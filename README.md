@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=master)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=master) [![LGPL licensed][img-license]](./LICENSE)
+[![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=master)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=master) [![LGPL licensed][img-license]](./LICENSE.txt)
 
 
 # DFIR-ORC
