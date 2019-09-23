@@ -1,3 +1,6 @@
+[![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=master)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=master) [![LGPL licensed][img-license]](./LICENSE)
+
+
 # DFIR-ORC
 
 ## Documentation
@@ -10,7 +13,7 @@ https://dfir-orc.github.io
 - Kitware's CMake >= 3.12 or Visual Studio 2017 integrated version
 - LLVM's Clang Format >= 8.0.0 or Visual Studio 2019 integrated version
 
-Build environment can be setup quickly using [Microsoft's developer virtual machines](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines). Import this [.vsconfig](msvc/visualstudio/.vsconfig) from **Visual Studio Installer**.
+Build environment can be setup quickly using [Microsoft's developer virtual machines](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines). Import this [.vsconfig](.vsconfig) from **Visual Studio Installer**.
 
 
 ### Commands
@@ -68,3 +71,6 @@ vcpkg --vcpkg-root . install fmt:x64-windows-static ...
 
 ## Aknowledgments
 DFIR-ORC is disclosing Microsoft source code with Microsoft's permission.
+
+[img-build]: https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/jeangautier.dfir-orc?branchName=master
+[img-license]: https://img.shields.io/github/license/DFIR-ORC/dfir-orc
