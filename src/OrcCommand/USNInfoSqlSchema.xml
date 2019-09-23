@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="USNInfo">
+
+  <table key="USNInfo">
+    <utf8 name="ComputerName" maxlen="50" allows_null="no" />
+    <uint64 name="USN" allows_null="no" fmt="{:#016x}" />
+    <uint64 name="FRN" allows_null="no" fmt="{:#016x}" />
+    <uint64 name="ParentFRN" allows_null="no" fmt="{:#016x}" />
+    <timestamp name="TimeStamp" />
+    <utf16  name="File" maxlen="256" />
+    <utf16  name="FullPath" maxlen="32K" />
+    <utf8 name="FileAttributes" />
+    <flags  name="Reason">
+      <value index="0x00008000">BASIC_INFO_CHANGE</value>
+      <value index="0x80000000">CLOSE</value>
+      <value index="0x00020000">COMPRESSION_CHANGE</value>
+      <value index="0x00000002">DATA_EXTEND</value>
+      <value index="0x00000001">DATA_OVERWRITE</value>
+      <value index="0x00000004">DATA_TRUNCATION</value>
+      <value index="0x00000400">EA_CHANGE</value>
+      <value index="0x00040000">ENCRYPTION_CHANGE</value>
+      <value index="0x00000100">FILE_CREATE</value>
+      <value index="0x00000200">FILE_DELETE</value>
+      <value index="0x00010000">HARD_LINK_CHANGE</value>
+      <value index="0x00004000">INDEXABLE_CHANGE</value>
+      <value index="0x00000020">NAMED_DATA_EXTEND</value>
+      <value index="0x00000010">NAMED_DATA_OVERWRITE</value>
+      <value index="0x00000040">NAMED_DATA_TRUNCATION</value>
+      <value index="0x00080000">OBJECT_ID_CHANGE</value>
+      <value index="0x00002000">RENAME_NEW_NAME</value>
+      <value index="0x00001000">RENAME_OLD_NAME</value>
+      <value index="0x00100000">REPARSE_POINT_CHANGE</value>
+      <value index="0x00000800">SECURITY_CHANGE</value>
+      <value index="0x00200000">STREAM_CHANGE</value>
+    </flags>
+    <uint64 name="VolumeID" allows_null="no" fmt="{:#016x}" />
+    <guid   name="SnapshotID" allows_null="no" />
+  </table>
+
+</sqlschema>

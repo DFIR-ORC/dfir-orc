@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<reginfo>
+
+  <output encoding="UTF16">c:\temp\reginfo</output>
+
+  <information>ComputerName,TemplateName,ResearchDescription,LastModificationDate,KeyName,KeyTree,ValueName,ValueType,ValueData</information>
+
+  <location>%SystemDrive%</location>
+
+  <hive>
+    <ntfs_find name="SYSTEM" />
+    <registry_find key="*" />
+  </hive>
+
+  <hive>
+    <ntfs_find name="SOFTWARE" />
+    
+    <registry_find key="*" />
+  </hive>
+
+</reginfo>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="GetThis">
+
+  <table key="getthis_collection">
+
+    <utf8   name="ComputerName" maxlen="50" allows_null="no"/>
+    <uint64 name="VolumeID"     allows_null="no" fmt="{:#016x}"/>
+    <uint64 name="ParentFRN"    allows_null="no" fmt="{:#016x}"/>
+    <uint64 name="FRN"          allows_null="no" fmt="{:#016x}"/>
+    <utf16  name="FullName"     maxlen="32k" allows_null="no" />
+    <utf16  name="SampleName"   maxlen="256" allows_null="no" />
+    <uint64 name="SizeInBytes"  allows_null="no" />
+
+    <binary name="MD5" len="16" />
+    <binary name="SHA-1" len="20" />
+
+    <utf8 name="FindMatch" maxlen="256" />
+    <utf8 name="ContentType" maxlen="12" />
+      
+    <timestamp name="SampleCollectionDate" />
+
+    <timestamp name="CreationDate" />
+    <timestamp name="LastModificationDate" />
+    <timestamp name="LastAccessDate" />
+    <timestamp name="LastAttrChangeDate" />
+
+    <timestamp name="FileNameCreationDate" />
+    <timestamp name="FileNameLastModificationDate" />
+    <timestamp name="FileNameLastAccessDate" />
+    <timestamp name="FileNameLastAttrModificationDate" />
+
+    <utf8   name="AttrType" maxlen="20"  />
+    <utf8   name="AttrName" maxlen="256" />
+    <uint32 name="AttrID"   allows_null="no" />
+    <utf16  name="SearchTerm" maxlen="128" />
+
+    <guid name="SnapshotID" allows_null="no" />
+    
+    <binary name="SHA256" len="32" />
+    <utf8   name="SSDeep" maxlen="256" />
+    <utf8   name="TLSH" maxlen="256" />
+
+    <utf8 name="YaraRules" maxlen="256" />
+
+  </table>
+  
+</sqlschema>

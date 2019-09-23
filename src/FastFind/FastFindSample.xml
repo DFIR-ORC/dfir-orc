@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<fastfind version="Test 2.0">
+    
+  <filesystem>
+
+    <location shadows="no">T:\</location>
+  
+    <ntfs_find header="MZ"  />
+
+  </filesystem>
+
+</fastfind>

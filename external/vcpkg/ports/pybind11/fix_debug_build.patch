@@ -1,0 +1,36 @@
+diff --git a/include/pybind11/detail/common.h b/include/pybind11/detail/common.h
+index 892de0f..2bf301b 100644
+--- a/include/pybind11/detail/common.h
++++ b/include/pybind11/detail/common.h
+@@ -103,10 +103,10 @@
+ #  endif
+ #  pragma warning(push)
+ #  pragma warning(disable: 4510 4610 4512 4005)
+-#  if defined(_DEBUG)
+-#    define PYBIND11_DEBUG_MARKER
+-#    undef _DEBUG
+-#  endif
++//#  if defined(_DEBUG)
++//#    define PYBIND11_DEBUG_MARKER
++//#    undef _DEBUG
++//#  endif
+ #endif
+ 
+ #include <Python.h>
+@@ -128,10 +128,10 @@
+ #endif
+ 
+ #if defined(_MSC_VER)
+-#  if defined(PYBIND11_DEBUG_MARKER)
+-#    define _DEBUG
+-#    undef PYBIND11_DEBUG_MARKER
+-#  endif
++//#  if defined(PYBIND11_DEBUG_MARKER)
++//#    define _DEBUG
++//#    undef PYBIND11_DEBUG_MARKER
++//#  endif
+ #  pragma warning(pop)
+ #endif
+ 
+-- 
+2.17.1

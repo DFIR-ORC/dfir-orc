@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="GetSectors">
+
+  <table key="GetSectors">
+   
+    <utf8   name="ComputerName" maxlen="50" />
+    <utf16  name="Disk" maxlen="256" />
+    <utf16  name="DumpDescription" maxlen="256" />
+    <utf16  name="DumpName" maxlen="256" />
+    <uint64 name="DumpOffset" />
+    <uint64 name="DumpSize" />
+    <uint64 name="ReadingTime" />
+    <utf16  name="DiskInterfaceUsed"  maxlen="256" />
+    <uint64 name="DiskSectorSize" />
+  </table>
+  
+</sqlschema>

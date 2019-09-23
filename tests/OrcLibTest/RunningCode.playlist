@@ -1,0 +1,1 @@
+<Playlist Version="1.0"><Add Test="UnitTest::AuthenticodeTest::AuthenticodeBasicTest" /><Add Test="UnitTest::RunningCodeTest::RunningCodeBasicTest" /></Playlist>

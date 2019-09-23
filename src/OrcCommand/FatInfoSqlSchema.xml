@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="FATInfo">
+
+  <table key="fileinfo">
+
+    <utf8   name="ComputerName" maxlen="50" allows_null="no" />
+    <uint64 name="VolumeID"     allows_null="no" />
+
+    <utf16 name="File"       maxlen="256" />
+    <utf16 name="ParentName" maxlen="256" />
+    <utf16 name="FullName"   maxlen="32k" />
+
+    <utf16  name="Extension" maxlen="256" />
+    <uint64 name="SizeInBytes" type="LargeInteger"  />
+    <utf8   name="Attributes"  len="14" />
+
+    <timestamp name="CreationDate"         />
+    <timestamp name="LastModificationDate" />
+    <timestamp name="LastAccessDate"       />
+
+    <bool name="RecordInUse" />
+
+    <utf8 name="ShortName" maxlen="12" />
+
+    <binary name="MD5"   len="16" />
+    <binary name="SHA-1" len="20" />
+
+    <binary name="FirstBytes" len="16" />
+
+    <utf16 name="Version"          maxlen="254" />
+    <utf16 name="CompanyName"      maxlen="254" />
+    <utf16 name="ProductName"      maxlen="254" />
+    <utf16 name="OriginalFileName" maxlen="254" />
+    <utf16 name="Platform"         maxlen="254" />
+    <utf16 name="TimeStamp"        maxlen="254" />
+    <utf16 name="SubSystem"        maxlen="254" />
+    <utf16 name="FileType"         maxlen="254" />
+    <utf16 name="FileOS"           maxlen="254" values=""/>
+
+    <binary name="SHA256" len="32" />
+    <binary name="PeSHA1" len="20" />
+    <binary name="PeSHA256"  len="32" />
+
+    <binary name="SecurityDirectory" maxlen="8000" />
+
+    <enum name="AuthenticodeStatus" >
+      <value index ="0">ASUndetermined</value>
+      <value>NotSigned</value>
+      <value>SignedVerified</value>
+      <value>SignedNotVerified</value>
+      <value>SignedTampered</value>
+    </enum>
+
+    <utf16  name="AuthenticodeSigner" maxlen="256" />
+    <binary name="AuthenticodeSignerThumbprint" maxlen="256" />
+    <utf16  name="AuthenticodeCA" maxlen="256" />
+    <binary name="AuthenticodeCAThumbprint" maxlen="256" />
+
+    <binary name="PeMD5" len="16" fmt="{:02X}" />
+
+  </table>
+
+  <table key="volstats">
+    <utf8   name="ComputerName" maxlen="50" allows_null="no" />
+    <uint64 name="VolumeID" fmt="{:#016x}" allows_null="no" />
+    <utf16  name="Location" maxlen="256" />
+    <enum name="Type">
+      <value index="0x00">UNKNOWN</value>
+      <value index="0x01">FAT12</value>
+      <value index="0x02">FAT16</value>
+      <value index="0x04">FAT32</value>
+      <value index="0x07">FAT</value>
+      <value index="0x08">NTFS</value>
+      <value index="0x10">REFS</value>
+      <value index="0x20">BITLOCKER</value>
+      <value index="0xFFFFFFF">ALL</value>
+    </enum>
+    <bool name="Parse" />
+  </table>
+  
+</sqlschema>

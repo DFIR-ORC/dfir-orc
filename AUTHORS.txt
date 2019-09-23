@@ -1,0 +1,21 @@
+
+* Developers:
+
+    Jean GAUTIER             Jean.Gautier[at]ssi[.]gouv[.]fr
+    fabienfl                 fabien.fl-orc[at]ssi[.]gouv[.]fr
+    Roger Guignard
+    Yann SALAUN
+    Jérémie CHRISTIN
+    Pierre-Sébastien BOST
+
+* Contributors:
+
+    Marion Daubignard
+    Thierry G.
+    Romain Veriato
+    Jérôme Leseinne
+
+* Acknowledgements:
+
+    Many thanks to ANSSI's Incident Response Teams (CERTA, FRI, BRI, DR) for, years after years, shaping and contributing to DFIR ORC.
+    Their talent and restless sense of commitment to their difficult mission will always command our respect.

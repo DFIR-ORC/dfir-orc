@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<toolembed>
+
+  <input>..\Win32\Debug\DFIR-Orc.exe</input>
+  <output>..\Win32\Debug\DFIR-FastFind.exe</output>
+
+  <run64 args="FastFind">7z:#Tools|DFIR-Orc_x64.exe</run64>
+  <run32 args="FastFind">self:#</run32>
+  
+  <file name="FASTFIND_CONFIG"  path="FastFindSample.xml" />
+
+  <archive name="Tools" format="7z" compression="Ultra">
+    <file name="DFIR-Orc_x64.exe"          path="..\x64\Debug\DFIR-Orc_x64.exe" />
+  </archive>
+
+</toolembed>

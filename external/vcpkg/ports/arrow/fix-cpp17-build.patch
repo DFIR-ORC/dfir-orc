@@ -1,0 +1,31 @@
+diff --git a/src/arrow/json/chunker.cc b/src/arrow/json/chunker.cc
+index 7b992df3..baaa869a 100644
+--- a/src/arrow/json/chunker.cc
++++ b/src/arrow/json/chunker.cc
+@@ -104,7 +104,8 @@ class MultiStringStream {
+   using Ch = char;
+   explicit MultiStringStream(std::vector<string_view> strings)
+       : strings_(std::move(strings)) {
+-    std::remove(strings_.begin(), strings_.end(), string_view(""));
++    // fix: C4834: discarding return value of function with 'nodiscard' attribute
++    const auto it = std::remove(strings_.begin(), strings_.end(), string_view(""));
+     std::reverse(strings_.begin(), strings_.end());
+   }
+   char Peek() const {
+diff --git a/src/arrow/json/parser.cc b/src/arrow/json/parser.cc
+index 99b8911d..733bb498 100644
+--- a/src/arrow/json/parser.cc
++++ b/src/arrow/json/parser.cc
+@@ -350,7 +350,8 @@ class RawArrayBuilder<Kind::kObject> {
+       std::shared_ptr<Array> values;
+       RETURN_NOT_OK(handler.Finish(field_builders_[i], &values));
+       child_data[i] = values->data();
+-      fields[i] = field(field_names[i].to_string(), values->type(),
++      // fix: C2039: 'to_string': is not a member of 'std::basic_string_view...
++      fields[i] = field(std::string(field_names[i]), values->type(),
+                         field_builders_[i].nullable, Tag(field_builders_[i].kind));
+     }
+ 
+-- 
+2.17.1
+

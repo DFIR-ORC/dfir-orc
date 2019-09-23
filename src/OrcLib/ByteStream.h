@@ -1,0 +1,95 @@
+//
+// SPDX-License-Identifier: LGPL-2.1-or-later
+//
+// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+//
+// Author(s): Jean Gautier (ANSSI)
+//
+#pragma once
+
+#include "OrcLib.h"
+
+#include "BinaryBuffer.h"
+
+#include <memory>
+
+#pragma managed(push, off)
+
+struct IInStream;
+struct IStream;
+struct ISequentialStream;
+
+namespace Orc {
+
+class LogFileWriter;
+using log = LogFileWriter;
+using logger = std::shared_ptr<LogFileWriter>;
+
+class OutputSpec;
+class XORStream;
+class CryptoHashStream;
+
+class ORCLIB_API ByteStream
+{
+    friend class ChainingStream;
+
+protected:
+    logger _L_;
+
+    ByteStream(logger pLog)
+        : _L_(std::move(pLog)) {};
+
+    virtual std::shared_ptr<ByteStream> _GetHashStream();
+    virtual std::shared_ptr<ByteStream> _GetXORStream();
+
+public:
+    virtual ~ByteStream();
+
+    STDMETHOD(IsOpen)() PURE;
+    STDMETHOD(CanRead)() PURE;
+    STDMETHOD(CanWrite)() PURE;
+    STDMETHOD(CanSeek)() PURE;
+
+    STDMETHOD(Read)
+    (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
+     __in ULONGLONG cbBytes,
+     __out_opt PULONGLONG pcbBytesRead) PURE;
+
+    STDMETHOD(Write)
+    (__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten) PURE;
+
+    STDMETHOD(SetFilePointer)
+    (__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod, __out_opt PULONG64 pCurrPointer) PURE;
+
+    STDMETHOD(CopyTo)(__in const std::shared_ptr<ByteStream>& pOutStream, __out_opt PULONGLONG pcbBytesWritten);
+
+    STDMETHOD(CopyTo)(__in ByteStream& pOutStream, __out_opt PULONGLONG pcbBytesWritten);
+
+    STDMETHOD(CopyTo)
+    (__in const std::shared_ptr<ByteStream>& pOutStream,
+     __in const ULONGLONG ullChunk,
+     __out_opt PULONGLONG pcbBytesWritten);
+
+    STDMETHOD(CopyTo)
+    (__in ByteStream& pOutStream, __in const ULONGLONG ullChunk, __out_opt PULONGLONG pcbBytesWritten);
+
+    STDMETHOD_(ULONG64, GetSize)() PURE;
+    STDMETHOD(SetSize)(ULONG64) PURE;
+
+    STDMETHOD(Close)() PURE;
+
+    static std::shared_ptr<ByteStream> GetStream(const logger& pLog, const OutputSpec& output);
+
+    static std::shared_ptr<ByteStream> GetHashStream(const std::shared_ptr<ByteStream>& aStream);
+    static std::shared_ptr<ByteStream> GetXORStream(const std::shared_ptr<ByteStream>& aStream);
+
+    static HRESULT Get_IInStream(const std::shared_ptr<ByteStream>& aStream, ::IInStream** pInStream);
+    static HRESULT Get_IStream(const std::shared_ptr<ByteStream>& aStream, ::IStream** pStream);
+    static HRESULT
+    Get_ISequentialStream(const std::shared_ptr<ByteStream>& aStream, ::ISequentialStream** pSequentialStream);
+};
+}  // namespace Orc
+
+constexpr auto DEFAULT_READ_SIZE = (0x0200000);
+
+#pragma managed(pop)

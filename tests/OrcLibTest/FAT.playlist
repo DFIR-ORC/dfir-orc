@@ -1,0 +1,1 @@
+<Playlist Version="1.0"><Add Test="UnitTest::FatWalkerTest::Fat12WalkerBasicTest" /><Add Test="UnitTest::FatWalkerTest::Fat16WalkerBasicTest" /><Add Test="UnitTest::FatTableTest::Fat32TableBasicTest" /><Add Test="UnitTest::FatWalkerTest::Fat32WalkerBasicTest" /><Add Test="UnitTest::FatFileEntryTest::FatFileEntryBasicTest" /></Playlist>

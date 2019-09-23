@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="DD">
+
+  <table key="DDTable">
+    
+    <utf8 name="ComputerName" maxlen="50" />
+
+    <utf8 name="IF" maxlen="255" />
+    <utf8 name="OF" maxlen="255" />
+
+    <uint64 name="BlockSize" />
+    <uint64 name="Skip"      />
+    <uint64 name="Seek"      />
+    <uint64 name="Count"     />
+    
+    <timestamp name="StartTime" />
+    <timestamp name="FinishTime" />
+    
+    <uint64 name="TotalBytes"        type="LargeInteger" />
+
+    <binary name="inMD5"     len="16" />
+    <binary name="inSHA-1"   len="20" />
+    <binary name="inSHA-256" len="32" />
+
+    <binary name="outMD5"     len="16" />
+    <binary name="outSHA-1"   len="20" />
+    <binary name="outSHA-256" len="32" />
+
+  </table>
+
+</sqlschema>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="EmptyTool">
+  
+  <table key="EmptyTable">
+      <utf8 name="ComputerName" maxlen="50" />
+  </table>
+  
+</sqlschema>

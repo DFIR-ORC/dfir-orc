@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="NTFSUtil">
+
+  <table key="Vss">
+    <guid      name="SnapshotID" allows_null="no" />
+    <utf16     name="DeviceInstance" maxlen="500" allows_null="no" />
+    <utf16     name="VolumeName" maxlen="500" allows_null="no" />
+    <timestamp name="CreationTime" />
+    <uint32    name="Attributes" />
+  </table> 
+
+</sqlschema>

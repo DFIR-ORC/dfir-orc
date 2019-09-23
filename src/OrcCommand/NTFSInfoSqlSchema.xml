@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="NTFSInfo">
+
+  <table key="fileinfo">
+    
+    <utf8   name="ComputerName" maxlen="50" allows_null="no" />
+    <uint64 name="VolumeID"     allows_null="no" fmt="{:#016x}" />
+
+    <utf16 name="File" maxlen="256" />
+    <utf16 name="ParentName" maxlen="32k" />
+    <utf16 name="FullName"   maxlen="32k" />
+
+    <utf16 name="Extension"  maxlen="256" />
+    <uint64 name="SizeInBytes"  />
+    <utf8 name="Attributes" len="14" />
+
+    <timestamp name="CreationDate"         />
+    <timestamp name="LastModificationDate" />
+    <timestamp name="LastAccessDate"       />
+    <timestamp name="LastAttrChangeDate"   />
+
+    <timestamp name="FileNameCreationDate"             />
+    <timestamp name="FileNameLastModificationDate"     />
+    <timestamp name="FileNameLastAccessDate"           />
+    <timestamp name="FileNameLastAttrModificationDate" />
+
+    <uint64 name="USN" fmt="{:#016x}" />
+    <uint64 name="FRN" fmt="{:#016x}" allows_null="no" />
+    <uint64 name="ParentFRN" fmt="{:#016x}" />
+
+    <utf16 name="ExtendedAttribute" maxlen="256" />
+    <utf16 name="ADS"               maxlen="256" />
+
+    <uint32 name="FilenameID"/>
+    <uint32 name="DataID"    />
+      
+    <bool name="RecordInUse" />
+
+    <utf8 name="ShortName" maxlen="12" />
+
+    <binary name="MD5"   len="16" fmt="{:02X}"/>
+    <binary name="SHA-1" len="20" fmt="{:02X}"/>
+
+    <binary name="FirstBytes" maxlen="16" fmt="{:02X}"/>
+
+    <uint32 name="OwnerId" />
+    <utf16 name="OwnerSid" maxlen="254" />
+    <utf16 name="Owner"    maxlen="254" />
+
+    <utf16 name="Version"          maxlen="254" />
+    <utf16 name="CompanyName"      maxlen="254" />
+    <utf16 name="ProductName"      maxlen="254" />
+    <utf16 name="OriginalFileName" maxlen="254" />
+    <utf16 name="Platform"         maxlen="254" />
+    <utf16 name="TimeStamp"        maxlen="254" />
+    <utf16 name="SubSystem"        maxlen="254" />
+    <utf16 name="FileType"         maxlen="254" />
+    <utf16 name="FileOS"           maxlen="254" />
+
+    <uint32 name="FilenameFlags" />
+
+    <binary name="SHA256" len="32" fmt="{:02X}"/>
+    <binary name="PeSHA1" len="20" fmt="{:02X}"/>
+    <binary name="PeSHA256"  maxlen="32" fmt="{:02X}"/>
+      
+    <uint32 name="SecDescrID" />
+      
+    <uint32 name="EASize" />
+      
+    <utf16 name="SecurityDirectory" maxlen="8000" />
+
+    <enum name="AuthenticodeStatus" >
+      <value index ="0">ASUndetermined</value>
+      <value>NotSigned</value>
+      <value>SignedVerified</value>
+      <value>SignedNotVerified</value>
+      <value>SignedTampered</value>
+    </enum>
+    
+    <utf16  name="AuthenticodeSigner" maxlen="256" />
+    <utf16 name="AuthenticodeSignerThumbprint" maxlen="256" />
+    <utf16  name="AuthenticodeCA" maxlen="256" />
+    <utf16 name="AuthenticodeCAThumbprint" maxlen="256" />
+
+    <binary name="PeMD5" len="16" fmt="{:02X}" />
+
+    <uint32 name="FilenameIndex" allows_null="no" />
+    <uint32 name="DataIndex" allows_null="no" />
+    <guid   name="SnapshotID" allows_null="no" />
+
+    <utf8 name="SSDeep" maxlen="256" />
+    <utf8 name="TLSH" maxlen="256" />
+    
+    <binary name="SignedHash"  maxlen="32" />
+
+  </table>
+
+  <table key="attrinfo">
+    <utf8 name="ComputerName" maxlen="50" />
+    <uint64 name="VolumeID" fmt="{:#016x}" />
+    <uint64 name="FRN" fmt="{:#016x}" />
+    <uint64 name="HostFRN" fmt="{:#016x}" />
+    <enum name="Type">
+      <value index="0x10">$STANDARD_INFORMATION</value>
+      <value index="0x20">$ATTRIBUTE_LIST</value>
+      <value index="0x30">$FILE_NAME</value>
+      <value index="0x40">$OBJECT_ID</value>
+      <value index="0x50"></value>
+      <value index="0x60">$VOLUME_NAME</value>
+      <value index="0x70">$VOLUME_INFORMATION</value>
+      <value index="0x80">$DATA</value>
+      <value index="0x90">$INDEX_ROOT</value>
+      <value index="0xA0">$INDEX_ALLOCATION</value>
+      <value index="0xB0">$BITMAP</value>
+      <value index="0xC0">$REPARSE_POINT</value>
+      <value index="0xD0">$EA_INFORMATION</value>
+      <value index="0xE0">$EA</value>
+      <value index="0x100">$LOGGED_UTILITY_STREAM</value>
+      <value index="0x1000">$FIRST_USER_DEFINED_ATTRIBUTE</value>
+      <value index="0xFFFFFFFF">$END</value>
+    </enum>
+    <utf16 name="Name" maxlen="256" />
+    <enum name="Form">
+      <value index="0x00">RESIDENT_FORM</value>
+      <value index="0x01">NONRESIDENT_FORM</value>
+    </enum>
+    <uint64 name="Size" />
+    <uint32 name="Flags" />
+    <uint32 name="Instance" />
+    <uint32 name="Index" />
+    <uint64 name="LowestVCN" fmt="{:#016x}" />
+    <guid   name="SnapshotID" allows_null="no" />
+  </table>
+
+  <table key="i30info">
+    <utf8   name="ComputerName" maxlen="50" allows_null="no" />
+    <uint64 name="VolumeID" fmt="{:#016x}" allows_null="no" />
+    <bool   name="CarvedEntry" />
+    <uint64 name="FRN" fmt="{:#016x}" allows_null="no" />
+    <uint64 name="ParentFRN" fmt="{:#016x}" />
+    <utf16  name="Name" maxlen="256" />
+    <uint32 name="FilenameFlags"  />
+    <timestamp name="FileNameCreationDate" />
+    <timestamp name="FileNameLastModificationDate" />
+    <timestamp name="FileNameLastAccessDate" />
+    <timestamp name="FileNameLastAttrModificationDate" />
+    <guid   name="SnapshotID" allows_null="no" />
+  </table>
+
+  <table key="timeline">
+    <utf8 name="ComputerName" maxlen="50" allows_null="no" />
+    <uint64 name="VolumeID"   allows_null="no" />
+    <enum name="KindOfDate"   allows_null="no">
+      <value index="0x00">InvalidKind</value>
+      <value index="0x01">CreationTime</value>
+      <value index="0x02">LastModificationTime</value>
+      <value index="0x04">LastAccessTime</value>
+      <value index="0x08">LastChangeTime</value>
+      <value index="0x10">FileNameCreationDate</value>
+      <value index="0x20">FileNameLastModificationDate</value>
+      <value index="0x40">FileNameLastAccessDate</value>
+      <value index="0x80">FileNameLastAttrModificationDate</value>
+    </enum>
+    <timestamp name="TimeStamp" allows_null="no" />
+    <uint64 name="FRN" fmt="{:#016x}" allows_null="no"/>
+    <uint32 name="FilenameID" allows_null="no" />
+    <guid   name="SnapshotID" allows_null="no" />
+  </table>
+
+  <table key="secdescr">
+    <utf8 name="ComputerName" maxlen="50" allows_null="no" />
+    <uint64 name="VolumeID" fmt="{:#016x}" allows_null="no" />
+    <uint32 name="ID" allows_null="no" />
+    <uint32 name="Hash" />
+    <utf8   name="SDDL" maxlen="4K" />
+    <uint32 name="SecDescrSize" />
+    <uint32 name="NormalisedSize" />
+    <uint32 name="DataSize" />
+    <guid name="SnapshotID" allows_null="no" />
+  </table>
+
+  <table key="volstats">
+    <utf8   name="ComputerName" maxlen="50" allows_null="no" />
+    <uint64 name="VolumeID" fmt="{:#016x}" allows_null="no" />
+    <utf16  name="Location" maxlen="256" />
+    <enum name="Type">
+      <value index="0x00">UNKNOWN</value>
+      <value index="0x01">FAT12</value>
+      <value index="0x02">FAT16</value>
+      <value index="0x04">FAT32</value>
+      <value index="0x07">FAT</value>
+      <value index="0x08">NTFS</value>
+      <value index="0x10">REFS</value>
+      <value index="0x20">BITLOCKER</value>
+      <value index="0xFFFFFFF">ALL</value>
+    </enum>
+    <bool name="Parse" />
+  </table>
+</sqlschema>
+ 

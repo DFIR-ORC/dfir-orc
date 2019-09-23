@@ -1,0 +1,36 @@
+Option Explicit
+On Error Resume Next
+
+Const EXE_PATH = "FDisk.exe"
+
+Dim pcengine, rep, fso, filename, csvfile, csvallfile, objNet, execmd, WshShell
+
+pcengine = LCase(Mid(WScript.Fullname, InstrRev(WScript.FullName, "\") + 1)) 
+If Not pcengine = "cscript.exe" Then
+    WScript.Echo "Start with cscript.exe"
+    WScript.Quit
+End If
+
+If (WScript.Arguments.Count = 0) Then
+    WScript.Echo "Missing Argument!"
+    WScript.Quit
+End If
+rep = WScript.Arguments.Item(0)
+
+Set fso = WScript.CreateObject("Scripting.FileSystemObject")
+Set objNet = CreateObject("WScript.NetWork") 
+Set WshShell = WScript.CreateObject("WScript.Shell")
+
+filename = rep & "\FDisk_" & objNet.ComputerName & ".log"
+csvfile  = rep & "\FDisk_" & objNet.ComputerName & ".csv"
+csvallfile  = rep & "\FDisk_" & objNet.ComputerName & "_all.csv"
+
+If (fso.FileExists(filename) = True) Then WScript.Quit
+
+' First Run is detecting only existing files
+execmd = EXE_PATH & " /low /CSV=" & csvfile & " > " & Chr(34) & filename & Chr(34)
+WshShell.Run "%comspec% /c " & execmd, 0, True
+
+' second run adds deleted files, less stable.
+execmd = EXE_PATH & " /low /all /CSV=" & csvallfile & " >> " & Chr(34) & filename & Chr(34)
+WshShell.Run "%comspec% /c " & execmd, 0, True

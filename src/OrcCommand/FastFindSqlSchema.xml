@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="FastFind">
+
+  <table key="FastFindFileSystem">
+
+    <utf8  name="ComputerName" maxlen="50" />
+    <utf16 name="FullName"     maxlen="32k" />
+    <uint64 name="SizeInBytes" />
+
+    <timestamp name="CollectionDate" />
+
+    <utf16 name="Description" maxlen="256" />
+
+    <timestamp name="CreationDate"         />
+    <timestamp name="LastModificationDate" />
+    <timestamp name="LastAccessDate"       />
+    <timestamp name="LastAttrChangeDate"   />
+
+    <timestamp name="FileNameCreationDate"             />
+    <timestamp name="FileNameLastModificationDate"     />
+    <timestamp name="FileNameLastAccessDate"           />
+    <timestamp name="FileNameLastAttrModificationDate" />
+    <binary name="MD5"   len="16" />
+    <binary name="SHA-1" len="20" />
+
+  </table>
+
+  <table key="FastFindRegistry">
+
+    <utf8  name="ComputerName" maxlen="50"  />
+    <utf16 name="FullName"     maxlen="32k" />
+
+  </table>
+
+  <table key="FastFindObject">
+    
+    <utf8 name="ComputerName"      maxlen="50" allows_null="no" />
+    <utf8 name="OperatingSystem"   maxlen="50" />
+    <utf8 name="ObjectType"      maxlen="50" allows_null="no" />
+    <utf16 name="ObjectName"       maxlen="256" allows_null="no" />
+    <utf16 name="ObjectPath"       maxlen="32K" allows_null="no" />
+    <utf16 name="LinkTarget"       maxlen="32K" />
+    <timestamp name="LinkCreationTime" />
+    
+  </table>
+
+</sqlschema>

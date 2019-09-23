@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="RegInfo">
+  
+  <table key="reginfo">
+    
+    <utf8   name="ComputerName"    description="Computer Name" maxlen="15"/>
+    <utf8   name="TermName"        description="Template Name" maxlen="20"/>
+    <uint32 name="TermDescription" description="Description for this search" />
+      
+    <timestamp name="LastModificationDate" description="Last Mod Date" />
+    <utf8 name="KeyName" description="Key Name" maxlen="32K"/>
+    <utf8 name="KeyTree" description="Key Full Tree" maxlen="32K"/>
+      
+    <utf8 name="ValueName"   description="Value Name" maxlen="256"/>
+    <uint32 name="ValueType" description="Value Type" />
+    <uint32 name="ValueSize" description="Value Type" />
+    <uint32 name="ValueFlag" description="Flag of value" />
+    
+    <utf16 name="ValueData"     description="Value Data" maxlen="32K"/>
+    <utf16 name="ValueDumpFile" description="Dump file with value Data"  maxlen="128"/>
+
+  </table>
+  
+</sqlschema>

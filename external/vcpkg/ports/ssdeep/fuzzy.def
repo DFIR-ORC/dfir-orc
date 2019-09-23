@@ -1,0 +1,14 @@
+EXPORTS
+    edit_distn @1
+    find_file_size @2
+    fuzzy_clone @3
+    fuzzy_compare @4
+    fuzzy_digest @5
+    fuzzy_free @6
+    fuzzy_hash_buf @7
+    fuzzy_hash_file @8
+    fuzzy_hash_filename @9
+    fuzzy_hash_stream @10
+    fuzzy_new @11
+    fuzzy_set_total_input_length @12
+    fuzzy_update @13

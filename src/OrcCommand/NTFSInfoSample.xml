@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<ntfsinfo walker="MFT" resurrect="yes">
+
+  <location altitude="lowest" shadows="yes">c:\</location>
+
+  <fileinfo>c:\temp\ntfs.csv</fileinfo>
+  <attrinfo>c:\temp\attr.csv</attrinfo>
+  <i30info>c:\temp\i30.csv</i30info>
+  <secdescr>c:\temp\sec.csv</secdescr>
+
+  <columns>
+    <default>Default</default>
+  </columns>
+
+</ntfsinfo>
+  
