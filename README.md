@@ -69,7 +69,7 @@ vcpkg --vcpkg-root . install fmt:x64-windows-static ...
 ```
 
 
-## Aknowledgments
+## Acknowledgments
 DFIR-ORC is disclosing Microsoft source code with Microsoft's permission.
 
 [img-build]: https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/jeangautier.dfir-orc?branchName=master
