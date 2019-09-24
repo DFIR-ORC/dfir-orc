@@ -1,7 +1,7 @@
 [![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=master)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=master) [![LGPL licensed][img-license]](./LICENSE.txt)
 
 
-# DFIR-ORC
+# DFIR ORC
 
 ## Documentation
 https://dfir-orc.github.io
@@ -70,7 +70,7 @@ vcpkg --vcpkg-root . install fmt:x64-windows-static ...
 
 
 ## Acknowledgments
-DFIR-ORC is disclosing Microsoft source code with Microsoft's permission.
+DFIR ORC is disclosing Microsoft source code with Microsoft's permission.
 
 [img-build]: https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/jeangautier.dfir-orc?branchName=master
 [img-license]: https://img.shields.io/github/license/DFIR-ORC/dfir-orc
