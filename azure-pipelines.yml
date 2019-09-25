@@ -1,3 +1,4 @@
+trigger: none
 jobs:
   - job: vs2017_x64
     timeoutInMinutes: 600
