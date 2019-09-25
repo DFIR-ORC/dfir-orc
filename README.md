@@ -21,7 +21,7 @@ Build environment can be setup quickly using [Microsoft's developer virtual mach
 ### Commands
 Both 32-bit and 64-bit versions should be built for maximum compatiliby before deployment. See https://dfir-orc.github.io for more details about deployment and configuration.
 
-For Visual Studio 2017:
+For Visual Studio 2019:
 ```bash
 git clone https://github.com/dfir-orc/dfir-orc.git
 cd dfir-orc
@@ -36,7 +36,7 @@ cmake -G "Visual Studio 16 2019" -A x64 -T v141_xp -DORC_BUILD_VCPKG=ON ..
 cmake --build . --config MinSizeRel -- -maxcpucount
 ```
 
-For Visual Studio 2019:
+For Visual Studio 2017:
 ```bash
 git clone https://github.com/dfir-orc/dfir-orc.git
 cd dfir-orc
