@@ -39,6 +39,9 @@ class Lib7z
         NCompress::NBcj2::RegisterCodecBCJ2();
         NCompress::NLzma::RegisterCodecLZMA();
         NCompress::NLzma2::RegisterCodecLZMA2();
+
+        NCrypto::N7z::RegisterCodec7zAES();
+        NCrypto::RegisterCodecAES256CBC();
     }
 
 public:
