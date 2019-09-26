@@ -34,7 +34,7 @@ void Main::PrintUsage()
         L"\r\n"
         L"\t/config=<ConfigFile>     : Specify a XML config file\r\n"
         L"\r\n"
-        L"\t/utf8,/utf16			  : Select utf8 or utf16 enncoding (default is utf8)\r\n"
+        L"\t/utf8,/utf16			  : Select utf8 or utf16 encoding (default is utf8)\r\n"
         L"\r\n"
         L"\t/FileInfo=<OutputSpec>     : File information file output specification\r\n"
         L"\t/AttrInfo=<OutputSpec>     : Attribute information file output specification\r\n"

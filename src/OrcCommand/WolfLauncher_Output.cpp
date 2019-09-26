@@ -35,7 +35,7 @@ void Main::PrintUsage()
         L"\t/local=<ConfigFile>         : Specify a XML local config file\r\n"
         L"\r\n"
         L"\t/OutDir=<Folder>            : Output files will be created here\r\n"
-        L"\t/utf8,/utf16		         : Select utf8 or utf16 enncoding (default is utf8, this is for CSV "
+        L"\t/utf8,/utf16		         : Select utf8 or utf16 encoding (default is utf8, this is for CSV "
         L"files "
         L"only)\r\n"
         L"\r\n"

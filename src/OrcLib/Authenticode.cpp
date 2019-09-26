@@ -33,7 +33,7 @@ using namespace Orc;
 static GUID WVTPolicyGUID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
 
 const FlagsDefinition Authenticode::AuthenticodeStatusDefs[] = {
-    {AUTHENTICODE_UNKNWON, L"Unknwon", L"This file's status is unknown"},
+    {AUTHENTICODE_UNKNWON, L"Unknwon", L"This file status is unknown"},
     {AUTHENTICODE_NOT_PE, L"NotPE", L"This is not a PE"},
     {AUTHENTICODE_SIGNED_VERIFIED, L"SignedVerified", L"This PE is signed and signature verifies"},
     {AUTHENTICODE_CATALOG_SIGNED_VERIFIED, L"CatalogSignedVerified", L"This PE's hash is catalog signed"},

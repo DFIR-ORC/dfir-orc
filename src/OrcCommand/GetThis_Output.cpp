@@ -28,11 +28,11 @@ void Main::PrintUsage()
         _L_,
         L"\r\n"
         L"usage: DFIR-Orc.exe GetThis [/out=<Cabinet.cab|Archive.zip|Archive.7z>] [/XOR=0xBADF00D0] "
-        L"[/sample=<SampleFile>] "
-        L"[/config=<ConfigFile>] <foldername>...\r\n"
+        L"\t[/sample=<SampleFile>]\r\n"
+        L"\t[/config=<ConfigFile>] <foldername>...\r\n"
         L"\r\n"
         L"\t/out=<Folder>|<F.csv>|<F.cab>|<F.zip>|<F.7z>:\r\n"
-        L"\t                              Files will be added to exsiting folder, to cabinet or zip file\r\n"
+        L"\t                              Files will be added to existing folder, to cabinet or zip file\r\n"
         L"\t\r\n\r\n"
         L"\t/sample=<FileName>          : Name of the file to copy\r\n"
         L"\t/sample=<FileName>:<Stream> : Name of the Altername Data Stream to copy\r\n"
@@ -60,7 +60,7 @@ void Main::PrintUsage()
         L"\r\n"
         L"\t/extract=<Cabinet.cab> : Cabinet file <Cabinet.cab> is to be extracted\r\n"
         L"\t/outdir=<Folder>       : Files will be extracted into <Folder>\r\n"
-        L"\t/utf8,/utf16           : Select utf8 or utf16 enncoding (default is utf8)\r\n"
+        L"\t/utf8,/utf16           : Select utf8 or utf16 encoding (default is utf8)\r\n"
         L"\r\n"
         L"\t/Yara=<Rules.Yara>           : Comma separared list of yara sources\r\n");
 }
