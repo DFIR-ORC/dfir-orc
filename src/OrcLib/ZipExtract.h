@@ -18,13 +18,11 @@ namespace Orc {
 class ORCLIB_API ZipExtract : public ArchiveExtract
 {
     friend class ArchiveExtract;
-    friend class std::_Ref_count_obj<ZipExtract>;
-
-private:
-    ZipExtract(logger pLog, bool bComputeHash = false);
 
 public:
-    STDMETHOD(Extract)
+    ZipExtract(logger pLog, bool bComputeHash = false);
+
+	STDMETHOD(Extract)
     (__in MakeArchiveStream makeArchiveStream,
      __in const ItemShouldBeExtractedCallback pShouldBeExtracted,
      __in MakeOutputStream MakeWriteAbleStream);

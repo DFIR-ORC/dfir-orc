@@ -22,7 +22,6 @@ class ImportAgent;
 
 class ORCLIB_API ImportMessage
 {
-    friend class std::shared_ptr<ImportMessage>;
     friend class ImportAgent;
     friend class SqlImportAgent;
 
@@ -51,6 +50,11 @@ public:
         Complete
     };
 
+protected:
+
+	ImportMessage(void) {};
+
+
 private:
     ImportItem m_item;
     ImportStatement m_Statement;
@@ -73,8 +77,6 @@ public:
     static Message MakeAfterStatementRequest(ImportStatement&& statement);
 
     static Message MakeCompleteRequest();
-
-    ImportMessage(void) {};
 
     const ImportItem& Item() const { return m_item; };
 

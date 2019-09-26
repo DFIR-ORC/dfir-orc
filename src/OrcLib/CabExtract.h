@@ -27,10 +27,21 @@ namespace Orc {
 class ORCLIB_API CabExtract : public ArchiveExtract
 {
     friend class ArchiveExtract;
-    friend class std::_Ref_count_obj<CabExtract>;
+
+public:
+
+    CabExtract(logger pLog, bool bComputeHash = false);
+
+	STDMETHOD(Extract)
+    (__in MakeArchiveStream makeArchiveStream,
+     __in const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
+     __in MakeOutputStream MakeWriteAbleStream);
+
+    virtual ~CabExtract();
 
 private:
-    typedef struct _DECOMP_FILE_HANDLE
+
+	typedef struct _DECOMP_FILE_HANDLE
     {
         CabExtract* pOwner;
         Archive::ArchiveItem Item;
@@ -51,15 +62,7 @@ private:
     FNFDINOTIFY(FDINotify);
 
     ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted = nullptr;
-    CabExtract(logger pLog, bool bComputeHash = false);
 
-public:
-    STDMETHOD(Extract)
-    (__in MakeArchiveStream makeArchiveStream,
-     __in const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
-     __in MakeOutputStream MakeWriteAbleStream);
-
-    virtual ~CabExtract();
 };
 }  // namespace Orc
 

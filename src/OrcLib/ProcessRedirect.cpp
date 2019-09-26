@@ -39,10 +39,15 @@ ProcessRedirect::ProcessRedirect(logger pLog, ProcessInOut selection)
     m_ASyncIO.pThis = this;
 }
 
+struct ProcessRedirect_make_shared_enabler : public Orc::ProcessRedirect {
+	inline ProcessRedirect_make_shared_enabler(logger pLog, ProcessInOut selection) : Orc::ProcessRedirect(pLog, selection) {};
+};
+
+
 std::shared_ptr<ProcessRedirect>
 ProcessRedirect::MakeRedirect(logger pLog, ProcessInOut selection, std::shared_ptr<ByteStream> pBS, bool bClose)
 {
-    auto retval = make_shared<ProcessRedirect>(std::move(pLog), selection);
+    auto retval = make_shared<ProcessRedirect_make_shared_enabler>(std::move(pLog), selection);
 
     retval->m_pBS = pBS;
     retval->m_bCloseStream = bClose;

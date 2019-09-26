@@ -14,6 +14,11 @@ using namespace std;
 
 using namespace Orc;
 
+
+struct CommandMessage_make_shared_enabler : public CommandMessage {
+	inline CommandMessage_make_shared_enabler(CmdRequest request) : CommandMessage(request) {};
+};
+
 CommandMessage::CommandMessage(CommandMessage::CmdRequest request)
     : m_Request(request)
     , m_dwPid(0L)
@@ -23,46 +28,45 @@ CommandMessage::CommandMessage(CommandMessage::CmdRequest request)
 
 CommandMessage::Message CommandMessage::MakeCancelAnyPendingAndStopMessage()
 {
-    auto retval = make_shared<CommandMessage>(CommandMessage::CancelAnyPendingAndStop);
+    auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::CancelAnyPendingAndStop);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeTerminateMessage(DWORD dwProcessID)
 {
-    auto retval = make_shared<CommandMessage>(CommandMessage::Terminate);
+	auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::Terminate);
     retval->m_dwPid = dwProcessID;
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeTerminateAllMessage()
 {
-    auto retval = make_shared<CommandMessage>(CommandMessage::TerminateAll);
+    auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::TerminateAll);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeRefreshRunningList()
 {
-    auto retval = make_shared<CommandMessage>(CommandMessage::RefreshRunningList);
+	auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::RefreshRunningList);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeDoneMessage()
 {
-    auto retval = make_shared<CommandMessage>(CommandMessage::Done);
+    auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::Done);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeQueryRunningListMessage()
 {
-    auto retval = make_shared<CommandMessage>(CommandMessage::QueryRunningList);
+	auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::QueryRunningList);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeExecuteMessage(const std::wstring& keyword)
 {
-    auto retval = make_shared<CommandMessage>(CommandMessage::Execute);
+    auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::Execute);
     retval->m_Keyword = keyword;
-
     return retval;
 }
 

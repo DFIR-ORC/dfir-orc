@@ -28,7 +28,7 @@
 using namespace std;
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 using namespace Orc;
 using namespace Orc::Test;

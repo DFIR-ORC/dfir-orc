@@ -73,8 +73,6 @@ public:
 
 class ORCLIB_API CommandMessage
 {
-    friend class std::shared_ptr<CommandMessage>;
-    friend class std::_Ref_count_obj<CommandMessage>;
 
 public:
     typedef enum _Request

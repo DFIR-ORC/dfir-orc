@@ -25,8 +25,7 @@ class TemporaryStream;
 class ORCLIB_API ZipCreate : public ArchiveCreate
 {
     friend class ArchiveCreate;
-    friend class std::_Ref_count_obj<ZipCreate>;
-
+    
 public:
     typedef enum _CL
     {

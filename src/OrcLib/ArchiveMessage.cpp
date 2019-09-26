@@ -12,10 +12,15 @@ using namespace std;
 
 using namespace Orc;
 
+struct ArchiveMessage_make_shared_enabler : public Orc::ArchiveMessage {
+	inline ArchiveMessage_make_shared_enabler(Orc::ArchiveMessage::Request request) : Orc::ArchiveMessage(request) {};
+};
+
+
 ArchiveMessage::Message
 ArchiveMessage::MakeOpenRequest(const std::wstring& strArchiveName, const std::wstring& strCompressionLevel)
 {
-    auto retval = make_shared<ArchiveMessage>(ArchiveMessage::OpenArchive);
+    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::OpenArchive);
     retval->m_Name = strArchiveName;
     retval->m_CompressionLevel = strCompressionLevel;
     return retval;
@@ -27,7 +32,7 @@ ArchiveMessage::Message ArchiveMessage::MakeOpenRequest(
     const std::shared_ptr<ByteStream>& aStream,
     const std::wstring& strCompressionLevel)
 {
-    auto retval = make_shared<ArchiveMessage>(ArchiveMessage::OpenArchive);
+    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::OpenArchive);
     retval->m_Name = strArchiveName;
     retval->m_Format = aFormat;
     retval->m_Stream = aStream;
@@ -40,7 +45,7 @@ ArchiveMessage::Message ArchiveMessage::MakeOpenRequest(const OutputSpec& anOutp
     if (anOutput.Type != OutputSpec::Kind::Archive)
         return nullptr;
 
-    auto retval = make_shared<ArchiveMessage>(ArchiveMessage::OpenArchive);
+    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::OpenArchive);
     retval->m_Name = anOutput.Path;
     retval->m_Format = anOutput.ArchiveFormat;
     retval->m_CompressionLevel = anOutput.Compression;
@@ -54,7 +59,7 @@ ArchiveMessage::Message ArchiveMessage::MakeAddFileRequest(
     DWORD dwXORPattern,
     bool bDeleteWhenDone)
 {
-    auto retval = make_shared<ArchiveMessage>(ArchiveMessage::AddFile);
+    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::AddFile);
     retval->m_Status = ArchiveMessage::Ready;
     retval->m_Keyword = szNameInArchive;
     retval->m_Name = szFileName;
@@ -72,7 +77,7 @@ ArchiveMessage::Message ArchiveMessage::MakeAddDirectoryRequest(
     DWORD dwXORPattern,
     bool bDeleteOnCompletion)
 {
-    auto retval = make_shared<ArchiveMessage>(ArchiveMessage::AddDirectory);
+    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::AddDirectory);
     retval->m_Status = ArchiveMessage::Ready;
     retval->m_Keyword = szCabbedName;
     retval->m_Name = szDirName;
@@ -89,7 +94,7 @@ ArchiveMessage::Message ArchiveMessage::MakeAddStreamRequest(
     bool bHashData,
     DWORD dwXORPattern)
 {
-    auto retval = make_shared<ArchiveMessage>(ArchiveMessage::AddStream);
+    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::AddStream);
     retval->m_Status = ArchiveMessage::Wait;
     retval->m_Keyword = szCabbedName;
     retval->m_Name = szCabbedName;
@@ -101,17 +106,17 @@ ArchiveMessage::Message ArchiveMessage::MakeAddStreamRequest(
 
 ArchiveMessage::Message ArchiveMessage::MakeFlushQueueRequest()
 {
-    return make_shared<ArchiveMessage>(ArchiveMessage::FlushQueue);
+    return make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::FlushQueue);
 }
 
 ArchiveMessage::Message ArchiveMessage::MakeCompleteRequest()
 {
-    return make_shared<ArchiveMessage>(ArchiveMessage::Complete);
+    return make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::Complete);
 }
 
 ArchiveMessage::Message ArchiveMessage::MakeCancellationRequest()
 {
-    return make_shared<ArchiveMessage>(ArchiveMessage::Cancel);
+    return make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::Cancel);
 }
 
 ArchiveMessage::~ArchiveMessage(void) {}

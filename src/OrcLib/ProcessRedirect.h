@@ -34,8 +34,6 @@ class ORCLIB_API ProcessRedirect
 {
 
     friend class CommandExecute;
-    friend class std::shared_ptr<ProcessRedirect>;
-    friend class std::_Ref_count_obj<ProcessRedirect>;
 
 public:
     enum ProcessInOut
@@ -75,17 +73,17 @@ public:
     ~ProcessRedirect();
 
 private:
-    HANDLE m_ReadHandle;
-    HANDLE m_WriteHandle;
-    HANDLE m_DuplicateHandle;
-    ProcessInOut m_Select;
+    HANDLE m_ReadHandle = INVALID_HANDLE_VALUE;
+    HANDLE m_WriteHandle= INVALID_HANDLE_VALUE;
+    HANDLE m_DuplicateHandle= INVALID_HANDLE_VALUE;
+    ProcessInOut m_Select = ProcessInOut::StdOutput;
 
     std::shared_ptr<ByteStream> m_pBS;
-    bool m_bCloseStream;
+    bool m_bCloseStream = true;
 
-    PROCESS_REDIRECT m_ASyncIO;
+	PROCESS_REDIRECT m_ASyncIO{ 0 };
 
-    RedirectStatus m_Status;
+    RedirectStatus m_Status = RedirectStatus::Closed;
 
     logger _L_;
 
@@ -100,6 +98,7 @@ private:
 
     HRESULT ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD dwNumberOfBytesTransfered);
 
+protected:
     ProcessRedirect(logger pLog, ProcessInOut selection);
 };
 

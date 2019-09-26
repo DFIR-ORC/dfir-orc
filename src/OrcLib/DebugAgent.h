@@ -40,8 +40,6 @@ struct CreateProcessArgs
 
 class DebugAgent : public std::enable_shared_from_this<DebugAgent>
 {
-    friend class std::shared_ptr<DebugAgent>;
-    friend class std::_Ref_count_obj<DebugAgent>;
 
 private:
     logger _L_;

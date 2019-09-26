@@ -20,8 +20,6 @@ namespace Orc {
 
 class ORCLIB_API UploadNotification
 {
-    friend class std::shared_ptr<UploadNotification>;
-    friend class std::_Ref_count_obj<UploadNotification>;
 
 public:
     typedef enum _Status
@@ -47,50 +45,16 @@ public:
     typedef Concurrency::ITarget<Notification> ITarget;
     typedef Concurrency::ISource<Notification> ISource;
 
-private:
-    Status m_Status;
-    Type m_Type;
-    std::wstring m_keyword;
-    std::wstring m_description;
-    std::wstring m_path;
-    HRESULT m_hr;
-
-protected:
-    UploadNotification(Type type, Status status, const std::wstring& keyword, const std::wstring& descr, HRESULT hr)
-        : m_Type(type)
-        , m_Status(status)
-        , m_keyword(keyword)
-        , m_description(descr)
-        , m_hr(hr)
-    {
-    }
-
 public:
-    static Notification MakeSuccessNotification(Type type, const std::wstring& keyword)
-    {
-        return std::make_shared<UploadNotification>(type, Success, keyword, L"", S_OK);
-    }
+
+	static Notification MakeSuccessNotification(Type type, const std::wstring& keyword);
     static Notification
-    MakeFailureNotification(Type type, HRESULT hr, const std::wstring& keyword, const std::wstring& description)
-    {
-        return std::make_shared<UploadNotification>(type, Failure, keyword, description, hr);
-    }
+		MakeFailureNotification(Type type, HRESULT hr, const std::wstring& keyword, const std::wstring& description);
 
     static Notification
-    MakeUploadStartedSuccessNotification(const std::wstring& keyword, const std::wstring& strFileName)
-    {
-        auto retval =
-            std::make_shared<UploadNotification>(Started, Success, keyword, L"Archive creation started", S_OK);
-        retval->m_path = strFileName;
-        return retval;
-    }
+		MakeUploadStartedSuccessNotification(const std::wstring& keyword, const std::wstring& strFileName);
 
-    static Notification MakeAddFileSucessNotification(const std::wstring& keyword, const std::wstring& strFileName)
-    {
-        auto retval = std::make_shared<UploadNotification>(FileAddition, Success, keyword, L"", S_OK);
-        retval->m_path = strFileName;
-        return retval;
-    }
+	static Notification MakeAddFileSucessNotification(const std::wstring& keyword, const std::wstring& strFileName);
 
     Status GetStatus() const { return m_Status; };
     HRESULT GetHResult() const { return m_hr; };
@@ -101,6 +65,26 @@ public:
     const std::wstring& GetFileName() const { return m_path; }
 
     ~UploadNotification(void);
+
+private:
+    Status m_Status;
+    Type m_Type;
+    std::wstring m_keyword;
+    std::wstring m_description;
+    std::wstring m_path;
+    HRESULT m_hr;
+
+protected:
+
+    UploadNotification(Type type, Status status, const std::wstring& keyword, const std::wstring& descr, HRESULT hr)
+        : m_Type(type)
+        , m_Status(status)
+        , m_keyword(keyword)
+        , m_description(descr)
+        , m_hr(hr)
+    {
+    }
+
 };
 
 }  // namespace Orc

@@ -24,9 +24,6 @@ namespace Orc {
 
 class ORCLIB_API ArchiveMessage : public std::enable_shared_from_this<ArchiveMessage>
 {
-    friend class std::shared_ptr<ArchiveMessage>;
-    friend class std::_Ref_count_obj<ArchiveMessage>;
-
 public:
     enum Request
     {
@@ -71,7 +68,9 @@ private:
     bool m_bHashData;
     DWORD m_dwXORPattern;
 
-    ArchiveMessage(Request request)
+protected:
+    
+	ArchiveMessage(Request request)
         : m_Request(request)
         , m_Status(Open)
         , m_bHashData(false)

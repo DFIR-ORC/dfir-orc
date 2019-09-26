@@ -18,7 +18,7 @@
 
 #include "CaseInsensitive.h"
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 using namespace Orc;
 
 Orc::ArchiveFormat Archive::GetArchiveFormat(const std::wstring_view& filepath)

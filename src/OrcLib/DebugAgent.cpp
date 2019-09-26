@@ -244,7 +244,7 @@ std::shared_ptr<DebugAgent> DebugAgent::DebugProcess(
     const std::wstring& strDirectory,
     const std::wstring& strKeyword)
 {
-    auto pAgent = std::make_shared<DebugAgent>(pLog, strDirectory, strKeyword);
+    auto pAgent = std::shared_ptr<DebugAgent>(new DebugAgent(pLog, strDirectory, strKeyword));
     if (pAgent == nullptr)
         return pAgent;
 

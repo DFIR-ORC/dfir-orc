@@ -24,8 +24,6 @@ namespace Orc {
 
 class ORCLIB_API UploadMessage : public std::enable_shared_from_this<UploadMessage>
 {
-    friend class std::shared_ptr<UploadMessage>;
-    friend class std::_Ref_count_obj<UploadMessage>;
 
 public:
     enum Request
@@ -53,28 +51,6 @@ public:
 
     using ITarget = Concurrency::ITarget<Message>;
     using ISource = Concurrency::ISource<Message>;
-
-private:
-    Request m_Request;
-    Status m_Status;
-
-    std::wstring m_RemoteServerName;
-    std::wstring m_RemoteRoot;
-    std::wstring m_JobName;
-
-    std::wstring m_Local;
-    std::wstring m_Remote;
-    std::wstring m_Pattern;
-
-    std::shared_ptr<ByteStream> m_Stream;
-
-    bool m_bDeleteWhenDone;
-
-    UploadMessage(Request request)
-        : m_Request(request)
-        , m_Status(Opened)
-        , m_bDeleteWhenDone(false) {};
-
 public:
     static Message MakeUploadFileRequest(
         const std::wstring& szRemoteName,
@@ -108,6 +84,31 @@ public:
     const std::shared_ptr<ByteStream>& GetStream() const { return m_Stream; };
 
     ~UploadMessage(void);
+
+protected:
+
+    UploadMessage(Request request)
+        : m_Request(request)
+        , m_Status(Opened)
+        , m_bDeleteWhenDone(false) {};
+
+private:
+
+    Request m_Request;
+    Status m_Status;
+
+    std::wstring m_RemoteServerName;
+    std::wstring m_RemoteRoot;
+    std::wstring m_JobName;
+
+    std::wstring m_Local;
+    std::wstring m_Remote;
+    std::wstring m_Pattern;
+
+    std::shared_ptr<ByteStream> m_Stream;
+
+    bool m_bDeleteWhenDone;
+
 };
 }  // namespace Orc
 

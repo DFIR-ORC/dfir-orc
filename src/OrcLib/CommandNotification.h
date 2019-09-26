@@ -44,8 +44,6 @@ using PJOB_STATISTICS = JOB_STATISTICS*;
 
 class CommandNotification
 {
-    friend class std::shared_ptr<CommandNotification>;
-    friend class std::_Ref_count_obj<CommandNotification>;
 
 public:
     enum Result
@@ -94,6 +92,8 @@ private:
     PIO_COUNTERS m_pIoCounters;
 
     PJOB_STATISTICS m_pJobStats;
+
+protected:
 
     CommandNotification(Event result);
 

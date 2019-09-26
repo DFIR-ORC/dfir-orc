@@ -10,9 +10,13 @@
 
 using namespace Orc;
 
+struct ImportMessage_make_shared_enabler : public Orc::ImportMessage {
+	inline ImportMessage_make_shared_enabler() = default;
+};
+
 ImportMessage::Message ImportMessage::MakeBeforeStatementRequest(const ImportStatement& statement)
 {
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = BeforeImport;
     retval->m_Statement = statement;
@@ -21,7 +25,7 @@ ImportMessage::Message ImportMessage::MakeBeforeStatementRequest(const ImportSta
 
 ImportMessage::Message ImportMessage::MakeBeforeStatementRequest(ImportStatement&& statement)
 {
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = BeforeImport;
     std::swap(retval->m_Statement, statement);
@@ -33,7 +37,7 @@ ImportMessage::Message ImportMessage::MakeImportRequest(const ImportItem& item)
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = Import;
     retval->m_item = item;
@@ -45,7 +49,7 @@ ImportMessage::Message ImportMessage::MakeImportRequest(ImportItem&& item)
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = Import;
     std::swap(retval->m_item, item);
@@ -57,7 +61,7 @@ ImportMessage::Message ImportMessage::MakeExpandRequest(const ImportItem& item)
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = Expand;
     retval->m_item = item;
@@ -69,7 +73,7 @@ ImportMessage::Message ImportMessage::MakeExpandRequest(ImportItem&& item)
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = Expand;
     std::swap(retval->m_item, item);
@@ -81,7 +85,7 @@ ImportMessage::Message ImportMessage::MakeExtractRequest(const ImportItem& item)
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = Extract;
     retval->m_item = item;
@@ -93,7 +97,7 @@ ImportMessage::Message ImportMessage::MakeExtractRequest(ImportItem&& item)
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = Extract;
     std::swap(retval->m_item, item);
@@ -105,7 +109,7 @@ ImportMessage::Message ImportMessage::MakePipeImportRequest(const ImportItem& it
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = PipeImport;
     retval->m_item = item;
@@ -117,7 +121,7 @@ ImportMessage::Message ImportMessage::MakePipeImportRequest(ImportItem&& item)
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = PipeImport;
     std::swap(retval->m_item, item);
@@ -129,7 +133,7 @@ ImportMessage::Message ImportMessage::MakePipeExtractRequest(const ImportItem& i
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = PipeExtract;
     retval->m_item = item;
@@ -141,7 +145,7 @@ ImportMessage::Message ImportMessage::MakePipeExtractRequest(ImportItem&& item)
     if (item.Format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = PipeExtract;
     std::swap(retval->m_item, item);
@@ -149,7 +153,7 @@ ImportMessage::Message ImportMessage::MakePipeExtractRequest(ImportItem&& item)
 }
 ImportMessage::Message ImportMessage::MakeAfterStatementRequest(const ImportStatement& statement)
 {
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = AfterImport;
     retval->m_Statement = statement;
@@ -158,7 +162,7 @@ ImportMessage::Message ImportMessage::MakeAfterStatementRequest(const ImportStat
 
 ImportMessage::Message ImportMessage::MakeAfterStatementRequest(ImportStatement&& statement)
 {
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = AfterImport;
     std::swap(retval->m_Statement, statement);
@@ -167,7 +171,7 @@ ImportMessage::Message ImportMessage::MakeAfterStatementRequest(ImportStatement&
 
 ImportMessage::Message ImportMessage::MakeCompleteRequest()
 {
-    auto retval = std::make_shared<ImportMessage>();
+    auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
 
     retval->m_Request = Complete;
     return retval;

@@ -22,8 +22,6 @@ namespace Orc {
 
 class ArchiveNotification
 {
-    friend class std::shared_ptr<ArchiveNotification>;
-    friend class std::_Ref_count_obj<ArchiveNotification>;
 
 public:
     enum Status
@@ -73,45 +71,19 @@ protected:
     }
 
 public:
-    static Notification MakeSuccessNotification(Type type, const std::wstring& keyword)
-    {
-        return std::make_shared<ArchiveNotification>(type, Success, keyword, L"", S_OK);
-    }
+	static Notification MakeSuccessNotification(Type type, const std::wstring& keyword);
     static Notification
-    MakeFailureNotification(Type type, HRESULT hr, const std::wstring& keyword, const std::wstring& description)
-    {
-        return std::make_shared<ArchiveNotification>(type, Failure, keyword, description, hr);
-    }
+		MakeFailureNotification(Type type, HRESULT hr, const std::wstring& keyword, const std::wstring& description);
 
     static Notification MakeArchiveStartedSuccessNotification(
         const std::wstring& keyword,
         const std::wstring& strFileName,
-        const std::wstring& strCompressionLevel)
-    {
-        auto retval =
-            std::make_shared<ArchiveNotification>(ArchiveStarted, Success, keyword, L"Archive creation started", S_OK);
-
-        retval->m_strFileName = strFileName;
-        retval->m_strCompressionLevel = strCompressionLevel;
-        return retval;
-    }
+		const std::wstring& strCompressionLevel);
 
     static Notification
-    MakeAddFileSucessNotification(const std::wstring& keyword, CBinaryBuffer& md5, CBinaryBuffer& sha1)
-    {
-        auto retval = std::make_shared<ArchiveNotification>(FileAddition, Success, keyword, L"", S_OK);
-        retval->m_md5 = md5;
-        retval->m_sha1 = sha1;
-        return retval;
-    }
+		MakeAddFileSucessNotification(const std::wstring& keyword, CBinaryBuffer& md5, CBinaryBuffer& sha1);
     static Notification
-    MakeAddFileSucessNotification(const std::wstring keyword, CBinaryBuffer&& md5, CBinaryBuffer&& sha1)
-    {
-        auto retval = std::make_shared<ArchiveNotification>(FileAddition, Success, keyword, L"", S_OK);
-        std::swap(retval->m_md5, md5);
-        std::swap(retval->m_sha1, sha1);
-        return retval;
-    }
+		MakeAddFileSucessNotification(const std::wstring keyword, CBinaryBuffer&& md5, CBinaryBuffer&& sha1);
 
     Status GetStatus() const { return m_Status; };
     HRESULT GetHResult() const { return m_hr; };

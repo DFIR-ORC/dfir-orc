@@ -24,10 +24,10 @@ void Main::PrintUsage()
     log::Info(
         _L_,
         L"\n"
-        L"usage: DFIR-Orc.exe GetSamples [/GetThisConfig=GetThisConfig.xml] [/Out=GetSample.7z] "
-        L"[/Autoruns[=<AutoRuns.xml>]] "
-        L"[/TempDir=c:\\temp]\r\n"
-        L"\r\n"
+        L"usage: DFIR-Orc.exe GetSamples [/Config=GetSamplesConfig.xml] [/Out=GetSample.7z]\r\n"
+        L"                               [/GetThisConfig=GetThisConfig.xml] [/Autoruns[=<AutoRuns.xml>]]\r\n"
+        L"                               [/TempDir=c:\\temp]\r\n"
+        L"\r\n\r\n"
         L"\t/GetThisConfig=GetThisConfig.xml : Output result config file for GetThis into GetThisConfig.xml\r\n"
         L"\t/SampleInfo=GetSamplesInfo.csv   : Collect sample related information into GetSamplesInfo.csv\r\n"
         L"\t/TimeLine=Timeline.csv           : Collect timeline related informatin into Timeline.csv\r\n"

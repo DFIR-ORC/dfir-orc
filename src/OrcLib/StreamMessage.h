@@ -19,7 +19,6 @@ namespace Orc {
 
 class ORCLIB_API StreamMessage
 {
-    friend class std::shared_ptr<StreamMessage>;
 
 public:
     enum StreamRequest
