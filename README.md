@@ -13,7 +13,7 @@ https://dfir-orc.github.io
 - Kitware's CMake >= 3.12 or Visual Studio 2017 integrated version
 - LLVM's Clang Format >= 8.0.0 or Visual Studio 2019 integrated version
 
-NB: Visual Studio 2019 16.3 (released 23/9/2019) does not compile DFIR ORC currently. A fix is under way.
+NB: Visual Studio 2019 16.3 (and 16.4 preview 1) can now compile DFIR ORC.
 
 Build environment can be setup quickly using [Microsoft's developer virtual machines](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines). Import this [.vsconfig](.vsconfig) from **Visual Studio Installer**.
 
