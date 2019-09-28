@@ -1055,7 +1055,7 @@ wstring FileFind::SearchTerm::GetDescription() const
             stream << L", ";
         stream << L"MD5=";
         for (DWORD i = 0; i < BYTES_IN_MD5_HASH; i++)
-            stream << fmt::format(L"{02X}", MD5[i]);
+            stream << fmt::format(L"{:02X}", MD5[i]);
         bFirst = false;
     }
     if (Required & SearchTerm::Criteria::DATA_SHA1)
@@ -1065,7 +1065,7 @@ wstring FileFind::SearchTerm::GetDescription() const
         stream << L"SHA1=";
 
         for (DWORD i = 0; i < BYTES_IN_SHA1_HASH; i++)
-            stream << fmt::format(L"{02X}", SHA1[i]);
+            stream << fmt::format(L"{:02X}", SHA1[i]);
         bFirst = false;
     }
     if (Required & SearchTerm::Criteria::DATA_SHA256)
@@ -1075,7 +1075,7 @@ wstring FileFind::SearchTerm::GetDescription() const
         stream << L"SHA256=";
 
         for (DWORD i = 0; i < BYTES_IN_SHA256_HASH; i++)
-            stream << fmt::format(L"{02X}", SHA256[i]);
+            stream << fmt::format(L"{:02X}", SHA256[i]);
         bFirst = false;
     }
 
