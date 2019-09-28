@@ -801,7 +801,7 @@ public:
 
         if (dwErrorCount > 0)
         {
-            log::Info(_L_, L"\r\nInformation         : %d errors occured during program execution\r\n", dwErrorCount);
+            log::Info(_L_, L"\r\nInformation           : %d errors occured during program execution\r\n", dwErrorCount);
         }
 
         {

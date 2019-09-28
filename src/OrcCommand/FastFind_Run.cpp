@@ -75,7 +75,7 @@ HRESULT Main::RunFileSystem()
                             {
                                 log::Info(
                                     _L_,
-                                    L"Found (deleted)     : %s (%s)\r\n",
+                                    L"Found (deleted)       : %s (%s)\r\n",
                                     aNameMatch.FullPathName.c_str(),
                                     strMatchDescr.c_str());
                             }
@@ -83,7 +83,7 @@ HRESULT Main::RunFileSystem()
                             {
                                 log::Info(
                                     _L_,
-                                    L"Found               : %s (%s)\r\n",
+                                    L"Found                 : %s (%s)\r\n",
                                     aNameMatch.FullPathName.c_str(),
                                     strMatchDescr.c_str());
                             }
@@ -323,7 +323,7 @@ HRESULT Main::RunObject()
 
                     // Dropping here means no previous test rejected the object
                     log::Info(
-                        _L_, L"Found               : %s (%s)\r\n", object.Path.c_str(), spec.Description().c_str());
+                        _L_, L"Found                 : %s (%s)\r\n", object.Path.c_str(), spec.Description().c_str());
 
                     LogObjectMatch(object);
                 }
