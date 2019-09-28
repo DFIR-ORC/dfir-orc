@@ -99,7 +99,7 @@ public:
     std::optional<std::wstring> FieldName;
     HRESULT m_HRESULT = E_FAIL;
 
-    HRESULT PrintMessage(const Orc::logger& L);
+    HRESULT PrintMessage(const Orc::logger& L) const;
 
     virtual const char* what() const override;
 

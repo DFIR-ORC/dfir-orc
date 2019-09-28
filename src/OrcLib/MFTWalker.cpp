@@ -1654,17 +1654,22 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
             DeleteRecord(pRecord);
         }
     }
-    catch (Orc::Exception& e)
+    catch (const Orc::Exception& e)
     {
         e.PrintMessage(_L_);
-        log::Error((_L_), E_FAIL, L"\r\nError while parsing record %.16I64X\r\n", ullRecordIndex);
+        log::Error((_L_), E_FAIL, L"\r\nError while parsing record 0x%.16I64X\r\n", ullRecordIndex);
         pAddedRecord = nullptr;
     }
-    catch (...)
-    {
-        log::Error((_L_), E_FAIL, L"\r\nParsing record %.16I64X threw an exception\r\n", ullRecordIndex);
+	catch (const std::exception & e)
+	{
+        log::Error((_L_), E_FAIL, L"\r\nParsing record 0x%.16I64X threw exception \"%S\"\r\n", ullRecordIndex, e.what());
         pAddedRecord = nullptr;
-    }
+	}
+	catch (...)
+	{
+	    log::Error((_L_), E_FAIL, L"\r\nParsing record 0x%.16I64X threw an exception\r\n", ullRecordIndex);
+	    pAddedRecord = nullptr;
+	}
     if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
         return hr;  // if hr==ERROR_NO_MORE_FILES we return this result to allow the walker to stop enumeration. All
                     // other HRs are ignored
@@ -1851,6 +1856,10 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
         e.PrintMessage(_L_);
         log::Error(_L_, E_FAIL, L"\r\nError while parsing record %.16I64X\r\n", ullRecordIndex);
     }
+	catch (const std::exception & e)
+	{
+        log::Error((_L_), E_FAIL, L"\r\nParsing record 0x%.16I64X threw exception \"%S\"\r\n", ullRecordIndex, e.what());
+	}
     catch (...)
     {
         log::Error(_L_, E_FAIL, L"\r\nParsing record %.16I64X threw an exception\r\n", ullRecordIndex);
