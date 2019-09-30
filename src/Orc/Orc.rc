@@ -2,6 +2,8 @@
 //
 #include "resource.h"
 
+#include "ToolVersion.h"
+
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -17,7 +19,6 @@
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
-#pragma code_page(1252)
 
 
 // Icon with lowest ID value placed first to ensure application icon
@@ -46,12 +47,12 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "FileDescription", "DFIR-Orc Utility"
-            VALUE "FileVersion", "10.0.0.000"
-            VALUE "InternalName", "DFIR-Orc"
-            VALUE "OriginalFilename", "DFIR-Orc"
-            VALUE "ProductName", "DIR-Orc"
-            VALUE "ProductVersion", "8.3.0.000"
+			VALUE "FileDescription", "DFIR-ORC Utility"
+			VALUE "FileVersion", STRFILEVER
+			VALUE "InternalName", "DFIR-ORC"
+			VALUE "OriginalFilename", "DFIR-ORC"
+			VALUE "ProductName", WSTRPRODUCTNAME
+			VALUE "ProductVersion", STRPRODUCTVER
         END
     END
     BLOCK "VarFileInfo"

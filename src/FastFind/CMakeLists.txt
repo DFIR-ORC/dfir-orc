@@ -23,6 +23,7 @@ add_executable(FastFind
     "stdafx.cpp"
     ${SRC}
     "FastFind.rc"
+	"Compatibility.manifest"
 )
 
 target_include_directories(FastFind PRIVATE ${Boost_INCLUDE_DIRS})
