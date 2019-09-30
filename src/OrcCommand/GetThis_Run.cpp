@@ -807,7 +807,7 @@ Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output
         {
             sample_ref.HashStream->GetMD5(const_cast<CBinaryBuffer&>(sample_ref.MD5));
             sample_ref.HashStream->GetSHA1(const_cast<CBinaryBuffer&>(sample_ref.SHA1));
-            sample_ref.HashStream->GetSHA256(const_cast<CBinaryBuffer&>(sample_ref.SHA1));
+            sample_ref.HashStream->GetSHA256(const_cast<CBinaryBuffer&>(sample_ref.SHA256));
         }
 
         if (sample_ref.FuzzyHashStream)
