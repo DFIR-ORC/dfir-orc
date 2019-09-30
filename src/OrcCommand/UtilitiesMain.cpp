@@ -403,6 +403,8 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
                 GetEncoding(anOutput.OutputEncoding));
             break;
         case OutputSpec::Kind::StructuredFile:
+        case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::XML:
+        case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON:
             log::Info(
                 _L_,
                 L"%-8.8s structured   : %s%s%s\r\n",

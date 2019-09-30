@@ -437,7 +437,7 @@ HRESULT Main::Run()
     if (config.outRegsitry.Type != OutputSpec::Kind::None)
         pObjectWriter = TableOutput::GetWriter(_L_, L"FastFind_Object", config.outObject);
 
-    if (config.outStructured.Type == OutputSpec::Kind::StructuredFile)
+    if (config.outStructured.Type & OutputSpec::Kind::StructuredFile)
     {
         pWriterOutput = StructuredOutputWriter::GetWriter(_L_, config.outStructured);
     }

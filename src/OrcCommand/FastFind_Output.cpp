@@ -52,6 +52,10 @@ void Main::PrintParameters()
     {
         log::Info(_L_, L"Version               : %s\r\n", config.strVersion.c_str());
     }
+	PrintOutputOption(L"Filesystem", config.outFileSystem);
+	PrintOutputOption(L"Registry", config.outRegsitry);
+	PrintOutputOption(L"Object", config.outObject);
+	PrintOutputOption(L"Structured", config.outStructured);
 
     SaveAndPrintStartTime();
 }
