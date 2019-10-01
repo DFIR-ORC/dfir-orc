@@ -2236,7 +2236,7 @@ FileFind::SearchTerm::Criteria FileFind::ExactEA(
                     return !_wcsicmp(item.first.c_str(), aTerm->EAName.c_str());
                 });
             if (found != end(ea_attr->Items()))
-                return SearchTerm::Criteria::EA_REGEX;
+                return SearchTerm::Criteria::EA_EXACT;
         }
     }
     return SearchTerm::Criteria::NONE;
