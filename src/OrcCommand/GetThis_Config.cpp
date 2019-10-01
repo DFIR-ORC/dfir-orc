@@ -396,15 +396,6 @@ HRESULT Main::CheckConfiguration()
 
     config.Locations.Consolidate((bool)config.bAddShadows, FSVBR::FSType::NTFS);
 
-    if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
-    {
-        log::Info(_L_, L"\r\nINFO: Not output explicitely specified: creating GetThis.7z in current directory\r\n");
-        config.Output.Path = L"GetThis.7z";
-        config.Output.Type = OutputSpec::Kind::Archive;
-        config.Output.ArchiveFormat = ArchiveFormat::SevenZip;
-        config.Output.Compression = L"Normal";
-    }
-
     if (!config.strExtractCab.empty())
     {
         if (config.Output.Path.empty())
@@ -425,6 +416,15 @@ HRESULT Main::CheckConfiguration()
         }
 
         return S_OK;
+    }
+
+    if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
+    {
+        log::Info(_L_, L"\r\nINFO: Not output explicitely specified: creating GetThis.7z in current directory\r\n");
+        config.Output.Path = L"GetThis.7z";
+        config.Output.Type = OutputSpec::Kind::Archive;
+        config.Output.ArchiveFormat = ArchiveFormat::SevenZip;
+        config.Output.Compression = L"Normal";
     }
 
     if (config.content.Type == ContentType::INVALID)
