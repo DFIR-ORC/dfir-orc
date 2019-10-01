@@ -256,7 +256,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         log::Error(
                             _L_,
                             E_INVALIDARG,
-                            L"Option /Names should be like: /Names=Kernel32.dll,nt*.sys,:ADName,*.txt#EAName\r\n");
+                            L"Option /Names should be like: /Names=Kernel32.dll,nt*.sys,:ADSName,*.txt#EAName\r\n");
                         return E_INVALIDARG;
                     }
                     else
