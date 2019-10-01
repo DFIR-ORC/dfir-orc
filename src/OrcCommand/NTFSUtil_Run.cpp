@@ -385,9 +385,20 @@ HRESULT Main::PrintRecordDetails(const std::shared_ptr<VolumeReader>& volReader,
 
     log::Info(
         _L_,
-        L"\r\nRECORD 0x%.16I64X %s\r\n",
+        L"\r\nRECORD 0x%.16I64X %s%s%s%s%s%s%s%s%s\r\n",
         pRecord->GetSafeMFTSegmentNumber(),
-        pRecord->IsRecordInUse() ? L"(in use)" : L"(deleted)");
+        pRecord->IsRecordInUse()    ? L"(in use)" : L"(deleted)",
+		pRecord->IsDirectory()      ? L" (directory)" : L"",
+		pRecord->IsBaseRecord()     ? L" (base)" : L" (child)",
+		pRecord->IsJunction()       ? L" (junction)" : L"",
+		pRecord->IsOverlayFile()    ? L" (overlay)" : L"",
+		pRecord->IsSymbolicLink()   ? L" (symlink)" : L"",
+		pRecord->HasExtendedAttr()  ? L" (has extended attr)" : L"",
+		pRecord->HasNamedDataAttr() ? L" (has named $DATA)" : L"",
+		pRecord->HasReparsePoint()  ? L" (has reparse point)" : L""
+		);
+
+	
 
     const auto& children = pRecord->GetChildRecords();
 
