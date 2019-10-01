@@ -63,8 +63,8 @@ constexpr auto REGEX_MOUNTED_VOLUME_ID = 3;
 
 // \\?\GLOBALROOT\Device\HarddiskVolume3 || \\.\HarddiskVolume1 https://regex101.com/r/2Trar8/3
 constexpr auto REGEX_MOUNTED_HARDDISKVOLUME =
-    LR"RAW((\\\\((\?|\.)\\GLOBALROOT)?)?(\\Device)?\\HarddiskVolume([0-9]+).*)RAW";
-constexpr auto REGEX_MOUNTED_HARDDISKVOLUME_ID = 5;
+    LR"RAW((\\\\((\?|\.)(\\GLOBALROOT)?)?)?(\\Device)?\\HarddiskVolume([0-9]+).*)RAW";
+constexpr auto REGEX_MOUNTED_HARDDISKVOLUME_ID = 6;
 
 // \\\\?\\C:\\[\\subdir]
 constexpr auto REGEX_MOUNTED_DRIVE = L"(\\\\\\\\(\\?|\\.)\\\\)?([a-zA-Z]):((\\\\)?.*)$";
