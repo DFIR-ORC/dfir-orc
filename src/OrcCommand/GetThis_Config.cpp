@@ -409,7 +409,7 @@ HRESULT Main::CheckConfiguration()
 
             if (FAILED(hr = GetOutputDir(aDir.wstring().c_str(), config.Output.Path)))
             {
-                log::Error(_L_, hr, L"Could not use %s as output dir\r\n", L"Defaut");
+                log::Error(_L_, hr, L"Could not use %s as output dir\r\n", L"Default");
                 return hr;
             }
             log::Info(_L_, L"Information: output directory omitted, using %s\r\n", config.Output.Path.c_str());

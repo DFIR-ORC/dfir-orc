@@ -27,7 +27,7 @@ void Main::PrintUsage()
     log::Info(
         _L_,
         L"\r\n"
-        L"usage: DFIR-Orc.exe GetThis [/out=<Cabinet.cab|Archive.zip|Archive.7z>] [/XOR=0xBADF00D0] "
+        L"Usage: DFIR-Orc.exe GetThis [/out=<Cabinet.cab|Archive.zip|Archive.7z>] [/XOR=0xBADF00D0] "
         L"\t[/sample=<SampleFile>]\r\n"
         L"\t[/config=<ConfigFile>] <foldername>...\r\n"
         L"\r\n"
@@ -56,7 +56,7 @@ void Main::PrintUsage()
         L"\r\n"
         L"\r\n"
         L"\r\n"
-        L"\tExtraction syntax:  GetThis.Exe [/extract=<Cabinet.cab>] [/outdir=<Folder>] \r\n"
+        L"\tExtraction syntax:  GetThis.exe [/extract=<Cabinet.cab>] [/outdir=<Folder>] \r\n"
         L"\r\n"
         L"\t/extract=<Cabinet.cab> : Cabinet file <Cabinet.cab> is to be extracted\r\n"
         L"\t/outdir=<Folder>       : Files will be extracted into <Folder>\r\n"
@@ -143,10 +143,9 @@ void Main::PrintParameters()
 
         for (const auto& aSpec : config.listofSpecs)
         {
-
             if (!config.limits.bIgnoreLimits)
             {
-                log::Info(_L_, L"   Sample : %s", aSpec.Name.c_str());
+                log::Info(_L_, L"   Sample: %s", aSpec.Name.c_str());
                 if (aSpec.PerSampleLimits.dwlMaxBytesPerSample != INFINITE)
                 {
                     log::Info(_L_, L" (max %I64d bytes per sample)", aSpec.PerSampleLimits.dwlMaxBytesPerSample);
@@ -162,7 +161,7 @@ void Main::PrintParameters()
             }
             else
             {
-                log::Info(_L_, L"   Sample : %s", aSpec.Name.c_str());
+                log::Info(_L_, L"   Sample: %s", aSpec.Name.c_str());
             }
             switch (aSpec.Content.Type)
             {
