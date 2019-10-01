@@ -3,7 +3,7 @@
 
   <output encoding="UTF16">c:\temp\reginfo</output>
 
-  <information>ComputerName,TemplateName,ResearchDescription,LastModificationDate,KeyName,KeyTree,ValueName,ValueType,ValueData</information>
+  <information>ComputerName,TemplateName,SearchTerm,LastModificationDate,KeyName,KeyTree,ValueName,ValueType,ValueData</information>
 
   <location>%SystemDrive%</location>
 

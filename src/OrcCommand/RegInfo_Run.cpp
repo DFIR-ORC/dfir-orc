@@ -41,7 +41,7 @@ Main::RegInfoDescription Main::_InfoDescription[] = {
     {REGINFO_COMPUTERNAME, L"ComputerName", L"Name of computer"},
 
     {REGINFO_TERMNAME, L"TemplateName", L"Name of associated template"},
-    {REGINFO_TERMDESCRIPTION, L"TermDescription", L"Term description"},
+    {REGINFO_TERMDESCRIPTION, L"SearchTerm", L"Search Term description"},
 
     {REGINFO_LASTMODDATE, L"LastModificationDate", L"Date the _key_ was last modified"},
 
