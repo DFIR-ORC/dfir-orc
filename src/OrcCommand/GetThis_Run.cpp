@@ -1085,7 +1085,6 @@ HRESULT Main::Run()
     {
         try
         {
-
             if (config.bFlushRegistry)
             {
                 if (FAILED(hr = RegFlushKeys()))

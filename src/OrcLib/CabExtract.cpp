@@ -425,7 +425,7 @@ INT_PTR CabExtract::FDINotify(__in FDINOTIFICATIONTYPE fdint, __in PFDINOTIFICAT
                 {
                     auto hashstream = make_shared<CryptoHashStream>(_L_);
                     if (FAILED(
-                            hr = hashstream->OpenToRead(
+                            hr = hashstream->OpenToWrite(
                                 static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1),
                                 filestream)))
                         return piRetVal;
@@ -444,7 +444,7 @@ INT_PTR CabExtract::FDINotify(__in FDINOTIFICATIONTYPE fdint, __in PFDINOTIFICAT
                 if (m_bComputeHash)
                 {
                     auto hashstream = make_shared<CryptoHashStream>(_L_);
-                    if (FAILED(hashstream->OpenToRead(
+                    if (FAILED(hashstream->OpenToWrite(
                             static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1),
                             filestream)))
                         return piRetVal;

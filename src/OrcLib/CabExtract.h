@@ -26,7 +26,6 @@ namespace Orc {
 
 class ORCLIB_API CabExtract : public ArchiveExtract
 {
-    friend class ArchiveExtract;
 
 public:
 

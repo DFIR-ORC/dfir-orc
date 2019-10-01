@@ -303,6 +303,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             config.listofSpecs.push_back(aSpec);
                         }
                     }
+                    else if (OutputFileOption(argv[i] + 1, L"Extract", config.strExtractCab))
+                        ;
                     else if (BooleanOption(argv[i] + 1, L"FlushRegistry", config.bFlushRegistry))
                         ;
                     else if (BooleanOption(argv[i] + 1, L"ReportAll", config.bReportAll))
@@ -421,6 +423,8 @@ HRESULT Main::CheckConfiguration()
             }
             log::Info(_L_, L"Information: output directory omitted, using %s\r\n", config.Output.Path.c_str());
         }
+
+        return S_OK;
     }
 
     if (config.content.Type == ContentType::INVALID)
