@@ -207,15 +207,34 @@ HRESULT FileFind::Match::Write(const logger& pLog, ITableOutput& output, const F
 
             output.WriteString(strMatchDescr.c_str());
 
-            output.WriteFileTime(StandardInformation->CreationTime);
-            output.WriteFileTime(StandardInformation->LastModificationTime);
-            output.WriteFileTime(StandardInformation->LastAccessTime);
-            output.WriteFileTime(StandardInformation->LastChangeTime);
-
-            output.WriteFileTime(name_it->FILENAME()->Info.CreationTime);
-            output.WriteFileTime(name_it->FILENAME()->Info.LastModificationTime);
-            output.WriteFileTime(name_it->FILENAME()->Info.LastAccessTime);
-            output.WriteFileTime(name_it->FILENAME()->Info.LastChangeTime);
+			if (StandardInformation)
+			{
+				output.WriteFileTime(StandardInformation->CreationTime);
+				output.WriteFileTime(StandardInformation->LastModificationTime);
+				output.WriteFileTime(StandardInformation->LastAccessTime);
+				output.WriteFileTime(StandardInformation->LastChangeTime);
+			}
+			else
+			{
+				output.WriteNothing();
+				output.WriteNothing();
+				output.WriteNothing();
+				output.WriteNothing();
+			}
+			if (name_it->FILENAME())
+			{
+				output.WriteFileTime(name_it->FILENAME()->Info.CreationTime);
+				output.WriteFileTime(name_it->FILENAME()->Info.LastModificationTime);
+				output.WriteFileTime(name_it->FILENAME()->Info.LastAccessTime);
+				output.WriteFileTime(name_it->FILENAME()->Info.LastChangeTime);
+			}
+			else
+			{
+				output.WriteNothing();
+				output.WriteNothing();
+				output.WriteNothing();
+				output.WriteNothing();
+			}
 
             output.WriteNothing();
             output.WriteNothing();
