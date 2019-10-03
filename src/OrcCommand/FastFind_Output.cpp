@@ -40,6 +40,9 @@ void Main::PrintUsage()
         L"\t/object=<FileName>.csv      : All System objects related finds are logged in <FileName>.csv\r\n"
         L"\t/out=<FileName.xml>         : All finds are logged into an XML file\r\n"
         L"\t/yara=<Rules.Yara>          : Add rules files for Yara scan\r\n"
+		L"\t/SkipDeleted                : Do not attempt to match against deleted records\r\n"
+		L"\t/Names=<NamesSpec>          : Add names to search terms (Kernel32.dll,nt*.sys,:ADSName,*.txt#EAName)\r\n"
+		L"\t/Version=<Description>      : Add a version description to FastFind output\r\n"
         L"\r\n");
     return;
 }
