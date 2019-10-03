@@ -373,6 +373,8 @@ set(SRC_INOUT_BYTESTREAM_SYSTEMSTREAM
     "PipeStream.h"
     "ResourceStream.cpp"
     "ResourceStream.h"
+	"SparseStream.cpp"
+	"SparseStream.h"
 )
 
 source_group(In&Out\\ByteStream\\SystemStream
