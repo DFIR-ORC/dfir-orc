@@ -117,7 +117,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.bConfigure)
     {
-        if (config.strVolume.empty() && config.cmd != Main::EnumLocations)
+        if (config.strVolume.empty() && config.cmd == Main::USN)
         {
             log::Error(_L_, E_INVALIDARG, L"No volume set to be configured\r\n");
             return E_INVALIDARG;
