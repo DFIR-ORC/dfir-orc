@@ -168,7 +168,7 @@ HRESULT MFTRecord::ParseRecord(
                     if (m_pAttributeList->m_AttList.size() > 200)
                     {
                         log::Warning(
-                            pLog, E_UNEXPECTED, L"Attribute list size exceeds 50 entries. Probably corrupted...\r\n");
+                            pLog, E_UNEXPECTED, L"Attribute list size has %d entries. Probably corrupted...\r\n", m_pAttributeList->m_AttList.size());
                     }
                     m_pAttributeList->m_AttList.push_back(ale);
                 }
