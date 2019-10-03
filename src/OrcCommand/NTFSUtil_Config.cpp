@@ -124,12 +124,12 @@ HRESULT Main::CheckConfiguration()
         }
         if (config.dwlMaxSize == 0 && config.dwlMinSize == 0)
         {
-            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used\r\n");
+            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used (at least minsize or maxsize must be specified)\r\n");
             return E_INVALIDARG;
         }
         else if ((config.dwlMaxSize == 0 || config.dwlMinSize == 0) && config.dwlAllocDelta == 0)
         {
-            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used\r\n");
+            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used (allocation delta is missing)\r\n");
             return E_INVALIDARG;
         }
     }
