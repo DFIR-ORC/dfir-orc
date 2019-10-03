@@ -33,11 +33,12 @@ void Main::PrintUsage()
         L"\t/debug                      : Adds debug information (Source File Name, Line number) to output, outputs to "
         L"debugger (OutputDebugString)\r\n"
         L"\t/noconsole                  : Turns off console logging\r\n"
+		L"\t/config=<ConfigFile>        : Configuration file (or resource reference)\r\n"
         L"\t/logfile=<FileName>         : All output is duplicated to logfile <FileName>\r\n"
-        L"\t/filesystem=<FileName>      : All NTFS related finds are logged in <FileName>\r\n"
-        L"\t/registry=<FileName>        : All registry related finds are logged in <FileName>\r\n"
-        L"\t/object=<FileName>          : All System objects related finds are logged in <FileName>\r\n"
-        L"\t/out=<FileName|Directory>   : All finds are logged into an XML file or directory\r\n"
+        L"\t/filesystem=<FileName>.csv  : All NTFS related finds are logged in <FileName>.csv\r\n"
+        L"\t/registry=<FileName>.csv    : All registry related finds are logged in <FileName>.csv\r\n"
+        L"\t/object=<FileName>.csv      : All System objects related finds are logged in <FileName>.csv\r\n"
+        L"\t/out=<FileName.xml>         : All finds are logged into an XML file\r\n"
         L"\t/yara=<Rules.Yara>          : Add rules files for Yara scan\r\n"
         L"\r\n");
     return;
