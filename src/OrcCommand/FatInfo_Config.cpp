@@ -257,6 +257,10 @@ HRESULT Main::CheckConfiguration()
     {
         SystemDetails::GetOrcComputerName(m_Config.strComputerName);
     }
+	else
+	{
+		SystemDetails::SetOrcComputerName(m_Config.strComputerName);
+	}
 
     m_Config.locs.Consolidate(false, FSVBR::FSType::FAT);
 
