@@ -1030,7 +1030,7 @@ HRESULT Main::PrintMasterFileDetails()
 
             log::Info(
                 _L_,
-                L"\r\nMaster File Table for volume %s\r\n\tcontains %I64d records\r\n\tis located at ofset 0x%.16I64X "
+                L"\r\nMaster File Table for volume %s\r\n\tcontains %I64d records\r\n\tis located at offset 0x%.16I64X "
                 L"in the volume\r\n\r\n",
                 loc->GetLocation().c_str(),
                 pMFT->GetMFTRecordCount(),
@@ -1049,7 +1049,7 @@ HRESULT Main::PrintMasterFileDetails()
 
             log::Info(
                 _L_,
-                L"\r\nMaster File Table for volume %s\r\n\tcontains %d records\r\n\tis located at ofset 0x%.16I64X in "
+                L"\r\nMaster File Table for volume %s\r\n\tcontains %d records\r\n\tis located at offset 0x%.16I64X in "
                 L"the volume\r\n\r\n",
                 loc->GetLocation().c_str(),
                 pMFT->GetMFTRecordCount(),
