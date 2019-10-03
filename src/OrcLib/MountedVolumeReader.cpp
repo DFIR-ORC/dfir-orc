@@ -156,13 +156,21 @@ HRESULT MountedVolumeReader::GetDiskExtents()
             {
                 if (GetLastError() == ERROR_NOT_SUPPORTED)
                 {
-                    // VMWare does not support this IOCTL, we default to DiskGeometry.Geometry.BytesPerSector
+                    // at least VMWare does not support this IOCTL, we default to DiskGeometry.Geometry.BytesPerSector
                     Extent.m_PhysicalSectorSize = Extent.m_LogicalSectorSize = DiskGeometryEx.Geometry.BytesPerSector;
                 }
-                else
-                {
+				else if (GetLastError() == ERROR_INVALID_FUNCTION)
+				{
+                    log::Warning(
+                        _L_,
+                        hr = HRESULT_FROM_WIN32(GetLastError()),
+                        L"IOCTL_STORAGE_QUERY_PROPERTY does not support StorageAccessAlignmentProperty for this device \"%s\"\r\n", Extent.GetName().c_str());
+                    Extent.m_PhysicalSectorSize = Extent.m_LogicalSectorSize = DiskGeometryEx.Geometry.BytesPerSector;
+				}
+				else
+				{
                     log::Error(
-                        (_L_),
+                        _L_,
                         hr = HRESULT_FROM_WIN32(GetLastError()),
                         L"Failed to retrieve Disk alignment Info ... (IOCTL_STORAGE_QUERY_PROPERTY)\r\n");
                     Extent.m_PhysicalSectorSize = Extent.m_LogicalSectorSize = DiskGeometryEx.Geometry.BytesPerSector;
