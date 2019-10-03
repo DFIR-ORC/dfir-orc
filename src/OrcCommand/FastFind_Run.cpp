@@ -429,13 +429,13 @@ HRESULT Main::Run()
     SystemDetails::GetOrcComputerName(ComputerName);
 
     if (config.outFileSystem.Type != OutputSpec::Kind::None)
-        pFileSystemWriter = TableOutput::GetWriter(_L_, L"FastFind_FileSystem", config.outFileSystem);
+        pFileSystemWriter = TableOutput::GetWriter(_L_, config.outFileSystem);
 
     if (config.outRegsitry.Type != OutputSpec::Kind::None)
-        pRegistryWriter = TableOutput::GetWriter(_L_, L"FastFind_Registry", config.outRegsitry);
+        pRegistryWriter = TableOutput::GetWriter(_L_, config.outRegsitry);
 
     if (config.outRegsitry.Type != OutputSpec::Kind::None)
-        pObjectWriter = TableOutput::GetWriter(_L_, L"FastFind_Object", config.outObject);
+        pObjectWriter = TableOutput::GetWriter(_L_, config.outObject);
 
     if (config.outStructured.Type & OutputSpec::Kind::StructuredFile)
     {
