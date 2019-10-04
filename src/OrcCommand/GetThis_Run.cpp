@@ -548,8 +548,6 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
 
             output.WriteInteger((DWORD)sampleRef.InstanceID);
 
-            output.WriteString((*match_it)->Term->GetDescription().c_str());
-
             output.WriteGUID(sampleRef.SnapshotID);
 
             if (!sampleRef.SHA256.empty())

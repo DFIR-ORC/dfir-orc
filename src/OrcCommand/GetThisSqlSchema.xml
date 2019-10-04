@@ -33,7 +33,6 @@
     <utf8   name="AttrType" maxlen="20"  />
     <utf8   name="AttrName" maxlen="256" />
     <uint32 name="AttrID"   allows_null="no" />
-    <utf16  name="SearchTerm" maxlen="128" />
 
     <guid name="SnapshotID" allows_null="no" />
     
