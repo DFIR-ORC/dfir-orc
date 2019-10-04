@@ -319,11 +319,10 @@ public:
             return S_OK;
         }
 
-        HRESULT Write(const logger& pLog, ITableOutput& output, const FILETIME& CollectionDate);
+        HRESULT Write(const logger& pLog, ITableOutput& output);
         HRESULT Write(
             const logger& pLog,
-            const std::shared_ptr<StructuredOutputWriter>& pWriter,
-            const FILETIME& CollectionDate);
+            const std::shared_ptr<StructuredOutputWriter>& pWriter);
 
         bool DeletedRecord;
         FILE_REFERENCE FRN;

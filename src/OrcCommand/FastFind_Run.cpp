@@ -90,9 +90,9 @@ HRESULT Main::RunFileSystem()
                         });
 
                     if (pFileSystemWriter)
-                        aMatch->Write(_L_, pFileSystemWriter->GetTableOutput(), CollectionDate);
+                        aMatch->Write(_L_, pFileSystemWriter->GetTableOutput());
                     if (pWriterOutput)
-                        aMatch->Write(_L_, pWriterOutput, CollectionDate);
+                        aMatch->Write(_L_, pWriterOutput);
 
                     return;
                 },
