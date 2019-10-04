@@ -197,11 +197,6 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 		config.strWalker = walker;
     }
 
-	if(!config.strWalker.compare(L"USN"))
-    {
-        log::Debug(_L_, L"USN requirement: 'EXACT' altitude enforced");
-        config.locs.GetAltitude() = LocationSet::Altitude::Exact;
-    }
 
     if (configitem[NTFSINFO_COMPUTER])
     {
@@ -293,12 +288,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             log::Error(
                                 _L_, E_INVALIDARG, L"Option /Walker should be like: /Walker=USN or /Walker=MFT\r\n");
                             return E_INVALIDARG;
-                        }
-
-                        if (!config.strWalker.compare(L"USN"))
-                        {
-                            log::Debug(_L_, L"USN requirement: 'EXACT' altitude enforced");
-                            config.locs.GetAltitude() = LocationSet::Altitude::Exact;
                         }
                     }
                     else if (ParameterOption(argv[i] + 1, L"Computer", config.strComputerName))
