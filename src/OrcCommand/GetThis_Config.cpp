@@ -253,7 +253,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     if (configitem[GETTHIS_HASH])
     {
         config.CryptoHashAlgs =
-            CryptoHashStream::GetSupportedAlgorithm(configitem[GETTHIS_FLUSHREGISTRY].strData.c_str());
+            CryptoHashStream::GetSupportedAlgorithm(configitem[GETTHIS_HASH].strData.c_str());
     }
     if (configitem[GETTHIS_FUZZYHASH])
     {

@@ -81,11 +81,10 @@ public:
             FileAttributes = fileAttributes;
         }
 
-        HRESULT Write(const logger& pLog, ITableOutput& output, const FILETIME& CollectionDate) const;
+        HRESULT Write(const logger& pLog, ITableOutput& output, const std::wstring& strDescription) const;
         HRESULT Write(
             const logger& pLog,
-            const std::shared_ptr<StructuredOutputWriter>& pWriter,
-            const FILETIME& CollectionDate) const;
+            const std::shared_ptr<StructuredOutputWriter>& pWriter) const;
     };
 
 private:

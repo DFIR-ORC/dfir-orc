@@ -36,6 +36,8 @@
         <utf8  name="ComputerName" maxlen="50"  />
         <utf16 name="FullName"     maxlen="32k" />
 
+        <utf16 name="Description" maxlen="256" />
+
     </table>
 
     <table key="FastFindObject">
@@ -47,6 +49,8 @@
         <utf16 name="ObjectPath"       maxlen="32K" allows_null="no" />
         <utf16 name="LinkTarget"       maxlen="32K" />
         <timestamp name="LinkCreationTime" />
+        
+        <utf16 name="Description" maxlen="256" />
 
     </table>
 

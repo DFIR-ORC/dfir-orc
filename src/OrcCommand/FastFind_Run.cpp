@@ -211,33 +211,37 @@ HRESULT Main::RunRegistry()
     return S_OK;
 }
 
-HRESULT Main::LogObjectMatch(const ObjectDirectory::ObjectInstance& obj)
+HRESULT Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::ObjectInstance& obj)
 {
     HRESULT hr = E_FAIL;
 
     if (pWriterOutput)
     {
-        obj.Write(_L_, pWriterOutput, CollectionDate);
+        obj.Write(_L_, pWriterOutput);
     }
     if (pObjectWriter)
     {
-        obj.Write(_L_, pObjectWriter->GetTableOutput(), CollectionDate);
+        obj.Write(_L_, pObjectWriter->GetTableOutput(), spec.Description());
     }
     return S_OK;
 }
 
-HRESULT Main::LogObjectMatch(const FileDirectory::FileInstance& file)
+HRESULT Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const FileDirectory::FileInstance& file)
 {
     HRESULT hr = E_FAIL;
 
     if (pWriterOutput)
     {
-        file.Write(_L_, pWriterOutput, CollectionDate);
+        pWriterOutput->BeginElement(L"object_match");
+        pWriterOutput->WriteNameValuePair(L"description", spec.Description().c_str());
+        file.Write(_L_, pWriterOutput);
+        pWriterOutput->EndElement(L"object_match");
+
     }
 
     if (pObjectWriter)
     {
-        file.Write(_L_, pObjectWriter->GetTableOutput(), CollectionDate);
+        file.Write(_L_, pObjectWriter->GetTableOutput(), spec.Description());
     }
     return S_OK;
 }
@@ -325,7 +329,7 @@ HRESULT Main::RunObject()
                     log::Info(
                         _L_, L"Found                 : %s (%s)\r\n", object.Path.c_str(), spec.Description().c_str());
 
-                    LogObjectMatch(object);
+                    LogObjectMatch(spec, object);
                 }
             }
         }
@@ -404,7 +408,7 @@ HRESULT Main::RunObject()
                     }
 
                     // Dropping here means no previous test rejected the object
-                    LogObjectMatch(file);
+                    LogObjectMatch(spec, file);
                 }
             }
         }
@@ -434,7 +438,7 @@ HRESULT Main::Run()
     if (config.outRegsitry.Type != OutputSpec::Kind::None)
         pRegistryWriter = TableOutput::GetWriter(_L_, config.outRegsitry);
 
-    if (config.outRegsitry.Type != OutputSpec::Kind::None)
+    if (config.outObject.Type != OutputSpec::Kind::None)
         pObjectWriter = TableOutput::GetWriter(_L_, config.outObject);
 
     if (config.outStructured.Type & OutputSpec::Kind::StructuredFile)
