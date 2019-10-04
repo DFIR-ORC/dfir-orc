@@ -388,6 +388,12 @@ HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
 
+    if (!config.strWalker.compare(L"USN"))
+    {
+        log::Debug(_L_, L"USN requirement: 'EXACT' altitude enforced");
+        config.locs.GetAltitude() = LocationSet::Altitude::Exact;
+    }
+
     if (config.strComputerName.empty())
     {
         SystemDetails::GetOrcComputerName(config.strComputerName);
