@@ -217,7 +217,10 @@ HRESULT Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDir
 
     if (pWriterOutput)
     {
+        pWriterOutput->BeginElement(L"object_match");
+        pWriterOutput->WriteNameValuePair(L"description", spec.Description().c_str());
         obj.Write(_L_, pWriterOutput);
+        pWriterOutput->EndElement(L"object_match");
     }
     if (pObjectWriter)
     {
