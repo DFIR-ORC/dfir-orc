@@ -620,7 +620,9 @@ HRESULT UtilitiesMain::PrintFormatedStringOption(LPCWSTR szOptionName, LPCWSTR s
 bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Kind supportedTypes, OutputSpec& anOutput)
 {
     HRESULT hr = E_FAIL;
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+
+    const auto cchOption = wcslen(szOption);
+    if (!_wcsnicmp(szArg, szOption, cchOption))
     {
         LPCWSTR pEquals = wcschr(szArg, L'=');
         if (!pEquals)
@@ -630,6 +632,12 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
         }
         else
         {
+            if (pEquals != szArg + cchOption)
+            {
+                // Argument 'szArgs' starts with 'szOption' but it is longer
+                return false;
+            }
+
             if (FAILED(hr = anOutput.Configure(_L_, supportedTypes, pEquals + 1)))
             {
                 log::Error(
