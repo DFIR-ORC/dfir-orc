@@ -154,7 +154,6 @@ public:
         CBinaryBuffer Contains;
         bool bContainsIsHex = false;
 
-        std::wstring Yara;
         std::wstring YaraRulesSpec;
         std::vector<std::string> YaraRules;
 

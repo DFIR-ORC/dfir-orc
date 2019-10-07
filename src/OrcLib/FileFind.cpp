@@ -852,11 +852,6 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->HeaderLen = liSize.LowPart;
         }
     }
-    if (item[CONFIG_FILEFIND_YARA])
-    {
-        fs->Yara = item[CONFIG_FILEFIND_YARA];
-        fs->Required |= FileFind::SearchTerm::YARA;
-    }
     if (item[CONFIG_FILEFIND_YARA_RULE])
     {
         fs->YaraRulesSpec = item[CONFIG_FILEFIND_YARA_RULE];
@@ -1179,10 +1174,9 @@ wstring FileFind::SearchTerm::GetDescription() const
     {
         if (!bFirst)
             stream << L", ";
-        stream << L"Content matches yara " << Yara;
         if (!YaraRules.empty())
         {
-            stream << L" rule(s) : " << YaraRulesSpec;
+            stream << L"Content matches yara rule(s) : " << YaraRulesSpec;
         }
         bFirst = false;
     }
@@ -1413,11 +1407,6 @@ HRESULT FileFind::SearchTerm::AddTermToConfig(ConfigItem& item)
     }
     if (Required & YARA)
     {
-        if (!Yara.empty())
-        {
-            ntfs_find.SubItems[CONFIG_FILEFIND_YARA].strData = Yara;
-            ntfs_find.SubItems[CONFIG_FILEFIND_YARA].Status = ConfigItem::PRESENT;
-        }
         if (!YaraRulesSpec.empty())
         {
             ntfs_find.SubItems[CONFIG_FILEFIND_YARA_RULE].strData = YaraRulesSpec;
@@ -1441,8 +1430,6 @@ HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
     {
         if (term->Required & SearchTerm::Criteria::YARA)
         {
-            if (!term->Yara.empty())
-                yara_content.push_back(term->Yara);
             yara_rules.insert(end(yara_rules), begin(term->YaraRules), end(term->YaraRules));
         }
     }
