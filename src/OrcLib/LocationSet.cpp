@@ -1960,6 +1960,8 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
     if (FAILED(hr = UniqueLocations(filterFSTypes)))
         return hr;
 
+    std::vector<std::shared_ptr<Location>> retval;
+    
     m_Volumes.reserve(m_UniqueLocations.size());
 
     for (const auto& loc : m_UniqueLocations)
@@ -1997,6 +1999,10 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
                     m_Volumes.emplace(std::move(pair));
                 }
             }
+            else if(loc->GetType() == Location::Type::OfflineMFT)
+            {
+                retval.push_back(loc);
+            }
         }
     }
 
@@ -2006,7 +2012,6 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
         return S_OK;
     }
 
-    std::vector<std::shared_ptr<Location>> retval;
 
     for (auto& aPair : m_Volumes)
     {
