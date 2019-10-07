@@ -446,7 +446,7 @@ HRESULT Main::CheckConfiguration()
 
     if (boost::logic::indeterminate(config.bResurrectRecords))
     {
-        config.bResurrectRecords = true;
+        config.bResurrectRecords = false;
     }
 
     // Default Parser is MFT;
