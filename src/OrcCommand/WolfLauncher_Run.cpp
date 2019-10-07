@@ -253,28 +253,28 @@ HRESULT Main::Run_Execute()
         // Checking in WOLFLauncher is running within a Windows Job object
         if (!job.IsBreakAwayAllowed())
         {
-            // Job object does not allow breakaway.
-            if (FAILED(hr = job.AllowBreakAway()))
+            DWORD dwMajor = 0L, dwMinor = 0L;
+            SystemDetails::GetOSVersion(dwMajor, dwMinor);
+            if (dwMajor < 6 || (dwMajor == 6 && dwMinor<2))
             {
-                DWORD dwMajor = 0L, dwMinor = 0L;
-                SystemDetails::GetOSVersion(dwMajor, dwMinor);
-                if (dwMajor < 6 && dwMinor < 2)
+                // Job object does not allow breakaway.
+                if (FAILED(hr = job.AllowBreakAway()))
                 {
                     log::Error(_L_, E_INVALIDARG, L"Running within a job that won't allow breakaway, exiting\r\n");
                     return E_FAIL;
                 }
                 else
                 {
-                    log::Verbose(
-                        _L_,
-                        L"WolfLauncher is within a job that won't allow breakaway. Windows 8.x allows nested job. "
-                        L"Giving it a try!!\r\n");
+                    bJobWasModified = true;
+                    log::Info(_L_, L"INFO: Running within a job, it has been configured to allow breakaway\r\n");
                 }
             }
             else
             {
-                bJobWasModified = true;
-                log::Info(_L_, L"INFO: Running within a job, it has been configured to allow breakaway\r\n");
+                log::Verbose(
+                    _L_,
+                    L"WolfLauncher is within a job that won't allow breakaway. Windows 8.x allows nested job. "
+                    L"Giving it a try!!\r\n");
             }
         }
     }
