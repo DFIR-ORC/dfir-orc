@@ -355,9 +355,7 @@ HRESULT Main::RunGetThis(const std::wstring& strConfigFile, LPCWSTR szTempDir)
 
     wstring strConfigArg = config.getthisArgs;
 
-    strConfigArg += L" /Config=\"";
-    strConfigArg += strConfigFile;
-    strConfigArg += L"\"";
+    strConfigArg += L" /Config=\"" + strConfigFile + L"\"";
     if (config.criteriasConfig.Type == OutputSpec::None)
         command->AddOnCompleteAction(
             make_shared<OnComplete>(OnComplete::Delete, L"GetThisConfig.xml", strConfigFile, nullptr));

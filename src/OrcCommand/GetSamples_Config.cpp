@@ -24,6 +24,35 @@
 using namespace Orc;
 using namespace Orc::Command::GetSamples;
 
+namespace {
+
+void CheckGetThisConfiguration(Orc::Command::GetSamples::Main::Configuration& config)
+{
+    if (config.getthisName.empty())
+    {
+        config.getthisName = L"getthis.exe";
+    }
+
+    if (config.getthisRef.empty())
+    {
+        config.getthisRef = L"self:#";
+    }
+
+    const std::wstring_view getThisCmd(L"getthis");
+    if (config.getthisArgs.empty())
+    {
+        config.getthisArgs = getThisCmd;
+    }
+    else if (!equalCaseInsensitive(config.getthisArgs, getThisCmd, getThisCmd.length()))
+    {
+        // Avoid having to specify 'getthis' as first argument
+        config.getthisArgs.insert(0, getThisCmd);
+        config.getthisArgs.insert(getThisCmd.size(), L" ");
+    }
+}
+
+}  // namespace
+
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 {
     return Orc::Config::GetSamples::root;
@@ -53,6 +82,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
             case L'/':
             case L'-':
                 if (OutputOption(argv[i] + 1, L"GetThis", OutputSpec::File, config.criteriasConfig))
+                    ;
+                else if (ParameterOption(argv[i] + 1, L"GetThisArgs", config.getthisArgs))
                     ;
                 else if (OutputOption(
                              argv[i] + 1,
@@ -259,6 +290,8 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    CheckGetThisConfiguration(config);
 
     if (config.bInstallNTrack && config.bRemoveNTrack)
     {
