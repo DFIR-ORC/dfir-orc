@@ -252,8 +252,7 @@ constexpr auto CONFIG_FILEFIND_ATTR_REGEX = 26U;
 constexpr auto CONFIG_FILEFIND_ATTR_TYPE = 27U;
 constexpr auto CONFIG_FILEFIND_CONTAINS = 28U;
 constexpr auto CONFIG_FILEFIND_CONTAINS_HEX = 29U;
-constexpr auto CONFIG_FILEFIND_YARA = 30U;
-constexpr auto CONFIG_FILEFIND_YARA_RULE = 31U;
+constexpr auto CONFIG_FILEFIND_YARA_RULE = 30U;
 
 constexpr auto CONFIG_YARA_SOURCE = 0L;
 constexpr auto CONFIG_YARA_BLOCK = 1L;
