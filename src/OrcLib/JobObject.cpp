@@ -182,7 +182,7 @@ HRESULT JobObject::GrantAccess(PSID pSid, ACCESS_MASK mask)
         PSID pPreviousOwner = nullptr;
         if (FAILED(hr = TakeOwnership(_L_, SE_KERNEL_OBJECT, m_hJob, pPreviousOwner)))
         {
-            log::Verbose(_L_, L"Failed to take ownershop of job\r\n");
+            log::Verbose(_L_, L"Failed to take ownership of job\r\n");
             return hr;
         }
         if (FAILED(hr = GetHandle(_L_, GetCurrentProcessId(), m_hJob, WRITE_DAC, hSettableHandle)))
