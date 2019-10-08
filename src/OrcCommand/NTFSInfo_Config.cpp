@@ -316,8 +316,11 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (EncodingOption(argv[i] + 1, config.outFileInfo.OutputEncoding))
                     {
-                        config.outAttrInfo.OutputEncoding = config.outTimeLine.OutputEncoding =
-                            config.outFileInfo.OutputEncoding;
+                        config.outI30Info.OutputEncoding =
+                            config.outAttrInfo.OutputEncoding =
+                            config.outTimeLine.OutputEncoding =
+                            config.outSecDescrInfo.OutputEncoding =
+                                config.outFileInfo.OutputEncoding;
                     }
                     else if (AltitudeOption(argv[i] + 1, L"Altitude", config.locs.GetAltitude()))
                         ;
