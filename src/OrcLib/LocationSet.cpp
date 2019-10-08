@@ -672,7 +672,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
 
             if (regex_match(canonical, m, disk_regex))
             {
-                if (m[REGEX_PHYSICALDRIVE_PARTITION_SPEC].matched || m[REGEX_PHYSICALDRIVE_OFFSET].matched)
+                if (m[REGEX_DISK_PARTITION_SPEC].matched || m[REGEX_DISK_OFFSET].matched)
                 {
                     if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
                     {
@@ -686,7 +686,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
             }
             else if (regex_match(canonical, m, drive_regex))
             {
-                if (m[REGEX_DISK_PARTITION_SPEC].matched || m[REGEX_DISK_OFFSET].matched)
+                if (m[REGEX_PHYSICALDRIVE_PARTITION_SPEC].matched || m[REGEX_PHYSICALDRIVE_OFFSET].matched)
                 {
                     if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
                     {
