@@ -40,7 +40,7 @@ public:
 
     HRESULT InitializeStore(const DWORD dwMaxObjects, const DWORD dwElementSize)
     {
-        m_heap = HeapCreate(HEAP_NO_SERIALIZE, 0L, dwMaxObjects * dwElementSize);
+        m_heap = HeapCreate(HEAP_NO_SERIALIZE, 0L, (size_t)dwMaxObjects * dwElementSize);
         if (m_heap == NULL)
             return HRESULT_FROM_WIN32(GetLastError());
         m_dwElementSize = dwElementSize;

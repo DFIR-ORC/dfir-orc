@@ -61,7 +61,7 @@ public:
         std::vector<PCCERT_CONTEXT> Signers;
         std::vector<PCCERT_CONTEXT> SignersCAs;
         PE_Hashs SignedHashs;
-        FILETIME Timestamp;
+        FILETIME Timestamp{ 0 };
 
         AuthenticodeData() = default;
         AuthenticodeData(const AuthenticodeData& other) = default;

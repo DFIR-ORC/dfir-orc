@@ -50,7 +50,7 @@ public:
 
         OnComplete(Action action, Object object, const std::wstring& name, const std::wstring& fullpath);
 
-        OnComplete(OnComplete&& other)
+        OnComplete(OnComplete&& other) noexcept
         {
             m_action = other.m_action;
             std::swap(m_Name, other.m_Name);

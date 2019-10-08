@@ -57,7 +57,7 @@ public:
 
         ArchiveItem() = default;
 
-        ArchiveItem(ArchiveItem&& other)
+        ArchiveItem(ArchiveItem&& other) noexcept
         {
             Index = other.Index;
             Size = other.Size;
