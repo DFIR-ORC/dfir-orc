@@ -42,7 +42,7 @@
     <binary name="PeSHA1" len="20" />
     <binary name="PeSHA256"  len="32" />
 
-    <binary name="SecurityDirectory" maxlen="8000" />
+    <utf16 name="SecurityDirectory" maxlen="8000" />
 
     <enum name="AuthenticodeStatus" >
       <value index ="0">ASUndetermined</value>
@@ -53,9 +53,9 @@
     </enum>
 
     <utf16  name="AuthenticodeSigner" maxlen="256" />
-    <binary name="AuthenticodeSignerThumbprint" maxlen="256" />
+    <utf16 name="AuthenticodeSignerThumbprint" maxlen="256" />
     <utf16  name="AuthenticodeCA" maxlen="256" />
-    <binary name="AuthenticodeCAThumbprint" maxlen="256" />
+    <utf16 name="AuthenticodeCAThumbprint" maxlen="256" />
 
     <binary name="PeMD5" len="16" fmt="{:02X}" />
 
