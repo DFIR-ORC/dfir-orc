@@ -38,7 +38,7 @@ void Main::PrintUsage()
         L"\r\n"
         L"\t/computer=<ComputerName> : Substitute computer name to GetComputerName()\r\n"
         L"\r\n"
-        L"\t/errorcodes        : Columns in error will have \"Error=0x00000000\" reporting the error code\r\n"
+        L"\t/errorcodes         : Columns in error will have \"Error=0x00000000\" reporting the error code\r\n"
         L"\t/low                : Runs with lowered priority\r\n"
         L"\t/verbose            : Turns on verbose logging\r\n"
         L"\t/debug              : Adds debug information (Source File Name, Line number) to output, outputs to "
@@ -46,7 +46,6 @@ void Main::PrintUsage()
         L"\t/noconsole          : Turns off console logging\r\n"
         L"\t/logfile=<FileName> : All output is duplicated to logfile <FileName>\r\n"
         L"\t/ResurrectRecords   : Include records marked as \"not in use\" in enumeration.\r\n"
-        L"\t/PopSysObj           : Populate system objects in locations (true by default).\r\n"
         L"\t/<DefaultColumnSelection>,...: \r\n"
         L"\tSelects the columns to fill for each file system entry:");
 
