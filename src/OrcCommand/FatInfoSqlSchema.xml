@@ -12,7 +12,7 @@
     <utf16 name="FullName"   maxlen="32k" />
 
     <utf16  name="Extension" maxlen="256" />
-    <uint64 name="SizeInBytes" type="LargeInteger"  />
+    <uint64 name="SizeInBytes" />
     <utf8   name="Attributes"  len="14" />
 
     <timestamp name="CreationDate"         />
@@ -36,7 +36,7 @@
     <utf16 name="TimeStamp"        maxlen="254" />
     <utf16 name="SubSystem"        maxlen="254" />
     <utf16 name="FileType"         maxlen="254" />
-    <utf16 name="FileOS"           maxlen="254" values=""/>
+    <utf16 name="FileOS"           maxlen="254" />
 
     <binary name="SHA256" len="32" />
     <binary name="PeSHA1" len="20" />
