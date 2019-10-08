@@ -167,6 +167,7 @@ void PartitionTable::ParseDiskPartition(
                 p.PartitionType = Partition::Type::Extended;
                 break;
             case 0xB:
+            case 0xC:
                 p.PartitionType = Partition::Type::FAT32;
                 break;
             case 0xEE:
