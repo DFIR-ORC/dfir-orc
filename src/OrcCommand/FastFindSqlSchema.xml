@@ -24,7 +24,7 @@
         <timestamp name="FileNameLastAccessDate"           />
         <timestamp name="FileNameLastAttrModificationDate" />
         <binary name="MD5"   len="16" />
-        <binary name="SHA-1" len="20" />
+        <binary name="SHA1" len="20" />
         <binary name="SHA256" len="32" fmt="{:02X}"/>
 
         <guid   name="SnapshotID" allows_null="no" />

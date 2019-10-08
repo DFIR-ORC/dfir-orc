@@ -40,7 +40,7 @@
         <utf8 name="ShortName" maxlen="12" />
 
         <binary name="MD5"   len="16" fmt="{:02X}"/>
-        <binary name="SHA-1" len="20" fmt="{:02X}"/>
+        <binary name="SHA1" len="20" fmt="{:02X}"/>
 
         <binary name="FirstBytes" maxlen="16" fmt="{:02X}"/>
 

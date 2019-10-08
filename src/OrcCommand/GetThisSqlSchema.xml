@@ -13,7 +13,7 @@
         <uint64 name="SizeInBytes"  allows_null="no" />
 
         <binary name="MD5" len="16" />
-        <binary name="SHA-1" len="20" />
+        <binary name="SHA1" len="20" />
 
         <utf8 name="FindMatch" maxlen="256" />
         <utf8 name="ContentType" maxlen="12" />

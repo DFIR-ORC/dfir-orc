@@ -49,7 +49,7 @@ void Main::PrintUsage()
         L"\t/nolimits                   : Ignore all limits, overrides default values\r\n"
         L"\t/reportall                  : Add information about rejected samples (due to limits) to CSV\r\n"
         L"\t/xor=0xBADF00D0             : Pattern used to XOR sample files (optional)\r\n"
-        L"\t/hash=<MD5|SHA-1|SHA256>    : List hash values stored in GetThis.csv\r\n"
+        L"\t/hash=<MD5|SHA1|SHA256>    : List hash values stored in GetThis.csv\r\n"
         L"\t/fuzzyhash=<SSDeep|TLSH>    : List fuzzy hash values stored in GetThis.csv\r\n"
         L"\r\n"
         L"Note: config file settings are superseded by command line options\r\n"

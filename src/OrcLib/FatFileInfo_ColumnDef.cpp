@@ -34,7 +34,7 @@ const ORCLIB_API ColumnNameDef FatFileInfo::g_FatColumnNames[] = {
     {FILEINFO_SHORTNAME, L"ShortName", L"Short Name (8.3) if any", 0L},
 
     {FILEINFO_MD5, L"MD5", L"Cryptographic MD5 hash (in hex)", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
-    {FILEINFO_SHA1, L"SHA-1", L"Cryptographic SHA1 hash (in hex)", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
+    {FILEINFO_SHA1, L"SHA1", L"Cryptographic SHA1 hash (in hex)", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
     {FILEINFO_FIRST_BYTES, L"FirstBytes", L"First bytes of the data stream", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
 
     {FILEINFO_VERSION, L"Version", L"VersionInfo file version", 0L},

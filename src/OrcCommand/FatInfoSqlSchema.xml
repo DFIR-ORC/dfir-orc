@@ -24,7 +24,7 @@
     <utf8 name="ShortName" maxlen="12" />
 
     <binary name="MD5"   len="16" />
-    <binary name="SHA-1" len="20" />
+    <binary name="SHA1" len="20" />
 
     <binary name="FirstBytes" len="16" />
 

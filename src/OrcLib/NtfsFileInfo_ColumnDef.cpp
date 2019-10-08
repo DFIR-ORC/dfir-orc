@@ -57,7 +57,7 @@ const ORCLIB_API ColumnNameDef NtfsFileInfo::g_NtfsColumnNames[] = {
     {FILEINFO_SHORTNAME, L"ShortName", L"Short Name (8.3) if any", 0L},
 
     {FILEINFO_MD5, L"MD5", L"Cryptographic MD5 hash (in hex)", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
-    {FILEINFO_SHA1, L"SHA-1", L"Cryptographic SHA1 hash (in hex)", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
+    {FILEINFO_SHA1, L"SHA1", L"Cryptographic SHA1 hash (in hex)", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
     {FILEINFO_FIRST_BYTES, L"FirstBytes", L"First bytes of the data stream", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
 
     {FILEINFO_OWNERID, L"OwnerId", L"File owner's unique ID", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
