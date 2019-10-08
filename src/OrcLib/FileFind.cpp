@@ -2561,7 +2561,7 @@ FileFind::ExactADS(const std::shared_ptr<FileFind::SearchTerm>& aTerm, LPCWSTR s
 {
     if (aTerm->Required & SearchTerm::Criteria::ADS_EXACT)
     {
-        if (!_wcsnicmp(aTerm->ADSName.c_str(), szAttrName, AttrNameLen))
+        if (!_wcsnicmp(aTerm->ADSName.c_str(), szAttrName, aTerm->ADSName.size()))
             return SearchTerm::Criteria::ADS_EXACT;
     }
     return SearchTerm::Criteria::NONE;
