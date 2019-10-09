@@ -152,22 +152,23 @@ protected:
     HRESULT WriteAuthenticodeCAThumbprint(ITableOutput& output);
 
 protected:
+
     logger _L_;
     const std::shared_ptr<VolumeReader> m_pVolReader;
 
-    HANDLE m_hFile;
+    HANDLE m_hFile = INVALID_HANDLE_VALUE;
     PEInfo m_PEInfo;
 
     std::wstring m_strComputerName;
 
-    const WCHAR* m_szFullName;
-    DWORD m_dwFullNameLen;
+    const WCHAR* m_szFullName = nullptr;
+    DWORD m_dwFullNameLen = 0LU;
 
-    bool m_bWriteErrorCodes;
+    bool m_bWriteErrorCodes = false;
 
     const std::vector<Filter>& m_Filters;
-    Intentions m_DefaultIntentions;
-    Intentions m_ColumnIntentions;
+    Intentions m_DefaultIntentions = FILEINFO_NONE;
+    Intentions m_ColumnIntentions  = FILEINFO_NONE;
 
     Authenticode& m_codeVerifyTrust;
 
