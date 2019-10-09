@@ -322,11 +322,10 @@ public:
         std::vector<KeyNameMatch> MatchingKeys;
         std::vector<ValueNameMatch> MatchingValues;
 
-        HRESULT Write(const logger& pLog, ITableOutput& output, const FILETIME& CollectionDate);
+        HRESULT Write(const logger& pLog, ITableOutput& output);
         HRESULT Write(
             const logger& pLog,
-            const std::shared_ptr<StructuredOutputWriter>& pWriter,
-            const FILETIME& CollectionDate);
+            const std::shared_ptr<StructuredOutputWriter>& pWriter);
     };
 
     typedef std::function<void(const std::vector<std::shared_ptr<Match>>& aMatch)> FoundKeyMatchCallback;

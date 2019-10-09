@@ -75,10 +75,9 @@ RegFind::Match::ValueNameMatch::ValueNameMatch(const RegistryValue* const Matchi
     }
 }
 
-HRESULT RegFind::Match::Write(const logger&, ITableOutput& output, const FILETIME& CollectionDate)
+HRESULT RegFind::Match::Write(const logger&, ITableOutput& output)
 {
     DBG_UNREFERENCED_PARAMETER(output);
-    DBG_UNREFERENCED_PARAMETER(CollectionDate);
 
     for (const auto& aValueNameMatch : MatchingValues)
     {
@@ -93,11 +92,8 @@ HRESULT RegFind::Match::Write(const logger&, ITableOutput& output, const FILETIM
 
 HRESULT RegFind::Match::Write(
     const logger&,
-    const std::shared_ptr<StructuredOutputWriter>& pWriter,
-    const FILETIME& CollectionDate)
+    const std::shared_ptr<StructuredOutputWriter>& pWriter)
 {
-    DBG_UNREFERENCED_PARAMETER(CollectionDate);
-
     string strMatchDescr = Term->GetDescription();
 
     pWriter->BeginElement(L"regfind_match");
