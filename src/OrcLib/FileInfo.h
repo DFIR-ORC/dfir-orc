@@ -64,7 +64,7 @@ public:
     static bool HasSpecificExtension(const WCHAR* pszName, const WCHAR* pszExtensions[]);
 
     static Intentions
-    GetIntentions(const WCHAR* szParams, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[]);
+    GetIntentions(const logger& pLog, const WCHAR* szParams, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[]);
     static Intentions GetFilterIntentions(const std::vector<Filter>& filters);
 
     static HRESULT BindColumns(

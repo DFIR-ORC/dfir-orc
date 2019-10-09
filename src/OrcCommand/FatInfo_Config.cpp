@@ -57,7 +57,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
                 m_Config.DefaultIntentions = static_cast<Intentions>(
                     m_Config.DefaultIntentions
                     | FileInfo::GetIntentions(
-                        item.strData.c_str(), FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                        _L_, item.strData.c_str(), FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
         });
 
     std::for_each(begin(configitem[ADD].NodeList), end(configitem[ADD].NodeList), [this](const ConfigItem& item) {
@@ -214,7 +214,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             m_Config.DefaultIntentions = static_cast<Intentions>(
                                 m_Config.DefaultIntentions
                                 | FatFileInfo::GetIntentions(
-                                    pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                                    _L_, pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
                             pCur = pNext + 1;
                         }
                         else
@@ -222,7 +222,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             m_Config.DefaultIntentions = static_cast<Intentions>(
                                 m_Config.DefaultIntentions
                                 | FatFileInfo::GetIntentions(
-                                    pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                                    _L_, pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
                             pCur = NULL;
                         }
                     }
@@ -281,7 +281,7 @@ HRESULT Main::CheckConfiguration()
     if (m_Config.DefaultIntentions == FILEINFO_NONE)
     {
         m_Config.DefaultIntentions =
-            FatFileInfo::GetIntentions(L"Default", FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames);
+            FatFileInfo::GetIntentions(_L_, L"Default", FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames);
     }
 
     if (boost::logic::indeterminate(m_Config.bResurrectRecords))

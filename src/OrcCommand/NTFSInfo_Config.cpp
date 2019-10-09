@@ -51,7 +51,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
                 config.DefaultIntentions = static_cast<Intentions>(
                     config.DefaultIntentions
                     | FileInfo::GetIntentions(
-                        item.strData.c_str(), NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                        _L_, item.strData.c_str(), NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
         });
 
     std::for_each(begin(configitem[ADD].NodeList), end(configitem[ADD].NodeList), [this](const ConfigItem& item) {
@@ -345,7 +345,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                                 config.DefaultIntentions = static_cast<Intentions>(
                                     config.DefaultIntentions
                                     | NtfsFileInfo::GetIntentions(
-                                        pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                                        _L_, pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
                                 pCur = pNext + 1;
                             }
                             else
@@ -353,7 +353,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                                 config.DefaultIntentions = static_cast<Intentions>(
                                     config.DefaultIntentions
                                     | NtfsFileInfo::GetIntentions(
-                                        pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                                        _L_, pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
                                 pCur = NULL;
                             }
                         }
@@ -444,7 +444,7 @@ HRESULT Main::CheckConfiguration()
     if (config.DefaultIntentions == FILEINFO_NONE)
     {
         config.DefaultIntentions =
-            NtfsFileInfo::GetIntentions(L"Default", NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames);
+            NtfsFileInfo::GetIntentions(_L_, L"Default", NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames);
     }
 
     if (boost::logic::indeterminate(config.bResurrectRecords))

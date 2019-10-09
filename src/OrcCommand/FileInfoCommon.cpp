@@ -90,7 +90,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
 
     if (config.Status & ConfigItem::PRESENT)
     {
-        filter.intent = FileInfo::GetIntentions(config.strData.c_str(), aliasNames, columnNames);
+        filter.intent = FileInfo::GetIntentions(pLog, config.strData.c_str(), aliasNames, columnNames);
         if (filter.intent == FILEINFO_NONE)
         {
             log::Error(pLog, E_INVALIDARG, L"Column specified (%s) is invalid\r\n", config.strData.c_str());
@@ -206,7 +206,7 @@ HRESULT FileInfoCommon::GetFiltersFromArgcArgv(
             if ((argv[i][0] == L'/' || argv[i][0] == L'-') && (argv[i][1] == L'+' || argv[i][1] == L'-'))
             {
                 Filter aFilter;
-                if (FAILED(hr = GetFilterFromArg(argv[i], aFilter, aliasNames, columnNames)))
+                if (FAILED(hr = GetFilterFromArg(pLog, argv[i], aFilter, aliasNames, columnNames)))
                 {
                     log::Warning(pLog, hr, L"Failed to interpret parameter \"%s\": Ignored\r\n", argv[i]);
                 }
@@ -222,6 +222,7 @@ HRESULT FileInfoCommon::GetFiltersFromArgcArgv(
 }
 
 HRESULT FileInfoCommon::GetFilterFromArg(
+    const logger& pLog,
     LPCWSTR szConstArg,
     Filter& filter,
     const ColumnNameDef aliasNames[],
@@ -256,7 +257,7 @@ HRESULT FileInfoCommon::GetFilterFromArg(
     }
 
     *pColon = L'\0';
-    filter.intent = FileInfo::GetIntentions(szArg + 2, aliasNames, columnNames);
+    filter.intent = FileInfo::GetIntentions(pLog, szArg + 2, aliasNames, columnNames);
 
     if (filter.intent == FILEINFO_NONE)
     {

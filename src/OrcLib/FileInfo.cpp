@@ -338,7 +338,7 @@ bool FileInfo::HasSpecificExtension(const WCHAR* pszName, const WCHAR* pszExtens
 }
 
 Intentions
-FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[])
+FileInfo::GetIntentions(const logger& pLog, const WCHAR* Params, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[])
 {
     Intentions dwIntentions = FILEINFO_NONE;
     WCHAR szParams[MAX_PATH];
@@ -353,6 +353,8 @@ FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], c
         if (szParams[i] == L',' || szParams[i] == L'\0')
         {
             szParams[i] = 0;
+
+            Intentions dwPreviousIntentions = dwIntentions;
 
             const ColumnNameDef* pCurAlias = aliasNames;
             while (pCurAlias->dwIntention != FILEINFO_NONE)
@@ -375,7 +377,10 @@ FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], c
                 }
                 pCurCol++;
             }
-
+            if (dwPreviousIntentions == dwIntentions)
+            {
+                log::Warning(pLog, E_INVALIDARG, L"Parameter %s was not recognized as a valid column name\r\n", pCur);
+            }
             szParams[i] = L',';
             pCur = &(szParams[i]) + 1;
         }
