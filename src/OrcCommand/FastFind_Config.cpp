@@ -92,7 +92,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     if (FAILED(
             hr = config.outStructured.Configure(
                 _L_,
-                static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile),
+                static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile),
                 configitem[FASTFIND_OUTPUT_STRUCTURED])))
     {
         return hr;
