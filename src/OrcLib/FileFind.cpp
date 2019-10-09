@@ -2587,7 +2587,7 @@ FileFind::RegexADS(const std::shared_ptr<FileFind::SearchTerm>& aTerm, LPCWSTR s
     SearchTerm::Criteria matchedSpec = SearchTerm::Criteria::NONE;
     if (aTerm->Required & SearchTerm::Criteria::ADS_REGEX)
     {
-        if (regex_match(szAttrName, szAttrName + AttrNameLen, aTerm->FileNameRegEx))
+        if (regex_match(szAttrName, szAttrName + AttrNameLen, aTerm->ADSNameRegEx))
             matchedSpec = static_cast<FileFind::SearchTerm::Criteria>(matchedSpec | SearchTerm::Criteria::ADS_REGEX);
 
         return matchedSpec;
