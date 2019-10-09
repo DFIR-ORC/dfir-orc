@@ -36,3 +36,32 @@ set_target_properties(OrcSqlTest
     PROPERTIES
         FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}Sql"
 )
+
+if("${TARGET_ARCH}" STREQUAL "x64")
+    set(ORCSQL_VAR_NAME "ORCSQL_X64DLL")
+elseif("${TARGET_ARCH}" STREQUAL "x86")
+    set(ORCSQL_VAR_NAME "ORCSQL_X86DLL")
+else()
+    message(FATAL_ERROR "Unknown architecture: ${TARGET_ARCH}")
+endif()
+
+
+add_custom_command(
+    TARGET OrcSqlTest
+    POST_BUILD
+    DEPENDS rcedit, OrcSql
+    VERBATIM
+
+    COMMAND $<TARGET_FILE:rcedit>
+        set --type "VALUES"
+            --name "${ORCSQL_VAR_NAME}"
+            --value-utf16 "7z:#ORCSQL|OrcSql.dll"
+            $<TARGET_FILE:OrcSqlTest>
+
+    COMMAND $<TARGET_FILE:rcedit>
+        set --type "BINARY"
+            --name "ORCSQL"
+            --value-path $<TARGET_FILE:OrcSql>
+            --compress=7z
+            $<TARGET_FILE:OrcSqlTest>
+)

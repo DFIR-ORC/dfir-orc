@@ -187,7 +187,8 @@ HRESULT Connection::CreateTable(
                 }
                 else
                 {
-                    log::Error(_L_, E_INVALIDARG, L"No valid length provided for column %s\r\n", column->ColumnName);
+                    stmt << L" VARCHAR ( MAX ) "
+                         << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
                 }
                 break;
             case TableOutput::ColumnType::UTF16Type:
@@ -203,7 +204,8 @@ HRESULT Connection::CreateTable(
                 }
                 else
                 {
-                    log::Error(_L_, E_INVALIDARG, L"No valid length provided for column %s\r\n", column->ColumnName);
+                    stmt << L" NVARCHAR ( MAX ) "
+                         << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
                 }
                 break;
             case TableOutput::ColumnType::BinaryType:
@@ -219,7 +221,8 @@ HRESULT Connection::CreateTable(
                 }
                 else
                 {
-                    log::Error(_L_, E_INVALIDARG, L"No valid length provided for column %s\r\n", column->ColumnName);
+                    stmt << L" VARBINARY ( MAX ) "
+                         << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
                 }
                 break;
             case TableOutput::ColumnType::GUIDType:

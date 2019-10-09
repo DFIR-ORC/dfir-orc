@@ -15,6 +15,10 @@
 using namespace Orc;
 using namespace Orc::TableOutput;
 
+#ifndef DBMAXCHAR
+#define DBMAXCHAR       (8000+1)
+#endif
+
 HRESULT BoundColumn::ClearBoundData()
 {
     switch (Type)
@@ -110,31 +114,22 @@ HRESULT BoundColumn::WriteString(const WCHAR* szString)
         case UTF16Type:
         case XMLType:
             boundData.WString->iIndicator = wcslen(szString) * sizeof(WCHAR);
-            if (dwMaxLen.has_value())
-            {
-                if (boundData.WString->iIndicator > dwMaxLen.value() * sizeof(WCHAR))
-                    return E_NOT_SUFFICIENT_BUFFER;
-                wcsncpy_s(boundData.WString->Data, dwMaxLen.value(), szString, boundData.WString->iIndicator);
-            }
+            if (boundData.WString->iIndicator > dwMaxLen.value_or(DBMAXCHAR) * sizeof(WCHAR))
+                return E_NOT_SUFFICIENT_BUFFER;
+            wcsncpy_s(boundData.WString->Data, dwMaxLen.value_or(DBMAXCHAR), szString, boundData.WString->iIndicator);
             break;
         case UTF8Type:
             boundData.WString->iIndicator = wcslen(szString) * sizeof(WCHAR);
-            if (dwMaxLen.has_value())
-            {
-                if (boundData.WString->iIndicator > dwMaxLen.value())
-                    return E_NOT_SUFFICIENT_BUFFER;
-                if (FAILED(hr = WideToAnsi(nullptr, szString, boundData.AString->Data, dwMaxLen.value())))
-                    return hr;
-            }
+            if (boundData.WString->iIndicator > dwMaxLen.value_or(DBMAXCHAR))
+                return E_NOT_SUFFICIENT_BUFFER;
+            if (FAILED(hr = WideToAnsi(nullptr, szString, boundData.AString->Data, dwMaxLen.value_or(DBMAXCHAR))))
+                return hr;
             break;
         case BinaryType:
             boundData.Binary->iIndicator = wcslen(szString) * sizeof(WCHAR);
-            if (dwMaxLen.has_value())
-            {
-                if (boundData.Binary->iIndicator > dwMaxLen.value() * sizeof(WCHAR))
-                    return E_NOT_SUFFICIENT_BUFFER;
-                wcscpy_s((LPWSTR)boundData.Binary->Data, dwMaxLen.value() / sizeof(WCHAR), szString);
-            }
+            if (boundData.Binary->iIndicator > dwMaxLen.value_or(DBMAXCHAR) * sizeof(WCHAR))
+                return E_NOT_SUFFICIENT_BUFFER;
+            wcscpy_s((LPWSTR)boundData.Binary->Data, dwMaxLen.value_or(DBMAXCHAR) / sizeof(WCHAR), szString);
             break;
         case Nothing:
             return S_OK;

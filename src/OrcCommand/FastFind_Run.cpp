@@ -195,7 +195,7 @@ HRESULT Main::RunRegistry()
                         }
 
                         if (pWriterOutput)
-                            elt.second->Write(_L_, pWriterOutput, CollectionDate);
+                            elt.second->Write(_L_, pWriterOutput);
                     }
                 }
             }
