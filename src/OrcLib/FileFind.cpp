@@ -1167,7 +1167,7 @@ wstring FileFind::SearchTerm::GetDescription() const
     {
         if (!bFirst)
             stream << L", ";
-        stream << L"Header matches regex " << strHeaderRegEx;
+        stream << L"Header matches regex " << strHeaderRegEx << L" (within first " << HeaderLen << L" bytes)";
         bFirst = false;
     }
     if (Required & SearchTerm::Criteria::YARA)
@@ -3927,7 +3927,7 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
             return S_OK;
     }
 
-    if (!m_SizeTerms.empty())
+    if (!m_ExcludeSizeTerms.empty())
     {
         for (auto& match_attr : aMatch->MatchingAttributes)
         {
