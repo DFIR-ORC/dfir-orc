@@ -17,9 +17,9 @@
     <timestamp name="StartTime" />
     <timestamp name="FinishTime" />
     
-    <uint64 name="TotalBytes"        type="LargeInteger" />
+    <uint64 name="TotalBytes" />
 
-    <binary name="inMD5"     len="16" />
+    <binary name="inMD5"    len="16" />
     <binary name="inSHA1"   len="20" />
     <binary name="inSHA256" len="32" />
 
