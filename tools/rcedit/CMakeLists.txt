@@ -19,6 +19,8 @@ else()
     set(CRT_TYPE "/MD")
 endif()
 
+add_compile_options(/EHsc)
+
 list(APPEND COMPILE_OPTIONS_DEBUG "${CRT_TYPE}d")
 list(APPEND COMPILE_OPTIONS_RELEASE
     "${CRT_TYPE}"
