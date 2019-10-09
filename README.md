@@ -55,9 +55,13 @@ Using default options is recommended with the exception of `ORC_BUILD_VCPKG` whi
 | ORC_BUILD_SSDEEP     | OFF                   | Build with ssdeep support     |
 | ORC_USE_STATIC_CRT   | ON                    | Use static runtime            |
 | ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory          |
+| ORC_XMLLITE_PATH     |                       | XmlLite.dll path (xp sp2)     |
 
 
 [1] `ORC_BUILD_SQL=ON` requires [SQL Server Native Client](https://docs.microsoft.com/en-us/sql/relational-databases/native-client/applications/installing-sql-server-native-client?view=sql-server-2017)
+
+[2] The `xmllite.dll` is native after patched Windows XP SP2
+
 
 **Note:** Some combinations may be irrelevant.
 
