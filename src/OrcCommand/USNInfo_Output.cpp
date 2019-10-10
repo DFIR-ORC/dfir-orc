@@ -36,15 +36,8 @@ void Main::PrintUsage()
         L"\t\t\tA SQL connection string and table name to import into (<connectionstring>#<tablename>)\r\n"
         L"\r\n"
         L"\t/Compact               : Compact form (no paths, only reason flag\r\n"
-        L"\t/utf8,/utf16		   : Select utf8 or utf16 encoding (default is utf8)\r\n"
-		L"\t/verbose               : Turns on verbose logging\r\n"
-        L"\t/debug                 : Adds debug information (Source File Name, Line number) to output, outputs to debugger "
-        L"(OutputDebugString)\r\n"
-        L"\t/noconsole             : Turns off console logging\r\n"
-        L"\t/logfile=<FileName>    : All output is duplicated to logfile <FileName>\r\n"
-        L"\r\n"
-
-        L"\r\n");
+        L"\t/utf8,/utf16		   : Select utf8 or utf16 encoding (default is utf8)\r\n");
+    PrintCommonUsage();
 }
 
 void Main::PrintParameters()

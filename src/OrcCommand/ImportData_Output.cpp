@@ -29,6 +29,7 @@ void Main::PrintUsage()
         L"\t/Out=<Output>      : output specification\r\n"
         L"\t\r\n"
         L"<PathToImportedData.7z.p7b>*    : Path to the data files to import\r\n");
+    PrintCommonUsage();
     return;
 }
 

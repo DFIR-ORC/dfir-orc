@@ -27,8 +27,7 @@ FatFileInfo::FatFileInfo(
     DWORD dwLen,
     const std::shared_ptr<VolumeReader>& pVolReader,
     const std::shared_ptr<FatFileEntry>& fileEntry,
-    Authenticode& codeVerifyTrust,
-    bool bWriteErrorCodes)
+    Authenticode& codeVerifyTrust)
     : FileInfo(
         std::move(pLog),
         szComputerName,
@@ -37,8 +36,7 @@ FatFileInfo::FatFileInfo(
         Filters,
         szFullName,
         dwLen,
-        codeVerifyTrust,
-        bWriteErrorCodes)
+        codeVerifyTrust)
     , m_FatFileEntry(fileEntry)
 {
     m_hFile = INVALID_HANDLE_VALUE;

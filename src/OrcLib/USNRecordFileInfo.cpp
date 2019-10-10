@@ -31,8 +31,7 @@ USNRecordFileInfo::USNRecordFileInfo(
     const std::vector<Filter>& filters,
     WCHAR* szFullFileName,
     USN_RECORD* pElt,
-    Authenticode& verifytrust,
-    bool bWriteErrorCodes)
+    Authenticode& verifytrust)
     : NtfsFileInfo(
         std::move(pLog),
         szComputerName,
@@ -41,8 +40,7 @@ USNRecordFileInfo::USNRecordFileInfo(
         filters,
         szFullFileName,
         (DWORD)wcslen(szFullFileName),
-        verifytrust,
-        bWriteErrorCodes)
+        verifytrust)
 {
     m_pUSNRecord = pElt;
 

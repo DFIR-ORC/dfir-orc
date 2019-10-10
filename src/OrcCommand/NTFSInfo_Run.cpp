@@ -86,8 +86,7 @@ HRESULT Main::RunThroughUSNJournal()
                 config.Filters,
                 szFullName,
                 pElt,
-                m_codeVerifier,
-                config.bWriteErrorCodes);
+                m_codeVerifier);
             HRESULT hr = E_FAIL;
             try
             {
@@ -212,8 +211,7 @@ void Main::FileAndDataInformation(
             pElt,
             pFileName,
             pDataAttr,
-            m_codeVerifier,
-            config.bWriteErrorCodes);
+            m_codeVerifier);
 
         HRESULT hr = fi.WriteFileInformation(_L_, NtfsFileInfo::g_NtfsColumnNames, output, config.Filters);
         ++dwTotalFileTreated;
@@ -245,8 +243,7 @@ void Main::DirectoryInformation(
             pElt,
             pFileName,
             nullptr,
-            m_codeVerifier,
-            config.bWriteErrorCodes);
+            m_codeVerifier);
 
         HRESULT hr = fi.WriteFileInformation(_L_, NtfsFileInfo::g_NtfsColumnNames, output, config.Filters);
         ++dwTotalFileTreated;

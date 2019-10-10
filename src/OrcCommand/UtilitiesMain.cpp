@@ -1197,3 +1197,28 @@ void UtilitiesMain::PrintHeader(LPCWSTR szToolName, LPCWSTR szVersion)
 }
 
 UtilitiesMain::~UtilitiesMain(void) {}
+
+void UtilitiesMain::PrintLoggingUsage()
+{
+    log::Info(
+        _L_,
+        L"\r\n"
+        L"\t/verbose                    : Turns on verbose logging\r\n"
+        L"\t/debug                      : Adds debug information (Source File Name, Line number) to output, outputs to "
+        L"debugger (OutputDebugString)\r\n"
+        L"\t/noconsole                  : Turns off console logging\r\n"
+        L"\t/logfile=<FileName>         : All output is duplicated to logfile <FileName>\r\n"
+        L"\r\n"
+    );
+}
+
+void UtilitiesMain::PrintPriorityUsage()
+{
+    log::Info(
+        _L_,
+        L"\r\n"
+        L"\t/low                        : Runs with lowered priority\n"
+        L"\r\n"
+    );
+}
+

@@ -45,6 +45,7 @@ void Main::PrintUsage()
         L"\t/NoSigCheck                      : Do not check all sample signatures (only signatures in autoruns output "
         L"will be used)\r\n"
         L"\r\n");
+    PrintCommonUsage();
 }
 
 void Main::PrintParameters()

@@ -102,8 +102,7 @@ private:
                 pElt,
                 pFileName,
                 pDataAttr,
-                authenticode,
-                false);
+                authenticode);
 
             fi.CheckHash();
 

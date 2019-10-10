@@ -38,8 +38,7 @@ public:
         const std::vector<Filter>& filters,
         LPCWSTR szFullFileName,
         DWORD dwLen,
-        Authenticode& verifytrust,
-        bool bWriteErrorCodes);
+        Authenticode& verifytrust);
     virtual ~FileInfo();
 
     const WCHAR* GetFullName() const { return m_szFullName; }
@@ -163,8 +162,6 @@ protected:
 
     const WCHAR* m_szFullName = nullptr;
     DWORD m_dwFullNameLen = 0LU;
-
-    bool m_bWriteErrorCodes = false;
 
     const std::vector<Filter>& m_Filters;
     Intentions m_DefaultIntentions = FILEINFO_NONE;

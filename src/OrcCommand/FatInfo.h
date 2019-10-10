@@ -41,7 +41,6 @@ public:
             : locs(std::move(pLog))
         {
             bResurrectRecords = boost::logic::indeterminate;
-            bWriteErrorCodes = false;
             ColumnIntentions = FILEINFO_NONE;
             DefaultIntentions = FILEINFO_NONE;
             output.supportedTypes = static_cast<OutputSpec::Kind>(
@@ -58,7 +57,6 @@ public:
         LocationSet locs;
         std::wstring strComputerName;
 
-        bool bWriteErrorCodes;
 
         boost::logic::tribool bResurrectRecords;
         boost::logic::tribool bPopSystemObjects;

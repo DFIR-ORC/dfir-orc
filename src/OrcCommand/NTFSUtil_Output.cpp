@@ -57,14 +57,8 @@ void Main::PrintUsage()
         L"\t/vss                  : List of existing volume shadow copies on current operating system\r\n"
         L"\t\tArgument: \r\n"
         L"\t\t/out=<Output>           : Output file or archive\r\n"
-        L"\r\n"
-        L"\t/low                  : Runs with lowered priority\r\n"
-        L"\t/verbose              : Turns on verbose logging\r\n"
-        L"\t/debug                : Adds debug information (Source File Name, Line number) to output, outputs to "
-        L"debugger (OutputDebugString)\r\n"
-        L"\t/noconsole            : Turns off console logging\r\n"
-        L"\t/logfile=<FileName>   : All output is duplicated to logfile <FileName>\r\n"
         L"\r\n");
+    PrintCommonUsage();
     return;
 }
 

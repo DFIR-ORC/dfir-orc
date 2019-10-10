@@ -87,8 +87,7 @@ public:
         MFTRecord* pRecord,
         const PFILE_NAME pFileName,
         const std::shared_ptr<DataAttribute>& pDataAttr,
-        Authenticode& verifytrust,
-        bool bWriteErrorCodes);
+        Authenticode& verifytrust);
     virtual ~MFTRecordFileInfo(void);
 
 private:

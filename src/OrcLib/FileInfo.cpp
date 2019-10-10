@@ -49,15 +49,13 @@ FileInfo::FileInfo(
     const std::vector<Filter>& Filters,
     LPCWSTR szFullName,
     DWORD dwLen,
-    Authenticode& codeVerifyTrust,
-    bool bWriteErrorCodes)
+    Authenticode& codeVerifyTrust)
     : m_PEInfo(pLog, *this)
     , _L_(std::move(pLog))
     , m_hFile(INVALID_HANDLE_VALUE)
     , m_pVolReader(pVolReader)
     , m_szFullName(szFullName)
     , m_dwFullNameLen(dwLen)
-    , m_bWriteErrorCodes(bWriteErrorCodes)
     , m_DefaultIntentions(DefaultIntentions)
     , m_Filters(Filters)
     , m_codeVerifyTrust(codeVerifyTrust)

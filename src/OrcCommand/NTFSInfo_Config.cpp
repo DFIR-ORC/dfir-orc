@@ -37,14 +37,6 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
 
     const ConfigItem& configitem = configItem[NTFSINFO_COLUMNS];
 
-    if (configitem[WRITERRORS])
-    {
-        if (Orc::equalCaseInsensitive((const std::wstring&)configitem.SubItems[WRITERRORS], L"yes"sv))
-            config.bWriteErrorCodes = true;
-        else
-            config.bWriteErrorCodes = false;
-    }
-
     std::for_each(
         begin(configitem[DEFAULT].NodeList), end(configitem[DEFAULT].NodeList), [this](const ConfigItem& item) {
             if (item)
@@ -303,8 +295,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     else if (OutputOption(argv[i] + 1, L"I30Info", config.outI30Info))
                         ;
                     else if (OutputOption(argv[i] + 1, L"SecDescr", config.outSecDescrInfo))
-                        ;
-                    else if (BooleanOption(argv[i] + 1, L"errorcodes", config.bWriteErrorCodes))
                         ;
                     else if (BooleanOption(argv[i] + 1, L"KnownLocations", config.bGetKnownLocations))
                         ;

@@ -41,11 +41,6 @@ void Main::PrintUsage()
         L"\t/config=<FileName>          : Config should be loaded from this file\r\n"
         L"\t/flushregistry              : Flushes registry hives (using RegFlushKey)\r\n"
         L"\t<foldername>...             : List of locations where to look for samples (and sub folders)\r\n"
-        L"\t/verbose                    : Turns on verbose logging\r\n"
-        L"\t/debug                      : Adds debug information (Source File Name, Line number) to output, outputs to "
-        L"debugger (OutputDebugString)\r\n"
-        L"\t/noconsole                  : Turns off console logging\r\n"
-        L"\t/logfile=<FileName>         : All output is duplicated to logfile <FileName>\r\n"
         L"\t/nolimits                   : Ignore all limits, overrides default values\r\n"
         L"\t/reportall                  : Add information about rejected samples (due to limits) to CSV\r\n"
         L"\t/xor=0xBADF00D0             : Pattern used to XOR sample files (optional)\r\n"
@@ -63,6 +58,7 @@ void Main::PrintUsage()
         L"\t/utf8,/utf16           : Select utf8 or utf16 encoding (default is utf8)\r\n"
         L"\r\n"
         L"\t/Yara=<Rules.Yara>           : Comma separared list of yara sources\r\n");
+    PrintCommonUsage();
 }
 
 void Main::PrintParameters()

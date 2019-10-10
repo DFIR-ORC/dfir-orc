@@ -33,13 +33,9 @@ void Main::PrintUsage()
         L"\t/seek=<BlockCount>  : Seek <BlockCount> blocks of <BlockSize> bytes on ouput device\r\n"
         L"\t/hash=<hashes>      : Comma separatelist of supported hash function (MD5|SHA1|SHA256)\r\n"
         L"\t/no_error           : Continue on error\r\n"
-        L"\r\n"
-        L"\t/low                : Runs with lowered priority\r\n"
-        L"\t/verbose            : Turns on verbose logging\r\n"
-        L"\t/debug              : Adds debug information (Source File Name, Line number) to output, outputs to "
-        L"debugger (OutputDebugString)\r\n"
-        L"\t/noconsole          : Turns off console logging\r\n"
-        L"\t/logfile=<FileName> : All output is duplicated to logfile <FileName>\r\n");
+        );
+    PrintCommonUsage();
+
     return;
 }
 

@@ -25,8 +25,7 @@ public:
         const std::vector<Filter>& filters,
         LPCWSTR szFullFileName,
         DWORD dwLen,
-        Authenticode& verifytrust,
-        bool bWriteErrorCodes);
+        Authenticode& verifytrust);
     virtual ~NtfsFileInfo();
 
     virtual HRESULT OpenHash();

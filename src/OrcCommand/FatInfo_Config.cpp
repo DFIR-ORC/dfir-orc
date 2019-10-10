@@ -40,17 +40,6 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
 
     const ConfigItem& configitem = configItem[FATINFO_COLUMNS];
 
-    if (configitem[WRITERRORS])
-    {
-        using namespace std::string_view_literals;
-        constexpr auto YES = L"yes"sv;
-
-        if (equalCaseInsensitive((const std::wstring&)configitem.SubItems[WRITERRORS], YES))
-            m_Config.bWriteErrorCodes = true;
-        else
-            m_Config.bWriteErrorCodes = false;
-    }
-
     std::for_each(
         begin(configitem[DEFAULT].NodeList), end(configitem[DEFAULT].NodeList), [this](const ConfigItem& item) {
             if (item)
@@ -182,8 +171,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                 if (OutputOption(argv[i] + 1, L"out", m_Config.output))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"Computer", m_Config.strComputerName))
-                    ;
-                else if (BooleanOption(argv[i] + 1, L"errorcodes", m_Config.bWriteErrorCodes))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"ResurrectRecords", m_Config.bResurrectRecords))
                     ;

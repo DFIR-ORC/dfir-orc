@@ -637,6 +637,12 @@ public:
     // Output handling
     //
     virtual void PrintUsage() = 0;
+    virtual void PrintLoggingUsage();
+    virtual void PrintPriorityUsage();
+    virtual void PrintCommonUsage() {
+        PrintLoggingUsage();
+        PrintPriorityUsage();
+    }
     virtual void PrintHeader(LPCWSTR szToolName, LPCWSTR szVersion);
     virtual void PrintParameters() = 0;
     virtual void PrintFooter() = 0;

@@ -60,15 +60,8 @@ void Main::PrintUsage()
         L"\t/FullComputer=<ComputerName>: Sets the OrcFullComputer name for all DFIR-Orc tools\r\n"
         L"\t/SystemType=<SystemType>    : Sets the system type as typically used in {SystemType} to name archives"
         L"\t/Offline=<ImagePath>        : Sets the DFIR-Orc to work on a disk image, will set %OfflineLocation% and "
-        L"explicitely select archive DFIR-ORC_Offline"
-        L"\r\n"
-        L"\t/verbose           : Turns on verbose logging\r\n"
-        L"\t/debug             : Adds debug information (Source File Name, Line number) to output, outputs to debugger "
-        L"(OutputDebugString)\r\n"
-        L"\t/noconsole         : Turns off console logging\r\n"
-        L"\t/logfile=<FileName>: All output is duplicated to logfile <FileName>\r\n"
-        L"\r\n"
-        L"\r\n");
+        L"explicitely select archive DFIR-ORC_Offline");
+    PrintCommonUsage();
 }
 
 void Main::PrintParameters()

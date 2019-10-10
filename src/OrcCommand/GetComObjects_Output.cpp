@@ -25,13 +25,8 @@ void Main::PrintUsage()
         L"	usage: DFIR-ORC.exe GetComObjects\r\n"
         L"\r\n"
         L"\t/out=<Output>       : Output file or archive\r\n"
-        L"\t/config=<ConfigFile> : Specify a XML config file\r\n"
-        L"\r\n"
-        L"\t/low                : Runs with lowered priority\r\n"
-        L"\t/verbose            : Turns on verbose logging\r\n"
-        L"\t/debug              : Adds debug information (Source File Name, Line number) to output\r\n"
-        L"\t/noconsole          : Turns off console logging\r\n"
-        L"\t/logfile=<FileName> : All output is duplicated to logfile <FileName>\r\n");
+        L"\t/config=<ConfigFile> : Specify a XML config file\r\n");
+    PrintCommonUsage();
     return;
 }
 
