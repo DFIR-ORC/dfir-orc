@@ -5,11 +5,11 @@
     <table key="fileinfo">
 
         <utf8   name="ComputerName" maxlen="50" allows_null="no" />
-        <uint64 name="VolumeID"     allows_null="no" fmt="{:#016x}" />
+        <binary name="VolumeID"     len="8" allows_null="no" fmt="{:#016x}" />
 
         <utf16 name="File" maxlen="256" />
-        <utf16 name="ParentName" maxlen="32k" />
-        <utf16 name="FullName"   maxlen="32k" />
+        <utf16 name="ParentName" maxlen="4000" />
+        <utf16 name="FullName"   maxlen="4000" />
 
         <utf16 name="Extension"  maxlen="256" />
         <uint64 name="SizeInBytes"  />
@@ -25,7 +25,7 @@
         <timestamp name="FileNameLastAccessDate"           />
         <timestamp name="FileNameLastAttrModificationDate" />
 
-        <uint64 name="USN" fmt="{:#016x}" />
+        <uint64 name="USN" fmt="{:#016x}" allows_null="no" />
         <uint64 name="FRN" fmt="{:#016x}" allows_null="no" />
         <uint64 name="ParentFRN" fmt="{:#016x}" />
 
@@ -68,7 +68,7 @@
 
         <uint32 name="EASize" />
 
-        <utf16 name="SecurityDirectory" maxlen="8000" />
+        <utf8 name="SecurityDirectory" maxlen="8000" />
 
         <enum name="AuthenticodeStatus" >
             <value index ="0">ASUndetermined</value>

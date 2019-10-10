@@ -261,7 +261,7 @@ void Main::PrintParameters()
 
 void Main::PrintFooter()
 {
-    log::Info(_L_, L"\r\nLines processed       : %u\r\n", dwTotalFileTreated);
+    log::Info(_L_, L"\r\nLines processed         : %u\r\n", dwTotalFileTreated);
 
     PrintExecutionTime();
     return;

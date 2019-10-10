@@ -176,7 +176,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
                     {
                         if (FAILED(hr = pSqlConnection->DropTable(out.TableName)))
                         {
-                            log::Error(pLog, hr, L"Failed to create table %s\r\n", out.TableName.c_str());
+                            log::Error(pLog, hr, L"Failed to drop table %s\r\n", out.TableName.c_str());
                         }
                     }
                     if (out.Schema)
@@ -216,13 +216,13 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
                 }
                 if (FAILED(hr = pSqlWriter->BindColumns(out.TableName.c_str())))
                 {
-                    log::Error(pLog, hr, L"Could not bind SQL columnss\r\n");
+                    log::Error(pLog, hr, L"Could not bind SQL columns\r\n");
                     return nullptr;
                 }
             }
             else
             {
-                log::Error(pLog, hr, L"Could not bind SQL columnss, not column schema defined\r\n");
+                log::Error(pLog, hr, L"Could not bind SQL columns, not column schema defined\r\n");
                 return nullptr;
             }
 
@@ -453,7 +453,7 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
         for (const auto& column : columnlist.NodeList)
         {
             auto aCol = std::make_unique<TableOutput::Column>();
-            aCol->dwColumnID = column.dwOrderIndex;
+            aCol->dwColumnID = column.dwOrderIndex+1;
             aCol->Type = type;
 
             if (column.SubItems[CONFIG_SCHEMA_COLUMN_NAME].Type != ConfigItem::ATTRIBUTE)
@@ -514,20 +514,29 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
                             aCol->Type = TableOutput::ColumnType::FixedBinaryType;
                             aCol->dwLen = (DWORD32)len;
                         }
-                        if (const auto& maxlen = column.SubItems[CONFIG_SCHEMA_COLUMN_BINARY_MAXLEN])
-                            aCol->dwMaxLen = (DWORD32)maxlen;
+                        else
+                        {
+                            if (const auto& maxlen = column.SubItems[CONFIG_SCHEMA_COLUMN_BINARY_MAXLEN])
+                                aCol->dwMaxLen = (DWORD32)maxlen;
+                        }
                         break;
                     case TableOutput::ColumnType::UTF8Type:
-                        if (const auto& maxlen = column.SubItems[CONFIG_SCHEMA_COLUMN_UTF8_MAXLEN])
-                            aCol->dwMaxLen = (DWORD32)maxlen;
                         if (const auto& len = column.SubItems[CONFIG_SCHEMA_COLUMN_UTF8_LEN])
                             aCol->dwLen = (DWORD32)len;
+                        else
+                        {
+                            if (const auto& maxlen = column.SubItems[CONFIG_SCHEMA_COLUMN_UTF8_MAXLEN])
+                                aCol->dwMaxLen = (DWORD32)maxlen;
+                        }
                         break;
                     case TableOutput::ColumnType::UTF16Type:
-                        if (const auto& maxlen = column.SubItems[CONFIG_SCHEMA_COLUMN_UTF16_MAXLEN])
-                            aCol->dwMaxLen = (DWORD32)maxlen;
                         if (const auto& len = column.SubItems[CONFIG_SCHEMA_COLUMN_UTF16_LEN])
                             aCol->dwLen = (DWORD32)len;
+                        else
+                        {
+                            if (const auto& maxlen = column.SubItems[CONFIG_SCHEMA_COLUMN_UTF16_MAXLEN])
+                                aCol->dwMaxLen = (DWORD32)maxlen;
+                        }
                         break;
                     case TableOutput::ColumnType::XMLType:
                         if (const auto& maxlen = column.SubItems[CONFIG_SCHEMA_COLUMN_XML_MAXLEN])

@@ -101,7 +101,7 @@ if(${ORC_BUILD_SQL})
     add_custom_command(
         TARGET Orc
         POST_BUILD
-        DEPENDS rcedit
+        DEPENDS rcedit, OrcSql
         VERBATIM
 
         COMMAND $<TARGET_FILE:rcedit>

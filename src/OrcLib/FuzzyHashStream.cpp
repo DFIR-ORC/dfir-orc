@@ -155,8 +155,8 @@ HRESULT FuzzyHashStream::GetHash(SupportedAlgorithm alg, CBinaryBuffer& Hash)
     {
         switch (alg)
         {
-#ifdef ORC_BUILD_SSDEEP
             case FuzzyHashStream::SSDeep:
+#ifdef ORC_BUILD_SSDEEP
                 if (m_Algorithms & FuzzyHashStream::SSDeep && m_ssdeep)
                 {
                     Hash.SetCount(FUZZY_MAX_RESULT);
@@ -165,9 +165,8 @@ HRESULT FuzzyHashStream::GetHash(SupportedAlgorithm alg, CBinaryBuffer& Hash)
                         return E_FAIL;
                     return S_OK;
                 }
-                break;
 #endif  // ORC_BUILD_SSDEEP
-
+                break;
             case FuzzyHashStream::TLSH:
                 if (m_Algorithms & FuzzyHashStream::TLSH && m_tlsh)
                 {

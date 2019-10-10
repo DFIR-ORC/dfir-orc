@@ -39,7 +39,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
 
     if (OutputSpec::Kind::SQL & supported)
     {
-        static std::wregex reConnectionString(L"^(([a-zA-Z0-9_\\s]+=[a-zA-Z0-9\\s{}.]+;)+)#([a-zA-Z0-9]+)$");
+        static std::wregex reConnectionString(LR"RAW(^(([\w\s]+=[\w\s{}.]+;?)+)#([\w]+)$)RAW");
 
         std::wcmatch matches;
         if (std::regex_match(szInputString, matches, reConnectionString))

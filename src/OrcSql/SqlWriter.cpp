@@ -426,6 +426,28 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::BindColumns(LPCWSTR szTable)
                 }
             }
             break;
+        case ColumnType::FixedBinaryType:
+            item.boundData.Binary = (BinaryData*)malloc(SafeInt<DWORD>(item.dwLen.value()) + sizeof(size_t));
+            if (item.boundData.Binary == nullptr)
+            {
+                hr = E_OUTOFMEMORY;
+                break;
+            }
+            ZeroMemory(item.boundData.Binary, item.dwLen.value() + sizeof(size_t));
+            if (m_pSQL->bcp_bind(
+                (LPCBYTE)item.boundData.Binary,
+                sizeof(size_t),
+                item.dwLen.value(),
+                nullptr,
+                0L,
+                SQLBINARY,
+                item.dwColumnID)
+                == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
+            break;
         case ColumnType::GUIDType:
             ZeroMemory(&(item.boundData.GUID), sizeof(item.boundData.GUID));
             if (m_pSQL->bcp_bind(
@@ -473,6 +495,23 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::BindColumns(LPCWSTR szTable)
             }
             else
                 hr = E_INVALIDARG;
+            break;
+        case ColumnType::EnumType:
+        case ColumnType::FlagsType:
+            ZeroMemory(&(item.boundData.Dword), sizeof(item.boundData.Dword));
+            if (m_pSQL->bcp_bind(
+                (LPBYTE) & (item.boundData.Dword),
+                0,
+                sizeof(item.boundData.Dword),
+                NULL,
+                0,
+                SQLINT4,
+                item.dwColumnID)
+                == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
             break;
         default:
             break;
@@ -608,6 +647,28 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteCharArray(const CHAR* szString,
     return hr;
 }
 
+STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const std::wstring& strString)
+{
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteString(strString)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
+}
+
+STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const std::wstring_view& strString)
+{
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteString(strString)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
+}
+
 STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const WCHAR* szString)
 {
     HRESULT hr = E_FAIL;
@@ -632,7 +693,13 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const CHAR* szString)
 
 STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteFormated_(const std::string_view& szFormat, IOutput::format_args args)
 {
-    return E_NOTIMPL;
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteFormated(szFormat, args)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
 }
 
 STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteCharArray(const WCHAR* szString, DWORD dwCharCount)
@@ -646,10 +713,29 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteCharArray(const WCHAR* szString
     return hr;
 }
 
+STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const std::string& strString)
+{
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteString(strString)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
+}
+
+inline STDMETHODIMP_(HRESULT __stdcall) Orc::TableOutput::Sql::Writer::WriteString(const std::string_view& strString) { return E_NOTIMPL; }
+
 STDMETHODIMP
 Orc::TableOutput::Sql::Writer::WriteFormated_(const std::wstring_view& szFormat, IOutput::wformat_args args)
 {
-    return E_NOTIMPL;
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteFormated(szFormat, args)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
 }
 
 STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteAttributes(DWORD dwAttributes)

@@ -773,7 +773,7 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-
+#ifdef ORC_BUILD_SSDEEP
         if (fuzzy_algs & FuzzyHashStream::SupportedAlgorithm::SSDeep
             && FAILED(
                 hr = fuzzy_hashstream->GetHash(FuzzyHashStream::SupportedAlgorithm::SSDeep, GetDetails()->SSDeep())))
@@ -781,6 +781,7 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
+#endif
         if (fuzzy_algs & FuzzyHashStream::SupportedAlgorithm::TLSH
             && FAILED(hr = fuzzy_hashstream->GetHash(FuzzyHashStream::SupportedAlgorithm::TLSH, GetDetails()->TLSH())))
         {
@@ -919,7 +920,7 @@ HRESULT FileInfo::WriteOwnerSid(ITableOutput& output)
     if (ERROR_SUCCESS != dwStatus)
         return HRESULT_FROM_WIN32(dwStatus);
 
-    BOOST_SCOPE_EXIT(&pSD) { ::free(pSD); }
+    BOOST_SCOPE_EXIT(&pSD) { :: LocalFree(pSD); }
     BOOST_SCOPE_EXIT_END
 
     WCHAR* StringSid = NULL;
@@ -948,7 +949,7 @@ HRESULT FileInfo::WriteOwner(ITableOutput& output)
     if (ERROR_SUCCESS != dwStatus)
         return HRESULT_FROM_WIN32(dwStatus);
 
-    BOOST_SCOPE_EXIT(&pSD) { ::free(pSD); }
+    BOOST_SCOPE_EXIT(&pSD) { ::LocalFree(pSD); }
     BOOST_SCOPE_EXIT_END
 
 #define MAX_NAME 512
@@ -1334,6 +1335,7 @@ HRESULT FileInfo::WriteSHA256(ITableOutput& output)
 
 HRESULT FileInfo::WriteSSDeep(ITableOutput& output)
 {
+#ifdef ORC_BUILD_SSDEEP
     HRESULT hr = E_FAIL;
     if (FAILED(hr = CheckHash()))
     {
@@ -1342,6 +1344,9 @@ HRESULT FileInfo::WriteSSDeep(ITableOutput& output)
         return hr;
     }
     return output.WriteString(GetDetails()->SSDeep().c_str());
+#else
+    return output.WriteNothing();
+#endif
 }
 
 HRESULT FileInfo::WriteTLSH(ITableOutput& output)

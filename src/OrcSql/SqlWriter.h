@@ -87,13 +87,13 @@ public:
         return S_OK;
     };
 
-    STDMETHOD(WriteString)(const std::wstring& strString) override final { return E_NOTIMPL; }
-    STDMETHOD(WriteString)(const std::wstring_view& strString) override final { return E_NOTIMPL; }
+    STDMETHOD(WriteString)(const std::wstring& strString) override final;
+    STDMETHOD(WriteString)(const std::wstring_view& strString) override final;
     STDMETHOD(WriteString)(const WCHAR* szString) override final;
     STDMETHOD(WriteCharArray)(const WCHAR* szArray, DWORD dwCharCount) override final;
 
-    STDMETHOD(WriteString)(const std::string& strString) override final { return E_NOTIMPL; }
-    STDMETHOD(WriteString)(const std::string_view& strString) override final { return E_NOTIMPL; }
+    STDMETHOD(WriteString)(const std::string& strString) override final;
+    STDMETHOD(WriteString)(const std::string_view& strString) override final;
     STDMETHOD(WriteString)(const CHAR* szString) override final;
     STDMETHOD(WriteCharArray)(const CHAR* szArray, DWORD dwCharCount) override final;
 

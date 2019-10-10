@@ -225,12 +225,22 @@ HRESULT Connection::CreateTable(
                          << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
                 }
                 break;
+            case TableOutput::ColumnType::FixedBinaryType:
+                if (column->dwLen.has_value())
+                {
+                    stmt << L" BINARY ( " << column->dwLen.value() << L" ) "
+                         << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
+                }
+                break;
             case TableOutput::ColumnType::GUIDType:
                 stmt << L" BINARY  ( 16 )" << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
                 break;
             case TableOutput::ColumnType::XMLType:
                 stmt << L" XML " << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
                 break;
+            case TableOutput::ColumnType::EnumType:
+            case TableOutput::ColumnType::FlagsType:
+                stmt << L" INT " << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
             default:
                 break;
         }

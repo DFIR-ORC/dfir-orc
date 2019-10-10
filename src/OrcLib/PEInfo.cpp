@@ -546,8 +546,12 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         pe_algs = static_cast<SupportedAlgorithm>(pe_algs | SupportedAlgorithm::SHA256);
 
     FuzzyHashStream::SupportedAlgorithm fuzzy_algs = FuzzyHashStream::SupportedAlgorithm::Undefined;
+
+#ifdef ORC_BUILD_SSDEEP
     if (localIntentions & FILEINFO_SSDEEP)
         fuzzy_algs = static_cast<FuzzyHashStream::SupportedAlgorithm>(fuzzy_algs | FuzzyHashStream::SSDeep);
+#endif
+
     if (localIntentions & FILEINFO_TLSH)
         fuzzy_algs = static_cast<FuzzyHashStream::SupportedAlgorithm>(fuzzy_algs | FuzzyHashStream::TLSH);
 

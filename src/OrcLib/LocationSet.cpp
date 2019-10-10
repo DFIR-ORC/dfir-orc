@@ -121,7 +121,7 @@ DWORD g_dwKnownLocationsCSIDL[] = {CSIDL_DESKTOPDIRECTORY,  CSIDL_PROGRAMS,     
                                    CSIDL_COMMON_ALTSTARTUP, CSIDL_COMMON_FAVORITES, CSIDL_INTERNET_CACHE,
                                    CSIDL_COOKIES,           CSIDL_HISTORY,          CSIDL_COMMON_APPDATA,
                                    CSIDL_WINDOWS,           CSIDL_PROGRAM_FILES,    CSIDL_PROFILE,
-                                   CSIDL_PROGRAM_FILES,     CSIDL_ADMINTOOLS,       CSIDL_NONE};
+                                   CSIDL_PROGRAM_FILESX86,  CSIDL_ADMINTOOLS,       CSIDL_NONE};
 
 WCHAR* g_szKnownEnvPaths[] = {L"%PATH%", L"%ALLUSERSPROFILE%", L"%temp%", L"%tmp%", L"%APPDATA%", NULL};
 
