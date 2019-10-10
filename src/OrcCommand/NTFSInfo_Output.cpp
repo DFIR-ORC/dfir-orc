@@ -44,7 +44,6 @@ void Main::PrintUsage()
         L"\t\tOutput specification can be one of:\r\n"
         L"\t\t\tA file that will contain output for all locations\r\n"
         L"\t\t\tA directory that will contain one file per location (<Output>_<Location identifier>.csv)\r\n"
-        L"\t\t\tA SQL connection string and table name to import into (<connectionstring>#<tablename>)\r\n"
         L"\r\n"
         L"\t/computer=<ComputerName> : Substitute computer name to GetComputerName()\r\n"
         L"\r\n"
