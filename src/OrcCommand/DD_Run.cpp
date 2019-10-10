@@ -226,8 +226,9 @@ HRESULT Main::Run()
         for (const auto& output : output_streams)
         {
             ULONGLONG ullWritten = 0LL;
+            
             if (output.second != nullptr
-                && FAILED(hr = output.second->Write(buffer.GetData(), buffer.GetCount(), &ullWritten)))
+                && FAILED(hr = output.second->Write(buffer.GetData(), ullRead, &ullWritten)))
             {
                 log::Error(
                     _L_,
@@ -262,7 +263,7 @@ HRESULT Main::Run()
             L"%s%I64d blocks of %I64d bytes copied (%I64d Mbytes) (now:%.2f MB/sec, average:%.2f MB/sec)\r",
             szProgress,
             ullBlockCount,
-            config.BlockSize.QuadPart,
+            std::min(config.BlockSize.QuadPart, ullRead),
             ullProgressBytes / (1024 * 1024),
             dblTXnow,
             dblTXaverage);
