@@ -27,7 +27,7 @@ void Main::PrintUsage()
     log::Info(
         _L_,
         L"\r\n"
-        L"usage: DFIR-Orc.exe NTFSInfo [/config=<ConfigFile>] [/outdir=<Folder>] [/outfile=<OutputFile>] "
+        L"usage: DFIR-Orc.exe NTFSInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>] "
         L"[/Walker=USN|MFT]\r\n"
         L"\t[/(+|-)<ColumnSelection,...>:<Filter>] [/<DefaultColumnSelection>,...]\r\n"
         L"\t<Dir1> <Dir2> ... <DirN> [/KnownLocations|/kl]\r\n"

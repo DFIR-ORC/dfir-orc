@@ -30,7 +30,7 @@ void Main::PrintUsage()
     log::Info(
         _L_,
         L"\r\n"
-        L"usage: DFIR-Orc.Exe [/config=<ConfigFile>] [/outdir=<Folder>] [/outfile=<OutputFile>] \r\n"
+        L"usage: DFIR-Orc.Exe [/config=<ConfigFile>] [/out=<Folder>]\r\n"
         L"\t/config=<ConfigFile>        : Specify a XML config file\r\n"
         L"\t/local=<ConfigFile>         : Specify a XML local config file\r\n"
         L"\r\n"

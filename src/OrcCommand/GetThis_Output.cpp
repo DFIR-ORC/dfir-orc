@@ -56,10 +56,10 @@ void Main::PrintUsage()
         L"\r\n"
         L"\r\n"
         L"\r\n"
-        L"\tExtraction syntax:  GetThis.exe [/extract=<Cabinet.cab>] [/outdir=<Folder>] \r\n"
+        L"\tExtraction syntax:  GetThis.exe [/extract=<Cabinet.cab>] [/out=<Folder>] \r\n"
         L"\r\n"
         L"\t/extract=<Cabinet.cab> : Cabinet file <Cabinet.cab> is to be extracted\r\n"
-        L"\t/outdir=<Folder>       : Files will be extracted into <Folder>\r\n"
+        L"\t/out=<Folder>          : Files will be extracted into <Folder>\r\n"
         L"\t/utf8,/utf16           : Select utf8 or utf16 encoding (default is utf8)\r\n"
         L"\r\n"
         L"\t/Yara=<Rules.Yara>           : Comma separared list of yara sources\r\n");
