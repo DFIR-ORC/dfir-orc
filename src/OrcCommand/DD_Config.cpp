@@ -44,10 +44,10 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
             case L'/':
             case L'-':
                 if (OutputOption(
-                        argv[i] + 1,
-                        L"Out",
-                        static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory),
-                        config.output))
+                    argv[i] + 1,
+                    L"Out",
+                    static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory),
+                    config.output))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"if", config.strIF))
                     ;
@@ -63,7 +63,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (CryptoHashAlgorithmOption(argv[i] + 1, L"hash", config.Hash))
                     ;
-                else if (BooleanOption(argv[1] + 1, L"no_error", config.NoError))
+                else if (BooleanOption(argv[i] + 1, L"notrunc", config.NoTrunc))
+                    ;
+                else if (BooleanOption(argv[i] + 1, L"no_error", config.NoError))
                     ;
                 else if (ProcessPriorityOption(argv[i] + 1))
                     ;

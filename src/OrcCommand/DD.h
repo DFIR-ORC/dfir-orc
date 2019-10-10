@@ -36,6 +36,7 @@ public:
         SupportedAlgorithm Hash = SupportedAlgorithm::Undefined;
 
         bool NoError = false;
+        bool NoTrunc = false;
 
         ULARGE_INTEGER BlockSize = {512L};
         ULARGE_INTEGER Count = {0L};

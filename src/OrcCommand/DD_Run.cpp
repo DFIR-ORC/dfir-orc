@@ -81,7 +81,7 @@ HRESULT Main::Run()
 
         auto out_file_stream = std::make_shared<FileStream>(_L_);
 
-        if (FAILED(hr = out_file_stream->WriteTo(out.c_str())))
+        if (FAILED(hr = out_file_stream->OpenFile(out.c_str(), GENERIC_WRITE, 0L, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL)))
         {
             log::Warning(_L_, hr, L"Failed to open %s to write data\r\n", config.strIF.c_str());
             out_stream = out_file_stream = nullptr;
@@ -136,16 +136,31 @@ HRESULT Main::Run()
         {
             if (out.second != nullptr)
             {
-                if (FAILED(
-                        hr = input_stream->SetFilePointer(
-                            config.BlockSize.QuadPart * config.Skip.QuadPart, FILE_BEGIN, nullptr)))
+                if (config.NoTrunc)
                 {
-                    log::Warning(
-                        _L_,
-                        hr,
-                        L"Failed to skip %I64d bytes from input stream %s\r\n",
-                        config.BlockSize.QuadPart * config.Skip.QuadPart,
-                        out.first.c_str());
+                    if (FAILED(
+                        hr = out.second->SetFilePointer(
+                            config.BlockSize.QuadPart * config.Seek.QuadPart, FILE_BEGIN, nullptr)))
+                    {
+                        log::Warning(
+                            _L_,
+                            hr,
+                            L"Failed to seek %I64d bytes in output stream %s\r\n",
+                            config.BlockSize.QuadPart * config.Seek.QuadPart,
+                            out.first.c_str());
+                    }
+                }
+                else
+                {
+                    if (FAILED(hr = out.second->SetSize(config.BlockSize.QuadPart * config.Seek.QuadPart)))
+                    {
+                        log::Warning(
+                            _L_,
+                            hr,
+                            L"Failed to truncate %I64d bytes in output stream %s\r\n",
+                            config.BlockSize.QuadPart * config.Seek.QuadPart,
+                            out.first.c_str());
+                    }
                 }
             }
         }
@@ -176,7 +191,7 @@ HRESULT Main::Run()
                 ZeroMemory(buffer.GetData(), buffer.GetCount());
                 ullRead = config.BlockSize.QuadPart;
                 if (FAILED(input_file_stream->SetFilePointer(
-                        ullAbsoluteOffset + config.BlockSize.QuadPart, FILE_BEGIN, NULL)))
+                        config.BlockSize.QuadPart, FILE_CURRENT, NULL)))
                 {
                     log::Error(
                         _L_,

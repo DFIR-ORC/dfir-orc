@@ -343,7 +343,7 @@ HRESULT FileStream::SetSize(ULONG64 ullNewSize)
     // Setting position to new file end
     LARGE_INTEGER liNewFileEnd = {0};
     liNewFileEnd.QuadPart = ullNewSize;
-    if (!(SetFilePointerEx(m_hFile, liDistanceToMove, &liCurrentFilePointer, FILE_BEGIN)))
+    if (!(SetFilePointerEx(m_hFile, liNewFileEnd, &liCurrentFilePointer, FILE_BEGIN)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         log::Error(_L_, hr, L"SetFilePointerEx failed\r\n");

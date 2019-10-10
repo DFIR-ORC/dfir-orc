@@ -33,6 +33,7 @@ void Main::PrintUsage()
         L"\t/seek=<BlockCount>  : Seek <BlockCount> blocks of <BlockSize> bytes on ouput device\r\n"
         L"\t/hash=<hashes>      : Comma separatelist of supported hash function (MD5|SHA1|SHA256)\r\n"
         L"\t/no_error           : Continue on error\r\n"
+        L"\t/notrunc            : Do not truncate output stream\r\n"
         );
     PrintCommonUsage();
 
