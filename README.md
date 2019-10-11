@@ -21,6 +21,8 @@ Build environment can be setup quickly using [Microsoft's developer virtual mach
 ### Commands
 Both 32-bit and 64-bit versions should be built for maximum compatiliby before deployment. See https://dfir-orc.github.io for more details about deployment and configuration.
 
+In a prompt like *Developer Command Prompt for VS 2019* (prefer to avoid using *cmd.exe*):
+
 ```bash
 git clone https://github.com/dfir-orc/dfir-orc.git
 cd dfir-orc
