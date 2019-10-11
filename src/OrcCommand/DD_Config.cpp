@@ -65,7 +65,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (BooleanOption(argv[i] + 1, L"notrunc", config.NoTrunc))
                     ;
-                else if (BooleanOption(argv[i] + 1, L"no_error", config.NoError))
+                else if (BooleanOption(argv[i] + 1, L"noerror", config.NoError))
                     ;
                 else if (ProcessPriorityOption(argv[i] + 1))
                     ;
