@@ -20,7 +20,7 @@ using namespace Orc::Config::Common;
 HRESULT samples(ConfigItem& parent, DWORD dwIndex)
 {
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = parent.AddChildNode(L"samples", dwIndex, ConfigItem::MANDATORY)))
+    if (FAILED(hr = parent.AddChildNode(L"samples", dwIndex, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"MaxTotalBytes", CONFIG_MAXBYTESTOTAL, ConfigItem::OPTION)))
         return hr;
@@ -35,9 +35,9 @@ HRESULT samples(ConfigItem& parent, DWORD dwIndex)
 HRESULT getthis(ConfigItem& parent, DWORD dwIndex)
 {
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = parent.AddChildNode(L"getthis", dwIndex, ConfigItem::MANDATORY)))
+    if (FAILED(hr = parent.AddChildNode(L"getthis", dwIndex, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"name", GETSTAMPLES_GETTHIS_EXENAME, ConfigItem::MANDATORY)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"name", GETSTAMPLES_GETTHIS_EXENAME, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"run", GETSTAMPLES_GETTHIS_EXERUN, ConfigItem::OPTION)))
         return hr;

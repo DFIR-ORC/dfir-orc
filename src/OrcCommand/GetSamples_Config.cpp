@@ -49,6 +49,11 @@ void CheckGetThisConfiguration(Orc::Command::GetSamples::Main::Configuration& co
         config.getthisArgs.insert(0, getThisCmd);
         config.getthisArgs.insert(getThisCmd.size(), L" ");
     }
+
+    if (config.limits.bIgnoreLimits)
+    {
+        config.getthisArgs.append(L" /nolimits");
+    }
 }
 
 }  // namespace
@@ -126,6 +131,14 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                 else if (OutputOption(argv[i] + 1, L"TimeLine", OutputSpec::TableFile, config.timelineOutput))
                     ;
                 else if (OutputOption(argv[i] + 1, L"TempDir", OutputSpec::Directory, config.tmpdirOutput))
+                    ;
+                else if (ParameterOption(argv[i] + 1, L"MaxPerSampleBytes", config.limits.dwlMaxBytesPerSample))
+                    ;
+                else if (ParameterOption(argv[i] + 1, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal))
+                    ;
+                else if (ParameterOption(argv[i] + 1, L"MaxSampleCount", config.limits.dwMaxSampleCount))
+                    ;
+                else if (BooleanOption(argv[i] + 1, L"NoLimits", config.limits.bIgnoreLimits))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"Compression", config.samplesOutput.Compression))
                     ;
@@ -290,6 +303,18 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    // TODO: make a function to use also in GetThis_config.cpp
+    if (!config.limits.bIgnoreLimits
+        && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
+    {
+        log::Error(
+            _L_,
+            E_INVALIDARG,
+            L"No global (at samples level, MaxBytesTotal or MaxSampleCount) has been set: set limits in configuration "
+            L"or use /nolimits\r\n");
+        return E_INVALIDARG;
+    }
 
     CheckGetThisConfiguration(config);
 

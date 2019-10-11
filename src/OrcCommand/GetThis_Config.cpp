@@ -448,6 +448,7 @@ HRESULT Main::CheckConfiguration()
         end(config.listOfExclusions),
         [this](const std::shared_ptr<FileFind::SearchTerm>& aTerm) { FileFinder.AddExcludeTerm(aTerm); });
 
+    // TODO: make a function to use also in GetSamples_config.cpp
     if (!config.limits.bIgnoreLimits
         && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
     {
