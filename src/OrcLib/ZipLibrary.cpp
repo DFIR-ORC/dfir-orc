@@ -35,10 +35,13 @@ class Lib7z
     {
         ::lib7zCrcTableInit();
         NArchive::N7z::Register();
+        NArchive::NZip::Register();
         NCompress::NBcj::RegisterCodecBCJ();
         NCompress::NBcj2::RegisterCodecBCJ2();
         NCompress::NLzma::RegisterCodecLZMA();
         NCompress::NLzma2::RegisterCodecLZMA2();
+        NCompress::NDeflate::RegisterCodecDeflate();
+        NCompress::NDeflate::RegisterCodecDeflate64();
 
         NCrypto::N7z::RegisterCodec7zAES();
         NCrypto::RegisterCodecAES256CBC();
