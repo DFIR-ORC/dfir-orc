@@ -84,7 +84,28 @@ std::unique_ptr<ZipLibrary> ZipLibrary::CreateZipLibrary(logger log)
     auto zip = std::unique_ptr<ZipLibrary>(new ZipLibrary(std::move(log)));
     if (FAILED(zip->Initialize()))
         return nullptr;
+
     return zip;
+}
+
+std::shared_ptr<ZipLibrary> ZipLibrary::GetZipLibrary(logger log)
+{
+    static std::weak_ptr<ZipLibrary> singleton;
+
+    auto lib = singleton.lock();
+    if (lib)
+    {
+        return lib;
+    }
+
+    lib = CreateZipLibrary(std::move(log));
+    if (lib == nullptr)
+    {
+        return nullptr;
+    }
+
+    singleton = lib;
+    return lib;
 }
 
 ZipLibrary::ZipLibrary(std::shared_ptr<LogFileWriter> log)

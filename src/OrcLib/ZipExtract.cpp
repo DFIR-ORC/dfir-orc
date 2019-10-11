@@ -57,7 +57,7 @@ STDMETHODIMP ZipExtract::Extract(
     if (MakeWriteAbleStream == nullptr)
         return E_INVALIDARG;
 
-    const auto pZipLib = ZipLibrary::CreateZipLibrary(_L_);
+    const auto pZipLib = ZipLibrary::GetZipLibrary(_L_);
     if (pZipLib == nullptr)
     {
         log::Error(_L_, E_FAIL, L"Failed to load 7zip.dll\r\n");

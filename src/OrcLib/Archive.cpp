@@ -46,7 +46,7 @@ Orc::ArchiveFormat Archive::GetArchiveFormat(const std::wstring_view& filepath)
     if (equalCaseInsensitive(ext, L"7z"))
         return ArchiveFormat::SevenZip;
 
-    const auto pZipLib = ZipLibrary::CreateZipLibrary(nullptr);
+    const auto pZipLib = ZipLibrary::GetZipLibrary(nullptr);
     if (pZipLib == nullptr)
         return ArchiveFormat::Unknown;
 
