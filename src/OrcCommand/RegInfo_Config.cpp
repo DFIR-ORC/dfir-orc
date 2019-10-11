@@ -99,7 +99,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     else
     {
-        log::Verbose(_L_, L"INFO: No statifactory ouput in config file\r\n");
+        log::Verbose(_L_, L"INFO: No statisfactory ouput in config file\r\n");
     }
 
     if (configitem[REGINFO_CSVLIMIT])
@@ -247,7 +247,13 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 
 HRESULT Main::CheckConfiguration()
 {
-    config.m_HiveQuery.m_HivesLocation.Consolidate(false, FSVBR::FSType::ALL);
+    config.m_HiveQuery.m_HivesLocation.Consolidate(false, FSVBR::FSType::NTFS);
+
+    if (config.Output.Type == OutputSpec::Kind::None)
+    {
+        log::Error(_L_, E_INVALIDARG, L"No valid output specified (only directory or csv|tsv ztr allowed\r\n");
+        return E_INVALIDARG;
+    }
 
     return S_OK;
 }

@@ -488,7 +488,7 @@ HRESULT Main::Run()
 
             std::shared_ptr<TableOutput::IWriter> pRegInfoWriter;
 
-            if (config.Output.Type != OutputSpec::Kind::Directory && config.Output.Type != OutputSpec::Kind::None)
+            if (config.Output.Type & OutputSpec::Kind::TableFile)
             {
                 if (nullptr == (pRegInfoWriter = GetRegInfoWriter(config.Output)))
                 {
@@ -504,7 +504,7 @@ HRESULT Main::Run()
 
                     log::Info(_L_, L"\tParsing hive %s\r\n", aHive.FileName.c_str());
 
-                    if (config.Output.Type == OutputSpec::Kind::Directory)
+                    if (config.Output.Type & OutputSpec::Kind::Directory)
                     {
                         // generate log filename from hive path
 
