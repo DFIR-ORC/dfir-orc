@@ -976,6 +976,12 @@ HRESULT Main::FindMatchingSamples()
 
                     const wstring& strFullFileName = aMatch->MatchingNames.front().FullPathName;
 
+                    if (aMatch->MatchingAttributes.empty())
+                    {
+                        log::Warning(_L_, E_FAIL, L"\"%s\" matched \"%s\" but no data related attribute was associated\r\n", strFullFileName.c_str(), aMatch->Term->GetDescription().c_str());
+                        return;
+                    }
+
                     for (const auto& attr : aMatch->MatchingAttributes)
                     {
                         wstring strName;
