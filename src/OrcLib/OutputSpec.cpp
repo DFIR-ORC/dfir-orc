@@ -70,8 +70,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
             szSeparator = L",";
             szQuote = L"\"";
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
         else if (equalCaseInsensitive(szExtension, L".tsv"))
         {
@@ -79,22 +78,19 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
             szSeparator = L"\t";
             szQuote = L"";
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
         else if (equalCaseInsensitive(szExtension, L".parquet"))
         {
             Type = static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet);
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
         else if (equalCaseInsensitive(szExtension, L".orc"))
         {
             Type = static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC);
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
     }
     if (OutputSpec::Kind::StructuredFile & supported)
@@ -103,8 +99,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         {
             Type = static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile | OutputSpec::Kind::XML);
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
     }
     if (OutputSpec::Kind::StructuredFile & supported)
@@ -113,8 +108,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         {
             Type = static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON);
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
     }
     if (OutputSpec::Kind::Archive & supported)
@@ -124,8 +118,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         {
             Type = OutputSpec::Kind::Archive;
             ArchiveFormat = fmt;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
     }
 
@@ -141,27 +134,16 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         }
         else
         {
-            if (!CreateDirectory(szExpanded, NULL))
-            {
-                log::Error(
-                    pLog,
-                    hr = HRESULT_FROM_WIN32(GetLastError()),
-                    L"Failed to create directory \"%s\"\r\n",
-                    szExpanded);
-                return hr;
-            }
             Type = OutputSpec::Kind::Directory;
-            Path = szExpanded;
             CreationStatus = CreatedNew;
-            return S_OK;
+            return Orc::GetOutputDir(szExpanded, Path, true);
         }
     }
 
     if (OutputSpec::Kind::File & supported)
     {
         Type = OutputSpec::Kind::File;
-        Path = szExpanded;
-        return S_OK;
+        return Orc::GetOutputFile(szExpanded, Path, true);
     }
     return S_FALSE;
 }

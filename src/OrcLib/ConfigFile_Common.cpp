@@ -381,8 +381,6 @@ HRESULT Orc::Config::Common::location(ConfigItem& parent, DWORD dwIndex, ConfigI
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"bytesperfrs", CONFIG_BYTESPERFRS, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"originalvolume", CONFIG_ORIGINALVOLUME, ConfigItem::OPTION)))
-        return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"offset", CONFIG_VOLUME_OFFSET, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"length", CONFIG_VOLUME_SIZE, ConfigItem::OPTION)))

@@ -285,11 +285,10 @@ constexpr auto CONFIG_COMPUTERNAME = 0U;
 constexpr auto CONFIG_BYTESPERSECTOR = 1U;
 constexpr auto CONFIG_BYTESPERCLUSTER = 2U;
 constexpr auto CONFIG_BYTESPERFRS = 3U;
-constexpr auto CONFIG_ORIGINALVOLUME = 4U;
-constexpr auto CONFIG_VOLUME_OFFSET = 5U;
-constexpr auto CONFIG_VOLUME_SIZE = 6U;
-constexpr auto CONFIG_VOLUME_SHADOWS = 7U;
-constexpr auto CONFIG_VOLUME_ALTITUDE = 8U;
+constexpr auto CONFIG_VOLUME_OFFSET = 4U;
+constexpr auto CONFIG_VOLUME_SIZE = 5U;
+constexpr auto CONFIG_VOLUME_SHADOWS = 6U;
+constexpr auto CONFIG_VOLUME_ALTITUDE = 7U;
 
 constexpr auto CONFIG_SQL_TABLEKEY = 0U;
 

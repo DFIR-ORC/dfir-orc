@@ -672,7 +672,7 @@ bool UtilitiesMain::OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstri
         }
         else
         {
-            if (FAILED(GetOutputFile(pEquals + 1, strOutputFile)))
+            if (FAILED(GetOutputFile(pEquals + 1, strOutputFile, true)))
             {
                 log::Error(_L_, E_INVALIDARG, L"Invalid output dir specified: %s\r\n", pEquals + 1);
                 return false;
@@ -695,7 +695,7 @@ bool UtilitiesMain::OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
         }
         else
         {
-            if (FAILED(GetOutputDir(pEquals + 1, strOutputDir)))
+            if (FAILED(GetOutputDir(pEquals + 1, strOutputDir, true)))
             {
                 log::Error(_L_, E_INVALIDARG, L"Invalid output dir specified: %s\r\n", pEquals + 1);
                 return false;
