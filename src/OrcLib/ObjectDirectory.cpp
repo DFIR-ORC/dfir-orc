@@ -153,10 +153,9 @@ HRESULT ObjectDirectory::ObjectInstance::Write(
 
     pWriter->WriteNameExactFlagsPair(L"type", Type, ObjectDirectory::g_ObjectTypeDefinition);
     pWriter->WriteNameValuePair(L"name", Name.c_str());
-    pWriter->WriteNameValuePair(L"path", Path.c_str());
 
     if (!Path.empty())
-        pWriter->WriteNameValuePair(L"link_target", Path.c_str());
+        pWriter->WriteNameValuePair(L"path", Path.c_str());
     if (!LinkTarget.empty())
         pWriter->WriteNameValuePair(L"link_target", LinkTarget.c_str());
     if (LinkCreationTime.QuadPart != 0LL)
