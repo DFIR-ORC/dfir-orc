@@ -41,6 +41,40 @@ namespace fs = std::filesystem;
 
 using namespace Orc;
 
+namespace {
+
+void StoreFileHashes(Archive::ArchiveItems& items, bool releaseInputStreams, Orc::logger& _L_)
+{
+    for (auto& item : items)
+    {
+        if (item.currentStatus != Archive::ArchiveItem::Status::Done)
+        {
+            log::Warning(_L_, E_FAIL, L"Unexpected archive status: %d", item.currentStatus);
+            continue;
+        }
+
+        auto hashstream = std::dynamic_pointer_cast<CryptoHashStream>(item.Stream);
+        if (hashstream)
+        {
+            // An item will be convertible to 'CryptoHashStream' only when processed the first time.
+            // Items that are compressed before 'bFinal == true' must be ignored as their hash were
+            // already processed.
+            hashstream->GetMD5(item.MD5);
+            hashstream->GetSHA1(item.SHA1);
+
+            // TODO: see if we want also to calculate sha256
+            // hashstream->GetSHA256(item.SHA256);
+        }
+
+        if (releaseInputStreams)
+        {
+            item.Stream = nullptr;
+        }
+    }
+}
+
+}  // namespace
+
 ZipCreate::ZipCreate(logger pLog, bool bComputeHash, DWORD XORPattern)
     : ArchiveCreate(std::move(pLog), bComputeHash, XORPattern)
     , m_FormatGUID(CLSID_NULL)
@@ -257,6 +291,9 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
             return hr;
         }
     }
+
+    const bool kReleaseInputStreams = true;
+    StoreFileHashes(m_Items, kReleaseInputStreams, _L_);
 
     auto leftover_found = std::find_if(begin(m_Items), end(m_Items), [](const ArchiveItem& item) {
         return item.Index == (DWORD)-1;
