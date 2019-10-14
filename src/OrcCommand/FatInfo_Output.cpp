@@ -110,9 +110,9 @@ void Main::PrintParameters()
     PrintOperatingSystem();
 
     if (!m_Config.strComputerName.empty())
-        log::Info(_L_, L"\r\nComputer logged     : %s\r\n", m_Config.strComputerName.c_str());
+        log::Info(_L_, L"\r\nComputer logged       : %s\r\n", m_Config.strComputerName.c_str());
 
-    log::Info(_L_, L"\r\nCSV Columns         :\r\n");
+    log::Info(_L_, L"\r\nCSV Columns           :\r\n");
     const ColumnNameDef* pCurCol = FatFileInfo::g_FatColumnNames;
     DWORD dwNumCol = 0;
     while (pCurCol->dwIntention != FILEINFO_NONE)
@@ -133,7 +133,7 @@ void Main::PrintParameters()
         pCurCol++;
     }
 
-    log::Info(_L_, L"\r\n\r\nDefault columns     :\r\n");
+    log::Info(_L_, L"\r\n\r\nDefault columns       :\r\n");
 
     pCurCol = FatFileInfo::g_FatColumnNames;
     dwNumCol = 0;
