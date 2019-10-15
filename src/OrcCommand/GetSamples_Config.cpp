@@ -132,9 +132,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                     ;
                 else if (OutputOption(argv[i] + 1, L"TempDir", OutputSpec::Directory, config.tmpdirOutput))
                     ;
-                else if (ParameterOption(argv[i] + 1, L"MaxPerSampleBytes", config.limits.dwlMaxBytesPerSample))
+                else if (FileSizeOption(argv[i] + 1, L"MaxPerSampleBytes", config.limits.dwlMaxBytesPerSample))
                     ;
-                else if (ParameterOption(argv[i] + 1, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal))
+                else if (FileSizeOption(argv[i] + 1, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"MaxSampleCount", config.limits.dwMaxSampleCount))
                     ;
