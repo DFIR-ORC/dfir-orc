@@ -33,7 +33,7 @@ class ORCLIB_API Authenticode
 public:
     typedef enum
     {
-        AUTHENTICODE_UNKNWON = 0,
+        AUTHENTICODE_UNKNOWN = 0,
         AUTHENTICODE_NOT_PE,
         AUTHENTICODE_SIGNED_VERIFIED,
         AUTHENTICODE_CATALOG_SIGNED_VERIFIED,
@@ -56,7 +56,7 @@ public:
         bool isSigned = false;
         bool bSignatureVerifies = false;
 
-        Authenticode::Status AuthStatus = AUTHENTICODE_UNKNWON;
+        Authenticode::Status AuthStatus = AUTHENTICODE_UNKNOWN;
 
         std::vector<PCCERT_CONTEXT> Signers;
         std::vector<PCCERT_CONTEXT> SignersCAs;
