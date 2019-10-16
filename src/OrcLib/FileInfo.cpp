@@ -830,7 +830,7 @@ HRESULT FileInfo::OpenAuthenticode()
     }
     else
     {
-        if (FAILED(hr = m_codeVerifyTrust.Verify(m_szFullName, GetDetails()->GetPEHashs(), data)))
+        if (FAILED(hr = m_codeVerifyTrust.VerifyAnySignatureWithCatalogs(m_szFullName, GetDetails()->GetPEHashs(), data)))
         {
             log::Warning(_L_, hr, L"WinVerifyTrust failed for file %s\r\n", m_szFullName);
         }

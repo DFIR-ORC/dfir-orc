@@ -102,8 +102,8 @@ private:
 
     HRESULT EvaluateCheck(LONG lStatus, AuthenticodeData& data);
 
-    HRESULT VerifySignature(LPCWSTR szFileName, HANDLE hFile, AuthenticodeData& data);
-    HRESULT VerifySignature(LPCWSTR szFileName, const CBinaryBuffer& hash, HCATINFO& hCatalog, AuthenticodeData& data);
+    HRESULT VerifyEmbeddedSignature(LPCWSTR szFileName, HANDLE hFile, AuthenticodeData& data);
+    HRESULT VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffer& hash, HCATINFO& hCatalog, AuthenticodeData& data);
 
     HRESULT ExtractSignatureHash(const CBinaryBuffer& signature, AuthenticodeData& data);
     HRESULT ExtractSignatureTimeStamp(const CBinaryBuffer& signature, AuthenticodeData& data);
@@ -128,7 +128,7 @@ public:
     // Catalog based verifications
     HRESULT Verify(LPCWSTR szFileName, AuthenticodeData& data);
     HRESULT Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStream>& pStream, AuthenticodeData& data);
-    HRESULT Verify(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data);
+    HRESULT VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data);
 
     // Security directory verification
     HRESULT Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_Hashs& hashs, AuthenticodeData& data);

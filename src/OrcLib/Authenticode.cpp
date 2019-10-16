@@ -148,7 +148,7 @@ HRESULT Authenticode::FindCatalogForHash(const CBinaryBuffer& hash, bool& isCata
     return S_OK;
 }
 
-HRESULT Authenticode::VerifySignature(LPCWSTR szFileName, HANDLE hFile, AuthenticodeData& data)
+HRESULT Authenticode::VerifyEmbeddedSignature(LPCWSTR szFileName, HANDLE hFile, AuthenticodeData& data)
 {
     // Initialize the WINTRUST_FILE_INFO structure.
     WINTRUST_FILE_INFO FileData;
@@ -174,7 +174,7 @@ HRESULT Authenticode::VerifySignature(LPCWSTR szFileName, HANDLE hFile, Authenti
 }
 
 HRESULT
-Authenticode::VerifySignature(LPCWSTR szFileName, const CBinaryBuffer& hash, HCATINFO& hCatalog, AuthenticodeData& data)
+Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffer& hash, HCATINFO& hCatalog, AuthenticodeData& data)
 {
     DBG_UNREFERENCED_PARAMETER(szFileName);
     CATALOG_INFO InfoStruct;
@@ -399,7 +399,7 @@ HRESULT Authenticode::Verify(LPCWSTR pwszSourceFile, AuthenticodeData& data)
     else if (HashSize == BYTES_IN_SHA256_HASH)
         hashs.sha256 = hash;
 
-    return Verify(pwszSourceFile, hashs, data);
+    return VerifyAnySignatureWithCatalogs(pwszSourceFile, hashs, data);
 }
 
 HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStream>& pStream, AuthenticodeData& data)
@@ -479,10 +479,10 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
     hashstream->GetSHA1(hashs.sha1);
     hashstream->GetSHA256(hashs.sha256);
 
-    return Verify(szFileName, hashs, data);
+    return VerifyAnySignatureWithCatalogs(szFileName, hashs, data);
 }
 
-HRESULT Authenticode::Verify(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data)
+HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data)
 {
     HRESULT hr = E_FAIL;
 
@@ -501,7 +501,7 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const PE_Hashs& hashs, Authenti
         else if (bIsCatalogSigned)
         {
             // Only if file is catalog signed and hash was passed, proceed with verification
-            if (FAILED(hr = VerifySignature(szFileName, hashs.md5, hCatalog, data)))
+            if (FAILED(hr = VerifySignatureWithCatalogs(szFileName, hashs.sha256, hCatalog, data)))
                 return hr;
             return S_OK;
         }
@@ -515,7 +515,7 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const PE_Hashs& hashs, Authenti
         else if (bIsCatalogSigned)
         {
             // Only if file is catalog signed and hash was passed, proceed with verification
-            if (FAILED(hr = VerifySignature(szFileName, hashs.sha1, hCatalog, data)))
+            if (FAILED(hr = VerifySignatureWithCatalogs(szFileName, hashs.sha1, hCatalog, data)))
                 return hr;
             return S_OK;
         }
@@ -529,7 +529,7 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const PE_Hashs& hashs, Authenti
         else if (bIsCatalogSigned)
         {
             // Only if file is catalog signed and hash was passed, proceed with verification
-            if (FAILED(hr = VerifySignature(szFileName, hashs.sha256, hCatalog, data)))
+            if (FAILED(hr = VerifySignatureWithCatalogs(szFileName, hashs.md5, hCatalog, data)))
                 return hr;
             return S_OK;
         }
