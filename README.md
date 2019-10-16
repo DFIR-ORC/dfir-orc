@@ -58,6 +58,8 @@ Using default options is recommended with the exception of `ORC_BUILD_VCPKG` whi
 | ORC_USE_STATIC_CRT   | ON                    | Use static runtime            |
 | ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory          |
 | ORC_XMLLITE_PATH     |                       | XmlLite.dll path (xp sp2)     |
+| VCPKG_TARGET_TRIPLET | Autodetect            | VCPKG triplet to use          |
+| CMAKE_TOOLCHAIN_FILE | Autodetect            | VCPKG's toolchain file        |
 
 
 [1] `ORC_BUILD_SQL=ON` requires [SQL Server Native Client](https://docs.microsoft.com/en-us/sql/relational-databases/native-client/applications/installing-sql-server-native-client?view=sql-server-2017)
