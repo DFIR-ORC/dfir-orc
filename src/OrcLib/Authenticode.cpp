@@ -492,11 +492,11 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
     HCATINFO hCatalog = INVALID_HANDLE_VALUE;
     bool bIsCatalogSigned = false;
 
-    if (hashs.md5.GetCount())
+	if (hCatalog == INVALID_HANDLE_VALUE && hashs.sha256.GetCount())
     {
-        if (FAILED(hr = FindCatalogForHash(hashs.md5, bIsCatalogSigned, hCatalog)))
+        if (FAILED(hr = FindCatalogForHash(hashs.sha256, bIsCatalogSigned, hCatalog)))
         {
-            log::Verbose(_L_, L"Could not find a catalog for MD5 hash\r\n");
+            log::Verbose(_L_, L"Could not find a catalog for SHA256 hash\r\n");
         }
         else if (bIsCatalogSigned)
         {
@@ -520,11 +520,12 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
             return S_OK;
         }
     }
-    if (hCatalog == INVALID_HANDLE_VALUE && hashs.sha256.GetCount())
+
+    if (hashs.md5.GetCount())
     {
-        if (FAILED(hr = FindCatalogForHash(hashs.sha256, bIsCatalogSigned, hCatalog)))
+        if (FAILED(hr = FindCatalogForHash(hashs.md5, bIsCatalogSigned, hCatalog)))
         {
-            log::Verbose(_L_, L"Could not find a catalog for SHA256 hash\r\n");
+            log::Verbose(_L_, L"Could not find a catalog for MD5 hash\r\n");
         }
         else if (bIsCatalogSigned)
         {
