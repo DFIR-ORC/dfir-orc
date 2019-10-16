@@ -113,7 +113,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::SetSchema(const Schema& schema)
             csv_col->FormatColumn = fmt::format(
                 L"{}{}",
                 bFirst ? emptyStr : m_Options->Delimiter,
-                csv_col->Format.value_or(L"{YYYY}-{MM}-{DD} {hh}:{mm}:{ss}.{mmm}"));
+                csv_col->Format.value_or(L"{YYYY:#04}-{MM:#02}-{DD:#02} {hh:#02}:{mm:#02}:{ss:#02}.{mmm:#03}"));
         }
         else
         {
