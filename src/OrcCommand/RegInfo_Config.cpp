@@ -251,7 +251,12 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Output.Type == OutputSpec::Kind::None)
     {
-        log::Error(_L_, E_INVALIDARG, L"No valid output specified (only directory or csv|tsv ztr allowed\r\n");
+        log::Error(_L_, E_INVALIDARG, L"No valid output specified (only directory or csv|tsv are allowed\r\n");
+        return E_INVALIDARG;
+    }
+    if (config.Output.Type & OutputSpec::Kind::Archive)
+    {
+        log::Error(_L_, E_INVALIDARG, L"Archive output is not supported (only directory or csv|tsv are allowed\r\n");
         return E_INVALIDARG;
     }
 
