@@ -399,7 +399,18 @@ HRESULT Authenticode::Verify(LPCWSTR pwszSourceFile, AuthenticodeData& data)
     else if (HashSize == BYTES_IN_SHA256_HASH)
         hashs.sha256 = hash;
 
-    return VerifyAnySignatureWithCatalogs(pwszSourceFile, hashs, data);
+    hr = VerifyAnySignatureWithCatalogs(pwszSourceFile, hashs, data);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (data.AuthStatus != AUTHENTICODE_NOT_SIGNED)
+    {
+        return S_OK;
+    }
+
+    return VerifyEmbeddedSignature(pwszSourceFile, hFile, data);
 }
 
 HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStream>& pStream, AuthenticodeData& data)
@@ -506,6 +517,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
             return S_OK;
         }
     }
+
     if (hCatalog == INVALID_HANDLE_VALUE && hashs.sha1.GetCount())
     {
         if (FAILED(hr = FindCatalogForHash(hashs.sha1, bIsCatalogSigned, hCatalog)))
@@ -535,6 +547,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
             return S_OK;
         }
     }
+
     data.bSignatureVerifies = false;
     data.isSigned = false;
     data.AuthStatus = AUTHENTICODE_NOT_SIGNED;
