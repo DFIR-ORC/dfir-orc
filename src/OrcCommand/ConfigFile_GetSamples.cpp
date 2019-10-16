@@ -81,8 +81,6 @@ HRESULT Orc::Config::GetSamples::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(L"autoruns", output, GETSAMPLES_AUTORUNS)))
         return hr;
-    if (FAILED(hr = item.AddAttribute(L"flushregistry", GETSAMPLES_FLUSHREGISTRY, ConfigItem::OPTION)))
-        return hr;
     if (FAILED(hr = item.AddAttribute(L"nolimits", GETSAMPLES_NOLIMITS, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"nosigcheck", GETSAMPLES_NOSIGCHECK, ConfigItem::OPTION)))

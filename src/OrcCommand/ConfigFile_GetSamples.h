@@ -31,9 +31,8 @@ constexpr auto GETSAMPLES_KNOWNLOCATIONS = 7L;
 constexpr auto GETSAMPLES_SAMPLES = 8L;
 constexpr auto GETSAMPLES_LOGGING = 9L;
 constexpr auto GETSAMPLES_AUTORUNS = 10L;
-constexpr auto GETSAMPLES_FLUSHREGISTRY = 11L;
-constexpr auto GETSAMPLES_NOLIMITS = 12L;
-constexpr auto GETSAMPLES_NOSIGCHECK = 13L;
+constexpr auto GETSAMPLES_NOLIMITS = 11L;
+constexpr auto GETSAMPLES_NOSIGCHECK = 12L;
 
 constexpr auto GETSAMPLES_GETSAMPLES = 0L;
 
