@@ -236,6 +236,11 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.limits.bIgnoreLimits = true;
     }
 
+    if (configitem[GETSAMPLES_NOSIGCHECK])
+    {
+        config.bNoSigCheck = true;
+    }
+
     if (configitem[GETSAMPLES_GETTHIS])
     {
         if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXENAME])
