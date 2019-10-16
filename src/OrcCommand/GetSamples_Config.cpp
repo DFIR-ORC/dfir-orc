@@ -231,6 +231,11 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.limits.dwMaxSampleCount = (DWORD32)configitem[GETSAMPLES_SAMPLES][CONFIG_MAXSAMPLECOUNT];
     }
 
+    if (configitem[GETSAMPLES_NOLIMITS])
+    {
+        config.limits.bIgnoreLimits = true;
+    }
+
     if (configitem[GETSAMPLES_GETTHIS])
     {
         if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXENAME])
