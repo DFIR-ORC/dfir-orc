@@ -34,8 +34,6 @@ constexpr auto GETSAMPLES_AUTORUNS = 10L;
 constexpr auto GETSAMPLES_NOLIMITS = 11L;
 constexpr auto GETSAMPLES_NOSIGCHECK = 12L;
 
-constexpr auto GETSAMPLES_GETSAMPLES = 0L;
-
 namespace Orc::Config::GetSamples {
 ORCLIB_API HRESULT root(ConfigItem& item);
 }
