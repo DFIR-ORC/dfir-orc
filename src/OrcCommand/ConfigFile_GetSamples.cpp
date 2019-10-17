@@ -37,15 +37,15 @@ HRESULT getthis(ConfigItem& parent, DWORD dwIndex)
     HRESULT hr = E_FAIL;
     if (FAILED(hr = parent.AddChildNode(L"getthis", dwIndex, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"name", GETSTAMPLES_GETTHIS_EXENAME, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"name", GETSAMPLES_GETTHIS_EXENAME, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run", GETSTAMPLES_GETTHIS_EXERUN, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run", GETSAMPLES_GETTHIS_EXERUN, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run32", GETSTAMPLES_GETTHIS_EXERUN32, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run32", GETSAMPLES_GETTHIS_EXERUN32, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run64", GETSTAMPLES_GETTHIS_EXERUN64, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run64", GETSAMPLES_GETTHIS_EXERUN64, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"args", GETSTAMPLES_GETTHIS_ARGS, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"args", GETSAMPLES_GETTHIS_ARGS, ConfigItem::OPTION)))
         return hr;
     return S_OK;
 }

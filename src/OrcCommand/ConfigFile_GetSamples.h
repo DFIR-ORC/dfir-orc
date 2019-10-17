@@ -14,11 +14,11 @@
 
 #pragma managed(push, off)
 
-constexpr auto GETSTAMPLES_GETTHIS_EXENAME = 0L;
-constexpr auto GETSTAMPLES_GETTHIS_EXERUN = 1L;
-constexpr auto GETSTAMPLES_GETTHIS_EXERUN32 = 2L;
-constexpr auto GETSTAMPLES_GETTHIS_EXERUN64 = 3L;
-constexpr auto GETSTAMPLES_GETTHIS_ARGS = 4L;
+constexpr auto GETSAMPLES_GETTHIS_EXENAME = 0L;
+constexpr auto GETSAMPLES_GETTHIS_EXERUN = 1L;
+constexpr auto GETSAMPLES_GETTHIS_EXERUN32 = 2L;
+constexpr auto GETSAMPLES_GETTHIS_EXERUN64 = 3L;
+constexpr auto GETSAMPLES_GETTHIS_ARGS = 4L;
 
 constexpr auto GETSAMPLES_OUTPUT = 0L;
 constexpr auto GETSAMPLES_SAMPLEINFO = 1L;

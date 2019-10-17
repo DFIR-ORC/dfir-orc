@@ -243,9 +243,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[GETSAMPLES_GETTHIS])
     {
-        if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXENAME])
+        if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXENAME])
         {
-            config.getthisName = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXENAME];
+            config.getthisName = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXENAME];
         }
 
         WORD wArch = 0;
@@ -255,24 +255,24 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         switch (wArch)
         {
             case PROCESSOR_ARCHITECTURE_INTEL:
-                if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN32])
+                if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN32])
                 {
-                    config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN32];
+                    config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN32];
                 }
                 break;
             case PROCESSOR_ARCHITECTURE_AMD64:
                 if (SystemDetails::IsWOW64())
                 {
-                    if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN32])
+                    if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN32])
                     {
-                        config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN32];
+                        config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN32];
                     }
                 }
                 else
                 {
-                    if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN64])
+                    if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN64])
                     {
-                        config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN64];
+                        config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN64];
                     }
                 }
                 break;
@@ -283,15 +283,15 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
         if (config.getthisRef.empty())
         {
-            if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN])
+            if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN])
             {
-                config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN];
+                config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN];
             }
         }
 
-        if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_ARGS])
+        if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_ARGS])
         {
-            config.getthisArgs = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_ARGS];
+            config.getthisArgs = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_ARGS];
         }
     }
 
