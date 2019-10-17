@@ -86,7 +86,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
         {
             case L'/':
             case L'-':
-                if (OutputOption(argv[i] + 1, L"GetThis", OutputSpec::File, config.getThisConfig))
+                if (OutputOption(argv[i] + 1, L"GetThisConfig", OutputSpec::File, config.getThisConfig))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"GetThisArgs", config.getthisArgs))
                     ;

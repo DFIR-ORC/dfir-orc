@@ -28,7 +28,7 @@ void Main::PrintUsage()
         L"                               [/GetThis=GetThisConfig.xml] [/Autoruns[=<AutoRuns.xml>]]\r\n"
         L"                               [/TempDir=c:\\temp]\r\n"
         L"\r\n\r\n"
-        L"\t/GetThis=GetThisConfig.xml       : Output result config file for GetThis into GetThisConfig.xml\r\n"
+        L"\t/GetThisConfig=GetThisConfig.xml : Output result config file for GetThis into GetThisConfig.xml\r\n"
         L"\t/GetThisArgs=\"/nolimits [...]\" : Arguments to be forwared to 'GetThis'\r\n"
         L"\t/SampleInfo=GetSamplesInfo.csv   : Collect sample related information into GetSamplesInfo.csv\r\n"
         L"\t/MaxPerSampleBytes=<max bytes>   : Do not collect sample bigger than <max bytes>\r\n"
