@@ -285,6 +285,12 @@ HRESULT Main::WriteGetThisConfig(
         getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXSAMPLECOUNT].Status = ConfigItem::PRESENT;
     }
 
+    if (!config.samplesOutput.Path.empty())
+    {
+        getthisconfig[GETTHIS_OUTPUT].strData = config.samplesOutput.Path;
+        getthisconfig[GETTHIS_OUTPUT].Status = ConfigItem::PRESENT;
+    }
+
     for (const auto& item : tocollect)
     {
 
