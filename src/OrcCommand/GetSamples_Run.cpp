@@ -356,7 +356,7 @@ HRESULT Main::RunGetThis(const std::wstring& strConfigFile, LPCWSTR szTempDir)
     wstring strConfigArg = config.getthisArgs;
 
     strConfigArg += L" /Config=\"" + strConfigFile + L"\"";
-    if (config.criteriasConfig.Type == OutputSpec::None)
+    if (config.getThisConfig.Type == OutputSpec::None)
         command->AddOnCompleteAction(
             make_shared<OnComplete>(OnComplete::Delete, L"GetThisConfig.xml", strConfigFile, nullptr));
 
@@ -444,9 +444,9 @@ HRESULT Main::Run()
     }
 
     wstring strConfigFile;
-    if (config.criteriasConfig.Type == OutputSpec::File)
+    if (config.getThisConfig.Type == OutputSpec::File)
     {
-        strConfigFile = config.criteriasConfig.Path;
+        strConfigFile = config.getThisConfig.Path;
     }
     else
     {
@@ -454,7 +454,7 @@ HRESULT Main::Run()
             return hr;
     }
 
-    if (config.samplesOutput.Type != OutputSpec::None || config.criteriasConfig.Type != OutputSpec::None)
+    if (config.samplesOutput.Type != OutputSpec::None || config.getThisConfig.Type != OutputSpec::None)
     {
         if (FAILED(hr = WriteGetThisConfig(strConfigFile, tk.GetAltitudeLocations(), results)))
         {

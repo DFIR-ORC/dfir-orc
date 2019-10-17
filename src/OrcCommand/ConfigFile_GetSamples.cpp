@@ -65,7 +65,7 @@ HRESULT Orc::Config::GetSamples::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(L"timeline", output, GETSAMPLES_TIMELINE)))
         return hr;
-    if (FAILED(hr = item.AddChild(L"criterias", output, GETSAMPLES_CRITERIAS)))
+    if (FAILED(hr = item.AddChild(L"criterias", output, GETSAMPLES_GETTHIS_CONFIG)))
         return hr;
     if (FAILED(hr = item.AddChild(getthis, GETSAMPLES_GETTHIS)))
         return hr;

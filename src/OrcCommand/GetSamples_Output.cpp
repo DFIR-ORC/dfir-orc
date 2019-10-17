@@ -73,9 +73,9 @@ void Main::PrintParameters()
         log::Info(_L_, L"\tNot using Autoruns ASE information\r\n", config.autorunsOutput.Path.c_str());
     }
 
-    if (config.criteriasConfig.Type == OutputSpec::File)
+    if (config.getThisConfig.Type == OutputSpec::File)
     {
-        log::Info(_L_, L"\tCreate GetThis configuration in %s\r\n", config.criteriasConfig.Path.c_str());
+        log::Info(_L_, L"\tCreate GetThis configuration in %s\r\n", config.getThisConfig.Path.c_str());
     }
 
     PrintOutputOption(config.samplesOutput);

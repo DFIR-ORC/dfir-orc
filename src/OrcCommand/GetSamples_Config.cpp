@@ -86,7 +86,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
         {
             case L'/':
             case L'-':
-                if (OutputOption(argv[i] + 1, L"GetThis", OutputSpec::File, config.criteriasConfig))
+                if (OutputOption(argv[i] + 1, L"GetThis", OutputSpec::File, config.getThisConfig))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"GetThisArgs", config.getthisArgs))
                     ;
@@ -213,7 +213,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.bKeepAutorunsXML = false;
     }
 
-    if (FAILED(hr = config.criteriasConfig.Configure(_L_, OutputSpec::File, configitem[GETSAMPLES_CRITERIAS])))
+    if (FAILED(hr = config.getThisConfig.Configure(_L_, OutputSpec::File, configitem[GETSAMPLES_GETTHIS_CONFIG])))
         return hr;
 
     if (configitem[GETSAMPLES_SAMPLES][CONFIG_MAXBYTESPERSAMPLE])
