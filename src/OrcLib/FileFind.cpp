@@ -2352,7 +2352,8 @@ FileFind::SearchTerm::Criteria
 FileFind::ExactAttr(const std::shared_ptr<SearchTerm>& aTerm, LPCWSTR szAttrName, size_t AttrNameLen) const
 {
     SearchTerm::Criteria matchedSpec = SearchTerm::Criteria::NONE;
-    if (AttrNameLen == aTerm->AttrName.length() && !_wcsicmp(aTerm->AttrName.c_str(), szAttrName))
+
+    if(Orc::equalCaseInsensitive(aTerm->AttrName, std::wstring_view(szAttrName, AttrNameLen)))
     {
         return matchedSpec | SearchTerm::Criteria::ATTR_NAME_EXACT;
     }
@@ -2564,7 +2565,9 @@ FileFind::ExactADS(const std::shared_ptr<FileFind::SearchTerm>& aTerm, LPCWSTR s
 {
     if (aTerm->Required & SearchTerm::Criteria::ADS_EXACT)
     {
-        if (!_wcsnicmp(aTerm->ADSName.c_str(), szAttrName, aTerm->ADSName.size()))
+        if (szAttrName == nullptr)
+            return SearchTerm::Criteria::NONE;
+        if (Orc::equalCaseInsensitive(aTerm->ADSName, std::wstring_view(szAttrName, AttrNameLen)))
             return SearchTerm::Criteria::ADS_EXACT;
     }
     return SearchTerm::Criteria::NONE;
