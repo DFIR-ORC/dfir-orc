@@ -173,7 +173,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             {
                 for (const auto& finditem : item[CONFIG_SAMPLE_FILEFIND].NodeList)
                 {
-                    auto filespec = FileFind::GetSearchTermFromConfig(finditem);
+                    auto filespec = FileFind::GetSearchTermFromConfig(finditem, _L_);
 
                     if (const auto [valid, reason] = filespec->IsValidTerm(); valid)
                         aSpec.Terms.push_back(filespec);

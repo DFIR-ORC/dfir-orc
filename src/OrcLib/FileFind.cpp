@@ -557,6 +557,8 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
     {
         using namespace std::string_view_literals;
 
+        fs->Required = static_cast<FileFind::SearchTerm::Criteria>(fs->Required | FileFind::SearchTerm::ATTR_TYPE);
+
         if ((const std::wstring&)item[CONFIG_FILEFIND_ATTR_TYPE] == L"$STANDARD_INFORMATION"sv)
             fs->dwAttrType = $STANDARD_INFORMATION;
         else if ((const std::wstring&)item[CONFIG_FILEFIND_ATTR_TYPE] == L"$ATTRIBUTE_LIST"sv)
@@ -599,9 +601,10 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
                     hr,
                     L"Invalid attribute type passed (%s), ignored\r\n",
                     item[CONFIG_FILEFIND_ATTR_TYPE].strData.c_str());
+                fs->Required = static_cast<FileFind::SearchTerm::Criteria>(fs->Required & ~FileFind::SearchTerm::ATTR_TYPE);
             }
         }
-        fs->Required = static_cast<FileFind::SearchTerm::Criteria>(fs->Required | FileFind::SearchTerm::ATTR_TYPE);
+        
     }
     if (item[CONFIG_FILEFIND_SIZE])
     {
