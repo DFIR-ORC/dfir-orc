@@ -291,6 +291,12 @@ HRESULT Main::WriteGetThisConfig(
         getthisconfig[GETTHIS_OUTPUT].Status = ConfigItem::PRESENT;
     }
 
+    if (config.limits.bIgnoreLimits)
+    {
+        getthisconfig[GETTHIS_NOLIMITS].strData = L"";
+        getthisconfig[GETTHIS_NOLIMITS].Status = ConfigItem::PRESENT;
+    }
+
     for (const auto& item : tocollect)
     {
 

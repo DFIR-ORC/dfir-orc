@@ -49,11 +49,6 @@ void CheckGetThisConfiguration(Orc::Command::GetSamples::Main::Configuration& co
         config.getthisArgs.insert(0, getThisCmd);
         config.getthisArgs.insert(getThisCmd.size(), L" ");
     }
-
-    if (config.limits.bIgnoreLimits)
-    {
-        config.getthisArgs.append(L" /nolimits");
-    }
 }
 
 }  // namespace
