@@ -1600,7 +1600,7 @@ HRESULT Main::Run()
                     {
                         log::Info(
                             _L_,
-                            L"Configure USN   : USN journal for volume %s is bigger than minsize \r\n",
+                            L"Configure USN   : USN journal for volume %s is bigger than sizeatleast \r\n",
                             GetVolumePath().c_str());
                     }
                     if (FAILED(hr = PrintUSNJournalConfiguration(hVolume)))

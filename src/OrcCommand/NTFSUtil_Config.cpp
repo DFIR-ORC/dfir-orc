@@ -75,7 +75,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (FileSizeOption(argv[i] + 1, L"MaxSize", config.dwlMaxSize))
                     ;
-                else if (FileSizeOption(argv[i] + 1, L"MinSize", config.dwlMinSize))
+                else if (FileSizeOption(argv[i] + 1, L"SizeAtLeast", config.dwlMinSize))
                     ;
                 else if (FileSizeOption(argv[i] + 1, L"Delta", config.dwlAllocDelta))
                     ;
