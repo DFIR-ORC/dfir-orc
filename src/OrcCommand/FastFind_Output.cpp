@@ -31,7 +31,6 @@ void Main::PrintUsage()
         L"\r\n"
 		L"\t/config=<ConfigFile>        : Configuration file (or resource reference)\r\n"
         L"\t/filesystem=<FileName>.csv  : All NTFS related finds are logged in <FileName>.csv\r\n"
-        L"\t/registry=<FileName>.csv    : All registry related finds are logged in <FileName>.csv\r\n"
         L"\t/object=<FileName>.csv      : All System objects related finds are logged in <FileName>.csv\r\n"
         L"\t/out=<FileName.xml>         : All finds are logged into an XML file\r\n"
         L"\t/yara=<Rules.Yara>          : Add rules files for Yara scan\r\n"
