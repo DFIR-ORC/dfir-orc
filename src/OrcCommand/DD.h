@@ -15,6 +15,8 @@
 
 #include "CryptoHashStream.h"
 
+#include "LocationSet.h"
+
 #pragma managed(push, off)
 
 namespace Orc {
@@ -33,7 +35,7 @@ public:
         std::wstring strIF;
         std::vector<std::wstring> OF;
 
-        SupportedAlgorithm Hash = SupportedAlgorithm::Undefined;
+        CryptoHashStream::Algorithm Hash = CryptoHashStream::Algorithm::Undefined;
 
         bool NoError = false;
         bool NoTrunc = false;
@@ -56,6 +58,8 @@ public:
 private:
     Configuration config;
 
+    LocationSet loc_set;
+
 public:
     static LPCWSTR ToolName() { return L"DD"; }
     static LPCWSTR ToolDescription() { return L"DD - Data Dump"; }
@@ -71,7 +75,7 @@ public:
     static LPCWSTR DefaultSchema() { return L"res:#DD_SQLSCHEMA"; }
 
     Main(logger pLog)
-        : UtilitiesMain(std::move(pLog))
+        : UtilitiesMain(pLog), loc_set(std::move(pLog))
     {
     }
 

@@ -146,7 +146,7 @@ std::shared_ptr<ByteStream> ArchiveExtractCallback::GetStreamToWrite()
             auto hashstream = make_shared<CryptoHashStream>(_L_);
             if (FAILED(
                     hr = hashstream->OpenToRead(
-                        static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1),
+                        CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1,
                         filestream)))
                 return nullptr;
             if (FAILED(hr = pXORStream->OpenForXOR(hashstream)))
@@ -166,7 +166,7 @@ std::shared_ptr<ByteStream> ArchiveExtractCallback::GetStreamToWrite()
             auto hashstream = make_shared<CryptoHashStream>(_L_);
             if (FAILED(
                     hr = hashstream->OpenToRead(
-                        static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1),
+                        CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1,
                         filestream)))
                 return nullptr;
             retval = hashstream;

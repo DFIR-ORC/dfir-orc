@@ -156,8 +156,7 @@ public:
         Assert::IsTrue(
             S_OK
             == hashstream->OpenToRead(
-                static_cast<SupportedAlgorithm>(
-                    SupportedAlgorithm::SHA256 | SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1),
+                CryptoHashStream::Algorithm::SHA256 | CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1,
                 std::make_shared<FatStream>(stream)));
 
         auto devnull = std::make_shared<DevNullStream>(_L_);

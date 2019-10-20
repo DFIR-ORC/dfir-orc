@@ -36,8 +36,7 @@ public:
         {
             unsigned char data[5] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
 
-            SupportedAlgorithm algs = static_cast<SupportedAlgorithm>(
-                SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1 | SupportedAlgorithm::SHA256);
+            auto algs = CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256;
 
             auto hashstream = std::make_shared<CryptoHashStream>(_L_);
             Assert::IsTrue(SUCCEEDED(hashstream->OpenToWrite(algs, nullptr)));
@@ -50,7 +49,7 @@ public:
                     0x37, 0xD3, 0xA1, 0x9F, 0xF4, 0x69, 0x7F, 0x91, 0xFD, 0xC4, 0xC3, 0xA0, 0x69, 0x0A, 0xD8, 0xC5};
                 CBinaryBuffer md5;
 
-                Assert::IsTrue(SUCCEEDED(hashstream->GetHash(SupportedAlgorithm::MD5, md5)));
+                Assert::IsTrue(SUCCEEDED(hashstream->GetHash(CryptoHashStream::Algorithm::MD5, md5)));
 
                 Assert::IsTrue(md5.GetCount() == sizeof(md5Result));
                 Assert::IsTrue(!memcmp(md5.GetData(), md5Result, sizeof(md5Result)));
@@ -61,7 +60,7 @@ public:
                                                 0xEA, 0x0E, 0xE0, 0x9B, 0xB7, 0x62, 0x71, 0xC5, 0xE7, 0x48};
                 CBinaryBuffer sha1;
 
-                Assert::IsTrue(S_OK == hashstream->GetHash(SupportedAlgorithm::SHA1, sha1));
+                Assert::IsTrue(S_OK == hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, sha1));
 
                 Assert::IsTrue(sha1.GetCount() == sizeof(sha1Result));
                 Assert::IsTrue(!memcmp(sha1.GetData(), sha1Result, sizeof(sha1Result)));
@@ -73,7 +72,7 @@ public:
                                                   0x33, 0xC1, 0x25, 0x03, 0x8F, 0x2E, 0xB0, 0xDF, 0xD1, 0x6E};
                 CBinaryBuffer sha256;
 
-                Assert::IsTrue(S_OK == hashstream->GetHash(SupportedAlgorithm::SHA256, sha256));
+                Assert::IsTrue(S_OK == hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, sha256));
 
                 Assert::IsTrue(sha256.GetCount() == sizeof(sha256Result));
                 Assert::IsTrue(!memcmp(sha256.GetData(), sha256Result, sizeof(sha256Result)));
@@ -114,7 +113,7 @@ public:
                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                 0x00, 0x00};
 
-            SupportedAlgorithm algs = static_cast<SupportedAlgorithm>(SupportedAlgorithm::SHA256);
+            auto algs = CryptoHashStream::Algorithm::SHA256;
 
             auto hashstream = std::make_shared<CryptoHashStream>(_L_);
             Assert::IsTrue(S_OK == hashstream->OpenToWrite(algs, nullptr));
@@ -127,7 +126,7 @@ public:
                                               0x18, 0xF6, 0x6C, 0x92, 0xB8, 0x9B, 0x55, 0xF3, 0x65, 0x60};
             CBinaryBuffer sha256;
 
-            Assert::IsTrue(S_OK == hashstream->GetHash(SupportedAlgorithm::SHA256, sha256));
+            Assert::IsTrue(S_OK == hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, sha256));
 
             Assert::IsTrue(sha256.GetCount() == sizeof(sha256Result));
             Assert::IsTrue(!memcmp(sha256.GetData(), sha256Result, sizeof(sha256Result)));
@@ -142,7 +141,7 @@ public:
 
             auto hashstream = std::make_shared<CryptoHashStream>(_L_);
             Assert::IsTrue(
-                S_OK == hashstream->OpenToWrite(static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5), pMemStream));
+                S_OK == hashstream->OpenToWrite(CryptoHashStream::Algorithm::MD5, pMemStream));
 
             ULONGLONG ullHashed = 0LL;
             Assert::IsTrue(S_OK == hashstream->Write(data, sizeof(data), &ullHashed));
@@ -156,7 +155,7 @@ public:
                 0x37, 0xD3, 0xA1, 0x9F, 0xF4, 0x69, 0x7F, 0x91, 0xFD, 0xC4, 0xC3, 0xA0, 0x69, 0x0A, 0xD8, 0xC5};
             CBinaryBuffer md5;
 
-            Assert::IsTrue(S_OK == hashstream->GetHash(SupportedAlgorithm::MD5, md5));
+            Assert::IsTrue(S_OK == hashstream->GetHash(CryptoHashStream::Algorithm::MD5, md5));
 
             Assert::IsTrue(md5.GetCount() == sizeof(md5Result));
             Assert::IsTrue(!memcmp(md5.GetData(), md5Result, sizeof(md5Result)));
@@ -176,7 +175,7 @@ public:
 
             auto hashstream = std::make_shared<CryptoHashStream>(_L_);
             Assert::IsTrue(
-                S_OK == hashstream->OpenToRead(static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5), pMemStream));
+                S_OK == hashstream->OpenToRead(CryptoHashStream::Algorithm::MD5, pMemStream));
 
             unsigned char readBuffer[5] = {0x00, 0x00, 0x00, 0x00, 0x00};
             ULONGLONG ullDataRead = 0LL;
@@ -190,7 +189,7 @@ public:
                 0x37, 0xD3, 0xA1, 0x9F, 0xF4, 0x69, 0x7F, 0x91, 0xFD, 0xC4, 0xC3, 0xA0, 0x69, 0x0A, 0xD8, 0xC5};
             CBinaryBuffer md5;
 
-            Assert::IsTrue(S_OK == hashstream->GetHash(SupportedAlgorithm::MD5, md5));
+            Assert::IsTrue(S_OK == hashstream->GetHash(CryptoHashStream::Algorithm::MD5, md5));
 
             Assert::IsTrue(md5.GetCount() == sizeof(md5Result));
             Assert::IsTrue(!memcmp(md5.GetData(), md5Result, sizeof(md5Result)));

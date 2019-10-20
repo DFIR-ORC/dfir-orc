@@ -58,15 +58,18 @@ void Main::PrintParameters()
     {
         PrintStringOption(L"Output", out.c_str());
     }
-
+    if(config.BlockSize.QuadPart > 0LL)
+        PrintIntegerOption(L"Block size (bytes)", config.BlockSize.QuadPart);
     if (config.Count.QuadPart > 0LL)
         PrintIntegerOption(L"Count (blocks)", config.Count.QuadPart);
     if (config.Skip.QuadPart > 0LL)
         PrintIntegerOption(L"Skip (input)", config.Skip.QuadPart);
     if (config.Seek.QuadPart > 0LL)
         PrintIntegerOption(L"Seek (output)", config.Seek.QuadPart);
-
+    
     PrintBooleanOption(L"No Error", config.NoError);
+    PrintBooleanOption(L"No Truncation", config.NoTrunc);
+    PrintHashAlgorithmOption(L"Hashs", config.Hash);
 
     log::Info(_L_, L"\r\n\r\n");
 

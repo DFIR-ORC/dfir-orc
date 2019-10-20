@@ -112,5 +112,7 @@ HRESULT Main::CheckConfiguration()
         config.BlockSize.QuadPart = 512;
     }
 
+
+
     return S_OK;
 }

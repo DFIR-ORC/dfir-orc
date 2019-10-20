@@ -14,34 +14,38 @@
 
 #ifdef ORC_BUILD_SSDEEP
 #    include "ssdeep/fuzzy.h"
-#endif
+#endif // ORC_BUILD_SSDEEP
 
 using namespace Orc;
 
-FuzzyHashStream::SupportedAlgorithm FuzzyHashStream::GetSupportedAlgorithm(LPCWSTR szAlgo)
+FuzzyHashStream::Algorithm FuzzyHashStream::GetSupportedAlgorithm(LPCWSTR szAlgo)
 {
+#ifdef ORC_BUILD_SSDEEP
     if (!_wcsnicmp(szAlgo, L"ssdeep", wcslen(L"ssdeep")))
     {
-        return FuzzyHashStream::SupportedAlgorithm::SSDeep;
+        return Algorithm::SSDeep;
     }
+#endif // ORC_BUILD_SSDEEP
     if (!_wcsnicmp(szAlgo, L"tlsh", wcslen(L"tlsh")))
     {
-        return FuzzyHashStream::SupportedAlgorithm::TLSH;
+        return Algorithm::TLSH;
     }
-    return FuzzyHashStream::SupportedAlgorithm::Undefined;
+    return Algorithm::Undefined;
 }
 
-std::wstring FuzzyHashStream::GetSupportedAlgorithm(SupportedAlgorithm algs)
+std::wstring FuzzyHashStream::GetSupportedAlgorithm(Algorithm algs)
 {
     std::wstring retval;
 
     retval.reserve(16);
 
-    if (algs & SupportedAlgorithm::SSDeep)
+#ifdef ORC_BUILD_SSDEEP
+    if (algs & Algorithm::SSDeep)
     {
         retval.append(L"SSDeep");
     }
-    if (algs & SupportedAlgorithm::TLSH)
+#endif // ORC_BUILD_SSDEEP
+    if (algs & Algorithm::TLSH)
     {
         if (retval.empty())
             retval.append(L"TLSH");
@@ -56,7 +60,7 @@ FuzzyHashStream::FuzzyHashStream(logger pLog)
 {
 }
 
-HRESULT FuzzyHashStream::OpenToRead(SupportedAlgorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
+HRESULT FuzzyHashStream::OpenToRead(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
 {
     HRESULT hr = E_FAIL;
     if (pChainedStream == nullptr)
@@ -75,7 +79,7 @@ HRESULT FuzzyHashStream::OpenToRead(SupportedAlgorithm algs, const std::shared_p
     return S_OK;
 }
 
-HRESULT FuzzyHashStream::OpenToWrite(SupportedAlgorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
+HRESULT FuzzyHashStream::OpenToWrite(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
 {
     HRESULT hr = E_FAIL;
 
@@ -149,7 +153,7 @@ HRESULT FuzzyHashStream::HashData(LPBYTE pBuffer, DWORD dwBytesToHash)
     return S_OK;
 }
 
-HRESULT FuzzyHashStream::GetHash(SupportedAlgorithm alg, CBinaryBuffer& Hash)
+HRESULT FuzzyHashStream::GetHash(Algorithm alg, CBinaryBuffer& Hash)
 {
     if (m_bHashIsValid)
     {
@@ -190,7 +194,7 @@ HRESULT FuzzyHashStream::GetHash(SupportedAlgorithm alg, CBinaryBuffer& Hash)
     return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 }
 
-HRESULT FuzzyHashStream::GetHash(SupportedAlgorithm alg, std::wstring& Hash)
+HRESULT FuzzyHashStream::GetHash(Algorithm alg, std::wstring& Hash)
 {
     HRESULT hr = E_FAIL;
     CBinaryBuffer buffer;

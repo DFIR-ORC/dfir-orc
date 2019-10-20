@@ -471,8 +471,8 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
 
     static DWORD dwRequestedHashSize = Authenticode::ExpectedHashSize(_L_);
 
-    SupportedAlgorithm algs =
-        dwRequestedHashSize == BYTES_IN_SHA1_HASH ? SupportedAlgorithm::SHA1 : SupportedAlgorithm::SHA256;
+    CryptoHashStream::Algorithm algs =
+        dwRequestedHashSize == BYTES_IN_SHA1_HASH ? CryptoHashStream::Algorithm::SHA1 : CryptoHashStream::Algorithm::SHA256;
 
     hashstream->OpenToWrite(algs, nullptr);
 

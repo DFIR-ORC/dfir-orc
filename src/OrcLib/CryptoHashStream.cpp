@@ -39,7 +39,7 @@ CryptoHashStream::~CryptoHashStream(void)
     m_bHashIsValid = false;
 }
 
-HRESULT CryptoHashStream::OpenToRead(SupportedAlgorithm algs, const std::shared_ptr<ByteStream>& pChained)
+HRESULT CryptoHashStream::OpenToRead(Algorithm algs, const std::shared_ptr<ByteStream>& pChained)
 {
     HRESULT hr = E_FAIL;
     if (pChained == nullptr)
@@ -58,7 +58,7 @@ HRESULT CryptoHashStream::OpenToRead(SupportedAlgorithm algs, const std::shared_
     return S_OK;
 }
 
-HRESULT CryptoHashStream::OpenToWrite(SupportedAlgorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
+HRESULT CryptoHashStream::OpenToWrite(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
 {
     HRESULT hr = E_FAIL;
 
@@ -138,7 +138,7 @@ HRESULT CryptoHashStream::HashData(LPBYTE pBuffer, DWORD dwBytesToHash)
     return S_OK;
 }
 
-HRESULT CryptoHashStream::GetHash(SupportedAlgorithm alg, CBinaryBuffer& hash)
+HRESULT CryptoHashStream::GetHash(Algorithm alg, CBinaryBuffer& hash)
 {
     if (m_bHashIsValid)
     {
@@ -178,7 +178,7 @@ HRESULT CryptoHashStream::GetHash(SupportedAlgorithm alg, CBinaryBuffer& hash)
     return S_OK;
 }
 
-HRESULT CryptoHashStream::GetHash(SupportedAlgorithm alg, std::wstring& Hash)
+HRESULT CryptoHashStream::GetHash(Algorithm alg, std::wstring& Hash)
 {
     HRESULT hr = E_FAIL;
     CBinaryBuffer bin_hash;
@@ -196,7 +196,7 @@ HRESULT CryptoHashStream::GetHash(SupportedAlgorithm alg, std::wstring& Hash)
     return S_OK;
 }
 
-SupportedAlgorithm CryptoHashStream::GetSupportedAlgorithm(std::wstring_view svAlgo)
+CryptoHashStream::Algorithm CryptoHashStream::GetSupportedAlgorithm(std::wstring_view svAlgo)
 {
     using namespace std::string_view_literals;
 
@@ -206,38 +206,38 @@ SupportedAlgorithm CryptoHashStream::GetSupportedAlgorithm(std::wstring_view svA
 
     if (equalCaseInsensitive(svAlgo, MD5, MD5.size()))
     {
-        return SupportedAlgorithm::MD5;
+        return Algorithm::MD5;
     }
     if (equalCaseInsensitive(svAlgo, SHA1, SHA1.size()))
     {
-        return SupportedAlgorithm::SHA1;
+        return Algorithm::SHA1;
     }
     if (equalCaseInsensitive(svAlgo, SHA256, SHA256.size()))
     {
-        return SupportedAlgorithm::SHA256;
+        return Algorithm::SHA256;
     }
-    return SupportedAlgorithm::Undefined;
+    return Algorithm::Undefined;
 }
 
-std::wstring CryptoHashStream::GetSupportedAlgorithm(SupportedAlgorithm algs)
+std::wstring CryptoHashStream::GetSupportedAlgorithm(Algorithm algs)
 {
     using namespace std::string_view_literals;
     std::wstring retval;
 
     retval.reserve(16);
 
-    if (algs & SupportedAlgorithm::MD5)
+    if (algs & Algorithm::MD5)
     {
         retval.append(L"MD5"sv);
     }
-    if (algs & SupportedAlgorithm::SHA1)
+    if (algs & Algorithm::SHA1)
     {
         if (retval.empty())
             retval.append(L"SHA1"sv);
         else
             retval.append(L",SHA1"sv);
     }
-    if (algs & SupportedAlgorithm::SHA256)
+    if (algs & Algorithm::SHA256)
     {
         if (retval.empty())
             retval.append(L"SHA256"sv);

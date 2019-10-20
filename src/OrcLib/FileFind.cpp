@@ -3552,15 +3552,15 @@ HRESULT FileFind::ComputeMatchHashes(const std::shared_ptr<Match>& aMatch)
 
     for (auto& attr_match : aMatch->MatchingAttributes)
     {
-        SupportedAlgorithm needed = SupportedAlgorithm::Undefined;
-        if (m_MatchHash & SupportedAlgorithm::MD5 && attr_match.MD5.empty())
-            needed = static_cast<SupportedAlgorithm>(needed | SupportedAlgorithm::MD5);
-        if (m_MatchHash & SupportedAlgorithm::SHA1 && attr_match.SHA1.empty())
-            needed = static_cast<SupportedAlgorithm>(needed | SupportedAlgorithm::SHA1);
-        if (m_MatchHash & SupportedAlgorithm::SHA256 && attr_match.SHA256.empty())
-            needed = static_cast<SupportedAlgorithm>(needed | SupportedAlgorithm::SHA256);
+        CryptoHashStream::Algorithm needed = CryptoHashStream::Algorithm::Undefined;
+        if (m_MatchHash & CryptoHashStream::Algorithm::MD5 && attr_match.MD5.empty())
+            needed |= CryptoHashStream::Algorithm::MD5;
+        if (m_MatchHash & CryptoHashStream::Algorithm::SHA1 && attr_match.SHA1.empty())
+            needed |= CryptoHashStream::Algorithm::SHA1;
+        if (m_MatchHash & CryptoHashStream::Algorithm::SHA256 && attr_match.SHA256.empty())
+            needed |= CryptoHashStream::Algorithm::SHA256;
 
-        if (needed != SupportedAlgorithm::Undefined)
+        if (needed != CryptoHashStream::Algorithm::Undefined)
         {
             auto stream = attr_match.DataStream;
 
@@ -3582,20 +3582,20 @@ HRESULT FileFind::ComputeMatchHashes(const std::shared_ptr<Match>& aMatch)
 
             if (ullWritten > 0)
             {
-                if (needed & SupportedAlgorithm::MD5
-                    && FAILED(hr = hashstream->GetHash(SupportedAlgorithm::MD5, attr_match.MD5)))
+                if (needed & CryptoHashStream::Algorithm::MD5
+                    && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::MD5, attr_match.MD5)))
                 {
                     if (hr != MK_E_UNAVAILABLE)
                         return hr;
                 }
-                if (needed & SupportedAlgorithm::SHA1
-                    && FAILED(hr = hashstream->GetHash(SupportedAlgorithm::SHA1, attr_match.SHA1)))
+                if (needed & CryptoHashStream::Algorithm::SHA1
+                    && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, attr_match.SHA1)))
                 {
                     if (hr != MK_E_UNAVAILABLE)
                         return hr;
                 }
-                if (needed & SupportedAlgorithm::SHA256
-                    && FAILED(hr = hashstream->GetHash(SupportedAlgorithm::SHA256, attr_match.SHA256)))
+                if (needed & CryptoHashStream::Algorithm::SHA256
+                    && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, attr_match.SHA256)))
                 {
                     if (hr != MK_E_UNAVAILABLE)
                         return hr;
@@ -3618,7 +3618,7 @@ HRESULT FileFind::EvaluateMatchCallCallback(
 
     if (hr == S_FALSE)
     {
-        if (m_MatchHash != SupportedAlgorithm::Undefined)
+        if (m_MatchHash != CryptoHashStream::Algorithm::Undefined)
         {
             if (FAILED(hr = ComputeMatchHashes(aMatch)))
             {
@@ -3822,66 +3822,66 @@ HRESULT FileFind::FindI30Match(const PFILE_NAME pFileName, bool& bStop, FileFind
     return S_OK;
 }
 
-SupportedAlgorithm FileFind::GetNeededHashAlgorithms()
+CryptoHashStream::Algorithm FileFind::GetNeededHashAlgorithms()
 {
-    auto getNeededHash = [](const std::shared_ptr<FileFind::SearchTerm>& term) -> SupportedAlgorithm {
-        SupportedAlgorithm retval = SupportedAlgorithm::Undefined;
+    auto getNeededHash = [](const std::shared_ptr<FileFind::SearchTerm>& term) -> CryptoHashStream::Algorithm {
+        CryptoHashStream::Algorithm retval = CryptoHashStream::Algorithm::Undefined;
 
         if (term->Required & SearchTerm::Criteria::DATA_MD5)
         {
-            retval = static_cast<SupportedAlgorithm>(retval | SupportedAlgorithm::MD5);
+            retval |= CryptoHashStream::Algorithm::MD5;
         }
         if (term->Required & SearchTerm::Criteria::DATA_SHA1)
         {
-            retval = static_cast<SupportedAlgorithm>(retval | SupportedAlgorithm::SHA1);
+            retval |= CryptoHashStream::Algorithm::SHA1;
         }
         if (term->Required & SearchTerm::Criteria::DATA_SHA256)
         {
-            retval = static_cast<SupportedAlgorithm>(retval | SupportedAlgorithm::SHA256);
+            retval |= CryptoHashStream::Algorithm::SHA256;
         }
         return retval;
     };
 
-    SupportedAlgorithm needed = SupportedAlgorithm::Undefined;
+    CryptoHashStream::Algorithm needed = CryptoHashStream::Algorithm::Undefined;
 
     for (const auto& term : m_ExactNameTerms)
     {
-        needed = static_cast<SupportedAlgorithm>(needed | getNeededHash(term.second));
+        needed |= getNeededHash(term.second);
     }
 
     for (const auto& term : m_ExactPathTerms)
     {
-        needed = static_cast<SupportedAlgorithm>(needed | getNeededHash(term.second));
+        needed |= getNeededHash(term.second);
     }
 
     for (const auto& term : m_SizeTerms)
     {
-        needed = static_cast<SupportedAlgorithm>(needed | getNeededHash(term.second));
+        needed |= getNeededHash(term.second);
     }
 
     for (const auto& term : m_Terms)
     {
-        needed = static_cast<SupportedAlgorithm>(needed | getNeededHash(term));
+        needed |= getNeededHash(term);
     }
 
     for (const auto& term : m_ExcludeNameTerms)
     {
-        needed = static_cast<SupportedAlgorithm>(needed | getNeededHash(term.second));
+        needed |= getNeededHash(term.second);
     }
 
     for (const auto& term : m_ExcludePathTerms)
     {
-        needed = static_cast<SupportedAlgorithm>(needed | getNeededHash(term.second));
+        needed |= getNeededHash(term.second);
     }
 
     for (const auto& term : m_ExcludeSizeTerms)
     {
-        needed = static_cast<SupportedAlgorithm>(needed | getNeededHash(term.second));
+        needed |= getNeededHash(term.second);
     }
 
     for (const auto& term : m_ExcludeTerms)
     {
-        needed = static_cast<SupportedAlgorithm>(needed | getNeededHash(term));
+        needed |= getNeededHash(term);
     }
 
     return needed;

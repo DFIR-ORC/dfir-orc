@@ -252,6 +252,22 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     if (configitem[GETTHIS_HASH])
     {
+        std::set<wstring> keys;
+        boost::split(keys, configitem[GETTHIS_HASH].strData, boost::is_any_of(L","));
+
+        for (const auto& key : keys)
+        {
+            auto alg = CryptoHashStream::GetSupportedAlgorithm(key.c_str());
+            if (alg == CryptoHashStream::Algorithm::Undefined)
+            {
+                log::Warning(_L_, E_NOTIMPL, L"Hash algorithm %s is not supported\r\n", key.c_str());
+            }
+            else
+            {
+                config.CryptoHashAlgs |= alg;
+            }
+        }
+
         config.CryptoHashAlgs =
             CryptoHashStream::GetSupportedAlgorithm(configitem[GETTHIS_HASH].strData.c_str());
     }
@@ -262,8 +278,15 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
         for (const auto& key : keys)
         {
-            config.FuzzyHashAlgs  = static_cast<FuzzyHashStream::SupportedAlgorithm>(
-                FuzzyHashStream::GetSupportedAlgorithm(key.c_str()) | config.FuzzyHashAlgs);
+            auto alg = FuzzyHashStream::GetSupportedAlgorithm(key.c_str());
+            if (alg == FuzzyHashStream::Algorithm::Undefined)
+            {
+                log::Warning(_L_, E_NOTIMPL, L"Fuzzy hash algorithm %s is not supported\r\n", key.c_str());
+            }
+            else
+            {
+                config.FuzzyHashAlgs  |= alg;
+            }
         }
     }
     if (configitem[GETTHIS_YARA])

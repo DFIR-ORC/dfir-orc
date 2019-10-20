@@ -46,8 +46,7 @@ public:
         , Files(
               pLog,
               true,
-              static_cast<SupportedAlgorithm>(
-                  SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1 | SupportedAlgorithm::SHA256)) {};
+              CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256) {};
 
     LocationSet Locations;
     FileFind Files;

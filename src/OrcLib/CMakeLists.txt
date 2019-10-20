@@ -170,16 +170,16 @@ set(SRC_DISK_FILESYSTEM_REFS RefsDataStructures.h)
 
 source_group(Disk\\FileSystem\\ReFS FILES ${SRC_DISK_FILESYSTEM_REFS})
 
-set(SRC_DISK_FILESYSTEM_LOCATION
+set(SRC_DISK_LOCATION
     "Location.cpp"
     "Location.h"
     "LocationSet.cpp"
     "LocationSet.h"
 )
 
-source_group(Disk\\FileSystem\\Location FILES ${SRC_DISK_FILESYSTEM_LOCATION})
+source_group(Disk\\Location FILES ${SRC_DISK_LOCATION})
 
-set(SRC_DISK_FILESYSTEM_VOLUME
+set(SRC_DISK_VOLUME
     "CompleteVolumeReader.cpp"
     "CompleteVolumeReader.h"
     "DiskExtent.cpp"
@@ -211,7 +211,7 @@ set(SRC_DISK_FILESYSTEM_VOLUME
     "VssAPIExtension.h"
 )
 
-source_group(Disk\\FileSystem\\Volume FILES ${SRC_DISK_FILESYSTEM_VOLUME})
+source_group(Disk\\Volume FILES ${SRC_DISK_VOLUME})
 
 set(SRC_EXTENSIONLIBRARIES
     "XmlLiteExtension.cpp"
@@ -693,8 +693,8 @@ add_library(OrcLib
         ${SRC_DISK_FILESYSTEM_NTFS_MFT}
         ${SRC_DISK_FILESYSTEM_NTFS_MFT_RECORD}
         ${SRC_DISK_FILESYSTEM_NTFS_MFT_USN}
-        ${SRC_DISK_FILESYSTEM_LOCATION}
-        ${SRC_DISK_FILESYSTEM_VOLUME}
+        ${SRC_DISK_LOCATION}
+        ${SRC_DISK_VOLUME}
         ${SRC_EXTENSIONLIBRARIES}
         ${SRC_EXTENSIONLIBRARIES_CHAKRA}
         ${SRC_EXTENSIONLIBRARIES_YARA}

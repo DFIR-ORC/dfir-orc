@@ -381,7 +381,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
 
         sampleRef.HashStream = make_shared<CryptoHashStream>(_L_);
 
-        SupportedAlgorithm algs = config.CryptoHashAlgs;
+        CryptoHashStream::Algorithm algs = config.CryptoHashAlgs;
 
         if (FAILED(hr = sampleRef.HashStream->OpenToRead(algs, stream)))
             return hr;
@@ -394,9 +394,9 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
     {
         std::shared_ptr<ByteStream> upstream = stream;
 
-        SupportedAlgorithm algs = config.CryptoHashAlgs;
+        CryptoHashStream::Algorithm algs = config.CryptoHashAlgs;
 
-        if (algs != SupportedAlgorithm::Undefined)
+        if (algs != CryptoHashStream::Algorithm::Undefined)
         {
             sampleRef.HashStream = make_shared<CryptoHashStream>(_L_);
             if (FAILED(hr = sampleRef.HashStream->OpenToRead(algs, upstream)))
@@ -404,8 +404,8 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
             upstream = sampleRef.HashStream;
         }
 
-        FuzzyHashStream::SupportedAlgorithm fuzzy_algs = config.FuzzyHashAlgs;
-        if (fuzzy_algs != FuzzyHashStream::SupportedAlgorithm::Undefined)
+        FuzzyHashStream::Algorithm fuzzy_algs = config.FuzzyHashAlgs;
+        if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
         {
             sampleRef.FuzzyHashStream = make_shared<FuzzyHashStream>(_L_);
             if (FAILED(hr = sampleRef.FuzzyHashStream->OpenToRead(fuzzy_algs, upstream)))

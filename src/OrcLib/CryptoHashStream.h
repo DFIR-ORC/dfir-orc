@@ -20,43 +20,46 @@ namespace Orc {
 
 class LogFileWriter;
 
-enum SupportedAlgorithm : char
-{
-    Undefined = 0,
-    MD5 = 1 << 0,
-    SHA1 = 1 << 1,
-    SHA256 = 1 << 2
-};
-
 class ORCLIB_API CryptoHashStream : public HashStream
 {
 public:
-    friend SupportedAlgorithm& operator^=(SupportedAlgorithm& left, const SupportedAlgorithm rigth)
+
+    enum Algorithm : char
     {
-        left = static_cast<SupportedAlgorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
+        Undefined = 0,
+        MD5 = 1 << 0,
+        SHA1 = 1 << 1,
+        SHA256 = 1 << 2
+    };
+
+    friend Algorithm& operator^=(Algorithm& left, const Algorithm rigth)
+    {
+        left = static_cast<Algorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
         return left;
     }
-    friend SupportedAlgorithm& operator|=(SupportedAlgorithm& left, const SupportedAlgorithm rigth)
+    friend Algorithm& operator|=(Algorithm& left, const Algorithm rigth)
     {
-        left = static_cast<SupportedAlgorithm>(static_cast<char>(left) | static_cast<char>(rigth));
+        left = static_cast<Algorithm>(static_cast<char>(left) | static_cast<char>(rigth));
         return left;
     }
 
-    friend SupportedAlgorithm operator^(const SupportedAlgorithm left, const SupportedAlgorithm rigth)
+    friend Algorithm operator^(const Algorithm left, const Algorithm rigth)
     {
-        return static_cast<SupportedAlgorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
+        return static_cast<Algorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
     }
-    friend SupportedAlgorithm operator|(const SupportedAlgorithm left, const SupportedAlgorithm rigth)
+    friend Algorithm operator|(const Algorithm left, const Algorithm rigth)
     {
-        return static_cast<SupportedAlgorithm>(static_cast<char>(left) | static_cast<char>(rigth));
+        return static_cast<Algorithm>(static_cast<char>(left) | static_cast<char>(rigth));
     }
-    friend SupportedAlgorithm operator&(const SupportedAlgorithm left, const SupportedAlgorithm rigth)
+    friend Algorithm operator&(const Algorithm left, const Algorithm rigth)
     {
-        return static_cast<SupportedAlgorithm>(static_cast<char>(left) & static_cast<char>(rigth));
+        return static_cast<Algorithm>(static_cast<char>(left) & static_cast<char>(rigth));
     }
+
+
 
 protected:
-    SupportedAlgorithm m_Algorithms;
+    Algorithm m_Algorithms;
     HCRYPTHASH m_Sha1;
     HCRYPTHASH m_Sha256;
     HCRYPTHASH m_MD5;
@@ -77,18 +80,18 @@ public:
 
     // CryptoHashStream Specifics
 
-    virtual HRESULT OpenToRead(SupportedAlgorithm algs, const std::shared_ptr<ByteStream>& pChainedStream);
-    virtual HRESULT OpenToWrite(SupportedAlgorithm algs, const std::shared_ptr<ByteStream>& pChainedStream);
+    virtual HRESULT OpenToRead(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream);
+    virtual HRESULT OpenToWrite(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream);
 
-    HRESULT GetHash(SupportedAlgorithm alg, CBinaryBuffer& Hash);
-    HRESULT GetHash(SupportedAlgorithm alg, std::wstring& Hash);
+    HRESULT GetHash(Algorithm alg, CBinaryBuffer& Hash);
+    HRESULT GetHash(Algorithm alg, std::wstring& Hash);
 
-    HRESULT GetSHA256(CBinaryBuffer& hash) { return GetHash(SHA256, hash); };
-    HRESULT GetSHA1(CBinaryBuffer& hash) { return GetHash(SHA1, hash); };
-    HRESULT GetMD5(CBinaryBuffer& hash) { return GetHash(MD5, hash); };
+    HRESULT GetSHA256(CBinaryBuffer& hash) { return GetHash(Algorithm::SHA256, hash); };
+    HRESULT GetSHA1(CBinaryBuffer& hash) { return GetHash(Algorithm::SHA1, hash); };
+    HRESULT GetMD5(CBinaryBuffer& hash) { return GetHash(Algorithm::MD5, hash); };
 
-    static SupportedAlgorithm GetSupportedAlgorithm(std::wstring_view svAlgo);
-    static std::wstring GetSupportedAlgorithm(SupportedAlgorithm algs);
+    static Algorithm GetSupportedAlgorithm(std::wstring_view svAlgo);
+    static std::wstring GetSupportedAlgorithm(Algorithm algs);
 };
 
 }  // namespace Orc

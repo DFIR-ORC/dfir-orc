@@ -155,7 +155,7 @@ public:
     HRESULT GetHashInformation(
         const logger& pLog,
         const std::shared_ptr<VolumeReader>& pVolReader,
-        SupportedAlgorithm required);
+        CryptoHashStream::Algorithm required);
 
     HRESULT AddContinuationAttribute(const std::shared_ptr<MftRecordAttribute>& pMftRecordAttribute);
 

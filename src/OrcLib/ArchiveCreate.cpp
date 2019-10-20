@@ -90,7 +90,7 @@ std::shared_ptr<ByteStream> ArchiveCreate::GetStreamToAdd(
 
             if (FAILED(
                     hr = pHashStream->OpenToRead(
-                        static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1), astream)))
+                        CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, astream)))
                 return nullptr;
             if (FAILED(hr = pXORStream->OpenForXOR(pHashStream)))
                 return nullptr;
@@ -114,7 +114,7 @@ std::shared_ptr<ByteStream> ArchiveCreate::GetStreamToAdd(
 
             if (FAILED(
                     hr = pHashStream->OpenToRead(
-                        static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1), astream)))
+                        CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, astream)))
                 return nullptr;
             return pHashStream;
         }

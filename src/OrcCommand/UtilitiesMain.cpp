@@ -49,7 +49,7 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
     PROCESS_BASIC_INFORMATION pbi;
     ZeroMemory(&pbi, sizeof(PROCESS_BASIC_INFORMATION));
     if (FAILED(pNtDll->NtQueryInformationProcess(
-            GetCurrentProcess(), ProcessBasicInformation, &pbi, (ULONG)sizeof(PROCESS_BASIC_INFORMATION), nullptr)))
+        GetCurrentProcess(), ProcessBasicInformation, &pbi, (ULONG)sizeof(PROCESS_BASIC_INFORMATION), nullptr)))
     {
         log::Error(_L_, E_FAIL, L"NtQueryInformationProcess failed\r\n");
         return false;
@@ -295,12 +295,12 @@ LPCWSTR UtilitiesMain::GetEncoding(OutputSpec::Encoding anEncoding)
 {
     switch (anEncoding)
     {
-        case OutputSpec::Encoding::UTF16:
-            return L" (encoding=UTF16)";
-        case OutputSpec::Encoding::UTF8:
-            return L" (encoding=UTF8)";
-        default:
-            return L" (encoding=?????)";
+    case OutputSpec::Encoding::UTF16:
+        return L" (encoding=UTF16)";
+    case OutputSpec::Encoding::UTF8:
+        return L" (encoding=UTF8)";
+    default:
+        return L" (encoding=?????)";
     }
 }
 
@@ -334,108 +334,108 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
 
     switch (anOutput.Type)
     {
-        case OutputSpec::Kind::Directory:
-            log::Info(
-                _L_,
-                L"%-8.8s directory    : %s%s%s\r\n",
-                szOutputName,
-                anOutput.Path.c_str(),
-                GetXOR(anOutput.XOR),
-                GetEncoding(anOutput.OutputEncoding));
-            break;
-        case OutputSpec::Kind::Archive:
-            log::Info(
-                _L_,
-                L"%-8.8s archive      : %s%s%s%s\r\n",
-                szOutputName,
-                anOutput.Path.c_str(),
-                GetXOR(anOutput.XOR),
-                GetEncoding(anOutput.OutputEncoding),
-                GetCompression(anOutput.Compression));
-            break;
-        case OutputSpec::Kind::TableFile:
-            log::Info(
-                _L_,
-                L"%-8.8s table        : %s%s%s\r\n",
-                szOutputName,
-                anOutput.Path.c_str(),
-                GetXOR(anOutput.XOR),
-                GetEncoding(anOutput.OutputEncoding));
-            break;
-        case OutputSpec::Kind::CSV:
-        case OutputSpec::Kind::TableFile | OutputSpec::Kind::CSV:
-            log::Info(
-                _L_,
-                L"%-8.8s CSV          : %s%s%s\r\n",
-                szOutputName,
-                anOutput.Path.c_str(),
-                GetXOR(anOutput.XOR),
-                GetEncoding(anOutput.OutputEncoding));
-            break;
-        case OutputSpec::Kind::TSV:
-        case OutputSpec::Kind::TableFile | OutputSpec::Kind::TSV:
-            log::Info(
-                _L_,
-                L"%-8.8s TSV          : %s%s%s\r\n",
-                szOutputName,
-                anOutput.Path.c_str(),
-                GetXOR(anOutput.XOR),
-                GetEncoding(anOutput.OutputEncoding));
-            break;
-        case OutputSpec::Kind::Parquet:
-        case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
-            log::Info(
-                _L_,
-                L"%-8.8s Parquet      : %s%s%s\r\n",
-                szOutputName,
-                anOutput.Path.c_str(),
-                GetXOR(anOutput.XOR),
-                GetEncoding(anOutput.OutputEncoding));
-            break;
-        case OutputSpec::Kind::ORC:
-        case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
-            log::Info(
-                _L_,
-                L"%-8.8s Parquet      : %s%s%s\r\n",
-                szOutputName,
-                anOutput.Path.c_str(),
-                GetXOR(anOutput.XOR),
-                GetEncoding(anOutput.OutputEncoding));
-            break;
-        case OutputSpec::Kind::StructuredFile:
-        case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::XML:
-        case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON:
-            log::Info(
-                _L_,
-                L"%-8.8s structured   : %s%s%s\r\n",
-                szOutputName,
-                anOutput.Path.c_str(),
-                GetXOR(anOutput.XOR),
-                GetEncoding(anOutput.OutputEncoding));
-            break;
-        case OutputSpec::Kind::File:
-            log::Info(
-                _L_,
-                L"%-8.8s file         : %s%s%s\r\n",
-                szOutputName,
-                anOutput.Path.c_str(),
-                GetXOR(anOutput.XOR),
-                GetEncoding(anOutput.OutputEncoding));
-            break;
-        case OutputSpec::Kind::SQL:
-            log::Info(
-                _L_,
-                L"%-8.8s SQLServer  : %s (Table=%s)\r\n",
-                szOutputName,
-                anOutput.ConnectionString.c_str(),
-                anOutput.TableName.c_str());
-            break;
-        case OutputSpec::Kind::None:
-            log::Info(_L_, L"%-8.8s file         : None\r\n", szOutputName);
-            break;
-        default:
-            log::Info(_L_, L"%-8.8s              : Unsupported\r\n", szOutputName);
-            break;
+    case OutputSpec::Kind::Directory:
+        log::Info(
+            _L_,
+            L"%-8.8s directory    : %s%s%s\r\n",
+            szOutputName,
+            anOutput.Path.c_str(),
+            GetXOR(anOutput.XOR),
+            GetEncoding(anOutput.OutputEncoding));
+        break;
+    case OutputSpec::Kind::Archive:
+        log::Info(
+            _L_,
+            L"%-8.8s archive      : %s%s%s%s\r\n",
+            szOutputName,
+            anOutput.Path.c_str(),
+            GetXOR(anOutput.XOR),
+            GetEncoding(anOutput.OutputEncoding),
+            GetCompression(anOutput.Compression));
+        break;
+    case OutputSpec::Kind::TableFile:
+        log::Info(
+            _L_,
+            L"%-8.8s table        : %s%s%s\r\n",
+            szOutputName,
+            anOutput.Path.c_str(),
+            GetXOR(anOutput.XOR),
+            GetEncoding(anOutput.OutputEncoding));
+        break;
+    case OutputSpec::Kind::CSV:
+    case OutputSpec::Kind::TableFile | OutputSpec::Kind::CSV:
+        log::Info(
+            _L_,
+            L"%-8.8s CSV          : %s%s%s\r\n",
+            szOutputName,
+            anOutput.Path.c_str(),
+            GetXOR(anOutput.XOR),
+            GetEncoding(anOutput.OutputEncoding));
+        break;
+    case OutputSpec::Kind::TSV:
+    case OutputSpec::Kind::TableFile | OutputSpec::Kind::TSV:
+        log::Info(
+            _L_,
+            L"%-8.8s TSV          : %s%s%s\r\n",
+            szOutputName,
+            anOutput.Path.c_str(),
+            GetXOR(anOutput.XOR),
+            GetEncoding(anOutput.OutputEncoding));
+        break;
+    case OutputSpec::Kind::Parquet:
+    case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
+        log::Info(
+            _L_,
+            L"%-8.8s Parquet      : %s%s%s\r\n",
+            szOutputName,
+            anOutput.Path.c_str(),
+            GetXOR(anOutput.XOR),
+            GetEncoding(anOutput.OutputEncoding));
+        break;
+    case OutputSpec::Kind::ORC:
+    case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
+        log::Info(
+            _L_,
+            L"%-8.8s Parquet      : %s%s%s\r\n",
+            szOutputName,
+            anOutput.Path.c_str(),
+            GetXOR(anOutput.XOR),
+            GetEncoding(anOutput.OutputEncoding));
+        break;
+    case OutputSpec::Kind::StructuredFile:
+    case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::XML:
+    case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON:
+        log::Info(
+            _L_,
+            L"%-8.8s structured   : %s%s%s\r\n",
+            szOutputName,
+            anOutput.Path.c_str(),
+            GetXOR(anOutput.XOR),
+            GetEncoding(anOutput.OutputEncoding));
+        break;
+    case OutputSpec::Kind::File:
+        log::Info(
+            _L_,
+            L"%-8.8s file         : %s%s%s\r\n",
+            szOutputName,
+            anOutput.Path.c_str(),
+            GetXOR(anOutput.XOR),
+            GetEncoding(anOutput.OutputEncoding));
+        break;
+    case OutputSpec::Kind::SQL:
+        log::Info(
+            _L_,
+            L"%-8.8s SQLServer  : %s (Table=%s)\r\n",
+            szOutputName,
+            anOutput.ConnectionString.c_str(),
+            anOutput.TableName.c_str());
+        break;
+    case OutputSpec::Kind::None:
+        log::Info(_L_, L"%-8.8s file         : None\r\n", szOutputName);
+        break;
+    default:
+        log::Info(_L_, L"%-8.8s              : Unsupported\r\n", szOutputName);
+        break;
     }
 
     if (anOutput.UploadOutput != nullptr)
@@ -444,41 +444,41 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
         LPWSTR szMethod = L"None";
         switch (anOutput.UploadOutput->Method)
         {
-            case OutputSpec::UploadMethod::FileCopy:
-                szMethod = L"File copy";
-                break;
-            case OutputSpec::UploadMethod::BITS:
-                szMethod = L"Background Intelligent Transfer Service (BITS)";
-                break;
-            case OutputSpec::UploadMethod::NoUpload:
-                szMethod = L"No upload";
-                break;
+        case OutputSpec::UploadMethod::FileCopy:
+            szMethod = L"File copy";
+            break;
+        case OutputSpec::UploadMethod::BITS:
+            szMethod = L"Background Intelligent Transfer Service (BITS)";
+            break;
+        case OutputSpec::UploadMethod::NoUpload:
+            szMethod = L"No upload";
+            break;
         }
         log::Info(_L_, L"   --> Method         : %s\r\n", szMethod);
 
         LPWSTR szOperation = L"NoOp";
         switch (anOutput.UploadOutput->Operation)
         {
-            case OutputSpec::UploadOperation::Copy:
-                szOperation = L"Copy file to upload location";
-                break;
-            case OutputSpec::UploadOperation::Move:
-                szOperation = L"Move file to upload location";
-                break;
-            case OutputSpec::UploadOperation::NoOp:
-                break;
+        case OutputSpec::UploadOperation::Copy:
+            szOperation = L"Copy file to upload location";
+            break;
+        case OutputSpec::UploadOperation::Move:
+            szOperation = L"Move file to upload location";
+            break;
+        case OutputSpec::UploadOperation::NoOp:
+            break;
         }
         log::Info(_L_, L"   --> Operation      : %s\r\n", szOperation);
 
         LPWSTR szMode = L"NoMode";
         switch (anOutput.UploadOutput->Mode)
         {
-            case OutputSpec::UploadMode::Asynchronous:
-                szMode = L"Asynchronous";
-                break;
-            case OutputSpec::UploadMode::Synchronous:
-                szMode = L"Synchronous";
-                break;
+        case OutputSpec::UploadMode::Asynchronous:
+            szMode = L"Asynchronous";
+            break;
+        case OutputSpec::UploadMode::Synchronous:
+            szMode = L"Synchronous";
+            break;
         }
         log::Info(_L_, L"   --> Mode           : %s\r\n", szMode);
 
@@ -498,21 +498,21 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
         LPWSTR szAuthScheme = L"NoAuth";
         switch (anOutput.UploadOutput->AuthScheme)
         {
-            case OutputSpec::UploadAuthScheme::Anonymous:
-                szAuthScheme = L"Anonymous";
-                break;
-            case OutputSpec::UploadAuthScheme::Basic:
-                szAuthScheme = L"Basic";
-                break;
-            case OutputSpec::UploadAuthScheme::NTLM:
-                szAuthScheme = L"NTLM";
-                break;
-            case OutputSpec::UploadAuthScheme::Kerberos:
-                szAuthScheme = L"Kerberos";
-                break;
-            case OutputSpec::UploadAuthScheme::Negotiate:
-                szAuthScheme = L"Negotiate";
-                break;
+        case OutputSpec::UploadAuthScheme::Anonymous:
+            szAuthScheme = L"Anonymous";
+            break;
+        case OutputSpec::UploadAuthScheme::Basic:
+            szAuthScheme = L"Basic";
+            break;
+        case OutputSpec::UploadAuthScheme::NTLM:
+            szAuthScheme = L"NTLM";
+            break;
+        case OutputSpec::UploadAuthScheme::Kerberos:
+            szAuthScheme = L"Kerberos";
+            break;
+        case OutputSpec::UploadAuthScheme::Negotiate:
+            szAuthScheme = L"Negotiate";
+            break;
         }
         log::Info(_L_, L"   --> Auth Scheme    : %s\r\n", szAuthScheme);
     }
@@ -568,9 +568,9 @@ HRESULT UtilitiesMain::PrintIntegerOption(LPCWSTR szOptionName, ULONGLONG ullOpt
     return S_OK;
 }
 
-HRESULT UtilitiesMain::PrintHashAlgorithmOption(LPCWSTR szOptionName, SupportedAlgorithm algs)
+HRESULT UtilitiesMain::PrintHashAlgorithmOption(LPCWSTR szOptionName, CryptoHashStream::Algorithm algs)
 {
-    if (algs == SupportedAlgorithm::Undefined)
+    if (algs == CryptoHashStream::Algorithm::Undefined)
     {
         log::Info(_L_, L"%-17.17s     : None\r\n", szOptionName);
     }
@@ -581,9 +581,9 @@ HRESULT UtilitiesMain::PrintHashAlgorithmOption(LPCWSTR szOptionName, SupportedA
     return S_OK;
 }
 
-HRESULT UtilitiesMain::PrintHashAlgorithmOption(LPCWSTR szOptionName, FuzzyHashStream::SupportedAlgorithm algs)
+HRESULT UtilitiesMain::PrintHashAlgorithmOption(LPCWSTR szOptionName, FuzzyHashStream::Algorithm algs)
 {
-    if (algs == FuzzyHashStream::SupportedAlgorithm::Undefined)
+    if (algs == FuzzyHashStream::Algorithm::Undefined)
     {
         log::Info(_L_, L"%-17.17s     : None\r\n", szOptionName);
     }
@@ -949,137 +949,129 @@ bool UtilitiesMain::FileSizeOption(LPCWSTR szArg, LPCWSTR szOption, DWORDLONG& d
 {
     HRESULT hr = E_FAIL;
 
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=32M\r\n", szArg, szOption);
+        return false;
+    }
+    else
+    {
+        LARGE_INTEGER liSize;
+        liSize.QuadPart = 0;
+        if (FAILED(hr = GetFileSizeFromArg(pEquals + 1, liSize)))
         {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=32M\r\n", szArg, szOption);
+            log::Error(_L_, E_INVALIDARG, L"Option /%s Failed to convert into a size\r\n", szArg);
             return false;
         }
-        else
-        {
-            LARGE_INTEGER liSize;
-            liSize.QuadPart = 0;
-            if (FAILED(hr = GetFileSizeFromArg(pEquals + 1, liSize)))
-            {
-                log::Error(_L_, E_INVALIDARG, L"Option /%s Failed to convert into a size\r\n", szArg);
-                return false;
-            }
-            dwlFileSize = liSize.QuadPart;
-        }
-        return true;
+        dwlFileSize = liSize.QuadPart;
     }
-    return false;
+    return true;
 }
 
 bool UtilitiesMain::AltitudeOption(LPCWSTR szArg, LPCWSTR szOption, LocationSet::Altitude& altitude)
 {
     HRESULT hr = E_FAIL;
 
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+    
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=highest|lowest|exact\r\n", szArg, szOption);
-            return false;
-        }
-        else
-        {
-            altitude = LocationSet::GetAltitudeFromString(pEquals + 1);
-            return true;
-        }
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=highest|lowest|exact\r\n", szArg, szOption);
+        return false;
     }
-    return false;
+    else
+    {
+        altitude = LocationSet::GetAltitudeFromString(pEquals + 1);
+        return true;
+    }
 }
 
 bool UtilitiesMain::BooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bPresent)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
-    {
-        bPresent = true;
-        return true;
-    }
-    return false;
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+    bPresent = true;
+    return true;
 }
 
 bool UtilitiesMain::BooleanOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bPresent)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
-    {
-        bPresent = true;
-        return true;
-    }
-    return false;
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+    bPresent = true;
+    return true;
 }
 
 bool UtilitiesMain::ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bPresent)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
-    {
-        bPresent = !bPresent;
-        return true;
-    }
-    return false;
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    bPresent = !bPresent;
+    return true;
 }
 
-bool UtilitiesMain::CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, SupportedAlgorithm& algo)
+bool UtilitiesMain::CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, CryptoHashStream::Algorithm& algo)
 {
     HRESULT hr = E_FAIL;
 
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=hash_functions\r\n", szArg, szOption);
+        return false;
+    }
+
+    std::set<wstring> keys;
+    std::wstring values = pEquals + 1;
+    boost::split(keys, values, boost::is_any_of(L","));
+
+    for (const auto& key : keys)
+    {
+        auto one = CryptoHashStream::GetSupportedAlgorithm(key.c_str());
+        if (one == CryptoHashStream::Algorithm::Undefined)
         {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=hash_functions\r\n", szArg, szOption);
-            return false;
+            log::Warning(_L_, E_NOTIMPL, L"Hash algorithm %s is not supported\r\n", key.c_str());
         }
         else
         {
-            std::set<wstring> keys;
-            std::wstring values = pEquals + 1;
-            boost::split(keys, values, boost::is_any_of(L","));
-
-            for (const auto& key : keys)
-            {
-                algo = static_cast<SupportedAlgorithm>(CryptoHashStream::GetSupportedAlgorithm(key.c_str()) | algo);
-            }
-
-            return true;
+            algo |= one;
         }
     }
-    return false;
+    return true;
 }
 
-bool UtilitiesMain::FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, FuzzyHashStream::SupportedAlgorithm& algo)
+bool UtilitiesMain::FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, FuzzyHashStream::Algorithm& algo)
 {
     HRESULT hr = E_FAIL;
 
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+    
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=32M\r\n", szArg, szOption);
-            return false;
-        }
-        else
-        {
-            std::set<wstring> keys;
-            std::wstring values = pEquals + 1;
-            boost::split(keys, values, boost::is_any_of(L","));
-
-            for (const auto& key : keys)
-            {
-                algo = static_cast<FuzzyHashStream::SupportedAlgorithm>(
-                    FuzzyHashStream::GetSupportedAlgorithm(key.c_str()) | algo);
-            }
-            return true;
-        }
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=32M\r\n", szArg, szOption);
+        return false;
     }
-    return false;
+
+    std::set<wstring> keys;
+    std::wstring values = pEquals + 1;
+    boost::split(keys, values, boost::is_any_of(L","));
+
+    for (const auto& key : keys)
+    {
+        algo |= FuzzyHashStream::GetSupportedAlgorithm(key.c_str());
+    }
+    return true;
 }
 
 bool UtilitiesMain::EncodingOption(LPCWSTR szArg, OutputSpec::Encoding& anEncoding)
@@ -1114,10 +1106,10 @@ bool UtilitiesMain::WaitForDebugger(int argc, const WCHAR* argv[])
     {
         switch (argv[i][0])
         {
-            case L'/':
-            case L'-':
-                if (WaitForDebuggerOption(argv[i] + 1))
-                    return true;
+        case L'/':
+        case L'-':
+            if (WaitForDebuggerOption(argv[i] + 1))
+                return true;
         }
     }
     return false;
