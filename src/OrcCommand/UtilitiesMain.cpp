@@ -622,192 +622,164 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
     HRESULT hr = E_FAIL;
 
     const auto cchOption = wcslen(szOption);
-    if (!_wcsnicmp(szArg, szOption, cchOption))
-    {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=c:\\temp\r\n", szOption, szOption);
-            return false;
-        }
-        else
-        {
-            if (pEquals != szArg + cchOption)
-            {
-                // Argument 'szArgs' starts with 'szOption' but it is longer
-                return false;
-            }
+    if (_wcsnicmp(szArg, szOption, cchOption))
+        return false;
 
-            if (FAILED(hr = anOutput.Configure(_L_, supportedTypes, pEquals + 1)))
-            {
-                log::Error(
-                    _L_,
-                    E_INVALIDARG,
-                    L"An error occured when evaluating output for option /%s=%s\r\n",
-                    szOption,
-                    pEquals + 1);
-                return false;
-            }
-            else if (hr == S_FALSE)
-            {
-                log::Info(_L_, L"WARNING: None of the supported output for option /%s matched %s\r\n", szOption, szArg);
-                return false;
-            }
-            return true;
-        }
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
+    {
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=c:\\temp\r\n", szOption, szOption);
+        return false;
     }
-    return false;
+    if (pEquals != szArg + cchOption)
+    {
+        // Argument 'szArgs' starts with 'szOption' but it is longer
+        return false;
+    }
+
+    if (FAILED(hr = anOutput.Configure(_L_, supportedTypes, pEquals + 1)))
+    {
+        log::Error(
+            _L_,
+            E_INVALIDARG,
+            L"An error occured when evaluating output for option /%s=%s\r\n",
+            szOption,
+            pEquals + 1);
+        return false;
+    }
+    if (hr == S_FALSE)
+    {
+        log::Info(_L_, L"WARNING: None of the supported output for option /%s matched %s\r\n", szOption, szArg);
+        return false;
+    }
+    return true;
 }
 
 bool UtilitiesMain::OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            log::Error(
-                _L_, E_INVALIDARG, L"Option /%s should be like: /%s=c:\\temp\\OutputFile.csv\r\n", szOption, szOption);
-            return false;
-        }
-        else
-        {
-            if (FAILED(GetOutputFile(pEquals + 1, strOutputFile, true)))
-            {
-                log::Error(_L_, E_INVALIDARG, L"Invalid output dir specified: %s\r\n", pEquals + 1);
-                return false;
-            }
-        }
-        return true;
+        log::Error(
+            _L_, E_INVALIDARG, L"Option /%s should be like: /%s=c:\\temp\\OutputFile.csv\r\n", szOption, szOption);
+        return false;
     }
-    return false;
+    if (auto hr= GetOutputFile(pEquals + 1, strOutputFile, true); FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Invalid output dir specified: %s\r\n", pEquals + 1);
+        return false;
+    }
+    return true;
 }
 
 bool UtilitiesMain::OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputDir)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=c:\\temp\r\n", szOption, szOption);
-            return false;
-        }
-        else
-        {
-            if (FAILED(GetOutputDir(pEquals + 1, strOutputDir, true)))
-            {
-                log::Error(_L_, E_INVALIDARG, L"Invalid output dir specified: %s\r\n", pEquals + 1);
-                return false;
-            }
-        }
-        return true;
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=c:\\temp\r\n", szOption, szOption);
+        return false;
     }
-    return false;
+    if (auto hr= GetOutputDir(pEquals + 1, strOutputDir, true); FAILED(hr))
+    {
+        log::Error(_L_, E_INVALIDARG, L"Invalid output dir specified: %s\r\n", pEquals + 1);
+        return false;
+    }
+    return true;
 }
 
 bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            log::Error(
-                _L_, E_INVALIDARG, L"Option /%s should be like: /%s=c:\\temp\\InputFile.csv\r\n", szOption, szOption);
-            return false;
-        }
-        else
-        {
-            if (FAILED(GetInputFile(pEquals + 1, strOutputFile)))
-            {
-                log::Error(_L_, E_INVALIDARG, L"Invalid input file specified: %s\r\n", pEquals + 1);
-                return false;
-            }
-        }
-        return true;
+        log::Error(
+            _L_, E_INVALIDARG, L"Option /%s should be like: /%s=c:\\temp\\InputFile.csv\r\n", szOption, szOption);
+        return false;
     }
-    return false;
+
+    if (auto hr = GetInputFile(pEquals + 1, strOutputFile); FAILED(hr))
+    {
+        log::Error(_L_, E_INVALIDARG, L"Invalid input file specified: %s\r\n", pEquals + 1);
+        return false;
+    }
+    return true;
 }
 
 bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strParameter)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=<Value>\r\n", szOption, szOption);
-            return false;
-            ;
-        }
-        else
-        {
-            strParameter = pEquals + 1;
-        }
-        return true;
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=<Value>\r\n", szOption, szOption);
+        return false;
     }
-    return false;
+    strParameter = pEquals + 1;
+    return true;
 }
 
 bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULONGLONG& ullParameter)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=<Value>\r\n", szOption, szOption);
+        return false;
+    }
+    HRESULT hr = E_FAIL;
+    LARGE_INTEGER li;
+    if (FAILED(hr = GetIntegerFromArg(pEquals + 1, li)))
+    {
+        if (FAILED(hr = GetIntegerFromHexaString(pEquals + 1, li)))
         {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=<Value>\r\n", szOption, szOption);
             return false;
         }
-        else
-        {
-            HRESULT hr = E_FAIL;
-            LARGE_INTEGER li;
-            if (FAILED(hr = GetIntegerFromArg(pEquals + 1, li)))
-            {
-                if (FAILED(hr = GetIntegerFromHexaString(pEquals + 1, li)))
-                {
-                    return false;
-                }
-            }
-            ullParameter = li.QuadPart;
-        }
-        return true;
     }
-    return false;
+    ullParameter = li.QuadPart;
+    return true;
 }
 
 bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWORD& dwParameter)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=<Value>\r\n", szOption, szOption);
+        return false;
+    }
+    HRESULT hr = E_FAIL;
+    LARGE_INTEGER li;
+    if (FAILED(hr = GetIntegerFromArg(pEquals + 1, li)))
+    {
+        if (FAILED(hr = GetIntegerFromHexaString(pEquals + 1, li)))
         {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=<Value>\r\n", szOption, szOption);
             return false;
         }
-        else
-        {
-            HRESULT hr = E_FAIL;
-            LARGE_INTEGER li;
-            if (FAILED(hr = GetIntegerFromArg(pEquals + 1, li)))
-            {
-                if (FAILED(hr = GetIntegerFromHexaString(pEquals + 1, li)))
-                {
-                    return false;
-                }
-            }
-            if (li.QuadPart > MAXDWORD)
-            {
-                log::Error(_L_, E_INVALIDARG, L"Parameter is too big (>MAXDWORD)\r\n");
-            }
-            dwParameter = li.LowPart;
-        }
-        return true;
     }
-    return false;
+    if (li.QuadPart > MAXDWORD)
+    {
+        log::Error(_L_, E_INVALIDARG, L"Parameter is too big (>MAXDWORD)\r\n");
+    }
+    dwParameter = li.LowPart;
+    return true;
 }
 
 bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono::minutes& minParameter)
@@ -845,104 +817,99 @@ bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono
 
 bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bParameter)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=<yes>|<no>\r\n", szOption, szOption);
-            return false;
-        }
-
-        std::wstring param = pEquals + 1;
-
-        if (!param.compare(L"no"))
-        {
-            bParameter = false;
-        }
-        else
-        {
-            bParameter = true;
-        }
-        return true;
+        log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=<yes>|<no>\r\n", szOption, szOption);
+        return false;
     }
-    return false;
+
+    std::wstring param = pEquals + 1;
+
+    if (!param.compare(L"no"))
+    {
+        bParameter = false;
+    }
+    else
+    {
+        bParameter = true;
+    }
+    return true;
 }
 
 bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strParameter)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            strParameter.clear();
-        }
-        else
-        {
-            strParameter = pEquals + 1;
-        }
-        return true;
+        strParameter.clear();
     }
-    return false;
+    else
+    {
+        strParameter = pEquals + 1;
+    }
+    return true;
 }
 
 bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULONGLONG& ullParameter)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            ullParameter = 0LL;
-        }
-        else
-        {
-            HRESULT hr = E_FAIL;
-            LARGE_INTEGER li;
-            if (FAILED(hr = GetIntegerFromArg(pEquals + 1, li)))
-            {
-                if (FAILED(hr = GetIntegerFromHexaString(pEquals + 1, li)))
-                {
-                    return false;
-                }
-            }
-            ullParameter = li.QuadPart;
-        }
-        return true;
+        ullParameter = 0LL;
     }
-    return false;
+    else
+    {
+        HRESULT hr = E_FAIL;
+        LARGE_INTEGER li;
+        if (FAILED(hr = GetIntegerFromArg(pEquals + 1, li)))
+        {
+            if (FAILED(hr = GetIntegerFromHexaString(pEquals + 1, li)))
+            {
+                return false;
+            }
+        }
+        ullParameter = li.QuadPart;
+    }
+    return true;
 }
 
 bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWORD& dwParameter)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
     {
-        LPCWSTR pEquals = wcschr(szArg, L'=');
-        if (!pEquals)
-        {
-            dwParameter = 0L;
-        }
-        else
-        {
-            HRESULT hr = E_FAIL;
-            LARGE_INTEGER li;
-            if (FAILED(hr = GetIntegerFromArg(pEquals + 1, li)))
-            {
-                if (FAILED(hr = GetIntegerFromHexaString(pEquals + 1, li)))
-                {
-                    return false;
-                }
-            }
-            if (li.QuadPart > MAXDWORD)
-            {
-                log::Error(_L_, E_INVALIDARG, L"Parameter is too big (>MAXDWORD)\r\n");
-            }
-            dwParameter = li.LowPart;
-        }
-        return true;
+        dwParameter = 0L;
     }
-    return false;
+    else
+    {
+        HRESULT hr = E_FAIL;
+        LARGE_INTEGER li;
+        if (FAILED(hr = GetIntegerFromArg(pEquals + 1, li)))
+        {
+            if (FAILED(hr = GetIntegerFromHexaString(pEquals + 1, li)))
+            {
+                return false;
+            }
+        }
+        if (li.QuadPart > MAXDWORD)
+        {
+            log::Error(_L_, E_INVALIDARG, L"Parameter is too big (>MAXDWORD)\r\n");
+        }
+        dwParameter = li.LowPart;
+    }
+    return true;
 }
 
 bool UtilitiesMain::FileSizeOption(LPCWSTR szArg, LPCWSTR szOption, DWORDLONG& dwlFileSize)
@@ -951,23 +918,21 @@ bool UtilitiesMain::FileSizeOption(LPCWSTR szArg, LPCWSTR szOption, DWORDLONG& d
 
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
         return false;
+
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
         log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=32M\r\n", szArg, szOption);
         return false;
     }
-    else
+    LARGE_INTEGER liSize;
+    liSize.QuadPart = 0;
+    if (FAILED(hr = GetFileSizeFromArg(pEquals + 1, liSize)))
     {
-        LARGE_INTEGER liSize;
-        liSize.QuadPart = 0;
-        if (FAILED(hr = GetFileSizeFromArg(pEquals + 1, liSize)))
-        {
-            log::Error(_L_, E_INVALIDARG, L"Option /%s Failed to convert into a size\r\n", szArg);
-            return false;
-        }
-        dwlFileSize = liSize.QuadPart;
+        log::Error(_L_, E_INVALIDARG, L"Option /%s Failed to convert into a size\r\n", szArg);
+        return false;
     }
+    dwlFileSize = liSize.QuadPart;
     return true;
 }
 
@@ -984,11 +949,8 @@ bool UtilitiesMain::AltitudeOption(LPCWSTR szArg, LPCWSTR szOption, LocationSet:
         log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=highest|lowest|exact\r\n", szArg, szOption);
         return false;
     }
-    else
-    {
-        altitude = LocationSet::GetAltitudeFromString(pEquals + 1);
-        return true;
-    }
+    altitude = LocationSet::GetAltitudeFromString(pEquals + 1);
+    return true;
 }
 
 bool UtilitiesMain::BooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bPresent)
@@ -1091,13 +1053,12 @@ bool UtilitiesMain::EncodingOption(LPCWSTR szArg, OutputSpec::Encoding& anEncodi
 
 bool UtilitiesMain::ProcessPriorityOption(LPCWSTR szArg, LPCWSTR szOption)
 {
-    if (!_wcsnicmp(szArg, szOption, wcslen(szOption)))
-    {
-        SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
-        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
-        return true;
-    }
-    return false;
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
+    return true;
 }
 
 bool UtilitiesMain::WaitForDebugger(int argc, const WCHAR* argv[])
@@ -1118,22 +1079,20 @@ bool UtilitiesMain::WaitForDebugger(int argc, const WCHAR* argv[])
 bool UtilitiesMain::WaitForDebuggerOption(LPCWSTR szArg)
 {
     using namespace std::chrono_literals;
-    if (!_wcsnicmp(szArg, L"WaitForDebugger", wcslen(L"WaitForDebugger")))
+    if (_wcsnicmp(szArg, L"WaitForDebugger", wcslen(L"WaitForDebugger")))
+        return false;
+    log::Info(_L_, L"Waiting 30 seconds for a debugger to attach...\r\n");
+    auto counter = 0LU;
+    while (!IsDebuggerPresent() && counter < 60)
     {
-        log::Info(_L_, L"Waiting 30 seconds for a debugger to attach...\r\n");
-        auto counter = 0LU;
-        while (!IsDebuggerPresent() && counter < 60)
-        {
-            counter++;
-            Sleep(500);
-        }
-        if (counter < 60)
-            log::Info(_L_, L"Debugger connected!\r\n");
-        else
-            log::Info(_L_, L"No debugger connected... let's continue\r\n");
-        return true;
+        counter++;
+        Sleep(500);
     }
-    return false;
+    if (counter < 60)
+        log::Info(_L_, L"Debugger connected!\r\n");
+    else
+        log::Info(_L_, L"No debugger connected... let's continue\r\n");
+    return true;
 }
 
 bool UtilitiesMain::IgnoreWaitForDebuggerOption(LPCWSTR szArg)
