@@ -257,7 +257,14 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     if (configitem[GETTHIS_FUZZYHASH])
     {
-        config.FuzzyHashAlgs = FuzzyHashStream::GetSupportedAlgorithm(configitem[GETTHIS_FUZZYHASH].strData.c_str());
+        std::set<wstring> keys;
+        boost::split(keys, configitem[GETTHIS_FUZZYHASH].strData, boost::is_any_of(L","));
+
+        for (const auto& key : keys)
+        {
+            config.FuzzyHashAlgs  = static_cast<FuzzyHashStream::SupportedAlgorithm>(
+                FuzzyHashStream::GetSupportedAlgorithm(key.c_str()) | config.FuzzyHashAlgs);
+        }
     }
     if (configitem[GETTHIS_YARA])
     {
