@@ -190,6 +190,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         return hr;
     }
 
+    if (FAILED(hr = config.tmpdirOutput.Configure(_L_, OutputSpec::Directory, configitem[GETSAMPLES_TEMPDIR])))
+        return hr;
+
     if (FAILED(hr = config.getThisConfig.Configure(_L_, OutputSpec::File, configitem[GETSAMPLES_GETTHIS_CONFIG])))
         return hr;
 

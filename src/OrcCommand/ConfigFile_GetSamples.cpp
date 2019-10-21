@@ -69,7 +69,7 @@ HRESULT Orc::Config::GetSamples::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(getthis, GETSAMPLES_GETTHIS)))
         return hr;
-    if (FAILED(hr = item.AddChildNode(L"temporary", GETSAMPLES_TEMPDIR, ConfigItem::OPTION)))
+    if (FAILED(hr = item.AddChildNode(L"tempdir", GETSAMPLES_TEMPDIR, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddChild(optional_location, GETSAMPLES_LOCATIONS)))
         return hr;
