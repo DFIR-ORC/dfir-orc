@@ -28,6 +28,25 @@ namespace fs = std::filesystem;
 
 using namespace Orc;
 
+namespace {
+
+bool HasValue(const ConfigItem& item, DWORD dwIndex)
+{
+    if (item.SubItems.size() <= dwIndex)
+    {
+        return false;
+    }
+
+    if (!item.SubItems[dwIndex])
+    {
+        return false;
+    }
+
+    return true;
+}
+
+}  // namespace
+
 HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, const WCHAR* szInputString)
 {
     HRESULT hr = E_FAIL;
@@ -159,21 +178,21 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         if (supported & static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL))
         {
             bool bDone = false;
-            if (item.SubItems[CONFIG_OUTPUT_CONNECTION])
+            if (::HasValue(item, CONFIG_OUTPUT_CONNECTION))
             {
                 Type = OutputSpec::Kind::SQL;
                 ConnectionString = item.SubItems[CONFIG_OUTPUT_CONNECTION];
                 bDone = true;
             }
-            if (item.SubItems[CONFIG_OUTPUT_TABLE])
+            if (::HasValue(item, CONFIG_OUTPUT_TABLE))
             {
                 TableName = item.SubItems[CONFIG_OUTPUT_TABLE];
             }
-            if (item.SubItems[CONFIG_OUTPUT_KEY])
+            if (::HasValue(item, CONFIG_OUTPUT_KEY))
             {
                 TableKey = item.SubItems[CONFIG_OUTPUT_KEY];
             }
-            if (item[CONFIG_OUTPUT_DISPOSITION])
+            if (::HasValue(item, CONFIG_OUTPUT_DISPOSITION))
             {
                 if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"createnew")
                     || equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"create_new"))
@@ -202,14 +221,14 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
                 log::Error(pLog, hr, L"An error occured when evaluating output item %s\r\n", item.c_str());
                 return hr;
             }
-            if (item.SubItems[CONFIG_OUTPUT_FORMAT])
+            if (::HasValue(item, CONFIG_OUTPUT_FORMAT))
             {
                 ArchiveFormat = Archive::GetArchiveFormat(item.SubItems[CONFIG_OUTPUT_FORMAT]);
             }
         }
 
         XOR = 0L;
-        if (item.SubItems[CONFIG_OUTPUT_XORPATTERN])
+        if (::HasValue(item, CONFIG_OUTPUT_XORPATTERN))
         {
             if (FAILED(hr = GetIntegerFromHexaString(item.SubItems[CONFIG_OUTPUT_XORPATTERN].c_str(), XOR)))
             {
@@ -223,7 +242,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         }
 
         OutputEncoding = OutputSpec::Encoding::UTF8;
-        if (item.SubItems[CONFIG_OUTPUT_ENCODING])
+        if (::HasValue(item, CONFIG_OUTPUT_ENCODING))
         {
             if (equalCaseInsensitive(item.SubItems[CONFIG_OUTPUT_ENCODING].c_str(), L"utf8"))
             {
@@ -244,12 +263,12 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
             }
         }
 
-        if (item.SubItems[CONFIG_OUTPUT_COMPRESSION])
+        if (::HasValue(item, CONFIG_OUTPUT_COMPRESSION))
         {
             Compression = item.SubItems[CONFIG_OUTPUT_COMPRESSION];
         }
 
-        if (item.SubItems[CONFIG_OUTPUT_PASSWORD])
+        if (::HasValue(item, CONFIG_OUTPUT_PASSWORD))
         {
             Password = item.SubItems[CONFIG_OUTPUT_PASSWORD];
         }
@@ -259,7 +278,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
 
 HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item)
 {
-    if (item.SubItems[CONFIG_UPLOAD_METHOD])
+    if (::HasValue(item, CONFIG_UPLOAD_METHOD))
     {
         if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_METHOD], L"BITS"sv))
         {
@@ -272,11 +291,12 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
         else
             Method = OutputSpec::UploadMethod::NoUpload;
 
-        if (item.SubItems[CONFIG_UPLOAD_JOBNAME])
+        if (::HasValue(item, CONFIG_UPLOAD_JOBNAME))
         {
             JobName = item.SubItems[CONFIG_UPLOAD_JOBNAME];
         }
-        if (item.SubItems[CONFIG_UPLOAD_SERVER])
+
+        if (::HasValue(item, CONFIG_UPLOAD_SERVER))
         {
             static std::wregex r(L"(http|https|file):(//|\\\\)(.*)", std::regex_constants::icase);
 
@@ -307,7 +327,7 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
                 return E_INVALIDARG;
             }
         }
-        if (item.SubItems[CONFIG_UPLOAD_ROOTPATH])
+        if (::HasValue(item, CONFIG_UPLOAD_ROOTPATH))
         {
             std::replace_copy(
                 begin(item.SubItems[CONFIG_UPLOAD_ROOTPATH].strData),
@@ -315,6 +335,7 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
                 back_inserter(RootPath),
                 bitsMode == BITSMode::SMB ? L'/' : L'\\',
                 bitsMode == BITSMode::SMB ? L'\\' : L'/');
+
             if (RootPath.empty())
             {
                 RootPath = bitsMode == BITSMode::SMB ? L"\\" : L"/";
@@ -324,17 +345,17 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
                 RootPath.insert(0, 1, bitsMode == BITSMode::SMB ? L'\\' : L'/');
             }
         }
-        if (item.SubItems[CONFIG_UPLOAD_USER])
+        if (::HasValue(item, CONFIG_UPLOAD_USER))
         {
             UserName = item.SubItems[CONFIG_UPLOAD_USER];
         }
-        if (item.SubItems[CONFIG_UPLOAD_PASSWORD])
+        if (::HasValue(item, CONFIG_UPLOAD_PASSWORD))
         {
             Password = item.SubItems[CONFIG_UPLOAD_PASSWORD];
         }
 
         Operation = OutputSpec::UploadOperation::Copy;
-        if (item.SubItems[CONFIG_UPLOAD_OPERATION])
+        if (::HasValue(item, CONFIG_UPLOAD_OPERATION))
         {
             if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_OPERATION], L"Copy"sv))
             {
@@ -347,7 +368,7 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
         }
 
         Mode = OutputSpec::UploadMode::Synchronous;
-        if (item.SubItems[CONFIG_UPLOAD_MODE])
+        if (::HasValue(item, CONFIG_UPLOAD_MODE))
         {
             if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_MODE], L"sync"sv))
             {
@@ -360,7 +381,7 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
         }
 
         AuthScheme = OutputSpec::UploadAuthScheme::Negotiate;
-        if (item.SubItems[CONFIG_UPLOAD_AUTHSCHEME])
+        if (::HasValue(item, CONFIG_UPLOAD_AUTHSCHEME))
         {
             if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_AUTHSCHEME], L"Anonymous"sv))
             {
@@ -384,12 +405,13 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
             }
         }
 
-        if (item.SubItems[CONFIG_UPLOAD_FILTER_INC])
+        if (::HasValue(item, CONFIG_UPLOAD_FILTER_INC))
         {
             boost::split(
                 FilterInclude, (const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_INC], boost::is_any_of(L",;"));
         }
-        if (item.SubItems[CONFIG_UPLOAD_FILTER_EXC])
+
+        if (::HasValue(item, CONFIG_UPLOAD_FILTER_EXC))
         {
             boost::split(
                 FilterExclude, (const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_INC], boost::is_any_of(L",;"));
