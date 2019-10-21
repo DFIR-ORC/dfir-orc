@@ -50,7 +50,7 @@ void Main::PrintUsage()
         L"\t/ResurrectRecords    : Include records marked as \"not in use\" in enumeration. (they'll need the FILE "
         L"tag)\r\n"
         L"\t/Walker=USN|MFT      : Walks the file systems entries through MFT parsing or USN Journal enumeration "
-        L"(default is USN)\r\n"
+        L"(default is MFT)\r\n"
         L"\r\n"
         L"\t/KnownLocations|/kl  : Scan a set of locations known to be of interest\r\n"
         L"\t/Shadows             : Add Volume Shadows Copies for selected volumes to parse\r\n"
