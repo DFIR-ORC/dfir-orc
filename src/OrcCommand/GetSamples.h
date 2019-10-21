@@ -120,6 +120,8 @@ public:
     HRESULT CheckConfiguration();
 
     HRESULT Run();
+
+    HRESULT ProcessOptionAutorun(const ConfigItem& item);
 };
 
 }  // namespace Command::GetSamples

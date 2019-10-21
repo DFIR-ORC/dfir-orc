@@ -183,29 +183,11 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         return hr;
     if (FAILED(hr = config.timelineOutput.Configure(_L_, OutputSpec::Kind::TableFile, configitem[GETSAMPLES_TIMELINE])))
         return hr;
-    if (FAILED(hr = config.autorunsOutput.Configure(_L_, OutputSpec::Kind::File, configitem[GETSAMPLES_AUTORUNS])))
-        return hr;
 
-    if (config.autorunsOutput.Type != OutputSpec::None)
+    hr = ProcessOptionAutorun(configitem);
+    if (FAILED(hr))
     {
-        if (SUCCEEDED(VerifyFileExists(config.autorunsOutput.Path.c_str())))
-        {
-            config.bLoadAutoruns = true;
-            config.bRunAutoruns = false;
-            config.bKeepAutorunsXML = false;
-        }
-        else
-        {
-            config.bRunAutoruns = true;
-            config.bLoadAutoruns = false;
-            config.bKeepAutorunsXML = true;
-        }
-    }
-    else
-    {
-        config.bRunAutoruns = false;
-        config.bLoadAutoruns = false;
-        config.bKeepAutorunsXML = false;
+        return hr;
     }
 
     if (FAILED(hr = config.getThisConfig.Configure(_L_, OutputSpec::File, configitem[GETSAMPLES_GETTHIS_CONFIG])))
@@ -344,5 +326,47 @@ HRESULT Main::CheckConfiguration()
     // we support only NTFS for now to get samples
     config.locs.Consolidate(false, FSVBR::FSType::NTFS);
 
+    return S_OK;
+}
+
+HRESULT Main::ProcessOptionAutorun(const ConfigItem& item)
+{
+    if (!item[GETSAMPLES_AUTORUNS])
+    {
+        // Undefined option: do not try to execute Autoruns.exe
+        config.bRunAutoruns = false;
+        config.bLoadAutoruns = false;
+        config.bKeepAutorunsXML = false;
+        return S_OK;
+    }
+
+    HRESULT hr = config.autorunsOutput.Configure(_L_, OutputSpec::Kind::File, item[GETSAMPLES_AUTORUNS]);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (config.autorunsOutput.Type == OutputSpec::None)
+    {
+        // Option is defined without any path: execute Autoruns.exe
+        config.bRunAutoruns = true;
+        config.bLoadAutoruns = false;
+        config.bKeepAutorunsXML = false;
+        return S_OK;
+    }
+
+    if (SUCCEEDED(VerifyFileExists(config.autorunsOutput.Path.c_str())))
+    {
+        // Option is defined with an existing existing file path: do not execute Autoruns.exe, load file as input result
+        config.bRunAutoruns = false;
+        config.bLoadAutoruns = true;
+        config.bKeepAutorunsXML = false;
+        return S_OK;
+    }
+
+    // Option is defined with an non-existing file path: execute Autoruns.exe and keep its results in the provided path
+    config.bRunAutoruns = true;
+    config.bLoadAutoruns = false;
+    config.bKeepAutorunsXML = true;
     return S_OK;
 }
