@@ -98,9 +98,34 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
 
         if (command->ExitCode() == 0)
         {
-            const CBinaryBuffer buffer = pMemStream->GetConstBuffer();
-            // buffer may be bigger than actual data... Adjusting...
-            size_t dwBufferLen = strnlen_s((LPSTR)buffer.GetData(), buffer.GetCount());
+            CBinaryBuffer buffer;
+
+            //
+            // Strip from xml anything like version in this autoruns regression:
+            //
+            // Sysinternals Autoruns v13.51 - Autostart program viewer
+            // Copyright (C) 2002-2015 Mark Russinovich
+            // Sysinternals - www.sysinternals.com
+            //
+            {
+                const auto output = pMemStream->GetConstBuffer();
+                std::wstring_view view(
+                    reinterpret_cast<const wchar_t*>(output.GetData()), output.GetCount() / sizeof(wchar_t));
+
+                const auto xmlIt = std::find(std::cbegin(view), std::cend(view), L'<');
+                if (xmlIt == std::cend(view))
+                {
+                    hr = E_INVALIDARG;
+                    log::Error(_L_, hr, L"Cannot parse autoruns xml\r\n");
+                    return hr;
+                }
+
+                // This will strip also \xFF\xFE but this should not be an issue
+                const auto xmlOffset = std::distance(std::cbegin(view), xmlIt);
+                buffer.SetData(
+                    reinterpret_cast<LPCBYTE>(view.data() + xmlOffset),
+                    (view.size() - xmlOffset) * sizeof(wchar_t));
+            }
 
             log::Info(_L_, L"\r\nLoading autoruns data...");
             if (FAILED(hr = tk.LoadAutoRuns(buffer)))

@@ -156,7 +156,7 @@ bool CBinaryBuffer::SetCount(size_t NewSize)
     return true;
 }
 
-HRESULT CBinaryBuffer::SetData(const LPBYTE pBuffer, size_t cbSize)
+HRESULT CBinaryBuffer::SetData(LPCBYTE pBuffer, size_t cbSize)
 {
     if (!SetCount(cbSize))
         return E_OUTOFMEMORY;
