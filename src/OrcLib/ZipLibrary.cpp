@@ -36,6 +36,7 @@ class Lib7z
         ::lib7zCrcTableInit();
         NArchive::N7z::Register();
         NArchive::NZip::Register();
+        NCompress::RegisterCodecCopy();
         NCompress::NBcj::RegisterCodecBCJ();
         NCompress::NBcj2::RegisterCodecBCJ2();
         NCompress::NLzma::RegisterCodecLZMA();
