@@ -345,6 +345,12 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Password", config.Output.Password))
                         ;
+                    else if (FileSizeOption(argv[i] + 1, L"MaxPerSampleBytes", config.limits.dwlMaxBytesPerSample))
+                        ;
+                    else if (FileSizeOption(argv[i] + 1, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal))
+                        ;
+                    else if (ParameterOption(argv[i] + 1, L"MaxSampleCount", config.limits.dwMaxSampleCount))
+                        ;
                     else if (BooleanOption(argv[i] + 1, L"NoLimits", config.limits.bIgnoreLimits))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Compression", config.Output.Compression))
