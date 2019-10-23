@@ -24,20 +24,30 @@ using namespace Orc::Command::DD;
 
 HRESULT Main::Run()
 {
-    HRESULT hr = E_FAIL;
-
     std::shared_ptr<ByteStream> input_stream;
     std::shared_ptr<FileStream> input_file_stream = std::make_shared<FileStream>(_L_);
 
-    if (FAILED(
-            hr = input_file_stream->OpenFile(
+    if (auto hr = loc_set.EnumerateLocations(); FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to enumerate locations\r\n");
+        return hr;
+    }
+
+    //std::vector<std::shared_ptr<Location>> addedLocs;
+    //if (auto hr = loc_set.AddLocation(config.strIF.c_str(), addedLocs); FAILED(hr))
+    //{
+    //    log::Error(_L_, hr, L"Failed to enumerate locations\r\n");
+    //    return hr;
+    //}
+
+    if (auto hr = input_file_stream->OpenFile(
                 config.strIF.c_str(),
                 FILE_READ_DATA,
                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                 NULL,
                 OPEN_EXISTING,
                 FILE_FLAG_SEQUENTIAL_SCAN,
-                NULL)))
+        NULL); FAILED(hr))
     {
         log::Error(_L_, hr, L"Failed to open %s to read data\r\n", config.strIF.c_str());
         return hr;
@@ -57,11 +67,11 @@ HRESULT Main::Run()
             ullMaxBytes - (config.Skip.QuadPart * config.BlockSize.QuadPart));
     }
 
-    if (config.Hash != SupportedAlgorithm::Undefined)
+    if (config.Hash != CryptoHashStream::Algorithm::Undefined)
     {
         auto hash_stream = std::make_shared<CryptoHashStream>(_L_);
 
-        if (FAILED(hr = hash_stream->OpenToRead(config.Hash, input_file_stream)))
+        if (auto hr = hash_stream->OpenToRead(config.Hash, input_file_stream); FAILED(hr))
         {
             log::Error(_L_, hr, L"Failed to open hash stream for input\r\n");
             return hr;
@@ -81,18 +91,18 @@ HRESULT Main::Run()
 
         auto out_file_stream = std::make_shared<FileStream>(_L_);
 
-        if (FAILED(hr = out_file_stream->WriteTo(out.c_str())))
+        if (auto hr = out_file_stream->OpenFile(out.c_str(), GENERIC_WRITE, 0L, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); FAILED(hr))
         {
             log::Warning(_L_, hr, L"Failed to open %s to write data\r\n", config.strIF.c_str());
             out_stream = out_file_stream = nullptr;
         }
         else
         {
-            if (config.Hash != SupportedAlgorithm::Undefined)
+            if (config.Hash != CryptoHashStream::Algorithm::Undefined)
             {
                 auto hash_stream = std::make_shared<CryptoHashStream>(_L_);
 
-                if (FAILED(hr = hash_stream->OpenToWrite(config.Hash, out_file_stream)))
+                if (auto hr = hash_stream->OpenToWrite(config.Hash, out_file_stream); FAILED(hr))
                 {
                     log::Error(_L_, hr, L"Failed to open hash stream for input\r\n");
                     return hr;
@@ -112,14 +122,15 @@ HRESULT Main::Run()
     if (!bValidOutput)
     {
         log::Error(_L_, E_INVALIDARG, L"None of the supplied output can be opened, nowhere to write to\r\n");
-        return hr;
+        return E_INVALIDARG;
     }
+
+    ULONGLONG ullCurrentCursor = 0LLU;
 
     if (config.Skip.QuadPart > 0LL)
     {
-        if (FAILED(
-                hr = input_stream->SetFilePointer(
-                    config.BlockSize.QuadPart * config.Skip.QuadPart, FILE_BEGIN, nullptr)))
+        if (auto hr = input_stream->SetFilePointer(
+                    config.BlockSize.QuadPart * config.Skip.QuadPart, FILE_BEGIN, &ullCurrentCursor); FAILED(hr))
         {
             log::Error(
                 _L_,
@@ -136,16 +147,30 @@ HRESULT Main::Run()
         {
             if (out.second != nullptr)
             {
-                if (FAILED(
-                        hr = input_stream->SetFilePointer(
-                            config.BlockSize.QuadPart * config.Skip.QuadPart, FILE_BEGIN, nullptr)))
+                if (config.NoTrunc)
                 {
-                    log::Warning(
-                        _L_,
-                        hr,
-                        L"Failed to skip %I64d bytes from input stream %s\r\n",
-                        config.BlockSize.QuadPart * config.Skip.QuadPart,
-                        out.first.c_str());
+                    if (auto hr = out.second->SetFilePointer(
+                            config.BlockSize.QuadPart * config.Seek.QuadPart, FILE_BEGIN, nullptr); FAILED(hr))
+                    {
+                        log::Warning(
+                            _L_,
+                            hr,
+                            L"Failed to seek %I64d bytes in output stream %s\r\n",
+                            config.BlockSize.QuadPart * config.Seek.QuadPart,
+                            out.first.c_str());
+                    }
+                }
+                else
+                {
+                    if (auto hr = out.second->SetSize(config.BlockSize.QuadPart * config.Seek.QuadPart); FAILED(hr))
+                    {
+                        log::Warning(
+                            _L_,
+                            hr,
+                            L"Failed to truncate %I64d bytes in output stream %s\r\n",
+                            config.BlockSize.QuadPart * config.Seek.QuadPart,
+                            out.first.c_str());
+                    }
                 }
             }
         }
@@ -154,9 +179,9 @@ HRESULT Main::Run()
     CBinaryBuffer buffer(true);
     buffer.SetCount(config.BlockSize.LowPart);
 
-    ULONGLONG ullBlockCount = 0LL;
-    ULONGLONG ullProgressBytes = 0LL;
-    ULONGLONG ullAbsoluteOffset = config.Skip.QuadPart;
+    auto ullBlockCount = 0LLU;
+    auto ullProgressBytes = 0LLU;
+    auto ullAbsoluteOffset = config.Skip.QuadPart;
     SHORT Progress = 0;
 
     auto start = std::chrono::system_clock::now();
@@ -169,14 +194,14 @@ HRESULT Main::Run()
         auto blockStart = std::chrono::system_clock::now();
 
         ULONGLONG ullRead = 0LL;
-        if (FAILED(hr = input_stream->Read(buffer.GetData(), buffer.GetCount(), &ullRead)))
+        if (auto hr = input_stream->Read(buffer.GetData(), buffer.GetCount(), &ullRead); FAILED(hr))
         {
             if (config.NoError)
             {
                 ZeroMemory(buffer.GetData(), buffer.GetCount());
                 ullRead = config.BlockSize.QuadPart;
-                if (FAILED(input_file_stream->SetFilePointer(
-                        ullAbsoluteOffset + config.BlockSize.QuadPart, FILE_BEGIN, NULL)))
+                if (auto hr = input_file_stream->SetFilePointer(
+                        config.BlockSize.QuadPart, FILE_CURRENT, NULL); FAILED(hr))
                 {
                     log::Error(
                         _L_,
@@ -207,12 +232,27 @@ HRESULT Main::Run()
             log::Verbose(_L_, L"Done reading from input stream\r\n");
             break;
         }
+        else
+        {
+            ullCurrentCursor += ullRead;
+            auto ullNewCursor = 0LLU;
+            if (auto hr = input_stream->SetFilePointer(ullCurrentCursor, FILE_BEGIN, &ullNewCursor); FAILED(hr))
+            {
+                log::Error(
+                        _L_,
+                        hr,
+                        L"\nFailed to seek to %I64d offset\r\n",
+                        ullCurrentCursor);
+            }
+            assert(ullNewCursor == ullCurrentCursor);
+        }
 
         for (const auto& output : output_streams)
         {
             ULONGLONG ullWritten = 0LL;
+            auto hr = E_FAIL;
             if (output.second != nullptr
-                && FAILED(hr = output.second->Write(buffer.GetData(), buffer.GetCount(), &ullWritten)))
+                && FAILED(hr = output.second->Write(buffer.GetData(), ullRead, &ullWritten)))
             {
                 log::Error(
                     _L_,
@@ -247,7 +287,7 @@ HRESULT Main::Run()
             L"%s%I64d blocks of %I64d bytes copied (%I64d Mbytes) (now:%.2f MB/sec, average:%.2f MB/sec)\r",
             szProgress,
             ullBlockCount,
-            config.BlockSize.QuadPart,
+            std::min(config.BlockSize.QuadPart, ullRead),
             ullProgressBytes / (1024 * 1024),
             dblTXnow,
             dblTXaverage);
@@ -259,7 +299,7 @@ HRESULT Main::Run()
         }
     }
 
-    if (FAILED(hr = input_stream->Close()))
+    if (auto hr = input_stream->Close(); FAILED(hr))
     {
         log::Error(_L_, hr, L"Failed to close input stream %s\r\n", buffer.GetCount(), config.strIF.c_str());
         return hr;
@@ -267,6 +307,7 @@ HRESULT Main::Run()
 
     for (const auto& output : output_streams)
     {
+        auto hr = E_FAIL;
         if (output.second != nullptr && FAILED(hr = output.second->Close()))
         {
             log::Error(_L_, hr, L"Failed to close input stream %s\r\n", buffer.GetCount(), output.first.c_str());

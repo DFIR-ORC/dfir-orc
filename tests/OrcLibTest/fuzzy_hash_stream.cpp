@@ -42,7 +42,7 @@ public:
         auto fuzzy_stream = std::make_unique<FuzzyHashStream>(_L_);
 
         Assert::IsTrue(SUCCEEDED(fuzzy_stream->OpenToRead(
-            static_cast<FuzzyHashStream::SupportedAlgorithm>(FuzzyHashStream::SSDeep | FuzzyHashStream::TLSH),
+            FuzzyHashStream::SSDeep | FuzzyHashStream::TLSH,
             filestream)));
 
         auto devnull = std::make_shared<DevNullStream>(_L_);

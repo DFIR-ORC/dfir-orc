@@ -59,7 +59,7 @@ HRESULT RegFindConfig::GetConfiguration(
     {
         for (const auto& configItem : item[CONFIG_HIVE_FILE].NodeList)
         {
-            HiveFiles.push_back(item.strData);
+            HiveFiles.push_back(configItem.strData);
         }
     }
 

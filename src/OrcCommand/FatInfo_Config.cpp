@@ -40,24 +40,13 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
 
     const ConfigItem& configitem = configItem[FATINFO_COLUMNS];
 
-    if (configitem[WRITERRORS])
-    {
-        using namespace std::string_view_literals;
-        constexpr auto YES = L"yes"sv;
-
-        if (equalCaseInsensitive((const std::wstring&)configitem.SubItems[WRITERRORS], YES))
-            m_Config.bWriteErrorCodes = true;
-        else
-            m_Config.bWriteErrorCodes = false;
-    }
-
     std::for_each(
         begin(configitem[DEFAULT].NodeList), end(configitem[DEFAULT].NodeList), [this](const ConfigItem& item) {
             if (item)
                 m_Config.DefaultIntentions = static_cast<Intentions>(
                     m_Config.DefaultIntentions
                     | FileInfo::GetIntentions(
-                        item.strData.c_str(), FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                        _L_, item.strData.c_str(), FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
         });
 
     std::for_each(begin(configitem[ADD].NodeList), end(configitem[ADD].NodeList), [this](const ConfigItem& item) {
@@ -183,8 +172,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (ParameterOption(argv[i] + 1, L"Computer", m_Config.strComputerName))
                     ;
-                else if (BooleanOption(argv[i] + 1, L"errorcodes", m_Config.bWriteErrorCodes))
-                    ;
                 else if (ParameterOption(argv[i] + 1, L"ResurrectRecords", m_Config.bResurrectRecords))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"PopSysObj", m_Config.bPopSystemObjects))
@@ -214,7 +201,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             m_Config.DefaultIntentions = static_cast<Intentions>(
                                 m_Config.DefaultIntentions
                                 | FatFileInfo::GetIntentions(
-                                    pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                                    _L_, pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
                             pCur = pNext + 1;
                         }
                         else
@@ -222,7 +209,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             m_Config.DefaultIntentions = static_cast<Intentions>(
                                 m_Config.DefaultIntentions
                                 | FatFileInfo::GetIntentions(
-                                    pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                                    _L_, pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
                             pCur = NULL;
                         }
                     }
@@ -257,6 +244,10 @@ HRESULT Main::CheckConfiguration()
     {
         SystemDetails::GetOrcComputerName(m_Config.strComputerName);
     }
+	else
+	{
+		SystemDetails::SetOrcComputerName(m_Config.strComputerName);
+	}
 
     m_Config.locs.Consolidate(false, FSVBR::FSType::FAT);
 
@@ -277,7 +268,7 @@ HRESULT Main::CheckConfiguration()
     if (m_Config.DefaultIntentions == FILEINFO_NONE)
     {
         m_Config.DefaultIntentions =
-            FatFileInfo::GetIntentions(L"Default", FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames);
+            FatFileInfo::GetIntentions(_L_, L"Default", FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames);
     }
 
     if (boost::logic::indeterminate(m_Config.bResurrectRecords))

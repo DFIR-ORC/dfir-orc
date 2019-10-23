@@ -121,7 +121,7 @@ DWORD g_dwKnownLocationsCSIDL[] = {CSIDL_DESKTOPDIRECTORY,  CSIDL_PROGRAMS,     
                                    CSIDL_COMMON_ALTSTARTUP, CSIDL_COMMON_FAVORITES, CSIDL_INTERNET_CACHE,
                                    CSIDL_COOKIES,           CSIDL_HISTORY,          CSIDL_COMMON_APPDATA,
                                    CSIDL_WINDOWS,           CSIDL_PROGRAM_FILES,    CSIDL_PROFILE,
-                                   CSIDL_PROGRAM_FILES,     CSIDL_ADMINTOOLS,       CSIDL_NONE};
+                                   CSIDL_PROGRAM_FILESX86,  CSIDL_ADMINTOOLS,       CSIDL_NONE};
 
 WCHAR* g_szKnownEnvPaths[] = {L"%PATH%", L"%ALLUSERSPROFILE%", L"%temp%", L"%tmp%", L"%APPDATA%", NULL};
 
@@ -672,7 +672,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
 
             if (regex_match(canonical, m, disk_regex))
             {
-                if (m[REGEX_PHYSICALDRIVE_PARTITION_SPEC].matched || m[REGEX_PHYSICALDRIVE_OFFSET].matched)
+                if (m[REGEX_DISK_PARTITION_SPEC].matched || m[REGEX_DISK_OFFSET].matched)
                 {
                     if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
                     {
@@ -686,7 +686,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
             }
             else if (regex_match(canonical, m, drive_regex))
             {
-                if (m[REGEX_DISK_PARTITION_SPEC].matched || m[REGEX_DISK_OFFSET].matched)
+                if (m[REGEX_PHYSICALDRIVE_PARTITION_SPEC].matched || m[REGEX_PHYSICALDRIVE_OFFSET].matched)
                 {
                     if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
                     {
@@ -1960,6 +1960,8 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
     if (FAILED(hr = UniqueLocations(filterFSTypes)))
         return hr;
 
+    std::vector<std::shared_ptr<Location>> retval;
+    
     m_Volumes.reserve(m_UniqueLocations.size());
 
     for (const auto& loc : m_UniqueLocations)
@@ -1997,6 +1999,10 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
                     m_Volumes.emplace(std::move(pair));
                 }
             }
+            else if(loc->GetType() == Location::Type::OfflineMFT)
+            {
+                retval.push_back(loc);
+            }
         }
     }
 
@@ -2006,7 +2012,6 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
         return S_OK;
     }
 
-    std::vector<std::shared_ptr<Location>> retval;
 
     for (auto& aPair : m_Volumes)
     {

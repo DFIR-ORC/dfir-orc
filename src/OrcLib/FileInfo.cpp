@@ -49,15 +49,13 @@ FileInfo::FileInfo(
     const std::vector<Filter>& Filters,
     LPCWSTR szFullName,
     DWORD dwLen,
-    Authenticode& codeVerifyTrust,
-    bool bWriteErrorCodes)
+    Authenticode& codeVerifyTrust)
     : m_PEInfo(pLog, *this)
     , _L_(std::move(pLog))
     , m_hFile(INVALID_HANDLE_VALUE)
     , m_pVolReader(pVolReader)
     , m_szFullName(szFullName)
     , m_dwFullNameLen(dwLen)
-    , m_bWriteErrorCodes(bWriteErrorCodes)
     , m_DefaultIntentions(DefaultIntentions)
     , m_Filters(Filters)
     , m_codeVerifyTrust(codeVerifyTrust)
@@ -338,7 +336,7 @@ bool FileInfo::HasSpecificExtension(const WCHAR* pszName, const WCHAR* pszExtens
 }
 
 Intentions
-FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[])
+FileInfo::GetIntentions(const logger& pLog, const WCHAR* Params, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[])
 {
     Intentions dwIntentions = FILEINFO_NONE;
     WCHAR szParams[MAX_PATH];
@@ -353,6 +351,8 @@ FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], c
         if (szParams[i] == L',' || szParams[i] == L'\0')
         {
             szParams[i] = 0;
+
+            Intentions dwPreviousIntentions = dwIntentions;
 
             const ColumnNameDef* pCurAlias = aliasNames;
             while (pCurAlias->dwIntention != FILEINFO_NONE)
@@ -375,7 +375,10 @@ FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], c
                 }
                 pCurCol++;
             }
-
+            if (dwPreviousIntentions == dwIntentions)
+            {
+                log::Warning(pLog, E_INVALIDARG, L"Parameter %s was not recognized as a valid column name\r\n", pCur);
+            }
             szParams[i] = L',';
             pCur = &(szParams[i]) + 1;
         }
@@ -589,13 +592,13 @@ HRESULT FileInfo::OpenCryptoHash(Intentions localIntentions)
     if (GetDetails()->HashAvailable())
         return S_OK;
 
-    SupportedAlgorithm algs = SupportedAlgorithm::Undefined;
+    CryptoHashStream::Algorithm algs = CryptoHashStream::Algorithm::Undefined;
     if (localIntentions & FILEINFO_MD5)
-        algs = static_cast<SupportedAlgorithm>(algs | SupportedAlgorithm::MD5);
+        algs |= CryptoHashStream::Algorithm::MD5;
     if (localIntentions & FILEINFO_SHA1)
-        algs = static_cast<SupportedAlgorithm>(algs | SupportedAlgorithm::SHA1);
+        algs |= CryptoHashStream::Algorithm::SHA1;
     if (localIntentions & FILEINFO_SHA256)
-        algs = static_cast<SupportedAlgorithm>(algs | SupportedAlgorithm::SHA256);
+        algs |= CryptoHashStream::Algorithm::SHA256;
 
     auto stream = GetDetails()->GetDataStream();
 
@@ -617,20 +620,20 @@ HRESULT FileInfo::OpenCryptoHash(Intentions localIntentions)
 
     if (ullWritten > 0)
     {
-        if (algs & SupportedAlgorithm::MD5
-            && FAILED(hr = hashstream->GetHash(SupportedAlgorithm::MD5, GetDetails()->MD5())))
+        if (algs & CryptoHashStream::Algorithm::MD5
+            && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::MD5, GetDetails()->MD5())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (algs & SupportedAlgorithm::SHA1
-            && FAILED(hr = hashstream->GetHash(SupportedAlgorithm::SHA1, GetDetails()->SHA1())))
+        if (algs & CryptoHashStream::Algorithm::SHA1
+            && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, GetDetails()->SHA1())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (algs & SupportedAlgorithm::SHA256
-            && FAILED(hr = hashstream->GetHash(SupportedAlgorithm::SHA256, GetDetails()->SHA256())))
+        if (algs & CryptoHashStream::Algorithm::SHA256
+            && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, GetDetails()->SHA256())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
@@ -647,11 +650,11 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
     if (GetDetails()->HashAvailable())
         return S_OK;
 
-    FuzzyHashStream::SupportedAlgorithm algs = FuzzyHashStream::SupportedAlgorithm::Undefined;
+    FuzzyHashStream::Algorithm algs = FuzzyHashStream::Algorithm::Undefined;
     if (localIntentions & FILEINFO_SSDEEP)
-        algs = static_cast<FuzzyHashStream::SupportedAlgorithm>(algs | FuzzyHashStream::SSDeep);
+        algs |= FuzzyHashStream::SSDeep;
     if (localIntentions & FILEINFO_TLSH)
-        algs = static_cast<FuzzyHashStream::SupportedAlgorithm>(algs | FuzzyHashStream::TLSH);
+        algs |= FuzzyHashStream::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
 
@@ -673,14 +676,14 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
 
     if (ullWritten > 0)
     {
-        if (algs & FuzzyHashStream::SupportedAlgorithm::SSDeep
-            && FAILED(hr = hashstream->GetHash(FuzzyHashStream::SupportedAlgorithm::SSDeep, GetDetails()->SSDeep())))
+        if (algs & FuzzyHashStream::Algorithm::SSDeep
+            && FAILED(hr = hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, GetDetails()->SSDeep())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (algs & FuzzyHashStream::SupportedAlgorithm::TLSH
-            && FAILED(hr = hashstream->GetHash(FuzzyHashStream::SupportedAlgorithm::TLSH, GetDetails()->TLSH())))
+        if (algs & FuzzyHashStream::Algorithm::TLSH
+            && FAILED(hr = hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
@@ -697,19 +700,19 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
     if (GetDetails()->HashAvailable())
         return S_OK;
 
-    SupportedAlgorithm crypto_algs = SupportedAlgorithm::Undefined;
+    CryptoHashStream::Algorithm crypto_algs = CryptoHashStream::Algorithm::Undefined;
     if (localIntentions & FILEINFO_MD5)
-        crypto_algs = static_cast<SupportedAlgorithm>(crypto_algs | SupportedAlgorithm::MD5);
+        crypto_algs |= CryptoHashStream::Algorithm::MD5;
     if (localIntentions & FILEINFO_SHA1)
-        crypto_algs = static_cast<SupportedAlgorithm>(crypto_algs | SupportedAlgorithm::SHA1);
+        crypto_algs |= CryptoHashStream::Algorithm::SHA1;
     if (localIntentions & FILEINFO_SHA256)
-        crypto_algs = static_cast<SupportedAlgorithm>(crypto_algs | SupportedAlgorithm::SHA256);
+        crypto_algs |= CryptoHashStream::Algorithm::SHA256;
 
-    FuzzyHashStream::SupportedAlgorithm fuzzy_algs = FuzzyHashStream::SupportedAlgorithm::Undefined;
+    FuzzyHashStream::Algorithm fuzzy_algs = FuzzyHashStream::Algorithm::Undefined;
     if (localIntentions & FILEINFO_SSDEEP)
-        fuzzy_algs = static_cast<FuzzyHashStream::SupportedAlgorithm>(fuzzy_algs | FuzzyHashStream::SSDeep);
+        fuzzy_algs |= FuzzyHashStream::SSDeep;
     if (localIntentions & FILEINFO_TLSH)
-        fuzzy_algs = static_cast<FuzzyHashStream::SupportedAlgorithm>(fuzzy_algs | FuzzyHashStream::TLSH);
+        fuzzy_algs |= FuzzyHashStream::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
 
@@ -722,7 +725,7 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
     std::shared_ptr<CryptoHashStream> crypto_hashstream;
     std::shared_ptr<FuzzyHashStream> fuzzy_hashstream;
 
-    if (crypto_algs != SupportedAlgorithm::Undefined)
+    if (crypto_algs != CryptoHashStream::Algorithm::Undefined)
     {
         crypto_hashstream = std::make_shared<CryptoHashStream>(_L_);
         if (crypto_hashstream == nullptr)
@@ -734,7 +737,7 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
         hashing_stream = crypto_hashstream;
     }
 
-    if (fuzzy_algs != FuzzyHashStream::SupportedAlgorithm::Undefined)
+    if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
     {
         fuzzy_hashstream = std::make_shared<FuzzyHashStream>(_L_);
         if (fuzzy_hashstream == nullptr)
@@ -752,34 +755,35 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
 
     if (ullWritten > 0)
     {
-        if (crypto_algs & SupportedAlgorithm::MD5
-            && FAILED(hr = crypto_hashstream->GetHash(SupportedAlgorithm::MD5, GetDetails()->MD5())))
+        if (crypto_algs & CryptoHashStream::Algorithm::MD5
+            && FAILED(hr = crypto_hashstream->GetHash(CryptoHashStream::Algorithm::MD5, GetDetails()->MD5())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (crypto_algs & SupportedAlgorithm::SHA1
-            && FAILED(hr = crypto_hashstream->GetHash(SupportedAlgorithm::SHA1, GetDetails()->SHA1())))
+        if (crypto_algs & CryptoHashStream::Algorithm::SHA1
+            && FAILED(hr = crypto_hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, GetDetails()->SHA1())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (crypto_algs & SupportedAlgorithm::SHA256
-            && FAILED(hr = crypto_hashstream->GetHash(SupportedAlgorithm::SHA256, GetDetails()->SHA256())))
+        if (crypto_algs & CryptoHashStream::Algorithm::SHA256
+            && FAILED(hr = crypto_hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, GetDetails()->SHA256())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-
-        if (fuzzy_algs & FuzzyHashStream::SupportedAlgorithm::SSDeep
+#ifdef ORC_BUILD_SSDEEP
+        if (fuzzy_algs & FuzzyHashStream::Algorithm::SSDeep
             && FAILED(
-                hr = fuzzy_hashstream->GetHash(FuzzyHashStream::SupportedAlgorithm::SSDeep, GetDetails()->SSDeep())))
+                hr = fuzzy_hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, GetDetails()->SSDeep())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (fuzzy_algs & FuzzyHashStream::SupportedAlgorithm::TLSH
-            && FAILED(hr = fuzzy_hashstream->GetHash(FuzzyHashStream::SupportedAlgorithm::TLSH, GetDetails()->TLSH())))
+#endif
+        if (fuzzy_algs & FuzzyHashStream::Algorithm::TLSH
+            && FAILED(hr = fuzzy_hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
@@ -826,7 +830,7 @@ HRESULT FileInfo::OpenAuthenticode()
     }
     else
     {
-        if (FAILED(hr = m_codeVerifyTrust.Verify(m_szFullName, GetDetails()->GetPEHashs(), data)))
+        if (FAILED(hr = m_codeVerifyTrust.VerifyAnySignatureWithCatalogs(m_szFullName, GetDetails()->GetPEHashs(), data)))
         {
             log::Warning(_L_, hr, L"WinVerifyTrust failed for file %s\r\n", m_szFullName);
         }
@@ -916,7 +920,7 @@ HRESULT FileInfo::WriteOwnerSid(ITableOutput& output)
     if (ERROR_SUCCESS != dwStatus)
         return HRESULT_FROM_WIN32(dwStatus);
 
-    BOOST_SCOPE_EXIT(&pSD) { ::free(pSD); }
+    BOOST_SCOPE_EXIT(&pSD) { :: LocalFree(pSD); }
     BOOST_SCOPE_EXIT_END
 
     WCHAR* StringSid = NULL;
@@ -945,7 +949,7 @@ HRESULT FileInfo::WriteOwner(ITableOutput& output)
     if (ERROR_SUCCESS != dwStatus)
         return HRESULT_FROM_WIN32(dwStatus);
 
-    BOOST_SCOPE_EXIT(&pSD) { ::free(pSD); }
+    BOOST_SCOPE_EXIT(&pSD) { ::LocalFree(pSD); }
     BOOST_SCOPE_EXIT_END
 
 #define MAX_NAME 512
@@ -1331,6 +1335,7 @@ HRESULT FileInfo::WriteSHA256(ITableOutput& output)
 
 HRESULT FileInfo::WriteSSDeep(ITableOutput& output)
 {
+#ifdef ORC_BUILD_SSDEEP
     HRESULT hr = E_FAIL;
     if (FAILED(hr = CheckHash()))
     {
@@ -1339,6 +1344,9 @@ HRESULT FileInfo::WriteSSDeep(ITableOutput& output)
         return hr;
     }
     return output.WriteString(GetDetails()->SSDeep().c_str());
+#else
+    return output.WriteNothing();
+#endif
 }
 
 HRESULT FileInfo::WriteTLSH(ITableOutput& output)

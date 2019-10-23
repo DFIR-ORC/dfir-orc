@@ -2,15 +2,16 @@
 
 <sqlschema tool="ObjInfo">
 
-  <table key="ObjInfo">
-    <utf8  name="ComputerName" maxlen="50" allows_null="no" />
-    <utf8  name="OperatingSystem" maxlen="50" />
-    <utf16 name="ObjectType" maxlen="50" allows_null="no" />
-    <utf16 name="ObjectName" maxlen="256" allows_null="no" />
-    <utf16 name="ObjectPath" maxlen="32K" allows_null="no" />
-    <utf16 name="LinkTarget" maxlen="32K" />
-    <timestamp name="LinkCreationTime" />
-  </table>
+    <table key="ObjInfo">
+        <utf8  name="ComputerName" maxlen="50" allows_null="no" />
+        <utf8  name="OperatingSystem" maxlen="50" />
+        <utf16 name="ObjectType" maxlen="50" allows_null="no" />
+        <utf16 name="ObjectName" maxlen="256" allows_null="no" />
+        <utf16 name="ObjectPath" maxlen="32K" allows_null="no" />
+        <utf16 name="LinkTarget" maxlen="32K" />
+        <timestamp name="LinkCreationTime" />
+        <utf16 name="Description" maxlen="256" />
+    </table>
 
 </sqlschema>
 

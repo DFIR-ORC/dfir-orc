@@ -43,6 +43,12 @@ HRESULT Orc::WideToAnsi(
     if (pszDest == NULL || cchDest == 0)
         return E_INVALIDARG;
 
+    if (cchSrc == 0LL)
+    {
+        *pszDest = '0';
+        return S_OK;
+    }
+
     if (0 == (cchSize = WideCharToMultiByte(CP_UTF8, 0, pwszSrc, cchSrc, pszDest, cchDest, NULL, NULL))
         || pszDest[0] == 0)
     {
@@ -227,6 +233,13 @@ Orc::WideToAnsi(__in const logger& pLog, __in_ecount(cchSrc) PCWSTR pwszSrc, __i
 {
     boost::io::ios_flags_saver fs(std::cerr);
     int cbNeeded = 0;
+
+    if (cchSrc == 0)
+    {
+        dest.RemoveAll();
+        return S_OK;
+    }
+
     if (0 == (cbNeeded = WideCharToMultiByte(CP_UTF8, 0, pwszSrc, cchSrc, NULL, 0L, NULL, NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
@@ -270,6 +283,14 @@ Orc::WideToAnsi(__in const logger& pLog, __in_ecount(cchSrc) PCWSTR pwszSrc, __i
 
 HRESULT Orc::WideToAnsi(__in const logger& pLog, PCWSTR pwszSrc, CBinaryBuffer& dest)
 {
+    if (pwszSrc == nullptr)
+        return E_INVALIDARG;
+    if (*pwszSrc == L'\0')
+    {
+        dest.RemoveAll();
+        return S_OK;
+    }
+
     boost::io::ios_flags_saver fs(std::cerr);
     int cbNeeded = 0;
     if (0 == (cbNeeded = WideCharToMultiByte(CP_UTF8, 0, pwszSrc, -1, NULL, 0L, NULL, NULL)))
@@ -315,6 +336,14 @@ HRESULT Orc::WideToAnsi(__in const logger& pLog, PCWSTR pwszSrc, CBinaryBuffer& 
 
 HRESULT ORCLIB_API Orc::WideToAnsi(const logger& pLog, PCWSTR pszSrc, std::string& dest)
 {
+    if (pszSrc == nullptr)
+        return E_INVALIDARG;
+    if (*pszSrc == L'\0')
+    {
+        dest.clear();
+        return S_OK;
+    }
+
     boost::io::ios_flags_saver fs(std::cerr);
     int cbNeeded = 0;
     if (0 == (cbNeeded = WideCharToMultiByte(CP_UTF8, 0, pszSrc, -1, NULL, 0L, NULL, NULL)))
@@ -441,8 +470,16 @@ HRESULT Orc::AnsiToWide(
     boost::io::ios_flags_saver fs(std::cerr);
     HRESULT hr = E_FAIL;
     DWORD cchSize = 0;
+
     if (pwzDest == NULL || cchDest == 0)
         return E_INVALIDARG;
+
+    if (*pszSrc == '\0')
+    {
+        *pwzDest = L'\0';
+        return S_OK;
+    }
+
 
     if (0 == (cchSize = MultiByteToWideChar(CP_UTF8, 0, pszSrc, -1, pwzDest, cchDest)) || pwzDest[0] == 0)
     {
@@ -581,6 +618,15 @@ HRESULT Orc::AnsiToWide(__in const logger& pLog, __in const std::string_view& sr
 HRESULT
 Orc::AnsiToWide(__in const logger& pLog, __in_ecount(cchSrc) PCSTR pszSrc, __in DWORD cchSrc, CBinaryBuffer& dest)
 {
+    if (pszSrc == nullptr)
+        return E_INVALIDARG;
+
+    if (cchSrc == 0 ||*pszSrc == '\0')
+    {
+        dest.RemoveAll();
+        return S_OK;
+    }
+
     boost::io::ios_flags_saver fs(std::cerr);
     HRESULT hr = E_FAIL;
     DWORD cchSize = 0;
@@ -631,6 +677,15 @@ HRESULT ORCLIB_API Orc::AnsiToWide(const logger& pLog, PCSTR pszSrc, CBinaryBuff
     boost::io::ios_flags_saver fs(std::cerr);
     HRESULT hr = E_FAIL;
     DWORD cchSize = 0;
+
+    if (pszSrc == nullptr)
+        return E_INVALIDARG;
+
+    if (pszSrc == '\0')
+    {
+        dest.RemoveAll();
+        return S_OK;
+    }
 
     if (0 == (cchSize = MultiByteToWideChar(CP_UTF8, 0, pszSrc, -1, NULL, 0)))
     {

@@ -154,7 +154,6 @@ public:
         CBinaryBuffer Contains;
         bool bContainsIsHex = false;
 
-        std::wstring Yara;
         std::wstring YaraRulesSpec;
         std::vector<std::string> YaraRules;
 
@@ -319,11 +318,10 @@ public:
             return S_OK;
         }
 
-        HRESULT Write(const logger& pLog, ITableOutput& output, const FILETIME& CollectionDate);
+        HRESULT Write(const logger& pLog, ITableOutput& output);
         HRESULT Write(
             const logger& pLog,
-            const std::shared_ptr<StructuredOutputWriter>& pWriter,
-            const FILETIME& CollectionDate);
+            const std::shared_ptr<StructuredOutputWriter>& pWriter);
 
         bool DeletedRecord;
         FILE_REFERENCE FRN;
@@ -337,13 +335,13 @@ public:
     typedef std::function<void(const std::shared_ptr<Match>& aMatch, bool& bStop)> FoundMatchCallback;
 
 public:
-    FileFind(logger pLog, bool bProvideStream = true, SupportedAlgorithm matchHash = SupportedAlgorithm::Undefined)
+    FileFind(logger pLog, bool bProvideStream = true, CryptoHashStream::Algorithm matchHash = CryptoHashStream::Algorithm::Undefined)
         : _L_(std::move(pLog))
         , m_FullNameBuilder(nullptr)
         , m_bProvideStream(bProvideStream)
         , m_MatchHash(matchHash)
     {
-        if (m_MatchHash != SupportedAlgorithm::Undefined)
+        if (m_MatchHash != CryptoHashStream::Algorithm::Undefined)
             m_bProvideStream = true;
     };
     FileFind(const FileFind& other) = delete;
@@ -416,9 +414,9 @@ private:
     std::vector<std::shared_ptr<Match>> m_Matches;
 
     bool m_bProvideStream = false;
-    SupportedAlgorithm m_MatchHash = SupportedAlgorithm::Undefined;
+    CryptoHashStream::Algorithm m_MatchHash = CryptoHashStream::Algorithm::Undefined;
 
-    SupportedAlgorithm m_NeededHash = SupportedAlgorithm::Undefined;
+    CryptoHashStream::Algorithm m_NeededHash = CryptoHashStream::Algorithm::Undefined;
 
     SearchTerm::Criteria DiscriminateName(const std::wstring& strName);
     SearchTerm::Criteria DiscriminateADS(const std::wstring& strADS);
@@ -578,7 +576,7 @@ private:
 
     HRESULT FindI30Match(const PFILE_NAME pFileName, bool& bStop, FileFind::FoundMatchCallback aCallback);
 
-    SupportedAlgorithm GetNeededHashAlgorithms();
+    CryptoHashStream::Algorithm GetNeededHashAlgorithms();
 };
 
 }  // namespace Orc

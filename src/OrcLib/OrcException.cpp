@@ -28,7 +28,7 @@ Exception::Exception(ExceptionSeverity status, std::wstring descr)
 {
 }
 
-HRESULT Exception::PrintMessage(const Orc::logger& pLog)
+HRESULT Exception::PrintMessage(const Orc::logger& pLog) const
 {
     Orc::log::Error(pLog, E_FAIL, L"Exception Occured: %s\r\n", Description.c_str());
     return S_OK;

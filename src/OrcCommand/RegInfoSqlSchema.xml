@@ -5,8 +5,8 @@
   <table key="reginfo">
     
     <utf8   name="ComputerName"    description="Computer Name" maxlen="15"/>
-    <utf8   name="TermName"        description="Template Name" maxlen="20"/>
-    <uint32 name="TermDescription" description="Description for this search" />
+    <utf8   name="TemplateName"    description="Template Name" maxlen="20"/>
+    <uint32 name="SearchTerm"      description="Description for this search" />
       
     <timestamp name="LastModificationDate" description="Last Mod Date" />
     <utf8 name="KeyName" description="Key Name" maxlen="32K"/>

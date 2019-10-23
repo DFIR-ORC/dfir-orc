@@ -15,6 +15,8 @@
 
 #include "NtDllExtension.h"
 
+#include "safeint.h"
+
 static const auto STATUS_INFO_LENGTH_MISMATCH = ((NTSTATUS)0xC0000004L);
 
 #include <boost/scope_exit.hpp>
@@ -180,7 +182,7 @@ HRESULT JobObject::GrantAccess(PSID pSid, ACCESS_MASK mask)
         PSID pPreviousOwner = nullptr;
         if (FAILED(hr = TakeOwnership(_L_, SE_KERNEL_OBJECT, m_hJob, pPreviousOwner)))
         {
-            log::Verbose(_L_, L"Failed to take ownershop of job\r\n");
+            log::Verbose(_L_, L"Failed to take ownership of job\r\n");
             return hr;
         }
         if (FAILED(hr = GetHandle(_L_, GetCurrentProcessId(), m_hJob, WRITE_DAC, hSettableHandle)))
@@ -208,6 +210,7 @@ HRESULT JobObject::GrantAccess(PSID pSid, ACCESS_MASK mask)
 
 HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJob)
 {
+    using namespace msl::utilities;
     HRESULT hr = E_FAIL;
     hJob = INVALID_HANDLE_VALUE;
 
@@ -254,40 +257,31 @@ HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJo
     if (pHandleInfo == nullptr)
         return E_OUTOFMEMORY;
 
-    BOOST_SCOPE_EXIT(&pHandleInfo) { ::free(pHandleInfo); }
-    BOOST_SCOPE_EXIT_END;
+    BOOST_SCOPE_EXIT(&pHandleInfo) { // Ensure pHandleInfo is freed upon scope exit
+        if(pHandleInfo)
+           ::free(pHandleInfo);
+    } BOOST_SCOPE_EXIT_END;
 
     while ((hr = pNtDll->NtQuerySystemInformation(
                 (SYSTEM_INFORMATION_CLASS)SystemHandleInformation, pHandleInfo, ulHandleInfoSize, &ulNeededBytes))
            == HRESULT_FROM_NT(STATUS_INFO_LENGTH_MISMATCH))
     {
-        ::free(pHandleInfo);
-        pHandleInfo = (SystemHandleInformationData*)::malloc(ulNeededBytes * 2);
-        if (pHandleInfo == nullptr)
+        auto pNewHandleInfo = (SystemHandleInformationData*)::realloc(pHandleInfo, SafeInt<size_t>(ulNeededBytes) * 2);
+        if (pNewHandleInfo == nullptr)
         {
             hr = E_OUTOFMEMORY;
             break;
         }
-        ulHandleInfoSize = ulNeededBytes * 2;
+        pHandleInfo = pNewHandleInfo;
+        ulHandleInfoSize = SafeInt<ULONG>(ulNeededBytes) * 2;
     }
     if (FAILED(hr))
     {
         log::Verbose(pLog, L"Failed to retrieve handle information (hr = 0x%lx)\r\n", hr);
         return hr;
     }
-
-    ULONG ulReturnedBytes = 0L;
-    hr = pNtDll->NtQuerySystemInformation(
-        (SYSTEM_INFORMATION_CLASS)SystemHandleInformation, pHandleInfo, ulNeededBytes, &ulReturnedBytes);
-
-    if (FAILED(hr))
-    {
-        log::Verbose(pLog, L"Failed to retrieve handle information (hr = 0x%lx)\r\n", hr);
-        return hr;
-    }
-
+    
     UCHAR ucJobType = 0;
-
     DWORD dwProcessID = GetCurrentProcessId();
 
     log::Verbose(pLog, L"Found %d handles\r\n", pHandleInfo->ulCount);
@@ -342,7 +336,6 @@ HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJo
                 if (bIsProcessInJob)
                 {
                     hJob = hOtherJob;
-                    ::free(pHandleInfo);
                     return S_OK;
                 }
                 CloseHandle(hOtherJob);

@@ -207,14 +207,14 @@ public:
 
         auto hash_stream = std::make_shared<CryptoHashStream>(_L_);
 
-        Assert::IsTrue(SUCCEEDED(hash_stream->OpenToWrite(SupportedAlgorithm::SHA1, nullptr)));
+        Assert::IsTrue(SUCCEEDED(hash_stream->OpenToWrite(CryptoHashStream::Algorithm::SHA1, nullptr)));
 
         ULONGLONG ullBytesWritten = 0LL;
         Assert::IsTrue(SUCCEEDED(result_stream->CopyTo(hash_stream, 4096, &ullBytesWritten)));
 
         {
             std::wstring sha1;
-            Assert::IsTrue(SUCCEEDED(hash_stream->GetHash(SupportedAlgorithm::SHA1, sha1)));
+            Assert::IsTrue(SUCCEEDED(hash_stream->GetHash(CryptoHashStream::Algorithm::SHA1, sha1)));
             Assert::AreEqual(szExpectedSHA1, sha1.c_str(), L"Structured Output differ from expected result");
         }
         return S_OK;

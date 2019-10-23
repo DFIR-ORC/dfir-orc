@@ -49,7 +49,7 @@ constexpr auto REGEX_PHYSICALDRIVE =
     L"\\\\\\\\(\\.|\\?)\\\\PhysicalDrive([0-9]+)(,offset=([0-9]+))?(,size=([0-9]+))?(,sector=([0-9]+))?(,part=([0-9]+))"
     L"?";
 constexpr auto REGEX_PHYSICALDRIVE_NUM = 2;
-constexpr auto REGEX_PHYSICALDRIVE_PARTITION_SPEC = 3;
+constexpr auto REGEX_PHYSICALDRIVE_PARTITION_SPEC = 9;
 constexpr auto REGEX_PHYSICALDRIVE_PARTITION_NUM = 10;
 
 constexpr auto REGEX_PHYSICALDRIVE_OFFSET = 4;

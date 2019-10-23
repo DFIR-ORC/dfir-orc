@@ -171,7 +171,6 @@ class ArchiveMessage;
 class ArchiveNotification;
 
 // In&Out/ByteStream/CryptoStream
-enum SupportedAlgorithm : char;
 class CryptoHashStream;
 class FuzzyHashStream;
 class HashStream;

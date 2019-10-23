@@ -40,8 +40,7 @@ MFTRecordFileInfo::MFTRecordFileInfo(
     MFTRecord* pRecord,
     const PFILE_NAME pFileName,
     const std::shared_ptr<DataAttribute>& pDataAttr,
-    Authenticode& verifytrust,
-    bool bWriteErrorCodes)
+    Authenticode& verifytrust)
     : NtfsFileInfo(
         std::move(pLog),
         std::move(strComputerName),
@@ -50,8 +49,7 @@ MFTRecordFileInfo::MFTRecordFileInfo(
         filters,
         szFullFileName,
         (DWORD)wcslen(szFullFileName),
-        verifytrust,
-        bWriteErrorCodes)
+        verifytrust)
 {
     m_pMFTRecord = pRecord;
     m_pFileName = pFileName;

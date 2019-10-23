@@ -44,6 +44,10 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
         _L_,
         config.outRegsitry.TableKey.empty() ? L"FastFindRegistry" : config.outRegsitry.TableKey.c_str(),
         schemaitem);
+    config.outObject.Schema = TableOutput::GetColumnsFromConfig(
+        _L_,
+        config.outObject.TableKey.empty() ? L"FastFindObject" : config.outObject.TableKey.c_str(),
+        schemaitem);
     return S_OK;
 }
 
@@ -88,7 +92,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     if (FAILED(
             hr = config.outStructured.Configure(
                 _L_,
-                static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile),
+                static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile),
                 configitem[FASTFIND_OUTPUT_STRUCTURED])))
     {
         return hr;
@@ -120,13 +124,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             log::Error(_L_, hr, L"Error in specific file find parsing in config file\r\n");
             return hr;
         }
-        if (filesystem[FASTFIND_FILESYSTEM_YARA].Status == ConfigItem::PRESENT)
+        if (filesystem[FASTFIND_FILESYSTEM_YARA])
         {
             config.Yara = std::make_unique<YaraConfig>(YaraConfig::Get(_L_, filesystem[FASTFIND_FILESYSTEM_YARA]));
         }
     }
 
-    if (configitem[FASTFIND_REGISTRY].Status == ConfigItem::PRESENT)
+    if (configitem[FASTFIND_REGISTRY])
     {
         if (FAILED(
                 hr = config.Registry.Locations.AddLocationsFromConfigItem(
@@ -173,15 +177,15 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             });
     }
 
-    if (configitem[FASTFIND_OBJECT].Status == ConfigItem::PRESENT)
+    if (configitem[FASTFIND_OBJECT])
     {
         for (const auto& item : configitem[FASTFIND_OBJECT][FASTFIND_OBJECT_FIND].NodeList)
         {
             ObjectSpec::ObjectItem anItem;
 
-            if (item[FASTFIND_OBJECT_FIND_TYPE].Status == ConfigItem::PRESENT)
+            if (item[FASTFIND_OBJECT_FIND_TYPE])
             {
-                anItem.ObjType = ObjectDirectory::GetObjectType(item[FASTFIND_OBJECT_FIND_TYPE].strData);
+                anItem.ObjType = ObjectDirectory::GetObjectType(item[FASTFIND_OBJECT_FIND_TYPE]);
                 if (anItem.ObjType == ObjectDirectory::ObjectType::Invalid)
                 {
                     log::Warning(
@@ -192,36 +196,36 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                     continue;
                 }
 
-                if (item[FASTFIND_OBJECT_FIND_NAME].Status == ConfigItem::PRESENT)
+                if (item[FASTFIND_OBJECT_FIND_NAME])
                 {
-                    anItem.strName = item[FASTFIND_OBJECT_FIND_NAME].strData;
+                    anItem.strName = item[FASTFIND_OBJECT_FIND_NAME];
                     anItem.name_typeofMatch = ObjectSpec::MatchType::Exact;
                 }
-                else if (item[FASTFIND_OBJECT_FIND_NAME_MATCH].Status == ConfigItem::PRESENT)
+                else if (item[FASTFIND_OBJECT_FIND_NAME_MATCH])
                 {
-                    anItem.strName = item[FASTFIND_OBJECT_FIND_NAME_MATCH].strData;
+                    anItem.strName = item[FASTFIND_OBJECT_FIND_NAME_MATCH];
                     anItem.name_typeofMatch = ObjectSpec::MatchType::Match;
                 }
-                else if (item[FASTFIND_OBJECT_FIND_NAME_REGEX].Status == ConfigItem::PRESENT)
+                else if (item[FASTFIND_OBJECT_FIND_NAME_REGEX])
                 {
-                    anItem.strName = item[FASTFIND_OBJECT_FIND_NAME_REGEX].strData;
+                    anItem.strName = item[FASTFIND_OBJECT_FIND_NAME_REGEX];
                     anItem.name_regexp = std::make_unique<std::wregex>(anItem.strName);
                     anItem.name_typeofMatch = ObjectSpec::MatchType::Regex;
                 }
 
-                if (item[FASTFIND_OBJECT_FIND_PATH].Status == ConfigItem::PRESENT)
+                if (item[FASTFIND_OBJECT_FIND_PATH])
                 {
-                    anItem.strPath = item[FASTFIND_OBJECT_FIND_PATH].strData;
+                    anItem.strPath = item[FASTFIND_OBJECT_FIND_PATH];
                     anItem.path_typeofMatch = ObjectSpec::MatchType::Exact;
                 }
-                else if (item[FASTFIND_OBJECT_FIND_PATH_MATCH].Status == ConfigItem::PRESENT)
+                else if (item[FASTFIND_OBJECT_FIND_PATH_MATCH])
                 {
-                    anItem.strPath = item[FASTFIND_OBJECT_FIND_PATH_MATCH].strData;
+                    anItem.strPath = item[FASTFIND_OBJECT_FIND_PATH_MATCH];
                     anItem.path_typeofMatch = ObjectSpec::MatchType::Match;
                 }
-                else if (item[FASTFIND_OBJECT_FIND_PATH_REGEX].Status == ConfigItem::PRESENT)
+                else if (item[FASTFIND_OBJECT_FIND_PATH_REGEX])
                 {
-                    anItem.strPath = item[FASTFIND_OBJECT_FIND_PATH_REGEX].strData;
+                    anItem.strPath = item[FASTFIND_OBJECT_FIND_PATH_REGEX];
                     anItem.path_regexp = std::make_unique<std::wregex>(anItem.strPath);
                     anItem.path_typeofMatch = ObjectSpec::MatchType::Regex;
                 }
@@ -256,7 +260,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         log::Error(
                             _L_,
                             E_INVALIDARG,
-                            L"Option /Names should be like: /Names=Kernel32.dll,nt*.sys,:ADName,*.txt#EAName\r\n");
+                            L"Option /Names should be like: /Names=Kernel32.dll,nt*.sys,:ADSName,*.txt#EAName\r\n");
                         return E_INVALIDARG;
                     }
                     else

@@ -147,7 +147,7 @@ private:
             m_pFileName = nullptr;
         };
         MFTFileNameWrapper(const PFILE_NAME pFileName);
-        MFTFileNameWrapper(MFTFileNameWrapper&& Other)
+        MFTFileNameWrapper(MFTFileNameWrapper&& Other) noexcept
         {
             m_pFileName = Other.m_pFileName;
             Other.m_pFileName = nullptr;

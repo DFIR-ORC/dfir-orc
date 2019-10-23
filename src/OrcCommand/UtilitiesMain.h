@@ -448,8 +448,8 @@ protected:
     HRESULT PrintIntegerOption(LPCWSTR szOptionName, DWORD dwOption);
     HRESULT PrintIntegerOption(LPCWSTR szOptionName, LONGLONG llOption);
     HRESULT PrintIntegerOption(LPCWSTR szOptionName, ULONGLONG ullOption);
-    HRESULT PrintHashAlgorithmOption(LPCWSTR szOptionName, SupportedAlgorithm algs);
-    HRESULT PrintHashAlgorithmOption(LPCWSTR szOptionName, FuzzyHashStream::SupportedAlgorithm algs);
+    HRESULT PrintHashAlgorithmOption(LPCWSTR szOptionName, CryptoHashStream::Algorithm algs);
+    HRESULT PrintHashAlgorithmOption(LPCWSTR szOptionName, FuzzyHashStream::Algorithm algs);
 
     HRESULT PrintStringOption(LPCWSTR szOptionName, LPCWSTR szOption);
     HRESULT PrintFormatedStringOption(LPCWSTR szOptionName, LPCWSTR szFormat, va_list argList);
@@ -586,8 +586,8 @@ protected:
 
     bool ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
 
-    bool CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, SupportedAlgorithm& algo);
-    bool FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, FuzzyHashStream::SupportedAlgorithm& algo);
+    bool CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, CryptoHashStream::Algorithm& algo);
+    bool FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, FuzzyHashStream::Algorithm& algo);
 
     bool ProcessPriorityOption(LPCWSTR szArg, LPCWSTR szOption = L"Low");
     bool EncodingOption(LPCWSTR szArg, OutputSpec::Encoding& anEncoding);
@@ -637,6 +637,12 @@ public:
     // Output handling
     //
     virtual void PrintUsage() = 0;
+    virtual void PrintLoggingUsage();
+    virtual void PrintPriorityUsage();
+    virtual void PrintCommonUsage() {
+        PrintLoggingUsage();
+        PrintPriorityUsage();
+    }
     virtual void PrintHeader(LPCWSTR szToolName, LPCWSTR szVersion);
     virtual void PrintParameters() = 0;
     virtual void PrintFooter() = 0;
@@ -801,7 +807,7 @@ public:
 
         if (dwErrorCount > 0)
         {
-            log::Info(_L_, L"\r\nInformation         : %d errors occured during program execution\r\n", dwErrorCount);
+            log::Info(_L_, L"\r\nInformation           : %d errors occured during program execution\r\n", dwErrorCount);
         }
 
         {

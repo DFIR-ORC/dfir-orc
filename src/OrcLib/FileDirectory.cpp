@@ -32,7 +32,7 @@ using namespace Orc;
 //
 static const auto STATUS_NO_MORE_FILES = ((NTSTATUS)0x80000006L);
 
-HRESULT FileDirectory::FileInstance::Write(const logger&, ITableOutput& output, const FILETIME&) const
+HRESULT FileDirectory::FileInstance::Write(const logger&, ITableOutput& output, const std::wstring& strDescription) const
 {
     SystemDetails::WriteComputerName(output);
     SystemDetails::WriteDescriptionString(output);
@@ -44,14 +44,14 @@ HRESULT FileDirectory::FileInstance::Write(const logger&, ITableOutput& output, 
     output.WriteNothing();
     output.WriteNothing();
 
+    output.WriteString(strDescription);
+
     output.WriteEndOfLine();
 
     return S_OK;
 }
-HRESULT FileDirectory::FileInstance::Write(
-    const logger&,
-    const std::shared_ptr<StructuredOutputWriter>& pWriterOutput,
-    const FILETIME&) const
+HRESULT FileDirectory::FileInstance::Write(const logger&,
+        const std::shared_ptr<StructuredOutputWriter>& pWriterOutput) const
 {
     pWriterOutput->BeginElement(L"object");
 

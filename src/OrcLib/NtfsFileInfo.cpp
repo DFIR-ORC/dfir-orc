@@ -34,8 +34,7 @@ NtfsFileInfo::NtfsFileInfo(
     const std::vector<Filter>& Filters,
     LPCWSTR szFullName,
     DWORD dwLen,
-    Authenticode& codeVerifyTrust,
-    bool bWriteErrorCodes)
+    Authenticode& codeVerifyTrust)
     : FileInfo(
         std::move(pLog),
         std::move(strComputerName),
@@ -44,8 +43,7 @@ NtfsFileInfo::NtfsFileInfo(
         Filters,
         szFullName,
         dwLen,
-        codeVerifyTrust,
-        bWriteErrorCodes)
+        codeVerifyTrust)
 {
 }
 

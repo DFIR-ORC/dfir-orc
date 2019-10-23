@@ -98,9 +98,34 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
 
         if (command->ExitCode() == 0)
         {
-            const CBinaryBuffer buffer = pMemStream->GetConstBuffer();
-            // buffer may be bigger than actual data... Adjusting...
-            size_t dwBufferLen = strnlen_s((LPSTR)buffer.GetData(), buffer.GetCount());
+            CBinaryBuffer buffer;
+
+            //
+            // Strip from xml anything like version in this autoruns regression:
+            //
+            // Sysinternals Autoruns v13.51 - Autostart program viewer
+            // Copyright (C) 2002-2015 Mark Russinovich
+            // Sysinternals - www.sysinternals.com
+            //
+            {
+                const auto output = pMemStream->GetConstBuffer();
+                std::wstring_view view(
+                    reinterpret_cast<const wchar_t*>(output.GetData()), output.GetCount() / sizeof(wchar_t));
+
+                const auto xmlIt = std::find(std::cbegin(view), std::cend(view), L'<');
+                if (xmlIt == std::cend(view))
+                {
+                    hr = E_INVALIDARG;
+                    log::Error(_L_, hr, L"Cannot parse autoruns xml\r\n");
+                    return hr;
+                }
+
+                // This will strip also \xFF\xFE but this should not be an issue
+                const auto xmlOffset = std::distance(std::cbegin(view), xmlIt);
+                buffer.SetData(
+                    reinterpret_cast<LPCBYTE>(view.data() + xmlOffset),
+                    (view.size() - xmlOffset) * sizeof(wchar_t));
+            }
 
             log::Info(_L_, L"\r\nLoading autoruns data...");
             if (FAILED(hr = tk.LoadAutoRuns(buffer)))
@@ -285,6 +310,18 @@ HRESULT Main::WriteGetThisConfig(
         getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXSAMPLECOUNT].Status = ConfigItem::PRESENT;
     }
 
+    if (!config.samplesOutput.Path.empty())
+    {
+        getthisconfig[GETTHIS_OUTPUT].strData = config.samplesOutput.Path;
+        getthisconfig[GETTHIS_OUTPUT].Status = ConfigItem::PRESENT;
+    }
+
+    if (config.limits.bIgnoreLimits)
+    {
+        getthisconfig[GETTHIS_NOLIMITS].strData = L"";
+        getthisconfig[GETTHIS_NOLIMITS].Status = ConfigItem::PRESENT;
+    }
+
     for (const auto& item : tocollect)
     {
 
@@ -355,10 +392,8 @@ HRESULT Main::RunGetThis(const std::wstring& strConfigFile, LPCWSTR szTempDir)
 
     wstring strConfigArg = config.getthisArgs;
 
-    strConfigArg += L" /Config=\"";
-    strConfigArg += strConfigFile;
-    strConfigArg += L"\"";
-    if (config.criteriasConfig.Type == OutputSpec::None)
+    strConfigArg += L" /Config=\"" + strConfigFile + L"\"";
+    if (config.getThisConfig.Type == OutputSpec::None)
         command->AddOnCompleteAction(
             make_shared<OnComplete>(OnComplete::Delete, L"GetThisConfig.xml", strConfigFile, nullptr));
 
@@ -446,9 +481,9 @@ HRESULT Main::Run()
     }
 
     wstring strConfigFile;
-    if (config.criteriasConfig.Type == OutputSpec::File)
+    if (config.getThisConfig.Type == OutputSpec::File)
     {
-        strConfigFile = config.criteriasConfig.Path;
+        strConfigFile = config.getThisConfig.Path;
     }
     else
     {
@@ -456,7 +491,7 @@ HRESULT Main::Run()
             return hr;
     }
 
-    if (config.samplesOutput.Type != OutputSpec::None || config.criteriasConfig.Type != OutputSpec::None)
+    if (config.samplesOutput.Type != OutputSpec::None || config.getThisConfig.Type != OutputSpec::None)
     {
         if (FAILED(hr = WriteGetThisConfig(strConfigFile, tk.GetAltitudeLocations(), results)))
         {

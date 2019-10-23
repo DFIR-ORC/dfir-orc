@@ -21,6 +21,8 @@ Build environment can be setup quickly using [Microsoft's developer virtual mach
 ### Commands
 Both 32-bit and 64-bit versions should be built for maximum compatiliby before deployment. See https://dfir-orc.github.io for more details about deployment and configuration.
 
+In a prompt like *Developer Command Prompt for VS 2019* (prefer to avoid using *cmd.exe*):
+
 ```bash
 git clone https://github.com/dfir-orc/dfir-orc.git
 cd dfir-orc
@@ -55,9 +57,15 @@ Using default options is recommended with the exception of `ORC_BUILD_VCPKG` whi
 | ORC_BUILD_SSDEEP     | OFF                   | Build with ssdeep support     |
 | ORC_USE_STATIC_CRT   | ON                    | Use static runtime            |
 | ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory          |
+| ORC_XMLLITE_PATH     |                       | XmlLite.dll path (xp sp2)     |
+| VCPKG_TARGET_TRIPLET | Autodetect            | VCPKG triplet to use          |
+| CMAKE_TOOLCHAIN_FILE | Autodetect            | VCPKG's toolchain file        |
 
 
 [1] `ORC_BUILD_SQL=ON` requires [SQL Server Native Client](https://docs.microsoft.com/en-us/sql/relational-databases/native-client/applications/installing-sql-server-native-client?view=sql-server-2017)
+
+[2] The `xmllite.dll` is native after patched Windows XP SP2
+
 
 **Note:** Some combinations may be irrelevant.
 

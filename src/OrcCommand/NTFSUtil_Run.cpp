@@ -385,9 +385,20 @@ HRESULT Main::PrintRecordDetails(const std::shared_ptr<VolumeReader>& volReader,
 
     log::Info(
         _L_,
-        L"\r\nRECORD 0x%.16I64X %s\r\n",
+        L"\r\nRECORD 0x%.16I64X %s%s%s%s%s%s%s%s%s\r\n",
         pRecord->GetSafeMFTSegmentNumber(),
-        pRecord->IsRecordInUse() ? L"(in use)" : L"(deleted)");
+        pRecord->IsRecordInUse()    ? L"(in use)" : L"(deleted)",
+		pRecord->IsDirectory()      ? L" (directory)" : L"",
+		pRecord->IsBaseRecord()     ? L" (base)" : L" (child)",
+		pRecord->IsJunction()       ? L" (junction)" : L"",
+		pRecord->IsOverlayFile()    ? L" (overlay)" : L"",
+		pRecord->IsSymbolicLink()   ? L" (symlink)" : L"",
+		pRecord->HasExtendedAttr()  ? L" (has extended attr)" : L"",
+		pRecord->HasNamedDataAttr() ? L" (has named $DATA)" : L"",
+		pRecord->HasReparsePoint()  ? L" (has reparse point)" : L""
+		);
+
+	
 
     const auto& children = pRecord->GetChildRecords();
 
@@ -1019,7 +1030,7 @@ HRESULT Main::PrintMasterFileDetails()
 
             log::Info(
                 _L_,
-                L"\r\nMaster File Table for volume %s\r\n\tcontains %I64d records\r\n\tis located at ofset 0x%.16I64X "
+                L"\r\nMaster File Table for volume %s\r\n\tcontains %I64d records\r\n\tis located at offset 0x%.16I64X "
                 L"in the volume\r\n\r\n",
                 loc->GetLocation().c_str(),
                 pMFT->GetMFTRecordCount(),
@@ -1038,7 +1049,7 @@ HRESULT Main::PrintMasterFileDetails()
 
             log::Info(
                 _L_,
-                L"\r\nMaster File Table for volume %s\r\n\tcontains %d records\r\n\tis located at ofset 0x%.16I64X in "
+                L"\r\nMaster File Table for volume %s\r\n\tcontains %d records\r\n\tis located at offset 0x%.16I64X in "
                 L"the volume\r\n\r\n",
                 loc->GetLocation().c_str(),
                 pMFT->GetMFTRecordCount(),
@@ -1589,7 +1600,7 @@ HRESULT Main::Run()
                     {
                         log::Info(
                             _L_,
-                            L"Configure USN   : USN journal for volume %s is bigger than minsize \r\n",
+                            L"Configure USN   : USN journal for volume %s is bigger than sizeatleast \r\n",
                             GetVolumePath().c_str());
                     }
                     if (FAILED(hr = PrintUSNJournalConfiguration(hVolume)))

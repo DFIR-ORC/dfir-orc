@@ -27,28 +27,21 @@ void Main::PrintUsage()
         L"\t[/(+|-)<ColumnSelection,...>:<Filter>] [/<DefaultColumnSelection>,...]\r\n"
         L"\t<Dir1> <Dir2> ... <DirN>\r\n"
         L"\r\n"
-        L"\t/utf8,/utf16			  : Select utf8 or utf16 enncoding (default is utf8)\r\n"
+        L"\t/utf8,/utf16			  : Select utf8 or utf16 encoding (default is utf8)\r\n"
         L"\r\n"
         L"\t/out=<OutputSpec>       : Output file or archive\r\n"
         L"\r\n"
         L"\t\tOutput specification can be one of:\r\n"
         L"\t\t\tA file that will contain output for all locations\r\n"
         L"\t\t\tA directory that will contain one file per location (<Output>_<Location identifier>.csv)\r\n"
-        L"\t\t\tA SQL connection string and table name to import into (<connectionstring>#<tablename>)\r\n"
         L"\r\n"
         L"\t/computer=<ComputerName> : Substitute computer name to GetComputerName()\r\n"
         L"\r\n"
-        L"\t/errorcodes        : Columns in error will have \"Error=0x00000000\" reporting the error code\r\n"
-        L"\t/low                : Runs with lowered priority\r\n"
-        L"\t/verbose            : Turns on verbose logging\r\n"
-        L"\t/debug              : Adds debug information (Source File Name, Line number) to output, outputs to "
-        L"debugger (OutputDebugString)\r\n"
-        L"\t/noconsole          : Turns off console logging\r\n"
-        L"\t/logfile=<FileName> : All output is duplicated to logfile <FileName>\r\n"
         L"\t/ResurrectRecords   : Include records marked as \"not in use\" in enumeration.\r\n"
-        L"\t/PopSysObj           : Populate system objects in locations (true by default).\r\n"
         L"\t/<DefaultColumnSelection>,...: \r\n"
         L"\tSelects the columns to fill for each file system entry:");
+
+    PrintCommonUsage();
 
     const ColumnNameDef* pCurCol = FatFileInfo::g_FatColumnNames;
 
@@ -116,9 +109,9 @@ void Main::PrintParameters()
     PrintOperatingSystem();
 
     if (!m_Config.strComputerName.empty())
-        log::Info(_L_, L"\r\nComputer logged     : %s\r\n", m_Config.strComputerName.c_str());
+        log::Info(_L_, L"\r\nComputer logged       : %s\r\n", m_Config.strComputerName.c_str());
 
-    log::Info(_L_, L"\r\nCSV Columns         :\r\n");
+    log::Info(_L_, L"\r\nCSV Columns           :\r\n");
     const ColumnNameDef* pCurCol = FatFileInfo::g_FatColumnNames;
     DWORD dwNumCol = 0;
     while (pCurCol->dwIntention != FILEINFO_NONE)
@@ -139,7 +132,7 @@ void Main::PrintParameters()
         pCurCol++;
     }
 
-    log::Info(_L_, L"\r\n\r\nDefault columns     :\r\n");
+    log::Info(_L_, L"\r\n\r\nDefault columns       :\r\n");
 
     pCurCol = FatFileInfo::g_FatColumnNames;
     dwNumCol = 0;

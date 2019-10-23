@@ -122,7 +122,7 @@ ObjectDirectory::ObjectType ObjectDirectory::GetObjectType(const std::wstring& t
     return ObjectType::Invalid;
 }
 
-HRESULT ObjectDirectory::ObjectInstance::Write(const logger&, ITableOutput& output, const FILETIME&) const
+HRESULT ObjectDirectory::ObjectInstance::Write(const logger&, ITableOutput& output, const std::wstring& strDescription) const
 {
     SystemDetails::WriteComputerName(output);
     SystemDetails::WriteDescriptionString(output);
@@ -140,23 +140,22 @@ HRESULT ObjectDirectory::ObjectInstance::Write(const logger&, ITableOutput& outp
         output.WriteString(LinkTarget.c_str());
         output.WriteFileTime(LinkCreationTime.QuadPart);
     }
+    output.WriteString(strDescription);
     output.WriteEndOfLine();
     return S_OK;
 }
 
 HRESULT ObjectDirectory::ObjectInstance::Write(
     const logger&,
-    const std::shared_ptr<StructuredOutputWriter>& pWriter,
-    const FILETIME&) const
+    const std::shared_ptr<StructuredOutputWriter>& pWriter) const
 {
     pWriter->BeginElement(L"object");
 
     pWriter->WriteNameExactFlagsPair(L"type", Type, ObjectDirectory::g_ObjectTypeDefinition);
     pWriter->WriteNameValuePair(L"name", Name.c_str());
-    pWriter->WriteNameValuePair(L"path", Path.c_str());
 
     if (!Path.empty())
-        pWriter->WriteNameValuePair(L"link_target", Path.c_str());
+        pWriter->WriteNameValuePair(L"path", Path.c_str());
     if (!LinkTarget.empty())
         pWriter->WriteNameValuePair(L"link_target", LinkTarget.c_str());
     if (LinkCreationTime.QuadPart != 0LL)

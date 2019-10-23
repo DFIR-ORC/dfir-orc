@@ -7,13 +7,13 @@
 //
 
 #ifndef VERSION
-#    define VERSION 10, 0, 0, 000
+#    define VERSION 10, 0, 2, 000
 #endif
 #ifndef STR_VERSION
-#    define STR_VERSION "10.0.0.000"
+#    define STR_VERSION "10.0.2.000"
 #endif
 #ifndef WSTR_VERSION
-#    define WSTR_VERSION L"10.0.0.000"
+#    define WSTR_VERSION L"10.0.2.000"
 #endif
 
 #define FILEVER VERSION

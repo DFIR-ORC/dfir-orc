@@ -34,7 +34,7 @@ const ORCLIB_API ColumnNameDef FatFileInfo::g_FatColumnNames[] = {
     {FILEINFO_SHORTNAME, L"ShortName", L"Short Name (8.3) if any", 0L},
 
     {FILEINFO_MD5, L"MD5", L"Cryptographic MD5 hash (in hex)", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
-    {FILEINFO_SHA1, L"SHA-1", L"Cryptographic SHA1 hash (in hex)", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
+    {FILEINFO_SHA1, L"SHA1", L"Cryptographic SHA1 hash (in hex)", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
     {FILEINFO_FIRST_BYTES, L"FirstBytes", L"First bytes of the data stream", FILE_READ_ATTRIBUTES | FILE_READ_DATA},
 
     {FILEINFO_VERSION, L"Version", L"VersionInfo file version", 0L},
@@ -62,15 +62,15 @@ const ORCLIB_API ColumnNameDef FatFileInfo::g_FatColumnNames[] = {
      L"AuthenticodeStatus",
      L"Status of this file regarding authenticode signature (SignedVerified,SignedNotVerified,NotSigned",
      0L},
-    {FILEINFO_AUTHENTICODE_SIGNER, L"AuthenticodeSigner", L"Signer of this file's signature", 0L},
+    {FILEINFO_AUTHENTICODE_SIGNER, L"AuthenticodeSigner", L"Signer of this file signature", 0L},
     {FILEINFO_AUTHENTICODE_SIGNER_THUMBPRINT,
      L"AuthenticodeSignerThumbprint",
-     L"Thumbprint of the signer of this file's signer",
+     L"Thumbprint of the signer of this file signer",
      0L},
-    {FILEINFO_AUTHENTICODE_CA, L"AuthenticodeCA", L"Authority of signer of this file's signature", 0L},
+    {FILEINFO_AUTHENTICODE_CA, L"AuthenticodeCA", L"Authority of signer of this file signature", 0L},
     {FILEINFO_AUTHENTICODE_CA_THUMBPRINT,
      L"AuthenticodeCAThumbprint",
-     L"Thumbprint of the authority of the signer of this file's signer",
+     L"Thumbprint of the authority of this file signer",
      0L},
 
     {FILEINFO_PE_MD5, L"PeMD5", L"MD5 of PE file", 0L},

@@ -84,8 +84,7 @@ HRESULT Main::Run()
                     (DWORD)wcslen(szFullName),
                     volreader,
                     fileEntry,
-                    m_CodeVerifier,
-                    m_Config.bWriteErrorCodes);
+                    m_CodeVerifier);
 
                 try
                 {

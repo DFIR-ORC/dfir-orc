@@ -24,6 +24,35 @@
 using namespace Orc;
 using namespace Orc::Command::GetSamples;
 
+namespace {
+
+void CheckGetThisConfiguration(Orc::Command::GetSamples::Main::Configuration& config)
+{
+    if (config.getthisName.empty())
+    {
+        config.getthisName = L"getthis.exe";
+    }
+
+    if (config.getthisRef.empty())
+    {
+        config.getthisRef = L"self:#";
+    }
+
+    const std::wstring_view getThisCmd(L"getthis");
+    if (config.getthisArgs.empty())
+    {
+        config.getthisArgs = getThisCmd;
+    }
+    else if (!equalCaseInsensitive(config.getthisArgs, getThisCmd, getThisCmd.length()))
+    {
+        // Avoid having to specify 'getthis' as first argument
+        config.getthisArgs.insert(0, getThisCmd);
+        config.getthisArgs.insert(getThisCmd.size(), L" ");
+    }
+}
+
+}  // namespace
+
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 {
     return Orc::Config::GetSamples::root;
@@ -52,7 +81,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
         {
             case L'/':
             case L'-':
-                if (OutputOption(argv[i] + 1, L"GetThis", OutputSpec::File, config.criteriasConfig))
+                if (OutputOption(argv[i] + 1, L"GetThisConfig", OutputSpec::File, config.getThisConfig))
+                    ;
+                else if (ParameterOption(argv[i] + 1, L"GetThisArgs", config.getthisArgs))
                     ;
                 else if (OutputOption(
                              argv[i] + 1,
@@ -95,6 +126,14 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                 else if (OutputOption(argv[i] + 1, L"TimeLine", OutputSpec::TableFile, config.timelineOutput))
                     ;
                 else if (OutputOption(argv[i] + 1, L"TempDir", OutputSpec::Directory, config.tmpdirOutput))
+                    ;
+                else if (FileSizeOption(argv[i] + 1, L"MaxPerSampleBytes", config.limits.dwlMaxBytesPerSample))
+                    ;
+                else if (FileSizeOption(argv[i] + 1, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal))
+                    ;
+                else if (ParameterOption(argv[i] + 1, L"MaxSampleCount", config.limits.dwMaxSampleCount))
+                    ;
+                else if (BooleanOption(argv[i] + 1, L"NoLimits", config.limits.bIgnoreLimits))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"Compression", config.samplesOutput.Compression))
                     ;
@@ -144,32 +183,17 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         return hr;
     if (FAILED(hr = config.timelineOutput.Configure(_L_, OutputSpec::Kind::TableFile, configitem[GETSAMPLES_TIMELINE])))
         return hr;
-    if (FAILED(hr = config.autorunsOutput.Configure(_L_, OutputSpec::Kind::File, configitem[GETSAMPLES_AUTORUNS])))
+
+    hr = ProcessOptionAutorun(configitem);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (FAILED(hr = config.tmpdirOutput.Configure(_L_, OutputSpec::Directory, configitem[GETSAMPLES_TEMPDIR])))
         return hr;
 
-    if (config.autorunsOutput.Type != OutputSpec::None)
-    {
-        if (SUCCEEDED(VerifyFileExists(config.autorunsOutput.Path.c_str())))
-        {
-            config.bLoadAutoruns = true;
-            config.bRunAutoruns = false;
-            config.bKeepAutorunsXML = false;
-        }
-        else
-        {
-            config.bRunAutoruns = true;
-            config.bLoadAutoruns = false;
-            config.bKeepAutorunsXML = true;
-        }
-    }
-    else
-    {
-        config.bRunAutoruns = false;
-        config.bLoadAutoruns = false;
-        config.bKeepAutorunsXML = false;
-    }
-
-    if (FAILED(hr = config.criteriasConfig.Configure(_L_, OutputSpec::File, configitem[GETSAMPLES_CRITERIAS])))
+    if (FAILED(hr = config.getThisConfig.Configure(_L_, OutputSpec::File, configitem[GETSAMPLES_GETTHIS_CONFIG])))
         return hr;
 
     if (configitem[GETSAMPLES_SAMPLES][CONFIG_MAXBYTESPERSAMPLE])
@@ -187,11 +211,21 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.limits.dwMaxSampleCount = (DWORD32)configitem[GETSAMPLES_SAMPLES][CONFIG_MAXSAMPLECOUNT];
     }
 
+    if (configitem[GETSAMPLES_NOLIMITS])
+    {
+        config.limits.bIgnoreLimits = true;
+    }
+
+    if (configitem[GETSAMPLES_NOSIGCHECK])
+    {
+        config.bNoSigCheck = true;
+    }
+
     if (configitem[GETSAMPLES_GETTHIS])
     {
-        if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXENAME])
+        if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXENAME])
         {
-            config.getthisName = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXENAME];
+            config.getthisName = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXENAME];
         }
 
         WORD wArch = 0;
@@ -201,24 +235,24 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         switch (wArch)
         {
             case PROCESSOR_ARCHITECTURE_INTEL:
-                if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN32])
+                if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN32])
                 {
-                    config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN32];
+                    config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN32];
                 }
                 break;
             case PROCESSOR_ARCHITECTURE_AMD64:
                 if (SystemDetails::IsWOW64())
                 {
-                    if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN32])
+                    if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN32])
                     {
-                        config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN32];
+                        config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN32];
                     }
                 }
                 else
                 {
-                    if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN64])
+                    if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN64])
                     {
-                        config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN64];
+                        config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN64];
                     }
                 }
                 break;
@@ -229,15 +263,15 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
         if (config.getthisRef.empty())
         {
-            if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN])
+            if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN])
             {
-                config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_EXERUN];
+                config.getthisRef = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_EXERUN];
             }
         }
 
-        if (configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_ARGS])
+        if (configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_ARGS])
         {
-            config.getthisArgs = configitem[GETSAMPLES_GETTHIS][GETSTAMPLES_GETTHIS_ARGS];
+            config.getthisArgs = configitem[GETSAMPLES_GETTHIS][GETSAMPLES_GETTHIS_ARGS];
         }
     }
 
@@ -260,6 +294,20 @@ HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
 
+    // TODO: make a function to use also in GetThis_config.cpp
+    if (!config.limits.bIgnoreLimits
+        && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
+    {
+        log::Error(
+            _L_,
+            E_INVALIDARG,
+            L"No global (at samples level, MaxBytesTotal or MaxSampleCount) has been set: set limits in configuration "
+            L"or use /nolimits\r\n");
+        return E_INVALIDARG;
+    }
+
+    CheckGetThisConfiguration(config);
+
     if (config.bInstallNTrack && config.bRemoveNTrack)
     {
         log::Error(_L_, E_FAIL, L"Cannot install and remove NTrack in same command\r\n");
@@ -281,5 +329,47 @@ HRESULT Main::CheckConfiguration()
     // we support only NTFS for now to get samples
     config.locs.Consolidate(false, FSVBR::FSType::NTFS);
 
+    return S_OK;
+}
+
+HRESULT Main::ProcessOptionAutorun(const ConfigItem& item)
+{
+    if (!item[GETSAMPLES_AUTORUNS])
+    {
+        // Undefined option: do not try to execute Autoruns.exe
+        config.bRunAutoruns = false;
+        config.bLoadAutoruns = false;
+        config.bKeepAutorunsXML = false;
+        return S_OK;
+    }
+
+    HRESULT hr = config.autorunsOutput.Configure(_L_, OutputSpec::Kind::File, item[GETSAMPLES_AUTORUNS]);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (config.autorunsOutput.Type == OutputSpec::None)
+    {
+        // Option is defined without any path: execute Autoruns.exe
+        config.bRunAutoruns = true;
+        config.bLoadAutoruns = false;
+        config.bKeepAutorunsXML = false;
+        return S_OK;
+    }
+
+    if (SUCCEEDED(VerifyFileExists(config.autorunsOutput.Path.c_str())))
+    {
+        // Option is defined with an existing existing file path: do not execute Autoruns.exe, load file as input result
+        config.bRunAutoruns = false;
+        config.bLoadAutoruns = true;
+        config.bKeepAutorunsXML = false;
+        return S_OK;
+    }
+
+    // Option is defined with an non-existing file path: execute Autoruns.exe and keep its results in the provided path
+    config.bRunAutoruns = true;
+    config.bLoadAutoruns = false;
+    config.bKeepAutorunsXML = true;
     return S_OK;
 }

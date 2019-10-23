@@ -75,7 +75,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (FileSizeOption(argv[i] + 1, L"MaxSize", config.dwlMaxSize))
                     ;
-                else if (FileSizeOption(argv[i] + 1, L"MinSize", config.dwlMinSize))
+                else if (FileSizeOption(argv[i] + 1, L"SizeAtLeast", config.dwlMinSize))
                     ;
                 else if (FileSizeOption(argv[i] + 1, L"Delta", config.dwlAllocDelta))
                     ;
@@ -117,19 +117,19 @@ HRESULT Main::CheckConfiguration()
 
     if (config.bConfigure)
     {
-        if (config.strVolume.empty() && config.cmd != Main::EnumLocations)
+        if (config.strVolume.empty() && config.cmd == Main::USN)
         {
             log::Error(_L_, E_INVALIDARG, L"No volume set to be configured\r\n");
             return E_INVALIDARG;
         }
         if (config.dwlMaxSize == 0 && config.dwlMinSize == 0)
         {
-            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used\r\n");
+            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used (at least minsize or maxsize must be specified)\r\n");
             return E_INVALIDARG;
         }
         else if ((config.dwlMaxSize == 0 || config.dwlMinSize == 0) && config.dwlAllocDelta == 0)
         {
-            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used\r\n");
+            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used (allocation delta is missing)\r\n");
             return E_INVALIDARG;
         }
     }

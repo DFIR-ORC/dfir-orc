@@ -34,7 +34,7 @@ HRESULT wolf_execute(ConfigItem& parent, DWORD dwIndex)
     return S_OK;
 }
 
-// <Output name="ntfsinfo.csv" source="File" argument="/outfile={Output}" />
+// <Output name="ntfsinfo.csv" source="File" argument="/out={Output}" />
 HRESULT wolf_output(ConfigItem& parent, DWORD dwIndex)
 {
     HRESULT hr = E_FAIL;

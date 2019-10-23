@@ -32,14 +32,11 @@ void Main::PrintUsage()
         L"\t/skip=<BlockCount>  : Skip <BlockCount> blocks of <BlockSize> bytes from input device\r\n"
         L"\t/seek=<BlockCount>  : Seek <BlockCount> blocks of <BlockSize> bytes on ouput device\r\n"
         L"\t/hash=<hashes>      : Comma separatelist of supported hash function (MD5|SHA1|SHA256)\r\n"
-        L"\t/no_error           : Continue on error\r\n"
-        L"\r\n"
-        L"\t/low                : Runs with lowered priority\r\n"
-        L"\t/verbose            : Turns on verbose logging\r\n"
-        L"\t/debug              : Adds debug information (Source File Name, Line number) to output, outputs to "
-        L"debugger (OutputDebugString)\r\n"
-        L"\t/noconsole          : Turns off console logging\r\n"
-        L"\t/logfile=<FileName> : All output is duplicated to logfile <FileName>\r\n");
+        L"\t/noerror            : Continue on error\r\n"
+        L"\t/notrunc            : Do not truncate output stream\r\n"
+        );
+    PrintCommonUsage();
+
     return;
 }
 
@@ -61,15 +58,18 @@ void Main::PrintParameters()
     {
         PrintStringOption(L"Output", out.c_str());
     }
-
+    if(config.BlockSize.QuadPart > 0LL)
+        PrintIntegerOption(L"Block size (bytes)", config.BlockSize.QuadPart);
     if (config.Count.QuadPart > 0LL)
         PrintIntegerOption(L"Count (blocks)", config.Count.QuadPart);
     if (config.Skip.QuadPart > 0LL)
         PrintIntegerOption(L"Skip (input)", config.Skip.QuadPart);
     if (config.Seek.QuadPart > 0LL)
         PrintIntegerOption(L"Seek (output)", config.Seek.QuadPart);
-
+    
     PrintBooleanOption(L"No Error", config.NoError);
+    PrintBooleanOption(L"No Truncation", config.NoTrunc);
+    PrintHashAlgorithmOption(L"Hashs", config.Hash);
 
     log::Info(_L_, L"\r\n\r\n");
 

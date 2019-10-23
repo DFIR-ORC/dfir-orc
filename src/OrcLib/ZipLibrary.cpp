@@ -35,10 +35,14 @@ class Lib7z
     {
         ::lib7zCrcTableInit();
         NArchive::N7z::Register();
+        NArchive::NZip::Register();
+        NCompress::RegisterCodecCopy();
         NCompress::NBcj::RegisterCodecBCJ();
         NCompress::NBcj2::RegisterCodecBCJ2();
         NCompress::NLzma::RegisterCodecLZMA();
         NCompress::NLzma2::RegisterCodecLZMA2();
+        NCompress::NDeflate::RegisterCodecDeflate();
+        NCompress::NDeflate::RegisterCodecDeflate64();
 
         NCrypto::N7z::RegisterCodec7zAES();
         NCrypto::RegisterCodecAES256CBC();
@@ -84,7 +88,28 @@ std::unique_ptr<ZipLibrary> ZipLibrary::CreateZipLibrary(logger log)
     auto zip = std::unique_ptr<ZipLibrary>(new ZipLibrary(std::move(log)));
     if (FAILED(zip->Initialize()))
         return nullptr;
+
     return zip;
+}
+
+std::shared_ptr<ZipLibrary> ZipLibrary::GetZipLibrary(logger log)
+{
+    static std::weak_ptr<ZipLibrary> singleton;
+
+    auto lib = singleton.lock();
+    if (lib)
+    {
+        return lib;
+    }
+
+    lib = CreateZipLibrary(std::move(log));
+    if (lib == nullptr)
+    {
+        return nullptr;
+    }
+
+    singleton = lib;
+    return lib;
 }
 
 ZipLibrary::ZipLibrary(std::shared_ptr<LogFileWriter> log)

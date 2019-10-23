@@ -130,7 +130,7 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::BindColumns(LPCWSTR szTable)
     }
     log::Verbose(_L_, L"VERBOSE: Successfully initialised bulk copy to table %s\r\n", szTable);
 
-    static NoData NoBoundData = {SQL_NULL_DATA};
+    static NoData NoBoundData = { SQL_NULL_DATA };
 
     m_Columns.shrink_to_fit();
     if (m_Columns.empty())
@@ -140,273 +140,381 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::BindColumns(LPCWSTR szTable)
         hr = S_OK;
         switch (item.Type)
         {
-            case ColumnType::Nothing:
-                if (m_pSQL->bcp_bind((LPBYTE)&NoBoundData, 0, SQL_NULL_DATA, NULL, 0, 0, item.dwColumnID) == FAIL)
+        case ColumnType::Nothing:
+            if (m_pSQL->bcp_bind((LPBYTE)&NoBoundData, 0, SQL_NULL_DATA, NULL, 0, 0, item.dwColumnID) == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
+            break;
+        case ColumnType::UInt64Type:
+            ZeroMemory(&(item.boundData.LargeInt), sizeof(item.boundData.LargeInt));
+            if (m_pSQL->bcp_bind(
+                (LPCBYTE)&item.boundData.LargeInt,
+                0,
+                sizeof(item.boundData.LargeInt),
+                NULL,
+                0,
+                SQLINT8,
+                item.dwColumnID)
+                == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
+            break;
+        case ColumnType::BoolType:
+            ZeroMemory(&(item.boundData.Boolean), sizeof(item.boundData.Boolean));
+            if (m_pSQL->bcp_bind((LPBYTE) & (item.boundData.Boolean), 0, 0, NULL, 0, SQLBIT, item.dwColumnID)
+                == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
+            break;
+        case ColumnType::UInt32Type:
+            ZeroMemory(&(item.boundData.Dword), sizeof(item.boundData.Dword));
+            if (m_pSQL->bcp_bind(
+                (LPBYTE) & (item.boundData.Dword),
+                0,
+                sizeof(item.boundData.Dword),
+                NULL,
+                0,
+                SQLINT4,
+                item.dwColumnID)
+                == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
+            break;
+        case ColumnType::TimeStampType:
+            ZeroMemory((LPBYTE) & (item.boundData.TimeStamp), sizeof(item.boundData.TimeStamp));
+            item.boundData.TimeStamp.year = 1;
+            item.boundData.TimeStamp.month = 1;
+            item.boundData.TimeStamp.day = 1;
+            if (m_pSQL->bcp_bind(
+                (LPBYTE) & (item.boundData.TimeStamp),
+                0,
+                sizeof(item.boundData.TimeStamp),
+                NULL,
+                0,
+                SQLDATETIME2N,
+                item.dwColumnID)
+                == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
+            break;
+        case ColumnType::UTF16Type:
+            if (item.dwMaxLen.has_value())
+            {
+                item.boundData.WString =
+                    (WStringData*)malloc(SafeInt<DWORD>(item.dwMaxLen.value()) * sizeof(WCHAR) + sizeof(size_t));
+                if (item.boundData.WString == nullptr)
                 {
-                    m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
-                    hr = E_FAIL;
+                    hr = E_OUTOFMEMORY;
+                    break;
                 }
-                break;
-            case ColumnType::UInt64Type:
-                ZeroMemory(&(item.boundData.LargeInt), sizeof(item.boundData.LargeInt));
+                ZeroMemory(item.boundData.WString, sizeof(size_t) + item.dwMaxLen.value() * sizeof(WCHAR));
                 if (m_pSQL->bcp_bind(
-                        (LPCBYTE)&item.boundData.LargeInt,
-                        0,
-                        sizeof(item.boundData.LargeInt),
-                        NULL,
-                        0,
-                        SQLINT8,
-                        item.dwColumnID)
+                    (LPBYTE)item.boundData.WString,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    NULL,
+                    0,
+                    SQLNVARCHAR,
+                    item.dwColumnID)
                     == FAIL)
                 {
                     m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
                     hr = E_FAIL;
                 }
-                break;
-            case ColumnType::BoolType:
-                ZeroMemory(&(item.boundData.Boolean), sizeof(item.boundData.Boolean));
-                if (m_pSQL->bcp_bind((LPBYTE) & (item.boundData.Boolean), 0, 0, NULL, 0, SQLBIT, item.dwColumnID)
-                    == FAIL)
+            }
+            else if (item.dwLen.has_value())
+            {
+                item.boundData.WString =
+                    (WStringData*)malloc(SafeInt<DWORD>(item.dwLen.value()) * sizeof(WCHAR) + sizeof(size_t));
+                if (item.boundData.WString == nullptr)
                 {
-                    m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
-                    hr = E_FAIL;
+                    hr = E_OUTOFMEMORY;
+                    break;
                 }
-                break;
-            case ColumnType::UInt32Type:
-                ZeroMemory(&(item.boundData.Dword), sizeof(item.boundData.Dword));
+                ZeroMemory(item.boundData.WString, sizeof(size_t) + item.dwLen.value() * sizeof(WCHAR));
                 if (m_pSQL->bcp_bind(
-                        (LPBYTE) & (item.boundData.Dword),
-                        0,
-                        sizeof(item.boundData.Dword),
-                        NULL,
-                        0,
-                        SQLINT4,
-                        item.dwColumnID)
+                    (LPBYTE)item.boundData.WString,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    NULL,
+                    0,
+                    SQLNCHAR,
+                    item.dwColumnID)
                     == FAIL)
                 {
                     m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
                     hr = E_FAIL;
                 }
-                break;
-            case ColumnType::TimeStampType:
-                ZeroMemory((LPBYTE) & (item.boundData.TimeStamp), sizeof(item.boundData.TimeStamp));
-                item.boundData.TimeStamp.year = 1;
-                item.boundData.TimeStamp.month = 1;
-                item.boundData.TimeStamp.day = 1;
+            }
+            else
+            {
+                item.boundData.WString =
+                    (WStringData*)malloc(SafeInt<DWORD>(DBMAXCHAR) * sizeof(WCHAR) + sizeof(size_t));
+                if (item.boundData.WString == nullptr)
+                {
+                    hr = E_OUTOFMEMORY;
+                    break;
+                }
+                ZeroMemory(item.boundData.WString, sizeof(size_t) + DBMAXCHAR * sizeof(WCHAR));
                 if (m_pSQL->bcp_bind(
-                        (LPBYTE) & (item.boundData.TimeStamp),
-                        0,
-                        sizeof(item.boundData.TimeStamp),
-                        NULL,
-                        0,
-                        SQLDATETIME2N,
-                        item.dwColumnID)
+                    (LPBYTE)item.boundData.WString,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    NULL,
+                    0,
+                    SQLNCHAR,
+                    item.dwColumnID)
                     == FAIL)
                 {
                     m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
                     hr = E_FAIL;
                 }
-                break;
-            case ColumnType::UTF16Type:
-                if (item.dwMaxLen.has_value())
+            }
+            break;
+        case ColumnType::UTF8Type:
+            if (item.dwMaxLen.has_value())
+            {
+                item.boundData.AString =
+                    (AStringData*)malloc(SafeInt<DWORD>(sizeof(size_t)) + item.dwMaxLen.value() * sizeof(CHAR));
+                if (item.boundData.AString == nullptr)
                 {
-                    item.boundData.WString =
-                        (WStringData*)malloc(SafeInt<DWORD>(item.dwMaxLen.value()) * sizeof(WCHAR) + sizeof(size_t));
-                    if (item.boundData.WString == nullptr)
-                    {
-                        hr = E_OUTOFMEMORY;
-                        break;
-                    }
-                    ZeroMemory(item.boundData.WString, sizeof(size_t) + item.dwMaxLen.value() * sizeof(WCHAR));
-                    if (m_pSQL->bcp_bind(
-                            (LPBYTE)item.boundData.WString,
-                            sizeof(size_t),
-                            SQL_VARLEN_DATA,
-                            NULL,
-                            0,
-                            SQLNVARCHAR,
-                            item.dwColumnID)
-                        == FAIL)
-                    {
-                        m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
-                        hr = E_FAIL;
-                    }
+                    hr = E_OUTOFMEMORY;
+                    break;
                 }
-                else if (item.dwLen.has_value())
-                {
-                    item.boundData.WString =
-                        (WStringData*)malloc(SafeInt<DWORD>(item.dwLen.value()) * sizeof(WCHAR) + sizeof(size_t));
-                    if (item.boundData.WString == nullptr)
-                    {
-                        hr = E_OUTOFMEMORY;
-                        break;
-                    }
-                    ZeroMemory(item.boundData.WString, sizeof(size_t) + item.dwLen.value() * sizeof(WCHAR));
-                    if (m_pSQL->bcp_bind(
-                            (LPBYTE)item.boundData.WString,
-                            sizeof(size_t),
-                            SQL_VARLEN_DATA,
-                            NULL,
-                            0,
-                            SQLNCHAR,
-                            item.dwColumnID)
-                        == FAIL)
-                    {
-                        m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
-                        hr = E_FAIL;
-                    }
-                }
-                break;
-            case ColumnType::UTF8Type:
-                if (item.dwMaxLen.has_value())
-                {
-                    item.boundData.AString =
-                        (AStringData*)malloc(SafeInt<DWORD>(sizeof(size_t)) + item.dwMaxLen.value() * sizeof(CHAR));
-                    if (item.boundData.AString == nullptr)
-                    {
-                        hr = E_OUTOFMEMORY;
-                        break;
-                    }
-                    ZeroMemory(item.boundData.AString, sizeof(size_t) + item.dwMaxLen.value() * sizeof(CHAR));
-                    if (m_pSQL->bcp_bind(
-                            (LPBYTE)item.boundData.AString,
-                            sizeof(size_t),
-                            SQL_VARLEN_DATA,
-                            NULL,
-                            0,
-                            SQLVARCHAR,
-                            item.dwColumnID)
-                        == FAIL)
-                    {
-                        m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
-                        hr = E_FAIL;
-                    }
-                }
-                else if (item.dwLen.has_value())
-                {
-                    item.boundData.AString =
-                        (AStringData*)malloc(SafeInt<DWORD>(sizeof(size_t)) + item.dwLen.value() * sizeof(CHAR));
-                    if (item.boundData.AString == nullptr)
-                    {
-                        hr = E_OUTOFMEMORY;
-                        break;
-                    }
-                    ZeroMemory(item.boundData.AString, sizeof(size_t) + item.dwLen.value() * sizeof(CHAR));
-                    if (m_pSQL->bcp_bind(
-                            (LPBYTE)item.boundData.AString,
-                            sizeof(size_t),
-                            SQL_VARLEN_DATA,
-                            NULL,
-                            0,
-                            SQLCHARACTER,
-                            item.dwColumnID)
-                        == FAIL)
-                    {
-                        m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
-                        hr = E_FAIL;
-                    }
-                }
-                else
-                    hr = E_INVALIDARG;
-                break;
-            case ColumnType::BinaryType:
-                if (item.dwMaxLen.has_value())
-                {
-                    item.boundData.Binary = (BinaryData*)malloc(SafeInt<DWORD>(item.dwMaxLen.value()) + sizeof(size_t));
-                    if (item.boundData.Binary == nullptr)
-                    {
-                        hr = E_OUTOFMEMORY;
-                        break;
-                    }
-                    ZeroMemory(item.boundData.Binary, item.dwMaxLen.value() + sizeof(size_t));
-                    if (m_pSQL->bcp_bind(
-                            (LPCBYTE)item.boundData.Binary,
-                            sizeof(size_t),
-                            SQL_VARLEN_DATA,
-                            nullptr,
-                            0L,
-                            SQLVARBINARY,
-                            item.dwColumnID)
-                        == FAIL)
-                    {
-                        m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
-                        hr = E_FAIL;
-                    }
-                }
-                else if (item.dwLen.has_value())
-                {
-                    item.boundData.Binary = (BinaryData*)malloc(SafeInt<DWORD>(item.dwLen.value()) + sizeof(size_t));
-                    if (item.boundData.Binary == nullptr)
-                    {
-                        hr = E_OUTOFMEMORY;
-                        break;
-                    }
-                    ZeroMemory(item.boundData.Binary, item.dwLen.value() + sizeof(size_t));
-                    if (m_pSQL->bcp_bind(
-                            (LPCBYTE)item.boundData.Binary,
-                            sizeof(size_t),
-                            SQL_VARLEN_DATA,
-                            nullptr,
-                            0L,
-                            SQLBINARY,
-                            item.dwColumnID)
-                        == FAIL)
-                    {
-                        m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
-                        hr = E_FAIL;
-                    }
-                }
-                break;
-            case ColumnType::GUIDType:
-                ZeroMemory(&(item.boundData.GUID), sizeof(item.boundData.GUID));
+                ZeroMemory(item.boundData.AString, sizeof(size_t) + item.dwMaxLen.value() * sizeof(CHAR));
                 if (m_pSQL->bcp_bind(
-                        (LPCBYTE)&item.boundData.GUID,
-                        0,
-                        sizeof(item.boundData.GUID),
-                        NULL,
-                        0,
-                        SQLBINARY,
-                        item.dwColumnID)
+                    (LPBYTE)item.boundData.AString,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    NULL,
+                    0,
+                    SQLVARCHAR,
+                    item.dwColumnID)
                     == FAIL)
                 {
                     m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
                     hr = E_FAIL;
                 }
-                break;
-            case ColumnType::XMLType:
-                if (item.dwMaxLen.has_value())
+            }
+            else if (item.dwLen.has_value())
+            {
+                item.boundData.AString =
+                    (AStringData*)malloc(SafeInt<DWORD>(sizeof(size_t)) + item.dwLen.value() * sizeof(CHAR));
+                if (item.boundData.AString == nullptr)
                 {
-                    msl::utilities::SafeInt<DWORD> buffer_size = sizeof(WCHAR);
+                    hr = E_OUTOFMEMORY;
+                    break;
+                }
+                ZeroMemory(item.boundData.AString, sizeof(size_t) + item.dwLen.value() * sizeof(CHAR));
+                if (m_pSQL->bcp_bind(
+                    (LPBYTE)item.boundData.AString,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    NULL,
+                    0,
+                    SQLCHARACTER,
+                    item.dwColumnID)
+                    == FAIL)
+                {
+                    m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                    hr = E_FAIL;
+                }
+            }
+            else
+            {
+                item.boundData.AString =
+                    (AStringData*)malloc(SafeInt<DWORD>(sizeof(size_t)) + DBMAXCHAR * sizeof(CHAR));
+                if (item.boundData.AString == nullptr)
+                {
+                    hr = E_OUTOFMEMORY;
+                    break;
+                }
+                ZeroMemory(item.boundData.AString, sizeof(size_t) + DBMAXCHAR * sizeof(CHAR));
+                if (m_pSQL->bcp_bind(
+                    (LPBYTE)item.boundData.AString,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    NULL,
+                    0,
+                    SQLCHARACTER,
+                    item.dwColumnID)
+                    == FAIL)
+                {
+                    m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                    hr = E_FAIL;
+                }
+            }
+            break;
+        case ColumnType::BinaryType:
+            if (item.dwMaxLen.has_value())
+            {
+                item.boundData.Binary = (BinaryData*)malloc(SafeInt<DWORD>(item.dwMaxLen.value()) + sizeof(size_t));
+                if (item.boundData.Binary == nullptr)
+                {
+                    hr = E_OUTOFMEMORY;
+                    break;
+                }
+                ZeroMemory(item.boundData.Binary, item.dwMaxLen.value() + sizeof(size_t));
+                if (m_pSQL->bcp_bind(
+                    (LPCBYTE)item.boundData.Binary,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    nullptr,
+                    0L,
+                    SQLVARBINARY,
+                    item.dwColumnID)
+                    == FAIL)
+                {
+                    m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                    hr = E_FAIL;
+                }
+            }
+            else if (item.dwLen.has_value())
+            {
+                item.boundData.Binary = (BinaryData*)malloc(SafeInt<DWORD>(item.dwLen.value()) + sizeof(size_t));
+                if (item.boundData.Binary == nullptr)
+                {
+                    hr = E_OUTOFMEMORY;
+                    break;
+                }
+                ZeroMemory(item.boundData.Binary, item.dwLen.value() + sizeof(size_t));
+                if (m_pSQL->bcp_bind(
+                    (LPCBYTE)item.boundData.Binary,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    nullptr,
+                    0L,
+                    SQLBINARY,
+                    item.dwColumnID)
+                    == FAIL)
+                {
+                    m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                    hr = E_FAIL;
+                }
+            }
+            else
+            {
+                item.boundData.Binary = (BinaryData*)malloc(SafeInt<DWORD>(DBMAXCHAR) + sizeof(size_t));
+                if (item.boundData.Binary == nullptr)
+                {
+                    hr = E_OUTOFMEMORY;
+                    break;
+                }
+                ZeroMemory(item.boundData.Binary, DBMAXCHAR + sizeof(size_t));
+                if (m_pSQL->bcp_bind(
+                    (LPCBYTE)item.boundData.Binary,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    nullptr,
+                    0L,
+                    SQLBINARY,
+                    item.dwColumnID)
+                    == FAIL)
+                {
+                    m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                    hr = E_FAIL;
+                }
+            }
+            break;
+        case ColumnType::FixedBinaryType:
+            item.boundData.Binary = (BinaryData*)malloc(SafeInt<DWORD>(item.dwLen.value()) + sizeof(size_t));
+            if (item.boundData.Binary == nullptr)
+            {
+                hr = E_OUTOFMEMORY;
+                break;
+            }
+            ZeroMemory(item.boundData.Binary, item.dwLen.value() + sizeof(size_t));
+            if (m_pSQL->bcp_bind(
+                (LPCBYTE)item.boundData.Binary,
+                sizeof(size_t),
+                item.dwLen.value(),
+                nullptr,
+                0L,
+                SQLBINARY,
+                item.dwColumnID)
+                == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
+            break;
+        case ColumnType::GUIDType:
+            ZeroMemory(&(item.boundData.GUID), sizeof(item.boundData.GUID));
+            if (m_pSQL->bcp_bind(
+                (LPCBYTE)&item.boundData.GUID,
+                0,
+                sizeof(item.boundData.GUID),
+                NULL,
+                0,
+                SQLBINARY,
+                item.dwColumnID)
+                == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
+            break;
+        case ColumnType::XMLType:
+            if (item.dwMaxLen.has_value())
+            {
+                msl::utilities::SafeInt<DWORD> buffer_size = sizeof(WCHAR);
 
-                    buffer_size *= item.dwMaxLen.value();
-                    buffer_size += sizeof(size_t);
+                buffer_size *= item.dwMaxLen.value();
+                buffer_size += sizeof(size_t);
 
-                    item.boundData.WString = (WStringData*)malloc(buffer_size);
-                    if (item.boundData.WString == nullptr)
-                    {
-                        hr = E_OUTOFMEMORY;
-                        break;
-                    }
-                    ZeroMemory(item.boundData.WString, sizeof(size_t) + item.dwMaxLen.value() * sizeof(WCHAR));
-                    if (m_pSQL->bcp_bind(
-                            (LPBYTE)item.boundData.WString,
-                            sizeof(size_t),
-                            SQL_VARLEN_DATA,
-                            NULL,
-                            0,
-                            SQLXML,
-                            item.dwColumnID)
-                        == FAIL)
-                    {
-                        m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
-                        hr = E_FAIL;
-                    }
+                item.boundData.WString = (WStringData*)malloc(buffer_size);
+                if (item.boundData.WString == nullptr)
+                {
+                    hr = E_OUTOFMEMORY;
+                    break;
                 }
-                else
-                    hr = E_INVALIDARG;
-                break;
-            default:
-                break;
+                ZeroMemory(item.boundData.WString, sizeof(size_t) + item.dwMaxLen.value() * sizeof(WCHAR));
+                if (m_pSQL->bcp_bind(
+                    (LPBYTE)item.boundData.WString,
+                    sizeof(size_t),
+                    SQL_VARLEN_DATA,
+                    NULL,
+                    0,
+                    SQLXML,
+                    item.dwColumnID)
+                    == FAIL)
+                {
+                    m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                    hr = E_FAIL;
+                }
+            }
+            else
+                hr = E_INVALIDARG;
+            break;
+        case ColumnType::EnumType:
+        case ColumnType::FlagsType:
+            ZeroMemory(&(item.boundData.Dword), sizeof(item.boundData.Dword));
+            if (m_pSQL->bcp_bind(
+                (LPBYTE) & (item.boundData.Dword),
+                0,
+                sizeof(item.boundData.Dword),
+                NULL,
+                0,
+                SQLINT4,
+                item.dwColumnID)
+                == FAIL)
+            {
+                m_pSQL->HandleDiagnosticRecord(SQL_HANDLE_DBC, FAIL);
+                hr = E_FAIL;
+            }
+            break;
+        default:
+            break;
         }
         if (FAILED(hr))
         {
@@ -539,6 +647,28 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteCharArray(const CHAR* szString,
     return hr;
 }
 
+STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const std::wstring& strString)
+{
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteString(strString)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
+}
+
+STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const std::wstring_view& strString)
+{
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteString(strString)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
+}
+
 STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const WCHAR* szString)
 {
     HRESULT hr = E_FAIL;
@@ -563,7 +693,13 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const CHAR* szString)
 
 STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteFormated_(const std::string_view& szFormat, IOutput::format_args args)
 {
-    return E_NOTIMPL;
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteFormated(szFormat, args)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
 }
 
 STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteCharArray(const WCHAR* szString, DWORD dwCharCount)
@@ -577,10 +713,29 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteCharArray(const WCHAR* szString
     return hr;
 }
 
+STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteString(const std::string& strString)
+{
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteString(strString)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
+}
+
+inline STDMETHODIMP_(HRESULT __stdcall) Orc::TableOutput::Sql::Writer::WriteString(const std::string_view& strString) { return E_NOTIMPL; }
+
 STDMETHODIMP
 Orc::TableOutput::Sql::Writer::WriteFormated_(const std::wstring_view& szFormat, IOutput::wformat_args args)
 {
-    return E_NOTIMPL;
+    HRESULT hr = E_FAIL;
+
+    if (FAILED(hr = m_Columns[m_CurCol].WriteFormated(szFormat, args)))
+        AbandonColumn();
+    else
+        m_CurCol++;
+    return hr;
 }
 
 STDMETHODIMP Orc::TableOutput::Sql::Writer::WriteAttributes(DWORD dwAttributes)

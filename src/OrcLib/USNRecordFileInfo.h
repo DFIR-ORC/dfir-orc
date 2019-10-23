@@ -80,8 +80,7 @@ public:
         const std::vector<Filter>& filters,
         WCHAR* szFullFileName,
         USN_RECORD* pElt,
-        Authenticode& verifytrust,
-        bool bWriteErrorCodes);
+        Authenticode& verifytrust);
     virtual ~USNRecordFileInfo(void);
 
 private:

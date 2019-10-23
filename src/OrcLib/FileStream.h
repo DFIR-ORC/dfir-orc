@@ -84,7 +84,7 @@ public:
 
     STDMETHOD(Close)();
 
-private:
+protected:
     HANDLE m_hFile = INVALID_HANDLE_VALUE;
     CriticalSection m_cs;
 };

@@ -45,6 +45,7 @@ public:
     };
 
     static std::unique_ptr<ZipLibrary> CreateZipLibrary(logger log);
+    static std::shared_ptr<ZipLibrary> GetZipLibrary(logger log);
 
     ~ZipLibrary();
 

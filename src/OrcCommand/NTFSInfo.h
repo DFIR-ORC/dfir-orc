@@ -59,7 +59,6 @@ public:
             bResurrectRecords = boost::logic::indeterminate;
             bAddShadows = boost::logic::indeterminate;
             bPopSystemObjects = boost::logic::indeterminate;
-            bWriteErrorCodes = false;
             ColumnIntentions = FILEINFO_NONE;
             DefaultIntentions = FILEINFO_NONE;
 
@@ -97,8 +96,6 @@ public:
         std::wstring strComputerName;
 
         boost::logic::tribool bGetKnownLocations;
-
-        bool bWriteErrorCodes;
 
         LocationSet locs;
 

@@ -143,9 +143,12 @@ public:
     {
         m_Columns = std::make_shared<std::vector<value_type>>();
         m_Columns->reserve(columns.size());
+        DWORD dwColumIdx = 1LU;
         for (auto&& c : columns)
         {
             m_Columns->push_back(std::make_unique<Column>(std::move(c)));
+            m_Columns->back()->dwColumnID = dwColumIdx;
+            dwColumIdx++;
         }
     }
 

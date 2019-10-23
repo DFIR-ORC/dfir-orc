@@ -21,37 +21,61 @@ class LogFileWriter;
 class FuzzyHashStream : public HashStream
 {
 public:
-    enum SupportedAlgorithm
+    enum Algorithm
     {
         Undefined = 0,
         SSDeep = 1 << 0,
         TLSH = 1 << 1
     };
 
+    friend Algorithm& operator^=(Algorithm& left, const Algorithm rigth)
+    {
+        left = static_cast<Algorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
+        return left;
+    }
+    friend Algorithm& operator|=(Algorithm& left, const Algorithm rigth)
+    {
+        left = static_cast<Algorithm>(static_cast<char>(left) | static_cast<char>(rigth));
+        return left;
+    }
+
+    friend Algorithm operator^(const Algorithm left, const Algorithm rigth)
+    {
+        return static_cast<Algorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
+    }
+    friend Algorithm operator|(const Algorithm left, const Algorithm rigth)
+    {
+        return static_cast<Algorithm>(static_cast<char>(left) | static_cast<char>(rigth));
+    }
+    friend Algorithm operator&(const Algorithm left, const Algorithm rigth)
+    {
+        return static_cast<Algorithm>(static_cast<char>(left) & static_cast<char>(rigth));
+    }
+
     FuzzyHashStream(logger pLog);
 
     // HashStream Specifics
 
-    STDMETHOD(OpenToRead(SupportedAlgorithm algs, const std::shared_ptr<ByteStream>& pChainedStream));
-    STDMETHOD(OpenToWrite(SupportedAlgorithm algs, const std::shared_ptr<ByteStream>& pChainedStream));
+    STDMETHOD(OpenToRead(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream));
+    STDMETHOD(OpenToWrite(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream));
     STDMETHOD(Close());
 
     STDMETHOD(ResetHash)(bool bContinue = false);
     STDMETHOD(HashData)(LPBYTE pBuffer, DWORD dwBytesToHash);
 
-    STDMETHOD(GetHash)(SupportedAlgorithm alg, CBinaryBuffer& Hash);
-    STDMETHOD(GetHash)(SupportedAlgorithm alg, std::wstring& Hash);
+    STDMETHOD(GetHash)(Algorithm alg, CBinaryBuffer& Hash);
+    STDMETHOD(GetHash)(Algorithm alg, std::wstring& Hash);
 
     STDMETHOD(GetSSDeep)(CBinaryBuffer& hash) { return GetHash(FuzzyHashStream::SSDeep, hash); };
     STDMETHOD(GetTLSH)(CBinaryBuffer& hash) { return GetHash(FuzzyHashStream::TLSH, hash); };
 
-    static SupportedAlgorithm GetSupportedAlgorithm(LPCWSTR szAlgo);
-    static std::wstring GetSupportedAlgorithm(SupportedAlgorithm algs);
+    static Algorithm GetSupportedAlgorithm(LPCWSTR szAlgo);
+    static std::wstring GetSupportedAlgorithm(Algorithm algs);
 
     virtual ~FuzzyHashStream();
 
 protected:
-    SupportedAlgorithm m_Algorithms = Undefined;
+    Algorithm m_Algorithms = Undefined;
     std::unique_ptr<Tlsh> m_tlsh;
     struct fuzzy_state* m_ssdeep = nullptr;
 };

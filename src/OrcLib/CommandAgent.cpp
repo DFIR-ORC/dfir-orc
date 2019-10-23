@@ -746,7 +746,7 @@ void CommandAgent::run()
                 m_bWillRequireBreakAway = false;
 
                 auto [major, minor] = SystemDetails::GetOSVersion();
-                if (major >= 6 && minor >= 2)
+                if ((major >= 6 && minor >= 2) || major >= 10)
                 {
                     log::Verbose(
                         _L_, L"Current Windows version allows nested jobs. We create our own job and use it!\r\n");
@@ -794,7 +794,7 @@ void CommandAgent::run()
                 m_bWillRequireBreakAway = false;
 
                 auto [major, minor] = SystemDetails::GetOSVersion();
-                if (major >= 6 && minor >= 2)
+                if ((major >= 6 && minor >= 2) ||major >= 10)
                 {
                     log::Verbose(
                         _L_, L"Current Windows version allows nested jobs. We create our own job and use it!\r\n");

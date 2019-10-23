@@ -58,14 +58,12 @@ target_link_libraries(Orc
         VisualStudio::atls
 )
 
-set(XMLLITE_PATH "${ORC_ROOT}/external/XmlLite/xmllite.dll")
-
 if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
     AND "${TARGET_ARCH}" STREQUAL "x86")
 
-    if(NOT EXISTS "${XMLLITE_PATH}")
+    if(NOT EXISTS "${ORC_XMLLITE_PATH}")
         # The xmllite.dll is only available on an enoughly patched Windows XP SP2
-        message(WARNING "${XMLLITE_PATH}: not found, it could be required on some XP SP2 installation")
+        message(WARNING "${ORC_XMLLITE_PATH}: not found, it could be required on some XP SP2 installation")
     else()
         add_custom_command(
             TARGET Orc
@@ -82,12 +80,47 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
             COMMAND $<TARGET_FILE:rcedit>
                 set --type "BINARY"
                     --name "XMLLITE_X86_XPSP2"
-                    --value-path "${XMLLITE_PATH}"
+                    --value-path "${ORC_XMLLITE_PATH}"
                     --compress=7z
                     $<TARGET_FILE:Orc>
         )
     endif()
 endif()
+
+if(${ORC_BUILD_SQL})
+
+    if("${TARGET_ARCH}" STREQUAL "x64")
+        set(ORCSQL_VAR_NAME "ORCSQL_X64DLL")
+    elseif("${TARGET_ARCH}" STREQUAL "x86")
+        set(ORCSQL_VAR_NAME "ORCSQL_X86DLL")
+    else()
+        message(FATAL_ERROR "Unknown architecture: ${TARGET_ARCH}")
+    endif()
+
+
+    add_custom_command(
+        TARGET Orc
+        POST_BUILD
+        DEPENDS rcedit, OrcSql
+        VERBATIM
+
+        COMMAND $<TARGET_FILE:rcedit>
+            set --type "VALUES"
+                --name "${ORCSQL_VAR_NAME}"
+                --value-utf16 "7z:#ORCSQL|OrcSql.dll"
+                $<TARGET_FILE:Orc>
+
+        COMMAND $<TARGET_FILE:rcedit>
+            set --type "BINARY"
+                --name "ORCSQL"
+                --value-path $<TARGET_FILE:OrcSql>
+                --compress=7z
+                $<TARGET_FILE:Orc>
+    )
+
+
+endif()
+
 
 set_property(TARGET Orc PROPERTY FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
 set_property(TARGET Orc PROPERTY OUTPUT_NAME "DFIR-Orc_${TARGET_ARCH}")

@@ -30,15 +30,15 @@ std::wstring Main::DirectoryOutput::GetIdentifier()
         end(retval),
         [](const WCHAR inchar) -> bool {
             return (
-                inchar == L'<' ||  //< (less than)
-                inchar == L'>' ||  //> (greater than)
-                inchar == L':' ||  //: (colon)
+                inchar == L'<'  ||  //< (less than)
+                inchar == L'>'  ||  //> (greater than)
+                inchar == L':'  ||  //: (colon)
                 inchar == L'\"' ||  //" (double quote)
-                inchar == L'/' ||  /// (forward slash)
+                inchar == L'/'  ||  /// (forward slash)
                 inchar == L'\\' ||  //\ (backslash)
-                inchar == L'|' ||  //| (vertical bar or pipe)
-                inchar == L'?' ||  //? (question mark)
-                inchar == L'*');  //* (asterisk)
+                inchar == L'|'  ||  //| (vertical bar or pipe)
+                inchar == L'?'  ||  //? (question mark)
+                inchar == L'*');    //* (asterisk)
         },
         L'_');
 
@@ -74,6 +74,9 @@ HRESULT Main::Run()
     log::Info(_L_, L"\r\nEnumerating object directories:\r\n");
 
     m_outputs.ForEachOutput(config.output, [this](const MultipleOutput<DirectoryOutput>::OutputPair& dir) -> HRESULT {
+
+        using namespace std::string_view_literals;
+
         HRESULT hr = E_FAIL;
         // Actually enumerate objects here
 
@@ -103,7 +106,7 @@ HRESULT Main::Run()
 
                     for (auto& obj : objects)
                     {
-                        obj.Write(_L_, dir.second->GetTableOutput(), CollectionDate);
+                        obj.Write(_L_, dir.second->GetTableOutput(), L""s);
                     }
                 }
                 else
@@ -120,7 +123,7 @@ HRESULT Main::Run()
                 {
                     for (auto& file : files)
                     {
-                        file.Write(_L_, dir.second->GetTableOutput(), CollectionDate);
+                        file.Write(_L_, dir.second->GetTableOutput(), L""s);
                     }
                 }
                 else

@@ -173,7 +173,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             {
                 for (const auto& finditem : item[CONFIG_SAMPLE_FILEFIND].NodeList)
                 {
-                    auto filespec = FileFind::GetSearchTermFromConfig(finditem);
+                    auto filespec = FileFind::GetSearchTermFromConfig(finditem, _L_);
 
                     if (const auto [valid, reason] = filespec->IsValidTerm(); valid)
                         aSpec.Terms.push_back(filespec);
@@ -252,12 +252,42 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     if (configitem[GETTHIS_HASH])
     {
+        std::set<wstring> keys;
+        boost::split(keys, configitem[GETTHIS_HASH].strData, boost::is_any_of(L","));
+
+        for (const auto& key : keys)
+        {
+            auto alg = CryptoHashStream::GetSupportedAlgorithm(key.c_str());
+            if (alg == CryptoHashStream::Algorithm::Undefined)
+            {
+                log::Warning(_L_, E_NOTIMPL, L"Hash algorithm %s is not supported\r\n", key.c_str());
+            }
+            else
+            {
+                config.CryptoHashAlgs |= alg;
+            }
+        }
+
         config.CryptoHashAlgs =
-            CryptoHashStream::GetSupportedAlgorithm(configitem[GETTHIS_FLUSHREGISTRY].strData.c_str());
+            CryptoHashStream::GetSupportedAlgorithm(configitem[GETTHIS_HASH].strData.c_str());
     }
     if (configitem[GETTHIS_FUZZYHASH])
     {
-        config.FuzzyHashAlgs = FuzzyHashStream::GetSupportedAlgorithm(configitem[GETTHIS_FUZZYHASH].strData.c_str());
+        std::set<wstring> keys;
+        boost::split(keys, configitem[GETTHIS_FUZZYHASH].strData, boost::is_any_of(L","));
+
+        for (const auto& key : keys)
+        {
+            auto alg = FuzzyHashStream::GetSupportedAlgorithm(key.c_str());
+            if (alg == FuzzyHashStream::Algorithm::Undefined)
+            {
+                log::Warning(_L_, E_NOTIMPL, L"Fuzzy hash algorithm %s is not supported\r\n", key.c_str());
+            }
+            else
+            {
+                config.FuzzyHashAlgs  |= alg;
+            }
+        }
     }
     if (configitem[GETTHIS_YARA])
     {
@@ -303,6 +333,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             config.listofSpecs.push_back(aSpec);
                         }
                     }
+                    else if (OutputFileOption(argv[i] + 1, L"Extract", config.strExtractCab))
+                        ;
                     else if (BooleanOption(argv[i] + 1, L"FlushRegistry", config.bFlushRegistry))
                         ;
                     else if (BooleanOption(argv[i] + 1, L"ReportAll", config.bReportAll))
@@ -312,6 +344,12 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     else if (BooleanOption(argv[i] + 1, L"Shadows", config.bAddShadows))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Password", config.Output.Password))
+                        ;
+                    else if (FileSizeOption(argv[i] + 1, L"MaxPerSampleBytes", config.limits.dwlMaxBytesPerSample))
+                        ;
+                    else if (FileSizeOption(argv[i] + 1, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal))
+                        ;
+                    else if (ParameterOption(argv[i] + 1, L"MaxSampleCount", config.limits.dwMaxSampleCount))
                         ;
                     else if (BooleanOption(argv[i] + 1, L"NoLimits", config.limits.bIgnoreLimits))
                         ;
@@ -394,15 +432,6 @@ HRESULT Main::CheckConfiguration()
 
     config.Locations.Consolidate((bool)config.bAddShadows, FSVBR::FSType::NTFS);
 
-    if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
-    {
-        log::Info(_L_, L"\r\nINFO: Not output explicitely specified: creating GetThis.7z in current directory\r\n");
-        config.Output.Path = L"GetThis.7z";
-        config.Output.Type = OutputSpec::Kind::Archive;
-        config.Output.ArchiveFormat = ArchiveFormat::SevenZip;
-        config.Output.Compression = L"Normal";
-    }
-
     if (!config.strExtractCab.empty())
     {
         if (config.Output.Path.empty())
@@ -416,11 +445,22 @@ HRESULT Main::CheckConfiguration()
 
             if (FAILED(hr = GetOutputDir(aDir.wstring().c_str(), config.Output.Path)))
             {
-                log::Error(_L_, hr, L"Could not use %s as output dir\r\n", L"Defaut");
+                log::Error(_L_, hr, L"Could not use %s as output dir\r\n", L"Default");
                 return hr;
             }
             log::Info(_L_, L"Information: output directory omitted, using %s\r\n", config.Output.Path.c_str());
         }
+
+        return S_OK;
+    }
+
+    if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
+    {
+        log::Info(_L_, L"\r\nINFO: Not output explicitely specified: creating GetThis.7z in current directory\r\n");
+        config.Output.Path = L"GetThis.7z";
+        config.Output.Type = OutputSpec::Kind::Archive;
+        config.Output.ArchiveFormat = ArchiveFormat::SevenZip;
+        config.Output.Compression = L"Normal";
     }
 
     if (config.content.Type == ContentType::INVALID)
@@ -444,6 +484,7 @@ HRESULT Main::CheckConfiguration()
         end(config.listOfExclusions),
         [this](const std::shared_ptr<FileFind::SearchTerm>& aTerm) { FileFinder.AddExcludeTerm(aTerm); });
 
+    // TODO: make a function to use also in GetSamples_config.cpp
     if (!config.limits.bIgnoreLimits
         && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
     {

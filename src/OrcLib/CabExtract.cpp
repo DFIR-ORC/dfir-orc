@@ -425,8 +425,8 @@ INT_PTR CabExtract::FDINotify(__in FDINOTIFICATIONTYPE fdint, __in PFDINOTIFICAT
                 {
                     auto hashstream = make_shared<CryptoHashStream>(_L_);
                     if (FAILED(
-                            hr = hashstream->OpenToRead(
-                                static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1),
+                            hr = hashstream->OpenToWrite(
+                                CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1,
                                 filestream)))
                         return piRetVal;
                     if (FAILED(hr = pXORStream->OpenForXOR(hashstream)))
@@ -444,8 +444,8 @@ INT_PTR CabExtract::FDINotify(__in FDINOTIFICATIONTYPE fdint, __in PFDINOTIFICAT
                 if (m_bComputeHash)
                 {
                     auto hashstream = make_shared<CryptoHashStream>(_L_);
-                    if (FAILED(hashstream->OpenToRead(
-                            static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1),
+                    if (FAILED(hashstream->OpenToWrite(
+                            CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1,
                             filestream)))
                         return piRetVal;
                     pStream = hashstream;

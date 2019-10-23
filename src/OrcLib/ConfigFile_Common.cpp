@@ -172,8 +172,6 @@ HRESULT Orc::Config::Common::ntfs_criterias(ConfigItem& parent, DWORD dwIndex)
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"contains_hex", CONFIG_FILEFIND_CONTAINS_HEX, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"yara", CONFIG_FILEFIND_YARA, ConfigItem::OPTION)))
-        return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"yara_rule", CONFIG_FILEFIND_YARA_RULE, ConfigItem::OPTION)))
         return hr;
     return S_OK;
@@ -382,8 +380,6 @@ HRESULT Orc::Config::Common::location(ConfigItem& parent, DWORD dwIndex, ConfigI
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"bytespercluster", CONFIG_BYTESPERCLUSTER, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"bytesperfrs", CONFIG_BYTESPERFRS, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"originalvolume", CONFIG_ORIGINALVOLUME, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"offset", CONFIG_VOLUME_OFFSET, ConfigItem::OPTION)))
         return hr;

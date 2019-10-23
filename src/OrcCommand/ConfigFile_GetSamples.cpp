@@ -20,7 +20,7 @@ using namespace Orc::Config::Common;
 HRESULT samples(ConfigItem& parent, DWORD dwIndex)
 {
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = parent.AddChildNode(L"samples", dwIndex, ConfigItem::MANDATORY)))
+    if (FAILED(hr = parent.AddChildNode(L"samples", dwIndex, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"MaxTotalBytes", CONFIG_MAXBYTESTOTAL, ConfigItem::OPTION)))
         return hr;
@@ -35,17 +35,17 @@ HRESULT samples(ConfigItem& parent, DWORD dwIndex)
 HRESULT getthis(ConfigItem& parent, DWORD dwIndex)
 {
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = parent.AddChildNode(L"getthis", dwIndex, ConfigItem::MANDATORY)))
+    if (FAILED(hr = parent.AddChildNode(L"getthis", dwIndex, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"name", GETSTAMPLES_GETTHIS_EXENAME, ConfigItem::MANDATORY)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"name", GETSAMPLES_GETTHIS_EXENAME, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run", GETSTAMPLES_GETTHIS_EXERUN, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run", GETSAMPLES_GETTHIS_EXERUN, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run32", GETSTAMPLES_GETTHIS_EXERUN32, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run32", GETSAMPLES_GETTHIS_EXERUN32, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run64", GETSTAMPLES_GETTHIS_EXERUN64, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"run64", GETSAMPLES_GETTHIS_EXERUN64, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"args", GETSTAMPLES_GETTHIS_ARGS, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"args", GETSAMPLES_GETTHIS_ARGS, ConfigItem::OPTION)))
         return hr;
     return S_OK;
 }
@@ -65,11 +65,11 @@ HRESULT Orc::Config::GetSamples::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(L"timeline", output, GETSAMPLES_TIMELINE)))
         return hr;
-    if (FAILED(hr = item.AddChild(L"criterias", output, GETSAMPLES_CRITERIAS)))
+    if (FAILED(hr = item.AddChild(L"getthisconfig", output, GETSAMPLES_GETTHIS_CONFIG)))
         return hr;
     if (FAILED(hr = item.AddChild(getthis, GETSAMPLES_GETTHIS)))
         return hr;
-    if (FAILED(hr = item.AddChildNode(L"temporary", GETSAMPLES_TEMPDIR, ConfigItem::OPTION)))
+    if (FAILED(hr = item.AddChildNode(L"tempdir", GETSAMPLES_TEMPDIR, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddChild(optional_location, GETSAMPLES_LOCATIONS)))
         return hr;
@@ -81,9 +81,9 @@ HRESULT Orc::Config::GetSamples::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(L"autoruns", output, GETSAMPLES_AUTORUNS)))
         return hr;
-    if (FAILED(hr = item.AddAttribute(L"flushregistry", GETSAMPLES_FLUSHREGISTRY, ConfigItem::OPTION)))
-        return hr;
     if (FAILED(hr = item.AddAttribute(L"nolimits", GETSAMPLES_NOLIMITS, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"nosigcheck", GETSAMPLES_NOSIGCHECK, ConfigItem::OPTION)))
         return hr;
     return S_OK;
 }

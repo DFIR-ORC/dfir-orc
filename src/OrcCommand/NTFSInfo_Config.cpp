@@ -37,21 +37,13 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
 
     const ConfigItem& configitem = configItem[NTFSINFO_COLUMNS];
 
-    if (configitem[WRITERRORS])
-    {
-        if (Orc::equalCaseInsensitive((const std::wstring&)configitem.SubItems[WRITERRORS], L"yes"sv))
-            config.bWriteErrorCodes = true;
-        else
-            config.bWriteErrorCodes = false;
-    }
-
     std::for_each(
         begin(configitem[DEFAULT].NodeList), end(configitem[DEFAULT].NodeList), [this](const ConfigItem& item) {
             if (item)
                 config.DefaultIntentions = static_cast<Intentions>(
                     config.DefaultIntentions
                     | FileInfo::GetIntentions(
-                        item.strData.c_str(), NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                        _L_, item.strData.c_str(), NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
         });
 
     std::for_each(begin(configitem[ADD].NodeList), end(configitem[ADD].NodeList), [this](const ConfigItem& item) {
@@ -193,7 +185,10 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     auto walker = GetWalkerFromConfig(configitem);
     if (!walker.empty())
-        config.strWalker = walker;
+    {
+		config.strWalker = walker;
+    }
+
 
     if (configitem[NTFSINFO_COMPUTER])
     {
@@ -301,8 +296,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (OutputOption(argv[i] + 1, L"SecDescr", config.outSecDescrInfo))
                         ;
-                    else if (BooleanOption(argv[i] + 1, L"errorcodes", config.bWriteErrorCodes))
-                        ;
                     else if (BooleanOption(argv[i] + 1, L"KnownLocations", config.bGetKnownLocations))
                         ;
                     else if (BooleanOption(argv[i] + 1, L"Shadows", config.bAddShadows))
@@ -313,8 +306,11 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (EncodingOption(argv[i] + 1, config.outFileInfo.OutputEncoding))
                     {
-                        config.outAttrInfo.OutputEncoding = config.outTimeLine.OutputEncoding =
-                            config.outFileInfo.OutputEncoding;
+                        config.outI30Info.OutputEncoding =
+                            config.outAttrInfo.OutputEncoding =
+                            config.outTimeLine.OutputEncoding =
+                            config.outSecDescrInfo.OutputEncoding =
+                                config.outFileInfo.OutputEncoding;
                     }
                     else if (AltitudeOption(argv[i] + 1, L"Altitude", config.locs.GetAltitude()))
                         ;
@@ -339,7 +335,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                                 config.DefaultIntentions = static_cast<Intentions>(
                                     config.DefaultIntentions
                                     | NtfsFileInfo::GetIntentions(
-                                        pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                                        _L_, pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
                                 pCur = pNext + 1;
                             }
                             else
@@ -347,7 +343,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                                 config.DefaultIntentions = static_cast<Intentions>(
                                     config.DefaultIntentions
                                     | NtfsFileInfo::GetIntentions(
-                                        pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                                        _L_, pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
                                 pCur = NULL;
                             }
                         }
@@ -384,6 +380,12 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    if (!config.strWalker.compare(L"USN"))
+    {
+        log::Debug(_L_, L"USN requirement: 'EXACT' altitude enforced");
+        config.locs.GetAltitude() = LocationSet::Altitude::Exact;
+    }
 
     if (config.strComputerName.empty())
     {
@@ -432,12 +434,12 @@ HRESULT Main::CheckConfiguration()
     if (config.DefaultIntentions == FILEINFO_NONE)
     {
         config.DefaultIntentions =
-            NtfsFileInfo::GetIntentions(L"Default", NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames);
+            NtfsFileInfo::GetIntentions(_L_, L"Default", NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames);
     }
 
     if (boost::logic::indeterminate(config.bResurrectRecords))
     {
-        config.bResurrectRecords = true;
+        config.bResurrectRecords = false;
     }
 
     // Default Parser is MFT;

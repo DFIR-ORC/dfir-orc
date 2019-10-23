@@ -164,12 +164,6 @@ HRESULT MFTRecord::ParseRecord(
 
                 if (!bFound)
                 {
-                    // --> Adding entry
-                    if (m_pAttributeList->m_AttList.size() > 200)
-                    {
-                        log::Warning(
-                            pLog, E_UNEXPECTED, L"Attribute list size exceeds 50 entries. Probably corrupted...\r\n");
-                    }
                     m_pAttributeList->m_AttList.push_back(ale);
                 }
             }

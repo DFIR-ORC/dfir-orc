@@ -6,11 +6,16 @@
 // Author(s): Jean Gautier (ANSSI)
 //
 #include "StdAfx.h"
+
+#include <cwctype>
+
 #include "ConfigFileReader.h"
 
 #include "FileStream.h"
 
 #include "XmlLiteExtension.h"
+
+#include "CaseInsensitive.h"
 
 using namespace std;
 
@@ -79,7 +84,8 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
 
             auto it = std::find_if(begin(config.SubItems), end(config.SubItems), [pName](ConfigItem& item) -> bool {
                 if (item.Type == ConfigItem::ConfigItemType::ATTRIBUTE)
-                    return item.strName.compare(pName) == 0;
+                    return equalCaseInsensitive(item.strName, pName);
+
                 return false;
             });
 
@@ -122,7 +128,8 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
         log::Error(_L_, hr, L"Error reading element name\r\n");
         return hr;
     }
-    if (config.strName.compare(pName))
+
+    if (equalCaseInsensitive(config.strName, pName) == false)
     {
         log::Error(
             _L_,
@@ -158,7 +165,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
 
                 auto it =
                     std::find_if(begin(config.SubItems), end(config.SubItems), [pLocalName](ConfigItem& item) -> bool {
-                        return item.strName.compare(pLocalName) == 0;
+                        return equalCaseInsensitive(item.strName, pLocalName);
                     });
 
                 if (it == end(config.SubItems))
@@ -254,7 +261,8 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                     log::Error(_L_, hr, L"Error reading element name\r\n");
                     return hr;
                 }
-                if (config.strName.compare(pLocalName))
+
+                if (equalCaseInsensitive(config.strName, pLocalName) == false)
                 {
                     log::Warning(
                         _L_,
@@ -371,7 +379,7 @@ HRESULT ConfigFileReader::ReadConfig(
                         log::Error(_L_, hr, L"Error reading element name\r\n");
                         return hr;
                     }
-                    if (config.strName.compare(pName) == 0)
+                    if (equalCaseInsensitive(config.strName, pName))
                     {
                         if (FAILED(hr = NavigateConfigAttributes(pReader, config)))
                         {

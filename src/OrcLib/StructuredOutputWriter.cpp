@@ -47,6 +47,8 @@ std::shared_ptr<StructuredOutputWriter> StructuredOutputWriter::GetWriter(const 
             return nullptr;
         case OutputSpec::Kind::File:
         case OutputSpec::Kind::StructuredFile:
+        case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::XML:
+        case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON:
         {
             auto retval = std::make_shared<XmlOutputWriter>(pLog);
 

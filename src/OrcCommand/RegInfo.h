@@ -105,7 +105,6 @@ public:
             : regFindConfig(pLog)
             , m_HiveQuery(pLog)
         {
-            bWriteErrorCodes = false;
             Information = static_cast<RegInfoType>(
                 REGINFO_LASTMODDATE | REGINFO_TERMNAME | REGINFO_TERMDESCRIPTION | REGINFO_KEYNAME | REGINFO_KEYTREE
                 | REGINFO_VALUENAME | REGINFO_VALUETYPE);
@@ -117,7 +116,6 @@ public:
 
         OutputSpec Output;
         size_t CsvValueLengthLimit;
-        bool bWriteErrorCodes;
         std::wstring strComputerName;
     };
 

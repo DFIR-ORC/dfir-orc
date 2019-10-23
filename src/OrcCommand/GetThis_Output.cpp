@@ -27,42 +27,41 @@ void Main::PrintUsage()
     log::Info(
         _L_,
         L"\r\n"
-        L"usage: DFIR-Orc.exe GetThis [/out=<Cabinet.cab|Archive.zip|Archive.7z>] [/XOR=0xBADF00D0] "
-        L"[/sample=<SampleFile>] "
-        L"[/config=<ConfigFile>] <foldername>...\r\n"
+        L"Usage: DFIR-Orc.exe GetThis\r\n"
+        L"\t[/out=<Cabinet.cab|Archive.zip|Archive.7z|Folder>] : Output format\r\n"
+        L"\t[/XOR=0xBADF00D0]\r\n"
+        L"\t[/sample=<SampleFile>]\r\n"
+        L"\t[/config=<ConfigFile>] <foldername>...\r\n"
         L"\r\n"
-        L"\t/out=<Folder>|<F.csv>|<F.cab>|<F.zip>|<F.7z>:\r\n"
-        L"\t                              Files will be added to exsiting folder, to cabinet or zip file\r\n"
-        L"\t\r\n\r\n"
-        L"\t/sample=<FileName>          : Name of the file to copy\r\n"
-        L"\t/sample=<FileName>:<Stream> : Name of the Altername Data Stream to copy\r\n"
-        L"\t/sample=<FileName>#<EAName> : Name of the Extended Attribute to copy\r\n"
-        L"\t/content=(data|strings|raw) : Data to collect (raw is the compressed NTFS stream)"
-        L"\t/config=<FileName>          : Config should be loaded from this file\r\n"
-        L"\t/flushregistry              : Flushes registry hives (using RegFlushKey)\r\n"
-        L"\t<foldername>...             : List of locations where to look for samples (and sub folders)\r\n"
-        L"\t/verbose                    : Turns on verbose logging\r\n"
-        L"\t/debug                      : Adds debug information (Source File Name, Line number) to output, outputs to "
-        L"debugger (OutputDebugString)\r\n"
-        L"\t/noconsole                  : Turns off console logging\r\n"
-        L"\t/logfile=<FileName>         : All output is duplicated to logfile <FileName>\r\n"
-        L"\t/nolimits                   : Ignore all limits, overrides default values\r\n"
-        L"\t/reportall                  : Add information about rejected samples (due to limits) to CSV\r\n"
-        L"\t/xor=0xBADF00D0             : Pattern used to XOR sample files (optional)\r\n"
-        L"\t/hash=<MD5|SHA-1|SHA256>    : List hash values stored in GetThis.csv\r\n"
-        L"\t/fuzzyhash=<SSDeep|TLSH>    : List fuzzy hash values stored in GetThis.csv\r\n"
+        L"\t/out=<Folder|F.csv|F.cab|F.zip|F.7z> : Files will be added to existing folder, to cabinet or zip file\r\n"
+        L"\t/sample=<FileName>                   : Name of the file to copy\r\n"
+        L"\t/sample=<FileName>:<Stream>          : Name of the Altername Data Stream to copy\r\n"
+        L"\t/sample=<FileName>#<EAName>          : Name of the Extended Attribute to copy\r\n"
+        L"\t/content=(data|strings|raw)          : Data to collect (raw is the compressed NTFS stream)"
+        L"\t/config=<FileName>                   : Config should be loaded from this file\r\n"
+        L"\t/Compression=<CompressionLevel>      : Set archive compression level\r\n"
+        L"\t/flushregistry                       : Flushes registry hives (using RegFlushKey)\r\n"
+        L"\t<foldername>...                      : List of locations where to look for samples (and sub folders)\r\n"
+        L"\t/MaxPerSampleBytes=<max bytes>       : Do not collect sample bigger than <max bytes>\r\n"
+        L"\t/MaxTotalBytes=<max bytes>           : Stop collecting when reaching <max bytes>\r\n"
+        L"\t/MaxSampleCount=<max count>          : Stop collecting when reaching <max count>\r\n"
+        L"\t/NoLimits                            : Do not set collection limit (be careful: output can get very big)\r\n"
+        L"\t/reportall                           : Add information about rejected samples (due to limits) to CSV\r\n"
+        L"\t/xor=0xBADF00D0                      : Pattern used to XOR sample files (optional)\r\n"
+        L"\t/hash=<MD5|SHA1|SHA256>             : List hash values stored in GetThis.csv\r\n"
+        L"\t/fuzzyhash=<SSDeep|TLSH>             : List fuzzy hash values stored in GetThis.csv\r\n"
         L"\r\n"
         L"Note: config file settings are superseded by command line options\r\n"
         L"\r\n"
         L"\r\n"
+        L"\tExtraction syntax:  GetThis.exe [/extract=<Cabinet.cab>] [/out=<Folder>]\r\n"
         L"\r\n"
-        L"\tExtraction syntax:  GetThis.Exe [/extract=<Cabinet.cab>] [/outdir=<Folder>] \r\n"
+        L"\t/extract=<Cabinet.cab>           : Cabinet file <Cabinet.cab> is to be extracted\r\n"
+        L"\t/out=<Folder>                    : Files will be extracted into <Folder>\r\n"
+        L"\t/utf8,/utf16                     : Select utf8 or utf16 encoding (default is utf8)\r\n"
         L"\r\n"
-        L"\t/extract=<Cabinet.cab> : Cabinet file <Cabinet.cab> is to be extracted\r\n"
-        L"\t/outdir=<Folder>       : Files will be extracted into <Folder>\r\n"
-        L"\t/utf8,/utf16           : Select utf8 or utf16 enncoding (default is utf8)\r\n"
-        L"\r\n"
-        L"\t/Yara=<Rules.Yara>           : Comma separared list of yara sources\r\n");
+        L"\t/Yara=<Rules.Yara>               : Comma separared list of yara sources\r\n");
+    PrintCommonUsage();
 }
 
 void Main::PrintParameters()
@@ -143,10 +142,9 @@ void Main::PrintParameters()
 
         for (const auto& aSpec : config.listofSpecs)
         {
-
             if (!config.limits.bIgnoreLimits)
             {
-                log::Info(_L_, L"   Sample : %s", aSpec.Name.c_str());
+                log::Info(_L_, L"   Sample: %s", aSpec.Name.c_str());
                 if (aSpec.PerSampleLimits.dwlMaxBytesPerSample != INFINITE)
                 {
                     log::Info(_L_, L" (max %I64d bytes per sample)", aSpec.PerSampleLimits.dwlMaxBytesPerSample);
@@ -162,7 +160,7 @@ void Main::PrintParameters()
             }
             else
             {
-                log::Info(_L_, L"   Sample : %s", aSpec.Name.c_str());
+                log::Info(_L_, L"   Sample: %s", aSpec.Name.c_str());
             }
             switch (aSpec.Content.Type)
             {

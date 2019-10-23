@@ -153,9 +153,8 @@ public:
         std::wstring YaraSource;
         std::unique_ptr<YaraConfig> Yara;
 
-        SupportedAlgorithm CryptoHashAlgs =
-            static_cast<SupportedAlgorithm>(SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1);
-        FuzzyHashStream::SupportedAlgorithm FuzzyHashAlgs = FuzzyHashStream::SupportedAlgorithm::Undefined;
+        CryptoHashStream::Algorithm CryptoHashAlgs = CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1;
+        FuzzyHashStream::Algorithm FuzzyHashAlgs = FuzzyHashStream::Algorithm::Undefined;
 
         ContentSpec GetContentSpecFromString(const std::wstring& str);
 

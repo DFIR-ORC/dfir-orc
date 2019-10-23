@@ -162,6 +162,9 @@ HRESULT Orc::GetOutputFile(
         if (err != 0)
             return E_INVALIDARG;
 
+        if (wcslen(path_buffer) == 0L)
+            return S_OK; // this is a relative path (only a filename)
+
         return GetOutputDir_Internal(path_buffer, _MAX_PATH, true, MAX_CREATEDIR_RECURSIONS);
     }
 

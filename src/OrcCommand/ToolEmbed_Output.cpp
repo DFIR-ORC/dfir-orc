@@ -43,6 +43,7 @@ void Main::PrintUsage()
         L"\t/Dump=<configuredbinary.exe>       : Dumps the configured ressources into a folder (specified with "
         L"/out=<dir>) along with associated embed.xml\r\n"
         L"\r\n");
+    PrintCommonUsage();
 }
 
 void Main::PrintParameters()

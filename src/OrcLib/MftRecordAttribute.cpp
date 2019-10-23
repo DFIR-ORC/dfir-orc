@@ -439,23 +439,23 @@ MftRecordAttribute::GetRawStream(const logger& pLog, const std::shared_ptr<Volum
 HRESULT MftRecordAttribute::GetHashInformation(
     const logger& pLog,
     const std::shared_ptr<VolumeReader>& pVolReader,
-    SupportedAlgorithm required)
+    CryptoHashStream::Algorithm required)
 {
     HRESULT hr = E_FAIL;
 
     if (!m_Details)
         m_Details = std::make_unique<DataDetails>();
 
-    SupportedAlgorithm needed = SupportedAlgorithm::Undefined;
+    CryptoHashStream::Algorithm needed = CryptoHashStream::Algorithm::Undefined;
 
-    if (required & SupportedAlgorithm::MD5 && m_Details->MD5().empty())
-        needed = static_cast<SupportedAlgorithm>(needed | SupportedAlgorithm::MD5);
-    if (required & SupportedAlgorithm::SHA1 && m_Details->SHA1().empty())
-        needed = static_cast<SupportedAlgorithm>(needed | SupportedAlgorithm::SHA1);
-    if (required & SupportedAlgorithm::SHA256 && m_Details->SHA256().empty())
-        needed = static_cast<SupportedAlgorithm>(needed | SupportedAlgorithm::SHA256);
+    if (required & CryptoHashStream::Algorithm::MD5 && m_Details->MD5().empty())
+        needed |= CryptoHashStream::Algorithm::MD5;
+    if (required & CryptoHashStream::Algorithm::SHA1 && m_Details->SHA1().empty())
+        needed |= CryptoHashStream::Algorithm::SHA1;
+    if (required & CryptoHashStream::Algorithm::SHA256 && m_Details->SHA256().empty())
+        needed |= CryptoHashStream::Algorithm::SHA256;
 
-    if (needed == SupportedAlgorithm::Undefined)
+    if (needed == CryptoHashStream::Algorithm::Undefined)
         return S_OK;
 
     auto stream = GetDataStream(pLog, pVolReader);
@@ -485,21 +485,21 @@ HRESULT MftRecordAttribute::GetHashInformation(
         return hr;
     }
 
-    if (needed & SupportedAlgorithm::MD5)
+    if (needed & CryptoHashStream::Algorithm::MD5)
     {
         CBinaryBuffer md5;
         if (FAILED(hr = pHashStream->GetMD5(md5)))
             return hr;
         m_Details->SetMD5(std::move(md5));
     }
-    if (needed & SupportedAlgorithm::SHA1)
+    if (needed & CryptoHashStream::Algorithm::SHA1)
     {
         CBinaryBuffer sha1;
         if (FAILED(hr = pHashStream->GetSHA1(sha1)))
             return hr;
         m_Details->SetSHA1(std::move(sha1));
     }
-    if (needed & SupportedAlgorithm::SHA256)
+    if (needed & CryptoHashStream::Algorithm::SHA256)
     {
         CBinaryBuffer sha256;
         if (FAILED(hr = pHashStream->GetSHA256(sha256)))

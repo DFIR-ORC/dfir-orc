@@ -23,6 +23,7 @@ add_executable(FastFind
     "stdafx.cpp"
     ${SRC}
     "FastFind.rc"
+	"Compatibility.manifest"
 )
 
 target_include_directories(FastFind PRIVATE ${Boost_INCLUDE_DIRS})
@@ -41,14 +42,12 @@ set_target_properties(FastFind
 )
 
 
-set(XMLLITE_PATH "${ORC_ROOT}/external/XmlLite/xmllite.dll")
-
 if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
     AND "${TARGET_ARCH}" STREQUAL "x86")
 
-    if(NOT EXISTS "${XMLLITE_PATH}")
+    if(NOT EXISTS "${ORC_XMLLITE_PATH}")
         # The xmllite.dll is only available on an enoughly patched Windows XP SP2
-        message(WARNING "${XMLLITE_PATH}: not found, it could be required on some XP SP2 installation")
+        message(WARNING "${ORC_XMLLITE_PATH}: not found, it could be required on some XP SP2 installation")
     else()
         add_custom_command(
             TARGET FastFind
@@ -65,7 +64,7 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
             COMMAND $<TARGET_FILE:rcedit>
                 set --type "BINARY"
                     --name "XMLLITE_X86_XPSP2"
-                    --value-path "${XMLLITE_PATH}"
+                    --value-path "${ORC_XMLLITE_PATH}"
                     --compress=7z
                     $<TARGET_FILE:FastFind>
         )

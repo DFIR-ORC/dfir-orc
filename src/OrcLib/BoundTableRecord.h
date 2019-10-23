@@ -9,6 +9,8 @@
 
 #include "TableOutput.h"
 
+#include "SafeInt.h"
+
 #pragma managed(push, off)
 
 namespace Orc {
@@ -60,7 +62,7 @@ class BoundColumn : public Column
 private:
     union
     {
-        LARGE_INTEGER LargeInt;
+        _int64 LargeInt;
         bool Boolean;
         BYTE Byte;
         SHORT Short;
@@ -101,14 +103,39 @@ public:
     HRESULT PrintToBuffer(const CHAR* szFormat, ...);
     HRESULT PrintToBuffer(const CHAR* szFormat, va_list argList);
 
-    HRESULT WriteString(const WCHAR* szString);
-    HRESULT WriteCharArray(const WCHAR* szArray, DWORD dwCharCount);
+	HRESULT WriteString(const std::wstring& strString)
+	{
+		return WriteString(std::wstring_view(strString));
+	}
+    HRESULT WriteString(const std::wstring_view& szString);
+    HRESULT WriteString(const WCHAR* szString)
+    {
+        return WriteCharArray(szString, msl::utilities::SafeInt<DWORD>(wcslen(szString)));
+    }
+    HRESULT WriteCharArray(const WCHAR* szArray, DWORD dwCharCount)
+    {
+        return WriteString(std::wstring_view(szArray, dwCharCount));
+    }
     HRESULT WriteFormatedString(const WCHAR* szFormat, ...);
 
-    HRESULT WriteString(const CHAR* szString);
-    HRESULT WriteCharArray(const CHAR* szArray, DWORD dwCharCount);
+    HRESULT WriteString(const std::string& strString)
+    {
+        return WriteString(std::string_view(strString));
+    }
+    HRESULT WriteString(const std::string_view& strString);
+    HRESULT WriteString(const CHAR* szString)
+    {
+        return WriteString(std::string_view(szString, strlen(szString)));
+    }
+    HRESULT WriteCharArray(const CHAR* szArray, DWORD dwCharCount)
+    {
+        return WriteString(std::string_view(szArray, dwCharCount));
+    }
     HRESULT WriteFormatedString(const CHAR* szFormat, ...);
 
+    HRESULT WriteFormated(const std::wstring_view& szFormat, IOutput::wformat_args args);
+    HRESULT WriteFormated(const std::string_view& szFormat, IOutput::format_args args);
+    
     HRESULT WriteAttributes(DWORD dwAttibutes);
     HRESULT WriteFileTime(FILETIME fileTime);
     HRESULT WriteFileTime(LONGLONG fileTime);

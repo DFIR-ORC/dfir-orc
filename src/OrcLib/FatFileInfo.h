@@ -32,8 +32,7 @@ public:
         DWORD dwLen,
         const std::shared_ptr<VolumeReader>& pVolReader,
         const std::shared_ptr<FatFileEntry>& fileEntry,
-        Authenticode& codeVerifyTrust,
-        bool bWriteErrorCodes);
+        Authenticode& codeVerifyTrust);
     virtual ~FatFileInfo();
 
     virtual HRESULT Open();

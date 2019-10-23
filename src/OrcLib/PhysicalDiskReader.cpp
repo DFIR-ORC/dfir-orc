@@ -117,7 +117,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
         return E_INVALIDARG;
     }
 
-    if (m_uiPartNum == (UINT)-1 && m_ullOffset == (ULONGLONG)-1)
+    if (m_ullOffset == (ULONGLONG)-1) // If no offset has been specified, we need to lookup the partition we are interested in (-1 -> active part, other -> use part num)
     {
         PartitionTable pt(_L_);
 
@@ -154,7 +154,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
         if (m_uiPartNum == (UINT)-1)
         {
             log::Error(
-                _L_, E_FAIL, L"Failed to determine active partition for \\\\.\\PhysicalDrive%d\r\n", m_uiDiskNum);
+                _L_, E_FAIL, L"Failed to determine partition to parse for \\\\.\\PhysicalDrive%d\r\n", m_uiDiskNum);
             return E_FAIL;
         }
     }

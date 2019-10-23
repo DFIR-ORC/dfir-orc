@@ -381,7 +381,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
 
         sampleRef.HashStream = make_shared<CryptoHashStream>(_L_);
 
-        SupportedAlgorithm algs = config.CryptoHashAlgs;
+        CryptoHashStream::Algorithm algs = config.CryptoHashAlgs;
 
         if (FAILED(hr = sampleRef.HashStream->OpenToRead(algs, stream)))
             return hr;
@@ -394,9 +394,9 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
     {
         std::shared_ptr<ByteStream> upstream = stream;
 
-        SupportedAlgorithm algs = config.CryptoHashAlgs;
+        CryptoHashStream::Algorithm algs = config.CryptoHashAlgs;
 
-        if (algs != SupportedAlgorithm::Undefined)
+        if (algs != CryptoHashStream::Algorithm::Undefined)
         {
             sampleRef.HashStream = make_shared<CryptoHashStream>(_L_);
             if (FAILED(hr = sampleRef.HashStream->OpenToRead(algs, upstream)))
@@ -404,8 +404,8 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
             upstream = sampleRef.HashStream;
         }
 
-        FuzzyHashStream::SupportedAlgorithm fuzzy_algs = config.FuzzyHashAlgs;
-        if (fuzzy_algs != FuzzyHashStream::SupportedAlgorithm::Undefined)
+        FuzzyHashStream::Algorithm fuzzy_algs = config.FuzzyHashAlgs;
+        if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
         {
             sampleRef.FuzzyHashStream = make_shared<FuzzyHashStream>(_L_);
             if (FAILED(hr = sampleRef.FuzzyHashStream->OpenToRead(fuzzy_algs, upstream)))
@@ -547,8 +547,6 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
             output.WriteString((*match_it)->MatchingAttributes[sampleRef.AttributeIndex].AttrName.c_str());
 
             output.WriteInteger((DWORD)sampleRef.InstanceID);
-
-            output.WriteString((*match_it)->Term->GetDescription().c_str());
 
             output.WriteGUID(sampleRef.SnapshotID);
 
@@ -807,7 +805,7 @@ Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output
         {
             sample_ref.HashStream->GetMD5(const_cast<CBinaryBuffer&>(sample_ref.MD5));
             sample_ref.HashStream->GetSHA1(const_cast<CBinaryBuffer&>(sample_ref.SHA1));
-            sample_ref.HashStream->GetSHA256(const_cast<CBinaryBuffer&>(sample_ref.SHA1));
+            sample_ref.HashStream->GetSHA256(const_cast<CBinaryBuffer&>(sample_ref.SHA256));
         }
 
         if (sample_ref.FuzzyHashStream)
@@ -978,6 +976,12 @@ HRESULT Main::FindMatchingSamples()
 
                     const wstring& strFullFileName = aMatch->MatchingNames.front().FullPathName;
 
+                    if (aMatch->MatchingAttributes.empty())
+                    {
+                        log::Warning(_L_, E_FAIL, L"\"%s\" matched \"%s\" but no data related attribute was associated\r\n", strFullFileName.c_str(), aMatch->Term->GetDescription().c_str());
+                        return;
+                    }
+
                     for (const auto& attr : aMatch->MatchingAttributes)
                     {
                         wstring strName;
@@ -1085,7 +1089,6 @@ HRESULT Main::Run()
     {
         try
         {
-
             if (config.bFlushRegistry)
             {
                 if (FAILED(hr = RegFlushKeys()))

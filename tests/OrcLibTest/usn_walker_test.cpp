@@ -70,7 +70,7 @@ public:
                     Authenticode authenticode(_L_);
 
                     USNRecordFileInfo fi(
-                        _L_, L"Test", volreader, FILEINFO_FILESIZE, filters, szFullName, pElt, authenticode, false);
+                        _L_, L"Test", volreader, FILEINFO_FILESIZE, filters, szFullName, pElt, authenticode);
 
                     if (fi.IsDirectory())
                     {

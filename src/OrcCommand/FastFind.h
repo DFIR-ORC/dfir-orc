@@ -46,8 +46,7 @@ public:
         , Files(
               pLog,
               true,
-              static_cast<SupportedAlgorithm>(
-                  SupportedAlgorithm::MD5 | SupportedAlgorithm::SHA1 | SupportedAlgorithm::SHA256)) {};
+              CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256) {};
 
     LocationSet Locations;
     FileFind Files;
@@ -192,14 +191,13 @@ public:
                 {
                     case MatchType::Exact:
                         descr += L"'name is ";
-                        descr += strName;
                         break;
                     case MatchType::Match:
                         descr += L"'name matches ";
-                        descr += strName;
                         break;
                     case MatchType::Regex:
                         descr += L"'name matches regex ";
+                        //descr += str
                         break;
                 }
                 descr += strName;
@@ -210,11 +208,9 @@ public:
                 {
                     case MatchType::Exact:
                         descr += L"'path is ";
-                        descr += strName;
                         break;
                     case MatchType::Match:
                         descr += L"'path matches ";
-                        descr += strName;
                         break;
                     case MatchType::Regex:
                         descr += L"'path matches regex ";
@@ -280,8 +276,8 @@ private:
     std::vector<std::wstring> ObjectDirs;
     std::vector<std::wstring> FileDirs;
 
-    HRESULT LogObjectMatch(const ObjectDirectory::ObjectInstance& obj);
-    HRESULT LogObjectMatch(const FileDirectory::FileInstance& file);
+    HRESULT LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::ObjectInstance& obj);
+    HRESULT LogObjectMatch(const ObjectSpec::ObjectItem& spec, const FileDirectory::FileInstance& file);
 
     HRESULT RunFileSystem();
     HRESULT RunRegistry();

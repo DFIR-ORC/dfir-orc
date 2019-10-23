@@ -58,6 +58,7 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
     ZeroMemory(buffer.GetData(), m_pVolReader->GetBytesPerFRS());
 
     ULONGLONG ullCurrentIndex = 0;
+    ULONGLONG ullCurrentMftIndex = 0;
     ULONGLONG ullLastIndex = (End.QuadPart - Start.QuadPart) / m_pVolReader->GetBytesPerFRS();
 
     while (ullCurrentIndex < ullLastIndex)
@@ -92,7 +93,7 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
             continue;
         }
 
-        if (FAILED(hr = pCallBack(ullCurrentIndex, buffer)))
+        if (FAILED(hr = pCallBack(ullCurrentMftIndex, buffer)))
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
@@ -102,6 +103,7 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
             log::Verbose(_L_, L"WARNING: Add Record Callback failed\r\n");
         }
         ullCurrentIndex++;
+        ullCurrentMftIndex++;
     }
 
     return S_OK;

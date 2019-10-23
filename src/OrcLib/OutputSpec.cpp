@@ -28,6 +28,25 @@ namespace fs = std::filesystem;
 
 using namespace Orc;
 
+namespace {
+
+bool HasValue(const ConfigItem& item, DWORD dwIndex)
+{
+    if (item.SubItems.size() <= dwIndex)
+    {
+        return false;
+    }
+
+    if (!item.SubItems[dwIndex])
+    {
+        return false;
+    }
+
+    return true;
+}
+
+}  // namespace
+
 HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, const WCHAR* szInputString)
 {
     HRESULT hr = E_FAIL;
@@ -39,7 +58,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
 
     if (OutputSpec::Kind::SQL & supported)
     {
-        static std::wregex reConnectionString(L"^(([a-zA-Z0-9_\\s]+=[a-zA-Z0-9\\s{}.]+;)+)#([a-zA-Z0-9]+)$");
+        static std::wregex reConnectionString(LR"RAW(^(([\w\s]+=[\w\s{}.]+;?)+)#([\w]+)$)RAW");
 
         std::wcmatch matches;
         if (std::regex_match(szInputString, matches, reConnectionString))
@@ -70,8 +89,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
             szSeparator = L",";
             szQuote = L"\"";
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
         else if (equalCaseInsensitive(szExtension, L".tsv"))
         {
@@ -79,22 +97,19 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
             szSeparator = L"\t";
             szQuote = L"";
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
         else if (equalCaseInsensitive(szExtension, L".parquet"))
         {
             Type = static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet);
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
         else if (equalCaseInsensitive(szExtension, L".orc"))
         {
             Type = static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC);
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
     }
     if (OutputSpec::Kind::StructuredFile & supported)
@@ -103,8 +118,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         {
             Type = static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile | OutputSpec::Kind::XML);
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
     }
     if (OutputSpec::Kind::StructuredFile & supported)
@@ -113,8 +127,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         {
             Type = static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON);
             ArchiveFormat = ArchiveFormat::Unknown;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
     }
     if (OutputSpec::Kind::Archive & supported)
@@ -124,8 +137,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         {
             Type = OutputSpec::Kind::Archive;
             ArchiveFormat = fmt;
-            Path = szExpanded;
-            return S_OK;
+            return Orc::GetOutputFile(szExpanded, Path, true);
         }
     }
 
@@ -141,27 +153,16 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         }
         else
         {
-            if (!CreateDirectory(szExpanded, NULL))
-            {
-                log::Error(
-                    pLog,
-                    hr = HRESULT_FROM_WIN32(GetLastError()),
-                    L"Failed to create directory \"%s\"\r\n",
-                    szExpanded);
-                return hr;
-            }
             Type = OutputSpec::Kind::Directory;
-            Path = szExpanded;
             CreationStatus = CreatedNew;
-            return S_OK;
+            return Orc::GetOutputDir(szExpanded, Path, true);
         }
     }
 
     if (OutputSpec::Kind::File & supported)
     {
         Type = OutputSpec::Kind::File;
-        Path = szExpanded;
-        return S_OK;
+        return Orc::GetOutputFile(szExpanded, Path, true);
     }
     return S_FALSE;
 }
@@ -177,21 +178,21 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         if (supported & static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL))
         {
             bool bDone = false;
-            if (item.SubItems[CONFIG_OUTPUT_CONNECTION])
+            if (::HasValue(item, CONFIG_OUTPUT_CONNECTION))
             {
                 Type = OutputSpec::Kind::SQL;
                 ConnectionString = item.SubItems[CONFIG_OUTPUT_CONNECTION];
                 bDone = true;
             }
-            if (item.SubItems[CONFIG_OUTPUT_TABLE])
+            if (::HasValue(item, CONFIG_OUTPUT_TABLE))
             {
                 TableName = item.SubItems[CONFIG_OUTPUT_TABLE];
             }
-            if (item.SubItems[CONFIG_OUTPUT_KEY])
+            if (::HasValue(item, CONFIG_OUTPUT_KEY))
             {
                 TableKey = item.SubItems[CONFIG_OUTPUT_KEY];
             }
-            if (item[CONFIG_OUTPUT_DISPOSITION])
+            if (::HasValue(item, CONFIG_OUTPUT_DISPOSITION))
             {
                 if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"createnew")
                     || equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"create_new"))
@@ -220,14 +221,14 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
                 log::Error(pLog, hr, L"An error occured when evaluating output item %s\r\n", item.c_str());
                 return hr;
             }
-            if (item.SubItems[CONFIG_OUTPUT_FORMAT])
+            if (::HasValue(item, CONFIG_OUTPUT_FORMAT))
             {
                 ArchiveFormat = Archive::GetArchiveFormat(item.SubItems[CONFIG_OUTPUT_FORMAT]);
             }
         }
 
         XOR = 0L;
-        if (item.SubItems[CONFIG_OUTPUT_XORPATTERN])
+        if (::HasValue(item, CONFIG_OUTPUT_XORPATTERN))
         {
             if (FAILED(hr = GetIntegerFromHexaString(item.SubItems[CONFIG_OUTPUT_XORPATTERN].c_str(), XOR)))
             {
@@ -241,7 +242,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         }
 
         OutputEncoding = OutputSpec::Encoding::UTF8;
-        if (item.SubItems[CONFIG_OUTPUT_ENCODING])
+        if (::HasValue(item, CONFIG_OUTPUT_ENCODING))
         {
             if (equalCaseInsensitive(item.SubItems[CONFIG_OUTPUT_ENCODING].c_str(), L"utf8"))
             {
@@ -262,12 +263,12 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
             }
         }
 
-        if (item.SubItems[CONFIG_OUTPUT_COMPRESSION])
+        if (::HasValue(item, CONFIG_OUTPUT_COMPRESSION))
         {
             Compression = item.SubItems[CONFIG_OUTPUT_COMPRESSION];
         }
 
-        if (item.SubItems[CONFIG_OUTPUT_PASSWORD])
+        if (::HasValue(item, CONFIG_OUTPUT_PASSWORD))
         {
             Password = item.SubItems[CONFIG_OUTPUT_PASSWORD];
         }
@@ -277,7 +278,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
 
 HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item)
 {
-    if (item.SubItems[CONFIG_UPLOAD_METHOD])
+    if (::HasValue(item, CONFIG_UPLOAD_METHOD))
     {
         if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_METHOD], L"BITS"sv))
         {
@@ -290,11 +291,12 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
         else
             Method = OutputSpec::UploadMethod::NoUpload;
 
-        if (item.SubItems[CONFIG_UPLOAD_JOBNAME])
+        if (::HasValue(item, CONFIG_UPLOAD_JOBNAME))
         {
             JobName = item.SubItems[CONFIG_UPLOAD_JOBNAME];
         }
-        if (item.SubItems[CONFIG_UPLOAD_SERVER])
+
+        if (::HasValue(item, CONFIG_UPLOAD_SERVER))
         {
             static std::wregex r(L"(http|https|file):(//|\\\\)(.*)", std::regex_constants::icase);
 
@@ -325,7 +327,7 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
                 return E_INVALIDARG;
             }
         }
-        if (item.SubItems[CONFIG_UPLOAD_ROOTPATH])
+        if (::HasValue(item, CONFIG_UPLOAD_ROOTPATH))
         {
             std::replace_copy(
                 begin(item.SubItems[CONFIG_UPLOAD_ROOTPATH].strData),
@@ -333,6 +335,7 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
                 back_inserter(RootPath),
                 bitsMode == BITSMode::SMB ? L'/' : L'\\',
                 bitsMode == BITSMode::SMB ? L'\\' : L'/');
+
             if (RootPath.empty())
             {
                 RootPath = bitsMode == BITSMode::SMB ? L"\\" : L"/";
@@ -342,17 +345,17 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
                 RootPath.insert(0, 1, bitsMode == BITSMode::SMB ? L'\\' : L'/');
             }
         }
-        if (item.SubItems[CONFIG_UPLOAD_USER])
+        if (::HasValue(item, CONFIG_UPLOAD_USER))
         {
             UserName = item.SubItems[CONFIG_UPLOAD_USER];
         }
-        if (item.SubItems[CONFIG_UPLOAD_PASSWORD])
+        if (::HasValue(item, CONFIG_UPLOAD_PASSWORD))
         {
             Password = item.SubItems[CONFIG_UPLOAD_PASSWORD];
         }
 
         Operation = OutputSpec::UploadOperation::Copy;
-        if (item.SubItems[CONFIG_UPLOAD_OPERATION])
+        if (::HasValue(item, CONFIG_UPLOAD_OPERATION))
         {
             if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_OPERATION], L"Copy"sv))
             {
@@ -365,7 +368,7 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
         }
 
         Mode = OutputSpec::UploadMode::Synchronous;
-        if (item.SubItems[CONFIG_UPLOAD_MODE])
+        if (::HasValue(item, CONFIG_UPLOAD_MODE))
         {
             if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_MODE], L"sync"sv))
             {
@@ -378,7 +381,7 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
         }
 
         AuthScheme = OutputSpec::UploadAuthScheme::Negotiate;
-        if (item.SubItems[CONFIG_UPLOAD_AUTHSCHEME])
+        if (::HasValue(item, CONFIG_UPLOAD_AUTHSCHEME))
         {
             if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_AUTHSCHEME], L"Anonymous"sv))
             {
@@ -402,12 +405,13 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
             }
         }
 
-        if (item.SubItems[CONFIG_UPLOAD_FILTER_INC])
+        if (::HasValue(item, CONFIG_UPLOAD_FILTER_INC))
         {
             boost::split(
                 FilterInclude, (const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_INC], boost::is_any_of(L",;"));
         }
-        if (item.SubItems[CONFIG_UPLOAD_FILTER_EXC])
+
+        if (::HasValue(item, CONFIG_UPLOAD_FILTER_EXC))
         {
             boost::split(
                 FilterExclude, (const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_INC], boost::is_any_of(L",;"));

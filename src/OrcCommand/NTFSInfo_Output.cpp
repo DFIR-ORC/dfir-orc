@@ -27,14 +27,14 @@ void Main::PrintUsage()
     log::Info(
         _L_,
         L"\r\n"
-        L"usage: DFIR-Orc.exe NTFSInfo [/config=<ConfigFile>] [/outdir=<Folder>] [/outfile=<OutputFile>] "
+        L"usage: DFIR-Orc.exe NTFSInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>] "
         L"[/Walker=USN|MFT]\r\n"
         L"\t[/(+|-)<ColumnSelection,...>:<Filter>] [/<DefaultColumnSelection>,...]\r\n"
         L"\t<Dir1> <Dir2> ... <DirN> [/KnownLocations|/kl]\r\n"
         L"\r\n"
         L"\t/config=<ConfigFile>     : Specify a XML config file\r\n"
         L"\r\n"
-        L"\t/utf8,/utf16			  : Select utf8 or utf16 enncoding (default is utf8)\r\n"
+        L"\t/utf8,/utf16			  : Select utf8 or utf16 encoding (default is utf8)\r\n"
         L"\r\n"
         L"\t/FileInfo=<OutputSpec>     : File information file output specification\r\n"
         L"\t/AttrInfo=<OutputSpec>     : Attribute information file output specification\r\n"
@@ -44,23 +44,13 @@ void Main::PrintUsage()
         L"\t\tOutput specification can be one of:\r\n"
         L"\t\t\tA file that will contain output for all locations\r\n"
         L"\t\t\tA directory that will contain one file per location (<Output>_<Location identifier>.csv)\r\n"
-        L"\t\t\tA SQL connection string and table name to import into (<connectionstring>#<tablename>)\r\n"
         L"\r\n"
         L"\t/computer=<ComputerName> : Substitute computer name to GetComputerName()\r\n"
         L"\r\n"
-        L"\t/errorcodes        : Columns in error will have \"Error=0x00000000\" reporting the error code\r\n"
-        L"\t/low               : Runs with lowered priority\n"
-        L"\t/verbose           : Turns on verbose logging\r\n"
-        L"\t/debug             : Adds debug information (Source File Name, Line number) to output, outputs to debugger "
-        L"(OutputDebugString)\r\n"
-        L"\t/noconsole         : Turns off console logging\r\n"
-        L"\t/logfile=<FileName>: All output is duplicated to logfile <FileName>\r\n"
-        L"\r\n"
         L"\t/ResurrectRecords    : Include records marked as \"not in use\" in enumeration. (they'll need the FILE "
         L"tag)\r\n"
-        L"\t/PopSysObj           : Populate system objects in locations (true by default).\r\n"
         L"\t/Walker=USN|MFT      : Walks the file systems entries through MFT parsing or USN Journal enumeration "
-        L"(default is USN)\r\n"
+        L"(default is MFT)\r\n"
         L"\r\n"
         L"\t/KnownLocations|/kl  : Scan a set of locations known to be of interest\r\n"
         L"\t/Shadows             : Add Volume Shadows Copies for selected volumes to parse\r\n"
@@ -68,6 +58,8 @@ void Main::PrintUsage()
         L"\t/<DefaultColumnSelection>,...: \r\n"
         L"\tSelects the columns to fill for each file system entry:"
         L"\r\n");
+
+    PrintCommonUsage();
 
     const ColumnNameDef* pCurCol = NtfsFileInfo::g_NtfsColumnNames;
 
@@ -269,7 +261,7 @@ void Main::PrintParameters()
 
 void Main::PrintFooter()
 {
-    log::Info(_L_, L"\r\nLines processed     : %u\r\n", dwTotalFileTreated);
+    log::Info(_L_, L"\r\nLines processed         : %u\r\n", dwTotalFileTreated);
 
     PrintExecutionTime();
     return;

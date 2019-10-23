@@ -17,6 +17,10 @@
 
 #pragma managed(push, off)
 
+#ifndef _LPCBYTE_DEFINED
+typedef BYTE const* LPCBYTE;
+#endif  //_LPCBYTE_DEFINED
+
 namespace Orc {
 
 class LogFileWriter;
@@ -95,7 +99,7 @@ public:
     }
 
     // Move assignment operator.
-    CBinaryBuffer& operator=(CBinaryBuffer&& other)
+    CBinaryBuffer& operator=(CBinaryBuffer&& other) 
     {
         if (this != &other)
         {
@@ -137,7 +141,7 @@ public:
     bool SetCount(size_t NewSize);
     BYTE* GetData() const { return m_pData; }
 
-    HRESULT SetData(const LPBYTE pBuffer, size_t cbSize);
+    HRESULT SetData(LPCBYTE pBuffer, size_t cbSize);
     HRESULT CopyTo(LPBYTE pBuffer, size_t cbSize);
 
     template <class T>

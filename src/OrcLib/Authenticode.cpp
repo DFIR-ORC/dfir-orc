@@ -33,7 +33,7 @@ using namespace Orc;
 static GUID WVTPolicyGUID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
 
 const FlagsDefinition Authenticode::AuthenticodeStatusDefs[] = {
-    {AUTHENTICODE_UNKNWON, L"Unknwon", L"This file's status is unknown"},
+    {AUTHENTICODE_UNKNOWN, L"Unknwon", L"This file status is unknown"},
     {AUTHENTICODE_NOT_PE, L"NotPE", L"This is not a PE"},
     {AUTHENTICODE_SIGNED_VERIFIED, L"SignedVerified", L"This PE is signed and signature verifies"},
     {AUTHENTICODE_CATALOG_SIGNED_VERIFIED, L"CatalogSignedVerified", L"This PE's hash is catalog signed"},
@@ -148,7 +148,7 @@ HRESULT Authenticode::FindCatalogForHash(const CBinaryBuffer& hash, bool& isCata
     return S_OK;
 }
 
-HRESULT Authenticode::VerifySignature(LPCWSTR szFileName, HANDLE hFile, AuthenticodeData& data)
+HRESULT Authenticode::VerifyEmbeddedSignature(LPCWSTR szFileName, HANDLE hFile, AuthenticodeData& data)
 {
     // Initialize the WINTRUST_FILE_INFO structure.
     WINTRUST_FILE_INFO FileData;
@@ -174,7 +174,7 @@ HRESULT Authenticode::VerifySignature(LPCWSTR szFileName, HANDLE hFile, Authenti
 }
 
 HRESULT
-Authenticode::VerifySignature(LPCWSTR szFileName, const CBinaryBuffer& hash, HCATINFO& hCatalog, AuthenticodeData& data)
+Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffer& hash, HCATINFO& hCatalog, AuthenticodeData& data)
 {
     DBG_UNREFERENCED_PARAMETER(szFileName);
     CATALOG_INFO InfoStruct;
@@ -399,7 +399,18 @@ HRESULT Authenticode::Verify(LPCWSTR pwszSourceFile, AuthenticodeData& data)
     else if (HashSize == BYTES_IN_SHA256_HASH)
         hashs.sha256 = hash;
 
-    return Verify(pwszSourceFile, hashs, data);
+    hr = VerifyAnySignatureWithCatalogs(pwszSourceFile, hashs, data);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (data.AuthStatus != AUTHENTICODE_NOT_SIGNED)
+    {
+        return S_OK;
+    }
+
+    return VerifyEmbeddedSignature(pwszSourceFile, hFile, data);
 }
 
 HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStream>& pStream, AuthenticodeData& data)
@@ -460,8 +471,8 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
 
     static DWORD dwRequestedHashSize = Authenticode::ExpectedHashSize(_L_);
 
-    SupportedAlgorithm algs =
-        dwRequestedHashSize == BYTES_IN_SHA1_HASH ? SupportedAlgorithm::SHA1 : SupportedAlgorithm::SHA256;
+    CryptoHashStream::Algorithm algs =
+        dwRequestedHashSize == BYTES_IN_SHA1_HASH ? CryptoHashStream::Algorithm::SHA1 : CryptoHashStream::Algorithm::SHA256;
 
     hashstream->OpenToWrite(algs, nullptr);
 
@@ -479,10 +490,10 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
     hashstream->GetSHA1(hashs.sha1);
     hashstream->GetSHA256(hashs.sha256);
 
-    return Verify(szFileName, hashs, data);
+    return VerifyAnySignatureWithCatalogs(szFileName, hashs, data);
 }
 
-HRESULT Authenticode::Verify(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data)
+HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data)
 {
     HRESULT hr = E_FAIL;
 
@@ -491,6 +502,36 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const PE_Hashs& hashs, Authenti
 
     HCATINFO hCatalog = INVALID_HANDLE_VALUE;
     bool bIsCatalogSigned = false;
+
+	if (hCatalog == INVALID_HANDLE_VALUE && hashs.sha256.GetCount())
+    {
+        if (FAILED(hr = FindCatalogForHash(hashs.sha256, bIsCatalogSigned, hCatalog)))
+        {
+            log::Verbose(_L_, L"Could not find a catalog for SHA256 hash\r\n");
+        }
+        else if (bIsCatalogSigned)
+        {
+            // Only if file is catalog signed and hash was passed, proceed with verification
+            if (FAILED(hr = VerifySignatureWithCatalogs(szFileName, hashs.sha256, hCatalog, data)))
+                return hr;
+            return S_OK;
+        }
+    }
+
+    if (hCatalog == INVALID_HANDLE_VALUE && hashs.sha1.GetCount())
+    {
+        if (FAILED(hr = FindCatalogForHash(hashs.sha1, bIsCatalogSigned, hCatalog)))
+        {
+            log::Verbose(_L_, L"Could not find a catalog for SHA1 hash\r\n");
+        }
+        else if (bIsCatalogSigned)
+        {
+            // Only if file is catalog signed and hash was passed, proceed with verification
+            if (FAILED(hr = VerifySignatureWithCatalogs(szFileName, hashs.sha1, hCatalog, data)))
+                return hr;
+            return S_OK;
+        }
+    }
 
     if (hashs.md5.GetCount())
     {
@@ -501,39 +542,12 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const PE_Hashs& hashs, Authenti
         else if (bIsCatalogSigned)
         {
             // Only if file is catalog signed and hash was passed, proceed with verification
-            if (FAILED(hr = VerifySignature(szFileName, hashs.md5, hCatalog, data)))
+            if (FAILED(hr = VerifySignatureWithCatalogs(szFileName, hashs.md5, hCatalog, data)))
                 return hr;
             return S_OK;
         }
     }
-    if (hCatalog == INVALID_HANDLE_VALUE && hashs.sha1.GetCount())
-    {
-        if (FAILED(hr = FindCatalogForHash(hashs.sha1, bIsCatalogSigned, hCatalog)))
-        {
-            log::Verbose(_L_, L"Could not find a catalog for SHA1 hash\r\n");
-        }
-        else if (bIsCatalogSigned)
-        {
-            // Only if file is catalog signed and hash was passed, proceed with verification
-            if (FAILED(hr = VerifySignature(szFileName, hashs.sha1, hCatalog, data)))
-                return hr;
-            return S_OK;
-        }
-    }
-    if (hCatalog == INVALID_HANDLE_VALUE && hashs.sha256.GetCount())
-    {
-        if (FAILED(hr = FindCatalogForHash(hashs.sha256, bIsCatalogSigned, hCatalog)))
-        {
-            log::Verbose(_L_, L"Could not find a catalog for SHA256 hash\r\n");
-        }
-        else if (bIsCatalogSigned)
-        {
-            // Only if file is catalog signed and hash was passed, proceed with verification
-            if (FAILED(hr = VerifySignature(szFileName, hashs.sha256, hCatalog, data)))
-                return hr;
-            return S_OK;
-        }
-    }
+
     data.bSignatureVerifies = false;
     data.isSigned = false;
     data.AuthStatus = AUTHENTICODE_NOT_SIGNED;

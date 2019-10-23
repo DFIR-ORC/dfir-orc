@@ -41,6 +41,7 @@ public:
         const ColumnNameDef aliasNames[],
         const ColumnNameDef columnNames[]);
     static HRESULT GetFilterFromArg(
+        const logger& pLog,
         LPCWSTR szConstArg,
         Filter& filter,
         const ColumnNameDef aliasNames[],

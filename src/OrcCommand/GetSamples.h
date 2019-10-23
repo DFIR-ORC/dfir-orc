@@ -35,7 +35,7 @@ public:
     {
 
     public:
-        OutputSpec criteriasConfig;
+        OutputSpec getThisConfig;
         OutputSpec samplesOutput;
         OutputSpec sampleinfoOutput;
         OutputSpec timelineOutput;
@@ -61,7 +61,7 @@ public:
         Configuration(logger pLog)
             : locs(std::move(pLog))
         {
-            criteriasConfig.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile);
+            getThisConfig.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile);
             samplesOutput.supportedTypes =
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::Archive | OutputSpec::Kind::Directory);
             sampleinfoOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile);
@@ -120,6 +120,8 @@ public:
     HRESULT CheckConfiguration();
 
     HRESULT Run();
+
+    HRESULT ProcessOptionAutorun(const ConfigItem& item);
 };
 
 }  // namespace Command::GetSamples

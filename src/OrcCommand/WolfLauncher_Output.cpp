@@ -30,12 +30,12 @@ void Main::PrintUsage()
     log::Info(
         _L_,
         L"\r\n"
-        L"usage: DFIR-Orc.Exe [/config=<ConfigFile>] [/outdir=<Folder>] [/outfile=<OutputFile>] \r\n"
+        L"usage: DFIR-Orc.Exe [/config=<ConfigFile>] [/out=<Folder>]\r\n"
         L"\t/config=<ConfigFile>        : Specify a XML config file\r\n"
         L"\t/local=<ConfigFile>         : Specify a XML local config file\r\n"
         L"\r\n"
         L"\t/OutDir=<Folder>            : Output files will be created here\r\n"
-        L"\t/utf8,/utf16		         : Select utf8 or utf16 enncoding (default is utf8, this is for CSV "
+        L"\t/utf8,/utf16		         : Select utf8 or utf16 encoding (default is utf8, this is for CSV "
         L"files "
         L"only)\r\n"
         L"\r\n"
@@ -60,15 +60,8 @@ void Main::PrintUsage()
         L"\t/FullComputer=<ComputerName>: Sets the OrcFullComputer name for all DFIR-Orc tools\r\n"
         L"\t/SystemType=<SystemType>    : Sets the system type as typically used in {SystemType} to name archives"
         L"\t/Offline=<ImagePath>        : Sets the DFIR-Orc to work on a disk image, will set %OfflineLocation% and "
-        L"explicitely select archive DFIR-ORC_Offline"
-        L"\r\n"
-        L"\t/verbose           : Turns on verbose logging\r\n"
-        L"\t/debug             : Adds debug information (Source File Name, Line number) to output, outputs to debugger "
-        L"(OutputDebugString)\r\n"
-        L"\t/noconsole         : Turns off console logging\r\n"
-        L"\t/logfile=<FileName>: All output is duplicated to logfile <FileName>\r\n"
-        L"\r\n"
-        L"\r\n");
+        L"explicitely select archive DFIR-ORC_Offline");
+    PrintCommonUsage();
 }
 
 void Main::PrintParameters()

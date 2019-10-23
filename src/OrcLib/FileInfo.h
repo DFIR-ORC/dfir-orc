@@ -38,8 +38,7 @@ public:
         const std::vector<Filter>& filters,
         LPCWSTR szFullFileName,
         DWORD dwLen,
-        Authenticode& verifytrust,
-        bool bWriteErrorCodes);
+        Authenticode& verifytrust);
     virtual ~FileInfo();
 
     const WCHAR* GetFullName() const { return m_szFullName; }
@@ -64,7 +63,7 @@ public:
     static bool HasSpecificExtension(const WCHAR* pszName, const WCHAR* pszExtensions[]);
 
     static Intentions
-    GetIntentions(const WCHAR* szParams, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[]);
+    GetIntentions(const logger& pLog, const WCHAR* szParams, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[]);
     static Intentions GetFilterIntentions(const std::vector<Filter>& filters);
 
     static HRESULT BindColumns(
@@ -152,22 +151,21 @@ protected:
     HRESULT WriteAuthenticodeCAThumbprint(ITableOutput& output);
 
 protected:
+
     logger _L_;
     const std::shared_ptr<VolumeReader> m_pVolReader;
 
-    HANDLE m_hFile;
+    HANDLE m_hFile = INVALID_HANDLE_VALUE;
     PEInfo m_PEInfo;
 
     std::wstring m_strComputerName;
 
-    const WCHAR* m_szFullName;
-    DWORD m_dwFullNameLen;
-
-    bool m_bWriteErrorCodes;
+    const WCHAR* m_szFullName = nullptr;
+    DWORD m_dwFullNameLen = 0LU;
 
     const std::vector<Filter>& m_Filters;
-    Intentions m_DefaultIntentions;
-    Intentions m_ColumnIntentions;
+    Intentions m_DefaultIntentions = FILEINFO_NONE;
+    Intentions m_ColumnIntentions  = FILEINFO_NONE;
 
     Authenticode& m_codeVerifyTrust;
 

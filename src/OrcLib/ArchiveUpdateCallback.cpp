@@ -330,19 +330,8 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
     item.Index = m_curIndexInArchive;
     m_Indexes[m_curIndexInArchive] = m_curIndex;
     m_curIndexInArchive++;
-    auto hashstream =
-        std::dynamic_pointer_cast<CryptoHashStream>(ByteStream::GetHashStream(m_Items[m_curIndex].Stream));
-    if (hashstream)
-    {
-        hashstream->GetMD5(item.MD5);
-        hashstream->GetSHA1(item.SHA1);
-    }
-    hashstream = nullptr;
 
     m_Items[m_curIndex].currentStatus = Archive::ArchiveItem::Status::Done;
-
-    // CLOSE
-    m_Items[m_curIndex].Stream = nullptr;
 
     if (m_Callback)
         m_Callback(item);
