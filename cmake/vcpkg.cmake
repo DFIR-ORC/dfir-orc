@@ -90,7 +90,7 @@ function(vcpkg_install_packages)
 
     if(VCPKG_BUILD)
         execute_process(
-            COMMAND "vcpkg" --vcpkg-root ${VCPKG_PATH} install ${PACKAGES}
+            COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} install ${PACKAGES}
             WORKING_DIRECTORY ${VCPKG_PATH}
             RESULT_VARIABLE RESULT
         )
@@ -183,4 +183,56 @@ function(vcpkg_install)
     set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} PARENT_SCOPE)
     set(VCPKG_TARGET_TRIPLET ${VCPKG_TARGET_TRIPLET} PARENT_SCOPE)
     set(VCPKG_FOUND TRUE PARENT_SCOPE)
+endfunction()
+
+
+#
+# vcpkg_upgrade: upgrade dependencies
+#
+#   ARGUMENTS
+#       VCPKG_PATH            path        vcpkg path
+#
+function(vcpkg_upgrade)
+    set(OPTIONS)
+    set(SINGLE PATH ARCH USE_STATIC_CRT BUILD)
+    set(MULTI PACKAGES)
+
+    cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
+
+    if(NOT EXISTS ${VCPKG_PATH}/vcpkg.exe)
+        return()
+    endif()
+
+    # Probe for "vcpkg.exe update available" message
+    execute_process(
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} install 7zip --dry-run
+        WORKING_DIRECTORY ${VCPKG_PATH}
+        OUTPUT_VARIABLE OUTPUT
+        ERROR_QUIET
+    )
+
+    string(FIND ${OUTPUT} "Use .\\bootstrap-vcpkg.bat to update." FIND_RESULT)
+    if(${FIND_RESULT} GREATER_EQUAL 0)
+        message(STATUS "vcpkg update is available")
+
+        execute_process(
+            COMMAND "bootstrap-vcpkg.bat"
+            WORKING_DIRECTORY ${VCPKG_PATH}
+            RESULT_VARIABLE RESULT
+        )
+
+        if(${RESULT} LESS 0)
+            message(FATAL_ERROR "Failed to upgrade bootstrap: ${RESULT}")
+        endif()
+    endif()
+
+    execute_process(
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} upgrade --no-dry-run
+        WORKING_DIRECTORY ${VCPKG_PATH}
+        RESULT_VARIABLE RESULT
+    )
+
+    if(${RESULT} LESS 0)
+        message(FATAL_ERROR "Failed to upgrade vcpkg: ${RESULT}")
+    endif()
 endfunction()
