@@ -237,14 +237,19 @@ public:
 
     void SetOptional() { m_bOptional = true; }
     void SetMandatory() { m_bOptional = false; }
-    bool IsOptional() { return m_bOptional; }
+    bool IsOptional() const { return m_bOptional; }
+
+    bool ShouldUpload() const {
+        if (m_Output.UploadOutput && m_Output.UploadOutput->IsFileUploaded(_L_, m_strOutputFileName))
+            return true;
+        return false;
+    }
 
     void SetChildDebug() { m_bChildDebug = true; }
     void UnSetChildDebug() { m_bChildDebug = false; }
 
     bool IsChildDebugActive(boost::tribool bGlobalSetting) const
     {
-
         if (boost::indeterminate(bGlobalSetting))
         {
             return (bool)m_bChildDebug;
