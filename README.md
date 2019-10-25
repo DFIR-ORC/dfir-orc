@@ -6,6 +6,7 @@
 ## Documentation
 https://dfir-orc.github.io
 
+
 ## Build
 
 ### Requirements
@@ -24,7 +25,7 @@ Both 32-bit and 64-bit versions should be built for maximum compatiliby before d
 In a prompt like *Developer Command Prompt for VS 2019* (prefer to avoid using *cmd.exe*):
 
 ```bash
-git clone https://github.com/dfir-orc/dfir-orc.git
+git clone --recursive https://github.com/dfir-orc/dfir-orc.git
 cd dfir-orc
 mkdir build-x86 build-x64
 
@@ -40,6 +41,8 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 * The `-T v141_xp` option will allow compatibility with Windows XP SP2 and later, it can safely be removed if this is not required.
 
 * The `ORC_BUILD_VCPKG=ON` option will build vcpkg packages in 'external/vcpkg' subdirectory.
+
+**Important** Always do a `git submodule update` after any `git pull` to update submodules aswell. Alternatively, always pull with `git pull --recurse-submodules`
 
 
 ### Options
@@ -66,8 +69,8 @@ Using default options is recommended with the exception of `ORC_BUILD_VCPKG` whi
 
 [2] The `xmllite.dll` is native after patched Windows XP SP2
 
-
 **Note:** Some combinations may be irrelevant.
+
 
 ### Build vcpkg dependencies manually
 See top **CMakeLists.txt** for a complete list of the dependencies to install. Building mainstream vcpkg may not work as some packages have custom patches. The **VERSION.txt** contains the reference commit from official vcpkg repository.
