@@ -1,11 +1,15 @@
 trigger:
   - master
+
 jobs:
   - job: vs2017_x64
     timeoutInMinutes: 600
     pool:
       vmImage: 'vs2017-win2016'
     steps:
+    - checkout: self
+      clean: true
+      submodules: true
     - script: mkdir build-x64
       displayName: Make Build Directory
     - task: CMake@1
@@ -24,12 +28,14 @@ jobs:
         testAssemblyVer2: '**/OrcLibTest.dll'
         platform: "x64"
         configuration: "MinSizeRel"
-
   - job: vs2017_x86
     timeoutInMinutes: 600
     pool:
       vmImage: 'vs2017-win2016'
     steps:
+    - checkout: self
+      clean: true
+      submodules: true
     - script: mkdir build-x86
       displayName: Make Build Directory
     - task: CMake@1
