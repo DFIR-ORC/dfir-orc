@@ -58,7 +58,7 @@ void Main::PrintUsage()
         L"DisplayRequired, UserPresent, AwayMode. Recommended: SystemRequired,AwayMode\r\n"
         L"\t/Computer=<ComputerName>    : Sets the OrcComputer name for all DFIR-Orc tools\r\n"
         L"\t/FullComputer=<ComputerName>: Sets the OrcFullComputer name for all DFIR-Orc tools\r\n"
-        L"\t/SystemType=<SystemType>    : Sets the system type as typically used in {SystemType} to name archives"
+        L"\t/SystemType=<SystemType>    : Sets the system type as typically used in {SystemType} to name archives\r\n"
         L"\t/Offline=<ImagePath>        : Sets the DFIR-Orc to work on a disk image, will set %OfflineLocation% and "
         L"explicitely select archive DFIR-ORC_Offline");
     PrintCommonUsage();
