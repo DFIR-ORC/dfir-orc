@@ -2,55 +2,9 @@ trigger:
   - master
 
 jobs:
-  - job: vs2017_x64
-    timeoutInMinutes: 600
-    pool:
-      vmImage: 'vs2017-win2016'
-    steps:
-    - checkout: self
-      clean: true
-      submodules: true
-    - script: mkdir build-x64
-      displayName: Make Build Directory
-    - task: CMake@1
-      displayName: CMake configuration
-      inputs:
-        workingDirectory: 'build-x64'
-        cmakeArgs: '-G "Visual Studio 15 2017 Win64" -T v141_xp -DORC_BUILD_VCPKG=ON ..'
-    - task: CMake@1
-      displayName: CMake build
-      inputs:
-        workingDirectory: 'build-x64'
-        cmakeArgs: '--build . --config MinSizeRel -- -maxcpucount'
-    - task: VSTest@2
-      inputs:
-        testSelector: 'testAssemblies'
-        testAssemblyVer2: '**/OrcLibTest.dll'
-        platform: "x64"
-        configuration: "MinSizeRel"
-  - job: vs2017_x86
-    timeoutInMinutes: 600
-    pool:
-      vmImage: 'vs2017-win2016'
-    steps:
-    - checkout: self
-      clean: true
-      submodules: true
-    - script: mkdir build-x86
-      displayName: Make Build Directory
-    - task: CMake@1
-      displayName: CMake configuration
-      inputs:
-        workingDirectory: 'build-x86'
-        cmakeArgs: '-G "Visual Studio 15 2017" -T v141_xp -DORC_BUILD_VCPKG=ON ..'
-    - task: CMake@1
-      displayName: CMake build
-      inputs:
-        workingDirectory: 'build-x86'
-        cmakeArgs: '--build . --config MinSizeRel -- -maxcpucount'
-    - task: VSTest@2
-      inputs:
-        testSelector: 'testAssemblies'
-        testAssemblyVer2: '**/OrcLibTest.dll'
-        platform: "x86"
-        configuration: "MinSizeRel"
+- template: azure-pipelines-template.yml
+  parameters:
+    arch: "x64"
+- template: azure-pipelines-template.yml
+  parameters:
+    arch: "x86"

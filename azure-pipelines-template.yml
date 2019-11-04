@@ -1,0 +1,34 @@
+parameters:
+  arch: ''
+
+jobs:
+- job: vs2017_${{ parameters.arch }}
+  variables:
+    ${{ if eq( parameters.arch, 'x64') }}:
+      winArch: " Win64"
+    ${{ if eq( parameters.arch, 'x86') }}:
+      winArch: ""
+  pool:
+    vmImage: 'vs2017-win2016'
+  steps:
+  - checkout: self
+    clean: true
+    submodules: true
+  - script: mkdir build-${{ parameters.arch }}
+    displayName: Make Build Directory
+  - task: CMake@1
+    displayName: CMake configuration
+    inputs:
+      workingDirectory: 'build-${{ parameters.arch }}'
+      cmakeArgs: '-G "Visual Studio 15 2017${{ variables.winArch }}" -T v141_xp -DORC_BUILD_VCPKG=ON ..'
+  - task: CMake@1
+    displayName: CMake build
+    inputs:
+      workingDirectory: 'build-${{ parameters.arch }}'
+      cmakeArgs: '--build . --config MinSizeRel -- -maxcpucount'
+  - task: VSTest@2
+    inputs:
+      testSelector: 'testAssemblies'
+      testAssemblyVer2: '**/OrcLibTest.dll'
+      platform: "${{ parameters.arch }}"
+      configuration: "MinSizeRel"
