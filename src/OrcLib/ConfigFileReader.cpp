@@ -53,7 +53,6 @@ HRESULT ConfigFileReader::NavigateConfigNodeList(const CComPtr<IXmlReader>& pRea
     }
 
     config.Status = ConfigItem::PRESENT;
-
     return S_OK;
 }
 
@@ -69,6 +68,7 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
 
         if (FAILED(hr = pReader->MoveToFirstAttribute()))
         {
+            XmlLiteExtension::LogError(_L_, hr, pReader);
             return hr;
         }
 
@@ -77,7 +77,7 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
             const WCHAR* pName = NULL;
             if (FAILED(hr = pReader->GetLocalName(&pName, NULL)))
             {
-                log::Error(_L_, hr, L"Error reading element name\r\n");
+                XmlLiteExtension::LogError(_L_, hr, pReader);
                 pReader->MoveToElement();
                 return hr;
             }
@@ -85,7 +85,6 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
             auto it = std::find_if(begin(config.SubItems), end(config.SubItems), [pName](ConfigItem& item) -> bool {
                 if (item.Type == ConfigItem::ConfigItemType::ATTRIBUTE)
                     return equalCaseInsensitive(item.strName, pName);
-
                 return false;
             });
 
@@ -100,7 +99,7 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
                 const WCHAR* pValue = NULL;
                 if (FAILED(hr = pReader->GetValue(&pValue, NULL)))
                 {
-                    log::Error(_L_, hr, L"Error reading attribute value\r\n");
+                    XmlLiteExtension::LogError(_L_, hr, pReader);
                     pReader->MoveToElement();
                     return hr;
                 }
@@ -125,7 +124,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
     const WCHAR* pName = NULL;
     if (FAILED(hr = pReader->GetLocalName(&pName, NULL)))
     {
-        log::Error(_L_, hr, L"Error reading element name\r\n");
+        XmlLiteExtension::LogError(_L_, hr, pReader);
         return hr;
     }
 
@@ -159,7 +158,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 const WCHAR* pLocalName = NULL;
                 if (FAILED(hr = pReader->GetLocalName(&pLocalName, NULL)))
                 {
-                    log::Error(_L_, hr, L"Error reading element name\r\n");
+                    XmlLiteExtension::LogError(_L_, hr, pReader);
                     return hr;
                 }
 
@@ -205,7 +204,6 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                     }
                     else
                     {
-
                         if (it->Type == ConfigItem::ConfigItemType::NODE)
                         {
                             if (FAILED(hr = NavigateConfigAttributes(pReader, *it)))
@@ -242,7 +240,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 const WCHAR* pValue = NULL;
                 if (FAILED(hr = pReader->GetValue(&pValue, NULL)))
                 {
-                    log::Error(_L_, hr, L"Error reading value\r\n");
+                    XmlLiteExtension::LogError(_L_, hr, pReader);
                     return hr;
                 }
                 if (!pValue || L'\0' == (*pValue))
@@ -258,7 +256,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 const WCHAR* pLocalName = NULL;
                 if (FAILED(hr = pReader->GetLocalName(&pLocalName, NULL)))
                 {
-                    log::Error(_L_, hr, L"Error reading element name\r\n");
+                    XmlLiteExtension::LogError(_L_, hr, pReader);
                     return hr;
                 }
 
@@ -281,7 +279,10 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
         }
     }
     if (FAILED(hr))
+    {
+        XmlLiteExtension::LogError(_L_, hr, pReader);
         return hr;
+    }
     return S_OK;
 }
 
@@ -327,7 +328,7 @@ HRESULT ConfigFileReader::ReadConfig(
 
     if (FAILED(hr = m_xmllite->CreateXmlReader(IID_IXmlReader, (PVOID*)&pReader, nullptr)))
     {
-        XmlLiteExtension::LogError(_L_, hr, nullptr);
+        XmlLiteExtension::LogError(_L_, hr, pReader);
         log::Error(_L_, hr, L"Failed to instantiate Xml reader\r\n");
         return hr;
     }
@@ -336,7 +337,7 @@ HRESULT ConfigFileReader::ReadConfig(
     {
         if (FAILED(hr = pReader->SetInput(stream)))
         {
-            XmlLiteExtension::LogError(_L_, hr, nullptr);
+            XmlLiteExtension::LogError(_L_, hr, pReader);
             log::Error(_L_, hr, L"Failed to set input stream\r\n");
             return hr;
         }
@@ -349,13 +350,13 @@ HRESULT ConfigFileReader::ReadConfig(
                 hr = m_xmllite->CreateXmlReaderInputWithEncodingName(
                     stream, nullptr, szEncodingHint, FALSE, L"", &pInput)))
         {
-            XmlLiteExtension::LogError(_L_, hr, nullptr);
+            XmlLiteExtension::LogError(_L_, hr, pReader);
             log::Error(_L_, hr, L"Failed to set output stream\r\n");
             return hr;
         }
         if (FAILED(hr = pReader->SetInput(pInput)))
         {
-            XmlLiteExtension::LogError(_L_, hr, nullptr);
+            XmlLiteExtension::LogError(_L_, hr, pReader);
             log::Error(_L_, hr, L"Failed to set input stream\r\n");
             return hr;
         }
@@ -376,7 +377,7 @@ HRESULT ConfigFileReader::ReadConfig(
                     const WCHAR* pName = NULL;
                     if (FAILED(hr = pReader->GetLocalName(&pName, NULL)))
                     {
-                        log::Error(_L_, hr, L"Error reading element name\r\n");
+                        XmlLiteExtension::LogError(_L_, hr, pReader);
                         return hr;
                     }
                     if (equalCaseInsensitive(config.strName, pName))
