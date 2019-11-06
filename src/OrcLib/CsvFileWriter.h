@@ -256,13 +256,14 @@ private:
         }
         catch (const fmt::format_error& error)
         {
-            log::Error(_L_, E_INVALIDARG, L"fmt::format_error: %S\r\n", error.what());
+            const auto [hr, errorMsg] = AnsiToWide(_L_, error.what());
+            log::Error(_L_, E_INVALIDARG, L"fmt::format_error: %s\r\n", errorMsg);
             return E_INVALIDARG;
         }
         catch (const fmt::windows_error& system_error)
         {
-            log::Error(
-                _L_, HRESULT_FROM_WIN32(system_error.error_code()), L"fmt::windows_error: %S\r\n", system_error.what());
+            const auto [hr, errorMsg] = AnsiToWide(_L_, system_error.what());
+            log::Error(_L_, HRESULT_FROM_WIN32(system_error.error_code()), L"fmt::windows_error: %s\r\n", errorMsg);
             return HRESULT_FROM_WIN32(system_error.error_code());
         }
         return S_OK;
