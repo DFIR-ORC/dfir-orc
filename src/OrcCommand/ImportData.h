@@ -61,7 +61,8 @@ public:
     public:
         Configuration(logger pLog)
         {
-            Output.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL);
+            Output.supportedTypes = static_cast<OutputSpec::Kind>(
+                OutputSpec::Kind::SQL | OutputSpec::Kind::CSV | OutputSpec::Kind::TSV | OutputSpec::Kind::TableFile);
             importOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL);
             extractOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory);
             tempOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory);
