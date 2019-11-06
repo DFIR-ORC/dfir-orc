@@ -12,7 +12,7 @@
 
 #include "WideAnsi.h"
 
-#include "safeint.h"
+#include <safeint.h>
 
 using namespace Orc;
 using namespace Orc::TableOutput;
@@ -168,6 +168,7 @@ HRESULT BoundColumn::PrintToBuffer(const CHAR* szFormat, va_list argList)
 
 HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::wstring_view& svString)
 {
+    using namespace msl::utilities;
     HRESULT hr = E_FAIL;
 
     auto dwStrMaxLen = dwLen.value_or(dwMaxLen.value_or(DBMAXCHAR));
@@ -183,7 +184,7 @@ HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::wstring_view& svSt
         break;
     case UTF8Type:
         boundData.AString->iIndicator = svString.size();
-        if (FAILED(hr = WideToAnsi(nullptr, svString.data(), svString.size(), boundData.AString->Data, dwStrMaxLen)))
+        if (FAILED(hr = WideToAnsi(nullptr, svString.data(), SafeInt<DWORD>(svString.size()), boundData.AString->Data, dwStrMaxLen)))
             return hr;
         break;
     case BinaryType:
@@ -201,6 +202,8 @@ HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::wstring_view& svSt
 
 HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::string_view& svString)
 {
+    using namespace msl::utilities;
+
     HRESULT hr = E_FAIL;
 
     auto dwStrMaxLen = dwLen.value_or(dwMaxLen.value_or(DBMAXCHAR));
@@ -216,7 +219,7 @@ HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::string_view& svStr
             hr = AnsiToWide(
                 nullptr,
                 svString.data(),
-                svString.size(),
+                SafeInt<DWORD>(svString.size()),
                 boundData.WString->Data,
                 dwStrMaxLen)))
             return hr;
