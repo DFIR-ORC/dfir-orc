@@ -183,14 +183,14 @@ HRESULT CommandAgent::ApplyPattern(
 }
 
 HRESULT CommandAgent::ReversePattern(
-    const std::wstring& Pattern,
+    const std::wstring& pattern,
     const std::wstring& input,
-    std::wstring& SystemType,
-    std::wstring& FullComputerName,
-    std::wstring& ComputerName,
-    std::wstring& TimeStamp)
+    std::wstring& systemType,
+    std::wstring& fullComputerName,
+    std::wstring& computerName,
+    std::wstring& timeStamp)
 {
-    if (Pattern.empty())
+    if (pattern.empty())
     {
         return S_OK;
     }
@@ -200,7 +200,7 @@ HRESULT CommandAgent::ReversePattern(
 
     array<int, 5> PatternIndex = {0, 0, 0, 0, 0};
     {
-        auto it = std::wsregex_iterator(begin(Pattern), end(Pattern), r_All);
+        auto it = std::wsregex_iterator(begin(pattern), end(pattern), r_All);
         std::wsregex_iterator rend;
 
         int Idx = 1;
@@ -223,7 +223,7 @@ HRESULT CommandAgent::ReversePattern(
         }
     }
 
-    wstring strReverseRegEx = Pattern;
+    wstring strReverseRegEx = pattern;
 
     if (PatternIndex[SystemTypeIdx] > 0)
     {
@@ -256,28 +256,28 @@ HRESULT CommandAgent::ReversePattern(
         {
             if (inputMatch[PatternIndex[SystemTypeIdx]].matched)
             {
-                SystemType = inputMatch[PatternIndex[SystemTypeIdx]].str();
+                systemType = inputMatch[PatternIndex[SystemTypeIdx]].str();
             }
         }
         if (PatternIndex[ComputerNameIdx] > 0)
         {
             if (inputMatch[PatternIndex[ComputerNameIdx]].matched)
             {
-                ComputerName = inputMatch[PatternIndex[ComputerNameIdx]].str();
+                computerName = inputMatch[PatternIndex[ComputerNameIdx]].str();
             }
         }
         if (PatternIndex[FullComputerNameIdx] > 0)
         {
             if (inputMatch[PatternIndex[FullComputerNameIdx]].matched)
             {
-                FullComputerName = inputMatch[PatternIndex[FullComputerNameIdx]].str();
+                fullComputerName = inputMatch[PatternIndex[FullComputerNameIdx]].str();
             }
         }
         if (PatternIndex[TimeStampIdx] > 0)
         {
             if (inputMatch[PatternIndex[TimeStampIdx]].matched)
             {
-                TimeStamp = inputMatch[PatternIndex[TimeStampIdx]].str();
+                timeStamp = inputMatch[PatternIndex[TimeStampIdx]].str();
             }
         }
     }

@@ -4,6 +4,7 @@
 // Copyright © 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl
 //
 
 #include "stdafx.h"
@@ -13,23 +14,29 @@
 #include "ParameterCheck.h"
 #include "LogFileWriter.h"
 #include "TableOutputWriter.h"
-
 #include "ConfigFile_ExtractData.h"
-
 #include "ImportDefinition.h"
-
 #include "EmbeddedResource.h"
 #include "Temporary.h"
-
-using namespace std;
+#include "CaseInsensitive.h"
+#include "WinApiHelper.h"
+#include "WideAnsi.h"
 
 using namespace Orc;
 using namespace Orc::Command::ExtractData;
 
-HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
+namespace fs = std::filesystem;
+
+HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaItem)
 {
-    config.Output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.Output.TableKey.empty() ? L"import" : config.Output.TableKey.c_str(), schemaitem);
+    std::wstring tableName(config.reportOutput.TableKey);
+
+    if (tableName.empty())
+    {
+        tableName = L"extract";
+    }
+
+    config.reportOutput.Schema = TableOutput::GetColumnsFromConfig(_L_, tableName.c_str(), schemaItem);
     return S_OK;
 }
 
@@ -38,296 +45,150 @@ ConfigItem::InitFunction Main::GetXmlConfigBuilder()
     return Orc::Config::ExtractData::root;
 }
 
-HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
+HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configItem)
 {
     HRESULT hr = E_FAIL;
 
-    if (configitem[EXTRACTDATA_OUTPUT])
+    if (configItem[EXTRACTDATA_OUTPUT])
     {
-        if (FAILED(hr = config.Output.Configure(_L_, config.Output.supportedTypes, configitem[EXTRACTDATA_OUTPUT])))
+        hr = config.output.Configure(_L_, config.output.supportedTypes, configItem[EXTRACTDATA_OUTPUT]);
+        if (FAILED(hr))
         {
             return hr;
-        }
-    }
-    if (configitem[EXTRACTDATA_EXTRACT_OUTPUT])
-    {
-        if (FAILED(
-                hr = config.importOutput.Configure(
-                    _L_, config.importOutput.supportedTypes, configitem[EXTRACTDATA_EXTRACT_OUTPUT])))
-        {
-            return hr;
-        }
-    }
-    if (configitem[EXTRACTDATA_EXTRACT_OUTPUT])
-    {
-        if (FAILED(
-                hr = config.extractOutput.Configure(
-                    _L_, config.extractOutput.supportedTypes, configitem[EXTRACTDATA_EXTRACT_OUTPUT])))
-        {
-            return hr;
-        }
-    }
-    if (configitem[EXTRACTDATA_RECURSIVE])
-    {
-        if (!_wcsnicmp(configitem[EXTRACTDATA_RECURSIVE].strData.c_str(), L"no", wcslen(L"no")))
-        {
-            config.bResursive = false;
-        }
-        else
-        {
-            config.bResursive = true;
         }
     }
 
-    if (configitem[EXTRACTDATA_CONCURRENCY])
+    if (configItem[EXTRACTDATA_REPORT_OUTPUT])
+    {
+        hr = config.reportOutput.Configure(
+            _L_, config.reportOutput.supportedTypes, configItem[EXTRACTDATA_REPORT_OUTPUT]);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+    if (configItem[EXTRACTDATA_RECURSIVE] && equalCaseInsensitive(configItem[EXTRACTDATA_RECURSIVE].strData, L"no"))
+    {
+        config.bRecursive = false;
+    }
+    else
+    {
+        config.bRecursive = true;
+    }
+
+    if (configItem[EXTRACTDATA_CONCURRENCY])
     {
         config.dwConcurrency = 0;
+
+        const auto cliArg = configItem[EXTRACTDATA_CONCURRENCY].strData;
         LARGE_INTEGER li;
-        if (FAILED(hr = GetIntegerFromArg(configitem[EXTRACTDATA_CONCURRENCY].strData.c_str(), li)))
+        hr = GetIntegerFromArg(cliArg.c_str(), li);
+        if (FAILED(hr))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Invalid concurrency value specified (%s), must be an integer.\r\n",
-                configitem[EXTRACTDATA_CONCURRENCY].strData.c_str());
+            log::Error(_L_, hr, L"Invalid concurrency value specified '%s' must be an integer.\r\n", cliArg.c_str());
             return hr;
         }
+
         if (li.QuadPart > MAXDWORD)
         {
-            log::Error(
-                _L_,
-                hr,
-                L"concurrency value specified (%s), must not be insane.\r\n",
-                configitem[EXTRACTDATA_CONCURRENCY].strData.c_str());
+            log::Error(_L_, hr, L"concurrency value specified '%s' seems invalid.\r\n", cliArg.c_str());
             return hr;
         }
+
         config.dwConcurrency = li.LowPart;
     }
 
-    if (configitem[EXTRACTDATA_TABLE])
+    if (configItem[EXTRACTDATA_INPUT])
     {
-        for (auto& table_item : configitem[EXTRACTDATA_TABLE].NodeList)
+        for (const auto& inputNode : configItem[EXTRACTDATA_INPUT].NodeList)
         {
-            TableDescription table;
+            Main::InputItem inputItem(_L_);
 
-            if (table_item[EXTRACTDATA_TABLE_NAME])
+            if (inputNode[EXTRACTDATA_INPUT_DIRECTORY])
             {
-                table.Name = table_item[EXTRACTDATA_TABLE_NAME];
-            }
-            if (table_item[EXTRACTDATA_TABLE_KEY])
-            {
-                table.Key = table_item[EXTRACTDATA_TABLE_KEY];
+                inputItem.path = inputNode[EXTRACTDATA_INPUT_DIRECTORY];
             }
 
-            if (table_item[EXTRACTDATA_TABLE_SCHEMA])
+            if (inputNode[EXTRACTDATA_INPUT_MATCH])
             {
-                table.Schema = table_item[EXTRACTDATA_TABLE_SCHEMA];
-            }
-            if (table_item[EXTRACTDATA_TABLE_DISPOSITION])
-            {
-                using namespace std::string_view_literals;
-                if (equalCaseInsensitive((const std::wstring&)table_item[EXTRACTDATA_TABLE_DISPOSITION], L"createnew"sv)
-                    || equalCaseInsensitive(
-                        (const std::wstring&)table_item[EXTRACTDATA_TABLE_DISPOSITION], L"create_new"sv))
-                    table.Disposition = TableDisposition::CreateNew;
-                else if (equalCaseInsensitive(
-                             (const std::wstring&)table_item[EXTRACTDATA_TABLE_DISPOSITION], L"truncate"sv))
-                    table.Disposition = TableDisposition::Truncate;
-                else
-                    table.Disposition = TableDisposition::AsIs;
-            }
-            if (table_item[EXTRACTDATA_TABLE_COMPRESS])
-            {
-                if (equalCaseInsensitive((const std::wstring&)table_item[EXTRACTDATA_TABLE_COMPRESS], L"no"sv))
-                {
-                    table.bCompress = false;
-                }
-                else
-                {
-                    table.bCompress = true;
-                }
-            }
-            if (table_item[EXTRACTDATA_TABLE_TABLOCK])
-            {
-                if (equalCaseInsensitive((const std::wstring&)table_item[EXTRACTDATA_TABLE_TABLOCK], L"no"sv))
-                {
-                    table.bTABLOCK = false;
-                }
-                else
-                {
-                    table.bTABLOCK = true;
-                }
-            }
-            if (table_item[EXTRACTDATA_TABLE_CONCURRENCY])
-            {
-                LARGE_INTEGER li;
-                if (FAILED(hr = GetIntegerFromArg(table_item[EXTRACTDATA_TABLE_CONCURRENCY].strData.c_str(), li)))
-                {
-                    log::Error(
-                        _L_,
-                        hr,
-                        L"Invalid concurrency value specified (%s), must be an integer.\r\n",
-                        table_item[EXTRACTDATA_TABLE_CONCURRENCY].strData.c_str());
-                    return hr;
-                }
-                if (li.QuadPart > MAXDWORD)
-                {
-                    log::Error(
-                        _L_,
-                        hr,
-                        L"concurrency value specified (%s), must not be insane.\r\n",
-                        table_item[EXTRACTDATA_TABLE_CONCURRENCY].strData.c_str());
-                    return hr;
-                }
-                table.dwConcurrency = li.LowPart;
+                inputItem.matchRegex = inputNode[EXTRACTDATA_INPUT_MATCH];
             }
 
-            if (table_item[EXTRACTDATA_TABLE_BEFORE])
-            {
-                table.BeforeStatement = table_item[EXTRACTDATA_TABLE_BEFORE];
-            }
-            if (table_item[EXTRACTDATA_TABLE_AFTER])
-            {
-                table.AfterStatement = table_item[EXTRACTDATA_TABLE_AFTER];
-            }
-
-            config.m_Tables.emplace_back(std::move(table));
-        }
-    }
-
-    if (configitem[EXTRACTDATA_INPUT])
-    {
-        for (auto& input_item : configitem[EXTRACTDATA_INPUT].NodeList)
-        {
-            Main::InputItem input(_L_);
-
-            if (input_item[EXTRACTDATA_INPUT_DIRECTORY])
-            {
-                input.InputDirectory = input_item[EXTRACTDATA_INPUT_DIRECTORY];
-            }
-            if (input_item[EXTRACTDATA_INPUT_MATCH])
-            {
-                input.NameMatch = input_item[EXTRACTDATA_INPUT_MATCH];
-            }
-
-            if (input_item[EXTRACTDATA_INPUT_BEFORE])
-            {
-                input.BeforeStatement = input_item[EXTRACTDATA_INPUT_BEFORE];
-            }
-            if (input_item[EXTRACTDATA_INPUT_AFTER])
-            {
-                input.AfterStatement = input_item[EXTRACTDATA_INPUT_AFTER].strData;
-            }
-
-            if (FAILED(hr = GetDefinitionFromConfig(input_item, input.ImportDefinitions)))
+            hr = GetDefinitionFromConfig(inputNode, inputItem.importDefinitions);
+            if (FAILED(hr))
             {
                 log::Error(_L_, hr, L"Failed to configure import definitions\r\n");
             }
 
-            config.Inputs.push_back(std::move(input));
+            config.inputItems.push_back(std::move(inputItem));
         }
     }
 
     return S_OK;
 }
 
-HRESULT Main::GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& definition)
+HRESULT Main::GetImportItemFromConfig(const ConfigItem& configItem, ImportDefinition::Item& definition)
 {
-    if (config_item[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH])
+    if (configItem[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH])
     {
-        definition.NameMatch = config_item[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH];
+        definition.nameMatch = configItem[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH];
     }
 
-    if (config_item[EXTRACTDATA_INPUT_EXTRACT_BEFORE])
+    if (configItem[EXTRACTDATA_INPUT_EXTRACT_PASSWORD])
     {
-        definition.BeforeStatement = config_item[EXTRACTDATA_INPUT_EXTRACT_BEFORE];
-    }
-    if (config_item[EXTRACTDATA_INPUT_EXTRACT_AFTER])
-    {
-        definition.AfterStatement = config_item[EXTRACTDATA_INPUT_EXTRACT_AFTER];
+        definition.Password = configItem[EXTRACTDATA_INPUT_EXTRACT_PASSWORD];
     }
 
-    if (config_item[EXTRACTDATA_INPUT_EXTRACT_TABLE])
-    {
-        definition.Table = config_item[EXTRACTDATA_INPUT_EXTRACT_TABLE];
-    }
-
-    if (config_item[EXTRACTDATA_INPUT_EXTRACT_PASSWORD])
-    {
-        definition.Password = config_item[EXTRACTDATA_INPUT_EXTRACT_PASSWORD];
-    }
     return S_OK;
 }
 
-HRESULT Main::GetIgnoreItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item)
+HRESULT Main::GetIgnoreItemFromConfig(const ConfigItem& configItem, ImportDefinition::Item& importItem)
 {
-    if (config_item[EXTRACTDATA_INPUT_IGNORE_FILEMATCH])
+    if (configItem[EXTRACTDATA_INPUT_IGNORE_FILEMATCH])
     {
-        import_item.NameMatch = config_item[EXTRACTDATA_INPUT_IGNORE_FILEMATCH];
+        importItem.nameMatch = configItem[EXTRACTDATA_INPUT_IGNORE_FILEMATCH];
     }
+
     return S_OK;
 }
 
-HRESULT Main::GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item)
-{
-    if (config_item[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH])
-    {
-        import_item.NameMatch = config_item[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH];
-    }
-    if (config_item[EXTRACTDATA_INPUT_EXTRACT_PASSWORD])
-    {
-        import_item.Password = config_item[EXTRACTDATA_INPUT_EXTRACT_PASSWORD];
-    }
-    return S_OK;
-}
-
-HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefinition& definition)
+HRESULT Main::GetDefinitionFromConfig(const ConfigItem& configItem, ImportDefinition& definition)
 {
     HRESULT hr = E_FAIL;
 
-    if (config_item[EXTRACTDATA_INPUT_EXTRACT])
+    if (configItem[EXTRACTDATA_INPUT_IGNORE])
     {
-
-        for (auto& import_item : config_item[EXTRACTDATA_INPUT_EXTRACT].NodeList)
+        for (const auto& ignoreItem : configItem[EXTRACTDATA_INPUT_IGNORE].NodeList)
         {
             ImportDefinition::Item import;
-
-            if (FAILED(hr = GetImportItemFromConfig(import_item, import)))
+            hr = GetIgnoreItemFromConfig(ignoreItem, import);
+            if (FAILED(hr))
             {
                 log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
             }
-            import.ToDo = ImportDefinition::Extract;
-            definition.m_ItemDefinitions.push_back(std::move(import));
-        }
-    }
-    if (config_item[EXTRACTDATA_INPUT_IGNORE])
-    {
-        for (auto& ignore_item : config_item[EXTRACTDATA_INPUT_IGNORE].NodeList)
-        {
-            ImportDefinition::Item import;
 
-            if (FAILED(hr = GetIgnoreItemFromConfig(ignore_item, import)))
-            {
-                log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
-            }
             import.ToDo = ImportDefinition::Ignore;
-            definition.m_ItemDefinitions.push_back(std::move(import));
+            definition.m_itemDefinitions.push_back(std::move(import));
         }
     }
-    if (config_item[EXTRACTDATA_INPUT_EXTRACT])
+
+    if (configItem[EXTRACTDATA_INPUT_EXTRACT])
     {
-        for (auto& extract_item : config_item[EXTRACTDATA_INPUT_EXTRACT].NodeList)
+        for (const auto& extractItem : configItem[EXTRACTDATA_INPUT_EXTRACT].NodeList)
         {
             ImportDefinition::Item import;
-
-            if (FAILED(hr = GetImportItemFromConfig(extract_item, import)))
+            hr = GetImportItemFromConfig(extractItem, import);
+            if (FAILED(hr))
             {
                 log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
             }
+
             import.ToDo = ImportDefinition::Extract;
-            definition.m_ItemDefinitions.push_back(std::move(import));
+            definition.m_itemDefinitions.push_back(std::move(import));
         }
     }
+
     return S_OK;
 }
 
@@ -337,57 +198,88 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
     for (int i = 1; i < argc; i++)
     {
-        switch (argv[i][0])
-        {
-            case L'/':
-            case L'-':
-                if (OutputOption(argv[i] + 1, L"Out", config.Output))
-                    ;
-                else if (OutputOption(argv[i] + 1, L"Extract", config.importOutput))
-                    ;
-                else if (OutputOption(argv[i] + 1, L"Extract", config.extractOutput))
-                    ;
-                else if (OutputOption(argv[i] + 1, L"Temp", config.tempOutput))
-                    ;
-                else if (BooleanOption(argv[i] + 1, L"Recursive", config.bResursive))
-                    ;
-                else if (OptionalParameterOption(argv[i] + 1, L"Concurrency", config.dwConcurrency))
-                    ;
-                else if (ProcessPriorityOption(argv[i] + 1))
-                    ;
-                else if (UsageOption(argv[i] + 1))
-                    ;
-                else if (IgnoreCommonOptions(argv[i] + 1))
-                    ;
-                else
-                {
-                    PrintUsage();
-                    return E_INVALIDARG;
-                }
-                break;
-            default:
-            {
-                std::wstring strInputDir;
-                if (FAILED(hr = GetInputDirectory(argv[i], strInputDir)))
-                {
-                    std::wstring strInputFile;
-                    if (FAILED(hr = GetInputFile(argv[i], strInputFile)))
-                    {
-                        log::Warning(_L_, hr, L"Invalid input %s specified\r\n", argv[i]);
-                    }
-                    else
-                    {
-                        config.strInputFiles.push_back(std::move(strInputFile));
-                    }
-                }
-                else
-                {
-                    config.strInputDirs.push_back(std::move(strInputDir));
-                }
-            }
-            break;
-        }
+        ParseArgument(argv[i], config);
     }
+
+    return S_OK;
+}
+
+HRESULT Main::ParseArgument(std::wstring_view arg, Configuration& config)
+{
+    if (arg.size() < 2)
+    {
+        return E_INVALIDARG;
+    }
+
+    HRESULT hr = E_FAIL;
+    switch (arg[0])
+    {
+        case L'/':
+        case L'-':
+            if (OutputOption(arg.data() + 1, L"Out", OutputSpec::Directory, config.output))
+                break;
+
+            if (OutputOption(arg.data() + 1, L"Report", OutputSpec::TableFile, config.reportOutput))
+                break;
+
+            if (OutputOption(arg.data() + 1, L"Temp", OutputSpec::Directory, config.tempOutput))
+                break;
+
+            if (BooleanOption(arg.data() + 1, L"Recursive", config.bRecursive))
+                break;
+
+            if (OptionalParameterOption(arg.data() + 1, L"Concurrency", config.dwConcurrency))
+                break;
+
+            if (ProcessPriorityOption(arg.data() + 1))
+                break;
+
+            if (UsageOption(arg.data() + 1))
+                break;
+
+            if (IgnoreCommonOptions(arg.data() + 1))
+                break;
+
+            PrintUsage();
+            return E_INVALIDARG;
+
+        default:
+        {
+            std::error_code ec;
+            auto path = ExpandEnvironmentStringsApi(arg.data(), ec);
+            if (ec)
+            {
+                hr = HRESULT_FROM_WIN32(ec.value());
+                log::Warning(_L_, hr, L"Invalid input '%s' specified\r\n", arg.data());
+                return hr;
+            }
+
+            Main::InputItem inputItem(_L_);
+            inputItem.path = path;
+            inputItem.matchRegex = L".*";  // regex filter for "on disk" files to extract
+
+            // match filter for "in archive" files to ignore
+            //ImportDefinition::Item ignoreFilter;
+            // ignoreFilter.nameMatch = L"";  // wildcard filter for "in archive" files to ignore
+            // ignoreFilter.ToDo = ImportDefinition::Ignore;
+            //inputItem.importDefinitions.m_itemDefinitions.push_back(std::move(ignoreFilter));
+
+            // match filter for "in archive" files to extract
+             ImportDefinition::Item extractFilter;
+             extractFilter.nameMatch = L"*";  // wildcard filter for "in archive" files to extract
+             extractFilter.ToDo = ImportDefinition::Extract;
+             extractFilter.Password = L"";
+
+             inputItem.importDefinitions.m_itemDefinitions.push_back(std::move(extractFilter));
+
+            // config.inputDirs.push_back(std::move(path));
+            config.inputItems.push_back(std::move(inputItem));
+
+            return S_OK;
+        }
+        break;
+    }
+
     return S_OK;
 }
 
@@ -395,59 +287,33 @@ HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
 
-    if (config.tempOutput.Type == OutputSpec::Kind::None && config.extractOutput.Type == OutputSpec::Kind::Directory)
+    if (config.output.Type == OutputSpec::Kind::None)
     {
-        config.tempOutput = config.extractOutput;
+        std::error_code ec;
+        const auto workingDir = GetWorkingDirectoryApi(ec);
+        if (ec)
+        {
+            hr = HRESULT_FROM_WIN32(ec.value());
+            log::Error(_L_, hr, L"%s", AnsiToWide(_L_, ec.message()));
+            return hr;
+        }
+
+        config.output.Configure(_L_, OutputSpec::Kind::Directory, workingDir.c_str());
+    }
+
+    if (config.tempOutput.Type == OutputSpec::Kind::None)
+    {
+        config.tempOutput = config.output;
     }
     else
     {
-        log::Verbose(_L_, L"No temprorary folder provided, defaulting to %temp%\r\n");
+        log::Verbose(_L_, L"No temporary folder provided, defaulting to %TEMP%\r\n");
+
         WCHAR szTempDir[MAX_PATH];
-        if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
+        hr = UtilGetTempDirPath(szTempDir, MAX_PATH);
+        if (FAILED(hr))
         {
             log::Error(_L_, hr, L"Failed to provide a default temporary folder\r\n");
-        }
-    }
-
-    if (config.extractOutput.Type == OutputSpec::Kind::None)
-    {
-        log::Warning(_L_, E_INVALIDARG, L"No extration output directory provided, disabled extraction\r\n");
-        config.bDontExtract = true;
-    }
-    if (config.importOutput.Type == OutputSpec::Kind::None)
-    {
-        log::Warning(_L_, E_INVALIDARG, L"No import output provided (SQL Connection string), disabled importing\r\n");
-        config.bDontImport = true;
-    }
-
-    if (config.bDontExtract && config.bDontImport)
-    {
-        log::Error(_L_, E_INVALIDARG, L"No import nor extract option specified, nothing to do!!\r\n");
-        return E_INVALIDARG;
-    }
-
-    for (const auto& input : config.Inputs)
-    {
-        for (const auto& input_def : input.ImportDefinitions.GetDefinitions())
-        {
-            if (!input_def.Table.empty())
-            {
-                auto it = find_if(
-                    begin(config.m_Tables), end(config.m_Tables), [&input_def](const TableDescription& descr) -> bool {
-                        return equalCaseInsensitive(input_def.Table, descr.Name);
-                    });
-                if (it == end(config.m_Tables))
-                {
-                    log::Error(
-                        _L_,
-                        E_INVALIDARG,
-                        L"No table description found for table %s (specified in input %s of %s)\r\n",
-                        input_def.Table.c_str(),
-                        input_def.NameMatch.c_str(),
-                        input.NameMatch.c_str());
-                    return E_INVALIDARG;
-                }
-            }
         }
     }
 

@@ -26,6 +26,7 @@ endif()
 
 set(SRC_SCHEMAS
     "../OrcCommand/DDSqlSchema.xml"
+    "../OrcCommand/ExtractDataReportSqlSchema.xml"
     "../OrcCommand/FastFindSqlSchema.xml"
     "../OrcCommand/FatInfoSqlSchema.xml"
     "../OrcCommand/GetComObjectsSqlSchema.xml"

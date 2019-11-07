@@ -20,9 +20,14 @@ namespace Command::ImportData {
 class Main;
 }
 
+namespace Command::ExtractData {
+class Main;
+}
+
 class ORCLIB_API ImportDefinition
 {
     friend class Command::ImportData::Main;
+    friend class Command::ExtractData::Main;
 
 public:
     enum Action

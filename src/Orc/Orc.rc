@@ -111,6 +111,8 @@ FASTFIND_SQLSCHEMA      BINARY                  "..\\OrcCommand\\FastFindSqlSche
 
 IMPORTDATA_SQLSCHEMA    BINARY                  "..\\OrcCommand\\ImportDataSqlSchema.xml"
 
+EXTRACTDATA_REPORT_SQLSCHEMA   BINARY           "..\\OrcCommand\\ExtractDataReportSqlSchema.xml"
+
 GETSECTORS_SQLSCHEMA    BINARY                  "..\\OrcCommand\\GetSectorsSchema.xml"
 
 NTFSUTIL_SQLSCHEMA      BINARY                  "..\\OrcCommand\\NTFSUtilSqlSchema.xml"

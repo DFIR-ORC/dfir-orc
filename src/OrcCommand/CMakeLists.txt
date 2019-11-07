@@ -56,6 +56,7 @@ set(SRC_EXTRACTDATA
     "ExtractData_Config.cpp"
     "ExtractData_Output.cpp"
     "ExtractData_Run.cpp"
+    "ExtractDataReportSqlSchema.xml"
 )
 
 source_group(ExtractData FILES ${SRC_EXTRACTDATA})

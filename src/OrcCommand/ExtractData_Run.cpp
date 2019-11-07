@@ -4,486 +4,160 @@
 // Copyright © 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl
 //
 
 #include "stdafx.h"
 
-#include "ImportData.h"
+#include <filesystem>
+
+#include "ExtractData.h"
 
 #include "ConfigFileReader.h"
 #include "ConfigFile_Common.h"
-
 #include "ImportAgent.h"
 #include "ImportMessage.h"
 #include "ImportNotification.h"
 #include "LogFileWriter.h"
-
 #include "CommandAgent.h"
-
 #include "SystemDetails.h"
 
-#include <filesystem>
-
-using namespace std;
 using namespace concurrency;
 namespace fs = std::filesystem;
 
 using namespace Orc;
-using namespace Orc::Command::ImportData;
+using namespace Orc::Command::ExtractData;
 
-HRESULT
-Main::AddDirectoryForInput(const std::wstring& dir, const InputItem& input, std::vector<ImportItem>& input_paths)
+namespace {
+
+void WriteSuccessfulReport(TableOutput::IWriter& writer, const ImportNotification::Notification& notification)
 {
-    fs::recursive_directory_iterator end_itr;
+    const auto& item = notification->Item();
+    auto& reportTable = writer.GetTableOutput();
 
-    fs::path root(dir);
-    root = canonical(root);
+    SystemDetails::WriteComputerName(reportTable);
 
-    auto dir_iter = fs::recursive_directory_iterator(root);
+    if (item.inputFile != nullptr)
+        reportTable.WriteString(*item.inputFile);
+    else
+        reportTable.WriteNothing();
 
-    auto offset = root.wstring().size() + 1;
+    reportTable.WriteString(item.name);
+    reportTable.WriteString(item.fullName);
 
-    if (!config.bResursive)
-        dir_iter.disable_recursion_pending();
-
-    for (; dir_iter != end_itr; dir_iter++)
+    switch (notification->Action())
     {
-        auto& entry = *dir_iter;
+        case ImportNotification::Extract:
+            reportTable.WriteString(L"Extract");
+            break;
+        default:
+            reportTable.WriteString(L"Unknown");
+            break;
+    }
 
-        if (is_regular_file(entry.status()))
-        {
-            ImportItem item;
+    reportTable.WriteString(item.systemType);
+    reportTable.WriteString(item.computerName);
+    reportTable.WriteString(item.timeStamp);
 
-            item.InputFile = make_shared<wstring>(entry.path().wstring());
-            item.FullName = item.InputFile->substr(offset);
-            item.Name = entry.path().filename().wstring();
-            item.Definitions = &input.ImportDefinitions;
-            item.DefinitionItem = item.DefinitionItemLookup(ImportDefinition::Expand);
-            item.Format = item.GetFileFormat();
-            item.isToExtract = false;
-            item.isToIgnore = false;
-            item.isToImport = false;
-            item.isToExpand = true;
+    FILETIME start, end;
+    SystemTimeToFileTime(&item.importStart, &start);
+    reportTable.WriteFileTime(start);
 
-            if (!input.NameMatch.empty())
+    SystemTimeToFileTime(&item.importEnd, &end);
+    reportTable.WriteFileTime(end);
+
+    switch (notification->Action())
+    {
+        case ImportNotification::Extract:
+            reportTable.WriteNothing();
+            break;
+        default:
+            reportTable.WriteNothing();
+            break;
+    }
+
+    switch (notification->Action())
+    {
+        case ImportNotification::Extract:
+            if (item.outputFile)
             {
-                if (SUCCEEDED(CommandAgent::ReversePattern(
-                        input.NameMatch,
-                        item.Name,
-                        item.SystemType,
-                        item.FullComputerName,
-                        item.ComputerName,
-                        item.TimeStamp)))
-                {
-                    log::Verbose(_L_, L"Input file added: %s\r\n", item.Name.c_str());
-                    input_paths.push_back(std::move(item));
-                }
-                else
-                {
-                    log::Verbose(
-                        _L_, L"Input file %s does not match %s\r\n", item.Name.c_str(), input.NameMatch.c_str());
-                }
+                reportTable.WriteString(*item.outputFile);
             }
             else
-            {
-                log::Verbose(_L_, L"Input file added: %s\r\n", item.Name.c_str());
-                input_paths.push_back(item);
-            }
-        }
+                reportTable.WriteNothing();
+            break;
+        default:
+            reportTable.WriteNothing();
+            break;
     }
-    return S_OK;
+
+    reportTable.WriteInteger(item.ullBytesExtracted);
+    reportTable.WriteInteger(static_cast<DWORD>(notification->GetHR()));
+    reportTable.WriteEndOfLine();
 }
 
-HRESULT Main::AddFileForInput(const std::wstring& file, const InputItem& input, std::vector<ImportItem>& input_paths)
+void WriteFailureReport(TableOutput::IWriter& writer, const ImportNotification::Notification& notification)
 {
-    fs::path entry(file);
+    const auto& item = notification->Item();
+    auto& reportTable = writer.GetTableOutput();
 
-    if (is_regular_file(entry))
-    {
-        ImportItem item;
+    SystemDetails::WriteComputerName(reportTable);
 
-        item.InputFile = make_shared<wstring>(entry.wstring());
+    if (item.inputFile != nullptr)
+        reportTable.WriteString(*item.inputFile);
+    else
+        reportTable.WriteNothing();
 
-        item.FullName = entry.relative_path().wstring();
-        item.Name = entry.filename().wstring();
-        item.Definitions = &input.ImportDefinitions;
-        item.Format = item.GetFileFormat();
-        item.isToExtract = true;
-        item.isToIgnore = false;
-        item.isToImport = false;
-        item.isToExpand = false;
+    reportTable.WriteString(item.name);
+    reportTable.WriteString(item.fullName);
 
-        if (!input.NameMatch.empty())
-        {
-            auto filename = entry.filename().wstring();
+    reportTable.WriteString(L"Extract");
 
-            if (SUCCEEDED(CommandAgent::ReversePattern(
-                    input.NameMatch,
-                    filename,
-                    item.SystemType,
-                    item.FullComputerName,
-                    item.ComputerName,
-                    item.TimeStamp)))
-            {
-                log::Verbose(_L_, L"Input file added: %s\r\n", filename.c_str());
-                input_paths.push_back(std::move(item));
-            }
-            else
-            {
-                log::Verbose(_L_, L"Input file %s does not match %s\r\n", filename.c_str(), input.NameMatch.c_str());
-            }
-        }
-        else
-        {
-            log::Verbose(_L_, L"Input file added: %s\r\n", item.Name.c_str());
-            input_paths.push_back(std::move(item));
-        }
-    }
-    return S_OK;
+    reportTable.WriteNothing();
+    reportTable.WriteNothing();
+    reportTable.WriteNothing();
+
+    reportTable.WriteNothing();
+    reportTable.WriteNothing();
+
+    reportTable.WriteNothing();
+
+    reportTable.WriteNothing();
+
+    reportTable.WriteNothing();
+    reportTable.WriteNothing();
+
+    reportTable.WriteInteger((DWORD)notification->GetHR());
+
+    reportTable.WriteEndOfLine();
 }
 
-std::vector<ImportItem> Main::GetInputFiles(const Main::InputItem& input)
+void WriteReport(TableOutput::IWriter& writer, const ImportNotification::Notification& notification)
+{
+    if (FAILED(notification->GetHR()))
+    {
+        WriteFailureReport(writer, notification);
+        return;
+    }
+
+    WriteSuccessfulReport(writer, notification);
+}
+
+HRESULT ExecuteAgent(ImportAgent& agent, logger& _L_)
 {
     HRESULT hr = E_FAIL;
 
-    std::vector<ImportItem> items;
+    log::Info(_L_, L"\r\nExtracting data...\r\n");
 
-    if (!input.InputDirectory.empty())
+    if (!agent.start())
     {
-        if (FAILED(hr = AddDirectoryForInput(input.InputDirectory, input, items)))
-        {
-            log::Error(_L_, hr, L"Failed to add input files for %s\r\n", input.InputDirectory.c_str());
-        }
-    }
-
-    if (!config.strInputDirs.empty())
-    {
-        for (auto& dir : config.strInputDirs)
-        {
-            if (FAILED(hr = AddDirectoryForInput(dir, input, items)))
-            {
-                log::Error(_L_, hr, L"Failed to add input files for %s\r\n", dir.c_str());
-            }
-        }
-    }
-
-    if (!config.strInputFiles.empty())
-    {
-        for (auto& file : config.strInputFiles)
-        {
-            if (FAILED(hr = AddFileForInput(file, input, items)))
-            {
-                log::Error(_L_, hr, L"Failed to add input file %s\r\n", file.c_str());
-            }
-        }
-    }
-    return items;
-}
-
-HRESULT Main::Run()
-{
-    HRESULT hr = E_FAIL;
-
-    if (FAILED(hr = LoadWinTrust()))
-        return hr;
-
-    auto pWriter = TableOutput::GetWriter(_L_, config.Output);
-    if (pWriter == nullptr)
-    {
-        log::Warning(_L_, E_FAIL, L"No writer for ImportData output: no data about imports will be generated\r\n");
-    }
-
-    auto& output = pWriter->GetTableOutput();
-
-    m_importNotification = std::make_unique<call<ImportNotification::Notification>>(
-        [this, &output](const ImportNotification::Notification& item) {
-            LONG queued = receive(m_importAgent->QueuedItemsCount());
-
-            if (SUCCEEDED(item->GetHR()))
-            {
-                switch (item->Item().Format)
-                {
-                    case ImportItem::Envelopped:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (envelopped message) decrypted (%I64d bytes)\r\n",
-                            queued,
-                            item->Item().Name.c_str(),
-                            item->Item().ullBytesExtracted);
-                        break;
-                    case ImportItem::Archive:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (archive) extracted (%I64d bytes)\r\n",
-                            queued,
-                            item->Item().Name.c_str(),
-                            item->Item().ullBytesExtracted);
-                        break;
-                    case ImportItem::CSV:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (csv) imported into %s (%I64d lines)\r\n",
-                            queued,
-                            item->Item().Name.c_str(),
-                            item->Item().DefinitionItem->Table.c_str(),
-                            item->Item().ullLinesImported);
-                        break;
-                    case ImportItem::RegistryHive:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (registry hive) imported into %s (%I64d lines)\r\n",
-                            queued,
-                            item->Item().Name.c_str(),
-                            item->Item().DefinitionItem->Table.c_str(),
-                            item->Item().ullLinesImported);
-                        break;
-                    case ImportItem::EventLog:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (event log) imported into %s (%I64d lines)\r\n",
-                            queued,
-                            item->Item().Name.c_str(),
-                            item->Item().DefinitionItem->Table.c_str(),
-                            item->Item().ullLinesImported);
-                        break;
-                    case ImportItem::XML:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (xml) imported (%I64d bytes)\r\n",
-                            queued,
-                            item->Item().Name.c_str(),
-                            item->Item().ullBytesExtracted);
-                        break;
-                    case ImportItem::Data:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (data) imported (%I64d bytes)\r\n",
-                            queued,
-                            item->Item().Name.c_str(),
-                            item->Item().ullBytesExtracted);
-                        break;
-                    case ImportItem::Text:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (text) imported (%I64d bytes)\r\n",
-                            queued,
-                            item->Item().Name.c_str(),
-                            item->Item().ullBytesExtracted);
-                        break;
-                }
-                ullImportedLines += item->Item().ullLinesImported;
-                ullProcessedBytes += item->Item().ullBytesExtracted;
-
-                SystemDetails::WriteComputerName(output);
-
-                if (item->Item().InputFile != nullptr)
-                    output.WriteString(item->Item().InputFile->c_str());
-                else
-                    output.WriteNothing();
-
-                output.WriteString(item->Item().Name.c_str());
-                output.WriteString(item->Item().FullName.c_str());
-
-                switch (item->Action())
-                {
-                    case ImportNotification::Import:
-                        output.WriteString(L"Import");
-                        break;
-                    case ImportNotification::Extract:
-                        output.WriteString(L"Extract");
-                        break;
-                    default:
-                        output.WriteString(L"Unknown");
-                        break;
-                }
-
-                output.WriteString(item->Item().SystemType.c_str());
-                output.WriteString(item->Item().ComputerName.c_str());
-                output.WriteString(item->Item().TimeStamp.c_str());
-
-                FILETIME start, end;
-                SystemTimeToFileTime(&item->Item().ImportStart, &start);
-                output.WriteFileTime(start);
-
-                SystemTimeToFileTime(&item->Item().ImportEnd, &end);
-                output.WriteFileTime(end);
-
-                switch (item->Action())
-                {
-                    case ImportNotification::Import:
-                        if (item->Item().DefinitionItem)
-                            output.WriteString(item->Item().DefinitionItem->Table.c_str());
-                        else
-                            output.WriteNothing();
-                        break;
-                    case ImportNotification::Extract:
-                        output.WriteNothing();
-                        break;
-                    default:
-                        output.WriteNothing();
-                        break;
-                }
-
-                switch (item->Action())
-                {
-                    case ImportNotification::Import:
-                        output.WriteNothing();
-                        break;
-                    case ImportNotification::Extract:
-                        if (item->Item().OutputFile)
-                        {
-                            output.WriteString(item->Item().OutputFile->c_str());
-                        }
-                        else
-                            output.WriteNothing();
-                        break;
-                    default:
-                        output.WriteNothing();
-                        break;
-                }
-
-                output.WriteInteger(item->Item().ullLinesImported);
-                output.WriteInteger(item->Item().ullBytesExtracted);
-
-                output.WriteInteger((DWORD)item->GetHR());
-
-                output.WriteEndOfLine();
-            }
-            else
-            {
-                log::Error(_L_, item->GetHR(), L"\t[%04d] %s failed\r\n", queued, item->Item().Name.c_str());
-
-                SystemDetails::WriteComputerName(output);
-
-                if (item->Item().InputFile != nullptr)
-                    output.WriteString(item->Item().InputFile->c_str());
-                else
-                    output.WriteNothing();
-
-                output.WriteString(item->Item().Name.c_str());
-                output.WriteString(item->Item().FullName.c_str());
-
-                output.WriteString(L"Import");
-
-                output.WriteNothing();
-                output.WriteNothing();
-                output.WriteNothing();
-
-                output.WriteNothing();
-                output.WriteNothing();
-
-                output.WriteNothing();
-
-                output.WriteNothing();
-
-                output.WriteNothing();
-                output.WriteNothing();
-
-                output.WriteInteger((DWORD)item->GetHR());
-
-                output.WriteEndOfLine();
-            }
-            return;
-        });
-
-    if (!config.m_Tables.empty())
-    {
-        log::Info(_L_, L"\r\nTables configuration :\r\n");
-        for (const auto& table : config.m_Tables)
-        {
-            LPWSTR szDisp = nullptr;
-            switch (table.Disposition)
-            {
-                case AsIs:
-                    szDisp = L"as is";
-                    break;
-                case Truncate:
-                    szDisp = L"truncate";
-                    break;
-                case CreateNew:
-                    szDisp = L"create new";
-                    break;
-                default:
-                    break;
-            }
-
-            log::Info(
-                _L_,
-                L"\t%s : %s, %s, %s with %d concurrent agents\r\n",
-                table.Name.c_str(),
-                szDisp,
-                table.bCompress ? L"compression" : L"no compression",
-                table.bTABLOCK ? L"table lock" : L"rows lock",
-                table.dwConcurrency);
-        }
-        log::Info(_L_, L"\r\n\r\n");
-    }
-
-    m_importAgent =
-        std::make_unique<ImportAgent>(_L_, m_importRequestBuffer, m_importRequestBuffer, *m_importNotification);
-
-    if (FAILED(
-            hr = m_importAgent->InitializeOutputs(
-                config.Output, config.importOutput, config.extractOutput, config.tempOutput)))
-    {
-        log::Error(_L_, hr, L"Failed to initialize import agent output\r\n");
-        return hr;
-    }
-
-    if (!config.m_Tables.empty())
-    {
-        log::Info(_L_, L"\r\nInitialize tables...");
-        if (FAILED(hr = m_importAgent->InitializeTables(config.m_Tables)))
-        {
-            log::Error(_L_, hr, L"\r\nFailed to initialize import agent table definitions\r\n");
-            return hr;
-        }
-        log::Info(_L_, L" Done\r\n");
-    }
-
-    log::Info(_L_, L"\r\nEnumerate input files tables...");
-    ULONG ulInputFiles = 0L;
-
-    vector<vector<ImportItem>> inputs;
-    inputs.reserve(config.Inputs.size());
-
-    for (auto& input : config.Inputs)
-    {
-        inputs.push_back(GetInputFiles(input));
-    }
-
-    auto it = std::max_element(
-        begin(inputs), end(inputs), [](const vector<ImportItem>& one, const vector<ImportItem>& two) -> bool {
-            return one.size() < two.size();
-        });
-
-    auto dwMax = it->size();
-
-    for (unsigned int i = 0; i < dwMax; i++)
-    {
-        for (auto& input : inputs)
-        {
-            if (input.size() > i)
-            {
-                m_importAgent->SendRequest(ImportMessage::MakeExpandRequest(move(input[i])));
-                ulInputFiles++;
-            }
-        }
-    }
-
-    log::Info(_L_, L" Done (%d input files)\r\n\r\n", ulInputFiles);
-
-    log::Info(_L_, L"\r\nImporting data...\r\n");
-
-    if (!m_importAgent->start())
-    {
-        log::Error(_L_, E_FAIL, L"Start for import Agent failed\r\n");
+        log::Error(_L_, E_FAIL, L"Failed to start import Agent failed\r\n");
         return E_FAIL;
     }
 
     try
     {
-        concurrency::agent::wait(m_importAgent.get());
+        concurrency::agent::wait(&agent);
     }
     catch (concurrency::operation_timed_out timeout)
     {
@@ -491,23 +165,226 @@ HRESULT Main::Run()
         return hr;
     }
 
-    if (!config.m_Tables.empty())
+    return S_OK;
+}
+
+void QueueForExtractions(ImportAgent& agent, const std::vector<Main::InputItem>& inputItems, logger& _L_)
+{
+    // log::Info(_L_, L"\r\nEnumerate input files...");
+
+    // ULONG ulInputFiles = 0L;
+    // for (const auto& inputItem : inputItems)
+    //{
+    //    auto files = GetInputFiles(inputItem);
+    //    for (auto& file : files)
+    //    {
+    //        ++ulInputFiles;
+    //        auto expand = ImportMessage::MakeExpandRequest(std::move(file));
+    //        agent.SendRequest(expand);
+    //    }
+    //}
+
+    // log::Info(_L_, L" Queued %d input files for extraction\r\n\r\n", ulInputFiles);
+}
+
+}  // namespace
+
+HRESULT
+Main::AddDirectoryForInput(const fs::path& path, const InputItem& input, std::vector<ImportItem>& inputPaths)
+{
+    HRESULT hr = E_FAIL;
+    std::error_code ec;
+
+    fs::path root(path);
+    root = canonical(root, ec);
+    if (ec)
     {
-        log::Info(_L_, L"\r\nAfter statements\r\n");
-        if (FAILED(hr = m_importAgent->FinalizeTables()))
+        return HRESULT_FROM_WIN32(hr);
+    }
+
+    auto dirIt = fs::recursive_directory_iterator(root, ec);
+    if (ec)
+    {
+        return HRESULT_FROM_WIN32(hr);
+    }
+
+    if (!config.bRecursive)
+    {
+        dirIt.disable_recursion_pending();
+    }
+
+    fs::recursive_directory_iterator end_itr;
+    for (; dirIt != end_itr; dirIt++)
+    {
+        hr = AddFileForInput(*dirIt, input, inputPaths);
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to finalize import tables\r\n");
+            log::Warning(_L_, hr, L"Failed to process '%s'", dirIt->path());
         }
     }
 
+    return S_OK;
+}
+
+HRESULT Main::AddFileForInput(const fs::path& path, const InputItem& input, std::vector<ImportItem>& inputPaths)
+{
+    std::error_code ec;
+
+    const auto isRegularFile = is_regular_file(path, ec);
+    if (ec)
+    {
+        return HRESULT_FROM_WIN32(ec.value());
+    }
+
+    if (!isRegularFile)
+    {
+        return S_OK;
+    }
+
+    fs::path root(fs::canonical(path));
+    const auto pathFromRoot = fs::relative(path, root, ec);
+    if (ec)
+    {
+        return HRESULT_FROM_WIN32(ec.value());
+    }
+
+    ImportItem item;
+
+    item.inputFile = std::make_shared<std::wstring>(path);
+    item.fullName = pathFromRoot;
+    item.name = path.filename();
+    item.definitions = &input.importDefinitions;
+    item.definitionItem = item.DefinitionItemLookup(ImportDefinition::Extract);
+    //item.definitionItem = ImportDefinition::Extract;
+    item.format = item.GetFileFormat();
+    item.isToExtract = true;
+    item.isToIgnore = false;
+    item.isToExpand = false;
+
+    if (input.matchRegex.empty())
+    {
+        log::Verbose(_L_, L"Input file added: '%s'\r\n", item.name);
+        inputPaths.push_back(item);
+        return S_OK;
+    }
+
+    HRESULT hr = CommandAgent::ReversePattern(
+        input.matchRegex, item.name, item.systemType, item.fullComputerName, item.computerName, item.timeStamp);
+
+    if (SUCCEEDED(hr))
+    {
+        log::Verbose(_L_, L"Input file added: '%s'\r\n", item.name.c_str());
+        inputPaths.push_back(std::move(item));
+        return S_OK;
+    }
+
+    log::Verbose(_L_, L"Input file '%s' does not match '%s'\r\n", item.name.c_str(), input.matchRegex.c_str());
+    return S_OK;
+}
+
+std::vector<ImportItem> Main::GetInputFiles(const Main::InputItem& input)
+{
+    if (input.path.empty())
+    {
+        return {};
+    }
+
+    std::error_code ec;
+    HRESULT hr = E_FAIL;
+
+    const auto isDirectory = fs::is_directory(input.path, ec);
+    if (ec)
+    {
+        log::Warning(_L_, HRESULT_FROM_WIN32(ec.value()), L"Invalid input '%s' specified\r\n", input.path);
+        return {};
+    }
+
+    std::vector<ImportItem> items;
+    if (isDirectory)
+    {
+        hr = AddDirectoryForInput(input.path, input, items);
+    }
+    else
+    {
+        hr = AddFileForInput(input.path, input, items);
+    }
+
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to add input files for '%s'\r\n", input.path.c_str());
+        return {};
+    }
+
+    return items;
+}
+
+HRESULT Main::Run()
+{
+    HRESULT hr = E_FAIL;
+
+    hr = LoadWinTrust();
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    auto reportWriter = TableOutput::GetWriter(_L_, config.reportOutput);
+    if (reportWriter == nullptr)
+    {
+        log::Verbose(_L_, L"No report writer, extraction report will be disabled\r\n");
+    }
+
+    m_notificationCb = std::make_unique<call<ImportNotification::Notification>>(
+        [this, &reportWriter](const ImportNotification::Notification& notification) {
+            m_ullProcessedBytes += notification->Item().ullBytesExtracted;
+
+            if (reportWriter)
+            {
+                ::WriteReport(*reportWriter, notification);
+            }
+        });
+
+    auto importAgent =
+        std::make_unique<ImportAgent>(_L_, m_importRequestBuffer, m_importRequestBuffer, *m_notificationCb);
+
+    hr = importAgent->InitializeOutputs(config.output, OutputSpec(), config.tempOutput);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to initialize import agent output\r\n");
+        return hr;
+    }
+
+    //::QueueExtractions(*importAgent, _L_);
+    log::Info(_L_, L"\r\nEnumerate input files...");
+
+    ULONG ulInputFiles = 0L;
+    for (const auto& inputItem : config.inputItems)
+    {
+        auto files = GetInputFiles(inputItem);
+        for (auto& file : files)
+        {
+            ++ulInputFiles;
+            auto expand = ImportMessage::MakeExpandRequest(std::move(file));
+            importAgent->SendRequest(expand);
+        }
+    }
+
+    log::Info(_L_, L" Queued %d input files for extraction\r\n\r\n", ulInputFiles);
+
+    hr = ::ExecuteAgent(*importAgent, _L_);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed while extractingt\r\n");
+        return hr;
+    }
+
     log::Info(_L_, L"\r\nSome statistics\r\n)");
-    m_importAgent->Statistics(_L_);
+    importAgent->LogStatistics(_L_);
 
-    m_importAgent.release();
-
-    if (pWriter)
-        pWriter->Close();
-    pWriter = nullptr;
+    if (reportWriter)
+    {
+        reportWriter->Close();
+    }
 
     return S_OK;
 }

@@ -10,6 +10,7 @@
 
 #include "stdafx.h"
 
+#include "ExtractData.h"
 #include "FastFind.h"
 #include "GetSamples.h"
 #include "GetSectors.h"
@@ -41,6 +42,7 @@ using namespace Orc;
 using namespace Orc::Command;
 
 ToolDescription g_Tools[] = {
+    {ExtractData::Main::ToolName(), ExtractData::Main::ToolDescription(), UtilitiesMain::WMain<ExtractData::Main>},
     {FastFind::Main::ToolName(), FastFind::Main::ToolDescription(), UtilitiesMain::WMain<FastFind::Main>},
     {GetSamples::Main::ToolName(), GetSamples::Main::ToolDescription(), UtilitiesMain::WMain<GetSamples::Main>},
     {GetSectors::Main::ToolName(), GetSectors::Main::ToolDescription(), UtilitiesMain::WMain<GetSectors::Main>},

@@ -4,18 +4,22 @@
 // Copyright © 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl
 //
 
-#include "OrcCommand.h"
+#pragma once
 
 #include "UtilitiesMain.h"
+
+#include <string>
+
+#include "OrcCommand.h"
 
 #include "ImportItem.h"
 #include "ImportMessage.h"
 #include "ImportNotification.h"
 #include "ImportDefinition.h"
 #include "ImportAgent.h"
-
 #include "OutputSpec.h"
 
 #include <filesystem>
@@ -39,21 +43,18 @@ public:
         logger _L_;
 
     public:
-        std::wstring NameMatch;
-        std::wstring InputDirectory;
+        std::wstring matchRegex;  // filename regex
+        std::wstring path;
         bool bRecursive = false;
 
-        ImportDefinition ImportDefinitions;
+        ImportDefinition importDefinitions;
 
-        std::wstring BeforeStatement;
-        std::wstring AfterStatement;
-
-        std::wstring Description() { return InputDirectory + L"\\" + NameMatch; }
+        std::wstring Description() { return path + L"\\" + matchRegex; }
 
         InputItem(InputItem&& other) noexcept = default;
         InputItem(logger pLog)
             : _L_(pLog)
-            , ImportDefinitions(pLog) {};
+            , importDefinitions(pLog) {};
     };
 
     class Configuration : public UtilitiesMain::Configuration
@@ -61,35 +62,26 @@ public:
     public:
         Configuration(logger pLog)
         {
-            Output.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::SQL | OutputSpec::Kind::CSV | OutputSpec::Kind::TSV | OutputSpec::Kind::TableFile);
-            importOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL);
-            extractOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory);
+            reportOutput.supportedTypes = static_cast<OutputSpec::Kind>(
+                OutputSpec::Kind::CSV | OutputSpec::Kind::TSV | OutputSpec::Kind::TableFile);
+            output.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory);
             tempOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory);
         }
 
-        DWORD dwConcurrency = 2;
+        DWORD dwConcurrency = 2;  // TODO: configurable
 
-        bool bResursive = false;
-        bool bDontExtract = false;
-        bool bDontImport = false;
+        bool bRecursive = false;
 
-        std::vector<std::wstring> strInputDirs;
-        std::vector<std::wstring> strInputFiles;
+        std::vector<InputItem> inputItems;
 
-        std::vector<InputItem> Inputs;
-
-        std::vector<TableDescription> m_Tables;
-
-        OutputSpec Output;
-        OutputSpec extractOutput;
-        OutputSpec importOutput;
+        OutputSpec output;
+        OutputSpec reportOutput;
         OutputSpec tempOutput;
     };
 
 public:
     static LPCWSTR ToolName() { return L"ExtractData"; }
-    static LPCWSTR ToolDescription() { return L"ExtractData - Extract collected data"; }
+    static LPCWSTR ToolDescription() { return L"ExtractData - Decrypt, decompress and prepare collected data"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#EXTRACTDATA_CONFIG"; }
@@ -99,7 +91,7 @@ public:
     static LPCWSTR LocalConfiguration() { return nullptr; }
     static LPCWSTR LocalConfigurationExtension() { return nullptr; }
 
-    static LPCWSTR DefaultSchema() { return L"res:#IMPORTDATA_SQLSCHEMA"; }
+    static LPCWSTR DefaultSchema() { return L"res:#EXTRACTDATA_REPORT_SQLSCHEMA"; }
     HRESULT GetSchemaFromConfig(const ConfigItem& schemaitem);
 
     Main(logger pLog)
@@ -115,10 +107,10 @@ public:
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         return S_OK;
-    };  // No Local Configuration supprt
+    };  // No Local Configuration support
 
     HRESULT GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
-    HRESULT GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
+    HRESULT GetExtractItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
     HRESULT GetIgnoreItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
 
     HRESULT GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefinition& definition);
@@ -130,20 +122,25 @@ public:
     HRESULT Run();
 
 private:
+    HRESULT ParseArgument(std::wstring_view argument, Configuration& config);
+
     Configuration config;
 
     ImportMessage::PriorityMessageBuffer m_importRequestBuffer;
-    std::unique_ptr<Concurrency::call<ImportNotification::Notification>> m_importNotification;
-
-    std::unique_ptr<ImportAgent> m_importAgent;
+    std::unique_ptr<Concurrency::call<ImportNotification::Notification>> m_notificationCb;
 
     // Statictics
-    ULONGLONG ullProcessedBytes = 0LL;
-    ULONGLONG ullImportedLines = 0LL;
+    ULONGLONG m_ullProcessedBytes = 0LL;
 
-    HRESULT AddDirectoryForInput(const std::wstring& dir, const InputItem& input, std::vector<ImportItem>& input_paths);
-    HRESULT AddFileForInput(const std::wstring& file, const InputItem& input, std::vector<ImportItem>& input_paths);
+    HRESULT
+    AddDirectoryForInput(const std::filesystem::path& path, const InputItem& inputItem, std::vector<ImportItem>& files);
+
+    HRESULT
+    AddFileForInput(const std::filesystem::path& file, const InputItem& inputItem, std::vector<ImportItem>& files);
+
     std::vector<ImportItem> GetInputFiles(const InputItem& input);
 };
+
 }  // namespace Command::ExtractData
+
 }  // namespace Orc
