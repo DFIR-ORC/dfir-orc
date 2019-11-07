@@ -27,7 +27,7 @@ namespace Orc {
 class ImportMessage;
 class LogFileWriter;
 
-namespace Command::ImportData {
+namespace Command::ExtractData {
 
 class ORCUTILS_API Main : public UtilitiesMain
 {
@@ -88,11 +88,11 @@ public:
     };
 
 public:
-    static LPCWSTR ToolName() { return L"ImportData"; }
-    static LPCWSTR ToolDescription() { return L"ImportData - Import collected data"; }
+    static LPCWSTR ToolName() { return L"ExtractData"; }
+    static LPCWSTR ToolDescription() { return L"ExtractData - Extract collected data"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
-    static LPCWSTR DefaultConfiguration() { return L"res:#IMPORTDATA_CONFIG"; }
+    static LPCWSTR DefaultConfiguration() { return L"res:#EXTRACTDATA_CONFIG"; }
     static LPCWSTR ConfigurationExtension() { return nullptr; }
 
     static ConfigItem::InitFunction GetXmlLocalConfigBuilder() { return nullptr; }
@@ -118,7 +118,7 @@ public:
     };  // No Local Configuration supprt
 
     HRESULT GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
-    HRESULT GetExtractItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
+    HRESULT GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
     HRESULT GetIgnoreItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
 
     HRESULT GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefinition& definition);
@@ -145,5 +145,5 @@ private:
     HRESULT AddFileForInput(const std::wstring& file, const InputItem& input, std::vector<ImportItem>& input_paths);
     std::vector<ImportItem> GetInputFiles(const InputItem& input);
 };
-}  // namespace Command::ImportData
+}  // namespace Command::ExtractData
 }  // namespace Orc

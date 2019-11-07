@@ -8,13 +8,13 @@
 
 #include "stdafx.h"
 
-#include "ImportData.h"
+#include "ExtractData.h"
 
 #include "ParameterCheck.h"
 #include "LogFileWriter.h"
 #include "TableOutputWriter.h"
 
-#include "ConfigFile_ImportData.h"
+#include "ConfigFile_ExtractData.h"
 
 #include "ImportDefinition.h"
 
@@ -24,7 +24,7 @@
 using namespace std;
 
 using namespace Orc;
-using namespace Orc::Command::ImportData;
+using namespace Orc::Command::ExtractData;
 
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
@@ -35,41 +35,41 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 {
-    return Orc::Config::ImportData::root;
+    return Orc::Config::ExtractData::root;
 }
 
 HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    if (configitem[IMPORTDATA_OUTPUT])
+    if (configitem[EXTRACTDATA_OUTPUT])
     {
-        if (FAILED(hr = config.Output.Configure(_L_, config.Output.supportedTypes, configitem[IMPORTDATA_OUTPUT])))
+        if (FAILED(hr = config.Output.Configure(_L_, config.Output.supportedTypes, configitem[EXTRACTDATA_OUTPUT])))
         {
             return hr;
         }
     }
-    if (configitem[IMPORTDATA_IMPORT_OUTPUT])
+    if (configitem[EXTRACTDATA_EXTRACT_OUTPUT])
     {
         if (FAILED(
                 hr = config.importOutput.Configure(
-                    _L_, config.importOutput.supportedTypes, configitem[IMPORTDATA_IMPORT_OUTPUT])))
+                    _L_, config.importOutput.supportedTypes, configitem[EXTRACTDATA_EXTRACT_OUTPUT])))
         {
             return hr;
         }
     }
-    if (configitem[IMPORTDATA_EXTRACT_OUTPUT])
+    if (configitem[EXTRACTDATA_EXTRACT_OUTPUT])
     {
         if (FAILED(
                 hr = config.extractOutput.Configure(
-                    _L_, config.extractOutput.supportedTypes, configitem[IMPORTDATA_EXTRACT_OUTPUT])))
+                    _L_, config.extractOutput.supportedTypes, configitem[EXTRACTDATA_EXTRACT_OUTPUT])))
         {
             return hr;
         }
     }
-    if (configitem[IMPORTDATA_RECURSIVE])
+    if (configitem[EXTRACTDATA_RECURSIVE])
     {
-        if (!_wcsnicmp(configitem[IMPORTDATA_RECURSIVE].strData.c_str(), L"no", wcslen(L"no")))
+        if (!_wcsnicmp(configitem[EXTRACTDATA_RECURSIVE].strData.c_str(), L"no", wcslen(L"no")))
         {
             config.bResursive = false;
         }
@@ -79,17 +79,17 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
-    if (configitem[IMPORTDATA_CONCURRENCY])
+    if (configitem[EXTRACTDATA_CONCURRENCY])
     {
         config.dwConcurrency = 0;
         LARGE_INTEGER li;
-        if (FAILED(hr = GetIntegerFromArg(configitem[IMPORTDATA_CONCURRENCY].strData.c_str(), li)))
+        if (FAILED(hr = GetIntegerFromArg(configitem[EXTRACTDATA_CONCURRENCY].strData.c_str(), li)))
         {
             log::Error(
                 _L_,
                 hr,
                 L"Invalid concurrency value specified (%s), must be an integer.\r\n",
-                configitem[IMPORTDATA_CONCURRENCY].strData.c_str());
+                configitem[EXTRACTDATA_CONCURRENCY].strData.c_str());
             return hr;
         }
         if (li.QuadPart > MAXDWORD)
@@ -98,47 +98,47 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 _L_,
                 hr,
                 L"concurrency value specified (%s), must not be insane.\r\n",
-                configitem[IMPORTDATA_CONCURRENCY].strData.c_str());
+                configitem[EXTRACTDATA_CONCURRENCY].strData.c_str());
             return hr;
         }
         config.dwConcurrency = li.LowPart;
     }
 
-    if (configitem[IMPORTDATA_TABLE])
+    if (configitem[EXTRACTDATA_TABLE])
     {
-        for (auto& table_item : configitem[IMPORTDATA_TABLE].NodeList)
+        for (auto& table_item : configitem[EXTRACTDATA_TABLE].NodeList)
         {
             TableDescription table;
 
-            if (table_item[IMPORTDATA_TABLE_NAME])
+            if (table_item[EXTRACTDATA_TABLE_NAME])
             {
-                table.Name = table_item[IMPORTDATA_TABLE_NAME];
+                table.Name = table_item[EXTRACTDATA_TABLE_NAME];
             }
-            if (table_item[IMPORTDATA_TABLE_KEY])
+            if (table_item[EXTRACTDATA_TABLE_KEY])
             {
-                table.Key = table_item[IMPORTDATA_TABLE_KEY];
+                table.Key = table_item[EXTRACTDATA_TABLE_KEY];
             }
 
-            if (table_item[IMPORTDATA_TABLE_SCHEMA])
+            if (table_item[EXTRACTDATA_TABLE_SCHEMA])
             {
-                table.Schema = table_item[IMPORTDATA_TABLE_SCHEMA];
+                table.Schema = table_item[EXTRACTDATA_TABLE_SCHEMA];
             }
-            if (table_item[IMPORTDATA_TABLE_DISPOSITION])
+            if (table_item[EXTRACTDATA_TABLE_DISPOSITION])
             {
                 using namespace std::string_view_literals;
-                if (equalCaseInsensitive((const std::wstring&)table_item[IMPORTDATA_TABLE_DISPOSITION], L"createnew"sv)
+                if (equalCaseInsensitive((const std::wstring&)table_item[EXTRACTDATA_TABLE_DISPOSITION], L"createnew"sv)
                     || equalCaseInsensitive(
-                        (const std::wstring&)table_item[IMPORTDATA_TABLE_DISPOSITION], L"create_new"sv))
+                        (const std::wstring&)table_item[EXTRACTDATA_TABLE_DISPOSITION], L"create_new"sv))
                     table.Disposition = TableDisposition::CreateNew;
                 else if (equalCaseInsensitive(
-                             (const std::wstring&)table_item[IMPORTDATA_TABLE_DISPOSITION], L"truncate"sv))
+                             (const std::wstring&)table_item[EXTRACTDATA_TABLE_DISPOSITION], L"truncate"sv))
                     table.Disposition = TableDisposition::Truncate;
                 else
                     table.Disposition = TableDisposition::AsIs;
             }
-            if (table_item[IMPORTDATA_TABLE_COMPRESS])
+            if (table_item[EXTRACTDATA_TABLE_COMPRESS])
             {
-                if (equalCaseInsensitive((const std::wstring&)table_item[IMPORTDATA_TABLE_COMPRESS], L"no"sv))
+                if (equalCaseInsensitive((const std::wstring&)table_item[EXTRACTDATA_TABLE_COMPRESS], L"no"sv))
                 {
                     table.bCompress = false;
                 }
@@ -147,9 +147,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                     table.bCompress = true;
                 }
             }
-            if (table_item[IMPORTDATA_TABLE_TABLOCK])
+            if (table_item[EXTRACTDATA_TABLE_TABLOCK])
             {
-                if (equalCaseInsensitive((const std::wstring&)table_item[IMPORTDATA_TABLE_TABLOCK], L"no"sv))
+                if (equalCaseInsensitive((const std::wstring&)table_item[EXTRACTDATA_TABLE_TABLOCK], L"no"sv))
                 {
                     table.bTABLOCK = false;
                 }
@@ -158,16 +158,16 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                     table.bTABLOCK = true;
                 }
             }
-            if (table_item[IMPORTDATA_TABLE_CONCURRENCY])
+            if (table_item[EXTRACTDATA_TABLE_CONCURRENCY])
             {
                 LARGE_INTEGER li;
-                if (FAILED(hr = GetIntegerFromArg(table_item[IMPORTDATA_TABLE_CONCURRENCY].strData.c_str(), li)))
+                if (FAILED(hr = GetIntegerFromArg(table_item[EXTRACTDATA_TABLE_CONCURRENCY].strData.c_str(), li)))
                 {
                     log::Error(
                         _L_,
                         hr,
                         L"Invalid concurrency value specified (%s), must be an integer.\r\n",
-                        table_item[IMPORTDATA_TABLE_CONCURRENCY].strData.c_str());
+                        table_item[EXTRACTDATA_TABLE_CONCURRENCY].strData.c_str());
                     return hr;
                 }
                 if (li.QuadPart > MAXDWORD)
@@ -176,47 +176,47 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                         _L_,
                         hr,
                         L"concurrency value specified (%s), must not be insane.\r\n",
-                        table_item[IMPORTDATA_TABLE_CONCURRENCY].strData.c_str());
+                        table_item[EXTRACTDATA_TABLE_CONCURRENCY].strData.c_str());
                     return hr;
                 }
                 table.dwConcurrency = li.LowPart;
             }
 
-            if (table_item[IMPORTDATA_TABLE_BEFORE])
+            if (table_item[EXTRACTDATA_TABLE_BEFORE])
             {
-                table.BeforeStatement = table_item[IMPORTDATA_TABLE_BEFORE];
+                table.BeforeStatement = table_item[EXTRACTDATA_TABLE_BEFORE];
             }
-            if (table_item[IMPORTDATA_TABLE_AFTER])
+            if (table_item[EXTRACTDATA_TABLE_AFTER])
             {
-                table.AfterStatement = table_item[IMPORTDATA_TABLE_AFTER];
+                table.AfterStatement = table_item[EXTRACTDATA_TABLE_AFTER];
             }
 
             config.m_Tables.emplace_back(std::move(table));
         }
     }
 
-    if (configitem[IMPORTDATA_INPUT])
+    if (configitem[EXTRACTDATA_INPUT])
     {
-        for (auto& input_item : configitem[IMPORTDATA_INPUT].NodeList)
+        for (auto& input_item : configitem[EXTRACTDATA_INPUT].NodeList)
         {
             Main::InputItem input(_L_);
 
-            if (input_item[IMPORTDATA_INPUT_DIRECTORY])
+            if (input_item[EXTRACTDATA_INPUT_DIRECTORY])
             {
-                input.InputDirectory = input_item[IMPORTDATA_INPUT_DIRECTORY];
+                input.InputDirectory = input_item[EXTRACTDATA_INPUT_DIRECTORY];
             }
-            if (input_item[IMPORTDATA_INPUT_MATCH])
+            if (input_item[EXTRACTDATA_INPUT_MATCH])
             {
-                input.NameMatch = input_item[IMPORTDATA_INPUT_MATCH];
+                input.NameMatch = input_item[EXTRACTDATA_INPUT_MATCH];
             }
 
-            if (input_item[IMPORTDATA_INPUT_BEFORE])
+            if (input_item[EXTRACTDATA_INPUT_BEFORE])
             {
-                input.BeforeStatement = input_item[IMPORTDATA_INPUT_BEFORE];
+                input.BeforeStatement = input_item[EXTRACTDATA_INPUT_BEFORE];
             }
-            if (input_item[IMPORTDATA_INPUT_AFTER])
+            if (input_item[EXTRACTDATA_INPUT_AFTER])
             {
-                input.AfterStatement = input_item[IMPORTDATA_INPUT_AFTER].strData;
+                input.AfterStatement = input_item[EXTRACTDATA_INPUT_AFTER].strData;
             }
 
             if (FAILED(hr = GetDefinitionFromConfig(input_item, input.ImportDefinitions)))
@@ -233,50 +233,50 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
 HRESULT Main::GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& definition)
 {
-    if (config_item[IMPORTDATA_INPUT_IMPORT_FILEMATCH])
+    if (config_item[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH])
     {
-        definition.NameMatch = config_item[IMPORTDATA_INPUT_IMPORT_FILEMATCH];
+        definition.NameMatch = config_item[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH];
     }
 
-    if (config_item[IMPORTDATA_INPUT_IMPORT_BEFORE])
+    if (config_item[EXTRACTDATA_INPUT_EXTRACT_BEFORE])
     {
-        definition.BeforeStatement = config_item[IMPORTDATA_INPUT_IMPORT_BEFORE];
+        definition.BeforeStatement = config_item[EXTRACTDATA_INPUT_EXTRACT_BEFORE];
     }
-    if (config_item[IMPORTDATA_INPUT_IMPORT_AFTER])
+    if (config_item[EXTRACTDATA_INPUT_EXTRACT_AFTER])
     {
-        definition.AfterStatement = config_item[IMPORTDATA_INPUT_IMPORT_AFTER];
-    }
-
-    if (config_item[IMPORTDATA_INPUT_IMPORT_TABLE])
-    {
-        definition.Table = config_item[IMPORTDATA_INPUT_IMPORT_TABLE];
+        definition.AfterStatement = config_item[EXTRACTDATA_INPUT_EXTRACT_AFTER];
     }
 
-    if (config_item[IMPORTDATA_INPUT_IMPORT_PASSWORD])
+    if (config_item[EXTRACTDATA_INPUT_EXTRACT_TABLE])
     {
-        definition.Password = config_item[IMPORTDATA_INPUT_IMPORT_PASSWORD];
+        definition.Table = config_item[EXTRACTDATA_INPUT_EXTRACT_TABLE];
+    }
+
+    if (config_item[EXTRACTDATA_INPUT_EXTRACT_PASSWORD])
+    {
+        definition.Password = config_item[EXTRACTDATA_INPUT_EXTRACT_PASSWORD];
     }
     return S_OK;
 }
 
 HRESULT Main::GetIgnoreItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item)
 {
-    if (config_item[IMPORTDATA_INPUT_IGNORE_FILEMATCH])
+    if (config_item[EXTRACTDATA_INPUT_IGNORE_FILEMATCH])
     {
-        import_item.NameMatch = config_item[IMPORTDATA_INPUT_IGNORE_FILEMATCH];
+        import_item.NameMatch = config_item[EXTRACTDATA_INPUT_IGNORE_FILEMATCH];
     }
     return S_OK;
 }
 
-HRESULT Main::GetExtractItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item)
+HRESULT Main::GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item)
 {
-    if (config_item[IMPORTDATA_INPUT_EXTRACT_FILEMATCH])
+    if (config_item[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH])
     {
-        import_item.NameMatch = config_item[IMPORTDATA_INPUT_EXTRACT_FILEMATCH];
+        import_item.NameMatch = config_item[EXTRACTDATA_INPUT_EXTRACT_FILEMATCH];
     }
-    if (config_item[IMPORTDATA_INPUT_EXTRACT_PASSWORD])
+    if (config_item[EXTRACTDATA_INPUT_EXTRACT_PASSWORD])
     {
-        import_item.Password = config_item[IMPORTDATA_INPUT_EXTRACT_PASSWORD];
+        import_item.Password = config_item[EXTRACTDATA_INPUT_EXTRACT_PASSWORD];
     }
     return S_OK;
 }
@@ -285,10 +285,10 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefin
 {
     HRESULT hr = E_FAIL;
 
-    if (config_item[IMPORTDATA_INPUT_IMPORT])
+    if (config_item[EXTRACTDATA_INPUT_EXTRACT])
     {
 
-        for (auto& import_item : config_item[IMPORTDATA_INPUT_IMPORT].NodeList)
+        for (auto& import_item : config_item[EXTRACTDATA_INPUT_EXTRACT].NodeList)
         {
             ImportDefinition::Item import;
 
@@ -296,13 +296,13 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefin
             {
                 log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
             }
-            import.ToDo = ImportDefinition::Import;
+            import.ToDo = ImportDefinition::Extract;
             definition.m_ItemDefinitions.push_back(std::move(import));
         }
     }
-    if (config_item[IMPORTDATA_INPUT_IGNORE])
+    if (config_item[EXTRACTDATA_INPUT_IGNORE])
     {
-        for (auto& ignore_item : config_item[IMPORTDATA_INPUT_IGNORE].NodeList)
+        for (auto& ignore_item : config_item[EXTRACTDATA_INPUT_IGNORE].NodeList)
         {
             ImportDefinition::Item import;
 
@@ -314,13 +314,13 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefin
             definition.m_ItemDefinitions.push_back(std::move(import));
         }
     }
-    if (config_item[IMPORTDATA_INPUT_EXTRACT])
+    if (config_item[EXTRACTDATA_INPUT_EXTRACT])
     {
-        for (auto& extract_item : config_item[IMPORTDATA_INPUT_EXTRACT].NodeList)
+        for (auto& extract_item : config_item[EXTRACTDATA_INPUT_EXTRACT].NodeList)
         {
             ImportDefinition::Item import;
 
-            if (FAILED(hr = GetExtractItemFromConfig(extract_item, import)))
+            if (FAILED(hr = GetImportItemFromConfig(extract_item, import)))
             {
                 log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
             }
@@ -343,7 +343,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
             case L'-':
                 if (OutputOption(argv[i] + 1, L"Out", config.Output))
                     ;
-                else if (OutputOption(argv[i] + 1, L"Import", config.importOutput))
+                else if (OutputOption(argv[i] + 1, L"Extract", config.importOutput))
                     ;
                 else if (OutputOption(argv[i] + 1, L"Extract", config.extractOutput))
                     ;

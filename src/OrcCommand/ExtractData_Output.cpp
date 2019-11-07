@@ -8,7 +8,7 @@
 
 #include "stdafx.h"
 
-#include "IMPORTDATA.h"
+#include "ExtractData.h"
 #include "ToolVersion.h"
 #include "LogFileWriter.h"
 
@@ -16,19 +16,19 @@
 #include <algorithm>
 
 using namespace Orc;
-using namespace Orc::Command::ImportData;
+using namespace Orc::Command::ExtractData;
 
 void Main::PrintUsage()
 {
     log::Info(
         _L_,
         L"\r\""
-        L"usage: DFIR-Orc.exe ImportData [/out=<Output>] <PathToImportedData.7z.p7b>*\r\n"
+        L"usage: DFIR-Orc.exe ExtractData [/out=<Output>] <PathToExtractedData.7z.p7b>*\r\n"
         L"\r\n"
         L"/config=<config.xml> : specifies a configuration file\r\n"
         L"\t/Out=<Output>      : output specification\r\n"
         L"\t\r\n"
-        L"<PathToImportedData.7z.p7b>*    : Path to the data files to import\r\n");
+        L"<PathToExtractedData.7z.p7b>*    : Path to the data files to import\r\n");
     PrintCommonUsage();
     return;
 }
@@ -39,7 +39,7 @@ void Main::PrintParameters()
 
     SaveAndPrintStartTime();
 
-    log::Info(_L_, L"\r\nImportData configured to import:\r\n");
+    log::Info(_L_, L"\r\nExtractData configured to import:\r\n");
     for (auto& item : config.Inputs)
     {
 
@@ -53,7 +53,7 @@ void Main::PrintFooter()
 {
     log::Info(_L_, L"\r\n");
     log::Info(_L_, L"Bytes processed     : %I64d\r\n", ullProcessedBytes);
-    log::Info(_L_, L"Lines imported      : %I64d\r\n", ullImportedLines);
+    log::Info(_L_, L"Lines imported      : %I64d\r\n", ullExtractedLines);
     log::Info(_L_, L"\r\n");
     PrintExecutionTime();
 }
