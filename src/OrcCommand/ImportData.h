@@ -61,7 +61,7 @@ public:
     public:
         Configuration(logger pLog)
         {
-            Output.supportedTypes = static_cast<OutputSpec::Kind>(
+            reportOutput.supportedTypes = static_cast<OutputSpec::Kind>(
                 OutputSpec::Kind::SQL | OutputSpec::Kind::CSV | OutputSpec::Kind::TSV | OutputSpec::Kind::TableFile);
             importOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL);
             extractOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory);
@@ -70,7 +70,7 @@ public:
 
         DWORD dwConcurrency = 2;
 
-        bool bResursive = false;
+        bool bRecursive = false;
         bool bDontExtract = false;
         bool bDontImport = false;
 
@@ -81,7 +81,7 @@ public:
 
         std::vector<TableDescription> m_Tables;
 
-        OutputSpec Output;
+        OutputSpec reportOutput;
         OutputSpec extractOutput;
         OutputSpec importOutput;
         OutputSpec tempOutput;
@@ -115,7 +115,7 @@ public:
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         return S_OK;
-    };  // No Local Configuration supprt
+    };  // No Local Configuration support
 
     HRESULT GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
     HRESULT GetExtractItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
@@ -133,13 +133,13 @@ private:
     Configuration config;
 
     ImportMessage::PriorityMessageBuffer m_importRequestBuffer;
-    std::unique_ptr<Concurrency::call<ImportNotification::Notification>> m_importNotification;
+    std::unique_ptr<Concurrency::call<ImportNotification::Notification>> m_notificationCb;
 
     std::unique_ptr<ImportAgent> m_importAgent;
 
     // Statictics
-    ULONGLONG ullProcessedBytes = 0LL;
-    ULONGLONG ullImportedLines = 0LL;
+    ULONGLONG m_ullProcessedBytes = 0LL;
+    ULONGLONG m_ullImportedLines = 0LL;
 
     HRESULT AddDirectoryForInput(const std::wstring& dir, const InputItem& input, std::vector<ImportItem>& input_paths);
     HRESULT AddFileForInput(const std::wstring& file, const InputItem& input, std::vector<ImportItem>& input_paths);

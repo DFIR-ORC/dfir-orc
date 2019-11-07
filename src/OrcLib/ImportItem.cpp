@@ -34,13 +34,13 @@ std::shared_ptr<ByteStream> ImportItem::GetInputStream(const logger& pLog)
         if (Stream->CanRead() == S_OK)
             return Stream;
     }
-    if (InputFile)
+    if (inputFile)
     {
         auto retval = std::make_shared<FileStream>(pLog);
         HRESULT hr = E_FAIL;
-        if (FAILED(hr = retval->ReadFrom(InputFile->c_str())))
+        if (FAILED(hr = retval->ReadFrom(inputFile->c_str())))
         {
-            log::Error(pLog, hr, L"Failed to open import item %s\r\n", FullName.c_str());
+            log::Error(pLog, hr, L"Failed to open import item %s\r\n", fullName.c_str());
             return nullptr;
         }
         return Stream = retval;
@@ -56,13 +56,13 @@ std::shared_ptr<ByteStream> ImportItem::GetOutputStream(const logger& pLog)
             return Stream;
     }
 
-    if (!FullName.empty())
+    if (!fullName.empty())
     {
         auto retval = std::make_shared<FileStream>(pLog);
         HRESULT hr = E_FAIL;
         if (FAILED(
                 hr = retval->OpenFile(
-                    FullName.c_str(),
+                    fullName.c_str(),
                     GENERIC_READ | GENERIC_WRITE,
                     0L,
                     NULL,
@@ -70,7 +70,7 @@ std::shared_ptr<ByteStream> ImportItem::GetOutputStream(const logger& pLog)
                     FILE_ATTRIBUTE_NORMAL,
                     NULL)))
         {
-            log::Error(pLog, hr, L"Failed to open import item %s\r\n", FullName.c_str());
+            log::Error(pLog, hr, L"Failed to open import item %s\r\n", fullName.c_str());
             return nullptr;
         }
         return Stream = retval;
@@ -80,24 +80,24 @@ std::shared_ptr<ByteStream> ImportItem::GetOutputStream(const logger& pLog)
 
 std::wstring ImportItem::GetBaseName(const logger& pLog)
 {
-    if (!Name.empty())
+    if (!name.empty())
     {
         HRESULT hr = E_FAIL;
         WCHAR szBasename[MAX_PATH];
-        if (FAILED(hr = GetBaseNameForFile(Name.c_str(), szBasename, MAX_PATH)))
+        if (FAILED(hr = GetBaseNameForFile(name.c_str(), szBasename, MAX_PATH)))
         {
-            log::Error(pLog, hr, L"Failed to extract basename for file %s\r\n", Name.c_str());
+            log::Error(pLog, hr, L"Failed to extract basename for file %s\r\n", name.c_str());
             return L"";
         }
         return szBasename;
     }
-    if (!FullName.empty())
+    if (!fullName.empty())
     {
         HRESULT hr = E_FAIL;
         WCHAR szBasename[MAX_PATH];
-        if (FAILED(hr = GetBaseNameForFile(FullName.c_str(), szBasename, MAX_PATH)))
+        if (FAILED(hr = GetBaseNameForFile(fullName.c_str(), szBasename, MAX_PATH)))
         {
-            log::Error(pLog, hr, L"Failed to extract basename for file %s\r\n", FullName.c_str());
+            log::Error(pLog, hr, L"Failed to extract basename for file %s\r\n", fullName.c_str());
             return L"";
         }
         return szBasename;
@@ -107,30 +107,30 @@ std::wstring ImportItem::GetBaseName(const logger& pLog)
 
 ImportItem::ImportItemFormat ImportItem::GetFileFormat()
 {
-    if (Format != Undetermined)
-        return Format;
+    if (format != Undetermined)
+        return format;
 
-    fs::path path(Name);
+    fs::path path(name);
     std::wstring ext = path.extension();
 
     if (!ext.empty())
     {
         if (equalCaseInsensitive(ext, L".p7b"))
-            return Format = ImportItem::ImportItemFormat::Envelopped;
+            return format = ImportItem::ImportItemFormat::Envelopped;
         if (equalCaseInsensitive(ext, L".7z"))
-            return Format = ImportItem::ImportItemFormat::Archive;
+            return format = ImportItem::ImportItemFormat::Archive;
         if (equalCaseInsensitive(ext, L".csv"))
-            return Format = ImportItem::ImportItemFormat::CSV;
+            return format = ImportItem::ImportItemFormat::CSV;
         if (equalCaseInsensitive(ext, L".xml"))
-            return Format = ImportItem::ImportItemFormat::XML;
+            return format = ImportItem::ImportItemFormat::XML;
         if (equalCaseInsensitive(ext, L".txt"))
-            return Format = ImportItem::ImportItemFormat::Text;
+            return format = ImportItem::ImportItemFormat::Text;
         if (equalCaseInsensitive(ext, L".log"))
-            return Format = ImportItem::ImportItemFormat::Text;
+            return format = ImportItem::ImportItemFormat::Text;
         if (equalCaseInsensitive(ext, L".zip"))
-            return Format = ImportItem::ImportItemFormat::Archive;
+            return format = ImportItem::ImportItemFormat::Archive;
         if (equalCaseInsensitive(ext, L".cab"))
-            return Format = ImportItem::ImportItemFormat::Archive;
+            return format = ImportItem::ImportItemFormat::Archive;
     }
 
     if (Stream != nullptr)
@@ -149,35 +149,35 @@ ImportItem::ImportItemFormat ImportItem::GetFileFormat()
                 {
                     if (Header[0] == 'r' && Header[1] == 'e' && Header[2] == 'g' && Header[3] == 'f')
                     {
-                        return Format = ImportItem::ImportItemFormat::RegistryHive;
+                        return format = ImportItem::ImportItemFormat::RegistryHive;
                     }
                     else if (
                         Header[0] == 'E' && Header[1] == 'l' && Header[2] == 'f' && Header[3] == 'F' && Header[4] == 'i'
                         && Header[5] == 'l' && Header[6] == 'e')
                     {
-                        return Format = ImportItem::ImportItemFormat::EventLog;
+                        return format = ImportItem::ImportItemFormat::EventLog;
                     }
                 }
             }
         }
     }
-    return Format = ImportItem::ImportItemFormat::Data;
+    return format = ImportItem::ImportItemFormat::Data;
 }
 
 const ImportDefinition::Item* ImportItem::DefinitionItemLookup(ImportDefinition::Action action)
 {
-    if (DefinitionItem)
-        return DefinitionItem;
+    if (definitionItem)
+        return definitionItem;
 
-    if (Definitions)
+    if (definitions)
     {
-        for (const auto& def : Definitions->GetDefinitions())
+        for (const auto& def : definitions->GetDefinitions())
         {
             if (def.ToDo == action)
             {
-                if (PathMatchSpec(Name.c_str(), def.NameMatch.c_str()))
+                if (PathMatchSpec(name.c_str(), def.nameMatch.c_str()))
                 {
-                    return DefinitionItem = &def;
+                    return definitionItem = &def;
                 }
             }
         }
@@ -189,7 +189,7 @@ bool ImportItem::IsToIgnore()
 {
     if (isToIgnore != boost::indeterminate)
         return (bool)isToIgnore;
-    return (bool)(isToIgnore = IsToIgnore(Definitions, Name, &DefinitionItem));
+    return (bool)(isToIgnore = IsToIgnore(definitions, name, &definitionItem));
 }
 
 bool ImportItem::IsToIgnore(
@@ -203,7 +203,7 @@ bool ImportItem::IsToIgnore(
         {
             if (def.ToDo == ImportDefinition::Ignore)
             {
-                if (PathMatchSpec(strName.c_str(), def.NameMatch.c_str()))
+                if (PathMatchSpec(strName.c_str(), def.nameMatch.c_str()))
                 {
                     if (ppItem)
                         *ppItem = &def;
@@ -219,7 +219,7 @@ bool ImportItem::IsToImport()
 {
     if (isToImport != boost::indeterminate)
         return (bool)isToImport;
-    return (bool)(isToImport = IsToImport(Definitions, Name, &DefinitionItem));
+    return (bool)(isToImport = IsToImport(definitions, name, &definitionItem));
 }
 
 bool ImportItem::IsToImport(
@@ -233,7 +233,7 @@ bool ImportItem::IsToImport(
         {
             if (def.ToDo == ImportDefinition::Import)
             {
-                if (PathMatchSpec(strName.c_str(), def.NameMatch.c_str()))
+                if (PathMatchSpec(strName.c_str(), def.nameMatch.c_str()))
                 {
                     if (ppItem)
                         *ppItem = &def;
@@ -249,7 +249,7 @@ bool ImportItem::IsToExtract()
 {
     if (!boost::indeterminate(isToExtract))
         return (bool)isToExtract;
-    return (bool)(isToExtract = IsToExtract(Definitions, Name, &DefinitionItem));
+    return (bool)(isToExtract = IsToExtract(definitions, name, &definitionItem));
 }
 
 bool ImportItem::IsToExtract(
@@ -263,7 +263,7 @@ bool ImportItem::IsToExtract(
         {
             if (def.ToDo == ImportDefinition::Extract)
             {
-                if (PathMatchSpec(strName.c_str(), def.NameMatch.c_str()))
+                if (PathMatchSpec(strName.c_str(), def.nameMatch.c_str()))
                 {
                     if (ppItem)
                         *ppItem = &def;
@@ -284,7 +284,7 @@ bool ImportItem::IsToExpand()
         isToExpand = false;
         return false;
     }
-    return (bool)(isToExpand = IsToExpand(Definitions, Name, &DefinitionItem));
+    return (bool)(isToExpand = IsToExpand(definitions, name, &definitionItem));
 }
 
 bool ImportItem::IsToExpand(

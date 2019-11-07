@@ -493,7 +493,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     else
                     {
                         WCHAR inputfile[MAX_PATH];
-                        if (FAILED(hr = GetInputFile(parameter.Name.c_str(), inputfile, MAX_PATH)))
+                        if (FAILED(hr = ExpandFilePath(parameter.Name.c_str(), inputfile, MAX_PATH)))
                             return;
 
                         wstring Arg;

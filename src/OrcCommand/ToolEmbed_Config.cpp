@@ -82,7 +82,7 @@ HRESULT Main::GetAddFileFromConfigItem(const logger& pLog, const ConfigItem& ite
     if (item)
     {
         HRESULT hr = E_FAIL;
-        if (FAILED(hr = GetInputFile(((const std::wstring&)item[TOOLEMBED_FILEPATH]).c_str(), strInputFile)))
+        if (FAILED(hr = ExpandFilePath(((const std::wstring&)item[TOOLEMBED_FILEPATH]).c_str(), strInputFile)))
         {
             log::Error(
                 pLog,
@@ -150,7 +150,7 @@ HRESULT Main::GetAddArchiveFromConfigItem(const logger& pLog, const ConfigItem& 
             wstring strInputFile;
 
             HRESULT subhr = E_FAIL;
-            if (FAILED(subhr = GetInputFile(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(), strInputFile)))
+            if (FAILED(subhr = ExpandFilePath(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(), strInputFile)))
             {
                 log::Error(
                     pLog,
@@ -374,7 +374,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     {
                         WCHAR szFile[MAX_PATH];
 
-                        if (FAILED(hr = GetInputFile(s[1].str().c_str(), szFile, MAX_PATH)))
+                        if (FAILED(hr = ExpandFilePath(s[1].str().c_str(), szFile, MAX_PATH)))
                         {
                             log::Error(_L_, hr, L"Invalid file to embed specified: %s\r\n", strParameter.c_str());
                             return E_INVALIDARG;

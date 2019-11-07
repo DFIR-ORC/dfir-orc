@@ -34,7 +34,7 @@ enum TableDisposition
 class TableDescription
 {
 public:
-    std::wstring Name;
+    std::wstring name;
     TableDisposition Disposition = TableDisposition::AsIs;
     DWORD dwConcurrency = 1;
     std::wstring Key;
@@ -65,14 +65,14 @@ public:
         Data
     };
 
-    ImportItemFormat Format = ImportItemFormat::Undetermined;
+    ImportItemFormat format = ImportItemFormat::Undetermined;
     boost::logic::tribool isToIgnore = boost::logic::indeterminate;
     boost::logic::tribool isToImport = boost::logic::indeterminate;
     boost::logic::tribool isToExtract = boost::logic::indeterminate;
     boost::logic::tribool isToExpand = boost::logic::indeterminate;
 
-    SYSTEMTIME ImportStart;
-    SYSTEMTIME ImportEnd;
+    SYSTEMTIME importStart;
+    SYSTEMTIME importEnd;
 
     ULONGLONG ullMemBytesCharged = 0LL;
     ULONGLONG ullFileBytesCharged = 0LL;
@@ -80,19 +80,19 @@ public:
     ULONGLONG ullBytesExtracted = 0LL;
     ULONGLONG ullLinesImported = 0LL;
 
-    const ImportDefinition::Item* DefinitionItem = nullptr;
-    const ImportDefinition* Definitions = nullptr;
+    const ImportDefinition::Item* definitionItem = nullptr;
+    const ImportDefinition* definitions = nullptr;
 
-    std::wstring FullName;
-    std::wstring Name;
+    std::wstring fullName;
+    std::wstring name;
 
-    std::wstring FullComputerName;
-    std::wstring ComputerName;
-    std::wstring SystemType;
-    std::wstring TimeStamp;
+    std::wstring fullComputerName;
+    std::wstring computerName;
+    std::wstring systemType;
+    std::wstring timeStamp;
 
-    std::shared_ptr<std::wstring> InputFile;
-    std::shared_ptr<std::wstring> OutputFile;
+    std::shared_ptr<std::wstring> inputFile;
+    std::shared_ptr<std::wstring> outputFile;
 
     std::shared_ptr<ByteStream> Stream;
 
@@ -102,17 +102,17 @@ public:
     ImportItem() = default;
 
     ImportItem(ImportItem&& other)
-        : DefinitionItem(other.DefinitionItem)
+        : definitionItem(other.definitionItem)
     {
-        std::swap(InputFile, other.InputFile);
-        std::swap(Definitions, other.Definitions);
-        std::swap(DefinitionItem, other.DefinitionItem);
-        std::swap(Format, other.Format);
-        std::swap(FullName, other.FullName);
-        std::swap(Name, other.Name);
-        std::swap(ComputerName, other.ComputerName);
-        std::swap(SystemType, other.SystemType);
-        std::swap(TimeStamp, other.TimeStamp);
+        std::swap(inputFile, other.inputFile);
+        std::swap(definitions, other.definitions);
+        std::swap(definitionItem, other.definitionItem);
+        std::swap(format, other.format);
+        std::swap(fullName, other.fullName);
+        std::swap(name, other.name);
+        std::swap(computerName, other.computerName);
+        std::swap(systemType, other.systemType);
+        std::swap(timeStamp, other.timeStamp);
         std::swap(Stream, other.Stream);
         std::swap(isToIgnore, other.isToIgnore);
         std::swap(isToExtract, other.isToExtract);
@@ -127,7 +127,7 @@ public:
     std::shared_ptr<ByteStream> GetOutputStream(const logger& pLog);
     std::wstring GetBaseName(const logger& pLog);
 
-    const ImportDefinition::Item* GetDefinitionItem() const { return DefinitionItem; }
+    const ImportDefinition::Item* GetDefinitionItem() const { return definitionItem; }
 
     bool IsToIgnore();
     bool IsToImport();

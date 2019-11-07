@@ -55,7 +55,7 @@ public:
             auto pDef = msg->Item().GetDefinitionItem();
             if (pDef)
             {
-                if (equalCaseInsensitive(pDef->Table, strTableName))
+                if (equalCaseInsensitive(pDef->tableName, strTableName))
                 {
                     return true;
                 }
@@ -97,9 +97,9 @@ public:
     }
 
     HRESULT InitializeOutputs(
-        const OutputSpec& output,
-        const OutputSpec& importOutput,
         const OutputSpec& extractOutput,
+        const OutputSpec& importOutput,
+        const OutputSpec& reportOutput,
         const OutputSpec& tempOutput);
 
     HRESULT InitializeTables(std::vector<TableDescription>& tables);
@@ -147,9 +147,9 @@ private:
     ImportBytesSemaphore m_fileSemaphore;
     ImportBytesSemaphore m_memSemaphore;
 
-    OutputSpec m_Output;
+    OutputSpec m_reportOutput;
     OutputSpec m_extractOutput;
-    OutputSpec m_importOutput;
+    OutputSpec m_databaseOutput;
     OutputSpec m_tempOutput;
 
     concurrency::event m_Complete;
@@ -193,6 +193,7 @@ private:
 
     HRESULT
     UnWrapMessage(const std::shared_ptr<ByteStream>& pMessageStream, const std::shared_ptr<ByteStream>& pOutputStream);
+
     HRESULT EnveloppedItem(ImportItem& input);
 
     HRESULT ExpandItem(ImportItem& input);

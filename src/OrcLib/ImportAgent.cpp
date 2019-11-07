@@ -58,7 +58,7 @@ ImportMessage::Message ImportAgent::TriageNewItem(const ImportItem& input, Impor
 {
     ImportMessage::Message retval;
 
-    newItem.Definitions = input.Definitions;
+    newItem.definitions = input.definitions;
 
     if (!newItem.IsToIgnore())
     {
@@ -71,10 +71,10 @@ ImportMessage::Message ImportAgent::TriageNewItem(const ImportItem& input, Impor
 
         newItem.ullBytesExtracted += input.Stream->GetSize();
 
-        newItem.ComputerName = input.ComputerName;
-        newItem.SystemType = input.SystemType;
-        newItem.TimeStamp = input.TimeStamp;
-        newItem.InputFile = input.InputFile;
+        newItem.computerName = input.computerName;
+        newItem.systemType = input.systemType;
+        newItem.timeStamp = input.timeStamp;
+        newItem.inputFile = input.inputFile;
 
         auto pFinalTempStream = std::dynamic_pointer_cast<TemporaryStream>(newItem.Stream);
 
@@ -88,24 +88,24 @@ ImportMessage::Message ImportAgent::TriageNewItem(const ImportItem& input, Impor
         else
             newItem.ullFileBytesCharged = newItem.Stream->GetSize();
 
-        if (Archive::GetArchiveFormat(newItem.Name) != ArchiveFormat::Unknown)
+        if (Archive::GetArchiveFormat(newItem.name) != ArchiveFormat::Unknown)
         {
             newItem.isToExtract = true;
             newItem.isToImport = false;
             retval = ImportMessage::MakeExtractRequest(std::move(newItem));
-            log::Verbose(_L_, L"\tArchive %s has been extracted\r\n", newItem.Name.c_str());
+            log::Verbose(_L_, L"\tArchive %s has been extracted\r\n", newItem.name.c_str());
         }
         else
         {
             if (newItem.IsToImport())
             {
                 retval = ImportMessage::MakeImportRequest(std::move(newItem));
-                log::Verbose(_L_, L"\tArchive %s has been extracted\r\n", newItem.Name.c_str());
+                log::Verbose(_L_, L"\tArchive %s has been extracted\r\n", newItem.name.c_str());
             }
             else if (newItem.IsToExtract())
             {
                 retval = ImportMessage::MakeExtractRequest(std::move(newItem));
-                log::Verbose(_L_, L"\tArchive %s has been extracted\r\n", newItem.Name.c_str());
+                log::Verbose(_L_, L"\tArchive %s has been extracted\r\n", newItem.name.c_str());
             }
         }
     }
@@ -153,13 +153,13 @@ HRESULT ImportAgent::EnveloppedItem(ImportItem& input)
     if (input.GetFileFormat() != ImportItem::Envelopped)
         return E_INVALIDARG;
 
-    GetSystemTime(&input.ImportStart);
+    GetSystemTime(&input.importStart);
 
-    BOOST_SCOPE_EXIT(&input) { GetSystemTime(&input.ImportEnd); }
+    BOOST_SCOPE_EXIT(&input) { GetSystemTime(&input.importEnd); }
     BOOST_SCOPE_EXIT_END;
 
     auto pTempStream = std::make_shared<TemporaryStream>(_L_);
-    if (FAILED(hr = pTempStream->Open(m_tempOutput.Path.c_str(), input.Name, 100 * 1024 * 1024, false)))
+    if (FAILED(hr = pTempStream->Open(m_tempOutput.Path.c_str(), input.name, 100 * 1024 * 1024, false)))
     {
         log::Error(_L_, hr, L"Failed to open temporary stream\r\n");
         return hr;
@@ -185,22 +185,22 @@ HRESULT ImportAgent::EnveloppedItem(ImportItem& input)
     }
 
     ImportItem output;
-    output.InputFile = input.InputFile;
-    output.DefinitionItem = nullptr;
-    output.Definitions = input.Definitions;
-    output.Name = input.GetBaseName(_L_);
-    output.FullName = output.Name;
-    output.Format = output.GetFileFormat();
+    output.inputFile = input.inputFile;
+    output.definitionItem = nullptr;
+    output.definitions = input.definitions;
+    output.name = input.GetBaseName(_L_);
+    output.fullName = output.name;
+    output.format = output.GetFileFormat();
 
-    output.ComputerName = input.ComputerName;
-    output.SystemType = input.SystemType;
-    output.TimeStamp = input.TimeStamp;
-    output.InputFile = input.InputFile;
+    output.computerName = input.computerName;
+    output.systemType = input.systemType;
+    output.timeStamp = input.timeStamp;
+    output.inputFile = input.inputFile;
 
-    if (JournalingStream::IsStreamJournaled(_L_, pTempStream) == S_OK)
+    if (JournalingStream::IsStreamJournalized(_L_, pTempStream) == S_OK)
     {
         auto pOutputStream = std::make_shared<TemporaryStream>(_L_);
-        if (FAILED(hr = pOutputStream->Open(m_tempOutput.Path.c_str(), output.Name, 100 * 1024 * 1024, false)))
+        if (FAILED(hr = pOutputStream->Open(m_tempOutput.Path.c_str(), output.name, 100 * 1024 * 1024, false)))
         {
             log::Error(_L_, hr, L"Failed to open temporary archive\r\n");
             return hr;
@@ -257,16 +257,16 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
     if (input.GetFileFormat() != ImportItem::Archive)
         return E_INVALIDARG;
 
-    GetSystemTime(&input.ImportStart);
+    GetSystemTime(&input.importStart);
 
-    BOOST_SCOPE_EXIT(&input) { GetSystemTime(&input.ImportEnd); }
+    BOOST_SCOPE_EXIT(&input) { GetSystemTime(&input.importEnd); }
     BOOST_SCOPE_EXIT_END;
 
-    auto archiveFormat = Archive::GetArchiveFormat(input.Name);
+    auto archiveFormat = Archive::GetArchiveFormat(input.name);
 
     if (archiveFormat == ArchiveFormat::Unknown)
     {
-        log::Error(_L_, hr, L"Unrecognised archive format for %s\r\n", input.Name.c_str());
+        log::Error(_L_, hr, L"Unrecognised archive format for %s\r\n", input.name.c_str());
         return hr;
     }
 
@@ -274,11 +274,11 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
     log::Verbose(_L_, L"Extracting archive\r\n");
 
-    if (input.DefinitionItem)
+    if (input.definitionItem)
     {
-        if (!input.DefinitionItem->Password.empty())
+        if (!input.definitionItem->Password.empty())
         {
-            extractor->SetPassword(input.DefinitionItem->Password);
+            extractor->SetPassword(input.definitionItem->Password);
         }
     }
 
@@ -286,7 +286,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
     extractor->SetCallback([this, &input, &tempItems](const Archive::ArchiveItem& item) {
         wstring strItemName;
-        fs::path path(input.Name);
+        fs::path path(input.name);
         auto strBaseName = path.stem().wstring();
 
         if (input.bPrefixSubItem)
@@ -299,7 +299,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
         }
 
         auto found = std::find_if(begin(tempItems), end(tempItems), [&strItemName](const ImportItem& tempItem) -> bool {
-            return tempItem.Name == strItemName;
+            return tempItem.name == strItemName;
         });
 
         if (found == end(tempItems))
@@ -311,14 +311,14 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
         {
             if (input.bPrefixSubItem)
             {
-                fs::path input_path(input.FullName);
-                found->FullName = input_path.parent_path().wstring() + L"\\" + input_path.stem().wstring() + L"\\"
+                fs::path input_path(input.fullName);
+                found->fullName = input_path.parent_path().wstring() + L"\\" + input_path.stem().wstring() + L"\\"
                     + item.NameInArchive;
             }
             else
-                found->FullName = strBaseName + L"\\" + item.NameInArchive;
+                found->fullName = strBaseName + L"\\" + item.NameInArchive;
 
-            found->Name = strItemName;
+            found->name = strItemName;
 
             if (!found->IsToIgnore())
             {
@@ -328,7 +328,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
                 {
                     found->DefinitionItemLookup(ImportDefinition::Expand);
 
-                    if (found->DefinitionItem == nullptr)
+                    if (found->definitionItem == nullptr)
                     {
                         found->isToExpand = true;
                     }
@@ -336,10 +336,10 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
                 input.ullBytesExtracted += found->Stream->GetSize();
 
-                found->ComputerName = input.ComputerName;
-                found->SystemType = input.SystemType;
-                found->TimeStamp = input.TimeStamp;
-                found->InputFile = input.InputFile;
+                found->computerName = input.computerName;
+                found->systemType = input.systemType;
+                found->timeStamp = input.timeStamp;
+                found->inputFile = input.inputFile;
 
                 auto pFinalTempStream = std::dynamic_pointer_cast<TemporaryStream>(found->Stream);
 
@@ -390,22 +390,22 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
         ImportItem output_item;
 
-        output_item.InputFile = input.InputFile;
-        output_item.FullName = item.Path;
+        output_item.inputFile = input.inputFile;
+        output_item.fullName = item.Path;
         output_item.bPrefixSubItem = true;
 
         if (input.bPrefixSubItem)
         {
-            fs::path path(input.Name);
+            fs::path path(input.name);
             auto strBaseName = path.stem().wstring();
-            output_item.Name = strBaseName + L"\\" + item.NameInArchive;
+            output_item.name = strBaseName + L"\\" + item.NameInArchive;
         }
         else
         {
-            output_item.Name = item.NameInArchive;
+            output_item.name = item.NameInArchive;
         }
 
-        output_item.Definitions = input.Definitions;
+        output_item.definitions = input.definitions;
 
         auto pStream = std::make_shared<TemporaryStream>(_L_);
 
@@ -422,7 +422,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
     auto ShouldItemBeExtracted = [this, &input](const std::wstring& strNameInArchive) {
         wstring strItemName;
-        fs::path path(input.Name);
+        fs::path path(input.name);
         auto strBaseName = path.stem().wstring();
 
         if (input.bPrefixSubItem)
@@ -434,18 +434,18 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
             strItemName = strNameInArchive;
         }
 
-        if (!ImportItem::IsToIgnore(input.Definitions, strItemName))
+        if (!ImportItem::IsToIgnore(input.definitions, strItemName))
         {
             if (Archive::GetArchiveFormat(strItemName) != ArchiveFormat::Unknown)
                 return true;
 
-            if (ImportItem::IsToImport(input.Definitions, strItemName))
+            if (ImportItem::IsToImport(input.definitions, strItemName))
                 return true;
 
-            if (ImportItem::IsToExtract(input.Definitions, strItemName))
+            if (ImportItem::IsToExtract(input.definitions, strItemName))
                 return true;
 
-            if (ImportItem::IsToExpand(input.Definitions, strItemName))
+            if (ImportItem::IsToExpand(input.definitions, strItemName))
                 return true;
         }
 
@@ -455,7 +455,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
     if (FAILED(hr = extractor->Extract(MakeArchiveStream, ShouldItemBeExtracted, MakeWriteStream)))
     {
-        log::Error(_L_, hr, L"Failed to extract archive %s\r\n", input.Name.c_str());
+        log::Error(_L_, hr, L"Failed to extract archive %s\r\n", input.name.c_str());
         return hr;
     }
     if (input.Stream)
@@ -470,8 +470,8 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
 {
     HRESULT hr = E_FAIL;
 
-    GetSystemTime(&input.ImportStart);
-    BOOST_SCOPE_EXIT(&input) { GetSystemTime(&input.ImportEnd); }
+    GetSystemTime(&input.importStart);
+    BOOST_SCOPE_EXIT(&input) { GetSystemTime(&input.importEnd); }
     BOOST_SCOPE_EXIT_END;
 
     if (input.Stream)
@@ -489,7 +489,7 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
 
         auto offset = output_path.wstring().size();
 
-        output_path /= input.FullName;
+        output_path /= input.fullName;
 
         error_code err;
         create_directories(output_path.parent_path(), err);
@@ -507,20 +507,20 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
         if (tempStream)
         {
             input.ullBytesExtracted = tempStream->GetSize();
-            input.OutputFile = std::make_shared<wstring>(strOutput.substr(offset + 1));
+            input.outputFile = std::make_shared<wstring>(strOutput.substr(offset + 1));
 
             if (FAILED(hr = tempStream->MoveTo(strOutput.c_str())))
             {
-                log::Error(_L_, hr, L"Failed to extract %s to file %s\r\n", input.FullName.c_str(), strOutput.c_str());
+                log::Error(_L_, hr, L"Failed to extract %s to file %s\r\n", input.fullName.c_str(), strOutput.c_str());
                 return hr;
             }
-            log::Verbose(_L_, L"\t%s is extracted to %s\r\n", input.FullName.c_str(), strOutput.c_str());
+            log::Verbose(_L_, L"\t%s is extracted to %s\r\n", input.fullName.c_str(), strOutput.c_str());
         }
         else
         {
             FileStream fileStream(_L_);
 
-            input.OutputFile = std::make_shared<wstring>(strOutput.substr(offset));
+            input.outputFile = std::make_shared<wstring>(strOutput.substr(offset));
 
             if (FAILED(hr = fileStream.WriteTo(strOutput.c_str())))
             {
@@ -530,10 +530,10 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
             ULONGLONG ullWritten = 0LL;
             if (FAILED(hr = input.Stream->CopyTo(fileStream, &ullWritten)))
             {
-                log::Error(_L_, hr, L"Failed to extract %s to file %s\r\n", input.FullName.c_str(), strOutput.c_str());
+                log::Error(_L_, hr, L"Failed to extract %s to file %s\r\n", input.fullName.c_str(), strOutput.c_str());
                 return hr;
             }
-            log::Verbose(_L_, L"\t%s is extracted to %s\r\n", input.FullName.c_str(), strOutput.c_str());
+            log::Verbose(_L_, L"\t%s is extracted to %s\r\n", input.fullName.c_str(), strOutput.c_str());
             input.ullBytesExtracted = ullWritten;
         }
 
@@ -544,14 +544,14 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
 }
 
 HRESULT ImportAgent::InitializeOutputs(
-    const OutputSpec& output,
-    const OutputSpec& importOutput,
     const OutputSpec& extractOutput,
+    const OutputSpec& importOutput,
+    const OutputSpec& reportOutput,
     const OutputSpec& tempOutput)
 {
-    m_Output = output;
-    m_importOutput = importOutput;
     m_extractOutput = extractOutput;
+    m_databaseOutput = importOutput;
+    m_reportOutput = reportOutput;
     m_tempOutput = tempOutput;
 
     m_Complete.reset();
@@ -578,7 +578,7 @@ HRESULT ImportAgent::InitializeTables(std::vector<TableDescription>& tables)
     {
         auto flow = std::make_unique<SqlMessageDataFlow>();
 
-        flow->filter.strTableName = table.Name;
+        flow->filter.strTableName = table.name;
 
         m_SqlMessageBuffer.link_target(&flow->block);
 
@@ -590,15 +590,15 @@ HRESULT ImportAgent::InitializeTables(std::vector<TableDescription>& tables)
             const auto& pAgent = flow->pAgents.back();
             if (pAgent)
             {
-                if (FAILED(hr = pAgent->Initialize(m_importOutput, m_tempOutput, table)))
+                if (FAILED(hr = pAgent->Initialize(m_databaseOutput, m_tempOutput, table)))
                 {
-                    log::Error(_L_, hr, L"Failed to initialize SQL import agent for table %s\r\n", table.Name.c_str());
+                    log::Error(_L_, hr, L"Failed to initialize SQL import agent for table %s\r\n", table.name.c_str());
                     return hr;
                 }
 
                 if (!pAgent->start())
                 {
-                    log::Error(_L_, hr, L"Failed to start SQL import agent for table %s\r\n", table.Name.c_str());
+                    log::Error(_L_, hr, L"Failed to start SQL import agent for table %s\r\n", table.name.c_str());
                     return hr;
                 }
 
@@ -646,7 +646,7 @@ HRESULT ImportAgent::ImportOneItem(ImportMessage::Message request)
 
     ImportMessage::RequestType type = request->m_Request;
 
-    switch (request->Item().Format)
+    switch (request->Item().format)
     {
         case ImportItem::Envelopped:
         {

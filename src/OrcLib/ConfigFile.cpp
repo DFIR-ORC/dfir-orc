@@ -134,7 +134,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                         }
                         else
                         {
-                            if (FAILED(hr = ::GetInputFile(pEquals + 1, strConfigFile)))
+                            if (FAILED(hr = ::ExpandFilePath(pEquals + 1, strConfigFile)))
                             {
                                 strConfigResource = pEquals + 1;
                                 if (EmbeddedResource::IsResourceBased(strConfigResource))
@@ -629,7 +629,7 @@ HRESULT ConfigFile::GetInputFile(const ConfigItem& item, std::wstring& inputFile
 
     if (item)
     {
-        if (FAILED(hr = ::GetInputFile(item.c_str(), inputFile)))
+        if (FAILED(hr = ::ExpandFilePath(item.c_str(), inputFile)))
         {
             log::Error(
                 _L_, hr, L"Error in specified inputfile in config file \"%s\" (0x%lx)\r\n", item.c_str());

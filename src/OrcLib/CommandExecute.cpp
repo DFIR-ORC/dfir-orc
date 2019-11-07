@@ -200,7 +200,7 @@ HRESULT CommandExecute::AddExecutableToRun(const std::wstring& szImageFilePath)
     }
 
     WCHAR inputfile[MAX_PATH] = {0};
-    if (FAILED(GetInputFile(szImageFilePath.c_str(), inputfile, MAX_PATH)))
+    if (FAILED(ExpandFilePath(szImageFilePath.c_str(), inputfile, MAX_PATH)))
     {
         log::Error(_L_, E_INVALIDARG, L"%s is not a valid file to use\r\n", szImageFilePath.c_str());
         return E_INVALIDARG;

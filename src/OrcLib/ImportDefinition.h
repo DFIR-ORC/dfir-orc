@@ -39,8 +39,8 @@ public:
     public:
         Action ToDo = Undetermined;
 
-        std::wstring NameMatch;
-        std::wstring Table;
+        std::wstring nameMatch;
+        std::wstring tableName;
         std::wstring Password;
 
         std::wstring BeforeStatement;
@@ -49,8 +49,8 @@ public:
         Item(Item&& other)
         {
             std::swap(ToDo, other.ToDo);
-            std::swap(NameMatch, other.NameMatch);
-            std::swap(Table, other.Table);
+            std::swap(nameMatch, other.nameMatch);
+            std::swap(tableName, other.tableName);
             std::swap(BeforeStatement, other.BeforeStatement);
             std::swap(AfterStatement, other.AfterStatement);
             std::swap(Password, other.Password);
@@ -63,7 +63,7 @@ public:
 private:
     logger _L_;
 
-    std::vector<ImportDefinition::Item> m_ItemDefinitions;
+    std::vector<ImportDefinition::Item> m_itemDefinitions;
 
 public:
     ImportDefinition(logger pLog)
@@ -71,7 +71,7 @@ public:
     ImportDefinition(ImportDefinition&& other) noexcept = default;
     ImportDefinition(const ImportDefinition& other) = default;
 
-    const std::vector<ImportDefinition::Item>& GetDefinitions() const { return m_ItemDefinitions; };
+    const std::vector<ImportDefinition::Item>& GetDefinitions() const { return m_itemDefinitions; };
 
     ~ImportDefinition();
 };

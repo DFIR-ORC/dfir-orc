@@ -34,7 +34,7 @@ ImportMessage::Message ImportMessage::MakeBeforeStatementRequest(ImportStatement
 
 ImportMessage::Message ImportMessage::MakeImportRequest(const ImportItem& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
@@ -46,7 +46,7 @@ ImportMessage::Message ImportMessage::MakeImportRequest(const ImportItem& item)
 
 ImportMessage::Message ImportMessage::MakeImportRequest(ImportItem&& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
@@ -58,7 +58,7 @@ ImportMessage::Message ImportMessage::MakeImportRequest(ImportItem&& item)
 
 ImportMessage::Message ImportMessage::MakeExpandRequest(const ImportItem& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
@@ -70,7 +70,7 @@ ImportMessage::Message ImportMessage::MakeExpandRequest(const ImportItem& item)
 
 ImportMessage::Message ImportMessage::MakeExpandRequest(ImportItem&& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
@@ -82,7 +82,7 @@ ImportMessage::Message ImportMessage::MakeExpandRequest(ImportItem&& item)
 
 ImportMessage::Message ImportMessage::MakeExtractRequest(const ImportItem& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
@@ -94,7 +94,7 @@ ImportMessage::Message ImportMessage::MakeExtractRequest(const ImportItem& item)
 
 ImportMessage::Message ImportMessage::MakeExtractRequest(ImportItem&& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
@@ -106,7 +106,7 @@ ImportMessage::Message ImportMessage::MakeExtractRequest(ImportItem&& item)
 
 ImportMessage::Message ImportMessage::MakePipeImportRequest(const ImportItem& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
@@ -118,7 +118,7 @@ ImportMessage::Message ImportMessage::MakePipeImportRequest(const ImportItem& it
 
 ImportMessage::Message ImportMessage::MakePipeImportRequest(ImportItem&& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
@@ -130,7 +130,7 @@ ImportMessage::Message ImportMessage::MakePipeImportRequest(ImportItem&& item)
 
 ImportMessage::Message ImportMessage::MakePipeExtractRequest(const ImportItem& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();
@@ -142,7 +142,7 @@ ImportMessage::Message ImportMessage::MakePipeExtractRequest(const ImportItem& i
 
 ImportMessage::Message ImportMessage::MakePipeExtractRequest(ImportItem&& item)
 {
-    if (item.Format == ImportItem::ImportItemFormat::Undetermined)
+    if (item.format == ImportItem::ImportItemFormat::Undetermined)
         return nullptr;
 
     auto retval = std::make_shared<ImportMessage_make_shared_enabler>();

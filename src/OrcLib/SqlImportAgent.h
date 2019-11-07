@@ -71,7 +71,7 @@ private:
     ImportBytesSemaphore& m_memSemaphore;
     ImportBytesSemaphore& m_fileSemaphore;
 
-    OutputSpec m_importOutput;
+    OutputSpec m_databaseOutput;
     OutputSpec m_tempOutput;
 
     LONG* m_plInProgressItems = nullptr;
