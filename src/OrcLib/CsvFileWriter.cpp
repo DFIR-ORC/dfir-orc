@@ -82,7 +82,6 @@ Orc::TableOutput::CSV::Writer::MakeNew(logger pLog, std::unique_ptr<TableOutput:
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::SetSchema(const Schema& schema)
 {
-
     m_Schema.reserve(schema.size());
 
     bool bFirst = true;
