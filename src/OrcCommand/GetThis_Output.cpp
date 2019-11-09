@@ -33,6 +33,8 @@ void Main::PrintUsage()
         L"\t[/sample=<SampleFile>]\r\n"
         L"\t[/config=<ConfigFile>] <foldername>...\r\n"
         L"\r\n"
+        L"\t/Altitude=<Exact|Highest|Lowest>     : Defines the strategy used to translate a given location into the optimal access path to the volume\r\n"
+        L"\r\n"
         L"\t/out=<Folder|F.csv|F.cab|F.zip|F.7z> : Files will be added to existing folder, to cabinet or zip file\r\n"
         L"\t/sample=<FileName>                   : Name of the file to copy\r\n"
         L"\t/sample=<FileName>:<Stream>          : Name of the Altername Data Stream to copy\r\n"
