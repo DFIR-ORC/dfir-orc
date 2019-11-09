@@ -27,6 +27,11 @@ void Main::PrintUsage()
         L"usage: DFIR-Orc.exe GetSamples [/Config=GetSamplesConfig.xml] [/Out=GetSample.7z]\r\n"
         L"                               [/GetThis=GetThisConfig.xml] [/Autoruns[=<AutoRuns.xml>]]\r\n"
         L"                               [/TempDir=c:\\temp]\r\n"
+<<<<<<< HEAD
+=======
+        L"\r\n"
+        L"\t/Altitude=<Exact|Highest|Lowest> : Defines the strategy used to translate a given location into the optimal access path to the volume\r\n"
+>>>>>>> parent of 3392469... Doesn't support Altitude switch
         L"\r\n\r\n"
         L"\t/GetThisConfig=GetThisConfig.xml : Output result config file for GetThis into GetThisConfig.xml\r\n"
         L"\t/GetThisArgs=\"/nolimits [...]\" : Arguments to be forwared to 'GetThis'\r\n"
