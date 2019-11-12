@@ -31,7 +31,6 @@ namespace fs = std::filesystem;
 using namespace Orc;
 using namespace Orc::Command::ImportData;
 
-
 namespace {
 
 void WriteSuccessfulReport(TableOutput::IWriter& writer, const ImportNotification::Notification& notification)
@@ -372,7 +371,7 @@ HRESULT Main::Run()
 
     if (FAILED(
             hr = m_importAgent->InitializeOutputs(
-                config.extractOutput, config.importOutput, config.reportOutput, config.tempOutput)))
+                config.extractOutput, config.importOutput, config.tempOutput)))
     {
         log::Error(_L_, hr, L"Failed to initialize import agent output\r\n");
         return hr;

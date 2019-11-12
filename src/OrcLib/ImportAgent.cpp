@@ -567,12 +567,10 @@ bool ImportAgent::SendResult(const ImportNotification::Notification& notificatio
 HRESULT ImportAgent::InitializeOutputs(
     const OutputSpec& extractOutput,
     const OutputSpec& importOutput,
-    const OutputSpec& reportOutput,
     const OutputSpec& tempOutput)
 {
     m_extractOutput = extractOutput;
     m_databaseOutput = importOutput;
-    m_reportOutput = reportOutput;
     m_tempOutput = tempOutput;
 
     m_Complete.reset();

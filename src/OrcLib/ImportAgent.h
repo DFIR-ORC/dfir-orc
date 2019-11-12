@@ -99,7 +99,6 @@ public:
     HRESULT InitializeOutputs(
         const OutputSpec& extractOutput,
         const OutputSpec& importOutput,
-        const OutputSpec& reportOutput,
         const OutputSpec& tempOutput);
 
     HRESULT InitializeTables(std::vector<TableDescription>& tables);
@@ -147,7 +146,6 @@ private:
     ImportBytesSemaphore m_fileSemaphore;
     ImportBytesSemaphore m_memSemaphore;
 
-    OutputSpec m_reportOutput;
     OutputSpec m_extractOutput;
     OutputSpec m_databaseOutput;
     OutputSpec m_tempOutput;
