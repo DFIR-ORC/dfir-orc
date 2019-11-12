@@ -511,6 +511,15 @@ public:
     //// Warning messages
     //
     template <typename... Args>
+    void Warning(LPCWSTR szFormatString, Args&&... args)
+    {
+        WarnColor();
+        WriteString("WARNING");
+        WriteFormatedString(szFormatString, std::forward<Args>(args)...);
+        DefaultColor();
+    }
+
+    template <typename... Args>
     void Warning(HRESULT hr, LPCWSTR szFormatString, Args&&... args)
     {
         WarnColor();
@@ -518,6 +527,7 @@ public:
         WriteFormatedString(szFormatString, std::forward<Args>(args)...);
         DefaultColor();
     }
+
     template <typename... Args>
     static void
     Warning(const std::shared_ptr<LogFileWriter>& LogFile, HRESULT hr, LPCWSTR szFormatString, Args&&... args)
@@ -525,12 +535,27 @@ public:
         if (LogFile)
             LogFile->Warning(hr, szFormatString, std::forward<Args>(args)...);
     }
+
     template <typename... Args>
     static void
     Warning(const std::unique_ptr<LogFileWriter>& LogFile, HRESULT hr, LPCWSTR szFormatString, Args&&... args)
     {
         if (LogFile)
             LogFile->Warning(hr, szFormatString, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    static void Warning(const std::shared_ptr<LogFileWriter>& LogFile, LPCWSTR szFormatString, Args&&... args)
+    {
+        if (LogFile)
+            LogFile->Warning(szFormatString, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    static void Warning(const std::unique_ptr<LogFileWriter>& LogFile, LPCWSTR szFormatString, Args&&... args)
+    {
+        if (LogFile)
+            LogFile->Warning(szFormatString, std::forward<Args>(args)...);
     }
 
     //
