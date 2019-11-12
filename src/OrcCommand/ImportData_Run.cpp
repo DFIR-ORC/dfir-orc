@@ -31,6 +31,137 @@ namespace fs = std::filesystem;
 using namespace Orc;
 using namespace Orc::Command::ImportData;
 
+
+namespace {
+
+void WriteSuccessfulReport(TableOutput::IWriter& writer, const ImportNotification::Notification& notification)
+{
+    auto& output = writer.GetTableOutput();
+
+    SystemDetails::WriteComputerName(output);
+
+    if (notification->Item().inputFile != nullptr)
+        output.WriteString(notification->Item().inputFile->c_str());
+    else
+        output.WriteNothing();
+
+    output.WriteString(notification->Item().name.c_str());
+    output.WriteString(notification->Item().fullName.c_str());
+
+    switch (notification->Action())
+    {
+        case ImportNotification::Import:
+            output.WriteString(L"Import");
+            break;
+        case ImportNotification::Extract:
+            output.WriteString(L"Extract");
+            break;
+        default:
+            output.WriteString(L"Unknown");
+            break;
+    }
+
+    output.WriteString(notification->Item().systemType.c_str());
+    output.WriteString(notification->Item().computerName.c_str());
+    output.WriteString(notification->Item().timeStamp.c_str());
+
+    FILETIME start, end;
+    SystemTimeToFileTime(&notification->Item().importStart, &start);
+    output.WriteFileTime(start);
+
+    SystemTimeToFileTime(&notification->Item().importEnd, &end);
+    output.WriteFileTime(end);
+
+    switch (notification->Action())
+    {
+        case ImportNotification::Import:
+            if (notification->Item().definitionItem)
+                output.WriteString(notification->Item().definitionItem->tableName.c_str());
+            else
+                output.WriteNothing();
+            break;
+        case ImportNotification::Extract:
+            output.WriteNothing();
+            break;
+        default:
+            output.WriteNothing();
+            break;
+    }
+
+    switch (notification->Action())
+    {
+        case ImportNotification::Import:
+            output.WriteNothing();
+            break;
+        case ImportNotification::Extract:
+            if (notification->Item().outputFile)
+            {
+                output.WriteString(notification->Item().outputFile->c_str());
+            }
+            else
+                output.WriteNothing();
+            break;
+        default:
+            output.WriteNothing();
+            break;
+    }
+
+    output.WriteInteger(notification->Item().ullLinesImported);
+    output.WriteInteger(notification->Item().ullBytesExtracted);
+
+    output.WriteInteger((DWORD)notification->GetHR());
+
+    output.WriteEndOfLine();
+}
+
+void WriteFailureReport(TableOutput::IWriter& writer, const ImportNotification::Notification& notification)
+{
+    auto& output = writer.GetTableOutput();
+
+    SystemDetails::WriteComputerName(output);
+
+    if (notification->Item().inputFile != nullptr)
+        output.WriteString(notification->Item().inputFile->c_str());
+    else
+        output.WriteNothing();
+
+    output.WriteString(notification->Item().name.c_str());
+    output.WriteString(notification->Item().fullName.c_str());
+
+    output.WriteString(L"Import");
+
+    output.WriteNothing();
+    output.WriteNothing();
+    output.WriteNothing();
+
+    output.WriteNothing();
+    output.WriteNothing();
+
+    output.WriteNothing();
+
+    output.WriteNothing();
+
+    output.WriteNothing();
+    output.WriteNothing();
+
+    output.WriteInteger((DWORD)notification->GetHR());
+
+    output.WriteEndOfLine();
+}
+
+void WriteReport(TableOutput::IWriter& writer, const ImportNotification::Notification& notification)
+{
+    if (FAILED(notification->GetHR()))
+    {
+        WriteFailureReport(writer, notification);
+        return;
+    }
+
+    WriteSuccessfulReport(writer, notification);
+}
+
+}  // namespace
+
 HRESULT
 Main::AddDirectoryForInput(const std::wstring& dir, const InputItem& input, std::vector<ImportItem>& input_paths)
 {
@@ -187,129 +318,21 @@ HRESULT Main::Run()
     if (FAILED(hr = LoadWinTrust()))
         return hr;
 
-    auto pWriter = TableOutput::GetWriter(_L_, config.reportOutput);
-    if (pWriter == nullptr)
+    auto reportWriter = TableOutput::GetWriter(_L_, config.reportOutput);
+    if (reportWriter == nullptr)
     {
         log::Warning(_L_, E_FAIL, L"No writer for ImportData output: no data about imports will be generated\r\n");
     }
 
-    auto& output = pWriter->GetTableOutput();
-
     m_notificationCb = std::make_unique<call<ImportNotification::Notification>>(
-        [this, &output](const ImportNotification::Notification& notification) {
-            if (SUCCEEDED(notification->GetHR()))
+        [this, &reportWriter](const ImportNotification::Notification& notification) mutable {
+            m_ullImportedLines += notification->Item().ullLinesImported;
+            m_ullProcessedBytes += notification->Item().ullBytesExtracted;
+
+            if (reportWriter)
             {
-                m_ullImportedLines += notification->Item().ullLinesImported;
-                m_ullProcessedBytes += notification->Item().ullBytesExtracted;
-
-                SystemDetails::WriteComputerName(output);
-
-                if (notification->Item().inputFile != nullptr)
-                    output.WriteString(notification->Item().inputFile->c_str());
-                else
-                    output.WriteNothing();
-
-                output.WriteString(notification->Item().name.c_str());
-                output.WriteString(notification->Item().fullName.c_str());
-
-                switch (notification->Action())
-                {
-                    case ImportNotification::Import:
-                        output.WriteString(L"Import");
-                        break;
-                    case ImportNotification::Extract:
-                        output.WriteString(L"Extract");
-                        break;
-                    default:
-                        output.WriteString(L"Unknown");
-                        break;
-                }
-
-                output.WriteString(notification->Item().systemType.c_str());
-                output.WriteString(notification->Item().computerName.c_str());
-                output.WriteString(notification->Item().timeStamp.c_str());
-
-                FILETIME start, end;
-                SystemTimeToFileTime(&notification->Item().importStart, &start);
-                output.WriteFileTime(start);
-
-                SystemTimeToFileTime(&notification->Item().importEnd, &end);
-                output.WriteFileTime(end);
-
-                switch (notification->Action())
-                {
-                    case ImportNotification::Import:
-                        if (notification->Item().definitionItem)
-                            output.WriteString(notification->Item().definitionItem->tableName.c_str());
-                        else
-                            output.WriteNothing();
-                        break;
-                    case ImportNotification::Extract:
-                        output.WriteNothing();
-                        break;
-                    default:
-                        output.WriteNothing();
-                        break;
-                }
-
-                switch (notification->Action())
-                {
-                    case ImportNotification::Import:
-                        output.WriteNothing();
-                        break;
-                    case ImportNotification::Extract:
-                        if (notification->Item().outputFile)
-                        {
-                            output.WriteString(notification->Item().outputFile->c_str());
-                        }
-                        else
-                            output.WriteNothing();
-                        break;
-                    default:
-                        output.WriteNothing();
-                        break;
-                }
-
-                output.WriteInteger(notification->Item().ullLinesImported);
-                output.WriteInteger(notification->Item().ullBytesExtracted);
-
-                output.WriteInteger((DWORD)notification->GetHR());
-
-                output.WriteEndOfLine();
+                ::WriteReport(*reportWriter, notification);
             }
-            else
-            {
-                SystemDetails::WriteComputerName(output);
-
-                if (notification->Item().inputFile != nullptr)
-                    output.WriteString(notification->Item().inputFile->c_str());
-                else
-                    output.WriteNothing();
-
-                output.WriteString(notification->Item().name.c_str());
-                output.WriteString(notification->Item().fullName.c_str());
-
-                output.WriteString(L"Import");
-
-                output.WriteNothing();
-                output.WriteNothing();
-                output.WriteNothing();
-
-                output.WriteNothing();
-                output.WriteNothing();
-
-                output.WriteNothing();
-
-                output.WriteNothing();
-
-                output.WriteNothing();
-                output.WriteNothing();
-
-                output.WriteInteger((DWORD)notification->GetHR());
-
-                output.WriteEndOfLine();
-            }
-            return;
         });
 
     if (!config.m_Tables.empty())
@@ -345,8 +368,7 @@ HRESULT Main::Run()
         log::Info(_L_, L"\r\n\r\n");
     }
 
-    m_importAgent =
-        std::make_unique<ImportAgent>(_L_, m_importRequestBuffer, m_importRequestBuffer, *m_notificationCb);
+    m_importAgent = std::make_unique<ImportAgent>(_L_, m_importRequestBuffer, m_importRequestBuffer, *m_notificationCb);
 
     if (FAILED(
             hr = m_importAgent->InitializeOutputs(
@@ -431,9 +453,10 @@ HRESULT Main::Run()
 
     m_importAgent.release();
 
-    if (pWriter)
-        pWriter->Close();
-    pWriter = nullptr;
+    if (reportWriter)
+    {
+        reportWriter->Close();
+    }
 
     return S_OK;
 }
