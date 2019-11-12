@@ -88,7 +88,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
     HRESULT hr = E_FAIL;
     bool bDefined = false;
 
-    if (config.Status & ConfigItem::PRESENT)
+    if (config)
     {
         filter.intent = FileInfo::GetIntentions(pLog, config.c_str(), aliasNames, columnNames);
         if (filter.intent == FILEINFO_NONE)
@@ -103,12 +103,12 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         return E_INVALIDARG;
     }
 
-    if (config[HASVERSIONINFO].Status & ConfigItem::PRESENT)
+    if (config[HASVERSIONINFO])
     {
         filter.type = FILEFILTER_VERSIONINFO;
         bDefined = true;
     }
-    if (config[HASPE].Status & ConfigItem::PRESENT)
+    if (config[HASPE])
     {
         filter.type = FILEFILTER_PEHEADER;
         if (bDefined)
@@ -118,7 +118,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         else
             bDefined = true;
     }
-    if (config[EXTBINARY].Status & ConfigItem::PRESENT)
+    if (config[EXTBINARY])
     {
         filter.type = FILEFILTER_EXTBINARY;
         if (bDefined)
@@ -128,7 +128,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         else
             bDefined = true;
     }
-    if (config[EXTARCHIVE].Status & ConfigItem::PRESENT)
+    if (config[EXTARCHIVE])
     {
         filter.type = FILEFILTER_EXTARCHIVE;
         if (bDefined)
@@ -138,7 +138,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         else
             bDefined = true;
     }
-    if (config[EXT].Status & ConfigItem::PRESENT)
+    if (config[EXT])
     {
         filter.type = FILEFILTER_EXTCUSTOM;
         if (bDefined)
@@ -150,7 +150,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
 
         filter.filterdata.extcustom = GetFilterExtCustomFromString(config[EXT].c_str());
     }
-    if (config[SIZEGT].Status & ConfigItem::PRESENT)
+    if (config[SIZEGT])
     {
         filter.type = FILEFILTER_SIZEMORE;
         if (bDefined)
@@ -163,7 +163,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         if (FAILED(hr = GetFileSizeFromArg(config[SIZEGT].c_str(), filter.filterdata.size)))
             return hr;
     }
-    if (config[SIZELT].Status & ConfigItem::PRESENT)
+    if (config[SIZELT])
     {
         filter.type = FILEFILTER_SIZELESS;
         if (bDefined)

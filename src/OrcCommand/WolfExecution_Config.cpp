@@ -51,15 +51,15 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
     switch (wArch)
     {
         case PROCESSOR_ARCHITECTURE_AMD64:
-            if (item[WOLFLAUNCHER_EXERUN64].Status == ConfigItem::PRESENT)
+            if (item[WOLFLAUNCHER_EXERUN64])
                 strExeRef = item[WOLFLAUNCHER_EXERUN64];
-            else if (item[WOLFLAUNCHER_EXERUN].Status == ConfigItem::PRESENT)
+            else if (item[WOLFLAUNCHER_EXERUN])
                 strExeRef = item[WOLFLAUNCHER_EXERUN];
             break;
         case PROCESSOR_ARCHITECTURE_INTEL:
-            if (item[WOLFLAUNCHER_EXERUN32].Status == ConfigItem::PRESENT)
+            if (item[WOLFLAUNCHER_EXERUN32])
                 strExeRef = item[WOLFLAUNCHER_EXERUN32];
-            else if (item[WOLFLAUNCHER_EXERUN].Status == ConfigItem::PRESENT)
+            else if (item[WOLFLAUNCHER_EXERUN])
                 strExeRef = item[WOLFLAUNCHER_EXERUN];
             break;
         default:
@@ -149,7 +149,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         return nullptr;
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_CMDKEYWORD].Status != ConfigItem::PRESENT)
+    if (!item[WOLFLAUNCHER_COMMAND_CMDKEYWORD])
     {
         log::Verbose(_L_, L"keyword attribute is missing in command\r\n");
         return nullptr;
@@ -157,7 +157,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
 
     const wstring& keyword = item[WOLFLAUNCHER_COMMAND_CMDKEYWORD];
 
-    if (item.SubItems[WOLFLAUNCHER_COMMAND_WINVER].Status == ConfigItem::PRESENT)
+    if (item.SubItems[WOLFLAUNCHER_COMMAND_WINVER])
     {
         std::wsmatch s;
         std::wstring winver(item.SubItems[WOLFLAUNCHER_COMMAND_WINVER]);
@@ -260,7 +260,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         // No incompatibilities found, proceed with command
     }
 
-    if (item.SubItems[WOLFLAUNCHER_COMMAND_SYSTEMTYPE].Status == ConfigItem::PRESENT)
+    if (item.SubItems[WOLFLAUNCHER_COMMAND_SYSTEMTYPE])
     {
         const wstring& requiredSystemTypes = item[WOLFLAUNCHER_COMMAND_SYSTEMTYPE];
         wstring strProductType;
@@ -300,7 +300,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
 
     auto command = CommandMessage::MakeExecuteMessage(keyword);
 
-    if (item[WOLFLAUNCHER_COMMAND_EXECUTE].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_EXECUTE])
     {
         const wstring& ExeName = item[WOLFLAUNCHER_COMMAND_EXECUTE][WOLFLAUNCHER_EXENAME];
 
@@ -319,7 +319,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         return nullptr;
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_ARGUMENT].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_ARGUMENT])
     {
         std::for_each(
             begin(item[WOLFLAUNCHER_COMMAND_ARGUMENT].NodeList),
@@ -327,7 +327,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             [command](const ConfigItem& item) { command->PushArgument(item.dwOrderIndex, item); });
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_INPUT].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_INPUT])
     {
         hr = S_OK;
 
@@ -336,7 +336,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             end(item[WOLFLAUNCHER_COMMAND_INPUT].NodeList),
             [this, command, &hr](const ConfigItem& input) {
                 HRESULT hr1 = E_FAIL;
-                if (input[WOLFLAUNCHER_INNAME].Status != ConfigItem::PRESENT)
+                if (!input[WOLFLAUNCHER_INNAME])
                 {
                     log::Error(_L_, E_INVALIDARG, L"The input is missing a name\r\n");
                     hr = E_INVALIDARG;
@@ -345,12 +345,12 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 const wstring& strName = input[WOLFLAUNCHER_INNAME];
 
                 const WCHAR* szPattern = NULL;
-                if (input[WOLFLAUNCHER_INARGUMENT].Status == ConfigItem::PRESENT)
+                if (input[WOLFLAUNCHER_INARGUMENT])
                 {
                     szPattern = input[WOLFLAUNCHER_INARGUMENT].c_str();
                 }
 
-                if (input[WOLFLAUNCHER_INSOURCE].Status != ConfigItem::PRESENT)
+                if (!input[WOLFLAUNCHER_INSOURCE])
                 {
                     log::Error(
                         _L_,
@@ -419,14 +419,14 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             return nullptr;
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_OUTPUT].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_OUTPUT])
     {
         hr = S_OK;
         std::for_each(
             begin(item[WOLFLAUNCHER_COMMAND_OUTPUT].NodeList),
             end(item[WOLFLAUNCHER_COMMAND_OUTPUT].NodeList),
             [this, &hr, command](const ConfigItem& output) {
-                if (output.SubItems[WOLFLAUNCHER_OUTNAME].Status != ConfigItem::PRESENT)
+                if (!output.SubItems[WOLFLAUNCHER_OUTNAME])
                 {
                     log::Info(_L_, L"The output is missing a name\r\n");
                     hr = E_FAIL;
@@ -435,12 +435,12 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 const wstring& strName = output[WOLFLAUNCHER_OUTNAME];
 
                 const WCHAR* szPattern = NULL;
-                if (output[WOLFLAUNCHER_OUTARGUMENT].Status == ConfigItem::PRESENT)
+                if (output[WOLFLAUNCHER_OUTARGUMENT])
                 {
                     szPattern = output[WOLFLAUNCHER_OUTARGUMENT].c_str();
                 }
 
-                if (output[WOLFLAUNCHER_OUTSOURCE].Status != ConfigItem::PRESENT)
+                if (!output[WOLFLAUNCHER_OUTSOURCE])
                 {
                     log::Info(
                         _L_, L"The output %s is missing a source\r\n", output[WOLFLAUNCHER_OUTNAME].c_str());
@@ -468,7 +468,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 }
                 else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"Directory"))
                 {
-                    if (output[WOLFLAUNCHER_OUTFILEMATCH].Status == ConfigItem::PRESENT)
+                    if (output[WOLFLAUNCHER_OUTFILEMATCH])
                     {
                         if (szPattern == NULL)
                             command->PushOutputDirectory(
@@ -502,7 +502,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             return nullptr;
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_QUEUE].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_QUEUE])
     {
         if (!_wcsicmp(item[WOLFLAUNCHER_COMMAND_QUEUE].c_str(), L"flush"))
         {
@@ -514,7 +514,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         }
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_OPTIONAL].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_OPTIONAL])
     {
         if (!_wcsicmp(item[WOLFLAUNCHER_COMMAND_OPTIONAL].c_str(), L"no"))
         {

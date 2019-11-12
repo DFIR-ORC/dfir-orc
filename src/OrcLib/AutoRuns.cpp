@@ -188,8 +188,7 @@ HRESULT AutoRuns::GetAutoRuns(AutoRunsVector& autoruns)
             {
                 autorun_item.ImagePath += wcslen(L"File not found: ");
             }
-            if (item.SubItems[AUTORUNS_SIGNER_ITEM].Status & ConfigItem::PRESENT
-                && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
+            if (item.SubItems[AUTORUNS_SIGNER_ITEM] && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
                 if (!_wcsnicmp(
                         item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
                     autorun_item.IsVerified = true;
@@ -243,8 +242,7 @@ HRESULT AutoRuns::EnumItems(AutoRunsEnumItemCallback pCallBack, LPVOID pContext)
         {
             autorun_item.ImagePath += wcslen(L"File not found: ");
         }
-        if (item.SubItems[AUTORUNS_SIGNER_ITEM].Status & ConfigItem::PRESENT
-            && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
+        if (item.SubItems[AUTORUNS_SIGNER_ITEM] && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
             if (!_wcsnicmp(item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
                 autorun_item.IsVerified = true;
 

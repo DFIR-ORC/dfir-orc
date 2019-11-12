@@ -135,7 +135,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
 boost::logic::tribool Main::GetResurrectFromConfig(const ConfigItem& config)
 {
-    if (config[FATINFO_RESURRECT].Status & ConfigItem::PRESENT)
+    if (config[FATINFO_RESURRECT])
     {
         if (!_wcsnicmp(config[FATINFO_RESURRECT].c_str(), L"no", wcslen(L"no")))
             return false;
@@ -147,7 +147,7 @@ boost::logic::tribool Main::GetResurrectFromConfig(const ConfigItem& config)
 
 boost::logic::tribool Main::GetPopulateSystemObjectsFromConfig(const ConfigItem& config)
 {
-    if (config[FATINFO_POP_SYS_OBJ].Status & ConfigItem::PRESENT)
+    if (config[FATINFO_POP_SYS_OBJ])
     {
         if (!_wcsnicmp(config[FATINFO_POP_SYS_OBJ].c_str(), L"no", wcslen(L"no")))
             return false;

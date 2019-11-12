@@ -33,12 +33,12 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
 
     std::wstring strJobName;
 
-    if (item[CONFIG_DOWNLOAD_JOBNAME].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_DOWNLOAD_JOBNAME])
     {
         strJobName = item[CONFIG_DOWNLOAD_JOBNAME];
     }
 
-    if (item[CONFIG_DOWNLOAD_METHOD].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_DOWNLOAD_METHOD])
     {
         if (equalCaseInsensitive(item[CONFIG_DOWNLOAD_METHOD], L"bits"))
         {
@@ -62,7 +62,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
     if (retval == nullptr)
         return nullptr;
 
-    if (item[CONFIG_DOWNLOAD_SERVER].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_DOWNLOAD_SERVER])
     {
         static std::wregex r(L"(http|https|file):(//|\\\\)(.*)", std::regex_constants::icase);
 
@@ -94,7 +94,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
         }
     }
 
-    if (item.SubItems[CONFIG_DOWNLOAD_ROOTPATH].Status == ConfigItem::PRESENT)
+    if (item.SubItems[CONFIG_DOWNLOAD_ROOTPATH])
     {
         auto rootpath = (std::wstring_view) item.SubItems[CONFIG_DOWNLOAD_ROOTPATH];
         std::replace_copy(
@@ -113,12 +113,12 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
         }
     }
 
-    if (item[CONFIG_DOWNLOAD_COMMAND].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_DOWNLOAD_COMMAND])
     {
         retval->m_strCmd = item[CONFIG_DOWNLOAD_COMMAND];
     }
 
-    if (item[CONFIG_DOWNLOAD_FILE].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_DOWNLOAD_FILE])
     {
         for (const auto& file : item[CONFIG_DOWNLOAD_FILE].NodeList)
         {
@@ -136,7 +136,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
                     file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str());
             }
 
-            if (file[CONFIG_DOWNLOAD_FILE_DELETE].Status & ConfigItem::PRESENT)
+            if (file[CONFIG_DOWNLOAD_FILE_DELETE])
             {
                 if (!equalCaseInsensitive(file[CONFIG_DOWNLOAD_FILE_DELETE], L"no"))
                 {

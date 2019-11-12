@@ -316,14 +316,14 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
 HRESULT ConfigFile::CheckConfig(const ConfigItem& config, const logger& pLog)
 {
 
-    if (config.Flags == ConfigItem::MANDATORY && !(config.Status & ConfigItem::PRESENT))
+    if (config.Flags == ConfigItem::MANDATORY && !config)
     {
         log::Error(pLog, E_FAIL, L"Element %s is mandatory and missing\r\n", config.strName.c_str());
         return E_FAIL;
     }
     HRESULT hr = S_OK;
 
-    if (config.Status & ConfigItem::PRESENT)
+    if (config)
     {
         switch (config.Type)
         {
@@ -367,7 +367,7 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent, const 
                 szIndent,
                 config.strName.c_str(),
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
-                (config.Status & ConfigItem::PRESENT) ? L"Present" : L"Absent");
+                config ? L"Present" : L"Absent");
             if (!config.empty())
                 log::Info(pLog, L"%s\tDATA: \"%s\" \r\n", szIndent, config.c_str());
 
@@ -384,7 +384,7 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent, const 
                 config.strName.c_str(),
                 config.c_str(),
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
-                (config.Status & ConfigItem::PRESENT) ? L"Present" : L"Absent");
+                config ? L"Present" : L"Absent");
             break;
         case ConfigItem::NODELIST:
         {
@@ -394,7 +394,7 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent, const 
                 szIndent,
                 config.strName.c_str(),
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
-                (config.Status & ConfigItem::PRESENT) ? L"Present" : L"Absent");
+                config? L"Present" : L"Absent");
 
             std::for_each(begin(config.NodeList), end(config.NodeList), [dwIndent, &pLog](const ConfigItem& item) {
                 PrintConfig(item, dwIndent + 1, pLog);
@@ -410,16 +410,16 @@ HRESULT ConfigFile::ConfigureLogging(const ConfigItem& item, const logger& pLog)
 {
     HRESULT hr = E_FAIL;
 
-    if (item[CONFIG_DEBUG].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_DEBUG])
         pLog->SetDebugLog(true);
 
-    if (item[CONFIG_VERBOSE].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_VERBOSE])
         pLog->SetVerboseLog(true);
 
-    if (item[CONFIG_NOCONSOLE].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_NOCONSOLE])
         pLog->SetConsoleLog(false);
 
-    if (item[CONFIG_LOGFILE].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_LOGFILE])
     {
         wstring strLogFile;
         if (SUCCEEDED(hr = ::GetOutputFile(item.SubItems[CONFIG_LOGFILE].c_str(), strLogFile)))
@@ -479,7 +479,7 @@ HRESULT ConfigFile::GetOutputDir(
 {
     HRESULT hr = E_FAIL;
 
-    if (item.Status == ConfigItem::PRESENT)
+    if (item)
     {
         if (FAILED(hr = ::GetOutputDir(item.c_str(), outputDir)))
         {
@@ -489,7 +489,7 @@ HRESULT ConfigFile::GetOutputDir(
 
         dwXOR = 0L;
 
-        if (item.SubItems[CONFIG_XORPATTERN].Status == ConfigItem::PRESENT)
+        if (item.SubItems[CONFIG_XORPATTERN])
         {
             if (FAILED(hr = GetIntegerFromHexaString(item.SubItems[CONFIG_XORPATTERN].c_str(), dwXOR)))
             {
@@ -504,7 +504,7 @@ HRESULT ConfigFile::GetOutputDir(
         anEncoding = OutputSpec::Encoding::UTF8;
         if (item.SubItems.size() > CONFIG_CSVENCODING)
         {
-            if (item.SubItems[CONFIG_CSVENCODING].Status == ConfigItem::PRESENT)
+            if (item.SubItems[CONFIG_CSVENCODING])
             {
                 if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].c_str(), L"utf8", wcslen(L"utf8")))
                 {
@@ -566,7 +566,7 @@ HRESULT ConfigFile::GetOutputFile(const ConfigItem& item, std::wstring& outputFi
 {
     HRESULT hr = E_FAIL;
 
-    if (item.Status == ConfigItem::PRESENT)
+    if (item)
     {
         if (FAILED(hr = ::GetOutputFile(item.c_str(), outputFile)))
         {
@@ -577,7 +577,7 @@ HRESULT ConfigFile::GetOutputFile(const ConfigItem& item, std::wstring& outputFi
         if (item.SubItems.size() > CONFIG_CSVENCODING
             && !_wcsicmp(item.SubItems[CONFIG_CSVENCODING].strName.c_str(), L"encoding"))
         {
-            if (item.SubItems[CONFIG_CSVENCODING].Status == ConfigItem::PRESENT)
+            if (item.SubItems[CONFIG_CSVENCODING])
             {
                 if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].c_str(), L"utf8", wcslen(L"utf8")))
                 {
@@ -627,7 +627,7 @@ HRESULT ConfigFile::GetInputFile(const ConfigItem& item, std::wstring& inputFile
 {
     HRESULT hr = E_FAIL;
 
-    if (item.Status == ConfigItem::PRESENT)
+    if (item)
     {
         if (FAILED(hr = ::GetInputFile(item.c_str(), inputFile)))
         {
@@ -648,7 +648,7 @@ HRESULT ConfigFile::SetInputFile(ConfigItem& item, const std::wstring& inputFile
 
 HRESULT ConfigFile::GetSQLConnectionString(const ConfigItem& item, std::wstring& strConnectionString)
 {
-    if (item.SubItems[CONFIG_SQL_CONNECTIONSTRING].Status == ConfigItem::PRESENT)
+    if (item.SubItems[CONFIG_SQL_CONNECTIONSTRING])
     {
         strConnectionString = item.SubItems[CONFIG_SQL_CONNECTIONSTRING].strData;
     }
@@ -659,7 +659,7 @@ HRESULT ConfigFile::GetSQLTableName(const ConfigItem& item, const LPWSTR szTable
 {
     const ConfigItem& tables = item.SubItems[CONFIG_SQL_TABLE];
 
-    if (tables.Status == ConfigItem::PRESENT && tables.Type == ConfigItem::NODELIST)
+    if (tables && tables.Type == ConfigItem::NODELIST)
     {
         auto it = begin(tables.NodeList);
 
@@ -691,7 +691,7 @@ HRESULT ConfigFile::GetSQLTableName(const ConfigItem& item, const LPWSTR szTable
         {
             for (; it != end(tables.NodeList); ++it)
             {
-                if (it->SubItems[CONFIG_SQL_TABLEKEY].Status == ConfigItem::PRESENT)
+                if (it->SubItems[CONFIG_SQL_TABLEKEY])
                 {
                     if (!_wcsicmp(it->SubItems[CONFIG_SQL_TABLEKEY].c_str(), szTableKey))
                     {

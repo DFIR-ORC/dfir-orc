@@ -95,7 +95,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    if (configitem[ORC_DOWNLOAD].Status & ConfigItem::PRESENT)
+    if (configitem[ORC_DOWNLOAD])
     {
         m_DownloadTask = DownloadTask::GetTaskFromConfig(_L_, configitem[ORC_DOWNLOAD]);
         if (m_DownloadTask != nullptr)
@@ -104,7 +104,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
-    if (configitem[ORC_TEMP].Status & ConfigItem::PRESENT)
+    if (configitem[ORC_TEMP])
     {
         if (FAILED(hr = config.Temporary.Configure(_L_, OutputSpec::Kind::Directory, configitem[ORC_TEMP])))
         {

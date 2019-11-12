@@ -65,7 +65,7 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
 
     auto retval = std::make_shared<WolfExecution::Recipient>();
 
-    if (recipient_item[WOLFLAUNCHER_RECIPIENT_NAME].Status == ConfigItem::PRESENT)
+    if (recipient_item[WOLFLAUNCHER_RECIPIENT_NAME])
     {
         retval->Name = recipient_item[WOLFLAUNCHER_RECIPIENT_NAME];
         auto inlist = GetRecipient(retval->Name);
@@ -81,7 +81,7 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
         return nullptr;
     }
 
-    if (recipient_item[WOLFLAUNCHER_RECIPIENT_ARCHIVE].Status == ConfigItem::PRESENT)
+    if (recipient_item[WOLFLAUNCHER_RECIPIENT_ARCHIVE])
     {
         boost::split(
             retval->ArchiveSpec, (std::wstring_view) recipient_item[WOLFLAUNCHER_RECIPIENT_ARCHIVE], boost::is_any_of(",;"));

@@ -156,13 +156,13 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
 
     std::shared_ptr<RegFind::SearchTerm> retval = std::make_shared<RegFind::SearchTerm>();
 
-    if (item[CONFIG_REGFIND_KEY].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_KEY])
     {
         WideToAnsi(pLog, (std::wstring_view) item[CONFIG_REGFIND_KEY], retval->m_strKeyName);
         retval->m_criteriaRequired =
             static_cast<RegFind::SearchTerm::Criteria>(retval->m_criteriaRequired | RegFind::SearchTerm::KEY_NAME);
     }
-    if (item[CONFIG_REGFIND_KEY_REGEX].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_KEY_REGEX])
     {
         WideToAnsi(pLog, (std::wstring_view) item[CONFIG_REGFIND_KEY_REGEX], retval->m_strKeyName);
         try
@@ -292,13 +292,13 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             retval->m_criteriaRequired | RegFind::SearchTerm::KEY_NAME_REGEX);
     }
 
-    if (item[CONFIG_REGFIND_PATH].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_PATH])
     {
         WideToAnsi(pLog, (std::wstring_view) item[CONFIG_REGFIND_PATH], retval->m_strPathName);
         retval->m_criteriaRequired =
             static_cast<RegFind::SearchTerm::Criteria>(retval->m_criteriaRequired | RegFind::SearchTerm::KEY_PATH);
     }
-    if (item[CONFIG_REGFIND_PATH_REGEX].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_PATH_REGEX])
     {
         WideToAnsi(pLog, (std::wstring_view) item[CONFIG_REGFIND_PATH_REGEX], retval->m_strPathName);
         try
@@ -540,7 +540,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             retval->m_criteriaRequired | RegFind::SearchTerm::VALUE_NAME_REGEX);
     }
 
-    if (item[CONFIG_REGFIND_VALUE_TYPE].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_VALUE_TYPE])
     {
         retval->m_ValueType = RegFind::GetRegistryValueType(item[CONFIG_REGFIND_VALUE_TYPE].c_str());
         if (retval->m_ValueType == RegNone)
@@ -556,7 +556,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             static_cast<RegFind::SearchTerm::Criteria>(retval->m_criteriaRequired | RegFind::SearchTerm::VALUE_TYPE);
     }
 
-    if (item[CONFIG_REGFIND_DATA].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA])
     {
         WideToAnsi(pLog, item[CONFIG_REGFIND_DATA].c_str(), retval->m_DataContent);
         retval->m_DataContent.SetCount(item[CONFIG_REGFIND_DATA].size());
@@ -570,7 +570,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             static_cast<RegFind::SearchTerm::Criteria>(retval->m_criteriaRequired | RegFind::SearchTerm::DATA_CONTENT);
     }
 
-    if (item[CONFIG_REGFIND_DATA_HEX].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA_HEX])
     {
         std::wstring Data;
         size_t strSize;
@@ -613,7 +613,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             static_cast<RegFind::SearchTerm::Criteria>(retval->m_criteriaRequired | RegFind::SearchTerm::DATA_CONTENT);
     }
 
-    if (item[CONFIG_REGFIND_DATA_SIZE].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA_SIZE])
     {
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE].c_str(), li)))
@@ -636,7 +636,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             retval->m_criteriaRequired | RegFind::SearchTerm::DATA_SIZE_EQUAL);
     }
 
-    if (item[CONFIG_REGFIND_DATA_SIZE_LT].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA_SIZE_LT])
     {
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_LT].c_str(), li)))
@@ -671,7 +671,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             retval->m_criteriaRequired | RegFind::SearchTerm::DATA_SIZE_LESS);
     }
 
-    if (item[CONFIG_REGFIND_DATA_SIZE_GT].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA_SIZE_GT])
     {
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_GT].c_str(), li)))
@@ -698,7 +698,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             retval->m_criteriaRequired | RegFind::SearchTerm::DATA_SIZE_MORE);
     }
 
-    if (item[CONFIG_REGFIND_DATA_SIZE_LE].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA_SIZE_LE])
     {
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_LE].c_str(), li)))
@@ -725,7 +725,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             retval->m_criteriaRequired | RegFind::SearchTerm::DATA_SIZE_LESS);
     }
 
-    if (item[CONFIG_REGFIND_DATA_SIZE_GE].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA_SIZE_GE])
     {
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_GE].c_str(), li)))
@@ -752,7 +752,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             retval->m_criteriaRequired | RegFind::SearchTerm::DATA_SIZE_MORE);
     }
 
-    if (item[CONFIG_REGFIND_DATA_REGEX].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA_REGEX])
     {
 
         WideToAnsi(pLog, item[CONFIG_REGFIND_DATA_REGEX].c_str(), retval->m_strRegexDataContentPattern);
@@ -875,7 +875,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             retval->m_criteriaRequired | RegFind::SearchTerm::DATA_CONTENT_REGEX);
     }
 
-    if (item[CONFIG_REGFIND_DATA_CONTAINS].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA_CONTAINS])
     {
         WideToAnsi(pLog, item[CONFIG_REGFIND_DATA_CONTAINS].c_str(), retval->m_DataContentContains);
         retval->m_DataContentContains.SetCount(item[CONFIG_REGFIND_DATA_CONTAINS].size());
@@ -889,7 +889,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
             static_cast<RegFind::SearchTerm::Criteria>(retval->m_criteriaRequired | RegFind::SearchTerm::DATA_CONTAINS);
     }
 
-    if (item[CONFIG_REGFIND_DATA_CONTAINS_HEX].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_REGFIND_DATA_CONTAINS_HEX])
     {
         std::wstring Data;
         size_t strSize;
@@ -965,13 +965,13 @@ HRESULT RegFind::AddRegFindFromTemplate(const std::vector<ConfigItem>& items)
 
     for (const auto& item : items)
     {
-        if (item[CONFIG_TEMPLATE_NAME].Status != ConfigItem::PRESENT)
+        if (!item[CONFIG_TEMPLATE_NAME])
         {
             log::Error(_L_, hr = E_INVALIDARG, L"Missing mandatory template name.\r\n");
             return hr;
         }
 
-        if (item[CONFIG_TEMPLATE_LOCATION].Status != ConfigItem::PRESENT)
+        if (!item[CONFIG_TEMPLATE_LOCATION])
         {
             log::Error(_L_, hr = E_INVALIDARG, L"Missing mandatory template name.\r\n");
             return hr;

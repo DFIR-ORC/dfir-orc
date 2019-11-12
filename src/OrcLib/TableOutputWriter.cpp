@@ -444,7 +444,7 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
     for (const auto [item, type] : column_types)
     {
         const ConfigItem& columnlist = it->SubItems[item];
-        if (columnlist.Status != ConfigItem::PRESENT)
+        if (!columnlist)
             continue;  // no column of this type
 
         if (columnlist.Type != ConfigItem::NODELIST)

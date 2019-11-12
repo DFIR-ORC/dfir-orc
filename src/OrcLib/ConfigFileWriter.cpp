@@ -23,7 +23,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
 {
     HRESULT hr = E_FAIL;
 
-    if (config.Status & ConfigItem::PRESENT)
+    if (config)
     {
         switch (config.Type)
         {
@@ -34,7 +34,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                 // Adding attributes
                 std::for_each(begin(config.SubItems), end(config.SubItems), [this, &pWriter](const ConfigItem& item) {
                     HRESULT hr = E_FAIL;
-                    if (item.Status & ConfigItem::PRESENT && item.Type & ConfigItem::ATTRIBUTE)
+                    if (item && item.Type & ConfigItem::ATTRIBUTE)
                     {
                         if (FAILED(
                                 hr = pWriter->WriteAttributeString(
@@ -78,7 +78,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                         begin(config.SubItems),
                         end(config.SubItems),
                         [this, &pWriter, &bHasChild](const ConfigItem& item) {
-                            if (item.Status == ConfigItem::PRESENT && (item.Type == ConfigItem::NODE)
+                            if (item && (item.Type == ConfigItem::NODE)
                                 || (item.Type == ConfigItem::NODELIST))
                             {
                                 WriteConfig(pWriter, item);

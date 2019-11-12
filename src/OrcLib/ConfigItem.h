@@ -126,7 +126,7 @@ public:  // METHODS
 
     explicit operator bool() const
     {
-        if (Status == ConfigItemStatus::PRESENT)
+        if ((Status & ConfigItemStatus::PRESENT) == ConfigItemStatus::PRESENT)
             return true;
         return false;
     }
