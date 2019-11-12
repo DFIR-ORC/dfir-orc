@@ -32,13 +32,13 @@ Orc::YaraConfig Orc::YaraConfig::Get(const logger& pLog, const ConfigItem& item)
 
     if (item[CONFIG_YARA_SOURCE])
     {
-        boost::split(retval.Sources(), item[CONFIG_YARA_SOURCE].strData, boost::is_any_of(L",;"));
+        boost::split(retval.Sources(), (std::wstring_view) item[CONFIG_YARA_SOURCE], boost::is_any_of(L",;"));
     }
 
     if (item[CONFIG_YARA_BLOCK])
     {
         LARGE_INTEGER blockSize = {0L};
-        if (SUCCEEDED(GetFileSizeFromArg(item[CONFIG_YARA_BLOCK].strData.c_str(), blockSize))
+        if (SUCCEEDED(GetFileSizeFromArg(item[CONFIG_YARA_BLOCK].c_str(), blockSize))
             && blockSize.QuadPart > 0LL)
         {
             if (blockSize.QuadPart > MAXDWORD)
@@ -49,7 +49,7 @@ Orc::YaraConfig Orc::YaraConfig::Get(const logger& pLog, const ConfigItem& item)
             if (FAILED(hr = retval.SetBlockSize(blockSize.LowPart)))
             {
                 log::Error(
-                    pLog, hr, L"Failed to configure block size with %s\r\n", item[CONFIG_YARA_BLOCK].strData.c_str());
+                    pLog, hr, L"Failed to configure block size with %s\r\n", item[CONFIG_YARA_BLOCK].c_str());
                 return retval;
             }
         }
@@ -57,7 +57,7 @@ Orc::YaraConfig Orc::YaraConfig::Get(const logger& pLog, const ConfigItem& item)
     if (item[CONFIG_YARA_OVERLAP])
     {
         LARGE_INTEGER overlapSize = {0L};
-        if (SUCCEEDED(GetFileSizeFromArg(item[CONFIG_YARA_OVERLAP].strData.c_str(), overlapSize))
+        if (SUCCEEDED(GetFileSizeFromArg(item[CONFIG_YARA_OVERLAP].c_str(), overlapSize))
             && overlapSize.QuadPart > 0LL)
         {
             if (overlapSize.QuadPart > MAXDWORD)
@@ -71,7 +71,7 @@ Orc::YaraConfig Orc::YaraConfig::Get(const logger& pLog, const ConfigItem& item)
                     pLog,
                     hr,
                     L"Failed to configure overlap size with %s\r\n",
-                    item[CONFIG_YARA_OVERLAP].strData.c_str());
+                    item[CONFIG_YARA_OVERLAP].c_str());
                 return retval;
             }
         }
@@ -79,7 +79,7 @@ Orc::YaraConfig Orc::YaraConfig::Get(const logger& pLog, const ConfigItem& item)
     if (item[CONFIG_YARA_TIMEOUT])
     {
         DWORD timeout = 0L;
-        if (SUCCEEDED(GetIntegerFromArg(item[CONFIG_YARA_TIMEOUT].strData.c_str(), timeout)))
+        if (SUCCEEDED(GetIntegerFromArg(item[CONFIG_YARA_TIMEOUT].c_str(), timeout)))
         {
             retval.SetTimeOut(std::chrono::seconds(timeout));
         }
@@ -92,7 +92,7 @@ Orc::YaraConfig Orc::YaraConfig::Get(const logger& pLog, const ConfigItem& item)
                 pLog,
                 hr,
                 L"Failed to configure scan method with %s\r\n",
-                item[CONFIG_YARA_SCAN_METHOD].strData.c_str());
+                item[CONFIG_YARA_SCAN_METHOD].c_str());
             return retval;
         }
     }

@@ -214,7 +214,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
         }
 
         ArchiveFormat = ArchiveFormat::Unknown;
-        if (!item.strData.empty())
+        if (!item.empty())
         {
             if (FAILED(hr = Configure(pLog, supported, item.c_str())))
             {
@@ -236,7 +236,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
                     pLog,
                     hr,
                     L"Invalid XOR pattern for outputdir in config file: %s\r\n",
-                    item.SubItems[CONFIG_OUTPUT_XORPATTERN].strData.c_str());
+                    item.SubItems[CONFIG_OUTPUT_XORPATTERN].c_str());
                 return hr;
             }
         }
@@ -258,7 +258,7 @@ HRESULT OutputSpec::Configure(const logger& pLog, OutputSpec::Kind supported, co
                     pLog,
                     E_INVALIDARG,
                     L"Invalid encoding for outputdir in config file: %s\r\n",
-                    item.SubItems[CONFIG_OUTPUT_ENCODING].strData.c_str());
+                    item.SubItems[CONFIG_OUTPUT_ENCODING].c_str());
                 return E_INVALIDARG;
             }
         }
@@ -302,7 +302,7 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
 
             std::wsmatch s;
 
-            if (std::regex_match(item.SubItems[CONFIG_UPLOAD_SERVER].strData, s, r))
+            if (std::regex_match((const wstring&)item.SubItems[CONFIG_UPLOAD_SERVER], s, r))
             {
                 if (equalCaseInsensitive(s[1].str().c_str(), L"http"sv))
                 {
@@ -329,9 +329,10 @@ HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item
         }
         if (::HasValue(item, CONFIG_UPLOAD_ROOTPATH))
         {
+            const std::wstring_view root = item.SubItems[CONFIG_UPLOAD_ROOTPATH];
             std::replace_copy(
-                begin(item.SubItems[CONFIG_UPLOAD_ROOTPATH].strData),
-                end(item.SubItems[CONFIG_UPLOAD_ROOTPATH].strData),
+                begin(root),
+                end(root),
                 back_inserter(RootPath),
                 bitsMode == BITSMode::SMB ? L'/' : L'\\',
                 bitsMode == BITSMode::SMB ? L'\\' : L'/');

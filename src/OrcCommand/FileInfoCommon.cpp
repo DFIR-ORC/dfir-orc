@@ -90,10 +90,10 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
 
     if (config.Status & ConfigItem::PRESENT)
     {
-        filter.intent = FileInfo::GetIntentions(pLog, config.strData.c_str(), aliasNames, columnNames);
+        filter.intent = FileInfo::GetIntentions(pLog, config.c_str(), aliasNames, columnNames);
         if (filter.intent == FILEINFO_NONE)
         {
-            log::Error(pLog, E_INVALIDARG, L"Column specified (%s) is invalid\r\n", config.strData.c_str());
+            log::Error(pLog, E_INVALIDARG, L"Column specified (%s) is invalid\r\n", config.c_str());
             return E_INVALIDARG;
         }
     }
@@ -148,7 +148,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         else
             bDefined = true;
 
-        filter.filterdata.extcustom = GetFilterExtCustomFromString(config[EXT].strData.c_str());
+        filter.filterdata.extcustom = GetFilterExtCustomFromString(config[EXT].c_str());
     }
     if (config[SIZEGT].Status & ConfigItem::PRESENT)
     {
@@ -160,7 +160,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         else
             bDefined = true;
 
-        if (FAILED(hr = GetFileSizeFromArg(config[SIZEGT].strData.c_str(), filter.filterdata.size)))
+        if (FAILED(hr = GetFileSizeFromArg(config[SIZEGT].c_str(), filter.filterdata.size)))
             return hr;
     }
     if (config[SIZELT].Status & ConfigItem::PRESENT)
@@ -173,7 +173,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         else
             bDefined = true;
 
-        if (FAILED(hr = GetFileSizeFromArg(config[SIZELT].strData.c_str(), filter.filterdata.size)))
+        if (FAILED(hr = GetFileSizeFromArg(config[SIZELT].c_str(), filter.filterdata.size)))
             return hr;
     }
 

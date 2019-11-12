@@ -67,7 +67,7 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
 
     if (recipient_item[WOLFLAUNCHER_RECIPIENT_NAME].Status == ConfigItem::PRESENT)
     {
-        retval->Name = recipient_item[WOLFLAUNCHER_RECIPIENT_NAME].strData;
+        retval->Name = recipient_item[WOLFLAUNCHER_RECIPIENT_NAME];
         auto inlist = GetRecipient(retval->Name);
         if (inlist != nullptr)
         {
@@ -84,7 +84,7 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
     if (recipient_item[WOLFLAUNCHER_RECIPIENT_ARCHIVE].Status == ConfigItem::PRESENT)
     {
         boost::split(
-            retval->ArchiveSpec, recipient_item[WOLFLAUNCHER_RECIPIENT_ARCHIVE].strData, boost::is_any_of(",;"));
+            retval->ArchiveSpec, (std::wstring_view) recipient_item[WOLFLAUNCHER_RECIPIENT_ARCHIVE], boost::is_any_of(",;"));
     }
     else
     {
@@ -95,7 +95,7 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
     DWORD cbOutput = 0L;
     DWORD dwFormatFlags = 0L;
 
-    const auto& strCert = recipient_item.strData;
+    const std::wstring& strCert = recipient_item;
 
     if (!CryptStringToBinaryW(
             strCert.c_str(), (DWORD)strCert.size(), CRYPT_STRING_ANY, NULL, &cbOutput, NULL, &dwFormatFlags))
@@ -190,13 +190,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         DWORD dwCommandTimeOutInMinutes = 0L;
         if (FAILED(
                 hr = GetIntegerFromArg(
-                    configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT].strData.c_str(), dwCommandTimeOutInMinutes)))
+                    configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT].c_str(), dwCommandTimeOutInMinutes)))
         {
             log::Error(
                 _L_,
                 hr,
                 L"Invalid command timeout (command_timeout) value specified (%s), must be an integer.\r\n",
-                configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT].strData.c_str());
+                configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT].c_str());
             return hr;
         }
         config.msCommandTerminationTimeOut = std::chrono::minutes(dwCommandTimeOutInMinutes);
@@ -211,13 +211,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         DWORD dwArchiveTimeOutMinutes = 0L;
         if (FAILED(
                 hr = GetIntegerFromArg(
-                    configitem[WOLFLAUNCHER_GLOBAL_ARCHIVE_TIMEOUT].strData.c_str(), dwArchiveTimeOutMinutes)))
+                    configitem[WOLFLAUNCHER_GLOBAL_ARCHIVE_TIMEOUT].c_str(), dwArchiveTimeOutMinutes)))
         {
             log::Error(
                 _L_,
                 hr,
                 L"Invalid archive timeout (archive_timeout) specified (%s), must be an integer.\r\n",
-                configitem[WOLFLAUNCHER_GLOBAL_ARCHIVE_TIMEOUT].strData.c_str());
+                configitem[WOLFLAUNCHER_GLOBAL_ARCHIVE_TIMEOUT].c_str());
             return hr;
         }
         config.msArchiveTimeOut = std::chrono::minutes(dwArchiveTimeOutMinutes);
@@ -276,20 +276,20 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         if (FAILED(hr = exec->SetArchiveName((const std::wstring&)archiveitem[WOLFLAUNCHER_ARCHIVE_NAME])))
         {
             log::Error(
-                _L_, hr, L"Failed to set %s as cab name\r\n", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME].strData.c_str());
+                _L_, hr, L"Failed to set %s as cab name\r\n", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME].c_str());
             return hr;
         }
 
         if (FAILED(hr = exec->SetConfigStreams(m_pConfigStream, m_pLocalConfigStream)))
         {
             log::Error(
-                _L_, hr, L"Failed to set config stream\r\n", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME].strData.c_str());
+                _L_, hr, L"Failed to set config stream\r\n", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME].c_str());
             return hr;
         }
 
         if (archiveitem[WOLFLAUNCHER_ARCHIVE_OPTIONAL])
         {
-            if (!_wcsicmp(archiveitem[WOLFLAUNCHER_ARCHIVE_OPTIONAL].strData.c_str(), L"no"))
+            if (!_wcsicmp(archiveitem[WOLFLAUNCHER_ARCHIVE_OPTIONAL].c_str(), L"no"))
             {
                 exec->SetMandatory();
             }
@@ -301,7 +301,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
         if (archiveitem[WOLFLAUNCHER_ARCHIVE_CHILDDEBUG])
         {
-            if (!_wcsicmp(archiveitem[WOLFLAUNCHER_ARCHIVE_CHILDDEBUG].strData.c_str(), L"no"))
+            if (!_wcsicmp(archiveitem[WOLFLAUNCHER_ARCHIVE_CHILDDEBUG].c_str(), L"no"))
             {
                 exec->UnSetChildDebug();
             }
@@ -393,11 +393,11 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     }
     if (configitem[ORC_PRIORITY])
     {
-        if (!_wcsicmp(L"Normal", configitem[ORC_PRIORITY].strData.c_str()))
+        if (!_wcsicmp(L"Normal", configitem[ORC_PRIORITY].c_str()))
             config.Priority = Normal;
-        else if (!_wcsicmp(L"Low", configitem[ORC_PRIORITY].strData.c_str()))
+        else if (!_wcsicmp(L"Low", configitem[ORC_PRIORITY].c_str()))
             config.Priority = Low;
-        else if (!_wcsicmp(L"High", configitem[ORC_PRIORITY].strData.c_str()))
+        else if (!_wcsicmp(L"High", configitem[ORC_PRIORITY].c_str()))
             config.Priority = High;
     }
 
@@ -405,19 +405,19 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         std::set<wstring> powerstates;
 
-        CSVListToContainer(configitem[ORC_POWERSTATE].strData, config.strPowerStates);
+        CSVListToContainer(configitem[ORC_POWERSTATE], config.strPowerStates);
     }
 
     if (configitem[ORC_ALTITUDE])
     {
-        config.DefaultAltitude = LocationSet::GetAltitudeFromString(configitem[ORC_ALTITUDE].strData.c_str());
+        config.DefaultAltitude = LocationSet::GetAltitudeFromString(configitem[ORC_ALTITUDE].c_str());
     }
 
     if (configitem[ORC_KEY])
     {
         for (const auto& item : configitem[ORC_KEY].NodeList)
         {
-            CSVListToContainer(item.strData, config.OnlyTheseKeywords);
+            CSVListToContainer(item, config.OnlyTheseKeywords);
         }
     }
 
@@ -425,7 +425,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         for (const auto& item : configitem[ORC_ENABLE_KEY].NodeList)
         {
-            CSVListToContainer(item.strData, config.EnableKeywords);
+            CSVListToContainer(item, config.EnableKeywords);
         }
     }
 
@@ -433,7 +433,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         for (const auto& item : configitem[ORC_DISABLE_KEY].NodeList)
         {
-            CSVListToContainer(item.strData, config.DisableKeywords);
+            CSVListToContainer(item, config.DisableKeywords);
         }
     }
 

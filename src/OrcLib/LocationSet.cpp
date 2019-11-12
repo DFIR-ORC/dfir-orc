@@ -864,7 +864,7 @@ HRESULT LocationSet::AddLocationsFromConfigItem(const ConfigItem& config)
             m_Altitude = GetAltitudeFromString((const std::wstring&)item.SubItems[CONFIG_VOLUME_ALTITUDE]);
         }
 
-        if (item.strData[0] == L'*')
+        if (((std::wstring_view)item)[0] == L'*')
         {
             hr = ParseAllVolumes();
             break;
@@ -872,7 +872,7 @@ HRESULT LocationSet::AddLocationsFromConfigItem(const ConfigItem& config)
         else
         {
             std::vector<std::shared_ptr<Location>> addedLocs;
-            hr = AddLocations(item.strData.c_str(), addedLocs);
+            hr = AddLocations(item.c_str(), addedLocs);
         }
     }
 

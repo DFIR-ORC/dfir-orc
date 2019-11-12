@@ -38,7 +38,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                     {
                         if (FAILED(
                                 hr = pWriter->WriteAttributeString(
-                                    NULL, item.strName.c_str(), NULL, item.strData.c_str())))
+                                    NULL, item.strName.c_str(), NULL, item.c_str())))
                         {
                             log::Warning(_L_, hr, L"Failed to write item");
                             return;
@@ -96,7 +96,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
             break;
             case ConfigItem::ATTRIBUTE:
                 if (FAILED(
-                        hr = pWriter->WriteAttributeString(NULL, config.strName.c_str(), NULL, config.strData.c_str())))
+                        hr = pWriter->WriteAttributeString(NULL, config.strName.c_str(), NULL, config.c_str())))
                 {
                     XmlLiteExtension::LogError(_L_, hr, nullptr);
                 }

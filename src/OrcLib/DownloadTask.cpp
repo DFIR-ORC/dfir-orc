@@ -35,16 +35,16 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
 
     if (item[CONFIG_DOWNLOAD_JOBNAME].Status & ConfigItem::PRESENT)
     {
-        strJobName = item[CONFIG_DOWNLOAD_JOBNAME].strData;
+        strJobName = item[CONFIG_DOWNLOAD_JOBNAME];
     }
 
     if (item[CONFIG_DOWNLOAD_METHOD].Status & ConfigItem::PRESENT)
     {
-        if (equalCaseInsensitive(item[CONFIG_DOWNLOAD_METHOD].strData, L"bits"))
+        if (equalCaseInsensitive(item[CONFIG_DOWNLOAD_METHOD], L"bits"))
         {
             retval = std::make_shared<BITSDownloadTask>(pLog, strJobName.c_str());
         }
-        else if (equalCaseInsensitive(item[CONFIG_DOWNLOAD_METHOD].strData, L"filecopy"))
+        else if (equalCaseInsensitive(item[CONFIG_DOWNLOAD_METHOD], L"filecopy"))
         {
             retval = std::make_shared<FileCopyDownloadTask>(pLog, strJobName.c_str());
         }
@@ -54,7 +54,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
                 pLog,
                 E_INVALIDARG,
                 L"Invalid download method \"%s\"\r\n",
-                item[CONFIG_DOWNLOAD_METHOD].strData.c_str());
+                item[CONFIG_DOWNLOAD_METHOD].c_str());
             return nullptr;
         }
     }
@@ -68,7 +68,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
 
         std::wsmatch s;
 
-        if (std::regex_match(item.SubItems[CONFIG_DOWNLOAD_SERVER].strData, s, r))
+        if (std::regex_match((const std::wstring&) item.SubItems[CONFIG_DOWNLOAD_SERVER], s, r))
         {
             if (!_wcsicmp(s[1].str().c_str(), L"http"))
             {
@@ -96,9 +96,10 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
 
     if (item.SubItems[CONFIG_DOWNLOAD_ROOTPATH].Status == ConfigItem::PRESENT)
     {
+        auto rootpath = (std::wstring_view) item.SubItems[CONFIG_DOWNLOAD_ROOTPATH];
         std::replace_copy(
-            begin(item.SubItems[CONFIG_DOWNLOAD_ROOTPATH].strData),
-            end(item.SubItems[CONFIG_DOWNLOAD_ROOTPATH].strData),
+            begin(rootpath),
+            end(rootpath),
             back_inserter(retval->m_strPath),
             retval->m_Protocol == BITSProtocol::BITS_SMB ? L'/' : L'\\',
             retval->m_Protocol == BITSProtocol::BITS_SMB ? L'\\' : L'/');
@@ -114,7 +115,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
 
     if (item[CONFIG_DOWNLOAD_COMMAND].Status & ConfigItem::PRESENT)
     {
-        retval->m_strCmd = item[CONFIG_DOWNLOAD_COMMAND].strData;
+        retval->m_strCmd = item[CONFIG_DOWNLOAD_COMMAND];
     }
 
     if (item[CONFIG_DOWNLOAD_FILE].Status & ConfigItem::PRESENT)
@@ -125,19 +126,19 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
             std::wstring strName, strLocalName;
             bool bDelete = false;
 
-            strName = file[CONFIG_DOWNLOAD_FILE_NAME].strData;
-            if (FAILED(hr = GetOutputFile(file[CONFIG_DOWNLOAD_FILE_LOCALPATH].strData.c_str(), strLocalName, true)))
+            strName = file[CONFIG_DOWNLOAD_FILE_NAME];
+            if (FAILED(hr = GetOutputFile(file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str(), strLocalName, true)))
             {
                 log::Error(
                     pLog,
                     hr,
                     L"Error while computing local file name for download task (%s)\r\n",
-                    file[CONFIG_DOWNLOAD_FILE_LOCALPATH].strData);
+                    file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str());
             }
 
             if (file[CONFIG_DOWNLOAD_FILE_DELETE].Status & ConfigItem::PRESENT)
             {
-                if (!equalCaseInsensitive(file[CONFIG_DOWNLOAD_FILE_DELETE].strData, L"no"))
+                if (!equalCaseInsensitive(file[CONFIG_DOWNLOAD_FILE_DELETE], L"no"))
                 {
                     bDelete = true;
                 }

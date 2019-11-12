@@ -52,7 +52,7 @@ Main::GetNameValuePairFromConfigItem(const logger& pLog, const ConfigItem& item,
     std::swap(
         spec,
         EmbeddedResource::EmbedSpec::AddNameValuePair(
-            item[TOOLEMBED_PAIRNAME].strData, item[TOOLEMBED_PAIRVALUE].strData));
+            item[TOOLEMBED_PAIRNAME], item[TOOLEMBED_PAIRVALUE]));
 
     return S_OK;
 }
@@ -88,7 +88,7 @@ HRESULT Main::GetAddFileFromConfigItem(const logger& pLog, const ConfigItem& ite
                 pLog,
                 hr,
                 L"Error in specified file (%s) to add in config file\r\n",
-                item[TOOLEMBED_FILEPATH].strData.c_str());
+                item[TOOLEMBED_FILEPATH].c_str());
             return hr;
         }
     }
@@ -145,18 +145,18 @@ HRESULT Main::GetAddArchiveFromConfigItem(const logger& pLog, const ConfigItem& 
         [&pLog, &items, &hr](const ConfigItem& item2cab) {
             EmbeddedResource::EmbedSpec::ArchiveItem toCab;
 
-            toCab.Name = item2cab[TOOLEMBED_FILE2ARCHIVE_NAME].strData;
+            toCab.Name = item2cab[TOOLEMBED_FILE2ARCHIVE_NAME];
 
             wstring strInputFile;
 
             HRESULT subhr = E_FAIL;
-            if (FAILED(subhr = GetInputFile(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].strData.c_str(), strInputFile)))
+            if (FAILED(subhr = GetInputFile(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(), strInputFile)))
             {
                 log::Error(
                     pLog,
                     subhr,
                     L"Error in specified file (%s) to add to cab file\r\n",
-                    item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].strData.c_str());
+                    item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str());
                 hr = subhr;
                 return;
             }
@@ -277,24 +277,24 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[TOOLEMBED_RUN])
     {
-        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun(configitem[TOOLEMBED_RUN].strData));
+        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun(configitem[TOOLEMBED_RUN]));
         if (configitem[TOOLEMBED_RUN][TOOLEMBED_RUN_ARGS])
             config.ToEmbed.push_back(
-                EmbeddedResource::EmbedSpec::AddRunArgs(configitem[TOOLEMBED_RUN][TOOLEMBED_RUN_ARGS].strData));
+                EmbeddedResource::EmbedSpec::AddRunArgs(configitem[TOOLEMBED_RUN][TOOLEMBED_RUN_ARGS]));
     }
     if (configitem[TOOLEMBED_RUN32])
     {
-        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX86(configitem[TOOLEMBED_RUN32].strData));
+        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX86(configitem[TOOLEMBED_RUN32]));
         if (configitem[TOOLEMBED_RUN32][TOOLEMBED_RUN_ARGS])
             config.ToEmbed.push_back(
-                EmbeddedResource::EmbedSpec::AddRun32Args(configitem[TOOLEMBED_RUN32][TOOLEMBED_RUN_ARGS].strData));
+                EmbeddedResource::EmbedSpec::AddRun32Args(configitem[TOOLEMBED_RUN32][TOOLEMBED_RUN_ARGS]));
     }
     if (configitem[TOOLEMBED_RUN64])
     {
-        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX64(configitem[TOOLEMBED_RUN64].strData));
+        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX64(configitem[TOOLEMBED_RUN64]));
         if (configitem[TOOLEMBED_RUN64][TOOLEMBED_RUN_ARGS])
             config.ToEmbed.push_back(
-                EmbeddedResource::EmbedSpec::AddRun64Args(configitem[TOOLEMBED_RUN64][TOOLEMBED_RUN_ARGS].strData));
+                EmbeddedResource::EmbedSpec::AddRun64Args(configitem[TOOLEMBED_RUN64][TOOLEMBED_RUN_ARGS]));
     }
 
     return S_OK;

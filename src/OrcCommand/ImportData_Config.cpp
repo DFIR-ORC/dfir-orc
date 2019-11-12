@@ -69,7 +69,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     if (configitem[IMPORTDATA_RECURSIVE])
     {
-        if (!_wcsnicmp(configitem[IMPORTDATA_RECURSIVE].strData.c_str(), L"no", wcslen(L"no")))
+        if (!_wcsnicmp(configitem[IMPORTDATA_RECURSIVE].c_str(), L"no", wcslen(L"no")))
         {
             config.bResursive = false;
         }
@@ -83,13 +83,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     {
         config.dwConcurrency = 0;
         LARGE_INTEGER li;
-        if (FAILED(hr = GetIntegerFromArg(configitem[IMPORTDATA_CONCURRENCY].strData.c_str(), li)))
+        if (FAILED(hr = GetIntegerFromArg(configitem[IMPORTDATA_CONCURRENCY].c_str(), li)))
         {
             log::Error(
                 _L_,
                 hr,
                 L"Invalid concurrency value specified (%s), must be an integer.\r\n",
-                configitem[IMPORTDATA_CONCURRENCY].strData.c_str());
+                configitem[IMPORTDATA_CONCURRENCY].c_str());
             return hr;
         }
         if (li.QuadPart > MAXDWORD)
@@ -98,7 +98,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 _L_,
                 hr,
                 L"concurrency value specified (%s), must not be insane.\r\n",
-                configitem[IMPORTDATA_CONCURRENCY].strData.c_str());
+                configitem[IMPORTDATA_CONCURRENCY].c_str());
             return hr;
         }
         config.dwConcurrency = li.LowPart;
@@ -161,13 +161,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             if (table_item[IMPORTDATA_TABLE_CONCURRENCY])
             {
                 LARGE_INTEGER li;
-                if (FAILED(hr = GetIntegerFromArg(table_item[IMPORTDATA_TABLE_CONCURRENCY].strData.c_str(), li)))
+                if (FAILED(hr = GetIntegerFromArg(table_item[IMPORTDATA_TABLE_CONCURRENCY].c_str(), li)))
                 {
                     log::Error(
                         _L_,
                         hr,
                         L"Invalid concurrency value specified (%s), must be an integer.\r\n",
-                        table_item[IMPORTDATA_TABLE_CONCURRENCY].strData.c_str());
+                        table_item[IMPORTDATA_TABLE_CONCURRENCY].c_str());
                     return hr;
                 }
                 if (li.QuadPart > MAXDWORD)
@@ -176,7 +176,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                         _L_,
                         hr,
                         L"concurrency value specified (%s), must not be insane.\r\n",
-                        table_item[IMPORTDATA_TABLE_CONCURRENCY].strData.c_str());
+                        table_item[IMPORTDATA_TABLE_CONCURRENCY].c_str());
                     return hr;
                 }
                 table.dwConcurrency = li.LowPart;
@@ -216,7 +216,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             }
             if (input_item[IMPORTDATA_INPUT_AFTER])
             {
-                input.AfterStatement = input_item[IMPORTDATA_INPUT_AFTER].strData;
+                input.AfterStatement = input_item[IMPORTDATA_INPUT_AFTER];
             }
 
             if (FAILED(hr = GetDefinitionFromConfig(input_item, input.ImportDefinitions)))

@@ -104,7 +104,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[REGINFO_CSVLIMIT])
     {
-        GetIntegerFromArg(configitem[REGINFO_CSVLIMIT].strData.c_str(), config.CsvValueLengthLimit);
+        GetIntegerFromArg(configitem[REGINFO_CSVLIMIT].c_str(), config.CsvValueLengthLimit);
     }
     else
     {
@@ -112,9 +112,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
 
     if (configitem[REGINFO_COMPUTER])
-        log::Info(_L_, L"No computer name specified\r\n", configitem[REGINFO_INFORMATION].strData.c_str());
+        log::Info(_L_, L"No computer name specified\r\n", configitem[REGINFO_INFORMATION].c_str());
 
-    config.strComputerName = configitem[REGINFO_COMPUTER].strData;
+    config.strComputerName = configitem[REGINFO_COMPUTER];
 
     std::for_each(
         begin(configitem[REGINFO_HIVE].NodeList),
@@ -157,14 +157,14 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[REGINFO_INFORMATION])
     {
-        config.Information = GetRegInfoType(configitem[REGINFO_INFORMATION].strData.c_str());
+        config.Information = GetRegInfoType(configitem[REGINFO_INFORMATION].c_str());
         if (config.Information == REGINFO_NONE)
         {
             log::Error(
                 _L_,
                 E_INVALIDARG,
                 L"Column specified (%s) is invalid\r\n",
-                configitem[REGINFO_INFORMATION].strData.c_str());
+                configitem[REGINFO_INFORMATION].c_str());
             return E_INVALIDARG;
         }
     }

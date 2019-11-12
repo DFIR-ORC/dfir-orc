@@ -112,7 +112,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
                 _L_,
                 hr,
                 L"Failed to configure temporary folder \"%s\", defaulting to %%TEMP%%\r\n",
-                configitem[ORC_TEMP].strData.c_str());
+                configitem[ORC_TEMP].c_str());
             if (FAILED(hr = config.Temporary.Configure(_L_, OutputSpec::Kind::Directory, L"%TEMP%")))
             {
                 log::Warning(_L_, hr, L"Failed to configure temporary folder \"%%TEMP%%\"");
