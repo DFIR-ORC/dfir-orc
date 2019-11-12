@@ -186,6 +186,8 @@ private:
     HRESULT ExtractItem(ImportItem& input);
 
     HRESULT ImportOneItem(ImportMessage::Message request);
+
+    void LogNotification(const ImportNotification::Notification& notification);
 };
 }  // namespace Orc
 #pragma managed(pop)

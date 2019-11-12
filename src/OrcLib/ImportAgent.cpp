@@ -559,6 +559,8 @@ bool ImportAgent::SendResult(const ImportNotification::Notification& notificatio
 
     static_cast<void>(InterlockedDecrement(&m_lInProgressItems));
 
+    LogNotification(notification);
+
     return Concurrency::send(m_target, notification);
 }
 
@@ -883,4 +885,99 @@ HRESULT ImportAgent::Statistics(const logger& pLog)
         }
     }
     return S_OK;
+}
+
+void ImportAgent::LogNotification(const ImportNotification::Notification& notification)
+{
+    const auto& item = notification->Item();
+
+    if (FAILED(notification->GetHR()))
+    {
+        log::Error(
+            _L_,
+            notification->GetHR(),
+            L"\t[%04d] %s failed\r\n",
+            QueuedItemsCount(),
+            notification->Item().name.c_str());
+        return;
+    }
+
+    switch (item.format)
+    {
+        case ImportItem::Envelopped:
+            log::Info(
+                _L_,
+                L"\t[%04d] %s (envelopped message) decrypted (%I64d bytes)\r\n",
+                QueuedItemsCount(),
+                item.name.c_str(),
+                item.ullBytesExtracted);
+            break;
+        case ImportItem::Archive:
+            log::Info(
+                _L_,
+                L"\t[%04d] %s (archive) extracted (%I64d bytes)\r\n",
+                QueuedItemsCount(),
+                item.name.c_str(),
+                item.ullBytesExtracted);
+            break;
+        case ImportItem::CSV:
+            log::Info(
+                _L_,
+                L"\t[%04d] %s (csv) imported into %s (%I64d lines)\r\n",
+                QueuedItemsCount(),
+                item.name.c_str(),
+                item.definitionItem->tableName.c_str(),
+                item.ullLinesImported);
+            break;
+        case ImportItem::RegistryHive:
+            log::Info(
+                _L_,
+                L"\t[%04d] %s (registry hive) imported into %s (%I64d lines)\r\n",
+                QueuedItemsCount(),
+                item.name.c_str(),
+                item.definitionItem->tableName.c_str(),
+                item.ullLinesImported);
+            break;
+        case ImportItem::EventLog:
+            log::Info(
+                _L_,
+                L"\t[%04d] %s (event log) imported into %s (%I64d lines)\r\n",
+                QueuedItemsCount(),
+                item.name.c_str(),
+                item.definitionItem->tableName.c_str(),
+                item.ullLinesImported);
+            break;
+        case ImportItem::XML:
+            log::Info(
+                _L_,
+                L"\t[%04d] %s (xml) imported (%I64d bytes)\r\n",
+                QueuedItemsCount(),
+                item.name.c_str(),
+                item.ullBytesExtracted);
+            break;
+        case ImportItem::Data:
+            log::Info(
+                _L_,
+                L"\t[%04d] %s (data) imported (%I64d bytes)\r\n",
+                QueuedItemsCount(),
+                item.name.c_str(),
+                item.ullBytesExtracted);
+            break;
+        case ImportItem::Text:
+            log::Info(
+                _L_,
+                L"\t[%04d] %s (text) imported (%I64d bytes)\r\n",
+                QueuedItemsCount(),
+                item.name.c_str(),
+                item.ullBytesExtracted);
+            break;
+        default:
+            log::Warning(
+                _L_,
+                L"\t[%04d] unexpected notification: %s (text) imported (%I64d bytes)\r\n",
+                QueuedItemsCount(),
+                item.name.c_str(),
+                item.ullBytesExtracted);
+            break;
+    }
 }

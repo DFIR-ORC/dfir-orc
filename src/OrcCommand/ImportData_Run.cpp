@@ -197,80 +197,8 @@ HRESULT Main::Run()
 
     m_notificationCb = std::make_unique<call<ImportNotification::Notification>>(
         [this, &output](const ImportNotification::Notification& notification) {
-            LONG queued = receive(m_importAgent->QueuedItemsCount());
-
             if (SUCCEEDED(notification->GetHR()))
             {
-                switch (notification->Item().format)
-                {
-                    case ImportItem::Envelopped:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (envelopped message) decrypted (%I64d bytes)\r\n",
-                            queued,
-                            notification->Item().name.c_str(),
-                            notification->Item().ullBytesExtracted);
-                        break;
-                    case ImportItem::Archive:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (archive) extracted (%I64d bytes)\r\n",
-                            queued,
-                            notification->Item().name.c_str(),
-                            notification->Item().ullBytesExtracted);
-                        break;
-                    case ImportItem::CSV:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (csv) imported into %s (%I64d lines)\r\n",
-                            queued,
-                            notification->Item().name.c_str(),
-                            notification->Item().definitionItem->tableName.c_str(),
-                            notification->Item().ullLinesImported);
-                        break;
-                    case ImportItem::RegistryHive:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (registry hive) imported into %s (%I64d lines)\r\n",
-                            queued,
-                            notification->Item().name.c_str(),
-                            notification->Item().definitionItem->tableName.c_str(),
-                            notification->Item().ullLinesImported);
-                        break;
-                    case ImportItem::EventLog:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (event log) imported into %s (%I64d lines)\r\n",
-                            queued,
-                            notification->Item().name.c_str(),
-                            notification->Item().definitionItem->tableName.c_str(),
-                            notification->Item().ullLinesImported);
-                        break;
-                    case ImportItem::XML:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (xml) imported (%I64d bytes)\r\n",
-                            queued,
-                            notification->Item().name.c_str(),
-                            notification->Item().ullBytesExtracted);
-                        break;
-                    case ImportItem::Data:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (data) imported (%I64d bytes)\r\n",
-                            queued,
-                            notification->Item().name.c_str(),
-                            notification->Item().ullBytesExtracted);
-                        break;
-                    case ImportItem::Text:
-                        log::Info(
-                            _L_,
-                            L"\t[%04d] %s (text) imported (%I64d bytes)\r\n",
-                            queued,
-                            notification->Item().name.c_str(),
-                            notification->Item().ullBytesExtracted);
-                        break;
-                }
                 m_ullImportedLines += notification->Item().ullLinesImported;
                 m_ullProcessedBytes += notification->Item().ullBytesExtracted;
 
@@ -351,8 +279,6 @@ HRESULT Main::Run()
             }
             else
             {
-                log::Error(_L_, notification->GetHR(), L"\t[%04d] %s failed\r\n", queued, notification->Item().name.c_str());
-
                 SystemDetails::WriteComputerName(output);
 
                 if (notification->Item().inputFile != nullptr)
