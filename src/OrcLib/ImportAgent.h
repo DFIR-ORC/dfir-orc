@@ -170,22 +170,7 @@ private:
     typedef std::pair<TableDescription, std::vector<TableOutput::Column>> TableDefinition;
     std::vector<TableDefinition> m_TableDefinitions;
 
-    bool SendResult(const ImportNotification::Notification& notification)
-    {
-        if (notification->Item().ullFileBytesCharged > 0LL)
-        {
-            m_fileSemaphore.release(notification->Item().ullFileBytesCharged);
-        }
-        if (notification->Item().ullMemBytesCharged > 0LL)
-        {
-            m_memSemaphore.release(notification->Item().ullMemBytesCharged);
-        }
-        m_ulItemProcessed++;
-
-        static_cast<void>(InterlockedDecrement(&m_lInProgressItems));
-
-        return Concurrency::send(m_target, notification);
-    }
+    bool SendResult(const ImportNotification::Notification& notification);
 
     ImportMessage::Message GetRequest() { return Concurrency::receive<ImportMessage::Message>(m_source); }
 

@@ -543,6 +543,25 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
     return S_OK;
 }
 
+bool ImportAgent::SendResult(const ImportNotification::Notification& notification)
+{
+    if (notification->Item().ullFileBytesCharged > 0LL)
+    {
+        m_fileSemaphore.release(notification->Item().ullFileBytesCharged);
+    }
+
+    if (notification->Item().ullMemBytesCharged > 0LL)
+    {
+        m_memSemaphore.release(notification->Item().ullMemBytesCharged);
+    }
+
+    m_ulItemProcessed++;
+
+    static_cast<void>(InterlockedDecrement(&m_lInProgressItems));
+
+    return Concurrency::send(m_target, notification);
+}
+
 HRESULT ImportAgent::InitializeOutputs(
     const OutputSpec& extractOutput,
     const OutputSpec& importOutput,
