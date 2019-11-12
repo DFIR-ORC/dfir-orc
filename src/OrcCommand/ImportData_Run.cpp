@@ -367,11 +367,9 @@ HRESULT Main::Run()
         log::Info(_L_, L"\r\n\r\n");
     }
 
-    m_importAgent = std::make_unique<ImportAgent>(_L_, m_importRequestBuffer, m_importRequestBuffer, *m_notificationCb);
+    auto importAgent = std::make_unique<ImportAgent>(_L_, m_importRequestBuffer, m_importRequestBuffer, *m_notificationCb);
 
-    if (FAILED(
-            hr = m_importAgent->InitializeOutputs(
-                config.extractOutput, config.importOutput, config.tempOutput)))
+    if (FAILED(hr = importAgent->InitializeOutputs(config.extractOutput, config.importOutput, config.tempOutput)))
     {
         log::Error(_L_, hr, L"Failed to initialize import agent output\r\n");
         return hr;
@@ -380,7 +378,7 @@ HRESULT Main::Run()
     if (!config.m_Tables.empty())
     {
         log::Info(_L_, L"\r\nInitialize tables...");
-        if (FAILED(hr = m_importAgent->InitializeTables(config.m_Tables)))
+        if (FAILED(hr = importAgent->InitializeTables(config.m_Tables)))
         {
             log::Error(_L_, hr, L"\r\nFailed to initialize import agent table definitions\r\n");
             return hr;
@@ -412,7 +410,7 @@ HRESULT Main::Run()
         {
             if (input.size() > i)
             {
-                m_importAgent->SendRequest(ImportMessage::MakeExpandRequest(move(input[i])));
+                importAgent->SendRequest(ImportMessage::MakeExpandRequest(move(input[i])));
                 ulInputFiles++;
             }
         }
@@ -422,7 +420,7 @@ HRESULT Main::Run()
 
     log::Info(_L_, L"\r\nImporting data...\r\n");
 
-    if (!m_importAgent->start())
+    if (!importAgent->start())
     {
         log::Error(_L_, E_FAIL, L"Start for import Agent failed\r\n");
         return E_FAIL;
@@ -430,7 +428,7 @@ HRESULT Main::Run()
 
     try
     {
-        concurrency::agent::wait(m_importAgent.get());
+        concurrency::agent::wait(importAgent.get());
     }
     catch (concurrency::operation_timed_out timeout)
     {
@@ -441,16 +439,16 @@ HRESULT Main::Run()
     if (!config.m_Tables.empty())
     {
         log::Info(_L_, L"\r\nAfter statements\r\n");
-        if (FAILED(hr = m_importAgent->FinalizeTables()))
+        if (FAILED(hr = importAgent->FinalizeTables()))
         {
             log::Error(_L_, hr, L"Failed to finalize import tables\r\n");
         }
     }
 
     log::Info(_L_, L"\r\nSome statistics\r\n)");
-    m_importAgent->Statistics(_L_);
+    importAgent->Statistics(_L_);
 
-    m_importAgent.release();
+    importAgent.release();
 
     if (reportWriter)
     {

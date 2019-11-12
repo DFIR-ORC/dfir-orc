@@ -135,8 +135,6 @@ private:
     ImportMessage::PriorityMessageBuffer m_importRequestBuffer;
     std::unique_ptr<Concurrency::call<ImportNotification::Notification>> m_notificationCb;
 
-    std::unique_ptr<ImportAgent> m_importAgent;
-
     // Statictics
     ULONGLONG m_ullProcessedBytes = 0LL;
     ULONGLONG m_ullImportedLines = 0LL;
