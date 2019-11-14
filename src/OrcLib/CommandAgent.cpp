@@ -190,6 +190,11 @@ HRESULT CommandAgent::ReversePattern(
     std::wstring& ComputerName,
     std::wstring& TimeStamp)
 {
+    if (Pattern.empty())
+    {
+        return S_OK;
+    }
+
     const std::wregex r_All(L"(\\{FullComputerName\\})|(\\{ComputerName\\})|(\\{TimeStamp\\})|(\\{SystemType\\})");
     const int FullComputerNameIdx = 1, ComputerNameIdx = 2, TimeStampIdx = 3, SystemTypeIdx = 4;
 
