@@ -5,6 +5,7 @@
 //
 // Author(s): Jean Gautier (ANSSI)
 //
+#pragma once
 
 #include "OrcCommand.h"
 
@@ -39,7 +40,7 @@ public:
         logger _L_;
 
     public:
-        std::wstring NameMatch;
+        std::wstring matchRegex;  // filename regex
         std::wstring InputDirectory;
         bool bRecursive = false;
 
@@ -48,7 +49,7 @@ public:
         std::wstring BeforeStatement;
         std::wstring AfterStatement;
 
-        std::wstring Description() { return InputDirectory + L"\\" + NameMatch; }
+        std::wstring Description() { return InputDirectory + L"\\" + matchRegex; }
 
         InputItem(InputItem&& other) noexcept = default;
         InputItem(logger pLog)

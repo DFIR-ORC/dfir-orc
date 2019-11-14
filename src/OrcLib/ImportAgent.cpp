@@ -864,7 +864,7 @@ void ImportAgent::run()
     return;
 }
 
-HRESULT ImportAgent::Statistics(const logger& pLog)
+HRESULT ImportAgent::LogStatistics(const logger& pLog)
 {
     log::Info(pLog, L"\tMain extraction agent: %d items\r\n\r\n", m_ulItemProcessed);
 

@@ -199,100 +199,100 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[IMPORTDATA_INPUT])
     {
-        for (auto& input_item : configitem[IMPORTDATA_INPUT].NodeList)
+        for (auto& inputNode : configitem[IMPORTDATA_INPUT].NodeList)
         {
-            Main::InputItem input(_L_);
+            Main::InputItem inputItem(_L_);
 
-            if (input_item[IMPORTDATA_INPUT_DIRECTORY])
+            if (inputNode[IMPORTDATA_INPUT_DIRECTORY])
             {
-                input.InputDirectory = input_item[IMPORTDATA_INPUT_DIRECTORY];
+                inputItem.InputDirectory = inputNode[IMPORTDATA_INPUT_DIRECTORY];
             }
 
-            if (input_item[IMPORTDATA_INPUT_MATCH])
+            if (inputNode[IMPORTDATA_INPUT_MATCH])
             {
-                input.NameMatch = input_item[IMPORTDATA_INPUT_MATCH];
+                inputItem.matchRegex = inputNode[IMPORTDATA_INPUT_MATCH];
             }
 
-            if (input_item[IMPORTDATA_INPUT_BEFORE])
+            if (inputNode[IMPORTDATA_INPUT_BEFORE])
             {
-                input.BeforeStatement = input_item[IMPORTDATA_INPUT_BEFORE];
+                inputItem.BeforeStatement = inputNode[IMPORTDATA_INPUT_BEFORE];
             }
 
-            if (input_item[IMPORTDATA_INPUT_AFTER])
+            if (inputNode[IMPORTDATA_INPUT_AFTER])
             {
-                input.AfterStatement = input_item[IMPORTDATA_INPUT_AFTER];
+                inputItem.AfterStatement = inputNode[IMPORTDATA_INPUT_AFTER];
             }
 
-            if (FAILED(hr = GetDefinitionFromConfig(input_item, input.ImportDefinitions)))
+            if (FAILED(hr = GetDefinitionFromConfig(inputNode, inputItem.ImportDefinitions)))
             {
                 log::Error(_L_, hr, L"Failed to configure import definitions\r\n");
             }
 
-            config.Inputs.push_back(std::move(input));
+            config.Inputs.push_back(std::move(inputItem));
         }
     }
 
     return S_OK;
 }
 
-HRESULT Main::GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& definition)
+HRESULT Main::GetImportItemFromConfig(const ConfigItem& configItem, ImportDefinition::Item& definition)
 {
-    if (config_item[IMPORTDATA_INPUT_IMPORT_FILEMATCH])
+    if (configItem[IMPORTDATA_INPUT_IMPORT_FILEMATCH])
     {
-        definition.nameMatch = config_item[IMPORTDATA_INPUT_IMPORT_FILEMATCH];
+        definition.nameMatch = configItem[IMPORTDATA_INPUT_IMPORT_FILEMATCH];
     }
 
-    if (config_item[IMPORTDATA_INPUT_IMPORT_BEFORE])
+    if (configItem[IMPORTDATA_INPUT_IMPORT_BEFORE])
     {
-        definition.BeforeStatement = config_item[IMPORTDATA_INPUT_IMPORT_BEFORE];
+        definition.BeforeStatement = configItem[IMPORTDATA_INPUT_IMPORT_BEFORE];
     }
-    if (config_item[IMPORTDATA_INPUT_IMPORT_AFTER])
+    if (configItem[IMPORTDATA_INPUT_IMPORT_AFTER])
     {
-        definition.AfterStatement = config_item[IMPORTDATA_INPUT_IMPORT_AFTER];
-    }
-
-    if (config_item[IMPORTDATA_INPUT_IMPORT_TABLE])
-    {
-        definition.tableName = config_item[IMPORTDATA_INPUT_IMPORT_TABLE];
+        definition.AfterStatement = configItem[IMPORTDATA_INPUT_IMPORT_AFTER];
     }
 
-    if (config_item[IMPORTDATA_INPUT_IMPORT_PASSWORD])
+    if (configItem[IMPORTDATA_INPUT_IMPORT_TABLE])
     {
-        definition.Password = config_item[IMPORTDATA_INPUT_IMPORT_PASSWORD];
+        definition.tableName = configItem[IMPORTDATA_INPUT_IMPORT_TABLE];
+    }
+
+    if (configItem[IMPORTDATA_INPUT_IMPORT_PASSWORD])
+    {
+        definition.Password = configItem[IMPORTDATA_INPUT_IMPORT_PASSWORD];
     }
     return S_OK;
 }
 
-HRESULT Main::GetIgnoreItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item)
+HRESULT Main::GetIgnoreItemFromConfig(const ConfigItem& configItem, ImportDefinition::Item& importItem)
 {
-    if (config_item[IMPORTDATA_INPUT_IGNORE_FILEMATCH])
+    if (configItem[IMPORTDATA_INPUT_IGNORE_FILEMATCH])
     {
-        import_item.nameMatch = config_item[IMPORTDATA_INPUT_IGNORE_FILEMATCH];
+        importItem.nameMatch = configItem[IMPORTDATA_INPUT_IGNORE_FILEMATCH];
     }
     return S_OK;
 }
 
-HRESULT Main::GetExtractItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item)
+HRESULT Main::GetExtractItemFromConfig(const ConfigItem& configItem, ImportDefinition::Item& importItem)
 {
-    if (config_item[IMPORTDATA_INPUT_EXTRACT_FILEMATCH])
+    if (configItem[IMPORTDATA_INPUT_EXTRACT_FILEMATCH])
     {
-        import_item.nameMatch = config_item[IMPORTDATA_INPUT_EXTRACT_FILEMATCH];
+        importItem.nameMatch = configItem[IMPORTDATA_INPUT_EXTRACT_FILEMATCH];
     }
-    if (config_item[IMPORTDATA_INPUT_EXTRACT_PASSWORD])
+    if (configItem[IMPORTDATA_INPUT_EXTRACT_PASSWORD])
     {
-        import_item.Password = config_item[IMPORTDATA_INPUT_EXTRACT_PASSWORD];
+        importItem.Password = configItem[IMPORTDATA_INPUT_EXTRACT_PASSWORD];
     }
     return S_OK;
 }
 
-HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefinition& definition)
+HRESULT Main::GetDefinitionFromConfig(const ConfigItem& configItem, ImportDefinition& definition)
 {
     HRESULT hr = E_FAIL;
 
-    if (config_item[IMPORTDATA_INPUT_IMPORT])
+    if (configItem[IMPORTDATA_INPUT_IMPORT])
     {
 
-        for (auto& import_item : config_item[IMPORTDATA_INPUT_IMPORT].NodeList)
+        for (auto& import_item : configItem[IMPORTDATA_INPUT_IMPORT].NodeList)
         {
             ImportDefinition::Item import;
 
@@ -304,9 +304,9 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefin
             definition.m_itemDefinitions.push_back(std::move(import));
         }
     }
-    if (config_item[IMPORTDATA_INPUT_IGNORE])
+    if (configItem[IMPORTDATA_INPUT_IGNORE])
     {
-        for (auto& ignore_item : config_item[IMPORTDATA_INPUT_IGNORE].NodeList)
+        for (auto& ignore_item : configItem[IMPORTDATA_INPUT_IGNORE].NodeList)
         {
             ImportDefinition::Item import;
 
@@ -318,13 +318,13 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefin
             definition.m_itemDefinitions.push_back(std::move(import));
         }
     }
-    if (config_item[IMPORTDATA_INPUT_EXTRACT])
+    if (configItem[IMPORTDATA_INPUT_EXTRACT])
     {
-        for (auto& extract_item : config_item[IMPORTDATA_INPUT_EXTRACT].NodeList)
+        for (auto& extractItem : configItem[IMPORTDATA_INPUT_EXTRACT].NodeList)
         {
             ImportDefinition::Item import;
 
-            if (FAILED(hr = GetExtractItemFromConfig(extract_item, import)))
+            if (FAILED(hr = GetExtractItemFromConfig(extractItem, import)))
             {
                 log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
             }
@@ -448,7 +448,7 @@ HRESULT Main::CheckConfiguration()
                         L"No table description found for table %s (specified in input %s of %s)\r\n",
                         input_def.tableName.c_str(),
                         input_def.nameMatch.c_str(),
-                        input.NameMatch.c_str());
+                        input.matchRegex.c_str());
                     return E_INVALIDARG;
                 }
             }

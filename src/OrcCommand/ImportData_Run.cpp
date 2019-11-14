@@ -234,10 +234,10 @@ Main::AddDirectoryForInput(const std::wstring& dir, const InputItem& input, std:
             item.isToImport = false;
             item.isToExpand = true;
 
-            if (!input.NameMatch.empty())
+            if (!input.matchRegex.empty())
             {
                 if (SUCCEEDED(CommandAgent::ReversePattern(
-                        input.NameMatch,
+                        input.matchRegex,
                         item.name,
                         item.systemType,
                         item.fullComputerName,
@@ -250,7 +250,7 @@ Main::AddDirectoryForInput(const std::wstring& dir, const InputItem& input, std:
                 else
                 {
                     log::Verbose(
-                        _L_, L"Input file %s does not match %s\r\n", item.name.c_str(), input.NameMatch.c_str());
+                        _L_, L"Input file %s does not match %s\r\n", item.name.c_str(), input.matchRegex.c_str());
                 }
             }
             else
@@ -282,12 +282,12 @@ HRESULT Main::AddFileForInput(const std::wstring& file, const InputItem& input, 
         item.isToImport = false;
         item.isToExpand = false;
 
-        if (!input.NameMatch.empty())
+        if (!input.matchRegex.empty())
         {
             auto filename = entry.filename().wstring();
 
             if (SUCCEEDED(CommandAgent::ReversePattern(
-                    input.NameMatch,
+                    input.matchRegex,
                     filename,
                     item.systemType,
                     item.fullComputerName,
@@ -299,7 +299,7 @@ HRESULT Main::AddFileForInput(const std::wstring& file, const InputItem& input, 
             }
             else
             {
-                log::Verbose(_L_, L"Input file %s does not match %s\r\n", filename.c_str(), input.NameMatch.c_str());
+                log::Verbose(_L_, L"Input file %s does not match %s\r\n", filename.c_str(), input.matchRegex.c_str());
             }
         }
         else
@@ -460,7 +460,7 @@ HRESULT Main::Run()
     }
 
     log::Info(_L_, L"\r\nSome statistics\r\n)");
-    importAgent->Statistics(_L_);
+    importAgent->LogStatistics(_L_);
 
     if (reportWriter)
     {

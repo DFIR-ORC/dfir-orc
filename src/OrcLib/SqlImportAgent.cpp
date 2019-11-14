@@ -31,7 +31,7 @@ using namespace std;
 using namespace Orc;
 
 HRESULT
-SqlImportAgent::Initialize(const OutputSpec& importOutput, const OutputSpec& tempOutput, TableDescription& table)
+SqlImportAgent::Initialize(const OutputSpec& databaseOutput, const OutputSpec& tempOutput, TableDescription& table)
 {
     m_wevtapi = ExtensionLibrary::GetLibrary<EvtLibrary>(_L_);
     if (!m_wevtapi)
@@ -41,7 +41,7 @@ SqlImportAgent::Initialize(const OutputSpec& importOutput, const OutputSpec& tem
     }
 
     HRESULT hr = E_FAIL;
-    m_databaseOutput = importOutput;
+    m_databaseOutput = databaseOutput;
     m_tempOutput = tempOutput;
 
     if (FAILED(hr = InitializeTableColumns(table)))

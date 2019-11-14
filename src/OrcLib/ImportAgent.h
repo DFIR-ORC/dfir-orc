@@ -132,7 +132,7 @@ public:
 
     Concurrency::ISource<LONG>& QueuedItemsCount() { return m_QueuedItems; }
 
-    HRESULT Statistics(const logger& pLog);
+    HRESULT LogStatistics(const logger& pLog);
 
     ~ImportAgent(void) = default;
 
