@@ -448,8 +448,6 @@ HRESULT Main::Run()
     log::Info(_L_, L"\r\nSome statistics\r\n)");
     importAgent->Statistics(_L_);
 
-    importAgent.release();
-
     if (reportWriter)
     {
         reportWriter->Close();
