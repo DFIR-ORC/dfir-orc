@@ -637,6 +637,7 @@ source_group(Utilities\\Resources FILES ${SRC_UTILITIES_RESOURCES})
 
 set(SRC_UTILITIES_STRINGS
     "CaseInsensitive.h"
+    "Strings.h"
     "Unicode.cpp"
     "Unicode.h"
     "Unicode_XmlComment.cpp"

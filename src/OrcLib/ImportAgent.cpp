@@ -39,6 +39,7 @@
 
 #include "Temporary.h"
 
+#include "Strings.h"
 #include "SystemDetails.h"
 
 #include <filesystem>
@@ -184,11 +185,19 @@ HRESULT ImportAgent::EnveloppedItem(ImportItem& input)
         return hr;
     }
 
+    // Functions GetFileFormat() and Archive::GetArchiveFormat() expect a '7z' extension
+    const wchar_t ext7z[] = L".7z";
+    auto name = input.GetBaseName(_L_);
+    if (!EndsWith(name, ext7z))
+    {
+        name.append(ext7z);
+    }
+
     ImportItem output;
     output.inputFile = input.inputFile;
     output.definitionItem = nullptr;
     output.definitions = input.definitions;
-    output.name = input.GetBaseName(_L_);
+    output.name = name;
     output.fullName = output.name;
     output.format = output.GetFileFormat();
 
