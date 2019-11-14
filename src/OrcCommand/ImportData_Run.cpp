@@ -159,6 +159,45 @@ void WriteReport(TableOutput::IWriter& writer, const ImportNotification::Notific
     WriteSuccessfulReport(writer, notification);
 }
 
+void LogTableDescription(logger& _L_, const std::vector<TableDescription>& tables)
+{
+    if (!tables.empty())
+    {
+        return;
+    }
+
+    log::Info(_L_, L"\r\nTables configuration :\r\n");
+    for (const auto& table : tables)
+    {
+        LPWSTR szDisp = nullptr;
+        switch (table.Disposition)
+        {
+            case AsIs:
+                szDisp = L"as is";
+                break;
+            case Truncate:
+                szDisp = L"truncate";
+                break;
+            case CreateNew:
+                szDisp = L"create new";
+                break;
+            default:
+                break;
+        }
+
+        log::Info(
+            _L_,
+            L"\t%s : %s, %s, %s with %d concurrent agents\r\n",
+            table.name.c_str(),
+            szDisp,
+            table.bCompress ? L"compression" : L"no compression",
+            table.bTABLOCK ? L"table lock" : L"rows lock",
+            table.dwConcurrency);
+    }
+
+    log::Info(_L_, L"\r\n\r\n");
+}
+
 }  // namespace
 
 HRESULT
@@ -314,8 +353,11 @@ HRESULT Main::Run()
 {
     HRESULT hr = E_FAIL;
 
-    if (FAILED(hr = LoadWinTrust()))
+    hr = LoadWinTrust();
+    if (FAILED(hr))
+    {
         return hr;
+    }
 
     auto reportWriter = TableOutput::GetWriter(_L_, config.reportOutput);
     if (reportWriter == nullptr)
@@ -334,46 +376,17 @@ HRESULT Main::Run()
             }
         });
 
-    if (!config.m_Tables.empty())
-    {
-        log::Info(_L_, L"\r\nTables configuration :\r\n");
-        for (const auto& table : config.m_Tables)
-        {
-            LPWSTR szDisp = nullptr;
-            switch (table.Disposition)
-            {
-                case AsIs:
-                    szDisp = L"as is";
-                    break;
-                case Truncate:
-                    szDisp = L"truncate";
-                    break;
-                case CreateNew:
-                    szDisp = L"create new";
-                    break;
-                default:
-                    break;
-            }
+    auto importAgent =
+        std::make_unique<ImportAgent>(_L_, m_importRequestBuffer, m_importRequestBuffer, *m_notificationCb);
 
-            log::Info(
-                _L_,
-                L"\t%s : %s, %s, %s with %d concurrent agents\r\n",
-                table.name.c_str(),
-                szDisp,
-                table.bCompress ? L"compression" : L"no compression",
-                table.bTABLOCK ? L"table lock" : L"rows lock",
-                table.dwConcurrency);
-        }
-        log::Info(_L_, L"\r\n\r\n");
-    }
-
-    auto importAgent = std::make_unique<ImportAgent>(_L_, m_importRequestBuffer, m_importRequestBuffer, *m_notificationCb);
-
-    if (FAILED(hr = importAgent->InitializeOutputs(config.extractOutput, config.importOutput, config.tempOutput)))
+    hr = importAgent->InitializeOutputs(config.extractOutput, config.importOutput, config.tempOutput);
+    if (FAILED(hr))
     {
         log::Error(_L_, hr, L"Failed to initialize import agent output\r\n");
         return hr;
     }
+
+    LogTableDescription(_L_, config.m_Tables);
 
     if (!config.m_Tables.empty())
     {
@@ -383,6 +396,7 @@ HRESULT Main::Run()
             log::Error(_L_, hr, L"\r\nFailed to initialize import agent table definitions\r\n");
             return hr;
         }
+
         log::Info(_L_, L" Done\r\n");
     }
 
