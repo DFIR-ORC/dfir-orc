@@ -96,6 +96,7 @@ public:
         const std::wstring& KeyWord,
         const std::wstring& FileName,
         std::wstring& output);
+
     static HRESULT ReversePattern(
         const std::wstring& Pattern,
         const std::wstring& input,

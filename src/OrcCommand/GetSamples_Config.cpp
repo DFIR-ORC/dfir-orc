@@ -101,7 +101,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                     }
                     else
                     {
-                        if (SUCCEEDED(GetInputFile(pEquals + 1, config.autorunsOutput.Path)))
+                        if (SUCCEEDED(ExpandFilePath(pEquals + 1, config.autorunsOutput.Path)))
                         {
                             config.bLoadAutoruns = true;
                             config.bKeepAutorunsXML = false;

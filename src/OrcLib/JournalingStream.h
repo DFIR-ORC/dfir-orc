@@ -64,7 +64,7 @@ public:
         const logger& pLog,
         const std::shared_ptr<ByteStream>& pFromStream,
         const std::shared_ptr<ByteStream>& pToStream);
-    static HRESULT IsStreamJournaled(const logger& pLog, const std::shared_ptr<ByteStream>& pStream);
+    static HRESULT IsStreamJournalized(const logger& pLog, const std::shared_ptr<ByteStream>& pStream);
 
     virtual ~JournalingStream();
 };

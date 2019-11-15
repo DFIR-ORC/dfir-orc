@@ -707,7 +707,7 @@ bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
         return false;
     }
 
-    if (auto hr = GetInputFile(pEquals + 1, strOutputFile); FAILED(hr))
+    if (auto hr = ExpandFilePath(pEquals + 1, strOutputFile); FAILED(hr))
     {
         log::Error(_L_, E_INVALIDARG, L"Invalid input file specified: %s\r\n", pEquals + 1);
         return false;

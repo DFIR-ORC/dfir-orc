@@ -140,7 +140,7 @@ HRESULT Main::Launch(const std::wstring& strToExecute, const std::wstring& strRu
 
     if (config.bNoWait && bHasDeletionWork)
     {
-        if (FAILED(hr = GetInputFile(L"%ComSpec%", strCreateProcessBinary)))
+        if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCreateProcessBinary)))
         {
             log::Error(_L_, hr, L"Failed to evaluate command spec (%ComSpec%)\r\n");
             return hr;
@@ -329,7 +329,7 @@ HRESULT Main::LaunchWMI()
 
     if (config.bNoWait && bHasDeletionWork)
     {
-        if (FAILED(hr = GetInputFile(L"%ComSpec%", strCreateProcessBinary)))
+        if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCreateProcessBinary)))
         {
             log::Error(_L_, hr, L"Failed to evaluate command spec (%ComSpec%)\r\n");
             return hr;

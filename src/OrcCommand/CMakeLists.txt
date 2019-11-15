@@ -49,6 +49,18 @@ set(SRC_EMPTYTOOL
 
 source_group(EmptyTool FILES ${SRC_EMPTYTOOL})
 
+set(SRC_EXTRACTDATA
+    "ConfigFile_ExtractData.cpp"
+    "ConfigFile_ExtractData.h"
+    "ExtractData.h"
+    "ExtractData_Config.cpp"
+    "ExtractData_Output.cpp"
+    "ExtractData_Run.cpp"
+    "ExtractDataReportSqlSchema.xml"
+)
+
+source_group(ExtractData FILES ${SRC_EXTRACTDATA})
+
 set(SRC_FASTFIND
     "ConfigFile_FastFind.cpp"
     "ConfigFile_FastFind.h"
@@ -235,6 +247,7 @@ add_library(OrcCommand
         ${SRC}
         ${SRC_DD}
         ${SRC_EMPTYTOOL}
+        ${SRC_EXTRACTDATA}
         ${SRC_FASTFIND}
         ${SRC_FATINFO}
         ${SRC_GETCOMOBJECTS}

@@ -55,7 +55,7 @@ public:
             auto pDef = msg->Item().GetDefinitionItem();
             if (pDef)
             {
-                if (equalCaseInsensitive(pDef->Table, strTableName))
+                if (equalCaseInsensitive(pDef->tableName, strTableName))
                 {
                     return true;
                 }
@@ -97,9 +97,8 @@ public:
     }
 
     HRESULT InitializeOutputs(
-        const OutputSpec& output,
-        const OutputSpec& importOutput,
         const OutputSpec& extractOutput,
+        const OutputSpec& importOutput,
         const OutputSpec& tempOutput);
 
     HRESULT InitializeTables(std::vector<TableDescription>& tables);
@@ -133,7 +132,7 @@ public:
 
     Concurrency::ISource<LONG>& QueuedItemsCount() { return m_QueuedItems; }
 
-    HRESULT Statistics(const logger& pLog);
+    HRESULT LogStatistics(const logger& pLog);
 
     ~ImportAgent(void) = default;
 
@@ -147,9 +146,8 @@ private:
     ImportBytesSemaphore m_fileSemaphore;
     ImportBytesSemaphore m_memSemaphore;
 
-    OutputSpec m_Output;
     OutputSpec m_extractOutput;
-    OutputSpec m_importOutput;
+    OutputSpec m_databaseOutput;
     OutputSpec m_tempOutput;
 
     concurrency::event m_Complete;
@@ -170,22 +168,7 @@ private:
     typedef std::pair<TableDescription, std::vector<TableOutput::Column>> TableDefinition;
     std::vector<TableDefinition> m_TableDefinitions;
 
-    bool SendResult(const ImportNotification::Notification& notification)
-    {
-        if (notification->Item().ullFileBytesCharged > 0LL)
-        {
-            m_fileSemaphore.release(notification->Item().ullFileBytesCharged);
-        }
-        if (notification->Item().ullMemBytesCharged > 0LL)
-        {
-            m_memSemaphore.release(notification->Item().ullMemBytesCharged);
-        }
-        m_ulItemProcessed++;
-
-        static_cast<void>(InterlockedDecrement(&m_lInProgressItems));
-
-        return Concurrency::send(m_target, notification);
-    }
+    bool SendResult(const ImportNotification::Notification& notification);
 
     ImportMessage::Message GetRequest() { return Concurrency::receive<ImportMessage::Message>(m_source); }
 
@@ -193,6 +176,7 @@ private:
 
     HRESULT
     UnWrapMessage(const std::shared_ptr<ByteStream>& pMessageStream, const std::shared_ptr<ByteStream>& pOutputStream);
+
     HRESULT EnveloppedItem(ImportItem& input);
 
     HRESULT ExpandItem(ImportItem& input);
@@ -200,6 +184,8 @@ private:
     HRESULT ExtractItem(ImportItem& input);
 
     HRESULT ImportOneItem(ImportMessage::Message request);
+
+    void LogNotification(const ImportNotification::Notification& notification);
 };
 }  // namespace Orc
 #pragma managed(pop)

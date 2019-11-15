@@ -268,7 +268,7 @@ STDMETHODIMP JournalingStream::Close()
     return S_OK;
 }
 
-HRESULT JournalingStream::IsStreamJournaled(const logger& pLog, const std::shared_ptr<ByteStream>& pStream)
+HRESULT JournalingStream::IsStreamJournalized(const logger& pLog, const std::shared_ptr<ByteStream>& pStream)
 {
     HRESULT hr = E_FAIL;
 

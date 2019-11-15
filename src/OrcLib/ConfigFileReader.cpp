@@ -91,7 +91,7 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
             if (it == end(config.SubItems))
             {
                 log::Warning(
-                    _L_, HRESULT_FROM_NT(NTE_NOT_FOUND), L"Unexpected attribute %s in configuration\r\n", pName);
+                    _L_, HRESULT_FROM_NT(NTE_NOT_FOUND), L"Unexpected attribute '%s' in configuration\r\n", pName);
             }
             else
             {
@@ -133,7 +133,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
         log::Error(
             _L_,
             E_INVALIDARG,
-            L"Error parsing configuration, incorrect element %s for item %s\r\n",
+            L"Error parsing configuration, incorrect element '%s' for item '%s'\r\n",
             pName,
             config.strName.c_str());
         return E_INVALIDARG;
@@ -189,7 +189,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
 
                             if (FAILED(hr = NavigateConfigAttributes(pReader, it->NodeList.back())))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node %s attributes\r\n", pLocalName);
+                                log::Error(_L_, hr, L"Failed to parse node '%s' attributes\r\n", pLocalName);
                                 return hr;
                             }
                         }
@@ -197,7 +197,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                         {
                             if (FAILED(hr = NavigateConfigAttributes(pReader, *it)))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node %s attributes\r\n", pLocalName);
+                                log::Error(_L_, hr, L"Failed to parse node '%s' attributes\r\n", pLocalName);
                                 return hr;
                             }
                         }
@@ -208,12 +208,12 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                         {
                             if (FAILED(hr = NavigateConfigAttributes(pReader, *it)))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node %s attributes\r\n", pLocalName);
+                                log::Error(_L_, hr, L"Failed to parse node '%s' attributes\r\n", pLocalName);
                                 return hr;
                             }
                             if (FAILED(hr = NavigateConfigNode(pReader, *it)))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node %s\r\n", pLocalName);
+                                log::Error(_L_, hr, L"Failed to parse node '%s'\r\n", pLocalName);
                                 return hr;
                             }
                         }
@@ -221,13 +221,13 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                         {
                             if (FAILED(hr = NavigateConfigNodeList(pReader, *it)))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node list %s\r\n", pLocalName);
+                                log::Error(_L_, hr, L"Failed to parse node list '%s'\r\n", pLocalName);
                                 return hr;
                             }
                         }
                         else
                         {
-                            log::Error(_L_, E_INVALIDARG, L"Failed to element %s: invalid node type\r\n", pLocalName);
+                            log::Error(_L_, E_INVALIDARG, L"Failed to element '%s': invalid node type\r\n", pLocalName);
                             return E_INVALIDARG;
                         }
                     }
@@ -265,7 +265,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                     log::Warning(
                         _L_,
                         HRESULT_FROM_NT(NTE_NOT_FOUND),
-                        L"Unexpected of element %s in configuration item %s\r\n",
+                        L"Unexpected of element %s in configuration item '%s'\r\n",
                         pLocalName,
                         config.strName.c_str());
                 }
@@ -297,7 +297,7 @@ HRESULT ConfigFileReader::ReadConfig(const WCHAR* pCfgFile, ConfigItem& config, 
 
     if (FAILED(hr = filestream->ReadFrom(pCfgFile)))
     {
-        log::Error(_L_, hr, L"Failed to open configuration file %s\r\n", pCfgFile);
+        log::Error(_L_, hr, L"Failed to open configuration file '%s'\r\n", pCfgFile);
         return hr;
     }
 
@@ -384,13 +384,13 @@ HRESULT ConfigFileReader::ReadConfig(
                     {
                         if (FAILED(hr = NavigateConfigAttributes(pReader, config)))
                         {
-                            log::Error(_L_, hr, L"Failed to parse node %s attributes\r\n", pName);
+                            log::Error(_L_, hr, L"Failed to parse node '%s' attributes\r\n", pName);
                             return hr;
                         }
 
                         if (FAILED(hr = NavigateConfigNode(pReader, config)))
                         {
-                            log::Error(_L_, hr, L"Error parsing root %s element\r\n", pName);
+                            log::Error(_L_, hr, L"Error parsing root '%s' element\r\n", pName);
                             return hr;
                         }
                     }

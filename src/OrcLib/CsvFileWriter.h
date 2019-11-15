@@ -94,40 +94,71 @@ public:
 
     STDMETHOD(WriteString)(const std::string& strString) override final
     {
-        if (auto [hr, wstr] = AnsiToWide(_L_, strString); FAILED(hr))
+        if (strString.empty())
+        {
+            return WriteNothing();
+        }
+
+        auto [hr, wstr] = AnsiToWide(_L_, strString);
+        if (FAILED(hr))
+        {
             return hr;
-        else
-            return WriteColumn(wstr);
+        }
+
+        return WriteColumn(wstr);
     }
     STDMETHOD(WriteString)(const std::string_view& strString) override final
     {
-        if (auto [hr, wstr] = AnsiToWide(_L_, strString); FAILED(hr))
+        if (strString.empty())
+        {
+            return WriteNothing();
+        }
+
+        auto [hr, wstr] = AnsiToWide(_L_, strString);
+        if (FAILED(hr))
+        {
             return hr;
-        else
-            return WriteColumn(wstr);
-    }
-    STDMETHOD(WriteString)(const CHAR* szString) override final
-    {
-        if (auto [hr, wstr] = AnsiToWide(_L_, szString); FAILED(hr))
-            return hr;
-        else
-            return WriteColumn(wstr);
-    }
-    STDMETHOD(WriteCharArray)(const CHAR* szArray, DWORD dwCharCount) override final
-    {
-        if (auto [hr, wstr] = AnsiToWide(_L_, std::string_view(szArray, dwCharCount)); FAILED(hr))
-            return hr;
-        else
-            return WriteColumn(wstr);
+        }
+
+        return WriteColumn(wstr);
     }
 
-    STDMETHOD(WriteString)(const std::wstring& strString) override final { return WriteColumn(strString); }
-    STDMETHOD(WriteString)(const std::wstring_view& strString) override final { return WriteColumn(strString); }
-    STDMETHOD(WriteString)(const WCHAR* szString) override final { return WriteColumn(szString); }
+    STDMETHOD(WriteString)(const CHAR* szString) override final
+    {
+        return WriteString(std::string_view(szString));
+    }
+
+    STDMETHOD(WriteCharArray)(const CHAR* szArray, DWORD dwCharCount) override final
+    {
+        return WriteString(std::string_view(szArray, dwCharCount));
+    }
+
+    STDMETHOD(WriteString)(const std::wstring& strString) override final
+    {
+        if (strString.empty())
+        {
+            return WriteNothing();
+        }
+
+        return WriteColumn(strString);
+    }
+
+    STDMETHOD(WriteString)(const std::wstring_view& strString) override final {
+        if (strString.empty())
+        {
+            return WriteNothing();
+        }
+
+        return WriteColumn(strString);
+    }
+
+    STDMETHOD(WriteString)(const WCHAR* szString) override final {
+        return WriteString(std::wstring_view(szString));
+    }
 
     STDMETHOD(WriteCharArray)(const WCHAR* szArray, DWORD dwCharCount) override final
     {
-        return WriteColumn(std::wstring_view(szArray, dwCharCount));
+        return WriteString(std::wstring_view(szArray, dwCharCount));
     }
 
 protected:
@@ -256,13 +287,14 @@ private:
         }
         catch (const fmt::format_error& error)
         {
-            log::Error(_L_, E_INVALIDARG, L"fmt::format_error: %S\r\n", error.what());
+            const auto [hr, errorMsg] = AnsiToWide(_L_, error.what());
+            log::Error(_L_, E_INVALIDARG, L"fmt::format_error: %s\r\n", errorMsg);
             return E_INVALIDARG;
         }
         catch (const fmt::windows_error& system_error)
         {
-            log::Error(
-                _L_, HRESULT_FROM_WIN32(system_error.error_code()), L"fmt::windows_error: %S\r\n", system_error.what());
+            const auto [hr, errorMsg] = AnsiToWide(_L_, system_error.what());
+            log::Error(_L_, HRESULT_FROM_WIN32(system_error.error_code()), L"fmt::windows_error: %s\r\n", errorMsg);
             return HRESULT_FROM_WIN32(system_error.error_code());
         }
         return S_OK;

@@ -148,7 +148,7 @@ public:
         m_bAllowedBreakAwayOnJob = false;
     };
 
-    HRESULT GetConfigurationFromConfig(const ConfigItem& configitem) { return S_OK; }  // No Configuration supprt
+    HRESULT GetConfigurationFromConfig(const ConfigItem& configitem) { return S_OK; }  // No Configuration support
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem);  // Local Configuration support
 
     HRESULT GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[]);

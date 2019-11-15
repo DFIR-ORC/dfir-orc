@@ -98,7 +98,7 @@ public:
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         return S_OK;
-    };  // No Local Configuration supprt
+    };  // No Local Configuration support
     HRESULT GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[]);
 
     HRESULT CheckConfiguration();

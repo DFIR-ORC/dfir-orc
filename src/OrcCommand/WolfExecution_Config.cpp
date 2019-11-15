@@ -117,7 +117,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
     else
     {
         wstring strExeFile;
-        if (SUCCEEDED(hr = GetInputFile(strExeRef.c_str(), strExeFile)))
+        if (SUCCEEDED(hr = ExpandFilePath(strExeRef.c_str(), strExeFile)))
         {
             if (VerifyFileIsBinary(strExeFile.c_str()) == S_OK)
             {
@@ -399,7 +399,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 else
                 {
                     wstring strInputFile;
-                    if (SUCCEEDED(hr1 = GetInputFile(input[WOLFLAUNCHER_INSOURCE].c_str(), strInputFile)))
+                    if (SUCCEEDED(hr1 = ExpandFilePath(input[WOLFLAUNCHER_INSOURCE].c_str(), strInputFile)))
                     {
                         if (szPattern != NULL)
                             command->PushInputFile(input.dwOrderIndex, strInputFile, strName, szPattern);

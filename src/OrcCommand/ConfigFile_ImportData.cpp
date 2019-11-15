@@ -11,7 +11,7 @@
 
 #include "OrcCommand.h"
 
-#include "ConfigFile_IMPORTDATA.h"
+#include "ConfigFile_ImportData.h"
 
 using namespace Orc::Config::Common;
 
