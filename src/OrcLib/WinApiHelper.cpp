@@ -15,6 +15,51 @@
 
 namespace Orc {
 
+std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, size_t cbMaxOutput, std::error_code& ec) noexcept
+{
+    const DWORD cchMaxOutput = cbMaxOutput / sizeof(wchar_t);
+    const DWORD cchRequired = ::ExpandEnvironmentStringsW(szEnvString, NULL, 0L);
+    if (cchRequired > cchMaxOutput)
+    {
+        ec.assign(ERROR_INSUFFICIENT_BUFFER, std::system_category());
+        return {};
+    }
+
+    std::wstring output;
+    try
+    {
+        output.resize(cchRequired);
+
+        const DWORD cchDone = ::ExpandEnvironmentStringsW(szEnvString, output.data(), cchRequired);
+        if (cchDone == 0)
+        {
+            ec.assign(GetLastError(), std::system_category());
+            return {};
+        }
+
+        if (cchDone != cchRequired)
+        {
+            ec.assign(ERROR_INVALID_DATA, std::system_category());
+            return {};
+        }
+
+        // remove terminating NULL character
+        output.resize(cchDone - 1);
+    }
+    catch (const std::length_error&)
+    {
+        ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+
+    return output;
+}
+
+std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, std::error_code& ec) noexcept
+{
+    return ExpandEnvironmentStringsApi(szEnvString, MAX_PATH * sizeof(wchar_t), ec);
+}
+
 std::wstring GetWorkingDirectoryApi(size_t cbMaxOutput, std::error_code& ec) noexcept
 {
     const DWORD cchMaxOutput = cbMaxOutput / sizeof(wchar_t);
