@@ -31,6 +31,7 @@ void Main::PrintUsage()
         L"usage: DFIR-Orc.exe ToolEmbed /Input=MotherShipCmd.exe [/Out=Tool.exe] [/AddFile=FileToEmbed.cab,101]+ "
         L"[/Name=Value]+\r\n"
         L"\r\n"
+        L"\t/config=<ConfigFile>               : Specify a XML config file\r\n"
         L"\t/Input=MotherShipCmd.exe           : File used as input, if /output is not specified, input is modified\r\n"
         L"\t/Out=<Tool.exe>|<DumpDir>          : Make a copy of input to update with specified ressources\r\n"
         L"\t/AddFile=FileToEmbed.cab,CabName   : Embeds FileToEmbed.cab into Tool.exe as ressource CabName\r\n"
