@@ -80,8 +80,6 @@ set_target_properties(rcedit
         FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}/Tools"
 )
 
-set_target_properties(rcedit PROPERTIES EXCLUDE_FROM_DEFAULT_BUILD TRUE)
-
 target_compile_definitions(rcedit
     PRIVATE
         UNICODE
