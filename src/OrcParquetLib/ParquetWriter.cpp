@@ -384,7 +384,7 @@ Orc::TableOutput::Parquet::Writer::WriteToStream(const std::shared_ptr<ByteStrea
         ::arrow::default_memory_pool(),
         arrow_output_stream,
         m_parquetProps,
-        parquet::arrow::default_arrow_writer_properties(),
+        parquet::default_arrow_writer_properties(),
         &m_arrowWriter);
 
     return S_OK;
