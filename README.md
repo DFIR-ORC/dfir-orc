@@ -21,20 +21,41 @@ Build environment can be setup quickly using [Microsoft's developer virtual mach
 ### Commands
 Both 32-bit and 64-bit versions should be built for maximum compatiliby before deployment. See https://dfir-orc.github.io for more details about deployment and configuration.
 
-In a prompt like *Developer Command Prompt for VS 2019* (prefer to avoid using *cmd.exe*):
+In a Windows PowerShell :
 
 ```bash
-git clone https://github.com/dfir-orc/dfir-orc.git
-cd dfir-orc
-mkdir build-x86 build-x64
+# Clone DFIR ORC
+> git clone https://github.com/dfir-orc/dfir-orc.git
+> cd dfir-orc
 
-cd build-x86
-cmake -G "Visual Studio 16 2019" -A Win32 -T v141_xp -DORC_BUILD_VCPKG=ON ..
-cmake --build . --config MinSizeRel -- -maxcpucount
+# Build the x86 unconfigured binaries
+dfir-orc> New-Item -ItemType directory -Path build-x86
+dfir-orc> cd build-x86
+dfir-orc\build-x86> cmake -G "Visual Studio 16 2019" -A Win32 -T v141_xp -DORC_BUILD_VCPKG=ON ..
+dfir-orc\build-x86> cmake --build . --config MinSizeRel -- -maxcpucount
 
-cd ../build-x64
-cmake -G "Visual Studio 16 2019" -A x64 -T v141_xp -DORC_BUILD_VCPKG=ON ..
-cmake --build . --config MinSizeRel -- -maxcpucount
+# Build the x64 unconfigured binaries
+dfir-orc> New-Item -ItemType directory -Path build-x64
+dfir-orc> cd build-x64
+dfir-orc\build-x64> cmake -G "Visual Studio 16 2019" -A x64 -T v141_xp -DORC_BUILD_VCPKG=ON ..
+dfir-orc\build-x64> cmake --build . --config MinSizeRel -- -maxcpucount
+
+# Clone the default configuration
+> git clone https://github.com/dfir-orc/dfir-orc-config.git
+
+# Copy the unconfigured DFIR ORC binaries DFIR-Orc_x86.exe and DFIR-Orc_x64.exe in the tools folder
+> cd dfir-orc-config
+dfir-orc-config> Copy-Item ..\dfir-orc\build-x86\MinSizeRel\DFIR-Orc_x86.exe .\tools
+dfir-orc-config> Copy-Item ..\dfir-orc\build-x64\MinSizeRel\DFIR-Orc_x64.exe .\tools
+
+# For exemple, you can include external tools 
+dfir-orc-config> Invoke-WebRequest https://live.sysinternals.com/autorunsc.exe -OutFile .\tools\autorunsc.exe
+
+# Build the defaul configured DFIR ORC
+dfir-orc-config> .\Configure.cmd
+
+# Run DFIR ORC
+dfir-orc-config> .\output\DFIR-Orc.exe
 ```
 
 * The `-T v141_xp` option will allow compatibility with Windows XP SP2 and later, it can safely be removed if this is not required.
