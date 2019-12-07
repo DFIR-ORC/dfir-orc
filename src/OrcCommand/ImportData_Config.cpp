@@ -401,7 +401,7 @@ HRESULT Main::CheckConfiguration()
     }
     else
     {
-        log::Verbose(_L_, L"No temprorary folder provided, defaulting to %temp%\r\n");
+        log::Verbose(_L_, L"No temporary folder provided, defaulting to %temp%\r\n");
         WCHAR szTempDir[MAX_PATH];
         if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
         {

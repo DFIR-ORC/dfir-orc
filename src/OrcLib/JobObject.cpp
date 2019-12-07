@@ -168,11 +168,11 @@ HRESULT JobObject::GrantAccess(PSID pSid, ACCESS_MASK mask)
 
     if (FAILED(hr = ::GrantAccess(_L_, SE_KERNEL_OBJECT, m_hJob, pSid, mask)))
     {
-        log::Verbose(_L_, L"First attempt to grant access rigth to job failed (hr=0x%lx)\r\n", hr);
+        log::Verbose(_L_, L"First attempt to grant access right to job failed (hr=0x%lx)\r\n", hr);
     }
     else
     {
-        log::Verbose(_L_, L"First attempt to grant access rigth to job succeeded\r\n");
+        log::Verbose(_L_, L"First attempt to grant access right to job succeeded\r\n");
         return S_OK;
     }
 
@@ -201,7 +201,7 @@ HRESULT JobObject::GrantAccess(PSID pSid, ACCESS_MASK mask)
 
     if (FAILED(hr = ::GrantAccess(_L_, SE_KERNEL_OBJECT, hSettableHandle, pSid, mask)))
     {
-        log::Verbose(_L_, L"Failed to grant access rigth to job\r\n");
+        log::Verbose(_L_, L"Failed to grant access right to job\r\n");
         return hr;
     }
 

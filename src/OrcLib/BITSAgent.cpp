@@ -826,7 +826,7 @@ HRESULT CNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackgroundCopyErro
         }
         else
         {
-            log::Verbose(_L_, L"Background upload faied, switching to foreground priority\r\n");
+            log::Verbose(_L_, L"Background upload failed, switching to foreground priority\r\n");
             hr = pJob->SetPriority(BG_JOB_PRIORITY_FOREGROUND);
             hr = pJob->Resume();
             IsError = FALSE;

@@ -1758,7 +1758,7 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
 
                             if (FAILED(hr) || pRecord == nullptr)
                             {
-                                log::Verbose(_L_, L"Fecthed record %I64X is incomplete\r\n", ullRecordIndex);
+                                log::Verbose(_L_, L"Fetched record %I64X is incomplete\r\n", ullRecordIndex);
                                 return S_OK;
                             }
 
@@ -1767,11 +1767,11 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
                                 bool bIsComplete = false;
                                 if (bIsComplete = IsRecordComplete(pRecord, missingRecords))
                                 {
-                                    log::Verbose(_L_, L"Fecthed record %I64X is complete\r\n", ullRecordIndex);
+                                    log::Verbose(_L_, L"Fetched record %I64X is complete\r\n", ullRecordIndex);
                                 }
                                 else
                                 {
-                                    log::Verbose(_L_, L"Fecthed record %I64X is incomplete\r\n", ullRecordIndex);
+                                    log::Verbose(_L_, L"Fetched record %I64X is incomplete\r\n", ullRecordIndex);
                                 }
                             }
                             return S_OK;
@@ -1909,7 +1909,7 @@ ULONG MFTWalker::GetMFTRecordCount() const
 HRESULT MFTWalker::Statistics(const WCHAR* szMsg)
 {
     HRESULT hr = E_FAIL;
-    log::Verbose(_L_, L"\r\nMFT Walker statitics : %s\r\n", szMsg);
+    log::Verbose(_L_, L"\r\nMFT Walker statistics : %s\r\n", szMsg);
 
     log::Verbose(_L_, L"\tMap Count: %d\r\n", m_MFTMap.size());
 

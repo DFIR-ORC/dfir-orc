@@ -836,14 +836,14 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
             log::Error(
                 _L_,
                 hr,
-                L"Abnormaly large number of GPT partition entries (%d)\r\n",
+                L"Abnormally large number of GPT partition entries (%d)\r\n",
                 gptHeader->NumberOfPartitionEntries);
             return hr;
         }
 
         if (gptHeader->SizeofPartitionEntry > 0x10000)
         {
-            log::Error(_L_, hr, L"Abnormaly large partition entry (%d)\r\n", gptHeader->SizeofPartitionEntry);
+            log::Error(_L_, hr, L"Abnormally large partition entry (%d)\r\n", gptHeader->SizeofPartitionEntry);
             return hr;
         }
 
@@ -887,7 +887,7 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
                 log::Error(
                     _L_,
                     hr,
-                    L"Abnormaly large number of GPT partition entries (%d) (secondary GPT)\r\n",
+                    L"Abnormally large number of GPT partition entries (%d) (secondary GPT)\r\n",
                     gptHeader->NumberOfPartitionEntries);
                 return hr;
             }
@@ -897,7 +897,7 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
                 log::Error(
                     _L_,
                     hr,
-                    L"Abnormaly large partition entry (%d) (secondary GPT)\r\n",
+                    L"Abnormally large partition entry (%d) (secondary GPT)\r\n",
                     gptHeader->SizeofPartitionEntry);
                 return hr;
             }

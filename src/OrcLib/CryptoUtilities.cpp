@@ -24,7 +24,7 @@ HRESULT CryptoUtilities::AcquireContext(_In_ const logger& pLog, _Out_ HCRYPTPRO
         {
             log::Verbose(
                 pLog,
-                L"Failed to initalize provider: %s (hr=0x%lx)\r\n",
+                L"Failed to initialize provider: %s (hr=0x%lx)\r\n",
                 *pszProvider,
                 hr = HRESULT_FROM_WIN32(GetLastError()));
         }
@@ -34,7 +34,7 @@ HRESULT CryptoUtilities::AcquireContext(_In_ const logger& pLog, _Out_ HCRYPTPRO
     }
     if (hCryptProv == NULL)
     {
-        log::Error(pLog, hr, L"Failed to initalize providers\r\n");
+        log::Error(pLog, hr, L"Failed to initialize providers\r\n");
         return hr;
     }
     else if (pszProvider && *pszProvider)

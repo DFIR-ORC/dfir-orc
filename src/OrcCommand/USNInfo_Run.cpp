@@ -254,7 +254,7 @@ HRESULT Main::Run()
                     return S_OK;
                 })))
     {
-        log::Error(_L_, hr, L"Failed during enumartion of output items\r\n");
+        log::Error(_L_, hr, L"Failed during the enumeration of output items\r\n");
         return hr;
     }
 

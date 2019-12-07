@@ -220,7 +220,7 @@ HRESULT DecodeMessageStream::GetDecryptionMaterial()
     {
         if (GetLastError() == CRYPT_E_STREAM_MSG_NOT_READY)
         {
-            log::Verbose(_L_, L"CryptMsgGetParam says that encruption algo is not yet available, need to continue\r\n");
+            log::Verbose(_L_, L"CryptMsgGetParam says that encryption algo is not yet available, need to continue\r\n");
             return S_OK;
         }
         else if (GetLastError() != ERROR_MORE_DATA)

@@ -442,7 +442,7 @@ HRESULT PartitionTable::ParseGPTPartitionTable(IDiskExtent& diskExtend, UINT sec
     if (pGPTHeader->NumberOfPartitionEntries > 128)
     {
         log::Warning(
-            _L_, hr, L"Abnormaly large number of GPT partition entries (%d)\r\n", pGPTHeader->NumberOfPartitionEntries);
+            _L_, hr, L"Abnormally large number of GPT partition entries (%d)\r\n", pGPTHeader->NumberOfPartitionEntries);
     }
 
     CBinaryBuffer buffer;
