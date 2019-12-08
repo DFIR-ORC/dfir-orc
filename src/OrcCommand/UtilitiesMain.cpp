@@ -642,7 +642,7 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
         log::Error(
             _L_,
             E_INVALIDARG,
-            L"An error occured when evaluating output for option /%s=%s\r\n",
+            L"An error occurred when evaluating output for option /%s=%s\r\n",
             szOption,
             pEquals + 1);
         return false;

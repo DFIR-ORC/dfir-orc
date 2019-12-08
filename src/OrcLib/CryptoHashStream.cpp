@@ -97,7 +97,7 @@ HRESULT CryptoHashStream::ResetHash(bool bContinue)
             // Acquire the best available crypto provider
             if (FAILED(hr = CryptoUtilities::AcquireContext(_L_, g_hProv)))
             {
-                log::Error(_L_, hr, L"Failed to initalize providers\r\n");
+                log::Error(_L_, hr, L"Failed to initialize providers\r\n");
                 return hr;
             }
         }

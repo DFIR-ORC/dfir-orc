@@ -495,7 +495,7 @@ HRESULT Main::Run()
     {
         if (FAILED(hr = WriteGetThisConfig(strConfigFile, tk.GetAltitudeLocations(), results)))
         {
-            log::Error(_L_, hr, L"Failed to write gettthis configuration\r\n");
+            log::Error(_L_, hr, L"Failed to write getthis configuration\r\n");
             return hr;
         }
     }
@@ -504,7 +504,7 @@ HRESULT Main::Run()
     {
         if (FAILED(hr = RunGetThis(strConfigFile, config.tmpdirOutput.Path.c_str())))
         {
-            log::Error(_L_, hr, L"Failed to run gettthis\r\n");
+            log::Error(_L_, hr, L"Failed to run getthis\r\n");
             return hr;
         }
     }

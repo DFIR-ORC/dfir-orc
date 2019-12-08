@@ -257,7 +257,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 }
                 break;
             default:
-                log::Error(_L_, hr, L"Unsupported architechture %d\r\n", wArch);
+                log::Error(_L_, hr, L"Unsupported architecture %d\r\n", wArch);
                 return hr;
         }
 

@@ -100,7 +100,7 @@ HRESULT Main::GetUSNJournalConfiguration(HANDLE hVolume, DWORDLONG& MaximumSize,
                     L"inactive.\r\n");
                 break;
             default:
-                log::Info(_L_, L"Error hr=0x%lx occured\r\n", hr);
+                log::Info(_L_, L"Error hr=0x%lx occurred\r\n", hr);
         }
         return hr;
     }

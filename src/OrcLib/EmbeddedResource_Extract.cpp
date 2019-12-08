@@ -420,7 +420,7 @@ HRESULT EmbeddedResource::ExtractRunWithArgs(
 
             break;
         default:
-            log::Error(pLog, E_FAIL, L"Archictecture %d is not supported\r\n", Arch);
+            log::Error(pLog, E_FAIL, L"Architecture %d is not supported\r\n", Arch);
             return E_FAIL;
     }
 
