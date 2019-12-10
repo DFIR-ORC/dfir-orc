@@ -86,16 +86,16 @@ if(ORC_VCPKG_ROOT)
     endif()
 
     include(cmake/vcpkg.cmake)
+    if(ORC_BUILD_VCPKG)
+        vcpkg_upgrade(PATH ${ORC_VCPKG_ROOT})
 
-    vcpkg_upgrade(PATH ${ORC_VCPKG_ROOT})
-
-    vcpkg_install(
-        PATH ${ORC_VCPKG_ROOT}
-        PACKAGES ${_PACKAGES}
-        ARCH ${TARGET_ARCH}
-        USE_STATIC_CRT ${ORC_USE_STATIC_CRT}
-        BUILD ${ORC_BUILD_VCPKG}
-    )
+        vcpkg_install(
+            PATH ${ORC_VCPKG_ROOT}
+            PACKAGES ${_PACKAGES}
+            ARCH ${TARGET_ARCH}
+            USE_STATIC_CRT ${ORC_USE_STATIC_CRT}
+        )
+    endif()
 endif()
 
 # Must be set AFTER 'VCPKG_TARGET_TRIPLET' is defined

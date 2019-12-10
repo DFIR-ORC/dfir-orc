@@ -12,24 +12,19 @@
 #
 #   ARGUMENTS
 #       VCPKG_PATH               path      vcpkg path
-#       BUILD                    ON/OFF    bootstrap and build vcpkg if needed
 #
 #   RESULT
 #       VCPKG_BOOTSTRAP_FOUND    BOOL      TRUE if vcpkg executable is found
 #
 function(vcpkg_check_boostrap)
     set(OPTIONS)
-    set(SINGLE PATH BUILD)
+    set(SINGLE PATH)
     set(MULTI)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
     set(VCPKG_EXE "${VCPKG_PATH}/vcpkg.exe")
     if(NOT EXISTS "${VCPKG_EXE}")
-        if(NOT VCPKG_BUILD)
-            message(FATAL_ERROR "Cannot find '${VCPKG_EXE}'")
-        endif()
-
         execute_process(
             COMMAND "bootstrap-vcpkg.bat"
             WORKING_DIRECTORY ${VCPKG_PATH}
@@ -56,14 +51,13 @@ endfunction()
 #       PACKAGES              list        list of packages to be installed
 #       ARCH                  x86/x64     build architecture
 #       USE_STATIC_CRT        ON/OFF      use static runtime
-#       BUILD                 ON/OFF      build packages if needed
 #
 #   RESULT
 #       VCPKG_PACKAGES_FOUND  BOOL        TRUE if pacakges are found
 #
 function(vcpkg_install_packages)
     set(OPTIONS)
-    set(SINGLE PATH ARCH USE_STATIC_CRT BUILD)
+    set(SINGLE PATH ARCH USE_STATIC_CRT)
     set(MULTI PACKAGES)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
@@ -88,16 +82,14 @@ function(vcpkg_install_packages)
         "install ${PACKAGES_STR}\n"
     )
 
-    if(VCPKG_BUILD)
-        execute_process(
-            COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} install ${PACKAGES}
-            WORKING_DIRECTORY ${VCPKG_PATH}
-            RESULT_VARIABLE RESULT
-        )
+    execute_process(
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} install ${PACKAGES}
+        WORKING_DIRECTORY ${VCPKG_PATH}
+        RESULT_VARIABLE RESULT
+    )
 
-        if(NOT "${RESULT}" STREQUAL "0")
-            message(FATAL_ERROR "Failed to install packages: ${RESULT}")
-        endif()
+    if(NOT "${RESULT}" STREQUAL "0")
+        message(FATAL_ERROR "Failed to install packages: ${RESULT}")
     endif()
 
     set(VCPKG_PACKAGES_FOUND TRUE PARENT_SCOPE)
@@ -147,7 +139,6 @@ endfunction()
 #       PACKAGES              list        list of packages to be installed
 #       ARCH                  x86/x64     build architecture
 #       USE_STATIC_CRT        ON/OFF      use static runtime
-#       BUILD                 ON/OFF      build packages if needed
 #
 #   RESULT
 #       VCPKG_FOUND           BOOL        TRUE if vcpkg is found and setup
@@ -156,14 +147,13 @@ endfunction()
 #
 function(vcpkg_install)
     set(OPTIONS)
-    set(SINGLE PATH ARCH USE_STATIC_CRT BUILD)
     set(MULTI PACKAGES)
+    set(SINGLE PATH ARCH USE_STATIC_CRT)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
     vcpkg_check_boostrap(
         PATH ${VCPKG_PATH}
-        BUILD ${VCPKG_BUILD}
     )
 
     vcpkg_install_packages(
@@ -171,7 +161,6 @@ function(vcpkg_install)
        PACKAGES ${VCPKG_PACKAGES}
        ARCH ${VCPKG_ARCH}
        USE_STATIC_CRT ${VCPKG_USE_STATIC_CRT}
-       BUILD ${VCPKG_BUILD}
     )
 
     vcpkg_setup_environment(
@@ -194,7 +183,7 @@ endfunction()
 #
 function(vcpkg_upgrade)
     set(OPTIONS)
-    set(SINGLE PATH ARCH USE_STATIC_CRT BUILD)
+    set(SINGLE PATH)
     set(MULTI PACKAGES)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
