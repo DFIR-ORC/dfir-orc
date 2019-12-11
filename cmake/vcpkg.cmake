@@ -117,7 +117,11 @@ function(vcpkg_setup_environment)
     # Deduce CMAKE_TOOLCHAIN_FILE from VCPKG_PATH
     if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
         set(CMAKE_TOOLCHAIN_FILE
-            ${VCPKG_PATH}\\scripts\\buildsystems\\vcpkg.cmake PARENT_SCOPE)
+            ${VCPKG_PATH}\\scripts\\buildsystems\\vcpkg.cmake
+            CACHE
+            STRING
+            "CMake toolchain file"
+            FORCE)
     endif()
 
     # Define the vcpkg triplet from the generator if not defined
@@ -173,7 +177,6 @@ function(vcpkg_install)
         USE_STATIC_CRT ${VCPKG_USE_STATIC_CRT}
     )
 
-    set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} PARENT_SCOPE)
     set(VCPKG_FOUND TRUE PARENT_SCOPE)
     message(STATUS "Using toolchain: " ${CMAKE_TOOLCHAIN_FILE})
     message(STATUS "Using vcpkg triplet: " ${VCPKG_TARGET_TRIPLET})
