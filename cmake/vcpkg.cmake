@@ -58,7 +58,7 @@ endfunction()
 function(vcpkg_install_packages)
     set(OPTIONS)
     set(SINGLE PATH ARCH USE_STATIC_CRT)
-    set(MULTI PACKAGES)
+    set(MULTI PACKAGES OVERLAY_PORTS)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
@@ -77,13 +77,22 @@ function(vcpkg_install_packages)
     endforeach()
 
     list(JOIN PACKAGES " " PACKAGES_STR)
+
+    if(VCPKG_OVERLAY_PORTS)
+        foreach(PORT IN ITEMS ${VCPKG_OVERLAY_PORTS})
+            string(APPEND OVERLAY_PORTS_STR "--overlay-ports=${PORT} ")
+        endforeach()
+        string(STRIP ${OVERLAY_PORTS_STR} OVERLAY_PORTS_STR)
+    endif()
+
     message(STATUS "Install dependencies with: "
         "\"${VCPKG_PATH}\\vcpkg.exe\" --vcpkg-root \"${VCPKG_PATH}\" "
+        "${OVERLAY_PORTS_STR}"
         "install ${PACKAGES_STR}\n"
     )
 
     execute_process(
-        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} install ${PACKAGES}
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} install ${PACKAGES}
         WORKING_DIRECTORY ${VCPKG_PATH}
         RESULT_VARIABLE RESULT
     )
@@ -147,6 +156,7 @@ endfunction()
 #       PACKAGES              list        list of packages to be installed
 #       ARCH                  x86/x64     build architecture
 #       USE_STATIC_CRT        ON/OFF      use static runtime
+#       OVERLAY_PORTS         path        list of overlay directories
 #       NO_UPGRADE            <option>    do not upgrade
 #
 #   RESULT
@@ -156,8 +166,8 @@ endfunction()
 #
 function(vcpkg_install)
     set(OPTIONS NO_UPGRADE)
-    set(MULTI PACKAGES)
     set(SINGLE PATH ARCH USE_STATIC_CRT)
+    set(MULTI PACKAGES OVERLAY_PORTS)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
@@ -174,6 +184,7 @@ function(vcpkg_install)
 
     vcpkg_install_packages(
        PATH ${VCPKG_PATH}
+       OVERLAY_PORTS ${VCPKG_OVERLAY_PORTS}
        PACKAGES ${VCPKG_PACKAGES}
        ARCH ${VCPKG_ARCH}
        USE_STATIC_CRT ${VCPKG_USE_STATIC_CRT}
@@ -200,7 +211,7 @@ endfunction()
 function(vcpkg_upgrade)
     set(OPTIONS)
     set(SINGLE PATH)
-    set(MULTI PACKAGES)
+    set(MULTI OVERLAY_PORTS)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
@@ -231,8 +242,15 @@ function(vcpkg_upgrade)
         endif()
     endif()
 
+    if(VCPKG_OVERLAY_PORTS)
+        foreach(PORT IN ITEMS ${VCPKG_OVERLAY_PORTS})
+            string(APPEND OVERLAY_PORTS_STR "--overlay-ports=${PORT} ")
+        endforeach()
+        string(STRIP ${OVERLAY_PORTS_STR} OVERLAY_PORTS_STR)
+    endif()
+
     execute_process(
-        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} upgrade --no-dry-run
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} upgrade --no-dry-run
         WORKING_DIRECTORY ${VCPKG_PATH}
         RESULT_VARIABLE RESULT
     )
