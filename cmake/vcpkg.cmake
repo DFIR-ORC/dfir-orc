@@ -147,6 +147,7 @@ endfunction()
 #       PACKAGES              list        list of packages to be installed
 #       ARCH                  x86/x64     build architecture
 #       USE_STATIC_CRT        ON/OFF      use static runtime
+#       NO_UPGRADE            <option>    do not upgrade
 #
 #   RESULT
 #       VCPKG_FOUND           BOOL        TRUE if vcpkg is found and setup
@@ -154,7 +155,7 @@ endfunction()
 #       VCPKG_TARGET_TRIPLET  triplet     triplet to use
 #
 function(vcpkg_install)
-    set(OPTIONS)
+    set(OPTIONS NO_UPGRADE)
     set(MULTI PACKAGES)
     set(SINGLE PATH ARCH USE_STATIC_CRT)
 
@@ -163,6 +164,13 @@ function(vcpkg_install)
     vcpkg_check_boostrap(
         PATH ${VCPKG_PATH}
     )
+
+    if(NOT NO_UPGRADE)
+        vcpkg_upgrade(
+            PATH ${VCPKG_PATH}
+            OVERLAY_PORTS ${VCPKG_OVERLAY_PORTS}
+        )
+    endif()
 
     vcpkg_install_packages(
        PATH ${VCPKG_PATH}

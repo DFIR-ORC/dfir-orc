@@ -84,8 +84,6 @@ if(ORC_VCPKG_ROOT)
 
     include(cmake/vcpkg.cmake)
     if(ORC_BUILD_VCPKG)
-        vcpkg_upgrade(PATH ${ORC_VCPKG_ROOT})
-
         vcpkg_install(
             PATH ${ORC_VCPKG_ROOT}
             PACKAGES ${_PACKAGES}
