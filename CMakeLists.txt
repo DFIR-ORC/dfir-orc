@@ -34,8 +34,9 @@ endif()
 include(cmake/architecture.cmake)
 get_target_architecture(RESULT_VARIABLE "TARGET_ARCH")
 
+set(OVERLAY_TRIPLETS ${CMAKE_BINARY_DIR}/vcpkg/triplets)
 include(cmake/vcpkg_configure_triplets.cmake)
-vcpkg_configure_triplets()
+vcpkg_configure_triplets(OUTPUT_TRIPLETS_DIR ${OVERLAY_TRIPLETS})
 
 if(${TARGET_ARCH} STREQUAL "x86")
     set(ORC_BUILD_PARQUET OFF)
@@ -89,6 +90,7 @@ if(ORC_VCPKG_ROOT)
             PACKAGES ${_PACKAGES}
             ARCH ${TARGET_ARCH}
             USE_STATIC_CRT ${ORC_USE_STATIC_CRT}
+            OVERLAY_TRIPLETS ${OVERLAY_TRIPLETS}
         )
     endif()
 endif()

@@ -58,7 +58,7 @@ endfunction()
 function(vcpkg_install_packages)
     set(OPTIONS)
     set(SINGLE PATH ARCH USE_STATIC_CRT)
-    set(MULTI PACKAGES OVERLAY_PORTS)
+    set(MULTI PACKAGES OVERLAY_PORTS OVERLAY_TRIPLETS)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
@@ -85,14 +85,23 @@ function(vcpkg_install_packages)
         string(STRIP ${OVERLAY_PORTS_STR} OVERLAY_PORTS_STR)
     endif()
 
+    if(VCPKG_OVERLAY_TRIPLETS)
+        foreach(TRIPLET IN ITEMS ${VCPKG_OVERLAY_TRIPLETS})
+            string(APPEND OVERLAY_TRIPLETS_STR "--overlay-triplets=${TRIPLET} ")
+        endforeach()
+        string(STRIP ${OVERLAY_TRIPLETS_STR} OVERLAY_TRIPLETS_STR)
+    endif()
+
     message(STATUS "Install dependencies with: "
-        "\"${VCPKG_PATH}\\vcpkg.exe\" --vcpkg-root \"${VCPKG_PATH}\" "
-        "${OVERLAY_PORTS_STR}"
-        "install ${PACKAGES_STR}\n"
+        "\"${VCPKG_PATH}\\vcpkg.exe\""
+            " --vcpkg-root \"${VCPKG_PATH}\" "
+            "${OVERLAY_PORTS_STR}"
+            "${OVERLAY_TRIPLETS_STR}"
+            "install ${PACKAGES_STR}\n"
     )
 
     execute_process(
-        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} install ${PACKAGES}
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} ${OVERLAY_TRIPLETS_STR} install ${PACKAGES}
         WORKING_DIRECTORY ${VCPKG_PATH}
         RESULT_VARIABLE RESULT
     )
@@ -167,7 +176,7 @@ endfunction()
 function(vcpkg_install)
     set(OPTIONS NO_UPGRADE)
     set(SINGLE PATH ARCH USE_STATIC_CRT)
-    set(MULTI PACKAGES OVERLAY_PORTS)
+    set(MULTI PACKAGES OVERLAY_PORTS OVERLAY_TRIPLETS)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
@@ -179,12 +188,14 @@ function(vcpkg_install)
         vcpkg_upgrade(
             PATH ${VCPKG_PATH}
             OVERLAY_PORTS ${VCPKG_OVERLAY_PORTS}
+            OVERLAY_TRIPLETS ${VCPKG_OVERLAY_TRIPLETS}
         )
     endif()
 
     vcpkg_install_packages(
        PATH ${VCPKG_PATH}
        OVERLAY_PORTS ${VCPKG_OVERLAY_PORTS}
+       OVERLAY_TRIPLETS ${VCPKG_OVERLAY_TRIPLETS}
        PACKAGES ${VCPKG_PACKAGES}
        ARCH ${VCPKG_ARCH}
        USE_STATIC_CRT ${VCPKG_USE_STATIC_CRT}
@@ -211,7 +222,7 @@ endfunction()
 function(vcpkg_upgrade)
     set(OPTIONS)
     set(SINGLE PATH)
-    set(MULTI OVERLAY_PORTS)
+    set(MULTI OVERLAY_PORTS OVERLAY_TRIPLETS)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
@@ -249,8 +260,15 @@ function(vcpkg_upgrade)
         string(STRIP ${OVERLAY_PORTS_STR} OVERLAY_PORTS_STR)
     endif()
 
+    if(VCPKG_OVERLAY_TRIPLETS)
+        foreach(TRIPLET IN ITEMS ${VCPKG_OVERLAY_TRIPLETS})
+            string(APPEND OVERLAY_TRIPLETS_STR "--overlay-triplets=${TRIPLET} ")
+        endforeach()
+        string(STRIP ${OVERLAY_TRIPLETS_STR} OVERLAY_TRIPLETS_STR)
+    endif()
+
     execute_process(
-        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} upgrade --no-dry-run
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} ${OVERLAY_TRIPLETS_STR} upgrade --no-dry-run
         WORKING_DIRECTORY ${VCPKG_PATH}
         RESULT_VARIABLE RESULT
     )

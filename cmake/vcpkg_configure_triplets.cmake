@@ -1,6 +1,14 @@
 # Generate triplets dynamically for convenience
 
 function(vcpkg_configure_triplets)
+    set(OPTIONS)
+    set(SINGLE OUTPUT_TRIPLETS_DIR)
+    set(MULTI)
+
+    cmake_parse_arguments(ARG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
+
+    file(MAKE_DIRECTORY ${ARG_OUTPUT_TRIPLETS_DIR})
+
     # Unfortunately vcpkg does not currently support v141_xp so v141 will be use
     # even if it makes no guarantees that it will be compatible with xp...
     if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
@@ -22,13 +30,13 @@ function(vcpkg_configure_triplets)
     set(VCPKG_TARGET_ARCHITECTURE x86)
     configure_file(
         ${ORC_ROOT}/cmake/triplet.cmake.in
-        ${ORC_VCPKG_ROOT}/triplets/x86-windows-static.cmake
+        ${ARG_OUTPUT_TRIPLETS_DIR}/x86-windows-static.cmake
     )
 
     set(VCPKG_TARGET_ARCHITECTURE x64)
     configure_file(
         ${ORC_ROOT}/cmake/triplet.cmake.in
-        ${ORC_VCPKG_ROOT}/triplets/x64-windows-static.cmake
+        ${ARG_OUTPUT_TRIPLETS_DIR}/x64-windows-static.cmake
     )
 
 
@@ -39,12 +47,12 @@ function(vcpkg_configure_triplets)
     set(VCPKG_TARGET_ARCHITECTURE x86)
     configure_file(
         ${ORC_ROOT}/cmake/triplet.cmake.in
-        ${ORC_VCPKG_ROOT}/triplets/x86-windows.cmake
+        ${ARG_OUTPUT_TRIPLETS_DIR}/x86-windows.cmake
     )
 
     set(VCPKG_TARGET_ARCHITECTURE x64)
     configure_file(
         ${ORC_ROOT}/cmake/triplet.cmake.in
-        ${ORC_VCPKG_ROOT}/triplets/x64-windows.cmake
+        ${ARG_OUTPUT_TRIPLETS_DIR}/x64-windows.cmake
     )
 endfunction()
