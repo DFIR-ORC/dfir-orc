@@ -22,9 +22,6 @@ set(ORC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 # Insert custom cmake directories for script lookup
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-# Optional: triplet as is guessed from generator and USE_STATIC_CRT value
-set(VCPKG_TARGET_TRIPLET CACHE STRING "VCPKG target triplet")
-
 # Default target is 'Windows Seven' unless xp toolset is used
 if(NOT CMAKE_SYSTEM_VERSION)
     if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")

@@ -125,9 +125,13 @@ function(vcpkg_setup_environment)
         if(VCPKG_USE_STATIC_CRT)
             set(CRT_LINK "-static")
         endif()
+
         set(VCPKG_TARGET_TRIPLET
-            "${VCPKG_ARCH}-windows${CRT_LINK}" PARENT_SCOPE
-        )
+            "${VCPKG_ARCH}-windows${CRT_LINK}"
+            CACHE
+            STRING
+            "VCPKG target triplet"
+            FORCE)
     endif()
 endfunction()
 
@@ -170,8 +174,9 @@ function(vcpkg_install)
     )
 
     set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} PARENT_SCOPE)
-    set(VCPKG_TARGET_TRIPLET ${VCPKG_TARGET_TRIPLET} PARENT_SCOPE)
     set(VCPKG_FOUND TRUE PARENT_SCOPE)
+    message(STATUS "Using toolchain: " ${CMAKE_TOOLCHAIN_FILE})
+    message(STATUS "Using vcpkg triplet: " ${VCPKG_TARGET_TRIPLET})
 endfunction()
 
 
