@@ -76,7 +76,7 @@ function(git_info)
     # Most recent/closer tag and commit id
     if (_GIT_VERSION)
         execute_process(
-          COMMAND ${GIT_EXECUTABLE} describe --tags --abbrev=64 --always
+          COMMAND ${GIT_EXECUTABLE} describe --tags --always
           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
           OUTPUT_VARIABLE GIT_VERSION
           OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -89,7 +89,7 @@ function(git_info)
     if (_GIT_SEMANTIC_VERSION)
         execute_process(
           COMMAND
-              ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags --abbrev=40
+              ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags
           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
           OUTPUT_VARIABLE GIT_SEMANTIC_VERSION
           OUTPUT_STRIP_TRAILING_WHITESPACE
