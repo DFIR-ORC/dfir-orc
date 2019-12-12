@@ -702,7 +702,7 @@ public:
 
         Cmd.LoadCommonExtensions();
 
-        Cmd.PrintHeader(UtilityT::ToolDescription(), WSTRFILEVER);
+        Cmd.PrintHeader(UtilityT::ToolDescription(), ORC_FILEVER_STRINGW);
 
         try
         {

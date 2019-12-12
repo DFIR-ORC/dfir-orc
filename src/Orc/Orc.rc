@@ -31,8 +31,8 @@ MAINICON                ICON                    "..\\..\\res\\DFIR-Orc.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION VERSION
- PRODUCTVERSION VERSION
+ FILEVERSION ORC_VERSION
+ PRODUCTVERSION ORC_VERSION
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -48,11 +48,11 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
 			VALUE "FileDescription", "DFIR-ORC Utility"
-			VALUE "FileVersion", STRFILEVER
+			VALUE "FileVersion", ORC_FILEVER_STRING
 			VALUE "InternalName", "DFIR-ORC"
 			VALUE "OriginalFilename", "DFIR-ORC"
-			VALUE "ProductName", WSTRPRODUCTNAME
-			VALUE "ProductVersion", STRPRODUCTVER
+			VALUE "ProductName", ORC_PRODUCTNAME_STRINGW
+			VALUE "ProductVersion", ORC_PRODUCTVER_STRING
         END
     END
     BLOCK "VarFileInfo"
