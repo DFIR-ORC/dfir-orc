@@ -287,7 +287,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"FastFind"; }
-    static LPCWSTR ToolDescription() { return L"FastFind - IOC Finder"; }
+    static LPCWSTR ToolDescription() { return L"IOC Finder"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#FASTFIND_CONFIG"; }

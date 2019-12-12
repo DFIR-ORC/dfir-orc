@@ -643,7 +643,7 @@ public:
         PrintLoggingUsage();
         PrintPriorityUsage();
     }
-    virtual void PrintHeader(LPCWSTR szToolName, LPCWSTR szVersion);
+    virtual void PrintHeader(LPCWSTR szToolName, LPCWSTR lpszToolDescription, LPCWSTR szVersion);
     virtual void PrintParameters() = 0;
     virtual void PrintFooter() = 0;
 
@@ -702,7 +702,7 @@ public:
 
         Cmd.LoadCommonExtensions();
 
-        Cmd.PrintHeader(UtilityT::ToolDescription(), ORC_FILEVER_STRINGW);
+        Cmd.PrintHeader(UtilityT::ToolName(), UtilityT::ToolDescription(), ORC_FILEVER_STRINGW);
 
         try
         {

@@ -67,7 +67,7 @@ public:
     };
 
     static LPCWSTR ToolName() { return L"FatInfo"; }
-    static LPCWSTR ToolDescription() { return L"FatInfo - FAT file system meta data dump"; }
+    static LPCWSTR ToolDescription() { return L"FAT file system meta data dump"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#FATINFO_CONFIG"; }

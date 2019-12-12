@@ -42,7 +42,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"EmptyTool"; }
-    static LPCWSTR ToolDescription() { return L"EmptyTool - Empty tool (template)"; }
+    static LPCWSTR ToolDescription() { return L"Empty tool (template)"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#EMPTYTOOL_CONFIG"; }

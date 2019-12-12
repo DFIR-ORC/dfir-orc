@@ -113,7 +113,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"NTFSUtil"; }
-    static LPCWSTR ToolDescription() { return L"NTFSUtil - various NTFS related utilities"; }
+    static LPCWSTR ToolDescription() { return L"Various NTFS related utilities"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return nullptr; }

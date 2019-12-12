@@ -91,7 +91,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"USNInfo"; }
-    static LPCWSTR ToolDescription() { return L"USNInfo - USN Journal enumeration"; }
+    static LPCWSTR ToolDescription() { return L"USN Journal enumeration"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#USNINFO_CONFIG"; }

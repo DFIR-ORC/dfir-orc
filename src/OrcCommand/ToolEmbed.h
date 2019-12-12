@@ -64,7 +64,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"ToolEmbed"; }
-    static LPCWSTR ToolDescription() { return L"ToolEmbed - Embed/Extract configuration data and tools"; }
+    static LPCWSTR ToolDescription() { return L"Embed/Extract configuration data and tools"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#TOOLEMBED_CONFIG"; }

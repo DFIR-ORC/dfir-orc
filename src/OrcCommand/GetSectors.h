@@ -147,7 +147,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"GetSectors"; }
-    static LPCWSTR ToolDescription() { return L"GetSectors - Boot sectors, slack space collection"; }
+    static LPCWSTR ToolDescription() { return L"Boot sectors, slack space collection"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return nullptr; }

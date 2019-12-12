@@ -1141,10 +1141,17 @@ bool UtilitiesMain::UsageOption(LPCWSTR szArg)
     return false;
 }
 
-void UtilitiesMain::PrintHeader(LPCWSTR szToolName, LPCWSTR szVersion)
+void UtilitiesMain::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, LPCWSTR szVersion)
 {
     if (szToolName)
-        log::Info(_L_, L"\r\n%s Version %s\r\n", szToolName, szVersion);
+    {
+        log::Info(_L_, L"\r\n%s %s\r\n", szToolName, szVersion);
+    }
+
+    if (szToolDescription)
+    {
+        log::Info(_L_, L"%s\r\n", szToolDescription);
+    }
 }
 
 UtilitiesMain::~UtilitiesMain(void) {}

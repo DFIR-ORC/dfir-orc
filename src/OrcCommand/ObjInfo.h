@@ -77,7 +77,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"ObjInfo"; }
-    static LPCWSTR ToolDescription() { return L"ObjInfo - Collect meta-data information about NT named objects"; }
+    static LPCWSTR ToolDescription() { return L"Collect meta-data information about NT named objects"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return nullptr; }

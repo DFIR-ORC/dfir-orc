@@ -81,7 +81,7 @@ public:
 
 public:
     static LPCWSTR ToolName() { return L"ExtractData"; }
-    static LPCWSTR ToolDescription() { return L"ExtractData - Decrypt, decompress and prepare collected data"; }
+    static LPCWSTR ToolDescription() { return L"Decrypt, decompress and prepare collected data"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#EXTRACTDATA_CONFIG"; }

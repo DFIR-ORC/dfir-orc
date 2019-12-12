@@ -190,7 +190,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"NTFSInfo"; }
-    static LPCWSTR ToolDescription() { return L"NTFSInfo - NTFS File system enumeration"; }
+    static LPCWSTR ToolDescription() { return L"NTFS File system enumeration"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#NTFSINFO_CONFIG"; }

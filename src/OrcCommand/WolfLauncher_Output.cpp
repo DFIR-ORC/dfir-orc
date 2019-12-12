@@ -20,9 +20,9 @@ using namespace std;
 using namespace Orc;
 using namespace Orc::Command::Wolf;
 
-void Main::PrintHeader(LPCWSTR szToolName, LPCWSTR szVersion)
+void Main::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, LPCWSTR szVersion)
 {
-    log::Info(_L_, L"\r\nDFIR-Orc Version %s\r\n", szVersion);
+    log::Info(_L_, L"\r\nDFIR-Orc %s\r\n", szVersion);
 }
 
 void Main::PrintUsage()

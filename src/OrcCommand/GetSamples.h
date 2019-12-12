@@ -88,7 +88,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"GetSamples"; }
-    static LPCWSTR ToolDescription() { return L"GetSamples - Automate low hanging fruit sample collection"; }
+    static LPCWSTR ToolDescription() { return L"Automate low hanging fruit sample collection"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#GETSAMPLES_CONFIG"; }

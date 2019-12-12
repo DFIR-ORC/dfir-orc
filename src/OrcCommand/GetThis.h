@@ -296,7 +296,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"GetThis"; }
-    static LPCWSTR ToolDescription() { return L"GetThis - Sample collection"; }
+    static LPCWSTR ToolDescription() { return L"Sample collection"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#GETTHIS_CONFIG"; }

@@ -62,7 +62,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"DD"; }
-    static LPCWSTR ToolDescription() { return L"DD - Data Dump"; }
+    static LPCWSTR ToolDescription() { return L"Data Dump"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#DD_CONFIG"; }

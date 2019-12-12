@@ -90,7 +90,7 @@ public:
 
 public:
     static LPCWSTR ToolName() { return L"ImportData"; }
-    static LPCWSTR ToolDescription() { return L"ImportData - Import collected data"; }
+    static LPCWSTR ToolDescription() { return L"Import collected data"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#IMPORTDATA_CONFIG"; }

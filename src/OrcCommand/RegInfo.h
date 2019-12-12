@@ -149,7 +149,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"RegInfo"; }
-    static LPCWSTR ToolDescription() { return L"RegInfo - Registry related data enumeration"; }
+    static LPCWSTR ToolDescription() { return L"Registry related data enumeration"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#REGINFO_CONFIG"; }
