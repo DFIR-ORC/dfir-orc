@@ -31,13 +31,21 @@ if(NOT CMAKE_SYSTEM_VERSION)
     endif()
 endif()
 
-include(cmake/architecture.cmake)
-get_target_architecture(RESULT_VARIABLE "TARGET_ARCH")
+include(cmake/GitInfo.cmake)
+git_monitor_status()
+git_info(
+    SEMANTIC_VERSION ORC_VERSION
+    BRANCH ORC_BRANCH
+    COMMIT ORC_COMMIT
+)
 
+# Configure triplet dynamically with options chosen from CMake
 set(OVERLAY_TRIPLETS ${CMAKE_BINARY_DIR}/vcpkg/triplets)
 include(cmake/vcpkg_configure_triplets.cmake)
 vcpkg_configure_triplets(OUTPUT_TRIPLETS_DIR ${OVERLAY_TRIPLETS})
 
+include(cmake/architecture.cmake)
+get_target_architecture(RESULT_VARIABLE "TARGET_ARCH")
 if(${TARGET_ARCH} STREQUAL "x86")
     set(ORC_BUILD_PARQUET OFF)
 endif()
@@ -112,6 +120,11 @@ else()
 endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+string(REGEX MATCH "([0-9]+).([0-9]+).([0-9]+)" VERSION_STRING "${ORC_VERSION}")
+set(ORC_VERSION_MAJOR ${CMAKE_MATCH_1})
+set(ORC_VERSION_MINOR ${CMAKE_MATCH_2})
+set(ORC_VERSION_PATCH ${CMAKE_MATCH_3})
 
 add_subdirectory(src)
 add_subdirectory(tests)

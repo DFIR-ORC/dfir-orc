@@ -1,19 +1,11 @@
-//
-// SPDX-License-Identifier: LGPL-2.1-or-later
-//
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
-//
-// Author(s): Jean Gautier (ANSSI)
-//
-
 #ifndef VERSION
-#    define VERSION 10, 0, 2, 000
+#    define VERSION @ORC_VERSION_MAJOR@, @ORC_VERSION_MINOR@, @ORC_VERSION_PATCH@, 0
 #endif
 #ifndef STR_VERSION
-#    define STR_VERSION "10.0.2.000"
+#    define STR_VERSION "@ORC_VERSION@"
 #endif
 #ifndef WSTR_VERSION
-#    define WSTR_VERSION L"10.0.2.000"
+#    define WSTR_VERSION L"@ORC_VERSION@"
 #endif
 
 #define FILEVER VERSION

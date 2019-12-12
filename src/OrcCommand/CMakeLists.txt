@@ -12,11 +12,21 @@ orc_add_compile_options()
 
 find_package(boost REQUIRED)
 
+set(GENERATED_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
+
+configure_file(
+    ToolVersionRes.h.in
+    "${GENERATED_SRC_DIR}/ToolVersionRes.h"
+    @ONLY
+)
+
 set(SRC
     "FileInfoCommon.cpp"
     "FileInfoCommon.h"
     "OrcCommand.h"
     "ToolVersion.h"
+    "ToolVersion.cpp"
+    "${GENERATED_SRC_DIR}/ToolVersionRes.h"
     "UtilitiesMain.cpp"
     "UtilitiesMain.h"
     "UtilitiesMain_Config.cpp"
@@ -265,9 +275,14 @@ add_library(OrcCommand
         ${SRC_WOLFLAUNCHER}
 )
 
-target_include_directories(OrcCommand PRIVATE ${Boost_INCLUDE_DIRS})
-
-target_include_directories(OrcCommand INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(OrcCommand
+    PRIVATE
+        ${Boost_INCLUDE_DIRS}
+    PUBLIC
+        ${GENERATED_SRC_DIR}
+    INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 target_link_libraries(OrcCommand PUBLIC OrcLib)
 
