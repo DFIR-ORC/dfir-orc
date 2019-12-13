@@ -70,3 +70,15 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
         )
     endif()
 endif()
+
+foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
+    install(TARGETS FastFind
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION bin/${CONFIG}
+    )
+
+    install(FILES $<TARGET_PDB_FILE:FastFind>
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION pdb/${CONFIG} OPTIONAL
+    )
+endforeach()
