@@ -89,7 +89,7 @@ function(git_info)
     if (_GIT_SEMANTIC_VERSION)
         execute_process(
           COMMAND
-              ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags
+              ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags --always
           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
           OUTPUT_VARIABLE GIT_SEMANTIC_VERSION
           OUTPUT_STRIP_TRAILING_WHITESPACE
