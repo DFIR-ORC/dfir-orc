@@ -34,6 +34,7 @@ endif()
 include(cmake/GitInfo.cmake)
 git_monitor_status()
 git_info(
+    REPO_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     SEMANTIC_VERSION ORC_VERSION
     BRANCH ORC_BRANCH
     COMMIT ORC_COMMIT

@@ -12,6 +12,7 @@ endfunction()
 function(git_info)
     set(OPTIONS)
     set(SINGLE
+        REPO_DIRECTORY
         COMMIT
         LAST_TAG
         LAST_SEMVER_TAG
@@ -28,7 +29,7 @@ function(git_info)
     if (_GIT_COMMIT)
         execute_process(
           COMMAND ${GIT_EXECUTABLE} log -1 --format=%H
-          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
           OUTPUT_VARIABLE GIT_COMMIT
           OUTPUT_STRIP_TRAILING_WHITESPACE
         )
@@ -40,7 +41,7 @@ function(git_info)
     if (_GIT_LAST_TAG)
         execute_process(
           COMMAND ${GIT_EXECUTABLE} describe --abbrev=0 --tags HEAD --always
-          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
           OUTPUT_VARIABLE GIT_LAST_TAG
           OUTPUT_STRIP_TRAILING_WHITESPACE
         )
@@ -53,7 +54,7 @@ function(git_info)
         execute_process(
           COMMAND
               ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags --abbrev=0
-          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
           OUTPUT_VARIABLE GIT_LAST_SEMVER_TAG
           OUTPUT_STRIP_TRAILING_WHITESPACE
         )
@@ -65,7 +66,7 @@ function(git_info)
     if (_GIT_HEAD_TAG)
         execute_process(
           COMMAND ${GIT_EXECUTABLE} tag --list --points-at=HEAD
-          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
           OUTPUT_VARIABLE GIT_HEAD_TAG
           OUTPUT_STRIP_TRAILING_WHITESPACE
         )
@@ -77,7 +78,7 @@ function(git_info)
     if (_GIT_VERSION)
         execute_process(
           COMMAND ${GIT_EXECUTABLE} describe --tags --always
-          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
           OUTPUT_VARIABLE GIT_VERSION
           OUTPUT_STRIP_TRAILING_WHITESPACE
         )
@@ -90,7 +91,7 @@ function(git_info)
         execute_process(
           COMMAND
               ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags --always
-          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
           OUTPUT_VARIABLE GIT_SEMANTIC_VERSION
           OUTPUT_STRIP_TRAILING_WHITESPACE
         )
@@ -102,7 +103,7 @@ function(git_info)
     if (_GIT_BRANCH)
         execute_process(
           COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
-          WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
           OUTPUT_VARIABLE GIT_BRANCH
           OUTPUT_STRIP_TRAILING_WHITESPACE
         )
