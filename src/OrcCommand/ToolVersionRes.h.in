@@ -1,3 +1,11 @@
+//
+// Prefer including 'ToolVersion.h'
+//
+// This template will be fill by cmake.
+// It must not be included directly except from resource files as it would
+// trigger useless compilations.
+//
+
 #ifndef ORC_VERSION
 #    define ORC_VERSION @ORC_VERSION_MAJOR@, @ORC_VERSION_MINOR@, @ORC_VERSION_PATCH@, 0
 #endif

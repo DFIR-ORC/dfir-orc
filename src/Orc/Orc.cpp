@@ -65,7 +65,7 @@ ToolDescription g_Tools[] = {
 int Usage(const logger& pLog)
 {
 
-    log::Info(pLog, L"\r\nDFIR-Orc.Exe %s\r\n", ORC_FILEVER_STRINGW);
+    log::Info(pLog, L"\r\nDFIR-Orc.Exe %s\r\n", kOrcFileVerStringW);
     log::Info(
         pLog,
         L"\r\n"

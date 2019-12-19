@@ -6,12 +6,11 @@
 // Author(s): fabienfl
 //
 
-//
-// Prefer including 'ToolVersion.h'
-//
-// This template will be fill by cmake.
-// It must not be included directly except from resource files as it would
-// trigger useless compilations.
-//
-
-#include "ToolVersionRes.h"
+extern const int kVersion[4];
+extern const char* kOrcVersionString;
+extern const wchar_t* kOrcVersionStringW;
+extern const char* kOrcFileVerString;
+extern const wchar_t* kOrcFileVerStringW;
+extern const char* kOrcProductVerString;
+extern const wchar_t* kOrcProductVerStringW;
+extern const wchar_t* kProductNameStringW;

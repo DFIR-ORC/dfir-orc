@@ -2,7 +2,7 @@
 //
 #include "resource.h"
 
-#include "ToolVersion.h"
+#include "ToolVersionRes.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////

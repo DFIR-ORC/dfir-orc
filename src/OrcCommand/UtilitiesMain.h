@@ -702,7 +702,7 @@ public:
 
         Cmd.LoadCommonExtensions();
 
-        Cmd.PrintHeader(UtilityT::ToolName(), UtilityT::ToolDescription(), ORC_FILEVER_STRINGW);
+        Cmd.PrintHeader(UtilityT::ToolName(), UtilityT::ToolDescription(), kOrcFileVerStringW);
 
         try
         {
