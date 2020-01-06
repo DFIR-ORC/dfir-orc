@@ -4,9 +4,9 @@
 
   <table key="USNInfo">
     <utf8 name="ComputerName" maxlen="50" allows_null="no" />
-    <uint64 name="USN" allows_null="no" fmt="{:#016x}" />
-    <uint64 name="FRN" allows_null="no" fmt="{:#016x}" />
-    <uint64 name="ParentFRN" allows_null="no" fmt="{:#016x}" />
+    <uint64 name="USN" allows_null="no" fmt="0x{:016X}" />
+    <uint64 name="FRN" allows_null="no" fmt="0x{:016X}" />
+    <uint64 name="ParentFRN" allows_null="no" fmt="0x{:016X}" />
     <timestamp name="TimeStamp" />
     <utf16  name="File" maxlen="256" />
     <utf16  name="FullPath" maxlen="32K" />
@@ -34,7 +34,7 @@
       <value index="0x00000800">SECURITY_CHANGE</value>
       <value index="0x00200000">STREAM_CHANGE</value>
     </flags>
-    <uint64 name="VolumeID" allows_null="no" fmt="{:#016x}" />
+    <uint64 name="VolumeID" allows_null="no" fmt="0x{:016X}" />
     <guid   name="SnapshotID" allows_null="no" />
   </table>
 
