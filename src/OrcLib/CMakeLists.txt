@@ -41,6 +41,7 @@ source_group(Command FILES ${SRC_COMMAND})
 set(SRC_COMMON
     "OrcLib.h"
     "targetver.h"
+    "FmtFormatter/EscapeQuote.h"
 )
 
 # stdafx.[cpp|h] must be included first, don't include them in SRC_COMMON
