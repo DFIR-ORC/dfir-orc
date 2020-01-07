@@ -16,7 +16,6 @@
 #include "OutputSpec.h"
 #include "WideAnsi.h"
 #include "CriticalSection.h"
-#include "FmtFormatter/EscapeQuote.h"
 
 #pragma managed(push, off)
 
