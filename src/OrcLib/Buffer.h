@@ -462,7 +462,8 @@ public:
     {
         if (m_EltsUsed < capacity())
         {
-            *get_raw(++m_EltsUsed) = elt;
+            *get_raw(m_EltsUsed) = elt;
+            m_EltsUsed++;
         }
         else
         {
