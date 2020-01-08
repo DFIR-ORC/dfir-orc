@@ -15,6 +15,8 @@
 
 #include "Robustness.h"
 
+#include <optional>
+
 #pragma managed(push, off)
 
 namespace Orc {
@@ -193,9 +195,13 @@ protected:
     std::wstring m_strLibFile;
     std::wstring m_strTempDir;
 
+    std::optional<std::wstring> m_strDesiredName;
+
     bool m_bDeleteOnClose = false;
 
     std::shared_ptr<TerminationHandler> m_UnLoadHandler;
+
+    HRESULT ToDesiredName(const std::wstring& libName);
 
     template <class Library>
     static const std::shared_ptr<Library> GetShared(bool bMakeNew = true, logger pLog = nullptr)

@@ -19,6 +19,7 @@ using namespace std::string_literals;
 DbgHelpLibrary::DbgHelpLibrary(logger pLog)
     : ExtensionLibrary(std::move(pLog), L"DbgHelp.dll"s, L"DBGHELP_X86DLL"s, L"DBGHELP_X64DLL"s, L""s)
 {
+    m_strDesiredName = L"DbgHelp.dll"s;
 }
 
 HRESULT DbgHelpLibrary::Initialize()

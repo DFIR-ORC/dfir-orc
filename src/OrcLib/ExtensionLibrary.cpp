@@ -20,6 +20,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <concrt.h>
+#include <filesystem>
 
 using namespace std;
 using namespace Orc;
@@ -80,6 +81,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
 
     if (EmbeddedResource::IsResourceBased(strFileRef))
     {
+        std::wstring strExtractedFile;
         if (FAILED(
                 hr = EmbeddedResource::ExtractToFile(
                     _L_,
@@ -88,13 +90,16 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                     RESSOURCE_READ_EXECUTE_SID,
                     strSID.c_str(),
                     m_strTempDir,
-                    m_strLibFile)))
+                    strExtractedFile)))
         {
             log::Verbose(
                 _L_, L"Failed to extract resource %s into temp dir %s\r\n", strFileRef.c_str(), m_strTempDir.c_str());
             return hr;
         }
         m_bDeleteOnClose = true;
+
+        if (FAILED(hr = ToDesiredName(strExtractedFile)))
+            return hr;
 
         auto [hr, hModule] = LoadThisLibrary(m_strLibFile);
         if (hModule == NULL || FAILED(hr))
@@ -115,6 +120,8 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
             _L_, L"ExtensionLibrary: Loaded value %s=%s successfully\r\n", strFileRef.c_str(), strNewLibRef.c_str());
         if (EmbeddedResource::IsResourceBased(strNewLibRef))
         {
+            std::wstring strExtractedFile;
+
             if (FAILED(
                     hr = EmbeddedResource::ExtractToFile(
                         _L_,
@@ -123,7 +130,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                         RESSOURCE_READ_EXECUTE_SID,
                         strSID.c_str(),
                         m_strTempDir,
-                        m_strLibFile)))
+                        strExtractedFile)))
             {
                 log::Verbose(
                     _L_,
@@ -133,6 +140,9 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                 return hr;
             }
             m_bDeleteOnClose = true;
+
+            if (FAILED(hr = ToDesiredName(strExtractedFile)))
+                return hr;
 
             auto [hr, hModule] = LoadThisLibrary(m_strLibFile);
             if (hModule == NULL || FAILED(hr))
@@ -213,6 +223,30 @@ std::pair<HRESULT, HINSTANCE> Orc::ExtensionLibrary::LoadThisLibrary(const std::
     }
     else
         return std::make_pair(S_OK, hInst);
+}
+
+HRESULT Orc::ExtensionLibrary::ToDesiredName(const std::wstring& libName)
+{
+    if (m_strDesiredName)
+    {
+        using namespace std::filesystem;
+
+        path extractedFileName(libName);
+        path finalName = extractedFileName.parent_path() / m_strDesiredName.value();
+
+        std::error_code ec;
+        std::filesystem::rename(extractedFileName, finalName, ec);
+
+        if (ec)
+        {
+            log::Error(_L_, E_FAIL, L"Failed to rename file %s to %s (%S)", extractedFileName.c_str(), finalName.c_str(), ec.message().c_str());
+            return E_FAIL;
+        }
+        m_strLibFile = finalName.wstring();
+    }
+    else
+        m_strLibFile = libName;
+    return S_OK;
 }
 
 FARPROC Orc::ExtensionLibrary::GetEntryPoint(const CHAR* szFunctionName, bool bMandatory)
