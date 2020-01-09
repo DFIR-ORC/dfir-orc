@@ -5,7 +5,7 @@
     <table key="fileinfo">
 
         <utf8   name="ComputerName" maxlen="50" allows_null="no" />
-        <binary name="VolumeID"     len="8" allows_null="no" fmt="0x{:016X}" />
+        <uint64 name="VolumeID"     fmt="0x{:016X}" />
 
         <utf16 name="File" maxlen="256" />
         <utf16 name="ParentName" maxlen="4000" />
