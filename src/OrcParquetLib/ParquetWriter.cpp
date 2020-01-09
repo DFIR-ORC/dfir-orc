@@ -237,53 +237,53 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
         switch (column->Type)
         {
             case Nothing:
-                schema_definition.push_back(arrow::field(strName, arrow::null(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::null(), true));
                 break;
             case BoolType:
-                schema_definition.push_back(arrow::field(strName, arrow::boolean(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::boolean(), true));
                 break;
             case UInt8Type:
-                schema_definition.push_back(arrow::field(strName, arrow::uint8(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::uint8(), true));
                 break;
             case Int8Type:
-                schema_definition.push_back(arrow::field(strName, arrow::int8(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::int8(), true));
                 break;
             case UInt16Type:
-                schema_definition.push_back(arrow::field(strName, arrow::uint16(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::uint16(), true));
                 break;
             case Int16Type:
-                schema_definition.push_back(arrow::field(strName, arrow::int16(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::int16(), true));
                 break;
             case UInt32Type:
-                schema_definition.push_back(arrow::field(strName, arrow::uint32(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::uint32(), true));
                 break;
             case Int32Type:
-                schema_definition.push_back(arrow::field(strName, arrow::int32(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::int32(), true));
                 break;
             case UInt64Type:
-                schema_definition.push_back(arrow::field(strName, arrow::uint64(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::uint64(), true));
                 break;
             case Int64Type:
-                schema_definition.push_back(arrow::field(strName, arrow::int64(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::int64(), true));
                 break;
             case TimeStampType:
-                schema_definition.push_back(arrow::field(strName, arrow::timestamp(arrow::TimeUnit::MICRO), false));
+                schema_definition.push_back(arrow::field(strName, arrow::timestamp(arrow::TimeUnit::MICRO), true));
                 break;
             case UTF16Type:
-                schema_definition.push_back(arrow::field(strName, arrow::binary(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::binary(), true));
                 break;
             case UTF8Type:
-                schema_definition.push_back(arrow::field(strName, arrow::utf8(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::utf8(), true));
                 break;
             case BinaryType:
-                schema_definition.push_back(arrow::field(strName, arrow::binary(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::binary(), true));
                 break;
             case FixedBinaryType:
                 schema_definition.push_back(
-                    arrow::field(strName, arrow::fixed_size_binary(column->dwLen.value()), false));
+                    arrow::field(strName, arrow::fixed_size_binary(column->dwLen.value()), true));
                 break;
             case GUIDType:
-                schema_definition.push_back(arrow::field(strName, arrow::fixed_size_binary(16), false));
+                schema_definition.push_back(arrow::field(strName, arrow::fixed_size_binary(16), true));
                 break;
             case EnumType:
             {
@@ -301,11 +301,11 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
                     }
                 }
 
-                schema_definition.push_back(arrow::field(strName, arrow::uint32(), false, metadata));
+                schema_definition.push_back(arrow::field(strName, arrow::uint32(), true, metadata));
                 break;
             }
             case XMLType:
-                schema_definition.push_back(arrow::field(strName, arrow::binary(), false));
+                schema_definition.push_back(arrow::field(strName, arrow::binary(), true));
                 break;
             case FlagsType:
             {
@@ -323,7 +323,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
                     }
                 }
 
-                schema_definition.push_back(arrow::field(strName, arrow::uint32(), false, metadata));
+                schema_definition.push_back(arrow::field(strName, arrow::uint32(), true, metadata));
                 break;
             }
             default:
