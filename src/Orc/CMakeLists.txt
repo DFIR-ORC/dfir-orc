@@ -152,6 +152,36 @@ if(${ORC_BUILD_PARQUET})
     )
 endif()
 
+if(${ORC_BUILD_APACHE_ORC})
+
+    if("${TARGET_ARCH}" STREQUAL "x64")
+        set(ORCOPTROWCOLUMN_VAR_NAME "ORCOPTROWCOLUMN_X64DLL")
+    elseif("${TARGET_ARCH}" STREQUAL "x86")
+        set(ORCOPTROWCOLUMN_VAR_NAME "ORCOPTROWCOLUMN_X86DLL")
+    else()
+        message(FATAL_ERROR "Unknown architecture: ${TARGET_ARCH}")
+    endif()
+
+    add_custom_command(
+        TARGET Orc
+        POST_BUILD
+        DEPENDS rcedit, OrcOptRowColumn
+        VERBATIM
+
+        COMMAND $<TARGET_FILE:rcedit>
+            set --type "VALUES"
+                --name "${ORCOPTROWCOLUMN_VAR_NAME}"
+                --value-utf16 "7z:#ORCOPTROWCOLUMN|OrcOptRowColumn.dll"
+                $<TARGET_FILE:Orc>
+
+        COMMAND $<TARGET_FILE:rcedit>
+            set --type "BINARY"
+                --name "ORCOPTROWCOLUMN"
+                --value-path $<TARGET_FILE:OrcOptRowColumn>
+                --compress=7z
+                $<TARGET_FILE:Orc>
+    )
+endif()
 
 set_property(TARGET Orc PROPERTY FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
 set_property(TARGET Orc PROPERTY OUTPUT_NAME "DFIR-Orc_${TARGET_ARCH}")
