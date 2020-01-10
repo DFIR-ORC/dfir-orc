@@ -23,9 +23,10 @@
 
 #include <winnt.h>
 
-#include <memory>
-#include <vector>
 #include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 #pragma managed(push, off)
 

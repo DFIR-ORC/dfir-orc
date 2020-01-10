@@ -132,14 +132,14 @@ HRESULT EmbeddedResource::SplitResourceReference(
 
     if (!regex_match(Ref, s_archive, ArchRessourceRegEx()))
     {
-        log::Verbose(pLog, L"%s is not an embedded archive ressource pattern\r\n", Ref.c_str());
+        log::Verbose(pLog, L"%s is not an embedded archive resource pattern\r\n", Ref.c_str());
         wsmatch s_res;
         if (!regex_match(Ref, s_res, ResRessourceRegEx()))
         {
             wsmatch s_self;
             if (!regex_match(Ref, s_self, SelfReferenceRegEx()))
             {
-                log::Verbose(pLog, L"%s is ressource pattern for self reference (%s)\r\n", Ref.c_str());
+                log::Verbose(pLog, L"%s is resource pattern for self reference (%s)\r\n", Ref.c_str());
             }
             else
             {
@@ -420,7 +420,7 @@ HRESULT EmbeddedResource::ExtractRunWithArgs(
 
             break;
         default:
-            log::Error(pLog, E_FAIL, L"Archictecture %d is not supported\r\n", Arch);
+            log::Error(pLog, E_FAIL, L"Architecture %d is not supported\r\n", Arch);
             return E_FAIL;
     }
 

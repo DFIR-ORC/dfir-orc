@@ -220,7 +220,7 @@ HRESULT Orc::IsFileName(const WCHAR* szInputFile)
     return S_FALSE;
 }
 
-HRESULT Orc::GetInputFile(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS)
+HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS)
 {
     DWORD dwRequiredLen = ExpandEnvironmentStrings(szInputString, NULL, 0L);
 
@@ -241,29 +241,29 @@ HRESULT Orc::GetInputFile(const WCHAR* szInputString, WCHAR* szInputFile, DWORD 
     return S_OK;
 }
 
-ORCLIB_API HRESULT Orc::GetInputFile(const WCHAR* szInputString, std::wstring& strInputFile)
+ORCLIB_API HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile)
 {
     HRESULT hr = E_FAIL;
 
     WCHAR szInputFile[MAX_PATH];
     ZeroMemory(szInputFile, sizeof(WCHAR) * MAX_PATH);
-    if (FAILED(hr = GetInputFile(szInputString, szInputFile, MAX_PATH)))
+    if (FAILED(hr = ExpandFilePath(szInputString, szInputFile, MAX_PATH)))
         return hr;
     strInputFile.assign(szInputFile);
     return S_OK;
 }
 
-HRESULT Orc::GetInputDirectory(const WCHAR* szInputString, WCHAR* szInputDir, DWORD cchInputDirLengthInWCHARS)
+HRESULT Orc::ExpandDirectoryPath(const WCHAR* szString, WCHAR* szDirectory, DWORD cchInputDir)
 {
-    DWORD dwRequiredLen = ExpandEnvironmentStrings(szInputString, NULL, 0L);
+    DWORD dwRequiredLen = ExpandEnvironmentStrings(szString, NULL, 0L);
 
-    if (dwRequiredLen > cchInputDirLengthInWCHARS)
+    if (dwRequiredLen > cchInputDir)
         return ERROR_INSUFFICIENT_BUFFER;
 
-    ZeroMemory(szInputDir, cchInputDirLengthInWCHARS * sizeof(WCHAR));
-    ExpandEnvironmentStrings(szInputString, szInputDir, cchInputDirLengthInWCHARS);
+    ZeroMemory(szDirectory, cchInputDir * sizeof(WCHAR));
+    ExpandEnvironmentStrings(szString, szDirectory, cchInputDir);
 
-    DWORD dwAttr = GetFileAttributes(szInputDir);
+    DWORD dwAttr = GetFileAttributes(szDirectory);
 
     // Checking if file exists and is not a directory
     if (INVALID_FILE_ATTRIBUTES == dwAttr)
@@ -274,15 +274,19 @@ HRESULT Orc::GetInputDirectory(const WCHAR* szInputString, WCHAR* szInputDir, DW
     return HRESULT_FROM_WIN32(ERROR_INVALID_NAME);
 }
 
-ORCLIB_API HRESULT Orc::GetInputDirectory(const WCHAR* szInputString, std::wstring& strInputDir)
+ORCLIB_API HRESULT Orc::ExpandDirectoryPath(const WCHAR* szInput, std::wstring& inputDir)
 {
     HRESULT hr = E_FAIL;
 
     WCHAR szInputDir[MAX_PATH];
-    ZeroMemory(szInputDir, sizeof(WCHAR) * MAX_PATH);
-    if (FAILED(hr = GetInputDirectory(szInputString, szInputDir, MAX_PATH)))
+    ZeroMemory(szInputDir, sizeof(szInputDir));
+    hr = ExpandDirectoryPath(szInput, szInputDir, MAX_PATH);
+    if (FAILED(hr))
+    {
         return hr;
-    strInputDir.assign(szInputDir);
+    }
+
+    inputDir.assign(szInputDir);
     return S_OK;
 }
 

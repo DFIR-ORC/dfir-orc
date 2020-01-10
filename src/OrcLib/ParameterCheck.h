@@ -15,11 +15,11 @@
 
 namespace Orc {
 
-ORCLIB_API HRESULT GetInputFile(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS);
-ORCLIB_API HRESULT GetInputFile(const WCHAR* szInputString, std::wstring& strInputFile);
+ORCLIB_API HRESULT ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS);
+ORCLIB_API HRESULT ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile);
 
-ORCLIB_API HRESULT GetInputDirectory(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS);
-ORCLIB_API HRESULT GetInputDirectory(const WCHAR* szInputString, std::wstring& strInputFile);
+ORCLIB_API HRESULT ExpandDirectoryPath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS);
+ORCLIB_API HRESULT ExpandDirectoryPath(const WCHAR* szInputString, std::wstring& strInputFile);
 
 ORCLIB_API HRESULT VerifyFileExists(const WCHAR* szInputFile);
 ORCLIB_API HRESULT VerifyDirectoryExists(const WCHAR* szInputDir);

@@ -526,6 +526,12 @@ source_group(In&Out\\TableOutput\\Parquet
     FILES ${SRC_INOUT_TABLEOUTPUT_PARQUET}
 )
 
+set(SRC_INOUT_TABLEOUTPUT_APACHE_ORC OptRowColumnOutputWriter.h)
+
+source_group(In&Out\\TableOutput\\ApacheOrc
+    FILES ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
+)
+
 set(SRC_INOUT_TABLEOUTPUT_SQL
     "CsvToSql.cpp"
     "CsvToSql.h"
@@ -637,6 +643,7 @@ source_group(Utilities\\Resources FILES ${SRC_UTILITIES_RESOURCES})
 
 set(SRC_UTILITIES_STRINGS
     "CaseInsensitive.h"
+    "Strings.h"
     "Unicode.cpp"
     "Unicode.h"
     "Unicode_XmlComment.cpp"
@@ -677,6 +684,13 @@ set(SRC_UTILITIES_TEST
 )
 
 source_group(Utilities\\Test FILES ${SRC_UTILITIES_TEST})
+
+set(SRC_UTILITIES_WINAPIHELPER
+    "WinApiHelper.cpp"
+    "WinApiHelper.h"
+)
+
+source_group(Utilities\\WinApi FILES ${SRC_UTILITIES_WINAPIHELPER})
 
 add_library(OrcLib
     STATIC
@@ -719,6 +733,7 @@ add_library(OrcLib
         ${SRC_INOUT_TABLEOUTPUT}
         ${SRC_INOUT_TABLEOUTPUT_CSV}
         ${SRC_INOUT_TABLEOUTPUT_PARQUET}
+        ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
         ${SRC_INOUT_TABLEOUTPUT_SQL}
         ${SRC_INOUT_UPLOAD}
         ${SRC_OBJECT}
@@ -731,6 +746,7 @@ add_library(OrcLib
         ${SRC_UTILITIES_SYSTEM}
         ${SRC_UTILITIES_STRINGS}
         ${SRC_UTILITIES_TEST}
+        ${SRC_UTILITIES_WINAPIHELPER}
 )
 
 target_include_directories(OrcLib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -749,6 +765,7 @@ target_link_libraries(OrcLib
         tlsh::tlsh
         VisualStudio::CppUnitTest
         yara::yara
+        ws2_32.lib
 )
 
 if(ORC_BUILD_SSDEEP)

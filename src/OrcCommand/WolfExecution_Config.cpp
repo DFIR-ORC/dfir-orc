@@ -51,16 +51,16 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
     switch (wArch)
     {
         case PROCESSOR_ARCHITECTURE_AMD64:
-            if (item[WOLFLAUNCHER_EXERUN64].Status == ConfigItem::PRESENT)
-                strExeRef = item[WOLFLAUNCHER_EXERUN64].strData;
-            else if (item[WOLFLAUNCHER_EXERUN].Status == ConfigItem::PRESENT)
-                strExeRef = item[WOLFLAUNCHER_EXERUN].strData;
+            if (item[WOLFLAUNCHER_EXERUN64])
+                strExeRef = item[WOLFLAUNCHER_EXERUN64];
+            else if (item[WOLFLAUNCHER_EXERUN])
+                strExeRef = item[WOLFLAUNCHER_EXERUN];
             break;
         case PROCESSOR_ARCHITECTURE_INTEL:
-            if (item[WOLFLAUNCHER_EXERUN32].Status == ConfigItem::PRESENT)
-                strExeRef = item[WOLFLAUNCHER_EXERUN32].strData;
-            else if (item[WOLFLAUNCHER_EXERUN].Status == ConfigItem::PRESENT)
-                strExeRef = item[WOLFLAUNCHER_EXERUN].strData;
+            if (item[WOLFLAUNCHER_EXERUN32])
+                strExeRef = item[WOLFLAUNCHER_EXERUN32];
+            else if (item[WOLFLAUNCHER_EXERUN])
+                strExeRef = item[WOLFLAUNCHER_EXERUN];
             break;
         default:
             break;
@@ -70,7 +70,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
         log::Verbose(
             _L_,
             L"No valid binary specified for item name %s (run, run32 or run64 attribute)\r\n",
-            item[WOLFLAUNCHER_EXENAME].strData.c_str());
+            item[WOLFLAUNCHER_EXENAME].c_str());
         return E_INVALIDARG;
     }
 
@@ -117,7 +117,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
     else
     {
         wstring strExeFile;
-        if (SUCCEEDED(hr = GetInputFile(strExeRef.c_str(), strExeFile)))
+        if (SUCCEEDED(hr = ExpandFilePath(strExeRef.c_str(), strExeFile)))
         {
             if (VerifyFileIsBinary(strExeFile.c_str()) == S_OK)
             {
@@ -149,18 +149,18 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         return nullptr;
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_CMDKEYWORD].Status != ConfigItem::PRESENT)
+    if (!item[WOLFLAUNCHER_COMMAND_CMDKEYWORD])
     {
         log::Verbose(_L_, L"keyword attribute is missing in command\r\n");
         return nullptr;
     }
 
-    const wstring& keyword = item[WOLFLAUNCHER_COMMAND_CMDKEYWORD].strData;
+    const wstring& keyword = item[WOLFLAUNCHER_COMMAND_CMDKEYWORD];
 
-    if (item.SubItems[WOLFLAUNCHER_COMMAND_WINVER].Status == ConfigItem::PRESENT)
+    if (item.SubItems[WOLFLAUNCHER_COMMAND_WINVER])
     {
         std::wsmatch s;
-        std::wstring winver(item.SubItems[WOLFLAUNCHER_COMMAND_WINVER].strData);
+        std::wstring winver(item.SubItems[WOLFLAUNCHER_COMMAND_WINVER]);
 
         if (std::regex_match(winver, s, g_WinVerRegEx))
         {
@@ -260,9 +260,9 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         // No incompatibilities found, proceed with command
     }
 
-    if (item.SubItems[WOLFLAUNCHER_COMMAND_SYSTEMTYPE].Status == ConfigItem::PRESENT)
+    if (item.SubItems[WOLFLAUNCHER_COMMAND_SYSTEMTYPE])
     {
-        const wstring& requiredSystemTypes = item[WOLFLAUNCHER_COMMAND_SYSTEMTYPE].strData;
+        const wstring& requiredSystemTypes = item[WOLFLAUNCHER_COMMAND_SYSTEMTYPE];
         wstring strProductType;
 
         if (FAILED(hr = SystemDetails::GetSystemType(strProductType)))
@@ -300,9 +300,9 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
 
     auto command = CommandMessage::MakeExecuteMessage(keyword);
 
-    if (item[WOLFLAUNCHER_COMMAND_EXECUTE].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_EXECUTE])
     {
-        const wstring& ExeName = item[WOLFLAUNCHER_COMMAND_EXECUTE][WOLFLAUNCHER_EXENAME].strData;
+        const wstring& ExeName = item[WOLFLAUNCHER_COMMAND_EXECUTE][WOLFLAUNCHER_EXENAME];
 
         wstring strExeToRun, strArgToAdd;
         if (FAILED(GetExecutableToRun(item[WOLFLAUNCHER_COMMAND_EXECUTE], strExeToRun, strArgToAdd)))
@@ -319,15 +319,15 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         return nullptr;
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_ARGUMENT].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_ARGUMENT])
     {
         std::for_each(
             begin(item[WOLFLAUNCHER_COMMAND_ARGUMENT].NodeList),
             end(item[WOLFLAUNCHER_COMMAND_ARGUMENT].NodeList),
-            [command](const ConfigItem& item) { command->PushArgument(item.dwOrderIndex, item.strData); });
+            [command](const ConfigItem& item) { command->PushArgument(item.dwOrderIndex, item); });
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_INPUT].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_INPUT])
     {
         hr = S_OK;
 
@@ -336,33 +336,33 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             end(item[WOLFLAUNCHER_COMMAND_INPUT].NodeList),
             [this, command, &hr](const ConfigItem& input) {
                 HRESULT hr1 = E_FAIL;
-                if (input[WOLFLAUNCHER_INNAME].Status != ConfigItem::PRESENT)
+                if (!input[WOLFLAUNCHER_INNAME])
                 {
                     log::Error(_L_, E_INVALIDARG, L"The input is missing a name\r\n");
                     hr = E_INVALIDARG;
                     return;
                 }
-                const wstring& strName = input[WOLFLAUNCHER_INNAME].strData;
+                const wstring& strName = input[WOLFLAUNCHER_INNAME];
 
                 const WCHAR* szPattern = NULL;
-                if (input[WOLFLAUNCHER_INARGUMENT].Status == ConfigItem::PRESENT)
+                if (input[WOLFLAUNCHER_INARGUMENT])
                 {
-                    szPattern = input[WOLFLAUNCHER_INARGUMENT].strData.c_str();
+                    szPattern = input[WOLFLAUNCHER_INARGUMENT].c_str();
                 }
 
-                if (input[WOLFLAUNCHER_INSOURCE].Status != ConfigItem::PRESENT)
+                if (!input[WOLFLAUNCHER_INSOURCE])
                 {
                     log::Error(
                         _L_,
                         E_INVALIDARG,
                         L"The input %s is missing a source\r\n",
-                        input[WOLFLAUNCHER_INNAME].strData.c_str());
+                        input[WOLFLAUNCHER_INNAME].c_str());
                     hr = E_INVALIDARG;
                     return;
                 }
-                if (EmbeddedResource::IsResourceBased(input.SubItems[WOLFLAUNCHER_INSOURCE].strData))
+                if (EmbeddedResource::IsResourceBased(input.SubItems[WOLFLAUNCHER_INSOURCE]))
                 {
-                    const wstring& szResName = input.SubItems[WOLFLAUNCHER_INSOURCE].strData;
+                    const wstring& szResName = input.SubItems[WOLFLAUNCHER_INSOURCE];
 
                     wstring strModule, strResource, strCabbedName, strFormat;
                     if (FAILED(
@@ -399,7 +399,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 else
                 {
                     wstring strInputFile;
-                    if (SUCCEEDED(hr1 = GetInputFile(input[WOLFLAUNCHER_INSOURCE].strData.c_str(), strInputFile)))
+                    if (SUCCEEDED(hr1 = ExpandFilePath(input[WOLFLAUNCHER_INSOURCE].c_str(), strInputFile)))
                     {
                         if (szPattern != NULL)
                             command->PushInputFile(input.dwOrderIndex, strInputFile, strName, szPattern);
@@ -419,63 +419,63 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             return nullptr;
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_OUTPUT].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_OUTPUT])
     {
         hr = S_OK;
         std::for_each(
             begin(item[WOLFLAUNCHER_COMMAND_OUTPUT].NodeList),
             end(item[WOLFLAUNCHER_COMMAND_OUTPUT].NodeList),
             [this, &hr, command](const ConfigItem& output) {
-                if (output.SubItems[WOLFLAUNCHER_OUTNAME].Status != ConfigItem::PRESENT)
+                if (!output.SubItems[WOLFLAUNCHER_OUTNAME])
                 {
                     log::Info(_L_, L"The output is missing a name\r\n");
                     hr = E_FAIL;
                     return;
                 }
-                const wstring& strName = output[WOLFLAUNCHER_OUTNAME].strData;
+                const wstring& strName = output[WOLFLAUNCHER_OUTNAME];
 
                 const WCHAR* szPattern = NULL;
-                if (output[WOLFLAUNCHER_OUTARGUMENT].Status == ConfigItem::PRESENT)
+                if (output[WOLFLAUNCHER_OUTARGUMENT])
                 {
-                    szPattern = output[WOLFLAUNCHER_OUTARGUMENT].strData.c_str();
+                    szPattern = output[WOLFLAUNCHER_OUTARGUMENT].c_str();
                 }
 
-                if (output[WOLFLAUNCHER_OUTSOURCE].Status != ConfigItem::PRESENT)
+                if (!output[WOLFLAUNCHER_OUTSOURCE])
                 {
                     log::Info(
-                        _L_, L"The output %s is missing a source\r\n", output[WOLFLAUNCHER_OUTNAME].strData.c_str());
+                        _L_, L"The output %s is missing a source\r\n", output[WOLFLAUNCHER_OUTNAME].c_str());
                     hr = E_FAIL;
                     return;
                 }
-                if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].strData.c_str(), L"StdOut"))
+                if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"StdOut"))
                 {
                     command->PushStdOut(output.dwOrderIndex, strName, true, 0L, true);
                 }
-                else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].strData.c_str(), L"StdErr"))
+                else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"StdErr"))
                 {
                     command->PushStdErr(output.dwOrderIndex, strName, true, 0L, true);
                 }
-                else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].strData.c_str(), L"StdOutErr"))
+                else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"StdOutErr"))
                 {
                     command->PushStdOutErr(output.dwOrderIndex, strName, true, 0L, true);
                 }
-                else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].strData.c_str(), L"File"))
+                else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"File"))
                 {
                     if (szPattern == NULL)
                         command->PushOutputFile(output.dwOrderIndex, strName, strName, 0L, true);
                     else
                         command->PushOutputFile(output.dwOrderIndex, strName, strName, szPattern, 0L, true);
                 }
-                else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].strData.c_str(), L"Directory"))
+                else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"Directory"))
                 {
-                    if (output[WOLFLAUNCHER_OUTFILEMATCH].Status == ConfigItem::PRESENT)
+                    if (output[WOLFLAUNCHER_OUTFILEMATCH])
                     {
                         if (szPattern == NULL)
                             command->PushOutputDirectory(
                                 output.dwOrderIndex,
                                 strName,
                                 strName,
-                                output[WOLFLAUNCHER_OUTFILEMATCH].strData,
+                                output[WOLFLAUNCHER_OUTFILEMATCH],
                                 0L,
                                 true);
                         else
@@ -483,7 +483,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                                 output.dwOrderIndex,
                                 strName,
                                 strName,
-                                output[WOLFLAUNCHER_OUTFILEMATCH].strData,
+                                output[WOLFLAUNCHER_OUTFILEMATCH],
                                 szPattern,
                                 0L,
                                 true);
@@ -502,9 +502,9 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             return nullptr;
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_QUEUE].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_QUEUE])
     {
-        if (!_wcsicmp(item[WOLFLAUNCHER_COMMAND_QUEUE].strData.c_str(), L"flush"))
+        if (!_wcsicmp(item[WOLFLAUNCHER_COMMAND_QUEUE].c_str(), L"flush"))
         {
             command->SetQueueBehavior(CommandMessage::QueueBehavior::FlushQueue);
         }
@@ -514,9 +514,9 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         }
     }
 
-    if (item[WOLFLAUNCHER_COMMAND_OPTIONAL].Status == ConfigItem::PRESENT)
+    if (item[WOLFLAUNCHER_COMMAND_OPTIONAL])
     {
-        if (!_wcsicmp(item[WOLFLAUNCHER_COMMAND_OPTIONAL].strData.c_str(), L"no"))
+        if (!_wcsicmp(item[WOLFLAUNCHER_COMMAND_OPTIONAL].c_str(), L"no"))
         {
             command->SetMandatory();
         }
@@ -549,7 +549,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     if (item[WOLFLAUNCHER_JOBMEMORY])
     {
         LARGE_INTEGER li;
-        if (FAILED(hr = GetFileSizeFromArg(item[WOLFLAUNCHER_JOBMEMORY].strData.c_str(), li)))
+        if (FAILED(hr = GetFileSizeFromArg(item[WOLFLAUNCHER_JOBMEMORY].c_str(), li)))
             return hr;
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
@@ -558,7 +558,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
                 _L_,
                 E_INVALIDARG,
                 L"Specified size is too big for JOB MEMORY restriction (%s)",
-                item[WOLFLAUNCHER_JOBMEMORY].strData.c_str());
+                item[WOLFLAUNCHER_JOBMEMORY].c_str());
         }
 
         if (!m_Restrictions.ExtendedLimits)
@@ -573,7 +573,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     if (item[WOLFLAUNCHER_PROCESSMEMORY])
     {
         LARGE_INTEGER li;
-        if (FAILED(hr = GetFileSizeFromArg(item[WOLFLAUNCHER_PROCESSMEMORY].strData.c_str(), li)))
+        if (FAILED(hr = GetFileSizeFromArg(item[WOLFLAUNCHER_PROCESSMEMORY].c_str(), li)))
             return hr;
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
@@ -582,7 +582,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
                 _L_,
                 E_INVALIDARG,
                 L"Specified size is too big for PROCESS memory restriction (%s)",
-                item[WOLFLAUNCHER_PROCESSMEMORY].strData.c_str());
+                item[WOLFLAUNCHER_PROCESSMEMORY].c_str());
         }
         if (!m_Restrictions.ExtendedLimits)
         {
@@ -596,7 +596,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     if (item[WOLFLAUNCHER_ELAPSEDTIME])
     {
         LARGE_INTEGER li;
-        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_ELAPSEDTIME].strData.c_str(), li)))
+        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_ELAPSEDTIME].c_str(), li)))
             return hr;
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
@@ -605,7 +605,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
                 _L_,
                 E_INVALIDARG,
                 L"Specified size is too big for elapsed time restriction (%s)",
-                item[WOLFLAUNCHER_ELAPSEDTIME].strData.c_str());
+                item[WOLFLAUNCHER_ELAPSEDTIME].c_str());
         }
         // Elapsed time is expressed in minutes
         m_ElapsedTime = std::chrono::minutes(li.LowPart);
@@ -614,7 +614,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     if (item[WOLFLAUNCHER_JOBUSERTIME])
     {
         LARGE_INTEGER li;
-        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_JOBUSERTIME].strData.c_str(), li)))
+        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_JOBUSERTIME].c_str(), li)))
             return hr;
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
@@ -623,7 +623,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
                 _L_,
                 E_INVALIDARG,
                 L"Specified size is too big for JOB user time restriction (%s)",
-                item[WOLFLAUNCHER_JOBUSERTIME].strData.c_str());
+                item[WOLFLAUNCHER_JOBUSERTIME].c_str());
         }
         // CPU time is expressed in minutes
         if (!m_Restrictions.ExtendedLimits)
@@ -639,7 +639,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     if (item[WOLFLAUNCHER_PERPROCESSUSERTIME])
     {
         LARGE_INTEGER li;
-        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_PERPROCESSUSERTIME].strData.c_str(), li)))
+        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_PERPROCESSUSERTIME].c_str(), li)))
             return hr;
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
@@ -648,7 +648,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
                 _L_,
                 E_INVALIDARG,
                 L"Specified size is too big for PROCESS user time restriction (%s)",
-                item[WOLFLAUNCHER_PERPROCESSUSERTIME].strData.c_str());
+                item[WOLFLAUNCHER_PERPROCESSUSERTIME].c_str());
         }
 
         if (!m_Restrictions.ExtendedLimits)
@@ -669,7 +669,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     else if (item[WOLFLAUNCHER_CPU_RATE])
     {
         DWORD percentage = 0;
-        if (FAILED(hr = GetPercentageFromArg(item[WOLFLAUNCHER_CPU_RATE].strData.c_str(), percentage)))
+        if (FAILED(hr = GetPercentageFromArg(item[WOLFLAUNCHER_CPU_RATE].c_str(), percentage)))
             return hr;
 
         if (!m_Restrictions.CpuRateControl)
@@ -685,7 +685,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     else if (item[WOLFLAUNCHER_CPU_WEIGHT])
     {
         DWORD weight = 0;
-        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_CPU_RATE].strData.c_str(), weight)))
+        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_CPU_RATE].c_str(), weight)))
             return hr;
 
         if (!m_Restrictions.CpuRateControl)
@@ -785,7 +785,7 @@ HRESULT WolfExecution::SetJobConfigFromConfig(const ConfigItem& item)
         return E_INVALIDARG;
     }
     else
-        m_strKeyword = item[WOLFLAUNCHER_ARCHIVE_KEYWORD].strData;
+        m_strKeyword = item[WOLFLAUNCHER_ARCHIVE_KEYWORD];
 
     if (item[WOLFLAUNCHER_ARCHIVE_COMPRESSION])
         m_strCompressionLevel = (const std::wstring&)item[WOLFLAUNCHER_ARCHIVE_COMPRESSION];
@@ -808,11 +808,11 @@ HRESULT WolfExecution::SetRepeatBehaviourFromConfig(const ConfigItem& item)
 
     if (item)
     {
-        if (!_wcsicmp(item.strData.c_str(), L"CreateNew"))
+        if (!_wcsicmp(item.c_str(), L"CreateNew"))
             m_RepeatBehavior = CreateNew;
-        else if (!_wcsicmp(item.strData.c_str(), L"Overwrite"))
+        else if (!_wcsicmp(item.c_str(), L"Overwrite"))
             m_RepeatBehavior = Overwrite;
-        else if (!_wcsicmp(item.strData.c_str(), L"Once"))
+        else if (!_wcsicmp(item.c_str(), L"Once"))
             m_RepeatBehavior = Once;
         else
         {
@@ -820,7 +820,7 @@ HRESULT WolfExecution::SetRepeatBehaviourFromConfig(const ConfigItem& item)
                 _L_,
                 E_INVALIDARG,
                 L"Invalid repeat behaviour in config: %s (allowed values are CreateNew, Overwrite, Once)\r\n",
-                item.strData.c_str());
+                item.c_str());
             return E_INVALIDARG;
         }
     }

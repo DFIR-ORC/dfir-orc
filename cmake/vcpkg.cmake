@@ -12,24 +12,19 @@
 #
 #   ARGUMENTS
 #       VCPKG_PATH               path      vcpkg path
-#       BUILD                    ON/OFF    bootstrap and build vcpkg if needed
 #
 #   RESULT
 #       VCPKG_BOOTSTRAP_FOUND    BOOL      TRUE if vcpkg executable is found
 #
 function(vcpkg_check_boostrap)
     set(OPTIONS)
-    set(SINGLE PATH BUILD)
+    set(SINGLE PATH)
     set(MULTI)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
     set(VCPKG_EXE "${VCPKG_PATH}/vcpkg.exe")
     if(NOT EXISTS "${VCPKG_EXE}")
-        if(NOT VCPKG_BUILD)
-            message(FATAL_ERROR "Cannot find '${VCPKG_EXE}'")
-        endif()
-
         execute_process(
             COMMAND "bootstrap-vcpkg.bat"
             WORKING_DIRECTORY ${VCPKG_PATH}
@@ -56,15 +51,14 @@ endfunction()
 #       PACKAGES              list        list of packages to be installed
 #       ARCH                  x86/x64     build architecture
 #       USE_STATIC_CRT        ON/OFF      use static runtime
-#       BUILD                 ON/OFF      build packages if needed
 #
 #   RESULT
 #       VCPKG_PACKAGES_FOUND  BOOL        TRUE if pacakges are found
 #
 function(vcpkg_install_packages)
     set(OPTIONS)
-    set(SINGLE PATH ARCH USE_STATIC_CRT BUILD)
-    set(MULTI PACKAGES)
+    set(SINGLE PATH ARCH USE_STATIC_CRT)
+    set(MULTI PACKAGES OVERLAY_PORTS OVERLAY_TRIPLETS)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
@@ -83,21 +77,37 @@ function(vcpkg_install_packages)
     endforeach()
 
     list(JOIN PACKAGES " " PACKAGES_STR)
+
+    if(VCPKG_OVERLAY_PORTS)
+        foreach(PORT IN ITEMS ${VCPKG_OVERLAY_PORTS})
+            string(APPEND OVERLAY_PORTS_STR "--overlay-ports=${PORT} ")
+        endforeach()
+        string(STRIP ${OVERLAY_PORTS_STR} OVERLAY_PORTS_STR)
+    endif()
+
+    if(VCPKG_OVERLAY_TRIPLETS)
+        foreach(TRIPLET IN ITEMS ${VCPKG_OVERLAY_TRIPLETS})
+            string(APPEND OVERLAY_TRIPLETS_STR "--overlay-triplets=${TRIPLET} ")
+        endforeach()
+        string(STRIP ${OVERLAY_TRIPLETS_STR} OVERLAY_TRIPLETS_STR)
+    endif()
+
     message(STATUS "Install dependencies with: "
-        "\"${VCPKG_PATH}\\vcpkg.exe\" --vcpkg-root \"${VCPKG_PATH}\" "
-        "install ${PACKAGES_STR}\n"
+        "\"${VCPKG_PATH}\\vcpkg.exe\""
+            " --vcpkg-root \"${VCPKG_PATH}\" "
+            "${OVERLAY_PORTS_STR}"
+            "${OVERLAY_TRIPLETS_STR}"
+            "install ${PACKAGES_STR}\n"
     )
 
-    if(VCPKG_BUILD)
-        execute_process(
-            COMMAND "vcpkg" --vcpkg-root ${VCPKG_PATH} install ${PACKAGES}
-            WORKING_DIRECTORY ${VCPKG_PATH}
-            RESULT_VARIABLE RESULT
-        )
+    execute_process(
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} ${OVERLAY_TRIPLETS_STR} install ${PACKAGES}
+        WORKING_DIRECTORY ${VCPKG_PATH}
+        RESULT_VARIABLE RESULT
+    )
 
-        if(NOT "${RESULT}" STREQUAL "0")
-            message(FATAL_ERROR "Failed to install packages: ${RESULT}")
-        endif()
+    if(NOT "${RESULT}" STREQUAL "0")
+        message(FATAL_ERROR "Failed to install packages: ${RESULT}")
     endif()
 
     set(VCPKG_PACKAGES_FOUND TRUE PARENT_SCOPE)
@@ -125,7 +135,11 @@ function(vcpkg_setup_environment)
     # Deduce CMAKE_TOOLCHAIN_FILE from VCPKG_PATH
     if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
         set(CMAKE_TOOLCHAIN_FILE
-            ${VCPKG_PATH}\\scripts\\buildsystems\\vcpkg.cmake PARENT_SCOPE)
+            ${VCPKG_PATH}\\scripts\\buildsystems\\vcpkg.cmake
+            CACHE
+            STRING
+            "CMake toolchain file"
+            FORCE)
     endif()
 
     # Define the vcpkg triplet from the generator if not defined
@@ -133,9 +147,13 @@ function(vcpkg_setup_environment)
         if(VCPKG_USE_STATIC_CRT)
             set(CRT_LINK "-static")
         endif()
+
         set(VCPKG_TARGET_TRIPLET
-            "${VCPKG_ARCH}-windows${CRT_LINK}" PARENT_SCOPE
-        )
+            "${VCPKG_ARCH}-windows${CRT_LINK}"
+            CACHE
+            STRING
+            "VCPKG target triplet"
+            FORCE)
     endif()
 endfunction()
 
@@ -147,7 +165,8 @@ endfunction()
 #       PACKAGES              list        list of packages to be installed
 #       ARCH                  x86/x64     build architecture
 #       USE_STATIC_CRT        ON/OFF      use static runtime
-#       BUILD                 ON/OFF      build packages if needed
+#       OVERLAY_PORTS         path        list of overlay directories
+#       NO_UPGRADE            <option>    do not upgrade
 #
 #   RESULT
 #       VCPKG_FOUND           BOOL        TRUE if vcpkg is found and setup
@@ -155,23 +174,31 @@ endfunction()
 #       VCPKG_TARGET_TRIPLET  triplet     triplet to use
 #
 function(vcpkg_install)
-    set(OPTIONS)
-    set(SINGLE PATH ARCH USE_STATIC_CRT BUILD)
-    set(MULTI PACKAGES)
+    set(OPTIONS NO_UPGRADE)
+    set(SINGLE PATH ARCH USE_STATIC_CRT)
+    set(MULTI PACKAGES OVERLAY_PORTS OVERLAY_TRIPLETS)
 
     cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
 
     vcpkg_check_boostrap(
         PATH ${VCPKG_PATH}
-        BUILD ${VCPKG_BUILD}
     )
+
+    if(NOT NO_UPGRADE)
+        vcpkg_upgrade(
+            PATH ${VCPKG_PATH}
+            OVERLAY_PORTS ${VCPKG_OVERLAY_PORTS}
+            OVERLAY_TRIPLETS ${VCPKG_OVERLAY_TRIPLETS}
+        )
+    endif()
 
     vcpkg_install_packages(
        PATH ${VCPKG_PATH}
+       OVERLAY_PORTS ${VCPKG_OVERLAY_PORTS}
+       OVERLAY_TRIPLETS ${VCPKG_OVERLAY_TRIPLETS}
        PACKAGES ${VCPKG_PACKAGES}
        ARCH ${VCPKG_ARCH}
        USE_STATIC_CRT ${VCPKG_USE_STATIC_CRT}
-       BUILD ${VCPKG_BUILD}
     )
 
     vcpkg_setup_environment(
@@ -180,7 +207,73 @@ function(vcpkg_install)
         USE_STATIC_CRT ${VCPKG_USE_STATIC_CRT}
     )
 
-    set(CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE} PARENT_SCOPE)
-    set(VCPKG_TARGET_TRIPLET ${VCPKG_TARGET_TRIPLET} PARENT_SCOPE)
     set(VCPKG_FOUND TRUE PARENT_SCOPE)
+    message(STATUS "Using toolchain: " ${CMAKE_TOOLCHAIN_FILE})
+    message(STATUS "Using vcpkg triplet: " ${VCPKG_TARGET_TRIPLET})
+endfunction()
+
+
+#
+# vcpkg_upgrade: upgrade dependencies
+#
+#   ARGUMENTS
+#       VCPKG_PATH            path        vcpkg path
+#
+function(vcpkg_upgrade)
+    set(OPTIONS)
+    set(SINGLE PATH)
+    set(MULTI OVERLAY_PORTS OVERLAY_TRIPLETS)
+
+    cmake_parse_arguments(VCPKG "${OPTIONS}" "${SINGLE}" "${MULTI}" ${ARGN})
+
+    if(NOT EXISTS ${VCPKG_PATH}/vcpkg.exe)
+        return()
+    endif()
+
+    # Probe for "vcpkg.exe update available" message
+    execute_process(
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} install 7zip --dry-run
+        WORKING_DIRECTORY ${VCPKG_PATH}
+        OUTPUT_VARIABLE OUTPUT
+        ERROR_QUIET
+    )
+
+    string(FIND ${OUTPUT} "Use .\\bootstrap-vcpkg.bat to update." FIND_RESULT)
+    if(${FIND_RESULT} GREATER_EQUAL 0)
+        message(STATUS "vcpkg update is available")
+
+        execute_process(
+            COMMAND "bootstrap-vcpkg.bat"
+            WORKING_DIRECTORY ${VCPKG_PATH}
+            RESULT_VARIABLE RESULT
+        )
+
+        if(${RESULT} LESS 0)
+            message(FATAL_ERROR "Failed to upgrade bootstrap: ${RESULT}")
+        endif()
+    endif()
+
+    if(VCPKG_OVERLAY_PORTS)
+        foreach(PORT IN ITEMS ${VCPKG_OVERLAY_PORTS})
+            string(APPEND OVERLAY_PORTS_STR "--overlay-ports=${PORT} ")
+        endforeach()
+        string(STRIP ${OVERLAY_PORTS_STR} OVERLAY_PORTS_STR)
+    endif()
+
+    if(VCPKG_OVERLAY_TRIPLETS)
+        foreach(TRIPLET IN ITEMS ${VCPKG_OVERLAY_TRIPLETS})
+            string(APPEND OVERLAY_TRIPLETS_STR "--overlay-triplets=${TRIPLET} ")
+        endforeach()
+        string(STRIP ${OVERLAY_TRIPLETS_STR} OVERLAY_TRIPLETS_STR)
+    endif()
+
+    execute_process(
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} ${OVERLAY_TRIPLETS_STR} upgrade --no-dry-run
+        WORKING_DIRECTORY ${VCPKG_PATH}
+        RESULT_VARIABLE RESULT
+    )
+
+    if(${RESULT} LESS 0)
+        message(FATAL_ERROR "Failed to upgrade vcpkg: ${RESULT}")
+    endif()
 endfunction()

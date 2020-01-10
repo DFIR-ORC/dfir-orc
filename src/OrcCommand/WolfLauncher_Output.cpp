@@ -20,9 +20,9 @@ using namespace std;
 using namespace Orc;
 using namespace Orc::Command::Wolf;
 
-void Main::PrintHeader(LPCWSTR szToolName, LPCWSTR szVersion)
+void Main::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, LPCWSTR szVersion)
 {
-    log::Info(_L_, L"\r\nDFIR-Orc Version %s\r\n", szVersion);
+    log::Info(_L_, L"\r\nDFIR-Orc %s\r\n", szVersion);
 }
 
 void Main::PrintUsage()
@@ -34,7 +34,7 @@ void Main::PrintUsage()
         L"\t/config=<ConfigFile>        : Specify a XML config file\r\n"
         L"\t/local=<ConfigFile>         : Specify a XML local config file\r\n"
         L"\r\n"
-        L"\t/OutDir=<Folder>            : Output files will be created here\r\n"
+        L"\t/Out=<Folder>               : Output files will be created here\r\n"
         L"\t/utf8,/utf16		         : Select utf8 or utf16 encoding (default is utf8, this is for CSV "
         L"files "
         L"only)\r\n"
@@ -58,7 +58,7 @@ void Main::PrintUsage()
         L"DisplayRequired, UserPresent, AwayMode. Recommended: SystemRequired,AwayMode\r\n"
         L"\t/Computer=<ComputerName>    : Sets the OrcComputer name for all DFIR-Orc tools\r\n"
         L"\t/FullComputer=<ComputerName>: Sets the OrcFullComputer name for all DFIR-Orc tools\r\n"
-        L"\t/SystemType=<SystemType>    : Sets the system type as typically used in {SystemType} to name archives"
+        L"\t/SystemType=<SystemType>    : Sets the system type as typically used in {SystemType} to name archives\r\n"
         L"\t/Offline=<ImagePath>        : Sets the DFIR-Orc to work on a disk image, will set %OfflineLocation% and "
         L"explicitely select archive DFIR-ORC_Offline");
     PrintCommonUsage();

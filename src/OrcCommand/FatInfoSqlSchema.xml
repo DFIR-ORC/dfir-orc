@@ -5,7 +5,7 @@
   <table key="fileinfo">
 
     <utf8   name="ComputerName" maxlen="50" allows_null="no" />
-    <uint64 name="VolumeID"     allows_null="no" />
+    <uint64 name="VolumeID"     fmt="0x{:016X}" allows_null="no" />
 
     <utf16 name="File"       maxlen="256" />
     <utf16 name="ParentName" maxlen="256" />
@@ -63,7 +63,7 @@
 
   <table key="volstats">
     <utf8   name="ComputerName" maxlen="50" allows_null="no" />
-    <uint64 name="VolumeID" fmt="{:#016x}" allows_null="no" />
+    <uint64 name="VolumeID" fmt="0x{:016X}" allows_null="no" />
     <utf16  name="Location" maxlen="256" />
     <enum name="Type">
       <value index="0x00">UNKNOWN</value>

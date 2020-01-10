@@ -165,7 +165,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
             if (item[CONFIG_SAMPLE_FILEFIND].NodeList.empty())
             {
-                auto filespec = make_shared<FileFind::SearchTerm>(item.strData);
+                auto filespec = make_shared<FileFind::SearchTerm>(item);
                 filespec->Required = FileFind::SearchTerm::Criteria::NAME;
                 aSpec.Terms.push_back(filespec);
             }
@@ -253,7 +253,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     if (configitem[GETTHIS_HASH])
     {
         std::set<wstring> keys;
-        boost::split(keys, configitem[GETTHIS_HASH].strData, boost::is_any_of(L","));
+        boost::split(keys, (std::wstring_view) configitem[GETTHIS_HASH], boost::is_any_of(L","));
 
         for (const auto& key : keys)
         {
@@ -269,12 +269,12 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
 
         config.CryptoHashAlgs =
-            CryptoHashStream::GetSupportedAlgorithm(configitem[GETTHIS_HASH].strData.c_str());
+            CryptoHashStream::GetSupportedAlgorithm(configitem[GETTHIS_HASH].c_str());
     }
     if (configitem[GETTHIS_FUZZYHASH])
     {
         std::set<wstring> keys;
-        boost::split(keys, configitem[GETTHIS_FUZZYHASH].strData, boost::is_any_of(L","));
+        boost::split(keys, (std::wstring_view) configitem[GETTHIS_FUZZYHASH], boost::is_any_of(L","));
 
         for (const auto& key : keys)
         {

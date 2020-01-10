@@ -83,7 +83,7 @@ std::wstring FileCopyDownloadTask::GetCompletionCommandLine()
     HRESULT hr = E_FAIL;
 
     std::wstring strCmdSpec;
-    if (FAILED(hr = GetInputFile(L"%ComSpec%", strCmdSpec)))
+    if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
     {
         log::Error(_L_, hr, L"Failed to determine command\r\n");
     }
@@ -128,7 +128,7 @@ HRESULT FileCopyDownloadTask::Finalise()
     HRESULT hr = E_FAIL;
 
     std::wstring strCmdSpec;
-    if (FAILED(hr = GetInputFile(L"%ComSpec%", strCmdSpec)))
+    if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
     {
         log::Error(_L_, hr, L"Failed to determine command\r\n");
     }

@@ -132,7 +132,7 @@ public:
 
 public:
     static LPCWSTR ToolName() { return L"WolfLauncher"; }
-    static LPCWSTR ToolDescription() { return L"WolfLauncher - DFIR-ORC command scheduler"; }
+    static LPCWSTR ToolDescription() { return L"DFIR-ORC command scheduler"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#WOLFLAUNCHER_CONFIG"; }
@@ -148,7 +148,7 @@ public:
         : UtilitiesMain(std::move(pLog)) {};
 
     // defined in WolfLauncher_Output.cpp
-    virtual void PrintHeader(LPCWSTR szToolName, LPCWSTR szVersion);
+    virtual void PrintHeader(LPCWSTR szToolName, LPCWSTR szDescription, LPCWSTR szVersion);
     void PrintUsage();
     void PrintFooter();
     void PrintParameters();

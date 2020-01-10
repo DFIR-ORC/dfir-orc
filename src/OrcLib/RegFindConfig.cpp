@@ -25,7 +25,7 @@ HRESULT RegFindConfig::GetConfiguration(
 
     DBG_UNREFERENCED_PARAMETER(HivesLocation);
 
-    if (item[CONFIG_HIVE_FILEFIND].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_HIVE_FILEFIND])
     {
         for (const auto& configItem : item[CONFIG_HIVE_FILEFIND].NodeList)
         {
@@ -55,11 +55,11 @@ HRESULT RegFindConfig::GetConfiguration(
         return hr;
     }
 
-    if (item[CONFIG_HIVE_FILE].Status == ConfigItem::PRESENT)
+    if (item[CONFIG_HIVE_FILE])
     {
         for (const auto& configItem : item[CONFIG_HIVE_FILE].NodeList)
         {
-            HiveFiles.push_back(configItem.strData);
+            HiveFiles.push_back(configItem);
         }
     }
 

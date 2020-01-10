@@ -2,7 +2,7 @@
 //
 #include "resource.h"
 
-#include "ToolVersion.h"
+#include "ToolVersionRes.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -31,8 +31,8 @@ MAINICON                ICON                    "..\\..\\res\\DFIR-Orc.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 8,0,0,0
- PRODUCTVERSION 8,0,0,0
+ FILEVERSION ORC_VERSION
+ PRODUCTVERSION ORC_VERSION
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -48,11 +48,11 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
 			VALUE "FileDescription", "DFIR-ORC Utility"
-			VALUE "FileVersion", STRFILEVER
+			VALUE "FileVersion", ORC_FILEVER_STRING
 			VALUE "InternalName", "DFIR-ORC"
 			VALUE "OriginalFilename", "DFIR-ORC"
-			VALUE "ProductName", WSTRPRODUCTNAME
-			VALUE "ProductVersion", STRPRODUCTVER
+			VALUE "ProductName", ORC_PRODUCTNAME_STRINGW
+			VALUE "ProductVersion", ORC_PRODUCTVER_STRING
         END
     END
     BLOCK "VarFileInfo"
@@ -110,6 +110,8 @@ REGINFO_SQLSCHEMA       BINARY                  "..\\OrcCommand\\RegInfoSqlSchem
 FASTFIND_SQLSCHEMA      BINARY                  "..\\OrcCommand\\FastFindSqlSchema.xml"
 
 IMPORTDATA_SQLSCHEMA    BINARY                  "..\\OrcCommand\\ImportDataSqlSchema.xml"
+
+EXTRACTDATA_REPORT_SQLSCHEMA   BINARY           "..\\OrcCommand\\ExtractDataReportSqlSchema.xml"
 
 GETSECTORS_SQLSCHEMA    BINARY                  "..\\OrcCommand\\GetSectorsSchema.xml"
 

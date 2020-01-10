@@ -46,7 +46,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
                 m_Config.DefaultIntentions = static_cast<Intentions>(
                     m_Config.DefaultIntentions
                     | FileInfo::GetIntentions(
-                        _L_, item.strData.c_str(), FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                        _L_, item.c_str(), FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
         });
 
     std::for_each(begin(configitem[ADD].NodeList), end(configitem[ADD].NodeList), [this](const ConfigItem& item) {
@@ -135,9 +135,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
 boost::logic::tribool Main::GetResurrectFromConfig(const ConfigItem& config)
 {
-    if (config[FATINFO_RESURRECT].Status & ConfigItem::PRESENT)
+    if (config[FATINFO_RESURRECT])
     {
-        if (!_wcsnicmp(config[FATINFO_RESURRECT].strData.c_str(), L"no", wcslen(L"no")))
+        if (!_wcsnicmp(config[FATINFO_RESURRECT].c_str(), L"no", wcslen(L"no")))
             return false;
         else
             return true;
@@ -147,9 +147,9 @@ boost::logic::tribool Main::GetResurrectFromConfig(const ConfigItem& config)
 
 boost::logic::tribool Main::GetPopulateSystemObjectsFromConfig(const ConfigItem& config)
 {
-    if (config[FATINFO_POP_SYS_OBJ].Status & ConfigItem::PRESENT)
+    if (config[FATINFO_POP_SYS_OBJ])
     {
-        if (!_wcsnicmp(config[FATINFO_POP_SYS_OBJ].strData.c_str(), L"no", wcslen(L"no")))
+        if (!_wcsnicmp(config[FATINFO_POP_SYS_OBJ].c_str(), L"no", wcslen(L"no")))
             return false;
         else
             return true;

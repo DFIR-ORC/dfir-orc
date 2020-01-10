@@ -45,7 +45,7 @@ public:
 
 public:
     static LPCWSTR ToolName() { return L"GetComObjects"; }
-    static LPCWSTR ToolDescription() { return L"GetComObjects - COM Object enumeration and collection"; }
+    static LPCWSTR ToolDescription() { return L"COM Object enumeration and collection"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#GETCOMOBJECTS_CONFIG"; }
@@ -74,7 +74,7 @@ public:
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         return S_OK;
-    };  // No Local Configuration supprt
+    };  // No Local Configuration support
 
     HRESULT GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[]);
 

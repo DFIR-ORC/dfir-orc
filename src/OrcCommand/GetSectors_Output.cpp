@@ -27,7 +27,7 @@ void Main::PrintUsage()
         L"\t/LegacyBootCode       Predefined logic to dump MBR, VBRs and IPLs.\r\n"
         L"\t/UefiFull		      Dump the entire EFI partition.\r\n"
         L"\t/UefiFullMaxSize	  Maximum size to dump for the UEFI partition. A larger\r\n"
-		L"\t                        partition will be truncated. Default : 400 Mo.\r\n"
+		L"\t                        partition will be truncated. Default : 5 MB.\r\n"
         L"\t/SlackSpace           Predefined logic to dump sectors samples outside any\r\n"
         L"\t                        partition.\r\n"
         L"\t/SlackSpaceDumpSize   Size in bytes of a slackspace sample. It defaults\r\n"

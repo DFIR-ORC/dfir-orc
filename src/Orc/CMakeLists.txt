@@ -26,6 +26,7 @@ endif()
 
 set(SRC_SCHEMAS
     "../OrcCommand/DDSqlSchema.xml"
+    "../OrcCommand/ExtractDataReportSqlSchema.xml"
     "../OrcCommand/FastFindSqlSchema.xml"
     "../OrcCommand/FatInfoSqlSchema.xml"
     "../OrcCommand/GetComObjectsSqlSchema.xml"
@@ -117,11 +118,85 @@ if(${ORC_BUILD_SQL})
                 --compress=7z
                 $<TARGET_FILE:Orc>
     )
-
-
 endif()
 
+if(${ORC_BUILD_PARQUET})
+
+    if("${TARGET_ARCH}" STREQUAL "x64")
+        set(ORCPARQUET_VAR_NAME "ORCPARQUET_X64DLL")
+    elseif("${TARGET_ARCH}" STREQUAL "x86")
+        set(ORCPARQUET_VAR_NAME "ORCPARQUET_X86DLL")
+    else()
+        message(FATAL_ERROR "Unknown architecture: ${TARGET_ARCH}")
+    endif()
+
+
+    add_custom_command(
+        TARGET Orc
+        POST_BUILD
+        DEPENDS rcedit, OrcParquet
+        VERBATIM
+
+        COMMAND $<TARGET_FILE:rcedit>
+            set --type "VALUES"
+                --name "${ORCPARQUET_VAR_NAME}"
+                --value-utf16 "7z:#ORCPARQUET|OrcParquet.dll"
+                $<TARGET_FILE:Orc>
+
+        COMMAND $<TARGET_FILE:rcedit>
+            set --type "BINARY"
+                --name "ORCPARQUET"
+                --value-path $<TARGET_FILE:OrcParquet>
+                --compress=7z
+                $<TARGET_FILE:Orc>
+    )
+endif()
+
+if(${ORC_BUILD_APACHE_ORC})
+
+    if("${TARGET_ARCH}" STREQUAL "x64")
+        set(ORCOPTROWCOLUMN_VAR_NAME "ORCOPTROWCOLUMN_X64DLL")
+    elseif("${TARGET_ARCH}" STREQUAL "x86")
+        set(ORCOPTROWCOLUMN_VAR_NAME "ORCOPTROWCOLUMN_X86DLL")
+    else()
+        message(FATAL_ERROR "Unknown architecture: ${TARGET_ARCH}")
+    endif()
+
+    add_custom_command(
+        TARGET Orc
+        POST_BUILD
+        DEPENDS rcedit, OrcOptRowColumn
+        VERBATIM
+
+        COMMAND $<TARGET_FILE:rcedit>
+            set --type "VALUES"
+                --name "${ORCOPTROWCOLUMN_VAR_NAME}"
+                --value-utf16 "7z:#ORCOPTROWCOLUMN|OrcOptRowColumn.dll"
+                $<TARGET_FILE:Orc>
+
+        COMMAND $<TARGET_FILE:rcedit>
+            set --type "BINARY"
+                --name "ORCOPTROWCOLUMN"
+                --value-path $<TARGET_FILE:OrcOptRowColumn>
+                --compress=7z
+                $<TARGET_FILE:Orc>
+    )
+endif()
 
 set_property(TARGET Orc PROPERTY FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
 set_property(TARGET Orc PROPERTY OUTPUT_NAME "DFIR-Orc_${TARGET_ARCH}")
 set_property(TARGET Orc APPEND PROPERTY LINK_FLAGS "/DEBUG /MANIFESTUAC:\"level='requireAdministrator'\"" )
+
+foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
+    install(TARGETS Orc
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION bin/${CONFIG}
+    )
+
+    install(FILES $<TARGET_PDB_FILE:Orc>
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION pdb/${CONFIG} OPTIONAL
+    )
+endforeach()
+
+#install(SCRIPT)

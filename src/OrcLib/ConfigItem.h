@@ -117,6 +117,8 @@ public:  // METHODS
     explicit operator std::wstring() const { return strData; }
 
     LPCWSTR c_str() const { return strData.c_str(); }
+    size_t  size() const { return strData.size(); }
+    bool empty() const { return strData.empty(); }
 
     explicit operator DWORD() const;
     explicit operator DWORD32() const;
@@ -124,7 +126,7 @@ public:  // METHODS
 
     explicit operator bool() const
     {
-        if (Status == ConfigItemStatus::PRESENT)
+        if ((Status & ConfigItemStatus::PRESENT) == ConfigItemStatus::PRESENT)
             return true;
         return false;
     }

@@ -52,8 +52,8 @@ void Main::PrintParameters()
 void Main::PrintFooter()
 {
     log::Info(_L_, L"\r\n");
-    log::Info(_L_, L"Bytes processed     : %I64d\r\n", ullProcessedBytes);
-    log::Info(_L_, L"Lines imported      : %I64d\r\n", ullImportedLines);
+    log::Info(_L_, L"Bytes processed     : %I64d\r\n", m_ullProcessedBytes);
+    log::Info(_L_, L"Lines imported      : %I64d\r\n", m_ullImportedLines);
     log::Info(_L_, L"\r\n");
     PrintExecutionTime();
 }

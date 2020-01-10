@@ -134,7 +134,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                         }
                         else
                         {
-                            if (FAILED(hr = ::GetInputFile(pEquals + 1, strConfigFile)))
+                            if (FAILED(hr = ::ExpandFilePath(pEquals + 1, strConfigFile)))
                             {
                                 strConfigResource = pEquals + 1;
                                 if (EmbeddedResource::IsResourceBased(strConfigResource))
@@ -316,14 +316,14 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
 HRESULT ConfigFile::CheckConfig(const ConfigItem& config, const logger& pLog)
 {
 
-    if (config.Flags == ConfigItem::MANDATORY && !(config.Status & ConfigItem::PRESENT))
+    if (config.Flags == ConfigItem::MANDATORY && !config)
     {
         log::Error(pLog, E_FAIL, L"Element %s is mandatory and missing\r\n", config.strName.c_str());
         return E_FAIL;
     }
     HRESULT hr = S_OK;
 
-    if (config.Status & ConfigItem::PRESENT)
+    if (config)
     {
         switch (config.Type)
         {
@@ -367,9 +367,9 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent, const 
                 szIndent,
                 config.strName.c_str(),
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
-                (config.Status & ConfigItem::PRESENT) ? L"Present" : L"Absent");
-            if (!config.strData.empty())
-                log::Info(pLog, L"%s\tDATA: \"%s\" \r\n", szIndent, config.strData.c_str());
+                config ? L"Present" : L"Absent");
+            if (!config.empty())
+                log::Info(pLog, L"%s\tDATA: \"%s\" \r\n", szIndent, config.c_str());
 
             std::for_each(begin(config.SubItems), end(config.SubItems), [dwIndent, &pLog](const ConfigItem& item) {
                 PrintConfig(item, dwIndent + 1, pLog);
@@ -382,9 +382,9 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent, const 
                 L"%sATTRIBUTE: \"%s=%s\" %s %s\r\n",
                 szIndent,
                 config.strName.c_str(),
-                config.strData.c_str(),
+                config.c_str(),
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
-                (config.Status & ConfigItem::PRESENT) ? L"Present" : L"Absent");
+                config ? L"Present" : L"Absent");
             break;
         case ConfigItem::NODELIST:
         {
@@ -394,7 +394,7 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent, const 
                 szIndent,
                 config.strName.c_str(),
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
-                (config.Status & ConfigItem::PRESENT) ? L"Present" : L"Absent");
+                config? L"Present" : L"Absent");
 
             std::for_each(begin(config.NodeList), end(config.NodeList), [dwIndent, &pLog](const ConfigItem& item) {
                 PrintConfig(item, dwIndent + 1, pLog);
@@ -410,23 +410,23 @@ HRESULT ConfigFile::ConfigureLogging(const ConfigItem& item, const logger& pLog)
 {
     HRESULT hr = E_FAIL;
 
-    if (item[CONFIG_DEBUG].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_DEBUG])
         pLog->SetDebugLog(true);
 
-    if (item[CONFIG_VERBOSE].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_VERBOSE])
         pLog->SetVerboseLog(true);
 
-    if (item[CONFIG_NOCONSOLE].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_NOCONSOLE])
         pLog->SetConsoleLog(false);
 
-    if (item[CONFIG_LOGFILE].Status & ConfigItem::PRESENT)
+    if (item[CONFIG_LOGFILE])
     {
         wstring strLogFile;
-        if (SUCCEEDED(hr = ::GetOutputFile(item.SubItems[CONFIG_LOGFILE].strData.c_str(), strLogFile)))
+        if (SUCCEEDED(hr = ::GetOutputFile(item.SubItems[CONFIG_LOGFILE].c_str(), strLogFile)))
             pLog->LogToFile(strLogFile.c_str());
         else
             log::Error(
-                pLog, E_FAIL, L"Invalid log file specified \"%s\"\r\n", item.SubItems[CONFIG_LOGFILE].strData.c_str());
+                pLog, E_FAIL, L"Invalid log file specified \"%s\"\r\n", item.SubItems[CONFIG_LOGFILE].c_str());
     }
 
     return S_OK;
@@ -479,38 +479,38 @@ HRESULT ConfigFile::GetOutputDir(
 {
     HRESULT hr = E_FAIL;
 
-    if (item.Status == ConfigItem::PRESENT)
+    if (item)
     {
-        if (FAILED(hr = ::GetOutputDir(item.strData.c_str(), outputDir)))
+        if (FAILED(hr = ::GetOutputDir(item.c_str(), outputDir)))
         {
-            log::Error(_L_, hr, L"Error in specified outputdir \"%s\" in config file\r\n", item.strData.c_str());
+            log::Error(_L_, hr, L"Error in specified outputdir \"%s\" in config file\r\n", item.c_str());
             return hr;
         }
 
         dwXOR = 0L;
 
-        if (item.SubItems[CONFIG_XORPATTERN].Status == ConfigItem::PRESENT)
+        if (item.SubItems[CONFIG_XORPATTERN])
         {
-            if (FAILED(hr = GetIntegerFromHexaString(item.SubItems[CONFIG_XORPATTERN].strData.c_str(), dwXOR)))
+            if (FAILED(hr = GetIntegerFromHexaString(item.SubItems[CONFIG_XORPATTERN].c_str(), dwXOR)))
             {
                 log::Error(
                     _L_,
                     hr,
                     L"Invalid XOR pattern for outputdir in config file: \"%s\"\r\n",
-                    item.SubItems[CONFIG_XORPATTERN].strData.c_str());
+                    item.SubItems[CONFIG_XORPATTERN].c_str());
                 return hr;
             }
         }
         anEncoding = OutputSpec::Encoding::UTF8;
         if (item.SubItems.size() > CONFIG_CSVENCODING)
         {
-            if (item.SubItems[CONFIG_CSVENCODING].Status == ConfigItem::PRESENT)
+            if (item.SubItems[CONFIG_CSVENCODING])
             {
-                if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].strData.c_str(), L"utf8", wcslen(L"utf8")))
+                if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].c_str(), L"utf8", wcslen(L"utf8")))
                 {
                     anEncoding = OutputSpec::Encoding::UTF8;
                 }
-                else if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].strData.c_str(), L"utf16", wcslen(L"utf16")))
+                else if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].c_str(), L"utf16", wcslen(L"utf16")))
                 {
                     anEncoding = OutputSpec::Encoding::UTF16;
                 }
@@ -520,7 +520,7 @@ HRESULT ConfigFile::GetOutputDir(
                         _L_,
                         hr,
                         L"Invalid encoding for outputdir in config file: %s\r\n",
-                        item.SubItems[CONFIG_CSVENCODING].strData.c_str());
+                        item.SubItems[CONFIG_CSVENCODING].c_str());
                     return hr;
                 }
             }
@@ -566,9 +566,9 @@ HRESULT ConfigFile::GetOutputFile(const ConfigItem& item, std::wstring& outputFi
 {
     HRESULT hr = E_FAIL;
 
-    if (item.Status == ConfigItem::PRESENT)
+    if (item)
     {
-        if (FAILED(hr = ::GetOutputFile(item.strData.c_str(), outputFile)))
+        if (FAILED(hr = ::GetOutputFile(item.c_str(), outputFile)))
         {
             log::Error(_L_, hr, L"Error in specified output file in config file (0x%lx)\r\n");
             return hr;
@@ -577,13 +577,13 @@ HRESULT ConfigFile::GetOutputFile(const ConfigItem& item, std::wstring& outputFi
         if (item.SubItems.size() > CONFIG_CSVENCODING
             && !_wcsicmp(item.SubItems[CONFIG_CSVENCODING].strName.c_str(), L"encoding"))
         {
-            if (item.SubItems[CONFIG_CSVENCODING].Status == ConfigItem::PRESENT)
+            if (item.SubItems[CONFIG_CSVENCODING])
             {
-                if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].strData.c_str(), L"utf8", wcslen(L"utf8")))
+                if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].c_str(), L"utf8", wcslen(L"utf8")))
                 {
                     anEncoding = OutputSpec::Encoding::UTF8;
                 }
-                else if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].strData.c_str(), L"utf16", wcslen(L"utf16")))
+                else if (!_wcsnicmp(item.SubItems[CONFIG_CSVENCODING].c_str(), L"utf16", wcslen(L"utf16")))
                 {
                     anEncoding = OutputSpec::Encoding::UTF16;
                 }
@@ -593,7 +593,7 @@ HRESULT ConfigFile::GetOutputFile(const ConfigItem& item, std::wstring& outputFi
                         _L_,
                         hr,
                         L"Invalid encoding for outputcab in config file: %s\r\n",
-                        item.SubItems[CONFIG_CSVENCODING].strData.c_str());
+                        item.SubItems[CONFIG_CSVENCODING].c_str());
                     return hr;
                 }
             }
@@ -627,12 +627,12 @@ HRESULT ConfigFile::GetInputFile(const ConfigItem& item, std::wstring& inputFile
 {
     HRESULT hr = E_FAIL;
 
-    if (item.Status == ConfigItem::PRESENT)
+    if (item)
     {
-        if (FAILED(hr = ::GetInputFile(item.strData.c_str(), inputFile)))
+        if (FAILED(hr = ::ExpandFilePath(item.c_str(), inputFile)))
         {
             log::Error(
-                _L_, hr, L"Error in specified inputfile in config file \"%s\" (0x%lx)\r\n", item.strData.c_str());
+                _L_, hr, L"Error in specified inputfile in config file \"%s\" (0x%lx)\r\n", item.c_str());
             return hr;
         }
     }
@@ -648,7 +648,7 @@ HRESULT ConfigFile::SetInputFile(ConfigItem& item, const std::wstring& inputFile
 
 HRESULT ConfigFile::GetSQLConnectionString(const ConfigItem& item, std::wstring& strConnectionString)
 {
-    if (item.SubItems[CONFIG_SQL_CONNECTIONSTRING].Status == ConfigItem::PRESENT)
+    if (item.SubItems[CONFIG_SQL_CONNECTIONSTRING])
     {
         strConnectionString = item.SubItems[CONFIG_SQL_CONNECTIONSTRING].strData;
     }
@@ -659,7 +659,7 @@ HRESULT ConfigFile::GetSQLTableName(const ConfigItem& item, const LPWSTR szTable
 {
     const ConfigItem& tables = item.SubItems[CONFIG_SQL_TABLE];
 
-    if (tables.Status == ConfigItem::PRESENT && tables.Type == ConfigItem::NODELIST)
+    if (tables && tables.Type == ConfigItem::NODELIST)
     {
         auto it = begin(tables.NodeList);
 
@@ -691,9 +691,9 @@ HRESULT ConfigFile::GetSQLTableName(const ConfigItem& item, const LPWSTR szTable
         {
             for (; it != end(tables.NodeList); ++it)
             {
-                if (it->SubItems[CONFIG_SQL_TABLEKEY].Status == ConfigItem::PRESENT)
+                if (it->SubItems[CONFIG_SQL_TABLEKEY])
                 {
-                    if (!_wcsicmp(it->SubItems[CONFIG_SQL_TABLEKEY].strData.c_str(), szTableKey))
+                    if (!_wcsicmp(it->SubItems[CONFIG_SQL_TABLEKEY].c_str(), szTableKey))
                     {
                         // we stop at the very first table found with the required name
                         break;

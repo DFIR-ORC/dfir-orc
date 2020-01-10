@@ -31,7 +31,7 @@ int main( const std::vector< std::string >& args )
     app.require_subcommand( 1 );
 
     // TODO: add option to set log verbose/debug
-    spdlog::set_level( spdlog::level::debug );
+    spdlog::set_level( spdlog::level::info );
 
     rcedit::CmdList cmdList;
     cmdList.Register( app );

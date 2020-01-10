@@ -281,7 +281,7 @@ Orc::TableOutput::OptRowColumn::Writer::WriteToStream(const std::shared_ptr<Byte
         return hr;
 
     orc::WriterOptions options;
-    options.setFileVersion(orc::FileVersion(0, 12));
+    options.setFileVersion(orc::FileVersion(0, 11));
     options.setCompression(orc::CompressionKind::CompressionKind_ZLIB);
 
     m_Writer = orc::createWriter(*m_OrcSchema, m_OrcStream.get(), options);

@@ -642,7 +642,7 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
         log::Error(
             _L_,
             E_INVALIDARG,
-            L"An error occured when evaluating output for option /%s=%s\r\n",
+            L"An error occurred when evaluating output for option /%s=%s\r\n",
             szOption,
             pEquals + 1);
         return false;
@@ -707,7 +707,7 @@ bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
         return false;
     }
 
-    if (auto hr = GetInputFile(pEquals + 1, strOutputFile); FAILED(hr))
+    if (auto hr = ExpandFilePath(pEquals + 1, strOutputFile); FAILED(hr))
     {
         log::Error(_L_, E_INVALIDARG, L"Invalid input file specified: %s\r\n", pEquals + 1);
         return false;
@@ -1141,10 +1141,17 @@ bool UtilitiesMain::UsageOption(LPCWSTR szArg)
     return false;
 }
 
-void UtilitiesMain::PrintHeader(LPCWSTR szToolName, LPCWSTR szVersion)
+void UtilitiesMain::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, LPCWSTR szVersion)
 {
     if (szToolName)
-        log::Info(_L_, L"\r\n%s Version %s\r\n", szToolName, szVersion);
+    {
+        log::Info(_L_, L"\r\n%s %s\r\n", szToolName, szVersion);
+    }
+
+    if (szToolDescription)
+    {
+        log::Info(_L_, L"%s\r\n", szToolDescription);
+    }
 }
 
 UtilitiesMain::~UtilitiesMain(void) {}

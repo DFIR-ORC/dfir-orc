@@ -5,7 +5,7 @@
     <table key="fileinfo">
 
         <utf8   name="ComputerName" maxlen="50" allows_null="no" />
-        <binary name="VolumeID"     len="8" allows_null="no" fmt="{:#016x}" />
+        <uint64 name="VolumeID"     fmt="0x{:016X}" />
 
         <utf16 name="File" maxlen="256" />
         <utf16 name="ParentName" maxlen="4000" />
@@ -25,9 +25,9 @@
         <timestamp name="FileNameLastAccessDate"           />
         <timestamp name="FileNameLastAttrModificationDate" />
 
-        <uint64 name="USN" fmt="{:#016x}" allows_null="no" />
-        <uint64 name="FRN" fmt="{:#016x}" allows_null="no" />
-        <uint64 name="ParentFRN" fmt="{:#016x}" />
+        <uint64 name="USN" fmt="0x{:016X}" allows_null="no" />
+        <uint64 name="FRN" fmt="0x{:016X}" allows_null="no" />
+        <uint64 name="ParentFRN" fmt="0x{:016X}" />
 
         <utf16 name="ExtendedAttribute" maxlen="256" />
         <utf16 name="ADS"               maxlen="256" />
@@ -98,9 +98,9 @@
 
     <table key="attrinfo">
         <utf8 name="ComputerName" maxlen="50" />
-        <uint64 name="VolumeID" fmt="{:#016x}" />
-        <uint64 name="FRN" fmt="{:#016x}" />
-        <uint64 name="HostFRN" fmt="{:#016x}" />
+        <uint64 name="VolumeID" fmt="0x{:016X}" />
+        <uint64 name="FRN" fmt="0x{:016X}" />
+        <uint64 name="HostFRN" fmt="0x{:016X}" />
         <enum name="Type">
             <value index="0x10">$STANDARD_INFORMATION</value>
             <value index="0x20">$ATTRIBUTE_LIST</value>
@@ -129,16 +129,16 @@
         <uint32 name="Flags" />
         <uint32 name="Instance" />
         <uint32 name="Index" />
-        <uint64 name="LowestVCN" fmt="{:#016x}" />
+        <uint64 name="LowestVCN" fmt="0x{:016X}" />
         <guid   name="SnapshotID" allows_null="no" />
     </table>
 
     <table key="i30info">
         <utf8   name="ComputerName" maxlen="50" allows_null="no" />
-        <uint64 name="VolumeID" fmt="{:#016x}" allows_null="no" />
+        <uint64 name="VolumeID" fmt="0x{:016X}" allows_null="no" />
         <bool   name="CarvedEntry" />
-        <uint64 name="FRN" fmt="{:#016x}" allows_null="no" />
-        <uint64 name="ParentFRN" fmt="{:#016x}" />
+        <uint64 name="FRN" fmt="0x{:016X}" allows_null="no" />
+        <uint64 name="ParentFRN" fmt="0x{:016X}" />
         <utf16  name="Name" maxlen="256" />
         <uint32 name="FilenameFlags"  />
         <timestamp name="FileNameCreationDate" />
@@ -163,14 +163,14 @@
             <value index="0x80">FileNameLastAttrModificationDate</value>
         </enum>
         <timestamp name="TimeStamp" allows_null="no" />
-        <uint64 name="FRN" fmt="{:#016x}" allows_null="no"/>
+        <uint64 name="FRN" fmt="0x{:016X}" allows_null="no"/>
         <uint32 name="FilenameID" allows_null="no" />
         <guid   name="SnapshotID" allows_null="no" />
     </table>
 
     <table key="secdescr">
         <utf8 name="ComputerName" maxlen="50" allows_null="no" />
-        <uint64 name="VolumeID" fmt="{:#016x}" allows_null="no" />
+        <uint64 name="VolumeID" fmt="0x{:016X}" allows_null="no" />
         <uint32 name="ID" allows_null="no" />
         <uint32 name="Hash" />
         <utf8   name="SDDL" maxlen="4K" />
@@ -182,7 +182,7 @@
 
     <table key="volstats">
         <utf8   name="ComputerName" maxlen="50" allows_null="no" />
-        <uint64 name="VolumeID" fmt="{:#016x}" allows_null="no" />
+        <uint64 name="VolumeID" fmt="0x{:016X}" allows_null="no" />
         <utf16  name="Location" maxlen="256" />
         <enum name="Type">
             <value index="0x00">UNKNOWN</value>

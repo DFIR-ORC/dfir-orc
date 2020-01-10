@@ -101,7 +101,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                     }
                     else
                     {
-                        if (SUCCEEDED(GetInputFile(pEquals + 1, config.autorunsOutput.Path)))
+                        if (SUCCEEDED(ExpandFilePath(pEquals + 1, config.autorunsOutput.Path)))
                         {
                             config.bLoadAutoruns = true;
                             config.bKeepAutorunsXML = false;
@@ -257,7 +257,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 }
                 break;
             default:
-                log::Error(_L_, hr, L"Unsupported architechture %d\r\n", wArch);
+                log::Error(_L_, hr, L"Unsupported architecture %d\r\n", wArch);
                 return hr;
         }
 

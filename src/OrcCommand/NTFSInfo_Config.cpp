@@ -43,7 +43,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
                 config.DefaultIntentions = static_cast<Intentions>(
                     config.DefaultIntentions
                     | FileInfo::GetIntentions(
-                        _L_, item.strData.c_str(), NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                        _L_, item.c_str(), NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
         });
 
     std::for_each(begin(configitem[ADD].NodeList), end(configitem[ADD].NodeList), [this](const ConfigItem& item) {
@@ -196,7 +196,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         DWORD dwComputerLen = MAX_PATH;
 
         if (auto actualLen =
-                ExpandEnvironmentStringsW(configitem[NTFSINFO_COMPUTER].strData.c_str(), szComputerName, dwComputerLen);
+                ExpandEnvironmentStringsW(configitem[NTFSINFO_COMPUTER].c_str(), szComputerName, dwComputerLen);
             actualLen > 0)
         {
             config.strComputerName.assign(szComputerName, actualLen - 1);

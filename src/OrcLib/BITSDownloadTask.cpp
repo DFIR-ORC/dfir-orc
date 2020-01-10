@@ -83,7 +83,7 @@ std::wstring BITSDownloadTask::GetCompletionCommandLine(const GUID& JobId)
     wstringstream cmdLine;
 
     std::wstring strCmdSpec;
-    if (FAILED(hr = GetInputFile(L"%ComSpec%", strCmdSpec)))
+    if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
     {
         log::Error(_L_, hr, L"Failed to determine command\r\n");
     }
@@ -216,7 +216,7 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
     else
     {
         std::wstring strCmdSpec;
-        if (FAILED(hr = GetInputFile(L"%ComSpec%", strCmdSpec)))
+        if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
         {
             log::Error(_L_, hr, L"Failed to determine command\r\n");
         }

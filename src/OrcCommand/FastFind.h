@@ -287,7 +287,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"FastFind"; }
-    static LPCWSTR ToolDescription() { return L"FastFind - IOC Finder"; }
+    static LPCWSTR ToolDescription() { return L"IOC Finder"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#FASTFIND_CONFIG"; }
@@ -309,7 +309,7 @@ public:
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         return S_OK;
-    };  // No Local Configuration supprt
+    };  // No Local Configuration support
 
     HRESULT GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[]);
 

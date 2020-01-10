@@ -147,7 +147,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"GetSectors"; }
-    static LPCWSTR ToolDescription() { return L"GetSectors - Boot sectors, slack space collection"; }
+    static LPCWSTR ToolDescription() { return L"Boot sectors, slack space collection"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return nullptr; }
@@ -174,7 +174,7 @@ public:
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         return S_OK;
-    };  // No Local Configuration supprt
+    };  // No Local Configuration support
 
     HRESULT GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[]);
     HRESULT CheckConfiguration();

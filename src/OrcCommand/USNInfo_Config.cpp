@@ -52,7 +52,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
 
     config.bCompactForm = false;
-    if (configitem[USNINFO_COMPACT].Status & ConfigItem::PRESENT)
+    if (configitem[USNINFO_COMPACT])
         config.bCompactForm = true;
 
     return S_OK;

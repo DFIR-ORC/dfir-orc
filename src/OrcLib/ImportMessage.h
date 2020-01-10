@@ -85,7 +85,7 @@ public:
         if (m_Request > message.m_Request)
             return true;
 
-        return m_item.Format > message.m_item.Format;
+        return m_item.format > message.m_item.format;
     }
 
     ~ImportMessage(void);

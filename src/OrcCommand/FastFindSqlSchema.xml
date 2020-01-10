@@ -5,10 +5,10 @@
     <table key="FastFindFileSystem">
 
         <utf8  name="ComputerName" maxlen="50" />
-        <uint64 name="VolumeID"     allows_null="no" fmt="{:#016x}" />
+        <uint64 name="VolumeID"     allows_null="no" fmt="0x{:016X}" />
         <utf16 name="FullName"     maxlen="32k" />
-        <uint64 name="FRN" fmt="{:#016x}" allows_null="no" />
-        <uint64 name="ParentFRN" fmt="{:#016x}" />
+        <uint64 name="FRN" fmt="0x{:016X}" allows_null="no" />
+        <uint64 name="ParentFRN" fmt="0x{:016X}" />
 
         <uint64 name="SizeInBytes" />
 

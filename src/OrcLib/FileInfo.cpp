@@ -282,7 +282,7 @@ HRESULT FileInfo::WriteFileInformation(
         catch (Orc::Exception& e)
         {
             e.PrintMessage(_L_);
-            log::Error(_L_, E_FAIL, L"\r\nError while writing column %s\r\n", output.GetCurrentColumn().ColumnName);
+            log::Error(_L_, E_FAIL, L"\r\nError while writing column %s\r\n", output.GetCurrentColumn().ColumnName.c_str());
             output.AbandonColumn();
         }
 

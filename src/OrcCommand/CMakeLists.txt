@@ -12,11 +12,21 @@ orc_add_compile_options()
 
 find_package(boost REQUIRED)
 
+set(GENERATED_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
+
+configure_file(
+    ToolVersionRes.h.in
+    "${GENERATED_SRC_DIR}/ToolVersionRes.h"
+    @ONLY
+)
+
 set(SRC
     "FileInfoCommon.cpp"
     "FileInfoCommon.h"
     "OrcCommand.h"
     "ToolVersion.h"
+    "ToolVersion.cpp"
+    "${GENERATED_SRC_DIR}/ToolVersionRes.h"
     "UtilitiesMain.cpp"
     "UtilitiesMain.h"
     "UtilitiesMain_Config.cpp"
@@ -48,6 +58,18 @@ set(SRC_EMPTYTOOL
 )
 
 source_group(EmptyTool FILES ${SRC_EMPTYTOOL})
+
+set(SRC_EXTRACTDATA
+    "ConfigFile_ExtractData.cpp"
+    "ConfigFile_ExtractData.h"
+    "ExtractData.h"
+    "ExtractData_Config.cpp"
+    "ExtractData_Output.cpp"
+    "ExtractData_Run.cpp"
+    "ExtractDataReportSqlSchema.xml"
+)
+
+source_group(ExtractData FILES ${SRC_EXTRACTDATA})
 
 set(SRC_FASTFIND
     "ConfigFile_FastFind.cpp"
@@ -235,6 +257,7 @@ add_library(OrcCommand
         ${SRC}
         ${SRC_DD}
         ${SRC_EMPTYTOOL}
+        ${SRC_EXTRACTDATA}
         ${SRC_FASTFIND}
         ${SRC_FATINFO}
         ${SRC_GETCOMOBJECTS}
@@ -252,9 +275,14 @@ add_library(OrcCommand
         ${SRC_WOLFLAUNCHER}
 )
 
-target_include_directories(OrcCommand PRIVATE ${Boost_INCLUDE_DIRS})
-
-target_include_directories(OrcCommand INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(OrcCommand
+    PRIVATE
+        ${Boost_INCLUDE_DIRS}
+    PUBLIC
+        ${GENERATED_SRC_DIR}
+    INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
 target_link_libraries(OrcCommand PUBLIC OrcLib)
 

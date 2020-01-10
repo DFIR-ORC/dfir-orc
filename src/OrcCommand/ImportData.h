@@ -5,6 +5,7 @@
 //
 // Author(s): Jean Gautier (ANSSI)
 //
+#pragma once
 
 #include "OrcCommand.h"
 
@@ -39,7 +40,7 @@ public:
         logger _L_;
 
     public:
-        std::wstring NameMatch;
+        std::wstring matchRegex;  // filename regex
         std::wstring InputDirectory;
         bool bRecursive = false;
 
@@ -48,7 +49,7 @@ public:
         std::wstring BeforeStatement;
         std::wstring AfterStatement;
 
-        std::wstring Description() { return InputDirectory + L"\\" + NameMatch; }
+        std::wstring Description() { return InputDirectory + L"\\" + matchRegex; }
 
         InputItem(InputItem&& other) noexcept = default;
         InputItem(logger pLog)
@@ -61,7 +62,8 @@ public:
     public:
         Configuration(logger pLog)
         {
-            Output.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL);
+            reportOutput.supportedTypes = static_cast<OutputSpec::Kind>(
+                OutputSpec::Kind::SQL | OutputSpec::Kind::CSV | OutputSpec::Kind::TSV | OutputSpec::Kind::TableFile);
             importOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL);
             extractOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory);
             tempOutput.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory);
@@ -69,7 +71,7 @@ public:
 
         DWORD dwConcurrency = 2;
 
-        bool bResursive = false;
+        bool bRecursive = false;
         bool bDontExtract = false;
         bool bDontImport = false;
 
@@ -80,7 +82,7 @@ public:
 
         std::vector<TableDescription> m_Tables;
 
-        OutputSpec Output;
+        OutputSpec reportOutput;
         OutputSpec extractOutput;
         OutputSpec importOutput;
         OutputSpec tempOutput;
@@ -88,7 +90,7 @@ public:
 
 public:
     static LPCWSTR ToolName() { return L"ImportData"; }
-    static LPCWSTR ToolDescription() { return L"ImportData - Import collected data"; }
+    static LPCWSTR ToolDescription() { return L"Import collected data"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#IMPORTDATA_CONFIG"; }
@@ -114,7 +116,7 @@ public:
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         return S_OK;
-    };  // No Local Configuration supprt
+    };  // No Local Configuration support
 
     HRESULT GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
     HRESULT GetExtractItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item);
@@ -132,13 +134,11 @@ private:
     Configuration config;
 
     ImportMessage::PriorityMessageBuffer m_importRequestBuffer;
-    std::unique_ptr<Concurrency::call<ImportNotification::Notification>> m_importNotification;
-
-    std::unique_ptr<ImportAgent> m_importAgent;
+    std::unique_ptr<Concurrency::call<ImportNotification::Notification>> m_notificationCb;
 
     // Statictics
-    ULONGLONG ullProcessedBytes = 0LL;
-    ULONGLONG ullImportedLines = 0LL;
+    ULONGLONG m_ullProcessedBytes = 0LL;
+    ULONGLONG m_ullImportedLines = 0LL;
 
     HRESULT AddDirectoryForInput(const std::wstring& dir, const InputItem& input, std::vector<ImportItem>& input_paths);
     HRESULT AddFileForInput(const std::wstring& file, const InputItem& input, std::vector<ImportItem>& input_paths);

@@ -94,40 +94,71 @@ public:
 
     STDMETHOD(WriteString)(const std::string& strString) override final
     {
-        if (auto [hr, wstr] = AnsiToWide(_L_, strString); FAILED(hr))
+        if (strString.empty())
+        {
+            return WriteNothing();
+        }
+
+        auto [hr, wstr] = AnsiToWide(_L_, strString);
+        if (FAILED(hr))
+        {
             return hr;
-        else
-            return WriteColumn(wstr);
+        }
+
+        return WriteColumn(wstr);
     }
     STDMETHOD(WriteString)(const std::string_view& strString) override final
     {
-        if (auto [hr, wstr] = AnsiToWide(_L_, strString); FAILED(hr))
+        if (strString.empty())
+        {
+            return WriteNothing();
+        }
+
+        auto [hr, wstr] = AnsiToWide(_L_, strString);
+        if (FAILED(hr))
+        {
             return hr;
-        else
-            return WriteColumn(wstr);
-    }
-    STDMETHOD(WriteString)(const CHAR* szString) override final
-    {
-        if (auto [hr, wstr] = AnsiToWide(_L_, szString); FAILED(hr))
-            return hr;
-        else
-            return WriteColumn(wstr);
-    }
-    STDMETHOD(WriteCharArray)(const CHAR* szArray, DWORD dwCharCount) override final
-    {
-        if (auto [hr, wstr] = AnsiToWide(_L_, std::string_view(szArray, dwCharCount)); FAILED(hr))
-            return hr;
-        else
-            return WriteColumn(wstr);
+        }
+
+        return WriteColumn(wstr);
     }
 
-    STDMETHOD(WriteString)(const std::wstring& strString) override final { return WriteColumn(strString); }
-    STDMETHOD(WriteString)(const std::wstring_view& strString) override final { return WriteColumn(strString); }
-    STDMETHOD(WriteString)(const WCHAR* szString) override final { return WriteColumn(szString); }
+    STDMETHOD(WriteString)(const CHAR* szString) override final
+    {
+        return WriteString(std::string_view(szString));
+    }
+
+    STDMETHOD(WriteCharArray)(const CHAR* szArray, DWORD dwCharCount) override final
+    {
+        return WriteString(std::string_view(szArray, dwCharCount));
+    }
+
+    STDMETHOD(WriteString)(const std::wstring& strString) override final
+    {
+        if (strString.empty())
+        {
+            return WriteNothing();
+        }
+
+        return WriteColumn(strString);
+    }
+
+    STDMETHOD(WriteString)(const std::wstring_view& strString) override final {
+        if (strString.empty())
+        {
+            return WriteNothing();
+        }
+
+        return WriteColumn(strString);
+    }
+
+    STDMETHOD(WriteString)(const WCHAR* szString) override final {
+        return WriteString(std::wstring_view(szString));
+    }
 
     STDMETHOD(WriteCharArray)(const WCHAR* szArray, DWORD dwCharCount) override final
     {
-        return WriteColumn(std::wstring_view(szArray, dwCharCount));
+        return WriteString(std::wstring_view(szArray, dwCharCount));
     }
 
 protected:
@@ -220,10 +251,53 @@ private:
 
     Writer(logger pLog, std::unique_ptr<Options>&& options);
 
+    //
+    // Workaround: 'Unescaped double quote characters in csv files #13 (github)'
+    //
+    // Double all quotes for escaping with CSV format but ignore first and last
+    // ones.
+    //
+    // A more complete approach is possible by specializing fmt::formatter but
+    // it could be less cpu friendly.
+    //
+    template <typename T>
+    struct EscapeQuoteInserter
+    {
+        using value_type = typename T::value_type;
+
+        EscapeQuoteInserter(T& wrapped)
+            : m_wrapped(wrapped)
+            , quoteCount(0)
+            , previousWasQuote(false)
+        {
+        }
+
+        template <typename U>
+        void push_back(U u)
+        {
+            if (previousWasQuote)
+            {
+                quoteCount++;
+
+                if (quoteCount > 1)
+                {
+                    m_wrapped.push_back('"');
+                }
+            }
+
+            previousWasQuote = (u == '"');
+
+            m_wrapped.push_back(u);
+        }
+
+        T& m_wrapped;
+        bool previousWasQuote;
+        size_t quoteCount;
+    };
+
     template <typename... Args>
     HRESULT FormatToBuffer(const std::wstring_view& strFormat, Args&&... args)
     {
-
         using char_type = WCHAR;
         using buffer_type = Buffer<char_type>;
         using wformat_iterator = std::back_insert_iterator<buffer_type>;
@@ -237,8 +311,14 @@ private:
 
         try
         {
-
-            auto result = fmt::format_to(std::back_inserter(buffer), strFormat, std::forward<Args>(args)...);
+            if (strFormat.find(L"\"{}\"") != std::wstring::npos)
+            {
+                fmt::format_to(std::back_inserter(EscapeQuoteInserter(buffer)), strFormat, args...);
+            }
+            else
+            {
+                fmt::format_to(std::back_inserter(buffer), strFormat, args...);
+            }
 
             if (!buffer.is_view())
             {
@@ -256,13 +336,14 @@ private:
         }
         catch (const fmt::format_error& error)
         {
-            log::Error(_L_, E_INVALIDARG, L"fmt::format_error: %S\r\n", error.what());
+            const auto [hr, errorMsg] = AnsiToWide(_L_, error.what());
+            log::Error(_L_, E_INVALIDARG, L"fmt::format_error: %s\r\n", errorMsg);
             return E_INVALIDARG;
         }
         catch (const fmt::windows_error& system_error)
         {
-            log::Error(
-                _L_, HRESULT_FROM_WIN32(system_error.error_code()), L"fmt::windows_error: %S\r\n", system_error.what());
+            const auto [hr, errorMsg] = AnsiToWide(_L_, system_error.what());
+            log::Error(_L_, HRESULT_FROM_WIN32(system_error.error_code()), L"fmt::windows_error: %s\r\n", errorMsg);
             return HRESULT_FROM_WIN32(system_error.error_code());
         }
         return S_OK;

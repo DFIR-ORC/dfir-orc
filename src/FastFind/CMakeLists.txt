@@ -37,10 +37,10 @@ target_link_libraries(FastFind
 
 set_target_properties(FastFind
     PROPERTIES
+        OUTPUT_NAME "FastFind_${TARGET_ARCH}"
         FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}"
         LINK_FLAGS "/DEBUG /MANIFESTUAC:\"level='requireAdministrator'\""
 )
-
 
 if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
     AND "${TARGET_ARCH}" STREQUAL "x86")
@@ -70,3 +70,15 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
         )
     endif()
 endif()
+
+foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
+    install(TARGETS FastFind
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION bin/${CONFIG}
+    )
+
+    install(FILES $<TARGET_PDB_FILE:FastFind>
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION pdb/${CONFIG} OPTIONAL
+    )
+endforeach()

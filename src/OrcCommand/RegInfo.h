@@ -149,7 +149,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"RegInfo"; }
-    static LPCWSTR ToolDescription() { return L"RegInfo - Registry related data enumeration"; }
+    static LPCWSTR ToolDescription() { return L"Registry related data enumeration"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#REGINFO_CONFIG"; }
@@ -173,7 +173,7 @@ public:
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         return S_OK;
-    };  // No Local Configuration supprt
+    };  // No Local Configuration support
 
     HRESULT GetSchemaFromConfig(const ConfigItem& configitem);
 

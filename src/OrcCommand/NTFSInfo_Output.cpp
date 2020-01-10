@@ -34,7 +34,9 @@ void Main::PrintUsage()
         L"\r\n"
         L"\t/config=<ConfigFile>     : Specify a XML config file\r\n"
         L"\r\n"
-        L"\t/utf8,/utf16			  : Select utf8 or utf16 encoding (default is utf8)\r\n"
+        L"\t/Altitude=<Exact|Highest|Lowest>    : Defines the strategy used to translate a given location into the optimal access path to the volume\r\n"
+        L"\r\n"
+        L"\t/utf8,/utf16			    : Select utf8 or utf16 encoding (default is utf8)\r\n"
         L"\r\n"
         L"\t/FileInfo=<OutputSpec>     : File information file output specification\r\n"
         L"\t/AttrInfo=<OutputSpec>     : Attribute information file output specification\r\n"
@@ -45,6 +47,7 @@ void Main::PrintUsage()
         L"\t\t\tA file that will contain output for all locations\r\n"
         L"\t\t\tA directory that will contain one file per location (<Output>_<Location identifier>.csv)\r\n"
         L"\r\n"
+        
         L"\t/computer=<ComputerName> : Substitute computer name to GetComputerName()\r\n"
         L"\r\n"
         L"\t/ResurrectRecords    : Include records marked as \"not in use\" in enumeration. (they'll need the FILE "
@@ -261,7 +264,7 @@ void Main::PrintParameters()
 
 void Main::PrintFooter()
 {
-    log::Info(_L_, L"\r\nLines processed         : %u\r\n", dwTotalFileTreated);
+    log::Info(_L_, L"\r\nLines processed       : %u\r\n", dwTotalFileTreated);
 
     PrintExecutionTime();
     return;

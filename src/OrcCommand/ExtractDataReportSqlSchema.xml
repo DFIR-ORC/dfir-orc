@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="ExtractData">
+  <table key="extract">
+    <utf8 name="ImportingComputer" maxlen="50"/>
+    <utf16 name="InputFile" maxlen="256"/>
+    <utf16 name="Name" maxlen="256"/>
+    <utf16 name="FullName" maxlen="256"/>
+    <utf16 name="Action" maxlen="10"/>
+    <utf16 name="SystemType" maxlen="20"/>
+    <utf16 name="ComputerName" maxlen="20" />
+    <timestamp name="TimeStamp"/>
+    <timestamp name="StartTime"/>
+    <timestamp name="EndTime"/>
+    <utf16 name="Table" maxlen="256"/>
+    <utf16 name="Output" maxlen="256"/>
+    <uint64 name="Bytes"/>
+    <uint32 name="HR"/>
+  </table>
+
+  <table key="registry">
+    <timestamp name="LastModificationDate" description="Last Mod Date"/>
+    <utf8 name="KeyName" description="Key Name" maxlen="1K"/>
+    <utf8 name="KeyTree" description="Key Full Tree" maxlen="1K"/>
+    <utf8 name="ValueName" description="Value Name" maxlen="256"/>
+    <utf8 name="ValueType" description="Value Type" maxlen="32K"/>
+    <utf16 name="Data" description="Value Data" maxlen="32K"/>
+  </table>
+
+  <table key="eventlog">
+    <utf8 name="ComputerName" maxlen="50"/>
+    <timestamp name="TimeCreated"/>
+    <utf16 name="ProviderName" maxlen="256"/>
+    <guid name="ProviderGuid"/>
+    <uint32 name="EventID"/>
+    <uint32 name="Version"/>
+    <uint32 name="Level"/>
+    <uint32 name="OpCode"/>
+    <uint64 name="EventRecordId"/>
+    <guid name="CorrelationActivityID"/>
+    <guid name="RelatedActivityID"/>
+    <uint32 name="ProcessID"/>
+    <uint32 name="ThreadID"/>
+    <utf16 name="SID" maxlen="256"/>
+    <xml name="EventData" maxlen="32K"/>
+  </table>
+</sqlschema>

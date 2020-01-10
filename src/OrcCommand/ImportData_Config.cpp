@@ -28,8 +28,8 @@ using namespace Orc::Command::ImportData;
 
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
-    config.Output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.Output.TableKey.empty() ? L"import" : config.Output.TableKey.c_str(), schemaitem);
+    config.reportOutput.Schema = TableOutput::GetColumnsFromConfig(
+        _L_, config.reportOutput.TableKey.empty() ? L"import" : config.reportOutput.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 
@@ -44,7 +44,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[IMPORTDATA_OUTPUT])
     {
-        if (FAILED(hr = config.Output.Configure(_L_, config.Output.supportedTypes, configitem[IMPORTDATA_OUTPUT])))
+        if (FAILED(
+                hr = config.reportOutput.Configure(
+                    _L_, config.reportOutput.supportedTypes, configitem[IMPORTDATA_OUTPUT])))
         {
             return hr;
         }
@@ -69,13 +71,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     if (configitem[IMPORTDATA_RECURSIVE])
     {
-        if (!_wcsnicmp(configitem[IMPORTDATA_RECURSIVE].strData.c_str(), L"no", wcslen(L"no")))
+        if (!_wcsnicmp(configitem[IMPORTDATA_RECURSIVE].c_str(), L"no", wcslen(L"no")))
         {
-            config.bResursive = false;
+            config.bRecursive = false;
         }
         else
         {
-            config.bResursive = true;
+            config.bRecursive = true;
         }
     }
 
@@ -83,13 +85,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     {
         config.dwConcurrency = 0;
         LARGE_INTEGER li;
-        if (FAILED(hr = GetIntegerFromArg(configitem[IMPORTDATA_CONCURRENCY].strData.c_str(), li)))
+        if (FAILED(hr = GetIntegerFromArg(configitem[IMPORTDATA_CONCURRENCY].c_str(), li)))
         {
             log::Error(
                 _L_,
                 hr,
                 L"Invalid concurrency value specified (%s), must be an integer.\r\n",
-                configitem[IMPORTDATA_CONCURRENCY].strData.c_str());
+                configitem[IMPORTDATA_CONCURRENCY].c_str());
             return hr;
         }
         if (li.QuadPart > MAXDWORD)
@@ -98,7 +100,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 _L_,
                 hr,
                 L"concurrency value specified (%s), must not be insane.\r\n",
-                configitem[IMPORTDATA_CONCURRENCY].strData.c_str());
+                configitem[IMPORTDATA_CONCURRENCY].c_str());
             return hr;
         }
         config.dwConcurrency = li.LowPart;
@@ -112,7 +114,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
             if (table_item[IMPORTDATA_TABLE_NAME])
             {
-                table.Name = table_item[IMPORTDATA_TABLE_NAME];
+                table.name = table_item[IMPORTDATA_TABLE_NAME];
             }
             if (table_item[IMPORTDATA_TABLE_KEY])
             {
@@ -161,13 +163,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             if (table_item[IMPORTDATA_TABLE_CONCURRENCY])
             {
                 LARGE_INTEGER li;
-                if (FAILED(hr = GetIntegerFromArg(table_item[IMPORTDATA_TABLE_CONCURRENCY].strData.c_str(), li)))
+                if (FAILED(hr = GetIntegerFromArg(table_item[IMPORTDATA_TABLE_CONCURRENCY].c_str(), li)))
                 {
                     log::Error(
                         _L_,
                         hr,
                         L"Invalid concurrency value specified (%s), must be an integer.\r\n",
-                        table_item[IMPORTDATA_TABLE_CONCURRENCY].strData.c_str());
+                        table_item[IMPORTDATA_TABLE_CONCURRENCY].c_str());
                     return hr;
                 }
                 if (li.QuadPart > MAXDWORD)
@@ -176,7 +178,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                         _L_,
                         hr,
                         L"concurrency value specified (%s), must not be insane.\r\n",
-                        table_item[IMPORTDATA_TABLE_CONCURRENCY].strData.c_str());
+                        table_item[IMPORTDATA_TABLE_CONCURRENCY].c_str());
                     return hr;
                 }
                 table.dwConcurrency = li.LowPart;
@@ -197,98 +199,100 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[IMPORTDATA_INPUT])
     {
-        for (auto& input_item : configitem[IMPORTDATA_INPUT].NodeList)
+        for (auto& inputNode : configitem[IMPORTDATA_INPUT].NodeList)
         {
-            Main::InputItem input(_L_);
+            Main::InputItem inputItem(_L_);
 
-            if (input_item[IMPORTDATA_INPUT_DIRECTORY])
+            if (inputNode[IMPORTDATA_INPUT_DIRECTORY])
             {
-                input.InputDirectory = input_item[IMPORTDATA_INPUT_DIRECTORY];
-            }
-            if (input_item[IMPORTDATA_INPUT_MATCH])
-            {
-                input.NameMatch = input_item[IMPORTDATA_INPUT_MATCH];
+                inputItem.InputDirectory = inputNode[IMPORTDATA_INPUT_DIRECTORY];
             }
 
-            if (input_item[IMPORTDATA_INPUT_BEFORE])
+            if (inputNode[IMPORTDATA_INPUT_MATCH])
             {
-                input.BeforeStatement = input_item[IMPORTDATA_INPUT_BEFORE];
-            }
-            if (input_item[IMPORTDATA_INPUT_AFTER])
-            {
-                input.AfterStatement = input_item[IMPORTDATA_INPUT_AFTER].strData;
+                inputItem.matchRegex = inputNode[IMPORTDATA_INPUT_MATCH];
             }
 
-            if (FAILED(hr = GetDefinitionFromConfig(input_item, input.ImportDefinitions)))
+            if (inputNode[IMPORTDATA_INPUT_BEFORE])
+            {
+                inputItem.BeforeStatement = inputNode[IMPORTDATA_INPUT_BEFORE];
+            }
+
+            if (inputNode[IMPORTDATA_INPUT_AFTER])
+            {
+                inputItem.AfterStatement = inputNode[IMPORTDATA_INPUT_AFTER];
+            }
+
+            if (FAILED(hr = GetDefinitionFromConfig(inputNode, inputItem.ImportDefinitions)))
             {
                 log::Error(_L_, hr, L"Failed to configure import definitions\r\n");
             }
 
-            config.Inputs.push_back(std::move(input));
+            config.Inputs.push_back(std::move(inputItem));
         }
     }
 
     return S_OK;
 }
 
-HRESULT Main::GetImportItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& definition)
+HRESULT Main::GetImportItemFromConfig(const ConfigItem& configItem, ImportDefinition::Item& definition)
 {
-    if (config_item[IMPORTDATA_INPUT_IMPORT_FILEMATCH])
+    if (configItem[IMPORTDATA_INPUT_IMPORT_FILEMATCH])
     {
-        definition.NameMatch = config_item[IMPORTDATA_INPUT_IMPORT_FILEMATCH];
+        definition.nameMatch = configItem[IMPORTDATA_INPUT_IMPORT_FILEMATCH];
     }
 
-    if (config_item[IMPORTDATA_INPUT_IMPORT_BEFORE])
+    if (configItem[IMPORTDATA_INPUT_IMPORT_BEFORE])
     {
-        definition.BeforeStatement = config_item[IMPORTDATA_INPUT_IMPORT_BEFORE];
+        definition.BeforeStatement = configItem[IMPORTDATA_INPUT_IMPORT_BEFORE];
     }
-    if (config_item[IMPORTDATA_INPUT_IMPORT_AFTER])
+    if (configItem[IMPORTDATA_INPUT_IMPORT_AFTER])
     {
-        definition.AfterStatement = config_item[IMPORTDATA_INPUT_IMPORT_AFTER];
-    }
-
-    if (config_item[IMPORTDATA_INPUT_IMPORT_TABLE])
-    {
-        definition.Table = config_item[IMPORTDATA_INPUT_IMPORT_TABLE];
+        definition.AfterStatement = configItem[IMPORTDATA_INPUT_IMPORT_AFTER];
     }
 
-    if (config_item[IMPORTDATA_INPUT_IMPORT_PASSWORD])
+    if (configItem[IMPORTDATA_INPUT_IMPORT_TABLE])
     {
-        definition.Password = config_item[IMPORTDATA_INPUT_IMPORT_PASSWORD];
+        definition.tableName = configItem[IMPORTDATA_INPUT_IMPORT_TABLE];
+    }
+
+    if (configItem[IMPORTDATA_INPUT_IMPORT_PASSWORD])
+    {
+        definition.Password = configItem[IMPORTDATA_INPUT_IMPORT_PASSWORD];
     }
     return S_OK;
 }
 
-HRESULT Main::GetIgnoreItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item)
+HRESULT Main::GetIgnoreItemFromConfig(const ConfigItem& configItem, ImportDefinition::Item& importItem)
 {
-    if (config_item[IMPORTDATA_INPUT_IGNORE_FILEMATCH])
+    if (configItem[IMPORTDATA_INPUT_IGNORE_FILEMATCH])
     {
-        import_item.NameMatch = config_item[IMPORTDATA_INPUT_IGNORE_FILEMATCH];
+        importItem.nameMatch = configItem[IMPORTDATA_INPUT_IGNORE_FILEMATCH];
     }
     return S_OK;
 }
 
-HRESULT Main::GetExtractItemFromConfig(const ConfigItem& config_item, ImportDefinition::Item& import_item)
+HRESULT Main::GetExtractItemFromConfig(const ConfigItem& configItem, ImportDefinition::Item& importItem)
 {
-    if (config_item[IMPORTDATA_INPUT_EXTRACT_FILEMATCH])
+    if (configItem[IMPORTDATA_INPUT_EXTRACT_FILEMATCH])
     {
-        import_item.NameMatch = config_item[IMPORTDATA_INPUT_EXTRACT_FILEMATCH];
+        importItem.nameMatch = configItem[IMPORTDATA_INPUT_EXTRACT_FILEMATCH];
     }
-    if (config_item[IMPORTDATA_INPUT_EXTRACT_PASSWORD])
+    if (configItem[IMPORTDATA_INPUT_EXTRACT_PASSWORD])
     {
-        import_item.Password = config_item[IMPORTDATA_INPUT_EXTRACT_PASSWORD];
+        importItem.Password = configItem[IMPORTDATA_INPUT_EXTRACT_PASSWORD];
     }
     return S_OK;
 }
 
-HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefinition& definition)
+HRESULT Main::GetDefinitionFromConfig(const ConfigItem& configItem, ImportDefinition& definition)
 {
     HRESULT hr = E_FAIL;
 
-    if (config_item[IMPORTDATA_INPUT_IMPORT])
+    if (configItem[IMPORTDATA_INPUT_IMPORT])
     {
 
-        for (auto& import_item : config_item[IMPORTDATA_INPUT_IMPORT].NodeList)
+        for (auto& import_item : configItem[IMPORTDATA_INPUT_IMPORT].NodeList)
         {
             ImportDefinition::Item import;
 
@@ -297,12 +301,12 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefin
                 log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
             }
             import.ToDo = ImportDefinition::Import;
-            definition.m_ItemDefinitions.push_back(std::move(import));
+            definition.m_itemDefinitions.push_back(std::move(import));
         }
     }
-    if (config_item[IMPORTDATA_INPUT_IGNORE])
+    if (configItem[IMPORTDATA_INPUT_IGNORE])
     {
-        for (auto& ignore_item : config_item[IMPORTDATA_INPUT_IGNORE].NodeList)
+        for (auto& ignore_item : configItem[IMPORTDATA_INPUT_IGNORE].NodeList)
         {
             ImportDefinition::Item import;
 
@@ -311,21 +315,21 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& config_item, ImportDefin
                 log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
             }
             import.ToDo = ImportDefinition::Ignore;
-            definition.m_ItemDefinitions.push_back(std::move(import));
+            definition.m_itemDefinitions.push_back(std::move(import));
         }
     }
-    if (config_item[IMPORTDATA_INPUT_EXTRACT])
+    if (configItem[IMPORTDATA_INPUT_EXTRACT])
     {
-        for (auto& extract_item : config_item[IMPORTDATA_INPUT_EXTRACT].NodeList)
+        for (auto& extractItem : configItem[IMPORTDATA_INPUT_EXTRACT].NodeList)
         {
             ImportDefinition::Item import;
 
-            if (FAILED(hr = GetExtractItemFromConfig(extract_item, import)))
+            if (FAILED(hr = GetExtractItemFromConfig(extractItem, import)))
             {
                 log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
             }
             import.ToDo = ImportDefinition::Extract;
-            definition.m_ItemDefinitions.push_back(std::move(import));
+            definition.m_itemDefinitions.push_back(std::move(import));
         }
     }
     return S_OK;
@@ -341,7 +345,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         {
             case L'/':
             case L'-':
-                if (OutputOption(argv[i] + 1, L"Out", config.Output))
+                if (OutputOption(argv[i] + 1, L"Out", config.reportOutput))
                     ;
                 else if (OutputOption(argv[i] + 1, L"Import", config.importOutput))
                     ;
@@ -349,7 +353,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (OutputOption(argv[i] + 1, L"Temp", config.tempOutput))
                     ;
-                else if (BooleanOption(argv[i] + 1, L"Recursive", config.bResursive))
+                else if (BooleanOption(argv[i] + 1, L"Recursive", config.bRecursive))
                     ;
                 else if (OptionalParameterOption(argv[i] + 1, L"Concurrency", config.dwConcurrency))
                     ;
@@ -368,10 +372,10 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
             default:
             {
                 std::wstring strInputDir;
-                if (FAILED(hr = GetInputDirectory(argv[i], strInputDir)))
+                if (FAILED(hr = ExpandDirectoryPath(argv[i], strInputDir)))
                 {
                     std::wstring strInputFile;
-                    if (FAILED(hr = GetInputFile(argv[i], strInputFile)))
+                    if (FAILED(hr = ExpandFilePath(argv[i], strInputFile)))
                     {
                         log::Warning(_L_, hr, L"Invalid input %s specified\r\n", argv[i]);
                     }
@@ -401,7 +405,7 @@ HRESULT Main::CheckConfiguration()
     }
     else
     {
-        log::Verbose(_L_, L"No temprorary folder provided, defaulting to %temp%\r\n");
+        log::Verbose(_L_, L"No temporary folder provided, defaulting to %temp%\r\n");
         WCHAR szTempDir[MAX_PATH];
         if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
         {
@@ -411,7 +415,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.extractOutput.Type == OutputSpec::Kind::None)
     {
-        log::Warning(_L_, E_INVALIDARG, L"No extration output directory provided, disabled extraction\r\n");
+        log::Warning(_L_, E_INVALIDARG, L"No extraction output directory provided, disabled extraction\r\n");
         config.bDontExtract = true;
     }
     if (config.importOutput.Type == OutputSpec::Kind::None)
@@ -430,11 +434,11 @@ HRESULT Main::CheckConfiguration()
     {
         for (const auto& input_def : input.ImportDefinitions.GetDefinitions())
         {
-            if (!input_def.Table.empty())
+            if (!input_def.tableName.empty())
             {
                 auto it = find_if(
                     begin(config.m_Tables), end(config.m_Tables), [&input_def](const TableDescription& descr) -> bool {
-                        return equalCaseInsensitive(input_def.Table, descr.Name);
+                        return equalCaseInsensitive(input_def.tableName, descr.name);
                     });
                 if (it == end(config.m_Tables))
                 {
@@ -442,9 +446,9 @@ HRESULT Main::CheckConfiguration()
                         _L_,
                         E_INVALIDARG,
                         L"No table description found for table %s (specified in input %s of %s)\r\n",
-                        input_def.Table.c_str(),
-                        input_def.NameMatch.c_str(),
-                        input.NameMatch.c_str());
+                        input_def.tableName.c_str(),
+                        input_def.nameMatch.c_str(),
+                        input.matchRegex.c_str());
                     return E_INVALIDARG;
                 }
             }

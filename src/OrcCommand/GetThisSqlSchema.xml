@@ -5,9 +5,9 @@
     <table key="getthis_collection">
 
         <utf8   name="ComputerName" maxlen="50" allows_null="no"/>
-        <uint64 name="VolumeID"     allows_null="no" fmt="{:#016x}"/>
-        <uint64 name="ParentFRN"    allows_null="no" fmt="{:#016x}"/>
-        <uint64 name="FRN"          allows_null="no" fmt="{:#016x}"/>
+        <uint64 name="VolumeID"     allows_null="no" fmt="0x{:016X}"/>
+        <uint64 name="ParentFRN"    allows_null="no" fmt="0x{:016X}"/>
+        <uint64 name="FRN"          allows_null="no" fmt="0x{:016X}"/>
         <utf16  name="FullName"     maxlen="32k" allows_null="no" />
         <utf16  name="SampleName"   maxlen="256" allows_null="no" />
         <uint64 name="SizeInBytes"  allows_null="no" />

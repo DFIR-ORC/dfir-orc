@@ -19,6 +19,8 @@
 #include "FileStream.h"
 #include "MemoryStream.h"
 
+#include <safeint.h>
+
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
 using namespace Orc;
@@ -44,6 +46,7 @@ public:
         using namespace Orc::TableOutput;
         using namespace std::string_view_literals;
         using namespace std::string_literals;
+        using namespace msl::utilities;
 
         auto options = std::make_unique<CSV::Options>();
 
@@ -72,7 +75,7 @@ public:
 
 			std::wstring tempPath;
             tempPath.resize(1024);
-			const auto length = GetTempPathW(tempPath.size(), tempPath.data());
+			const auto length = GetTempPathW(SafeInt<DWORD>(tempPath.size()), tempPath.data());
             Assert::IsTrue(length);
 			tempPath.resize(length);
             tempPath.append(L"\\test.csv");

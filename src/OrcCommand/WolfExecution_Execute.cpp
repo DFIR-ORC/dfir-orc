@@ -487,7 +487,7 @@ HRESULT WolfExecution::CreateCommandAgent(
 
         if (m_ProcessStatisticsWriter == nullptr)
         {
-            log::Error(_L_, E_FAIL, L"Failed to initalize ProcessStatistics writer\r\n");
+            log::Error(_L_, E_FAIL, L"Failed to initialize ProcessStatistics writer\r\n");
         }
     }
 
@@ -496,7 +496,7 @@ HRESULT WolfExecution::CreateCommandAgent(
         m_JobStatisticsWriter = TableOutput::GetWriter(_L_, m_JobStatisticsOutput);
         if (m_JobStatisticsWriter == nullptr)
         {
-            log::Error(_L_, E_FAIL, L"Failed to initalize JobStatistics writer\r\n");
+            log::Error(_L_, E_FAIL, L"Failed to initialize JobStatistics writer\r\n");
         }
     }
 

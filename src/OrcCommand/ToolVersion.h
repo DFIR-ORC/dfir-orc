@@ -3,24 +3,14 @@
 //
 // Copyright © 2011-2019 ANSSI. All Rights Reserved.
 //
-// Author(s): Jean Gautier (ANSSI)
+// Author(s): fabienfl
 //
 
-#ifndef VERSION
-#    define VERSION 10, 0, 2, 000
-#endif
-#ifndef STR_VERSION
-#    define STR_VERSION "10.0.2.000"
-#endif
-#ifndef WSTR_VERSION
-#    define WSTR_VERSION L"10.0.2.000"
-#endif
-
-#define FILEVER VERSION
-#define PRODUCTVER VERSION
-#define STRFILEVER STR_VERSION
-#define STRPRODUCTVER STR_VERSION
-#define WSTRFILEVER WSTR_VERSION
-#define WSTRPRODUCTVER WSTR_VERSION
-
-#define WSTRPRODUCTNAME L"DFIR-ORC"
+extern const int kVersion[4];
+extern const char* kOrcVersionString;
+extern const wchar_t* kOrcVersionStringW;
+extern const char* kOrcFileVerString;
+extern const wchar_t* kOrcFileVerStringW;
+extern const char* kOrcProductVerString;
+extern const wchar_t* kOrcProductVerStringW;
+extern const wchar_t* kProductNameStringW;

@@ -1,0 +1,26 @@
+//
+// Prefer including 'ToolVersion.h'
+//
+// This template will be fill by cmake.
+// It must not be included directly except from resource files as it would
+// trigger useless compilations.
+//
+
+#ifndef ORC_VERSION
+#    define ORC_VERSION @ORC_VERSION_MAJOR@, @ORC_VERSION_MINOR@, @ORC_VERSION_PATCH@, 0
+#endif
+#ifndef ORC_VERSION_STRING
+#    define ORC_VERSION_STRING "@ORC_VERSION@"
+#endif
+#ifndef ORC_VERSION_STRINGW
+#    define ORC_VERSION_STRINGW L"@ORC_VERSION@"
+#endif
+
+#define ORC_FILEVER ORC_VERSION
+#define ORC_PRODUCTVER ORC_VERSION
+#define ORC_FILEVER_STRING ORC_VERSION_STRING
+#define ORC_PRODUCTVER_STRING ORC_VERSION_STRING
+#define ORC_FILEVER_STRINGW ORC_VERSION_STRINGW
+#define ORC_PRODUCTVER_STRINGW ORC_VERSION_STRINGW
+
+#define ORC_PRODUCTNAME_STRINGW L"DFIR-ORC"

@@ -200,7 +200,7 @@ HRESULT CommandExecute::AddExecutableToRun(const std::wstring& szImageFilePath)
     }
 
     WCHAR inputfile[MAX_PATH] = {0};
-    if (FAILED(GetInputFile(szImageFilePath.c_str(), inputfile, MAX_PATH)))
+    if (FAILED(ExpandFilePath(szImageFilePath.c_str(), inputfile, MAX_PATH)))
     {
         log::Error(_L_, E_INVALIDARG, L"%s is not a valid file to use\r\n", szImageFilePath.c_str());
         return E_INVALIDARG;
@@ -382,7 +382,7 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
     {
         wstring dumpKeyword(m_Keyword.c_str());
         dumpKeyword.append(L".dmp");
-        log::Verbose(_L_, L"Attaching debuger to %s\r\n", m_Keyword.c_str());
+        log::Verbose(_L_, L"Attaching debugger to %s\r\n", m_Keyword.c_str());
         m_pDebugger = DebugAgent::DebugProcess(_L_, m_pi.dwProcessId, m_DumpFilePath, dumpKeyword);
         if (m_pDebugger)
         {

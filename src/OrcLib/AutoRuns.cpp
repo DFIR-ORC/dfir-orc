@@ -164,21 +164,21 @@ HRESULT AutoRuns::GetAutoRuns(AutoRunsVector& autoruns)
         begin(m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM].NodeList),
         end(m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM].NodeList),
         [&autoruns](const ConfigItem& item) {
-            AutoRunItem autorun_item = {item.SubItems[AUTORUNS_LOCATION_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_ITEMNAME_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_ENABLED_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_DESCRIPTION_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_COMPANY_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_SIGNER_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_VERSION_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_IMAGEPATH_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_MD5HASH_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_SHA1HASH_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_SHA256HASH_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_PESHA1HASH_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_PESHA256HASH_ITEM].strData.c_str(),
-                                        item.SubItems[AUTORUNS_IMPHASH_ITEM].strData.c_str(),
+            AutoRunItem autorun_item = {item.SubItems[AUTORUNS_LOCATION_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_ITEMNAME_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_ENABLED_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_DESCRIPTION_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_COMPANY_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_VERSION_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_IMAGEPATH_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_MD5HASH_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_SHA1HASH_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_SHA256HASH_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_PESHA1HASH_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_PESHA256HASH_ITEM].c_str(),
+                                        item.SubItems[AUTORUNS_IMPHASH_ITEM].c_str(),
                                         false};
 
             if (!wcsncmp(
@@ -188,10 +188,9 @@ HRESULT AutoRuns::GetAutoRuns(AutoRunsVector& autoruns)
             {
                 autorun_item.ImagePath += wcslen(L"File not found: ");
             }
-            if (item.SubItems[AUTORUNS_SIGNER_ITEM].Status & ConfigItem::PRESENT
-                && !item.SubItems[AUTORUNS_SIGNER_ITEM].strData.empty())
+            if (item.SubItems[AUTORUNS_SIGNER_ITEM] && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
                 if (!_wcsnicmp(
-                        item.SubItems[AUTORUNS_SIGNER_ITEM].strData.c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
+                        item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
                     autorun_item.IsVerified = true;
 
             autoruns.push_back(autorun_item);
@@ -206,7 +205,7 @@ HRESULT AutoRuns::GetAutoRunFiles(std::vector<std::wstring>& Modules)
     std::for_each(
         begin(m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM].NodeList),
         end(m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM].NodeList),
-        [&Modules](const ConfigItem& item) { Modules.push_back(item.SubItems[AUTORUNS_IMAGEPATH_ITEM].strData); });
+        [&Modules](const ConfigItem& item) { Modules.push_back(item.SubItems[AUTORUNS_IMAGEPATH_ITEM]); });
 
     return S_OK;
 }
@@ -219,21 +218,21 @@ HRESULT AutoRuns::PrintAutoRuns(const logger& pLog)
 HRESULT AutoRuns::EnumItems(AutoRunsEnumItemCallback pCallBack, LPVOID pContext)
 {
     std::for_each(begin(m_AutoRuns.NodeList), end(m_AutoRuns.NodeList), [pCallBack, pContext](const ConfigItem& item) {
-        AutoRunItem autorun_item = {item.SubItems[AUTORUNS_LOCATION_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_ITEMNAME_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_ENABLED_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_DESCRIPTION_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_COMPANY_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_SIGNER_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_VERSION_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_IMAGEPATH_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_MD5HASH_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_SHA1HASH_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_SHA256HASH_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_PESHA1HASH_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_PESHA256HASH_ITEM].strData.c_str(),
-                                    item.SubItems[AUTORUNS_IMPHASH_ITEM].strData.c_str(),
+        AutoRunItem autorun_item = {item.SubItems[AUTORUNS_LOCATION_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_ITEMNAME_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_ENABLED_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_DESCRIPTION_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_COMPANY_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_VERSION_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_IMAGEPATH_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_MD5HASH_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_SHA1HASH_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_SHA256HASH_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_PESHA1HASH_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_PESHA256HASH_ITEM].c_str(),
+                                    item.SubItems[AUTORUNS_IMPHASH_ITEM].c_str(),
                                     false};
 
         if (!wcsncmp(
@@ -243,9 +242,8 @@ HRESULT AutoRuns::EnumItems(AutoRunsEnumItemCallback pCallBack, LPVOID pContext)
         {
             autorun_item.ImagePath += wcslen(L"File not found: ");
         }
-        if (item.SubItems[AUTORUNS_SIGNER_ITEM].Status & ConfigItem::PRESENT
-            && !item.SubItems[AUTORUNS_SIGNER_ITEM].strData.empty())
-            if (!_wcsnicmp(item.SubItems[AUTORUNS_SIGNER_ITEM].strData.c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
+        if (item.SubItems[AUTORUNS_SIGNER_ITEM] && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
+            if (!_wcsnicmp(item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
                 autorun_item.IsVerified = true;
 
         pCallBack(autorun_item, pContext);

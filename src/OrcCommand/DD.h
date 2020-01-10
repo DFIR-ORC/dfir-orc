@@ -62,7 +62,7 @@ private:
 
 public:
     static LPCWSTR ToolName() { return L"DD"; }
-    static LPCWSTR ToolDescription() { return L"DD - Data Dump"; }
+    static LPCWSTR ToolDescription() { return L"Data Dump"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
     static LPCWSTR DefaultConfiguration() { return L"res:#DD_CONFIG"; }
@@ -90,7 +90,7 @@ public:
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         return S_OK;
-    };  // No Local Configuration supprt
+    };  // No Local Configuration support
 
     HRESULT GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[]);
 

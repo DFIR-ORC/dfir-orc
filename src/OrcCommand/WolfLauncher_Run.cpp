@@ -364,7 +364,7 @@ HRESULT Main::Run_Execute()
                 break;
             case WolfExecution::Overwrite:
 
-                if (m_pUploadAgent)
+                if (m_pUploadAgent && exec->ShouldUpload())
                 {
                     if (m_pUploadAgent->CheckFileUpload(exec->GetOutputFileName()) == S_OK)
                     {
@@ -411,7 +411,7 @@ HRESULT Main::Run_Execute()
                 break;
             case WolfExecution::Once:
 
-                if (m_pUploadAgent)
+                if (m_pUploadAgent && exec->ShouldUpload())
                 {
                     DWORD dwFileSize = 0L;
                     if (m_pUploadAgent->CheckFileUpload(exec->GetOutputFileName(), &dwFileSize) == S_OK)

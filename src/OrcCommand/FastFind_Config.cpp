@@ -192,7 +192,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                         _L_,
                         E_INVALIDARG,
                         L"Invalid object type provided: %s\r\n",
-                        item[FASTFIND_OBJECT_FIND_TYPE].strData.c_str());
+                        item[FASTFIND_OBJECT_FIND_TYPE].c_str());
                     continue;
                 }
 
