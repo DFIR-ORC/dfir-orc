@@ -31,40 +31,40 @@
 #include "LogFileWriter.h"
 #include "ToolVersion.h"
 
-typedef struct _ToolDescription
+struct ToolDescription
 {
+    template <typename CommandType> static ToolDescription Get() {
+        return ToolDescription{ CommandType::ToolName(), CommandType::ToolDescription(), UtilitiesMain::WMain<CommandType> };
+    };
     LPCWSTR szName;
     LPCWSTR szDescr;
     std::function<int(int argc, const WCHAR* argv[])> WinMain;
-} ToolDescription;
+};
 
 using namespace Orc;
 using namespace Orc::Command;
 
 ToolDescription g_Tools[] = {
-    {GetThis::Main::ToolName(), GetThis::Main::ToolDescription(), UtilitiesMain::WMain<GetThis::Main>},
-    {NTFSInfo::Main::ToolName(), NTFSInfo::Main::ToolDescription(), UtilitiesMain::WMain<NTFSInfo::Main>},
-    {USNInfo::Main::ToolName(), USNInfo::Main::ToolDescription(), UtilitiesMain::WMain<USNInfo::Main>},
-    {Wolf::Main::ToolName(), Wolf::Main::ToolDescription(), UtilitiesMain::WMain<Wolf::Main>},
-    {FastFind::Main::ToolName(), FastFind::Main::ToolDescription(), UtilitiesMain::WMain<FastFind::Main>},
-    {ObjInfo::Main::ToolName(), ObjInfo::Main::ToolDescription(), UtilitiesMain::WMain<ObjInfo::Main>},
-    {GetSamples::Main::ToolName(), GetSamples::Main::ToolDescription(), UtilitiesMain::WMain<GetSamples::Main>},
-    {GetSectors::Main::ToolName(), GetSectors::Main::ToolDescription(), UtilitiesMain::WMain<GetSectors::Main>},
-    {FatInfo::Main::ToolName(), FatInfo::Main::ToolDescription(), UtilitiesMain::WMain<FatInfo::Main>},
-    {ToolEmbed::Main::ToolName(), ToolEmbed::Main::ToolDescription(), UtilitiesMain::WMain<ToolEmbed::Main>},
-    {NTFSUtil::Main::ToolName(), NTFSUtil::Main::ToolDescription(), UtilitiesMain::WMain<NTFSUtil::Main>},
-    {ExtractData::Main::ToolName(), ExtractData::Main::ToolDescription(), UtilitiesMain::WMain<ExtractData::Main>},
-    {ImportData::Main::ToolName(), ImportData::Main::ToolDescription(), UtilitiesMain::WMain<ImportData::Main>},
-    {RegInfo::Main::ToolName(), RegInfo::Main::ToolDescription(), UtilitiesMain::WMain<RegInfo::Main>},
-    {DD::Main::ToolName(), DD::Main::ToolDescription(), UtilitiesMain::WMain<DD::Main>},
-    {GetComObjects::Main::ToolName(),
-     GetComObjects::Main::ToolDescription(),
-     UtilitiesMain::WMain<GetComObjects::Main>},
+    ToolDescription::Get<GetThis::Main>(),
+    ToolDescription::Get<NTFSInfo::Main>(),
+    ToolDescription::Get<USNInfo::Main>(),
+    ToolDescription::Get<Wolf::Main>(),
+    ToolDescription::Get<FastFind::Main>(),
+    ToolDescription::Get<ObjInfo::Main>(),
+    ToolDescription::Get<GetSamples::Main>(),
+    ToolDescription::Get<GetSectors::Main>(),
+    ToolDescription::Get<FatInfo::Main>(),
+    ToolDescription::Get<ToolEmbed::Main>(),
+    ToolDescription::Get<NTFSUtil::Main>(),
+    ToolDescription::Get<ExtractData::Main>(),
+    ToolDescription::Get<ImportData::Main>(),
+    ToolDescription::Get<RegInfo::Main>(),
+    ToolDescription::Get<DD::Main>(),
+    ToolDescription::Get<GetComObjects::Main>(),
     {nullptr, nullptr}};
 
 int Usage(const logger& pLog)
 {
-
     log::Info(pLog, L"\r\nDFIR-Orc.Exe %s\r\n", kOrcFileVerStringW);
     log::Info(
         pLog,
