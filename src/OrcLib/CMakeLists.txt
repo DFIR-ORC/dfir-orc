@@ -78,6 +78,7 @@ set(SRC_DISK_FILESYSTEM
     "FSUtils.h"
     "FSVBR.h"
     "GenDataStructure.h"
+    "BitLocker.h"
     "PEInfo.cpp"
     "PEInfo.h"
 )

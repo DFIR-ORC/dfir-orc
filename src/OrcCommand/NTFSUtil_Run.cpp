@@ -20,6 +20,8 @@
 
 #include "VolumeShadowCopies.h"
 
+#include "BitLocker.h"
+
 #include "MFTWalker.h"
 
 #include "MFTOnline.h"
@@ -397,8 +399,6 @@ HRESULT Main::PrintRecordDetails(const std::shared_ptr<VolumeReader>& volReader,
 		pRecord->HasNamedDataAttr() ? L" (has named $DATA)" : L"",
 		pRecord->HasReparsePoint()  ? L" (has reparse point)" : L""
 		);
-
-	
 
     const auto& children = pRecord->GetChildRecords();
 
@@ -1545,6 +1545,116 @@ HRESULT Main::PrintVss()
     return S_OK;
 }
 
+constexpr uint64_t RoundUp(uint64_t offset, uint64_t pageSize) {
+    return (((offset)) + pageSize - 1) & (~(pageSize - 1));
+}
+
+HRESULT Orc::Command::NTFSUtil::Main::PrintBitLocker()
+{
+    HRESULT hr = E_FAIL;
+    LocationSet aSet(_L_);
+
+    // enumerate all possible locations
+    if (FAILED(hr = aSet.EnumerateLocations()))
+    {
+        log::Error(_L_, hr, L"Failed to enumerate locations\r\n");
+        return hr;
+    }
+
+    if (!config.strVolume.empty())
+    {
+        std::vector<std::shared_ptr<Location>> addedLocs;
+        if (FAILED(hr = aSet.AddLocations(config.strVolume.c_str(), addedLocs)))
+        {
+            log::Error(_L_, hr, L"Failed to add location %s\r\n", config.strVolume.c_str());
+            return hr;
+        }
+    }
+
+    aSet.Consolidate(false, FSVBR::FSType::BITLOCKER);
+
+    const auto bitlockerLocations = aSet.GetAltitudeLocations();
+
+    log::Info(_L_, L"\r\nBitLocker locations:\r\n");
+    for (const auto loc : bitlockerLocations)
+    {
+        log::Info(_L_, L"\r\n\t%s\r\n", loc->GetLocation().c_str());
+
+        const auto reader = loc->GetReader();
+
+        using namespace BitLocker;
+
+        CBinaryBuffer buffer;
+        buffer.SetCount(512);
+        ULONGLONG ullBytesRead = 0LLU;
+
+        reader->Seek(0LLU);
+        if (auto hr = reader->Read(buffer, 512, ullBytesRead); FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to read header from location %s\r\n", loc->GetLocation().c_str());
+        }
+        auto pHeader = buffer.GetP<VolumeHeader>();
+        if (pHeader->Guid != INFO_GUID)
+        {
+            log::Warning(_L_, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"BitLocker header does not have the INFO_GUID\r\n");
+            continue;
+        }
+
+        log::Info(_L_, L"\t\tSectorSize: %d\r\n", pHeader->SectorSize);
+
+        for(UINT i = 0; i < sizeof(pHeader->InfoOffsets)/sizeof(uint64_t); i++) {
+            log::Info(_L_, L"\t\tMetadata offset[%d]: 0x%I64x\r\n", i, pHeader->InfoOffsets[i]);
+
+            reader->Seek(pHeader->InfoOffsets[i]);
+
+            CBinaryBuffer info_buffer;
+            info_buffer.SetCount(pHeader->SectorSize);
+
+            ULONGLONG ullBytesRead = 0LLU;
+            reader->Read(info_buffer, pHeader->SectorSize, ullBytesRead);
+
+            auto pInfoHeader = info_buffer.GetP<InfoStruct>();
+
+            if (pInfoHeader->Header.Version != 2 && pInfoHeader->Header.Version != 1)
+            {
+                log::Warning(_L_, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"Invalid metadata version %s, only version 2 is supported\r\n", pInfoHeader->Header.Version);
+                continue;
+            }
+            if (strncmp((char*)pInfoHeader->Header.Signature, "-FVE-FS-", 8))
+            {
+                log::Warning(_L_, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"Invalid metadata signature %S, only -FVE-FS- is supported\r\n", (char*)pInfoHeader->Header.Signature);
+                continue;
+            }
+
+            auto infoSize = (uint64_t)pInfoHeader->Header.Size * (pInfoHeader->Header.Version == 2 ? 16 : 1);
+            
+	        if( infoSize < 64) {
+                log::Warning(_L_, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"Meta data size (%s) is too small\r\n", infoSize);
+                continue;
+	        }
+
+            // Reset pointer to start of info data
+            reader->Seek(pHeader->InfoOffsets[i]);
+
+            auto toRead = RoundUp(infoSize + sizeof(ValidationHeader), pHeader->SectorSize);
+            info_buffer.SetCount(toRead);
+            reader->Read(info_buffer, toRead, ullBytesRead);
+
+            auto pValidation = (ValidationHeader*) info_buffer.GetP<BYTE>(infoSize);
+
+            if (pValidation->Version != 1 && pValidation->Version != 2)
+            {
+                log::Warning(_L_, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"Invalid validation metadata version %s, only version 2 is supported\r\n", pValidation->Version);
+                continue;
+            }
+
+            log::Info(_L_, L"\t\tMetadata   size[%d]: %I64d\r\n", i, RoundUp(infoSize + pValidation->Size, pHeader->SectorSize));
+        }
+    }
+
+    return S_OK;
+}
+
 HRESULT Main::Run()
 {
     HRESULT hr = E_FAIL;
@@ -1630,6 +1740,10 @@ HRESULT Main::Run()
         case Main::Vss:
         {
             return PrintVss();
+        }
+        case Main::BitLocker:
+        {
+            return PrintBitLocker();
         }
     }
     return S_OK;

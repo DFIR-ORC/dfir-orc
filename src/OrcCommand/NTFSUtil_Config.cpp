@@ -85,6 +85,10 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                 {
                     config.cmd = Main::Command::Vss;
                 }
+                else if (BooleanOption(argv[i] + 1, L"bitlocker", bBool))
+                {
+                    config.cmd = Main::Command::BitLocker;
+                }
                 else if (OutputOption(argv[i] + 1, L"out", config.output))
                     ;
                 else if (ProcessPriorityOption(argv[i] + 1))
