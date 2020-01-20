@@ -66,7 +66,7 @@ void CmdList::Execute( std::error_code& ec )
     Resources resources;
     resources.Load( o.pePath, ec );
     if( ec ) {
-        spdlog::debug( "Failed to load resources: {}", ec.message() );
+        spdlog::error( "Failed to load resources: {}", ec.message() );
         return;
     }
 

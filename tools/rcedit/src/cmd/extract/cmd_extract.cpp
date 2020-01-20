@@ -57,7 +57,7 @@ std::vector< uint8_t > ExtractResource(
         LoadLibraryExW( pePath.c_str(), NULL, LOAD_LIBRARY_AS_IMAGE_RESOURCE );
     if( module == nullptr ) {
         ec.assign( GetLastError(), std::system_category() );
-        spdlog::debug( "Failed to load resource file: {}", ec.message() );
+        spdlog::error( "Failed to load resource file: {}", ec.message() );
         return {};
     }
 
@@ -65,28 +65,28 @@ std::vector< uint8_t > ExtractResource(
         FindResourceExW( module.get(), type.c_str(), name.c_str(), lang );
     if( hResInfo == nullptr ) {
         ec.assign( GetLastError(), std::system_category() );
-        spdlog::debug( "Failed to find resource: {}", ec.message() );
+        spdlog::error( "Failed to find resource: {}", ec.message() );
         return {};
     }
 
     HGLOBAL hResData = LoadResource( module.get(), hResInfo );
     if( hResData == nullptr ) {
         ec.assign( GetLastError(), std::system_category() );
-        spdlog::debug( "Failed to load resource: {}", ec.message() );
+        spdlog::error( "Failed to load resource: {}", ec.message() );
         return {};
     }
 
     LPVOID resource = LockResource( hResData );
     if( resource == nullptr ) {
         ec.assign( GetLastError(), std::system_category() );
-        spdlog::debug( "Failed to lock resource: {}", ec.message() );
+        spdlog::error( "Failed to lock resource: {}", ec.message() );
         return {};
     }
 
     DWORD resourceSize = SizeofResource( module.get(), hResInfo );
     if( resourceSize == 0 ) {
         ec.assign( GetLastError(), std::system_category() );
-        spdlog::debug( "Failed to get resource size: {}", ec.message() );
+        spdlog::error( "Failed to get resource size: {}", ec.message() );
         return {};
     }
 
@@ -145,7 +145,7 @@ void CmdExtract::Execute( std::error_code& ec )
     const auto resource =
         ExtractResource( o.pePath.c_str(), o.type, o.name, lang, ec );
     if( ec ) {
-        spdlog::debug( "Failed to extract resource" );
+        spdlog::error( "Failed to extract resource" );
         return;
     }
 
@@ -158,7 +158,7 @@ void CmdExtract::Execute( std::error_code& ec )
 
     ofs.close();
     if( !ofs ) {
-        spdlog::debug( "Failed to write resource" );
+        spdlog::error( "Failed to write resource" );
         ec.assign( ERROR_CANTWRITE, std::system_category() );
         return;
     }

@@ -67,7 +67,7 @@ int main( const std::vector< std::string >& args )
     }
 
     if( ec ) {
-        spdlog::error( "Failed to set resource" );
+        spdlog::error( "Command failed" );
         ExitProcess( EXIT_FAILURE );
     }
 

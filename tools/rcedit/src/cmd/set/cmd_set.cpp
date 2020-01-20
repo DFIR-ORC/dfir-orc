@@ -301,7 +301,7 @@ void CmdSet::Execute( std::error_code& ec )
     if( o.outPath ) {
         fs::copy( o.pePath, outPath, fs::copy_options::overwrite_existing, ec );
         if( ec ) {
-            spdlog::debug( "Failed to copy file: {}", ec.message() );
+            spdlog::error( "Failed to copy file: {}", ec.message() );
             return;
         }
     }
@@ -321,14 +321,14 @@ void CmdSet::Execute( std::error_code& ec )
 
         value = Compress( *o.compression, value, fileNameInArchive, ec );
         if( ec ) {
-            spdlog::debug( "Failed to compress resource" );
+            spdlog::error( "Failed to compress resource" );
             return;
         }
     }
 
     ::UpdateFileResource( outPath, o.type, o.name, o.lang, value, ec );
     if( ec ) {
-        spdlog::debug( "Failed to update resource" );
+        spdlog::error( "Failed to update resource" );
         return;
     }
 
