@@ -93,42 +93,6 @@ END
 
 #endif    // APSTUDIO_INVOKED
 
-
-/////////////////////////////////////////////////////////////////////////////
-//
-// BINARY
-//
-
-GETTHIS_SQLSCHEMA       BINARY                  "..\\OrcCommand\\GetThisSqlSchema.xml"
-
-NTFSINFO_SQLSCHEMA      BINARY                  "..\\OrcCommand\\NTFSInfoSqlSchema.xml"
-
-GETSAMPLES_SQLSCHEMA    BINARY                  "..\\OrcCommand\\GetSamplesSchema.xml"
-
-USNINFO_SQLSCHEMA       BINARY                  "..\\OrcCommand\\USNInfoSqlSchema.xml"
-
-OBJINFO_SQLSCHEMA       BINARY                  "..\\OrcCommand\\ObjInfoSqlSchema.xml"
-
-WOLFLAUNCHER_SQLSCHEMA  BINARY                  "..\\OrcCommand\\WolfLauncherSqlSchema.xml"
-
-REGINFO_SQLSCHEMA       BINARY                  "..\\OrcCommand\\RegInfoSqlSchema.xml"
-
-FASTFIND_SQLSCHEMA      BINARY                  "..\\OrcCommand\\FastFindSqlSchema.xml"
-
-IMPORTDATA_SQLSCHEMA    BINARY                  "..\\OrcCommand\\ImportDataSqlSchema.xml"
-
-EXTRACTDATA_REPORT_SQLSCHEMA   BINARY           "..\\OrcCommand\\ExtractDataReportSqlSchema.xml"
-
-GETSECTORS_SQLSCHEMA    BINARY                  "..\\OrcCommand\\GetSectorsSchema.xml"
-
-NTFSUTIL_SQLSCHEMA      BINARY                  "..\\OrcCommand\\NTFSUtilSqlSchema.xml"
-
-FATINFO_SQLSCHEMA       BINARY                  "..\\OrcCommand\\FatInfoSqlSchema.xml"
-
-DD_SQLSCHEMA            BINARY                  "..\\OrcCommand\\DDSqlSchema.xml"
-
-GETCOMOBJECTS_SQLSCHEMA BINARY                  "..\\OrcCommand\\GetComObjectsSqlSchema.xml"
-
 #endif    // Neutral resources
 /////////////////////////////////////////////////////////////////////////////
 

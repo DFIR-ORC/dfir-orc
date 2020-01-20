@@ -33,31 +33,10 @@ if(${TARGET_ARCH} STREQUAL "x86")
     list(APPEND SRC "xpcrtwrap.asm" "XPSP2Compatibility.cpp")
 endif()
 
-set(SRC_SCHEMAS
-    "../OrcCommand/DDSqlSchema.xml"
-    "../OrcCommand/ExtractDataReportSqlSchema.xml"
-    "../OrcCommand/FastFindSqlSchema.xml"
-    "../OrcCommand/FatInfoSqlSchema.xml"
-    "../OrcCommand/GetComObjectsSqlSchema.xml"
-    "../OrcCommand/GetSamplesSchema.xml"
-    "../OrcCommand/GetSectorsSchema.xml"
-    "../OrcCommand/GetThisSqlSchema.xml"
-    "../OrcCommand/ImportDataSqlSchema.xml"
-    "../OrcCommand/NTFSInfoSqlSchema.xml"
-    "../OrcCommand/NTFSUtilSqlSchema.xml"
-    "../OrcCommand/ObjInfoSqlSchema.xml"
-    "../OrcCommand/RegInfoSqlSchema.xml"
-    "../OrcCommand/USNInfoSqlSchema.xml"
-    "../OrcCommand/WolfLauncherSqlSchema.xml"
-)
-
-source_group(Schemas FILES ${SRC_SCHEMAS})
-
 add_executable(Orc
     "stdafx.h"
     "stdafx.cpp"
     ${SRC}
-    ${SRC_SCHEMAS}
 )
 
 target_include_directories(Orc
