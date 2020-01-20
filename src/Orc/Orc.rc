@@ -1,6 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
+#include "icon.h"
 
 #include "ToolVersionRes.h"
 
@@ -20,10 +21,15 @@
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-MAINICON                ICON                    "..\\..\\res\\DFIR-Orc.ico"
+MAINICON                ICON                    ORC_ICON
+
 
 /////////////////////////////////////////////////////////////////////////////
 //

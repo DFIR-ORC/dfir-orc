@@ -13,9 +13,18 @@ orc_add_compile_options()
 find_package(boost REQUIRED)
 find_package(VisualStudio REQUIRED)
 
+set(GENERATED_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
+
+configure_file(
+    "Icon.h.in"
+    "${GENERATED_SRC_DIR}/Icon.h"
+    @ONLY
+)
+
 set(SRC
     "FastFind.cpp"
     "targetver.h"
+    "${GENERATED_SRC_DIR}/Icon.h"
 )
 
 add_executable(FastFind
@@ -26,7 +35,11 @@ add_executable(FastFind
 	"Compatibility.manifest"
 )
 
-target_include_directories(FastFind PRIVATE ${Boost_INCLUDE_DIRS})
+target_include_directories(FastFind
+    PRIVATE
+        ${Boost_INCLUDE_DIRS}
+        ${GENERATED_SRC_DIR}
+)
 
 target_link_libraries(FastFind
     PRIVATE

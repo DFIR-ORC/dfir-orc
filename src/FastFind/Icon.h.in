@@ -1,0 +1,3 @@
+#pragma once
+
+#define ORC_ICON @ORC_ICON@

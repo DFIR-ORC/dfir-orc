@@ -12,12 +12,21 @@ orc_add_compile_options()
 
 find_package(VisualStudio REQUIRED)
 
+set(GENERATED_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
+
+configure_file(
+    "Icon.h.in"
+    "${GENERATED_SRC_DIR}/Icon.h"
+    @ONLY
+)
+
 set(SRC
     "targetver.h"
     "resource.h"
     "Orc.cpp"
     "Compatibility.manifest"
     "Orc.rc"
+    "${GENERATED_SRC_DIR}/Icon.h"
     )
 
 if(${TARGET_ARCH} STREQUAL "x86")
@@ -49,6 +58,11 @@ add_executable(Orc
     "stdafx.cpp"
     ${SRC}
     ${SRC_SCHEMAS}
+)
+
+target_include_directories(Orc
+    PRIVATE
+        ${GENERATED_SRC_DIR}
 )
 
 target_link_libraries(Orc
