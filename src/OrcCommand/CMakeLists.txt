@@ -14,6 +14,9 @@ find_package(boost REQUIRED)
 
 set(GENERATED_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
 
+set(ORC_META_NAME "" CACHE STRING "Product meta name")
+set(ORC_META_VERSION "" CACHE STRING "Product meta version")
+
 configure_file(
     ToolVersionRes.h.in
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"

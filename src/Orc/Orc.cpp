@@ -65,7 +65,19 @@ ToolDescription g_Tools[] = {
 
 int Usage(const logger& pLog)
 {
-    log::Info(pLog, L"\r\nDFIR-Orc.Exe %s\r\n", kOrcFileVerStringW);
+    log::Info(pLog, L"\r\nDFIR-Orc.Exe %s", kOrcFileVerStringW);
+
+    const std::wstring metaName(kOrcMetaNameW);
+    const std::wstring metaVersion(kOrcMetaVersionW);
+    if (!metaName.empty() && !metaVersion.empty())
+    {
+        log::Info(pLog, L" (%s %s)\r\n", metaName.c_str(), metaVersion.c_str());
+    }
+    else
+    {
+        log::Info(pLog, L"\r\n");
+    }
+
     log::Info(
         pLog,
         L"\r\n"

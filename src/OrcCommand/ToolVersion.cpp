@@ -19,3 +19,6 @@ const wchar_t* kOrcFileVerStringW = ORC_FILEVER_STRINGW;
 const char* kOrcProductVerString = ORC_PRODUCTVER_STRING;
 const wchar_t* kOrcProductVerStringW = ORC_PRODUCTVER_STRINGW;
 const wchar_t* kProductNameStringW = ORC_PRODUCTNAME_STRINGW;
+
+const wchar_t* kOrcMetaVersionW = ORC_META_VERSION_STRINGW;
+const wchar_t* kOrcMetaNameW = ORC_META_NAME_STRINGW;
