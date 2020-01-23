@@ -783,7 +783,7 @@ HRESULT Main::CheckConfiguration()
 
         // Then, we set ORC_Offline as a "OnlyThis" keyword
         config.OnlyTheseKeywords.clear();
-        config.OnlyTheseKeywords.insert(L"DFIR-ORC_Offline");
+        config.OnlyTheseKeywords.insert(L"ORC_Offline");
 
         // Finally, we set the %OfflineLocation env var so the location is known to chikdren
         SetEnvironmentVariable(L"OfflineLocation", config.strOfflineLocation.value().c_str());
