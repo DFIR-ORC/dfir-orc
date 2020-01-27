@@ -1434,7 +1434,17 @@ HRESULT Main::PrintHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize)
     if (FAILED(hr = locs.AddLocations(config.strVolume.c_str(), addedLocs)))
         return hr;
 
-    auto volreader = addedLocs[0]->GetReader();
+    std::shared_ptr<VolumeReader> volreader;
+
+    for(const auto& loc: addedLocs)
+    {
+        if (loc->GetReader()->IsReady())
+        {
+            volreader = loc->GetReader();
+            break;
+        }
+    }
+    
     if (volreader == nullptr)
     {
         log::Error(_L_, E_INVALIDARG, L"Failed to create a reader for volume %s\r\n", config.strVolume.c_str());
@@ -1443,6 +1453,12 @@ HRESULT Main::PrintHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize)
 
     if (FAILED(hr = volreader->LoadDiskProperties()))
         log::Error(_L_, hr, L"Failed to load disk properties for volume %s\r\n", config.strVolume.c_str());
+
+    if (volreader->GetBytesPerCluster() == 0)
+    {
+        log::Error(_L_, hr, L"Invalid bytes per cluster for volume %s\r\n", config.strVolume.c_str());
+        return hr;
+    }
 
     CBinaryBuffer buffer;
     buffer.SetCount(volreader->GetBytesPerCluster());
