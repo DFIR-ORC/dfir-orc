@@ -33,7 +33,7 @@
     <utf16 name="ProductName"      maxlen="254" />
     <utf16 name="OriginalFileName" maxlen="254" />
     <utf16 name="Platform"         maxlen="254" />
-    <utf16 name="TimeStamp"        maxlen="254" />
+    <timestamp name="TimeStamp"                 />
     <utf16 name="SubSystem"        maxlen="254" />
     <utf16 name="FileType"         maxlen="254" />
     <utf16 name="FileOS"           maxlen="254" />
@@ -78,5 +78,5 @@
     </enum>
     <bool name="Parse" />
   </table>
-  
+
 </sqlschema>
