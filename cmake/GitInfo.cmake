@@ -14,11 +14,11 @@ function(git_info)
     set(SINGLE
         REPO_DIRECTORY
         COMMIT
-        LAST_TAG
-        LAST_SEMVER_TAG
+        TAG
+        SEMVER_TAG
         HEAD_TAG
         VERSION
-        SEMANTIC_VERSION
+        VERSION_FROM_SEMVER_TAG
         BRANCH
     )
     set(MULTI)
@@ -28,84 +28,85 @@ function(git_info)
     # Current commit
     if (_GIT_COMMIT)
         execute_process(
-          COMMAND ${GIT_EXECUTABLE} log -1 --format=%H
-          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
-          OUTPUT_VARIABLE GIT_COMMIT
-          OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND ${GIT_EXECUTABLE} log -1 --format=%H
+            WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
+            OUTPUT_VARIABLE GIT_COMMIT
+            OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
         set(${_GIT_COMMIT} ${GIT_COMMIT} PARENT_SCOPE)
     endif()
 
-    # Most recent/close tag
-    if (_GIT_LAST_TAG)
+    # Closest tag
+    if (_GIT_TAG)
         execute_process(
-          COMMAND ${GIT_EXECUTABLE} describe --abbrev=0 --tags HEAD --always
-          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
-          OUTPUT_VARIABLE GIT_LAST_TAG
-          OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND ${GIT_EXECUTABLE} describe --abbrev=0 --tags HEAD --always
+            WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
+            OUTPUT_VARIABLE GIT_TAG
+            OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
-        set(${_GIT_LAST_TAG} ${GIT_LAST_TAG} PARENT_SCOPE)
+        set(${_GIT_TAG} ${GIT_TAG} PARENT_SCOPE)
     endif()
 
-    # Tag string from the most recent/closer Semantic Version tag
-    if (_GIT_LAST_SEMVER_TAG)
+    # Get the closest tag which match a semantic version (ex: 10.0.2)
+    if (_GIT_SEMVER_TAG)
         execute_process(
-          COMMAND
-              ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags --abbrev=0
-          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
-          OUTPUT_VARIABLE GIT_LAST_SEMVER_TAG
-          OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND
+                ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags --abbrev=0
+            WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
+            OUTPUT_VARIABLE GIT_SEMVER_TAG
+            OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
-        set(${_GIT_LAST_SEMVER_TAG} ${GIT_LAST_SEMVER_TAG} PARENT_SCOPE)
+        set(${_GIT_SEMVER_TAG} ${GIT_SEMVER_TAG} PARENT_SCOPE)
     endif()
 
     # Tag on HEAD or nothing
     if (_GIT_HEAD_TAG)
         execute_process(
-          COMMAND ${GIT_EXECUTABLE} tag --list --points-at=HEAD
-          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
-          OUTPUT_VARIABLE GIT_HEAD_TAG
-          OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND ${GIT_EXECUTABLE} tag --list --points-at=HEAD
+            WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
+            OUTPUT_VARIABLE GIT_HEAD_TAG
+            OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
         set(${_GIT_HEAD_TAG} ${GIT_HEAD_TAG} PARENT_SCOPE)
     endif()
 
-    # Most recent/closer tag and commit id
+    # Get a version string build on closest tag and commit id
     if (_GIT_VERSION)
         execute_process(
-          COMMAND ${GIT_EXECUTABLE} describe --tags --always
-          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
-          OUTPUT_VARIABLE GIT_VERSION
-          OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND ${GIT_EXECUTABLE} describe --tags --always
+            WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
+            OUTPUT_VARIABLE GIT_VERSION
+            OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
         set(${_GIT_VERSION} ${GIT_VERSION} PARENT_SCOPE)
     endif()
 
-    # Version string from the most recent/close Semantic Version tag
-    if (_GIT_SEMANTIC_VERSION)
+    # Get a version string built from the latest semantic version tag, number of
+    # commit since and commit hash (ex: 10.0.2-73-g12af043)
+    if (_GIT_VERSION_FROM_SEMVER_TAG)
         execute_process(
-          COMMAND
-              ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags --always
-          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
-          OUTPUT_VARIABLE GIT_SEMANTIC_VERSION
-          OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND
+                ${GIT_EXECUTABLE} describe --match "*[0-9].[0-9].[0-9]*" --tags --always
+            WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
+            OUTPUT_VARIABLE GIT_VERSION_FROM_SEMVER_TAG
+            OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
-        set(${_GIT_SEMANTIC_VERSION} ${GIT_SEMANTIC_VERSION} PARENT_SCOPE)
+        set(${_GIT_VERSION_FROM_SEMVER_TAG} ${GIT_VERSION_FROM_SEMVER_TAG} PARENT_SCOPE)
     endif()
 
     # Current branch
     if (_GIT_BRANCH)
         execute_process(
-          COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
-          WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
-          OUTPUT_VARIABLE GIT_BRANCH
-          OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND ${GIT_EXECUTABLE} rev-parse --abbrev-ref HEAD
+            WORKING_DIRECTORY ${_GIT_REPO_DIRECTORY}
+            OUTPUT_VARIABLE GIT_BRANCH
+            OUTPUT_STRIP_TRAILING_WHITESPACE
         )
 
         set(${_GIT_BRANCH} ${GIT_BRANCH} PARENT_SCOPE)
