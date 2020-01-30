@@ -41,17 +41,6 @@ git_info(
     COMMIT ORC_COMMIT
 )
 
-string(REGEX MATCH "([0-9]+).([0-9]+).([0-9]+)" VERSION_STRING "${ORC_VERSION}")
-if(ORC_VERSION_MAJOR AND ORC_VERSION_MINOR AND ORC_VERSION_PATCH)
-    set(ORC_VERSION_MAJOR ${CMAKE_MATCH_1})
-    set(ORC_VERSION_MINOR ${CMAKE_MATCH_2})
-    set(ORC_VERSION_PATCH ${CMAKE_MATCH_3})
-else()
-    set(ORC_VERSION_MAJOR 0)
-    set(ORC_VERSION_MINOR 0)
-    set(ORC_VERSION_PATCH 0)
-endif()
-
 
 # Configure triplet dynamically with options chosen from CMake
 set(OVERLAY_TRIPLETS ${CMAKE_BINARY_DIR}/vcpkg/triplets)
