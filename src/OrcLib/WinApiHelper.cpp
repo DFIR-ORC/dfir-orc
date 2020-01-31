@@ -17,7 +17,7 @@ namespace Orc {
 
 std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, size_t cbMaxOutput, std::error_code& ec) noexcept
 {
-    const DWORD cchMaxOutput = cbMaxOutput / sizeof(wchar_t);
+    const DWORD cchMaxOutput = static_cast<DWORD>(cbMaxOutput / sizeof(wchar_t));
     const DWORD cchRequired = ::ExpandEnvironmentStringsW(szEnvString, NULL, 0L);
     if (cchRequired > cchMaxOutput)
     {
@@ -62,7 +62,7 @@ std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, std::error_
 
 std::wstring GetWorkingDirectoryApi(size_t cbMaxOutput, std::error_code& ec) noexcept
 {
-    const DWORD cchMaxOutput = cbMaxOutput / sizeof(wchar_t);
+    const DWORD cchMaxOutput = static_cast<DWORD>(cbMaxOutput / sizeof(wchar_t));
 
     std::wstring directory;
     try
