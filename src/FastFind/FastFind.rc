@@ -2,6 +2,8 @@
 //
 #include "resource.h"
 
+#include "Icon.h"
+
 #include "ToolVersionRes.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
@@ -41,6 +43,15 @@ BEGIN
 END
 
 #endif    // APSTUDIO_INVOKED
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// BINARY
+//
+
+FASTFIND_SQLSCHEMA       BINARY     "..\OrcCommand\FastFindSqlSchema.xml"
+
+/////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -82,13 +93,10 @@ END
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
-FASTFIND_SQLSCHEMA              BINARY                  "..\OrcCommand\FastFindSqlSchema.xml"
-
-
 /////////////////////////////////////////////////////////////////////////////
 YARA_CONTENT              BINARY                  "FastFindSample.yara"
 
-MAINICON                ICON                    "..\\..\\res\\DFIR-Orc.ico"
+MAINICON                ICON                    ORC_ICON
 
 #ifndef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////

@@ -55,7 +55,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::SetDateFormat(const WCHAR* szDateForm
     return S_OK;
 }
 
-inline HRESULT Orc::TableOutput::CSV::FileReader::SetBooleanFormat(const WCHAR* szBooleanFormat)
+HRESULT Orc::TableOutput::CSV::FileReader::SetBooleanFormat(const WCHAR* szBooleanFormat)
 {
     if (wcslen(szBooleanFormat) < 2)
         return E_INVALIDARG;

@@ -17,6 +17,7 @@ set(ORC_VCPKG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/vcpkg"
     CACHE FILEPATH "VCPKG root directory"
 )
 
+set(ORC_ICON "${ORC_ROOT}/res/DFIR-Orc.ico" CACHE STRING "Application icon")
 set(ORC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Insert custom cmake directories for script lookup
@@ -35,21 +36,10 @@ include(cmake/GitInfo.cmake)
 git_monitor_status()
 git_info(
     REPO_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    SEMANTIC_VERSION ORC_VERSION
+    VERSION_FROM_SEMVER_TAG ORC_VERSION
     BRANCH ORC_BRANCH
     COMMIT ORC_COMMIT
 )
-
-string(REGEX MATCH "([0-9]+).([0-9]+).([0-9]+)" VERSION_STRING "${ORC_VERSION}")
-if(ORC_VERSION_MAJOR AND ORC_VERSION_MINOR AND ORC_VERSION_PATCH)
-    set(ORC_VERSION_MAJOR ${CMAKE_MATCH_1})
-    set(ORC_VERSION_MINOR ${CMAKE_MATCH_2})
-    set(ORC_VERSION_PATCH ${CMAKE_MATCH_3})
-else()
-    set(ORC_VERSION_MAJOR 0)
-    set(ORC_VERSION_MINOR 0)
-    set(ORC_VERSION_PATCH 0)
-endif()
 
 
 # Configure triplet dynamically with options chosen from CMake

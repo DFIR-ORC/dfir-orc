@@ -1145,7 +1145,18 @@ void UtilitiesMain::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, L
 {
     if (szToolName)
     {
-        log::Info(_L_, L"\r\n%s %s\r\n", szToolName, szVersion);
+        log::Info(_L_, L"\r\n%s %s", szToolName, szVersion);
+
+        const std::wstring metaName(kOrcMetaNameW);
+        const std::wstring metaVersion(kOrcMetaVersionW);
+        if (!metaName.empty() && !metaVersion.empty())
+        {
+            log::Info(_L_, L" (%s %s)\r\n", metaName.c_str(), metaVersion.c_str());
+        }
+        else
+        {
+            log::Info(_L_, L"\r\n");
+        }
     }
 
     if (szToolDescription)

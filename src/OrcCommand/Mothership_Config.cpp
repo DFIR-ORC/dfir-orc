@@ -26,6 +26,30 @@ using namespace std;
 using namespace Orc;
 using namespace Orc::Command::Mothership;
 
+namespace
+{
+    void WriteArgument(std::wstringstream& stream, std::wstring_view& arg)
+    {
+        if (arg.find(' ') != std::wstring::npos)
+        {
+            auto valuePos = arg.find_first_of('=');
+            if (valuePos != std::wstring_view::npos)
+            {
+                valuePos += 1;
+
+                // Add quotes to escape spaces
+                const auto variable = arg.substr(0, valuePos);
+                const auto value = arg.substr(valuePos, arg.size() - valuePos);
+
+                stream << " " << variable << "\"" << value << "\"";
+                return;
+            }
+        }
+
+        stream << " " << arg;
+    }
+}  // namespace
+
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 {
     return nullptr;
@@ -45,7 +69,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         switch (argv[i][0])
         {
             case L'/':
-                argsBuilder << " " << argv[i];
+                ::WriteArgument(argsBuilder, std::wstring_view(argv[i]));
+
                 if (ProcessPriorityOption(argv[i] + 1))
                 {
                     config.dwCreationFlags |= IDLE_PRIORITY_CLASS;

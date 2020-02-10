@@ -14,6 +14,9 @@ find_package(boost REQUIRED)
 
 set(GENERATED_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
 
+set(ORC_META_NAME "" CACHE STRING "Product meta name")
+set(ORC_META_VERSION "" CACHE STRING "Product meta version")
+
 configure_file(
     ToolVersionRes.h.in
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"
@@ -31,6 +34,7 @@ set(SRC
     "UtilitiesMain.h"
     "UtilitiesMain_Config.cpp"
     "targetver.h"
+    "OrcCommand.rc"
 )
 
 source_group("" FILES ${SRC})
@@ -39,10 +43,10 @@ set(SRC_DD
     "ConfigFile_DD.cpp"
     "ConfigFile_DD.h"
     "DD.h"
-    "DDSqlSchema.xml"
     "DD_Config.cpp"
     "DD_Output.cpp"
     "DD_Run.cpp"
+    "DDSqlSchema.xml"
 )
 
 source_group(DD FILES ${SRC_DD})
@@ -79,6 +83,7 @@ set(SRC_FASTFIND
     "FastFind_Config.cpp"
     "FastFind_Output.cpp"
     "FastFind_Run.cpp"
+    "FastFindSqlSchema.xml"
 )
 
 source_group(FastFind FILES ${SRC_FASTFIND})
@@ -91,6 +96,7 @@ set(SRC_FATINFO
     "FatInfo_Config.cpp"
     "FatInfo_Output.cpp"
     "FatInfo_Run.cpp"
+    "FatInfoSqlSchema.xml"
 )
 
 source_group(FatInfo FILES ${SRC_FATINFO})
@@ -103,6 +109,7 @@ set(SRC_GETCOMOBJECTS
     "GetComObjects_Config.cpp"
     "GetComObjects_Output.cpp"
     "GetComObjects_Run.cpp"
+    "GetComObjectsSqlSchema.xml"
 )
 
 source_group(GetComObjects FILES ${SRC_GETCOMOBJECTS})
@@ -115,6 +122,7 @@ set(SRC_GETSAMPLES
     "GetSamples_Config.cpp"
     "GetSamples_Output.cpp"
     "GetSamples_Run.cpp"
+    "GetSamplesSchema.xml"
 )
 
 source_group(GetSamples FILES ${SRC_GETSAMPLES})
@@ -125,6 +133,7 @@ set(SRC_GETSECTORS
     "GetSectors_Config.cpp"
     "GetSectors_Output.cpp"
     "GetSectors_Run.cpp"
+    "GetSectorsSchema.xml"
 )
 
 source_group(GetSectors FILES ${SRC_GETSECTORS})
@@ -137,6 +146,7 @@ set(SRC_GETTHIS
     "GetThis_Config.cpp"
     "GetThis_Output.cpp"
     "GetThis_Run.cpp"
+    "GetThisSqlSchema.xml"
 )
 
 source_group(GetThis FILES ${SRC_GETTHIS})
@@ -149,6 +159,7 @@ set(SRC_IMPORTDATA
     "ImportData_Config.cpp"
     "ImportData_Output.cpp"
     "ImportData_Run.cpp"
+    "ImportDataSqlSchema.xml"
 )
 
 source_group(ImportData FILES ${SRC_IMPORTDATA})
@@ -171,6 +182,7 @@ set(SRC_NTFSINFO
     "NTFSInfo_Config.cpp"
     "NTFSInfo_Output.cpp"
     "NTFSInfo_Run.cpp"
+    "NTFSInfoSqlSchema.xml"
 )
 
 source_group(NTFSInfo FILES ${SRC_NTFSINFO})
@@ -181,6 +193,7 @@ set(SRC_NTFSUTIL
     "NTFSUtil_Config.cpp"
     "NTFSUtil_Output.cpp"
     "NTFSUtil_Run.cpp"
+    "NTFSUtilSqlSchema.xml"
 )
 
 source_group(NTFSUtil FILES ${SRC_NTFSUTIL})
@@ -191,6 +204,7 @@ set(SRC_OBJINFO
     "ObjInfo_Config.cpp"
     "ObjInfo_Output.cpp"
     "ObjInfo_Run.cpp"
+    "ObjInfoSqlSchema.xml"
 )
 
 source_group(ObjInfo FILES ${SRC_OBJINFO})
@@ -203,6 +217,7 @@ set(SRC_REGINFO
     "RegInfo_Config.cpp"
     "RegInfo_Output.cpp"
     "RegInfo_Run.cpp"
+    "RegInfoSqlSchema.xml"
 )
 
 source_group(RegInfo FILES ${SRC_REGINFO})
@@ -226,6 +241,7 @@ set(SRC_USNINFO
     "USNInfo_Config.cpp"
     "USNInfo_Output.cpp"
     "USNInfo_Run.cpp"
+    "USNInfoSqlSchema.xml"
 )
 
 source_group(USNInfo FILES ${SRC_USNINFO})
@@ -246,6 +262,7 @@ set(SRC_WOLFLAUNCHER
     "WolfLauncher_Run.cpp"
     "WolfTask.cpp"
     "WolfTask.h"
+    "WolfLauncherSqlSchema.xml"
 )
 
 source_group(WolfLauncher FILES ${SRC_WOLFLAUNCHER})
@@ -274,6 +291,8 @@ add_library(OrcCommand
         ${SRC_USNINFO}
         ${SRC_WOLFLAUNCHER}
 )
+
+target_sources(OrcCommand PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/OrcCommand.rc")
 
 target_include_directories(OrcCommand
     PRIVATE

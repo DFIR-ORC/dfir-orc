@@ -1872,6 +1872,11 @@ HRESULT LocationSet::ValidateLocation(const std::shared_ptr<Location>& loc)
             loc->SetIsValid(true);
             return S_OK;
         }
+        else if(reader->GetFSType() == FSVBR::FSType::BITLOCKER)
+        {
+            loc->SetIsValid(true);
+            return S_OK;
+        }
     }
 
     return hr;
@@ -2000,6 +2005,10 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
                 }
             }
             else if(loc->GetType() == Location::Type::OfflineMFT)
+            {
+                retval.push_back(loc);
+            }
+            else if(loc->GetFSType() == FSVBR::FSType::BITLOCKER)
             {
                 retval.push_back(loc);
             }

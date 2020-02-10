@@ -362,7 +362,6 @@ FSVBR::FSType Location::GetFSType() const
     {
         return m_Reader->GetFSType();
     }
-
     return FSVBR::FSType::UNKNOWN;
 }
 

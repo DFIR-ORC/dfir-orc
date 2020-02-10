@@ -22,7 +22,18 @@ using namespace Orc::Command::Wolf;
 
 void Main::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, LPCWSTR szVersion)
 {
-    log::Info(_L_, L"\r\nDFIR-Orc %s\r\n", szVersion);
+    log::Info(_L_, L"\r\nDFIR-Orc %s", szVersion);
+
+    const std::wstring metaName(kOrcMetaNameW);
+    const std::wstring metaVersion(kOrcMetaVersionW);
+    if (!metaName.empty() && !metaVersion.empty())
+    {
+        log::Info(_L_, L" (%s %s)\r\n", metaName.c_str(), metaVersion.c_str());
+    }
+    else
+    {
+        log::Info(_L_, L"\r\n");
+    }
 }
 
 void Main::PrintUsage()

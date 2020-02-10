@@ -51,8 +51,12 @@ void Main::PrintUsage()
         L"\t/enumlocs             : Enumerates all possible locations\r\n"
         L"\r\n"
         L"\t/vss                  : List of existing volume shadow copies on current operating system\r\n"
-        L"\t\tArgument: \r\n"
-        L"\t\t/out=<Output>           : Output file or archive\r\n"
+        L"\t/bitlocker            : List BitLocker volumes metadata location and size\r\n"
+        L"\t\tArguments: \r\n"
+        L"\t\t/Offset=<offset>        : Specifies the offset of the -FVE-FS- start of BitLocker volume\r\n"
+        L"\t\t<LocationPath>          : Path to BitLocker image (default is all mounted bitlocker volumes)\r\n"
+        L"\r\n\tArgument: \r\n"
+        L"\t/out=<Output>           : Output file or archive\r\n"
         L"\r\n");
     PrintCommonUsage();
     return;

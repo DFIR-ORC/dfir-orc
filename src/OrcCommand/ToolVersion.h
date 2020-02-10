@@ -6,6 +6,8 @@
 // Author(s): fabienfl
 //
 
+#pragma once
+
 extern const int kVersion[4];
 extern const char* kOrcVersionString;
 extern const wchar_t* kOrcVersionStringW;
@@ -14,3 +16,6 @@ extern const wchar_t* kOrcFileVerStringW;
 extern const char* kOrcProductVerString;
 extern const wchar_t* kOrcProductVerStringW;
 extern const wchar_t* kProductNameStringW;
+
+extern const wchar_t* kOrcMetaVersionW;
+extern const wchar_t* kOrcMetaNameW;

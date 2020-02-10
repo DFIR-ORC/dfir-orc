@@ -36,6 +36,7 @@ public:
         Find,
         HexDump,
         Vss,
+        BitLocker,
         MFT
     } Command;
 
@@ -64,7 +65,7 @@ public:
         DWORDLONG dwlMinSize;
         DWORDLONG dwlAllocDelta;
 
-        // HexDump
+        // HexDump || BitLocker
         DWORDLONG dwlOffset;
         DWORDLONG dwlSize;
 
@@ -110,6 +111,9 @@ private:
 
     // Vss
     HRESULT PrintVss();
+
+    // BitLocker
+    HRESULT PrintBitLocker();
 
 public:
     static LPCWSTR ToolName() { return L"NTFSUtil"; }

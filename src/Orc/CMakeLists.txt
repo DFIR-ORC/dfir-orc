@@ -12,43 +12,36 @@ orc_add_compile_options()
 
 find_package(VisualStudio REQUIRED)
 
+set(GENERATED_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
+
+configure_file(
+    "Icon.h.in"
+    "${GENERATED_SRC_DIR}/Icon.h"
+    @ONLY
+)
+
 set(SRC
     "targetver.h"
     "resource.h"
     "Orc.cpp"
     "Compatibility.manifest"
     "Orc.rc"
+    "${GENERATED_SRC_DIR}/Icon.h"
     )
 
 if(${TARGET_ARCH} STREQUAL "x86")
     list(APPEND SRC "xpcrtwrap.asm" "XPSP2Compatibility.cpp")
 endif()
 
-set(SRC_SCHEMAS
-    "../OrcCommand/DDSqlSchema.xml"
-    "../OrcCommand/ExtractDataReportSqlSchema.xml"
-    "../OrcCommand/FastFindSqlSchema.xml"
-    "../OrcCommand/FatInfoSqlSchema.xml"
-    "../OrcCommand/GetComObjectsSqlSchema.xml"
-    "../OrcCommand/GetSamplesSchema.xml"
-    "../OrcCommand/GetSectorsSchema.xml"
-    "../OrcCommand/GetThisSqlSchema.xml"
-    "../OrcCommand/ImportDataSqlSchema.xml"
-    "../OrcCommand/NTFSInfoSqlSchema.xml"
-    "../OrcCommand/NTFSUtilSqlSchema.xml"
-    "../OrcCommand/ObjInfoSqlSchema.xml"
-    "../OrcCommand/RegInfoSqlSchema.xml"
-    "../OrcCommand/USNInfoSqlSchema.xml"
-    "../OrcCommand/WolfLauncherSqlSchema.xml"
-)
-
-source_group(Schemas FILES ${SRC_SCHEMAS})
-
 add_executable(Orc
     "stdafx.h"
     "stdafx.cpp"
     ${SRC}
-    ${SRC_SCHEMAS}
+)
+
+target_include_directories(Orc
+    PRIVATE
+        ${GENERATED_SRC_DIR}
 )
 
 target_link_libraries(Orc
