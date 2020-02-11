@@ -17,7 +17,10 @@ set(ORC_VCPKG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/vcpkg"
     CACHE FILEPATH "VCPKG root directory"
 )
 
-set(ORC_ICON "${ORC_ROOT}/res/DFIR-Orc.ico" CACHE STRING "Application icon")
+set(ORC_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/DFIR-Orc.ico"
+    CACHE STRING "Application icon"
+)
+
 set(ORC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Insert custom cmake directories for script lookup
