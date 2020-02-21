@@ -47,13 +47,19 @@ typedef struct _PE_IMAGE
     };
 } PE_IMAGE, *PPE_IMAGE;
 
+typedef struct _PE_CHUNK
+{
+    int64_t offset;
+    int64_t length;
+} PE_CHUNK;
+
 int parse_pe(const unsigned char* data, size_t datalen, struct _PE_IMAGE* pe);
 PIMAGE_DATA_DIRECTORY pe_get_secdir(struct _PE_IMAGE* pe);
 uint32_t pe_get_checksum_offset(PPE_IMAGE pe);
 uint32_t pe_get_sizeof_headers(PPE_IMAGE pe);
 
 int calc_pe_chunks_spec(unsigned char* in, size_t size, uint32_t* chunks, size_t nchunks);
-int calc_pe_chunks_real(unsigned char* in, size_t size, uint32_t* chunks, size_t nchunks);
+int calc_pe_chunks_real(unsigned char* in, size_t size, PE_CHUNK* chunks, size_t nchunks);
 
 }  // namespace Orc
 #pragma managed(pop)

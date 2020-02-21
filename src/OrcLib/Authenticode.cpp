@@ -192,13 +192,11 @@ Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffe
 
     std::wstring MemberTag = hash.ToHex();
 
-    log::Verbose(_L_, L"The file is associated catalog with catalog %s.\r\n", InfoStruct.wszCatalogFile);
-
-    WINTRUST_CATALOG_INFO WintrustCatalogStructure;
-    ZeroMemory(&WintrustCatalogStructure, sizeof(WINTRUST_CATALOG_INFO));
-    WintrustCatalogStructure.cbStruct = sizeof(WINTRUST_CATALOG_INFO);
+    log::Verbose(_L_, L"The file is associated with catalog: '%s'.\r\n", InfoStruct.wszCatalogFile);
 
     // Fill in catalog info structure.
+    WINTRUST_CATALOG_INFO WintrustCatalogStructure;
+    ZeroMemory(&WintrustCatalogStructure, sizeof(WINTRUST_CATALOG_INFO));
     WintrustCatalogStructure.cbStruct = sizeof(WINTRUST_CATALOG_INFO);
     WintrustCatalogStructure.pcwszCatalogFilePath = InfoStruct.wszCatalogFile;
     WintrustCatalogStructure.cbCalculatedFileHash = (DWORD)hash.GetCount();
@@ -460,9 +458,9 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
     } PEChunks;
 
     const unsigned int MaxChunks = 256;
-    PEChunks chunks[MaxChunks];
+    PE_CHUNK chunks[MaxChunks];
     ZeroMemory((BYTE*)chunks, sizeof(chunks));
-    int cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), (uint32_t*)chunks, MaxChunks);
+    int cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), chunks, MaxChunks);
 
     if (cChunks == -1)
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
