@@ -184,6 +184,11 @@ HRESULT PEInfo::OpenPEInformation()
         m_FileInfo.GetDetails()->SetDosHeader(std::move(dosbuf));
     }
 
+    if (pDos->e_lfanew + sizeof(IMAGE_NT_HEADERS64) >= stream->GetSize())
+    {
+        return S_OK;
+    }
+
     if (IMAGE_DOS_SIGNATURE == pDos->e_magic)
     {
         /* retrieve PE headers + section table */
