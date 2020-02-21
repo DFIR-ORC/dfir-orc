@@ -184,6 +184,11 @@ HRESULT PEInfo::OpenPEInformation()
         m_FileInfo.GetDetails()->SetDosHeader(std::move(dosbuf));
     }
 
+    if (pDos->e_lfanew + sizeof(IMAGE_NT_HEADERS64) >= stream->GetSize())
+    {
+        return S_OK;
+    }
+
     if (IMAGE_DOS_SIGNATURE == pDos->e_magic)
     {
         /* retrieve PE headers + section table */
@@ -649,30 +654,18 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
 
     // Pe Hash
     {
-        typedef struct _PEChunks
-        {
-            uint32_t offset;
-            uint32_t length;
-        } PEChunks;
-
         const unsigned int MaxChunks = 256;
-        PEChunks chunks[MaxChunks];
+        PE_CHUNK chunks[MaxChunks];
         ZeroMemory((BYTE*)chunks, sizeof(chunks));
-        uint32_t cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), (uint32_t*)chunks, MaxChunks);
+        uint32_t cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), chunks, MaxChunks);
 
         if (cChunks == -1)
+        {
+            log::Warning(_L_, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"Invalid PE chunks\r\n");
             return S_OK;
+        }
 
         // Check if chunks are OK
-        for (uint32_t i = 0; i < cChunks; ++i)
-        {
-            auto nextOffset = (i < (cChunks - 1)) ? chunks[i + 1].offset : pData.GetCount();
-            if (chunks[i].offset + chunks[i].length > nextOffset)
-            {
-                log::Warning(_L_, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"Invalid chunk size for PE hash\r\n");
-                return S_OK;
-            }
-        }
 
         auto pe_hashstream = std::make_shared<CryptoHashStream>(_L_);
         pe_hashstream->OpenToWrite(pe_algs, nullptr);
@@ -761,16 +754,10 @@ HRESULT PEInfo::OpenPeHash(Intentions localIntentions)
     CBinaryBuffer pData;
     memstream->GrabBuffer(pData);
 
-    typedef struct _PEChunks
-    {
-        uint32_t offset;
-        uint32_t length;
-    } PEChunks;
-
     const unsigned int MaxChunks = 256;
-    PEChunks chunks[MaxChunks];
+    PE_CHUNK chunks[MaxChunks];
     ZeroMemory((BYTE*)chunks, sizeof(chunks));
-    int cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), (uint32_t*)chunks, MaxChunks);
+    int cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), chunks, MaxChunks);
 
     if (cChunks == -1)
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);

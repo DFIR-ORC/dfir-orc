@@ -330,55 +330,62 @@ int Orc::calc_pe_chunks_spec(unsigned char* in, size_t size, uint32_t* chunks, s
  * @nchunks : number of allocated chunks
  * return value : number of computed chunks
  */
-int Orc::calc_pe_chunks_real(unsigned char* in, size_t size, uint32_t* chunks, size_t nchunks)
+int Orc::calc_pe_chunks_real(unsigned char* in, size_t inSize, PE_CHUNK* chunks, size_t nchunks)
 {
-    int rc = 1, curchunk = 0;
-    PIMAGE_DATA_DIRECTORY secdir;
-    PE_IMAGE pe_img;
-
-    if (in == NULL || chunks == NULL || nchunks < 4)
-        return -1;
-
-    rc = parse_pe(in, size, &pe_img);
-    if (rc < 0)
+    const size_t kChunkCount = 4;
+    if (in == NULL || chunks == NULL || nchunks < kChunkCount)
     {
-        // fprintf(stderr, "Could not parse PE file\n");
+        return -1;
+    }
+
+    PE_IMAGE pe_img;
+    if (parse_pe(in, inSize, &pe_img) < 0)
+    {
         return -1;
     }
 
     /* XXX read security (certificates) directory */
-    secdir = pe_get_secdir(&pe_img);
+    const PIMAGE_DATA_DIRECTORY secdir = pe_get_secdir(&pe_img);
+    const size_t secdirOffset = reinterpret_cast<uint8_t*>(secdir) - in;
 
-    uint8_t* mImageBase = in;
-    uint32_t mImageSize = (uint32_t)size;
-    uint8_t* HashBase = nullptr;
-    uint32_t HashSize = 0L;
+    chunks[0].offset = 0;
+    chunks[0].length = pe_img.mPeCoffHeaderOffset + pe_get_checksum_offset(&pe_img);
 
-    HashBase = mImageBase;
-    HashSize = pe_img.mPeCoffHeaderOffset + pe_get_checksum_offset(&pe_img);
-    chunks[curchunk * 2] = (uint32_t)(HashBase - in);
-    chunks[curchunk * 2 + 1] = HashSize;
-    curchunk++;
+    chunks[1].offset = chunks[0].length + sizeof(uint32_t);
+    chunks[1].length = secdirOffset - chunks[1].offset;
 
-    HashBase = mImageBase + pe_img.mPeCoffHeaderOffset + pe_get_checksum_offset(&pe_img) + sizeof(uint32_t);
-    HashSize = (uint32_t)((unsigned char*)secdir - HashBase);
-    chunks[curchunk * 2] = (uint32_t)(HashBase - in);
-    chunks[curchunk * 2 + 1] = HashSize;
-    curchunk++;
-
-    HashBase = (uint8_t*)(secdir) + sizeof(IMAGE_DATA_DIRECTORY);
-    HashSize = (uint32_t)(
-        pe_get_sizeof_headers(&pe_img) - ((unsigned char*)secdir - mImageBase) - sizeof(IMAGE_DATA_DIRECTORY));
-    chunks[curchunk * 2] = (uint32_t)(HashBase - in);
-    chunks[curchunk * 2 + 1] = HashSize;
-    curchunk++;
+    chunks[2].offset = secdirOffset + sizeof(IMAGE_DATA_DIRECTORY);
+    chunks[2].length = pe_get_sizeof_headers(&pe_img) - chunks[2].offset;
 
     /* secdir (header) -> secdir (section) */
-    HashBase = mImageBase + pe_get_sizeof_headers(&pe_img);
-    HashSize = (uint32_t)(mImageSize - secdir->Size - pe_get_sizeof_headers(&pe_img));
-    chunks[curchunk * 2] = (uint32_t)(HashBase - in);
-    chunks[curchunk * 2 + 1] = HashSize;
-    curchunk++;
+    chunks[3].offset = pe_get_sizeof_headers(&pe_img);
+    chunks[3].length = inSize - chunks[3].offset - secdir->Size;
 
-    return curchunk;
+    // Chunks must not overlap themselves or overflow image size
+    // All pe fields are at max 32 bits so it should be safe to use int64 to
+    // avoid overflows.
+    for (uint32_t i = 0; i < kChunkCount; ++i)
+    {
+        if (chunks[i].offset < 0 || chunks[i].length < 0)
+        {
+            return -1;
+        }
+
+        int64_t nextOffset;
+        if (i != kChunkCount - 1)
+        {
+            nextOffset = chunks[i + 1].offset;
+        }
+        else
+        {
+            nextOffset = inSize;
+        }
+
+        if (chunks[i].offset + chunks[i].length > nextOffset)
+        {
+            return -1;
+        }
+    }
+
+    return kChunkCount;
 }

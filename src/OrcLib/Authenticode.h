@@ -60,6 +60,7 @@ public:
 
         std::vector<PCCERT_CONTEXT> Signers;
         std::vector<PCCERT_CONTEXT> SignersCAs;
+        std::vector<HCERTSTORE> CertStores;
         PE_Hashs SignedHashs;
         FILETIME Timestamp{ 0 };
 
@@ -85,6 +86,10 @@ public:
             {
                 CertFreeCertificateContext(CA);
             }
+            for (auto certStore : CertStores)
+            {
+                CertCloseStore(certStore, CERT_CLOSE_STORE_FORCE_FLAG);
+            }
         }
 
         AuthenticodeData& operator=(const AuthenticodeData& other) = default;
@@ -108,17 +113,24 @@ private:
     HRESULT ExtractSignatureHash(const CBinaryBuffer& signature, AuthenticodeData& data);
     HRESULT ExtractSignatureTimeStamp(const CBinaryBuffer& signature, AuthenticodeData& data);
 
-    HRESULT ExtractNestedSignature(HCRYPTMSG hMsg, DWORD dwSignerIndex, std::vector<PCCERT_CONTEXT>& pSigner);
+    HRESULT ExtractNestedSignature(
+        HCRYPTMSG hMsg,
+        DWORD dwSignerIndex,
+        std::vector<PCCERT_CONTEXT>& pSigner,
+        std::vector<HCERTSTORE>& certStores);
 
     HRESULT ExtractSignatureSigners(
         const CBinaryBuffer& signature,
         const FILETIME& timestamp,
         std::vector<PCCERT_CONTEXT>& pSigner,
-        std::vector<PCCERT_CONTEXT>& pCA);
+        std::vector<PCCERT_CONTEXT>& pCA,
+        std::vector<HCERTSTORE>& certStores);
+
     HRESULT ExtractCatalogSigners(
         LPCWSTR szCatalogFile,
         std::vector<PCCERT_CONTEXT>& pSigners,
-        std::vector<PCCERT_CONTEXT>& pCAs);
+        std::vector<PCCERT_CONTEXT>& pCAs,
+        std::vector<HCERTSTORE>& certStores);
 
 public:
     Authenticode(const logger& pLog);
