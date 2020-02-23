@@ -8,7 +8,10 @@
 #
 
 add_subdirectory(OrcLib)
-add_subdirectory(OrcCommand)
+
+if(ORC_BUILD_COMMAND OR ORC_BUILD_ORC OR ORC_BUILD_FASTFIND)
+    add_subdirectory(OrcCommand)
+endif()
 
 if(ORC_BUILD_APACHE_ORC)
     add_subdirectory(OrcOptRowColumnLib)

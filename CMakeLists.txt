@@ -7,11 +7,17 @@ option(ORC_BUILD_VCPKG "Build vcpkg dependencies" OFF)
 
 option(ORC_BUILD_APACHE_ORC "Build Apache's ORC module" OFF)
 option(ORC_BUILD_CHAKRACORE "Build with chakracore support" OFF)
-option(ORC_BUILD_FASTFIND "Build FastFind binary" ON)
-option(ORC_BUILD_ORC "Build Orc binary" ON)
-option(ORC_BUILD_PARQUET "Build Parquet module" OFF)
-option(ORC_BUILD_SQL "Build SQL module" OFF)
-option(ORC_BUILD_SSDEEP "Build with ssdeep support" OFF)
+option(ORC_BUILD_COMMAND    "Build any OrcCommabd based command" ON)
+option(ORC_BUILD_FASTFIND   "Build FastFind binary" ON)
+option(ORC_BUILD_ORC        "Build Orc binary" ON)
+option(ORC_BUILD_PARQUET    "Build Parquet module" OFF)
+option(ORC_BUILD_SQL        "Build SQL module" OFF)
+option(ORC_BUILD_SSDEEP     "Build with ssdeep support" OFF)
+
+if(NOT ORC_BUILD_COMMAND)
+    set(ORC_BUILD_FASTFIND OFF)
+    set(ORC_BUILD_ORC      OFF)
+endif()
 
 set(ORC_VCPKG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/vcpkg"
     CACHE FILEPATH "VCPKG root directory"
