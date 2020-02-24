@@ -192,13 +192,11 @@ Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffe
 
     std::wstring MemberTag = hash.ToHex();
 
-    log::Verbose(_L_, L"The file is associated catalog with catalog %s.\r\n", InfoStruct.wszCatalogFile);
-
-    WINTRUST_CATALOG_INFO WintrustCatalogStructure;
-    ZeroMemory(&WintrustCatalogStructure, sizeof(WINTRUST_CATALOG_INFO));
-    WintrustCatalogStructure.cbStruct = sizeof(WINTRUST_CATALOG_INFO);
+    log::Verbose(_L_, L"The file is associated with catalog: '%s'.\r\n", InfoStruct.wszCatalogFile);
 
     // Fill in catalog info structure.
+    WINTRUST_CATALOG_INFO WintrustCatalogStructure;
+    ZeroMemory(&WintrustCatalogStructure, sizeof(WINTRUST_CATALOG_INFO));
     WintrustCatalogStructure.cbStruct = sizeof(WINTRUST_CATALOG_INFO);
     WintrustCatalogStructure.pcwszCatalogFilePath = InfoStruct.wszCatalogFile;
     WintrustCatalogStructure.cbCalculatedFileHash = (DWORD)hash.GetCount();
@@ -237,7 +235,7 @@ Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffe
         log::Verbose(_L_, L"The catalog %s was not successfully released.\r\n", InfoStruct.wszCatalogFile);
     }
 
-    if (FAILED(ExtractCatalogSigners(InfoStruct.wszCatalogFile, data.Signers, data.SignersCAs)))
+    if (FAILED(ExtractCatalogSigners(InfoStruct.wszCatalogFile, data.Signers, data.SignersCAs, data.CertStores)))
     {
         log::Verbose(_L_, L"Failed to extract signer information from catalog %s\r\n", InfoStruct.wszCatalogFile);
     }
@@ -379,10 +377,10 @@ HRESULT Authenticode::Verify(LPCWSTR pwszSourceFile, AuthenticodeData& data)
 
     // Get the size we need for our hash.
     DWORD HashSize = 0L;
-	if (FAILED(hr= m_wintrust.CryptCATAdminCalcHashFromFileHandle(hFile, &HashSize, nullptr, 0L)))
-		return hr;
-    
-	// Allocate memory.
+    if (FAILED(hr = m_wintrust.CryptCATAdminCalcHashFromFileHandle(hFile, &HashSize, nullptr, 0L)))
+        return hr;
+
+    // Allocate memory.
     if (!hash.SetCount(HashSize))
         return E_OUTOFMEMORY;
 
@@ -460,9 +458,9 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
     } PEChunks;
 
     const unsigned int MaxChunks = 256;
-    PEChunks chunks[MaxChunks];
+    PE_CHUNK chunks[MaxChunks];
     ZeroMemory((BYTE*)chunks, sizeof(chunks));
-    int cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), (uint32_t*)chunks, MaxChunks);
+    int cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), chunks, MaxChunks);
 
     if (cChunks == -1)
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -503,7 +501,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
     HCATINFO hCatalog = INVALID_HANDLE_VALUE;
     bool bIsCatalogSigned = false;
 
-	if (hCatalog == INVALID_HANDLE_VALUE && hashs.sha256.GetCount())
+    if (hCatalog == INVALID_HANDLE_VALUE && hashs.sha256.GetCount())
     {
         if (FAILED(hr = FindCatalogForHash(hashs.sha256, bIsCatalogSigned, hCatalog)))
         {
@@ -787,7 +785,11 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
     return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 }
 
-HRESULT Authenticode::ExtractNestedSignature(HCRYPTMSG hMsg, DWORD dwSignerIndex, std::vector<PCCERT_CONTEXT>& pSigners)
+HRESULT Authenticode::ExtractNestedSignature(
+    HCRYPTMSG hMsg,
+    DWORD dwSignerIndex,
+    std::vector<PCCERT_CONTEXT>& pSigners,
+    std::vector<HCERTSTORE>& certStores)
 {
     HRESULT hr = E_FAIL;
     DWORD cbNeeded = 0L;
@@ -849,6 +851,8 @@ HRESULT Authenticode::ExtractNestedSignature(HCRYPTMSG hMsg, DWORD dwSignerIndex
             BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
             BOOST_SCOPE_EXIT_END;
 
+            certStores.push_back(hCertStore);
+
             PCCERT_CONTEXT pSigner = NULL;
             DWORD dwSignerIndex = 0;
 
@@ -858,7 +862,7 @@ HRESULT Authenticode::ExtractNestedSignature(HCRYPTMSG hMsg, DWORD dwSignerIndex
                 pSigners.push_back(CertDuplicateCertificateContext(pSigner));
                 CertFreeCertificateContext(pSigner);
 
-                ExtractNestedSignature(hMsg, dwSignerIndex, pSigners);
+                ExtractNestedSignature(hMsg, dwSignerIndex, pSigners, certStores);
 
                 dwSignerIndex++;
             }
@@ -879,7 +883,8 @@ HRESULT Authenticode::ExtractSignatureSigners(
     const CBinaryBuffer& signature,
     const FILETIME& timestamp,
     std::vector<PCCERT_CONTEXT>& pSigners,
-    std::vector<PCCERT_CONTEXT>& pCAs)
+    std::vector<PCCERT_CONTEXT>& pCAs,
+    std::vector<HCERTSTORE>& certStores)
 {
     HRESULT hr = E_FAIL;
 
@@ -906,6 +911,9 @@ HRESULT Authenticode::ExtractSignatureSigners(
     {
         return hr = HRESULT_FROM_WIN32(GetLastError());
     }
+
+    certStores.push_back(hCertStore);
+
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
     BOOST_SCOPE_EXIT_END;
 
@@ -918,7 +926,7 @@ HRESULT Authenticode::ExtractSignatureSigners(
         pSigners.push_back(CertDuplicateCertificateContext(pSigner));
         CertFreeCertificateContext(pSigner);
 
-        ExtractNestedSignature(hMsg, dwSignerIndex, pSigners);
+        ExtractNestedSignature(hMsg, dwSignerIndex, pSigners, certStores);
 
         dwSignerIndex++;
     }
@@ -976,7 +984,8 @@ HRESULT Authenticode::ExtractSignatureSigners(
 HRESULT Authenticode::ExtractCatalogSigners(
     LPCWSTR szCatalogFile,
     std::vector<PCCERT_CONTEXT>& pSigners,
-    std::vector<PCCERT_CONTEXT>& pCAs)
+    std::vector<PCCERT_CONTEXT>& pCAs,
+    std::vector<HCERTSTORE>& certStores)
 {
     HRESULT hr = E_FAIL;
 
@@ -1013,7 +1022,7 @@ HRESULT Authenticode::ExtractCatalogSigners(
     while (CryptMsgGetAndVerifySigner(hMsg, 1, &hCertStore, CMSG_USE_SIGNER_INDEX_FLAG, &pSigner, &dwSignerIndex))
     {
         pSigners.push_back(CertDuplicateCertificateContext(pSigner));
-        ExtractNestedSignature(hMsg, dwSignerIndex, pSigners);
+        ExtractNestedSignature(hMsg, dwSignerIndex, pSigners, certStores);
         dwSignerIndex++;
     }
     if (GetLastError() != CRYPT_E_INVALID_INDEX)
@@ -1151,7 +1160,7 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
                     szFileName);
             }
 
-            if (FAILED(hr = ExtractSignatureSigners(signature, data.Timestamp, data.Signers, data.SignersCAs)))
+            if (FAILED(hr = ExtractSignatureSigners(signature, data.Timestamp, data.Signers, data.SignersCAs, data.CertStores)))
             {
                 log::Error(
                     _L_,
