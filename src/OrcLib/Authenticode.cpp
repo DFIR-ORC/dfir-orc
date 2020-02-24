@@ -185,8 +185,6 @@ Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffe
     // If we couldn't get information
     if (!m_wintrust.CryptCATCatalogInfoFromContext(hCatalog, &InfoStruct, 0))
     {
-        m_wintrust.CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0);
-        hCatalog = NULL;
         return HRESULT_FROM_WIN32(GetLastError());
     }
 
@@ -229,11 +227,6 @@ Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffe
     LONG lStatus = m_wintrust.WinVerifyTrust((HWND)INVALID_HANDLE_VALUE, &WVTPolicyGUID, &WintrustStructure);
 
     m_StateMap[std::move(strCatalog)] = WintrustStructure.hWVTStateData;
-
-    if (!m_wintrust.CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
-    {
-        log::Verbose(_L_, L"The catalog %s was not successfully released.\r\n", InfoStruct.wszCatalogFile);
-    }
 
     if (FAILED(ExtractCatalogSigners(InfoStruct.wszCatalogFile, data.Signers, data.SignersCAs, data.CertStores)))
     {
@@ -510,9 +503,14 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
         else if (bIsCatalogSigned)
         {
             // Only if file is catalog signed and hash was passed, proceed with verification
-            if (FAILED(hr = VerifySignatureWithCatalogs(szFileName, hashs.sha256, hCatalog, data)))
-                return hr;
-            return S_OK;
+            hr = VerifySignatureWithCatalogs(szFileName, hashs.sha256, hCatalog, data);
+
+            if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
+            {
+                log::Warning(_L_, L"CryptCATAdminReleaseCatalogContext failed with: %x\r\n", GetLastError());
+            }
+
+            return hr;
         }
     }
 
@@ -525,9 +523,14 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
         else if (bIsCatalogSigned)
         {
             // Only if file is catalog signed and hash was passed, proceed with verification
-            if (FAILED(hr = VerifySignatureWithCatalogs(szFileName, hashs.sha1, hCatalog, data)))
-                return hr;
-            return S_OK;
+            hr = VerifySignatureWithCatalogs(szFileName, hashs.sha1, hCatalog, data);
+
+            if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
+            {
+                log::Warning(_L_, L"CryptCATAdminReleaseCatalogContext failed with: %x\r\n", GetLastError());
+            }
+
+            return hr;
         }
     }
 
@@ -540,9 +543,14 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
         else if (bIsCatalogSigned)
         {
             // Only if file is catalog signed and hash was passed, proceed with verification
-            if (FAILED(hr = VerifySignatureWithCatalogs(szFileName, hashs.md5, hCatalog, data)))
-                return hr;
-            return S_OK;
+            hr = VerifySignatureWithCatalogs(szFileName, hashs.md5, hCatalog, data);
+
+            if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
+            {
+                log::Warning(_L_, L"CryptCATAdminReleaseCatalogContext failed with: %x\r\n", GetLastError());
+            }
+
+            return hr;
         }
     }
 
