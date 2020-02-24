@@ -21,14 +21,16 @@
 #    define ORCLIB_API
 #endif
 
-#include <winnt.h>
+
+
+#pragma managed(push, off)
 
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-#pragma managed(push, off)
+#include <Windows.h>
 
 namespace Orc {
 
