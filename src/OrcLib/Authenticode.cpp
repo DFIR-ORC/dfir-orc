@@ -1024,6 +1024,8 @@ HRESULT Authenticode::ExtractCatalogSigners(
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
     BOOST_SCOPE_EXIT_END;
 
+    certStores.push_back(hCertStore);
+
     PCCERT_CONTEXT pSigner = NULL;
     DWORD dwSignerIndex = 0;
 
