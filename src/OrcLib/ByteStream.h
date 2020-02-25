@@ -9,8 +9,6 @@
 
 #include "OrcLib.h"
 
-#include "BinaryBuffer.h"
-
 #include <memory>
 
 #pragma managed(push, off)

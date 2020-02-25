@@ -10,7 +10,7 @@
 #include "OrcLib.h"
 
 #include "ByteStream.h"
-
+#include "BinaryBuffer.h"
 #include "ArchiveFormat.h"
 
 #include <memory>

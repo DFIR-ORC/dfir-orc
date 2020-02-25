@@ -9,12 +9,8 @@
 
 #include "OutputWriter.h"
 
-#include "ByteStream.h"
-
 #include <concrt.h>
-
 #include <strsafe.h>
-
 #include <functional>
 #include <optional>
 
@@ -41,6 +37,7 @@ class ORCLIB_API LogFileWriter
     , std::enable_shared_from_this<LogFileWriter>
 {
 public:
+
     typedef enum _BufferEncoding
     {
         TreatAsUnicode,
@@ -167,165 +164,22 @@ public:
 
     HRESULT WriteEndOfLine();
 
-    ~LogFileWriter(void);
+    ~LogFileWriter(void) { Close(); }
 
-    friend Orc::logger& operator<<(Orc::logger& L, LPCWSTR szString)
-    {
-        if (L)
-            L->WriteString(szString);
-        return L;
-    }
-
-    friend Orc::logger& operator<<(Orc::logger& L, LPCSTR szString)
-    {
-        if (L)
-            L->WriteString(szString);
-        return L;
-    }
-
-    friend Orc::logger& operator<<(Orc::logger& L, const std::string& strString)
-    {
-        if (L)
-            L->WriteString(strString.c_str());
-        return L;
-    };
-
-    friend Orc::logger& operator<<(Orc::logger& L, const std::wstring& strString)
-    {
-        if (L)
-            L->WriteString(strString);
-        return L;
-    };
-
-    friend Orc::logger& operator<<(Orc::logger& L, bool bBoolean)
-    {
-        if (L)
-            L->WriteBool(bBoolean);
-        return L;
-    }
-
-    friend Orc::logger& operator<<(Orc::logger& L, SYSTEMTIME sysTime)
-    {
-        if (L)
-            L->WriteSystemTime(sysTime);
-        return L;
-    }
-    friend Orc::logger& operator<<(Orc::logger& L, FILETIME fileTime)
-    {
-        if (L)
-            L->WriteFileTime(fileTime);
-        return L;
-    }
-    friend Orc::logger& operator<<(Orc::logger& L, const CBinaryBuffer& buffer)
-    {
-        if (!L)
-            return L;
-        switch (L->BinFormat())
-        {
-            case BinaryFormat::PrefixedHex:
-                L->WriteBytesInHex(buffer.GetData(), static_cast<DWORD>(buffer.GetCount()), true);
-                break;
-            default:
-                L->WriteBytesInHex(buffer.GetData(), static_cast<DWORD>(buffer.GetCount()), false);
-        }
-        return L;
-    }
-
-    friend Orc::logger& operator<<(Orc::logger& L, const ULONG uLong)
-    {
-        if (!L)
-            return L;
-        switch (L->IntFormat())
-        {
-            case IntegerFormat::HexaDecimal:
-                L->WriteBytesInHex(uLong, false);
-                break;
-            case IntegerFormat::PrefixedHexaDecimal:
-                L->WriteBytesInHex(uLong, true);
-                break;
-            default:
-                L->WriteFileSize(0L, uLong);
-                break;
-        }
-        return L;
-    };
-    friend Orc::logger& operator<<(Orc::logger& L, const LONG uLong)
-    {
-        if (!L)
-            return L;
-        switch (L->IntFormat())
-        {
-            case IntegerFormat::HexaDecimal:
-                L->WriteBytesInHex((ULONG)uLong, false);
-                break;
-            case IntegerFormat::PrefixedHexaDecimal:
-                L->WriteBytesInHex((ULONG)uLong, true);
-                break;
-            default:
-                L->WriteFileSize(0L, uLong);
-                break;
-        }
-        return L;
-    }
-    friend Orc::logger& operator<<(Orc::logger& L, const ULONG64 uLongLong)
-    {
-        if (!L)
-            return L;
-        switch (L->IntFormat())
-        {
-            case IntegerFormat::HexaDecimal:
-                L->WriteBytesInHex(uLongLong, false);
-                break;
-            case IntegerFormat::PrefixedHexaDecimal:
-                L->WriteBytesInHex(uLongLong, true);
-                break;
-            default:
-            {
-                ULARGE_INTEGER li;
-                li.QuadPart = uLongLong;
-                L->WriteFileSize(li);
-            }
-            break;
-        }
-        return L;
-    }
-
-    friend Orc::logger& operator<<(Orc::logger& L, const SHORT Bytes)
-    {
-        if (!L)
-            return L;
-        switch (L->IntFormat())
-        {
-            case IntegerFormat::HexaDecimal:
-                L->WriteBytesInHex(Bytes, false);
-                break;
-            case IntegerFormat::PrefixedHexaDecimal:
-                L->WriteBytesInHex(Bytes, true);
-                break;
-            default:
-                L->WriteInteger(Bytes);
-                break;
-        }
-        return L;
-    };
-    friend Orc::logger& operator<<(Orc::logger& L, const BYTE Byte)
-    {
-        if (!L)
-            return L;
-        switch (L->IntFormat())
-        {
-            case IntegerFormat::HexaDecimal:
-                L->WriteBytesInHex(Byte, false);
-                break;
-            case IntegerFormat::PrefixedHexaDecimal:
-                L->WriteBytesInHex(Byte, true);
-                break;
-            default:
-                L->WriteInteger(Byte);
-                break;
-        }
-        return L;
-    };
+    friend Orc::logger& operator<<(Orc::logger& L, LPCWSTR szString);
+    friend Orc::logger& operator<<(Orc::logger& L, LPCSTR szString);
+    friend Orc::logger& operator<<(Orc::logger& L, const std::string& strString);
+    friend Orc::logger& operator<<(Orc::logger& L, const std::wstring& strString);
+    friend Orc::logger& operator<<(Orc::logger& L, bool bBoolean);
+    friend Orc::logger& operator<<(Orc::logger& L, SYSTEMTIME sysTime);
+    friend Orc::logger& operator<<(Orc::logger& L, FILETIME fileTime);
+    friend Orc::logger& operator<<(Orc::logger& L, const CBinaryBuffer& buffer);
+    friend Orc::logger& operator<<(Orc::logger& L, const ULONG uLong);
+    friend Orc::logger& operator<<(Orc::logger& L, const LONG uLong);
+    friend Orc::logger& operator<<(Orc::logger& L, const ULONG64 uLongLong);
+    friend Orc::logger& operator<<(Orc::logger& L, const SHORT Bytes);
+    friend Orc::logger& operator<<(Orc::logger& L, const BYTE Byte);
+    friend Orc::logger& operator<<(Orc::logger& L, LogFileWriter& (*pf)(LogFileWriter&));
 
     template <typename T>
     friend Orc::logger& operator<<(Orc::logger& L, const std::vector<T>& vect)
@@ -342,13 +196,6 @@ public:
             L << item;
         }
         L->WriteString(L"]");
-        return L;
-    }
-
-    friend Orc::logger& operator<<(Orc::logger& L, LogFileWriter& (*pf)(LogFileWriter&))
-    {
-        if (L)
-            pf(*L);
         return L;
     }
 

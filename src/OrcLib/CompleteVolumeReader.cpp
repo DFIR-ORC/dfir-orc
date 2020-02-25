@@ -9,7 +9,7 @@
 #include "stdafx.h"
 
 #include "CompleteVolumeReader.h"
-
+#include "ByteStream.h"
 #include "Kernel32Extension.h"
 
 using namespace Orc;
