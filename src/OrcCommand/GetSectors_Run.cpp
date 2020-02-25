@@ -1082,7 +1082,12 @@ Main::CreateDiskChunkArchiveAndCSV(const std::wstring& pArchivePath, const std::
     fs::path tempdir;
     tempdir = fs::path(pArchivePath).parent_path();
 
-    auto logStream = std::make_shared<TemporaryStream>(_L_);
+    auto stream_log = std::make_shared<LogFileWriter>(0x1000);
+    stream_log->SetConsoleLog(_L_->ConsoleLog());
+    stream_log->SetDebugLog(_L_->DebugLog());
+    stream_log->SetVerboseLog(_L_->VerboseLog());
+
+    auto logStream = std::make_shared<TemporaryStream>(stream_log);
 
     if (FAILED(hr = logStream->Open(tempdir.wstring(), L"GetSectors", 5 * 1024 * 1024)))
     {
