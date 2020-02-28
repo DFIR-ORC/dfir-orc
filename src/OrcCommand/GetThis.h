@@ -4,6 +4,7 @@
 // Copyright © 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl (ANSSI)
 //
 
 #pragma once
@@ -220,29 +221,19 @@ private:
 
         bool operator<(const SampleRef& rigth) const
         {
+            if (FRN.SegmentNumberLowPart != rigth.FRN.SegmentNumberLowPart)
+                return FRN.SegmentNumberLowPart < rigth.FRN.SegmentNumberLowPart;
+
             if (!Matches.empty() && !rigth.Matches.empty())
             {
                 if (VolumeSerial != rigth.VolumeSerial)
                     return VolumeSerial < rigth.VolumeSerial;
 
-                if (SnapshotID.Data1 != rigth.SnapshotID.Data1)
-                    return SnapshotID.Data1 < rigth.SnapshotID.Data1;
-
-                if (SnapshotID.Data2 != rigth.SnapshotID.Data2)
-                    return SnapshotID.Data2 < rigth.SnapshotID.Data2;
-
-                if (SnapshotID.Data3 != rigth.SnapshotID.Data3)
-                    return SnapshotID.Data3 < rigth.SnapshotID.Data3;
-
-                auto cmpresult = memcmp(SnapshotID.Data4, rigth.SnapshotID.Data4, 8 * sizeof(CHAR));
+                auto cmpresult = memcmp(&SnapshotID, &rigth.SnapshotID, sizeof(GUID));
                 if (cmpresult != 0)
                     return cmpresult < 0;
 
-                if (FRN.SegmentNumberLowPart != rigth.FRN.SegmentNumberLowPart)
-                    return FRN.SegmentNumberLowPart < rigth.FRN.SegmentNumberLowPart;
-
                 return InstanceID < rigth.InstanceID;
-                ;
             }
             return false;
         };
