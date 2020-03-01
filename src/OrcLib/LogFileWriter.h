@@ -115,10 +115,8 @@ public:
 
     HRESULT WriteString(const WCHAR* szString);
     HRESULT WriteString(const CHAR* szString);
-    HRESULT WriteString(const std::wstring& strString);
-    HRESULT WriteString(const std::string& strString);
-    HRESULT WriteString(const std::wstring_view& strString);
-    HRESULT WriteString(const std::string_view& strString);
+    HRESULT WriteString(const std::wstring_view strString);
+    HRESULT WriteString(const std::string_view strString);
 
     template <typename... Args>
     HRESULT WriteFormatedString(const WCHAR* szFormat, Args&&... args)
@@ -168,8 +166,8 @@ public:
 
     friend Orc::logger& operator<<(Orc::logger& L, LPCWSTR szString);
     friend Orc::logger& operator<<(Orc::logger& L, LPCSTR szString);
-    friend Orc::logger& operator<<(Orc::logger& L, const std::string& strString);
-    friend Orc::logger& operator<<(Orc::logger& L, const std::wstring& strString);
+    friend Orc::logger& operator<<(Orc::logger& L, const std::string_view strString);
+    friend Orc::logger& operator<<(Orc::logger& L, const std::wstring_view strString);
     friend Orc::logger& operator<<(Orc::logger& L, bool bBoolean);
     friend Orc::logger& operator<<(Orc::logger& L, SYSTEMTIME sysTime);
     friend Orc::logger& operator<<(Orc::logger& L, FILETIME fileTime);

@@ -577,7 +577,7 @@ HRESULT LogFileWriter::WriteString(const CHAR* szString)
     return WriteString(buffer.GetP<WCHAR>());
 }
 
-HRESULT LogFileWriter::WriteString(const std::wstring& strString)
+HRESULT LogFileWriter::WriteString(const std::wstring_view strString)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = PrintToBuffer(L"%.*s", strString.size(), strString.data())))
@@ -585,23 +585,7 @@ HRESULT LogFileWriter::WriteString(const std::wstring& strString)
     return S_OK;
 }
 
-HRESULT LogFileWriter::WriteString(const std::string& strString)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = PrintToBuffer(L"%.*S", strString.size(), strString.data())))
-        return hr;
-    return S_OK;
-}
-
-HRESULT LogFileWriter::WriteString(const std::wstring_view& strString)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = PrintToBuffer(L"%.*s", strString.size(), strString.data())))
-        return hr;
-    return S_OK;
-}
-
-HRESULT LogFileWriter::WriteString(const std::string_view& strString)
+HRESULT LogFileWriter::WriteString(const std::string_view strString)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = PrintToBuffer(L"%.*S", strString.size(), strString.data())))
@@ -1142,17 +1126,17 @@ namespace Orc {
         return L;
     }
 
-    Orc::logger& operator<<(Orc::logger& L, const std::string& strString)
+    Orc::logger& operator<<(Orc::logger& L, const std::string_view svString)
     {
         if (L)
-            L->WriteString(strString.c_str());
+            L->WriteString(svString);
         return L;
     }
 
-    Orc::logger& operator<<(Orc::logger& L, const std::wstring& strString)
+    Orc::logger& operator<<(Orc::logger& L, const std::wstring_view svString)
     {
         if (L)
-            L->WriteString(strString);
+            L->WriteString(svString);
         return L;
     }
 
