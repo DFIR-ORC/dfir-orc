@@ -279,7 +279,7 @@ private:
     FILETIME CollectionDate;
     std::wstring ComputerName;
     Limits GlobalLimits;
-    std::set<std::wstring> SampleNames;
+    std::unordered_set<std::wstring> SampleNames;
 
     static HRESULT CreateSampleFileName(
         const ContentSpec& content,

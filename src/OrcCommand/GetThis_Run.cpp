@@ -664,7 +664,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
 
                 wstring CabSampleName;
                 DWORD dwIdx = 0L;
-                std::set<std::wstring>::iterator it;
+                std::unordered_set<std::wstring>::iterator it;
                 do
                 {
                     if (FAILED(
@@ -677,7 +677,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
                         CabSampleName.insert(0, L"\\");
                         CabSampleName.insert(0, aSpec.Name);
                     }
-                    it = std::find(begin(SampleNames), end(SampleNames), CabSampleName);
+                    it = SampleNames.find(CabSampleName);
                     dwIdx++;
 
                 } while (it != end(SampleNames));
