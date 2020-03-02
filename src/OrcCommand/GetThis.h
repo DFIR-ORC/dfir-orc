@@ -239,12 +239,46 @@ private:
         };
     };
 
-    FileFind FileFinder;
+    struct SampleRefHasher
+    {
+        size_t operator()(const SampleRef& ref) const { return ref.FRN.SegmentNumberLowPart; }
+    };
 
+    struct SampleRefComparator
+    {
+        bool operator()(const SampleRef& lhs, const SampleRef& rhs) const
+        {
+            if (lhs.FRN.SegmentNumberLowPart != rhs.FRN.SegmentNumberLowPart)
+            {
+                return false;
+            }
+
+            if (lhs.Matches.empty() || rhs.Matches.empty())
+            {
+                return false;
+            }
+
+            if (lhs.VolumeSerial != rhs.VolumeSerial)
+            {
+                return false;
+            }
+
+            if (memcmp(&lhs.SnapshotID, &rhs.SnapshotID, sizeof(GUID) != 0))
+            {
+                return false;
+            }
+
+            return true;
+        }
+    };
+
+    using SampleSet = std::unordered_set<SampleRef, SampleRefHasher, SampleRefComparator>;
+    SampleSet Samples;
+
+    FileFind FileFinder;
     FILETIME CollectionDate;
     std::wstring ComputerName;
     Limits GlobalLimits;
-    std::set<SampleRef> Samples;
     std::set<std::wstring> SampleNames;
 
     static HRESULT CreateSampleFileName(
@@ -271,15 +305,12 @@ private:
     HRESULT CollectMatchingSamples(
         const std::shared_ptr<ArchiveCreate>& compressor,
         ITableOutput& output,
-        std::set<SampleRef>& MatchingSamples);
-    HRESULT CollectMatchingSamples(
-        const std::wstring& strOutputDir,
-        ITableOutput& output,
-        std::set<SampleRef>& MatchingSamples);
+        SampleSet& MatchingSamples);
+    HRESULT CollectMatchingSamples(const std::wstring& strOutputDir, ITableOutput& output, SampleSet& MatchingSamples);
 
-    HRESULT HashOffLimitSamples(ITableOutput& output, std::set<SampleRef>& MatchingSamples);
+    HRESULT HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSamples);
 
-    HRESULT CollectMatchingSamples(const OutputSpec& output, std::set<SampleRef>& MatchingSamples);
+    HRESULT CollectMatchingSamples(const OutputSpec& output, SampleSet& MatchingSamples);
 
     HRESULT FindMatchingSamples();
 

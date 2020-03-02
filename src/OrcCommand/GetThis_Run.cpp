@@ -641,7 +641,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
                 break;
         }
 
-        std::set<SampleRef>::iterator prevSample = Samples.find(sampleRef);
+        SampleSet::iterator prevSample = Samples.find(sampleRef);
 
         if (prevSample != end(Samples))
         {
@@ -702,7 +702,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
 HRESULT Main::CollectMatchingSamples(
     const std::shared_ptr<ArchiveCreate>& compressor,
     ITableOutput& output,
-    std::set<SampleRef>& Samples)
+    SampleSet& Samples)
 {
     HRESULT hr = E_FAIL;
 
@@ -764,7 +764,7 @@ HRESULT Main::CollectMatchingSamples(
 }
 
 HRESULT
-Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output, std::set<SampleRef>& MatchingSamples)
+Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output, SampleSet& MatchingSamples)
 {
     HRESULT hr = E_FAIL;
 
@@ -833,7 +833,7 @@ Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output
     return S_OK;
 }
 
-HRESULT Main::CollectMatchingSamples(const OutputSpec& output, std::set<SampleRef>& MatchingSamples)
+HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& MatchingSamples)
 {
     HRESULT hr = E_FAIL;
 
@@ -923,7 +923,7 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, std::set<SampleRe
     return S_OK;
 }
 
-HRESULT Main::HashOffLimitSamples(ITableOutput& output, std::set<SampleRef>& MatchingSamples)
+HRESULT Main::HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSamples)
 {
     HRESULT hr = E_FAIL;
 
@@ -931,7 +931,7 @@ HRESULT Main::HashOffLimitSamples(ITableOutput& output, std::set<SampleRef>& Mat
 
     log::Info(_L_, L"\r\nComputing hash of off limit samples\r\n");
 
-    for (std::set<SampleRef>::iterator it = begin(MatchingSamples); it != end(MatchingSamples); ++it)
+    for (SampleSet::iterator it = begin(MatchingSamples); it != end(MatchingSamples); ++it)
     {
         if (it->OffLimits)
         {
