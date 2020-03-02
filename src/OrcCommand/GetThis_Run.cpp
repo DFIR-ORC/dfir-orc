@@ -409,6 +409,10 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
                 return hr;
             upstream = sampleRef.HashStream;
         }
+        else
+        {
+            upstream = stream;
+        }
 
         FuzzyHashStream::Algorithm fuzzy_algs = config.FuzzyHashAlgs;
         if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
