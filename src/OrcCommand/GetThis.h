@@ -4,6 +4,7 @@
 // Copyright © 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl (ANSSI)
 //
 
 #pragma once
@@ -220,41 +221,65 @@ private:
 
         bool operator<(const SampleRef& rigth) const
         {
+            if (FRN.SegmentNumberLowPart != rigth.FRN.SegmentNumberLowPart)
+                return FRN.SegmentNumberLowPart < rigth.FRN.SegmentNumberLowPart;
+
             if (!Matches.empty() && !rigth.Matches.empty())
             {
                 if (VolumeSerial != rigth.VolumeSerial)
                     return VolumeSerial < rigth.VolumeSerial;
 
-                if (SnapshotID.Data1 != rigth.SnapshotID.Data1)
-                    return SnapshotID.Data1 < rigth.SnapshotID.Data1;
-
-                if (SnapshotID.Data2 != rigth.SnapshotID.Data2)
-                    return SnapshotID.Data2 < rigth.SnapshotID.Data2;
-
-                if (SnapshotID.Data3 != rigth.SnapshotID.Data3)
-                    return SnapshotID.Data3 < rigth.SnapshotID.Data3;
-
-                auto cmpresult = memcmp(SnapshotID.Data4, rigth.SnapshotID.Data4, 8 * sizeof(CHAR));
+                auto cmpresult = memcmp(&SnapshotID, &rigth.SnapshotID, sizeof(GUID));
                 if (cmpresult != 0)
                     return cmpresult < 0;
 
-                if (FRN.SegmentNumberLowPart != rigth.FRN.SegmentNumberLowPart)
-                    return FRN.SegmentNumberLowPart < rigth.FRN.SegmentNumberLowPart;
-
                 return InstanceID < rigth.InstanceID;
-                ;
             }
             return false;
         };
     };
 
-    FileFind FileFinder;
+    struct SampleRefHasher
+    {
+        size_t operator()(const SampleRef& ref) const { return ref.FRN.SegmentNumberLowPart; }
+    };
 
+    struct SampleRefComparator
+    {
+        bool operator()(const SampleRef& lhs, const SampleRef& rhs) const
+        {
+            if (lhs.FRN.SegmentNumberLowPart != rhs.FRN.SegmentNumberLowPart)
+            {
+                return false;
+            }
+
+            if (lhs.Matches.empty() || rhs.Matches.empty())
+            {
+                return false;
+            }
+
+            if (lhs.VolumeSerial != rhs.VolumeSerial)
+            {
+                return false;
+            }
+
+            if (memcmp(&lhs.SnapshotID, &rhs.SnapshotID, sizeof(GUID) != 0))
+            {
+                return false;
+            }
+
+            return true;
+        }
+    };
+
+    using SampleSet = std::unordered_set<SampleRef, SampleRefHasher, SampleRefComparator>;
+    SampleSet Samples;
+
+    FileFind FileFinder;
     FILETIME CollectionDate;
     std::wstring ComputerName;
     Limits GlobalLimits;
-    std::set<SampleRef> Samples;
-    std::set<std::wstring> SampleNames;
+    std::unordered_set<std::wstring> SampleNames;
 
     static HRESULT CreateSampleFileName(
         const ContentSpec& content,
@@ -280,15 +305,12 @@ private:
     HRESULT CollectMatchingSamples(
         const std::shared_ptr<ArchiveCreate>& compressor,
         ITableOutput& output,
-        std::set<SampleRef>& MatchingSamples);
-    HRESULT CollectMatchingSamples(
-        const std::wstring& strOutputDir,
-        ITableOutput& output,
-        std::set<SampleRef>& MatchingSamples);
+        SampleSet& MatchingSamples);
+    HRESULT CollectMatchingSamples(const std::wstring& strOutputDir, ITableOutput& output, SampleSet& MatchingSamples);
 
-    HRESULT HashOffLimitSamples(ITableOutput& output, std::set<SampleRef>& MatchingSamples);
+    HRESULT HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSamples);
 
-    HRESULT CollectMatchingSamples(const OutputSpec& output, std::set<SampleRef>& MatchingSamples);
+    HRESULT CollectMatchingSamples(const OutputSpec& output, SampleSet& MatchingSamples);
 
     HRESULT FindMatchingSamples();
 
