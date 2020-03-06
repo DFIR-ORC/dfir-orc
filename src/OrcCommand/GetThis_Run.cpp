@@ -579,7 +579,7 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
             if (rules.has_value())
             {
                 stringstream aStream;
-                const char* const delim = ", ";
+                const char* const delim = "; ";
 
                 std::copy(begin(rules.value()), end(rules.value()), std::ostream_iterator<std::string>(aStream, delim));
 
