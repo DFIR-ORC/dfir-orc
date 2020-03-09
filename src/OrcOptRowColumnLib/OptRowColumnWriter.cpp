@@ -16,6 +16,7 @@
 #include "Robustness.h"
 
 #include "Buffer.h"
+#include "BinaryBuffer.h"
 #include "Convert.h"
 
 #include <WideAnsi.h>

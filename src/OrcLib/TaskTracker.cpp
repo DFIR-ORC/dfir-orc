@@ -22,7 +22,7 @@
 
 #include "TaskTracker.h"
 #include "LogFileWriter.h"
-
+#include "ByteStream.h"
 #include "Authenticode.h"
 
 #include "CaseInsensitive.h"

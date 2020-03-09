@@ -427,19 +427,9 @@ source_group(In&Out\\ByteStream\\WrapperStream
 
 set(SRC_INOUT_CONCURRENT
     "BoundedBuffer.h"
-    "BufferAgent.cpp"
-    "BufferAgent.h"
-    "ConcurrentStream.cpp"
-    "ConcurrentStream.h"
-    "HashTransform.cpp"
-    "HashTransform.h"
     "MessageQueue.h"
     "PriorityBuffer.h"
     "Semaphore.h"
-    "StreamAgent.cpp"
-    "StreamAgent.h"
-    "StreamMessage.cpp"
-    "StreamMessage.h"
 )
 
 source_group(In&Out\\Concurrent FILES ${SRC_INOUT_CONCURRENT})

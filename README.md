@@ -53,6 +53,7 @@ Using default options is recommended with the exception of `ORC_BUILD_VCPKG` whi
 | ORC_BUILD_VCPKG      | OFF                   | Build vcpkg dependencies      |
 | ORC_BUILD_APACHE_ORC | OFF                   | Build Apache Orc module       |
 | ORC_BUILD_CHAKRACORE | OFF                   | Build with ChakraCore support |
+| ORC_BUILD_COMMAND    | ON                    | Build OrcCommand library      |
 | ORC_BUILD_FASTFIND   | OFF                   | Build FastFind binary         |
 | ORC_BUILD_ORC        | ON                    | Build Orc binary              |
 | ORC_BUILD_PARQUET    | OFF                   | Build Parquet module (x64)    |

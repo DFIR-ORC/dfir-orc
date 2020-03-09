@@ -204,7 +204,13 @@ HRESULT Main::Run_Execute()
     {
         OutputSpec log = config.Log;
         log.Path = config.strLogFilePath;
-        auto byteStream = ByteStream::GetStream(_L_, log);
+
+        auto stream_log = std::make_shared<LogFileWriter>(0x1000);
+        stream_log->SetConsoleLog(_L_->ConsoleLog());
+        stream_log->SetDebugLog(_L_->DebugLog());
+        stream_log->SetVerboseLog(_L_->VerboseLog());
+
+        auto byteStream = ByteStream::GetStream(stream_log, log);
 
         if (byteStream->GetSize() == 0LLU)
         {

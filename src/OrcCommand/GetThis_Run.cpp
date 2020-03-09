@@ -112,13 +112,19 @@ Main::CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::sh
     fs::path tempdir;
     tempdir = fs::path(pArchivePath).parent_path();
 
-    auto logStream = std::make_shared<TemporaryStream>(_L_);
+    auto stream_log = std::make_shared<LogFileWriter>(0x1000);
+    stream_log->SetConsoleLog(_L_->ConsoleLog());
+    stream_log->SetDebugLog(_L_->DebugLog());
+    stream_log->SetVerboseLog(_L_->VerboseLog());
+
+    auto logStream = std::make_shared<TemporaryStream>(stream_log);
 
     if (FAILED(hr = logStream->Open(tempdir.wstring(), L"GetThisLogStream", 5 * 1024 * 1024)))
     {
         log::Error(_L_, hr, L"Failed to create temp stream\r\n");
         return {hr, nullptr};
     }
+
     if (FAILED(hr = _L_->LogToStream(logStream)))
     {
         log::Error(_L_, hr, L"Failed to initialize temp logging\r\n");
@@ -403,6 +409,10 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
                 return hr;
             upstream = sampleRef.HashStream;
         }
+        else
+        {
+            upstream = stream;
+        }
 
         FuzzyHashStream::Algorithm fuzzy_algs = config.FuzzyHashAlgs;
         if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
@@ -569,7 +579,7 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
             if (rules.has_value())
             {
                 stringstream aStream;
-                const char* const delim = ", ";
+                const char* const delim = "; ";
 
                 std::copy(begin(rules.value()), end(rules.value()), std::ostream_iterator<std::string>(aStream, delim));
 
@@ -631,7 +641,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
                 break;
         }
 
-        std::set<SampleRef>::iterator prevSample = Samples.find(sampleRef);
+        SampleSet::iterator prevSample = Samples.find(sampleRef);
 
         if (prevSample != end(Samples))
         {
@@ -654,7 +664,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
 
                 wstring CabSampleName;
                 DWORD dwIdx = 0L;
-                std::set<std::wstring>::iterator it;
+                std::unordered_set<std::wstring>::iterator it;
                 do
                 {
                     if (FAILED(
@@ -667,7 +677,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
                         CabSampleName.insert(0, L"\\");
                         CabSampleName.insert(0, aSpec.Name);
                     }
-                    it = std::find(begin(SampleNames), end(SampleNames), CabSampleName);
+                    it = SampleNames.find(CabSampleName);
                     dwIdx++;
 
                 } while (it != end(SampleNames));
@@ -692,7 +702,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
 HRESULT Main::CollectMatchingSamples(
     const std::shared_ptr<ArchiveCreate>& compressor,
     ITableOutput& output,
-    std::set<SampleRef>& Samples)
+    SampleSet& Samples)
 {
     HRESULT hr = E_FAIL;
 
@@ -754,7 +764,7 @@ HRESULT Main::CollectMatchingSamples(
 }
 
 HRESULT
-Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output, std::set<SampleRef>& MatchingSamples)
+Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output, SampleSet& MatchingSamples)
 {
     HRESULT hr = E_FAIL;
 
@@ -823,7 +833,7 @@ Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output
     return S_OK;
 }
 
-HRESULT Main::CollectMatchingSamples(const OutputSpec& output, std::set<SampleRef>& MatchingSamples)
+HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& MatchingSamples)
 {
     HRESULT hr = E_FAIL;
 
@@ -913,7 +923,7 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, std::set<SampleRe
     return S_OK;
 }
 
-HRESULT Main::HashOffLimitSamples(ITableOutput& output, std::set<SampleRef>& MatchingSamples)
+HRESULT Main::HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSamples)
 {
     HRESULT hr = E_FAIL;
 
@@ -921,7 +931,7 @@ HRESULT Main::HashOffLimitSamples(ITableOutput& output, std::set<SampleRef>& Mat
 
     log::Info(_L_, L"\r\nComputing hash of off limit samples\r\n");
 
-    for (std::set<SampleRef>::iterator it = begin(MatchingSamples); it != end(MatchingSamples); ++it)
+    for (SampleSet::iterator it = begin(MatchingSamples); it != end(MatchingSamples); ++it)
     {
         if (it->OffLimits)
         {

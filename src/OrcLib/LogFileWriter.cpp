@@ -12,7 +12,7 @@
 #include "WideAnsi.h"
 
 #include "ParameterCheck.h"
-
+#include "ByteStream.h"
 #include "NtfsDataStructures.h"
 
 #include "CriticalSection.h"
@@ -577,7 +577,7 @@ HRESULT LogFileWriter::WriteString(const CHAR* szString)
     return WriteString(buffer.GetP<WCHAR>());
 }
 
-HRESULT LogFileWriter::WriteString(const std::wstring& strString)
+HRESULT LogFileWriter::WriteString(const std::wstring_view strString)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = PrintToBuffer(L"%.*s", strString.size(), strString.data())))
@@ -585,23 +585,7 @@ HRESULT LogFileWriter::WriteString(const std::wstring& strString)
     return S_OK;
 }
 
-HRESULT LogFileWriter::WriteString(const std::string& strString)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = PrintToBuffer(L"%.*S", strString.size(), strString.data())))
-        return hr;
-    return S_OK;
-}
-
-HRESULT LogFileWriter::WriteString(const std::wstring_view& strString)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = PrintToBuffer(L"%.*s", strString.size(), strString.data())))
-        return hr;
-    return S_OK;
-}
-
-HRESULT LogFileWriter::WriteString(const std::string_view& strString)
+HRESULT LogFileWriter::WriteString(const std::string_view strString)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = PrintToBuffer(L"%.*S", strString.size(), strString.data())))
@@ -1127,8 +1111,172 @@ HRESULT LogFileWriter::Close()
     return S_OK;
 }
 
-LogFileWriter::~LogFileWriter(void)
-{
+namespace Orc {
 
-    Close();
-}
+    Orc::logger& operator<<(Orc::logger& L, LPCWSTR szString)
+    {
+        if (L)
+            L->WriteString(szString);
+        return L;
+    }
+    Orc::logger& operator<<(Orc::logger& L, LPCSTR szString)
+    {
+        if (L)
+            L->WriteString(szString);
+        return L;
+    }
+
+    Orc::logger& operator<<(Orc::logger& L, const std::string_view svString)
+    {
+        if (L)
+            L->WriteString(svString);
+        return L;
+    }
+
+    Orc::logger& operator<<(Orc::logger& L, const std::wstring_view svString)
+    {
+        if (L)
+            L->WriteString(svString);
+        return L;
+    }
+
+    Orc::logger& operator<<(Orc::logger& L, bool bBoolean)
+    {
+        if (L)
+            L->WriteBool(bBoolean);
+        return L;
+    }
+
+    Orc::logger& operator<<(Orc::logger& L, SYSTEMTIME sysTime)
+    {
+        if (L)
+            L->WriteSystemTime(sysTime);
+        return L;
+    }
+
+    Orc::logger& operator<<(Orc::logger& L, FILETIME fileTime)
+    {
+        if (L)
+            L->WriteFileTime(fileTime);
+        return L;
+    }
+    Orc::logger& operator<<(Orc::logger& L, const CBinaryBuffer& buffer)
+    {
+        if (!L)
+            return L;
+        switch (L->BinFormat())
+        {
+            case LogFileWriter::BinaryFormat::PrefixedHex:
+                L->WriteBytesInHex(buffer.GetData(), static_cast<DWORD>(buffer.GetCount()), true);
+                break;
+            default:
+                L->WriteBytesInHex(buffer.GetData(), static_cast<DWORD>(buffer.GetCount()), false);
+        }
+        return L;
+    }
+
+    Orc::logger& operator<<(Orc::logger& L, const ULONG uLong)
+    {
+        if (!L)
+            return L;
+        switch (L->IntFormat())
+        {
+            case LogFileWriter::IntegerFormat::HexaDecimal:
+                L->WriteBytesInHex(uLong, false);
+                break;
+            case LogFileWriter::IntegerFormat::PrefixedHexaDecimal:
+                L->WriteBytesInHex(uLong, true);
+                break;
+            default:
+                L->WriteFileSize(0L, uLong);
+                break;
+        }
+        return L;
+    };
+    Orc::logger& operator<<(Orc::logger& L, const LONG uLong)
+    {
+        if (!L)
+            return L;
+        switch (L->IntFormat())
+        {
+            case LogFileWriter::IntegerFormat::HexaDecimal:
+                L->WriteBytesInHex((ULONG)uLong, false);
+                break;
+            case LogFileWriter::IntegerFormat::PrefixedHexaDecimal:
+                L->WriteBytesInHex((ULONG)uLong, true);
+                break;
+            default:
+                L->WriteFileSize(0L, uLong);
+                break;
+        }
+        return L;
+    }
+    Orc::logger& operator<<(Orc::logger& L, const ULONG64 uLongLong)
+    {
+        if (!L)
+            return L;
+        switch (L->IntFormat())
+        {
+            case LogFileWriter::IntegerFormat::HexaDecimal:
+                L->WriteBytesInHex(uLongLong, false);
+                break;
+            case LogFileWriter::IntegerFormat::PrefixedHexaDecimal:
+                L->WriteBytesInHex(uLongLong, true);
+                break;
+            default: {
+                ULARGE_INTEGER li;
+                li.QuadPart = uLongLong;
+                L->WriteFileSize(li);
+            }
+            break;
+        }
+        return L;
+    }
+
+    Orc::logger& operator<<(Orc::logger& L, const SHORT Bytes)
+    {
+        if (!L)
+            return L;
+        switch (L->IntFormat())
+        {
+            case LogFileWriter::IntegerFormat::HexaDecimal:
+                L->WriteBytesInHex(Bytes, false);
+                break;
+            case LogFileWriter::IntegerFormat::PrefixedHexaDecimal:
+                L->WriteBytesInHex(Bytes, true);
+                break;
+            default:
+                L->WriteInteger(Bytes);
+                break;
+        }
+        return L;
+    };
+    Orc::logger& operator<<(Orc::logger& L, const BYTE Byte)
+    {
+        if (!L)
+            return L;
+        switch (L->IntFormat())
+        {
+            case LogFileWriter::IntegerFormat::HexaDecimal:
+                L->WriteBytesInHex(Byte, false);
+                break;
+            case LogFileWriter::IntegerFormat::PrefixedHexaDecimal:
+                L->WriteBytesInHex(Byte, true);
+                break;
+            default:
+                L->WriteInteger(Byte);
+                break;
+        }
+        return L;
+    };
+
+    Orc::logger& operator<<(Orc::logger& L, LogFileWriter& (*pf)(LogFileWriter&))
+    {
+        if (L)
+            pf(*L);
+        return L;
+    }
+
+
+}  // namespace Orc
+
