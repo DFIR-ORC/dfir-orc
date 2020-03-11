@@ -20,6 +20,7 @@
 #include "CryptoHashStream.h"
 #include "PipeStream.h"
 #include "MemoryStream.h"
+#include "ByteStreamVisitor.h"
 
 #include "ArchiveUpdateCallback.h"
 
@@ -30,49 +31,86 @@ using namespace lib7z;
 
 using namespace Orc;
 
+namespace {
+
+class ArchiveItemStreamState : public Orc::ByteStreamVisitor
+{
+public:
+    void Visit(PipeStream& stream) override
+    {
+        m_isPipeStream = true;
+
+        if (stream.DataIsAvailable())
+        {
+            m_pipeStreamIsReady = true;
+        }
+    }
+
+    void Visit(MemoryStream& stream) override
+    {
+        m_isMemStream = true;
+
+        if (stream.GetSize() > 0)
+        {
+            m_memStreamIsReady = true;
+        }
+    }
+
+    bool IsPipeStream() const { return m_isPipeStream; }
+    bool HasReadyPipeStream() const { return m_pipeStreamIsReady; }
+    bool IsMemoryStream() const { return m_isMemStream; }
+    bool HasReadyMemoryStream() const { return m_memStreamIsReady; }
+
+private:
+    bool m_pipeStreamIsReady = false;
+    bool m_isPipeStream = false;
+    bool m_memStreamIsReady = false;
+    bool m_isMemStream = false;
+};
+
+}  // namespace
+
 ArchiveUpdateCallback::~ArchiveUpdateCallback() {}
 
 size_t ArchiveUpdateCallback::DeviseNextBestAddition()
 {
-    bool bHasWaitingPipes = false;
-
-    unsigned int idx = 0;
-
-    // then a waiting pipe with data available
-    idx = 0;
+    uint64_t idx = 0;
+    Archive::ArchiveItem* memoryStreamItem = nullptr;
+    uint64_t memoryStreamItemIndex = 0;
     for (auto& item : m_Items)
     {
-        // PipeStream with data is highest priority additions (to avoid blocking the pipe)
+        if (item.Stream == nullptr)
+        {
+            ++idx;
+            continue;
+        }
 
-        auto pPipe = std::dynamic_pointer_cast<PipeStream>(item.Stream);
+        ArchiveItemStreamState streamState;
+        item.Stream->Accept(streamState);
 
-        if (pPipe != nullptr)
+        if (streamState.HasReadyPipeStream())
         {
             if (item.currentStatus == Archive::ArchiveItem::Status::Waiting)
             {
-                if (pPipe->DataIsAvailable())
-                    return idx;
-                else
-                    bHasWaitingPipes = true;
+                return idx;
             }
         }
-        idx++;
+
+        if (memoryStreamItem == nullptr && streamState.IsMemoryStream())
+        {
+            if (m_bFinal || (streamState.HasReadyMemoryStream() && item.currentStatus == Archive::ArchiveItem::Status::Waiting))
+            {
+                memoryStreamItem = &item;
+                memoryStreamItemIndex = idx;
+            }
+        }
+
+        ++idx;
     }
 
-    // Finally, any memory stream
-    idx = 0;
-    for (auto& item : m_Items)
+    if (memoryStreamItem)
     {
-        // MemoryStream with data is next priority additions (to reduce memory pressure)
-
-        auto pMemStream = std::dynamic_pointer_cast<MemoryStream>(item.Stream);
-
-        if (pMemStream != nullptr)
-        {
-            if (m_bFinal || (pMemStream->GetSize() > 0 && item.currentStatus == Archive::ArchiveItem::Status::Waiting))
-                return idx;
-        }
-        idx++;
+        return memoryStreamItemIndex;
     }
 
     return (size_t)-1;
