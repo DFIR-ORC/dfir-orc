@@ -36,81 +36,104 @@ namespace {
 class ArchiveItemStreamState : public Orc::ByteStreamVisitor
 {
 public:
-    void Visit(PipeStream& stream) override
-    {
-        m_isPipeStream = true;
+    void Visit(PipeStream& stream) override { m_isPipeStream = true; }
 
-        if (stream.DataIsAvailable())
-        {
-            m_pipeStreamIsReady = true;
-        }
-    }
-
-    void Visit(MemoryStream& stream) override
-    {
-        m_isMemStream = true;
-
-        if (stream.GetSize() > 0)
-        {
-            m_memStreamIsReady = true;
-        }
-    }
+    void Visit(MemoryStream& stream) override { m_isMemStream = true; }
 
     bool IsPipeStream() const { return m_isPipeStream; }
-    bool HasReadyPipeStream() const { return m_pipeStreamIsReady; }
     bool IsMemoryStream() const { return m_isMemStream; }
-    bool HasReadyMemoryStream() const { return m_memStreamIsReady; }
 
 private:
-    bool m_pipeStreamIsReady = false;
     bool m_isPipeStream = false;
-    bool m_memStreamIsReady = false;
     bool m_isMemStream = false;
 };
 
 }  // namespace
 
+ArchiveUpdateCallback::ArchiveUpdateCallback(
+    logger pLog,
+    Archive::ArchiveItems& items,
+    Archive::ArchiveIndexes& indexes,
+    bool bFinal,
+    Archive::ArchiveCallback pCallback,
+    const std::wstring& pwd)
+    : m_refCount(0)
+    , _L_(std::move(pLog))
+    , m_Items(items)
+    , m_curIndex(0L)
+    , m_curIndexInArchive((UInt32)indexes.size())
+    , m_Callback(pCallback)
+    , m_Indexes(indexes)
+    , m_Password(pwd)
+    , m_bFinal(bFinal)
+{
+    for (size_t i = 0; i < m_Items.size(); ++i)
+    {
+        if (m_Items[i].Stream == nullptr)
+        {
+            continue;
+        }
+
+        ArchiveItemStreamState itemState;
+        m_Items[i].Stream->Accept(itemState);
+        if (itemState.IsPipeStream())
+        {
+            m_pipeStreamIndexes.push_back(i);
+        }
+        else if (itemState.IsMemoryStream())
+        {
+            m_memoryStreamIndexes.push_back(i);
+        }
+    }
+}
+
 ArchiveUpdateCallback::~ArchiveUpdateCallback() {}
 
 size_t ArchiveUpdateCallback::DeviseNextBestAddition()
 {
-    uint64_t idx = 0;
-    Archive::ArchiveItem* memoryStreamItem = nullptr;
-    uint64_t memoryStreamItemIndex = 0;
-    for (auto& item : m_Items)
+    for (auto it = std::begin(m_pipeStreamIndexes); it != std::end(m_pipeStreamIndexes); ++it)
     {
-        if (item.Stream == nullptr)
+        const auto& item = m_Items[*it];
+        if (item.currentStatus != Archive::ArchiveItem::Status::Waiting)
         {
-            ++idx;
             continue;
         }
 
-        ArchiveItemStreamState streamState;
-        item.Stream->Accept(streamState);
-
-        if (streamState.HasReadyPipeStream())
+        const auto pipeStream = std::static_pointer_cast<PipeStream>(item.Stream);
+        if (!pipeStream->DataIsAvailable())
         {
-            if (item.currentStatus == Archive::ArchiveItem::Status::Waiting)
-            {
-                return idx;
-            }
+            continue;
         }
 
-        if (memoryStreamItem == nullptr && streamState.IsMemoryStream())
-        {
-            if (m_bFinal || (streamState.HasReadyMemoryStream() && item.currentStatus == Archive::ArchiveItem::Status::Waiting))
-            {
-                memoryStreamItem = &item;
-                memoryStreamItemIndex = idx;
-            }
-        }
-
-        ++idx;
+        const auto index = *it;
+        m_pipeStreamIndexes.erase(it);
+        return index;
     }
 
-    if (memoryStreamItem)
+    for (auto it = std::begin(m_memoryStreamIndexes); it != std::end(m_memoryStreamIndexes); ++it)
     {
-        return memoryStreamItemIndex;
+        if (m_bFinal)
+        {
+            const auto index = *it;
+            m_memoryStreamIndexes.erase(it);
+            return index;
+        }
+
+        const auto& item = m_Items[*it];
+        if (item.currentStatus != Archive::ArchiveItem::Status::Waiting)
+        {
+            continue;
+        }
+
+        const auto memoryStream = std::static_pointer_cast<MemoryStream>(item.Stream);
+        if (memoryStream->GetSize() == 0)
+        {
+            continue;
+        }
+
+        const auto index = *it;
+        m_memoryStreamIndexes.erase(it);
+        return index;
     }
 
     return (size_t)-1;
