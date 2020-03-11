@@ -274,7 +274,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     if (configitem[GETTHIS_FUZZYHASH])
     {
         std::set<wstring> keys;
-        boost::split(keys, (std::wstring_view) configitem[GETTHIS_FUZZYHASH], boost::is_any_of(L","));
+        boost::split(keys, (std::wstring_view)configitem[GETTHIS_FUZZYHASH], boost::is_any_of(L","));
 
         for (const auto& key : keys)
         {
@@ -285,7 +285,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             }
             else
             {
-                config.FuzzyHashAlgs  |= alg;
+                config.FuzzyHashAlgs |= alg;
             }
         }
     }

@@ -329,8 +329,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
         case DATA:
             stream = sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].DataStream;
             break;
-        case STRINGS:
-        {
+        case STRINGS: {
             auto strings = std::make_shared<StringsStream>(_L_);
             if (sampleRef.Content.MaxChars == 0 && sampleRef.Content.MinChars == 0)
             {
@@ -699,10 +698,8 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
     return S_OK;
 }
 
-HRESULT Main::CollectMatchingSamples(
-    const std::shared_ptr<ArchiveCreate>& compressor,
-    ITableOutput& output,
-    SampleSet& Samples)
+HRESULT
+Main::CollectMatchingSamples(const std::shared_ptr<ArchiveCreate>& compressor, ITableOutput& output, SampleSet& Samples)
 {
     HRESULT hr = E_FAIL;
 
@@ -839,11 +836,10 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
 
     switch (output.Type)
     {
-        case OutputSpec::Archive:
-        {
+        case OutputSpec::Archive: {
             auto compressor = ArchiveCreate::MakeCreate(config.Output.ArchiveFormat, _L_, true);
 
-            if(!config.Output.Compression.empty())
+            if (!config.Output.Compression.empty())
                 compressor->SetCompressionLevel(config.Output.Compression);
 
             auto [hr, CSV] = CreateArchiveLogFileAndCSV(config.Output.Path, compressor);
@@ -900,8 +896,7 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
             CSV->Close();
         }
         break;
-        case OutputSpec::Directory:
-        {
+        case OutputSpec::Directory: {
             auto [hr, CSV] = CreateOutputDirLogFileAndCSV(config.Output.Path);
             if (FAILED(hr))
                 return hr;
@@ -988,7 +983,12 @@ HRESULT Main::FindMatchingSamples()
 
                     if (aMatch->MatchingAttributes.empty())
                     {
-                        log::Warning(_L_, E_FAIL, L"\"%s\" matched \"%s\" but no data related attribute was associated\r\n", strFullFileName.c_str(), aMatch->Term->GetDescription().c_str());
+                        log::Warning(
+                            _L_,
+                            E_FAIL,
+                            L"\"%s\" matched \"%s\" but no data related attribute was associated\r\n",
+                            strFullFileName.c_str(),
+                            aMatch->Term->GetDescription().c_str());
                         return;
                     }
 
@@ -1009,8 +1009,7 @@ HRESULT Main::FindMatchingSamples()
                         switch (status)
                         {
                             case NoLimits:
-                            case SampleWithinLimits:
-                            {
+                            case SampleWithinLimits: {
                                 if (hr == S_FALSE)
                                 {
                                     log::Info(_L_, L"\t%s is already collected\r\n", strName.c_str());
@@ -1119,7 +1118,6 @@ HRESULT Main::Run()
                 log::Error(_L_, hr, L"\r\nGetThis failed while matching samples\r\n");
                 return hr;
             }
-
             if (FAILED(hr = CollectMatchingSamples(config.Output, Samples)))
             {
                 log::Error(_L_, hr, L"\r\nGetThis failed while collecting samples\r\n");

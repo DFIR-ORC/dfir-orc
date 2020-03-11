@@ -154,7 +154,8 @@ public:
         std::wstring YaraSource;
         std::unique_ptr<YaraConfig> Yara;
 
-        CryptoHashStream::Algorithm CryptoHashAlgs = CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1;
+        CryptoHashStream::Algorithm CryptoHashAlgs =
+            CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1;
         FuzzyHashStream::Algorithm FuzzyHashAlgs = FuzzyHashStream::Algorithm::Undefined;
 
         ContentSpec GetContentSpecFromString(const std::wstring& str);
