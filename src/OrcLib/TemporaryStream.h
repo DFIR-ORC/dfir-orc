@@ -42,6 +42,8 @@ public:
     {
     }
 
+    void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
+
     STDMETHOD(IsOpen)() { return m_pMemStream || m_pFileStream ? S_OK : S_FALSE; };
     STDMETHOD(CanRead)();
     STDMETHOD(CanWrite)();

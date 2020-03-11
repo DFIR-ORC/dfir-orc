@@ -78,6 +78,8 @@ public:
 
     ~CryptoHashStream(void);
 
+    void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
+
     // CryptoHashStream Specifics
 
     virtual HRESULT OpenToRead(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream);

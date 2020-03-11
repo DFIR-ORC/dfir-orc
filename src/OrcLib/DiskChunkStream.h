@@ -72,6 +72,8 @@ public:
 
     ~DiskChunkStream();
 
+    void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
+
     std::wstring getSampleName();
 
     STDMETHOD(Open)();
