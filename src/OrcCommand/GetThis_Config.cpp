@@ -250,27 +250,29 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     {
         config.bReportAll = true;
     }
+
     if (configitem[GETTHIS_HASH])
     {
+        CryptoHashStream::Algorithm algorithms = CryptoHashStream::Algorithm::Undefined;
         std::set<wstring> keys;
-        boost::split(keys, (std::wstring_view) configitem[GETTHIS_HASH], boost::is_any_of(L","));
+        boost::split(keys, (std::wstring_view)configitem[GETTHIS_HASH], boost::is_any_of(L","));
 
         for (const auto& key : keys)
         {
-            auto alg = CryptoHashStream::GetSupportedAlgorithm(key.c_str());
+            const auto alg = CryptoHashStream::GetSupportedAlgorithm(key.c_str());
             if (alg == CryptoHashStream::Algorithm::Undefined)
             {
                 log::Warning(_L_, E_NOTIMPL, L"Hash algorithm %s is not supported\r\n", key.c_str());
             }
             else
             {
-                config.CryptoHashAlgs |= alg;
+                algorithms |= alg;
             }
         }
 
-        config.CryptoHashAlgs =
-            CryptoHashStream::GetSupportedAlgorithm(configitem[GETTHIS_HASH].c_str());
+        config.CryptoHashAlgs = algorithms;
     }
+
     if (configitem[GETTHIS_FUZZYHASH])
     {
         std::set<wstring> keys;

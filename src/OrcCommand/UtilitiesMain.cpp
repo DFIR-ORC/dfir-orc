@@ -996,6 +996,8 @@ bool UtilitiesMain::CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, C
     std::wstring values = pEquals + 1;
     boost::split(keys, values, boost::is_any_of(L","));
 
+    algo = CryptoHashStream::Algorithm::Undefined;
+
     for (const auto& key : keys)
     {
         auto one = CryptoHashStream::GetSupportedAlgorithm(key.c_str());
@@ -1008,6 +1010,7 @@ bool UtilitiesMain::CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, C
             algo |= one;
         }
     }
+
     return true;
 }
 
