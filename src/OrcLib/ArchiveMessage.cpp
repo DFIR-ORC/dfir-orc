@@ -30,13 +30,15 @@ ArchiveMessage::Message ArchiveMessage::MakeOpenRequest(
     const std::wstring& strArchiveName,
     const ArchiveFormat aFormat,
     const std::shared_ptr<ByteStream>& aStream,
-    const std::wstring& strCompressionLevel)
+    const std::wstring& strCompressionLevel,
+    const std::wstring& password)
 {
     auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::OpenArchive);
     retval->m_Name = strArchiveName;
     retval->m_Format = aFormat;
     retval->m_Stream = aStream;
     retval->m_CompressionLevel = strCompressionLevel;
+    retval->m_Password = password;
     return retval;
 }
 
@@ -49,6 +51,7 @@ ArchiveMessage::Message ArchiveMessage::MakeOpenRequest(const OutputSpec& anOutp
     retval->m_Name = anOutput.Path;
     retval->m_Format = anOutput.ArchiveFormat;
     retval->m_CompressionLevel = anOutput.Compression;
+    retval->m_Password = anOutput.Password;
     return retval;
 }
 

@@ -60,6 +60,7 @@ private:
     std::wstring m_Keyword;
     std::wstring m_Pattern;
     std::wstring m_CompressionLevel;
+    std::wstring m_Password;
 
     ArchiveFormat m_Format;
     std::shared_ptr<ByteStream> m_Stream;
@@ -80,11 +81,13 @@ protected:
 
 public:
     static Message MakeOpenRequest(const std::wstring& szArchiveName, const std::wstring& strCompressionLevel = L"");
+
     static Message MakeOpenRequest(
         const std::wstring& szArchiveName,
         const ArchiveFormat aFormat,
         const std::shared_ptr<ByteStream>& aStream,
-        const std::wstring& strCompressionLevel = L"");
+        const std::wstring& strCompressionLevel = L"",
+        const std::wstring& password = L"");
     static Message MakeOpenRequest(const OutputSpec& anOutput);
 
     static Message MakeAddFileRequest(
@@ -125,6 +128,7 @@ public:
 
     ArchiveFormat GetArchiveFormat() const { return m_Format; };
     const std::wstring& GetCompressionLevel() const { return m_CompressionLevel; };
+    const std::wstring& GetPassword() const { return m_Password; }
 
     ~ArchiveMessage(void);
 };

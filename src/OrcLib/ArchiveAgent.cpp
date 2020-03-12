@@ -211,6 +211,7 @@ void ArchiveAgent::run()
 
                         if (!request->GetCompressionLevel().empty())
                             m_compressor->SetCompressionLevel(request->GetCompressionLevel());
+                        m_compressor->SetPassword(request->GetPassword());
 
                         if (m_compressor == nullptr)
                             notification = ArchiveNotification::MakeFailureNotification(
