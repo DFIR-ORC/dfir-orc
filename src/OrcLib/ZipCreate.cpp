@@ -125,6 +125,11 @@ HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, Co
     return S_OK;
 }
 
+STDMETHODIMP ZipCreate::InitArchive(const fs::path& path, Archive::ArchiveCallback pCallback)
+{
+    return InitArchive(path.c_str(), pCallback);
+}
+
 STDMETHODIMP ZipCreate::InitArchive(PCWSTR pwzArchivePath, Archive::ArchiveCallback pCallback)
 {
     HRESULT hr = E_FAIL;

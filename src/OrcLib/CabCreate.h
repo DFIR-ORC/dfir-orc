@@ -13,13 +13,13 @@
 
 #include "ArchiveCreate.h"
 
+#include <string>
+#include <memory>
+
 #include "ByteStream.h"
 
 #include "MFTRecord.h"
 #include "VolumeReader.h"
-
-#include <string>
-#include <memory>
 
 #include <fci.h>
 
@@ -129,6 +129,7 @@ public:
     ~CabCreate();
 
     // ArchiveCompress methods
+    STDMETHOD(InitArchive)(__in const std::filesystem::path& path, Archive::ArchiveCallback pCallback = nullptr);
     STDMETHOD(InitArchive)(__in PCWSTR pwzArchivePath, Archive::ArchiveCallback pCallback = nullptr);
     STDMETHOD(InitArchive)
     (__in const std::shared_ptr<ByteStream>& pOutputStream, Archive::ArchiveCallback pCallback = nullptr);

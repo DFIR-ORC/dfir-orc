@@ -41,6 +41,7 @@ public:
     CompressionLevel GetCompressionLevel(const std::wstring& strLevel);
 
     // ArchiveCompress methods
+    STDMETHOD(InitArchive)(__in const std::filesystem::path& path, Archive::ArchiveCallback pCallback = nullptr);
     STDMETHOD(InitArchive)(__in PCWSTR pwzArchivePath, Archive::ArchiveCallback pCallback = nullptr);
     STDMETHOD(InitArchive)
     (__in const std::shared_ptr<ByteStream>& pOutputStream, Archive::ArchiveCallback pCallback = nullptr);

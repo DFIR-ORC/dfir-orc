@@ -9,12 +9,13 @@
 
 #include "OrcLib.h"
 
+#include <memory>
+#include <filesystem>
+
 #include "ByteStream.h"
 #include "VolumeReader.h"
 #include "MFTRecord.h"
 #include "Archive.h"
-
-#include <memory>
 
 #pragma managed(push, off)
 
@@ -45,6 +46,7 @@ public:
     static std::shared_ptr<ArchiveCreate> MakeCreate(ArchiveFormat fmt, logger pLog, bool bComputeHash = false);
 
     STDMETHOD(InitArchive)(__in PCWSTR pwzArchivePath, Archive::ArchiveCallback pCallback = nullptr) PURE;
+    STDMETHOD(InitArchive)(__in const std::filesystem::path& path, Archive::ArchiveCallback pCallback = nullptr) PURE;
     STDMETHOD(InitArchive)
     (__in const std::shared_ptr<ByteStream>& pOutputStream, Archive::ArchiveCallback pCallback = nullptr) PURE;
 

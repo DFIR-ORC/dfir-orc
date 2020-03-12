@@ -26,6 +26,8 @@
 using namespace std;
 using namespace Orc;
 
+namespace fs = std::filesystem;
+
 constexpr auto CAB_MAX_SIZE = 0x80000000;
 
 constexpr auto FCI_TEMPFILENAME = "*TEMP*";
@@ -262,6 +264,11 @@ HRESULT CabCreate::FindStreamInStreamList(
         }
     }
     return HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
+}
+
+HRESULT CabCreate::InitArchive(__in const fs::path& path, Archive::ArchiveCallback pCallback)
+{
+    return InitArchive(path.c_str(), pCallback);
 }
 
 HRESULT CabCreate::InitArchive(__in PCWSTR pwzArchivePath, Archive::ArchiveCallback pCallback)

@@ -9,6 +9,7 @@
 
 #include "ByteStream.h"
 
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -51,6 +52,8 @@ public:
 
     STDMETHOD(Open)
     (const std::wstring& strTempDir, const std::wstring& strID, DWORD dwMemThreshold, bool bReleaseOnClose = true);
+
+    STDMETHODIMP Open(const std::filesystem::path& output, DWORD dwMemThreshold, bool bReleaseOnClose = true);
 
     STDMETHOD(Read)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
