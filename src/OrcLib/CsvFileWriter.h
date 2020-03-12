@@ -10,9 +10,8 @@
 
 #include "OrcLib.h"
 
-#include "ByteStream.h"
-
 #include "TableOutputWriter.h"
+
 #include "OutputSpec.h"
 #include "WideAnsi.h"
 #include "CriticalSection.h"
@@ -82,6 +81,7 @@ public:
             throw "No Schema define for columns";
     }
 
+    STDMETHOD(WriteToFile)(const std::filesystem::path& path) override final;
     STDMETHOD(WriteToFile)(const WCHAR* szFileName) override final;
     STDMETHOD(WriteToStream)
     (const std::shared_ptr<ByteStream>& pStream,

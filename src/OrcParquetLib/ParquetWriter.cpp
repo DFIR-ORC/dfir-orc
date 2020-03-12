@@ -24,6 +24,8 @@
 
 using namespace Orc;
 
+namespace fs = std::filesystem;
+
 class Orc::TableOutput::Parquet::WriterTermination : public TerminationHandler
 {
 public:
@@ -334,6 +336,11 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
     m_arrowSchema = std::make_shared<arrow::Schema>(schema_definition);
     m_arrowBuilders = GetBuilders();
     return S_OK;
+}
+
+HRESULT Orc::TableOutput::Parquet::Writer::WriteToFile(const fs::path& path)
+{
+    return WriteToFile(path.c_str());
 }
 
 HRESULT Orc::TableOutput::Parquet::Writer::WriteToFile(const WCHAR* szFileName)

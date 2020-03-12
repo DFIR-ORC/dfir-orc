@@ -31,6 +31,8 @@
 
 using namespace msl::utilities;
 
+namespace fs = std::filesystem;
+
 class Orc::TableOutput::OptRowColumn::WriterTermination : public TerminationHandler
 {
 public:
@@ -242,6 +244,11 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::SetSchema(const TableOutput
     }
 
     return S_OK;
+}
+
+HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteToFile(const fs::path& path)
+{
+    return WriteToFile(path.c_str());
 }
 
 HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteToFile(const WCHAR* szFileName)

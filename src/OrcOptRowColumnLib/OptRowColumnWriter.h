@@ -52,6 +52,7 @@ public:
 
     std::shared_ptr<ByteStream> GetStream() const override final { return m_pByteStream; };
 
+    STDMETHOD(WriteToFile)(const std::filesystem::path& path) override final;
     STDMETHOD(WriteToFile)(const WCHAR* szFileName) override final;
     STDMETHOD(WriteToStream)(const std::shared_ptr<ByteStream>& pStream, bool bCloseStream = true) override final;
 
