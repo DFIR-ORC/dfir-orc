@@ -837,7 +837,7 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
     switch (output.Type)
     {
         case OutputSpec::Archive: {
-            auto compressor = ArchiveCreate::MakeCreate(config.Output.ArchiveFormat, _L_, true);
+            auto compressor = ArchiveCreate::MakeCreate(config.Output.ArchiveFormat, _L_, false);
 
             if (!config.Output.Compression.empty())
                 compressor->SetCompressionLevel(config.Output.Compression);
