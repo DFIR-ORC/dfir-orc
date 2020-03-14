@@ -304,7 +304,6 @@ private:
         using wformat_args = fmt::format_args_t<wformat_iterator, char_type>;
         using context = fmt::basic_format_context<wformat_iterator, char_type>;
 
-        assert(m_dwBufferSize >= m_dwCount);
         DWORD remaining = (m_dwBufferSize - m_dwCount) / sizeof(char_type);
 
         buffer_type buffer;
@@ -332,11 +331,8 @@ private:
                 new_buffer.append(buffer);
                 std::swap(buffer, new_buffer);
             }
-            else
-            {
-                m_dwCount += buffer.size() * sizeof(char_type);
-                m_pCurrent += buffer.size();
-            }
+            m_dwCount += buffer.size() * sizeof(char_type);
+            m_pCurrent += buffer.size();
         }
         catch (const fmt::format_error& error)
         {
