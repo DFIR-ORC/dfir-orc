@@ -462,6 +462,10 @@ HRESULT Main::CheckConfiguration()
         config.Output.Path = L"GetThis.7z";
         config.Output.Type = OutputSpec::Kind::Archive;
         config.Output.ArchiveFormat = ArchiveFormat::SevenZip;
+    }
+
+    if (config.Output.Type == OutputSpec::Kind::Archive && config.Output.Compression.empty())
+    {
         config.Output.Compression = L"Normal";
     }
 
