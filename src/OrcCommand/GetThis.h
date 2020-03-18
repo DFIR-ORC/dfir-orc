@@ -225,6 +225,11 @@ private:
             if (FRN.SegmentNumberLowPart != rigth.FRN.SegmentNumberLowPart)
                 return FRN.SegmentNumberLowPart < rigth.FRN.SegmentNumberLowPart;
 
+            if (AttributeIndex != rigth.AttributeIndex)
+            {
+                return false;
+            }
+
             if (!Matches.empty() && !rigth.Matches.empty())
             {
                 if (VolumeSerial != rigth.VolumeSerial)
@@ -250,6 +255,11 @@ private:
         bool operator()(const SampleRef& lhs, const SampleRef& rhs) const
         {
             if (lhs.FRN.SegmentNumberLowPart != rhs.FRN.SegmentNumberLowPart)
+            {
+                return false;
+            }
+
+            if (lhs.AttributeIndex != rhs.AttributeIndex)
             {
                 return false;
             }
