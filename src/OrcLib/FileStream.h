@@ -27,6 +27,8 @@ public:
     }
     ~FileStream();
 
+    void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
+
     STDMETHOD(IsOpen)()
     {
         if (m_hFile != INVALID_HANDLE_VALUE)

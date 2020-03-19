@@ -27,6 +27,7 @@
 #include <fmt/ostream.h>
 
 using namespace Orc;
+namespace fs = std::filesystem;
 
 class Orc::TableOutput::CSV::WriterTermination : public TerminationHandler
 {
@@ -216,6 +217,11 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBOM()
     }
     m_bBOMWritten = true;
     return S_OK;
+}
+
+HRESULT Orc::TableOutput::CSV::Writer::WriteToFile(const fs::path& path)
+{
+    return WriteToFile(path.c_str());
 }
 
 HRESULT Orc::TableOutput::CSV::Writer::WriteToFile(const WCHAR* szFileName)

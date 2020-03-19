@@ -20,6 +20,7 @@
 #include "CryptoHashStream.h"
 #include "PipeStream.h"
 #include "MemoryStream.h"
+#include "ByteStreamVisitor.h"
 
 #include "ArchiveUpdateCallback.h"
 
@@ -30,49 +31,109 @@ using namespace lib7z;
 
 using namespace Orc;
 
+namespace {
+
+class ArchiveItemStreamState : public Orc::ByteStreamVisitor
+{
+public:
+    void Visit(PipeStream& stream) override { m_isPipeStream = true; }
+
+    void Visit(MemoryStream& stream) override { m_isMemStream = true; }
+
+    bool IsPipeStream() const { return m_isPipeStream; }
+    bool IsMemoryStream() const { return m_isMemStream; }
+
+private:
+    bool m_isPipeStream = false;
+    bool m_isMemStream = false;
+};
+
+}  // namespace
+
+ArchiveUpdateCallback::ArchiveUpdateCallback(
+    logger pLog,
+    Archive::ArchiveItems& items,
+    Archive::ArchiveIndexes& indexes,
+    bool bFinal,
+    Archive::ArchiveCallback pCallback,
+    const std::wstring& pwd)
+    : m_refCount(0)
+    , _L_(std::move(pLog))
+    , m_Items(items)
+    , m_curIndex(0L)
+    , m_curIndexInArchive((UInt32)indexes.size())
+    , m_Callback(pCallback)
+    , m_Indexes(indexes)
+    , m_Password(pwd)
+    , m_bFinal(bFinal)
+{
+    for (size_t i = 0; i < m_Items.size(); ++i)
+    {
+        if (m_Items[i].Stream == nullptr)
+        {
+            continue;
+        }
+
+        ArchiveItemStreamState itemState;
+        m_Items[i].Stream->Accept(itemState);
+        if (itemState.IsPipeStream())
+        {
+            m_pipeStreamIndexes.push_back(i);
+        }
+        else if (itemState.IsMemoryStream())
+        {
+            m_memoryStreamIndexes.push_back(i);
+        }
+    }
+}
+
 ArchiveUpdateCallback::~ArchiveUpdateCallback() {}
 
 size_t ArchiveUpdateCallback::DeviseNextBestAddition()
 {
-    bool bHasWaitingPipes = false;
-
-    unsigned int idx = 0;
-
-    // then a waiting pipe with data available
-    idx = 0;
-    for (auto& item : m_Items)
+    for (auto it = std::begin(m_pipeStreamIndexes); it != std::end(m_pipeStreamIndexes); ++it)
     {
-        // PipeStream with data is highest priority additions (to avoid blocking the pipe)
-
-        auto pPipe = std::dynamic_pointer_cast<PipeStream>(item.Stream);
-
-        if (pPipe != nullptr)
+        const auto& item = m_Items[*it];
+        if (item.currentStatus != Archive::ArchiveItem::Status::Waiting)
         {
-            if (item.currentStatus == Archive::ArchiveItem::Status::Waiting)
-            {
-                if (pPipe->DataIsAvailable())
-                    return idx;
-                else
-                    bHasWaitingPipes = true;
-            }
+            continue;
         }
-        idx++;
+
+        const auto pipeStream = std::static_pointer_cast<PipeStream>(item.Stream);
+        if (!pipeStream->DataIsAvailable())
+        {
+            continue;
+        }
+
+        const auto index = *it;
+        m_pipeStreamIndexes.erase(it);
+        return index;
     }
 
-    // Finally, any memory stream
-    idx = 0;
-    for (auto& item : m_Items)
+    for (auto it = std::begin(m_memoryStreamIndexes); it != std::end(m_memoryStreamIndexes); ++it)
     {
-        // MemoryStream with data is next priority additions (to reduce memory pressure)
-
-        auto pMemStream = std::dynamic_pointer_cast<MemoryStream>(item.Stream);
-
-        if (pMemStream != nullptr)
+        if (m_bFinal)
         {
-            if (m_bFinal || (pMemStream->GetSize() > 0 && item.currentStatus == Archive::ArchiveItem::Status::Waiting))
-                return idx;
+            const auto index = *it;
+            m_memoryStreamIndexes.erase(it);
+            return index;
         }
-        idx++;
+
+        const auto& item = m_Items[*it];
+        if (item.currentStatus != Archive::ArchiveItem::Status::Waiting)
+        {
+            continue;
+        }
+
+        const auto memoryStream = std::static_pointer_cast<MemoryStream>(item.Stream);
+        if (memoryStream->GetSize() == 0)
+        {
+            continue;
+        }
+
+        const auto index = *it;
+        m_memoryStreamIndexes.erase(it);
+        return index;
     }
 
     return (size_t)-1;

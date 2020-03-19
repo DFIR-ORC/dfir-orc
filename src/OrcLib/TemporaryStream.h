@@ -9,6 +9,7 @@
 
 #include "ByteStream.h"
 
+#include <filesystem>
 #include <memory>
 #include <string>
 
@@ -42,6 +43,8 @@ public:
     {
     }
 
+    void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
+
     STDMETHOD(IsOpen)() { return m_pMemStream || m_pFileStream ? S_OK : S_FALSE; };
     STDMETHOD(CanRead)();
     STDMETHOD(CanWrite)();
@@ -49,6 +52,8 @@ public:
 
     STDMETHOD(Open)
     (const std::wstring& strTempDir, const std::wstring& strID, DWORD dwMemThreshold, bool bReleaseOnClose = true);
+
+    STDMETHODIMP Open(const std::filesystem::path& output, DWORD dwMemThreshold, bool bReleaseOnClose = true);
 
     STDMETHOD(Read)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,

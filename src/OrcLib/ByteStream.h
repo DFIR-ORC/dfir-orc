@@ -9,6 +9,8 @@
 
 #include "OrcLib.h"
 
+#include "ByteStreamVisitor.h"
+
 #include <memory>
 
 #pragma managed(push, off)
@@ -27,6 +29,8 @@ class OutputSpec;
 class XORStream;
 class CryptoHashStream;
 
+class ByteStreamVisitor;
+
 class ORCLIB_API ByteStream
 {
     friend class ChainingStream;
@@ -42,6 +46,8 @@ protected:
 
 public:
     virtual ~ByteStream();
+
+    virtual void Accept(ByteStreamVisitor& visitor) { return visitor.Visit(*this);  };
 
     STDMETHOD(IsOpen)() PURE;
     STDMETHOD(CanRead)() PURE;

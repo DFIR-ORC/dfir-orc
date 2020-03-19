@@ -54,6 +54,8 @@ public:
 
     FuzzyHashStream(logger pLog);
 
+    void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
+
     // HashStream Specifics
 
     STDMETHOD(OpenToRead(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream));

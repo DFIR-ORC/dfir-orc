@@ -33,6 +33,8 @@ public:
         ZeroMemory(&EncodeInfo, sizeof(CMSG_ENVELOPED_ENCODE_INFO));
     }
 
+    void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
+
     STDMETHOD(AddRecipient)(const CBinaryBuffer& buffer);
     STDMETHOD(AddRecipient)(LPCSTR szEncodedCert, DWORD cchLen, DWORD dwFlags = CRYPT_STRING_ANY);
     STDMETHOD(AddRecipient)(LPCWSTR szEncodedCert, DWORD cchLen, DWORD dwFlags = CRYPT_STRING_ANY);

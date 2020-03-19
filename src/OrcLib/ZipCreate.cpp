@@ -84,6 +84,11 @@ ZipCreate::ZipCreate(logger pLog, bool bComputeHash, DWORD XORPattern)
 
 ZipCreate::CompressionLevel ZipCreate::GetCompressionLevel(const std::wstring& strLevel)
 {
+    if (strLevel.empty())
+    {
+        return ZipCreate::CompressionLevel::Fast;
+    }
+
     if (equalCaseInsensitive(strLevel, L"None"))
         return ZipCreate::CompressionLevel::None;
     if (equalCaseInsensitive(strLevel, L"Fastest"))
@@ -96,11 +101,13 @@ ZipCreate::CompressionLevel ZipCreate::GetCompressionLevel(const std::wstring& s
         return ZipCreate::CompressionLevel::Maximum;
     if (equalCaseInsensitive(strLevel, L"Ultra"))
         return ZipCreate::CompressionLevel::Ultra;
+
     log::Warning(
         _L_,
         E_INVALIDARG,
         L"Selecting default compression level (unrecognised parameter was %s)\r\n",
         strLevel.c_str());
+
     return ZipCreate::CompressionLevel::Fast;
 }
 
@@ -123,6 +130,11 @@ HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, Co
         return hr;
 
     return S_OK;
+}
+
+STDMETHODIMP ZipCreate::InitArchive(const fs::path& path, Archive::ArchiveCallback pCallback)
+{
+    return InitArchive(path.c_str(), pCallback);
 }
 
 STDMETHODIMP ZipCreate::InitArchive(PCWSTR pwzArchivePath, Archive::ArchiveCallback pCallback)

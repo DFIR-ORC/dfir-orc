@@ -14,21 +14,51 @@ jobs:
   - checkout: self
     clean: true
     submodules: true
-  - script: mkdir build-${{ parameters.arch }}
-    displayName: Make Build Directory
+
   - task: CMake@1
     displayName: CMake configuration
     inputs:
       workingDirectory: 'build-${{ parameters.arch }}'
       cmakeArgs: '-G "Visual Studio 15 2017${{ variables.winArch }}" -T v141_xp -DORC_BUILD_VCPKG=ON ..'
+
   - task: CMake@1
     displayName: CMake build
     inputs:
       workingDirectory: 'build-${{ parameters.arch }}'
       cmakeArgs: '--build . --config MinSizeRel -- -maxcpucount'
+
   - task: VSTest@2
     inputs:
       testSelector: 'testAssemblies'
       testAssemblyVer2: '**/OrcLibTest.dll'
       platform: "${{ parameters.arch }}"
       configuration: "MinSizeRel"
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: '$(Build.SourcesDirectory)'
+      contents: 'build-${{ parameters.arch }}/MinSizeRel/dfir-orc_${{ parameters.arch }}.exe'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: '$(Build.SourcesDirectory)'
+      contents: 'build-${{ parameters.arch }}/MinSizeRel/dfir-orc_${{ parameters.arch }}.pdb'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: $(Build.SourcesDirectory)
+      contents: 'build-${{ parameters.arch }}/MinSizeRel/fastfind_${{ parameters.arch }}.exe'
+      TargetFolder: $(Build.ArtifactStagingDirectory)
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: $(Build.SourcesDirectory)
+      contents: 'build-${{ parameters.arch }}/MinSizeRel/fastfind_${{ parameters.arch }}.pdb'
+      TargetFolder: $(Build.ArtifactStagingDirectory)
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      pathtoPublish: $(Build.ArtifactStagingDirectory)
+      artifactName: drop_${{ parameters.arch }}

@@ -166,19 +166,16 @@ void Main::PrintParameters()
             }
             switch (aSpec.Content.Type)
             {
-                case DATA:
-                {
+                case DATA: {
                     log::Info(_L_, L" (copy data)\r\n", aSpec.Content.MinChars, aSpec.Content.MaxChars);
                 }
                 break;
-                case STRINGS:
-                {
+                case STRINGS: {
                     log::Info(
                         _L_, L" (copy strings:min=%d,max=%d)\r\n", aSpec.Content.MinChars, aSpec.Content.MaxChars);
                 }
                 break;
-                case RAW:
-                {
+                case RAW: {
                     log::Info(_L_, L" (copy raw data)\r\n", aSpec.Content.MinChars, aSpec.Content.MaxChars);
                 }
                 break;

@@ -9,12 +9,13 @@
 
 #include "OrcLib.h"
 
-#include "TableOutput.h"
-#include "OutputSpec.h"
+#include <memory>
+#include <filesystem>
 
 #include <ObjIdl.h>
 
-#include <memory>
+#include "TableOutput.h"
+#include "OutputSpec.h"
 
 #pragma managed(push, off)
 
@@ -110,6 +111,7 @@ GetOptRowColumnWriter(const logger& pLog, std::unique_ptr<Options>&& options);
 class IStreamWriter : public IWriter
 {
 public:
+    STDMETHOD(WriteToFile)(const std::filesystem::path& path) PURE;
     STDMETHOD(WriteToFile)(const WCHAR* szFileName) PURE;
     STDMETHOD(WriteToStream)(const std::shared_ptr<ByteStream>& pStream, bool bCloseStream = true) PURE;
 

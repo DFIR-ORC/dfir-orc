@@ -31,6 +31,9 @@ private:
     Archive::ArchiveItems& m_Items;
     Archive::ArchiveIndexes& m_Indexes;
 
+    std::vector<size_t> m_pipeStreamIndexes;
+    std::vector<size_t> m_memoryStreamIndexes;
+
     size_t m_firstAddIndex = 0;
 
     UInt32 m_curIndex;
@@ -53,16 +56,8 @@ public:
         Archive::ArchiveIndexes& indexes,
         bool bFinal,
         Archive::ArchiveCallback pCallback = nullptr,
-        const std::wstring& pwd = L"")
-        : m_refCount(0)
-        , _L_(std::move(pLog))
-        , m_Items(items)
-        , m_curIndex(0L)
-        , m_curIndexInArchive((UInt32)indexes.size())
-        , m_Callback(pCallback)
-        , m_Indexes(indexes)
-        , m_Password(pwd)
-        , m_bFinal(bFinal) {};
+        const std::wstring& pwd = L"");
+
     virtual ~ArchiveUpdateCallback();
 
     STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);

@@ -154,7 +154,8 @@ public:
         std::wstring YaraSource;
         std::unique_ptr<YaraConfig> Yara;
 
-        CryptoHashStream::Algorithm CryptoHashAlgs = CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1;
+        CryptoHashStream::Algorithm CryptoHashAlgs =
+            CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1;
         FuzzyHashStream::Algorithm FuzzyHashAlgs = FuzzyHashStream::Algorithm::Undefined;
 
         ContentSpec GetContentSpecFromString(const std::wstring& str);
@@ -224,6 +225,11 @@ private:
             if (FRN.SegmentNumberLowPart != rigth.FRN.SegmentNumberLowPart)
                 return FRN.SegmentNumberLowPart < rigth.FRN.SegmentNumberLowPart;
 
+            if (AttributeIndex != rigth.AttributeIndex)
+            {
+                return false;
+            }
+
             if (!Matches.empty() && !rigth.Matches.empty())
             {
                 if (VolumeSerial != rigth.VolumeSerial)
@@ -249,6 +255,11 @@ private:
         bool operator()(const SampleRef& lhs, const SampleRef& rhs) const
         {
             if (lhs.FRN.SegmentNumberLowPart != rhs.FRN.SegmentNumberLowPart)
+            {
+                return false;
+            }
+
+            if (lhs.AttributeIndex != rhs.AttributeIndex)
             {
                 return false;
             }

@@ -71,7 +71,7 @@ public:
 
     private:
         std::vector<OutputPair> m_outputs;
-        logger _L_;
+        mutable logger _L_;
 
         ArchiveMessage::UnboundedMessageBuffer m_messageBuf;
         std::unique_ptr<Concurrency::call<ArchiveNotification::Notification>> m_notificationBuf;
@@ -423,7 +423,7 @@ private:
     DWORD theFinishTickCount;
 
 protected:
-    logger _L_;
+    mutable logger _L_;
 
     std::vector<std::shared_ptr<ExtensionLibrary>> m_extensions;
     HRESULT LoadCommonExtensions();

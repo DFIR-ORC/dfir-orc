@@ -211,9 +211,6 @@ __data_entrypoint(File) HRESULT FileStream::Read(
 {
     HRESULT hr = E_FAIL;
 
-    if (m_hFile == INVALID_HANDLE_VALUE)
-        return HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE);
-
     *pcbBytesRead = 0;
 
     if (cbBytesToRead > MAXDWORD)
@@ -247,9 +244,6 @@ FileStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbByt
 {
     HRESULT hr = E_FAIL;
 
-    if (m_hFile == INVALID_HANDLE_VALUE)
-        return HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE);
-
     DWORD cbBytesWritten = 0;
     if (cbBytes > MAXDWORD)
     {
@@ -276,9 +270,6 @@ FileStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbByt
 HRESULT
 FileStream::SetFilePointer(__in LONGLONG lDistanceToMove, __in DWORD dwMoveMethod, __out_opt PULONG64 pqwCurrPointer)
 {
-    if (m_hFile == INVALID_HANDLE_VALUE)
-        return HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE);
-
     LARGE_INTEGER liDistanceToMove = {0};
     LARGE_INTEGER liNewFilePointer = {0};
 
@@ -309,9 +300,6 @@ FileStream::SetFilePointer(__in LONGLONG lDistanceToMove, __in DWORD dwMoveMetho
 */
 ULONG64 FileStream::GetSize()
 {
-    if (m_hFile == INVALID_HANDLE_VALUE)
-        return ULONG64(-1);
-
     LARGE_INTEGER Size = {0};
 
     if (!GetFileSizeEx(m_hFile, &Size))
@@ -325,9 +313,6 @@ ULONG64 FileStream::GetSize()
 
 HRESULT FileStream::SetSize(ULONG64 ullNewSize)
 {
-    if (m_hFile == INVALID_HANDLE_VALUE)
-        return HRESULT_FROM_WIN32(ERROR_INVALID_HANDLE);
-
     LARGE_INTEGER liCurrentFilePointer = {0};
     LARGE_INTEGER liDistanceToMove = {0};
     liDistanceToMove.QuadPart = 0;

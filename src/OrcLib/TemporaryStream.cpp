@@ -6,7 +6,10 @@
 // Author(s): Jean Gautier (ANSSI)
 //
 #include "stdafx.h"
+
 #include "TemporaryStream.h"
+
+#include <boost/algorithm/string/replace.hpp>
 
 #include "MemoryStream.h"
 #include "FileStream.h"
@@ -14,11 +17,10 @@
 
 #include "LogFileWriter.h"
 
-#include <boost/algorithm/string/replace.hpp>
-
 using namespace std;
-
 using namespace Orc;
+
+namespace fs = std::filesystem;
 
 STDMETHODIMP TemporaryStream::CanRead()
 {
@@ -45,6 +47,14 @@ STDMETHODIMP TemporaryStream::CanSeek()
     if (m_pFileStream)
         return m_pFileStream->CanSeek();
     return S_FALSE;
+}
+
+STDMETHODIMP TemporaryStream::Open(
+    const fs::path& output,
+    DWORD dwMemThreshold,
+    bool bReleaseOnClose)
+{
+    return TemporaryStream::Open(output.parent_path().wstring(), output.filename().wstring(), dwMemThreshold, bReleaseOnClose);
 }
 
 STDMETHODIMP TemporaryStream::Open(

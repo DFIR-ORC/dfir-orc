@@ -23,6 +23,8 @@ public:
     PipeStream(logger pLog)
         : ByteStream(std::move(pLog)) {};
 
+    void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
+
     STDMETHOD(IsOpen)()
     {
         if (m_hReadPipe != INVALID_HANDLE_VALUE && m_hWritePipe != INVALID_HANDLE_VALUE)

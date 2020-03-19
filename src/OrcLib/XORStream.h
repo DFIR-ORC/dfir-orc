@@ -30,6 +30,8 @@ public:
         , m_CurrentXORPattern(0L) {};
     ~XORStream(void);
 
+    void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
+
     STDMETHOD(IsOpen)()
     {
         if (m_pChainedStream == NULL)

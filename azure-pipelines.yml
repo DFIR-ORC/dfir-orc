@@ -1,10 +1,55 @@
 trigger:
   - master
 
-jobs:
-- template: azure-pipelines-template.yml
-  parameters:
-    arch: "x64"
-- template: azure-pipelines-template.yml
-  parameters:
-    arch: "x86"
+stages:
+  - stage: Build
+    jobs:
+    - template: azure-pipelines-template.yml
+      parameters:
+        arch: "x64"
+
+    - template: azure-pipelines-template.yml
+      parameters:
+        arch: "x86"
+
+  - stage: Publish
+    jobs:
+    - job: RetrieveAndPublish
+      steps:
+      - checkout: self
+        clean: false
+        submodules: true
+
+      - task: DownloadBuildArtifacts@0
+        inputs:
+          buildType: 'current'
+          downloadType: 'single'
+          artifactName: 'drop_x86'
+          downloadPath: '$(Build.ArtifactStagingDirectory)'
+
+      - task: DownloadBuildArtifacts@0
+        inputs:
+          buildType: 'current'
+          downloadType: 'single'
+          artifactName: 'drop_x64'
+          downloadPath: '$(Build.ArtifactStagingDirectory)'
+
+      - task: GitHubRelease@0
+        inputs:
+          gitHubConnection: 'github.com_jgautier-anssi'
+          repositoryName: $(Build.Repository.Name)
+          action: 'create'
+          target: $(Build.SourceVersion)
+          tagSource: 'auto'
+          tagPattern: '^v?[0-9]+\.[0-9]+\.[0-9]+'
+          assets: |
+            $(Build.ArtifactStagingDirectory)/drop_x64/build-x64/MinSizeRel/DFIR-Orc_x64.exe
+            $(Build.ArtifactStagingDirectory)/drop_x64/build-x64/MinSizeRel/DFIR-Orc_x64.pdb
+            $(Build.ArtifactStagingDirectory)/drop_x64/build-x64/MinSizeRel/FastFind_x64.exe
+            $(Build.ArtifactStagingDirectory)/drop_x64/build-x64/MinSizeRel/FastFind_x64.pdb
+            $(Build.ArtifactStagingDirectory)/drop_x86/build-x86/MinSizeRel/DFIR-Orc_x86.exe
+            $(Build.ArtifactStagingDirectory)/drop_x86/build-x86/MinSizeRel/DFIR-Orc_x86.pdb
+            $(Build.ArtifactStagingDirectory)/drop_x86/build-x86/MinSizeRel/FastFind_x86.exe
+            $(Build.ArtifactStagingDirectory)/drop_x86/build-x86/MinSizeRel/FastFind_x86.pdb
+          changeLogCompareToRelease: 'lastFullRelease'
+          changeLogType: 'commitBased'
