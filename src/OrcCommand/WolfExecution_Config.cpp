@@ -8,7 +8,6 @@
 
 #include "stdafx.h"
 
-#include <string>
 
 #include "WolfLauncher.h"
 
@@ -23,8 +22,12 @@
 #include "ConfigFile.h"
 #include "ConfigFile_WOLFLauncher.h"
 
-#include <boost/tokenizer.hpp>
+#include <safeint.h>
+
 #include <algorithm>
+#include <string>
+
+#include <boost/tokenizer.hpp>
 
 using namespace std;
 
@@ -566,7 +569,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
             m_Restrictions.ExtendedLimits.emplace();
             ZeroMemory(&m_Restrictions.ExtendedLimits.value(), sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
         }
-        m_Restrictions.ExtendedLimits->JobMemoryLimit = li.LowPart;
+        m_Restrictions.ExtendedLimits->JobMemoryLimit = msl::utilities::SafeInt<SIZE_T>(li.QuadPart);
         m_Restrictions.ExtendedLimits->BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
     }
 
@@ -589,7 +592,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
             m_Restrictions.ExtendedLimits.emplace();
             ZeroMemory(&m_Restrictions.ExtendedLimits.value(), sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
         }
-        m_Restrictions.ExtendedLimits->ProcessMemoryLimit = li.LowPart;
+        m_Restrictions.ExtendedLimits->ProcessMemoryLimit = msl::utilities::SafeInt<SIZE_T>(li.QuadPart);
         m_Restrictions.ExtendedLimits->BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_PROCESS_MEMORY;
     }
 
