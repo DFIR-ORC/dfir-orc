@@ -32,8 +32,7 @@ struct FlagsDefinition
 class ORCLIB_API OutputWriter
 {
 public:
-    static HRESULT
-    GetOutputFileName(const std::wstring& strPattern, const std::wstring& strName, std::wstring& strFileName);
+    virtual ~OutputWriter() {}
 };
 
 }  // namespace Orc
