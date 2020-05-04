@@ -3657,7 +3657,7 @@ HRESULT FileFind::FindMatch(MFTRecord* pElt, bool& bStop, FileFind::FoundMatchCa
             PFILE_NAME aName = *it;
 
             if (!m_InLocationBuilder(aName))
-                return S_OK;
+                continue;
 
             std::wstring strName;
             std::wstring strPath;
