@@ -91,7 +91,10 @@ void Main::PrintParameters()
 
     PrintOutputOption(L"Output", config.Output);
     PrintOutputOption(L"Temp", config.TempWorkingDir);
-    log::Info(_L_, L"Log file              : %s\r\n", config.strLogFileName.c_str());
+    if (config.Log.IsFile())
+        log::Info(_L_, L"Log file              : %s\r\n", config.Log.Path.c_str());
+    if (config.Outline.IsFile())
+        log::Info(_L_, L"Outline file          : %s\r\n", config.Outline.Path.c_str());
 
     switch (config.RepeatBehavior)
     {
