@@ -14,6 +14,8 @@
 
 #pragma managed(push, off)
 
+using SOCKET_ADDRESS = struct _SOCKET_ADDRESS;
+
 namespace Orc {
 
 namespace TableOutput {
@@ -102,6 +104,38 @@ public:
     static DriveType GetPathLocation(const std::wstring& strAnyPath);
 
     static bool IsWOW64();
+
+    enum class AddressMode
+    {
+        UniCast, AnyCast, MultiCast, UnknownMode
+    };
+    enum class AddressType
+    {
+        IPV4, IPV6, IPUnknown
+    };
+    struct NetworkAddress
+    {
+        AddressType Type = AddressType::IPUnknown;
+        AddressMode Mode = AddressMode::UnknownMode;
+        std::wstring Address;
+    };
+
+    struct NetworkAdapter
+    {
+        std::wstring Name;
+        std::wstring Description;
+        std::wstring FriendlyName;
+        std::wstring PhysicalAddress;
+        std::vector<NetworkAddress> Addresses;
+        std::vector<NetworkAddress> DNS;
+        std::wstring DNSSuffix;
+    };
+
+    static std::pair<HRESULT, const std::vector<NetworkAdapter>&> GetNetworkAdapters();
+
+private:
+    static std::pair<HRESULT, NetworkAddress> GetNetworkAddress(SOCKET_ADDRESS& address);
+
 };
 
 static auto constexpr OrcComputerName = L"DFIR-OrcComputer";

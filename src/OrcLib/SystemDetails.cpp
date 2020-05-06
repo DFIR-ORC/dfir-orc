@@ -9,10 +9,9 @@
 #include "StdAfx.h"
 
 #include "SystemDetails.h"
-
 #include "LogFileWriter.h"
-
 #include "TableOutput.h"
+#include "WideAnsi.h"
 
 #include <WinNls.h>
 #include <WinError.h>
@@ -20,6 +19,10 @@
 #include <boost/scope_exit.hpp>
 
 #include <filesystem>
+#include <winsock.h>
+#include <winsock2.h>
+#include <iphlpapi.h>
+
 
 namespace fs = std::filesystem;
 
@@ -43,6 +46,7 @@ struct SystemDetailsBlock
     std::optional<SystemTags> Tags;
     bool bIsElevated = false;
     DWORD dwLargePageSize = 0L;
+    std::optional<std::vector<Orc::SystemDetails::NetworkAdapter>> NetworkAdapters;
 };
 }  // namespace Orc
 
@@ -704,6 +708,46 @@ bool SystemDetails::IsWOW64()
     return g_pDetailsBlock->WOW64;
 }
 
+std::pair<HRESULT, const std::vector<Orc::SystemDetails::NetworkAdapter>&> Orc::SystemDetails::GetNetworkAdapters()
+{
+    static std::vector<NetworkAdapter> failure;
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return {hr, failure};
+    if (!g_pDetailsBlock->NetworkAdapters.has_value())
+        return {E_NOT_VALID_STATE, failure};
+    return {S_OK, g_pDetailsBlock->NetworkAdapters.value()};
+}
+
+std::pair<HRESULT, Orc::SystemDetails::NetworkAddress> Orc::SystemDetails::GetNetworkAddress(SOCKET_ADDRESS& address)
+{
+    NetworkAddress retval;
+    switch (address.lpSockaddr->sa_family)
+    {
+        case AF_INET:
+            retval.Type = AddressType::IPV4;
+            break;
+        case AF_INET6:
+            retval.Type = AddressType::IPV6;
+            break;
+        default:
+            retval.Type = AddressType::IPUnknown;
+            break;
+    }
+
+    Buffer<WCHAR,MAX_PATH> ip;
+    DWORD dwLength = MAX_PATH;
+    ip.reserve(MAX_PATH);
+
+    if (WSAAddressToStringW(address.lpSockaddr, address.iSockaddrLength, NULL, ip.get(), &dwLength) == SOCKET_ERROR)
+        return {HRESULT_FROM_WIN32(WSAGetLastError()), retval };
+
+    ip.use(dwLength);
+
+    retval.Address.assign(ip.get());
+
+    return {S_OK, retval};
+}
+
 HRESULT SystemDetails::LoadSystemDetails()
 {
     if (g_pDetailsBlock)
@@ -760,229 +804,228 @@ HRESULT SystemDetails::LoadSystemDetails()
         g_pDetailsBlock->WOW64 = Bool ? true : false;
     }
 
-    if (VER_PLATFORM_WIN32_NT == g_pDetailsBlock->osvi.dwPlatformId && g_pDetailsBlock->osvi.dwMajorVersion > 4)
-    {
-        StringCchCopy(szOSDesc, BUFSIZE, TEXT("Microsoft "));
-
-        // Test for the specific product.
-
-        if (g_pDetailsBlock->osvi.dwMajorVersion == 6 || g_pDetailsBlock->osvi.dwMajorVersion == 10)
-        {
-            if (g_pDetailsBlock->osvi.dwMajorVersion == 10 && g_pDetailsBlock->osvi.dwMinorVersion == 0)
-            {
-                if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
-                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 10 "));
-                else
-                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2016 "));
-            }
-            else if (g_pDetailsBlock->osvi.dwMajorVersion == 6)
-            {
-                if (g_pDetailsBlock->osvi.dwMinorVersion == 0)
-                {
-                    if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Vista "));
-                    else
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2008 "));
-                }
-                else if (g_pDetailsBlock->osvi.dwMinorVersion == 1)
-                {
-                    if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 7 "));
-                    else
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2008 R2 "));
-                }
-                else if (g_pDetailsBlock->osvi.dwMinorVersion == 2)
-                {
-                    if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 8 "));
-                    else
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2012 "));
-                }
-                else if (g_pDetailsBlock->osvi.dwMinorVersion == 3)
-                {
-                    if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 8.1 "));
-                    else
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2012 R2 "));
-                }
-            }
-
-            pGPI = (PGPI)GetProcAddress(hKernel32, "GetProductInfo");
-            if (pGPI != nullptr)
-            {
-                pGPI(g_pDetailsBlock->osvi.dwMajorVersion, g_pDetailsBlock->osvi.dwMinorVersion, 0, 0, &dwType);
-
-                switch (dwType)
-                {
-                    case PRODUCT_ULTIMATE:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Ultimate Edition"));
-                        break;
-                    case PRODUCT_PROFESSIONAL:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Professional"));
-                        break;
-                    case PRODUCT_HOME_PREMIUM:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Home Premium Edition"));
-                        break;
-                    case PRODUCT_HOME_BASIC:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Home Basic Edition"));
-                        break;
-                    case PRODUCT_ENTERPRISE:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition"));
-                        break;
-                    case PRODUCT_BUSINESS:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Business Edition"));
-                        break;
-                    case PRODUCT_STARTER:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Starter Edition"));
-                        break;
-                    case PRODUCT_CLUSTER_SERVER:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Cluster Server Edition"));
-                        break;
-                    case PRODUCT_DATACENTER_SERVER:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Edition"));
-                        break;
-                    case PRODUCT_DATACENTER_SERVER_CORE:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Edition (core installation)"));
-                        break;
-                    case PRODUCT_ENTERPRISE_SERVER:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition"));
-                        break;
-                    case PRODUCT_ENTERPRISE_SERVER_CORE:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition (core installation)"));
-                        break;
-                    case PRODUCT_ENTERPRISE_SERVER_IA64:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition for Itanium-based Systems"));
-                        break;
-                    case PRODUCT_SMALLBUSINESS_SERVER:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Small Business Server"));
-                        break;
-                    case PRODUCT_SMALLBUSINESS_SERVER_PREMIUM:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Small Business Server Premium Edition"));
-                        break;
-                    case PRODUCT_STANDARD_SERVER:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Standard Edition"));
-                        break;
-                    case PRODUCT_STANDARD_SERVER_CORE:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Standard Edition (core installation)"));
-                        break;
-                    case PRODUCT_WEB_SERVER:
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Web Server Edition"));
-                        break;
-                }
-            }
-            else
-            {
-                StringCchCat(szOSDesc, BUFSIZE, TEXT("Edition not available"));
-            }
-        }
-
-        if (g_pDetailsBlock->osvi.dwMajorVersion == 5 && g_pDetailsBlock->osvi.dwMinorVersion == 2)
-        {
-            if (GetSystemMetrics(SM_SERVERR2))
-                StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2003 R2, "));
-            else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_STORAGE_SERVER)
-                StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Storage Server 2003"));
-            else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_WH_SERVER)
-                StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Home Server"));
-            else if (
-                g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION
-                && g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
-            {
-                StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows XP Professional x64 Edition"));
-            }
-            else
-                StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2003, "));
-
-            // Test for the server type.
-            if (g_pDetailsBlock->osvi.wProductType != VER_NT_WORKSTATION)
-            {
-                if (g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64)
-                {
-                    if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_DATACENTER)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Edition for Itanium-based Systems"));
-                    else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition for Itanium-based Systems"));
-                }
-
-                else if (g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
-                {
-                    if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_DATACENTER)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter x64 Edition"));
-                    else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise x64 Edition"));
-                    else
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Standard x64 Edition"));
-                }
-
-                else
-                {
-                    if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_COMPUTE_SERVER)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Compute Cluster Edition"));
-                    else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_DATACENTER)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Edition"));
-                    else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition"));
-                    else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_BLADE)
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Web Edition"));
-                    else
-                        StringCchCat(szOSDesc, BUFSIZE, TEXT("Standard Edition"));
-                }
-            }
-        }
-
-        if (g_pDetailsBlock->osvi.dwMajorVersion == 5 && g_pDetailsBlock->osvi.dwMinorVersion == 1)
-        {
-            StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows XP "));
-            if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_PERSONAL)
-                StringCchCat(szOSDesc, BUFSIZE, TEXT("Home Edition"));
-            else
-                StringCchCat(szOSDesc, BUFSIZE, TEXT("Professional"));
-        }
-
-        if (g_pDetailsBlock->osvi.dwMajorVersion == 5 && g_pDetailsBlock->osvi.dwMinorVersion == 0)
-        {
-            StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 2000 "));
-
-            if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
-            {
-                StringCchCat(szOSDesc, BUFSIZE, TEXT("Professional"));
-            }
-            else
-            {
-                if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_DATACENTER)
-                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Server"));
-                else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
-                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Advanced Server"));
-                else
-                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Server"));
-            }
-        }
-
-        // Include service pack (if any) and build number.
-
-        if (wcslen(g_pDetailsBlock->osvi.szCSDVersion) > 0)
-        {
-            StringCchCat(szOSDesc, BUFSIZE, TEXT(" "));
-            StringCchCat(szOSDesc, BUFSIZE, g_pDetailsBlock->osvi.szCSDVersion);
-        }
-
-        TCHAR buf[80];
-
-        StringCchPrintf(buf, 80, TEXT(" (build %d)"), g_pDetailsBlock->osvi.dwBuildNumber);
-        StringCchCat(szOSDesc, BUFSIZE, buf);
-
-        if (g_pDetailsBlock->osvi.dwMajorVersion >= 6)
-        {
-            if (g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
-                StringCchCat(szOSDesc, BUFSIZE, TEXT(", 64-bit"));
-            else if (g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL)
-                StringCchCat(szOSDesc, BUFSIZE, TEXT(", 32-bit"));
-        }
-    }
-    else
+    if (VER_PLATFORM_WIN32_NT != g_pDetailsBlock->osvi.dwPlatformId || g_pDetailsBlock->osvi.dwMajorVersion <= 4)
     {
         return E_FAIL;
     }
+
+    StringCchCopy(szOSDesc, BUFSIZE, TEXT("Microsoft "));
+
+    // Test for the specific product.
+
+    if (g_pDetailsBlock->osvi.dwMajorVersion == 6 || g_pDetailsBlock->osvi.dwMajorVersion == 10)
+    {
+        if (g_pDetailsBlock->osvi.dwMajorVersion == 10 && g_pDetailsBlock->osvi.dwMinorVersion == 0)
+        {
+            if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
+                StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 10 "));
+            else
+                StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2016 "));
+        }
+        else if (g_pDetailsBlock->osvi.dwMajorVersion == 6)
+        {
+            if (g_pDetailsBlock->osvi.dwMinorVersion == 0)
+            {
+                if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Vista "));
+                else
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2008 "));
+            }
+            else if (g_pDetailsBlock->osvi.dwMinorVersion == 1)
+            {
+                if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 7 "));
+                else
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2008 R2 "));
+            }
+            else if (g_pDetailsBlock->osvi.dwMinorVersion == 2)
+            {
+                if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 8 "));
+                else
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2012 "));
+            }
+            else if (g_pDetailsBlock->osvi.dwMinorVersion == 3)
+            {
+                if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 8.1 "));
+                else
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2012 R2 "));
+            }
+        }
+
+        pGPI = (PGPI)GetProcAddress(hKernel32, "GetProductInfo");
+        if (pGPI != nullptr)
+        {
+            pGPI(g_pDetailsBlock->osvi.dwMajorVersion, g_pDetailsBlock->osvi.dwMinorVersion, 0, 0, &dwType);
+
+            switch (dwType)
+            {
+                case PRODUCT_ULTIMATE:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Ultimate Edition"));
+                    break;
+                case PRODUCT_PROFESSIONAL:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Professional"));
+                    break;
+                case PRODUCT_HOME_PREMIUM:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Home Premium Edition"));
+                    break;
+                case PRODUCT_HOME_BASIC:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Home Basic Edition"));
+                    break;
+                case PRODUCT_ENTERPRISE:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition"));
+                    break;
+                case PRODUCT_BUSINESS:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Business Edition"));
+                    break;
+                case PRODUCT_STARTER:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Starter Edition"));
+                    break;
+                case PRODUCT_CLUSTER_SERVER:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Cluster Server Edition"));
+                    break;
+                case PRODUCT_DATACENTER_SERVER:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Edition"));
+                    break;
+                case PRODUCT_DATACENTER_SERVER_CORE:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Edition (core installation)"));
+                    break;
+                case PRODUCT_ENTERPRISE_SERVER:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition"));
+                    break;
+                case PRODUCT_ENTERPRISE_SERVER_CORE:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition (core installation)"));
+                    break;
+                case PRODUCT_ENTERPRISE_SERVER_IA64:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition for Itanium-based Systems"));
+                    break;
+                case PRODUCT_SMALLBUSINESS_SERVER:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Small Business Server"));
+                    break;
+                case PRODUCT_SMALLBUSINESS_SERVER_PREMIUM:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Small Business Server Premium Edition"));
+                    break;
+                case PRODUCT_STANDARD_SERVER:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Standard Edition"));
+                    break;
+                case PRODUCT_STANDARD_SERVER_CORE:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Standard Edition (core installation)"));
+                    break;
+                case PRODUCT_WEB_SERVER:
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Web Server Edition"));
+                    break;
+            }
+        }
+        else
+        {
+            StringCchCat(szOSDesc, BUFSIZE, TEXT("Edition not available"));
+        }
+    }
+
+    if (g_pDetailsBlock->osvi.dwMajorVersion == 5 && g_pDetailsBlock->osvi.dwMinorVersion == 2)
+    {
+        if (GetSystemMetrics(SM_SERVERR2))
+            StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2003 R2, "));
+        else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_STORAGE_SERVER)
+            StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Storage Server 2003"));
+        else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_WH_SERVER)
+            StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Home Server"));
+        else if (
+            g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION
+            && g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
+        {
+            StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows XP Professional x64 Edition"));
+        }
+        else
+            StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows Server 2003, "));
+
+        // Test for the server type.
+        if (g_pDetailsBlock->osvi.wProductType != VER_NT_WORKSTATION)
+        {
+            if (g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_IA64)
+            {
+                if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_DATACENTER)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Edition for Itanium-based Systems"));
+                else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition for Itanium-based Systems"));
+            }
+
+            else if (g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
+            {
+                if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_DATACENTER)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter x64 Edition"));
+                else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise x64 Edition"));
+                else
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Standard x64 Edition"));
+            }
+
+            else
+            {
+                if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_COMPUTE_SERVER)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Compute Cluster Edition"));
+                else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_DATACENTER)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Edition"));
+                else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Enterprise Edition"));
+                else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_BLADE)
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Web Edition"));
+                else
+                    StringCchCat(szOSDesc, BUFSIZE, TEXT("Standard Edition"));
+            }
+        }
+    }
+
+    if (g_pDetailsBlock->osvi.dwMajorVersion == 5 && g_pDetailsBlock->osvi.dwMinorVersion == 1)
+    {
+        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows XP "));
+        if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_PERSONAL)
+            StringCchCat(szOSDesc, BUFSIZE, TEXT("Home Edition"));
+        else
+            StringCchCat(szOSDesc, BUFSIZE, TEXT("Professional"));
+    }
+
+    if (g_pDetailsBlock->osvi.dwMajorVersion == 5 && g_pDetailsBlock->osvi.dwMinorVersion == 0)
+    {
+        StringCchCat(szOSDesc, BUFSIZE, TEXT("Windows 2000 "));
+
+        if (g_pDetailsBlock->osvi.wProductType == VER_NT_WORKSTATION)
+        {
+            StringCchCat(szOSDesc, BUFSIZE, TEXT("Professional"));
+        }
+        else
+        {
+            if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_DATACENTER)
+                StringCchCat(szOSDesc, BUFSIZE, TEXT("Datacenter Server"));
+            else if (g_pDetailsBlock->osvi.wSuiteMask & VER_SUITE_ENTERPRISE)
+                StringCchCat(szOSDesc, BUFSIZE, TEXT("Advanced Server"));
+            else
+                StringCchCat(szOSDesc, BUFSIZE, TEXT("Server"));
+        }
+    }
+
+    // Include service pack (if any) and build number.
+
+    if (wcslen(g_pDetailsBlock->osvi.szCSDVersion) > 0)
+    {
+        StringCchCat(szOSDesc, BUFSIZE, TEXT(" "));
+        StringCchCat(szOSDesc, BUFSIZE, g_pDetailsBlock->osvi.szCSDVersion);
+    }
+
+    TCHAR buf[80];
+
+    StringCchPrintf(buf, 80, TEXT(" (build %d)"), g_pDetailsBlock->osvi.dwBuildNumber);
+    StringCchCat(szOSDesc, BUFSIZE, buf);
+
+    if (g_pDetailsBlock->osvi.dwMajorVersion >= 6)
+    {
+        if (g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_AMD64)
+            StringCchCat(szOSDesc, BUFSIZE, TEXT(", 64-bit"));
+        else if (g_pDetailsBlock->si.wProcessorArchitecture == PROCESSOR_ARCHITECTURE_INTEL)
+            StringCchCat(szOSDesc, BUFSIZE, TEXT(", 32-bit"));
+    }
+
     g_pDetailsBlock->strOSDescription.assign(szOSDesc);
 
     WCHAR szComputerName[MAX_COMPUTERNAME_LENGTH + 1];
@@ -1094,6 +1137,141 @@ HRESULT SystemDetails::LoadSystemDetails()
                 g_pDetailsBlock->bIsElevated = false;
         }
     }
+
+    // Collect network adapters information
+    {
+        DWORD dwPageSize = 0L;
+        SystemDetails::GetPageSize(dwPageSize);
+
+        const DWORD WORKING_BUFFER_SIZE = 4 * dwPageSize;
+        Buffer<BYTE> buffer;
+
+        buffer.reserve(WORKING_BUFFER_SIZE);
+        ULONG cbRequiredSize = 0L;
+
+        if (auto ret = GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES) buffer.get(), &cbRequiredSize); ret == ERROR_BUFFER_OVERFLOW)
+        {
+            buffer.reserve(cbRequiredSize);
+            if (auto ret =
+                    GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES)buffer.get(), &cbRequiredSize);
+                ret != ERROR_SUCCESS)
+            {
+                return HRESULT_FROM_WIN32(ret);
+            }
+        }
+        else if (ret != ERROR_SUCCESS)
+        {
+            return HRESULT_FROM_WIN32(ret);
+        }
+
+        // We have result values from the APIs
+        g_pDetailsBlock->NetworkAdapters.emplace();
+
+         // If successful, output some information from the data we received
+        auto pCurrAddresses = buffer.get_as<IP_ADAPTER_ADDRESSES>();
+        while (pCurrAddresses)
+        {
+            NetworkAdapter adapter;
+
+            // Adaptor's "cryptic" name (GUID)
+            Orc::AnsiToWide(nullptr, pCurrAddresses->AdapterName, adapter.Name);
+
+            // First, UniCast addresses
+            
+            if (auto pUnicast = pCurrAddresses->FirstUnicastAddress; pUnicast != NULL)
+            {
+                for (; pUnicast != NULL;)
+                {
+                    if(auto [hr,address] = GetNetworkAddress(pUnicast->Address);FAILED(hr))
+                        break;
+                    else
+                    {
+                        address.Mode = AddressMode::UniCast;
+                        adapter.Addresses.push_back(std::move(address));
+                    }
+
+                    pUnicast = pUnicast->Next;
+                }
+            }
+
+            
+            if (auto pAnycast = pCurrAddresses->FirstAnycastAddress; pAnycast != NULL)
+            {
+                for (; pAnycast != NULL;)
+                {
+                    if (auto [hr, address] = GetNetworkAddress(pAnycast->Address); FAILED(hr))
+                        break;
+                    else
+                    {
+                        address.Mode = AddressMode::AnyCast;
+                        adapter.Addresses.push_back(std::move(address));
+                    }
+
+                    pAnycast = pAnycast->Next;
+                }
+            }
+            
+            if (auto pMulticast = pCurrAddresses->FirstMulticastAddress;pMulticast != NULL)
+            {
+                for (; pMulticast != NULL; )
+                {
+                    if (auto [hr, address] = GetNetworkAddress(pMulticast->Address); FAILED(hr))
+                        break;
+                    else
+                    {
+                        address.Mode = AddressMode::MultiCast;
+                        adapter.Addresses.push_back(std::move(address));
+                    }
+                    pMulticast = pMulticast->Next;
+                }
+            }
+
+            auto pDnServer = pCurrAddresses->FirstDnsServerAddress;
+            if (pDnServer)
+            {
+                for (; pDnServer != NULL; )
+                {
+                    if (auto [hr, address] = GetNetworkAddress(pDnServer->Address); FAILED(hr))
+                        break;
+                    else
+                    {
+                        address.Mode = AddressMode::UnknownMode;
+                        adapter.DNS.push_back(std::move(address));
+                    }
+
+                    pDnServer = pDnServer->Next;
+                }
+            }
+
+            adapter.DNSSuffix.assign(pCurrAddresses->DnsSuffix);
+            adapter.Description.assign(pCurrAddresses->Description);
+            adapter.FriendlyName.assign(pCurrAddresses->FriendlyName);
+
+            if (pCurrAddresses->PhysicalAddressLength != 0)
+            {
+                Buffer<WCHAR,MAX_PATH> PhysAddress;
+
+                for (auto i = 0; i < (int)pCurrAddresses->PhysicalAddressLength; i++)
+                {
+                    if (i == (pCurrAddresses->PhysicalAddressLength - 1))
+                        fmt::format_to(
+                            std::back_insert_iterator(adapter.PhysicalAddress),
+                            L"{:0X}",
+                            pCurrAddresses->PhysicalAddress[i]);
+                    else
+                        fmt::format_to(
+                            std::back_insert_iterator(adapter.PhysicalAddress),
+                            L"{:0X}-",
+                            pCurrAddresses->PhysicalAddress[i]);
+                }
+            }
+
+            g_pDetailsBlock->NetworkAdapters.value().push_back(std::move(adapter));
+
+            pCurrAddresses = pCurrAddresses->Next;
+        }
+    }
+
     return S_OK;
 }
 

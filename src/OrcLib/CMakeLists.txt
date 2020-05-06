@@ -758,6 +758,7 @@ target_link_libraries(OrcLib
         VisualStudio::CppUnitTest
         yara::yara
         ws2_32.lib
+        Iphlpapi.lib
 )
 
 if(ORC_BUILD_SSDEEP)
