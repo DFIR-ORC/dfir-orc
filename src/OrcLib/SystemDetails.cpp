@@ -14,6 +14,7 @@
 
 #include "TableOutput.h"
 
+#include <WinNls.h>
 #include <WinError.h>
 
 #include <boost/scope_exit.hpp>
@@ -606,6 +607,64 @@ HRESULT Orc::SystemDetails::UserSID(std::wstring& strSID)
 
     strSID = g_pDetailsBlock->strUserSID;
 
+    return S_OK;
+}
+
+HRESULT Orc::SystemDetails::GetSystemLocale(std::wstring& strLocale)
+{
+    wchar_t szName[MAX_PATH];
+    if (GetLocaleInfo(GetSystemDefaultLCID(), LOCALE_SISO639LANGNAME, szName, MAX_PATH) == 0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    wchar_t szCountry[MAX_PATH];
+    if (GetLocaleInfo(GetSystemDefaultLCID(), LOCALE_SISO3166CTRYNAME, szCountry, MAX_PATH) == 0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    strLocale = fmt::format(L"{}-{}", szName, szCountry);
+    return S_OK;
+}
+
+HRESULT Orc::SystemDetails::GetUserLocale(std::wstring& strLocale)
+{
+    wchar_t szName[MAX_PATH];
+    if (GetLocaleInfo(GetUserDefaultLCID(), LOCALE_SISO639LANGNAME, szName, MAX_PATH) == 0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    wchar_t szCountry[MAX_PATH];
+    if (GetLocaleInfo(GetUserDefaultLCID(), LOCALE_SISO3166CTRYNAME, szCountry, MAX_PATH) == 0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    strLocale = fmt::format(L"{}-{}", szName, szCountry);
+    return S_OK;
+}
+
+HRESULT Orc::SystemDetails::GetSystemLanguage(std::wstring& strLanguage)
+{
+    wchar_t szName[MAX_PATH];
+    if (GetLocaleInfo(GetSystemDefaultUILanguage(), LOCALE_SLANGUAGE, szName, MAX_PATH) == 0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+    strLanguage.assign(szName);
+    return S_OK;
+}
+
+HRESULT Orc::SystemDetails::GetUserLanguage(std::wstring& strLanguage)
+{
+    wchar_t szName[MAX_PATH];
+    if (GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SLANGUAGE, szName, MAX_PATH) == 0)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+    strLanguage.assign(szName);
     return S_OK;
 }
 

@@ -78,6 +78,12 @@ public:
     static HRESULT AmIElevated(bool& bIsElevated);
     static HRESULT UserSID(std::wstring& strSID);
 
+    static HRESULT GetSystemLocale(std::wstring& strLocale);
+    static HRESULT GetUserLocale(std::wstring& strLocale);
+    static HRESULT GetSystemLanguage(std::wstring& strLocale);
+    static HRESULT GetUserLanguage(std::wstring& strLocale);
+
+
     static HRESULT GetCurrentWorkingDirectory(std::wstring& strCMD);
 
     static HRESULT GetProcessBinary(std::wstring& strFullPath);
