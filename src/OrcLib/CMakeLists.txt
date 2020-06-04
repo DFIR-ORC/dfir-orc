@@ -611,6 +611,7 @@ set(SRC_UTILITIES
     "LogFileWriter.h"
     "OrcException.cpp"
     "OrcException.h"
+    "OrcResult.h"
 )
 
 source_group(Utilities FILES ${SRC_UTILITIES})
