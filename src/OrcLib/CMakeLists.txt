@@ -672,6 +672,8 @@ set(SRC_UTILITIES_SYSTEM
     "JobObject.h"
     "Privilege.cpp"
     "Privilege.h"
+    "ProfileList.cpp"
+    "ProfileList.h"
     "Robustness.cpp"
     "Robustness.h"
     "SecurityDescriptor.cpp"
