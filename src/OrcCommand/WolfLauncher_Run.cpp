@@ -209,15 +209,28 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             GetSystemTimeAsFileTime(&ft);
             writer->WriteNamed(L"time", ft);
 
-            writer->BeginCollection(L"keys");
+            writer->BeginCollection(L"archives");
             for (const auto& exec : m_wolfexecs)
             {
                 if (!exec->IsOptional())
                 {
-                    writer->Write(exec->GetKeyword().c_str());
+                    writer->BeginElement(nullptr);
+                    {
+                        writer->WriteNamed(L"keyword", exec->GetKeyword().c_str());
+                        writer->BeginCollection(L"commands");
+                        for (const auto& command : exec->GetCommands())
+                        {
+                            if (!command->IsOptional())
+                            {
+                                writer->Write(command->Keyword().c_str());
+                            }
+                        }
+                        writer->EndCollection(L"commands");
+                    }
+                    writer->EndElement(nullptr);
                 }
             }
-            writer->EndCollection(L"keys");
+            writer->EndCollection(L"archives");
 
             writer->WriteNamed(L"output", config.Output.Path.c_str());
             writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());
