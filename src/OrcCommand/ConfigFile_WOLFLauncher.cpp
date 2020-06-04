@@ -177,6 +177,8 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(L"log", Orc::Config::Common::output, WOLFLAUNCHER_LOG)))
         return hr;
+    if (FAILED(hr = item.AddChild(L"outline", Orc::Config::Common::output, WOLFLAUNCHER_OUTLINE)))
+        return hr;
     if (FAILED(hr = item.AddAttribute(L"childdebug", WOLFLAUNCHER_CHILDDEBUG, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"command_timeout", WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT, ConfigItem::OPTION)))

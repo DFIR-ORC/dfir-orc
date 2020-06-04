@@ -181,6 +181,15 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
+    if (configitem[WOLFLAUNCHER_OUTLINE])
+    {
+        auto hr = E_FAIL;
+        if (FAILED(hr = config.Outline.Configure(_L_, configitem[WOLFLAUNCHER_OUTLINE])))
+        {
+            log::Warning(_L_, hr, L"Failed to configure DFIR-Orc outline file\r\n");
+        }
+    }
+
     if (!configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT])
     {
         config.msCommandTerminationTimeOut = 3h;  // 3 hours
@@ -319,35 +328,25 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
 HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 {
-    HRESULT hr = E_FAIL;
     wstring strOutputDir;
 
     if (config.bAddConfigToArchive && configitem)
     {
         auto stream = std::make_shared<TemporaryStream>(_L_);
 
-        if (SUCCEEDED(hr = stream->Open(config.TempWorkingDir.Path, L"DFIROrcConfigStream", 100 * 1024)))
-        {
-            ConfigFileWriter w(_L_);
-
-            if (SUCCEEDED(hr = w.WriteConfig(stream, L"DFIR-ORC Local Configuration", configitem)))
-            {
-                m_pLocalConfigStream = stream;
-            }
-            else
-            {
-                return hr;
-            }
-        }
-        else
-        {
+        if (auto hr = stream->Open(config.TempWorkingDir.Path, L"DFIROrcConfigStream", 100 * 1024); FAILED(hr))
             return hr;
-        }
+
+        ConfigFileWriter w(_L_);
+
+        if (auto hr = w.WriteConfig(stream, L"DFIR-ORC Local Configuration", configitem); FAILED(hr))
+            return hr;
+
+        m_pLocalConfigStream = stream;
     }
 
-    if (FAILED(
-            hr = config.Output.Configure(
-                _L_, static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory), configitem[ORC_OUTPUT])))
+    if (auto hr = config.Output.Configure(
+                _L_, static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory), configitem[ORC_OUTPUT]); FAILED(hr))
     {
         log::Error(_L_, hr, L"Error in specified outputdir in config file, defaulting to .\r\n");
         return hr;
@@ -359,20 +358,17 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 
         if (upload == nullptr)
             return E_OUTOFMEMORY;
-        if (FAILED(hr = upload->Configure(_L_, configitem[ORC_UPLOAD])))
+
+        if (auto hr = upload->Configure(_L_, configitem[ORC_UPLOAD]); FAILED(hr))
         {
             log::Error(_L_, hr, L"Error in specified upload section in config file, ignored\r\n");
             return hr;
         }
-        else
-        {
-            config.Output.UploadOutput = upload;
-        }
+        config.Output.UploadOutput = upload;
     }
 
-    if (FAILED(
-            hr = config.TempWorkingDir.Configure(
-                _L_, static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory), configitem[ORC_TEMP])))
+    if (auto hr = config.TempWorkingDir.Configure(
+                _L_, static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory), configitem[ORC_TEMP]); FAILED(hr))
     {
         log::Error(_L_, hr, L"Error in specified tempdir in config file, defaulting to current directory\r\n");
         config.TempWorkingDir.Path = L".\\DFIR-OrcTempDir";
@@ -385,10 +381,10 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
         {
             auto recipient = GetRecipientFromItem(recipient_item);
 
-            if (recipient != nullptr)
-                m_Recipients.push_back(recipient);
-            else
+            if (recipient == nullptr)
                 return E_FAIL;
+
+            m_Recipients.push_back(recipient);
         }
     }
     if (configitem[ORC_PRIORITY])
@@ -672,14 +668,10 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Log.Type != OutputSpec::Kind::None)
     {
-        if (config.Log.Type == OutputSpec::Kind::File)
+        if (config.Log.IsFile())
         {
-            if (FAILED(hr = OutputWriter::GetOutputFileName(config.Log.Path, L""s, config.strLogFileName)))
-            {
-                log::Error(_L_, hr, L"Invalid log file pattern");
-                return hr;
-            }
-            config.strLogFilePath = std::filesystem::path(config.Output.Path) / config.strLogFileName;
+            // We need to apply the output directory path to the log file
+            config.Log.Path = std::filesystem::path(config.Output.Path) / config.Log.FileName;
         }
         else
         {
@@ -687,6 +679,21 @@ HRESULT Main::CheckConfiguration()
             return E_INVALIDARG;
         }
     }
+
+    if (config.Outline.Type != OutputSpec::Kind::None)
+    {
+        if (config.Outline.IsStructuredFile())
+        {
+            // We need to apply the output directory path to the outline file
+            config.Outline.Path = std::filesystem::path(config.Output.Path) / config.Outline.FileName;
+        }
+        else
+        {
+            log::Error(_L_, E_INVALIDARG, L"Invalid outline file type");
+            return E_INVALIDARG;
+        }
+    }
+
 
     if (config.JobStatistics.Type == OutputSpec::Kind::None)
     {

@@ -16,6 +16,7 @@
 #include "SystemDetails.h"
 #include "LogFileWriter.h"
 #include "JobObject.h"
+#include "StructuredOutputWriter.h"
 
 #include <boost/logic/tribool.hpp>
 #include <boost/scope_exit.hpp>
@@ -33,8 +34,7 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
     {
         case OutputSpec::None:
             break;
-        default:
-        {
+        default: {
             m_pUploadMessageQueue = std::make_unique<UploadMessage::UnboundedMessageBuffer>();
             m_pUploadNotification = std::make_unique<call<UploadNotification::Notification>>(
                 [this](const UploadNotification::Notification& item) {
@@ -99,6 +99,30 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
     return S_OK;
 }
 
+HRESULT Orc::Command::Wolf::Main::UploadSingleFile(const std::wstring& fileName, const std::wstring& filePath)
+{
+    if (VerifyFileExists(filePath.c_str()) == S_OK)
+    {
+        if (m_pUploadMessageQueue && config.Output.UploadOutput)
+        {
+            switch (config.Output.UploadOutput->Operation)
+            {
+                case OutputSpec::UploadOperation::NoOp:
+                    break;
+                case OutputSpec::UploadOperation::Copy:
+                    Concurrency::send(
+                        m_pUploadMessageQueue.get(), UploadMessage::MakeUploadFileRequest(fileName, filePath, false));
+                    break;
+                case OutputSpec::UploadOperation::Move:
+                    Concurrency::send(
+                        m_pUploadMessageQueue.get(), UploadMessage::MakeUploadFileRequest(fileName, filePath, true));
+                    break;
+            }
+        }
+    }
+    return S_OK;
+}
+
 HRESULT Main::CompleteUpload()
 {
     HRESULT hr = E_FAIL;
@@ -159,6 +183,288 @@ boost::logic::tribool Main::SetWERDontShowUI(DWORD dwNewValue)
     return retval;
 }
 
+HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
+{
+    try
+    {
+        auto options = std::make_unique<StructuredOutput::JSON::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF8;
+        options->bPrettyPrint = false;
+
+        auto writer = StructuredOutputWriter::GetWriter(_L_, config.Outline, std::move(options));
+        if (writer == nullptr)
+        {
+            log::Error(
+                _L_, E_INVALIDARG, L"Failed to create writer for outline file %s\r\n", config.Outline.Path.c_str());
+            return E_INVALIDARG;
+        }
+
+        writer->BeginElement(L"dfir-orc");
+        {
+
+            writer->WriteNamed(L"version", L"1.0");
+
+            FILETIME ft;
+            GetSystemTimeAsFileTime(&ft);
+            writer->WriteNamed(L"time", ft);
+
+            writer->BeginCollection(L"keys");
+            for (const auto& exec : m_wolfexecs)
+            {
+                if (!exec->IsOptional())
+                {
+                    writer->Write(exec->GetKeyword().c_str());
+                }
+            }
+            writer->EndCollection(L"keys");
+
+            writer->BeginElement(L"orc_process");
+            {
+                writer->WriteNamed(L"version", kOrcFileVerStringW);
+
+                std::wstring strProcessBinary;
+                SystemDetails::GetProcessBinary(strProcessBinary);
+                writer->WriteNamed(L"binary", strProcessBinary.c_str());
+
+                writer->WriteNamed(L"syswow64", SystemDetails::IsWOW64());
+
+                writer->WriteNamed(L"command_line", GetCommandLine());
+
+                writer->WriteNamed(L"output", config.Output.Path.c_str());
+                writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());
+
+                writer->BeginElement(L"user");
+                {
+                    std::wstring strUserName;
+                    SystemDetails::WhoAmI(strUserName);
+                    writer->WriteNamed(L"username", strUserName.c_str());
+
+                    std::wstring strUserSID;
+                    SystemDetails::UserSID(strUserSID);
+                    writer->WriteNamed(L"SID", strUserSID.c_str());
+
+                    bool bElevated = false;
+                    SystemDetails::AmIElevated(bElevated);
+                    writer->WriteNamed(L"elevated", bElevated);
+
+                    std::wstring locale;
+                    if (auto hr = SystemDetails::GetUserLocale(locale); SUCCEEDED(hr))
+                        writer->WriteNamed(L"locale", locale.c_str());
+
+                    std::wstring language;
+                    if (auto hr = SystemDetails::GetUserLanguage(language); SUCCEEDED(hr))
+                        writer->WriteNamed(L"language", language.c_str());
+                }
+                writer->EndElement(L"user");
+            }
+            writer->EndElement(L"orc_process");
+
+            writer->BeginElement(L"system");
+            {
+                {
+                    std::wstring strComputerName;
+                    SystemDetails::GetOrcComputerName(strComputerName);
+                    writer->WriteNamed(L"name", strComputerName.c_str());
+                }
+                {
+                    std::wstring strFullComputerName;
+                    SystemDetails::GetOrcFullComputerName(strFullComputerName);
+                    writer->WriteNamed(L"fullname", strFullComputerName.c_str());
+                }
+                {
+                    std::wstring strSystemType;
+                    SystemDetails::GetSystemType(strSystemType);
+                    writer->WriteNamed(L"type", strSystemType.c_str());
+                }
+                {
+                    WORD wArch = 0;
+                    SystemDetails::GetArchitecture(wArch);
+                    switch (wArch)
+                    {
+                        case PROCESSOR_ARCHITECTURE_INTEL:
+                            writer->WriteNamed(L"architecture", L"x86");
+                            break;
+                        case PROCESSOR_ARCHITECTURE_AMD64:
+                            writer->WriteNamed(L"architecture", L"x64");
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                {
+                    writer->BeginElement(L"operating_system");
+                    {
+                        std::wstring strDescr;
+                        SystemDetails::GetDescriptionString(strDescr);
+
+                        writer->WriteNamed(L"description", strDescr.c_str());
+                    }
+                    {
+                        auto [major, minor] = SystemDetails::GetOSVersion();
+                        auto version = fmt::format(L"{}.{}", major, minor);
+                        writer->WriteNamed(L"version", version.c_str());
+                    }
+                    {
+                        TIME_ZONE_INFORMATION tzi;
+                        ZeroMemory(&tzi, sizeof(tzi));
+                        if (auto active = GetTimeZoneInformation(&tzi); active != TIME_ZONE_ID_INVALID)
+                        {
+                            writer->BeginElement(L"time_zone");
+                            {
+                                writer->WriteNamed(L"daylight", tzi.DaylightName);
+                                writer->WriteNamed(L"daylight_bias", tzi.DaylightBias);
+                                writer->WriteNamed(L"standard", tzi.StandardName);
+                                writer->WriteNamed(L"standard_bias", tzi.StandardBias);
+                                writer->WriteNamed(L"current_bias", tzi.Bias);
+                                switch (active)
+                                {
+                                    case TIME_ZONE_ID_UNKNOWN:
+                                    case TIME_ZONE_ID_STANDARD:
+                                        writer->WriteNamed(L"current", L"standard");
+                                        break;
+                                    case TIME_ZONE_ID_DAYLIGHT:
+                                        writer->WriteNamed(L"current", L"daylight");
+                                        break;
+                                }
+                            }
+                            writer->EndElement(L"time_zone");
+                        }
+                    }
+                    {
+                        std::wstring locale;
+                        if (auto hr = SystemDetails::GetUserLocale(locale); SUCCEEDED(hr))
+                            writer->WriteNamed(L"locale", locale.c_str());
+                    }
+                    {
+                        std::wstring language;
+                        if (auto hr = SystemDetails::GetUserLanguage(language); SUCCEEDED(hr))
+                            writer->WriteNamed(L"language", language.c_str());
+                    }
+                    {
+                        auto tags = SystemDetails::GetSystemTags();
+                        writer->BeginCollection(L"tags");
+                        for (const auto& tag : tags)
+                        {
+                            writer->Write(tag.c_str());
+                        }
+                        writer->EndCollection(L"tags");
+                    }
+                    writer->EndElement(L"operating_system");
+                }
+                {
+                    writer->BeginElement(L"network");
+                    {
+                        if (const auto& [hr, adapters] = SystemDetails::GetNetworkAdapters(); SUCCEEDED(hr))
+                        {
+                            writer->BeginCollection(L"adapters");
+                            for (const auto& adapter : adapters)
+                            {
+                                writer->BeginElement(nullptr);
+                                {
+                                    writer->WriteNamed(L"name", adapter.Name.c_str());
+                                    writer->WriteNamed(L"friendly_name", adapter.FriendlyName.c_str());
+                                    writer->WriteNamed(L"description", adapter.Description.c_str());
+                                    writer->WriteNamed(L"physical", adapter.PhysicalAddress.c_str());
+
+                                    writer->BeginCollection(L"address");
+                                    for (const auto& address : adapter.Addresses)
+                                    {
+                                        if (address.Mode == SystemDetails::AddressMode::MultiCast)
+                                            continue;
+
+                                        writer->BeginElement(nullptr);
+
+                                        switch (address.Type)
+                                        {
+                                            case SystemDetails::AddressType::IPV4:
+                                                writer->WriteNamed(L"ipv4", address.Address.c_str());
+                                                break;
+                                            case SystemDetails::AddressType::IPV6:
+                                                writer->WriteNamed(L"ipv6", address.Address.c_str());
+                                                break;
+                                            default:
+                                                writer->WriteNamed(L"other", address.Address.c_str());
+                                                break;
+                                        }
+
+                                        switch (address.Mode)
+                                        {
+                                            case SystemDetails::AddressMode::AnyCast:
+                                                writer->WriteNamed(L"mode", L"anycast");
+                                                break;
+                                            case SystemDetails::AddressMode::MultiCast:
+                                                writer->WriteNamed(L"mode", L"multicast");
+                                                break;
+                                            case SystemDetails::AddressMode::UniCast:
+                                                writer->WriteNamed(L"mode", L"unicast");
+                                                break;
+                                            default:
+                                                writer->WriteNamed(L"mode", L"other");
+                                                break;
+                                        }
+                                        writer->EndElement(nullptr);
+                                    }
+                                    writer->EndCollection(L"address");
+
+                                    writer->WriteNamed(L"dns_suffix", adapter.DNSSuffix.c_str());
+
+                                    writer->BeginCollection(L"dns_server");
+                                    for (const auto& dns : adapter.DNS)
+                                    {
+                                        writer->BeginElement(nullptr);
+                                        switch (dns.Type)
+                                        {
+                                            case SystemDetails::AddressType::IPV4:
+                                                writer->WriteNamed(L"ipv4", dns.Address.c_str());
+                                                break;
+                                            case SystemDetails::AddressType::IPV6:
+                                                writer->WriteNamed(L"ipv6", dns.Address.c_str());
+                                                break;
+                                            default:
+                                                writer->WriteNamed(L"other", dns.Address.c_str());
+                                                break;
+                                        }
+                                        writer->EndElement(nullptr);
+                                    }
+                                    writer->EndCollection(L"dns_server");
+                                }
+                                writer->EndElement(nullptr);
+                            }
+                            writer->EndCollection(L"adapters");
+                        }
+                    }
+                    writer->EndElement(L"network");
+                }
+            }
+            writer->EndElement(L"system");
+        }
+        writer->EndElement(L"dfir-orc");
+
+        writer->Close();
+    }
+    catch (std::exception& e)
+    {
+        std::cerr << "std::exception during LogFileWrite initialisation" << std::endl;
+        std::cerr << "Caught " << e.what() << std::endl;
+        std::cerr << "Type " << typeid(e).name() << std::endl;
+        return E_ABORT;
+    }
+    catch (...)
+    {
+        std::cerr << "Exception during LogFileWrite initialisation" << std::endl;
+        return E_ABORT;
+    }
+
+    if (std::filesystem::exists(config.Outline.Path))
+    {
+        if (auto hr = UploadSingleFile(config.Outline.FileName, config.Outline.Path); FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to upload outline file\r\n");
+        }
+    }
+    return S_OK;
+}
+
 HRESULT Main::SetLauncherPriority(WolfPriority priority)
 {
     switch (priority)
@@ -202,15 +508,12 @@ HRESULT Main::Run_Execute()
 
     if (config.Log.Type != OutputSpec::Kind::None)
     {
-        OutputSpec log = config.Log;
-        log.Path = config.strLogFilePath;
-
         auto stream_log = std::make_shared<LogFileWriter>(0x1000);
         stream_log->SetConsoleLog(_L_->ConsoleLog());
         stream_log->SetDebugLog(_L_->DebugLog());
         stream_log->SetVerboseLog(_L_->VerboseLog());
 
-        auto byteStream = ByteStream::GetStream(stream_log, log);
+        auto byteStream = ByteStream::GetStream(stream_log, config.Log);
 
         if (byteStream->GetSize() == 0LLU)
         {
@@ -233,6 +536,14 @@ HRESULT Main::Run_Execute()
         }
     }
 
+    if (config.Output.UploadOutput)
+    {
+        if (FAILED(hr = InitializeUpload(*config.Output.UploadOutput)))
+        {
+            log::Error(_L_, hr, L"Failed to initalise upload as requested, no upload will be performed\r\n");
+        }
+    }
+
     if (FAILED(hr = SetDefaultAltitude()))
     {
         log::Warning(_L_, hr, L"Failed to configure default altitude\r\n");
@@ -252,6 +563,14 @@ HRESULT Main::Run_Execute()
     BOOST_SCOPE_EXIT(hr) { SetThreadExecutionState(ES_CONTINUOUS); }
     BOOST_SCOPE_EXIT_END;
 
+    if (config.Outline.IsStructuredFile())
+    {
+        if (auto hr = CreateAndUploadOutline(); FAILED(hr))
+        {
+            log::Warning(_L_, hr, L"Failed to create outline file %s\r\n", config.Outline.Path.c_str());
+        }
+    }
+
     auto job = JobObject::GetJobObject(_L_, GetCurrentProcess());
 
     if (job.IsValid())
@@ -261,7 +580,7 @@ HRESULT Main::Run_Execute()
         {
             DWORD dwMajor = 0L, dwMinor = 0L;
             SystemDetails::GetOSVersion(dwMajor, dwMinor);
-            if (dwMajor < 6 || (dwMajor == 6 && dwMinor<2))
+            if (dwMajor < 6 || (dwMajor == 6 && dwMinor < 2))
             {
                 // Job object does not allow breakaway.
                 if (FAILED(hr = job.AllowBreakAway()))
@@ -309,14 +628,6 @@ HRESULT Main::Run_Execute()
         }
     }
     BOOST_SCOPE_EXIT_END;
-
-    if (config.Output.UploadOutput)
-    {
-        if (FAILED(hr = InitializeUpload(*config.Output.UploadOutput)))
-        {
-            log::Error(_L_, hr, L"Failed to initalise upload as requested, no upload will be performed\r\n");
-        }
-    }
 
     for (const auto& exec : m_wolfexecs)
     {
@@ -561,26 +872,10 @@ HRESULT Main::Run_Execute()
     if (_L_->IsLoggingToStream())
     {
         _L_->CloseLogToStream();
-        if (VerifyFileExists(config.strLogFilePath.c_str()) == S_OK)
+
+        if (auto hr = UploadSingleFile(config.Log.FileName, config.Log.Path); FAILED(hr))
         {
-            if (m_pUploadMessageQueue && config.Output.UploadOutput)
-            {
-                switch (config.Output.UploadOutput->Operation)
-                {
-                    case OutputSpec::UploadOperation::NoOp:
-                        break;
-                    case OutputSpec::UploadOperation::Copy:
-                        Concurrency::send(
-                            m_pUploadMessageQueue.get(),
-                            UploadMessage::MakeUploadFileRequest(config.strLogFileName, config.strLogFilePath, false));
-                        break;
-                    case OutputSpec::UploadOperation::Move:
-                        Concurrency::send(
-                            m_pUploadMessageQueue.get(),
-                            UploadMessage::MakeUploadFileRequest(config.strLogFileName, config.strLogFilePath, true));
-                        break;
-                }
-            }
+            log::Error(_L_, hr, L"Failed to upload log file\r\n");
         }
     }
 

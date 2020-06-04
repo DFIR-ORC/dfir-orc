@@ -27,7 +27,7 @@ class CBinaryBuffer;
 
 namespace TableOutput {
 
-struct Options : OutputOptions
+struct Options : public Orc::OutputOptions
 {
 };
 

@@ -301,8 +301,10 @@ public:
     bool is_heap() const { return std::holds_alternative<HeapStore>(m_store); }
     bool is_inner() const { return std::holds_alternative<InnerStore>(m_store); }
     bool is_view() const { return std::holds_alternative<ViewStore>(m_store); }
-    bool empty() const { return std::holds_alternative<EmptyStore>(m_store); }
 
+    bool full() const { return capacity() > size(); }
+
+    bool empty() const { return std::holds_alternative<EmptyStore>(m_store); }
     void set(_In_reads_(Elts) _T* Ptr, _In_ ULONG Elts, _In_ ULONG Used)
     {
         if (Elts == 0)
@@ -516,6 +518,7 @@ public:
     }
 
     ULONG size(void) const { return m_EltsUsed; }
+    constexpr ULONG elt_size(void) const { return sizeof(_T); }
     void use(ULONG elts_used)
     {
         auto max_elts = capacity();

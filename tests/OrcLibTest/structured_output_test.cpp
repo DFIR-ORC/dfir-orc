@@ -11,6 +11,8 @@
 
 #include "StructuredOutputWriter.h"
 #include "RobustStructuredWriter.h"
+#include "XmlOutputWriter.h"
+#include "JSONOutputWriter.h"
 
 #include "OutputSpec.h"
 
@@ -47,24 +49,26 @@ public:
 
     TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
 
-    HRESULT WriterSingleTest(const std::shared_ptr<StructuredOutputWriter>& writer)
+    HRESULT WriterSingleTest(const std::shared_ptr<StructuredOutput::IWriter>& _writer)
     {
+        auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
+
         Assert::IsNotNull(writer.get());
 
         Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"test")));
 
         // Basic elements
-        Assert::IsTrue(SUCCEEDED(writer->WriteNameValuePair(L"test_element", L"test_value")));
+        Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_element", L"test_value")));
 
-        Assert::IsTrue(SUCCEEDED(writer->WriteNameValuePair(L"test_path", L"c:\\windows\\system32\\kernel32.dll")));
+        Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_path", L"c:\\windows\\system32\\kernel32.dll")));
 
         Assert::IsTrue(SUCCEEDED(
-            writer->WriteNameFormatedStringPair(L"test_format", L"%s %S %X %d", L"test", "alternate", 24, 56)));
+            writer->WriteNamedFormated(L"test_format", L"%s %S %X %d", L"test", "alternate", 24, 56)));
 
         {
             Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"test_boolean")));
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameBoolPair(L"test_true", true)));
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameBoolPair(L"test_false", false)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_true", true)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_false", false)));
             Assert::IsTrue(SUCCEEDED(writer->EndElement(L"test_boolean")));
         }
 
@@ -192,6 +196,51 @@ public:
                 L"test_flags", USN_REASON_FILE_CREATE | USN_REASON_DATA_EXTEND | USN_REASON_CLOSE, g_Reasons, L'|')));
 
             Assert::IsTrue(SUCCEEDED(writer->EndElement(L"test_enum_flags")));
+
+            Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"test_binary_buffer")));
+
+            Buffer<BYTE, 16> MD5 = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
+                                    13, 14, 15};
+
+            writer->WriteNamed(L"MD5", MD5.get(), MD5.size(), false);
+
+            Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"sha1")));
+            {
+                Buffer<BYTE, 20> SHA1 = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
+                writer->Write(SHA1.get(), SHA1.size(), false);
+            }
+            Assert::IsTrue(SUCCEEDED(writer->EndElement(L"sha1")));
+
+            Assert::IsTrue(SUCCEEDED(writer->EndElement(L"test_binary_buffer")));
+
+            Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"simple_data")));
+            {
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"bool")));
+                Assert::IsTrue(SUCCEEDED(writer->Write(true)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"bool")));
+
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"dword")));
+                Assert::IsTrue(SUCCEEDED(writer->Write((UINT32) 0x01020304LU)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"dword")));
+
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"dword_hex")));
+                Assert::IsTrue(SUCCEEDED(writer->Write((UINT32) 0x01020304LU, true)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"dword_hex")));
+
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"longlong")));
+                Assert::IsTrue(SUCCEEDED(writer->Write(0x0102030405060708LLU)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"longlong")));
+
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"longlong")));
+                Assert::IsTrue(SUCCEEDED(writer->Write(0x0102030405060708LLU, true)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"longlong")));
+
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"string")));
+                Assert::IsTrue(SUCCEEDED(writer->Write(L"Hello world!!")));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"string")));
+
+            }
+            Assert::IsTrue(SUCCEEDED(writer->EndElement(L"simple_data")));
         }
 
         Assert::IsTrue(SUCCEEDED(writer->EndElement(L"test")));
@@ -229,20 +278,25 @@ public:
         auto result_stream = std::make_shared<MemoryStream>(_L_);
         Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
-        auto writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Encoding::UTF8);
+        auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF8;
+
+        auto writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"52A726F4CA6815829B8DBC4250925002A60DD844")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"97AA814567B5B37150F76FE377CAC1D174DB5321")));
 
         writer.reset();
 
         result_stream = std::make_shared<MemoryStream>(_L_);
         Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
-        writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Encoding::UTF16);
+        options = std::make_unique<Orc::StructuredOutput::XML::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF16;
+        writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"5589CE79EF3384B28C2E9EF03986BB3E00B7BFFB")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"FE70F58C976F536ABD8294EC3B6C61438E92C465")));
     }
 
     TEST_METHOD(RobustStructuredOutputTest)
@@ -254,23 +308,31 @@ public:
         auto result_stream = std::make_shared<MemoryStream>(_L_);
         Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
-        auto writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Encoding::UTF8);
+        auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF8;
 
-        auto robust_writer = std::make_shared<RobustStructuredWriter>(_L_, writer);
+        auto writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
+
+        auto robust_writer =
+            std::make_shared<RobustStructuredWriter>(_L_, std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"52A726F4CA6815829B8DBC4250925002A60DD844")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"97AA814567B5B37150F76FE377CAC1D174DB5321")));
 
         robust_writer.reset();
 
         result_stream = std::make_shared<MemoryStream>(_L_);
         Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
-        writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Encoding::UTF16);
-        robust_writer = std::make_shared<RobustStructuredWriter>(_L_, writer);
+        options = std::make_unique<Orc::StructuredOutput::XML::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF16;
+
+        writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
+        robust_writer =
+            std::make_shared<RobustStructuredWriter>(_L_, std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"5589CE79EF3384B28C2E9EF03986BB3E00B7BFFB")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"FE70F58C976F536ABD8294EC3B6C61438E92C465")));
     }
 
     HRESULT WriteGargabeElementTest(const std::shared_ptr<ByteStream>& stream, WCHAR wGarbageCode)
@@ -284,7 +346,11 @@ public:
         Silence->SetLogCallback(nullptr);
         Silence->SetVerboseLog(false);
 
-        const auto writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Encoding::UTF8);
+        auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF8;
+        const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, std::move(options));
+
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -322,7 +388,11 @@ public:
         Silence->SetLogCallback(nullptr);
         Silence->SetVerboseLog(false);
 
-        const auto writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Encoding::UTF8);
+        auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF8;
+
+        const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, nullptr);
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -360,7 +430,12 @@ public:
         Silence->SetLogCallback(nullptr);
         Silence->SetVerboseLog(false);
 
-        const auto writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Encoding::UTF8);
+        
+        auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF8;
+
+        const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, nullptr);
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -398,7 +473,12 @@ public:
         Silence->SetLogCallback(nullptr);
         Silence->SetVerboseLog(false);
 
-        const auto writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Encoding::UTF8);
+        
+        auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF8;
+        
+        const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, std::move(options));
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -438,7 +518,11 @@ public:
         Silence->SetLogCallback(nullptr);
         Silence->SetVerboseLog(false);
 
-        const auto writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Encoding::UTF8);
+        auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
+        options->Encoding = OutputSpec::Encoding::UTF8;
+        const auto _writer =
+            StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, std::move(options));
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -607,6 +691,46 @@ public:
 
         Assert::IsTrue(SUCCEEDED(WriteSanitizedTest(result_stream)));
         Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3FAB138DB1BB32154972E28C3128A4DC1B78EB94")));
+    }
+
+    TEST_METHOD(JSONStructuredOutput)
+    {
+
+        auto stream = std::make_shared<MemoryStream>(_L_);
+        Assert::IsTrue(SUCCEEDED(stream->OpenForReadWrite()));
+
+        auto writer = StructuredOutput::JSON::GetWriter(_L_, stream, nullptr);
+
+        writer->BeginElement(L"element");
+        writer->WriteNamed(L"name", L"value");
+        writer->WriteNamed(L"integer", 123U);
+        writer->WriteNamed(L"integer_hex", 123U, true);
+        writer->WriteNamed(L"longlong", 23423432434123LU);
+        writer->WriteNamed(L"longlong_hex", 23423432434123LU, true);
+
+        LARGE_INTEGER li;
+        li.QuadPart = 23423432434123LU;
+        writer->WriteNamed(L"largeint", 23423432434123LU);
+        writer->WriteNamed(L"largeint_hex", 23423432434123LU, true);
+
+        FILETIME ft;
+        GetSystemTimeAsFileTime(&ft);
+        writer->WriteNamed(L"system_time", ft);
+
+        writer->EndElement(L"element");
+
+        writer->BeginCollection(L"items");
+        for (int i = 0; i<10; ++i)
+        {
+            writer->BeginElement(nullptr);
+            writer->WriteNamed(L"integer", 123U);
+            writer->EndElement(nullptr);
+        }
+        writer->EndCollection(L"items");
+
+        writer->Close();
+        stream;
+
     }
 };
 }  // namespace Orc::Test
