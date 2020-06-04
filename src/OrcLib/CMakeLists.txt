@@ -475,6 +475,7 @@ set(SRC_INOUT_STRUCTUREDOUTPUT
     "RobustStructuredWriter.h"
     "StructuredOutputWriter.cpp"
     "StructuredOutputWriter.h"
+    "StructuredOutput.h"
 )
 
 source_group(In&Out\\StructuredOutput FILES ${SRC_INOUT_STRUCTUREDOUTPUT})
