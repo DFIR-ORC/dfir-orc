@@ -17,6 +17,11 @@
 
 HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IWriter>& writer, IdentityArea areas)
 {
+    if (areas & IdentityArea::Process)
+    {
+        if (auto hr = Process(writer); FAILED(hr))
+            return hr;
+    }
     if (areas & IdentityArea::System)
     {
         if (auto hr = System(writer); FAILED(hr))
@@ -48,7 +53,9 @@ HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IWrit
 
 HRESULT Orc::SystemIdentity::Process(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
 {
-    writer->BeginElement(L"process");
+    writer->BeginElement(elt);
+    BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
+    BOOST_SCOPE_EXIT_END;
     {
         std::wstring strProcessBinary;
         SystemDetails::GetProcessBinary(strProcessBinary);
@@ -83,8 +90,7 @@ HRESULT Orc::SystemIdentity::Process(const std::shared_ptr<StructuredOutput::IWr
         }
         writer->EndElement(L"user");
     }
-    writer->EndElement(L"process");
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IWriter>& writer, LPCWSTR elt)
