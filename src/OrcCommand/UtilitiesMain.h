@@ -622,7 +622,7 @@ public:
         ConfigItem& configitem,
         ConfigItem::InitFunction init);
 
-    bool IsProcessParent(LPCWSTR szImageName);
+    static bool IsProcessParent(LPCWSTR szImageName, logger& logger);
 
     //
     //
@@ -814,19 +814,6 @@ public:
         if (dwErrorCount > 0)
         {
             log::Info(_L_, L"\r\nInformation           : %d errors occurred during program execution\r\n", dwErrorCount);
-        }
-
-        {
-            // if parent is 'explorer' or debugger attached press any key to continue
-            if (IsDebuggerPresent())
-            {
-                DebugBreak();
-            }
-            else if (Cmd.IsProcessParent(L"explorer.exe"))
-            {
-                log::Info(_L_, L"Press any key to continue . . . ");
-                _getch();
-            }
         }
 
         _L_->Close();
