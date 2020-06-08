@@ -9,6 +9,7 @@
 #include "StdAfx.h"
 
 #include "SystemIdentity.h"
+#include "ProfileList.h"
 
 #include "SystemDetails.h"
 #include "LogFileWriter.h"
@@ -19,7 +20,7 @@ HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IWrit
 {
     if (areas & IdentityArea::Process)
     {
-        if (auto hr = Process(writer); FAILED(hr))
+        if (auto hr = CurrentProcess(writer); FAILED(hr))
             return hr;
     }
     if (areas & IdentityArea::System)
@@ -45,13 +46,44 @@ HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IWrit
     }
     if (areas & IdentityArea::ProfileList)
     {
-        if (auto hr = ProfileList(writer); FAILED(hr))
+        if (auto hr = Profiles(writer); FAILED(hr))
             return hr;
     }
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::Process(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+HRESULT
+Orc::SystemIdentity::CurrentUser(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+{
+    writer->BeginElement(elt);
+    BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
+    BOOST_SCOPE_EXIT_END;
+    {
+        std::wstring strUserName;
+        SystemDetails::WhoAmI(strUserName);
+        writer->WriteNamed(L"username", strUserName.c_str());
+
+        std::wstring strUserSID;
+        SystemDetails::UserSID(strUserSID);
+        writer->WriteNamed(L"SID", strUserSID.c_str());
+
+        bool bElevated = false;
+        SystemDetails::AmIElevated(bElevated);
+        writer->WriteNamed(L"elevated", bElevated);
+
+        std::wstring locale;
+        if (auto hr = SystemDetails::GetUserLocale(locale); SUCCEEDED(hr))
+            writer->WriteNamed(L"locale", locale.c_str());
+
+        std::wstring language;
+        if (auto hr = SystemDetails::GetUserLanguage(language); SUCCEEDED(hr))
+            writer->WriteNamed(L"language", language.c_str());
+    }
+    return S_OK;
+}
+
+HRESULT
+    Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
 {
     writer->BeginElement(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
@@ -65,30 +97,7 @@ HRESULT Orc::SystemIdentity::Process(const std::shared_ptr<StructuredOutput::IWr
 
         writer->WriteNamed(L"command_line", GetCommandLine());
 
-
-        writer->BeginElement(L"user");
-        {
-            std::wstring strUserName;
-            SystemDetails::WhoAmI(strUserName);
-            writer->WriteNamed(L"username", strUserName.c_str());
-
-            std::wstring strUserSID;
-            SystemDetails::UserSID(strUserSID);
-            writer->WriteNamed(L"SID", strUserSID.c_str());
-
-            bool bElevated = false;
-            SystemDetails::AmIElevated(bElevated);
-            writer->WriteNamed(L"elevated", bElevated);
-
-            std::wstring locale;
-            if (auto hr = SystemDetails::GetUserLocale(locale); SUCCEEDED(hr))
-                writer->WriteNamed(L"locale", locale.c_str());
-
-            std::wstring language;
-            if (auto hr = SystemDetails::GetUserLanguage(language); SUCCEEDED(hr))
-                writer->WriteNamed(L"language", language.c_str());
-        }
-        writer->EndElement(L"user");
+        CurrentUser(writer);
     }
     return S_OK;
 }
@@ -209,87 +218,160 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IWr
         if (const auto& [hr, adapters] = SystemDetails::GetNetworkAdapters(); SUCCEEDED(hr))
         {
             writer->BeginCollection(L"adapters");
+            BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"adapters"); }
+            BOOST_SCOPE_EXIT_END;
 
             for (const auto& adapter : adapters)
             {
                 writer->BeginElement(nullptr);
+                BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(nullptr); }
+                BOOST_SCOPE_EXIT_END;
+
                 {
                     writer->WriteNamed(L"name", adapter.Name.c_str());
                     writer->WriteNamed(L"friendly_name", adapter.FriendlyName.c_str());
                     writer->WriteNamed(L"description", adapter.Description.c_str());
                     writer->WriteNamed(L"physical", adapter.PhysicalAddress.c_str());
 
-                    writer->BeginCollection(L"address");
-                    for (const auto& address : adapter.Addresses)
                     {
-                        if (address.Mode == SystemDetails::AddressMode::MultiCast)
-                            continue;
 
-                        writer->BeginElement(nullptr);
-
-                        switch (address.Type)
+                        writer->BeginCollection(L"address");
+                        BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"address"); }
+                        BOOST_SCOPE_EXIT_END;
+                        for (const auto& address : adapter.Addresses)
                         {
-                            case SystemDetails::AddressType::IPV4:
-                                writer->WriteNamed(L"ipv4", address.Address.c_str());
-                                break;
-                            case SystemDetails::AddressType::IPV6:
-                                writer->WriteNamed(L"ipv6", address.Address.c_str());
-                                break;
-                            default:
-                                writer->WriteNamed(L"other", address.Address.c_str());
-                                break;
-                        }
+                            if (address.Mode == SystemDetails::AddressMode::MultiCast)
+                                continue;
 
-                        switch (address.Mode)
-                        {
-                            case SystemDetails::AddressMode::AnyCast:
-                                writer->WriteNamed(L"mode", L"anycast");
-                                break;
-                            case SystemDetails::AddressMode::MultiCast:
-                                writer->WriteNamed(L"mode", L"multicast");
-                                break;
-                            case SystemDetails::AddressMode::UniCast:
-                                writer->WriteNamed(L"mode", L"unicast");
-                                break;
-                            default:
-                                writer->WriteNamed(L"mode", L"other");
-                                break;
+                            writer->BeginElement(nullptr);
+                            BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(nullptr); }
+                            BOOST_SCOPE_EXIT_END;
+
+                            switch (address.Type)
+                            {
+                                case SystemDetails::AddressType::IPV4:
+                                    writer->WriteNamed(L"ipv4", address.Address.c_str());
+                                    break;
+                                case SystemDetails::AddressType::IPV6:
+                                    writer->WriteNamed(L"ipv6", address.Address.c_str());
+                                    break;
+                                default:
+                                    writer->WriteNamed(L"other", address.Address.c_str());
+                                    break;
+                            }
+
+                            switch (address.Mode)
+                            {
+                                case SystemDetails::AddressMode::AnyCast:
+                                    writer->WriteNamed(L"mode", L"anycast");
+                                    break;
+                                case SystemDetails::AddressMode::MultiCast:
+                                    writer->WriteNamed(L"mode", L"multicast");
+                                    break;
+                                case SystemDetails::AddressMode::UniCast:
+                                    writer->WriteNamed(L"mode", L"unicast");
+                                    break;
+                                default:
+                                    writer->WriteNamed(L"mode", L"other");
+                                    break;
+                            }
                         }
-                        writer->EndElement(nullptr);
                     }
-                    writer->EndCollection(L"address");
 
                     writer->WriteNamed(L"dns_suffix", adapter.DNSSuffix.c_str());
 
-                    writer->BeginCollection(L"dns_server");
-                    for (const auto& dns : adapter.DNS)
                     {
-                        writer->BeginElement(nullptr);
-                        switch (dns.Type)
+                        writer->BeginCollection(L"dns_server");
+                        BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"dns_server"); }
+                        BOOST_SCOPE_EXIT_END;
+
+                        for (const auto& dns : adapter.DNS)
                         {
-                            case SystemDetails::AddressType::IPV4:
-                                writer->WriteNamed(L"ipv4", dns.Address.c_str());
-                                break;
-                            case SystemDetails::AddressType::IPV6:
-                                writer->WriteNamed(L"ipv6", dns.Address.c_str());
-                                break;
-                            default:
-                                writer->WriteNamed(L"other", dns.Address.c_str());
-                                break;
+                            writer->BeginElement(nullptr);
+                            BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(nullptr); }
+                            BOOST_SCOPE_EXIT_END;
+
+                            switch (dns.Type)
+                            {
+                                case SystemDetails::AddressType::IPV4:
+                                    writer->WriteNamed(L"ipv4", dns.Address.c_str());
+                                    break;
+                                case SystemDetails::AddressType::IPV6:
+                                    writer->WriteNamed(L"ipv6", dns.Address.c_str());
+                                    break;
+                                default:
+                                    writer->WriteNamed(L"other", dns.Address.c_str());
+                                    break;
+                            }
                         }
-                        writer->EndElement(nullptr);
                     }
-                    writer->EndCollection(L"dns_server");
                 }
-                writer->EndElement(nullptr);
             }
-            writer->EndCollection(L"adapters");
         }
     }
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::ProfileList(const std::shared_ptr<StructuredOutput::IWriter>& writer, LPCWSTR elt)
+HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IWriter>& writer, LPCWSTR elt)
 {
+    writer->BeginElement(elt);
+    BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
+    BOOST_SCOPE_EXIT_END;
+    {
+        auto default_profile = ProfileList::DefaultProfilePath(nullptr);
+        if (default_profile.is_ok())
+            writer->WriteNamed(L"default_profile", default_profile.unwrap().c_str());
+
+        auto profiles_dir = ProfileList::ProfilesDirectoryPath(nullptr);
+        if (profiles_dir.is_ok())
+            writer->WriteNamed(L"profiles_directory", profiles_dir.unwrap().c_str());
+
+        auto program_data = ProfileList::ProgramDataPath(nullptr);
+        if (program_data.is_ok())
+            writer->WriteNamed(L"program_data", program_data.unwrap().c_str());
+
+        auto public_path = ProfileList::PublicProfilePath(nullptr);
+        if (public_path.is_ok())
+            writer->WriteNamed(L"public_path", public_path.unwrap().c_str());
+
+        auto profiles = ProfileList::GetProfiles(nullptr);
+        if (profiles.is_ok())
+        {
+            writer->BeginCollection(L"profiles");
+            BOOST_SCOPE_EXIT(&writer) { writer->EndCollection(L"profiles"); }
+            BOOST_SCOPE_EXIT_END;
+
+            const auto profile_list = profiles.unwrap();
+            for (const auto& profile : profile_list)
+            {
+                writer->BeginElement(nullptr);
+                BOOST_SCOPE_EXIT(&writer) { writer->EndElement(nullptr); }
+                BOOST_SCOPE_EXIT_END;
+
+                writer->WriteNamed(L"sid", profile.strSID.c_str());
+                writer->WriteNamed(L"path", profile.ProfilePath.c_str());
+
+                if (profile.strDomainName.has_value() && profile.strUserName.has_value())
+                {
+                    auto full_user = fmt::format(L"{}\\{}", profile.strDomainName.value().c_str(), profile.strUserName.value().c_str());
+                    writer->WriteNamed(L"user", full_user.c_str());
+                }
+                else if (profile.strUserName.has_value())
+                {
+                    writer->WriteNamed(L"user", profile.strUserName.value().c_str());
+                }
+
+                if (profile.LocalLoadTime.has_value())
+                    writer->WriteNamed(L"local_load_time", profile.LocalLoadTime.value());
+
+                if (profile.LocalUnloadTime.has_value())
+                    writer->WriteNamed(L"local_unload_time", profile.LocalUnloadTime.value());
+
+                writer->WriteNamed(L"key_last_write", profile.ProfileKeyLastWrite);
+            }
+        }
+
+    }
+    
     return S_OK;
 }

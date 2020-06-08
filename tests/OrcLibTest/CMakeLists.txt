@@ -51,6 +51,7 @@ set(SRC_UTILITIES
     "crypto_utilities_test.cpp"
 	"embedded_resource.cpp"
     "libraries_test.cpp"
+    "profile_list.cpp"
     "registry.cpp"
     "temporary.cpp"
     "logwriter.cpp"

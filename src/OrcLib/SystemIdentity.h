@@ -42,13 +42,16 @@ public:
 
     static HRESULT Write(const std::shared_ptr<StructuredOutput::IWriter>& writer, IdentityArea areas = IdentityArea::All); 
 
-    static HRESULT Process(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"process");
+    static HRESULT
+    CurrentProcess(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"process");
+    static HRESULT
+    CurrentUser(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"user");
     static HRESULT System(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"system"); // Includes OS & Network
     static HRESULT
     OperatingSystem(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"operating_system");
     static HRESULT Network(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"network");
     static HRESULT
-    ProfileList(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"profiles");
+    Profiles(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"profiles");
 
 };
 

@@ -27,7 +27,9 @@ public:
     std::wstring strSID;
 
     // SID resolved to actual user name (if any)
-    std::optional<std::wstring> strName;
+    std::optional<std::wstring> strUserName;
+    std::optional<std::wstring> strDomainName;
+    std::optional<SID_NAME_USE> SidNameUse;
 
     // profile path (env vars _not_ expanded)
     std::wstring strProfilePath;
@@ -49,23 +51,35 @@ public:
     // 0200       Default net profile is available and ready.
     // 0400       Slow network link identified.
     // 0800       Temporary profile loaded.
-    DWORD State;
+    DWORD State = 0LU;
+
+
+    std::optional<FILETIME> LocalLoadTime;
+    std::optional<FILETIME> LocalUnloadTime;
+    FILETIME ProfileKeyLastWrite;
+
 };
+using ProfileResult = Orc::Result<std::vector<Profile>, HRESULT>;
 
 class ORCLIB_API ProfileList
 {
 public:
-    static std::vector<Profile> GetProfiles(const logger& pLog);
 
-    static PathResult DefaultProfile(const logger& pLog);
+    static ProfileResult GetProfiles(const logger& pLog);
 
-    std::filesystem::path DefaultProfilePath(const logger& pLog);
-    std::wstring ProfilesDirectory(const logger& pLog);
-    std::filesystem::path ProfilesDirectoryPath(const logger& pLog);
-    std::wstring ProgramData(const logger& pLog);
-    std::filesystem::path ProgramDataPath(const logger& pLog);
-    std::wstring PublicProfile(const logger& pLog);
-    std::filesystem::path PublicProfilePath(const logger& pLog);
+    static Result<std::wstring> DefaultProfile(const logger& pLog);
+    static Result<std::filesystem::path> DefaultProfilePath(const logger& pLog);
+    
+    static Result<std::wstring> ProfilesDirectory(const logger& pLog);
+    static Result<std::filesystem::path> ProfilesDirectoryPath(const logger& pLog);
+
+    static Result<std::wstring> ProgramData(const logger& pLog);
+    static Result<std::filesystem::path> ProgramDataPath(const logger& pLog);
+
+    static Result<std::wstring> PublicProfile(const logger& pLog);
+    static Result<std::filesystem::path> PublicProfilePath(const logger& pLog);
+
+
 };
 
 }  // namespace Orc
