@@ -87,7 +87,7 @@ class Robustness;
 class SecurityDescriptor;
 class SystemDetails;
 
-class WMIUtil;
+class WMI;
 
 // RunningCode
 class WinTrustExtension;

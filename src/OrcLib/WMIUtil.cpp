@@ -15,7 +15,7 @@
 
 using namespace Orc;
 
-HRESULT WMIUtil::Initialize()
+HRESULT WMI::Initialize()
 {
     HRESULT hr = E_FAIL;
 
@@ -52,7 +52,7 @@ HRESULT WMIUtil::Initialize()
     return S_OK;
 }
 
-HRESULT WMIUtil::WMICreateProcess(
+HRESULT WMI::WMICreateProcess(
     LPCWSTR szCurrentDirectory,
     LPCWSTR szCommandLine,
     DWORD dwCreationFlags,
@@ -196,23 +196,140 @@ HRESULT WMIUtil::WMICreateProcess(
     return S_OK;
 }
 
-HRESULT WMIUtil::WMIEnumPhysicalMedia(std::vector<std::wstring>& physicaldrives)
+Result<CComPtr<IEnumWbemClassObject>> Orc::WMI::Query(LPCWSTR szRequest)
+{
+    CComPtr<IEnumWbemClassObject> pEnumerator;
+    if (auto hr = m_pServices->ExecQuery(
+                bstr_t("WQL"),
+                bstr_t(szRequest),
+                WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
+                NULL,
+                &pEnumerator); FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Query \"%s\" failed\r\n", szRequest);
+        return hr;
+    }
+
+    return pEnumerator;
+}
+
+
+template <>
+Orc::Result<SHORT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+{
+    CComVariant vtProp;
+    CIMTYPE propType;
+    if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
+        return hr;
+    if (propType != CIM_SINT16 || !(vtProp.vt & VT_I2))
+        return E_NOT_VALID_STATE;
+    return (SHORT)vtProp.iVal;
+}
+
+template <>
+Orc::Result<USHORT> Orc::WMI::GetProperty<USHORT>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+{
+    CComVariant vtProp;
+    CIMTYPE propType;
+    if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
+        return hr;
+    if (propType != CIM_UINT16 || !(vtProp.vt & VT_UI2))
+        return E_NOT_VALID_STATE;
+    return (USHORT)vtProp.uiVal;
+}
+
+template <>
+Orc::Result<ULONG32> Orc::WMI::GetProperty<ULONG32>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+{
+    CComVariant vtProp;
+    CIMTYPE propType;
+    if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
+        return hr;
+    if (propType != CIM_UINT32 || !(vtProp.vt & VT_UI4))
+        return E_NOT_VALID_STATE;
+    return (ULONG32)vtProp.ulVal;
+}
+
+template <>
+Orc::Result<LONG32> Orc::WMI::GetProperty<LONG32>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+{
+    CComVariant vtProp;
+    CIMTYPE propType;
+    if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
+        return hr;
+    if (propType != CIM_SINT32 || !(vtProp.vt & VT_I4))
+        return E_NOT_VALID_STATE;
+    return (LONG32)vtProp.lVal;
+}
+
+template <>
+Orc::Result<ULONG64> Orc::WMI::GetProperty<ULONG64>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+{
+    CComVariant vtProp;
+    CIMTYPE propType;
+    if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
+        return hr;
+    if (propType != CIM_UINT64 || !(vtProp.vt & VT_UI8))
+        return E_NOT_VALID_STATE;
+    return (ULONG64)vtProp.ullVal;
+}
+
+template <>
+Orc::Result<LONG64> Orc::WMI::GetProperty<LONG64>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+{
+    CComVariant vtProp;
+    CIMTYPE propType;
+    if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
+        return hr;
+    if (propType != CIM_SINT64 || !(vtProp.vt & VT_I8))
+        return E_NOT_VALID_STATE;
+    return (LONG64)vtProp.llVal;
+}
+
+template <>
+Orc::Result<ByteBuffer> Orc::WMI::GetProperty<ByteBuffer>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+{
+    return E_NOTIMPL;
+}
+
+template <>
+Orc::Result<std::wstring>
+Orc::WMI::GetProperty<std::wstring>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+{
+    CComVariant vtProp;
+    CIMTYPE propType;
+    if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
+        return hr;
+    if (propType != CIM_STRING|| !(vtProp.vt & VT_BSTR))
+        return E_NOT_VALID_STATE;
+    return std::wstring(vtProp.bstrVal, SysStringLen(vtProp.bstrVal));
+}
+
+
+template <>
+Orc::Result<std::vector<std::wstring>>
+Orc::WMI::GetProperty<std::vector<std::wstring>>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+{
+    CComVariant vtProp;
+    CIMTYPE propType;
+    if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
+        return hr;
+    if (propType != CIM_FLAG_ARRAY || !(vtProp.vt & (VT_ARRAY|VT_BSTR)))
+        return E_NOT_VALID_STATE;
+    return E_NOTIMPL;
+}
+
+
+
+HRESULT WMI::WMIEnumPhysicalMedia(std::vector<std::wstring>& physicaldrives)
 {
     HRESULT hr = E_FAIL;
 
-    CComPtr<IEnumWbemClassObject> pEnumerator;
+    auto result = Query(L"SELECT DeviceID FROM Win32_DiskDrive");
+    if (result.is_err())
+        return result.err();
 
-    if (FAILED(
-            hr = m_pServices->ExecQuery(
-                bstr_t("WQL"),
-                bstr_t("SELECT DeviceID FROM Win32_DiskDrive"),
-                WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
-                NULL,
-                &pEnumerator)))
-    {
-        log::Error(_L_, hr, L"Could not enumerate PhysicalMedia\r\n");
-        return hr;
-    }
+    auto pEnumerator = result.unwrap();
 
     ULONG uReturn = 0;
 
@@ -223,9 +340,7 @@ HRESULT WMIUtil::WMIEnumPhysicalMedia(std::vector<std::wstring>& physicaldrives)
         HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
 
         if (0 == uReturn)
-        {
             break;
-        }
 
         CComVariant vtProp;
 
@@ -238,4 +353,4 @@ HRESULT WMIUtil::WMIEnumPhysicalMedia(std::vector<std::wstring>& physicaldrives)
     return S_OK;
 }
 
-WMIUtil::~WMIUtil() {}
+WMI::~WMI() {}

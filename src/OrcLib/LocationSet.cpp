@@ -1311,7 +1311,7 @@ HRESULT LocationSet::PopulatePhysicalDrives()
 
     log::Debug(_L_, L"Populating physical drives\r\n");
     HRESULT hr = E_FAIL;
-    WMIUtil wmi(_L_);
+    WMI wmi(_L_);
 
     if (FAILED(hr = wmi.Initialize()))
     {

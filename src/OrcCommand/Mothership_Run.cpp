@@ -383,7 +383,7 @@ HRESULT Main::LaunchWMI()
     std::wstring strCommandLine = cmdLineBuilder.str();
     wcsncpy_s(szCommandLine.data(), MAX_CMDLINE, strCommandLine.c_str(), strCommandLine.size());
 
-    WMIUtil wmi(_L_);
+    WMI wmi(_L_);
 
     if (FAILED(hr = wmi.Initialize()))
     {
