@@ -3,29 +3,23 @@ parameters:
 
 jobs:
 - job: vs2017_${{ parameters.arch }}
-  variables:
-    ${{ if eq( parameters.arch, 'x64') }}:
-      winArch: " Win64"
-    ${{ if eq( parameters.arch, 'x86') }}:
-      winArch: ""
   pool:
     vmImage: 'vs2017-win2016'
   steps:
   - checkout: self
     clean: true
     submodules: true
-
-  - task: CMake@1
-    displayName: CMake configuration
+  - task: PowerShell@2
     inputs:
-      workingDirectory: 'build-${{ parameters.arch }}'
-      cmakeArgs: '-G "Visual Studio 15 2017${{ variables.winArch }}" -T v141_xp -DORC_BUILD_VCPKG=ON ..'
-
-  - task: CMake@1
-    displayName: CMake build
-    inputs:
-      workingDirectory: 'build-${{ parameters.arch }}'
-      cmakeArgs: '--build . --config MinSizeRel -- -maxcpucount'
+      targetType: 'inline'
+      script: |
+        . $(Build.SourcesDirectory)/tools/ci/build.ps1
+        Build-ORC `
+          -Source $(Build.SourcesDirectory) `
+          -Output $(Build.SourcesDirectory)/artifacts `
+          -Toolchain vs2017 `
+          -Architecture ${{ parameters.arch }} `
+          -Configuration Debug,MinSizeRel
 
   - task: VSTest@2
     inputs:
@@ -36,27 +30,9 @@ jobs:
 
   - task: CopyFiles@2
     inputs:
-      sourceFolder: '$(Build.SourcesDirectory)'
-      contents: 'build-${{ parameters.arch }}/MinSizeRel/dfir-orc_${{ parameters.arch }}.exe'
+      sourceFolder: '$(Build.SourcesDirectory)/artifacts'
+      contents: '**'
       TargetFolder: '$(Build.ArtifactStagingDirectory)'
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: '$(Build.SourcesDirectory)'
-      contents: 'build-${{ parameters.arch }}/MinSizeRel/dfir-orc_${{ parameters.arch }}.pdb'
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: $(Build.SourcesDirectory)
-      contents: 'build-${{ parameters.arch }}/MinSizeRel/fastfind_${{ parameters.arch }}.exe'
-      TargetFolder: $(Build.ArtifactStagingDirectory)
-
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: $(Build.SourcesDirectory)
-      contents: 'build-${{ parameters.arch }}/MinSizeRel/fastfind_${{ parameters.arch }}.pdb'
-      TargetFolder: $(Build.ArtifactStagingDirectory)
 
   - task: PublishBuildArtifacts@1
     inputs:
