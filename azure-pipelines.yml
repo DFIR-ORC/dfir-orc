@@ -1,6 +1,11 @@
 trigger:
   - master
 
+parameters:
+- name: PublishRelease
+  type: boolean
+  default: true
+
 stages:
   - stage: Build
     jobs:
@@ -13,6 +18,7 @@ stages:
         arch: "x86"
 
   - stage: Publish
+    condition: ${{parameters.PublishRelease}}
     jobs:
     - job: RetrieveAndPublish
       steps:
