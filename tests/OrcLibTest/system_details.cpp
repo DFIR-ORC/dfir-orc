@@ -72,5 +72,42 @@ public:
             Assert::IsFalse(tag.empty());
         }
     }
+    TEST_METHOD(GetPhysicalDrives)
+    {
+        auto result = SystemDetails::GetPhysicalDrives(_L_);
+        Assert::IsTrue(result.is_ok());
+        auto drives = result.unwrap();
+        Assert::IsFalse(drives.empty());
+
+        for (const auto& drive: drives)
+        {
+            Assert::IsFalse(drive.Path.empty());
+        }
+    }
+    TEST_METHOD(GetQFEs)
+    {
+        auto result = SystemDetails::GetOsQFEs(_L_);
+        Assert::IsTrue(result.is_ok());
+
+        auto qfes = result.unwrap();
+
+        for (const auto& qfe : qfes)
+        {
+            Assert::IsFalse(qfe.HotFixId.empty());
+        }
+    }
+    TEST_METHOD(GetEnvironment)
+    {
+        auto result = SystemDetails::GetEnvironment(_L_);
+
+        Assert::IsTrue(result.is_ok());
+
+        auto envs = result.unwrap();
+        for (const auto& env : envs)
+        {
+            Assert::IsFalse(env.Name.empty());
+        }
+    }
+
 };
 }  // namespace Orc::Test

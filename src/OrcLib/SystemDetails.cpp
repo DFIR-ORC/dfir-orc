@@ -12,6 +12,7 @@
 #include "LogFileWriter.h"
 #include "TableOutput.h"
 #include "WideAnsi.h"
+#include "WMIUtil.h"
 
 #include <WinNls.h>
 #include <WinError.h>
@@ -699,6 +700,150 @@ SystemDetails::DriveType SystemDetails::GetPathLocation(const std::wstring& strA
         default:
             return Drive_Unknown;
     }
+}
+
+Orc::Result<std::vector<Orc::SystemDetails::PhysicalDrive>> Orc::SystemDetails::GetPhysicalDrives(const logger& pLog)
+{
+    WMI wmi(pLog);
+
+    if (auto hr = wmi.Initialize(); FAILED(hr))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return hr;
+    }
+    auto result = wmi.Query(L"SELECT DeviceID,Size,SerialNumber,MediaType,Status,ConfigManagerErrorCode,Availability FROM Win32_DiskDrive");
+    if (result.is_err())
+        return result.err();
+
+    auto pEnum = result.unwrap();
+
+    std::vector<Orc::SystemDetails::PhysicalDrive> retval;
+
+    while (pEnum)
+    {
+        CComPtr<IWbemClassObject> pclsObj;
+        ULONG uReturn = 0;
+
+        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        if (0 == uReturn)
+            break;
+
+        PhysicalDrive drive;
+
+        if(auto id = WMI::GetProperty<std::wstring>(pclsObj, L"DeviceID"); id.is_err())
+            continue; // If we can't get the deviceId, no need to add it...
+        else
+            drive.Path = id.unwrap();
+
+        if (auto size = WMI::GetProperty<ULONG64>(pclsObj, L"Size"); size.is_ok())
+            drive.Size = size.unwrap();
+
+        if (auto serial = WMI::GetProperty<ULONG32>(pclsObj, L"SerialNumber"); serial.is_ok())
+            drive.SerialNumber = serial.unwrap();
+
+        if (auto type = WMI::GetProperty<std::wstring>(pclsObj, L"MediaType"); type.is_ok())
+            drive.MediaType = type.unwrap();
+
+        if (auto status = WMI::GetProperty<std::wstring>(pclsObj, L"Status"); status.is_ok())
+            drive.Status = status.unwrap();
+
+        if (auto error_code = WMI::GetProperty<ULONG32>(pclsObj, L"ConfigManagerErrorCode"); error_code.is_ok())
+        {
+            if (auto code = error_code.unwrap(); code != 0)
+                drive.ConfigManagerErrorCode = code;
+        }
+        if (auto availability = WMI::GetProperty<USHORT>(pclsObj, L"Availability"); availability.is_ok())
+        {
+            if (auto avail = availability.unwrap(); avail != 0)
+                drive.Availability = avail;
+        }
+
+        retval.push_back(std::move(drive));
+    }
+
+    return retval;
+}
+
+Orc::Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::GetMountedVolumes(const logger& pLog)
+{
+    return Result<std::vector<MountedVolume>>();
+}
+
+Result<std::vector<Orc::SystemDetails::QFE>> Orc::SystemDetails::GetOsQFEs(const logger& pLog)
+{
+    WMI wmi(pLog);
+
+    if (auto hr = wmi.Initialize(); FAILED(hr))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return hr;
+    }
+    auto result = wmi.Query(
+        L"SELECT * FROM Win32_QuickFixEngineering");
+    if (result.is_err())
+        return result.err();
+
+    auto pEnum = result.unwrap();
+
+    std::vector<QFE> retval;
+    while (pEnum)
+    {
+        CComPtr<IWbemClassObject> pclsObj;
+        ULONG uReturn = 0;
+
+        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        if (0 == uReturn)
+            break;
+
+        QFE qfe;
+
+        if (auto id = WMI::GetProperty<std::wstring>(pclsObj, L"HotFixID"); id.is_err())
+            continue; // without hotfix id...
+        else
+            qfe.HotFixId = id.unwrap();
+
+        if (auto descr = WMI::GetProperty<std::wstring>(pclsObj, L"Description"); descr.is_ok())
+            qfe.Description = descr.unwrap();
+
+        if (auto url = WMI::GetProperty<std::wstring>(pclsObj, L"Caption"); url.is_ok())
+            qfe.URL = url.unwrap();
+
+
+        if (auto date = WMI::GetProperty<std::wstring>(pclsObj, L"InstalledOn"); date.is_ok())
+            qfe.InstallDate = date.unwrap();
+
+        retval.push_back(std::move(qfe));
+    }
+    return retval;
+}
+
+Orc::Result<std::vector<Orc::SystemDetails::EnvVariable>> Orc::SystemDetails::GetEnvironment(const logger& pLog)
+{
+    auto env_snap = GetEnvironmentStringsW();
+
+    if (env_snap == NULL)
+        return HRESULT_FROM_WIN32(GetLastError());
+
+    BOOST_SCOPE_EXIT(&env_snap) { FreeEnvironmentStringsW(env_snap); }
+    BOOST_SCOPE_EXIT_END;
+
+    std::vector<Orc::SystemDetails::EnvVariable> retval;
+
+    auto curVar = (LPWSTR)env_snap;
+    while (*curVar)
+    {
+        auto equals = wcschr(curVar, L'=');
+        if (equals && equals != curVar)
+        {
+            EnvVariable var;
+            var.Name.assign(curVar, equals);
+            var.Value.assign(equals+1);
+            retval.push_back(std::move(var));
+        }
+        curVar += lstrlen(curVar) + 1;
+    }
+ 
+    return retval;
 }
 
 bool SystemDetails::IsWOW64()

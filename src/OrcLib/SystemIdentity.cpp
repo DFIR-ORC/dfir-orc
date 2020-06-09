@@ -23,26 +23,48 @@ HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IWrit
         if (auto hr = CurrentProcess(writer); FAILED(hr))
             return hr;
     }
+
     if (areas & IdentityArea::System)
     {
         if (auto hr = System(writer); FAILED(hr))
             return hr;
     }
-    else if (areas & IdentityArea::OperatingSystem)
+    else
     {
         writer->BeginElement(L"system");
-        auto hr = OperatingSystem(writer);
-        writer->EndElement(L"system");
-        if (FAILED(hr))
-            return hr;
-    }
-    else if (areas & IdentityArea::Network)
-    {
-        writer->BeginElement(L"system");
-        auto hr = Network(writer);
-        writer->EndElement(L"system");
-        if (FAILED(hr))
-            return hr;
+        BOOST_SCOPE_EXIT(&writer) { writer->EndElement(L"system"); }
+        BOOST_SCOPE_EXIT_END;
+
+        if (areas & IdentityArea::OperatingSystem)
+        {
+            if (auto hr = OperatingSystem(writer); FAILED(hr))
+                return hr;
+        }
+        if (areas & IdentityArea::PhysicalDrives)
+        {
+            if (auto hr = PhysicalDrives(writer); FAILED(hr))
+                return hr;
+        }
+        if (areas & IdentityArea::MountedVolumes)
+        {
+            if (auto hr = MountedVolumes(writer); FAILED(hr))
+                return hr;
+        }
+        if (areas & IdentityArea::PhysicalMemory)
+        {
+            if (auto hr = PhysicalMemory(writer); FAILED(hr))
+                return hr;
+        }
+        if (areas & IdentityArea::CPU)
+        {
+            if (auto hr = CPU(writer); FAILED(hr))
+                return hr;
+        }
+        if (areas & IdentityArea::Network)
+        {
+            if (auto hr = Network(writer); FAILED(hr))
+                return hr;
+        }
     }
     if (areas & IdentityArea::ProfileList)
     {
@@ -98,6 +120,24 @@ HRESULT
         writer->WriteNamed(L"command_line", GetCommandLine());
 
         CurrentUser(writer);
+
+        auto environ_result = SystemDetails::GetEnvironment(nullptr);
+        if (environ_result.is_ok())
+        {
+            writer->BeginCollection(L"environment");
+            BOOST_SCOPE_EXIT(&writer) { writer->EndCollection(L"environment"); }
+            BOOST_SCOPE_EXIT_END;
+
+            auto envs = environ_result.unwrap();
+            for (const auto& env:envs)
+            {
+                writer->BeginElement(nullptr);
+                BOOST_SCOPE_EXIT(&writer) { writer->EndElement(nullptr); }
+                BOOST_SCOPE_EXIT_END;
+                writer->WriteNamed(L"Name", env.Name.c_str());
+                writer->WriteNamed(L"Value", env.Value.c_str());
+            }
+        }
     }
     return S_OK;
 }
@@ -138,8 +178,18 @@ HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IWri
                 break;
         }
     }
+
     if (auto hr = OperatingSystem(writer); FAILED(hr))
         return hr;
+    if (auto hr = PhysicalDrives(writer); FAILED(hr))
+        return hr;
+    if (auto hr = MountedVolumes(writer); FAILED(hr))
+        return hr;
+    if (auto hr = PhysicalMemory(writer); FAILED(hr))
+        return hr;
+    if (auto hr = CPU(writer); FAILED(hr))
+        return hr;
+
     if (auto hr = Network(writer); FAILED(hr))
         return hr;
     return S_OK;
@@ -205,6 +255,23 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
             writer->Write(tag.c_str());
         }
         writer->EndCollection(L"tags");
+    }
+    {
+        auto qfes = SystemDetails::GetOsQFEs(nullptr);
+        if (qfes.is_ok())
+        {
+            writer->BeginCollection(L"qfe");
+            for (const auto& qfe : qfes.unwrap())
+            {
+                writer->BeginElement(nullptr);
+                {
+                    writer->WriteNamed(L"hotfix_id", qfe.HotFixId.c_str());
+                    writer->WriteNamed(L"installed_on", qfe.InstallDate.c_str());
+                }
+                writer->EndElement(nullptr);
+            }
+            writer->EndCollection(L"qfe");
+        }
     }
     return S_OK;
 }
@@ -312,6 +379,52 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IWr
     return S_OK;
 }
 
+HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+{
+    writer->BeginCollection(elt);
+    BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
+    BOOST_SCOPE_EXIT_END;
+
+    auto result = SystemDetails::GetPhysicalDrives(nullptr);
+    if (result.is_err())
+        return result.err();
+
+    auto drives = result.unwrap();
+    for (const auto& drive: drives)
+    {
+        writer->BeginElement(nullptr);
+        BOOST_SCOPE_EXIT(&writer) { writer->EndElement(nullptr); }
+        BOOST_SCOPE_EXIT_END;
+
+        writer->WriteNamed(L"path", drive.Path.c_str());
+        writer->WriteNamed(L"type", drive.MediaType.c_str());
+        writer->WriteNamed(L"serial", drive.SerialNumber);
+        writer->WriteNamed(L"size", drive.Size);
+        if (drive.Availability)
+            writer->WriteNamed(L"availability", drive.Availability.value());
+        if (drive.ConfigManagerErrorCode)
+            writer->WriteNamed(L"error_code", (ULONG32) drive.ConfigManagerErrorCode.value());
+        if (drive.Status)
+            writer->WriteNamed(L"status", drive.Status.value().c_str());
+    }
+    return S_OK;
+}
+
+HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT Orc::SystemIdentity::PhysicalMemory(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+{
+    return E_NOTIMPL;
+}
+
+HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+{
+    return E_NOTIMPL;
+}
+
 HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IWriter>& writer, LPCWSTR elt)
 {
     writer->BeginElement(elt);
@@ -353,7 +466,8 @@ HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IW
 
                 if (profile.strDomainName.has_value() && profile.strUserName.has_value())
                 {
-                    auto full_user = fmt::format(L"{}\\{}", profile.strDomainName.value().c_str(), profile.strUserName.value().c_str());
+                    auto full_user = fmt::format(
+                        L"{}\\{}", profile.strDomainName.value().c_str(), profile.strUserName.value().c_str());
                     writer->WriteNamed(L"user", full_user.c_str());
                 }
                 else if (profile.strUserName.has_value())
@@ -370,8 +484,7 @@ HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IW
                 writer->WriteNamed(L"key_last_write", profile.ProfileKeyLastWrite);
             }
         }
-
     }
-    
+
     return S_OK;
 }

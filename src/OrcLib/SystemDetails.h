@@ -9,6 +9,8 @@
 
 #include "OrcLib.h"
 
+#include "OrcResult.h"
+
 #include <string>
 #include <set>
 
@@ -100,8 +102,52 @@ public:
         Drive_CDRom,
         Drive_RamDisk
     };
-
     static DriveType GetPathLocation(const std::wstring& strAnyPath);
+
+    struct PhysicalDrive
+    {
+        std::wstring Path;
+        ULONG64   Size = 0LLU;
+        ULONG32   SerialNumber = 0LU;
+        std::wstring MediaType;
+
+        std::optional<std::wstring> Status;
+        std::optional<USHORT> Availability;
+        std::optional<DWORD>  ConfigManagerErrorCode;
+    };
+
+    static Result<std::vector<PhysicalDrive>> GetPhysicalDrives(const logger& pLog);
+
+    struct MountedVolume
+    {
+        std::wstring FileSystemName;
+        std::wstring VolumeName;
+        std::wstring Path;
+        DriveType Type;
+        ULONG64 Size;
+        ULONG64 FreeSpace;
+        DWORD SerialNumber;
+    };
+
+    static Result<std::vector<MountedVolume>> GetMountedVolumes(const logger& pLog);
+
+    struct QFE
+    {
+        std::wstring URL;
+        std::wstring Description;
+        std::wstring HotFixId;
+        std::wstring InstallDate;
+    };
+
+    static Result<std::vector<QFE>> GetOsQFEs(const logger& pLog);
+
+    struct EnvVariable
+    {
+        std::wstring Name;
+        std::wstring Value;
+    };
+
+    static Result<std::vector<EnvVariable>> GetEnvironment(const logger& pLog);
 
     static bool IsWOW64();
 
