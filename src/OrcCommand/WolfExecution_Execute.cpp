@@ -40,6 +40,7 @@
 #include "EncodeMessageStream.h"
 
 #include "WolfTask.h"
+#include "Convert.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -548,8 +549,20 @@ HRESULT WolfExecution::CreateCommandAgent(
                         break;
                     case CommandNotification::Done:
                         GetSystemTimeAsFileTime(&m_FinishTime);
+                        {
+                            auto start = Orc::ConvertTo(m_StartTime);
+                            auto end = Orc::ConvertTo(m_FinishTime);
+                            auto duration = end - start;
+
+                            log::Info(
+                                _L_,
+                                L"%*s: Complete! (commands took %I64d seconds)\r\n",
+                                m_dwLongerTaskKeyword + 20,
+                                m_strKeyword.c_str(),
+                                duration.count() / 10000000);
+                        }
+
                         AddJobStatistics(m_JobStatisticsWriter->GetTableOutput(), item);
-                        log::Info(_L_, L"%*s: Complete!\r\n", m_dwLongerTaskKeyword + 20, L"JOB");
                         break;
                 }
                 NotifyTask(item);
@@ -771,6 +784,31 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     {
         Robustness::RemoveTerminationHandler(m_pTermination);
         m_pTermination.reset();
+    }
+
+    auto archiveSize = [&]() {
+        FileStream fs (_L_);
+
+        if (FAILED(fs.ReadFrom(m_strOutputFullPath.c_str())))
+            return 0LLU;
+
+        return fs.GetSize();
+    };
+    
+    GetSystemTimeAsFileTime(&m_ArchiveFinishTime);
+    {
+        auto start = Orc::ConvertTo(m_StartTime);
+        auto end = Orc::ConvertTo(m_ArchiveFinishTime);
+        auto duration = end - start;
+
+        log::Info(
+            _L_,
+            L"%*s: %s (took %I64d seconds, size %I64d bytes)\r\n",
+            m_dwLongerTaskKeyword + 20,
+            m_strKeyword.c_str(),
+            m_strArchiveFileName.c_str(),
+            duration.count() / 10000000,
+            archiveSize());
     }
 
     if (pUploadMessageQueue && m_Output.UploadOutput)
