@@ -412,17 +412,17 @@ HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutp
 
 HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
 {
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 HRESULT Orc::SystemIdentity::PhysicalMemory(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
 {
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
 {
-    return E_NOTIMPL;
+    return S_OK;
 }
 
 HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IWriter>& writer, LPCWSTR elt)

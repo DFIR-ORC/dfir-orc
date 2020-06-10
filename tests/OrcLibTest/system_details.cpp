@@ -103,10 +103,27 @@ public:
         Assert::IsTrue(result.is_ok());
 
         auto envs = result.unwrap();
+        Assert::IsFalse(envs.empty());
         for (const auto& env : envs)
         {
             Assert::IsFalse(env.Name.empty());
         }
+    }
+
+    TEST_METHOD(GetCommandLineTest)
+    {
+        auto cmdLine = SystemDetails::GetCmdLine();
+        auto cmdLineWMI = SystemDetails::GetCmdLine(_L_, GetCurrentProcessId());
+        Assert::IsTrue(cmdLine.is_ok());
+        Assert::IsTrue(cmdLineWMI.is_ok());
+        Assert::AreEqual(cmdLine.unwrap(), cmdLineWMI.unwrap());
+
+        auto parent_id = SystemDetails::GetParentProcessId(_L_);
+        Assert::IsTrue(parent_id.is_ok());
+        auto parentCmdLine = SystemDetails::GetCmdLine(_L_, parent_id.unwrap());
+        Assert::IsTrue(parentCmdLine.is_ok());
+        Assert::IsFalse(parentCmdLine.unwrap().empty());
+        
     }
 
 };

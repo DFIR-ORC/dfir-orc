@@ -82,6 +82,11 @@ public:
     static HRESULT AmIElevated(bool& bIsElevated);
     static HRESULT UserSID(std::wstring& strSID);
 
+    static Result<DWORD> GetParentProcessId(const logger& pLog);
+
+    static Result<std::wstring> GetCmdLine();
+    static Result<std::wstring> GetCmdLine(const logger& pLog, DWORD dwPid);
+
     static HRESULT GetSystemLocale(std::wstring& strLocale);
     static HRESULT GetUserLocale(std::wstring& strLocale);
     static HRESULT GetSystemLanguage(std::wstring& strLocale);

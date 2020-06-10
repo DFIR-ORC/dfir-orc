@@ -24,6 +24,7 @@
 #include <winsock2.h>
 #include <iphlpapi.h>
 
+#include <fmt/format.h>
 
 namespace fs = std::filesystem;
 
@@ -613,6 +614,79 @@ HRESULT Orc::SystemDetails::UserSID(std::wstring& strSID)
     strSID = g_pDetailsBlock->strUserSID;
 
     return S_OK;
+}
+
+Result<DWORD> Orc::SystemDetails::GetParentProcessId(const logger& pLog)
+{
+    WMI wmi(pLog);
+
+    if (auto hr = wmi.Initialize(); FAILED(hr))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return hr;
+    }
+
+    auto query = fmt::format(L"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {}", GetCurrentProcessId());
+
+    auto result = wmi.Query(query.c_str());
+    if (result.is_err())
+        return result.err();
+
+    auto pEnum = result.unwrap();
+    if (!pEnum)
+        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+    CComPtr<IWbemClassObject> pclsObj;
+    ULONG uReturn = 0;
+
+    HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+    if (0 == uReturn)
+        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+
+    if (auto parent_id = WMI::GetProperty<ULONG32>(pclsObj, L"ParentProcessId"); parent_id.is_err())
+        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+    else
+        return (DWORD)parent_id.unwrap();
+}
+
+Result<std::wstring> Orc::SystemDetails::GetCmdLine()
+{
+    return std::wstring(GetCommandLineW());
+}
+
+Result<std::wstring> Orc::SystemDetails::GetCmdLine(const logger& pLog, DWORD dwPid)
+{
+    WMI wmi(pLog);
+
+    if (auto hr = wmi.Initialize(); FAILED(hr))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return hr;
+    }
+
+    if (dwPid == 0)
+        return E_INVALIDARG;
+
+    // We can now look for the parent command line
+    auto query = fmt::format(L"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {}", dwPid);
+
+    auto result = wmi.Query(query.c_str());
+    if (result.is_err())
+        return result.err();
+
+    auto pEnum = result.unwrap();
+    if (!pEnum)
+        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+    CComPtr<IWbemClassObject> pclsObj;
+    ULONG uReturn = 0;
+
+    HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+    if (0 == uReturn)
+        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+
+    if (auto cmdLine = WMI::GetProperty<std::wstring>(pclsObj, L"CommandLine"); cmdLine.is_err())
+        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+    else
+        return cmdLine.unwrap();
 }
 
 HRESULT Orc::SystemDetails::GetSystemLocale(std::wstring& strLocale)

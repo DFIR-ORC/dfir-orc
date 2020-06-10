@@ -63,7 +63,7 @@ public:
     static HRESULT CPU(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"cpu");
 
     static HRESULT
-    Profiles(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"profiles");
+    Profiles(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"profile");
 
 
 };
