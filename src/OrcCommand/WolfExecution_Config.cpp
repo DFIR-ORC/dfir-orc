@@ -545,7 +545,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     WORD arch = 0;
     if (FAILED(hr = SystemDetails::GetArchitecture(arch)))
     {
-        log::Warning(_L_, hr, L"Failed to retrieve architecture");
+        log::Warning(_L_, hr, L"Failed to retrieve architecture\r\n");
         return hr;
     }
 
@@ -560,17 +560,19 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
             log::Warning(
                 _L_,
                 E_INVALIDARG,
-                L"Specified size is too big for JOB MEMORY restriction (%s)",
+                L"Specified size is too big for JOB MEMORY restriction (%s), limit ignored\r\n",
                 item[WOLFLAUNCHER_JOBMEMORY].c_str());
         }
-
-        if (!m_Restrictions.ExtendedLimits)
+        else
         {
-            m_Restrictions.ExtendedLimits.emplace();
-            ZeroMemory(&m_Restrictions.ExtendedLimits.value(), sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+            if (!m_Restrictions.ExtendedLimits)
+            {
+                m_Restrictions.ExtendedLimits.emplace();
+                ZeroMemory(&m_Restrictions.ExtendedLimits.value(), sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+            }
+            m_Restrictions.ExtendedLimits->JobMemoryLimit = msl::utilities::SafeInt<SIZE_T>(li.QuadPart);
+            m_Restrictions.ExtendedLimits->BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
         }
-        m_Restrictions.ExtendedLimits->JobMemoryLimit = msl::utilities::SafeInt<SIZE_T>(li.QuadPart);
-        m_Restrictions.ExtendedLimits->BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_JOB_MEMORY;
     }
 
     if (item[WOLFLAUNCHER_PROCESSMEMORY])
@@ -584,16 +586,19 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
             log::Warning(
                 _L_,
                 E_INVALIDARG,
-                L"Specified size is too big for PROCESS memory restriction (%s)",
+                L"Specified size is too big for PROCESS memory restriction (%s), limit ignored\r\n",
                 item[WOLFLAUNCHER_PROCESSMEMORY].c_str());
         }
-        if (!m_Restrictions.ExtendedLimits)
+        else
         {
-            m_Restrictions.ExtendedLimits.emplace();
-            ZeroMemory(&m_Restrictions.ExtendedLimits.value(), sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+            if (!m_Restrictions.ExtendedLimits)
+            {
+                m_Restrictions.ExtendedLimits.emplace();
+                ZeroMemory(&m_Restrictions.ExtendedLimits.value(), sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION));
+            }
+            m_Restrictions.ExtendedLimits->ProcessMemoryLimit = msl::utilities::SafeInt<SIZE_T>(li.QuadPart);
+            m_Restrictions.ExtendedLimits->BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_PROCESS_MEMORY;
         }
-        m_Restrictions.ExtendedLimits->ProcessMemoryLimit = msl::utilities::SafeInt<SIZE_T>(li.QuadPart);
-        m_Restrictions.ExtendedLimits->BasicLimitInformation.LimitFlags |= JOB_OBJECT_LIMIT_PROCESS_MEMORY;
     }
 
     if (item[WOLFLAUNCHER_ELAPSEDTIME])

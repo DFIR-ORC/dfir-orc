@@ -80,6 +80,7 @@ public:
             ProcessStatistics.supportedTypes =
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::SQL);
             Log.supportedTypes = OutputSpec::Kind::File;
+            Outline.supportedTypes = OutputSpec::Kind::StructuredFile;
             TempWorkingDir.supportedTypes = OutputSpec::Kind::Directory;
         };
 
@@ -90,8 +91,7 @@ public:
         OutputSpec ProcessStatistics;
 
         OutputSpec Log;
-        std::wstring strLogFileName;
-        std::wstring strLogFilePath;
+        OutputSpec Outline;
 
         std::wstring strCompressionLevel;
 
@@ -189,11 +189,14 @@ private:
     }
 
     HRESULT InitializeUpload(const OutputSpec::Upload& uploadspec);
+    HRESULT UploadSingleFile(const std::wstring& fileName, const std::wstring& filePath);
     HRESULT CompleteUpload();
 
     std::shared_ptr<WolfExecution::Recipient> GetRecipientFromItem(const ConfigItem& item);
 
     boost::logic::tribool SetWERDontShowUI(DWORD dwNewValue);  // returns DontShowUI previous value
+
+    HRESULT CreateAndUploadOutline();
 
     HRESULT SetLauncherPriority(WolfPriority priority);
 

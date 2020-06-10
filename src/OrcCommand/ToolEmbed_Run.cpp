@@ -37,7 +37,7 @@ HRESULT Main::WriteEmbedConfig(
     outputEmbedFile.Path = strOutputFile;
     outputEmbedFile.OutputEncoding = OutputSpec::Encoding::UTF8;
 
-    auto writer = StructuredOutputWriter::GetWriter(_L_, outputEmbedFile);
+    auto writer = StructuredOutputWriter::GetWriter(_L_, outputEmbedFile, nullptr);
 
     if (writer == nullptr)
     {
@@ -48,7 +48,7 @@ HRESULT Main::WriteEmbedConfig(
     writer->BeginElement(L"toolembed");
 
     writer->BeginElement(L"input");
-    writer->WriteString(strMothership.c_str());
+    writer->Write(strMothership.c_str());
     writer->EndElement(L"input");
 
     for (const auto& item : values)
@@ -57,33 +57,32 @@ HRESULT Main::WriteEmbedConfig(
         {
             case EmbeddedResource::EmbedSpec::File:
                 writer->BeginElement(L"file");
-                writer->WriteNameValuePair(L"name", item.Name.c_str());
-                writer->WriteNameValuePair(L"path", item.Value.c_str());
+                writer->WriteNamed(L"name", item.Name.c_str());
+                writer->WriteNamed(L"path", item.Value.c_str());
                 writer->EndElement(L"file");
                 break;
             case EmbeddedResource::EmbedSpec::NameValuePair:
                 writer->BeginElement(L"pair");
-                writer->WriteNameValuePair(L"name", item.Name.c_str());
-                writer->WriteNameValuePair(L"value", item.Value.c_str());
+                writer->WriteNamed(L"name", item.Name.c_str());
+                writer->WriteNamed(L"value", item.Value.c_str());
                 writer->EndElement(L"pair");
                 break;
             case EmbeddedResource::EmbedSpec::Archive:
                 writer->BeginElement(L"archive");
-                writer->WriteNameValuePair(L"name", item.Name.c_str());
-                writer->WriteNameValuePair(L"format", item.ArchiveFormat.c_str());
+                writer->WriteNamed(L"name", item.Name.c_str());
+                writer->WriteNamed(L"format", item.ArchiveFormat.c_str());
 
                 for (const auto& arch_item : item.ArchiveItems)
                 {
                     writer->BeginElement(L"file");
-                    writer->WriteNameValuePair(L"name", arch_item.Name.c_str());
-                    writer->WriteNameValuePair(L"path", arch_item.Path.c_str());
+                    writer->WriteNamed(L"name", arch_item.Name.c_str());
+                    writer->WriteNamed(L"path", arch_item.Path.c_str());
                     writer->EndElement(L"file");
                 }
 
                 writer->EndElement(L"archive");
         }
     }
-
     writer->EndElement(L"toolembed");
 
     return S_OK;

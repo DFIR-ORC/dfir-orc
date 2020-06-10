@@ -674,6 +674,12 @@ public:
             return E_ABORT;
         }
 
+        WSADATA wsa_data;
+        if(WSAStartup(MAKEWORD(2, 2), &wsa_data))
+        {
+            log::Error(_L_,HRESULT_FROM_WIN32(WSAGetLastError()), L"Failed to initialize WinSock 2.2\r\n");
+        }
+
         if (FAILED(hr = CoInitializeEx(0, COINIT_MULTITHREADED)))
         {
             log::Error(_L_, hr, L"Failed to initialize COM library\r\n");
@@ -824,6 +830,12 @@ public:
         }
 
         _L_->Close();
+
+        if(WSACleanup())
+        {
+            log::Error(_L_, HRESULT_FROM_WIN32(WSAGetLastError()), L"Failed to cleanup WinSock 2.2\r\n");
+        }
+
         Robustness::UnInitialize(INFINITE);
         return dwErrorCount;
     }
