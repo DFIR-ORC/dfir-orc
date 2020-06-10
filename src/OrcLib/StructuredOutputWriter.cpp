@@ -289,5 +289,5 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
         return nullptr;
     }
 
-    return GetWriter(pLog, fileSpec, nullptr);
+    return GetWriter(pLog, fileSpec, std::move(pOptions));
 }

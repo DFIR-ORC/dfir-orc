@@ -190,7 +190,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
     {
         auto options = std::make_unique<StructuredOutput::JSON::Options>();
         options->Encoding = OutputSpec::Encoding::UTF8;
-        options->bPrettyPrint = false;
+        options->bPrettyPrint = true;
 
         auto writer = StructuredOutputWriter::GetWriter(_L_, config.Outline, std::move(options));
         if (writer == nullptr)
@@ -217,6 +217,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                     writer->BeginElement(nullptr);
                     {
                         writer->WriteNamed(L"keyword", exec->GetKeyword().c_str());
+                        writer->WriteNamed(L"file", exec->GetArchiveFileName().c_str());
                         writer->BeginCollection(L"commands");
                         for (const auto& command : exec->GetCommands())
                         {
