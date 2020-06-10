@@ -209,6 +209,14 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             GetSystemTimeAsFileTime(&ft);
             writer->WriteNamed(L"time", ft);
 
+            auto mothership_id = SystemDetails::GetParentProcessId(_L_);
+            if (mothership_id.is_ok())
+            {
+                auto mothership_cmdline = SystemDetails::GetCmdLine(_L_, mothership_id.unwrap());
+                if (mothership_cmdline.is_ok())
+                    writer->WriteNamed(L"command", mothership_cmdline.unwrap().c_str());
+            }
+            
             writer->BeginCollection(L"archives");
             for (const auto& exec : m_wolfexecs)
             {
