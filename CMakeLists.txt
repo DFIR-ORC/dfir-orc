@@ -13,7 +13,7 @@ option(ORC_BUILD_ORC        "Build Orc binary" ON)
 option(ORC_BUILD_PARQUET    "Build Parquet module" OFF)
 option(ORC_BUILD_SQL        "Build SQL module" OFF)
 option(ORC_BUILD_SSDEEP     "Build with ssdeep support" OFF)
-option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" OFF)
+option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" ON)
 
 if(NOT ORC_BUILD_COMMAND)
     set(ORC_BUILD_FASTFIND OFF)

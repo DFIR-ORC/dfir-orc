@@ -59,7 +59,7 @@ Using default options is recommended with the exception of `ORC_BUILD_VCPKG` whi
 | ORC_BUILD_PARQUET    | OFF                   | Build Parquet module (x64)    |
 | ORC_BUILD_SQL        | OFF                   | Build SQL module [1]          |
 | ORC_BUILD_SSDEEP     | OFF                   | Build with ssdeep support     |
-| ORC_BUILD_JSON       | OFF                   | Build with JSON enabled       |
+| ORC_BUILD_JSON       | ON                    | Build with JSON enabled       |
 | ORC_USE_STATIC_CRT   | ON                    | Use static runtime            |
 | ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory          |
 | ORC_XMLLITE_PATH     |                       | XmlLite.dll path (xp sp2)     |
