@@ -236,13 +236,32 @@ class BITSDownloadTask;
 class DownloadTask;
 class FileCopyDownloadTask;
 
-// In&Out/StructuredOutput/XML
-class XmlLiteExtension;
-class XmlOutputWriter;
 
-// In&Out/StructuredOutput
-class RobustStructuredWriter;
-class StructuredOutputWriter;
+// In&Out/StructuredOutput/XML
+
+namespace StructuredOutput {
+struct Options;
+class Writer;
+
+namespace XML {
+struct Options;
+class Writer;
+}  // namespace XML
+
+namespace JSON {
+struct Options;
+}
+
+}  // namespace StructuredOutput
+
+using StructuredOutputOptions = StructuredOutput::Options;
+using StructuredOutputWriter = StructuredOutput::Writer;
+
+class XmlLiteExtension;
+using XmlOutputWriter  = StructuredOutput::XML::Writer;
+using XmlOutputOptions = StructuredOutput::XML::Options;
+
+using JSONOutputOptions = StructuredOutput::JSON::Options;
 
 // In&Out/TableOutput/CSV
 namespace TableOutput::CSV {
@@ -281,7 +300,24 @@ class ImportMessage;
 class ImportNotification;
 class SqlImportAgent;
 
-class StructuredOutputWriter;
+template <typename Derived, typename Base>
+std::unique_ptr<Derived> dynamic_unique_ptr_cast(std::unique_ptr<Base>&& p)
+{
+    if (Derived* result = dynamic_cast<Derived*>(p.get()))
+    {
+        p.release();
+        return std::unique_ptr<Derived>(result);
+    }
+    return std::unique_ptr<Derived>(nullptr);
+}
+
+template <typename Derived, typename Base, typename Del>
+std::unique_ptr<Derived> static_unique_ptr_cast(std::unique_ptr<Base>&& p)
+{
+    auto d = static_cast<Derived*>(p.release());
+    return std::unique_ptr<Derived>(d);
+}
+
 
 }  // namespace Orc
 

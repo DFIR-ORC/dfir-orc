@@ -120,6 +120,7 @@ private:
 
     FILETIME m_StartTime;
     FILETIME m_FinishTime;
+    FILETIME m_ArchiveFinishTime;
 
     std::shared_ptr<TableOutput::IWriter> m_JobStatisticsWriter;
     OutputSpec m_JobStatisticsOutput;

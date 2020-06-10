@@ -17,6 +17,8 @@ find_package(tlsh CONFIG REQUIRED)
 find_package(VisualStudio REQUIRED)
 find_package(Yara REQUIRED)
 
+
+
 set(SRC_COMMAND
     "CommandAgent.cpp"
     "CommandAgent.h"
@@ -486,6 +488,16 @@ source_group(In&Out\\StructuredOutput\\XML
     FILES ${SRC_INOUT_STRUCTUREDOUTPUT_XML}
 )
 
+set(SRC_INOUT_STRUCTUREDOUTPUT_JSON
+    "JSONOutputWriter.cpp"
+    "JSONOutputWriter.h"
+)
+
+source_group(In&Out\\StructuredOutput\\JSON
+    FILES ${SRC_INOUT_STRUCTUREDOUTPUT_JSON}
+)
+
+
 set(SRC_INOUT_TABLEOUTPUT
     "BoundTableRecord.cpp"
     "BoundTableRecord.h"
@@ -664,6 +676,8 @@ set(SRC_UTILITIES_SYSTEM
     "SecurityDescriptor.h"
     "SystemDetails.cpp"
     "SystemDetails.h"
+    "SystemIdentity.cpp"
+    "SystemIdentity.h"
     "WMIUtil.cpp"
     "WMIUtil.h"
 )
@@ -722,6 +736,7 @@ add_library(OrcLib
         ${SRC_INOUT_LOGPARSER}
         ${SRC_INOUT_STRUCTUREDOUTPUT}
         ${SRC_INOUT_STRUCTUREDOUTPUT_XML}
+        ${SRC_INOUT_STRUCTUREDOUTPUT_JSON}
         ${SRC_INOUT_TABLEOUTPUT}
         ${SRC_INOUT_TABLEOUTPUT_CSV}
         ${SRC_INOUT_TABLEOUTPUT_PARQUET}
@@ -758,7 +773,13 @@ target_link_libraries(OrcLib
         VisualStudio::CppUnitTest
         yara::yara
         ws2_32.lib
+        Iphlpapi.lib
 )
+
+if(ORC_BUILD_JSON)
+    find_package(RapidJSON CONFIG REQUIRED)
+    target_include_directories(OrcLib PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
+endif()
 
 if(ORC_BUILD_SSDEEP)
     find_package(ssdeep CONFIG REQUIRED)
@@ -769,5 +790,6 @@ endif()
     find_package(chakracore REQUIRED)
     target_link_libraries(OrcLib PUBLIC chakracore::chakracore-header-only)
  endif()
+
 
 set_target_properties(OrcLib PROPERTIES FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")

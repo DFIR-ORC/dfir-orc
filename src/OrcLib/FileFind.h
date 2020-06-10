@@ -33,8 +33,6 @@ constexpr auto MAX_BYTES_IN_BINSTRING = 1024;
 
 namespace Orc {
 
-class StructuredOutputWriter;
-
 class ConfigItem;
 
 class NTFSStream;

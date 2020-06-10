@@ -8,12 +8,13 @@
 
 #pragma once
 
-#include <string>
-
 #include "OrcLib.h"
 #include "ArchiveFormat.h"
 
 #include "TableOutput.h"
+
+#include <string>
+#include <filesystem>
 
 #pragma managed(push, off)
 
@@ -122,6 +123,9 @@ public:
 
     Kind Type = Kind::None;
     Kind supportedTypes;
+
+    std::wstring Pattern;
+    std::wstring FileName;
     std::wstring Path;
 
     Disposition Disposition = Disposition::Append;
@@ -158,14 +162,71 @@ public:
     OutputSpec& operator=(const OutputSpec&) = default;
     OutputSpec& operator=(OutputSpec&&) noexcept = default;
 
-    HRESULT Configure(const logger& pLog, OutputSpec::Kind supportedTypes, const WCHAR* szInputString);
-    HRESULT Configure(const logger& pLog, const WCHAR* szInputString)
-    {
-        return Configure(pLog, supportedTypes, szInputString);
+
+    bool IsDirectory() {
+        return Type & Kind::Directory;
     };
 
-    HRESULT Configure(const logger& pLog, OutputSpec::Kind supportedTypes, const ConfigItem& item);
-    HRESULT Configure(const logger& pLog, const ConfigItem& item) { return Configure(pLog, supportedTypes, item); };
+    bool IsFile() {
+        return Type & Kind::File
+            || Type & Kind::TableFile
+            || Type & Kind::StructuredFile
+            || Type & Kind::Archive
+            || Type & Kind::CSV
+            || Type & Kind::TSV
+            || Type & Kind::Parquet
+            || Type & Kind::ORC
+            || Type & Kind::XML
+            || Type & Kind::JSON;
+    }
+
+    bool IsRegularFile() // the same but without archive
+    {
+        return Type & Kind::File || Type & Kind::TableFile || Type & Kind::StructuredFile
+            || Type & Kind::CSV || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC || Type & Kind::XML
+            || Type & Kind::JSON;
+    }
+
+    bool IsTableFile() 
+    {
+        return Type & Kind::TableFile || Type & Kind::CSV
+            || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC;
+    }
+
+    bool IsStructuredFile() {
+        return Type & Kind::StructuredFile || Type & Kind::XML || Type & Kind::JSON;
+    }
+
+    bool IsArchive()
+    {
+        return Type & Kind::Archive;
+    }
+
+    static bool IsPattern(const std::wstring& strPattern);
+
+    static HRESULT
+    ApplyPattern(const std::wstring& strPattern, const std::wstring& strName, std::wstring& strFileName);
+
+    HRESULT Configure(
+        const logger& pLog,
+        OutputSpec::Kind supportedTypes,
+        const std::wstring& strInputString,
+        std::optional<std::filesystem::path> parent = std::nullopt);
+    HRESULT
+    Configure(
+        const logger& pLog,
+        const std::wstring& strInputString,
+        std::optional<std::filesystem::path> parent = std::nullopt)
+    {
+        return Configure(pLog, supportedTypes, strInputString, std::move(parent));
+    };
+
+    HRESULT Configure(const logger& pLog, OutputSpec::Kind supportedTypes, const ConfigItem& item, std::optional<std::filesystem::path> parent = std::nullopt);
+    HRESULT
+    Configure(const logger& pLog, const ConfigItem& item, std::optional<std::filesystem::path> parent = std::nullopt)
+    {
+        return Configure(pLog, supportedTypes, item, std::move(parent));
+    };
 };
 
 }  // namespace Orc

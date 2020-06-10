@@ -354,12 +354,15 @@ FileInfo::GetIntentions(const logger& pLog, const WCHAR* Params, const ColumnNam
 
             Intentions dwPreviousIntentions = dwIntentions;
 
+            auto bNameFound = false;
+
             const ColumnNameDef* pCurAlias = aliasNames;
             while (pCurAlias->dwIntention != FILEINFO_NONE)
             {
                 if (!_wcsicmp(pCur, pCurAlias->szColumnName))
                 {
                     dwIntentions = static_cast<Intentions>(dwIntentions | pCurAlias->dwIntention);
+                    bNameFound = true;
                     break;
                 }
                 pCurAlias++;
@@ -371,11 +374,12 @@ FileInfo::GetIntentions(const logger& pLog, const WCHAR* Params, const ColumnNam
                 if (!_wcsicmp(pCur, pCurCol->szColumnName))
                 {
                     dwIntentions = static_cast<Intentions>(dwIntentions | pCurCol->dwIntention);
+                    bNameFound = true;
                     break;
                 }
                 pCurCol++;
             }
-            if (dwPreviousIntentions == dwIntentions)
+            if (!bNameFound)
             {
                 log::Warning(pLog, E_INVALIDARG, L"Parameter %s was not recognized as a valid column name\r\n", pCur);
             }

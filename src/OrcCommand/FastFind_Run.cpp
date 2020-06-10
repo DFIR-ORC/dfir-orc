@@ -446,12 +446,14 @@ HRESULT Main::Run()
 
     if (config.outStructured.Type & OutputSpec::Kind::StructuredFile)
     {
-        pWriterOutput = StructuredOutputWriter::GetWriter(_L_, config.outStructured);
+        auto writer = StructuredOutputWriter::GetWriter(_L_, config.outStructured, nullptr);
+        pWriterOutput = std::dynamic_pointer_cast<StructuredOutputWriter>(writer);
     }
     else if (config.outStructured.Type == OutputSpec::Kind::Directory)
     {
-        pWriterOutput = StructuredOutputWriter::GetWriter(
-            _L_, config.outStructured, L"{Name}_{SystemType}_{ComputerName}.xml", L"FastFind");
+        auto writer = StructuredOutputWriter::GetWriter(
+            _L_, config.outStructured, L"{Name}_{SystemType}_{ComputerName}.xml", L"FastFind", nullptr);
+        pWriterOutput = std::dynamic_pointer_cast<StructuredOutputWriter>(writer);
     }
 
     if (pWriterOutput != nullptr)

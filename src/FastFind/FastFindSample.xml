@@ -4,9 +4,9 @@
     
   <filesystem>
 
-    <location shadows="no">T:\</location>
+    <location shadows="no">D:\</location>
   
-    <ntfs_find header="MZ"  />
+    <ntfs_find name="procexp.exe" />
 
   </filesystem>
 

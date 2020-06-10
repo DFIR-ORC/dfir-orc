@@ -127,8 +127,8 @@ HRESULT RegFind::Match::Write(
         pWriter->BeginElement(L"key");
         {
             pWriter->WriteNameFormatedStringPair(L"key", L"%S", aKeyNameMatch.KeyName.c_str());
-            pWriter->WriteNameValuePair(L"subkeys_count", aKeyNameMatch.SubKeysCount);
-            pWriter->WriteNameValuePair(L"values_count", aKeyNameMatch.ValuesCount);
+            pWriter->WriteNameValuePair(L"subkeys_count", (UINT32) aKeyNameMatch.SubKeysCount);
+            pWriter->WriteNameValuePair(L"values_count", (UINT32) aKeyNameMatch.ValuesCount);
             pWriter->WriteNameFileTimePair(L"lastmodified_key", aKeyNameMatch.LastModificationTime);
         }
         pWriter->EndElement(L"key");

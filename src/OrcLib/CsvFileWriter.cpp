@@ -68,9 +68,8 @@ struct Orc::TableOutput::CSV::Writer::MakeSharedEnabler : public Orc::TableOutpu
 std::shared_ptr<Orc::TableOutput::CSV::Writer>
 Orc::TableOutput::CSV::Writer::MakeNew(logger pLog, std::unique_ptr<TableOutput::Options>&& options)
 {
-    auto pCsvOpt = std::unique_ptr<CSV::Options>(dynamic_cast<CSV::Options*>(options.release()));
-
-    auto retval = std::make_shared<MakeSharedEnabler>(std::move(pLog), std::move(pCsvOpt));
+    auto retval =
+        std::make_shared<MakeSharedEnabler>(std::move(pLog), dynamic_unique_ptr_cast<CSV::Options>(std::move(options)));
 
     if (FAILED(retval->InitializeBuffer(retval->m_Options->dwBufferSize)))
         return nullptr;
