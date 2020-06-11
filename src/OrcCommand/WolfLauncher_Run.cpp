@@ -221,7 +221,9 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                 if (mothership_cmdline.is_ok())
                     writer->WriteNamed(L"command", mothership_cmdline.unwrap().c_str());
             }
-            
+            writer->WriteNamed(L"output", config.Output.Path.c_str());
+            writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());
+
             writer->BeginCollection(L"archives");
             for (const auto& exec : m_wolfexecs)
             {
@@ -246,8 +248,6 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             }
             writer->EndCollection(L"archives");
 
-            writer->WriteNamed(L"output", config.Output.Path.c_str());
-            writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());
 
             SystemIdentity::Write(writer);
         }

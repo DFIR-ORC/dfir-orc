@@ -58,7 +58,7 @@ HRESULT Main::RunFileSystem()
     HRESULT hr = E_FAIL;
 
     if (pWriterOutput)
-        pWriterOutput->BeginCollection(L"filesystem");
+        pWriterOutput->BeginElement(L"filesystem");
 
     if (FAILED(
             hr = config.FileSystem.Files.Find(
@@ -103,7 +103,7 @@ HRESULT Main::RunFileSystem()
     }
 
     if (pWriterOutput)
-        pWriterOutput->EndCollection(L"filesystem");
+        pWriterOutput->EndElement(L"filesystem");
     return S_OK;
 }
 
@@ -114,7 +114,7 @@ HRESULT Main::RunRegistry()
     RegFlushKeys();
 
     if (pWriterOutput)
-        pWriterOutput->BeginCollection(L"registry");
+        pWriterOutput->BeginElement(L"registry");
 
     if (FAILED(
             hr = config.Registry.Files.Find(
@@ -137,7 +137,7 @@ HRESULT Main::RunRegistry()
 
         if (pWriterOutput)
         {
-            pWriterOutput->BeginCollection(L"hive");
+            pWriterOutput->BeginElement(L"hive");
             pWriterOutput->WriteNameValuePair(L"volume_id", aFileMatch->VolumeReader->VolumeSerialNumber(), true);
 
             auto reader = std::dynamic_pointer_cast<SnapshotVolumeReader>(aFileMatch->VolumeReader);
@@ -202,11 +202,11 @@ HRESULT Main::RunRegistry()
         }
 
         if (pWriterOutput)
-            pWriterOutput->EndCollection(L"hive");
+            pWriterOutput->EndElement(L"hive");
     }
 
     if (pWriterOutput)
-        pWriterOutput->EndCollection(L"registry");
+        pWriterOutput->EndElement(L"registry");
 
     return S_OK;
 }
@@ -254,7 +254,7 @@ HRESULT Main::RunObject()
     HRESULT hr = E_FAIL;
 
     if (pWriterOutput)
-        pWriterOutput->BeginCollection(L"object");
+        pWriterOutput->BeginElement(L"object");
 
     for (const auto& objdir : ObjectDirs)
     {
@@ -418,7 +418,7 @@ HRESULT Main::RunObject()
     }
 
     if (pWriterOutput)
-        pWriterOutput->EndCollection(L"object");
+        pWriterOutput->EndElement(L"object");
 
     return S_OK;
 }

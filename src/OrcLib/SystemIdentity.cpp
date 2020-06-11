@@ -212,6 +212,25 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
         writer->WriteNamed(L"version", version.c_str());
     }
     {
+        std::wstring locale;
+        if (auto hr = SystemDetails::GetUserLocale(locale); SUCCEEDED(hr))
+            writer->WriteNamed(L"locale", locale.c_str());
+    }
+    {
+        std::wstring language;
+        if (auto hr = SystemDetails::GetUserLanguage(language); SUCCEEDED(hr))
+            writer->WriteNamed(L"language", language.c_str());
+    }
+    {
+        auto tags = SystemDetails::GetSystemTags();
+        writer->BeginCollection(L"tag");
+        for (const auto& tag : tags)
+        {
+            writer->Write(tag.c_str());
+        }
+        writer->EndCollection(L"tag");
+    }
+    {
         TIME_ZONE_INFORMATION tzi;
         ZeroMemory(&tzi, sizeof(tzi));
         if (auto active = GetTimeZoneInformation(&tzi); active != TIME_ZONE_ID_INVALID)
@@ -237,25 +256,7 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
             writer->EndElement(L"time_zone");
         }
     }
-    {
-        std::wstring locale;
-        if (auto hr = SystemDetails::GetUserLocale(locale); SUCCEEDED(hr))
-            writer->WriteNamed(L"locale", locale.c_str());
-    }
-    {
-        std::wstring language;
-        if (auto hr = SystemDetails::GetUserLanguage(language); SUCCEEDED(hr))
-            writer->WriteNamed(L"language", language.c_str());
-    }
-    {
-        auto tags = SystemDetails::GetSystemTags();
-        writer->BeginCollection(L"tags");
-        for (const auto& tag : tags)
-        {
-            writer->Write(tag.c_str());
-        }
-        writer->EndCollection(L"tags");
-    }
+
     {
         auto qfes = SystemDetails::GetOsQFEs(nullptr);
         if (qfes.is_ok())
@@ -284,8 +285,8 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IWr
     {
         if (auto result = SystemDetails::GetNetworkAdapters(); result.is_ok())
         {
-            writer->BeginCollection(L"adapters");
-            BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"adapters"); }
+            writer->BeginCollection(L"adapter");
+            BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"adapter"); }
             BOOST_SCOPE_EXIT_END;
 
             auto adapters = result.unwrap();
@@ -300,7 +301,7 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IWr
                     writer->WriteNamed(L"friendly_name", adapter.FriendlyName.c_str());
                     writer->WriteNamed(L"description", adapter.Description.c_str());
                     writer->WriteNamed(L"physical", adapter.PhysicalAddress.c_str());
-
+                    writer->WriteNamed(L"dns_suffix", adapter.DNSSuffix.c_str());
                     {
 
                         writer->BeginCollection(L"address");
@@ -345,9 +346,6 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IWr
                             }
                         }
                     }
-
-                    writer->WriteNamed(L"dns_suffix", adapter.DNSSuffix.c_str());
-
                     {
                         writer->BeginCollection(L"dns_server");
                         BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"dns_server"); }
@@ -524,8 +522,8 @@ HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IW
         auto profiles = ProfileList::GetProfiles(nullptr);
         if (profiles.is_ok())
         {
-            writer->BeginCollection(L"profiles");
-            BOOST_SCOPE_EXIT(&writer) { writer->EndCollection(L"profiles"); }
+            writer->BeginCollection(L"profile");
+            BOOST_SCOPE_EXIT(&writer) { writer->EndCollection(L"profile"); }
             BOOST_SCOPE_EXIT_END;
 
             const auto profile_list = profiles.unwrap();

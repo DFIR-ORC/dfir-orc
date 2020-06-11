@@ -13,6 +13,8 @@
 
 #include "XmlLiteExtension.h"
 
+#include <stack>
+
 #pragma managed(push, off)
 
 struct IXmlWriter;
@@ -29,7 +31,7 @@ class Writer : public StructuredOutput::Writer
 protected:
     std::shared_ptr<XmlLiteExtension> m_xmllite;
     CComPtr<IXmlWriter> m_pWriter;
-
+    std::stack<std::wstring> m_collectionStack;
 public:
 
     Writer(logger pLog, std::unique_ptr<Options>&& pOptions);
