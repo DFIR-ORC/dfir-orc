@@ -105,7 +105,7 @@ Orc::SystemIdentity::CurrentUser(const std::shared_ptr<StructuredOutput::IWriter
 }
 
 HRESULT
-    Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
 {
     writer->BeginElement(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
@@ -129,7 +129,7 @@ HRESULT
             BOOST_SCOPE_EXIT_END;
 
             auto envs = environ_result.unwrap();
-            for (const auto& env:envs)
+            for (const auto& env : envs)
             {
                 writer->BeginElement(nullptr);
                 BOOST_SCOPE_EXIT(&writer) { writer->EndElement(nullptr); }
@@ -390,7 +390,7 @@ HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutp
         return result.err();
 
     auto drives = result.unwrap();
-    for (const auto& drive: drives)
+    for (const auto& drive : drives)
     {
         writer->BeginElement(nullptr);
         BOOST_SCOPE_EXIT(&writer) { writer->EndElement(nullptr); }
@@ -403,7 +403,7 @@ HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutp
         if (drive.Availability)
             writer->WriteNamed(L"availability", drive.Availability.value());
         if (drive.ConfigManagerErrorCode)
-            writer->WriteNamed(L"error_code", (ULONG32) drive.ConfigManagerErrorCode.value());
+            writer->WriteNamed(L"error_code", (ULONG32)drive.ConfigManagerErrorCode.value());
         if (drive.Status)
             writer->WriteNamed(L"status", drive.Status.value().c_str());
     }
@@ -412,16 +412,89 @@ HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutp
 
 HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
 {
+    writer->BeginCollection(elt);
+    BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
+    BOOST_SCOPE_EXIT_END;
+
+    auto result = SystemDetails::GetMountedVolumes(nullptr);
+    if (result.is_err())
+        return result.err();
+
+    auto volumes = result.unwrap();
+    for (const auto& volume : volumes)
+    {
+        writer->BeginElement(nullptr);
+        BOOST_SCOPE_EXIT(&writer) { writer->EndElement(nullptr); }
+        BOOST_SCOPE_EXIT_END;
+
+        FlagsDefinition DriveTypeDefinitions[] = {
+            {SystemDetails::DriveType::Drive_Unknown, L"Unknown", L"Unknown"},
+            {SystemDetails::DriveType::Drive_No_Root_Dir, L"Invalid", L"Invalid"},
+            {SystemDetails::DriveType::Drive_Removable, L"Removeable", L"Removeable"},
+            {SystemDetails::DriveType::Drive_Fixed, L"Fixed", L"Fixed"},
+            {SystemDetails::DriveType::Drive_Remote, L"Remote", L"Remote"},
+            {SystemDetails::DriveType::Drive_CDRom, L"CDROM", L"Drive_CDRom"},
+            {SystemDetails::DriveType::Drive_RamDisk, L"RAMDisk", L"RAMDisk"},
+            {0xFFFFFFFF, NULL, NULL}
+        };
+
+        writer->WriteNamed(L"path", volume.Path.c_str());
+        writer->WriteNamed(L"label", volume.Label.c_str());
+        writer->WriteNamed(L"serial", (ULONG32)volume.SerialNumber);
+        writer->WriteNamed(L"file_system", volume.FileSystem.c_str());
+        writer->WriteNamed(L"device_id", volume.DeviceId.c_str());
+        writer->WriteNamed(L"is_boot", volume.bBoot);
+        writer->WriteNamed(L"is_system", volume.bSystem);
+        writer->WriteNamed(L"size", volume.Size);
+        writer->WriteNamed(L"freespace", volume.FreeSpace);
+        writer->WriteNamed(L"type", (DWORD)volume.Type, DriveTypeDefinitions);
+    }
     return S_OK;
 }
 
 HRESULT Orc::SystemIdentity::PhysicalMemory(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
 {
+    writer->BeginElement(elt);
+    BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
+    BOOST_SCOPE_EXIT_END;
+
+    auto result = SystemDetails::GetPhysicalMemory(nullptr);
+    if (result.is_err())
+        return result.err();
+
+    auto mem = result.unwrap();
+
+    writer->WriteNamed(L"current_load", (ULONG32)mem.dwMemoryLoad);
+    writer->WriteNamed(L"physical", mem.ullTotalPhys);
+    writer->WriteNamed(L"pagefile", mem.ullTotalPageFile);
+    writer->WriteNamed(L"available_physical", mem.ullAvailPhys);
+    writer->WriteNamed(L"available_pagefile", mem.ullAvailPageFile);
     return S_OK;
 }
 
 HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
 {
+    writer->BeginCollection(elt);
+    BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
+    BOOST_SCOPE_EXIT_END;
+
+    auto result = SystemDetails::GetCPUInfo(nullptr);
+    if (result.is_err())
+        return result.err();
+
+    auto cpus = result.unwrap();
+    for (const auto& cpu : cpus)
+    {
+        writer->BeginElement(nullptr);
+        BOOST_SCOPE_EXIT(&writer) { writer->EndElement(nullptr); }
+        BOOST_SCOPE_EXIT_END;
+
+        writer->WriteNamed(L"name", cpu.Name.c_str());
+        writer->WriteNamed(L"description", cpu.Description.c_str());
+        writer->WriteNamed(L"cores", (ULONG32)cpu.Cores);
+        writer->WriteNamed(L"enabled_cores", (ULONG32)cpu.EnabledCores);
+        writer->WriteNamed(L"logical_processors", (ULONG32)cpu.LogicalProcessors);
+    }
     return S_OK;
 }
 

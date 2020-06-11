@@ -350,6 +350,67 @@ std::pair<DWORD, DWORD> Orc::SystemDetails::GetOSVersion()
     throw L"Failed to retrieve OS Version";
 }
 
+Result<std::vector<Orc::SystemDetails::CPUInformation>> Orc::SystemDetails::GetCPUInfo(const logger& pLog)
+{
+    WMI wmi(pLog);
+
+    if (auto hr = wmi.Initialize(); FAILED(hr))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return hr;
+    }
+    auto result = wmi.Query(
+        L"SELECT * FROM Win32_Processor");
+    if (result.is_err())
+        return result.err();
+
+    auto pEnum = result.unwrap();
+
+    std::vector<CPUInformation> retval;
+
+    while (pEnum)
+    {
+        CComPtr<IWbemClassObject> pclsObj;
+        ULONG uReturn = 0;
+
+        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        if (0 == uReturn)
+            break;
+
+        CPUInformation cpu;
+
+        if (auto descr = WMI::GetProperty<std::wstring>(pclsObj, L"Description"); descr.is_ok())
+            cpu.Description = descr.unwrap();
+
+        if (auto name = WMI::GetProperty<std::wstring>(pclsObj, L"Name"); name.is_ok())
+            cpu.Name = name.unwrap();
+        
+        if (auto cores = WMI::GetProperty<ULONG32>(pclsObj, L"NumberOfCores"); cores.is_ok())
+            cpu.Cores = cores.unwrap();
+
+        if (auto cores = WMI::GetProperty<ULONG32>(pclsObj, L"NumberOfEnabledCore"); cores.is_ok())
+            cpu.EnabledCores = cores.unwrap();
+
+        if (auto logical = WMI::GetProperty<ULONG32>(pclsObj, L"NumberOfLogicalProcessors"); logical.is_ok())
+            cpu.LogicalProcessors = logical.unwrap();
+
+        retval.push_back(std::move(cpu));
+    }
+
+    return retval;
+}
+
+Orc::Result<MEMORYSTATUSEX> Orc::SystemDetails::GetPhysicalMemory(const logger& pLog)
+{
+    MEMORYSTATUSEX statex;
+    statex.dwLength = sizeof(statex);
+
+    if(!GlobalMemoryStatusEx(&statex))
+        return HRESULT_FROM_WIN32(GetLastError());
+
+    return statex;
+}
+
 HRESULT SystemDetails::GetPageSize(DWORD& dwPageSize)
 {
     HRESULT hr = E_FAIL;
@@ -840,7 +901,97 @@ Orc::Result<std::vector<Orc::SystemDetails::PhysicalDrive>> Orc::SystemDetails::
 
 Orc::Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::GetMountedVolumes(const logger& pLog)
 {
-    return Result<std::vector<MountedVolume>>();
+    WMI wmi(pLog);
+
+    if (auto hr = wmi.Initialize(); FAILED(hr))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return hr;
+    }
+    auto result = wmi.Query(
+        L"SELECT * FROM Win32_Volume");
+    if (result.is_err())
+        return result.err();
+
+    auto pEnum = result.unwrap();
+
+    std::vector<Orc::SystemDetails::MountedVolume> retval;
+
+    while (pEnum)
+    {
+        CComPtr<IWbemClassObject> pclsObj;
+        ULONG uReturn = 0;
+
+        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        if (0 == uReturn)
+            break;
+
+        MountedVolume volume;
+
+        if (auto name = WMI::GetProperty<std::wstring>(pclsObj, L"Name"); name.is_err())
+            continue;  // without name...
+        else
+            volume.Path = name.unwrap();
+
+        if (auto fs = WMI::GetProperty<std::wstring>(pclsObj, L"FileSystem"); fs.is_ok())
+            volume.FileSystem = fs.unwrap();
+
+        if (auto label = WMI::GetProperty<std::wstring>(pclsObj, L"Label"); label.is_ok())
+            volume.Label = label.unwrap();
+
+        if (auto device_id = WMI::GetProperty<std::wstring>(pclsObj, L"DeviceID"); device_id.is_ok())
+            volume.DeviceId = device_id.unwrap();
+
+        if (auto drive_type = WMI::GetProperty<ULONG32>(pclsObj, L"DriveType"); drive_type.is_ok())
+        {
+            switch (drive_type.unwrap())
+            {
+                case DRIVE_UNKNOWN:
+                    volume.Type = Drive_Unknown;break;
+                case DRIVE_NO_ROOT_DIR:
+                    volume.Type = Drive_No_Root_Dir;break;
+                case DRIVE_REMOVABLE:
+                    volume.Type = Drive_Removable;break;
+                case DRIVE_FIXED:
+                    volume.Type = Drive_Fixed;break;
+                case DRIVE_REMOTE:
+                    volume.Type = Drive_Remote;break;
+                case DRIVE_CDROM:
+                    volume.Type = Drive_CDRom;break;
+                case DRIVE_RAMDISK:
+                    volume.Type = Drive_RamDisk;break;
+                default:
+                    volume.Type = Drive_Unknown;
+            }
+        }
+
+        if (auto capacity = WMI::GetProperty<ULONG64>(pclsObj, L"Capacity"); capacity.is_ok())
+            volume.Size = capacity.unwrap();
+
+        if (auto freespace = WMI::GetProperty<ULONG64>(pclsObj, L"FreeSpace"); freespace.is_ok())
+            volume.FreeSpace = freespace.unwrap();
+
+        if (auto serial = WMI::GetProperty<ULONG32>(pclsObj, L"SerialNumber"); serial.is_ok())
+            volume.SerialNumber = serial.unwrap();
+
+        if (auto boot = WMI::GetProperty<bool>(pclsObj, L"BootVolume"); boot.is_ok())
+            volume.bBoot = boot.unwrap();
+
+        if (auto system = WMI::GetProperty<bool>(pclsObj, L"SystemVolume"); system.is_ok())
+            volume.bSystem= system.unwrap();
+
+        if (auto errorcode = WMI::GetProperty<ULONG32>(pclsObj, L"LastErrorCode"); errorcode.is_ok())
+            if(auto code = errorcode.unwrap(); code != 0LU)
+                volume.ErrorCode = code;
+
+        if (auto errordescr = WMI::GetProperty<std::wstring>(pclsObj, L"ErrorDescription"); errordescr.is_ok())
+            if (auto descr = errordescr.unwrap(); descr.empty())
+                volume.ErrorDesciption = descr;
+
+        retval.push_back(std::move(volume));
+    }
+
+    return retval;
 }
 
 Result<std::vector<Orc::SystemDetails::QFE>> Orc::SystemDetails::GetOsQFEs(const logger& pLog)
