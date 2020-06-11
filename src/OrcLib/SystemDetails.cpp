@@ -360,7 +360,7 @@ Result<std::vector<Orc::SystemDetails::CPUInformation>> Orc::SystemDetails::GetC
         return hr;
     }
     auto result = wmi.Query(
-        L"SELECT * FROM Win32_Processor");
+        L"SELECT Description,Name,NumberOfCores,NumberOfEnabledCore,NumberOfLogicalProcessors FROM Win32_Processor");
     if (result.is_err())
         return result.err();
 
@@ -909,7 +909,7 @@ Orc::Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::
         return hr;
     }
     auto result = wmi.Query(
-        L"SELECT * FROM Win32_Volume");
+        L"SELECT Name,FileSystem,Label,DeviceID,DriveType,Capacity,FreeSpace,SerialNumber,BootVolume,SystemVolume,LastErrorCode,ErrorDescription FROM Win32_Volume");
     if (result.is_err())
         return result.err();
 
@@ -1004,7 +1004,7 @@ Result<std::vector<Orc::SystemDetails::QFE>> Orc::SystemDetails::GetOsQFEs(const
         return hr;
     }
     auto result = wmi.Query(
-        L"SELECT * FROM Win32_QuickFixEngineering");
+        L"SELECT HotFixID,Description,Caption,InstalledOn FROM Win32_QuickFixEngineering");
     if (result.is_err())
         return result.err();
 
