@@ -215,100 +215,152 @@ Result<CComPtr<IEnumWbemClassObject>> Orc::WMI::Query(LPCWSTR szRequest)
 
 
 template <>
-Orc::Result<SHORT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+Orc::Result<bool> Orc::WMI::GetProperty<bool>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return hr;
-    if (propType != CIM_SINT16 || !(vtProp.vt & VT_I2))
+
+    if (propType != CIM_BOOLEAN)
         return E_NOT_VALID_STATE;
-    return (SHORT)vtProp.iVal;
+
+    if (!(vtProp.vt & VT_BOOL) && FAILED(vtProp.ChangeType(VT_BOOL)))
+        return HRESULT_FROM_WIN32(ERROR_INVALID_VARIANT);
+
+    return (bool)vtProp.boolVal;
 }
 
 template <>
-Orc::Result<USHORT> Orc::WMI::GetProperty<USHORT>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+Orc::Result<SHORT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return hr;
-    if (propType != CIM_UINT16 || !(vtProp.vt & VT_UI2))
+
+    if (propType != CIM_SINT16 )
         return E_NOT_VALID_STATE;
+
+    if (!(vtProp.vt & VT_I2) && FAILED(vtProp.ChangeType(VT_I2)))
+        return HRESULT_FROM_WIN32(ERROR_INVALID_VARIANT);
+
+    return (SHORT)vtProp.iVal;
+}
+
+
+template <>
+Orc::Result<USHORT> Orc::WMI::GetProperty<USHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+{
+    CComVariant vtProp;
+    CIMTYPE propType;
+    if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
+        return hr;
+
+    if (propType != CIM_UINT16)
+        return E_NOT_VALID_STATE;
+
+    if (!(vtProp.vt & VT_UI2) && FAILED(vtProp.ChangeType(VT_UI2)))
+        return HRESULT_FROM_WIN32(ERROR_INVALID_VARIANT);
+
     return (USHORT)vtProp.uiVal;
 }
 
 template <>
-Orc::Result<ULONG32> Orc::WMI::GetProperty<ULONG32>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+Orc::Result<ULONG32> Orc::WMI::GetProperty<ULONG32>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return hr;
-    if (propType != CIM_UINT32 || !(vtProp.vt & VT_UI4))
+
+    if (propType != CIM_UINT32)
         return E_NOT_VALID_STATE;
+
+    if (!(vtProp.vt & VT_UI4) && FAILED(vtProp.ChangeType(VT_UI4)))
+        return HRESULT_FROM_WIN32(ERROR_INVALID_VARIANT);
+
     return (ULONG32)vtProp.ulVal;
 }
 
 template <>
-Orc::Result<LONG32> Orc::WMI::GetProperty<LONG32>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+Orc::Result<LONG32> Orc::WMI::GetProperty<LONG32>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return hr;
+
     if (propType != CIM_SINT32 || !(vtProp.vt & VT_I4))
         return E_NOT_VALID_STATE;
+
+    if (!(vtProp.vt & VT_I4) && FAILED(vtProp.ChangeType(VT_I4)))
+        return HRESULT_FROM_WIN32(ERROR_INVALID_VARIANT);
+
     return (LONG32)vtProp.lVal;
 }
 
 template <>
-Orc::Result<ULONG64> Orc::WMI::GetProperty<ULONG64>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+Orc::Result<ULONG64> Orc::WMI::GetProperty<ULONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return hr;
-    if (propType != CIM_UINT64 || !(vtProp.vt & VT_UI8))
+    if (propType != CIM_UINT64)
         return E_NOT_VALID_STATE;
+
+    if (!(vtProp.vt & VT_UI8) && FAILED(vtProp.ChangeType(VT_UI8)))
+        return HRESULT_FROM_WIN32(ERROR_INVALID_VARIANT);
+
     return (ULONG64)vtProp.ullVal;
 }
 
 template <>
-Orc::Result<LONG64> Orc::WMI::GetProperty<LONG64>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+Orc::Result<LONG64> Orc::WMI::GetProperty<LONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return hr;
-    if (propType != CIM_SINT64 || !(vtProp.vt & VT_I8))
+
+    if (propType != CIM_SINT64)
         return E_NOT_VALID_STATE;
+
+    if (!(vtProp.vt & VT_I8) && FAILED(vtProp.ChangeType(VT_I8)))
+        return HRESULT_FROM_WIN32(ERROR_INVALID_VARIANT);
+
     return (LONG64)vtProp.llVal;
 }
 
 template <>
-Orc::Result<ByteBuffer> Orc::WMI::GetProperty<ByteBuffer>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+Orc::Result<ByteBuffer> Orc::WMI::GetProperty<ByteBuffer>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     return E_NOTIMPL;
 }
 
 template <>
 Orc::Result<std::wstring>
-Orc::WMI::GetProperty<std::wstring>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+Orc::WMI::GetProperty<std::wstring>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return hr;
-    if (propType != CIM_STRING|| !(vtProp.vt & VT_BSTR))
+
+    if (propType != CIM_STRING)
         return E_NOT_VALID_STATE;
+
+    if (!(vtProp.vt & VT_BSTR) && FAILED(vtProp.ChangeType(VT_BSTR)))
+        return HRESULT_FROM_WIN32(ERROR_INVALID_VARIANT);
+
     return std::wstring(vtProp.bstrVal, SysStringLen(vtProp.bstrVal));
 }
 
 
 template <>
 Orc::Result<std::vector<std::wstring>>
-Orc::WMI::GetProperty<std::vector<std::wstring>>(const CComPtr<IWbemClassObject> obj, LPCWSTR szProperty)
+Orc::WMI::GetProperty<std::vector<std::wstring>>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
