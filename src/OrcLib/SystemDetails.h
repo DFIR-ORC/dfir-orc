@@ -209,10 +209,10 @@ public:
         std::wstring DNSSuffix;
     };
 
-    static std::pair<HRESULT, const std::vector<NetworkAdapter>&> GetNetworkAdapters();
+    static Result<std::vector<NetworkAdapter>> GetNetworkAdapters();
 
 private:
-    static std::pair<HRESULT, NetworkAddress> GetNetworkAddress(SOCKET_ADDRESS& address);
+    static Result<NetworkAddress> GetNetworkAddress(SOCKET_ADDRESS& address);
 };
 
 static auto constexpr OrcComputerName = L"DFIR-OrcComputer";

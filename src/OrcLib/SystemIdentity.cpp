@@ -282,12 +282,13 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IWr
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
     BOOST_SCOPE_EXIT_END;
     {
-        if (const auto& [hr, adapters] = SystemDetails::GetNetworkAdapters(); SUCCEEDED(hr))
+        if (auto result = SystemDetails::GetNetworkAdapters(); result.is_ok())
         {
             writer->BeginCollection(L"adapters");
             BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"adapters"); }
             BOOST_SCOPE_EXIT_END;
 
+            auto adapters = result.unwrap();
             for (const auto& adapter : adapters)
             {
                 writer->BeginElement(nullptr);

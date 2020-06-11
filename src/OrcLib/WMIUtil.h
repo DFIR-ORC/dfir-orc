@@ -26,26 +26,26 @@ class ORCLIB_API WMI
 {
 
 private:
-    logger _L_;
+
     CComPtr<IWbemLocator> m_pLocator;
     CComPtr<IWbemServices> m_pServices;
 
 public:
-    WMI(logger pLog)
-        : _L_(std::move(pLog)) {};
+    WMI() {};
 
-    HRESULT Initialize();
+    HRESULT Initialize(const logger& pLog);
 
     HRESULT WMICreateProcess(
+        const logger& pLog,
         LPCWSTR szCurrentDirectory,
         LPCWSTR szCommandLine,
         DWORD dwCreationFlags,
         DWORD dwPriority,
         DWORD& dwStatus);
 
-    Result<CComPtr<IEnumWbemClassObject>> Query(LPCWSTR szQuery);
+    Result<CComPtr<IEnumWbemClassObject>> Query(const logger& pLog, LPCWSTR szQuery) const;
 
-    HRESULT WMIEnumPhysicalMedia(std::vector<std::wstring>& physicaldrives);
+    HRESULT WMIEnumPhysicalMedia(const logger& pLog, std::vector<std::wstring>& physicaldrives) const;
 
     template <typename _T>
     static Result<_T> GetProperty(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)

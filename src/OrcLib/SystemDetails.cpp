@@ -48,7 +48,7 @@ struct SystemDetailsBlock
     std::optional<SystemTags> Tags;
     bool bIsElevated = false;
     DWORD dwLargePageSize = 0L;
-    std::optional<std::vector<Orc::SystemDetails::NetworkAdapter>> NetworkAdapters;
+    WMI wmi;
 };
 }  // namespace Orc
 
@@ -352,14 +352,19 @@ std::pair<DWORD, DWORD> Orc::SystemDetails::GetOSVersion()
 
 Result<std::vector<Orc::SystemDetails::CPUInformation>> Orc::SystemDetails::GetCPUInfo(const logger& pLog)
 {
-    WMI wmi(pLog);
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return hr;
 
-    if (auto hr = wmi.Initialize(); FAILED(hr))
+    if(auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
         return hr;
     }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
+
     auto result = wmi.Query(
+        pLog,
         L"SELECT Description,Name,NumberOfCores,NumberOfEnabledCore,NumberOfLogicalProcessors FROM Win32_Processor");
     if (result.is_err())
         return result.err();
@@ -679,17 +684,20 @@ HRESULT Orc::SystemDetails::UserSID(std::wstring& strSID)
 
 Result<DWORD> Orc::SystemDetails::GetParentProcessId(const logger& pLog)
 {
-    WMI wmi(pLog);
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return hr;
 
-    if (auto hr = wmi.Initialize(); FAILED(hr))
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
         return hr;
     }
 
+    const auto& wmi = g_pDetailsBlock->wmi;
+
     auto query = fmt::format(L"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {}", GetCurrentProcessId());
 
-    auto result = wmi.Query(query.c_str());
+    auto result = wmi.Query(pLog, query.c_str());
     if (result.is_err())
         return result.err();
 
@@ -716,13 +724,16 @@ Result<std::wstring> Orc::SystemDetails::GetCmdLine()
 
 Result<std::wstring> Orc::SystemDetails::GetCmdLine(const logger& pLog, DWORD dwPid)
 {
-    WMI wmi(pLog);
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return hr;
 
-    if (auto hr = wmi.Initialize(); FAILED(hr))
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
         return hr;
     }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
 
     if (dwPid == 0)
         return E_INVALIDARG;
@@ -730,7 +741,7 @@ Result<std::wstring> Orc::SystemDetails::GetCmdLine(const logger& pLog, DWORD dw
     // We can now look for the parent command line
     auto query = fmt::format(L"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {}", dwPid);
 
-    auto result = wmi.Query(query.c_str());
+    auto result = wmi.Query(pLog, query.c_str());
     if (result.is_err())
         return result.err();
 
@@ -839,14 +850,20 @@ SystemDetails::DriveType SystemDetails::GetPathLocation(const std::wstring& strA
 
 Orc::Result<std::vector<Orc::SystemDetails::PhysicalDrive>> Orc::SystemDetails::GetPhysicalDrives(const logger& pLog)
 {
-    WMI wmi(pLog);
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return hr;
 
-    if (auto hr = wmi.Initialize(); FAILED(hr))
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
         return hr;
     }
-    auto result = wmi.Query(L"SELECT DeviceID,Size,SerialNumber,MediaType,Status,ConfigManagerErrorCode,Availability FROM Win32_DiskDrive");
+
+    const auto& wmi = g_pDetailsBlock->wmi;
+
+    auto result = wmi.Query(
+        pLog,
+        L"SELECT DeviceID,Size,SerialNumber,MediaType,Status,ConfigManagerErrorCode,Availability FROM Win32_DiskDrive");
     if (result.is_err())
         return result.err();
 
@@ -901,14 +918,18 @@ Orc::Result<std::vector<Orc::SystemDetails::PhysicalDrive>> Orc::SystemDetails::
 
 Orc::Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::GetMountedVolumes(const logger& pLog)
 {
-    WMI wmi(pLog);
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return hr;
 
-    if (auto hr = wmi.Initialize(); FAILED(hr))
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
         return hr;
     }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
     auto result = wmi.Query(
+        pLog,
         L"SELECT Name,FileSystem,Label,DeviceID,DriveType,Capacity,FreeSpace,SerialNumber,BootVolume,SystemVolume,LastErrorCode,ErrorDescription FROM Win32_Volume");
     if (result.is_err())
         return result.err();
@@ -996,14 +1017,18 @@ Orc::Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::
 
 Result<std::vector<Orc::SystemDetails::QFE>> Orc::SystemDetails::GetOsQFEs(const logger& pLog)
 {
-    WMI wmi(pLog);
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return hr;
 
-    if (auto hr = wmi.Initialize(); FAILED(hr))
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
         return hr;
     }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
     auto result = wmi.Query(
+        pLog,
         L"SELECT HotFixID,Description,Caption,InstalledOn FROM Win32_QuickFixEngineering");
     if (result.is_err())
         return result.err();
@@ -1078,17 +1103,151 @@ bool SystemDetails::IsWOW64()
     return g_pDetailsBlock->WOW64;
 }
 
-std::pair<HRESULT, const std::vector<Orc::SystemDetails::NetworkAdapter>&> Orc::SystemDetails::GetNetworkAdapters()
+Orc::Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails::GetNetworkAdapters()
 {
-    static std::vector<NetworkAdapter> failure;
     if (auto hr = LoadSystemDetails(); FAILED(hr))
-        return {hr, failure};
-    if (!g_pDetailsBlock->NetworkAdapters.has_value())
-        return {E_NOT_VALID_STATE, failure};
-    return {S_OK, g_pDetailsBlock->NetworkAdapters.value()};
+        return hr;
+
+    std::vector<Orc::SystemDetails::NetworkAdapter> retval;
+
+    // Collect network adapters information
+    {
+        DWORD dwPageSize = 0L;
+        SystemDetails::GetPageSize(dwPageSize);
+
+        const DWORD WORKING_BUFFER_SIZE = 4 * dwPageSize;
+        Buffer<BYTE> buffer;
+
+        buffer.reserve(WORKING_BUFFER_SIZE);
+        ULONG cbRequiredSize = 0L;
+
+        if (auto ret = GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES)buffer.get(), &cbRequiredSize);
+            ret == ERROR_BUFFER_OVERFLOW)
+        {
+            buffer.reserve(cbRequiredSize);
+            if (auto ret =
+                    GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES)buffer.get(), &cbRequiredSize);
+                ret != ERROR_SUCCESS)
+            {
+                return HRESULT_FROM_WIN32(ret);
+            }
+        }
+        else if (ret != ERROR_SUCCESS)
+        {
+            return HRESULT_FROM_WIN32(ret);
+        }
+
+        // If successful, output some information from the data we received
+        auto pCurrAddresses = buffer.get_as<IP_ADAPTER_ADDRESSES>();
+        while (pCurrAddresses)
+        {
+            NetworkAdapter adapter;
+
+            // Adaptor's "cryptic" name (GUID)
+            Orc::AnsiToWide(nullptr, pCurrAddresses->AdapterName, adapter.Name);
+
+            // First, UniCast addresses
+
+            if (auto pUnicast = pCurrAddresses->FirstUnicastAddress; pUnicast != NULL)
+            {
+                for (; pUnicast != NULL;)
+                {
+                    if (auto result = GetNetworkAddress(pUnicast->Address); result.is_err())
+                        break;
+                    else
+                    {
+                        auto address = result.unwrap();
+                        address.Mode = AddressMode::UniCast;
+                        adapter.Addresses.push_back(std::move(address));
+                    }
+
+                    pUnicast = pUnicast->Next;
+                }
+            }
+
+            if (auto pAnycast = pCurrAddresses->FirstAnycastAddress; pAnycast != NULL)
+            {
+                for (; pAnycast != NULL;)
+                {
+                    if (auto result = GetNetworkAddress(pAnycast->Address); result.is_err())
+                        break;
+                    else
+                    {
+                        auto address = result.unwrap();
+                        address.Mode = AddressMode::AnyCast;
+                        adapter.Addresses.push_back(std::move(address));
+                    }
+
+                    pAnycast = pAnycast->Next;
+                }
+            }
+
+            if (auto pMulticast = pCurrAddresses->FirstMulticastAddress; pMulticast != NULL)
+            {
+                for (; pMulticast != NULL;)
+                {
+                    if (auto result = GetNetworkAddress(pMulticast->Address); result.is_err())
+                        break;
+                    else
+                    {
+                        auto address = result.unwrap();
+                        address.Mode = AddressMode::MultiCast;
+                        adapter.Addresses.push_back(std::move(address));
+                    }
+                    pMulticast = pMulticast->Next;
+                }
+            }
+
+            auto pDnServer = pCurrAddresses->FirstDnsServerAddress;
+            if (pDnServer)
+            {
+                for (; pDnServer != NULL;)
+                {
+                    if (auto result = GetNetworkAddress(pDnServer->Address); result.is_err())
+                        break;
+                    else
+                    {
+                        auto address = result.unwrap();
+                        address.Mode = AddressMode::UnknownMode;
+                        adapter.DNS.push_back(std::move(address));
+                    }
+
+                    pDnServer = pDnServer->Next;
+                }
+            }
+
+            adapter.DNSSuffix.assign(pCurrAddresses->DnsSuffix);
+            adapter.Description.assign(pCurrAddresses->Description);
+            adapter.FriendlyName.assign(pCurrAddresses->FriendlyName);
+
+            if (pCurrAddresses->PhysicalAddressLength != 0)
+            {
+                Buffer<WCHAR, MAX_PATH> PhysAddress;
+
+                for (auto i = 0; i < (int)pCurrAddresses->PhysicalAddressLength; i++)
+                {
+                    if (i == (pCurrAddresses->PhysicalAddressLength - 1))
+                        fmt::format_to(
+                            std::back_insert_iterator(adapter.PhysicalAddress),
+                            L"{:0X}",
+                            pCurrAddresses->PhysicalAddress[i]);
+                    else
+                        fmt::format_to(
+                            std::back_insert_iterator(adapter.PhysicalAddress),
+                            L"{:0X}-",
+                            pCurrAddresses->PhysicalAddress[i]);
+                }
+            }
+
+            retval.push_back(std::move(adapter));
+
+            pCurrAddresses = pCurrAddresses->Next;
+        }
+    }
+    return retval;
 }
 
-std::pair<HRESULT, Orc::SystemDetails::NetworkAddress> Orc::SystemDetails::GetNetworkAddress(SOCKET_ADDRESS& address)
+Orc::Result<Orc::SystemDetails::NetworkAddress> Orc::SystemDetails::GetNetworkAddress(SOCKET_ADDRESS& address)
 {
     NetworkAddress retval;
     switch (address.lpSockaddr->sa_family)
@@ -1109,13 +1268,13 @@ std::pair<HRESULT, Orc::SystemDetails::NetworkAddress> Orc::SystemDetails::GetNe
     ip.reserve(MAX_PATH);
 
     if (WSAAddressToStringW(address.lpSockaddr, address.iSockaddrLength, NULL, ip.get(), &dwLength) == SOCKET_ERROR)
-        return {HRESULT_FROM_WIN32(WSAGetLastError()), retval };
+        return HRESULT_FROM_WIN32(WSAGetLastError());
 
     ip.use(dwLength);
 
     retval.Address.assign(ip.get());
 
-    return {S_OK, retval};
+    return retval;
 }
 
 HRESULT SystemDetails::LoadSystemDetails()
@@ -1505,140 +1664,6 @@ HRESULT SystemDetails::LoadSystemDetails()
                 g_pDetailsBlock->bIsElevated = true;
             else
                 g_pDetailsBlock->bIsElevated = false;
-        }
-    }
-
-    // Collect network adapters information
-    {
-        DWORD dwPageSize = 0L;
-        SystemDetails::GetPageSize(dwPageSize);
-
-        const DWORD WORKING_BUFFER_SIZE = 4 * dwPageSize;
-        Buffer<BYTE> buffer;
-
-        buffer.reserve(WORKING_BUFFER_SIZE);
-        ULONG cbRequiredSize = 0L;
-
-        if (auto ret = GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES) buffer.get(), &cbRequiredSize); ret == ERROR_BUFFER_OVERFLOW)
-        {
-            buffer.reserve(cbRequiredSize);
-            if (auto ret =
-                    GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES)buffer.get(), &cbRequiredSize);
-                ret != ERROR_SUCCESS)
-            {
-                return HRESULT_FROM_WIN32(ret);
-            }
-        }
-        else if (ret != ERROR_SUCCESS)
-        {
-            return HRESULT_FROM_WIN32(ret);
-        }
-
-        // We have result values from the APIs
-        g_pDetailsBlock->NetworkAdapters.emplace();
-
-         // If successful, output some information from the data we received
-        auto pCurrAddresses = buffer.get_as<IP_ADAPTER_ADDRESSES>();
-        while (pCurrAddresses)
-        {
-            NetworkAdapter adapter;
-
-            // Adaptor's "cryptic" name (GUID)
-            Orc::AnsiToWide(nullptr, pCurrAddresses->AdapterName, adapter.Name);
-
-            // First, UniCast addresses
-            
-            if (auto pUnicast = pCurrAddresses->FirstUnicastAddress; pUnicast != NULL)
-            {
-                for (; pUnicast != NULL;)
-                {
-                    if(auto [hr,address] = GetNetworkAddress(pUnicast->Address);FAILED(hr))
-                        break;
-                    else
-                    {
-                        address.Mode = AddressMode::UniCast;
-                        adapter.Addresses.push_back(std::move(address));
-                    }
-
-                    pUnicast = pUnicast->Next;
-                }
-            }
-
-            
-            if (auto pAnycast = pCurrAddresses->FirstAnycastAddress; pAnycast != NULL)
-            {
-                for (; pAnycast != NULL;)
-                {
-                    if (auto [hr, address] = GetNetworkAddress(pAnycast->Address); FAILED(hr))
-                        break;
-                    else
-                    {
-                        address.Mode = AddressMode::AnyCast;
-                        adapter.Addresses.push_back(std::move(address));
-                    }
-
-                    pAnycast = pAnycast->Next;
-                }
-            }
-            
-            if (auto pMulticast = pCurrAddresses->FirstMulticastAddress;pMulticast != NULL)
-            {
-                for (; pMulticast != NULL; )
-                {
-                    if (auto [hr, address] = GetNetworkAddress(pMulticast->Address); FAILED(hr))
-                        break;
-                    else
-                    {
-                        address.Mode = AddressMode::MultiCast;
-                        adapter.Addresses.push_back(std::move(address));
-                    }
-                    pMulticast = pMulticast->Next;
-                }
-            }
-
-            auto pDnServer = pCurrAddresses->FirstDnsServerAddress;
-            if (pDnServer)
-            {
-                for (; pDnServer != NULL; )
-                {
-                    if (auto [hr, address] = GetNetworkAddress(pDnServer->Address); FAILED(hr))
-                        break;
-                    else
-                    {
-                        address.Mode = AddressMode::UnknownMode;
-                        adapter.DNS.push_back(std::move(address));
-                    }
-
-                    pDnServer = pDnServer->Next;
-                }
-            }
-
-            adapter.DNSSuffix.assign(pCurrAddresses->DnsSuffix);
-            adapter.Description.assign(pCurrAddresses->Description);
-            adapter.FriendlyName.assign(pCurrAddresses->FriendlyName);
-
-            if (pCurrAddresses->PhysicalAddressLength != 0)
-            {
-                Buffer<WCHAR,MAX_PATH> PhysAddress;
-
-                for (auto i = 0; i < (int)pCurrAddresses->PhysicalAddressLength; i++)
-                {
-                    if (i == (pCurrAddresses->PhysicalAddressLength - 1))
-                        fmt::format_to(
-                            std::back_insert_iterator(adapter.PhysicalAddress),
-                            L"{:0X}",
-                            pCurrAddresses->PhysicalAddress[i]);
-                    else
-                        fmt::format_to(
-                            std::back_insert_iterator(adapter.PhysicalAddress),
-                            L"{:0X}-",
-                            pCurrAddresses->PhysicalAddress[i]);
-                }
-            }
-
-            g_pDetailsBlock->NetworkAdapters.value().push_back(std::move(adapter));
-
-            pCurrAddresses = pCurrAddresses->Next;
         }
     }
 

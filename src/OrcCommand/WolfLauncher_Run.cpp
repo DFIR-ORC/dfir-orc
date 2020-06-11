@@ -18,6 +18,8 @@
 #include "LogFileWriter.h"
 #include "JobObject.h"
 #include "StructuredOutputWriter.h"
+#include "Convert.h"
+#include "FileStream.h"
 
 #include <boost/logic/tribool.hpp>
 #include <boost/scope_exit.hpp>
@@ -186,6 +188,9 @@ boost::logic::tribool Main::SetWERDontShowUI(DWORD dwNewValue)
 
 HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 {
+    FILETIME StartTime;
+    GetSystemTimeAsFileTime(&StartTime);
+
     try
     {
         auto options = std::make_unique<StructuredOutput::JSON::Options>();
@@ -252,15 +257,39 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
     }
     catch (std::exception& e)
     {
-        std::cerr << "std::exception during LogFileWrite initialisation" << std::endl;
+        std::cerr << "std::exception during outline creation" << std::endl;
         std::cerr << "Caught " << e.what() << std::endl;
         std::cerr << "Type " << typeid(e).name() << std::endl;
         return E_ABORT;
     }
     catch (...)
     {
-        std::cerr << "Exception during LogFileWrite initialisation" << std::endl;
+        std::cerr << "Exception during outline creation" << std::endl;
         return E_ABORT;
+    }
+
+    auto outlineSize = [&]() {
+        FileStream fs(_L_);
+
+        if (FAILED(fs.ReadFrom(config.Outline.Path.c_str())))
+            return 0LLU;
+
+        return fs.GetSize();
+    };
+
+    FILETIME FinishTime;
+    GetSystemTimeAsFileTime(&FinishTime);
+    {
+        auto start = Orc::ConvertTo(StartTime);
+        auto end = Orc::ConvertTo(FinishTime);
+        auto duration = end - start;
+
+        log::Info(
+            _L_,
+            L"Outline               : %s (took %I64d seconds, size %I64d bytes)\r\n",
+            config.Outline.FileName.c_str(),
+            duration.count() / 10000000,
+            outlineSize());
     }
 
     if (std::filesystem::exists(config.Outline.Path))
