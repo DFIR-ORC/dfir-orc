@@ -183,7 +183,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(ULONG32 dw
     if (bInHex)
     {
         StructuredOutput::Writer::_Buffer buffer;
-        WriteBuffer(buffer, dwValue);
+        WriteBuffer(buffer, dwValue, bInHex);
         rapidWriter.String(buffer.get());
     }
     else
@@ -198,7 +198,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(LONG32 uiV
     if (bInHex)
     {
         StructuredOutput::Writer::_Buffer buffer;
-        WriteBuffer(buffer, uiValue);
+        WriteBuffer(buffer, uiValue, bInHex);
         rapidWriter.String(buffer.get());
     }
     else
@@ -226,7 +226,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(ULONG64 ul
     if (bInHex)
     {
         StructuredOutput::Writer::_Buffer buffer;
-        WriteBuffer(buffer, ullValue);
+        WriteBuffer(buffer, ullValue, bInHex);
         rapidWriter.String(buffer.get());
     }
     else
@@ -241,7 +241,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(LONG64 llV
     if (bInHex)
     {
         StructuredOutput::Writer::_Buffer buffer;
-        WriteBuffer(buffer, llValue);
+        WriteBuffer(buffer, llValue, bInHex);
         rapidWriter.String(buffer.get());
     }
     else
@@ -270,7 +270,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(LARGE_INTE
     if (bInHex)
     {
         StructuredOutput::Writer::_Buffer buffer;
-        WriteBuffer(buffer, ullValue);
+        WriteBuffer(buffer, ullValue, bInHex);
         rapidWriter.String(buffer.get());
     }
     else
