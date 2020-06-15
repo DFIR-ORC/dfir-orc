@@ -160,7 +160,7 @@ HRESULT ObjectDirectory::ObjectInstance::Write(
     if (!LinkTarget.empty())
         pWriter.WriteNamed(L"link_target", LinkTarget.c_str());
     if (LinkCreationTime.QuadPart != 0LL)
-        pWriter.WriteNamed(L"link_creationtime", LinkCreationTime.QuadPart);
+        pWriter.WriteNamedFileTime(L"link_creationtime", LinkCreationTime.QuadPart);
 
     pWriter.EndElement(szElement);
     return S_OK;

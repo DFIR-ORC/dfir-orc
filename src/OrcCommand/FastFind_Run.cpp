@@ -117,9 +117,6 @@ HRESULT Main::RunRegistry()
 
     RegFlushKeys();
 
-    if (pStructuredOutput)
-        pStructuredOutput->BeginElement(L"registry");
-
     if (FAILED(
             hr = config.Registry.Files.Find(
                 config.Registry.Locations,
@@ -135,7 +132,7 @@ HRESULT Main::RunRegistry()
         log::Error(_L_, hr, L"Failed to parse location while searching for registry hives\r\n");
     }
 
-    pStructuredOutput->BeginCollection(L"hive");
+    pStructuredOutput->BeginCollection(L"registry");
 
     for (const auto& aFileMatch : config.Registry.Files.Matches())
     {
@@ -213,8 +210,7 @@ HRESULT Main::RunRegistry()
 
     if (pStructuredOutput)
     {
-        pStructuredOutput->EndCollection(L"hive");
-        pStructuredOutput->EndElement(L"registry");
+        pStructuredOutput->EndCollection(L"registry");
     }
 
     return S_OK;
@@ -264,10 +260,7 @@ HRESULT Main::RunObject()
     HRESULT hr = E_FAIL;
 
     if (pStructuredOutput)
-    {
-        pStructuredOutput->BeginElement(L"object_directory");
-        pStructuredOutput->BeginCollection(L"object_match");
-    }
+        pStructuredOutput->BeginCollection(L"object_directory");
 
     for (const auto& objdir : ObjectDirs)
     {
@@ -431,11 +424,8 @@ HRESULT Main::RunObject()
     }
 
     if (pStructuredOutput)
-    {
-        pStructuredOutput->EndCollection(L"object_match");
-        pStructuredOutput->EndElement(L"object_directory");
-    }
-
+        pStructuredOutput->EndCollection(L"object_directory");
+    
     return S_OK;
 }
 
