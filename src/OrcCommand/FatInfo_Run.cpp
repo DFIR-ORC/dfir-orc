@@ -90,7 +90,7 @@ HRESULT Main::Run()
                 {
                     if (FAILED(
                             hr = fi.WriteFileInformation(
-                                _L_, FatFileInfo::g_FatColumnNames, dir.second->GetTableOutput(), m_Config.Filters)))
+                                _L_, FatFileInfo::g_FatColumnNames, *dir.second, m_Config.Filters)))
                     {
                         log::Error(_L_, hr, L"\r\nCould not WriteFileInformation for %s\r\n", szFullName);
                         return hr;

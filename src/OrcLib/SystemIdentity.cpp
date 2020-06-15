@@ -16,7 +16,7 @@
 
 #include "boost/scope_exit.hpp"
 
-HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IWriter>& writer, IdentityArea areas)
+HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IOutput>& writer, IdentityArea areas)
 {
     if (areas & IdentityArea::Process)
     {
@@ -75,7 +75,7 @@ HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IWrit
 }
 
 HRESULT
-Orc::SystemIdentity::CurrentUser(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+Orc::SystemIdentity::CurrentUser(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt)
 {
     writer->BeginElement(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
@@ -105,7 +105,7 @@ Orc::SystemIdentity::CurrentUser(const std::shared_ptr<StructuredOutput::IWriter
 }
 
 HRESULT
-Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt)
 {
     writer->BeginElement(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
@@ -142,7 +142,7 @@ Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IWri
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IWriter>& writer, LPCWSTR elt)
+HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IOutput>& writer, LPCWSTR elt)
 {
     writer->BeginElement(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
@@ -195,7 +195,7 @@ HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IWri
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOutput::IWriter>& writer, LPCWSTR elt)
+HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOutput::IOutput>& writer, LPCWSTR elt)
 {
     writer->BeginElement(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
@@ -277,7 +277,7 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IWriter>& writer, LPCWSTR elt)
+HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IOutput>& writer, LPCWSTR elt)
 {
     writer->BeginElement(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
@@ -378,7 +378,7 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IWr
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt)
 {
     writer->BeginCollection(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
@@ -409,7 +409,7 @@ HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutp
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt)
 {
     writer->BeginCollection(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
@@ -451,7 +451,7 @@ HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutp
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::PhysicalMemory(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+HRESULT Orc::SystemIdentity::PhysicalMemory(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt)
 {
     writer->BeginElement(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
@@ -471,7 +471,7 @@ HRESULT Orc::SystemIdentity::PhysicalMemory(const std::shared_ptr<StructuredOutp
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt)
+HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt)
 {
     writer->BeginCollection(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
@@ -497,7 +497,7 @@ HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IWriter
     return S_OK;
 }
 
-HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IWriter>& writer, LPCWSTR elt)
+HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IOutput>& writer, LPCWSTR elt)
 {
     writer->BeginElement(elt);
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }

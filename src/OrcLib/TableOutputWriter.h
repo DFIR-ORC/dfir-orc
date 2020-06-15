@@ -48,7 +48,7 @@ public:
 class IConnectWriter;
 class IStreamWriter;
 
-class IWriter
+class IWriter : public IOutput
 {
 public:
     STDMETHOD(SetSchema)(const Schema& columns) PURE;
@@ -56,7 +56,6 @@ public:
     STDMETHOD(Flush)() PURE;
     STDMETHOD(Close)() PURE;
 
-    virtual ITableOutput& GetTableOutput() PURE;
 };
 
 namespace CSV {

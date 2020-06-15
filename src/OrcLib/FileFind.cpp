@@ -315,95 +315,102 @@ HRESULT FileFind::Match::Write(const logger& pLog, ITableOutput& output)
 
 HRESULT FileFind::Match::Write(
     const logger& pLog,
-    const std::shared_ptr<StructuredOutputWriter>& pWriter)
+    IStructuredOutput& pWriter,
+    LPCWSTR szElement)
 {
     wstring strMatchDescr = Term->GetDescription();
 
-    pWriter->BeginElement(L"filefind_match");
+    pWriter.BeginElement(szElement);
 
-    pWriter->WriteNameValuePair(L"description", strMatchDescr.c_str());
+    pWriter.WriteNamed(L"description", strMatchDescr.c_str());
 
-    pWriter->BeginElement(L"record");
+    pWriter.BeginElement(L"record");
     {
         LARGE_INTEGER* pLI = (LARGE_INTEGER*)&FRN;
-        pWriter->WriteNameValuePair(L"frn", (ULONGLONG)pLI->QuadPart, true);
+        pWriter.WriteNamed(L"frn", (ULONGLONG)pLI->QuadPart, true);
 
-        pWriter->WriteNameValuePair(L"volume_id", VolumeReader->VolumeSerialNumber(), true);
+        pWriter.WriteNamed(L"volume_id", VolumeReader->VolumeSerialNumber(), true);
 
         auto reader = std::dynamic_pointer_cast<SnapshotVolumeReader>(VolumeReader);
         if (reader)
         {
-            pWriter->WriteNameGUIDPair(L"snapshot_id", reader->GetSnapshotID());
+            pWriter.WriteNamed(L"snapshot_id", reader->GetSnapshotID());
         }
         else
         {
-            pWriter->WriteNameGUIDPair(L"snapshot_id", GUID_NULL);
+            pWriter.WriteNamed(L"snapshot_id", GUID_NULL);
         }
 
         if (StandardInformation != nullptr)
         {
-            pWriter->BeginElement(L"standardinformation");
+            pWriter.BeginElement(L"standardinformation");
             {
-                pWriter->WriteNameFileTimePair(L"creation", StandardInformation->CreationTime);
-                pWriter->WriteNameFileTimePair(L"lastmodification", StandardInformation->LastModificationTime);
-                pWriter->WriteNameFileTimePair(L"lastaccess", StandardInformation->LastAccessTime);
-                pWriter->WriteNameFileTimePair(L"lastentrychange", StandardInformation->LastChangeTime);
-                pWriter->WriteNameAttributesPair(L"attributes", StandardInformation->FileAttributes);
+                pWriter.WriteNamed(L"creation", StandardInformation->CreationTime);
+                pWriter.WriteNamed(L"lastmodification", StandardInformation->LastModificationTime);
+                pWriter.WriteNamed(L"lastaccess", StandardInformation->LastAccessTime);
+                pWriter.WriteNamed(L"lastentrychange", StandardInformation->LastChangeTime);
+                pWriter.WriteNamedAttributes(L"attributes", StandardInformation->FileAttributes);
             }
-            pWriter->EndElement(L"standardinformation");
+            pWriter.EndElement(L"standardinformation");
         }
 
         if (MatchingAttributes.empty())
         {
+            pWriter.BeginCollection(L"i30");
             for (auto name_it = begin(MatchingNames); name_it != end(MatchingNames); ++name_it)
             {
-                pWriter->BeginElement(L"i30");
-                pWriter->WriteNameValuePair(L"fullname", name_it->FullPathName.c_str());
+                pWriter.BeginElement(nullptr);
+                pWriter.WriteNamed(L"fullname", name_it->FullPathName.c_str());
 
                 LARGE_INTEGER* pParentLI = (LARGE_INTEGER*)&name_it->FILENAME()->ParentDirectory;
-                pWriter->WriteNameValuePair(L"parentfrn", (ULONGLONG)pParentLI->QuadPart, true);
+                pWriter.WriteNamed(L"parentfrn", (ULONGLONG)pParentLI->QuadPart, true);
 
-                pWriter->WriteNameFileTimePair(L"creation", name_it->FILENAME()->Info.CreationTime);
-                pWriter->WriteNameFileTimePair(L"lastmodification", name_it->FILENAME()->Info.LastModificationTime);
-                pWriter->WriteNameFileTimePair(L"lastaccess", name_it->FILENAME()->Info.LastAccessTime);
-                pWriter->WriteNameFileTimePair(L"lastentrychange", name_it->FILENAME()->Info.LastChangeTime);
-                pWriter->EndElement(L"i30");
+                pWriter.WriteNamed(L"creation", name_it->FILENAME()->Info.CreationTime);
+                pWriter.WriteNamed(L"lastmodification", name_it->FILENAME()->Info.LastModificationTime);
+                pWriter.WriteNamed(L"lastaccess", name_it->FILENAME()->Info.LastAccessTime);
+                pWriter.WriteNamed(L"lastentrychange", name_it->FILENAME()->Info.LastChangeTime);
+                pWriter.EndElement(nullptr);
             }
+            pWriter.EndCollection(L"i30");
         }
         else
         {
+            pWriter.BeginCollection(L"filename");
             for (auto name_it = begin(MatchingNames); name_it != end(MatchingNames); ++name_it)
             {
-                pWriter->BeginElement(L"filename");
+                pWriter.BeginElement(nullptr);
                 {
-                    pWriter->WriteNameValuePair(L"fullname", name_it->FullPathName.c_str());
+                    pWriter.WriteNamed(L"fullname", name_it->FullPathName.c_str());
 
                     LARGE_INTEGER* pParentLI = (LARGE_INTEGER*)&name_it->FILENAME()->ParentDirectory;
-                    pWriter->WriteNameValuePair(L"parentfrn", (ULONGLONG)pParentLI->QuadPart, true);
+                    pWriter.WriteNamed(L"parentfrn", (ULONGLONG)pParentLI->QuadPart, true);
 
-                    pWriter->WriteNameFileTimePair(L"creation", name_it->FILENAME()->Info.CreationTime);
-                    pWriter->WriteNameFileTimePair(L"lastmodification", name_it->FILENAME()->Info.LastModificationTime);
-                    pWriter->WriteNameFileTimePair(L"lastaccess", name_it->FILENAME()->Info.LastAccessTime);
-                    pWriter->WriteNameFileTimePair(L"lastentrychange", name_it->FILENAME()->Info.LastChangeTime);
+                    pWriter.WriteNamed(L"creation", name_it->FILENAME()->Info.CreationTime);
+                    pWriter.WriteNamed(L"lastmodification", name_it->FILENAME()->Info.LastModificationTime);
+                    pWriter.WriteNamed(L"lastaccess", name_it->FILENAME()->Info.LastAccessTime);
+                    pWriter.WriteNamed(L"lastentrychange", name_it->FILENAME()->Info.LastChangeTime);
                 }
-                pWriter->EndElement(L"filename");
+                pWriter.EndElement(nullptr);
             }
+            pWriter.EndCollection(L"filename");
 
+            pWriter.BeginCollection(L"data");
             for (auto data_it = begin(MatchingAttributes); data_it != end(MatchingAttributes); ++data_it)
             {
-                pWriter->BeginElement(L"data");
+                pWriter.BeginElement(nullptr);
                 {
-                    pWriter->WriteNameValuePair(L"filesize", data_it->DataSize);
-                    pWriter->WriteNameBytesInHexPair(L"MD5", data_it->MD5, false);
-                    pWriter->WriteNameBytesInHexPair(L"SHA1", data_it->SHA1, false);
-                    pWriter->WriteNameBytesInHexPair(L"SHA256", data_it->SHA256, false);
+                    pWriter.WriteNamed(L"filesize", data_it->DataSize);
+                    pWriter.WriteNamed(L"MD5", data_it->MD5, false);
+                    pWriter.WriteNamed(L"SHA1", data_it->SHA1, false);
+                    pWriter.WriteNamed(L"SHA256", data_it->SHA256, false);
                 }
-                pWriter->EndElement(L"data");
+                pWriter.EndElement(nullptr);
             }
+            pWriter.EndCollection(L"data");
         }
     }
-    pWriter->EndElement(L"record");
-    pWriter->EndElement(L"filefind_match");
+    pWriter.EndElement(L"record");
+    pWriter.EndElement(szElement);
 
     return S_OK;
 }

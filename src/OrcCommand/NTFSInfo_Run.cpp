@@ -92,7 +92,7 @@ HRESULT Main::RunThroughUSNJournal()
             {
                 if (FAILED(
                         hr = fi.WriteFileInformation(
-                            _L_, NtfsFileInfo::g_NtfsColumnNames, pFileInfoWriter->GetTableOutput(), config.Filters)))
+                            _L_, NtfsFileInfo::g_NtfsColumnNames, *pFileInfoWriter, config.Filters)))
                 {
                     log::Error(_L_, hr, L"\r\nCould not WriteFileInformation for %s\r\n", szFullName);
                 }
@@ -716,26 +716,26 @@ HRESULT Main::RunThroughMFT()
                                                     const PFILE_NAME pFileName,
                                                     const std::shared_ptr<DataAttribute>& pDataAttr) {
                 FileAndDataInformation(
-                    fileinfoIterator->second->GetTableOutput(), volreader, pElt, pFileName, pDataAttr);
+                    *fileinfoIterator->second, volreader, pElt, pFileName, pDataAttr);
             };
             callBacks.DirectoryCallback = [this, fileinfoIterator](
                                               const std::shared_ptr<VolumeReader>& volreader,
                                               MFTRecord* pElt,
                                               const PFILE_NAME pFileName,
                                               const std::shared_ptr<IndexAllocationAttribute>& pAttr) {
-                DirectoryInformation(fileinfoIterator->second->GetTableOutput(), volreader, pElt, pFileName, pAttr);
+                DirectoryInformation(*fileinfoIterator->second, volreader, pElt, pFileName, pAttr);
             };
         }
         if (timelineIterator->second != nullptr)
         {
             callBacks.ElementCallback =
                 [this, timelineIterator](const std::shared_ptr<VolumeReader>& volreader, MFTRecord* pElt) {
-                    ElementInformation(timelineIterator->second->GetTableOutput(), volreader, pElt);
+                    ElementInformation(*timelineIterator->second, volreader, pElt);
                 };
             callBacks.FileNameCallback =
                 [this, timelineIterator](
                     const std::shared_ptr<VolumeReader>& volreader, MFTRecord* pElt, const PFILE_NAME pFileName) {
-                    TimelineInformation(timelineIterator->second->GetTableOutput(), volreader, pElt, pFileName);
+                    TimelineInformation(*timelineIterator->second, volreader, pElt, pFileName);
                 };
         }
 
@@ -745,7 +745,7 @@ HRESULT Main::RunThroughMFT()
                                               const std::shared_ptr<VolumeReader>& volreader,
                                               MFTRecord* pElt,
                                               const AttributeListEntry& AttrEntry) {
-                AttrInformation(attrIterator->second->GetTableOutput(), volreader, pElt, AttrEntry);
+                AttrInformation(*attrIterator->second, volreader, pElt, AttrEntry);
             };
         }
 
@@ -757,7 +757,7 @@ HRESULT Main::RunThroughMFT()
                                         const PINDEX_ENTRY& pEntry,
                                         const PFILE_NAME pFileName,
                                         bool bCarvedEntry) {
-                I30Information(i30Iterator->second->GetTableOutput(), volreader, pElt, pEntry, pFileName, bCarvedEntry);
+                I30Information(*i30Iterator->second, volreader, pElt, pEntry, pFileName, bCarvedEntry);
             };
         }
 
@@ -766,7 +766,7 @@ HRESULT Main::RunThroughMFT()
             callBacks.SecDescCallback = [this, secdescrIterator](
                                             const std::shared_ptr<VolumeReader>& volreader,
                                             const PSECURITY_DESCRIPTOR_ENTRY pEntry) {
-                SecurityDescriptorInformation(secdescrIterator->second->GetTableOutput(), volreader, pEntry);
+                SecurityDescriptorInformation(*secdescrIterator->second, volreader, pEntry);
             };
         }
 

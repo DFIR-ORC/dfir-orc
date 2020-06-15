@@ -35,7 +35,7 @@ protected:
 public:
 
     Writer(logger pLog, std::unique_ptr<Options>&& pOptions);
-    Writer(const XmlOutputWriter&) = delete;
+    Writer(const Writer&) = delete;
 
     HRESULT SetOutput(std::shared_ptr<ByteStream> stream);
 

@@ -325,7 +325,7 @@ public:
         HRESULT Write(const logger& pLog, ITableOutput& output);
         HRESULT Write(
             const logger& pLog,
-            const std::shared_ptr<StructuredOutputWriter>& pWriter);
+            IStructuredOutput& pWriter);
     };
 
     typedef std::function<void(const std::vector<std::shared_ptr<Match>>& aMatch)> FoundKeyMatchCallback;

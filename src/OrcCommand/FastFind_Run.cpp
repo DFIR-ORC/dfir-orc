@@ -15,6 +15,8 @@
 #include "FastFind.h"
 
 #include "TableOutput.h"
+#include "TableOutputWriter.h"
+
 #include "SystemDetails.h"
 #include "FileFind.h"
 #include "MFTWalker.h"
@@ -27,6 +29,8 @@
 
 #include "CaseInsensitive.h"
 #include "LogFileWriter.h"
+
+#include "boost/scope_exit.hpp"
 
 using namespace std;
 
@@ -57,8 +61,8 @@ HRESULT Main::RunFileSystem()
 {
     HRESULT hr = E_FAIL;
 
-    if (pWriterOutput)
-        pWriterOutput->BeginElement(L"filesystem");
+    if (pStructuredOutput)
+        pStructuredOutput->BeginCollection(L"filesystem_match");
 
     if (FAILED(
             hr = config.FileSystem.Files.Find(
@@ -89,10 +93,10 @@ HRESULT Main::RunFileSystem()
                             }
                         });
 
-                    if (pFileSystemWriter)
-                        aMatch->Write(_L_, pFileSystemWriter->GetTableOutput());
-                    if (pWriterOutput)
-                        aMatch->Write(_L_, pWriterOutput);
+                    if (pFileSystemTableOutput)
+                        aMatch->Write(_L_, *pFileSystemTableOutput);
+                    if (pStructuredOutput)
+                        aMatch->Write(_L_, *pStructuredOutput, nullptr);
 
                     return;
                 },
@@ -102,8 +106,8 @@ HRESULT Main::RunFileSystem()
         return hr;
     }
 
-    if (pWriterOutput)
-        pWriterOutput->EndElement(L"filesystem");
+    if (pStructuredOutput)
+        pStructuredOutput->EndCollection(L"filesystem_match");
     return S_OK;
 }
 
@@ -113,8 +117,8 @@ HRESULT Main::RunRegistry()
 
     RegFlushKeys();
 
-    if (pWriterOutput)
-        pWriterOutput->BeginElement(L"registry");
+    if (pStructuredOutput)
+        pStructuredOutput->BeginElement(L"registry");
 
     if (FAILED(
             hr = config.Registry.Files.Find(
@@ -131,26 +135,28 @@ HRESULT Main::RunRegistry()
         log::Error(_L_, hr, L"Failed to parse location while searching for registry hives\r\n");
     }
 
+    pStructuredOutput->BeginCollection(L"hive");
+
     for (const auto& aFileMatch : config.Registry.Files.Matches())
     {
         log::Verbose(_L_, L"Parsing registry hive %s\t\n", aFileMatch->MatchingNames.front().FullPathName.c_str());
 
-        if (pWriterOutput)
+        if (pStructuredOutput)
         {
-            pWriterOutput->BeginElement(L"hive");
-            pWriterOutput->WriteNameValuePair(L"volume_id", aFileMatch->VolumeReader->VolumeSerialNumber(), true);
+            pStructuredOutput->BeginElement(nullptr);
+            pStructuredOutput->WriteNamed(L"volume_id", aFileMatch->VolumeReader->VolumeSerialNumber(), true);
 
             auto reader = std::dynamic_pointer_cast<SnapshotVolumeReader>(aFileMatch->VolumeReader);
             if (reader)
             {
-                pWriterOutput->WriteNameGUIDPair(L"snapshot_id", reader->GetSnapshotID());
+                pStructuredOutput->WriteNamed(L"snapshot_id", reader->GetSnapshotID());
             }
             else
             {
-                pWriterOutput->WriteNameGUIDPair(L"snapshot_id", GUID_NULL);
+                pStructuredOutput->WriteNamed(L"snapshot_id", GUID_NULL);
             }
 
-            pWriterOutput->WriteNameValuePair(L"hive_path", aFileMatch->MatchingNames.front().FullPathName.c_str());
+            pStructuredOutput->WriteNamed(L"hive_path", aFileMatch->MatchingNames.front().FullPathName.c_str());
         }
 
         for (const auto& data : aFileMatch->MatchingAttributes)
@@ -194,57 +200,61 @@ HRESULT Main::RunRegistry()
                                 value.KeyName.c_str());
                         }
 
-                        if (pWriterOutput)
-                            elt.second->Write(_L_, pWriterOutput);
+                        if (pStructuredOutput)
+                            elt.second->Write(_L_, *pStructuredOutput);
                     }
                 }
             }
         }
 
-        if (pWriterOutput)
-            pWriterOutput->EndElement(L"hive");
+        if (pStructuredOutput)
+            pStructuredOutput->EndElement(nullptr);
     }
 
-    if (pWriterOutput)
-        pWriterOutput->EndElement(L"registry");
+    if (pStructuredOutput)
+    {
+        pStructuredOutput->EndCollection(L"hive");
+        pStructuredOutput->EndElement(L"registry");
+    }
 
     return S_OK;
 }
 
-HRESULT Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::ObjectInstance& obj)
+HRESULT Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::ObjectInstance& obj, LPCWSTR szElement)
 {
     HRESULT hr = E_FAIL;
 
-    if (pWriterOutput)
+    if (pStructuredOutput)
     {
-        pWriterOutput->BeginElement(L"object_match");
-        pWriterOutput->WriteNameValuePair(L"description", spec.Description().c_str());
-        obj.Write(_L_, pWriterOutput);
-        pWriterOutput->EndElement(L"object_match");
+        pStructuredOutput->BeginElement(szElement);
+        pStructuredOutput->WriteNamed(L"description", spec.Description().c_str());
+        obj.Write(_L_, *pStructuredOutput);
+        pStructuredOutput->EndElement(szElement);
     }
-    if (pObjectWriter)
+    if (pObjectTableOutput)
     {
-        obj.Write(_L_, pObjectWriter->GetTableOutput(), spec.Description());
+        obj.Write(_L_, *pObjectTableOutput, spec.Description());
     }
     return S_OK;
 }
 
-HRESULT Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const FileDirectory::FileInstance& file)
+HRESULT
+Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const FileDirectory::FileInstance& file, LPCWSTR szElement)
 {
     HRESULT hr = E_FAIL;
 
-    if (pWriterOutput)
+    if (pStructuredOutput)
     {
-        pWriterOutput->BeginElement(L"object_match");
-        pWriterOutput->WriteNameValuePair(L"description", spec.Description().c_str());
-        file.Write(_L_, pWriterOutput);
-        pWriterOutput->EndElement(L"object_match");
+        pStructuredOutput->BeginElement(szElement);
+        pStructuredOutput->WriteNamed(L"description", spec.Description().c_str());
+        file.Write(_L_, *pStructuredOutput);
+        pStructuredOutput->EndElement(szElement);
 
     }
 
-    if (pObjectWriter)
+    if (pObjectTableOutput)
     {
-        file.Write(_L_, pObjectWriter->GetTableOutput(), spec.Description());
+        file.Write(_L_, *pObjectTableOutput, spec.Description());
     }
     return S_OK;
 }
@@ -253,8 +263,11 @@ HRESULT Main::RunObject()
 {
     HRESULT hr = E_FAIL;
 
-    if (pWriterOutput)
-        pWriterOutput->BeginElement(L"object");
+    if (pStructuredOutput)
+    {
+        pStructuredOutput->BeginElement(L"object_directory");
+        pStructuredOutput->BeginCollection(L"object_match");
+    }
 
     for (const auto& objdir : ObjectDirs)
     {
@@ -332,7 +345,7 @@ HRESULT Main::RunObject()
                     log::Info(
                         _L_, L"Found                 : %s (%s)\r\n", object.Path.c_str(), spec.Description().c_str());
 
-                    LogObjectMatch(spec, object);
+                    LogObjectMatch(spec, object, nullptr);
                 }
             }
         }
@@ -411,17 +424,22 @@ HRESULT Main::RunObject()
                     }
 
                     // Dropping here means no previous test rejected the object
-                    LogObjectMatch(spec, file);
+                    LogObjectMatch(spec, file, nullptr);
                 }
             }
         }
     }
 
-    if (pWriterOutput)
-        pWriterOutput->EndElement(L"object");
+    if (pStructuredOutput)
+    {
+        pStructuredOutput->EndCollection(L"object_match");
+        pStructuredOutput->EndElement(L"object_directory");
+    }
 
     return S_OK;
 }
+
+#include "StructuredOutputWriter.h"
 
 HRESULT Main::Run()
 {
@@ -436,69 +454,68 @@ HRESULT Main::Run()
     SystemDetails::GetOrcComputerName(ComputerName);
 
     if (config.outFileSystem.Type != OutputSpec::Kind::None)
-        pFileSystemWriter = TableOutput::GetWriter(_L_, config.outFileSystem);
+        pFileSystemTableOutput = TableOutput::GetWriter(_L_, config.outFileSystem);
 
     if (config.outRegsitry.Type != OutputSpec::Kind::None)
-        pRegistryWriter = TableOutput::GetWriter(_L_, config.outRegsitry);
+        pRegistryTableOutput = TableOutput::GetWriter(_L_, config.outRegsitry);
 
     if (config.outObject.Type != OutputSpec::Kind::None)
-        pObjectWriter = TableOutput::GetWriter(_L_, config.outObject);
+        pObjectTableOutput = TableOutput::GetWriter(_L_, config.outObject);
 
     if (config.outStructured.Type & OutputSpec::Kind::StructuredFile)
     {
-        auto writer = StructuredOutputWriter::GetWriter(_L_, config.outStructured, nullptr);
-        pWriterOutput = std::dynamic_pointer_cast<StructuredOutputWriter>(writer);
+        pStructuredOutput = StructuredOutputWriter::GetWriter(_L_, config.outStructured, nullptr);
     }
     else if (config.outStructured.Type == OutputSpec::Kind::Directory)
     {
         auto writer = StructuredOutputWriter::GetWriter(
             _L_, config.outStructured, L"{Name}_{SystemType}_{ComputerName}.xml", L"FastFind", nullptr);
-        pWriterOutput = std::dynamic_pointer_cast<StructuredOutputWriter>(writer);
+        pStructuredOutput = std::dynamic_pointer_cast<StructuredOutputWriter>(writer);
     }
 
-    if (pWriterOutput != nullptr)
+    if (pStructuredOutput != nullptr)
     {
-        pWriterOutput->BeginElement(L"fast_find");
-        pWriterOutput->WriteNameValuePair(L"computer", ComputerName.c_str());
+        pStructuredOutput->BeginElement(L"fast_find");
+        pStructuredOutput->WriteNamed(L"computer", ComputerName.c_str());
 
         std::wstring strSystemDescr;
         if (SUCCEEDED(SystemDetails::GetDescriptionString(strSystemDescr)))
-            pWriterOutput->WriteNameValuePair(L"os", strSystemDescr.c_str());
+            pStructuredOutput->WriteNamed(L"os", strSystemDescr.c_str());
 
         std::wstring strSystemRole;
         if (SUCCEEDED(SystemDetails::GetSystemType(strSystemRole)))
-            pWriterOutput->WriteNameValuePair(L"role", strSystemRole.c_str());
+            pStructuredOutput->WriteNamed(L"role", strSystemRole.c_str());
     }
 
     RunFileSystem();
     RunRegistry();
     RunObject();
 
-    if (pWriterOutput != nullptr)
-        pWriterOutput->EndElement(L"fast_find");
+    if (pStructuredOutput != nullptr)
+        pStructuredOutput->EndElement(L"fast_find");
 
-    if (pFileSystemWriter != nullptr)
+    if (pFileSystemTableOutput != nullptr)
     {
-        pFileSystemWriter->Close();
-        pFileSystemWriter = nullptr;
+        pFileSystemTableOutput->Close();
+        pFileSystemTableOutput = nullptr;
     }
 
-    if (pRegistryWriter != nullptr)
+    if (pRegistryTableOutput != nullptr)
     {
-        pRegistryWriter->Close();
-        pRegistryWriter = nullptr;
+        pRegistryTableOutput->Close();
+        pRegistryTableOutput = nullptr;
     }
 
-    if (pObjectWriter != nullptr)
+    if (pObjectTableOutput != nullptr)
     {
-        pObjectWriter->Close();
-        pObjectWriter = nullptr;
+        pObjectTableOutput->Close();
+        pObjectTableOutput = nullptr;
     }
 
-    if (pWriterOutput != nullptr)
+    if (pStructuredOutput != nullptr)
     {
-        pWriterOutput->Close();
-        pWriterOutput = nullptr;
+        pStructuredOutput->Close();
+        pStructuredOutput = nullptr;
     }
     return S_OK;
 }

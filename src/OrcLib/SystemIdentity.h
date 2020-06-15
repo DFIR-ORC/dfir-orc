@@ -44,26 +44,26 @@ class SystemIdentity
 
 public:
 
-    static HRESULT Write(const std::shared_ptr<StructuredOutput::IWriter>& writer, IdentityArea areas = IdentityArea::All); 
+    static HRESULT Write(const std::shared_ptr<StructuredOutput::IOutput>& writer, IdentityArea areas = IdentityArea::All); 
 
     static HRESULT
-    CurrentProcess(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"process");
+    CurrentProcess(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"process");
     static HRESULT
-    CurrentUser(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"user");
-    static HRESULT System(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"system"); // Includes OS, PhysicalDrives, MountedVolumes,CPU, Memory & Network
+    CurrentUser(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"user");
+    static HRESULT System(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"system"); // Includes OS, PhysicalDrives, MountedVolumes,CPU, Memory & Network
     static HRESULT
-    OperatingSystem(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"operating_system");
-    static HRESULT Network(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"network");
+    OperatingSystem(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"operating_system");
+    static HRESULT Network(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"network");
     static HRESULT
-    PhysicalDrives(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"physical_drives");
+    PhysicalDrives(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"physical_drives");
     static HRESULT
-    MountedVolumes(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"mounted_volumes");
+    MountedVolumes(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"mounted_volumes");
     static HRESULT
-    PhysicalMemory(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"pysical_memory");
-    static HRESULT CPU(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"cpu");
+    PhysicalMemory(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"pysical_memory");
+    static HRESULT CPU(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"cpu");
 
     static HRESULT
-    Profiles(const std::shared_ptr<StructuredOutput::IWriter>& writer, const LPCWSTR elt = L"profile_list");
+    Profiles(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"profile_list");
 
 
 };

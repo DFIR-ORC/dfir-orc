@@ -95,7 +95,7 @@ public:
 
             if (volStatWriter != nullptr)
             {
-                auto& volStatOutput = volStatWriter->GetTableOutput();
+                auto& volStatOutput = *volStatWriter;
                 for (auto& loc : locations)
                 {
                     auto reader = loc->GetReader();

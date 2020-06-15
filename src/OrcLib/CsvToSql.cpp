@@ -102,7 +102,7 @@ HRESULT CsvToSql::MoveData(const TableOutput::CSV::FileReader::Record& csv_recor
         [this, &sql_record](const TableOutput::CSV::FileReader::Column& column) {
             if (FAILED(MoveColumn(column, sql_record[m_mappings[column.Definition->Index]])))
             {
-                m_pSqlWriter->GetTableOutput().AbandonColumn();
+                m_pSqlWriter->AbandonColumn();
             }
             else
                 m_pSqlWriter->NextColumn();
@@ -120,7 +120,7 @@ HRESULT CsvToSql::MoveNextLine(TableOutput::CSV::FileReader::Record& record)
         if (FAILED(hr = MoveData(record, m_pSqlWriter->GetColumnDefinitions())))
             return hr;
 
-        if (FAILED(hr = m_pSqlWriter->GetTableOutput().WriteEndOfLine()))
+        if (FAILED(hr = m_pSqlWriter->WriteEndOfLine()))
             return hr;
     }
     else

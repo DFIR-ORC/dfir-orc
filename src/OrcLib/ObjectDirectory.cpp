@@ -147,21 +147,22 @@ HRESULT ObjectDirectory::ObjectInstance::Write(const logger&, ITableOutput& outp
 
 HRESULT ObjectDirectory::ObjectInstance::Write(
     const logger&,
-    const std::shared_ptr<StructuredOutputWriter>& pWriter) const
+    IStructuredOutput& pWriter,
+    LPCWSTR szElement) const
 {
-    pWriter->BeginElement(L"object");
+    pWriter.BeginElement(szElement);
 
-    pWriter->WriteNameExactFlagsPair(L"type", Type, ObjectDirectory::g_ObjectTypeDefinition);
-    pWriter->WriteNameValuePair(L"name", Name.c_str());
+    pWriter.WriteNamed(L"type", (DWORD) Type, ObjectDirectory::g_ObjectTypeDefinition);
+    pWriter.WriteNamed(L"name", Name.c_str());
 
     if (!Path.empty())
-        pWriter->WriteNameValuePair(L"path", Path.c_str());
+        pWriter.WriteNamed(L"path", Path.c_str());
     if (!LinkTarget.empty())
-        pWriter->WriteNameValuePair(L"link_target", LinkTarget.c_str());
+        pWriter.WriteNamed(L"link_target", LinkTarget.c_str());
     if (LinkCreationTime.QuadPart != 0LL)
-        pWriter->WriteNameFileTimePair(L"link_creationtime", LinkCreationTime.QuadPart);
+        pWriter.WriteNamed(L"link_creationtime", LinkCreationTime.QuadPart);
 
-    pWriter->EndElement(L"object");
+    pWriter.EndElement(szElement);
     return S_OK;
 }
 

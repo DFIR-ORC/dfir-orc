@@ -242,6 +242,7 @@ class FileCopyDownloadTask;
 namespace StructuredOutput {
 struct Options;
 class Writer;
+class IOutput;
 
 namespace XML {
 struct Options;
@@ -255,13 +256,14 @@ struct Options;
 }  // namespace StructuredOutput
 
 using StructuredOutputOptions = StructuredOutput::Options;
-using StructuredOutputWriter = StructuredOutput::Writer;
+using IStructuredOutput = StructuredOutput::IOutput;
 
 class XmlLiteExtension;
-using XmlOutputWriter  = StructuredOutput::XML::Writer;
 using XmlOutputOptions = StructuredOutput::XML::Options;
 
 using JSONOutputOptions = StructuredOutput::JSON::Options;
+
+
 
 // In&Out/TableOutput/CSV
 namespace TableOutput::CSV {
@@ -286,8 +288,11 @@ namespace TableOutput {
 class Column;
 class Schema;
 class IOutput;
+class IWriter;
 }  // namespace TableOutput
 using ITableOutput = TableOutput::IOutput;
+using ITableWriter = TableOutput::IWriter;
+
 
 // In&Out/Import
 class ImportAgent;

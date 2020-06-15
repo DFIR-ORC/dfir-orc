@@ -50,7 +50,7 @@ using JSONOutputOptions = JSON::Options;
 using XMLOutputOptions  = XML::Options;
 
 
-class ORCLIB_API Writer : public Orc::OutputWriter, public LegacyWriter
+class ORCLIB_API Writer : public Orc::OutputWriter, public IWriter
 {
 
 public:

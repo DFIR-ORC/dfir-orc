@@ -520,7 +520,7 @@ HRESULT Main::Run()
                         }
                     }
 
-                    auto& output = pRegInfoWriter->GetTableOutput();
+                    auto& output = *pRegInfoWriter;
 
                     if (aHive.Stream)
                     {

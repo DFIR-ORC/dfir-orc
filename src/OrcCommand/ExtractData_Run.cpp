@@ -33,7 +33,7 @@ namespace {
 void WriteSuccessfulReport(TableOutput::IWriter& writer, const ImportNotification::Notification& notification)
 {
     const auto& item = notification->Item();
-    auto& reportTable = writer.GetTableOutput();
+    auto& reportTable = writer;
 
     SystemDetails::WriteComputerName(reportTable);
 
@@ -99,7 +99,7 @@ void WriteSuccessfulReport(TableOutput::IWriter& writer, const ImportNotificatio
 void WriteFailureReport(TableOutput::IWriter& writer, const ImportNotification::Notification& notification)
 {
     const auto& item = notification->Item();
-    auto& reportTable = writer.GetTableOutput();
+    TableOutput::IOutput& reportTable = writer;
 
     SystemDetails::WriteComputerName(reportTable);
 

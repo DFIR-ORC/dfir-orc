@@ -34,7 +34,6 @@ public:
 
 class ORCLIB_API Writer
     : public ::Orc::TableOutput::Writer
-    , private ITableOutput
     , public ::Orc::TableOutput::IStreamWriter
 {
     struct MakeSharedEnabler;
