@@ -92,6 +92,9 @@ public:
     virtual HRESULT WriteAttributes(DWORD dwAttibutes) override final;
     virtual HRESULT WriteNamedAttributes(LPCWSTR szName, DWORD dwAttibutes) override final;
 
+    virtual HRESULT WriteFileTime(ULONGLONG fileTime) override final;
+    virtual HRESULT WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime) override final;
+
     
     virtual HRESULT Write(FILETIME fileTime) override final { return Write_(fileTime); }
     virtual HRESULT WriteNamed(LPCWSTR szName, FILETIME fileTime) override final

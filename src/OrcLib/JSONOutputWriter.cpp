@@ -303,6 +303,24 @@ Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedAttributes(LPC
 }
 
 template <class _RapidWriter, typename _Ch>
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFileTime(ULONGLONG fileTime)
+{
+    StructuredOutput::Writer::_Buffer buffer;
+    WriteFileTimeBuffer(buffer, fileTime);
+    rapidWriter.String(buffer.get());
+    return S_OK;
+}
+
+
+template <class _RapidWriter, typename _Ch>
+HRESULT
+Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime)
+{
+    rapidWriter.Key(szName);
+    return WriteFileTime(fileTime);
+}
+
+template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(FILETIME fileTime)
 {
     StructuredOutput::Writer::_Buffer buffer;

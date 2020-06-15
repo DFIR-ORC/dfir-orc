@@ -334,6 +334,51 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteAttributes(DWORD dwFileAttribut
     return S_OK;
 }
 
+HRESULT Orc::StructuredOutput::XML::Writer::WriteFileTime(ULONGLONG fileTime)
+{
+    _Buffer buffer;
+
+    if (auto hr = WriteFileTimeBuffer(buffer, fileTime); FAILED(hr))
+        return hr;
+
+    if (m_collectionStack.empty())
+    {
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime)
+{
+    _Buffer buffer;
+
+    if (auto hr = WriteFileTimeBuffer(buffer, fileTime); FAILED(hr))
+        return hr;
+
+    if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, buffer.get()); FAILED(hr))
+    {
+        XmlLiteExtension::LogError(_L_, hr);
+        return hr;
+    }
+    return S_OK;
+}
+
+
 HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedAttributes(LPCWSTR szName, DWORD dwFileAttributes)
 {
     _Buffer buffer;

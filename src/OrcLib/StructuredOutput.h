@@ -63,6 +63,9 @@ namespace StructuredOutput {
         virtual HRESULT Write(FILETIME fileTime) PURE;
         virtual HRESULT WriteNamed(LPCWSTR szName, FILETIME fileTime) PURE;
 
+        virtual HRESULT WriteFileTime(ULONGLONG fileTime) PURE;
+        virtual HRESULT WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime) PURE;
+
         virtual HRESULT Write(const WCHAR* szArray, DWORD dwCharCount) PURE;
         virtual HRESULT WriteNamed(LPCWSTR szName, const WCHAR* szArray, DWORD dwCharCount) PURE;
 

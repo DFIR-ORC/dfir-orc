@@ -86,6 +86,8 @@ protected:
     HRESULT WriteBuffer(_Buffer& buffer, LARGE_INTEGER ullValue, bool bInHex = false);
 
     HRESULT WriteAttributesBuffer(_Buffer& buffer, DWORD dwAttibutes);
+    HRESULT WriteFileTimeBuffer(_Buffer& buffer, ULONGLONG dwAttibutes);
+
     HRESULT WriteBuffer(_Buffer& buffer, FILETIME fileTime);
     HRESULT WriteBuffer(_Buffer& buffer, const WCHAR* szArray, DWORD dwCharCount);
     HRESULT WriteBuffer(_Buffer& buffer, const BYTE pSHA1[], DWORD dwLen, bool b0xPrefix);

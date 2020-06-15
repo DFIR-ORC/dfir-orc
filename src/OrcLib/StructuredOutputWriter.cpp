@@ -99,6 +99,14 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, FILETIME fil
     return S_OK;
 }
 
+HRESULT Orc::StructuredOutput::Writer::WriteFileTimeBuffer(_Buffer& buffer, ULONGLONG fileTime)
+{
+    FILETIME ft;
+    ft.dwLowDateTime  = ((LARGE_INTEGER*)&fileTime)->LowPart;
+    ft.dwHighDateTime = ((LARGE_INTEGER*)&fileTime)->HighPart;
+    return WriteBuffer(buffer,ft);
+}
+
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, const WCHAR* szArray, DWORD dwCharCount)
 {
     buffer.resize(dwCharCount);

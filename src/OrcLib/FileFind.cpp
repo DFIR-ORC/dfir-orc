@@ -23,6 +23,8 @@
 #include "TableOutputWriter.h"
 #include "StructuredOutputWriter.h"
 
+#include "Convert.h"
+
 #include "ConfigFile_Common.h"
 
 #include "SystemDetails.h"
@@ -345,10 +347,10 @@ HRESULT FileFind::Match::Write(
         {
             pWriter.BeginElement(L"standardinformation");
             {
-                pWriter.WriteNamed(L"creation", StandardInformation->CreationTime);
-                pWriter.WriteNamed(L"lastmodification", StandardInformation->LastModificationTime);
-                pWriter.WriteNamed(L"lastaccess", StandardInformation->LastAccessTime);
-                pWriter.WriteNamed(L"lastentrychange", StandardInformation->LastChangeTime);
+                pWriter.WriteNamedFileTime(L"creation", StandardInformation->CreationTime);
+                pWriter.WriteNamedFileTime(L"lastmodification", StandardInformation->LastModificationTime);
+                pWriter.WriteNamedFileTime(L"lastaccess", StandardInformation->LastAccessTime);
+                pWriter.WriteNamedFileTime(L"lastentrychange", StandardInformation->LastChangeTime);
                 pWriter.WriteNamedAttributes(L"attributes", StandardInformation->FileAttributes);
             }
             pWriter.EndElement(L"standardinformation");
@@ -365,10 +367,10 @@ HRESULT FileFind::Match::Write(
                 LARGE_INTEGER* pParentLI = (LARGE_INTEGER*)&name_it->FILENAME()->ParentDirectory;
                 pWriter.WriteNamed(L"parentfrn", (ULONGLONG)pParentLI->QuadPart, true);
 
-                pWriter.WriteNamed(L"creation", name_it->FILENAME()->Info.CreationTime);
-                pWriter.WriteNamed(L"lastmodification", name_it->FILENAME()->Info.LastModificationTime);
-                pWriter.WriteNamed(L"lastaccess", name_it->FILENAME()->Info.LastAccessTime);
-                pWriter.WriteNamed(L"lastentrychange", name_it->FILENAME()->Info.LastChangeTime);
+                pWriter.WriteNamedFileTime(L"creation", name_it->FILENAME()->Info.CreationTime);
+                pWriter.WriteNamedFileTime(L"lastmodification", name_it->FILENAME()->Info.LastModificationTime);
+                pWriter.WriteNamedFileTime(L"lastaccess", name_it->FILENAME()->Info.LastAccessTime);
+                pWriter.WriteNamedFileTime(L"lastentrychange", name_it->FILENAME()->Info.LastChangeTime);
                 pWriter.EndElement(nullptr);
             }
             pWriter.EndCollection(L"i30");
@@ -385,10 +387,10 @@ HRESULT FileFind::Match::Write(
                     LARGE_INTEGER* pParentLI = (LARGE_INTEGER*)&name_it->FILENAME()->ParentDirectory;
                     pWriter.WriteNamed(L"parentfrn", (ULONGLONG)pParentLI->QuadPart, true);
 
-                    pWriter.WriteNamed(L"creation", name_it->FILENAME()->Info.CreationTime);
-                    pWriter.WriteNamed(L"lastmodification", name_it->FILENAME()->Info.LastModificationTime);
-                    pWriter.WriteNamed(L"lastaccess", name_it->FILENAME()->Info.LastAccessTime);
-                    pWriter.WriteNamed(L"lastentrychange", name_it->FILENAME()->Info.LastChangeTime);
+                    pWriter.WriteNamedFileTime(L"creation", name_it->FILENAME()->Info.CreationTime);
+                    pWriter.WriteNamedFileTime(L"lastmodification", name_it->FILENAME()->Info.LastModificationTime);
+                    pWriter.WriteNamedFileTime(L"lastaccess", name_it->FILENAME()->Info.LastAccessTime);
+                    pWriter.WriteNamedFileTime(L"lastentrychange", name_it->FILENAME()->Info.LastChangeTime);
                 }
                 pWriter.EndElement(nullptr);
             }
