@@ -782,10 +782,8 @@ target_link_libraries(OrcLib
         Iphlpapi.lib
 )
 
-if(ORC_BUILD_JSON)
-    find_package(RapidJSON CONFIG REQUIRED)
-    target_include_directories(OrcLib PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
-endif()
+find_package(RapidJSON CONFIG REQUIRED)
+target_include_directories(OrcLib PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
 
 if(ORC_BUILD_SSDEEP)
     find_package(ssdeep CONFIG REQUIRED)
