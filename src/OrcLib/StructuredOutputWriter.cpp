@@ -69,8 +69,8 @@ HRESULT Orc::StructuredOutput::Writer::WriteAttributesBuffer(_Buffer& buffer, DW
         dwFileAttributes & FILE_ATTRIBUTE_NORMAL ? L'N' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_OFFLINE ? L'O' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_READONLY ? L'R' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? L'?' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? L'?' : L'.',
+        dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? L'L' : L'.',
+        dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? L'P' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_SYSTEM ? L'S' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY ? L'T' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_VIRTUAL ? L'V' : L'.');
