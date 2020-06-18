@@ -112,6 +112,55 @@ HRESULT BITSAgent::Initialize()
     else
         return hr;
 
+
+    //TODO: Mutualize this code between the copyfileagent & bitsagent
+    if (m_config.bitsMode == OutputSpec::BITSMode::SMB && !m_config.UserName.empty())
+    {
+        NETRESOURCE nr;
+
+        nr.dwScope = 0L;
+        nr.dwType = RESOURCETYPE_DISK;
+        nr.dwDisplayType = 0L;
+        nr.dwUsage = 0L;
+
+        nr.lpLocalName = NULL;
+
+        nr.lpComment = NULL;
+        nr.lpProvider = NULL;
+
+        wstringstream stream;
+        WCHAR szUNC[MAX_PATH];
+        ZeroMemory(szUNC, MAX_PATH * sizeof(WCHAR));
+
+        stream << L"\\\\" << m_config.ServerName << m_config.RootPath;
+        stream.str()._Copy_s(szUNC, MAX_PATH, MAX_PATH);
+        nr.lpRemoteName = szUNC;
+
+        WCHAR szUser[MAX_PATH];
+        WCHAR szPass[MAX_PATH];
+        ZeroMemory(szUser, MAX_PATH * sizeof(WCHAR));
+        ZeroMemory(szPass, MAX_PATH * sizeof(WCHAR));
+        m_config.UserName._Copy_s(szUser, MAX_PATH, MAX_PATH);
+        szUser[m_config.UserName.size()] = L'\0';
+        m_config.Password._Copy_s(szPass, MAX_PATH, MAX_PATH);
+        szPass[m_config.UserName.size()] = L'\0';
+
+        DWORD dwRet = 0;
+
+        if ((dwRet = WNetAddConnection2(&nr, szPass, szUser, CONNECT_TEMPORARY)) != NO_ERROR)
+        {
+            log::Error(_L_, HRESULT_FROM_WIN32(dwRet), L"Failed to add a connection to %s\r\n", szUNC);
+        }
+        else
+        {
+            //TODO: remove this diag
+            log::Info(_L_, L"Added a connection to %s\r\n", szUNC);
+            m_bAddedConnection = true;
+        }
+        SecureZeroMemory(szUser, MAX_PATH * sizeof(WCHAR));
+        SecureZeroMemory(szPass, MAX_PATH * sizeof(WCHAR));
+    }
+
     return S_OK;
 }
 
@@ -362,6 +411,15 @@ HRESULT BITSAgent::Cancel()
 
 HRESULT BITSAgent::UnInitialize()
 {
+    // TODO: Mutualize this code between the copyfileagent & bitsagent
+    if (m_bAddedConnection)
+    {
+        wstringstream stream;
+
+        stream << L"\\\\" << m_config.ServerName << m_config.RootPath << L"\\";
+
+        WNetCancelConnection2(stream.str().c_str(), 0L, TRUE);
+    }
     return S_OK;
 }
 
