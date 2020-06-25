@@ -94,7 +94,7 @@ function Build-Orc
     $Generators = @{
         "vs2017_x86" = @(("-G", "`"Visual Studio 15 2017`""))
         "vs2017_x64" = @(("-G", "`"Visual Studio 15 2017 Win64`""))
-        "vs2019_x86" = @(("-G", "`"Visual Studio 16 2019`""))
+        "vs2019_x86" = @(("-G", "`"Visual Studio 16 2019`""), ("-A", "Win32"))
         "vs2019_x64" = @(("-G", "`"Visual Studio 16 2019`""), ("-A", "x64"))
     }
 
@@ -119,21 +119,6 @@ function Build-Orc
 
         foreach($Config in $Configuration)
         {
-            # if($Toolchain.Equals("vs2019"))
-            # {
-            #     $ToolchainArch = "-A ${Architecture}"
-            # }
-
-            # $CMakeGenerationArgs = @(
-            #     ("-G", "${Generator}")
-            #     ("-T", "v141_xp")
-            #     "-DORC_BUILD_VCPKG=ON"
-            #     "-DVCPKG_TARGET_TRIPLET=${Architecture}-windows-static"
-            #     "-DCMAKE_TOOLCHAIN_FILE=${OrcPath}\external\vcpkg\scripts\buildsystems\vcpkg.cmake"
-            #     "${OrcPath}"
-            # )
-            # Write-Output @CMakeGenerationArgs
-            # . $CMakeExe @CMakeGenerationArgs
 
             . $CMakeExe `
                 @Generator `
