@@ -53,6 +53,7 @@ set(SOURCES
     src/cmd/extract/cmd_extract.h
     src/cmd/extract/cmd_extract.cpp
     src/cmd/set/compression_type.h
+    src/cmd/set/compression_type.cpp
     src/cmd/set/cmd_set.h
     src/cmd/set/cmd_set.cpp
     src/cmd/set/7z/archive_update_callback.h

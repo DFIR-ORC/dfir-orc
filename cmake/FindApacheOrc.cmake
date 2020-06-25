@@ -11,7 +11,7 @@ find_package(protobuf CONFIG REQUIRED)
 find_package(Snappy CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(LZ4 REQUIRED)
-find_package(ZSTD REQUIRED)
+find_package(zstd CONFIG REQUIRED)
 
 # Unfortunately the directory search order has 'debug' first:
 #
@@ -45,6 +45,6 @@ target_link_libraries(ApacheOrc::ApacheOrc
         Snappy::snappy
         ZLIB::ZLIB
         LZ4::LZ4
-        ZSTD::ZSTD
+        libzstd
         debug ${APACHE_ORC_LIB_DEBUG} optimized ${APACHE_ORC_LIB_RELEASE}
 )
