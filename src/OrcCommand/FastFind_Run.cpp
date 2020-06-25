@@ -62,7 +62,7 @@ HRESULT Main::RunFileSystem()
     HRESULT hr = E_FAIL;
 
     if (pStructuredOutput)
-        pStructuredOutput->BeginCollection(L"filesystem_match");
+        pStructuredOutput->BeginCollection(L"filesystem");
 
     if (FAILED(
             hr = config.FileSystem.Files.Find(
@@ -107,7 +107,7 @@ HRESULT Main::RunFileSystem()
     }
 
     if (pStructuredOutput)
-        pStructuredOutput->EndCollection(L"filesystem_match");
+        pStructuredOutput->EndCollection(L"filesystem");
     return S_OK;
 }
 
