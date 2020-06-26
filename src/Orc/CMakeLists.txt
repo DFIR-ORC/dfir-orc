@@ -148,9 +148,9 @@ endif()
 if(${ORC_BUILD_APACHE_ORC})
 
     if("${TARGET_ARCH}" STREQUAL "x64")
-        set(ORCOPTROWCOLUMN_VAR_NAME "ORCOPTROWCOLUMN_X64DLL")
+        set(APACHEORC_VAR_NAME "APACHEORC_X64DLL")
     elseif("${TARGET_ARCH}" STREQUAL "x86")
-        set(ORCOPTROWCOLUMN_VAR_NAME "ORCOPTROWCOLUMN_X86DLL")
+        set(APACHEORC_VAR_NAME "APACHEORC_X86DLL")
     else()
         message(FATAL_ERROR "Unknown architecture: ${TARGET_ARCH}")
     endif()
@@ -158,19 +158,19 @@ if(${ORC_BUILD_APACHE_ORC})
     add_custom_command(
         TARGET Orc
         POST_BUILD
-        DEPENDS rcedit, OrcOptRowColumn
+        DEPENDS rcedit, OrcApacheOrc
         VERBATIM
 
         COMMAND $<TARGET_FILE:rcedit>
             set --type "VALUES"
-                --name "${ORCOPTROWCOLUMN_VAR_NAME}"
-                --value-utf16 "7z:#ORCOPTROWCOLUMN|OrcOptRowColumn.dll"
+                --name "${APACHEORC_VAR_NAME}"
+                --value-utf16 "7z:#APACHEORC|OrcApacheOrc.dll"
                 $<TARGET_FILE:Orc>
 
         COMMAND $<TARGET_FILE:rcedit>
             set --type "BINARY"
-                --name "ORCOPTROWCOLUMN"
-                --value-path $<TARGET_FILE:OrcOptRowColumn>
+                --name "APACHEORC"
+                --value-path $<TARGET_FILE:OrcApacheOrc>
                 --compress=7z
                 $<TARGET_FILE:Orc>
     )

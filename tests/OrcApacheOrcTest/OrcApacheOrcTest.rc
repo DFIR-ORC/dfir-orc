@@ -51,24 +51,24 @@ END
 
 #  ifdef _DEBUG
 #     ifdef _DLL
-ORCOPTROWCOLUMN_X64             BINARY                  "..\\x64\\DllDebug\\OrcOptRowColumn.dll"
+APACHEORC_X64             BINARY                  "..\\x64\\DllDebug\\OrcApacheOrc.dll"
 #     else
-ORCOPTROWCOLUMN_X64             BINARY                  "..\\x64\\StaticDebug\\OrcOptRowColumn.dll"
+APACHEORC_X64             BINARY                  "..\\x64\\StaticDebug\\OrcApacheOrc.dll"
 #     endif
 #  else
 
 #     ifdef _DLL
-ORCOPTROWCOLUMN_X64             BINARY                  "..\\x64\\DllRelease\\OrcOptRowColumn.dll"
+APACHEORC_X64             BINARY                  "..\\x64\\DllRelease\\OrcApacheOrc.dll"
 #     else
-ORCOPTROWCOLUMN_X64             BINARY                  "..\\x64\\StaticRelease\\OrcOptRowColumn.dll"
+APACHEORC_X64             BINARY                  "..\\x64\\StaticRelease\\OrcApacheOrc.dll"
 #     endif
 
 #  endif
 
 #endif
 
-ORCOPTROWCOLUMN_X64DLL             VALUES
+APACHEORC_X64DLL             VALUES
 BEGIN
-L"res:#ORCOPTROWCOLUMN_X64"
+L"res:#APACHEORC_X64"
 END
 

@@ -13,19 +13,19 @@ orc_add_compile_options()
 find_package(ApacheOrc REQUIRED)
 
 set(SRC
-    "OptRowColumnMemoryPool.h"
-    "OptRowColumnStream.h"
-    "OptRowColumnWriter.h"
-    "OptRowColumnMemoryPool.cpp"
-    "OptRowColumnStream.cpp"
-    "OptRowColumnWriter.cpp"
+    "ApacheOrcMemoryPool.h"
+    "ApacheOrcStream.h"
+    "ApacheOrcWriter.h"
+    "ApacheOrcMemoryPool.cpp"
+    "ApacheOrcStream.cpp"
+    "ApacheOrcWriter.cpp"
 )
 
 set(SRC_COMMON "targetver.h")
 
 source_group(Common FILES ${SRC_COMMON} "stdafx.cpp" "stdafx.h")
 
-add_library(OrcOptRowColumnLib
+add_library(OrcApacheOrcLib
     STATIC
         "stdafx.h"
         "stdafx.cpp"
@@ -33,19 +33,19 @@ add_library(OrcOptRowColumnLib
         ${SRC_COMMON}
 )
 
-target_include_directories(OrcOptRowColumnLib
+target_include_directories(OrcApacheOrcLib
     INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(OrcOptRowColumnLib
+target_link_libraries(OrcApacheOrcLib
     PUBLIC
         crypt32.lib
         ApacheOrc::ApacheOrc
         OrcLib
 )
 
-set_target_properties(OrcOptRowColumnLib
+set_target_properties(OrcApacheOrcLib
     PROPERTIES
-        FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}OrcOptRowColumn"
+        FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}OrcApacheOrc"
 )

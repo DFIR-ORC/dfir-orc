@@ -8,9 +8,9 @@
 
 #include "stdafx.h"
 
-#include "OptRowColumnStream.h"
+#include "ApacheOrcStream.h"
 
-uint64_t Orc::TableOutput::OptRowColumn::Stream::getLength() const
+uint64_t Orc::TableOutput::ApacheOrc::Stream::getLength() const
 {
     if (m_Stream)
         return m_Stream->GetSize();
@@ -18,12 +18,12 @@ uint64_t Orc::TableOutput::OptRowColumn::Stream::getLength() const
     return 0LLU;
 }
 
-uint64_t Orc::TableOutput::OptRowColumn::Stream::getNaturalWriteSize() const
+uint64_t Orc::TableOutput::ApacheOrc::Stream::getNaturalWriteSize() const
 {
     return DEFAULT_READ_SIZE;
 }
 
-void Orc::TableOutput::OptRowColumn::Stream::write(const void* buf, size_t length)
+void Orc::TableOutput::ApacheOrc::Stream::write(const void* buf, size_t length)
 {
     if (m_Stream)
     {
@@ -36,7 +36,7 @@ void Orc::TableOutput::OptRowColumn::Stream::write(const void* buf, size_t lengt
     }
 }
 
-void Orc::TableOutput::OptRowColumn::Stream::close()
+void Orc::TableOutput::ApacheOrc::Stream::close()
 {
     if (m_Stream)
         m_Stream->Close();

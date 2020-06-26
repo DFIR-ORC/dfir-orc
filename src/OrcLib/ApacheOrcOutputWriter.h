@@ -15,16 +15,16 @@ namespace Orc {
 
 using namespace std::string_literals;
 
-class OptRowColumnOutputWriter : public TableOutputExtension
+class ApacheOrcOutputWriter : public TableOutputExtension
 {
 public:
-    OptRowColumnOutputWriter(logger pLog)
+    ApacheOrcOutputWriter(logger pLog)
         : TableOutputExtension(
             std::move(pLog),
-            L"orcoptrowcolumn.dll"s,
-            L"ORCOPTROWCOLUMN_X86DLL"s,
-            L"ORCOPTROWCOLUMN_X64DLL"s) {};
-    ~OptRowColumnOutputWriter() {};
+            L"orcapacheorc.dll"s,
+            L"APACHEORC_X86DLL"s,
+            L"APACHEORC_X64DLL"s) {};
+    ~ApacheOrcOutputWriter() {};
 };
 
 }  // namespace Orc

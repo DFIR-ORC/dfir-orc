@@ -531,7 +531,7 @@ source_group(In&Out\\TableOutput\\Parquet
     FILES ${SRC_INOUT_TABLEOUTPUT_PARQUET}
 )
 
-set(SRC_INOUT_TABLEOUTPUT_APACHE_ORC OptRowColumnOutputWriter.h)
+set(SRC_INOUT_TABLEOUTPUT_APACHE_ORC ApacheOrcOutputWriter.h)
 
 source_group(In&Out\\TableOutput\\ApacheOrc
     FILES ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}

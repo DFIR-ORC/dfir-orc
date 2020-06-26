@@ -14,8 +14,8 @@ if(ORC_BUILD_COMMAND OR ORC_BUILD_ORC OR ORC_BUILD_FASTFIND)
 endif()
 
 if(ORC_BUILD_APACHE_ORC)
-    add_subdirectory(OrcOptRowColumnLib)
-    add_subdirectory(OrcOptRowColumn)
+    add_subdirectory(OrcApacheOrcLib)
+    add_subdirectory(OrcApacheOrc)
 endif()
 
 # Parquet depends on arrow library which does not exist for x86

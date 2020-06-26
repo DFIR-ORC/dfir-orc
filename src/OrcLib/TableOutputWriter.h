@@ -88,7 +88,7 @@ struct Options : Orc::TableOutput::Options
 };
 }  // namespace Sql
 
-namespace OptRowColumn {
+namespace ApacheOrc {
 struct Options : Orc::TableOutput::Options
 {
     std::optional<DWORD> BatchSize;
@@ -102,7 +102,7 @@ struct Options : Orc::TableOutput::Options
 [[nodiscard]] std::shared_ptr<IStreamWriter> GetCSVWriter(const logger& pLog, std::unique_ptr<Options>&& options);
 [[nodiscard]] std::shared_ptr<IStreamWriter> GetParquetWriter(const logger& pLog, std::unique_ptr<Options>&& options);
 [[nodiscard]] std::shared_ptr<IStreamWriter>
-GetOptRowColumnWriter(const logger& pLog, std::unique_ptr<Options>&& options);
+GetApacheOrcnWriter(const logger& pLog, std::unique_ptr<Options>&& options);
 
 [[nodiscard]] std::shared_ptr<IConnectWriter> GetSqlWriter(const logger& pLog, std::unique_ptr<Options>&& options);
 [[nodiscard]] std::shared_ptr<IConnection> GetSqlConnection(const logger& pLog, std::unique_ptr<Options>&& options);
