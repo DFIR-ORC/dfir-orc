@@ -30,10 +30,10 @@ function Build-Orc
         None or error on failure.
 
     .EXAMPLE
-        Build DFIR-Orc in 'F:\dfir-orc\build-x64' and place artefacts in 'F:\dfir-orc\build-x64\Artefacts'
+        Build DFIR-Orc in 'F:\dfir-orc\build' and place artifacts in 'F:\dfir-orc\build\bin\' and 'F:\dfir-orc\build\pdb\'
 
         . F:\Orc\tools\ci\build.ps1
-        Build-Orc -Path F:\dfir-orc -Clean -Output build-x64 -Configuration Debug,MinSizeRel -Architecture x64 -Runtime static
+        Build-Orc -Path F:\dfir-orc -Clean -Configuration Debug,MinSizeRel -Architecture x86,x64 -Runtime static
     #>
 
     [cmdletbinding()]
@@ -52,7 +52,7 @@ function Build-Orc
         $Output,
         [Parameter(Mandatory = $True)]
         [ValidateSet('x86', 'x64')]
-        [String]
+        [String[]]
         $Architecture,
         [Parameter(Mandatory = $False)]
         [ValidateSet('vs2017', 'vs2019')]
@@ -95,8 +95,6 @@ function Build-Orc
         $Output = "$OrcPath/$Output"
     }
 
-    $BuildDir = "$BuildDirectory/$Architecture"
-
     $Generators = @{
         "vs2017_x86" = @(("-G", "`"Visual Studio 15 2017`""))
         "vs2017_x64" = @(("-G", "`"Visual Studio 15 2017 Win64`""))
@@ -104,7 +102,6 @@ function Build-Orc
         "vs2019_x64" = @(("-G", "`"Visual Studio 16 2019`""), ("-A", "x64"))
     }
 
-    $Generator = $Generators[$Toolchain + "_" + $Architecture]
 
     $CMakeOptions = @()
 
@@ -118,43 +115,49 @@ function Build-Orc
         $CMakeOptions += @("-DORC_BUILD_PARQUET=ON")
     }
 
-    if($Clean)
+    foreach($Arch in $Architecture)
     {
-        Remove-Item -Force -Recurse -Path $BuildDir -ErrorAction Ignore
-    }
-
-    New-Item -Force -ItemType Directory -Path $BuildDir | Out-Null
-
-    Push-Location $BuildDir
-    try
-    {
-        $CMakeExe = Find-CMake
-        if(-not $CMakeExe)
+        $BuildDir = "$BuildDirectory/$Arch"
+        if($Clean)
         {
-            Write-Error "Cannot find 'cmake.exe'"
-            return
+            Remove-Item -Force -Recurse -Path $BuildDir -ErrorAction Ignore
         }
 
-        foreach($Config in $Configuration)
+        New-Item -Force -ItemType Directory -Path $BuildDir | Out-Null
+
+        Push-Location $BuildDir
+
+        $Generator = $Generators[$Toolchain + "_" + $Arch]
+        try
         {
+            $CMakeExe = Find-CMake
+            if(-not $CMakeExe)
+            {
+                Write-Error "Cannot find 'cmake.exe'"
+                return
+            }
 
-            . $CMakeExe `
-                @Generator `
-                -T v141_xp `
-                -DORC_BUILD_VCPKG=ON `
-                -DVCPKG_TARGET_TRIPLET="${Architecture}-windows-static" `
-                -DCMAKE_TOOLCHAIN_FILE="${OrcPath}\external\vcpkg\scripts\buildsystems\vcpkg.cmake" `
-                $CMakeOptions `
-                $OrcPath
+            foreach($Config in $Configuration)
+            {
 
-            . $CMakeExe --build . --config $Config -- -maxcpucount
+                . $CMakeExe `
+                    @Generator `
+                    -T v141_xp `
+                    -DORC_BUILD_VCPKG=ON `
+                    -DVCPKG_TARGET_TRIPLET="${Arch}-windows-static" `
+                    -DCMAKE_TOOLCHAIN_FILE="${OrcPath}\external\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+                    $CMakeOptions `
+                    $OrcPath
 
-            . $CMakeExe --install . --prefix $Output --config $Config
+                . $CMakeExe --build . --config $Config -- -maxcpucount
+
+                . $CMakeExe --install . --prefix $Output --config $Config
+            }
         }
-    }
-    finally
-    {
-        Pop-Location
+        finally
+        {
+            Pop-Location
+        }
     }
 }
 
