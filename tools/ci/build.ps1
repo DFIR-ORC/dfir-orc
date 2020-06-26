@@ -68,6 +68,12 @@ function Build-Orc
         $Runtime = 'static',
         [Parameter(Mandatory = $False)]
         [switch]
+        $ApacheOrc,
+        [Parameter(Mandatory = $False)]
+        [switch]
+        $Parquet,
+        [Parameter(Mandatory = $False)]
+        [switch]
         $Clean
     )
 
@@ -100,6 +106,18 @@ function Build-Orc
 
     $Generator = $Generators[$Toolchain + "_" + $Architecture]
 
+    $CMakeOptions = @()
+
+    if($ApacheOrc)
+    {
+        $CMakeOptions += @("-DORC_BUILD_APACHE_ORC=ON")
+    }
+
+    if($Parquet)
+    {
+        $CMakeOptions += @("-DORC_BUILD_PARQUET=ON")
+    }
+
     if($Clean)
     {
         Remove-Item -Force -Recurse -Path $BuildDir -ErrorAction Ignore
@@ -126,6 +144,7 @@ function Build-Orc
                 -DORC_BUILD_VCPKG=ON `
                 -DVCPKG_TARGET_TRIPLET="${Architecture}-windows-static" `
                 -DCMAKE_TOOLCHAIN_FILE="${OrcPath}\external\vcpkg\scripts\buildsystems\vcpkg.cmake" `
+                $CMakeOptions `
                 $OrcPath
 
             . $CMakeExe --build . --config $Config -- -maxcpucount
