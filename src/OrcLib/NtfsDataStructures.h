@@ -147,32 +147,33 @@ struct FILE_RECORD_SEGMENT_HEADER
 
 using PFILE_RECORD_SEGMENT_HEADER = FILE_RECORD_SEGMENT_HEADER*;
 
-constexpr auto FILE_RECORD_SEGMENT_IN_USE = (0x0001);
-constexpr auto FILE_FILE_NAME_INDEX_PRESENT = (0x0002);
-constexpr auto FILE_SYSTEM_FILE = (0x0004);
-constexpr auto FILE_VIEW_INDEX_PRESENT = (0x0008);
+constexpr auto FILE_RECORD_SEGMENT_IN_USE = 0x0001ui16;
+constexpr auto FILE_FILE_NAME_INDEX_PRESENT = 0x0002ui16;
+constexpr auto FILE_SYSTEM_FILE = 0x0004ui16;
+constexpr auto FILE_VIEW_INDEX_PRESENT = 0x0008ui16;
 
 using ATTRIBUTE_TYPE_CODE = ULONG;
 using PATTRIBUTE_TYPE_CODE = ATTRIBUTE_TYPE_CODE*;
 
-constexpr auto $UNUSED = (0X0);
-constexpr auto $STANDARD_INFORMATION = (0x10);
-constexpr auto $ATTRIBUTE_LIST = (0x20);
-constexpr auto $FILE_NAME = (0x30);
-constexpr auto $OBJECT_ID = (0x40);
-constexpr auto $SECURITY_DESCRIPTOR = (0x50);
-constexpr auto $VOLUME_NAME = (0x60);
-constexpr auto $VOLUME_INFORMATION = (0x70);
-constexpr auto $DATA = (0x80);
-constexpr auto $INDEX_ROOT = (0x90);
-constexpr auto $INDEX_ALLOCATION = (0xA0);
-constexpr auto $BITMAP = (0xB0);
-constexpr auto $REPARSE_POINT = (0xC0);
-constexpr auto $EA_INFORMATION = (0xD0);
-constexpr auto $EA = (0xE0);
-constexpr auto $LOGGED_UTILITY_STREAM = (0x100);
-constexpr auto $FIRST_USER_DEFINED_ATTRIBUTE = (0x1000);
-constexpr auto $END = (0xFFFFFFFF);
+constexpr auto $UNUSED = 0X0LU;
+constexpr auto $STANDARD_INFORMATION = 0x10LU;
+constexpr auto $ATTRIBUTE_LIST = 0x20LU;
+constexpr auto $FILE_NAME = 0x30LU;
+constexpr auto $OBJECT_ID = 0x40LU;
+constexpr auto $SECURITY_DESCRIPTOR = 0x50LU;
+constexpr auto $VOLUME_NAME = 0x60LU;
+constexpr auto $VOLUME_INFORMATION = 0x70LU;
+constexpr auto $DATA = 0x80LU;
+constexpr auto $INDEX_ROOT = 0x90LU;
+constexpr auto $INDEX_ALLOCATION = 0xA0LU;
+constexpr auto $BITMAP = 0xB0LU;
+constexpr auto $REPARSE_POINT = 0xC0LU;
+constexpr auto $EA_INFORMATION = 0xD0LU;
+constexpr auto $EA = 0xE0LU;
+constexpr auto $DATA_PROPERTIES = 0xF0LU;
+constexpr auto $LOGGED_UTILITY_STREAM = 0x100LU;
+constexpr auto $FIRST_USER_DEFINED_ATTRIBUTE = 0x1000LU;
+constexpr auto $END = 0xFFFFFFFFLU;
 
 struct ATTRIBUTE_RECORD_HEADER
 {
@@ -207,8 +208,8 @@ struct ATTRIBUTE_RECORD_HEADER
 };
 using PATTRIBUTE_RECORD_HEADER = ATTRIBUTE_RECORD_HEADER*;
 
-constexpr auto RESIDENT_FORM = 0x00;
-constexpr auto NONRESIDENT_FORM = (0x01);
+constexpr auto RESIDENT_FORM = 0x00ui8;
+constexpr auto NONRESIDENT_FORM = 0x01ui8;
 constexpr auto ATTRIBUTE_FLAG_COMPRESSION_MASK = 0x00FF;
 constexpr auto ATTRIBUTE_FLAG_SPARSE = 0x8000;
 constexpr auto ATTRIBUTE_FLAG_ENCRYPTED = 0x4000;
@@ -245,9 +246,9 @@ struct ATTRIBUTE_LIST_ENTRY
 };
 using PATTRIBUTE_LIST_ENTRY = ATTRIBUTE_LIST_ENTRY*;
 
-constexpr auto FILE_NAME_POSIX = 0x00;
-constexpr auto FILE_NAME_WIN32 = 0x01;
-constexpr auto FILE_NAME_DOS83 = 0x02;
+constexpr auto FILE_NAME_POSIX = 0x00ui8;
+constexpr auto FILE_NAME_WIN32 = 0x01ui8;
+constexpr auto FILE_NAME_DOS83 = 0x02ui8;
 
 struct FILE_NAME_DUPLICATED_INFORMATION
 {
@@ -388,9 +389,9 @@ constexpr auto NtfsNextSecDescIndexEntry(PSECURITY_DESCRIPTOR_INDEX_ENTRY IE)
 {
     return (PSECURITY_DESCRIPTOR_INDEX_ENTRY)((PCHAR)(IE) + (ULONG)(IE)->IndexEntrySize);
 }
-constexpr auto INDEX_ENTRY_NODE = (0x0001);
-constexpr auto INDEX_ENTRY_END = (0x0002);
-constexpr auto INDEX_ENTRY_POINTER_FORM = (0x8000);
+constexpr auto INDEX_ENTRY_NODE = 0x0001ui16;
+constexpr auto INDEX_ENTRY_END = 0x0002ui16;
+constexpr auto INDEX_ENTRY_POINTER_FORM = 0x8000ui16;
 constexpr auto NtfsIndexEntryBlock(PINDEX_ENTRY IE)
 {
     return *(PLONGLONG)((PCHAR)(IE) + (ULONG)(IE)->Length - sizeof(LONGLONG));
