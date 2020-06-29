@@ -33,3 +33,15 @@ set_target_properties(OrcParquet
     PROPERTIES
         FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}OrcParquet"
 )
+
+foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
+    install(TARGETS OrcParquet
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION bin/${CONFIG}
+    )
+
+    install(FILES $<TARGET_PDB_FILE:OrcParquet>
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION pdb/${CONFIG} OPTIONAL
+    )
+endforeach()

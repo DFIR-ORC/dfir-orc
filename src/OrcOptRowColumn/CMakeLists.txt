@@ -32,3 +32,15 @@ set_target_properties(OrcOptRowColumn
     PROPERTIES
         FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}OrcOptRowColumn"
 )
+
+foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
+    install(TARGETS OrcApacheOrc
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION bin/${CONFIG}
+    )
+
+    install(FILES $<TARGET_PDB_FILE:OrcApacheOrc>
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION pdb/${CONFIG} OPTIONAL
+    )
+endforeach()

@@ -48,3 +48,15 @@ target_link_libraries(OrcSql
 )
 
 set_target_properties(OrcSql PROPERTIES FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}Sql")
+
+foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
+    install(TARGETS OrcSql
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION bin/${CONFIG}
+    )
+
+    install(FILES $<TARGET_PDB_FILE:OrcSql>
+        CONFIGURATIONS ${CONFIG}
+        DESTINATION pdb/${CONFIG} OPTIONAL
+    )
+endforeach()
