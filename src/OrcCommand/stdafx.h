@@ -25,6 +25,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4996)
 
+#include <inttypes.h>
 #include <string>
 #include <cstdio>
 #include <iostream>
