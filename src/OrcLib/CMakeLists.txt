@@ -16,7 +16,7 @@ find_package(fmt REQUIRED)
 find_package(tlsh CONFIG REQUIRED)
 find_package(VisualStudio REQUIRED)
 find_package(Yara REQUIRED)
-
+find_package(stx CONFIG REQUIRED)
 
 
 set(SRC_COMMAND
@@ -778,6 +778,7 @@ target_link_libraries(OrcLib
         tlsh::tlsh
         VisualStudio::CppUnitTest
         yara::yara
+        stx::stx
         ws2_32.lib
         Iphlpapi.lib
 )

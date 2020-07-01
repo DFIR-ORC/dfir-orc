@@ -43,12 +43,12 @@ public:
         DWORD dwPriority,
         DWORD& dwStatus);
 
-    Result<CComPtr<IEnumWbemClassObject>> Query(const logger& pLog, LPCWSTR szQuery) const;
+    stx::Result<CComPtr<IEnumWbemClassObject>,HRESULT> Query(const logger& pLog, LPCWSTR szQuery) const;
 
     HRESULT WMIEnumPhysicalMedia(const logger& pLog, std::vector<std::wstring>& physicaldrives) const;
 
     template <typename _T>
-    static Result<_T> GetProperty(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+    static stx::Result<_T, HRESULT> GetProperty(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
     {
         static_assert(false, "Property read for your type must be via a specialised version");
     }
@@ -58,32 +58,33 @@ public:
 };
 
 template <>
-Orc::Result<bool> Orc::WMI::GetProperty<bool>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+stx::Result<bool, HRESULT> Orc::WMI::GetProperty<bool>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 template <>
-Orc::Result<USHORT> Orc::WMI::GetProperty<USHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+stx::Result<USHORT, HRESULT> Orc::WMI::GetProperty<USHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 template <>
-Orc::Result<SHORT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+stx::Result<SHORT, HRESULT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 
 template <>
-Orc::Result<ULONG32> Orc::WMI::GetProperty<ULONG32>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+stx::Result<ULONG32, HRESULT> Orc::WMI::GetProperty<ULONG32>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 
 template <>
-Orc::Result<LONG32> Orc::WMI::GetProperty<LONG32>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+stx::Result<LONG32, HRESULT> Orc::WMI::GetProperty<LONG32>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 
 template <>
-Orc::Result<ULONG64> Orc::WMI::GetProperty<ULONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+stx::Result<ULONG64, HRESULT> Orc::WMI::GetProperty<ULONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 template <>
-Orc::Result<LONG64> Orc::WMI::GetProperty<LONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+stx::Result<LONG64, HRESULT> Orc::WMI::GetProperty<LONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 
 template <>
-Orc::Result<ByteBuffer> Orc::WMI::GetProperty<ByteBuffer>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+stx::Result<ByteBuffer, HRESULT>
+Orc::WMI::GetProperty<ByteBuffer>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 
 template <>
-Orc::Result<std::wstring>
+stx::Result<std::wstring, HRESULT>
 Orc::WMI::GetProperty<std::wstring>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 
 template <>
-Orc::Result<std::vector<std::wstring>>
+stx::Result<std::vector<std::wstring>, HRESULT>
 Orc::WMI::GetProperty<std::vector<std::wstring>>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 
 }  // namespace Orc

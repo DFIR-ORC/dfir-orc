@@ -83,7 +83,7 @@ STDMETHODIMP Orc::SparseStream::GetAllocatedRanges(std::vector<FILE_ALLOCATED_RA
             bMoreData = true;
         }
 
-        // Calculate the number of records returned and print them
+        // Calculate the number of records returned and add them
         auto nbRanges = nbBytesReturned / sizeof(FILE_ALLOCATED_RANGE_BUFFER);
         ranges.reserve(ranges.size() + nbRanges);
         for (auto i = 0; i < nbRanges; i++)

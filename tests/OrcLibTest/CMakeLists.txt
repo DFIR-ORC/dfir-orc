@@ -55,6 +55,7 @@ set(SRC_UTILITIES
     "registry.cpp"
     "temporary.cpp"
     "logwriter.cpp"
+    "result.cpp"
     "system_details.cpp"
     "wide_ansi.cpp"
 )

@@ -78,6 +78,7 @@ if(ORC_VCPKG_ROOT)
         tlsh
         yara
         rapidjson
+        stx
     )
 
     # Tools/rcedit specific dependencies

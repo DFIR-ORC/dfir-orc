@@ -128,7 +128,7 @@ Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IOut
             BOOST_SCOPE_EXIT(&writer) { writer->EndCollection(L"environment"); }
             BOOST_SCOPE_EXIT_END;
 
-            auto envs = environ_result.unwrap();
+            const auto& envs = environ_result.value();
             for (const auto& env : envs)
             {
                 writer->BeginElement(nullptr);
@@ -262,7 +262,7 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
         if (qfes.is_ok())
         {
             writer->BeginCollection(L"qfe");
-            for (const auto& qfe : qfes.unwrap())
+            for (const auto& qfe : qfes.value())
             {
                 writer->BeginElement(nullptr);
                 {
@@ -289,7 +289,7 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IOu
             BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"adapter"); }
             BOOST_SCOPE_EXIT_END;
 
-            auto adapters = result.unwrap();
+            auto adapters = result.value();
             for (const auto& adapter : adapters)
             {
                 writer->BeginElement(nullptr);
@@ -386,9 +386,9 @@ HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutp
 
     auto result = SystemDetails::GetPhysicalDrives(nullptr);
     if (result.is_err())
-        return result.err();
+        return std::move(result).err();
 
-    auto drives = result.unwrap();
+    auto drives = result.value();
     for (const auto& drive : drives)
     {
         writer->BeginElement(nullptr);
@@ -417,9 +417,9 @@ HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutp
 
     auto result = SystemDetails::GetMountedVolumes(nullptr);
     if (result.is_err())
-        return result.err();
+        return std::move(result).err();
 
-    auto volumes = result.unwrap();
+    const auto& volumes = result.value();
     for (const auto& volume : volumes)
     {
         writer->BeginElement(nullptr);
@@ -459,9 +459,9 @@ HRESULT Orc::SystemIdentity::PhysicalMemory(const std::shared_ptr<StructuredOutp
 
     auto result = SystemDetails::GetPhysicalMemory(nullptr);
     if (result.is_err())
-        return result.err();
+        return std::move(result).err();
 
-    auto mem = result.unwrap();
+    const auto& mem = result.value();
 
     writer->WriteNamed(L"current_load", (ULONG32)mem.dwMemoryLoad);
     writer->WriteNamed(L"physical", mem.ullTotalPhys);
@@ -478,10 +478,10 @@ HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IOutput
     BOOST_SCOPE_EXIT_END;
 
     auto result = SystemDetails::GetCPUInfo(nullptr);
-    if (result.is_err())
-        return result.err();
+    if (!result)
+        return result.err_value();
 
-    auto cpus = result.unwrap();
+    const auto& cpus = result.value();
     for (const auto& cpu : cpus)
     {
         writer->BeginElement(nullptr);
@@ -504,29 +504,29 @@ HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IO
     BOOST_SCOPE_EXIT_END;
     {
         auto default_profile = ProfileList::DefaultProfilePath(nullptr);
-        if (default_profile.is_ok())
-            writer->WriteNamed(L"default_profile", default_profile.unwrap().c_str());
+        if (default_profile)
+            writer->WriteNamed(L"default_profile", default_profile.value().c_str());
 
         auto profiles_dir = ProfileList::ProfilesDirectoryPath(nullptr);
-        if (profiles_dir.is_ok())
-            writer->WriteNamed(L"profiles_directory", profiles_dir.unwrap().c_str());
+        if (profiles_dir)
+            writer->WriteNamed(L"profiles_directory", profiles_dir.value().c_str());
 
         auto program_data = ProfileList::ProgramDataPath(nullptr);
-        if (program_data.is_ok())
-            writer->WriteNamed(L"program_data", program_data.unwrap().c_str());
+        if (program_data)
+            writer->WriteNamed(L"program_data", program_data.value().c_str());
 
         auto public_path = ProfileList::PublicProfilePath(nullptr);
-        if (public_path.is_ok())
-            writer->WriteNamed(L"public_path", public_path.unwrap().c_str());
+        if (public_path)
+            writer->WriteNamed(L"public_path", public_path.value().c_str());
 
         auto profiles = ProfileList::GetProfiles(nullptr);
-        if (profiles.is_ok())
+        if (profiles)
         {
             writer->BeginCollection(L"profile");
             BOOST_SCOPE_EXIT(&writer) { writer->EndCollection(L"profile"); }
             BOOST_SCOPE_EXIT_END;
 
-            const auto profile_list = profiles.unwrap();
+            const auto& profile_list = profiles.value();
             for (const auto& profile : profile_list)
             {
                 writer->BeginElement(nullptr);

@@ -59,7 +59,7 @@ public:
     FILETIME ProfileKeyLastWrite;
 
 };
-using ProfileResult = Orc::Result<std::vector<Profile>, HRESULT>;
+using ProfileResult = stx::Result<std::vector<Profile>, HRESULT>;
 
 class ORCLIB_API ProfileList
 {
@@ -67,17 +67,17 @@ public:
 
     static ProfileResult GetProfiles(const logger& pLog);
 
-    static Result<std::wstring> DefaultProfile(const logger& pLog);
-    static Result<std::filesystem::path> DefaultProfilePath(const logger& pLog);
+    static stx::Result<std::wstring, HRESULT> DefaultProfile(const logger& pLog);
+    static stx::Result<std::filesystem::path, HRESULT> DefaultProfilePath(const logger& pLog);
     
-    static Result<std::wstring> ProfilesDirectory(const logger& pLog);
-    static Result<std::filesystem::path> ProfilesDirectoryPath(const logger& pLog);
+    static stx::Result<std::wstring, HRESULT> ProfilesDirectory(const logger& pLog);
+    static stx::Result<std::filesystem::path, HRESULT> ProfilesDirectoryPath(const logger& pLog);
 
-    static Result<std::wstring> ProgramData(const logger& pLog);
-    static Result<std::filesystem::path> ProgramDataPath(const logger& pLog);
+    static stx::Result<std::wstring, HRESULT> ProgramData(const logger& pLog);
+    static stx::Result<std::filesystem::path, HRESULT> ProgramDataPath(const logger& pLog);
 
-    static Result<std::wstring> PublicProfile(const logger& pLog);
-    static Result<std::filesystem::path> PublicProfilePath(const logger& pLog);
+    static stx::Result<std::wstring, HRESULT> PublicProfile(const logger& pLog);
+    static stx::Result<std::filesystem::path, HRESULT> PublicProfilePath(const logger& pLog);
 
 
 };

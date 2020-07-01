@@ -215,11 +215,11 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             writer->WriteNamed(L"time", ft);
 
             auto mothership_id = SystemDetails::GetParentProcessId(_L_);
-            if (mothership_id.is_ok())
+            if (mothership_id)
             {
-                auto mothership_cmdline = SystemDetails::GetCmdLine(_L_, mothership_id.unwrap());
-                if (mothership_cmdline.is_ok())
-                    writer->WriteNamed(L"command", mothership_cmdline.unwrap().c_str());
+                auto mothership_cmdline = SystemDetails::GetCmdLine(_L_, mothership_id.value());
+                if (mothership_cmdline)
+                    writer->WriteNamed(L"command", mothership_cmdline.value().c_str());
             }
             writer->WriteNamed(L"output", config.Output.Path.c_str());
             writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());

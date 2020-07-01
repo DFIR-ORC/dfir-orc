@@ -11,6 +11,7 @@
 #include "Buffer.h"
 #include "Registry.h"
 
+using namespace std;
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace Orc;
 using namespace Orc::Test;
@@ -37,21 +38,21 @@ namespace Orc::Test {
             auto BuildBranch = Registry::Read<std::wstring>(
                 _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\UnknownVersion)", L"BuildBranch");
             Assert::IsTrue(BuildBranch.is_err());
-            Assert::IsTrue(BuildBranch.err() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+            Assert::IsTrue(BuildBranch.err_value() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
         }
         TEST_METHOD(ReadValueNotFound)
         {
             auto BuildBranch = Registry::Read<std::wstring>(
                 _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"UnknownBranch");
             Assert::IsTrue(BuildBranch.is_err());
-            Assert::IsTrue(BuildBranch.err() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+            Assert::IsTrue(BuildBranch.err_value() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
         }
         TEST_METHOD(ReadString)
         {
             auto BuildBranch = Registry::Read<std::wstring>(
                 _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"BuildBranch");
             Assert::IsTrue(BuildBranch.is_ok());
-            Assert::IsFalse(BuildBranch.unwrap().empty());
+            Assert::IsFalse(move(BuildBranch).unwrap().empty());
         }
 
         TEST_METHOD(ReadDWORD)
@@ -62,7 +63,7 @@ namespace Orc::Test {
                 LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)",
                 L"CurrentMajorVersionNumber");
             Assert::IsTrue(VersionNumber.is_ok());
-            Assert::IsTrue(VersionNumber.unwrap() > 5);
+            Assert::IsTrue(move(VersionNumber).unwrap() > 5);
         }
         TEST_METHOD(ReadQWORD)
         {
@@ -73,7 +74,7 @@ namespace Orc::Test {
                 L"InstallTime");
             Assert::IsTrue(InstallTime.is_ok());
             ULARGE_INTEGER li;
-            li.QuadPart = InstallTime.unwrap();
+            li.QuadPart = move(InstallTime).unwrap();
 
             FILETIME ft;
             ft.dwLowDateTime = li.LowPart;
@@ -89,7 +90,7 @@ namespace Orc::Test {
                 _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"PathName");
             Assert::IsTrue(PathName.is_ok());
 
-            Assert::IsTrue(std::filesystem::exists(PathName.unwrap()));
+            Assert::IsTrue(std::filesystem::exists(move(PathName).unwrap()));
         }
         TEST_METHOD(ReadBinay)
         {
@@ -97,9 +98,8 @@ namespace Orc::Test {
                 _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"DigitalProductId4");
             Assert::IsTrue(DigitalProductId.is_ok());
 
-            auto buffer = DigitalProductId.unwrap();
+            auto buffer = move(DigitalProductId).unwrap();
             Assert::IsTrue(buffer.size() > 0);
-
         }
     };
 }

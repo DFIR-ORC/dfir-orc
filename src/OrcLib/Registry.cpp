@@ -10,9 +10,10 @@
 
 #include "Registry.h"
 
+using namespace stx;
 
 template <>
-Orc::Result<ULONG32>
+stx::Result<ULONG32,HRESULT>
 Orc::Registry::Read<ULONG32>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
 {
     HKEY hKey = nullptr;
@@ -23,7 +24,7 @@ Orc::Registry::Read<ULONG32>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyNa
             status != ERROR_SUCCESS)
         {
             log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to registry key %s\r\n", szKeyName);
-            return Orc::Result<ULONG32>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
     }
     else
@@ -49,12 +50,12 @@ Orc::Registry::Read<ULONG32>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyNa
         if (status == ERROR_MORE_DATA)
         {
             log::Error(pLog, HRESULT_FROM_WIN32(status), L"Unexepected registry value \"%s\" is bigger than expected (ULONG32)\r\n", szValueName);
-            return Orc::Result<ULONG32>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
         else
         {
             log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to open registry \"%s\" value\r\n", szValueName);
-            return Orc::Result<ULONG32>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
     }
     else
@@ -68,14 +69,14 @@ Orc::Registry::Read<ULONG32>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyNa
             HRESULT_FROM_WIN32(ERROR_DATATYPE_MISMATCH),
             L"Unexpected value \"%s\" type (not ULONG32 compatible)\r\n",
             szValueName);
-        return Orc::Result<ULONG32>(HRESULT_FROM_WIN32(ERROR_DATATYPE_MISMATCH));
+        return Err(HRESULT_FROM_WIN32(ERROR_DATATYPE_MISMATCH));
     }
 
-    return Result<ULONG32>(valueBuffer[0]);
+    return Ok<ULONG32>(std::move(valueBuffer[0]));
 }
 
 template <>
-Orc::Result<ULONG64>
+stx::Result<ULONG64,HRESULT>
 Orc::Registry::Read<ULONG64>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
 {
     HKEY hKey = nullptr;
@@ -86,7 +87,7 @@ Orc::Registry::Read<ULONG64>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyNa
             status != ERROR_SUCCESS)
         {
             log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to registry key %s\r\n", szKeyName);
-            return Orc::Result<ULONG64>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
     }
     else
@@ -116,12 +117,12 @@ Orc::Registry::Read<ULONG64>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyNa
                 HRESULT_FROM_WIN32(status),
                 L"Unexepected registry value \"%s\" is bigger than expected (ULONG32)\r\n",
                 szValueName);
-            return Orc::Result<ULONG64>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
         else
         {
             log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to open registry \"%s\" value\r\n", szValueName);
-            return Orc::Result<ULONG64>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
     }
     else
@@ -135,14 +136,14 @@ Orc::Registry::Read<ULONG64>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyNa
             HRESULT_FROM_WIN32(ERROR_DATATYPE_MISMATCH),
             L"Unexpected value \"%s\" type (not ULONG32 compatible)\r\n",
             szValueName);
-        return Orc::Result<ULONG64>(HRESULT_FROM_WIN32(ERROR_DATATYPE_MISMATCH));
+        return Err(HRESULT_FROM_WIN32(ERROR_DATATYPE_MISMATCH));
     }
 
-    return Result<ULONG64>(valueBuffer[0]);
+    return Ok(std::move(valueBuffer[0]));
 }
 
 template <>
-Orc::Result<Orc::ByteBuffer>
+stx::Result<Orc::ByteBuffer, HRESULT>
 Orc::Registry::Read<Orc::ByteBuffer>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
 {
     HKEY hKey = nullptr;
@@ -153,7 +154,7 @@ Orc::Registry::Read<Orc::ByteBuffer>(const logger& pLog, HKEY hParentKey, LPWSTR
             status != ERROR_SUCCESS)
         {
             log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to registry key %s\r\n", szKeyName);
-            return Orc::Result<ByteBuffer>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
     }
     else
@@ -182,25 +183,25 @@ Orc::Registry::Read<Orc::ByteBuffer>(const logger& pLog, HKEY hParentKey, LPWSTR
                 status != ERROR_SUCCESS)
             {
                 log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to reg value \"%s:%s\" value\r\n", szKeyName?szKeyName:L"", szValueName);
-                return Orc::Result<ByteBuffer>(HRESULT_FROM_WIN32(status));
+                return Err(HRESULT_FROM_WIN32(status));
             }
         }
         else
         {
             log::Error(
                 pLog, HRESULT_FROM_WIN32(status), L"Failed to reg value \"%s:%s\" value\r\n", szKeyName?szKeyName:L"", szValueName);
-            return Orc::Result<ByteBuffer>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
     }
     else
     {
         valueBuffer.use((cbBytes / sizeof(BYTE)));
     }
-    return Orc::Result<ByteBuffer>(std::move(valueBuffer));
+    return Ok(std::move(valueBuffer));
 }
 
 template <>
-Orc::Result<std::wstring>
+stx::Result<std::wstring, HRESULT>
 Orc::Registry::Read<std::wstring>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
 {
     HKEY hKey = nullptr;
@@ -211,7 +212,7 @@ Orc::Registry::Read<std::wstring>(const logger& pLog, HKEY hParentKey, LPWSTR sz
             status != ERROR_SUCCESS)
         {
             log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to registry key %s\r\n", szKeyName);
-            return Orc::Result<std::wstring>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
     }
     else
@@ -240,13 +241,13 @@ Orc::Registry::Read<std::wstring>(const logger& pLog, HKEY hParentKey, LPWSTR sz
                 status != ERROR_SUCCESS)
             {
                 log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to reg value \"%s\" value\r\n", szValueName);
-                return Orc::Result<std::wstring>(HRESULT_FROM_WIN32(status));
+                return Err(HRESULT_FROM_WIN32(status));
             }
         }
         else
         {
             log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to open profile list \"%s\" value\r\n", szValueName);
-            return Orc::Result<std::wstring>(HRESULT_FROM_WIN32(status));
+            return Err(HRESULT_FROM_WIN32(status));
         }
     }
     else
@@ -262,7 +263,7 @@ Orc::Registry::Read<std::wstring>(const logger& pLog, HKEY hParentKey, LPWSTR sz
             valueBuffer.resize(valueBuffer.size() - 1);
         }
 
-        return Orc::Result<std::wstring>(std::wstring(valueBuffer.get(), valueBuffer.size()));
+        return Ok(std::wstring(valueBuffer.get(), valueBuffer.size()));
     }
     else if (dwValueType == REG_EXPAND_SZ)
     {
@@ -287,7 +288,7 @@ Orc::Registry::Read<std::wstring>(const logger& pLog, HKEY hParentKey, LPWSTR sz
         {
             expandBuffer.use(cbSize);
         }
-        return Orc::Result<std::wstring>(std::wstring(expandBuffer.get(), expandBuffer.size()));
+        return Ok(std::wstring(expandBuffer.get(), expandBuffer.size()));
     }
     else
     {
@@ -296,17 +297,16 @@ Orc::Registry::Read<std::wstring>(const logger& pLog, HKEY hParentKey, LPWSTR sz
             HRESULT_FROM_WIN32(ERROR_DATATYPE_MISMATCH),
             L"Registry value %s is not of the expected (REG_*SZ) type\r\n",
             szValueName);
-        return Orc::Result<std::wstring>(HRESULT_FROM_WIN32(ERROR_DATATYPE_MISMATCH));
+        return Err(HRESULT_FROM_WIN32(ERROR_DATATYPE_MISMATCH));
     }
 }
 
 template <>
-Orc::Result<std::filesystem::path>
+stx::Result<std::filesystem::path, HRESULT>
 Orc::Registry::Read<std::filesystem::path>(const logger& pLog, HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
 {
-    auto string = Read<std::wstring>(pLog, hParentKey, szKeyName, szValueName);
-    if (string.is_ok())
-        return string.unwrap();
-    else
-        return string.err();
+    return Read<std::wstring>(pLog, hParentKey, szKeyName, szValueName).and_then([
+    ](auto&& value) {
+        return std::filesystem::path(std::move(value));
+        });
 }

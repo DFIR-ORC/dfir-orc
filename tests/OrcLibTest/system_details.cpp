@@ -76,7 +76,7 @@ public:
     {
         auto result = SystemDetails::GetPhysicalDrives(_L_);
         Assert::IsTrue(result.is_ok());
-        auto drives = result.unwrap();
+        auto drives = move(result).unwrap();
         Assert::IsFalse(drives.empty());
 
         for (const auto& drive: drives)
@@ -88,7 +88,7 @@ public:
     {
         auto result = SystemDetails::GetMountedVolumes(_L_);
         Assert::IsTrue(result.is_ok());
-        auto volumes = result.unwrap();
+        auto volumes = move(result).unwrap();
         Assert::IsFalse(volumes.empty());
 
         bool bHasSystem = false;
@@ -115,7 +115,7 @@ public:
         auto result = SystemDetails::GetOsQFEs(_L_);
         Assert::IsTrue(result.is_ok());
 
-        auto qfes = result.unwrap();
+        auto qfes = move(result).unwrap();
 
         for (const auto& qfe : qfes)
         {
@@ -128,7 +128,7 @@ public:
 
         Assert::IsTrue(result.is_ok());
 
-        auto envs = result.unwrap();
+        auto envs = move(result).unwrap();
         Assert::IsFalse(envs.empty());
         for (const auto& env : envs)
         {
@@ -142,13 +142,13 @@ public:
         auto cmdLineWMI = SystemDetails::GetCmdLine(_L_, GetCurrentProcessId());
         Assert::IsTrue(cmdLine.is_ok());
         Assert::IsTrue(cmdLineWMI.is_ok());
-        Assert::AreEqual(cmdLine.unwrap(), cmdLineWMI.unwrap());
+        Assert::AreEqual(move(cmdLine).unwrap(), move(cmdLineWMI).unwrap());
 
         auto parent_id = SystemDetails::GetParentProcessId(_L_);
         Assert::IsTrue(parent_id.is_ok());
-        auto parentCmdLine = SystemDetails::GetCmdLine(_L_, parent_id.unwrap());
+        auto parentCmdLine = SystemDetails::GetCmdLine(_L_, move(parent_id).unwrap());
         Assert::IsTrue(parentCmdLine.is_ok());
-        Assert::IsFalse(parentCmdLine.unwrap().empty());
+        Assert::IsFalse(move(parentCmdLine).unwrap().empty());
         
     }
 

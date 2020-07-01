@@ -35,49 +35,47 @@ public:
     {
         auto default_profile = ProfileList::DefaultProfile(_L_);
         Assert::IsTrue(default_profile.is_ok());
-        Assert::IsFalse(default_profile.unwrap().empty());
+        Assert::IsFalse(default_profile.value().empty());
 
         auto default_profile_path = ProfileList::DefaultProfilePath(_L_);
         Assert::IsTrue(default_profile_path.is_ok());
-
-
-        auto path = default_profile_path.unwrap();
+        auto& path = default_profile_path.value();
         Assert::IsTrue(std::filesystem::exists(path));
     }
     TEST_METHOD(ProfilesDirectory)
     {
         auto profiles_directory = ProfileList::ProfilesDirectory(_L_);
         Assert::IsTrue(profiles_directory.is_ok());
-        Assert::IsFalse(profiles_directory.unwrap().empty());
+        Assert::IsFalse(profiles_directory.value().empty());
 
         auto profiles_path = ProfileList::ProfilesDirectoryPath(_L_);
         Assert::IsTrue(profiles_path.is_ok());
 
-        auto path = profiles_path.unwrap();
+        auto& path = profiles_path.value();
         Assert::IsTrue(std::filesystem::exists(path));
     }
     TEST_METHOD(ProgramData)
     {
         auto program_data = ProfileList::ProfilesDirectory(_L_);
         Assert::IsTrue(program_data.is_ok());
-        Assert::IsFalse(program_data.unwrap().empty());
+        Assert::IsFalse(program_data.value().empty());
 
         auto program_data_path = ProfileList::ProfilesDirectoryPath(_L_);
         Assert::IsTrue(program_data_path.is_ok());
 
-        auto path = program_data_path.unwrap();
+        auto& path = program_data_path.value();
         Assert::IsTrue(std::filesystem::exists(path));
     }
     TEST_METHOD(Public)
     {
         auto public_ = ProfileList::ProfilesDirectory(_L_);
         Assert::IsTrue(public_.is_ok());
-        Assert::IsFalse(public_.unwrap().empty());
+        Assert::IsFalse(public_.value().empty());
 
         auto public_path = ProfileList::ProfilesDirectoryPath(_L_);
         Assert::IsTrue(public_path.is_ok());
 
-        auto path = public_path.unwrap();
+        auto& path = public_path.value();
         Assert::IsTrue(std::filesystem::exists(path));
     }
 
@@ -86,7 +84,7 @@ public:
         auto profiles = ProfileList::GetProfiles(_L_);
 
         Assert::IsTrue(profiles.is_ok());
-        auto profile_list = profiles.unwrap();
+        auto& profile_list = profiles.value();
 
         Assert::IsFalse(profile_list.empty());
     }

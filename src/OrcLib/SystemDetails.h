@@ -35,6 +35,7 @@ using SystemTags = std::set<std::wstring>;
 
 class ORCLIB_API SystemDetails
 {
+
 private:
     static HRESULT LoadSystemDetails();
 
@@ -65,9 +66,9 @@ public:
 
     };
 
-    static Result<std::vector<CPUInformation>> GetCPUInfo(const logger& pLog);
+    static stx::Result<std::vector<CPUInformation>,HRESULT> GetCPUInfo(const logger& pLog);
 
-    static Result<MEMORYSTATUSEX> GetPhysicalMemory(const logger& pLog);
+    static stx::Result<MEMORYSTATUSEX, HRESULT> GetPhysicalMemory(const logger& pLog);
 
     static HRESULT GetPageSize(DWORD& dwPageSize);
     static HRESULT GetLargePageSize(DWORD& dwPageSize);
@@ -98,10 +99,10 @@ public:
     static HRESULT AmIElevated(bool& bIsElevated);
     static HRESULT UserSID(std::wstring& strSID);
 
-    static Result<DWORD> GetParentProcessId(const logger& pLog);
+    static stx::Result<DWORD, HRESULT> GetParentProcessId(const logger& pLog);
 
-    static Result<std::wstring> GetCmdLine();
-    static Result<std::wstring> GetCmdLine(const logger& pLog, DWORD dwPid);
+    static stx::Result<std::wstring, HRESULT> GetCmdLine();
+    static stx::Result<std::wstring, HRESULT> GetCmdLine(const logger& pLog, DWORD dwPid);
 
     static HRESULT GetSystemLocale(std::wstring& strLocale);
     static HRESULT GetUserLocale(std::wstring& strLocale);
@@ -137,7 +138,7 @@ public:
         std::optional<DWORD> ConfigManagerErrorCode;
     };
 
-    static Result<std::vector<PhysicalDrive>> GetPhysicalDrives(const logger& pLog);
+    static stx::Result<std::vector<PhysicalDrive>, HRESULT> GetPhysicalDrives(const logger& pLog);
 
     struct MountedVolume
     {
@@ -156,7 +157,7 @@ public:
         std::optional<ULONG32> ErrorCode;
     };
 
-    static Result<std::vector<MountedVolume>> GetMountedVolumes(const logger& pLog);
+    static stx::Result<std::vector<MountedVolume>, HRESULT> GetMountedVolumes(const logger& pLog);
 
     struct QFE
     {
@@ -166,7 +167,7 @@ public:
         std::wstring InstallDate;
     };
 
-    static Result<std::vector<QFE>> GetOsQFEs(const logger& pLog);
+    static stx::Result<std::vector<QFE>, HRESULT> GetOsQFEs(const logger& pLog);
 
     struct EnvVariable
     {
@@ -174,7 +175,7 @@ public:
         std::wstring Value;
     };
 
-    static Result<std::vector<EnvVariable>> GetEnvironment(const logger& pLog);
+    static stx::Result<std::vector<EnvVariable>, HRESULT> GetEnvironment(const logger& pLog);
 
     static bool IsWOW64();
 
@@ -209,10 +210,10 @@ public:
         std::wstring DNSSuffix;
     };
 
-    static Result<std::vector<NetworkAdapter>> GetNetworkAdapters();
+    static stx::Result<std::vector<NetworkAdapter>, HRESULT> GetNetworkAdapters();
 
 private:
-    static Result<NetworkAddress> GetNetworkAddress(SOCKET_ADDRESS& address);
+    static stx::Result<NetworkAddress, HRESULT> GetNetworkAddress(SOCKET_ADDRESS& address);
 };
 
 static auto constexpr OrcComputerName = L"DFIR-OrcComputer";

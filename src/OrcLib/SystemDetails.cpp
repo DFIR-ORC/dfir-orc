@@ -29,6 +29,8 @@
 namespace fs = std::filesystem;
 
 using namespace Orc;
+using namespace stx;
+using namespace std;
 
 namespace Orc {
 struct SystemDetailsBlock
@@ -350,15 +352,15 @@ std::pair<DWORD, DWORD> Orc::SystemDetails::GetOSVersion()
     throw L"Failed to retrieve OS Version";
 }
 
-Result<std::vector<Orc::SystemDetails::CPUInformation>> Orc::SystemDetails::GetCPUInfo(const logger& pLog)
+Result<std::vector<Orc::SystemDetails::CPUInformation>, HRESULT> Orc::SystemDetails::GetCPUInfo(const logger& pLog)
 {
     if (auto hr = LoadSystemDetails(); FAILED(hr))
-        return hr;
+        return Err(std::move(hr));
 
     if(auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
-        return hr;
+        return Err(std::move(hr));
     }
 
     const auto& wmi = g_pDetailsBlock->wmi;
@@ -366,10 +368,11 @@ Result<std::vector<Orc::SystemDetails::CPUInformation>> Orc::SystemDetails::GetC
     auto result = wmi.Query(
         pLog,
         L"SELECT Description,Name,NumberOfCores,NumberOfEnabledCore,NumberOfLogicalProcessors FROM Win32_Processor");
-    if (result.is_err())
-        return result.err();
 
-    auto pEnum = result.unwrap();
+    if (!result)
+        return Err(std::move(result.err_value()));
+
+    const auto& pEnum = result.value();
 
     std::vector<CPUInformation> retval;
 
@@ -385,35 +388,35 @@ Result<std::vector<Orc::SystemDetails::CPUInformation>> Orc::SystemDetails::GetC
         CPUInformation cpu;
 
         if (auto descr = WMI::GetProperty<std::wstring>(pclsObj, L"Description"); descr.is_ok())
-            cpu.Description = descr.unwrap();
+            cpu.Description = move(descr).unwrap();
 
         if (auto name = WMI::GetProperty<std::wstring>(pclsObj, L"Name"); name.is_ok())
-            cpu.Name = name.unwrap();
+            cpu.Name = move(name).unwrap();
         
         if (auto cores = WMI::GetProperty<ULONG32>(pclsObj, L"NumberOfCores"); cores.is_ok())
-            cpu.Cores = cores.unwrap();
+            cpu.Cores = move(cores).unwrap();
 
         if (auto cores = WMI::GetProperty<ULONG32>(pclsObj, L"NumberOfEnabledCore"); cores.is_ok())
-            cpu.EnabledCores = cores.unwrap();
+            cpu.EnabledCores = move(cores).unwrap();
 
         if (auto logical = WMI::GetProperty<ULONG32>(pclsObj, L"NumberOfLogicalProcessors"); logical.is_ok())
-            cpu.LogicalProcessors = logical.unwrap();
+            cpu.LogicalProcessors = move(logical).unwrap();
 
         retval.push_back(std::move(cpu));
     }
 
-    return retval;
+    return Ok(std::move(retval));
 }
 
-Orc::Result<MEMORYSTATUSEX> Orc::SystemDetails::GetPhysicalMemory(const logger& pLog)
+stx::Result<MEMORYSTATUSEX,HRESULT> Orc::SystemDetails::GetPhysicalMemory(const logger& pLog)
 {
     MEMORYSTATUSEX statex;
     statex.dwLength = sizeof(statex);
 
     if(!GlobalMemoryStatusEx(&statex))
-        return HRESULT_FROM_WIN32(GetLastError());
+        return Err(HRESULT_FROM_WIN32(GetLastError()));
 
-    return statex;
+    return Ok(std::move(statex));
 }
 
 HRESULT SystemDetails::GetPageSize(DWORD& dwPageSize)
@@ -682,15 +685,15 @@ HRESULT Orc::SystemDetails::UserSID(std::wstring& strSID)
     return S_OK;
 }
 
-Result<DWORD> Orc::SystemDetails::GetParentProcessId(const logger& pLog)
+Result<DWORD,HRESULT> Orc::SystemDetails::GetParentProcessId(const logger& pLog)
 {
     if (auto hr = LoadSystemDetails(); FAILED(hr))
-        return hr;
+        return Err(std::move(hr));
 
     if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
-        return hr;
+        return Err(std::move(hr));
     }
 
     const auto& wmi = g_pDetailsBlock->wmi;
@@ -699,66 +702,66 @@ Result<DWORD> Orc::SystemDetails::GetParentProcessId(const logger& pLog)
 
     auto result = wmi.Query(pLog, query.c_str());
     if (result.is_err())
-        return result.err();
+        return Err(move(result.err_value()));
 
-    auto pEnum = result.unwrap();
+    auto pEnum = move(result).unwrap();
     if (!pEnum)
-        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
     CComPtr<IWbemClassObject> pclsObj;
     ULONG uReturn = 0;
 
     HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
     if (0 == uReturn)
-        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
 
     if (auto parent_id = WMI::GetProperty<ULONG32>(pclsObj, L"ParentProcessId"); parent_id.is_err())
-        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
     else
-        return (DWORD)parent_id.unwrap();
+        return Ok(move((DWORD)move(parent_id).unwrap()));
 }
 
-Result<std::wstring> Orc::SystemDetails::GetCmdLine()
+stx::Result<std::wstring,HRESULT> Orc::SystemDetails::GetCmdLine()
 {
-    return std::wstring(GetCommandLineW());
+    return Ok(std::wstring(GetCommandLineW()));
 }
 
-Result<std::wstring> Orc::SystemDetails::GetCmdLine(const logger& pLog, DWORD dwPid)
+Result<std::wstring,HRESULT> Orc::SystemDetails::GetCmdLine(const logger& pLog, DWORD dwPid)
 {
     if (auto hr = LoadSystemDetails(); FAILED(hr))
-        return hr;
+        return Err(std::move(hr));
 
     if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
-        return hr;
+        return Err(std::move(hr));
     }
 
     const auto& wmi = g_pDetailsBlock->wmi;
 
     if (dwPid == 0)
-        return E_INVALIDARG;
+        return Err(E_INVALIDARG);
 
     // We can now look for the parent command line
     auto query = fmt::format(L"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {}", dwPid);
 
     auto result = wmi.Query(pLog, query.c_str());
-    if (result.is_err())
-        return result.err();
+    if (!result)
+        return Err(move(result.err_value()));
 
-    auto pEnum = result.unwrap();
+    const auto& pEnum = result.value();
     if (!pEnum)
-        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
     CComPtr<IWbemClassObject> pclsObj;
     ULONG uReturn = 0;
 
     HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
     if (0 == uReturn)
-        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
 
     if (auto cmdLine = WMI::GetProperty<std::wstring>(pclsObj, L"CommandLine"); cmdLine.is_err())
-        return HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND);
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
     else
-        return cmdLine.unwrap();
+        return Ok(move(cmdLine).unwrap());
 }
 
 HRESULT Orc::SystemDetails::GetSystemLocale(std::wstring& strLocale)
@@ -848,15 +851,15 @@ SystemDetails::DriveType SystemDetails::GetPathLocation(const std::wstring& strA
     }
 }
 
-Orc::Result<std::vector<Orc::SystemDetails::PhysicalDrive>> Orc::SystemDetails::GetPhysicalDrives(const logger& pLog)
+stx::Result<std::vector<Orc::SystemDetails::PhysicalDrive>, HRESULT> Orc::SystemDetails::GetPhysicalDrives(const logger& pLog)
 {
     if (auto hr = LoadSystemDetails(); FAILED(hr))
-        return hr;
+        return Err(std::move(hr));
 
     if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
-        return hr;
+        return Err(std::move(hr));
     }
 
     const auto& wmi = g_pDetailsBlock->wmi;
@@ -865,9 +868,9 @@ Orc::Result<std::vector<Orc::SystemDetails::PhysicalDrive>> Orc::SystemDetails::
         pLog,
         L"SELECT DeviceID,Size,SerialNumber,MediaType,Status,ConfigManagerErrorCode,Availability FROM Win32_DiskDrive");
     if (result.is_err())
-        return result.err();
+        return Err(move(result.err_value()));
 
-    auto pEnum = result.unwrap();
+    const auto& pEnum = result.value();
 
     std::vector<Orc::SystemDetails::PhysicalDrive> retval;
 
@@ -885,46 +888,46 @@ Orc::Result<std::vector<Orc::SystemDetails::PhysicalDrive>> Orc::SystemDetails::
         if(auto id = WMI::GetProperty<std::wstring>(pclsObj, L"DeviceID"); id.is_err())
             continue; // If we can't get the deviceId, no need to add it...
         else
-            drive.Path = id.unwrap();
+            drive.Path = move(id).unwrap();
 
         if (auto size = WMI::GetProperty<ULONG64>(pclsObj, L"Size"); size.is_ok())
-            drive.Size = size.unwrap();
+            drive.Size = move(size).unwrap();
 
         if (auto serial = WMI::GetProperty<ULONG32>(pclsObj, L"SerialNumber"); serial.is_ok())
-            drive.SerialNumber = serial.unwrap();
+            drive.SerialNumber = move(serial).unwrap();
 
         if (auto type = WMI::GetProperty<std::wstring>(pclsObj, L"MediaType"); type.is_ok())
-            drive.MediaType = type.unwrap();
+            drive.MediaType = move(type).unwrap();
 
         if (auto status = WMI::GetProperty<std::wstring>(pclsObj, L"Status"); status.is_ok())
-            drive.Status = status.unwrap();
+            drive.Status = move(status).unwrap();
 
         if (auto error_code = WMI::GetProperty<ULONG32>(pclsObj, L"ConfigManagerErrorCode"); error_code.is_ok())
         {
-            if (auto code = error_code.unwrap(); code != 0)
+            if (auto code = move(error_code).unwrap(); code != 0)
                 drive.ConfigManagerErrorCode = code;
         }
         if (auto availability = WMI::GetProperty<USHORT>(pclsObj, L"Availability"); availability.is_ok())
         {
-            if (auto avail = availability.unwrap(); avail != 0)
+            if (auto avail = move(availability).unwrap(); avail != 0)
                 drive.Availability = avail;
         }
 
         retval.push_back(std::move(drive));
     }
 
-    return retval;
+    return Ok(std::move(retval));
 }
 
-Orc::Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::GetMountedVolumes(const logger& pLog)
+stx::Result<std::vector<Orc::SystemDetails::MountedVolume>,HRESULT> Orc::SystemDetails::GetMountedVolumes(const logger& pLog)
 {
     if (auto hr = LoadSystemDetails(); FAILED(hr))
-        return hr;
+        return Err(std::move(hr));
 
     if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
-        return hr;
+        return Err(std::move(hr));
     }
 
     const auto& wmi = g_pDetailsBlock->wmi;
@@ -932,9 +935,9 @@ Orc::Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::
         pLog,
         L"SELECT Name,FileSystem,Label,DeviceID,DriveType,Capacity,FreeSpace,SerialNumber,BootVolume,SystemVolume,LastErrorCode,ErrorDescription FROM Win32_Volume");
     if (result.is_err())
-        return result.err();
+        return Err(move(result.err_value()));
 
-    auto pEnum = result.unwrap();
+    const auto& pEnum = result.value();
 
     std::vector<Orc::SystemDetails::MountedVolume> retval;
 
@@ -949,23 +952,23 @@ Orc::Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::
 
         MountedVolume volume;
 
-        if (auto name = WMI::GetProperty<std::wstring>(pclsObj, L"Name"); name.is_err())
+        if (auto name = WMI::GetProperty<std::wstring>(pclsObj, L"Name"); !name)
             continue;  // without name...
         else
-            volume.Path = name.unwrap();
+            volume.Path = move(name).unwrap();
 
-        if (auto fs = WMI::GetProperty<std::wstring>(pclsObj, L"FileSystem"); fs.is_ok())
-            volume.FileSystem = fs.unwrap();
+        if (auto fs = WMI::GetProperty<std::wstring>(pclsObj, L"FileSystem"))
+            volume.FileSystem = move(fs).unwrap();
 
-        if (auto label = WMI::GetProperty<std::wstring>(pclsObj, L"Label"); label.is_ok())
-            volume.Label = label.unwrap();
+        if (auto label = WMI::GetProperty<std::wstring>(pclsObj, L"Label"))
+            volume.Label = move(label).unwrap();
 
-        if (auto device_id = WMI::GetProperty<std::wstring>(pclsObj, L"DeviceID"); device_id.is_ok())
-            volume.DeviceId = device_id.unwrap();
+        if (auto device_id = WMI::GetProperty<std::wstring>(pclsObj, L"DeviceID"))
+            volume.DeviceId = move(device_id).unwrap();
 
-        if (auto drive_type = WMI::GetProperty<ULONG32>(pclsObj, L"DriveType"); drive_type.is_ok())
+        if (auto drive_type = WMI::GetProperty<ULONG32>(pclsObj, L"DriveType"))
         {
-            switch (drive_type.unwrap())
+            switch (drive_type.value())
             {
                 case DRIVE_UNKNOWN:
                     volume.Type = Drive_Unknown;break;
@@ -986,54 +989,54 @@ Orc::Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::
             }
         }
 
-        if (auto capacity = WMI::GetProperty<ULONG64>(pclsObj, L"Capacity"); capacity.is_ok())
-            volume.Size = capacity.unwrap();
+        if (auto capacity = WMI::GetProperty<ULONG64>(pclsObj, L"Capacity"))
+            volume.Size = move(capacity).unwrap();
 
-        if (auto freespace = WMI::GetProperty<ULONG64>(pclsObj, L"FreeSpace"); freespace.is_ok())
-            volume.FreeSpace = freespace.unwrap();
+        if (auto freespace = WMI::GetProperty<ULONG64>(pclsObj, L"FreeSpace"))
+            volume.FreeSpace = move(freespace).unwrap();
 
-        if (auto serial = WMI::GetProperty<ULONG32>(pclsObj, L"SerialNumber"); serial.is_ok())
-            volume.SerialNumber = serial.unwrap();
+        if (auto serial = WMI::GetProperty<ULONG32>(pclsObj, L"SerialNumber"))
+            volume.SerialNumber = move(serial).unwrap();
 
-        if (auto boot = WMI::GetProperty<bool>(pclsObj, L"BootVolume"); boot.is_ok())
-            volume.bBoot = boot.unwrap();
+        if (auto boot = WMI::GetProperty<bool>(pclsObj, L"BootVolume"))
+            volume.bBoot = move(boot).unwrap();
 
-        if (auto system = WMI::GetProperty<bool>(pclsObj, L"SystemVolume"); system.is_ok())
-            volume.bSystem= system.unwrap();
+        if (auto system = WMI::GetProperty<bool>(pclsObj, L"SystemVolume"))
+            volume.bSystem= move(system).unwrap();
 
-        if (auto errorcode = WMI::GetProperty<ULONG32>(pclsObj, L"LastErrorCode"); errorcode.is_ok())
-            if(auto code = errorcode.unwrap(); code != 0LU)
+        if (auto errorcode = WMI::GetProperty<ULONG32>(pclsObj, L"LastErrorCode"))
+            if(auto code = move(errorcode).unwrap(); code != 0LU)
                 volume.ErrorCode = code;
 
-        if (auto errordescr = WMI::GetProperty<std::wstring>(pclsObj, L"ErrorDescription"); errordescr.is_ok())
-            if (auto descr = errordescr.unwrap(); descr.empty())
+        if (auto errordescr = WMI::GetProperty<std::wstring>(pclsObj, L"ErrorDescription"))
+            if (auto descr = move(errordescr).unwrap(); descr.empty())
                 volume.ErrorDesciption = descr;
 
         retval.push_back(std::move(volume));
     }
 
-    return retval;
+    return Ok(std::move(retval));
 }
 
-Result<std::vector<Orc::SystemDetails::QFE>> Orc::SystemDetails::GetOsQFEs(const logger& pLog)
+Result<std::vector<Orc::SystemDetails::QFE>, HRESULT> Orc::SystemDetails::GetOsQFEs(const logger& pLog)
 {
     if (auto hr = LoadSystemDetails(); FAILED(hr))
-        return hr;
+        return Err(std::move(hr));
 
     if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
     {
         log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
-        return hr;
+        return Err(std::move(hr));
     }
 
     const auto& wmi = g_pDetailsBlock->wmi;
     auto result = wmi.Query(
         pLog,
         L"SELECT HotFixID,Description,Caption,InstalledOn FROM Win32_QuickFixEngineering");
-    if (result.is_err())
-        return result.err();
+    if (!result)
+        return Err(move(result.err_value()));
 
-    auto pEnum = result.unwrap();
+    const auto& pEnum = result.value();
 
     std::vector<QFE> retval;
     while (pEnum)
@@ -1047,32 +1050,32 @@ Result<std::vector<Orc::SystemDetails::QFE>> Orc::SystemDetails::GetOsQFEs(const
 
         QFE qfe;
 
-        if (auto id = WMI::GetProperty<std::wstring>(pclsObj, L"HotFixID"); id.is_err())
+        if (auto id = WMI::GetProperty<std::wstring>(pclsObj, L"HotFixID"); !id)
             continue; // without hotfix id...
         else
-            qfe.HotFixId = id.unwrap();
+            qfe.HotFixId = move(id).unwrap();
 
-        if (auto descr = WMI::GetProperty<std::wstring>(pclsObj, L"Description"); descr.is_ok())
-            qfe.Description = descr.unwrap();
+        if (auto descr = WMI::GetProperty<std::wstring>(pclsObj, L"Description"))
+            qfe.Description = move(descr).unwrap();
 
-        if (auto url = WMI::GetProperty<std::wstring>(pclsObj, L"Caption"); url.is_ok())
-            qfe.URL = url.unwrap();
+        if (auto url = WMI::GetProperty<std::wstring>(pclsObj, L"Caption"))
+            qfe.URL = move(url).unwrap();
 
 
-        if (auto date = WMI::GetProperty<std::wstring>(pclsObj, L"InstalledOn"); date.is_ok())
-            qfe.InstallDate = date.unwrap();
+        if (auto date = WMI::GetProperty<std::wstring>(pclsObj, L"InstalledOn"))
+            qfe.InstallDate = move(date).unwrap();
 
         retval.push_back(std::move(qfe));
     }
-    return retval;
+    return Ok(std::move(retval));
 }
 
-Orc::Result<std::vector<Orc::SystemDetails::EnvVariable>> Orc::SystemDetails::GetEnvironment(const logger& pLog)
+stx::Result<std::vector<Orc::SystemDetails::EnvVariable>,HRESULT> Orc::SystemDetails::GetEnvironment(const logger& pLog)
 {
     auto env_snap = GetEnvironmentStringsW();
 
     if (env_snap == NULL)
-        return HRESULT_FROM_WIN32(GetLastError());
+        return Err(HRESULT_FROM_WIN32(GetLastError()));
 
     BOOST_SCOPE_EXIT(&env_snap) { FreeEnvironmentStringsW(env_snap); }
     BOOST_SCOPE_EXIT_END;
@@ -1093,7 +1096,7 @@ Orc::Result<std::vector<Orc::SystemDetails::EnvVariable>> Orc::SystemDetails::Ge
         curVar += lstrlen(curVar) + 1;
     }
  
-    return retval;
+    return Ok(std::move(retval));
 }
 
 bool SystemDetails::IsWOW64()
@@ -1103,10 +1106,10 @@ bool SystemDetails::IsWOW64()
     return g_pDetailsBlock->WOW64;
 }
 
-Orc::Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails::GetNetworkAdapters()
+stx::Result<std::vector<Orc::SystemDetails::NetworkAdapter>,HRESULT> Orc::SystemDetails::GetNetworkAdapters()
 {
     if (auto hr = LoadSystemDetails(); FAILED(hr))
-        return hr;
+        return Err(std::move(hr));
 
     std::vector<Orc::SystemDetails::NetworkAdapter> retval;
 
@@ -1129,12 +1132,12 @@ Orc::Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails:
                     GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES)buffer.get(), &cbRequiredSize);
                 ret != ERROR_SUCCESS)
             {
-                return HRESULT_FROM_WIN32(ret);
+                return Err(HRESULT_FROM_WIN32(ret));
             }
         }
         else if (ret != ERROR_SUCCESS)
         {
-            return HRESULT_FROM_WIN32(ret);
+            return Err(HRESULT_FROM_WIN32(ret));
         }
 
         // If successful, output some information from the data we received
@@ -1156,7 +1159,7 @@ Orc::Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails:
                         break;
                     else
                     {
-                        auto address = result.unwrap();
+                        auto address = std::move(result).unwrap();
                         address.Mode = AddressMode::UniCast;
                         adapter.Addresses.push_back(std::move(address));
                     }
@@ -1173,7 +1176,7 @@ Orc::Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails:
                         break;
                     else
                     {
-                        auto address = result.unwrap();
+                        auto address = std::move(result).unwrap();
                         address.Mode = AddressMode::AnyCast;
                         adapter.Addresses.push_back(std::move(address));
                     }
@@ -1190,7 +1193,7 @@ Orc::Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails:
                         break;
                     else
                     {
-                        auto address = result.unwrap();
+                        auto address = std::move(result).unwrap();
                         address.Mode = AddressMode::MultiCast;
                         adapter.Addresses.push_back(std::move(address));
                     }
@@ -1207,7 +1210,7 @@ Orc::Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails:
                         break;
                     else
                     {
-                        auto address = result.unwrap();
+                        auto address = std::move(result).unwrap();
                         address.Mode = AddressMode::UnknownMode;
                         adapter.DNS.push_back(std::move(address));
                     }
@@ -1244,10 +1247,10 @@ Orc::Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails:
             pCurrAddresses = pCurrAddresses->Next;
         }
     }
-    return retval;
+    return Ok(std::move(retval));
 }
 
-Orc::Result<Orc::SystemDetails::NetworkAddress> Orc::SystemDetails::GetNetworkAddress(SOCKET_ADDRESS& address)
+stx::Result<Orc::SystemDetails::NetworkAddress, HRESULT> Orc::SystemDetails::GetNetworkAddress(SOCKET_ADDRESS& address)
 {
     NetworkAddress retval;
     switch (address.lpSockaddr->sa_family)
@@ -1268,13 +1271,13 @@ Orc::Result<Orc::SystemDetails::NetworkAddress> Orc::SystemDetails::GetNetworkAd
     ip.reserve(MAX_PATH);
 
     if (WSAAddressToStringW(address.lpSockaddr, address.iSockaddrLength, NULL, ip.get(), &dwLength) == SOCKET_ERROR)
-        return HRESULT_FROM_WIN32(WSAGetLastError());
+        return Err(HRESULT_FROM_WIN32(WSAGetLastError()));
 
     ip.use(dwLength);
 
     retval.Address.assign(ip.get());
 
-    return retval;
+    return Ok(std::move(retval));
 }
 
 HRESULT SystemDetails::LoadSystemDetails()
