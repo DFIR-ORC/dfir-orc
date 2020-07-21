@@ -184,7 +184,7 @@ function(vcpkg_install)
         PATH ${VCPKG_PATH}
     )
 
-    if(NOT NO_UPGRADE)
+    if(NOT VCPKG_NO_UPGRADE)
         vcpkg_upgrade(
             PATH ${VCPKG_PATH}
             OVERLAY_PORTS ${VCPKG_OVERLAY_PORTS}
