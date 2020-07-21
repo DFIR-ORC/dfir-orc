@@ -3,11 +3,11 @@ cmake_policy(VERSION 3.12)
 
 # CMake user options
 option(ORC_USE_STATIC_CRT "Use static runtime" ON)
-option(ORC_BUILD_VCPKG "Build vcpkg dependencies" OFF)
+option(ORC_BUILD_VCPKG "Build vcpkg dependencies" ON)
 
 option(ORC_BUILD_APACHE_ORC "Build Apache's ORC module" OFF)
 option(ORC_BUILD_CHAKRACORE "Build with chakracore support" OFF)
-option(ORC_BUILD_COMMAND    "Build any OrcCommabd based command" ON)
+option(ORC_BUILD_COMMAND    "Build any OrcCommand based command" ON)
 option(ORC_BUILD_FASTFIND   "Build FastFind binary" ON)
 option(ORC_BUILD_ORC        "Build Orc binary" ON)
 option(ORC_BUILD_PARQUET    "Build Parquet module" OFF)

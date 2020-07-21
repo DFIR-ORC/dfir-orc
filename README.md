@@ -30,17 +30,17 @@ cd dfir-orc
 mkdir build-x86 build-x64
 
 cd build-x86
-cmake -G "Visual Studio 16 2019" -A Win32 -T v141_xp -DORC_BUILD_VCPKG=ON ..
+cmake -G "Visual Studio 16 2019" -A Win32 -T v141_xp ..
 cmake --build . --config MinSizeRel -- -maxcpucount
 
 cd ../build-x64
-cmake -G "Visual Studio 16 2019" -A x64 -T v141_xp -DORC_BUILD_VCPKG=ON ..
+cmake -G "Visual Studio 16 2019" -A x64 -T v141_xp ..
 cmake --build . --config MinSizeRel -- -maxcpucount
 ```
 
 * The `-T v141_xp` option will allow compatibility with Windows XP SP2 and later, it can safely be removed if this is not required.
 
-* The `ORC_BUILD_VCPKG=ON` option will build vcpkg packages in 'external/vcpkg' subdirectory.
+* The default `ORC_BUILD_VCPKG=ON` option will build vcpkg packages in 'external/vcpkg' subdirectory.
 
 **Important** Always do a `git submodule update` after any `git pull` to update submodules aswell. Alternatively, always pull with `git pull --recurse-submodules`
 
@@ -50,7 +50,7 @@ Using default options is recommended with the exception of `ORC_BUILD_VCPKG` whi
 
 | CMake option         | Default               | Description                   |
 |:---------------------|:----------------------|:------------------------------|
-| ORC_BUILD_VCPKG      | OFF                   | Build vcpkg dependencies      |
+| ORC_BUILD_VCPKG      | ON                    | Build vcpkg dependencies      |
 | ORC_BUILD_APACHE_ORC | OFF                   | Build Apache Orc module       |
 | ORC_BUILD_CHAKRACORE | OFF                   | Build with ChakraCore support |
 | ORC_BUILD_COMMAND    | ON                    | Build OrcCommand library      |
