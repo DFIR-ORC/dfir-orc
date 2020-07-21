@@ -46,25 +46,25 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 
 
 ### Options
-Using default options is recommended with the exception of `ORC_BUILD_VCPKG` which should be set to **ON** so dependencies will be built automatically using vcpkg.
 
-| CMake option         | Default               | Description                   |
-|:---------------------|:----------------------|:------------------------------|
-| ORC_BUILD_VCPKG      | ON                    | Build vcpkg dependencies      |
-| ORC_BUILD_APACHE_ORC | OFF                   | Build Apache Orc module       |
-| ORC_BUILD_CHAKRACORE | OFF                   | Build with ChakraCore support |
-| ORC_BUILD_COMMAND    | ON                    | Build OrcCommand library      |
-| ORC_BUILD_FASTFIND   | OFF                   | Build FastFind binary         |
-| ORC_BUILD_ORC        | ON                    | Build Orc binary              |
-| ORC_BUILD_PARQUET    | OFF                   | Build Parquet module (x64)    |
-| ORC_BUILD_SQL        | OFF                   | Build SQL module [1]          |
-| ORC_BUILD_SSDEEP     | OFF                   | Build with ssdeep support     |
-| ORC_BUILD_JSON       | ON                    | Build with JSON enabled       |
-| ORC_USE_STATIC_CRT   | ON                    | Use static runtime            |
-| ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory          |
-| ORC_XMLLITE_PATH     |                       | XmlLite.dll path (xp sp2)     |
-| VCPKG_TARGET_TRIPLET | Autodetect            | VCPKG triplet to use          |
-| CMAKE_TOOLCHAIN_FILE | Autodetect            | VCPKG's toolchain file        |
+| CMake option         | Default               | Description                      |
+|:---------------------|:----------------------|:---------------------------------|
+| ORC_DOWNLOADS_ONLY   | OFF                   | Only download vcpkg dependencies |
+| ORC_BUILD_VCPKG      | ON                    | Build vcpkg dependencies         |
+| ORC_BUILD_APACHE_ORC | OFF                   | Build Apache Orc module          |
+| ORC_BUILD_CHAKRACORE | OFF                   | Build with ChakraCore support    |
+| ORC_BUILD_COMMAND    | ON                    | Build OrcCommand library         |
+| ORC_BUILD_FASTFIND   | OFF                   | Build FastFind binary            |
+| ORC_BUILD_ORC        | ON                    | Build Orc binary                 |
+| ORC_BUILD_PARQUET    | OFF                   | Build Parquet module (x64)       |
+| ORC_BUILD_SQL        | OFF                   | Build SQL module [1]             |
+| ORC_BUILD_SSDEEP     | OFF                   | Build with ssdeep support        |
+| ORC_BUILD_JSON       | ON                    | Build with JSON enabled          |
+| ORC_USE_STATIC_CRT   | ON                    | Use static runtime               |
+| ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory             |
+| ORC_XMLLITE_PATH     |                       | XmlLite.dll path (xp sp2)        |
+| VCPKG_TARGET_TRIPLET | Autodetect            | VCPKG triplet to use             |
+| CMAKE_TOOLCHAIN_FILE | Autodetect            | VCPKG's toolchain file           |
 
 
 [1] `ORC_BUILD_SQL=ON` requires [SQL Server Native Client](https://docs.microsoft.com/en-us/sql/relational-databases/native-client/applications/installing-sql-server-native-client?view=sql-server-2017)

@@ -14,6 +14,7 @@ option(ORC_BUILD_PARQUET    "Build Parquet module" OFF)
 option(ORC_BUILD_SQL        "Build SQL module" OFF)
 option(ORC_BUILD_SSDEEP     "Build with ssdeep support" OFF)
 option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" ON)
+option(ORC_DOWNLOADS_ONLY   "Do not build ORC but only download vcpkg third parties" OFF)
 
 if(NOT ORC_BUILD_COMMAND)
     set(ORC_BUILD_FASTFIND OFF)
@@ -108,9 +109,14 @@ if(ORC_VCPKG_ROOT)
         list(APPEND _PACKAGES ssdeep)
     endif()
 
+    if(ORC_DOWNLOADS_ONLY)
+        set(ONLY_DOWNLOADS "ONLY_DOWNLOADS")
+    endif()
+
     include(cmake/vcpkg.cmake)
-    if(ORC_BUILD_VCPKG)
+    if(ORC_BUILD_VCPKG OR ORC_DOWNLOADS_ONLY)
         vcpkg_install(
+            ${ONLY_DOWNLOADS}
             PATH ${ORC_VCPKG_ROOT}
             PACKAGES ${_PACKAGES}
             ARCH ${TARGET_ARCH}
@@ -118,6 +124,10 @@ if(ORC_VCPKG_ROOT)
             OVERLAY_TRIPLETS ${OVERLAY_TRIPLETS}
         )
     endif()
+endif()
+
+if(ORC_DOWNLOADS_ONLY)
+    return()
 endif()
 
 # Must be set AFTER 'VCPKG_TARGET_TRIPLET' is defined
