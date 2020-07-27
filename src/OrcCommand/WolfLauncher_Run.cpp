@@ -214,6 +214,10 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             GetSystemTimeAsFileTime(&ft);
             writer->WriteNamed(L"time", ft);
 
+            std::wstring strTimeStamp;
+            SystemDetails::GetTimeStamp(strTimeStamp);
+            writer->WriteNamed(L"timestamp", strTimeStamp.c_str());
+
             auto mothership_id = SystemDetails::GetParentProcessId(_L_);
             if (mothership_id)
             {
