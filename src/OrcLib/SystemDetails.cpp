@@ -41,6 +41,7 @@ struct SystemDetailsBlock
     std::wstring strOSDescription;
     std::wstring strComputerName;
     std::wstring strFullComputerName;
+    std::wstring strTimeStamp;
     std::optional<std::wstring> strOrcComputerName;
     std::optional<std::wstring> strOrcFullComputerName;
     std::optional<std::wstring> strProductType;
@@ -633,23 +634,10 @@ HRESULT SystemDetails::WriteProductype(ITableOutput& output)
 
 HRESULT SystemDetails::GetTimeStamp(std::wstring& strTimeStamp)
 {
-    WCHAR szBuffer[MAX_PATH];
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return hr;
 
-    SYSTEMTIME stNow;
-    GetSystemTime(&stNow);
-
-    swprintf_s(
-        szBuffer,
-        MAX_PATH,
-        L"%04d%02d%02d_%02d%02d%02d",
-        stNow.wYear,
-        stNow.wMonth,
-        stNow.wDay,
-        stNow.wHour,
-        stNow.wMinute,
-        stNow.wSecond);
-
-    strTimeStamp.assign(szBuffer);
+    strTimeStamp.assign(g_pDetailsBlock->strTimeStamp);
     return S_OK;
 }
 
@@ -1670,6 +1658,18 @@ HRESULT SystemDetails::LoadSystemDetails()
         }
     }
 
+    {
+        SYSTEMTIME stNow;
+        GetSystemTime(&stNow);
+
+        g_pDetailsBlock->strTimeStamp = fmt::format(L"{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}"sv,
+            stNow.wYear,
+            stNow.wMonth,
+            stNow.wDay,
+            stNow.wHour,
+            stNow.wMinute,
+            stNow.wSecond);
+    }
     return S_OK;
 }
 
