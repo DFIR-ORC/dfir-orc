@@ -52,7 +52,7 @@ public:
         Assert::AreEqual(L"Access is denied"s, fmt::format(L"{:msg}"sv, access_denied));
         Assert::AreEqual(L"0x80070005"s, fmt::format(L"{:hr}"sv, access_denied));
         Assert::AreEqual(L"0x80070005:Access is denied"s, fmt::format(L"{:hrmsg}"sv, access_denied));
-        Assert::AreEqual(L"Access is denied"s, fmt::format(L"{}"sv, access_denied));
+        Assert::AreEqual(L"0x80070005:Access is denied"s, fmt::format(L"{}"sv, access_denied));
 
         auto ok = make_hr(S_OK);
         Assert::AreEqual(L"S_OK"s, fmt::format(L"{:msg}"sv, ok));
@@ -69,7 +69,7 @@ public:
         Assert::AreEqual(L"Access is denied"s, fmt::format(L"{:msg}"sv, access_denied));
         Assert::AreEqual(L"0x80070005"s, fmt::format(L"{:hr}"sv, access_denied));
         Assert::AreEqual(L"0x80070005:Access is denied"s, fmt::format(L"{:hrmsg}"sv, access_denied));
-        Assert::AreEqual(L"Access is denied"s, fmt::format(L"{}"sv, access_denied));
+        Assert::AreEqual(L"0x80070005:Access is denied"s, fmt::format(L"{}"sv, access_denied));
 
         auto s_ok = make_hr<DWORD>(S_OK);
         Assert::AreEqual(L"0"s, fmt::format(L"{:msg}"sv, s_ok));
