@@ -60,8 +60,8 @@ Orc::ConfigItem::operator DWORD() const
                 throw Orc::Exception(
                     Severity::Continue,
                     hr,
-                    L"%s is not a valid value for this attribute (does not convert to a DWORD)",
-                    strData.c_str());
+                    L"{} is not a valid value for this attribute (does not convert to a DWORD)"sv,
+                    strData);
         }
     }
     else if (auto hr = GetFileSizeFromArg(strData.c_str(), li); FAILED(hr))
@@ -69,8 +69,8 @@ Orc::ConfigItem::operator DWORD() const
         throw Orc::Exception(
             Severity::Continue,
             hr,
-            L"%s is not a valid value for this attribute (does not convert to a DWORD)",
-            strData.c_str());
+            L"{} is not a valid value for this attribute (does not convert to a DWORD)",
+            strData);
     }
 
     if (li.HighPart != 0)
@@ -78,8 +78,8 @@ Orc::ConfigItem::operator DWORD() const
         throw Orc::Exception(
             Severity::Continue,
             HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            L"%s is not a valid value for this attribute (does not fit a DWORD)",
-            strData.c_str());
+            L"{} is not a valid value for this attribute (does not fit a DWORD)"sv,
+            strData);
     }
     return li.LowPart;
 }
@@ -95,8 +95,8 @@ Orc::ConfigItem::operator DWORD32() const
                 throw Orc::Exception(
                     Severity::Continue,
                     hr,
-                    L"%s is not a valid value for this attribute (does not convert to a DWORD32)",
-                    strData.c_str());
+                    L"{} is not a valid value for this attribute (does not convert to a DWORD32)"sv,
+                    strData);
         }
     }
     else if (auto hr = GetFileSizeFromArg(strData.c_str(), li); FAILED(hr))
@@ -104,8 +104,8 @@ Orc::ConfigItem::operator DWORD32() const
         throw Orc::Exception(
             Severity::Continue,
             hr,
-            L"%s is not a valid value for this attribute (does not convert to a DWORD32)",
-            strData.c_str());
+            L"{} is not a valid value for this attribute (does not convert to a DWORD32)"sv,
+            strData);
     }
 
     if (li.HighPart != 0)
@@ -113,8 +113,8 @@ Orc::ConfigItem::operator DWORD32() const
         throw Orc::Exception(
             Severity::Continue,
             HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            L"%s is not a valid value for this attribute (does not fit a DWORD32)",
-            strData.c_str());
+            L"{} is not a valid value for this attribute (does not fit a DWORD32)"sv,
+            strData);
     }
     return li.LowPart;
 }
@@ -130,8 +130,8 @@ Orc::ConfigItem::operator DWORD64() const
                 throw Orc::Exception(
                     Severity::Continue,
                     hr,
-                    L"%s is not a valid value for this attribute (does not convert to a DWORD64)",
-                    strData.c_str());
+                    L"{} is not a valid value for this attribute (does not convert to a DWORD64)"sv,
+                    strData);
         }
     }
     else if (auto hr = GetFileSizeFromArg(strData.c_str(), li); FAILED(hr))
@@ -139,8 +139,8 @@ Orc::ConfigItem::operator DWORD64() const
         throw Orc::Exception(
             Severity::Continue,
             hr,
-            L"%s is not a valid value for this attribute (does not convert to a DWORD64)",
-            strData.c_str());
+            L"{} is not a valid value for this attribute (does not convert to a DWORD64)"sv,
+            strData);
     }
 
     return li.QuadPart;

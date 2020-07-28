@@ -19,6 +19,8 @@ namespace Orc {
 
 namespace Detail {
 
+using namespace std::string_view_literals;
+
 template <typename _T>
 class BufferView
 {
@@ -38,7 +40,7 @@ public:
     const _T& operator[](ULONG idx) const
     {
         if (idx >= m_Elts)
-            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index acces into BufferExView");
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index acces into BufferExView"sv);
         return m_Ptr[idx];
     }
 
@@ -228,14 +230,14 @@ private:
         {
             if (Elts > _DeclElts)
                 throw Orc::Exception(
-                    Severity::Fatal, L"Cannot reserve %d elements in a %d inner store", Elts, _DeclElts);
+                    Severity::Fatal, L"Cannot reserve %d elements in a {} inner store"sv, Elts, _DeclElts);
         }
         void assign(const _T* Ptr, ULONG Elts)
         {
             if (Elts > _DeclElts)
             {
                 throw Orc::Exception(
-                    Severity::Fatal, L"Cannot assign %d elements to a %d inner store", Elts, _DeclElts);
+                    Severity::Fatal, L"Cannot assign %d elements to a {} inner store"sv, Elts, _DeclElts);
             }
             std::copy(Ptr, Ptr + Elts, stdext::checked_array_iterator(m_Elts, _DeclElts));
             return;
@@ -265,10 +267,10 @@ private:
         EmptyStore& operator=(const EmptyStore& other) = delete;
 
         ULONG capacity() const { return 0; }
-        void reserve(ULONG Elts) { throw Orc::Exception(Continue, L"Cannot reserve %d elements in empty store", Elts); }
+        void reserve(ULONG Elts) { throw Orc::Exception(Continue, L"Cannot reserve {} elements in empty store"sv, Elts); }
         void assign(const _T* Ptr, ULONG Elts)
         {
-            throw Orc::Exception(Severity::Continue, L"Cannot assign %d elements to empty store", Elts);
+            throw Orc::Exception(Severity::Continue, L"Cannot assign {} elements to empty store"sv, Elts);
         }
 
         _T* get(ULONG index = 0) const { return nullptr; }
@@ -331,7 +333,7 @@ public:
                 throw Orc::Exception(
                     Severity::Continue,
                     E_INVALIDARG,
-                    L"BufferEx::resize(%d) illegal elt count (> %d)",
+                    L"BufferEx::resize({}) illegal elt count (> {})"sv,
                     Elts,
                     capacity());
             reserve(Elts);
@@ -478,9 +480,7 @@ public:
         if (Elts > (ULONG_PTR)-1 / sizeof(_T))
         {
             throw Orc::Exception(
-                Severity::Fatal,
-                HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW),
-                L"BufferEx::Resize count overflow");
+                Severity::Fatal, HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW), L"BufferEx::Resize count overflow"sv);
         }
         if (Elts == 0L)
         {
@@ -543,14 +543,13 @@ public:
     _T* get(ULONG index = 0) const
     {
         if (index && index >= m_EltsUsed)
-            throw Exception(
-                Severity::Fatal, E_INVALIDARG, L"Invalid index get(%d) (size=%d)", index, m_EltsUsed);
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index get({}) (size={})"sv, index, m_EltsUsed);
 
         auto ptr = get_raw(index);
 
         if (!ptr)
         {
-            throw Exception(Severity::Fatal, E_INVALIDARG, L"Buffer NULL reference");
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Buffer NULL reference"sv);
         }
         return ptr;
     }
@@ -563,7 +562,7 @@ public:
 
         if (!ptr)
         {
-            throw Exception(Severity::Fatal, E_INVALIDARG, L"Buffer NULL reference");
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Buffer NULL reference"sv);
         }
         return reinterpret_cast<const _T_as* const>(ptr);
     }
@@ -622,16 +621,14 @@ public:
     const _T& operator[](ULONG idx) const
     {
         if (idx >= m_EltsUsed)
-            throw Orc::Exception(
-                Severity::Fatal, L"Index %d out of buffer range of %d elements", idx, m_EltsUsed);
+            throw Orc::Exception(Severity::Fatal, L"Index {} out of buffer range of {} elements"sv, idx, m_EltsUsed);
         return get()[idx];
     }
 
     _T& operator[](ULONG idx)
     {
         if (idx >= m_EltsUsed)
-            throw Orc::Exception(
-                Severity::Fatal, L"Index %d out of buffer range of %d elements", idx, m_EltsUsed);
+            throw Orc::Exception(Severity::Fatal, L"Index {} out of buffer range of {} elements"sv, idx, m_EltsUsed);
         return get()[idx];
     }
 
@@ -640,10 +637,7 @@ public:
     {
         if (sizeof(_To) != (sizeof(_T) * m_EltsUsed))
             throw Orc::Exception(
-                Severity::Fatal,
-                L"Illegal conversion from size %d to %d",
-                (sizeof(_T) * m_EltsUsed),
-                sizeof(_To));
+                Severity::Fatal, L"Illegal conversion from size {} to {}"sv, (sizeof(_T) * m_EltsUsed), sizeof(_To));
         return *(reinterpret_cast<const _To*>(get()));
     }
 

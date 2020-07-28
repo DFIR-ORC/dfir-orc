@@ -39,7 +39,7 @@ public:
         {
             Flush();
             if (!m_buffer.empty())
-                throw Orc::Exception(Severity::Continue, E_OUTOFMEMORY, L"Failed to flush JSON's stream buffer");
+                throw Orc::Exception(Severity::Continue, E_OUTOFMEMORY, L"Failed to flush JSON's stream buffer"sv);
         }
         m_buffer.push_back(c);
     }
@@ -52,10 +52,10 @@ public:
 
         auto BytesWritten = 0ULL;
         if (auto hr = m_stream->Write(m_buffer.get(), m_buffer.elt_size() * m_buffer.size(), &BytesWritten); FAILED(hr))
-            throw Orc::Exception(Severity::Continue, hr, L"Failed to write JSON's buffer to stream");
+            throw Orc::Exception(Severity::Continue, hr, L"Failed to write JSON's buffer to stream"sv);
         if (BytesWritten != m_buffer.elt_size() * m_buffer.size())
             throw Orc::Exception(
-                Severity::Continue, E_NOT_VALID_STATE, L"Failed to write JSON's entire buffer to stream");
+                Severity::Continue, E_NOT_VALID_STATE, L"Failed to write JSON's entire buffer to stream"sv);
 
         m_buffer.clear();
     }

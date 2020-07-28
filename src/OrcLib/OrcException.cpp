@@ -23,12 +23,6 @@ Orc::Exception::Exception(std::wstring descr)
 {
 }
 
-Orc::Exception::Exception(Orc::Severity status, std::wstring descr)
-    : Description(std::move(descr))
-    , Severity(status)
-{
-}
-
 HRESULT Exception::PrintMessage() const
 {
     Log::Error(L"Exception Occured: {}", Description);
@@ -42,11 +36,14 @@ char const* Exception::what() const
     if (What.has_value())
         return What.value().c_str();
 
-    auto [hr, str] = Orc::WideToAnsi(fmt::format(L"Exception: {}", Description));
-    if (SUCCEEDED(hr))
+    if (!Description.empty())
     {
-        What.emplace(std::move(str));
-        return What.value().c_str();
+        auto [hr, str] = Orc::WideToAnsi(fmt::format(L"Exception: {}", Description));
+        if (SUCCEEDED(hr))
+        {
+            What.emplace(std::move(str));
+            return What.value().c_str();
+        }
     }
 
     return "Exception raised without further description";

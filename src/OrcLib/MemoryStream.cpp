@@ -18,6 +18,7 @@
 #include "SystemDetails.h"
 
 using namespace Orc;
+using namespace std::string_view_literals;
 
 // The minimum number of bytes to allocate for a memory stream buffer
 static const size_t MEMORY_STREAM_MIN_ALLOC = 4096;
@@ -416,7 +417,7 @@ CBinaryBuffer MemoryStream::GetBuffer()
     CBinaryBuffer retval;
 
     if (auto hr = retval.SetData(m_pBuffer, m_cbBuffer); FAILED(hr))
-        throw Exception(Severity::Fatal, hr, L"Failed to copy buffer of %d bytes", m_cbBuffer);
+        throw Exception(Severity::Fatal, hr, L"Failed to copy buffer of {} bytes"sv, m_cbBuffer);
 
     return retval;
 }

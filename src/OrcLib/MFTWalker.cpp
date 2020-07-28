@@ -24,6 +24,7 @@
 #include "Log/Log.h"
 
 using namespace std;
+using namespace std::string_view_literals;
 using namespace Orc;
 
 // Number of items in the VirtualStore

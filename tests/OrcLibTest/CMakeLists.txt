@@ -50,6 +50,7 @@ set(SRC_UTILITIES
     "convert.cpp"
     "crypto_utilities_test.cpp"
 	"embedded_resource.cpp"
+    "exceptions.cpp"
     "libraries_test.cpp"
     "profile_list.cpp"
     "registry.cpp"

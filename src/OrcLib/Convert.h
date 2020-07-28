@@ -14,6 +14,8 @@
 
 namespace Orc {
 
+using namespace std::string_view_literals;
+
 template <
     typename To,
     typename From,
@@ -75,7 +77,7 @@ static Orc::ByteBuffer ConvertBase64(const std::wstring_view strBase64, DWORD dw
             throw Exception(
                 Severity::Continue,
                 HRESULT_FROM_WIN32(error),
-                L"Conversion from BASE64 failed to compute required size");
+                L"Conversion from BASE64 failed to compute required size"sv);
         }
     }
     retval.resize(dwRequiredSize);
@@ -85,7 +87,7 @@ static Orc::ByteBuffer ConvertBase64(const std::wstring_view strBase64, DWORD dw
         throw Exception(
             Severity::Continue,
             HRESULT_FROM_WIN32(GetLastError()),
-            L"Conversion from BASE64 failed to compute required size");
+            L"Conversion from BASE64 failed to compute required size"sv);
     }
     return retval;
 }
@@ -105,7 +107,7 @@ static Orc::ByteBuffer ConvertBase64(const std::string_view strBase64, DWORD dwF
             throw Exception(
                 Severity::Continue,
                 HRESULT_FROM_WIN32(error),
-                L"Conversion from BASE64 failed to compute required size");
+                L"Conversion from BASE64 failed to compute required size"sv);
         }
     }
     retval.resize(dwRequiredSize);
@@ -115,7 +117,7 @@ static Orc::ByteBuffer ConvertBase64(const std::string_view strBase64, DWORD dwF
         throw Exception(
             Severity::Continue,
             HRESULT_FROM_WIN32(GetLastError()),
-            L"Conversion from BASE64 failed to compute required size");
+            L"Conversion from BASE64 failed to compute required size"sv);
     }
     return retval;
 }
@@ -134,7 +136,7 @@ ConvertToBase64(const Buffer<BYTE, _DeclElts>& buffer, DWORD dwFlags = CRYPT_STR
             throw Exception(
                 Severity::Continue,
                 HRESULT_FROM_WIN32(error),
-                L"Conversion from BASE64 failed to compute required size");
+                L"Conversion from BASE64 failed to compute required size"sv);
         else
             strBuffer.reserve(dwRequiredSize);
     }
@@ -144,7 +146,7 @@ ConvertToBase64(const Buffer<BYTE, _DeclElts>& buffer, DWORD dwFlags = CRYPT_STR
         throw Exception(
             Severity::Continue,
             HRESULT_FROM_WIN32(GetLastError()),
-            L"Conversion from BASE64 failed to compute required size");
+            L"Conversion from BASE64 failed to compute required size"sv);
     }
     return std::wstring(strBuffer.get(), dwRequiredSize);
 }

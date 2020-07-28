@@ -40,7 +40,7 @@ HANDLE GetBinaryBufferHeap()
     throw Exception(
         Severity::Fatal,
         HRESULT_FROM_WIN32(GetLastError()),
-        L"Binary buffer heap could not be created nor did process heap");
+        L"Binary buffer heap could not be created nor did process heap"sv);
 }
 
 CBinaryBuffer::CBinaryBuffer(const CBinaryBuffer& other)
@@ -58,7 +58,7 @@ CBinaryBuffer::CBinaryBuffer(const CBinaryBuffer& other)
                 m_pData = (BYTE*)VirtualAlloc(NULL, other.m_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
                 m_bOwnMemory = true;
                 if (m_pData == nullptr)
-                    throw Exception(Severity::Fatal, E_OUTOFMEMORY, L"out of memory");
+                    throw Exception(Severity::Fatal, E_OUTOFMEMORY, L"out of memory"sv);
 
                 if (!other.m_bJunk)
                     CopyMemory(m_pData, other.m_pData, other.m_size);

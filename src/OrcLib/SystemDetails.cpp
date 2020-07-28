@@ -27,7 +27,6 @@
 
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
-
 using namespace Orc;
 using namespace stx;
 
@@ -119,7 +118,7 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
 
     HRESULT hr = E_FAIL;
     if (FAILED(hr = LoadSystemDetails()))
-        throw Exception(Severity::Fatal, L"System details information could not be loaded");
+        throw Exception(Severity::Fatal, L"System details information could not be loaded"sv);
 
     if (g_pDetailsBlock->Tags.has_value())
         return g_pDetailsBlock->Tags.value();
@@ -138,14 +137,14 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
             tags.insert(L"x64"s);
             break;
         default:
-            throw Exception(Severity::Fatal, L"Unsupported architechture {}", wArch);
+            throw Exception(Severity::Fatal, L"Unsupported architechture {}"sv, wArch);
     }
 
     auto [major, minor] = Orc::SystemDetails::GetOSVersion();
 
     BYTE systemType = 0L;
     if (auto hr = Orc::SystemDetails::GetSystemType(systemType); FAILED(hr))
-        throw Exception(Severity::Fatal, hr, L"System type not available");
+        throw Exception(Severity::Fatal, hr, L"System type not available"sv);
 
     switch (major)
     {
@@ -269,7 +268,7 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
 
     std::wstring strProductType;
     if (auto hr = GetSystemType(strProductType); FAILED(hr))
-        throw Exception(Severity::Fatal, hr, L"System type not available");
+        throw Exception(Severity::Fatal, hr, L"System type not available"sv);
     tags.insert(strProductType);
 
     tags.insert(fmt::format(L"OSBuild#{}", g_pDetailsBlock->osvi.dwBuildNumber));
@@ -297,7 +296,7 @@ HRESULT Orc::SystemDetails::SetSystemTags(SystemTags tags)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = LoadSystemDetails()))
-        throw Exception(Severity::Fatal, L"System details information could not be loaded");
+        throw Exception(Severity::Fatal, L"System details information could not be loaded"sv);
 
     g_pDetailsBlock->Tags.emplace(std::move(tags));
     return S_OK;

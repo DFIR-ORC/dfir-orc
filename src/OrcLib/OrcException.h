@@ -14,6 +14,8 @@
 
 #include <strsafe.h>
 
+#include "Output/Text/Fmt/optional.h"
+
 #pragma managed(push, off)
 
 namespace Orc {
@@ -30,50 +32,26 @@ class Exception : public std::exception
 {
 public:
     template <typename... Args>
-    Exception(Severity status, _In_ HRESULT hr, LPCWSTR szFmt, Args&&... args)
+    Exception(Severity status, _In_ HRESULT hr, std::wstring_view fmt, Args&&... args)
         : Severity(status)
         , m_HRESULT(hr)
     {
-        WCHAR szMsg[MAX_DESCR];
-        size_t remanining = 0;
-        if (FAILED(StringCchPrintfExW(
-                szMsg, MAX_DESCR, NULL, &remanining, STRSAFE_FILL_ON_FAILURE, szFmt, std::forward<Args>(args)...)))
-        {
-            Description.assign(szFmt);
-        }
-        else
-        {
-            Description.reserve(MAX_DESCR - remanining);
-            Description.assign(szMsg);
-        }
+        Description = fmt::format(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    Exception(Severity status, LPCWSTR szFmt, Args&&... args)
+    Exception(Severity status, std::wstring_view fmt, Args&&... args)
         : Severity(status)
     {
-        WCHAR szMsg[MAX_DESCR];
-        size_t remanining = 0;
-        if (FAILED(StringCchPrintfExW(
-                szMsg, MAX_DESCR, NULL, &remanining, STRSAFE_FILL_ON_FAILURE, szFmt, std::forward<Args>(args)...)))
-        {
-            Description.assign(szFmt);
-        }
-        else
-        {
-            Description.reserve(MAX_DESCR - remanining);
-            Description.assign(szMsg);
-        }
+        Description = fmt::format(fmt, std::forward<Args>(args)...);
     }
 
-    Exception(std::wstring descr);
-    Exception(Severity status, std::wstring descr);
-    Exception(Severity status, std::wstring descr, std::wstring typeName, std::wstring field);
-    Exception(Severity status, _In_ HRESULT hr, std::wstring descr)
-        : Description(std::move(descr))
-        , m_HRESULT(hr)
+    Exception() = default;
+    Exception(Severity status)
+        : Severity(status)
     {
     }
+    Exception(std::wstring descr);
     Exception(Severity status, _In_ HRESULT hr)
         : m_HRESULT(hr)
     {
@@ -95,8 +73,6 @@ public:
 
     Severity Severity = Severity::Unset;
     std::wstring Description;
-    std::optional<std::wstring> TypeName;
-    std::optional<std::wstring> FieldName;
     HRESULT m_HRESULT = E_FAIL;
 
     HRESULT PrintMessage() const;
@@ -107,8 +83,6 @@ public:
 
 private:
     mutable std::optional<std::string> What;
-
-    static const int MAX_DESCR = 1024;
 };
 
 }  // namespace Orc

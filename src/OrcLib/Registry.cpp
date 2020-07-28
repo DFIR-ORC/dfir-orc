@@ -10,6 +10,7 @@
 
 #include "Registry.h"
 
+using namespace std::string_view_literals;
 using namespace stx;
 
 template <>
@@ -275,7 +276,7 @@ Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szVa
             }
             else
             {
-                throw Exception(Severity::Continue, E_FAIL, L"Unexpected return value for ExpandEnvironmentStringsW");
+                throw Exception(Severity::Continue, E_FAIL, L"Unexpected return value for ExpandEnvironmentStringsW"sv);
             }
         }
         else

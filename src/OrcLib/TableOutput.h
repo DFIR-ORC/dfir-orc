@@ -165,8 +165,7 @@ public:
             return false;
         });
         if (it == std::end(*m_Columns))
-            throw Orc::Exception(
-                Severity::Fatal, E_INVALIDARG, L"No column named \"%.*s\" in schema", strName.size(), strName.data());
+            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"No column named \"{}\" in schema"sv, strName);
         return *(*it);
     };
     Column& operator[](const std::wstring_view& strName)
@@ -177,37 +176,31 @@ public:
             return false;
         });
         if (it == std::end(*m_Columns))
-            throw Orc::Exception(
-                Severity::Fatal,
-                E_INVALIDARG,
-                L"No column named \"%.*s\" in schema",
-                strName.size(),
-                strName.data());
+            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"No column named \"{}\" in schema"sv, strName);
         return *(*it);
     };
     const Column& operator[](const size_t colId) const
     {
         if (!m_Columns)
-            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Schema not initialized");
+            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Schema not initialized"sv);
         if (colId >= m_Columns->size())
             throw Orc::Exception(
-                Severity::Fatal, E_INVALIDARG, L"No column at index %d (max is %d)", colId, m_Columns->size() - 1);
+                Severity::Fatal, E_INVALIDARG, L"No column at index {} (max is {})"sv, colId, m_Columns->size() - 1);
         const auto& pCol = (*m_Columns)[colId];
         if (!pCol)
-            throw Orc::Exception(
-                Severity::Fatal, E_INVALIDARG, L"Column at index %d is not initialized", colId);
+            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Column at index {} is not initialized"sv, colId);
         return *((*m_Columns)[colId]);
     };
     Column& operator[](const size_t colId)
     {
         if (!m_Columns)
-            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Schema not initialized");
+            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Schema not initialized"sv);
         if (colId >= m_Columns->size())
             throw Orc::Exception(
-                Severity::Fatal, E_INVALIDARG, L"No column at index %d (max is %d)", colId, m_Columns->size() - 1);
+                Severity::Fatal, E_INVALIDARG, L"No column at index {} (max is {})"sv, colId, m_Columns->size() - 1);
         const auto& pCol = (*m_Columns)[colId];
         if (!pCol)
-            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Column at index %d is not initialized", colId);
+            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Column at index {} is not initialized"sv, colId);
         return *((*m_Columns)[colId]);
     };
 

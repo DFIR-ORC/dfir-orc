@@ -62,5 +62,3 @@
 #include <eh.h>
 
 #include "Log/Log.h"
-
-#include "Output/Text/Fmt/formatter.h"
