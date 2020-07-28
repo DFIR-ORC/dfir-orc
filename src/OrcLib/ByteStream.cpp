@@ -7,6 +7,7 @@
 //
 #include "stdafx.h"
 #include "ByteStream.h"
+#include "BinaryBuffer.h"
 
 #include "Temporary.h"
 

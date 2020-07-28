@@ -71,4 +71,3 @@
 #include "Output/Text/Fmt/Formatter.h"
 
 #include "OrcLib.h"
-#include "BinaryBuffer.h"

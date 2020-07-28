@@ -12,6 +12,7 @@
 
 #include "OutputSpec.h"
 #include "FileStream.h"
+#include "BinaryBuffer.h"
 
 using namespace std::string_view_literals;
 using namespace Orc;

@@ -11,6 +11,8 @@
 
 #include "TemporaryStream.h"
 
+#include "BinaryBuffer.h"
+
 using namespace Orc;
 
 STDMETHODIMP AccumulatingStream::Open(

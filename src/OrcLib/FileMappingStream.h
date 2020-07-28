@@ -8,6 +8,7 @@
 #pragma once
 
 #include "ByteStream.h"
+#include "BinaryBuffer.h"
 
 #pragma managed(push, off)
 

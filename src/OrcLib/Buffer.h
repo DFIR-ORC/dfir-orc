@@ -38,7 +38,7 @@ public:
     const _T& operator[](ULONG idx) const
     {
         if (idx >= m_Elts)
-            throw Exception(Orc::ExceptionSeverity::Fatal, E_INVALIDARG, L"Invalid index acces into BufferExView");
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index acces into BufferExView");
         return m_Ptr[idx];
     }
 
@@ -59,14 +59,14 @@ private:
             , m_EltsAlloc(Elts)
         {
             if (!m_Ptr)
-                throw Orc::Exception(Orc::ExceptionSeverity::Fatal, E_OUTOFMEMORY);
+                throw Orc::Exception(Severity::Fatal, E_OUTOFMEMORY);
         }
         HeapStore(_T* Ptr, ULONG Elts)
             : m_Ptr(Ptr)
             , m_EltsAlloc(Elts)
         {
             if (!m_Ptr)
-                throw Orc::Exception(Orc::ExceptionSeverity::Fatal, E_POINTER);
+                throw Orc::Exception(Severity::Fatal, E_POINTER);
         };
         HeapStore(HeapStore&& other) noexcept
         {
@@ -147,7 +147,7 @@ private:
             , m_EltsInView(Elts)
         {
             if (m_Ptr == nullptr)
-                throw Orc::Exception(Orc::ExceptionSeverity::Fatal, E_POINTER);
+                throw Orc::Exception(Severity::Fatal, E_POINTER);
         };
 
         ViewStore(ViewStore&& other) noexcept
@@ -171,7 +171,7 @@ private:
         void assign(const _T* Ptr, ULONG Elts)
         {
             if (Elts > m_EltsInView)
-                throw Orc::Exception(Orc::ExceptionSeverity::Fatal, E_OUTOFMEMORY);
+                throw Orc::Exception(Severity::Fatal, E_OUTOFMEMORY);
 
             std::copy(Ptr, Ptr + Elts, stdext::checked_array_iterator(m_Ptr, m_EltsInView));
             return;
@@ -188,7 +188,7 @@ private:
         void reserve(ULONG Elts)
         {
             if (Elts > m_EltsInView)
-                throw Orc::Exception(Orc::ExceptionSeverity::Fatal, E_OUTOFMEMORY);
+                throw Orc::Exception(Severity::Fatal, E_OUTOFMEMORY);
         }
 
         _T* get(ULONG index = 0) const { return m_Ptr + index; }
@@ -228,14 +228,14 @@ private:
         {
             if (Elts > _DeclElts)
                 throw Orc::Exception(
-                    Orc::ExceptionSeverity::Fatal, L"Cannot reserve %d elements in a %d inner store", Elts, _DeclElts);
+                    Severity::Fatal, L"Cannot reserve %d elements in a %d inner store", Elts, _DeclElts);
         }
         void assign(const _T* Ptr, ULONG Elts)
         {
             if (Elts > _DeclElts)
             {
                 throw Orc::Exception(
-                    Orc::ExceptionSeverity::Fatal, L"Cannot assign %d elements to a %d inner store", Elts, _DeclElts);
+                    Severity::Fatal, L"Cannot assign %d elements to a %d inner store", Elts, _DeclElts);
             }
             std::copy(Ptr, Ptr + Elts, stdext::checked_array_iterator(m_Elts, _DeclElts));
             return;
@@ -268,7 +268,7 @@ private:
         void reserve(ULONG Elts) { throw Orc::Exception(Continue, L"Cannot reserve %d elements in empty store", Elts); }
         void assign(const _T* Ptr, ULONG Elts)
         {
-            throw Orc::Exception(Continue, L"Cannot assign %d elements to empty store", Elts);
+            throw Orc::Exception(Severity::Continue, L"Cannot assign %d elements to empty store", Elts);
         }
 
         _T* get(ULONG index = 0) const { return nullptr; }
@@ -329,7 +329,7 @@ public:
         {
             if (!allow_growth)
                 throw Orc::Exception(
-                    Orc::ExceptionSeverity::Continue,
+                    Severity::Continue,
                     E_INVALIDARG,
                     L"BufferEx::resize(%d) illegal elt count (> %d)",
                     Elts,
@@ -478,7 +478,7 @@ public:
         if (Elts > (ULONG_PTR)-1 / sizeof(_T))
         {
             throw Orc::Exception(
-                Orc::ExceptionSeverity::Fatal,
+                Severity::Fatal,
                 HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW),
                 L"BufferEx::Resize count overflow");
         }
@@ -544,13 +544,13 @@ public:
     {
         if (index && index >= m_EltsUsed)
             throw Exception(
-                Orc::ExceptionSeverity::Fatal, E_INVALIDARG, L"Invalid index get(%d) (size=%d)", index, m_EltsUsed);
+                Severity::Fatal, E_INVALIDARG, L"Invalid index get(%d) (size=%d)", index, m_EltsUsed);
 
         auto ptr = get_raw(index);
 
         if (!ptr)
         {
-            throw Exception(Orc::ExceptionSeverity::Fatal, E_INVALIDARG, L"Buffer NULL reference");
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Buffer NULL reference");
         }
         return ptr;
     }
@@ -563,7 +563,7 @@ public:
 
         if (!ptr)
         {
-            throw Exception(Orc::ExceptionSeverity::Fatal, E_INVALIDARG, L"Buffer NULL reference");
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Buffer NULL reference");
         }
         return reinterpret_cast<const _T_as* const>(ptr);
     }
@@ -623,7 +623,7 @@ public:
     {
         if (idx >= m_EltsUsed)
             throw Orc::Exception(
-                Orc::ExceptionSeverity::Fatal, L"Index %d out of buffer range of %d elements", idx, m_EltsUsed);
+                Severity::Fatal, L"Index %d out of buffer range of %d elements", idx, m_EltsUsed);
         return get()[idx];
     }
 
@@ -631,7 +631,7 @@ public:
     {
         if (idx >= m_EltsUsed)
             throw Orc::Exception(
-                Orc::ExceptionSeverity::Fatal, L"Index %d out of buffer range of %d elements", idx, m_EltsUsed);
+                Severity::Fatal, L"Index %d out of buffer range of %d elements", idx, m_EltsUsed);
         return get()[idx];
     }
 
@@ -640,7 +640,7 @@ public:
     {
         if (sizeof(_To) != (sizeof(_T) * m_EltsUsed))
             throw Orc::Exception(
-                Orc::ExceptionSeverity::Fatal,
+                Severity::Fatal,
                 L"Illegal conversion from size %d to %d",
                 (sizeof(_T) * m_EltsUsed),
                 sizeof(_To));

@@ -345,7 +345,7 @@ HRESULT Orc::TableOutput::CSV::Writer::AddColumnAndCheckNumbers()
         auto counter = m_dwColumnCounter;
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
-            ExceptionSeverity::Fatal,
+            Severity::Fatal,
             L"Too many columns written to CSV (got %d, max is %d)",
             counter,
             m_dwColumnNumber);
@@ -564,10 +564,10 @@ HRESULT Orc::TableOutput::CSV::Writer::WriteEndOfLine()
     m_dwColumnCounter = 0L;
     if (counter < m_dwColumnNumber)
         throw Orc::Exception(
-            ExceptionSeverity::Fatal, L"Too few columns written to CSV (got %d, max is %d)", counter, m_dwColumnNumber);
+            Severity::Fatal, L"Too few columns written to CSV (got %d, max is %d)", counter, m_dwColumnNumber);
     if (counter > m_dwColumnNumber)
         throw Orc::Exception(
-            ExceptionSeverity::Fatal,
+            Severity::Fatal,
             L"Too many columns written to CSV (got %d, max is %d)",
             counter,
             m_dwColumnNumber);

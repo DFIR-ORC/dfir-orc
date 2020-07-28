@@ -416,7 +416,7 @@ CBinaryBuffer MemoryStream::GetBuffer()
     CBinaryBuffer retval;
 
     if (auto hr = retval.SetData(m_pBuffer, m_cbBuffer); FAILED(hr))
-        throw Exception(ExceptionSeverity::Fatal, hr, L"Failed to copy buffer of %d bytes", m_cbBuffer);
+        throw Exception(Severity::Fatal, hr, L"Failed to copy buffer of %d bytes", m_cbBuffer);
 
     return retval;
 }

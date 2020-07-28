@@ -9,6 +9,7 @@
 
 #include "ParameterCheck.h"
 #include "SystemDetails.h"
+#include "BinaryBuffer.h"
 
 #include "CaseInsensitive.h"
 

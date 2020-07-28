@@ -435,7 +435,7 @@ TableOutput::Schema Orc::TableOutput::GetColumnsFromConfig(const LPCWSTR szTable
             continue;  // no column of this type
 
         if (columnlist.Type != ConfigItem::NODELIST)
-            throw Orc::Exception(Fatal, L"Invalid column type item in configuration");
+            throw Orc::Exception(Severity::Fatal, L"Invalid column type item in configuration");
 
         for (const auto& column : columnlist.NodeList)
         {

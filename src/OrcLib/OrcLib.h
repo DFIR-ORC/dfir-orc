@@ -35,7 +35,7 @@ namespace Orc {
 // Utilities
 
 class Exception;
-enum ExceptionSeverity : short;
+enum class Severity : short;
 
 // Utilities/Memory
 class CBinaryBuffer;

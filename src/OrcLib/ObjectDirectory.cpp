@@ -9,6 +9,7 @@
 #include "ObjectDirectory.h"
 
 #include "NtDllExtension.h"
+#include "BinaryBuffer.h"
 
 #include "SystemDetails.h"
 

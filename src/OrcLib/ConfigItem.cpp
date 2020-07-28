@@ -58,7 +58,7 @@ Orc::ConfigItem::operator DWORD() const
         {
             if (auto hr = GetIntegerFromHexaString(strData.c_str(), li.LowPart); FAILED(hr))
                 throw Orc::Exception(
-                    Continue,
+                    Severity::Continue,
                     hr,
                     L"%s is not a valid value for this attribute (does not convert to a DWORD)",
                     strData.c_str());
@@ -67,13 +67,16 @@ Orc::ConfigItem::operator DWORD() const
     else if (auto hr = GetFileSizeFromArg(strData.c_str(), li); FAILED(hr))
     {
         throw Orc::Exception(
-            Continue, hr, L"%s is not a valid value for this attribute (does not convert to a DWORD)", strData.c_str());
+            Severity::Continue,
+            hr,
+            L"%s is not a valid value for this attribute (does not convert to a DWORD)",
+            strData.c_str());
     }
 
     if (li.HighPart != 0)
     {
         throw Orc::Exception(
-            Continue,
+            Severity::Continue,
             HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
             L"%s is not a valid value for this attribute (does not fit a DWORD)",
             strData.c_str());
@@ -90,7 +93,7 @@ Orc::ConfigItem::operator DWORD32() const
         {
             if (auto hr = GetIntegerFromHexaString(strData.c_str(), li.LowPart); FAILED(hr))
                 throw Orc::Exception(
-                    Continue,
+                    Severity::Continue,
                     hr,
                     L"%s is not a valid value for this attribute (does not convert to a DWORD32)",
                     strData.c_str());
@@ -99,7 +102,7 @@ Orc::ConfigItem::operator DWORD32() const
     else if (auto hr = GetFileSizeFromArg(strData.c_str(), li); FAILED(hr))
     {
         throw Orc::Exception(
-            Continue,
+            Severity::Continue,
             hr,
             L"%s is not a valid value for this attribute (does not convert to a DWORD32)",
             strData.c_str());
@@ -108,7 +111,7 @@ Orc::ConfigItem::operator DWORD32() const
     if (li.HighPart != 0)
     {
         throw Orc::Exception(
-            Continue,
+            Severity::Continue,
             HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
             L"%s is not a valid value for this attribute (does not fit a DWORD32)",
             strData.c_str());
@@ -125,7 +128,7 @@ Orc::ConfigItem::operator DWORD64() const
         {
             if (auto hr = GetIntegerFromHexaString(strData.c_str(), li.LowPart); FAILED(hr))
                 throw Orc::Exception(
-                    Continue,
+                    Severity::Continue,
                     hr,
                     L"%s is not a valid value for this attribute (does not convert to a DWORD64)",
                     strData.c_str());
@@ -134,7 +137,7 @@ Orc::ConfigItem::operator DWORD64() const
     else if (auto hr = GetFileSizeFromArg(strData.c_str(), li); FAILED(hr))
     {
         throw Orc::Exception(
-            Continue,
+            Severity::Continue,
             hr,
             L"%s is not a valid value for this attribute (does not convert to a DWORD64)",
             strData.c_str());

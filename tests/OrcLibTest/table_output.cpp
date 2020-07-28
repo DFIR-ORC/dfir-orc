@@ -202,7 +202,7 @@ public:
         std::wstring retval;
 
         if (auto hr = GetOutputFile(strFileName.c_str(), retval); FAILED(hr))
-            throw Orc::Exception(Fatal, hr, L"Failed to expand output file name (from string %s)", strFileName.c_str());
+            throw Orc::Exception(Severity::Fatal, hr, L"Failed to expand output file name (from string {})", strFileName);
         return retval;
     }
 };

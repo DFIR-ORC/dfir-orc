@@ -7,6 +7,7 @@
 //
 #include "stdafx.h"
 #include "MessageStream.h"
+#include "BinaryBuffer.h"
 
 using namespace Orc;
 

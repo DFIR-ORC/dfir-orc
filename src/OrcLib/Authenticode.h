@@ -18,6 +18,7 @@
 #include "WinTrustExtension.h"
 
 #include "OutputWriter.h"
+#include "BinaryBuffer.h"
 
 #include <mscat.h>
 

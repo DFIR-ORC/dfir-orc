@@ -275,8 +275,7 @@ Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szVa
             }
             else
             {
-                throw Exception(
-                    ExceptionSeverity::Continue, E_FAIL, L"Unexpected return value for ExpandEnvironmentStringsW");
+                throw Exception(Severity::Continue, E_FAIL, L"Unexpected return value for ExpandEnvironmentStringsW");
             }
         }
         else

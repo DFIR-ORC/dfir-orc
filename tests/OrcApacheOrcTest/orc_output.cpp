@@ -37,9 +37,7 @@ private:
     UnitTestHelper helper;
 
 public:
-    TEST_METHOD_INITIALIZE(Initialize)
-    {
-    }
+    TEST_METHOD_INITIALIZE(Initialize) {}
     TEST_METHOD_CLEANUP(Finalize) {}
     TEST_METHOD(WriteLocalFile)
     {
@@ -95,12 +93,13 @@ public:
         auto stream_writer = Orc::TableOutput::GetApacheOrcWriter(std::move(options));
         Assert::IsTrue((bool)stream_writer, L"Failed to instantiate orc writer");
 
-        Schema schema {{ColumnType::UInt32Type, L"FieldOne"sv},
-                       {ColumnType::UTF16Type, L"FieldTwo"sv},
-                       {ColumnType::UInt64Type, L"FieldThree"sv},
-                       {ColumnType::UTF8Type, L"FieldFour"sv},
-                       {ColumnType::BoolType, L"FieldFive"sv},
-                       {ColumnType::UInt64Type, L"FieldSix"sv}};
+        Schema schema {
+            {ColumnType::UInt32Type, L"FieldOne"sv},
+            {ColumnType::UTF16Type, L"FieldTwo"sv},
+            {ColumnType::UInt64Type, L"FieldThree"sv},
+            {ColumnType::UTF8Type, L"FieldFour"sv},
+            {ColumnType::BoolType, L"FieldFive"sv},
+            {ColumnType::UInt64Type, L"FieldSix"sv}};
 
         Assert::IsTrue(SUCCEEDED(stream_writer->SetSchema(schema)), L"Failed to set parquet Schema");
 
@@ -296,7 +295,8 @@ public:
         std::wstring retval;
 
         if (auto hr = GetOutputFile(strFileName.c_str(), retval); FAILED(hr))
-            throw Orc::Exception(Fatal, hr, L"Failed to expand output file name (from string %s)", strFileName.c_str());
+            throw Orc::Exception(
+                Severity::Fatal, hr, L"Failed to expand output file name (from string {})", strFileName);
         return retval;
     }
     std::string GetFilePath(const std::string& strFileName)
@@ -311,15 +311,15 @@ public:
                     return retval;
                 else
                     throw Orc::Exception(
-                        Fatal, hr, L"Failed to convert output file name to UTF8 (from string %s)", strPath.c_str());
+                        Severity::Fatal, hr, L"Failed to convert output file name to UTF8 (from string {})", strPath);
             }
             else
                 throw Orc::Exception(
-                    Fatal, hr, L"Failed to expand output file name (from string %S)", strFileName.c_str());
+                    Severity::Fatal, hr, L"Failed to expand output file name (from string {})", strName);
         }
         else
             throw Orc::Exception(
-                Fatal, hr, L"Failed to convert output file name to UTF16 (from string %S)", strFileName.c_str());
+                Severity::Fatal, hr, L"Failed to convert output file name to UTF16 (from string {})", strName);
     }
 };
 }  // namespace Orc::Test::ApacheOrc

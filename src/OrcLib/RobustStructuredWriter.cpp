@@ -10,7 +10,7 @@
 #include "RobustStructuredWriter.h"
 
 #include "TableOutputWriter.h"
-
+#include "BinaryBuffer.h"
 #include "Unicode.h"
 
 using namespace std;

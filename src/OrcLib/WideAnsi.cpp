@@ -9,6 +9,7 @@
 #include "stdafx.h"
 
 #include "WideAnsi.h"
+#include "BinaryBuffer.h"
 
 #include <boost/io/ios_state.hpp>
 

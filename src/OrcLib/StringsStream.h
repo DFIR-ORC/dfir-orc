@@ -10,6 +10,7 @@
 #include "OrcLib.h"
 
 #include "ChainingStream.h"
+#include "BinaryBuffer.h"
 
 #pragma managed(push, off)
 

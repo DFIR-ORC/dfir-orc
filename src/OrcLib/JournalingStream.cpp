@@ -12,6 +12,7 @@
 
 #include "ByteStream.h"
 #include "PipeStream.h"
+#include "BinaryBuffer.h"
 
 #include <boost/scope_exit.hpp>
 

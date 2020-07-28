@@ -14,6 +14,7 @@
 
 #include "CryptoUtilities.h"
 #include "CaseInsensitive.h"
+#include "BinaryBuffer.h"
 
 #include <sstream>
 #include <iomanip>

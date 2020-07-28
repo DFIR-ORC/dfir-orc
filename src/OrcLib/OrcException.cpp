@@ -18,12 +18,12 @@
 
 using namespace Orc;
 
-Exception::Exception(std::wstring descr)
+Orc::Exception::Exception(std::wstring descr)
     : Description(std::move(descr))
 {
 }
 
-Exception::Exception(ExceptionSeverity status, std::wstring descr)
+Orc::Exception::Exception(Orc::Severity status, std::wstring descr)
     : Description(std::move(descr))
     , Severity(status)
 {

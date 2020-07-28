@@ -9,6 +9,7 @@
 #include "FuzzyHashStream.h"
 
 #include "WideAnsi.h"
+#include "BinaryBuffer.h"
 
 #include "tlsh/tlsh.h"
 

@@ -18,7 +18,7 @@
 
 namespace Orc {
 
-enum ExceptionSeverity : short
+enum class Severity : short
 {
     Unset,
     Fatal,
@@ -30,7 +30,7 @@ class Exception : public std::exception
 {
 public:
     template <typename... Args>
-    Exception(ExceptionSeverity status, _In_ HRESULT hr, LPCWSTR szFmt, Args&&... args)
+    Exception(Severity status, _In_ HRESULT hr, LPCWSTR szFmt, Args&&... args)
         : Severity(status)
         , m_HRESULT(hr)
     {
@@ -49,7 +49,7 @@ public:
     }
 
     template <typename... Args>
-    Exception(ExceptionSeverity status, LPCWSTR szFmt, Args&&... args)
+    Exception(Severity status, LPCWSTR szFmt, Args&&... args)
         : Severity(status)
     {
         WCHAR szMsg[MAX_DESCR];
@@ -67,14 +67,14 @@ public:
     }
 
     Exception(std::wstring descr);
-    Exception(ExceptionSeverity status, std::wstring descr);
-    Exception(ExceptionSeverity status, std::wstring descr, std::wstring typeName, std::wstring field);
-    Exception(ExceptionSeverity status, _In_ HRESULT hr, std::wstring descr)
+    Exception(Severity status, std::wstring descr);
+    Exception(Severity status, std::wstring descr, std::wstring typeName, std::wstring field);
+    Exception(Severity status, _In_ HRESULT hr, std::wstring descr)
         : Description(std::move(descr))
         , m_HRESULT(hr)
     {
     }
-    Exception(ExceptionSeverity status, _In_ HRESULT hr)
+    Exception(Severity status, _In_ HRESULT hr)
         : m_HRESULT(hr)
     {
     }
@@ -91,9 +91,9 @@ public:
         return Status;
     }
 
-    bool IsCritical() const { return Severity == ExceptionSeverity::Fatal; }
+    bool IsCritical() const { return Severity == Severity::Fatal; }
 
-    ExceptionSeverity Severity = ExceptionSeverity::Unset;
+    Severity Severity = Severity::Unset;
     std::wstring Description;
     std::optional<std::wstring> TypeName;
     std::optional<std::wstring> FieldName;

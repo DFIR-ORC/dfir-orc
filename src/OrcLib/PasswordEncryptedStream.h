@@ -8,6 +8,7 @@
 #pragma once
 
 #include "ChainingStream.h"
+#include "BinaryBuffer.h"
 
 #include <boost/logic/tribool.hpp>
 

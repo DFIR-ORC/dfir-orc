@@ -10,7 +10,7 @@
 #include "JSONOutputWriter.h"
 
 #include "WideAnsi.h"
-
+#include "BinaryBuffer.h"
 #include "Buffer.h"
 
 #include "rapidjson/writer.h"

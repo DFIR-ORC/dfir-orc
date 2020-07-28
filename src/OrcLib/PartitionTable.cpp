@@ -23,6 +23,8 @@
 
 #include "Output/Text/Fmt/Partition.h"
 
+#include "Output/Text/Fmt/Partition.h"
+
 using namespace Orc;
 
 static const unsigned char MBR_SIGNATURE[2] = {0x55, 0xAA};

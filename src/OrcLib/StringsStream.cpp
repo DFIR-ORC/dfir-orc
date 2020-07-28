@@ -10,6 +10,7 @@
 #include "StringsStream.h"
 
 #include "WideAnsi.h"
+#include "BinaryBuffer.h"
 
 using namespace std;
 using namespace Orc;

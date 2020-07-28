@@ -8,6 +8,7 @@
 #include "stdafx.h"
 
 #include "DecodeMessageStream.h"
+#include "BinaryBuffer.h"
 
 #include "boost/scope_exit.hpp"
 

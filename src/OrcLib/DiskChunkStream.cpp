@@ -7,6 +7,7 @@
 //
 #include "stdafx.h"
 #include "DiskChunkStream.h"
+#include "BinaryBuffer.h"
 
 using namespace Orc;
 
