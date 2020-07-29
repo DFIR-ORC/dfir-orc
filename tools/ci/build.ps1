@@ -1,8 +1,13 @@
+# TODO: add switch to disable OrcLibTest build
+# TODO: add function or a switch for Orc complete configuration
+
 function Build-Orc
 {
     <#
     .SYNOPSIS
-        Build wrapper around cmake to facilitate CI integration.
+        Build wrapper around CMake to ease CI integration.
+
+        Allow one-liners for building multiple configurations: x86, x64, Debug, MinSizeRel...
 
     .PARAMETER Source
         Path to DFIR-ORC source root directory to build.
@@ -96,23 +101,32 @@ function Build-Orc
     }
 
     $Generators = @{
-        "vs2017_x86" = @(("-G", "`"Visual Studio 15 2017`""))
-        "vs2017_x64" = @(("-G", "`"Visual Studio 15 2017 Win64`""))
-        "vs2019_x86" = @(("-G", "`"Visual Studio 16 2019`""), ("-A", "Win32"))
-        "vs2019_x64" = @(("-G", "`"Visual Studio 16 2019`""), ("-A", "x64"))
+        "vs2017_x86" = @("-G `"Visual Studio 15 2017`"")
+        "vs2017_x64" = @("-G `"Visual Studio 15 2017 Win64`"")
+        "vs2019_x86" = @(
+                "-G `"Visual Studio 16 2019`""
+                "-A Win32"
+        )
+        "vs2019_x64" = @(
+                "-G `"Visual Studio 16 2019`""
+                "-A x64"
+        )
     }
 
-
-    $CMakeOptions = @()
+    $CMakeGenerationOptions = @(
+        "-T v141_xp"
+        "-DORC_BUILD_VCPKG=ON"
+        "-DCMAKE_TOOLCHAIN_FILE=`"${OrcPath}\external\vcpkg\scripts\buildsystems\vcpkg.cmake`""
+    )
 
     if($ApacheOrc)
     {
-        $CMakeOptions += @("-DORC_BUILD_APACHE_ORC=ON")
+        $CMakeGenerationOptions += "-DORC_BUILD_APACHE_ORC=ON"
     }
 
     if($Parquet)
     {
-        $CMakeOptions += @("-DORC_BUILD_PARQUET=ON")
+        $CMakeGenerationOptions += "-DORC_BUILD_PARQUET=ON"
     }
 
     foreach($Arch in $Architecture)
@@ -128,31 +142,29 @@ function Build-Orc
         Push-Location $BuildDir
 
         $Generator = $Generators[$Toolchain + "_" + $Arch]
+
+        $CMakeExe = Find-CMake
+        if(-not $CMakeExe)
+        {
+            Write-Error "Cannot find 'cmake.exe'"
+            return
+        }
+
         try
         {
-            $CMakeExe = Find-CMake
-            if(-not $CMakeExe)
-            {
-                Write-Error "Cannot find 'cmake.exe'"
-                return
-            }
-
             foreach($Config in $Configuration)
             {
+                $Parameters = $Generator + $CMakeGenerationOptions + "-DVCPKG_TARGET_TRIPLET=${Arch}-windows-${Runtime}" + "$OrcPath"
+                Invoke-NativeCommand $CMakeExe $Parameters
 
-                . $CMakeExe `
-                    @Generator `
-                    -T v141_xp `
-                    -DORC_BUILD_VCPKG=ON `
-                    -DVCPKG_TARGET_TRIPLET="${Arch}-windows-static" `
-                    -DCMAKE_TOOLCHAIN_FILE="${OrcPath}\external\vcpkg\scripts\buildsystems\vcpkg.cmake" `
-                    $CMakeOptions `
-                    $OrcPath
+                Invoke-NativeCommand $CMakeExe "--build . --config ${Config} -- -maxcpucount"
 
-                . $CMakeExe --build . --config $Config -- -maxcpucount
-
-                . $CMakeExe --install . --prefix $Output --config $Config
+                Invoke-NativeCommand $CMakeExe "--install . --prefix ${Output} --config ${Config}"
             }
+        }
+        catch
+        {
+            throw
         }
         finally
         {
@@ -181,5 +193,47 @@ function Find-CMake
         {
             return $Path
         }
+    }
+}
+
+#
+# Invoke-NativeCommand
+#
+# Execute a native command and throw if its exit code is not 0.
+#
+# This simple wrapper could be smarter and rely on parameters splatting.
+# In the case of CMake its not so easy to keep generic approach because of its handling of the cli options.
+#
+# In an attempt to use splatting I had those issues:
+#
+# - Options uses '-'
+# - Options '-D' can have "-D<KEY>=<VALUE>" or "-D<KEY:TYPE>=<VALLUE>"
+# - VALUE can be a bool or a path (quotes...)
+# - Options like '-T <VALUE>' is followed by a space before <VALUE>
+# ...
+#
+# cmake.exe -G "Visual Studio 16 2019" -A x64 -T v141_xp -DORC_BUILD_VCPKG=ON -DCMAKE_TOOLCHAIN_FILE="C:\dev\orc\dfir-orc\external\vcpkg\scripts\buildsystems\vcpkg.cmake" "C:\dev\orc\dfir-orc\"
+#
+
+function Invoke-NativeCommand()
+{
+    param(
+        [Parameter(ValueFromPipeline=$true, Mandatory=$true, Position=0)]
+        [string]
+        $Command,
+        [Parameter(ValueFromPipeline=$true, Mandatory=$true, Position=1)]
+        [String[]]
+        $Parameters
+    )
+
+    $Child = Start-Process -PassThru $Command -ArgumentList $Parameters -NoNewWindow
+
+    # Workaround on 'Start-Process -Wait ...' which hangs sometimes (psh 7.0.3)
+    $Child | Wait-Process
+
+    if ($Child.ExitCode -ne 0)
+    {
+        $ExitCode = [String]::Format("0x{0:X}", $Child.ExitCode)
+        throw "'${Command} ${Parameters}' exited with code ${ExitCode}"
     }
 }
