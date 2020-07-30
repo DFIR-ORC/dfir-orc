@@ -34,6 +34,13 @@ public:
     TEST_METHOD(DefaultProfile)
     {
         auto default_profile = ProfileList::DefaultProfile(_L_);
+
+        if (default_profile.is_err())
+        {
+            log::Error(_L_, default_profile.err_value(), L"Failed to read DefaultProfile, test not performed\r\n");
+            return;
+        }
+
         Assert::IsTrue(default_profile.is_ok());
         Assert::IsFalse(default_profile.value().empty());
 
@@ -45,6 +52,14 @@ public:
     TEST_METHOD(ProfilesDirectory)
     {
         auto profiles_directory = ProfileList::ProfilesDirectory(_L_);
+
+        if (profiles_directory.is_err())
+        {
+            log::Error(
+                _L_, profiles_directory.err_value(), L"Failed to read profiles_directory, test not performed\r\n");
+            return;
+        }
+
         Assert::IsTrue(profiles_directory.is_ok());
         Assert::IsFalse(profiles_directory.value().empty());
 
@@ -57,6 +72,12 @@ public:
     TEST_METHOD(ProgramData)
     {
         auto program_data = ProfileList::ProfilesDirectory(_L_);
+        if (program_data.is_err())
+        {
+            log::Error(_L_, program_data.err_value(), L"Failed to read program_data, test not performed\r\n");
+            return;
+        }
+
         Assert::IsTrue(program_data.is_ok());
         Assert::IsFalse(program_data.value().empty());
 
@@ -69,6 +90,12 @@ public:
     TEST_METHOD(Public)
     {
         auto public_ = ProfileList::ProfilesDirectory(_L_);
+        if (public_.is_err())
+        {
+            log::Error(_L_, public_.err_value(), L"Failed to read public profile, test not performed\r\n");
+            return;
+        }
+
         Assert::IsTrue(public_.is_ok());
         Assert::IsFalse(public_.value().empty());
 
@@ -82,11 +109,20 @@ public:
     TEST_METHOD(ProfileList)
     {
         auto profiles = ProfileList::GetProfiles(_L_);
+        if (profiles.is_err())
+        {
+            log::Error(_L_, profiles.err_value(), L"Failed to read profiles, test not performed\r\n");
+            return;
+        }
 
         Assert::IsTrue(profiles.is_ok());
         auto& profile_list = profiles.value();
 
-        Assert::IsFalse(profile_list.empty());
+        if (profile_list.empty())
+        {
+            log::Error(_L_, E_FAIL, L"Empty profile list, test not valid\r\n");
+            return;
+        }
     }
 };
 }  // namespace Orc::Test
