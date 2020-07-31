@@ -13,7 +13,7 @@
 #include "orc/OrcFile.hh"
 #pragma warning(default : 4521)
 
-namespace Orc::TableOutput::OptRowColumn {
+namespace Orc::TableOutput::ApacheOrc {
 
 class Stream : public orc::OutputStream
 {

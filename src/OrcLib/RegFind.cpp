@@ -92,48 +92,53 @@ HRESULT RegFind::Match::Write(const logger&, ITableOutput& output)
 
 HRESULT RegFind::Match::Write(
     const logger&,
-    const std::shared_ptr<StructuredOutputWriter>& pWriter)
+    IStructuredOutput& pWriter)
 {
     string strMatchDescr = Term->GetDescription();
 
-    pWriter->BeginElement(L"regfind_match");
+    pWriter.BeginElement(L"regfind_match");
 
-    pWriter->WriteNameFormatedStringPair(L"description", L"%S", strMatchDescr.c_str());
+    pWriter.WriteNamedFormated(L"description", L"%S", strMatchDescr.c_str());
 
+    pWriter.BeginCollection(L"value");
     for (const auto& aValueNameMatch : MatchingValues)
     {
-        pWriter->BeginElement(L"value");
+        pWriter.BeginElement(nullptr);
         {
-            pWriter->WriteNameFormatedStringPair(L"key", L"%S", aValueNameMatch.KeyName.c_str());
-            pWriter->WriteNameFormatedStringPair(L"value", L"%S", aValueNameMatch.ValueName.c_str());
+            pWriter.WriteNamedFormated(L"key", L"%S", aValueNameMatch.KeyName.c_str());
+            pWriter.WriteNamedFormated(L"value", L"%S", aValueNameMatch.ValueName.c_str());
 
             for (UINT idx = 0; g_ValyeTypeDefinitions[idx].Type != RegMaxType; idx++)
             {
                 if (aValueNameMatch.ValueType == g_ValyeTypeDefinitions[idx].Type)
                 {
-                    pWriter->WriteNameValuePair(L"type", g_ValyeTypeDefinitions[idx].szTypeName);
+                    pWriter.WriteNamed(L"type", g_ValyeTypeDefinitions[idx].szTypeName);
                     break;
                 }
             }
 
-            pWriter->WriteNameFileTimePair(L"lastmodified_key", aValueNameMatch.LastModificationTime);
+            pWriter.WriteNamed(L"lastmodified_key", aValueNameMatch.LastModificationTime);
 
-            pWriter->WriteNameFormatedStringPair(L"data_size", L"%Iu", aValueNameMatch.DatasLength);
+            pWriter.WriteNamedFormated(L"data_size", L"%Iu", aValueNameMatch.DatasLength);
         }
-        pWriter->EndElement(L"value");
+        pWriter.EndElement(nullptr);
     }
+    pWriter.EndCollection(L"value");
+
+    pWriter.BeginCollection(L"key");
     for (const auto& aKeyNameMatch : MatchingKeys)
     {
-        pWriter->BeginElement(L"key");
+        pWriter.BeginElement(nullptr);
         {
-            pWriter->WriteNameFormatedStringPair(L"key", L"%S", aKeyNameMatch.KeyName.c_str());
-            pWriter->WriteNameValuePair(L"subkeys_count", (UINT32) aKeyNameMatch.SubKeysCount);
-            pWriter->WriteNameValuePair(L"values_count", (UINT32) aKeyNameMatch.ValuesCount);
-            pWriter->WriteNameFileTimePair(L"lastmodified_key", aKeyNameMatch.LastModificationTime);
+            pWriter.WriteNamedFormated(L"key", L"%S", aKeyNameMatch.KeyName.c_str());
+            pWriter.WriteNamed(L"subkeys_count", (UINT32) aKeyNameMatch.SubKeysCount);
+            pWriter.WriteNamed(L"values_count", (UINT32) aKeyNameMatch.ValuesCount);
+            pWriter.WriteNamed(L"lastmodified_key", aKeyNameMatch.LastModificationTime);
         }
-        pWriter->EndElement(L"key");
+        pWriter.EndElement(nullptr);
     }
-    pWriter->EndElement(L"regfind_match");
+    pWriter.EndCollection(L"key");
+    pWriter.EndElement(L"regfind_match");
     return S_OK;
 }
 

@@ -10,12 +10,12 @@
 include(${ORC_ROOT}/cmake/Orc.cmake)
 orc_add_compile_options()
 
-set(SRC "OrcOptRowColumn.cpp")
+set(SRC "OrcApacheOrc.cpp")
 
 set(SRC_COMMON "dllmain.cpp" "targetver.h")
 source_group(Common FILES ${SRC_COMMON} "stdafx.cpp" "stdafx.h")
 
-add_library(OrcOptRowColumn
+add_library(OrcApacheOrc
     SHARED
         "stdafx.h"
         "stdafx.cpp"
@@ -23,14 +23,14 @@ add_library(OrcOptRowColumn
         ${SRC_COMMON}
 )
 
-target_link_libraries(OrcOptRowColumn
+target_link_libraries(OrcApacheOrc
     PUBLIC
-        OrcOptRowColumnLib
+        OrcApacheOrcLib
 )
 
-set_target_properties(OrcOptRowColumn
+set_target_properties(OrcApacheOrc
     PROPERTIES
-        FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}OrcOptRowColumn"
+        FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}OrcApacheOrc"
 )
 
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)

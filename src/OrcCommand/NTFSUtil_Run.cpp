@@ -1518,7 +1518,7 @@ HRESULT Main::PrintVss()
 
         if (pVssWriter != nullptr)
         {
-            auto& output = pVssWriter->GetTableOutput();
+            auto& output = *pVssWriter;
 
             for (const auto& shadow : shadows)
             {

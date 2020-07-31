@@ -49,9 +49,9 @@ public:
 
     TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
 
-    HRESULT WriterSingleTest(const std::shared_ptr<StructuredOutput::IWriter>& _writer)
+    HRESULT WriterSingleTest(const std::shared_ptr<StructuredOutput::IOutput>& _writer)
     {
-        auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
+        auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -77,26 +77,26 @@ public:
 
             // Long Integer values
             const ULONGLONG ull = (ULONGLONG)46412874515674154LL;
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameValuePair(L"test_ulonglong", ull)));
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameValuePair(L"test_ulonglong_hex", ull, true)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_ulonglong", ull)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_ulonglong_hex", ull, true)));
 
             LARGE_INTEGER li;
             li.QuadPart = ull;
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameValuePair(L"test_large_integer", li)));
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameValuePair(L"test_large_integer_hex", li, true)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_large_integer", li)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_large_integer_hex", li, true)));
             Assert::IsTrue(SUCCEEDED(writer->EndElement(L"test_integer")));
         }
 
         {
             Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"test_file_size")));
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameSizePair(L"test_size", 546874312)));
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameSizePair(L"test_size_hex", 546874312, true)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_size", 546874312)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_size_hex", 546874312, true)));
             Assert::IsTrue(SUCCEEDED(writer->EndElement(L"test_file_size")));
         }
 
         {
             Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"test_file_attributes")));
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameAttributesPair(
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamedAttributes(
                 L"test_attrib", FILE_ATTRIBUTE_ARCHIVE | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_READONLY)));
             Assert::IsTrue(SUCCEEDED(writer->EndElement(L"test_file_attributes")));
         }
@@ -105,7 +105,7 @@ public:
 
             LPCWSTR szValues[] = {L"Value0", L"Value1", L"Value2", NULL};
 
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameEnumPair(L"test_enum", 1, szValues)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_enum", (DWORD)1, szValues)));
 
             static const Orc::FlagsDefinition AttrTypeDefs[] = {
                 {$UNUSED, L"$UNUSED", L"$UNUSED"},
@@ -127,7 +127,7 @@ public:
                 {$FIRST_USER_DEFINED_ATTRIBUTE, L"$FIRST_USER_DEFINED_ATTRIBUTE", L"$FIRST_USER_DEFINED_ATTRIBUTE"},
                 {$END, L"$END", L"$END"}};
 
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameExactFlagsPair(L"test_flag_exact", $INDEX_ROOT, AttrTypeDefs)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_flag_exact", (DWORD)$INDEX_ROOT, AttrTypeDefs)));
 
             static const Orc::FlagsDefinition g_Reasons[] = {
                 {USN_REASON_BASIC_INFO_CHANGE,
@@ -192,7 +192,7 @@ public:
                  L"A named stream is added to or removed from a file, or a named stream is renamed."},
                 {USN_REASON_TRANSACTED_CHANGE, L"TRANSACTED_CHANGE", L"A change occured within a transaction"},
                 {0xFFFFFFFF, NULL, NULL}};
-            Assert::IsTrue(SUCCEEDED(writer->WriteNameFlagsPair(
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(
                 L"test_flags", USN_REASON_FILE_CREATE | USN_REASON_DATA_EXTEND | USN_REASON_CLOSE, g_Reasons, L'|')));
 
             Assert::IsTrue(SUCCEEDED(writer->EndElement(L"test_enum_flags")));
@@ -284,7 +284,7 @@ public:
         auto writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"97AA814567B5B37150F76FE377CAC1D174DB5321")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"817B16409158FE82616DCCB6199E2AC55A3D3CC9")));
 
         writer.reset();
 
@@ -296,7 +296,7 @@ public:
         writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"FE70F58C976F536ABD8294EC3B6C61438E92C465")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3EC3C8E033C4618BB0276787AB1EB3B79DC8FDFD")));
     }
 
     TEST_METHOD(RobustStructuredOutputTest)
@@ -317,7 +317,7 @@ public:
             std::make_shared<RobustStructuredWriter>(_L_, std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"97AA814567B5B37150F76FE377CAC1D174DB5321")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"817B16409158FE82616DCCB6199E2AC55A3D3CC9")));
 
         robust_writer.reset();
 
@@ -332,7 +332,7 @@ public:
             std::make_shared<RobustStructuredWriter>(_L_, std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"FE70F58C976F536ABD8294EC3B6C61438E92C465")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3EC3C8E033C4618BB0276787AB1EB3B79DC8FDFD")));
     }
 
     HRESULT WriteGargabeElementTest(const std::shared_ptr<ByteStream>& stream, WCHAR wGarbageCode)
@@ -350,7 +350,7 @@ public:
         options->Encoding = OutputSpec::Encoding::UTF8;
         const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, std::move(options));
 
-        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -363,7 +363,7 @@ public:
         {
             return hr;
         }
-        if (FAILED(hr = writer->WriteNameValuePair(L"value", L"test_value")))
+        if (FAILED(hr = writer->WriteNamed(L"value", L"test_value")))
         {
             return hr;
         }
@@ -392,7 +392,7 @@ public:
         options->Encoding = OutputSpec::Encoding::UTF8;
 
         const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, nullptr);
-        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -405,7 +405,7 @@ public:
         {
             return hr;
         }
-        if (FAILED(hr = writer->WriteNameValuePair(L"value", szTestValue)))
+        if (FAILED(hr = writer->WriteNamed(L"value", szTestValue)))
         {
             return hr;
         }
@@ -435,7 +435,7 @@ public:
         options->Encoding = OutputSpec::Encoding::UTF8;
 
         const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, nullptr);
-        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -448,7 +448,7 @@ public:
         {
             return hr;
         }
-        if (FAILED(hr = writer->WriteString(szTestValue)))
+        if (FAILED(hr = writer->Write(szTestValue)))
         {
             return hr;
         }
@@ -478,7 +478,7 @@ public:
         options->Encoding = OutputSpec::Encoding::UTF8;
         
         const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, std::move(options));
-        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -522,7 +522,7 @@ public:
         options->Encoding = OutputSpec::Encoding::UTF8;
         const auto _writer =
             StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, std::move(options));
-        const auto writer = std::dynamic_pointer_cast<StructuredOutput::LegacyWriter>(_writer);
+        const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
 
@@ -550,7 +550,7 @@ public:
             {
                 return hr;
             }
-            if (FAILED(hr = writer->WriteNameValuePair(L"value", strSanitized.c_str())))
+            if (FAILED(hr = writer->WriteNamed(L"value", strSanitized.c_str())))
             {
                 return hr;
             }

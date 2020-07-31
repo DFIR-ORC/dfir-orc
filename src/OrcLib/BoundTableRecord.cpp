@@ -372,8 +372,8 @@ HRESULT BoundColumn::WriteAttributes(DWORD dwAttributes)
                 dwAttributes & FILE_ATTRIBUTE_NORMAL ? 'N' : '.',
                 dwAttributes & FILE_ATTRIBUTE_OFFLINE ? 'O' : '.',
                 dwAttributes & FILE_ATTRIBUTE_READONLY ? 'R' : '.',
-                dwAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? '?' : '.',
-                dwAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? '?' : '.',
+                dwAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? 'L' : '.',
+                dwAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? 'P' : '.',
                 dwAttributes & FILE_ATTRIBUTE_SYSTEM ? 'S' : '.',
                 dwAttributes & FILE_ATTRIBUTE_TEMPORARY ? 'T' : '.',
                 dwAttributes & FILE_ATTRIBUTE_VIRTUAL ? 'V' : '.')))

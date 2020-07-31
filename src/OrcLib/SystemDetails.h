@@ -9,7 +9,11 @@
 
 #include "OrcLib.h"
 
+#include "OrcResult.h"
+#include "OutputWriter.h"
+
 #include <string>
+#include <array>
 #include <set>
 
 #pragma managed(push, off)
@@ -31,6 +35,7 @@ using SystemTags = std::set<std::wstring>;
 
 class ORCLIB_API SystemDetails
 {
+
 private:
     static HRESULT LoadSystemDetails();
 
@@ -50,6 +55,20 @@ public:
     static std::pair<DWORD, DWORD> GetOSVersion();
 
     static HRESULT GetArchitecture(WORD& wArch);
+
+    struct CPUInformation
+    {
+        DWORD Cores = 0LU;
+        DWORD EnabledCores = 0LU;
+        DWORD LogicalProcessors = 0LU;
+        std::wstring Name;
+        std::wstring Description;
+
+    };
+
+    static stx::Result<std::vector<CPUInformation>,HRESULT> GetCPUInfo(const logger& pLog);
+
+    static stx::Result<MEMORYSTATUSEX, HRESULT> GetPhysicalMemory(const logger& pLog);
 
     static HRESULT GetPageSize(DWORD& dwPageSize);
     static HRESULT GetLargePageSize(DWORD& dwPageSize);
@@ -80,11 +99,15 @@ public:
     static HRESULT AmIElevated(bool& bIsElevated);
     static HRESULT UserSID(std::wstring& strSID);
 
+    static stx::Result<DWORD, HRESULT> GetParentProcessId(const logger& pLog);
+
+    static stx::Result<std::wstring, HRESULT> GetCmdLine();
+    static stx::Result<std::wstring, HRESULT> GetCmdLine(const logger& pLog, DWORD dwPid);
+
     static HRESULT GetSystemLocale(std::wstring& strLocale);
     static HRESULT GetUserLocale(std::wstring& strLocale);
     static HRESULT GetSystemLanguage(std::wstring& strLocale);
     static HRESULT GetUserLanguage(std::wstring& strLocale);
-
 
     static HRESULT GetCurrentWorkingDirectory(std::wstring& strCMD);
 
@@ -103,15 +126,71 @@ public:
 
     static DriveType GetPathLocation(const std::wstring& strAnyPath);
 
+    struct PhysicalDrive
+    {
+        std::wstring Path;
+        ULONG64 Size = 0LLU;
+        ULONG32 SerialNumber = 0LU;
+        std::wstring MediaType;
+
+        std::optional<std::wstring> Status;
+        std::optional<USHORT> Availability;
+        std::optional<DWORD> ConfigManagerErrorCode;
+    };
+
+    static stx::Result<std::vector<PhysicalDrive>, HRESULT> GetPhysicalDrives(const logger& pLog);
+
+    struct MountedVolume
+    {
+        std::wstring FileSystem;
+        std::wstring Label;
+        std::wstring Path;
+        std::wstring DeviceId;
+        DriveType Type;
+        ULONG64 Size = 0LLU;
+        ULONG64 FreeSpace = 0LLU;
+        DWORD SerialNumber = 0LU;
+        bool bBoot = false;
+        bool bSystem = false;
+
+        std::optional<std::wstring> ErrorDesciption;
+        std::optional<ULONG32> ErrorCode;
+    };
+
+    static stx::Result<std::vector<MountedVolume>, HRESULT> GetMountedVolumes(const logger& pLog);
+
+    struct QFE
+    {
+        std::wstring URL;
+        std::wstring Description;
+        std::wstring HotFixId;
+        std::wstring InstallDate;
+    };
+
+    static stx::Result<std::vector<QFE>, HRESULT> GetOsQFEs(const logger& pLog);
+
+    struct EnvVariable
+    {
+        std::wstring Name;
+        std::wstring Value;
+    };
+
+    static stx::Result<std::vector<EnvVariable>, HRESULT> GetEnvironment(const logger& pLog);
+
     static bool IsWOW64();
 
     enum class AddressMode
     {
-        UniCast, AnyCast, MultiCast, UnknownMode
+        UniCast,
+        AnyCast,
+        MultiCast,
+        UnknownMode
     };
     enum class AddressType
     {
-        IPV4, IPV6, IPUnknown
+        IPV4,
+        IPV6,
+        IPUnknown
     };
     struct NetworkAddress
     {
@@ -131,11 +210,10 @@ public:
         std::wstring DNSSuffix;
     };
 
-    static std::pair<HRESULT, const std::vector<NetworkAdapter>&> GetNetworkAdapters();
+    static stx::Result<std::vector<NetworkAdapter>, HRESULT> GetNetworkAdapters();
 
 private:
-    static std::pair<HRESULT, NetworkAddress> GetNetworkAddress(SOCKET_ADDRESS& address);
-
+    static stx::Result<NetworkAddress, HRESULT> GetNetworkAddress(SOCKET_ADDRESS& address);
 };
 
 static auto constexpr OrcComputerName = L"DFIR-OrcComputer";

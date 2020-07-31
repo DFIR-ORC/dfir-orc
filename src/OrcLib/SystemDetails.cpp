@@ -12,6 +12,7 @@
 #include "LogFileWriter.h"
 #include "TableOutput.h"
 #include "WideAnsi.h"
+#include "WMIUtil.h"
 
 #include <WinNls.h>
 #include <WinError.h>
@@ -23,10 +24,13 @@
 #include <winsock2.h>
 #include <iphlpapi.h>
 
+#include <fmt/format.h>
 
 namespace fs = std::filesystem;
 
 using namespace Orc;
+using namespace stx;
+using namespace std;
 
 namespace Orc {
 struct SystemDetailsBlock
@@ -46,7 +50,7 @@ struct SystemDetailsBlock
     std::optional<SystemTags> Tags;
     bool bIsElevated = false;
     DWORD dwLargePageSize = 0L;
-    std::optional<std::vector<Orc::SystemDetails::NetworkAdapter>> NetworkAdapters;
+    WMI wmi;
 };
 }  // namespace Orc
 
@@ -348,6 +352,73 @@ std::pair<DWORD, DWORD> Orc::SystemDetails::GetOSVersion()
     throw L"Failed to retrieve OS Version";
 }
 
+Result<std::vector<Orc::SystemDetails::CPUInformation>, HRESULT> Orc::SystemDetails::GetCPUInfo(const logger& pLog)
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return Err(std::move(hr));
+
+    if(auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return Err(std::move(hr));
+    }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
+
+    auto result = wmi.Query(
+        pLog,
+        L"SELECT Description,Name,NumberOfCores,NumberOfEnabledCore,NumberOfLogicalProcessors FROM Win32_Processor");
+
+    if (!result)
+        return Err(std::move(result.err_value()));
+
+    const auto& pEnum = result.value();
+
+    std::vector<CPUInformation> retval;
+
+    while (pEnum)
+    {
+        CComPtr<IWbemClassObject> pclsObj;
+        ULONG uReturn = 0;
+
+        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        if (0 == uReturn)
+            break;
+
+        CPUInformation cpu;
+
+        if (auto descr = WMI::GetProperty<std::wstring>(pclsObj, L"Description"); descr.is_ok())
+            cpu.Description = move(descr).unwrap();
+
+        if (auto name = WMI::GetProperty<std::wstring>(pclsObj, L"Name"); name.is_ok())
+            cpu.Name = move(name).unwrap();
+        
+        if (auto cores = WMI::GetProperty<ULONG32>(pclsObj, L"NumberOfCores"); cores.is_ok())
+            cpu.Cores = move(cores).unwrap();
+
+        if (auto cores = WMI::GetProperty<ULONG32>(pclsObj, L"NumberOfEnabledCore"); cores.is_ok())
+            cpu.EnabledCores = move(cores).unwrap();
+
+        if (auto logical = WMI::GetProperty<ULONG32>(pclsObj, L"NumberOfLogicalProcessors"); logical.is_ok())
+            cpu.LogicalProcessors = move(logical).unwrap();
+
+        retval.push_back(std::move(cpu));
+    }
+
+    return Ok(std::move(retval));
+}
+
+stx::Result<MEMORYSTATUSEX,HRESULT> Orc::SystemDetails::GetPhysicalMemory(const logger& pLog)
+{
+    MEMORYSTATUSEX statex;
+    statex.dwLength = sizeof(statex);
+
+    if(!GlobalMemoryStatusEx(&statex))
+        return Err(HRESULT_FROM_WIN32(GetLastError()));
+
+    return Ok(std::move(statex));
+}
+
 HRESULT SystemDetails::GetPageSize(DWORD& dwPageSize)
 {
     HRESULT hr = E_FAIL;
@@ -614,6 +685,85 @@ HRESULT Orc::SystemDetails::UserSID(std::wstring& strSID)
     return S_OK;
 }
 
+Result<DWORD,HRESULT> Orc::SystemDetails::GetParentProcessId(const logger& pLog)
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return Err(std::move(hr));
+
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return Err(std::move(hr));
+    }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
+
+    auto query = fmt::format(L"SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {}", GetCurrentProcessId());
+
+    auto result = wmi.Query(pLog, query.c_str());
+    if (result.is_err())
+        return Err(move(result.err_value()));
+
+    auto pEnum = move(result).unwrap();
+    if (!pEnum)
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
+    CComPtr<IWbemClassObject> pclsObj;
+    ULONG uReturn = 0;
+
+    HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+    if (0 == uReturn)
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
+
+    if (auto parent_id = WMI::GetProperty<ULONG32>(pclsObj, L"ParentProcessId"); parent_id.is_err())
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
+    else
+        return Ok(move((DWORD)move(parent_id).unwrap()));
+}
+
+stx::Result<std::wstring,HRESULT> Orc::SystemDetails::GetCmdLine()
+{
+    return Ok(std::wstring(GetCommandLineW()));
+}
+
+Result<std::wstring,HRESULT> Orc::SystemDetails::GetCmdLine(const logger& pLog, DWORD dwPid)
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return Err(std::move(hr));
+
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return Err(std::move(hr));
+    }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
+
+    if (dwPid == 0)
+        return Err(E_INVALIDARG);
+
+    // We can now look for the parent command line
+    auto query = fmt::format(L"SELECT CommandLine FROM Win32_Process WHERE ProcessId = {}", dwPid);
+
+    auto result = wmi.Query(pLog, query.c_str());
+    if (!result)
+        return Err(move(result.err_value()));
+
+    const auto& pEnum = result.value();
+    if (!pEnum)
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
+    CComPtr<IWbemClassObject> pclsObj;
+    ULONG uReturn = 0;
+
+    HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+    if (0 == uReturn)
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
+
+    if (auto cmdLine = WMI::GetProperty<std::wstring>(pclsObj, L"CommandLine"); cmdLine.is_err())
+        return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
+    else
+        return Ok(move(cmdLine).unwrap());
+}
+
 HRESULT Orc::SystemDetails::GetSystemLocale(std::wstring& strLocale)
 {
     wchar_t szName[MAX_PATH];
@@ -701,6 +851,254 @@ SystemDetails::DriveType SystemDetails::GetPathLocation(const std::wstring& strA
     }
 }
 
+stx::Result<std::vector<Orc::SystemDetails::PhysicalDrive>, HRESULT> Orc::SystemDetails::GetPhysicalDrives(const logger& pLog)
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return Err(std::move(hr));
+
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return Err(std::move(hr));
+    }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
+
+    auto result = wmi.Query(
+        pLog,
+        L"SELECT DeviceID,Size,SerialNumber,MediaType,Status,ConfigManagerErrorCode,Availability FROM Win32_DiskDrive");
+    if (result.is_err())
+        return Err(move(result.err_value()));
+
+    const auto& pEnum = result.value();
+
+    std::vector<Orc::SystemDetails::PhysicalDrive> retval;
+
+    while (pEnum)
+    {
+        CComPtr<IWbemClassObject> pclsObj;
+        ULONG uReturn = 0;
+
+        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        if (0 == uReturn)
+            break;
+
+        PhysicalDrive drive;
+
+        if(auto id = WMI::GetProperty<std::wstring>(pclsObj, L"DeviceID"); id.is_err())
+            continue; // If we can't get the deviceId, no need to add it...
+        else
+            drive.Path = move(id).unwrap();
+
+        if (auto size = WMI::GetProperty<ULONG64>(pclsObj, L"Size"); size.is_ok())
+            drive.Size = move(size).unwrap();
+
+        if (auto serial = WMI::GetProperty<ULONG32>(pclsObj, L"SerialNumber"); serial.is_ok())
+            drive.SerialNumber = move(serial).unwrap();
+
+        if (auto type = WMI::GetProperty<std::wstring>(pclsObj, L"MediaType"); type.is_ok())
+            drive.MediaType = move(type).unwrap();
+
+        if (auto status = WMI::GetProperty<std::wstring>(pclsObj, L"Status"); status.is_ok())
+            drive.Status = move(status).unwrap();
+
+        if (auto error_code = WMI::GetProperty<ULONG32>(pclsObj, L"ConfigManagerErrorCode"); error_code.is_ok())
+        {
+            if (auto code = move(error_code).unwrap(); code != 0)
+                drive.ConfigManagerErrorCode = code;
+        }
+        if (auto availability = WMI::GetProperty<USHORT>(pclsObj, L"Availability"); availability.is_ok())
+        {
+            if (auto avail = move(availability).unwrap(); avail != 0)
+                drive.Availability = avail;
+        }
+
+        retval.push_back(std::move(drive));
+    }
+
+    return Ok(std::move(retval));
+}
+
+stx::Result<std::vector<Orc::SystemDetails::MountedVolume>,HRESULT> Orc::SystemDetails::GetMountedVolumes(const logger& pLog)
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return Err(std::move(hr));
+
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return Err(std::move(hr));
+    }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
+    auto result = wmi.Query(
+        pLog,
+        L"SELECT Name,FileSystem,Label,DeviceID,DriveType,Capacity,FreeSpace,SerialNumber,BootVolume,SystemVolume,LastErrorCode,ErrorDescription FROM Win32_Volume");
+    if (result.is_err())
+        return Err(move(result.err_value()));
+
+    const auto& pEnum = result.value();
+
+    std::vector<Orc::SystemDetails::MountedVolume> retval;
+
+    while (pEnum)
+    {
+        CComPtr<IWbemClassObject> pclsObj;
+        ULONG uReturn = 0;
+
+        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        if (0 == uReturn)
+            break;
+
+        MountedVolume volume;
+
+        if (auto name = WMI::GetProperty<std::wstring>(pclsObj, L"Name"); !name)
+            continue;  // without name...
+        else
+            volume.Path = move(name).unwrap();
+
+        if (auto fs = WMI::GetProperty<std::wstring>(pclsObj, L"FileSystem"))
+            volume.FileSystem = move(fs).unwrap();
+
+        if (auto label = WMI::GetProperty<std::wstring>(pclsObj, L"Label"))
+            volume.Label = move(label).unwrap();
+
+        if (auto device_id = WMI::GetProperty<std::wstring>(pclsObj, L"DeviceID"))
+            volume.DeviceId = move(device_id).unwrap();
+
+        if (auto drive_type = WMI::GetProperty<ULONG32>(pclsObj, L"DriveType"))
+        {
+            switch (drive_type.value())
+            {
+                case DRIVE_UNKNOWN:
+                    volume.Type = Drive_Unknown;break;
+                case DRIVE_NO_ROOT_DIR:
+                    volume.Type = Drive_No_Root_Dir;break;
+                case DRIVE_REMOVABLE:
+                    volume.Type = Drive_Removable;break;
+                case DRIVE_FIXED:
+                    volume.Type = Drive_Fixed;break;
+                case DRIVE_REMOTE:
+                    volume.Type = Drive_Remote;break;
+                case DRIVE_CDROM:
+                    volume.Type = Drive_CDRom;break;
+                case DRIVE_RAMDISK:
+                    volume.Type = Drive_RamDisk;break;
+                default:
+                    volume.Type = Drive_Unknown;
+            }
+        }
+
+        if (auto capacity = WMI::GetProperty<ULONG64>(pclsObj, L"Capacity"))
+            volume.Size = move(capacity).unwrap();
+
+        if (auto freespace = WMI::GetProperty<ULONG64>(pclsObj, L"FreeSpace"))
+            volume.FreeSpace = move(freespace).unwrap();
+
+        if (auto serial = WMI::GetProperty<ULONG32>(pclsObj, L"SerialNumber"))
+            volume.SerialNumber = move(serial).unwrap();
+
+        if (auto boot = WMI::GetProperty<bool>(pclsObj, L"BootVolume"))
+            volume.bBoot = move(boot).unwrap();
+
+        if (auto system = WMI::GetProperty<bool>(pclsObj, L"SystemVolume"))
+            volume.bSystem= move(system).unwrap();
+
+        if (auto errorcode = WMI::GetProperty<ULONG32>(pclsObj, L"LastErrorCode"))
+            if(auto code = move(errorcode).unwrap(); code != 0LU)
+                volume.ErrorCode = code;
+
+        if (auto errordescr = WMI::GetProperty<std::wstring>(pclsObj, L"ErrorDescription"))
+            if (auto descr = move(errordescr).unwrap(); descr.empty())
+                volume.ErrorDesciption = descr;
+
+        retval.push_back(std::move(volume));
+    }
+
+    return Ok(std::move(retval));
+}
+
+Result<std::vector<Orc::SystemDetails::QFE>, HRESULT> Orc::SystemDetails::GetOsQFEs(const logger& pLog)
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return Err(std::move(hr));
+
+    if (auto hr = g_pDetailsBlock->wmi.Initialize(pLog))
+    {
+        log::Error(pLog, hr, L"Failed to initialize WMI\r\n");
+        return Err(std::move(hr));
+    }
+
+    const auto& wmi = g_pDetailsBlock->wmi;
+    auto result = wmi.Query(
+        pLog,
+        L"SELECT HotFixID,Description,Caption,InstalledOn FROM Win32_QuickFixEngineering");
+    if (!result)
+        return Err(move(result.err_value()));
+
+    const auto& pEnum = result.value();
+
+    std::vector<QFE> retval;
+    while (pEnum)
+    {
+        CComPtr<IWbemClassObject> pclsObj;
+        ULONG uReturn = 0;
+
+        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        if (0 == uReturn)
+            break;
+
+        QFE qfe;
+
+        if (auto id = WMI::GetProperty<std::wstring>(pclsObj, L"HotFixID"); !id)
+            continue; // without hotfix id...
+        else
+            qfe.HotFixId = move(id).unwrap();
+
+        if (auto descr = WMI::GetProperty<std::wstring>(pclsObj, L"Description"))
+            qfe.Description = move(descr).unwrap();
+
+        if (auto url = WMI::GetProperty<std::wstring>(pclsObj, L"Caption"))
+            qfe.URL = move(url).unwrap();
+
+
+        if (auto date = WMI::GetProperty<std::wstring>(pclsObj, L"InstalledOn"))
+            qfe.InstallDate = move(date).unwrap();
+
+        retval.push_back(std::move(qfe));
+    }
+    return Ok(std::move(retval));
+}
+
+stx::Result<std::vector<Orc::SystemDetails::EnvVariable>,HRESULT> Orc::SystemDetails::GetEnvironment(const logger& pLog)
+{
+    auto env_snap = GetEnvironmentStringsW();
+
+    if (env_snap == NULL)
+        return Err(HRESULT_FROM_WIN32(GetLastError()));
+
+    BOOST_SCOPE_EXIT(&env_snap) { FreeEnvironmentStringsW(env_snap); }
+    BOOST_SCOPE_EXIT_END;
+
+    std::vector<Orc::SystemDetails::EnvVariable> retval;
+
+    auto curVar = (LPWSTR)env_snap;
+    while (*curVar)
+    {
+        auto equals = wcschr(curVar, L'=');
+        if (equals && equals != curVar)
+        {
+            EnvVariable var;
+            var.Name.assign(curVar, equals);
+            var.Value.assign(equals+1);
+            retval.push_back(std::move(var));
+        }
+        curVar += lstrlen(curVar) + 1;
+    }
+ 
+    return Ok(std::move(retval));
+}
+
 bool SystemDetails::IsWOW64()
 {
     if (FAILED(LoadSystemDetails()))
@@ -708,17 +1106,151 @@ bool SystemDetails::IsWOW64()
     return g_pDetailsBlock->WOW64;
 }
 
-std::pair<HRESULT, const std::vector<Orc::SystemDetails::NetworkAdapter>&> Orc::SystemDetails::GetNetworkAdapters()
+stx::Result<std::vector<Orc::SystemDetails::NetworkAdapter>,HRESULT> Orc::SystemDetails::GetNetworkAdapters()
 {
-    static std::vector<NetworkAdapter> failure;
     if (auto hr = LoadSystemDetails(); FAILED(hr))
-        return {hr, failure};
-    if (!g_pDetailsBlock->NetworkAdapters.has_value())
-        return {E_NOT_VALID_STATE, failure};
-    return {S_OK, g_pDetailsBlock->NetworkAdapters.value()};
+        return Err(std::move(hr));
+
+    std::vector<Orc::SystemDetails::NetworkAdapter> retval;
+
+    // Collect network adapters information
+    {
+        DWORD dwPageSize = 0L;
+        SystemDetails::GetPageSize(dwPageSize);
+
+        const DWORD WORKING_BUFFER_SIZE = 4 * dwPageSize;
+        Buffer<BYTE> buffer;
+
+        buffer.reserve(WORKING_BUFFER_SIZE);
+        ULONG cbRequiredSize = 0L;
+
+        if (auto ret = GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES)buffer.get(), &cbRequiredSize);
+            ret == ERROR_BUFFER_OVERFLOW)
+        {
+            buffer.reserve(cbRequiredSize);
+            if (auto ret =
+                    GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES)buffer.get(), &cbRequiredSize);
+                ret != ERROR_SUCCESS)
+            {
+                return Err(HRESULT_FROM_WIN32(ret));
+            }
+        }
+        else if (ret != ERROR_SUCCESS)
+        {
+            return Err(HRESULT_FROM_WIN32(ret));
+        }
+
+        // If successful, output some information from the data we received
+        auto pCurrAddresses = buffer.get_as<IP_ADAPTER_ADDRESSES>();
+        while (pCurrAddresses)
+        {
+            NetworkAdapter adapter;
+
+            // Adaptor's "cryptic" name (GUID)
+            Orc::AnsiToWide(nullptr, pCurrAddresses->AdapterName, adapter.Name);
+
+            // First, UniCast addresses
+
+            if (auto pUnicast = pCurrAddresses->FirstUnicastAddress; pUnicast != NULL)
+            {
+                for (; pUnicast != NULL;)
+                {
+                    if (auto result = GetNetworkAddress(pUnicast->Address); result.is_err())
+                        break;
+                    else
+                    {
+                        auto address = std::move(result).unwrap();
+                        address.Mode = AddressMode::UniCast;
+                        adapter.Addresses.push_back(std::move(address));
+                    }
+
+                    pUnicast = pUnicast->Next;
+                }
+            }
+
+            if (auto pAnycast = pCurrAddresses->FirstAnycastAddress; pAnycast != NULL)
+            {
+                for (; pAnycast != NULL;)
+                {
+                    if (auto result = GetNetworkAddress(pAnycast->Address); result.is_err())
+                        break;
+                    else
+                    {
+                        auto address = std::move(result).unwrap();
+                        address.Mode = AddressMode::AnyCast;
+                        adapter.Addresses.push_back(std::move(address));
+                    }
+
+                    pAnycast = pAnycast->Next;
+                }
+            }
+
+            if (auto pMulticast = pCurrAddresses->FirstMulticastAddress; pMulticast != NULL)
+            {
+                for (; pMulticast != NULL;)
+                {
+                    if (auto result = GetNetworkAddress(pMulticast->Address); result.is_err())
+                        break;
+                    else
+                    {
+                        auto address = std::move(result).unwrap();
+                        address.Mode = AddressMode::MultiCast;
+                        adapter.Addresses.push_back(std::move(address));
+                    }
+                    pMulticast = pMulticast->Next;
+                }
+            }
+
+            auto pDnServer = pCurrAddresses->FirstDnsServerAddress;
+            if (pDnServer)
+            {
+                for (; pDnServer != NULL;)
+                {
+                    if (auto result = GetNetworkAddress(pDnServer->Address); result.is_err())
+                        break;
+                    else
+                    {
+                        auto address = std::move(result).unwrap();
+                        address.Mode = AddressMode::UnknownMode;
+                        adapter.DNS.push_back(std::move(address));
+                    }
+
+                    pDnServer = pDnServer->Next;
+                }
+            }
+
+            adapter.DNSSuffix.assign(pCurrAddresses->DnsSuffix);
+            adapter.Description.assign(pCurrAddresses->Description);
+            adapter.FriendlyName.assign(pCurrAddresses->FriendlyName);
+
+            if (pCurrAddresses->PhysicalAddressLength != 0)
+            {
+                Buffer<WCHAR, MAX_PATH> PhysAddress;
+
+                for (auto i = 0; i < (int)pCurrAddresses->PhysicalAddressLength; i++)
+                {
+                    if (i == (pCurrAddresses->PhysicalAddressLength - 1))
+                        fmt::format_to(
+                            std::back_insert_iterator(adapter.PhysicalAddress),
+                            L"{:0X}",
+                            pCurrAddresses->PhysicalAddress[i]);
+                    else
+                        fmt::format_to(
+                            std::back_insert_iterator(adapter.PhysicalAddress),
+                            L"{:0X}-",
+                            pCurrAddresses->PhysicalAddress[i]);
+                }
+            }
+
+            retval.push_back(std::move(adapter));
+
+            pCurrAddresses = pCurrAddresses->Next;
+        }
+    }
+    return Ok(std::move(retval));
 }
 
-std::pair<HRESULT, Orc::SystemDetails::NetworkAddress> Orc::SystemDetails::GetNetworkAddress(SOCKET_ADDRESS& address)
+stx::Result<Orc::SystemDetails::NetworkAddress, HRESULT> Orc::SystemDetails::GetNetworkAddress(SOCKET_ADDRESS& address)
 {
     NetworkAddress retval;
     switch (address.lpSockaddr->sa_family)
@@ -739,13 +1271,13 @@ std::pair<HRESULT, Orc::SystemDetails::NetworkAddress> Orc::SystemDetails::GetNe
     ip.reserve(MAX_PATH);
 
     if (WSAAddressToStringW(address.lpSockaddr, address.iSockaddrLength, NULL, ip.get(), &dwLength) == SOCKET_ERROR)
-        return {HRESULT_FROM_WIN32(WSAGetLastError()), retval };
+        return Err(HRESULT_FROM_WIN32(WSAGetLastError()));
 
     ip.use(dwLength);
 
     retval.Address.assign(ip.get());
 
-    return {S_OK, retval};
+    return Ok(std::move(retval));
 }
 
 HRESULT SystemDetails::LoadSystemDetails()
@@ -1135,140 +1667,6 @@ HRESULT SystemDetails::LoadSystemDetails()
                 g_pDetailsBlock->bIsElevated = true;
             else
                 g_pDetailsBlock->bIsElevated = false;
-        }
-    }
-
-    // Collect network adapters information
-    {
-        DWORD dwPageSize = 0L;
-        SystemDetails::GetPageSize(dwPageSize);
-
-        const DWORD WORKING_BUFFER_SIZE = 4 * dwPageSize;
-        Buffer<BYTE> buffer;
-
-        buffer.reserve(WORKING_BUFFER_SIZE);
-        ULONG cbRequiredSize = 0L;
-
-        if (auto ret = GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES) buffer.get(), &cbRequiredSize); ret == ERROR_BUFFER_OVERFLOW)
-        {
-            buffer.reserve(cbRequiredSize);
-            if (auto ret =
-                    GetAdaptersAddresses(AF_UNSPEC, 0L, NULL, (PIP_ADAPTER_ADDRESSES)buffer.get(), &cbRequiredSize);
-                ret != ERROR_SUCCESS)
-            {
-                return HRESULT_FROM_WIN32(ret);
-            }
-        }
-        else if (ret != ERROR_SUCCESS)
-        {
-            return HRESULT_FROM_WIN32(ret);
-        }
-
-        // We have result values from the APIs
-        g_pDetailsBlock->NetworkAdapters.emplace();
-
-         // If successful, output some information from the data we received
-        auto pCurrAddresses = buffer.get_as<IP_ADAPTER_ADDRESSES>();
-        while (pCurrAddresses)
-        {
-            NetworkAdapter adapter;
-
-            // Adaptor's "cryptic" name (GUID)
-            Orc::AnsiToWide(nullptr, pCurrAddresses->AdapterName, adapter.Name);
-
-            // First, UniCast addresses
-            
-            if (auto pUnicast = pCurrAddresses->FirstUnicastAddress; pUnicast != NULL)
-            {
-                for (; pUnicast != NULL;)
-                {
-                    if(auto [hr,address] = GetNetworkAddress(pUnicast->Address);FAILED(hr))
-                        break;
-                    else
-                    {
-                        address.Mode = AddressMode::UniCast;
-                        adapter.Addresses.push_back(std::move(address));
-                    }
-
-                    pUnicast = pUnicast->Next;
-                }
-            }
-
-            
-            if (auto pAnycast = pCurrAddresses->FirstAnycastAddress; pAnycast != NULL)
-            {
-                for (; pAnycast != NULL;)
-                {
-                    if (auto [hr, address] = GetNetworkAddress(pAnycast->Address); FAILED(hr))
-                        break;
-                    else
-                    {
-                        address.Mode = AddressMode::AnyCast;
-                        adapter.Addresses.push_back(std::move(address));
-                    }
-
-                    pAnycast = pAnycast->Next;
-                }
-            }
-            
-            if (auto pMulticast = pCurrAddresses->FirstMulticastAddress;pMulticast != NULL)
-            {
-                for (; pMulticast != NULL; )
-                {
-                    if (auto [hr, address] = GetNetworkAddress(pMulticast->Address); FAILED(hr))
-                        break;
-                    else
-                    {
-                        address.Mode = AddressMode::MultiCast;
-                        adapter.Addresses.push_back(std::move(address));
-                    }
-                    pMulticast = pMulticast->Next;
-                }
-            }
-
-            auto pDnServer = pCurrAddresses->FirstDnsServerAddress;
-            if (pDnServer)
-            {
-                for (; pDnServer != NULL; )
-                {
-                    if (auto [hr, address] = GetNetworkAddress(pDnServer->Address); FAILED(hr))
-                        break;
-                    else
-                    {
-                        address.Mode = AddressMode::UnknownMode;
-                        adapter.DNS.push_back(std::move(address));
-                    }
-
-                    pDnServer = pDnServer->Next;
-                }
-            }
-
-            adapter.DNSSuffix.assign(pCurrAddresses->DnsSuffix);
-            adapter.Description.assign(pCurrAddresses->Description);
-            adapter.FriendlyName.assign(pCurrAddresses->FriendlyName);
-
-            if (pCurrAddresses->PhysicalAddressLength != 0)
-            {
-                Buffer<WCHAR,MAX_PATH> PhysAddress;
-
-                for (auto i = 0; i < (int)pCurrAddresses->PhysicalAddressLength; i++)
-                {
-                    if (i == (pCurrAddresses->PhysicalAddressLength - 1))
-                        fmt::format_to(
-                            std::back_insert_iterator(adapter.PhysicalAddress),
-                            L"{:0X}",
-                            pCurrAddresses->PhysicalAddress[i]);
-                    else
-                        fmt::format_to(
-                            std::back_insert_iterator(adapter.PhysicalAddress),
-                            L"{:0X}-",
-                            pCurrAddresses->PhysicalAddress[i]);
-                }
-            }
-
-            g_pDetailsBlock->NetworkAdapters.value().push_back(std::move(adapter));
-
-            pCurrAddresses = pCurrAddresses->Next;
         }
     }
 

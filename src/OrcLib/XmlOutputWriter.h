@@ -13,6 +13,8 @@
 
 #include "XmlLiteExtension.h"
 
+#include <stack>
+
 #pragma managed(push, off)
 
 struct IXmlWriter;
@@ -29,11 +31,11 @@ class Writer : public StructuredOutput::Writer
 protected:
     std::shared_ptr<XmlLiteExtension> m_xmllite;
     CComPtr<IXmlWriter> m_pWriter;
-
+    std::stack<std::wstring> m_collectionStack;
 public:
 
     Writer(logger pLog, std::unique_ptr<Options>&& pOptions);
-    Writer(const XmlOutputWriter&) = delete;
+    Writer(const Writer&) = delete;
 
     HRESULT SetOutput(std::shared_ptr<ByteStream> stream);
 
@@ -89,6 +91,9 @@ public:
         
     virtual HRESULT WriteAttributes(DWORD dwAttibutes) override final;
     virtual HRESULT WriteNamedAttributes(LPCWSTR szName, DWORD dwAttibutes) override final;
+
+    virtual HRESULT WriteFileTime(ULONGLONG fileTime) override final;
+    virtual HRESULT WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime) override final;
 
     
     virtual HRESULT Write(FILETIME fileTime) override final { return Write_(fileTime); }

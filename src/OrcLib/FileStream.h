@@ -84,10 +84,13 @@ public:
     STDMETHOD(SetSize)(ULONG64 ullSize);
     HANDLE GetHandle() { return m_hFile; };
 
+    const std::wstring& Path() const { return m_strPath; }
+
     STDMETHOD(Close)();
 
 protected:
-    HANDLE m_hFile = INVALID_HANDLE_VALUE;
+    HANDLE          m_hFile = INVALID_HANDLE_VALUE;
+    std::wstring    m_strPath;
     CriticalSection m_cs;
 };
 

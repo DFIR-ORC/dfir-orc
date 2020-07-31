@@ -48,7 +48,6 @@ class WriterTermination;
 
 class Writer
     : public TableOutput::Writer
-    , private ITableOutput
     , public TableOutput::IStreamWriter
 {
     struct MakeSharedEnabler;

@@ -1311,16 +1311,16 @@ HRESULT LocationSet::PopulatePhysicalDrives()
 
     log::Debug(_L_, L"Populating physical drives\r\n");
     HRESULT hr = E_FAIL;
-    WMIUtil wmi(_L_);
+    WMI wmi;
 
-    if (FAILED(hr = wmi.Initialize()))
+    if (FAILED(hr = wmi.Initialize(_L_)))
     {
         log::Error(_L_, hr, L"Failed to initialize WMI\r\n");
         return hr;
     }
 
     vector<wstring> output;
-    if (FAILED(hr = wmi.WMIEnumPhysicalMedia(output)))
+    if (FAILED(hr = wmi.WMIEnumPhysicalMedia(_L_, output)))
     {
         log::Error(_L_, hr, L"Failed to enum physical media via WMI\r\n");
         return hr;

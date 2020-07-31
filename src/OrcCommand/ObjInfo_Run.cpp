@@ -106,7 +106,7 @@ HRESULT Main::Run()
 
                     for (auto& obj : objects)
                     {
-                        obj.Write(_L_, dir.second->GetTableOutput(), L""s);
+                        obj.Write(_L_, *dir.second, L""s);
                     }
                 }
                 else
@@ -123,7 +123,7 @@ HRESULT Main::Run()
                 {
                     for (auto& file : files)
                     {
-                        file.Write(_L_, dir.second->GetTableOutput(), L""s);
+                        file.Write(_L_, *dir.second, L""s);
                     }
                 }
                 else

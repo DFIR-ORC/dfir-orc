@@ -94,7 +94,7 @@ public:
         writer->SetSchema(schema);
         writer->BindColumns(L"TestTable");
 
-        auto& output = writer->GetTableOutput();
+        auto& output = *writer;
 
         for (int i = 0; i < 100; i++)
         {

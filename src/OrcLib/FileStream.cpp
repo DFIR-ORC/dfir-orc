@@ -118,6 +118,7 @@ __data_entrypoint(File) HRESULT FileStream::OpenFile(
     {
         ScopedLock sl(m_cs);
         std::swap(m_hFile, hFile);
+        m_strPath.assign(pwszPath);
     }
 
     return S_OK;

@@ -108,7 +108,8 @@ public:
         HRESULT Write(const logger& pLog, ITableOutput& output, const std::wstring& strDescription) const;
         HRESULT Write(
             const logger& pLog,
-            const std::shared_ptr<StructuredOutputWriter>& pWriter) const;
+            IStructuredOutput& pWriter,
+            LPCWSTR szElement = L"object") const;
     };
 
 private:

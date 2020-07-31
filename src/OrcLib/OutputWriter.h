@@ -24,9 +24,15 @@ struct OutputOptions
 
 struct FlagsDefinition
 {
+    constexpr FlagsDefinition(const DWORD flag, LPCWSTR shorter, LPCWSTR longer)
+        : dwFlag(flag)
+        , szShortDescr(shorter)
+        , szLongDescr(longer)
+    {
+    }
     DWORD dwFlag;
-    WCHAR* szShortDescr;
-    WCHAR* szLongDescr;
+    LPCWSTR szShortDescr;
+    LPCWSTR szLongDescr;
 };
 
 class ORCLIB_API OutputWriter

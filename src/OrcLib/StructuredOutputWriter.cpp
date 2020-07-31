@@ -69,8 +69,8 @@ HRESULT Orc::StructuredOutput::Writer::WriteAttributesBuffer(_Buffer& buffer, DW
         dwFileAttributes & FILE_ATTRIBUTE_NORMAL ? L'N' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_OFFLINE ? L'O' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_READONLY ? L'R' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? L'?' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? L'?' : L'.',
+        dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? L'L' : L'.',
+        dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? L'P' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_SYSTEM ? L'S' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY ? L'T' : L'.',
         dwFileAttributes & FILE_ATTRIBUTE_VIRTUAL ? L'V' : L'.');
@@ -97,6 +97,14 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, FILETIME fil
         stUTC.wSecond,
         stUTC.wMilliseconds);
     return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::Writer::WriteFileTimeBuffer(_Buffer& buffer, ULONGLONG fileTime)
+{
+    FILETIME ft;
+    ft.dwLowDateTime  = ((LARGE_INTEGER*)&fileTime)->LowPart;
+    ft.dwHighDateTime = ((LARGE_INTEGER*)&fileTime)->HighPart;
+    return WriteBuffer(buffer,ft);
 }
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, const WCHAR* szArray, DWORD dwCharCount)
@@ -289,5 +297,5 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
         return nullptr;
     }
 
-    return GetWriter(pLog, fileSpec, nullptr);
+    return GetWriter(pLog, fileSpec, std::move(pOptions));
 }

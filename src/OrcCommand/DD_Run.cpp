@@ -321,7 +321,7 @@ HRESULT Main::Run()
 
     if (writer != nullptr)
     {
-        auto& output = writer->GetTableOutput();
+        auto& output = *writer;
 
         auto input_hashstream = std::dynamic_pointer_cast<CryptoHashStream>(ByteStream::GetHashStream(input_stream));
         CBinaryBuffer inMD5, inSHA1, inSHA256;

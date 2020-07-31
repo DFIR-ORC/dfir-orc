@@ -14,9 +14,12 @@
 
 #include "EmbeddedResource.h"
 #include "SystemDetails.h"
+#include "SystemIdentity.h"
 #include "LogFileWriter.h"
 #include "JobObject.h"
 #include "StructuredOutputWriter.h"
+#include "Convert.h"
+#include "FileStream.h"
 
 #include <boost/logic/tribool.hpp>
 #include <boost/scope_exit.hpp>
@@ -185,11 +188,14 @@ boost::logic::tribool Main::SetWERDontShowUI(DWORD dwNewValue)
 
 HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 {
+    FILETIME StartTime;
+    GetSystemTimeAsFileTime(&StartTime);
+
     try
     {
         auto options = std::make_unique<StructuredOutput::JSON::Options>();
         options->Encoding = OutputSpec::Encoding::UTF8;
-        options->bPrettyPrint = false;
+        options->bPrettyPrint = true;
 
         auto writer = StructuredOutputWriter::GetWriter(_L_, config.Outline, std::move(options));
         if (writer == nullptr)
@@ -201,242 +207,49 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 
         writer->BeginElement(L"dfir-orc");
         {
-
             writer->WriteNamed(L"version", L"1.0");
+            writer->WriteNamed(L"dfir_orc_id", kOrcFileVerStringW);
 
             FILETIME ft;
             GetSystemTimeAsFileTime(&ft);
             writer->WriteNamed(L"time", ft);
 
-            writer->BeginCollection(L"keys");
+            auto mothership_id = SystemDetails::GetParentProcessId(_L_);
+            if (mothership_id)
+            {
+                auto mothership_cmdline = SystemDetails::GetCmdLine(_L_, mothership_id.value());
+                if (mothership_cmdline)
+                    writer->WriteNamed(L"command", mothership_cmdline.value().c_str());
+            }
+            writer->WriteNamed(L"output", config.Output.Path.c_str());
+            writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());
+
+            writer->BeginCollection(L"archives");
             for (const auto& exec : m_wolfexecs)
             {
                 if (!exec->IsOptional())
                 {
-                    writer->Write(exec->GetKeyword().c_str());
-                }
-            }
-            writer->EndCollection(L"keys");
-
-            writer->BeginElement(L"orc_process");
-            {
-                writer->WriteNamed(L"version", kOrcFileVerStringW);
-
-                std::wstring strProcessBinary;
-                SystemDetails::GetProcessBinary(strProcessBinary);
-                writer->WriteNamed(L"binary", strProcessBinary.c_str());
-
-                writer->WriteNamed(L"syswow64", SystemDetails::IsWOW64());
-
-                writer->WriteNamed(L"command_line", GetCommandLine());
-
-                writer->WriteNamed(L"output", config.Output.Path.c_str());
-                writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());
-
-                writer->BeginElement(L"user");
-                {
-                    std::wstring strUserName;
-                    SystemDetails::WhoAmI(strUserName);
-                    writer->WriteNamed(L"username", strUserName.c_str());
-
-                    std::wstring strUserSID;
-                    SystemDetails::UserSID(strUserSID);
-                    writer->WriteNamed(L"SID", strUserSID.c_str());
-
-                    bool bElevated = false;
-                    SystemDetails::AmIElevated(bElevated);
-                    writer->WriteNamed(L"elevated", bElevated);
-
-                    std::wstring locale;
-                    if (auto hr = SystemDetails::GetUserLocale(locale); SUCCEEDED(hr))
-                        writer->WriteNamed(L"locale", locale.c_str());
-
-                    std::wstring language;
-                    if (auto hr = SystemDetails::GetUserLanguage(language); SUCCEEDED(hr))
-                        writer->WriteNamed(L"language", language.c_str());
-                }
-                writer->EndElement(L"user");
-            }
-            writer->EndElement(L"orc_process");
-
-            writer->BeginElement(L"system");
-            {
-                {
-                    std::wstring strComputerName;
-                    SystemDetails::GetOrcComputerName(strComputerName);
-                    writer->WriteNamed(L"name", strComputerName.c_str());
-                }
-                {
-                    std::wstring strFullComputerName;
-                    SystemDetails::GetOrcFullComputerName(strFullComputerName);
-                    writer->WriteNamed(L"fullname", strFullComputerName.c_str());
-                }
-                {
-                    std::wstring strSystemType;
-                    SystemDetails::GetSystemType(strSystemType);
-                    writer->WriteNamed(L"type", strSystemType.c_str());
-                }
-                {
-                    WORD wArch = 0;
-                    SystemDetails::GetArchitecture(wArch);
-                    switch (wArch)
+                    writer->BeginElement(nullptr);
                     {
-                        case PROCESSOR_ARCHITECTURE_INTEL:
-                            writer->WriteNamed(L"architecture", L"x86");
-                            break;
-                        case PROCESSOR_ARCHITECTURE_AMD64:
-                            writer->WriteNamed(L"architecture", L"x64");
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                {
-                    writer->BeginElement(L"operating_system");
-                    {
-                        std::wstring strDescr;
-                        SystemDetails::GetDescriptionString(strDescr);
-
-                        writer->WriteNamed(L"description", strDescr.c_str());
-                    }
-                    {
-                        auto [major, minor] = SystemDetails::GetOSVersion();
-                        auto version = fmt::format(L"{}.{}", major, minor);
-                        writer->WriteNamed(L"version", version.c_str());
-                    }
-                    {
-                        TIME_ZONE_INFORMATION tzi;
-                        ZeroMemory(&tzi, sizeof(tzi));
-                        if (auto active = GetTimeZoneInformation(&tzi); active != TIME_ZONE_ID_INVALID)
+                        writer->WriteNamed(L"keyword", exec->GetKeyword().c_str());
+                        writer->WriteNamed(L"file", exec->GetArchiveFileName().c_str());
+                        writer->BeginCollection(L"commands");
+                        for (const auto& command : exec->GetCommands())
                         {
-                            writer->BeginElement(L"time_zone");
+                            if (!command->IsOptional())
                             {
-                                writer->WriteNamed(L"daylight", tzi.DaylightName);
-                                writer->WriteNamed(L"daylight_bias", tzi.DaylightBias);
-                                writer->WriteNamed(L"standard", tzi.StandardName);
-                                writer->WriteNamed(L"standard_bias", tzi.StandardBias);
-                                writer->WriteNamed(L"current_bias", tzi.Bias);
-                                switch (active)
-                                {
-                                    case TIME_ZONE_ID_UNKNOWN:
-                                    case TIME_ZONE_ID_STANDARD:
-                                        writer->WriteNamed(L"current", L"standard");
-                                        break;
-                                    case TIME_ZONE_ID_DAYLIGHT:
-                                        writer->WriteNamed(L"current", L"daylight");
-                                        break;
-                                }
+                                writer->Write(command->Keyword().c_str());
                             }
-                            writer->EndElement(L"time_zone");
                         }
+                        writer->EndCollection(L"commands");
                     }
-                    {
-                        std::wstring locale;
-                        if (auto hr = SystemDetails::GetUserLocale(locale); SUCCEEDED(hr))
-                            writer->WriteNamed(L"locale", locale.c_str());
-                    }
-                    {
-                        std::wstring language;
-                        if (auto hr = SystemDetails::GetUserLanguage(language); SUCCEEDED(hr))
-                            writer->WriteNamed(L"language", language.c_str());
-                    }
-                    {
-                        auto tags = SystemDetails::GetSystemTags();
-                        writer->BeginCollection(L"tags");
-                        for (const auto& tag : tags)
-                        {
-                            writer->Write(tag.c_str());
-                        }
-                        writer->EndCollection(L"tags");
-                    }
-                    writer->EndElement(L"operating_system");
-                }
-                {
-                    writer->BeginElement(L"network");
-                    {
-                        if (const auto& [hr, adapters] = SystemDetails::GetNetworkAdapters(); SUCCEEDED(hr))
-                        {
-                            writer->BeginCollection(L"adapters");
-                            for (const auto& adapter : adapters)
-                            {
-                                writer->BeginElement(nullptr);
-                                {
-                                    writer->WriteNamed(L"name", adapter.Name.c_str());
-                                    writer->WriteNamed(L"friendly_name", adapter.FriendlyName.c_str());
-                                    writer->WriteNamed(L"description", adapter.Description.c_str());
-                                    writer->WriteNamed(L"physical", adapter.PhysicalAddress.c_str());
-
-                                    writer->BeginCollection(L"address");
-                                    for (const auto& address : adapter.Addresses)
-                                    {
-                                        if (address.Mode == SystemDetails::AddressMode::MultiCast)
-                                            continue;
-
-                                        writer->BeginElement(nullptr);
-
-                                        switch (address.Type)
-                                        {
-                                            case SystemDetails::AddressType::IPV4:
-                                                writer->WriteNamed(L"ipv4", address.Address.c_str());
-                                                break;
-                                            case SystemDetails::AddressType::IPV6:
-                                                writer->WriteNamed(L"ipv6", address.Address.c_str());
-                                                break;
-                                            default:
-                                                writer->WriteNamed(L"other", address.Address.c_str());
-                                                break;
-                                        }
-
-                                        switch (address.Mode)
-                                        {
-                                            case SystemDetails::AddressMode::AnyCast:
-                                                writer->WriteNamed(L"mode", L"anycast");
-                                                break;
-                                            case SystemDetails::AddressMode::MultiCast:
-                                                writer->WriteNamed(L"mode", L"multicast");
-                                                break;
-                                            case SystemDetails::AddressMode::UniCast:
-                                                writer->WriteNamed(L"mode", L"unicast");
-                                                break;
-                                            default:
-                                                writer->WriteNamed(L"mode", L"other");
-                                                break;
-                                        }
-                                        writer->EndElement(nullptr);
-                                    }
-                                    writer->EndCollection(L"address");
-
-                                    writer->WriteNamed(L"dns_suffix", adapter.DNSSuffix.c_str());
-
-                                    writer->BeginCollection(L"dns_server");
-                                    for (const auto& dns : adapter.DNS)
-                                    {
-                                        writer->BeginElement(nullptr);
-                                        switch (dns.Type)
-                                        {
-                                            case SystemDetails::AddressType::IPV4:
-                                                writer->WriteNamed(L"ipv4", dns.Address.c_str());
-                                                break;
-                                            case SystemDetails::AddressType::IPV6:
-                                                writer->WriteNamed(L"ipv6", dns.Address.c_str());
-                                                break;
-                                            default:
-                                                writer->WriteNamed(L"other", dns.Address.c_str());
-                                                break;
-                                        }
-                                        writer->EndElement(nullptr);
-                                    }
-                                    writer->EndCollection(L"dns_server");
-                                }
-                                writer->EndElement(nullptr);
-                            }
-                            writer->EndCollection(L"adapters");
-                        }
-                    }
-                    writer->EndElement(L"network");
+                    writer->EndElement(nullptr);
                 }
             }
-            writer->EndElement(L"system");
+            writer->EndCollection(L"archives");
+
+
+            SystemIdentity::Write(writer);
         }
         writer->EndElement(L"dfir-orc");
 
@@ -444,15 +257,39 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
     }
     catch (std::exception& e)
     {
-        std::cerr << "std::exception during LogFileWrite initialisation" << std::endl;
+        std::cerr << "std::exception during outline creation" << std::endl;
         std::cerr << "Caught " << e.what() << std::endl;
         std::cerr << "Type " << typeid(e).name() << std::endl;
         return E_ABORT;
     }
     catch (...)
     {
-        std::cerr << "Exception during LogFileWrite initialisation" << std::endl;
+        std::cerr << "Exception during outline creation" << std::endl;
         return E_ABORT;
+    }
+
+    auto outlineSize = [&]() {
+        FileStream fs(_L_);
+
+        if (FAILED(fs.ReadFrom(config.Outline.Path.c_str())))
+            return 0LLU;
+
+        return fs.GetSize();
+    };
+
+    FILETIME FinishTime;
+    GetSystemTimeAsFileTime(&FinishTime);
+    {
+        auto start = Orc::ConvertTo(StartTime);
+        auto end = Orc::ConvertTo(FinishTime);
+        auto duration = end - start;
+
+        log::Info(
+            _L_,
+            L"Outline               : %s (took %I64d seconds, size %I64d bytes)\r\n",
+            config.Outline.FileName.c_str(),
+            duration.count() / 10000000,
+            outlineSize());
     }
 
     if (std::filesystem::exists(config.Outline.Path))

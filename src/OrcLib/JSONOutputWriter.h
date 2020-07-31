@@ -114,6 +114,9 @@ public:
     virtual HRESULT Write(LARGE_INTEGER ullValue, bool bInHex = false) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, LARGE_INTEGER ullValue, bool bInHex = false) override final;
 
+    virtual HRESULT WriteFileTime(ULONGLONG fileTime) override final;
+    virtual HRESULT WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime) override final;
+
     virtual HRESULT WriteAttributes(DWORD dwAttibutes) override final;
     virtual HRESULT WriteNamedAttributes(LPCWSTR szName, DWORD dwAttibutes) override final;
 

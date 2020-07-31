@@ -319,7 +319,8 @@ public:
         HRESULT Write(const logger& pLog, ITableOutput& output);
         HRESULT Write(
             const logger& pLog,
-            const std::shared_ptr<StructuredOutputWriter>& pWriter);
+            IStructuredOutput& pWriter,
+            LPCWSTR szElement = L"filefind_match");
 
         bool DeletedRecord;
         FILE_REFERENCE FRN;

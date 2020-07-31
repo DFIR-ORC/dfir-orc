@@ -15,6 +15,7 @@
 #include "ByteStream.h"
 
 #include <xmllite.h>
+#include <boost/scope_exit.hpp>
 
 using namespace Orc;
 
@@ -125,10 +126,28 @@ HRESULT Orc::StructuredOutput::XML::Writer::BeginElement(LPCWSTR szElement)
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    if (FAILED(hr = m_pWriter->WriteStartElement(NULL, szElement, NULL)))
+    if (szElement)
     {
-        XmlLiteExtension::LogError(_L_, hr);
-        return hr;
+        if (FAILED(hr = m_pWriter->WriteStartElement(NULL, szElement, NULL)))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    else if (!m_collectionStack.empty())
+    {
+        // if no element is provided, we use the current collection element name
+        if (FAILED(hr = m_pWriter->WriteStartElement(NULL, m_collectionStack.top().c_str(), NULL)))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    else
+    {
+        log::Error(
+            _L_, E_INVALIDARG, L"Attempt to add a null element without a current collection\r\n");
+        return E_INVALIDARG;
     }
     return S_OK;
 }
@@ -152,12 +171,25 @@ HRESULT Orc::StructuredOutput::XML::Writer::EndElement(LPCWSTR szElement)
 
 HRESULT Orc::StructuredOutput::XML::Writer::BeginCollection(LPCWSTR szCollection)
 {
-    return BeginElement(szCollection);
+    m_collectionStack.emplace(szCollection);
+    return S_OK;
 }
 
 HRESULT Orc::StructuredOutput::XML::Writer::EndCollection(LPCWSTR szCollection)
 {
-    return EndElement(szCollection);
+    if (m_collectionStack.empty())
+    {
+        log::Error(_L_, E_INVALIDARG, L"Attempt to end a collection (%s) without a current collection\r\n", szCollection);
+        return E_INVALIDARG;
+    }
+    if (m_collectionStack.top().compare(szCollection))
+    {
+        log::Error(
+            _L_, E_INVALIDARG, L"Attempt to end collection (%s) with invalid end (%s)\r\n", m_collectionStack.top().c_str(), szCollection);
+        return E_INVALIDARG;
+    }
+    m_collectionStack.pop();
+    return S_OK;
 }
 
 HRESULT Orc::StructuredOutput::XML::Writer::Write(LPCWSTR szValue)
@@ -167,10 +199,25 @@ HRESULT Orc::StructuredOutput::XML::Writer::Write(LPCWSTR szValue)
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    if (FAILED(hr = m_pWriter->WriteString(szValue)))
+    if (m_collectionStack.empty())
     {
-        XmlLiteExtension::LogError(_L_, hr);
-        return hr;
+        if (FAILED(hr = m_pWriter->WriteString(szValue)))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+
+        if (FAILED(hr = m_pWriter->WriteString(szValue)))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
     }
     return S_OK;
 }
@@ -209,10 +256,25 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated(const WCHAR* szFormat,
         return hr;
     }
 
-    if (FAILED(hr = m_pWriter->WriteString(szBuffer)))
+    if (m_collectionStack.empty())
     {
-        XmlLiteExtension::LogError(_L_, hr);
-        return hr;
+        if (FAILED(hr = m_pWriter->WriteString(szBuffer)))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+
+        if (FAILED(hr = m_pWriter->WriteString(szBuffer)))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
     }
     return S_OK;
 }
@@ -250,13 +312,72 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteAttributes(DWORD dwFileAttribut
     if (auto hr = WriteAttributesBuffer(buffer, dwFileAttributes); FAILED(hr))
         return hr;
 
-    if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
+    if (m_collectionStack.empty())
+    {
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::WriteFileTime(ULONGLONG fileTime)
+{
+    _Buffer buffer;
+
+    if (auto hr = WriteFileTimeBuffer(buffer, fileTime); FAILED(hr))
+        return hr;
+
+    if (m_collectionStack.empty())
+    {
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime)
+{
+    _Buffer buffer;
+
+    if (auto hr = WriteFileTimeBuffer(buffer, fileTime); FAILED(hr))
+        return hr;
+
+    if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, buffer.get()); FAILED(hr))
     {
         XmlLiteExtension::LogError(_L_, hr);
         return hr;
     }
     return S_OK;
 }
+
 
 HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedAttributes(LPCWSTR szName, DWORD dwFileAttributes)
 {
@@ -277,10 +398,24 @@ HRESULT Orc::StructuredOutput::XML::Writer::Write(bool bBoolean)
 {
     HRESULT hr = E_FAIL;
 
-    if (FAILED(hr = m_pWriter->WriteString(bBoolean ? L"true" : L"false")))
+    if (m_collectionStack.empty())
     {
-        XmlLiteExtension::LogError(_L_, hr);
-        return hr;
+        if (FAILED(hr = m_pWriter->WriteString(bBoolean ? L"true" : L"false")))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+        if (FAILED(hr = m_pWriter->WriteString(bBoolean ? L"true" : L"false")))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
     }
     return S_OK;
 }
@@ -316,10 +451,24 @@ HRESULT Orc::StructuredOutput::XML::Writer::Write(DWORD dwEnum, const WCHAR* Enu
     if (szValue == NULL)
         szValue = L"IllegalEnumValue";
 
-    if (FAILED(hr = m_pWriter->WriteString(szValue)))
+    if (m_collectionStack.empty())
     {
-        XmlLiteExtension::LogError(_L_, hr);
-        return hr;
+        if (FAILED(hr = m_pWriter->WriteString(szValue)))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+        if (FAILED(hr = m_pWriter->WriteString(szValue)))
+        {
+            XmlLiteExtension::LogError(_L_, hr);
+            return hr;
+        }
     }
     return S_OK;
 }

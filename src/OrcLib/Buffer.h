@@ -518,7 +518,9 @@ public:
     }
 
     ULONG size(void) const { return m_EltsUsed; }
-    constexpr ULONG elt_size(void) const { return sizeof(_T); }
+    constexpr static size_t elt_size(void) { return sizeof(_T); }
+    constexpr static size_t inner_elts(void) { return _DeclElts; }
+
     void use(ULONG elts_used)
     {
         auto max_elts = capacity();
