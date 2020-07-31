@@ -225,7 +225,7 @@ HRESULT Main::Run()
                                                                const std::shared_ptr<VolumeReader>& volreader,
                                                                WCHAR* szFullName,
                                                                USN_RECORD* pElt) {
-                                    USNRecordInformation(dir.second->GetTableOutput(), volreader, szFullName, pElt);
+                                    USNRecordInformation(*dir.second, volreader, szFullName, pElt);
                                 };
 
                                 if (FAILED(hr = walker.ReadJournal(callbacks)))

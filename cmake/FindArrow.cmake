@@ -27,7 +27,7 @@ find_package(Snappy CONFIG REQUIRED)
 find_package(thrift REQUIRED)
 find_package(LZ4 REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(ZSTD REQUIRED)
+find_package(zstd CONFIG REQUIRED)
 
 find_library(ARROW_LIB_DEBUG NAMES arrow)
 
@@ -48,6 +48,6 @@ target_link_libraries(Arrow::Arrow
         Snappy::snappy
         thrift::thrift
         ZLIB::ZLIB
-        ZSTD::ZSTD
+        libzstd
         debug ${ARROW_LIB_DEBUG} optimized ${ARROW_LIB_RELEASE}
 )

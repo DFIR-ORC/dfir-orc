@@ -33,9 +33,72 @@ HRESULT Orc::SparseStream::OpenFile(
 	return S_OK;
 }
 
-STDMETHODIMP_(HRESULT __stdcall) Orc::SparseStream::SetSize(ULONG64 ullSize)
+STDMETHODIMP Orc::SparseStream::SetSize(ULONG64 ullSize)
 {
-	return Orc::FileStream::SetSize(ullSize);
+    if (!DeviceIoControl(m_hFile, FSCTL_SET_SPARSE, NULL, 0L, NULL, 0L, NULL, NULL))
+    {
+        auto hr = HRESULT_FROM_WIN32(GetLastError());
+        log::Error(_L_, hr, L"Failed to set file \"%s\" sparse\r\n", m_strPath.c_str());
+        return hr;
+    }
+    return Orc::FileStream::SetSize(ullSize);
+}
+
+STDMETHODIMP Orc::SparseStream::GetAllocatedRanges(std::vector<FILE_ALLOCATED_RANGE_BUFFER>& ranges)
+{
+    FILE_ALLOCATED_RANGE_BUFFER queryrange;  // Range to be examined
+  
+    queryrange.FileOffset.QuadPart = 0LLU;  // File range to query
+    queryrange.Length.QuadPart = GetSize();  //   (the whole file)
+
+    ranges.clear();
+
+    while (TRUE)
+    {
+        bool bMoreData = false;
+        FILE_ALLOCATED_RANGE_BUFFER range_buffer[512];  // Allocated areas info
+        DWORD nbBytesReturned = 0LU;
+
+        ZeroMemory(range_buffer, sizeof(range_buffer));
+
+        if (!::DeviceIoControl(
+                m_hFile,
+                FSCTL_QUERY_ALLOCATED_RANGES,
+                &queryrange,
+                sizeof(queryrange),
+                range_buffer,
+                sizeof(range_buffer),
+                &nbBytesReturned,
+                NULL))
+        {
+            if (auto err = ::GetLastError(); err != ERROR_MORE_DATA)
+            {
+                log::Error(
+                    _L_,
+                    HRESULT_FROM_WIN32(err),
+                    L"Failed to read allocated ranges of sparse stream %s\r\n",
+                    m_strPath.c_str());
+                return HRESULT_FROM_WIN32(err);
+            }
+            bMoreData = true;
+        }
+
+        // Calculate the number of records returned and add them
+        auto nbRanges = nbBytesReturned / sizeof(FILE_ALLOCATED_RANGE_BUFFER);
+        ranges.reserve(ranges.size() + nbRanges);
+        for (auto i = 0; i < nbRanges; i++)
+            ranges.push_back(range_buffer[i]);
+
+        if (!ranges.empty())
+        {
+            queryrange.FileOffset.QuadPart = ranges.back().FileOffset.QuadPart + ranges.back().Length.QuadPart;
+            queryrange.Length.QuadPart = GetSize() - queryrange.FileOffset.QuadPart;
+        }
+
+        if (!bMoreData)
+            break;
+    }
+    return S_OK;
 }
 
 

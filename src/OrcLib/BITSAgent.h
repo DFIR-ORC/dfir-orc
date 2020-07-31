@@ -33,6 +33,7 @@ class ORCLIB_API BITSAgent : public UploadAgent
 
 private:
     CComPtr<IBackgroundCopyManager> m_pbcm;
+    bool m_bAddedConnection = false; // When using BITS over SMB, we have to add the connection (net use) to allow test of existence to succeed
 
     std::vector<BITSJob> m_jobs;
 

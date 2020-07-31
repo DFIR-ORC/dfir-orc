@@ -51,12 +51,13 @@ endfunction()
 #       PACKAGES              list        list of packages to be installed
 #       ARCH                  x86/x64     build architecture
 #       USE_STATIC_CRT        ON/OFF      use static runtime
+#       ONLY_DOWNLOADS        <option>    only download dependencies
 #
 #   RESULT
 #       VCPKG_PACKAGES_FOUND  BOOL        TRUE if pacakges are found
 #
 function(vcpkg_install_packages)
-    set(OPTIONS)
+    set(OPTIONS ONLY_DOWNLOADS)
     set(SINGLE PATH ARCH USE_STATIC_CRT)
     set(MULTI PACKAGES OVERLAY_PORTS OVERLAY_TRIPLETS)
 
@@ -100,8 +101,12 @@ function(vcpkg_install_packages)
             "install ${PACKAGES_STR}\n"
     )
 
+    if(VCPKG_ONLY_DOWNLOADS)
+        set(ONLY_DOWNLOADS "--only-downloads")
+    endif()
+
     execute_process(
-        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} ${OVERLAY_TRIPLETS_STR} install ${PACKAGES}
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} ${OVERLAY_TRIPLETS_STR} install ${ONLY_DOWNLOADS} ${PACKAGES}
         WORKING_DIRECTORY ${VCPKG_PATH}
         RESULT_VARIABLE RESULT
     )
@@ -167,6 +172,7 @@ endfunction()
 #       USE_STATIC_CRT        ON/OFF      use static runtime
 #       OVERLAY_PORTS         path        list of overlay directories
 #       NO_UPGRADE            <option>    do not upgrade
+#       ONLY_DOWNLOADS        <option>    only download packages
 #
 #   RESULT
 #       VCPKG_FOUND           BOOL        TRUE if vcpkg is found and setup
@@ -174,7 +180,7 @@ endfunction()
 #       VCPKG_TARGET_TRIPLET  triplet     triplet to use
 #
 function(vcpkg_install)
-    set(OPTIONS NO_UPGRADE)
+    set(OPTIONS NO_UPGRADE ONLY_DOWNLOADS)
     set(SINGLE PATH ARCH USE_STATIC_CRT)
     set(MULTI PACKAGES OVERLAY_PORTS OVERLAY_TRIPLETS)
 
@@ -184,7 +190,7 @@ function(vcpkg_install)
         PATH ${VCPKG_PATH}
     )
 
-    if(NOT NO_UPGRADE)
+    if(NOT VCPKG_NO_UPGRADE)
         vcpkg_upgrade(
             PATH ${VCPKG_PATH}
             OVERLAY_PORTS ${VCPKG_OVERLAY_PORTS}
@@ -192,7 +198,12 @@ function(vcpkg_install)
         )
     endif()
 
+    if(VCPKG_ONLY_DOWNLOADS)
+        set(ONLY_DOWNLOADS "ONLY_DOWNLOADS")
+    endif()
+
     vcpkg_install_packages(
+       ${ONLY_DOWNLOADS}
        PATH ${VCPKG_PATH}
        OVERLAY_PORTS ${VCPKG_OVERLAY_PORTS}
        OVERLAY_TRIPLETS ${VCPKG_OVERLAY_TRIPLETS}

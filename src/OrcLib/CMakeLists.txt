@@ -16,7 +16,7 @@ find_package(fmt REQUIRED)
 find_package(tlsh CONFIG REQUIRED)
 find_package(VisualStudio REQUIRED)
 find_package(Yara REQUIRED)
-
+find_package(stx CONFIG REQUIRED)
 
 
 set(SRC_COMMAND
@@ -475,6 +475,7 @@ set(SRC_INOUT_STRUCTUREDOUTPUT
     "RobustStructuredWriter.h"
     "StructuredOutputWriter.cpp"
     "StructuredOutputWriter.h"
+    "StructuredOutput.h"
 )
 
 source_group(In&Out\\StructuredOutput FILES ${SRC_INOUT_STRUCTUREDOUTPUT})
@@ -530,7 +531,7 @@ source_group(In&Out\\TableOutput\\Parquet
     FILES ${SRC_INOUT_TABLEOUTPUT_PARQUET}
 )
 
-set(SRC_INOUT_TABLEOUTPUT_APACHE_ORC OptRowColumnOutputWriter.h)
+set(SRC_INOUT_TABLEOUTPUT_APACHE_ORC ApacheOrcOutputWriter.h)
 
 source_group(In&Out\\TableOutput\\ApacheOrc
     FILES ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
@@ -611,6 +612,7 @@ set(SRC_UTILITIES
     "LogFileWriter.h"
     "OrcException.cpp"
     "OrcException.h"
+    "OrcResult.h"
 )
 
 source_group(Utilities FILES ${SRC_UTILITIES})
@@ -670,6 +672,10 @@ set(SRC_UTILITIES_SYSTEM
     "JobObject.h"
     "Privilege.cpp"
     "Privilege.h"
+    "ProfileList.cpp"
+    "ProfileList.h"
+    "Registry.cpp"
+    "Registry.h"
     "Robustness.cpp"
     "Robustness.h"
     "SecurityDescriptor.cpp"
@@ -772,14 +778,13 @@ target_link_libraries(OrcLib
         tlsh::tlsh
         VisualStudio::CppUnitTest
         yara::yara
+        stx::stx
         ws2_32.lib
         Iphlpapi.lib
 )
 
-if(ORC_BUILD_JSON)
-    find_package(RapidJSON CONFIG REQUIRED)
-    target_include_directories(OrcLib PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
-endif()
+find_package(RapidJSON CONFIG REQUIRED)
+target_include_directories(OrcLib PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
 
 if(ORC_BUILD_SSDEEP)
     find_package(ssdeep CONFIG REQUIRED)

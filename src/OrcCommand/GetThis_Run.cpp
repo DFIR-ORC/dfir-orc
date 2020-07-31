@@ -847,10 +847,10 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
                 return hr;
 
             if (config.bReportAll && config.CryptoHashAlgs != CryptoHashStream::Algorithm::Undefined)
-                if (FAILED(hr = HashOffLimitSamples(CSV->GetTableOutput(), MatchingSamples)))
+                if (FAILED(hr = HashOffLimitSamples(*CSV, MatchingSamples)))
                     return hr;
 
-            if (FAILED(hr = CollectMatchingSamples(compressor, CSV->GetTableOutput(), MatchingSamples)))
+            if (FAILED(hr = CollectMatchingSamples(compressor, *CSV, MatchingSamples)))
                 return hr;
 
             CSV->Flush();
@@ -902,10 +902,10 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
                 return hr;
 
             if (config.bReportAll && config.CryptoHashAlgs != CryptoHashStream::Algorithm::Undefined)
-                if (FAILED(hr = HashOffLimitSamples(CSV->GetTableOutput(), MatchingSamples)))
+                if (FAILED(hr = HashOffLimitSamples(*CSV, MatchingSamples)))
                     return hr;
 
-            if (FAILED(hr = CollectMatchingSamples(config.Output.Path, CSV->GetTableOutput(), MatchingSamples)))
+            if (FAILED(hr = CollectMatchingSamples(config.Output.Path, *CSV, MatchingSamples)))
                 return hr;
 
             CSV->Close();

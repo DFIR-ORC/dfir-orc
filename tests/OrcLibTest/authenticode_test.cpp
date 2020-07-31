@@ -34,17 +34,15 @@ public:
 
     TEST_METHOD(AuthenticodeBasicTest)
     {
-
         Authenticode authenticode(_L_);
-
         Authenticode::AuthenticodeData data;
         Authenticode::PE_Hashs hashs;
 
         auto fstream = std::make_shared<FileStream>(_L_);
-        LPCWSTR szFile = LR"(c:\windows\system32\mrt.exe)";
+        LPCWSTR szFile = LR"(c:\windows\system32\explorer.exe)";
         if (SUCCEEDED(fstream->ReadFrom(szFile)))
         {
-            Assert::IsTrue(SUCCEEDED(authenticode.Verify(LR"(c:\windows\system32\mrt.exe)", fstream, data)));
+            Assert::IsTrue(SUCCEEDED(authenticode.Verify(szFile, fstream, data)));
         }
     }
 };

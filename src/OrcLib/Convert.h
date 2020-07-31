@@ -14,11 +14,12 @@
 
 namespace Orc {
 
+
 template <
     typename To,
     typename From,
-    typename = std::enable_if_t<std::is_integral<To>::value>,
-    typename = std::enable_if_t<std::is_integral<From>::value>>
+    std::enable_if_t<std::is_integral<To>::value, int > = 0,
+    std::enable_if_t<std::is_integral<From>::value, int> = 0>
 static To ConvertTo(From from)
 {
     using TFrom = std::decay_t<From>;
@@ -28,6 +29,23 @@ static To ConvertTo(From from)
     static_assert(std::numeric_limits<TTo>::is_integer, "ConvertTo To type is not an integer");
 
     return msl::utilities::SafeInt<To>(from);
+}
+
+
+static FILETIME ConvertToFILETIME(LONGLONG fileTime)
+{
+    FILETIME retval;
+    retval.dwLowDateTime = ((LARGE_INTEGER*)&fileTime)->LowPart;
+    retval.dwHighDateTime = ((LARGE_INTEGER*)&fileTime)->HighPart;
+    return retval;
+}
+
+static FILETIME ConvertToFILETIME(ULONGLONG fileTime)
+{
+    FILETIME retval;
+    retval.dwLowDateTime = ((ULARGE_INTEGER*)&fileTime)->LowPart;
+    retval.dwHighDateTime = ((ULARGE_INTEGER*)&fileTime)->HighPart;
+    return retval;
 }
 
 static std::chrono::system_clock::time_point ConvertTo(const FILETIME& ft)

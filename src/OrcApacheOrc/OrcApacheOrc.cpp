@@ -10,7 +10,7 @@
 
 #include "stdafx.h"
 
-#include "OptRowColumnWriter.h"
+#include "ApacheOrcWriter.h"
 
 using namespace Orc;
 
@@ -19,8 +19,8 @@ StreamTableFactory(const logger& pLog, std::unique_ptr<TableOutput::Options>&& o
 {
 #pragma comment(linker, "/export:StreamTableFactory=" __FUNCDNAME__)
 
-    std::unique_ptr<TableOutput::OptRowColumn::Options> pParquetOpt(
-        dynamic_cast<TableOutput::OptRowColumn::Options*>(options.release()));
+    std::unique_ptr<TableOutput::ApacheOrc::Options> pParquetOpt(
+        dynamic_cast<TableOutput::ApacheOrc::Options*>(options.release()));
 
-    return Orc::TableOutput::OptRowColumn::Writer::MakeNew(pLog, std::move(pParquetOpt));
+    return Orc::TableOutput::ApacheOrc::Writer::MakeNew(pLog, std::move(pParquetOpt));
 }

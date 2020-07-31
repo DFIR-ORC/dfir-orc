@@ -725,16 +725,15 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
             }
             BOOST_SCOPE_EXIT_END;
 
-            auto& output = pWriter->GetTableOutput();
 
             for (DWORD i = 0; i < dwReturned; i++)
             {
 
-                HRESULT hr1 = ImportSingleEvent(output, input, hSystemContext, hEvents[i]);
+                HRESULT hr1 = ImportSingleEvent(*pWriter, input, hSystemContext, hEvents[i]);
 
                 if (FAILED(hr1))
                 {
-                    output.AbandonRow();
+                    pWriter->AbandonRow();
                     log::Error(_L_, hr1, L"Failed to import event from log %s\r\n", input.name.c_str());
                 }
 
@@ -783,7 +782,7 @@ HRESULT SqlImportAgent::ImportHiveData(ImportItem& input)
     }
     BOOST_SCOPE_EXIT_END;
 
-    auto& output = pWriter->GetTableOutput();
+    auto& output = *pWriter;
 
     auto pStream = input.GetInputStream(_L_);
 

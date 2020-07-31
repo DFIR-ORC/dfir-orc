@@ -521,7 +521,7 @@ HRESULT WolfExecution::CreateCommandAgent(
                     }
                     break;
                     case CommandNotification::Terminated:
-                        AddProcessStatistics(m_ProcessStatisticsWriter->GetTableOutput(), item);
+                        AddProcessStatistics(*m_ProcessStatisticsWriter, item);
                         break;
                     case CommandNotification::Running:
                         break;
@@ -562,7 +562,7 @@ HRESULT WolfExecution::CreateCommandAgent(
                                 duration.count() / 10000000);
                         }
 
-                        AddJobStatistics(m_JobStatisticsWriter->GetTableOutput(), item);
+                        AddJobStatistics(*m_JobStatisticsWriter, item);
                         break;
                 }
                 NotifyTask(item);

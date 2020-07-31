@@ -22,12 +22,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4996)
 
-#include <boost/version.hpp>
-#if defined(_MSC_VER) && BOOST_VERSION == 105700
-//#pragma warning(disable:4003)
-#    define BOOST_PP_VARIADICS 0
-#endif
-
+#include <inttypes.h>
 #include <string>
 #include <cstdio>
 #include <iostream>

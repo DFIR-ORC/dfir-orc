@@ -14,6 +14,8 @@
 
 #include "Robustness.h"
 
+#include "UnitTestHelper.h"
+
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace Orc;
 using namespace Orc::Test;

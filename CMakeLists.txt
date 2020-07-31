@@ -3,17 +3,18 @@ cmake_policy(VERSION 3.12)
 
 # CMake user options
 option(ORC_USE_STATIC_CRT "Use static runtime" ON)
-option(ORC_BUILD_VCPKG "Build vcpkg dependencies" OFF)
+option(ORC_BUILD_VCPKG "Build vcpkg dependencies" ON)
 
 option(ORC_BUILD_APACHE_ORC "Build Apache's ORC module" OFF)
 option(ORC_BUILD_CHAKRACORE "Build with chakracore support" OFF)
-option(ORC_BUILD_COMMAND    "Build any OrcCommabd based command" ON)
+option(ORC_BUILD_COMMAND    "Build any OrcCommand based command" ON)
 option(ORC_BUILD_FASTFIND   "Build FastFind binary" ON)
 option(ORC_BUILD_ORC        "Build Orc binary" ON)
 option(ORC_BUILD_PARQUET    "Build Parquet module" OFF)
 option(ORC_BUILD_SQL        "Build SQL module" OFF)
 option(ORC_BUILD_SSDEEP     "Build with ssdeep support" OFF)
 option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" ON)
+option(ORC_DOWNLOADS_ONLY   "Do not build ORC but only download vcpkg third parties" OFF)
 
 if(NOT ORC_BUILD_COMMAND)
     set(ORC_BUILD_FASTFIND OFF)
@@ -76,6 +77,8 @@ if(ORC_VCPKG_ROOT)
         fmt
         tlsh
         yara
+        rapidjson
+        stx
     )
 
     # Tools/rcedit specific dependencies
@@ -92,10 +95,6 @@ if(ORC_VCPKG_ROOT)
         list(APPEND _PACKAGES arrow)
     endif()
 
-    if(ORC_BUILD_JSON)
-        list(APPEND _PACKAGES rapidjson)
-    endif()
-
     if(ORC_BUILD_CHAKRACORE)
         list(APPEND _PACKAGES
             chakracore:x86-windows
@@ -108,9 +107,14 @@ if(ORC_VCPKG_ROOT)
         list(APPEND _PACKAGES ssdeep)
     endif()
 
+    if(ORC_DOWNLOADS_ONLY)
+        set(ONLY_DOWNLOADS "ONLY_DOWNLOADS")
+    endif()
+
     include(cmake/vcpkg.cmake)
-    if(ORC_BUILD_VCPKG)
+    if(ORC_BUILD_VCPKG OR ORC_DOWNLOADS_ONLY)
         vcpkg_install(
+            ${ONLY_DOWNLOADS}
             PATH ${ORC_VCPKG_ROOT}
             PACKAGES ${_PACKAGES}
             ARCH ${TARGET_ARCH}
@@ -118,6 +122,10 @@ if(ORC_VCPKG_ROOT)
             OVERLAY_TRIPLETS ${OVERLAY_TRIPLETS}
         )
     endif()
+endif()
+
+if(ORC_DOWNLOADS_ONLY)
+    return()
 endif()
 
 # Must be set AFTER 'VCPKG_TARGET_TRIPLET' is defined

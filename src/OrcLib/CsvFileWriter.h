@@ -34,7 +34,6 @@ public:
 
 class ORCLIB_API Writer
     : public ::Orc::TableOutput::Writer
-    , private ITableOutput
     , public ::Orc::TableOutput::IStreamWriter
 {
     struct MakeSharedEnabler;
@@ -340,10 +339,10 @@ private:
             log::Error(_L_, E_INVALIDARG, L"fmt::format_error: %s\r\n", errorMsg);
             return E_INVALIDARG;
         }
-        catch (const fmt::windows_error& system_error)
+        catch (const fmt::system_error& system_error)
         {
             const auto [hr, errorMsg] = AnsiToWide(_L_, system_error.what());
-            log::Error(_L_, HRESULT_FROM_WIN32(system_error.error_code()), L"fmt::windows_error: %s\r\n", errorMsg);
+            log::Error(_L_, HRESULT_FROM_WIN32(system_error.error_code()), L"fmt::system_error: %s\r\n", errorMsg);
             return HRESULT_FROM_WIN32(system_error.error_code());
         }
         return S_OK;

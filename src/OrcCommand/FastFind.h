@@ -15,8 +15,8 @@
 #include "ConfigFile_FastFind.h"
 
 #include "Location.h"
-#include "TableOutputWriter.h"
-#include "StructuredOutputWriter.h"
+#include "TableOutput.h"
+#include "StructuredOutput.h"
 #include "FileFind.h"
 #include "RegFind.h"
 
@@ -268,16 +268,19 @@ private:
     FILETIME CollectionDate;
     std::wstring ComputerName;
 
-    std::shared_ptr<TableOutput::IWriter> pFileSystemWriter;
-    std::shared_ptr<TableOutput::IWriter> pRegistryWriter;
-    std::shared_ptr<TableOutput::IWriter> pObjectWriter;
-    std::shared_ptr<StructuredOutputWriter> pWriterOutput;
+    std::shared_ptr<ITableWriter> pFileSystemTableOutput;
+    std::shared_ptr<ITableWriter> pRegistryTableOutput;
+    std::shared_ptr<ITableWriter> pObjectTableOutput;
+    std::shared_ptr<IStructuredWriter> pStructuredOutput;
 
     std::vector<std::wstring> ObjectDirs;
     std::vector<std::wstring> FileDirs;
 
-    HRESULT LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::ObjectInstance& obj);
-    HRESULT LogObjectMatch(const ObjectSpec::ObjectItem& spec, const FileDirectory::FileInstance& file);
+    HRESULT LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::ObjectInstance& obj, LPCWSTR szElement = nullptr);
+    HRESULT LogObjectMatch(
+        const ObjectSpec::ObjectItem& spec,
+        const FileDirectory::FileInstance& file,
+        LPCWSTR szElement = nullptr);
 
     HRESULT RunFileSystem();
     HRESULT RunRegistry();

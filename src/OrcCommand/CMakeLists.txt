@@ -24,20 +24,28 @@ configure_file(
 )
 
 set(SRC
-    "FileInfoCommon.cpp"
-    "FileInfoCommon.h"
-    "OrcCommand.h"
-    "ToolVersion.h"
-    "ToolVersion.cpp"
-    "${GENERATED_SRC_DIR}/ToolVersionRes.h"
     "UtilitiesMain.cpp"
     "UtilitiesMain.h"
     "UtilitiesMain_Config.cpp"
-    "targetver.h"
-    "OrcCommand.rc"
 )
 
 source_group("" FILES ${SRC})
+
+set(SRC_COMMON
+    "FileInfoCommon.cpp"
+    "FileInfoCommon.h"
+    "OrcCommand.rc"
+    "OrcCommand.h"
+    "stdafx.cpp"
+    "stdafx.h"
+    "targetver.h"
+    "ToolVersion.h"
+    "ToolVersion.cpp"
+    "${GENERATED_SRC_DIR}/ToolVersionRes.h"
+)
+
+source_group(Common FILES ${SRC_COMMON})
+
 
 set(SRC_DD
     "ConfigFile_DD.cpp"
@@ -269,9 +277,8 @@ source_group(WolfLauncher FILES ${SRC_WOLFLAUNCHER})
 
 add_library(OrcCommand
     STATIC
-        "stdafx.cpp"
-        "stdafx.h"
         ${SRC}
+        ${SRC_COMMON}
         ${SRC_DD}
         ${SRC_EMPTYTOOL}
         ${SRC_EXTRACTDATA}

@@ -2,9 +2,9 @@ parameters:
   arch: ''
 
 jobs:
-- job: vs2017_${{ parameters.arch }}
+- job: vs2019_${{ parameters.arch }}
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   steps:
   - checkout: self
     clean: true
@@ -17,7 +17,7 @@ jobs:
         Build-ORC `
           -Source $(Build.SourcesDirectory) `
           -Output $(Build.SourcesDirectory)/artifacts `
-          -Toolchain vs2017 `
+          -Toolchain vs2019 `
           -Architecture ${{ parameters.arch }} `
           -Configuration Debug,MinSizeRel
 

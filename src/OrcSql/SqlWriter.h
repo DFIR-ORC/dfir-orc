@@ -28,7 +28,6 @@ class Connection;
 
 class Writer
     : public ::Orc::TableOutput::Writer
-    , private ITableOutput
     , public ::Orc::TableOutput::IConnectWriter
 {
     friend class CsvToSql;
@@ -46,8 +45,6 @@ public:
         else
             throw L"No schema associtated with Sql::Writer";
     }
-
-    ITableOutput& GetTableOutput() override final { return static_cast<ITableOutput&>(*this); }
 
     const BoundRecord& GetColumnDefinitions() const override final { return m_Columns; };
     BoundRecord& GetColumnDefinitions() override final { return m_Columns; };

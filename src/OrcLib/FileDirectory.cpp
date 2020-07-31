@@ -51,29 +51,29 @@ HRESULT FileDirectory::FileInstance::Write(const logger&, ITableOutput& output, 
     return S_OK;
 }
 HRESULT FileDirectory::FileInstance::Write(const logger&,
-        const std::shared_ptr<StructuredOutputWriter>& pWriterOutput) const
+        IStructuredOutput& pWriterOutput, LPCWSTR szElement) const
 {
-    pWriterOutput->BeginElement(L"object");
+    pWriterOutput.BeginElement(szElement);
 
-    pWriterOutput->WriteNameValuePair(L"name", Name.c_str());
-    pWriterOutput->WriteNameValuePair(L"path", Path.c_str());
+    pWriterOutput.WriteNamed(L"name", Name.c_str());
+    pWriterOutput.WriteNamed(L"path", Path.c_str());
 
     if (CreationTime.QuadPart != 0LL)
-        pWriterOutput->WriteNameFileTimePair(L"creation_time", CreationTime.QuadPart);
+        pWriterOutput.WriteNamed(L"creation_time", CreationTime.QuadPart);
     if (LastWriteTime.QuadPart != 0LL)
-        pWriterOutput->WriteNameFileTimePair(L"lastwrite_time", LastWriteTime.QuadPart);
+        pWriterOutput.WriteNamed(L"lastwrite_time", LastWriteTime.QuadPart);
     if (ChangeTime.QuadPart != 0LL)
-        pWriterOutput->WriteNameFileTimePair(L"lastchange_time", ChangeTime.QuadPart);
+        pWriterOutput.WriteNamed(L"lastchange_time", ChangeTime.QuadPart);
     if (LastAccessTime.QuadPart != 0LL)
-        pWriterOutput->WriteNameFileTimePair(L"lastaccess_time", LastAccessTime.QuadPart);
+        pWriterOutput.WriteNamed(L"lastaccess_time", LastAccessTime.QuadPart);
     if (AllocationSize.QuadPart != 0LL)
-        pWriterOutput->WriteNameSizePair(L"allocation", (size_t)AllocationSize.QuadPart);
+        pWriterOutput.WriteNamed(L"allocation", (size_t)AllocationSize.QuadPart);
     if (EndOfFile.QuadPart != 0LL)
-        pWriterOutput->WriteNameSizePair(L"end_of_file", (size_t)EndOfFile.QuadPart);
+        pWriterOutput.WriteNamed(L"end_of_file", (size_t)EndOfFile.QuadPart);
     if (FileAttributes != 0LL)
-        pWriterOutput->WriteNameAttributesPair(L"attributes", FileAttributes);
+        pWriterOutput.WriteNamedAttributes(L"attributes", FileAttributes);
 
-    pWriterOutput->EndElement(L"object");
+    pWriterOutput.EndElement(szElement);
     return S_OK;
 }
 

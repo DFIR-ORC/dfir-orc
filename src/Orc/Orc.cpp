@@ -115,7 +115,36 @@ int wmain(int argc, const WCHAR* argv[])
         while (g_Tools[index].szName != nullptr)
         {
             if (!_wcsicmp(argv[1], g_Tools[index].szName))
-                return g_Tools[index].WinMain(--argc, ++argv);
+            {
+                HRESULT hr = g_Tools[index].WinMain(--argc, ++argv);
+
+                // if parent is 'explorer' or debugger attached press any key to continue
+                if (IsDebuggerPresent())
+                {
+                    DebugBreak();
+                }
+                else if (UtilitiesMain::IsProcessParent(L"explorer.exe", pLog))
+                {
+                    std::wcerr << "Press any key to continue..." << std::endl;
+                    _getch();
+                }
+                else
+                {
+#ifdef _DEBUG
+                    if (!UtilitiesMain::IsProcessParent(L"cmd.exe", pLog)
+                        && !UtilitiesMain::IsProcessParent(L"WindowsTerminal.exe", pLog)
+                        && !UtilitiesMain::IsProcessParent(L"pwsh.exe", pLog)
+                        && !UtilitiesMain::IsProcessParent(L"VsDebugConsole.exe", pLog))
+                    {
+                        std::wcerr << "Press any key to continue..." << std::endl;
+                        _getch();
+                    }
+#endif
+                }
+
+                return hr;
+            }
+
             index++;
         }
     }

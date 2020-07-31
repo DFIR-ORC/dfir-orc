@@ -7,22 +7,22 @@
 //
 #include "stdafx.h"
 
-#include "OptRowColumnMemoryPool.h"
+#include "ApacheOrcMemoryPool.h"
 
 #include "OrcException.h"
 
 #include <safeint.h>
 
-using namespace Orc::TableOutput::OptRowColumn;
+using namespace Orc::TableOutput::ApacheOrc;
 
 using namespace msl::utilities;
 
-Orc::TableOutput::OptRowColumn::MemoryPool::MemoryPool(size_t initialSize)
+Orc::TableOutput::ApacheOrc::MemoryPool::MemoryPool(size_t initialSize)
     : m_initialSize(initialSize)
 {
 }
 
-char* Orc::TableOutput::OptRowColumn::MemoryPool::malloc(uint64_t size)
+char* Orc::TableOutput::ApacheOrc::MemoryPool::malloc(uint64_t size)
 {
     CheckHeap();
 
@@ -33,7 +33,7 @@ char* Orc::TableOutput::OptRowColumn::MemoryPool::malloc(uint64_t size)
     return (char*)lpVoid;
 }
 
-void Orc::TableOutput::OptRowColumn::MemoryPool::free(char* p)
+void Orc::TableOutput::ApacheOrc::MemoryPool::free(char* p)
 {
     CheckHeap();
 
@@ -43,7 +43,7 @@ void Orc::TableOutput::OptRowColumn::MemoryPool::free(char* p)
     }
 }
 
-Orc::TableOutput::OptRowColumn::MemoryPool::~MemoryPool()
+Orc::TableOutput::ApacheOrc::MemoryPool::~MemoryPool()
 {
     if (m_heap != NULL)
     {
@@ -52,7 +52,7 @@ Orc::TableOutput::OptRowColumn::MemoryPool::~MemoryPool()
     }
 }
 
-void Orc::TableOutput::OptRowColumn::MemoryPool::InitializeHeap()
+void Orc::TableOutput::ApacheOrc::MemoryPool::InitializeHeap()
 {
     if (m_heap != NULL)
     {

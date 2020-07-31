@@ -11,8 +11,8 @@
 #include "OutputSpec.h"
 #include "CriticalSection.h"
 
-#include "OptRowColumnMemoryPool.h"
-#include "OptRowColumnStream.h"
+#include "ApacheOrcMemoryPool.h"
+#include "ApacheOrcStream.h"
 
 #include "Convert.h"
 
@@ -22,7 +22,7 @@
 
 #include <variant>
 
-namespace Orc::TableOutput::OptRowColumn {
+namespace Orc::TableOutput::ApacheOrc {
 
 using namespace std::string_literals;
 
@@ -31,7 +31,6 @@ class Stream;
 
 class Writer
     : public TableOutput::Writer
-    , private ITableOutput
     , public TableOutput::IStreamWriter
 {
     struct MakeSharedEnabler;
@@ -55,8 +54,6 @@ public:
     STDMETHOD(WriteToFile)(const std::filesystem::path& path) override final;
     STDMETHOD(WriteToFile)(const WCHAR* szFileName) override final;
     STDMETHOD(WriteToStream)(const std::shared_ptr<ByteStream>& pStream, bool bCloseStream = true) override final;
-
-    ITableOutput& GetTableOutput() { return static_cast<ITableOutput&>(*this); }
 
     STDMETHOD(SetSchema)(const TableOutput::Schema& columns) override final;
     ;
@@ -170,4 +167,4 @@ private:
     void AddZoneInfo(const std::string name, const std::wstring_view base64);
 };
 
-}  // namespace Orc::TableOutput::OptRowColumn
+}  // namespace Orc::TableOutput::ApacheOrc

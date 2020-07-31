@@ -123,7 +123,7 @@ public:
 
         stream_writer->SetSchema(schema);
 
-        auto& output = stream_writer->GetTableOutput();
+        auto& output = *stream_writer;
 
         for (UINT i = 0; i < 1000; i++)
         {

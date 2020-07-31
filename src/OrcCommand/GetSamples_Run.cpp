@@ -181,7 +181,7 @@ HRESULT Main::WriteSampleInformation(const std::vector<std::shared_ptr<SampleIte
         return E_FAIL;
     }
 
-    auto& output = pWriter->GetTableOutput();
+    auto& output = *pWriter;
 
     std::for_each(results.begin(), results.end(), [&output](const std::shared_ptr<SampleItem>& item) {
         SystemDetails::WriteComputerName(output);
@@ -226,7 +226,7 @@ HRESULT Main::WriteTimeline(const TaskTracker::TimeLine& timeline)
         return E_FAIL;
     }
 
-    auto& output = pWriter->GetTableOutput();
+    auto& output = *pWriter;
 
     std::for_each(timeline.cbegin(), timeline.cend(), [&output](const std::shared_ptr<CausalityItem>& item) {
         SystemDetails::WriteComputerName(output);

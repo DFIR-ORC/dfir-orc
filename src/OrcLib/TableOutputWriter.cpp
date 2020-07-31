@@ -20,7 +20,7 @@
 #include "TableOutputWriter.h"
 #include "SqlOutputWriter.h"
 #include "ParquetOutputWriter.h"
-#include "OptRowColumnOutputWriter.h"
+#include "ApacheOrcOutputWriter.h"
 #include "CsvFileWriter.h"
 
 #include "CaseInsensitive.h"
@@ -118,7 +118,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
         {
             auto options = std::make_unique<TableOutput::Options>();
 
-            auto pWriter = GetOptRowColumnWriter(pLog, std::move(options));
+            auto pWriter = GetApacheOrcnWriter(pLog, std::move(options));
 
             if (!pWriter)
             {
@@ -356,9 +356,9 @@ Orc::TableOutput::GetParquetWriter(const logger& pLog, std::unique_ptr<Options>&
 }
 
 std::shared_ptr<IStreamWriter>
-Orc::TableOutput::GetOptRowColumnWriter(const logger& pLog, std::unique_ptr<Options>&& options)
+Orc::TableOutput::GetApacheOrcnWriter(const logger& pLog, std::unique_ptr<Options>&& options)
 {
-    static auto extension = Orc::ExtensionLibrary::GetLibrary<OptRowColumnOutputWriter>(pLog);
+    static auto extension = Orc::ExtensionLibrary::GetLibrary<ApacheOrcOutputWriter>(pLog);
 
     if (!extension)
         return nullptr;

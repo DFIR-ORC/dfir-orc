@@ -10,7 +10,7 @@
 add_subdirectory(OrcLibTest)
 
 if(ORC_BUILD_APACHE_ORC)
-    add_subdirectory(OrcOptRowColumnTest)
+    add_subdirectory(OrcApacheOrcTest)
 endif()
 
 # Parquet depends on arrow library which does not exist for x86

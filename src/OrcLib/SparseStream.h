@@ -38,6 +38,8 @@ public:
 
     STDMETHOD(SetSize)(ULONG64 ullSize);
 
+    STDMETHOD(GetAllocatedRanges)(std::vector<FILE_ALLOCATED_RANGE_BUFFER>& ranges);
+
 private:
 };
 

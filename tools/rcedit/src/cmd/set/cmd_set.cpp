@@ -30,6 +30,17 @@ using OptionsUtf16 = CmdSet::OptionsUtf16;
 
 namespace {
 
+template < typename T >
+std::istringstream& operator>>(
+    std::istringstream& in,
+    std::optional< T >& val )
+{
+    T v;
+    in >> v;
+    val = v;
+    return in;
+}
+
 void UpdateFileResource(
     const fs::path& path,
     const std::wstring& type,
@@ -278,13 +289,8 @@ void CmdSet::Register( CLI::App& app )
     resourceInputType->add_option(
         "--value-utf16", o.valueUtf16, "Resource value to store as utf-16" );
 
-    std::vector< std::pair< std::string, CompressionType > > map{
-        { "no", CompressionType::kNone }, { "7z", CompressionType::k7zip }
-    };
-    m_setApp
-        ->add_option(
-            "-c,--compress", o.compression, "Use compression algorithm" )
-        ->transform( CLI::CheckedTransformer( map, CLI::ignore_case ) );
+    m_setApp->add_option(
+        "-c,--compress", o.compression, "Use compression algorithm {none,7z}" );
 
     m_setApp->add_option( "-o,--out", o.outPath, "Output file path" );
 }

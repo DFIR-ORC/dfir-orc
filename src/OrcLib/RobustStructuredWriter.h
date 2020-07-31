@@ -97,6 +97,15 @@ public:
         return m_pWriter->WriteNamed(szName, ullValue, bInHex);
     }
 
+    virtual HRESULT WriteFileTime(ULONGLONG fileTime) override final
+    {
+        return m_pWriter->WriteFileTime(fileTime);
+    }
+    virtual HRESULT WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime) override final
+    {
+        return m_pWriter->WriteNamedFileTime(szName, fileTime);
+    }
+
     virtual HRESULT WriteAttributes(DWORD dwAttibutes) override final
     {
         return m_pWriter->WriteAttributes(dwAttibutes);

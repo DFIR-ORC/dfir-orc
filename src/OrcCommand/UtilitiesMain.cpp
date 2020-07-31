@@ -38,7 +38,7 @@ using namespace std;
 using namespace Orc;
 using namespace Orc::Command;
 
-bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
+bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName, logger& _L_)
 {
     HRESULT hr = E_FAIL;
     const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>(_L_);

@@ -383,9 +383,9 @@ HRESULT Main::LaunchWMI()
     std::wstring strCommandLine = cmdLineBuilder.str();
     wcsncpy_s(szCommandLine.data(), MAX_CMDLINE, strCommandLine.c_str(), strCommandLine.size());
 
-    WMIUtil wmi(_L_);
+    WMI wmi;
 
-    if (FAILED(hr = wmi.Initialize()))
+    if (FAILED(hr = wmi.Initialize(_L_)))
     {
         log::Error(_L_, hr, L"Failed to initialize WMI\r\n");
         return hr;
@@ -394,7 +394,7 @@ HRESULT Main::LaunchWMI()
     log::Verbose(_L_, L"Starting with command line \"%s\"", szCommandLine);
 
     DWORD dwStatus = 0L;
-    if (FAILED(hr = wmi.WMICreateProcess(nullptr, szCommandLine.data(), config.dwCreationFlags, 0L, dwStatus))
+    if (FAILED(hr = wmi.WMICreateProcess(_L_, nullptr, szCommandLine.data(), config.dwCreationFlags, 0L, dwStatus))
         || dwStatus != 0L)
     {
         log::Error(_L_, hr, L"Could not start command line \"%s\" (status=%d)\r\n", szCommandLine, dwStatus);

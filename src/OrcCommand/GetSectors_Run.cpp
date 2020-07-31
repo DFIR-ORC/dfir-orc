@@ -1032,7 +1032,7 @@ HRESULT Main::CollectDiskChunks(const OutputSpec& output)
                 // Make sure we read from the beginning of the chunk
                 diskChunk->SetFilePointer(0, FILE_BEGIN, NULL);
 
-                hr = CollectDiskChunk(compressor, CSV->GetTableOutput(), diskChunk);
+                hr = CollectDiskChunk(compressor, *CSV, diskChunk);
                 if
                     FAILED(hr)
                     {
@@ -1054,7 +1054,7 @@ HRESULT Main::CollectDiskChunks(const OutputSpec& output)
                 // Make sure we read from the beginning of the chunk
                 diskChunk->SetFilePointer(0, FILE_BEGIN, NULL);
 
-                hr = CollectDiskChunk(config.Output.Path, CSV->GetTableOutput(), diskChunk);
+                hr = CollectDiskChunk(config.Output.Path, *CSV, diskChunk);
                 if
                     FAILED(hr)
                     {

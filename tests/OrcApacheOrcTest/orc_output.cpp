@@ -19,10 +19,12 @@
 #include "OrcException.h"
 #include "WideAnsi.h"
 
-#include "OptRowColumnMemoryPool.h"
-#include "OptRowColumnStream.h"
+#include "ApacheOrcMemoryPool.h"
+#include "ApacheOrcStream.h"
 
 #include "orc/OrcFile.hh"
+
+#include "UnitTestHelper.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace std;
@@ -30,7 +32,7 @@ using namespace std::string_literals;
 using namespace Orc;
 using namespace Orc::Test;
 
-namespace Orc::Test::OptRowColumn {
+namespace Orc::Test::ApacheOrc {
 TEST_CLASS(OrcWriter)
 {
 private:
@@ -62,7 +64,7 @@ public:
 
         Assert::IsTrue(SUCCEEDED(fileStream->WriteTo(strPath.c_str())));
 
-        auto outStream = std::make_unique<Orc::TableOutput::OptRowColumn::Stream>(_L_);
+        auto outStream = std::make_unique<Orc::TableOutput::ApacheOrc::Stream>(_L_);
 
         Assert::IsTrue(SUCCEEDED(outStream->Open(fileStream)));
 
@@ -78,7 +80,7 @@ public:
 
         Assert::IsTrue(SUCCEEDED(fileStream->WriteTo(strPath.c_str())));
 
-        auto outStream = std::make_unique<Orc::TableOutput::OptRowColumn::Stream>(_L_);
+        auto outStream = std::make_unique<Orc::TableOutput::ApacheOrc::Stream>(_L_);
 
         Assert::IsTrue(SUCCEEDED(outStream->Open(fileStream)));
 
@@ -91,11 +93,11 @@ public:
         using namespace std::string_view_literals;
         using namespace Orc::TableOutput;
 
-        auto options = std::make_unique<TableOutput::OptRowColumn::Options>();
+        auto options = std::make_unique<TableOutput::ApacheOrc::Options>();
 
         options->BatchSize = 102400;
 
-        auto stream_writer = Orc::TableOutput::GetOptRowColumnWriter(_L_, std::move(options));
+        auto stream_writer = Orc::TableOutput::GetApacheOrcnWriter(_L_, std::move(options));
         Assert::IsTrue((bool)stream_writer, L"Failed to instantiate orc writer");
 
         Schema schema {{ColumnType::UInt32Type, L"FieldOne"sv},
@@ -112,7 +114,7 @@ public:
         auto hr = stream_writer->WriteToFile(strPath.c_str());
         Assert::IsTrue(SUCCEEDED(hr), L"Failed to write to orc stream");
 
-        auto& output = stream_writer->GetTableOutput();
+        auto& output = *stream_writer;
 
         for (UINT i = 0; i < 1000000; i++)
         {
@@ -152,7 +154,7 @@ public:
         StringVectorBatch* s = dynamic_cast<StringVectorBatch*>(root->fields[2]);
 
         std::unique_ptr<orc::MemoryPool> pool =
-            std::make_unique<Orc::TableOutput::OptRowColumn::MemoryPool>(10 * 1024 * 1024);
+            std::make_unique<Orc::TableOutput::ApacheOrc::MemoryPool>(10 * 1024 * 1024);
 
         uint64_t rows = 0;
         for (uint64_t i = 0; i < rowCount; ++i)
@@ -179,7 +181,7 @@ public:
                 s->numElements = rows;
 
                 writer->add(*batch);
-                pool = std::make_unique<Orc::TableOutput::OptRowColumn::MemoryPool>(10 * 1024 * 1024);
+                pool = std::make_unique<Orc::TableOutput::ApacheOrc::MemoryPool>(10 * 1024 * 1024);
                 rows = 0;
             }
         }
@@ -221,7 +223,7 @@ public:
         StringVectorBatch* s = dynamic_cast<StringVectorBatch*>(root->fields[2]);
 
         std::unique_ptr<orc::MemoryPool> pool =
-            std::make_unique<Orc::TableOutput::OptRowColumn::MemoryPool>(10 * 1024 * 1024);
+            std::make_unique<Orc::TableOutput::ApacheOrc::MemoryPool>(10 * 1024 * 1024);
 
         uint64_t rows = 0;
         for (uint64_t i = 0; i < rowCount; ++i)
@@ -275,7 +277,7 @@ public:
                 s->numElements = rows;
 
                 writer->add(*batch);
-                pool = std::make_unique<Orc::TableOutput::OptRowColumn::MemoryPool>(10 * 1024 * 1024);
+                pool = std::make_unique<Orc::TableOutput::ApacheOrc::MemoryPool>(10 * 1024 * 1024);
                 rows = 0;
             }
         }
@@ -325,4 +327,4 @@ public:
                 Fatal, hr, L"Failed to convert output file name to UTF16 (from string %S)", strFileName.c_str());
     }
 };
-}  // namespace Orc::Test::OptRowColumn
+}  // namespace Orc::Test::ApacheOrc

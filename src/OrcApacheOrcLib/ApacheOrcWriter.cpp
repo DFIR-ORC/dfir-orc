@@ -7,8 +7,8 @@
 //
 #include "stdafx.h"
 
-#include "OptRowColumnWriter.h"
-#include "OptRowColumnStream.h"
+#include "ApacheOrcWriter.h"
+#include "ApacheOrcStream.h"
 
 #include "FileStream.h"
 
@@ -33,7 +33,7 @@ using namespace msl::utilities;
 
 namespace fs = std::filesystem;
 
-class Orc::TableOutput::OptRowColumn::WriterTermination : public TerminationHandler
+class Orc::TableOutput::ApacheOrc::WriterTermination : public TerminationHandler
 {
 public:
     WriterTermination(const std::wstring& strDescr, std::weak_ptr<Writer> pW)
@@ -46,7 +46,7 @@ private:
     std::weak_ptr<Writer> m_pWriter;
 };
 
-HRESULT Orc::TableOutput::OptRowColumn::WriterTermination::operator()()
+HRESULT Orc::TableOutput::ApacheOrc::WriterTermination::operator()()
 {
     if (auto pWriter = m_pWriter.lock(); pWriter)
     {
@@ -55,7 +55,7 @@ HRESULT Orc::TableOutput::OptRowColumn::WriterTermination::operator()()
     return S_OK;
 }
 
-struct Orc::TableOutput::OptRowColumn::Writer::MakeSharedEnabler : public Orc::TableOutput::OptRowColumn::Writer
+struct Orc::TableOutput::ApacheOrc::Writer::MakeSharedEnabler : public Orc::TableOutput::ApacheOrc::Writer
 {
     MakeSharedEnabler(logger pLog, std::unique_ptr<Options>&& options)
         : Writer(std::move(pLog), std::move(options))
@@ -63,8 +63,8 @@ struct Orc::TableOutput::OptRowColumn::Writer::MakeSharedEnabler : public Orc::T
     }
 };
 
-std::shared_ptr<Orc::TableOutput::OptRowColumn::Writer>
-Orc::TableOutput::OptRowColumn::Writer::MakeNew(logger pLog, std::unique_ptr<Options>&& options)
+std::shared_ptr<Orc::TableOutput::ApacheOrc::Writer>
+Orc::TableOutput::ApacheOrc::Writer::MakeNew(logger pLog, std::unique_ptr<Options>&& options)
 {
     auto retval = std::make_shared<MakeSharedEnabler>(std::move(pLog), std::move(options));
 
@@ -74,7 +74,7 @@ Orc::TableOutput::OptRowColumn::Writer::MakeNew(logger pLog, std::unique_ptr<Opt
     return retval;
 }
 
-Orc::TableOutput::OptRowColumn::Writer::Writer(logger pLog, std::unique_ptr<Options>&& options)
+Orc::TableOutput::ApacheOrc::Writer::Writer(logger pLog, std::unique_ptr<Options>&& options)
     : _L_(std::move(pLog))
     , m_Options(std::move(options))
 {
@@ -85,7 +85,7 @@ Orc::TableOutput::OptRowColumn::Writer::Writer(logger pLog, std::unique_ptr<Opti
     }
 }
 
-Orc::TableOutput::OptRowColumn::Writer::~Writer() {}
+Orc::TableOutput::ApacheOrc::Writer::~Writer() {}
 
 // declarations in orc (Timezone.h) missing from the exported includes
 namespace orc {
@@ -130,7 +130,7 @@ std::unique_ptr<Timezone> getTimezone(const std::string& filename, const std::ve
 
 }  // namespace orc
 
-void Orc::TableOutput::OptRowColumn::Writer::AddZoneInfo(const std::string name, const std::wstring_view base64)
+void Orc::TableOutput::ApacheOrc::Writer::AddZoneInfo(const std::string name, const std::wstring_view base64)
 {
     auto data = Orc::ConvertBase64(base64);
     std::vector<unsigned char> bytes;
@@ -141,7 +141,7 @@ void Orc::TableOutput::OptRowColumn::Writer::AddZoneInfo(const std::string name,
     auto timeZone = orc::getTimezone(name, bytes);
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::SetSchema(const TableOutput::Schema& columns)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::SetSchema(const TableOutput::Schema& columns)
 {
     if (!columns)
         return E_INVALIDARG;
@@ -246,12 +246,12 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::SetSchema(const TableOutput
     return S_OK;
 }
 
-HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteToFile(const fs::path& path)
+HRESULT Orc::TableOutput::ApacheOrc::Writer::WriteToFile(const fs::path& path)
 {
     return WriteToFile(path.c_str());
 }
 
-HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteToFile(const WCHAR* szFileName)
+HRESULT Orc::TableOutput::ApacheOrc::Writer::WriteToFile(const WCHAR* szFileName)
 {
     HRESULT hr = E_FAIL;
 
@@ -271,7 +271,7 @@ HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteToFile(const WCHAR* szFileN
 }
 
 STDMETHODIMP
-Orc::TableOutput::OptRowColumn::Writer::WriteToStream(const std::shared_ptr<ByteStream>& pStream, bool bCloseStream)
+Orc::TableOutput::ApacheOrc::Writer::WriteToStream(const std::shared_ptr<ByteStream>& pStream, bool bCloseStream)
 {
     HRESULT hr = E_FAIL;
 
@@ -301,7 +301,7 @@ Orc::TableOutput::OptRowColumn::Writer::WriteToStream(const std::shared_ptr<Byte
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::Flush()
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::Flush()
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
 
@@ -322,7 +322,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::Flush()
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::Close()
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::Close()
 {
 
     if (auto hr = Flush(); FAILED(hr))
@@ -342,7 +342,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::Close()
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteNothing()
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteNothing()
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -356,7 +356,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteNothing()
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::AbandonRow()
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::AbandonRow()
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     for (auto i = m_dwColumnCounter; i < m_dwColumnNumber; i++)
@@ -372,7 +372,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::AbandonRow()
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::AbandonColumn()
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::AbandonColumn()
 {
     if (auto hr = WriteNothing(); FAILED(hr))
         return hr;
@@ -380,7 +380,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::AbandonColumn()
     return E_FAIL;
 }
 
-HRESULT Orc::TableOutput::OptRowColumn::Writer::AddColumnAndCheckNumbers()
+HRESULT Orc::TableOutput::ApacheOrc::Writer::AddColumnAndCheckNumbers()
 {
     m_dwColumnCounter++;
     if (m_dwColumnCounter > m_dwColumnNumber)
@@ -396,7 +396,7 @@ HRESULT Orc::TableOutput::OptRowColumn::Writer::AddColumnAndCheckNumbers()
     return S_OK;
 }
 
-HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteEndOfLine()
+HRESULT Orc::TableOutput::ApacheOrc::Writer::WriteEndOfLine()
 {
     if (m_dwColumnCounter == m_dwColumnNumber)
     {
@@ -408,7 +408,7 @@ HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteEndOfLine()
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
             ExceptionSeverity::Fatal,
-            L"Too few columns written to OptRowColumn (got %d, max is %d)",
+            L"Too few columns written to ApacheOrc (got %d, max is %d)",
             counter,
             m_dwColumnNumber);
     }
@@ -418,7 +418,7 @@ HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteEndOfLine()
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
             ExceptionSeverity::Fatal,
-            L"Too many columns written to OptRowColumn (got %d, max is %d)",
+            L"Too many columns written to ApacheOrc (got %d, max is %d)",
             counter,
             m_dwColumnNumber);
     }
@@ -433,7 +433,7 @@ HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteEndOfLine()
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const std::wstring& strString)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteString(const std::wstring& strString)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -469,7 +469,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const std::wstr
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const std::wstring_view& strString)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteString(const std::wstring_view& strString)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -504,7 +504,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const std::wstr
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const WCHAR* szString)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteString(const WCHAR* szString)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -541,7 +541,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const WCHAR* sz
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteCharArray(const WCHAR* szString, DWORD dwCharCount)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteCharArray(const WCHAR* szString, DWORD dwCharCount)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -578,7 +578,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteCharArray(const WCHAR*
 }
 
 STDMETHODIMP
-Orc::TableOutput::OptRowColumn::Writer::WriteFormated_(const std::wstring_view& szFormat, IOutput::wformat_args args)
+Orc::TableOutput::ApacheOrc::Writer::WriteFormated_(const std::wstring_view& szFormat, IOutput::wformat_args args)
 {
     Buffer<WCHAR, MAX_PATH> buffer;
 
@@ -590,7 +590,7 @@ Orc::TableOutput::OptRowColumn::Writer::WriteFormated_(const std::wstring_view& 
         return WriteCharArray(buffer.get(), buffer.size());
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const std::string& strString)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteString(const std::string& strString)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -611,7 +611,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const std::stri
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const std::string_view& strString)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteString(const std::string_view& strString)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -633,7 +633,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const std::stri
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const CHAR* szString)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteString(const CHAR* szString)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -657,7 +657,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteString(const CHAR* szS
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteCharArray(const CHAR* szString, DWORD dwCharCount)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteCharArray(const CHAR* szString, DWORD dwCharCount)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -680,7 +680,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteCharArray(const CHAR* 
 }
 
 STDMETHODIMP
-Orc::TableOutput::OptRowColumn::Writer::WriteFormated_(const std::string_view& szFormat, IOutput::format_args args)
+Orc::TableOutput::ApacheOrc::Writer::WriteFormated_(const std::string_view& szFormat, IOutput::format_args args)
 {
     Buffer<CHAR, MAX_PATH> buffer;
 
@@ -692,7 +692,7 @@ Orc::TableOutput::OptRowColumn::Writer::WriteFormated_(const std::string_view& s
         return WriteCharArray(buffer.get(), buffer.size());
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteAttributes(DWORD dwFileAttributes)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteAttributes(DWORD dwFileAttributes)
 {
     if (auto hr = WriteFormated(
             "{}{}{}{}{}{}{}{}{}{}{}{}{}",
@@ -717,7 +717,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteAttributes(DWORD dwFil
     return S_OK;
 }
 
-HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteFileTime(FILETIME fileTime)
+HRESULT Orc::TableOutput::ApacheOrc::Writer::WriteFileTime(FILETIME fileTime)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -736,7 +736,7 @@ HRESULT Orc::TableOutput::OptRowColumn::Writer::WriteFileTime(FILETIME fileTime)
         return AbandonColumn();
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFileTime(LONGLONG fileTime)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteFileTime(LONGLONG fileTime)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -761,7 +761,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFileTime(LONGLONG file
         return AbandonColumn();
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteTimeStamp(time_t tmStamp)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteTimeStamp(time_t tmStamp)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -775,7 +775,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteTimeStamp(time_t tmSta
         return AbandonColumn();
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteTimeStamp(tm tmStamp)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteTimeStamp(tm tmStamp)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -789,7 +789,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteTimeStamp(tm tmStamp)
         return AbandonColumn();
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFileSize(LARGE_INTEGER fileSize)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteFileSize(LARGE_INTEGER fileSize)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -804,7 +804,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFileSize(LARGE_INTEGER
         return AbandonColumn();
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFileSize(ULONGLONG fileSize)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteFileSize(ULONGLONG fileSize)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -819,7 +819,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFileSize(ULONGLONG fil
         return AbandonColumn();
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFileSize(DWORD nFileSizeHigh, DWORD nFileSizeLow)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteFileSize(DWORD nFileSizeHigh, DWORD nFileSizeLow)
 {
     LARGE_INTEGER FileSize;
 
@@ -830,7 +830,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFileSize(DWORD nFileSi
     return WriteFileSize(FileSize);
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteBool(bool bBoolean)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteBool(bool bBoolean)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -845,7 +845,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteBool(bool bBoolean)
         return AbandonColumn();
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteEnum(DWORD dwEnum)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteEnum(DWORD dwEnum)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -859,7 +859,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteEnum(DWORD dwEnum)
     else
         return AbandonColumn();
 }
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteEnum(DWORD dwEnum, const WCHAR* EnumValues[])
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteEnum(DWORD dwEnum, const WCHAR* EnumValues[])
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -874,7 +874,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteEnum(DWORD dwEnum, con
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFlags(DWORD dwFlags)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteFlags(DWORD dwFlags)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -890,22 +890,22 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteFlags(DWORD dwFlags)
 }
 
 STDMETHODIMP
-Orc::TableOutput::OptRowColumn::Writer::WriteFlags(DWORD dwFlags, const FlagsDefinition FlagValues[], WCHAR cSeparator)
+Orc::TableOutput::ApacheOrc::Writer::WriteFlags(DWORD dwFlags, const FlagsDefinition FlagValues[], WCHAR cSeparator)
 {
     return WriteFlags(dwFlags);
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteExactFlags(DWORD dwFlags)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteExactFlags(DWORD dwFlags)
 {
     return WriteFlags(dwFlags);
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteExactFlags(DWORD dwFlags, const FlagsDefinition FlagValues[])
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteExactFlags(DWORD dwFlags, const FlagsDefinition FlagValues[])
 {
     return WriteExactFlags(dwFlags);
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteGUID(const GUID& guid)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteGUID(const GUID& guid)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -928,27 +928,27 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteGUID(const GUID& guid)
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteXML(const WCHAR* szString)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteXML(const WCHAR* szString)
 {
     return WriteString(szString);
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteXML(const WCHAR* szString, DWORD dwCharCount)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteXML(const WCHAR* szString, DWORD dwCharCount)
 {
     return WriteString(std::wstring_view(szString, dwCharCount));
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteXML(const CHAR* szString)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteXML(const CHAR* szString)
 {
     return WriteString(szString);
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteXML(const CHAR* szString, DWORD dwCharCount)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteXML(const CHAR* szString, DWORD dwCharCount)
 {
     return WriteString(std::string_view(szString, dwCharCount));
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteInteger(DWORD dwInteger)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteInteger(DWORD dwInteger)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -967,7 +967,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteInteger(DWORD dwIntege
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteInteger(LONGLONG llInteger)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteInteger(LONGLONG llInteger)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -986,7 +986,7 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteInteger(LONGLONG llInt
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteInteger(ULONGLONG ullInteger)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteInteger(ULONGLONG ullInteger)
 {
     auto root = dynamic_cast<orc::StructVectorBatch*>(m_Batch.get());
     if (root)
@@ -1006,12 +1006,12 @@ STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteInteger(ULONGLONG ullI
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteBytes(const BYTE pBytes[], DWORD dwLen)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteBytes(const BYTE pBytes[], DWORD dwLen)
 {
     return WriteNothing();
 }
 
-STDMETHODIMP Orc::TableOutput::OptRowColumn::Writer::WriteBytes(const CBinaryBuffer& Buffer)
+STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteBytes(const CBinaryBuffer& Buffer)
 {
     return WriteBytes(Buffer.GetData(), (DWORD)Buffer.GetCount());
 }

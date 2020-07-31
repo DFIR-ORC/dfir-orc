@@ -13,7 +13,7 @@
 
 #include "OrcException.h"
 
-namespace Orc::TableOutput::OptRowColumn {
+namespace Orc::TableOutput::ApacheOrc {
 
 class MemoryPool : public orc::MemoryPool
 {
