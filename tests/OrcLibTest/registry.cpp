@@ -51,6 +51,13 @@ namespace Orc::Test {
         {
             auto BuildBranch = Registry::Read<std::wstring>(
                 _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"BuildBranch");
+
+            if (BuildBranch.is_err())
+            {
+                log::Error(_L_, BuildBranch.err_value(), L"Failed to read BuildBranch, test not performed\r\n");
+                return;
+            }
+
             Assert::IsTrue(BuildBranch.is_ok());
             Assert::IsFalse(move(BuildBranch).unwrap().empty());
         }
@@ -62,6 +69,13 @@ namespace Orc::Test {
                 HKEY_LOCAL_MACHINE,
                 LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)",
                 L"CurrentMajorVersionNumber");
+
+            if (VersionNumber.is_err())
+            {
+                log::Error(_L_, VersionNumber.err_value(), L"Failed to read VersionNumber, test not performed\r\n");
+                return;
+            }
+
             Assert::IsTrue(VersionNumber.is_ok());
             Assert::IsTrue(move(VersionNumber).unwrap() > 5);
         }
@@ -72,6 +86,13 @@ namespace Orc::Test {
                 HKEY_LOCAL_MACHINE,
                 LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)",
                 L"InstallTime");
+
+            if (InstallTime.is_err())
+            {
+                log::Error(_L_, InstallTime.err_value(), L"Failed to read InstallTime, test not performed\r\n");
+                return;
+            }
+
             Assert::IsTrue(InstallTime.is_ok());
             ULARGE_INTEGER li;
             li.QuadPart = move(InstallTime).unwrap();
@@ -88,16 +109,26 @@ namespace Orc::Test {
         {
             auto PathName = Registry::Read<std::filesystem::path>(
                 _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"PathName");
-            Assert::IsTrue(PathName.is_ok());
+            if (PathName.is_err())
+            {
+                log::Error(_L_, PathName.err_value(), L"Failed to read PathName, test not performed\r\n");
+                return;
+            }
 
+            Assert::IsTrue(PathName.is_ok());
             Assert::IsTrue(std::filesystem::exists(move(PathName).unwrap()));
         }
-        TEST_METHOD(ReadBinay)
+        TEST_METHOD(ReadBinary)
         {
             auto DigitalProductId = Registry::Read<ByteBuffer>(
                 _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"DigitalProductId4");
-            Assert::IsTrue(DigitalProductId.is_ok());
 
+            if(DigitalProductId.is_err())
+            {
+                log::Error(_L_, DigitalProductId.err_value(), L"Failed to read DigitalProductId4, test not performed\r\n");
+                return;
+            }
+            Assert::IsTrue(DigitalProductId.is_ok());
             auto buffer = move(DigitalProductId).unwrap();
             Assert::IsTrue(buffer.size() > 0);
         }
