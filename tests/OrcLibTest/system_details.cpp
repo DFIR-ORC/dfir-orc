@@ -100,26 +100,22 @@ public:
             if (volume.bSystem)
                 bHasSystem=true;
 
-            Assert::IsTrue(volume.Size > 0);
-            Assert::IsTrue(volume.FreeSpace > 0);
-            Assert::IsFalse(volume.Path.empty());
-            Assert::IsFalse(volume.DeviceId.empty());
-            Assert::IsFalse(volume.FileSystem.empty());
+            Assert::IsFalse(volume.Path.empty(), L"Volume path should not be empty");
         }
-        Assert::IsTrue(bHasBoot);
-        Assert::IsTrue(bHasSystem);
+        Assert::IsTrue(bHasBoot, L"This system does not seem to have a boot volume");
+        Assert::IsTrue(bHasSystem, L"This system does not seem to have a system volume");
     }
 
     TEST_METHOD(QFE)
     {
         auto result = SystemDetails::GetOsQFEs(_L_);
-        Assert::IsTrue(result.is_ok());
+        Assert::IsTrue(result.is_ok(), L"Failed to retrieve installed OS QFEs");
 
         auto qfes = move(result).unwrap();
 
         for (const auto& qfe : qfes)
         {
-            Assert::IsFalse(qfe.HotFixId.empty());
+            Assert::IsFalse(qfe.HotFixId.empty(), L"HotFixId should not be null");
         }
     }
     TEST_METHOD(Environment)
