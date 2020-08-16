@@ -562,12 +562,32 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
         if (strComputerName.empty() && !strFullComputerName.empty())
         {
-            strComputerName = strFullComputerName;
+            size_t pos = strFullComputerName.find(L".");
+
+            if (pos != std::string::npos)
+            {
+                strComputerName = strFullComputerName.substr(0, pos);
+            }
+            else
+            {
+                strComputerName = strFullComputerName;
+            }
         }
         if (strFullComputerName.empty() && !strComputerName.empty())
         {
             strFullComputerName = strComputerName;
         }
+
+        if (strComputerName.length() > MAX_COMPUTERNAME_LENGTH)
+        {
+            log::Error(
+                _L_,
+                E_FAIL,
+                L"ComputerName (defined by /Compter or /CompterFull) must be shorter or equal to %d characters\r\n", MAX_COMPUTERNAME_LENGTH);
+
+            return E_FAIL;
+        } 
+
         if (!strComputerName.empty())
             SystemDetails::SetOrcComputerName(strComputerName);
         if (!strFullComputerName.empty())
