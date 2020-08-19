@@ -1564,8 +1564,8 @@ HRESULT SystemDetails::LoadSystemDetails()
     }
     g_pDetailsBlock->strFullComputerName.assign(szFullComputerName, dwFullBufLen);
 
-    WCHAR szOrcComputerName[MAX_COMPUTERNAME_LENGTH + 1];
-    DWORD dwOrcBufLen = MAX_COMPUTERNAME_LENGTH + 1;
+    WCHAR szOrcComputerName[MAX_PATH + 1];
+    DWORD dwOrcBufLen = MAX_PATH + 1;
 
     auto dwOrcComputerName = GetEnvironmentVariableW(OrcComputerName, szOrcComputerName, dwOrcBufLen);
     if (dwOrcComputerName > 0)
