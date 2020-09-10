@@ -443,7 +443,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hSession == NULL)
     {
         log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to open %s\r\n", m_config.ServerName.c_str());
-        return S_OK;
+        return hr;
     }
     BOOST_SCOPE_EXIT((&hSession)) { WinHttpCloseHandle(hSession); }
     BOOST_SCOPE_EXIT_END;
@@ -454,7 +454,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     {
         log::Error(
             _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to connect to %s\r\n", m_config.ServerName.c_str());
-        return S_OK;
+        return hr;
     }
     BOOST_SCOPE_EXIT((&hConnect)) { WinHttpCloseHandle(hConnect); }
     BOOST_SCOPE_EXIT_END;
@@ -476,7 +476,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             L"Failed to open request to %s/%s\r\n",
             m_config.ServerName.c_str(),
             strRemotePath.c_str());
-        return S_OK;
+        return hr;
     }
     BOOST_SCOPE_EXIT((&hRequest)) { WinHttpCloseHandle(hRequest); }
     BOOST_SCOPE_EXIT_END;
@@ -490,7 +490,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             L"Failed to send status request for %s/%s\r\n",
             m_config.ServerName.c_str(),
             strRemotePath.c_str());
-        return S_OK;
+        return hr;
     }
 
     // Place additional code here.
@@ -502,7 +502,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             L"Failed to receive response to %s/%s\r\n",
             m_config.ServerName.c_str(),
             strRemotePath.c_str());
-        return S_OK;
+        return hr;
     }
 
     DWORD dwStatusCode = 0L;
@@ -521,7 +521,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             L"Failed to query status code %s/%s\r\n",
             m_config.ServerName.c_str(),
             strRemotePath.c_str());
-        return S_OK;
+        return hr;
     }
 
     if (dwStatusCode == 401)
@@ -538,7 +538,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 L"Failed to query status code %s/%s\r\n",
                 m_config.ServerName.c_str(),
                 strRemotePath.c_str());
-            return S_OK;
+            return hr;
         }
 
         DWORD dwSelectedScheme = 0L;
@@ -554,7 +554,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 L"No supported authentication scheme available %s/%s\r\n",
                 m_config.ServerName.c_str(),
                 strRemotePath.c_str());
-            return S_OK;
+            return hr;
         }
 
         if (!WinHttpSetCredentials(
@@ -566,7 +566,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 L"Failed to authenticate to %s/%s\r\n",
                 m_config.ServerName.c_str(),
                 strRemotePath.c_str());
-            return S_OK;
+            return hr;
         }
 
         // Send a Request.
@@ -578,7 +578,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 L"Failed to send status request for %s/%s\r\n",
                 m_config.ServerName.c_str(),
                 strRemotePath.c_str());
-            return S_OK;
+            return hr;
         }
 
         // Place additional code here.
@@ -590,7 +590,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 L"Failed to receive response to %s/%s\r\n",
                 m_config.ServerName.c_str(),
                 strRemotePath.c_str());
-            return S_OK;
+            return hr;
         }
 
         if (!WinHttpQueryHeaders(
@@ -607,7 +607,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 L"Failed to query status code %s/%s\r\n",
                 m_config.ServerName.c_str(),
                 strRemotePath.c_str());
-            return S_OK;
+            return hr;
         }
     }
 
@@ -630,7 +630,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                     L"Failed to query content length %s/%s\r\n",
                     m_config.ServerName.c_str(),
                     strRemotePath.c_str());
-                return S_OK;
+                return hr;
             }
         }
     }
@@ -658,7 +658,8 @@ HRESULT BITSAgent::CheckFileUploadOverSMB(const std::wstring& strRemoteName, PDW
         {
             if (GetLastError() == ERROR_FILE_NOT_FOUND)
                 return S_FALSE;
-            *pdwFileSize = MAXDWORD;
+
+            return HRESULT_FROM_WIN32(GetLastError());
         }
         else
         {
