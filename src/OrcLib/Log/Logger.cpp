@@ -40,34 +40,28 @@ std::shared_ptr<Logger::FileSink> CreateFileSink()
     return file;
 }
 
-std::vector<std::shared_ptr<spdlog::logger>> CreateFacilities(
-    const std::shared_ptr<Orc::Logger::ConsoleSink>& consoleSink,
-    const std::shared_ptr<Orc::Logger::FileSink>& fileSink)
-{
-    std::vector<std::shared_ptr<spdlog::logger>> loggers;
-
-    auto defaultLogger = std::make_shared<spdlog::logger>("default", spdlog::sinks_init_list {consoleSink, fileSink});
-    loggers.push_back(defaultLogger);
-
-    auto logFile = std::make_shared<spdlog::logger>("file", fileSink);
-    logFile->set_level(spdlog::level::trace);  // delegate filtering to the sink
-    loggers.push_back(logFile);
-
-    return loggers;
-}
-
 }  // namespace
 
 namespace Orc {
 
-Logger::Logger()
-    : m_consoleSink(::CreateConsoleSink())
-    , m_fileSink(::CreateFileSink())
-    , m_loggers(::CreateFacilities(m_consoleSink, m_fileSink))
-    , m_warningCount(0)
+Logger::Logger(std::initializer_list<std::pair<Facility, std::shared_ptr<spdlog::logger>>> loggers)
+    : m_warningCount(0)
     , m_errorCount(0)
     , m_criticalCount(0)
 {
+    auto facility_count = std::underlying_type_t<Facility>(Facility::kFacilityCount);
+    m_loggers.resize(facility_count);
+
+    for (auto&& [facility, logger] : loggers)
+    {
+        auto idx = std::underlying_type_t<Facility>(facility);
+        assert(idx < facility_count);
+        if (!m_loggers[idx] && logger)
+        {
+            m_loggers[idx] = std::move(logger);
+        }
+    }
+
     spdlog::set_default_logger(Logger::Get(Facility::kDefault));
 
     // Default upstream log level filter (sinks will not received filtered logs)

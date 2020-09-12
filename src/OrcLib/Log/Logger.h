@@ -25,6 +25,7 @@ namespace Orc {
  *
  * It add some features like warn, error, critical log count. Sink registration.
  */
+
 class Logger
 {
 public:
@@ -34,18 +35,12 @@ public:
     enum class Facility : size_t
     {
         kDefault = 0,
-        kLogFile
+        kLogFile,
+        kUnitTest,
+        kFacilityCount
     };
 
-    Logger();
-
-    void OpenOutputFile(const std::filesystem::path& path, std::error_code& ec);
-
-    const FileSink& fileSink() const;
-    FileSink& fileSink();
-
-    const ConsoleSink& consoleSink() const;
-    ConsoleSink& consoleSink();
+    Logger(std::initializer_list<std::pair<Facility, std::shared_ptr<spdlog::logger>>> loggers);
 
     uint64_t warningCount() const;
     uint64_t errorCount() const;
@@ -144,8 +139,6 @@ public:
     void Set(Facility id, std::shared_ptr<spdlog::logger> logger);
 
 private:
-    std::shared_ptr<ConsoleSink> m_consoleSink;
-    std::shared_ptr<FileSink> m_fileSink;
     std::vector<std::shared_ptr<spdlog::logger>> m_loggers;
 
     std::atomic<uint64_t> m_warningCount;

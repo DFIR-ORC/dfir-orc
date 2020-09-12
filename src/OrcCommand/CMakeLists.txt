@@ -42,6 +42,8 @@ set(SRC_COMMON
     "Output/Console/Journal.h"
     "ToolVersion.h"
     "ToolVersion.cpp"
+    "UtilitiesLogger.cpp"
+    "UtilitiesLogger.h"
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"
     "Usage.h"
 )
