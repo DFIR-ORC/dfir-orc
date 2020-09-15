@@ -171,7 +171,7 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
                         values_builder.emplace_back(std::move(builder));
                     else
                     {
-                        throw Orc::Exception(Fatal, E_POINTER, L"Failed to create builder for field");
+                        throw Orc::Exception(Severity::Fatal, E_POINTER, L"Failed to create builder for field");
                     }
                 }
                 retval.emplace_back(
@@ -182,8 +182,12 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
                 break;
             }
             default: {
+                std::error_code ec;
                 throw Orc::Exception(
-                    Fatal, E_INVALIDARG, L"Failed to create builder for type %S", column->type()->ToString().c_str());
+                    Severity::Fatal,
+                    E_INVALIDARG,
+                    L"Failed to create builder for type {}",
+                    Orc::Utf8ToUtf16(column->type()->ToString(), ec));
             }
         }
     }
@@ -445,10 +449,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::AddColumnAndCheckNumbers()
         auto counter = m_dwColumnCounter;
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
-            ExceptionSeverity::Fatal,
-            L"Too many columns written to Parquet (got {}, max is {})",
-            counter,
-            m_dwColumnNumber);
+            Severity::Fatal, L"Too many columns written to Parquet (got {}, max is {})", counter, m_dwColumnNumber);
     }
     return S_OK;
 }
@@ -461,7 +462,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteNothing()
             if constexpr (!std::is_same_v<T, std::unique_ptr<arrow::ArrayBuilder>>)
                 arg->AppendNull();
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Cannot append WriteNothing via Array Builder");
+                throw Orc::Exception(Severity::Fatal, L"Cannot append WriteNothing via Array Builder");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -478,7 +479,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::AbandonRow()
                 if constexpr (!std::is_same_v<T, std::unique_ptr<arrow::ArrayBuilder>>)
                     arg->AppendNull();
                 else
-                    throw Orc::Exception(ExceptionSeverity::Fatal, L"Cannot append AbandonRow via Array Builder");
+                    throw Orc::Exception(Severity::Fatal, L"Cannot append AbandonRow via Array Builder");
             },
             m_arrowBuilders[i]);
         AddColumnAndCheckNumbers();
@@ -502,20 +503,14 @@ HRESULT Orc::TableOutput::Parquet::Writer::WriteEndOfLine()
         auto counter = m_dwColumnCounter;
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
-            ExceptionSeverity::Fatal,
-            L"Too few columns written to Parquet (got {}, max is {})",
-            counter,
-            m_dwColumnNumber);
+            Severity::Fatal, L"Too few columns written to Parquet (got {}, max is {})", counter, m_dwColumnNumber);
     }
     else if (m_dwColumnCounter > m_dwColumnNumber)
     {
         auto counter = m_dwColumnCounter;
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
-            ExceptionSeverity::Fatal,
-            L"Too many columns written to Parquet (got {}, max is {})",
-            counter,
-            m_dwColumnNumber);
+            Severity::Fatal, L"Too many columns written to Parquet (got {}, max is {})", counter, m_dwColumnNumber);
     }
     m_dwBatchRowCount++;
     m_dwTotalRowCount++;
@@ -551,7 +546,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::wstring& 
                     arg->AppendNull();
             }
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for a Unicode string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a Unicode string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -577,7 +572,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::wstring_v
                     arg->AppendNull();
             }
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for a Unicode string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a Unicode string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -602,7 +597,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const WCHAR* szStrin
                     arg->AppendNull();
             }
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for a Unicode string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a Unicode string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -626,7 +621,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteCharArray(const WCHAR* szSt
                     arg->AppendNull();
             }
             else
-                throw Orc::Exception(Fatal, L"Not a valid arrow builder for a Unicode string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a Unicode string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -654,7 +649,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::string& s
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
                 arg->Append(strString);
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an ANSI string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an ANSI string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -669,7 +664,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::string_vi
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
                 arg->Append(strString.data(), strString.size());
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an ANSI string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an ANSI string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -684,7 +679,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const CHAR* szString
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
                 arg->Append(szString, static_cast<uint32_t>(strlen(szString)));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an ANSI string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an ANSI string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -699,7 +694,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteCharArray(const CHAR* szStr
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
                 arg->Append(szString, static_cast<uint32_t>(dwCharCount));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an ANSI string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an ANSI string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -752,7 +747,7 @@ HRESULT Orc::TableOutput::Parquet::Writer::WriteFileTime(FILETIME fileTime)
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::TimestampBuilder>>)
                 arg->Append(ConvertTo(fileTime));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an FILETIME value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an FILETIME value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
 
@@ -768,8 +763,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteFileTime(LONGLONG fileTime)
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::TimestampBuilder>>)
                 arg->Append(fileTime);
             else
-                throw Orc::Exception(
-                    ExceptionSeverity::Fatal, L"Not a valid arrow builder for an LONGLONG fileTime value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an LONGLONG fileTime value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
 
@@ -785,7 +779,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteTimeStamp(time_t tmStamp)
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::TimestampBuilder>>)
                 arg->Append(ConvertTo(tmStamp));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an time_t value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an time_t value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
 
@@ -801,7 +795,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteTimeStamp(tm tmStamp)
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::TimestampBuilder>>)
                 arg->Append(ConvertTo(tmStamp));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an time_t value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an time_t value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
 
@@ -817,8 +811,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteFileSize(LARGE_INTEGER file
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::UInt64Builder>>)
                 arg->Append(fileSize.QuadPart);
             else
-                throw Orc::Exception(
-                    ExceptionSeverity::Fatal, L"Not a valid arrow builder for an LARGE_INTEGER FileSize value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an LARGE_INTEGER FileSize value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -833,8 +826,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteFileSize(ULONGLONG fileSize
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::UInt64Builder>>)
                 arg->Append(fileSize);
             else
-                throw Orc::Exception(
-                    ExceptionSeverity::Fatal, L"Not a valid arrow builder for an ULONGLONG FileSize value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an ULONGLONG FileSize value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -860,7 +852,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteBool(bool bBoolean)
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::BooleanBuilder>>)
                 arg->Append(bBoolean);
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for a boolean value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a boolean value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -877,7 +869,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteEnum(DWORD dwEnum)
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::Int32Builder>>)
                 arg->Append(static_cast<int32_t>(dwEnum));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an enum value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an enum value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -898,7 +890,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteFlags(DWORD dwFlags)
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::Int32Builder>>)
                 arg->Append(static_cast<int64_t>(dwFlags));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an enum value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an enum value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -921,7 +913,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteExactFlags(DWORD dwFlags)
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::Int32Builder>>)
                 arg->Append(static_cast<int64_t>(dwFlags));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an enum value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an enum value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     return S_OK;
@@ -941,7 +933,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteGUID(const GUID& guid)
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::FixedSizeBinaryBuilder>>)
                 arg->Append(reinterpret_cast<const uint8_t*>(&guid));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for a GUID value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a GUID value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -957,7 +949,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteXML(const WCHAR* szString)
                 arg->Append(
                     reinterpret_cast<const uint8_t* const>(szString), (uint32_t)wcslen(szString) * sizeof(WCHAR));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for a XML string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a XML string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -972,7 +964,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteXML(const WCHAR* szString, 
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::BinaryBuilder>>)
                 arg->Append(reinterpret_cast<const uint8_t* const>(szString), dwCharCount * sizeof(WCHAR));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for a XML string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a XML string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -987,7 +979,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteXML(const CHAR* szString)
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::BinaryBuilder>>)
                 arg->Append(reinterpret_cast<const uint8_t* const>(szString), static_cast<int32_t>(strlen(szString)));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for a XML string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a XML string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -1002,7 +994,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteXML(const CHAR* szString, D
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::BinaryBuilder>>)
                 arg->Append(reinterpret_cast<const uint8_t* const>(szString), dwCharCount);
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for a XML string");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a XML string");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -1025,7 +1017,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteInteger(DWORD dwInteger)
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::Int64Builder>>)
                 arg->Append(static_cast<int64_t>(dwInteger));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an DWORD value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an DWORD value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -1042,7 +1034,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteInteger(LONGLONG llInteger)
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::Int64Builder>>)
                 arg->Append(static_cast<int64_t>(llInteger));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an LONGLONG value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an LONGLONG value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -1059,7 +1051,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteInteger(ULONGLONG ullIntege
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::Int64Builder>>)
                 arg->Append(static_cast<int64_t>(ullInteger));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an ULONGLONG value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an ULONGLONG value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();
@@ -1074,7 +1066,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteBytes(const BYTE pBytes[], 
             if constexpr (std::is_same_v<T, std::unique_ptr<arrow::BinaryBuilder>>)
                 arg->Append(reinterpret_cast<const uint8_t* const>(&pBytes), sizeof(dwLen));
             else
-                throw Orc::Exception(ExceptionSeverity::Fatal, L"Not a valid arrow builder for an LONGLONG hex value");
+                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for an LONGLONG hex value");
         },
         m_arrowBuilders[m_dwColumnCounter]);
     AddColumnAndCheckNumbers();

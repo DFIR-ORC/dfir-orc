@@ -52,9 +52,20 @@ private:
 template <typename _T, size_t _DeclElts>
 class Buffer
 {
+    friend void swap(Buffer<_T, _DeclElts>& left, Buffer<_T, _DeclElts>& right) noexcept
+    {
+        std::swap(left.m_store, right.m_store);
+        std::swap(left.m_EltsUsed, right.m_EltsUsed);
+    }
+
 private:
     struct HeapStore
     {
+        friend void swap(HeapStore& left, HeapStore& right) noexcept
+        {
+            std::swap(left.m_EltsAlloc, right.m_EltsAlloc);
+            std::swap(left.m_Ptr, right.m_Ptr);
+        }
 
         HeapStore(ULONG Elts)
             : m_Ptr(new _T[Elts])
@@ -143,6 +154,11 @@ private:
 
     struct ViewStore
     {
+        friend void swap(ViewStore& left, ViewStore& right) noexcept
+        {
+            std::swap(left.m_EltsInView, right.m_EltsInView);
+            std::swap(left.m_Ptr, right.m_Ptr);
+        }
 
         ViewStore(_T* Ptr, ULONG Elts)
             : m_Ptr(Ptr)
@@ -200,8 +216,6 @@ private:
             auto ptr = new _T[m_EltsInView];
             std::copy(m_Ptr, m_Ptr + m_EltsInView, stdext::checked_array_iterator(ptr, m_EltsInView));
             m_Ptr = nullptr;
-            m_EltsAlloc = 0;
-            m_Owned = false;
             return ptr;
         }
 
@@ -211,6 +225,20 @@ private:
 
     struct InnerStore
     {
+        friend void swap(InnerStore& left, InnerStore& right) noexcept
+        {
+            _T temp[_DeclElts];
+            std::copy(
+                std::begin(left.m_Elts),
+                std::end(left.m_Elts),
+                stdext::checked_array_iterator(std::begin(temp), _DeclElts));
+            std::copy(
+                std::begin(right.m_Elts),
+                std::end(right.m_Elts),
+                stdext::checked_array_iterator(std::begin(left.m_Elts), _DeclElts));
+            std::copy(
+                std::begin(temp), std::end(temp), stdext::checked_array_iterator(std::begin(right.m_Elts), _DeclElts));
+        }
 
         InnerStore() = default;
         InnerStore(InnerStore&& other) noexcept = default;
@@ -248,7 +276,7 @@ private:
         _T* relinquish()
         {
             auto ptr = new _T[_DeclElts];
-            std::copy(m_Elts, m_Elts + _DeclElts, stdext::checked_array_iterator(pre, _DeclElts));
+            std::copy(m_Elts, m_Elts + _DeclElts, stdext::checked_array_iterator(ptr, _DeclElts));
             return ptr;
         }
 
@@ -259,6 +287,7 @@ private:
 
     struct EmptyStore
     {
+        friend void swap(EmptyStore& left, EmptyStore& right) noexcept {}
         EmptyStore() {};
         EmptyStore(EmptyStore&& other) noexcept = default;
         EmptyStore(const EmptyStore& other) = delete;
@@ -267,7 +296,10 @@ private:
         EmptyStore& operator=(const EmptyStore& other) = delete;
 
         ULONG capacity() const { return 0; }
-        void reserve(ULONG Elts) { throw Orc::Exception(Continue, L"Cannot reserve {} elements in empty store"sv, Elts); }
+        void reserve(ULONG Elts)
+        {
+            throw Orc::Exception(Severity::Continue, L"Cannot reserve {} elements in empty store"sv, Elts);
+        }
         void assign(const _T* Ptr, ULONG Elts)
         {
             throw Orc::Exception(Severity::Continue, L"Cannot assign {} elements to empty store"sv, Elts);
@@ -382,18 +414,6 @@ public:
     void view_of(_In_ const BufferView<_T>& Other, std::optional<ULONG> InUse = std::nullopt)
     {
         view_of(Other.m_Ptr, Other.m_Elts, InUse);
-    }
-
-    void unview()
-    {
-        if (is_view())
-        {
-            if (Elts <= _DeclElts)
-            {
-                m_store = InnerStore();
-                std::copy(Src, Src + Elts, stdext::checked_array_iterator(get() + m_EltsUsed, capacity() - m_EltsUsed));
-            }
-        }
     }
 
     void append(_In_reads_(Elts) const _T* Src, _In_ ULONG Elts = 1)

@@ -11,6 +11,7 @@
 #include "Buffer.h"
 
 #include <safeint.h>
+#include <iostream>
 
 #include "Log/Log.h"
 
@@ -206,7 +207,7 @@ HRESULT ORCLIB_API AnsiToWide(__in const std::string_view src, Buffer<WCHAR, _De
         }
         else
         {
-            cerr << "MultiByteToWideChar failed:" << hex << hr << endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
         }
         return hr;
     }
@@ -224,7 +225,7 @@ HRESULT ORCLIB_API AnsiToWide(__in const std::string_view src, Buffer<WCHAR, _De
         }
         else
         {
-            cerr << "MultiByteToWideChar failed:" << hex << hr << endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
         }
         dest.clear();
         return hr;
@@ -249,16 +250,14 @@ HRESULT ORCLIB_API AnsiToWide(__in_ecount(cchSrc) PCSTR pwszSrc, __in DWORD cchS
         }
         else
         {
-            cerr << "MultiByteToWideChar failed:" << hex << hr << endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
         }
         return hr;
     }
 
-    dest.resize(
-        msl::utilities::SafeInt<DWORD>(cchSize * sizeof(WCHAR));
+    dest.resize(msl::utilities::SafeInt<DWORD>(cchSize * sizeof(WCHAR)));
 
-        if (0
-            == (cchSize = MultiByteToWideChar(CP_UTF8, 0, pwszSrc, static_cast<int>(cchSrc), dest.get(), dest.size()))))
+    if (0 == (cchSize = MultiByteToWideChar(CP_UTF8, 0, pwszSrc, static_cast<int>(cchSrc), dest.get(), dest.size())))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
@@ -267,7 +266,7 @@ HRESULT ORCLIB_API AnsiToWide(__in_ecount(cchSrc) PCSTR pwszSrc, __in DWORD cchS
         }
         else
         {
-            cerr << "MultiByteToWideChar failed:" << hex << hr << endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
         }
         dest.clear();
         return hr;
@@ -291,7 +290,7 @@ HRESULT ORCLIB_API AnsiToWide(PCSTR pwszSrc, Buffer<WCHAR, _DeclElts>& dest)
         }
         else
         {
-            cerr << "MultiByteToWideChar failed:" << hex << hr << endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
         }
         return hr;
     }
@@ -307,7 +306,7 @@ HRESULT ORCLIB_API AnsiToWide(PCSTR pwszSrc, Buffer<WCHAR, _DeclElts>& dest)
         }
         else
         {
-            cerr << "MultiByteToWideChar failed:" << hex << hr << endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
         }
         dest.clear();
         return hr;

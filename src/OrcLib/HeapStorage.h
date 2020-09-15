@@ -25,11 +25,11 @@ private:
     DWORD m_NumberOfAllocatedCells = 0L;
     bool m_Initialized = false;
 
-    const LPWSTR m_szStoreDescription;
+    const LPCWSTR m_szStoreDescription;
 
 public:
     // Constructeur du "storage" d'objets
-    HeapStorage(const LPWSTR szDescription)
+    HeapStorage(const LPCWSTR szDescription)
         : m_szStoreDescription(szDescription) {};
 
     HeapStorage(const DWORD dwMaxObjects, const DWORD dwElementSize, const LPWSTR szDescription)

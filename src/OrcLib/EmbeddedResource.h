@@ -9,11 +9,14 @@
 
 #include "OrcLib.h"
 
+#include "BinaryBuffer.h"
+#include "Archive.h"
+
+#include "Log/Log.h"
+
 #include <regex>
 
-#include "BinaryBuffer.h"
-
-#include "Archive.h"
+#include <safeint.h>
 
 #pragma managed(push, off)
 
@@ -453,7 +456,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             std::wstring strBinaryPath;
             if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
-                Log::warn(L"Could not locate resource {} (code: {:#x})", szImageFileRessourceID, hr);
+                Log::Warn(L"Could not locate resource {} (code: {:#x})", szImageFileRessourceID, hr);
                 return hr;
             }
 
@@ -462,7 +465,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             if ((hFileResource = LoadResource(hModule, hRes)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::warn(L"Could not load ressource (code: {:#x})", hr);
+                Log::Warn(L"Could not load ressource (code: {:#x})", hr);
                 return hr;
             }
 
@@ -471,7 +474,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             if ((lpData = LockResource(hFileResource)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::warn(L"Could not lock ressource (code: {:#x})", hr);
+                Log::Warn(L"Could not lock ressource (code: {:#x})", hr);
                 return hr;
             }
 
@@ -512,7 +515,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
                 std::wstring strBinaryPath;
                 if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
-                    Log::warn(L"Could not locate resource (code: {:#x})", szImageFileRessourceID, hr);
+                    Log::Warn(L"Could not locate resource (code: {:#x})", szImageFileRessourceID, hr);
                     return hr;
                 }
 
@@ -560,19 +563,19 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             const auto& items = extract->GetExtractedItems();
             if (items.empty())
             {
-                Log::warn(L"Could not locate item '{}' in resource '{}'", NameInArchive, ResName);
+                Log::Warn(L"Could not locate item '{}' in resource '{}'", NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
             }
 
             if (items.size() > 1)
             {
-                Log::warn(L"{} items matched name '{}' in resource '{}'", items.size(), NameInArchive, ResName);
+                Log::Warn(L"{} items matched name '{}' in resource '{}'", items.size(), NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_TOO_MANY_NAMES);
             }
 
             if (!pOutput)
             {
-                Log::warn(L"Invalid output stream for item '{}' in resource '{}'", NameInArchive, ResName);
+                Log::Warn(L"Invalid output stream for item '{}' in resource '{}'", NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
             }
 

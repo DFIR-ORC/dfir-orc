@@ -29,13 +29,7 @@ public:
     ExtensionLibraryHandler(const std::wstring& strDescr)
         : TerminationHandler(strDescr, ROBUSTNESS_UNLOAD_DLLS) {};
 
-    HRESULT operator()()
-    {
-        const auto ext = ExtensionLibrary::GetShared<Ext>(false);
-        if (ext)
-            ext->UnloadAndCleanup();
-        return S_OK;
-    }
+    HRESULT operator()();
 };
 
 class ORCLIB_API ExtensionLibrary
@@ -114,12 +108,12 @@ protected:
     HRESULT TryLoad(const std::wstring& strFileRef);
 
     template <typename FuncType>
-    void Get(FuncType& func, LPSTR szFuncName)
+    void Get(FuncType& func, LPCSTR szFuncName)
     {
         func = GetExtension<FuncType>(szFuncName, true);
     };
     template <typename FuncType>
-    void Try(FuncType& func, LPSTR szFuncName)
+    void Try(FuncType& func, LPCSTR szFuncName)
     {
         func = GetExtension<FuncType>(szFuncName, false);
     };
@@ -219,14 +213,23 @@ protected:
         return shared;
     };
 
-    FARPROC GetEntryPoint(const CHAR* szFunctionName, bool bMandatory = false);
+    FARPROC GetEntryPoint(LPCSTR szFunctionName, bool bMandatory = false);
 
     template <typename T>
-    T GetExtension(const CHAR* szFunctionName, bool bMandatory = false)
+    T GetExtension(LPCSTR szFunctionName, bool bMandatory = false)
     {
         return (T)GetEntryPoint(szFunctionName, bMandatory);
     };
 };
+
+template <class Ext>
+HRESULT ExtensionLibraryHandler<Ext>::operator()()
+{
+    const auto ext = ExtensionLibrary::GetShared<Ext>(false);
+    if (ext)
+        ext->UnloadAndCleanup();
+    return S_OK;
+}
 
 class ORCLIB_API TemplateExtension : public ExtensionLibrary
 {

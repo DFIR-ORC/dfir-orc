@@ -393,10 +393,7 @@ HRESULT Orc::TableOutput::ApacheOrc::Writer::AddColumnAndCheckNumbers()
         auto counter = m_dwColumnCounter;
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
-            ExceptionSeverity::Fatal,
-            L"Too many columns written to Parquet (got %d, max is %d)",
-            counter,
-            m_dwColumnNumber);
+            Severity::Fatal, L"Too many columns written to Parquet (got %d, max is %d)", counter, m_dwColumnNumber);
     }
     return S_OK;
 }
@@ -412,20 +409,14 @@ HRESULT Orc::TableOutput::ApacheOrc::Writer::WriteEndOfLine()
         auto counter = m_dwColumnCounter;
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
-            ExceptionSeverity::Fatal,
-            L"Too few columns written to ApacheOrc (got %d, max is %d)",
-            counter,
-            m_dwColumnNumber);
+            Severity::Fatal, L"Too few columns written to ApacheOrc (got %d, max is %d)", counter, m_dwColumnNumber);
     }
     else if (m_dwColumnCounter > m_dwColumnNumber)
     {
         auto counter = m_dwColumnCounter;
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
-            ExceptionSeverity::Fatal,
-            L"Too many columns written to ApacheOrc (got %d, max is %d)",
-            counter,
-            m_dwColumnNumber);
+            Severity::Fatal, L"Too many columns written to ApacheOrc (got %d, max is %d)", counter, m_dwColumnNumber);
     }
 
     m_dwBatchRow++;

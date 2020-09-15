@@ -28,7 +28,8 @@ char* Orc::TableOutput::ApacheOrc::MemoryPool::malloc(uint64_t size)
 
     auto lpVoid = HeapAlloc(m_heap, HEAP_NO_SERIALIZE, SafeInt<size_t>(size));
     if (lpVoid == nullptr)
-        throw Orc::Exception(Fatal, HRESULT_FROM_WIN32(GetLastError()), L"Failed to allocate heap memory %z", size);
+        throw Orc::Exception(
+            Severity::Fatal, HRESULT_FROM_WIN32(GetLastError()), L"Failed to allocate heap memory %z", size);
 
     return (char*)lpVoid;
 }
@@ -39,7 +40,7 @@ void Orc::TableOutput::ApacheOrc::MemoryPool::free(char* p)
 
     if (!HeapFree(m_heap, HEAP_NO_SERIALIZE, p))
     {
-        throw Orc::Exception(Fatal, HRESULT_FROM_WIN32(GetLastError()), L"Failed to free heap memory");
+        throw Orc::Exception(Severity::Fatal, HRESULT_FROM_WIN32(GetLastError()), L"Failed to free heap memory");
     }
 }
 
@@ -57,11 +58,12 @@ void Orc::TableOutput::ApacheOrc::MemoryPool::InitializeHeap()
     if (m_heap != NULL)
     {
         if (!HeapDestroy(m_heap))
-            throw Orc::Exception(Fatal, HRESULT_FROM_WIN32(GetLastError()), L"Failed to destroy existing heap");
+            throw Orc::Exception(
+                Severity::Fatal, HRESULT_FROM_WIN32(GetLastError()), L"Failed to destroy existing heap");
         m_heap = NULL;
     }
 
     m_heap = HeapCreate(HEAP_NO_SERIALIZE, m_initialSize, 0);
     if (m_heap == NULL)
-        throw Orc::Exception(Fatal, HRESULT_FROM_WIN32(GetLastError()), L"Failed to initialize heap");
+        throw Orc::Exception(Severity::Fatal, HRESULT_FROM_WIN32(GetLastError()), L"Failed to initialize heap");
 }

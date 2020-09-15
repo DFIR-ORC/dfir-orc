@@ -10,7 +10,6 @@
 
 #include "OrcLib.h"
 
-#include "BoundedBuffer.h"
 #include "ByteStream.h"
 #include "Archive.h"
 #include "OutputSpec.h"
