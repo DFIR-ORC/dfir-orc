@@ -302,7 +302,7 @@ public:
     bool is_inner() const { return std::holds_alternative<InnerStore>(m_store); }
     bool is_view() const { return std::holds_alternative<ViewStore>(m_store); }
 
-    bool full() const { return capacity() > size(); }
+    bool full() const { return capacity() == size(); }
 
     bool empty() const { return std::holds_alternative<EmptyStore>(m_store); }
     void set(_In_reads_(Elts) _T* Ptr, _In_ ULONG Elts, _In_ ULONG Used)
