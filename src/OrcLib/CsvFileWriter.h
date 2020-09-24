@@ -358,15 +358,46 @@ private:
                 return hr;
             }
 
-            // Push previously formatted data into the buffer as it was not handled by 'Flush'
-            buffer_type new_buffer;
-            new_buffer.view_of(m_pBuffer, m_dwBufferSize);
-            new_buffer.append(buffer);
+            if (buffer.size() < m_dwBufferSize)
+            {
+                // Push previously formatted data into the buffer as it was not handled by 'Flush'
+                buffer_type new_buffer;
+                new_buffer.view_of(m_pBuffer, m_dwBufferSize);
+                new_buffer.append(buffer);
 
-            m_dwCount += new_buffer.size() * sizeof(char_type);
-            m_pCurrent += new_buffer.size();
+                m_dwCount += new_buffer.size() * sizeof(char_type);
+                m_pCurrent += new_buffer.size();
 
-            return S_OK;
+                return S_OK;
+            }
+            else
+            {
+                //
+                // Flush all as it will not be possible to hold everything at once in 'm_pBuffer'.
+                //
+                // With a buffer of 1MB it is really unusual to have bigger cell but it can happen. For example
+                // 'mrt.exe' has a SecurityDirectory of 4MB.
+                //
+                const auto internalBufferCch = m_dwBufferSize / sizeof(wchar_t);
+                const auto chunkCount = buffer.size() / internalBufferCch;
+
+                for (size_t i = 0; i <= chunkCount; i++)
+                {
+                    const size_t chunkSizeCch =
+                        (i != chunkCount) ? internalBufferCch : buffer.size() % internalBufferCch;
+
+                    std::wstring_view chunk(buffer.get() + i * internalBufferCch, chunkSizeCch);
+                    std::copy(std::cbegin(chunk), std::cend(chunk), m_pBuffer);
+                    m_dwCount = chunkSizeCch * sizeof(wchar_t);
+
+                    if (auto hr = Flush(); FAILED(hr))
+                    {
+                        return hr;
+                    }
+                }
+
+                return S_OK;
+            }
         }
 
         return E_FAIL;
