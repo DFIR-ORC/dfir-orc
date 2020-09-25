@@ -37,6 +37,7 @@
 #include "WMIUtil.h"
 
 #include "NtfsDataStructures.h"
+#include "ProfileList.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/scope_exit.hpp>
@@ -44,6 +45,44 @@
 using namespace std;
 
 using namespace Orc;
+
+namespace {
+
+stx::Result<std::wstring, HRESULT> GetProfilesDirectory()
+{
+    // Logger is not used here and will be remove in 10.1.x
+    return ProfileList::ProfilesDirectory({});
+}
+
+std::wstring ExpandOrcStrings(const std::wstring& raw, const Orc::logger& pLog)
+{
+    using Handler = std::function<stx::Result<std::wstring, HRESULT>()>;
+
+    // TODO: eventually cache the results, a better choice may be to Expand once
+    const std::unordered_map<std::wstring, Handler> convertors = {{L"{ProfilesDirectory}", GetProfilesDirectory}};
+
+    auto out = raw;
+    for (const auto& [key, convertor] : convertors)
+    {
+        if (!boost::icontains(key, out))
+        {
+            continue;
+        }
+
+        auto result = convertor();
+        if (!result)
+        {
+            log::Error(pLog, E_FAIL, L"Failed to expand orc variable: '%s'", key);
+            continue;
+        }
+
+        boost::ireplace_all<std::wstring>(out, key, result.value());
+    }
+
+    return out;
+}
+
+}  // namespace
 
 static const auto CSIDL_NONE = ((DWORD)-1);
 
@@ -427,6 +466,8 @@ HRESULT LocationSet::CanonicalizeLocation(
     dwLen = ExpandEnvironmentStrings(szLocation, (LPWSTR)szTemp, MAX_PATH);
 
     location.assign(szTemp);
+
+    location = ExpandOrcStrings(location, _L_);
 
     locType = DeduceLocationType(location.c_str());
     if (locType == Location::Undetermined)
