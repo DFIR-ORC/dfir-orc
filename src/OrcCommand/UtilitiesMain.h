@@ -542,10 +542,36 @@ protected:
     // Option handling
     //
     bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Kind supportedTypes, OutputSpec& anOutput);
+
+    template <typename OptionType>
+    bool
+    OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Kind supportedTypes, std::optional<OptionType>& parameter)
+    {
+        OptionType result;
+        if (OutputOption(szArg, szOption, supportedTypes, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
+
     bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec& anOutput)
     {
         return OutputOption(szArg, szOption, anOutput.supportedTypes, anOutput);
     };
+
+    template <typename OptionType>
+    bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType> parameter)
+    {
+        OptionType result;
+        if (OutputOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
 
     bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
     template <typename OptionType>
