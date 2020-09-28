@@ -37,6 +37,7 @@
 #include "WMIUtil.h"
 
 #include "NtfsDataStructures.h"
+#include "ProfileList.h"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/scope_exit.hpp>
@@ -44,6 +45,59 @@
 using namespace std;
 
 using namespace Orc;
+
+namespace {
+
+stx::Result<std::vector<std::wstring>, HRESULT> GetUserProfiles(const Orc::logger& pLog)
+{
+    const auto profiles = ProfileList::GetProfiles(pLog);
+    if (!profiles)
+    {
+        return stx::make_err<std::vector<std::wstring>, HRESULT>(profiles.err_value());
+    }
+
+    std::vector<wstring> profileLocations;
+    for (auto& profile : profiles.value())
+    {
+        profileLocations.emplace_back(profile.ProfilePath.c_str());
+    }
+
+    return stx::make_ok<std::vector<std::wstring>, HRESULT>(profileLocations);
+}
+
+std::vector<std::wstring> ExpandOrcStringsLocation(const std::wstring& rawLocation, const Orc::logger& pLog)
+{
+    using HandlerResult = stx::Result<std::vector<std::wstring>, HRESULT>;
+    using Handler = std::function<HandlerResult()>;
+
+    // TODO: eventually cache the results, a better choice may be to Expand once
+    const std::unordered_map<std::wstring, Handler> convertors = {
+        {L"{UserProfiles}", [&pLog]() { return GetUserProfiles(pLog); }}};
+
+    std::vector<std::wstring> out;
+    for (const auto& [key, convertor] : convertors)
+    {
+        if (boost::icontains(key, rawLocation))
+        {
+            auto values = convertor();
+            if (!values)
+            {
+                log::Error(pLog, E_FAIL, L"Failed to expand orc variable: '%s'", key);
+                continue;
+            }
+
+            for (const auto& value : values.value())
+            {
+                auto location = boost::ireplace_all_copy(rawLocation, key, value);
+                out.emplace_back(std::move(location));
+            }
+        }
+    }
+
+    return out;
+}
+
+}  // namespace
 
 static const auto CSIDL_NONE = ((DWORD)-1);
 
@@ -548,6 +602,21 @@ HRESULT
 LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<Location>>& addedLocs, bool bToParse)
 {
     HRESULT hr = E_FAIL;
+
+    std::vector<std::wstring> subLocations = ExpandOrcStringsLocation(szLocation, _L_);
+    if (subLocations.size() > 1)
+    {
+        for (const auto& subLocation : subLocations)
+        {
+            hr = AddLocations(subLocation.c_str(), addedLocs, bToParse);
+            if (FAILED(hr))
+            {
+                return hr;
+            }
+        }
+
+        return S_OK;
+    }
 
     Location::Type locType = Location::Undetermined;
     wstring canonical;

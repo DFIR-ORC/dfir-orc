@@ -128,19 +128,6 @@ int wmain(int argc, const WCHAR* argv[])
                     std::wcerr << "Press any key to continue..." << std::endl;
                     _getch();
                 }
-                else
-                {
-#ifdef _DEBUG
-                    if (!UtilitiesMain::IsProcessParent(L"cmd.exe", pLog)
-                        && !UtilitiesMain::IsProcessParent(L"WindowsTerminal.exe", pLog)
-                        && !UtilitiesMain::IsProcessParent(L"pwsh.exe", pLog)
-                        && !UtilitiesMain::IsProcessParent(L"VsDebugConsole.exe", pLog))
-                    {
-                        std::wcerr << "Press any key to continue..." << std::endl;
-                        _getch();
-                    }
-#endif
-                }
 
                 return hr;
             }

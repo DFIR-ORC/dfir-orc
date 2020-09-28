@@ -252,7 +252,6 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             }
             writer->EndCollection(L"archives");
 
-
             SystemIdentity::Write(writer);
         }
         writer->EndElement(L"dfir-orc");
@@ -596,75 +595,64 @@ HRESULT Main::Run_Execute()
                             continue;
                         }
                     }
-                    else
+                }
+
+                if (SUCCEEDED(hr = VerifyFileExists(exec->GetOutputFullPath().c_str())))
+                {
+                    WIN32_FILE_ATTRIBUTE_DATA data;
+                    ZeroMemory(&data, sizeof(WIN32_FILE_ATTRIBUTE_DATA));
+
+                    if (!GetFileAttributesEx(exec->GetOutputFullPath().c_str(), GetFileExInfoStandard, &data))
                     {
+                        log::Warning(
+                            _L_,
+                            hr = HRESULT_FROM_WIN32(GetLastError()),
+                            L"Failed to obtain file attributes of %s\r\n",
+                            exec->GetOutputFullPath().c_str());
                         log::Info(
                             _L_,
-                            L"\r\n\tExecuting \"%s\"%s%s\r\n\r\n",
+                            L"\r\n\tSkipping \"%s\" (file %s already exists)%s%s\r\n\r\n",
                             exec->GetKeyword().c_str(),
+                            exec->GetOutputFullPath().c_str(),
                             bDebug ? L" (debug=on)" : L"",
                             strRecipients.c_str());
-                        break;
+                        continue;
                     }
-                }
-                else
-                {
-                    if (SUCCEEDED(hr = VerifyFileExists(exec->GetOutputFullPath().c_str())))
+                    else
                     {
-                        WIN32_FILE_ATTRIBUTE_DATA data;
-                        ZeroMemory(&data, sizeof(WIN32_FILE_ATTRIBUTE_DATA));
-
-                        if (!GetFileAttributesEx(exec->GetOutputFullPath().c_str(), GetFileExInfoStandard, &data))
+                        if (data.nFileSizeHigh == 0L && data.nFileSizeLow == 0L)
                         {
-                            log::Warning(
-                                _L_,
-                                hr = HRESULT_FROM_WIN32(GetLastError()),
-                                L"Failed to obtain file attributes of %s\r\n",
-                                exec->GetOutputFullPath().c_str());
                             log::Info(
                                 _L_,
-                                L"\r\n\tSkipping \"%s\" (file %s already exists)%s%s\r\n\r\n",
+                                L"\r\n\tExecuting \"%s\" (overwriting previous _empty_ file)%s%s\r\n\r\n",
+                                exec->GetKeyword().c_str(),
+                                bDebug ? L" (debug=on)" : L"",
+                                strRecipients.c_str());
+                            break;
+                        }
+                        else
+                        {
+                            log::Info(
+                                _L_,
+                                L"\r\n\tSkipping \"%s\" (file %s already created and not empty)%s%s\r\n\r\n",
                                 exec->GetKeyword().c_str(),
                                 exec->GetOutputFullPath().c_str(),
                                 bDebug ? L" (debug=on)" : L"",
                                 strRecipients.c_str());
                             continue;
                         }
-                        else
-                        {
-                            if (data.nFileSizeHigh == 0L && data.nFileSizeLow == 0L)
-                            {
-                                log::Info(
-                                    _L_,
-                                    L"\r\n\tExecuting \"%s\" (overwriting previous _empty_ file)%s%s\r\n\r\n",
-                                    exec->GetKeyword().c_str(),
-                                    bDebug ? L" (debug=on)" : L"",
-                                    strRecipients.c_str());
-                                break;
-                            }
-                            else
-                            {
-                                log::Info(
-                                    _L_,
-                                    L"\r\n\tSkipping \"%s\" (file %s already created and not empty)%s%s\r\n\r\n",
-                                    exec->GetKeyword().c_str(),
-                                    exec->GetOutputFullPath().c_str(),
-                                    bDebug ? L" (debug=on)" : L"",
-                                    strRecipients.c_str());
-                                continue;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        log::Info(
-                            _L_,
-                            L"\r\n\tExecuting \"%s\"%s%s\r\n\r\n",
-                            exec->GetKeyword().c_str(),
-                            bDebug ? L" (debug=on)" : L"",
-                            strRecipients.c_str());
                     }
                 }
+                else
+                {
+                    log::Info(
+                        _L_,
+                        L"\r\n\tExecuting \"%s\"%s%s\r\n\r\n",
+                        exec->GetKeyword().c_str(),
+                        bDebug ? L" (debug=on)" : L"",
+                        strRecipients.c_str());
+                }
+
                 break;
         }
 
