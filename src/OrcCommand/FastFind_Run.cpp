@@ -469,9 +469,8 @@ HRESULT Main::Run()
     }
     else if (config.outStructured.Type == OutputSpec::Kind::Directory)
     {
-        auto writer = StructuredOutputWriter::GetWriter(
+        auto pStructuredOutput = StructuredOutputWriter::GetWriter(
             config.outStructured, L"{Name}_{SystemType}_{ComputerName}.xml", L"FastFind", nullptr);
-        pStructuredOutput = std::dynamic_pointer_cast<StructuredOutputWriter>(writer);
     }
 
     if (pStructuredOutput != nullptr)
