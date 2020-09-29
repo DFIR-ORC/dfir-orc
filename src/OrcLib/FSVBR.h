@@ -62,9 +62,11 @@ public:
                 return L"NTFS";
             case FSType::REFS:
                 return L"REFS";
+            case FSType::UNKNOWN:
+                return L"Unknown";
         }
 
-        return L"Unknown";
+        return L"Unsupported";
     }
 
     static boolean IsFSSupported(const std::wstring& fsName)
