@@ -1,0 +1,11 @@
+blockdiag spdlog_backtrace {
+     orientation = portrait
+     node_width = 160
+
+     "logger::dump_backtrace()" -> "sink" -> "sink level filter"
+            "sink level filter" -> "Endpoint" [label = "Store"]
+
+    "sink" [stacked];
+    "sink level filter" [stacked];
+    "Endpoint" [stacked];
+}

@@ -1,0 +1,12 @@
+blockdiag Logger {
+     orientation = portrait
+
+     UserCode -> "Log::Debug()" -> DefaultLogger -> "Logger::Debug" -> "spdlog::logger";
+        "spdlog::logger" -> backtrace [label = "Store"];
+        "spdlog::logger" -> "logger level filter" -> "sink" -> "sink level filter"
+            "sink level filter" -> "Endpoint" [label = "Store"]
+
+    "sink" [stacked];
+    "sink level filter" [stacked];
+    "Endpoint" [stacked];
+}
