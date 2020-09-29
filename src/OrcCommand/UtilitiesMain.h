@@ -876,8 +876,15 @@ public:
         }
 
         Robustness::UnInitialize(INFINITE);
-        // TODO: return dwErrorCount;
-        return 0;
+
+        // FIXME: Once log level are fine we should be able to return only m_logger->criticalCount()
+        //        Until then, always dump the backtrace with a Log::Critical
+        if (Cmd.m_logging.logger().errorCount())
+        {
+            Log::Critical(L"Dump log backtrace due to some previously encoutered error(s)");
+        }
+
+        return static_cast<int>(Cmd.m_logging.logger().errorCount() + Cmd.m_logging.logger().criticalCount());
     }
 };
 
