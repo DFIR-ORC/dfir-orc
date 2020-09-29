@@ -90,6 +90,21 @@ template <typename T>
 constexpr auto has_char_type_member_v = has_char_type_member<T>::value;
 
 //
+// Check if type is instance of std::back_insert_iterator
+//
+template <typename T>
+struct is_back_insert_iterator : std::false_type
+{
+};
+
+template <typename T>
+struct is_back_insert_iterator<std::back_insert_iterator<T>> : std::true_type
+{
+};
+
+template <typename T>
+constexpr bool is_back_insert_iterator_v = is_back_insert_iterator<T>::value;
+//
 // Provide underlying char type for the given type or 'void'
 //
 template <typename T, typename Enable = void>
