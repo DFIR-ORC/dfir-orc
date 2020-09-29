@@ -33,6 +33,20 @@ using namespace msl::utilities;
 
 namespace fs = std::filesystem;
 
+namespace {
+
+// Enable the use of std::make_shared with Writer protected constructor
+struct WriterT : public Orc::TableOutput::ApacheOrc::Writer
+{
+    template <typename... Args>
+    inline WriterT(Args&&... args)
+        : Writer(std::forward<Args>(args)...)
+    {
+    }
+};
+
+}  // namespace
+
 class Orc::TableOutput::ApacheOrc::WriterTermination : public TerminationHandler
 {
 public:
@@ -55,18 +69,10 @@ HRESULT Orc::TableOutput::ApacheOrc::WriterTermination::operator()()
     return S_OK;
 }
 
-struct Orc::TableOutput::ApacheOrc::Writer::MakeSharedEnabler : public Orc::TableOutput::ApacheOrc::Writer
-{
-    MakeSharedEnabler(std::unique_ptr<Options>&& options)
-        : Writer(std::move(options))
-    {
-    }
-};
-
 std::shared_ptr<Orc::TableOutput::ApacheOrc::Writer>
 Orc::TableOutput::ApacheOrc::Writer::MakeNew(std::unique_ptr<Options>&& options)
 {
-    auto retval = std::make_shared<MakeSharedEnabler>(std::move(options));
+    auto retval = std::make_shared<::WriterT>(std::move(options));
 
     std::wstring strDescr = L"Termination for ParquetWriter";
     retval->m_pTermination = std::make_shared<WriterTermination>(strDescr, retval);

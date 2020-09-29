@@ -33,9 +33,6 @@ class Writer
     : public TableOutput::Writer
     , public TableOutput::IStreamWriter
 {
-    struct MakeSharedEnabler;
-    friend struct MakeSharedEnabler;
-
 public:
     static std::shared_ptr<Writer> MakeNew(std::unique_ptr<Options>&& options);
 
@@ -46,7 +43,7 @@ public:
         wcscpy_s(m_szFileName, other.m_szFileName);
     }
 
-    ~Writer();
+    virtual ~Writer();
 
     std::shared_ptr<ByteStream> GetStream() const override final { return m_pByteStream; };
 
@@ -125,7 +122,7 @@ public:
 
     virtual HRESULT WriteEndOfLine() override final;
 
-private:
+protected:
     Writer(std::unique_ptr<Options>&& options);
 
     HRESULT AddColumnAndCheckNumbers();
