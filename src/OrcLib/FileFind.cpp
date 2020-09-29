@@ -82,7 +82,7 @@ HRESULT Orc::FileFind::Match::AddAttributeMatch(
             && matched_attr.AttrName.length() == pAttribute->NameLength())
         {
             if (!matched_attr.AttrName.compare(
-                0L, pAttribute->NameLength(), pAttribute->NamePtr(), pAttribute->NameLength()))
+                    0L, pAttribute->NameLength(), pAttribute->NamePtr(), pAttribute->NameLength()))
             {
                 // Attribute is already added to the matching list
                 if (matchedRules.has_value())
@@ -124,7 +124,7 @@ HRESULT Orc::FileFind::Match::AddAttributeMatch(
             && matched_attr.AttrName.length() == pAttribute->NameLength())
         {
             if (!matched_attr.AttrName.compare(
-                0L, pAttribute->NameLength(), pAttribute->NamePtr(), pAttribute->NameLength()))
+                    0L, pAttribute->NameLength(), pAttribute->NamePtr(), pAttribute->NameLength()))
             {
                 // Attribute is already added to the matching list
                 if (matchedRules.has_value())
@@ -164,12 +164,12 @@ HRESULT FileFind::Match::GetMatchFullName(
         strName.assign(nameMatch.FullPathName);
         switch (attrMatch.Type)
         {
-        case $DATA:
-            strName.append(L":");
-            break;
-        default:
-            strName.append(L"#");
-            break;
+            case $DATA:
+                strName.append(L":");
+                break;
+            default:
+                strName.append(L"#");
+                break;
         }
         strName.append(attrMatch.AttrName);
     }
@@ -203,9 +203,8 @@ HRESULT FileFind::Match::Write(const logger& pLog, ITableOutput& output)
     }
     else
     {
-         SnapshotID = GUID_NULL;
+        SnapshotID = GUID_NULL;
     }
-
 
     if (MatchingAttributes.empty())
     {
@@ -218,11 +217,11 @@ HRESULT FileFind::Match::Write(const logger& pLog, ITableOutput& output)
             output.WriteString(name_it->FullPathName.c_str());
 
             {
-                LARGE_INTEGER* pLI = (LARGE_INTEGER*) & (FRN);
+                LARGE_INTEGER* pLI = (LARGE_INTEGER*)&(FRN);
                 output.WriteInteger((DWORDLONG)pLI->QuadPart);
             }
             {
-                LARGE_INTEGER* pLI = (LARGE_INTEGER*) & (name_it->FILENAME()->ParentDirectory);
+                LARGE_INTEGER* pLI = (LARGE_INTEGER*)&(name_it->FILENAME()->ParentDirectory);
                 output.WriteInteger((DWORDLONG)pLI->QuadPart);
             }
 
@@ -264,7 +263,7 @@ HRESULT FileFind::Match::Write(const logger& pLog, ITableOutput& output)
             output.WriteNothing();
 
             output.WriteGUID(SnapshotID);
-            
+
             output.WriteEndOfLine();
         }
     }
@@ -279,14 +278,13 @@ HRESULT FileFind::Match::Write(const logger& pLog, ITableOutput& output)
 
                 output.WriteString(name_it->FullPathName.c_str());
                 {
-                    LARGE_INTEGER* pLI = (LARGE_INTEGER*) & (FRN);
+                    LARGE_INTEGER* pLI = (LARGE_INTEGER*)&(FRN);
                     output.WriteInteger((DWORDLONG)pLI->QuadPart);
                 }
                 {
-                    LARGE_INTEGER* pLI = (LARGE_INTEGER*) & (name_it->FILENAME()->ParentDirectory);
+                    LARGE_INTEGER* pLI = (LARGE_INTEGER*)&(name_it->FILENAME()->ParentDirectory);
                     output.WriteInteger((DWORDLONG)pLI->QuadPart);
                 }
-
 
                 output.WriteFileSize(data_match.DataSize);
 
@@ -315,10 +313,7 @@ HRESULT FileFind::Match::Write(const logger& pLog, ITableOutput& output)
     return S_OK;
 }
 
-HRESULT FileFind::Match::Write(
-    const logger& pLog,
-    IStructuredOutput& pWriter,
-    LPCWSTR szElement)
+HRESULT FileFind::Match::Write(IStructuredOutput& pWriter, LPCWSTR szElement)
 {
     wstring strMatchDescr = Term->GetDescription();
 
@@ -610,10 +605,10 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
                     hr,
                     L"Invalid attribute type passed (%s), ignored\r\n",
                     item[CONFIG_FILEFIND_ATTR_TYPE].c_str());
-                fs->Required = static_cast<FileFind::SearchTerm::Criteria>(fs->Required & ~FileFind::SearchTerm::ATTR_TYPE);
+                fs->Required =
+                    static_cast<FileFind::SearchTerm::Criteria>(fs->Required & ~FileFind::SearchTerm::ATTR_TYPE);
             }
         }
-        
     }
     if (item[CONFIG_FILEFIND_SIZE])
     {
@@ -622,11 +617,10 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->SizeEQ = (DWORD64)item[CONFIG_FILEFIND_SIZE];
             fs->Required |= FileFind::SearchTerm::SIZE_EQ;
         }
-        catch (Orc::Exception & e)
+        catch (Orc::Exception& e)
         {
             log::Warning(pLog, e.GetHRESULT(), L"%S", e.what());
-            log::Warning(
-                pLog, hr, L"Invalid file size passed (%s), ignored\r\n", item[CONFIG_FILEFIND_SIZE].c_str());
+            log::Warning(pLog, hr, L"Invalid file size passed (%s), ignored\r\n", item[CONFIG_FILEFIND_SIZE].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_GT])
@@ -636,14 +630,11 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->SizeG = (DWORD64)item[CONFIG_FILEFIND_SIZE_GT];
             fs->Required |= FileFind::SearchTerm::SIZE_GT;
         }
-        catch (Orc::Exception & e)
+        catch (Orc::Exception& e)
         {
             log::Warning(pLog, e.GetHRESULT(), L"%S", e.what());
             log::Warning(
-                pLog,
-                hr,
-                L"Invalid file size_gt passed (%s), ignored\r\n",
-                item[CONFIG_FILEFIND_SIZE_GT].c_str());
+                pLog, hr, L"Invalid file size_gt passed (%s), ignored\r\n", item[CONFIG_FILEFIND_SIZE_GT].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_GE])
@@ -653,14 +644,11 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->SizeG = (DWORD64)item[CONFIG_FILEFIND_SIZE_GE];
             fs->Required |= FileFind::SearchTerm::SIZE_GE;
         }
-        catch (Orc::Exception & e)
+        catch (Orc::Exception& e)
         {
             log::Warning(pLog, e.GetHRESULT(), L"%S", e.what());
             log::Warning(
-                pLog,
-                hr,
-                L"Invalid file size_ge passed (%s), ignored\r\n",
-                item[CONFIG_FILEFIND_SIZE_GE].c_str());
+                pLog, hr, L"Invalid file size_ge passed (%s), ignored\r\n", item[CONFIG_FILEFIND_SIZE_GE].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_LT])
@@ -670,14 +658,11 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->SizeL = (DWORD64)item[CONFIG_FILEFIND_SIZE_LT];
             fs->Required |= FileFind::SearchTerm::SIZE_LT;
         }
-        catch (Orc::Exception & e)
+        catch (Orc::Exception& e)
         {
             log::Warning(pLog, e.GetHRESULT(), L"%S", e.what());
             log::Warning(
-                pLog,
-                hr,
-                L"Invalid file size_lt passed (%s), ignored\r\n",
-                item[CONFIG_FILEFIND_SIZE_LT].c_str());
+                pLog, hr, L"Invalid file size_lt passed (%s), ignored\r\n", item[CONFIG_FILEFIND_SIZE_LT].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_LE])
@@ -687,63 +672,54 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->SizeL = (DWORD64)item[CONFIG_FILEFIND_SIZE_LE];
             fs->Required |= FileFind::SearchTerm::SIZE_LE;
         }
-        catch (Orc::Exception & e)
+        catch (Orc::Exception& e)
         {
             log::Warning(pLog, e.GetHRESULT(), L"%S", e.what());
             log::Warning(
-                pLog,
-                hr,
-                L"Invalid file size_le passed (%s), ignored\r\n",
-                item[CONFIG_FILEFIND_SIZE_LE].c_str());
+                pLog, hr, L"Invalid file size_le passed (%s), ignored\r\n", item[CONFIG_FILEFIND_SIZE_LE].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_MD5])
     {
         fs->MD5.SetCount(BYTES_IN_MD5_HASH);
         if (SUCCEEDED(
-            hr = GetBytesFromHexaString(
-                item[CONFIG_FILEFIND_MD5].c_str(),
-                (DWORD)item[CONFIG_FILEFIND_MD5].size(),
-                fs->MD5.GetData(),
-                BYTES_IN_MD5_HASH)))
+                hr = GetBytesFromHexaString(
+                    item[CONFIG_FILEFIND_MD5].c_str(),
+                    (DWORD)item[CONFIG_FILEFIND_MD5].size(),
+                    fs->MD5.GetData(),
+                    BYTES_IN_MD5_HASH)))
             fs->Required |= FileFind::SearchTerm::DATA_MD5;
         else
         {
             log::Warning(
-                pLog,
-                hr,
-                L"Invalid hexa string passed as md5 (%s), ignored\r\n",
-                item[CONFIG_FILEFIND_MD5].c_str());
+                pLog, hr, L"Invalid hexa string passed as md5 (%s), ignored\r\n", item[CONFIG_FILEFIND_MD5].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_SHA1])
     {
         fs->SHA1.SetCount(BYTES_IN_SHA1_HASH);
         if (SUCCEEDED(
-            hr = GetBytesFromHexaString(
-                item[CONFIG_FILEFIND_SHA1].c_str(),
-                (DWORD)item[CONFIG_FILEFIND_SHA1].size(),
-                fs->SHA1.GetData(),
-                BYTES_IN_SHA1_HASH)))
+                hr = GetBytesFromHexaString(
+                    item[CONFIG_FILEFIND_SHA1].c_str(),
+                    (DWORD)item[CONFIG_FILEFIND_SHA1].size(),
+                    fs->SHA1.GetData(),
+                    BYTES_IN_SHA1_HASH)))
             fs->Required |= FileFind::SearchTerm::DATA_SHA1;
         else
         {
             log::Warning(
-                pLog,
-                hr,
-                L"Invalid hexa string passed as sha1 (%s), ignored\r\n",
-                item[CONFIG_FILEFIND_SHA1].c_str());
+                pLog, hr, L"Invalid hexa string passed as sha1 (%s), ignored\r\n", item[CONFIG_FILEFIND_SHA1].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_SHA256])
     {
         fs->SHA256.SetCount(BYTES_IN_SHA256_HASH);
         if (SUCCEEDED(
-            hr = GetBytesFromHexaString(
-                item[CONFIG_FILEFIND_SHA256].c_str(),
-                (DWORD)item[CONFIG_FILEFIND_SHA256].size(),
-                fs->SHA256.GetData(),
-                BYTES_IN_SHA256_HASH)))
+                hr = GetBytesFromHexaString(
+                    item[CONFIG_FILEFIND_SHA256].c_str(),
+                    (DWORD)item[CONFIG_FILEFIND_SHA256].size(),
+                    fs->SHA256.GetData(),
+                    BYTES_IN_SHA256_HASH)))
             fs->Required |= FileFind::SearchTerm::DATA_SHA256;
         else
         {
@@ -757,11 +733,11 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
     if (item[CONFIG_FILEFIND_CONTAINS])
     {
         if (SUCCEEDED(
-            hr = WideToAnsi(
-                pLog,
-                item[CONFIG_FILEFIND_CONTAINS].c_str(),
-                (DWORD)item[CONFIG_FILEFIND_CONTAINS].size(),
-                fs->Contains)))
+                hr = WideToAnsi(
+                    pLog,
+                    item[CONFIG_FILEFIND_CONTAINS].c_str(),
+                    (DWORD)item[CONFIG_FILEFIND_CONTAINS].size(),
+                    fs->Contains)))
         {
             fs->Required |= FileFind::SearchTerm::CONTAINS;
         }
@@ -777,10 +753,10 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
     if (item[CONFIG_FILEFIND_CONTAINS_HEX])
     {
         if (SUCCEEDED(
-            hr = GetBytesFromHexaString(
-                item[CONFIG_FILEFIND_CONTAINS_HEX].c_str(),
-                (DWORD)item[CONFIG_FILEFIND_CONTAINS_HEX].size(),
-                fs->Contains)))
+                hr = GetBytesFromHexaString(
+                    item[CONFIG_FILEFIND_CONTAINS_HEX].c_str(),
+                    (DWORD)item[CONFIG_FILEFIND_CONTAINS_HEX].size(),
+                    fs->Contains)))
         {
             fs->Required |= FileFind::SearchTerm::CONTAINS;
             fs->bContainsIsHex = true;
@@ -797,11 +773,11 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
     if (item[CONFIG_FILEFIND_HEADER])
     {
         if (SUCCEEDED(
-            hr = WideToAnsi(
-                pLog,
-                item[CONFIG_FILEFIND_HEADER].c_str(),
-                (DWORD)item[CONFIG_FILEFIND_HEADER].size(),
-                fs->Header)))
+                hr = WideToAnsi(
+                    pLog,
+                    item[CONFIG_FILEFIND_HEADER].c_str(),
+                    (DWORD)item[CONFIG_FILEFIND_HEADER].size(),
+                    fs->Header)))
         {
             fs->HeaderLen = (DWORD)fs->Header.GetCount();
             fs->Required |= FileFind::SearchTerm::HEADER;
@@ -818,10 +794,10 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
     if (item[CONFIG_FILEFIND_HEADER_HEX])
     {
         if (SUCCEEDED(
-            hr = GetBytesFromHexaString(
-                item[CONFIG_FILEFIND_HEADER_HEX].c_str(),
-                (DWORD)item[CONFIG_FILEFIND_HEADER_HEX].size(),
-                fs->Header)))
+                hr = GetBytesFromHexaString(
+                    item[CONFIG_FILEFIND_HEADER_HEX].c_str(),
+                    (DWORD)item[CONFIG_FILEFIND_HEADER_HEX].size(),
+                    fs->Header)))
         {
             fs->HeaderLen = (DWORD)fs->Header.GetCount();
             fs->Required |= FileFind::SearchTerm::HEADER_HEX;
@@ -857,7 +833,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
     }
     if (item[CONFIG_FILEFIND_HEADER_LENGTH])
     {
-        LARGE_INTEGER liSize = { 0, 0 };
+        LARGE_INTEGER liSize = {0, 0};
         if (SUCCEEDED(GetIntegerFromArg(item[CONFIG_FILEFIND_HEADER_LENGTH].c_str(), liSize)))
         {
             fs->Header.SetCount(liSize.LowPart);
@@ -1020,57 +996,57 @@ wstring FileFind::SearchTerm::GetDescription() const
         ;
         switch (dwAttrType)
         {
-        case $STANDARD_INFORMATION:
-            stream << "$STANDARD_INFORMATION";
-            break;
-        case $ATTRIBUTE_LIST:
-            stream << "$ATTRIBUTE_LIST";
-            break;
-        case $FILE_NAME:
-            stream << "$FILE_NAME";
-            break;
-        case $OBJECT_ID:
-            stream << "$OBJECT_ID";
-            break;
-        case $SECURITY_DESCRIPTOR:
-            stream << "$SECURITY_DESCRIPTOR";
-            break;
-        case $VOLUME_NAME:
-            stream << "$VOLUME_NAME";
-            break;
-        case $VOLUME_INFORMATION:
-            stream << "$VOLUME_INFORMATION";
-            break;
-        case $DATA:
-            stream << "$DATA";
-            break;
-        case $INDEX_ROOT:
-            stream << "$INDEX_ROOT";
-            break;
-        case $INDEX_ALLOCATION:
-            stream << "$INDEX_ALLOCATION";
-            break;
-        case $BITMAP:
-            stream << "$BITMAP";
-            break;
-        case $REPARSE_POINT:
-            stream << "$REPARSE_POINT";
-            break;
-        case $EA_INFORMATION:
-            stream << "$EA_INFORMATION";
-            break;
-        case $EA:
-            stream << "$EA";
-            break;
-        case $LOGGED_UTILITY_STREAM:
-            stream << "$LOGGED_UTILITY_STREAM";
-            break;
-        case $FIRST_USER_DEFINED_ATTRIBUTE:
-            stream << "$FIRST_USER_DEFINED_ATTRIBUTE";
-            break;
-        default:
-            stream << "Custom(" << dwAttrType << ")";
-            break;
+            case $STANDARD_INFORMATION:
+                stream << "$STANDARD_INFORMATION";
+                break;
+            case $ATTRIBUTE_LIST:
+                stream << "$ATTRIBUTE_LIST";
+                break;
+            case $FILE_NAME:
+                stream << "$FILE_NAME";
+                break;
+            case $OBJECT_ID:
+                stream << "$OBJECT_ID";
+                break;
+            case $SECURITY_DESCRIPTOR:
+                stream << "$SECURITY_DESCRIPTOR";
+                break;
+            case $VOLUME_NAME:
+                stream << "$VOLUME_NAME";
+                break;
+            case $VOLUME_INFORMATION:
+                stream << "$VOLUME_INFORMATION";
+                break;
+            case $DATA:
+                stream << "$DATA";
+                break;
+            case $INDEX_ROOT:
+                stream << "$INDEX_ROOT";
+                break;
+            case $INDEX_ALLOCATION:
+                stream << "$INDEX_ALLOCATION";
+                break;
+            case $BITMAP:
+                stream << "$BITMAP";
+                break;
+            case $REPARSE_POINT:
+                stream << "$REPARSE_POINT";
+                break;
+            case $EA_INFORMATION:
+                stream << "$EA_INFORMATION";
+                break;
+            case $EA:
+                stream << "$EA";
+                break;
+            case $LOGGED_UTILITY_STREAM:
+                stream << "$LOGGED_UTILITY_STREAM";
+                break;
+            case $FIRST_USER_DEFINED_ATTRIBUTE:
+                stream << "$FIRST_USER_DEFINED_ATTRIBUTE";
+                break;
+            default:
+                stream << "Custom(" << dwAttrType << ")";
+                break;
         }
 
         bFirst = false;
@@ -1202,15 +1178,15 @@ std::pair<bool, std::wstring> Orc::FileFind::SearchTerm::IsValidTerm()
     if (Required & Criteria::SIZE_EQ
         && (Required & Criteria::SIZE_LE || Required & Criteria::SIZE_LT || Required & Criteria::SIZE_GE
             || Required & Criteria::SIZE_GT))
-        return { false, L"requirement size=<size> cannot be combined with any other size requirement"s };
+        return {false, L"requirement size=<size> cannot be combined with any other size requirement"s};
 
     if (Required & Criteria::SIZE_GE && Required & Criteria::SIZE_GT)
-        return { false, L"greater requirements cannot be combined"s };
+        return {false, L"greater requirements cannot be combined"s};
 
     if (Required & Criteria::SIZE_LE && Required & Criteria::SIZE_LT)
-        return { false, L"less requirements cannot be combined"s };
+        return {false, L"less requirements cannot be combined"s};
 
-    return { true, L""s };
+    return {true, L""s};
 }
 
 HRESULT FileFind::SearchTerm::AddTermToConfig(ConfigItem& item)
@@ -1343,57 +1319,57 @@ HRESULT FileFind::SearchTerm::AddTermToConfig(ConfigItem& item)
     {
         switch (dwAttrType)
         {
-        case $STANDARD_INFORMATION:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$STANDARD_INFORMATION";
-            break;
-        case $ATTRIBUTE_LIST:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$ATTRIBUTE_LIST";
-            break;
-        case $FILE_NAME:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$FILE_NAME";
-            break;
-        case $OBJECT_ID:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$OBJECT_ID";
-            break;
-        case $SECURITY_DESCRIPTOR:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$SECURITY_DESCRIPTOR";
-            break;
-        case $VOLUME_NAME:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$VOLUME_NAME";
-            break;
-        case $VOLUME_INFORMATION:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$VOLUME_INFORMATION";
-            break;
-        case $DATA:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$DATA";
-            break;
-        case $INDEX_ROOT:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$INDEX_ROOT";
-            break;
-        case $INDEX_ALLOCATION:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$INDEX_ALLOCATION";
-            break;
-        case $BITMAP:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$BITMAP";
-            break;
-        case $REPARSE_POINT:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$REPARSE_POINT";
-            break;
-        case $EA_INFORMATION:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$EA_INFORMATION";
-            break;
-        case $EA:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$EA";
-            break;
-        case $LOGGED_UTILITY_STREAM:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$LOGGED_UTILITY_STREAM";
-            break;
-        case $FIRST_USER_DEFINED_ATTRIBUTE:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$FIRST_USER_DEFINED_ATTRIBUTE";
-            break;
-        default:
-            ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = std::to_wstring(dwAttrType);
-            break;
+            case $STANDARD_INFORMATION:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$STANDARD_INFORMATION";
+                break;
+            case $ATTRIBUTE_LIST:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$ATTRIBUTE_LIST";
+                break;
+            case $FILE_NAME:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$FILE_NAME";
+                break;
+            case $OBJECT_ID:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$OBJECT_ID";
+                break;
+            case $SECURITY_DESCRIPTOR:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$SECURITY_DESCRIPTOR";
+                break;
+            case $VOLUME_NAME:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$VOLUME_NAME";
+                break;
+            case $VOLUME_INFORMATION:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$VOLUME_INFORMATION";
+                break;
+            case $DATA:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$DATA";
+                break;
+            case $INDEX_ROOT:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$INDEX_ROOT";
+                break;
+            case $INDEX_ALLOCATION:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$INDEX_ALLOCATION";
+                break;
+            case $BITMAP:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$BITMAP";
+                break;
+            case $REPARSE_POINT:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$REPARSE_POINT";
+                break;
+            case $EA_INFORMATION:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$EA_INFORMATION";
+                break;
+            case $EA:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$EA";
+                break;
+            case $LOGGED_UTILITY_STREAM:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$LOGGED_UTILITY_STREAM";
+                break;
+            case $FIRST_USER_DEFINED_ATTRIBUTE:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = L"$FIRST_USER_DEFINED_ATTRIBUTE";
+                break;
+            default:
+                ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].strData = std::to_wstring(dwAttrType);
+                break;
         }
         ntfs_find.SubItems[CONFIG_FILEFIND_ATTR_TYPE].Status = ConfigItem::PRESENT;
     }
@@ -1575,7 +1551,7 @@ HRESULT FileFind::AddTerm(const shared_ptr<SearchTerm>& pMatch)
     }
 
     if ((pMatch->Required & SearchTerm::Criteria::EA_EXACT || pMatch->Required & SearchTerm::Criteria::EA_MATCH
-        || pMatch->Required & SearchTerm::Criteria::EA_REGEX)
+         || pMatch->Required & SearchTerm::Criteria::EA_REGEX)
         && (pMatch->Required & SearchTerm::Criteria::ADS_EXACT || pMatch->Required & SearchTerm::Criteria::ADS_MATCH
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX))
     {
@@ -1584,9 +1560,9 @@ HRESULT FileFind::AddTerm(const shared_ptr<SearchTerm>& pMatch)
         return E_INVALIDARG;
     }
     if ((pMatch->Required & SearchTerm::Criteria::ATTR_NAME_EXACT
-        || pMatch->Required & SearchTerm::Criteria::ATTR_NAME_MATCH
-        || pMatch->Required & SearchTerm::Criteria::ATTR_NAME_REGEX
-        || pMatch->Required & SearchTerm::Criteria::ATTR_TYPE)
+         || pMatch->Required & SearchTerm::Criteria::ATTR_NAME_MATCH
+         || pMatch->Required & SearchTerm::Criteria::ATTR_NAME_REGEX
+         || pMatch->Required & SearchTerm::Criteria::ATTR_TYPE)
         && (pMatch->Required & SearchTerm::Criteria::ADS_EXACT || pMatch->Required & SearchTerm::Criteria::ADS_MATCH
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX || pMatch->Required & SearchTerm::Criteria::EA_EXACT
             || pMatch->Required & SearchTerm::Criteria::EA_MATCH || pMatch->Required & SearchTerm::Criteria::EA_REGEX))
@@ -1760,7 +1736,7 @@ HRESULT FileFind::AddExcludeTerm(const shared_ptr<SearchTerm>& pMatch)
     }
 
     if ((pMatch->Required & SearchTerm::Criteria::EA_EXACT || pMatch->Required & SearchTerm::Criteria::EA_MATCH
-        || pMatch->Required & SearchTerm::Criteria::EA_REGEX)
+         || pMatch->Required & SearchTerm::Criteria::EA_REGEX)
         && (pMatch->Required & SearchTerm::Criteria::ADS_EXACT || pMatch->Required & SearchTerm::Criteria::ADS_MATCH
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX))
     {
@@ -1769,9 +1745,9 @@ HRESULT FileFind::AddExcludeTerm(const shared_ptr<SearchTerm>& pMatch)
         return E_INVALIDARG;
     }
     if ((pMatch->Required & SearchTerm::Criteria::ATTR_NAME_EXACT
-        || pMatch->Required & SearchTerm::Criteria::ATTR_NAME_MATCH
-        || pMatch->Required & SearchTerm::Criteria::ATTR_NAME_REGEX
-        || pMatch->Required & SearchTerm::Criteria::ATTR_TYPE)
+         || pMatch->Required & SearchTerm::Criteria::ATTR_NAME_MATCH
+         || pMatch->Required & SearchTerm::Criteria::ATTR_NAME_REGEX
+         || pMatch->Required & SearchTerm::Criteria::ATTR_TYPE)
         && (pMatch->Required & SearchTerm::Criteria::ADS_EXACT || pMatch->Required & SearchTerm::Criteria::ADS_MATCH
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX || pMatch->Required & SearchTerm::Criteria::EA_EXACT
             || pMatch->Required & SearchTerm::Criteria::EA_MATCH || pMatch->Required & SearchTerm::Criteria::EA_REGEX))
@@ -2044,12 +2020,12 @@ FileFind::SearchTerm::Criteria FileFind::ExcludeMatchingName(
         begin(aMatch->MatchingNames),
         end(aMatch->MatchingNames),
         [this, aTerm, requiredSpec, &retval](const Match::NameMatch& aNameMatch) -> bool {
-        SearchTerm::Criteria matchedSpec = MatchName(aTerm, requiredSpec, aNameMatch);
+            SearchTerm::Criteria matchedSpec = MatchName(aTerm, requiredSpec, aNameMatch);
 
-        if (requiredSpec == matchedSpec)
-            return true;
-        return false;
-    });
+            if (requiredSpec == matchedSpec)
+                return true;
+            return false;
+        });
 
     if (found != end(aMatch->MatchingNames))
     {
@@ -2254,12 +2230,12 @@ FileFind::SearchTerm::Criteria FileFind::ExcludeMatchingPath(
         begin(aMatch->MatchingNames),
         end(aMatch->MatchingNames),
         [this, aTerm, requiredSpec, &retval](const Match::NameMatch& aNameMatch) -> bool {
-        SearchTerm::Criteria matchedSpec = MatchPath(aTerm, requiredSpec, aNameMatch);
+            SearchTerm::Criteria matchedSpec = MatchPath(aTerm, requiredSpec, aNameMatch);
 
-        if (requiredSpec == matchedSpec)
-            return true;
-        return false;
-    });
+            if (requiredSpec == matchedSpec)
+                return true;
+            return false;
+        });
     if (found != end(aMatch->MatchingNames))
     {
         return requiredSpec;
@@ -2286,8 +2262,8 @@ FileFind::SearchTerm::Criteria FileFind::ExactEA(
 
             auto found = std::find_if(
                 begin(ea_attr->Items()), end(ea_attr->Items()), [aTerm](const ExtendedAttribute::Item& item) {
-                return !_wcsicmp(item.first.c_str(), aTerm->EAName.c_str());
-            });
+                    return !_wcsicmp(item.first.c_str(), aTerm->EAName.c_str());
+                });
             if (found != end(ea_attr->Items()))
                 return SearchTerm::Criteria::EA_EXACT;
         }
@@ -2318,8 +2294,8 @@ FileFind::SearchTerm::Criteria FileFind::MatchEA(
 
             auto found = std::find_if(
                 begin(ea_attr->Items()), end(ea_attr->Items()), [aTerm](const ExtendedAttribute::Item& item) {
-                return PathMatchSpec(item.first.c_str(), aTerm->EAName.c_str());
-            });
+                    return PathMatchSpec(item.first.c_str(), aTerm->EAName.c_str());
+                });
             if (found != end(ea_attr->Items()))
                 return SearchTerm::Criteria::EA_MATCH;
         }
@@ -2348,8 +2324,8 @@ FileFind::SearchTerm::Criteria FileFind::RegexEA(
 
             auto found = std::find_if(
                 begin(ea_attr->Items()), end(ea_attr->Items()), [aTerm](const ExtendedAttribute::Item& item) {
-                return regex_match(item.first, aTerm->EANameRegEx);
-            });
+                    return regex_match(item.first, aTerm->EANameRegEx);
+                });
             if (found != end(ea_attr->Items()))
                 return SearchTerm::Criteria::EA_REGEX;
         }
@@ -2362,7 +2338,7 @@ FileFind::ExactAttr(const std::shared_ptr<SearchTerm>& aTerm, LPCWSTR szAttrName
 {
     SearchTerm::Criteria matchedSpec = SearchTerm::Criteria::NONE;
 
-    if(Orc::equalCaseInsensitive(aTerm->AttrName, std::wstring_view(szAttrName, AttrNameLen)))
+    if (Orc::equalCaseInsensitive(aTerm->AttrName, std::wstring_view(szAttrName, AttrNameLen)))
     {
         return matchedSpec | SearchTerm::Criteria::ATTR_NAME_EXACT;
     }
@@ -2518,52 +2494,52 @@ FileFind::SearchTerm::Criteria FileFind::ExcludeMatchingAttributes(
         begin(aFileMatch->MatchingAttributes),
         end(aFileMatch->MatchingAttributes),
         [this, aTerm, requiredSpec](const Match::AttributeMatch& attrMatch) -> bool {
-        SearchTerm::Criteria matchedAttributesSpecs = SearchTerm::Criteria::NONE;
+            SearchTerm::Criteria matchedAttributesSpecs = SearchTerm::Criteria::NONE;
 
-        if (requiredSpec & SearchTerm::Criteria::ATTR_TYPE)
-        {
-            SearchTerm::Criteria aSpec = AttrType(aTerm, attrMatch.Type);
-            if (aSpec == SearchTerm::Criteria::NONE)
+            if (requiredSpec & SearchTerm::Criteria::ATTR_TYPE)
             {
-                return false;
+                SearchTerm::Criteria aSpec = AttrType(aTerm, attrMatch.Type);
+                if (aSpec == SearchTerm::Criteria::NONE)
+                {
+                    return false;
+                }
+                matchedAttributesSpecs = requiredSpec | aSpec;
             }
-            matchedAttributesSpecs = requiredSpec | aSpec;
-        }
-        //
-        /// EA content exclusion is not supported!
-        //
-        if (requiredSpec & SearchTerm::Criteria::ATTR_NAME_EXACT)
-        {
-            SearchTerm::Criteria aSpec = ExactAttr(aTerm, attrMatch.AttrName.c_str(), attrMatch.AttrName.size());
-            if (aSpec == SearchTerm::Criteria::NONE)
+            //
+            /// EA content exclusion is not supported!
+            //
+            if (requiredSpec & SearchTerm::Criteria::ATTR_NAME_EXACT)
             {
-                return false;
+                SearchTerm::Criteria aSpec = ExactAttr(aTerm, attrMatch.AttrName.c_str(), attrMatch.AttrName.size());
+                if (aSpec == SearchTerm::Criteria::NONE)
+                {
+                    return false;
+                }
+                matchedAttributesSpecs = requiredSpec | aSpec;
             }
-            matchedAttributesSpecs = requiredSpec | aSpec;
-        }
-        if (requiredSpec & SearchTerm::Criteria::ATTR_NAME_MATCH)
-        {
-            SearchTerm::Criteria aSpec = MatchAttr(aTerm, attrMatch.AttrName.c_str(), attrMatch.AttrName.size());
-            if (aSpec == SearchTerm::Criteria::NONE)
+            if (requiredSpec & SearchTerm::Criteria::ATTR_NAME_MATCH)
             {
-                return false;
+                SearchTerm::Criteria aSpec = MatchAttr(aTerm, attrMatch.AttrName.c_str(), attrMatch.AttrName.size());
+                if (aSpec == SearchTerm::Criteria::NONE)
+                {
+                    return false;
+                }
+                matchedAttributesSpecs = requiredSpec | aSpec;
             }
-            matchedAttributesSpecs = requiredSpec | aSpec;
-        }
-        if (requiredSpec & SearchTerm::Criteria::ATTR_NAME_REGEX)
-        {
-            SearchTerm::Criteria aSpec = RegExAttr(aTerm, attrMatch.AttrName.c_str(), attrMatch.AttrName.size());
-            if (aSpec == SearchTerm::Criteria::NONE)
+            if (requiredSpec & SearchTerm::Criteria::ATTR_NAME_REGEX)
             {
-                return false;
+                SearchTerm::Criteria aSpec = RegExAttr(aTerm, attrMatch.AttrName.c_str(), attrMatch.AttrName.size());
+                if (aSpec == SearchTerm::Criteria::NONE)
+                {
+                    return false;
+                }
+                matchedAttributesSpecs = requiredSpec | aSpec;
             }
-            matchedAttributesSpecs = requiredSpec | aSpec;
-        }
 
-        if (matchedAttributesSpecs == requiredSpec)
-            return true;
-        return false;
-    });
+            if (matchedAttributesSpecs == requiredSpec)
+                return true;
+            return false;
+        });
     if (found != end(aFileMatch->MatchingAttributes))
         return requiredSpec;
     return SearchTerm::Criteria::NONE;
@@ -2738,53 +2714,53 @@ FileFind::SearchTerm::Criteria FileFind::ExcludeMatchingDataNameAndSize(
         begin(aFileMatch->MatchingAttributes),
         end(aFileMatch->MatchingAttributes),
         [this, aTerm, requiredSpec](const Match::AttributeMatch& aMatch) -> bool {
-        if (aMatch.Type != $DATA)
+            if (aMatch.Type != $DATA)
+                return false;
+
+            SearchTerm::Criteria matchedDataNameOrSizeSpecs = SearchTerm::Criteria::NONE;
+            if (requiredSpec & SearchTerm::Criteria::SIZE_EQ || requiredSpec & SearchTerm::Criteria::SIZE_GT
+                || requiredSpec & SearchTerm::Criteria::SIZE_GE || requiredSpec & SearchTerm::Criteria::SIZE_LE
+                || requiredSpec & SearchTerm::Criteria::SIZE_LT)
+            {
+                SearchTerm::Criteria aSpec = SizeMatch(aTerm, aMatch.DataSize);
+                if (aSpec == SearchTerm::Criteria::NONE)
+                {
+                    return false;
+                }
+                matchedDataNameOrSizeSpecs |= aSpec;
+            }
+            if (requiredSpec & SearchTerm::Criteria::ADS_EXACT)
+            {
+                SearchTerm::Criteria aSpec = ExactADS(aTerm, aMatch.AttrName.c_str(), aMatch.AttrName.size());
+                if (aSpec == SearchTerm::Criteria::NONE)
+                {
+                    return false;
+                }
+                matchedDataNameOrSizeSpecs |= aSpec;
+            }
+            if (requiredSpec & SearchTerm::Criteria::ADS_MATCH)
+            {
+                SearchTerm::Criteria aSpec = MatchADS(aTerm, aMatch.AttrName.c_str(), aMatch.AttrName.size());
+                if (aSpec == SearchTerm::Criteria::NONE)
+                {
+                    return false;
+                }
+                matchedDataNameOrSizeSpecs |= aSpec;
+            }
+            if (requiredSpec & SearchTerm::Criteria::ADS_REGEX)
+            {
+                SearchTerm::Criteria aSpec = RegexADS(aTerm, aMatch.AttrName.c_str(), aMatch.AttrName.size());
+                if (aSpec == SearchTerm::Criteria::NONE)
+                {
+                    return false;
+                }
+                matchedDataNameOrSizeSpecs |= aSpec;
+            }
+
+            if (matchedDataNameOrSizeSpecs == requiredSpec)
+                return true;
             return false;
-
-        SearchTerm::Criteria matchedDataNameOrSizeSpecs = SearchTerm::Criteria::NONE;
-        if (requiredSpec & SearchTerm::Criteria::SIZE_EQ || requiredSpec & SearchTerm::Criteria::SIZE_GT
-            || requiredSpec & SearchTerm::Criteria::SIZE_GE || requiredSpec & SearchTerm::Criteria::SIZE_LE
-            || requiredSpec & SearchTerm::Criteria::SIZE_LT)
-        {
-            SearchTerm::Criteria aSpec = SizeMatch(aTerm, aMatch.DataSize);
-            if (aSpec == SearchTerm::Criteria::NONE)
-            {
-                return false;
-            }
-            matchedDataNameOrSizeSpecs |= aSpec;
-        }
-        if (requiredSpec & SearchTerm::Criteria::ADS_EXACT)
-        {
-            SearchTerm::Criteria aSpec = ExactADS(aTerm, aMatch.AttrName.c_str(), aMatch.AttrName.size());
-            if (aSpec == SearchTerm::Criteria::NONE)
-            {
-                return false;
-            }
-            matchedDataNameOrSizeSpecs |= aSpec;
-        }
-        if (requiredSpec & SearchTerm::Criteria::ADS_MATCH)
-        {
-            SearchTerm::Criteria aSpec = MatchADS(aTerm, aMatch.AttrName.c_str(), aMatch.AttrName.size());
-            if (aSpec == SearchTerm::Criteria::NONE)
-            {
-                return false;
-            }
-            matchedDataNameOrSizeSpecs |= aSpec;
-        }
-        if (requiredSpec & SearchTerm::Criteria::ADS_REGEX)
-        {
-            SearchTerm::Criteria aSpec = RegexADS(aTerm, aMatch.AttrName.c_str(), aMatch.AttrName.size());
-            if (aSpec == SearchTerm::Criteria::NONE)
-            {
-                return false;
-            }
-            matchedDataNameOrSizeSpecs |= aSpec;
-        }
-
-        if (matchedDataNameOrSizeSpecs == requiredSpec)
-            return true;
-        return false;
-    });
+        });
     if (found != end(aFileMatch->MatchingAttributes))
     {
         return requiredSpec;
@@ -2919,26 +2895,26 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
     if (!m_YaraScan)
     {
         log::Warning(_L_, HRESULT_FROM_WIN32(ERROR_INVALID_STATE), L"Yara not initialized & yara rules selected\r\n");
-        return { SearchTerm::Criteria::NONE, std::nullopt };
+        return {SearchTerm::Criteria::NONE, std::nullopt};
     }
 
     if (aTerm->Required & SearchTerm::Criteria::YARA)
     {
         auto pDataStream = pDataAttr->GetDataStream(_L_, m_pVolReader);
         if (pDataStream == nullptr)
-            return { SearchTerm::Criteria::NONE, std::nullopt };
+            return {SearchTerm::Criteria::NONE, std::nullopt};
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
             log::Verbose(_L_, L"Failed to seek pointer to 0 for data attribute (hr=0x%lx)\r\n", hr);
-            return { SearchTerm::Criteria::NONE, std::nullopt };
+            return {SearchTerm::Criteria::NONE, std::nullopt};
         }
 
         auto [hr, matchingRules] = m_YaraScan->Scan(pDataStream);
         if (FAILED(hr))
         {
             log::Verbose(_L_, L"Failed to yara scan data attribute (hr=0x%lx)\r\n", hr);
-            return { SearchTerm::Criteria::NONE, std::nullopt };
+            return {SearchTerm::Criteria::NONE, std::nullopt};
         }
         if (!matchingRules.empty())
         {
@@ -2950,19 +2926,19 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
                     {
                         if (PathMatchSpecA(matchingRule.c_str(), termRule.c_str()))
                         {
-                            return { SearchTerm::Criteria::YARA,
-                                    matchingRules };  // With the first matchingRule in the rules spec, we have a winner
+                            return {SearchTerm::Criteria::YARA,
+                                    matchingRules};  // With the first matchingRule in the rules spec, we have a winner
                         }
                     }
                 }
-                return { SearchTerm::Criteria::NONE,
-                        std::nullopt };  // the stream matched more than one rule but not the specified one
+                return {SearchTerm::Criteria::NONE,
+                        std::nullopt};  // the stream matched more than one rule but not the specified one
             }
             else
-                return { SearchTerm::Criteria::YARA, std::nullopt };
+                return {SearchTerm::Criteria::YARA, std::nullopt};
         }
     }
-    return { matchedSpec, std::nullopt };
+    return {matchedSpec, std::nullopt};
 }
 
 FileFind::SearchTerm::Criteria FileFind::MatchHeader(
@@ -3035,9 +3011,9 @@ FileFind::RegExHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::share
 
         // Match the header here
         if (regex_match(
-            (LPSTR)buffer.GetData(),
-            ((LPSTR)buffer.GetData()) + (buffer.GetCount() / sizeof(CHAR)),
-            aTerm->HeaderRegEx))
+                (LPSTR)buffer.GetData(),
+                ((LPSTR)buffer.GetData()) + (buffer.GetCount() / sizeof(CHAR)),
+                aTerm->HeaderRegEx))
             return matchedSpec |= SearchTerm::Criteria::HEADER_REGEX;
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
@@ -3185,56 +3161,56 @@ FileFind::SearchTerm::Criteria FileFind::ExcludeMatchingData(
         begin(aFileMatch->MatchingAttributes),
         end(aFileMatch->MatchingAttributes),
         [this, aTerm, requiredDataSpecs](const Match::AttributeMatch& attrMatch) -> bool {
-        SearchTerm::Criteria matchedDataSpecs = SearchTerm::Criteria::NONE;
+            SearchTerm::Criteria matchedDataSpecs = SearchTerm::Criteria::NONE;
 
-        if (attrMatch.Type != $DATA)
+            if (attrMatch.Type != $DATA)
+                return false;
+
+            auto data_attr = attrMatch.DataAttr.lock();
+            if (!data_attr)
+                return false;
+
+            if (requiredDataSpecs & SearchTerm::Criteria::HEADER)
+            {
+                SearchTerm::Criteria aSpec = MatchHeader(aTerm, data_attr);
+                if (aSpec == SearchTerm::Criteria::NONE)
+                    return false;
+                matchedDataSpecs |= aSpec;
+            }
+            if (requiredDataSpecs & SearchTerm::Criteria::HEADER_HEX)
+            {
+                SearchTerm::Criteria aSpec = HexHeader(aTerm, data_attr);
+                if (aSpec == SearchTerm::Criteria::NONE)
+                    return false;
+                matchedDataSpecs |= aSpec;
+            }
+            if (requiredDataSpecs & SearchTerm::Criteria::HEADER_REGEX)
+            {
+                SearchTerm::Criteria aSpec = RegExHeader(aTerm, data_attr);
+                if (aSpec == SearchTerm::Criteria::NONE)
+                    return false;
+                matchedDataSpecs |= aSpec;
+            }
+            if (requiredDataSpecs & SearchTerm::Criteria::DATA_MD5
+                || requiredDataSpecs & SearchTerm::Criteria::DATA_SHA1
+                || requiredDataSpecs & SearchTerm::Criteria::DATA_SHA256)
+            {
+                SearchTerm::Criteria aSpec = MatchHash(aTerm, data_attr);
+                if (aSpec == SearchTerm::Criteria::NONE)
+                    return false;
+                matchedDataSpecs |= aSpec;
+            }
+            if (requiredDataSpecs & SearchTerm::Criteria::CONTAINS)
+            {
+                SearchTerm::Criteria aSpec = MatchContains(aTerm, data_attr);
+                if (aSpec == SearchTerm::Criteria::NONE)
+                    return false;
+                matchedDataSpecs |= aSpec;
+            }
+            if (matchedDataSpecs == requiredDataSpecs)
+                return true;
             return false;
-
-        auto data_attr = attrMatch.DataAttr.lock();
-        if (!data_attr)
-            return false;
-
-        if (requiredDataSpecs & SearchTerm::Criteria::HEADER)
-        {
-            SearchTerm::Criteria aSpec = MatchHeader(aTerm, data_attr);
-            if (aSpec == SearchTerm::Criteria::NONE)
-                return false;
-            matchedDataSpecs |= aSpec;
-        }
-        if (requiredDataSpecs & SearchTerm::Criteria::HEADER_HEX)
-        {
-            SearchTerm::Criteria aSpec = HexHeader(aTerm, data_attr);
-            if (aSpec == SearchTerm::Criteria::NONE)
-                return false;
-            matchedDataSpecs |= aSpec;
-        }
-        if (requiredDataSpecs & SearchTerm::Criteria::HEADER_REGEX)
-        {
-            SearchTerm::Criteria aSpec = RegExHeader(aTerm, data_attr);
-            if (aSpec == SearchTerm::Criteria::NONE)
-                return false;
-            matchedDataSpecs |= aSpec;
-        }
-        if (requiredDataSpecs & SearchTerm::Criteria::DATA_MD5
-            || requiredDataSpecs & SearchTerm::Criteria::DATA_SHA1
-            || requiredDataSpecs & SearchTerm::Criteria::DATA_SHA256)
-        {
-            SearchTerm::Criteria aSpec = MatchHash(aTerm, data_attr);
-            if (aSpec == SearchTerm::Criteria::NONE)
-                return false;
-            matchedDataSpecs |= aSpec;
-        }
-        if (requiredDataSpecs & SearchTerm::Criteria::CONTAINS)
-        {
-            SearchTerm::Criteria aSpec = MatchContains(aTerm, data_attr);
-            if (aSpec == SearchTerm::Criteria::NONE)
-                return false;
-            matchedDataSpecs |= aSpec;
-        }
-        if (matchedDataSpecs == requiredDataSpecs)
-            return true;
-        return false;
-    });
+        });
     if (found != end(aFileMatch->MatchingAttributes))
     {
         return requiredSpec;
@@ -3362,7 +3338,7 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
         // We do have a positive match. Fill in the blanks
         if (aFileMatch == nullptr)
             aFileMatch =
-            std::make_shared<Match>(m_pVolReader, aTerm, pElt->GetFileReferenceNumber(), !pElt->IsRecordInUse());
+                std::make_shared<Match>(m_pVolReader, aTerm, pElt->GetFileReferenceNumber(), !pElt->IsRecordInUse());
 
         aFileMatch->Term = aTerm;
         aFileMatch->DeletedRecord = !pElt->IsRecordInUse();
@@ -3389,8 +3365,8 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
                     // the selected file name is not in location, try to find another one
                     auto it2 = std::find_if(
                         begin(pElt->GetFileNames()), end(pElt->GetFileNames()), [pElt, this](PFILE_NAME aName) -> bool {
-                        return m_InLocationBuilder(aName);
-                    });
+                            return m_InLocationBuilder(aName);
+                        });
                     if (it2 == end(pElt->GetFileNames()))
                         return SearchTerm::Criteria::NONE;  // we have been unable to find a name in location
                     else
@@ -3904,39 +3880,39 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
             begin(aMatch->MatchingNames),
             end(aMatch->MatchingNames),
             [this, aMatch](const Match::NameMatch& nameMatch) -> bool {
-            if (!m_ExcludeNameTerms.empty())
-            {
-                wstring strName;
-                strName.assign(nameMatch.FILENAME()->FileName, nameMatch.FILENAME()->FileNameLength);
-                auto name_list = m_ExcludeNameTerms.equal_range(strName);
+                if (!m_ExcludeNameTerms.empty())
+                {
+                    wstring strName;
+                    strName.assign(nameMatch.FILENAME()->FileName, nameMatch.FILENAME()->FileNameLength);
+                    auto name_list = m_ExcludeNameTerms.equal_range(strName);
 
-                for (auto name_it = name_list.first; name_it != name_list.second; ++name_it)
-                {
-                    auto matched =
-                        LookupTermInMatchExcludeMatching(name_it->second, SearchTerm::Criteria::NAME_EXACT, aMatch);
-                    if (matched != SearchTerm::Criteria::NONE)
+                    for (auto name_it = name_list.first; name_it != name_list.second; ++name_it)
                     {
-                        // we do have a match!
-                        return true;
+                        auto matched =
+                            LookupTermInMatchExcludeMatching(name_it->second, SearchTerm::Criteria::NAME_EXACT, aMatch);
+                        if (matched != SearchTerm::Criteria::NONE)
+                        {
+                            // we do have a match!
+                            return true;
+                        }
                     }
                 }
-            }
-            if (!m_ExcludePathTerms.empty())
-            {
-                auto path_list = m_ExcludePathTerms.equal_range(nameMatch.FullPathName);
-                for (auto path_it = path_list.first; path_it != path_list.second; ++path_it)
+                if (!m_ExcludePathTerms.empty())
                 {
-                    auto matched =
-                        LookupTermInMatchExcludeMatching(path_it->second, SearchTerm::Criteria::PATH_EXACT, aMatch);
-                    if (matched != SearchTerm::Criteria::NONE)
+                    auto path_list = m_ExcludePathTerms.equal_range(nameMatch.FullPathName);
+                    for (auto path_it = path_list.first; path_it != path_list.second; ++path_it)
                     {
-                        // we do have a Match
-                        return true;
+                        auto matched =
+                            LookupTermInMatchExcludeMatching(path_it->second, SearchTerm::Criteria::PATH_EXACT, aMatch);
+                        if (matched != SearchTerm::Criteria::NONE)
+                        {
+                            // we do have a Match
+                            return true;
+                        }
                     }
                 }
-            }
-            return false;
-        });
+                return false;
+            });
 
         if (found != end(aMatch->MatchingNames))
             return S_OK;
@@ -3986,8 +3962,8 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
     // keep only the locations we're parsing
     std::copy_if(
         begin(lowest_locs), end(lowest_locs), back_inserter(locs), [](const shared_ptr<Location>& item) -> bool {
-        return item->GetParse();
-    });
+            return item->GetParse();
+        });
 
     m_NeededHash = GetNeededHashAlgorithms();
 
@@ -4026,26 +4002,26 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
 
             cbs.ElementCallback =
                 [this, aCallback, &bStop, &hr](const std::shared_ptr<VolumeReader>& volreader, MFTRecord* pElt) {
-                DBG_UNREFERENCED_PARAMETER(volreader);
-                try
-                {
-                    if (pElt)
+                    DBG_UNREFERENCED_PARAMETER(volreader);
+                    try
                     {
-                        if (FAILED(hr = FindMatch(pElt, bStop, aCallback)))
+                        if (pElt)
                         {
-                            log::Error(_L_, hr, L"FindMatch failed\r\n");
+                            if (FAILED(hr = FindMatch(pElt, bStop, aCallback)))
+                            {
+                                log::Error(_L_, hr, L"FindMatch failed\r\n");
+                                pElt->CleanCachedData();
+                                return;
+                            }
                             pElt->CleanCachedData();
-                            return;
                         }
-                        pElt->CleanCachedData();
                     }
-                }
-                catch (WCHAR * e)
-                {
-                    log::Error(_L_, E_ABORT, L"\r\nCould not parse record for %s : %s\r\n", nullptr, e);
-                }
-                return;
-            };
+                    catch (WCHAR* e)
+                    {
+                        log::Error(_L_, E_ABORT, L"\r\nCould not parse record for %s : %s\r\n", nullptr, e);
+                    }
+                    return;
+                };
 
             cbs.ProgressCallback = [&bStop](ULONG ulProgress) -> HRESULT {
                 if (bStop)
@@ -4058,11 +4034,11 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
             if (bParseI30Data && (!m_I30ExactNameTerms.empty() || !m_I30ExactPathTerms.empty() || !m_I30Terms.empty()))
             {
                 cbs.I30Callback = [this, aCallback, &bStop, &hr](
-                    const std::shared_ptr<VolumeReader>& volreader,
-                    MFTRecord* pElt,
-                    const PINDEX_ENTRY pEntry,
-                    const PFILE_NAME pFileName,
-                    bool bCarvedEntry) {
+                                      const std::shared_ptr<VolumeReader>& volreader,
+                                      MFTRecord* pElt,
+                                      const PINDEX_ENTRY pEntry,
+                                      const PFILE_NAME pFileName,
+                                      bool bCarvedEntry) {
                     DBG_UNREFERENCED_PARAMETER(volreader);
                     DBG_UNREFERENCED_PARAMETER(bCarvedEntry);
                     DBG_UNREFERENCED_PARAMETER(pEntry);
@@ -4075,7 +4051,7 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
                             return;
                         }
                     }
-                    catch (WCHAR * e)
+                    catch (WCHAR* e)
                     {
                         log::Error(_L_, E_ABORT, L"\r\nCould not parse record : %s\r\n", e);
                     }
@@ -4104,15 +4080,15 @@ void FileFind::PrintSpecs() const
         begin(m_ExactNameTerms),
         end(m_ExactNameTerms),
         [this](const pair<std::wstring, std::shared_ptr<SearchTerm>>& aPair) {
-        log::Info(_L_, L"\t%s\r\n", aPair.second->GetDescription().c_str());
-    });
+            log::Info(_L_, L"\t%s\r\n", aPair.second->GetDescription().c_str());
+        });
 
     std::for_each(
         begin(m_ExactPathTerms),
         end(m_ExactPathTerms),
         [this](const pair<std::wstring, std::shared_ptr<SearchTerm>>& aPair) {
-        log::Info(_L_, L"\t%s\r\n", aPair.second->GetDescription().c_str());
-    });
+            log::Info(_L_, L"\t%s\r\n", aPair.second->GetDescription().c_str());
+        });
 
     std::for_each(begin(m_Terms), end(m_Terms), [this](const std::shared_ptr<SearchTerm>& aTerm) {
         log::Info(_L_, L"\t%s\r\n", aTerm->GetDescription().c_str());
