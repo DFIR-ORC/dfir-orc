@@ -610,6 +610,7 @@ set(SRC_UTILITIES
     "Utils/Iconv.cpp"
     "Utils/Iconv.h"
     "Utils/MakeArray.h"
+    "Utils/TypeTraits.h"
 )
 
 source_group(Utilities FILES ${SRC_UTILITIES})
