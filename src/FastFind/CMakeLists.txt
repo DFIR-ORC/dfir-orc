@@ -10,7 +10,7 @@
 include(${ORC_ROOT}/cmake/Orc.cmake)
 orc_add_compile_options()
 
-find_package(boost REQUIRED)
+find_package(Boost REQUIRED)
 find_package(VisualStudio REQUIRED)
 
 set(GENERATED_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")

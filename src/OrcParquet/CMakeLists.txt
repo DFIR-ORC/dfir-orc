@@ -10,7 +10,7 @@
 include(${ORC_ROOT}/CMake/Orc.cmake)
 orc_add_compile_options()
 
-find_package(boost REQUIRED)
+find_package(Boost REQUIRED)
 
 set(SRC "OrcParquet.cpp")
 

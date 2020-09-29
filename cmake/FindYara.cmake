@@ -8,7 +8,7 @@
 #
 
 find_package(jansson REQUIRED)
-find_package(openssl REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # Unfortunately the directory search order has 'debug' first:
 #

@@ -11,7 +11,7 @@ include(${ORC_ROOT}/cmake/Orc.cmake)
 orc_add_compile_options()
 
 find_package(7zip CONFIG REQUIRED)
-find_package(boost REQUIRED)
+find_package(Boost REQUIRED)
 find_package(fmt REQUIRED)
 find_package(tlsh CONFIG REQUIRED)
 find_package(VisualStudio REQUIRED)
