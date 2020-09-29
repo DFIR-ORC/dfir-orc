@@ -26,6 +26,20 @@ using namespace Orc;
 
 namespace fs = std::filesystem;
 
+namespace {
+
+// Enable the use of std::make_shared with Writer protected constructor
+struct WriterT : public Orc::TableOutput::Parquet::Writer
+{
+    template <typename... Args>
+    inline WriterT(Args&&... args)
+        : Writer(std::forward<Args>(args)...)
+    {
+    }
+};
+
+}  // namespace
+
 class Orc::TableOutput::Parquet::WriterTermination : public TerminationHandler
 {
 public:
@@ -48,18 +62,10 @@ HRESULT Orc::TableOutput::Parquet::WriterTermination::operator()()
     return S_OK;
 }
 
-struct Orc::TableOutput::Parquet::Writer::MakeSharedEnabler : public Orc::TableOutput::Parquet::Writer
-{
-    MakeSharedEnabler(std::unique_ptr<Options>&& options)
-        : Writer(std::move(options))
-    {
-    }
-};
-
 std::shared_ptr<Orc::TableOutput::Parquet::Writer>
 Orc::TableOutput::Parquet::Writer::MakeNew(std::unique_ptr<Options>&& options)
 {
-    auto retval = std::make_shared<MakeSharedEnabler>(std::move(options));
+    auto retval = std::make_shared<::WriterT>(std::move(options));
 
     std::wstring strDescr = L"Termination for ParquetWriter";
     retval->m_pTermination = std::make_shared<WriterTermination>(strDescr, retval);

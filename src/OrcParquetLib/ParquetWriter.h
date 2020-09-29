@@ -50,8 +50,6 @@ class Writer
     : public TableOutput::Writer
     , public TableOutput::IStreamWriter
 {
-    struct MakeSharedEnabler;
-    friend struct MakeSharedEnabler;
     friend class Orc::Test::Parquet::ParquetWriter;
 
 public:
@@ -143,9 +141,9 @@ public:
 
     virtual HRESULT WriteEndOfLine() override final;
 
-    virtual ~Writer(void);
+    virtual ~Writer();
 
-private:
+protected:
     Writer(std::unique_ptr<Options>&& options);
 
     std::unique_ptr<Options> m_Options;
