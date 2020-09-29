@@ -279,7 +279,7 @@ private:
     std::shared_ptr<Orc::TableOutput::IStreamWriter> m_tableWriter;
 
 
-    HRESULT ConfigureSampleStreams(SampleRef& sampleRef);
+    HRESULT ConfigureSampleStreams(SampleRef& sample) const;
 
     HRESULT AddSampleRefToCSV(ITableOutput& output, const SampleRef& sampleRef) const;
 

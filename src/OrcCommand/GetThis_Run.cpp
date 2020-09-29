@@ -415,6 +415,34 @@ LimitStatus SampleLimitStatus(const Limits& globalLimits, const Limits& localLim
     return SampleWithinLimits;
 }
 
+std::unique_ptr<ByteStream> ConfigureStringStream(
+    const std::shared_ptr<ByteStream> dataStream,
+    const ContentSpec& sampleSpec,
+    const ContentSpec& configSpec)
+{
+    size_t minChars, maxChars;
+    if (sampleSpec.MaxChars != 0 || sampleSpec.MinChars != 0)
+    {
+        minChars = sampleSpec.MinChars;
+        maxChars = sampleSpec.MaxChars;
+    }
+    else
+    {
+        maxChars = configSpec.MaxChars;
+        minChars = configSpec.MinChars;
+    }
+
+    auto stream = std::make_unique<StringsStream>();
+    HRESULT hr = stream->OpenForStrings(dataStream, minChars, maxChars);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to initialise strings stream");
+        return {};
+    }
+
+    return stream;
+}
+
 HRESULT RegFlushKeys(logger& _L_)
 {
     bool bSuccess = true;
@@ -452,88 +480,58 @@ Main::Main(logger pLog)
 {
 }
 
-HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
+HRESULT Main::ConfigureSampleStreams(SampleRef& sample) const
 {
     HRESULT hr = E_FAIL;
 
-    shared_ptr<ByteStream> retval;
+    _ASSERT(sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream->IsOpen() == S_OK);
 
-    _ASSERT(sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].DataStream->IsOpen() == S_OK);
+    auto& dataStream = sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream;
 
-    if (sampleRef.SampleName.empty())
-        return E_INVALIDARG;
+    // Stream are initially at eof
 
     std::shared_ptr<ByteStream> stream;
-
-    switch (sampleRef.Content.Type)
+    if (sample.Content.Type == ContentType::STRINGS)
     {
-        case ContentType::DATA:
-            stream = sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].DataStream;
-            break;
-        case ContentType::STRINGS: {
-            auto strings = std::make_shared<StringsStream>(_L_);
-            if (sampleRef.Content.MaxChars == 0 && sampleRef.Content.MinChars == 0)
-            {
-                if (FAILED(
-                        hr = strings->OpenForStrings(
-                            sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].DataStream,
-                            config.content.MinChars,
-                            config.content.MaxChars)))
-                {
-                    log::Error(_L_, hr, L"Failed to initialise strings stream\r\n");
-                    return hr;
-                }
-            }
-            else
-            {
-                if (FAILED(
-                        hr = strings->OpenForStrings(
-                            sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].DataStream,
-                            sampleRef.Content.MinChars,
-                            sampleRef.Content.MaxChars)))
-                {
-                    log::Error(_L_, hr, L"Failed to initialise strings stream\r\n");
-                    return hr;
-                }
-            }
-            stream = strings;
+        stream = ::ConfigureStringStream(dataStream, sample.Content, config.content);
+        if (stream == nullptr)
+        {
+            return E_FAIL;
         }
-        break;
-        case ContentType::RAW:
-            stream = sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].RawStream;
-            break;
-        default:
-            stream = sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].DataStream;
-            break;
-    }
-
-    std::shared_ptr<ByteStream> upstream = stream;
-
-    CryptoHashStream::Algorithm algs = config.CryptoHashAlgs;
-
-    if (algs != CryptoHashStream::Algorithm::Undefined)
-    {
-        sampleRef.HashStream = make_shared<CryptoHashStream>(_L_);
-        if (FAILED(hr = sampleRef.HashStream->OpenToRead(algs, upstream)))
-            return hr;
-        upstream = sampleRef.HashStream;
     }
     else
     {
-        upstream = stream;
+        stream = dataStream;
     }
 
-    FuzzyHashStream::Algorithm fuzzy_algs = config.FuzzyHashAlgs;
-    if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
+    const auto algs = config.CryptoHashAlgs;
+    if (algs != CryptoHashStream::Algorithm::Undefined)
     {
-        sampleRef.FuzzyHashStream = make_shared<FuzzyHashStream>(_L_);
-        if (FAILED(hr = sampleRef.FuzzyHashStream->OpenToRead(fuzzy_algs, upstream)))
+        sample.HashStream = std::make_shared<CryptoHashStream>();
+        hr = sample.HashStream->OpenToRead(algs, stream);
+        if (FAILED(hr))
+        {
             return hr;
-        upstream = sampleRef.FuzzyHashStream;
+        }
+
+        stream = sample.HashStream;
     }
 
-    sampleRef.CopyStream = upstream;
-    sampleRef.SampleSize = sampleRef.CopyStream->GetSize();
+    const auto fuzzyAlgs = config.FuzzyHashAlgs;
+    if (fuzzyAlgs != FuzzyHashStream::Algorithm::Undefined)
+    {
+        sample.FuzzyHashStream = std::make_shared<FuzzyHashStream>();
+        hr = sample.FuzzyHashStream->OpenToRead(fuzzyAlgs, stream);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        stream = sample.FuzzyHashStream;
+    }
+
+    sample.CopyStream = stream;
+    sample.SampleSize = sample.CopyStream->GetSize();
     return S_OK;
 }
 
