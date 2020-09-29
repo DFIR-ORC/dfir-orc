@@ -278,31 +278,20 @@ private:
     std::shared_ptr<Orc::ArchiveCreate> m_compressor;
     std::shared_ptr<Orc::TableOutput::IStreamWriter> m_tableWriter;
 
-    static HRESULT CreateSampleFileName(
-        const ContentSpec& content,
-        const PFILE_NAME pFileName,
-        const std::wstring& DataName,
-        DWORD idx,
-        std::wstring& SampleFileName);
 
     HRESULT ConfigureSampleStreams(SampleRef& sampleRef);
 
-    static LimitStatus SampleLimitStatus(const Limits& GlobalLimits, const Limits& LocalLimits, DWORDLONG DataSize);
-
-    HRESULT
-    AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std::shared_ptr<FileFind::Match>& aMatch);
-
     HRESULT AddSampleRefToCSV(ITableOutput& output, const SampleRef& sampleRef) const;
 
-    HRESULT WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, const SampleSet& samples) const;
-    HRESULT WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, const SampleRef& sample) const;
+    HRESULT WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, SampleSet& samples) const;
+    HRESULT WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, SampleRef& sample) const;
 
-    HRESULT WriteSamples(const std::filesystem::path& outputDir, const SampleSet& samples) const;
-    HRESULT WriteSample(const std::filesystem::path& outputDir, const SampleRef& sample) const;
+    HRESULT WriteSamples(const std::filesystem::path& outputDir, SampleSet& samples) const;
+    HRESULT WriteSample(const std::filesystem::path& outputDir, SampleRef& sample) const;
 
     void FinalizeHashes(const Main::SampleRef& sample) const;
 
-    HRESULT CollectSamples(const OutputSpec& output, const SampleSet& samples);
+    HRESULT CollectSamples(const OutputSpec& output, SampleSet& samples);
 
     HRESULT FindMatchingSamples();
 

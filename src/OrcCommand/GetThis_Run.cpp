@@ -28,6 +28,7 @@
 #include "CryptoHashStream.h"
 #include "ParameterCheck.h"
 #include "ArchiveExtract.h"
+#include "ScopeGuard.h"
 
 #include "SnapshotVolumeReader.h"
 
@@ -214,46 +215,36 @@ HRESULT CopyStream(Orc::ByteStream& src, const fs::path& outPath)
     return S_OK;
 }
 
-}  // namespace
-
-Main::Main(logger pLog)
-    : UtilitiesMain(pLog)
-    , config(pLog)
-    , FileFinder(pLog)
-    , ComputerName(::RetrieveComputerName(L"Default", pLog))
+std::wstring
+GetMatchFullName(const FileFind::Match::NameMatch& nameMatch, const FileFind::Match::AttributeMatch& attrMatch)
 {
+    if (attrMatch.AttrName.empty())
+    {
+        return nameMatch.FullPathName;
+    }
+
+    std::wstring name;
+    name.reserve(nameMatch.FullPathName.length() + 1 + attrMatch.AttrName.length());
+    name.assign(nameMatch.FullPathName);
+
+    switch (attrMatch.Type)
+    {
+        case $DATA:
+            name.append(L":");
+            break;
+        default:
+            name.append(L"#");
+            break;
+    }
+
+    name.append(attrMatch.AttrName);
+    return name;
 }
 
-HRESULT Main::RegFlushKeys()
+std::wstring
+CreateSampleFileName(const ContentSpec& content, const PFILE_NAME pFileName, const wstring& DataName, DWORD idx)
 {
-    bool bSuccess = true;
-    DWORD dwGLE = 0L;
-
-    log::Info(_L_, L"\r\nFlushing HKEY_LOCAL_MACHINE\r\n");
-    dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
-    if (dwGLE != ERROR_SUCCESS)
-        bSuccess = false;
-
-    log::Info(_L_, L"Flushing HKEY_USERS\r\n");
-    dwGLE = RegFlushKey(HKEY_USERS);
-    if (dwGLE != ERROR_SUCCESS)
-        bSuccess = false;
-
-    if (!bSuccess)
-        return HRESULT_FROM_WIN32(dwGLE);
-    return S_OK;
-}
-
-HRESULT Main::CreateSampleFileName(
-    const ContentSpec& content,
-    const PFILE_NAME pFileName,
-    const wstring& DataName,
-    DWORD idx,
-    wstring& SampleFileName)
-{
-    if (pFileName == NULL)
-        return E_POINTER;
-
+    std::wstring sampleFilename;
     WCHAR tmpName[MAX_PATH];
     WCHAR* pContent = NULL;
 
@@ -356,13 +347,101 @@ HRESULT Main::CreateSampleFileName(
         }
     }
 
-    SampleFileName.assign(tmpName);
+    sampleFilename.assign(tmpName);
 
-    std::for_each(SampleFileName.begin(), SampleFileName.end(), [=](WCHAR& Item) {
+    std::for_each(sampleFilename.begin(), sampleFilename.end(), [=](WCHAR& Item) {
         if (iswspace(Item) || Item == L':' || Item == L'#')
             Item = L'_';
     });
 
+    return sampleFilename;
+}
+
+LimitStatus SampleLimitStatus(const Limits& globalLimits, const Limits& localLimits, DWORDLONG dataSize)
+{
+    if (globalLimits.bIgnoreLimits)
+    {
+        return LimitStatus::NoLimits;
+    }
+
+    if (globalLimits.dwMaxSampleCount != INFINITE)
+    {
+        if (globalLimits.dwAccumulatedSampleCount >= globalLimits.dwMaxSampleCount)
+        {
+            return GlobalSampleCountLimitReached;
+        }
+    }
+
+    if (localLimits.dwMaxSampleCount != INFINITE)
+    {
+        if (localLimits.dwAccumulatedSampleCount >= localLimits.dwMaxSampleCount)
+        {
+            return LocalSampleCountLimitReached;
+        }
+    }
+
+    if (globalLimits.dwlMaxBytesPerSample != INFINITE)
+    {
+        if (dataSize > globalLimits.dwlMaxBytesPerSample)
+        {
+            return GlobalMaxBytesPerSample;
+        }
+    }
+
+    if (globalLimits.dwlMaxBytesTotal != INFINITE)
+    {
+        if (dataSize + globalLimits.dwlAccumulatedBytesTotal > globalLimits.dwlMaxBytesTotal)
+        {
+            return GlobalMaxBytesTotal;
+        }
+    }
+
+    if (localLimits.dwlMaxBytesPerSample != INFINITE)
+    {
+        if (dataSize > localLimits.dwlMaxBytesPerSample)
+        {
+            return LocalMaxBytesPerSample;
+        }
+    }
+
+    if (localLimits.dwlMaxBytesTotal != INFINITE)
+    {
+        if (dataSize + localLimits.dwlAccumulatedBytesTotal > localLimits.dwlMaxBytesTotal)
+        {
+            return LocalMaxBytesTotal;
+        }
+    }
+
+    return SampleWithinLimits;
+}
+
+}  // namespace
+
+Main::Main(logger pLog)
+    : UtilitiesMain(pLog)
+    , config(pLog)
+    , FileFinder(pLog)
+    , ComputerName(::RetrieveComputerName(L"Default", pLog))
+{
+}
+
+HRESULT Main::RegFlushKeys()
+{
+    bool bSuccess = true;
+    DWORD dwGLE = 0L;
+
+    Log::Debug(L"Flushing HKEY_LOCAL_MACHINE");
+    dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
+    if (dwGLE != ERROR_SUCCESS)
+        bSuccess = false;
+
+    Log::Debug(L"Flushing HKEY_USERS");
+    dwGLE = RegFlushKey(HKEY_USERS);
+    if (dwGLE != ERROR_SUCCESS)
+        bSuccess = false;
+
+    if (!bSuccess)
+        return HRESULT_FROM_WIN32(dwGLE);
     return S_OK;
 }
 
@@ -449,41 +528,6 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
     sampleRef.CopyStream = upstream;
     sampleRef.SampleSize = sampleRef.CopyStream->GetSize();
     return S_OK;
-}
-
-LimitStatus Main::SampleLimitStatus(const Limits& GlobalLimits, const Limits& LocalLimits, DWORDLONG DataSize)
-{
-    if (GlobalLimits.bIgnoreLimits)
-        return NoLimits;
-
-    // Sample count reached?
-
-    if (GlobalLimits.dwMaxSampleCount != INFINITE)
-        if (GlobalLimits.dwAccumulatedSampleCount >= GlobalLimits.dwMaxSampleCount)
-            return GlobalSampleCountLimitReached;
-
-    if (LocalLimits.dwMaxSampleCount != INFINITE)
-        if (LocalLimits.dwAccumulatedSampleCount >= LocalLimits.dwMaxSampleCount)
-            return LocalSampleCountLimitReached;
-
-    //  Global limits
-    if (GlobalLimits.dwlMaxBytesPerSample != INFINITE)
-        if (DataSize > GlobalLimits.dwlMaxBytesPerSample)
-            return GlobalMaxBytesPerSample;
-
-    if (GlobalLimits.dwlMaxBytesTotal != INFINITE)
-        if (DataSize + GlobalLimits.dwlAccumulatedBytesTotal > GlobalLimits.dwlMaxBytesTotal)
-            return GlobalMaxBytesTotal;
-
-    // Local limits  bytes are now collected?
-    if (LocalLimits.dwlMaxBytesPerSample != INFINITE)
-        if (DataSize > LocalLimits.dwlMaxBytesPerSample)
-            return LocalMaxBytesPerSample;
-    if (LocalLimits.dwlMaxBytesTotal != INFINITE)
-        if (DataSize + LocalLimits.dwlAccumulatedBytesTotal > LocalLimits.dwlMaxBytesTotal)
-            return LocalMaxBytesTotal;
-
-    return SampleWithinLimits;
 }
 
 HRESULT
@@ -608,121 +652,15 @@ Main::AddSampleRefToCSV(ITableOutput& output, const Main::SampleRef& sample) con
     return S_OK;
 }
 
-HRESULT
-Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std::shared_ptr<FileFind::Match>& aMatch)
+HRESULT Main::WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, SampleRef& sample) const
 {
-    HRESULT hr = E_FAIL;
-    size_t sIndex = 0;
-
-    for (const auto& anAttr : aMatch->MatchingAttributes)
-    {
-        SampleRef sampleRef;
-        sampleRef.Matches.push_back(aMatch);
-
-        sampleRef.VolumeSerial = aMatch->VolumeReader->VolumeSerialNumber();
-
-        auto pSnapshotReader = std::dynamic_pointer_cast<SnapshotVolumeReader>(aMatch->VolumeReader);
-
-        if (pSnapshotReader)
+    const auto onItemArchivedCb = [this, sample](HRESULT hrArchived) {
+        if (FAILED(hrArchived))
         {
-            sampleRef.SnapshotID = pSnapshotReader->GetSnapshotID();
-        }
-        else
-        {
-            sampleRef.SnapshotID = GUID_NULL;
+            log::Error(_L_, hrArchived, L"Failed to add sample '%s' to archive\r\n", sample.SampleName);
+            // Do not return
         }
 
-        sampleRef.FRN = aMatch->FRN;
-        sampleRef.InstanceID = anAttr.InstanceID;
-        sampleRef.AttributeIndex = sIndex++;
-
-        switch (status)
-        {
-            case NoLimits:
-            case SampleWithinLimits:
-                sampleRef.OffLimits = false;
-                break;
-            case GlobalSampleCountLimitReached:
-            case GlobalMaxBytesPerSample:
-            case GlobalMaxBytesTotal:
-            case LocalSampleCountLimitReached:
-            case LocalMaxBytesPerSample:
-            case LocalMaxBytesTotal:
-            case FailedToComputeLimits:
-                sampleRef.OffLimits = true;
-                break;
-        }
-
-        SampleSet::iterator prevSample = Samples.find(sampleRef);
-
-        if (prevSample != end(Samples))
-        {
-            // this sample is already cabbed
-            log::Verbose(
-                _L_,
-                L"Not adding duplicate sample %s to archive\r\n",
-                aMatch->MatchingNames.front().FullPathName.c_str());
-            SampleRef& item = const_cast<SampleRef&>(*prevSample);
-            hr = S_FALSE;
-        }
-        else
-        {
-            for (auto& name : aMatch->MatchingNames)
-            {
-                log::Verbose(_L_, L"Adding sample %s to archive\r\n", name.FullPathName.c_str());
-
-                sampleRef.Content = aSpec.Content;
-                sampleRef.CollectionDate = CollectionDate;
-
-                wstring CabSampleName;
-                DWORD dwIdx = 0L;
-                std::unordered_set<std::wstring>::iterator it;
-                do
-                {
-                    if (FAILED(
-                            hr = CreateSampleFileName(
-                                sampleRef.Content, name.FILENAME(), anAttr.AttrName, dwIdx, CabSampleName)))
-                        break;
-
-                    if (!aSpec.Name.empty())
-                    {
-                        CabSampleName.insert(0, L"\\");
-                        CabSampleName.insert(0, aSpec.Name);
-                    }
-                    it = SampleNames.find(CabSampleName);
-                    dwIdx++;
-
-                } while (it != end(SampleNames));
-
-                SampleNames.insert(CabSampleName);
-                sampleRef.SampleName = CabSampleName;
-            }
-
-            if (FAILED(hr = ConfigureSampleStreams(sampleRef)))
-            {
-                log::Error(_L_, hr, L"Failed to configure sample reference for %s\r\n", sampleRef.SampleName.c_str());
-            }
-            Samples.insert(sampleRef);
-        }
-    }
-
-    if (hr == S_FALSE)
-        return hr;
-    return S_OK;
-}
-
-HRESULT Main::WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, const SampleRef& sample) const
-{
-    if (sample.OffLimits)
-    {
-        return S_OK;
-    }
-
-    std::wstring strName;
-    sample.Matches.front()->GetMatchFullName(
-        sample.Matches.front()->MatchingNames.front(), sample.Matches.front()->MatchingAttributes.front(), strName);
-
-    const auto itemArchivedCb = [this, &sample](HRESULT hrArchived) {
         FinalizeHashes(sample);
 
         HRESULT hr = AddSampleRefToCSV(m_tableWriter->GetTableOutput(), sample);
@@ -731,27 +669,39 @@ HRESULT Main::WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, cons
             log::Error(
                 _L_,
                 hr,
-                L"Failed to add sample %s metadata to csv\r\n",
+                L"Failed to add sample '%s' metadata to csv\r\n",
                 sample.Matches.front()->MatchingNames.front().FullPathName.c_str());
         }
     };
 
-    HRESULT hr = compressor->AddStream(sample.SampleName.c_str(), strName.c_str(), sample.CopyStream, itemArchivedCb);
+    if (sample.OffLimits)
+    {
+        onItemArchivedCb(S_OK);
+        return S_OK;
+    }
+
+    const std::wstring fullName = ::GetMatchFullName(
+        sample.Matches.front()->MatchingNames.front(), sample.Matches.front()->MatchingAttributes.front());
+
+    HRESULT hr =
+        compressor->AddStream(sample.SampleName.c_str(), fullName.c_str(), sample.CopyStream, onItemArchivedCb);
     if (FAILED(hr))
     {
         log::Error(_L_, hr, L"Failed to add sample %s\r\n", sample.SampleName.c_str());
+        onItemArchivedCb(hr);
     }
 
-    return S_OK;
+    return hr;
 }
 
-HRESULT Main::WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, const SampleSet& samples) const
+HRESULT Main::WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, SampleSet& samples) const
 {
     log::Info(_L_, L"\r\nAdding matching samples to archive:\r\n");
 
-    for (const auto& sample : samples)
+    for (auto& sample : samples)
     {
-        HRESULT hr = WriteSample(compressor, sample);
+        #pragma message("### please remove this const_cast")
+        HRESULT hr = WriteSample(compressor, const_cast<SampleRef&>(sample));
         if (FAILED(hr))
         {
             log::Error(_L_, hr, L"Failed to write sample '%s'", sample.SampleName.c_str());
@@ -762,34 +712,19 @@ HRESULT Main::WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, con
     return S_OK;
 }
 
-HRESULT Main::WriteSample(const std::filesystem::path& outputDir, const SampleRef& sample) const
+HRESULT Main::WriteSample(const std::filesystem::path& outputDir, SampleRef& sample) const
 {
     HRESULT hr = E_FAIL;
 
-    if (sample.OffLimits)
+    if (!sample.OffLimits)
     {
-        return S_OK;
-    }
-
-    const fs::path sampleFile = outputDir / fs::path(sample.SampleName);
-
-    std::error_code ec;
-    fs::create_directories(sampleFile.parent_path(), ec);
-    if (ec)
-    {
-        hr = HRESULT_FROM_WIN32(ec.value());
-        log::Error(_L_, HRESULT_FROM_WIN32(ec.value()), L"Failed to create sample directory");
-        return hr;
-    }
-
-    // As SampleSet is an std::set, iterator are const (key is built on value). It is safe to const_cast here
-    // because the stream is not part of the key
-    ByteStream& src = const_cast<ByteStream&>(*sample.CopyStream);
-    hr = ::CopyStream(src, sampleFile, _L_);
-    if (FAILED(hr))
-    {
-        log::Error(_L_, hr, L"Failed to copy stream of '%s'", sampleFile);
-        return hr;
+        const fs::path sampleFile = outputDir / fs::path(sample.SampleName);
+        hr = ::CopyStream(*sample.CopyStream, sampleFile, _L_);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to copy stream of '%s'", sampleFile);
+            // Do not return
+        }
     }
 
     FinalizeHashes(sample);
@@ -802,20 +737,20 @@ HRESULT Main::WriteSample(const std::filesystem::path& outputDir, const SampleRe
             hr,
             L"Failed to add sample %s metadata to csv\r\n",
             sample.Matches.front()->MatchingNames.front().FullPathName.c_str());
-        return hr;
     }
 
-    return S_OK;
+    return hr;
 }
 
 HRESULT
-Main::WriteSamples(const fs::path& outputDir, const SampleSet& samples) const
+Main::WriteSamples(const fs::path& outputDir, SampleSet& samples) const
 {
     log::Info(_L_, L"\r\nCopying matching samples to %s\r\n", outputDir.c_str());
 
     for (auto& sample : samples)
     {
-        HRESULT hr = WriteSample(outputDir, sample);
+        #pragma message("### please remove this const_cast")
+        HRESULT hr = WriteSample(outputDir, const_cast<SampleRef&>(sample));
         if (FAILED(hr))
         {
             log::Error(_L_, hr, L"Failed to write sample '%s'", sample.SampleName.c_str());
@@ -1010,7 +945,7 @@ HRESULT Main::CloseDirectoryOutput()
     return S_OK;
 }
 
-HRESULT Main::CollectSamples(const OutputSpec& output, const SampleSet& samples)
+HRESULT Main::CollectSamples(const OutputSpec& output, SampleSet& samples)
 {
     if (OutputSpec::Archive == output.Type)
     {
@@ -1066,36 +1001,107 @@ HRESULT Main::FindMatchingSamples()
             return;
         }
 
-        for (const auto& attr : aMatch->MatchingAttributes)
+        SampleRef sample;
+        sample.FRN = aMatch->FRN;
+        sample.VolumeSerial = aMatch->VolumeReader->VolumeSerialNumber();
+        sample.Content = aSpecIt->Content;
+        sample.CollectionDate = CollectionDate;
+
+        auto pSnapshotReader = std::dynamic_pointer_cast<SnapshotVolumeReader>(aMatch->VolumeReader);
+        if (pSnapshotReader)
         {
-            std::wstring strName;
+            sample.SnapshotID = pSnapshotReader->GetSnapshotID();
+        }
+        else
+        {
+            sample.SnapshotID = GUID_NULL;
+        }
 
-            aMatch->GetMatchFullName(aMatch->MatchingNames.front(), attr, strName);
+        sample.Matches.push_back(aMatch);
 
-            DWORDLONG dwlDataSize = attr.DataStream->GetSize();
-            LimitStatus status = SampleLimitStatus(GlobalLimits, aSpecIt->PerSampleLimits, dwlDataSize);
+        for (size_t i = 0; i < aMatch->MatchingAttributes.size(); ++i)
+        {
+            const auto& attribute = aMatch->MatchingAttributes[i];
 
-            hr = AddSamplesForMatch(status, *aSpecIt, aMatch);
+            // This must be set early has it is part of the key used by the Samples set
+            sample.AttributeIndex = i;
+            sample.InstanceID = attribute.InstanceID;
+            if (Samples.find(sample) != std::cend(Samples))
+            {
+                log::Verbose(
+                    _L_,
+                    L"Not adding duplicate sample %s to archive\r\n",
+                    aMatch->MatchingNames.front().FullPathName.c_str());
+
+                continue;
+            }
+
+            const std::wstring name = ::GetMatchFullName(aMatch->MatchingNames.front(), attribute);
+            LimitStatus status =
+                ::SampleLimitStatus(GlobalLimits, aSpecIt->PerSampleLimits, attribute.DataStream->GetSize());
+
+            switch (status)
+            {
+                case NoLimits:
+                case SampleWithinLimits:
+                    sample.OffLimits = false;
+                    break;
+                case GlobalSampleCountLimitReached:
+                case GlobalMaxBytesPerSample:
+                case GlobalMaxBytesTotal:
+                case LocalSampleCountLimitReached:
+                case LocalMaxBytesPerSample:
+                case LocalMaxBytesTotal:
+                case FailedToComputeLimits:
+                    sample.OffLimits = true;
+                    break;
+            }
+
+            std::wstring sampleName;
+            DWORD dwIdx = 0L;
+            std::unordered_set<std::wstring>::iterator it;
+
+            do
+            {
+                const auto filename = aMatch->MatchingNames[0].FILENAME();
+                if (filename == nullptr)
+                {
+                    break;
+                }
+
+                sampleName = ::CreateSampleFileName(sample.Content, filename, attribute.AttrName, dwIdx);
+                if (!aSpecIt->Name.empty())
+                {
+                    sampleName.insert(0, L"\\");
+                    sampleName.insert(0, aSpecIt->Name);
+                }
+
+                it = SampleNames.find(sampleName);
+                dwIdx++;
+
+            } while (it != std::cend(SampleNames));
+
+            SampleNames.insert(sampleName);
+            sample.SampleName = sampleName;
+
+            hr = ConfigureSampleStreams(sample);
             if (FAILED(hr))
             {
-                log::Error(_L_, hr, L"\tFailed to add %s\r\n", strName.c_str());
+                log::Error(_L_, hr, L"Failed to configure sample reference for %s\r\n", sample.SampleName.c_str());
             }
+
+            Samples.insert(sample);
 
             switch (status)
             {
                 case NoLimits:
                 case SampleWithinLimits: {
-                    if (hr == S_FALSE)
                     {
-                        log::Info(_L_, L"\t%s is already collected\r\n", strName.c_str());
-                    }
-                    else
-                    {
-                        log::Info(_L_, L"\t%s matched (%d bytes)\r\n", strName.c_str(), dwlDataSize);
+                        log::Info(_L_, L"\t%s matched (%d bytes)\r\n", name.c_str(), attribute.DataStream->GetSize());
 
-                        aSpecIt->PerSampleLimits.dwlAccumulatedBytesTotal += dwlDataSize;
+                        aSpecIt->PerSampleLimits.dwlAccumulatedBytesTotal += attribute.DataStream->GetSize();
                         aSpecIt->PerSampleLimits.dwAccumulatedSampleCount++;
-                        GlobalLimits.dwlAccumulatedBytesTotal += dwlDataSize;
+                        GlobalLimits.dwlAccumulatedBytesTotal += attribute.DataStream->GetSize();
                         GlobalLimits.dwAccumulatedSampleCount++;
                     }
                 }
@@ -1105,7 +1111,7 @@ HRESULT Main::FindMatchingSamples()
                     log::Info(
                         _L_,
                         L"\t%s : Global sample count reached (%d)\r\n",
-                        strName.c_str(),
+                        name.c_str(),
                         GlobalLimits.dwMaxSampleCount);
 
                     GlobalLimits.bMaxSampleCountReached = true;
@@ -1115,7 +1121,7 @@ HRESULT Main::FindMatchingSamples()
                     log::Info(
                         _L_,
                         L"\t%s : Exceeds global per sample size limit (%I64d)\r\n",
-                        strName.c_str(),
+                        name.c_str(),
                         GlobalLimits.dwlMaxBytesPerSample);
 
                     GlobalLimits.bMaxBytesPerSampleReached = true;
@@ -1125,7 +1131,7 @@ HRESULT Main::FindMatchingSamples()
                     log::Info(
                         _L_,
                         L"\t%s : Global total sample size limit reached (%I64d)\r\n",
-                        strName.c_str(),
+                        name.c_str(),
                         GlobalLimits.dwlMaxBytesTotal);
 
                     GlobalLimits.bMaxBytesTotalReached = true;
@@ -1135,7 +1141,7 @@ HRESULT Main::FindMatchingSamples()
                     log::Info(
                         _L_,
                         L"\t%s : sample count reached (%d)\r\n",
-                        strName.c_str(),
+                        name.c_str(),
                         aSpecIt->PerSampleLimits.dwMaxSampleCount);
 
                     aSpecIt->PerSampleLimits.bMaxSampleCountReached = true;
@@ -1145,7 +1151,7 @@ HRESULT Main::FindMatchingSamples()
                     log::Info(
                         _L_,
                         L"\t%s : Exceeds per sample size limit (%I64d)\r\n",
-                        strName.c_str(),
+                        name.c_str(),
                         aSpecIt->PerSampleLimits.dwlMaxBytesPerSample);
 
                     aSpecIt->PerSampleLimits.bMaxBytesPerSampleReached = true;
@@ -1155,7 +1161,7 @@ HRESULT Main::FindMatchingSamples()
                     log::Info(
                         _L_,
                         L"\t%s : total sample size limit reached (%I64d)\r\n",
-                        strName.c_str(),
+                        name.c_str(),
                         aSpecIt->PerSampleLimits.dwlMaxBytesTotal);
 
                     aSpecIt->PerSampleLimits.bMaxBytesTotalReached = true;
