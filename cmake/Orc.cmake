@@ -43,6 +43,11 @@ add_compile_options(
     /bigobj
 )
 
+# TODO: enable SAFESEH when clang add support
+if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    add_link_options("/SAFESEH:NO")
+endif()
+
 list(APPEND COMPILE_OPTIONS_RELEASE
     /guard:cf  # Enable control flow guard
 )
