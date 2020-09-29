@@ -263,65 +263,65 @@ Location::Type LocationSet::DeduceLocationType(const WCHAR* szLocation)
     HRESULT hr = E_FAIL;
     Location::Type retval = Location::Type::Undetermined;
 
-    wregex physical_regex(REGEX_PHYSICALDRIVE, std::regex_constants::icase);
-    wregex disk_regex(REGEX_DISK, std::regex_constants::icase);
-    wregex partition_regex(REGEX_PARTITIONVOLUME, std::regex_constants::icase);
-    wregex interface_regex(REGEX_INTERFACE, std::regex_constants::icase);
-    wregex systemstorage_regex(REGEX_SYSTEMSTORAGE, std::regex_constants::icase);
-    wregex snapshot_regex(REGEX_SNAPSHOT, std::regex_constants::icase);
-    wregex volume_regex(REGEX_MOUNTED_VOLUME, std::regex_constants::icase);
-    wregex harddiskvolume_regex(REGEX_MOUNTED_HARDDISKVOLUME, std::regex_constants::icase);
-    wregex drive_regex(REGEX_MOUNTED_DRIVE);
-    wregex image_regex(REGEX_IMAGE, std::regex_constants::icase);
+    std::wregex physical_regex(REGEX_PHYSICALDRIVE, std::regex_constants::icase);
+    std::wregex disk_regex(REGEX_DISK, std::regex_constants::icase);
+    std::wregex partition_regex(REGEX_PARTITIONVOLUME, std::regex_constants::icase);
+    std::wregex interface_regex(REGEX_INTERFACE, std::regex_constants::icase);
+    std::wregex systemstorage_regex(REGEX_SYSTEMSTORAGE, std::regex_constants::icase);
+    std::wregex snapshot_regex(REGEX_SNAPSHOT, std::regex_constants::icase);
+    std::wregex volume_regex(REGEX_MOUNTED_VOLUME, std::regex_constants::icase);
+    std::wregex harddiskvolume_regex(REGEX_MOUNTED_HARDDISKVOLUME, std::regex_constants::icase);
+    std::wregex drive_regex(REGEX_MOUNTED_DRIVE);
+    std::wregex image_regex(REGEX_IMAGE, std::regex_constants::icase);
 
-    wstring Location(szLocation);
-    wsmatch m;
+    std::wstring Location(szLocation);
+    std::wsmatch m;
 
-    if (regex_match(Location, m, physical_regex))
+    if (std::regex_match(Location, m, physical_regex))
     {
         if (m[REGEX_PHYSICALDRIVE_PARTITION_NUM].matched || m[REGEX_PHYSICALDRIVE_OFFSET].matched)
             retval = Location::Type::PhysicalDriveVolume;
         else
             retval = Location::Type::PhysicalDrive;
     }
-    else if (regex_match(Location, m, disk_regex))
+    else if (std::regex_match(Location, m, disk_regex))
     {
         if (m[REGEX_DISK_PARTITION_NUM].matched || m[REGEX_DISK_OFFSET].matched)
             retval = Location::Type::PhysicalDriveVolume;
         else
             retval = Location::Type::PhysicalDrive;
     }
-    else if (regex_match(Location, m, partition_regex))
+    else if (std::regex_match(Location, m, partition_regex))
     {
         retval = Location::Type::PartitionVolume;
     }
-    else if (regex_match(Location, m, interface_regex))
+    else if (std::regex_match(Location, m, interface_regex))
     {
         if (m[REGEX_INTERFACE_PARTITION_NUM].matched || m[REGEX_INTERFACE_OFFSET].matched)
             retval = Location::Type::DiskInterfaceVolume;
         else
             retval = Location::Type::DiskInterface;
     }
-    else if (regex_match(Location, m, snapshot_regex))
+    else if (std::regex_match(Location, m, snapshot_regex))
     {
         retval = Location::Type::Snapshot;
     }
-    else if (regex_match(Location, m, volume_regex))
+    else if (std::regex_match(Location, m, volume_regex))
     {
         retval = Location::Type::MountedVolume;
     }
-    else if (regex_match(Location, m, harddiskvolume_regex))
+    else if (std::regex_match(Location, m, harddiskvolume_regex))
     {
         retval = Location::Type::MountedVolume;
     }
-    else if (regex_match(Location, m, systemstorage_regex))
+    else if (std::regex_match(Location, m, systemstorage_regex))
     {
         if (m[REGEX_SYSTEMSTORAGE_PARTITION_NUM].matched || m[REGEX_SYSTEMSTORAGE_OFFSET].matched)
             retval = Location::Type::SystemStorageVolume;
         else
             retval = Location::Type::SystemStorage;
     }
-    else if (regex_match(Location, m, image_regex))
+    else if (std::regex_match(Location, m, image_regex))
     {
         // File or Directory???
         if (m[REGEX_IMAGE_SPEC].matched)
