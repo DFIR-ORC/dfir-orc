@@ -136,19 +136,6 @@ set(SRC_GETTHIS
 
 source_group(GetThis FILES ${SRC_GETTHIS})
 
-set(SRC_IMPORTDATA
-    "ConfigFile_ImportData.cpp"
-    "ConfigFile_ImportData.h"
-    "ImportData.h"
-    "ImportDataSqlSchema.xml"
-    "ImportData_Config.cpp"
-    "ImportData_Output.cpp"
-    "ImportData_Run.cpp"
-    "ImportDataSqlSchema.xml"
-)
-
-source_group(ImportData FILES ${SRC_IMPORTDATA})
-
 set(SRC_MOTHERSHIP
     "Mothership.h"
     "Mothership_Config.cpp"
@@ -263,7 +250,6 @@ add_library(OrcCommand
         ${SRC_GETSAMPLES}
         ${SRC_GETSECTORS}
         ${SRC_GETTHIS}
-        ${SRC_IMPORTDATA}
         ${SRC_MOTHERSHIP}
         ${SRC_NTFSINFO}
         ${SRC_NTFSUTIL}
