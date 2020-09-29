@@ -160,31 +160,6 @@ struct fmt::formatter<stx::v1::Result<T, HRESULT>, wchar_t>
     }
 };
 
-template <>
-template <typename FormatContext>
-auto fmt::formatter<stx::v1::Result<Orc::VoidResult, HRESULT>, wchar_t>::format(
-    const stx::v1::Result<Orc::VoidResult, HRESULT>& result,
-    FormatContext& ctx)
-{
-    if (result.is_err())
-    {
-        if (bMsg)
-        {
-            if (bhr)
-            {
-                fmt::format_to(ctx.out(), L"{:#x}", (ULONG32)result.err_value());
-                ctx.out() = L':';
-                ctx.out()++;
-            }
-            formatMessage(result.err_value(), ctx);
-        }
-        else
-            fmt::format_to(ctx.out(), L"{:#x}", (ULONG32)result.err_value());
-    }
-    else
-        fmt::format_to(ctx.out(), L"S_OK");
-    return ctx.out();
-}
 
 #    endif
 
