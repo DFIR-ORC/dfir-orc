@@ -535,6 +535,12 @@ set(SRC_INOUT_TABLEOUTPUT_SQL
 
 source_group(In&Out\\TableOutput\\SQL FILES ${SRC_INOUT_TABLEOUTPUT_SQL})
 
+set(SRC_INOUT_TEXT
+    "Output/Text/Format.h"
+)
+
+source_group(In&Out\\Text FILES ${SRC_INOUT_TEXT})
+
 set(SRC_INOUT_UPLOAD
     "BITSAgent.cpp"
     "BITSAgent.h"
