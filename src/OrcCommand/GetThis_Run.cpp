@@ -415,6 +415,33 @@ LimitStatus SampleLimitStatus(const Limits& globalLimits, const Limits& localLim
     return SampleWithinLimits;
 }
 
+HRESULT RegFlushKeys(logger& _L_)
+{
+    bool bSuccess = true;
+    DWORD dwGLE = 0L;
+
+    Log::Debug(L"Flushing HKEY_LOCAL_MACHINE");
+    dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
+    if (dwGLE != ERROR_SUCCESS)
+    {
+        bSuccess = false;
+    }
+
+    Log::Debug(L"Flushing HKEY_USERS");
+    dwGLE = RegFlushKey(HKEY_USERS);
+    if (dwGLE != ERROR_SUCCESS)
+    {
+        bSuccess = false;
+    }
+
+    if (!bSuccess)
+    {
+        return HRESULT_FROM_WIN32(dwGLE);
+    }
+
+    return S_OK;
+}
+
 }  // namespace
 
 Main::Main(logger pLog)
@@ -423,26 +450,6 @@ Main::Main(logger pLog)
     , FileFinder(pLog)
     , ComputerName(::RetrieveComputerName(L"Default", pLog))
 {
-}
-
-HRESULT Main::RegFlushKeys()
-{
-    bool bSuccess = true;
-    DWORD dwGLE = 0L;
-
-    Log::Debug(L"Flushing HKEY_LOCAL_MACHINE");
-    dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
-    if (dwGLE != ERROR_SUCCESS)
-        bSuccess = false;
-
-    Log::Debug(L"Flushing HKEY_USERS");
-    dwGLE = RegFlushKey(HKEY_USERS);
-    if (dwGLE != ERROR_SUCCESS)
-        bSuccess = false;
-
-    if (!bSuccess)
-        return HRESULT_FROM_WIN32(dwGLE);
-    return S_OK;
 }
 
 HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
@@ -1225,6 +1232,7 @@ HRESULT Main::CloseOutput()
 HRESULT Main::Run()
 {
     HRESULT hr = E_FAIL;
+
     LoadWinTrust();
 
     GetSystemTimeAsFileTime(&CollectionDate);
@@ -1233,18 +1241,14 @@ HRESULT Main::Run()
     {
         if (config.bFlushRegistry)
         {
-            if (FAILED(hr = RegFlushKeys()))
-                log::Info(_L_, L"Failed to flush keys (hr = 0x%lx)\r\n", hr);
+            hr = ::RegFlushKeys();
+            if (FAILED(hr))
+            {
+                Log::Error(L"Failed to flush keys (code: {:#x})", hr);
+                return hr;
+            }
         }
-    }
-    catch (...)
-    {
-        log::Error(_L_, E_FAIL, L"GetThis failed during output setup, parameter output, RegistryFlush, exiting\r\n");
-        return E_FAIL;
-    }
 
-    try
-    {
         hr = InitOutput();
         if (FAILED(hr))
         {

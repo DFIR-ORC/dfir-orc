@@ -295,8 +295,6 @@ private:
 
     HRESULT FindMatchingSamples();
 
-    HRESULT RegFlushKeys();
-
 public:
     Main();
 
