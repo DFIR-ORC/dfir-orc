@@ -3617,7 +3617,11 @@ HRESULT FileFind::EvaluateMatchCallCallback(
 
         // the match has not matched a excluding term
         log::Verbose(_L_, L"Adding match %s\r\n", aMatch->MatchingNames.front().FullPathName.c_str());
-        m_Matches.push_back(aMatch);
+        if (m_storeMatches)
+        {
+            m_Matches.push_back(aMatch);
+        }
+
         if (aCallback)
             aCallback(aMatch, bStop);
     }

@@ -334,11 +334,15 @@ public:
     typedef std::function<void(const std::shared_ptr<Match>& aMatch, bool& bStop)> FoundMatchCallback;
 
 public:
-    FileFind(logger pLog, bool bProvideStream = true, CryptoHashStream::Algorithm matchHash = CryptoHashStream::Algorithm::Undefined)
+    FileFind(logger pLog,
+             bool bProvideStream = true,
+             CryptoHashStream::Algorithm matchHash = CryptoHashStream::Algorithm::Undefined,
+             bool storeMatches = true)
         : _L_(std::move(pLog))
         , m_FullNameBuilder(nullptr)
         , m_bProvideStream(bProvideStream)
         , m_MatchHash(matchHash)
+        , m_storeMatches(storeMatches)
     {
         if (m_MatchHash != CryptoHashStream::Algorithm::Undefined)
             m_bProvideStream = true;
@@ -416,6 +420,8 @@ private:
     CryptoHashStream::Algorithm m_MatchHash = CryptoHashStream::Algorithm::Undefined;
 
     CryptoHashStream::Algorithm m_NeededHash = CryptoHashStream::Algorithm::Undefined;
+
+    bool m_storeMatches;
 
     SearchTerm::Criteria DiscriminateName(const std::wstring& strName);
     SearchTerm::Criteria DiscriminateADS(const std::wstring& strADS);
