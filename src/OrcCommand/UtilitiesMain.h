@@ -436,7 +436,6 @@ protected:
     HRESULT LoadEvtLibrary();
     HRESULT LoadPSAPI();
 
-    void PrintCommonParameters();
     auto Configure(int argc, const wchar_t* argv[]) { return m_logging.Configure(argc, argv); }
 
     template <typename T>
@@ -537,28 +536,6 @@ protected:
 
         PrintValue(root, "Elapsed time", boost::join(durations, L", "));
     }
-
-    HRESULT PrintSystemType();
-    HRESULT PrintSystemTags();
-    HRESULT PrintComputerName();
-    HRESULT PrintWhoAmI();
-    HRESULT PrintOperatingSystem();
-    HRESULT PrintExecutionTime();
-    LPCWSTR GetEncoding(OutputSpec::Encoding anEncoding);
-    LPCWSTR GetCompression(const std::wstring& strCompression);
-    HRESULT PrintOutputOption(const OutputSpec& anOutput) { return PrintOutputOption(L"Output", anOutput); }
-    HRESULT PrintOutputOption(LPCWSTR szOutputName, const OutputSpec& anOutput);
-    HRESULT PrintBooleanOption(LPCWSTR szOptionName, bool bValue);
-    HRESULT PrintBooleanOption(LPCWSTR szOptionName, const boost::logic::tribool& bValue);
-    HRESULT PrintIntegerOption(LPCWSTR szOptionName, DWORD dwOption);
-    HRESULT PrintIntegerOption(LPCWSTR szOptionName, LONGLONG llOption);
-    HRESULT PrintIntegerOption(LPCWSTR szOptionName, ULONGLONG ullOption);
-    HRESULT PrintHashAlgorithmOption(LPCWSTR szOptionName, CryptoHashStream::Algorithm algs);
-    HRESULT PrintHashAlgorithmOption(LPCWSTR szOptionName, FuzzyHashStream::Algorithm algs);
-    void PrintStartTime();
-    HRESULT PrintStringOption(LPCWSTR szOptionName, LPCWSTR szOption);
-    HRESULT PrintFormatedStringOption(LPCWSTR szOptionName, LPCWSTR szFormat, va_list argList);
-    HRESULT PrintFormatedStringOption(LPCWSTR szOptionName, LPCWSTR szFormat, ...);
 
     //
     // Option handling
@@ -722,9 +699,6 @@ public:
 
     static bool IsProcessParent(LPCWSTR szImageName);
 
-    //
-    //
-    //
     virtual HRESULT GetConfigurationFromConfig(const ConfigItem& configitem) = 0;
     virtual HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem) = 0;
     virtual HRESULT GetSchemaFromConfig(const ConfigItem&) { return S_OK; };
@@ -735,13 +709,7 @@ public:
     // Output handling
     //
     virtual void PrintUsage() = 0;
-    virtual void PrintLoggingUsage();
-    virtual void PrintPriorityUsage();
-    virtual void PrintCommonUsage()
-    {
-        PrintLoggingUsage();
-        PrintPriorityUsage();
-    }
+
     virtual void PrintHeader(LPCWSTR szToolName, LPCWSTR lpszToolDescription, LPCWSTR szVersion);
     virtual void PrintParameters() = 0;
     virtual void PrintFooter() = 0;
@@ -901,14 +869,6 @@ public:
         GetSystemTime(&Cmd.theFinishTime);
         Cmd.theFinishTickCount = GetTickCount();
         Cmd.PrintFooter();
-
-        // TODO: implement this feature
-        // DWORD dwErrorCount = _L_->GetErrorCount();
-
-        // if (dwErrorCount > 0)
-        //{
-        //    Log::Info("{} error(s) occurred during program execution", dwErrorCount);
-        //}
 
         if (WSACleanup())
         {
