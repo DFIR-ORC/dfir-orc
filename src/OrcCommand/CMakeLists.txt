@@ -99,19 +99,6 @@ set(SRC_FATINFO
 
 source_group(FatInfo FILES ${SRC_FATINFO})
 
-set(SRC_GETCOMOBJECTS
-    "ConfigFile_GetComObjects.cpp"
-    "ConfigFile_GetComObjects.h"
-    "GetComObjects.h"
-    "GetComObjectsSqlSchema.xml"
-    "GetComObjects_Config.cpp"
-    "GetComObjects_Output.cpp"
-    "GetComObjects_Run.cpp"
-    "GetComObjectsSqlSchema.xml"
-)
-
-source_group(GetComObjects FILES ${SRC_GETCOMOBJECTS})
-
 set(SRC_GETSAMPLES
     "ConfigFile_GetSamples.cpp"
     "ConfigFile_GetSamples.h"
@@ -273,7 +260,6 @@ add_library(OrcCommand
         ${SRC_EXTRACTDATA}
         ${SRC_FASTFIND}
         ${SRC_FATINFO}
-        ${SRC_GETCOMOBJECTS}
         ${SRC_GETSAMPLES}
         ${SRC_GETSECTORS}
         ${SRC_GETTHIS}

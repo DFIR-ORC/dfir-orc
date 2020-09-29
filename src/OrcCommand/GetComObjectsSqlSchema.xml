@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-
-<sqlschema tool="GetComObjects">
-  
-  <table key="comobjects">
-      <utf8 name="ComputerName" maxlen="50" />
-  </table>
-  
-</sqlschema>
