@@ -173,8 +173,6 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, DWORD dwFlags, const FlagsDefinition FlagValues[])
 {
-    bool bFirst = true;
-
     int idx = 0;
 
     auto current = std::back_insert_iterator(buffer);

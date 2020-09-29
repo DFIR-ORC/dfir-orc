@@ -356,9 +356,6 @@ FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], c
         if (szParams[i] == L',' || szParams[i] == L'\0')
         {
             szParams[i] = 0;
-
-            Intentions dwPreviousIntentions = dwIntentions;
-
             auto bNameFound = false;
 
             const ColumnNameDef* pCurAlias = aliasNames;

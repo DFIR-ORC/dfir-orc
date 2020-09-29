@@ -32,7 +32,6 @@ private:
     std::vector<size_t> m_pipeStreamIndexes;
     std::vector<size_t> m_memoryStreamIndexes;
 
-    size_t m_firstAddIndex = 0;
 
     UInt32 m_curIndex;
     UInt32 m_curIndexInArchive;

@@ -9,20 +9,19 @@
 
 #include "PartitionTable.h"
 
-#include "DiskStructures.h"
-#include "FSVBR.h"
-
-#include "DiskExtent.h"
-
-#include "NtfsDataStructures.h"
-
-#include "diskguid.h"
-
 #include <sstream>
 #include <locale>
 #include <codecvt>
 
 #include <spdlog/spdlog.h>
+
+#include "DiskStructures.h"
+#include "FSVBR.h"
+#include "DiskExtent.h"
+#include "NtfsDataStructures.h"
+#include "diskguid.h"
+
+#include "Output/Text/Fmt/Partition.h"
 
 using namespace Orc;
 
@@ -44,8 +43,6 @@ PartitionTable::~PartitionTable(void)
 
 HRESULT PartitionTable::LoadPartitionTable(const WCHAR* szDeviceOrImage)
 {
-    HRESULT hr = E_FAIL;
-
     if (m_pDiskExtent != NULL)
     {
         m_pDiskExtent->Close();
@@ -94,8 +91,6 @@ HRESULT PartitionTable::LoadPartitionTable(IDiskExtent& diskExtent)
  */
 HRESULT PartitionTable::GuessPartitionType(const CBinaryBuffer& buffer, Partition& p)
 {
-    HRESULT hr = E_FAIL;
-
     FSVBR::FSType fsType = FSVBR::GuessFSType(buffer);
 
     switch (fsType)

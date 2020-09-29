@@ -61,7 +61,6 @@ public:
     {
         try
         {
-            HRESULT hr = E_FAIL;
             const std::shared_ptr<Library>& pLib = GetShared<Library>(true);
 
             if (!bInitialize)

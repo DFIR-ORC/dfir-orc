@@ -33,7 +33,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                 pWriter->WriteStartElement(NULL, config.strName.c_str(), NULL);
 
                 // Adding attributes
-                std::for_each(begin(config.SubItems), end(config.SubItems), [this, &pWriter](const ConfigItem& item) {
+                std::for_each(begin(config.SubItems), end(config.SubItems), [&pWriter](const ConfigItem& item) {
                     HRESULT hr = E_FAIL;
                     if (item && item.Type & ConfigItem::ATTRIBUTE)
                     {

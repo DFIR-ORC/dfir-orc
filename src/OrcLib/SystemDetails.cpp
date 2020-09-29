@@ -383,7 +383,7 @@ Result<std::vector<Orc::SystemDetails::CPUInformation>, HRESULT> Orc::SystemDeta
         CComPtr<IWbemClassObject> pclsObj;
         ULONG uReturn = 0;
 
-        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
         if (0 == uReturn)
             break;
 
@@ -713,7 +713,7 @@ Result<DWORD, HRESULT> Orc::SystemDetails::GetParentProcessId()
     CComPtr<IWbemClassObject> pclsObj;
     ULONG uReturn = 0;
 
-    HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+    pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
     if (0 == uReturn)
         return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
 
@@ -757,7 +757,7 @@ Result<std::wstring, HRESULT> Orc::SystemDetails::GetCmdLine(DWORD dwPid)
     CComPtr<IWbemClassObject> pclsObj;
     ULONG uReturn = 0;
 
-    HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+    pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
     if (0 == uReturn)
         return Err(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
 
@@ -881,7 +881,7 @@ stx::Result<std::vector<Orc::SystemDetails::PhysicalDrive>, HRESULT> Orc::System
         CComPtr<IWbemClassObject> pclsObj;
         ULONG uReturn = 0;
 
-        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
         if (0 == uReturn)
             break;
 
@@ -949,7 +949,7 @@ stx::Result<std::vector<Orc::SystemDetails::MountedVolume>, HRESULT> Orc::System
         CComPtr<IWbemClassObject> pclsObj;
         ULONG uReturn = 0;
 
-        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
         if (0 == uReturn)
             break;
 
@@ -1052,7 +1052,7 @@ Result<std::vector<Orc::SystemDetails::QFE>, HRESULT> Orc::SystemDetails::GetOsQ
         CComPtr<IWbemClassObject> pclsObj;
         ULONG uReturn = 0;
 
-        HRESULT hr = pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
+        pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
         if (0 == uReturn)
             break;
 

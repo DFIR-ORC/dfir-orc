@@ -381,8 +381,6 @@ Orc::WMI::GetProperty<std::vector<std::wstring>>(const CComPtr<IWbemClassObject>
 
 HRESULT WMI::WMIEnumPhysicalMedia(std::vector<std::wstring>& physicaldrives) const
 {
-    HRESULT hr = E_FAIL;
-
     auto result = Query(L"SELECT DeviceID FROM Win32_DiskDrive");
     if (result.is_err())
         return result.err_value();
