@@ -51,6 +51,11 @@ public:
     STDMETHOD(AddBuffer)(__in_opt PCWSTR pwzNameInArchive, __in PVOID pData, __in DWORD cbData);
     STDMETHOD(AddStream)
     (__in_opt PCWSTR pwzNameInArchive, __in_opt PCWSTR pwzPath, __in_opt const std::shared_ptr<ByteStream>& pStream);
+    STDMETHODIMP AddStream(
+        __in_opt PCWSTR pwzNameInArchive,
+        __in_opt PCWSTR pwzPath,
+        __in_opt const std::shared_ptr<ByteStream>& pStream,
+        ArchiveItem::ArchivedCallback itemArchivedCallback);
 
     STDMETHOD(FlushQueue)() PURE;
 

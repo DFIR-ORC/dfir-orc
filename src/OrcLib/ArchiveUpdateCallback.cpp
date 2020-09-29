@@ -376,17 +376,24 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
 {
     concurrency::critical_section::scoped_lock sl(m_cs);
 
-    switch (operationResult)
+    Archive::ArchiveItem& item = m_Items[m_curIndex];
+    if (operationResult != NArchive::NUpdate::NOperationResult::kOK)
     {
-        case NArchive::NUpdate::NOperationResult::kOK:
-            log::Verbose(_L_, L"INFO: Archive of %s succeed\r\n", m_Items[m_curIndex].NameInArchive.c_str());
-            break;
-        default:
-            log::Error(_L_, E_FAIL, L"Failed to archive %s\r\n", m_Items[m_curIndex].NameInArchive.c_str());
-            return S_OK;
+        HRESULT hr = E_FAIL;
+        log::Error(
+            _L_,
+            hr,
+            L"Failed operation on: %s (code: %d)\r\n",
+            m_Items[m_curIndex].NameInArchive.c_str(),
+            operationResult);
+        if (item.m_archivedCallback)
+        {
+            item.m_archivedCallback(hr);
+            return hr;
+        }
     }
 
-    Archive::ArchiveItem& item = m_Items[m_curIndex];
+    log::Verbose(_L_, L"INFO: Archive of %s succeed\r\n", m_Items[m_curIndex].NameInArchive.c_str());
 
     item.Index = m_curIndexInArchive;
     m_Indexes[m_curIndexInArchive] = m_curIndex;
@@ -394,8 +401,15 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
 
     m_Items[m_curIndex].currentStatus = Archive::ArchiveItem::Status::Done;
 
+    if (item.m_archivedCallback)
+    {
+        item.m_archivedCallback(S_OK);
+    }
+
     if (m_Callback)
+    {
         m_Callback(item);
+    }
 
     return S_OK;
 }

@@ -33,6 +33,8 @@ public:
     class ArchiveItem
     {
     public:
+        using ArchivedCallback = std::function<void(HRESULT)>;
+
         enum Status
         {
             Waiting,
@@ -55,6 +57,8 @@ public:
         DWORD attrib = 0L;
         bool isDir = false;
 
+        ArchivedCallback m_archivedCallback;
+
         ArchiveItem() = default;
 
         ArchiveItem(ArchiveItem&& other) noexcept
@@ -70,6 +74,7 @@ public:
             std::swap(Stream, other.Stream);
             std::swap(MD5, other.MD5);
             std::swap(SHA1, other.SHA1);
+            std::swap(m_archivedCallback, other.m_archivedCallback);
             currentStatus = other.currentStatus;
         }
         ArchiveItem(const ArchiveItem& other) = default;

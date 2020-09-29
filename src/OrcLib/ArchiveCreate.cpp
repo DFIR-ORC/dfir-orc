@@ -144,18 +144,29 @@ STDMETHODIMP ArchiveCreate::AddStream(
     __in_opt PCWSTR pwzPath,
     __in_opt const std::shared_ptr<ByteStream>& pStream)
 {
+    return AddStream(pwzNameInArchive, pwzPath, pStream, {});
+}
+
+STDMETHODIMP ArchiveCreate::AddStream(
+    __in_opt PCWSTR pwzNameInArchive,
+    __in_opt PCWSTR pwzPath,
+    __in_opt const std::shared_ptr<ByteStream>& pStream,
+    ArchiveItem::ArchivedCallback itemArchivedCallback)
+{
     ArchiveItem item;
 
     item.NameInArchive = pwzNameInArchive;
     item.Stream = GetStreamToAdd(pStream);
     item.Size = pStream->GetSize();
     item.Path = pwzPath;
+    item.m_archivedCallback = itemArchivedCallback;
 
-    if (item.Stream)
+    if (item.Stream == nullptr)
     {
-        m_Queue.push_back(std::move(item));
-    }
-    else
+        itemArchivedCallback(E_FAIL);
         return E_FAIL;
+    }
+
+    m_Queue.push_back(std::move(item));
     return S_OK;
 }
