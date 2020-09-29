@@ -229,13 +229,13 @@ HRESULT Main::CreateSampleFileName(
 
     switch (content.Type)
     {
-        case DATA:
+        case ContentType::DATA:
             pContent = L"data";
             break;
-        case STRINGS:
+        case ContentType::STRINGS:
             pContent = L"strings";
             break;
-        case RAW:
+        case ContentType::RAW:
             pContent = L"raw";
             break;
         default:
@@ -351,10 +351,10 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
 
     switch (sampleRef.Content.Type)
     {
-        case DATA:
+        case ContentType::DATA:
             stream = sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].DataStream;
             break;
-        case STRINGS: {
+        case ContentType::STRINGS: {
             auto strings = std::make_shared<StringsStream>(_L_);
             if (sampleRef.Content.MaxChars == 0 && sampleRef.Content.MinChars == 0)
             {
@@ -383,7 +383,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
             stream = strings;
         }
         break;
-        case RAW:
+        case ContentType::RAW:
             stream = sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].RawStream;
             break;
         default:
@@ -517,10 +517,10 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
 
             switch (sample.Content.Type)
             {
-                case DATA:
+                case ContentType::DATA:
                     output.WriteString(L"data");
                     break;
-                case STRINGS:
+                case ContentType::STRINGS:
                     output.WriteString(L"strings");
                     break;
                 default:
