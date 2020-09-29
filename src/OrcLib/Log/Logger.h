@@ -41,6 +41,10 @@ public:
     const ConsoleSink& consoleSink() const;
     ConsoleSink& consoleSink();
 
+    uint64_t warningCount() const;
+    uint64_t errorCount() const;
+    uint64_t criticalCount() const;
+
     void DumpBacktrace();
 
     template <typename... Args>
@@ -65,24 +69,31 @@ public:
     void Warn(const Args&... args)
     {
         m_logger->warn(args...);
+        ++m_warningCount;
     }
 
     template <typename... Args>
     void Error(const Args&... args)
     {
         m_logger->error(args...);
+        ++m_errorCount;
     }
 
     template <typename... Args>
     void Critical(const Args&... args)
     {
         m_logger->critical(args...);
+        ++m_criticalCount;
     }
 
 private:
     std::shared_ptr<ConsoleSink> m_consoleSink;
     std::shared_ptr<FileSink> m_fileSink;
     std::shared_ptr<spdlog::logger> m_logger;
+
+    std::atomic<uint64_t> m_warningCount;
+    std::atomic<uint64_t> m_errorCount;
+    std::atomic<uint64_t> m_criticalCount;
 };
 
 }  // namespace Orc

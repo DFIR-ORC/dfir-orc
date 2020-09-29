@@ -43,6 +43,9 @@ Logger::Logger()
     : m_consoleSink(::CreateConsoleSink())
     , m_fileSink(::CreateFileSink())
     , m_logger(new spdlog::logger("default", {m_consoleSink, m_fileSink}))
+    , m_warningCount(0)
+    , m_errorCount(0)
+    , m_criticalCount(0)
 {
     spdlog::set_default_logger(m_logger);
 
@@ -62,6 +65,21 @@ Logger::Logger()
     // The following could output: '[17:49:47.335][I] this is a foobar log'
     // The %^...%$ options specify coloring range, only one is currently supported
     spdlog::set_pattern("%^[%H:%M:%S.%e][%L] %v%$");
+}
+
+uint64_t Logger::warningCount() const
+{
+    return m_warningCount;
+}
+
+uint64_t Logger::errorCount() const
+{
+    return m_errorCount;
+}
+
+uint64_t Logger::criticalCount() const
+{
+    return m_criticalCount;
 }
 
 void Logger::DumpBacktrace()
