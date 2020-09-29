@@ -61,18 +61,6 @@ set(SRC_DD
 
 source_group(DD FILES ${SRC_DD})
 
-set(SRC_EMPTYTOOL
-    "ConfigFile_EmptyTool.cpp"
-    "ConfigFile_EmptyTool.h"
-    "EmptyTool.h"
-    "EmptyToolSqlSchema.xml"
-    "EmptyTool_Config.cpp"
-    "EmptyTool_Output.cpp"
-    "EmptyTool_Run.cpp"
-)
-
-source_group(EmptyTool FILES ${SRC_EMPTYTOOL})
-
 set(SRC_EXTRACTDATA
     "ConfigFile_ExtractData.cpp"
     "ConfigFile_ExtractData.h"
@@ -282,7 +270,6 @@ add_library(OrcCommand
         ${SRC}
         ${SRC_COMMON}
         ${SRC_DD}
-        ${SRC_EMPTYTOOL}
         ${SRC_EXTRACTDATA}
         ${SRC_FASTFIND}
         ${SRC_FATINFO}
