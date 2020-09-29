@@ -74,7 +74,11 @@ public:
     }
 
     HRESULT AddFile(const std::wstring& strRemotePath, const std::wstring& strLocalPath, const bool bDelete = true);
-    HRESULT SetCommand(const std::wstring& strCommandPath) { m_strCmd = strCommandPath; }
+    HRESULT SetCommand(const std::wstring& strCommandPath)
+    {
+        m_strCmd = strCommandPath;
+        return S_OK;
+    }
 
     const std::vector<DownloadFile>& Files() const { return m_files; }
 

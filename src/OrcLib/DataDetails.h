@@ -155,8 +155,17 @@ public:
 
     const Authenticode::PE_Hashs& GetPEHashs() const { return m_PEHashs; };
 
-    HRESULT SetPEHashs(const Authenticode::PE_Hashs& hashs) { m_PEHashs = hashs; }
-    HRESULT SetPEHashs(Authenticode::PE_Hashs&& hashs) { std::swap(m_PEHashs, hashs); }
+    HRESULT SetPEHashs(const Authenticode::PE_Hashs& hashs)
+    {
+        m_PEHashs = hashs;
+        return S_OK;
+    }
+
+    HRESULT SetPEHashs(Authenticode::PE_Hashs&& hashs)
+    {
+        std::swap(m_PEHashs, hashs);
+        return S_OK;
+    }
 
     bool PeHashAvailable() const
     {
@@ -168,6 +177,7 @@ public:
     {
         m_AuthData = data;
         m_bHasAuthData = true;
+        return S_OK;
     };
 
     HRESULT SetAuthenticodeData(Authenticode::AuthenticodeData&& data)
