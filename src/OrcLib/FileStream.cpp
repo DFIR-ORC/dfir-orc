@@ -124,6 +124,25 @@ __data_entrypoint(File) HRESULT FileStream::OpenFile(
     return S_OK;
 }
 
+__data_entrypoint(File) HRESULT FileStream::OpenFile(
+    __in const std::filesystem::path& path,
+    __in DWORD dwDesiredAccess,
+    __in DWORD dwSharedMode,
+    __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes,
+    __in DWORD dwCreationDisposition,
+    __in DWORD dwFlagsAndAttributes,
+    __in_opt HANDLE hTemplate)
+{
+    return OpenFile(
+        path.c_str(),
+        dwDesiredAccess,
+        dwSharedMode,
+        pSecurityAttributes,
+        dwCreationDisposition,
+        dwFlagsAndAttributes,
+        hTemplate);
+}
+
 HRESULT FileStream::CopyHandle(HANDLE hFile)
 {
     if (m_hFile != INVALID_HANDLE_VALUE)

@@ -10,8 +10,9 @@
 
 #include "OrcLib.h"
 
-#include "ByteStream.h"
+#include <filesystem>
 
+#include "ByteStream.h"
 #include "CriticalSection.h"
 
 #pragma managed(push, off)
@@ -42,6 +43,15 @@ public:
 
     HRESULT OpenFile(
         __in PCWSTR pwzPath,
+        __in DWORD dwDesiredAccess,
+        __in DWORD dwSharedMode,
+        __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes,
+        __in DWORD dwCreationDisposition,
+        __in DWORD dwFlagsAndAttributes,
+        __in_opt HANDLE hTemplate);
+
+    HRESULT OpenFile(
+        __in const std::filesystem::path& path,
         __in DWORD dwDesiredAccess,
         __in DWORD dwSharedMode,
         __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes,
