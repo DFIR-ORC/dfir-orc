@@ -39,6 +39,7 @@ set(SRC_COMMON
     "stdafx.cpp"
     "stdafx.h"
     "targetver.h"
+    "Output/Console/Journal.h"
     "ToolVersion.h"
     "ToolVersion.cpp"
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"
