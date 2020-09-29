@@ -67,7 +67,7 @@
 #include <eh.h>
 
 #include "Log/Log.h"
-
 #include "Output/Text/Fmt/Formatter.h"
+#include "Utils/Result.h"
 
 #include "OrcLib.h"

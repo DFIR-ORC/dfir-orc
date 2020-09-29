@@ -704,6 +704,7 @@ set(SRC_UTILITIES
     "Utils/Iconv.cpp"
     "Utils/Iconv.h"
     "Utils/MakeArray.h"
+    "Utils/Result.h"
     "Utils/TypeTraits.h"
 )
 

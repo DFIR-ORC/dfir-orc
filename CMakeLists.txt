@@ -79,6 +79,7 @@ if(ORC_VCPKG_ROOT)
         boost-format
         boost-logic
         boost-multi-index
+        boost-outcome
         boost-scope-exit
         boost-stacktrace
         fmt
