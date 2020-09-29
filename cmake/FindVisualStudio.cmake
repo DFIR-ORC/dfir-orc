@@ -12,6 +12,7 @@ if(DEFINED ENV{VCINSTALLDIR})
 else()
     set(VS_INSTALL_DIR ${CMAKE_GENERATOR_INSTANCE})
 endif()
+get_filename_component(VS_INSTALL_DIR "${VS_INSTALL_DIR}" ABSOLUTE)
 
 #from architecture.cmake
 get_target_architecture(RESULT_VARIABLE "TARGET_ARCH")
@@ -41,16 +42,25 @@ find_path(CPPUNITTEST_LIB_DIR "${LIBRARY_NAME}"
 
 set(CPPUNITTEST_LIBRARY "${CPPUNITTEST_LIB_DIR}/${LIBRARY_NAME}")
 
-## atls / atlmfc
-# Resolve VC tools installation directory
-# .../Microsoft Visual Studio/2019/Enterprise/VC/Tools/MSVC/14.20.27508/bin/Hostx64/x64/link.exe
-# .../Microsoft Visual Studio/2019/Enterprise/VC/Tools/MSVC/14.20.27508
-get_filename_component(VC_TOOLS "${CMAKE_LINKER}/../../../.." ABSOLUTE)
+#
+# Resolve VC tools installation directory based on current linker path to get the correct version
+#
+# Linker path should be like:
+#   .../Microsoft Visual Studio/2019/Enterprise/VC/Tools/MSVC/14.20.27508/bin/Hostx64/x64/link.exe
+#   .../Microsoft Visual Studio/2019/Enterprise/VC/Tools/MSVC/14.20.29110/bin/Hostx64/x64/link.exe
+#   ...
+#
+if(${CMAKE_LINKER} MATCHES ".*/VC/Tools/MSVC/.*")
+    get_filename_component(VC_TOOLS_MSVC "${CMAKE_LINKER}/../../../.." ABSOLUTE)
+endif()
+
+file(GLOB MSVC_VERSIONS "${VS_INSTALL_DIR}/VC/Tools/MSVC/*")
+list(GET MSVC_VERSIONS 0 VC_TOOLS_MSVC_FALLBACK)
 
 find_path(ATLS_LIB_DIR "atls.lib"
     PATHS
-        "${VC_TOOLS}"
-
+        "${VC_TOOLS_MSVC}"
+        "${VC_TOOLS_MSVC_FALLBACK}"
     PATH_SUFFIXES
         "atlmfc/lib/${TARGET_ARCH}"
     DOC
