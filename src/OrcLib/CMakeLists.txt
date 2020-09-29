@@ -603,6 +603,8 @@ set(SRC_UTILITIES
     "OrcException.cpp"
     "OrcException.h"
     "OrcResult.h"
+    "Utils/Iconv.cpp"
+    "Utils/Iconv.h"
 )
 
 source_group(Utilities FILES ${SRC_UTILITIES})
