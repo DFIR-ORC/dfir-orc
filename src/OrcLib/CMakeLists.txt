@@ -605,6 +605,7 @@ set(SRC_UTILITIES
     "OrcResult.h"
     "Flags.cpp"
     "Flags.h"
+    "Utils/EnumFlags.h"
     "Utils/Guard.h"
     "Utils/Iconv.cpp"
     "Utils/Iconv.h"
