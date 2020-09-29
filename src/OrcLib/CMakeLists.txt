@@ -535,6 +535,12 @@ set(SRC_INOUT_TABLEOUTPUT_SQL
 
 source_group(In&Out\\TableOutput\\SQL FILES ${SRC_INOUT_TABLEOUTPUT_SQL})
 
+set(SRC_INOUT_CONSOLE
+    "Output/Console/Console.h"
+)
+
+source_group(In&Out\\Output\\Console FILES ${SRC_INOUT_CONSOLE})
+
 set(SRC_INOUT_TEXT
     "Output/Text/Format.h"
     "Output/Text/HexDump.h"
@@ -798,6 +804,7 @@ add_library(OrcLib
         ${SRC_INOUT_TABLEOUTPUT_PARQUET}
         ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
         ${SRC_INOUT_TABLEOUTPUT_SQL}
+        ${SRC_INOUT_CONSOLE}
         ${SRC_INOUT_TEXT}
         ${SRC_INOUT_UPLOAD}
         ${SRC_LOG}
