@@ -12,9 +12,9 @@
 
 #include <memory>
 
-#include "Utils/EnumFlags.h"
-
 #include "CryptoUtilities.h"
+#include "CryptoHashStreamAlgorithm.h"
+#include "Output/Text/Fmt/CryptoHashStreamAlgorithm.h"
 
 #pragma managed(push, off)
 
@@ -23,28 +23,11 @@ namespace Orc {
 class ORCLIB_API CryptoHashStream : public HashStream
 {
 public:
-    enum class Algorithm : char
-    {
-        Undefined = 0,
-        MD5 = 1 << 0,
-        SHA1 = 1 << 1,
-        SHA256 = 1 << 2
-    };
+    using Algorithm = CryptoHashStreamAlgorithm;
 
-protected:
-    Algorithm m_Algorithms;
-    HCRYPTHASH m_Sha256;
-    HCRYPTHASH m_Sha1;
-    HCRYPTHASH m_MD5;
-
-    static HCRYPTPROV g_hProv;
-
-    STDMETHOD(ResetHash(bool bContinue = false));
-    STDMETHOD(HashData(LPBYTE pBuffer, DWORD dwBytesToHash));
-
-public:
     CryptoHashStream()
         : HashStream()
+        , m_Algorithms(Algorithm::Undefined)
         , m_Sha256(NULL)
         , m_Sha1(NULL)
         , m_MD5(NULL) {};
@@ -54,7 +37,6 @@ public:
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
 
     // CryptoHashStream Specifics
-
     virtual HRESULT OpenToRead(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream);
     virtual HRESULT OpenToWrite(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream);
 
@@ -67,9 +49,18 @@ public:
 
     static Algorithm GetSupportedAlgorithm(std::wstring_view svAlgo);
     static std::wstring GetSupportedAlgorithm(Algorithm algs);
-};
 
-ENABLE_BITMASK_OPERATORS(CryptoHashStream::Algorithm)
+protected:
+    Algorithm m_Algorithms;
+    HCRYPTHASH m_Sha256;
+    HCRYPTHASH m_Sha1;
+    HCRYPTHASH m_MD5;
+
+    static HCRYPTPROV g_hProv;
+
+    STDMETHOD(ResetHash(bool bContinue = false));
+    STDMETHOD(HashData(LPBYTE pBuffer, DWORD dwBytesToHash));
+};
 
 }  // namespace Orc
 

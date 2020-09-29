@@ -35,7 +35,7 @@ void Print(Orc::Text::Tree<T>& node, const Orc::Location& location)
 {
     std::vector<std::wstring> properties;
 
-    properties.push_back(Location::ToString(location.GetType()));
+    properties.push_back(ToString(location.GetType()));
 
     if (location.IsValid())
     {
@@ -43,7 +43,7 @@ void Print(Orc::Text::Tree<T>& node, const Orc::Location& location)
     }
 
     properties.push_back(location.IsValid() ? L"Valid" : L"Invalid");
-    properties.push_back(FSVBR::ToString(location.GetFSType()));
+    properties.push_back(ToString(location.GetFSType()));
     const auto mountPointList = detail::GetMountPointList(location);
     if (mountPointList.size())
     {

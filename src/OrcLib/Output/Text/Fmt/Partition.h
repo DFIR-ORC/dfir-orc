@@ -8,104 +8,28 @@
 
 #pragma once
 
-#include <fmt/format.h>
+#include "Output/Text/Fmt/Fwd/Partition.h"
 
 #include "Output/Text/Format.h"
-#include <Partition.h>
 #include "Utils/Iconv.h"
+#include <Partition.h>
 
-template <>
-struct fmt::formatter<Orc::Partition::Flags> : public fmt::formatter<fmt::string_view>
+template <typename FormatContext>
+auto fmt::formatter<Orc::Partition>::format(const Orc::Partition& partition, FormatContext& ctx) -> decltype(ctx.out())
 {
-    template <typename FormatContext>
-    auto format(const Orc::Partition::Flags& flags, FormatContext& ctx)
+    std::error_code ec;
+    const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(partition), ec);
+    if (ec)
     {
-        const auto utf16 = Orc::Partition::ToString(flags);
-
-        std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(utf16, ec);
-        if (ec)
-        {
-            return fmt::format_to(ctx.out(), "<failed_conversion>");
-        }
-
-        std::copy(std::cbegin(utf8), std::cend(utf8), ctx.out());
-        return ctx.out();
+        return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
     }
-};
 
-template <>
-struct fmt::formatter<Orc::Partition::Flags, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
+    return formatter<std::string_view>::format(utf8, ctx);
+}
+
+template <typename FormatContext>
+auto fmt::formatter<Orc::Partition, wchar_t>::format(const Orc::Partition& partition, FormatContext& ctx)
+    -> decltype(ctx.out())
 {
-    template <typename FormatContext>
-    auto format(const Orc::Partition::Flags& flags, FormatContext& ctx)
-    {
-        const auto s = Orc::Partition::ToString(flags);
-        std::copy(std::cbegin(s), std::cend(s), ctx.out());
-        return ctx.out();
-    }
-};
-
-template <>
-struct fmt::formatter<Orc::Partition::Type> : public fmt::formatter<fmt::string_view>
-{
-    template <typename FormatContext>
-    auto format(const Orc::Partition::Type& type, FormatContext& ctx)
-    {
-        const auto utf16 = Orc::Partition::ToString(type);
-
-        std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(utf16, ec);
-        if (ec)
-        {
-            return fmt::format_to(ctx.out(), "<failed_conversion>");
-        }
-
-        std::copy(std::cbegin(utf8), std::cend(utf8), ctx.out());
-        return ctx.out();
-    }
-};
-
-template <>
-struct fmt::formatter<Orc::Partition::Type, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
-{
-    template <typename FormatContext>
-    auto format(const Orc::Partition::Type& type, FormatContext& ctx)
-    {
-        const auto s = Orc::Partition::ToString(type);
-        std::copy(std::cbegin(s), std::cend(s), ctx.out());
-        return ctx.out();
-    }
-};
-
-template <>
-struct fmt::formatter<Orc::Partition> : public fmt::formatter<fmt::string_view>
-{
-    template <typename FormatContext>
-    auto format(const Orc::Partition::Type& partition, FormatContext& ctx)
-    {
-        const auto utf16 = Orc::Partition::ToString(partition);
-
-        std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(utf16, ec);
-        if (ec)
-        {
-            return fmt::format_to(ctx.out(), "<failed_conversion>");
-        }
-
-        std::copy(std::cbegin(utf8), std::cend(utf8), ctx.out());
-        return ctx.out();
-    }
-};
-
-template <>
-struct fmt::formatter<Orc::Partition, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
-{
-    template <typename FormatContext>
-    auto format(const Orc::Partition& partition, FormatContext& ctx)
-    {
-        const auto s = Orc::Partition::ToString(partition);
-        std::copy(std::cbegin(s), std::cend(s), ctx.out());
-        return ctx.out();
-    }
-};
+    return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(partition), ctx);
+}

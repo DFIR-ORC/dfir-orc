@@ -14,6 +14,9 @@
 #include <locale>
 #include <codecvt>
 
+#include <boost/algorithm/string.hpp>
+#include <boost/scope_exit.hpp>
+
 #include "LocationSet.h"
 
 #include "PartitionTable.h"
@@ -38,9 +41,6 @@
 
 #include "NtfsDataStructures.h"
 #include "ProfileList.h"
-
-#include <boost/algorithm/string.hpp>
-#include <boost/scope_exit.hpp>
 
 using namespace std;
 

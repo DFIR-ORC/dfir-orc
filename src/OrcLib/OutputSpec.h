@@ -8,14 +8,15 @@
 
 #pragma once
 
-#include "OrcLib.h"
-#include "ArchiveFormat.h"
-
-#include "TableOutput.h"
-#include "Utils/EnumFlags.h"
-
 #include <string>
 #include <filesystem>
+
+#include "OrcLib.h"
+#include "ArchiveFormat.h"
+#include "TableOutput.h"
+
+#include "OutputSpecTypes.h"
+#include "Output/Text/Fmt/OutputSpecTypes.h"
 
 #pragma managed(push, off)
 
@@ -26,50 +27,15 @@ class ConfigItem;
 class ORCLIB_API OutputSpec
 {
 public:
-    enum class UploadAuthScheme : char
-    {
-        Anonymous = 0,
-        Basic,
-        NTLM,
-        Kerberos,
-        Negotiate
-    };
-
-    static std::wstring ToString(UploadAuthScheme method);
-
-    enum class UploadMethod : char
-    {
-        NoUpload = 0,
-        FileCopy,
-        BITS
-    };
-
-    static std::wstring ToString(UploadMethod method);
-
-    enum BITSMode : char
-    {
-        NoMode,
-        SMB,
-        HTTP,
-        HTTPS
-    };
-
-    enum class UploadOperation : char
-    {
-        NoOp = 0,
-        Copy,
-        Move
-    };
-
-    static std::wstring ToString(UploadOperation method);
-
-    enum class UploadMode : char
-    {
-        Synchronous = 0,
-        Asynchronous
-    };
-
-    static std::wstring ToString(UploadMode mode);
+    using UploadAuthScheme = OutputSpecTypes::UploadAuthScheme;
+    using UploadMethod = OutputSpecTypes::UploadMethod;
+    using BITSMode = OutputSpecTypes::BITSMode;
+    using UploadOperation = OutputSpecTypes::UploadOperation;
+    using UploadMode = OutputSpecTypes::UploadMode;
+    using Kind = OutputSpecTypes::Kind;
+    using Disposition = OutputSpecTypes::Disposition;
+    using Status = OutputSpecTypes::Status;
+    using Encoding = OutputSpecTypes::Encoding;
 
     class ORCLIB_API Upload
     {
@@ -98,40 +64,6 @@ public:
         bool IsFileUploaded(const std::wstring& file_name);
     };
 
-    enum class Kind
-    {
-        None = 0,
-        TableFile = 1 << 0,
-        StructuredFile = 1 << 1,
-        File = 1 << 2,
-        Archive = 1 << 3,
-        Directory = 1 << 4,
-        SQL = 1 << 5,
-        Pipe = 1 << 6,
-        CSV = 1 << 7,
-        TSV = 1 << 8,
-        Parquet = 1 << 9,
-        XML = 1 << 10,
-        JSON = 1 << 11,
-        ORC = 1 << 12
-    };
-
-    static std::wstring ToString(Kind kind);
-
-    enum Disposition
-    {
-        Truncate = 0,
-        CreateNew,
-        Append
-    };
-
-    enum Status
-    {
-        StatusUnknown,
-        Existing,
-        CreatedNew
-    };
-
     Kind Type = Kind::None;
     Kind supportedTypes;
 
@@ -139,8 +71,8 @@ public:
     std::wstring FileName;
     std::wstring Path;
 
-    Disposition Disposition = Disposition::Append;
-    Status CreationStatus = StatusUnknown;
+    Disposition disposition = Disposition::Append;
+    Status creationStatus = Status::StatusUnknown;
 
     std::wstring ConnectionString;
     std::wstring TableName;
@@ -155,15 +87,6 @@ public:
     std::shared_ptr<Upload> UploadOutput;
 
 public:
-    enum class Encoding
-    {
-        kUnknown = 0,
-        UTF8,
-        UTF16
-    };
-
-    static std::wstring ToString(Encoding encoding);
-
     Encoding OutputEncoding = Encoding::UTF8;
     LPCWSTR szSeparator = L",";
     LPCWSTR szQuote = L"\"";
@@ -200,14 +123,13 @@ public:
         OutputSpec::Kind supportedTypes,
         const ConfigItem& item,
         std::optional<std::filesystem::path> parent = std::nullopt);
+
     HRESULT
     Configure(const ConfigItem& item, std::optional<std::filesystem::path> parent = std::nullopt)
     {
         return Configure(supportedTypes, item, std::move(parent));
     };
 };
-
-ENABLE_BITMASK_OPERATORS(OutputSpec::Kind);
 
 }  // namespace Orc
 

@@ -10,21 +10,19 @@
 
 #include "OutputSpec.h"
 
-#include "ConfigItem.h"
-#include "ParameterCheck.h"
-#include "CaseInsensitive.h"
-#include "SystemDetails.h"
-
-#include "Archive.h"
+#include <filesystem>
+#include <regex>
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/tokenizer.hpp>
-
-#include <filesystem>
-#include <regex>
-
 #include <fmt/format.h>
+
+#include "ConfigItem.h"
+#include "ParameterCheck.h"
+#include "CaseInsensitive.h"
+#include "SystemDetails.h"
+#include "Archive.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -49,118 +47,6 @@ bool HasValue(const ConfigItem& item, DWORD dwIndex)
 }
 
 }  // namespace
-
-std::wstring OutputSpec::ToString(OutputSpec::UploadAuthScheme scheme)
-{
-    switch (scheme)
-    {
-        case OutputSpec::UploadAuthScheme::Anonymous:
-            return L"Anonymous";
-        case OutputSpec::UploadAuthScheme::Basic:
-            return L"Basic";
-        case OutputSpec::UploadAuthScheme::Kerberos:
-            return L"Kerberos";
-        case OutputSpec::UploadAuthScheme::Negotiate:
-            return L"Negotiate";
-        case OutputSpec::UploadAuthScheme::NTLM:
-            return L"NTLM";
-    }
-
-    return L"Unknown";
-}
-
-std::wstring OutputSpec::ToString(OutputSpec::UploadMethod method)
-{
-    switch (method)
-    {
-        case OutputSpec::UploadMethod::BITS:
-            return L"Background Intelligent Transfer Service (BITS)";
-        case OutputSpec::UploadMethod::FileCopy:
-            return L"File copy";
-        case OutputSpec::UploadMethod::NoUpload:
-            return L"No upload";
-    }
-
-    return L"Unknown";
-}
-
-std::wstring OutputSpec::ToString(OutputSpec::UploadOperation operation)
-{
-    switch (operation)
-    {
-        case OutputSpec::UploadOperation::Copy:
-            return L"Copy file";
-        case OutputSpec::UploadOperation::Move:
-            return L"Move file";
-        case OutputSpec::UploadOperation::NoOp:
-            return L"No operation";
-    }
-
-    return L"Unknown";
-}
-
-std::wstring OutputSpec::ToString(UploadMode mode)
-{
-    switch (mode)
-    {
-        case OutputSpec::UploadMode::Asynchronous:
-            return L"Asynchronous";
-        case OutputSpec::UploadMode::Synchronous:
-            return L"Synchronous";
-    }
-
-    return L"Unknown";
-}
-
-std::wstring OutputSpec::ToString(OutputSpec::Kind kind)
-{
-    switch (kind)
-    {
-        case OutputSpec::Kind::Archive:
-            return L"archive";
-        case OutputSpec::Kind::CSV:
-            return L"csv";
-        case OutputSpec::Kind::Directory:
-            return L"directory";
-        case OutputSpec::Kind::File:
-            return L"file";
-        case OutputSpec::Kind::JSON:
-            return L"json";
-        case OutputSpec::Kind::None:
-            return L"none";
-        case OutputSpec::Kind::ORC:
-            return L"ORC";
-        case OutputSpec::Kind::Parquet:
-            return L"parquet";
-        case OutputSpec::Kind::Pipe:
-            return L"pipe";
-        case OutputSpec::Kind::SQL:
-            return L"sql";
-        case OutputSpec::Kind::StructuredFile:
-            return L"structured file";
-        case OutputSpec::Kind::TableFile:
-            return L"table file";
-        case OutputSpec::Kind::TSV:
-            return L"tsv";
-        case OutputSpec::Kind::XML:
-            return L"xml";
-    }
-
-    return L"Unknown";
-}
-
-std::wstring OutputSpec::ToString(OutputSpec::Encoding encoding)
-{
-    switch (encoding)
-    {
-        case OutputSpec::Encoding::UTF8:
-            return L"utf-8";
-        case OutputSpec::Encoding::UTF16:
-            return L"utf-16";
-    }
-
-    return L"Unknown";
-}
 
 bool Orc::OutputSpec::IsPattern(const std::wstring& strPattern)
 {
@@ -369,13 +255,13 @@ HRESULT OutputSpec::Configure(
         {
             Type = OutputSpec::Kind::Directory;
             Path = outPath.wstring();
-            CreationStatus = Existing;
+            creationStatus = Status::Existing;
             return S_OK;
         }
         else
         {
             Type = OutputSpec::Kind::Directory;
-            CreationStatus = CreatedNew;
+            creationStatus = Status::CreatedNew;
             return Orc::GetOutputDir(outPath.c_str(), Path, true);
         }
     }
@@ -422,16 +308,16 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
             {
                 if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"createnew"sv)
                     || equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"create_new"sv))
-                    Disposition = Disposition::CreateNew;
+                    disposition = Disposition::CreateNew;
                 else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"truncate"sv))
-                    Disposition = Disposition::Truncate;
+                    disposition = Disposition::Truncate;
                 else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"append"sv))
-                    Disposition = Disposition::Append;
+                    disposition = Disposition::Append;
                 else
                 {
                     spdlog::warn(
                         L"Invalid disposition \"{}\", defaulting to append", item[CONFIG_OUTPUT_DISPOSITION].c_str());
-                    Disposition = Disposition::Append;
+                    disposition = Disposition::Append;
                 }
             }
         }
@@ -447,16 +333,16 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
         {
             if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"createnew"sv)
                 || equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"create_new"sv))
-                Disposition = Disposition::CreateNew;
+                disposition = Disposition::CreateNew;
             else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"truncate"sv))
-                Disposition = Disposition::Truncate;
+                disposition = Disposition::Truncate;
             else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"append"sv))
-                Disposition = Disposition::Append;
+                disposition = Disposition::Append;
             else
             {
                 spdlog::warn(
                     L"Invalid disposition \"{}\", defaulting to append", item[CONFIG_OUTPUT_DISPOSITION].c_str());
-                Disposition = Disposition::Append;
+                disposition = Disposition::Append;
             }
         }
     }

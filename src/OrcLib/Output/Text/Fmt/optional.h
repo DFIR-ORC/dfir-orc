@@ -13,14 +13,14 @@
 #include <fmt/format.h>
 
 template <typename T>
-struct fmt::formatter<std::optional<T>> : public fmt::formatter<fmt::string_view>
+struct fmt::formatter<std::optional<T>> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
     auto format(const std::optional<T>& optional, FormatContext& ctx)
     {
         if (!optional.has_value())
         {
-            return fmt::format_to(ctx.out(), "N/A");
+            return fmt::formatter<std::string_view>::format("N/A", ctx);
         }
 
         return fmt::format_to(ctx.out(), "{}", *optional);
@@ -28,14 +28,14 @@ struct fmt::formatter<std::optional<T>> : public fmt::formatter<fmt::string_view
 };
 
 template <typename T>
-struct fmt::formatter<std::optional<T>, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
+struct fmt::formatter<std::optional<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
     auto format(const std::optional<T>& optional, FormatContext& ctx)
     {
         if (!optional.has_value())
         {
-            return fmt::format_to(ctx.out(), L"N/A");
+            return fmt::formatter<std::wstring_view, wchar_t>::format(L"N/A", ctx);
         }
 
         return fmt::format_to(ctx.out(), L"{}", *optional);

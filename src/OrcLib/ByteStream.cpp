@@ -105,7 +105,7 @@ std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const OutputSpec& output)
         case OutputSpec::Kind::File: {
             auto retval = std::make_shared<FileStream>();
 
-            switch (output.Disposition)
+            switch (output.disposition)
             {
                 case OutputSpec::Disposition::Append:
                     if (FAILED(

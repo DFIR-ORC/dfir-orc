@@ -157,7 +157,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
                 return nullptr;
             }
 
-            switch (out.Disposition)
+            switch (out.disposition)
             {
                 case OutputSpec::Disposition::Append:
                     break;

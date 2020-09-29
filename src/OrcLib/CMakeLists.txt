@@ -43,6 +43,7 @@ source_group(Command FILES ${SRC_COMMAND})
 set(SRC_COMMON
     "OrcLib.h"
     "OrcLimits.h"
+    "Limit.h"
     "targetver.h"
 )
 
@@ -68,6 +69,10 @@ set(SRC_DISK
     "DiskStructures.h"
     "Partition.cpp"
     "Partition.h"
+    "PartitionType.cpp"
+    "PartitionType.h"
+    "PartitionFlags.cpp"
+    "PartitionFlags.h"
     "PartitionTable.cpp"
     "PartitionTable.h"
 )
@@ -80,6 +85,7 @@ set(SRC_DISK_FILESYSTEM
     "FileInfo.h"
     "FSUtils.h"
     "FSVBR.h"
+    "FSVBR_FSType.h"
     "GenDataStructure.h"
     "BitLocker.h"
     "PEInfo.cpp"
@@ -177,6 +183,8 @@ source_group(Disk\\FileSystem\\ReFS FILES ${SRC_DISK_FILESYSTEM_REFS})
 set(SRC_DISK_LOCATION
     "Location.cpp"
     "Location.h"
+    "LocationType.h"
+    "LocationType.cpp"
     "LocationSet.cpp"
     "LocationSet.h"
 )
@@ -313,8 +321,10 @@ source_group(In&Out\\ByteStream FILES ${SRC_INOUT_BYTESTREAM})
 set(SRC_INOUT_BYTESTREAM_CRYPTOSTREAM
     "CryptoHashStream.cpp"
     "CryptoHashStream.h"
+    "CryptoHashStreamAlgorithm.h"
     "FuzzyHashStream.cpp"
     "FuzzyHashStream.h"
+    "FuzzyHashStreamAlgorithm.h"
     "HashStream.cpp"
     "HashStream.h"
     "PasswordEncryptedStream.cpp"
@@ -546,22 +556,46 @@ set(SRC_INOUT_TEXT
     "Output/Text/Format.h"
     "Output/Text/HexDump.h"
     "Output/Text/Tree.h"
-    "Output/Text/Tree.cpp"
+    "Output/Text/Tree.cpp")
+
+source_group(In&Out\\Output\\Text FILES ${SRC_INOUT_TEXT})
+
+set(SRC_INOUT_TEXT_FMT
     "Output/Text/Fmt/ByteQuantity.h"
-    "Output/Text/Fmt/CryptoHashStream.h"
+    "Output/Text/Fmt/CryptoHashStreamAlgorithm.h"
     "Output/Text/Fmt/FILE_NAME.h"
     "Output/Text/Fmt/FILETIME.h"
+    "Output/Text/Fmt/Formatter.h"
     "Output/Text/Fmt/FSVBR.h"
-    "Output/Text/Fmt/FuzzyHashStream.h"
+    "Output/Text/Fmt/FuzzyHashStreamAlgorithm.h"
     "Output/Text/Fmt/GUID.h"
-    "Output/Text/Fmt/Location.h"
+    "Output/Text/Fmt/Limit.h"
+    "Output/Text/Fmt/LocationType.h"
     "Output/Text/Fmt/optional.h"
-    "Output/Text/Fmt/OrcLimits.h"
     "Output/Text/Fmt/Offset.h"
-    "Output/Text/Fmt/OutputSpec.h"
+    "Output/Text/Fmt/OutputSpecTypes.h"
     "Output/Text/Fmt/Partition.h"
-    "Output/Text/Fmt/SafeMFTSegmentNumber.h"
+    "Output/Text/Fmt/PartitionFlags.h"
+    "Output/Text/Fmt/PartitionType.h"
     "Output/Text/Fmt/SYSTEMTIME.h"
+    "Output/Text/Fmt/Fwd/ByteQuantity.h"
+    "Output/Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
+    "Output/Text/Fmt/Fwd/FILE_NAME.h"
+    "Output/Text/Fmt/Fwd/FILETIME.h"
+    "Output/Text/Fmt/Fwd/FSVBR.h"
+    "Output/Text/Fmt/Fwd/FuzzyHashStreamAlgorithm.h"
+    "Output/Text/Fmt/Fwd/Limit.h"
+    "Output/Text/Fmt/Fwd/LocationType.h"
+    "Output/Text/Fmt/Fwd/Offset.h"
+    "Output/Text/Fmt/Fwd/OutputSpecTypes.h"
+    "Output/Text/Fmt/Fwd/Partition.h"
+    "Output/Text/Fmt/Fwd/PartitionFlags.h"
+    "Output/Text/Fmt/Fwd/PartitionType.h"
+    "Output/Text/Fmt/Fwd/SYSTEMTIME.h")
+
+source_group(In&Out\\Output\\Text\\Fmt FILES ${SRC_INOUT_TEXT_FMT})
+
+set(SRC_INOUT_TEXT_PRINT
     "Output/Text/Print.h"
     "Output/Text/Print/Bool.h"
     "Output/Text/Print/EmbedSpec.h"
@@ -581,7 +615,7 @@ set(SRC_INOUT_TEXT
     "Output/Text/Print/Ntfs/MFTRecord.cpp"
 )
 
-source_group(In&Out\\Output\\Text FILES ${SRC_INOUT_TEXT})
+source_group(In&Out\\Output\\Text\\Print FILES ${SRC_INOUT_TEXT_PRINT})
 
 set(SRC_INOUT_UPLOAD
     "BITSAgent.cpp"
@@ -687,6 +721,8 @@ source_group(Utilities\\Memory FILES ${SRC_UTILITIES_MEMORY})
 set(SRC_UTILITIES_PARAMETERS
     "OutputSpec.cpp"
     "OutputSpec.h"
+    "OutputSpecTypes.h"
+    "OutputSpecTypes.cpp"
     "ParameterCheck.cpp"
     "ParameterCheck.h"
     "Temporary.cpp"
@@ -805,6 +841,8 @@ add_library(OrcLib
         ${SRC_INOUT_TABLEOUTPUT_SQL}
         ${SRC_INOUT_CONSOLE}
         ${SRC_INOUT_TEXT}
+        ${SRC_INOUT_TEXT_FMT}
+        ${SRC_INOUT_TEXT_PRINT}
         ${SRC_INOUT_UPLOAD}
         ${SRC_LOG}
         ${SRC_OBJECT}

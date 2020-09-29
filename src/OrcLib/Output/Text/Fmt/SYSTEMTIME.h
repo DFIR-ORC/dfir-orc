@@ -8,18 +8,16 @@
 
 #pragma once
 
-#include <windows.h>
+#include "Output/Text/Fmt/Fwd/SYSTEMTIME.h"
 
-#include <fmt/format.h>
+#include <windows.h>
 
 namespace Orc {
 namespace Text {
 
-template <typename FormatContext>
-auto FormatSystemTimeA(const SYSTEMTIME& st, FormatContext& ctx)
+inline auto FormatSystemTimeA(const SYSTEMTIME& st)
 {
-    return fmt::format_to(
-        ctx.out(),
+    return fmt::format(
         "{}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}",
         st.wYear,
         st.wMonth,
@@ -30,11 +28,9 @@ auto FormatSystemTimeA(const SYSTEMTIME& st, FormatContext& ctx)
         st.wMilliseconds);
 }
 
-template <typename FormatContext>
-auto FormatSystemTimeW(const SYSTEMTIME& st, FormatContext& ctx)
+inline auto FormatSystemTimeW(const SYSTEMTIME& st)
 {
-    return fmt::format_to(
-        ctx.out(),
+    return fmt::format(
         L"{}-{:02}-{:02} {:02}:{:02}:{:02}.{:03}",
         st.wYear,
         st.wMonth,
@@ -48,22 +44,14 @@ auto FormatSystemTimeW(const SYSTEMTIME& st, FormatContext& ctx)
 }  // namespace Text
 }  // namespace Orc
 
-template <>
-struct fmt::formatter<SYSTEMTIME> : public fmt::formatter<fmt::string_view>
+template <typename FormatContext>
+auto fmt::formatter<SYSTEMTIME>::format(const SYSTEMTIME& st, FormatContext& ctx) -> decltype(ctx.out())
 {
-    template <typename FormatContext>
-    auto format(const SYSTEMTIME& st, FormatContext& ctx)
-    {
-        return Orc::Text::FormatSystemTimeA(st, ctx);
-    }
-};
+    return formatter<std::string_view>::format(Orc::Text::FormatSystemTimeA(st), ctx);
+}
 
-template <>
-struct fmt::formatter<SYSTEMTIME, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
+template <typename FormatContext>
+auto fmt::formatter<SYSTEMTIME, wchar_t>::format(const SYSTEMTIME& st, FormatContext& ctx) -> decltype(ctx.out())
 {
-    template <typename FormatContext>
-    auto format(const SYSTEMTIME& st, FormatContext& ctx)
-    {
-        return Orc::Text::FormatSystemTimeW(st, ctx);
-    }
-};
+    return formatter<std::wstring_view, wchar_t>::format(Orc::Text::FormatSystemTimeW(st), ctx);
+}

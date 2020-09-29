@@ -12,41 +12,13 @@
 #include <windows.h>
 
 #include "Utils/TypeTraits.h"
+#include "Limit.h"
 
 namespace Orc {
 
 class Limits
 {
 public:
-    template <typename T>
-    struct Limit;
-
-    template <typename T>
-    struct Limit
-    {
-        Limit(T quantity)
-            : value(quantity)
-        {
-        }
-        operator T&() { return value; }
-        operator T() const { return value; }
-        bool IsUnlimited() const { return value == INFINITE; }
-        T value;
-    };
-
-    template <typename T>
-    struct Limit<Traits::ByteQuantity<T>>
-    {
-        Limit(T quantity)
-            : value(quantity)
-        {
-        }
-        operator T&() { return value.value; }
-        operator T() const { return value; }
-        bool IsUnlimited() const { return value.value == INFINITE; }
-        Traits::ByteQuantity<T> value;
-    };
-
     Limits() = default;
 
     bool bIgnoreLimits = false;

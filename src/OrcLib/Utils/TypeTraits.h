@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <type_traits>
+#include <iterator>
 
 namespace Orc {
 namespace Traits {
@@ -347,12 +348,9 @@ struct ByteQuantity
     using value_type = T;
 
     ByteQuantity(T quantity)
+        : value(quantity)
     {
-        if constexpr (std::is_integral_v<T>)
-        {
-            value = quantity;
-        }
-        else
+        if constexpr (!std::is_integral_v<T>)
         {
             static_assert(always_false<T>, "Only integral type are supported");
         }

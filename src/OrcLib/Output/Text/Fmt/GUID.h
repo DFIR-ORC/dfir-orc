@@ -8,28 +8,30 @@
 
 #pragma once
 
+#include <string_view>
+
 #include <guiddef.h>
 
 #include <fmt/format.h>
 
 template <>
-struct fmt::formatter<GUID> : public fmt::formatter<fmt::string_view>
+struct fmt::formatter<GUID> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
     auto format(const GUID& guid, FormatContext& ctx)
     {
-        fmt::format_to(ctx.out(), "{}-{}-{}-{}", guid.Data1, guid.Data2, guid.Data3, guid.Data4);
-        return ctx.out();
+        const auto s = fmt::format("{}-{}-{}-{}", guid.Data1, guid.Data2, guid.Data3, guid.Data4);
+        return formatter<std::string_view>::format(s, ctx);
     }
 };
 
 template <>
-struct fmt::formatter<GUID, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
+struct fmt::formatter<GUID, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const GUID& type, FormatContext& ctx)
+    auto format(const GUID& guid, FormatContext& ctx)
     {
-        fmt::format_to(ctx.out(), L"{}-{}-{}-{}", guid.Data1, guid.Data2, guid.Data3, guid.Data4);
-        return ctx.out();
+        const auto s = fmt::format(L"{}-{}-{}-{}", guid.Data1, guid.Data2, guid.Data3, guid.Data4);
+        return formatter<std::wstring_view, wchar_t>::format(s, ctx);
     }
 };

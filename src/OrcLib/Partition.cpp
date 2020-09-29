@@ -12,84 +12,7 @@
 
 #include <fmt/format.h>
 
-#include <boost/algorithm/string/join.hpp>
-
 namespace Orc {
-
-std::wstring Partition::ToString(Type type)
-{
-    switch (type)
-    {
-        case Type::BitLocked:
-            return L"Bitlocked";
-        case Type::ESP:
-            return L"ESP";
-        case Type::Extended:
-            return L"Extended";
-        case Type::FAT12:
-            return L"FAT12";
-        case Type::FAT16:
-            return L"FAT16";
-        case Type::FAT32:
-            return L"FAT32";
-        case Type::GPT:
-            return L"GPT";
-        case Type::Invalid:
-            return L"Invalid";
-        case Type::MICROSOFT_RESERVED:
-            return L"MICROSOFT_RESERVED";
-        case Type::NTFS:
-            return L"NTFS";
-        case Type::Other:
-            return L"Other";
-        case Type::REFS:
-            return L"REFS";
-    }
-
-    return L"Unsupported";
-}
-
-std::wstring Partition::ToString(Flags flags)
-{
-    std::vector<std::wstring> activeFlags;
-
-    if (flags & Flags::Bootable)
-    {
-        activeFlags.push_back(L"BOOTABLE");
-    }
-
-    if (flags & Flags::Hidden)
-    {
-        activeFlags.push_back(L"HIDDEN");
-    }
-
-    if (flags & Flags::Invalid)
-    {
-        activeFlags.push_back(L"INVALID");
-    }
-
-    if (flags & Flags::NoAutoMount)
-    {
-        activeFlags.push_back(L"NO_AUTO_MOUNT");
-    }
-
-    if (flags & Flags::None)
-    {
-        activeFlags.push_back(L"NONE");
-    }
-
-    if (flags & Flags::ReadOnly)
-    {
-        activeFlags.push_back(L"READONLY");
-    }
-
-    if (flags & Flags::System)
-    {
-        activeFlags.push_back(L"SYSTEM");
-    }
-
-    return boost::join(activeFlags, L" ");
-}
 
 bool Partition::IsBootable() const
 {
@@ -171,7 +94,7 @@ bool Partition::IsValid() const
     return PartitionType != Type::Invalid;
 }
 
-std::wstring Partition::ToString(const Partition& partition)
+std::wstring ToString(const Partition& partition)
 {
     if (partition.IsValid())
     {

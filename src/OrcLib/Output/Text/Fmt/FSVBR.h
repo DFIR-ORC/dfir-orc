@@ -8,41 +8,32 @@
 
 #pragma once
 
-#include <windows.h>
-
-#include <fmt/format.h>
-
+#include "Output/Text/Fmt/Fwd/FSVBR.h"
 #include "Output/Text/Format.h"
+
 #include <FSVBR.h>
 
-template <>
-struct fmt::formatter<Orc::FSVBR::FSType> : public fmt::formatter<fmt::string_view>
+#include <windows.h>
+
+template <typename FormatContext>
+auto fmt::formatter<Orc::FSVBR_FSType>::format(const Orc::FSVBR_FSType& FSType, FormatContext& ctx)
+    -> decltype(ctx.out())
 {
-    template <typename FormatContext>
-    auto format(const Orc::FSVBR::FSType& FSType, FormatContext& ctx)
+    const auto utf16 = Orc::ToString(FSType);
+
+    std::error_code ec;
+    const auto utf8 = Orc::Utf16ToUtf8(utf16, ec);
+    if (ec)
     {
-        const auto utf16 = Orc::FSVBR::ToString(FSType);
-
-        std::error_code ec;
-        const auto utf8 = Utf16ToUtf8(utf16, ec);
-        if (ec)
-        {
-            return fmt::format_to(ctx.out(), "<failed_conversion>");
-        }
-
-        std::copy(std::cbegin(utf8), std::cend(utf8), ctx.out());
-        return ctx.out();
+        return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
     }
-};
 
-template <>
-struct fmt::formatter<Orc::FSVBR::FSType, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
+    formatter<std::string_view>::format(utf8, ctx);
+}
+
+template <typename FormatContext>
+auto fmt::formatter<Orc::FSVBR_FSType, wchar_t>::format(const Orc::FSVBR_FSType& FSType, FormatContext& ctx)
+    -> decltype(ctx.out())
 {
-    template <typename FormatContext>
-    auto format(const Orc::FSVBR::FSType& FSType, FormatContext& ctx)
-    {
-        const auto utf16 = Orc::FSVBR::ToString(FSType);
-        std::copy(std::cbegin(utf16), std::cend(utf16), ctx.out());
-        return ctx.out();
-    }
-};
+    return formatter<std::wstring, wchar_t>::format(Orc::ToString(FSType), ctx);
+}

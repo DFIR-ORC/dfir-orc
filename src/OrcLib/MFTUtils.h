@@ -7,15 +7,16 @@
 //
 #pragma once
 
+#include <vector>
+#include <functional>
+
 #include "OrcLib.h"
 
 #include "BinaryBuffer.h"
 #include "ByteStream.h"
 
 #include "NtfsDataStructures.h"
-
-#include <vector>
-#include <functional>
+#include "Utils/TypeTraits.h"
 
 #pragma managed(push, off)
 

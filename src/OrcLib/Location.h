@@ -7,14 +7,16 @@
 //
 #pragma once
 
-#include "VolumeShadowCopies.h"
-
-#include "DiskExtent.h"
-#include "FSVBR.h"
 
 #include <string>
 #include <vector>
 #include <memory>
+
+#include "LocationType.h"
+#include "VolumeShadowCopies.h"
+#include "DiskExtent.h"
+#include "FSVBR.h"
+#include "Output/Text/Fmt/LocationType.h"
 
 #pragma managed(push, off)
 
@@ -30,25 +32,7 @@ class ORCLIB_API Location
     friend class LocationSet;
 
 public:
-    enum class Type
-    {
-        Undetermined = 0,
-        OfflineMFT,
-        ImageFileDisk,
-        ImageFileVolume,
-        DiskInterface,
-        DiskInterfaceVolume,
-        PhysicalDrive,
-        PhysicalDriveVolume,
-        SystemStorage,
-        SystemStorageVolume,
-        PartitionVolume,
-        MountedStorageVolume,
-        MountedVolume,
-        Snapshot,
-    };
-
-    static std::wstring ToString(Type locationType);
+    using Type = Orc::LocationType;
 
 private:
     std::shared_ptr<VolumeReader> m_Reader;

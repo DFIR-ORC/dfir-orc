@@ -9,7 +9,8 @@
 
 #include "HashStream.h"
 
-#include "Utils/EnumFlags.h"
+#include "FuzzyHashStreamAlgorithm.h"
+#include "Output/Text/Fmt/FuzzyHashStreamAlgorithm.h"
 
 #pragma managed(push, off)
 
@@ -21,12 +22,7 @@ namespace Orc {
 class FuzzyHashStream : public HashStream
 {
 public:
-    enum class Algorithm
-    {
-        Undefined = 0,
-        SSDeep = 1 << 0,
-        TLSH = 1 << 1
-    };
+    using Algorithm = FuzzyHashStreamAlgorithm;
 
     FuzzyHashStream();
 
@@ -57,8 +53,6 @@ protected:
     std::unique_ptr<Tlsh> m_tlsh;
     struct fuzzy_state* m_ssdeep = nullptr;
 };
-
-ENABLE_BITMASK_OPERATORS(FuzzyHashStream::Algorithm);
 
 }  // namespace Orc
 

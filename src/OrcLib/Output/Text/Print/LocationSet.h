@@ -72,7 +72,7 @@ void Print(Orc::Text::Tree<T>& root, const LocationSet& locationSet)
             std::vector<std::wstring> attributes;
             attributes.push_back(serialW);
             attributes.push_back(location->IsValid() ? L"Valid" : L"Invalid");
-            attributes.push_back(FSVBR::ToString(location->GetFSType()));
+            attributes.push_back(ToString(location->GetFSType()));
 
             serialNodeString = fmt::format(L"Volume: {}", boost::join(attributes, L", "));
         }

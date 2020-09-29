@@ -9,9 +9,10 @@
 
 #include "OrcLib.h"
 #include "BinaryBuffer.h"
-#include "Utils/EnumFlags.h"
+#include "FSVBR_FSType.h"
 
 #include "FatDataStructures.h"
+#include "Output/Text/Fmt/FSVBR.h"
 
 #pragma managed(push, off)
 
@@ -29,45 +30,7 @@ static const std::string FVE_VBR_SIGNATURE("-FVE-FS");
 class ORCLIB_API FSVBR
 {
 public:
-    enum class FSType : std::int32_t
-    {
-        UNKNOWN = 0,
-        FAT12 = 0x1,
-        FAT16 = 0x2,
-        FAT32 = 0x4,
-        FAT = 0x7,
-        NTFS = 0x8,
-        REFS = 0x10,
-        BITLOCKER = 0x20,
-        ALL = 0xFFFFFFF
-    };
-
-    static std::wstring ToString(FSType fsType)
-    {
-        switch (fsType)
-        {
-            case FSType::ALL:
-                return L"ALL";
-            case FSType::BITLOCKER:
-                return L"Bit Locker";
-            case FSType::FAT:
-                return L"FAT";
-            case FSType::FAT12:
-                return L"FAT12";
-            case FSType::FAT16:
-                return L"FAT16";
-            case FSType::FAT32:
-                return L"FAT32";
-            case FSType::NTFS:
-                return L"NTFS";
-            case FSType::REFS:
-                return L"REFS";
-            case FSType::UNKNOWN:
-                return L"Unknown";
-        }
-
-        return L"Unsupported";
-    }
+    using FSType = FSVBR_FSType;
 
     static boolean IsFSSupported(const std::wstring& fsName)
     {
@@ -186,8 +149,6 @@ public:
         }
     }
 };
-
-ENABLE_BITMASK_OPERATORS(FSVBR::FSType);
 
 }  // namespace Orc
 

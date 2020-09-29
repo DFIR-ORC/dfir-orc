@@ -10,8 +10,7 @@
 
 #include <boost/algorithm/string/join.hpp>
 
-#include "Output/Text/Fmt/OutputSpec.h"
-
+#include "Output/Text/Fmt/OutputSpecTypes.h"
 #include "Output/Text/Print.h"
 #include "Output/Text/Print/Bool.h"
 #include "Output/Text/Print/Tribool.h"
@@ -53,11 +52,11 @@ void PrintValue(Orc::Text::Tree<T>& node, const U& name, const OutputSpec& outpu
         return;
     }
 
-    std::vector<std::wstring> properties {OutputSpec::ToString(output.Type)};
+    std::vector<std::wstring> properties {ToString(output.Type)};
 
     if (output.Type != OutputSpec::Kind::None)
     {
-        properties.push_back(OutputSpec::ToString(output.OutputEncoding));
+        properties.push_back(ToString(output.OutputEncoding));
     }
 
     if (output.Type == OutputSpec::Kind::Archive)

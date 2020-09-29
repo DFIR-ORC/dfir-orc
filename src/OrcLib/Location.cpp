@@ -26,43 +26,6 @@ using namespace std;
 
 using namespace Orc;
 
-std::wstring Location::ToString(Type locationType)
-{
-    switch (locationType)
-    {
-        case Type::Undetermined:
-            return L"Unknown";
-        case Type::OfflineMFT:
-            return L"OfflineMFT";
-        case Type::ImageFileDisk:
-            return L"ImageFileDisk";
-        case Type::ImageFileVolume:
-            return L"ImageFileVolume";
-        case Type::DiskInterface:
-            return L"DiskInterface";
-        case Type::DiskInterfaceVolume:
-            return L"DiskInterfaceVolume";
-        case Type::PhysicalDrive:
-            return L"PhysicalDrive";
-        case Type::PhysicalDriveVolume:
-            return L"PhysicalDriveVolume";
-        case Type::SystemStorage:
-            return L"SystemStorage";
-        case Type::SystemStorageVolume:
-            return L"SystemStorageVolume";
-        case Type::PartitionVolume:
-            return L"PartitionVolume";
-        case Type::MountedStorageVolume:
-            return L"MountedStorageVolume";
-        case Type::MountedVolume:
-            return L"MountedVolume";
-        case Type::Snapshot:
-            return L"Snapshot";
-    }
-
-    return L"Unknown";
-}
-
 Location::Location(const std::wstring& Location, Location::Type type)
     : m_Location(Location)
     , m_Type(type)
@@ -397,7 +360,7 @@ std::wostream& Orc::operator<<(std::wostream& o, const Location& l)
     std::wstringstream ss;
     bool isAMountedVolume = false;
 
-    ss << Location::ToString(l.GetType()) << L": " << l.GetLocation();
+    ss << ToString(l.GetType()) << L": " << l.GetLocation();
 
     if (l.GetType() == Location::Type::MountedVolume)
     {

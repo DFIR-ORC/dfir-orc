@@ -8,9 +8,10 @@
 
 #pragma once
 
-#include <array>
+#include "Output/Text/Fmt/Fwd/ByteQuantity.h"
 
-#include <fmt/format.h>
+#include <array>
+#include <string>
 
 #include "Utils/TypeTraits.h"
 
@@ -96,23 +97,23 @@ void FormatByteQuantityToW(OutputIt out, const Orc::Traits::ByteQuantity<T>& qua
 //}
 
 template <typename T>
-struct fmt::formatter<Orc::Traits::ByteQuantity<T>> : public fmt::formatter<fmt::string_view>
+template <typename FormatContext>
+auto fmt::formatter<Orc::Traits::ByteQuantity<T>>::format(
+    const Orc::Traits::ByteQuantity<T>& quantity,
+    FormatContext& ctx) -> decltype(ctx.out())
 {
-    template <typename FormatContext>
-    auto format(const Orc::Traits::ByteQuantity<T>& quantity, FormatContext& ctx)
-    {
-        FormatByteQuantityTo(ctx.out(), quantity);
-        return ctx.out();
-    }
-};
+    std::string s;
+    FormatByteQuantityTo(std::back_inserter(s), quantity);
+    return formatter<std::string_view>::format(s, ctx);
+}
 
 template <typename T>
-struct fmt::formatter<Orc::Traits::ByteQuantity<T>, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
+template <typename FormatContext>
+auto fmt::formatter<Orc::Traits::ByteQuantity<T>, wchar_t>::format(
+    const Orc::Traits::ByteQuantity<T>& quantity,
+    FormatContext& ctx) -> decltype(ctx.out())
 {
-    template <typename FormatContext>
-    auto format(const Orc::Traits::ByteQuantity<T>& quantity, FormatContext& ctx)
-    {
-        FormatByteQuantityToW(ctx.out(), quantity);
-        return ctx.out();
-    }
-};
+    std::wstring s;
+    FormatByteQuantityToW(std::back_inserter(s), quantity);
+    return formatter<std::wstring_view, wchar_t>::format(s, ctx);
+}

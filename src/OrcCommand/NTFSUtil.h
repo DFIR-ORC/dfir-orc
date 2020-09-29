@@ -12,6 +12,8 @@
 
 #include "UtilitiesMain.h"
 
+#include "Output/Text/Fmt/Offset.h"
+
 #pragma managed(push, off)
 
 namespace Orc {

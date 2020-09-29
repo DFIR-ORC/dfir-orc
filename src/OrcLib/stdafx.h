@@ -68,7 +68,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "Output/Text/Fmt/formatter.h"
+#include "Output/Text/Fmt/Formatter.h"
 
 #include "OrcLib.h"
 #include "BinaryBuffer.h"
