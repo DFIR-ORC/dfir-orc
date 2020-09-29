@@ -858,7 +858,7 @@ private:
 
 using ByteBuffer = Detail::Buffer<BYTE, 16>;
 
-template <typename _T, size_t _DeclElts = 1>
+template <typename _T, size_t _DeclElts>
 using Buffer = Detail::Buffer<_T, _DeclElts>;
 
 }  // namespace Orc
