@@ -45,6 +45,16 @@ inline HRESULT ReplaceInvalidChars(
 {
     return ReplaceInvalidChars(table, szString, wcslen(szString), dst, cReplacement);
 }
+
+inline HRESULT ReplaceInvalidChars(
+    const IsUnicodeValidTable table[],
+    std::wstring_view sv,
+    std::wstring& dst,
+    const WCHAR cReplacement = L'_')
+{
+    return ReplaceInvalidChars(table, sv.data(), sv.size(), dst, cReplacement);
+}
+
 inline HRESULT ReplaceInvalidChars(
     IsUnicodeValidTable table[],
     const std::wstring& str,
@@ -63,6 +73,10 @@ inline HRESULT SanitizeString(const IsUnicodeValidTable table[], LPCWSTR szStrin
 inline HRESULT SanitizeString(const IsUnicodeValidTable table[], const std::wstring& str, std::wstring& dst)
 {
     return SanitizeString(table, str.c_str(), (DWORD)str.size(), dst);
+}
+inline HRESULT SanitizeString(const IsUnicodeValidTable table[], const std::wstring_view& str, std::wstring& dst)
+{
+    return SanitizeString(table, str.data(), (DWORD)str.size(), dst);
 }
 
 }  // namespace Orc

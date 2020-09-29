@@ -74,13 +74,6 @@ private:
             if (!m_Ptr)
                 throw Orc::Exception(Severity::Fatal, E_OUTOFMEMORY);
         }
-        HeapStore(_T* Ptr, ULONG Elts)
-            : m_Ptr(Ptr)
-            , m_EltsAlloc(Elts)
-        {
-            if (!m_Ptr)
-                throw Orc::Exception(Severity::Fatal, E_POINTER);
-        };
         HeapStore(HeapStore&& other) noexcept
         {
             std::swap(m_Ptr, other.m_Ptr);
@@ -321,7 +314,7 @@ public:
     }
     explicit Buffer(const Buffer& other) { assign(other); }
 
-    Buffer(_In_reads_(Elts) _T* Ptr, _In_ ULONG Elts, _In_ bool Owned, _In_ ULONG Used) { set(Ptr, Elts, Owned, Used); }
+    Buffer(_In_reads_(Elts) const _T* Ptr, _In_ ULONG Elts, _In_ ULONG Used) { set(Ptr, Elts, Used); }
 
     Buffer(const std::initializer_list<_T>& list)
     {
@@ -339,16 +332,20 @@ public:
     bool full() const { return capacity() == size(); }
 
     bool empty() const { return std::holds_alternative<EmptyStore>(m_store); }
-    void set(_In_reads_(Elts) _T* Ptr, _In_ ULONG Elts, _In_ ULONG Used)
+    void set(_In_reads_(Elts) const _T* Ptr, _In_ ULONG Elts, _In_ ULONG Used)
     {
         if (Elts == 0)
             m_store = EmptyStore();
         else if (Elts <= _DeclElts)
         {
-            m_store = InnerStore(Ptr, Ptr + Elts);
+            m_store = InnerStore(Ptr, Ptr + Used);
         }
         else
-            m_store = HeapStore(Ptr, Elts);
+        {
+            HeapStore heap(Elts);
+            heap.assign(Ptr, Used);
+            m_store = std::move(heap);
+        }
 
         if (Used <= Elts)
             m_EltsUsed = Used;
@@ -414,6 +411,46 @@ public:
     void view_of(_In_ const BufferView<_T>& Other, std::optional<ULONG> InUse = std::nullopt)
     {
         view_of(Other.m_Ptr, Other.m_Elts, InUse);
+    }
+
+    void append(const _T& Src)
+    {
+        auto capacity_ = capacity();
+        auto size_ = size();
+        auto new_size = size_ + 1;
+
+        if (new_size > capacity_)
+        {
+            auto new_capacity = std::max(new_size, capacity_ + capacity_ / 2);
+            if (new_capacity < _DeclElts)
+                new_capacity = _DeclElts;
+            reserve(new_capacity);
+            capacity_ = new_capacity;
+        }
+
+        if (is_view() && (capacity_ < new_size))  // current store is a view, and is too small to contains the new
+                                                  // elts -> we need to "mutate" to a owning one.
+        {
+            if (new_size <= _DeclElts)
+            {
+                auto new_store = InnerStore();
+
+                std::visit([&new_store](const auto& arg) { new_store.assign(arg.get(), arg.capacity()); }, m_store);
+                m_store = std::move(new_store);
+                capacity_ = _DeclElts;
+            }
+            else
+            {
+                auto new_capacity = std::max(new_size, capacity_ + capacity_ / 2);
+                auto new_store = HeapStore(new_capacity);
+                std::visit([&new_store](const auto& arg) { new_store.assign(arg.get(), arg.capacity()); }, m_store);
+                m_store = std::move(new_store);
+                capacity_ = new_capacity;
+            }
+        }
+
+        std::copy(&Src, &Src + 1, stdext::checked_array_iterator(get() + size_, capacity_ - size_));
+        m_EltsUsed = new_size;
     }
 
     void append(_In_reads_(Elts) const _T* Src, _In_ ULONG Elts = 1)

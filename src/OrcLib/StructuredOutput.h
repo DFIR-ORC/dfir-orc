@@ -34,11 +34,17 @@ public:
     virtual HRESULT BeginCollection(LPCWSTR szCollection) PURE;
     virtual HRESULT EndCollection(LPCWSTR szCollection) PURE;
 
-    virtual HRESULT WriteFormated(const WCHAR* szFormat, ...) PURE;
-    virtual HRESULT WriteNamedFormated(LPCWSTR szName, const WCHAR* szFormat, ...) PURE;
-
     virtual HRESULT Write(LPCWSTR szString) PURE;
     virtual HRESULT WriteNamed(LPCWSTR szName, LPCWSTR szValue) PURE;
+
+    virtual HRESULT Write(const std::wstring_view str) PURE;
+    virtual HRESULT WriteNamed(LPCWSTR szName, const std::wstring_view str) PURE;
+
+    virtual HRESULT Write(const std::wstring& str) PURE;
+    virtual HRESULT WriteNamed(LPCWSTR szName, const std::wstring& str) PURE;
+
+    virtual HRESULT Write(const std::string_view str) PURE;
+    virtual HRESULT WriteNamed(LPCWSTR szName, const std::string_view str) PURE;
 
     virtual HRESULT Write(bool bBoolean) PURE;
     virtual HRESULT WriteNamed(LPCWSTR szName, bool bBoolean) PURE;
@@ -113,6 +119,50 @@ public:
     virtual HRESULT WriteNamed(LPCWSTR szName, const GUID& guid) PURE;
 
     virtual HRESULT WriteComment(LPCWSTR szComment) PURE;
+
+#ifndef __cplusplus_cli
+
+    using wformat_iterator = std::back_insert_iterator<Buffer<WCHAR, MAX_PATH>>;
+    using wformat_args = fmt::format_args_t<wformat_iterator, wchar_t>;
+
+    template <typename... Args>
+    HRESULT WriteFormated(const std::wstring_view& szFormat, Args&&... args)
+    {
+        using context = fmt::basic_format_context<wformat_iterator, WCHAR>;
+        return WriteFormated_(szFormat, fmt::make_format_args<context>(args...));
+    }
+
+    template <typename... Args>
+    HRESULT WriteNamedFormated(LPCWSTR szName, const std::wstring_view& szFormat, Args&&... args)
+    {
+        using context = fmt::basic_format_context<wformat_iterator, WCHAR>;
+        return WriteNamedFormated_(szName, szFormat, fmt::make_format_args<context>(args...));
+    }
+
+    using format_iterator = std::back_insert_iterator<Buffer<CHAR, MAX_PATH>>;
+    using format_args = fmt::format_args_t<format_iterator, CHAR>;
+
+    template <typename... Args>
+    HRESULT WriteFormated(const std::string_view& szFormat, Args&&... args)
+    {
+        using context = fmt::basic_format_context<format_iterator, CHAR>;
+        return WriteFormated_(szFormat, fmt::make_format_args<context>(args...));
+    }
+
+    template <typename... Args>
+    HRESULT WriteNamedFormated(LPCWSTR szName, const std::string_view& szFormat, Args&&... args)
+    {
+        using context = fmt::basic_format_context<format_iterator, CHAR>;
+        return WriteNamedFormated_(szName, szFormat, fmt::make_format_args<context>(args...));
+    }
+
+protected:
+    STDMETHOD(WriteFormated_)(const std::wstring_view& szFormat, wformat_args args) PURE;
+    STDMETHOD(WriteFormated_)(const std::string_view& szFormat, format_args args) PURE;
+    STDMETHOD(WriteNamedFormated_)(LPCWSTR szName, const std::wstring_view& szFormat, wformat_args args) PURE;
+    STDMETHOD(WriteNamedFormated_)(LPCWSTR szName, const std::string_view& szFormat, format_args args) PURE;
+
+#endif
 };
 
 class IWriter : public IOutput

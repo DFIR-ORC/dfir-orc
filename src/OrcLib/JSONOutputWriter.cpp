@@ -112,48 +112,53 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::EndCollection(LP
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated(const WCHAR* szFormat, ...)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
+    const std::wstring_view& szFormat,
+    wformat_args args)
 {
-    va_list argList;
-    va_start(argList, szFormat);
+    Buffer<WCHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
-    const DWORD dwMaxChar = 1024;
-    WCHAR szBuffer[dwMaxChar];
-    HRESULT hr = StringCchVPrintfW(szBuffer, dwMaxChar, szFormat, argList);
-
-    va_end(argList);
-
-    if (FAILED(hr))
-    {
-        Log::Error(L"Failed to write formated string (code: {:#x})", hr);
-        return hr;
-    }
-
-    rapidWriter.String(szBuffer);
+    rapidWriter.String(buffer.get(), buffer.size());
     return S_OK;
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT
-Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated(LPCWSTR szName, const WCHAR* szFormat, ...)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
+    const std::string_view& szFormat,
+    format_args args)
 {
-    va_list argList;
-    va_start(argList, szFormat);
+    Buffer<CHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
-    const DWORD dwMaxChar = 1024;
-    WCHAR szBuffer[dwMaxChar];
-    HRESULT hr = StringCchVPrintfW(szBuffer, dwMaxChar, szFormat, argList);
-
-    va_end(argList);
-
+    std::string_view result_string = buffer.size() > 0 ? std::string_view(buffer.get(), buffer.size()) : ""sv;
+    auto [hr, wstr] = Orc::AnsiToWide(result_string);
     if (FAILED(hr))
-    {
-        Log::Error(L"Failed to write formated string (code: {:#x})", hr);
         return hr;
-    }
 
+    rapidWriter.String(wstr.data(), wstr.size());
+    return S_OK;
+}
+
+template <class _RapidWriter, typename _Ch>
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated_(
+    LPCWSTR szName,
+    const std::wstring_view& szFormat,
+    wformat_args args)
+{
     rapidWriter.Key(szName);
-    rapidWriter.String(szBuffer);
+    WriteFormated_(szFormat, args);
+    return S_OK;
+}
+
+template <class _RapidWriter, typename _Ch>
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated_(
+    LPCWSTR szName,
+    const std::string_view& szFormat,
+    format_args args)
+{
+    rapidWriter.Key(szName);
+    WriteFormated_(szFormat, args);
     return S_OK;
 }
 
@@ -168,6 +173,51 @@ template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, const WCHAR* szValue)
 {
     return WriteNamed_(szName, szValue);
+}
+
+template <class _RapidWriter, typename _Ch>
+HRESULT Writer<_RapidWriter, _Ch>::Write(const std::wstring_view str)
+{
+    rapidWriter.String(str.data(), str.length());
+    return S_OK;
+}
+
+template <class _RapidWriter, typename _Ch>
+HRESULT Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, const std::wstring_view str)
+{
+    return WriteNamed_(szName, str);
+}
+
+template <class _RapidWriter, typename _Ch>
+HRESULT Writer<_RapidWriter, _Ch>::Write(const std::wstring& str)
+{
+    rapidWriter.String(str.data(), str.length());
+    return S_OK;
+}
+
+template <class _RapidWriter, typename _Ch>
+HRESULT Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, const std::wstring& str)
+{
+    return WriteNamed_(szName, str);
+}
+
+template <class _RapidWriter, typename _Ch>
+HRESULT Writer<_RapidWriter, _Ch>::Write(const std::string_view str)
+{
+    if (auto [hr, wstr] = Orc::AnsiToWide(str); FAILED(hr))
+        return hr;
+    else
+        rapidWriter.String(wstr.data(), wstr.length());
+    return S_OK;
+}
+
+template <class _RapidWriter, typename _Ch>
+HRESULT Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, const std::string_view str)
+{
+    if (auto [hr, wstr] = Orc::AnsiToWide(str); FAILED(hr))
+        return hr;
+    else
+        return WriteNamed(szName, wstr);
 }
 
 template <class _RapidWriter, typename _Ch>
