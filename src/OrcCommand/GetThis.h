@@ -15,6 +15,12 @@
 
 #include "UtilitiesMain.h"
 
+#include <filesystem>
+#include <vector>
+#include <set>
+#include <string>
+
+#include <boost/logic/tribool.hpp>
 #include "ConfigFileReader.h"
 #include "ConfigFileReader.h"
 #include "MFTWalker.h"
@@ -28,13 +34,6 @@
 
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
-
-#include "Utils/TypeTraits.h"
-
-#include <filesystem>
-#include <vector>
-#include <set>
-#include <string>
 
 #pragma managed(push, off)
 
@@ -148,9 +147,6 @@ public:
         static std::wregex g_ContentRegEx;
     };
 
-private:
-    Configuration config;
-
     class SampleRef
     {
     public:
@@ -165,7 +161,6 @@ private:
 
         ULONGLONG SampleSize = 0LL;
         FILETIME CollectionDate;
-        bool OffLimits = false;
 
         LONGLONG VolumeSerial;  //   |
         MFT_SEGMENT_REFERENCE FRN;  //   |--> Uniquely identifies a data stream to collect
@@ -196,7 +191,6 @@ private:
             std::swap(SHA1, Other.SHA1);
             std::swap(SampleSize, Other.SampleSize);
             CollectionDate = Other.CollectionDate;
-            OffLimits = Other.OffLimits;
             std::swap(LimitStatus, Other.LimitStatus);
             std::swap(Matches, Other.Matches);
             AttributeIndex = Other.AttributeIndex;
@@ -206,6 +200,28 @@ private:
             std::swap(Content, Other.Content);
             std::swap(SnapshotID, Other.SnapshotID);
             std::swap(SourcePath, Other.SourcePath);
+        }
+
+        bool IsOfflimits() const
+        {
+            switch (LimitStatus)
+            {
+                case NoLimits:
+                case SampleWithinLimits:
+                    return false;
+                case GlobalSampleCountLimitReached:
+                case GlobalMaxBytesPerSample:
+                case GlobalMaxBytesTotal:
+                case LocalSampleCountLimitReached:
+                case LocalMaxBytesPerSample:
+                case LocalMaxBytesTotal:
+                case FailedToComputeLimits:
+                    return true;
+                default:
+                    _ASSERT("Unhandled 'LimitStatus' case");
+            }
+
+            return true;
         }
 
         bool operator<(const SampleRef& rigth) const
@@ -233,16 +249,43 @@ private:
         };
     };
 
-    struct SampleRefHasher
+    struct SampleId
     {
-        size_t operator()(const SampleRef& ref) const { return ref.FRN.SegmentNumberLowPart; }
+        explicit SampleId(const SampleRef& sample)
+            : FRN(sample.FRN)
+            , AttributeIndex(sample.AttributeIndex)
+            , VolumeSerial(sample.VolumeSerial)
+            , SnapshotId(sample.SnapshotID)
+        {
+        }
+
+        const MFT_SEGMENT_REFERENCE FRN;
+        const size_t AttributeIndex;
+        const LONGLONG VolumeSerial;
+        const GUID SnapshotId;
     };
 
-    struct SampleRefComparator
+    struct SampleIdHasher
     {
-        bool operator()(const SampleRef& lhs, const SampleRef& rhs) const
+        size_t operator()(const SampleId& sampleId) const { return sampleId.FRN.SegmentNumberLowPart; }
+    };
+
+    struct SampleIdComparator
+    {
+        bool operator()(const SampleId& lhs, const SampleId& rhs) const
         {
+            // Low first because of its higher probability of not matching
             if (lhs.FRN.SegmentNumberLowPart != rhs.FRN.SegmentNumberLowPart)
+            {
+                return false;
+            }
+
+            if (lhs.FRN.SegmentNumberHighPart != rhs.FRN.SegmentNumberHighPart)
+            {
+                return false;
+            }
+
+            if (lhs.FRN.SequenceNumber != rhs.FRN.SequenceNumber)
             {
                 return false;
             }
@@ -252,17 +295,12 @@ private:
                 return false;
             }
 
-            if (lhs.Matches.empty() || rhs.Matches.empty())
-            {
-                return false;
-            }
-
             if (lhs.VolumeSerial != rhs.VolumeSerial)
             {
                 return false;
             }
 
-            if (memcmp(&lhs.SnapshotID, &rhs.SnapshotID, sizeof(GUID)) != 0)
+            if (memcmp(&lhs.SnapshotId, &rhs.SnapshotId, sizeof(GUID)) != 0)
             {
                 return false;
             }
@@ -271,8 +309,11 @@ private:
         }
     };
 
-    using SampleSet = std::unordered_set<SampleRef, SampleRefHasher, SampleRefComparator>;
-    SampleSet Samples;
+private:
+    Configuration config;
+
+    using SampleIds = std::unordered_set<SampleId, SampleIdHasher, SampleIdComparator>;
+    SampleIds m_sampleIds;
 
     FileFind FileFinder;
     FILETIME CollectionDate;
@@ -281,7 +322,6 @@ private:
     std::unordered_set<std::wstring> SampleNames;
     std::shared_ptr<Orc::ArchiveCreate> m_compressor;
     std::shared_ptr<Orc::TableOutput::IStreamWriter> m_tableWriter;
-
 
     HRESULT ConfigureSampleStreams(SampleRef& sample) const;
 
@@ -293,21 +333,24 @@ private:
         const SampleSpec& sampleSpec,
         const std::unordered_set<std::wstring>& givenSampleNames) const;
 
-    HRESULT WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, SampleSet& samples) const;
-    HRESULT WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, SampleRef& sample) const;
+    using SampleWrittenCb = std::function<void(const SampleRef&, HRESULT hrWrite)>;
 
-    HRESULT WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, const SampleSet& samples) const;
-    HRESULT WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, const SampleRef& sample) const;
+    HRESULT
+    WriteSample(ArchiveCreate& compressor, std::unique_ptr<SampleRef> sample, SampleWrittenCb writtenCb = {}) const;
 
-    HRESULT WriteSamples(const std::filesystem::path& outputDir, SampleSet& samples) const;
-    HRESULT WriteSample(const std::filesystem::path& outputDir, SampleRef& sample) const;
+    HRESULT WriteSample(
+        const std::filesystem::path& outputDir,
+        std::unique_ptr<SampleRef> sample,
+        SampleWrittenCb writtenCb = {}) const;
+
+    void UpdateSamplesLimits(SampleSpec& sampleSpec, const SampleRef& sample);
 
     void FinalizeHashes(const Main::SampleRef& sample) const;
 
-    HRESULT CollectSamples(const OutputSpec& output, SampleSet& samples);
-
     HRESULT FindMatchingSamples();
 
+    void OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool bStop);
+    void OnSampleWritten(const SampleRef& sample, const SampleSpec& sampleSpec, HRESULT hrWrite) const;
 
 public:
     Main();
