@@ -104,6 +104,24 @@ struct is_back_insert_iterator<std::back_insert_iterator<T>> : std::true_type
 
 template <typename T>
 constexpr bool is_back_insert_iterator_v = is_back_insert_iterator<T>::value;
+
+//
+// Extract underlying value_type
+//
+template <typename T>
+struct extract_value_type
+{
+};
+
+template <typename T>
+struct extract_value_type<std::back_insert_iterator<T>>
+{
+    using type = T;
+};
+
+template <typename T>
+using extract_value_type_t = typename extract_value_type<T>::type;
+
 //
 // Provide underlying char type for the given type or 'void'
 //
