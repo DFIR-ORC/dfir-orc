@@ -455,6 +455,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (OutputOption(argv[i] + 1, L"TempDir", OutputSpec::Kind::Directory, config.TempWorkingDir))
                         ;
+                    else if (OutputOption(argv[i] + 1, L"Outline", OutputSpec::Kind::StructuredFile, config.Outline))
+                        ;
                     else if (BooleanOption(argv[i] + 1, L"Keys", bKeywords))
                         ;
                     else if (BooleanOption(argv[i] + 1, L"Execute", bExecute))

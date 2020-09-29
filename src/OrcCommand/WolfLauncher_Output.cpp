@@ -62,7 +62,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe [/Config=<File>] [/Local=<File> [/Out=<Folder|File.csv|Archive.7z>] "
+        "Usage: DFIR-Orc.exe [/Config=<File>] [/Local=<File> [/Out=<Folder|File.csv|Archive.7z>] [/Outline=File.json] "
         "[/Once|/Overwrite|/CreateNew] [/Computer=<Name>] [/FullComputer=<Name>] [/PowerState=<Requirements>] "
         "[/ChildDebug|/NoChildDebug] [/Offline=<FilePath>] [/SystemType=<WorkStation|Server|DomainController>] [/keys]",
         "When DFIR-Orc executable is 'configured' it will be run in multiple processes which parent(s) will watch and "
@@ -70,7 +70,7 @@ void Main::PrintUsage()
         "processes.");
 
     constexpr std::array kCustomOutputParameters = {
-        Usage::Parameter {"/Outline", "Generic system information file output"}};
+        Usage::Parameter {"/Outline=<File.json|File.xml>", "Generic system information file output"}};
 
     Usage::PrintOutputParameters(usageNode, kCustomOutputParameters);
 
