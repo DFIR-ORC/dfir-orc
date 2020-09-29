@@ -84,6 +84,8 @@ public:
     {
         m_logger->critical(args...);
         ++m_criticalCount;
+
+        DumpBacktrace();
     }
 
 private:
