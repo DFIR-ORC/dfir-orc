@@ -52,6 +52,8 @@ target_link_libraries(Orc
         VisualStudio::atls
 )
 
+target_precompile_headers(Orc PRIVATE stdafx.h)
+
 if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
     AND "${TARGET_ARCH}" STREQUAL "x86")
 

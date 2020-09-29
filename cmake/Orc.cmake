@@ -38,7 +38,6 @@ add_compile_options(
     /Qpar     # Enable Parallel Code Generation
    # /Qspectre-  # No need of mitigation as MS disable theirs when as administrator
     /sdl      # Enable additional security checks
-    /Yustdafx.h
   # /Zi       # Program database for edit and continue (debug only)
     /bigobj
 )
@@ -70,8 +69,5 @@ foreach(OPTION IN ITEMS ${COMPILE_OPTIONS_RELEASE})
     add_compile_options($<$<CONFIG:MINSIZEREL>:${OPTION}>)
     add_compile_options($<$<CONFIG:RELWITHDEBINFO>:${OPTION}>)
 endforeach()
-
-# Always add precompiled header creation flag
-set_source_files_properties(stdafx.cpp PROPERTIES COMPILE_FLAGS "/Ycstdafx.h")
 
 endmacro()

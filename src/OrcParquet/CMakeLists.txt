@@ -34,6 +34,8 @@ set_target_properties(OrcParquet
         FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}OrcParquet"
 )
 
+target_precompile_headers(OrcParquet PRIVATE stdafx.h)
+
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
     install(TARGETS OrcParquet
         CONFIGURATIONS ${CONFIG}

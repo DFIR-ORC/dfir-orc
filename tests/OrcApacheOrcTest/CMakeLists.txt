@@ -37,6 +37,8 @@ set_target_properties(OrcApacheOrcTest
         FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}OrcApacheOrc"
 )
 
+target_precompile_headers(OrcApacheOrcTest PRIVATE stdafx.h)
+
 if("${TARGET_ARCH}" STREQUAL "x64")
     set(APACHEORC_VAR_NAME "APACHEORC_X64DLL")
 elseif("${TARGET_ARCH}" STREQUAL "x86")

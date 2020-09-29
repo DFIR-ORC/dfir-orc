@@ -32,6 +32,8 @@ add_library(OrcParquetLib
         ${SRC_COMMON}
 )
 
+target_precompile_headers(OrcParquetLib PRIVATE stdafx.h)
+
 target_compile_definitions(OrcParquetLib PUBLIC ARROW_STATIC PARQUET_STATIC)
 
 target_include_directories(OrcParquetLib PRIVATE ${Boost_INCLUDE_DIRS})

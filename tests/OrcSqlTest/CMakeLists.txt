@@ -30,6 +30,8 @@ add_library(OrcSqlTest
         ${SRC_COMMON}
 )
 
+target_precompile_headers(OrcSqlTest PRIVATE stdafx.h)
+
 target_link_libraries(OrcSqlTest PRIVATE OrcSql)
 
 set_target_properties(OrcSqlTest

@@ -55,6 +55,8 @@ set_target_properties(FastFind
         LINK_FLAGS "/DEBUG /MANIFESTUAC:\"level='requireAdministrator'\""
 )
 
+target_precompile_headers(FastFind PRIVATE stdafx.h)
+
 if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
     AND "${TARGET_ARCH}" STREQUAL "x86")
 

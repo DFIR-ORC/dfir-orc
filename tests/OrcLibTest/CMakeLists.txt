@@ -190,6 +190,8 @@ target_link_libraries(OrcLibTest
         OrcLib
 )
 
+target_precompile_headers(OrcLibTest PRIVATE stdafx.h)
+
 set_target_properties(OrcLibTest PROPERTIES FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
 
 if(ORC_BUILD_CHAKRACORE)

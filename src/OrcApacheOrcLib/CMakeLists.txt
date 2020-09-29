@@ -33,6 +33,8 @@ add_library(OrcApacheOrcLib
         ${SRC_COMMON}
 )
 
+target_precompile_headers(OrcApacheOrcLib PRIVATE stdafx.h)
+
 target_include_directories(OrcApacheOrcLib
     INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}

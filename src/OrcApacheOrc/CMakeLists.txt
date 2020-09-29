@@ -33,6 +33,8 @@ set_target_properties(OrcApacheOrc
         FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}OrcApacheOrc"
 )
 
+target_precompile_headers(OrcApacheOrc PRIVATE stdafx.h)
+
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
     install(TARGETS OrcApacheOrc
         CONFIGURATIONS ${CONFIG}

@@ -312,4 +312,6 @@ target_include_directories(OrcCommand
 
 target_link_libraries(OrcCommand PUBLIC OrcLib)
 
+target_precompile_headers(OrcCommand PRIVATE stdafx.h)
+
 set_target_properties(OrcCommand PROPERTIES FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")

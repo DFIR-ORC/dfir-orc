@@ -34,6 +34,8 @@ add_library(OrcSql
         ${SRC_UTILITIES}
 )
 
+target_precompile_headers(OrcSql PRIVATE stdafx.h)
+
 target_include_directories(OrcSql
     PRIVATE
         ${Boost_INCLUDE_DIRS}
