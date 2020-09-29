@@ -122,7 +122,7 @@ HRESULT Main::RunThroughUSNJournal()
         if (config.outFileInfo.Type == OutputSpec::Kind::Directory)
         {
             WCHAR szOutputFile[MAX_PATH];
-            StringCchPrintf(szOutputFile, MAX_PATH, L"NTFSInfo_%s_.csv", loc->GetIdentifier());
+            StringCchPrintf(szOutputFile, MAX_PATH, L"NTFSInfo_%s_.csv", loc->GetIdentifier().c_str());
             if (nullptr == (pFileInfoWriter = TableOutput::GetWriter(szOutputFile, config.outFileInfo)))
             {
                 spdlog::error("Failed to create output file information file");
