@@ -534,11 +534,12 @@ private:
 
 }  // namespace
 
-Main::Main(logger pLog)
-    : UtilitiesMain(pLog)
-    , config(pLog)
-    , FileFinder(pLog)
-    , ComputerName(::RetrieveComputerName(L"Default", pLog))
+Main::Main()
+    : UtilitiesMain()
+    , config()
+    , FileFinder(true, Orc::CryptoHashStreamAlgorithm::Undefined, false)
+    , CollectionDate()
+    , ComputerName(::RetrieveComputerName(L"Default"))
 {
 }
 
