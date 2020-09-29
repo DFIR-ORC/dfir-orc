@@ -553,6 +553,8 @@ source_group(In&Out\\Upload FILES ${SRC_INOUT_UPLOAD})
 set(SRC_LOG
     "Log/ByteStreamSink.h"
     "Log/FileSink.h"
+    "Log/Log.cpp"
+    "Log/Log.h"
     "Log/Logger.cpp"
     "Log/Logger.h"
     "Log/MemorySink.h"

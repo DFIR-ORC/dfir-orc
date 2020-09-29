@@ -51,6 +51,7 @@ Logger::Logger()
 
     spdlog::enable_backtrace(512);
 
+    // This is error handler will help to fix log formatting error
     spdlog::set_error_handler([](const std::string& msg) {
         std::cerr << msg << std::endl;
         std::cerr << "Stack trace:" << std::endl;

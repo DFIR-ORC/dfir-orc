@@ -34,6 +34,7 @@ public:
     Logger();
 
     void OpenOutputFile(const std::filesystem::path& path, std::error_code& ec);
+
     const FileSink& fileSink() const;
     FileSink& fileSink();
 
@@ -41,6 +42,42 @@ public:
     ConsoleSink& consoleSink();
 
     void DumpBacktrace();
+
+    template <typename... Args>
+    void Trace(const Args&... args)
+    {
+        m_logger->trace(args...);
+    }
+
+    template <typename... Args>
+    void Debug(const Args&... args)
+    {
+        m_logger->debug(args...);
+    }
+
+    template <typename... Args>
+    void Info(const Args&... args)
+    {
+        m_logger->info(args...);
+    }
+
+    template <typename... Args>
+    void Warn(const Args&... args)
+    {
+        m_logger->warn(args...);
+    }
+
+    template <typename... Args>
+    void Error(const Args&... args)
+    {
+        m_logger->error(args...);
+    }
+
+    template <typename... Args>
+    void Critical(const Args&... args)
+    {
+        m_logger->critical(args...);
+    }
 
 private:
     std::shared_ptr<ConsoleSink> m_consoleSink;
