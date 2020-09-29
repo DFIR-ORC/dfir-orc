@@ -27,6 +27,9 @@ if(${TARGET_ARCH} STREQUAL "x64")
     )
 endif()
 
+# Fix warning with 'cl' about overriding existing value
+string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
 # TODO: Qspectre disable option is not supported until cmake 3.15.2
 add_compile_options(
     /wd4995
@@ -50,8 +53,6 @@ endif()
 list(APPEND COMPILE_OPTIONS_RELEASE
     /guard:cf  # Enable control flow guard
 )
-
-
 
 foreach(OPTION IN ITEMS ${COMPILE_OPTIONS_DEBUG})
     add_compile_options($<$<CONFIG:DEBUG>:${OPTION}>)
