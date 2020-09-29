@@ -13,6 +13,28 @@
 
 using namespace Orc;
 
+namespace {
+
+BOOL CALLBACK StreamOutputCb(IN const void* pvArg, IN BYTE* pbData, IN DWORD cbData, IN BOOL fFinal)
+{
+    auto pStream = (ByteStream*)pvArg;
+
+    if (pStream == nullptr)
+        return FALSE;
+
+    ULONGLONG ullWritten = 0LL;
+    if (FAILED(pStream->Write(pbData, cbData, &ullWritten)))
+        return FALSE;
+
+    if (fFinal)
+        if (FAILED(pStream->Close()))
+            return FALSE;
+
+    return TRUE;
+};
+
+}  // namespace
+
 STDMETHODIMP EncodeMessageStream::AddRecipient(const CBinaryBuffer& buffer)
 {
     HRESULT hr = E_FAIL;
@@ -119,25 +141,7 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
 
     m_StreamInfo.cbContent = CMSG_INDEFINITE_LENGTH;
     m_StreamInfo.pvArg = m_pChainedStream.get();
-    m_StreamInfo.pfnStreamOutput =
-        (PFN_CMSG_STREAM_OUTPUT)[](IN const void* pvArg, IN BYTE* pbData, IN DWORD cbData, IN BOOL fFinal)->BOOL
-    {
-
-        auto pStream = (ByteStream*)pvArg;
-
-        if (pStream == nullptr)
-            return FALSE;
-
-        ULONGLONG ullWritten = 0LL;
-        if (FAILED(pStream->Write(pbData, cbData, &ullWritten)))
-            return FALSE;
-
-        if (fFinal)
-            if (FAILED(pStream->Close()))
-                return FALSE;
-
-        return TRUE;
-    };
+    m_StreamInfo.pfnStreamOutput = ::StreamOutputCb;
 
     m_hMsg = CryptMsgOpenToEncode(
         X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 0L, CMSG_ENVELOPED, &EncodeInfo, NULL, &m_StreamInfo);
