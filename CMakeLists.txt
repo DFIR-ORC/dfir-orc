@@ -14,6 +14,7 @@ option(ORC_BUILD_SQL        "Build SQL module" OFF)
 option(ORC_BUILD_SSDEEP     "Build with ssdeep support" OFF)
 option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" ON)
 option(ORC_DOWNLOADS_ONLY   "Do not build ORC but only download vcpkg third parties" OFF)
+option(ORC_DISABLE_PRECOMPILED_HEADERS "Disable precompiled headers" OFF)
 
 if(NOT ORC_BUILD_COMMAND)
     set(ORC_BUILD_FASTFIND OFF)

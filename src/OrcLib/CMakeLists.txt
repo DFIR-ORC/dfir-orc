@@ -796,6 +796,8 @@ endif()
     target_link_libraries(OrcLib PUBLIC chakracore::chakracore-header-only)
  endif()
 
-target_precompile_headers(OrcLib PRIVATE stdafx.h)
+if(NOT ORC_DISABLE_PRECOMPILED_HEADERS)
+    target_precompile_headers(OrcLib PRIVATE stdafx.h)
+endif()
 
 set_target_properties(OrcLib PROPERTIES FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
