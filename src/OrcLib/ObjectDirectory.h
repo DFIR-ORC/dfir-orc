@@ -10,6 +10,8 @@
 
 #include <functional>
 
+#include "Flags.h"
+
 #pragma managed(push, off)
 
 namespace Orc {

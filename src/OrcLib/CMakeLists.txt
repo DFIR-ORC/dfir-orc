@@ -603,6 +603,8 @@ set(SRC_UTILITIES
     "OrcException.cpp"
     "OrcException.h"
     "OrcResult.h"
+    "Flags.cpp"
+    "Flags.h"
     "Utils/Iconv.cpp"
     "Utils/Iconv.h"
 )
