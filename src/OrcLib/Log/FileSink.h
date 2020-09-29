@@ -11,6 +11,7 @@
 #include <memory>
 #include <cassert>
 #include <fstream>
+#include <iostream>
 
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -57,7 +58,7 @@ public:
         m_lazyClose = true;
 
         // Calling flush with lazyclose will close the file sink behind the base_sink mutex
-        flush();
+        spdlog::sinks::base_sink<Mutex>::flush();
     }
 
 protected:
