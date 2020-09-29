@@ -388,6 +388,15 @@ HRESULT MemoryStream::SetSize(ULONG64 ullNewSize)
 {
     if (ullNewSize > MAXDWORD)
         return E_INVALIDARG;
+
+    // Truncate the buffer to have the same behavior than FileStream with
+    // SetEndOfFile
+    if (ullNewSize < m_cbBuffer)
+    {
+        m_cbBuffer = ullNewSize;
+        return S_OK;
+    }
+
     return SetBufferSize(0LL, (size_t)ullNewSize);
 }
 
