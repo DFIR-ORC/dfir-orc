@@ -30,10 +30,10 @@ namespace {
 
 class Lib7z
 {
-    Lib7z::Lib7z( const Lib7z& ) = delete;
-    Lib7z& Lib7z::operator=( const Lib7z& ) = delete;
+    Lib7z( const Lib7z& ) = delete;
+    Lib7z& operator=( const Lib7z& ) = delete;
 
-    Lib7z::Lib7z()
+    Lib7z()
     {
         ::lib7zCrcTableInit();
         NArchive::N7z::Register();

@@ -33,7 +33,8 @@ public:
 
         Assert::IsTrue(SUCCEEDED(scanner.Initialize()));
 
-        Assert::IsTrue(SUCCEEDED(scanner.Configure(std::unique_ptr<YaraConfig>())));
+        auto yaraConfig = std::make_unique<YaraConfig>();
+        Assert::IsTrue(SUCCEEDED(scanner.Configure(yaraConfig)));
 
         auto rules = R"(
 				import "pe"

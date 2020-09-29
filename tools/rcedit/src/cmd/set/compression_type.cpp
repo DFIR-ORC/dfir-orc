@@ -45,7 +45,8 @@ CompressionType ToCompressionType( const std::string& value )
         return toEnumClass.at( type );
     }
     catch( const std::exception& ) {
-        spdlog::error( "Failed to convert '{}' to a known compression type", value );
+        spdlog::error(
+            "Failed to convert '{}' to a known compression type", value );
         throw;
     }
 }
@@ -56,6 +57,17 @@ std::istream& operator>>( std::istream& in, CompressionType& type )
     in >> s;
     type = ToCompressionType( s );
     return in;
+}
+
+std::istream& operator>>(
+    std::istream& in,
+    std::optional< CompressionType >& type )
+{
+    if( !type ) {
+        return in;
+    }
+
+    return operator>>( in, *type );
 }
 
 }  // namespace rcedit

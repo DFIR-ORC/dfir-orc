@@ -36,7 +36,6 @@ add_compile_options(
     /EHa      # Enable C++ exception with SEH (required by Robustness.cpp: _set_se_translator)
   # /Gy       # Enable function level linking
   # /JMC      # Debug only Just My Code
-    /MP       # Multi processor compilation
     /Oy-      # Omit frame pointer
    # /Qpar     # Enable Parallel Code Generation
    # /Qspectre-  # No need of mitigation as MS disable theirs when as administrator
@@ -45,8 +44,48 @@ add_compile_options(
     /bigobj
 )
 
-# TODO: enable SAFESEH when clang add support
-if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # Multi processor compilation
+    add_compile_options("/MP")
+else()
+    add_compile_options(
+        -Wpointer-to-int-cast
+        -Wno-deprecated-declarations
+        -Wno-defaulted-function-deleted
+        -Wno-delete-non-abstract-non-virtual-dtor
+        -Wno-enum-compare
+        -Wno-final-dtor-non-final-class
+        -Wno-inconsistent-missing-override
+        -Wno-ignored-pragmas
+        -Wno-invalid-noreturn
+        -Wno-logical-not-parentheses
+        -Wno-microsoft-extra-qualification
+        -Wno-microsoft-exception-spec
+        -Wno-microsoft-goto
+        -Wno-microsoft-include
+        -Wno-microsoft-template
+        -Wno-missing-braces
+        -Wno-nonportable-include-path
+        -Wno-overloaded-virtual
+        -Wno-parentheses
+        -Wno-pessimizing-move
+        -Wno-reorder-ctor
+        -Wno-return-type
+        -Wno-switch
+        -Wno-tautological-constant-out-of-range-compare
+        -Wno-unknown-pragmas
+        -Wno-unknown-warning-option
+        -Wno-unused-const-variable
+        -Wno-unused-function
+        -Wno-unused-lambda-capture
+        -Wno-unused-local-typedef
+        -Wno-unused-private-field
+        -Wno-unused-value
+        -Wno-unused-variable
+        -Wno-writable-strings
+    )
+
+    # TODO: enable SAFESEH when clang add support
     add_link_options("/SAFESEH:NO")
 endif()
 

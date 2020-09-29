@@ -219,7 +219,7 @@ public:
 
             NameMatch(NameMatch&& other) noexcept = default;
 
-            NameMatch& NameMatch::operator=(const NameMatch& other)
+            NameMatch& operator=(const NameMatch& other)
             {
                 size_t cbBytes = sizeof(FILE_NAME) + ((PFILE_NAME)other.FileName.get())->FileNameLength * sizeof(WCHAR);
                 FileName = std::unique_ptr<BYTE[]>(new BYTE[cbBytes]);

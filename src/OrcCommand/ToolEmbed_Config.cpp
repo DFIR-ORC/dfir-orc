@@ -48,8 +48,7 @@ Main::GetNameValuePairFromConfigItem(const ConfigItem& item, EmbeddedResource::E
         return E_FAIL;
     }
 
-    std::swap(spec, EmbeddedResource::EmbedSpec::AddNameValuePair(item[TOOLEMBED_PAIRNAME], item[TOOLEMBED_PAIRVALUE]));
-
+    spec = EmbeddedResource::EmbedSpec::AddNameValuePair(item[TOOLEMBED_PAIRNAME], item[TOOLEMBED_PAIRVALUE]);
     return S_OK;
 }
 
@@ -88,10 +87,7 @@ HRESULT Main::GetAddFileFromConfigItem(const ConfigItem& item, EmbeddedResource:
         }
     }
 
-    std::swap(
-        spec,
-        EmbeddedResource::EmbedSpec::AddFile((const std::wstring&)item[TOOLEMBED_FILENAME], std::move(strInputFile)));
-
+    spec = EmbeddedResource::EmbedSpec::AddFile((const std::wstring&)item[TOOLEMBED_FILENAME], std::move(strInputFile));
     return S_OK;
 }
 
@@ -163,13 +159,8 @@ HRESULT Main::GetAddArchiveFromConfigItem(const ConfigItem& item, EmbeddedResour
     if (FAILED(hr))
         return hr;
 
-    std::swap(
-        spec,
-        EmbeddedResource::EmbedSpec::AddArchive(
-            std::move(strArchiveName),
-            std::move(strArchiveFormat),
-            std::move(strArchiveCompression),
-            std::move(items)));
+    spec = EmbeddedResource::EmbedSpec::AddArchive(
+        std::move(strArchiveName), std::move(strArchiveFormat), std::move(strArchiveCompression), std::move(items));
 
     return S_OK;
 }

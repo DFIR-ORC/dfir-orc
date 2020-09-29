@@ -7,6 +7,7 @@
 //
 #pragma once
 
+#include <optional>
 #include <string>
 
 namespace rcedit {
@@ -17,8 +18,12 @@ enum class CompressionType
     k7zip
 };
 
-std::string ToString(CompressionType type);
+std::string ToString( CompressionType type );
 
 std::istream& operator>>( std::istream& in, CompressionType& type );
+
+std::istream& operator>>(
+    std::istream& in,
+    std::optional< CompressionType >& type );
 
 }  // namespace rcedit

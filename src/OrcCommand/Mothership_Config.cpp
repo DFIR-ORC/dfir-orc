@@ -60,56 +60,57 @@ ConfigItem::InitFunction Main::GetXmlLocalConfigBuilder()
 
 HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 {
-    wstringstream argsBuilder;
+    std::wstringstream argsBuilder;
 
     for (int i = 0; i < argc; i++)
     {
-        switch (argv[i][0])
+        const wchar_t firstLetter = argv[i][0];
+        if (firstLetter == L'/')
         {
-            case L'/':
-                ::WriteArgument(argsBuilder, std::wstring_view(argv[i]));
+            std::wstring_view arg(argv[i]);
+            ::WriteArgument(argsBuilder, arg);
 
-                if (ProcessPriorityOption(argv[i] + 1))
-                {
-                    config.dwCreationFlags |= IDLE_PRIORITY_CLASS;
-                }
-                else if (OutputOption(
-                             argv[i] + 1,
-                             L"TempDir",
-                             static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory),
-                             config.Temporary))
-                {
-                }
-                break;
-            case L'-':
-                if (BooleanOption(argv[i] + 1, L"NoWait", config.bNoWait))
-                {
-                }
-                else if (BooleanOption(argv[i] + 1, L"WMI", config.bUseWMI))
-                {
-                }
-                else if (BooleanOption(argv[i] + 1, L"PreserveJob", config.bPreserveJob))
-                {
-                }
-                else if (ParameterOption(argv[i] + 1, L"ReParent", config.strParentName))
-                {
-                }
-                else if (ProcessPriorityOption(argv[i] + 1))
-                {
-                    config.dwCreationFlags |= IDLE_PRIORITY_CLASS;
-                }
-                else if (IgnoreCommonOptions(argv[i] + 1))
-                    ;
-                else
-                {
-                    PrintUsage();
-                    return E_INVALIDARG;
-                }
-                break;
-            default:
-                break;
+            if (ProcessPriorityOption(argv[i] + 1))
+            {
+                config.dwCreationFlags |= IDLE_PRIORITY_CLASS;
+            }
+            else if (OutputOption(
+                         argv[i] + 1,
+                         L"TempDir",
+                         static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory),
+                         config.Temporary))
+            {
+            }
+        }
+        else if (firstLetter == L'-')
+        {
+            if (BooleanOption(argv[i] + 1, L"NoWait", config.bNoWait))
+            {
+            }
+            else if (BooleanOption(argv[i] + 1, L"WMI", config.bUseWMI))
+            {
+            }
+            else if (BooleanOption(argv[i] + 1, L"PreserveJob", config.bPreserveJob))
+            {
+            }
+            else if (ParameterOption(argv[i] + 1, L"ReParent", config.strParentName))
+            {
+            }
+            else if (ProcessPriorityOption(argv[i] + 1))
+            {
+                config.dwCreationFlags |= IDLE_PRIORITY_CLASS;
+            }
+            else if (IgnoreCommonOptions(argv[i] + 1))
+            {
+            }
+            else
+            {
+                PrintUsage();
+                return E_INVALIDARG;
+            }
         }
     }
+
     config.strCmdLineArgs = argsBuilder.str();
     return S_OK;
 }

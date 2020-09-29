@@ -53,7 +53,7 @@ public:
     virtual ~Resources();
 
     void Load( const std::filesystem::path& peFilePath, std::error_code& ec );
-    void Resources::Print() const;
+    void Print() const;
 
 private:
     std::vector< ResourceTypeDir > m_types;

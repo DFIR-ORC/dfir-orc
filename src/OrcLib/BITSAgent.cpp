@@ -185,7 +185,13 @@ BITSAgent::UploadFile(
         return hr;
     }
 
-    CComQIPtr<IBackgroundCopyJob2> job2 = job;
+    CComPtr<IBackgroundCopyJob2> job2;
+    hr = job->QueryInterface(IID_IBackgroundCopyJob2, reinterpret_cast<void**>(&job2));
+    if (!job2)
+    {
+        spdlog::critical(L"Failed to retrieve IID_IBackgroundCopyJob2 interface (code: {:#x})", hr);
+        return hr;
+    }
 
     if (!m_config.UserName.empty() && m_config.AuthScheme != OutputSpec::UploadAuthScheme::Anonymous)
     {

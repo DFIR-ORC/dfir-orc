@@ -178,9 +178,9 @@ private:
         WCHAR** ppValue);
     HRESULT WriteVersionQueryValue(WCHAR* szValueName, ITableOutput& output);
 
-    static const WCHAR* FileInfo::g_pszExecutableFileExtensions[];
-    static const WCHAR* FileInfo::g_pszScriptFileExtensions[];
-    static const WCHAR* FileInfo::g_pszArchiveFileExtensions[];
+    static const WCHAR* g_pszExecutableFileExtensions[];
+    static const WCHAR* g_pszScriptFileExtensions[];
+    static const WCHAR* g_pszArchiveFileExtensions[];
 };
 
 }  // namespace Orc

@@ -201,7 +201,7 @@ public:
                 Type = other.Type;
             };
 
-            KeyNameMatch& KeyNameMatch::operator=(const KeyNameMatch& other)
+            KeyNameMatch& operator=(const KeyNameMatch& other)
             {
                 KeyName = other.KeyName;
                 ShortKeyName = other.ShortKeyName;
@@ -271,7 +271,7 @@ public:
                 other.Datas = nullptr;
             }
 
-            ValueNameMatch& ValueNameMatch::operator=(const ValueNameMatch& other)
+            ValueNameMatch& operator=(const ValueNameMatch& other)
             {
                 KeyType = other.KeyType;
                 ValueType = other.ValueType;

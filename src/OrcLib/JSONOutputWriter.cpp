@@ -34,7 +34,7 @@ Writer<_RapidWriter, _Ch>::Writer(std::shared_ptr<ByteStream> stream, std::uniqu
 }
 
 std::shared_ptr<StructuredOutput::IWriter>
-JSON::GetWriter(std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& options)
+GetWriter(std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& options)
 {
     if (options == nullptr)
         return std::make_shared<Writer<

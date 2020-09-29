@@ -39,7 +39,7 @@ std::wstring StringFromResourceId( LPCWSTR resId )
 
 #pragma warning( push )
 #pragma warning( disable : 4302 )
-    const WORD id = reinterpret_cast< WORD >( resId );
+    const WORD id = reinterpret_cast<size_t>(resId) & 0xFFFF;
 #pragma warning( pop )
 
     try {
@@ -51,19 +51,28 @@ std::wstring StringFromResourceId( LPCWSTR resId )
     }
 }
 
+BOOL CALLBACK EnumResourceTypeCb( HMODULE, LPWSTR lpType, LONG_PTR lParam )
+{
+    auto types = reinterpret_cast< std::vector< ResourceTypeDir >* >( lParam );
+    auto type = StringFromResourceId( lpType );
+    types->push_back( std::move( type ) );
+    return TRUE;
+}
+
 BOOL GetResourceTypes( HMODULE hModule, std::vector< ResourceTypeDir >& types )
 {
     return EnumResourceTypesW(
-        hModule,
-        []( HMODULE, LPWSTR lpType, LONG_PTR lParam ) {
-            auto types =
-                reinterpret_cast< std::vector< ResourceTypeDir >* >( lParam );
+        hModule, &EnumResourceTypeCb, reinterpret_cast< LONG_PTR >( &types ) );
+}
 
-            auto type = StringFromResourceId( lpType );
-            types->push_back( std::move( type ) );
-            return TRUE;
-        },
-        reinterpret_cast< LONG_PTR >( &types ) );
+BOOL CALLBACK
+EnumResourceNamesCb( HMODULE, LPCWSTR type, LPWSTR lpName, LONG_PTR lParam )
+{
+    auto names = reinterpret_cast< std::vector< ResourceNameDir >* >( lParam );
+
+    auto name = StringFromResourceId( lpName );
+    names->push_back( std::move( name ) );
+    return TRUE;
 }
 
 BOOL GetResourceNames(
@@ -74,15 +83,21 @@ BOOL GetResourceNames(
     return EnumResourceNamesW(
         hModule,
         type.c_str(),
-        []( HMODULE, LPCWSTR type, LPWSTR lpName, LONG_PTR lParam ) {
-            auto names =
-                reinterpret_cast< std::vector< ResourceNameDir >* >( lParam );
-
-            auto name = StringFromResourceId( lpName );
-            names->push_back( std::move( name ) );
-            return TRUE;
-        },
+        &EnumResourceNamesCb,
         reinterpret_cast< LONG_PTR >( &names ) );
+}
+
+BOOL CALLBACK EnumResourceLanguageCb(
+    HMODULE,
+    LPCWSTR type,
+    LPCWSTR name,
+    WORD wLang,
+    LONG_PTR lParam )
+{
+    auto langs = reinterpret_cast< std::vector< ResourceLangDir >* >( lParam );
+
+    langs->emplace_back( wLang );
+    return TRUE;
 }
 
 BOOL GetResourceLang(
@@ -95,13 +110,7 @@ BOOL GetResourceLang(
         hModule,
         type.c_str(),
         name.c_str(),
-        []( HMODULE, LPCWSTR type, LPCWSTR name, WORD wLang, LONG_PTR lParam ) {
-            auto langs =
-                reinterpret_cast< std::vector< ResourceLangDir >* >( lParam );
-
-            langs->emplace_back( wLang );
-            return TRUE;
-        },
+        &EnumResourceLanguageCb,
         reinterpret_cast< LONG_PTR >( &langs ) );
 }
 

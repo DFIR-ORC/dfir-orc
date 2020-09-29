@@ -17,8 +17,8 @@ using namespace Orc;
 
 static const auto DEFAULT_FRS_PER_READ = 64;
 
-MFTOnline::MFTOnline(std::shared_ptr<VolumeReader>& volReader)
-    : m_pVolReader(volReader)
+MFTOnline::MFTOnline(std::shared_ptr<VolumeReader> volReader)
+    : m_pVolReader(std::move(volReader))
 {
     m_MftOffset = 0LL;
     m_RootUSN = 0LL;

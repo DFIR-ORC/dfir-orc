@@ -180,7 +180,14 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
         }
     }
 
-    CComQIPtr<IBackgroundCopyJob2> job2 = m_job;
+    CComPtr<IBackgroundCopyJob2> job2;
+    hr = m_job->QueryInterface(IID_IBackgroundCopyJob2, reinterpret_cast<void**>(&job2));
+    if (!job2)
+    {
+        spdlog::critical(L"Failed to retrieve IID_IBackgroundCopyJob2 interface (code: {:#x})", hr);
+        return hr;
+    }
+
     ULONG ulNotifyFlags = 0L;
     CComPtr<IBackgroundCopyCallback2> pNotify;
 

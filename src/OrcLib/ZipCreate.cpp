@@ -111,7 +111,9 @@ HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, Co
     HRESULT hr = E_FAIL;
 
     if (!pArchiver)
+    {
         return E_POINTER;
+    }
 
     const size_t numProps = 1;
     const wchar_t* names[numProps] = {L"x"};
@@ -233,12 +235,11 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
 
             CComPtr<InByteStreamWrapper> infile = new InByteStreamWrapper(m_TempStream);
 
-            CComQIPtr<IInArchive, &IID_IInArchive> inarchive = pArchiver;
-
-            CComPtr<ArchiveOpenCallback> callback = new ArchiveOpenCallback();
-
+            CComPtr<IInArchive> inarchive;
+            pArchiver->QueryInterface(IID_IInArchive, (void**)&pArchiver);
             if (inarchive != nullptr)
             {
+                CComPtr<ArchiveOpenCallback> callback = new ArchiveOpenCallback();
                 if (FAILED(hr = inarchive->Open(infile, nullptr, callback)))
                 {
                     spdlog::error(L"Failed to open archive stream (code: {:#x})", hr);

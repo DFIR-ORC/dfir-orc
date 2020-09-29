@@ -402,7 +402,7 @@ Orc::TableOutput::CSV::Writer::WriteFormated_(const std::wstring_view& szFormat,
     Buffer<WCHAR, MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
-    std::wstring_view result_string = buffer.size() > 0 ? std::wstring_view((LPCWSTR)buffer, buffer.size()) : L""sv;
+    std::wstring_view result_string = buffer.size() > 0 ? std::wstring_view(buffer.get(), buffer.size()) : L""sv;
 
     if (auto hr = FormatColumn(result_string); FAILED(hr))
     {

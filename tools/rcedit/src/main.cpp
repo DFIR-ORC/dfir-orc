@@ -5,6 +5,7 @@
 //
 // Author(s): fabienfl
 //
+
 #include <optional>
 #include <string>
 
@@ -82,7 +83,7 @@ int wmain( int argc, const wchar_t* const argv[] )
         // Convert arguments to utf8 for compatibility with CLI11
         std::vector< std::string > args;
         for( int i = 0; i < argc; ++i ) {
-            args.push_back( std::move( rcedit::Utf16ToUtf8( argv[ i ] ) ) );
+            args.push_back( rcedit::Utf16ToUtf8( argv[ i ] ) );
         }
 
         rcedit::main( args );

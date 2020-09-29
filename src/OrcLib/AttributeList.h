@@ -158,8 +158,8 @@ public:
         return false;
     }
 
-    AttributeList& AttributeList::operator=(const AttributeList& theOther);
-    AttributeList& AttributeList::operator=(AttributeList&& theOther);
+    AttributeList& operator=(const AttributeList& theOther);
+    AttributeList& operator=(AttributeList&& theOther);
 
     HRESULT DeleteAttributesForThisRecord();
 };

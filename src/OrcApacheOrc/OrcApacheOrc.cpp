@@ -16,7 +16,9 @@ using namespace Orc;
 
 std::shared_ptr<TableOutput::IStreamWriter> StreamTableFactory(std::unique_ptr<TableOutput::Options>&& options)
 {
-#pragma comment(linker, "/export:StreamTableFactory=" __FUNCDNAME__)
+#ifndef __clang__
+#    pragma comment(linker, "/export:StreamTableFactory=" __FUNCDNAME__)
+#endif
 
     std::unique_ptr<TableOutput::ApacheOrc::Options> pParquetOpt(
         dynamic_cast<TableOutput::ApacheOrc::Options*>(options.release()));

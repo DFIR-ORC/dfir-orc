@@ -503,7 +503,7 @@ public:
                     std::copy(current, current + size(), stdext::checked_array_iterator(new_store.get(), Elts));
                 }
 
-                std::swap(m_store, Store(std::move(new_store)));
+                m_store = std::move(new_store);
             }
         }
 
@@ -781,14 +781,14 @@ public:
     using const_reference = typename allocator_type::const_reference;
     using difference_type = typename allocator_type::difference_type;
     using size_type = typename allocator_type::size_type;
-    using const_pointer = typename const allocator_type::pointer;
+    using const_pointer = const typename allocator_type::pointer;
 
     class const_iterator
     {
     public:
         using value_type = typename allocator_type::value_type;
         using const_reference = typename allocator_type::const_reference;
-        using const_pointer = typename const allocator_type::pointer;
+        using const_pointer = const typename allocator_type::pointer;
         using difference_type = typename allocator_type::difference_type;
         using size_type = typename allocator_type::size_type;
         using iterator_category = typename std::bidirectional_iterator_tag;
@@ -853,6 +853,7 @@ private:
     Store m_store;
     ULONG m_EltsUsed = 0;
 };
+
 }  // namespace Detail
 
 using ByteBuffer = Detail::Buffer<BYTE, 16>;

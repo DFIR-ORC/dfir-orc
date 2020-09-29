@@ -7,6 +7,15 @@
 #            Jean Gautier
 #
 
+function(remove_lines IN_FILE pattern)
+  file(STRINGS "${IN_FILE}" LINES)
+  file(WRITE "${IN_FILE}" "")
+  foreach(LINE IN LISTS LINES)
+    string(REGEX REPLACE "${pattern}" "" STRIPPED "${LINE}")
+    file(APPEND "${IN_FILE}" "${STRIPPED}\n")
+  endforeach()
+endfunction()
+
 if(DEFINED ENV{VCINSTALLDIR})
     set(VS_INSTALL_DIR $ENV{VCINSTALLDIR}/..)
 else()
@@ -78,16 +87,24 @@ find_package_handle_standard_args(VisualStudio
 
 if(NOT TARGET VisualStudio::atls)
     add_library(VisualStudio::atls INTERFACE IMPORTED)
-
-    set_target_properties(VisualStudio::atls
-        PROPERTIES
-            INTERFACE_LINK_DIRECTORIES "${ATLS_LIB_DIR}"
-    )
-
     target_link_libraries(VisualStudio::atls INTERFACE "atls.lib")
+    target_link_directories(VisualStudio::atls INTERFACE "${ATLS_LIB_DIR}")
 endif()
 
 if(NOT TARGET VisualStudio::CppUnitTest)
+    # Copy original header and remove the library inclusion done with '#pragma'
+    # because relative path is not supported by clang:
+    #
+    # lld-link: error: could not open 'x86\Microsoft.VisualStudio.TestTools.CppUnitTestFramework.lib': no such file or directory
+    #
+    if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        set(CPPUNITTEST_INCLUDE_DIR_OVERRIDE "${CMAKE_BINARY_DIR}/VS/UnitTest/")
+        file(COPY "${CPPUNITTEST_INCLUDE_DIR}" DESTINATION "${CPPUNITTEST_INCLUDE_DIR_OVERRIDE}")
+        remove_lines("${CPPUNITTEST_INCLUDE_DIR_OVERRIDE}/include/CppUnitTestCommon.h" "\#pragma comment\\(lib.*")
+
+        set(CPPUNITTEST_INCLUDE_DIR "${CPPUNITTEST_INCLUDE_DIR_OVERRIDE}/include")
+    endif()
+
     # Instead of including absolute path do the library, the library directory
     # must be include instead because of the following:
     #
@@ -109,10 +126,9 @@ if(NOT TARGET VisualStudio::CppUnitTest)
            "${CPPUNITTEST_INCLUDE_DIR}"
     )
 
-    # Cannot use 'target_link_directories' before CMake 3.13
-    set_target_properties(VisualStudio::CppUnitTest
-        PROPERTIES
-            INTERFACE_LINK_DIRECTORIES "${CPPUNITTEST_LIB_DIR}"
+    target_link_directories(VisualStudio::CppUnitTest
+        INTERFACE
+            "${CPPUNITTEST_LIB_DIR}"
     )
 
     target_link_libraries(VisualStudio::CppUnitTest

@@ -18,7 +18,7 @@ namespace Orc {
 class ORCLIB_API MFTOnline : public IMFT
 {
 public:
-    MFTOnline(std::shared_ptr<VolumeReader>& volReader);
+    MFTOnline(std::shared_ptr<VolumeReader> volReader);
     virtual ~MFTOnline();
 
     // from IMFT

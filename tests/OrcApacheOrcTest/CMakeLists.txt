@@ -10,6 +10,8 @@
 include(${ORC_ROOT}/cmake/Orc.cmake)
 orc_add_compile_options()
 
+find_package(VisualStudio REQUIRED)
+
 set(SRC
     "orc_output.cpp"
     "OrcApacheOrcTest.cpp"
@@ -30,7 +32,11 @@ add_library(OrcApacheOrcTest
         ${SRC_COMMON}
 )
 
-target_link_libraries(OrcApacheOrcTest PRIVATE OrcApacheOrcLib)
+target_link_libraries(OrcApacheOrcTest
+    PRIVATE
+        VisualStudio::CppUnitTest
+        OrcApacheOrcLib
+)
 
 set_target_properties(OrcApacheOrcTest
     PROPERTIES
@@ -51,12 +57,11 @@ add_custom_command(
     TARGET OrcApacheOrcTest
     POST_BUILD
     DEPENDS rcedit, OrcApacheOrc
-    VERBATIM
 
     COMMAND $<TARGET_FILE:rcedit>
         set --type "VALUES"
             --name "${APACHEORC_VAR_NAME}"
-            --value-utf16 "7z:#APACHEORC|OrcApacheOrc.dll"
+            --value-utf16 "7z:#APACHEORC^|OrcApacheOrc.dll"
             $<TARGET_FILE:OrcApacheOrcTest>
 
     COMMAND $<TARGET_FILE:rcedit>

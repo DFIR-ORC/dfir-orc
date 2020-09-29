@@ -278,7 +278,7 @@ HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
     for (unsigned int i = 0; i < pHandleInfo->ulCount && ucJobType == 0; i++)
     {
         if (pHandleInfo->HandleInformation[i].ProcessID == dwProcessID
-            && ((HANDLE)pHandleInfo->HandleInformation[i].HANDLE == hEmptyJob))
+            && reinterpret_cast<HANDLE>(pHandleInfo->HandleInformation[i].HANDLE) == hEmptyJob)
         {
             spdlog::debug("Job Type Number: {}", pHandleInfo->HandleInformation[i].ObjectTypeNumber);
             ucJobType = pHandleInfo->HandleInformation[i].ObjectTypeNumber;
@@ -310,7 +310,7 @@ HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
 
             if (SUCCEEDED(GetHandle(
                     pHandleInfo->HandleInformation[i].ProcessID,
-                    (HANDLE)pHandleInfo->HandleInformation[i].HANDLE,
+                    reinterpret_cast<HANDLE>(pHandleInfo->HandleInformation[i].HANDLE),
                     JOB_OBJECT_QUERY,
                     hOtherJob,
                     bPreserveJob)))

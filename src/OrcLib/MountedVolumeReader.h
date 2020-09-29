@@ -58,8 +58,10 @@ private:
 };
 }  // namespace Orc
 
-// \\\\?\\Volume{e1404546-e2f7-11e0-96f1-806e6f6e6963}\\ 
-constexpr auto  REGEX_MOUNTED_VOLUME = L"(\\\\\\\\(\\?|\\.)\\\\Volume(\\{[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}\\})).*";
+// \\\\?\\Volume{e1404546-e2f7-11e0-96f1-806e6f6e6963}
+constexpr auto REGEX_MOUNTED_VOLUME =
+    L"(\\\\\\\\(\\?|\\.)\\\\Volume(\\{[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}\\}))."
+    L"*";
 constexpr auto REGEX_MOUNTED_VOLUME_ROOT = 2;
 constexpr auto REGEX_MOUNTED_VOLUME_ID = 3;
 
