@@ -609,6 +609,7 @@ set(SRC_UTILITIES
     "Utils/Guard.h"
     "Utils/Iconv.cpp"
     "Utils/Iconv.h"
+    "Utils/MakeArray.h"
 )
 
 source_group(Utilities FILES ${SRC_UTILITIES})
