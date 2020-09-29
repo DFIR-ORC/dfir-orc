@@ -278,6 +278,27 @@ set(SRC_INOUT_ARCHIVE
 
 source_group(In&Out\\Archive FILES ${SRC_INOUT_ARCHIVE})
 
+set(SRC_INOUT_ARCHIVER
+    "Archive/Appender.h"
+    "Archive/CompressionLevel.h"
+    "Archive/CompressionLevel.cpp"
+    "Archive/IArchive.h"
+    "Archive/Item.cpp"
+    "Archive/Item.h"
+    "Archive/7z/Archive7z.cpp"
+    "Archive/7z/Archive7z.h"
+    "Archive/7z/ArchiveOpenCallback.h"
+    "Archive/7z/ArchiveOpenCallback.cpp"
+    "Archive/7z/ArchiveUpdateCallback.cpp"
+    "Archive/7z/ArchiveUpdateCallback.h"
+    "Archive/7z/InStreamAdapter.cpp"
+    "Archive/7z/InStreamAdapter.h"
+    "Archive/7z/OutStreamAdapter.cpp"
+    "Archive/7z/OutStreamAdapter.h"
+)
+
+source_group(In&Out\\Archiver FILES ${SRC_INOUT_ARCHIVER})
+
 set(SRC_INOUT_ARCHIVE_SEVENZIP
     "ArchiveExtractCallback.cpp"
     "ArchiveExtractCallback.h"
@@ -816,6 +837,7 @@ add_library(OrcLib
         ${SRC_INOUT}
         ${SRC_INOUT_ARCHIVE}
         ${SRC_INOUT_ARCHIVE_SEVENZIP}
+        ${SRC_INOUT_ARCHIVER}
         ${SRC_INOUT_BYTESTREAM}
         ${SRC_INOUT_BYTESTREAM_CRYPTOSTREAM}
         ${SRC_INOUT_BYTESTREAM_FSSTREAM_FATSTREAM}
