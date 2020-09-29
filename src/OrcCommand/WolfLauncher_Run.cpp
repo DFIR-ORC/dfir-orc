@@ -8,13 +8,14 @@
 
 #include "stdafx.h"
 
+#include "WolfLauncher.h"
+
 #include <filesystem>
 
 #include <boost/logic/tribool.hpp>
 #include <boost/scope_exit.hpp>
 #include <boost/algorithm/string/join.hpp>
 
-#include "WolfLauncher.h"
 #include "Robustness.h"
 #include "EmbeddedResource.h"
 #include "SystemDetails.h"
@@ -30,54 +31,23 @@
 
 using namespace Concurrency;
 
-namespace Orc {
-namespace Command {
-namespace Wolf {
-
-const wchar_t kWolfLauncher[] = L"WolfLauncher";
+namespace {
 
 struct FileInformations
 {
     bool exist;
     std::wstring path;
-    std::optional<Traits::ByteQuantity<uint64_t>> size;
+    std::optional<Orc::Traits::ByteQuantity<uint64_t>> size;
 };
 
-std::shared_ptr<WolfExecution::Recipient> Main::GetRecipient(const std::wstring& strName)
+HRESULT
+GetLocalOutputFileInformations(const Orc::Command::Wolf::WolfExecution& exec, FileInformations& fileInformations)
 {
-    const auto it = std::find_if(
-        std::cbegin(config.m_Recipients),
-        std::cend(config.m_Recipients),
-        [&strName](const std::shared_ptr<WolfExecution::Recipient>& item) { return !strName.compare(item->Name); });
+    using namespace Orc;
 
-    if (it != std::cend(config.m_Recipients))
-    {
-        return *it;
-    }
-
-    return nullptr;
-}
-
-HRESULT Main::GetOutputFileInformations(const WolfExecution& exec, FileInformations& fileInformations)
-{
     HRESULT hr = E_FAIL;
 
     fileInformations = {};
-
-    if (m_pUploadAgent && exec.ShouldUpload())
-    {
-        DWORD dwFileSize;
-        hr = m_pUploadAgent->CheckFileUpload(exec.GetOutputFileName(), &dwFileSize);
-        if (FAILED(hr))
-        {
-            return E_FAIL;
-        }
-
-        fileInformations.exist = true;
-        fileInformations.path = m_pUploadAgent->GetRemoteFullPath(exec.GetOutputFileName());
-        fileInformations.size = dwFileSize;
-        return S_OK;
-    }
 
     hr = VerifyFileExists(exec.GetOutputFullPath().c_str());
     if (FAILED(hr))
@@ -102,6 +72,56 @@ HRESULT Main::GetOutputFileInformations(const WolfExecution& exec, FileInformati
     fileInformations.size = (static_cast<uint64_t>(data.nFileSizeHigh) << 32) | data.nFileSizeLow;
 
     return S_OK;
+}
+
+HRESULT GetRemoteOutputFileInformations(
+    const Orc::Command::Wolf::WolfExecution& exec,
+    Orc::UploadAgent& uploadAgent,
+    FileInformations& fileInformations)
+{
+    HRESULT hr = E_FAIL;
+
+    fileInformations = {};
+
+    if (exec.ShouldUpload())
+    {
+        DWORD dwFileSize;
+        hr = uploadAgent.CheckFileUpload(exec.GetOutputFileName(), &dwFileSize);
+        if (FAILED(hr))
+        {
+            return E_FAIL;
+        }
+
+        fileInformations.exist = true;
+        fileInformations.path = uploadAgent.GetRemoteFullPath(exec.GetOutputFileName());
+        fileInformations.size = dwFileSize;
+        return S_OK;
+    }
+
+    return S_OK;
+}
+
+}  // namespace
+
+namespace Orc {
+namespace Command {
+namespace Wolf {
+
+const wchar_t kWolfLauncher[] = L"WolfLauncher";
+
+std::shared_ptr<WolfExecution::Recipient> Main::GetRecipient(const std::wstring& strName)
+{
+    const auto it = std::find_if(
+        std::cbegin(config.m_Recipients),
+        std::cend(config.m_Recipients),
+        [&strName](const std::shared_ptr<WolfExecution::Recipient>& item) { return !strName.compare(item->Name); });
+
+    if (it != std::cend(config.m_Recipients))
+    {
+        return *it;
+    }
+
+    return nullptr;
 }
 
 HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
@@ -568,20 +588,47 @@ HRESULT Main::Run_Execute()
             if (exec->RepeatBehaviour() == WolfExecution::Repeat::Overwrite)
             {
                 FileInformations info;
-                hr = GetOutputFileInformations(*exec, info);
+
+                if (exec->ShouldUpload() && m_pUploadAgent)
+                {
+                    hr = ::GetRemoteOutputFileInformations(*exec, *m_pUploadAgent, info);
+                    if (SUCCEEDED(hr))
+                    {
+                        commandSetNode.Add("Overwriting remote file: '{}' ({})", info.path, info.size);
+                    }
+                }
+
+                hr = ::GetLocalOutputFileInformations(*exec, info);
                 if (SUCCEEDED(hr))
                 {
-                    commandSetNode.Add("Overwriting '{}' ({})", info.path, info.size);
+                    commandSetNode.Add("Overwriting local file: '{}' ({})", info.path, info.size);
                 }
             }
             else if (exec->RepeatBehaviour() == WolfExecution::Repeat::Once)
             {
                 FileInformations info;
-                hr = GetOutputFileInformations(*exec, info);
+
+                if (exec->ShouldUpload() && m_pUploadAgent)
+                {
+                    hr = ::GetRemoteOutputFileInformations(*exec, *m_pUploadAgent, info);
+                    if (SUCCEEDED(hr) && (!info.size || *info.size != 0))
+                    {
+                        commandSetNode.Add(
+                            "Skipping set because non-empty remote output file already exists: '{}' ({})",
+                            info.path,
+                            info.size);
+                        commandSetNode.AddEmptyLine();
+                        continue;
+                    }
+                }
+
+                hr = ::GetLocalOutputFileInformations(*exec, info);
                 if (SUCCEEDED(hr) && (!info.size || *info.size != 0))
                 {
                     commandSetNode.Add(
-                        "Skipping set because non-empty output file already exists: '{}' ({})", info.path, info.size);
+                        "Skipping set because non-empty local output file already exists: '{}' ({})",
+                        info.path,
+                        info.size);
                     commandSetNode.AddEmptyLine();
                     continue;
                 }

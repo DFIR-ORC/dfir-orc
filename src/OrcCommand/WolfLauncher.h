@@ -35,8 +35,6 @@ using namespace std::literals;
 namespace Orc {
 namespace Command::Wolf {
 
-struct FileInformations;
-
 class ORCUTILS_API Main : public UtilitiesMain
 {
 public:
@@ -181,8 +179,6 @@ private:
     std::unique_ptr<Concurrency::call<UploadNotification::Notification>> m_pUploadNotification;
 
     std::shared_ptr<WolfExecution::Recipient> GetRecipient(const std::wstring& strName);
-
-    HRESULT GetOutputFileInformations(const WolfExecution& exec, FileInformations& fileInformations);
 
     HRESULT InitializeUpload(const OutputSpec::Upload& uploadspec);
     HRESULT UploadSingleFile(const std::wstring& fileName, const std::wstring& filePath);
