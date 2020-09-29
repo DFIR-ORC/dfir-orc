@@ -118,15 +118,13 @@ std::wstring Main::getBootDiskName()
         return {};
     }
 
-    BOOST_SCOPE_EXIT(&hVolume)
-    {
+    Guard::ScopeGuard([&hVolume]() {
         if (hVolume != INVALID_HANDLE_VALUE)
         {
             CloseHandle(hVolume);
             hVolume = INVALID_HANDLE_VALUE;
         }
-    }
-    BOOST_SCOPE_EXIT_END;
+    });
 
     VOLUME_DISK_EXTENTS outBuffer;
     DWORD bytesReturned = 0, ioctlLastError = 0;

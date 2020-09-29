@@ -17,7 +17,6 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
-#include <boost/scope_exit.hpp>
 #include <boost/stacktrace.hpp>
 #include <concrt.h>
 
@@ -297,14 +296,11 @@ public:
 
         HRESULT ForEachOutput(const OutputSpec& output, std::function<HRESULT(const OutputPair& out)> aCallback)
         {
-
-            BOOST_SCOPE_EXIT(&output, this_) { this_->CloseAll(output); }
-            BOOST_SCOPE_EXIT_END;
+            Guard::ScopeGuard sg([&output, this] { CloseAll(output); });
 
             for (auto& item : m_outputs)
             {
-                BOOST_SCOPE_EXIT(&output, &item, this_) { this_->CloseOne(output, item); }
-                BOOST_SCOPE_EXIT_END;
+                Guard::ScopeGuard forGuard([&output, &item, this]() { CloseOne(output, item); });
 
                 HRESULT hr = E_FAIL;
                 // Actually enumerate objects here
