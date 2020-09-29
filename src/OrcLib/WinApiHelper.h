@@ -29,6 +29,21 @@ std::wstring GetWorkingDirectoryApi(size_t cbMaxOutput, std::error_code& ec) noe
 // WARNING: this function is not thread safe
 std::wstring GetWorkingDirectoryApi(std::error_code& ec) noexcept;
 
+// GetTempPath wrapper with custom maximum buffer size
+std::wstring GetTempPathApi(size_t cbMaxOutput, std::error_code& ec) noexcept;
+
+// GetTempPath wrapper with default maximum buffer size of MAX_PATH
+std::wstring GetTempPathApi(std::error_code& ec) noexcept;
+
+// GetTempFileName wrapper
+std::wstring GetTempFileNameApi(
+    const wchar_t* lpPathName,
+    const wchar_t* lpPrefixString,
+    UINT uUnique,
+    std::error_code& ec) noexcept;
+
+std::wstring GetTempFileNameApi(const wchar_t* lpPathName, std::error_code& ec) noexcept;
+
 }  // namespace Orc
 
 #pragma managed(pop)

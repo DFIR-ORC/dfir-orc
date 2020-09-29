@@ -92,4 +92,70 @@ std::wstring GetWorkingDirectoryApi(std::error_code& ec) noexcept
     return GetWorkingDirectoryApi(MAX_PATH * sizeof(wchar_t), ec);
 }
 
+std::wstring GetTempPathApi(size_t cbMaxOutput, std::error_code& ec) noexcept
+{
+    const DWORD cchMaxOutput = static_cast<DWORD>(cbMaxOutput / sizeof(wchar_t));
+
+    std::wstring path;
+    try
+    {
+        path.resize(cbMaxOutput);
+
+        size_t cch = ::GetTempPathW(cchMaxOutput, path.data());
+        if (cch == 0)
+        {
+            ec.assign(::GetLastError(), std::system_category());
+        }
+
+        path.resize(cch);
+        path.shrink_to_fit();
+    }
+    catch (const std::length_error&)
+    {
+        ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+
+    return path;
+}
+
+std::wstring GetTempPathApi(std::error_code& ec) noexcept
+{
+    return GetTempPathApi(MAX_PATH * sizeof(wchar_t), ec);
+}
+
+std::wstring
+GetTempFileNameApi(const wchar_t* lpPathName, const wchar_t* lpPrefixString, UINT uUnique, std::error_code& ec) noexcept
+{
+    const DWORD cchMaxOutput = MAX_PATH;
+    const DWORD cbMaxOutput = cchMaxOutput * sizeof(wchar_t);
+
+    std::wstring path;
+    try
+    {
+        path.resize(cbMaxOutput);
+
+        size_t cch = ::GetTempFileNameW(lpPathName, lpPrefixString, uUnique, path.data());
+        if (cch == 0)
+        {
+            ec.assign(::GetLastError(), std::system_category());
+        }
+
+        path.resize(cch);
+        path.shrink_to_fit();
+    }
+    catch (const std::length_error&)
+    {
+        ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+
+    return path;
+}
+
+std::wstring GetTempFileNameApi(const wchar_t* lpPathName, std::error_code& ec) noexcept
+{
+    return GetTempFileNameApi(lpPathName, nullptr, 0, ec);
+}
+
 }  // namespace Orc
