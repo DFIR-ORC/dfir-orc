@@ -65,12 +65,11 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
             TARGET Orc
             POST_BUILD
             DEPENDS rcedit
-            VERBATIM
 
             COMMAND $<TARGET_FILE:rcedit>
                 set --type "VALUES"
                     --name "XMLLITE_X86DLL"
-                    --value-utf16 "7z:#XMLLITE_X86_XPSP2|xmllite.dll"
+                    --value-utf16 "7z:#XMLLITE_X86_XPSP2^|xmllite.dll"
                     $<TARGET_FILE:Orc>
 
             COMMAND $<TARGET_FILE:rcedit>
@@ -98,12 +97,11 @@ if(${ORC_BUILD_SQL})
         TARGET Orc
         POST_BUILD
         DEPENDS rcedit, OrcSql
-        VERBATIM
 
         COMMAND $<TARGET_FILE:rcedit>
             set --type "VALUES"
                 --name "${ORCSQL_VAR_NAME}"
-                --value-utf16 "7z:#ORCSQL|OrcSql.dll"
+                --value-utf16 "7z:#ORCSQL^|OrcSql.dll"
                 $<TARGET_FILE:Orc>
 
         COMMAND $<TARGET_FILE:rcedit>
@@ -130,12 +128,11 @@ if(${ORC_BUILD_PARQUET})
         TARGET Orc
         POST_BUILD
         DEPENDS rcedit, OrcParquet
-        VERBATIM
 
         COMMAND $<TARGET_FILE:rcedit>
             set --type "VALUES"
                 --name "${ORCPARQUET_VAR_NAME}"
-                --value-utf16 "7z:#ORCPARQUET|OrcParquet.dll"
+                --value-utf16 "7z:#ORCPARQUET^|OrcParquet.dll"
                 $<TARGET_FILE:Orc>
 
         COMMAND $<TARGET_FILE:rcedit>
@@ -161,12 +158,11 @@ if(${ORC_BUILD_APACHE_ORC})
         TARGET Orc
         POST_BUILD
         DEPENDS rcedit, OrcApacheOrc
-        VERBATIM
 
         COMMAND $<TARGET_FILE:rcedit>
             set --type "VALUES"
                 --name "${APACHEORC_VAR_NAME}"
-                --value-utf16 "7z:#APACHEORC|OrcApacheOrc.dll"
+                --value-utf16 "7z:#APACHEORC^|OrcApacheOrc.dll"
                 $<TARGET_FILE:Orc>
 
         COMMAND $<TARGET_FILE:rcedit>

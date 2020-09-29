@@ -202,12 +202,11 @@ if(ORC_BUILD_CHAKRACORE)
             TARGET OrcLibTest
             POST_BUILD
             DEPENDS rcedit
-            VERBATIM
 
             COMMAND $<TARGET_FILE:rcedit>
                 set --type "VALUES"
                     --name "CHAKRACORE_X86DLL"
-                    --value-utf16 "7z:#CHAKRACORE_X86|ChakraCore_x86.dll"
+                    --value-utf16 "7z:#CHAKRACORE_X86^|ChakraCore_x86.dll"
                     $<TARGET_FILE:OrcLibTest>
 
             COMMAND $<TARGET_FILE:rcedit>
@@ -223,12 +222,11 @@ if(ORC_BUILD_CHAKRACORE)
             TARGET OrcLibTest
             POST_BUILD
             DEPENDS rcedit
-            VERBATIM
 
             COMMAND $<TARGET_FILE:rcedit>
                 set --type "VALUES"
                     --name "CHAKRACORE_X64DLL"
-                    --value-utf16 "7z:#CHAKRACORE_X64|ChakraCore_x64.dll"
+                    --value-utf16 '7z:#CHAKRACORE_X64^|ChakraCore_x64.dll'
                     $<TARGET_FILE:OrcLibTest>
 
             COMMAND $<TARGET_FILE:rcedit>
@@ -248,12 +246,11 @@ add_custom_command(
     TARGET OrcLibTest
     POST_BUILD
     DEPENDS rcedit
-    VERBATIM
 
     COMMAND $<TARGET_FILE:rcedit>
         set --type "VALUES"
             --name "TEST_7Z_DLL"
-            --value-utf16 "7z:#TEST_7Z_DLL_BIN|OrcLibTest.dll"
+            --value-utf16 "7z:#TEST_7Z_DLL_BIN^|OrcLibTest.dll"
             $<TARGET_FILE:OrcLibTest>
 
     COMMAND $<TARGET_FILE:rcedit>

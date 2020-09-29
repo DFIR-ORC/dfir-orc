@@ -68,12 +68,11 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
             TARGET FastFind
             POST_BUILD
             DEPENDS rcedit
-            VERBATIM
 
             COMMAND $<TARGET_FILE:rcedit>
                 set --type "VALUES"
                     --name "XMLLITE_X86DLL"
-                    --value-utf16 "7z:#XMLLITE_X86_XPSP2|xmllite.dll"
+                    --value-utf16 "7z:#XMLLITE_X86_XPSP2^|xmllite.dll"
                     $<TARGET_FILE:FastFind>
 
             COMMAND $<TARGET_FILE:rcedit>
