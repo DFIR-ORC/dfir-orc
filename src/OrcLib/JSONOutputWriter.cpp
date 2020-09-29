@@ -171,7 +171,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWS
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(ULONG32 dwValue, bool bInHex)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(uint32_t dwValue, bool bInHex)
 {
     if (bInHex)
     {
@@ -186,7 +186,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(ULONG32 dw
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(LONG32 uiValue, bool bInHex)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(int32_t uiValue, bool bInHex)
 {
     if (bInHex)
     {
@@ -201,19 +201,20 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(LONG32 uiV
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, LONG32 lValue, bool bInHex)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, int32_t lValue, bool bInHex)
 {
     return WriteNamed_(szName, lValue, bInHex);
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, ULONG32 dwValue, bool bInHex)
+HRESULT
+Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, uint32_t dwValue, bool bInHex)
 {
     return WriteNamed_(szName, dwValue, bInHex);
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(ULONG64 ullValue, bool bInHex)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(uint64_t ullValue, bool bInHex)
 {
     if (bInHex)
     {
@@ -228,7 +229,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(ULONG64 ul
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(LONG64 llValue, bool bInHex)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(int64_t llValue, bool bInHex)
 {
     if (bInHex)
     {
@@ -244,13 +245,13 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(LONG64 llV
 
 template <class _RapidWriter, typename _Ch>
 HRESULT
-Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, ULONG64 ullValue, bool bInHex)
+Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, uint64_t ullValue, bool bInHex)
 {
     return WriteNamed_(szName, ullValue, bInHex);
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, LONG64 llValue, bool bInHex)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, int64_t llValue, bool bInHex)
 {
     return WriteNamed_(szName, llValue, bInHex);
 }
@@ -469,7 +470,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(DWORD dwFl
     if (szValue == NULL)
     {
         // No flags where recognised, write value in Hex
-        if (FAILED(Write((ULONG32)dwFlags, true)))
+        if (FAILED(Write((uint32_t)dwFlags, true)))
             return hr;
         return S_OK;
     }

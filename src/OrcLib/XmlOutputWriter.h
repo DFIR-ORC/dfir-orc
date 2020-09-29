@@ -55,26 +55,26 @@ public:
     virtual HRESULT Write(bool bBoolean) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, bool bBoolean) override final;
 
-    virtual HRESULT Write(ULONG32 dwValue, bool bInHex = false) override final { return Write_(dwValue, bInHex); };
-    virtual HRESULT WriteNamed(LPCWSTR szName, ULONG32 dwValue, bool bInHex = false) override final
+    virtual HRESULT Write(uint32_t dwValue, bool bInHex = false) override final { return Write_(dwValue, bInHex); };
+    virtual HRESULT WriteNamed(LPCWSTR szName, uint32_t dwValue, bool bInHex = false) override final
     {
         return WriteNamed_(szName, dwValue, bInHex);
     };
 
-    virtual HRESULT Write(LONG32 dwValue, bool bInHex = false) override final { return Write_(dwValue, bInHex); };
-    virtual HRESULT WriteNamed(LPCWSTR szName, LONG32 dwValue, bool bInHex = false) override final
+    virtual HRESULT Write(int32_t dwValue, bool bInHex = false) override final { return Write_(dwValue, bInHex); };
+    virtual HRESULT WriteNamed(LPCWSTR szName, int32_t dwValue, bool bInHex = false) override final
     {
         return WriteNamed_(szName, dwValue, bInHex);
     };
 
-    virtual HRESULT Write(ULONG64 ullValue, bool bInHex = false) override final { return Write_(ullValue, bInHex); };
-    virtual HRESULT WriteNamed(LPCWSTR szName, ULONG64 ullValue, bool bInHex = false) override final
+    virtual HRESULT Write(uint64_t ullValue, bool bInHex = false) override final { return Write_(ullValue, bInHex); };
+    virtual HRESULT WriteNamed(LPCWSTR szName, uint64_t ullValue, bool bInHex = false) override final
     {
         return WriteNamed_(szName, ullValue, bInHex);
     }
 
-    virtual HRESULT Write(LONG64 ullValue, bool bInHex = false) override final { return Write_(ullValue, bInHex); };
-    virtual HRESULT WriteNamed(LPCWSTR szName, LONG64 ullValue, bool bInHex = false) override final
+    virtual HRESULT Write(int64_t ullValue, bool bInHex = false) override final { return Write_(ullValue, bInHex); };
+    virtual HRESULT WriteNamed(LPCWSTR szName, int64_t ullValue, bool bInHex = false) override final
     {
         return WriteNamed_(szName, ullValue, bInHex);
     }
