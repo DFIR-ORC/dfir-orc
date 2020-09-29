@@ -293,11 +293,7 @@ private:
     HRESULT AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerName, const SampleRef& sampleRef);
 
     std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
-    CreateOutputDirLogFileAndCSV(const std::wstring& pOutputDir);
-
-    std::pair<HRESULT, std::shared_ptr<TableOutput::IStreamWriter>> CreateArchiveLogFileAndCSV(
-        const std::filesystem::path& archivePath,
-        const std::shared_ptr<ArchiveCreate>& compressor) const;
+    CreateOutputDirLogFileAndCSV(const std::filesystem::path& outDir);
 
     HRESULT CollectMatchingSamples(
         const std::shared_ptr<ArchiveCreate>& compressor,
@@ -305,7 +301,7 @@ private:
         SampleSet& MatchingSamples);
     HRESULT CollectMatchingSamples(const std::wstring& strOutputDir, ITableOutput& output, SampleSet& MatchingSamples);
 
-    HRESULT HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSamples);
+    HRESULT HashOffLimitSamples(SampleSet& MatchingSamples) const;
 
     HRESULT CollectMatchingSamples(const OutputSpec& output, SampleSet& MatchingSamples);
 

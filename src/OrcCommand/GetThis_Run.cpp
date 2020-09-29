@@ -40,8 +40,57 @@ namespace fs = std::filesystem;
 using namespace Orc;
 using namespace Orc::Command::GetThis;
 
-namespace
+namespace {
+
+enum class CompressorFlags : uint32_t
 {
+    kNone = 0,
+    kComputeHash = 1
+};
+
+std::shared_ptr<ArchiveCreate>
+CreateCompressor(const OutputSpec& outputSpec, CompressorFlags flags, HRESULT& hr, logger& _L_)
+{
+    const bool computeHash = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(CompressorFlags::kComputeHash));
+
+    auto compressor = ArchiveCreate::MakeCreate(outputSpec.ArchiveFormat, _L_, computeHash);
+    if (compressor == nullptr)
+    {
+        hr = E_POINTER;
+        log::Error(_L_, hr, L"Failed calling MakeCreate for archive '%s'\r\n", outputSpec.Path.c_str());
+        return nullptr;
+    }
+
+    hr = compressor->InitArchive(outputSpec.Path);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to initialize archive '%s'\r\n", outputSpec.Path.c_str());
+        return nullptr;
+    }
+
+    if (!outputSpec.Password.empty())
+    {
+        hr = compressor->SetPassword(outputSpec.Password);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to set password for '%s'\r\n", outputSpec.Path.c_str());
+            return nullptr;
+        }
+    }
+
+    hr = compressor->SetCompressionLevel(outputSpec.Compression);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to set compression level for '%s'\r\n", outputSpec.Path.c_str());
+        return nullptr;
+    }
+
+    compressor->SetCallback(
+        [&_L_](const OrcArchive::ArchiveItem& item) { log::Info(_L_, L"\t%s\r\n", item.Path.c_str()); });
+
+    return compressor;
+}
+
 std::shared_ptr<TableOutput::IStreamWriter> CreateCsvWriter(
     const std::filesystem::path& out,
     const Orc::TableOutput::Schema& schema,
@@ -106,104 +155,43 @@ std::shared_ptr<TemporaryStream> CreateLogStream(const std::filesystem::path& ou
 
 }  // namespace
 
-std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
-Main::CreateOutputDirLogFileAndCSV(const std::wstring& strOutputDir)
+std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>> Main::CreateOutputDirLogFileAndCSV(const fs::path& outDir)
 {
     HRESULT hr = E_FAIL;
+    std::error_code ec;
 
-    if (strOutputDir.empty())
-        return {E_POINTER, nullptr};
-
-    fs::path outDir(strOutputDir);
-
-    switch (fs::status(outDir).type())
+    fs::create_directories(outDir, ec);
+    if (ec)
     {
-        case fs::file_type::not_found:
-            if (create_directories(outDir))
-            {
-                log::Verbose(_L_, L"Created output directory %s", strOutputDir.c_str());
-            }
-            else
-            {
-                log::Verbose(_L_, L"Output directory %s exists", strOutputDir.c_str());
-            }
-            break;
-        case fs::file_type::directory:
-            log::Verbose(_L_, L"Specified output directory %s exists and is a directory\r\n", strOutputDir.c_str());
-            break;
-        default:
-            log::Error(
-                _L_,
-                E_INVALIDARG,
-                L"Specified output directory %s exists and is not a directory\r\n",
-                strOutputDir.c_str());
-            break;
+        hr = HRESULT_FROM_WIN32(ec.value());
+        _L_->Error(hr, L"Failed to create output directory");
+        return {hr, nullptr};
     }
-
-    fs::path logFile;
-
-    logFile = outDir;
-    logFile /= L"GetThis.log";
 
     if (!_L_->IsLoggingToFile())
     {
-        if (FAILED(hr = _L_->LogToFile(logFile.wstring().c_str())))
-            return {hr, nullptr};
-    }
-
-    fs::path csvFile(outDir);
-    csvFile /= L"GetThis.csv";
-
-    auto options = std::make_unique<TableOutput::CSV::Options>();
-    options->Encoding = config.Output.OutputEncoding;
-    auto CSV = TableOutput::CSV::Writer::MakeNew(_L_, std::move(options));
-
-    if (FAILED(hr = CSV->WriteToFile(csvFile.wstring().c_str())))
-        return {hr, nullptr};
-
-    CSV->SetSchema(config.Output.Schema);
-
-    return {S_OK, std::move(CSV)};
-}
-
-std::pair<HRESULT, std::shared_ptr<TableOutput::IStreamWriter>>
-Main::CreateArchiveLogFileAndCSV(const fs::path& archivePath, const std::shared_ptr<ArchiveCreate>& compressor) const
-{
-    HRESULT hr = E_FAIL;
-    const fs::path tempDir = archivePath.parent_path();
-
-    auto logStream = ::CreateLogStream(tempDir / L"GetThisLogStream", hr, _L_);
-    if (logStream == nullptr)
-    {
-        log::Error(_L_, hr, L"Failed to create log stream\r\n");
-        return {hr, nullptr};
-    }
-
-    auto csvWriter = ::CreateCsvWriter(tempDir / L"GetThisCsvStream", config.Output.Schema, config.Output.OutputEncoding, hr, _L_);
-    if (csvWriter == nullptr)
-    {
-        log::Error(_L_, hr, L"Failed to create log stream\r\n");
-        return {hr, nullptr};
-    }
-
-    hr = compressor->InitArchive(archivePath);
-    if (FAILED(hr))
-    {
-        log::Error(_L_, hr, L"Failed to initialize archive file %s\r\n", archivePath.c_str());
-        return {hr, nullptr};
-    }
-
-    if (!config.Output.Password.empty())
-    {
-        hr = compressor->SetPassword(config.Output.Password);
+        const fs::path logFile = outDir / L"GetThis.log";
+        hr = _L_->LogToFile(logFile.c_str());
         if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to set password for archive file %s\r\n", archivePath.c_str());
             return {hr, nullptr};
         }
     }
 
-    return {S_OK, std::move(csvWriter)};
+    auto options = std::make_unique<TableOutput::CSV::Options>();
+    options->Encoding = config.Output.OutputEncoding;
+
+    auto csvStream = TableOutput::CSV::Writer::MakeNew(_L_, std::move(options));
+    const fs::path csvPath = outDir / L"GetThis.csv";
+    hr = csvStream->WriteToFile(csvPath);
+    if (FAILED(hr))
+    {
+        return {hr, nullptr};
+    }
+
+    csvStream->SetSchema(config.Output.Schema);
+
+    return {hr, csvStream};
 }
 
 HRESULT Main::RegFlushKeys()
@@ -841,36 +829,52 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
     switch (output.Type)
     {
         case OutputSpec::Archive: {
-            auto compressor = ArchiveCreate::MakeCreate(config.Output.ArchiveFormat, _L_, false);
+            const auto& archivePath = fs::path(config.Output.Path);
 
-            if (!config.Output.Compression.empty())
-                compressor->SetCompressionLevel(config.Output.Compression);
-
-            auto [hr, CSV] = CreateArchiveLogFileAndCSV(config.Output.Path, compressor);
-            if (FAILED(hr))
-                return hr;
-
-            if (config.bReportAll && config.CryptoHashAlgs != CryptoHashStream::Algorithm::Undefined)
-                if (FAILED(hr = HashOffLimitSamples(*CSV, MatchingSamples)))
-                    return hr;
-
-            if (FAILED(hr = CollectMatchingSamples(compressor, *CSV, MatchingSamples)))
-                return hr;
-
-            CSV->Flush();
-
-            if (auto pStreamWriter = std::dynamic_pointer_cast<TableOutput::IStreamWriter>(CSV);
-                pStreamWriter && pStreamWriter->GetStream())
+            auto compressor = ::CreateCompressor(config.Output, CompressorFlags::kNone, hr, _L_);
+            if (compressor == nullptr)
             {
-                auto pCSVStream = pStreamWriter->GetStream();
+                return hr;
+            }
 
-                if (pCSVStream && pCSVStream->GetSize() > 0LL)
+            const fs::path tempDir = archivePath.parent_path();
+            std::shared_ptr<TemporaryStream> logStream;
+            logStream = ::CreateLogStream(tempDir / L"GetThisLogStream", hr, _L_);
+            if (logStream == nullptr)
+            {
+                log::Error(_L_, hr, L"Failed to create log stream\r\n");
+                return hr;
+            }
+
+            auto csvWriter = ::CreateCsvWriter(
+                tempDir / L"GetThisCsvStream", config.Output.Schema, config.Output.OutputEncoding, hr, _L_);
+            if (csvWriter == nullptr)
+            {
+                log::Error(_L_, hr, L"Failed to create log stream\r\n");
+                return hr;
+            }
+
+            hr = CollectMatchingSamples(compressor, csvWriter->GetTableOutput(), MatchingSamples);
+            if (FAILED(hr))
+            {
+                return hr;
+            }
+
+            csvWriter->Flush();
+
+            if (csvWriter->GetStream())
+            {
+                auto stream = csvWriter->GetStream();
+                if (stream->GetSize())
                 {
-                    if (FAILED(hr = pCSVStream->SetFilePointer(0, FILE_BEGIN, nullptr)))
+                    hr = stream->SetFilePointer(0, FILE_BEGIN, nullptr);
+                    if (FAILED(hr))
                     {
                         log::Error(_L_, hr, L"Failed to rewind csv stream\r\n");
                     }
-                    if (FAILED(hr = compressor->AddStream(L"GetThis.csv", L"GetThis.csv", pCSVStream)))
+
+                    hr = compressor->AddStream(L"GetThis.csv", L"GetThis.csv", stream);
+                    if (FAILED(hr))
                     {
                         log::Error(_L_, hr, L"Failed to add GetThis.csv\r\n");
                     }
@@ -897,22 +901,24 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
                 log::Error(_L_, hr, L"Failed to complete %s\r\n", config.Output.Path.c_str());
                 return hr;
             }
-            CSV->Close();
+
+            csvWriter->Close();
         }
         break;
         case OutputSpec::Directory: {
-            auto [hr, CSV] = CreateOutputDirLogFileAndCSV(config.Output.Path);
+            auto [hr, csvWriter] = CreateOutputDirLogFileAndCSV({config.Output.Path});
+            if (csvWriter == nullptr)
+            {
+                return hr;
+            }
+
+            hr = CollectMatchingSamples(config.Output.Path, csvWriter->GetTableOutput(), MatchingSamples);
             if (FAILED(hr))
+            {
                 return hr;
+            }
 
-            if (config.bReportAll && config.CryptoHashAlgs != CryptoHashStream::Algorithm::Undefined)
-                if (FAILED(hr = HashOffLimitSamples(*CSV, MatchingSamples)))
-                    return hr;
-
-            if (FAILED(hr = CollectMatchingSamples(config.Output.Path, *CSV, MatchingSamples)))
-                return hr;
-
-            CSV->Close();
+            csvWriter->Close();
         }
         break;
         default:
@@ -922,31 +928,30 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
     return S_OK;
 }
 
-HRESULT Main::HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSamples)
+HRESULT Main::HashOffLimitSamples(SampleSet& samples) const
 {
-    HRESULT hr = E_FAIL;
-
     auto devnull = std::make_shared<DevNullStream>(_L_);
 
     log::Info(_L_, L"\r\nComputing hash of off limit samples\r\n");
 
-    for (SampleSet::iterator it = begin(MatchingSamples); it != end(MatchingSamples); ++it)
+    for (auto& sample : samples)
     {
-        if (it->OffLimits)
+        if (!sample.OffLimits)
         {
-            ULONGLONG ullBytesWritten = 0LL;
-            if (FAILED(hr = it->CopyStream->CopyTo(devnull, &ullBytesWritten)))
-            {
-                log::Error(_L_, hr, L"Failed while computing hash of sample\r\n");
-                break;
-            }
-
-            it->CopyStream->Close();
-
-            it->HashStream->GetMD5(const_cast<CBinaryBuffer&>(it->MD5));
-            it->HashStream->GetSHA1(const_cast<CBinaryBuffer&>(it->SHA1));
+            continue;
         }
+
+        ULONGLONG ullBytesWritten = 0LL;
+        HRESULT hr = sample.CopyStream->CopyTo(devnull, &ullBytesWritten);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed while computing hash of sample\r\n");
+            break;
+        }
+
+        sample.CopyStream->Close();
     }
+
     return S_OK;
 }
 
@@ -1119,6 +1124,16 @@ HRESULT Main::Run()
             log::Error(_L_, hr, L"\r\nGetThis failed while matching samples\r\n");
             return hr;
         }
+
+        if (config.bReportAll && config.CryptoHashAlgs != CryptoHashStream::Algorithm::Undefined)
+        {
+            hr = HashOffLimitSamples(Samples);
+            if (FAILED(hr))
+            {
+                return hr;
+            }
+        }
+
         if (FAILED(hr = CollectMatchingSamples(config.Output, Samples)))
         {
             log::Error(_L_, hr, L"\r\nGetThis failed while collecting samples\r\n");
