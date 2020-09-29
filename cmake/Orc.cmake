@@ -40,6 +40,7 @@ add_compile_options(
     /sdl      # Enable additional security checks
     /Yustdafx.h
   # /Zi       # Program database for edit and continue (debug only)
+    /bigobj
 )
 
 list(APPEND COMPILE_OPTIONS_RELEASE
