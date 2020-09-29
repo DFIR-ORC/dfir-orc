@@ -917,22 +917,34 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const CHAR* szString, DWORD
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBytes(const BYTE pBytes[], DWORD dwLen)
 {
-    Buffer<BYTE> buffer;
+    if (dwLen == 0)
+    {
+        return WriteNothing();
+    }
 
+    Buffer<BYTE> buffer;
     buffer.view_of((BYTE*)pBytes, dwLen, dwLen);
 
-    if (auto hr = FormatColumn(buffer); FAILED(hr))
+    HRESULT hr = FormatColumn(buffer);
+    if (FAILED(hr))
     {
         AbandonColumn();
         return hr;
     }
+
     AddColumnAndCheckNumbers();
+
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBytes(const CBinaryBuffer& Buffer)
+STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBytes(const CBinaryBuffer& buffer)
 {
-    return WriteBytes(Buffer.GetData(), (DWORD)Buffer.GetCount());
+    if (buffer.empty())
+    {
+        return WriteNothing();
+    }
+
+    return WriteBytes(buffer.GetData(), (DWORD)buffer.GetCount());
 }
 
 Orc::TableOutput::CSV::Writer::~Writer(void)
