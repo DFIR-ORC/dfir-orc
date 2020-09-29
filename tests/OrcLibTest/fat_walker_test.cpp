@@ -72,7 +72,7 @@ public:
 private:
     DWORD64 m_NbFiles;
     DWORD64 m_NbFolders;
-    Archive::ArchiveItem m_ArchiveItem;
+    OrcArchive::ArchiveItem m_ArchiveItem;
 
     void ProcessArchive(const std::wstring& archive)
     {
@@ -135,7 +135,7 @@ private:
 
         auto ShouldItemBeExtracted = [](const std::wstring& strNameInArchive) -> bool { return true; };
 
-        auto MakeWriteStream = [this](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+        auto MakeWriteStream = [this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
             HRESULT hr = E_FAIL;
 
             WCHAR szTempDir[MAX_PATH];
@@ -151,7 +151,7 @@ private:
             return pStream;
         };
 
-        auto ArchiveCallback = [this](const Archive::ArchiveItem& item) { m_ArchiveItem = item; };
+        auto ArchiveCallback = [this](const OrcArchive::ArchiveItem& item) { m_ArchiveItem = item; };
 
         return helper.ExtractArchive(
             ArchiveFormat::SevenZip, MakeArchiveStream, ShouldItemBeExtracted, MakeWriteStream, ArchiveCallback);

@@ -49,10 +49,10 @@ private:
 }  // namespace
 
 ArchiveUpdateCallback::ArchiveUpdateCallback(
-    Archive::ArchiveItems& items,
-    Archive::ArchiveIndexes& indexes,
+    OrcArchive::ArchiveItems& items,
+    OrcArchive::ArchiveIndexes& indexes,
     bool bFinal,
-    Archive::ArchiveCallback pCallback,
+    OrcArchive::ArchiveCallback pCallback,
     const std::wstring& pwd)
     : m_refCount(0)
     , m_Items(items)
@@ -90,7 +90,7 @@ size_t ArchiveUpdateCallback::DeviseNextBestAddition()
     for (auto it = std::begin(m_pipeStreamIndexes); it != std::end(m_pipeStreamIndexes); ++it)
     {
         const auto& item = m_Items[*it];
-        if (item.currentStatus != Archive::ArchiveItem::Status::Waiting)
+        if (item.currentStatus != OrcArchive::ArchiveItem::Status::Waiting)
         {
             continue;
         }
@@ -116,7 +116,7 @@ size_t ArchiveUpdateCallback::DeviseNextBestAddition()
         }
 
         const auto& item = m_Items[*it];
-        if (item.currentStatus != Archive::ArchiveItem::Status::Waiting)
+        if (item.currentStatus != OrcArchive::ArchiveItem::Status::Waiting)
         {
             continue;
         }
@@ -285,12 +285,12 @@ STDMETHODIMP ArchiveUpdateCallback::GetProperty(UInt32 index, PROPID propID, PRO
                 prop = ft;
                 break;
         }
-        m_Items[it->second].currentStatus = Archive::ArchiveItem::Status::Selected;
+        m_Items[it->second].currentStatus = OrcArchive::ArchiveItem::Status::Selected;
         prop.Detach(value);
     }
     else
     {
-        if (m_Items[index].currentStatus == Archive::ArchiveItem::Status::Waiting)
+        if (m_Items[index].currentStatus == OrcArchive::ArchiveItem::Status::Waiting)
         {
             // Item is just the "next" in line selected  by 7zip
             // we need to devise if we have a "better" one to add
@@ -333,7 +333,7 @@ STDMETHODIMP ArchiveUpdateCallback::GetProperty(UInt32 index, PROPID propID, PRO
                 prop = ft;
                 break;
         }
-        m_Items[index].currentStatus = Archive::ArchiveItem::Status::Selected;
+        m_Items[index].currentStatus = OrcArchive::ArchiveItem::Status::Selected;
         prop.Detach(value);
     }
     return S_OK;
@@ -362,7 +362,7 @@ STDMETHODIMP ArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream*
 
     *inStream = fileStream.Detach();
 
-    m_Items[index].currentStatus = Archive::ArchiveItem::Status::Processing;
+    m_Items[index].currentStatus = OrcArchive::ArchiveItem::Status::Processing;
 
     m_curIndex = index;
     return S_OK;
@@ -372,7 +372,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
 {
     concurrency::critical_section::scoped_lock sl(m_cs);
 
-    Archive::ArchiveItem& item = m_Items[m_curIndex];
+    OrcArchive::ArchiveItem& item = m_Items[m_curIndex];
     if (operationResult != NArchive::NUpdate::NOperationResult::kOK)
     {
         HRESULT hr = E_FAIL;
@@ -390,7 +390,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
     m_Indexes[m_curIndexInArchive] = m_curIndex;
     m_curIndexInArchive++;
 
-    m_Items[m_curIndex].currentStatus = Archive::ArchiveItem::Status::Done;
+    m_Items[m_curIndex].currentStatus = OrcArchive::ArchiveItem::Status::Done;
 
     if (item.m_archivedCallback)
     {

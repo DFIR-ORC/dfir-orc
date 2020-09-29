@@ -42,11 +42,11 @@ using namespace Orc;
 
 namespace {
 
-void StoreFileHashes(Archive::ArchiveItems& items, bool releaseInputStreams)
+void StoreFileHashes(OrcArchive::ArchiveItems& items, bool releaseInputStreams)
 {
     for (auto& item : items)
     {
-        if (item.currentStatus != Archive::ArchiveItem::Status::Done)
+        if (item.currentStatus != OrcArchive::ArchiveItem::Status::Done)
         {
             Log::Warn("Unexpected archive status: {}", item.currentStatus);
             continue;
@@ -129,12 +129,12 @@ HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, Co
     return S_OK;
 }
 
-STDMETHODIMP ZipCreate::InitArchive(const fs::path& path, Archive::ArchiveCallback pCallback)
+STDMETHODIMP ZipCreate::InitArchive(const fs::path& path, OrcArchive::ArchiveCallback pCallback)
 {
     return InitArchive(path.c_str(), pCallback);
 }
 
-STDMETHODIMP ZipCreate::InitArchive(PCWSTR pwzArchivePath, Archive::ArchiveCallback pCallback)
+STDMETHODIMP ZipCreate::InitArchive(PCWSTR pwzArchivePath, OrcArchive::ArchiveCallback pCallback)
 {
     HRESULT hr = E_FAIL;
 
@@ -152,7 +152,7 @@ STDMETHODIMP ZipCreate::InitArchive(PCWSTR pwzArchivePath, Archive::ArchiveCallb
 }
 
 STDMETHODIMP
-ZipCreate::InitArchive(__in const std::shared_ptr<ByteStream>& pOutputStream, Archive::ArchiveCallback pCallback)
+ZipCreate::InitArchive(__in const std::shared_ptr<ByteStream>& pOutputStream, OrcArchive::ArchiveCallback pCallback)
 {
     m_FormatGUID = CLSID_NULL;
 

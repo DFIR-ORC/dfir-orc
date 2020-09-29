@@ -29,7 +29,7 @@ public:
         ArchiveExtract::MakeArchiveStream makeArchiveStream,
         const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
         ArchiveExtract::MakeOutputStream MakeWriteAbleStream,
-        Archive::ArchiveCallback archiveCallback);
+        OrcArchive::ArchiveCallback archiveCallback);
 
 private:
     std::wstring m_strAccumulator;

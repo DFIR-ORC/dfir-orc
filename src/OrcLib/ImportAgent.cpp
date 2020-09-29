@@ -87,7 +87,7 @@ ImportMessage::Message ImportAgent::TriageNewItem(const ImportItem& input, Impor
         else
             newItem.ullFileBytesCharged = newItem.Stream->GetSize();
 
-        if (Archive::GetArchiveFormat(newItem.name) != ArchiveFormat::Unknown)
+        if (OrcArchive::GetArchiveFormat(newItem.name) != ArchiveFormat::Unknown)
         {
             newItem.isToExtract = true;
             newItem.isToImport = false;
@@ -269,7 +269,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
     BOOST_SCOPE_EXIT(&input) { GetSystemTime(&input.importEnd); }
     BOOST_SCOPE_EXIT_END;
 
-    auto archiveFormat = Archive::GetArchiveFormat(input.name);
+    auto archiveFormat = OrcArchive::GetArchiveFormat(input.name);
 
     if (archiveFormat == ArchiveFormat::Unknown)
     {
@@ -291,7 +291,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
     std::vector<ImportItem> tempItems;
 
-    extractor->SetCallback([this, &input, &tempItems](const Archive::ArchiveItem& item) {
+    extractor->SetCallback([this, &input, &tempItems](const OrcArchive::ArchiveItem& item) {
         wstring strItemName;
         fs::path path(input.name);
         auto strBaseName = path.stem().wstring();
@@ -359,7 +359,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
                 else
                     found->ullFileBytesCharged = found->Stream->GetSize();
 
-                if (Archive::GetArchiveFormat(item.NameInArchive) != ArchiveFormat::Unknown)
+                if (OrcArchive::GetArchiveFormat(item.NameInArchive) != ArchiveFormat::Unknown)
                 {
                     SendRequest(ImportMessage::MakeExpandRequest(std::move(*found)));
                     Log::Debug(L"Archive '{}' has been extracted", strItemName);
@@ -391,7 +391,8 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
         return S_OK;
     };
 
-    auto MakeWriteStream = [this, &input, &tempItems](const Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+    auto MakeWriteStream =
+        [this, &input, &tempItems](const OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
         ImportItem output_item;
@@ -442,7 +443,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
         if (!ImportItem::IsToIgnore(input.definitions, strItemName))
         {
-            if (Archive::GetArchiveFormat(strItemName) != ArchiveFormat::Unknown)
+            if (OrcArchive::GetArchiveFormat(strItemName) != ArchiveFormat::Unknown)
                 return true;
 
             if (ImportItem::IsToImport(input.definitions, strItemName))

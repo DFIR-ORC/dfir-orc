@@ -155,7 +155,7 @@ class ZipCreate;
 class ZipExtract;
 
 // In&Out/Archive
-class Archive;
+class OrcArchive;
 class ArchiveAgent;
 
 class ArchiveCreate;

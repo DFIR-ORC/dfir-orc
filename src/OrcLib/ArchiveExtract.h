@@ -19,10 +19,10 @@
 
 namespace Orc {
 
-class ORCLIB_API ArchiveExtract : public Archive
+class ORCLIB_API ArchiveExtract : public OrcArchive
 {
 public:
-    typedef std::function<std::shared_ptr<ByteStream>(Archive::ArchiveItem& item)> MakeOutputStream;
+    typedef std::function<std::shared_ptr<ByteStream>(OrcArchive::ArchiveItem& item)> MakeOutputStream;
     typedef std::function<HRESULT(std::shared_ptr<ByteStream>& stream)> MakeArchiveStream;
 
     static std::shared_ptr<ArchiveExtract> MakeExtractor(ArchiveFormat fmt, bool bComputeHash = false);
@@ -35,7 +35,7 @@ protected:
     ItemShouldBeExtractedCallback m_ShouldBeExtracted;
 
     ArchiveExtract(bool bComputeHash)
-        : Archive(bComputeHash) {};
+        : OrcArchive(bComputeHash) {};
 
     std::vector<std::pair<std::wstring, std::wstring>> m_ExtractedItems;
 

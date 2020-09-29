@@ -19,7 +19,7 @@
 namespace fs = std::filesystem;
 using namespace Orc;
 
-Orc::ArchiveFormat Archive::GetArchiveFormat(const std::wstring_view& filepath)
+Orc::ArchiveFormat OrcArchive::GetArchiveFormat(const std::wstring_view& filepath)
 {
     auto path = fs::path(std::wstring(filepath));
 
@@ -56,7 +56,7 @@ Orc::ArchiveFormat Archive::GetArchiveFormat(const std::wstring_view& filepath)
     return ArchiveFormat::Unknown;
 }
 
-std::wstring_view Archive::GetArchiveFormatString(Orc::ArchiveFormat format)
+std::wstring_view OrcArchive::GetArchiveFormatString(Orc::ArchiveFormat format)
 {
     using namespace std::string_view_literals;
     switch (format)
@@ -70,13 +70,13 @@ std::wstring_view Archive::GetArchiveFormatString(Orc::ArchiveFormat format)
     }
 }
 
-HRESULT Archive::SetCallback(Archive::ArchiveCallback aCallback)
+HRESULT OrcArchive::SetCallback(OrcArchive::ArchiveCallback aCallback)
 {
     m_Callback = aCallback;
     return S_OK;
 }
 
-const Archive::ArchiveItem& Archive::operator[](const std::wstring& strNameInArchive)
+const OrcArchive::ArchiveItem& OrcArchive::operator[](const std::wstring& strNameInArchive)
 {
     static const ArchiveItem g_NotFound;
     const auto& found = std::find_if(begin(m_Items), end(m_Items), [strNameInArchive](const ArchiveItem& item) -> bool {
@@ -85,4 +85,4 @@ const Archive::ArchiveItem& Archive::operator[](const std::wstring& strNameInArc
     return found == end(m_Items) ? g_NotFound : *found;
 }
 
-Archive::~Archive(void) {}
+OrcArchive::~OrcArchive(void) {}

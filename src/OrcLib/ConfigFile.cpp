@@ -404,7 +404,8 @@ HRESULT ConfigFile::SetOutputSpec(ConfigItem& item, const OutputSpec& outputSpec
             item.strData = outputSpec.Path;
             if (outputSpec.ArchiveFormat != ArchiveFormat::Unknown)
             {
-                item.SubItems[CONFIG_OUTPUT_FORMAT].strData = Archive::GetArchiveFormatString(outputSpec.ArchiveFormat);
+                item.SubItems[CONFIG_OUTPUT_FORMAT].strData =
+                    OrcArchive::GetArchiveFormatString(outputSpec.ArchiveFormat);
                 item.SubItems[CONFIG_OUTPUT_FORMAT].Status = ConfigItem::PRESENT;
             }
             if (!outputSpec.Compression.empty())

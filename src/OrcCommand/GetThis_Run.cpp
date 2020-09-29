@@ -10,6 +10,7 @@
 
 #include "GetThis.h"
 
+#include "LogFileWriter.h"
 #include "TableOutput.h"
 #include "CsvFileWriter.h"
 #include "ConfigFileReader.h"
@@ -33,8 +34,6 @@
 #include <filesystem>
 #include <sstream>
 
-#include "Log/Log.h"
-
 using namespace std;
 namespace fs = std::filesystem;
 
@@ -56,19 +55,34 @@ Main::CreateOutputDirLogFileAndCSV(const std::wstring& strOutputDir)
         case fs::file_type::not_found:
             if (create_directories(outDir))
             {
-                Log::Debug(L"Created output directory '{}'", strOutputDir);
+                log::Verbose(_L_, L"Created output directory %s", strOutputDir.c_str());
             }
             else
             {
-                Log::Debug(L"Output directory '{}' exists", strOutputDir);
+                log::Verbose(_L_, L"Output directory %s exists", strOutputDir.c_str());
             }
             break;
         case fs::file_type::directory:
-            Log::Debug(L"Specified output directory '{}' exists and is a directory", strOutputDir);
+            log::Verbose(_L_, L"Specified output directory %s exists and is a directory\r\n", strOutputDir.c_str());
             break;
         default:
-            Log::Error(L"Specified output directory '{}' exists and is not a directory", strOutputDir);
+            log::Error(
+                _L_,
+                E_INVALIDARG,
+                L"Specified output directory %s exists and is not a directory\r\n",
+                strOutputDir.c_str());
             break;
+    }
+
+    fs::path logFile;
+
+    logFile = outDir;
+    logFile /= L"GetThis.log";
+
+    if (!_L_->IsLoggingToFile())
+    {
+        if (FAILED(hr = _L_->LogToFile(logFile.wstring().c_str())))
+            return {hr, nullptr};
     }
 
     fs::path csvFile(outDir);
@@ -76,7 +90,7 @@ Main::CreateOutputDirLogFileAndCSV(const std::wstring& strOutputDir)
 
     auto options = std::make_unique<TableOutput::CSV::Options>();
     options->Encoding = config.Output.OutputEncoding;
-    auto CSV = TableOutput::CSV::Writer::MakeNew(std::move(options));
+    auto CSV = TableOutput::CSV::Writer::MakeNew(_L_, std::move(options));
 
     if (FAILED(hr = CSV->WriteToFile(csvFile.wstring().c_str())))
         return {hr, nullptr};
@@ -97,21 +111,40 @@ Main::CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::sh
     fs::path tempdir;
     tempdir = fs::path(pArchivePath).parent_path();
 
-    auto csvStream = std::make_shared<TemporaryStream>();
+    auto stream_log = std::make_shared<LogFileWriter>(0x1000);
+    stream_log->SetConsoleLog(_L_->ConsoleLog());
+    stream_log->SetDebugLog(_L_->DebugLog());
+    stream_log->SetVerboseLog(_L_->VerboseLog());
+
+    auto logStream = std::make_shared<TemporaryStream>(stream_log);
+
+    if (FAILED(hr = logStream->Open(tempdir.wstring(), L"GetThisLogStream", 5 * 1024 * 1024)))
+    {
+        log::Error(_L_, hr, L"Failed to create temp stream\r\n");
+        return {hr, nullptr};
+    }
+
+    if (FAILED(hr = _L_->LogToStream(logStream)))
+    {
+        log::Error(_L_, hr, L"Failed to initialize temp logging\r\n");
+        return {hr, nullptr};
+    }
+
+    auto csvStream = std::make_shared<TemporaryStream>(_L_);
 
     if (FAILED(hr = csvStream->Open(tempdir.wstring(), L"GetThisCsvStream", 1 * 1024 * 1024)))
     {
-        Log::Error("Failed to create temp stream");
+        log::Error(_L_, hr, L"Failed to create temp stream\r\n");
         return {hr, nullptr};
     }
 
     auto options = std::make_unique<TableOutput::CSV::Options>();
     options->Encoding = config.Output.OutputEncoding;
 
-    auto CSV = TableOutput::CSV::Writer::MakeNew(std::move(options));
+    auto CSV = TableOutput::CSV::Writer::MakeNew(_L_, std::move(options));
     if (FAILED(hr = CSV->WriteToStream(csvStream)))
     {
-        Log::Error("Failed to initialize CSV stream");
+        log::Error(_L_, hr, L"Failed to initialize CSV stream\r\n");
         return {hr, nullptr};
     }
 
@@ -119,7 +152,7 @@ Main::CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::sh
 
     if (FAILED(hr = compressor->InitArchive(pArchivePath.c_str())))
     {
-        Log::Error(L"Failed to initialize archive file {}", pArchivePath);
+        log::Error(_L_, hr, L"Failed to initialize archive file %s\r\n", pArchivePath.c_str());
         return {hr, nullptr};
     }
 
@@ -127,7 +160,7 @@ Main::CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::sh
     {
         if (FAILED(hr = compressor->SetPassword(config.Output.Password)))
         {
-            Log::Error(L"Failed to set password for archive file {}", pArchivePath);
+            log::Error(_L_, hr, L"Failed to set password for archive file %s\r\n", pArchivePath.c_str());
             return {hr, nullptr};
         }
     }
@@ -140,25 +173,18 @@ HRESULT Main::RegFlushKeys()
     bool bSuccess = true;
     DWORD dwGLE = 0L;
 
-    Log::Debug(L"Flushing HKEY_LOCAL_MACHINE");
+    log::Info(_L_, L"\r\nFlushing HKEY_LOCAL_MACHINE\r\n");
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
-    {
         bSuccess = false;
-    }
 
-    Log::Debug(L"Flushing HKEY_USERS");
+    log::Info(_L_, L"Flushing HKEY_USERS\r\n");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
-    {
         bSuccess = false;
-    }
 
     if (!bSuccess)
-    {
         return HRESULT_FROM_WIN32(dwGLE);
-    }
-
     return S_OK;
 }
 
@@ -173,7 +199,23 @@ HRESULT Main::CreateSampleFileName(
         return E_POINTER;
 
     WCHAR tmpName[MAX_PATH];
-    std::wstring contentType = Orc::Command::GetThis::ToString(content.Type);
+    WCHAR* pContent = NULL;
+
+    switch (content.Type)
+    {
+        case DATA:
+            pContent = L"data";
+            break;
+        case STRINGS:
+            pContent = L"strings";
+            break;
+        case RAW:
+            pContent = L"raw";
+            break;
+        default:
+            pContent = L"";
+            break;
+    }
 
     if (idx)
     {
@@ -196,7 +238,7 @@ HRESULT Main::CreateSampleFileName(
                 (UINT)DataName.size(),
                 DataName.c_str(),
                 idx,
-                contentType.c_str());
+                pContent);
         else
             swprintf_s(
                 tmpName,
@@ -214,7 +256,7 @@ HRESULT Main::CreateSampleFileName(
                 pFileName->FileNameLength,
                 pFileName->FileName,
                 idx,
-                contentType.c_str());
+                pContent);
     }
     else
     {
@@ -236,7 +278,7 @@ HRESULT Main::CreateSampleFileName(
                 pFileName->FileName,
                 (UINT)DataName.size(),
                 DataName.c_str(),
-                contentType.c_str());
+                pContent);
         else
         {
             swprintf_s(
@@ -254,7 +296,7 @@ HRESULT Main::CreateSampleFileName(
                 pFileName->ParentDirectory.SegmentNumberLowPart,
                 pFileName->FileNameLength,
                 pFileName->FileName,
-                contentType.c_str());
+                pContent);
         }
     }
 
@@ -283,11 +325,11 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
 
     switch (sampleRef.Content.Type)
     {
-        case ContentType::DATA:
+        case DATA:
             stream = sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].DataStream;
             break;
-        case ContentType::STRINGS: {
-            auto strings = std::make_shared<StringsStream>();
+        case STRINGS: {
+            auto strings = std::make_shared<StringsStream>(_L_);
             if (sampleRef.Content.MaxChars == 0 && sampleRef.Content.MinChars == 0)
             {
                 if (FAILED(
@@ -296,7 +338,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
                             config.content.MinChars,
                             config.content.MaxChars)))
                 {
-                    Log::Error("Failed to initialise strings stream");
+                    log::Error(_L_, hr, L"Failed to initialise strings stream\r\n");
                     return hr;
                 }
             }
@@ -308,14 +350,14 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
                             sampleRef.Content.MinChars,
                             sampleRef.Content.MaxChars)))
                 {
-                    Log::Error("Failed to initialise strings stream");
+                    log::Error(_L_, hr, L"Failed to initialise strings stream\r\n");
                     return hr;
                 }
             }
             stream = strings;
         }
         break;
-        case ContentType::RAW:
+        case RAW:
             stream = sampleRef.Matches.front()->MatchingAttributes[sampleRef.AttributeIndex].RawStream;
             break;
         default:
@@ -329,7 +371,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
 
     if (algs != CryptoHashStream::Algorithm::Undefined)
     {
-        sampleRef.HashStream = make_shared<CryptoHashStream>();
+        sampleRef.HashStream = make_shared<CryptoHashStream>(_L_);
         if (FAILED(hr = sampleRef.HashStream->OpenToRead(algs, upstream)))
             return hr;
         upstream = sampleRef.HashStream;
@@ -342,7 +384,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
     FuzzyHashStream::Algorithm fuzzy_algs = config.FuzzyHashAlgs;
     if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
     {
-        sampleRef.FuzzyHashStream = make_shared<FuzzyHashStream>();
+        sampleRef.FuzzyHashStream = make_shared<FuzzyHashStream>(_L_);
         if (FAILED(hr = sampleRef.FuzzyHashStream->OpenToRead(fuzzy_algs, upstream)))
             return hr;
         upstream = sampleRef.FuzzyHashStream;
@@ -453,10 +495,10 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
 
             switch (sampleRef.Content.Type)
             {
-                case ContentType::DATA:
+                case DATA:
                     output.WriteString(L"data");
                     break;
-                case ContentType::STRINGS:
+                case STRINGS:
                     output.WriteString(L"strings");
                     break;
                 default:
@@ -569,7 +611,10 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
         if (prevSample != end(Samples))
         {
             // this sample is already cabbed
-            Log::Debug(L"Not adding duplicate sample {} to archive", aMatch->MatchingNames.front().FullPathName);
+            log::Verbose(
+                _L_,
+                L"Not adding duplicate sample %s to archive\r\n",
+                aMatch->MatchingNames.front().FullPathName.c_str());
             SampleRef& item = const_cast<SampleRef&>(*prevSample);
             hr = S_FALSE;
         }
@@ -577,7 +622,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
         {
             for (auto& name : aMatch->MatchingNames)
             {
-                Log::Debug(L"Adding sample {} to archive", name.FullPathName);
+                log::Verbose(_L_, L"Adding sample %s to archive\r\n", name.FullPathName.c_str());
 
                 sampleRef.Content = aSpec.Content;
                 sampleRef.CollectionDate = CollectionDate;
@@ -608,9 +653,8 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
 
             if (FAILED(hr = ConfigureSampleStreams(sampleRef)))
             {
-                Log::Error(L"Failed to configure sample reference for {}", sampleRef.SampleName);
+                log::Error(_L_, hr, L"Failed to configure sample reference for %s\r\n", sampleRef.SampleName.c_str());
             }
-
             Samples.insert(sampleRef);
         }
     }
@@ -635,19 +679,18 @@ Main::CollectMatchingSamples(const std::shared_ptr<ArchiveCreate>& compressor, I
                 strName);
             if (FAILED(hr = compressor->AddStream(sampleRef.SampleName.c_str(), strName.c_str(), sampleRef.CopyStream)))
             {
-                Log::Error(L"Failed to add sample {}", sampleRef.SampleName);
+                log::Error(_L_, hr, L"Failed to add sample %s\r\n", sampleRef.SampleName.c_str());
             }
         }
     });
 
-    auto root = m_console.OutputTree();
-    auto matchingSamplesNode = root.AddNode("Adding matching samples to archive:");
+    log::Info(_L_, L"\r\nAdding matching samples to archive:\r\n");
     compressor->SetCallback(
-        [this, matchingSamplesNode](const Archive::ArchiveItem& item) mutable { matchingSamplesNode.Add(item.Path); });
+        [this](const OrcArchive::ArchiveItem& item) { log::Info(_L_, L"\t%s\r\n", item.Path.c_str()); });
 
     if (FAILED(hr = compressor->FlushQueue()))
     {
-        Log::Error(L"Failed to flush queue to {}", config.Output.Path);
+        log::Error(_L_, hr, L"Failed to flush queue to %s\r\n", config.Output.Path.c_str());
         return hr;
     }
 
@@ -671,10 +714,11 @@ Main::CollectMatchingSamples(const std::shared_ptr<ArchiveCreate>& compressor, I
 
             if (FAILED(hr = AddSampleRefToCSV(output, strComputerName, sampleRef)))
             {
-                Log::Error(
-                    L"Failed to add sample '{}' metadata to csv (code: {})",
-                    sampleRef.Matches.front()->MatchingNames.front().FullPathName,
-                    hr);
+                log::Error(
+                    _L_,
+                    hr,
+                    L"Failed to add sample %s metadata to csv\r\n",
+                    sampleRef.Matches.front()->MatchingNames.front().FullPathName.c_str());
                 return;
             }
         });
@@ -695,8 +739,7 @@ Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output
     wstring strComputerName;
     SystemDetails::GetOrcComputerName(strComputerName);
 
-    auto root = m_console.OutputTree();
-    auto matchingSamplesNode = root.AddNode("Copying matching samples to '{}'", outputdir);
+    log::Info(_L_, L"\r\nCopying matching samples to %s\r\n", outputdir.c_str());
 
     for (const auto& sample_ref : MatchingSamples)
     {
@@ -704,25 +747,26 @@ Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output
         {
             fs::path sampleFile = output_dir / fs::path(sample_ref.SampleName);
 
-            FileStream outputStream;
+            FileStream outputStream(_L_);
 
             if (FAILED(hr = outputStream.WriteTo(sampleFile.wstring().c_str())))
             {
-                Log::Error("Failed to create sample file '{}'", sampleFile.string());
+                log::Error(_L_, hr, L"Failed to create sample file %s\r\n", sampleFile.wstring().c_str());
                 break;
             }
 
             ULONGLONG ullBytesWritten = 0LL;
             if (FAILED(hr = sample_ref.CopyStream->CopyTo(outputStream, &ullBytesWritten)))
             {
-                Log::Error("Failed while writing to sample '{}'", sampleFile.string());
+                log::Error(_L_, hr, L"Failed while writing to sample %s\r\n", sampleFile.string().c_str());
                 break;
             }
 
             outputStream.Close();
             sample_ref.CopyStream->Close();
 
-            matchingSamplesNode.Add("'{}' copied ({} bytes)", sample_ref.SampleName, sample_ref.CopyStream->GetSize());
+            log::Info(
+                _L_, L"\t%s copied (%I64d bytes)\r\n", sample_ref.SampleName.c_str(), sample_ref.CopyStream->GetSize());
         }
     }
 
@@ -745,7 +789,7 @@ Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output
 
         if (FAILED(hr = AddSampleRefToCSV(output, strComputerName, sample_ref)))
         {
-            Log::Error("Failed to add sample '{}' metadata to csv", sampleFile.string());
+            log::Error(_L_, hr, L"Failed to add sample %s metadata to csv\r\n", sampleFile.string().c_str());
             break;
         }
     }
@@ -758,8 +802,8 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
 
     switch (output.Type)
     {
-        case OutputSpec::Kind::Archive: {
-            auto compressor = ArchiveCreate::MakeCreate(config.Output.ArchiveFormat, false);
+        case OutputSpec::Archive: {
+            auto compressor = ArchiveCreate::MakeCreate(config.Output.ArchiveFormat, _L_, false);
 
             if (!config.Output.Compression.empty())
                 compressor->SetCompressionLevel(config.Output.Compression);
@@ -786,24 +830,39 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
                 {
                     if (FAILED(hr = pCSVStream->SetFilePointer(0, FILE_BEGIN, nullptr)))
                     {
-                        Log::Error("Failed to rewind csv stream");
+                        log::Error(_L_, hr, L"Failed to rewind csv stream\r\n");
                     }
                     if (FAILED(hr = compressor->AddStream(L"GetThis.csv", L"GetThis.csv", pCSVStream)))
                     {
-                        Log::Error("Failed to add GetThis.csv");
+                        log::Error(_L_, hr, L"Failed to add GetThis.csv\r\n");
                     }
+                }
+            }
+
+            auto pLogStream = _L_->GetByteStream();
+            _L_->CloseLogToStream(false);
+
+            if (pLogStream && pLogStream->GetSize() > 0LL)
+            {
+                if (FAILED(hr = pLogStream->SetFilePointer(0, FILE_BEGIN, nullptr)))
+                {
+                    log::Error(_L_, hr, L"Failed to rewind log stream\r\n");
+                }
+                if (FAILED(hr = compressor->AddStream(L"GetThis.log", L"GetThis.log", pLogStream)))
+                {
+                    log::Error(_L_, hr, L"Failed to add GetThis.log\r\n");
                 }
             }
 
             if (FAILED(hr = compressor->Complete()))
             {
-                Log::Error(L"Failed to complete '{}'", config.Output.Path);
+                log::Error(_L_, hr, L"Failed to complete %s\r\n", config.Output.Path.c_str());
                 return hr;
             }
             CSV->Close();
         }
         break;
-        case OutputSpec::Kind::Directory: {
+        case OutputSpec::Directory: {
             auto [hr, CSV] = CreateOutputDirLogFileAndCSV(config.Output.Path);
             if (FAILED(hr))
                 return hr;
@@ -829,9 +888,9 @@ HRESULT Main::HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSampl
 {
     HRESULT hr = E_FAIL;
 
-    auto devnull = std::make_shared<DevNullStream>();
+    auto devnull = std::make_shared<DevNullStream>(_L_);
 
-    m_console.Print("Computing hash of off limit samples");
+    log::Info(_L_, L"\r\nComputing hash of off limit samples\r\n");
 
     for (SampleSet::iterator it = begin(MatchingSamples); it != end(MatchingSamples); ++it)
     {
@@ -840,7 +899,7 @@ HRESULT Main::HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSampl
             ULONGLONG ullBytesWritten = 0LL;
             if (FAILED(hr = it->CopyStream->CopyTo(devnull, &ullBytesWritten)))
             {
-                Log::Error("Failed while computing hash of sample");
+                log::Error(_L_, hr, L"Failed while computing hash of sample\r\n");
                 break;
             }
 
@@ -859,7 +918,7 @@ HRESULT Main::FindMatchingSamples()
 
     if (FAILED(hr = FileFinder.InitializeYara(config.Yara)))
     {
-        Log::Error("Failed to initialize Yara scan");
+        log::Error(_L_, hr, L"Failed to initialize Yara scan\r\n");
     }
 
     if (FAILED(
@@ -878,7 +937,11 @@ HRESULT Main::FindMatchingSamples()
 
                     if (aSpecIt == end(config.listofSpecs))
                     {
-                        Log::Error(L"Could not find sample spec for match '{}'", aMatch->Term->GetDescription());
+                        log::Error(
+                            _L_,
+                            hr = E_FAIL,
+                            L"Could not find sample spec for match %s\r\n",
+                            aMatch->Term->GetDescription().c_str());
                         return;
                     }
 
@@ -886,10 +949,12 @@ HRESULT Main::FindMatchingSamples()
 
                     if (aMatch->MatchingAttributes.empty())
                     {
-                        Log::Warn(
-                            L"'{}' matched '{}' but no data related attribute was associated",
-                            strFullFileName,
-                            aMatch->Term->GetDescription());
+                        log::Warning(
+                            _L_,
+                            E_FAIL,
+                            L"\"%s\" matched \"%s\" but no data related attribute was associated\r\n",
+                            strFullFileName.c_str(),
+                            aMatch->Term->GetDescription().c_str());
                         return;
                     }
 
@@ -904,7 +969,7 @@ HRESULT Main::FindMatchingSamples()
 
                         if (FAILED(hr = AddSamplesForMatch(status, *aSpecIt, aMatch)))
                         {
-                            Log::Error(L"Failed to add {}", strName);
+                            log::Error(_L_, hr, L"\tFailed to add %s\r\n", strName.c_str());
                         }
 
                         switch (status)
@@ -913,11 +978,11 @@ HRESULT Main::FindMatchingSamples()
                             case SampleWithinLimits: {
                                 if (hr == S_FALSE)
                                 {
-                                    m_console.Print(L"'{}' is already collected", strName);
+                                    log::Info(_L_, L"\t%s is already collected\r\n", strName.c_str());
                                 }
                                 else
                                 {
-                                    m_console.Print(L"'{}' matched ({} bytes)", strName, dwlDataSize);
+                                    log::Info(_L_, L"\t%s matched (%d bytes)\r\n", strName.c_str(), dwlDataSize);
                                     aSpecIt->PerSampleLimits.dwlAccumulatedBytesTotal += dwlDataSize;
                                     aSpecIt->PerSampleLimits.dwAccumulatedSampleCount++;
 
@@ -927,42 +992,50 @@ HRESULT Main::FindMatchingSamples()
                             }
                             break;
                             case GlobalSampleCountLimitReached:
-                                m_console.Print(
-                                    L"'{}': Global sample count reached ({})", strName, GlobalLimits.dwMaxSampleCount);
+                                log::Info(
+                                    _L_,
+                                    L"\t%s : Global sample count reached (%d)\r\n",
+                                    strName.c_str(),
+                                    GlobalLimits.dwMaxSampleCount);
                                 GlobalLimits.bMaxSampleCountReached = true;
                                 break;
                             case GlobalMaxBytesPerSample:
-                                m_console.Print(
-                                    L"'{}': Exceeds global per sample size limit ({})",
-                                    strName,
+                                log::Info(
+                                    _L_,
+                                    L"\t%s : Exceeds global per sample size limit (%I64d)\r\n",
+                                    strName.c_str(),
                                     GlobalLimits.dwlMaxBytesPerSample);
                                 GlobalLimits.bMaxBytesPerSampleReached = true;
                                 break;
                             case GlobalMaxBytesTotal:
-                                m_console.Print(
-                                    L"'{}': Global total sample size limit reached ({})",
-                                    strName,
+                                log::Info(
+                                    _L_,
+                                    L"\t%s : Global total sample size limit reached (%I64d)\r\n",
+                                    strName.c_str(),
                                     GlobalLimits.dwlMaxBytesTotal);
                                 GlobalLimits.bMaxBytesTotalReached = true;
                                 break;
                             case LocalSampleCountLimitReached:
-                                m_console.Print(
-                                    L"'{}': sample count reached ({})",
-                                    strName,
+                                log::Info(
+                                    _L_,
+                                    L"\t%s : sample count reached (%d)\r\n",
+                                    strName.c_str(),
                                     aSpecIt->PerSampleLimits.dwMaxSampleCount);
                                 aSpecIt->PerSampleLimits.bMaxSampleCountReached = true;
                                 break;
                             case LocalMaxBytesPerSample:
-                                m_console.Print(
-                                    L"{}: Exceeds per sample size limit ({})",
-                                    strName,
+                                log::Info(
+                                    _L_,
+                                    L"\t%s : Exceeds per sample size limit (%I64d)\r\n",
+                                    strName.c_str(),
                                     aSpecIt->PerSampleLimits.dwlMaxBytesPerSample);
                                 aSpecIt->PerSampleLimits.bMaxBytesPerSampleReached = true;
                                 break;
                             case LocalMaxBytesTotal:
-                                m_console.Print(
-                                    L"{}: total sample size limit reached ({})",
-                                    strName,
+                                log::Info(
+                                    _L_,
+                                    L"\t%s : total sample size limit reached (%I64d)\r\n",
+                                    strName.c_str(),
                                     aSpecIt->PerSampleLimits.dwlMaxBytesTotal);
                                 aSpecIt->PerSampleLimits.bMaxBytesTotalReached = true;
                                 break;
@@ -974,7 +1047,7 @@ HRESULT Main::FindMatchingSamples()
                 },
                 false)))
     {
-        Log::Error("Failed while parsing locations");
+        log::Error(_L_, hr, L"Failed while parsing locations\r\n");
     }
 
     return S_OK;
@@ -985,23 +1058,19 @@ HRESULT Main::Run()
     HRESULT hr = E_FAIL;
     LoadWinTrust();
 
-#ifndef _DEBUG
     GetSystemTimeAsFileTime(&CollectionDate);
-#else
-    CollectionDate = {0};
-#endif
 
     try
     {
         if (config.bFlushRegistry)
         {
             if (FAILED(hr = RegFlushKeys()))
-                Log::Warn("Failed to flush keys (code: {:#x})", hr);
+                log::Info(_L_, L"Failed to flush keys (hr = 0x%lx)\r\n", hr);
         }
     }
     catch (...)
     {
-        Log::Error(L"GetThis failed during output setup, parameter output, RegistryFlush, exiting");
+        log::Error(_L_, E_FAIL, L"GetThis failed during output setup, parameter output, RegistryFlush, exiting\r\n");
         return E_FAIL;
     }
 
@@ -1009,18 +1078,26 @@ HRESULT Main::Run()
     {
         if (FAILED(hr = FindMatchingSamples()))
         {
-            Log::Error("GetThis failed while matching samples");
+            log::Error(_L_, hr, L"\r\nGetThis failed while matching samples\r\n");
             return hr;
         }
         if (FAILED(hr = CollectMatchingSamples(config.Output, Samples)))
         {
-            Log::Error("GetThis failed while collecting samples");
+            log::Error(_L_, hr, L"\r\nGetThis failed while collecting samples\r\n");
             return hr;
+        }
+
+        hr = CloseOutput();
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to close output (code: {:#x})", hr);
         }
     }
     catch (...)
     {
-        Log::Error("GetThis failed during sample collection, terminating archive");
+        log::Error(_L_, E_ABORT, L"\r\nGetThis failed during sample collection, terminating archive\r\n");
+        _L_->CloseLogFile();
+
         return E_ABORT;
     }
 

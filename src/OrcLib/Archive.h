@@ -27,7 +27,7 @@ namespace Orc {
 class ArchiveExtract;
 class ArchiveCompress;
 
-class ORCLIB_API Archive
+class ORCLIB_API OrcArchive
 {
 public:
     class ArchiveItem
@@ -96,7 +96,7 @@ protected:
     ArchiveCallback m_Callback;
 
 public:
-    Archive(bool bComputeHash)
+    OrcArchive(bool bComputeHash)
         : m_bComputeHash(bComputeHash)
         , m_Callback(nullptr) {};
 
@@ -115,7 +115,7 @@ public:
         return S_OK;
     }
 
-    virtual ~Archive(void);
+    virtual ~OrcArchive(void);
 };
 
 }  // namespace Orc

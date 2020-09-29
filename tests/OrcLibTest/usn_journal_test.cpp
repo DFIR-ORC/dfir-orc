@@ -191,7 +191,7 @@ public:
 
 private:
     DWORD64 m_NbRecords;
-    typedef std::map<int, Archive::ArchiveItem> ITEMS;
+    typedef std::map<int, OrcArchive::ArchiveItem> ITEMS;
     typedef std::map<int, std::wstring> ITEM_PATHS;
     ITEMS m_Items;
 
@@ -261,7 +261,7 @@ private:
             usnStream.reset();
         }
 
-        std::for_each(std::begin(m_Items), std::end(m_Items), [](std::pair<const int, Archive::ArchiveItem>& item) {
+        std::for_each(std::begin(m_Items), std::end(m_Items), [](std::pair<const int, OrcArchive::ArchiveItem>& item) {
             item.second.Stream.reset();
 
             if (!item.second.Path.empty())
@@ -289,7 +289,7 @@ private:
 
         auto ShouldItemBeExtracted = [](const std::wstring& strNameInArchive) -> bool { return true; };
 
-        auto MakeWriteStream = [this](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+        auto MakeWriteStream = [this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
             HRESULT hr = E_FAIL;
 
             WCHAR szTempDir[MAX_PATH];
@@ -321,7 +321,7 @@ private:
             }
         };
 
-        auto ArchiveCallback = [this](const Archive::ArchiveItem& item) {
+        auto ArchiveCallback = [this](const OrcArchive::ArchiveItem& item) {
             std::size_t found = item.NameInArchive.find(L"vbr");
             if (found != std::string::npos)
             {

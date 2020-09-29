@@ -172,7 +172,7 @@ void ArchiveAgent::run()
                 }
                 else if (request->GetStream() == nullptr)
                 {
-                    ArchiveFormat fmt = Archive::GetArchiveFormat(request->Name());
+                    ArchiveFormat fmt = OrcArchive::GetArchiveFormat(request->Name());
                     if (fmt == ArchiveFormat::Unknown)
                         notification = ArchiveNotification::MakeFailureNotification(
                             request,
@@ -211,7 +211,7 @@ void ArchiveAgent::run()
                             {
                                 m_cabName = request->Name();
 
-                                m_compressor->SetCallback([this, request](const Archive::ArchiveItem& item) {
+                                m_compressor->SetCallback([this, request](const OrcArchive::ArchiveItem& item) {
                                     auto notification = ArchiveNotification::MakeSuccessNotification(
                                         request, ArchiveNotification::FileAddition, item.NameInArchive);
                                     if (notification)
@@ -251,7 +251,7 @@ void ArchiveAgent::run()
                         {
                             m_cabName = request->Name();
 
-                            m_compressor->SetCallback([this, request](const Archive::ArchiveItem& item) {
+                            m_compressor->SetCallback([this, request](const OrcArchive::ArchiveItem& item) {
                                 auto notification = ArchiveNotification::MakeSuccessNotification(
                                     request, ArchiveNotification::FileAddition, item.NameInArchive);
                                 if (notification)
