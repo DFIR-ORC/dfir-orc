@@ -6,7 +6,7 @@
 # Author(s): fabienfl
 #
 
-cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(rcedit)
 
@@ -14,16 +14,14 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(ORC_USE_STATIC_CRT)
-    set(CRT_TYPE "/MT")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 else()
-    set(CRT_TYPE "/MD")
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
 endif()
 
 add_compile_options(/EHsc)
 
-list(APPEND COMPILE_OPTIONS_DEBUG "${CRT_TYPE}d")
 list(APPEND COMPILE_OPTIONS_RELEASE
-    "${CRT_TYPE}"
     /guard:cf
 )
 

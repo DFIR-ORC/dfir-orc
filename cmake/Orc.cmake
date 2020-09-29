@@ -51,14 +51,7 @@ list(APPEND COMPILE_OPTIONS_RELEASE
     /guard:cf  # Enable control flow guard
 )
 
-if(ORC_USE_STATIC_CRT)
-    set(CRT_TYPE "/MT")
-else()
-    set(CRT_TYPE "/MD")
-endif()
 
-list(APPEND COMPILE_OPTIONS_DEBUG "${CRT_TYPE}d")
-list(APPEND COMPILE_OPTIONS_RELEASE "${CRT_TYPE}")
 
 foreach(OPTION IN ITEMS ${COMPILE_OPTIONS_DEBUG})
     add_compile_options($<$<CONFIG:DEBUG>:${OPTION}>)

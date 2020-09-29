@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
-cmake_policy(VERSION 3.12)
+cmake_minimum_required(VERSION 3.16)
 
 # CMake user options
 option(ORC_USE_STATIC_CRT "Use static runtime" ON)
@@ -30,6 +29,12 @@ set(ORC_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/DFIR-Orc.ico"
 )
 
 set(ORC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
+
+if(ORC_USE_STATIC_CRT)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+else()
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+endif()
 
 # Insert custom cmake directories for script lookup
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
