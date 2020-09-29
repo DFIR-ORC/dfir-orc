@@ -41,14 +41,14 @@ HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<Byte
     m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
     if (!m_xmllite)
     {
-        spdlog::error(L"Failed to load xmllite extension library");
+        Log::Error(L"Failed to load xmllite extension library");
         return E_POINTER;
     }
 
     if (FAILED(hr = m_xmllite->CreateXmlWriter(IID_IXmlWriter, (PVOID*)&pWriter, nullptr)))
     {
         XmlLiteExtension::LogError(hr);
-        spdlog::error(L"Failed to instantiate Xml writer (code: {:#x})", hr);
+        Log::Error(L"Failed to instantiate Xml writer (code: {:#x})", hr);
         return hr;
     }
 
@@ -60,13 +60,13 @@ HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<Byte
         if (FAILED(hr = m_xmllite->CreateXmlWriterOutputWithEncodingName(stream, nullptr, L"utf-16", &pWriterOutput)))
         {
             XmlLiteExtension::LogError(hr);
-            spdlog::error(L"Failed to instantiate Xml writer with encoding hint (code: {:#x})", hr);
+            Log::Error(L"Failed to instantiate Xml writer with encoding hint (code: {:#x})", hr);
             return hr;
         }
         if (FAILED(hr = pWriter->SetOutput(pWriterOutput)))
         {
             XmlLiteExtension::LogError(hr);
-            spdlog::error(L"Failed to set output stream (code: {:#x})", hr);
+            Log::Error(L"Failed to set output stream (code: {:#x})", hr);
             return hr;
         }
     }
@@ -75,7 +75,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<Byte
         if (FAILED(hr = pWriter->SetOutput(stream)))
         {
             XmlLiteExtension::LogError(hr);
-            spdlog::error(L"Failed to set output stream (code: {:#x})", hr);
+            Log::Error(L"Failed to set output stream (code: {:#x})", hr);
             return hr;
         }
     }
@@ -83,14 +83,14 @@ HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<Byte
     if (FAILED(hr = pWriter->SetProperty(XmlWriterProperty_Indent, TRUE)))
     {
         XmlLiteExtension::LogError(hr);
-        spdlog::error(L"Failed to set indentation property (code: {:#x})", hr);
+        Log::Error(L"Failed to set indentation property (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = pWriter->WriteStartDocument(XmlStandalone_Omit)))
     {
         XmlLiteExtension::LogError(hr);
-        spdlog::error(L"Failed to write start document (code: {:#x})", hr);
+        Log::Error(L"Failed to write start document (code: {:#x})", hr);
         return hr;
     }
 
@@ -142,7 +142,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::BeginElement(LPCWSTR szElement)
     }
     else
     {
-        spdlog::error(L"Attempt to add a null element without a current collection");
+        Log::Error(L"Attempt to add a null element without a current collection");
         return E_INVALIDARG;
     }
     return S_OK;
@@ -175,12 +175,12 @@ HRESULT Orc::StructuredOutput::XML::Writer::EndCollection(LPCWSTR szCollection)
 {
     if (m_collectionStack.empty())
     {
-        spdlog::error(L"Attempt to end collection '{}' without a current collection", szCollection);
+        Log::Error(L"Attempt to end collection '{}' without a current collection", szCollection);
         return E_INVALIDARG;
     }
     if (m_collectionStack.top().compare(szCollection))
     {
-        spdlog::error(L"Attempt to end collection '{}' with invalid end ({})", m_collectionStack.top(), szCollection);
+        Log::Error(L"Attempt to end collection '{}' with invalid end ({})", m_collectionStack.top(), szCollection);
         return E_INVALIDARG;
     }
     m_collectionStack.pop();
@@ -246,7 +246,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated(const WCHAR* szFormat,
 
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to write formated string (code: {:#x})", hr);
+        Log::Error(L"Failed to write formated string (code: {:#x})", hr);
         return hr;
     }
 
@@ -287,7 +287,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated(LPCWSTR szName, c
 
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to write formated string (code: {:#x})", hr);
+        Log::Error(L"Failed to write formated string (code: {:#x})", hr);
         return hr;
     }
 

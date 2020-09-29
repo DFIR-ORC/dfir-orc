@@ -16,7 +16,7 @@
 #include "EmbeddedResource.h"
 #include "ParameterCheck.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 auto constexpr STATUS_SUCCESS = (0);
 
@@ -165,7 +165,7 @@ HRESULT ConfigItem::AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags fl
 {
     if (index != SubItems.size())
     {
-        spdlog::error(L"Failed to add attribute '{}'", szAttr);
+        Log::Error(L"Failed to add attribute '{}'", szAttr);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
 
@@ -183,7 +183,7 @@ HRESULT ConfigItem::AddChildNode(LPCWSTR szName, DWORD index, ConfigItemFlags fl
 {
     if (index != SubItems.size())
     {
-        spdlog::error(L"Failed to add child node '{}' at index {}", szName, index);
+        Log::Error(L"Failed to add child node '{}' at index {}", szName, index);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
     ConfigItem newitem;
@@ -200,7 +200,7 @@ HRESULT ConfigItem::AddChildNodeList(LPCWSTR szName, DWORD index, ConfigItemFlag
 {
     if (index != SubItems.size())
     {
-        spdlog::error(L"Failed to add child node list '{}' at index {}", szName, index);
+        Log::Error(L"Failed to add child node list '{}' at index {}", szName, index);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
 
@@ -218,7 +218,7 @@ HRESULT ConfigItem::AddChild(const ConfigItem& item)
 {
     if (item.dwIndex != SubItems.size())
     {
-        spdlog::error(L"Failed to add child '{}' at index {}", item.strName, item.dwIndex);
+        Log::Error(L"Failed to add child '{}' at index {}", item.strName, item.dwIndex);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
     SubItems.push_back(item);
@@ -229,7 +229,7 @@ HRESULT ConfigItem::AddChild(ConfigItem&& item)
 {
     if (item.dwIndex != SubItems.size())
     {
-        spdlog::error(L"Failed to add child '{}' at index {}", item.strName, item.dwIndex);
+        Log::Error(L"Failed to add child '{}' at index {}", item.strName, item.dwIndex);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
     SubItems.push_back(item);

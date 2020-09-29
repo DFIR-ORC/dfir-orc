@@ -12,7 +12,7 @@
 
 #include <boost/io/ios_state.hpp>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 
@@ -51,7 +51,7 @@ HRESULT Orc::WideToAnsi(
         || pszDest[0] == 0)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
     if (cchSize < cchDest)
@@ -86,7 +86,7 @@ Orc::WideToAnsi(__in PCWSTR pwszSrc, __out_ecount(cchDest) PSTR pszDest, __in DW
     if (0 == WideCharToMultiByte(CP_UTF8, 0, pwszSrc, -1, pszDest, cchDest, NULL, NULL) || pszDest[0] == 0)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -108,7 +108,7 @@ HRESULT Orc::WideToAnsi(__in const std::wstring& src, std::string& dest)
                 WideCharToMultiByte(CP_UTF8, 0, src.c_str(), static_cast<int>(src.size()), NULL, 0L, NULL, NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -128,7 +128,7 @@ HRESULT Orc::WideToAnsi(__in const std::wstring& src, std::string& dest)
                 NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -150,7 +150,7 @@ HRESULT Orc::WideToAnsi(__in const std::wstring_view& src, std::string& dest)
         == (cbNeeded = WideCharToMultiByte(CP_UTF8, 0, src.data(), static_cast<int>(src.size()), NULL, 0L, NULL, NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -170,7 +170,7 @@ HRESULT Orc::WideToAnsi(__in const std::wstring_view& src, std::string& dest)
                 NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -193,7 +193,7 @@ Orc::WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cchSrc, CBinaryBu
     if (0 == (cbNeeded = WideCharToMultiByte(CP_UTF8, 0, pwszSrc, cchSrc, NULL, 0L, NULL, NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -210,7 +210,7 @@ Orc::WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cchSrc, CBinaryBu
                 NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -232,7 +232,7 @@ HRESULT Orc::WideToAnsi(PCWSTR pwszSrc, CBinaryBuffer& dest)
     if (0 == (cbNeeded = WideCharToMultiByte(CP_UTF8, 0, pwszSrc, -1, NULL, 0L, NULL, NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -249,7 +249,7 @@ HRESULT Orc::WideToAnsi(PCWSTR pwszSrc, CBinaryBuffer& dest)
                 NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -271,7 +271,7 @@ HRESULT ORCLIB_API Orc::WideToAnsi(PCWSTR pszSrc, std::string& dest)
     if (0 == (cbNeeded = WideCharToMultiByte(CP_UTF8, 0, pszSrc, -1, NULL, 0L, NULL, NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -289,7 +289,7 @@ HRESULT ORCLIB_API Orc::WideToAnsi(PCWSTR pszSrc, std::string& dest)
                 NULL)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("WideCharToMultiByte failed (code: {:#x})", hr);
+        Log::Error("WideCharToMultiByte failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -353,7 +353,7 @@ Orc::AnsiToWide(__in PCSTR pszSrc, __out_ecount(cchDest) PWSTR pwzDest, __in DWO
     if (0 == (cchSize = MultiByteToWideChar(CP_UTF8, 0, pszSrc, -1, pwzDest, cchDest)) || pwzDest[0] == 0)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error("MultiByteToWideChar failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -383,7 +383,7 @@ HRESULT Orc::AnsiToWide(
     if (0 == (cchSize = MultiByteToWideChar(CP_UTF8, 0, pszSrc, -1, pwzDest, cchDest)) || pwzDest[0] == 0)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error("MultiByteToWideChar failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -406,7 +406,7 @@ HRESULT Orc::AnsiToWide(__in const std::string& src, std::wstring& dest)
     if (0 == (cchSize = MultiByteToWideChar(CP_UTF8, 0, src.c_str(), static_cast<int>(src.size()), NULL, 0)))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error("MultiByteToWideChar failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -420,7 +420,7 @@ HRESULT Orc::AnsiToWide(__in const std::string& src, std::wstring& dest)
                 CP_UTF8, 0, src.c_str(), static_cast<int>(src.size()), buffer.data(), static_cast<int>(buffer.size()))))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error("MultiByteToWideChar failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -450,7 +450,7 @@ HRESULT Orc::AnsiToWide(__in const std::string_view& src, std::wstring& dest)
     if (0 == (cchSize = MultiByteToWideChar(CP_UTF8, 0, src.data(), static_cast<int>(src.size()), NULL, 0)))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error(L"MultiByteToWideChar failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -464,7 +464,7 @@ HRESULT Orc::AnsiToWide(__in const std::string_view& src, std::wstring& dest)
                 CP_UTF8, 0, src.data(), static_cast<int>(src.size()), buffer.data(), static_cast<int>(buffer.size()))))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error(L"MultiByteToWideChar failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -499,7 +499,7 @@ Orc::AnsiToWide(__in_ecount(cchSrc) PCSTR pszSrc, __in DWORD cchSrc, CBinaryBuff
     if (0 == (cchSize = MultiByteToWideChar(CP_UTF8, 0, pszSrc, cchSrc, NULL, 0)))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error("MultiByteToWideChar failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -515,7 +515,7 @@ Orc::AnsiToWide(__in_ecount(cchSrc) PCSTR pszSrc, __in DWORD cchSrc, CBinaryBuff
                 static_cast<int>(dest.GetCount() / sizeof(WCHAR)))))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error("MultiByteToWideChar failed (code: {:#x})", hr);
         dest.RemoveAll();
         return hr;
     }
@@ -541,7 +541,7 @@ HRESULT ORCLIB_API Orc::AnsiToWide(LPCSTR pszSrc, CBinaryBuffer& dest)
     if (0 == (cchSize = MultiByteToWideChar(CP_UTF8, 0, pszSrc, -1, NULL, 0)))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error("MultiByteToWideChar failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -557,7 +557,7 @@ HRESULT ORCLIB_API Orc::AnsiToWide(LPCSTR pszSrc, CBinaryBuffer& dest)
                 static_cast<int>(dest.GetCount() / sizeof(WCHAR)))))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("MultiByteToWideChar failed (code: {:#x})", hr);
+        Log::Error("MultiByteToWideChar failed (code: {:#x})", hr);
         dest.RemoveAll();
         return hr;
     }

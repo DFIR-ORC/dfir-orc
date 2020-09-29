@@ -69,7 +69,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
     }
     if (strExeRef.empty())
     {
-        spdlog::debug(
+        Log::Debug(
             L"No valid binary specified for item name '{}' (run, run32 or run64 attribute)",
             item[WOLFLAUNCHER_EXENAME].c_str());
         return E_INVALIDARG;
@@ -93,7 +93,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
                     hr = EmbeddedResource::SplitResourceReference(
                         strExeRef, strModule, strResource, strCabbedName, strFormat)))
             {
-                spdlog::error(L"The ressource specified '{}' could not be split (code: {:#x})", strExeRef, hr);
+                Log::Error(L"The ressource specified '{}' could not be split (code: {:#x})", strExeRef, hr);
                 return E_FAIL;
             }
 
@@ -104,7 +104,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
                     hr = EmbeddedResource::LocateResource(
                         strModule, strResource, EmbeddedResource::BINARY(), hModule, hRes, strBinaryPath)))
             {
-                spdlog::error(L"The ressource specified '{}' could not be located (code: {:#x})", strExeRef, hr);
+                Log::Error(L"The ressource specified '{}' could not be located (code: {:#x})", strExeRef, hr);
                 return E_FAIL;
             }
             else
@@ -121,7 +121,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
         hr = ExpandFilePath(strExeRef.c_str(), strExeFile);
         if (FAILED(hr))
         {
-            spdlog::error(L"Executable file '{}' does not exist or is not a file (code: {:#x})", strExeRef, hr);
+            Log::Error(L"Executable file '{}' does not exist or is not a file (code: {:#x})", strExeRef, hr);
             return E_FAIL;
         }
 
@@ -129,7 +129,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
         if (FAILED(hr))
         {
 
-            spdlog::error(L"Executable file '{}' is not a compatible binary (code: {:#x})", strExeFile, hr);
+            Log::Error(L"Executable file '{}' is not a compatible binary (code: {:#x})", strExeFile, hr);
             return E_FAIL;
         }
 
@@ -145,13 +145,13 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
 
     if (_wcsicmp(item.strName.c_str(), L"command"))
     {
-        spdlog::debug("item passed is not a command");
+        Log::Debug("item passed is not a command");
         return nullptr;
     }
 
     if (!item[WOLFLAUNCHER_COMMAND_CMDKEYWORD])
     {
-        spdlog::debug("keyword attribute is missing in command");
+        Log::Debug("keyword attribute is missing in command");
         return nullptr;
     }
 
@@ -176,7 +176,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             DWORD dwWinMajor = 0, dwWinMinor = 0;
             if (FAILED(hr = SystemDetails::GetOSVersion(dwWinMajor, dwWinMinor)))
             {
-                spdlog::error("Could not get OS version, statement ignored (code: {:#x})", hr);
+                Log::Error("Could not get OS version, statement ignored (code: {:#x})", hr);
                 return nullptr;
             }
             else
@@ -185,7 +185,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 {
                     if (dwWinMajor < dwReqMajor)
                     {
-                        spdlog::debug(
+                        Log::Debug(
                             L"Skipping command {}: OS major version {} is incompatible with required {}",
                             keyword,
                             dwWinMajor,
@@ -194,7 +194,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                     }
                     if (dwWinMajor == dwReqMajor && dwWinMinor < dwReqMinor)
                     {
-                        spdlog::debug(
+                        Log::Debug(
                             L"Skipping command {}: OS minor version {} is incompatible with required {}",
                             keyword,
                             dwWinMinor,
@@ -206,7 +206,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 {
                     if (dwWinMajor > dwReqMajor)
                     {
-                        spdlog::debug(
+                        Log::Debug(
                             L"Skipping command {}: OS major version {} is incompatible with required {}",
                             keyword,
                             dwWinMajor,
@@ -215,7 +215,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                     }
                     if (dwWinMajor == dwReqMajor && dwWinMinor > dwReqMinor)
                     {
-                        spdlog::debug(
+                        Log::Debug(
                             L"Skipping command {}: OS minor version {} is incompatible with required {}",
                             keyword,
                             dwWinMinor,
@@ -227,7 +227,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 {
                     if (dwWinMajor != dwReqMajor || dwWinMinor != dwReqMinor)
                     {
-                        spdlog::debug(
+                        Log::Debug(
                             L"Skipping command '{}': OS version mismatch ({}.{} != required {}.{})",
                             keyword,
                             dwWinMajor,
@@ -237,7 +237,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                         return nullptr;
                     }
                 }
-                spdlog::debug(
+                Log::Debug(
                     L"Command '{}': OS version {}.{} compatible with requirement winver={}.{}{}",
                     keyword,
                     dwWinMajor,
@@ -249,7 +249,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         }
         else
         {
-            spdlog::error(L"Specified winver attribute '{}' is invalid, ignored", winver);
+            Log::Error(L"Specified winver attribute '{}' is invalid, ignored", winver);
         }
         // No incompatibilities found, proceed with command
     }
@@ -261,7 +261,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
 
         if (FAILED(hr = SystemDetails::GetSystemType(strProductType)))
         {
-            spdlog::error("Failed to retrieve system product type (code: {:#x})", hr);
+            Log::Error("Failed to retrieve system product type (code: {:#x})", hr);
             return nullptr;
         }
 
@@ -275,13 +275,13 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         {
             if (equalCaseInsensitive(*tok_iter, strProductType))
             {
-                spdlog::debug(L"Found product type '{}' matching system's '{}'", tok_iter->c_str(), strProductType);
+                Log::Debug(L"Found product type '{}' matching system's '{}'", tok_iter->c_str(), strProductType);
                 bFound = true;
             }
         }
         if (!bFound)
         {
-            spdlog::debug(
+            Log::Debug(
                 L"Command '{}' will not proceed ('{}' does not match any of '{}')",
                 keyword,
                 strProductType,
@@ -307,7 +307,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
     }
     else
     {
-        spdlog::error("Execute element is missing");
+        Log::Error("Execute element is missing");
         return nullptr;
     }
 
@@ -330,7 +330,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 HRESULT hr1 = E_FAIL;
                 if (!input[WOLFLAUNCHER_INNAME])
                 {
-                    spdlog::error("The input is missing a name");
+                    Log::Error("The input is missing a name");
                     hr = E_INVALIDARG;
                     return;
                 }
@@ -344,7 +344,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
 
                 if (!input[WOLFLAUNCHER_INSOURCE])
                 {
-                    spdlog::error(L"The input '{}' is missing a source", input[WOLFLAUNCHER_INNAME].c_str());
+                    Log::Error(L"The input '{}' is missing a source", input[WOLFLAUNCHER_INNAME].c_str());
                     hr = E_INVALIDARG;
                     return;
                 }
@@ -357,7 +357,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                         szResName, strModule, strResource, strCabbedName, strFormat);
                     if (FAILED(hr1))
                     {
-                        spdlog::error(L"The ressource specified '{}' could not be split (code: {:#x})", szResName, hr1);
+                        Log::Error(L"The ressource specified '{}' could not be split (code: {:#x})", szResName, hr1);
                         hr = hr1;
                         return;
                     }
@@ -369,8 +369,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                         strModule, strResource, EmbeddedResource::BINARY(), hModule, hRes, strBinaryPath);
                     if (FAILED(hr1))
                     {
-                        spdlog::error(
-                            L"The ressource specified '{}' could not be located (code: {:#x})", szResName, hr1);
+                        Log::Error(L"The ressource specified '{}' could not be located (code: {:#x})", szResName, hr1);
                         hr = hr1;
                         return;
                     }
@@ -396,8 +395,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                     }
                     else
                     {
-                        spdlog::error(
-                            L"Input file '{}' does not exist or is not a file (code: {:#x})", strInputFile, hr1);
+                        Log::Error(L"Input file '{}' does not exist or is not a file (code: {:#x})", strInputFile, hr1);
                         hr = hr1;
                         return;
                     }
@@ -416,7 +414,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             [this, &hr, command](const ConfigItem& output) {
                 if (!output.SubItems[WOLFLAUNCHER_OUTNAME])
                 {
-                    spdlog::info("The output is missing a name");
+                    Log::Info("The output is missing a name");
                     hr = E_FAIL;
                     return;
                 }
@@ -430,7 +428,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
 
                 if (!output[WOLFLAUNCHER_OUTSOURCE])
                 {
-                    spdlog::info(L"The output '{}' is missing a source", output[WOLFLAUNCHER_OUTNAME].c_str());
+                    Log::Info(L"The output '{}' is missing a source", output[WOLFLAUNCHER_OUTNAME].c_str());
                     hr = E_FAIL;
                     return;
                 }
@@ -515,14 +513,14 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
     if (_wcsicmp(item.strName.c_str(), L"restrictions"))
     {
-        spdlog::debug(L"item passed is not restrictions");
+        Log::Debug(L"item passed is not restrictions");
         return E_INVALIDARG;
     }
 
     WORD arch = 0;
     if (FAILED(hr = SystemDetails::GetArchitecture(arch)))
     {
-        spdlog::warn(L"Failed to retrieve architecture (code: {:#x})", hr);
+        Log::Warn(L"Failed to retrieve architecture (code: {:#x})", hr);
         return hr;
     }
 
@@ -534,7 +532,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
-            spdlog::warn(
+            Log::Warn(
                 L"Specified size is too big for JOB MEMORY restriction '{}'", item[WOLFLAUNCHER_JOBMEMORY].c_str());
         }
         else
@@ -557,7 +555,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
-            spdlog::warn(
+            Log::Warn(
                 L"Specified size is too big for PROCESS memory restriction '{}'",
                 item[WOLFLAUNCHER_PROCESSMEMORY].c_str());
         }
@@ -581,7 +579,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
-            spdlog::warn(
+            Log::Warn(
                 L"Specified size is too big for elapsed time restriction '{}'", item[WOLFLAUNCHER_ELAPSEDTIME].c_str());
         }
         // Elapsed time is expressed in minutes
@@ -596,7 +594,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
-            spdlog::warn(
+            Log::Warn(
                 L"Specified size is too big for JOB user time restriction '{}'",
                 item[WOLFLAUNCHER_JOBUSERTIME].c_str());
         }
@@ -619,7 +617,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
-            spdlog::warn(
+            Log::Warn(
                 L"Specified size is too big for PROCESS user time restriction '{}'",
                 item[WOLFLAUNCHER_PERPROCESSUSERTIME].c_str());
         }
@@ -637,7 +635,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
     if (item[WOLFLAUNCHER_CPU_RATE] && item[WOLFLAUNCHER_CPU_WEIGHT])
     {
-        spdlog::warn("CpuRate and CpuWeight are mutually exclusive: values ignored");
+        Log::Warn("CpuRate and CpuWeight are mutually exclusive: values ignored");
     }
     else if (item[WOLFLAUNCHER_CPU_RATE])
     {
@@ -669,7 +667,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
         if (weight > 9 || weight < 1)
         {
-            spdlog::warn("CpuWeight valid values are (1-9), current invalid value {} is ignored", weight);
+            Log::Warn("CpuWeight valid values are (1-9), current invalid value {} is ignored", weight);
         }
         else
         {
@@ -688,7 +686,7 @@ HRESULT WolfExecution::SetCommandsFromConfig(const ConfigItem& item)
 
     if (_wcsicmp(item.strName.c_str(), L"command"))
     {
-        spdlog::debug("item passed is not a \"command\"");
+        Log::Debug("item passed is not a \"command\"");
         return E_INVALIDARG;
     }
     m_dwLongerTaskKeyword = 0L;
@@ -744,13 +742,13 @@ HRESULT WolfExecution::SetJobConfigFromConfig(const ConfigItem& item)
 
     if (_wcsicmp(item.strName.c_str(), L"archive"))
     {
-        spdlog::debug("item passed is not a cab item");
+        Log::Debug("item passed is not a cab item");
         return E_INVALIDARG;
     }
 
     if (!item[WOLFLAUNCHER_ARCHIVE_KEYWORD])
     {
-        spdlog::debug("keyword attribute is missing in archive");
+        Log::Debug("keyword attribute is missing in archive");
         return E_INVALIDARG;
     }
     else
@@ -785,7 +783,7 @@ HRESULT WolfExecution::SetRepeatBehaviourFromConfig(const ConfigItem& item)
             m_RepeatBehavior = Repeat::Once;
         else
         {
-            spdlog::error(
+            Log::Error(
                 L"Invalid repeat behaviour in config: '{}' (allowed values are CreateNew, Overwrite, Once)", item);
             return E_INVALIDARG;
         }

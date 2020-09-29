@@ -27,7 +27,7 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles()
             &hKey);
         status != ERROR_SUCCESS)
     {
-        spdlog::error(L"Failed to open registry key ProfileList (code: {:#x})", HRESULT_FROM_WIN32(status));
+        Log::Error(L"Failed to open registry key ProfileList (code: {:#x})", HRESULT_FROM_WIN32(status));
         return Err(HRESULT_FROM_WIN32(status));
     }
     BOOST_SCOPE_EXIT(&hKey) { RegCloseKey(hKey); }
@@ -51,7 +51,7 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles()
             if (status == ERROR_NO_MORE_ITEMS)
                 break;
 
-            spdlog::error(
+            Log::Error(
                 L"Failed to enumerate registry key ProfileList at index {} (code: {:#x})",
                 dwIndex,
                 HRESULT_FROM_WIN32(status));
@@ -70,11 +70,11 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles()
             auto rSID = Registry::Read<ByteBuffer>(hKey, keyName.get(), L"Sid");
             if (rSID.is_err())
             {
-                spdlog::debug(L"Failed to read SID for profile {}, using key name", keyName.get());
+                Log::Debug(L"Failed to read SID for profile {}, using key name", keyName.get());
                 PSID pSID = NULL;
                 if (!ConvertStringSidToSidW(keyName.get(), &pSID))
                 {
-                    spdlog::debug(L"Failed profile key name {} is not a valid sid", keyName.get());
+                    Log::Debug(L"Failed profile key name {} is not a valid sid", keyName.get());
                     continue;
                 }
                 sid.assign((LPBYTE)pSID, GetLengthSid(pSID));
@@ -88,7 +88,7 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles()
                 LPWSTR pSID;
                 if (!ConvertSidToStringSidW((PSID)sid.get_as<PSID>(), &pSID))
                 {
-                    spdlog::warn(
+                    Log::Warn(
                         L"Failed to convert SID to a string for profile {} (code: {#x})",
                         keyName.get(),
                         HRESULT_FROM_WIN32(GetLastError()));
@@ -117,7 +117,7 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles()
                     &cchDomainName,
                     &SidNameUse))
             {
-                spdlog::warn(
+                Log::Warn(
                     L"Failed to convert SID into a username for profile {} (code: {:#x})",
                     keyName.get(),
                     HRESULT_FROM_WIN32(GetLastError()));
@@ -138,7 +138,7 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles()
             auto ProfileImagePath = Registry::Read<std::filesystem::path>(hKey, keyName.get(), L"ProfileImagePath");
             if (ProfileImagePath.is_err())
             {
-                spdlog::warn(
+                Log::Warn(
                     L"Failed to read ProfileImagePath for profile {} (code: {:#x})",
                     keyName.get(),
                     std::move(ProfileImagePath).err());

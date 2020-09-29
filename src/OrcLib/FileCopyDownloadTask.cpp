@@ -54,7 +54,7 @@ HRESULT FileCopyDownloadTask::Initialize(const bool bDelayedDeletion)
         std::wstring strLocalPath;
         GetOutputFile(file.strLocalPath.c_str(), strLocalPath, true);
 
-        spdlog::info(L"Copying '{}' to '{}'", strRemotePath, strLocalPath);
+        Log::Info(L"Copying '{}' to '{}'", strRemotePath, strLocalPath);
 
         if (!CopyFileEx(
                 strRemotePath.c_str(),
@@ -65,11 +65,11 @@ HRESULT FileCopyDownloadTask::Initialize(const bool bDelayedDeletion)
                 COPY_FILE_ALLOW_DECRYPTED_DESTINATION))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Failed to copy '{}' to '{}' (code: {:#x})", strRemotePath, strLocalPath, hr);
+            Log::Error(L"Failed to copy '{}' to '{}' (code: {:#x})", strRemotePath, strLocalPath, hr);
             return hr;
         }
 
-        spdlog::debug(L"Successfully copied '{}' to '{}'", strRemotePath, strLocalPath);
+        Log::Debug(L"Successfully copied '{}' to '{}'", strRemotePath, strLocalPath);
     }
     return S_OK;
 }
@@ -81,7 +81,7 @@ std::wstring FileCopyDownloadTask::GetCompletionCommandLine()
     std::wstring strCmdSpec;
     if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
     {
-        spdlog::error("Failed to determine command (code: {:#x})", hr);
+        Log::Error("Failed to determine command (code: {:#x})", hr);
     }
     else
     {
@@ -126,7 +126,7 @@ HRESULT FileCopyDownloadTask::Finalise()
     std::wstring strCmdSpec;
     if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
     {
-        spdlog::error("Failed to determine command");
+        Log::Error("Failed to determine command");
     }
 
     std::wstring strCmdLine = GetCompletionCommandLine();
@@ -137,7 +137,7 @@ HRESULT FileCopyDownloadTask::Finalise()
     ZeroMemory(&si, sizeof(si));
     ZeroMemory(&pi, sizeof(pi));
 
-    spdlog::info(L"Running completion command '{}'", strCmdLine);
+    Log::Info(L"Running completion command '{}'", strCmdLine);
     if (!CreateProcessW(
             strCmdSpec.c_str(),
             (LPWSTR)strCmdLine.c_str(),
@@ -151,10 +151,10 @@ HRESULT FileCopyDownloadTask::Finalise()
             &pi))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to create process: '{}' with cmdLine: '{}' (code: {:#x})", strCmdSpec, strCmdLine, hr);
+        Log::Error(L"Failed to create process: '{}' with cmdLine: '{}' (code: {:#x})", strCmdSpec, strCmdLine, hr);
         return hr;
     }
-    spdlog::debug(L"Successfully created completion process");
+    Log::Debug(L"Successfully created completion process");
 
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);

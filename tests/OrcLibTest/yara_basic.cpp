@@ -155,7 +155,7 @@ public:
 private:
     void compiler_message(int error_level, const char* file_name, int line_number, const char* message)
     {
-        spdlog::info("level: {}, line: {}, '{}'", error_level, line_number, message);
+        Log::Info("level: {}, line: {}, '{}'", error_level, line_number, message);
     }
 
     static void compiler_callback(
@@ -170,19 +170,19 @@ private:
         switch (message)
         {
             case CALLBACK_MSG_RULE_MATCHING:
-                spdlog::info("Text matched rule: '{}'", ((YR_RULE*)message_data)->identifier);
+                Log::Info("Text matched rule: '{}'", ((YR_RULE*)message_data)->identifier);
                 break;
             case CALLBACK_MSG_RULE_NOT_MATCHING:
-                spdlog::info("Text did not match rule: '{}'", ((YR_RULE*)message_data)->identifier);
+                Log::Info("Text did not match rule: '{}'", ((YR_RULE*)message_data)->identifier);
                 break;
             case CALLBACK_MSG_SCAN_FINISHED:
-                spdlog::info("Scan finished");
+                Log::Info("Scan finished");
                 break;
             case CALLBACK_MSG_IMPORT_MODULE:
-                spdlog::info("Importing module: '{}'", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
+                Log::Info("Importing module: '{}'", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
                 break;
             case CALLBACK_MSG_MODULE_IMPORTED:
-                spdlog::info("Module '{}' imported", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
+                Log::Info("Module '{}' imported", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
                 break;
             default:
                 break;

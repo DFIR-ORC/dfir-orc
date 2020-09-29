@@ -58,7 +58,7 @@ HRESULT WolfTask::ApplyNotification(
             break;
         case CommandNotification::Running:
             // Process is still running, checking if it hangs...
-            spdlog::debug(L"Task {} is running (pid: {})", m_command, m_dwPID);
+            Log::Debug(L"Task {} is running (pid: {})", m_command, m_dwPID);
             {
                 HANDLE hProcess =
                     OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, static_cast<DWORD>(notification->GetProcessID()));
@@ -105,7 +105,7 @@ HRESULT WolfTask::ApplyNotification(
                             {
                                 if (dwHangTime - m_dwLastReportedHang >= 30)
                                 {
-                                    spdlog::critical(
+                                    Log::Critical(
                                         L"{} (pid: {}): Hanged for {} secs",
                                         m_command,
                                         m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
@@ -116,7 +116,7 @@ HRESULT WolfTask::ApplyNotification(
                             }
                             else
                             {
-                                spdlog::debug(
+                                Log::Debug(
                                     L"{} (pid: {}): Process consumed {} msecs",
                                     m_command,
                                     m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
@@ -130,7 +130,7 @@ HRESULT WolfTask::ApplyNotification(
             break;
         case CommandNotification::ProcessTimeLimit:
             // Process has reached its time limit, kill it!
-            spdlog::critical(
+            Log::Critical(
                 L"{} (pid: {}): CPU Time limit, it will now be terminated",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
@@ -141,7 +141,7 @@ HRESULT WolfTask::ApplyNotification(
             m_Status = Failed;
             break;
         case CommandNotification::ProcessAbnormalTermination:
-            spdlog::critical(
+            Log::Critical(
                 L"{} (pid: {}): Abnormal termination (code: {:#x})",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
@@ -150,7 +150,7 @@ HRESULT WolfTask::ApplyNotification(
             m_Status = Failed;
             break;
         case CommandNotification::ProcessMemoryLimit:
-            spdlog::critical(
+            Log::Critical(
                 L"{} (pid: {}): Memory limit, it will now be terminated",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
@@ -159,7 +159,7 @@ HRESULT WolfTask::ApplyNotification(
             m_Status = Failed;
             break;
         case CommandNotification::AllTerminated:
-            spdlog::critical(
+            Log::Critical(
                 L"{} (pid: {}): Memory limit, it will now be terminated",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);

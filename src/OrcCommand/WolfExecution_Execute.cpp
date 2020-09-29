@@ -86,12 +86,12 @@ HRESULT WolfExecution::BuildFullArchiveName()
 
     if (m_strArchiveName.empty())
     {
-        spdlog::error("No valid archive file name specified, archive agent is not created");
+        Log::Error("No valid archive file name specified, archive agent is not created");
         return E_FAIL;
     }
     else
     {
-        spdlog::debug(L"Archive file name specified is '{}'", m_strArchiveName);
+        Log::Debug(L"Archive file name specified is '{}'", m_strArchiveName);
     }
 
     if (IsPathComplete(m_strArchiveName.c_str()) == S_FALSE)
@@ -120,7 +120,7 @@ HRESULT WolfExecution::BuildFullArchiveName()
         }
         else
         {
-            spdlog::error("No valid output directory specified");
+            Log::Error("No valid output directory specified");
             return E_INVALIDARG;
         }
     }
@@ -132,7 +132,7 @@ HRESULT WolfExecution::BuildFullArchiveName()
 
         if (FAILED(hr = GetFileNameForFile(m_strArchiveFullPath.c_str(), szFileName, MAX_PATH)))
         {
-            spdlog::error("Unable to extract archive file name (code: {:#x}", hr);
+            Log::Error("Unable to extract archive file name (code: {:#x})", hr);
             return hr;
         }
 
@@ -164,7 +164,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
             HRESULT hr = archive->GetHResult();
             if (FAILED(hr))
             {
-                spdlog::critical(
+                Log::Critical(
                     L"Failed creating archive '{}': {} (code: {:#x})",
                     archive->Keyword(),
                     archive->Description(),
@@ -205,7 +205,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
         std::make_unique<ArchiveAgent>(m_ArchiveMessageBuffer, m_ArchiveMessageBuffer, *m_archiveNotification);
     if (!m_archiveAgent->start())
     {
-        spdlog::error("Start for archive Agent failed");
+        Log::Error("Start for archive Agent failed");
         return E_FAIL;
     }
 
@@ -213,7 +213,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
     {
         if (m_strOutputFullPath.empty())
         {
-            spdlog::error("Invalid empty output file name");
+            Log::Error("Invalid empty output file name");
             return E_FAIL;
         }
 
@@ -221,7 +221,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
         if (FAILED(hr = pOutputStream->WriteTo(m_strOutputFullPath.c_str())))
         {
-            spdlog::error(L"Failed to open file for write: '{}' (code: {:#x})", m_strOutputFullPath, hr);
+            Log::Error(L"Failed to open file for write: '{}' (code: {:#x})", m_strOutputFullPath, hr);
             return hr;
         }
 
@@ -231,13 +231,13 @@ HRESULT WolfExecution::CreateArchiveAgent()
         {
             if (FAILED(hr = pEncodingStream->AddRecipient(recipient->Certificate)))
             {
-                spdlog::error(L"Failed to add certificate for recipient '{}' (code: {:#x})", recipient->Name, hr);
+                Log::Error(L"Failed to add certificate for recipient '{}' (code: {:#x})", recipient->Name, hr);
                 return hr;
             }
         }
         if (FAILED(hr = pEncodingStream->Initialize(pOutputStream)))
         {
-            spdlog::error(L"Failed initialize encoding stream for '{}' (code: {:#x})", m_strOutputFullPath, hr);
+            Log::Error(L"Failed initialize encoding stream for '{}' (code: {:#x})", m_strOutputFullPath, hr);
             return hr;
         }
 
@@ -249,7 +249,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
             if (FAILED(hr = pJournalingStream->Open(pEncodingStream)))
             {
-                spdlog::error(L"Failed open journaling stream to write (code: {:#x})", hr);
+                Log::Error(L"Failed open journaling stream to write (code: {:#x})", hr);
                 return hr;
             }
             pFinalStream = pJournalingStream;
@@ -260,7 +260,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
             if (FAILED(hr = pAccumulatingStream->Open(pEncodingStream, m_Temporary.Path, 100 * 1024 * 1024)))
             {
-                spdlog::error(L"Failed open accumulating stream to write (code: {:#x})", hr);
+                Log::Error(L"Failed open accumulating stream to write (code: {:#x})", hr);
                 return hr;
             }
             pFinalStream = pAccumulatingStream;
@@ -272,7 +272,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
             if (FAILED(hr = pClearStream->WriteTo(m_strArchiveFullPath.c_str())))
             {
-                spdlog::error(L"Failed initialize file stream for '{}' (code: {:#x})", m_strArchiveFullPath, hr);
+                Log::Error(L"Failed initialize file stream for '{}' (code: {:#x})", m_strArchiveFullPath, hr);
                 return hr;
             }
 
@@ -280,7 +280,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
             if (FAILED(hr = pTeeTream->Open({pClearStream, pFinalStream})))
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed initialize tee stream for '{}' & '{}' (code: {:#x})",
                     m_strOutputFileName,
                     m_strArchiveFullPath,
@@ -303,7 +303,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
         if (FAILED(hr = pOutputStream->WriteTo(m_strOutputFullPath.c_str())))
         {
-            spdlog::error(L"Failed open file '{}' to write (code: {:#x})", m_strOutputFullPath, hr);
+            Log::Error(L"Failed open file '{}' to write (code: {:#x})", m_strOutputFullPath, hr);
             return hr;
         }
 
@@ -501,7 +501,7 @@ HRESULT WolfExecution::CreateCommandAgent(
 
         if (m_ProcessStatisticsWriter == nullptr)
         {
-            spdlog::error("Failed to initialize ProcessStatistics writer");
+            Log::Error("Failed to initialize ProcessStatistics writer");
         }
     }
 
@@ -510,7 +510,7 @@ HRESULT WolfExecution::CreateCommandAgent(
         m_JobStatisticsWriter = TableOutput::GetWriter(m_JobStatisticsOutput);
         if (m_JobStatisticsWriter == nullptr)
         {
-            spdlog::error("Failed to initialize JobStatistics writer");
+            Log::Error("Failed to initialize JobStatistics writer");
         }
     }
 
@@ -528,7 +528,7 @@ HRESULT WolfExecution::CreateCommandAgent(
                             m_TasksByPID[static_cast<DWORD>(item->GetProcessID())] = taskiter->second;
                         else
                         {
-                            spdlog::error(L"New task '{}' could not be found", item->GetKeyword());
+                            Log::Error(L"New task '{}' could not be found", item->GetKeyword());
                         }
                     }
                     break;
@@ -544,19 +544,19 @@ HRESULT WolfExecution::CreateCommandAgent(
                     case CommandNotification::ProcessTimeLimit:
                         break;
                     case CommandNotification::JobEmpty:
-                        spdlog::debug("No tasks are currently running");
+                        Log::Debug("No tasks are currently running");
                         break;
                     case CommandNotification::JobProcessLimit:
-                        spdlog::warn("JOB: Process number limit");
+                        Log::Warn("JOB: Process number limit");
                         break;
                     case CommandNotification::JobMemoryLimit:
-                        spdlog::warn(L"JOB: Memory limit");
+                        Log::Warn(L"JOB: Memory limit");
                         break;
                     case CommandNotification::JobTimeLimit:
-                        spdlog::warn(L"JOB: CPU Time limit");
+                        Log::Warn(L"JOB: CPU Time limit");
                         break;
                     case CommandNotification::AllTerminated:
-                        spdlog::warn("JOB: Job was autoritatively terminated");
+                        Log::Warn("JOB: Job was autoritatively terminated");
                         break;
                     case CommandNotification::Done:
                         GetSystemTimeAsFileTime(&m_FinishTime);
@@ -565,14 +565,14 @@ HRESULT WolfExecution::CreateCommandAgent(
                             auto end = Orc::ConvertTo(m_FinishTime);
                             auto duration = end - start;
 
-                            spdlog::info(
+                            Log::Info(
                                 L"{}: Complete! (commands took {} seconds)",
                                 item->GetKeyword(),
                                 duration.count() / 10000000);
                         }
 
                         AddJobStatistics(*m_JobStatisticsWriter, item);
-                        spdlog::info("JOB: Complete");
+                        Log::Info("JOB: Complete");
                         break;
                 }
                 NotifyTask(item);
@@ -594,13 +594,13 @@ HRESULT WolfExecution::CreateCommandAgent(
             case PROCESSOR_ARCHITECTURE_AMD64:
                 if (FAILED(hr = EmbeddedResource::ExtractValue(L"", L"WOLFLAUNCHER_DBGHELP64", strDbgHelpRef)))
                 {
-                    spdlog::debug("WOLFLAUNCHER_DBGHELP64 is not set, won't use dbgelp (code: {:#x})", hr);
+                    Log::Debug("WOLFLAUNCHER_DBGHELP64 is not set, won't use dbgelp (code: {:#x})", hr);
                 }
                 break;
             case PROCESSOR_ARCHITECTURE_INTEL:
                 if (FAILED(hr = EmbeddedResource::ExtractValue(L"", L"WOLFLAUNCHER_DBGHELP32", strDbgHelpRef)))
                 {
-                    spdlog::debug("WOLFLAUNCHER_DBGHELP32 is not set, won't use dbgelp (code: {:#x})", hr);
+                    Log::Debug("WOLFLAUNCHER_DBGHELP32 is not set, won't use dbgelp (code: {:#x})", hr);
                 }
                 break;
         }
@@ -612,7 +612,7 @@ HRESULT WolfExecution::CreateCommandAgent(
     hr = m_cmdAgent->Initialize(m_commandSet, bChildDebug, m_Temporary.Path, m_Restrictions, &m_cmdAgentBuffer);
     if (FAILED(hr))
     {
-        spdlog::error(
+        Log::Error(
             L"WolfLauncher cmd agent failed during initialisation (output directory: '{}', code: {:#x})",
             m_Temporary.Path,
             hr);
@@ -621,7 +621,7 @@ HRESULT WolfExecution::CreateCommandAgent(
 
     if (!m_cmdAgent->start())
     {
-        spdlog::error("WolfLauncher cmd agent failed to start");
+        Log::Error("WolfLauncher cmd agent failed to start");
         return E_FAIL;
     }
 
@@ -652,7 +652,7 @@ HRESULT WolfExecution::EnqueueCommands()
 
         if (m_TasksByKeyword.find(command->Keyword()) != m_TasksByKeyword.end())
         {
-            spdlog::error(L"Task with keyword '{}' already exists, ignoring the later", command->Keyword());
+            Log::Error(L"Task with keyword '{}' already exists, ignoring the later", command->Keyword());
         }
         else
         {
@@ -680,7 +680,7 @@ HRESULT WolfExecution::CompleteExecution()
     }
     catch (Concurrency::operation_timed_out e)
     {
-        spdlog::error("Command agent completion timeout: {} msecs reached", m_CmdTimeOut.count());
+        Log::Error("Command agent completion timeout: {} msecs reached", m_CmdTimeOut.count());
         return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
     }
     if (m_pTermination)
@@ -690,7 +690,7 @@ HRESULT WolfExecution::CompleteExecution()
     }
     if (FAILED(hr = m_cmdAgent->UnInitialize()))
     {
-        spdlog::error("WolfLauncher cmd agent failed during unload (code: {:#x})", hr);
+        Log::Error("WolfLauncher cmd agent failed during unload (code: {:#x})", hr);
         return hr;
     }
     return S_OK;
@@ -706,7 +706,7 @@ HRESULT WolfExecution::TerminateAllAndComplete()
     auto last = CommandMessage::MakeDoneMessage();
     Concurrency::send(m_cmdAgentBuffer, last);
 
-    spdlog::debug(
+    Log::Debug(
         L"Waiting {} secs for agent to complete closing job...",
         std::chrono::duration_cast<std::chrono::seconds>(m_CmdTimeOut).count());
     try
@@ -716,7 +716,7 @@ HRESULT WolfExecution::TerminateAllAndComplete()
     }
     catch (Concurrency::operation_timed_out e)
     {
-        spdlog::error(L"Command agent completion timeout: {} msecs reached", m_CmdTimeOut.count());
+        Log::Error(L"Command agent completion timeout: {} msecs reached", m_CmdTimeOut.count());
         return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
     }
 
@@ -771,7 +771,7 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     request->SetCommandSet(m_commandSet);
     Concurrency::send(m_ArchiveMessageBuffer, request);
 
-    spdlog::debug(L"WAITING FOR ARCHIVE to COMPLETE");
+    Log::Debug(L"WAITING FOR ARCHIVE to COMPLETE");
 
     try
     {
@@ -782,7 +782,7 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     }
     catch (Concurrency::operation_timed_out e)
     {
-        spdlog::error(
+        Log::Error(
             "Command archive completion timeout: {} secs reached",
             std::chrono::duration_cast<std::chrono::seconds>(m_ArchiveTimeOut).count());
         return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
@@ -809,7 +809,7 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
         auto end = Orc::ConvertTo(m_ArchiveFinishTime);
         auto duration = end - start;
 
-        spdlog::info(
+        Log::Info(
             L"{}: {} (took {} seconds, size {} bytes)",
             GetKeyword(),
             m_strArchiveFileName,

@@ -57,7 +57,7 @@ HRESULT Main::Run()
         hr = m_outputs.Prepare(config.output);
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to prepare archive for '{}' (code: {:#x})", config.output.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.output.Path, hr);
             return hr;
         }
     }
@@ -68,7 +68,7 @@ HRESULT Main::Run()
     hr = m_outputs.GetWriters(config.output, L"ObjInfo");
     if (FAILED(hr))
     {
-        spdlog::error("Failed to create objinfo output writers (code: {:#x})", hr);
+        Log::Error("Failed to create objinfo output writers (code: {:#x})", hr);
         return hr;
     }
 
@@ -97,8 +97,7 @@ HRESULT Main::Run()
                 {
                     if (dir.second == nullptr)
                     {
-                        spdlog::error(
-                            L"No output writer configured for '{}' directory, skipped", dir.first.m_Directory);
+                        Log::Error(L"No output writer configured for '{}' directory, skipped", dir.first.m_Directory);
                         return hr;
                     }
 
@@ -109,7 +108,7 @@ HRESULT Main::Run()
                 }
                 else
                 {
-                    spdlog::error(
+                    Log::Error(
                         L"Failed to enumerate objects in directory '{}' (code: {:#x})", dir.first.m_Directory, hr);
                     return hr;
                 }
@@ -126,7 +125,7 @@ HRESULT Main::Run()
                 }
                 else
                 {
-                    spdlog::error(
+                    Log::Error(
                         L"Failed to enumerate objects in directory '{}' (code: {:#x})", dir.first.m_Directory, hr);
                     return hr;
                 }

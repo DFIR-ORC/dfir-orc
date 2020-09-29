@@ -154,31 +154,31 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.outFileInfo.Configure(configitem[NTFSINFO_FILEINFO])))
     {
-        spdlog::error("Invalid output specified (code: {:#x})", hr);
+        Log::Error("Invalid output specified (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = config.outAttrInfo.Configure(configitem[NTFSINFO_ATTRINFO])))
     {
-        spdlog::error("Invalid attrinfo output specified (code: {:#x})", hr);
+        Log::Error("Invalid attrinfo output specified (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = config.outI30Info.Configure(configitem[NTFSINFO_I30INFO])))
     {
-        spdlog::error("Invalid attrinfo output specified (code: {:#x})", hr);
+        Log::Error("Invalid attrinfo output specified (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = config.outTimeLine.Configure(configitem[NTFSINFO_TIMELINE])))
     {
-        spdlog::error("Invalid timeline output file specified (code: {:#x})", hr);
+        Log::Error("Invalid timeline output file specified (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = config.outSecDescrInfo.Configure(configitem[NTFSINFO_SECDESCR])))
     {
-        spdlog::error(L"Invalid secdescr output file specified (code: {:#x})", hr);
+        Log::Error(L"Invalid secdescr output file specified (code: {:#x})", hr);
         return hr;
     }
 
@@ -224,13 +224,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(locationsConfig)))
     {
-        spdlog::error(L"Failed to get locations definition from config (code: {:#x})", hr);
+        Log::Error(L"Failed to get locations definition from config (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = GetColumnsAndFiltersFromConfig(configitem)))
     {
-        spdlog::error(L"Failed to get column definition from config (code: {:#x})", hr);
+        Log::Error(L"Failed to get column definition from config (code: {:#x})", hr);
         return hr;
     }
 
@@ -272,7 +272,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     {
                         if (config.strWalker.compare(L"USN") && config.strWalker.compare(L"MFT"))
                         {
-                            spdlog::error("Option /Walker should be like: /Walker=USN or /Walker=MFT");
+                            Log::Error("Option /Walker should be like: /Walker=USN or /Walker=MFT");
                             return E_INVALIDARG;
                         }
                     }
@@ -348,7 +348,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
     }
     catch (...)
     {
-        spdlog::error("NTFSInfo failed during argument parsing, exiting");
+        Log::Error("NTFSInfo failed during argument parsing, exiting");
         return E_ABORT;
     }
     // argc/argv parameters only
@@ -375,7 +375,7 @@ HRESULT Main::CheckConfiguration()
 
     if (!config.strWalker.compare(L"USN"))
     {
-        spdlog::trace("USN requirement: 'EXACT' altitude enforced");
+        Log::Trace("USN requirement: 'EXACT' altitude enforced");
         config.locs.GetAltitude() = LocationSet::Altitude::Exact;
     }
 
@@ -400,7 +400,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.locs.IsEmpty() != S_OK)
     {
-        spdlog::error(
+        Log::Error(
             L"No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
             L"want parsed");
         return E_INVALIDARG;
@@ -444,7 +444,7 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.outFileInfo.Path.c_str())))
         {
-            spdlog::error(
+            Log::Error(
                 L"Specified file information output directory '{}' is not a directory (code: {:#x})",
                 config.outFileInfo.Path,
                 hr);
@@ -455,7 +455,7 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.outAttrInfo.Path.c_str())))
         {
-            spdlog::error(
+            Log::Error(
                 L"Specified attribute information output directory '{}' is not a directory (code: {:#x})",
                 config.outAttrInfo.Path,
                 hr);
@@ -466,7 +466,7 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.outTimeLine.Path.c_str())))
         {
-            spdlog::error(
+            Log::Error(
                 L"Specified timeline information output directory '{}' is not a directory (code: {:#x})",
                 config.outTimeLine.Path,
                 hr);
@@ -477,7 +477,7 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.outSecDescrInfo.Path.c_str())))
         {
-            spdlog::error(
+            Log::Error(
                 L"Specified secdescr information output directory '{}' is not a directory (code: {:#x})",
                 config.outSecDescrInfo.Path,
                 hr);
@@ -487,7 +487,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.strWalker.empty())
     {
-        spdlog::error("A parser must be selected");
+        Log::Error("A parser must be selected");
         return E_INVALIDARG;
     }
 

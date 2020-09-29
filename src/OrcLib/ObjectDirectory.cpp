@@ -186,7 +186,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
 
     if (FAILED(hr = pNtDll->NtOpenDirectoryObject(&hRoot, GENERIC_READ, &ObjAttr)))
     {
-        spdlog::error(L"Failed to open object directory '{}' (code: {:#x})", aObjDir, hr);
+        Log::Error(L"Failed to open object directory '{}' (code: {:#x})", aObjDir, hr);
         return hr;
     }
     BOOST_SCOPE_EXIT((&hRoot)) { CloseHandle(hRoot); }
@@ -216,7 +216,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
 
         while (idx < returnedLength)
         {
-            spdlog::debug(
+            Log::Debug(
                 L"Type: {}, Name: {}",
                 std::wstring_view(pObjInfo->TypeName.Buffer, pObjInfo->TypeName.Length / sizeof(WCHAR)),
                 std::wstring_view(pObjInfo->Name.Buffer, pObjInfo->Name.Length / sizeof(WCHAR)));
@@ -300,7 +300,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
                     {
                         if (FAILED(hr = ParseObjectDirectory(path, objects, bRecursive)))
                         {
-                            spdlog::warn(
+                            Log::Warn(
                                 L"Failed to recursively parse directory '{}' (subdir '{}') (code: {:#x})",
                                 aObjDir,
                                 path,

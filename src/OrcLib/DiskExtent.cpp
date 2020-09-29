@@ -14,7 +14,7 @@
 
 #include <crtdbg.h>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -94,7 +94,7 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
     {
         case DRIVE_UNKNOWN:
         case DRIVE_NO_ROOT_DIR: {
-            spdlog::error(L"Cannot open location {}: Unrecognised, No root dir or unknown device", fullname);
+            Log::Error(L"Cannot open location {}: Unrecognised, No root dir or unknown device", fullname);
         }
         case DRIVE_CDROM:
             return HRESULT_FROM_WIN32(ERROR_BAD_DEVICE);
@@ -108,7 +108,7 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
     if (INVALID_HANDLE_VALUE == m_hFile)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug(L"Failed CreateFile(FILE_FLAG_SEQUENTIAL_SCAN) - '{}' (code: {:#x})", m_Name, hr);
+        Log::Debug(L"Failed CreateFile(FILE_FLAG_SEQUENTIAL_SCAN) - '{}' (code: {:#x})", m_Name, hr);
         return hr;
     }
 
@@ -130,7 +130,7 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
         m_Length = liLength.QuadPart;
         if (liLength.LowPart == INVALID_FILE_SIZE && ((lastError = GetLastError()) != NO_ERROR))
         {
-            spdlog::warn(
+            Log::Warn(
                 L"CDiskExtent: Unable to determine disk size (GetFileSize code: {:#x}, IOCTL_DISK_GET_LENGTH_INFO "
                 L"code: {:#x})",
                 HRESULT_FROM_WIN32(lastError),
@@ -152,7 +152,7 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
     else
     {
         ioctlLastError = GetLastError();
-        // spdlog::warn(E_FAIL, (L"[CDiskExtent] Unable to determine sector size (IOCTL_DISK_GET_DRIVE_GEOMETRY
+        // Log::Warn(E_FAIL, (L"[CDiskExtent] Unable to determine sector size (IOCTL_DISK_GET_DRIVE_GEOMETRY
         // error=0x%lx), fallback to a size of 512.", ioctlLastError));
         m_LogicalSectorSize = 512;
     }
@@ -173,11 +173,11 @@ HRESULT CDiskExtent::Read(__in_bcount(dwCount) PVOID lpBuf, DWORD dwCount, PDWOR
     _ASSERT(pdwBytesRead != nullptr);
 
     DWORD dwBytesRead = 0;
-    spdlog::debug(L"CDiskExtent: Reading {} bytes", dwCount);
+    Log::Debug(L"CDiskExtent: Reading {} bytes", dwCount);
     if (!ReadFile(m_hFile, lpBuf, dwCount, &dwBytesRead, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::warn(L"Failed to read {} bytes from disk extent (code: {:#x})", dwCount, hr);
+        Log::Warn(L"Failed to read {} bytes from disk extent (code: {:#x})", dwCount, hr);
         *pdwBytesRead = 0;
         return hr;
     }
@@ -194,12 +194,12 @@ HRESULT CDiskExtent::Seek(LARGE_INTEGER liDistanceToMove, PLARGE_INTEGER pliNewF
     if (dwFrom == FILE_BEGIN)
         liDistanceToMove.QuadPart += m_Start;
 
-    spdlog::debug(L"Moving from {} to {}", m_liCurrentPos.QuadPart, liDistanceToMove.QuadPart);
+    Log::Debug(L"Moving from {} to {}", m_liCurrentPos.QuadPart, liDistanceToMove.QuadPart);
 
     if (!SetFilePointerEx(m_hFile, liDistanceToMove, &m_liCurrentPos, dwFrom))
     {
         auto lastError = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to set file pointer on file (code: {:#x})", lastError);
+        Log::Error(L"Failed to set file pointer on file (code: {:#x})", lastError);
         return lastError;
     }
     if (pliNewFilePointer != NULL)
@@ -241,7 +241,7 @@ CDiskExtent CDiskExtent::ReOpen(DWORD dwDesiredAccess, DWORD dwShareMode, DWORD 
                 GetCurrentProcess(), m_hFile, GetCurrentProcess(), &ext.m_hFile, dwDesiredAccess, FALSE, 0L))
         {
             HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Failed to duplicate disk extent's handle (code: {:#x})", hr);
+            Log::Error("Failed to duplicate disk extent's handle (code: {:#x})", hr);
             ext.m_hFile = INVALID_HANDLE_VALUE;
         }
     }

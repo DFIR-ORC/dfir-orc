@@ -42,12 +42,12 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
         {
             if (blockSize.QuadPart > MAXDWORD)
             {
-                spdlog::error(L"Configured block size too big ({})", blockSize.QuadPart);
+                Log::Error(L"Configured block size too big ({})", blockSize.QuadPart);
                 return retval;
             }
             if (FAILED(hr = retval.SetBlockSize(blockSize.LowPart)))
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to configure block size with '{}' (code: {:#x})", item[CONFIG_YARA_BLOCK].c_str(), hr);
                 return retval;
             }
@@ -60,12 +60,12 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
         {
             if (overlapSize.QuadPart > MAXDWORD)
             {
-                spdlog::error(L"Configured overlap size too big ({})", overlapSize.QuadPart);
+                Log::Error(L"Configured overlap size too big ({})", overlapSize.QuadPart);
                 return retval;
             }
             if (FAILED(hr = retval.SetOverlapSize(overlapSize.LowPart)))
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to configure overlap size with '{}' (code: {:#x})", item[CONFIG_YARA_OVERLAP].c_str(), hr);
                 return retval;
             }
@@ -83,7 +83,7 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
     {
         if (FAILED(retval.SetScanMethod((std::wstring)item[CONFIG_YARA_SCAN_METHOD])))
         {
-            spdlog::error(
+            Log::Error(
                 L"Failed to configure scan method with '{}' (code: {:#x})", item[CONFIG_YARA_SCAN_METHOD].c_str(), hr);
             return retval;
         }
@@ -111,7 +111,7 @@ HRESULT Orc::YaraScanner::Initialize(bool bWithCompiler)
         m_yara = std::make_shared<YaraStaticExtension>();
         if (!m_yara)
         {
-            spdlog::error(L"Failed to load yara library");
+            Log::Error(L"Failed to load yara library");
             return E_FAIL;
         }
 
@@ -123,7 +123,7 @@ HRESULT Orc::YaraScanner::Initialize(bool bWithCompiler)
         m_yara->yr_compiler_create(&m_pCompiler);
         if (!m_pCompiler)
         {
-            spdlog::error(L"Failed to create yara rules compiler");
+            Log::Error(L"Failed to create yara rules compiler");
             return E_FAIL;
         }
         m_yara->yr_compiler_set_callback(m_pCompiler, compiler_callback, this);
@@ -148,7 +148,7 @@ HRESULT Orc::YaraScanner::Configure(std::unique_ptr<YaraConfig>& config)
     else
     {
         m_config = YaraConfig();
-        spdlog::debug(L"Invalid or missing yara configuration, using default");
+        Log::Debug(L"Invalid or missing yara configuration, using default");
     }
 
     return S_OK;
@@ -165,13 +165,13 @@ HRESULT Orc::YaraScanner::AddRules(const std::wstring& yara_content_spec)
 
         if (FAILED(hr = EmbeddedResource::ExtractToBuffer(yara_content_spec, buffer)))
         {
-            spdlog::error(L"Failed to find and extract ressource '{}' (code: {:#x})", yara_content_spec, hr);
+            Log::Error(L"Failed to find and extract ressource '{}' (code: {:#x})", yara_content_spec, hr);
             return hr;
         }
 
         if (FAILED(hr = AddRules(buffer)))
         {
-            spdlog::error(L"Failed to add rules from ressource '{}' (code: {:#x})", yara_content_spec, hr);
+            Log::Error(L"Failed to add rules from ressource '{}' (code: {:#x})", yara_content_spec, hr);
             return hr;
         }
     }
@@ -183,13 +183,13 @@ HRESULT Orc::YaraScanner::AddRules(const std::wstring& yara_content_spec)
 
         if (FAILED(hr = fstream->ReadFrom(yara_content_spec.c_str())))
         {
-            spdlog::error(L"Failed to open rules file '{}' (code: {:#x})", yara_content_spec, hr);
+            Log::Error(L"Failed to open rules file '{}' (code: {:#x})", yara_content_spec, hr);
             return hr;
         }
 
         if (FAILED(hr = AddRules(fstream)))
         {
-            spdlog::error(L"Failed to add rules from ressource '{}' (code: {:#x})", yara_content_spec, hr);
+            Log::Error(L"Failed to add rules from ressource '{}' (code: {:#x})", yara_content_spec, hr);
             return hr;
         }
     }
@@ -206,13 +206,13 @@ HRESULT Orc::YaraScanner::AddRules(const std::shared_ptr<ByteStream>& stream)
 
         if (FAILED(hr = memstream->OpenForReadWrite((ULONG)stream->GetSize())))
         {
-            spdlog::error(L"Failed to open memstream for {} bytes read/write (code: {:#x})", stream->GetSize(), hr);
+            Log::Error(L"Failed to open memstream for {} bytes read/write (code: {:#x})", stream->GetSize(), hr);
             return hr;
         }
         ULONGLONG bytesCopied = 0LL;
         if (FAILED(hr = stream->CopyTo(memstream, &bytesCopied)))
         {
-            spdlog::error(L"Failed to copy yara stream's {} bytes (code: {:#x})", stream->GetSize(), hr);
+            Log::Error(L"Failed to copy yara stream's {} bytes (code: {:#x})", stream->GetSize(), hr);
             return hr;
         }
     }
@@ -222,7 +222,7 @@ HRESULT Orc::YaraScanner::AddRules(const std::shared_ptr<ByteStream>& stream)
 
     if (buffer.empty())
     {
-        spdlog::error("Invalid empty yara rules buffer");
+        Log::Error("Invalid empty yara rules buffer");
         return hr;
     }
 
@@ -245,7 +245,7 @@ HRESULT Orc::YaraScanner::AddRules(CBinaryBuffer& buffer)
 
     if (errnum > 0)
     {
-        spdlog::error("Errors occured while compiling YARA rules");
+        Log::Error("Errors occured while compiling YARA rules");
         return E_INVALIDARG;
     }
 
@@ -261,7 +261,7 @@ std::vector<std::string> Orc::YaraScanner::GetRulesSpec(LPCSTR szRules)
 
     if (rules.empty())
     {
-        spdlog::error("Empty rules list to enable");
+        Log::Error("Empty rules list to enable");
     }
     return rules;
 }
@@ -280,7 +280,7 @@ std::vector<std::string> Orc::YaraScanner::GetRulesSpec(LPCWSTR szRules)
 
     if (rules.empty())
     {
-        spdlog::error("Empty rules list to enable");
+        Log::Error("Empty rules list to enable");
     }
     return rules;
 }
@@ -304,7 +304,7 @@ HRESULT Orc::YaraScanner::EnableRule(LPCSTR strRule)
     YR_RULES* yr_rules = GetRules();
     if (!yr_rules)
     {
-        spdlog::error("No compiled rules to enable");
+        Log::Error("No compiled rules to enable");
         return E_INVALIDARG;
     }
 
@@ -332,7 +332,7 @@ HRESULT Orc::YaraScanner::DisableRule(LPCSTR strRule)
     YR_RULES* yr_rules = GetRules();
     if (!yr_rules)
     {
-        spdlog::error("No compiled rules to enable");
+        Log::Error("No compiled rules to enable");
         return E_INVALIDARG;
     }
 
@@ -366,7 +366,7 @@ Orc::YaraScanner::ScannedRules(std::vector<std::string> rules)
     YR_RULES* yr_rules = GetRules();
     if (!yr_rules)
     {
-        spdlog::error("No compiled rules to enable");
+        Log::Error("No compiled rules to enable");
         return retval;
     }
 
@@ -389,7 +389,7 @@ Orc::YaraScanner::ScannedRules(std::vector<std::string> rules)
 
     if (rules.size() != retval.first.size() + retval.second.size())
     {
-        spdlog::trace(L"Lost some rules while checking if scanned");
+        Log::Trace(L"Lost some rules while checking if scanned");
     }
 
     return retval;
@@ -402,13 +402,13 @@ HRESULT Orc::YaraScanner::Scan(const LPCWSTR& szFileName, MatchingRuleCollection
 
     if (FAILED(hr = fileStream->ReadFrom(szFileName)))
     {
-        spdlog::error(L"Failed to open '{}' for yara scan (code: {:#x})", szFileName, hr);
+        Log::Error(L"Failed to open '{}' for yara scan (code: {:#x})", szFileName, hr);
         return hr;
     }
 
     if (FAILED(hr = Scan(fileStream, matchingRules)))
     {
-        spdlog::error(L"Failed to scan '{}' for yara scan (code: {:#x})", szFileName, hr);
+        Log::Error(L"Failed to scan '{}' for yara scan (code: {:#x})", szFileName, hr);
         return hr;
     }
 
@@ -440,19 +440,19 @@ HRESULT Orc::YaraScanner::Scan(const CBinaryBuffer& buffer, ULONG bytesToScan, M
         case ERROR_INSUFFICIENT_MEMORY:
             return E_OUTOFMEMORY;
         case ERROR_TOO_MANY_SCAN_THREADS:
-            spdlog::error(L"Too many scan threads");
+            Log::Error(L"Too many scan threads");
             return E_FAIL;
         case ERROR_SCAN_TIMEOUT:
-            spdlog::error(L"Yara scan timeout");
+            Log::Error(L"Yara scan timeout");
             return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
         case ERROR_CALLBACK_ERROR:
-            spdlog::error(L"Yara callback return an error");
+            Log::Error(L"Yara callback return an error");
             return E_FAIL;
         case ERROR_TOO_MANY_MATCHES:
-            spdlog::error(L"Too many matches in yara scan");
+            Log::Error(L"Too many matches in yara scan");
             return S_OK;
         default:
-            spdlog::error(L"Undefined error code");
+            Log::Error(L"Undefined error code");
             return E_FAIL;
     }
 }
@@ -502,7 +502,7 @@ HRESULT Orc::YaraScanner::ScanFrom(
 
     if (FAILED(hr = stream->SetFilePointer(pos, dwMoveMethod, NULL)))
     {
-        spdlog::error("Failed to move inside stream for yara scan");
+        Log::Error("Failed to move inside stream for yara scan");
         return hr;
     }
 
@@ -515,7 +515,7 @@ HRESULT Orc::YaraScanner::ScanFrom(
         if (FAILED(
                 hr = stream->Read(buffer.GetP<BYTE>(static_cast<size_t>(bytesRead)), (UINT)leftToRead, &ullBytesRead)))
         {
-            spdlog::error("Failed to read {} bytes from stream for yara scan (code: {:#x})", buffer.GetCount(), hr);
+            Log::Error("Failed to read {} bytes from stream for yara scan (code: {:#x})", buffer.GetCount(), hr);
             break;
         }
 
@@ -528,7 +528,7 @@ HRESULT Orc::YaraScanner::ScanFrom(
 
     if (FAILED(hr = Scan(buffer, static_cast<ULONG>(bytesRead), matchingRules)))
     {
-        spdlog::error("Yara scan failed");
+        Log::Error("Yara scan failed");
         bytesScanned = 0L;
         return hr;
     }
@@ -548,14 +548,14 @@ HRESULT Orc::YaraScanner::ScanFileMapping(
     HRESULT hr = fmstream->Open(INVALID_HANDLE_VALUE, PAGE_READWRITE, stream->GetSize(), L"YaraScan");
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to create pagefile backed filemapping (size: {}, code: {:#x})", stream->GetSize(), hr);
+        Log::Error(L"Failed to create pagefile backed filemapping (size: {}, code: {:#x})", stream->GetSize(), hr);
         return hr;
     }
 
     ULONGLONG ullBytesCopied = 0LL;
     if (FAILED(hr = stream->CopyTo(fmstream, &ullBytesCopied)))
     {
-        spdlog::error(
+        Log::Error(
             "Failed to copy file into file mapping (size: {}, copied: {}, code: {:#x})",
             stream->GetSize(),
             ullBytesCopied,
@@ -565,7 +565,7 @@ HRESULT Orc::YaraScanner::ScanFileMapping(
 
     if (ullBytesCopied != stream->GetSize())
     {
-        spdlog::error(
+        Log::Error(
             "Failed to copy all file content into file mapping (size: {}, copied: {}, code: {:#x})",
             stream->GetSize(),
             ullBytesCopied,
@@ -579,13 +579,13 @@ HRESULT Orc::YaraScanner::ScanFileMapping(
     {
         if (FAILED(hr = Scan(buffer, matchingRules)))
         {
-            spdlog::error(L"Failed to scan file content in file mapping", stream->GetSize(), ullBytesCopied);
+            Log::Error(L"Failed to scan file content in file mapping", stream->GetSize(), ullBytesCopied);
             return hr;
         }
     }
     else
     {
-        spdlog::error(L"Failed to scan file content in file mapping", stream->GetSize(), ullBytesCopied);
+        Log::Error(L"Failed to scan file content in file mapping", stream->GetSize(), ullBytesCopied);
         return ERROR_INVALID_DATA;
     }
     return S_OK;
@@ -624,7 +624,7 @@ HRESULT Orc::YaraScanner::Scan(
         ULONG bytes = 0L;
         if (FAILED(hr = ScanFrom(stream, FILE_CURRENT, 0LL, buffer, matchingRules, bytes)))
         {
-            spdlog::error("Stream yara scan failed (code: {:#x})", hr);
+            Log::Error("Stream yara scan failed (code: {:#x})", hr);
             return hr;
         }
         if (bytes == 0)  // we have reached a (portentially unexpected) end of file
@@ -634,7 +634,7 @@ HRESULT Orc::YaraScanner::Scan(
         sizeToCopy = std::min(bytes, overlapSize / 2);
         if (auto err = memcpy_s(overlap.GetP<BYTE>(overlapCurrentSize), sizeToCopy, buffer.GetP<BYTE>(), sizeToCopy))
         {
-            spdlog::error("Error executing memcpy_s (errno: {})", err);
+            Log::Error("Error executing memcpy_s (errno: {})", err);
         }
         overlapCurrentSize += sizeToCopy;
 
@@ -643,7 +643,7 @@ HRESULT Orc::YaraScanner::Scan(
         {
             if (FAILED(hr = Scan(overlap, overlapCurrentSize, matchingRules)))
             {
-                spdlog::error("Stream yara overlap scan failed (code: {:#x})", hr);
+                Log::Error("Stream yara overlap scan failed (code: {:#x})", hr);
                 return hr;
             }
             overlapCurrentSize = 0L;
@@ -667,7 +667,7 @@ HRESULT Orc::YaraScanner::Scan(
         }
         if (auto err = memcpy_s(overlap.GetP<BYTE>(), sizeToCopy, buffer.GetP<BYTE>(posInBuffer), sizeToCopy))
         {
-            spdlog::error("Error executing memcpy_s (errno: {})", err);
+            Log::Error("Error executing memcpy_s (errno: {})", err);
         }
         overlapCurrentSize = sizeToCopy;
 
@@ -682,16 +682,16 @@ HRESULT Orc::YaraScanner::PrintConfiguration()
     YR_RULES* yr_rules = GetRules();
     if (!yr_rules)
     {
-        spdlog::error("No compiled rules to enable");
+        Log::Error("No compiled rules to enable");
         return E_INVALIDARG;
     }
 
-    spdlog::info(L"Yara scanner is configured with the following rules:");
+    Log::Info(L"Yara scanner is configured with the following rules:");
 
     YR_RULE* yr_rule = nullptr;
     yr_rules_foreach(yr_rules, yr_rule)
     {
-        spdlog::info("Rule: {} ({})", yr_rule->identifier, RULE_IS_DISABLED(yr_rule) ? "disabled" : "enabled");
+        Log::Info("Rule: {} ({})", yr_rule->identifier, RULE_IS_DISABLED(yr_rule) ? "disabled" : "enabled");
     }
     return S_OK;
 }
@@ -710,15 +710,15 @@ void Orc::YaraScanner::compiler_message(int error_level, const char* file_name, 
     switch (error_level)
     {
         case YARA_ERROR_LEVEL_ERROR:
-            spdlog::error("Error in yara rule: {} (line: {})", message, line_number);
+            Log::Error("Error in yara rule: {} (line: {})", message, line_number);
             m_ErrorCount++;
             break;
         case YARA_ERROR_LEVEL_WARNING:
-            spdlog::error("Warning in yara rule: {} (line: {})", message, line_number);
+            Log::Error("Warning in yara rule: {} (line: {})", message, line_number);
             m_WarningCount++;
             break;
         default:
-            spdlog::info("Level: {}, line: {}, {}", error_level, line_number, message);
+            Log::Info("Level: {}, line: {}, {}", error_level, line_number, message);
             break;
     }
 }
@@ -728,21 +728,21 @@ int Orc::YaraScanner::scan_message(int message, void* message_data, MatchingRule
     switch (message)
     {
         case CALLBACK_MSG_RULE_MATCHING: {
-            spdlog::debug("Text matched rule: {}", ((YR_RULE*)message_data)->identifier);
+            Log::Debug("Text matched rule: {}", ((YR_RULE*)message_data)->identifier);
             matchingRules.push_back(((YR_RULE*)message_data)->identifier);
             break;
         }
         case CALLBACK_MSG_RULE_NOT_MATCHING:
-            spdlog::debug("Text did not match rule: {}", ((YR_RULE*)message_data)->identifier);
+            Log::Debug("Text did not match rule: {}", ((YR_RULE*)message_data)->identifier);
             break;
         case CALLBACK_MSG_SCAN_FINISHED:
-            spdlog::debug("Scan finished");
+            Log::Debug("Scan finished");
             break;
         case CALLBACK_MSG_IMPORT_MODULE:
-            spdlog::debug("Importing module {}", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
+            Log::Debug("Importing module {}", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
             break;
         case CALLBACK_MSG_MODULE_IMPORTED:
-            spdlog::debug("Module {} imported", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
+            Log::Debug("Module {} imported", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
             break;
         default:
             break;
@@ -812,21 +812,21 @@ Orc::YaraScanner::GetMemoryStream(const std::shared_ptr<ByteStream>& byteStream)
 
         if (FAILED(hr = memstream->OpenForReadWrite(static_cast<DWORD>(byteStream->GetSize()))))
         {
-            spdlog::error(L"Failed to allocate %I64d bytes in memory stream (code: {:#x})", byteStream->GetSize(), hr);
+            Log::Error(L"Failed to allocate %I64d bytes in memory stream (code: {:#x})", byteStream->GetSize(), hr);
             return std::make_pair(hr, nullptr);
         }
 
         ULONG64 ullBytesCopied = 0LL;
         if (FAILED(hr = byteStream->CopyTo(memstream, &ullBytesCopied)))
         {
-            spdlog::error(
+            Log::Error(
                 L"Failed to load stream %I64d bytes into memory stream (code: {:#x})", byteStream->GetSize(), hr);
             return std::make_pair(hr, nullptr);
         }
 
         if (ullBytesCopied != byteStream->GetSize())
         {
-            spdlog::error(L"Failed to load stream %I64d bytes into memory stream", byteStream->GetSize());
+            Log::Error(L"Failed to load stream %I64d bytes into memory stream", byteStream->GetSize());
             return std::make_pair(E_FAIL, nullptr);
         }
     }

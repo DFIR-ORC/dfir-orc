@@ -12,7 +12,7 @@
 #include "ByteStream.h"
 #include "Kernel32Extension.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -303,14 +303,14 @@ HRESULT CompleteVolumeReader::ParseBootSector()
 
         if (FAILED(hr = m_Extents[0].Read(buffer.GetData(), sizeof(PackedGenBootSector), &dwBytesRead)))
         {
-            spdlog::error("Failed to read the first 512 bytes (code: {:#x})", hr);
+            Log::Error("Failed to read the first 512 bytes (code: {:#x})", hr);
 
             if (!buffer.SetCount(4096))
                 return E_OUTOFMEMORY;
 
             if (FAILED(hr = m_Extents[0].Read(buffer.GetData(), 4096, &dwBytesRead)))
             {
-                spdlog::error("Failed to read the first 4096 bytes (code: {:#x})", hr);
+                Log::Error("Failed to read the first 4096 bytes (code: {:#x})", hr);
                 return hr;
             }
         }

@@ -85,7 +85,7 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
         m_vssapi = ExtensionLibrary::GetLibrary<VssAPIExtension>();
         if (m_vssapi == nullptr)
         {
-            spdlog::error("Failed to load VSSAPI dll, feature is not available");
+            Log::Error("Failed to load VSSAPI dll, feature is not available");
             return E_FAIL;
         }
 
@@ -94,12 +94,12 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
         {
             if (hr == E_ACCESSDENIED)
             {
-                spdlog::warn("Access denied when connecting to VSS Service (not running as admin?) (code: {:#x})", hr);
+                Log::Warn("Access denied when connecting to VSS Service (not running as admin?) (code: {:#x})", hr);
                 return hr;
             }
             else
             {
-                spdlog::error("Failed to connect to VSS service (code: {:#x})", hr);
+                Log::Error("Failed to connect to VSS service (code: {:#x})", hr);
                 return hr;
             }
         }
@@ -108,21 +108,21 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
         {
             if ((hr == VSS_E_UNEXPECTED) && SystemDetails::IsWOW64())
             {
-                spdlog::warn(
+                Log::Warn(
                     "Failed to initalise VSS service, most likely cause: you are running a 32 bits process on x64 "
                     "system (code: {:#x})",
                     hr);
             }
             else
             {
-                spdlog::error("Failed to initalise VSS service (code: {:#x})", hr);
+                Log::Error("Failed to initalise VSS service (code: {:#x})", hr);
             }
             return hr;
         }
 
         if (FAILED(hr = pVssBackup->SetContext(VSS_CTX_ALL)))
         {
-            spdlog::error("Failed to set context on VSS service (code: {:#x})", hr);
+            Log::Error("Failed to set context on VSS service (code: {:#x})", hr);
             return hr;
         }
 
@@ -155,7 +155,7 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
                 }
                 else
                 {
-                    spdlog::warn("Unexpected object type '{}' returned by the IVssEnumObject", Snaps[i].Type);
+                    Log::Warn("Unexpected object type '{}' returned by the IVssEnumObject", Snaps[i].Type);
                 }
             }
             if (ulSnapReturned < ulSnapCount)
@@ -169,7 +169,7 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
     }
     catch (const std::exception& e)
     {
-        spdlog::error("System Exception during snapshot enumeration: {}", e.what());
+        Log::Error("System Exception during snapshot enumeration: {}", e.what());
         return E_FAIL;
     }
     return S_OK;

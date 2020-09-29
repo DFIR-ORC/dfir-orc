@@ -50,7 +50,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const ConfigItem& 
         }
         else
         {
-            spdlog::error(L"Invalid download method '{}'", item[CONFIG_DOWNLOAD_METHOD].c_str());
+            Log::Error(L"Invalid download method '{}'", item[CONFIG_DOWNLOAD_METHOD].c_str());
             return nullptr;
         }
     }
@@ -125,7 +125,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const ConfigItem& 
             strName = file[CONFIG_DOWNLOAD_FILE_NAME];
             if (FAILED(hr = GetOutputFile(file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str(), strLocalName, true)))
             {
-                spdlog::error(
+                Log::Error(
                     L"Error while computing local file name for download task: '{}' (code: {:#x})",
                     file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str(),
                     hr);

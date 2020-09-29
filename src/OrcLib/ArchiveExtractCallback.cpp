@@ -110,7 +110,7 @@ std::shared_ptr<ByteStream> ArchiveExtractCallback::GetStreamToWrite()
     auto filestream = m_MakeWriteAbleStream(m_currentItem);
     if (!filestream)
     {
-        spdlog::error(L"Failed to create writeable stream for {}", m_currentItem.NameInArchive);
+        Log::Error(L"Failed to create writeable stream for {}", m_currentItem.NameInArchive);
         return nullptr;
     }
 
@@ -184,13 +184,13 @@ STDMETHODIMP ArchiveExtractCallback::SetOperationResult(Int32 operationResult)
     switch (operationResult)
     {
         case NArchive::NExtract::NOperationResult::kCRCError:
-            spdlog::error(L"CRC error when extracting '{}'", m_currentItem.NameInArchive);
+            Log::Error(L"CRC error when extracting '{}'", m_currentItem.NameInArchive);
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         case NArchive::NExtract::NOperationResult::kDataError:
-            spdlog::error(L"Data error when extracting '{}'", m_currentItem.NameInArchive);
+            Log::Error(L"Data error when extracting '{}'", m_currentItem.NameInArchive);
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         case NArchive::NExtract::NOperationResult::kUnsupportedMethod:
-            spdlog::error(L"Unsupported method Error when extracting '{}'", m_currentItem.NameInArchive);
+            Log::Error(L"Unsupported method Error when extracting '{}'", m_currentItem.NameInArchive);
             return HRESULT_FROM_WIN32(ERROR_UNSUPPORTED_COMPRESSION);
         case NArchive::NExtract::NOperationResult::kOK:
             break;

@@ -26,7 +26,7 @@
 #include <sstream>
 #include <iomanip>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 using namespace Orc;
@@ -38,46 +38,46 @@ void LogError(const std::wstring& configItemName, const std::regex_error& e)
     switch (e.code())
     {
         case std::regex_constants::error_collate:
-            spdlog::error(L"Error 'error_collate' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_collate' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_ctype:
-            spdlog::error(L"Error 'error_ctype' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_ctype' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_escape:
-            spdlog::error(L"Error 'error_escape' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_escape' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_backref:
-            spdlog::error(L"Error 'error_backref' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_backref' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_brack:
-            spdlog::error(L"Error 'error_brack' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_brack' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_paren:
-            spdlog::error(L"Error 'error_paren' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_paren' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_brace:
-            spdlog::error(L"Error 'error_brace' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_brace' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_badbrace:
-            spdlog::error(L"Error 'error_badbrace' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_badbrace' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_range:
-            spdlog::error(L"Error 'error_range' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_range' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_space:
-            spdlog::error(L"Error 'error_space' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_space' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_badrepeat:
-            spdlog::error(L"Error 'error_badrepeat' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_badrepeat' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_complexity:
-            spdlog::error(L"Error 'error_complexity' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_complexity' with regex {} (code: {})", configItemName, e.code());
             break;
         case std::regex_constants::error_stack:
-            spdlog::error(L"Error 'error_stack' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_stack' with regex {} (code: {})", configItemName, e.code());
             break;
         default:
-            spdlog::error(L"Error with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error with regex {} (code: {})", configItemName, e.code());
             break;
     }
 }
@@ -229,7 +229,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         }
         catch (const std::regex_error& e)
         {
-            spdlog::error("Regex error: {}", e.what());
+            Log::Error("Regex error: {}", e.what());
             return nullptr;
         }
         retval->m_criteriaRequired = static_cast<RegFind::SearchTerm::Criteria>(
@@ -287,7 +287,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         retval->m_ValueType = RegFind::GetRegistryValueType(item[CONFIG_REGFIND_VALUE_TYPE].c_str());
         if (retval->m_ValueType == RegNone)
         {
-            spdlog::error(L"Invalid registry value type '{}'", item[CONFIG_REGFIND_VALUE_TYPE].c_str());
+            Log::Error(L"Invalid registry value type '{}'", item[CONFIG_REGFIND_VALUE_TYPE].c_str());
             return nullptr;
         }
         retval->m_criteriaRequired =
@@ -339,7 +339,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
 
         if (FAILED(hr = GetBytesFromHexaString(Data.c_str(), static_cast<DWORD>(Data.size()), retval->m_DataContent)))
         {
-            spdlog::error(L"Invalid bytes for content '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_HEX].c_str(), hr);
+            Log::Error(L"Invalid bytes for content '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_HEX], hr);
             return nullptr;
         }
         // Also initiate unicode version of pattern (in case pattern tested against SZ values)
@@ -354,13 +354,12 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE].c_str(), li)))
         {
-            spdlog::error(
-                L"Invalid file size specification: '{}' (code: {})", item[CONFIG_REGFIND_DATA_SIZE].c_str(), hr);
+            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE], hr);
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
-            spdlog::error(
+            Log::Error(
                 L"Invalid negative file size specification: '{}' (code: {:#x})",
                 item[CONFIG_REGFIND_DATA_SIZE].c_str(),
                 hr);
@@ -376,19 +375,18 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_LT].c_str(), li)))
         {
-            spdlog::error(
-                L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_LT].c_str(), hr);
+            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_LT], hr);
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
-            spdlog::error(
+            Log::Error(
                 L"Invalid negative file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE], hr);
             return nullptr;
         }
         if (li.QuadPart == 0)
         {
-            spdlog::error(L"Invalid zero file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE].c_str());
+            Log::Error(L"Invalid zero file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE].c_str());
             return nullptr;
         }
         retval->m_ulDataSizeHighLimit = li.QuadPart - 1;
@@ -401,13 +399,12 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_GT].c_str(), li)))
         {
-            spdlog::error(
-                L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_GT].c_str(), hr);
+            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_GT], hr);
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
-            spdlog::error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE].c_str());
+            Log::Error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE]);
             return nullptr;
         }
 
@@ -421,13 +418,12 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_LE].c_str(), li)))
         {
-            spdlog::error(
-                L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_LE].c_str(), hr);
+            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_LE], hr);
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
-            spdlog::error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE].c_str());
+            Log::Error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE]);
             return nullptr;
         }
 
@@ -441,13 +437,12 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_GE].c_str(), li)))
         {
-            spdlog::error(
-                L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_GE].c_str(), hr);
+            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_GE], hr);
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
-            spdlog::error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE].c_str());
+            Log::Error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE]);
             return nullptr;
         }
 
@@ -525,8 +520,8 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
                 hr = GetBytesFromHexaString(
                     Data.c_str(), static_cast<DWORD>(Data.size()), retval->m_DataContentContains)))
         {
-            spdlog::error(
-                L"Invalid bytes for content '{}' (code: {})", item[CONFIG_REGFIND_DATA_CONTAINS_HEX].c_str(), hr);
+            Log::Error(
+                L"Invalid bytes for content '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_CONTAINS_HEX].c_str(), hr);
             return nullptr;
         }
 
@@ -551,7 +546,7 @@ HRESULT RegFind::AddRegFindFromConfig(const std::vector<ConfigItem>& items)
             HRESULT hr = E_FAIL;
             if (FAILED(hr = AddSearchTerm(term)))
             {
-                spdlog::error(L"Failed to add registry search term (code: {:#x})", hr);
+                Log::Error(L"Failed to add registry search term (code: {:#x})", hr);
             }
         }
     }
@@ -567,13 +562,13 @@ HRESULT RegFind::AddRegFindFromTemplate(const std::vector<ConfigItem>& items)
     {
         if (!item[CONFIG_TEMPLATE_NAME])
         {
-            spdlog::error(L"Missing mandatory template name");
+            Log::Error(L"Missing mandatory template name");
             return E_INVALIDARG;
         }
 
         if (!item[CONFIG_TEMPLATE_LOCATION])
         {
-            spdlog::error(L"Missing mandatory template location");
+            Log::Error(L"Missing mandatory template location");
             return E_INVALIDARG;
         }
 
@@ -593,13 +588,13 @@ HRESULT RegFind::AddRegFindFromTemplate(const std::vector<ConfigItem>& items)
 
                 if (FAILED(hr = memstream->OpenForReadOnly(buffer.GetData(), buffer.GetCount())))
                 {
-                    spdlog::error(L"Failed to create stream for memory buffer");
+                    Log::Error(L"Failed to create stream for memory buffer");
                     return hr;
                 }
 
                 if (FAILED(hr = TemplateConfig.ReadConfig(memstream, NewItem)))
                 {
-                    spdlog::error(
+                    Log::Error(
                         L"Failed to read config resource '{}' (code: {:#x})",
                         item[CONFIG_TEMPLATE_LOCATION].c_str(),
                         hr);
@@ -608,7 +603,7 @@ HRESULT RegFind::AddRegFindFromTemplate(const std::vector<ConfigItem>& items)
             }
             else
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to extract config from resource '{}' (code: {:#x})",
                     item[CONFIG_TEMPLATE_LOCATION].c_str(),
                     hr);
@@ -619,7 +614,7 @@ HRESULT RegFind::AddRegFindFromTemplate(const std::vector<ConfigItem>& items)
         {
             if (FAILED(hr = TemplateConfig.ReadConfig(item[CONFIG_TEMPLATE_LOCATION].c_str(), NewItem)))
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to open template file '{}' (code: {:#x})", item[CONFIG_TEMPLATE_LOCATION].c_str(), hr);
                 return hr;
             }
@@ -634,7 +629,7 @@ HRESULT RegFind::AddRegFindFromTemplate(const std::vector<ConfigItem>& items)
                 term->SetTermName(item[CONFIG_TEMPLATE_NAME]);
                 if (FAILED(hr = AddSearchTerm(term)))
                 {
-                    spdlog::error(L"Failed to add registry search term (code: {:#x})", hr);
+                    Log::Error(L"Failed to add registry search term (code: {:#x})", hr);
                 }
             }
         }
@@ -749,26 +744,26 @@ void RegFind::SearchTerm::SetTermName(const std::wstring& wstrName)
 
 void RegFind::PrintSpecs() const
 {
-    spdlog::info(L"Registry search details:");
+    Log::Info(L"Registry search details:");
 
     for (const auto& e : m_ExactKeyNameSpecs)
     {
-        spdlog::info("{}", e.second->GetDescription());
+        Log::Info("{}", e.second->GetDescription());
     }
 
     for (const auto& e : m_ExactKeyPathSpecs)
     {
-        spdlog::info("{}", e.second->GetDescription());
+        Log::Info("{}", e.second->GetDescription());
     }
 
     for (const auto& e : m_ExactValueNameSpecs)
     {
-        spdlog::info("{}", e.second->GetDescription());
+        Log::Info("{}", e.second->GetDescription());
     }
 
     for (const auto& e : m_Specs)
     {
-        spdlog::info("{}", e->GetDescription());
+        Log::Info("{}", e->GetDescription());
     }
 }
 
@@ -1859,7 +1854,7 @@ HRESULT RegFind::Find(
         hr = Hive.LoadHive(*location);
         if (hr != S_OK)
         {
-            spdlog::error(L"Failed RegFind::Find: cannot load hive (code: {:#x})", hr);
+            Log::Error(L"Failed RegFind::Find: cannot load hive (code: {:#x})", hr);
             return hr;
         }
 
@@ -1879,16 +1874,16 @@ HRESULT RegFind::Find(
 
         if (FAILED(hr = Hive.Walk(CallbackOnKey, CallBackOnValue)))
         {
-            spdlog::error(L"Failed RegFind::Find: cannot walk hive (code: {:#x})", hr);
+            Log::Error(L"Failed RegFind::Find: cannot walk hive (code: {:#x})", hr);
             return hr;
         }
     }
     else
     {
-        spdlog::error("RegFind::Find: a search location is required");
+        Log::Error("RegFind::Find: a search location is required");
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    spdlog::debug("RegFind::Find: done");
+    Log::Debug("RegFind::Find: done");
     return hr;
 }

@@ -146,11 +146,11 @@ HRESULT ExecuteAgent(ImportAgent& agent)
 {
     HRESULT hr = E_FAIL;
 
-    spdlog::info(L"Extracting data...");
+    Log::Info(L"Extracting data...");
 
     if (!agent.start())
     {
-        spdlog::critical(L"Failed to start import Agent failed");
+        Log::Critical(L"Failed to start import Agent failed");
         return E_FAIL;
     }
 
@@ -160,7 +160,7 @@ HRESULT ExecuteAgent(ImportAgent& agent)
     }
     catch (concurrency::operation_timed_out timeout)
     {
-        spdlog::critical("Timed out while waiting for agent completion");
+        Log::Critical("Timed out while waiting for agent completion");
         return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
     }
 
@@ -199,7 +199,7 @@ Main::AddDirectoryForInput(const fs::path& path, const InputItem& input, std::ve
         hr = AddFileForInput(*dirIt, input, inputPaths);
         if (FAILED(hr))
         {
-            spdlog::warn("Failed to process '{}'", dirIt->path());
+            Log::Warn("Failed to process '{}'", dirIt->path());
         }
     }
 
@@ -243,7 +243,7 @@ HRESULT Main::AddFileForInput(const fs::path& path, const InputItem& input, std:
 
     if (input.matchRegex.empty())
     {
-        spdlog::debug(L"Input file added: '{}'", item.name);
+        Log::Debug(L"Input file added: '{}'", item.name);
         inputPaths.push_back(item);
         return S_OK;
     }
@@ -253,12 +253,12 @@ HRESULT Main::AddFileForInput(const fs::path& path, const InputItem& input, std:
 
     if (SUCCEEDED(hr))
     {
-        spdlog::debug(L"Input file added: '{}'", item.name);
+        Log::Debug(L"Input file added: '{}'", item.name);
         inputPaths.push_back(std::move(item));
         return S_OK;
     }
 
-    spdlog::debug(L"Input file '{}' does not match '{}'", item.name, input.matchRegex);
+    Log::Debug(L"Input file '{}' does not match '{}'", item.name, input.matchRegex);
     return S_OK;
 }
 
@@ -275,7 +275,7 @@ std::vector<ImportItem> Main::GetInputFiles(const Main::InputItem& input)
     const auto isDirectory = fs::is_directory(input.path, ec);
     if (ec)
     {
-        spdlog::warn(L"Invalid input '{}' specified (code: {:#x})", input.path, ec.value());
+        Log::Warn(L"Invalid input '{}' specified (code: {:#x})", input.path, ec.value());
         return {};
     }
 
@@ -291,7 +291,7 @@ std::vector<ImportItem> Main::GetInputFiles(const Main::InputItem& input)
 
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to add input files for '{}' (code: {:#x})", input.path, hr);
+        Log::Error(L"Failed to add input files for '{}' (code: {:#x})", input.path, hr);
         return {};
     }
 
@@ -311,7 +311,7 @@ HRESULT Main::Run()
     auto reportWriter = TableOutput::GetWriter(config.reportOutput);
     if (reportWriter == nullptr)
     {
-        spdlog::debug("No report writer, extraction report will be disabled");
+        Log::Debug("No report writer, extraction report will be disabled");
     }
 
     m_notificationCb = std::make_unique<call<ImportNotification::Notification>>(
@@ -329,7 +329,7 @@ HRESULT Main::Run()
     hr = importAgent->InitializeOutputs(config.output, OutputSpec(), config.tempOutput);
     if (FAILED(hr))
     {
-        spdlog::error("Failed to initialize import agent output (code: {:#x}", hr);
+        Log::Error("Failed to initialize import agent output (code: {:#x})", hr);
         return hr;
     }
 
@@ -353,7 +353,7 @@ HRESULT Main::Run()
     hr = ::ExecuteAgent(*importAgent);
     if (FAILED(hr))
     {
-        spdlog::error("Failed while extracting");
+        Log::Error("Failed while extracting");
         return hr;
     }
 

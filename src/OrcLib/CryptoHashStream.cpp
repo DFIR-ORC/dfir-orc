@@ -45,7 +45,7 @@ HRESULT CryptoHashStream::OpenToRead(Algorithm algs, const std::shared_ptr<ByteS
 
     if (pChained->IsOpen() != S_OK)
     {
-        spdlog::error(L"Chained stream to HashStream must be opened");
+        Log::Error(L"Chained stream to HashStream must be opened");
         return E_FAIL;
     }
 
@@ -62,7 +62,7 @@ HRESULT CryptoHashStream::OpenToWrite(Algorithm algs, const std::shared_ptr<Byte
 
     if (pChainedStream != nullptr && pChainedStream->IsOpen() != S_OK)
     {
-        spdlog::error(L"Chained stream to HashStream must be opened if provided");
+        Log::Error(L"Chained stream to HashStream must be opened if provided");
         return E_FAIL;
     }
 
@@ -95,7 +95,7 @@ HRESULT CryptoHashStream::ResetHash(bool bContinue)
             // Acquire the best available crypto provider
             if (FAILED(hr = CryptoUtilities::AcquireContext(g_hProv)))
             {
-                spdlog::error(L"Failed to initialize providers (code: {:#x})", hr);
+                Log::Error(L"Failed to initialize providers (code: {:#x})", hr);
                 return hr;
             }
         }
@@ -104,18 +104,18 @@ HRESULT CryptoHashStream::ResetHash(bool bContinue)
         if ((m_Algorithms & Algorithm::MD5) && !CryptCreateHash(g_hProv, CALG_MD5, 0, 0, &m_MD5))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::debug(L"Failed to initialise MD5 hash (code: {:#x})", hr);
+            Log::Debug(L"Failed to initialise MD5 hash (code: {:#x})", hr);
         }
 
         if ((m_Algorithms & Algorithm::SHA1) && !CryptCreateHash(g_hProv, CALG_SHA1, 0, 0, &m_Sha1))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::debug(L"Failed to initialise SHA1 hash (code: {:#x})", hr);
+            Log::Debug(L"Failed to initialise SHA1 hash (code: {:#x})", hr);
         }
         if ((m_Algorithms & Algorithm::SHA256) && !CryptCreateHash(g_hProv, CALG_SHA_256, 0, 0, &m_Sha256))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::debug(L"Failed to initialise SHA256 hash (code: {:#x})", hr);
+            Log::Debug(L"Failed to initialise SHA256 hash (code: {:#x})", hr);
         }
     }
     return S_OK;

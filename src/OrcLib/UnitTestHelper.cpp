@@ -47,7 +47,7 @@ HRESULT UnitTestHelper::ExtractArchive(
     std::shared_ptr<ArchiveExtract> extractor = ArchiveExtract::MakeExtractor(format, false);
     if (!extractor)
     {
-        spdlog::error(L"Failed to create extractor");
+        Log::Error(L"Failed to create extractor");
         return E_FAIL;
     }
 
@@ -55,7 +55,7 @@ HRESULT UnitTestHelper::ExtractArchive(
 
     if (FAILED(extractor->Extract(makeArchiveStream, pShouldBeExtracted, MakeWriteAbleStream)))
     {
-        spdlog::error(L"Failed to extract archive");
+        Log::Error(L"Failed to extract archive");
         return hr;
     }
 

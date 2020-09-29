@@ -37,7 +37,7 @@
 
 #include <fmt/format.h>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 constexpr const unsigned int FILESPEC_FILENAME_INDEX = 1;
 constexpr const unsigned int FILESPEC_SPEC_INDEX = 3;
@@ -442,7 +442,7 @@ HRESULT Orc::FileFind::CheckYara()
                     if (term_rule == rule)
                     {
                         auto [hr, termRule] = AnsiToWide(term_rule);
-                        spdlog::warn(
+                        Log::Warn(
                             L"Term '{}' rule spec '{}' does not match any rule in yara",
                             term->GetDescription(),
                             termRule);
@@ -600,7 +600,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->dwAttrType = _wtoi(item[CONFIG_FILEFIND_ATTR_TYPE].c_str());
             if (fs->dwAttrType == 0)
             {
-                spdlog::warn(L"Invalid attribute type passed: {}", item[CONFIG_FILEFIND_ATTR_TYPE].c_str());
+                Log::Warn(L"Invalid attribute type passed: {}", item[CONFIG_FILEFIND_ATTR_TYPE]);
                 fs->Required =
                     static_cast<FileFind::SearchTerm::Criteria>(fs->Required & ~FileFind::SearchTerm::ATTR_TYPE);
             }
@@ -616,7 +616,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         catch (Orc::Exception& e)
         {
             auto [hr, msg] = AnsiToWide(e.what());
-            spdlog::warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE].c_str(), msg);
+            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE], msg);
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_GT])
@@ -629,7 +629,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         catch (Orc::Exception& e)
         {
             auto [hr, msg] = AnsiToWide(e.what());
-            spdlog::warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_GT].c_str(), msg);
+            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_GT], msg);
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_GE])
@@ -642,7 +642,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         catch (Orc::Exception& e)
         {
             auto [hr, msg] = AnsiToWide(e.what());
-            spdlog::warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_GE].c_str(), msg);
+            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_GE].c_str(), msg);
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_LT])
@@ -655,7 +655,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         catch (Orc::Exception& e)
         {
             auto [hr, msg] = AnsiToWide(e.what());
-            spdlog::warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_LT].c_str(), msg);
+            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_LT].c_str(), msg);
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_LE])
@@ -668,7 +668,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         catch (Orc::Exception& e)
         {
             auto [hr, msg] = AnsiToWide(e.what());
-            spdlog::warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_LE].c_str(), msg);
+            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_LE], msg);
         }
     }
     if (item[CONFIG_FILEFIND_MD5])
@@ -683,7 +683,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->Required |= FileFind::SearchTerm::DATA_MD5;
         else
         {
-            spdlog::warn(L"Invalid hex string passed as md5: {}", item[CONFIG_FILEFIND_MD5].c_str());
+            Log::Warn(L"Invalid hex string passed as md5: {}", item[CONFIG_FILEFIND_MD5]);
         }
     }
     if (item[CONFIG_FILEFIND_SHA1])
@@ -698,7 +698,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->Required |= FileFind::SearchTerm::DATA_SHA1;
         else
         {
-            spdlog::warn(L"Invalid hex string passed as sha1: {}", item[CONFIG_FILEFIND_SHA1].c_str());
+            Log::Warn(L"Invalid hex string passed as sha1: {}", item[CONFIG_FILEFIND_SHA1]);
         }
     }
     if (item[CONFIG_FILEFIND_SHA256])
@@ -713,7 +713,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->Required |= FileFind::SearchTerm::DATA_SHA256;
         else
         {
-            spdlog::warn(L"Invalid hex string passed as sha256: {}", item[CONFIG_FILEFIND_SHA256].c_str());
+            Log::Warn(L"Invalid hex string passed as sha256: {}", item[CONFIG_FILEFIND_SHA256]);
         }
     }
     if (item[CONFIG_FILEFIND_CONTAINS])
@@ -728,7 +728,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         }
         else
         {
-            spdlog::warn(
+            Log::Warn(
                 L"string '{}' passed as binstring could not be converted to ANSI (code: {:#x})",
                 item[CONFIG_FILEFIND_CONTAINS],
                 hr);
@@ -747,7 +747,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         }
         else
         {
-            spdlog::warn(L"Invalid hex string passed as binstring '{}'", item[CONFIG_FILEFIND_CONTAINS_HEX].c_str());
+            Log::Warn(L"Invalid hex string passed as binstring '{}'", item[CONFIG_FILEFIND_CONTAINS_HEX]);
         }
     }
     if (item[CONFIG_FILEFIND_HEADER])
@@ -761,8 +761,8 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         }
         else
         {
-            spdlog::warn(
-                L"String '{}' passed as header string could not be converted to ANSI (code: {:#x)",
+            Log::Warn(
+                L"String '{}' passed as header string could not be converted to ANSI (code: {:#x})",
                 item[CONFIG_FILEFIND_HEADER],
                 hr);
         }
@@ -780,8 +780,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         }
         else
         {
-            spdlog::warn(
-                L"Invalid hex string passed as header: {} (code: {})", item[CONFIG_FILEFIND_HEADER_HEX].c_str(), hr);
+            Log::Warn(L"Invalid hex string passed as header: {} (code: {})", item[CONFIG_FILEFIND_HEADER_HEX], hr);
         }
     }
     if (item[CONFIG_FILEFIND_HEADER_REGEX])
@@ -789,8 +788,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         std::string ansiRegEx;
         if (FAILED(hr = WideToAnsi((std::wstring_view)item[CONFIG_FILEFIND_HEADER_REGEX], ansiRegEx)))
         {
-            spdlog::warn(
-                L"Invalid hex string passed as header: {} (code: {:#x})", item[CONFIG_FILEFIND_HEADER_HEX].c_str(), hr);
+            Log::Warn(L"Invalid hex string passed as header: {} (code: {:#x})", item[CONFIG_FILEFIND_HEADER_HEX], hr);
         }
         else
         {
@@ -1414,7 +1412,7 @@ HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
 
     if (FAILED(hr = m_YaraScan->Configure(config)))
     {
-        spdlog::error(L"Failed to configure yara scanner");
+        Log::Error(L"Failed to configure yara scanner");
         return hr;
     }
 
@@ -1422,7 +1420,7 @@ HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
     {
         if (FAILED(hr = m_YaraScan->AddRules(yara)))
         {
-            spdlog::error(L"Failed to load yara rules from source: {}", yara.c_str());
+            Log::Error(L"Failed to load yara rules from source: {}", yara);
         }
     }
 
@@ -1511,7 +1509,7 @@ HRESULT FileFind::AddTerm(const shared_ptr<SearchTerm>& pMatch)
             || pMatch->Required & SearchTerm::Criteria::ADS_EXACT || pMatch->Required & SearchTerm::Criteria::ADS_MATCH
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX))
     {
-        spdlog::error("It is unsupported to have both a name and other attributes in file search criteria");
+        Log::Error("It is unsupported to have both a name and other attributes in file search criteria");
         return E_INVALIDARG;
     }
 
@@ -1520,7 +1518,7 @@ HRESULT FileFind::AddTerm(const shared_ptr<SearchTerm>& pMatch)
         && (pMatch->Required & SearchTerm::Criteria::ADS_EXACT || pMatch->Required & SearchTerm::Criteria::ADS_MATCH
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX))
     {
-        spdlog::error("It is unsupported to have both EA name and ADS name into a file search criteria");
+        Log::Error("It is unsupported to have both EA name and ADS name into a file search criteria");
         return E_INVALIDARG;
     }
     if ((pMatch->Required & SearchTerm::Criteria::ATTR_NAME_EXACT
@@ -1531,7 +1529,7 @@ HRESULT FileFind::AddTerm(const shared_ptr<SearchTerm>& pMatch)
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX || pMatch->Required & SearchTerm::Criteria::EA_EXACT
             || pMatch->Required & SearchTerm::Criteria::EA_MATCH || pMatch->Required & SearchTerm::Criteria::EA_REGEX))
     {
-        spdlog::error(
+        Log::Error(
             L"It is unsupported to have both EA name or ADS name combined with attr_* for attribute into a file search "
             L"criteria");
         return E_INVALIDARG;
@@ -1690,7 +1688,7 @@ HRESULT FileFind::AddExcludeTerm(const shared_ptr<SearchTerm>& pMatch)
             || pMatch->Required & SearchTerm::Criteria::ADS_EXACT || pMatch->Required & SearchTerm::Criteria::ADS_MATCH
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX))
     {
-        spdlog::error("It is unsupported to have both a name and other attributes in file search criteria");
+        Log::Error("It is unsupported to have both a name and other attributes in file search criteria");
         return E_INVALIDARG;
     }
 
@@ -1699,7 +1697,7 @@ HRESULT FileFind::AddExcludeTerm(const shared_ptr<SearchTerm>& pMatch)
         && (pMatch->Required & SearchTerm::Criteria::ADS_EXACT || pMatch->Required & SearchTerm::Criteria::ADS_MATCH
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX))
     {
-        spdlog::error("It is unsupported to have both EA name and ADS name into a file search criteria");
+        Log::Error("It is unsupported to have both EA name and ADS name into a file search criteria");
         return E_INVALIDARG;
     }
     if ((pMatch->Required & SearchTerm::Criteria::ATTR_NAME_EXACT
@@ -1710,7 +1708,7 @@ HRESULT FileFind::AddExcludeTerm(const shared_ptr<SearchTerm>& pMatch)
             || pMatch->Required & SearchTerm::Criteria::ADS_REGEX || pMatch->Required & SearchTerm::Criteria::EA_EXACT
             || pMatch->Required & SearchTerm::Criteria::EA_MATCH || pMatch->Required & SearchTerm::Criteria::EA_REGEX))
     {
-        spdlog::error(
+        Log::Error(
             "It is unsupported to have both EA name or ADS name combined with attr_* for attribute into a file search "
             "criteria");
         return E_INVALIDARG;
@@ -2739,7 +2737,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchHash(
 
         if (FAILED(hr = pDataAttr->GetHashInformation(m_pVolReader, m_NeededHash)))
         {
-            spdlog::error(L"Failed to compute hash for data attribute (code: {:#x})", hr);
+            Log::Error(L"Failed to compute hash for data attribute (code: {:#x})", hr);
             return SearchTerm::Criteria::NONE;
         }
 
@@ -2786,7 +2784,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            spdlog::debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
             return SearchTerm::Criteria::NONE;
         }
         boost::algorithm::boyer_moore<BYTE*> boyermoore(aTerm->Contains.begin(), aTerm->Contains.end());
@@ -2834,7 +2832,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            spdlog::debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
             return SearchTerm::Criteria::NONE;
         }
     }
@@ -2850,7 +2848,7 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
     if (!m_YaraScan)
     {
-        spdlog::warn("Yara not initialized & yara rules selected");
+        Log::Warn("Yara not initialized & yara rules selected");
         return {SearchTerm::Criteria::NONE, std::nullopt};
     }
 
@@ -2862,14 +2860,14 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            spdlog::debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
 
         auto [hr, matchingRules] = m_YaraScan->Scan(pDataStream);
         if (FAILED(hr))
         {
-            spdlog::debug("Failed to yara scan data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to yara scan data attribute (code: {:#x})", hr);
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
         if (!matchingRules.empty())
@@ -2914,7 +2912,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchHeader(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            spdlog::debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
             return SearchTerm::Criteria::NONE;
         }
 
@@ -2928,7 +2926,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchHeader(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            spdlog::debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
             return SearchTerm::Criteria::NONE;
         }
 
@@ -2955,7 +2953,7 @@ FileFind::RegExHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::share
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            spdlog::debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
             return SearchTerm::Criteria::NONE;
         }
 
@@ -2976,7 +2974,7 @@ FileFind::RegExHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::share
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            spdlog::debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
             return SearchTerm::Criteria::NONE;
         }
     }
@@ -2998,7 +2996,7 @@ FileFind::HexHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            spdlog::debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
             return SearchTerm::Criteria::NONE;
         }
 
@@ -3019,7 +3017,7 @@ FileFind::HexHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            spdlog::debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
             return SearchTerm::Criteria::NONE;
         }
     }
@@ -3309,7 +3307,7 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
             if (pFileName == nullptr)
             {
                 LARGE_INTEGER* pLI = (LARGE_INTEGER*)&pElt->GetFileReferenceNumber();
-                spdlog::error(
+                Log::Error(
                     L"Failed to find a default file name for record '{}' matching '{}'",
                     pLI->QuadPart,
                     aTerm->GetDescription());
@@ -3563,7 +3561,7 @@ HRESULT FileFind::EvaluateMatchCallCallback(
         {
             if (FAILED(hr = ComputeMatchHashes(aMatch)))
             {
-                spdlog::warn(
+                Log::Warn(
                     L"Failed to compute hashes for match '{}' (code: {:#x})",
                     aMatch->MatchingNames.front().FullPathName,
                     hr);
@@ -3571,7 +3569,7 @@ HRESULT FileFind::EvaluateMatchCallCallback(
         }
 
         // the match has not matched a excluding term
-        spdlog::debug(L"Adding match '{}'", aMatch->MatchingNames.front().FullPathName);
+        Log::Debug(L"Adding match '{}'", aMatch->MatchingNames.front().FullPathName);
         if (m_storeMatches)
         {
             m_Matches.push_back(aMatch);
@@ -3582,7 +3580,7 @@ HRESULT FileFind::EvaluateMatchCallCallback(
     }
     else
     {
-        spdlog::debug(L"Match has been excluded");
+        Log::Debug(L"Match has been excluded");
     }
     return S_OK;
 }
@@ -3943,11 +3941,11 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
             {
-                spdlog::debug(L"File system not eligible for volume '{}' (code: {:#x})", aLoc->GetLocation(), hr);
+                Log::Debug(L"File system not eligible for volume '{}' (code: {:#x})", aLoc->GetLocation(), hr);
             }
             else
             {
-                spdlog::debug(L"Failed to init walk for volume '{}' (code: {:#x})", aLoc->GetLocation(), hr);
+                Log::Debug(L"Failed to init walk for volume '{}' (code: {:#x})", aLoc->GetLocation(), hr);
             }
         }
         else
@@ -3966,7 +3964,7 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
                         {
                             if (FAILED(hr = FindMatch(pElt, bStop, aCallback)))
                             {
-                                spdlog::error(L"FindMatch failed");
+                                Log::Error(L"FindMatch failed");
                                 pElt->CleanCachedData();
                                 return;
                             }
@@ -3975,7 +3973,7 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
                     }
                     catch (WCHAR* e)
                     {
-                        spdlog::error(L"Could not parse record: '{}'", e);
+                        Log::Error(L"Could not parse record: '{}'", e);
                     }
                     return;
                 };
@@ -4004,13 +4002,13 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
                     {
                         if (FAILED(hr = FindI30Match(pFileName, bStop, aCallback)))
                         {
-                            spdlog::error(L"FindI30Match failed");
+                            Log::Error(L"FindI30Match failed");
                             return;
                         }
                     }
                     catch (WCHAR* e)
                     {
-                        spdlog::error(L"Could not parse record: '{}'", e);
+                        Log::Error(L"Could not parse record: '{}'", e);
                     }
                     return;
                 };
@@ -4018,11 +4016,11 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
 
             if (FAILED(hr = walk.Walk(cbs)))
             {
-                spdlog::debug(L"Failed to walk volume '{}' (code: {:#x})", aLoc->GetLocation(), hr);
+                Log::Debug(L"Failed to walk volume '{}' (code: {:#x})", aLoc->GetLocation(), hr);
             }
             else
             {
-                spdlog::debug(L"Done!");
+                Log::Debug(L"Done!");
                 walk.Statistics(L"Done");
             }
         }
@@ -4037,18 +4035,18 @@ void FileFind::PrintSpecs() const
         begin(m_ExactNameTerms),
         end(m_ExactNameTerms),
         [this](const pair<std::wstring, std::shared_ptr<SearchTerm>>& aPair) {
-            spdlog::info(L"{}", aPair.second->GetDescription());
+            Log::Info(L"{}", aPair.second->GetDescription());
         });
 
     std::for_each(
         begin(m_ExactPathTerms),
         end(m_ExactPathTerms),
         [this](const pair<std::wstring, std::shared_ptr<SearchTerm>>& aPair) {
-            spdlog::info(L"{}", aPair.second->GetDescription());
+            Log::Info(L"{}", aPair.second->GetDescription());
         });
 
     std::for_each(begin(m_Terms), end(m_Terms), [this](const std::shared_ptr<SearchTerm>& aTerm) {
-        spdlog::info(L"{}", aTerm->GetDescription());
+        Log::Info(L"{}", aTerm->GetDescription());
     });
 
     return;

@@ -135,7 +135,7 @@ HRESULT Orc::TableOutput::CSV::Cruncher::PeekNextToken(
                             ForwardBy(3);
                         else
                         {
-                            spdlog::warn("Invalid line termination");
+                            Log::Warn("Invalid line termination");
                         }
 
                         *(Current - 1) = L'\0';
@@ -162,7 +162,7 @@ HRESULT Orc::TableOutput::CSV::Cruncher::PeekNextToken(
                         ForwardBy(3);
                     else
                     {
-                        spdlog::warn("Invalid end of token");
+                        Log::Warn("Invalid end of token");
                     }
                     *(Current) = L'\0';
                     bReachedNewLine = true;
@@ -300,7 +300,7 @@ HRESULT Orc::TableOutput::CSV::Cruncher::PeekHeaders()
 
     if (!m_bfirstRowIsColumnNames)
     {
-        spdlog::error("No headers in headers file nor in first line. Unsupported");
+        Log::Error("No headers in headers file nor in first line. Unsupported");
         return E_INVALIDARG;
     }
 
@@ -555,7 +555,7 @@ HRESULT Orc::TableOutput::CSV::Cruncher::PeekTypes(DWORD cbLinesToPeek)
 
             if (bReachedNewLine && i != m_Schema.Column.size() - 1)
             {
-                spdlog::error(
+                Log::Error(
                     "Not enough columns found while peeking column types ({} found, {} expected)",
                     i,
                     m_Schema.Column.size() - 1);
@@ -564,7 +564,7 @@ HRESULT Orc::TableOutput::CSV::Cruncher::PeekTypes(DWORD cbLinesToPeek)
         }
         if (!bReachedNewLine)
         {
-            spdlog::error(
+            Log::Error(
                 "Too much columns found while peeking column types ({} found, {} expected)",
                 i,
                 m_Schema.Column.size() - 1);
@@ -636,11 +636,11 @@ HRESULT Orc::TableOutput::CSV::Cruncher::ParseNextLine(Record& record)
 
         if (FAILED(hr = CoerceToColumn(szToken, dwTokenLength, record.Values[i])))
         {
-            spdlog::warn(L"Failed to coerce {} into its destination type (code: {:#x})", szToken, hr);
+            Log::Warn(L"Failed to coerce {} into its destination type (code: {:#x})", szToken, hr);
         }
         if (bReachedNewLine && i != m_Schema.Column.size() - 1)
         {
-            spdlog::error(
+            Log::Error(
                 "Not enough columns found while peeking column types ({} found, {} expected)",
                 i,
                 m_Schema.Column.size() - 1);
@@ -649,7 +649,7 @@ HRESULT Orc::TableOutput::CSV::Cruncher::ParseNextLine(Record& record)
     }
     if (!bReachedNewLine)
     {
-        spdlog::error(
+        Log::Error(
             "Too much columns while parsing line: {} ({} found, {} expected)",
             m_ullCurLine,
             i,

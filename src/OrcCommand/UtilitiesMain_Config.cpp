@@ -33,7 +33,7 @@ HRESULT UtilitiesMain::ReadConfiguration(
 
     if (FAILED(hr = init(configitem)))
     {
-        spdlog::error(L"Failed to initialize config item schema");
+        Log::Error(L"Failed to initialize config item schema");
         return hr;
     }
 
@@ -42,7 +42,7 @@ HRESULT UtilitiesMain::ReadConfiguration(
             hr = ConfigFile::LookupAndReadConfiguration(
                 argc, argv, r, szCmdLineOption, szResourceID, szRefResourceID, szConfigExt, configitem)))
     {
-        spdlog::error(L"Failed to lookup and read item schema");
+        Log::Error(L"Failed to lookup and read item schema");
         return hr;
     }
 

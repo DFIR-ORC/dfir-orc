@@ -314,12 +314,12 @@ Assert::IsTrue(p.IsNTFS());
         DiskExtentTest::SeekCallBack seekCallBack = [this](LARGE_INTEGER offset) {
             m_Offset = offset;
 
-            spdlog::info("Seek with offset: {}", offset.QuadPart);
+            Log::Info("Seek with offset: {}", offset.QuadPart);
             return S_OK;
         };
 
         DiskExtentTest::ReadCallBack readCallBack = [this, &ntfs_vbr](PVOID buf, DWORD size) {
-            spdlog::info("Read with size: {}", size);
+            Log::Info("Read with size: {}", size);
 
             if (m_Offset.QuadPart == 0x2010000)
             {
@@ -401,12 +401,12 @@ BYTE mbr[512] = {
 DiskExtentTest::SeekCallBack seekCallBack = [this](LARGE_INTEGER offset) {
     m_Offset = offset;
 
-    spdlog::info("Seek with offset: {}", offset.QuadPart);
+    Log::Info("Seek with offset: {}", offset.QuadPart);
     return S_OK;
 };
 
 DiskExtentTest::ReadCallBack readCallBack = [this, &mbr](PVOID buf, DWORD size) {
-    spdlog::info("Read with size: {}", size);
+    Log::Info("Read with size: {}", size);
 
     if (m_Offset.QuadPart == 0)
     {
@@ -473,7 +473,7 @@ Assert::IsTrue(table[1].PartitionNumber == 2);
     DiskExtentTest::SeekCallBack seekCallBack = [](LARGE_INTEGER) { return S_OK; };
 
     DiskExtentTest::ReadCallBack readCallBack = [this, &mbr](PVOID buf, DWORD size) {
-        spdlog::info(L"Read with size: {}", size);
+        Log::Info(L"Read with size: {}", size);
 
         if (m_Offset.QuadPart == 0)
         {
@@ -652,13 +652,13 @@ BYTE fat32_vbr[512] = {
 DiskExtentTest::SeekCallBack seekCallBack = [this](LARGE_INTEGER offset) {
     m_Offset = offset;
 
-    spdlog::info("Seek with offset: {}", offset.QuadPart);
+    Log::Info("Seek with offset: {}", offset.QuadPart);
     return S_OK;
 };
 
 DiskExtentTest::ReadCallBack readCallBack =
     [this, &protected_mbr, &gpt_table, &gpt_entries, &ntfs_vbr, &fat32_vbr](PVOID buf, DWORD size) {
-        spdlog::info("Read with size: {}", size);
+        Log::Info("Read with size: {}", size);
 
         if (m_Offset.QuadPart == 0)
         {
@@ -824,13 +824,13 @@ Assert::IsTrue(table[2].PartitionNumber == 3);
     DiskExtentTest::SeekCallBack seekCallBack = [this](LARGE_INTEGER offset) {
         m_Offset = offset;
 
-        spdlog::info("Seek with offset: {}", offset.QuadPart);
+        Log::Info("Seek with offset: {}", offset.QuadPart);
         return S_OK;
     };
 
     DiskExtentTest::ReadCallBack readCallBack =
         [this, &protected_mbr, &gpt_table, &gpt_entries, &refs_vbr](PVOID buf, DWORD size) {
-            spdlog::info("Read with size: {}", size);
+            Log::Info("Read with size: {}", size);
 
             if (m_Offset.QuadPart == 0)
             {
@@ -1110,7 +1110,7 @@ TEST_METHOD(ExtendedPartitionTableTest)
     DiskExtentTest::SeekCallBack seekCallBack = [this](LARGE_INTEGER offset) {
         m_Offset = offset;
 
-        spdlog::info("Seek with offset: {}", offset.QuadPart);
+        Log::Info("Seek with offset: {}", offset.QuadPart);
         return S_OK;
     };
 
@@ -1122,7 +1122,7 @@ TEST_METHOD(ExtendedPartitionTableTest)
                                                  &fat32_vbr,
                                                  &fat32_vbr2,
                                                  &ntfs_vbr](PVOID buf, DWORD size) {
-        spdlog::info(L"Read with size: {}", size);
+        Log::Info(L"Read with size: {}", size);
 
         if (m_Offset.QuadPart == 0)
         {

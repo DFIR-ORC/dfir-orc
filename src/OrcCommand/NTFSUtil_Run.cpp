@@ -59,7 +59,7 @@ HANDLE OpenVolume(const std::wstring& volume)
 
     if (hVolume == INVALID_HANDLE_VALUE)
     {
-        spdlog::debug(L"Failed to open volume: '{}' (code: {:#x})", volume, HRESULT_FROM_WIN32(GetLastError()));
+        Log::Debug(L"Failed to open volume: '{}' (code: {:#x})", volume, HRESULT_FROM_WIN32(GetLastError()));
         return INVALID_HANDLE_VALUE;
     }
 
@@ -82,13 +82,13 @@ HRESULT GetUSNJournalConfiguration(HANDLE hVolume, DWORDLONG& maximumSize, DWORD
         switch (dwErr)
         {
             case ERROR_JOURNAL_DELETE_IN_PROGRESS:
-                spdlog::error("An attempt is made to read the journal while a journal deletion is in process");
+                Log::Error("An attempt is made to read the journal while a journal deletion is in process");
                 break;
             case ERROR_JOURNAL_NOT_ACTIVE:
-                spdlog::error("An attempt is made to read USN journal while being inactive");
+                Log::Error("An attempt is made to read USN journal while being inactive");
                 break;
             default:
-                spdlog::error("Failed FSCTL_QUERY_USN_JOURNAL (code: {:#x})", hr);
+                Log::Error("Failed FSCTL_QUERY_USN_JOURNAL (code: {:#x})", hr);
         }
 
         return hr;
@@ -116,7 +116,7 @@ HRESULT ConfigureUSNJournal(HANDLE hVolume, DWORDLONG dwlMinSize, DWORDLONG dwlM
 
         if (MaxSize >= dwlMinSize)
         {
-            spdlog::error("Cannot shrink USN journal because specified size is smaller than the current");
+            Log::Error("Cannot shrink USN journal because specified size is smaller than the current");
             return E_FAIL;
         }
 
@@ -142,10 +142,10 @@ HRESULT ConfigureUSNJournal(HANDLE hVolume, DWORDLONG dwlMinSize, DWORDLONG dwlM
         switch (dwErr)
         {
             case ERROR_JOURNAL_DELETE_IN_PROGRESS:
-                spdlog::error("An attempt is made to modify the journal while a journal deletion is in process");
+                Log::Error("An attempt is made to modify the journal while a journal deletion is in process");
                 break;
             default:
-                spdlog::error("Failed FSCTL_QUERY_USN_JOURNAL (code: {:#x})", hr);
+                Log::Error("Failed FSCTL_QUERY_USN_JOURNAL (code: {:#x})", hr);
         }
 
         return hr;
@@ -164,7 +164,7 @@ HRESULT Main::CommandUSN()
     Guard::FileHandle hVolume = OpenVolume(config.strVolume);
     if (hVolume == INVALID_HANDLE_VALUE)
     {
-        spdlog::critical(L"Failed to open volume: '{}' (code: {:#x})", config.strVolume, hr);
+        Log::Critical(L"Failed to open volume: '{}' (code: {:#x})", config.strVolume, hr);
         return E_FAIL;
     }
 
@@ -175,7 +175,7 @@ HRESULT Main::CommandUSN()
         hr = ::GetUSNJournalConfiguration(hVolume, maxSize, delta);
         if (FAILED(hr))
         {
-            spdlog::critical(
+            Log::Critical(
                 L"Failed to obtain USN configuration values for volume: '{}' (code: {:#x})", config.strVolume, hr);
             return hr;
         }
@@ -196,7 +196,7 @@ HRESULT Main::CommandUSN()
         hr = ::ConfigureUSNJournal(hVolume, config.dwlMinSize, config.dwlMaxSize, config.dwlAllocDelta);
         if (FAILED(hr))
         {
-            spdlog::critical(L"Failed to configure USN journal for volume '{}' (code: {:#x})", config.strVolume, hr);
+            Log::Critical(L"Failed to configure USN journal for volume '{}' (code: {:#x})", config.strVolume, hr);
             return hr;
         }
 
@@ -207,7 +207,7 @@ HRESULT Main::CommandUSN()
             hr = ::GetUSNJournalConfiguration(hVolume, maxSize, delta);
             if (FAILED(hr))
             {
-                spdlog::critical(
+                Log::Critical(
                     L"Failed to obtain new USN configuration values for volume: '{}' (code: {:#x})",
                     config.strVolume,
                     hr);
@@ -232,7 +232,7 @@ HRESULT Main::CommandEnum()
     HRESULT hr = locations.EnumerateLocations();
     if (FAILED(hr))
     {
-        spdlog::error("Failed to enumerate locations (code: {:#x})", hr);
+        Log::Error("Failed to enumerate locations (code: {:#x})", hr);
         return hr;
     }
 
@@ -267,7 +267,7 @@ HRESULT Main::CommandLoc()
         hr = pt.LoadPartitionTable(canonical.c_str());
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to load partition table for '{}' (code: {:#x})", canonical, hr);
+            Log::Error(L"Failed to load partition table for '{}' (code: {:#x})", canonical, hr);
             return hr;
         }
 
@@ -279,7 +279,7 @@ HRESULT Main::CommandLoc()
     hr = locationSet.AddLocations(config.strVolume.c_str(), addedLocations, false);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to parse location '{}' (code: {:#x})", config.strVolume, hr);
+        Log::Error(L"Failed to parse location '{}' (code: {:#x})", config.strVolume, hr);
         return hr;
     }
 
@@ -291,14 +291,14 @@ HRESULT Main::CommandLoc()
         auto reader = location->GetReader();
         if (reader == nullptr)
         {
-            spdlog::debug(L"Failed to retrieve reader for '{}' (code: {:#x})", location->GetLocation(), hr);
+            Log::Debug(L"Failed to retrieve reader for '{}' (code: {:#x})", location->GetLocation(), hr);
             continue;
         }
 
         HRESULT hr = reader->LoadDiskProperties();
         if (FAILED(hr))
         {
-            spdlog::debug(L"Failed to load disk properties for '{}' (code: {:#x})", location->GetLocation(), hr);
+            Log::Debug(L"Failed to load disk properties for '{}' (code: {:#x})", location->GetLocation(), hr);
             continue;
         }
 
@@ -314,7 +314,7 @@ HRESULT Main::CommandLoc()
             hr = walker.Initialize(location);
             if (FAILED(hr))
             {
-                spdlog::debug(L"Failed to parse MFT for '{}' (code: {:#x})", location->GetLocation(), hr);
+                Log::Debug(L"Failed to parse MFT for '{}' (code: {:#x})", location->GetLocation(), hr);
                 continue;
             }
 
@@ -363,20 +363,20 @@ HRESULT Main::CommandRecord(ULONGLONG ullRecord)
 
     if (loc->GetReader() == nullptr)
     {
-        spdlog::error(L"Unable to instantiate Volume reader for location: '{}'", loc->GetLocation());
+        Log::Error(L"Unable to instantiate Volume reader for location: '{}'", loc->GetLocation());
         return E_FAIL;
     }
 
     hr = loc->GetReader()->LoadDiskProperties();
     if (FAILED(hr))
     {
-        spdlog::error(L"Unable to load disk properties for location: '{}' (code: {:#x})", loc->GetLocation(), hr);
+        Log::Error(L"Unable to load disk properties for location: '{}' (code: {:#x})", loc->GetLocation(), hr);
         return hr;
     }
 
     if (!loc->IsNTFS())
     {
-        spdlog::error(L"Record details command is only available on a NTFS volume: '{}'", config.strVolume);
+        Log::Error(L"Record details command is only available on a NTFS volume: '{}'", config.strVolume);
         return hr;
     }
 
@@ -384,7 +384,7 @@ HRESULT Main::CommandRecord(ULONGLONG ullRecord)
     hr = walk.Initialize(addedLocs[0], true);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed during MFT walk initialisation on volume: '{}'", config.strVolume);
+        Log::Error(L"Failed during MFT walk initialisation on volume: '{}'", config.strVolume);
         return hr;
     }
 
@@ -404,7 +404,7 @@ HRESULT Main::CommandRecord(ULONGLONG ullRecord)
     callbacks.ProgressCallback = [&bRecordFound, this](ULONG dwProgress) -> HRESULT {
         if (bRecordFound)
         {
-            spdlog::info("Record found, stopping enumeration");
+            Log::Info("Record found, stopping enumeration");
             return HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES);
         }
         return S_OK;
@@ -415,11 +415,11 @@ HRESULT Main::CommandRecord(ULONGLONG ullRecord)
     {
         if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
         {
-            spdlog::debug("Enumeration is stopping");
+            Log::Debug("Enumeration is stopping");
         }
         else
         {
-            spdlog::error("Failed during MFT walk on volume (code: {:#x})", hr);
+            Log::Error("Failed during MFT walk on volume (code: {:#x})", hr);
         }
     }
 
@@ -453,27 +453,27 @@ HRESULT Main::CommandMFT()
         auto volreader = loc->GetReader();
         if (volreader == nullptr)
         {
-            spdlog::error(L"Unable to instantiate Volume reader for location: '{}'", loc->GetLocation());
+            Log::Error(L"Unable to instantiate Volume reader for location: '{}'", loc->GetLocation());
             continue;
         }
 
         hr = volreader->LoadDiskProperties();
         if (FAILED(hr))
         {
-            spdlog::error(L"Unable to load disk properties for location: '{}' (code: {:#x})", loc->GetLocation(), hr);
+            Log::Error(L"Unable to load disk properties for location: '{}' (code: {:#x})", loc->GetLocation(), hr);
             continue;
         }
 
         if (!loc->IsNTFS())
         {
-            spdlog::error(L"MFT details command is only available for NTFS volumes: '{}'", config.strVolume);
+            Log::Error(L"MFT details command is only available for NTFS volumes: '{}'", config.strVolume);
             continue;
         }
 
         if (Location::Type::OfflineMFT == loc->GetType())
         {
             // fabienfl: there was no output, just initialization
-            spdlog::error("Offline MFT volume is not supported");
+            Log::Error("Offline MFT volume is not supported");
             continue;
         }
 
@@ -508,7 +508,7 @@ HRESULT Main::CommandMFT()
             // hr = volreader->Read(extent.DiskOffset, buffer, 1024, ullBytesRead);
             // if (FAILED(hr))
             //{
-            //    spdlog::error(L"Failed to read first MFT record in extent (code: {:#x})", hr);
+            //    Log::Error(L"Failed to read first MFT record in extent (code: {:#x})", hr);
             //    continue;
             //}
 
@@ -517,7 +517,7 @@ HRESULT Main::CommandMFT()
             // if ((pData->MultiSectorHeader.Signature[0] != 'F') || (pData->MultiSectorHeader.Signature[1] != 'I')
             //    || (pData->MultiSectorHeader.Signature[2] != 'L') || (pData->MultiSectorHeader.Signature[3] != 'E'))
             //{
-            //    spdlog::error(
+            //    Log::Error(
             //        L"First MFT record of extent at {} doesn't have a file signature",
             //        Traits::Offset(extent.DiskOffset));
             //    continue;
@@ -528,7 +528,7 @@ HRESULT Main::CommandMFT()
             // li.LowPart = pData->SegmentNumberLowPart;
             // li.HighPart = pData->SegmentNumberHighPart;
 
-            // spdlog::info(
+            // Log::Info(
             //    L"\t\tFILE({:#018x}) {}",
             //    li.QuadPart,
             //    ((li.QuadPart * 1024) / volreader->GetBytesPerCluster() == extent.LowestVCN ? L"inSequence"
@@ -541,7 +541,7 @@ HRESULT Main::CommandMFT()
         hr = walker.Initialize(loc);
         if (FAILED(hr))
         {
-            spdlog::warn(L"Could not initialize walker for volume: '{}' (code: {:#x})", loc->GetIdentifier(), hr);
+            Log::Warn(L"Could not initialize walker for volume: '{}' (code: {:#x})", loc->GetIdentifier(), hr);
             continue;
         }
 
@@ -556,7 +556,7 @@ HRESULT Main::CommandMFT()
         hr = walker.Walk(callbacks);
         if (FAILED(hr))
         {
-            spdlog::warn(L"Could not walk volume: '{}' (code: {:#x})", loc->GetIdentifier(), hr);
+            Log::Warn(L"Could not walk volume: '{}' (code: {:#x})", loc->GetIdentifier(), hr);
             continue;
         }
 
@@ -593,7 +593,7 @@ HRESULT Main::CommandHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize)
         hr = loc->GetReader()->LoadDiskProperties();
         if (FAILED(hr))
         {
-            spdlog::error(L"Unable to load disk properties for location: '{}' (code: {:#x})", loc->GetLocation(), hr);
+            Log::Error(L"Unable to load disk properties for location: '{}' (code: {:#x})", loc->GetLocation(), hr);
             return hr;
         }
 
@@ -606,19 +606,19 @@ HRESULT Main::CommandHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize)
 
     if (volreader == nullptr)
     {
-        spdlog::error(L"Failed to create a reader for volume: '{}'", config.strVolume);
+        Log::Error(L"Failed to create a reader for volume: '{}'", config.strVolume);
         return E_INVALIDARG;
     }
 
     hr = volreader->LoadDiskProperties();
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to load disk properties for volume: '{}' (code: {:#x})", config.strVolume, hr);
+        Log::Error(L"Failed to load disk properties for volume: '{}' (code: {:#x})", config.strVolume, hr);
     }
 
     if (volreader->GetBytesPerCluster() == 0)
     {
-        spdlog::error(L"Invalid bytes per cluster for volume: '{}'", config.strVolume);
+        Log::Error(L"Invalid bytes per cluster for volume: '{}'", config.strVolume);
         return E_FAIL;
     }
 
@@ -634,7 +634,7 @@ HRESULT Main::CommandHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize)
         ZeroMemory(buffer.GetData(), buffer.GetCount());
         if (FAILED(hr = volreader->Read(dwlOffset, buffer, volreader->GetBytesPerCluster(), ullThisRead)))
         {
-            spdlog::error(L"Failed to read volume '{}' (code: {:#x})", config.strVolume, hr);
+            Log::Error(L"Failed to read volume '{}' (code: {:#x})", config.strVolume, hr);
             return hr;
         }
 
@@ -668,7 +668,7 @@ HRESULT Main::CommandVss()
     HRESULT hr = vss.EnumerateShadows(shadows);
     if (FAILED(hr))
     {
-        spdlog::critical("Failed to list volume shadow copies (code: {:#x})", hr);
+        Log::Critical("Failed to list volume shadow copies (code: {:#x})", hr);
         return hr;
     }
 
@@ -679,7 +679,7 @@ HRESULT Main::CommandVss()
         pVssWriter = TableOutput::GetWriter(config.output);
         if (nullptr == pVssWriter)
         {
-            spdlog::critical("Failed to create output file");
+            Log::Critical("Failed to create output file");
             return E_FAIL;
         }
     }
@@ -748,7 +748,7 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
     HRESULT hr = aSet.EnumerateLocations();
     if (FAILED(hr))
     {
-        spdlog::critical(L"Failed to enumerate locations (code: {:#x})", hr);
+        Log::Critical(L"Failed to enumerate locations (code: {:#x})", hr);
         return hr;
     }
 
@@ -758,7 +758,7 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
         hr = aSet.AddLocations(config.strVolume.c_str(), addedLocs);
         if (FAILED(hr))
         {
-            spdlog::critical(L"Failed to add location '{}' (code: {:#x})", config.strVolume, hr);
+            Log::Critical(L"Failed to add location '{}' (code: {:#x})", config.strVolume, hr);
             return hr;
         }
     }
@@ -780,13 +780,13 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
         hr = reader->Read(buffer, 512, ullBytesRead);
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to read header from location: '{}'", loc->GetLocation());
+            Log::Error(L"Failed to read header from location: '{}'", loc->GetLocation());
         }
 
         auto pHeader = buffer.GetP<VolumeHeader>();
         if (pHeader->Guid != INFO_GUID)
         {
-            spdlog::warn("BitLocker header does not have the INFO_GUID");
+            Log::Warn("BitLocker header does not have the INFO_GUID");
             continue;
         }
 
@@ -810,14 +810,12 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
 
             if (pInfoHeader->Header.Version != 2 && pInfoHeader->Header.Version != 1)
             {
-                spdlog::warn(
-                    "Invalid metadata version: '{}', only version 2 is supported", pInfoHeader->Header.Version);
+                Log::Warn("Invalid metadata version: '{}', only version 2 is supported", pInfoHeader->Header.Version);
                 continue;
             }
             if (strncmp((char*)pInfoHeader->Header.Signature, "-FVE-FS-", 8))
             {
-                spdlog::warn(
-                    "Invalid metadata signature '{}', only -FVE-FS- is supported", pInfoHeader->Header.Signature);
+                Log::Warn("Invalid metadata signature '{}', only -FVE-FS- is supported", pInfoHeader->Header.Signature);
                 continue;
             }
 
@@ -825,7 +823,7 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
 
             if (infoSize < 64)
             {
-                spdlog::warn("Meta data size '{}' is too small", infoSize);
+                Log::Warn("Meta data size '{}' is too small", infoSize);
                 continue;
             }
 
@@ -840,8 +838,7 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
 
             if (pValidation->Version != 1 && pValidation->Version != 2)
             {
-                spdlog::warn(
-                    "Invalid validation metadata version {}, only version 2 is supported", pValidation->Version);
+                Log::Warn("Invalid validation metadata version {}, only version 2 is supported", pValidation->Version);
                 continue;
             }
 
@@ -880,6 +877,6 @@ HRESULT Main::Run()
         }
     }
 
-    spdlog::critical("Unsupported command");
+    Log::Critical("Unsupported command");
     return E_FAIL;
 }

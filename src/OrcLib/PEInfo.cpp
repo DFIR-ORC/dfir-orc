@@ -21,7 +21,7 @@
 
 #pragma comment(lib, "Crypt32.lib")
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -494,7 +494,7 @@ HRESULT PEInfo::OpenSecurityDirectory()
 
     if (secdir_pe_offset > stream->GetSize())
     {
-        spdlog::warn(L"'{}' contains an invalid security directory", m_FileInfo.GetFullName());
+        Log::Warn(L"'{}' contains an invalid security directory", m_FileInfo.GetFullName());
         return S_OK;
     }
 
@@ -669,7 +669,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
 
         if (cChunks == -1)
         {
-            spdlog::warn("Invalid PE chunks");
+            Log::Warn("Invalid PE chunks");
             return S_OK;
         }
 

@@ -50,7 +50,7 @@ namespace Orc::Test {
 
             if (BuildBranch.is_err())
             {
-                spdlog::error(L"Failed to read BuildBranch, test not performed (code: {:#x})", BuildBranch.err_value());
+                Log::Error(L"Failed to read BuildBranch, test not performed (code: {:#x})", BuildBranch.err_value());
                 return;
             }
 
@@ -67,7 +67,7 @@ namespace Orc::Test {
 
             if (VersionNumber.is_err())
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to read VersionNumber, test not performed (code: {:#x})", VersionNumber.err_value());
                 return;
             }
@@ -84,7 +84,7 @@ namespace Orc::Test {
 
             if (InstallTime.is_err())
             {
-                spdlog::error(L"Failed to read InstallTime, test not performed (code: {:#x})", InstallTime.err_value());
+                Log::Error(L"Failed to read InstallTime, test not performed (code: {:#x})", InstallTime.err_value());
                 return;
             }
 
@@ -106,7 +106,7 @@ namespace Orc::Test {
                 HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"PathName");
             if (PathName.is_err())
             {
-                spdlog::error(L"Failed to read PathName, test not performed (code: {:#x})", PathName.err_value());
+                Log::Error(L"Failed to read PathName, test not performed (code: {:#x})", PathName.err_value());
                 return;
             }
 
@@ -120,7 +120,7 @@ namespace Orc::Test {
 
             if(DigitalProductId.is_err())
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to read DigitalProductId4, test not performed (code: {:#x})",
                     DigitalProductId.err_value());
                 return;

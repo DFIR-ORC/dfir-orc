@@ -22,7 +22,7 @@
 
 #include "SystemDetails.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 
@@ -269,7 +269,7 @@ HRESULT MftRecordAttribute::GetStreams(
                 auto stream = make_shared<NTFSStream>();
                 if (FAILED(hr = stream->OpenStream(pVolReader, shared_from_this())))
                 {
-                    spdlog::error("Failed to open NTFSStream (code: {:#x})", hr);
+                    Log::Error("Failed to open NTFSStream (code: {:#x})", hr);
                     return hr;
                 }
                 dataStream = rawStream = stream;
@@ -285,13 +285,13 @@ HRESULT MftRecordAttribute::GetStreams(
             case 1:
             case 2:
             case 3: {
-                spdlog::info(
+                Log::Info(
                     L"INFO: Collect record with unsupported compression unit value: {}",
                     m_pHeader->Form.Nonresident.CompressionUnit);
                 auto stream = make_shared<NTFSStream>();
                 if (FAILED(hr = stream->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
-                    spdlog::error(L"Failed to open NTFSStream (code: {:#x})", hr);
+                    Log::Error(L"Failed to open NTFSStream (code: {:#x})", hr);
                     return hr;
                 }
                 dataStream = rawStream = stream;
@@ -308,14 +308,14 @@ HRESULT MftRecordAttribute::GetStreams(
                 auto rawdata = make_shared<NTFSStream>();
                 if (FAILED(hr = rawdata->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
-                    spdlog::error(L"Failed to open NTFSStream (code: {:#x})", hr);
+                    Log::Error(L"Failed to open NTFSStream (code: {:#x})", hr);
                     return hr;
                 }
 
                 auto datastream = make_shared<UncompressNTFSStream>();
                 if (FAILED(hr = datastream->Open(rawdata, 16 * pVolReader->GetBytesPerCluster())))
                 {
-                    spdlog::error(L"Failed to open UncompressNTFSStream (code: {:#x})", hr);
+                    Log::Error(L"Failed to open UncompressNTFSStream (code: {:#x})", hr);
                     return hr;
                 }
                 else if (hr == S_FALSE)
@@ -324,14 +324,14 @@ HRESULT MftRecordAttribute::GetStreams(
                     if (pFN != nullptr && pFN->FileNameLength <= pVolReader->MaxComponentLength())
                     {
                         std::wstring_view fileName(pFN->FileName, pFN->FileNameLength);
-                        spdlog::debug(
+                        Log::Debug(
                             L"Issues when opening compressed file: '{}' with record {:#x})",
                             fileName,
                             m_pHostRecord->GetSafeMFTSegmentNumber());
                     }
                     else
                     {
-                        spdlog::debug(
+                        Log::Debug(
                             L"Issues when opening compressed file with record {:#x})",
                             m_pHostRecord->GetSafeMFTSegmentNumber());
                     }
@@ -454,7 +454,7 @@ HRESULT MftRecordAttribute::GetHashInformation(
 
     if (FAILED(hr = stream->SetFilePointer(0LL, SEEK_SET, nullptr)))
     {
-        spdlog::debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+        Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
         return hr;
     }
 
@@ -471,7 +471,7 @@ HRESULT MftRecordAttribute::GetHashInformation(
 
     if (FAILED(hr = stream->SetFilePointer(0LL, SEEK_SET, nullptr)))
     {
-        spdlog::debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+        Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
         return hr;
     }
 
@@ -509,11 +509,11 @@ HRESULT IndexRootAttribute::Open()
         switch (m_pHeader->Form.Nonresident.CompressionUnit)
         {
             case 0: {
-                spdlog::error("NON RESIDENT $INDEX_ROOT attribute are not supported");
+                Log::Error("NON RESIDENT $INDEX_ROOT attribute are not supported");
                 return E_NOTIMPL;
             }
             default: {
-                spdlog::error("Compressed $INDEX_ROOT attribute are not supported");
+                Log::Error("Compressed $INDEX_ROOT attribute are not supported");
                 return E_NOTIMPL;
             }
         }

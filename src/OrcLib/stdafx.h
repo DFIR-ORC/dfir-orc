@@ -66,7 +66,7 @@
 
 #include <eh.h>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 #include "Output/Text/Fmt/Formatter.h"
 

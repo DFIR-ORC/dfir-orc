@@ -215,7 +215,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
         auto [hr, strName] = WideToAnsi(column->ColumnName);
         if (FAILED(hr))
         {
-            spdlog::error(L"Invalid column name: '{}' (code: {:#x})", column->ColumnName, hr);
+            Log::Error(L"Invalid column name: '{}' (code: {:#x})", column->ColumnName, hr);
             break;
         }
 
@@ -310,7 +310,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
                 break;
             }
             default:
-                spdlog::error(L"Unupported (parquet) column type for column: '{}'", column->ColumnName);
+                Log::Error(L"Unupported (parquet) column type for column: '{}'", column->ColumnName);
                 return E_FAIL;
         }
     }
@@ -363,7 +363,7 @@ Orc::TableOutput::Parquet::Writer::WriteToStream(const std::shared_ptr<ByteStrea
 
     if (m_arrowSchema->num_fields() == 0 || m_arrowBuilders.size() == 0)
     {
-        spdlog::error(L"Cannot write to a parquet file without a schema");
+        Log::Error(L"Cannot write to a parquet file without a schema");
         return E_FAIL;
     }
 
@@ -382,7 +382,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::Flush()
 {
     ScopedLock sl(m_cs);
 
-    spdlog::debug(L"Orc::TableOutput::Parquet::Writer::Flush");
+    Log::Debug(L"Orc::TableOutput::Parquet::Writer::Flush");
 
     std::vector<std::shared_ptr<arrow::Array>> arrays;
     arrays.reserve(m_arrowBuilders.size());
@@ -403,14 +403,14 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::Flush()
     auto table = arrow::Table::Make(m_arrowSchema, arrays);
     if (!table)
     {
-        spdlog::error(L"Failed to create arrow table (to flush)");
+        Log::Error(L"Failed to create arrow table (to flush)");
         return E_FAIL;
     }
 
     auto status = m_arrowWriter->WriteTable(*table, table->num_rows());
     if (!status.ok())
     {
-        spdlog::error("Failed to write arrow table '{}'", status.ToString());
+        Log::Error("Failed to write arrow table '{}'", status.ToString());
         return E_FAIL;
     }
 
@@ -424,7 +424,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::Close()
 
     if (auto hr = Flush(); FAILED(hr))
     {
-        spdlog::error("Failed to flush arrow table");
+        Log::Error("Failed to flush arrow table");
         return hr;
     }
 
@@ -524,7 +524,7 @@ HRESULT Orc::TableOutput::Parquet::Writer::WriteEndOfLine()
     {
         if (m_dwBatchRowCount >= m_Options->BatchSize.value())
         {
-            spdlog::debug(L"Batch is full --> Flush() ({} rows)", m_dwBatchRowCount);
+            Log::Debug(L"Batch is full --> Flush() ({} rows)", m_dwBatchRowCount);
             if (auto hr = Flush(); FAILED(hr))
                 return hr;
         }

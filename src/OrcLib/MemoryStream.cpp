@@ -180,7 +180,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
                 NULL, std::min(MEMORY_STREAM_RESERVE_MAX, dwReserveSize), MEM_RESERVE, PAGE_READWRITE);
             if (!m_pBuffer)
             {
-                spdlog::warn("Could not reserve {} bytes", dwReserveSize);
+                Log::Warn("Could not reserve {} bytes", dwReserveSize);
             }
             else
                 m_cbReservedBytes = dwReserveSize;
@@ -201,7 +201,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
 
         if (!pNewBuffer)
         {
-            spdlog::error("Could not allocate {} bytes", dwCommitSize);
+            Log::Error("Could not allocate {} bytes", dwCommitSize);
             return E_OUTOFMEMORY;
         }
     }
@@ -211,7 +211,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
         DWORD dwPageSize = 0L;
         if (FAILED(hr = SystemDetails::GetPageSize(dwPageSize)))
         {
-            spdlog::error(L"Failed to decommit pages: could not retrieve page size (code: {:#x})", hr);
+            Log::Error(L"Failed to decommit pages: could not retrieve page size (code: {:#x})", hr);
         }
         else
         {
@@ -223,7 +223,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
                 if (!VirtualFree(pFirstPageToDecommit, dwPagesToUnCommit * dwPageSize, MEM_DECOMMIT))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    spdlog::error("Failed to decommit pages (code: {:#x})", hr);
+                    Log::Error("Failed to decommit pages (code: {:#x})", hr);
                 }
             }
         }
@@ -265,14 +265,14 @@ HRESULT MemoryStream::Write(
 
     if (m_bReadOnly)
     {
-        spdlog::error("Invalid write to read-only memory stream");
+        Log::Error("Invalid write to read-only memory stream");
         return E_ACCESSDENIED;
     }
 
     if (m_dwCurrFilePointer + cbBytesToWrite < m_dwCurrFilePointer)
     {
         hr = HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW);
-        spdlog::error("File pointer overflowed");
+        Log::Error("File pointer overflowed");
         return hr;
     }
 
@@ -294,7 +294,7 @@ HRESULT MemoryStream::Write(
 
             if (dwAllocSize < cbBytesToWrite + m_dwCurrFilePointer)
             {
-                spdlog::error("Alloc size overflowed while rounding up");
+                Log::Error("Alloc size overflowed while rounding up");
                 return E_OUTOFMEMORY;
             }
         }

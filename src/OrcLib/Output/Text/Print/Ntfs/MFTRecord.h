@@ -92,7 +92,7 @@ void Print(Orc::Text::Tree<T>& root, const MFTRecord& record, const std::shared_
         {
             if (pName == nullptr)
             {
-                spdlog::error("Invalid MFT record: {}", record.GetSafeMFTSegmentNumber());
+                Log::Error("Invalid MFT record: {}", record.GetSafeMFTSegmentNumber());
                 continue;
             }
 
@@ -123,7 +123,7 @@ void Print(Orc::Text::Tree<T>& root, const MFTRecord& record, const std::shared_
             const auto& data = dataList[i];
             if (data == nullptr)
             {
-                spdlog::debug("Invalid data entry");
+                Log::Debug("Invalid data entry");
                 continue;
             }
 

@@ -144,7 +144,7 @@ HRESULT ZipLibrary::GetAvailableFormats(std::vector<ArchiveFormat>& formats) con
     UInt32 numFormats = 1;
     if (FAILED(hr = ::GetNumberOfFormats(&numFormats)))
     {
-        spdlog::error(L"Failed to get number of format functions (code: {:#x})", hr);
+        Log::Error(L"Failed to get number of format functions (code: {:#x})", hr);
         return hr;
     }
 
@@ -155,14 +155,14 @@ HRESULT ZipLibrary::GetAvailableFormats(std::vector<ArchiveFormat>& formats) con
 
         if (FAILED(hr = ::GetHandlerProperty2((UInt32)i, NArchive::NHandlerPropID::kUpdate, &prop)))
         {
-            spdlog::error(L"Failed to get handler of property func kUpdate (code: {:#x})", hr);
+            Log::Error(L"Failed to get handler of property func kUpdate (code: {:#x})", hr);
             return hr;
         }
         fmt.UpdateCapable = prop.boolVal ? true : false;
 
         if (FAILED(hr = ::GetHandlerProperty2((UInt32)i, NArchive::NHandlerPropID::kName, &prop)))
         {
-            spdlog::error(L"Failed to get handler of property func kName (code: {:#x})", hr);
+            Log::Error(L"Failed to get handler of property func kName (code: {:#x})", hr);
             return hr;
         }
 
@@ -173,7 +173,7 @@ HRESULT ZipLibrary::GetAvailableFormats(std::vector<ArchiveFormat>& formats) con
 
         if (FAILED(hr = ::GetHandlerProperty2((UInt32)i, NArchive::NHandlerPropID::kExtension, &prop)))
         {
-            spdlog::error(L"Failed to get handler of property func kExtension (code: {:#x})", hr);
+            Log::Error(L"Failed to get handler of property func kExtension (code: {:#x})", hr);
             return hr;
         }
 
@@ -186,7 +186,7 @@ HRESULT ZipLibrary::GetAvailableFormats(std::vector<ArchiveFormat>& formats) con
 
         if (FAILED(hr = ::GetHandlerProperty2((UInt32)i, NArchive::NHandlerPropID::kClassID, &prop)))
         {
-            spdlog::error(L"Failed to get handler of property func kClassID (code: {:#x})", hr);
+            Log::Error(L"Failed to get handler of property func kClassID (code: {:#x})", hr);
             return hr;
         }
 
@@ -218,7 +218,7 @@ HRESULT ZipLibrary::GetAvailableCodecs(std::vector<ArchiveCodec>& codecs) const
 
         if (FAILED(hr = ::GetMethodProperty((UInt32)i, NMethodPropID::kName, &prop)))
         {
-            spdlog::error(L"Failed to get method of property func kName (code: {:#x})", hr);
+            Log::Error(L"Failed to get method of property func kName (code: {:#x})", hr);
             return hr;
         }
 
@@ -229,7 +229,7 @@ HRESULT ZipLibrary::GetAvailableCodecs(std::vector<ArchiveCodec>& codecs) const
 
         if (FAILED(hr = ::GetMethodProperty((UInt32)i, NMethodPropID::kID, &prop)))
         {
-            spdlog::error(L"Failed to get method of property func kID (code: {:#x})", hr);
+            Log::Error(L"Failed to get method of property func kID (code: {:#x})", hr);
             return hr;
         }
 

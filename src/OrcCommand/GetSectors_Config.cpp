@@ -68,8 +68,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else
                 {
-                    spdlog::error(L"[!] Unknown option : \"%s\".", argv[i]);
-                    spdlog::error(L"Use /help to list the available options.");
+                    Log::Error(L"[!] Unknown option : \"{}\".", argv[i]);
+                    Log::Error(L"Use /help to list the available options.");
                     exit(-1);
                 }
                 break;
@@ -85,7 +85,7 @@ HRESULT Main::CheckConfiguration()
 {
     if ((!config.customSample) && (!config.dumpLegacyBootCode) && (!config.dumpSlackSpace) && (!config.dumpUefiFull))
     {
-        spdlog::error(L"[!] You must specify something to dump. Use /help to list the available options.");
+        Log::Error(L"[!] You must specify something to dump. Use /help to list the available options.");
         return E_FAIL;
     }
 
@@ -97,7 +97,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
     {
-        spdlog::warn(L"INFO: No output explicitely specified: creating GetSectors.7z in current directory");
+        Log::Warn(L"INFO: No output explicitely specified: creating GetSectors.7z in current directory");
         config.Output.Path = L"GetSectors.7z";
         config.Output.Type = OutputSpec::Kind::Archive;
         config.Output.ArchiveFormat = ArchiveFormat::SevenZip;

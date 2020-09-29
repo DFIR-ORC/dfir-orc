@@ -68,7 +68,7 @@ HRESULT FuzzyHashStream::OpenToRead(FuzzyHashStream::Algorithm algs, const std::
 
     if (pChainedStream->IsOpen() != S_OK)
     {
-        spdlog::error(L"Chained stream to FuzzyHashStream must be opened");
+        Log::Error(L"Chained stream to FuzzyHashStream must be opened");
         return E_FAIL;
     }
 
@@ -85,7 +85,7 @@ HRESULT FuzzyHashStream::OpenToWrite(FuzzyHashStream::Algorithm algs, const std:
 
     if (pChainedStream != nullptr && pChainedStream->IsOpen() != S_OK)
     {
-        spdlog::error(L"Chained stream to FuzzyHashStream must be opened if provided");
+        Log::Error(L"Chained stream to FuzzyHashStream must be opened if provided");
         return E_FAIL;
     }
 

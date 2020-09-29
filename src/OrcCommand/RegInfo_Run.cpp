@@ -173,7 +173,7 @@ HRESULT DumpValue(const RegFind::Match::ValueNameMatch& match, std::wstring outp
     HRESULT hr = dataDumpFile.WriteTo(outputPath.c_str());
     if (FAILED(hr))
     {
-        spdlog::error(L"Can't open file '{}' (code: {:#x})", outputPath, hr);
+        Log::Error(L"Can't open file '{}' (code: {:#x})", outputPath, hr);
         return hr;
     }
 
@@ -182,7 +182,7 @@ HRESULT DumpValue(const RegFind::Match::ValueNameMatch& match, std::wstring outp
     dataDumpFile.Write(match.Datas.get(), match.DatasLength, &ulWritten);
     if (ulWritten != dwLen)
     {
-        spdlog::error("Can't write content of value: '{}' with key: '{}'", match.ValueName, match.KeyName);
+        Log::Error("Can't write content of value: '{}' with key: '{}'", match.ValueName, match.KeyName);
     }
 
     dataDumpFile.Close();
@@ -432,7 +432,7 @@ HRESULT Main::Run()
     HRESULT hr = LoadWinTrust();
     if (FAILED(hr))
     {
-        spdlog::critical("Failed LoadWinTrust (code: {:#x})", hr);
+        Log::Critical("Failed LoadWinTrust (code: {:#x})", hr);
         return hr;
     }
 
@@ -440,24 +440,24 @@ HRESULT Main::Run()
     // Useless if MFT parser not used but done every time so nobody will forget to mention it in configuration...
     DWORD dwGLE = 0L;
 
-    spdlog::debug("Flushing HKEY_LOCAL_MACHINE");
+    Log::Debug("Flushing HKEY_LOCAL_MACHINE");
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
     {
-        spdlog::error("Flushing HKEY_LOCAL_MACHINE failed (code: {:#x})", HRESULT_FROM_WIN32(dwGLE));
+        Log::Error("Flushing HKEY_LOCAL_MACHINE failed (code: {:#x})", HRESULT_FROM_WIN32(dwGLE));
     }
 
-    spdlog::debug(L"Flushing HKEY_USERS");
+    Log::Debug(L"Flushing HKEY_USERS");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
     {
-        spdlog::error(L"Flushing HKEY_USERS failed (code: {:#x})", HRESULT_FROM_WIN32(dwGLE));
+        Log::Error(L"Flushing HKEY_USERS failed (code: {:#x})", HRESULT_FROM_WIN32(dwGLE));
     }
 
     hr = config.m_HiveQuery.BuildStreamList();
     if (FAILED(hr))
     {
-        spdlog::error("Failed to build hive stream list(code: {:#x})", hr);
+        Log::Error("Failed to build hive stream list(code: {:#x})", hr);
         return hr;
     }
 
@@ -472,7 +472,7 @@ HRESULT Main::Run()
             pRegInfoWriter = GetRegInfoWriter(config.Output);
             if (nullptr == pRegInfoWriter)
             {
-                spdlog::error("Failed to create output file");
+                Log::Error("Failed to create output file");
                 return E_FAIL;
             }
         }
@@ -491,21 +491,21 @@ HRESULT Main::Run()
                 pRegInfoWriter = GetRegInfoWriter(config.Output, fileName);
                 if (nullptr == pRegInfoWriter)
                 {
-                    spdlog::error("Failed to create output file information file");
+                    Log::Error("Failed to create output file information file");
                     continue;
                 }
             }
 
             if (!hive.Stream)
             {
-                spdlog::error(L"Can't open hive '{}'", hive.FileName);
+                Log::Error(L"Can't open hive '{}'", hive.FileName);
                 continue;
             }
 
             hr = query->QuerySpec.Find(hive.Stream, nullptr, nullptr);
             if (FAILED(hr))
             {
-                spdlog::error(L"Failed to search into hive '{}' (code: {:#x})", hive.FileName, hr);
+                Log::Error(L"Failed to search into hive '{}' (code: {:#x})", hive.FileName, hr);
                 continue;
             }
 

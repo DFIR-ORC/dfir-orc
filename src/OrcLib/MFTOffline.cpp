@@ -11,7 +11,7 @@
 
 #include "OfflineMFTReader.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -47,7 +47,7 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         == SetFilePointer(m_pVolReader->GetHandle(), Start.LowPart, &Start.HighPart, FILE_BEGIN))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Could not seek to offset {} in MFT file (code: {:#x})", Start.LowPart, hr);
+        Log::Error(L"Could not seek to offset {} in MFT file (code: {:#x})", Start.LowPart, hr);
         return hr;
     }
 
@@ -68,13 +68,13 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         if (!ReadFile(m_pVolReader->GetHandle(), buffer.GetData(), m_pVolReader->GetBytesPerFRS(), &dwBytesRead, NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Could not read in MFT file (code: {:#x})", hr);
+            Log::Error(L"Could not read in MFT file (code: {:#x})", hr);
             return hr;
         }
 
         if (dwBytesRead != m_pVolReader->GetBytesPerFRS())
         {
-            spdlog::debug(L"Reached end of offline MFT (code: {:#x})", hr);
+            Log::Debug(L"Reached end of offline MFT (code: {:#x})", hr);
             return S_OK;
         }
 
@@ -83,7 +83,7 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         if ((pHeader->MultiSectorHeader.Signature[0] != 'F') || (pHeader->MultiSectorHeader.Signature[1] != 'I')
             || (pHeader->MultiSectorHeader.Signature[2] != 'L') || (pHeader->MultiSectorHeader.Signature[3] != 'E'))
         {
-            spdlog::debug(
+            Log::Debug(
                 L"Skipping... MultiSectorHeader.Signature is not FILE - '{}{}{}{}'",
                 pHeader->MultiSectorHeader.Signature[0],
                 pHeader->MultiSectorHeader.Signature[1],
@@ -96,11 +96,11 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
-                spdlog::debug("INFO: stopping enumeration (code: {:#x})", hr);
+                Log::Debug("INFO: stopping enumeration (code: {:#x})", hr);
                 return hr;
             }
 
-            spdlog::warn("Add Record Callback failed (code: {:#x})", hr);
+            Log::Warn("Add Record Callback failed (code: {:#x})", hr);
         }
 
         ullCurrentIndex++;
@@ -151,7 +151,7 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
             == SetFilePointer(m_pFetchReader->GetHandle(), Index.LowPart, &Index.HighPart, FILE_BEGIN))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Could not seek to offset {} in MFT file (code: {:#x})", Index.QuadPart, hr);
+            Log::Error(L"Could not seek to offset {} in MFT file (code: {:#x})", Index.QuadPart, hr);
             continue;
         }
 
@@ -164,7 +164,7 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
                 NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Could not read {} bytes in MFT file (code: {:#x})", m_pFetchReader->GetBytesPerFRS(), hr);
+            Log::Error(L"Could not read {} bytes in MFT file (code: {:#x})", m_pFetchReader->GetBytesPerFRS(), hr);
             continue;
         }
 
@@ -173,7 +173,7 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
         if ((pHeader->MultiSectorHeader.Signature[0] != 'F') || (pHeader->MultiSectorHeader.Signature[1] != 'I')
             || (pHeader->MultiSectorHeader.Signature[2] != 'L') || (pHeader->MultiSectorHeader.Signature[3] != 'E'))
         {
-            spdlog::debug(
+            Log::Debug(
                 L"Skipping... MultiSectorHeader.Signature is not FILE - '{}{}{}{}'",
                 pHeader->MultiSectorHeader.Signature[0],
                 pHeader->MultiSectorHeader.Signature[1],
@@ -189,7 +189,7 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
 
         if (NtfsSegmentNumber(&read_record_frn) != NtfsSegmentNumber(&idx))
         {
-            spdlog::debug(
+            Log::Debug(
                 L"Skipping... {} does not match the expected {}",
                 NtfsSegmentNumber(&read_record_frn),
                 NtfsSegmentNumber(&idx));
@@ -197,7 +197,7 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
         }
         if (read_record_frn.SequenceNumber != idx.SequenceNumber)
         {
-            spdlog::debug(
+            Log::Debug(
                 L"Skipping... Sequence numbed {} does not match the expected {}",
                 read_record_frn.SequenceNumber,
                 idx.SequenceNumber);
@@ -209,15 +209,15 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
         {
             if (hr == E_OUTOFMEMORY)
             {
-                spdlog::error(L"Add Record Callback failed, not enough memory to continue (code: {:#x})", hr);
+                Log::Error(L"Add Record Callback failed, not enough memory to continue (code: {:#x})", hr);
                 return hr;
             }
             else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
-                spdlog::debug(L"Add Record Callback asks for enumeration to stop... (code: {:#x})", hr);
+                Log::Debug(L"Add Record Callback asks for enumeration to stop... (code: {:#x})", hr);
                 return hr;
             }
-            spdlog::debug(L"WARNING: Add Record Callback failed");
+            Log::Debug(L"WARNING: Add Record Callback failed");
         }
     }
 
@@ -232,7 +232,7 @@ ULONG MFTOffline::GetMFTRecordCount() const
 
     if (FileSize.QuadPart % m_pVolReader->GetBytesPerFRS())
     {
-        spdlog::debug(L"Weird, MFT size is not a multiple of records...");
+        Log::Debug(L"Weird, MFT size is not a multiple of records...");
     }
 
     return FileSize.LowPart / m_pVolReader->GetBytesPerFRS();

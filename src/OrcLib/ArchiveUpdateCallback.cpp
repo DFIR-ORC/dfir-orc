@@ -376,7 +376,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
     if (operationResult != NArchive::NUpdate::NOperationResult::kOK)
     {
         HRESULT hr = E_FAIL;
-        spdlog::error(L"Failed operation on: '{}' (code: {:#x})", m_Items[m_curIndex].NameInArchive, operationResult);
+        Log::Error(L"Failed operation on: '{}' (code: {:#x})", m_Items[m_curIndex].NameInArchive, operationResult);
         if (item.m_archivedCallback)
         {
             item.m_archivedCallback(hr);
@@ -384,7 +384,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
         }
     }
 
-    spdlog::debug(L"Archive of '{}' succeed", m_Items[m_curIndex].NameInArchive);
+    Log::Debug(L"Archive of '{}' succeed", m_Items[m_curIndex].NameInArchive);
 
     item.Index = m_curIndexInArchive;
     m_Indexes[m_curIndexInArchive] = m_curIndex;

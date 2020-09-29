@@ -94,13 +94,13 @@ HRESULT Main::ChangeTemporaryEnvironment()
     if (!SetEnvironmentVariableW(L"TEMP", config.Temporary.Path.c_str()))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to set %TEMP% to '{}' (code: {:#x})", config.Temporary.Path, hr);
+        Log::Error(L"Failed to set %TEMP% to '{}' (code: {:#x})", config.Temporary.Path, hr);
         return E_INVALIDARG;
     }
     if (!SetEnvironmentVariableW(L"TMP", config.Temporary.Path.c_str()))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to set %TMP% to '{}' (code: {:#x})", config.Temporary.Path, hr);
+        Log::Error(L"Failed to set %TMP% to '{}' (code: {:#x})", config.Temporary.Path, hr);
         return E_INVALIDARG;
     }
 
@@ -111,7 +111,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
 {
     HRESULT hr = E_FAIL;
 
-    spdlog::debug(L"Running '{}'", command);
+    Log::Debug(L"Running '{}'", command);
 
     std::wstringstream cmdLineBuilder;
 
@@ -134,7 +134,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         hr = ExpandFilePath(L"%ComSpec%", strCreateProcessBinary);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to evaluate command spec '%ComSpec%' (code: {:#x})", hr);
+            Log::Error("Failed to evaluate command spec '%ComSpec%' (code: {:#x})", hr);
             return hr;
         }
 
@@ -174,7 +174,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
 
     if (cmdLineBuilder.width() > MAX_CMDLINE)
     {
-        spdlog::error(L"Command line too long (length: {}): {}", cmdLineBuilder.width(), cmdLineBuilder.str());
+        Log::Error(L"Command line too long (length: {}): {}", cmdLineBuilder.width(), cmdLineBuilder.str());
         return E_INVALIDARG;
     }
 
@@ -192,7 +192,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         const auto pk32 = ExtensionLibrary::GetLibrary<Kernel32Extension>();
         if (pk32 == nullptr)
         {
-            spdlog::error("Failed to obtain the Kernel32.dll as an extension library");
+            Log::Error("Failed to obtain the Kernel32.dll as an extension library");
             return E_FAIL;
         }
 
@@ -200,7 +200,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         hr = pk32->InitializeProcThreadAttributeList(nullptr, 1, 0, &sizeToAlloc);
         if (FAILED(hr) && hr != HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER))
         {
-            spdlog::error("Failed to obtain tread attribute list size (code: {:#x})", hr);
+            Log::Error("Failed to obtain tread attribute list size (code: {:#x})", hr);
             return hr;
         }
 
@@ -213,7 +213,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         hr = pk32->InitializeProcThreadAttributeList(pAttrList, 1, 0, &sizeToAlloc);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to obtain tread attribute list (code: {:#x})", hr);
+            Log::Error("Failed to obtain tread attribute list (code: {:#x})", hr);
             return hr;
         }
 
@@ -221,7 +221,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         if (m_hParentProcess == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(
+            Log::Error(
                 "Failed OpenProcess on parent pid {} with PROCESS_CREATE_PROCESS (code: {:#x})", config.dwParentID, hr);
             return hr;
         }
@@ -230,7 +230,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
             pAttrList, 0, PROC_THREAD_ATTRIBUTE_PARENT_PROCESS, &m_hParentProcess, sizeof(hParent), nullptr, nullptr);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to add process handle to attribute list (code: {:#x}", hr);
+            Log::Error("Failed to add process handle to attribute list (code: {:#x})", hr);
             return hr;
         }
 
@@ -241,7 +241,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
 
     config.dwCreationFlags |= CREATE_UNICODE_ENVIRONMENT;
 
-    spdlog::debug(L"Starting '{}' with command line '{}'", command, szCommandLine.data());
+    Log::Debug(L"Starting '{}' with command line '{}'", command, szCommandLine.data());
 
     if (!CreateProcess(
             strCreateProcessBinary.c_str(),
@@ -256,7 +256,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
             &m_pi))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Could not start '{}' with command line '{}' (code: {:#x})", command, szCommandLine.data(), hr);
+        Log::Error(L"Could not start '{}' with command line '{}' (code: {:#x})", command, szCommandLine.data(), hr);
         return hr;
     }
 
@@ -265,7 +265,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         const auto pk32 = ExtensionLibrary::GetLibrary<Kernel32Extension>();
         if (pk32 == nullptr)
         {
-            spdlog::error("Failed to obtain the Kernel32.dll as an extension library");
+            Log::Error("Failed to obtain the Kernel32.dll as an extension library");
             return E_FAIL;
         }
 
@@ -284,11 +284,11 @@ HRESULT Main::LaunchWMI()
     hr = GetProcessModuleFullPath(szMyselfName, MAX_PATH);
     if (FAILED(hr))
     {
-        spdlog::error("Failed to obtain own process full path (code: {:#x})", hr);
+        Log::Error("Failed to obtain own process full path (code: {:#x})", hr);
         return hr;
     }
 
-    spdlog::debug(L"Running '{}'...", szMyselfName);
+    Log::Debug(L"Running '{}'...", szMyselfName);
 
     bool bHasDeletionWork = false;
 
@@ -310,7 +310,7 @@ HRESULT Main::LaunchWMI()
         hr = ExpandFilePath(L"%ComSpec%", strCreateProcessBinary);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to evaluate command spec %ComSpec% (code: {:#x})", hr);
+            Log::Error("Failed to evaluate command spec %ComSpec% (code: {:#x})", hr);
             return hr;
         }
 
@@ -349,7 +349,7 @@ HRESULT Main::LaunchWMI()
 
     if (cmdLineBuilder.width() > MAX_CMDLINE)
     {
-        spdlog::error(L"Command line too long (length: {}): {}", cmdLineBuilder.width(), cmdLineBuilder.str());
+        Log::Error(L"Command line too long (length: {}): {}", cmdLineBuilder.width(), cmdLineBuilder.str());
         return E_FAIL;
     }
 
@@ -362,18 +362,17 @@ HRESULT Main::LaunchWMI()
     hr = wmi.Initialize();
     if (FAILED(hr))
     {
-        spdlog::error("Failed to initialize WMI (code: {:#x})", hr);
+        Log::Error("Failed to initialize WMI (code: {:#x})", hr);
         return hr;
     }
 
-    spdlog::debug(L"Starting with command line '{}'", szCommandLine.data());
+    Log::Debug(L"Starting with command line '{}'", szCommandLine.data());
 
     DWORD dwStatus = 0L;
     hr = wmi.WMICreateProcess(nullptr, szCommandLine.data(), config.dwCreationFlags, 0L, dwStatus);
     if (FAILED(hr) || dwStatus != 0L)
     {
-        spdlog::error(
-            L"Could not start command line '{}' (status: {}, code: {:#x})", szCommandLine.data(), dwStatus, hr);
+        Log::Error(L"Could not start command line '{}' (status: {}, code: {:#x})", szCommandLine.data(), dwStatus, hr);
         return hr;
     }
 
@@ -388,24 +387,24 @@ HRESULT Main::LaunchSelf()
 
     if (job.IsProcessInJob())
     {
-        spdlog::debug("Current process is running within a job");
+        Log::Debug("Current process is running within a job");
         if (!job.IsBreakAwayAllowed())
         {
             if (config.bPreserveJob)
             {
-                spdlog::error("Failed to allow break away from job (changes are not allowed)");
+                Log::Error("Failed to allow break away from job (changes are not allowed)");
             }
             else
             {
                 hr = job.AllowBreakAway(config.bPreserveJob);
                 if (FAILED(hr))
                 {
-                    spdlog::error("Failed to allow break away from job (code: {:#x})", hr);
+                    Log::Error("Failed to allow break away from job (code: {:#x})", hr);
                     return hr;
                 }
 
                 m_bAllowedBreakAwayOnJob = true;
-                spdlog::debug("Break away was not available, we enabled it");
+                Log::Debug("Break away was not available, we enabled it");
             }
         }
     }
@@ -414,7 +413,7 @@ HRESULT Main::LaunchSelf()
     hr = GetProcessModuleFullPath(szMyselfName, MAX_PATH);
     if (FAILED(hr))
     {
-        spdlog::error("Failed to obtain own process full path (code: {:#x})", hr);
+        Log::Error("Failed to obtain own process full path (code: {:#x})", hr);
         return hr;
     }
 
@@ -425,11 +424,11 @@ HRESULT Main::LaunchSelf()
         HRESULT _hr = job.BlockBreakAway();
         if (FAILED(_hr))
         {
-            spdlog::error("Failed to block break away from job (code: {:#x})", _hr);
+            Log::Error("Failed to block break away from job (code: {:#x})", _hr);
         }
         else
         {
-            spdlog::debug("Break away is now blocked again");
+            Log::Debug("Break away is now blocked again");
         }
     }
 
@@ -445,13 +444,13 @@ HRESULT Main::LaunchRun()
     HRESULT hr = EmbeddedResource::ExtractRunWithArgs(L"", strToExecuteRef, strRunArgs);
     if (FAILED(hr))
     {
-        spdlog::error("Not RUN ressource found to execute");
+        Log::Error("Not RUN ressource found to execute");
         return hr;
     }
 
     if (strToExecuteRef.empty())
     {
-        spdlog::error("RUN ressource is invalid (empty)");
+        Log::Error("RUN ressource is invalid (empty)");
         return E_FAIL;
     }
 
@@ -459,7 +458,7 @@ HRESULT Main::LaunchRun()
         strToExecuteRef, L"ToExecute.exe", RESSOURCE_READ_EXECUTE_BA, config.Temporary.Path, strToExecute);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to extract resource '{}' to file", strToExecuteRef);
+        Log::Error(L"Failed to extract resource '{}' to file", strToExecuteRef);
         return hr;
     }
 
@@ -482,7 +481,7 @@ HRESULT Main::LaunchRun()
     DWORD dwWaitResult = WaitForSingleObject(m_pi.hProcess, INFINITE);
     if (WAIT_OBJECT_0 != dwWaitResult)
     {
-        spdlog::warn("Waiting for process termination did not detect process termination");
+        Log::Warn("Waiting for process termination did not detect process termination");
     }
 
     if (pTerminate)
@@ -505,28 +504,27 @@ HRESULT Main::LaunchRun()
                 if (dwRetries > 20)
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    spdlog::error(L"Could not delete file '{}' (code: {:#x})", strToExecute, hr);
+                    Log::Error(L"Could not delete file '{}' (code: {:#x})", strToExecute, hr);
                     return hr;
                 }
                 else
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    spdlog::debug(
-                        L"Could not delete file '{}' (retries: {}, code: {:#x})", strToExecute, dwRetries, hr);
+                    Log::Debug(L"Could not delete file '{}' (retries: {}, code: {:#x})", strToExecute, dwRetries, hr);
                     dwRetries++;
                     Sleep(500);
                 }
             }
             else
             {
-                spdlog::debug(L"Successfully deleted file '{}'", strToExecute);
+                Log::Debug(L"Successfully deleted file '{}'", strToExecute);
                 bDeleted = true;
             }
 
         } while (!bDeleted);
     }
 
-    spdlog::debug(L"Done");
+    Log::Debug(L"Done");
 
     CloseHandle(m_pi.hThread);
     CloseHandle(m_pi.hProcess);
@@ -540,17 +538,17 @@ HRESULT Main::DownloadLocalCopy()
 
     if (!m_DownloadTask)
     {
-        spdlog::error("No download task configured to download local copy");
+        Log::Error("No download task configured to download local copy");
         return E_INVALIDARG;
     }
 
     if (FAILED(hr = m_DownloadTask->Initialize(config.bNoWait ? true : false)))
     {
-        spdlog::error("Failed to initialize download task (code: {:#x})", hr);
+        Log::Error("Failed to initialize download task (code: {:#x})", hr);
     }
     else if (FAILED(hr = m_DownloadTask->Finalise()))
     {
-        spdlog::error("Failed to finalize download task (code: {:#x})", hr);
+        Log::Error("Failed to finalize download task (code: {:#x})", hr);
     }
     else
     {
@@ -563,18 +561,18 @@ HRESULT Main::DownloadLocalCopy()
         return hr;
     }
 
-    spdlog::warn("Download failed with specified method but alternative is available");
+    Log::Warn("Download failed with specified method but alternative is available");
     hr = retry->Initialize(config.bNoWait ? true : false);
     if (FAILED(hr))
     {
-        spdlog::error("Failed to initialize download task (code: {:#x})", hr);
+        Log::Error("Failed to initialize download task (code: {:#x})", hr);
         return hr;
     }
 
     hr = retry->Finalise();
     if (FAILED(hr))
     {
-        spdlog::error("Failed to finalize download task (code: {:#x})", hr);
+        Log::Error("Failed to finalize download task (code: {:#x})", hr);
         return hr;
     }
 
@@ -588,7 +586,7 @@ HRESULT Main::Run()
     hr = ChangeTemporaryEnvironment();
     if (FAILED(hr))
     {
-        spdlog::warn("Failed to modify temp directory (code: {:#x})", hr);
+        Log::Warn("Failed to modify temp directory (code: {:#x})", hr);
     }
 
     if (config.bUseLocalCopy && m_DownloadTask)
@@ -598,7 +596,7 @@ HRESULT Main::Run()
         hr = SystemDetails::GetProcessBinary(strProcessBinary);
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to obtain process' binary, cancelling download task");
+            Log::Error(L"Failed to obtain process' binary, cancelling download task");
         }
         else
         {
@@ -608,7 +606,7 @@ HRESULT Main::Run()
             {
                 case SystemDetails::DriveType::Drive_Unknown:
                 case SystemDetails::DriveType::Drive_No_Root_Dir: {
-                    spdlog::warn(L"Running from invalid location '{}', canceling download task", strProcessBinary);
+                    Log::Warn(L"Running from invalid location '{}', canceling download task", strProcessBinary);
                 }
                 break;
                 case SystemDetails::DriveType::Drive_RamDisk:
@@ -624,7 +622,7 @@ HRESULT Main::Run()
                     hr = DownloadLocalCopy();
                     if (FAILED(hr))
                     {
-                        spdlog::error(L"Downloading to local device failed, download task ignored (code: {:#x})", hr);
+                        Log::Error(L"Downloading to local device failed, download task ignored (code: {:#x})", hr);
                         break;
                     }
 

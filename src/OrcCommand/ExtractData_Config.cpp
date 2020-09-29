@@ -84,13 +84,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configItem)
         hr = GetIntegerFromArg(cliArg.c_str(), li);
         if (FAILED(hr))
         {
-            spdlog::error(L"Invalid concurrency value specified '{}' must be an integer.", cliArg);
+            Log::Error(L"Invalid concurrency value specified '{}' must be an integer.", cliArg);
             return hr;
         }
 
         if (li.QuadPart > MAXDWORD)
         {
-            spdlog::error(L"concurrency value specified '{}' seems invalid.", cliArg);
+            Log::Error(L"concurrency value specified '{}' seems invalid.", cliArg);
             return hr;
         }
 
@@ -116,7 +116,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configItem)
             hr = GetDefinitionFromConfig(inputNode, inputItem.importDefinitions);
             if (FAILED(hr))
             {
-                spdlog::error(L"Failed to configure import definitions");
+                Log::Error(L"Failed to configure import definitions");
             }
 
             config.inputItems.push_back(std::move(inputItem));
@@ -163,7 +163,7 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& configItem, ImportDefini
             hr = GetIgnoreItemFromConfig(ignoreItem, import);
             if (FAILED(hr))
             {
-                spdlog::error(L"Failed to get import definition item config");
+                Log::Error(L"Failed to get import definition item config");
             }
 
             import.ToDo = ImportDefinition::Ignore;
@@ -179,7 +179,7 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& configItem, ImportDefini
             hr = GetImportItemFromConfig(extractItem, import);
             if (FAILED(hr))
             {
-                spdlog::error(L"Failed to get import definition item config");
+                Log::Error(L"Failed to get import definition item config");
             }
 
             import.ToDo = ImportDefinition::Extract;
@@ -246,7 +246,7 @@ HRESULT Main::ParseArgument(std::wstring_view arg, Configuration& config)
             auto path = ExpandEnvironmentStringsApi(arg.data(), ec);
             if (ec)
             {
-                spdlog::warn(L"Invalid input '{}' specified (code: {:#x})", arg.data(), ec.value());
+                Log::Warn(L"Invalid input '{}' specified (code: {:#x})", arg.data(), ec.value());
                 return HRESULT_FROM_WIN32(ec.value());
             }
 
@@ -289,7 +289,7 @@ HRESULT Main::CheckConfiguration()
         const auto workingDir = GetWorkingDirectoryApi(ec);
         if (ec)
         {
-            spdlog::error("Failed GetWorkingDirectory (code: {:#x})", ec.value());
+            Log::Error("Failed GetWorkingDirectory (code: {:#x})", ec.value());
             return HRESULT_FROM_WIN32(ec.value());
         }
 
@@ -302,13 +302,13 @@ HRESULT Main::CheckConfiguration()
     }
     else
     {
-        spdlog::debug("No temporary folder provided, defaulting to %TEMP%");
+        Log::Debug("No temporary folder provided, defaulting to %TEMP%");
 
         WCHAR szTempDir[MAX_PATH];
         hr = UtilGetTempDirPath(szTempDir, MAX_PATH);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to provide a default temporary folder (code: {:#x})", hr);
+            Log::Error("Failed to provide a default temporary folder (code: {:#x})", hr);
         }
     }
 

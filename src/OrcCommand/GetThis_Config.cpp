@@ -124,13 +124,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.Locations.AddLocationsFromConfigItem(configitem[GETTHIS_LOCATION])))
     {
-        spdlog::error(L"Syntax error in specific locations parsing in config file");
+        Log::Error(L"Syntax error in specific locations parsing in config file");
         return hr;
     }
 
     if (FAILED(hr = config.Locations.AddKnownLocations(configitem[GETTHIS_KNOWNLOCATIONS])))
     {
-        spdlog::error(L"Syntax error in known locations parsing in config file");
+        Log::Error(L"Syntax error in known locations parsing in config file");
         return hr;
     }
 
@@ -174,7 +174,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                     if (const auto [valid, reason] = filespec->IsValidTerm(); valid)
                         aSpec.Terms.push_back(filespec);
                     else
-                        spdlog::error(L"Term is invalid, reason: {}", reason);
+                        Log::Error(L"Term is invalid, reason: {}", reason);
                 }
             }
 
@@ -186,7 +186,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                     if (const auto [valid, reason] = filespec->IsValidTerm(); valid)
                         config.listOfExclusions.push_back(filespec);
                     else
-                        spdlog::error(L"Term is invalid, reason: {}", reason);
+                        Log::Error(L"Term is invalid, reason: {}", reason);
                 }
             }
 
@@ -258,7 +258,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             const auto alg = CryptoHashStream::GetSupportedAlgorithm(key.c_str());
             if (alg == CryptoHashStream::Algorithm::Undefined)
             {
-                spdlog::warn(L"Hash algorithm '{}' is not supported", key);
+                Log::Warn(L"Hash algorithm '{}' is not supported", key);
             }
             else
             {
@@ -279,7 +279,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             auto alg = FuzzyHashStream::GetSupportedAlgorithm(key.c_str());
             if (alg == FuzzyHashStream::Algorithm::Undefined)
             {
-                spdlog::warn(L"Fuzzy hash algorithm '{}' is not supported", key);
+                Log::Warn(L"Fuzzy hash algorithm '{}' is not supported", key);
             }
             else
             {
@@ -319,7 +319,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         LPCWSTR pEquals = wcschr(argv[i], L'=');
                         if (!pEquals)
                         {
-                            spdlog::error("Option /Sample should be like: /Sample=malware.exe");
+                            Log::Error("Option /Sample should be like: /Sample=malware.exe");
                             return E_INVALIDARG;
                         }
                         else
@@ -388,13 +388,13 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
         if (FAILED(hr = config.Locations.AddLocationsFromArgcArgv(argc, argv)))
         {
-            spdlog::error("Error in specific locations parsing");
+            Log::Error("Error in specific locations parsing");
             return E_INVALIDARG;
         }
     }
     catch (...)
     {
-        spdlog::error("GetThis failed during argument parsing, exiting");
+        Log::Error("GetThis failed during argument parsing, exiting");
         return E_INVALIDARG;
     }
     return S_OK;
@@ -411,7 +411,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
     {
-        spdlog::warn(L"No output explicitely specified: creating GetThis.7z in current directory");
+        Log::Warn(L"No output explicitely specified: creating GetThis.7z in current directory");
         config.Output.Path = L"GetThis.7z";
         config.Output.Type = OutputSpec::Kind::Archive;
         config.Output.ArchiveFormat = ArchiveFormat::SevenZip;
@@ -447,7 +447,7 @@ HRESULT Main::CheckConfiguration()
     if (!config.limits.bIgnoreLimits
         && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
     {
-        spdlog::error(
+        Log::Critical(
             L"No global (at samples level, MaxBytesTotal or MaxSampleCount) has been set: set limits in configuration "
             L"or use /nolimits");
         return E_INVALIDARG;
@@ -457,7 +457,7 @@ HRESULT Main::CheckConfiguration()
 
     if (FAILED(hr = FileFinder.InitializeYara(config.Yara)))
     {
-        spdlog::error(L"Failed to initialize yara scanner");
+        Log::Error(L"Failed to initialize yara scanner");
         return hr;
     }
 

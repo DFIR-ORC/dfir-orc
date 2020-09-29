@@ -14,7 +14,7 @@
 
 #include "fmt/format.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -31,7 +31,7 @@ Exception::Exception(ExceptionSeverity status, std::wstring descr)
 
 HRESULT Exception::PrintMessage() const
 {
-    spdlog::error(L"Exception Occured: {}", Description);
+    Log::Error(L"Exception Occured: {}", Description);
     return S_OK;
 }
 

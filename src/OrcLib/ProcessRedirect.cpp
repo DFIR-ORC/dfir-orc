@@ -17,7 +17,7 @@
 
 #include "ByteStream.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 using namespace Concurrency;
@@ -93,7 +93,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
             ULONGLONG ullBytesWritten = 0L;
             if (FAILED(hr = m_pBS->Write(m_ASyncIO.Buffer, dwNumberOfBytesTransfered, &ullBytesWritten)))
             {
-                spdlog::warn(L"Failed to write incoming data (code: {:#x})", hr);
+                Log::Warn(L"Failed to write incoming data (code: {:#x})", hr);
             }
         }
         if (m_ReadHandle != INVALID_HANDLE_VALUE)
@@ -113,7 +113,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
                         Close();
                         break;
                     default:
-                        spdlog::error(L"ReadFile from child failed (code: {:#x})", HRESULT_FROM_WIN32(dwLastError));
+                        Log::Error(L"ReadFile from child failed (code: {:#x})", HRESULT_FROM_WIN32(dwLastError));
                         break;
                 }
             }
@@ -138,7 +138,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
                         Close();
                         break;
                     default:
-                        spdlog::error("ReadFile from child failed (code: {:#x})", HRESULT_FROM_WIN32(dwLastError));
+                        Log::Error("ReadFile from child failed (code: {:#x})", HRESULT_FROM_WIN32(dwLastError));
                         break;
                 }
             }

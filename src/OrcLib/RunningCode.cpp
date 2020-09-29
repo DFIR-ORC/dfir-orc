@@ -70,7 +70,7 @@ HRESULT RunningCode::EnumProcessesModules()
         HRESULT hr2 = E_FAIL;
         if (FAILED(hr2 = EnumModules(pProcesses[i])))
         {
-            spdlog::debug(L"Could not load modules for process: {} (code: {:#x})", pProcesses[i], hr2);
+            Log::Debug(L"Could not load modules for process: {} (code: {:#x})", pProcesses[i], hr2);
         }
     }
     return hr;
@@ -86,14 +86,14 @@ HRESULT RunningCode::EnumModules(DWORD dwPID)
     const auto psapi = ExtensionLibrary::GetLibrary<PSAPIExtension>();
     if (!psapi)
     {
-        spdlog::debug(L"EnumModules: Failed to load PSAPI");
+        Log::Debug(L"EnumModules: Failed to load PSAPI");
         return E_FAIL;
     }
 
     if ((hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, dwPID)) == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug(L"EnumModules: OpenProcess failed for pid {} (code: {:#x})", dwPID, hr);
+        Log::Debug(L"EnumModules: OpenProcess failed for pid {} (code: {:#x})", dwPID, hr);
         return hr;
     }
 
@@ -157,7 +157,7 @@ HRESULT RunningCode::EnumModules(DWORD dwPID)
             // this module was unknown (yet)
             modinfo.Pids.push_back(dwPID);
             m_ModMap.insert(pair<std::wstring, ModuleInfo>(modinfo.strModule, modinfo));
-            spdlog::trace(L"EnumModule: {}", modinfo.strModule);
+            Log::Trace(L"EnumModule: {}", modinfo.strModule);
         }
     }
     phModules = nullptr;
@@ -219,7 +219,7 @@ HRESULT RunningCode::EnumDeviceDrivers()
             if (item == m_ModMap.end())
             {
                 m_ModMap.insert(pair<wstring, ModuleInfo>(modinfo.strModule, modinfo));
-                spdlog::trace(L"EnumDeviceDriver '{}'", modinfo.strModule);
+                Log::Trace(L"EnumDeviceDriver '{}'", modinfo.strModule);
             }
 
             return S_OK;
@@ -238,7 +238,7 @@ HRESULT RunningCode::SnapEnumProcessesModules()
     if (hSnapshot == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Unable to create snapshot (code: {:#x})", hr);
+        Log::Error("Unable to create snapshot (code: {:#x})", hr);
         return hr;
     }
 
@@ -248,7 +248,7 @@ HRESULT RunningCode::SnapEnumProcessesModules()
     if (!Module32First(hSnapshot, &me32))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed Module32First (code: {:#x})", hr);
+        Log::Error("Failed Module32First (code: {:#x})", hr);
         CloseHandle(hSnapshot);
         return hr;
     }
@@ -273,7 +273,7 @@ HRESULT RunningCode::SnapEnumProcessesModules()
             // this module was unknown (yet)
             modinfo.Pids.push_back(me32.th32ProcessID);
             m_ModMap.insert(pair<std::wstring, ModuleInfo>(modinfo.strModule, modinfo));
-            spdlog::trace(L"SnapEnumModule '{}'", modinfo.strModule);
+            Log::Trace(L"SnapEnumModule '{}'", modinfo.strModule);
         }
 
     } while (Module32Next(hSnapshot, &me32));
@@ -289,15 +289,15 @@ HRESULT RunningCode::EnumRunningCode()
 
     if (FAILED(hr = EnumProcessesModules()))
     {
-        spdlog::error("Failed to enumerate process's modules (code: {:#x})", hr);
+        Log::Error("Failed to enumerate process's modules (code: {:#x})", hr);
     }
     if (FAILED(hr = EnumDeviceDrivers()))
     {
-        spdlog::error("Failed to enumerate device drivers (code: {:#x})", hr);
+        Log::Error("Failed to enumerate device drivers (code: {:#x})", hr);
     }
     if (FAILED(hr = SnapEnumProcessesModules()))
     {
-        spdlog::error("Failed to enumerate SNAPSHOT modules (code: {:#x})", hr);
+        Log::Error("Failed to enumerate SNAPSHOT modules (code: {:#x})", hr);
     }
     return S_OK;
 }

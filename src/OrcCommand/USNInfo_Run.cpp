@@ -138,7 +138,7 @@ HRESULT Main::USNRecordInformation(
     }
     catch (WCHAR* e)
     {
-        spdlog::error(L"Exception: could not WriteFileInformation for '{}': {}", szFullName, e);
+        Log::Error(L"Exception: could not WriteFileInformation for '{}': {}", szFullName, e);
     }
 
     return S_OK;
@@ -167,7 +167,7 @@ HRESULT Main::Run()
         hr = m_outputs.Prepare(config.output);
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to prepare archive for '{}' (code: {:#x})", config.output.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.output.Path, hr);
             return hr;
         }
     }
@@ -178,7 +178,7 @@ HRESULT Main::Run()
     hr = m_outputs.GetWriters(config.output, L"USNInfo", locations);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to get writers for locations (code: {:#x})", hr);
+        Log::Error(L"Failed to get writers for locations (code: {:#x})", hr);
         return hr;
     }
 
@@ -192,18 +192,17 @@ HRESULT Main::Run()
             {
                 if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
                 {
-                    spdlog::warn(L"File system not eligible for volume '{}'", dir.first.m_pLoc->GetLocation());
+                    Log::Warn(L"File system not eligible for volume '{}'", dir.first.m_pLoc->GetLocation());
                     return S_OK;
                 }
 
-                spdlog::error(
-                    L"Failed to init walk for volume '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
+                Log::Error(L"Failed to init walk for volume '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
                 return hr;
             }
 
             if (!walker.GetUsnJournal())
             {
-                spdlog::warn(L"Did not find a USN journal on following volume '{}'", dir.first.m_pLoc->GetLocation());
+                Log::Warn(L"Did not find a USN journal on following volume '{}'", dir.first.m_pLoc->GetLocation());
                 return S_OK;
             }
 
@@ -214,7 +213,7 @@ HRESULT Main::Run()
             hr = walker.EnumJournal(callbacks);
             if (FAILED(hr))
             {
-                spdlog::error(L"Failed to enum MFT records '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
+                Log::Error(L"Failed to enum MFT records '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
                 return S_OK;
             }
 
@@ -226,17 +225,17 @@ HRESULT Main::Run()
             hr = walker.ReadJournal(callbacks);
             if (FAILED(hr))
             {
-                spdlog::error(L"Failed to walk volume '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
+                Log::Error(L"Failed to walk volume '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
                 return S_OK;
             }
 
-            spdlog::info(L"Done");
+            Log::Info(L"Done");
             return S_OK;
         });
 
     if (FAILED(hr))
     {
-        spdlog::error("Failed during the enumeration of output items (code: {:#x})", hr);
+        Log::Error("Failed during the enumeration of output items (code: {:#x})", hr);
         return hr;
     }
 

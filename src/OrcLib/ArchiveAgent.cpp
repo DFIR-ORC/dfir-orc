@@ -95,11 +95,11 @@ HRESULT ArchiveAgent::CompleteOnFlush(bool bFinal)
                             if (!RemoveDirectory(action.Fullpath().c_str()))
                             {
                                 hr = action.m_hr = HRESULT_FROM_WIN32(GetLastError());
-                                spdlog::error(L"Failed to delete directory '{}' (code: {:#x})", action.Fullpath(), hr);
+                                Log::Error(L"Failed to delete directory '{}' (code: {:#x})", action.Fullpath(), hr);
                             }
                             else
                             {
-                                spdlog::debug(L"Successfully deleted file {}", action.Fullpath());
+                                Log::Debug(L"Successfully deleted file {}", action.Fullpath());
                                 action.m_hr = S_OK;
                             }
                         }
@@ -119,11 +119,11 @@ HRESULT ArchiveAgent::CompleteOnFlush(bool bFinal)
                             if (!DeleteFile(action.Fullpath().c_str()))
                             {
                                 hr = action.m_hr = HRESULT_FROM_WIN32(GetLastError());
-                                spdlog::error(L"Failed to delete directory '{}' (code: {:#x})", action.Fullpath(), hr);
+                                Log::Error(L"Failed to delete directory '{}' (code: {:#x})", action.Fullpath(), hr);
                             }
                             else
                             {
-                                spdlog::debug(L"Successfully deleted file '{}'", action.Fullpath());
+                                Log::Debug(L"Successfully deleted file '{}'", action.Fullpath());
                                 action.m_hr = S_OK;
                             }
                         }
@@ -359,7 +359,7 @@ void ArchiveAgent::run()
                     if (!FindClose(hFind))
                     {
                         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-                        spdlog::warn("Failed to close FindFile while adding directory to CAB (code: {:#x})", hr);
+                        Log::Warn("Failed to close FindFile while adding directory to CAB (code: {:#x})", hr);
                     }
                 }
 

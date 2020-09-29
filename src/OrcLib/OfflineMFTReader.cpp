@@ -10,7 +10,7 @@
 
 #include "OfflineMFTReader.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -61,7 +61,7 @@ HRESULT OfflineMFTReader::LoadDiskProperties()
         == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Could not open offline MFT file '{}' (code: {:#x})", m_szMFTFileName, hr);
+        Log::Error(L"Could not open offline MFT file '{}' (code: {:#x})", m_szMFTFileName, hr);
         return hr;
     }
 

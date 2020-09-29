@@ -11,7 +11,7 @@
 
 #include <windows.h>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 namespace Orc {
 namespace Guard {
@@ -75,7 +75,7 @@ public:
 
         if (CloseHandle(handle) == FALSE)
         {
-            spdlog::warn("Failed on CloseHandle (code: {:#x})", GetLastError());
+            Log::Warn("Failed on CloseHandle (code: {:#x})", GetLastError());
         }
     }
 
@@ -103,7 +103,7 @@ public:
 
         if (CloseHandle(handle) == FALSE)
         {
-            spdlog::warn("Failed on CloseHandle: {}", GetLastError());
+            Log::Warn("Failed on CloseHandle: {}", GetLastError());
         }
     }
 

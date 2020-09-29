@@ -291,7 +291,7 @@ protected:
         }
         catch (const fmt::format_error& error)
         {
-            spdlog::error("fmt::format_error: {}", error.what());
+            Log::Error("fmt::format_error: {}", error.what());
             return E_INVALIDARG;
         }
 

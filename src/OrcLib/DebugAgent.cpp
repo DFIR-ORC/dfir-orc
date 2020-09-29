@@ -14,7 +14,7 @@
 
 #include "DbgHelpLibrary.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 
@@ -36,12 +36,12 @@ DWORD WINAPI DebugAgent::StaticDebugLoopProc(__in LPVOID lpParameter)
     if (!DebugActiveProcess(pThis->m_dwProcessID))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed to attach debugger to running process (pid: {}, code: {:#x})", pThis->m_dwProcessID, hr);
+        Log::Error("Failed to attach debugger to running process (pid: {}, code: {:#x})", pThis->m_dwProcessID, hr);
         return hr;
     }
     else
     {
-        spdlog::debug("Attached debugger to running process (pid: {})", pThis->m_dwProcessID);
+        Log::Debug("Attached debugger to running process (pid: {})", pThis->m_dwProcessID);
     }
 
     if (pThis != NULL)
@@ -70,7 +70,7 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
     if (hFile == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed CreateFile on '{}' (code: {:#x})", strTempDumpFileName, hr);
+        Log::Error(L"Failed CreateFile on '{}' (code: {:#x})", strTempDumpFileName, hr);
         return hr;
     }
     // Create the minidump
@@ -78,7 +78,7 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
     if (hThread == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed OpenThread (tid: {}, code: {:#x})", debug_event.dwThreadId, hr);
+        Log::Error(L"Failed OpenThread (tid: {}, code: {:#x})", debug_event.dwThreadId, hr);
         return hr;
     }
 
@@ -115,7 +115,7 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
     if (hProcess == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(
+        Log::Error(
             "Failed to CreateMinidump: OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_READ) failed (pid: {}, code: "
             "{:#x})",
             m_dwProcessID,
@@ -124,16 +124,16 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
         return hr;
     }
 
-    spdlog::debug(L"Creating Mini Dump %s...", strTempDumpFileName);
+    Log::Debug(L"Creating Mini Dump {}...", strTempDumpFileName);
 
     if (FAILED(hr = pDbgDll->MiniDumpWriteDump(hProcess, m_dwProcessID, hFile, mdt, &mdei, nullptr, nullptr)))
     {
-        spdlog::error(L"Failed on MiniDumpWriteDump (code: {:#x})", hr);
+        Log::Error(L"Failed on MiniDumpWriteDump (code: {:#x})", hr);
         return hr;
     }
     else
     {
-        spdlog::debug(L"Created Mini Dump '{}'", strTempDumpFileName);
+        Log::Debug(L"Created Mini Dump '{}'", strTempDumpFileName);
         m_Dumps.push_back(std::move(strTempDumpFileName));
     }
 
@@ -157,7 +157,7 @@ void DebugAgent::DebugLoop()
 
     bool bContinue = true;
 
-    spdlog::debug("DebugEvent: Entering event loop for pid: {}", m_dwProcessID);
+    Log::Debug("DebugEvent: Entering event loop for pid: {}", m_dwProcessID);
 
     do
     {
@@ -168,14 +168,14 @@ void DebugAgent::DebugLoop()
         switch (m_Event.dwDebugEventCode)
         {
             case CREATE_PROCESS_DEBUG_EVENT:
-                spdlog::debug("DebugEvent: CREATE_PROCESS_DEBUG_EVENT");
+                Log::Debug("DebugEvent: CREATE_PROCESS_DEBUG_EVENT");
                 CloseHandleHelper(m_Event.u.CreateProcessInfo.hFile);
                 break;
             case CREATE_THREAD_DEBUG_EVENT:
-                spdlog::debug("DebugEvent: CREATE_THREAD_DEBUG_EVENT");
+                Log::Debug("DebugEvent: CREATE_THREAD_DEBUG_EVENT");
                 break;
             case EXCEPTION_DEBUG_EVENT:
-                spdlog::debug(
+                Log::Debug(
                     "DebugEvent: EXCEPTION_DEBUG_EVENT code: {}, pid: {}, tid: {}, {}",
                     m_Event.u.Exception.ExceptionRecord.ExceptionCode,
                     m_Event.dwProcessId,
@@ -185,12 +185,12 @@ void DebugAgent::DebugLoop()
                     dwExceptionHandled = DBG_EXCEPTION_NOT_HANDLED;
                     if (!m_Event.u.Exception.dwFirstChance)
                     {
-                        spdlog::debug(
+                        Log::Debug(
                             "Exception occured in child process (code: {:#x})",
                             m_Event.u.Exception.ExceptionRecord.ExceptionCode);
                         if (SUCCEEDED(hr = CreateMinidump(m_Event)))
                         {
-                            spdlog::debug(L"Dump file created: '{}'", m_Dumps.back());
+                            Log::Debug(L"Dump file created: '{}'", m_Dumps.back());
                         }
                     }
                     DWORD ExceptionCode = m_Event.u.Exception.ExceptionRecord.ExceptionCode;
@@ -199,38 +199,38 @@ void DebugAgent::DebugLoop()
                 }
                 break;
             case EXIT_PROCESS_DEBUG_EVENT:
-                spdlog::debug("DebugEvent: EXIT_PROCESS_DEBUG_EVENT");
+                Log::Debug("DebugEvent: EXIT_PROCESS_DEBUG_EVENT");
                 bContinue = false;
                 break;
             case EXIT_THREAD_DEBUG_EVENT:
-                spdlog::debug("DebugEvent: EXIT_THREAD_DEBUG_EVENT");
+                Log::Debug("DebugEvent: EXIT_THREAD_DEBUG_EVENT");
                 break;
             case LOAD_DLL_DEBUG_EVENT:
-                spdlog::debug("DebugEvent: LOAD_DLL_DEBUG_EVENT");
+                Log::Debug("DebugEvent: LOAD_DLL_DEBUG_EVENT");
                 CloseHandleHelper(m_Event.u.LoadDll.hFile);
                 break;
             case OUTPUT_DEBUG_STRING_EVENT:
-                spdlog::debug("DebugEvent: OUTPUT_DEBUG_STRING_EVENT");
+                Log::Debug("DebugEvent: OUTPUT_DEBUG_STRING_EVENT");
                 break;
             case RIP_EVENT:
-                spdlog::debug("DebugEvent: RIP_EVENT");
+                Log::Debug("DebugEvent: RIP_EVENT");
                 break;
             case UNLOAD_DLL_DEBUG_EVENT:
-                spdlog::debug("DebugEvent: UNLOAD_DLL_DEBUG_EVENT");
+                Log::Debug("DebugEvent: UNLOAD_DLL_DEBUG_EVENT");
                 break;
             default:
-                spdlog::debug("DebugEvent: Unknown Debug event code: {:#x}", m_Event.dwDebugEventCode);
+                Log::Debug("DebugEvent: Unknown Debug event code: {:#x}", m_Event.dwDebugEventCode);
         }
 
         // Let the debuggee continue
         if (!ContinueDebugEvent(m_Event.dwProcessId, m_Event.dwThreadId, dwExceptionHandled))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Failed to ContinueDebugEvent() (code: {:#x})", hr);
+            Log::Error("Failed to ContinueDebugEvent() (code: {:#x})", hr);
             return;
         }
     } while (bContinue);
-    spdlog::debug("DebugEvent: Exiting Debug Loop");
+    Log::Debug("DebugEvent: Exiting Debug Loop");
 }
 
 std::shared_ptr<DebugAgent>
@@ -246,7 +246,7 @@ DebugAgent::DebugProcess(DWORD dwProcessID, const std::wstring& strDirectory, co
             (LPTHREAD_START_ROUTINE)DebugAgent::StaticDebugLoopProc, pAgent.get(), WT_EXECUTELONGFUNCTION))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to queue debugger agent (code: {:#x})", hr);
+        Log::Error(L"Failed to queue debugger agent (code: {:#x})", hr);
         return nullptr;
     }
     return pAgent;

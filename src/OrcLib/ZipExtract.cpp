@@ -58,7 +58,7 @@ STDMETHODIMP ZipExtract::Extract(
     const auto pZipLib = ZipLibrary::GetZipLibrary();
     if (pZipLib == nullptr)
     {
-        spdlog::error(L"Failed to load 7zip.dll");
+        Log::Error(L"Failed to load 7zip.dll");
         return E_FAIL;
     }
 
@@ -66,7 +66,7 @@ STDMETHODIMP ZipExtract::Extract(
 
     if (FAILED(hr = pZipLib->CreateObject(&CLSID_CFormat7z, &IID_IInArchive, reinterpret_cast<void**>(&archive))))
     {
-        spdlog::error(L"Failed to create archive reader (code: {:#x})", hr);
+        Log::Error(L"Failed to create archive reader (code: {:#x})", hr);
         return hr;
     }
 
@@ -74,7 +74,7 @@ STDMETHODIMP ZipExtract::Extract(
 
     if (FAILED(hr = makeArchiveStream(InputStream)))
     {
-        spdlog::error(L"Failed to make archive stream (code: {:#x})", hr);
+        Log::Error(L"Failed to make archive stream (code: {:#x})", hr);
         return hr;
     }
 
@@ -83,7 +83,7 @@ STDMETHODIMP ZipExtract::Extract(
 
     if ((hr = archive->Open(infile, 0, openCallback)) != S_OK)
     {
-        spdlog::error(L"Failed when opening archive (code: {:#x})", hr);
+        Log::Error(L"Failed when opening archive (code: {:#x})", hr);
         return hr;
     }
 
@@ -93,7 +93,7 @@ STDMETHODIMP ZipExtract::Extract(
     hr = archive->Extract(NULL, (UInt32)-1, false, extractCallback);
     if (hr != S_OK)  // returning S_FALSE also indicates error
     {
-        spdlog::error(L"Failed when extracting archive (code: {:#x})", hr);
+        Log::Error(L"Failed when extracting archive (code: {:#x})", hr);
         return hr;
     }
 

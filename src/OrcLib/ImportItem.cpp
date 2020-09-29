@@ -38,7 +38,7 @@ std::shared_ptr<ByteStream> ImportItem::GetInputStream()
         HRESULT hr = E_FAIL;
         if (FAILED(hr = retval->ReadFrom(inputFile->c_str())))
         {
-            spdlog::error(L"Failed to open import item {} (code: {:#x})", fullName, hr);
+            Log::Error(L"Failed to open import item {} (code: {:#x})", fullName, hr);
             return nullptr;
         }
         return Stream = retval;
@@ -68,7 +68,7 @@ std::shared_ptr<ByteStream> ImportItem::GetOutputStream()
                     FILE_ATTRIBUTE_NORMAL,
                     NULL)))
         {
-            spdlog::error(L"Failed to open import item '{}' (code: {:#x})", fullName, hr);
+            Log::Error(L"Failed to open import item '{}' (code: {:#x})", fullName, hr);
             return nullptr;
         }
         return Stream = retval;
@@ -84,7 +84,7 @@ std::wstring ImportItem::GetBaseName()
         WCHAR szBasename[MAX_PATH];
         if (FAILED(hr = GetBaseNameForFile(name.c_str(), szBasename, MAX_PATH)))
         {
-            spdlog::error(L"Failed to extract basename for file '{}' (code: {:#x})", name, hr);
+            Log::Error(L"Failed to extract basename for file '{}' (code: {:#x})", name, hr);
             return L"";
         }
 
@@ -96,7 +96,7 @@ std::wstring ImportItem::GetBaseName()
         WCHAR szBasename[MAX_PATH];
         if (FAILED(hr = GetBaseNameForFile(fullName.c_str(), szBasename, MAX_PATH)))
         {
-            spdlog::error(L"Failed to extract basename for file '{}' (code: {:#x})", fullName, hr);
+            Log::Error(L"Failed to extract basename for file '{}' (code: {:#x})", fullName, hr);
             return L"";
         }
         return szBasename;

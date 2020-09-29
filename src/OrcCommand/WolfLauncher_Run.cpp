@@ -92,7 +92,7 @@ HRESULT Main::GetOutputFileInformations(const WolfExecution& exec, FileInformati
     ZeroMemory(&data, sizeof(WIN32_FILE_ATTRIBUTE_DATA));
     if (!GetFileAttributesExW(exec.GetOutputFullPath().c_str(), GetFileExInfoStandard, &data))
     {
-        spdlog::warn(
+        Log::Warn(
             L"Failed to obtain file attributes of '{}' (code: {:#x})",
             exec.GetOutputFullPath(),
             HRESULT_FROM_WIN32(GetLastError()));
@@ -108,7 +108,7 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
 {
     if (uploadspec.Method == OutputSpec::UploadMethod::NoUpload)
     {
-        spdlog::debug("UPLOAD: no upload method selected");
+        Log::Debug("UPLOAD: no upload method selected");
         return S_OK;
     }
 
@@ -120,7 +120,7 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
             HRESULT hr = upload->GetHResult();
             if (FAILED(hr))
             {
-                spdlog::critical(
+                Log::Critical(
                     L"UPLOAD: Operation for '{}' failed: '{}' (code: {:#x})",
                     upload->Source(),
                     upload->Description(),
@@ -155,7 +155,7 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
                     m_journal.Print(upload->Keyword(), operation, L"Complete: {}", upload->Destination());
                     break;
                 case UploadNotification::JobComplete:
-                    spdlog::debug(L"Upload job complete: {}", upload->Request()->JobName());
+                    Log::Debug(L"Upload job complete: {}", upload->Request()->JobName());
                     break;
             }
         });
@@ -165,13 +165,13 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
 
     if (uploadAgent == nullptr)
     {
-        spdlog::critical("Failed to create upload agent");
+        Log::Critical("Failed to create upload agent");
         return E_FAIL;
     }
 
     if (!uploadAgent->start())
     {
-        spdlog::critical("Failed to start upload agent");
+        Log::Critical("Failed to start upload agent");
         // Agent has reference on queue and notifications so make sure it is cleared before
         uploadAgent.reset();
         return E_FAIL;
@@ -226,7 +226,7 @@ HRESULT Main::SetWERDontShowUI(DWORD dwNewValue, DWORD& dwPreviousValue)
     if (lasterror != ERROR_SUCCESS)
     {
         HRESULT hr = HRESULT_FROM_WIN32(lasterror);
-        spdlog::error("Failed to open WER registry key (code: {:#x})", hr);
+        Log::Error("Failed to open WER registry key (code: {:#x})", hr);
         return hr;
     }
 
@@ -235,7 +235,7 @@ HRESULT Main::SetWERDontShowUI(DWORD dwNewValue, DWORD& dwPreviousValue)
     if (lasterror != ERROR_SUCCESS)
     {
         HRESULT hr = HRESULT_FROM_WIN32(lasterror);
-        spdlog::error("Failed to open WER registry DontShowUI value (code: {:#x})", hr);
+        Log::Error("Failed to open WER registry DontShowUI value (code: {:#x})", hr);
         return hr;
     }
 
@@ -245,17 +245,17 @@ HRESULT Main::SetWERDontShowUI(DWORD dwNewValue, DWORD& dwPreviousValue)
         if (lasterror != ERROR_SUCCESS)
         {
             HRESULT hr = HRESULT_FROM_WIN32(lasterror);
-            spdlog::error("Failed to set WER registry DontShowUI value (code: {:#x})", hr);
+            Log::Error("Failed to set WER registry DontShowUI value (code: {:#x})", hr);
             return hr;
         }
 
         if (dwNewValue)
         {
-            spdlog::debug("WER user interface is now disabled");
+            Log::Debug("WER user interface is now disabled");
         }
         else
         {
-            spdlog::debug("WER user interface is now enabled");
+            Log::Debug("WER user interface is now enabled");
         }
     }
 
@@ -276,7 +276,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         auto writer = StructuredOutputWriter::GetWriter(config.Outline, std::move(options));
         if (writer == nullptr)
         {
-            spdlog::error(L"Failed to create writer for outline file {}", config.Outline.Path);
+            Log::Error(L"Failed to create writer for outline file {}", config.Outline.Path);
             return E_INVALIDARG;
         }
 
@@ -362,7 +362,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         auto end = Orc::ConvertTo(FinishTime);
         auto duration = end - start;
 
-        spdlog::info(
+        Log::Info(
             L"Outline: {} (took {} seconds, size {} bytes)",
             config.Outline.FileName,
             duration.count() / 10000000,
@@ -373,7 +373,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
     {
         if (auto hr = UploadSingleFile(config.Outline.FileName, config.Outline.Path); FAILED(hr))
         {
-            spdlog::error(L"Failed to upload outline file (code: {:#x})", hr);
+            Log::Error(L"Failed to upload outline file (code: {:#x})", hr);
         }
     }
 
@@ -426,7 +426,7 @@ HRESULT Main::Run_Execute()
         m_logging.fileSink()->Open(config.Log.Path, ec);
         if (ec)
         {
-            spdlog::error("Failed to create log stream (code: {:#x})", ec.value());
+            Log::Error("Failed to create log stream (code: {:#x})", ec.value());
             return ec.value();
         }
     }
@@ -435,20 +435,20 @@ HRESULT Main::Run_Execute()
     {
         if (FAILED(hr = InitializeUpload(*config.Output.UploadOutput)))
         {
-            spdlog::error(L"Failed to initalise upload as requested, no upload will be performed (code: {:#x})", hr);
+            Log::Error(L"Failed to initalise upload as requested, no upload will be performed (code: {:#x})", hr);
         }
     }
 
     hr = SetDefaultAltitude();
     if (FAILED(hr))
     {
-        spdlog::warn("Failed to configure default altitude (code: {:#x})", hr);
+        Log::Warn("Failed to configure default altitude (code: {:#x})", hr);
     }
 
     hr = SetLauncherPriority(config.Priority);
     if (FAILED(hr))
     {
-        spdlog::warn("Failed to configure launcher priority (code: {:#x})", hr);
+        Log::Warn("Failed to configure launcher priority (code: {:#x})", hr);
     }
 
     if (config.PowerState != WolfPowerState::Unmodified)
@@ -464,7 +464,7 @@ HRESULT Main::Run_Execute()
     {
         if (auto hr = CreateAndUploadOutline(); FAILED(hr))
         {
-            spdlog::critical("Failed to initalise upload as requested, no upload will be performed (code: {:#x})", hr);
+            Log::Critical("Failed to initalise upload as requested, no upload will be performed (code: {:#x})", hr);
         }
     }
 
@@ -484,16 +484,16 @@ HRESULT Main::Run_Execute()
                 hr = job.AllowBreakAway();
                 if (FAILED(hr))
                 {
-                    spdlog::error("Running within a job that won't allow breakaway, exiting (code: {:#x})", hr);
+                    Log::Error("Running within a job that won't allow breakaway, exiting (code: {:#x})", hr);
                     return E_FAIL;
                 }
 
                 bJobWasModified = true;
-                spdlog::info(L"Running within a job, it has been configured to allow breakaway");
+                Log::Info(L"Running within a job, it has been configured to allow breakaway");
             }
             else
             {
-                spdlog::debug("WolfLauncher is within a job that won't allow breakaway. Windows 8.x allows nested job");
+                Log::Debug("WolfLauncher is within a job that won't allow breakaway. Windows 8.x allows nested job");
             }
         }
     }
@@ -507,7 +507,7 @@ HRESULT Main::Run_Execute()
         hr = SetWERDontShowUI(1L, dwPreviousValue);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to set WERDontShowUIStatus to '{}' (code: {:#x})", config.bWERDontShowUI, hr);
+            Log::Error("Failed to set WERDontShowUIStatus to '{}' (code: {:#x})", config.bWERDontShowUI, hr);
         }
         else
         {
@@ -542,7 +542,7 @@ HRESULT Main::Run_Execute()
     {
         if (exec->IsOptional())
         {
-            spdlog::debug(L"Skipping optional command set: '{}'", exec->GetKeyword());
+            Log::Debug(L"Skipping optional command set: '{}'", exec->GetKeyword());
             continue;
         }
 
@@ -593,7 +593,7 @@ HRESULT Main::Run_Execute()
         hr = ExecuteKeyword(*exec);
         if (FAILED(hr))
         {
-            spdlog::critical(L"Failed to execute command set '{}' (code: {:#x})", exec->GetKeyword(), hr);
+            Log::Critical(L"Failed to execute command set '{}' (code: {:#x})", exec->GetKeyword(), hr);
             continue;
         }
     }
@@ -604,7 +604,7 @@ HRESULT Main::Run_Execute()
 
         if (auto hr = UploadSingleFile(config.Log.FileName, config.Log.Path); FAILED(hr))
         {
-            spdlog::error(L"Failed to upload log file (code: {:#x})", hr);
+            Log::Error(L"Failed to upload log file (code: {:#x})", hr);
         }
     }
 
@@ -613,7 +613,7 @@ HRESULT Main::Run_Execute()
         hr = CompleteUpload();
         if (FAILED(hr))
         {
-            spdlog::error("Failed to complete upload agent (code: {:#x})", hr);
+            Log::Error("Failed to complete upload agent (code: {:#x})", hr);
         }
     }
 
@@ -622,11 +622,11 @@ HRESULT Main::Run_Execute()
         hr = job.BlockBreakAway();
         if (SUCCEEDED(hr))
         {
-            spdlog::info(L"Job has been re-configured to block breakaway");
+            Log::Info(L"Job has been re-configured to block breakaway");
         }
         else
         {
-            spdlog::error(L"Job failed to be re-configured to block breakaway (code: {:#x})", hr);
+            Log::Error(L"Job failed to be re-configured to block breakaway (code: {:#x})", hr);
         }
     }
 
@@ -643,7 +643,7 @@ HRESULT Main::ExecuteKeyword(WolfExecution& exec)
     HRESULT hr = exec.CreateArchiveAgent();
     if (FAILED(hr))
     {
-        spdlog::error("Archive agent creation failed (code: {:#x})", hr);
+        Log::Error("Archive agent creation failed (code: {:#x})", hr);
         return hr;
     }
 
@@ -652,7 +652,7 @@ HRESULT Main::ExecuteKeyword(WolfExecution& exec)
     hr = exec.CreateCommandAgent(config.bChildDebug, config.msRefreshTimer, exec.GetConcurrency());
     if (FAILED(hr))
     {
-        spdlog::error("Command agent creation failed (code: {:#x})", hr);
+        Log::Error("Command agent creation failed (code: {:#x})", hr);
         exec.CompleteArchive(m_pUploadMessageQueue.get());
         return hr;
     }
@@ -666,7 +666,7 @@ HRESULT Main::ExecuteKeyword(WolfExecution& exec)
         HRESULT hrComplete = exec.CompleteArchive(m_pUploadMessageQueue.get());
         if (FAILED(hrComplete))
         {
-            spdlog::error(L"Failed to complete archive '{}' (code: {:#x})", exec.GetOutputFileName(), hrComplete);
+            Log::Error(L"Failed to complete archive '{}' (code: {:#x})", exec.GetOutputFileName(), hrComplete);
         }
     });
 
@@ -675,7 +675,7 @@ HRESULT Main::ExecuteKeyword(WolfExecution& exec)
         hr = exec.EnqueueCommands();
         if (FAILED(hr))
         {
-            spdlog::error("Command enqueue failed (code: {:#x})", hr);
+            Log::Error("Command enqueue failed (code: {:#x})", hr);
             return hr;
         }
 
@@ -683,7 +683,7 @@ HRESULT Main::ExecuteKeyword(WolfExecution& exec)
         hr = exec.CompleteExecution();
         if (FAILED(hr))
         {
-            spdlog::error("Command execution completion failed (code: {:#x})", hr);
+            Log::Error("Command execution completion failed (code: {:#x})", hr);
             return hr;
         }
 
@@ -691,7 +691,7 @@ HRESULT Main::ExecuteKeyword(WolfExecution& exec)
     }
     catch (...)
     {
-        spdlog::critical("Exception raised, attempting job termination and archive completion...");
+        Log::Critical("Exception raised, attempting job termination and archive completion...");
         return E_FAIL;
     }
 }

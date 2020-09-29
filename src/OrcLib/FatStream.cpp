@@ -194,7 +194,7 @@ FatStream::SetFilePointer(__in LONGLONG distanceToMove, __in DWORD dwMoveMethod,
         case FILE_END:
             if (distanceToMove > 0)
             {
-                spdlog::error("Cannot move past the end of the file ({})", distanceToMove);
+                Log::Error("Cannot move past the end of the file ({})", distanceToMove);
                 return E_INVALIDARG;
             }
 
@@ -221,7 +221,7 @@ FatStream::SetFilePointer(__in LONGLONG distanceToMove, __in DWORD dwMoveMethod,
         case FILE_BEGIN:
             if (distanceToMove < 0)
             {
-                spdlog::error("Cannot move before the beginning of the file ({})", distanceToMove);
+                Log::Error("Cannot move before the beginning of the file ({})", distanceToMove);
                 return E_INVALIDARG;
             }
 

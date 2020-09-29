@@ -93,24 +93,24 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         if (FAILED(
                 hr = config.FileSystem.Locations.AddLocationsFromConfigItem(filesystem[FASTFIND_FILESYSTEM_LOCATIONS])))
         {
-            spdlog::error(L"Error in specific locations parsing in config file");
+            Log::Error(L"Error in specific locations parsing in config file");
             return hr;
         }
 
         if (FAILED(hr = config.FileSystem.Locations.AddKnownLocations(filesystem[FASTFIND_FILESYSTEM_KNOWNLOCATIONS])))
         {
-            spdlog::error(L"Error in knownlocations parsing in config file");
+            Log::Error(L"Error in knownlocations parsing in config file");
             return hr;
         }
 
         if (FAILED(hr = config.FileSystem.Files.AddTermsFromConfig(filesystem[FASTFIND_FILESYSTEM_FILEFIND])))
         {
-            spdlog::error(L"Error in specific file find parsing in config file");
+            Log::Error(L"Error in specific file find parsing in config file");
             return hr;
         }
         if (FAILED(hr = config.FileSystem.Files.AddExcludeTermsFromConfig(filesystem[FASTFIND_FILESYSTEM_EXCLUDE])))
         {
-            spdlog::error(L"Error in specific file find parsing in config file");
+            Log::Error(L"Error in specific file find parsing in config file");
             return hr;
         }
         if (filesystem[FASTFIND_FILESYSTEM_YARA])
@@ -125,7 +125,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 hr = config.Registry.Locations.AddLocationsFromConfigItem(
                     configitem[FASTFIND_REGISTRY][FASTFIND_REGISTRY_LOCATIONS])))
         {
-            spdlog::error(L"Error in specific locations parsing in config file");
+            Log::Error(L"Error in specific locations parsing in config file");
             return hr;
         }
 
@@ -133,7 +133,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 hr = config.Registry.Locations.AddKnownLocations(
                     configitem[FASTFIND_REGISTRY][FASTFIND_REGISTRY_KNOWNLOCATIONS])))
         {
-            spdlog::error(L"Error in knownlocations parsing in config file");
+            Log::Error(L"Error in knownlocations parsing in config file");
             return hr;
         }
 
@@ -157,7 +157,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                             FileNameList,
                             FileFindTerms)))
                 {
-                    spdlog::error(L"Error in specific registry find parsing un config file");
+                    Log::Error(L"Error in specific registry find parsing un config file");
                     return hr;
                 }
 
@@ -177,7 +177,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 anItem.ObjType = ObjectDirectory::GetObjectType(item[FASTFIND_OBJECT_FIND_TYPE]);
                 if (anItem.ObjType == ObjectDirectory::ObjectType::Invalid)
                 {
-                    spdlog::warn(L"Invalid object type provided: {}", item[FASTFIND_OBJECT_FIND_TYPE].c_str());
+                    Log::Warn(L"Invalid object type provided: {}", item[FASTFIND_OBJECT_FIND_TYPE].c_str());
                     continue;
                 }
 
@@ -242,8 +242,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     LPCWSTR pEquals = wcschr(argv[i], L'=');
                     if (!pEquals)
                     {
-                        spdlog::error(
-                            "Option /Names should be like: /Names=Kernel32.dll,nt*.sys,:ADSName,*.txt#EAName");
+                        Log::Error("Option /Names should be like: /Names=Kernel32.dll,nt*.sys,:ADSName,*.txt#EAName");
                         return E_INVALIDARG;
                     }
                     else
@@ -328,7 +327,7 @@ HRESULT Main::CheckConfiguration()
 
     if (FAILED(hr = config.FileSystem.Files.InitializeYara(config.Yara)))
     {
-        spdlog::error(L"Failed to initialize yara scanner");
+        Log::Error(L"Failed to initialize yara scanner");
         return hr;
     }
 

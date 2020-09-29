@@ -107,7 +107,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                             hr = config.autorunsOutput.Configure(OutputSpec::Kind::File, pEquals + 1);
                             if (FAILED(hr))
                             {
-                                spdlog::error(L"Invalid autoruns file specified: '{}' (code: {:#x})", pEquals + 1, hr);
+                                Log::Error(L"Invalid autoruns file specified: '{}' (code: {:#x})", pEquals + 1, hr);
                                 return E_INVALIDARG;
                             }
                             else
@@ -251,7 +251,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 }
                 break;
             default:
-                spdlog::error("Unsupported architecture: {}", wArch);
+                Log::Error("Unsupported architecture: {}", wArch);
                 return hr;
         }
 
@@ -271,13 +271,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(configitem[GETSAMPLES_LOCATIONS])))
     {
-        spdlog::error("Error in specific locations parsing in config file (code: {:#x}", hr);
+        Log::Error("Error in specific locations parsing in config file (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = config.locs.AddKnownLocations(configitem[GETSAMPLES_KNOWNLOCATIONS])))
     {
-        spdlog::error("Error in known locations parsing (code: {:#x}", hr);
+        Log::Error("Error in known locations parsing (code: {:#x})", hr);
         return hr;
     }
 
@@ -292,7 +292,7 @@ HRESULT Main::CheckConfiguration()
     if (!config.limits.bIgnoreLimits
         && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
     {
-        spdlog::error(
+        Log::Critical(
             "No global (at samples level, MaxBytesTotal or MaxSampleCount) has been set: set limits in configuration "
             "or use /nolimits");
         return E_INVALIDARG;
@@ -302,7 +302,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.bInstallNTrack && config.bRemoveNTrack)
     {
-        spdlog::error("Cannot install and remove NTrack in same command");
+        Log::Error("Cannot install and remove NTrack in same command");
         return E_FAIL;
     }
 
@@ -311,7 +311,7 @@ HRESULT Main::CheckConfiguration()
         WCHAR szTempDir[MAX_PATH];
         if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
         {
-            spdlog::error("Failed to determine default temp folder (code: {:#x}", hr);
+            Log::Error("Failed to determine default temp folder (code: {:#x})", hr);
             return hr;
         }
         config.tmpdirOutput.Path = szTempDir;

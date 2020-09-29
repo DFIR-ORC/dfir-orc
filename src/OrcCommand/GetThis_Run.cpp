@@ -33,7 +33,7 @@
 #include <filesystem>
 #include <sstream>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -56,18 +56,18 @@ Main::CreateOutputDirLogFileAndCSV(const std::wstring& strOutputDir)
         case fs::file_type::not_found:
             if (create_directories(outDir))
             {
-                spdlog::debug(L"Created output directory '{}'", strOutputDir);
+                Log::Debug(L"Created output directory '{}'", strOutputDir);
             }
             else
             {
-                spdlog::debug(L"Output directory '{}' exists", strOutputDir);
+                Log::Debug(L"Output directory '{}' exists", strOutputDir);
             }
             break;
         case fs::file_type::directory:
-            spdlog::debug(L"Specified output directory '{}' exists and is a directory", strOutputDir);
+            Log::Debug(L"Specified output directory '{}' exists and is a directory", strOutputDir);
             break;
         default:
-            spdlog::error(L"Specified output directory '{}' exists and is not a directory", strOutputDir);
+            Log::Error(L"Specified output directory '{}' exists and is not a directory", strOutputDir);
             break;
     }
 
@@ -101,7 +101,7 @@ Main::CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::sh
 
     if (FAILED(hr = csvStream->Open(tempdir.wstring(), L"GetThisCsvStream", 1 * 1024 * 1024)))
     {
-        spdlog::error("Failed to create temp stream");
+        Log::Error("Failed to create temp stream");
         return {hr, nullptr};
     }
 
@@ -111,7 +111,7 @@ Main::CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::sh
     auto CSV = TableOutput::CSV::Writer::MakeNew(std::move(options));
     if (FAILED(hr = CSV->WriteToStream(csvStream)))
     {
-        spdlog::error("Failed to initialize CSV stream");
+        Log::Error("Failed to initialize CSV stream");
         return {hr, nullptr};
     }
 
@@ -119,7 +119,7 @@ Main::CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::sh
 
     if (FAILED(hr = compressor->InitArchive(pArchivePath.c_str())))
     {
-        spdlog::error(L"Failed to initialize archive file {}", pArchivePath);
+        Log::Error(L"Failed to initialize archive file {}", pArchivePath);
         return {hr, nullptr};
     }
 
@@ -127,7 +127,7 @@ Main::CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::sh
     {
         if (FAILED(hr = compressor->SetPassword(config.Output.Password)))
         {
-            spdlog::error(L"Failed to set password for archive file {}", pArchivePath);
+            Log::Error(L"Failed to set password for archive file {}", pArchivePath);
             return {hr, nullptr};
         }
     }
@@ -140,14 +140,14 @@ HRESULT Main::RegFlushKeys()
     bool bSuccess = true;
     DWORD dwGLE = 0L;
 
-    spdlog::debug(L"Flushing HKEY_LOCAL_MACHINE");
+    Log::Debug(L"Flushing HKEY_LOCAL_MACHINE");
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
     {
         bSuccess = false;
     }
 
-    spdlog::debug(L"Flushing HKEY_USERS");
+    Log::Debug(L"Flushing HKEY_USERS");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
     {
@@ -296,7 +296,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
                             config.content.MinChars,
                             config.content.MaxChars)))
                 {
-                    spdlog::error("Failed to initialise strings stream");
+                    Log::Error("Failed to initialise strings stream");
                     return hr;
                 }
             }
@@ -308,7 +308,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
                             sampleRef.Content.MinChars,
                             sampleRef.Content.MaxChars)))
                 {
-                    spdlog::error("Failed to initialise strings stream");
+                    Log::Error("Failed to initialise strings stream");
                     return hr;
                 }
             }
@@ -569,7 +569,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
         if (prevSample != end(Samples))
         {
             // this sample is already cabbed
-            spdlog::debug(L"Not adding duplicate sample {} to archive", aMatch->MatchingNames.front().FullPathName);
+            Log::Debug(L"Not adding duplicate sample {} to archive", aMatch->MatchingNames.front().FullPathName);
             SampleRef& item = const_cast<SampleRef&>(*prevSample);
             hr = S_FALSE;
         }
@@ -577,7 +577,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
         {
             for (auto& name : aMatch->MatchingNames)
             {
-                spdlog::debug(L"Adding sample {} to archive", name.FullPathName);
+                Log::Debug(L"Adding sample {} to archive", name.FullPathName);
 
                 sampleRef.Content = aSpec.Content;
                 sampleRef.CollectionDate = CollectionDate;
@@ -608,7 +608,7 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
 
             if (FAILED(hr = ConfigureSampleStreams(sampleRef)))
             {
-                spdlog::error(L"Failed to configure sample reference for {}", sampleRef.SampleName);
+                Log::Error(L"Failed to configure sample reference for {}", sampleRef.SampleName);
             }
 
             Samples.insert(sampleRef);
@@ -635,7 +635,7 @@ Main::CollectMatchingSamples(const std::shared_ptr<ArchiveCreate>& compressor, I
                 strName);
             if (FAILED(hr = compressor->AddStream(sampleRef.SampleName.c_str(), strName.c_str(), sampleRef.CopyStream)))
             {
-                spdlog::error(L"Failed to add sample {}", sampleRef.SampleName);
+                Log::Error(L"Failed to add sample {}", sampleRef.SampleName);
             }
         }
     });
@@ -647,7 +647,7 @@ Main::CollectMatchingSamples(const std::shared_ptr<ArchiveCreate>& compressor, I
 
     if (FAILED(hr = compressor->FlushQueue()))
     {
-        spdlog::error(L"Failed to flush queue to {}", config.Output.Path);
+        Log::Error(L"Failed to flush queue to {}", config.Output.Path);
         return hr;
     }
 
@@ -671,7 +671,7 @@ Main::CollectMatchingSamples(const std::shared_ptr<ArchiveCreate>& compressor, I
 
             if (FAILED(hr = AddSampleRefToCSV(output, strComputerName, sampleRef)))
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to add sample '{}' metadata to csv (code: {})",
                     sampleRef.Matches.front()->MatchingNames.front().FullPathName,
                     hr);
@@ -708,14 +708,14 @@ Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output
 
             if (FAILED(hr = outputStream.WriteTo(sampleFile.wstring().c_str())))
             {
-                spdlog::error("Failed to create sample file '{}'", sampleFile.string());
+                Log::Error("Failed to create sample file '{}'", sampleFile.string());
                 break;
             }
 
             ULONGLONG ullBytesWritten = 0LL;
             if (FAILED(hr = sample_ref.CopyStream->CopyTo(outputStream, &ullBytesWritten)))
             {
-                spdlog::error("Failed while writing to sample '{}'", sampleFile.string());
+                Log::Error("Failed while writing to sample '{}'", sampleFile.string());
                 break;
             }
 
@@ -745,7 +745,7 @@ Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output
 
         if (FAILED(hr = AddSampleRefToCSV(output, strComputerName, sample_ref)))
         {
-            spdlog::error("Failed to add sample '{}' metadata to csv", sampleFile.string());
+            Log::Error("Failed to add sample '{}' metadata to csv", sampleFile.string());
             break;
         }
     }
@@ -786,18 +786,18 @@ HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& Matchi
                 {
                     if (FAILED(hr = pCSVStream->SetFilePointer(0, FILE_BEGIN, nullptr)))
                     {
-                        spdlog::error("Failed to rewind csv stream");
+                        Log::Error("Failed to rewind csv stream");
                     }
                     if (FAILED(hr = compressor->AddStream(L"GetThis.csv", L"GetThis.csv", pCSVStream)))
                     {
-                        spdlog::error("Failed to add GetThis.csv");
+                        Log::Error("Failed to add GetThis.csv");
                     }
                 }
             }
 
             if (FAILED(hr = compressor->Complete()))
             {
-                spdlog::error(L"Failed to complete '{}'", config.Output.Path);
+                Log::Error(L"Failed to complete '{}'", config.Output.Path);
                 return hr;
             }
             CSV->Close();
@@ -840,7 +840,7 @@ HRESULT Main::HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSampl
             ULONGLONG ullBytesWritten = 0LL;
             if (FAILED(hr = it->CopyStream->CopyTo(devnull, &ullBytesWritten)))
             {
-                spdlog::error("Failed while computing hash of sample");
+                Log::Error("Failed while computing hash of sample");
                 break;
             }
 
@@ -859,7 +859,7 @@ HRESULT Main::FindMatchingSamples()
 
     if (FAILED(hr = FileFinder.InitializeYara(config.Yara)))
     {
-        spdlog::error("Failed to initialize Yara scan");
+        Log::Error("Failed to initialize Yara scan");
     }
 
     if (FAILED(
@@ -878,7 +878,7 @@ HRESULT Main::FindMatchingSamples()
 
                     if (aSpecIt == end(config.listofSpecs))
                     {
-                        spdlog::error(L"Could not find sample spec for match '{}'", aMatch->Term->GetDescription());
+                        Log::Error(L"Could not find sample spec for match '{}'", aMatch->Term->GetDescription());
                         return;
                     }
 
@@ -886,7 +886,7 @@ HRESULT Main::FindMatchingSamples()
 
                     if (aMatch->MatchingAttributes.empty())
                     {
-                        spdlog::warn(
+                        Log::Warn(
                             L"'{}' matched '{}' but no data related attribute was associated",
                             strFullFileName,
                             aMatch->Term->GetDescription());
@@ -904,7 +904,7 @@ HRESULT Main::FindMatchingSamples()
 
                         if (FAILED(hr = AddSamplesForMatch(status, *aSpecIt, aMatch)))
                         {
-                            spdlog::error(L"Failed to add {}", strName);
+                            Log::Error(L"Failed to add {}", strName);
                         }
 
                         switch (status)
@@ -974,7 +974,7 @@ HRESULT Main::FindMatchingSamples()
                 },
                 false)))
     {
-        spdlog::error("Failed while parsing locations");
+        Log::Error("Failed while parsing locations");
     }
 
     return S_OK;
@@ -996,12 +996,12 @@ HRESULT Main::Run()
         if (config.bFlushRegistry)
         {
             if (FAILED(hr = RegFlushKeys()))
-                spdlog::warn("Failed to flush keys (code: {:#x})", hr);
+                Log::Warn("Failed to flush keys (code: {:#x})", hr);
         }
     }
     catch (...)
     {
-        spdlog::error(L"GetThis failed during output setup, parameter output, RegistryFlush, exiting");
+        Log::Error(L"GetThis failed during output setup, parameter output, RegistryFlush, exiting");
         return E_FAIL;
     }
 
@@ -1009,18 +1009,18 @@ HRESULT Main::Run()
     {
         if (FAILED(hr = FindMatchingSamples()))
         {
-            spdlog::error("GetThis failed while matching samples");
+            Log::Error("GetThis failed while matching samples");
             return hr;
         }
         if (FAILED(hr = CollectMatchingSamples(config.Output, Samples)))
         {
-            spdlog::error("GetThis failed while collecting samples");
+            Log::Error("GetThis failed while collecting samples");
             return hr;
         }
     }
     catch (...)
     {
-        spdlog::error("GetThis failed during sample collection, terminating archive");
+        Log::Error("GetThis failed during sample collection, terminating archive");
         return E_ABORT;
     }
 

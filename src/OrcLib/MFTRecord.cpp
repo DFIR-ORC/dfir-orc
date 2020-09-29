@@ -17,7 +17,7 @@
 #include <vector>
 #include <algorithm>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 
@@ -45,7 +45,7 @@ HRESULT MFTRecord::ParseRecord(
                 hr = m_pBaseFileRecord->ParseRecord(
                     VolReader, m_pBaseFileRecord->m_pRecord, VolReader->GetBytesPerFRS(), NULL)))
         {
-            spdlog::debug(
+            Log::Debug(
                 L"Skipping... Base Record could not be parsed... (FRN: {:#x}, code: {:#x})",
                 NtfsFullSegmentNumber(&(m_pBaseFileRecord->m_FileReferenceNumber)),
                 hr);
@@ -58,7 +58,7 @@ HRESULT MFTRecord::ParseRecord(
     if ((pRecord->MultiSectorHeader.Signature[0] != 'F') || (pRecord->MultiSectorHeader.Signature[1] != 'I')
         || (pRecord->MultiSectorHeader.Signature[2] != 'L') || (pRecord->MultiSectorHeader.Signature[3] != 'E'))
     {
-        spdlog::debug(
+        Log::Debug(
             L"Skipping... MultiSectorHeader.Signature is not FILE - \"{}{}{}{}\".",
             pRecord->MultiSectorHeader.Signature[0],
             pRecord->MultiSectorHeader.Signature[1],
@@ -79,7 +79,7 @@ HRESULT MFTRecord::ParseRecord(
     // check if this is not a base file record segment
     if (0 != NtfsFullSegmentNumber(&(pRecord->BaseFileRecordSegment)) && pBaseRecord == NULL)
     {
-        spdlog::debug(
+        Log::Debug(
             L"Skipping... Child Record with no base File Record... yet... ({:#x})",
             NtfsFullSegmentNumber(&(pRecord->BaseFileRecordSegment)));
         m_bParsed = false;
@@ -88,7 +88,7 @@ HRESULT MFTRecord::ParseRecord(
 
     if (pRecord->FirstAttributeOffset > dwRecordLen)
     {
-        spdlog::info(
+        Log::Info(
             L"Skipping... Record length ({}) is smaller than First attribute Offset ({})",
             dwRecordLen,
             pRecord->FirstAttributeOffset);
@@ -207,7 +207,7 @@ HRESULT MFTRecord::ParseRecord(
         pCurAttr = (PATTRIBUTE_RECORD_HEADER)((LPBYTE)pCurAttr + pCurAttr->RecordLength);  // ready for next record
         if ((LPBYTE)pCurAttr > ((LPBYTE)pFirstAttr + dwAllAttrLength))
         {
-            spdlog::debug(L"Invalid MFT attribute length. Skipped");
+            Log::Debug(L"Invalid MFT attribute length. Skipped");
             break;
         }
 
@@ -216,7 +216,7 @@ HRESULT MFTRecord::ParseRecord(
 
         if (pCurAttr->RecordLength == 0)
         {
-            spdlog::debug(L"Invalid null MFT attribute length. Skipped");
+            Log::Debug(L"Invalid null MFT attribute length. Skipped");
             break;
         }
 
@@ -271,15 +271,15 @@ HRESULT MFTRecord::ParseAttribute(
     switch (pAttribute->TypeCode)
     {
         case $STANDARD_INFORMATION: {
-            spdlog::debug(L"Adding $STANDARD_INFORMATION attribute");
+            Log::Debug(L"Adding $STANDARD_INFORMATION attribute");
             if (m_pStandardInformation != NULL)
             {
-                spdlog::error(L"More than 1 Standard Information attribute! Unexpected");
+                Log::Error(L"More than 1 Standard Information attribute! Unexpected");
                 return E_FAIL;
             }
             if (pAttribute->FormCode != RESIDENT_FORM)
             {
-                spdlog::error(L"Standard Information attribute is not resident! Unexpected");
+                Log::Error(L"Standard Information attribute is not resident! Unexpected");
                 return E_FAIL;
             }
             m_pStandardInformation =
@@ -290,7 +290,7 @@ HRESULT MFTRecord::ParseAttribute(
         break;
         case $ATTRIBUTE_LIST: {
             // Attribute List
-            spdlog::debug(L"Adding $ATTRIBUTE_LIST attribute");
+            Log::Debug(L"Adding $ATTRIBUTE_LIST attribute");
             std::shared_ptr<AttributeList> NewAttributeList = make_shared<AttributeList>(pAttribute, this);
 
             if (SUCCEEDED(hr = NewAttributeList->ParseAttributeList(VolReader, m_FileReferenceNumber, this)))
@@ -343,7 +343,7 @@ HRESULT MFTRecord::ParseAttribute(
         case $FILE_NAME: {
             if (pAttribute->FormCode != RESIDENT_FORM)
             {
-                spdlog::error(L"FileName attribute is not resident! Unexpected");
+                Log::Error(L"FileName attribute is not resident! Unexpected");
                 return E_FAIL;
             }
             if (m_pBaseFileRecord != NULL)
@@ -352,7 +352,7 @@ HRESULT MFTRecord::ParseAttribute(
                     (PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset));
             }
             m_FileNames.push_back((PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset));
-            spdlog::debug(
+            Log::Debug(
                 L"FileName: '{}', Parent: {:#x}, Flags: {:#x}",
                 std::wstring_view(m_FileNames.back()->FileName, m_FileNames.back()->FileNameLength),
                 NtfsFullSegmentNumber(&(m_FileNames.back()->ParentDirectory)),
@@ -362,27 +362,27 @@ HRESULT MFTRecord::ParseAttribute(
         }
         break;
         case $OBJECT_ID: {
-            spdlog::debug(L"Adding $OBJECT_ID attribute");
+            Log::Debug(L"Adding $OBJECT_ID attribute");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $SECURITY_DESCRIPTOR: {
-            spdlog::debug(L"Adding $SECURITY_DESCRIPTOR attribute");
+            Log::Debug(L"Adding $SECURITY_DESCRIPTOR attribute");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $VOLUME_NAME: {
-            spdlog::debug(L"Adding $VOLUME_NAME attribute");
+            Log::Debug(L"Adding $VOLUME_NAME attribute");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $VOLUME_INFORMATION: {
-            spdlog::debug(L"Adding $VOLUME_INFORMATION attribute");
+            Log::Debug(L"Adding $VOLUME_INFORMATION attribute");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $DATA: {
-            spdlog::debug(
+            Log::Debug(
                 L"Adding $DATA attribute {}",
                 pAttribute->NameLength
                     ? std::wstring_view((WCHAR*)((BYTE*)pAttribute + pAttribute->NameOffset), pAttribute->NameLength)
@@ -422,18 +422,18 @@ HRESULT MFTRecord::ParseAttribute(
                     }
                     m_bIsDirectory = true;
 
-                    spdlog::debug(L"Adding directory");
+                    Log::Debug(L"Adding directory");
                     pNewAttr = make_shared<IndexRootAttribute>(pAttribute, this);
                 }
                 else
                 {
-                    spdlog::debug(L"Adding $INDEX_ROOT attribute (whose name is NOT $I30)");
+                    Log::Debug(L"Adding $INDEX_ROOT attribute (whose name is NOT $I30)");
                     pNewAttr = make_shared<IndexRootAttribute>(pAttribute, this);
                 }
             }
             else
             {
-                spdlog::debug(L"Adding $INDEX_ROOT attribute (no name)");
+                Log::Debug(L"Adding $INDEX_ROOT attribute (no name)");
                 pNewAttr = make_shared<IndexRootAttribute>(pAttribute, this);
             }
 
@@ -453,20 +453,20 @@ HRESULT MFTRecord::ParseAttribute(
             }
             else
             {
-                spdlog::debug(L"Adding $INDEX_ROOT attribute (whose name is NOT $I30)");
+                Log::Debug(L"Adding $INDEX_ROOT attribute (whose name is NOT $I30)");
                 pNewAttr = make_shared<IndexAllocationAttribute>(pAttribute, this);
             }
-            spdlog::debug(L"Adding $INDEX_ALLOCATION attribute");
+            Log::Debug(L"Adding $INDEX_ALLOCATION attribute");
             pNewAttr = make_shared<IndexAllocationAttribute>(pAttribute, this);
         }
         break;
         case $BITMAP: {
-            spdlog::debug(L"Adding $BITMAP attribute");
+            Log::Debug(L"Adding $BITMAP attribute");
             pNewAttr = make_shared<BitmapAttribute>(pAttribute, this);
         }
         break;
         case $REPARSE_POINT: {
-            spdlog::debug(L"Adding $REPARSE_POINT attribute");
+            Log::Debug(L"Adding $REPARSE_POINT attribute");
             m_bHasReparsePoint = true;
 
             auto flags = ReparsePointAttribute::GetReparsePointType(pAttribute);
@@ -493,7 +493,7 @@ HRESULT MFTRecord::ParseAttribute(
         }
         break;
         case $EA_INFORMATION: {
-            spdlog::debug(L"Adding $EA_INFORMATION attribute");
+            Log::Debug(L"Adding $EA_INFORMATION attribute");
             EA_INFORMATION* pEAInfo = NULL;
             if (pAttribute->FormCode == RESIDENT_FORM)
             {
@@ -503,24 +503,24 @@ HRESULT MFTRecord::ParseAttribute(
         }
         break;
         case $EA: {
-            spdlog::debug(L"Adding $EA attribute");
+            Log::Debug(L"Adding $EA attribute");
 
             pNewAttr = make_shared<ExtendedAttribute>(pAttribute, this);
             m_bHasExtendedAttr = true;
         }
         break;
         case $LOGGED_UTILITY_STREAM: {
-            spdlog::debug(L"Adding $LOGGED_UTILITY_STREAM attribute");
+            Log::Debug(L"Adding $LOGGED_UTILITY_STREAM attribute");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $END: {
-            spdlog::debug(L"$END attribute");
+            Log::Debug(L"$END attribute");
             pNewAttr = nullptr;
         }
         break;
         default: {
-            spdlog::warn("Unknown attribute {:#x}", pAttribute->TypeCode);
+            Log::Warn("Unknown attribute {:#x}", pAttribute->TypeCode);
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
     }

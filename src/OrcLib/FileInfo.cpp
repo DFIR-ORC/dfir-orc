@@ -26,7 +26,7 @@
 
 #pragma comment(lib, "Crypt32.lib")
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -273,7 +273,7 @@ HRESULT FileInfo::WriteFileInformation(
             {
                 if (FAILED(hr = HandleIntentions(pCurCol->dwIntention, output)))
                 {
-                    spdlog::debug(
+                    Log::Debug(
                         L"VERBOSE: Column '{}' failed to be written for '{}' (code: {:#x}))",
                         pCurCol->szColumnName,
                         m_szFullName,
@@ -287,7 +287,7 @@ HRESULT FileInfo::WriteFileInformation(
         }
         catch (Orc::Exception& e)
         {
-            spdlog::error(L"Error while writing column '{}': {}", output.GetCurrentColumn().ColumnName, e.Description);
+            Log::Error(L"Error while writing column '{}': {}", output.GetCurrentColumn().ColumnName, e.Description);
             output.AbandonColumn();
         }
 
@@ -383,7 +383,7 @@ FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], c
             }
             if (!bNameFound)
             {
-                spdlog::warn(L"Parameter '{}' was not recognized as a valid column name", pCur);
+                Log::Warn(L"Parameter '{}' was not recognized as a valid column name", pCur);
             }
             szParams[i] = L',';
             pCur = &(szParams[i]) + 1;
@@ -426,7 +426,7 @@ HRESULT FileInfo::BindColumns(
                 Writer.AddColumn(dwIndex, pCurCol->szColumnName, it->Type, it->dwMaxLen.value());
             else
             {
-                spdlog::error(
+                Log::Error(
                     L"Could not find a column type for '{}' in schema definition, binding it to nothing",
                     pCurCol->szColumnName);
                 Writer.AddColumn(dwIndex, pCurCol->szColumnName, TableOutput::ColumnType::Nothing, 0);
@@ -836,7 +836,7 @@ HRESULT FileInfo::OpenAuthenticode()
                 hr = m_codeVerifyTrust.Verify(
                     m_szFullName, GetDetails()->SecurityDirectory(), GetDetails()->GetPEHashs(), data)))
         {
-            spdlog::warn(L"WinVerifyTrust failed for file '{}' (code: {:#x})", m_szFullName, hr);
+            Log::Warn(L"WinVerifyTrust failed for file '{}' (code: {:#x})", m_szFullName, hr);
         }
     }
     else
@@ -844,7 +844,7 @@ HRESULT FileInfo::OpenAuthenticode()
         if (FAILED(
                 hr = m_codeVerifyTrust.VerifyAnySignatureWithCatalogs(m_szFullName, GetDetails()->GetPEHashs(), data)))
         {
-            spdlog::warn(L"WinVerifyTrust failed for file '{}' (code: {:#x})", m_szFullName, hr);
+            Log::Warn(L"WinVerifyTrust failed for file '{}' (code: {:#x})", m_szFullName, hr);
         }
     }
     GetDetails()->SetAuthenticodeData(std::move(data));
@@ -1463,7 +1463,7 @@ HRESULT FileInfo::WriteSecurityDirectorySignatureSize(ITableOutput& output)
         DWORD cbSize = 0L;
         if (FAILED(hr = m_codeVerifyTrust.SignatureSize(m_szFullName, GetDetails()->SecurityDirectory(), cbSize)))
         {
-            spdlog::warn(L"SignatureSize failed for file '{}' (code: {:#x})", m_szFullName, hr);
+            Log::Warn(L"SignatureSize failed for file '{}' (code: {:#x})", m_szFullName, hr);
         }
         return output.WriteInteger(cbSize);
     }
@@ -1568,7 +1568,7 @@ HRESULT FileInfo::WriteAuthenticodeSignerThumbprint(ITableOutput& output)
         DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
         if (!CertGetCertificateContextProperty(signer, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
         {
-            spdlog::debug(L"Failed to extract certificate thumbprint");
+            Log::Debug(L"Failed to extract certificate thumbprint");
         }
         else
         {
@@ -1652,7 +1652,7 @@ HRESULT FileInfo::WriteAuthenticodeCAThumbprint(ITableOutput& output)
         DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
         if (!CertGetCertificateContextProperty(ca, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
         {
-            spdlog::debug(L"Failed to extract certificate thumbprint");
+            Log::Debug(L"Failed to extract certificate thumbprint");
         }
         else
         {

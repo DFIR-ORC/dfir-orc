@@ -34,7 +34,7 @@ HRESULT Orc::SparseStream::OpenFile(
     if (!DeviceIoControl(m_hFile, FSCTL_SET_SPARSE, NULL, 0L, NULL, 0L, NULL, NULL))
     {
         auto hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to set file '{}' sparse (code: {:#x})", pwzPath, hr);
+        Log::Error(L"Failed to set file '{}' sparse (code: {:#x})", pwzPath, hr);
         return hr;
     }
 
@@ -46,7 +46,7 @@ STDMETHODIMP Orc::SparseStream::SetSize(ULONG64 ullSize)
     if (!DeviceIoControl(m_hFile, FSCTL_SET_SPARSE, NULL, 0L, NULL, 0L, NULL, NULL))
     {
         auto hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to set file '{}' sparse (code: {:#x})", m_strPath, hr);
+        Log::Error(L"Failed to set file '{}' sparse (code: {:#x})", m_strPath, hr);
         return hr;
     }
     return Orc::FileStream::SetSize(ullSize);
@@ -81,7 +81,7 @@ STDMETHODIMP Orc::SparseStream::GetAllocatedRanges(std::vector<FILE_ALLOCATED_RA
         {
             if (auto err = ::GetLastError(); err != ERROR_MORE_DATA)
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to read allocated ranges of sparse stream '{}' (code: {:#x})",
                     m_strPath,
                     HRESULT_FROM_WIN32(err));

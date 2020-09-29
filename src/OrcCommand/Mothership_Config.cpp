@@ -132,13 +132,13 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         if (FAILED(hr = config.Temporary.Configure(OutputSpec::Kind::Directory, configitem[ORC_TEMP])))
         {
-            spdlog::warn(
+            Log::Warn(
                 L"Failed to configure temporary folder '{}', defaulting to %%TEMP%% (code: {:#x})",
                 configitem[ORC_TEMP].c_str(),
                 hr);
             if (FAILED(hr = config.Temporary.Configure(OutputSpec::Kind::Directory, L"%TEMP%")))
             {
-                spdlog::warn("Failed to configure temporary folder \"%%TEMP%%\" (code: {:#x}", hr);
+                Log::Warn("Failed to configure temporary folder \"%%TEMP%%\" (code: {:#x})", hr);
             }
         }
     }
@@ -161,7 +161,7 @@ HRESULT Main::CheckConfiguration()
 
     if (!config.strParentName.empty())
     {
-        spdlog::debug(L"Looking for reparenting child to '{}'", config.strParentName);
+        Log::Debug(L"Looking for reparenting child to '{}'", config.strParentName);
         size_t parentArg = 0;
         if (SUCCEEDED(GetIntegerFromArg(config.strParentName.c_str(), parentArg)))
         {
@@ -175,7 +175,7 @@ HRESULT Main::CheckConfiguration()
 
             if (FAILED(hr = rp.EnumProcesses()))
             {
-                spdlog::error(L"Failed to enumerate running processes, reparenting won't be available");
+                Log::Error(L"Failed to enumerate running processes, reparenting won't be available");
                 return hr;
             }
 
@@ -191,12 +191,12 @@ HRESULT Main::CheckConfiguration()
 
             if (it != end(processes))
             {
-                spdlog::debug(L"Reparenting child under '{}' (pid: {})", config.strParentName, it->m_Pid);
+                Log::Debug(L"Reparenting child under '{}' (pid: {})", config.strParentName, it->m_Pid);
                 config.dwParentID = it->m_Pid;
             }
             else
             {
-                spdlog::error(
+                Log::Error(
                     L"Desired parent '{}' for reparenting could not be found, reparenting won't happen",
                     config.strParentName);
             }
@@ -204,7 +204,7 @@ HRESULT Main::CheckConfiguration()
     }
     else
     {
-        spdlog::debug("No reparenting for child");
+        Log::Debug("No reparenting for child");
     }
     return S_OK;
 }

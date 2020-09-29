@@ -25,7 +25,7 @@ FileMappingStream::Open(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG 
         case PAGE_READWRITE:
             break;
         default:
-            spdlog::error("The only allowed protection for FileMappingStream are PAGE_READONLY _or_ PAGE_READWRITE");
+            Log::Error("The only allowed protection for FileMappingStream are PAGE_READONLY _or_ PAGE_READWRITE");
             return E_INVALIDARG;
     }
 
@@ -33,7 +33,7 @@ FileMappingStream::Open(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG 
     if (m_hMapping == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed CreateFileMapping (hFile: 0x{:p}, code: {:#x})", hFile, hr);
+        Log::Error("Failed CreateFileMapping (hFile: 0x{:p}, code: {:#x})", hFile, hr);
         return hr;
     }
 
@@ -58,7 +58,7 @@ FileMappingStream::Open(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG 
         m_hMapping = INVALID_HANDLE_VALUE;
 
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed MapViewOfFile (hFile: 0x{:p}, code: {:#x})", hFile, hr);
+        Log::Error("Failed MapViewOfFile (hFile: 0x{:p}, code: {:#x})", hFile, hr);
         return hr;
     }
 
@@ -94,7 +94,7 @@ HRESULT FileMappingStream::CommitSize(ULONGLONG ullNewSize)
     if (NULL == VirtualAlloc(m_pMapped, static_cast<size_t>(ullNewSize), MEM_COMMIT, m_dwPageProtect))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed VirtualAlloc: cannot Commit size {} (code: {:#x})", ullNewSize, hr);
+        Log::Error(L"Failed VirtualAlloc: cannot Commit size {} (code: {:#x})", ullNewSize, hr);
         return hr;
     }
 
@@ -104,11 +104,11 @@ HRESULT FileMappingStream::CommitSize(ULONGLONG ullNewSize)
     if (!VirtualQuery(m_pMapped, &mbi, sizeof(MEMORY_BASIC_INFORMATION)))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed VirtualQuery on 0x{:p} (code: {:#x})", m_pMapped, hr);
+        Log::Error("Failed VirtualQuery on 0x{:p} (code: {:#x})", m_pMapped, hr);
 
         if (!VirtualFree(m_pMapped, static_cast<size_t>(ullNewSize), MEM_DECOMMIT))
         {
-            spdlog::error(
+            Log::Error(
                 "Failed VirtualFree: cannot decommit 0x{:p} (code: {:#x})",
                 m_pMapped,
                 HRESULT_FROM_WIN32(GetLastError()));

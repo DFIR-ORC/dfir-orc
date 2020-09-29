@@ -26,7 +26,7 @@
 
 #include <array>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 
@@ -104,7 +104,7 @@ CommandAgent::PrepareRedirection(const shared_ptr<CommandExecute>& cmd, const Co
 
     if (FAILED(hr = stream->Open(m_TempDir, L"CommandRedirection", 4 * 1024 * 1024)))
     {
-        spdlog::error(L"Failed to create temporary stream (code: {:#x})", hr);
+        Log::Error(L"Failed to create temporary stream (code: {:#x})", hr);
         return nullptr;
     }
 
@@ -131,7 +131,7 @@ CommandAgent::PrepareRedirection(const shared_ptr<CommandExecute>& cmd, const Co
         HRESULT hr2 = E_FAIL;
         if (FAILED(hr2 = retval->CreatePipe(output.Keyword.c_str())))
         {
-            spdlog::error("Could not create pipe for process redirection (code: {:#x})", hr2);
+            Log::Error("Could not create pipe for process redirection (code: {:#x})", hr2);
             return nullptr;
         }
     }
@@ -307,8 +307,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = ApplyPattern(parameter.Keyword, L"", L"", strFileName)))
                     {
-                        spdlog::error(
-                            L"Failed to apply parttern on output name '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(L"Failed to apply parttern on output name '{}' (code: {:#x})", parameter.Name, hr);
                         return;
                     }
 
@@ -328,7 +327,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = GetOutputFile(parameter.Name.c_str(), strInterpretedName)))
                     {
-                        spdlog::error(L"GetOutputFile failed, skipping file '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(L"GetOutputFile failed, skipping file '{}' (code: {:#x})", parameter.Name, hr);
                         return;
                     }
 
@@ -336,7 +335,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = ApplyPattern(strInterpretedName, L"", L"", strFileName)))
                     {
-                        spdlog::error(L"Failed to apply parttern on '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(L"Failed to apply parttern on '{}' (code: {:#x})", parameter.Name, hr);
                         return;
                     }
 
@@ -350,7 +349,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = UtilGetUniquePath(szTempDir, strFileName.c_str(), strFilePath)))
                     {
-                        spdlog::error(L"UtilGetUniquePath failed, skipping file '{}' (code: {:#x})", strFileName, hr);
+                        Log::Error(L"UtilGetUniquePath failed, skipping file '{}' (code: {:#x})", strFileName, hr);
                         return;
                     }
                     else
@@ -376,8 +375,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = GetOutputFile(parameter.Name.c_str(), strInterpretedName)))
                     {
-                        spdlog::error(
-                            L"GetOutputFile failed, skipping directory '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(L"GetOutputFile failed, skipping directory '{}' (code: {:#x})", parameter.Name, hr);
                         return;
                     }
 
@@ -391,15 +389,14 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = ApplyPattern(strInterpretedName, L"", L"", strDirName)))
                     {
-                        spdlog::error(
-                            L"Failed to apply parttern on output name '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(L"Failed to apply parttern on output name '{}' (code: {:#x})", parameter.Name, hr);
                         return;
                     }
 
                     wstring strDirPath;
                     if (FAILED(hr = UtilGetUniquePath(szTempDir, strDirName.c_str(), strDirPath)))
                     {
-                        spdlog::error(
+                        Log::Error(
                             L"UtilGetUniquePath failed, skipping directory '{}':  (code: {:#x})", strDirName, hr);
                         return;
                     }
@@ -411,7 +408,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                         if (!CreateDirectory(strDirPath.c_str(), NULL))
                         {
                             hr = HRESULT_FROM_WIN32(GetLastError());
-                            spdlog::error(
+                            Log::Error(
                                 L"Could not create directory, skipping directory '{}' (code: {:#x})", strDirPath, hr);
                             return;
                         }
@@ -439,7 +436,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                         if (FAILED(hr = m_Ressources.GetResource(parameter.Name, parameter.Keyword, extracted)))
                         {
-                            spdlog::error(L"Failed to extract ressource '{}' (code: {:#x})", parameter.Name, hr);
+                            Log::Error(L"Failed to extract ressource '{}' (code: {:#x})", parameter.Name, hr);
                             return;
                         }
                         if (FAILED(hr = retval->AddExecutableToRun(extracted)))
@@ -464,8 +461,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                                     m_TempDir,
                                     extracted)))
                         {
-                            spdlog::error(
-                                L"Failed to extract ressource '{}' from cab (code: {:#x})", parameter.Name, hr);
+                            Log::Error(L"Failed to extract ressource '{}' from cab (code: {:#x})", parameter.Name, hr);
                             return;
                         }
                         wstring Arg;
@@ -507,7 +503,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
     if (m_bChildDebug)
     {
-        spdlog::debug(L"CommandAgent: Configured dump file path '{}'", m_TempDir);
+        Log::Debug(L"CommandAgent: Configured dump file path '{}'", m_TempDir);
         retval->AddDumpFileDirectory(m_TempDir);
     }
 
@@ -610,8 +606,7 @@ HRESULT CommandAgent::ExecuteNextCommand()
                     WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::error(
-                    L"Could not register for process '{}' termination (code: {:#x})", command->GetKeyword(), hr);
+                Log::Error(L"Could not register for process '{}' termination (code: {:#x})", command->GetKeyword(), hr);
                 return hr;
             }
 
@@ -644,7 +639,7 @@ DWORD WINAPI CommandAgent::JobObjectNotificationRoutine(__in LPVOID lpParameter)
             if (err != ERROR_INVALID_HANDLE && err != ERROR_ABANDONED_WAIT_0)
             {
                 // Error invalid handle "somewhat" expected. Log the others
-                spdlog::error(L"Failed GetQueuedCompletionStatus (code: {:#x})", HRESULT_FROM_WIN32(err));
+                Log::Error(L"Failed GetQueuedCompletionStatus (code: {:#x})", HRESULT_FROM_WIN32(err));
             }
             return 0;
         }
@@ -698,7 +693,7 @@ void CommandAgent::run()
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, (ULONG_PTR)this, 0);
     if (m_hCompletionPort == NULL)
     {
-        spdlog::error(
+        Log::Error(
             L"Failed to create IO Completion port for job object (code: {:#x})",
             m_Keyword,
             HRESULT_FROM_WIN32(GetLastError()));
@@ -714,17 +709,17 @@ void CommandAgent::run()
         JobObject currentJob = JobObject(hJob);
         if (currentJob.IsValid())
         {
-            spdlog::debug(L"WolfLauncher is running under an existing job!");
+            Log::Debug(L"WolfLauncher is running under an existing job!");
             if (currentJob.IsBreakAwayAllowed())
             {
-                spdlog::debug(L"Breakaway is allowed, we create our own job and use it!");
+                Log::Debug(L"Breakaway is allowed, we create our own job and use it!");
                 m_Job = JobObject(m_Keyword.c_str());
                 m_bWillRequireBreakAway = true;
             }
             else
             {
                 // OK, tricky case here... we are in a job, that does not allow breakaway...
-                spdlog::debug(L"Breakaway is not allowed!");
+                Log::Debug(L"Breakaway is not allowed!");
 
                 // as we'll be hosted inside a "foreign" job or a nested job, limits may or may not apply
                 m_bLimitsMUSTApply = false;
@@ -733,13 +728,12 @@ void CommandAgent::run()
                 auto [major, minor] = SystemDetails::GetOSVersion();
                 if ((major >= 6 && minor >= 2) || major >= 10)
                 {
-                    spdlog::debug(L"Current Windows version allows nested jobs. We create our own job and use it!");
+                    Log::Debug(L"Current Windows version allows nested jobs. We create our own job and use it!");
                     m_Job = JobObject(m_Keyword.c_str());
                 }
                 else
                 {
-                    spdlog::debug(
-                        L"Current Windows version does not allow nested jobs. We have to use the current job!");
+                    Log::Debug(L"Current Windows version does not allow nested jobs. We have to use the current job!");
                     m_Job = std::move(currentJob);
                 }
             }
@@ -747,30 +741,30 @@ void CommandAgent::run()
     }
     else if (hr == S_OK && hJob == INVALID_HANDLE_VALUE)
     {
-        spdlog::debug(L"WolfLauncher is not running under any job!");
+        Log::Debug(L"WolfLauncher is not running under any job!");
         m_Job = JobObject(m_Keyword.c_str());
     }
     else
     {
-        spdlog::debug(L"WolfLauncher is running under a job we could not determine!");
+        Log::Debug(L"WolfLauncher is running under a job we could not determine!");
         JobObject currentJob = JobObject((HANDLE)NULL);
         if (currentJob.IsValid())
         {
-            spdlog::debug(L"WolfLauncher is running under an existing job!");
+            Log::Debug(L"WolfLauncher is running under an existing job!");
             if (currentJob.IsBreakAwayAllowed())
             {
-                spdlog::debug(L"Breakaway is allowed, we create our own job and use it!");
+                Log::Debug(L"Breakaway is allowed, we create our own job and use it!");
                 m_Job = JobObject(m_Keyword.c_str());
                 if (!m_Job.IsValid())
                 {
-                    spdlog::error(L"Failed to create job");
+                    Log::Error(L"Failed to create job");
                 }
                 m_bWillRequireBreakAway = true;
             }
             else
             {
                 // OK, tricky case here... we are in a job, don't know which one, that does not allow breakaway...
-                spdlog::debug(L"Breakaway is not allowed!");
+                Log::Debug(L"Breakaway is not allowed!");
 
                 // as we'll be hosted inside a "foreign" job or a nested job, limits may or may not apply
                 m_bLimitsMUSTApply = false;
@@ -779,12 +773,12 @@ void CommandAgent::run()
                 auto [major, minor] = SystemDetails::GetOSVersion();
                 if ((major >= 6 && minor >= 2) || major >= 10)
                 {
-                    spdlog::debug(L"Current Windows version allows nested jobs. We create our own job and use it!");
+                    Log::Debug(L"Current Windows version allows nested jobs. We create our own job and use it!");
                     m_Job = JobObject(m_Keyword.c_str());
                 }
                 else
                 {
-                    spdlog::error(
+                    Log::Error(
                         L"Current Windows version does not allow nested jobs, we cannot determine which job, we cannot "
                         L"break away. We have to fail!");
                     done();
@@ -796,14 +790,14 @@ void CommandAgent::run()
 
     if (!m_Job.IsValid())
     {
-        spdlog::error(L"Failed to create '{}' job object (code: {:#x})", m_Keyword, HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error(L"Failed to create '{}' job object (code: {:#x})", m_Keyword, HRESULT_FROM_WIN32(GetLastError()));
         done();
         return;
     }
 
     if (FAILED(hr = m_Job.AssociateCompletionPort(m_hCompletionPort, this)))
     {
-        spdlog::error(L"Failed to associate job object with completion port '{}' (code: {:#x})", m_Keyword, hr);
+        Log::Error(L"Failed to associate job object with completion port '{}' (code: {:#x})", m_Keyword, hr);
         done();
         return;
     }
@@ -819,14 +813,14 @@ void CommandAgent::run()
             if (m_bLimitsMUSTApply)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError()),
-                spdlog::error("Failed to set basic UI restrictions on job object (code: {:#x})", hr);
+                Log::Error("Failed to set basic UI restrictions on job object (code: {:#x})", hr);
                 done();
                 return;
             }
             else
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::warn("Failed to set basic UI restrictions on job object (code: {:#x})", hr);
+                Log::Warn("Failed to set basic UI restrictions on job object (code: {:#x})", hr);
             }
         }
     }
@@ -841,7 +835,7 @@ void CommandAgent::run()
                 sizeof(JOBOBJECT_END_OF_JOB_TIME_INFORMATION),
                 NULL))
         {
-            spdlog::error(
+            Log::Error(
                 "Failed to retrieve end of job behavior on job object (code: {:#x})",
                 HRESULT_FROM_WIN32(GetLastError()));
             done();
@@ -858,7 +852,7 @@ void CommandAgent::run()
         // job time is exceeded
         if (!SetInformationJobObject(m_Job.GetHandle(), JobObjectEndOfJobTimeInformation, &joeojti, sizeof(joeojti)))
         {
-            spdlog::warn(
+            Log::Warn(
                 L"Failed to set end of job behavior (to post at end of job) on job object (code: {:#x})",
                 HRESULT_FROM_WIN32(GetLastError()));
         }
@@ -885,26 +879,25 @@ void CommandAgent::run()
                 if (m_bLimitsMUSTApply)
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError()),
-                    spdlog::error("Failed to set CPU Rate limits on job object (code: {:#x})", hr);
+                    Log::Error("Failed to set CPU Rate limits on job object (code: {:#x})", hr);
                     done();
                     return;
                 }
                 else
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    spdlog::warn(L"Failed to CPU Rate limits on job object (code: {:#x})", hr);
+                    Log::Warn(L"Failed to CPU Rate limits on job object (code: {:#x})", hr);
                 }
             }
             else
             {
-                spdlog::debug(L"CPU rate limits successfully applied");
+                Log::Debug(L"CPU rate limits successfully applied");
             }
         }
         else
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::warn(
-                L"CPU Rate limit: this Windows version does not support this feature (<6.2) (code: {:#x})", hr);
+            Log::Warn(L"CPU Rate limit: this Windows version does not support this feature (<6.2) (code: {:#x})", hr);
         }
     }
 
@@ -919,14 +912,14 @@ void CommandAgent::run()
             if (m_bLimitsMUSTApply)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::error(L"Failed to set extended limits on job object (code: {:#x})", hr);
+                Log::Error(L"Failed to set extended limits on job object (code: {:#x})", hr);
                 done();
                 return;
             }
             else
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::warn(L"Failed to set extended limits on job object (code: {:#x})", hr);
+                Log::Warn(L"Failed to set extended limits on job object (code: {:#x})", hr);
             }
         }
     }
@@ -945,7 +938,7 @@ void CommandAgent::run()
             &returnedLength))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to obtain extended limits on job object (code: {:#x})", hr);
+        Log::Error(L"Failed to obtain extended limits on job object (code: {:#x})", hr);
         done();
         return;
     }
@@ -974,7 +967,7 @@ void CommandAgent::run()
                 sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Failed to set extended limits on job object (code: {:#x})", hr);
+            Log::Error(L"Failed to set extended limits on job object (code: {:#x})", hr);
             done();
             return;
         }
@@ -984,7 +977,7 @@ void CommandAgent::run()
     if (!QueueUserWorkItem(JobObjectNotificationRoutine, m_hCompletionPort, WT_EXECUTEDEFAULT))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to queue user work item for completion port (code: {:#x})", m_Keyword, hr);
+        Log::Error(L"Failed to queue user work item for completion port (code: {:#x})", m_Keyword, hr);
         done();
         return;
     }
@@ -994,7 +987,7 @@ void CommandAgent::run()
         switch (request->Request())
         {
             case CommandMessage::Execute: {
-                spdlog::debug(L"CommandAgent: Execute command '{}'", request->Keyword());
+                Log::Debug(L"CommandAgent: Execute command '{}'", request->Keyword());
                 if (!m_bStopping)
                 {
                     auto command = PrepareCommandExecute(request);
@@ -1003,12 +996,12 @@ void CommandAgent::run()
                 }
                 else
                 {
-                    spdlog::error(L"Command '{}' rejected, command agent is stopping", request->Keyword());
+                    Log::Error(L"Command '{}' rejected, command agent is stopping", request->Keyword());
                 }
             }
             break;
             case CommandMessage::RefreshRunningList: {
-                spdlog::debug("CommandAgent: Refreshing running command list");
+                Log::Debug("CommandAgent: Refreshing running command list");
 
                 Concurrency::critical_section::scoped_lock s(m_cs);
                 auto new_end = std::remove_if(
@@ -1072,7 +1065,7 @@ void CommandAgent::run()
             }
             break;
             case CommandMessage::TerminateAll: {
-                spdlog::debug("CommandAgent: Terminate (kill) all running tasks");
+                Log::Debug("CommandAgent: Terminate (kill) all running tasks");
                 m_bStopping = true;
                 {
                     Concurrency::critical_section::scoped_lock lock(m_cs);
@@ -1085,27 +1078,27 @@ void CommandAgent::run()
                 if (!TerminateJobObject(m_Job.GetHandle(), (UINT)-1))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    spdlog::error(L"Failed to terminate job object '{}' (code: {:#x})", request->Keyword(), hr);
+                    Log::Error(L"Failed to terminate job object '{}' (code: {:#x})", request->Keyword(), hr);
                 }
                 SendResult(CommandNotification::NotifyTerminateAll());
             }
             break;
             case CommandMessage::CancelAnyPendingAndStop: {
-                spdlog::debug(L"CommandAgent: Cancel any pending task (ie not running) and stop accepting new ones");
+                Log::Debug(L"CommandAgent: Cancel any pending task (ie not running) and stop accepting new ones");
                 m_bStopping = true;
                 {
                     Concurrency::critical_section::scoped_lock lock(m_cs);
                     std::shared_ptr<CommandExecute> cmd;
                     while (m_CommandQueue.try_pop(cmd))
                     {
-                        spdlog::info(L"Canceling command {}", cmd->GetKeyword());
+                        Log::Info(L"Canceling command {}", cmd->GetKeyword());
                     }
                 }
                 SendResult(CommandNotification::NotifyCanceled());
             }
             break;
             case CommandMessage::QueryRunningList: {
-                spdlog::debug("CommandAgent: Query running command list");
+                Log::Debug("CommandAgent: Query running command list");
 
                 Concurrency::critical_section::scoped_lock lock(m_cs);
 
@@ -1118,7 +1111,7 @@ void CommandAgent::run()
             }
             break;
             case CommandMessage::Done: {
-                spdlog::debug("CommandAgent: Done message received");
+                Log::Debug("CommandAgent: Done message received");
                 m_bStopping = true;
             }
             break;
@@ -1128,7 +1121,7 @@ void CommandAgent::run()
 
         if (FAILED(hr = ExecuteNextCommand()))
         {
-            spdlog::error(L"Failed to execute next command (code: {:#x})", hr);
+            Log::Error(L"Failed to execute next command (code: {:#x})", hr);
         }
 
         if (m_bStopping && m_RunningCommands.size() == 0 && m_CommandQueue.empty())

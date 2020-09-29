@@ -8,7 +8,7 @@
 #include "stdafx.h"
 #include "SecurityDescriptor.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -22,7 +22,7 @@ HRESULT SecurityDescriptor::ConvertFromSDDL(LPCWSTR szSDDL)
     if (!ConvertStringSecurityDescriptorToSecurityDescriptor(szSDDL, SDDL_REVISION_1, &retval, &ulLength))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to convert string '{}' into a valid security descriptor (code: {:#x})", szSDDL, hr);
+        Log::Error(L"Failed to convert string '{}' into a valid security descriptor (code: {:#x})", szSDDL, hr);
         return hr;
     }
 

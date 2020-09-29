@@ -92,19 +92,19 @@ ImportMessage::Message ImportAgent::TriageNewItem(const ImportItem& input, Impor
             newItem.isToExtract = true;
             newItem.isToImport = false;
             retval = ImportMessage::MakeExtractRequest(std::move(newItem));
-            spdlog::debug(L"Archive '{}' has been extracted", newItem.name);
+            Log::Debug(L"Archive '{}' has been extracted", newItem.name);
         }
         else
         {
             if (newItem.IsToImport())
             {
                 retval = ImportMessage::MakeImportRequest(std::move(newItem));
-                spdlog::debug(L"Archive '{}' has been extracted", newItem.name);
+                Log::Debug(L"Archive '{}' has been extracted", newItem.name);
             }
             else if (newItem.IsToExtract())
             {
                 retval = ImportMessage::MakeExtractRequest(std::move(newItem));
-                spdlog::debug(L"Archive '{}' has been extracted", newItem.name);
+                Log::Debug(L"Archive '{}' has been extracted", newItem.name);
             }
         }
     }
@@ -121,7 +121,7 @@ HRESULT ImportAgent::UnWrapMessage(
 
     if (FAILED(hr = pDecodeStream->Initialize(pOutputStream)))
     {
-        spdlog::error("Failed to initialise decoding stream to unwrap message (code: {:#x})", hr);
+        Log::Error("Failed to initialise decoding stream to unwrap message (code: {:#x})", hr);
         return hr;
     }
 
@@ -129,7 +129,7 @@ HRESULT ImportAgent::UnWrapMessage(
 
     if (FAILED(hr = pMessageStream->CopyTo(pDecodeStream, &cbBytesWritten)))
     {
-        spdlog::error("Failed to unwrap envelopped message (code: {:#x})", hr);
+        Log::Error("Failed to unwrap envelopped message (code: {:#x})", hr);
         return hr;
     }
     else
@@ -139,7 +139,7 @@ HRESULT ImportAgent::UnWrapMessage(
         {
             std::wstring strSubjectName;
             MessageStream::CertNameToString(&pDecryptor->pCertInfo->Subject, CERT_SIMPLE_NAME_STR, strSubjectName);
-            spdlog::debug(L"Successfully unwrapped message with '{}' certificate", strSubjectName);
+            Log::Debug(L"Successfully unwrapped message with '{}' certificate", strSubjectName);
         }
     }
     return S_OK;
@@ -160,26 +160,26 @@ HRESULT ImportAgent::EnveloppedItem(ImportItem& input)
     auto pTempStream = std::make_shared<TemporaryStream>();
     if (FAILED(hr = pTempStream->Open(m_tempOutput.Path.c_str(), input.name, 100 * 1024 * 1024, false)))
     {
-        spdlog::error(L"Failed to open temporary stream (code: {:#x})", hr);
+        Log::Error(L"Failed to open temporary stream (code: {:#x})", hr);
         return hr;
     }
 
     auto pEnveloppedStream = input.GetInputStream();
     if (!pEnveloppedStream)
     {
-        spdlog::error(L"Failed to open envelopped stream (code: {:#x})", hr);
+        Log::Error(L"Failed to open envelopped stream (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = UnWrapMessage(pEnveloppedStream, pTempStream)))
     {
-        spdlog::error(L"Failed to unwrap message (code: {:#x})", hr);
+        Log::Error(L"Failed to unwrap message (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = pTempStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
     {
-        spdlog::error(L"Failed to rewind unwrapped stream (code: {:#x})", hr);
+        Log::Error(L"Failed to rewind unwrapped stream (code: {:#x})", hr);
         return hr;
     }
 
@@ -209,20 +209,20 @@ HRESULT ImportAgent::EnveloppedItem(ImportItem& input)
         auto pOutputStream = std::make_shared<TemporaryStream>();
         if (FAILED(hr = pOutputStream->Open(m_tempOutput.Path.c_str(), output.name, 100 * 1024 * 1024, false)))
         {
-            spdlog::error("Failed to open temporary archive (code: {:#x})", hr);
+            Log::Error("Failed to open temporary archive (code: {:#x})", hr);
             return hr;
         }
 
         if (FAILED(hr = JournalingStream::ReplayJournalStream(pTempStream, pOutputStream)))
         {
-            spdlog::error("Failed to replay journaled archive (code: {:#x})", hr);
+            Log::Error("Failed to replay journaled archive (code: {:#x})", hr);
             return hr;
         }
         pTempStream->Close();
 
         if (FAILED(hr = pOutputStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
         {
-            spdlog::error("Failed to rewind output stream (code: {:#x})", hr);
+            Log::Error("Failed to rewind output stream (code: {:#x})", hr);
             return hr;
         }
         output.Stream = pOutputStream;
@@ -273,13 +273,13 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
     if (archiveFormat == ArchiveFormat::Unknown)
     {
-        spdlog::error(L"Unrecognised archive format for '{}'", input.name);
+        Log::Error(L"Unrecognised archive format for '{}'", input.name);
         return hr;
     }
 
     auto extractor = ArchiveExtract::MakeExtractor(archiveFormat);
 
-    spdlog::debug("Extracting archive");
+    Log::Debug("Extracting archive");
 
     if (input.definitionItem)
     {
@@ -311,7 +311,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
         if (found == end(tempItems))
         {
-            spdlog::error(L"Could not find a temp item for '{}'", strItemName);
+            Log::Error(L"Could not find a temp item for '{}'", strItemName);
         }
         else
         {
@@ -362,19 +362,19 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
                 if (Archive::GetArchiveFormat(item.NameInArchive) != ArchiveFormat::Unknown)
                 {
                     SendRequest(ImportMessage::MakeExpandRequest(std::move(*found)));
-                    spdlog::debug(L"Archive '{}' has been extracted", strItemName);
+                    Log::Debug(L"Archive '{}' has been extracted", strItemName);
                 }
                 else
                 {
                     if (found->IsToImport())
                     {
                         SendRequest(std::move(ImportMessage::MakeImportRequest(*found)));
-                        spdlog::debug(L"Archive '{}' has been extracted", strItemName);
+                        Log::Debug(L"Archive '{}' has been extracted", strItemName);
                     }
                     else if (found->IsToExtract())
                     {
                         SendRequest(ImportMessage::MakeExtractRequest(std::move(*found)));
-                        spdlog::debug(L"Archive '{}' has been extracted", strItemName);
+                        Log::Debug(L"Archive '{}' has been extracted", strItemName);
                     }
                 }
             }
@@ -417,7 +417,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
         if (FAILED(hr = pStream->Open(m_tempOutput.Path.c_str(), item.NameInArchive, 800 * 1024 * 1024, false)))
         {
-            spdlog::error("Failed to open temporary archive (code: {:#x})", hr);
+            Log::Error("Failed to open temporary archive (code: {:#x})", hr);
             return nullptr;
         }
         output_item.Stream = pStream;
@@ -455,13 +455,13 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
                 return true;
         }
 
-        spdlog::debug(L"'{}'' is not imported", strItemName);
+        Log::Debug(L"'{}'' is not imported", strItemName);
         return false;
     };
 
     if (FAILED(hr = extractor->Extract(MakeArchiveStream, ShouldItemBeExtracted, MakeWriteStream)))
     {
-        spdlog::error(L"Failed to extract archive '{}' (code: {:#x})", input.name, hr);
+        Log::Error(L"Failed to extract archive '{}' (code: {:#x})", input.name, hr);
         return hr;
     }
     if (input.Stream)
@@ -485,7 +485,7 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
         wstring strOutputDir;
         if (FAILED(hr = GetOutputDir(m_extractOutput.Path.c_str(), strOutputDir, true)))
         {
-            spdlog::error(L"Failed to create output file (code: {:#x})", hr);
+            Log::Error(L"Failed to create output file (code: {:#x})", hr);
             return hr;
         }
 
@@ -503,7 +503,7 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
         if (err)
         {
             hr = HRESULT_FROM_WIN32(err.value());
-            spdlog::error(L"Failed to create output directory '{}' (code: {:#x})", output_path.parent_path(), hr);
+            Log::Error(L"Failed to create output directory '{}' (code: {:#x})", output_path.parent_path(), hr);
             return hr;
         }
 
@@ -518,10 +518,10 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
 
             if (FAILED(hr = tempStream->MoveTo(strOutput.c_str())))
             {
-                spdlog::error(L"Failed to extract '{}' to file '{}' (code: {:#x})", input.fullName, strOutput, hr);
+                Log::Error(L"Failed to extract '{}' to file '{}' (code: {:#x})", input.fullName, strOutput, hr);
                 return hr;
             }
-            spdlog::debug(L"'{}' is extracted to '{}'", input.fullName, strOutput);
+            Log::Debug(L"'{}' is extracted to '{}'", input.fullName, strOutput);
         }
         else
         {
@@ -537,10 +537,10 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
             ULONGLONG ullWritten = 0LL;
             if (FAILED(hr = input.Stream->CopyTo(fileStream, &ullWritten)))
             {
-                spdlog::error(L"Failed to extract '{}' to file '{}' (code: {:#x})", input.fullName, strOutput, hr);
+                Log::Error(L"Failed to extract '{}' to file '{}' (code: {:#x})", input.fullName, strOutput, hr);
                 return hr;
             }
-            spdlog::debug(L"'{}' is extracted to '{}'", input.fullName, strOutput);
+            Log::Debug(L"'{}' is extracted to '{}'", input.fullName, strOutput);
             input.ullBytesExtracted = ullWritten;
         }
 
@@ -618,14 +618,13 @@ HRESULT ImportAgent::InitializeTables(std::vector<TableDescription>& tables)
             {
                 if (FAILED(hr = pAgent->Initialize(m_databaseOutput, m_tempOutput, table)))
                 {
-                    spdlog::error(
-                        L"Failed to initialize SQL import agent for table '{}' (code: {:#x})", table.name, hr);
+                    Log::Error(L"Failed to initialize SQL import agent for table '{}' (code: {:#x})", table.name, hr);
                     return hr;
                 }
 
                 if (!pAgent->start())
                 {
-                    spdlog::error(L"Failed to start SQL import agent for table '{}'", table.name);
+                    Log::Error(L"Failed to start SQL import agent for table '{}'", table.name);
                     return hr;
                 }
 
@@ -644,7 +643,7 @@ HRESULT ImportAgent::InitializeTables(std::vector<TableDescription>& tables)
         std::make_unique<SqlImportAgent>(flow->block, m_target, m_memSemaphore, m_fileSemaphore, &m_lInProgressItems);
     if (!pAgent->start())
     {
-        spdlog::error("Failed to start SQL import agent for dummy table (code: {:#x})", hr);
+        Log::Error("Failed to start SQL import agent for dummy table (code: {:#x})", hr);
         return hr;
     }
     m_pAgents.emplace_back(std::move(pAgent));
@@ -661,7 +660,7 @@ HRESULT ImportAgent::FinalizeTables()
     {
         if (FAILED(hr = agent->Finalize()))
         {
-            spdlog::error("Failed to finalize agent (code: {:#x})", hr);
+            Log::Error("Failed to finalize agent (code: {:#x})", hr);
         }
     }
     return S_OK;
@@ -806,7 +805,7 @@ void ImportAgent::run()
         {
             return;
         }
-        spdlog::info(L"Queue is empty, completing agents...");
+        Log::Info(L"Queue is empty, completing agents...");
         auto complete_request = ImportMessage::MakeCompleteRequest();
         SendRequest(complete_request);
     });
@@ -821,7 +820,7 @@ void ImportAgent::run()
     {
         if (request->m_Request == ImportMessage::Complete)
         {
-            spdlog::debug("ImportAgent received a complete message");
+            Log::Debug("ImportAgent received a complete message");
         }
         else
         {
@@ -866,7 +865,7 @@ void ImportAgent::run()
 
 HRESULT ImportAgent::LogStatistics()
 {
-    spdlog::info(L"Main extraction agent: {} items", m_ulItemProcessed);
+    Log::Info(L"Main extraction agent: {} items", m_ulItemProcessed);
 
     for (const auto& flow : m_SqlDataFlow)
     {
@@ -875,7 +874,7 @@ HRESULT ImportAgent::LogStatistics()
             bool bFirst = true;
             for (const auto& agent : flow->pAgents)
             {
-                spdlog::info(L"{}: {} {}", flow->filter.strTableName, bFirst ? L"" : L" +", agent->ItemsProcess());
+                Log::Info(L"{}: {} {}", flow->filter.strTableName, bFirst ? L"" : L" +", agent->ItemsProcess());
                 bFirst = false;
             }
         }
@@ -889,50 +888,50 @@ void ImportAgent::LogNotification(const ImportNotification::Notification& notifi
 
     if (FAILED(notification->GetHR()))
     {
-        spdlog::error(L"{}: Failed (code: {:#x})", notification->Item().name, notification->GetHR());
+        Log::Error(L"{}: Failed (code: {:#x})", notification->Item().name, notification->GetHR());
         return;
     }
 
     switch (item.format)
     {
         case ImportItem::Envelopped:
-            spdlog::info(L"{} (envelopped message) decrypted ({} bytes)", item.name, item.ullBytesExtracted);
+            Log::Info(L"{} (envelopped message) decrypted ({} bytes)", item.name, item.ullBytesExtracted);
             break;
         case ImportItem::Archive:
-            spdlog::info(L"{} (archive) extracted ({} bytes)", item.name, item.ullBytesExtracted);
+            Log::Info(L"{} (archive) extracted ({} bytes)", item.name, item.ullBytesExtracted);
             break;
         case ImportItem::CSV:
-            spdlog::info(
+            Log::Info(
                 L"{} (csv) imported into {} ({} lines)",
                 item.name,
                 item.definitionItem->tableName,
                 item.ullLinesImported);
             break;
         case ImportItem::RegistryHive:
-            spdlog::info(
+            Log::Info(
                 L"{} (registry hive) imported into {} ({} lines)",
                 item.name,
                 item.definitionItem->tableName,
                 item.ullLinesImported);
             break;
         case ImportItem::EventLog:
-            spdlog::info(
+            Log::Info(
                 L"{} (event log) imported into {} ({} lines)",
                 item.name,
                 item.definitionItem->tableName,
                 item.ullLinesImported);
             break;
         case ImportItem::XML:
-            spdlog::info(L"{} (xml) imported ({} bytes)", item.name, item.ullBytesExtracted);
+            Log::Info(L"{} (xml) imported ({} bytes)", item.name, item.ullBytesExtracted);
             break;
         case ImportItem::Data:
-            spdlog::info(L"{} (data) imported ({} bytes)", item.name, item.ullBytesExtracted);
+            Log::Info(L"{} (data) imported ({} bytes)", item.name, item.ullBytesExtracted);
             break;
         case ImportItem::Text:
-            spdlog::info(L"{} (text) imported ({} bytes)", item.name, item.ullBytesExtracted);
+            Log::Info(L"{} (text) imported ({} bytes)", item.name, item.ullBytesExtracted);
             break;
         default:
-            spdlog::warn(L"unexpected notification: {} (text) imported ({} bytes)", item.name, item.ullBytesExtracted);
+            Log::Warn(L"unexpected notification: {} (text) imported ({} bytes)", item.name, item.ullBytesExtracted);
             break;
     }
 }

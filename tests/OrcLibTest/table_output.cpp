@@ -189,11 +189,11 @@ public:
         if (auto mem_stream = std::dynamic_pointer_cast<MemoryStream>(stream); mem_stream)
         {
             auto buffer = mem_stream->GetConstBuffer();
-            spdlog::info(L"Table has {} bytes", buffer.GetCount());
+            Log::Info(L"Table has {} bytes", buffer.GetCount());
         }
         else
         {
-            spdlog::info(L"Table has {} bytes", stream->GetSize());
+            Log::Info(L"Table has {} bytes", stream->GetSize());
         }
     }
 

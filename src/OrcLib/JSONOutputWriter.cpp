@@ -125,7 +125,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated(co
 
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to write formated string (code: {:#x})", hr);
+        Log::Error(L"Failed to write formated string (code: {:#x})", hr);
         return hr;
     }
 
@@ -148,7 +148,7 @@ Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated(LPCWS
 
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to write formated string (code: {:#x})", hr);
+        Log::Error(L"Failed to write formated string (code: {:#x})", hr);
         return hr;
     }
 

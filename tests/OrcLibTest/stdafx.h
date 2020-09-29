@@ -24,6 +24,6 @@
 
 #include <atlbase.h>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 #include "unittesthelper.h"

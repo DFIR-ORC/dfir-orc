@@ -313,7 +313,7 @@ private:
 
                 if (FAILED(hr = pStream->Open(szTempDir, item.NameInArchive, 1 * 1024 * 1024, false)))
                 {
-                    spdlog::error("Failed to open temporary archive (code: {:#x})", hr);
+                    Log::Error("Failed to open temporary archive (code: {:#x})", hr);
                     return nullptr;
                 }
 

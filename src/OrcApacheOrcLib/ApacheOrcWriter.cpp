@@ -165,7 +165,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::SetSchema(const TableOutput::S
         auto [hr, strName] = WideToAnsi(column->ColumnName);
         if (FAILED(hr))
         {
-            spdlog::error(L"Invalid column name: '{}' (code: {:#x})", column->ColumnName, hr);
+            Log::Error(L"Invalid column name: '{}' (code: {:#x})", column->ColumnName, hr);
             break;
         }
 
@@ -241,7 +241,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::SetSchema(const TableOutput::S
                 type = createPrimitiveType(TypeKind::INT);
                 break;
             default:
-                spdlog::error(L"Unupported (orc) column type for column: '{}'", column->ColumnName);
+                Log::Error(L"Unupported (orc) column type for column: '{}'", column->ColumnName);
         }
 
         if (type)
@@ -332,7 +332,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::Close()
 
     if (auto hr = Flush(); FAILED(hr))
     {
-        spdlog::error(L"Failed to flush arrow table (code: {:#x})", hr);
+        Log::Error(L"Failed to flush arrow table (code: {:#x})", hr);
         return hr;
     }
 

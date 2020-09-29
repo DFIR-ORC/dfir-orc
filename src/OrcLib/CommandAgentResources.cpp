@@ -13,7 +13,7 @@
 
 #include "Temporary.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 using namespace Orc;
@@ -31,7 +31,7 @@ HRESULT CommandAgentResources::ExtractRessource(
             strRef, strKeyword, RESSOURCE_READ_EXECUTE_BA, m_strTempDirectory, strExtracted);
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to extract ressource '{}' (code: {:#x})", strRef, hr);
+            Log::Error(L"Failed to extract ressource '{}' (code: {:#x})", strRef, hr);
             return hr;
         }
     }
@@ -76,20 +76,20 @@ HRESULT CommandAgentResources::DeleteTemporaryRessource(const std::wstring& strR
 
     if (it == end(m_TempRessources))
     {
-        spdlog::debug(L"Ressource '{}' not found in temporary extracted ressources", strRef);
+        Log::Debug(L"Ressource '{}' not found in temporary extracted ressources", strRef);
         return S_OK;  // Nothing to delete here
     }
 
     if (!it->second.empty())
     {
-        spdlog::debug(L"No temporary file associated with '{}'", strRef);
+        Log::Debug(L"No temporary file associated with '{}'", strRef);
         return S_OK;
     }
 
     HRESULT hr = E_FAIL;
     if (FAILED(hr = UtilDeleteTemporaryFile(it->second.c_str())))
     {
-        spdlog::error(L"Failed to delete temporary ressource '{}' (temp: '{}', code: {:#x})", strRef, it->second, hr);
+        Log::Error(L"Failed to delete temporary ressource '{}' (temp: '{}', code: {:#x})", strRef, it->second, hr);
         return hr;
     }
     return S_OK;
@@ -103,7 +103,7 @@ HRESULT CommandAgentResources::DeleteTemporaryRessources()
 
             if (FAILED(hr = UtilDeleteTemporaryFile(item.second.c_str())))
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to delete temporary ressource {} (temp: {}, code: {:#x})", item.first, item.second, hr);
             }
         });
@@ -116,6 +116,6 @@ CommandAgentResources::~CommandAgentResources()
     HRESULT hr = E_FAIL;
     if (FAILED(hr = DeleteTemporaryRessources()))
     {
-        spdlog::error(L"~CommandAgentResources: failed to delete all extrated temporary ressources (code: {:#x})", hr);
+        Log::Error(L"~CommandAgentResources: failed to delete all extrated temporary ressources (code: {:#x})", hr);
     }
 }

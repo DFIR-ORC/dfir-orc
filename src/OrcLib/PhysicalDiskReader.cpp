@@ -50,7 +50,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
                 m_uiDiskNum = (UINT)std::stoul(m[REGEX_PHYSICALDRIVE_NUM].str());
             else
             {
-                spdlog::error("Invalid physical drive number specification");
+                Log::Error("Invalid physical drive number specification");
             }
 
             if (m[REGEX_PHYSICALDRIVE_PARTITION_NUM].matched)
@@ -105,13 +105,13 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
         }
         else
         {
-            spdlog::error(L"Invalid physical drive reference: '{}'", m_szLocation);
+            Log::Error(L"Invalid physical drive reference: '{}'", m_szLocation);
             return E_INVALIDARG;
         }
     }
     catch (std::out_of_range)
     {
-        spdlog::error(L"Invalid physical drive reference: '{}'", m_szLocation);
+        Log::Error(L"Invalid physical drive reference: '{}'", m_szLocation);
         return E_INVALIDARG;
     }
 
@@ -122,7 +122,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
 
         if (FAILED(hr = pt.LoadPartitionTable(m_szPhysDrive)))
         {
-            spdlog::error(L"Failed to load partition table for {} (code: {:#x})", m_szPhysDrive, hr);
+            Log::Error(L"Failed to load partition table for {} (code: {:#x})", m_szPhysDrive, hr);
             return hr;
         }
 
@@ -152,7 +152,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
 
         if (m_uiPartNum == (UINT)-1)
         {
-            spdlog::error(L"Failed to determine partition to parse for \\\\.\\PhysicalDrive{}", m_uiDiskNum);
+            Log::Error(L"Failed to determine partition to parse for \\\\.\\PhysicalDrive{}", m_uiDiskNum);
             return E_FAIL;
         }
     }
@@ -160,7 +160,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
     CDiskExtent Extent(m_szPhysDrive, m_ullOffset, m_ullLength, m_BytesPerSector);
     if (FAILED(hr = Extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        spdlog::error(L"Failed to open the drive: '{}' (code: {:#x})", m_szPhysDrive, hr);
+        Log::Error(L"Failed to open the drive: '{}' (code: {:#x})", m_szPhysDrive, hr);
         return hr;
     }
 

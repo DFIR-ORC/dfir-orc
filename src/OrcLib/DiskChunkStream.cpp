@@ -22,7 +22,7 @@ HRESULT __stdcall DiskChunkStream::Open()
     }
     else
     {
-        spdlog::error(
+        Log::Error(
             L"DiskChunkStream::Open: Failed to open a disk for read access : {} (code: {:#x})", m_DiskInterface, hr);
     }
     return hr;
@@ -83,13 +83,13 @@ HRESULT __stdcall DiskChunkStream::Read(
 
     if (diskSize == 0 || diskSectorSize == 0)
     {
-        spdlog::error(L"[DiskChunkStream::Read] Unknown disk size or sector size");
+        Log::Error(L"[DiskChunkStream::Read] Unknown disk size or sector size");
         return E_FAIL;
     }
 
     if (m_chunkPointer > m_size)
     {
-        spdlog::error(L"[DiskChunkStream::Read] Internal chunk pointer is out of bounds\n");
+        Log::Error(L"[DiskChunkStream::Read] Internal chunk pointer is out of bounds\n");
         return hr;
     }
 
@@ -130,7 +130,7 @@ HRESULT __stdcall DiskChunkStream::Read(
         {
             // Free the memory for the buffer, m_cBuf.GetData() will return NULL
             cBuf.RemoveAll();
-            spdlog::error(
+            Log::Error(
                 L"DiskChunkStream::Read: Failed to read at offset {} ({}) (code: {:#x})",
                 m_offset + m_chunkPointer - m_deltaFromDiskToChunkPointer,
                 m_DiskInterface,
@@ -145,7 +145,7 @@ HRESULT __stdcall DiskChunkStream::Read(
     if ((numberOfbytesRead < (m_deltaFromDiskToChunkPointer + deltaReadSize)) || (numberOfChunkBytesRead > cbBytes))
     {
         cBuf.RemoveAll();
-        spdlog::error(L"DiskChunkStream::Read: Consistency checks done after reading failed");
+        Log::Error(L"DiskChunkStream::Read: Consistency checks done after reading failed");
         return E_FAIL;
     }
 
@@ -195,7 +195,7 @@ HRESULT __stdcall DiskChunkStream::SetFilePointer(
 
     if (diskSize == 0 || diskSectorSize == 0)
     {
-        spdlog::error(L"[DiskChunkStream::SetFilePointer] Unknown disk size or sector size");
+        Log::Error(L"[DiskChunkStream::SetFilePointer] Unknown disk size or sector size");
         return E_FAIL;
     }
 
@@ -236,7 +236,7 @@ HRESULT __stdcall DiskChunkStream::SetFilePointer(
 
     if (diskOffset.QuadPart < 0 || (ULONGLONG)diskOffset.QuadPart >= diskSize)
     {
-        spdlog::error(
+        Log::Error(
             L"[DiskChunkStream::SetFilePointer] Offset is beyond disk boundaries. (offset = %lld, disk size = "
             L"%llu)",
             diskOffset.QuadPart,
@@ -247,7 +247,7 @@ HRESULT __stdcall DiskChunkStream::SetFilePointer(
     // Seek to the raw disk offset
     if (FAILED(hr = m_diskReader->Seek(diskOffset, NULL, FILE_BEGIN)))
     {
-        spdlog::error(
+        Log::Error(
             L"DiskChunkStream::SetFilePointer: Failed to seek at offset {} ({}) (code: {:#x})",
             diskOffset.QuadPart,
             m_DiskInterface,

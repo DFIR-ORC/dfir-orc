@@ -36,7 +36,7 @@ HRESULT FatWalker::Init(const std::shared_ptr<Location>& loc, bool bResurrectRec
 
     if (nullptr == reader)
     {
-        spdlog::error(L"Failed to get reader from location {}", m_Location->GetLocation());
+        Log::Error(L"Failed to get reader from location {}", m_Location->GetLocation());
         return E_FAIL;
     }
 
@@ -82,13 +82,12 @@ HRESULT FatWalker::Init(const std::shared_ptr<Location>& loc, bool bResurrectRec
 
     if (FAILED(hr = reader->Seek(ullFirstFatTableOffset)))
     {
-        spdlog::error(
-            L"Failed to seek to first Fat table from location {} (code: {:#x})", m_Location->GetLocation(), hr);
+        Log::Error(L"Failed to seek to first Fat table from location {} (code: {:#x})", m_Location->GetLocation(), hr);
 
         // try to seek second fat table
         if (FAILED(hr = reader->Seek(ullSecondFatTableOffset)))
         {
-            spdlog::error(
+            Log::Error(
                 L"Failed to seek to second Fat table from location {} (code: {:#x})", m_Location->GetLocation(), hr);
             return hr;
         }
@@ -114,7 +113,7 @@ HRESULT FatWalker::Init(const std::shared_ptr<Location>& loc, bool bResurrectRec
         // force seek of reader if needed
         if (shouldSeek && FAILED(hr = reader->Seek(ullFatTableOffset)))
         {
-            spdlog::error(
+            Log::Error(
                 L"Failed to seek when reading the Fat table from location {} (code: {:#x})",
                 m_Location->GetLocation(),
                 hr);
@@ -123,8 +122,7 @@ HRESULT FatWalker::Init(const std::shared_ptr<Location>& loc, bool bResurrectRec
 
         if (FAILED(hr = reader->Read(buffer, ullBytesToRead, ullBytesRead)))
         {
-            spdlog::error(
-                L"Failed to read the Fat table from location {} (code: {:#x})", m_Location->GetLocation(), hr);
+            Log::Error(L"Failed to read the Fat table from location {} (code: {:#x})", m_Location->GetLocation(), hr);
             return hr;
         }
 
@@ -145,8 +143,7 @@ HRESULT FatWalker::Init(const std::shared_ptr<Location>& loc, bool bResurrectRec
         // root directory is not stored in fat table!
         if (S_OK != (hr = ReadRootDirectory(m_RootDirectoryBuffer, rootDirectorySize)))
         {
-            spdlog::error(
-                L"Failed to read root directory from location {} (code: {:#x})", m_Location->GetLocation(), hr);
+            Log::Error(L"Failed to read root directory from location {} (code: {:#x})", m_Location->GetLocation(), hr);
             return hr;
         }
 
@@ -161,8 +158,7 @@ HRESULT FatWalker::Init(const std::shared_ptr<Location>& loc, bool bResurrectRec
         // read root directory - it starts at cluster 2. there is actually no cluster 0 and no cluster 1
         if (S_OK != (hr = ReadClusterChain(clusterChain, m_RootDirectoryBuffer)))
         {
-            spdlog::error(
-                L"Failed to read root directory from location {} (code: {:#x})", m_Location->GetLocation(), hr);
+            Log::Error(L"Failed to read root directory from location {} (code: {:#x})", m_Location->GetLocation(), hr);
             return hr;
         }
     }
@@ -211,7 +207,7 @@ HRESULT FatWalker::Init(const std::shared_ptr<Location>& loc, bool bResurrectRec
         CBinaryBuffer buffer;
         if (S_OK != (hr = ReadClusterChain(clusterChain, buffer)))
         {
-            spdlog::error(L"Failed to read subfolder {} (code: {:#x})", subfolder->m_Name, hr);
+            Log::Error(L"Failed to read subfolder {} (code: {:#x})", subfolder->m_Name, hr);
             continue;
         }
 
@@ -287,7 +283,7 @@ HRESULT FatWalker::ReadRootDirectory(CBinaryBuffer& buffer, DWORD size)
 
     if (nullptr == reader)
     {
-        spdlog::error(L"Failed to get reader from location {} (code: {:#x})", m_Location->GetLocation(), hr);
+        Log::Error(L"Failed to get reader from location {} (code: {:#x})", m_Location->GetLocation(), hr);
         return hr;
     }
 
@@ -298,8 +294,7 @@ HRESULT FatWalker::ReadRootDirectory(CBinaryBuffer& buffer, DWORD size)
 
     if (S_OK != (hr = reader->Seek(m_ullRootDirectoryOffset)))
     {
-        spdlog::error(
-            L"Failed to seek to root directory from location {} (code: {:#x})", m_Location->GetLocation(), hr);
+        Log::Error(L"Failed to seek to root directory from location {} (code: {:#x})", m_Location->GetLocation(), hr);
         return hr;
     }
     else
@@ -308,8 +303,7 @@ HRESULT FatWalker::ReadRootDirectory(CBinaryBuffer& buffer, DWORD size)
 
         if (S_OK != (hr = reader->Read(buffer, size, ullBytesRead) && size == ullBytesRead))
         {
-            spdlog::error(
-                L"Failed to read root directory from location {} (code: {:#x})", m_Location->GetLocation(), hr);
+            Log::Error(L"Failed to read root directory from location {} (code: {:#x})", m_Location->GetLocation(), hr);
             return hr;
         }
     }
@@ -324,7 +318,7 @@ HRESULT FatWalker::ReadClusterChain(const FatTable::ClusterChain& clusterChain, 
 
     if (nullptr == reader)
     {
-        spdlog::error(L"Failed to get reader from location {}", m_Location->GetLocation());
+        Log::Error(L"Failed to get reader from location {}", m_Location->GetLocation());
         return hr;
     }
 
@@ -356,7 +350,7 @@ HRESULT FatWalker::ReadClusterChain(const FatTable::ClusterChain& clusterChain, 
 
                 if (S_OK != (hr = reader->Seek(seekOffset)))
                 {
-                    spdlog::error(
+                    Log::Error(
                         L"Failed to seek to cluster number {} from location {} (code: {:#x})",
                         clusterNumber,
                         m_Location->GetLocation(),
@@ -373,7 +367,7 @@ HRESULT FatWalker::ReadClusterChain(const FatTable::ClusterChain& clusterChain, 
                     }
                     else
                     {
-                        spdlog::error(
+                        Log::Error(
                             L"Failed to read cluster number {} from location {} (code: {:#x})",
                             clusterNumber,
                             m_Location->GetLocation(),
@@ -433,7 +427,7 @@ HRESULT FatWalker::ParseFolder(
                     bIsSpecial)))
         {
             if (parentFolder != nullptr && !parentFolder->IsDeleted() && !bIsDeletedEntry)
-                spdlog::error("Failed to parse Fat file entry. Will continue parsing next entry.");
+                Log::Error("Failed to parse Fat file entry. Will continue parsing next entry.");
 
             continue;
         }
@@ -546,7 +540,7 @@ HRESULT FatWalker::ParseFileEntry(
             std::wstring volumeName(std::begin(fatFile83->Filename), std::end(fatFile83->Extension));
             boost::algorithm::trim_right(volumeName);
 
-            spdlog::trace(L"VOLUME NAME: {}", volumeName);
+            Log::Trace(L"VOLUME NAME: {}", volumeName);
         }
         else
         {
@@ -675,7 +669,7 @@ HRESULT FatWalker::PrintFileEntry(const FatFileEntry& fileEntry) const
     std::wstringstream ss;
     ss << fileEntry;
 
-    spdlog::trace(L"{}", ss.str());
+    Log::Trace(L"{}", ss.str());
 
     return S_OK;
 }

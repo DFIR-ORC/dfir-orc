@@ -14,7 +14,7 @@
 
 #include <regex>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -45,7 +45,7 @@ HRESULT SnapshotVolumeReader::LoadDiskProperties(void)
 
     if (!std::regex_match(location, m, snapshot_regex))
     {
-        spdlog::error(L"Invalid physical drive reference: '{}'", m_Shadow.DeviceInstance);
+        Log::Error(L"Invalid physical drive reference: '{}'", m_Shadow.DeviceInstance);
         return E_INVALIDARG;
     }
 
@@ -53,7 +53,7 @@ HRESULT SnapshotVolumeReader::LoadDiskProperties(void)
 
     if (FAILED(hr = extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        spdlog::error(L"Failed to open the drive '{}' (code: {:#x})", m_Shadow.DeviceInstance, hr);
+        Log::Error(L"Failed to open the drive '{}' (code: {:#x})", m_Shadow.DeviceInstance, hr);
         return hr;
     }
 

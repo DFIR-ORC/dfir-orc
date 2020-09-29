@@ -28,7 +28,7 @@ public:
 
     TEST_METHOD(RunningCodeBasicTest)
     {
-        spdlog::info("Entering RunningCode basic test");
+        Log::Info("Entering RunningCode basic test");
 
         RunningCode rc;
 
@@ -39,7 +39,7 @@ public:
 
         for (const auto& mod : mods)
         {
-            spdlog::info(L"Module '{}' in process", mod.strModule);
+            Log::Info(L"Module '{}' in process", mod.strModule);
 
             std::wstringstream stream;
 
@@ -47,7 +47,7 @@ public:
             {
                 stream << pid << L" ";
             }
-            spdlog::info(L"\t{}", stream.str());
+            Log::Info(L"\t{}", stream.str());
         }
     }
 };

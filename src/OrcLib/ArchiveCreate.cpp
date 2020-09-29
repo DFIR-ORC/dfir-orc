@@ -93,7 +93,7 @@ STDMETHODIMP ArchiveCreate::AddFile(__in PCWSTR pwzNameInArchive, __in PCWSTR pw
                     FILE_FLAG_SEQUENTIAL_SCAN | (bDeleteWhenDone ? FILE_FLAG_DELETE_ON_CLOSE : 0L),
                     NULL)))
         {
-            spdlog::error(L"Failed to open file to archive {} (code: {:#x})", pwzFileName, hr);
+            Log::Error(L"Failed to open file to archive {} (code: {:#x})", pwzFileName, hr);
             return hr;
         }
 
@@ -123,7 +123,7 @@ STDMETHODIMP ArchiveCreate::AddBuffer(__in_opt PCWSTR pwzNameInArchive, __in PVO
 
     if (FAILED(hr = stream->OpenForReadOnly(pData, cbData)))
     {
-        spdlog::error(L"Failed to open buffer to archive");
+        Log::Error(L"Failed to open buffer to archive");
         return hr;
     }
 

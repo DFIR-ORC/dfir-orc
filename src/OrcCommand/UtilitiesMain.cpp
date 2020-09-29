@@ -58,7 +58,7 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
     if (FAILED(pNtDll->NtQueryInformationProcess(
             GetCurrentProcess(), ProcessBasicInformation, &pbi, (ULONG)sizeof(PROCESS_BASIC_INFORMATION), nullptr)))
     {
-        spdlog::error(L"Failed NtQueryInformationProcess (code: {:#x})", GetLastError());
+        Log::Error(L"Failed NtQueryInformationProcess (code: {:#x})", GetLastError());
         return false;
     }
 
@@ -71,7 +71,7 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
     if (hParent == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed OpenProcess (parent process pid: {}, code: {:#x})", dwParentId, hr);
+        Log::Error("Failed OpenProcess (parent process pid: {}, code: {:#x})", dwParentId, hr);
         return false;
     }
 
@@ -87,16 +87,16 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
     if (!GetProcessImageFileName(hParent, szImageFileName, MAX_PATH))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed GetProcessImageFileName (code {:#x})", hr);
+        Log::Error("Failed GetProcessImageFileName (code {:#x})", hr);
         return false;
     }
 
-    spdlog::debug(L"Parent process file name is '{}'", szImageFileName);
+    Log::Debug(L"Parent process file name is '{}'", szImageFileName);
 
     WCHAR szImageBaseName[MAX_PATH];
     if (FAILED(hr = GetFileNameForFile(szImageFileName, szImageBaseName, MAX_PATH)))
     {
-        spdlog::error(L"Failed to build filename for '{}'", szImageFileName);
+        Log::Error(L"Failed to build filename for '{}'", szImageFileName);
         return false;
     }
 
@@ -111,7 +111,7 @@ HRESULT Orc::Command::UtilitiesMain::LoadCommonExtensions()
     auto ntdll = ExtensionLibrary::GetLibrary<NtDllExtension>();
     if (!ntdll)
     {
-        spdlog::error(L"Failed to initialize ntdll extension");
+        Log::Error(L"Failed to initialize ntdll extension");
         return E_FAIL;
     }
     m_extensions.push_back(std::move(ntdll));
@@ -119,7 +119,7 @@ HRESULT Orc::Command::UtilitiesMain::LoadCommonExtensions()
     auto kernel32 = ExtensionLibrary::GetLibrary<Kernel32Extension>();
     if (!kernel32)
     {
-        spdlog::error(L"Failed to initialize kernel extension");
+        Log::Error(L"Failed to initialize kernel extension");
         return E_FAIL;
     }
     m_extensions.push_back(std::move(kernel32));
@@ -127,7 +127,7 @@ HRESULT Orc::Command::UtilitiesMain::LoadCommonExtensions()
     auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
     if (!xmllite)
     {
-        spdlog::error(L"Failed to initialize xmllite extension");
+        Log::Error(L"Failed to initialize xmllite extension");
         return E_FAIL;
     }
     m_extensions.push_back(std::move(xmllite));
@@ -140,7 +140,7 @@ HRESULT Orc::Command::UtilitiesMain::LoadWinTrust()
     auto wintrust = ExtensionLibrary::GetLibrary<WinTrustExtension>();
     if (!wintrust)
     {
-        spdlog::error(L"Failed to initialize wintrust extension");
+        Log::Error(L"Failed to initialize wintrust extension");
         return E_FAIL;
     }
     m_extensions.push_back(std::move(wintrust));
@@ -152,7 +152,7 @@ HRESULT Orc::Command::UtilitiesMain::LoadEvtLibrary()
     auto wevtapi = ExtensionLibrary::GetLibrary<EvtLibrary>();
     if (!wevtapi)
     {
-        spdlog::error(L"Failed to initialize wevtapi extension");
+        Log::Error(L"Failed to initialize wevtapi extension");
         return E_FAIL;
     }
     m_extensions.push_back(std::move(wevtapi));
@@ -164,7 +164,7 @@ HRESULT Orc::Command::UtilitiesMain::LoadPSAPI()
     auto psapi = ExtensionLibrary::GetLibrary<PSAPIExtension>();
     if (!psapi)
     {
-        spdlog::error(L"Failed to initialize psapi extension");
+        Log::Error(L"Failed to initialize psapi extension");
         return E_FAIL;
     }
     m_extensions.push_back(std::move(psapi));
@@ -176,7 +176,7 @@ HRESULT UtilitiesMain::PrintSystemType()
     wstring strSystemType;
     SystemDetails::GetSystemType(strSystemType);
 
-    spdlog::info(L"System type: {}", strSystemType);
+    Log::Info(L"System type: {}", strSystemType);
     return S_OK;
 }
 
@@ -194,7 +194,7 @@ HRESULT UtilitiesMain::PrintSystemTags()
         bFirst = false;
     }
 
-    spdlog::info(L"System tags: {}", strTags);
+    Log::Info(L"System tags: {}", strTags);
     return S_OK;
 }
 
@@ -236,7 +236,7 @@ HRESULT UtilitiesMain::PrintWhoAmI()
     SystemDetails::WhoAmI(strUserName);
     bool bIsElevated = false;
     SystemDetails::AmIElevated(bIsElevated);
-    spdlog::info(L"User                  : {}{}", strUserName, bIsElevated ? L" (elevated)" : L"");
+    Log::Info(L"User                  : {}{}", strUserName, bIsElevated ? L" (elevated)" : L"");
     return S_OK;
 }
 
@@ -244,7 +244,7 @@ HRESULT UtilitiesMain::PrintOperatingSystem()
 {
     wstring strDesc;
     SystemDetails::GetDescriptionString(strDesc);
-    spdlog::info(L"Operating system      : {}", strDesc);
+    Log::Info(L"Operating system      : {}", strDesc);
     return S_OK;
 }
 
@@ -324,17 +324,17 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
 {
     if (anOutput.Path.empty() && anOutput.Type != OutputSpec::Kind::SQL)
     {
-        spdlog::info(L"{}: Empty", szOutputName);
+        Log::Info(L"{}: Empty", szOutputName);
         return S_OK;
     }
 
     switch (anOutput.Type)
     {
         case OutputSpec::Kind::Directory:
-            spdlog::info(L"{} directory    : {}{}", szOutputName, anOutput.Path, GetEncoding(anOutput.OutputEncoding));
+            Log::Info(L"{} directory    : {}{}", szOutputName, anOutput.Path, GetEncoding(anOutput.OutputEncoding));
             break;
         case OutputSpec::Kind::Archive:
-            spdlog::info(
+            Log::Info(
                 L"{} archive      : {}{}{}",
                 szOutputName,
                 anOutput.Path,
@@ -342,54 +342,53 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
                 GetCompression(anOutput.Compression));
             break;
         case OutputSpec::Kind::TableFile:
-            spdlog::info(
+            Log::Info(
                 L"{} table        : {}{}", szOutputName, anOutput.Path.c_str(), GetEncoding(anOutput.OutputEncoding));
             break;
         case OutputSpec::Kind::CSV:
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::CSV:
-            spdlog::info(
+            Log::Info(
                 L"{}{} CSV          : {}{}", szOutputName, anOutput.Path.c_str(), GetEncoding(anOutput.OutputEncoding));
             break;
         case OutputSpec::Kind::TSV:
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::TSV:
-            spdlog::info(
+            Log::Info(
                 L"{} TSV          : {}{}", szOutputName, anOutput.Path.c_str(), GetEncoding(anOutput.OutputEncoding));
             break;
         case OutputSpec::Kind::Parquet:
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
-            spdlog::info(
+            Log::Info(
                 L"{} Parquet      : {}{}", szOutputName, anOutput.Path.c_str(), GetEncoding(anOutput.OutputEncoding));
             break;
         case OutputSpec::Kind::ORC:
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
-            spdlog::info(
+            Log::Info(
                 L"{} Parquet      : {}{}", szOutputName, anOutput.Path.c_str(), GetEncoding(anOutput.OutputEncoding));
             break;
         case OutputSpec::Kind::StructuredFile:
         case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::XML:
         case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON:
-            spdlog::info(
+            Log::Info(
                 L"{} structured   : {}{}", szOutputName, anOutput.Path.c_str(), GetEncoding(anOutput.OutputEncoding));
             break;
         case OutputSpec::Kind::File:
-            spdlog::info(
+            Log::Info(
                 L"{} file         : {}{}", szOutputName, anOutput.Path.c_str(), GetEncoding(anOutput.OutputEncoding));
             break;
         case OutputSpec::Kind::SQL:
-            spdlog::info(
-                L"{} SQLServer  : {} (table: {})", szOutputName, anOutput.ConnectionString, anOutput.TableName);
+            Log::Info(L"{} SQLServer  : {} (table: {})", szOutputName, anOutput.ConnectionString, anOutput.TableName);
             break;
         case OutputSpec::Kind::None:
-            spdlog::info(L"{} file         : None", szOutputName);
+            Log::Info(L"{} file         : None", szOutputName);
             break;
         default:
-            spdlog::info(L"{}              : Unsupported", szOutputName);
+            Log::Info(L"{}              : Unsupported", szOutputName);
             break;
     }
 
     if (anOutput.UploadOutput != nullptr)
     {
-        spdlog::info(L"Upload configuration:", szOutputName);
+        Log::Info(L"Upload configuration:", szOutputName);
         LPWSTR szMethod = L"None";
         switch (anOutput.UploadOutput->Method)
         {
@@ -403,7 +402,7 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
                 szMethod = L"No upload";
                 break;
         }
-        spdlog::info(L"   --> Method         : {}", szMethod);
+        Log::Info(L"   --> Method         : {}", szMethod);
 
         LPWSTR szOperation = L"NoOp";
         switch (anOutput.UploadOutput->Operation)
@@ -417,7 +416,7 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
             case OutputSpec::UploadOperation::NoOp:
                 break;
         }
-        spdlog::info(L"   --> Operation      : {}", szOperation);
+        Log::Info(L"   --> Operation      : {}", szOperation);
 
         LPWSTR szMode = L"NoMode";
         switch (anOutput.UploadOutput->Mode)
@@ -429,19 +428,19 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
                 szMode = L"Synchronous";
                 break;
         }
-        spdlog::info(L"   --> Mode           : {}", szMode);
+        Log::Info(L"   --> Mode           : {}", szMode);
 
         if (!anOutput.UploadOutput->JobName.empty())
         {
-            spdlog::info(L"   --> Job name       : {}", anOutput.UploadOutput->JobName);
+            Log::Info(L"   --> Job name       : {}", anOutput.UploadOutput->JobName);
         }
-        spdlog::info(
+        Log::Info(
             L"   --> Server name    : {}, path = {}",
             anOutput.UploadOutput->ServerName.c_str(),
             anOutput.UploadOutput->RootPath.c_str());
         if (!anOutput.UploadOutput->UserName.empty())
         {
-            spdlog::info(L"   --> User name      : {}", anOutput.UploadOutput->UserName);
+            Log::Info(L"   --> User name      : {}", anOutput.UploadOutput->UserName);
         }
         LPWSTR szAuthScheme = L"NoAuth";
         switch (anOutput.UploadOutput->AuthScheme)
@@ -462,7 +461,7 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
                 szAuthScheme = L"Negotiate";
                 break;
         }
-        spdlog::info(L"   --> Auth Scheme    : {}", szAuthScheme);
+        Log::Info(L"   --> Auth Scheme    : {}", szAuthScheme);
     }
 
     return S_OK;
@@ -472,11 +471,11 @@ HRESULT UtilitiesMain::PrintBooleanOption(LPCWSTR szOptionName, bool bValue)
 {
     if (bValue)
     {
-        spdlog::info(L"{}     : On", szOptionName);
+        Log::Info(L"{}     : On", szOptionName);
     }
     else
     {
-        spdlog::info(L"{}     : Off", szOptionName);
+        Log::Info(L"{}     : Off", szOptionName);
     }
     return S_OK;
 }
@@ -485,34 +484,34 @@ HRESULT UtilitiesMain::PrintBooleanOption(LPCWSTR szOptionName, const boost::log
 {
     if (bValue)
     {
-        spdlog::info(L"{}    : On", szOptionName);
+        Log::Info(L"{}    : On", szOptionName);
     }
     else if (!bValue)
     {
-        spdlog::info(L"{}    : Off", szOptionName);
+        Log::Info(L"{}    : Off", szOptionName);
     }
     else
     {
-        spdlog::info(L"{}    : Indeterminate", szOptionName);
+        Log::Info(L"{}    : Indeterminate", szOptionName);
     }
     return S_OK;
 }
 
 HRESULT UtilitiesMain::PrintIntegerOption(LPCWSTR szOptionName, DWORD dwOption)
 {
-    spdlog::info(L"{}     : {}", szOptionName, dwOption);
+    Log::Info(L"{}     : {}", szOptionName, dwOption);
     return S_OK;
 }
 
 HRESULT UtilitiesMain::PrintIntegerOption(LPCWSTR szOptionName, LONGLONG llOption)
 {
-    spdlog::info(L"{}     : {}", szOptionName, llOption);
+    Log::Info(L"{}     : {}", szOptionName, llOption);
     return S_OK;
 }
 
 HRESULT UtilitiesMain::PrintIntegerOption(LPCWSTR szOptionName, ULONGLONG ullOption)
 {
-    spdlog::info(L"{}     : {}", szOptionName, ullOption);
+    Log::Info(L"{}     : {}", szOptionName, ullOption);
     return S_OK;
 }
 
@@ -520,11 +519,11 @@ HRESULT UtilitiesMain::PrintHashAlgorithmOption(LPCWSTR szOptionName, CryptoHash
 {
     if (algs == CryptoHashStream::Algorithm::Undefined)
     {
-        spdlog::info(L"{}     : None", szOptionName);
+        Log::Info(L"{}     : None", szOptionName);
     }
     else
     {
-        spdlog::info(L"{}     : {}", szOptionName, CryptoHashStream::GetSupportedAlgorithm(algs));
+        Log::Info(L"{}     : {}", szOptionName, CryptoHashStream::GetSupportedAlgorithm(algs));
     }
     return S_OK;
 }
@@ -533,31 +532,31 @@ HRESULT UtilitiesMain::PrintHashAlgorithmOption(LPCWSTR szOptionName, FuzzyHashS
 {
     if (algs == FuzzyHashStream::Algorithm::Undefined)
     {
-        spdlog::info(L"{}     : None", szOptionName);
+        Log::Info(L"{}     : None", szOptionName);
     }
     else
     {
-        spdlog::info(L"{}     : {}", szOptionName, FuzzyHashStream::GetSupportedAlgorithm(algs).c_str());
+        Log::Info(L"{}     : {}", szOptionName, FuzzyHashStream::GetSupportedAlgorithm(algs).c_str());
     }
     return S_OK;
 }
 
 HRESULT UtilitiesMain::PrintStringOption(LPCWSTR szOptionName, LPCWSTR szOption)
 {
-    spdlog::info(L"{}     : %s", szOptionName, szOption);
+    Log::Info(L"{}     : %s", szOptionName, szOption);
     return S_OK;
 }
 
 HRESULT UtilitiesMain::PrintFormatedStringOption(LPCWSTR szOptionName, LPCWSTR szFormat, va_list argList)
 {
-    spdlog::info(L"{}     : ", szOptionName);
+    Log::Info(L"{}     : ", szOptionName);
     // TODO: _L_->WriteFormatedString(szFormat, argList);
     return S_OK;
 }
 
 HRESULT UtilitiesMain::PrintFormatedStringOption(LPCWSTR szOptionName, LPCWSTR szFormat, ...)
 {
-    spdlog::info(L"{}     : ", szOptionName);
+    Log::Info(L"{}     : ", szOptionName);
     va_list argList;
     va_start(argList, szFormat);
     // TODO: _L_->WriteFormatedString(szFormat, argList);
@@ -576,7 +575,7 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=c:\\temp", szOption, szOption);
+        Log::Error(L"Option /{} should be like: /{}=c:\\temp", szOption, szOption);
         return false;
     }
     if (pEquals != szArg + cchOption)
@@ -587,12 +586,12 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
 
     if (FAILED(hr = anOutput.Configure(supportedTypes, pEquals + 1)))
     {
-        spdlog::error(L"An error occurred when evaluating output for option /{}={}", szOption, pEquals + 1);
+        Log::Error(L"An error occurred when evaluating output for option /{}={}", szOption, pEquals + 1);
         return false;
     }
     if (hr == S_FALSE)
     {
-        spdlog::error(L"None of the supported output for option /{} matched {}", szOption, szArg);
+        Log::Error(L"None of the supported output for option /{} matched {}", szOption, szArg);
         return false;
     }
     return true;
@@ -606,12 +605,12 @@ bool UtilitiesMain::OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstri
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=c:\\temp\\OutputFile.csv", szOption, szOption);
+        Log::Error(L"Option /{} should be like: /{}=c:\\temp\\OutputFile.csv", szOption, szOption);
         return false;
     }
     if (auto hr = GetOutputFile(pEquals + 1, strOutputFile, true); FAILED(hr))
     {
-        spdlog::error(L"Invalid output dir specified: {}", pEquals + 1);
+        Log::Error(L"Invalid output dir specified: {}", pEquals + 1);
         return false;
     }
     return true;
@@ -625,12 +624,12 @@ bool UtilitiesMain::OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=c:\\temp", szOption, szOption);
+        Log::Error(L"Option /{} should be like: /{}=c:\\temp", szOption, szOption);
         return false;
     }
     if (auto hr = GetOutputDir(pEquals + 1, strOutputDir, true); FAILED(hr))
     {
-        spdlog::error(L"Invalid output dir specified: {}", pEquals + 1);
+        Log::Error(L"Invalid output dir specified: {}", pEquals + 1);
         return false;
     }
     return true;
@@ -644,13 +643,13 @@ bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=c:\\temp\\InputFile.csv", szOption, szOption);
+        Log::Error(L"Option /{} should be like: /{}=c:\\temp\\InputFile.csv", szOption, szOption);
         return false;
     }
 
     if (auto hr = ExpandFilePath(pEquals + 1, strOutputFile); FAILED(hr))
     {
-        spdlog::error(L"Invalid input file specified: {}", pEquals + 1);
+        Log::Error(L"Invalid input file specified: {}", pEquals + 1);
         return false;
     }
     return true;
@@ -664,7 +663,7 @@ bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
+        Log::Error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
         return false;
     }
     strParameter = pEquals + 1;
@@ -679,7 +678,7 @@ bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULONGLONG& 
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
+        Log::Error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
         return false;
     }
     HRESULT hr = E_FAIL;
@@ -703,7 +702,7 @@ bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWORD& dwPa
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
+        Log::Error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
         return false;
     }
     HRESULT hr = E_FAIL;
@@ -717,7 +716,7 @@ bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWORD& dwPa
     }
     if (li.QuadPart > MAXDWORD)
     {
-        spdlog::error("Parameter is too big (>MAXDWORD)");
+        Log::Error("Parameter is too big (>MAXDWORD)");
     }
     dwParameter = li.LowPart;
     return true;
@@ -764,7 +763,7 @@ bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, boost::logi
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=<yes>|<no>", szOption, szOption);
+        Log::Error(L"Option /{} should be like: /{}=<yes>|<no>", szOption, szOption);
         return false;
     }
 
@@ -846,7 +845,7 @@ bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWO
         }
         if (li.QuadPart > MAXDWORD)
         {
-            spdlog::error("Parameter is too big (>MAXDWORD)");
+            Log::Error("Parameter is too big (>MAXDWORD)");
         }
         dwParameter = li.LowPart;
     }
@@ -863,14 +862,14 @@ bool UtilitiesMain::FileSizeOption(LPCWSTR szArg, LPCWSTR szOption, DWORDLONG& d
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=32M", szArg, szOption);
+        Log::Error(L"Option /{} should be like: /{}=32M", szArg, szOption);
         return false;
     }
     LARGE_INTEGER liSize;
     liSize.QuadPart = 0;
     if (FAILED(hr = GetFileSizeFromArg(pEquals + 1, liSize)))
     {
-        spdlog::error(L"Option /{} Failed to convert into a size", szArg);
+        Log::Error(L"Option /{} Failed to convert into a size", szArg);
         return false;
     }
     dwlFileSize = liSize.QuadPart;
@@ -887,7 +886,7 @@ bool UtilitiesMain::AltitudeOption(LPCWSTR szArg, LPCWSTR szOption, LocationSet:
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=highest|lowest|exact", szArg, szOption);
+        Log::Error(L"Option /{} should be like: /{}=highest|lowest|exact", szArg, szOption);
         return false;
     }
     altitude = LocationSet::GetAltitudeFromString(pEquals + 1);
@@ -929,7 +928,7 @@ bool UtilitiesMain::CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, C
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=hash_functions", szArg, szOption);
+        Log::Error(L"Option /{} should be like: /{}=hash_functions", szArg, szOption);
         return false;
     }
 
@@ -944,7 +943,7 @@ bool UtilitiesMain::CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, C
         auto one = CryptoHashStream::GetSupportedAlgorithm(key.c_str());
         if (one == CryptoHashStream::Algorithm::Undefined)
         {
-            spdlog::warn(L"Hash algorithm '{}' is not supported", key);
+            Log::Warn(L"Hash algorithm '{}' is not supported", key);
         }
         else
         {
@@ -965,7 +964,7 @@ bool UtilitiesMain::FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, Fu
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        spdlog::error(L"Option /{} should be like: /{}=32M", szArg, szOption);
+        Log::Error(L"Option /{} should be like: /{}=32M", szArg, szOption);
         return false;
     }
 
@@ -1025,7 +1024,7 @@ bool UtilitiesMain::WaitForDebuggerOption(LPCWSTR szArg)
     using namespace std::chrono_literals;
     if (_wcsnicmp(szArg, L"WaitForDebugger", wcslen(L"WaitForDebugger")))
         return false;
-    spdlog::info("Waiting 30 seconds for a debugger to attach...");
+    Log::Info("Waiting 30 seconds for a debugger to attach...");
     auto counter = 0LU;
     while (!IsDebuggerPresent() && counter < 60)
     {
@@ -1033,9 +1032,9 @@ bool UtilitiesMain::WaitForDebuggerOption(LPCWSTR szArg)
         Sleep(500);
     }
     if (counter < 60)
-        spdlog::info("Debugger connected!");
+        Log::Info("Debugger connected!");
     else
-        spdlog::info("No debugger connected... let's continue");
+        Log::Info("No debugger connected... let's continue");
     return true;
 }
 
@@ -1114,7 +1113,7 @@ void UtilitiesMain::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, L
 
 void UtilitiesMain::PrintLoggingUsage()
 {
-    spdlog::info(
+    Log::Info(
         L""
         L"\t/verbose                    : Turns on verbose logging"
         L"\t/debug                      : Adds debug information (Source File Name, Line number) to output, outputs to "
@@ -1126,7 +1125,7 @@ void UtilitiesMain::PrintLoggingUsage()
 
 void UtilitiesMain::PrintPriorityUsage()
 {
-    spdlog::info(
+    Log::Info(
         L""
         L"\t/low                        : Runs with lowered priority\n"
         L"");

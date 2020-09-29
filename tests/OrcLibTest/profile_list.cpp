@@ -33,7 +33,7 @@ public:
 
         if (default_profile.is_err())
         {
-            spdlog::error(L"Failed to read DefaultProfile, test not performed (code: {:#x})", default_profile.err_value());
+            Log::Error(L"Failed to read DefaultProfile, test not performed (code: {:#x})", default_profile.err_value());
             return;
         }
 
@@ -51,7 +51,7 @@ public:
 
         if (profiles_directory.is_err())
         {
-            spdlog::error(L"Failed to read profiles_directory, test not performed (code: {:#x})", profiles_directory.err_value());
+            Log::Error(L"Failed to read profiles_directory, test not performed (code: {:#x})", profiles_directory.err_value());
             return;
         }
 
@@ -69,7 +69,7 @@ public:
         auto program_data = ProfileList::ProfilesDirectory();
         if (program_data.is_err())
         {
-            spdlog::error(L"Failed to read program_data, test not performed (code: {:#x})", program_data.err_value());
+            Log::Error(L"Failed to read program_data, test not performed (code: {:#x})", program_data.err_value());
             return;
         }
 
@@ -87,7 +87,7 @@ public:
         auto public_ = ProfileList::ProfilesDirectory();
         if (public_.is_err())
         {
-            spdlog::error(L"Failed to read public profile, test not performed", public_.err_value());
+            Log::Error(L"Failed to read public profile, test not performed", public_.err_value());
             return;
         }
 
@@ -106,7 +106,7 @@ public:
         auto profiles = ProfileList::GetProfiles();
         if (profiles.is_err())
         {
-            spdlog::error(L"Failed to read profiles, test not performed (code: {:#x})", profiles.err_value());
+            Log::Error(L"Failed to read profiles, test not performed (code: {:#x})", profiles.err_value());
             return;
         }
 
@@ -115,7 +115,7 @@ public:
 
         if (profile_list.empty())
         {
-            spdlog::error(L"Empty profile list, test not valid");
+            Log::Error(L"Empty profile list, test not valid");
             return;
         }
     }

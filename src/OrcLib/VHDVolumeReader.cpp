@@ -27,19 +27,19 @@ HRESULT VHDVolumeReader::LoadDiskFooter()
 
     if (FAILED(hr = stream.ReadFrom(m_szLocation)))
     {
-        spdlog::error(L"Failed to open location '{}' (code: {:#x})", m_szLocation, hr);
+        Log::Error(L"Failed to open location '{}' (code: {:#x})", m_szLocation, hr);
         return hr;
     }
     ULONGLONG ullNewPostion = 0LL;
     if (FAILED(hr = stream.SetFilePointer(-(LONGLONG)sizeof(Footer), FILE_END, &ullNewPostion)))
     {
-        spdlog::error(L"Failed to move to VHD's footer '{}' (code: {:#x})", m_szLocation, hr);
+        Log::Error(L"Failed to move to VHD's footer '{}' (code: {:#x})", m_szLocation, hr);
         return hr;
     }
     ULONGLONG ullRead = 0L;
     if (FAILED(hr = stream.Read(&m_Footer, sizeof(Footer), &ullRead)))
     {
-        spdlog::error(L"Failed to read VHD's footer '{}' (code: {:#x})", m_szLocation, hr);
+        Log::Error(L"Failed to read VHD's footer '{}' (code: {:#x})", m_szLocation, hr);
         return hr;
     }
     m_Footer.Features = _byteswap_ulong(m_Footer.Features);
@@ -82,7 +82,7 @@ std::shared_ptr<VolumeReader> VHDVolumeReader::GetVolumeReader()
 
             if (FAILED(hr = retval->LoadDiskProperties()))
             {
-                spdlog::error(L"Failed to load VHD properties (code: {:#x})", hr);
+                Log::Error(L"Failed to load VHD properties (code: {:#x})", hr);
                 return nullptr;
             }
             return retval;
@@ -109,7 +109,7 @@ HRESULT FixedVHDVolumeReader::LoadDiskProperties()
 
     if (FAILED(hr = LoadDiskFooter()))
     {
-        spdlog::error(L"Failed to load VHD disk footer (code: {:#x})", hr);
+        Log::Error(L"Failed to load VHD disk footer (code: {:#x})", hr);
         return hr;
     }
 
@@ -117,7 +117,7 @@ HRESULT FixedVHDVolumeReader::LoadDiskProperties()
 
     if (FAILED(hr = extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        spdlog::error(L"Failed to open vhd: '{}' (code: {:#x})", m_szLocation, hr);
+        Log::Error(L"Failed to open vhd: '{}' (code: {:#x})", m_szLocation, hr);
         return hr;
     }
 

@@ -15,14 +15,14 @@
 namespace Orc {
 namespace Log {
 
-std::shared_ptr<Logger>& DefaultInstance();
+std::shared_ptr<Logger>& DefaultLogger();
 
-void SetDefaultInstance(std::shared_ptr<Logger> instance);
+void SetDefaultLogger(std::shared_ptr<Logger> instance);
 
 template <typename... Args>
 void Trace(const Args&... args)
 {
-    auto& instance = DefaultInstance();
+    auto& instance = DefaultLogger();
     if (instance)
     {
         instance->Trace(args...);
@@ -32,7 +32,7 @@ void Trace(const Args&... args)
 template <typename... Args>
 void Debug(const Args&... args)
 {
-    auto& instance = DefaultInstance();
+    auto& instance = DefaultLogger();
     if (instance)
     {
         instance->Debug(args...);
@@ -42,7 +42,7 @@ void Debug(const Args&... args)
 template <typename... Args>
 void Info(const Args&... args)
 {
-    auto& instance = DefaultInstance();
+    auto& instance = DefaultLogger();
     if (instance)
     {
         instance->Info(args...);
@@ -52,7 +52,7 @@ void Info(const Args&... args)
 template <typename... Args>
 void Warn(const Args&... args)
 {
-    auto& instance = DefaultInstance();
+    auto& instance = DefaultLogger();
     if (instance)
     {
         instance->Warn(args...);
@@ -62,7 +62,7 @@ void Warn(const Args&... args)
 template <typename... Args>
 void Error(const Args&... args)
 {
-    auto& instance = DefaultInstance();
+    auto& instance = DefaultLogger();
     if (instance)
     {
         instance->Error(args...);
@@ -72,7 +72,7 @@ void Error(const Args&... args)
 template <typename... Args>
 void Critical(const Args&... args)
 {
-    auto& instance = DefaultInstance();
+    auto& instance = DefaultLogger();
     if (instance)
     {
         instance->Critical(args...);

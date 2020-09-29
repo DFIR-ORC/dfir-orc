@@ -290,12 +290,11 @@ HRESULT XmlLiteExtension::LogError(HRESULT err, IXmlReader* pReader)
         pReader->GetLineNumber(&dwLineNumber);
         pReader->GetLinePosition(&dwLinePosition);
 
-        spdlog::error(
-            L"XmlLite: '{}' (line: {}, pos: {} code: {:#x})", szErrMessage, dwLineNumber, dwLinePosition, err);
+        Log::Error(L"XmlLite: '{}' (line: {}, pos: {} code: {:#x})", szErrMessage, dwLineNumber, dwLinePosition, err);
     }
     else
     {
-        spdlog::error(L"XmlLite: {} (code: {:#x})", szErrMessage, err);
+        Log::Error(L"XmlLite: {} (code: {:#x})", szErrMessage, err);
     }
     return S_OK;
 }

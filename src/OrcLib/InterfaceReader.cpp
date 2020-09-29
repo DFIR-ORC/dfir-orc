@@ -15,7 +15,7 @@
 
 #include <boost\scope_exit.hpp>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -58,14 +58,14 @@ HRESULT InterfaceReader::LoadDiskProperties()
         }
         else
         {
-            spdlog::error(L"Invalid physical drive reference: '{}'", m_szLocation);
+            Log::Error(L"Invalid physical drive reference: '{}'", m_szLocation);
             return E_INVALIDARG;
         }
     }
     catch (const std::out_of_range& e)
     {
         auto [hr, msg] = AnsiToWide(e.what());
-        spdlog::error(L"Invalid physical drive reference: '{}' ({})", m_szLocation, msg);
+        Log::Error(L"Invalid physical drive reference: '{}' ({})", m_szLocation, msg);
         return E_INVALIDARG;
     }
 
@@ -77,7 +77,7 @@ HRESULT InterfaceReader::LoadDiskProperties()
 
         if (FAILED(hr = pt.LoadPartitionTable(m_InterfacePath.c_str())))
         {
-            spdlog::error(L"Invalid partition table found on interface '{}' (code: {:#x})", m_InterfacePath, hr);
+            Log::Error(L"Invalid partition table found on interface '{}' (code: {:#x})", m_InterfacePath, hr);
             return hr;
         }
 
@@ -91,7 +91,7 @@ HRESULT InterfaceReader::LoadDiskProperties()
                         hr = Extent.Open(
                             (FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
                 {
-                    spdlog::error(L"Failed to open the interface '{}' (code: {:#x})", m_InterfacePath, hr);
+                    Log::Error(L"Failed to open the interface '{}' (code: {:#x})", m_InterfacePath, hr);
                     return hr;
                 }
 
@@ -104,7 +104,7 @@ HRESULT InterfaceReader::LoadDiskProperties()
         CDiskExtent Extent(m_InterfacePath.c_str(), m_ullOffset, m_ullLength, m_uiSectorSize);
         if (FAILED(hr = Extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
         {
-            spdlog::error(L"Failed to open the drive '{}' (code: {:#x})", m_InterfacePath, hr);
+            Log::Error(L"Failed to open the drive '{}' (code: {:#x})", m_InterfacePath, hr);
             return hr;
         }
 
@@ -112,7 +112,7 @@ HRESULT InterfaceReader::LoadDiskProperties()
     }
     else
     {
-        spdlog::error(L"No partition number or offset specified for interface reader: '{}'", m_szLocation);
+        Log::Error(L"No partition number or offset specified for interface reader: '{}'", m_szLocation);
         return E_INVALIDARG;
     }
 

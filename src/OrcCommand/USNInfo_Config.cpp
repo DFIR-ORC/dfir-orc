@@ -41,12 +41,12 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(configitem[USNINFO_LOCATIONS])))
     {
-        spdlog::error("Failed to get locations definition from config (code: {:#x})", hr);
+        Log::Error("Failed to get locations definition from config (code: {:#x})", hr);
         return hr;
     }
     if (FAILED(hr = config.locs.AddKnownLocations(configitem[USNINFO_KNOWNLOCATIONS])))
     {
-        spdlog::error("Failed to get known locations (code: {:#x})", hr);
+        Log::Error("Failed to get known locations (code: {:#x})", hr);
         return hr;
     }
 
@@ -120,7 +120,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.locs.IsEmpty() != S_OK)
     {
-        spdlog::error(
+        Log::Error(
             "No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
             "want parsed");
         return E_INVALIDARG;
@@ -139,7 +139,7 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.output.Path.c_str())))
         {
-            spdlog::error(
+            Log::Error(
                 L"Specified file information output directory '{}' is not a directory (code: {:#x})",
                 config.output.Path,
                 hr);
@@ -149,7 +149,7 @@ HRESULT Main::CheckConfiguration()
 
     if (!config.output.Schema)
     {
-        spdlog::warn("Sql Schema is empty");
+        Log::Warn("Sql Schema is empty");
     }
 
     return S_OK;

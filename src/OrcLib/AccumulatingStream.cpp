@@ -25,13 +25,13 @@ STDMETHODIMP AccumulatingStream::Open(
 
     if (pChainedStream->CanWrite() == S_FALSE)
     {
-        spdlog::error("Chained stream not able to write cannot be used in accumulating stream");
+        Log::Error("Chained stream not able to write cannot be used in accumulating stream");
         return E_INVALIDARG;
     }
 
     if (pChainedStream->IsOpen() != S_OK)
     {
-        spdlog::error("Chained stream must be opened to be used in accumulating stream");
+        Log::Error("Chained stream must be opened to be used in accumulating stream");
         return E_INVALIDARG;
     }
 
@@ -42,7 +42,7 @@ STDMETHODIMP AccumulatingStream::Open(
 
     if (FAILED(hr = m_pTempStream->Open(strTempDir, L"AccumulatingStream", dwMemThreshold)))
     {
-        spdlog::error("Failed to create temporary stream in a accumulating stream (code: {:#x})", hr);
+        Log::Error("Failed to create temporary stream in a accumulating stream (code: {:#x})", hr);
         return hr;
     }
 
@@ -57,7 +57,7 @@ STDMETHODIMP AccumulatingStream::Read(
     DBG_UNREFERENCED_PARAMETER(pcbBytesRead);
     DBG_UNREFERENCED_PARAMETER(cbBytes);
     DBG_UNREFERENCED_PARAMETER(pReadBuffer);
-    spdlog::error("Cannot read from accumulating stream");
+    Log::Error("Cannot read from accumulating stream");
     return HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION);
 }
 
@@ -100,7 +100,7 @@ STDMETHODIMP AccumulatingStream::Close()
 
     if (FAILED(hr = m_pTempStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
     {
-        spdlog::error("Failed to reset temporary stream in accumulating stream (code: {:#x})", hr);
+        Log::Error("Failed to reset temporary stream in accumulating stream (code: {:#x})", hr);
         return hr;
     }
 
@@ -113,7 +113,7 @@ STDMETHODIMP AccumulatingStream::Close()
 
     if (FAILED(hr = m_pTempStream->Read(buffer.GetData(), m_dwBlockSize, &ullBytesRead)))
     {
-        spdlog::error("Failed to read from temporary stream in accumulating stream (code: {:#x})", hr);
+        Log::Error("Failed to read from temporary stream in accumulating stream (code: {:#x})", hr);
         return hr;
     }
 
@@ -122,18 +122,18 @@ STDMETHODIMP AccumulatingStream::Close()
         ULONGLONG ullBytesWritten = 0LL;
         if (FAILED(hr = m_pChainedStream->Write(buffer.GetData(), ullBytesRead, &ullBytesWritten)))
         {
-            spdlog::error(L"Failed to read from temporary stream in accumulating stream (code: {:#x})", hr);
+            Log::Error(L"Failed to read from temporary stream in accumulating stream (code: {:#x})", hr);
             return hr;
         }
 
         if (ullBytesRead != ullBytesWritten)
         {
-            spdlog::warn("Failed to read from temporary stream in accumulating stream");
+            Log::Warn("Failed to read from temporary stream in accumulating stream");
         }
 
         if (FAILED(hr = m_pTempStream->Read(buffer.GetData(), m_dwBlockSize, &ullBytesRead)))
         {
-            spdlog::error("Failed to read from temporary stream in accumulating stream");
+            Log::Error("Failed to read from temporary stream in accumulating stream");
             return hr;
         }
     }

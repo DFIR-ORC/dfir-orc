@@ -18,7 +18,7 @@
 #include <string>
 #include <sstream>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 
@@ -569,16 +569,16 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
         {
             if (GetLastError() == ERROR_FILE_NOT_FOUND)
             {
-                spdlog::debug(L"File '{}' already deleted", pszPath);
+                Log::Debug(L"File '{}' already deleted", pszPath);
                 return S_OK;
             }
             if (dwRetries > DELETION_RETRIES)
             {
-                spdlog::debug(L"Could not delete file '{}', Delay deletion till next reboot", pszPath);
+                Log::Debug(L"Could not delete file '{}', Delay deletion till next reboot", pszPath);
                 if (!MoveFileEx(pszPath, NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    spdlog::error(L"Failed to delay deletion until reboot for file '{}' (code: {:#x})", pszPath, hr);
+                    Log::Error(L"Failed to delay deletion until reboot for file '{}' (code: {:#x})", pszPath, hr);
                     return hr;
                 }
                 return S_OK;
@@ -586,20 +586,20 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
             else
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::debug(L"Could not delete file '{}' (code: {:#x}, retries: {})", pszPath, hr, dwRetries);
+                Log::Debug(L"Could not delete file '{}' (code: {:#x}, retries: {})", pszPath, hr, dwRetries);
                 dwRetries++;
                 Sleep(200);
             }
         }
         else
         {
-            spdlog::debug(L"Successfully deleted file '{}'", pszPath);
+            Log::Debug(L"Successfully deleted file '{}'", pszPath);
             bDeleted = true;
         }
 
     } while (!bDeleted);
 
-    spdlog::debug("UtilDeleteTemporaryFile: done");
+    Log::Debug("UtilDeleteTemporaryFile: done");
 
     return S_OK;
 }

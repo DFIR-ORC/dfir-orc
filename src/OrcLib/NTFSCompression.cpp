@@ -9,8 +9,9 @@
 #include "stdafx.h"
 
 #include "NTFSCompression.h"
-
-#include <spdlog/spdlog.h>
+#include "Utils/TypeTraits.h"
+#include "Log/Log.h"
+#include "Output/Text/Fmt/ByteQuantity.h"
 
 /* uncompression values */
 constexpr auto NTFS_TOKEN_MASK = 1;
@@ -113,11 +114,11 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
         size_t blk_end = cl_index + blk_size;  // index into the buffer to where block ends
         if (blk_end > comp->comp_len)
         {
-            spdlog::warn("ntfs_uncompress_compunit: Block length longer than buffer length: {}", blk_end);
+            Log::Warn("ntfs_uncompress_compunit: Block length longer than buffer length: {}", blk_end);
             return E_FAIL;
         }
 
-        spdlog::debug(L"ntfs_uncompress_compunit: Block size is %Iu", blk_size);
+        Log::Debug(L"ntfs_uncompress_compunit: Block size is {}", Traits::ByteQuantity(blk_size));
 
         /* The MSB identifies if the block is compressed */
         UCHAR iscomp;  // set to 1 if block is compressed
@@ -142,7 +143,7 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                 unsigned char header = comp->comp_buf[cl_index];
                 cl_index++;
 
-                spdlog::debug("ntfs_uncompress_compunit: New Tag: {:#x}\n", header);
+                Log::Debug("ntfs_uncompress_compunit: New Tag: {:#x}\n", header);
 
                 for (int a = 0; a < 8 && cl_index < blk_end; a++)
                 {
@@ -153,11 +154,11 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                      */
                     if ((header & NTFS_TOKEN_MASK) == NTFS_SYMBOL_TOKEN)
                     {
-                        spdlog::debug(L"ntfs_uncompress_compunit: Symbol Token: %Iu", cl_index);
+                        Log::Debug(L"ntfs_uncompress_compunit: Symbol Token: {}", cl_index);
 
                         if (comp->uncomp_idx >= comp->buf_size_b)
                         {
-                            spdlog::warn(
+                            Log::Warn(
                                 L"ntfs_uncompress_compunit: Trying to write past end of uncompression buffer: {}",
                                 comp->uncomp_idx);
                             return E_FAIL;
@@ -175,7 +176,7 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
 
                         if (cl_index + 1 >= blk_end)
                         {
-                            spdlog::warn(L"ntfs_uncompress_compunit: Phrase token index is past end of block: {}", a);
+                            Log::Warn(L"ntfs_uncompress_compunit: Phrase token index is past end of block: {}", a);
                             return E_FAIL;
                         }
 
@@ -199,17 +200,13 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                         size_t start_position_index = comp->uncomp_idx - offset;
                         size_t end_position_index = start_position_index + length;
 
-                        spdlog::debug(
-                            L"ntfs_uncompress_compunit: Phrase Token: %Iu\t%d\t%d\t%x",
-                            cl_index,
-                            length,
-                            offset,
-                            pheader);
+                        Log::Debug(
+                            L"ntfs_uncompress_compunit: Phrase Token: {} {} {} {}", cl_index, length, offset, pheader);
 
                         /* Sanity checks on values */
                         if (offset > comp->uncomp_idx)
                         {
-                            spdlog::warn(
+                            Log::Warn(
                                 L"ntfs_uncompress_compunit: Phrase token offset is too large: {} (max: {})",
                                 offset,
                                 comp->uncomp_idx);
@@ -217,7 +214,7 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                         }
                         else if (length + start_position_index > comp->buf_size_b)
                         {
-                            spdlog::warn(
+                            Log::Warn(
                                 L"ntfs_uncompress_compunit: Phrase token length is too large: {} (max: {})",
                                 length,
                                 comp->buf_size_b - start_position_index);
@@ -225,7 +222,7 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                         }
                         else if (end_position_index - start_position_index + 1 > comp->buf_size_b - comp->uncomp_idx)
                         {
-                            spdlog::warn(
+                            Log::Warn(
                                 L"ntfs_uncompress_compunit: Phrase token length is too large for rest of uncomp buf:  "
                                 L"{} (max: {})",
                                 end_position_index - start_position_index + 1,
@@ -256,7 +253,7 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                  * when an unallocated file is being processed... */
                 if (comp->uncomp_idx >= comp->buf_size_b)
                 {
-                    spdlog::warn(
+                    Log::Warn(
                         L"ntfs_uncompress_compunit: Trying to write past end of uncompression buffer (1) -- corrupt "
                         L"data?)");
                     return E_FAIL;
@@ -312,10 +309,10 @@ HRESULT Orc::ntfs_decompress(uint8_t* dest, const size_t dest_size, uint8_t* con
     uint8_t tag; /* Current tag. */
     int token; /* Loop counter for the eight tokens in tag. */
 
-    spdlog::debug(L"Entering, cb_size = {:#x}", cb_size);
+    Log::Debug(L"Entering, cb_size = {:#x}", cb_size);
 
 do_next_sb:
-    spdlog::debug(L"Beginning sub-block at offset {} in the cb", (int)(cb - cb_start));
+    Log::Debug(L"Beginning sub-block at offset {} in the cb", (int)(cb - cb_start));
     /*
      * Have we reached the end of the compression block or the end of the
      * decompressed data?  The latter can happen for example if the current
@@ -324,7 +321,7 @@ do_next_sb:
      */
     if (cb == cb_end || !le16_to_cpup((uint16_t*)cb) || dest == dest_end)
     {
-        spdlog::debug(L"Completed. Returning success (0)");
+        Log::Debug(L"Completed. Returning success (0)");
         return S_OK;
     }
     /* Setup offset for the current sub-block destination. */
@@ -345,7 +342,7 @@ do_next_sb:
     /* Now, we are ready to process the current sub-block (sb). */
     if (!(le16_to_cpup((uint16_t*)cb) & NTFS_SB_IS_COMPRESSED))
     {
-        spdlog::debug(L"Found uncompressed sub-block");
+        Log::Debug(L"Found uncompressed sub-block");
         /* This sb is not compressed, just copy it into destination. */
         /* Advance source position to first data byte. */
         cb += 2;
@@ -359,7 +356,7 @@ do_next_sb:
         dest += NTFS_SB_SIZE;
         goto do_next_sb;
     }
-    spdlog::debug(L"Found compressed sub-block");
+    Log::Debug(L"Found compressed sub-block");
     /* This sb is compressed, decompress it into destination. */
     /* Forward to the first tag in the sub-block. */
     cb += 2;
@@ -371,7 +368,7 @@ do_next_tag:
         {
             int nr_bytes = (int)(dest_sb_end - dest);
 
-            spdlog::debug(L"Filling incomplete sub-block with zeroes");
+            Log::Debug(L"Filling incomplete sub-block with zeroes");
             /* Zero remainder and update destination position. */
             memset(dest, 0, nr_bytes);
             dest += nr_bytes;
@@ -466,6 +463,6 @@ do_next_tag:
     /* No tokens left in the current tag. Continue with the next tag. */
     goto do_next_tag;
 return_overflow:
-    spdlog::error(L"Failed to decompress file");
+    Log::Error(L"Failed to decompress file");
     return E_FAIL;
 }

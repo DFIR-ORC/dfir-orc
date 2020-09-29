@@ -23,7 +23,7 @@ HRESULT RunningProcesses::EnumProcesses()
     if (hSnapshot == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Unable to create snapshot (code: {:#x})", hr);
+        Log::Error("Unable to create snapshot (code: {:#x})", hr);
         return hr;
     }
 
@@ -36,7 +36,7 @@ HRESULT RunningProcesses::EnumProcesses()
         if (GetLastError() != ERROR_NO_MORE_FILES)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Failed Process32First (code: {:#x})", hr);
+            Log::Error("Failed Process32First (code: {:#x})", hr);
             return hr;
         }
     }
@@ -52,7 +52,7 @@ HRESULT RunningProcesses::EnumProcesses()
             info.m_ParentPid = pe.th32ParentProcessID;
             info.m_Pid = pe.th32ProcessID;
             info.strModule = make_shared<wstring>(pe.szExeFile);
-            spdlog::trace(L"EnumProcess '{}'", pe.szExeFile);
+            Log::Trace(L"EnumProcess '{}'", pe.szExeFile);
             m_Processes.push_back(info);
         }
 
@@ -62,7 +62,7 @@ HRESULT RunningProcesses::EnumProcesses()
             if (GetLastError() != ERROR_NO_MORE_FILES)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::error("Failed Process32Next (code: {:#x})", hr);
+                Log::Error("Failed Process32Next (code: {:#x})", hr);
             }
         }
     }

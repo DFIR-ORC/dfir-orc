@@ -90,13 +90,13 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.intent = FileInfo::GetIntentions(config.c_str(), aliasNames, columnNames);
         if (filter.intent == Intentions::FILEINFO_NONE)
         {
-            spdlog::error(L"Column specified '{}' is invalid", config.c_str());
+            Log::Error(L"Column specified '{}' is invalid", config.c_str());
             return E_INVALIDARG;
         }
     }
     else
     {
-        spdlog::error("Column filter specified with no column definition");
+        Log::Error("Column filter specified with no column definition");
         return E_INVALIDARG;
     }
 
@@ -110,7 +110,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_PEHEADER;
         if (bDefined)
         {
-            spdlog::error("Ignored criteria HasPE, critera already defined");
+            Log::Error("Ignored criteria HasPE, critera already defined");
         }
         else
             bDefined = true;
@@ -120,7 +120,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_EXTBINARY;
         if (bDefined)
         {
-            spdlog::error("Ignored criteria ExtBinary, critera already defined");
+            Log::Error("Ignored criteria ExtBinary, critera already defined");
         }
         else
             bDefined = true;
@@ -130,7 +130,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_EXTARCHIVE;
         if (bDefined)
         {
-            spdlog::error("Ignored criteria ExtArchive, critera already defined");
+            Log::Error("Ignored criteria ExtArchive, critera already defined");
         }
         else
             bDefined = true;
@@ -140,7 +140,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_EXTCUSTOM;
         if (bDefined)
         {
-            spdlog::error("Ignored criteria Ext, critera already defined");
+            Log::Error("Ignored criteria Ext, critera already defined");
         }
         else
             bDefined = true;
@@ -152,7 +152,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_SIZEMORE;
         if (bDefined)
         {
-            spdlog::error("Ignored criteria SizeGT, critera already defined");
+            Log::Error("Ignored criteria SizeGT, critera already defined");
         }
         else
             bDefined = true;
@@ -165,7 +165,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_SIZELESS;
         if (bDefined)
         {
-            spdlog::error("Ignored criteria SizeLT, critera already defined");
+            Log::Error("Ignored criteria SizeLT, critera already defined");
         }
         else
             bDefined = true;
@@ -204,7 +204,7 @@ HRESULT FileInfoCommon::GetFiltersFromArgcArgv(
                 Filter aFilter;
                 if (FAILED(hr = GetFilterFromArg(argv[i], aFilter, aliasNames, columnNames)))
                 {
-                    spdlog::warn(L"Failed to interpret parameter '{}': ignored", argv[i]);
+                    Log::Warn(L"Failed to interpret parameter '{}': ignored", argv[i]);
                 }
                 else
                 {

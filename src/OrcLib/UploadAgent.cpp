@@ -136,7 +136,7 @@ void UploadAgent::run()
                     if (!FindClose(hFind))
                     {
                         hr = HRESULT_FROM_WIN32(GetLastError());
-                        spdlog::warn("Failed to close FindFile while adding directory to copy (code: {:#x})", hr);
+                        Log::Warn("Failed to close FindFile while adding directory to copy (code: {:#x})", hr);
                     }
                 }
             }
@@ -245,7 +245,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
                 return nullptr;
             if (FAILED(hr = retval->SetConfiguration(uploadSpec)))
             {
-                spdlog::error(L"Failed to configure CopyFileAgent (code: {:#x})", hr);
+                Log::Error(L"Failed to configure CopyFileAgent (code: {:#x})", hr);
                 return nullptr;
             }
         }
@@ -259,7 +259,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
             {
                 if (FAILED(hr = retval->SetConfiguration(uploadSpec)))
                 {
-                    spdlog::error(L"Failed to configure CopyFileAgent");
+                    Log::Error(L"Failed to configure CopyFileAgent");
                     return nullptr;
                 }
             }
@@ -269,13 +269,13 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
                 newConfig.Method = OutputSpec::UploadMethod::FileCopy;
                 if (FAILED(hr = retval->SetConfiguration(newConfig)))
                 {
-                    spdlog::error(L"Failed to configure CopyFileAgent (code: {:#x})", hr);
+                    Log::Error(L"Failed to configure CopyFileAgent (code: {:#x})", hr);
                     return nullptr;
                 }
             }
             else
             {
-                spdlog::error(L"Failed to configure BITS Agent: incompatible BITS version installed");
+                Log::Error(L"Failed to configure BITS Agent: incompatible BITS version installed");
                 return nullptr;
             }
         }
@@ -286,7 +286,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
 
     if (FAILED(hr = retval->Initialize()))
     {
-        spdlog::error(L"Failed to initialize CopyFileAgent (code: {:#x})", hr);
+        Log::Error(L"Failed to initialize CopyFileAgent (code: {:#x})", hr);
         return nullptr;
     }
     return retval;

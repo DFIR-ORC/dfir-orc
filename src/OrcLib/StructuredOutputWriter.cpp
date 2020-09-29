@@ -222,7 +222,7 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
 
             if (auto hr = retval->SetOutput(stream); FAILED(hr))
             {
-                spdlog::error(L"Failed to set output (code: {:#x})", hr);
+                Log::Error(L"Failed to set output (code: {:#x})", hr);
                 return nullptr;
             }
             return retval;
@@ -239,7 +239,7 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
         case OutputSpec::Kind::Directory:
             break;
         default:
-            spdlog::error(L"Invalid type of output to create StructuredOutputWriter");
+            Log::Error(L"Invalid type of output to create StructuredOutputWriter");
             return nullptr;
     }
     return nullptr;
@@ -252,7 +252,7 @@ StructuredOutput::Writer::GetWriter(const OutputSpec& outFile, std::unique_ptr<S
 
     if (auto hr = stream->WriteTo(outFile.Path.c_str()); FAILED(hr))
     {
-        spdlog::error(L"Failed to open file '{}' for writing (code: {:#x})", outFile.Path, hr);
+        Log::Error(L"Failed to open file '{}' for writing (code: {:#x})", outFile.Path, hr);
         return nullptr;
     }
     return GetWriter(stream, outFile.Type, std::move(pOptions));
@@ -266,7 +266,7 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
 {
     if (outFile.Type != OutputSpec::Kind::Directory)
     {
-        spdlog::error(L"Invalid type of output to create StructuredOutputWriter");
+        Log::Error(L"Invalid type of output to create StructuredOutputWriter");
         return nullptr;
     }
 
@@ -280,7 +280,7 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
     auto hr = fileSpec.Configure(OutputSpec::Kind::StructuredFile, szOutputFile);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to configure output file for path '{}' (code: {:#x})", szOutputFile, hr);
+        Log::Error(L"Failed to configure output file for path '{}' (code: {:#x})", szOutputFile, hr);
         return nullptr;
     }
 

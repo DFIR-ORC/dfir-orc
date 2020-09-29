@@ -112,13 +112,13 @@ HRESULT Orc::TableOutput::CSV::FileReader::OpenStream(
         m_pStream->SetFilePointer(2L, 0L, FILE_BEGIN);
         m_liCurPos.QuadPart = 2LL;
         m_liFilePos.QuadPart = 2LL;
-        spdlog::debug(L"UTF16 BOM detected");
+        Log::Debug(L"UTF16 BOM detected");
     }
     BYTE utf8bom[3] = {0xEF, 0xBB, 0xBF};
     if (Current[0] == utf8bom[0] && Current[1] == utf8bom[1] && Current[2] == utf8bom[2])
     {
         m_csvEncoding = OutputSpec::Encoding::UTF8;
-        spdlog::debug(L"UTF8 BOM detected");
+        Log::Debug(L"UTF8 BOM detected");
         m_pStream->SetFilePointer(3L, 0L, FILE_BEGIN);
         m_liCurPos.QuadPart = 3LL;
         m_liFilePos.QuadPart = 3LL;
@@ -129,12 +129,12 @@ HRESULT Orc::TableOutput::CSV::FileReader::OpenStream(
 
     if (FAILED(hr = SetBooleanFormat(szBoolFormat)))
     {
-        spdlog::error(L"Failed to set boolean format from '{}' (code: {:#x})", szBoolFormat, hr);
+        Log::Error(L"Failed to set boolean format from '{}' (code: {:#x})", szBoolFormat, hr);
     }
 
     if (m_csvEncoding == OutputSpec::Encoding::kUnknown)
     {
-        spdlog::debug(L"No valid BOM detected, defaulting to UTF8");
+        Log::Debug(L"No valid BOM detected, defaulting to UTF8");
         m_csvEncoding = OutputSpec::Encoding::UTF8;
     }
 
@@ -319,7 +319,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::PeekNextToken(
                             ForwardBy(3);
                         else
                         {
-                            spdlog::warn("Invalid line termination");
+                            Log::Warn("Invalid line termination");
                         }
 
                         *(Current - 1) = L'\0';
@@ -346,7 +346,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::PeekNextToken(
                         ForwardBy(3);
                     else
                     {
-                        spdlog::warn("Invalid line termination");
+                        Log::Warn("Invalid line termination");
                     }
                     *(Current) = L'\0';
                     bReachedNewLine = true;
@@ -472,7 +472,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::PeekHeaders(const WCHAR* szHeadersFil
 
     if (!m_bfirstRowIsColumnNames && szHeadersFileName)
     {
-        spdlog::error("No headers in headers file nor in first line. Unsupported");
+        Log::Error("No headers in headers file nor in first line. Unsupported");
         return E_INVALIDARG;
     }
 
@@ -811,7 +811,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::PeekTypes(DWORD cbLinesToPeek)
 
             if (col.Type != UnknownType && new_type != col.Type && new_type != UnknownType)
             {
-                spdlog::warn(
+                Log::Warn(
                     L"Column {}: Type of '{}' is incoherent with previous values -> converting to string",
                     col.Name,
                     szToken);
@@ -826,7 +826,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::PeekTypes(DWORD cbLinesToPeek)
 
             if (bReachedNewLine && col.Index != m_Schema.Column.size() - 1)
             {
-                spdlog::error(
+                Log::Error(
                     "Not enough columns found while peeking column types ({} found, {} expected)",
                     col.Index,
                     m_Schema.Column.size() - 1);
@@ -835,8 +835,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::PeekTypes(DWORD cbLinesToPeek)
         }
         if (!bReachedNewLine)
         {
-            spdlog::error(
-                "Too much columns found while peeking column types ({} expected)", m_Schema.Column.size() - 1);
+            Log::Error("Too much columns found while peeking column types ({} expected)", m_Schema.Column.size() - 1);
             return E_FAIL;
         }
         else
@@ -1002,11 +1001,11 @@ HRESULT Orc::TableOutput::CSV::FileReader::ParseNextLine(Record& record)
 
         if (FAILED(hr = CoerceToColumn(szToken, dwTokenLength, record.Values[i])))
         {
-            spdlog::warn(L"Failed to coerce {} into its destination type (code: {:#x})", szToken, hr);
+            Log::Warn(L"Failed to coerce {} into its destination type (code: {:#x})", szToken, hr);
         }
         if (bReachedNewLine && i != m_Schema.Column.size() - 1)
         {
-            spdlog::error(
+            Log::Error(
                 L"Not enough columns found while peeking column types ({} found, {} expected)",
                 i,
                 m_Schema.Column.size() - 1);
@@ -1015,7 +1014,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::ParseNextLine(Record& record)
     }
     if (!bReachedNewLine)
     {
-        spdlog::error(
+        Log::Error(
             "Too much columns while parsing line {} ({} found, {} expected)",
             m_ullCurLine,
             i,

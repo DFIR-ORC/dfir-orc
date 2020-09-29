@@ -83,7 +83,7 @@ public:
         }
         else
         {
-            spdlog::error("Failed to find a suitable location to parse (not running as admin?)");
+            Log::Error("Failed to find a suitable location to parse (not running as admin?)");
         }
     }
 

@@ -25,7 +25,7 @@
 #include <xmllite.h>
 #include <filesystem>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 #ifndef STATUS_SUCCESS
 #    define STATUS_SUCCESS (0)
@@ -123,7 +123,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                         LPCWSTR pEquals = wcschr(argv[i], L'=');
                         if (!pEquals)
                         {
-                            spdlog::error(
+                            Log::Error(
                                 L"Option /{} should be like: /{}=c:\\temp\\config.xml or /{}=res:#myconfig",
                                 szConfigOpt,
                                 szConfigOpt,
@@ -142,7 +142,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                                 }
                                 else
                                 {
-                                    spdlog::error(L"Invalid config file specified: '{}'", pEquals + 1);
+                                    Log::Error(L"Invalid config file specified: '{}'", pEquals + 1);
                                     return E_FAIL;
                                 }
                             }
@@ -156,7 +156,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
     }
     catch (...)
     {
-        spdlog::error(L"Failed during argument parsing, exiting");
+        Log::Error(L"Failed during argument parsing, exiting");
         return E_FAIL;
     }
 
@@ -174,7 +174,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                     hr = EmbeddedResource::SplitResourceReference(
                         szReferenceConfigResource, strBinary, strResName, strNameInArchive, strFormat)))
             {
-                spdlog::warn(
+                Log::Warn(
                     L"Failed to locate '{}' value as a reference for local resource lookup (code: {:#x})",
                     szReferenceConfigResource,
                     hr);
@@ -183,7 +183,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
             if (FAILED(
                     hr = EmbeddedResource::LocateResource(strBinary, strResName, L"BINARY", hMod, hRes, strBinaryPath)))
             {
-                spdlog::warn(
+                Log::Warn(
                     L"Failed to locate '{}' value as a reference for local resource lookup (code: {:#x})",
                     szReferenceConfigResource,
                     hr);
@@ -222,13 +222,13 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
         // Config file is used, let's read it
         if (FAILED(hr = r.ReadConfig(strConfigFile.c_str(), Config)))
         {
-            spdlog::error(L"Failed to read config file '{}' (code: {:#x})", strConfigFile, hr);
+            Log::Error(L"Failed to read config file '{}' (code: {:#x})", strConfigFile, hr);
             return hr;
         }
 
         if (FAILED(hr = r.CheckConfig(Config)))
         {
-            spdlog::error(L"Config file '{}' is incorrect and cannot be used (code: {:#x})", strConfigFile, hr);
+            Log::Error(L"Config file '{}' is incorrect and cannot be used (code: {:#x})", strConfigFile, hr);
             return hr;
         }
     }
@@ -241,28 +241,27 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
 
             if (FAILED(hr = memstream->OpenForReadOnly(buffer.GetData(), buffer.GetCount())))
             {
-                spdlog::error(
-                    L"Failed to create stream for config ressource '{}' (code: {:#x})", strConfigResource, hr);
+                Log::Error(L"Failed to create stream for config ressource '{}' (code: {:#x})", strConfigResource, hr);
                 return hr;
             }
 
             // Config file is used, let's read it
             if (FAILED(hr = r.ReadConfig(memstream, Config)))
             {
-                spdlog::error(L"Failed to read config resource '{}' (code: {:#x})", strConfigResource, hr);
+                Log::Error(L"Failed to read config resource '{}' (code: {:#x})", strConfigResource, hr);
                 return hr;
             }
 
             if (FAILED(hr = r.CheckConfig(Config)))
             {
-                spdlog::error(
+                Log::Error(
                     L"Config resource '{}' is incorrect and cannot be used (code: {:#x})", strConfigResource, hr);
                 return hr;
             }
         }
         else
         {
-            spdlog::debug(
+            Log::Debug(
                 L"WARNING: Configuration could not be loaded from resource '{}' (code: {:#x})", strConfigResource, hr);
         }
     }
@@ -278,25 +277,25 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
 
             if (FAILED(hr = memstream->OpenForReadOnly(buffer.GetData(), buffer.GetCount())))
             {
-                spdlog::error(L"Failed to create stream for config ressource '{}' (code: {:#x})", strConfigRef, hr);
+                Log::Error(L"Failed to create stream for config ressource '{}' (code: {:#x})", strConfigRef, hr);
                 return hr;
             }
 
             if (FAILED(hr = r.ReadConfig(memstream, Config)))
             {
-                spdlog::error(L"Failed to read config resource '{}' (code: {:#x})", strConfigRef, hr);
+                Log::Error(L"Failed to read config resource '{}' (code: {:#x})", strConfigRef, hr);
                 return hr;
             }
 
             if (FAILED(hr = r.CheckConfig(Config)))
             {
-                spdlog::error(L"Config resource '{}' is incorrect and cannot be used (code: {:#x})", strConfigRef, hr);
+                Log::Error(L"Config resource '{}' is incorrect and cannot be used (code: {:#x})", strConfigRef, hr);
                 return hr;
             }
         }
         else
         {
-            spdlog::debug(
+            Log::Debug(
                 L"WARNING: Configuration could not be loaded from resource '{}' (code: {:#x})", strConfigRef, hr);
         }
     }
@@ -308,7 +307,7 @@ HRESULT ConfigFile::CheckConfig(const ConfigItem& config)
 
     if (config.Flags == ConfigItem::MANDATORY && !config)
     {
-        spdlog::error(L"Element '{}' is mandatory and missing", config.strName);
+        Log::Error(L"Element '{}' is mandatory and missing", config.strName);
         return E_FAIL;
     }
     HRESULT hr = S_OK;
@@ -351,14 +350,14 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent)
     switch (config.Type)
     {
         case ConfigItem::NODE:
-            spdlog::info(
-                L"%sNODE: \"%s\" %s %s",
+            Log::Info(
+                L"{}NODE: \"{}\" {} {}",
                 szIndent,
                 config.strName,
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
                 config ? L"Present" : L"Absent");
             if (!config.empty())
-                spdlog::info(L"%s\tDATA: \"%s\" ", szIndent, config.c_str());
+                Log::Info(L"{}\tDATA: \"{}\" ", szIndent, config);
 
             std::for_each(begin(config.SubItems), end(config.SubItems), [dwIndent](const ConfigItem& item) {
                 PrintConfig(item, dwIndent + 1);
@@ -366,8 +365,8 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent)
             break;
 
         case ConfigItem::ATTRIBUTE:
-            spdlog::info(
-                L"%sATTRIBUTE: \"%s=%s\" %s %s",
+            Log::Info(
+                L"{}ATTRIBUTE: \"{}={}\" {} {}",
                 szIndent,
                 config.strName,
                 config,
@@ -375,8 +374,8 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent)
                 config ? L"Present" : L"Absent");
             break;
         case ConfigItem::NODELIST: {
-            spdlog::info(
-                L"%sNODES: \"%s\" %s %s",
+            Log::Info(
+                L"{}NODES: \"{}\" {} {}",
                 szIndent,
                 config.strName,
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
@@ -439,7 +438,7 @@ HRESULT ConfigFile::GetOutputDir(const ConfigItem& item, std::wstring& outputDir
     {
         if (FAILED(hr = ::GetOutputDir(item.c_str(), outputDir)))
         {
-            spdlog::error(L"Error in specified outputdir '{}' in config file (code: {:#x})", item.c_str(), hr);
+            Log::Error(L"Error in specified outputdir '{}' in config file (code: {:#x})", item, hr);
             return hr;
         }
 
@@ -458,9 +457,9 @@ HRESULT ConfigFile::GetOutputDir(const ConfigItem& item, std::wstring& outputDir
                 }
                 else
                 {
-                    spdlog::error(
+                    Log::Error(
                         L"Invalid encoding for outputdir in config file: '{}' (code: {:#x})",
-                        item.SubItems[CONFIG_CSVENCODING].c_str(),
+                        item.SubItems[CONFIG_CSVENCODING],
                         hr);
                     return hr;
                 }
@@ -501,7 +500,7 @@ HRESULT ConfigFile::GetOutputFile(const ConfigItem& item, std::wstring& outputFi
     {
         if (FAILED(hr = ::GetOutputFile(item.c_str(), outputFile)))
         {
-            spdlog::error(L"Error in specified output file in config file (code: {:#x})", hr);
+            Log::Error(L"Error in specified output file in config file (code: {:#x})", hr);
             return hr;
         }
         anEncoding = OutputSpec::Encoding::UTF8;
@@ -520,7 +519,7 @@ HRESULT ConfigFile::GetOutputFile(const ConfigItem& item, std::wstring& outputFi
                 }
                 else
                 {
-                    spdlog::error(
+                    Log::Error(
                         L"Invalid encoding for outputcab in config file: '{}' (code: {:#x})",
                         item.SubItems[CONFIG_CSVENCODING].c_str(),
                         hr);
@@ -561,7 +560,7 @@ HRESULT ConfigFile::GetInputFile(const ConfigItem& item, std::wstring& inputFile
     {
         if (FAILED(hr = ::ExpandFilePath(item.c_str(), inputFile)))
         {
-            spdlog::error(L"Error in specified inputfile in config file '{}' (code: {:#x})", item.c_str(), hr);
+            Log::Error(L"Error in specified inputfile in config file '{}' (code: {:#x})", item, hr);
             return hr;
         }
     }
@@ -605,8 +604,7 @@ HRESULT ConfigFile::GetSQLTableName(const ConfigItem& item, const LPWSTR szTable
             }
             if (it != end(tables.NodeList))
             {
-                spdlog::error(
-                    "While loading schema: No table name specified and none of the table schemas have no name");
+                Log::Error("While loading schema: No table name specified and none of the table schemas have no name");
                 return E_INVALIDARG;
             }
         }
@@ -629,7 +627,7 @@ HRESULT ConfigFile::GetSQLTableName(const ConfigItem& item, const LPWSTR szTable
             }
             if (it == end(tables.NodeList))
             {
-                spdlog::error(L"No table name matches required key ({})", szTableKey);
+                Log::Error(L"No table name matches required key ({})", szTableKey);
                 return E_INVALIDARG;
             }
         }

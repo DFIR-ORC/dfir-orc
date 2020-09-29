@@ -36,7 +36,7 @@ HRESULT RegFindConfig::GetConfiguration(
                 HRESULT hr = E_FAIL;
                 if (FAILED(hr = HivesFind.AddTerm(term)))
                 {
-                    spdlog::error(L"Failed to add registry search term (code: {:#x})", hr);
+                    Log::Error(L"Failed to add registry search term (code: {:#x})", hr);
                 }
 
                 FileFindTerms.push_back(term);
@@ -46,13 +46,13 @@ HRESULT RegFindConfig::GetConfiguration(
 
     if (FAILED(hr = reg.AddRegFindFromConfig(item[CONFIG_HIVE_REGFIND].NodeList)))
     {
-        spdlog::error(L"Error in specific registry find parsing in config file (code: {:#x})", hr);
+        Log::Error(L"Error in specific registry find parsing in config file (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = reg.AddRegFindFromTemplate(item[CONFIG_HIVE_TEMPLATE].NodeList)))
     {
-        spdlog::error(L"Error in specific registry find parsing in template file (code: {:#x})", hr);
+        Log::Error(L"Error in specific registry find parsing in template file (code: {:#x})", hr);
         return hr;
     }
 

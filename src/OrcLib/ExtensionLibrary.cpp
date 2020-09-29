@@ -23,7 +23,7 @@
 #include <concrt.h>
 #include <filesystem>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace std;
 using namespace Orc;
@@ -51,7 +51,7 @@ bool Orc::ExtensionLibrary::CheckInitialized()
     {
         if (FAILED(hr = Initialize()))
         {
-            spdlog::error("Failed to initialize library (code: {:#x})", hr);
+            Log::Error("Failed to initialize library (code: {:#x})", hr);
             return false;
         }
     }
@@ -63,7 +63,7 @@ bool Orc::ExtensionLibrary::CheckLoaded()
     HRESULT hr = E_FAIL;
     if (FAILED(hr = Load()))
     {
-        spdlog::error(L"Failed to load library (code: {:#x})", hr);
+        Log::Error(L"Failed to load library (code: {:#x})", hr);
         return false;
     }
     return true;
@@ -76,7 +76,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
     std::wstring strSID;
     if (FAILED(hr = SystemDetails::UserSID(strSID)))
     {
-        spdlog::error(L"Failed to get current user SID (code: {:#x})", hr);
+        Log::Error(L"Failed to get current user SID (code: {:#x})", hr);
         return hr;
     }
 
@@ -92,7 +92,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                     m_strTempDir,
                     strExtractedFile)))
         {
-            spdlog::debug(
+            Log::Debug(
                 L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})", strFileRef, m_strTempDir, hr);
             return hr;
         }
@@ -104,19 +104,19 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         auto [hr, hModule] = LoadThisLibrary(m_strLibFile);
         if (hModule == NULL || FAILED(hr))
         {
-            spdlog::debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_strLibFile, hr);
+            Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_strLibFile, hr);
             return hr;
         }
         m_hModule = hModule;
-        spdlog::debug(L"ExtensionLibrary: Loaded '{}' successfully", m_strLibFile);
+        Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", m_strLibFile);
         return S_OK;
     }
 
-    spdlog::debug(L"ExtensionLibrary: Loading value '{}'", strFileRef);
+    Log::Debug(L"ExtensionLibrary: Loading value '{}'", strFileRef);
     wstring strNewLibRef;
     if (SUCCEEDED(EmbeddedResource::ExtractValue(L"", strFileRef, strNewLibRef)))
     {
-        spdlog::debug(L"ExtensionLibrary: Loaded value {}={} successfully", strFileRef, strNewLibRef);
+        Log::Debug(L"ExtensionLibrary: Loaded value {}={} successfully", strFileRef, strNewLibRef);
         if (EmbeddedResource::IsResourceBased(strNewLibRef))
         {
             std::wstring strExtractedFile;
@@ -130,7 +130,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                         m_strTempDir,
                         strExtractedFile)))
             {
-                spdlog::debug(
+                Log::Debug(
                     L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})",
                     strNewLibRef,
                     m_strTempDir,
@@ -145,11 +145,11 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
             auto [hr, hModule] = LoadThisLibrary(m_strLibFile);
             if (hModule == NULL || FAILED(hr))
             {
-                spdlog::debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_strLibFile, hr);
+                Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_strLibFile, hr);
                 return hr;
             }
             m_hModule = hModule;
-            spdlog::debug(L"ExtensionLibrary: Loaded '{}' successfully", m_strLibFile);
+            Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", m_strLibFile);
             return S_OK;
         }
 
@@ -157,24 +157,24 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         auto [hr, hModule] = LoadThisLibrary(strNewLibRef);
         if (hModule == NULL || FAILED(hr))
         {
-            spdlog::debug(L"Failed to load extension lib using '{}' path (code: {:#x})", strNewLibRef, hr);
+            Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", strNewLibRef, hr);
             return hr;
         }
         else
         {
             m_hModule = hModule;
-            spdlog::debug(L"ExtensionLibrary: Loaded '{}' successfully", strNewLibRef);
+            Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", strNewLibRef);
         }
         m_bDeleteOnClose = false;
 
         WCHAR szFullPath[MAX_PATH];
         if (!GetModuleFileName(m_hModule, szFullPath, MAX_PATH))
         {
-            spdlog::debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strNewLibRef, hr);
+            Log::Debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strNewLibRef, hr);
             return HRESULT_FROM_WIN32(GetLastError());
         }
         m_strLibFile = szFullPath;
-        spdlog::debug(L"ExtensionLibrary: Loaded '{}' successfully", strNewLibRef);
+        Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", strNewLibRef);
         return S_OK;
     }
 
@@ -183,13 +183,13 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         auto [hr, hModule] = LoadThisLibrary(strFileRef);
         if (hModule == NULL || FAILED(hr))
         {
-            spdlog::debug(L"Failed to load extension lib using '{}' path (code: {:#x})", strFileRef, hr);
+            Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", strFileRef, hr);
             return hr;
         }
         else
         {
             m_hModule = hModule;
-            spdlog::debug(L"ExtensionLibrary: Loaded '{}' successfully", strFileRef);
+            Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", strFileRef);
         }
         m_bDeleteOnClose = false;
     }
@@ -197,11 +197,11 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
     if (!GetModuleFileName(m_hModule, szFullPath, MAX_PATH))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strFileRef, hr);
+        Log::Debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strFileRef, hr);
         return hr;
     }
     m_strLibFile = szFullPath;
-    spdlog::debug(L"ExtensionLibrary: Loaded '{}' successfully", m_strLibFile);
+    Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", m_strLibFile);
 
     return S_OK;
 }
@@ -216,7 +216,7 @@ std::pair<HRESULT, HINSTANCE> Orc::ExtensionLibrary::LoadThisLibrary(const std::
             return std::make_pair(hr, hInst);
         else
         {
-            spdlog::debug(L"LoadLibraryEx failed without setting GetLastError()");
+            Log::Debug(L"LoadLibraryEx failed without setting GetLastError()");
             return std::make_pair(hr, hInst);
         }
     }
@@ -238,7 +238,7 @@ HRESULT Orc::ExtensionLibrary::ToDesiredName(const std::wstring& libName)
 
         if (ec)
         {
-            spdlog::error(L"Failed to rename file '{}' to '{}': {})", extractedFileName, finalName, ec);
+            Log::Error(L"Failed to rename file '{}' to '{}': {})", extractedFileName, finalName, ec);
             return E_FAIL;
         }
         m_strLibFile = finalName.wstring();
@@ -254,7 +254,7 @@ FARPROC Orc::ExtensionLibrary::GetEntryPoint(const CHAR* szFunctionName, bool bM
 
     if (!IsLoaded() && FAILED(hr = Load()))
     {
-        spdlog::error(L"Failed to load extension library '{}'", m_strKeyword);
+        Log::Error(L"Failed to load extension library '{}'", m_strKeyword);
         return nullptr;
     }
 
@@ -265,11 +265,11 @@ FARPROC Orc::ExtensionLibrary::GetEntryPoint(const CHAR* szFunctionName, bool bM
 
         if (bMandatory)
         {
-            spdlog::error("Failed GetProcAddress on '{}' (code: {:#x})", szFunctionName, hr);
+            Log::Error("Failed GetProcAddress on '{}' (code: {:#x})", szFunctionName, hr);
         }
         else
         {
-            spdlog::debug("Failed GetProcAddress on '{}' (code: {:#x})", szFunctionName, hr);
+            Log::Debug("Failed GetProcAddress on '{}' (code: {:#x})", szFunctionName, hr);
         }
         return nullptr;
     }
@@ -305,14 +305,14 @@ HRESULT ExtensionLibrary::Load(const std::wstring& strAlternateRef)
                     m_strLibRef = m_strX64LibRef;
                 break;
             default:
-                spdlog::error(L"Unsupported architecture: {}", wArch);
+                Log::Error(L"Unsupported architecture: {}", wArch);
                 return hr;
         }
     }
 
     std::vector<std::wstring> refs;
 
-    spdlog::debug(L"TryLoad for references '{}'", m_strLibRef);
+    Log::Debug(L"TryLoad for references '{}'", m_strLibRef);
 
     boost::split(refs, m_strLibRef, boost::is_any_of(L";,"));
 
@@ -320,15 +320,15 @@ HRESULT ExtensionLibrary::Load(const std::wstring& strAlternateRef)
     {
         if (SUCCEEDED(hr = TryLoad(ref)))
         {
-            spdlog::debug(L"TryLoad succeeded for reference '{}'", ref);
+            Log::Debug(L"TryLoad succeeded for reference '{}'", ref);
             return S_OK;
         }
         else
         {
-            spdlog::debug(L"TryLoad failed for reference '{}' (code: {:#x})", ref, hr);
+            Log::Debug(L"TryLoad failed for reference '{}' (code: {:#x})", ref, hr);
         }
     }
-    spdlog::error(L"Failed to load extension DLL '{}' using the reference values: '{}'", m_strKeyword, m_strLibRef);
+    Log::Error(L"Failed to load extension DLL '{}' using the reference values: '{}'", m_strKeyword, m_strLibRef);
     return hr;
 }
 

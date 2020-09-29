@@ -60,13 +60,13 @@ public:
         VolumeReaderTest::SeekCallBack seekCallBack = [this](ULONGLONG offset) {
             m_Offset = offset;
 
-            spdlog::info(L"Seek with offset=%llu", offset);
+            Log::Info(L"Seek with offset=%llu", offset);
             return S_OK;
         };
 
         VolumeReaderTest::ReadCallBack readCallBack =
             [this](ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead) {
-                spdlog::info(L"Read with size=%d", ullBytesToRead);
+                Log::Info(L"Read with size=%d", ullBytesToRead);
 
                 ULONGLONG i = 0;
                 for (; i < ullBytesToRead; i++)

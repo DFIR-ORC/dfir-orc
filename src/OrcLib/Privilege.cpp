@@ -57,7 +57,7 @@ HRESULT Orc::SetPrivilege(WCHAR* szPrivilege, BOOL bEnablePrivilege)
 
     if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
     {
-        spdlog::error(L"The required privilege '{}' is not held by the process token.", szPrivilege);
+        Log::Error(L"The required privilege '{}' is not held by the process token.", szPrivilege);
         return HRESULT_FROM_WIN32(ERROR_NOT_ALL_ASSIGNED);
     }
 
@@ -74,7 +74,7 @@ HRESULT Orc::GetMyCurrentSID(PSID& pSid)
     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed OpenProcessToken (code: {:#x})", hr);
+        Log::Error("Failed OpenProcessToken (code: {:#x})", hr);
         return hr;
     }
     BOOST_SCOPE_EXIT((&hToken))
@@ -92,7 +92,7 @@ HRESULT Orc::GetMyCurrentSID(PSID& pSid)
         if (dwResult != ERROR_INSUFFICIENT_BUFFER)
         {
             hr = HRESULT_FROM_WIN32(dwResult);
-            spdlog::error("Failed GetTokenInformation (code: {:#x})", hr);
+            Log::Error("Failed GetTokenInformation (code: {:#x})", hr);
             return FALSE;
         }
     }
@@ -113,13 +113,13 @@ HRESULT Orc::GetMyCurrentSID(PSID& pSid)
     if (!GetTokenInformation(hToken, TokenUser, pUserInfo, dwSize, &dwSize))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed GetTokenInformation (code: {:#x})", hr);
+        Log::Error("Failed GetTokenInformation (code: {:#x})", hr);
         return hr;
     }
 
     if (!IsValidSid(pUserInfo->User.Sid))
     {
-        spdlog::error("Failed IsValidSid (code: {:#x})", hr);
+        Log::Error("Failed IsValidSid (code: {:#x})", hr);
         return HRESULT_FROM_WIN32(ERROR_INVALID_SID);
     }
 
@@ -127,7 +127,7 @@ HRESULT Orc::GetMyCurrentSID(PSID& pSid)
     if (dwSidLength == 0)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed GetLengthSid (code: {:#x})", hr);
+        Log::Error("Failed GetLengthSid (code: {:#x})", hr);
         return hr;
     }
 
@@ -138,21 +138,21 @@ HRESULT Orc::GetMyCurrentSID(PSID& pSid)
     if (!CopySid(dwSidLength, pSid, pUserInfo->User.Sid))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed CopySid (code: {:#x})", hr);
+        Log::Error("Failed CopySid (code: {:#x})", hr);
         LocalFree(pSid);
         return hr;
     }
 
-    if (spdlog::default_logger()->level() == spdlog::level::debug)
+    if (Log::DefaultLogger()->Get(Logger::Facility::kDefault)->level() == spdlog::level::debug)
     {
         LPWSTR pszSid = nullptr;
         if (!ConvertSidToStringSid(pSid, &pszSid))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Failed ConvertSidToStringSid (code: {:#x})", hr);
+            Log::Error("Failed ConvertSidToStringSid (code: {:#x})", hr);
             return S_OK;
         }
-        spdlog::debug(L"The current process token owner is '{}'", pszSid);
+        Log::Debug(L"The current process token owner is '{}'", pszSid);
         LocalFree(pszSid);
     }
 
@@ -168,7 +168,7 @@ HRESULT Orc::GetObjectOwnerSID(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pSi
     if (!GetSecurityInfo(hObject, objType, OWNER_SECURITY_INFORMATION, &pSid, NULL, NULL, NULL, &pSecurityDescriptor))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed GetSecurityInfo (code: {:#x})", hr);
+        Log::Error("Failed GetSecurityInfo (code: {:#x})", hr);
         return hr;
     }
 
@@ -183,7 +183,7 @@ HRESULT Orc::TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPrevio
 
     if (FAILED(hr = GetMyCurrentSID(pMySID)))
     {
-        spdlog::debug("Failed to obtain my current SID (code: {:#x})", hr);
+        Log::Debug("Failed to obtain my current SID (code: {:#x})", hr);
     }
 
     BOOST_SCOPE_EXIT(&pMySID)
@@ -199,7 +199,7 @@ HRESULT Orc::TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPrevio
     if (!GetSecurityInfo(hObject, objType, TokenOwner, &pCurrentOwnerSid, NULL, NULL, NULL, &pSecDescr))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed to obtain current owner for object (code: {:#x})", hr);
+        Log::Debug("Failed to obtain current owner for object (code: {:#x})", hr);
         return hr;
     }
     BOOST_SCOPE_EXIT(&pSecDescr)
@@ -215,7 +215,7 @@ HRESULT Orc::TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPrevio
         if (EqualSid(pMySID, pCurrentOwnerSid))
         {
             // the SIDs are already equal, nothing else to do
-            spdlog::debug("SIDs are equal, already owner of this object");
+            Log::Debug("SIDs are equal, already owner of this object");
             return S_OK;
         }
     }
@@ -223,7 +223,7 @@ HRESULT Orc::TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPrevio
     // Enable the SE_TAKE_OWNERSHIP_NAME privilege.
     if (FAILED(hr = SetPrivilege(SE_TAKE_OWNERSHIP_NAME, TRUE)))
     {
-        spdlog::debug("You must be logged on as Administrator (code: {:#x})", hr);
+        Log::Debug("You must be logged on as Administrator (code: {:#x})", hr);
         return hr;
     }
 
@@ -231,7 +231,7 @@ HRESULT Orc::TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPrevio
     if (!SetSecurityInfo(hObject, objType, OWNER_SECURITY_INFORMATION, pMySID, NULL, NULL, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed to change object's owner (code: {:#x})", hr);
+        Log::Debug("Failed to change object's owner (code: {:#x})", hr);
         return hr;
     }
 
@@ -241,17 +241,17 @@ HRESULT Orc::TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPrevio
         if (!ConvertSidToStringSid(pMySID, &pszSid))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Failed ConvertSidToStringSid (code: {:#x})", hr);
+            Log::Error("Failed ConvertSidToStringSid (code: {:#x})", hr);
             return S_OK;
         }
-        spdlog::debug(L"The object's owner has been changed to '{}'", pszSid);
+        Log::Debug(L"The object's owner has been changed to '{}'", pszSid);
         LocalFree(pszSid);
     }
 
     // Disable the SE_TAKE_OWNERSHIP_NAME privilege.
     if (FAILED(hr = SetPrivilege(SE_TAKE_OWNERSHIP_NAME, FALSE)))
     {
-        spdlog::debug("Failed SetPrivilege to disable SE_TAKE_OWNERSHIP (code: {:#x})", hr);
+        Log::Debug("Failed SetPrivilege to disable SE_TAKE_OWNERSHIP (code: {:#x})", hr);
     }
 
     if (pCurrentOwnerSid != NULL)
@@ -260,7 +260,7 @@ HRESULT Orc::TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPrevio
         if (dwSidLength == 0)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Failed GetLengthSid (code: {:#x})", hr);
+            Log::Error("Failed GetLengthSid (code: {:#x})", hr);
             return hr;
         }
 
@@ -271,7 +271,7 @@ HRESULT Orc::TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPrevio
         if (!CopySid(dwSidLength, pPreviousOwnerSid, pCurrentOwnerSid))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Failed CopySid (code: {:#x})", hr);
+            Log::Error("Failed CopySid (code: {:#x})", hr);
             LocalFree(pPreviousOwnerSid);
             return hr;
         }
@@ -290,7 +290,7 @@ HRESULT Orc::GrantAccess(SE_OBJECT_TYPE objType, HANDLE hObject, PSID pSid, ACCE
             GetSecurityInfo(hObject, objType, TokenOwner, NULL, NULL, &pCurrentDACL, NULL, &pSecDescr) != ERROR_SUCCESS)
     {
         hr = HRESULT_FROM_WIN32(dwErrorCode);
-        spdlog::debug("Failed to obtain current DACL for object (code: {:#x})", hr);
+        Log::Debug("Failed to obtain current DACL for object (code: {:#x})", hr);
         return hr;
     }
     BOOST_SCOPE_EXIT(&pSecDescr)
@@ -316,7 +316,7 @@ HRESULT Orc::GrantAccess(SE_OBJECT_TYPE objType, HANDLE hObject, PSID pSid, ACCE
     if (!SetEntriesInAcl(1, newRigths, pCurrentDACL, &pNewACL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed SetEntriesInAcl to modify DACL (code: {:#x})", hr);
+        Log::Debug("Failed SetEntriesInAcl to modify DACL (code: {:#x})", hr);
         return hr;
     }
     BOOST_SCOPE_EXIT(&pNewACL)
@@ -330,10 +330,10 @@ HRESULT Orc::GrantAccess(SE_OBJECT_TYPE objType, HANDLE hObject, PSID pSid, ACCE
     if (!SetSecurityInfo(hObject, objType, DACL_SECURITY_INFORMATION, NULL, NULL, pNewACL, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed to assign new ACL to object (code: {:#x})", hr);
+        Log::Debug("Failed to assign new ACL to object (code: {:#x})", hr);
         return hr;
     }
 
-    spdlog::debug("Successfully granted {:#x} access to object", mask);
+    Log::Debug("Successfully granted {:#x} access to object", mask);
     return S_OK;
 }

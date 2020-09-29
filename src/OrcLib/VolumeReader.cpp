@@ -45,7 +45,7 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
             && (pbs->PackedBpb.SectorsPerCluster != 0x40) && (pbs->PackedBpb.SectorsPerCluster != 0x80))
         {
             // sectors per cluster isn't a supported value
-            spdlog::error("NTFS: SectorsPerCluster is not a supported value");
+            Log::Error("NTFS: SectorsPerCluster is not a supported value");
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
         else if (
@@ -53,7 +53,7 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
             || pbs->PackedBpb.Sectors != 0 || pbs->PackedBpb.SectorsPerFat != 0 || pbs->PackedBpb.LargeSectors != 0)
         {
             // one of the fields that should be null are not null
-            spdlog::error("NTFS: fields that should be zero is not zero");
+            Log::Error("NTFS: fields that should be zero is not zero");
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
         m_BytesPerSector = pbs->PackedBpb.BytesPerSector;
@@ -70,7 +70,7 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
 
         if (m_BytesPerFRS % 1024 != 0)
         {
-            spdlog::error("NTFS: Bytes per File Record is not a multiple of 1024 - {:#x}", m_BytesPerFRS);
+            Log::Error("NTFS: Bytes per File Record is not a multiple of 1024 - {:#x}", m_BytesPerFRS);
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
 

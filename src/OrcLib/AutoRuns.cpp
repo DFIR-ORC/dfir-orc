@@ -19,7 +19,7 @@
 
 #include "AutoRuns.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 static const auto AUTORUNS_ITEM = 0L;
 static const auto AUTORUNS_ITEM_ITEM = 0L;
@@ -55,7 +55,7 @@ AutoRuns::AutoRuns()
 
     if (FAILED(hr = m_AutoRuns.AddChildNodeList(L"item", AUTORUNS_ITEM_ITEM, ConfigItem::MANDATORY)))
     {
-        spdlog::warn("Failed to populate child node list (code: {:#x})", hr);
+        Log::Warn("Failed to populate child node list (code: {:#x})", hr);
         return;
     }
 
@@ -125,7 +125,7 @@ HRESULT AutoRuns::LoadAutoRunsXml(const CBinaryBuffer& XmlData)
 
     if (FAILED(hr = memstream->OpenForReadOnly(XmlData.GetData(), XmlData.GetCount())))
     {
-        spdlog::error(L"Failed to open autoruns memory stream");
+        Log::Error(L"Failed to open autoruns memory stream");
         return hr;
     }
 

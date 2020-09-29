@@ -89,12 +89,12 @@ HRESULT Main::CheckConfiguration()
     // Here we check to tool's provided configuration and adjust (if need be) some parameters to default values
     if (config.strIF.empty())
     {
-        spdlog::error("No if parameter passed");
+        Log::Error("No if parameter passed");
         return E_INVALIDARG;
     }
     if (config.OF.empty())
     {
-        spdlog::error("No if parameter passed");
+        Log::Error("No if parameter passed");
         return E_INVALIDARG;
     }
 

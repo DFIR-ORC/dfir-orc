@@ -98,7 +98,7 @@ HRESULT MultiMemoryStream::Write(
 
     if (m_bReadOnly)
     {
-        spdlog::error("Invalid write to read-only memory stream");
+        Log::Error("Invalid write to read-only memory stream");
         return E_ACCESSDENIED;
     }
 

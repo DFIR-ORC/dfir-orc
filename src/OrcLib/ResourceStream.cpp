@@ -30,7 +30,7 @@ ResourceStream::~ResourceStream()
 
 HRESULT ResourceStream::OpenForReadWrite()
 {
-    spdlog::error("Invalid write to read-only memory stream");
+    Log::Error("Invalid write to read-only memory stream");
     return E_ACCESSDENIED;
 }
 
@@ -43,14 +43,14 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
     if ((hResource = FindResource(hInstance, MAKEINTRESOURCE(resourceID), L"BINARY")) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed FindResource '{}' (code: {:#x})", resourceID, hr);
+        Log::Debug("Failed FindResource '{}' (code: {:#x})", resourceID, hr);
         return hr;
     }
 
     if ((hFileResource = LoadResource(hInstance, hResource)) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed LoadResource '{}' (code: {:#x})", resourceID, hr);
+        Log::Debug("Failed LoadResource '{}' (code: {:#x})", resourceID, hr);
         return hr;
     }
 
@@ -60,7 +60,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
     if ((lpFile = LockResource(hFileResource)) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed LockResource '{}' (code: {:#x})", resourceID, hr);
+        Log::Debug("Failed LockResource '{}' (code: {:#x})", resourceID, hr);
         return hr;
     }
 
@@ -69,7 +69,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
     if ((dwSize = SizeofResource(hInstance, hResource)) == 0)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed SizeofResource '{}' (code: {:#x})", resourceID, hr);
+        Log::Debug("Failed SizeofResource '{}' (code: {:#x})", resourceID, hr);
         return hr;
     }
     {
@@ -92,7 +92,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
     if ((hFileResource = LoadResource(hInstance, hResource)) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed LoadResource (code: {:#x})", hr);
+        Log::Debug("Failed LoadResource (code: {:#x})", hr);
         return hr;
     }
 
@@ -101,7 +101,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
     if ((lpFile = LockResource(hFileResource)) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed LockResource (code: {:#x})", hr);
+        Log::Debug("Failed LockResource (code: {:#x})", hr);
         return hr;
     }
 
@@ -110,7 +110,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
     if ((dwSize = SizeofResource(hInstance, hResource)) == 0)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::debug("Failed SizeofResource (code: {:#x})", hr);
+        Log::Debug("Failed SizeofResource (code: {:#x})", hr);
         return hr;
     }
     {
@@ -128,7 +128,7 @@ HRESULT Orc::ResourceStream::OpenForReadOnly(const std::wstring& strResourceSpec
 
     if (!EmbeddedResource::IsResourceBased(strResourceSpec.c_str()))
     {
-        spdlog::error(L"Invalid ressource reference '{}'", strResourceSpec);
+        Log::Error(L"Invalid ressource reference '{}'", strResourceSpec);
         return E_FAIL;
     }
 
@@ -139,7 +139,7 @@ HRESULT Orc::ResourceStream::OpenForReadOnly(const std::wstring& strResourceSpec
 
     if (Format != L"res"sv)
     {
-        spdlog::error(L"Invalid ressource format '{}'. Only the res:# format is currently supported", Format);
+        Log::Error(L"Invalid ressource format '{}'. Only the res:# format is currently supported", Format);
         return E_FAIL;
     }
 

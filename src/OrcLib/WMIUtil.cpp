@@ -22,7 +22,7 @@ HRESULT WMI::Initialize()
     {
         if (FAILED(hr = m_pLocator.CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER)))
         {
-            spdlog::error(L"Failed to create IWbemLocator object (code: {:#x})", hr);
+            Log::Error(L"Failed to create IWbemLocator object (code: {:#x})", hr);
             return hr;
         }
     }
@@ -33,12 +33,12 @@ HRESULT WMI::Initialize()
         // and obtain pointer pSvc to make IWbemServices calls.
         if (FAILED(hr = m_pLocator->ConnectServer(_bstr_t(L"ROOT\\CIMV2"), NULL, NULL, 0, NULL, 0, 0, &m_pServices)))
         {
-            spdlog::error(L"Could not connect to WbemServices object (code: {:#x})", hr);
+            Log::Error(L"Could not connect to WbemServices object (code: {:#x})", hr);
             return hr;
         }
     }
 
-    spdlog::debug(L"Connected to ROOT\\CIMV2 WMI namespace");
+    Log::Debug(L"Connected to ROOT\\CIMV2 WMI namespace");
 
     hr = CoSetProxyBlanket(
         m_pServices,  // Indicates the proxy to set
@@ -52,7 +52,7 @@ HRESULT WMI::Initialize()
 
     if (FAILED(hr))
     {
-        spdlog::error(L"Could not set proxy blanket on WbemServices proxy (code: {:#x})", hr);
+        Log::Error(L"Could not set proxy blanket on WbemServices proxy (code: {:#x})", hr);
         return hr;
     }
 
@@ -73,7 +73,7 @@ HRESULT WMI::WMICreateProcess(
     CComPtr<IWbemClassObject> pProcessClass;
     if (FAILED(hr = m_pServices->GetObject(ClassName, 0, NULL, &pProcessClass, NULL)))
     {
-        spdlog::error(L"Could not GetObject of class name Win32_Process (code: {:#x})", hr);
+        Log::Error(L"Could not GetObject of class name Win32_Process (code: {:#x})", hr);
         return hr;
     }
 
@@ -81,14 +81,14 @@ HRESULT WMI::WMICreateProcess(
     CComPtr<IWbemClassObject> pInParamsDefinition;
     if (FAILED(hr = pProcessClass->GetMethod(MethodName, 0, &pInParamsDefinition, NULL)))
     {
-        spdlog::error(L"Could not GetMethod Create of class Win32_Process (code: {:#x})", hr);
+        Log::Error(L"Could not GetMethod Create of class Win32_Process (code: {:#x})", hr);
         return hr;
     }
 
     CComPtr<IWbemClassObject> pProcessInstance;
     if (FAILED(hr = pInParamsDefinition->SpawnInstance(0, &pProcessInstance)))
     {
-        spdlog::error("Could not SpawnInstance of Create of class Win32_Process (code: {:#x})", hr);
+        Log::Error("Could not SpawnInstance of Create of class Win32_Process (code: {:#x})", hr);
         return hr;
     }
 
@@ -98,10 +98,10 @@ HRESULT WMI::WMICreateProcess(
     // Store the value for the in parameters
     if (FAILED(hr = pProcessInstance->Put(L"CommandLine", 0, &varCommand, 0)))
     {
-        spdlog::error("Could not put CommandLine parameter of Create of class Win32_Process (code: {:#x})", hr);
+        Log::Error("Could not put CommandLine parameter of Create of class Win32_Process (code: {:#x})", hr);
         return hr;
     }
-    spdlog::debug(L"The command is: {}", varCommand.bstrVal);
+    Log::Debug(L"The command is: {}", varCommand.bstrVal);
 
     if (szCurrentDirectory != nullptr)
     {
@@ -111,12 +111,11 @@ HRESULT WMI::WMICreateProcess(
         // Store the value for the in parameters
         if (FAILED(hr = pProcessInstance->Put(L"CurrentDirectory", 0, &varCurrentDirectory, 0)))
         {
-            spdlog::error(
-                "Could not put CurrentDirectory parameter of Create of class Win32_Process (code: {:#x})", hr);
+            Log::Error("Could not put CurrentDirectory parameter of Create of class Win32_Process (code: {:#x})", hr);
             return hr;
         }
 
-        spdlog::debug(L"The CurrentDirectory is: {}", varCurrentDirectory.bstrVal);
+        Log::Debug(L"The CurrentDirectory is: {}", varCurrentDirectory.bstrVal);
     }
 
     //************************************
@@ -125,7 +124,7 @@ HRESULT WMI::WMICreateProcess(
     CComBSTR bstrProcessStartup(L"Win32_ProcessStartup");
     if (FAILED(hr = m_pServices->GetObject(bstrProcessStartup, 0, NULL, &pProcessStartupClass, NULL)))
     {
-        spdlog::error(L"Could not GetObject of class Win32_ProcessStartup");
+        Log::Error(L"Could not GetObject of class Win32_ProcessStartup");
         return hr;
     }
 
@@ -133,7 +132,7 @@ HRESULT WMI::WMICreateProcess(
     CComPtr<IWbemClassObject> pProcessStartupInstance;
     if (FAILED(hr = pProcessStartupClass->SpawnInstance(0, &pProcessStartupInstance)))
     {
-        spdlog::error(L"Could not SpawnInstance of class Win32_ProcessStartup");
+        Log::Error(L"Could not SpawnInstance of class Win32_ProcessStartup");
         return hr;
     }
 
@@ -141,10 +140,10 @@ HRESULT WMI::WMICreateProcess(
     varCommand_ShowWindow = SW_HIDE;
     if (FAILED(hr = pProcessStartupInstance->Put(L"ShowWindow", 0, &varCommand_ShowWindow, 0)))
     {
-        spdlog::error("Could not put ShowWindow of class Win32_ProcessStartup");
+        Log::Error("Could not put ShowWindow of class Win32_ProcessStartup");
         return hr;
     }
-    spdlog::debug("PriorityClass set to {:#x} in class Win32_ProcessStartup", varCommand_ShowWindow.uintVal);
+    Log::Debug("PriorityClass set to {:#x} in class Win32_ProcessStartup", varCommand_ShowWindow.uintVal);
 
     if (dwPriority)
     {
@@ -152,11 +151,11 @@ HRESULT WMI::WMICreateProcess(
         varCommand_PriorityClass = (UINT32)dwPriority;
         if (FAILED(hr = pProcessStartupInstance->Put(L"PriorityClass", 0, &varCommand_PriorityClass, 0)))
         {
-            spdlog::error(
+            Log::Error(
                 "Could not put PriorityClass of class Win32_ProcessStartup with {:#x} (code: {:#x})", dwPriority, hr);
             return hr;
         }
-        spdlog::debug("PriorityClass set to {:#x} in class Win32_ProcessStartup", dwPriority);
+        Log::Debug("PriorityClass set to {:#x} in class Win32_ProcessStartup", dwPriority);
     }
 
     if (dwCreationFlags)
@@ -167,10 +166,10 @@ HRESULT WMI::WMICreateProcess(
 
         if (FAILED(hr = pProcessStartupInstance->Put(L"CreateFlags", 0, &varCommand_CreateFlags, 0L)))
         {
-            spdlog::error("Could not put CreateFlags of class Win32_ProcessStartup {:#x}", dwCreationFlags);
+            Log::Error("Could not put CreateFlags of class Win32_ProcessStartup {:#x}", dwCreationFlags);
             return hr;
         }
-        spdlog::debug("CreateFlags set to {:#x} in class Win32_ProcessStartup", dwCreationFlags);
+        Log::Debug("CreateFlags set to {:#x} in class Win32_ProcessStartup", dwCreationFlags);
     }
 
     // Create a command to set ProcessStartupInformation to be the instance of Win32_ProcessStartup
@@ -179,7 +178,7 @@ HRESULT WMI::WMICreateProcess(
     // set the value to the instance of Win32_Process process
     if (FAILED(hr = pProcessInstance->Put(L"ProcessStartupInformation", 0, &varCommand_ProcessStartup, 0)))
     {
-        spdlog::error("Could not put ProcessStartupInformation of class Win32_Process (code: {:#x})", hr);
+        Log::Error("Could not put ProcessStartupInformation of class Win32_Process (code: {:#x})", hr);
         return hr;
     }
 
@@ -187,7 +186,7 @@ HRESULT WMI::WMICreateProcess(
     CComPtr<IWbemClassObject> pOutParams;
     if (FAILED(hr = m_pServices->ExecMethod(ClassName, MethodName, 0, NULL, pProcessInstance, &pOutParams, NULL)))
     {
-        spdlog::error("Could not put execute command (code: {:#x})", hr);
+        Log::Error("Could not put execute command (code: {:#x})", hr);
         return hr;
     }
 
@@ -197,10 +196,10 @@ HRESULT WMI::WMICreateProcess(
     CComVariant varReturnValue;
     if (FAILED(hr = pOutParams->Get(CComBSTR(L"ReturnValue"), 0, &varReturnValue, NULL, 0)))
     {
-        spdlog::error("Could not retrieve value ReturnValue (code: {:#x})", hr);
+        Log::Error("Could not retrieve value ReturnValue (code: {:#x})", hr);
         return hr;
     }
-    spdlog::debug("Command was successfully created, ReturnValue={}", varReturnValue.uintVal);
+    Log::Debug("Command was successfully created, ReturnValue={}", varReturnValue.uintVal);
     dwStatus = varReturnValue.uintVal;
     return S_OK;
 }
@@ -216,7 +215,7 @@ stx::Result<CComPtr<IEnumWbemClassObject>, HRESULT> Orc::WMI::Query(LPCWSTR szRe
             &pEnumerator);
         FAILED(hr))
     {
-        spdlog::error(L"Query \"{}\" failed (code: {:#x})", szRequest, hr);
+        Log::Error(L"Query \"{}\" failed (code: {:#x})", szRequest, hr);
         return Err(std::move(hr));
     }
 

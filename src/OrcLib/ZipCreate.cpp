@@ -48,7 +48,7 @@ void StoreFileHashes(Archive::ArchiveItems& items, bool releaseInputStreams)
     {
         if (item.currentStatus != Archive::ArchiveItem::Status::Done)
         {
-            spdlog::warn("Unexpected archive status: {}", item.currentStatus);
+            Log::Warn("Unexpected archive status: {}", item.currentStatus);
             continue;
         }
 
@@ -101,7 +101,7 @@ ZipCreate::CompressionLevel ZipCreate::GetCompressionLevel(const std::wstring& s
     if (equalCaseInsensitive(strLevel, L"Ultra"))
         return ZipCreate::CompressionLevel::Ultra;
 
-    spdlog::warn(L"Selecting default compression level (unrecognised parameter was '{}')", strLevel);
+    Log::Warn(L"Selecting default compression level (unrecognised parameter was '{}')", strLevel);
 
     return ZipCreate::CompressionLevel::Fast;
 }
@@ -144,7 +144,7 @@ STDMETHODIMP ZipCreate::InitArchive(PCWSTR pwzArchivePath, Archive::ArchiveCallb
     if (FAILED(
             hr = filestream->OpenFile(pwzArchivePath, GENERIC_WRITE | GENERIC_READ, 0L, NULL, CREATE_ALWAYS, 0L, NULL)))
     {
-        spdlog::error(L"Failed to open '{}' for writing (code: {:#x})", pwzArchivePath, hr);
+        Log::Error(L"Failed to open '{}' for writing (code: {:#x})", pwzArchivePath, hr);
         return hr;
     }
 
@@ -165,14 +165,14 @@ ZipCreate::InitArchive(__in const std::shared_ptr<ByteStream>& pOutputStream, Ar
             m_FormatGUID = CLSID_CFormatZip;
             break;
         default:
-            spdlog::debug("No format specified for a archive, defaulting to 7zip");
+            Log::Debug("No format specified for a archive, defaulting to 7zip");
             m_FormatGUID = CLSID_CFormat7z;
             break;
     }
 
     if (m_FormatGUID == CLSID_NULL)
     {
-        spdlog::debug("Failed to find a format matching extension, defaulting to 7zip");
+        Log::Debug("Failed to find a format matching extension, defaulting to 7zip");
         m_FormatGUID = CLSID_CFormat7z;
     }
 
@@ -195,7 +195,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
     const auto pZipLib = ZipLibrary::GetZipLibrary();
     if (pZipLib == nullptr)
     {
-        spdlog::error(L"FAILED to load 7zip.dll");
+        Log::Error(L"FAILED to load 7zip.dll");
         return E_FAIL;
     }
 
@@ -205,7 +205,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
         CComPtr<IOutArchive> pArchiver;
         if (FAILED(hr = pZipLib->CreateObject(&m_FormatGUID, &IID_IOutArchive, reinterpret_cast<void**>(&pArchiver))))
         {
-            spdlog::error(L"Failed to create archiver");
+            Log::Error(L"Failed to create archiver");
             return hr;
         }
 
@@ -223,13 +223,13 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
 
             if ((hr = m_TempStream->CanRead()) != S_OK)
             {
-                spdlog::error(L"Temp archive stream cannot be read");
+                Log::Error(L"Temp archive stream cannot be read");
                 return E_UNEXPECTED;
             }
 
             if (FAILED(hr = m_TempStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
             {
-                spdlog::error(L"Failed to rewind temp stream (code: {:#x})", hr);
+                Log::Error(L"Failed to rewind temp stream (code: {:#x})", hr);
                 return hr;
             }
 
@@ -242,7 +242,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
                 CComPtr<ArchiveOpenCallback> callback = new ArchiveOpenCallback();
                 if (FAILED(hr = inarchive->Open(infile, nullptr, callback)))
                 {
-                    spdlog::error(L"Failed to open archive stream (code: {:#x})", hr);
+                    Log::Error(L"Failed to open archive stream (code: {:#x})", hr);
                     return hr;
                 }
             }
@@ -266,7 +266,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
             auto tempstr = tempdir.wstring();
             if (FAILED(hr = pNewTemp->Open(tempstr, L"ZipStream", 100 * 1024 * 1024)))
             {
-                spdlog::error(L"Failed to create temp stream (code: {:#x})", hr);
+                Log::Error(L"Failed to create temp stream (code: {:#x})", hr);
                 return hr;
             }
 
@@ -295,7 +295,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
         if ((hr = pArchiver->UpdateItems(outFile, (UInt32)m_Items.size(), callback)) != S_OK)
         {
             // returning S_FALSE also indicates error
-            spdlog::error(L"Failed to update '{}' (code: {:#x})", m_ArchiveName, hr);
+            Log::Error(L"Failed to update '{}' (code: {:#x})", m_ArchiveName, hr);
             return hr;
         }
     }
@@ -328,7 +328,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
     {
         for (const auto& item : m_Queue)
         {
-            spdlog::warn(
+            Log::Warn(
                 L"Queued item '{}' was not included in archive ({} bytes)",
                 item.NameInArchive,
                 item.Stream != nullptr ? item.Stream->GetSize() : 0LL);
@@ -369,7 +369,7 @@ STDMETHODIMP ZipCreate::Complete()
         {
             if (FAILED(hr = m_TempStream->MoveTo(m_ArchiveStream)))
             {
-                spdlog::error(L"Failed to copy Temp stream to output stream (code: {:#x})", hr);
+                Log::Error(L"Failed to copy Temp stream to output stream (code: {:#x})", hr);
                 return hr;
             }
             m_ArchiveStream->Close();
@@ -379,7 +379,7 @@ STDMETHODIMP ZipCreate::Complete()
             m_ArchiveStream->Close();
             if (FAILED(hr = m_TempStream->MoveTo(m_ArchiveName.c_str())))
             {
-                spdlog::error(L"Failed to copy Temp stream to output stream (code: {:#x})", hr);
+                Log::Error(L"Failed to copy Temp stream to output stream (code: {:#x})", hr);
                 return hr;
             }
         }

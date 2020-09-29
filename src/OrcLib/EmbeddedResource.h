@@ -429,9 +429,8 @@ static constexpr LPCWSTR RESSOURCE_GENERIC_READ_BA = L"D:PAI(A;;FR;;;BA)";
 #include "ResourceStream.h"
 
 template <typename _T, size_t _DeclElts>
-HRESULT Orc::EmbeddedResource::ExtractToBuffer(
-    const std::wstring& szImageFileRessourceID,
-    Buffer<_T, _DeclElts>& Buffer)
+HRESULT
+Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, Buffer<_T, _DeclElts>& Buffer)
 {
     using namespace std;
     using namespace msl::utilities;
@@ -454,7 +453,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(
             std::wstring strBinaryPath;
             if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
-                spdlog::warn(L"Could not locate resource {} (code: {:#x})", szImageFileRessourceID, hr);
+                Log::warn(L"Could not locate resource {} (code: {:#x})", szImageFileRessourceID, hr);
                 return hr;
             }
 
@@ -463,7 +462,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(
             if ((hFileResource = LoadResource(hModule, hRes)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::warn(L"Could not load ressource (code: {:#x})", hr);
+                Log::warn(L"Could not load ressource (code: {:#x})", hr);
                 return hr;
             }
 
@@ -472,7 +471,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(
             if ((lpData = LockResource(hFileResource)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::warn(L"Could not lock ressource (code: {:#x})", hr);
+                Log::warn(L"Could not lock ressource (code: {:#x})", hr);
                 return hr;
             }
 
@@ -480,14 +479,14 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(
             if ((dwSize = SizeofResource(hModule, hRes)) == 0)
             {
                 auto hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::error(L"Could not compute ressource size (code: {:#x})", hr);
+                Log::Error(L"Could not compute ressource size (code: {:#x})", hr);
                 return hr;
             }
 
             if ((dwSize % sizeof(_T)) > 0)
             {
                 auto hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-                spdlog::error(L"Resource's size is not compatible with buffer's type (code: {:#x})", hr);
+                Log::Error(L"Resource's size is not compatible with buffer's type (code: {:#x})", hr);
                 return hr;
             }
 
@@ -513,7 +512,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(
                 std::wstring strBinaryPath;
                 if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
-                    spdlog::warn(L"Could not locate resource (code: {:#x})", szImageFileRessourceID, hr);
+                    Log::warn(L"Could not locate resource (code: {:#x})", szImageFileRessourceID, hr);
                     return hr;
                 }
 
@@ -561,19 +560,19 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(
             const auto& items = extract->GetExtractedItems();
             if (items.empty())
             {
-                spdlog::warn(L"Could not locate item '{}' in resource '{}'", NameInArchive, ResName);
+                Log::warn(L"Could not locate item '{}' in resource '{}'", NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
             }
 
             if (items.size() > 1)
             {
-                spdlog::warn(L"{} items matched name '{}' in resource '{}'", items.size(), NameInArchive, ResName);
+                Log::warn(L"{} items matched name '{}' in resource '{}'", items.size(), NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_TOO_MANY_NAMES);
             }
 
             if (!pOutput)
             {
-                spdlog::warn(L"Invalid output stream for item '{}' in resource '{}'", NameInArchive, ResName);
+                Log::warn(L"Invalid output stream for item '{}' in resource '{}'", NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
             }
 
@@ -582,7 +581,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(
 
             if ((itembuffer.GetCount() % sizeof(_T)) > 0)
             {
-                spdlog::error(L"Uncompressed resource's size is not compatible with buffer's type");
+                Log::Error(L"Uncompressed resource's size is not compatible with buffer's type");
                 return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
             }
 
@@ -592,7 +591,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(
     }
     else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
     {
-        spdlog::error(L"'{}' does not match a typical embedded ressource pattern", szImageFileRessourceID);
+        Log::Error(L"'{}' does not match a typical embedded ressource pattern", szImageFileRessourceID);
         return E_INVALIDARG;
     }
 

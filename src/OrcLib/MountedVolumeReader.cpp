@@ -18,7 +18,7 @@
 
 #include "winioctl.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -59,7 +59,7 @@ HRESULT MountedVolumeReader::GetDiskExtents()
                 hr = Extent.Open(
                     (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE), OPEN_ALWAYS, FILE_FLAG_SEQUENTIAL_SCAN)))
         {
-            spdlog::error("Failed to open the drive (code: {:#x})", hr);
+            Log::Error("Failed to open the drive (code: {:#x})", hr);
             break;
         }
         if (!::DeviceIoControl(
@@ -73,7 +73,7 @@ HRESULT MountedVolumeReader::GetDiskExtents()
                 NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Failed to retrieve Disk Geometry using IOCTL_DISK_GET_DRIVE_GEOMETRY_EX (code: {:#x})", hr);
+            Log::Error(L"Failed to retrieve Disk Geometry using IOCTL_DISK_GET_DRIVE_GEOMETRY_EX (code: {:#x})", hr);
 
             DISK_GEOMETRY DiskGeometry = {{0}};
 
@@ -88,8 +88,8 @@ HRESULT MountedVolumeReader::GetDiskExtents()
                     NULL))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::error("Failed to retrieve disk geometry using IOCTL_DISK_GET_DRIVE_GEOMETRY (code: {:#x})", hr);
-                spdlog::info("Using safe geometry values with 512 bytes per sector");
+                Log::Error("Failed to retrieve disk geometry using IOCTL_DISK_GET_DRIVE_GEOMETRY (code: {:#x})", hr);
+                Log::Info("Using safe geometry values with 512 bytes per sector");
                 ZeroMemory(&DiskGeometryEx, sizeof(DiskGeometryEx));
                 DiskGeometry.BytesPerSector = 512;
             }
@@ -114,7 +114,7 @@ HRESULT MountedVolumeReader::GetDiskExtents()
                     NULL))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::error("Failed to retrieve disk length with IOCTL_DISK_GET_PARTITION_INFO (code: {:#x})", hr);
+                Log::Error("Failed to retrieve disk length with IOCTL_DISK_GET_PARTITION_INFO (code: {:#x})", hr);
                 break;
             }
             DiskLength.Length = PartitionInfo.PartitionLength;
@@ -125,7 +125,7 @@ HRESULT MountedVolumeReader::GetDiskExtents()
         if (FAILED(hr = SystemDetails::GetOSVersion(dwMajor, dwMinor)))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Failed to retrieve OS version info (code: {:#x})", hr);
+            Log::Error("Failed to retrieve OS version info (code: {:#x})", hr);
             break;
         }
 
@@ -156,7 +156,7 @@ HRESULT MountedVolumeReader::GetDiskExtents()
                 else if (GetLastError() == ERROR_INVALID_FUNCTION)
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    spdlog::warn(
+                    Log::Warn(
                         L"IOCTL_STORAGE_QUERY_PROPERTY does not support StorageAccessAlignmentProperty for this device "
                         L"'{}' (code: {:#x})",
                         Extent.GetName(),
@@ -166,7 +166,7 @@ HRESULT MountedVolumeReader::GetDiskExtents()
                 else
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    spdlog::error(
+                    Log::Error(
                         L"Failed to retrieve disk alignment with IOCTL_STORAGE_QUERY_PROPERTY (code: {:#x})", hr);
                     Extent.m_PhysicalSectorSize = Extent.m_LogicalSectorSize = DiskGeometryEx.Geometry.BytesPerSector;
                 }
@@ -228,8 +228,7 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
 
             if (hr != HRESULT_FROM_WIN32(ERROR_MORE_DATA))
             {
-                spdlog::error(
-                    L"GetVolumePathNamesForVolumeName failed for volume '{}' (code: {:#x})", m_VolumePath, hr);
+                Log::Error(L"GetVolumePathNamesForVolumeName failed for volume '{}' (code: {:#x})", m_VolumePath, hr);
                 return hr;
             }
         }
@@ -243,8 +242,7 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
 
             if (hr != HRESULT_FROM_WIN32(ERROR_MORE_DATA))
             {
-                spdlog::error(
-                    L"GetVolumePathNamesForVolumeName failed for volume '{}' (code: {:#x})", m_VolumePath, hr);
+                Log::Error(L"GetVolumePathNamesForVolumeName failed for volume '{}' (code: {:#x})", m_VolumePath, hr);
                 HeapFree(GetProcessHeap(), 0L, szPathNames);
                 return hr;
             }
@@ -285,7 +283,7 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
     if (hRoot == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to open volume root '{}' (code: {:#x})", m_szShortVolumeName, hr);
+        Log::Error(L"Failed to open volume root '{}' (code: {:#x})", m_szShortVolumeName, hr);
         return hr;
     }
 
@@ -313,7 +311,7 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
     if (m_hDevice == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to open volume '{}' (code: {:#x})", m_szVolumeName, hr);
+        Log::Error(L"Failed to open volume '{}' (code: {:#x})", m_szVolumeName, hr);
         return hr;
     }
 
@@ -322,7 +320,7 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
     //
     if (FAILED(hr = GetDiskExtents()))
     {
-        spdlog::error("Failed to get volume extents (code: {:#x})", hr);
+        Log::Error("Failed to get volume extents (code: {:#x})", hr);
         return hr;
     }
 

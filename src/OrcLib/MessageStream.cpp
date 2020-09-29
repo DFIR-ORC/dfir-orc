@@ -60,7 +60,7 @@ STDMETHODIMP MessageStream::OpenCertStore()
     if (m_hCertStore == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed CertOpenStore (code: {:#x})", hr);
+        Log::Error("Failed CertOpenStore (code: {:#x})", hr);
         return hr;
     }
     return S_OK;
@@ -78,7 +78,7 @@ STDMETHODIMP MessageStream::AddCertificate(const CBinaryBuffer& buffer, PCCERT_C
             &pCertContext))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed CertAddEncodedCertificateToStore (code: {:#x})", hr);
+        Log::Error("Failed CertAddEncodedCertificateToStore (code: {:#x})", hr);
         return hr;
     }
     return S_OK;
@@ -94,7 +94,7 @@ MessageStream::AddCertificate(LPCWSTR szEncodedCert, DWORD cchLen, PCCERT_CONTEX
     if (!CryptStringToBinaryW(szEncodedCert, cchLen, dwFlags, NULL, &cbOutput, NULL, &dwFormatFlags))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(
+        Log::Error(
             L"Failed CryptStringToBinaryW: cannot convert '{}' into a binary blob (code: {:#x})", szEncodedCert, hr);
         return hr;
     }
@@ -104,7 +104,7 @@ MessageStream::AddCertificate(LPCWSTR szEncodedCert, DWORD cchLen, PCCERT_CONTEX
     if (!CryptStringToBinaryW(szEncodedCert, cchLen, dwFlags, pCertBin.GetData(), &cbOutput, NULL, &dwFormatFlags))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(
+        Log::Error(
             L"Failed CryptStringToBinaryW: cannot convert '{}' into a binary blob (code: {:#x})", szEncodedCert, hr);
         return hr;
     }
@@ -121,7 +121,7 @@ MessageStream::AddCertificate(LPCSTR szEncodedCert, DWORD cchLen, PCCERT_CONTEXT
     if (!CryptStringToBinaryA(szEncodedCert, cchLen, dwFlags, NULL, &cbOutput, NULL, &dwFormatFlags))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(
+        Log::Error(
             "Failed CryptStringToBinaryA: cannot convert '{}' into a binary blob (code: {:#x})", szEncodedCert, hr);
         return hr;
     }
@@ -131,7 +131,7 @@ MessageStream::AddCertificate(LPCSTR szEncodedCert, DWORD cchLen, PCCERT_CONTEXT
     if (!CryptStringToBinaryA(szEncodedCert, cchLen, dwFlags, pCertBin.GetData(), &cbOutput, NULL, &dwFormatFlags))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(
+        Log::Error(
             "Failed CryptStringToBinaryA: cannot convert '{}' into a binary blob (code: {:#x})", szEncodedCert, hr);
         return hr;
     }

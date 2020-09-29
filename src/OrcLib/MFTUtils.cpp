@@ -12,7 +12,7 @@
 
 #include "VolumeReader.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -71,7 +71,7 @@ HRESULT MFTUtils::GetAttributeNRExtents(
         if (countRecord > PairDataLen)
         {
             HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Got a bad VCN/LCN record (code: {:#x})", hr);
+            Log::Error("Got a bad VCN/LCN record (code: {:#x})", hr);
             break;
         }
 
@@ -329,7 +329,7 @@ HRESULT MFTUtils::MultiSectorFixup(PFILE_RECORD_SEGMENT_HEADER pFRS, const std::
             _ASSERT(false);
         }
 
-        spdlog::error("FILE Signature doesn't match in Fixup");
+        Log::Error("FILE Signature doesn't match in Fixup");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
@@ -351,7 +351,7 @@ HRESULT MFTUtils::MultiSectorFixup(PFILE_RECORD_SEGMENT_HEADER pFRS, const std::
 
         if (*((WORD*)dest) != fixupsig)
         {
-            spdlog::error(L"FILE Fixup {} does not match signature {}", *((WORD*)dest), fixupsig);
+            Log::Error(L"FILE Fixup {} does not match signature {}", *((WORD*)dest), fixupsig);
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
         *(WORD*)dest = fixuparray[i];
@@ -378,11 +378,11 @@ HRESULT MFTUtils::MultiSectorFixup(
     {
         if (!memcmp((PCHAR)pHeader->Signature, "\0\0\0\0", 4))
         {
-            spdlog::debug("Failed to parse $INDEX_ALLOCATION header : invalid block (uninitialized)");
+            Log::Debug("Failed to parse $INDEX_ALLOCATION header : invalid block (uninitialized)");
         }
         else
         {
-            spdlog::debug(
+            Log::Debug(
                 "Failed to parse $INDEX_ALLOCATION header ({}{}{}{})",
                 (CHAR)pHeader->Signature[0],
                 (CHAR)pHeader->Signature[1],
@@ -410,7 +410,7 @@ HRESULT MFTUtils::MultiSectorFixup(
 
         if (*((WORD*)dest) != fixupsig)
         {
-            spdlog::info(L"INDX Fixup {} does not match signature {}", *((WORD*)dest), fixupsig);
+            Log::Info(L"INDX Fixup {} does not match signature {}", *((WORD*)dest), fixupsig);
             return E_FAIL;
         }
         *(WORD*)dest = fixuparray[i];

@@ -41,7 +41,7 @@ HRESULT UncompressNTFSStream::Open(const std::shared_ptr<ByteStream>& pChained, 
 
     if (pChained->IsOpen() != S_OK)
     {
-        spdlog::error(L"Chained stream must be opened");
+        Log::Error(L"Chained stream must be opened");
         return E_FAIL;
     }
 
@@ -57,7 +57,7 @@ HRESULT UncompressNTFSStream::Open(const std::shared_ptr<ByteStream>& pChained, 
             m_dwCompressionUnit = dwCompressionUnit;
             break;
         default:
-            spdlog::error(
+            Log::Error(
                 "Invalid Compression unit size specified {} (valid values are: 0x2000,0x4000,0x8000,0x10000)",
                 dwCompressionUnit);
             return E_INVALIDARG;
@@ -168,7 +168,7 @@ HRESULT UncompressNTFSStream::Open(const std::shared_ptr<NTFSStream>& pChained, 
                 [](const boost::logic::tribool& aTribool) { return boost::logic::indeterminate(aTribool); })
             > 0)
     {
-        spdlog::debug(
+        Log::Debug(
             "Failed to determine compression status of at least one CU ({} indeterminate out of {} compression units)",
             indeterCount,
             m_IsBlockCompressed.size());
@@ -192,7 +192,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
 
     if (dwNbCU > m_dwMaxCompressionUnit)
     {
-        spdlog::error(
+        Log::Error(
             "Attempted to read past the last compression unit (tried {}, max is {})", dwNbCU, m_dwMaxCompressionUnit);
         return hr;
     }
@@ -209,8 +209,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
         ULONGLONG ullThisRead = 0LL;
         if (FAILED(hr = m_pChainedStream->Read(buffer.GetData() + ullRead, buffer.GetCount() - ullRead, &ullThisRead)))
         {
-            spdlog::error(
-                L"Failed to read {} bytes from chained stream (code: {:#x})", buffer.GetCount() - ullRead, hr);
+            Log::Error(L"Failed to read {} bytes from chained stream (code: {:#x})", buffer.GetCount() - ullRead, hr);
             return hr;
         }
         if (ullThisRead == 0LL)
@@ -246,7 +245,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
 
                     if (FAILED(hr = ntfs_uncompress_compunit(&info)))
                     {
-                        spdlog::warn(
+                        Log::Warn(
                             L"Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data "
                             L"(code: {:#x})",
                             info.comp_len,
@@ -285,7 +284,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
                 {
                     // If decompression failed and CUs not compressed information is not available, we assume the CU was
                     // not compressed
-                    spdlog::warn(
+                    Log::Warn(
                         "Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data (code: "
                         "{:#x})",
                         info.comp_len,
@@ -321,7 +320,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
 
                     if (FAILED(hr = ntfs_uncompress_compunit(&info)))
                     {
-                        spdlog::warn(
+                        Log::Warn(
                             L"Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data "
                             L"(code: {:#x})",
                             info.comp_len,

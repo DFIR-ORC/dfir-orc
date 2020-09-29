@@ -289,7 +289,7 @@ HRESULT StringsStream::OpenForStrings(const shared_ptr<ByteStream>& pChained, si
 
     if (pChained->IsOpen() != S_OK)
     {
-        spdlog::error(L"Chained stream must be opened");
+        Log::Error(L"Chained stream must be opened");
         return E_FAIL;
     }
     m_pChainedStream = pChained;
@@ -667,21 +667,21 @@ HRESULT StringsStream::Read(
     CBinaryBuffer strings;
     if (FAILED(hr = processBuffer(CBinaryBuffer((LPBYTE)pReadBuffer, static_cast<size_t>(cbBytesRead)), strings)))
     {
-        spdlog::error(L"Failed to extract strings from read buffer (code: {:#x)", hr);
+        Log::Error(L"Failed to extract strings from read buffer (code: {:#x})", hr);
         return hr;
     }
     if (m_cchExtracted * sizeof(UCHAR) > cbBytes)
     {
         // Extraction generates more bytes than input buffer size
-        spdlog::warn("Failed to extract strings (input size: {}, output size: {})", cbBytes, m_cchExtracted);
-        spdlog::info("Truncating {} bytes: ", m_cchExtracted * sizeof(UCHAR) - cbBytes);
+        Log::Warn("Failed to extract strings (input size: {}, output size: {})", cbBytes, m_cchExtracted);
+        Log::Info("Truncating {} bytes: ", m_cchExtracted * sizeof(UCHAR) - cbBytes);
 
         // TODO: print hex buffer
         //_L_->WriteBytesInHex(
         //    ((BYTE*)m_Strings.GetData()) + cbBytes,
         //    static_cast<DWORD>(m_cchExtracted * sizeof(UCHAR) - cbBytes),
         //    false);
-        // spdlog::info(L"");
+        // Log::Info(L"");
     }
 
     if (m_cchExtracted == 0LL)
@@ -725,7 +725,7 @@ HRESULT StringsStream::Write(
 
     if (cbBytesToWrite > MAXDWORD)
     {
-        spdlog::error("Too many bytes");
+        Log::Error("Too many bytes");
         return E_INVALIDARG;
     }
 

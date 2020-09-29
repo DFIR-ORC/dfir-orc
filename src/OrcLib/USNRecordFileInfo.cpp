@@ -15,7 +15,7 @@
 
 #include "FileStream.h"
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 
@@ -173,7 +173,7 @@ std::shared_ptr<ByteStream> USNRecordFileInfo::GetFileStream()
 
     if (FAILED(hr = retval->CopyHandle(m_hFile)))
     {
-        spdlog::debug(L"Failed to open file '{}' (code: {:#x})", m_szFullName, hr);
+        Log::Debug(L"Failed to open file '{}' (code: {:#x})", m_szFullName, hr);
         return nullptr;
     }
 

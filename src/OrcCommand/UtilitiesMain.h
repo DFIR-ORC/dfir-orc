@@ -35,7 +35,7 @@
 #include "SystemDetails.h"
 #include "TableOutputWriter.h"
 #include "ExtensionLibrary.h"
-#include "Log/Logger.h"
+#include "Log/Log.h"
 #include "Output/Console/Console.h"
 #include "Output/Text/Print.h"
 #include "Output/Text/Fmt/FILE_NAME.h"
@@ -154,25 +154,25 @@ public:
                         switch (item->GetType())
                         {
                             case ArchiveNotification::ArchiveStarted:
-                                spdlog::info(L"Archive: '{}' started", item->Keyword());
+                                Log::Info(L"Archive: '{}' started", item->Keyword());
                                 break;
                             case ArchiveNotification::FileAddition:
-                                spdlog::info(L"Archive: File '{}' added", item->Keyword());
+                                Log::Info(L"Archive: File '{}' added", item->Keyword());
                                 break;
                             case ArchiveNotification::DirectoryAddition:
-                                spdlog::info(L"Archive: Directory '{}' added", item->Keyword());
+                                Log::Info(L"Archive: Directory '{}' added", item->Keyword());
                                 break;
                             case ArchiveNotification::StreamAddition:
-                                spdlog::info(L"Archive: Output '{}' added", item->Keyword());
+                                Log::Info(L"Archive: Output '{}' added", item->Keyword());
                                 break;
                             case ArchiveNotification::ArchiveComplete:
-                                spdlog::info(L"Archive: '{}' is complete", item->Keyword());
+                                Log::Info(L"Archive: '{}' is complete", item->Keyword());
                                 break;
                         }
                     }
                     else
                     {
-                        spdlog::error(
+                        Log::Error(
                             L"ArchiveOperation: Operation for '{}' failed \"{}\" (code: {:#x})",
                             item->Keyword(),
                             item->Description(),
@@ -186,7 +186,7 @@ public:
 
             if (!m_pArchiveAgent->start())
             {
-                spdlog::error("Archive agent as failed to start");
+                Log::Error("Archive agent as failed to start");
                 return E_FAIL;
             }
 
@@ -216,7 +216,7 @@ public:
                 case OutputSpec::Kind::SQL: {
                     if (nullptr == (pWriter = ::Orc::TableOutput::GetWriter(output)))
                     {
-                        spdlog::error("Failed to create ouput writer");
+                        Log::Error("Failed to create ouput writer");
                         return E_FAIL;
                     }
                     for (auto& out : m_outputs)
@@ -235,7 +235,7 @@ public:
                             szOutputFile, MAX_PATH, L"%s_%s.csv", szPrefix, out.first.GetIdentifier().c_str());
                         if (nullptr == (pW = ::Orc::TableOutput::GetWriter(szOutputFile, output)))
                         {
-                            spdlog::error("Failed to create output file information");
+                            Log::Error("Failed to create output file information");
                             return E_FAIL;
                         }
                         out.second = pW;
@@ -260,7 +260,7 @@ public:
                             out.first.GetIdentifier().c_str());
                         if (nullptr == (pW = ::Orc::TableOutput::GetWriter(szOutputFile, output)))
                         {
-                            spdlog::error("Failed to create output file information file");
+                            Log::Error("Failed to create output file information file");
                             return E_FAIL;
                         }
 
@@ -307,7 +307,7 @@ public:
 
                 if (FAILED(hr = aCallback(item)))
                 {
-                    spdlog::error(L"Failed during callback on output item '{}'", item.first.GetIdentifier());
+                    Log::Error(L"Failed during callback on output item '{}'", item.first.GetIdentifier());
                 }
             }
             return S_OK;
@@ -411,7 +411,7 @@ public:
                 }
                 catch (concurrency::operation_timed_out&)
                 {
-                    spdlog::error("Complete archive operation has timed out");
+                    Log::Error("Complete archive operation has timed out");
                     return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
                 }
             }
@@ -665,7 +665,7 @@ protected:
             LPCWSTR pEquals = wcschr(szArg, L'=');
             if (!pEquals)
             {
-                spdlog::error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
+                Log::Error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
                 return false;
             }
             else
@@ -755,12 +755,12 @@ public:
         WSADATA wsa_data;
         if (WSAStartup(MAKEWORD(2, 2), &wsa_data))
         {
-            spdlog::critical(L"Failed to initialize WinSock 2.2 (code: {:#x})", HRESULT_FROM_WIN32(WSAGetLastError()));
+            Log::Critical(L"Failed to initialize WinSock 2.2 (code: {:#x})", HRESULT_FROM_WIN32(WSAGetLastError()));
         }
 
         if (FAILED(hr = CoInitializeEx(0, COINIT_MULTITHREADED)))
         {
-            spdlog::error("Failed to initialize COM library (code: {:#x})", hr);
+            Log::Error("Failed to initialize COM library (code: {:#x})", hr);
             return hr;
         }
 
@@ -777,7 +777,7 @@ public:
                     NULL  // Reserved
                     )))
         {
-            spdlog::warn("Failed to initialize COM security");
+            Log::Warn("Failed to initialize COM security");
         }
 
         Cmd.WaitForDebugger(argc, argv);
@@ -898,9 +898,17 @@ public:
         Cmd.theFinishTickCount = GetTickCount();
         Cmd.PrintFooter();
 
+        // TODO: implement this feature
+        // DWORD dwErrorCount = _L_->GetErrorCount();
+
+        // if (dwErrorCount > 0)
+        //{
+        //    Log::Info("{} error(s) occurred during program execution", dwErrorCount);
+        //}
+
         if (WSACleanup())
         {
-            spdlog::error(L"Failed to cleanup WinSock 2.2 (code: {:#x})", HRESULT_FROM_WIN32(WSAGetLastError()));
+            Log::Error(L"Failed to cleanup WinSock 2.2 (code: {:#x})", HRESULT_FROM_WIN32(WSAGetLastError()));
         }
 
         Robustness::UnInitialize(INFINITE);

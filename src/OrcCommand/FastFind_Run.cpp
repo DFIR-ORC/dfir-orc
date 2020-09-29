@@ -79,12 +79,12 @@ HRESULT Main::RegFlushKeys()
     bool bSuccess = true;
     DWORD dwGLE = 0L;
 
-    spdlog::debug("Flushing HKEY_LOCAL_MACHINE");
+    Log::Debug("Flushing HKEY_LOCAL_MACHINE");
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
         bSuccess = false;
 
-    spdlog::debug("Flushing HKEY_USERS");
+    Log::Debug("Flushing HKEY_USERS");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
         bSuccess = false;
@@ -125,7 +125,7 @@ HRESULT Main::RunFileSystem()
 
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed while parsing locations");
+        Log::Error(L"Failed while parsing locations");
         return hr;
     }
 
@@ -143,7 +143,7 @@ HRESULT Main::RunRegistry()
     hr = config.Registry.Files.Find(
         config.Registry.Locations,
         [this](const std::shared_ptr<FileFind::Match>& aFileMatch, bool& bStop) {
-            spdlog::debug(
+            Log::Debug(
                 L"Hive '{}' matches '{}'",
                 aFileMatch->MatchingNames.front().FullPathName,
                 aFileMatch->Term->GetDescription());
@@ -152,14 +152,14 @@ HRESULT Main::RunRegistry()
 
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to parse location while searching for registry hives");
+        Log::Error(L"Failed to parse location while searching for registry hives");
     }
 
     pStructuredOutput->BeginCollection(L"registry");
 
     for (const auto& aFileMatch : config.Registry.Files.Matches())
     {
-        spdlog::debug(L"Parsing registry hive '{}'", aFileMatch->MatchingNames.front().FullPathName);
+        Log::Debug(L"Parsing registry hive '{}'", aFileMatch->MatchingNames.front().FullPathName);
 
         if (pStructuredOutput)
         {
@@ -187,14 +187,14 @@ HRESULT Main::RunRegistry()
 
                 if (FAILED(hr = aregfind.Find(data.DataStream, nullptr, nullptr)))
                 {
-                    spdlog::error(
+                    Log::Error(
                         L"Failed while parsing registry hive '{}' (code: {:#x})",
                         aFileMatch->MatchingNames.front().FullPathName,
                         hr);
                 }
                 else
                 {
-                    spdlog::debug(L"Successfully parsed hive '{}'", aFileMatch->MatchingNames.front().FullPathName);
+                    Log::Debug(L"Successfully parsed hive '{}'", aFileMatch->MatchingNames.front().FullPathName);
                     // write matching elements
 
                     auto& Results = aregfind.Matches();
@@ -286,7 +286,7 @@ HRESULT Main::RunObject()
 
         if (FAILED(hr = objectdir.ParseObjectDirectory(objdir, objects)))
         {
-            spdlog::error(L"Failed to parse object directory '{}' (code: {:#x})", objdir, hr);
+            Log::Error(L"Failed to parse object directory '{}' (code: {:#x})", objdir, hr);
         }
         else
         {
@@ -364,7 +364,7 @@ HRESULT Main::RunObject()
 
         if (FAILED(hr = filedirectory.ParseFileDirectory(filedir, files)))
         {
-            spdlog::error(L"Failed to parse file directory {} (code: {:#x})", filedir, hr);
+            Log::Error(L"Failed to parse file directory {} (code: {:#x})", filedir, hr);
         }
         else
         {

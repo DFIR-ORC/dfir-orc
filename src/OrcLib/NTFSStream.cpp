@@ -230,7 +230,7 @@ NTFSStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod
         case FILE_END:
             if (DistanceToMove > 0)
             {
-                spdlog::error("Cannot move past the end of the file ({})", DistanceToMove);
+                Log::Error("Cannot move past the end of the file ({})", DistanceToMove);
                 return E_INVALIDARG;
             }
 

@@ -37,7 +37,7 @@ HRESULT Main::Run()
             hr = m_FileInfoOutput.Prepare(m_Config.output);
             if (FAILED(hr))
             {
-                spdlog::error(L"Failed to prepare archive for '{}'", m_Config.output.Path);
+                Log::Error(L"Failed to prepare archive for '{}'", m_Config.output.Path);
                 return hr;
             }
         }
@@ -65,7 +65,7 @@ HRESULT Main::Run()
     hr = m_FileInfoOutput.GetWriters(m_Config.output, L"FatInfo", locations);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to create file information writers (code: {:#x})", hr);
+        Log::Error(L"Failed to create file information writers (code: {:#x})", hr);
         return hr;
     }
 
@@ -94,13 +94,13 @@ HRESULT Main::Run()
                     HRESULT hr = fi.WriteFileInformation(FatFileInfo::g_FatColumnNames, *dir.second, m_Config.Filters);
                     if (FAILED(hr))
                     {
-                        spdlog::error(L"Could not WriteFileInformation for '{}' (code: {:#x})", szFullName, hr);
+                        Log::Error(L"Could not WriteFileInformation for '{}' (code: {:#x})", szFullName, hr);
                         return hr;
                     }
                 }
                 catch (WCHAR* e)
                 {
-                    spdlog::error(L"Could not WriteFileInformation for '{}': {}", szFullName, e);
+                    Log::Error(L"Could not WriteFileInformation for '{}': {}", szFullName, e);
                     return E_FAIL;
                 }
 

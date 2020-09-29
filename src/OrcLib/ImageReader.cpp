@@ -20,7 +20,7 @@ using namespace std;
 
 using namespace Orc;
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 ImageReader::ImageReader(const WCHAR* szImageFile)
     : CompleteVolumeReader(szImageFile)
@@ -42,7 +42,7 @@ HRESULT ImageReader::LoadDiskProperties(void)
 
     if (!regex_match(location, m, image_regex))
     {
-        spdlog::error(L"'{}' does not match a valid image file name", location);
+        Log::Error(L"'{}' does not match a valid image file name", location);
         return E_INVALIDARG;
     }
 
@@ -59,7 +59,7 @@ HRESULT ImageReader::LoadDiskProperties(void)
         PartitionTable pt;
         if (FAILED(hr = pt.LoadPartitionTable(strImageFile.c_str())))
         {
-            spdlog::error(L"Failed to load partition table for '{}' (code: {:#x})", strImageFile, hr);
+            Log::Error(L"Failed to load partition table for '{}' (code: {:#x})", strImageFile, hr);
             return hr;
         }
 
@@ -96,7 +96,7 @@ HRESULT ImageReader::LoadDiskProperties(void)
         {
             if (FAILED(hr = GetFileSizeFromArg(m[REGEX_IMAGE_OFFSET].str().c_str(), offset)))
             {
-                spdlog::error(L"Invalid offset specified: {} (code: {:#x})", m[REGEX_IMAGE_OFFSET].str(), hr);
+                Log::Error(L"Invalid offset specified: {} (code: {:#x})", m[REGEX_IMAGE_OFFSET].str(), hr);
                 return hr;
             }
         }
@@ -105,7 +105,7 @@ HRESULT ImageReader::LoadDiskProperties(void)
         {
             if (FAILED(hr = GetFileSizeFromArg(m[REGEX_IMAGE_SIZE].str().c_str(), size)))
             {
-                spdlog::error(L"Invalid size specified: {} (code: {:#x})", m[REGEX_IMAGE_SIZE].str(), hr);
+                Log::Error(L"Invalid size specified: {} (code: {:#x})", m[REGEX_IMAGE_SIZE].str(), hr);
                 return hr;
             }
         }
@@ -114,7 +114,7 @@ HRESULT ImageReader::LoadDiskProperties(void)
         {
             if (FAILED(hr = GetFileSizeFromArg(m[REGEX_IMAGE_SECTOR].str().c_str(), sector)))
             {
-                spdlog::error(L"Invalid sector size specified: '{}' (code: {:#x})", m[REGEX_IMAGE_SECTOR].str(), hr);
+                Log::Error(L"Invalid sector size specified: '{}' (code: {:#x})", m[REGEX_IMAGE_SECTOR].str(), hr);
                 return hr;
             }
         }
@@ -126,7 +126,7 @@ HRESULT ImageReader::LoadDiskProperties(void)
 
     if (FAILED(hr = extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        spdlog::error(L"Failed to open image '{}' (code: {:#x})", strImageFile, hr);
+        Log::Error(L"Failed to open image '{}' (code: {:#x})", strImageFile, hr);
         return hr;
     }
 

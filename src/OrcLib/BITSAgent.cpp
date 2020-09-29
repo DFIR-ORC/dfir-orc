@@ -96,13 +96,13 @@ HRESULT BITSAgent::Initialize()
                     (void**)&m_pbcm);
                 if (FAILED(hr))
                 {
-                    spdlog::error(L"Failed to create instance of background copy manager 2.0");
+                    Log::Error(L"Failed to create instance of background copy manager 2.0");
                     return hr;
                 }
             }
             else
             {
-                spdlog::error(L"Failed to create instance of background copy manager 2.5");
+                Log::Error(L"Failed to create instance of background copy manager 2.5");
                 return hr;
             }
         }
@@ -146,12 +146,12 @@ HRESULT BITSAgent::Initialize()
 
         if ((dwRet = WNetAddConnection2(&nr, szPass, szUser, CONNECT_TEMPORARY)) != NO_ERROR)
         {
-            spdlog::error(L"Failed to add a connection to {} (code: {:#x})", szUNC, HRESULT_FROM_WIN32(dwRet));
+            Log::Error(L"Failed to add a connection to {} (code: {:#x})", szUNC, HRESULT_FROM_WIN32(dwRet));
         }
         else
         {
             // TODO: remove this diag
-            spdlog::info(L"Added a connection to {}", szUNC);
+            Log::Info(L"Added a connection to {}", szUNC);
             m_bAddedConnection = true;
         }
         SecureZeroMemory(szUser, MAX_PATH * sizeof(WCHAR));
@@ -181,7 +181,7 @@ BITSAgent::UploadFile(
     hr = m_pbcm->CreateJob(m_config.JobName.c_str(), BG_JOB_TYPE_UPLOAD, &JobId, &job);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to create job '{}' for background copy (code: {:#x})", m_config.JobName, hr);
+        Log::Error(L"Failed to create job '{}' for background copy (code: {:#x})", m_config.JobName, hr);
         return hr;
     }
 
@@ -189,7 +189,7 @@ BITSAgent::UploadFile(
     hr = job->QueryInterface(IID_IBackgroundCopyJob2, reinterpret_cast<void**>(&job2));
     if (!job2)
     {
-        spdlog::critical(L"Failed to retrieve IID_IBackgroundCopyJob2 interface (code: {:#x})", hr);
+        Log::Critical(L"Failed to retrieve IID_IBackgroundCopyJob2 interface (code: {:#x})", hr);
         return hr;
     }
 
@@ -197,7 +197,7 @@ BITSAgent::UploadFile(
     {
         if (job2 == nullptr)
         {
-            spdlog::error("Local version of BITS does not support IBackgroundCopyJob2, cannot configure credentials");
+            Log::Error("Local version of BITS does not support IBackgroundCopyJob2, cannot configure credentials");
         }
         else
         {
@@ -235,11 +235,11 @@ BITSAgent::UploadFile(
 
             if (FAILED(hr = job2->SetCredentials(&creds)))
             {
-                spdlog::error("Failed to set credentials on the BITS job (code: {:#x})", hr);
+                Log::Error("Failed to set credentials on the BITS job (code: {:#x})", hr);
             }
             else
             {
-                spdlog::debug("Successfully set the username and password on the BITS job");
+                Log::Debug("Successfully set the username and password on the BITS job");
             }
         }
     }
@@ -248,7 +248,7 @@ BITSAgent::UploadFile(
 
     if (FAILED(hr = job->AddFile(strRemotePath.c_str(), strLocalName.c_str())))
     {
-        spdlog::error(L"Failed to add file '{}' to BITS job '{}' (code: {:#x})", strLocalName, m_config.JobName, hr);
+        Log::Error(L"Failed to add file '{}' to BITS job '{}' (code: {:#x})", strLocalName, m_config.JobName, hr);
         return hr;
     }
 
@@ -260,24 +260,24 @@ BITSAgent::UploadFile(
         ulNotifyFlags |= BG_NOTIFY_JOB_TRANSFERRED | BG_NOTIFY_JOB_ERROR;
         if (FAILED(hr = job->SetNotifyFlags(ulNotifyFlags)))
         {
-            spdlog::error("Failed to SetNotifyFlags to delete uploaded files (code: {:#x})", hr);
+            Log::Error("Failed to SetNotifyFlags to delete uploaded files (code: {:#x})", hr);
         }
     }
     else
     {
-        spdlog::error("Failed to SetNotifyInterface to delete uploaded files");
+        Log::Error("Failed to SetNotifyInterface to delete uploaded files");
     }
 
     if (job2 == nullptr)
     {
-        spdlog::error("BITS version does not allow for command notification, uploaded file won't be deleted");
+        Log::Error("BITS version does not allow for command notification, uploaded file won't be deleted");
     }
     else
     {
         std::wstring strCmdSpec;
         if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
         {
-            spdlog::error(L"Failed to determine command spec %ComSpec% (code: {:#x})", hr);
+            Log::Error(L"Failed to determine command spec %ComSpec% (code: {:#x})", hr);
         }
         else
         {
@@ -286,7 +286,7 @@ BITSAgent::UploadFile(
 
             if (!StringFromGUID2(JobId, szJobGUID, MAX_PATH))
             {
-                spdlog::error(L"Failed to copy GUID to a string");
+                Log::Error(L"Failed to copy GUID to a string");
                 cmdLine << L"\"" << strCmdSpec << L"\" /E:OFF /D /C del \"" << strLocalName << "\"";
             }
             else
@@ -304,14 +304,14 @@ BITSAgent::UploadFile(
 
             if (FAILED(hr = job2->SetNotifyCmdLine(strCmdSpec.c_str(), cmdLine.str().c_str())))
             {
-                spdlog::error(L"Failed to SetNotifyCmdLine to delete uploaded files");
+                Log::Error(L"Failed to SetNotifyCmdLine to delete uploaded files");
             }
             else
             {
                 ulNotifyFlags |= BG_NOTIFY_JOB_TRANSFERRED | BG_NOTIFY_JOB_ERROR;
                 if (FAILED(hr = job2->SetNotifyFlags(ulNotifyFlags)))
                 {
-                    spdlog::error(L"Failed to SetNotifyFlags to delete uploaded files");
+                    Log::Error(L"Failed to SetNotifyFlags to delete uploaded files");
                 }
                 // We're done, files will be deleted on upload completion
             }
@@ -323,7 +323,7 @@ BITSAgent::UploadFile(
 
     if (FAILED(hr = job->Resume()))
     {
-        spdlog::error(L"Failed to start upload transfer");
+        Log::Error(L"Failed to start upload transfer");
     }
 
     return S_OK;
@@ -435,7 +435,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hSession == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed WinHttpOpen on '{}' (code: {:#x})", m_config.ServerName, hr);
+        Log::Error(L"Failed WinHttpOpen on '{}' (code: {:#x})", m_config.ServerName, hr);
         return hr;
     }
     BOOST_SCOPE_EXIT((&hSession)) { WinHttpCloseHandle(hSession); }
@@ -446,7 +446,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hConnect == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed WinHttpConnect on '{}' (code: {:#x})", m_config.ServerName, hr);
+        Log::Error(L"Failed WinHttpConnect on '{}' (code: {:#x})", m_config.ServerName, hr);
         return hr;
     }
     BOOST_SCOPE_EXIT((&hConnect)) { WinHttpCloseHandle(hConnect); }
@@ -464,7 +464,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hRequest == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to open request to {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+        Log::Error(L"Failed to open request to {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
         return hr;
     }
     BOOST_SCOPE_EXIT((&hRequest)) { WinHttpCloseHandle(hRequest); }
@@ -474,7 +474,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to send status request for {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+        Log::Error(L"Failed to send status request for {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
         return hr;
     }
 
@@ -482,7 +482,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (!WinHttpReceiveResponse(hRequest, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to receive response to {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+        Log::Error(L"Failed to receive response to {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
         return hr;
     }
 
@@ -497,7 +497,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             WINHTTP_NO_HEADER_INDEX))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed to query status code {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+        Log::Error(L"Failed to query status code {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
         return hr;
     }
 
@@ -510,7 +510,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         if (!WinHttpQueryAuthSchemes(hRequest, &dwSupportedSchemes, &dwFirstScheme, &dwTarget))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Failed to query status code {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+            Log::Error(L"Failed to query status code {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
             return hr;
         }
 
@@ -521,7 +521,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             dwSelectedScheme = WINHTTP_AUTH_SCHEME_NTLM;
         else
         {
-            spdlog::error(
+            Log::Error(
                 L"No supported authentication scheme available {}/{} (code: {:#x})",
                 m_config.ServerName,
                 strRemotePath,
@@ -533,7 +533,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 hRequest, dwTarget, dwSelectedScheme, m_config.UserName.c_str(), m_config.Password.c_str(), NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(
+            Log::Error(
                 L"Failed WinHttpSetCredentials with {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
             return hr;
         }
@@ -542,7 +542,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Failed WinHttpSendRequest on {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+            Log::Error(L"Failed WinHttpSendRequest on {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
             return hr;
         }
 
@@ -550,7 +550,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         if (!WinHttpReceiveResponse(hRequest, NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Failed to receive response to {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+            Log::Error(L"Failed to receive response to {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
             return hr;
         }
 
@@ -563,7 +563,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 WINHTTP_NO_HEADER_INDEX))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Failed to query status code {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+            Log::Error(L"Failed to query status code {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
             return hr;
         }
     }
@@ -582,7 +582,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                     WINHTTP_NO_HEADER_INDEX))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                spdlog::error(
+                Log::Error(
                     L"Failed to query content length {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
                 return hr;
             }
@@ -846,7 +846,7 @@ HRESULT CNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackgroundCopyErro
         }
         else
         {
-            spdlog::debug(L"Background upload failed, switching to foreground priority");
+            Log::Debug(L"Background upload failed, switching to foreground priority");
             hr = pJob->SetPriority(BG_JOB_PRIORITY_FOREGROUND);
             hr = pJob->Resume();
             IsError = FALSE;

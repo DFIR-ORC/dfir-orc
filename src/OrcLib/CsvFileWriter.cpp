@@ -27,7 +27,7 @@
 
 #include <fmt/ostream.h>
 
-#include <spdlog/spdlog.h>
+#include "Log/Log.h"
 
 using namespace Orc;
 namespace fs = std::filesystem;
@@ -142,9 +142,9 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::SetSchema(const Schema& schema)
             if (FAILED(hr = WriteHeaders(m_Schema)))
             {
                 if (wcslen(m_szFileName))
-                    spdlog::error(L"Could not write columns to specified file '{}'", m_szFileName);
+                    Log::Error(L"Could not write columns to specified file '{}'", m_szFileName);
                 else
-                    spdlog::error(L"Could not write columns to specified stream '{}'", m_szFileName);
+                    Log::Error(L"Could not write columns to specified stream '{}'", m_szFileName);
                 return hr;
             }
         }

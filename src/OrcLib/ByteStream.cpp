@@ -118,12 +118,12 @@ std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const OutputSpec& output)
                                 FILE_ATTRIBUTE_NORMAL,
                                 NULL)))
                     {
-                        spdlog::error(L"Failed to open stream for path '{}' (code: {:#x})", output.Path, hr);
+                        Log::Error(L"Failed to open stream for path '{}' (code: {:#x})", output.Path, hr);
                         return nullptr;
                     }
                     if (FAILED(hr = retval->SetFilePointer(0L, FILE_END, NULL)))
                     {
-                        spdlog::error(L"Failed to move to the end of the file for '{}' (code: {:#x})", output.Path, hr);
+                        Log::Error(L"Failed to move to the end of the file for '{}' (code: {:#x})", output.Path, hr);
                         return nullptr;
                     }
                     return retval;
@@ -132,7 +132,7 @@ std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const OutputSpec& output)
                             hr = retval->OpenFile(
                                 output.Path.c_str(), GENERIC_WRITE, 0L, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL)))
                     {
-                        spdlog::error(L"Failed to open stream for path '{}' (code: {:#x})", output.Path, hr);
+                        Log::Error(L"Failed to open stream for path '{}' (code: {:#x})", output.Path, hr);
                         return nullptr;
                     }
                     return retval;
@@ -147,7 +147,7 @@ std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const OutputSpec& output)
                                 FILE_ATTRIBUTE_NORMAL,
                                 NULL)))
                     {
-                        spdlog::error(L"Failed to open stream for path '{}' (code: {:#x})", output.Path, hr);
+                        Log::Error(L"Failed to open stream for path '{}' (code: {:#x})", output.Path, hr);
                         return nullptr;
                     }
                     return retval;
@@ -159,7 +159,7 @@ std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const OutputSpec& output)
             auto retval = std::make_shared<PipeStream>();
             if (FAILED(hr = retval->CreatePipe()))
             {
-                spdlog::error("Failed to create pipe (code: {:#x})", hr);
+                Log::Error("Failed to create pipe (code: {:#x})", hr);
                 return nullptr;
             }
             return retval;

@@ -58,7 +58,7 @@ HRESULT Main::RunThroughUSNJournal()
         pFileInfoWriter = TableOutput::GetWriter(L"NTFSInfo_usn", config.outFileInfo);
         if (nullptr == pFileInfoWriter)
         {
-            spdlog::error("Failed to create output file information file");
+            Log::Error("Failed to create output file information file");
             return E_FAIL;
         }
     }
@@ -67,7 +67,7 @@ HRESULT Main::RunThroughUSNJournal()
         pFileInfoWriter = TableOutput::GetWriter(config.outFileInfo);
         if (nullptr == pFileInfoWriter)
         {
-            spdlog::error("Failed to create output file information file");
+            Log::Error("Failed to create output file information file");
             return E_FAIL;
         }
     }
@@ -99,12 +99,12 @@ HRESULT Main::RunThroughUSNJournal()
             HRESULT hr = fi.WriteFileInformation(NtfsFileInfo::g_NtfsColumnNames, *pFileInfoWriter, config.Filters);
             if (FAILED(hr))
             {
-                spdlog::error(L"Could not WriteFileInformation for '{}'", szFullName);
+                Log::Error(L"Could not WriteFileInformation for '{}'", szFullName);
             }
         }
         catch (WCHAR* e)
         {
-            spdlog::error(L"Could not WriteFileInformation for '{}': {}", szFullName, e);
+            Log::Error(L"Could not WriteFileInformation for '{}': {}", szFullName, e);
         }
     };
 
@@ -112,7 +112,7 @@ HRESULT Main::RunThroughUSNJournal()
     {
         if (loc->GetType() != Location::Type::MountedVolume)
         {
-            spdlog::warn(
+            Log::Warn(
                 L"Location '{}' is not available with USN walker (should be a mounted volume)", loc->GetLocation());
             continue;
         }
@@ -125,7 +125,7 @@ HRESULT Main::RunThroughUSNJournal()
             StringCchPrintf(szOutputFile, MAX_PATH, L"NTFSInfo_%s_.csv", loc->GetIdentifier().c_str());
             if (nullptr == (pFileInfoWriter = TableOutput::GetWriter(szOutputFile, config.outFileInfo)))
             {
-                spdlog::error("Failed to create output file information file");
+                Log::Error("Failed to create output file information file");
                 continue;
             }
         }
@@ -137,22 +137,22 @@ HRESULT Main::RunThroughUSNJournal()
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
             {
-                spdlog::warn(L"File system not eligible for '{}'", loc->GetLocation());
+                Log::Warn(L"File system not eligible for '{}'", loc->GetLocation());
             }
             else
             {
-                spdlog::warn(L"Failed to init walk for '{}' (code: {:#x})", loc->GetLocation(), hr);
+                Log::Warn(L"Failed to init walk for '{}' (code: {:#x})", loc->GetLocation(), hr);
             }
         }
         else
         {
             if (FAILED(hr = walk.EnumJournal(callbacks)))
             {
-                spdlog::error(L"Failed to walk volume '{}' (code: {:#x})", loc->GetLocation(), hr);
+                Log::Error(L"Failed to walk volume '{}' (code: {:#x})", loc->GetLocation(), hr);
             }
             else
             {
-                spdlog::info(L"Done");
+                Log::Info(L"Done");
             }
         }
 
@@ -212,7 +212,7 @@ void Main::FileAndDataInformation(
     }
     catch (WCHAR* e)
     {
-        spdlog::error(L"Exception: could not WriteFileInformation: {}", e);
+        Log::Error(L"Exception: could not WriteFileInformation: {}", e);
     }
 }
 
@@ -243,7 +243,7 @@ void Main::DirectoryInformation(
     }
     catch (WCHAR* e)
     {
-        spdlog::error(L"Exception: could not WriteFileInformation: {}", e);
+        Log::Error(L"Exception: could not WriteFileInformation: {}", e);
     }
 }
 
@@ -363,8 +363,7 @@ void Main::SecurityDescriptorInformation(
     if (!ConvertSecurityDescriptorToStringSecurityDescriptor(
             &pEntry->SecurityDescriptor, SDDL_REVISION_1, InfoFlags, &szSDDL, NULL))
     {
-        spdlog::debug(
-            "Failed to convert security descriptor to SDDL (code: {:#x}))", HRESULT_FROM_WIN32(GetLastError()));
+        Log::Debug("Failed to convert security descriptor to SDDL (code: {:#x}))", HRESULT_FROM_WIN32(GetLastError()));
         output.WriteNothing();
         if (szSDDL != nullptr)
         {
@@ -387,7 +386,7 @@ void Main::SecurityDescriptorInformation(
         if (!ConvertStringSecurityDescriptorToSecurityDescriptor(
                 szSDDL, SDDL_REVISION_1, &pNormalisedSecDescr, &ulNormalisedSecDescrLength))
         {
-            spdlog::debug(
+            Log::Debug(
                 "Failed to convert SDDL to security descriptor (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
             output.WriteNothing();
         }
@@ -535,7 +534,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_FileInfoOutput.Prepare(config.outFileInfo)))
         {
-            spdlog::error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outFileInfo.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outFileInfo.Path, hr);
             return hr;
         }
     }
@@ -544,7 +543,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_AttrOutput.Prepare(config.outAttrInfo)))
         {
-            spdlog::error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outAttrInfo.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outAttrInfo.Path, hr);
             return hr;
         }
     }
@@ -553,7 +552,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_I30Output.Prepare(config.outI30Info)))
         {
-            spdlog::error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outI30Info.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outI30Info.Path, hr);
             return hr;
         }
     }
@@ -562,7 +561,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_TimeLineOutput.Prepare(config.outTimeLine)))
         {
-            spdlog::error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outTimeLine.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outTimeLine.Path, hr);
             return hr;
         }
     }
@@ -571,7 +570,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_SecDescrOutput.Prepare(config.outSecDescrInfo)))
         {
-            spdlog::error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outSecDescrInfo.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outSecDescrInfo.Path, hr);
             return hr;
         }
     }
@@ -585,31 +584,31 @@ HRESULT Main::GetWriters(std::vector<std::shared_ptr<Location>>& locations)
 
     if (FAILED(hr = m_FileInfoOutput.GetWriters(config.outFileInfo, L"NTFSInfo", locations)))
     {
-        spdlog::error("Failed to create file information writers (code: {:#x})", hr);
+        Log::Error("Failed to create file information writers (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = m_AttrOutput.GetWriters(config.outAttrInfo, L"AttrInfo", locations)))
     {
-        spdlog::error("Failed to create attribute information writers (code: {:#x})", hr);
+        Log::Error("Failed to create attribute information writers (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = m_I30Output.GetWriters(config.outI30Info, L"I30Info", locations)))
     {
-        spdlog::error("Failed to create I30 information writers (code: {:#x})", hr);
+        Log::Error("Failed to create I30 information writers (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = m_TimeLineOutput.GetWriters(config.outTimeLine, L"NTFSTimeLine", locations)))
     {
-        spdlog::error("Failed to create timeline information writers (code: {:#x})", hr);
+        Log::Error("Failed to create timeline information writers (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = m_SecDescrOutput.GetWriters(config.outSecDescrInfo, L"SecDescr", locations)))
     {
-        spdlog::error("Failed to create security descriptors information writers (code: {:#x})", hr);
+        Log::Error("Failed to create security descriptors information writers (code: {:#x})", hr);
         return hr;
     }
     return S_OK;
@@ -652,7 +651,7 @@ HRESULT Main::RunThroughMFT()
     {
         if (FAILED(hr = Prepare()))
         {
-            spdlog::error("Failed to prepare outputs (code: {:#x})", hr);
+            Log::Error("Failed to prepare outputs (code: {:#x})", hr);
             return hr;
         }
 
@@ -661,7 +660,7 @@ HRESULT Main::RunThroughMFT()
 
     if (FAILED(hr = GetWriters(locations)))
     {
-        spdlog::error("Failed to create writers for NTFSInfo (code: {:#x})", hr);
+        Log::Error("Failed to create writers for NTFSInfo (code: {:#x})", hr);
         return hr;
     }
 
@@ -776,11 +775,11 @@ HRESULT Main::RunThroughMFT()
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
             {
-                spdlog::warn(L"File system not eligible for '{}'", loc->GetLocation());
+                Log::Warn(L"File system not eligible for '{}'", loc->GetLocation());
             }
             else
             {
-                spdlog::error(L"Failed to init walk for '{}' (code: {:#x})", loc->GetLocation(), hr);
+                Log::Error(L"Failed to init walk for '{}' (code: {:#x})", loc->GetLocation(), hr);
             }
         }
         else
@@ -788,7 +787,7 @@ HRESULT Main::RunThroughMFT()
             m_FullNameBuilder = walker.GetFullNameBuilder();
             if (FAILED(hr = walker.Walk(callBacks)))
             {
-                spdlog::error(L"Failed to walk volume '{}' (code: {:#x})", loc->GetLocation(), hr);
+                Log::Error(L"Failed to walk volume '{}' (code: {:#x})", loc->GetLocation(), hr);
             }
             else
             {
@@ -814,7 +813,7 @@ HRESULT Main::Run()
         {
             if (FAILED(hr = RunThroughUSNJournal()))
             {
-                spdlog::error("Failed to enumerate the USNs (code: {:#x})", hr);
+                Log::Error("Failed to enumerate the USNs (code: {:#x})", hr);
                 return hr;
             }
         }
@@ -822,14 +821,14 @@ HRESULT Main::Run()
         {
             if (FAILED(hr = RunThroughMFT()))
             {
-                spdlog::error("Failed to enumerate the MFT records (code: {:#x})", hr);
+                Log::Error("Failed to enumerate the MFT records (code: {:#x})", hr);
                 return hr;
             }
         }
     }
     catch (...)
     {
-        spdlog::error("An exception was raised during enumeration");
+        Log::Error("An exception was raised during enumeration");
         return E_FAIL;
     }
     return S_OK;

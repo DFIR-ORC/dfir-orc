@@ -95,7 +95,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     else
     {
-        spdlog::debug(L"INFO: No statisfactory ouput in config file");
+        Log::Debug(L"INFO: No statisfactory ouput in config file");
     }
 
     if (configitem[REGINFO_CSVLIMIT])
@@ -108,7 +108,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
 
     if (configitem[REGINFO_COMPUTER])
-        spdlog::info(L"No computer name specified ({})", configitem[REGINFO_INFORMATION].c_str());
+        Log::Info(L"No computer name specified ({})", configitem[REGINFO_INFORMATION].c_str());
 
     m_utilitiesConfig.strComputerName = configitem[REGINFO_COMPUTER];
 
@@ -156,20 +156,20 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.Information = GetRegInfoType(configitem[REGINFO_INFORMATION].c_str());
         if (config.Information == REGINFO_NONE)
         {
-            spdlog::error(L"Column specified '{}' is invalid", configitem[REGINFO_INFORMATION].c_str());
+            Log::Error(L"Column specified '{}' is invalid", configitem[REGINFO_INFORMATION].c_str());
             return E_INVALIDARG;
         }
     }
 
     if (FAILED(hr = config.m_HiveQuery.m_HivesLocation.AddLocationsFromConfigItem(configitem[REGINFO_LOCATION])))
     {
-        spdlog::error("Error in specific locations parsing in config file (code: {:#x})", hr);
+        Log::Error("Error in specific locations parsing in config file (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = config.m_HiveQuery.m_HivesLocation.AddKnownLocations(configitem[REGINFO_KNOWNLOCATIONS])))
     {
-        spdlog::error(L"Error in specific known locations parsing in config file (code: {:#x})", hr);
+        Log::Error(L"Error in specific known locations parsing in config file (code: {:#x})", hr);
         return hr;
     }
 
@@ -224,7 +224,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
     }
     catch (...)
     {
-        spdlog::info("RegInfo failed during argument parsing, exiting");
+        Log::Info("RegInfo failed during argument parsing, exiting");
         return E_FAIL;
     }
     return S_OK;
@@ -243,12 +243,12 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Output.Type == OutputSpec::Kind::None)
     {
-        spdlog::error("No valid output specified (only directory or csv|tsv are allowed");
+        Log::Error("No valid output specified (only directory or csv|tsv are allowed");
         return E_INVALIDARG;
     }
     if (config.Output.Type & OutputSpec::Kind::Archive)
     {
-        spdlog::error("Archive output is not supported (only directory or csv|tsv are allowed");
+        Log::Error("Archive output is not supported (only directory or csv|tsv are allowed");
         return E_INVALIDARG;
     }
 

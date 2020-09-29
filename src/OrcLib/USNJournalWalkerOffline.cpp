@@ -69,7 +69,7 @@ HRESULT USNJournalWalkerOffline::Initialize(const std::shared_ptr<Location>& loc
             hr = fileFind.Find(
                 m_Locations,
                 [this, hr](const std::shared_ptr<FileFind::Match>& aFileMatch, bool& bStop) {
-                    spdlog::info(
+                    Log::Info(
                         L"Found USN journal {}: {}",
                         aFileMatch->MatchingNames.front().FullPathName,
                         aFileMatch->Term->GetDescription());
@@ -82,12 +82,12 @@ HRESULT USNJournalWalkerOffline::Initialize(const std::shared_ptr<Location>& loc
                     }
                     else
                     {
-                        spdlog::error("Failed to find USN journal data attribute");
+                        Log::Error("Failed to find USN journal data attribute");
                     }
                 },
                 false)))
     {
-        spdlog::error("Failed to parse location while searching for USN journal");
+        Log::Error("Failed to parse location while searching for USN journal");
     }
 
     if (FAILED(hr = m_RecordStore.InitializeStore(USN_MAX_NUMBER, m_dwRecordMaxSize)))
@@ -111,7 +111,7 @@ HRESULT USNJournalWalkerOffline::EnumJournal(const IUSNJournalWalker::Callbacks&
 
     if (FAILED(hr = walk.Initialize(locations.begin()->second, true)))
     {
-        spdlog::error(L"Failed during MFT walk initialisation (code: {:#x})", hr);
+        Log::Error(L"Failed during MFT walk initialisation (code: {:#x})", hr);
         return hr;
     }
 
@@ -157,11 +157,11 @@ HRESULT USNJournalWalkerOffline::EnumJournal(const IUSNJournalWalker::Callbacks&
     {
         if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
         {
-            spdlog::debug(L"Enumeration is stopping");
+            Log::Debug(L"Enumeration is stopping");
         }
         else
         {
-            spdlog::error(L"Failed during MFT walk (code: {:#x})", hr);
+            Log::Error(L"Failed during MFT walk (code: {:#x})", hr);
         }
         return hr;
     }

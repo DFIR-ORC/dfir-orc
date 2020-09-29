@@ -315,7 +315,7 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
                     disposition = Disposition::Append;
                 else
                 {
-                    spdlog::warn(
+                    Log::Warn(
                         L"Invalid disposition \"{}\", defaulting to append", item[CONFIG_OUTPUT_DISPOSITION].c_str());
                     disposition = Disposition::Append;
                 }
@@ -340,8 +340,7 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
                 disposition = Disposition::Append;
             else
             {
-                spdlog::warn(
-                    L"Invalid disposition \"{}\", defaulting to append", item[CONFIG_OUTPUT_DISPOSITION].c_str());
+                Log::Warn(L"Invalid disposition \"{}\", defaulting to append", item[CONFIG_OUTPUT_DISPOSITION].c_str());
                 disposition = Disposition::Append;
             }
         }
@@ -352,7 +351,7 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
     {
         if (FAILED(hr = Configure(supported, item.c_str())))
         {
-            spdlog::error(L"An error occured when evaluating output item {}", item.c_str());
+            Log::Error(L"An error occured when evaluating output item {}", item);
             return hr;
         }
         if (::HasValue(item, CONFIG_OUTPUT_FORMAT))
@@ -374,7 +373,7 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
         }
         else
         {
-            spdlog::error(L"Invalid encoding for outputdir in config file: {}", item.SubItems[CONFIG_OUTPUT_ENCODING]);
+            Log::Error(L"Invalid encoding for outputdir in config file: {}", item.SubItems[CONFIG_OUTPUT_ENCODING]);
             return E_INVALIDARG;
         }
     }

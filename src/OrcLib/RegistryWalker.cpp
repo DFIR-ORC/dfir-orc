@@ -234,26 +234,26 @@ HRESULT RegistryHive::LoadHive(ByteStream& HiveStream)
 
     if ((hr = HiveStream.IsOpen()) != S_OK)
     {
-        spdlog::error("Hive stream seems to be closed");
+        Log::Error("Hive stream seems to be closed");
         return hr;
     }
     if ((hr = HiveStream.CanRead()) != S_OK)
     {
-        spdlog::error("Can't read hive stream");
+        Log::Error("Can't read hive stream");
         return hr;
     }
 
     ULONG64 ulSize = HiveStream.GetSize();
     if (ulSize == 0)
     {
-        spdlog::error("Hive size is 0");
+        Log::Error("Hive size is 0");
         return E_FAIL;
     }
 
     m_pHiveBuffer = (BYTE*)malloc((size_t)ulSize);
     if (m_pHiveBuffer == NULL)
     {
-        spdlog::error("Not enough memory to read hive");
+        Log::Error("Not enough memory to read hive");
         return E_OUTOFMEMORY;
     }
     m_ulHiveBufferSize = ulSize;
@@ -267,7 +267,7 @@ HRESULT RegistryHive::LoadHive(ByteStream& HiveStream)
 
         if (ulTmp == 0)
         {
-            spdlog::error("Read error, aborting read operation");
+            Log::Error("Read error, aborting read operation");
             free(m_pHiveBuffer);
             m_pHiveBuffer = nullptr;
             m_ulHiveBufferSize = 0LL;
@@ -280,7 +280,7 @@ HRESULT RegistryHive::LoadHive(ByteStream& HiveStream)
         free(m_pHiveBuffer);
         m_pHiveBuffer = nullptr;
         m_ulHiveBufferSize = 0L;
-        spdlog::error("Error during hive header parsing (code: {:#x})", hr);
+        Log::Error("Error during hive header parsing (code: {:#x})", hr);
         return hr;
     }
 
@@ -289,7 +289,7 @@ HRESULT RegistryHive::LoadHive(ByteStream& HiveStream)
         free(m_pHiveBuffer);
         m_pHiveBuffer = nullptr;
         m_ulHiveBufferSize = 0;
-        spdlog::error("Error during hive hbin header parsing (code: {:#x})", hr);
+        Log::Error("Error during hive hbin header parsing (code: {:#x})", hr);
         return hr;
     }
     return S_OK;
@@ -300,20 +300,20 @@ HRESULT RegistryHive::CheckBlockHeader(const BlockHeader* const pBlockHeader) co
     HRESULT hr = E_FAIL;
     if (pBlockHeader == nullptr)
     {
-        spdlog::error("Null pointer passed as parameter to CheckBlockHeader()");
+        Log::Error("Null pointer passed as parameter to CheckBlockHeader()");
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
     if (-(int)(pBlockHeader->BlockSize) < 0)
     {
-        spdlog::error("BlockSize is negative (should be positive)");
+        Log::Error("BlockSize is negative (should be positive)");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     if ((UINT_PTR)(pBlockHeader) + (size_t)(-(int)pBlockHeader->BlockSize)
         > m_ulHiveBufferSize + (UINT_PTR)m_pHiveBuffer)
     {
-        spdlog::error("Block end is outside of hive buffer boundary");
+        Log::Error("Block end is outside of hive buffer boundary");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
     return S_OK;
@@ -325,7 +325,7 @@ HRESULT RegistryHive::CheckVkHeader(const ValueHeader* const pHeader, bool* bVal
 
     if (pHeader == nullptr)
     {
-        spdlog::error("Null pointer passed as parameter to CheckVkHeader()");
+        Log::Error("Null pointer passed as parameter to CheckVkHeader()");
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
@@ -336,13 +336,13 @@ HRESULT RegistryHive::CheckVkHeader(const ValueHeader* const pHeader, bool* bVal
 
     if (_strnicmp(pHeader->Signature, "vk", 2))
     {
-        spdlog::error("Vk-block signature mismatch");
+        Log::Error("Vk-block signature mismatch");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     if ((sizeof(ValueHeader) + pHeader->NameLength) > (size_t)(4 - (int)pHeader->Header.BlockSize))
     {
-        spdlog::error("Vk-block size and computed size does not match");
+        Log::Error("Vk-block size and computed size does not match");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
@@ -353,19 +353,19 @@ HRESULT RegistryHive::CheckVkHeader(const ValueHeader* const pHeader, bool* bVal
     {
         if ((pHeader->DataLength == 0) && (pHeader->OffsetToData != 0xFFFFFFFF))
         {
-            spdlog::error("Vk header: data offset/length incoherence");
+            Log::Error("Vk header: data offset/length incoherence");
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
         else if (!IsOffsetValid(pHeader->OffsetToData))
         {
-            spdlog::debug("Vk header: offset to data is invalid. Either vk header is corrupt or data is not resident");
+            Log::Debug("Vk header: offset to data is invalid. Either vk header is corrupt or data is not resident");
             *bValueDataIsResident = false;
         }
     }
 
     if (pHeader->Type >= ValueType::RegMaxType)
     {
-        spdlog::debug("Value type is unknown");
+        Log::Debug("Value type is unknown");
     }
 
     return S_OK;
@@ -377,7 +377,7 @@ HRESULT RegistryHive::CheckLfHeader(const LF_LH_Header* const pHeader) const
 
     if (pHeader == nullptr)
     {
-        spdlog::error("Null pointer passed as parameter to CheckLfHeader()");
+        Log::Error("Null pointer passed as parameter to CheckLfHeader()");
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
@@ -388,14 +388,14 @@ HRESULT RegistryHive::CheckLfHeader(const LF_LH_Header* const pHeader) const
 
     if (_strnicmp(pHeader->Signature, "lf", 2) && _strnicmp(pHeader->Signature, "lh", 2))
     {
-        spdlog::error("Lf/Lh-block signature mismatch");
+        Log::Error("Lf/Lh-block signature mismatch");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     if ((sizeof(LF_LH_Header) + (pHeader->NumberOfKeys - 1) * sizeof(HashRecord))
         > (size_t)((4 - (int)pHeader->Header.BlockSize)))
     {
-        spdlog::error("Lf/Lh-block size and computed size does not match");
+        Log::Error("Lf/Lh-block size and computed size does not match");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
@@ -413,7 +413,7 @@ HRESULT RegistryHive::CheckNkHeader(
 
     if (pHeader == nullptr)
     {
-        spdlog::error("Null pointer passed as parameter to CheckNkHeader()");
+        Log::Error("Null pointer passed as parameter to CheckNkHeader()");
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
@@ -424,36 +424,36 @@ HRESULT RegistryHive::CheckNkHeader(
 
     if (_strnicmp(pHeader->Signature, "nk", 2))
     {
-        spdlog::error("Nk-block signature mismatch");
+        Log::Error("Nk-block signature mismatch");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     if ((sizeof(KeyHeader) + pHeader->NameLength) > (size_t)(4 - (int)pHeader->Header.BlockSize))
     {
-        spdlog::error("Nk-block size and computed size does not match");
+        Log::Error("Nk-block size and computed size does not match");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     *bHasClassName = true;
     if ((pHeader->ClassNameLength == 0) && (pHeader->OffsetToClassName != 0xFFFFFFFF))
     {
-        spdlog::debug("Nk header: Class name incoherence");
+        Log::Debug("Nk header: Class name incoherence");
         *bHasClassName = false;
     }
     else if (!IsOffsetValid(pHeader->OffsetToClassName))
     {
-        spdlog::debug("Nk header: Class name offset is invalid");
+        Log::Debug("Nk header: Class name offset is invalid");
         *bHasClassName = false;
     }
 
     *bSubkeyListIsResident = true;
     if ((pHeader->NumberOfSubKeys == 0) && (pHeader->OffsetToLFHeader != 0xFFFFFFFF))
     {
-        spdlog::debug("Nk header: number of subkeys incoherence");
+        Log::Debug("Nk header: number of subkeys incoherence");
     }
     else if (!IsOffsetValid(pHeader->OffsetToLFHeader))
     {
-        spdlog::debug(
+        Log::Debug(
             "Nk header: subkey list offset is invalid. Either nk header is corrupt or subkey list is not resident");
         *bSubkeyListIsResident = false;
     }
@@ -464,36 +464,35 @@ HRESULT RegistryHive::CheckNkHeader(
         // Don't throw error because this field is never used to build keys. (Parent key is always known)
         if (!IsOffsetValid(pHeader->OffsetToParent))
         {
-            spdlog::debug(L"Nk header: ParentKey offset is invalid");
+            Log::Debug(L"Nk header: ParentKey offset is invalid");
         }
 
         // check parent key signature
 
         if (_strnicmp(((KeyHeader*)FixOffset(pHeader->OffsetToParent))->Signature, "nk", 2))
         {
-            spdlog::debug(L"Nk header: ParentKey signature mismatch");
+            Log::Debug(L"Nk header: ParentKey signature mismatch");
         }
     }
     else if ((pHeader->Type != KeyType::rootkey) && (pHeader->Type != KeyType::rootkeyAlternate))
     {
-        spdlog::debug(L"Key type is unknown");
+        Log::Debug(L"Key type is unknown");
     }
 
     if (!IsOffsetValid(pHeader->OffsetToSKHeader))
     {
-        spdlog::debug(
-            "Nk header: sk-header offset is invalid. Either nk header is corrupt or sk-header is not resident");
+        Log::Debug("Nk header: sk-header offset is invalid. Either nk header is corrupt or sk-header is not resident");
         *bSkHeaderIsResident = false;
     }
 
     *bValueListIsResident = true;
     if ((pHeader->NumberOfValues == 0) && (pHeader->OffsetToValueList != 0xFFFFFFFF))
     {
-        spdlog::debug("Number of values incoherence");
+        Log::Debug("Number of values incoherence");
     }
     else if (!IsOffsetValid(pHeader->OffsetToValueList))
     {
-        spdlog::debug(
+        Log::Debug(
             "Nk header: value list offset is invalid. Either nk header is corrupt or value list is not resident");
         *bValueListIsResident = false;
     }
@@ -506,14 +505,14 @@ HRESULT RegistryHive::CheckHashRecord(const HashRecord* const pHeader, bool* bSu
     HRESULT hr = E_FAIL;
     if (pHeader == nullptr)
     {
-        spdlog::error("Null pointer passed as parameter to CheckHashRecord()");
+        Log::Error("Null pointer passed as parameter to CheckHashRecord()");
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
     *bSubkeyIsResident = true;
     if (!IsOffsetValid(pHeader->OffsetToKeyHeader))
     {
-        spdlog::debug("HashRecord: subkey offset is invalid. Either hashrecord is corrupt or subkey is not resident");
+        Log::Debug("HashRecord: subkey offset is invalid. Either hashrecord is corrupt or subkey is not resident");
         *bSubkeyIsResident = false;
     }
 
@@ -525,7 +524,7 @@ HRESULT RegistryHive::CheckLiHeader(const LI_RI_Header* const pHeader) const
     HRESULT hr = E_FAIL;
     if (pHeader == nullptr)
     {
-        spdlog::error("Null pointer passed as parameter to CheckLiHeader()");
+        Log::Error("Null pointer passed as parameter to CheckLiHeader()");
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
@@ -536,13 +535,13 @@ HRESULT RegistryHive::CheckLiHeader(const LI_RI_Header* const pHeader) const
 
     if (_strnicmp(pHeader->Signature, "li", 2) && _strnicmp(pHeader->Signature, "ri", 2))
     {
-        spdlog::error("Li/ri-block signature mismatch");
+        Log::Error("Li/ri-block signature mismatch");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     if ((pHeader->NumberOfKeys - 1) * 4 + sizeof(LI_RI_Header) > (size_t)(4 - (int)pHeader->Header.BlockSize))
     {
-        spdlog::error("Li/ri-block size and computed size does not match ");
+        Log::Error("Li/ri-block size and computed size does not match ");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
@@ -553,13 +552,13 @@ HRESULT RegistryHive::CheckDataHeader(const BlockHeader* const pHeader) const
 {
     if (pHeader == nullptr)
     {
-        spdlog::error("Null pointer passed as parameter to CheckDataHeader()");
+        Log::Error("Null pointer passed as parameter to CheckDataHeader()");
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
     if ((UINT_PTR)(pHeader) + (size_t)(-(int)pHeader->BlockSize) > (UINT_PTR)(m_pHiveBuffer) + m_ulHiveBufferSize)
     {
-        spdlog::error("Data block end is outside of hive buffer boundary");
+        Log::Error("Data block end is outside of hive buffer boundary");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
     return S_OK;
@@ -597,7 +596,7 @@ HRESULT RegistryHive::ParseValues(
 
         if (!IsOffsetValid(pValuesList->ValueOffsets[i]))
         {
-            spdlog::debug("Key '{}': value offset in values list is invalid", pCurrentKey->GetKeyName());
+            Log::Debug("Key '{}': value offset in values list is invalid", pCurrentKey->GetKeyName());
             pCurrentKey->SetHasNonResidentValues();
             continue;
         }
@@ -630,13 +629,13 @@ HRESULT RegistryHive::ParseValues(
                     pDataHeader = (DataHeader*)FixOffset(pCurrentValue->OffsetToData);
                     if ((hr = CheckDataHeader(&pDataHeader->Header)) != S_OK)
                     {
-                        spdlog::debug("Key '{}': Value data header is invalid", pCurrentKey->GetKeyName());
+                        Log::Debug("Key '{}': Value data header is invalid", pCurrentKey->GetKeyName());
                         continue;
                     }
                     pData = (BYTE*)&(pDataHeader->Data);
                     if (dwDatasLen != (DWORD)(-(int)pDataHeader->Header.BlockSize))
                     {
-                        spdlog::debug(
+                        Log::Debug(
                             "Keys '{}': size mismatch for data inside value '{}'", pCurrentKey->GetKeyName(), Name);
                     }
                 }
@@ -654,7 +653,7 @@ HRESULT RegistryHive::ParseValues(
         }
         else
         {
-            spdlog::debug("Key '{}': Vk structure is invalid", pCurrentKey->GetKeyName());
+            Log::Debug("Key '{}': Vk structure is invalid", pCurrentKey->GetKeyName());
             continue;
         }
     }
@@ -684,7 +683,7 @@ HRESULT RegistryHive::ParseLfLh(
 
     if ((hr = CheckLfHeader(pLfLhHeader)) != S_OK)
     {
-        spdlog::error("Key '{}': lf/lh header is invalid", CurrentKey->GetKeyName());
+        Log::Error("Key '{}': lf/lh header is invalid", CurrentKey->GetKeyName());
         return hr;
     }
 
@@ -724,7 +723,7 @@ HRESULT RegistryHive::ParseLfLh(
                      &bHasClassName))
                 != S_OK)
             {
-                spdlog::debug("Key '{}': lf/lh hash record point to an invalid nk header", CurrentKey->GetKeyName());
+                Log::Debug("Key '{}': lf/lh hash record point to an invalid nk header", CurrentKey->GetKeyName());
                 continue;
             }
 
@@ -749,7 +748,7 @@ HRESULT RegistryHive::ParseLfLh(
 
             if (pCurrentSubKeyHeader->Type != KeyType::key)
             {
-                spdlog::debug(
+                Log::Debug(
                     "Key '{}': subkey with invalid key type (0x%x)",
                     CurrentKey->GetKeyName(),
                     pCurrentSubKeyHeader->Type);
@@ -807,7 +806,7 @@ HRESULT RegistryHive::ParseLiRi(
     bSubkeyIsResident = true;
     if ((hr = CheckLiHeader(pRiLiHeader)) != S_OK)
     {
-        spdlog::error("Key '{}': Li/ri header is invalid (code: {:#x})", CurrentKey->GetKeyName(), hr);
+        Log::Error("Key '{}': Li/ri header is invalid (code: {:#x})", CurrentKey->GetKeyName(), hr);
         return hr;
     }
 
@@ -818,7 +817,7 @@ HRESULT RegistryHive::ParseLiRi(
 
         if (!IsOffsetValid(pRiLiHeader->Records[i].OffsetToKeyHeader))
         {
-            spdlog::debug(
+            Log::Debug(
                 "Key '{}': Li/Ri record: offset to key is invalid. Either Li/Ri record is invalid or key is not "
                 "resident",
                 CurrentKey->GetKeyName());
@@ -897,7 +896,7 @@ HRESULT RegistryHive::ParseLiRi(
         // else error
         else
         {
-            spdlog::debug(
+            Log::Debug(
                 "Key '{}': Unknown signature for subkeys list! Should be 'nk','lf','lh,'ri' or 'li' and is {}",
                 CurrentKey->GetKeyName(),
                 pHeader->Data);
@@ -939,14 +938,14 @@ HRESULT RegistryHive::ParseNks(RegistryKey* const CurrentKey, std::vector<Regist
     else
     {
         LPCSTR pHead = (CHAR*)pHeader;
-        spdlog::error(
+        Log::Error(
             "Unknown signature for subkeys list! Should be 'lf','lh,'ri' or 'li' and is {:#x}{:x}", pHead[0], pHead[1]);
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
     if (dwCount != pCurrentKeyHeader->NumberOfSubKeys)
     {
-        spdlog::debug(
+        Log::Debug(
             L"Invalid number of subkeys. Some subkeys might be non resident, if it's not the case, something went "
             L"wrong",
             dwCount,
@@ -961,7 +960,7 @@ HRESULT RegistryHive::ParseHiveHeader()
     // Hive are at least 0x1000 in size
     if (m_ulHiveBufferSize < 0x1000)
     {
-        spdlog::error("Hive invalid (too small)");
+        Log::Error("Hive invalid (too small)");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
@@ -970,26 +969,26 @@ HRESULT RegistryHive::ParseHiveHeader()
     pRegFile = (RegistryFile*)m_pHiveBuffer;
     if (strncmp(pRegFile->Signature, "regf", 4))
     {
-        spdlog::error("Hive signature 'regf' mismatch");
+        Log::Error("Hive signature 'regf' mismatch");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     if (pRegFile->Reserved1 != pRegFile->Reserved2)
     {
-        spdlog::debug("Some values of hive header are inconsistant (not fatal)");
+        Log::Debug("Some values of hive header are inconsistant (not fatal)");
     }
 
     if (pRegFile->DataBlockSize + 0x1000 >= m_ulHiveBufferSize)
     {
         SetHiveIsNotComplete();
-        spdlog::debug("Hive size mismatch. Either Hive is incomplete or some parts are not resident");
+        Log::Debug("Hive size mismatch. Either Hive is incomplete or some parts are not resident");
     }
 
     m_dwRootKeyOffset = pRegFile->OffsetToKeyRecord;
     if (!IsOffsetValid(m_dwRootKeyOffset))
     {
         m_dwRootKeyOffset = 0;
-        spdlog::error("Hive rootKey seems to be outside of hive");
+        Log::Error("Hive rootKey seems to be outside of hive");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
@@ -997,7 +996,7 @@ HRESULT RegistryHive::ParseHiveHeader()
     if (!IsOffsetValid(m_dwDataBlockSize))
     {
         SetHiveIsNotComplete();
-        spdlog::debug("Hive data block is bigger than hive. Either Hive is incomplete or some parts are not resident");
+        Log::Debug("Hive data block is bigger than hive. Either Hive is incomplete or some parts are not resident");
     }
 
     m_pLastModificationTime = &pRegFile->LastModificationDate;
@@ -1012,14 +1011,14 @@ HRESULT RegistryHive::ParseHBinHeader()
 
     if (m_ulHiveBufferSize < 0x1004)
     {
-        spdlog::error("Hive invalid (too small)");
+        Log::Error("Hive invalid (too small)");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     HBINHeader* pHBinHeader = (HBINHeader*)(m_pHiveBuffer + 0x1000);
     if (strncmp(pHBinHeader->Signature, "hbin", 4))
     {
-        spdlog::error(L"Hive '{}': bad hbin header", m_strHiveName);
+        Log::Error(L"Hive '{}': bad hbin header", m_strHiveName);
         return E_FAIL;
     }
 
@@ -1044,7 +1043,7 @@ HRESULT RegistryHive::Walk(
 
     if (!m_dwDataBlockSize || !m_ulHiveBufferSize || !m_dwRootKeyOffset)
     {
-        spdlog::error(L"Hive '{}': hive is not loaded", m_strHiveName);
+        Log::Error(L"Hive '{}': hive is not loaded", m_strHiveName);
         return E_UNEXPECTED;
     }
     // Get Root key
@@ -1054,13 +1053,13 @@ HRESULT RegistryHive::Walk(
     if (CheckNkHeader(pRegKey, &bSubkeyListIsResident, &bValueListIsResident, &bSkHeaderIsResident, &bHasClassName)
         != S_OK)
     {
-        spdlog::error(L"Hive '{}': root key is invalid", m_strHiveName);
+        Log::Error(L"Hive '{}': root key is invalid", m_strHiveName);
         return ERROR_INVALID_DATA;
     }
 
     if ((pRegKey->Type != KeyType::rootkey) && (pRegKey->Type != KeyType::rootkeyAlternate))
     {
-        spdlog::debug(L"Hive '{}': root key is not of type RootKey", m_strHiveName);
+        Log::Debug(L"Hive '{}': root key is not of type RootKey", m_strHiveName);
     }
 
     std::string ClassName;
@@ -1105,7 +1104,7 @@ HRESULT RegistryHive::Walk(
         {
             CurrentKeySet.pop_back();
             if (CurrentKey->GetSubKeysCount() != CurrentKey->GetSeenSubKeysCount())
-                spdlog::debug(
+                Log::Debug(
                     "Key '{}': number of subkeys parsed is different from number of subkeys announced.({} announced, "
                     "{} parsed)",
                     CurrentKey->GetKeyName(),
@@ -1124,11 +1123,11 @@ HRESULT RegistryHive::Walk(
 
         if ((hr = ParseNks(CurrentKey, CurrentKeySet)) != S_OK)
         {
-            spdlog::debug("Error during parsing of '{}' subkeys", CurrentKey->GetKeyName());
+            Log::Debug("Error during parsing of '{}' subkeys", CurrentKey->GetKeyName());
         }
         if ((hr = ParseValues(CurrentKey, RegistryValueCallback)) != S_OK)
         {
-            spdlog::debug("Error during parsing of '{}' values", CurrentKey->GetKeyName());
+            Log::Debug("Error during parsing of '{}' values", CurrentKey->GetKeyName());
         }
         // Set key as treated!
 

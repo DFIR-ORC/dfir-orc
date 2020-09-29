@@ -63,7 +63,7 @@ public:
         }
         catch (const Exception& e)
         {
-            spdlog::error(L"Failed to allocate {} bytes in BufferStream: {}", newSize, e.Description);
+            Log::Error(L"Failed to allocate {} bytes in BufferStream: {}", newSize, e.Description);
             return E_OUTOFMEMORY;
         }
         return S_OK;
@@ -118,7 +118,7 @@ inline STDMETHODIMP_(HRESULT __stdcall)
 
     if (m_dwCurrFilePointer + cbBytesToWrite < m_dwCurrFilePointer)
     {
-        spdlog::error("File pointer overflowed");
+        Log::Error("File pointer overflowed");
         return HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW);
     }
 
@@ -136,7 +136,7 @@ inline STDMETHODIMP_(HRESULT __stdcall)
         }
         catch (const Exception& e)
         {
-            spdlog::error(
+            Log::Error(
                 L"Failed SetFilePointer({}) to resize BufferStream: {}",
                 cbBytesToWrite + m_dwCurrFilePointer,
                 e.Description);
@@ -198,7 +198,7 @@ inline STDMETHODIMP_(HRESULT __stdcall)
         }
         catch (const Exception& e)
         {
-            spdlog::error(L"Failed SetFilePointer({}) to resize BufferStream: {}", dwNewFilePointer, e.Description);
+            Log::Error(L"Failed SetFilePointer({}) to resize BufferStream: {}", dwNewFilePointer, e.Description);
             return E_OUTOFMEMORY;
         }
     }

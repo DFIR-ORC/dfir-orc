@@ -10,6 +10,8 @@
 
 #include "ApacheOrcStream.h"
 
+#include "Log/Log.h"
+
 uint64_t Orc::TableOutput::ApacheOrc::Stream::getLength() const
 {
     if (m_Stream)
@@ -31,7 +33,7 @@ void Orc::TableOutput::ApacheOrc::Stream::write(const void* buf, size_t length)
 
         if (auto hr = m_Stream->Write((PVOID)buf, length, &ullBytesWritten); FAILED(hr))
         {
-            spdlog::error("Failed to write into orc file (code: {:#x})", hr);
+            Log::Error("Failed to write into orc file (code: {:#x})", hr);
         }
     }
 }

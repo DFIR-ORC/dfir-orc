@@ -92,7 +92,7 @@ LONG __stdcall Orc::WinTrustExtension::WinVerifyTrust(HWND hWnd, GUID* pgActionI
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
-        spdlog::error("Exception raised in WinVerifyTrust");
+        Log::Error("Exception raised in WinVerifyTrust");
         return 0L;
     }
 }

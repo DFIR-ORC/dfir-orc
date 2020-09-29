@@ -68,7 +68,7 @@ STDMETHODIMP TemporaryStream::Open(
         WCHAR szTempDir[MAX_PATH] = {0};
         if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
         {
-            spdlog::warn("Failed to create temporary path (code: {:#x})", hr);
+            Log::Warn("Failed to create temporary path (code: {:#x})", hr);
             return hr;
         }
         m_strTemp = szTempDir;
@@ -90,16 +90,16 @@ STDMETHODIMP TemporaryStream::Open(
 
     if (FAILED(hr = m_pMemStream->SetSize(dwMemThreshold)))
     {
-        spdlog::error("Failed to resize memory buffer (code: {:#x})", hr);
+        Log::Error("Failed to resize memory buffer (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = m_pMemStream->OpenForReadWrite(dwMemThreshold)))
     {
-        spdlog::debug("Failed to open memstream for {} bytes, using file stream", dwMemThreshold);
+        Log::Debug("Failed to open memstream for {} bytes, using file stream", dwMemThreshold);
         if (FAILED(hr = MoveToFileStream(nullptr)))
         {
-            spdlog::error("Failed to Open temporary stream into a file stream (code: {:#x})", hr);
+            Log::Error("Failed to Open temporary stream into a file stream (code: {:#x})", hr);
             return hr;
         }
     }
@@ -124,7 +124,7 @@ HRESULT TemporaryStream::MoveToFileStream(const std::shared_ptr<ByteStream>& aSt
 {
     HRESULT hr = E_FAIL;
 
-    spdlog::debug("INFO: Moving TemporaryStream to a file stream");
+    Log::Debug("INFO: Moving TemporaryStream to a file stream");
 
     m_pFileStream = std::make_shared<FileStream>();
 
@@ -317,7 +317,7 @@ STDMETHODIMP TemporaryStream::MoveTo(const std::shared_ptr<ByteStream> pStream)
 
         if (FAILED(hr = UtilDeleteTemporaryFile(m_strFileName.c_str())))
         {
-            spdlog::error(L"Failed to delete temp file '{}' (code: {:#x})", m_strFileName, hr);
+            Log::Error(L"Failed to delete temp file '{}' (code: {:#x})", m_strFileName, hr);
             return hr;
         }
         m_strFileName.clear();
@@ -356,7 +356,7 @@ TemporaryStream::~TemporaryStream(void)
     {
         if (FAILED(hr = UtilDeleteTemporaryFile(m_strFileName.c_str())))
         {
-            spdlog::error(L"Failed to delete temp file '{}' (code: {:#x})", m_strFileName, hr);
+            Log::Error(L"Failed to delete temp file '{}' (code: {:#x})", m_strFileName, hr);
         }
         m_strFileName.clear();
     }

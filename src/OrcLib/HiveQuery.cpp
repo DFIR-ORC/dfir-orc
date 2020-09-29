@@ -50,7 +50,7 @@ HRESULT HiveQuery::BuildStreamList()
 
     if (FAILED(hr))
     {
-        spdlog::error("Failed to parse locations for hives (code: {:#x})", hr);
+        Log::Error("Failed to parse locations for hives (code: {:#x})", hr);
         return hr;
     }
 
@@ -60,7 +60,7 @@ HRESULT HiveQuery::BuildStreamList()
         hr = fileStream->ReadFrom(fileName.c_str());
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to open stream for hive: {} (code: {:#x})", fileName, hr);
+            Log::Error(L"Failed to open stream for hive: {} (code: {:#x})", fileName, hr);
             continue;
         }
 

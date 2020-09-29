@@ -40,11 +40,11 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
         hr = tk.LoadAutoRuns(config.autorunsOutput.Path.c_str());
         if (FAILED(hr))
         {
-            spdlog::error("Failed to load autoruns (code: {:#x})", hr);
+            Log::Error("Failed to load autoruns (code: {:#x})", hr);
             return hr;
         }
 
-        spdlog::info("Loading autoruns file... Done");
+        Log::Info("Loading autoruns file... Done");
         return S_OK;
     }
 
@@ -60,7 +60,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
     hr = EmbeddedResource::ExtractValue(L"", L"AUTORUNS", strAutorunsRef);
     if (FAILED(hr))
     {
-        spdlog::error("Could not find ressource reference to AutoRuns (code: {:#x})", hr);
+        Log::Error("Could not find ressource reference to AutoRuns (code: {:#x})", hr);
         return hr;
     }
 
@@ -69,7 +69,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
         strAutorunsRef, L"autorunsc.exe", RESSOURCE_READ_EXECUTE_BA, szTempDir, strAutorunsCmd);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to extract '{}' to '{}' (code: {:#x})", strAutorunsRef, szTempDir, hr);
+        Log::Error(L"Failed to extract '{}' to '{}' (code: {:#x})", strAutorunsRef, szTempDir, hr);
         return hr;
     }
 
@@ -94,11 +94,11 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
     command->Execute(no_job);
     command->WaitCompletion();
     command->CompleteExecution(nullptr);
-    spdlog::info(L"Running autoruns utility... Done");
+    Log::Info(L"Running autoruns utility... Done");
 
     if (command->ExitCode() != 0)
     {
-        spdlog::error(L"Autoruns failed (exitcode: {:#x})", command->ExitCode());
+        Log::Error(L"Autoruns failed (exitcode: {:#x})", command->ExitCode());
         return E_FAIL;
     }
 
@@ -118,7 +118,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
         const auto xmlIt = std::find(std::cbegin(view), std::cend(view), L'<');
         if (xmlIt == std::cend(view))
         {
-            spdlog::error("Cannot parse autoruns xml");
+            Log::Error("Cannot parse autoruns xml");
             return E_INVALIDARG;
         }
 
@@ -130,11 +130,11 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
     m_console.Print(L"Loading autoruns data...");
     if (FAILED(hr = tk.LoadAutoRuns(buffer)))
     {
-        spdlog::error("Failed to load autoruns data (code: {:#x})", hr);
+        Log::Error("Failed to load autoruns data (code: {:#x})", hr);
         return hr;
     }
 
-    spdlog::info(L"Loading autoruns data... Done");
+    Log::Info(L"Loading autoruns data... Done");
 
     if (config.bKeepAutorunsXML)
     {
@@ -142,7 +142,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
         hr = fs->WriteTo(config.autorunsOutput.Path.c_str());
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to create file '{}' (code: {:#x})", config.autorunsOutput.Path, hr);
+            Log::Error(L"Failed to create file '{}' (code: {:#x})", config.autorunsOutput.Path, hr);
             // Continue execution normally
             return S_OK;
         }
@@ -150,7 +150,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
         hr = tk.SaveAutoRuns(fs);
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to save autoruns data to '{}' (code: {:#x})", config.autorunsOutput.Path, hr);
+            Log::Error(L"Failed to save autoruns data to '{}' (code: {:#x})", config.autorunsOutput.Path, hr);
             // Continue execution normally
             return S_OK;
         }
@@ -168,7 +168,7 @@ HRESULT Main::WriteSampleInformation(const std::vector<std::shared_ptr<SampleIte
     auto pWriter = TableOutput::GetWriter(config.sampleinfoOutput);
     if (pWriter == nullptr)
     {
-        spdlog::error(L"Failed to create writer for sample information to '{}'", config.sampleinfoOutput.Path);
+        Log::Error(L"Failed to create writer for sample information to '{}'", config.sampleinfoOutput.Path);
         return E_FAIL;
     }
 
@@ -196,7 +196,7 @@ HRESULT Main::WriteSampleInformation(const std::vector<std::shared_ptr<SampleIte
     }
 
     pWriter->Close();
-    spdlog::info(L"Writing sample information... Done");
+    Log::Info(L"Writing sample information... Done");
 
     return S_OK;
 }
@@ -210,7 +210,7 @@ HRESULT Main::WriteTimeline(const TaskTracker::TimeLine& timeline)
     auto pWriter = TableOutput::GetWriter(config.timelineOutput);
     if (pWriter == nullptr)
     {
-        spdlog::error(L"Failed to create writer for timeline information to '{}'", config.timelineOutput.Path);
+        Log::Error(L"Failed to create writer for timeline information to '{}'", config.timelineOutput.Path);
         return E_FAIL;
     }
 
@@ -248,7 +248,7 @@ HRESULT Main::WriteTimeline(const TaskTracker::TimeLine& timeline)
     }
 
     pWriter->Close();
-    spdlog::info(L"Writing time line... Done");
+    Log::Info(L"Writing time line... Done");
     return S_OK;
 }
 
@@ -353,11 +353,11 @@ HRESULT Main::WriteGetThisConfig(
         strConfigFile.c_str(), L"GetThis configuration file generated by GetSamples", getthisconfig);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to write GetThis configuration file (file: {})", strConfigFile);
+        Log::Error(L"Failed to write GetThis configuration file (file: {})", strConfigFile);
         return hr;
     }
 
-    spdlog::info(L"Writing GetThis configuration... Done");
+    Log::Info(L"Writing GetThis configuration... Done");
     return S_OK;
 }
 
@@ -375,7 +375,7 @@ HRESULT Main::RunGetThis(const std::wstring& strConfigFile, LPCWSTR szTempDir)
         config.getthisRef, config.getthisName, RESSOURCE_READ_EXECUTE_BA, szTempDir, strGetThisCmd);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to load extract getthis to '{}' (code: {:#x})", szTempDir, hr);
+        Log::Error(L"Failed to load extract getthis to '{}' (code: {:#x})", szTempDir, hr);
         return hr;
     }
 
@@ -432,17 +432,17 @@ HRESULT Main::Run()
     hr = tk.LoadRunningTasksAndModules();
     if (FAILED(hr))
     {
-        spdlog::error("Failed to load running Tasks and Modules (code: {:#x})", hr);
+        Log::Error("Failed to load running Tasks and Modules (code: {:#x})", hr);
         return hr;
     }
 
-    spdlog::info("Loading running processes and modules... Done");
+    Log::Info("Loading running processes and modules... Done");
 
     // Loading Autoruns data
     hr = LoadAutoRuns(tk, config.tmpdirOutput.Path.c_str());
     if (FAILED(hr))
     {
-        spdlog::error("Failed to load autoruns data (code: {:#x})", hr);
+        Log::Error("Failed to load autoruns data (code: {:#x})", hr);
         return hr;
     }
 
@@ -453,11 +453,11 @@ HRESULT Main::Run()
     hr = tk.CoalesceResults(results);
     if (FAILED(hr))
     {
-        spdlog::error(L"Failed to compile results (code: {:#x})", hr);
+        Log::Error(L"Failed to compile results (code: {:#x})", hr);
         return hr;
     }
 
-    spdlog::info("Coalesce data... Done");
+    Log::Info("Coalesce data... Done");
 
     if (!config.bNoSigCheck)
     {
@@ -466,11 +466,11 @@ HRESULT Main::Run()
         hr = tk.CheckSamplesSignature();
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to compile results (code: {:#x})", hr);
+            Log::Error(L"Failed to compile results (code: {:#x})", hr);
             return hr;
         }
 
-        spdlog::info(L"Verifying code signatures... Done");
+        Log::Info(L"Verifying code signatures... Done");
     }
 
     if (config.sampleinfoOutput.Type & OutputSpec::Kind::TableFile)
@@ -478,7 +478,7 @@ HRESULT Main::Run()
         hr = WriteSampleInformation(results);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to write sample information");
+            Log::Error("Failed to write sample information");
             return hr;
         }
     }
@@ -490,7 +490,7 @@ HRESULT Main::Run()
         hr = WriteTimeline(timeline);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to write timeline information (code: {:#x})", hr);
+            Log::Error("Failed to write timeline information (code: {:#x})", hr);
             return hr;
         }
     }
@@ -514,7 +514,7 @@ HRESULT Main::Run()
         hr = WriteGetThisConfig(strConfigFile, tk.GetAltitudeLocations(), results);
         if (FAILED(hr))
         {
-            spdlog::error("Failed to write getthis configuration (code: {:#x})", hr);
+            Log::Error("Failed to write getthis configuration (code: {:#x})", hr);
             return hr;
         }
     }
@@ -524,7 +524,7 @@ HRESULT Main::Run()
         hr = RunGetThis(strConfigFile, config.tmpdirOutput.Path.c_str());
         if (FAILED(hr))
         {
-            spdlog::error("Failed to run getthis (code: {:#x})", hr);
+            Log::Error("Failed to run getthis (code: {:#x})", hr);
             return hr;
         }
     }

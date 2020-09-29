@@ -28,19 +28,19 @@ HRESULT CsvToSql::Initialize(
 {
     if (!pReader->IsFileOpened())
     {
-        spdlog::error("CsvToSql can only be initialized with a valid CSV file opened");
+        Log::Error("CsvToSql can only be initialized with a valid CSV file opened");
         return E_INVALIDARG;
     }
 
     if (pReader->GetSchema().Column.empty())
     {
-        spdlog::error("CSV file reader does not have any schema defined, needed!");
+        Log::Error("CSV file reader does not have any schema defined, needed!");
         return E_INVALIDARG;
     }
 
     if (pSql->GetColumnDefinitions().empty())
     {
-        spdlog::error("CsvToSql's SQL database writer requires a valid schema defined");
+        Log::Error("CsvToSql's SQL database writer requires a valid schema defined");
         return E_INVALIDARG;
     }
 

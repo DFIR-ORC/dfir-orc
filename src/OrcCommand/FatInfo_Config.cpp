@@ -102,7 +102,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = m_Config.output.Configure(configitem[FATINFO_OUTPUT])))
     {
-        spdlog::error("Invalid output specified");
+        Log::Error("Invalid output specified");
         return hr;
     }
 
@@ -118,13 +118,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = m_Config.locs.AddLocationsFromConfigItem(configitem[FATINFO_LOCATIONS])))
     {
-        spdlog::error("Failed to get locations definition from config (code: {:x})", hr);
+        Log::Error("Failed to get locations definition from config (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = GetColumnsAndFiltersFromConfig(configitem)))
     {
-        spdlog::error("Failed to get column definition from config (code: {:x})", hr);
+        Log::Error("Failed to get column definition from config (code: {:#x})", hr);
         return hr;
     }
 
@@ -283,7 +283,7 @@ HRESULT Main::CheckConfiguration()
         hr = ::VerifyDirectoryExists(m_Config.output.Path.c_str());
         if (FAILED(hr))
         {
-            spdlog::error(
+            Log::Error(
                 L"Specified file information output directory '{}' is not a directory (code: {:#x})",
                 m_Config.output.Path,
                 hr);

@@ -87,7 +87,7 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
     {
         if (FAILED(hr = CryptoUtilities::AcquireContext(m_hProv)))
         {
-            spdlog::error(L"Failed to acquire suitable Crypto Service Provider (code: {:#x})", hr);
+            Log::Error(L"Failed to acquire suitable Crypto Service Provider (code: {:#x})", hr);
             return hr;
         }
         EncodeInfo.ContentEncryptionAlgorithm.pszObjId = szOID_RSA_DES_EDE3_CBC;
@@ -144,7 +144,7 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
     if (m_hMsg == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed to open message for encoding (code: {:#x})", hr);
+        Log::Error("Failed to open message for encoding (code: {:#x})", hr);
         return hr;
     }
 
@@ -163,7 +163,7 @@ __data_entrypoint(File) HRESULT EncodeMessageStream::Read(
     if (cbBytesToRead > MAXDWORD)
         return E_INVALIDARG;
 
-    spdlog::debug(L"Cannot read from an EncodeMessageStream");
+    Log::Debug(L"Cannot read from an EncodeMessageStream");
     return E_NOTIMPL;
 }
 
@@ -179,18 +179,18 @@ HRESULT EncodeMessageStream::Write(
 
     if (cbBytes > MAXDWORD)
     {
-        spdlog::error("Write: Too many bytes");
+        Log::Error("Write: Too many bytes");
         return E_INVALIDARG;
     }
 
     if (!CryptMsgUpdate(m_hMsg, (const BYTE*)pBuffer, static_cast<DWORD>(cbBytes), FALSE))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error("Failed CryptMsgUpdate (code: {:#x})", hr);
+        Log::Error("Failed CryptMsgUpdate (code: {:#x})", hr);
         return hr;
     }
     *pcbBytesWritten = cbBytes;
-    spdlog::debug("CryptMsgUpdate {} bytes succeeded (hMsg={:#x})", cbBytes, m_hMsg);
+    Log::Debug("CryptMsgUpdate {} bytes succeeded (hMsg={:#x})", cbBytes, m_hMsg);
     return S_OK;
 }
 
@@ -202,7 +202,7 @@ HRESULT EncodeMessageStream::SetFilePointer(
     DBG_UNREFERENCED_PARAMETER(lDistanceToMove);
     DBG_UNREFERENCED_PARAMETER(dwMoveMethod);
     DBG_UNREFERENCED_PARAMETER(pqwCurrPointer);
-    spdlog::error(
+    Log::Error(
         "SetFilePointer is not implemented in EncodeMessageStream (distance: {}, method: {})",
         lDistanceToMove,
         dwMoveMethod);
@@ -211,14 +211,14 @@ HRESULT EncodeMessageStream::SetFilePointer(
 
 ULONG64 EncodeMessageStream::GetSize()
 {
-    spdlog::debug("EncodeMessageStream: GetSize is not implemented");
+    Log::Debug("EncodeMessageStream: GetSize is not implemented");
     return (ULONG64)-1;
 }
 
 HRESULT EncodeMessageStream::SetSize(ULONG64 ullNewSize)
 {
     DBG_UNREFERENCED_PARAMETER(ullNewSize);
-    spdlog::debug("EncodeMessageStream: SetSize is not implemented");
+    Log::Debug("EncodeMessageStream: SetSize is not implemented");
     return S_OK;
 }
 
@@ -230,13 +230,13 @@ HRESULT EncodeMessageStream::Close()
         if (!CryptMsgUpdate(m_hMsg, NULL, 0L, TRUE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error(L"Failed CryptMsgUpdate (on final call, code: {:#x})", hr);
+            Log::Error(L"Failed CryptMsgUpdate (on final call, code: {:#x})", hr);
             return hr;
         }
         if (!CryptMsgClose(m_hMsg))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            spdlog::error("Failed CryptMsgClose (code: {:#x})", hr);
+            Log::Error("Failed CryptMsgClose (code: {:#x})", hr);
             m_hMsg = NULL;
             return hr;
         }

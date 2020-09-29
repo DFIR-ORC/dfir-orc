@@ -133,7 +133,7 @@ HRESULT FileDirectory::ParseFileDirectory(const std::wstring& aObjDir, FileDirec
 
         if (FAILED(hr))
         {
-            spdlog::error("Failed NtQueryDirectoryFile (code: {:#x})", hr);
+            Log::Error("Failed NtQueryDirectoryFile (code: {:#x})", hr);
             return hr;
         }
 

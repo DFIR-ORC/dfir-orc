@@ -114,7 +114,7 @@ HRESULT Main::CheckConfiguration()
 {
     if (config.bConfigure && config.bPrintDetails)
     {
-        spdlog::error("Cannot configure USN journal AND detail location");
+        Log::Error("Cannot configure USN journal AND detail location");
         return E_INVALIDARG;
     }
 
@@ -122,17 +122,17 @@ HRESULT Main::CheckConfiguration()
     {
         if (config.strVolume.empty() && config.cmd == Main::USN)
         {
-            spdlog::error("No volume set to be configured");
+            Log::Error("No volume set to be configured");
             return E_INVALIDARG;
         }
         if (config.dwlMaxSize == 0 && config.dwlMinSize == 0)
         {
-            spdlog::error("Invalid USN configuration values used (at least minsize or maxsize must be specified)");
+            Log::Error("Invalid USN configuration values used (at least minsize or maxsize must be specified)");
             return E_INVALIDARG;
         }
         else if ((config.dwlMaxSize == 0 || config.dwlMinSize == 0) && config.dwlAllocDelta == 0)
         {
-            spdlog::error("Invalid USN configuration values used (allocation delta is missing)");
+            Log::Error("Invalid USN configuration values used (allocation delta is missing)");
             return E_INVALIDARG;
         }
     }

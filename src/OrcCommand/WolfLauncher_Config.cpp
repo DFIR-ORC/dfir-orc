@@ -57,7 +57,7 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
 
     if (!recipient_item[WOLFLAUNCHER_RECIPIENT_NAME])
     {
-        spdlog::error("Recipient name attribute is mandatory");
+        Log::Error("Recipient name attribute is mandatory");
         return nullptr;
     }
 
@@ -65,13 +65,13 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
     auto inlist = GetRecipient(retval->Name);
     if (inlist != nullptr)
     {
-        spdlog::error(L"Only one recipient with name '{}' is allowed", retval->Name);
+        Log::Error(L"Only one recipient with name '{}' is allowed", retval->Name);
         return nullptr;
     }
 
     if (!recipient_item[WOLFLAUNCHER_RECIPIENT_ARCHIVE])
     {
-        spdlog::error("Recipient archive attribute is mandatory");
+        Log::Error("Recipient archive attribute is mandatory");
         return nullptr;
     }
 
@@ -87,7 +87,7 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
             cert.c_str(), (DWORD)cert.size(), CRYPT_STRING_ANY, NULL, &cbOutput, NULL, &dwFormatFlags))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"Failed CryptStringToBinary while converting {} into a binary blob (code: {:#x})", cert, hr);
+        Log::Error(L"Failed CryptStringToBinary while converting {} into a binary blob (code: {:#x})", cert, hr);
         return nullptr;
     }
 
@@ -97,7 +97,7 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
             cert.c_str(), (DWORD)cert.size(), CRYPT_STRING_ANY, pCertBin.GetData(), &cbOutput, NULL, &dwFormatFlags))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        spdlog::error(L"CryptStringToBinary failed to convert '{}' into a binary blob (code: {:#x})", cert, hr);
+        Log::Error(L"CryptStringToBinary failed to convert '{}' into a binary blob (code: {:#x})", cert, hr);
         return nullptr;
     }
 
@@ -130,7 +130,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             }
             else
             {
-                spdlog::error(L"Failed to write configuration (code: {:#x})", hr);
+                Log::Error(L"Failed to write configuration (code: {:#x})", hr);
             }
         }
     }
@@ -165,7 +165,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         hr = config.Log.Configure(configitem[WOLFLAUNCHER_LOG]);
         if (FAILED(hr))
         {
-            spdlog::warn("Failed to configure DFIR-Orc log file (code: {:#x})", hr);
+            Log::Warn("Failed to configure DFIR-Orc log file (code: {:#x})", hr);
         }
     }
 
@@ -174,7 +174,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         auto hr = E_FAIL;
         if (FAILED(hr = config.Outline.Configure(configitem[WOLFLAUNCHER_OUTLINE])))
         {
-            spdlog::warn(L"Failed to configure DFIR-Orc outline file (code: {:#x})", hr);
+            Log::Warn(L"Failed to configure DFIR-Orc outline file (code: {:#x})", hr);
         }
     }
 
@@ -188,7 +188,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         hr = GetIntegerFromArg(configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT].c_str(), dwCommandTimeOutInMinutes);
         if (FAILED(hr))
         {
-            spdlog::error(
+            Log::Error(
                 L"Invalid command timeout (command_timeout) value specified '{}' must be an integer (code: {:#x})",
                 configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT].c_str(),
                 hr);
@@ -208,7 +208,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         hr = GetIntegerFromArg(configitem[WOLFLAUNCHER_GLOBAL_ARCHIVE_TIMEOUT].c_str(), dwArchiveTimeOutMinutes);
         if (FAILED(hr))
         {
-            spdlog::error(
+            Log::Error(
                 L"Invalid archive timeout (archive_timeout) specified '{}' must be an integer (code: {:3x})",
                 configitem[WOLFLAUNCHER_GLOBAL_ARCHIVE_TIMEOUT].c_str(),
                 hr);
@@ -236,51 +236,49 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         hr = exec->SetJobConfigFromConfig(archiveitem);
         if (FAILED(hr))
         {
-            spdlog::error("Job configuration failed (code: {:#x})", hr);
+            Log::Error("Job configuration failed (code: {:#x})", hr);
             return hr;
         }
 
         hr = exec->SetJobTimeOutFromConfig(archiveitem, config.msCommandTerminationTimeOut, config.msArchiveTimeOut);
         if (FAILED(hr))
         {
-            spdlog::error(L"Job timeout configuration failed (code: {:#x})", hr);
+            Log::Error(L"Job timeout configuration failed (code: {:#x})", hr);
             return hr;
         }
 
         hr = exec->SetRestrictionsFromConfig(archiveitem.SubItems[WOLFLAUNCHER_ARCHIVE_RESTRICTIONS]);
         if (FAILED(hr))
         {
-            spdlog::error(L"Command restrictions setup failed (code: {:#x})", hr);
+            Log::Error(L"Command restrictions setup failed (code: {:#x})", hr);
             return hr;
         }
 
         hr = exec->SetRepeatBehaviourFromConfig(archiveitem.SubItems[WOLFLAUNCHER_ARCHIVE_REPEAT]);
         if (FAILED(hr))
         {
-            spdlog::error(L"Command repeat behavior setup failed (code: {:#x})", hr);
+            Log::Error(L"Command repeat behavior setup failed (code: {:#x})", hr);
             return hr;
         }
 
         hr = exec->SetCommandsFromConfig(archiveitem.SubItems[WOLFLAUNCHER_ARCHIVE_COMMAND]);
         if (FAILED(hr))
         {
-            spdlog::error(L"Command creation failed (code: {:#x})", hr);
+            Log::Error(L"Command creation failed (code: {:#x})", hr);
             return hr;
         }
 
         hr = exec->SetArchiveName((const std::wstring&)archiveitem[WOLFLAUNCHER_ARCHIVE_NAME]);
         if (FAILED(hr))
         {
-            spdlog::error(
-                L"Failed to set '{}' as cab name (code: {:#x})", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME].c_str(), hr);
+            Log::Error(L"Failed to set '{}' as cab name (code: {:#x})", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], hr);
             return hr;
         }
 
         hr = exec->SetConfigStreams(m_pConfigStream, m_pLocalConfigStream);
         if (FAILED(hr))
         {
-            spdlog::error(
-                L"Failed to set config stream (code: {:#x})", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME].c_str(), hr);
+            Log::Error(L"Failed to set config stream (code: {:#x})", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], hr);
             return hr;
         }
 
@@ -335,7 +333,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 
     if (auto hr = config.Output.Configure(OutputSpec::Kind::Directory, configitem[ORC_OUTPUT]); FAILED(hr))
     {
-        spdlog::error("Error in specified outputdir in config file, using default (code: {:#x})", hr);
+        Log::Error("Error in specified outputdir in config file, using default (code: {:#x})", hr);
         return hr;
     }
 
@@ -348,7 +346,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 
         if (auto hr = upload->Configure(configitem[ORC_UPLOAD]); FAILED(hr))
         {
-            spdlog::error("Error in specified upload section in config file, ignored (code: {:#x})", hr);
+            Log::Error("Error in specified upload section in config file, ignored (code: {:#x})", hr);
             return hr;
         }
         config.Output.UploadOutput = upload;
@@ -356,7 +354,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 
     if (auto hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, configitem[ORC_TEMP]); FAILED(hr))
     {
-        spdlog::error("Error in specified tempdir in config file, defaulting to current directory (code: {:#x})", hr);
+        Log::Error("Error in specified tempdir in config file, defaulting to current directory (code: {:#x})", hr);
         config.TempWorkingDir.Path = L".\\DFIR-OrcTempDir";
         config.TempWorkingDir.Type = OutputSpec::Kind::Directory;
     }
@@ -586,7 +584,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
     }
     catch (...)
     {
-        spdlog::info("WolfLauncher failed during argument parsing, exiting");
+        Log::Info("WolfLauncher failed during argument parsing, exiting");
         return E_FAIL;
     }
     return S_OK;
@@ -597,7 +595,7 @@ HRESULT Main::CheckConfiguration()
     HRESULT hr = E_FAIL;
     if ((config.bRepeatCreateNew ? 1 : 0) + (config.bRepeatOnce ? 1 : 0) + (config.bRepeatOverwrite ? 1 : 0) > 1)
     {
-        spdlog::error("options /createnew, /once and /overwrite are mutually exclusive");
+        Log::Error("options /createnew, /once and /overwrite are mutually exclusive");
         return E_FAIL;
     }
 
@@ -613,7 +611,7 @@ HRESULT Main::CheckConfiguration()
         DWORD dwLenRequired = GetFullPathName(config.Output.Path.c_str(), 0L, NULL, NULL);
         if (dwLenRequired == 0L)
         {
-            spdlog::error(L"Output path '{}' was not convertible to an absolute path", config.Output.Path);
+            Log::Error(L"Output path '{}' was not convertible to an absolute path", config.Output.Path);
             return E_INVALIDARG;
         }
 
@@ -622,7 +620,7 @@ HRESULT Main::CheckConfiguration()
 
         if (GetFullPathName(config.Output.Path.c_str(), dwLenRequired, buffer.GetP<WCHAR>(0), NULL) == 0)
         {
-            spdlog::error(L"Failed to convert '{}' to an absolute path", config.Output.Path);
+            Log::Error(L"Failed to convert '{}' to an absolute path", config.Output.Path);
             return E_INVALIDARG;
         }
 
@@ -631,7 +629,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Output.Type != OutputSpec::Kind::Directory)
     {
-        spdlog::error("Invalid output specification");
+        Log::Error("Invalid output specification");
         return E_INVALIDARG;
     }
 
@@ -639,13 +637,13 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, L"%TEMP%\\WorkingTemp")))
         {
-            spdlog::error(L"Failed to use default temporary directory from %TEMP%");
+            Log::Error(L"Failed to use default temporary directory from %TEMP%");
             return hr;
         }
     }
     if (config.TempWorkingDir.Type != OutputSpec::Kind::Directory)
     {
-        spdlog::error("Invalid temporary location specification");
+        Log::Error("Invalid temporary location specification");
         return E_INVALIDARG;
     }
 
@@ -658,7 +656,7 @@ HRESULT Main::CheckConfiguration()
         }
         else
         {
-            spdlog::error("Invalid log file type");
+            Log::Error("Invalid log file type");
             return E_INVALIDARG;
         }
     }
@@ -672,7 +670,7 @@ HRESULT Main::CheckConfiguration()
         }
         else
         {
-            spdlog::error(L"Invalid outline file type");
+            Log::Error(L"Invalid outline file type");
             return E_INVALIDARG;
         }
     }
@@ -681,7 +679,7 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = config.JobStatistics.Configure(OutputSpec::Kind::TableFile, L"JobStatistics.csv")))
         {
-            spdlog::error("Failed to set job statistics output (code: {:#x})", hr);
+            Log::Error("Failed to set job statistics output (code: {:#x})", hr);
             return hr;
         }
     }
@@ -690,7 +688,7 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = config.ProcessStatistics.Configure(OutputSpec::Kind::TableFile, L"ProcessStatistics.csv")))
         {
-            spdlog::error("Failed to set process statistics output (code: {:#x})", hr);
+            Log::Error("Failed to set process statistics output (code: {:#x})", hr);
             return hr;
         }
     }
@@ -724,7 +722,7 @@ HRESULT Main::CheckConfiguration()
         HRESULT hr = wolfexec->BuildFullArchiveName();
         if (FAILED(hr))
         {
-            spdlog::error(L"Failed to build full archive name for '{}' (code: {:#x})", wolfexec->GetKeyword(), hr);
+            Log::Error(L"Failed to build full archive name for '{}' (code: {:#x})", wolfexec->GetKeyword(), hr);
         }
     }
 
@@ -748,7 +746,7 @@ HRESULT Main::CheckConfiguration()
         }
         else
         {
-            spdlog::warn(L"Invalid powerstate value '{}': ignored", powerState);
+            Log::Warn(L"Invalid powerstate value '{}': ignored", powerState);
         }
     }
 
@@ -772,7 +770,7 @@ HRESULT Main::CheckConfiguration()
 
         if (strFullComputerName == strOrcFullComputerName)
         {
-            spdlog::warn("DFIR-Orc in offline mode and no computer name set, defaulting to this machine's name");
+            Log::Warn("DFIR-Orc in offline mode and no computer name set, defaulting to this machine's name");
         }
 
         // Then, we set ORC_Offline as a "OnlyThis" keyword

@@ -60,9 +60,14 @@ Orc::Command::UtilitiesLogger::UtilitiesLogger()
         std::make_pair(Logger::Facility::kDefault, defaultLogger),
         std::make_pair(Logger::Facility::kLogFile, fileLogger)};
     m_logger = std::make_shared<Logger>(loggers);
+
+    Orc::Log::SetDefaultLogger(m_logger);
 }
 
-Orc::Command::UtilitiesLogger::~UtilitiesLogger() {}
+Orc::Command::UtilitiesLogger::~UtilitiesLogger()
+{
+    Orc::Log::SetDefaultLogger(nullptr);
+}
 
 // Portage of LogFileWriter::ConfigureLoggingOptions
 // Parse directly argc/argv to allow initializing logs very early
@@ -123,14 +128,14 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
                     WCHAR szLogFile[MAX_PATH] = {};
                     if (!pEquals)
                     {
-                        spdlog::error(L"Option /LogFile should be like: /LogFile=c:\\temp\\logfile.log\r\n");
+                        Log::Error(L"Option /LogFile should be like: /LogFile=c:\\temp\\logfile.log\r\n");
                         continue;
                     }
                     else
                     {
                         if (FAILED(hr = GetOutputFile(pEquals + 1, szLogFile, MAX_PATH)))
                         {
-                            spdlog::error(L"Invalid logging file specified: {} (code: {:#x})", pEquals + 1, hr);
+                            Log::Error(L"Invalid logging file specified: {} (code: {:#x})", pEquals + 1, hr);
                             continue;
                         }
 
@@ -138,7 +143,7 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
                         m_fileSink->Open(szLogFile, ec);
                         if (ec)
                         {
-                            spdlog::error(L"Failed to initialize log file '{}': {}", szLogFile, ec);
+                            Log::Error(L"Failed to initialize log file '{}': {}", szLogFile, ec);
                             continue;
                         }
                     }
