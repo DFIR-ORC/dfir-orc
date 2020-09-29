@@ -1058,7 +1058,12 @@ HRESULT Main::Run()
     HRESULT hr = E_FAIL;
     LoadWinTrust();
 
+
+#ifndef _DEBUG
     GetSystemTimeAsFileTime(&CollectionDate);
+#else
+    CollectionDate = {0};
+#endif
 
     try
     {
