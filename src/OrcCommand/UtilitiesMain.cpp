@@ -316,7 +316,7 @@ LPCWSTR UtilitiesMain::GetCompression(const std::wstring& strCompression)
     if (strCompression.empty())
         return L"";
     static WCHAR szCompression[MAX_PATH];
-    swprintf_s(szCompression, MAX_PATH, L" (compression %s)", strCompression);
+    swprintf_s(szCompression, MAX_PATH, L" (compression %s)", strCompression.c_str());
     return szCompression;
 }
 
