@@ -10,7 +10,11 @@
 
 #include "GetThis.h"
 
-#include "LogFileWriter.h"
+#include <string>
+#include <memory>
+#include <filesystem>
+#include <sstream>
+
 #include "TableOutput.h"
 #include "CsvFileWriter.h"
 #include "ConfigFileReader.h"
@@ -30,10 +34,7 @@
 #include "SystemDetails.h"
 #include "WinApiHelper.h"
 
-#include <string>
-#include <memory>
-#include <filesystem>
-#include <sstream>
+#include "NtfsDataStructures.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -1027,138 +1028,149 @@ HRESULT Main::FindMatchingSamples()
 {
     HRESULT hr = E_FAIL;
 
-    if (FAILED(hr = FileFinder.InitializeYara(config.Yara)))
+    hr = FileFinder.InitializeYara(config.Yara);
+    if (FAILED(hr))
     {
         log::Error(_L_, hr, L"Failed to initialize Yara scan\r\n");
     }
 
-    if (FAILED(
-            hr = FileFinder.Find(
-                config.Locations,
-                [this, &hr](const std::shared_ptr<FileFind::Match>& aMatch, bool& bStop) {
-                    if (aMatch == nullptr)
-                        return;
+    auto onMatchCb = [this, &hr](const std::shared_ptr<FileFind::Match>& aMatch, bool bStop) {
+        _ASSERT(aMatch != nullptr);
 
-                    // finding the corresponding Sample Spec (for limits)
-                    auto aSpecIt = std::find_if(
-                        begin(config.listofSpecs), end(config.listofSpecs), [aMatch](const SampleSpec& aSpec) -> bool {
-                            auto filespecIt = std::find(begin(aSpec.Terms), end(aSpec.Terms), aMatch->Term);
-                            return filespecIt != end(aSpec.Terms);
-                        });
+        if (aMatch->MatchingAttributes.empty())
+        {
+            const std::wstring& name = aMatch->MatchingNames.front().FullPathName;
+            log::Warning(
+                _L_,
+                E_FAIL,
+                L"\"%s\" matched \"%s\" but no data related attribute was associated\r\n",
+                name.c_str(),
+                aMatch->Term->GetDescription().c_str());
+            return;
+        }
 
-                    if (aSpecIt == end(config.listofSpecs))
+        // finding the corresponding Sample Spec (for limits)
+        auto aSpecIt = std::find_if(
+            std::begin(config.listofSpecs), std::end(config.listofSpecs), [aMatch](const SampleSpec& aSpec) -> bool {
+                auto filespecIt = std::find(std::cbegin(aSpec.Terms), std::cend(aSpec.Terms), aMatch->Term);
+                return filespecIt != std::cend(aSpec.Terms);
+            });
+
+        if (aSpecIt == std::end(config.listofSpecs))
+        {
+            log::Error(
+                _L_,
+                hr = E_FAIL,
+                L"Could not find sample spec for match %s\r\n",
+                aMatch->Term->GetDescription().c_str());
+            return;
+        }
+
+        for (const auto& attr : aMatch->MatchingAttributes)
+        {
+            std::wstring strName;
+
+            aMatch->GetMatchFullName(aMatch->MatchingNames.front(), attr, strName);
+
+            DWORDLONG dwlDataSize = attr.DataStream->GetSize();
+            LimitStatus status = SampleLimitStatus(GlobalLimits, aSpecIt->PerSampleLimits, dwlDataSize);
+
+            hr = AddSamplesForMatch(status, *aSpecIt, aMatch);
+            if (FAILED(hr))
+            {
+                log::Error(_L_, hr, L"\tFailed to add %s\r\n", strName.c_str());
+            }
+
+            switch (status)
+            {
+                case NoLimits:
+                case SampleWithinLimits: {
+                    if (hr == S_FALSE)
                     {
-                        log::Error(
-                            _L_,
-                            hr = E_FAIL,
-                            L"Could not find sample spec for match %s\r\n",
-                            aMatch->Term->GetDescription().c_str());
-                        return;
+                        log::Info(_L_, L"\t%s is already collected\r\n", strName.c_str());
                     }
-
-                    const wstring& strFullFileName = aMatch->MatchingNames.front().FullPathName;
-
-                    if (aMatch->MatchingAttributes.empty())
+                    else
                     {
-                        log::Warning(
-                            _L_,
-                            E_FAIL,
-                            L"\"%s\" matched \"%s\" but no data related attribute was associated\r\n",
-                            strFullFileName.c_str(),
-                            aMatch->Term->GetDescription().c_str());
-                        return;
+                        log::Info(_L_, L"\t%s matched (%d bytes)\r\n", strName.c_str(), dwlDataSize);
+
+                        aSpecIt->PerSampleLimits.dwlAccumulatedBytesTotal += dwlDataSize;
+                        aSpecIt->PerSampleLimits.dwAccumulatedSampleCount++;
+                        GlobalLimits.dwlAccumulatedBytesTotal += dwlDataSize;
+                        GlobalLimits.dwAccumulatedSampleCount++;
                     }
+                }
+                break;
 
-                    for (const auto& attr : aMatch->MatchingAttributes)
-                    {
-                        wstring strName;
+                case GlobalSampleCountLimitReached:
+                    log::Info(
+                        _L_,
+                        L"\t%s : Global sample count reached (%d)\r\n",
+                        strName.c_str(),
+                        GlobalLimits.dwMaxSampleCount);
 
-                        aMatch->GetMatchFullName(aMatch->MatchingNames.front(), attr, strName);
+                    GlobalLimits.bMaxSampleCountReached = true;
+                    break;
 
-                        DWORDLONG dwlDataSize = attr.DataStream->GetSize();
-                        LimitStatus status = SampleLimitStatus(GlobalLimits, aSpecIt->PerSampleLimits, dwlDataSize);
+                case GlobalMaxBytesPerSample:
+                    log::Info(
+                        _L_,
+                        L"\t%s : Exceeds global per sample size limit (%I64d)\r\n",
+                        strName.c_str(),
+                        GlobalLimits.dwlMaxBytesPerSample);
 
-                        if (FAILED(hr = AddSamplesForMatch(status, *aSpecIt, aMatch)))
-                        {
-                            log::Error(_L_, hr, L"\tFailed to add %s\r\n", strName.c_str());
-                        }
+                    GlobalLimits.bMaxBytesPerSampleReached = true;
+                    break;
 
-                        switch (status)
-                        {
-                            case NoLimits:
-                            case SampleWithinLimits: {
-                                if (hr == S_FALSE)
-                                {
-                                    log::Info(_L_, L"\t%s is already collected\r\n", strName.c_str());
-                                }
-                                else
-                                {
-                                    log::Info(_L_, L"\t%s matched (%d bytes)\r\n", strName.c_str(), dwlDataSize);
-                                    aSpecIt->PerSampleLimits.dwlAccumulatedBytesTotal += dwlDataSize;
-                                    aSpecIt->PerSampleLimits.dwAccumulatedSampleCount++;
+                case GlobalMaxBytesTotal:
+                    log::Info(
+                        _L_,
+                        L"\t%s : Global total sample size limit reached (%I64d)\r\n",
+                        strName.c_str(),
+                        GlobalLimits.dwlMaxBytesTotal);
 
-                                    GlobalLimits.dwlAccumulatedBytesTotal += dwlDataSize;
-                                    GlobalLimits.dwAccumulatedSampleCount++;
-                                }
-                            }
-                            break;
-                            case GlobalSampleCountLimitReached:
-                                log::Info(
-                                    _L_,
-                                    L"\t%s : Global sample count reached (%d)\r\n",
-                                    strName.c_str(),
-                                    GlobalLimits.dwMaxSampleCount);
-                                GlobalLimits.bMaxSampleCountReached = true;
-                                break;
-                            case GlobalMaxBytesPerSample:
-                                log::Info(
-                                    _L_,
-                                    L"\t%s : Exceeds global per sample size limit (%I64d)\r\n",
-                                    strName.c_str(),
-                                    GlobalLimits.dwlMaxBytesPerSample);
-                                GlobalLimits.bMaxBytesPerSampleReached = true;
-                                break;
-                            case GlobalMaxBytesTotal:
-                                log::Info(
-                                    _L_,
-                                    L"\t%s : Global total sample size limit reached (%I64d)\r\n",
-                                    strName.c_str(),
-                                    GlobalLimits.dwlMaxBytesTotal);
-                                GlobalLimits.bMaxBytesTotalReached = true;
-                                break;
-                            case LocalSampleCountLimitReached:
-                                log::Info(
-                                    _L_,
-                                    L"\t%s : sample count reached (%d)\r\n",
-                                    strName.c_str(),
-                                    aSpecIt->PerSampleLimits.dwMaxSampleCount);
-                                aSpecIt->PerSampleLimits.bMaxSampleCountReached = true;
-                                break;
-                            case LocalMaxBytesPerSample:
-                                log::Info(
-                                    _L_,
-                                    L"\t%s : Exceeds per sample size limit (%I64d)\r\n",
-                                    strName.c_str(),
-                                    aSpecIt->PerSampleLimits.dwlMaxBytesPerSample);
-                                aSpecIt->PerSampleLimits.bMaxBytesPerSampleReached = true;
-                                break;
-                            case LocalMaxBytesTotal:
-                                log::Info(
-                                    _L_,
-                                    L"\t%s : total sample size limit reached (%I64d)\r\n",
-                                    strName.c_str(),
-                                    aSpecIt->PerSampleLimits.dwlMaxBytesTotal);
-                                aSpecIt->PerSampleLimits.bMaxBytesTotalReached = true;
-                                break;
-                            case FailedToComputeLimits:
-                                break;
-                        }
-                    }
-                    return;
-                },
-                false)))
+                    GlobalLimits.bMaxBytesTotalReached = true;
+                    break;
+
+                case LocalSampleCountLimitReached:
+                    log::Info(
+                        _L_,
+                        L"\t%s : sample count reached (%d)\r\n",
+                        strName.c_str(),
+                        aSpecIt->PerSampleLimits.dwMaxSampleCount);
+
+                    aSpecIt->PerSampleLimits.bMaxSampleCountReached = true;
+                    break;
+
+                case LocalMaxBytesPerSample:
+                    log::Info(
+                        _L_,
+                        L"\t%s : Exceeds per sample size limit (%I64d)\r\n",
+                        strName.c_str(),
+                        aSpecIt->PerSampleLimits.dwlMaxBytesPerSample);
+
+                    aSpecIt->PerSampleLimits.bMaxBytesPerSampleReached = true;
+                    break;
+
+                case LocalMaxBytesTotal:
+                    log::Info(
+                        _L_,
+                        L"\t%s : total sample size limit reached (%I64d)\r\n",
+                        strName.c_str(),
+                        aSpecIt->PerSampleLimits.dwlMaxBytesTotal);
+
+                    aSpecIt->PerSampleLimits.bMaxBytesTotalReached = true;
+                    break;
+
+                case FailedToComputeLimits:
+                    break;
+            }
+        }
+    };
+
+    hr = FileFinder.Find(config.Locations, onMatchCb, false);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed while parsing locations\r\n");
+        Log::Error(L"Failed while parsing locations");
     }
 
     return S_OK;
