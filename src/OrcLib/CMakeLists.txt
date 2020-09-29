@@ -539,6 +539,21 @@ set(SRC_INOUT_TEXT
     "Output/Text/Format.h"
     "Output/Text/Tree.h"
     "Output/Text/Tree.cpp"
+    "Output/Text/Fmt/ByteQuantity.h"
+    "Output/Text/Fmt/CryptoHashStream.h"
+    "Output/Text/Fmt/FILE_NAME.h"
+    "Output/Text/Fmt/FILETIME.h"
+    "Output/Text/Fmt/FSVBR.h"
+    "Output/Text/Fmt/FuzzyHashStream.h"
+    "Output/Text/Fmt/GUID.h"
+    "Output/Text/Fmt/Location.h"
+    "Output/Text/Fmt/optional.h"
+    "Output/Text/Fmt/OrcLimits.h"
+    "Output/Text/Fmt/Offset.h"
+    "Output/Text/Fmt/OutputSpec.h"
+    "Output/Text/Fmt/Partition.h"
+    "Output/Text/Fmt/SafeMFTSegmentNumber.h"
+    "Output/Text/Fmt/SYSTEMTIME.h"
 )
 
 source_group(In&Out\\Text FILES ${SRC_INOUT_TEXT})
