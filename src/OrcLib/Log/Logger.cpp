@@ -6,6 +6,11 @@
 // Author(s): fabienfl
 //
 
+//
+// Logger is a wrapper over spdlog that dispatches logging on spdlog::logger.
+// It add some features like warn, error, critical log count. Sink registration.
+//
+
 #include "stdafx.h"
 
 #include "Log/Logger.h"
@@ -35,6 +40,22 @@ std::shared_ptr<Logger::FileSink> CreateFileSink()
     return file;
 }
 
+std::vector<std::shared_ptr<spdlog::logger>> CreateFacilities(
+    const std::shared_ptr<Orc::Logger::ConsoleSink>& consoleSink,
+    const std::shared_ptr<Orc::Logger::FileSink>& fileSink)
+{
+    std::vector<std::shared_ptr<spdlog::logger>> loggers;
+
+    auto defaultLogger = std::make_shared<spdlog::logger>("default", spdlog::sinks_init_list {consoleSink, fileSink});
+    loggers.push_back(defaultLogger);
+
+    auto logFile = std::make_shared<spdlog::logger>("file", fileSink);
+    logFile->set_level(spdlog::level::trace);  // delegate filtering to the sink
+    loggers.push_back(logFile);
+
+    return loggers;
+}
+
 }  // namespace
 
 namespace Orc {
@@ -42,12 +63,12 @@ namespace Orc {
 Logger::Logger()
     : m_consoleSink(::CreateConsoleSink())
     , m_fileSink(::CreateFileSink())
-    , m_logger(new spdlog::logger("default", {m_consoleSink, m_fileSink}))
+    , m_loggers(::CreateFacilities(m_consoleSink, m_fileSink))
     , m_warningCount(0)
     , m_errorCount(0)
     , m_criticalCount(0)
 {
-    spdlog::set_default_logger(m_logger);
+    spdlog::set_default_logger(Logger::Get(Facility::kDefault));
 
     // Default upstream log level filter (sinks will not received filtered logs)
     spdlog::set_level(spdlog::level::debug);
@@ -82,9 +103,11 @@ uint64_t Logger::criticalCount() const
     return m_criticalCount;
 }
 
+// TODO: This feature is only supported by default logger. To be able to use a backtrace with multiple loggers a
+// dedicated sink should be done so all logs would be automatically sorted.
 void Logger::DumpBacktrace()
 {
-    const auto& sinks = m_logger->sinks();
+    const auto& sinks = Get(Facility::kDefault)->sinks();
 
     std::vector<spdlog::level::level_enum> levels;
     for (size_t i = 0; i < sinks.size(); ++i)
@@ -103,33 +126,15 @@ void Logger::DumpBacktrace()
     }
 }
 
-void Logger::OpenOutputFile(const std::filesystem::path& path, std::error_code& ec)
+void Logger::Set(Facility id, std::shared_ptr<spdlog::logger> logger)
 {
-    m_fileSink->Open(path, ec);
-}
+    const auto facilityNum = std::underlying_type_t<Facility>(id);
+    if (m_loggers.size() <= facilityNum)
+    {
+        m_loggers.resize(facilityNum + 1);
+    }
 
-const Logger::FileSink& Logger::fileSink() const
-{
-    assert(m_fileSink);
-    return *m_fileSink;
-}
-
-Logger::FileSink& Logger::fileSink()
-{
-    assert(m_fileSink);
-    return *m_fileSink;
-}
-
-const Logger::ConsoleSink& Logger::consoleSink() const
-{
-    assert(m_consoleSink);
-    return *m_consoleSink;
-}
-
-Logger::ConsoleSink& Logger::consoleSink()
-{
-    assert(m_consoleSink);
-    return *m_consoleSink;
+    m_loggers[facilityNum] = logger;
 }
 
 }  // namespace Orc
