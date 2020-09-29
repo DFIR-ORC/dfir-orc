@@ -26,8 +26,8 @@
 #include "UnittestHelper.h"
 
 using namespace std;
-using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
+namespace test = Microsoft::VisualStudio::CppUnitTestFramework;
 namespace fs = std::filesystem;
 
 using namespace Orc;
@@ -42,11 +42,11 @@ void UnitTestHelper::InitLogFileWriter(const logger& pLog)
     pLog->SetLogCallback([this](const WCHAR* szMsg, DWORD dwSize, DWORD& dwWritten) -> HRESULT {
         auto write_msg = [](std::wstring& acc, const WCHAR* szMsg) {
             if (acc.empty())
-                Logger::WriteMessage(szMsg);
+                test::Logger::WriteMessage(szMsg);
             else
             {
                 acc.append(szMsg);
-                Logger::WriteMessage(acc.c_str());
+                test::Logger::WriteMessage(acc.c_str());
                 acc.resize(0);
             }
         };

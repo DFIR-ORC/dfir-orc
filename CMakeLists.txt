@@ -80,7 +80,9 @@ if(ORC_VCPKG_ROOT)
         boost-logic
         boost-multi-index
         boost-scope-exit
+        boost-stacktrace
         fmt
+        spdlog
         tlsh
         yara
         rapidjson
@@ -90,7 +92,6 @@ if(ORC_VCPKG_ROOT)
     # Tools/rcedit specific dependencies
     list(APPEND _PACKAGES
         cli11
-        spdlog
     )
 
     if(ORC_BUILD_APACHE_ORC)

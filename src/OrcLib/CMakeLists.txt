@@ -550,6 +550,16 @@ set(SRC_INOUT_UPLOAD
 
 source_group(In&Out\\Upload FILES ${SRC_INOUT_UPLOAD})
 
+set(SRC_LOG
+    "Log/ByteStreamSink.h"
+    "Log/FileSink.h"
+    "Log/Logger.cpp"
+    "Log/Logger.h"
+    "Log/MemorySink.h"
+)
+
+source_group(Log FILES ${SRC_LOG})
+
 set(SRC_OBJECT
     "FileDirectory.cpp"
     "FileDirectory.h"
@@ -745,7 +755,9 @@ add_library(OrcLib
         ${SRC_INOUT_TABLEOUTPUT_PARQUET}
         ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
         ${SRC_INOUT_TABLEOUTPUT_SQL}
+        ${SRC_INOUT_TEXT}
         ${SRC_INOUT_UPLOAD}
+        ${SRC_LOG}
         ${SRC_OBJECT}
         ${SRC_REGISTRY}
         ${SRC_RUNNINGCODE}
@@ -759,9 +771,10 @@ add_library(OrcLib
         ${SRC_UTILITIES_WINAPIHELPER}
 )
 
-target_include_directories(OrcLib INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
-
-target_include_directories(OrcLib PRIVATE ${Boost_INCLUDE_DIRS})
+target_include_directories(OrcLib
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+    PRIVATE ${Boost_INCLUDE_DIRS}
+)
 
 target_link_libraries(OrcLib
     PUBLIC

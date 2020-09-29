@@ -46,6 +46,8 @@
 #include <iostream>
 #include <chrono>
 
+#include "Log/Logger.h"
+
 #pragma managed(push, off)
 
 namespace Orc {
@@ -422,6 +424,7 @@ private:
 
 protected:
     mutable logger _L_;
+    Orc::Logger m_logger;
 
     std::vector<std::shared_ptr<ExtensionLibrary>> m_extensions;
     HRESULT LoadCommonExtensions();
