@@ -517,6 +517,22 @@ HRESULT RegFlushKeys()
     return S_OK;
 }
 
+class VolumeReaderInfo : public Orc::VolumeReaderVisitor
+{
+public:
+    VolumeReaderInfo()
+        : m_snapshotId(GUID_NULL)
+    {
+    }
+
+    void Visit(const SnapshotVolumeReader& element) override { m_snapshotId = element.GetSnapshotID(); }
+
+    const GUID& Guid() const { return m_snapshotId; }
+
+private:
+    GUID m_snapshotId;
+};
+
 }  // namespace
 
 Main::Main(logger pLog)
@@ -525,6 +541,50 @@ Main::Main(logger pLog)
     , FileFinder(pLog)
     , ComputerName(::RetrieveComputerName(L"Default", pLog))
 {
+}
+
+std::unique_ptr<Main::SampleRef> Main::CreateSample(
+    const std::shared_ptr<FileFind::Match>& match,
+    const size_t attributeIndex,
+    const SampleSpec& sampleSpec,
+    const std::unordered_set<std::wstring>& givenSampleNames) const
+{
+    const auto& attribute = match->MatchingAttributes[attributeIndex];
+
+    auto sample = std::make_unique<Main::SampleRef>();
+
+    sample->FRN = match->FRN;
+    sample->VolumeSerial = match->VolumeReader->VolumeSerialNumber();
+    sample->Content = sampleSpec.Content;
+    sample->CollectionDate = CollectionDate;
+
+    VolumeReaderInfo volumeInfo;
+    match->VolumeReader->Accept(volumeInfo);
+    sample->SnapshotID = volumeInfo.Guid();
+
+    sample->Matches.push_back(match);
+
+    sample->LimitStatus =
+        ::SampleLimitStatus(GlobalLimits, sampleSpec.PerSampleLimits, attribute.DataStream->GetSize());
+
+    sample->AttributeIndex = attributeIndex;
+    sample->InstanceID = attribute.InstanceID;
+    sample->SampleName = ::CreateUniqueSampleName(
+        sample->Content.Type,
+        sampleSpec.Name,
+        match->MatchingNames[0].FILENAME(),
+        attribute.AttrName,
+        givenSampleNames);
+
+    sample->SourcePath = ::GetMatchFullName(match->MatchingNames.front(), attribute);
+
+    HRESULT hr = ConfigureSampleStreams(*sample);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to configure sample reference for '{}' (code: {:#x})", sample->SampleName, hr);
+    }
+
+    return sample;
 }
 
 HRESULT Main::ConfigureSampleStreams(SampleRef& sample) const

@@ -176,6 +176,8 @@ private:
         std::shared_ptr<FuzzyHashStream> FuzzyHashStream;
         std::shared_ptr<ByteStream> CopyStream;
         GUID SnapshotID;
+        LimitStatus LimitStatus;
+        std::wstring SourcePath;
 
         std::vector<std::shared_ptr<FileFind::Match>> Matches;
 
@@ -195,6 +197,7 @@ private:
             std::swap(SampleSize, Other.SampleSize);
             CollectionDate = Other.CollectionDate;
             OffLimits = Other.OffLimits;
+            std::swap(LimitStatus, Other.LimitStatus);
             std::swap(Matches, Other.Matches);
             AttributeIndex = Other.AttributeIndex;
             InstanceID = Other.InstanceID;
@@ -202,6 +205,7 @@ private:
             std::swap(CopyStream, Other.CopyStream);
             std::swap(Content, Other.Content);
             std::swap(SnapshotID, Other.SnapshotID);
+            std::swap(SourcePath, Other.SourcePath);
         }
 
         bool operator<(const SampleRef& rigth) const
@@ -283,8 +287,17 @@ private:
 
     HRESULT AddSampleRefToCSV(ITableOutput& output, const SampleRef& sampleRef) const;
 
+    std::unique_ptr<SampleRef> CreateSample(
+        const std::shared_ptr<FileFind::Match>& match,
+        const size_t attributeIndex,
+        const SampleSpec& sampleSpec,
+        const std::unordered_set<std::wstring>& givenSampleNames) const;
+
     HRESULT WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, SampleSet& samples) const;
     HRESULT WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, SampleRef& sample) const;
+
+    HRESULT WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, const SampleSet& samples) const;
+    HRESULT WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, const SampleRef& sample) const;
 
     HRESULT WriteSamples(const std::filesystem::path& outputDir, SampleSet& samples) const;
     HRESULT WriteSample(const std::filesystem::path& outputDir, SampleRef& sample) const;
