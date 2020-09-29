@@ -241,35 +241,34 @@ GetMatchFullName(const FileFind::Match::NameMatch& nameMatch, const FileFind::Ma
     return name;
 }
 
-std::wstring
-CreateSampleFileName(const ContentSpec& content, const PFILE_NAME pFileName, const wstring& DataName, DWORD idx)
+const wchar_t* ToString(ContentType contentType)
 {
-    std::wstring sampleFilename;
-    WCHAR tmpName[MAX_PATH];
-    WCHAR* pContent = NULL;
-
-    switch (content.Type)
+    switch (contentType)
     {
         case ContentType::DATA:
-            pContent = L"data";
-            break;
+            return L"data";
         case ContentType::STRINGS:
-            pContent = L"strings";
-            break;
+            return L"strings";
         case ContentType::RAW:
-            pContent = L"raw";
-            break;
+            return L"raw";
         default:
-            pContent = L"";
-            break;
+            return L"";
     }
+}
+
+std::wstring
+CreateSampleFileName(const ContentType contentType, const PFILE_NAME pFileName, const std::wstring& dataName, DWORD idx)
+{
+    std::array<wchar_t, MAX_PATH> name;
+    int len = 0;
 
     if (idx)
     {
-        if (DataName.size())
-            swprintf_s(
-                tmpName,
-                MAX_PATH,
+        if (dataName.size())
+        {
+            len = swprintf_s(
+                name.data(),
+                name.size(),
                 L"%*.*X%*.*X%*.*X_%.*s_%.*s_%u_%s",
                 (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
                 (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
@@ -282,14 +281,16 @@ CreateSampleFileName(const ContentSpec& content, const PFILE_NAME pFileName, con
                 pFileName->ParentDirectory.SegmentNumberLowPart,
                 pFileName->FileNameLength,
                 pFileName->FileName,
-                (UINT)DataName.size(),
-                DataName.c_str(),
+                (UINT)dataName.size(),
+                dataName.c_str(),
                 idx,
-                pContent);
+                Command::GetThis::ToString(contentType).c_str());
+        }
         else
-            swprintf_s(
-                tmpName,
-                MAX_PATH,
+        {
+            len = swprintf_s(
+                name.data(),
+                name.size(),
                 L"%*.*X%*.*X%*.*X__%.*s_%u_%s",
                 (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
                 (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
@@ -303,14 +304,17 @@ CreateSampleFileName(const ContentSpec& content, const PFILE_NAME pFileName, con
                 pFileName->FileNameLength,
                 pFileName->FileName,
                 idx,
-                pContent);
+                Command::GetThis::ToString(contentType).c_str());
+        }
     }
     else
     {
-        if (DataName.size())
-            swprintf_s(
-                tmpName,
-                MAX_PATH,
+        if (dataName.size())
+        {
+
+            len = swprintf_s(
+                name.data(),
+                name.size(),
                 L"%*.*X%*.*X%*.*X__%.*s_%.*s_%s",
                 (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
                 (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
@@ -323,14 +327,15 @@ CreateSampleFileName(const ContentSpec& content, const PFILE_NAME pFileName, con
                 pFileName->ParentDirectory.SegmentNumberLowPart,
                 pFileName->FileNameLength,
                 pFileName->FileName,
-                (UINT)DataName.size(),
-                DataName.c_str(),
-                pContent);
+                (UINT)dataName.size(),
+                dataName.c_str(),
+                Command::GetThis::ToString(contentType).c_str());
+        }
         else
         {
-            swprintf_s(
-                tmpName,
-                MAX_PATH,
+            len = swprintf_s(
+                name.data(),
+                name.size(),
                 L"%*.*X%*.*X%*.*X_%.*s_%s",
                 (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
                 (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
@@ -343,18 +348,26 @@ CreateSampleFileName(const ContentSpec& content, const PFILE_NAME pFileName, con
                 pFileName->ParentDirectory.SegmentNumberLowPart,
                 pFileName->FileNameLength,
                 pFileName->FileName,
-                pContent);
+                Command::GetThis::ToString(contentType).c_str());
         }
     }
 
-    sampleFilename.assign(tmpName);
+    if (len == -1)
+    {
+        return L"filename_error";
+    }
 
-    std::for_each(sampleFilename.begin(), sampleFilename.end(), [=](WCHAR& Item) {
-        if (iswspace(Item) || Item == L':' || Item == L'#')
-            Item = L'_';
+    std::wstring sampleFileName;
+    std::transform(std::cbegin(name), std::cbegin(name) + len, std::back_inserter(sampleFileName), [](wchar_t letter) {
+        if (iswspace(letter) || letter == L':' || letter == L'#')
+        {
+            return L'_';
+        }
+
+        return letter;
     });
 
-    return sampleFilename;
+    return sampleFileName;
 }
 
 LimitStatus SampleLimitStatus(const Limits& globalLimits, const Limits& localLimits, DWORDLONG dataSize)
@@ -1074,7 +1087,7 @@ HRESULT Main::FindMatchingSamples()
                     break;
                 }
 
-                sampleName = ::CreateSampleFileName(sample.Content, filename, attribute.AttrName, dwIdx);
+                sampleName = ::CreateSampleFileName(sample.Content.Type, filename, attribute.AttrName, dwIdx);
                 if (!aSpecIt->Name.empty())
                 {
                     sampleName.insert(0, L"\\");
