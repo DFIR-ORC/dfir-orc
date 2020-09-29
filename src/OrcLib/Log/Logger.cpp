@@ -49,7 +49,7 @@ Logger::Logger()
     // Default upstream log level filter (sinks will not received filtered logs)
     spdlog::set_level(spdlog::level::debug);
 
-    //spdlog::enable_backtrace(64);
+    spdlog::enable_backtrace(512);
 
     spdlog::set_error_handler([](const std::string& msg) {
         std::cerr << msg << std::endl;
@@ -61,6 +61,27 @@ Logger::Logger()
     // The following could output: '[17:49:47.335][I] this is a foobar log'
     // The %^...%$ options specify coloring range, only one is currently supported
     spdlog::set_pattern("%^[%H:%M:%S.%e][%L] %v%$");
+}
+
+void Logger::DumpBacktrace()
+{
+    const auto& sinks = m_logger->sinks();
+
+    std::vector<spdlog::level::level_enum> levels;
+    for (size_t i = 0; i < sinks.size(); ++i)
+    {
+        levels.push_back(sinks[i]->level());
+
+        // set trace level to ensure the stack of logs will be displayed even if configurated level would be too high
+        sinks[i]->set_level(spdlog::level::trace);
+    }
+
+    spdlog::dump_backtrace();
+
+    for (size_t i = 0; i < sinks.size(); ++i)
+    {
+        sinks[i]->set_level(levels[i]);
+    }
 }
 
 void Logger::OpenOutputFile(const std::filesystem::path& path, std::error_code& ec)

@@ -40,6 +40,8 @@ public:
     const ConsoleSink& consoleSink() const;
     ConsoleSink& consoleSink();
 
+    void DumpBacktrace();
+
 private:
     std::shared_ptr<ConsoleSink> m_consoleSink;
     std::shared_ptr<FileSink> m_fileSink;
