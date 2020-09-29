@@ -555,6 +555,23 @@ set(SRC_INOUT_TEXT
     "Output/Text/Fmt/Partition.h"
     "Output/Text/Fmt/SafeMFTSegmentNumber.h"
     "Output/Text/Fmt/SYSTEMTIME.h"
+    "Output/Text/Print.h"
+    "Output/Text/Print/Bool.h"
+    "Output/Text/Print/EmbedSpec.h"
+    "Output/Text/Print/FILE_NAME.h"
+    "Output/Text/Print/Filter.h"
+    "Output/Text/Print/Intentions.h"
+    "Output/Text/Print/Location.h"
+    "Output/Text/Print/Location.cpp"
+    "Output/Text/Print/LocationSet.h"
+    "Output/Text/Print/Ntfs.h"
+    "Output/Text/Print/OutputSpec.h"
+    "Output/Text/Print/Partition.h"
+    "Output/Text/Print/SearchTerm.h"
+    "Output/Text/Print/Tribool.h"
+    "Output/Text/Print/Ntfs/NonResidentAttributeExtent.h"
+    "Output/Text/Print/Ntfs/MFTRecord.h"
+    "Output/Text/Print/Ntfs/MFTRecord.cpp"
 )
 
 source_group(In&Out\\Text FILES ${SRC_INOUT_TEXT})
