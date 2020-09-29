@@ -21,6 +21,7 @@
 #include <string>
 
 #include <boost/logic/tribool.hpp>
+
 #include "ConfigFileReader.h"
 #include "ConfigFileReader.h"
 #include "MFTWalker.h"
@@ -34,6 +35,9 @@
 
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
+
+#include "Archive/Appender.h"
+#include "Archive/7z/Archive7z.h"
 
 #pragma managed(push, off)
 
@@ -162,10 +166,10 @@ public:
         ULONGLONG SampleSize = 0LL;
         FILETIME CollectionDate;
 
-        LONGLONG VolumeSerial;  //   |
-        MFT_SEGMENT_REFERENCE FRN;  //   |--> Uniquely identifies a data stream to collect
-        USHORT InstanceID;  //   |
-        size_t AttributeIndex = 0;  // AttributeIndex because each attribute from the match is a sample
+        LONGLONG VolumeSerial;
+        MFT_SEGMENT_REFERENCE FRN;
+        USHORT InstanceID;
+        size_t AttributeIndex = 0;
         ContentSpec Content;
         std::shared_ptr<CryptoHashStream> HashStream;
         std::shared_ptr<FuzzyHashStream> FuzzyHashStream;
@@ -320,7 +324,7 @@ private:
     const std::wstring ComputerName;
     Limits GlobalLimits;
     std::unordered_set<std::wstring> SampleNames;
-    std::shared_ptr<Orc::ArchiveCreate> m_compressor;
+    std::unique_ptr<Archive::Appender<Archive::Archive7z>> m_compressor;
     std::shared_ptr<Orc::TableOutput::IStreamWriter> m_tableWriter;
 
     HRESULT ConfigureSampleStreams(SampleRef& sample) const;
@@ -335,8 +339,10 @@ private:
 
     using SampleWrittenCb = std::function<void(const SampleRef&, HRESULT hrWrite)>;
 
-    HRESULT
-    WriteSample(ArchiveCreate& compressor, std::unique_ptr<SampleRef> sample, SampleWrittenCb writtenCb = {}) const;
+    HRESULT WriteSample(
+        Archive::Appender<Archive::Archive7z>& compressor,
+        std::unique_ptr<SampleRef> pSample,
+        SampleWrittenCb writtenCb = {}) const;
 
     HRESULT WriteSample(
         const std::filesystem::path& outputDir,
@@ -396,5 +402,7 @@ private:
     HRESULT CloseArchiveOutput();
     HRESULT CloseDirectoryOutput();
 };
+
 }  // namespace Command::GetThis
+
 }  // namespace Orc

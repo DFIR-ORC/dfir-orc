@@ -1,9 +1,10 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2020 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl (ANSSI)
 //
 
 #include "stdafx.h"
@@ -36,7 +37,10 @@
 
 #include "NtfsDataStructures.h"
 
-using namespace std;
+#include "Archive/CompressionLevel.h"
+#include "Archive/Appender.h"
+#include "Archive/7z/Archive7z.h"
+
 namespace fs = std::filesystem;
 
 using namespace Orc;
@@ -50,47 +54,26 @@ enum class CompressorFlags : uint32_t
     kComputeHash = 1
 };
 
-std::shared_ptr<ArchiveCreate>
-CreateCompressor(const OutputSpec& outputSpec, CompressorFlags flags, HRESULT& hr, logger& _L_)
+std::unique_ptr<Archive::Appender<Archive::Archive7z>> CreateCompressor(const OutputSpec& outputSpec)
 {
-    const bool computeHash = (static_cast<uint32_t>(flags) & static_cast<uint32_t>(CompressorFlags::kComputeHash));
+    using namespace Archive;
 
-    auto compressor = ArchiveCreate::MakeCreate(outputSpec.ArchiveFormat, _L_, computeHash);
-    if (compressor == nullptr)
+    std::error_code ec;
+    auto compressionLevel = ToCompressionLevel(outputSpec.Compression, ec);
+    if (ec)
     {
-        hr = E_POINTER;
-        log::Error(_L_, hr, L"Failed calling MakeCreate for archive '%s'\r\n", outputSpec.Path.c_str());
-        return nullptr;
+        return {};
     }
 
-    hr = compressor->InitArchive(outputSpec.Path);
-    if (FAILED(hr))
+    Archive::Archive7z archiver(Archive::Format::k7z, compressionLevel, outputSpec.Password);
+
+    auto appender = Appender<Archive7z>::Create(std::move(archiver), fs::path(outputSpec.Path), 1024 * 1024 * 50, ec);
+    if (ec)
     {
-        log::Error(_L_, hr, L"Failed to initialize archive '%s'\r\n", outputSpec.Path.c_str());
-        return nullptr;
+        return {};
     }
 
-    if (!outputSpec.Password.empty())
-    {
-        hr = compressor->SetPassword(outputSpec.Password);
-        if (FAILED(hr))
-        {
-            log::Error(_L_, hr, L"Failed to set password for '%s'\r\n", outputSpec.Path.c_str());
-            return nullptr;
-        }
-    }
-
-    hr = compressor->SetCompressionLevel(outputSpec.Compression);
-    if (FAILED(hr))
-    {
-        log::Error(_L_, hr, L"Failed to set compression level for '%s'\r\n", outputSpec.Path.c_str());
-        return nullptr;
-    }
-
-    compressor->SetCallback(
-        [&_L_](const OrcArchive::ArchiveItem& item) { log::Info(_L_, L"\t%s\r\n", item.Path.c_str()); });
-
-    return compressor;
+    return appender;
 }
 
 std::shared_ptr<TableOutput::IStreamWriter> CreateCsvWriter(
@@ -129,33 +112,39 @@ std::shared_ptr<TableOutput::IStreamWriter> CreateCsvWriter(
     return csvWriter;
 }
 
-std::shared_ptr<TemporaryStream> CreateLogStream(const std::filesystem::path& out, HRESULT& hr, logger& _L_)
+void CompressTable(
+    const std::unique_ptr<Archive::Appender<Archive::Archive7z>>& compressor,
+    const std::shared_ptr<TableOutput::IStreamWriter>& tableWriter)
 {
-    auto logWriter = std::make_shared<LogFileWriter>(0x1000);
-    logWriter->SetConsoleLog(_L_->ConsoleLog());
-    logWriter->SetDebugLog(_L_->DebugLog());
-    logWriter->SetVerboseLog(_L_->VerboseLog());
+    std::error_code ec;
 
-    auto logStream = std::make_shared<TemporaryStream>(logWriter);
-
-    hr = logStream->Open(out.parent_path(), out.filename(), 5 * 1024 * 1024);
+    HRESULT hr = tableWriter->Flush();
     if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to create temp stream\r\n");
-        return nullptr;
+        Log::Error(L"Failed to flush csv writer (code: {:#x})", hr);
     }
 
-    hr = _L_->LogToStream(logStream);
+    auto tableStream = tableWriter->GetStream();
+    if (tableStream == nullptr || tableStream->GetSize() == 0)
+    {
+        return;
+    }
+
+    hr = tableStream->SetFilePointer(0, FILE_BEGIN, nullptr);
     if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to initialize temp logging\r\n");
-        return nullptr;
+        Log::Error(L"Failed to rewind csv stream (code: {:#x})", hr);
     }
 
-    return logStream;
+    auto item = std::make_unique<Archive::Item>(tableStream, L"GetThis.csv");
+    compressor->Add(std::move(item));
+    if (ec)
+    {
+        Log::Error(L"Failed to add GetThis.csv (code: {:#x})", ec.value());
+    }
 }
 
-std::wstring RetrieveComputerName(const std::wstring& defaultName, logger& _L_)
+std::wstring RetrieveComputerName(const std::wstring& defaultName)
 {
     std::wstring name;
 
@@ -594,6 +583,11 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sample) const
     _ASSERT(sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream->IsOpen() == S_OK);
 
     auto& dataStream = sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream;
+    hr = dataStream->SetFilePointer(0, FILE_BEGIN, NULL);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     // Stream are initially at eof
 
@@ -764,28 +758,29 @@ Main::AddSampleRefToCSV(ITableOutput& output, const Main::SampleRef& sample) con
     return S_OK;
 }
 
-HRESULT
-Main::WriteSample(ArchiveCreate& compressor, std::unique_ptr<SampleRef> pSample, SampleWrittenCb writtenCb) const
+HRESULT Main::WriteSample(
+    Archive::Appender<Archive::Archive7z>& compressor,
+    std::unique_ptr<SampleRef> pSample,
+    SampleWrittenCb writtenCb) const
 {
     auto sample = std::shared_ptr<SampleRef>(std::move(pSample));
 
-    const auto onItemArchivedCb = [this, sample, writtenCb](HRESULT hrArchived) {
+    const auto onItemArchivedCb = [this, sample, writtenCb](const std::error_code& ec) {
         FinalizeHashes(*sample);
 
         HRESULT hrTable = AddSampleRefToCSV(*m_tableWriter, *sample);
         if (FAILED(hrTable))
         {
-            log::Error(
-                _L_,
-                hrTable,
-                L"Failed to add sample %s metadata to csv\r\n",
-                sample->Matches.front()->MatchingNames.front().FullPathName.c_str());
+            Log::Error(
+                L"Failed to add sample '{}' metadata to csv (code: {:#x})",
+                sample->Matches.front()->MatchingNames.front().FullPathName,
+                hrTable);
         }
 
         if (writtenCb)
         {
             HRESULT hr = E_FAIL;
-            if (SUCCEEDED(hrTable) && SUCCEEDED(hrArchived))
+            if (SUCCEEDED(hrTable) && !ec)
             {
                 hr = S_OK;
             }
@@ -796,19 +791,14 @@ Main::WriteSample(ArchiveCreate& compressor, std::unique_ptr<SampleRef> pSample,
 
     if (sample->IsOfflimits())
     {
-        onItemArchivedCb(S_OK);
+        onItemArchivedCb({});
         return S_OK;
     }
 
-    HRESULT hr = compressor.AddStream(
-        sample->SampleName.c_str(), sample->SourcePath.c_str(), sample->CopyStream, onItemArchivedCb);
-    if (FAILED(hr))
-    {
-        log::Error(_L_, hr, L"Failed to add to archive the sample '%s'\r\n", sample->SampleName.c_str());
-        // No need to call 'onItemArchivedCb' as it is 'AddStream' responsability
-    }
+    auto item = std::make_unique<Archive::Item>(sample->CopyStream, sample->SampleName, std::move(onItemArchivedCb));
+    compressor.Add(std::move(item));
 
-    return hr;
+    return S_OK;
 }
 
 HRESULT Main::WriteSample(
@@ -901,14 +891,7 @@ HRESULT Main::InitArchiveOutput()
         }
     }
 
-    ::CreateLogStream(tempDir / L"GetThisLogStream", hr, _L_);
-    if (FAILED(hr))
-    {
-        log::Error(_L_, hr, L"Failed to create log stream\r\n");
-        return hr;
-    }
-
-    m_compressor = ::CreateCompressor(config.Output, CompressorFlags::kNone, hr, _L_);
+    m_compressor = ::CreateCompressor(config.Output);
     if (m_compressor == nullptr)
     {
         Log::Error(L"Failed to create compressor");
@@ -931,60 +914,20 @@ HRESULT Main::CloseArchiveOutput()
     _ASSERT(m_compressor);
     _ASSERT(m_tableWriter);
 
-    m_compressor->FlushQueue();
+    std::error_code ec;
 
-    HRESULT hr = m_tableWriter->Flush();
-    if (FAILED(hr))
+    m_compressor->Flush(ec);
+    if (ec)
     {
-        log::Error(_L_, hr, L"Failed to flush csv writer\r\n");
+        Log::Error(L"Failed to compress '{}' (code: {:#x})", config.Output.Path, ec.value());
     }
 
-    auto tableStream = m_tableWriter->GetStream();
-    if (tableStream && tableStream->GetSize())
+    ::CompressTable(m_compressor, m_tableWriter);
+
+    m_compressor->Close(ec);
+    if (ec)
     {
-        hr = tableStream->SetFilePointer(0, FILE_BEGIN, nullptr);
-        if (FAILED(hr))
-        {
-            log::Error(_L_, hr, L"Failed to rewind csv stream\r\n");
-        }
-
-        hr = m_compressor->AddStream(L"GetThis.csv", L"GetThis.csv", tableStream);
-        if (FAILED(hr))
-        {
-            log::Error(_L_, hr, L"Failed to add GetThis.csv\r\n");
-        }
-    }
-
-    auto logStream = _L_->GetByteStream();
-    _L_->CloseLogToStream(false);
-
-    if (logStream && logStream->GetSize() > 0LL)
-    {
-        hr = logStream->SetFilePointer(0, FILE_BEGIN, nullptr);
-        if (FAILED(hr))
-        {
-            log::Error(_L_, hr, L"Failed to rewind log stream\r\n");
-        }
-
-        hr = m_compressor->AddStream(L"GetThis.log", L"GetThis.log", logStream);
-        if (FAILED(hr))
-        {
-            log::Error(_L_, hr, L"Failed to add GetThis.log\r\n");
-        }
-    }
-
-    hr = m_compressor->Complete();
-    if (FAILED(hr))
-    {
-        log::Error(_L_, hr, L"Failed to complete %s\r\n", config.Output.Path.c_str());
-        return hr;
-    }
-
-    hr = tableStream->Close();
-    if (FAILED(hr))
-    {
-        log::Error(_L_, hr, L"Failed to close csv writer\r\n");
-        return hr;
+        Log::Error(L"Failed to close archive (code: {:#x})", ec.value());
     }
 
     return S_OK;
