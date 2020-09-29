@@ -44,9 +44,12 @@ char const* Exception::what() const
 
     auto [hr, str] = Orc::WideToAnsi(fmt::format(L"Exception: {}", Description));
     if (SUCCEEDED(hr))
+    {
         What.emplace(std::move(str));
+        return What.value().c_str();
+    }
 
-    return What.value_or("Exception raised without further desciption"s).c_str();
+    return "Exception raised without further description";
 }
 
 Exception::~Exception() {}
