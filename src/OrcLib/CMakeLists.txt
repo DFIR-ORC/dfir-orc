@@ -42,6 +42,7 @@ source_group(Command FILES ${SRC_COMMAND})
 
 set(SRC_COMMON
     "OrcLib.h"
+    "OrcLimits.h"
     "targetver.h"
 )
 
