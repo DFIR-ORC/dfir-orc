@@ -281,15 +281,6 @@ set(SRC_INOUT_ARCHIVE
 
 source_group(In&Out\\Archive FILES ${SRC_INOUT_ARCHIVE})
 
-set(SRC_INOUT_ARCHIVE_CABINET
-    "CabCreate.cpp"
-    "CabCreate.h"
-    "CabExtract.cpp"
-    "CabExtract.h"
-)
-
-source_group(In&Out\\Archive\\Cabinet FILES ${SRC_INOUT_ARCHIVE_CABINET})
-
 set(SRC_INOUT_ARCHIVE_SEVENZIP
     "ArchiveExtractCallback.cpp"
     "ArchiveExtractCallback.h"
@@ -726,7 +717,6 @@ add_library(OrcLib
         ${SRC_EXTENSIONLIBRARIES_YARA}
         ${SRC_INOUT}
         ${SRC_INOUT_ARCHIVE}
-        ${SRC_INOUT_ARCHIVE_CABINET}
         ${SRC_INOUT_ARCHIVE_SEVENZIP}
         ${SRC_INOUT_BYTESTREAM}
         ${SRC_INOUT_BYTESTREAM_CRYPTOSTREAM}
@@ -771,7 +761,6 @@ target_link_libraries(OrcLib
         7zip::7zip
         7zip::extras
         psapi.lib
-        Cabinet.lib
         Wintrust.lib
         Crypt32.lib
         fmt::fmt-header-only

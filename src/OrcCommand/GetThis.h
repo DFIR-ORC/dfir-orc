@@ -149,8 +149,6 @@ public:
         Limits limits;
         ContentSpec content;
 
-        std::wstring strExtractCab;
-
         std::wstring YaraSource;
         std::unique_ptr<YaraConfig> Yara;
 

@@ -335,8 +335,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             config.listofSpecs.push_back(aSpec);
                         }
                     }
-                    else if (OutputFileOption(argv[i] + 1, L"Extract", config.strExtractCab))
-                        ;
                     else if (BooleanOption(argv[i] + 1, L"FlushRegistry", config.bFlushRegistry))
                         ;
                     else if (BooleanOption(argv[i] + 1, L"ReportAll", config.bReportAll))
@@ -433,28 +431,6 @@ HRESULT Main::CheckConfiguration()
         config.bAddShadows = false;
 
     config.Locations.Consolidate((bool)config.bAddShadows, FSVBR::FSType::NTFS);
-
-    if (!config.strExtractCab.empty())
-    {
-        if (config.Output.Path.empty())
-        {
-            fs::path aArchivePath(config.strExtractCab);
-            fs::path aDir;
-
-            aDir = aArchivePath.parent_path();
-            aDir /= aArchivePath.stem();
-            fs::create_directory(aDir);
-
-            if (FAILED(hr = GetOutputDir(aDir.wstring().c_str(), config.Output.Path)))
-            {
-                log::Error(_L_, hr, L"Could not use %s as output dir\r\n", L"Default");
-                return hr;
-            }
-            log::Info(_L_, L"Information: output directory omitted, using %s\r\n", config.Output.Path.c_str());
-        }
-
-        return S_OK;
-    }
 
     if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
     {

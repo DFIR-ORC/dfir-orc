@@ -59,7 +59,7 @@ EmbeddedResource::EmbeddedResource(void) {}
 wregex& Orc::EmbeddedResource::ArchRessourceRegEx()
 {
     static wregex g_ArchRessourceRegEx(
-        L"((cab|7z|zip):([a-zA-Z0-9_\\-\\.]*))#([a-zA-Z0-9_\\-\\.]+)\\|([a-zA-Z0-9\\-_\\.]+)");
+        L"((7z|zip):([a-zA-Z0-9_\\-\\.]*))#([a-zA-Z0-9_\\-\\.]+)\\|([a-zA-Z0-9\\-_\\.\\\\/]+)");
     return g_ArchRessourceRegEx;
 }
 
@@ -564,7 +564,7 @@ HRESULT EmbeddedResource::ExtractToFile(
             // Resource is based in an archive... extracting file
             auto fmt = ArchiveExtract::GetArchiveFormat(FormatName);
             if (fmt == ArchiveFormat::Unknown)
-                fmt = ArchiveFormat::Cabinet;
+                fmt = ArchiveFormat::SevenZip;
 
             auto extract = ArchiveExtract::MakeExtractor(fmt, pLog);
 
@@ -653,7 +653,7 @@ EmbeddedResource::ExtractToBuffer(const logger& pLog, const std::wstring& szImag
             // Resource is based in an archive... extracting file
             auto fmt = ArchiveExtract::GetArchiveFormat(FormatName);
             if (fmt == ArchiveFormat::Unknown)
-                fmt = ArchiveFormat::Cabinet;
+                fmt = ArchiveFormat::SevenZip;
 
             auto extract = ArchiveExtract::MakeExtractor(fmt, pLog);
 
@@ -1050,9 +1050,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(
     std::vector<EmbedSpec> archives;
     std::vector<EmbedSpec> binaries;
 
-    static const CHAR cabSignature[] = "MSCF";
     static const CHAR _7zSignature[] = "7z";
-    static const size_t cabSigLen = strlen(cabSignature);
     static const size_t _7zSigLen = strlen(_7zSignature);
 
     for (auto& item : values)
@@ -1063,35 +1061,19 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(
         if (item.Type == EmbedSpec::Buffer)
         {
             bool bArchive = true;
-            if (item.BinaryValue.GetCount() > cabSigLen)
+
+            if (item.BinaryValue.GetCount() > _7zSigLen)
             {
-                for (size_t i = 0; i < cabSigLen; i++)
+                for (size_t i = 0; i < _7zSigLen; i++)
                 {
-                    if (item.BinaryValue.Get<CHAR>(i) != cabSignature[i])
+                    if (item.BinaryValue.Get<CHAR>(i) != _7zSignature[i])
                         bArchive = false;
                 }
                 if (bArchive)
-                    strArchFormat = L"cab";
+                    strArchFormat = L"7z";
             }
             else
                 bArchive = false;
-
-            if (!bArchive)
-            {
-                bArchive = true;
-                if (item.BinaryValue.GetCount() > _7zSigLen)
-                {
-                    for (size_t i = 0; i < _7zSigLen; i++)
-                    {
-                        if (item.BinaryValue.Get<CHAR>(i) != _7zSignature[i])
-                            bArchive = false;
-                    }
-                    if (bArchive)
-                        strArchFormat = L"7z";
-                }
-                else
-                    bArchive = false;
-            }
 
             if (bArchive)
             {

@@ -1122,7 +1122,7 @@ Main::CreateDiskChunkArchiveAndCSV(const std::wstring& pArchivePath, const std::
 
     if (FAILED(hr = compressor->InitArchive(pArchivePath.c_str())))
     {
-        log::Error(_L_, hr, L"Failed to initialize cabinet file %s\r\n", pArchivePath.c_str());
+        log::Error(_L_, hr, L"Failed to initialize archive file %s\r\n", pArchivePath.c_str());
         return {hr, nullptr};
     }
 

@@ -1094,80 +1094,40 @@ HRESULT Main::Run()
 
     GetSystemTimeAsFileTime(&CollectionDate);
 
-    if (config.strExtractCab.empty())
+    try
     {
-        try
+        if (config.bFlushRegistry)
         {
-            if (config.bFlushRegistry)
-            {
-                if (FAILED(hr = RegFlushKeys()))
-                    log::Info(_L_, L"Failed to flush keys (hr = 0x%lx)\r\n", hr);
-            }
-        }
-        catch (...)
-        {
-            log::Error(
-                _L_, E_FAIL, L"GetThis failed during output setup, parameter output, RegistryFlush, exiting\r\n");
-            return E_FAIL;
-        }
-
-        try
-        {
-            if (FAILED(hr = FindMatchingSamples()))
-            {
-                log::Error(_L_, hr, L"\r\nGetThis failed while matching samples\r\n");
-                return hr;
-            }
-            if (FAILED(hr = CollectMatchingSamples(config.Output, Samples)))
-            {
-                log::Error(_L_, hr, L"\r\nGetThis failed while collecting samples\r\n");
-                return hr;
-            }
-        }
-        catch (...)
-        {
-            log::Error(_L_, E_ABORT, L"\r\nGetThis failed during sample collection, terminating cabinet\r\n");
-            wstring strLogFileName(_L_->FileName());
-            _L_->CloseLogFile();
-
-            log::Error(_L_, E_ABORT, L"\r\nGetThis failed during sample collection, terminating cabinet\r\n");
-
-            return E_ABORT;
+            if (FAILED(hr = RegFlushKeys()))
+                log::Info(_L_, L"Failed to flush keys (hr = 0x%lx)\r\n", hr);
         }
     }
-    else
+    catch (...)
     {
-        try
+        log::Error(_L_, E_FAIL, L"GetThis failed during output setup, parameter output, RegistryFlush, exiting\r\n");
+        return E_FAIL;
+    }
+
+    try
+    {
+        if (FAILED(hr = FindMatchingSamples()))
         {
-            log::Info(_L_, L"Decompressing %s to %s\r\n", config.strExtractCab.c_str(), config.Output.Path.c_str());
-
-            auto extract = ArchiveExtract::MakeExtractor(Archive::GetArchiveFormat(config.strExtractCab), _L_, true);
-
-            if (FAILED(hr = extract->Extract(config.strExtractCab.c_str(), config.Output.Path.c_str(), nullptr)))
-            {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Decompressing %s to %s failed\r\n",
-                    config.strExtractCab.c_str(),
-                    config.Output.Path.c_str());
-                return hr;
-            }
-            else
-            {
-                log::Info(
-                    _L_,
-                    L"Decompressing %s to %s completed successfully\r\n",
-                    config.strExtractCab.c_str(),
-                    config.Output.Path.c_str(),
-                    hr);
-            }
+            log::Error(_L_, hr, L"\r\nGetThis failed while matching samples\r\n");
+            return hr;
         }
-        catch (...)
+        if (FAILED(hr = CollectMatchingSamples(config.Output, Samples)))
         {
-            log::Info(_L_, L"\r\nGetThis failed during cab extraction\r\n");
-            return E_FAIL;
+            log::Error(_L_, hr, L"\r\nGetThis failed while collecting samples\r\n");
+            return hr;
         }
     }
+    catch (...)
+    {
+        log::Error(_L_, E_ABORT, L"\r\nGetThis failed during sample collection, terminating archive\r\n");
+        _L_->CloseLogFile();
+
+        return E_ABORT;
+    }
+
     return S_OK;
 }

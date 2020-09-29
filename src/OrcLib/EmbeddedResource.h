@@ -515,7 +515,7 @@ static HRESULT Orc::EmbeddedResource::ExtractToBuffer(
             // Resource is based in an archive... extracting file
             auto fmt = ArchiveExtract::GetArchiveFormat(FormatName);
             if (fmt == ArchiveFormat::Unknown)
-                fmt = ArchiveFormat::Cabinet;
+                fmt = ArchiveFormat::SevenZip;
 
             auto extract = ArchiveExtract::MakeExtractor(fmt, pLog);
 

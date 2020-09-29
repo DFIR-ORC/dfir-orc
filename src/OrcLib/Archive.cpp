@@ -33,14 +33,10 @@ Orc::ArchiveFormat Archive::GetArchiveFormat(const std::wstring_view& filepath)
     if (ext.empty())
         return ArchiveFormat::Unknown;
 
-    if (equalCaseInsensitive(ext, L".cab"))
-        return ArchiveFormat::Cabinet;
     if (equalCaseInsensitive(ext, L".zip"))
         return ArchiveFormat::Zip;
     if (equalCaseInsensitive(ext, L".7z"))
         return ArchiveFormat::SevenZip;
-    if (equalCaseInsensitive(ext, L"cab"))
-        return ArchiveFormat::Cabinet;
     if (equalCaseInsensitive(ext, L"zip"))
         return ArchiveFormat::Zip;
     if (equalCaseInsensitive(ext, L"7z"))
@@ -67,8 +63,6 @@ std::wstring_view Archive::GetArchiveFormatString(Orc::ArchiveFormat format)
     using namespace std::string_view_literals;
     switch (format)
     {
-        case ArchiveFormat::Cabinet:
-            return L"cab"sv;
         case ArchiveFormat::Zip:
             return L"zip"sv;
         case ArchiveFormat::SevenZip:

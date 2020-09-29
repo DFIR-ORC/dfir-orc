@@ -539,14 +539,14 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                         {
                             if (SUCCEEDED(VerifyDirectoryExists(action->Fullpath().c_str())))
                             {
-                                auto cab_request = ArchiveMessage::MakeAddDirectoryRequest(
+                                auto archiveRequest = ArchiveMessage::MakeAddDirectoryRequest(
                                     action->Name(),
                                     action->Fullpath(),
                                     action->MatchPattern(),
                                     true,
                                     0L,
                                     action->DeleteWhenDone());
-                                Concurrency::send(action->ArchiveTarget(), cab_request);
+                                Concurrency::send(action->ArchiveTarget(), archiveRequest);
                             }
                             else
                             {
@@ -593,9 +593,9 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                         {
                             if (SUCCEEDED(VerifyFileExists(action->Fullpath().c_str())))
                             {
-                                auto cab_request = ArchiveMessage::MakeAddFileRequest(
+                                auto archiveRequest = ArchiveMessage::MakeAddFileRequest(
                                     action->Name(), action->Fullpath(), true, 0L, action->DeleteWhenDone());
-                                Concurrency::send(action->ArchiveTarget(), cab_request);
+                                Concurrency::send(action->ArchiveTarget(), archiveRequest);
                             }
                             else
                             {
@@ -644,16 +644,16 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             {
                                 log::Error(_L_, hr, L"Failed to reset stream before adding it to cab!\r\n");
                             }
-                            auto cab_request =
+                            auto archiveRequest =
                                 ArchiveMessage::MakeAddStreamRequest(action->Name(), action->GetStream(), true, 0L);
-                            Concurrency::send(action->ArchiveTarget(), cab_request);
+                            Concurrency::send(action->ArchiveTarget(), archiveRequest);
                         }
                         else
                         {
                             log::Error(
                                 _L_,
                                 E_INVALIDARG,
-                                L"Cab action planned and no Cab agent available, no cab addition for file %s\r\n",
+                                L"Archive action planned and no archive agent available, no cab addition for file %s\r\n",
                                 action->Fullpath().c_str());
                         }
                         break;

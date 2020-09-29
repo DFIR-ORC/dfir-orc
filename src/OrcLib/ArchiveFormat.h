@@ -13,7 +13,6 @@ namespace Orc {
 enum ArchiveFormat
 {
     Unknown = 0,
-    Cabinet,
     SevenZip,
     Zip,
     SevenZipSupported,

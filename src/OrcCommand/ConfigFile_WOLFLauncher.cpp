@@ -14,7 +14,7 @@
 
 // <TempDir>%Temp%\WorkingTemp</TempDir>
 
-// <Execute name="NTFSInfo.exe" resource="cab:#ToolCab|ntfsinfo.exe" />
+// <Execute name="NTFSInfo.exe" resource="7z:#ToolCab|ntfsinfo.exe" />
 
 using namespace Orc;
 

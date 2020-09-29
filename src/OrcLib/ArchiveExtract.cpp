@@ -28,7 +28,6 @@
 #include "EmbeddedResource.h"
 
 #include "ZipExtract.h"
-#include "CabExtract.h"
 
 #include "ParameterCheck.h"
 
@@ -43,8 +42,6 @@ std::shared_ptr<ArchiveExtract> ArchiveExtract::MakeExtractor(ArchiveFormat fmt,
 {
     switch (fmt)
     {
-        case ArchiveFormat::Cabinet:
-            return std::make_shared<CabExtract>(std::move(pLog), bComputeHash);
         case ArchiveFormat::SevenZip:
             return std::make_shared<ZipExtract>(std::move(pLog), bComputeHash);
         case ArchiveFormat::Zip:

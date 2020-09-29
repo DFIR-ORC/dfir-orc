@@ -42,7 +42,7 @@ public:
     TEST_METHOD(BasicCompressionAPI)
     {
         auto compressAPI = ExtensionLibrary::GetLibrary<CompressAPIExtension>(_L_);
-
+        // This is not related to cabinet archive format but on unfinished work about WOF support
         Assert::IsTrue((bool)compressAPI, L"Could not compression API cabinet.dll");
 
         CBinaryBuffer buffer;

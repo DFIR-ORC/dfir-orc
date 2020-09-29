@@ -225,7 +225,7 @@ HRESULT EmbeddedResource::UpdateResources(
                 ArchiveFormat fmt = ArchiveFormat::Unknown;
 
                 if (item.ArchiveFormat.empty())
-                    fmt = ArchiveFormat::Cabinet;
+                    fmt = ArchiveFormat::SevenZip;
                 else
                     fmt = ArchiveCreate::GetArchiveFormat(item.ArchiveFormat);
 

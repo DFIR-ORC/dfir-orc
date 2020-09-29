@@ -152,10 +152,6 @@ using PFILE_DIRECTORY_INFORMATION = FILE_DIRECTORY_INFORMATION*;
 class FileDirectory;
 class ObjectDirectory;
 
-// In&Out/Archive/Cabinet
-using CABCOMPRESSCALLBACK = HRESULT(PVOID pContext, ULONG64 CabbedSoFar, ULONG64 TotalSize);
-class CAB_ITEM;
-class CabExtract;
 // In&Out/Archive/SevenZip
 class ArchiveExtractCallback;
 class ArchiveOpenCallback;

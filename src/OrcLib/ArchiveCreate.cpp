@@ -19,7 +19,6 @@
 #include "XORStream.h"
 
 #include "ZipCreate.h"
-#include "CabCreate.h"
 
 using namespace std;
 
@@ -34,9 +33,6 @@ std::shared_ptr<ArchiveCreate> ArchiveCreate::MakeCreate(ArchiveFormat fmt, logg
         case ArchiveFormat::SevenZip:
         case ArchiveFormat::SevenZipSupported:
             retval = std::shared_ptr<ZipCreate>(new ZipCreate(std::move(pLog), bComputeHash));
-            break;
-        case ArchiveFormat::Cabinet:
-            retval = std::shared_ptr<CabCreate>(new CabCreate(std::move(pLog), bComputeHash));
             break;
         default:
             return nullptr;
