@@ -189,7 +189,7 @@ private:
 
     MFTRecord(const MFTRecord&) = delete;
     MFTRecord(const MFTRecord&&) noexcept = delete;
-    MFTRecord& MFTRecord::operator=(MFTRecord const&) = delete;
+    MFTRecord& operator=(MFTRecord const&) = delete;
 
     MFTRecord() { NtfsSetSegmentNumber(&m_FileReferenceNumber, 0L, 0L); };
 };
