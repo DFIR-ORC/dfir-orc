@@ -69,7 +69,10 @@ void Main::PrintUsage()
         "administer (see online documentation). The top-level options specified here can affect parent and childs "
         "processes.");
 
-    Usage::PrintOutputParameters(usageNode);
+    constexpr std::array kCustomOutputParameters = {
+        Usage::Parameter {"/Outline", "Generic system information file output"}};
+
+    Usage::PrintOutputParameters(usageNode, kCustomOutputParameters);
 
     constexpr std::array kSpecificParameters = {
         Usage::Parameter {
