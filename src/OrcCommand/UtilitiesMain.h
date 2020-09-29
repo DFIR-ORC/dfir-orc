@@ -489,6 +489,10 @@ protected:
     template <typename T>
     void PrintCommonFooter(Orc::Text::Tree<T>& root)
     {
+        PrintValue(root, "Warning(s)", m_logging.logger().warningCount());
+        PrintValue(root, "Error(s)", m_logging.logger().errorCount());
+        PrintValue(root, "Critical error(s)", m_logging.logger().criticalCount());
+
         PrintValue(root, "Finish time", theFinishTime);
 
         // TODO: std::chrono
