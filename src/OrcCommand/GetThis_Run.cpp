@@ -40,6 +40,72 @@ namespace fs = std::filesystem;
 using namespace Orc;
 using namespace Orc::Command::GetThis;
 
+namespace
+{
+std::shared_ptr<TableOutput::IStreamWriter> CreateCsvWriter(
+    const std::filesystem::path& out,
+    const Orc::TableOutput::Schema& schema,
+    const OutputSpec::Encoding& encoding,
+    HRESULT& hr)
+{
+    auto csvStream = std::make_shared<TemporaryStream>();
+
+    hr = csvStream->Open(out.parent_path(), out.filename(), 1 * 1024 * 1024);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to create temp stream (code: {:#x})", hr);
+        return nullptr;
+    }
+
+    auto options = std::make_unique<TableOutput::CSV::Options>();
+    options->Encoding = encoding;
+
+    auto csvWriter = TableOutput::CSV::Writer::MakeNew(std::move(options));
+    hr = csvWriter->WriteToStream(csvStream);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to initialize CSV stream (code: {:#x})", hr);
+        return nullptr;
+    }
+
+    hr = csvWriter->SetSchema(schema);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to set CSV schema (code: {:#x})", hr);
+        return nullptr;
+    }
+
+    return csvWriter;
+}
+
+std::shared_ptr<TemporaryStream> CreateLogStream(const std::filesystem::path& out, HRESULT& hr, logger& _L_)
+{
+    auto logWriter = std::make_shared<LogFileWriter>(0x1000);
+    logWriter->SetConsoleLog(_L_->ConsoleLog());
+    logWriter->SetDebugLog(_L_->DebugLog());
+    logWriter->SetVerboseLog(_L_->VerboseLog());
+
+    auto logStream = std::make_shared<TemporaryStream>(logWriter);
+
+    hr = logStream->Open(out.parent_path(), out.filename(), 5 * 1024 * 1024);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to create temp stream\r\n");
+        return nullptr;
+    }
+
+    hr = _L_->LogToStream(logStream);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to initialize temp logging\r\n");
+        return nullptr;
+    }
+
+    return logStream;
+}
+
+}  // namespace
+
 std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
 Main::CreateOutputDirLogFileAndCSV(const std::wstring& strOutputDir)
 {
@@ -100,72 +166,44 @@ Main::CreateOutputDirLogFileAndCSV(const std::wstring& strOutputDir)
     return {S_OK, std::move(CSV)};
 }
 
-std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
-Main::CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::shared_ptr<ArchiveCreate>& compressor)
+std::pair<HRESULT, std::shared_ptr<TableOutput::IStreamWriter>>
+Main::CreateArchiveLogFileAndCSV(const fs::path& archivePath, const std::shared_ptr<ArchiveCreate>& compressor) const
 {
     HRESULT hr = E_FAIL;
+    const fs::path tempDir = archivePath.parent_path();
 
-    if (pArchivePath.empty())
-        return {E_POINTER, nullptr};
-
-    fs::path tempdir;
-    tempdir = fs::path(pArchivePath).parent_path();
-
-    auto stream_log = std::make_shared<LogFileWriter>(0x1000);
-    stream_log->SetConsoleLog(_L_->ConsoleLog());
-    stream_log->SetDebugLog(_L_->DebugLog());
-    stream_log->SetVerboseLog(_L_->VerboseLog());
-
-    auto logStream = std::make_shared<TemporaryStream>(stream_log);
-
-    if (FAILED(hr = logStream->Open(tempdir.wstring(), L"GetThisLogStream", 5 * 1024 * 1024)))
+    auto logStream = ::CreateLogStream(tempDir / L"GetThisLogStream", hr, _L_);
+    if (logStream == nullptr)
     {
-        log::Error(_L_, hr, L"Failed to create temp stream\r\n");
+        log::Error(_L_, hr, L"Failed to create log stream\r\n");
         return {hr, nullptr};
     }
 
-    if (FAILED(hr = _L_->LogToStream(logStream)))
+    auto csvWriter = ::CreateCsvWriter(tempDir / L"GetThisCsvStream", config.Output.Schema, config.Output.OutputEncoding, hr, _L_);
+    if (csvWriter == nullptr)
     {
-        log::Error(_L_, hr, L"Failed to initialize temp logging\r\n");
+        log::Error(_L_, hr, L"Failed to create log stream\r\n");
         return {hr, nullptr};
     }
 
-    auto csvStream = std::make_shared<TemporaryStream>(_L_);
-
-    if (FAILED(hr = csvStream->Open(tempdir.wstring(), L"GetThisCsvStream", 1 * 1024 * 1024)))
+    hr = compressor->InitArchive(archivePath);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to create temp stream\r\n");
-        return {hr, nullptr};
-    }
-
-    auto options = std::make_unique<TableOutput::CSV::Options>();
-    options->Encoding = config.Output.OutputEncoding;
-
-    auto CSV = TableOutput::CSV::Writer::MakeNew(_L_, std::move(options));
-    if (FAILED(hr = CSV->WriteToStream(csvStream)))
-    {
-        log::Error(_L_, hr, L"Failed to initialize CSV stream\r\n");
-        return {hr, nullptr};
-    }
-
-    CSV->SetSchema(config.Output.Schema);
-
-    if (FAILED(hr = compressor->InitArchive(pArchivePath.c_str())))
-    {
-        log::Error(_L_, hr, L"Failed to initialize archive file %s\r\n", pArchivePath.c_str());
+        log::Error(_L_, hr, L"Failed to initialize archive file %s\r\n", archivePath.c_str());
         return {hr, nullptr};
     }
 
     if (!config.Output.Password.empty())
     {
-        if (FAILED(hr = compressor->SetPassword(config.Output.Password)))
+        hr = compressor->SetPassword(config.Output.Password);
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to set password for archive file %s\r\n", pArchivePath.c_str());
+            log::Error(_L_, hr, L"Failed to set password for archive file %s\r\n", archivePath.c_str());
             return {hr, nullptr};
         }
     }
 
-    return {S_OK, std::move(CSV)};
+    return {S_OK, std::move(csvWriter)};
 }
 
 HRESULT Main::RegFlushKeys()

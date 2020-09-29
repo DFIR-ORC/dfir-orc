@@ -31,6 +31,7 @@
 
 #include "Utils/TypeTraits.h"
 
+#include <filesystem>
 #include <vector>
 #include <set>
 #include <string>
@@ -293,8 +294,10 @@ private:
 
     std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
     CreateOutputDirLogFileAndCSV(const std::wstring& pOutputDir);
-    std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
-    CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::shared_ptr<ArchiveCreate>& compressor);
+
+    std::pair<HRESULT, std::shared_ptr<TableOutput::IStreamWriter>> CreateArchiveLogFileAndCSV(
+        const std::filesystem::path& archivePath,
+        const std::shared_ptr<ArchiveCreate>& compressor) const;
 
     HRESULT CollectMatchingSamples(
         const std::shared_ptr<ArchiveCreate>& compressor,
