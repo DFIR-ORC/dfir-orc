@@ -26,6 +26,8 @@ protected:
 public:
     ImageReader(logger pLog, const WCHAR* szImageFile);
 
+    void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
+
     const WCHAR* ShortVolumeName() { return L"\\"; }
 
     virtual HRESULT LoadDiskProperties(void);

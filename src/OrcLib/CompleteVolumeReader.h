@@ -25,6 +25,8 @@ class ORCLIB_API CompleteVolumeReader : public VolumeReader
 public:
     CompleteVolumeReader(logger pLog, const WCHAR* szLocation);
 
+    void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
+
     HRESULT Seek(ULONGLONG offset);
     HRESULT Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead);
 

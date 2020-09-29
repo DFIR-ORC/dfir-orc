@@ -32,6 +32,8 @@ protected:
 public:
     PhysicalDiskReader(logger pLog, const WCHAR* szLocation);
 
+    void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
+
     const WCHAR* ShortVolumeName() { return L"\\"; }
 
     HRESULT LoadDiskProperties(void);

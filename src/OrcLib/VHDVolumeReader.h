@@ -63,6 +63,8 @@ protected:
 public:
     VHDVolumeReader(logger pLog, const WCHAR* szLocation);
 
+    void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
+
     const WCHAR* ShortVolumeName() { return L"\\"; }
     virtual HANDLE GetDevice() { return INVALID_HANDLE_VALUE; }
 

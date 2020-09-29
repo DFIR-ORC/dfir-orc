@@ -26,6 +26,8 @@ protected:
 public:
     SnapshotVolumeReader(logger pLog, const VolumeShadowCopies::Shadow& Snapshot);
 
+    void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
+
     const WCHAR* ShortVolumeName() { return L"\\"; };
 
     virtual HRESULT LoadDiskProperties(void);

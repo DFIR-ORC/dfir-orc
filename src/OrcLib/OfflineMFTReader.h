@@ -26,6 +26,8 @@ protected:
 public:
     OfflineMFTReader(logger pLog, const WCHAR* szMFTFileName);
 
+    void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
+
     HRESULT
     SetCharacteristics(WCHAR VolumeOriginalName, ULONG ulBytesPerSector, ULONG ulBytesPerCluster, ULONG ulBytesPerFRS);
     HRESULT SetCharacteristics(const CBinaryBuffer& buffer);

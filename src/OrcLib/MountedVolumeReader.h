@@ -23,6 +23,8 @@ public:
     MountedVolumeReader(MountedVolumeReader&&) noexcept = default;
     MountedVolumeReader(logger pLog, const WCHAR* szLocation);
 
+    void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
+
     const WCHAR* ShortVolumeName() { return m_szShortVolumeName; }
     const WCHAR* VolumeName() { return m_szVolumeName; }
     HANDLE GetDevice() { return m_hDevice; }

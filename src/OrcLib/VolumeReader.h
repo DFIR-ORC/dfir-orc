@@ -9,6 +9,7 @@
 
 #include "OrcLib.h"
 
+#include "VolumeReaderVisitor.h"
 #include "DiskExtent.h"
 #include "FSVBR.h"
 
@@ -29,6 +30,8 @@ public:
 
 public:
     VolumeReader(logger pLog, const WCHAR* szLocation);
+
+    virtual void Accept(VolumeReaderVisitor& visitor) const { return visitor.Visit(*this); }
 
     logger GetLogger() { return _L_; }
     virtual const WCHAR* ShortVolumeName() PURE;

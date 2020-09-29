@@ -208,6 +208,7 @@ set(SRC_DISK_VOLUME
     "VHDVolumeReader.h"
     "VolumeReader.cpp"
     "VolumeReader.h"
+    "VolumeReaderVisitor.h"
     "VolumeShadowCopies.cpp"
     "VolumeShadowCopies.h"
     "VssAPIExtension.cpp"
