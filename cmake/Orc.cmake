@@ -38,7 +38,7 @@ add_compile_options(
   # /JMC      # Debug only Just My Code
     /MP       # Multi processor compilation
     /Oy-      # Omit frame pointer
-    /Qpar     # Enable Parallel Code Generation
+   # /Qpar     # Enable Parallel Code Generation
    # /Qspectre-  # No need of mitigation as MS disable theirs when as administrator
     /sdl      # Enable additional security checks
   # /Zi       # Program database for edit and continue (debug only)
