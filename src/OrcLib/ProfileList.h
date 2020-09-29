@@ -9,7 +9,7 @@
 
 #include "OrcLib.h"
 
-#include "OrcResult.h"
+#include "Utils/Result.h"
 
 #include <optional>
 #include <filesystem>
@@ -55,24 +55,24 @@ public:
     std::optional<FILETIME> LocalUnloadTime;
     FILETIME ProfileKeyLastWrite;
 };
-using ProfileResult = stx::Result<std::vector<Profile>, HRESULT>;
+using ProfileResult = Result<std::vector<Profile>>;
 
 class ORCLIB_API ProfileList
 {
 public:
     static ProfileResult GetProfiles();
 
-    static stx::Result<std::wstring, HRESULT> DefaultProfile();
-    static stx::Result<std::filesystem::path, HRESULT> DefaultProfilePath();
+    static Result<std::wstring> DefaultProfile();
+    static Result<std::filesystem::path> DefaultProfilePath();
 
-    static stx::Result<std::wstring, HRESULT> ProfilesDirectory();
-    static stx::Result<std::filesystem::path, HRESULT> ProfilesDirectoryPath();
+    static Result<std::wstring> ProfilesDirectory();
+    static Result<std::filesystem::path> ProfilesDirectoryPath();
 
-    static stx::Result<std::wstring, HRESULT> ProgramData();
-    static stx::Result<std::filesystem::path, HRESULT> ProgramDataPath();
+    static Result<std::wstring> ProgramData();
+    static Result<std::filesystem::path> ProgramDataPath();
 
-    static stx::Result<std::wstring, HRESULT> PublicProfile();
-    static stx::Result<std::filesystem::path, HRESULT> PublicProfilePath();
+    static Result<std::wstring> PublicProfile();
+    static Result<std::filesystem::path> PublicProfilePath();
 };
 
 }  // namespace Orc

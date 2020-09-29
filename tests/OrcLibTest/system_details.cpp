@@ -68,8 +68,8 @@ public:
     TEST_METHOD(PhysicalDrives)
     {
         auto result = SystemDetails::GetPhysicalDrives();
-        Assert::IsTrue(result.is_ok());
-        auto drives = move(result).unwrap();
+        Assert::IsTrue(result.has_value());
+        auto drives = *result;
         Assert::IsFalse(drives.empty());
 
         for (const auto& drive: drives)
@@ -80,8 +80,8 @@ public:
     TEST_METHOD(MountedVolumes)
     {
         auto result = SystemDetails::GetMountedVolumes();
-        Assert::IsTrue(result.is_ok());
-        auto volumes = move(result).unwrap();
+        Assert::IsTrue(result.has_value());
+        auto volumes = *result;
         Assert::IsFalse(volumes.empty());
 
         bool bHasSystem = false;
@@ -102,9 +102,9 @@ public:
     TEST_METHOD(QFE)
     {
         auto result = SystemDetails::GetOsQFEs();
-        Assert::IsTrue(result.is_ok(), L"Failed to retrieve installed OS QFEs");
+        Assert::IsTrue(result.has_value(), L"Failed to retrieve installed OS QFEs");
 
-        auto qfes = move(result).unwrap();
+        auto qfes = *result;
 
         for (const auto& qfe : qfes)
         {
@@ -115,9 +115,9 @@ public:
     {
         auto result = SystemDetails::GetEnvironment();
 
-        Assert::IsTrue(result.is_ok());
+        Assert::IsTrue(result.has_value());
 
-        auto envs = std::move(result).unwrap();
+        auto envs = *result;
         Assert::IsFalse(envs.empty());
         for (const auto& env : envs)
         {
@@ -129,16 +129,15 @@ public:
     {
         auto cmdLine = SystemDetails::GetCmdLine();
         auto cmdLineWMI = SystemDetails::GetCmdLine(GetCurrentProcessId());
-        Assert::IsTrue(cmdLine.is_ok());
-        Assert::IsTrue(cmdLineWMI.is_ok());
-        Assert::AreEqual(std::move(cmdLine).unwrap(), std::move(cmdLineWMI).unwrap());
+        Assert::IsTrue(cmdLine.has_value());
+        Assert::IsTrue(cmdLineWMI.has_value());
+        Assert::AreEqual(*cmdLine, *cmdLineWMI);
 
         auto parent_id = SystemDetails::GetParentProcessId();
-        Assert::IsTrue(parent_id.is_ok());
-        auto parentCmdLine = SystemDetails::GetCmdLine(std::move(parent_id).unwrap());
-        Assert::IsTrue(parentCmdLine.is_ok());
-        Assert::IsFalse(std::move(parentCmdLine).unwrap().empty());
-        
+        Assert::IsTrue(parent_id.has_value());
+        auto parentCmdLine = SystemDetails::GetCmdLine(*parent_id);
+        Assert::IsTrue(parentCmdLine.has_value());
+        Assert::IsFalse((*parentCmdLine).empty());
     }
 
 

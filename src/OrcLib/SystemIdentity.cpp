@@ -121,7 +121,7 @@ Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IOut
         CurrentUser(writer);
 
         auto environ_result = SystemDetails::GetEnvironment();
-        if (environ_result.is_ok())
+        if (environ_result.has_error())
         {
             writer->BeginCollection(L"environment");
             BOOST_SCOPE_EXIT(&writer) { writer->EndCollection(L"environment"); }
@@ -258,7 +258,7 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
 
     {
         auto qfes = SystemDetails::GetOsQFEs();
-        if (qfes.is_ok())
+        if (qfes.has_error())
         {
             writer->BeginCollection(L"qfe");
             for (const auto& qfe : qfes.value())
@@ -282,7 +282,7 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IOu
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
     BOOST_SCOPE_EXIT_END;
     {
-        if (auto result = SystemDetails::GetNetworkAdapters(); result.is_ok())
+        if (auto result = SystemDetails::GetNetworkAdapters(); result.has_error())
         {
             writer->BeginCollection(L"adapter");
             BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"adapter"); }
@@ -384,8 +384,11 @@ HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutp
     BOOST_SCOPE_EXIT_END;
 
     auto result = SystemDetails::GetPhysicalDrives();
-    if (result.is_err())
-        return std::move(result).err();
+    if (result.has_error())
+    {
+        assert(result.error().category() == std::system_category());
+        return result.error().value();
+    }
 
     auto drives = result.value();
     for (const auto& drive : drives)
@@ -415,8 +418,11 @@ HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutp
     BOOST_SCOPE_EXIT_END;
 
     auto result = SystemDetails::GetMountedVolumes();
-    if (result.is_err())
-        return std::move(result).err();
+    if (result.has_error())
+    {
+        assert(result.error().category() == std::system_category());
+        return result.error().value();
+    }
 
     const auto& volumes = result.value();
     for (const auto& volume : volumes)
@@ -456,8 +462,11 @@ HRESULT Orc::SystemIdentity::PhysicalMemory(const std::shared_ptr<StructuredOutp
     BOOST_SCOPE_EXIT_END;
 
     auto result = SystemDetails::GetPhysicalMemory();
-    if (result.is_err())
-        return std::move(result).err();
+    if (result.has_error())
+    {
+        assert(result.error().category() == std::system_category());
+        return result.error().value();
+    }
 
     const auto& mem = result.value();
 
@@ -477,7 +486,10 @@ HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IOutput
 
     auto result = SystemDetails::GetCPUInfo();
     if (!result)
-        return result.err_value();
+    {
+        assert(result.error().category() == std::system_category());
+        return result.error().value();
+    }
 
     const auto& cpus = result.value();
     for (const auto& cpu : cpus)

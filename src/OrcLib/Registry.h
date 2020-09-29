@@ -16,7 +16,7 @@
 
 #include <boost/scope_exit.hpp>
 
-#include "OrcResult.h"
+#include "Utils/Result.h"
 #include "Buffer.h"
 
 #pragma managed(push, off)
@@ -27,31 +27,30 @@ class ORCLIB_API Registry
 {
 public:
     template <typename _T>
-    static stx::Result<_T, HRESULT> Read(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
+    static Result<_T> Read(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
     {
         static_assert(false, "Registry read for your type must be a specialised version");
     }
 };
 
 template <>
-stx::Result<ULONG32, HRESULT> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
 
 template <>
-stx::Result<ULONG64, HRESULT> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
 
 template <>
-stx::Result<ByteBuffer, HRESULT> Orc::Registry::Read<ByteBuffer>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Result<ByteBuffer> Orc::Registry::Read<ByteBuffer>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
 
 template <>
-stx::Result<std::wstring, HRESULT>
-Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
 
 template <>
-stx::Result<std::vector<std::wstring>, HRESULT>
+Result<std::vector<std::wstring>>
 Orc::Registry::Read<std::vector<std::wstring>>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
 
 template <>
-stx::Result<std::filesystem::path, HRESULT>
+Result<std::filesystem::path>
 Orc::Registry::Read<std::filesystem::path>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
 
 }  // namespace Orc

@@ -33,29 +33,29 @@ namespace Orc::Test {
         {
             auto BuildBranch = Registry::Read<std::wstring>(
                 HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\UnknownVersion)", L"BuildBranch");
-            Assert::IsTrue(BuildBranch.is_err());
-            Assert::IsTrue(BuildBranch.err_value() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+            Assert::IsTrue(BuildBranch.has_error());
+            Assert::IsTrue(BuildBranch.error().value() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
         }
         TEST_METHOD(ReadValueNotFound)
         {
             auto BuildBranch = Registry::Read<std::wstring>(
                 HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"UnknownBranch");
-            Assert::IsTrue(BuildBranch.is_err());
-            Assert::IsTrue(BuildBranch.err_value() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+            Assert::IsTrue(BuildBranch.has_error());
+            Assert::IsTrue(BuildBranch.error().value() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
         }
         TEST_METHOD(ReadString)
         {
             auto BuildBranch = Registry::Read<std::wstring>(
                 HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"BuildBranch");
 
-            if (BuildBranch.is_err())
+            if (BuildBranch.has_error())
             {
-                Log::Error(L"Failed to read BuildBranch, test not performed (code: {:#x})", BuildBranch.err_value());
+                Log::Error(L"Failed to read BuildBranch, test not performed (code: {:#x})", BuildBranch.error().value());
                 return;
             }
 
-            Assert::IsTrue(BuildBranch.is_ok());
-            Assert::IsFalse(move(BuildBranch).unwrap().empty());
+            Assert::IsTrue(BuildBranch.has_value());
+            Assert::IsFalse(BuildBranch.value().empty());
         }
 
         TEST_METHOD(ReadDWORD)
@@ -65,15 +65,15 @@ namespace Orc::Test {
                 LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)",
                 L"CurrentMajorVersionNumber");
 
-            if (VersionNumber.is_err())
+            if (VersionNumber.has_error())
             {
                 Log::Error(
-                    L"Failed to read VersionNumber, test not performed (code: {:#x})", VersionNumber.err_value());
+                    L"Failed to read VersionNumber, test not performed (code: {:#x})", VersionNumber.error().value());
                 return;
             }
 
-            Assert::IsTrue(VersionNumber.is_ok());
-            Assert::IsTrue(move(VersionNumber).unwrap() > 5);
+            Assert::IsTrue(VersionNumber.has_value());
+            Assert::IsTrue(VersionNumber.value() > 5);
         }
         TEST_METHOD(ReadQWORD)
         {
@@ -82,15 +82,15 @@ namespace Orc::Test {
                 LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)",
                 L"InstallTime");
 
-            if (InstallTime.is_err())
+            if (InstallTime.has_error())
             {
-                Log::Error(L"Failed to read InstallTime, test not performed (code: {:#x})", InstallTime.err_value());
+                Log::Error(L"Failed to read InstallTime, test not performed (code: {:#x})", InstallTime.error().value());
                 return;
             }
 
-            Assert::IsTrue(InstallTime.is_ok());
+            Assert::IsTrue(InstallTime.has_value());
             ULARGE_INTEGER li;
-            li.QuadPart = move(InstallTime).unwrap();
+            li.QuadPart = *InstallTime;
 
             FILETIME ft;
             ft.dwLowDateTime = li.LowPart;
@@ -104,29 +104,29 @@ namespace Orc::Test {
         {
             auto PathName = Registry::Read<std::filesystem::path>(
                 HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"PathName");
-            if (PathName.is_err())
+            if (PathName.has_error())
             {
-                Log::Error(L"Failed to read PathName, test not performed (code: {:#x})", PathName.err_value());
+                Log::Error(L"Failed to read PathName, test not performed (code: {:#x})", PathName.error().value());
                 return;
             }
 
-            Assert::IsTrue(PathName.is_ok());
-            Assert::IsTrue(std::filesystem::exists(move(PathName).unwrap()));
+            Assert::IsTrue(PathName.has_value());
+            Assert::IsTrue(std::filesystem::exists(PathName.value()));
         }
         TEST_METHOD(ReadBinary)
         {
             auto DigitalProductId = Registry::Read<ByteBuffer>(
                 HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"DigitalProductId4");
 
-            if(DigitalProductId.is_err())
+            if(DigitalProductId.has_error())
             {
                 Log::Error(
                     L"Failed to read DigitalProductId4, test not performed (code: {:#x})",
-                    DigitalProductId.err_value());
+                    DigitalProductId.error().value());
                 return;
             }
-            Assert::IsTrue(DigitalProductId.is_ok());
-            auto buffer = move(DigitalProductId).unwrap();
+            Assert::IsTrue(DigitalProductId.has_value());
+            auto& buffer = *DigitalProductId;
             Assert::IsTrue(buffer.size() > 0);
         }
     };

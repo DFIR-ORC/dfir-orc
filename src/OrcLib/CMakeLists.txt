@@ -16,8 +16,6 @@ find_package(fmt REQUIRED)
 find_package(tlsh CONFIG REQUIRED)
 find_package(VisualStudio REQUIRED)
 find_package(Yara REQUIRED)
-find_package(stx CONFIG REQUIRED)
-
 
 set(SRC_COMMAND
     "CommandAgent.cpp"
@@ -696,7 +694,6 @@ set(SRC_UTILITIES
     "Convert.h"
     "OrcException.cpp"
     "OrcException.h"
-    "OrcResult.h"
     "Flags.cpp"
     "Flags.h"
     "Utils/EnumFlags.h"
@@ -877,7 +874,6 @@ target_link_libraries(OrcLib
         tlsh::tlsh
         VisualStudio::CppUnitTest
         yara::yara
-        stx::stx
         ws2_32.lib
         Iphlpapi.lib
 )

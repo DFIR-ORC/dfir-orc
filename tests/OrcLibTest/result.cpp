@@ -7,7 +7,7 @@
 //
 #include "stdafx.h"
 
-#include "OrcResult.h"
+#include "Utils/Result.h"
 #include "Buffer.h"
 #include "CaseInsensitive.h"
 

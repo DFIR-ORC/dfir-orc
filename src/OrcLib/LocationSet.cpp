@@ -48,12 +48,12 @@ using namespace Orc;
 
 namespace {
 
-stx::Result<std::vector<std::wstring>, HRESULT> GetUserProfiles()
+Orc::Result<std::vector<std::wstring>> GetUserProfiles()
 {
     const auto profiles = ProfileList::GetProfiles();
-    if (!profiles)
+    if (profiles.has_error())
     {
-        return stx::make_err<std::vector<std::wstring>, HRESULT>(profiles.err_value());
+        return profiles.error();
     }
 
     std::vector<wstring> profileLocations;
@@ -62,12 +62,12 @@ stx::Result<std::vector<std::wstring>, HRESULT> GetUserProfiles()
         profileLocations.emplace_back(profile.ProfilePath.c_str());
     }
 
-    return stx::make_ok<std::vector<std::wstring>, HRESULT>(profileLocations);
+    return profileLocations;
 }
 
 std::vector<std::wstring> ExpandOrcStringsLocation(const std::wstring& rawLocation)
 {
-    using HandlerResult = stx::Result<std::vector<std::wstring>, HRESULT>;
+    using HandlerResult = Orc::Result<std::vector<std::wstring>>;
     using Handler = std::function<HandlerResult()>;
 
     // TODO: eventually cache the results, a better choice may be to Expand once
