@@ -537,6 +537,8 @@ source_group(In&Out\\TableOutput\\SQL FILES ${SRC_INOUT_TABLEOUTPUT_SQL})
 
 set(SRC_INOUT_TEXT
     "Output/Text/Format.h"
+    "Output/Text/Tree.h"
+    "Output/Text/Tree.cpp"
 )
 
 source_group(In&Out\\Text FILES ${SRC_INOUT_TEXT})
