@@ -131,13 +131,20 @@ struct underlying_char_type
 };
 
 template <typename T>
+struct underlying_char_type<T, std::enable_if_t<is_back_insert_iterator_v<T>>>
+{
+    // Extract a container type as std::string and check underlying char/wchar_t type
+    using type = typename underlying_char_type<extract_value_type_t<T>>::type;
+};
+
+template <typename T>
 struct underlying_char_type<T, std::enable_if_t<!std::is_class_v<remove_all_t<T>>>>
 {
     using type = remove_all_t<T>;
 };
 
 template <typename T>
-struct underlying_char_type<T, std::enable_if_t<std::is_class_v<remove_all_t<T>>>>
+struct underlying_char_type<T, std::enable_if_t<std::is_class_v<remove_all_t<T>> && !is_back_insert_iterator_v<T>>>
 {
     using ClassT = remove_all_t<T>;
     using CharT = typename ClassT::value_type;
