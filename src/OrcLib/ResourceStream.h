@@ -21,7 +21,7 @@ class ORCLIB_API ResourceStream : public MemoryStream
 {
 
 public:
-    ResourceStream(logger pLog);
+    ResourceStream();
     ~ResourceStream();
 
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };

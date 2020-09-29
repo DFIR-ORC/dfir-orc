@@ -37,8 +37,8 @@ private:
     HRESULT MoveToFileStream(const std::shared_ptr<ByteStream>& aStream);
 
 public:
-    TemporaryStream(logger pLog)
-        : ByteStream(std::move(pLog))
+    TemporaryStream()
+        : ByteStream()
         , m_dwMemThreshold(0L)
     {
     }

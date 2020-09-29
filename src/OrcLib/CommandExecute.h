@@ -22,7 +22,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
 class JobObject;
 
 class ORCLIB_API OnComplete
@@ -131,9 +130,9 @@ public:
 private:
     OnComplete(const OnComplete& other) { DBG_UNREFERENCED_PARAMETER(other); };
     Action m_action;
-    Object m_object;
-
     std::wstring m_Name;
+
+    Object m_object;
     std::wstring m_FullPath;
     std::wstring m_Pattern;  // used to match files in an output directory
 
@@ -159,7 +158,7 @@ public:
     } ProcessStatus;
 
 public:
-    CommandExecute(logger pLog, const std::wstring& Keyword);
+    CommandExecute(const std::wstring& Keyword);
 
     HRESULT AddRedirection(const std::shared_ptr<ProcessRedirect>& redirect);
 
@@ -206,12 +205,10 @@ private:
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
 
-    logger _L_;
-
     std::vector<std::shared_ptr<OnComplete>> m_OnCompleteActions;
 
-    std::vector<std::shared_ptr<ProcessRedirect>> m_Redirections;
     ProcessRedirect::RedirectStatus m_RedirectStatus;
+    std::vector<std::shared_ptr<ProcessRedirect>> m_Redirections;
 
     std::shared_ptr<DebugAgent> m_pDebugger;
 

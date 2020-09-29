@@ -24,7 +24,6 @@ class ORCLIB_API FatFileInfo : public FileInfo
 {
 public:
     FatFileInfo(
-        logger pLog,
         LPCWSTR szComputerName,
         Intentions DefaultIntentions,
         const std::vector<Filter>& Filters,

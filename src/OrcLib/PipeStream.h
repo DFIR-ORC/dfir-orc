@@ -20,8 +20,8 @@ class PipeStream : public ByteStream
 {
 
 public:
-    PipeStream(logger pLog)
-        : ByteStream(std::move(pLog)) {};
+    PipeStream()
+        : ByteStream() {};
 
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
 

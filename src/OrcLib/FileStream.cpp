@@ -12,8 +12,6 @@
 
 #include "Temporary.h"
 
-#include "LogFileWriter.h"
-
 #include "Kernel32Extension.h"
 
 using namespace Orc;
@@ -34,7 +32,7 @@ HRESULT FileStream::Close()
     if (hFile != INVALID_HANDLE_VALUE)
     {
         CloseHandle(hFile);
-        log::Verbose(_L_, L"CloseHandle (hFile=0x%lx)\r\n", hFile);
+        spdlog::trace(L"CloseHandle (hFile: {:p})", hFile);
         hFile = INVALID_HANDLE_VALUE;
     }
     return S_OK;
@@ -111,10 +109,11 @@ __data_entrypoint(File) HRESULT FileStream::OpenFile(
     if (hFile == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"CreateFile(%s) failed\r\n", pwszPath);
+        spdlog::error(L"Failed CreateFile for '{}' (code: {:#x})", pwszPath, hr);
         return hr;
     }
-    log::Verbose(_L_, L"CreateFile(%s) succeeded (hFile=0x%lx)\r\n", pwszPath, hFile);
+
+    spdlog::trace(L"CreateFile({}) succeeded (hFile={:p})", pwszPath, hFile);
     {
         ScopedLock sl(m_cs);
         std::swap(m_hFile, hFile);
@@ -150,7 +149,7 @@ HRESULT FileStream::CopyHandle(HANDLE hFile)
 
     if (hFile == INVALID_HANDLE_VALUE)
     {
-        log::Error(_L_, E_INVALIDARG, L"OpenHandle(%p) failed\r\n", hFile);
+        spdlog::error("Failed CopyHandle (hFile: {:p}, code: {:#x})", hFile, GetLastError());
         return E_INVALIDARG;
     }
     HANDLE hDupHandle = INVALID_HANDLE_VALUE;
@@ -173,9 +172,10 @@ HRESULT FileStream::OpenHandle(HANDLE hFile)
 
     if (hFile == INVALID_HANDLE_VALUE)
     {
-        log::Error(_L_, E_INVALIDARG, L"OpenHandle(%p) failed\r\n", hFile);
+        spdlog::error("Failed OpenHandle (hFile: {:p}, code: {:#x})", hFile, HRESULT_FROM_WIN32(GetLastError()));
         return E_INVALIDARG;
     }
+
     {
         ScopedLock sl(m_cs);
         std::swap(m_hFile, hFile);
@@ -190,11 +190,11 @@ HRESULT FileStream::Duplicate(const FileStream& other)
 
     if (other.m_hFile == INVALID_HANDLE_VALUE)
     {
-        log::Error(_L_, E_INVALIDARG, L"OpenHandle(%p) failed\r\n", other.m_hFile);
+        spdlog::error("Failed Duplicate (hFile: {:p}, code: {:#x})", other.m_hFile, HRESULT_FROM_WIN32(GetLastError()));
         return E_INVALIDARG;
     }
 
-    const auto pk32 = ExtensionLibrary::GetLibrary<Kernel32Extension>(_L_, true);
+    const auto pk32 = ExtensionLibrary::GetLibrary<Kernel32Extension>(true);
 
     HANDLE hFile = INVALID_HANDLE_VALUE;
     if ((hFile = pk32->ReOpenFile(other.m_hFile, GENERIC_READ, FILE_SHARE_READ, FILE_FLAG_SEQUENTIAL_SCAN))
@@ -239,11 +239,12 @@ __data_entrypoint(File) HRESULT FileStream::Read(
     DWORD dwBytesRead = 0;
     if (!ReadFile(m_hFile, pBuffer, (DWORD)cbBytesToRead, &dwBytesRead, NULL))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"ReadFile failed\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed ReadFile (code: {:#x})", hr);
         return hr;
     }
 
-    log::Verbose(_L_, L"ReadFile read %d bytes (hFile=0x%lx)\r\n", dwBytesRead, m_hFile);
+    spdlog::trace(L"ReadFile read {} bytes (hFile: {:p})", dwBytesRead, m_hFile);
 
     *pcbBytesRead = dwBytesRead;
     return S_OK;
@@ -267,17 +268,18 @@ FileStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbByt
     DWORD cbBytesWritten = 0;
     if (cbBytes > MAXDWORD)
     {
-        log::Error(_L_, E_INVALIDARG, L"Too many bytes to Write\r\n");
+        spdlog::error("Write: Too many bytes to Write");
         return E_INVALIDARG;
     }
 
     if (!WriteFile(m_hFile, pBuffer, static_cast<DWORD>(cbBytes), &cbBytesWritten, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"WriteFile failed\r\n");
+        spdlog::error("Failed WriteFile (code: {:#x})", hr);
         return hr;
     }
-    log::Verbose(_L_, L"WriteFile %d bytes succeeded (hFile=0x%lx)\r\n", cbBytesWritten, m_hFile);
+
+    spdlog::trace("WriteFile {} bytes succeeded (hFile: {:p})", cbBytesWritten, m_hFile);
     *pcbBytesWritten = cbBytesWritten;
     return S_OK;
 }
@@ -298,7 +300,7 @@ FileStream::SetFilePointer(__in LONGLONG lDistanceToMove, __in DWORD dwMoveMetho
     if (!SetFilePointerEx(m_hFile, liDistanceToMove, &liNewFilePointer, dwMoveMethod))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"SetFilePointerEx failed\r\n");
+        spdlog::error("Failed SetFilePointerEx (code: {:#x})", hr);
         return hr;
     }
 
@@ -306,7 +308,8 @@ FileStream::SetFilePointer(__in LONGLONG lDistanceToMove, __in DWORD dwMoveMetho
     {
         *pqwCurrPointer = liNewFilePointer.QuadPart;
     }
-    log::Verbose(_L_, L"SetFilePointer succeeded (hFile=0x%lx, pointer=%I64x)\r\n", m_hFile, liNewFilePointer.QuadPart);
+
+    spdlog::trace("SetFilePointer succeeded (hFile: {:p}, pointer: {:#x})", m_hFile, liNewFilePointer.QuadPart);
     return S_OK;
 }
 
@@ -324,10 +327,12 @@ ULONG64 FileStream::GetSize()
 
     if (!GetFileSizeEx(m_hFile, &Size))
     {
-        log::Error(_L_, HRESULT_FROM_WIN32(GetLastError()), L"GetFileSizeEx failed\r\n");
+
+        spdlog::error("Failed GetFileSizeEx (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
         return ULONG64(-1);
     }
-    log::Verbose(_L_, L"GetFileSizeEx succeeded (hFile=0x%lx, filesize=%I64x)\r\n", m_hFile, Size.QuadPart);
+
+    spdlog::trace("GetFileSizeEx succeeded (hFile: {:p}, filesize: {})", m_hFile, Size.QuadPart);
     return Size.QuadPart;
 }
 
@@ -341,7 +346,7 @@ HRESULT FileStream::SetSize(ULONG64 ullNewSize)
     if (!(SetFilePointerEx(m_hFile, liDistanceToMove, &liCurrentFilePointer, FILE_CURRENT)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"SetFilePointerEx failed\r\n");
+        spdlog::error(L"Failed SetFilePointerEx (code: {:#x})", hr);
         return hr;
     }
 
@@ -351,7 +356,7 @@ HRESULT FileStream::SetSize(ULONG64 ullNewSize)
     if (!(SetFilePointerEx(m_hFile, liNewFileEnd, &liCurrentFilePointer, FILE_BEGIN)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"SetFilePointerEx failed\r\n");
+        spdlog::error(L"Failed SetFilePointerEx (code: {:#x})", hr);
         return hr;
     }
 
@@ -359,7 +364,7 @@ HRESULT FileStream::SetSize(ULONG64 ullNewSize)
     if (!(SetEndOfFile(m_hFile)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"SetEndOfFile failed\r\n");
+        spdlog::error(L"Failed SetEndOfFile (code: {:#x})", hr);
         return hr;
     }
 
@@ -367,7 +372,7 @@ HRESULT FileStream::SetSize(ULONG64 ullNewSize)
     if (!(SetFilePointerEx(m_hFile, liCurrentFilePointer, &liCurrentFilePointer, FILE_BEGIN)))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"SetFilePointerEx failed\r\n");
+        spdlog::error(L"Failed SetFilePointerEx (code: {:#x})", hr);
         return hr;
     }
     return S_OK;

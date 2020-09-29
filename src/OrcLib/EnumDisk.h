@@ -13,8 +13,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API EnumDisk
 {
 public:
@@ -27,15 +25,11 @@ public:
     };
 
 public:
-    EnumDisk(logger pLog)
-        : _L_(std::move(pLog)) {};
-
     HRESULT EnumerateDisks(std::vector<PhysicalDisk>& disks, const GUID guidDeviceClass = GUID_DEVINTERFACE_DISK);
 
     ~EnumDisk();
 
 private:
-    logger _L_;
 
     HRESULT GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk, const GUID guidDeviceClass);
 };

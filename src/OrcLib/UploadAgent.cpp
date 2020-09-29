@@ -11,8 +11,6 @@
 
 #include "Robustness.h"
 
-#include "LogFileWriter.h"
-
 using namespace Orc;
 
 void UploadAgent::run()
@@ -26,33 +24,36 @@ void UploadAgent::run()
     {
         switch (request->GetRequest())
         {
-            case UploadMessage::UploadFile:
-            {
+            case UploadMessage::UploadFile: {
                 if (bIsReadyToBeDone)
                     break;  // no new upload is accepted
 
                 UploadNotification::Notification notification;
 
-                if (FAILED(hr = UploadFile(request->LocalName(), request->RemoteName(), request->GetDeleteWhenDone())))
+                hr = UploadFile(request->LocalName(), request->RemoteName(), request->GetDeleteWhenDone(), request);
+                if (FAILED(hr))
                 {
                     notification = UploadNotification::MakeFailureNotification(
+                        request,
                         UploadNotification::FileAddition,
-                        hr,
                         request->LocalName(),
+                        request->RemoteName(),
+                        hr,
                         L"Failed to upload file to destination server");
                 }
                 else
                 {
                     notification = UploadNotification::MakeSuccessNotification(
-                        UploadNotification::FileAddition, request->LocalName());
+                        request, UploadNotification::FileAddition, request->LocalName(), request->RemoteName());
                 }
 
                 if (notification)
+                {
                     SendResult(notification);
+                }
             }
             break;
-            case UploadMessage::UploadDirectory:
-            {
+            case UploadMessage::UploadDirectory: {
                 if (bIsReadyToBeDone)
                     break;  // no new upload is accepted
 
@@ -75,12 +76,16 @@ void UploadAgent::run()
                 if (INVALID_HANDLE_VALUE == hFind)
                 {
                     auto notification = UploadNotification::MakeFailureNotification(
+                        request,
                         UploadNotification::DirectoryAddition,
-                        HRESULT_FROM_WIN32(GetLastError()),
                         request->LocalName(),
+                        request->RemoteName(),
+                        HRESULT_FROM_WIN32(GetLastError()),
                         L"FindFile failed");
                     if (notification)
+                    {
                         SendResult(notification);
+                    }
                 }
                 else
                 {
@@ -100,22 +105,27 @@ void UploadAgent::run()
                             strRemoteName.append(ffd.cFileName);
                             UploadNotification::Notification notification;
 
-                            if (FAILED(hr = UploadFile(strFileName, strRemoteName, request->GetDeleteWhenDone())))
+                            hr = UploadFile(strFileName, strRemoteName, request->GetDeleteWhenDone(), request);
+                            if (FAILED(hr))
                             {
                                 notification = UploadNotification::MakeFailureNotification(
+                                    request,
                                     UploadNotification::FileAddition,
-                                    hr,
                                     strFileName,
+                                    strRemoteName,
+                                    hr,
                                     L"Failed to upload file to destination server");
                             }
                             else
                             {
                                 notification = UploadNotification::MakeSuccessNotification(
-                                    UploadNotification::FileAddition, strFileName);
+                                    request, UploadNotification::FileAddition, strFileName, strRemoteName);
                             }
 
                             if (notification)
+                            {
                                 SendResult(notification);
+                            }
                         }
                         else
                         {
@@ -125,74 +135,87 @@ void UploadAgent::run()
 
                     if (!FindClose(hFind))
                     {
-                        log::Warning(
-                            _L_,
-                            HRESULT_FROM_WIN32(GetLastError()),
-                            L"Failed to close FindFile while adding directory to copy\r\n");
+                        hr = HRESULT_FROM_WIN32(GetLastError());
+                        spdlog::warn("Failed to close FindFile while adding directory to copy (code: {:#x})", hr);
                     }
                 }
             }
             break;
-            case UploadMessage::UploadStream:
-            {
+            case UploadMessage::UploadStream: {
                 if (bIsReadyToBeDone)
+                {
                     break;  // no new upload is accepted
+                }
 
                 UploadNotification::Notification notification;
 
                 if (notification)
+                {
                     SendResult(notification);
+                }
             }
             break;
-            case UploadMessage::RefreshJobStatus:
-            {
+            case UploadMessage::RefreshJobStatus: {
                 if (IsComplete(bIsReadyToBeDone) == S_OK)
                 {
                     UploadNotification::Notification notification;
-                    if (FAILED(hr = UnInitialize()))
+                    hr = UnInitialize();
+                    if (FAILED(hr))
                     {
                         notification = UploadNotification::MakeFailureNotification(
+                            request,
                             UploadNotification::JobComplete,
+                            request->LocalName(),
+                            request->RemoteName(),
                             hr,
-                            request->JobName(),
-                            L"Failed to unitialize upload agent");
+                            L"Failed to uninitialize upload agent");
                     }
                     else
                     {
                         notification = UploadNotification::MakeSuccessNotification(
-                            UploadNotification::JobComplete, request->JobName());
+                            request, UploadNotification::JobComplete, request->LocalName(), request->RemoteName());
                     }
+
                     if (notification)
+                    {
                         SendResult(notification);
+                    }
+
                     done();
                     return;
                 }
             }
             break;
-            case UploadMessage::Cancel:
-            {
+            case UploadMessage::Cancel: {
                 UploadNotification::Notification notification;
                 if (FAILED(Cancel()))
                 {
                     notification = UploadNotification::MakeFailureNotification(
-                        UploadNotification::Cancelled, hr, request->JobName(), L"Failed to cancel current BITS jobs");
+                        request,
+                        UploadNotification::Cancelled,
+                        request->LocalName(),
+                        request->RemoteName(),
+                        hr,
+                        L"Failed to cancel current BITS jobs");
                 }
                 else
                 {
-                    notification =
-                        UploadNotification::MakeSuccessNotification(UploadNotification::Cancelled, request->JobName());
+                    notification = UploadNotification::MakeSuccessNotification(
+                        request, UploadNotification::Cancelled, request->LocalName(), request->RemoteName());
                 }
             }
             break;
-            case UploadMessage::Complete:
-            {
+            case UploadMessage::Complete: {
                 if (bIsReadyToBeDone)
+                {
                     break;  // ready already
+                }
 
                 bIsReadyToBeDone = true;
 
+                auto refreshRequest = UploadMessage::MakeRefreshJobStatusRequest();
                 m_RefreshTimer = std::make_unique<Concurrency::timer<UploadMessage::Message>>(
-                    1000, UploadMessage::MakeRefreshJobStatusRequest(), &m_requestTarget, true);
+                    1000, refreshRequest, &m_requestTarget, true);
                 m_RefreshTimer->start();
             }
             break;
@@ -206,7 +229,6 @@ void UploadAgent::run()
 #include "BITSAgent.h"
 
 std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
-    const logger& pLog,
     const OutputSpec::Upload& uploadSpec,
     UploadMessage::ISource& msgSource,
     UploadMessage::ITarget& msgTarget,
@@ -217,21 +239,19 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
 
     switch (uploadSpec.Method)
     {
-        case OutputSpec::UploadMethod::FileCopy:
-        {
-            retval = std::make_shared<CopyFileAgent>(pLog, msgSource, msgTarget, target);
+        case OutputSpec::UploadMethod::FileCopy: {
+            retval = std::make_shared<CopyFileAgent>(msgSource, msgTarget, target);
             if (!retval)
                 return nullptr;
             if (FAILED(hr = retval->SetConfiguration(uploadSpec)))
             {
-                log::Error(pLog, hr, L"Failed to configure CopyFileAgent\r\n");
+                spdlog::error(L"Failed to configure CopyFileAgent (code: {:#x})", hr);
                 return nullptr;
             }
         }
         break;
-        case OutputSpec::UploadMethod::BITS:
-        {
-            retval = std::make_shared<BITSAgent>(pLog, msgSource, msgTarget, target);
+        case OutputSpec::UploadMethod::BITS: {
+            retval = std::make_shared<BITSAgent>(msgSource, msgTarget, target);
             if (!retval)
                 return nullptr;
 
@@ -239,7 +259,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
             {
                 if (FAILED(hr = retval->SetConfiguration(uploadSpec)))
                 {
-                    log::Error(pLog, hr, L"Failed to configure CopyFileAgent\r\n");
+                    spdlog::error(L"Failed to configure CopyFileAgent");
                     return nullptr;
                 }
             }
@@ -249,13 +269,13 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
                 newConfig.Method = OutputSpec::UploadMethod::FileCopy;
                 if (FAILED(hr = retval->SetConfiguration(newConfig)))
                 {
-                    log::Error(pLog, hr, L"Failed to configure CopyFileAgent\r\n");
+                    spdlog::error(L"Failed to configure CopyFileAgent (code: {:#x})", hr);
                     return nullptr;
                 }
             }
             else
             {
-                log::Error(pLog, hr, L"Failed to configure BITS Agent : incompatible BITS version installed\r\n");
+                spdlog::error(L"Failed to configure BITS Agent: incompatible BITS version installed");
                 return nullptr;
             }
         }
@@ -266,7 +286,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
 
     if (FAILED(hr = retval->Initialize()))
     {
-        log::Error(pLog, hr, L"Failed to initialize CopyFileAgent\r\n");
+        spdlog::error(L"Failed to initialize CopyFileAgent (code: {:#x})", hr);
         return nullptr;
     }
     return retval;

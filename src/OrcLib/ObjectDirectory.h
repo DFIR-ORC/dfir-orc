@@ -107,20 +107,11 @@ public:
             std::swap(LinkCreationTime, lnkcreationtime);
         }
 
-        HRESULT Write(const logger& pLog, ITableOutput& output, const std::wstring& strDescription) const;
-        HRESULT Write(
-            const logger& pLog,
-            IStructuredOutput& pWriter,
-            LPCWSTR szElement = L"object") const;
+        HRESULT Write(ITableOutput& output, const std::wstring& strDescription) const;
+        HRESULT Write(IStructuredOutput& pWriter, LPCWSTR szElement = L"object") const;
     };
 
-private:
-    logger _L_;
-
 public:
-    ObjectDirectory(logger pLog)
-        : _L_(std::move(pLog)) {};
-
     static ObjectType GetObjectType(const UNICODE_STRING& type);
     static ObjectType GetObjectType(const std::wstring& type);
 

@@ -7,7 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "DiskExtent.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -18,19 +17,16 @@ namespace Orc::Test {
 TEST_CLASS(DiskExtentTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
-    TEST_METHOD(DiskExtentBasicTest) {{CDiskExtent diskExtent(_L_);
+    TEST_METHOD(DiskExtentBasicTest) {{CDiskExtent diskExtent;
     Assert::IsTrue(diskExtent.GetName().empty());
     Assert::IsTrue(diskExtent.GetHandle() == INVALID_HANDLE_VALUE);
     Assert::IsTrue(diskExtent.GetLogicalSectorSize() == 0);
@@ -39,7 +35,7 @@ public:
 }
 
 {
-    CDiskExtent diskExtent(_L_, L"Test");
+    CDiskExtent diskExtent(L"Test");
     Assert::IsTrue(!std::wcscmp(diskExtent.GetName().c_str(), L"Test"));
     Assert::IsTrue(diskExtent.GetHandle() == INVALID_HANDLE_VALUE);
     Assert::IsTrue(diskExtent.GetLogicalSectorSize() == 0);
@@ -48,7 +44,7 @@ public:
 }
 
 {
-    CDiskExtent diskExtent(_L_, L"Test", 0x10000, 0x10000, 0x200);
+    CDiskExtent diskExtent(L"Test", 0x10000, 0x10000, 0x200);
     CheckExpectedDiskExtent(diskExtent);
 
     {
@@ -57,7 +53,7 @@ public:
     }
 
     {
-        CDiskExtent diskExtent2(_L_);  // operator =
+        CDiskExtent diskExtent2;  // operator =
         diskExtent2 = diskExtent;
         CheckExpectedDiskExtent(diskExtent2);
     }
@@ -67,7 +63,7 @@ public:
 
         Functor functor = [](CDiskExtent diskExtent) { return diskExtent; };
 
-        CDiskExtent diskExtent2(_L_);
+        CDiskExtent diskExtent2;
         diskExtent2 = functor(diskExtent);  // move assignment operator
         CheckExpectedDiskExtent(diskExtent2);
     }

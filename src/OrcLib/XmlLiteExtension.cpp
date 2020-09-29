@@ -30,7 +30,7 @@ HRESULT XmlLiteExtension::Initialize()
     return S_OK;
 }
 
-HRESULT XmlLiteExtension::LogError(const logger& pLog, HRESULT err, IXmlReader* pReader)
+HRESULT XmlLiteExtension::LogError(HRESULT err, IXmlReader* pReader)
 {
     LPCWSTR szErrMessage = NULL;
 
@@ -290,11 +290,12 @@ HRESULT XmlLiteExtension::LogError(const logger& pLog, HRESULT err, IXmlReader* 
         pReader->GetLineNumber(&dwLineNumber);
         pReader->GetLinePosition(&dwLinePosition);
 
-        log::Error(pLog, err, L"XmlLite: %s (line=%d,pos=%d)\r\n", szErrMessage, dwLineNumber, dwLinePosition);
+        spdlog::error(
+            L"XmlLite: '{}' (line: {}, pos: {} code: {:#x})", szErrMessage, dwLineNumber, dwLinePosition, err);
     }
     else
     {
-        log::Error(pLog, err, L"XmlLite: %s\r\n", szErrMessage);
+        spdlog::error(L"XmlLite: {} (code: {:#x})", szErrMessage, err);
     }
     return S_OK;
 }

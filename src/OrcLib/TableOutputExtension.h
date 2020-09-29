@@ -21,8 +21,8 @@ class TableOutputExtension : public ExtensionLibrary
     friend class ExtensionLibrary;
 
 public:
-    TableOutputExtension(logger pLog, std::wstring strFormat, std::wstring strX86Lib, std::wstring strX64Lib)
-        : ExtensionLibrary(std::move(pLog), std::move(strFormat), std::move(strX86Lib), std::move(strX64Lib)) {};
+    TableOutputExtension(std::wstring strFormat, std::wstring strX86Lib, std::wstring strX64Lib)
+        : ExtensionLibrary(std::move(strFormat), std::move(strX86Lib), std::move(strX64Lib)) {};
 
     bool IsStreamTableOutput() { return m_StreamTableFactory != nullptr; }
     bool IsConnectionTableOutput() { return m_ConnectTableFactory != nullptr; }
@@ -48,12 +48,12 @@ public:
     virtual ~TableOutputExtension();
 
 private:
-    std::shared_ptr<TableOutput::IConnection>(
-        WINAPI* m_ConnectionFactory)(const logger& pLog, std::unique_ptr<TableOutput::Options>&& options);
-    std::shared_ptr<TableOutput::IConnectWriter>(
-        WINAPI* m_ConnectTableFactory)(const logger& pLog, std::unique_ptr<TableOutput::Options>&& options);
-    std::shared_ptr<TableOutput::IStreamWriter>(
-        WINAPI* m_StreamTableFactory)(const logger& pLog, std::unique_ptr<TableOutput::Options>&& options);
+    std::shared_ptr<TableOutput::IConnection>(WINAPI* m_ConnectionFactory)(
+        std::unique_ptr<TableOutput::Options>&& options);
+    std::shared_ptr<TableOutput::IConnectWriter>(WINAPI* m_ConnectTableFactory)(
+        std::unique_ptr<TableOutput::Options>&& options);
+    std::shared_ptr<TableOutput::IStreamWriter>(WINAPI* m_StreamTableFactory)(
+        std::unique_ptr<TableOutput::Options>&& options);
 };
 }  // namespace Orc
 

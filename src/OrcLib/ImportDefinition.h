@@ -13,7 +13,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
 class ConfigItem;
 
 namespace Command::ImportData {
@@ -66,13 +65,10 @@ public:
     };
 
 private:
-    logger _L_;
-
     std::vector<ImportDefinition::Item> m_itemDefinitions;
 
 public:
-    ImportDefinition(logger pLog)
-        : _L_(std::move(pLog)) {};
+    ImportDefinition() noexcept = default;
     ImportDefinition(ImportDefinition&& other) noexcept = default;
     ImportDefinition(const ImportDefinition& other) = default;
 

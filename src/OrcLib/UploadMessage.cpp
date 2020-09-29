@@ -8,25 +8,34 @@
 #include "stdafx.h"
 #include "UploadMessage.h"
 
-using namespace std;
-
 using namespace Orc;
 
-struct UploadMessage_make_shared_enabler : public Orc::UploadMessage {
-	inline UploadMessage_make_shared_enabler(Orc::UploadMessage::Request request) : UploadMessage(request) {}
+namespace {
+
+// Enable the use of std::make_shared with UploadMessage protected constructor
+struct UploadMessageT : public Orc::UploadMessage
+{
+    template <typename... Args>
+    inline UploadMessageT(Args&&... args)
+        : UploadMessage(std::forward<Args>(args)...)
+    {
+    }
 };
 
+}  // namespace
+
 UploadMessage::Message UploadMessage::MakeUploadFileRequest(
-    const std::wstring& strRemoteName,
-    const std::wstring& strFileName,
+    const std::wstring& remotePath,
+    const std::wstring& localPath,
     bool bDeleteWhenDone)
 {
-    auto retval = make_shared<UploadMessage_make_shared_enabler>(UploadMessage::UploadFile);
-    retval->m_Status = UploadMessage::Ready;
-    retval->m_Remote = strRemoteName;
-    retval->m_Local = strFileName;
-    retval->m_bDeleteWhenDone = bDeleteWhenDone;
-    return retval;
+    auto message = std::make_shared<::UploadMessageT>(UploadMessage::UploadFile);
+    message->m_status = UploadMessage::Ready;
+    message->m_remotePath = remotePath;
+    message->m_localPath = localPath;
+    message->m_bDeleteWhenDone = bDeleteWhenDone;
+    message->m_jobName = fmt::format(L"Upload file '{}' to '{}'", localPath, remotePath);
+    return message;
 }
 
 UploadMessage::Message UploadMessage::MakeUploadDirectoryRequest(
@@ -35,39 +44,47 @@ UploadMessage::Message UploadMessage::MakeUploadDirectoryRequest(
     const std::wstring& strPattern,
     bool bDeleteOnCompletion)
 {
-    auto retval = make_shared<UploadMessage_make_shared_enabler>(UploadMessage::UploadDirectory);
-    retval->m_Status = UploadMessage::Ready;
-    retval->m_Remote = strRemoteName;
-    retval->m_Local = strDirName;
-    retval->m_Pattern = strPattern;
-    retval->m_bDeleteWhenDone = bDeleteOnCompletion;
-    return retval;
+    auto message = std::make_shared<::UploadMessageT>(UploadMessage::UploadDirectory);
+    message->m_status = UploadMessage::Ready;
+    message->m_remotePath = strRemoteName;
+    message->m_localPath = strDirName;
+    message->m_pattern = strPattern;
+    message->m_bDeleteWhenDone = bDeleteOnCompletion;
+    message->m_jobName =
+        fmt::format(L"Upload directory '{}' to '{}' (pattern: {})", strDirName, strRemoteName, strPattern);
+
+    return message;
 }
 
 UploadMessage::Message
 UploadMessage::MakeUploadStreamRequest(const std::wstring& strRemoteName, const std::shared_ptr<ByteStream>& aStream)
 {
-    auto retval = make_shared<UploadMessage_make_shared_enabler>(UploadMessage::UploadStream);
-    retval->m_Status = UploadMessage::Ready;
-    retval->m_Local = strRemoteName;
-    retval->m_Remote = strRemoteName;
-    retval->m_Stream = aStream;
-    return retval;
+    auto message = std::make_shared<::UploadMessageT>(UploadMessage::UploadStream);
+    message->m_status = UploadMessage::Ready;
+    message->m_localPath = strRemoteName;
+    message->m_remotePath = strRemoteName;
+    message->m_stream = aStream;
+    message->m_jobName = fmt::format(L"Upload stream to '{}'", strRemoteName);
+    return message;
 }
 
 UploadMessage::Message UploadMessage::MakeRefreshJobStatusRequest()
 {
-    return make_shared<UploadMessage_make_shared_enabler>(UploadMessage::RefreshJobStatus);
+    auto message = std::make_shared<UploadMessageT>(UploadMessage::RefreshJobStatus);
+    message->m_jobName = L"Refresh status";
+    return message;
 }
 
 UploadMessage::Message UploadMessage::MakeCompleteRequest()
 {
-    return make_shared<UploadMessage_make_shared_enabler>(UploadMessage::Complete);
+    auto message = std::make_shared<::UploadMessageT>(UploadMessage::Complete);
+    message->m_jobName = L"Complete request";
+    return message;
 }
 
 UploadMessage::Message UploadMessage::MakeCancellationRequest()
 {
-    return make_shared<UploadMessage_make_shared_enabler>(UploadMessage::Cancel);
+    auto message = std::make_shared<::UploadMessageT>(UploadMessage::Cancel);
+    message->m_jobName = L"Cancellation request";
+    return message;
 }
-
-UploadMessage::~UploadMessage(void) {}

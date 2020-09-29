@@ -47,13 +47,11 @@ static constexpr auto COMPRESS_ALGORITHM_MAX = 6;
 
 static constexpr auto COMPRESS_RAW = (1 << 29);
 
-class LogFileWriter;
-
 class CompressAPIExtension : public ExtensionLibrary
 {
 public:
-    CompressAPIExtension(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"cabinet", L"cabinet.dll", L"cabinet.dll") {};
+    CompressAPIExtension()
+        : ExtensionLibrary(L"cabinet", L"cabinet.dll", L"cabinet.dll") {};
 
     STDMETHOD(Initialize)();
 

@@ -11,13 +11,14 @@
 #include "Temporary.h"
 
 #include "ParameterCheck.h"
-#include "LogFileWriter.h"
 #include "SecurityDescriptor.h"
 
 #include <boost/scope_exit.hpp>
 
 #include <string>
 #include <sstream>
+
+#include <spdlog/spdlog.h>
 
 using namespace std;
 
@@ -34,7 +35,9 @@ static const auto WAIT_CREATE_TIME = 100;
 
     Parameters:
         pwszPath    -   The path
-        
+
+
+
     Return:
         Whether the path is a directory
 */
@@ -252,7 +255,9 @@ HRESULT Orc::UtilGetTempFile(
     UtilExpandEnvVariable
 
     Expands the environment variables in a string
-    
+
+
+
     Parameters:
         pwszData    -   The string that we need to expand
         pstrData    -   This will contain the expanded string
@@ -287,11 +292,15 @@ HRESULT UtilExpandEnvVariable(__in PCWSTR pwszData, __out std::wstring& strData)
 
     Parameters:
         pwszFilePath    -   The file path
-        
+
+
+
     Return:
         TRUE    -   Success, file exists
         FALSE   -   otherwise
-    
+
+
+
     Notes:
         This will not work for a directory
 */
@@ -329,19 +338,27 @@ BOOL UtilFileExists(__in PCWSTR pwszFilePath)
 
 /*
     UtilGetUniquePath
-    
+
+
+
     Checks if a filename already exists in a directory. If the name does
     exist, this routine tries to come up with an alternate name for the
     file by appending a suffix to to it.
-                
+
+
+
     Parameters:
         pwszDir         -   The directory path
         pwszDesiredName -   The desired name of the file. if the file exists, this
                             name will be appened with a suffix to come up with a
                             unique filename in the directory
-                        
+
+
+
         pstrDestPath    -   This string will receive the full path to the unique filename
-        
+
+
+
     Return:
         S_OK    -   Success
         Error HR otherwise
@@ -409,7 +426,6 @@ Parameters:
 pstrDestPath    -   This string will receive the full path to the unique filename
 */
 HRESULT Orc::UtilGetUniquePath(
-    const logger& pLog,
     __in PCWSTR pwszDir,
     __in PCWSTR pwszDesiredName,
     __out wstring& pstrDestPath,
@@ -442,7 +458,7 @@ HRESULT Orc::UtilGetUniquePath(
 
     pstrDestPath = std::move(stream.str());
 
-    SecurityDescriptor sd(pLog);
+    SecurityDescriptor sd;
 
     SECURITY_ATTRIBUTES sa;
 
@@ -498,13 +514,19 @@ HRESULT Orc::UtilGetUniquePath(
 
 /*
     UtilGetPath
-    
+
+
+
     Get a path from directory and file name.
-                
+
+
+
     Parameters:
         pwszDir         -   The directory path
         pwszDesiredName -   The desired name of the file.
-                        
+
+
+
         pstrDestPath    -   This string will receive the full path to the filename
 */
 HRESULT Orc::UtilGetPath(__in PCWSTR pwszDir, __in PCWSTR pwszDesiredName, __out wstring& pstrDestPath)
@@ -535,7 +557,7 @@ HRESULT Orc::UtilGetPath(__in PCWSTR pwszDir, __in PCWSTR pwszDesiredName, __out
     return S_OK;
 }
 
-HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(const logger& pLog, __in LPCWSTR pszPath)
+HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
 {
     HRESULT hr = E_FAIL;
     bool bDeleted = false;
@@ -547,44 +569,38 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(const logger& pLog, __in LPCWSTR
         {
             if (GetLastError() == ERROR_FILE_NOT_FOUND)
             {
-                log::Verbose(pLog, L"File \"%s\" already deleted\r\n", pszPath);
+                spdlog::debug(L"File '{}' already deleted", pszPath);
                 return S_OK;
             }
             if (dwRetries > DELETION_RETRIES)
             {
-                log::Verbose(pLog, L"Could not delete file \"%s\", Delay deletion till next reboot\r\n", pszPath);
+                spdlog::debug(L"Could not delete file '{}', Delay deletion till next reboot", pszPath);
                 if (!MoveFileEx(pszPath, NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
                 {
-                    log::Error(
-                        pLog,
-                        HRESULT_FROM_WIN32(GetLastError()),
-                        L"Failed to delay deletion until reboot for file %s\r\n",
-                        pszPath);
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::error(L"Failed to delay deletion until reboot for file '{}' (code: {:#x})", pszPath, hr);
                     return hr;
                 }
                 return S_OK;
             }
             else
             {
-                log::Verbose(
-                    pLog,
-                    L"VERBOSE: Could not delete file \"%s\" (hr=0x%lx,retries=%d)\r\n",
-                    pszPath,
-                    HRESULT_FROM_WIN32(GetLastError()),
-                    dwRetries);
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::debug(L"Could not delete file '{}' (code: {:#x}, retries: {})", pszPath, hr, dwRetries);
                 dwRetries++;
                 Sleep(200);
             }
         }
         else
         {
-            log::Verbose(pLog, L"VERBOSE: Successfully deleted file \"%s\"\r\n", pszPath);
+            spdlog::debug(L"Successfully deleted file '{}'", pszPath);
             bDeleted = true;
         }
 
     } while (!bDeleted);
 
-    log::Verbose(pLog, L"\r\nDone.\r\n");
+    spdlog::debug("UtilDeleteTemporaryFile: done");
+
     return S_OK;
 }
 

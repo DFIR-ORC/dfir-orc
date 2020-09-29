@@ -25,7 +25,7 @@ HRESULT ChakraExtension::Initialize()
         HRESULT hr = E_FAIL;
         if (FAILED(hr = Load()))
         {
-            log::Error(_L_, hr, L"Failed to load chakracore dll\r\n");
+            log::Error(hr, L"Failed to load chakracore dll");
             return hr;
         }
     }

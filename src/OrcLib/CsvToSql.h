@@ -22,7 +22,7 @@ class ORCLIB_API CsvToSql
 {
 
 public:
-    CsvToSql(logger pLog);
+    CsvToSql();
 
     HRESULT Initialize(
         std::shared_ptr<TableOutput::CSV::FileReader> pReader,
@@ -36,7 +36,6 @@ public:
     ~CsvToSql(void);
 
 private:
-    logger _L_;
     std::shared_ptr<TableOutput::CSV::FileReader> m_pReader;
     std::shared_ptr<TableOutput::IConnectWriter> m_pSqlWriter;
 

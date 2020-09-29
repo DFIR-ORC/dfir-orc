@@ -10,16 +10,13 @@
 
 #include "CsvToSql.h"
 
-#include "LogFileWriter.h"
-
 #include "CSVFileReader.h"
 #include "TableOutput.h"
 
 using namespace std;
 using namespace Orc;
 
-CsvToSql::CsvToSql(logger pLog)
-    : _L_(std::move(pLog))
+CsvToSql::CsvToSql()
 {
     m_pReader = nullptr;
     m_pSqlWriter = nullptr;
@@ -31,19 +28,19 @@ HRESULT CsvToSql::Initialize(
 {
     if (!pReader->IsFileOpened())
     {
-        log::Error(_L_, E_INVALIDARG, L"CsvToSql can only be initialized with a valid CSV file opened\r\n");
+        spdlog::error("CsvToSql can only be initialized with a valid CSV file opened");
         return E_INVALIDARG;
     }
 
     if (pReader->GetSchema().Column.empty())
     {
-        log::Error(_L_, E_INVALIDARG, L"CSV file reader does not have any schema defined, needed!\r\n");
+        spdlog::error("CSV file reader does not have any schema defined, needed!");
         return E_INVALIDARG;
     }
 
     if (pSql->GetColumnDefinitions().empty())
     {
-        log::Error(_L_, E_INVALIDARG, L"CsvToSql's SQL database writer requires a valid schema defined\r\n");
+        spdlog::error("CsvToSql's SQL database writer requires a valid schema defined");
         return E_INVALIDARG;
     }
 

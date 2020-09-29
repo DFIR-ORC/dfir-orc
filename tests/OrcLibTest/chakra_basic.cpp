@@ -20,7 +20,6 @@ namespace Orc::Test {
 TEST_CLASS(ChakraBasicTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:

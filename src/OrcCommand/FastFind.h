@@ -41,10 +41,9 @@ class FileSystemSpec
 {
 
 public:
-    FileSystemSpec(const logger& pLog)
-        : Locations(pLog)
+    FileSystemSpec()
+        : Locations()
         , Files(
-              pLog,
               true,
               CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256) {};
 
@@ -56,9 +55,9 @@ class RegistrySpec
 {
 
 public:
-    RegistrySpec(const logger& pLog)
-        : Locations(pLog)
-        , Files(pLog) {};
+    RegistrySpec()
+        : Locations()
+        , Files() {};
 
     RegistrySpec(RegistrySpec&& other) noexcept = default;
 
@@ -255,9 +254,9 @@ public:
         std::wstring YaraSource;
         std::unique_ptr<YaraConfig> Yara;
 
-        Configuration(const logger& pLog)
-            : FileSystem(pLog)
-            , Registry(pLog)
+        Configuration()
+            : FileSystem()
+            , Registry()
         {
         }
     };
@@ -302,9 +301,9 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#FASTFIND_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog)
-        , config(pLog) {
+    Main()
+        : UtilitiesMain()
+        , config() {
 
           };
 

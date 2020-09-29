@@ -12,7 +12,6 @@
 
 #include "ParameterCheck.h"
 #include "FileFind.h"
-#include "LogFileWriter.h"
 #include "TableOutputWriter.h"
 
 #include "ConfigFile_GetThis.h"
@@ -40,7 +39,7 @@ constexpr auto CONTENT_STRINGS_DEFAULT_MAX = 1024;
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.Output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.Output.TableKey.empty() ? L"getthis_collection" : config.Output.TableKey.c_str(), schemaitem);
+        config.Output.TableKey.empty() ? L"getthis_collection" : config.Output.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 
@@ -58,7 +57,7 @@ ContentSpec Main::Configuration::GetContentSpecFromString(const std::wstring& st
     {
         if (!s_content[REGEX_CONTENT_TYPE].compare(L"strings"))
         {
-            retval.Type = STRINGS;
+            retval.Type = ContentType::STRINGS;
             if (s_content[REGEX_CONTENT_STRINGS_MIN].matched)
             {
                 if (FAILED(GetIntegerFromArg(s_content[REGEX_CONTENT_STRINGS_MIN].str().c_str(), retval.MinChars)))
@@ -81,15 +80,15 @@ ContentSpec Main::Configuration::GetContentSpecFromString(const std::wstring& st
         }
         else if (!s_content[REGEX_CONTENT_TYPE].compare(L"data"))
         {
-            retval.Type = DATA;
+            retval.Type = ContentType::DATA;
         }
         else if (!s_content[REGEX_CONTENT_TYPE].compare(L"raw"))
         {
-            retval.Type = RAW;
+            retval.Type = ContentType::RAW;
         }
         else
         {
-            retval.Type = INVALID;
+            retval.Type = ContentType::INVALID;
         }
     }
 
@@ -100,13 +99,10 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    ConfigFile::ConfigureLogging(configitem.SubItems[GETTHIS_LOGGING], _L_);
-
-    ConfigFile reader(_L_);
+    ConfigFile reader;
 
     if (FAILED(
             hr = config.Output.Configure(
-                _L_,
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::Archive | OutputSpec::Kind::Directory),
                 configitem[GETTHIS_OUTPUT])))
     {
@@ -128,13 +124,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.Locations.AddLocationsFromConfigItem(configitem[GETTHIS_LOCATION])))
     {
-        log::Error(_L_, E_FAIL, L"Syntax error in specific locations parsing in config file\r\n");
+        spdlog::error(L"Syntax error in specific locations parsing in config file");
         return hr;
     }
 
     if (FAILED(hr = config.Locations.AddKnownLocations(configitem[GETTHIS_KNOWNLOCATIONS])))
     {
-        log::Error(_L_, E_FAIL, L"Syntax error in known locations parsing in config file\r\n");
+        spdlog::error(L"Syntax error in known locations parsing in config file");
         return hr;
     }
 
@@ -173,12 +169,12 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             {
                 for (const auto& finditem : item[CONFIG_SAMPLE_FILEFIND].NodeList)
                 {
-                    auto filespec = FileFind::GetSearchTermFromConfig(finditem, _L_);
+                    auto filespec = FileFind::GetSearchTermFromConfig(finditem);
 
                     if (const auto [valid, reason] = filespec->IsValidTerm(); valid)
                         aSpec.Terms.push_back(filespec);
                     else
-                        log::Error(_L_, E_INVALIDARG, L"Term is invalid, reason: %s\r\n", reason.c_str());
+                        spdlog::error(L"Term is invalid, reason: {}", reason);
                 }
             }
 
@@ -190,7 +186,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                     if (const auto [valid, reason] = filespec->IsValidTerm(); valid)
                         config.listOfExclusions.push_back(filespec);
                     else
-                        log::Error(_L_, E_INVALIDARG, L"Term is invalid, reason: %s\r\n", reason.c_str());
+                        spdlog::error(L"Term is invalid, reason: {}", reason);
                 }
             }
 
@@ -262,7 +258,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             const auto alg = CryptoHashStream::GetSupportedAlgorithm(key.c_str());
             if (alg == CryptoHashStream::Algorithm::Undefined)
             {
-                log::Warning(_L_, E_NOTIMPL, L"Hash algorithm %s is not supported\r\n", key.c_str());
+                spdlog::warn(L"Hash algorithm '{}' is not supported", key);
             }
             else
             {
@@ -283,7 +279,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             auto alg = FuzzyHashStream::GetSupportedAlgorithm(key.c_str());
             if (alg == FuzzyHashStream::Algorithm::Undefined)
             {
-                log::Warning(_L_, E_NOTIMPL, L"Fuzzy hash algorithm %s is not supported\r\n", key.c_str());
+                spdlog::warn(L"Fuzzy hash algorithm '{}' is not supported", key);
             }
             else
             {
@@ -293,7 +289,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     if (configitem[GETTHIS_YARA])
     {
-        config.Yara = std::make_unique<YaraConfig>(YaraConfig::Get(_L_, configitem[GETTHIS_YARA]));
+        config.Yara = std::make_unique<YaraConfig>(YaraConfig::Get(configitem[GETTHIS_YARA]));
     }
     return S_OK;
 }
@@ -323,7 +319,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         LPCWSTR pEquals = wcschr(argv[i], L'=');
                         if (!pEquals)
                         {
-                            log::Error(_L_, E_INVALIDARG, L"Option /Sample should be like: /Sample=malware.exe\n");
+                            spdlog::error("Option /Sample should be like: /Sample=malware.exe");
                             return E_INVALIDARG;
                         }
                         else
@@ -331,7 +327,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             SampleSpec aSpec;
                             auto filespec = make_shared<FileFind::SearchTerm>(wstring(pEquals + 1));
                             aSpec.Terms.push_back(filespec);
-                            aSpec.Content.Type = INVALID;
+                            aSpec.Content.Type = ContentType::INVALID;
                             config.listofSpecs.push_back(aSpec);
                         }
                     }
@@ -392,13 +388,13 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
         if (FAILED(hr = config.Locations.AddLocationsFromArgcArgv(argc, argv)))
         {
-            log::Error(_L_, E_INVALIDARG, L"Error in specific locations parsing\r\n");
+            spdlog::error("Error in specific locations parsing");
             return E_INVALIDARG;
         }
     }
     catch (...)
     {
-        log::Error(_L_, E_INVALIDARG, L"GetThis failed during argument parsing, exiting\r\n");
+        spdlog::error("GetThis failed during argument parsing, exiting");
         return E_INVALIDARG;
     }
     return S_OK;
@@ -415,7 +411,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
     {
-        log::Info(_L_, L"\r\nINFO: Not output explicitely specified: creating GetThis.7z in current directory\r\n");
+        spdlog::warn(L"No output explicitely specified: creating GetThis.7z in current directory");
         config.Output.Path = L"GetThis.7z";
         config.Output.Type = OutputSpec::Kind::Archive;
         config.Output.ArchiveFormat = ArchiveFormat::SevenZip;
@@ -451,11 +447,9 @@ HRESULT Main::CheckConfiguration()
     if (!config.limits.bIgnoreLimits
         && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
     {
-        log::Error(
-            _L_,
-            E_INVALIDARG,
+        spdlog::error(
             L"No global (at samples level, MaxBytesTotal or MaxSampleCount) has been set: set limits in configuration "
-            L"or use /nolimits\r\n");
+            L"or use /nolimits");
         return E_INVALIDARG;
     }
 
@@ -463,7 +457,7 @@ HRESULT Main::CheckConfiguration()
 
     if (FAILED(hr = FileFinder.InitializeYara(config.Yara)))
     {
-        log::Error(_L_, hr, L"Failed to initialize yara scanner\r\n");
+        spdlog::error(L"Failed to initialize yara scanner");
         return hr;
     }
 

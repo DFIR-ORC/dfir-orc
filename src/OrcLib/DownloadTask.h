@@ -63,16 +63,13 @@ protected:
 
     BITSProtocol m_Protocol;
 
-    logger _L_;
-
 public:
-    static std::shared_ptr<DownloadTask> GetTaskFromConfig(const logger& pLog, const ConfigItem& item);
+    static std::shared_ptr<DownloadTask> GetTaskFromConfig(const ConfigItem& item);
 
     virtual std::shared_ptr<DownloadTask> GetRetryTask() PURE;
 
-    DownloadTask(logger pLog, std::wstring strJobName)
-        : _L_(std::move(pLog))
-        , m_strJobName(std::move(strJobName))
+    DownloadTask(std::wstring strJobName)
+        : m_strJobName(std::move(strJobName))
     {
     }
 

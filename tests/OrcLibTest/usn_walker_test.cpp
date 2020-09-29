@@ -9,7 +9,6 @@
 
 #include "USNJournalWalker.h"
 #include "USNRecordFileInfo.h"
-#include "LogFileWriter.h"
 #include "LocationSet.h"
 #include "VolumeReader.h"
 #include "FileInfo.h"
@@ -24,24 +23,19 @@ namespace Orc::Test {
 TEST_CLASS(USNWalkerTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
-    TEST_METHOD_INITIALIZE(Initialize)
-    {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
-    }
+    TEST_METHOD_INITIALIZE(Initialize) {}
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(USNWalkerBasicTest)
     {
         m_NbFiles = 0;
         m_NbFolders = 0;
 
-        LocationSet locSet(_L_);
+        LocationSet locSet;
         locSet.SetPopulatePhysicalDrives(false);
         locSet.SetPopulateShadows(false);
         locSet.SetPopulateSystemObjects(false);
@@ -67,10 +61,9 @@ public:
             callbacks.RecordCallback =
                 [this](std::shared_ptr<VolumeReader>& volreader, WCHAR* szFullName, USN_RECORD* pElt) {
                     std::vector<Filter> filters;
-                    Authenticode authenticode(_L_);
+                    Authenticode authenticode;
 
-                    USNRecordFileInfo fi(
-                        _L_, L"Test", volreader, FILEINFO_FILESIZE, filters, szFullName, pElt, authenticode);
+                    USNRecordFileInfo fi(L"Test", volreader, Intentions::FILEINFO_FILESIZE, filters, szFullName, pElt, authenticode);
 
                     if (fi.IsDirectory())
                     {
@@ -90,7 +83,7 @@ public:
         }
         else
         {
-            log::Error(_L_, E_ACCESSDENIED, L"Failed to find a suitable location to parse (not running as admin?)\r\n");
+            spdlog::error("Failed to find a suitable location to parse (not running as admin?)");
         }
     }
 

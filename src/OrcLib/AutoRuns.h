@@ -43,7 +43,6 @@ class CBinaryBuffer;
 
 class ORCLIB_API AutoRuns
 {
-    logger _L_;
 
     ConfigItem m_AutoRuns;
 
@@ -52,14 +51,14 @@ class ORCLIB_API AutoRuns
     std::shared_ptr<ByteStream> m_xmlDataStream;
 
 public:
-    AutoRuns(const logger& pLog);
+    AutoRuns();
 
     HRESULT LoadAutoRunsXml(const WCHAR* szXmlFile);
     HRESULT LoadAutoRunsXml(const CBinaryBuffer& szXmlData);
 
     std::shared_ptr<ByteStream> GetXmlDataStream() const { return m_xmlDataStream; }
 
-    HRESULT PrintAutoRuns(const logger& pLog);
+    HRESULT PrintAutoRuns();
 
     HRESULT EnumItems(AutoRunsEnumItemCallback pCallBack, LPVOID pContext);
     HRESULT GetAutoRuns(AutoRunsVector& autoruns);

@@ -26,9 +26,45 @@ using namespace std;
 
 using namespace Orc;
 
-Location::Location(logger pLog, const std::wstring& Location, Location::Type type)
-    : _L_(std::move(pLog))
-    , m_Location(Location)
+std::wstring Location::ToString(Type locationType)
+{
+    switch (locationType)
+    {
+        case Type::Undetermined:
+            return L"Unknown";
+        case Type::OfflineMFT:
+            return L"OfflineMFT";
+        case Type::ImageFileDisk:
+            return L"ImageFileDisk";
+        case Type::ImageFileVolume:
+            return L"ImageFileVolume";
+        case Type::DiskInterface:
+            return L"DiskInterface";
+        case Type::DiskInterfaceVolume:
+            return L"DiskInterfaceVolume";
+        case Type::PhysicalDrive:
+            return L"PhysicalDrive";
+        case Type::PhysicalDriveVolume:
+            return L"PhysicalDriveVolume";
+        case Type::SystemStorage:
+            return L"SystemStorage";
+        case Type::SystemStorageVolume:
+            return L"SystemStorageVolume";
+        case Type::PartitionVolume:
+            return L"PartitionVolume";
+        case Type::MountedStorageVolume:
+            return L"MountedStorageVolume";
+        case Type::MountedVolume:
+            return L"MountedVolume";
+        case Type::Snapshot:
+            return L"Snapshot";
+    }
+
+    return L"Unknown";
+}
+
+Location::Location(const std::wstring& Location, Location::Type type)
+    : m_Location(Location)
     , m_Type(type)
 {
 }
@@ -38,7 +74,7 @@ std::shared_ptr<VolumeReader> Location::GetReader()
     if (m_Reader != nullptr)
         return m_Reader;
 
-    if (m_Type == Undetermined)
+    if (m_Type == Type::Undetermined)
     {
         // Cannot instantiate a reader for a Location we fail to determine
         return nullptr;
@@ -46,34 +82,34 @@ std::shared_ptr<VolumeReader> Location::GetReader()
 
     switch (m_Type)
     {
-        case MountedVolume:
-        case PartitionVolume:
-            m_Reader = make_shared<MountedVolumeReader>(_L_, m_Location.c_str());
+        case Type::MountedVolume:
+        case Type::PartitionVolume:
+            m_Reader = make_shared<MountedVolumeReader>(m_Location.c_str());
             break;
-        case Snapshot:
+        case Type::Snapshot:
             if (m_Shadow != nullptr)
             {
-                m_Reader = make_shared<SnapshotVolumeReader>(_L_, *m_Shadow);
+                m_Reader = make_shared<SnapshotVolumeReader>(*m_Shadow);
             }
             break;
-        case PhysicalDrive:
-        case PhysicalDriveVolume:
-            m_Reader = make_shared<PhysicalDiskReader>(_L_, m_Location.c_str());
+        case Type::PhysicalDrive:
+        case Type::PhysicalDriveVolume:
+            m_Reader = make_shared<PhysicalDiskReader>(m_Location.c_str());
             break;
-        case DiskInterface:
-        case DiskInterfaceVolume:
-            m_Reader = make_shared<InterfaceReader>(_L_, m_Location.c_str());
+        case Type::DiskInterface:
+        case Type::DiskInterfaceVolume:
+            m_Reader = make_shared<InterfaceReader>(m_Location.c_str());
             break;
-        case SystemStorage:
-        case SystemStorageVolume:
-            m_Reader = make_shared<SystemStorageReader>(_L_, m_Location.c_str());
+        case Type::SystemStorage:
+        case Type::SystemStorageVolume:
+            m_Reader = make_shared<SystemStorageReader>(m_Location.c_str());
             break;
-        case ImageFileVolume:
-        case ImageFileDisk:
-            m_Reader = make_shared<ImageReader>(_L_, m_Location.c_str());
+        case Type::ImageFileVolume:
+        case Type::ImageFileDisk:
+            m_Reader = make_shared<ImageReader>(m_Location.c_str());
             break;
-        case OfflineMFT:
-            m_Reader = make_shared<OfflineMFTReader>(_L_, m_Location.c_str());
+        case Type::OfflineMFT:
+            m_Reader = make_shared<OfflineMFTReader>(m_Location.c_str());
             break;
         default:
             break;
@@ -83,7 +119,7 @@ std::shared_ptr<VolumeReader> Location::GetReader()
 
 void Location::MakeIdentifier()
 {
-    if (m_Type == Undetermined)
+    if (m_Type == Type::Undetermined)
     {
         // Cannot instantiate a reader for a Location we fail to determine
         m_Identifier = L"Undetermined";
@@ -116,8 +152,7 @@ void Location::MakeIdentifier()
 
     switch (m_Type)
     {
-        case MountedVolume:
-        {
+        case Type::MountedVolume: {
             static wregex r1(REGEX_MOUNTED_DRIVE);
             wsmatch s;
 
@@ -174,8 +209,7 @@ void Location::MakeIdentifier()
             m_Identifier = replace_reserved_chars(m_Location);
         }
         break;
-        case Snapshot:
-        {
+        case Type::Snapshot: {
             wregex r(REGEX_SNAPSHOT, regex_constants::icase);
             wsmatch s;
 
@@ -186,9 +220,8 @@ void Location::MakeIdentifier()
             }
         }
         break;
-        case PhysicalDrive:
-        case PhysicalDriveVolume:
-        {
+        case Type::PhysicalDrive:
+        case Type::PhysicalDriveVolume: {
             wregex r_physical(REGEX_PHYSICALDRIVE, std::regex_constants::icase);
             wregex r_disk(REGEX_DISK, std::regex_constants::icase);
             wsmatch s;
@@ -236,31 +269,27 @@ void Location::MakeIdentifier()
             m_Identifier = wstring(L"Disk_") + replace_reserved_chars(m_Location);
         }
         break;
-        case PartitionVolume:
-        {
+        case Type::PartitionVolume: {
             m_Identifier = wstring(L"PartitionVolume_") + replace_reserved_chars(m_Location);
         }
         break;
-        case DiskInterface:
-        case DiskInterfaceVolume:
-        {
+        case Type::DiskInterface:
+        case Type::DiskInterfaceVolume: {
             std::wstringstream ss;
             ss << L"0x" << std::hex << SerialNumber();
 
-            m_Identifier = wstring(L"DiskInterface_") + ss.str();
+            m_Identifier = wstring(L"DiskInterface_Serial_") + ss.str();
         }
         break;
-        case SystemStorage:
-        case SystemStorageVolume:
-        {
+        case Type::SystemStorage:
+        case Type::SystemStorageVolume: {
             std::wstringstream ss;
             ss << L"0x" << std::hex << SerialNumber();
 
             m_Identifier = wstring(L"SystemStorage_") + ss.str();
         }
         break;
-        case ImageFileVolume:
-        {
+        case Type::ImageFileVolume: {
             wregex r(REGEX_IMAGE, regex_constants::icase);
             wsmatch s;
 
@@ -299,8 +328,7 @@ void Location::MakeIdentifier()
             }
         }
         break;
-        case ImageFileDisk:
-        {
+        case Type::ImageFileDisk: {
             wregex r(REGEX_IMAGE, regex_constants::icase);
             wsmatch s;
 
@@ -328,8 +356,7 @@ void Location::MakeIdentifier()
             }
         }
         break;
-        case OfflineMFT:
-        {
+        case Type::OfflineMFT: {
             WCHAR szImageName[MAX_PATH];
             if (SUCCEEDED(GetFileNameForFile(m_Location.c_str(), szImageName, MAX_PATH)))
             {
@@ -370,56 +397,9 @@ std::wostream& Orc::operator<<(std::wostream& o, const Location& l)
     std::wstringstream ss;
     bool isAMountedVolume = false;
 
-    switch (l.GetType())
-    {
-        case Location::Type::OfflineMFT:
-            ss << L"OfflineMFT           ";
-            break;
-        case Location::Type::ImageFileDisk:
-            ss << L"ImageFileDisk        ";
-            break;
-        case Location::Type::ImageFileVolume:
-            ss << L"ImageFileVolume      ";
-            break;
-        case Location::Type::DiskInterface:
-            ss << L"DiskInterface        ";
-            break;
-        case Location::Type::DiskInterfaceVolume:
-            ss << L"DiskInterfaceVolume  ";
-            break;
-        case Location::Type::PhysicalDrive:
-            ss << L"PhysicalDrive        ";
-            break;
-        case Location::Type::PhysicalDriveVolume:
-            ss << L"PhysicalDriveVolume  ";
-            break;
-        case Location::Type::SystemStorage:
-            ss << L"SystemStorage        ";
-            break;
-        case Location::Type::SystemStorageVolume:
-            ss << L"SystemStorageVolume  ";
-            break;
-        case Location::Type::PartitionVolume:
-            ss << L"PartitionVolume      ";
-            break;
-        case Location::Type::MountedStorageVolume:
-            ss << L"MountedStorageVolume ";
-            break;
-        case Location::Type::MountedVolume:
-            ss << L"MountedVolume        ";
-            isAMountedVolume = true;
-            break;
-        case Location::Type::Snapshot:
-            ss << L"Snapshot             ";
-            break;
+    ss << Location::ToString(l.GetType()) << L": " << l.GetLocation();
 
-        default:
-            ss << L"Undetermined         ";
-    }
-
-    ss << L" : " << l.GetLocation();
-
-    if (isAMountedVolume)
+    if (l.GetType() == Location::Type::MountedVolume)
     {
         if (!l.GetPaths().empty())
         {

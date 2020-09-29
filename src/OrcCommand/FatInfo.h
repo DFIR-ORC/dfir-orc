@@ -27,8 +27,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 namespace Command::FatInfo {
 
 class ORCUTILS_API Main : public UtilitiesMain
@@ -37,12 +35,12 @@ public:
     class Configuration : public UtilitiesMain::Configuration
     {
     public:
-        Configuration(logger pLog)
-            : locs(std::move(pLog))
+        Configuration()
+            : locs()
         {
             bResurrectRecords = boost::logic::indeterminate;
-            ColumnIntentions = FILEINFO_NONE;
-            DefaultIntentions = FILEINFO_NONE;
+            ColumnIntentions = Intentions::FILEINFO_NONE;
+            DefaultIntentions = Intentions::FILEINFO_NONE;
             output.supportedTypes = static_cast<OutputSpec::Kind>(
                 OutputSpec::Kind::Directory | OutputSpec::Kind::TableFile | OutputSpec::Kind::Archive
                 | OutputSpec::Kind::SQL);
@@ -79,12 +77,12 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#FATINFO_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog)
-        , m_Config(pLog)
-        , m_CodeVerifier(pLog)
-        , m_FileInfoOutput(pLog)
-        , m_VolStatOutput(pLog)
+    Main()
+        : UtilitiesMain()
+        , m_Config()
+        , m_CodeVerifier()
+        , m_FileInfoOutput()
+        , m_VolStatOutput()
     {
     }
 

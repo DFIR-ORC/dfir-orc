@@ -19,8 +19,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class VssAPIExtension : public ExtensionLibrary
 {
 
@@ -29,8 +27,8 @@ private:
     HRESULT(WINAPI* m_VssFreeSnapshotProperties)(_In_ VSS_SNAPSHOT_PROP* pProp) = nullptr;
 
 public:
-    VssAPIExtension(logger pLog)
-        : ExtensionLibrary(pLog, L"vssapi", L"vssapi.dll", L"vssapi.dll") {};
+    VssAPIExtension()
+        : ExtensionLibrary(L"vssapi", L"vssapi.dll", L"vssapi.dll") {};
 
     STDMETHOD(Initialize)();
 

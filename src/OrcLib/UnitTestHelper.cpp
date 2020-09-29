@@ -7,15 +7,7 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
-
 #include "SystemDetails.h"
-
-#ifdef ORC_BUILD_CHARACORE
-#    include "ChakraExtension.h"
-#endif
-
-#include "YaraStaticExtension.h"
 
 #include <boost/scope_exit.hpp>
 
@@ -33,63 +25,6 @@ namespace fs = std::filesystem;
 using namespace Orc;
 using namespace Orc::Test;
 
-void UnitTestHelper::InitLogFileWriter(const logger& pLog)
-{
-    pLog->SetConsoleLog(false);
-    pLog->SetDebugLog(false);
-    pLog->SetVerboseLog(false);
-
-    pLog->SetLogCallback([this](const WCHAR* szMsg, DWORD dwSize, DWORD& dwWritten) -> HRESULT {
-        auto write_msg = [](std::wstring& acc, const WCHAR* szMsg) {
-            if (acc.empty())
-                test::Logger::WriteMessage(szMsg);
-            else
-            {
-                acc.append(szMsg);
-                test::Logger::WriteMessage(acc.c_str());
-                acc.resize(0);
-            }
-        };
-
-        if (dwSize >= 2 && szMsg[dwSize - 1] == L'\n' && szMsg[dwSize - 2] == L'\r')
-        {
-            const_cast<WCHAR*>(szMsg)[dwSize - 2] = L'\0';
-            write_msg(m_strAccumulator, szMsg);
-            const_cast<WCHAR*>(szMsg)[dwSize - 2] = L'\r';
-        }
-        else if (dwSize >= 2 && szMsg[dwSize - 1] == L'\r' && szMsg[dwSize - 2] == L'\n')
-        {
-            const_cast<WCHAR*>(szMsg)[dwSize - 2] = L'\0';
-            write_msg(m_strAccumulator, szMsg);
-            const_cast<WCHAR*>(szMsg)[dwSize - 2] = L'\n';
-        }
-        else if (dwSize >= 1 && szMsg[dwSize - 1] == L'\r')
-        {
-            const_cast<WCHAR*>(szMsg)[dwSize - 1] = L'\0';
-            write_msg(m_strAccumulator, szMsg);
-            const_cast<WCHAR*>(szMsg)[dwSize - 1] = L'\r';
-        }
-        else if (dwSize >= 1 && szMsg[dwSize - 1] == L'\n')
-        {
-            const_cast<WCHAR*>(szMsg)[dwSize - 1] = L'\0';
-            write_msg(m_strAccumulator, szMsg);
-            const_cast<WCHAR*>(szMsg)[dwSize - 2] = L'\n';
-        }
-        else
-        {
-            m_strAccumulator.append(szMsg);
-        }
-        return S_OK;
-    });
-}
-
-void UnitTestHelper::FinalizeLogFileWriter(const logger& pLog)
-{
-    pLog->SetLogCallback(nullptr);
-    pLog->SetConsoleLog(false);
-    pLog->SetDebugLog(false);
-}
-
 std::wstring UnitTestHelper::GetDirectoryName(const std::wstring& apath)
 {
     fs::path spath = apath;
@@ -101,7 +36,6 @@ std::wstring UnitTestHelper::GetDirectoryName(const std::wstring& apath)
 }
 
 HRESULT UnitTestHelper::ExtractArchive(
-    const logger& pLog,
     ArchiveFormat format,
     ArchiveExtract::MakeArchiveStream makeArchiveStream,
     const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
@@ -110,10 +44,10 @@ HRESULT UnitTestHelper::ExtractArchive(
 {
     HRESULT hr = E_FAIL;
 
-    std::shared_ptr<ArchiveExtract> extractor = ArchiveExtract::MakeExtractor(format, pLog, false);
+    std::shared_ptr<ArchiveExtract> extractor = ArchiveExtract::MakeExtractor(format, false);
     if (!extractor)
     {
-        log::Error(pLog, E_FAIL, L"Failed to create extractor\r\n");
+        spdlog::error(L"Failed to create extractor");
         return E_FAIL;
     }
 
@@ -121,7 +55,7 @@ HRESULT UnitTestHelper::ExtractArchive(
 
     if (FAILED(extractor->Extract(makeArchiveStream, pShouldBeExtracted, MakeWriteAbleStream)))
     {
-        log::Error(pLog, hr, L"Failed to extract archive\r\n");
+        spdlog::error(L"Failed to extract archive");
         return hr;
     }
 

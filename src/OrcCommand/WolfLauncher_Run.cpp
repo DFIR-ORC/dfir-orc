@@ -1,104 +1,186 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2020 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
 
 #include "stdafx.h"
 
+#include <filesystem>
+
+#include <boost/logic/tribool.hpp>
+#include <boost/scope_exit.hpp>
+#include <boost/algorithm/string/join.hpp>
+
 #include "WolfLauncher.h"
-
 #include "Robustness.h"
-
 #include "EmbeddedResource.h"
 #include "SystemDetails.h"
-#include "SystemIdentity.h"
-#include "LogFileWriter.h"
 #include "JobObject.h"
 #include "StructuredOutputWriter.h"
 #include "Convert.h"
 #include "FileStream.h"
+#include "SystemIdentity.h"
 
-#include <boost/logic/tribool.hpp>
-#include <boost/scope_exit.hpp>
+#include "Utils/Guard.h"
+#include "Utils/TypeTraits.h"
+#include "Output/Text/Print/Bool.h"
 
-using namespace std;
 using namespace Concurrency;
 
-using namespace Orc;
-using namespace Orc::Command::Wolf;
+namespace Orc {
+namespace Command {
+namespace Wolf {
+
+const wchar_t kWolfLauncher[] = L"WolfLauncher";
+
+struct FileInformations
+{
+    bool exist;
+    std::wstring path;
+    std::optional<Traits::ByteQuantity<uint64_t>> size;
+};
+
+std::shared_ptr<WolfExecution::Recipient> Main::GetRecipient(const std::wstring& strName)
+{
+    const auto it = std::find_if(
+        std::cbegin(config.m_Recipients),
+        std::cend(config.m_Recipients),
+        [&strName](const std::shared_ptr<WolfExecution::Recipient>& item) { return !strName.compare(item->Name); });
+
+    if (it != std::cend(config.m_Recipients))
+    {
+        return *it;
+    }
+
+    return nullptr;
+}
+
+HRESULT Main::GetOutputFileInformations(const WolfExecution& exec, FileInformations& fileInformations)
+{
+    HRESULT hr = E_FAIL;
+
+    fileInformations = {};
+
+    if (m_pUploadAgent && exec.ShouldUpload())
+    {
+        DWORD dwFileSize;
+        hr = m_pUploadAgent->CheckFileUpload(exec.GetOutputFileName(), &dwFileSize);
+        if (FAILED(hr))
+        {
+            return E_FAIL;
+        }
+
+        fileInformations.exist = true;
+        fileInformations.path = m_pUploadAgent->GetRemoteFullPath(exec.GetOutputFileName());
+        fileInformations.size = dwFileSize;
+        return S_OK;
+    }
+
+    hr = VerifyFileExists(exec.GetOutputFullPath().c_str());
+    if (FAILED(hr))
+    {
+        return E_FAIL;
+    }
+
+    fileInformations.path = exec.GetOutputFullPath();
+    fileInformations.exist = true;
+
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    ZeroMemory(&data, sizeof(WIN32_FILE_ATTRIBUTE_DATA));
+    if (!GetFileAttributesExW(exec.GetOutputFullPath().c_str(), GetFileExInfoStandard, &data))
+    {
+        spdlog::warn(
+            L"Failed to obtain file attributes of '{}' (code: {:#x})",
+            exec.GetOutputFullPath(),
+            HRESULT_FROM_WIN32(GetLastError()));
+        return S_OK;
+    }
+
+    fileInformations.size = (static_cast<uint64_t>(data.nFileSizeHigh) << 32) | data.nFileSizeLow;
+
+    return S_OK;
+}
 
 HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
 {
-    HRESULT hr = E_FAIL;
-    switch (uploadspec.Method)
+    if (uploadspec.Method == OutputSpec::UploadMethod::NoUpload)
     {
-        case OutputSpec::None:
-            break;
-        default: {
-            m_pUploadMessageQueue = std::make_unique<UploadMessage::UnboundedMessageBuffer>();
-            m_pUploadNotification = std::make_unique<call<UploadNotification::Notification>>(
-                [this](const UploadNotification::Notification& item) {
-                    if (SUCCEEDED(item->GetHResult()))
-                    {
-                        switch (item->GetType())
-                        {
-                            case UploadNotification::Started:
-                                log::Info(_L_, L"UPLOAD: %s started\r\n", item->Keyword().c_str());
-                                break;
-                            case UploadNotification::FileAddition:
-                                log::Info(_L_, L"UPLOAD: File %s added to upload queue\r\n", item->Keyword().c_str());
-                                break;
-                            case UploadNotification::DirectoryAddition:
-                                log::Info(
-                                    _L_, L"UPLOAD: Directory %s added to upload queue\r\n", item->Keyword().c_str());
-                                break;
-                            case UploadNotification::StreamAddition:
-                                log::Info(_L_, L"UPLOAD: Output %s added to upload queue\r\n", item->Keyword().c_str());
-                                break;
-                            case UploadNotification::UploadComplete:
-                                log::Info(_L_, L"UPLOAD: File %s is uploaded\r\n", item->Keyword().c_str());
-                                break;
-                            case UploadNotification::JobComplete:
-                                log::Info(_L_, L"UPLOAD: %s is complete\r\n", item->Keyword().c_str());
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        log::Error(
-                            _L_,
-                            item->GetHResult(),
-                            L"UPLOAD: Operation for %s failed \"%s\"\r\n",
-                            item->Keyword().c_str(),
-                            item->Description().c_str());
-                    }
-                    return;
-                });
-
-            m_pUploadAgent = UploadAgent::CreateUploadAgent(
-                _L_, uploadspec, *m_pUploadMessageQueue, *m_pUploadMessageQueue, *m_pUploadNotification);
-
-            if (m_pUploadAgent == nullptr)
-            {
-                // Agent creation failed, reset buffers too
-                m_pUploadMessageQueue = nullptr;
-                m_pUploadNotification = nullptr;
-            }
-            else
-            {
-                // Agent created, run it!
-                if (!m_pUploadAgent->start())
-                {
-                    log::Error(_L_, E_FAIL, L"Failed to start upload agent\r\n");
-                    return E_FAIL;
-                }
-            }
-        }
-        break;
+        spdlog::debug("UPLOAD: no upload method selected");
+        return S_OK;
     }
+
+    auto uploadMessageQueue = std::make_unique<UploadMessage::UnboundedMessageBuffer>();
+    auto uploadNotification = std::make_unique<concurrency::call<UploadNotification::Notification>>(
+        [this](const UploadNotification::Notification& upload) {
+            const std::wstring operation = L"Upload";
+
+            HRESULT hr = upload->GetHResult();
+            if (FAILED(hr))
+            {
+                spdlog::critical(
+                    L"UPLOAD: Operation for '{}' failed: '{}' (code: {:#x})",
+                    upload->Source(),
+                    upload->Description(),
+                    upload->GetHResult());
+
+                m_journal.Print(
+                    upload->Keyword(),
+                    operation,
+                    L"Failed upload for '{}': {} (code: {:#x})",
+                    upload->Source(),
+                    upload->Description(),
+                    upload->GetHResult());
+
+                return;
+            }
+
+            switch (upload->GetType())
+            {
+                case UploadNotification::Started:
+                    m_journal.Print(upload->Keyword(), operation, L"Start");
+                    break;
+                case UploadNotification::FileAddition:
+                    m_journal.Print(upload->Keyword(), operation, L"Add file: {}", upload->Source());
+                    break;
+                case UploadNotification::DirectoryAddition:
+                    m_journal.Print(upload->Keyword(), operation, L"Add directory: {}", upload->Source());
+                    break;
+                case UploadNotification::StreamAddition:
+                    m_journal.Print(upload->Keyword(), operation, L"Add stream: {}", upload->Source());
+                    break;
+                case UploadNotification::UploadComplete:
+                    m_journal.Print(upload->Keyword(), operation, L"Complete: {}", upload->Destination());
+                    break;
+                case UploadNotification::JobComplete:
+                    spdlog::debug(L"Upload job complete: {}", upload->Request()->JobName());
+                    break;
+            }
+        });
+
+    auto uploadAgent =
+        UploadAgent::CreateUploadAgent(uploadspec, *uploadMessageQueue, *uploadMessageQueue, *uploadNotification);
+
+    if (uploadAgent == nullptr)
+    {
+        spdlog::critical("Failed to create upload agent");
+        return E_FAIL;
+    }
+
+    if (!uploadAgent->start())
+    {
+        spdlog::critical("Failed to start upload agent");
+        // Agent has reference on queue and notifications so make sure it is cleared before
+        uploadAgent.reset();
+        return E_FAIL;
+    }
+
+    m_pUploadAgent = std::move(uploadAgent);
+    m_pUploadMessageQueue = std::move(uploadMessageQueue);
+    m_pUploadNotification = std::move(uploadNotification);
+
     return S_OK;
 }
 
@@ -128,62 +210,56 @@ HRESULT Orc::Command::Wolf::Main::UploadSingleFile(const std::wstring& fileName,
 
 HRESULT Main::CompleteUpload()
 {
-    HRESULT hr = E_FAIL;
-
     if (m_pUploadAgent)
     {
         Concurrency::send(m_pUploadMessageQueue.get(), UploadMessage::MakeCompleteRequest());
-
-        agent::wait(m_pUploadAgent.get());
+        concurrency::agent::wait(m_pUploadAgent.get());
     }
 
     return S_OK;
 }
 
-boost::logic::tribool Main::SetWERDontShowUI(DWORD dwNewValue)
+HRESULT Main::SetWERDontShowUI(DWORD dwNewValue, DWORD& dwPreviousValue)
 {
-    boost::logic::tribool retval = boost::indeterminate;
-
     HKEY hWERKey = nullptr;
     DWORD lasterror = RegOpenKey(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\Windows Error Reporting", &hWERKey);
     if (lasterror != ERROR_SUCCESS)
     {
-        log::Error(_L_, HRESULT_FROM_WIN32(lasterror), L"Failed to open WER registry key\r\n");
-        return retval;
+        HRESULT hr = HRESULT_FROM_WIN32(lasterror);
+        spdlog::error("Failed to open WER registry key (code: {:#x})", hr);
+        return hr;
     }
 
-    DWORD dwValue = 0L;
-    DWORD dwValueSize = sizeof(dwValue);
-    lasterror = RegQueryValueEx(hWERKey, L"DontShowUI", NULL, NULL, (LPBYTE)&dwValue, &dwValueSize);
+    DWORD dwValueSize = sizeof(dwPreviousValue);
+    lasterror = RegQueryValueEx(hWERKey, L"DontShowUI", NULL, NULL, (LPBYTE)&dwPreviousValue, &dwValueSize);
     if (lasterror != ERROR_SUCCESS)
     {
-        log::Error(_L_, HRESULT_FROM_WIN32(lasterror), L"Failed to open WER registry DontShowUI value\r\n");
-        return retval;
+        HRESULT hr = HRESULT_FROM_WIN32(lasterror);
+        spdlog::error("Failed to open WER registry DontShowUI value (code: {:#x})", hr);
+        return hr;
     }
-    if (dwValue != dwNewValue)
-    {
 
+    if (dwPreviousValue != dwNewValue)
+    {
         lasterror = RegSetValueEx(hWERKey, L"DontShowUI", NULL, REG_DWORD, (LPBYTE)&dwNewValue, sizeof(dwNewValue));
         if (lasterror != ERROR_SUCCESS)
         {
-            log::Error(_L_, HRESULT_FROM_WIN32(lasterror), L"Failed to set WER registry DontShowUI value\r\n");
-            return retval;
+            HRESULT hr = HRESULT_FROM_WIN32(lasterror);
+            spdlog::error("Failed to set WER registry DontShowUI value (code: {:#x})", hr);
+            return hr;
         }
 
         if (dwNewValue)
         {
-            log::Info(_L_, L"\r\nWER user interface is now disabled\r\n");
+            spdlog::debug("WER user interface is now disabled");
         }
         else
         {
-            log::Info(_L_, L"\r\nWER user interface is now enabled\r\n");
+            spdlog::debug("WER user interface is now enabled");
         }
-        if (dwValue)
-            retval = true;
-        else
-            retval = false;
     }
-    return retval;
+
+    return S_OK;
 }
 
 HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
@@ -197,11 +273,10 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         options->Encoding = OutputSpec::Encoding::UTF8;
         options->bPrettyPrint = true;
 
-        auto writer = StructuredOutputWriter::GetWriter(_L_, config.Outline, std::move(options));
+        auto writer = StructuredOutputWriter::GetWriter(config.Outline, std::move(options));
         if (writer == nullptr)
         {
-            log::Error(
-                _L_, E_INVALIDARG, L"Failed to create writer for outline file %s\r\n", config.Outline.Path.c_str());
+            spdlog::error(L"Failed to create writer for outline file {}", config.Outline.Path);
             return E_INVALIDARG;
         }
 
@@ -218,10 +293,10 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             SystemDetails::GetTimeStamp(strTimeStamp);
             writer->WriteNamed(L"timestamp", strTimeStamp.c_str());
 
-            auto mothership_id = SystemDetails::GetParentProcessId(_L_);
+            auto mothership_id = SystemDetails::GetParentProcessId();
             if (mothership_id)
             {
-                auto mothership_cmdline = SystemDetails::GetCmdLine(_L_, mothership_id.value());
+                auto mothership_cmdline = SystemDetails::GetCmdLine(mothership_id.value());
                 if (mothership_cmdline)
                     writer->WriteNamed(L"command", mothership_cmdline.value().c_str());
             }
@@ -254,8 +329,8 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 
             SystemIdentity::Write(writer);
         }
-        writer->EndElement(L"dfir-orc");
 
+        writer->EndElement(L"dfir-orc");
         writer->Close();
     }
     catch (std::exception& e)
@@ -272,7 +347,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
     }
 
     auto outlineSize = [&]() {
-        FileStream fs(_L_);
+        FileStream fs;
 
         if (FAILED(fs.ReadFrom(config.Outline.Path.c_str())))
             return 0LLU;
@@ -287,10 +362,9 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         auto end = Orc::ConvertTo(FinishTime);
         auto duration = end - start;
 
-        log::Info(
-            _L_,
-            L"Outline               : %s (took %I64d seconds, size %I64d bytes)\r\n",
-            config.Outline.FileName.c_str(),
+        spdlog::info(
+            L"Outline: {} (took {} seconds, size {} bytes)",
+            config.Outline.FileName,
             duration.count() / 10000000,
             outlineSize());
     }
@@ -299,9 +373,10 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
     {
         if (auto hr = UploadSingleFile(config.Outline.FileName, config.Outline.Path); FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to upload outline file\r\n");
+            spdlog::error(L"Failed to upload outline file (code: {:#x})", hr);
         }
     }
+
     return S_OK;
 }
 
@@ -328,8 +403,6 @@ HRESULT Main::SetLauncherPriority(WolfPriority priority)
 
 HRESULT Main::Run()
 {
-    HRESULT hr = E_FAIL;
-
     switch (config.SelectedAction)
     {
         case WolfLauncherAction::Execute:
@@ -339,40 +412,22 @@ HRESULT Main::Run()
         default:
             return E_NOTIMPL;
     }
+
+    return S_OK;
 }
 
 HRESULT Main::Run_Execute()
 {
     HRESULT hr = E_FAIL;
-    bool bJobWasModified = false;
 
     if (config.Log.Type != OutputSpec::Kind::None)
     {
-        auto stream_log = std::make_shared<LogFileWriter>(0x1000);
-        stream_log->SetConsoleLog(_L_->ConsoleLog());
-        stream_log->SetDebugLog(_L_->DebugLog());
-        stream_log->SetVerboseLog(_L_->VerboseLog());
-
-        auto byteStream = ByteStream::GetStream(stream_log, config.Log);
-
-        if (byteStream->GetSize() == 0LLU)
+        std::error_code ec;
+        m_logging.fileSink()->Open(config.Log.Path, ec);
+        if (ec)
         {
-            // Writing BOM
-            ULONGLONG bytesWritten = 0LLU;
-            BYTE bom[2] = {0xFF, 0xFE};
-            if (FAILED(hr = byteStream->Write(bom, 2 * sizeof(BYTE), &bytesWritten)))
-            {
-                log::Warning(_L_, hr, L"Failed to write BOM to log stream\r\n");
-                byteStream = nullptr;
-            }
-        }
-
-        if (byteStream)
-        {
-            if (FAILED(hr = _L_->LogToStream(byteStream)))
-            {
-                log::Warning(_L_, hr, L"Failed to associate log stream with logger\r\n");
-            }
+            spdlog::error("Failed to create log stream (code: {:#x})", ec.value());
+            return ec.value();
         }
     }
 
@@ -380,24 +435,26 @@ HRESULT Main::Run_Execute()
     {
         if (FAILED(hr = InitializeUpload(*config.Output.UploadOutput)))
         {
-            log::Error(_L_, hr, L"Failed to initalise upload as requested, no upload will be performed\r\n");
+            spdlog::error(L"Failed to initalise upload as requested, no upload will be performed (code: {:#x})", hr);
         }
     }
 
-    if (FAILED(hr = SetDefaultAltitude()))
+    hr = SetDefaultAltitude();
+    if (FAILED(hr))
     {
-        log::Warning(_L_, hr, L"Failed to configure default altitude\r\n");
+        spdlog::warn("Failed to configure default altitude (code: {:#x})", hr);
     }
 
-    if (FAILED(hr = SetLauncherPriority(config.Priority)))
+    hr = SetLauncherPriority(config.Priority);
+    if (FAILED(hr))
     {
-        log::Warning(_L_, hr, L"Failed to configure launcher priority\r\n");
+        spdlog::warn("Failed to configure launcher priority (code: {:#x})", hr);
     }
 
     if (config.PowerState != WolfPowerState::Unmodified)
     {
         EXECUTION_STATE previousState =
-            SetThreadExecutionState(static_cast<EXECUTION_STATE>(config.PowerState | ES_CONTINUOUS));
+            SetThreadExecutionState(static_cast<EXECUTION_STATE>(config.PowerState) | ES_CONTINUOUS);
     }
 
     BOOST_SCOPE_EXIT(hr) { SetThreadExecutionState(ES_CONTINUOUS); }
@@ -407,12 +464,13 @@ HRESULT Main::Run_Execute()
     {
         if (auto hr = CreateAndUploadOutline(); FAILED(hr))
         {
-            log::Warning(_L_, hr, L"Failed to create outline file %s\r\n", config.Outline.Path.c_str());
+            spdlog::critical("Failed to initalise upload as requested, no upload will be performed (code: {:#x})", hr);
         }
     }
 
-    auto job = JobObject::GetJobObject(_L_, GetCurrentProcess());
+    auto job = JobObject::GetJobObject(GetCurrentProcess());
 
+    bool bJobWasModified = false;
     if (job.IsValid())
     {
         // Checking in WOLFLauncher is running within a Windows Job object
@@ -423,44 +481,55 @@ HRESULT Main::Run_Execute()
             if (dwMajor < 6 || (dwMajor == 6 && dwMinor < 2))
             {
                 // Job object does not allow breakaway.
-                if (FAILED(hr = job.AllowBreakAway()))
+                hr = job.AllowBreakAway();
+                if (FAILED(hr))
                 {
-                    log::Error(_L_, E_INVALIDARG, L"Running within a job that won't allow breakaway, exiting\r\n");
+                    spdlog::error("Running within a job that won't allow breakaway, exiting (code: {:#x})", hr);
                     return E_FAIL;
                 }
-                else
-                {
-                    bJobWasModified = true;
-                    log::Info(_L_, L"INFO: Running within a job, it has been configured to allow breakaway\r\n");
-                }
+
+                bJobWasModified = true;
+                spdlog::info(L"Running within a job, it has been configured to allow breakaway");
             }
             else
             {
-                log::Verbose(
-                    _L_,
-                    L"WolfLauncher is within a job that won't allow breakaway. Windows 8.x allows nested job. "
-                    L"Giving it a try!!\r\n");
+                spdlog::debug("WolfLauncher is within a job that won't allow breakaway. Windows 8.x allows nested job");
             }
         }
     }
 
-    boost::logic::tribool WERDontShowUIStatus = boost::logic::indeterminate;
+    boost::logic::tribool initialWERDontShowUIStatus = boost::logic::indeterminate;
 
     if (config.bWERDontShowUI)
     {
-        WERDontShowUIStatus = SetWERDontShowUI(1L);
+        DWORD dwPreviousValue = 0;
+
+        hr = SetWERDontShowUI(1L, dwPreviousValue);
+        if (FAILED(hr))
+        {
+            spdlog::error("Failed to set WERDontShowUIStatus to '{}' (code: {:#x})", config.bWERDontShowUI, hr);
+        }
+        else
+        {
+            m_console.Print("WER user interface is enabled");
+        }
+
+        initialWERDontShowUIStatus = dwPreviousValue;
     }
-    BOOST_SCOPE_EXIT(&WERDontShowUIStatus, this_)
+
+    BOOST_SCOPE_EXIT(&initialWERDontShowUIStatus, this_)
     {
-        if (!WERDontShowUIStatus)
+        DWORD dwPreviousValue;
+
+        if (!initialWERDontShowUIStatus)
         {
             // Value mas modified from false to true
-            this_->SetWERDontShowUI(0L);
+            this_->SetWERDontShowUI(0L, dwPreviousValue);
         }
-        else if (WERDontShowUIStatus)
+        else if (initialWERDontShowUIStatus)
         {
             // Value was modified from true to false
-            this_->SetWERDontShowUI(1L);
+            this_->SetWERDontShowUI(1L, dwPreviousValue);
         }
         else
         {
@@ -471,260 +540,93 @@ HRESULT Main::Run_Execute()
 
     for (const auto& exec : m_wolfexecs)
     {
-
         if (exec->IsOptional())
+        {
+            spdlog::debug(L"Skipping optional command set: '{}'", exec->GetKeyword());
             continue;
+        }
 
         if (m_pConfigStream != nullptr)
         {
-            // Rewind the config file stream to enable the config to be "not empty" :-)
+            // Rewind the config file stream to enable the config to be "not empty"
             m_pConfigStream->SetFilePointer(0LL, FILE_BEGIN, NULL);
         }
 
         exec->SetUseJournalWhenEncrypting(config.bUseJournalWhenEncrypting);
 
-        bool bDebug = exec->IsChildDebugActive(config.bChildDebug);
-
-        wstring strRecipients;
-        bool bFirst = true;
-        for (const auto& rec : exec->Recipients())
+        // Print command parameters and eventually skip it
         {
-            if (!bFirst)
+            auto [lock, console] = m_journal.Console();
+
+            auto commandSetNode = console.OutputTree().AddNode("Command set '{}'", exec->GetKeyword());
+            auto parametersNode = commandSetNode.AddNode("Parameters");
+            PrintValue(
+                parametersNode, "UseEncryptionJournal", exec->IsChildDebugActive(config.bUseJournalWhenEncrypting));
+            PrintValue(parametersNode, "Debug", exec->IsChildDebugActive(config.bChildDebug));
+            PrintValue(parametersNode, "RepeatBehavior", WolfExecution::ToString(exec->RepeatBehaviour()));
+
+            if (exec->RepeatBehaviour() == WolfExecution::Repeat::Overwrite)
             {
-                strRecipients += L", ";
-                strRecipients += rec->Name;
+                FileInformations info;
+                hr = GetOutputFileInformations(*exec, info);
+                if (SUCCEEDED(hr))
+                {
+                    commandSetNode.Add("Overwriting '{}' ({})", info.path, info.size);
+                }
             }
-            else
+            else if (exec->RepeatBehaviour() == WolfExecution::Repeat::Once)
             {
-                strRecipients = L" (recipients ";
-                strRecipients += rec->Name;
-                bFirst = false;
+                FileInformations info;
+                hr = GetOutputFileInformations(*exec, info);
+                if (SUCCEEDED(hr) && (!info.size || *info.size != 0))
+                {
+                    commandSetNode.Add(
+                        "Skipping set because non-empty output file already exists: '{}' ({})", info.path, info.size);
+                    commandSetNode.AddEmptyLine();
+                    continue;
+                }
             }
-        }
-        if (!strRecipients.empty())
-        {
-            strRecipients += L")";
+
+            commandSetNode.AddEmptyLine();
         }
 
-        switch (exec->RepeatBehaviour())
+        hr = ExecuteKeyword(*exec);
+        if (FAILED(hr))
         {
-            case WolfExecution::NotSet:
-                log::Info(
-                    _L_,
-                    L"\r\n\tExecuting \"%s\" (repeat behavior not set)%s%s\r\n\r\n",
-                    exec->GetKeyword().c_str(),
-                    bDebug ? L" (debug=on)" : L"",
-                    strRecipients.c_str());
-                break;
-            case WolfExecution::CreateNew:
-                log::Info(_L_, L"\r\n\tExecuting \"%s\"%s\r\n\r\n", exec->GetKeyword().c_str(), strRecipients.c_str());
-                break;
-            case WolfExecution::Overwrite:
-
-                if (m_pUploadAgent && exec->ShouldUpload())
-                {
-                    if (m_pUploadAgent->CheckFileUpload(exec->GetOutputFileName()) == S_OK)
-                    {
-                        log::Info(
-                            _L_,
-                            L"\r\n\tExecuting \"%s\" (overwriting existing %s)%s%s\r\n\r\n",
-                            exec->GetKeyword().c_str(),
-                            m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName()).c_str(),
-                            bDebug ? L" (debug=on)" : L"",
-                            strRecipients.c_str());
-                    }
-                    else
-                    {
-                        log::Info(
-                            _L_,
-                            L"\r\n\tExecuting \"%s\"%s%s\r\n\r\n",
-                            exec->GetKeyword().c_str(),
-                            bDebug ? L" (debug=on)" : L"",
-                            strRecipients.c_str());
-                    }
-                }
-                else
-                {
-                    if (SUCCEEDED(hr = VerifyFileExists(exec->GetOutputFullPath().c_str())))
-                    {
-                        log::Info(
-                            _L_,
-                            L"\r\n\tExecuting \"%s\" (overwriting existing %s)%s%s\r\n\r\n",
-                            exec->GetKeyword().c_str(),
-                            exec->GetOutputFullPath().c_str(),
-                            bDebug ? L" (debug=on)" : L"",
-                            strRecipients.c_str());
-                    }
-                    else
-                    {
-                        log::Info(
-                            _L_,
-                            L"\r\n\tExecuting \"%s\"%s%s\r\n\r\n",
-                            exec->GetKeyword().c_str(),
-                            bDebug ? L" (debug=on)" : L"",
-                            strRecipients.c_str());
-                    }
-                }
-                break;
-            case WolfExecution::Once:
-
-                if (m_pUploadAgent && exec->ShouldUpload())
-                {
-                    DWORD dwFileSize = 0L;
-                    if (m_pUploadAgent->CheckFileUpload(exec->GetOutputFileName(), &dwFileSize) == S_OK)
-                    {
-                        if (dwFileSize == 0L)
-                        {
-                            log::Info(
-                                _L_,
-                                L"\r\n\tExecuting \"%s\" (overwriting previous _empty_ file)%s%s\r\n\r\n",
-                                exec->GetKeyword().c_str(),
-                                bDebug ? L" (debug=on)" : L"",
-                                strRecipients.c_str());
-                            break;
-                        }
-                        else
-                        {
-                            log::Info(
-                                _L_,
-                                L"\r\n\tSkipping \"%s\" (file %s already created and not empty)%s%s\r\n\r\n",
-                                exec->GetKeyword().c_str(),
-                                m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName()).c_str(),
-                                bDebug ? L" (debug=on)" : L"",
-                                strRecipients.c_str());
-                            continue;
-                        }
-                    }
-                }
-
-                if (SUCCEEDED(hr = VerifyFileExists(exec->GetOutputFullPath().c_str())))
-                {
-                    WIN32_FILE_ATTRIBUTE_DATA data;
-                    ZeroMemory(&data, sizeof(WIN32_FILE_ATTRIBUTE_DATA));
-
-                    if (!GetFileAttributesEx(exec->GetOutputFullPath().c_str(), GetFileExInfoStandard, &data))
-                    {
-                        log::Warning(
-                            _L_,
-                            hr = HRESULT_FROM_WIN32(GetLastError()),
-                            L"Failed to obtain file attributes of %s\r\n",
-                            exec->GetOutputFullPath().c_str());
-                        log::Info(
-                            _L_,
-                            L"\r\n\tSkipping \"%s\" (file %s already exists)%s%s\r\n\r\n",
-                            exec->GetKeyword().c_str(),
-                            exec->GetOutputFullPath().c_str(),
-                            bDebug ? L" (debug=on)" : L"",
-                            strRecipients.c_str());
-                        continue;
-                    }
-                    else
-                    {
-                        if (data.nFileSizeHigh == 0L && data.nFileSizeLow == 0L)
-                        {
-                            log::Info(
-                                _L_,
-                                L"\r\n\tExecuting \"%s\" (overwriting previous _empty_ file)%s%s\r\n\r\n",
-                                exec->GetKeyword().c_str(),
-                                bDebug ? L" (debug=on)" : L"",
-                                strRecipients.c_str());
-                            break;
-                        }
-                        else
-                        {
-                            log::Info(
-                                _L_,
-                                L"\r\n\tSkipping \"%s\" (file %s already created and not empty)%s%s\r\n\r\n",
-                                exec->GetKeyword().c_str(),
-                                exec->GetOutputFullPath().c_str(),
-                                bDebug ? L" (debug=on)" : L"",
-                                strRecipients.c_str());
-                            continue;
-                        }
-                    }
-                }
-                else
-                {
-                    log::Info(
-                        _L_,
-                        L"\r\n\tExecuting \"%s\"%s%s\r\n\r\n",
-                        exec->GetKeyword().c_str(),
-                        bDebug ? L" (debug=on)" : L"",
-                        strRecipients.c_str());
-                }
-
-                break;
-        }
-
-        if (FAILED(hr = exec->CreateArchiveAgent()))
-        {
-            log::Error(_L_, hr, L"Archive agent creation failed\r\n");
+            spdlog::critical(L"Failed to execute command set '{}' (code: {:#x})", exec->GetKeyword(), hr);
             continue;
         }
-
-        if (FAILED(hr = exec->CreateCommandAgent(config.bChildDebug, config.msRefreshTimer, exec->GetConcurrency())))
-        {
-            log::Error(_L_, hr, L"Command agent creation failed\r\n");
-            exec->CompleteArchive(m_pUploadMessageQueue.get());
-            continue;
-        }
-
-        try
-        {
-            // issue commands
-            if (FAILED(hr = exec->EnqueueCommands()))
-            {
-                log::Error(_L_, hr, L"Command enqueue failed\r\n");
-                exec->TerminateAllAndComplete();
-                exec->CompleteArchive(m_pUploadMessageQueue.get());
-                continue;
-            }
-            // issue last "Done" message
-            if (FAILED(hr = exec->CompleteExecution()))
-            {
-                log::Error(_L_, hr, L"Command execution completion failed\r\n");
-                exec->TerminateAllAndComplete();
-                exec->CompleteArchive(m_pUploadMessageQueue.get());
-                continue;
-            }
-        }
-        catch (...)
-        {
-            log::Error(_L_, E_FAIL, L"Exception raised, attempting job termination and archive completion...\r\n");
-            exec->TerminateAllAndComplete();
-            exec->CompleteArchive(m_pUploadMessageQueue.get());
-        }
-
-        exec->CompleteArchive(m_pUploadMessageQueue.get());
     }
-
-    if (_L_->IsLoggingToStream())
+    const auto& fileSink = m_logging.fileSink();
+    if (fileSink->IsOpen())
     {
-        _L_->CloseLogToStream();
+        fileSink->Close();
 
         if (auto hr = UploadSingleFile(config.Log.FileName, config.Log.Path); FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to upload log file\r\n");
+            spdlog::error(L"Failed to upload log file (code: {:#x})", hr);
         }
     }
 
     if (config.Output.UploadOutput)
     {
-        if (FAILED(hr = CompleteUpload()))
+        hr = CompleteUpload();
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to complete upload agent\r\n");
+            spdlog::error("Failed to complete upload agent (code: {:#x})", hr);
         }
     }
 
     if (bJobWasModified)
     {
-        if (SUCCEEDED(hr = job.BlockBreakAway()))
+        hr = job.BlockBreakAway();
+        if (SUCCEEDED(hr))
         {
-            log::Info(_L_, L"\r\nINFO: Job has been re-configured to block breakaway\r\n");
+            spdlog::info(L"Job has been re-configured to block breakaway");
         }
         else
         {
-            log::Error(_L_, hr, L"\r\nJob failed to be re-configured to block breakaway\r\n");
+            spdlog::error(L"Job failed to be re-configured to block breakaway (code: {:#x})", hr);
         }
     }
 
@@ -732,29 +634,88 @@ HRESULT Main::Run_Execute()
     {
         MessageBeep(MB_ICONINFORMATION);
     }
+
     return S_OK;
+}
+
+HRESULT Main::ExecuteKeyword(WolfExecution& exec)
+{
+    HRESULT hr = exec.CreateArchiveAgent();
+    if (FAILED(hr))
+    {
+        spdlog::error("Archive agent creation failed (code: {:#x})", hr);
+        return hr;
+    }
+
+    // TODO: This should be moved into the try/except and benefit from RAII cleanup below but 'TerminateAllAndComplete'
+    // should not be called multiple times without checking
+    hr = exec.CreateCommandAgent(config.bChildDebug, config.msRefreshTimer, exec.GetConcurrency());
+    if (FAILED(hr))
+    {
+        spdlog::error("Command agent creation failed (code: {:#x})", hr);
+        exec.CompleteArchive(m_pUploadMessageQueue.get());
+        return hr;
+    }
+
+    auto completeArchiveOnExit = Guard::CreateScopeGuard([&]() {
+        if (FAILED(hr))
+        {
+            exec.TerminateAllAndComplete();
+        }
+
+        HRESULT hrComplete = exec.CompleteArchive(m_pUploadMessageQueue.get());
+        if (FAILED(hrComplete))
+        {
+            spdlog::error(L"Failed to complete archive '{}' (code: {:#x})", exec.GetOutputFileName(), hrComplete);
+        }
+    });
+
+    try
+    {
+        hr = exec.EnqueueCommands();
+        if (FAILED(hr))
+        {
+            spdlog::error("Command enqueue failed (code: {:#x})", hr);
+            return hr;
+        }
+
+        // issue last "Done" message
+        hr = exec.CompleteExecution();
+        if (FAILED(hr))
+        {
+            spdlog::error("Command execution completion failed (code: {:#x})", hr);
+            return hr;
+        }
+
+        return S_OK;
+    }
+    catch (...)
+    {
+        spdlog::critical("Exception raised, attempting job termination and archive completion...");
+        return E_FAIL;
+    }
 }
 
 HRESULT Main::Run_Keywords()
 {
-    HRESULT hr = E_FAIL;
+    auto root = m_console.OutputTree();
 
     for (const auto& exec : m_wolfexecs)
     {
-        log::Info(
-            _L_,
-            L"[%c] Archive: %s (file is %s)\r\n",
-            exec->IsOptional() ? L' ' : L'X',
-            exec->GetKeyword().c_str(),
-            exec->GetArchiveFileName().c_str());
+        auto keywordNode = root.AddNode(
+            L"[{}] {} ({})", exec->IsOptional() ? L' ' : L'X', exec->GetKeyword(), exec->GetArchiveFileName());
 
         for (const auto& command : exec->GetCommands())
         {
-            log::Info(_L_, L"\t[%c] Command %s\r\n", command->IsOptional() ? L' ' : L'X', command->Keyword().c_str());
+            keywordNode.Add(L"[{}] {}", command->IsOptional() ? L' ' : L'X', command->Keyword());
         }
 
-        log::Info(_L_, L"\r\n");
+        root.AddEmptyLine();
     }
 
     return S_OK;
 }
+
+}  // namespace Wolf
+}  // namespace Command
+}  // namespace Orc

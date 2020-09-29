@@ -17,13 +17,12 @@
 
 namespace Orc {
 
-class LogFileWriter;
 class IDiskExtent;
 
 class ORCLIB_API PartitionTable
 {
 public:
-    PartitionTable(logger pLog);
+    PartitionTable();
     ~PartitionTable(void);
 
     typedef std::vector<Partition> PartitionVector;
@@ -62,7 +61,6 @@ private:
 
 private:
     std::vector<Partition> m_Table;
-    logger _L_;
     IDiskExtent* m_pDiskExtent;
     bool m_isGPT = false;
 };

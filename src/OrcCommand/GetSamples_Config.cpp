@@ -19,8 +19,6 @@
 
 #include "ConfigFile_GetSamples.h"
 
-#include "LogFileWriter.h"
-
 using namespace Orc;
 using namespace Orc::Command::GetSamples;
 
@@ -61,11 +59,9 @@ ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.sampleinfoOutput.Schema = TableOutput::GetColumnsFromConfig(
-        _L_,
         config.sampleinfoOutput.TableKey.empty() ? L"SampleInfo" : config.sampleinfoOutput.TableKey.c_str(),
         schemaitem);
     config.timelineOutput.Schema = TableOutput::GetColumnsFromConfig(
-        _L_,
         config.timelineOutput.TableKey.empty() ? L"SampleTimeline" : config.timelineOutput.TableKey.c_str(),
         schemaitem);
     return S_OK;
@@ -81,14 +77,14 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
         {
             case L'/':
             case L'-':
-                if (OutputOption(argv[i] + 1, L"GetThisConfig", OutputSpec::File, config.getThisConfig))
+                if (OutputOption(argv[i] + 1, L"GetThisConfig", OutputSpec::Kind::File, config.getThisConfig))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"GetThisArgs", config.getthisArgs))
                     ;
                 else if (OutputOption(
                              argv[i] + 1,
                              L"Out",
-                             static_cast<OutputSpec::Kind>(OutputSpec::Archive | OutputSpec::Directory),
+                             static_cast<OutputSpec::Kind>(OutputSpec::Kind::Archive | OutputSpec::Kind::Directory),
                              config.samplesOutput))
                     ;
                 else if (!_wcsnicmp(argv[i] + 1, L"Autoruns", wcslen(L"Autoruns")))
@@ -108,9 +104,10 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                         }
                         else
                         {
-                            if (FAILED(config.autorunsOutput.Configure(_L_, OutputSpec::File, pEquals + 1)))
+                            hr = config.autorunsOutput.Configure(OutputSpec::Kind::File, pEquals + 1);
+                            if (FAILED(hr))
                             {
-                                log::Error(_L_, E_INVALIDARG, L"Invalid autoruns file specified: %s\r\n", pEquals + 1);
+                                spdlog::error(L"Invalid autoruns file specified: '{}' (code: {:#x})", pEquals + 1, hr);
                                 return E_INVALIDARG;
                             }
                             else
@@ -121,11 +118,11 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                         }
                     }
                 }
-                else if (OutputOption(argv[i] + 1, L"SampleInfo", OutputSpec::TableFile, config.sampleinfoOutput))
+                else if (OutputOption(argv[i] + 1, L"SampleInfo", OutputSpec::Kind::TableFile, config.sampleinfoOutput))
                     ;
-                else if (OutputOption(argv[i] + 1, L"TimeLine", OutputSpec::TableFile, config.timelineOutput))
+                else if (OutputOption(argv[i] + 1, L"TimeLine", OutputSpec::Kind::TableFile, config.timelineOutput))
                     ;
-                else if (OutputOption(argv[i] + 1, L"TempDir", OutputSpec::Directory, config.tmpdirOutput))
+                else if (OutputOption(argv[i] + 1, L"TempDir", OutputSpec::Kind::Directory, config.tmpdirOutput))
                     ;
                 else if (FileSizeOption(argv[i] + 1, L"MaxPerSampleBytes", config.limits.dwlMaxBytesPerSample))
                     ;
@@ -169,19 +166,16 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    ConfigFile reader(_L_);
+    ConfigFile reader;
 
     if (FAILED(
             hr = config.samplesOutput.Configure(
-                _L_,
-                static_cast<OutputSpec::Kind>(OutputSpec::Archive | OutputSpec::Directory),
+                static_cast<OutputSpec::Kind>(OutputSpec::Kind::Archive | OutputSpec::Kind::Directory),
                 configitem[GETSAMPLES_OUTPUT])))
         return hr;
-    if (FAILED(
-            hr =
-                config.sampleinfoOutput.Configure(_L_, OutputSpec::Kind::TableFile, configitem[GETSAMPLES_SAMPLEINFO])))
+    if (FAILED(hr = config.sampleinfoOutput.Configure(OutputSpec::Kind::TableFile, configitem[GETSAMPLES_SAMPLEINFO])))
         return hr;
-    if (FAILED(hr = config.timelineOutput.Configure(_L_, OutputSpec::Kind::TableFile, configitem[GETSAMPLES_TIMELINE])))
+    if (FAILED(hr = config.timelineOutput.Configure(OutputSpec::Kind::TableFile, configitem[GETSAMPLES_TIMELINE])))
         return hr;
 
     hr = ProcessOptionAutorun(configitem);
@@ -190,10 +184,10 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         return hr;
     }
 
-    if (FAILED(hr = config.tmpdirOutput.Configure(_L_, OutputSpec::Directory, configitem[GETSAMPLES_TEMPDIR])))
+    if (FAILED(hr = config.tmpdirOutput.Configure(OutputSpec::Kind::Directory, configitem[GETSAMPLES_TEMPDIR])))
         return hr;
 
-    if (FAILED(hr = config.getThisConfig.Configure(_L_, OutputSpec::File, configitem[GETSAMPLES_GETTHIS_CONFIG])))
+    if (FAILED(hr = config.getThisConfig.Configure(OutputSpec::Kind::File, configitem[GETSAMPLES_GETTHIS_CONFIG])))
         return hr;
 
     if (configitem[GETSAMPLES_SAMPLES][CONFIG_MAXBYTESPERSAMPLE])
@@ -257,7 +251,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 }
                 break;
             default:
-                log::Error(_L_, hr, L"Unsupported architecture %d\r\n", wArch);
+                spdlog::error("Unsupported architecture: {}", wArch);
                 return hr;
         }
 
@@ -277,13 +271,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(configitem[GETSAMPLES_LOCATIONS])))
     {
-        log::Error(_L_, hr, L"Error in specific locations parsing in config file\r\n");
+        spdlog::error("Error in specific locations parsing in config file (code: {:#x}", hr);
         return hr;
     }
 
     if (FAILED(hr = config.locs.AddKnownLocations(configitem[GETSAMPLES_KNOWNLOCATIONS])))
     {
-        log::Error(_L_, hr, L"Error in known locations parsing\r\n");
+        spdlog::error("Error in known locations parsing (code: {:#x}", hr);
         return hr;
     }
 
@@ -298,11 +292,9 @@ HRESULT Main::CheckConfiguration()
     if (!config.limits.bIgnoreLimits
         && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
     {
-        log::Error(
-            _L_,
-            E_INVALIDARG,
-            L"No global (at samples level, MaxBytesTotal or MaxSampleCount) has been set: set limits in configuration "
-            L"or use /nolimits\r\n");
+        spdlog::error(
+            "No global (at samples level, MaxBytesTotal or MaxSampleCount) has been set: set limits in configuration "
+            "or use /nolimits");
         return E_INVALIDARG;
     }
 
@@ -310,7 +302,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.bInstallNTrack && config.bRemoveNTrack)
     {
-        log::Error(_L_, E_FAIL, L"Cannot install and remove NTrack in same command\r\n");
+        spdlog::error("Cannot install and remove NTrack in same command");
         return E_FAIL;
     }
 
@@ -319,11 +311,11 @@ HRESULT Main::CheckConfiguration()
         WCHAR szTempDir[MAX_PATH];
         if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
         {
-            log::Error(_L_, hr, L"Failed to determine default temp folder\r\n");
+            spdlog::error("Failed to determine default temp folder (code: {:#x}", hr);
             return hr;
         }
         config.tmpdirOutput.Path = szTempDir;
-        config.tmpdirOutput.Type = OutputSpec::Directory;
+        config.tmpdirOutput.Type = OutputSpec::Kind::Directory;
     }
 
     // we support only NTFS for now to get samples
@@ -343,13 +335,13 @@ HRESULT Main::ProcessOptionAutorun(const ConfigItem& item)
         return S_OK;
     }
 
-    HRESULT hr = config.autorunsOutput.Configure(_L_, OutputSpec::Kind::File, item[GETSAMPLES_AUTORUNS]);
+    HRESULT hr = config.autorunsOutput.Configure(OutputSpec::Kind::File, item[GETSAMPLES_AUTORUNS]);
     if (FAILED(hr))
     {
         return hr;
     }
 
-    if (config.autorunsOutput.Type == OutputSpec::None)
+    if (config.autorunsOutput.Type == OutputSpec::Kind::None)
     {
         // Option is defined without any path: execute Autoruns.exe
         config.bRunAutoruns = true;

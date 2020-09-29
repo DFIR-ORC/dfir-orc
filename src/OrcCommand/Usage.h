@@ -86,7 +86,7 @@ auto PrintParameters(Orc::Text::Tree<T>& root, const ListsDescription& descripti
     return node;
 }
 
-constexpr std::array kUsageOutput = {Parameter {"/out=<Directory|File.csv|Archive.7z>", "Output file or directory"}};
+constexpr std::array kUsageOutput = {Parameter {"/Out=<Directory|File.csv|Archive.7z>", "Output file or directory"}};
 
 constexpr std::string_view kCategoryOutputParameters = "OUTPUT PARAMETERS";
 
@@ -104,7 +104,9 @@ constexpr std::array kUsageLogging = {
     Parameter("/Trace", "Set trace log level"),
     Parameter("/Debug", "Set debug log level"),
     Parameter("/Info", "Set info log level"),
+    Parameter("/Warn", "Set warn log level"),
     Parameter("/Error", "Set error log level"),
+    Parameter("/Critical", "Set critical log level"),
     Parameter("/NoConsole", "Turns off console logging")};
 
 template <typename T, typename... CustomParameterLists>

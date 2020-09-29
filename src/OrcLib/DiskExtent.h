@@ -14,8 +14,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API CDiskExtent : public IDiskExtent
 {
     friend class CompleteVolumeReader;
@@ -32,12 +30,10 @@ class ORCLIB_API CDiskExtent : public IDiskExtent
 
 public:
     // CDiskExtent
-    CDiskExtent(logger pLog)
-        : _L_(std::move(pLog))
-    {
-    }
-    CDiskExtent(logger pLog, const std::wstring& name, ULONGLONG ullStart, ULONGLONG ullLength, ULONG ulSectorSize);
-    CDiskExtent(logger pLog, const std::wstring& name);
+    CDiskExtent() {}
+
+    CDiskExtent(const std::wstring& name, ULONGLONG ullStart, ULONGLONG ullLength, ULONG ulSectorSize);
+    CDiskExtent(const std::wstring& name);
     CDiskExtent(CDiskExtent&& Other) noexcept;
     CDiskExtent(const CDiskExtent& Other) noexcept;
 
@@ -53,8 +49,6 @@ private:
     ULONG m_LogicalSectorSize = 0LU;
     ULONG m_PhysicalSectorSize = 0LU;
     HANDLE m_hFile = INVALID_HANDLE_VALUE;
-
-    logger _L_;
 
 public:
     // from IDiskExtend

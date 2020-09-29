@@ -18,8 +18,6 @@
 
 #include "Temporary.h"
 
-#include "LogFileWriter.h"
-
 #include "FileStream.h"
 #include "CryptoHashStream.h"
 #include "ResourceStream.h"
@@ -32,19 +30,21 @@
 
 #include "SecurityDescriptor.h"
 
+#include "WideAnsi.h"
+
 using namespace std;
 namespace fs = std::filesystem;
 
 using namespace Orc;
 
-std::shared_ptr<ArchiveExtract> ArchiveExtract::MakeExtractor(ArchiveFormat fmt, logger pLog, bool bComputeHash)
+std::shared_ptr<ArchiveExtract> ArchiveExtract::MakeExtractor(ArchiveFormat fmt, bool bComputeHash)
 {
     switch (fmt)
     {
         case ArchiveFormat::SevenZip:
-            return std::make_shared<ZipExtract>(std::move(pLog), bComputeHash);
+            return std::make_shared<ZipExtract>(bComputeHash);
         case ArchiveFormat::Zip:
-            return std::make_shared<ZipExtract>(std::move(pLog), bComputeHash);
+            return std::make_shared<ZipExtract>(bComputeHash);
     }
     return nullptr;
 }
@@ -68,7 +68,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (EmbeddedResource::IsResourceBasedArchiveFile(pwzZipFilePath))
         {
-            shared_ptr<ResourceStream> pResStream = make_shared<ResourceStream>(_L_);
+            shared_ptr<ResourceStream> pResStream = make_shared<ResourceStream>();
 
             if (!pResStream)
             {
@@ -80,7 +80,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
             if (FAILED(
                     hr = EmbeddedResource::SplitResourceReference(
-                        _L_, strFileName, MotherShip, ResName, NameInArchive, Format)))
+                        strFileName, MotherShip, ResName, NameInArchive, Format)))
                 return hr;
 
             HMODULE hMod = NULL;
@@ -89,7 +89,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
             if (FAILED(
                     hr = EmbeddedResource::LocateResource(
-                        _L_, MotherShip, ResName, EmbeddedResource::BINARY(), hMod, hRes, strBinaryPath)))
+                        MotherShip, ResName, EmbeddedResource::BINARY(), hMod, hRes, strBinaryPath)))
                 return hr;
 
             if (FAILED(hr = pResStream->OpenForReadOnly(hMod, hRes)))
@@ -99,7 +99,7 @@ STDMETHODIMP ArchiveExtract::Extract(
         }
         else
         {
-            shared_ptr<FileStream> pFileStream = make_shared<FileStream>(_L_);
+            shared_ptr<FileStream> pFileStream = make_shared<FileStream>();
 
             if (!pFileStream)
                 return E_OUTOFMEMORY;
@@ -110,7 +110,7 @@ STDMETHODIMP ArchiveExtract::Extract(
             sa.bInheritHandle = FALSE;
             sa.lpSecurityDescriptor = NULL;
 
-            SecurityDescriptor sd(_L_);
+            SecurityDescriptor sd;
             if (szSDDL != NULL)
             {
                 if (SUCCEEDED(sd.ConvertFromSDDL(szSDDL)))
@@ -142,7 +142,6 @@ STDMETHODIMP ArchiveExtract::Extract(
         HANDLE hFile = INVALID_HANDLE_VALUE;
         if (FAILED(
                 hr = UtilGetUniquePath(
-                    _L_,
                     pwzExtractRootDir,
                     item.NameInArchive.c_str(),
                     item.Path,
@@ -150,12 +149,11 @@ STDMETHODIMP ArchiveExtract::Extract(
                     FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
                     szSDDL)))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Failed to get unique path for file %s in %s\r\n",
-                item.NameInArchive.c_str(),
-                pwzExtractRootDir);
+            spdlog::error(
+                L"Failed to get unique path for file '{}' in '{}' (code: {:#x})",
+                item.NameInArchive,
+                pwzExtractRootDir,
+                hr);
             return nullptr;
         }
 
@@ -172,7 +170,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, MAX_PATH)))
         {
-            log::Error(_L_, hr, L"Failed to get directory for file %s\r\n", item.Path.c_str());
+            spdlog::error(L"Failed to get directory for file '{}' (code: {:#x})", item.Path, hr);
             return nullptr;
         }
         fs::path absolute(szDirectory);
@@ -183,17 +181,12 @@ STDMETHODIMP ArchiveExtract::Extract(
         }
         catch (const fs::filesystem_error& error)
         {
-            const HRESULT hr = HRESULT_FROM_WIN32(error.code().value());
-            log::Error(
-                _L_,
-                hr,
-                L"Failed to create directory %s while processing file %s\r\n",
-                absolute.c_str(),
-                item.Path.c_str());
+            const auto [hr, msg] = AnsiToWide(error.what());
+            spdlog::error(L"Failed to create directory '{}' while processing file '{}': {}", absolute, item.Path, msg);
             return nullptr;
         }
 
-        auto filestream = make_shared<FileStream>(_L_);
+        auto filestream = make_shared<FileStream>();
         if (FAILED(hr = filestream->OpenHandle(hFile)))
             return nullptr;
 
@@ -240,7 +233,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (fs)
         {
-            auto newfs = std::make_shared<FileStream>(_L_);
+            auto newfs = std::make_shared<FileStream>();
 
             if (FAILED(hr = newfs->Duplicate(*fs)))
                 return hr;
@@ -254,7 +247,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (ms)
         {
-            auto newms = std::make_shared<MemoryStream>(_L_);
+            auto newms = std::make_shared<MemoryStream>();
 
             if (FAILED(hr = newms->Duplicate(*ms)))
                 return hr;
@@ -275,7 +268,6 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (FAILED(
                 hr = UtilGetUniquePath(
-                    _L_,
                     pwzExtractRootDir,
                     item.NameInArchive.c_str(),
                     item.Path,
@@ -283,12 +275,11 @@ STDMETHODIMP ArchiveExtract::Extract(
                     FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
                     szSDDL)))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Failed to get unique path for file %s in %s\r\n",
-                item.NameInArchive.c_str(),
-                pwzExtractRootDir);
+            spdlog::error(
+                L"Failed to get unique path for file '{}' in '{}' (code: {:#x})",
+                item.NameInArchive,
+                pwzExtractRootDir,
+                hr);
             return nullptr;
         }
 
@@ -296,7 +287,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, MAX_PATH)))
         {
-            log::Error(_L_, hr, L"Failed to get directory for file %s\r\n", item.Path.c_str());
+            spdlog::error(L"Failed to get directory for file '{}' (code: {:#x}", item.Path, hr);
             return nullptr;
         }
         fs::path absolute(szDirectory);
@@ -311,7 +302,7 @@ STDMETHODIMP ArchiveExtract::Extract(
             return nullptr;
         }
 
-        auto filestream = make_shared<FileStream>(_L_);
+        auto filestream = make_shared<FileStream>();
         if (FAILED(hr = filestream->OpenHandle(hFile)))
             return nullptr;
 
@@ -345,7 +336,6 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (FAILED(
                 hr = UtilGetUniquePath(
-                    _L_,
                     pwzExtractRootDir,
                     item.NameInArchive.c_str(),
                     item.Path,
@@ -353,12 +343,11 @@ STDMETHODIMP ArchiveExtract::Extract(
                     FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
                     szSDDL)))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Failed to get unique path for file %s in %s\r\n",
-                item.NameInArchive.c_str(),
-                pwzExtractRootDir);
+            spdlog::error(
+                L"Failed to get unique path for file '{}' in '{}' (code: {:#x})",
+                item.NameInArchive,
+                pwzExtractRootDir,
+                hr);
             return nullptr;
         }
 
@@ -366,7 +355,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, MAX_PATH)))
         {
-            log::Error(_L_, hr, L"Failed to get directory for file %s\r\n", item.Path.c_str());
+            spdlog::error(L"Failed to get directory for file '{}' (code: {:#x})", item.Path, hr);
             return nullptr;
         }
         fs::path absolute(szDirectory);
@@ -380,7 +369,7 @@ STDMETHODIMP ArchiveExtract::Extract(
             auto code = exception.code();
             return nullptr;
         }
-        auto filestream = make_shared<FileStream>(_L_);
+        auto filestream = make_shared<FileStream>();
         if (FAILED(hr = filestream->OpenHandle(hFile)))
             return nullptr;
 

@@ -13,15 +13,13 @@
 #include "EmbeddedResource.h"
 #include "Temporary.h"
 
-#include "LogFileWriter.h"
-
 #include <string>
 #include <string_view>
 
 using namespace Orc;
 
-ResourceStream::ResourceStream(logger pLog)
-    : MemoryStream(std::move(pLog))
+ResourceStream::ResourceStream()
+    : MemoryStream()
 {
 }
 
@@ -32,7 +30,7 @@ ResourceStream::~ResourceStream()
 
 HRESULT ResourceStream::OpenForReadWrite()
 {
-    log::Error(_L_, E_ACCESSDENIED, L"Invalid write to read-only memory stream\r\n");
+    spdlog::error("Invalid write to read-only memory stream");
     return E_ACCESSDENIED;
 }
 
@@ -44,14 +42,16 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
     // First find and load the required resource
     if ((hResource = FindResource(hInstance, MAKEINTRESOURCE(resourceID), L"BINARY")) == NULL)
     {
-        log::Verbose(_L_, L"WARNING: Invalid resource id (%d) could not be found\r\n", resourceID);
-        return HRESULT_FROM_WIN32(GetLastError());
+        HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed FindResource '{}' (code: {:#x})", resourceID, hr);
+        return hr;
     }
 
     if ((hFileResource = LoadResource(hInstance, hResource)) == NULL)
     {
-        log::Verbose(_L_, L"WARNING: Could not load ressource\r\n");
-        return HRESULT_FROM_WIN32(GetLastError());
+        HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed LoadResource '{}' (code: {:#x})", resourceID, hr);
+        return hr;
     }
 
     // Now open and map this to a disk file
@@ -59,16 +59,18 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
 
     if ((lpFile = LockResource(hFileResource)) == NULL)
     {
-        log::Verbose(_L_, L"Could not lock ressource\r\n");
-        return HRESULT_FROM_WIN32(GetLastError());
+        HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed LockResource '{}' (code: {:#x})", resourceID, hr);
+        return hr;
     }
 
     DWORD dwSize = 0L;
 
     if ((dwSize = SizeofResource(hInstance, hResource)) == 0)
     {
-        log::Verbose(_L_, L"Could not compute ressource size\r\n");
-        return HRESULT_FROM_WIN32(GetLastError());
+        HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed SizeofResource '{}' (code: {:#x})", resourceID, hr);
+        return hr;
     }
     {
         ScopedLock sl(m_cs);
@@ -89,16 +91,18 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
 
     if ((hFileResource = LoadResource(hInstance, hResource)) == NULL)
     {
-        log::Verbose(_L_, L"WARNING: Could not load ressource\r\n");
-        return HRESULT_FROM_WIN32(GetLastError());
+        HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed LoadResource (code: {:#x})", hr);
+        return hr;
     }
 
     // Now open and map this to a disk file
     LPVOID lpFile = NULL;
     if ((lpFile = LockResource(hFileResource)) == NULL)
     {
-        log::Verbose(_L_, L"WARNING: Could not lock ressource\r\n");
-        return HRESULT_FROM_WIN32(GetLastError());
+        HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed LockResource (code: {:#x})", hr);
+        return hr;
     }
 
     DWORD dwSize = 0L;
@@ -106,7 +110,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
     if ((dwSize = SizeofResource(hInstance, hResource)) == 0)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"Could not compute ressource size\r\n");
+        spdlog::debug("Failed SizeofResource (code: {:#x})", hr);
         return hr;
     }
     {
@@ -124,23 +128,18 @@ HRESULT Orc::ResourceStream::OpenForReadOnly(const std::wstring& strResourceSpec
 
     if (!EmbeddedResource::IsResourceBased(strResourceSpec.c_str()))
     {
-        log::Error(_L_, E_FAIL, L"Invalid ressource reference \"%s\"\r\n", strResourceSpec.c_str());
+        spdlog::error(L"Invalid ressource reference '{}'", strResourceSpec);
         return E_FAIL;
     }
 
     std::wstring ResName, MotherShip, NameInArchive, Format;
-    if (auto hr =
-            EmbeddedResource::SplitResourceReference(_L_, strResourceSpec, MotherShip, ResName, NameInArchive, Format);
+    if (auto hr = EmbeddedResource::SplitResourceReference(strResourceSpec, MotherShip, ResName, NameInArchive, Format);
         FAILED(hr))
         return hr;
 
     if (Format != L"res"sv)
     {
-        log::Error(
-            _L_,
-            E_FAIL,
-            L"Invalid ressource format \"%s\". Only the res:# format is currently supported\r\n",
-            Format.c_str());
+        spdlog::error(L"Invalid ressource format '{}'. Only the res:# format is currently supported", Format);
         return E_FAIL;
     }
 
@@ -149,7 +148,7 @@ HRESULT Orc::ResourceStream::OpenForReadOnly(const std::wstring& strResourceSpec
     std::wstring strBinaryPath;
 
     if (auto hr = EmbeddedResource::LocateResource(
-            _L_, MotherShip, ResName, EmbeddedResource::BINARY(), hMod, hRes, strBinaryPath);
+            MotherShip, ResName, EmbeddedResource::BINARY(), hMod, hRes, strBinaryPath);
         FAILED(hr))
         return hr;
 

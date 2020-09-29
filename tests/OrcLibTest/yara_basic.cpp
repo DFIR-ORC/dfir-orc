@@ -8,7 +8,6 @@
 
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "YaraStaticExtension.h"
 
 #include "yara.h"
@@ -23,21 +22,16 @@ namespace Orc::Test {
 TEST_CLASS(YaraBasicTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
-    TEST_METHOD_INITIALIZE(Initialize)
-    {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
-    }
+    TEST_METHOD_INITIALIZE(Initialize) {}
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(YaraInitialize)
     {
-        const auto& yara = std::make_shared<YaraStaticExtension>(_L_);
+        const auto& yara = std::make_shared<YaraStaticExtension>();
 
         yara->yr_initialize();
 
@@ -46,7 +40,7 @@ public:
 
     TEST_METHOD(YaraCompiler)
     {
-        const auto& yara = std::make_shared<YaraStaticExtension>(_L_);
+        const auto& yara = std::make_shared<YaraStaticExtension>();
 
         yara->yr_initialize();
 
@@ -63,7 +57,7 @@ public:
         yara->yr_compiler_get_rules(pCompiler, &pRules);
 
         YR_RULE* pRule = nullptr;
-        yr_rules_foreach(pRules, pRule) { log::Info(_L_, L"Compiled rule: %S\r\n", pRule->identifier); }
+        yr_rules_foreach(pRules, pRule) { spdlog::info("Compiled rule: '{}'", pRule->identifier); }
 
         yara->yr_compiler_destroy(pCompiler);
 
@@ -72,7 +66,7 @@ public:
 
     TEST_METHOD(YaraModules)
     {
-        const auto& yara = std::make_shared<YaraStaticExtension>(_L_);
+        const auto& yara = std::make_shared<YaraStaticExtension>();
 
         yara->yr_initialize();
 
@@ -123,7 +117,7 @@ public:
 
     TEST_METHOD(YaraScanMem)
     {
-        const auto& yara = std::make_shared<YaraStaticExtension>(_L_);
+        const auto& yara = std::make_shared<YaraStaticExtension>();
 
         yara->yr_initialize();
 
@@ -161,7 +155,7 @@ public:
 private:
     void compiler_message(int error_level, const char* file_name, int line_number, const char* message)
     {
-        log::Info(_L_, L"level:%d, line:%d, \"%S\"\r\n", error_level, line_number, message);
+        spdlog::info("level: {}, line: {}, '{}'", error_level, line_number, message);
     }
 
     static void compiler_callback(
@@ -176,19 +170,19 @@ private:
         switch (message)
         {
             case CALLBACK_MSG_RULE_MATCHING:
-                log::Info(_L_, L"Text matched rule: %S\r\n", ((YR_RULE*)message_data)->identifier);
+                spdlog::info("Text matched rule: '{}'", ((YR_RULE*)message_data)->identifier);
                 break;
             case CALLBACK_MSG_RULE_NOT_MATCHING:
-                log::Info(_L_, L"Text did not match rule: %S\r\n", ((YR_RULE*)message_data)->identifier);
+                spdlog::info("Text did not match rule: '{}'", ((YR_RULE*)message_data)->identifier);
                 break;
             case CALLBACK_MSG_SCAN_FINISHED:
-                log::Info(_L_, L"Scan finished\r\n");
+                spdlog::info("Scan finished");
                 break;
             case CALLBACK_MSG_IMPORT_MODULE:
-                log::Info(_L_, L"Importing module %S\r\n", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
+                spdlog::info("Importing module: '{}'", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
                 break;
             case CALLBACK_MSG_MODULE_IMPORTED:
-                log::Info(_L_, L"Module %S imported\r\n", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
+                spdlog::info("Module '{}' imported", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
                 break;
             default:
                 break;

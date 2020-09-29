@@ -25,8 +25,6 @@ using namespace Orc;
 class CDownloadNotifyInterface : public IBackgroundCopyCallback2
 {
 private:
-    logger _L_;
-
     LONG m_lRefCount = 0L;
     LONG m_PendingJobModificationCount = 0L;
 
@@ -34,9 +32,8 @@ private:
 
 public:
     // Constructor, Destructor
-    CDownloadNotifyInterface(logger pLog, const std::shared_ptr<DownloadTask>& task)
-        : _L_(std::move(pLog))
-        , m_task(task) {};
+    CDownloadNotifyInterface(const std::shared_ptr<DownloadTask>& task)
+        : m_task(task) {};
 
     ~CDownloadNotifyInterface() {};
 
@@ -52,8 +49,8 @@ public:
     STDMETHOD(FileTransferred)(IBackgroundCopyJob* pJob, IBackgroundCopyFile* pFile);
 };
 
-BITSDownloadTask::BITSDownloadTask(logger pLog, std::wstring strJobName)
-    : DownloadTask(std::move(pLog), std::move(strJobName))
+BITSDownloadTask::BITSDownloadTask(std::wstring strJobName)
+    : DownloadTask(std::move(strJobName))
 {
 }
 
@@ -85,12 +82,12 @@ std::wstring BITSDownloadTask::GetCompletionCommandLine(const GUID& JobId)
     std::wstring strCmdSpec;
     if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
     {
-        log::Error(_L_, hr, L"Failed to determine command\r\n");
+        spdlog::error(L"Failed to determine command");
     }
 
     if (!StringFromGUID2(JobId, szJobGUID, MAX_PATH))
     {
-        log::Error(_L_, E_FAIL, L"Failed to copy GUID to a string\r\n");
+        spdlog::error(L"Failed to copy GUID to a string");
         return std::wstring();
     }
     else
@@ -147,13 +144,13 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
                 (void**)&m_pbcm);
             if (FAILED(hr))
             {
-                log::Error(_L_, hr, L"Failed to create instance of background copy manager 2.0\r\n");
+                spdlog::error(L"Failed to create instance of background copy manager 2.0");
                 return hr;
             }
         }
         else
         {
-            log::Error(_L_, hr, L"Failed to create instance of background copy manager 2.5\r\n");
+            spdlog::error(L"Failed to create instance of background copy manager 2.5");
             return hr;
         }
     }
@@ -167,7 +164,7 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
     // we need to create one per file uploaded
     if (FAILED(hr = m_pbcm->CreateJob(m_strJobName.c_str(), BG_JOB_TYPE_DOWNLOAD, &JobId, &m_job)))
     {
-        log::Error(_L_, hr, L"Failed to create job %s for background copy\r\n", m_strJobName.c_str());
+        spdlog::error(L"Failed to create job '{}' for background copy (code: {:#x})", m_strJobName, hr);
         return hr;
     }
 
@@ -177,12 +174,8 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
 
         if (FAILED(hr = m_job->AddFile(strRemoteFullPath.c_str(), file.strLocalPath.c_str())))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Failed to add download of %s to %s\r\n",
-                strRemoteFullPath.c_str(),
-                file.strLocalPath.c_str());
+            spdlog::error(
+                L"Failed to add download of '{}' to '{}' (code: {:#x})", strRemoteFullPath, file.strLocalPath, hr);
             return hr;
         }
     }
@@ -191,34 +184,31 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
     ULONG ulNotifyFlags = 0L;
     CComPtr<IBackgroundCopyCallback2> pNotify;
 
-    pNotify = new CDownloadNotifyInterface(_L_, shared_from_this());
+    pNotify = new CDownloadNotifyInterface(shared_from_this());
 
     if (SUCCEEDED(hr = m_job->SetNotifyInterface(pNotify)))
     {
         ulNotifyFlags |= BG_NOTIFY_JOB_TRANSFERRED | BG_NOTIFY_JOB_ERROR;
         if (FAILED(hr = m_job->SetNotifyFlags(ulNotifyFlags)))
         {
-            log::Error(_L_, hr, L"Failed to SetNotifyFlags\r\n");
+            spdlog::error(L"Failed to SetNotifyFlags");
         }
     }
     else
     {
-        log::Error(_L_, hr, L"Failed to SetNotifyInterface\r\n");
+        spdlog::error(L"Failed to SetNotifyInterface");
     }
 
     if (job2 == nullptr)
     {
-        log::Error(
-            _L_,
-            E_NOTIMPL,
-            L"BITS version does not allow for command notification, uploaded file won't be deleted\r\n");
+        spdlog::error("BITS version does not allow for command notification, uploaded file won't be deleted");
     }
     else
     {
         std::wstring strCmdSpec;
         if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
         {
-            log::Error(_L_, hr, L"Failed to determine command\r\n");
+            spdlog::error(L"Failed to determine command (code: {:#x})", hr);
         }
 
         auto strCmdLine = GetCompletionCommandLine(JobId);
@@ -227,14 +217,14 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
         {
             if (FAILED(hr = job2->SetNotifyCmdLine(strCmdSpec.c_str(), strCmdLine.c_str())))
             {
-                log::Error(_L_, hr, L"Failed to SetNotifyCmdLine to delete uploaded files\r\n");
+                spdlog::error(L"Failed to SetNotifyCmdLine to delete uploaded files (code: {:#x})", hr);
             }
             else
             {
                 ulNotifyFlags |= BG_NOTIFY_JOB_TRANSFERRED | BG_NOTIFY_JOB_ERROR;
                 if (FAILED(hr = job2->SetNotifyFlags(ulNotifyFlags)))
                 {
-                    log::Error(_L_, hr, L"Failed to SetNotifyFlags to delete uploaded files\r\n");
+                    spdlog::error(L"Failed to SetNotifyFlags to delete uploaded files (code: {:#x})", hr);
                 }
                 // We're done, files will be deleted on upload completion
             }
@@ -245,7 +235,7 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
 
     if (FAILED(hr = m_job->Resume()))
     {
-        log::Error(_L_, hr, L"Failed to start upload transfer\r\n");
+        spdlog::error(L"Failed to start upload transfer (code: {:#x})", hr);
     }
     return S_OK;
 }
@@ -264,7 +254,7 @@ std::shared_ptr<DownloadTask> BITSDownloadTask::GetRetryTask()
     if (m_Protocol == BITSProtocol::BITS_SMB)
     {
         // SMB always makes it possible to attempt copy file over SMB
-        auto retval = std::make_shared<FileCopyDownloadTask>(_L_, m_strJobName.c_str());
+        auto retval = std::make_shared<FileCopyDownloadTask>(m_strJobName.c_str());
 
         retval->m_files = m_files;
         retval->m_Protocol = DownloadTask::BITSProtocol::BITS_SMB;
@@ -354,7 +344,7 @@ HRESULT CDownloadNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackground
 
     hr = pError->GetError(&Context, &ErrorCode);
     if (FAILED(hr))
-        log::Error(_L_, hr, L"IBackgroundCopyError::GetError failed\r\n");
+        spdlog::error(L"IBackgroundCopyError::GetError failed (code: {:#x})", hr);
 
     // If the proxy or server does not support the Content-Range header or if
     // antivirus software removes the range requests, BITS returns BG_E_INSUFFICIENT_RANGE_SUPPORT.
@@ -366,10 +356,10 @@ HRESULT CDownloadNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackground
 
         hr = pError->GetFile(&pFile);
         if (FAILED(hr))
-            log::Error(_L_, hr, L"IBackgroundCopyError::GetFile failed\r\n");
+            spdlog::error(L"IBackgroundCopyError::GetFile failed (code: {:#x})", hr);
         hr = pFile->GetProgress(&Progress);
         if (FAILED(hr))
-            log::Error(_L_, hr, L"IBackgroundCopyError::GetProgress failed\r\n");
+            spdlog::error(L"IBackgroundCopyError::GetProgress failed (code: {:#x})", hr);
 
         if (BG_SIZE_UNKNOWN == Progress.BytesTotal)
         {
@@ -384,7 +374,7 @@ HRESULT CDownloadNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackground
         }
         else
         {
-            log::Verbose(_L_, L"Background upload failed, switching to foreground priority\r\n");
+            spdlog::debug(L"Background upload failed, switching to foreground priority");
             hr = pJob->SetPriority(BG_JOB_PRIORITY_FOREGROUND);
             hr = pJob->Resume();
             IsError = FALSE;
@@ -395,21 +385,21 @@ HRESULT CDownloadNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackground
     {
         hr = pJob->GetDisplayName(&pszJobName);
         if (FAILED(hr))
-            log::Error(_L_, hr, L"IBackgroundCopyJob::GetDisplayName failed\r\n");
+            spdlog::error(L"IBackgroundCopyJob::GetDisplayName failed (code: {:#x})", hr);
 
         BOOST_SCOPE_EXIT(&pszJobName) { CoTaskMemFree(pszJobName); }
         BOOST_SCOPE_EXIT_END;
 
         hr = pError->GetErrorDescription(LANGIDFROMLCID(GetThreadLocale()), &pszErrorDescription);
         if (FAILED(hr))
-            log::Error(_L_, hr, L"IBackgroundCopyJob::GetErrorDescription failed\r\n");
+            spdlog::error(L"IBackgroundCopyJob::GetErrorDescription failed (code: {:#x})", hr);
 
         BOOST_SCOPE_EXIT(&pszErrorDescription) { CoTaskMemFree(pszErrorDescription); }
         BOOST_SCOPE_EXIT_END;
 
         if (pszJobName && pszErrorDescription)
         {
-            log::Error(_L_, E_FAIL, L"Bits job \"%s\" failed: %s\r\n", pszJobName, pszErrorDescription);
+            spdlog::error(L"Bits job '{}' with message: {}", pszJobName, pszErrorDescription);
         }
     }
 

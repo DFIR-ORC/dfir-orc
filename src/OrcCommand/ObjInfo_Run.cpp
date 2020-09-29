@@ -11,7 +11,6 @@
 
 #include "ObjectDirectory.h"
 #include "FileDirectory.h"
-#include "LogFileWriter.h"
 
 #include "SystemDetails.h"
 
@@ -55,9 +54,10 @@ HRESULT Main::Run()
 
     if (config.output.Type == OutputSpec::Kind::Archive)
     {
-        if (FAILED(hr = m_outputs.Prepare(config.output)))
+        hr = m_outputs.Prepare(config.output);
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to prepare archive for %s\r\n", config.output.Path.c_str());
+            spdlog::error(L"Failed to prepare archive for '{}' (code: {:#x})", config.output.Path, hr);
             return hr;
         }
     }
@@ -65,13 +65,14 @@ HRESULT Main::Run()
     BOOST_SCOPE_EXIT(&config, &m_outputs) { m_outputs.CloseAll(config.output); }
     BOOST_SCOPE_EXIT_END;
 
-    if (FAILED(hr = m_outputs.GetWriters(config.output, L"ObjInfo")))
+    hr = m_outputs.GetWriters(config.output, L"ObjInfo");
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to create objinfo output writers\r\n");
+        spdlog::error("Failed to create objinfo output writers (code: {:#x})", hr);
         return hr;
     }
 
-    log::Info(_L_, L"\r\nEnumerating object directories:\r\n");
+    m_console.Print(L"Enumerating object directories:");
 
     m_outputs.ForEachOutput(config.output, [this](const MultipleOutput<DirectoryOutput>::OutputPair& dir) -> HRESULT {
 
@@ -80,17 +81,15 @@ HRESULT Main::Run()
         HRESULT hr = E_FAIL;
         // Actually enumerate objects here
 
-        ObjectDirectory objectdir(_L_);
-        FileDirectory filedir(_L_);
+        ObjectDirectory objectdir;
+        FileDirectory filedir;
 
         std::vector<ObjectDirectory::ObjectInstance> objects;
         std::vector<FileDirectory::FileInstance> files;
 
-        log::Info(
-            _L_,
-            L"\tDirectory %s %s\r\n",
-            dir.first.m_Type == ObjectDir ? L"ObjInfo" : L"FileInfo",
-            dir.first.m_Directory.c_str());
+        auto directoryNode = m_console.OutputTree();
+        directoryNode.AddNode(
+            L"Directory {} {}", dir.first.m_Type == ObjectDir ? L"ObjInfo" : L"FileInfo", dir.first.m_Directory);
 
         switch (dir.first.m_Type)
         {
@@ -99,20 +98,20 @@ HRESULT Main::Run()
                 {
                     if (dir.second == nullptr)
                     {
-                        log::Error(
-                            _L_, E_INVALIDARG, L"Not output writer configured for \"%s\" directory, skipped\r\n");
+                        spdlog::error(
+                            L"No output writer configured for '{}' directory, skipped", dir.first.m_Directory);
                         return hr;
                     }
 
                     for (auto& obj : objects)
                     {
-                        obj.Write(_L_, *dir.second, L""s);
+                        obj.Write(*dir.second, L""s);
                     }
                 }
                 else
                 {
-                    log::Error(
-                        _L_, hr, L"Failed to enumerate objects in directory %s\r\n", dir.first.m_Directory.c_str());
+                    spdlog::error(
+                        L"Failed to enumerate objects in directory '{}' (code: {:#x})", dir.first.m_Directory, hr);
                     return hr;
                 }
                 break;
@@ -123,18 +122,19 @@ HRESULT Main::Run()
                 {
                     for (auto& file : files)
                     {
-                        file.Write(_L_, *dir.second, L""s);
+                        file.Write(*dir.second, L""s);
                     }
                 }
                 else
                 {
-                    log::Error(
-                        _L_, hr, L"Failed to enumerate objects in directory %s\r\n", dir.first.m_Directory.c_str());
+                    spdlog::error(
+                        L"Failed to enumerate objects in directory '{}' (code: {:#x})", dir.first.m_Directory, hr);
                     return hr;
                 }
 
                 break;
         }
+
         return S_OK;
     });
 

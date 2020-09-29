@@ -29,8 +29,6 @@ auto constexpr DEFAULT_MAX_RUNNING_PROCESSES = 20;
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ProcessRedirect;
 class CommandExecute;
 
@@ -79,17 +77,17 @@ class ORCLIB_API CommandAgent : public Concurrency::agent
 {
 public:
     CommandAgent(
-        const logger& pLog,
         CommandMessage::ISource& source,
         ArchiveMessage::ITarget& archive,
         CommandNotification::ITarget& target,
         unsigned int max_running_tasks = DEFAULT_MAX_RUNNING_PROCESSES)
-        : _L_(pLog)
-        , m_source(source)
+        : m_source(source)
         , m_target(target)
         , m_archive(archive)
         , m_MaximumRunningSemaphore(max_running_tasks)
-        , m_Ressources(pLog) {};
+        , m_Ressources()
+    {
+    }
 
     static HRESULT ApplyPattern(
         const std::wstring& Pattern,
@@ -116,7 +114,6 @@ public:
     ~CommandAgent(void);
 
 protected:
-    logger _L_;
 
     Semaphore m_MaximumRunningSemaphore;
 

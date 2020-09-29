@@ -16,8 +16,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 HRESULT ORCLIB_API UtilGetTempDirPath(__out_ecount(dwPathSize) PWSTR pwzTempDir, __in DWORD dwPathSize);
 
 HRESULT ORCLIB_API UtilGetTempFile(
@@ -41,7 +39,6 @@ HRESULT ORCLIB_API UtilGetTempFile(
 
 HRESULT ORCLIB_API UtilGetUniquePath(__in PCWSTR pwzDir, __in PCWSTR pwzDesiredName, __out std::wstring& pstrDestPath);
 HRESULT ORCLIB_API UtilGetUniquePath(
-    const logger& pLog,
     __in PCWSTR pwzDir,
     __in PCWSTR pwzDesiredName,
     __out std::wstring& pstrDestPath,
@@ -53,11 +50,11 @@ HRESULT ORCLIB_API UtilGetPath(__in PCWSTR pwzDir, __in PCWSTR pwzDesiredName, _
 
 BOOL ORCLIB_API UtilPathIsDirectory(__in PCWSTR pwszPath);
 
-HRESULT ORCLIB_API UtilDeleteTemporaryFile(const logger& pLog, __in LPCWSTR pszPath);
+HRESULT ORCLIB_API UtilDeleteTemporaryFile(LPCWSTR pszPath);
 
 static constexpr auto DELETION_RETRIES = 50;
 
-HRESULT ORCLIB_API UtilDeleteTemporaryFile(__in LPCWSTR pszPath, DWORD dwMaxRetries = DELETION_RETRIES);
+HRESULT ORCLIB_API UtilDeleteTemporaryFile(__in LPCWSTR pszPath, DWORD dwMaxRetries);
 
 }  // namespace Orc
 

@@ -14,9 +14,8 @@
 
 using namespace Orc;
 
-ArchiveOpenCallback::ArchiveOpenCallback(logger pLog)
+ArchiveOpenCallback::ArchiveOpenCallback()
     : m_refCount(0)
-    , _L_(std::move(pLog))
 {
 }
 

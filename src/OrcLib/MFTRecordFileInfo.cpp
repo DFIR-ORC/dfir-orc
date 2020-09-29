@@ -31,7 +31,6 @@ typedef NTSTATUS(__stdcall* pvfNtOpenFile)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBU
 typedef NTSTATUS(__stdcall* pvfNtQueryInformationFile)(HANDLE, PIO_STATUS_BLOCK, PVOID, ULONG, FILE_INFORMATION_CLASS);
 
 MFTRecordFileInfo::MFTRecordFileInfo(
-    logger pLog,
     std::wstring strComputerName,
     const std::shared_ptr<VolumeReader>& pVolReader,
     Intentions dwDefaultIntentions,
@@ -42,7 +41,6 @@ MFTRecordFileInfo::MFTRecordFileInfo(
     const std::shared_ptr<DataAttribute>& pDataAttr,
     Authenticode& verifytrust)
     : NtfsFileInfo(
-        std::move(pLog),
         std::move(strComputerName),
         pVolReader,
         dwDefaultIntentions,
@@ -90,7 +88,7 @@ HRESULT MFTRecordFileInfo::Open()
             (p)->SecurityQualityOfService = NULL;                                                                      \
         }
 #endif
-        const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>(_L_);
+        const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>();
         if (pNtDll == nullptr)
         {
             return E_FAIL;
@@ -147,7 +145,7 @@ std::shared_ptr<ByteStream> MFTRecordFileInfo::GetFileStream()
     if (m_pDataAttr == nullptr)
         return nullptr;
 
-    auto retval = m_pDataAttr->GetDataStream(_L_, m_pVolReader);
+    auto retval = m_pDataAttr->GetDataStream(m_pVolReader);
 
     m_pDataAttr->GetDetails()->SetDataStream(retval);
 

@@ -20,7 +20,7 @@ std::pair<HRESULT, HINSTANCE> Orc::COMExtension::LoadThisLibrary(const std::wstr
             return std::make_pair(hr, hInst);
         else
         {
-            log::Verbose(_L_, L"LoadLibraryEx failed without setting GetLastError()");
+            spdlog::debug(L"LoadLibraryEx failed without setting GetLastError()");
             return std::make_pair(hr, hInst);
         }
     }
@@ -39,7 +39,7 @@ STDMETHODIMP COMExtension::Initialize()
     {
         if (auto hr = Load(); FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to load COM Extension %s", m_strKeyword.c_str());
+            spdlog::error(L"Failed to load COM Extension {} (code: {:#x})", m_strKeyword, hr);
             return hr;
         }
     }

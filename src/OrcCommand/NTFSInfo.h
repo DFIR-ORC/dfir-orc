@@ -7,21 +7,17 @@
 //
 #pragma once
 
-#include "OrcCommand.h"
-
-#include "Location.h"
-#include "LocationOutput.h"
-
-#include "VolumeReader.h"
-
 #include "UtilitiesMain.h"
 
+#include "boost/logic/tribool.hpp"
+
+#include "OrcCommand.h"
+#include "Location.h"
+#include "LocationOutput.h"
+#include "VolumeReader.h"
 #include "MFTWalker.h"
 #include "NtfsFileInfo.h"
-
 #include "Authenticode.h"
-
-#include "boost/logic/tribool.hpp"
 
 #pragma managed(push, off)
 
@@ -52,15 +48,15 @@ public:
     class Configuration : public UtilitiesMain::Configuration
     {
     public:
-        Configuration(logger pLog)
-            : locs(std::move(pLog))
+        Configuration()
+            : locs()
         {
             bGetKnownLocations = false;
             bResurrectRecords = boost::logic::indeterminate;
             bAddShadows = boost::logic::indeterminate;
             bPopSystemObjects = boost::logic::indeterminate;
-            ColumnIntentions = FILEINFO_NONE;
-            DefaultIntentions = FILEINFO_NONE;
+            ColumnIntentions = Intentions::FILEINFO_NONE;
+            DefaultIntentions = Intentions::FILEINFO_NONE;
 
             outFileInfo.supportedTypes = static_cast<OutputSpec::Kind>(
                 OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive
@@ -92,8 +88,6 @@ public:
         OutputSpec outAttrInfo;
         OutputSpec outI30Info;
         OutputSpec outSecDescrInfo;
-
-        std::wstring strComputerName;
 
         boost::logic::tribool bGetKnownLocations;
 
@@ -134,6 +128,14 @@ private:
         const PFILE_NAME pFileName,
         DWORD dwKind,
         LONGLONG llTime);
+
+    HRESULT WriteTimeLineEntry(
+        ITableOutput& pTimelineOutput,
+        const std::shared_ptr<VolumeReader>& volreader,
+        MFTRecord* pElt,
+        const PFILE_NAME pFileName,
+        DWORD dwKind,
+        FILETIME time);
 
     std::wstring GetWalkerFromConfig(const ConfigItem& config);
     boost::logic::tribool GetResurrectFromConfig(const ConfigItem& config);
@@ -202,18 +204,18 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#NTFSINFO_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog)
-        , config(pLog)
+    Main()
+        : UtilitiesMain()
+        , config()
         , dwTotalFileTreated(0L)
         , m_dwProgress(0L)
-        , m_codeVerifier(pLog)
-        , m_FileInfoOutput(pLog)
-        , m_VolStatOutput(pLog)
-        , m_TimeLineOutput(pLog)
-        , m_AttrOutput(pLog)
-        , m_I30Output(pLog)
-        , m_SecDescrOutput(pLog) {};
+        , m_codeVerifier()
+        , m_FileInfoOutput()
+        , m_VolStatOutput()
+        , m_TimeLineOutput()
+        , m_AttrOutput()
+        , m_I30Output()
+        , m_SecDescrOutput() {};
 
     // implemented in NTFSInfo_Output.cpp
     void PrintUsage();

@@ -15,8 +15,6 @@
 #include "FileStream.h"
 #include "Temporary.h"
 
-#include "LogFileWriter.h"
-
 using namespace std;
 using namespace Orc;
 
@@ -72,7 +70,7 @@ STDMETHODIMP TemporaryStream::Open(
         WCHAR szTempDir[MAX_PATH] = {0};
         if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
         {
-            log::Warning(_L_, hr, L"Failed to create temporary path\r\n");
+            spdlog::warn("Failed to create temporary path (code: {:#x})", hr);
             return hr;
         }
         m_strTemp = szTempDir;
@@ -90,20 +88,20 @@ STDMETHODIMP TemporaryStream::Open(
 
     m_dwMemThreshold = dwMemThreshold;
 
-    m_pMemStream = make_shared<MemoryStream>(_L_);
+    m_pMemStream = make_shared<MemoryStream>();
 
     if (FAILED(hr = m_pMemStream->SetSize(dwMemThreshold)))
     {
-        log::Error(_L_, hr, L"Failed to resize memory buffer");
+        spdlog::error("Failed to resize memory buffer (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = m_pMemStream->OpenForReadWrite(dwMemThreshold)))
     {
-        log::Verbose(_L_, L"Failed to open memstream for %s bytes, using file stream\r\n", dwMemThreshold);
+        spdlog::debug("Failed to open memstream for {} bytes, using file stream", dwMemThreshold);
         if (FAILED(hr = MoveToFileStream(nullptr)))
         {
-            log::Error(_L_, hr, L"Failed to Open temporary stream into a file stream");
+            spdlog::error("Failed to Open temporary stream into a file stream (code: {:#x})", hr);
             return hr;
         }
     }
@@ -128,15 +126,14 @@ HRESULT TemporaryStream::MoveToFileStream(const std::shared_ptr<ByteStream>& aSt
 {
     HRESULT hr = E_FAIL;
 
-    log::Verbose(_L_, L"INFO: Moving TemporaryStream to a file stream\r\n");
+    spdlog::debug("INFO: Moving TemporaryStream to a file stream");
 
-    m_pFileStream = std::make_shared<FileStream>(_L_);
+    m_pFileStream = std::make_shared<FileStream>();
 
     HANDLE hTempFile = INVALID_HANDLE_VALUE;
 
     if (FAILED(
             hr = ::UtilGetUniquePath(
-                _L_,
                 m_strTemp.c_str(),
                 m_strIdentifier.empty() ? L"TempStream" : m_strIdentifier.c_str(),
                 m_strFileName,
@@ -263,7 +260,7 @@ STDMETHODIMP TemporaryStream::MoveTo(LPCWSTR lpszNewFileName)
 
     if (m_pMemStream)
     {
-        FileStream fileStream(_L_);
+        FileStream fileStream;
 
         if (FAILED(hr = fileStream.WriteTo(lpszNewFileName)))
         {
@@ -286,8 +283,7 @@ STDMETHODIMP TemporaryStream::MoveTo(LPCWSTR lpszNewFileName)
         if (!MoveFileEx(m_strFileName.c_str(), lpszNewFileName, MOVEFILE_COPY_ALLOWED | MOVEFILE_REPLACE_EXISTING))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            UtilDeleteTemporaryFile(
-                _L_, m_strFileName.c_str());  // even if the move fails, we try to delete de temp file
+            UtilDeleteTemporaryFile(m_strFileName.c_str());  // even if the move fails, we try to delete de temp file
             return hr;
         }
         m_strFileName.clear();
@@ -321,9 +317,9 @@ STDMETHODIMP TemporaryStream::MoveTo(const std::shared_ptr<ByteStream> pStream)
             return hr;
         }
 
-        if (FAILED(hr = UtilDeleteTemporaryFile(_L_, m_strFileName.c_str())))
+        if (FAILED(hr = UtilDeleteTemporaryFile(m_strFileName.c_str())))
         {
-            log::Error(_L_, hr, L"Failed to delete temp file %s", m_strFileName.c_str());
+            spdlog::error(L"Failed to delete temp file '{}' (code: {:#x})", m_strFileName, hr);
             return hr;
         }
         m_strFileName.clear();
@@ -360,9 +356,9 @@ TemporaryStream::~TemporaryStream(void)
 
     if (!m_strFileName.empty())
     {
-        if (FAILED(hr = UtilDeleteTemporaryFile(_L_, m_strFileName.c_str())))
+        if (FAILED(hr = UtilDeleteTemporaryFile(m_strFileName.c_str())))
         {
-            log::Error(_L_, hr, L"Failed to delete temp file %s", m_strFileName.c_str());
+            spdlog::error(L"Failed to delete temp file '{}' (code: {:#x})", m_strFileName, hr);
         }
         m_strFileName.clear();
     }

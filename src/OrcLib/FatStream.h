@@ -22,10 +22,7 @@ class FatFileEntry;
 class ORCLIB_API FatStream : public ByteStream
 {
 public:
-    FatStream(
-        logger pLog,
-        const std::shared_ptr<VolumeReader>& pVolReader,
-        const std::shared_ptr<FatFileEntry>& fileEntry);
+    FatStream(const std::shared_ptr<VolumeReader>& pVolReader, const std::shared_ptr<FatFileEntry>& fileEntry);
     virtual ~FatStream();
 
     STDMETHOD(IsOpen)();

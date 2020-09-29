@@ -71,9 +71,12 @@ public:  // METHODS
     ConfigItem(LPWSTR name, DWORD index, ConfigItemType type, ConfigItemFlags flags)
         : Type(type)
         , Flags(flags)
-        , dwIndex(index)
+        , Status(MISSING)
         , strName(name)
-        , Status(MISSING) {};
+        , dwIndex(index)
+    {
+    }
+
     ConfigItem(const ConfigItem& other) noexcept;
 
     ConfigItem(ConfigItem&& other) noexcept
@@ -138,33 +141,31 @@ public:  // METHODS
     const ConfigItem& Item(LPCWSTR szIndex) const;
 
     HRESULT AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags flags);
-    HRESULT AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags flags, const logger& pLog);
 
     HRESULT AddChildNode(LPCWSTR szName, DWORD index, ConfigItemFlags flags);
-    HRESULT AddChildNode(LPCWSTR szName, DWORD index, ConfigItemFlags flags, const logger& pLog);
 
     HRESULT AddChildNodeList(LPCWSTR szName, DWORD index, ConfigItemFlags flags);
-    HRESULT AddChildNodeList(LPCWSTR szName, DWORD index, ConfigItemFlags flags, const logger& pLog);
     HRESULT AddChild(const ConfigItem& item);
-    HRESULT AddChild(const ConfigItem& item, const logger& pLog);
 
     HRESULT AddChild(ConfigItem&& item);
-    HRESULT AddChild(ConfigItem&& item, const logger& pLog);
 
     HRESULT AddChild(AdderFunction adder, DWORD dwIdx) { return adder(*this, dwIdx); }
-    HRESULT AddChild(AdderFunction adder, DWORD dwIdx, const logger& pLog);
 
     HRESULT AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwIdx) { return adder(*this, dwIdx, szName); }
-    HRESULT AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwIdx, const logger& pLog);
 };
 
 }  // namespace Orc
 
 // Logging indexes
 constexpr auto CONFIG_LOGFILE = 0U;
-constexpr auto CONFIG_DEBUG = 1U;
-constexpr auto CONFIG_VERBOSE = 2U;
-constexpr auto CONFIG_NOCONSOLE = 3U;
+constexpr auto CONFIG_TRACE = 1U;
+constexpr auto CONFIG_DEBUG = 2U;
+constexpr auto CONFIG_INFO = 3U;
+constexpr auto CONFIG_WARN = 4U;
+constexpr auto CONFIG_ERROR = 5U;
+constexpr auto CONFIG_CRITICAL = 6U;
+constexpr auto CONFIG_VERBOSE = 7U;
+constexpr auto CONFIG_NOCONSOLE = 8U;
 
 constexpr auto CONFIG_CSVENCODING = 0U;
 

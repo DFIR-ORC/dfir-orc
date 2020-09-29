@@ -25,11 +25,8 @@ using namespace Orc;
 namespace Orc::StructuredOutput::JSON {
 
 template <class _RapidWriter, typename _Ch>
- Writer<_RapidWriter,_Ch>::Writer(
-    logger pLog,
-    std::shared_ptr<ByteStream> stream,
-    std::unique_ptr<Options>&& pOptions)
-    : StructuredOutputWriter(std::move(pLog), std::move(pOptions))
+Writer<_RapidWriter, _Ch>::Writer(std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& pOptions)
+    : StructuredOutputWriter(std::move(pOptions))
     , m_Stream(std::move(stream))
     , rapidWriter(m_Stream)
 {
@@ -37,35 +34,33 @@ template <class _RapidWriter, typename _Ch>
 }
 
 std::shared_ptr<StructuredOutput::IWriter>
-JSON::GetWriter(const logger& pLog, std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& pOptions)
+JSON::GetWriter(std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& options)
 {
-    auto options = dynamic_unique_ptr_cast<Options>(std::move(pOptions));
     if (options == nullptr)
         return std::make_shared<Writer<
             rapidjson::PrettyWriter<Stream<rapidjson::UTF8<>::Ch>, rapidjson::UTF16<>, rapidjson::UTF8<>>,
-            rapidjson::UTF8<>::Ch>>(
-            pLog, stream, std::move(pOptions));
+            rapidjson::UTF8<>::Ch>>(stream, std::move(options));
 
     if (options->bPrettyPrint && options->Encoding == OutputSpec::Encoding::UTF8)
         return std::make_shared<Writer<
             rapidjson::PrettyWriter<Stream<rapidjson::UTF8<>::Ch>, rapidjson::UTF16<>, rapidjson::UTF8<>>,
-            rapidjson::UTF8<>::Ch>>(pLog, stream, std::move(pOptions));
+            rapidjson::UTF8<>::Ch>>(stream, std::move(options));
     if (!options->bPrettyPrint && options->Encoding == OutputSpec::Encoding::UTF8)
         return std::make_shared<Writer<
             rapidjson::Writer<Stream<rapidjson::UTF8<>::Ch>, rapidjson::UTF16<>, rapidjson::UTF8<>>,
-            rapidjson::UTF8<>::Ch>>(pLog, stream, std::move(pOptions));
+            rapidjson::UTF8<>::Ch>>(stream, std::move(options));
     if (options->bPrettyPrint && options->Encoding == OutputSpec::Encoding::UTF16)
         return std::make_shared<Writer<
             rapidjson::PrettyWriter<Stream<rapidjson::UTF16<>::Ch>, rapidjson::UTF16<>, rapidjson::UTF16<>>,
-            rapidjson::UTF16<>::Ch>>(pLog, stream, std::move(pOptions));
+            rapidjson::UTF16<>::Ch>>(stream, std::move(options));
     if (!options->bPrettyPrint && options->Encoding == OutputSpec::Encoding::UTF16)
         return std::make_shared<Writer<
             rapidjson::Writer<Stream<rapidjson::UTF16<>::Ch>, rapidjson::UTF16<>, rapidjson::UTF16<>>,
-            rapidjson::UTF16<>::Ch>>(pLog, stream, std::move(pOptions));
+            rapidjson::UTF16<>::Ch>>(stream, std::move(options));
 
     return std::make_shared<Writer<
         rapidjson::PrettyWriter<Stream<rapidjson::UTF8<>::Ch>, rapidjson::UTF16<>, rapidjson::UTF8<>>,
-        rapidjson::UTF8<>::Ch>>(pLog, stream, std::move(pOptions));
+        rapidjson::UTF8<>::Ch>>(stream, std::move(options));
 }
 
 template <class _RapidWriter, typename _Ch>
@@ -131,7 +126,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated(co
 
     if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to write formated string\r\n");
+        spdlog::error(L"Failed to write formated string (code: {:#x})", hr);
         return hr;
     }
 
@@ -154,7 +149,7 @@ Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated(LPCWS
 
     if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to write formated string\r\n");
+        spdlog::error(L"Failed to write formated string (code: {:#x})", hr);
         return hr;
     }
 

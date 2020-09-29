@@ -47,58 +47,64 @@ public:
 
     using UnboundedMessageBuffer = Concurrency::unbounded_buffer<std::shared_ptr<ArchiveMessage>>;
 
+    using Ptr = std::shared_ptr<const ArchiveMessage>;
     using Message = std::shared_ptr<ArchiveMessage>;
 
     using ITarget = Concurrency::ITarget<Message>;
     using ISource = Concurrency::ISource<Message>;
 
 private:
-    Request m_Request;
-    Status m_Status;
+    Request m_request;
+    Status m_status;
 
-    std::wstring m_Name;
-    std::wstring m_Keyword;
-    std::wstring m_Pattern;
-    std::wstring m_CompressionLevel;
-    std::wstring m_Password;
+    std::wstring m_archiveFileName;
+    std::wstring m_sourcePath;
+    std::wstring m_commandSet;
+    std::wstring m_command;
+    std::wstring m_nameInArchive;
+    std::wstring m_pattern;
+    std::wstring m_compressionLevel;
+    std::wstring m_password;
 
-    ArchiveFormat m_Format;
-    std::shared_ptr<ByteStream> m_Stream;
+    ArchiveFormat m_format;
+    std::shared_ptr<ByteStream> m_stream;
 
     bool m_bDeleteWhenDone;
     bool m_bHashData;
 
 protected:
-    
-	ArchiveMessage(Request request)
-        : m_Request(request)
-        , m_Status(Open)
+    ArchiveMessage(Request request)
+        : m_request(request)
+        , m_status(Open)
         , m_bHashData(false)
         , m_bDeleteWhenDone(false)
-        , m_Format(ArchiveFormat::Unknown) {};
+        , m_format(ArchiveFormat::Unknown) {};
 
 public:
-    static Message MakeOpenRequest(const std::wstring& szArchiveName, const std::wstring& strCompressionLevel = L"");
+    static Message MakeOpenRequest(const std::wstring& archiveFileName, const std::wstring& compressionLevel = L"");
 
     static Message MakeOpenRequest(
-        const std::wstring& szArchiveName,
-        const ArchiveFormat aFormat,
-        const std::shared_ptr<ByteStream>& aStream,
-        const std::wstring& strCompressionLevel = L"",
+        const std::wstring& archiveFileName,
+        const ArchiveFormat format,
+        const std::shared_ptr<ByteStream>& stream,
+        const std::wstring& compressionLevel = L"",
         const std::wstring& password = L"");
-    static Message MakeOpenRequest(const OutputSpec& anOutput);
+
+    static Message MakeOpenRequest(const OutputSpec& output);
 
     static Message MakeAddFileRequest(
-        const std::wstring& szCabbedName,
-        const std::wstring& szFileName,
+        const std::wstring& nameInArchive,
+        const std::wstring& fileName,
         bool bHashData = false,
         bool bDeleteWhenDone = false);
+
     static Message MakeAddDirectoryRequest(
-        const std::wstring& szDirCabbedName,
-        const std::wstring& szDirName,
+        const std::wstring& nameInArchive,
+        const std::wstring& dirName,
         const std::wstring& szPattern,
         bool bHashData = false,
         bool bDeleteWhenDone = false);
+
     static Message MakeAddStreamRequest(
         const std::wstring& szCabbedName,
         const std::shared_ptr<ByteStream>& aStream,
@@ -109,22 +115,32 @@ public:
 
     static Message MakeCancellationRequest();
 
-    Request GetRequest() const { return m_Request; };
-    Status GetStatus() const { return m_Status; };
-    bool GetComputeHash() const { return m_bHashData; };
-    bool GetDeleteWhenDone() const { return m_bDeleteWhenDone; };
+    Request GetRequest() const { return m_request; }
+    Status GetStatus() const { return m_status; }
+    bool GetComputeHash() const { return m_bHashData; }
+    bool GetDeleteWhenDone() const { return m_bDeleteWhenDone; }
 
-    const std::wstring& Name() const { return m_Name; };
-    const std::wstring& Keyword() const { return m_Keyword; };
-    const std::wstring& Pattern() const { return m_Pattern; };
+    const std::wstring& Name() const { return m_archiveFileName; }
 
-    const std::shared_ptr<ByteStream>& GetStream() const { return m_Stream; };
+    const std::wstring& SourcePath() const { return m_sourcePath; }
 
-    ArchiveFormat GetArchiveFormat() const { return m_Format; };
-    const std::wstring& GetCompressionLevel() const { return m_CompressionLevel; };
-    const std::wstring& GetPassword() const { return m_Password; }
+    const std::wstring& NameInArchive() const { return m_nameInArchive; }
 
-    ~ArchiveMessage(void);
+    const std::wstring& CommandSet() const { return m_commandSet; }
+    void SetCommandSet(const std::wstring& commandSet) { m_commandSet = commandSet; }
+
+    const std::wstring& Command() const { return m_command; }
+    void SetCommand(const std::wstring& command) { m_command = command; }
+
+    const std::wstring& Pattern() const { return m_pattern; }
+
+    const std::shared_ptr<ByteStream>& GetStream() const { return m_stream; }
+
+    ArchiveFormat GetArchiveFormat() const { return m_format; };
+    const std::wstring& GetCompressionLevel() const { return m_compressionLevel; }
+    const std::wstring& GetPassword() const { return m_password; }
+
+    virtual ~ArchiveMessage();
 };
 }  // namespace Orc
 

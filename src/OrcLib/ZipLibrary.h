@@ -15,8 +15,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API ZipLibrary
 {
 public:
@@ -44,8 +42,8 @@ public:
         std::wstring Name;
     };
 
-    static std::unique_ptr<ZipLibrary> CreateZipLibrary(logger log);
-    static std::shared_ptr<ZipLibrary> GetZipLibrary(logger log);
+    static std::unique_ptr<ZipLibrary> CreateZipLibrary();
+    static std::shared_ptr<ZipLibrary> GetZipLibrary();
 
     ~ZipLibrary();
 
@@ -56,12 +54,11 @@ public:
     const GUID GetFormatCLSID(const std::wstring& anExt) const;
 
 private:
-    ZipLibrary(logger log);
+    ZipLibrary() = default;
     HRESULT Initialize();
     HRESULT GetAvailableFormats(std::vector<ArchiveFormat>& formats) const;
     HRESULT GetAvailableCodecs(std::vector<ArchiveCodec>& codecs) const;
 
-    logger _L_;
     std::vector<ArchiveFormat> m_Formats;
     std::vector<ArchiveCodec> m_Codecs;
 };

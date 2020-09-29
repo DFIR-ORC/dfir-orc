@@ -10,7 +10,6 @@
 #include "EncodeMessageStream.h"
 #include "SystemDetails.h"
 #include "CryptoUtilities.h"
-#include "LogFileWriter.h"
 
 using namespace Orc;
 
@@ -86,9 +85,9 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
 
     if (dwMajor < 6)
     {
-        if (FAILED(hr = CryptoUtilities::AcquireContext(_L_, m_hProv)))
+        if (FAILED(hr = CryptoUtilities::AcquireContext(m_hProv)))
         {
-            log::Error(_L_, hr, L"Failed to acquire suitable Crypto Service Provider\r\n");
+            spdlog::error(L"Failed to acquire suitable Crypto Service Provider (code: {:#x})", hr);
             return hr;
         }
         EncodeInfo.ContentEncryptionAlgorithm.pszObjId = szOID_RSA_DES_EDE3_CBC;
@@ -144,9 +143,11 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
         X509_ASN_ENCODING | PKCS_7_ASN_ENCODING, 0L, CMSG_ENVELOPED, &EncodeInfo, NULL, &m_StreamInfo);
     if (m_hMsg == NULL)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to open message for encoding\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to open message for encoding (code: {:#x})", hr);
         return hr;
     }
+
     return S_OK;
 }
 
@@ -162,7 +163,7 @@ __data_entrypoint(File) HRESULT EncodeMessageStream::Read(
     if (cbBytesToRead > MAXDWORD)
         return E_INVALIDARG;
 
-    log::Verbose(_L_, L"Cannot read from an EncodeMessageStream\r\n");
+    spdlog::debug(L"Cannot read from an EncodeMessageStream");
     return E_NOTIMPL;
 }
 
@@ -178,17 +179,18 @@ HRESULT EncodeMessageStream::Write(
 
     if (cbBytes > MAXDWORD)
     {
-        log::Error(_L_, E_INVALIDARG, L"Too many bytes\r\n");
+        spdlog::error("Write: Too many bytes");
         return E_INVALIDARG;
     }
 
     if (!CryptMsgUpdate(m_hMsg, (const BYTE*)pBuffer, static_cast<DWORD>(cbBytes), FALSE))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgUpdate failed\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CryptMsgUpdate (code: {:#x})", hr);
         return hr;
     }
     *pcbBytesWritten = cbBytes;
-    log::Verbose(_L_, L"CryptMsgUpdate %d bytes succeeded (hMsg=0x%lx)\r\n", cbBytes, m_hMsg);
+    spdlog::debug("CryptMsgUpdate {} bytes succeeded (hMsg={:#x})", cbBytes, m_hMsg);
     return S_OK;
 }
 
@@ -200,10 +202,8 @@ HRESULT EncodeMessageStream::SetFilePointer(
     DBG_UNREFERENCED_PARAMETER(lDistanceToMove);
     DBG_UNREFERENCED_PARAMETER(dwMoveMethod);
     DBG_UNREFERENCED_PARAMETER(pqwCurrPointer);
-    log::Error(
-        _L_,
-        E_NOTIMPL,
-        L"SetFilePointer is not implemented in EncodeMessageStream distance: %I64d, Method:%d\r\n",
+    spdlog::error(
+        "SetFilePointer is not implemented in EncodeMessageStream (distance: {}, method: {})",
         lDistanceToMove,
         dwMoveMethod);
     return S_OK;
@@ -211,14 +211,14 @@ HRESULT EncodeMessageStream::SetFilePointer(
 
 ULONG64 EncodeMessageStream::GetSize()
 {
-    log::Verbose(_L_, L"GetFileSizeEx is not implemented on EncodeMessageStream\r\n");
+    spdlog::debug("EncodeMessageStream: GetSize is not implemented");
     return (ULONG64)-1;
 }
 
 HRESULT EncodeMessageStream::SetSize(ULONG64 ullNewSize)
 {
     DBG_UNREFERENCED_PARAMETER(ullNewSize);
-    log::Verbose(_L_, L"SetSize is not implemented on EncodeMessageStream\r\n");
+    spdlog::debug("EncodeMessageStream: SetSize is not implemented");
     return S_OK;
 }
 
@@ -229,12 +229,14 @@ HRESULT EncodeMessageStream::Close()
         HRESULT hr = E_FAIL;
         if (!CryptMsgUpdate(m_hMsg, NULL, 0L, TRUE))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Final CryptMsgUpdate failed\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Failed CryptMsgUpdate (on final call, code: {:#x})", hr);
             return hr;
         }
         if (!CryptMsgClose(m_hMsg))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgClose failed\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed CryptMsgClose (code: {:#x})", hr);
             m_hMsg = NULL;
             return hr;
         }

@@ -12,6 +12,7 @@
 #include "ArchiveFormat.h"
 
 #include "TableOutput.h"
+#include "Utils/EnumFlags.h"
 
 #include <string>
 #include <filesystem>
@@ -25,7 +26,7 @@ class ConfigItem;
 class ORCLIB_API OutputSpec
 {
 public:
-    enum UploadAuthScheme : char
+    enum class UploadAuthScheme : char
     {
         Anonymous = 0,
         Basic,
@@ -34,12 +35,16 @@ public:
         Negotiate
     };
 
-    enum UploadMethod : char
+    static std::wstring ToString(UploadAuthScheme method);
+
+    enum class UploadMethod : char
     {
         NoUpload = 0,
         FileCopy,
         BITS
     };
+
+    static std::wstring ToString(UploadMethod method);
 
     enum BITSMode : char
     {
@@ -49,18 +54,22 @@ public:
         HTTPS
     };
 
-    enum UploadOperation : char
+    enum class UploadOperation : char
     {
         NoOp = 0,
         Copy,
         Move
     };
 
-    enum UploadMode : char
+    static std::wstring ToString(UploadOperation method);
+
+    enum class UploadMode : char
     {
         Synchronous = 0,
         Asynchronous
     };
+
+    static std::wstring ToString(UploadMode mode);
 
     class ORCLIB_API Upload
     {
@@ -81,15 +90,15 @@ public:
         std::vector<std::wstring> FilterExclude;
 
         Upload()
-            : Method(NoUpload)
-            , Operation(NoOp) {};
+            : Method(UploadMethod::NoUpload)
+            , Operation(UploadOperation::NoOp) {};
 
-        HRESULT Configure(const logger& pLog, const ConfigItem& item);
+        HRESULT Configure(const ConfigItem& item);
 
-        bool IsFileUploaded(const logger& pLog, const std::wstring& file_name);
+        bool IsFileUploaded(const std::wstring& file_name);
     };
 
-    enum Kind
+    enum class Kind
     {
         None = 0,
         TableFile = 1 << 0,
@@ -106,6 +115,8 @@ public:
         JSON = 1 << 11,
         ORC = 1 << 12
     };
+
+    static std::wstring ToString(Kind kind);
 
     enum Disposition
     {
@@ -144,12 +155,14 @@ public:
     std::shared_ptr<Upload> UploadOutput;
 
 public:
-    typedef enum _Encoding
+    enum class Encoding
     {
-        Undetermined = 0,
+        kUnknown = 0,
         UTF8,
         UTF16
-    } Encoding;
+    };
+
+    static std::wstring ToString(Encoding encoding);
 
     Encoding OutputEncoding = Encoding::UTF8;
     LPCWSTR szSeparator = L",";
@@ -161,72 +174,40 @@ public:
     OutputSpec& operator=(const OutputSpec&) = default;
     OutputSpec& operator=(OutputSpec&&) noexcept = default;
 
+    bool IsDirectory() const;
+    bool IsFile() const;
+    bool IsRegularFile() const;
+    bool IsTableFile() const;
+    bool IsStructuredFile() const;
+    bool IsArchive() const;
 
-    bool IsDirectory() {
-        return Type & Kind::Directory;
-    };
+    static bool IsPattern(const std::wstring& pattern);
 
-    bool IsFile() {
-        return Type & Kind::File
-            || Type & Kind::TableFile
-            || Type & Kind::StructuredFile
-            || Type & Kind::Archive
-            || Type & Kind::CSV
-            || Type & Kind::TSV
-            || Type & Kind::Parquet
-            || Type & Kind::ORC
-            || Type & Kind::XML
-            || Type & Kind::JSON;
-    }
-
-    bool IsRegularFile() // the same but without archive
-    {
-        return Type & Kind::File || Type & Kind::TableFile || Type & Kind::StructuredFile
-            || Type & Kind::CSV || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC || Type & Kind::XML
-            || Type & Kind::JSON;
-    }
-
-    bool IsTableFile() 
-    {
-        return Type & Kind::TableFile || Type & Kind::CSV
-            || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC;
-    }
-
-    bool IsStructuredFile() {
-        return Type & Kind::StructuredFile || Type & Kind::XML || Type & Kind::JSON;
-    }
-
-    bool IsArchive()
-    {
-        return Type & Kind::Archive;
-    }
-
-    static bool IsPattern(const std::wstring& strPattern);
-
-    static HRESULT
-    ApplyPattern(const std::wstring& strPattern, const std::wstring& strName, std::wstring& strFileName);
+    static HRESULT ApplyPattern(const std::wstring& pattern, const std::wstring& name, std::wstring& fileName);
 
     HRESULT Configure(
-        const logger& pLog,
         OutputSpec::Kind supportedTypes,
-        const std::wstring& strInputString,
+        const std::wstring& inputString,
         std::optional<std::filesystem::path> parent = std::nullopt);
+
     HRESULT
-    Configure(
-        const logger& pLog,
-        const std::wstring& strInputString,
-        std::optional<std::filesystem::path> parent = std::nullopt)
+    Configure(const std::wstring& inputString, std::optional<std::filesystem::path> parent = std::nullopt)
     {
-        return Configure(pLog, supportedTypes, strInputString, std::move(parent));
+        return Configure(supportedTypes, inputString, std::move(parent));
     };
 
-    HRESULT Configure(const logger& pLog, OutputSpec::Kind supportedTypes, const ConfigItem& item, std::optional<std::filesystem::path> parent = std::nullopt);
+    HRESULT Configure(
+        OutputSpec::Kind supportedTypes,
+        const ConfigItem& item,
+        std::optional<std::filesystem::path> parent = std::nullopt);
     HRESULT
-    Configure(const logger& pLog, const ConfigItem& item, std::optional<std::filesystem::path> parent = std::nullopt)
+    Configure(const ConfigItem& item, std::optional<std::filesystem::path> parent = std::nullopt)
     {
-        return Configure(pLog, supportedTypes, item, std::move(parent));
+        return Configure(supportedTypes, item, std::move(parent));
     };
 };
+
+ENABLE_BITMASK_OPERATORS(OutputSpec::Kind);
 
 }  // namespace Orc
 

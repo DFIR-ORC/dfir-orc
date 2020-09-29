@@ -74,8 +74,6 @@ typedef DBINT(SQL_API* PBCP_DONE)(HDBC);
 
 namespace Orc {
 
-class LogFileWriter;
-
 namespace TableOutput::Sql {
 
 class Connection : public TableOutput::IConnection
@@ -84,8 +82,8 @@ private:
     STDMETHOD(Initialize)();
 
 public:
-    Connection(logger pLog)
-        : _L_(std::move(pLog)) {};
+    Connection()
+        : _L_() {};
 
     STDMETHOD(Connect)(const std::wstring& strConnString) override final;
     STDMETHOD_(bool, IsConnected)() const override final { return m_bIsConnected; };
@@ -220,8 +218,6 @@ private:
     SQLHENV m_henv = NULL;
     SQLHDBC m_hdbc = NULL;
     bool m_bIsConnected = false;
-
-    logger _L_;
 
     STDMETHOD(LoadSqlNativeClient)(LPCWSTR szSqlLib = L"SQLNCLI11.DLL", LPCWSTR szODBCLib = L"ODBC32.DLL");
 

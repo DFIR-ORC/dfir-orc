@@ -63,8 +63,8 @@ class WinTrustExtension : public ExtensionLibrary
 {
 
 public:
-    WinTrustExtension(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"wintrust"s, L"wintrust.dll"s, L"wintrust.dll"s) {};
+    WinTrustExtension()
+        : ExtensionLibrary(L"wintrust"s, L"wintrust.dll"s, L"wintrust.dll"s) {};
     ~WinTrustExtension();
 
     STDMETHOD(Initialize)();

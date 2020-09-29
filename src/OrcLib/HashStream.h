@@ -17,15 +17,15 @@ namespace Orc {
 class HashStream : public ChainingStream
 {
 protected:
-    bool m_bHashIsValid;
     bool m_bWriteOnly;
+    bool m_bHashIsValid;
 
     STDMETHOD(ResetHash(bool bContinue = false)) PURE;
     STDMETHOD(HashData(LPBYTE pBuffer, DWORD dwBytesToHash)) PURE;
 
 public:
-    HashStream(logger pLog)
-        : ChainingStream(std::move(pLog))
+    HashStream()
+        : ChainingStream()
         , m_bWriteOnly(false)
         , m_bHashIsValid(false) {};
 

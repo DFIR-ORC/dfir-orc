@@ -13,202 +13,196 @@
 #include <string>
 
 #include "SystemDetails.h"
-#include "LogFileWriter.h"
 #include "FileFind.h"
 #include "ToolVersion.h"
 
-using namespace std;
+#include "Output/Text/Print.h"
+#include "Output/Text/Fmt/formatter.h"
+#include "Output/Text/Print/Bool.h"
+#include "Output/Text/Print/LocationSet.h"
+#include "Output/Text/Print/OutputSpec.h"
+#include "Output/Text/Print/SearchTerm.h"
+#include "Utils/MakeArray.h"
+#include "Usage.h"
 
-using namespace Orc;
 using namespace Orc::Command::GetThis;
+using namespace Orc;
+
+template <>
+struct fmt::formatter<Orc::Command::GetThis::ContentSpec, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
+{
+    template <typename FormatContext>
+    auto format(const Orc::Command::GetThis::ContentSpec& content, FormatContext& ctx)
+    {
+        switch (content.Type)
+        {
+            case ContentType::STRINGS:
+                return fmt::format_to(
+                    ctx.out(), L"{} (min: {}, max: {})", ToString(content.Type), content.MinChars, content.MaxChars);
+            case ContentType::DATA:
+            case ContentType::RAW:
+            default:
+                return fmt::format_to(ctx.out(), ToString(content.Type));
+        }
+    }
+};
+
+namespace {
+
+template <typename T>
+void PrintValues(
+    Orc::Text::Tree<T> root,
+    const std::wstring description,
+    const Orc::Command::GetThis::ListOfSampleSpecs& samples)
+{
+    if (samples.size() == 0)
+    {
+        // Handle empty list as 'Orc::Text::PrintValues' would
+        PrintValues(root, description, samples);
+        return;
+    }
+
+    auto samplesNode = root.AddNode(description);
+
+    for (size_t i = 0; i < samples.size(); ++i)
+    {
+        const auto& sample = samples[i];
+
+        std::wstring sampleName;
+        if (sample.Name.empty())
+        {
+            sampleName = fmt::format(L"#{}:", i);
+        }
+        else
+        {
+            sampleName = fmt::format(L"#{} {}:", i, sample.Name);
+        }
+
+        auto sampleNode = samplesNode.AddNode(
+            L"{} {} (Count: {}, Size: {}, Total: {})",
+            sampleName,
+            sample.Content,
+            sample.PerSampleLimits.dwMaxSampleCount,
+            sample.PerSampleLimits.dwlMaxBytesPerSample,
+            sample.PerSampleLimits.dwlMaxBytesTotal);
+
+        for (const auto& term : sample.Terms)
+        {
+            Print(sampleNode, term);
+        }
+
+        root.AddEmptyLine();
+    }
+}
+
+}  // namespace
+
+namespace Orc {
+namespace Command {
+namespace GetThis {
+
+std::wstring ToString(ContentType contentType)
+{
+    switch (contentType)
+    {
+        case ContentType::DATA:
+            return L"DATA";
+        case ContentType::INVALID:
+            return L"INVALID";
+        case ContentType::RAW:
+            return L"RAW";
+        case ContentType::STRINGS:
+            return L"STRINGS";
+    }
+
+    return L"<Unhandled Type>";
+}
+
+}  // namespace GetThis
+}  // namespace Command
+}  // namespace Orc
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\r\n"
-        L"Usage: DFIR-Orc.exe GetThis\r\n"
-        L"\t[/out=Archive.zip|Archive.7z|Folder>] : Output format\r\n"
-        L"\t[/sample=<SampleFile>]\r\n"
-        L"\t[/config=<ConfigFile>] <foldername>...\r\n"
-        L"\r\n"
-        L"\t/Altitude=<Exact|Highest|Lowest>     : Defines the strategy used to translate a given location into the optimal access path to the volume\r\n"
-        L"\r\n"
-        L"\t/out=<Folder|F.csv|F.zip|F.7z>       : Files will be added to existing folder or 7z/zip archive file\r\n"
-        L"\t/sample=<FileName>                   : Name of the file to copy\r\n"
-        L"\t/sample=<FileName>:<Stream>          : Name of the Altername Data Stream to copy\r\n"
-        L"\t/sample=<FileName>#<EAName>          : Name of the Extended Attribute to copy\r\n"
-        L"\t/content=(data|strings|raw)          : Data to collect (raw is the compressed NTFS stream)"
-        L"\t/config=<FileName>                   : Config should be loaded from this file\r\n"
-        L"\t/Compression=<CompressionLevel>      : Set archive compression level\r\n"
-        L"\t/flushregistry                       : Flushes registry hives (using RegFlushKey)\r\n"
-        L"\t<foldername>...                      : List of locations where to look for samples (and sub folders)\r\n"
-        L"\t/MaxPerSampleBytes=<max bytes>       : Do not collect sample bigger than <max bytes>\r\n"
-        L"\t/MaxTotalBytes=<max bytes>           : Stop collecting when reaching <max bytes>\r\n"
-        L"\t/MaxSampleCount=<max count>          : Stop collecting when reaching <max count>\r\n"
-        L"\t/NoLimits                            : Do not set collection limit (be careful: output can get very big)\r\n"
-        L"\t/reportall                           : Add information about rejected samples (due to limits) to CSV\r\n"
-        L"\t/hash=<MD5|SHA1|SHA256>             : List hash values stored in GetThis.csv\r\n"
-        L"\t/fuzzyhash=<SSDeep|TLSH>             : List fuzzy hash values stored in GetThis.csv\r\n"
-        L"\r\n"
-        L"Note: config file settings are superseded by command line options\r\n"
-        L"\r\n"
-        L"\r\n"
-        L"\tExtraction syntax:  GetThis.exe [/out=<Folder>]\r\n"
-        L"\r\n"
-        L"\t/out=<Folder>                    : Files will be extracted into <Folder>\r\n"
-        L"\t/utf8,/utf16                     : Select utf8 or utf16 encoding (default is utf8)\r\n"
-        L"\r\n"
-        L"\t/Yara=<Rules.Yara>               : Comma separared list of yara sources\r\n");
-    PrintCommonUsage();
+    auto usageNode = m_console.OutputTree();
+
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe GetThis [/Sample=<SampleFile>[:<Stream>|#<EAName>]] [/Content=<Data|Strings|Raw>] "
+        "[/Config=GetThisConfig.xml] [/Out=<Folder|File.csv|Archive.7z>] <Location>...<LocationN>",
+        MakeArray<std::string_view>(
+            R"raw(GetThis was originally developed to assist with malicious sample collection but quickly evolved into a general purpose file collection tool.)raw",
+            R"raw(While enumerating the specified file systems, GetThis searches for specific file indicators to collect in Alternate Data Streams, Extended Attributes and "any" NTFS attribute. Various conditions and patterns can be defined to restrict the search to interesting matches.)raw",
+            R"raw(GetThis bypass file system locks and permissions using its own MFT parser and therefore allows collection of in-use registry files, Pagefile, Hyberfil, event log files, files with restrictive ACLs, files opened with exclusive rights (i.e. non-shared), malware using file-level API hooking.)raw",
+            R"raw(To prevent interference from anti-virus software, it is recommended to store the samples in a password-protected archive.)raw"));
+
+    constexpr std::array kSpecificParameters = {
+        Usage::Parameter {
+            "/Content=<Data|Strings|Raw>",
+            "Retrieved content: copy data (default), strings or raw bytes (ex: compressed bytes if NTFS option is "
+            "enabled)"},
+        Usage::Parameter {"/ReportAll", "Add information about rejected samples (due to limits) to CSV"},
+        Usage::Parameter {"/NoSigCheck", "Check only sample signatures from autoruns output"},
+        Usage::Parameter {"/Hash=<MD5|SHA1|SHA256>", "Comma-separated list of hashes to compute"},
+        Usage::Parameter {"/FuzzyHash=<SSDeep|TLSH>", "Comma-separated list of 'FuzzyHash' hashes to compute"},
+        Usage::Parameter {"/Yara=<Rules.yara>", "List of Yara sources"}};
+    Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
+
+    Usage::PrintLimitsParameters(usageNode);
+
+    constexpr std::array kCustomOutputParameters = {
+        Usage::Parameter {"/GetThisConfig=<FilePath>", "Output path to 'GetThis' generated configuration"},
+        Usage::Parameter {"/SampleInfo=<FilePath.csv>", "Sample related information"},
+        Usage::Parameter {"/TimeLine=<FilePath.csv>", "Timeline related information"}};
+    Usage::PrintOutputParameters(usageNode, kCustomOutputParameters);
+
+    constexpr std::array kCustomMiscParameters = {
+        Usage::kMiscParameterCompression,
+        Usage::kMiscParameterPassword,
+        Usage::kMiscParameterTempDir,
+        Usage::Parameter {"/FlushRegistry", "Flushes registry hives using RegFlushKey API"}};
+    Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
+
+    Usage::PrintLoggingParameters(usageNode);
 }
 
 void Main::PrintParameters()
 {
-    PrintComputerName();
-    PrintOperatingSystem();
-    wstring strDesc;
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode(L"Parameters");
 
-    log::Info(_L_, L"\r\n");
+    PrintCommonParameters(node);
 
-    PrintOutputOption(config.Output);
+    PrintValue(node, L"Output", config.Output);
+    PrintValue(node, L"ReportAll", config.bReportAll);
+    PrintValue(node, L"Hash", config.CryptoHashAlgs);
+    PrintValue(node, L"FuzzyHash", config.FuzzyHashAlgs);
+    PrintValue(node, L"NoLimits", config.limits.bIgnoreLimits);
+    PrintValue(node, L"MaxBytesPerSample", config.limits.dwlMaxBytesPerSample);
+    PrintValue(node, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal);
+    PrintValue(node, L"MaxSampleCount", config.limits.dwMaxSampleCount);
 
-    PrintBooleanOption(L"Report All", config.bReportAll);
-    PrintHashAlgorithmOption(L"Hash", config.CryptoHashAlgs);
-    PrintHashAlgorithmOption(L"Fuzzy Hash", config.FuzzyHashAlgs);
+    PrintValues(node, L"Parsed locations", config.Locations.GetParsedLocations());
 
-    log::Info(_L_, L"\r\nVolumes, Folders to parse:\r\n");
-
-    config.Locations.PrintLocations(true);
-
-    log::Info(_L_, L"\r\n");
+    PrintValue(node, L"Default content", config.content);
+    ::PrintValues(node, L"Specific samples:", config.listofSpecs);
+    PrintValues(node, L"Excluded samples", config.listOfExclusions);
 
     if (config.limits.bIgnoreLimits)
     {
-        log::Info(_L_, L"\r\n\tWarning: No limits are imposed to the size and number of collected samples\r\n");
-    }
-    else
-    {
-        log::Info(_L_, L"\r\nGlobal limits imposed on collection:\r\n");
-        if (config.limits.dwlMaxBytesPerSample == INFINITE)
-        {
-            log::Info(_L_, L"\tMaximum bytes per sample  = Unlimited\r\n");
-        }
-        else
-        {
-            log::Info(_L_, L"\tMaximum bytes per sample  = %I64d\r\n", config.limits.dwlMaxBytesPerSample);
-        }
-        if (config.limits.dwlMaxBytesTotal == INFINITE)
-        {
-            log::Info(_L_, L"\tMaximum bytes collected   = Unlimited\r\n");
-        }
-        else
-        {
-            log::Info(_L_, L"\tMaximum bytes collected   = %I64d\r\n", config.limits.dwlMaxBytesTotal);
-        }
-        if (config.limits.dwMaxSampleCount == INFINITE)
-        {
-            log::Info(_L_, L"\tMaximum number of samples = Unlimited\r\n");
-        }
-        else
-        {
-            log::Info(_L_, L"\tMaximum number of samples = %d\r\n", config.limits.dwMaxSampleCount);
-        }
+        root.Add(L"WARNING: No limits are imposed to the size and number of collected samples");
     }
 
-    switch (config.content.Type)
-    {
-        case DATA:
-            log::Info(_L_, L"\tDefault content copied is attribute's data\r\n");
-            break;
-        case STRINGS:
-            log::Info(
-                _L_,
-                L"\tDefault content copied is attribute's strings (min=%d,max=%d)\r\n",
-                config.content.MinChars,
-                config.content.MaxChars);
-            break;
-        case RAW:
-            log::Info(_L_, L"\tDefault content copied is attribute's raw data on disk\r\n");
-            break;
-        default:
-            break;
-    }
-
-    if (!config.listofSpecs.empty())
-    {
-        log::Info(_L_, L"\r\nSamples looked after:\r\n\r\n");
-
-        for (const auto& aSpec : config.listofSpecs)
-        {
-            if (!config.limits.bIgnoreLimits)
-            {
-                log::Info(_L_, L"   Sample: %s", aSpec.Name.c_str());
-                if (aSpec.PerSampleLimits.dwlMaxBytesPerSample != INFINITE)
-                {
-                    log::Info(_L_, L" (max %I64d bytes per sample)", aSpec.PerSampleLimits.dwlMaxBytesPerSample);
-                }
-                if (aSpec.PerSampleLimits.dwlMaxBytesTotal != INFINITE)
-                {
-                    log::Info(_L_, L" (max %I64d bytes for all samples)", aSpec.PerSampleLimits.dwlMaxBytesTotal);
-                }
-                if (aSpec.PerSampleLimits.dwMaxSampleCount != INFINITE)
-                {
-                    log::Info(_L_, L" (max %d samples)", aSpec.PerSampleLimits.dwMaxSampleCount);
-                }
-            }
-            else
-            {
-                log::Info(_L_, L"   Sample: %s", aSpec.Name.c_str());
-            }
-            switch (aSpec.Content.Type)
-            {
-                case DATA: {
-                    log::Info(_L_, L" (copy data)\r\n", aSpec.Content.MinChars, aSpec.Content.MaxChars);
-                }
-                break;
-                case STRINGS: {
-                    log::Info(
-                        _L_, L" (copy strings:min=%d,max=%d)\r\n", aSpec.Content.MinChars, aSpec.Content.MaxChars);
-                }
-                break;
-                case RAW: {
-                    log::Info(_L_, L" (copy raw data)\r\n", aSpec.Content.MinChars, aSpec.Content.MaxChars);
-                }
-                break;
-                default:
-                    break;
-            }
-            log::Info(_L_, L"\r\n");
-
-            for (const auto& item : aSpec.Terms)
-            {
-                log::Info(_L_, L"      %s\r\n", item->GetDescription().c_str());
-            }
-
-            log::Info(_L_, L"\r\n");
-        }
-    }
-
-    if (!config.listOfExclusions.empty())
-    {
-        log::Info(_L_, L"\r\nSamples excluded:\r\n\r\n");
-
-        std::for_each(
-            begin(config.listOfExclusions),
-            end(config.listOfExclusions),
-            [this](const std::shared_ptr<FileFind::SearchTerm>& item) {
-                auto desc = item->GetDescription();
-                log::Info(_L_, L"      %s\r\n", desc.c_str());
-            });
-
-        log::Info(_L_, L"\r\n");
-    }
-
-    SaveAndPrintStartTime();
+    root.AddEmptyLine();
 }
 
 void Main::PrintFooter()
 {
-    PrintExecutionTime();
+    m_console.PrintNewLine();
+
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

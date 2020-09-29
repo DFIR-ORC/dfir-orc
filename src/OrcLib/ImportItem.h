@@ -123,9 +123,9 @@ public:
     ImportItem(const ImportItem&) = default;
     ImportItem& operator=(const ImportItem&) = default;
 
-    std::shared_ptr<ByteStream> GetInputStream(const logger& pLog);
-    std::shared_ptr<ByteStream> GetOutputStream(const logger& pLog);
-    std::wstring GetBaseName(const logger& pLog);
+    std::shared_ptr<ByteStream> GetInputStream();
+    std::shared_ptr<ByteStream> GetOutputStream();
+    std::wstring GetBaseName();
 
     const ImportDefinition::Item* GetDefinitionItem() const { return definitionItem; }
 

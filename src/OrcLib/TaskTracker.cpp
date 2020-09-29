@@ -21,7 +21,6 @@
 #endif
 
 #include "TaskTracker.h"
-#include "LogFileWriter.h"
 #include "ByteStream.h"
 #include "Authenticode.h"
 
@@ -167,7 +166,7 @@ HRESULT TaskTracker::LoadNTrackResults()
     if (hDevice == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Verbose(_L_, L"NTrack is not installed or not started\r\nCreateFile failed! (hr=0x%lx)\r\n", hr);
+        spdlog::debug("NTrack is not installed or not started. Failed CreateFile (code: {:#x})", hr);
         return hr;
     }
     //
@@ -178,7 +177,8 @@ HRESULT TaskTracker::LoadNTrackResults()
 
     if (!TkResults)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"VirtualAlloc Failed\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed VirtualAlloc (code: {:#x})", hr);
         CloseHandle(hDevice);
         return hr;
     }
@@ -188,20 +188,20 @@ HRESULT TaskTracker::LoadNTrackResults()
 
     if (!DeviceIoControl(hDevice, (DWORD)IOCTL_GET_DATA, NULL, 0, TkResults, sizeof(TRACEDATA), &bytesReturned, NULL))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Error in DeviceIoControl\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed DeviceIoControl (code: {:#x})", hr);
         VirtualFree(TkResults, 0L, MEM_RELEASE);
         CloseHandle(hDevice);
         return hr;
     }
     CloseHandle(hDevice);
 
-    log::Verbose(_L_, L"inBuffer (%d)\r\n", sizeof(_TRACEDATA));
-    log::Verbose(_L_, L"OutBuffer (%d)\r\n", bytesReturned);
+    spdlog::debug("inBuffer ({})", sizeof(_TRACEDATA));
+    spdlog::debug("OutBuffer ({})", bytesReturned);
 
     if (TkResults->bCollisionsDetected == TRUE)
     {
-        log::Error(
-            _L_, E_FAIL, L"NTrack detected a collision in image path storage.\r\nInformation may not be accurate.\r\n");
+        spdlog::error("NTrack detected a collision in image path storage. Information may not be accurate");
         return E_FAIL;
     }
 
@@ -256,21 +256,18 @@ HRESULT TaskTracker::SaveAutoRuns(const std::shared_ptr<ByteStream>& stream)
 
             if (FAILED(hr = xmlstream->CopyTo(stream, &cbWritten)))
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Did not write complete data for autoruns (written=%I64d, expected=%I64d)\r\n",
+                spdlog::error(
+                    "Did not write complete data for autoruns (written: {}, expected: {}, code: {:#x})",
                     cbWritten,
-                    xmlstream->GetSize());
+                    xmlstream->GetSize(),
+                    hr);
                 return hr;
             }
 
             if (cbWritten != xmlstream->GetSize())
             {
-                log::Error(
-                    _L_,
-                    E_FAIL,
-                    L"Did not write complete data for autoruns (written=%I64d, expected=%I64d)\r\n",
+                spdlog::error(
+                    "Did not write complete data for autoruns (written: {}, expected: {})",
                     cbWritten,
                     xmlstream->GetSize());
                 return E_FAIL;
@@ -279,7 +276,7 @@ HRESULT TaskTracker::SaveAutoRuns(const std::shared_ptr<ByteStream>& stream)
     }
     else
     {
-        log::Error(_L_, E_UNEXPECTED, L"No autoruns data to save\r\n");
+        spdlog::error("No autoruns data to save");
         return E_UNEXPECTED;
     }
     return S_OK;
@@ -503,10 +500,7 @@ shared_ptr<SampleItem> TaskTracker::InsertSampleInformation(SampleItem& sample)
                     if (item.second != result)
                     {
                         // TODO: Add Error List
-                        log::Info(
-                            _L_,
-                            L"INFO: We could not find the %s item in the short map\r\n",
-                            item.second->FullPath.c_str());
+                        spdlog::info(L"Could not find the '{}' item in the short map", item.second->FullPath);
                     }
                     else
                     {
@@ -571,7 +565,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
             wstring new_path;
             if (FAILED(hr = ReParsePath(info.strModule, new_path)))
             {
-                log::Error(_L_, hr, L"Failed while reparsing %s path\r\n", info.strModule.c_str());
+                spdlog::error(L"Failed while reparsing '{}' path (code: {:#x})", info.strModule, hr);
             }
             else if (hr == S_OK)
                 info.strModule = new_path;
@@ -605,7 +599,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
                 wstring new_path;
                 if (FAILED(hr = ReParsePath(item.ImagePath, new_path)))
                 {
-                    log::Error(_L_, hr, L"Failed while reparsing %s path\r\n", item.ImagePath);
+                    spdlog::error(L"Failed while reparsing '{}' path (code: {:#x})", item.ImagePath, hr);
                 }
                 else
                 {
@@ -685,7 +679,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
         ProcessVector runningprocesses;
         if (FAILED(hr = m_rp.GetProcesses(runningprocesses)))
         {
-            log::Error(_L_, hr, L"Could not list running processes\r\n");
+            spdlog::error(L"Could not list running processes");
             return hr;
         }
 
@@ -768,7 +762,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
 
         if (FAILED(hr = m_rc.GetUniqueModules(modules, MODULETYPE_ALL)))
         {
-            log::Error(_L_, hr, L"Failed to enumerate loaded modules\r\n");
+            spdlog::error("Failed to enumerate loaded modules (code: {:#x})", hr);
             return hr;
         }
 
@@ -777,7 +771,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
             wstring new_path;
             if (FAILED(hr = ReParsePath(item.strModule, new_path)))
             {
-                log::Error(_L_, hr, L"Failed while reparsing %s path\r\n", item.strModule.c_str());
+                spdlog::error(L"Failed while reparsing '{}' path (code: {:#x})", item.strModule, hr);
             }
             else if (hr == S_OK)
                 item.strModule = new_path;
@@ -796,7 +790,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
                 }
                 else
                 {
-                    log::Error(_L_, E_FAIL, L"Could not find module %s in full map\r\n", item.strModule.c_str());
+                    spdlog::error(L"Could not find module '{}' in full map", item.strModule);
                 }
 
                 auto iter_item = m_ProcessLife.insert(moduleload_item);
@@ -916,7 +910,7 @@ HRESULT TaskTracker::CheckSampleSignatureStatus(const std::shared_ptr<SampleItem
 
     if (FAILED(hr = m_authenticode.Verify(sample->FullPath.c_str(), data)))
     {
-        log::Error(_L_, hr, L"Verify signature failed for %s\r\n", sample->FullPath.c_str());
+        spdlog::error(L"Verify signature failed for '{}' (code: {:#x})", sample->FullPath, hr);
     }
     else
     {

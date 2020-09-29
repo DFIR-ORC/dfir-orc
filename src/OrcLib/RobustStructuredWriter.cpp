@@ -75,7 +75,7 @@ HRESULT RobustStructuredWriter::WriteFormated(const WCHAR* szFormat, ...)
     va_end(argList);
     if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to write formated string\r\n");
+        spdlog::error("Failed to write formated string (code: {:#x})", hr);
         return hr;
     }
 
@@ -102,7 +102,7 @@ HRESULT RobustStructuredWriter::WriteNamedFormated(LPCWSTR szName, const WCHAR* 
     va_end(argList);
     if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to write formated string\r\n");
+        spdlog::error(L"Failed to write formated string (code: {:#x})", hr);
         return hr;
     }
 
@@ -144,7 +144,7 @@ HRESULT RobustStructuredWriter::Write(const WCHAR* szArray, DWORD dwCharCount)
 
     if (FAILED(hr = StringCchPrintfW((LPWSTR)buffer.GetData(), dwCharCount, L"%.*s", dwCharCount, szArray)))
     {
-        log::Error(_L_, hr, L"Failed to write WChar Array\r\n");
+        spdlog::error("Failed to write WChar Array (code: {:#x})", hr);
         return hr;
     }
 
@@ -172,7 +172,7 @@ HRESULT RobustStructuredWriter::WriteNamed(LPCWSTR szName, const WCHAR* szArray,
 
     if (FAILED(hr = StringCchPrintfW((LPWSTR)buffer.GetData(), dwCharCount, L"%.*s", dwCharCount, szArray)))
     {
-        log::Error(_L_, hr, L"Failed to write WChar Array\r\n");
+        spdlog::error("Failed to write WChar Array (code: {:#x})", hr);
         return hr;
     }
 

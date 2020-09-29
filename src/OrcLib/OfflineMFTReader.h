@@ -24,7 +24,7 @@ protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();
 
 public:
-    OfflineMFTReader(logger pLog, const WCHAR* szMFTFileName);
+    OfflineMFTReader(const WCHAR* szMFTFileName);
 
     void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
 

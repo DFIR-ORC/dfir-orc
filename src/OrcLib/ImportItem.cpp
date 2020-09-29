@@ -12,8 +12,6 @@
 
 #include "FileStream.h"
 
-#include "LogFileWriter.h"
-
 #include "ParameterCheck.h"
 
 #include "ImportDefinition.h"
@@ -27,7 +25,7 @@ namespace fs = std::filesystem;
 
 using namespace Orc;
 
-std::shared_ptr<ByteStream> ImportItem::GetInputStream(const logger& pLog)
+std::shared_ptr<ByteStream> ImportItem::GetInputStream()
 {
     if (Stream)
     {
@@ -36,11 +34,11 @@ std::shared_ptr<ByteStream> ImportItem::GetInputStream(const logger& pLog)
     }
     if (inputFile)
     {
-        auto retval = std::make_shared<FileStream>(pLog);
+        auto retval = std::make_shared<FileStream>();
         HRESULT hr = E_FAIL;
         if (FAILED(hr = retval->ReadFrom(inputFile->c_str())))
         {
-            log::Error(pLog, hr, L"Failed to open import item %s\r\n", fullName.c_str());
+            spdlog::error(L"Failed to open import item {} (code: {:#x})", fullName, hr);
             return nullptr;
         }
         return Stream = retval;
@@ -48,7 +46,7 @@ std::shared_ptr<ByteStream> ImportItem::GetInputStream(const logger& pLog)
     return nullptr;
 }
 
-std::shared_ptr<ByteStream> ImportItem::GetOutputStream(const logger& pLog)
+std::shared_ptr<ByteStream> ImportItem::GetOutputStream()
 {
     if (Stream)
     {
@@ -58,7 +56,7 @@ std::shared_ptr<ByteStream> ImportItem::GetOutputStream(const logger& pLog)
 
     if (!fullName.empty())
     {
-        auto retval = std::make_shared<FileStream>(pLog);
+        auto retval = std::make_shared<FileStream>();
         HRESULT hr = E_FAIL;
         if (FAILED(
                 hr = retval->OpenFile(
@@ -70,7 +68,7 @@ std::shared_ptr<ByteStream> ImportItem::GetOutputStream(const logger& pLog)
                     FILE_ATTRIBUTE_NORMAL,
                     NULL)))
         {
-            log::Error(pLog, hr, L"Failed to open import item %s\r\n", fullName.c_str());
+            spdlog::error(L"Failed to open import item '{}' (code: {:#x})", fullName, hr);
             return nullptr;
         }
         return Stream = retval;
@@ -78,7 +76,7 @@ std::shared_ptr<ByteStream> ImportItem::GetOutputStream(const logger& pLog)
     return nullptr;
 }
 
-std::wstring ImportItem::GetBaseName(const logger& pLog)
+std::wstring ImportItem::GetBaseName()
 {
     if (!name.empty())
     {
@@ -86,9 +84,10 @@ std::wstring ImportItem::GetBaseName(const logger& pLog)
         WCHAR szBasename[MAX_PATH];
         if (FAILED(hr = GetBaseNameForFile(name.c_str(), szBasename, MAX_PATH)))
         {
-            log::Error(pLog, hr, L"Failed to extract basename for file %s\r\n", name.c_str());
+            spdlog::error(L"Failed to extract basename for file '{}' (code: {:#x})", name, hr);
             return L"";
         }
+
         return szBasename;
     }
     if (!fullName.empty())
@@ -97,7 +96,7 @@ std::wstring ImportItem::GetBaseName(const logger& pLog)
         WCHAR szBasename[MAX_PATH];
         if (FAILED(hr = GetBaseNameForFile(fullName.c_str(), szBasename, MAX_PATH)))
         {
-            log::Error(pLog, hr, L"Failed to extract basename for file %s\r\n", fullName.c_str());
+            spdlog::error(L"Failed to extract basename for file '{}' (code: {:#x})", fullName, hr);
             return L"";
         }
         return szBasename;

@@ -34,7 +34,6 @@ class ORCLIB_API ConfigFile
 private:
 protected:
     HANDLE m_hHeap;
-    logger _L_;
 
     HRESULT TrimString(struct _UNICODE_STRING* pString);
     HRESULT TrimString(std::wstring& string);
@@ -43,10 +42,9 @@ protected:
     HRESULT SetData(ConfigItem& config, const std::wstring& String);
 
 public:
-    ConfigFile(logger pLog);
+    ConfigFile();
 
     static HRESULT LookupAndReadConfiguration(
-        const logger& pLog,
         int argc,
         LPCWSTR argv[],
         ConfigFileReader& r,
@@ -55,10 +53,9 @@ public:
         LPCWSTR szReferenceConfigResource,
         LPCWSTR szCompanionExtension,
         ConfigItem& Config);
-    static HRESULT ConfigureLogging(const ConfigItem& item, const logger& pLog);
 
-    static HRESULT CheckConfig(const ConfigItem& config, const logger& pLog = nullptr);
-    static HRESULT PrintConfig(const ConfigItem& config, DWORD dwIndent = 0, const logger& pLog = nullptr);
+    static HRESULT CheckConfig(const ConfigItem& config);
+    static HRESULT PrintConfig(const ConfigItem& config, DWORD dwIndent = 0);
     static HRESULT DestroyConfig(ConfigItem& config, bool bDeleteSubItems = false);
 
     HRESULT SetOutputSpec(ConfigItem& item, const OutputSpec& outputSpec);

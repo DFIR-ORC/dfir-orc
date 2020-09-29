@@ -38,8 +38,8 @@ private:
      __out IXmlReaderInput** ppInput) = nullptr;
 
 public:
-    XmlLiteExtension(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"xmllite.dll"s, L"xmllite.dll;XMLLITE_X86DLL"s, L"xmllite.dll"s) {};
+    XmlLiteExtension()
+        : ExtensionLibrary(L"xmllite.dll"s, L"xmllite.dll;XMLLITE_X86DLL"s, L"xmllite.dll"s) {};
 
     STDMETHOD(Initialize)();
 
@@ -67,7 +67,7 @@ public:
         return COMCall(m_CreateXmlWriterOutputWithEncodingName, std::forward<Args>(args)...);
     }
 
-    static HRESULT LogError(const logger& pLog, HRESULT err, IXmlReader* pReader = nullptr);
+    static HRESULT LogError(HRESULT err, IXmlReader* pReader = nullptr);
 
     ~XmlLiteExtension();
 };

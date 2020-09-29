@@ -7,15 +7,15 @@
 //
 #pragma once
 
+#include <vector>
+#include <memory>
+
 #include "DataDetails.h"
 #include "FSUtils.h"
 #include "PEInfo.h"
 
 #include "TableOutput.h"
 #include "TableOutputWriter.h"
-
-#include <vector>
-#include <memory>
 
 #pragma managed(push, off)
 
@@ -31,7 +31,6 @@ public:
     friend class PEInfo;
 
     FileInfo(
-        logger pLog,
         std::wstring strComputerName,
         const std::shared_ptr<VolumeReader>& pVolReader,
         Intentions dwDefaultIntentions,
@@ -44,11 +43,8 @@ public:
     const WCHAR* GetFullName() const { return m_szFullName; }
 
     virtual HRESULT HandleIntentions(const Intentions& intention, ITableOutput& writer);
-    HRESULT WriteFileInformation(
-        const logger& pLog,
-        const ColumnNameDef columnNames[],
-        ITableOutput& output,
-        const std::vector<Filter>& filters);
+    HRESULT
+    WriteFileInformation(const ColumnNameDef columnNames[], ITableOutput& output, const std::vector<Filter>& filters);
 
     // abstract methods
     virtual bool IsDirectory() = 0;
@@ -63,11 +59,10 @@ public:
     static bool HasSpecificExtension(const WCHAR* pszName, const WCHAR* pszExtensions[]);
 
     static Intentions
-    GetIntentions(const logger& pLog, const WCHAR* szParams, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[]);
+    GetIntentions(const WCHAR* szParams, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[]);
     static Intentions GetFilterIntentions(const std::vector<Filter>& filters);
 
     static HRESULT BindColumns(
-        const logger& pLog,
         const ColumnNameDef columnNames[],
         Intentions dwIntentions,
         const std::vector<TableOutput::Column>& sqlcolumns,
@@ -155,11 +150,10 @@ protected:
 
 protected:
 
-    logger _L_;
     const std::shared_ptr<VolumeReader> m_pVolReader;
 
-    HANDLE m_hFile = INVALID_HANDLE_VALUE;
     PEInfo m_PEInfo;
+    HANDLE m_hFile = INVALID_HANDLE_VALUE;
 
     std::wstring m_strComputerName;
 
@@ -167,8 +161,8 @@ protected:
     DWORD m_dwFullNameLen = 0LU;
 
     const std::vector<Filter>& m_Filters;
-    Intentions m_DefaultIntentions = FILEINFO_NONE;
-    Intentions m_ColumnIntentions  = FILEINFO_NONE;
+    Intentions m_DefaultIntentions = Intentions::FILEINFO_NONE;
+    Intentions m_ColumnIntentions = Intentions::FILEINFO_NONE;
 
     Authenticode& m_codeVerifyTrust;
 

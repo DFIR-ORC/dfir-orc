@@ -32,7 +32,7 @@ using namespace Orc;
 //
 static const auto STATUS_NO_MORE_FILES = ((NTSTATUS)0x80000006L);
 
-HRESULT FileDirectory::FileInstance::Write(const logger&, ITableOutput& output, const std::wstring& strDescription) const
+HRESULT FileDirectory::FileInstance::Write(ITableOutput& output, const std::wstring& strDescription) const
 {
     SystemDetails::WriteComputerName(output);
     SystemDetails::WriteDescriptionString(output);
@@ -50,8 +50,7 @@ HRESULT FileDirectory::FileInstance::Write(const logger&, ITableOutput& output, 
 
     return S_OK;
 }
-HRESULT FileDirectory::FileInstance::Write(const logger&,
-        IStructuredOutput& pWriterOutput, LPCWSTR szElement) const
+HRESULT FileDirectory::FileInstance::Write(IStructuredOutput& pWriterOutput, LPCWSTR szElement) const
 {
     pWriterOutput.BeginElement(szElement);
 
@@ -84,7 +83,7 @@ HRESULT FileDirectory::ParseFileDirectory(const std::wstring& aObjDir, FileDirec
     if (aCallback == nullptr)
         return E_POINTER;
 
-    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>(_L_);
+    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>();
     if (pNtDll == nullptr)
         return E_FAIL;
 
@@ -134,7 +133,7 @@ HRESULT FileDirectory::ParseFileDirectory(const std::wstring& aObjDir, FileDirec
 
         if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"NtQueryDirectoryFile failed\r\n");
+            spdlog::error("Failed NtQueryDirectoryFile (code: {:#x})", hr);
             return hr;
         }
 

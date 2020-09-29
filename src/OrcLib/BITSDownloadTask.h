@@ -15,13 +15,11 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class BITSDownloadTask : public DownloadTask
 {
 
 public:
-    BITSDownloadTask(logger pLog, std::wstring strJobName);
+    BITSDownloadTask(std::wstring strJobName);
 
     virtual HRESULT Initialize(const bool bDelayedDeletion);
     virtual HRESULT Finalise();

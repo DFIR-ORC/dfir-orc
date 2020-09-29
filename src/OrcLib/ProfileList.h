@@ -18,8 +18,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API Profile
 {
 public:
@@ -64,22 +62,19 @@ using ProfileResult = stx::Result<std::vector<Profile>, HRESULT>;
 class ORCLIB_API ProfileList
 {
 public:
+    static ProfileResult GetProfiles();
 
-    static ProfileResult GetProfiles(const logger& pLog);
+    static stx::Result<std::wstring, HRESULT> DefaultProfile();
+    static stx::Result<std::filesystem::path, HRESULT> DefaultProfilePath();
 
-    static stx::Result<std::wstring, HRESULT> DefaultProfile(const logger& pLog);
-    static stx::Result<std::filesystem::path, HRESULT> DefaultProfilePath(const logger& pLog);
-    
-    static stx::Result<std::wstring, HRESULT> ProfilesDirectory(const logger& pLog);
-    static stx::Result<std::filesystem::path, HRESULT> ProfilesDirectoryPath(const logger& pLog);
+    static stx::Result<std::wstring, HRESULT> ProfilesDirectory();
+    static stx::Result<std::filesystem::path, HRESULT> ProfilesDirectoryPath();
 
-    static stx::Result<std::wstring, HRESULT> ProgramData(const logger& pLog);
-    static stx::Result<std::filesystem::path, HRESULT> ProgramDataPath(const logger& pLog);
+    static stx::Result<std::wstring, HRESULT> ProgramData();
+    static stx::Result<std::filesystem::path, HRESULT> ProgramDataPath();
 
-    static stx::Result<std::wstring, HRESULT> PublicProfile(const logger& pLog);
-    static stx::Result<std::filesystem::path, HRESULT> PublicProfilePath(const logger& pLog);
-
-
+    static stx::Result<std::wstring, HRESULT> PublicProfile();
+    static stx::Result<std::filesystem::path, HRESULT> PublicProfilePath();
 };
 
 }  // namespace Orc

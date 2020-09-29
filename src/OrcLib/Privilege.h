@@ -12,17 +12,15 @@
 
 namespace Orc {
 
-class LogFileWriter;
+ORCLIB_API HRESULT SetPrivilege(WCHAR* szPrivilege, BOOL bEnablePrivilege);
 
-ORCLIB_API HRESULT SetPrivilege(const logger& pLog, WCHAR* szPrivilege, BOOL bEnablePrivilege);
+ORCLIB_API HRESULT GetMyCurrentSID(PSID& pSid);
 
-ORCLIB_API HRESULT GetMyCurrentSID(const logger& pLog, PSID& pSid);
+ORCLIB_API HRESULT GetObjectOwnerSID(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pSid);
 
-ORCLIB_API HRESULT GetObjectOwnerSID(const logger& pLog, SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pSid);
+ORCLIB_API HRESULT TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPreviousOwnerSid);
 
-ORCLIB_API HRESULT TakeOwnership(const logger& pLog, SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPreviousOwnerSid);
-
-ORCLIB_API HRESULT GrantAccess(const logger& pLog, SE_OBJECT_TYPE objType, HANDLE hObject, PSID pSid, ACCESS_MASK mask);
+ORCLIB_API HRESULT GrantAccess(SE_OBJECT_TYPE objType, HANDLE hObject, PSID pSid, ACCESS_MASK mask);
 
 }  // namespace Orc
 

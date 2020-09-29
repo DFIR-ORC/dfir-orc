@@ -8,7 +8,6 @@
 
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "SystemDetails.h"
 #include "ParameterCheck.h"
 #include "WideAnsi.h"
@@ -85,13 +84,10 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    ConfigFile reader(_L_);
-
-    reader.ConfigureLogging(configitem[REGINFO_LOGGING], _L_);
+    ConfigFile reader;
 
     if (FAILED(
             hr = config.Output.Configure(
-                _L_,
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory),
                 configitem[REGINFO_OUTPUT])))
     {
@@ -99,7 +95,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     else
     {
-        log::Verbose(_L_, L"INFO: No statisfactory ouput in config file\r\n");
+        spdlog::debug(L"INFO: No statisfactory ouput in config file");
     }
 
     if (configitem[REGINFO_CSVLIMIT])
@@ -112,9 +108,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
 
     if (configitem[REGINFO_COMPUTER])
-        log::Info(_L_, L"No computer name specified\r\n", configitem[REGINFO_INFORMATION].c_str());
+        spdlog::info(L"No computer name specified ({})", configitem[REGINFO_INFORMATION].c_str());
 
-    config.strComputerName = configitem[REGINFO_COMPUTER];
+    m_utilitiesConfig.strComputerName = configitem[REGINFO_COMPUTER];
 
     std::for_each(
         begin(configitem[REGINFO_HIVE].NodeList),
@@ -122,18 +118,18 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         [this, &reader](const ConfigItem& item) -> HRESULT {
             HRESULT hr = E_FAIL;
 
-            auto NewQuery = std::make_shared<HiveQuery::SearchQuery>(_L_);
+            auto NewQuery = std::make_shared<HiveQuery::SearchQuery>();
             std::vector<std::shared_ptr<FileFind::SearchTerm>> FileFindTerms;
             std::vector<std::wstring> FileNameList;
 
-            if (FAILED(
-                    hr = config.regFindConfig.GetConfiguration(
-                        item,
-                        config.m_HiveQuery.m_HivesLocation,
-                        config.m_HiveQuery.m_HivesFind,
-                        NewQuery->QuerySpec,
-                        FileNameList,
-                        FileFindTerms)))
+            hr = config.regFindConfig.GetConfiguration(
+                item,
+                config.m_HiveQuery.m_HivesLocation,
+                config.m_HiveQuery.m_HivesFind,
+                NewQuery->QuerySpec,
+                FileNameList,
+                FileFindTerms);
+            if (FAILED(hr))
             {
                 return hr;
             }
@@ -160,24 +156,20 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.Information = GetRegInfoType(configitem[REGINFO_INFORMATION].c_str());
         if (config.Information == REGINFO_NONE)
         {
-            log::Error(
-                _L_,
-                E_INVALIDARG,
-                L"Column specified (%s) is invalid\r\n",
-                configitem[REGINFO_INFORMATION].c_str());
+            spdlog::error(L"Column specified '{}' is invalid", configitem[REGINFO_INFORMATION].c_str());
             return E_INVALIDARG;
         }
     }
 
     if (FAILED(hr = config.m_HiveQuery.m_HivesLocation.AddLocationsFromConfigItem(configitem[REGINFO_LOCATION])))
     {
-        log::Error(_L_, hr, L"Error in specific locations parsing in config file\r\n");
+        spdlog::error("Error in specific locations parsing in config file (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = config.m_HiveQuery.m_HivesLocation.AddKnownLocations(configitem[REGINFO_KNOWNLOCATIONS])))
     {
-        log::Error(_L_, hr, L"Error in specific known locations parsing in config file\r\n");
+        spdlog::error(L"Error in specific known locations parsing in config file (code: {:#x})", hr);
         return hr;
     }
 
@@ -202,7 +194,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory),
                             config.Output))
                         ;
-                    else if (ParameterOption(argv[i] + 1, L"Computer", config.strComputerName))
+                    else if (ParameterOption(argv[i] + 1, L"Computer", m_utilitiesConfig.strComputerName))
                         ;
                     else if (ProcessPriorityOption(argv[i] + 1))
                         ;
@@ -232,7 +224,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
     }
     catch (...)
     {
-        log::Info(_L_, L"RegInfo failed during argument parsing, exiting\r\n");
+        spdlog::info("RegInfo failed during argument parsing, exiting");
         return E_FAIL;
     }
     return S_OK;
@@ -241,7 +233,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.Output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.Output.TableKey.empty() ? L"reginfo" : config.Output.TableKey.c_str(), schemaitem);
+        config.Output.TableKey.empty() ? L"reginfo" : config.Output.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 
@@ -251,12 +243,12 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Output.Type == OutputSpec::Kind::None)
     {
-        log::Error(_L_, E_INVALIDARG, L"No valid output specified (only directory or csv|tsv are allowed\r\n");
+        spdlog::error("No valid output specified (only directory or csv|tsv are allowed");
         return E_INVALIDARG;
     }
     if (config.Output.Type & OutputSpec::Kind::Archive)
     {
-        log::Error(_L_, E_INVALIDARG, L"Archive output is not supported (only directory or csv|tsv are allowed\r\n");
+        spdlog::error("Archive output is not supported (only directory or csv|tsv are allowed");
         return E_INVALIDARG;
     }
 

@@ -10,12 +10,12 @@
 
 #include "OfflineMFTReader.h"
 
-#include "LogFileWriter.h"
+#include <spdlog/spdlog.h>
 
 using namespace Orc;
 
-OfflineMFTReader::OfflineMFTReader(logger pLog, const WCHAR* szMFTFileName)
-    : VolumeReader(std::move(pLog), szMFTFileName)
+OfflineMFTReader::OfflineMFTReader(const WCHAR* szMFTFileName)
+    : VolumeReader(szMFTFileName)
 {
     m_hMFT = INVALID_HANDLE_VALUE;
     wcsncpy_s(m_szMFTFileName, szMFTFileName, MAX_PATH);
@@ -61,7 +61,7 @@ HRESULT OfflineMFTReader::LoadDiskProperties()
         == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"Could not open offline MFT file \"%s\"", m_szMFTFileName);
+        spdlog::error(L"Could not open offline MFT file '{}' (code: {:#x})", m_szMFTFileName, hr);
         return hr;
     }
 
@@ -99,7 +99,7 @@ std::shared_ptr<VolumeReader> OfflineMFTReader::ReOpen(DWORD dwDesiredAccess, DW
 
 std::shared_ptr<VolumeReader> OfflineMFTReader::DuplicateReader()
 {
-    auto retval = std::make_shared<OfflineMFTReader>(_L_, m_szLocation);
+    auto retval = std::make_shared<OfflineMFTReader>(m_szLocation);
 
     retval->m_cOriginalName = m_cOriginalName;
     wcscpy_s(retval->m_szMFTFileName, m_szMFTFileName);

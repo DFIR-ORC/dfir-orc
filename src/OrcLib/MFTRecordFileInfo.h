@@ -78,7 +78,6 @@ public:
     virtual HRESULT WriteSnapshotID(ITableOutput& output);
 
     MFTRecordFileInfo(
-        logger pLog,
         std::wstring strComputerName,
         const std::shared_ptr<VolumeReader>& pVolReader,
         Intentions dwDefaultIntentions,

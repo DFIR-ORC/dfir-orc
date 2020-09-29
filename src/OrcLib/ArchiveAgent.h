@@ -24,8 +24,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API ArchiveAgent : public Concurrency::agent
 {
     class OnCompleteTerminationHandler;
@@ -113,7 +111,6 @@ private:
         ArchiveAgent::OnComplete::Object m_object;
     };
 
-    logger _L_;
     std::wstring m_cabName;
     std::shared_ptr<ArchiveCreate> m_compressor;
 
@@ -137,12 +134,10 @@ protected:
 
 public:
     ArchiveAgent(
-        logger pLog,
         ArchiveMessage::ISource& source,
         ArchiveMessage::ITarget& messagetarget,
         ArchiveNotification::ITarget& target)
-        : _L_(std::move(pLog))
-        , m_source(source)
+        : m_source(source)
         , m_messagetarget(messagetarget)
         , m_target(target)
     {

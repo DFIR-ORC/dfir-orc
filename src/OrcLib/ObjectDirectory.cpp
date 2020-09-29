@@ -10,8 +10,6 @@
 
 #include "NtDllExtension.h"
 
-#include "LogFileWriter.h"
-
 #include "SystemDetails.h"
 
 #include "StructuredOutputWriter.h"
@@ -122,14 +120,14 @@ ObjectDirectory::ObjectType ObjectDirectory::GetObjectType(const std::wstring& t
     return ObjectType::Invalid;
 }
 
-HRESULT ObjectDirectory::ObjectInstance::Write(const logger&, ITableOutput& output, const std::wstring& strDescription) const
+HRESULT ObjectDirectory::ObjectInstance::Write(ITableOutput& output, const std::wstring& strDescription) const
 {
     SystemDetails::WriteComputerName(output);
     SystemDetails::WriteDescriptionString(output);
 
     output.WriteExactFlags(Type, ObjectDirectory::g_ObjectTypeDefinition);
-    output.WriteString(Name.c_str());
-    output.WriteString(Path.c_str());
+    output.WriteString(Name);
+    output.WriteString(Path);
     if (LinkTarget.empty())
     {
         output.WriteNothing();
@@ -137,7 +135,7 @@ HRESULT ObjectDirectory::ObjectInstance::Write(const logger&, ITableOutput& outp
     }
     else
     {
-        output.WriteString(LinkTarget.c_str());
+        output.WriteString(LinkTarget);
         output.WriteFileTime(LinkCreationTime.QuadPart);
     }
     output.WriteString(strDescription);
@@ -146,7 +144,7 @@ HRESULT ObjectDirectory::ObjectInstance::Write(const logger&, ITableOutput& outp
 }
 
 HRESULT ObjectDirectory::ObjectInstance::Write(
-    const logger&,
+
     IStructuredOutput& pWriter,
     LPCWSTR szElement) const
 {
@@ -173,7 +171,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
 {
     HRESULT hr;
 
-    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>(_L_);
+    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>();
     if (pNtDll == nullptr)
         return E_FAIL;
 
@@ -188,7 +186,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
 
     if (FAILED(hr = pNtDll->NtOpenDirectoryObject(&hRoot, GENERIC_READ, &ObjAttr)))
     {
-        log::Error(_L_, hr, L"Failed to open object directory %s\r\n", aObjDir.c_str());
+        spdlog::error(L"Failed to open object directory '{}' (code: {:#x})", aObjDir, hr);
         return hr;
     }
     BOOST_SCOPE_EXIT((&hRoot)) { CloseHandle(hRoot); }
@@ -218,14 +216,10 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
 
         while (idx < returnedLength)
         {
-
-            log::Verbose(
-                _L_,
-                L"Type=%*s\tName=%*s",
-                pObjInfo->TypeName.Length / sizeof(WCHAR),
-                pObjInfo->TypeName.Buffer,
-                pObjInfo->Name.Length / sizeof(WCHAR),
-                pObjInfo->Name.Buffer);
+            spdlog::debug(
+                L"Type: {}, Name: {}",
+                std::wstring_view(pObjInfo->TypeName.Buffer, pObjInfo->TypeName.Length / sizeof(WCHAR)),
+                std::wstring_view(pObjInfo->Name.Buffer, pObjInfo->Name.Length / sizeof(WCHAR)));
 
             ObjectType type = GetObjectType(pObjInfo->TypeName);
 
@@ -281,8 +275,6 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
                     if (FAILED(hr = pNtDll->NtQuerySymbolicLinkObject(hSymLink, &LinkTarget, &ulReturnedLength)))
                         break;
 
-                    log::Verbose(_L_, L"\tLinkTarget: %*s", LinkTarget.Length / sizeof(WCHAR), LinkTarget.Buffer);
-
                     OBJECT_BASIC_INFORMATION obi;
                     ZeroMemory(&obi, sizeof(OBJECT_BASIC_INFORMATION));
 
@@ -310,12 +302,11 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
                     {
                         if (FAILED(hr = ParseObjectDirectory(path, objects, bRecursive)))
                         {
-                            log::Warning(
-                                _L_,
-                                hr,
-                                L"Failed to recursively parse directory %s (subdir %s)\r\n",
-                                aObjDir.c_str(),
-                                path.c_str());
+                            spdlog::warn(
+                                L"Failed to recursively parse directory '{}' (subdir '{}') (code: {:#x})",
+                                aObjDir,
+                                path,
+                                hr);
                         }
                     }
 
@@ -333,7 +324,6 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
                         std::move(path));
                 }
             }
-            log::Verbose(_L_, L"\r\n");
 
             pObjInfo++;
 

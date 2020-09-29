@@ -22,8 +22,8 @@ namespace Orc {
 class ORCLIB_API FileStream : public ByteStream
 {
 public:
-    FileStream(logger pLog)
-        : ByteStream(std::move(pLog))
+    FileStream()
+        : ByteStream()
     {
     }
     ~FileStream();

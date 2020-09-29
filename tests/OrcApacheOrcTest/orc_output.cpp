@@ -8,8 +8,6 @@
 
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
-
 #include "TableOutputWriter.h"
 
 #include "FileStream.h"
@@ -36,16 +34,13 @@ namespace Orc::Test::ApacheOrc {
 TEST_CLASS(OrcWriter)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
     TEST_METHOD(WriteLocalFile)
     {
         using namespace orc;
@@ -60,11 +55,11 @@ public:
         using namespace orc;
         auto strPath = GetFilePath(L"%TEMP%\\testStream.orc"s);
 
-        auto fileStream = std::make_shared<Orc::FileStream>(_L_);
+        auto fileStream = std::make_shared<Orc::FileStream>();
 
         Assert::IsTrue(SUCCEEDED(fileStream->WriteTo(strPath.c_str())));
 
-        auto outStream = std::make_unique<Orc::TableOutput::ApacheOrc::Stream>(_L_);
+        auto outStream = std::make_unique<Orc::TableOutput::ApacheOrc::Stream>();
 
         Assert::IsTrue(SUCCEEDED(outStream->Open(fileStream)));
 
@@ -76,11 +71,11 @@ public:
         using namespace orc;
         auto strPath = GetFilePath(L"%TEMP%\\testStreamWithNulls.orc"s);
 
-        auto fileStream = std::make_shared<Orc::FileStream>(_L_);
+        auto fileStream = std::make_shared<Orc::FileStream>();
 
         Assert::IsTrue(SUCCEEDED(fileStream->WriteTo(strPath.c_str())));
 
-        auto outStream = std::make_unique<Orc::TableOutput::ApacheOrc::Stream>(_L_);
+        auto outStream = std::make_unique<Orc::TableOutput::ApacheOrc::Stream>();
 
         Assert::IsTrue(SUCCEEDED(outStream->Open(fileStream)));
 
@@ -97,7 +92,7 @@ public:
 
         options->BatchSize = 102400;
 
-        auto stream_writer = Orc::TableOutput::GetApacheOrcnWriter(_L_, std::move(options));
+        auto stream_writer = Orc::TableOutput::GetApacheOrcWriter(std::move(options));
         Assert::IsTrue((bool)stream_writer, L"Failed to instantiate orc writer");
 
         Schema schema {{ColumnType::UInt32Type, L"FieldOne"sv},
@@ -307,12 +302,12 @@ public:
     std::string GetFilePath(const std::string& strFileName)
     {
 
-        if (auto [hr, strName] = AnsiToWide(_L_, strFileName); SUCCEEDED(hr))
+        if (auto [hr, strName] = AnsiToWide(strFileName); SUCCEEDED(hr))
         {
             std::wstring strPath;
             if (auto hr = GetOutputFile(strName.c_str(), strPath); SUCCEEDED(hr))
             {
-                if (auto [hr, retval] = WideToAnsi(_L_, strPath); SUCCEEDED(hr))
+                if (auto [hr, retval] = WideToAnsi(strPath); SUCCEEDED(hr))
                     return retval;
                 else
                     throw Orc::Exception(

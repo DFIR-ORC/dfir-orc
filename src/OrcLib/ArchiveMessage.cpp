@@ -8,112 +8,121 @@
 #include "stdafx.h"
 #include "ArchiveMessage.h"
 
-using namespace std;
-
 using namespace Orc;
 
-struct ArchiveMessage_make_shared_enabler : public Orc::ArchiveMessage {
-	inline ArchiveMessage_make_shared_enabler(Orc::ArchiveMessage::Request request) : Orc::ArchiveMessage(request) {};
+namespace {
+
+// Enable the use of std::make_shared with ArchiveMessage protected constructor
+struct ArchiveMessageT : public Orc::ArchiveMessage
+{
+    template <typename... Args>
+    inline ArchiveMessageT(Args&&... args)
+        : ArchiveMessage(std::forward<Args>(args)...)
+    {
+    }
 };
 
+}  // namespace
 
 ArchiveMessage::Message
-ArchiveMessage::MakeOpenRequest(const std::wstring& strArchiveName, const std::wstring& strCompressionLevel)
+ArchiveMessage::MakeOpenRequest(const std::wstring& archiveFileName, const std::wstring& compressionLevel)
 {
-    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::OpenArchive);
-    retval->m_Name = strArchiveName;
-    retval->m_CompressionLevel = strCompressionLevel;
+    auto retval = std::make_shared<::ArchiveMessageT>(ArchiveMessage::OpenArchive);
+    retval->m_archiveFileName = archiveFileName;
+    retval->m_compressionLevel = compressionLevel;
     return retval;
 }
 
 ArchiveMessage::Message ArchiveMessage::MakeOpenRequest(
-    const std::wstring& strArchiveName,
-    const ArchiveFormat aFormat,
-    const std::shared_ptr<ByteStream>& aStream,
-    const std::wstring& strCompressionLevel,
+    const std::wstring& archiveName,
+    const ArchiveFormat format,
+    const std::shared_ptr<ByteStream>& stream,
+    const std::wstring& compressionLevel,
     const std::wstring& password)
 {
-    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::OpenArchive);
-    retval->m_Name = strArchiveName;
-    retval->m_Format = aFormat;
-    retval->m_Stream = aStream;
-    retval->m_CompressionLevel = strCompressionLevel;
-    retval->m_Password = password;
+    auto retval = std::make_shared<::ArchiveMessageT>(ArchiveMessage::OpenArchive);
+    retval->m_archiveFileName = archiveName;
+    retval->m_format = format;
+    retval->m_stream = stream;
+    retval->m_compressionLevel = compressionLevel;
+    retval->m_password = password;
     return retval;
 }
 
-ArchiveMessage::Message ArchiveMessage::MakeOpenRequest(const OutputSpec& anOutput)
+ArchiveMessage::Message ArchiveMessage::MakeOpenRequest(const OutputSpec& output)
 {
-    if (anOutput.Type != OutputSpec::Kind::Archive)
+    if (output.Type != OutputSpec::Kind::Archive)
+    {
         return nullptr;
+    }
 
-    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::OpenArchive);
-    retval->m_Name = anOutput.Path;
-    retval->m_Format = anOutput.ArchiveFormat;
-    retval->m_CompressionLevel = anOutput.Compression;
-    retval->m_Password = anOutput.Password;
+    auto retval = std::make_shared<::ArchiveMessageT>(ArchiveMessage::OpenArchive);
+    retval->m_archiveFileName = output.Path;
+    retval->m_format = output.ArchiveFormat;
+    retval->m_compressionLevel = output.Compression;
+    retval->m_password = output.Password;
     return retval;
 }
 
 ArchiveMessage::Message ArchiveMessage::MakeAddFileRequest(
-    const std::wstring& szNameInArchive,
-    const std::wstring& szFileName,
+    const std::wstring& nameInArchive,
+    const std::wstring& fileName,
     bool bHashData,
     bool bDeleteWhenDone)
 {
-    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::AddFile);
-    retval->m_Status = ArchiveMessage::Ready;
-    retval->m_Keyword = szNameInArchive;
-    retval->m_Name = szFileName;
+    auto retval = std::make_shared<::ArchiveMessageT>(ArchiveMessage::AddFile);
+    retval->m_status = ArchiveMessage::Ready;
+    retval->m_nameInArchive = nameInArchive;
+    retval->m_sourcePath = fileName;
     retval->m_bHashData = bHashData;
     retval->m_bDeleteWhenDone = bDeleteWhenDone;
     return retval;
 }
 
 ArchiveMessage::Message ArchiveMessage::MakeAddDirectoryRequest(
-    const std::wstring& szCabbedName,
-    const std::wstring& szDirName,
-    const std::wstring& szPattern,
+    const std::wstring& nameInArchive,
+    const std::wstring& dirName,
+    const std::wstring& pattern,
     bool bHashData,
     bool bDeleteOnCompletion)
 {
-    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::AddDirectory);
-    retval->m_Status = ArchiveMessage::Ready;
-    retval->m_Keyword = szCabbedName;
-    retval->m_Name = szDirName;
-    retval->m_Pattern = szPattern;
+    auto retval = std::make_shared<::ArchiveMessageT>(ArchiveMessage::AddDirectory);
+    retval->m_status = ArchiveMessage::Ready;
+    retval->m_nameInArchive = nameInArchive;
+    retval->m_sourcePath = dirName;
+    retval->m_pattern = pattern;
     retval->m_bHashData = bHashData;
     retval->m_bDeleteWhenDone = bDeleteOnCompletion;
     return retval;
 }
 
 ArchiveMessage::Message ArchiveMessage::MakeAddStreamRequest(
-    const std::wstring& szCabbedName,
+    const std::wstring& nameInArchive,
     const std::shared_ptr<ByteStream>& aStream,
     bool bHashData)
 {
-    auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::AddStream);
-    retval->m_Status = ArchiveMessage::Wait;
-    retval->m_Keyword = szCabbedName;
-    retval->m_Name = szCabbedName;
+    auto retval = std::make_shared<::ArchiveMessageT>(ArchiveMessage::AddStream);
+    retval->m_status = ArchiveMessage::Wait;
+    retval->m_sourcePath = nameInArchive;
+    retval->m_nameInArchive = nameInArchive;
     retval->m_bHashData = bHashData;
-    retval->m_Stream = aStream;
+    retval->m_stream = aStream;
     return retval;
 }
 
 ArchiveMessage::Message ArchiveMessage::MakeFlushQueueRequest()
 {
-    return make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::FlushQueue);
+    return std::make_shared<::ArchiveMessageT>(ArchiveMessage::FlushQueue);
 }
 
 ArchiveMessage::Message ArchiveMessage::MakeCompleteRequest()
 {
-    return make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::Complete);
+    return std::make_shared<::ArchiveMessageT>(ArchiveMessage::Complete);
 }
 
 ArchiveMessage::Message ArchiveMessage::MakeCancellationRequest()
 {
-    return make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::Cancel);
+    return std::make_shared<::ArchiveMessageT>(ArchiveMessage::Cancel);
 }
 
-ArchiveMessage::~ArchiveMessage(void) {}
+ArchiveMessage::~ArchiveMessage() {}

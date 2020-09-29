@@ -10,6 +10,7 @@
 #include "OrcLib.h"
 
 #include "OutputWriter.h"
+#include "Flags.h"
 #include "Buffer.h"
 
 #include <optional>
@@ -57,23 +58,27 @@ enum ColumnType
 class EnumValue
 {
 public:
-    DWORD Index = 0;
+    DWORD Index;
     std::wstring strValue;
 
     EnumValue(const std::wstring& strV, DWORD dwIndex)
-        : strValue(strV)
-        , Index(dwIndex) {};
+        : Index(dwIndex)
+        , strValue(strV)
+    {
+    }
 };
 
 class FlagValue
 {
 public:
-    DWORD dwFlag = 0;
+    DWORD dwFlag;
     std::wstring strFlag;
 
     FlagValue(const std::wstring& strV, DWORD dwIndex)
-        : strFlag(strV)
-        , dwFlag(dwIndex) {};
+        : dwFlag(dwIndex)
+        , strFlag(strV)
+    {
+    }
 };
 
 using namespace std::string_view_literals;
@@ -118,8 +123,8 @@ public:
     ColumnType Type = Nothing;
     std::wstring ColumnName;
     std::optional<std::wstring> Description;
-    std::optional<std::wstring> Artifact;
     std::optional<std::wstring> Format;
+    std::optional<std::wstring> Artifact;
 
     std::optional<DWORD> dwMaxLen;
     std::optional<DWORD> dwLen;

@@ -8,7 +8,6 @@
 #include "stdafx.h"
 
 #include "DecodeMessageStream.h"
-#include "LogFileWriter.h"
 
 #include "boost/scope_exit.hpp"
 
@@ -53,7 +52,8 @@ STDMETHODIMP DecodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
     m_hSystemStore = CertOpenSystemStore(NULL, L"MY");
     if (m_hSystemStore == NULL)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CertOpenSystemStore failed!!!\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CertOpenSystemStore (code: {:#x})", hr);
         return hr;
     }
 
@@ -72,7 +72,7 @@ __data_entrypoint(File) HRESULT DecodeMessageStream::Read(
     if (cbBytesToRead > MAXDWORD)
         return E_INVALIDARG;
 
-    log::Verbose(_L_, L"Cannot read from an EncodeMessageStream\r\n");
+    spdlog::debug("Cannot read from an EncodeMessageStream");
     return E_NOTIMPL;
 }
 
@@ -89,8 +89,8 @@ HRESULT DecodeMessageStream::GetCertPrivateKey(
     {
         if (GetLastError() != ERROR_MORE_DATA)
         {
-            log::Error(
-                _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CertGetCertificateContextProperty failed!!!\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed CertGetCertificateContextProperty (code: {:#x})", hr);
             return hr;
         }
     }
@@ -101,7 +101,8 @@ HRESULT DecodeMessageStream::GetCertPrivateKey(
 
     if (!CertGetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, pProvInfo, &cbProvInfo))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CertGetCertificateContextProperty failed!!!\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CertGetCertificateContextProperty (code: {:#x})", hr);
         return hr;
     }
 
@@ -117,7 +118,8 @@ HRESULT DecodeMessageStream::GetCertPrivateKey(
             &dwKeySpec,
             &fCallerFreeProvOrNCryptKey))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptAcquireCertificatePrivateKey failed!!!\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CryptAcquireCertificatePrivateKey (code: {:#x})", hr);
         return hr;
     }
 
@@ -139,7 +141,8 @@ HRESULT DecodeMessageStream::GetRecipients()
 
     if (!CryptMsgGetParam(m_hMsg, CMSG_RECIPIENT_COUNT_PARAM, 0L, &dwRecipientCount, &cbRecipientCount))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgGetParam failed!!!\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CryptMsgGetParam (code: {:#x})", hr);
     }
     else
     {
@@ -152,7 +155,8 @@ HRESULT DecodeMessageStream::GetRecipients()
             {
                 if (GetLastError() != ERROR_MORE_DATA)
                 {
-                    log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgGetParam failed!!!\r\n");
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::error("Failed CryptMsgGetParam (code: {:#x})", hr);
                     return hr;
                 }
             }
@@ -165,7 +169,8 @@ HRESULT DecodeMessageStream::GetRecipients()
 
             if (!CryptMsgGetParam(m_hMsg, CMSG_RECIPIENT_INFO_PARAM, i, pRecipientInfo, &cbRecipientInfo))
             {
-                log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgGetParam failed!!!\r\n");
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::error("Failed CryptMsgGetParam (code: {:#x})", hr);
             }
             else
             {
@@ -182,8 +187,7 @@ HRESULT DecodeMessageStream::GetRecipients()
                     std::wstring strSerial;
                     CertSerialNumberToString(&pRecipientInfo->SerialNumber, strSerial);
 
-                    log::Verbose(
-                        _L_, L"Unknown certificate (Issuer=\"%s\" SN=%s\r\n", strIssuer.c_str(), strSerial.c_str());
+                    spdlog::debug(L"Unknown certificate (Issuer=\"{}\", SN=\"{}\")", strIssuer, strSerial);
                 }
                 else
                 {
@@ -191,10 +195,8 @@ HRESULT DecodeMessageStream::GetRecipients()
                     if (!CertAddCertificateContextToStore(
                             m_hCertStore, pCertContext, CERT_STORE_ADD_NEW, &pMyCertContext))
                     {
-                        log::Error(
-                            _L_,
-                            hr = HRESULT_FROM_WIN32(GetLastError()),
-                            L"CertAddCertificateContextToStore failed!!!\r\n");
+                        hr = HRESULT_FROM_WIN32(GetLastError());
+                        spdlog::error("Failed CertAddCertificateContextToStore (code: {:#x})", hr);
                         return hr;
                     }
                     m_Recipients.push_back(pMyCertContext);
@@ -220,13 +222,13 @@ HRESULT DecodeMessageStream::GetDecryptionMaterial()
     {
         if (GetLastError() == CRYPT_E_STREAM_MSG_NOT_READY)
         {
-            log::Verbose(_L_, L"CryptMsgGetParam says that encryption algo is not yet available, need to continue\r\n");
+            spdlog::debug("CryptMsgGetParam says that encryption algo is not yet available, need to continue");
             return S_OK;
         }
         else if (GetLastError() != ERROR_MORE_DATA)
         {
-            log::Error(
-                _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgGetParam failed for unexpected reason!!!\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed CryptMsgGetParam (code: {:#x})", hr);
             return hr;
         }
     }
@@ -237,15 +239,16 @@ HRESULT DecodeMessageStream::GetDecryptionMaterial()
     pAlgId = (PCRYPT_ALGORITHM_IDENTIFIER)AlgBuffer.GetData();
     if (!CryptMsgGetParam(m_hMsg, CMSG_ENVELOPE_ALGORITHM_PARAM, 0L, pAlgId, &cbAlgId))
     {
-        log::Error(
-            _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgGetParam failed for unexpected reason!!!\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CryptMsgGetParam (code: {:#x})", hr);
         return hr;
     }
-    log::Verbose(_L_, L"CryptMsgGetParam says that encryption information is now available\r\n");
+    spdlog::debug("CryptMsgGetParam says that encryption information is now available");
 
     if (FAILED(GetRecipients()))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to determine the list of recipients!!!\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to determine the list of recipients (code: {:#x})", hr);
         return hr;
     }
 
@@ -262,13 +265,14 @@ HRESULT DecodeMessageStream::GetDecryptionMaterial()
         {
             if (!CryptMsgControl(m_hMsg, CMSG_CRYPT_RELEASE_CONTEXT_FLAG, CMSG_CTRL_DECRYPT, &params))
             {
-                log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgControl failed!!!\r\n");
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::error("Failed CryptMsgControl (code: {:#x})", hr);
                 return hr;
             }
             else
             {
                 m_DecryptParam = params;
-                log::Verbose(_L_, L"Decryption information is now available\r\n");
+                spdlog::debug("Decryption information is now available");
                 m_bDecrypting = true;
                 break;
             }
@@ -291,13 +295,14 @@ HRESULT DecodeMessageStream::Write(
 
     if (cbBytes > MAXDWORD)
     {
-        log::Error(_L_, E_INVALIDARG, L"Too many bytes to decode\r\n");
+        spdlog::error("DecodeMessageStream: Write: Too many bytes to decode");
         return E_INVALIDARG;
     }
 
     if (!CryptMsgUpdate(m_hMsg, (const BYTE*)pBuffer, static_cast<DWORD>(cbBytes), FALSE))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgUpdate failed\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CryptMsgUpdate (code: {:#x})", hr);
         return hr;
     }
 
@@ -308,7 +313,7 @@ HRESULT DecodeMessageStream::Write(
     }
 
     *pcbBytesWritten = cbBytes;
-    log::Verbose(_L_, L"CryptMsgUpdate %d bytes succeeded (hMsg=0x%lx)\r\n", cbBytes, m_hMsg);
+    spdlog::debug("CryptMsgUpdate {} bytes succeeded (hMsg: {:p})", cbBytes, m_hMsg);
     return S_OK;
 }
 
@@ -320,20 +325,20 @@ HRESULT DecodeMessageStream::SetFilePointer(
     DBG_UNREFERENCED_PARAMETER(lDistanceToMove);
     DBG_UNREFERENCED_PARAMETER(dwMoveMethod);
     DBG_UNREFERENCED_PARAMETER(pqwCurrPointer);
-    log::Verbose(_L_, L"SetFilePointer is not implemented in DecodeMessageStream\r\n");
+    spdlog::debug(L"DecodeMessageStream: SetFilePointer is not implemented");
     return S_OK;
 }
 
 ULONG64 DecodeMessageStream::GetSize()
 {
-    log::Verbose(_L_, L"GetFileSizeEx is not implemented on DecodeMessageStream\r\n");
+    spdlog::debug(L"DecodeMessageStream: GetSize is not implemented");
     return (ULONG64)-1;
 }
 
 HRESULT DecodeMessageStream::SetSize(ULONG64 ullNewSize)
 {
     DBG_UNREFERENCED_PARAMETER(ullNewSize);
-    log::Verbose(_L_, L"SetSize is not implemented on DecodeMessageStream\r\n");
+    spdlog::debug(L"DecodeMessageStream: SetSize is not implemented");
     return S_OK;
 }
 
@@ -344,12 +349,14 @@ HRESULT DecodeMessageStream::Close()
         HRESULT hr = E_FAIL;
         if (!CryptMsgUpdate(m_hMsg, NULL, 0L, TRUE))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Final CryptMsgUpdate failed\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed CryptMsgUpdate on final call (code: {:#x})", hr);
             return hr;
         }
         if (!CryptMsgClose(m_hMsg))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptMsgClose failed\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed CryptMsgClose (code: {:#x})", hr);
             m_hMsg = NULL;
             return hr;
         }

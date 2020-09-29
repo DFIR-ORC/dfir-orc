@@ -19,15 +19,13 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API ArchiveExtract : public Archive
 {
 public:
     typedef std::function<std::shared_ptr<ByteStream>(Archive::ArchiveItem& item)> MakeOutputStream;
     typedef std::function<HRESULT(std::shared_ptr<ByteStream>& stream)> MakeArchiveStream;
 
-    static std::shared_ptr<ArchiveExtract> MakeExtractor(ArchiveFormat fmt, logger pLog, bool bComputeHash = false);
+    static std::shared_ptr<ArchiveExtract> MakeExtractor(ArchiveFormat fmt, bool bComputeHash = false);
 
     typedef std::function<bool(const std::wstring& strNameInArchive)> ItemShouldBeExtractedCallback;
 
@@ -36,8 +34,8 @@ protected:
     MakeArchiveStream m_MakeArchiveStream;
     ItemShouldBeExtractedCallback m_ShouldBeExtracted;
 
-    ArchiveExtract(logger pLog, bool bComputeHash)
-        : Archive(std::move(pLog), bComputeHash) {};
+    ArchiveExtract(bool bComputeHash)
+        : Archive(bComputeHash) {};
 
     std::vector<std::pair<std::wstring, std::wstring>> m_ExtractedItems;
 

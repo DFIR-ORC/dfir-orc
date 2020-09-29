@@ -581,7 +581,7 @@ set(SRC_INOUT_TEXT
     "Output/Text/Print/Ntfs/MFTRecord.cpp"
 )
 
-source_group(In&Out\\Text FILES ${SRC_INOUT_TEXT})
+source_group(In&Out\\Output\\Text FILES ${SRC_INOUT_TEXT})
 
 set(SRC_INOUT_UPLOAD
     "BITSAgent.cpp"
@@ -658,8 +658,6 @@ source_group(RunningCode FILES ${SRC_RUNNINGCODE})
 
 set(SRC_UTILITIES
     "Convert.h"
-    "LogFileWriter.cpp"
-    "LogFileWriter.h"
     "OrcException.cpp"
     "OrcException.h"
     "OrcResult.h"

@@ -18,49 +18,62 @@
 
 #include "ExtractData.h"
 #include "ToolVersion.h"
-#include "LogFileWriter.h"
+
+#include "Usage.h"
+
+#include "Output/Text/Print.h"
+#include "Utils/TypeTraits.h"
 
 using namespace Orc;
 using namespace Orc::Command::ExtractData;
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\r\""
-        L"Usage: DFIR-Orc.exe ExtractData [/out=<Output>] [/report=report.csv] <directory|file.p7b>\r\n"
-        L"\r\n"
-        L"/config=<config.xml> : use xml configuration file\r\n"
-        L"\t/out=<Output>      : output extraction directory\r\n"
-        L"\t/report=<Output>      : extraction report output file\r\n"
-        L"\t\r\n"
-        L"<directory|file.p7b>   : input directory or input file to extract\r\n");
+    auto usageNode = m_console.OutputTree();
 
-    PrintCommonUsage();
-    return;
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe ExtractData [/Out=<Output>] [/Report=report.csv] <directory|file.p7b>",
+        "Decrypt and decompress ORC archive files. Currently it is only supporting Microsoft Security Cryptography "
+        "Service Provider and the keys have to be imported under user's certificate store (use 'certmgr.msc').");
+
+    constexpr std::array kUsageInput = {
+        Usage::Parameter {"<directory|file.p7b>", "input directory or input file to extract"}};
+    Usage::PrintParameters(usageNode, L"INPUT PARAMETERS", kUsageInput);
+
+    constexpr std::array kUsageOutput = {
+        Usage::Parameter {"/Out=<Directory>", "Output file or directory"},
+        Usage::Parameter {"/Report=<FilePath>", "Extraction information report"}};
+    Usage::PrintParameters(usageNode, L"OUTPUT PARAMETERS", kUsageOutput);
+
+    Usage::PrintMiscellaneousParameters(usageNode);
+
+    Usage::PrintLoggingParameters(usageNode);
+
+    constexpr std::array kUsageExamples = {Usage::Example {
+        "DFIR-Orc.exe extractdata prod.p7b /Out=c:\\extract",
+        "Extract and decrypt 'prod.p7b' in to 'c:\\extract\\' directory using MSCSP"}};
+    Usage::PrintExamples(usageNode, kUsageExamples);
 }
 
 void Main::PrintParameters()
 {
-    log::Info(_L_, L"\r\n");
+    auto root = m_console.OutputTree();
 
-    SaveAndPrintStartTime();
-
-    log::Info(_L_, L"\r\nExtractData configured to import:\r\n");
     for (auto& item : config.inputItems)
     {
-        log::Info(_L_, L"\r\n\t%s\r\n\r\n", item.Description().c_str());
+        root.Add("{}", item.Description());
     }
-
-    log::Info(_L_, L"\r\n");
-    return;
 }
 
 void Main::PrintFooter()
 {
-    log::Info(_L_, L"\r\n");
-    log::Info(_L_, L"Bytes processed     : %I64d\r\n", m_ullProcessedBytes);
-    log::Info(_L_, L"\r\n");
+    m_console.PrintNewLine();
 
-    PrintExecutionTime();
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Statistics");
+    PrintValue(root, "Bytes processed", Traits::ByteQuantity(m_ullProcessedBytes));
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

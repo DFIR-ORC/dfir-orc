@@ -12,29 +12,23 @@
 #include <regex>
 #include <chrono>
 
+#include <boost/logic/tribool.hpp>
+
 #include "ArchiveMessage.h"
 #include "ArchiveAgent.h"
-
 #include "CommandAgent.h"
 #include "CommandMessage.h"
-
-#include "TableOutputWriter.h"
-
-#include "UploadAgent.h"
-
 #include "ConfigFile.h"
-
+#include "TableOutputWriter.h"
+#include "UploadAgent.h"
 #include "UploadMessage.h"
-
 #include "Robustness.h"
 
-#include <boost/logic/tribool.hpp>
+#include "Output/Console/Journal.h"
 
 #pragma managed(push, off)
 
 namespace Orc {
-
-class LogFileWriter;
 
 namespace Command::Wolf {
 
@@ -65,13 +59,15 @@ private:
     };
 
 public:
-    typedef enum _Repeat
+    enum class Repeat
     {
         NotSet = 0,
-        CreateNew = 1,
-        Overwrite = 2,
-        Once = 3
-    } Repeat;
+        CreateNew,
+        Overwrite,
+        Once
+    };
+
+    static std::wstring ToString(Repeat value);
 
     class Recipient
     {
@@ -82,10 +78,10 @@ public:
     };
 
 private:
-    logger _L_;
+    OrcCommand::Output::Journal& m_journal;
     std::wstring m_logFilePath;
 
-    std::wstring m_strKeyword;
+    std::wstring m_commandSet;
     std::wstring m_strCompressionLevel;
     DWORD m_dwConcurrency;
 
@@ -111,7 +107,7 @@ private:
     std::wstring m_strOutputFileName;
     std::wstring m_strArchiveFullPath;
     std::wstring m_strArchiveFileName;
-    Repeat m_RepeatBehavior = NotSet;
+    Repeat m_RepeatBehavior = Repeat::NotSet;
 
     OutputSpec m_Temporary;
 
@@ -157,9 +153,6 @@ private:
     std::shared_ptr<ByteStream> m_localConfigStream;
 
 public:
-    WolfExecution(logger pLog)
-        : _L_(std::move(pLog)) {};
-
     HRESULT SetArchiveName(const std::wstring& strArchiveName)
     {
         if (strArchiveName.empty())
@@ -240,8 +233,9 @@ public:
     void SetMandatory() { m_bOptional = false; }
     bool IsOptional() const { return m_bOptional; }
 
-    bool ShouldUpload() const {
-        if (m_Output.UploadOutput && m_Output.UploadOutput->IsFileUploaded(_L_, m_strOutputFileName))
+    bool ShouldUpload() const
+    {
+        if (m_Output.UploadOutput && m_Output.UploadOutput->IsFileUploaded(m_strOutputFileName))
             return true;
         return false;
     }
@@ -263,7 +257,7 @@ public:
 
     Repeat RepeatBehaviour() const { return m_RepeatBehavior; };
 
-    const std::wstring& GetKeyword() const { return m_strKeyword; };
+    const std::wstring& GetKeyword() const { return m_commandSet; };
     DWORD GetConcurrency() const { return m_dwConcurrency; };
     const std::wstring& GetFullArchiveName() const { return m_strArchiveFullPath; };
     const std::wstring& GetArchiveFileName() const { return m_strArchiveFileName; };
@@ -281,7 +275,12 @@ public:
 
     HRESULT CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue);
 
-    ~WolfExecution(void);
+    WolfExecution(OrcCommand::Output::Journal& journal)
+        : m_journal(journal)
+    {
+    }
+
+    ~WolfExecution();
 };
 }  // namespace Command::Wolf
 }  // namespace Orc

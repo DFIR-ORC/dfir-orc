@@ -14,17 +14,19 @@
 
 #include <regex>
 
+#include <spdlog/spdlog.h>
+
 using namespace Orc;
 
 std::shared_ptr<VolumeReader> SnapshotVolumeReader::DuplicateReader()
 {
-    auto retval = std::make_shared<SnapshotVolumeReader>(_L_, m_Shadow);
+    auto retval = std::make_shared<SnapshotVolumeReader>(m_Shadow);
 
     return retval;
 }
 
-SnapshotVolumeReader::SnapshotVolumeReader(logger pLog, const VolumeShadowCopies::Shadow& Snapshot)
-    : CompleteVolumeReader(std::move(pLog), Snapshot.DeviceInstance.c_str())
+SnapshotVolumeReader::SnapshotVolumeReader(const VolumeShadowCopies::Shadow& Snapshot)
+    : CompleteVolumeReader(Snapshot.DeviceInstance.c_str())
     , m_Shadow(Snapshot)
 {
 }
@@ -43,15 +45,15 @@ HRESULT SnapshotVolumeReader::LoadDiskProperties(void)
 
     if (!std::regex_match(location, m, snapshot_regex))
     {
-        log::Error(_L_, E_INVALIDARG, L"Invalid physical drive reference: %s\r\n", m_Shadow.DeviceInstance.c_str());
+        spdlog::error(L"Invalid physical drive reference: '{}'", m_Shadow.DeviceInstance);
         return E_INVALIDARG;
     }
 
-    CDiskExtent extent(_L_, m_Shadow.DeviceInstance.c_str());
+    CDiskExtent extent(m_Shadow.DeviceInstance.c_str());
 
     if (FAILED(hr = extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        log::Error((_L_), hr, L"Failed to open the drive, so bailing...\r\n");
+        spdlog::error(L"Failed to open the drive '{}' (code: {:#x})", m_Shadow.DeviceInstance, hr);
         return hr;
     }
 

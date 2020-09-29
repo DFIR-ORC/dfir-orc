@@ -11,7 +11,6 @@
 #include "OrcException.h"
 
 #include "OutputSpec.h"
-#include "LogFileWriter.h"
 
 #include "ConfigItem.h"
 #include "ParameterCheck.h"
@@ -30,13 +29,15 @@
 
 #include <boost/tokenizer.hpp>
 
+#include <spdlog/spdlog.h>
+
 using namespace std;
 using namespace boost;
 
 using namespace Orc;
 using namespace Orc::TableOutput;
 
-std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const OutputSpec& out)
+std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
 {
     HRESULT hr = E_FAIL;
 
@@ -50,8 +51,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
         case OutputSpec::Kind::CSV:
         case OutputSpec::Kind::TSV:
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::CSV:
-        case OutputSpec::Kind::TableFile | OutputSpec::Kind::TSV:
-        {
+        case OutputSpec::Kind::TableFile | OutputSpec::Kind::TSV: {
             auto options = std::make_unique<CSV::Options>();
 
             options->Encoding = out.OutputEncoding;
@@ -59,17 +59,17 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
             options->Delimiter = out.szSeparator;
             options->StringDelimiter = out.szQuote;
 
-            auto retval = CSV::Writer::MakeNew(pLog, std::move(options));
+            auto retval = CSV::Writer::MakeNew(std::move(options));
 
             if (!retval)
             {
-                log::Error(pLog, hr, L"CSV File format is not available\r\n");
+                spdlog::error(L"CSV File format is not available");
                 return nullptr;
             }
 
-            if (FAILED(hr = retval->WriteToFile(out.Path.c_str())))
+            if (FAILED(hr = retval->WriteToFile(out.Path)))
             {
-                log::Error(pLog, hr, L"Could not create specified file: %s\r\n", out.Path.c_str());
+                spdlog::error(L"Could not create specified file: '{}' (code: {:#x})", out.Path, hr);
                 return nullptr;
             }
 
@@ -77,7 +77,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
             {
                 if (FAILED(hr = retval->SetSchema(out.Schema)))
                 {
-                    log::Error(pLog, hr, L"Could not set schema to CSV file %s\r\n", out.Path.c_str());
+                    spdlog::error(L"Could not set schema to CSV file: '{}' (code: {:#x})", out.Path, hr);
                     return nullptr;
                 }
             }
@@ -85,15 +85,14 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
             return retval;
         }
         case OutputSpec::Kind::Parquet:
-        case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
-        {
+        case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet: {
             auto options = std::make_unique<TableOutput::Options>();
 
-            auto pWriter = GetParquetWriter(pLog, std::move(options));
+            auto pWriter = GetParquetWriter(std::move(options));
 
             if (!pWriter)
             {
-                log::Error(pLog, hr, L"Parquet File format is not available\r\n");
+                spdlog::error(L"Parquet File format is not available");
                 return nullptr;
             }
 
@@ -101,28 +100,27 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
             {
                 if (FAILED(hr = pWriter->SetSchema(out.Schema)))
                 {
-                    log::Error(pLog, hr, L"Could not write columns to parquet file %s\r\n", out.Path.c_str());
+                    spdlog::error(L"Could not write columns to parquet file: {} (code: {:#x})", out.Path, hr);
                     return nullptr;
                 }
             }
 
-            if (FAILED(hr = pWriter->WriteToFile(out.Path.c_str())))
+            if (FAILED(hr = pWriter->WriteToFile(out.Path)))
             {
-                log::Error(pLog, hr, L"Could not create specified file: %s\r\n", out.Path.c_str());
+                spdlog::error(L"Could not create specified file: {} (code: {:#x})", out.Path, hr);
                 return nullptr;
             }
             return pWriter;
         }
         case OutputSpec::Kind::ORC:
-        case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
-        {
+        case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC: {
             auto options = std::make_unique<TableOutput::Options>();
 
-            auto pWriter = GetApacheOrcnWriter(pLog, std::move(options));
+            auto pWriter = GetApacheOrcWriter(std::move(options));
 
             if (!pWriter)
             {
-                log::Error(pLog, hr, L"Parquet File format is not available\r\n");
+                spdlog::error(L"Parquet File format is not available");
                 return nullptr;
             }
 
@@ -130,33 +128,32 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
             {
                 if (FAILED(hr = pWriter->SetSchema(out.Schema)))
                 {
-                    log::Error(pLog, hr, L"Could not write columns to parquet file %s\r\n", out.Path.c_str());
+                    spdlog::error(L"Could not write columns to parquet file {} (code: {:#x})", out.Path, hr);
                     return nullptr;
                 }
             }
 
-            if (FAILED(hr = pWriter->WriteToFile(out.Path.c_str())))
+            if (FAILED(hr = pWriter->WriteToFile(out.Path)))
             {
-                log::Error(pLog, hr, L"Could not create specified file: %s\r\n", out.Path.c_str());
+                spdlog::error(L"Could not create specified file: {} (code: {:#x})", out.Path, hr);
                 return nullptr;
             }
             return pWriter;
         }
-        case OutputSpec::Kind::SQL:
-        {
+        case OutputSpec::Kind::SQL: {
             auto options = std::make_unique<TableOutput::Options>();
 
-            auto pSqlConnection = GetSqlConnection(pLog, std::move(options));
+            auto pSqlConnection = GetSqlConnection(std::move(options));
 
             if (!pSqlConnection)
             {
-                log::Error(pLog, hr, L"SQLServer connectivity is not available\r\n");
+                spdlog::error("SQLServer connectivity is not available");
                 return nullptr;
             }
 
             if (FAILED(hr = pSqlConnection->Connect(out.ConnectionString)))
             {
-                log::Error(pLog, hr, L"Could not connect to SQL %s\r\n", out.ConnectionString.c_str());
+                spdlog::error(L"Could not connect to SQL '{}' (code: {:#x})", out.ConnectionString, hr);
                 return nullptr;
             }
 
@@ -167,43 +164,41 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
                 case OutputSpec::Disposition::Truncate:
                     if (FAILED(hr = pSqlConnection->TruncateTable(out.TableName)))
                     {
-                        log::Error(pLog, hr, L"Failed to truncate table %s\r\n", out.TableName.c_str());
+                        spdlog::error(L"Failed to truncate table '{}' (code: {:#x})", out.TableName, hr);
                     }
                     break;
-                case OutputSpec::Disposition::CreateNew:
-                {
+                case OutputSpec::Disposition::CreateNew: {
                     if (pSqlConnection->IsTablePresent(out.TableName))
                     {
                         if (FAILED(hr = pSqlConnection->DropTable(out.TableName)))
                         {
-                            log::Error(pLog, hr, L"Failed to drop table %s\r\n", out.TableName.c_str());
+                            spdlog::error(L"Failed to drop table '{}' (code: {:#x})", out.TableName, hr);
                         }
                     }
                     if (out.Schema)
                     {
                         if (FAILED(hr = pSqlConnection->CreateTable(out.TableName, out.Schema)))
                         {
-                            log::Error(pLog, hr, L"Failed to create table %s\r\n", out.TableName.c_str());
+                            spdlog::error(L"Failed to create table '{}' (code: {:#x})", out.TableName, hr);
                         }
                     }
                     else
                     {
-                        log::Error(
-                            pLog,
-                            hr,
-                            L"Failed to create table %s -> No column definition available\r\n",
-                            out.TableName.c_str());
+                        spdlog::error(
+                            L"Failed to create table {} (code: {:#x}) -> No column definition available",
+                            out.TableName,
+                            hr);
                     }
                 }
                 break;
                 default:
                     break;
             }
-            auto pSqlWriter = GetSqlWriter(pLog, std::move(options));
+            auto pSqlWriter = GetSqlWriter(std::move(options));
 
             if (FAILED(hr = pSqlWriter->SetConnection(pSqlConnection)))
             {
-                log::Error(pLog, hr, L"Could not connect to SQL %s\r\n", out.ConnectionString.c_str());
+                spdlog::error(L"Could not connect to SQL '{}' (code: {:#x}", out.ConnectionString, hr);
                 return nullptr;
             }
 
@@ -211,30 +206,30 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, const O
             {
                 if (FAILED(hr = pSqlWriter->SetSchema(out.Schema)))
                 {
-                    log::Error(pLog, hr, L"Could not add SQL columns\r\n");
+                    spdlog::error(L"Could not add SQL columns (code: {:#x})", hr);
                     return nullptr;
                 }
                 if (FAILED(hr = pSqlWriter->BindColumns(out.TableName.c_str())))
                 {
-                    log::Error(pLog, hr, L"Could not bind SQL columns\r\n");
+                    spdlog::error(L"Could not bind SQL columns (code: {:#x})", hr);
                     return nullptr;
                 }
             }
             else
             {
-                log::Error(pLog, hr, L"Could not bind SQL columns, not column schema defined\r\n");
+                spdlog::error("Could not bind SQL columns, not column schema defined");
                 return nullptr;
             }
 
             return pSqlWriter;
         }
         default:
-            log::Error(pLog, E_INVALIDARG, L"Invalid type of output to create SecDescrWriter\r\n");
+            spdlog::error("Invalid type of output to create SecDescrWriter");
             return nullptr;
     }
 }
 
-std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, LPCWSTR szFileName, const OutputSpec& out)
+std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(LPCWSTR szFileName, const OutputSpec& out)
 {
     HRESULT hr = E_FAIL;
 
@@ -253,29 +248,27 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, LPCWSTR
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
         case OutputSpec::Kind::SQL:
-            log::Error(pLog, E_INVALIDARG, L"Invalid type of output to create suffixed writer\r\n");
+            spdlog::error("Invalid type of output to create suffixed writer");
             return nullptr;
-        case OutputSpec::Kind::Directory:
-        {
+        case OutputSpec::Kind::Directory: {
             std::wstring strFilePath = out.Path + L"\\" + szFileName;
 
-            auto pFileStream = std::make_shared<FileStream>(pLog);
+            auto pFileStream = std::make_shared<FileStream>();
 
             if (FAILED(hr = pFileStream->WriteTo(strFilePath.c_str())))
             {
-                log::Error(pLog, hr, L"Could not create output file: %s\r\n", strFilePath.c_str());
+                spdlog::error(L"Could not create output file: '{} (code: {:#x})'", strFilePath, hr);
                 return nullptr;
             }
             pStream = pFileStream;
         }
         break;
-        case OutputSpec::Kind::Archive:
-        {
-            auto pPipe = std::make_shared<PipeStream>(pLog);
+        case OutputSpec::Kind::Archive: {
+            auto pPipe = std::make_shared<PipeStream>();
 
             if (FAILED(hr = pPipe->CreatePipe()))
             {
-                log::Error(pLog, hr, L"Could not create output pipe for output %s\r\n", szFileName);
+                spdlog::error(L"Could not create output pipe for output '{}' (code: {:#x})", szFileName, hr);
                 return nullptr;
             }
             pStream = pPipe;
@@ -288,11 +281,11 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, LPCWSTR
     auto options = std::make_unique<TableOutput::CSV::Options>();
     options->Encoding = out.OutputEncoding;
 
-    auto retval = TableOutput::CSV::Writer::MakeNew(pLog, std::move(options));
+    auto retval = TableOutput::CSV::Writer::MakeNew(std::move(options));
 
     if (FAILED(hr = retval->WriteToStream(pStream)))
     {
-        log::Error(pLog, hr, L"Could not write to byte stream\r\n");
+        spdlog::error(L"Could not write to byte stream (code: {:#x})", hr);
         return nullptr;
     }
 
@@ -300,74 +293,71 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const logger& pLog, LPCWSTR
     {
         if (FAILED(hr = retval->SetSchema(out.Schema)))
         {
-            log::Error(pLog, hr, L"Could not write columns to output file\r\n");
+            spdlog::error(L"Could not write columns to output file (code: {:#x})", hr);
             return nullptr;
         }
     }
     else
     {
-        log::Error(pLog, hr, L"Could not write columns to output file : no column schema defined\r\n");
+        spdlog::error(L"Could not write columns to output file: no column schema defined");
         return nullptr;
     }
     return retval;
 }
 
-std::shared_ptr<IConnection> Orc::TableOutput::GetSqlConnection(const logger& pLog, std::unique_ptr<Options>&& options)
+std::shared_ptr<IConnection> Orc::TableOutput::GetSqlConnection(std::unique_ptr<Options> options)
 {
-    static auto extension = Orc::ExtensionLibrary::GetLibrary<SqlOutputWriter>(pLog);
+    static auto extension = Orc::ExtensionLibrary::GetLibrary<SqlOutputWriter>();
 
     if (!extension)
         return nullptr;
 
-    return extension->ConnectionFactory(pLog, std::move(options));
+    return extension->ConnectionFactory(std::move(options));
 }
 
-std::shared_ptr<IStreamWriter> Orc::TableOutput::GetCSVWriter(const logger& pLog, std::unique_ptr<Options>&& options)
+std::shared_ptr<IStreamWriter> Orc::TableOutput::GetCSVWriter(std::unique_ptr<Options> options)
 {
-    auto retval = Orc::TableOutput::CSV::Writer::MakeNew(pLog, std::move(options));
+    auto retval = Orc::TableOutput::CSV::Writer::MakeNew(std::move(options));
 
     if (!retval)
     {
-        log::Error(pLog, E_FAIL, L"CSV File format is not available\r\n");
+        spdlog::error("CSV File format is not available");
         return nullptr;
     }
     return retval;
 }
 
-std::shared_ptr<IConnectWriter> Orc::TableOutput::GetSqlWriter(const logger& pLog, std::unique_ptr<Options>&& options)
+std::shared_ptr<IConnectWriter> Orc::TableOutput::GetSqlWriter(std::unique_ptr<Options> options)
 {
-    static auto extension = Orc::ExtensionLibrary::GetLibrary<SqlOutputWriter>(pLog);
+    static auto extension = Orc::ExtensionLibrary::GetLibrary<SqlOutputWriter>();
 
     if (!extension)
         return nullptr;
 
-    return extension->ConnectTableFactory(pLog, std::move(options));
+    return extension->ConnectTableFactory(std::move(options));
 }
 
-std::shared_ptr<IStreamWriter>
-Orc::TableOutput::GetParquetWriter(const logger& pLog, std::unique_ptr<Options>&& options)
+std::shared_ptr<IStreamWriter> Orc::TableOutput::GetParquetWriter(std::unique_ptr<Options> options)
 {
-    static auto extension = Orc::ExtensionLibrary::GetLibrary<ParquetOutputWriter>(pLog);
+    static auto extension = Orc::ExtensionLibrary::GetLibrary<ParquetOutputWriter>();
 
     if (!extension)
         return nullptr;
 
-    return extension->StreamTableFactory(pLog, std::move(options));
+    return extension->StreamTableFactory(std::move(options));
 }
 
-std::shared_ptr<IStreamWriter>
-Orc::TableOutput::GetApacheOrcnWriter(const logger& pLog, std::unique_ptr<Options>&& options)
+std::shared_ptr<IStreamWriter> Orc::TableOutput::GetApacheOrcWriter(std::unique_ptr<Options> options)
 {
-    static auto extension = Orc::ExtensionLibrary::GetLibrary<ApacheOrcOutputWriter>(pLog);
+    static auto extension = Orc::ExtensionLibrary::GetLibrary<ApacheOrcOutputWriter>();
 
     if (!extension)
         return nullptr;
 
-    return extension->StreamTableFactory(pLog, std::move(options));
+    return extension->StreamTableFactory(std::move(options));
 }
 
-TableOutput::Schema
-Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTableName, const ConfigItem& item)
+TableOutput::Schema Orc::TableOutput::GetColumnsFromConfig(const LPCWSTR szTableName, const ConfigItem& item)
 {
     HRESULT hr = E_FAIL;
 
@@ -389,10 +379,7 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
 
         if (it == end(tables.NodeList))
         {
-            log::Verbose(
-                pLog,
-                L"WARNING: while loading schema: No table name specified and none of the table schemas have no "
-                L"name\r\n");
+            spdlog::warn("While loading schema: No table name specified and none of the table schemas have no name");
             return retval;
         }
     }
@@ -410,8 +397,7 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
         }
         if (it == end(tables.NodeList))
         {
-            log::Error(
-                pLog, E_FAIL, L"while loading schema: No table name schema matches required name %s\r\n", szTableName);
+            spdlog::error(L"while loading schema: No table name schema matches required name '{}'", szTableName);
             return retval;
         }
     }
@@ -421,27 +407,28 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
 
     using ColumnTypeConfig = std::vector<std::pair<DWORD, TableOutput::ColumnType>>;
 
-    ColumnTypeConfig column_types = {{CONFIG_SCHEMA_COLUMN_BOOL, TableOutput::ColumnType::BoolType},
-                                     {CONFIG_SCHEMA_COLUMN_UINT8, TableOutput::ColumnType::UInt8Type},
-                                     {CONFIG_SCHEMA_COLUMN_INT8, TableOutput::ColumnType::Int8Type},
-                                     {CONFIG_SCHEMA_COLUMN_UINT16, TableOutput::ColumnType::UInt16Type},
-                                     {CONFIG_SCHEMA_COLUMN_INT16, TableOutput::ColumnType::Int16Type},
-                                     {CONFIG_SCHEMA_COLUMN_UINT32, TableOutput::ColumnType::UInt32Type},
-                                     {CONFIG_SCHEMA_COLUMN_INT32, TableOutput::ColumnType::Int32Type},
-                                     {CONFIG_SCHEMA_COLUMN_UINT64, TableOutput::ColumnType::UInt64Type},
-                                     {CONFIG_SCHEMA_COLUMN_INT64, TableOutput::ColumnType::Int64Type},
-                                     {CONFIG_SCHEMA_COLUMN_TIMESTAMP, TableOutput::ColumnType::TimeStampType},
-                                     {CONFIG_SCHEMA_COLUMN_UTF8, TableOutput::ColumnType::UTF8Type},
-                                     {CONFIG_SCHEMA_COLUMN_UTF16, TableOutput::ColumnType::UTF16Type},
-                                     {CONFIG_SCHEMA_COLUMN_BINARY, TableOutput::ColumnType::BinaryType},
-                                     {CONFIG_SCHEMA_COLUMN_GUID, TableOutput::ColumnType::GUIDType},
-                                     {CONFIG_SCHEMA_COLUMN_XML, TableOutput::ColumnType::XMLType},
-                                     {CONFIG_SCHEMA_COLUMN_ENUM, TableOutput::ColumnType::EnumType},
-                                     {CONFIG_SCHEMA_COLUMN_FLAGS, TableOutput::ColumnType::FlagsType}};
+    ColumnTypeConfig column_types = {
+        {CONFIG_SCHEMA_COLUMN_BOOL, TableOutput::ColumnType::BoolType},
+        {CONFIG_SCHEMA_COLUMN_UINT8, TableOutput::ColumnType::UInt8Type},
+        {CONFIG_SCHEMA_COLUMN_INT8, TableOutput::ColumnType::Int8Type},
+        {CONFIG_SCHEMA_COLUMN_UINT16, TableOutput::ColumnType::UInt16Type},
+        {CONFIG_SCHEMA_COLUMN_INT16, TableOutput::ColumnType::Int16Type},
+        {CONFIG_SCHEMA_COLUMN_UINT32, TableOutput::ColumnType::UInt32Type},
+        {CONFIG_SCHEMA_COLUMN_INT32, TableOutput::ColumnType::Int32Type},
+        {CONFIG_SCHEMA_COLUMN_UINT64, TableOutput::ColumnType::UInt64Type},
+        {CONFIG_SCHEMA_COLUMN_INT64, TableOutput::ColumnType::Int64Type},
+        {CONFIG_SCHEMA_COLUMN_TIMESTAMP, TableOutput::ColumnType::TimeStampType},
+        {CONFIG_SCHEMA_COLUMN_UTF8, TableOutput::ColumnType::UTF8Type},
+        {CONFIG_SCHEMA_COLUMN_UTF16, TableOutput::ColumnType::UTF16Type},
+        {CONFIG_SCHEMA_COLUMN_BINARY, TableOutput::ColumnType::BinaryType},
+        {CONFIG_SCHEMA_COLUMN_GUID, TableOutput::ColumnType::GUIDType},
+        {CONFIG_SCHEMA_COLUMN_XML, TableOutput::ColumnType::XMLType},
+        {CONFIG_SCHEMA_COLUMN_ENUM, TableOutput::ColumnType::EnumType},
+        {CONFIG_SCHEMA_COLUMN_FLAGS, TableOutput::ColumnType::FlagsType}};
 
     using namespace std::string_view_literals;
 
-    for (const auto [item, type] : column_types)
+    for (const auto& [item, type] : column_types)
     {
         const ConfigItem& columnlist = it->SubItems[item];
         if (!columnlist)
@@ -453,15 +440,13 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
         for (const auto& column : columnlist.NodeList)
         {
             auto aCol = std::make_unique<TableOutput::Column>();
-            aCol->dwColumnID = column.dwOrderIndex+1;
+            aCol->dwColumnID = column.dwOrderIndex + 1;
             aCol->Type = type;
 
             if (column.SubItems[CONFIG_SCHEMA_COLUMN_NAME].Type != ConfigItem::ATTRIBUTE)
             {
-                log::Verbose(
-                    pLog,
-                    L"WARN: %s is not an attribute and is ignored\r\n",
-                    column.SubItems[CONFIG_SCHEMA_COLUMN_NAME].strName.c_str());
+                spdlog::warn(
+                    L"'{}' is not an attribute and is ignored", column.SubItems[CONFIG_SCHEMA_COLUMN_NAME].strName);
                 continue;
             }
 
@@ -505,7 +490,7 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
                         if (column.SubItems[CONFIG_SCHEMA_COLUMN_BINARY_LEN]
                             && column.SubItems[CONFIG_SCHEMA_COLUMN_BINARY_MAXLEN])
                         {
-                            log::Error(pLog, E_INVALIDARG, L"len & maxlen cannot be used for the same binary column");
+                            spdlog::error("len & maxlen cannot be used for the same binary column");
                             break;
                         }
 
@@ -579,7 +564,7 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
                 if (e.IsCritical())
                     throw;
 
-                log::Error(pLog, e.GetHRESULT(), e.Description.c_str());
+                spdlog::error(L"{} (code: {:#x})", e.Description, e.GetHRESULT());
             }
             catch (...)
             {
@@ -590,8 +575,7 @@ Orc::TableOutput::GetColumnsFromConfig(const logger& pLog, const LPCWSTR szTable
         }
     }
 
-    std::sort(
-        begin(retval), end(retval), [](auto&& left, auto&& rigth) { return left->dwColumnID < rigth->dwColumnID; });
+    std::sort(begin(retval), end(retval), [](auto& left, auto& rigth) { return left->dwColumnID < rigth->dwColumnID; });
 
     return retval;
 }

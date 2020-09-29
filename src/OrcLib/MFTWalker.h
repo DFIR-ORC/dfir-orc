@@ -99,9 +99,8 @@ public:
     using InLocationBuilder = std::function<bool(const PFILE_NAME pFileName)>;
 
 public:
-    MFTWalker(logger pLog)
+    MFTWalker()
         : m_SegmentStore(L"MFTSegmentStore")
-        , _L_(std::move(pLog))
     {
     }
 
@@ -164,8 +163,6 @@ private:
     bool m_bIncludeNotInUse = false;
 
     ULONG m_ulMFTRecordCount = 0LU;
-
-    logger _L_;
 
     std::shared_ptr<VolumeReader> m_pVolReader;
     std::shared_ptr<VolumeReader> m_pVolRandomReader;

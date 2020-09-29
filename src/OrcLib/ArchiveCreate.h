@@ -21,8 +21,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API ArchiveCreate : public Archive
 {
 
@@ -35,10 +33,10 @@ protected:
 
     std::shared_ptr<ByteStream> GetStreamToAdd(const std::shared_ptr<ByteStream>& astream);
 
-    ArchiveCreate(logger pLog, bool bComputeHash);
+    ArchiveCreate(bool bComputeHash);
 
 public:
-    static std::shared_ptr<ArchiveCreate> MakeCreate(ArchiveFormat fmt, logger pLog, bool bComputeHash = false);
+    static std::shared_ptr<ArchiveCreate> MakeCreate(ArchiveFormat fmt, bool bComputeHash = false);
 
     STDMETHOD(InitArchive)(__in PCWSTR pwzArchivePath, Archive::ArchiveCallback pCallback = nullptr) PURE;
     STDMETHOD(InitArchive)(__in const std::filesystem::path& path, Archive::ArchiveCallback pCallback = nullptr) PURE;

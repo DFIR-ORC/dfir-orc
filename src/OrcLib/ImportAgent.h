@@ -35,8 +35,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API ImportAgent : public Concurrency::agent
 {
 public:
@@ -83,12 +81,10 @@ public:
 
 public:
     ImportAgent(
-        logger pLog,
         ImportMessage::ISource& source,
         ImportMessage::ITarget& import_target,
         ImportNotification::ITarget& target)
-        : _L_(std::move(pLog))
-        , m_source(source)
+        : m_source(source)
         , m_import_target(import_target)
         , m_target(target)
     {
@@ -132,12 +128,11 @@ public:
 
     Concurrency::ISource<LONG>& QueuedItemsCount() { return m_QueuedItems; }
 
-    HRESULT LogStatistics(const logger& pLog);
+    HRESULT LogStatistics();
 
     ~ImportAgent(void) = default;
 
 private:
-    logger _L_;
 
     ImportNotification::ITarget& m_target;
     ImportMessage::ISource& m_source;

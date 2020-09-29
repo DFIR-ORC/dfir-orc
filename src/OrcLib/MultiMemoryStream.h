@@ -25,7 +25,7 @@ protected:
     BOOL m_bReadOnly;
 
 public:
-    MultiMemoryStream(logger pLog);
+    MultiMemoryStream();
     ~MultiMemoryStream();
 
     //

@@ -24,7 +24,7 @@ protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();
 
 public:
-    SnapshotVolumeReader(logger pLog, const VolumeShadowCopies::Shadow& Snapshot);
+    SnapshotVolumeReader(const VolumeShadowCopies::Shadow& Snapshot);
 
     void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
 

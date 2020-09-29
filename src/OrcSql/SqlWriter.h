@@ -17,7 +17,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
 class ConfigItem;
 
 class CsvToSql;
@@ -33,7 +32,7 @@ class Writer
     friend class CsvToSql;
 
 public:
-    Writer(logger pLog, DWORD dwTransactionRowCount = 10000);
+    Writer(DWORD dwTransactionRowCount = 10000);
 
     STDMETHOD(SetConnection)(const std::shared_ptr<TableOutput::IConnection>& pConnection);
     ;
@@ -138,8 +137,6 @@ public:
     ~Writer(void);
 
 private:
-    logger _L_;
-
     std::shared_ptr<Connection> m_pSQL;
 
     DWORD m_dwMaxTransactionRowCount = 0;

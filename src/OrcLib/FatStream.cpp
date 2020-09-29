@@ -15,11 +15,8 @@
 
 using namespace Orc;
 
-FatStream::FatStream(
-    logger pLog,
-    const std::shared_ptr<VolumeReader>& pVolReader,
-    const std::shared_ptr<FatFileEntry>& fileEntry)
-    : ByteStream(std::move(pLog))
+FatStream::FatStream(const std::shared_ptr<VolumeReader>& pVolReader, const std::shared_ptr<FatFileEntry>& fileEntry)
+    : ByteStream()
     , m_pVolReader(pVolReader)
     , m_FatFileEntry(fileEntry)
     , m_CurrentPosition(0LL)
@@ -197,7 +194,7 @@ FatStream::SetFilePointer(__in LONGLONG distanceToMove, __in DWORD dwMoveMethod,
         case FILE_END:
             if (distanceToMove > 0)
             {
-                log::Error(_L_, E_INVALIDARG, L"Cannot move past the end of the file (%I64d)\r\n", distanceToMove);
+                spdlog::error("Cannot move past the end of the file ({})", distanceToMove);
                 return E_INVALIDARG;
             }
 
@@ -224,8 +221,7 @@ FatStream::SetFilePointer(__in LONGLONG distanceToMove, __in DWORD dwMoveMethod,
         case FILE_BEGIN:
             if (distanceToMove < 0)
             {
-                log::Error(
-                    _L_, E_INVALIDARG, L"Cannot move before the beginning of the file (%I64d)\r\n", distanceToMove);
+                spdlog::error("Cannot move before the beginning of the file ({})", distanceToMove);
                 return E_INVALIDARG;
             }
 

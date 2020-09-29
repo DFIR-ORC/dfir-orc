@@ -86,35 +86,20 @@ HRESULT ArchiveAgent::CompleteOnFlush(bool bFinal)
 
         switch (action.GetObjectType())
         {
-            case OnComplete::Directory:
-            {
+            case OnComplete::Directory: {
                 switch (action.GetAction())
                 {
-                    case OnComplete::Delete:
-                    {
+                    case OnComplete::Delete: {
                         if (!action.Fullpath().empty())
                         {
                             if (!RemoveDirectory(action.Fullpath().c_str()))
                             {
                                 hr = action.m_hr = HRESULT_FROM_WIN32(GetLastError());
-
-                                if (bFinal)
-                                {
-                                    log::Error(
-                                        _L_, hr, L"Failed to delete directory %s\r\n", action.Fullpath().c_str());
-                                }
-                                else
-                                {
-                                    log::Verbose(
-                                        _L_,
-                                        L"Failed to delete directory %s (hr=0x%lx)\r\n",
-                                        action.Fullpath().c_str(),
-                                        hr);
-                                }
+                                spdlog::error(L"Failed to delete directory '{}' (code: {:#x})", action.Fullpath(), hr);
                             }
                             else
                             {
-                                log::Verbose(_L_, L"Successfully deleted file %s\r\n", action.Fullpath().c_str());
+                                spdlog::debug(L"Successfully deleted file {}", action.Fullpath());
                                 action.m_hr = S_OK;
                             }
                         }
@@ -125,34 +110,20 @@ HRESULT ArchiveAgent::CompleteOnFlush(bool bFinal)
                 }
             }
             break;
-            case OnComplete::File:
-            {
+            case OnComplete::File: {
                 switch (action.GetAction())
                 {
-                    case OnComplete::Delete:
-                    {
+                    case OnComplete::Delete: {
                         if (!action.Fullpath().empty())
                         {
                             if (!DeleteFile(action.Fullpath().c_str()))
                             {
                                 hr = action.m_hr = HRESULT_FROM_WIN32(GetLastError());
-                                if (bFinal)
-                                {
-                                    log::Error(
-                                        _L_, hr, L"Failed to delete directory %s\r\n", action.Fullpath().c_str());
-                                }
-                                else
-                                {
-                                    log::Verbose(
-                                        _L_,
-                                        L"Failed to delete directory %s (hr=0x%lx)\r\n",
-                                        action.Fullpath().c_str(),
-                                        hr);
-                                }
+                                spdlog::error(L"Failed to delete directory '{}' (code: {:#x})", action.Fullpath(), hr);
                             }
                             else
                             {
-                                log::Verbose(_L_, L"Successfully deleted file %s\r\n", action.Fullpath().c_str());
+                                spdlog::debug(L"Successfully deleted file '{}'", action.Fullpath());
                                 action.m_hr = S_OK;
                             }
                         }
@@ -187,27 +158,31 @@ void ArchiveAgent::run()
     {
         switch (request->GetRequest())
         {
-            case ArchiveMessage::OpenArchive:
-            {
+            case ArchiveMessage::OpenArchive: {
                 ArchiveNotification::Notification notification;
 
                 if (m_compressor != nullptr)
                 {
                     notification = ArchiveNotification::MakeFailureNotification(
-                        ArchiveNotification::ArchiveStarted, E_FAIL, request->Name(), L"Already creating archive");
+                        request,
+                        ArchiveNotification::ArchiveStarted,
+                        E_FAIL,
+                        request->Name(),
+                        L"Already creating archive");
                 }
                 else if (request->GetStream() == nullptr)
                 {
                     ArchiveFormat fmt = Archive::GetArchiveFormat(request->Name());
                     if (fmt == ArchiveFormat::Unknown)
                         notification = ArchiveNotification::MakeFailureNotification(
+                            request,
                             ArchiveNotification::ArchiveStarted,
                             E_FAIL,
                             request->Name(),
                             L"Unsupported format extension");
                     else
                     {
-                        m_compressor = ArchiveCreate::MakeCreate(fmt, _L_, request->GetComputeHash());
+                        m_compressor = ArchiveCreate::MakeCreate(fmt, request->GetComputeHash());
 
                         if (!request->GetCompressionLevel().empty())
                             m_compressor->SetCompressionLevel(request->GetCompressionLevel());
@@ -215,6 +190,7 @@ void ArchiveAgent::run()
 
                         if (m_compressor == nullptr)
                             notification = ArchiveNotification::MakeFailureNotification(
+                                request,
                                 ArchiveNotification::ArchiveStarted,
                                 E_FAIL,
                                 request->Name(),
@@ -226,6 +202,7 @@ void ArchiveAgent::run()
 
                             if (FAILED(hr = m_compressor->InitArchive(request->Name().c_str())))
                                 notification = ArchiveNotification::MakeFailureNotification(
+                                    request,
                                     ArchiveNotification::ArchiveStarted,
                                     E_FAIL,
                                     request->Name(),
@@ -234,26 +211,26 @@ void ArchiveAgent::run()
                             {
                                 m_cabName = request->Name();
 
-                                m_compressor->SetCallback([this](const Archive::ArchiveItem& item) {
+                                m_compressor->SetCallback([this, request](const Archive::ArchiveItem& item) {
                                     auto notification = ArchiveNotification::MakeSuccessNotification(
-                                        ArchiveNotification::FileAddition, item.NameInArchive);
+                                        request, ArchiveNotification::FileAddition, item.NameInArchive);
                                     if (notification)
                                         SendResult(notification);
                                 });
 
                                 notification = ArchiveNotification::MakeArchiveStartedSuccessNotification(
-                                    request->Name(), request->Name(), request->GetCompressionLevel());
+                                    request, request->Name(), request->Name(), request->GetCompressionLevel());
                             }
                         }
                     }
                 }
                 else if (request->GetStream() != nullptr && request->GetArchiveFormat() != ArchiveFormat::Unknown)
                 {
-                    m_compressor =
-                        ArchiveCreate::MakeCreate(request->GetArchiveFormat(), _L_, request->GetComputeHash());
+                    m_compressor = ArchiveCreate::MakeCreate(request->GetArchiveFormat(), request->GetComputeHash());
 
                     if (m_compressor == nullptr)
                         notification = ArchiveNotification::MakeFailureNotification(
+                            request,
                             ArchiveNotification::ArchiveStarted,
                             E_FAIL,
                             request->Name(),
@@ -265,6 +242,7 @@ void ArchiveAgent::run()
 
                         if (FAILED(hr = m_compressor->InitArchive(request->GetStream())))
                             notification = ArchiveNotification::MakeFailureNotification(
+                                request,
                                 ArchiveNotification::ArchiveStarted,
                                 E_FAIL,
                                 request->Name(),
@@ -273,46 +251,46 @@ void ArchiveAgent::run()
                         {
                             m_cabName = request->Name();
 
-                            m_compressor->SetCallback([this](const Archive::ArchiveItem& item) {
+                            m_compressor->SetCallback([this, request](const Archive::ArchiveItem& item) {
                                 auto notification = ArchiveNotification::MakeSuccessNotification(
-                                    ArchiveNotification::FileAddition, item.NameInArchive);
+                                    request, ArchiveNotification::FileAddition, item.NameInArchive);
                                 if (notification)
                                     SendResult(notification);
                             });
 
                             notification = ArchiveNotification::MakeArchiveStartedSuccessNotification(
-                                request->Name(), request->Name(), request->GetCompressionLevel());
+                                request, request->Name(), request->Name(), request->GetCompressionLevel());
                         }
                     }
                 }
                 else
                 {
                     notification = ArchiveNotification::MakeFailureNotification(
-                        ArchiveNotification::ArchiveStarted, E_FAIL, request->Name(), L"Invalid request");
+                        request, ArchiveNotification::ArchiveStarted, E_FAIL, request->Name(), L"Invalid request");
                 }
                 if (notification)
                     SendResult(notification);
             }
             break;
-            case ArchiveMessage::AddFile:
-            {
+            case ArchiveMessage::AddFile: {
                 ArchiveNotification::Notification notification;
 
-                if (FAILED(
-                        hr = m_compressor->AddFile(
-                            request->Keyword().c_str(), request->Name().c_str(), request->GetDeleteWhenDone())))
+                hr = m_compressor->AddFile(
+                    request->NameInArchive().c_str(), request->SourcePath().c_str(), request->GetDeleteWhenDone());
+                if (FAILED(hr))
+                {
                     notification = ArchiveNotification::MakeFailureNotification(
-                        ArchiveNotification::FileAddition, hr, request->Name(), L"AddFileToCab failed");
+                        request, ArchiveNotification::FileAddition, hr, request->Name(), L"AddFileToCab failed");
+                }
 
                 if (notification)
                     SendResult(notification);
             }
             break;
-            case ArchiveMessage::AddDirectory:
-            {
+            case ArchiveMessage::AddDirectory: {
                 WIN32_FIND_DATA ffd;
 
-                std::wstring strSearchString(request->Name().c_str());
+                std::wstring strSearchString(request->SourcePath().c_str());
 
                 if (request->Pattern().empty())
                     strSearchString.append(L"\\*");
@@ -329,6 +307,7 @@ void ArchiveAgent::run()
                 if (INVALID_HANDLE_VALUE == hFind)
                 {
                     auto notification = ArchiveNotification::MakeFailureNotification(
+                        request,
                         ArchiveNotification::DirectoryAddition,
                         HRESULT_FROM_WIN32(GetLastError()),
                         request->Name(),
@@ -349,19 +328,27 @@ void ArchiveAgent::run()
                             strFileName.append(ffd.cFileName);
 
                             std::wstring strCabbedName;
-                            strCabbedName.assign(request->Keyword());
+                            strCabbedName.assign(request->NameInArchive());
                             strCabbedName.append(L"\\");
                             strCabbedName.append(ffd.cFileName);
                             ArchiveNotification::Notification notification;
 
-                            if (FAILED(
-                                    hr = m_compressor->AddFile(
-                                        strCabbedName.c_str(), strFileName.c_str(), request->GetDeleteWhenDone())))
+                            hr = m_compressor->AddFile(
+                                strCabbedName.c_str(), strFileName.c_str(), request->GetDeleteWhenDone());
+                            if (FAILED(hr))
+                            {
                                 notification = ArchiveNotification::MakeFailureNotification(
-                                    ArchiveNotification::FileAddition, hr, strFileName, L"AddFileToCab failed");
+                                    request,
+                                    ArchiveNotification::FileAddition,
+                                    hr,
+                                    strFileName,
+                                    L"AddFileToCab failed");
+                            }
 
                             if (notification)
+                            {
                                 SendResult(notification);
+                            }
                         }
                         else
                         {
@@ -371,10 +358,8 @@ void ArchiveAgent::run()
 
                     if (!FindClose(hFind))
                     {
-                        log::Warning(
-                            _L_,
-                            HRESULT_FROM_WIN32(GetLastError()),
-                            L"Failed to close FindFile while adding directory to CAB\r\n");
+                        HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+                        spdlog::warn("Failed to close FindFile while adding directory to CAB (code: {:#x})", hr);
                     }
                 }
 
@@ -382,57 +367,77 @@ void ArchiveAgent::run()
                     OnComplete::Action::Delete, OnComplete::Object::Directory, request->Name(), request->Name());
             }
             break;
-            case ArchiveMessage::AddStream:
-            {
+            case ArchiveMessage::AddStream: {
                 ArchiveNotification::Notification notification;
 
-                if (FAILED(
-                        hr = m_compressor->AddStream(
-                            request->Keyword().c_str(), request->Name().c_str(), request->GetStream())))
+                hr = m_compressor->AddStream(
+                    request->NameInArchive().c_str(), request->SourcePath().c_str(), request->GetStream());
+                if (FAILED(hr))
+                {
                     notification = ArchiveNotification::MakeFailureNotification(
-                        ArchiveNotification::StreamAddition, hr, request->Name(), L"AddStream failed");
+                        request, ArchiveNotification::StreamAddition, hr, request->Name(), L"AddStream failed");
+                }
 
                 if (notification)
-                    SendResult(notification);
-            }
-            break;
-            case ArchiveMessage::FlushQueue:
-            {
-                ArchiveNotification::Notification notification;
-
-                if (FAILED(hr = m_compressor->FlushQueue()))
                 {
-                    notification = ArchiveNotification::MakeFailureNotification(
-                        ArchiveNotification::FlushQueue, hr, request->Name(), L"FlushQueue failed");
-                    SendResult(notification);
-                }
-
-                if (FAILED(hr = CompleteOnFlush(false)))
-                {
-                    notification = ArchiveNotification::MakeFailureNotification(
-                        ArchiveNotification::FlushQueue, hr, request->Name(), L"FlushQueue completion actions failed");
                     SendResult(notification);
                 }
             }
             break;
-            case ArchiveMessage::Complete:
-            {
+            case ArchiveMessage::FlushQueue: {
                 ArchiveNotification::Notification notification;
 
-                if (FAILED(hr = m_compressor->Complete()))
+                hr = m_compressor->FlushQueue();
+                if (FAILED(hr))
+                {
                     notification = ArchiveNotification::MakeFailureNotification(
-                        ArchiveNotification::ArchiveComplete, hr, m_cabName, L"Complete failed");
+                        request, ArchiveNotification::FlushQueue, hr, request->Name(), L"FlushQueue failed");
+                    SendResult(notification);
+                }
+
+                hr = CompleteOnFlush(false);
+                if (FAILED(hr))
+                {
+                    notification = ArchiveNotification::MakeFailureNotification(
+                        request,
+                        ArchiveNotification::FlushQueue,
+                        hr,
+                        request->Name(),
+                        L"FlushQueue completion actions failed");
+                    SendResult(notification);
+                }
+            }
+            break;
+            case ArchiveMessage::Complete: {
+                ArchiveNotification::Notification notification;
+
+                hr = m_compressor->Complete();
+                if (FAILED(hr))
+                {
+                    notification = ArchiveNotification::MakeFailureNotification(
+                        request, ArchiveNotification::ArchiveComplete, hr, m_cabName, L"Complete failed");
+                }
                 else
-                    notification =
-                        ArchiveNotification::MakeSuccessNotification(ArchiveNotification::ArchiveComplete, m_cabName);
+                {
+                    notification = ArchiveNotification::MakeSuccessNotification(
+                        request, ArchiveNotification::ArchiveComplete, m_cabName);
+                }
 
                 if (notification)
+                {
                     SendResult(notification);
+                }
 
-                if (FAILED(hr = CompleteOnFlush(true)))
+                hr = CompleteOnFlush(true);
+                if (FAILED(hr))
                 {
                     notification = ArchiveNotification::MakeFailureNotification(
-                        ArchiveNotification::FlushQueue, hr, request->Name(), L"FlushQueue completion actions failed");
+                        request,
+                        ArchiveNotification::FlushQueue,
+                        hr,
+                        request->Name(),
+                        L"FlushQueue completion actions failed");
+
                     SendResult(notification);
                 }
             }
@@ -448,7 +453,9 @@ void ArchiveAgent::run()
             done();
         }
         else
+        {
             request = GetRequest();
+        }
     }
     return;
 }

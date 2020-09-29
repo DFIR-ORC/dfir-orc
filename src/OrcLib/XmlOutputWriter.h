@@ -21,7 +21,6 @@ struct IXmlWriter;
 
 namespace Orc {
 
-class LogFileWriter;
 class ByteStream;
 
 namespace StructuredOutput::XML {
@@ -34,7 +33,8 @@ protected:
     std::stack<std::wstring> m_collectionStack;
 public:
 
-    Writer(logger pLog, std::unique_ptr<Options>&& pOptions);
+public:
+    Writer(std::unique_ptr<Options>&& pOptions);
     Writer(const Writer&) = delete;
 
     HRESULT SetOutput(std::shared_ptr<ByteStream> stream);
@@ -174,7 +174,7 @@ private:
 
         if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, buffer.empty() ? L"" : buffer.get()); FAILED(hr))
         {
-            XmlLiteExtension::LogError(_L_, hr);
+            XmlLiteExtension::LogError(hr);
             return hr;
         }
         return S_OK;
@@ -189,7 +189,7 @@ private:
 
         if (auto hr = m_pWriter->WriteString(buffer.empty() ? L"" : buffer.get()); FAILED(hr))
         {
-            XmlLiteExtension::LogError(_L_, hr);
+            XmlLiteExtension::LogError(hr);
             return hr;
         }
         return S_OK;

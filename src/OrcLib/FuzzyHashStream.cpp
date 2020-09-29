@@ -40,12 +40,12 @@ std::wstring FuzzyHashStream::GetSupportedAlgorithm(Algorithm algs)
     retval.reserve(16);
 
 #ifdef ORC_BUILD_SSDEEP
-    if (algs & Algorithm::SSDeep)
+    if (algs & FuzzyHashStream::Algorithm::SSDeep)
     {
         retval.append(L"SSDeep");
     }
-#endif // ORC_BUILD_SSDEEP
-    if (algs & Algorithm::TLSH)
+#endif  // ORC_BUILD_SSDEEP
+    if (algs & FuzzyHashStream::Algorithm::TLSH)
     {
         if (retval.empty())
             retval.append(L"TLSH");
@@ -55,12 +55,12 @@ std::wstring FuzzyHashStream::GetSupportedAlgorithm(Algorithm algs)
     return retval;
 }
 
-FuzzyHashStream::FuzzyHashStream(logger pLog)
-    : HashStream(std::move(pLog))
+FuzzyHashStream::FuzzyHashStream()
+    : HashStream()
 {
 }
 
-HRESULT FuzzyHashStream::OpenToRead(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
+HRESULT FuzzyHashStream::OpenToRead(FuzzyHashStream::Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
 {
     HRESULT hr = E_FAIL;
     if (pChainedStream == nullptr)
@@ -68,7 +68,7 @@ HRESULT FuzzyHashStream::OpenToRead(Algorithm algs, const std::shared_ptr<ByteSt
 
     if (pChainedStream->IsOpen() != S_OK)
     {
-        log::Error(_L_, E_FAIL, L"Chained stream to FuzzyHashStream must be opened\r\n");
+        spdlog::error(L"Chained stream to FuzzyHashStream must be opened");
         return E_FAIL;
     }
 
@@ -79,13 +79,13 @@ HRESULT FuzzyHashStream::OpenToRead(Algorithm algs, const std::shared_ptr<ByteSt
     return S_OK;
 }
 
-HRESULT FuzzyHashStream::OpenToWrite(Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
+HRESULT FuzzyHashStream::OpenToWrite(FuzzyHashStream::Algorithm algs, const std::shared_ptr<ByteStream>& pChainedStream)
 {
     HRESULT hr = E_FAIL;
 
     if (pChainedStream != nullptr && pChainedStream->IsOpen() != S_OK)
     {
-        log::Error(_L_, E_FAIL, L"Chained stream to FuzzyHashStream must be opened if provided\r\n");
+        spdlog::error(L"Chained stream to FuzzyHashStream must be opened if provided");
         return E_FAIL;
     }
 
@@ -121,13 +121,13 @@ HRESULT FuzzyHashStream::ResetHash(bool bContinue)
         m_ssdeep = nullptr;
     }
 
-    if (m_Algorithms & FuzzyHashStream::SSDeep)
+    if (m_Algorithms & FuzzyHashStream::Algorithm::SSDeep)
     {
         m_ssdeep = fuzzy_new();
     }
 #endif  // ORC_BUILD_SSDEEP
 
-    if (m_Algorithms & FuzzyHashStream::TLSH)
+    if (m_Algorithms & FuzzyHashStream::Algorithm::TLSH)
     {
         m_tlsh = std::make_unique<Tlsh>();
     }
@@ -153,15 +153,15 @@ HRESULT FuzzyHashStream::HashData(LPBYTE pBuffer, DWORD dwBytesToHash)
     return S_OK;
 }
 
-HRESULT FuzzyHashStream::GetHash(Algorithm alg, CBinaryBuffer& Hash)
+HRESULT FuzzyHashStream::GetHash(FuzzyHashStream::Algorithm alg, CBinaryBuffer& Hash)
 {
     if (m_bHashIsValid)
     {
         switch (alg)
         {
-            case FuzzyHashStream::SSDeep:
+            case FuzzyHashStream::Algorithm::SSDeep:
 #ifdef ORC_BUILD_SSDEEP
-                if (m_Algorithms & FuzzyHashStream::SSDeep && m_ssdeep)
+                if (m_Algorithms & FuzzyHashStream::Algorithm::SSDeep && m_ssdeep)
                 {
                     Hash.SetCount(FUZZY_MAX_RESULT);
                     Hash.ZeroMe();
@@ -171,8 +171,8 @@ HRESULT FuzzyHashStream::GetHash(Algorithm alg, CBinaryBuffer& Hash)
                 }
 #endif  // ORC_BUILD_SSDEEP
                 break;
-            case FuzzyHashStream::TLSH:
-                if (m_Algorithms & FuzzyHashStream::TLSH && m_tlsh)
+            case FuzzyHashStream::Algorithm::TLSH:
+                if (m_Algorithms & FuzzyHashStream::Algorithm::TLSH && m_tlsh)
                 {
                     if (!m_tlsh->isValid())
                     {
@@ -206,7 +206,7 @@ HRESULT FuzzyHashStream::GetHash(Algorithm alg, std::wstring& Hash)
     if (buffer.empty())
         return S_OK;
 
-    if (FAILED(hr = AnsiToWide(_L_, buffer.GetP<CHAR>(), static_cast<DWORD>(buffer.GetCount()), Hash)))
+    if (FAILED(hr = AnsiToWide(buffer.GetP<CHAR>(), static_cast<DWORD>(buffer.GetCount()), Hash)))
         return hr;
     return S_OK;
 }

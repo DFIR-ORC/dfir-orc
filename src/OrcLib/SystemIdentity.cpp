@@ -9,12 +9,11 @@
 #include "StdAfx.h"
 
 #include "SystemIdentity.h"
+
+#include <boost/scope_exit.hpp>
+
 #include "ProfileList.h"
-
 #include "SystemDetails.h"
-#include "LogFileWriter.h"
-
-#include "boost/scope_exit.hpp"
 
 HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IOutput>& writer, IdentityArea areas)
 {
@@ -121,7 +120,7 @@ Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IOut
 
         CurrentUser(writer);
 
-        auto environ_result = SystemDetails::GetEnvironment(nullptr);
+        auto environ_result = SystemDetails::GetEnvironment();
         if (environ_result.is_ok())
         {
             writer->BeginCollection(L"environment");
@@ -258,7 +257,7 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
     }
 
     {
-        auto qfes = SystemDetails::GetOsQFEs(nullptr);
+        auto qfes = SystemDetails::GetOsQFEs();
         if (qfes.is_ok())
         {
             writer->BeginCollection(L"qfe");
@@ -384,7 +383,7 @@ HRESULT Orc::SystemIdentity::PhysicalDrives(const std::shared_ptr<StructuredOutp
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
     BOOST_SCOPE_EXIT_END;
 
-    auto result = SystemDetails::GetPhysicalDrives(nullptr);
+    auto result = SystemDetails::GetPhysicalDrives();
     if (result.is_err())
         return std::move(result).err();
 
@@ -415,7 +414,7 @@ HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutp
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
     BOOST_SCOPE_EXIT_END;
 
-    auto result = SystemDetails::GetMountedVolumes(nullptr);
+    auto result = SystemDetails::GetMountedVolumes();
     if (result.is_err())
         return std::move(result).err();
 
@@ -457,7 +456,7 @@ HRESULT Orc::SystemIdentity::PhysicalMemory(const std::shared_ptr<StructuredOutp
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
     BOOST_SCOPE_EXIT_END;
 
-    auto result = SystemDetails::GetPhysicalMemory(nullptr);
+    auto result = SystemDetails::GetPhysicalMemory();
     if (result.is_err())
         return std::move(result).err();
 
@@ -477,7 +476,7 @@ HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IOutput
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
     BOOST_SCOPE_EXIT_END;
 
-    auto result = SystemDetails::GetCPUInfo(nullptr);
+    auto result = SystemDetails::GetCPUInfo();
     if (!result)
         return result.err_value();
 
@@ -503,23 +502,23 @@ HRESULT Orc::SystemIdentity::Profiles(const std::shared_ptr<StructuredOutput::IO
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
     BOOST_SCOPE_EXIT_END;
     {
-        auto default_profile = ProfileList::DefaultProfilePath(nullptr);
+        auto default_profile = ProfileList::DefaultProfilePath();
         if (default_profile)
             writer->WriteNamed(L"default_profile", default_profile.value().c_str());
 
-        auto profiles_dir = ProfileList::ProfilesDirectoryPath(nullptr);
+        auto profiles_dir = ProfileList::ProfilesDirectoryPath();
         if (profiles_dir)
             writer->WriteNamed(L"profiles_directory", profiles_dir.value().c_str());
 
-        auto program_data = ProfileList::ProgramDataPath(nullptr);
+        auto program_data = ProfileList::ProgramDataPath();
         if (program_data)
             writer->WriteNamed(L"program_data", program_data.value().c_str());
 
-        auto public_path = ProfileList::PublicProfilePath(nullptr);
+        auto public_path = ProfileList::PublicProfilePath();
         if (public_path)
             writer->WriteNamed(L"public_path", public_path.value().c_str());
 
-        auto profiles = ProfileList::GetProfiles(nullptr);
+        auto profiles = ProfileList::GetProfiles();
         if (profiles)
         {
             writer->BeginCollection(L"profile");

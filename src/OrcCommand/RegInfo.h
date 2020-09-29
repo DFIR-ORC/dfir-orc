@@ -27,10 +27,6 @@
 // max size of data to dump into csv
 constexpr auto REGINFO_CSV_DEFALUT_LIMIT = (512);
 
-// Characters banned from output (break csv file...)
-// end the table with a null character
-constexpr WCHAR OutputBadChars[] = {'\n', '"', '\0'};
-
 namespace Orc {
 
 namespace Command::RegInfo {
@@ -91,19 +87,14 @@ private:
     static RegInfoDescription _InfoDescription[];
     static RegInfoDescription _AliasDescription[];
 
-    static HRESULT BindColumns(
-        const logger& pLog,
-        RegInfoType columns,
-        const std::vector<TableOutput::Column>& sqlcolumns,
-        const std::shared_ptr<TableOutput::IWriter>& pWriter);
 
 public:
     class Configuration : public UtilitiesMain::Configuration
     {
     public:
-        Configuration(const logger& pLog)
-            : regFindConfig(pLog)
-            , m_HiveQuery(pLog)
+        Configuration()
+            : regFindConfig()
+            , m_HiveQuery()
         {
             Information = static_cast<RegInfoType>(
                 REGINFO_LASTMODDATE | REGINFO_TERMNAME | REGINFO_TERMDESCRIPTION | REGINFO_KEYNAME | REGINFO_KEYTREE
@@ -122,28 +113,26 @@ public:
 private:
     Configuration config;
 
-    FILETIME CollectionDate;
-    std::wstring ComputerName;
+    FILETIME m_collectionDate;
 
     RegInfoType GetRegInfoType(LPCWSTR Params);
 
-    auto GetRegInfoWriter(const OutputSpec& outFile) { return TableOutput::GetWriter(_L_, outFile); }
+    auto GetRegInfoWriter(const OutputSpec& outFile) { return TableOutput::GetWriter(outFile); }
     std::shared_ptr<TableOutput::IWriter> GetRegInfoWriter(const OutputSpec& outFile, const std::wstring& strSuffix)
     {
         WCHAR szOutputFile[MAX_PATH];
         StringCchPrintf(szOutputFile, MAX_PATH, L"RegInfo_%s.csv", strSuffix.c_str());
 
-        return TableOutput::GetWriter(_L_, szOutputFile, outFile);
+        return TableOutput::GetWriter(szOutputFile, outFile);
     }
 
-    HRESULT WriteCompName(ITableOutput& output);
+    HRESULT WriteComputerName(ITableOutput& output);
     HRESULT WriteSearchDescription(ITableOutput& output, const std::shared_ptr<RegFind::SearchTerm>& Term);
-    HRESULT WriteKeyInformation(ITableOutput& output, RegFind::Match::KeyNameMatch& Match);
+    HRESULT WriteKeyInformation(ITableOutput& output, const RegFind::Match::KeyNameMatch& Match);
     HRESULT WriteValueInformation(
-        const logger& pLog,
         ITableOutput& output,
-        RegFind::Match::ValueNameMatch& Match,
-        std::wstring& FileNamePrefix,
+        const RegFind::Match::ValueNameMatch& Match,
+        const std::wstring& FileNamePrefix,
         size_t CvsMaxsize);
     HRESULT WriteTermName(ITableOutput& output, const std::shared_ptr<RegFind::SearchTerm>& Term);
 
@@ -161,9 +150,9 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#REGINFO_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog)
-        , config(pLog) {};
+    Main()
+        : UtilitiesMain()
+        , config() {};
 
     void PrintUsage();
     void PrintParameters();

@@ -15,8 +15,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API StringsStream : public ChainingStream
 {
 public:
@@ -51,8 +49,8 @@ private:
     HRESULT processBuffer(const CBinaryBuffer& aBuffer, CBinaryBuffer& strings);
 
 public:
-    StringsStream(logger pLog)
-        : ChainingStream(std::move(pLog)) {};
+    StringsStream()
+        : ChainingStream() {};
 
     STDMETHOD(IsOpen)()
     {

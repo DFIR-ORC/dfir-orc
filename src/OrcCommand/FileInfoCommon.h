@@ -35,19 +35,16 @@ public:
     // filter related static methods
     static WCHAR** GetFilterExtCustomFromString(LPCWSTR szExtCustom);
     static HRESULT GetFilterFromConfig(
-        const logger& pLog,
         const ConfigItem& config,
         Filter& filter,
         const ColumnNameDef aliasNames[],
         const ColumnNameDef columnNames[]);
     static HRESULT GetFilterFromArg(
-        const logger& pLog,
         LPCWSTR szConstArg,
         Filter& filter,
         const ColumnNameDef aliasNames[],
         const ColumnNameDef columnNames[]);
     static HRESULT GetFiltersFromArgcArgv(
-        const logger& pLog,
         int argc,
         LPCWSTR argv[],
         std::vector<Filter>& filters,

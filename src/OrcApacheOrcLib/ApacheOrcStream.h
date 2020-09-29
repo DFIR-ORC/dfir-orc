@@ -18,10 +18,7 @@ namespace Orc::TableOutput::ApacheOrc {
 class Stream : public orc::OutputStream
 {
 public:
-    Stream(logger pLog)
-        : _L_(pLog)
-    {
-    }
+    Stream() {}
 
     HRESULT Open(std::shared_ptr<ByteStream> stream)
     {
@@ -50,7 +47,6 @@ public:
 private:
     std::shared_ptr<ByteStream> m_Stream;
     std::string m_Name;
-    logger _L_;
 };
 
 }  // namespace Orc::TableOutput::OptRowColumn

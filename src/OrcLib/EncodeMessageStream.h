@@ -15,8 +15,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API EncodeMessageStream : public MessageStream
 {
 protected:
@@ -27,8 +25,8 @@ protected:
     CMSG_ENVELOPED_ENCODE_INFO EncodeInfo;
 
 public:
-    EncodeMessageStream(logger pLog)
-        : MessageStream(std::move(pLog))
+    EncodeMessageStream()
+        : MessageStream()
     {
         ZeroMemory(&EncodeInfo, sizeof(CMSG_ENVELOPED_ENCODE_INFO));
     }

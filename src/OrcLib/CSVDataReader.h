@@ -30,7 +30,6 @@ namespace TaskUtils {
 
 		private:
 			CSVFileReader* m_pReader;
-			LogFileWriter* m_pW;
 			CSVRecord*     m_pCurrentRecord;
 
 			DataTable^     m_Schema;

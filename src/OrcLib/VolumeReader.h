@@ -21,19 +21,16 @@ constexpr auto MAX_PATH_LEN = 256;
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API VolumeReader
 {
 public:
     using CDiskExtentVector = std::vector<CDiskExtent>;
 
 public:
-    VolumeReader(logger pLog, const WCHAR* szLocation);
+    VolumeReader(const WCHAR* szLocation);
 
     virtual void Accept(VolumeReaderVisitor& visitor) const { return visitor.Visit(*this); }
 
-    logger GetLogger() { return _L_; }
     virtual const WCHAR* ShortVolumeName() PURE;
 
     const WCHAR* GetLocation() const { return m_szLocation; }
@@ -62,7 +59,6 @@ public:
     virtual ~VolumeReader() {}
 
 protected:
-    logger _L_;
     bool m_bCanReadData = true;
     bool m_bReadyForEnumeration = false;
     ULONG m_BytesPerFRS = 0L;

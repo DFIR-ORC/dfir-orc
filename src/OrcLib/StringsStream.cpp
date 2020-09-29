@@ -8,7 +8,6 @@
 #include "stdafx.h"
 
 #include "StringsStream.h"
-#include "LogFileWriter.h"
 
 #include "WideAnsi.h"
 
@@ -289,7 +288,7 @@ HRESULT StringsStream::OpenForStrings(const shared_ptr<ByteStream>& pChained, si
 
     if (pChained->IsOpen() != S_OK)
     {
-        log::Error(_L_, E_FAIL, L"Chained stream must be opened\r\n");
+        spdlog::error(L"Chained stream must be opened");
         return E_FAIL;
     }
     m_pChainedStream = pChained;
@@ -671,23 +670,21 @@ HRESULT StringsStream::Read(
     CBinaryBuffer strings;
     if (FAILED(hr = processBuffer(CBinaryBuffer((LPBYTE)pReadBuffer, static_cast<size_t>(cbBytesRead)), strings)))
     {
-        log::Error(_L_, hr, L"Failed to extract strings from read buffer\r\n");
+        spdlog::error(L"Failed to extract strings from read buffer (code: {:#x)", hr);
         return hr;
     }
     if (m_cchExtracted * sizeof(UCHAR) > cbBytes)
     {
-        log::Warning(
-            _L_,
-            ERROR_INSUFFICIENT_BUFFER,
-            L"String extraction generates more bytes (%d bytes) than input buffer (%d bytes)\r\n",
-            m_cchExtracted,
-            cbBytes);
-        log::Info(_L_, L"Truncating %d bytes: \r\n", m_cchExtracted * sizeof(UCHAR) - cbBytes);
-        _L_->WriteBytesInHex(
-            ((BYTE*)m_Strings.GetData()) + cbBytes,
-            static_cast<DWORD>(m_cchExtracted * sizeof(UCHAR) - cbBytes),
-            false);
-        log::Info(_L_, L"\r\n");
+        // Extraction generates more bytes than input buffer size
+        spdlog::warn("Failed to extract strings (input size: {}, output size: {})", cbBytes, m_cchExtracted);
+        spdlog::info("Truncating {} bytes: ", m_cchExtracted * sizeof(UCHAR) - cbBytes);
+
+        // TODO: print hex buffer
+        //_L_->WriteBytesInHex(
+        //    ((BYTE*)m_Strings.GetData()) + cbBytes,
+        //    static_cast<DWORD>(m_cchExtracted * sizeof(UCHAR) - cbBytes),
+        //    false);
+        // spdlog::info(L"");
     }
 
     if (m_cchExtracted == 0LL)
@@ -731,7 +728,7 @@ HRESULT StringsStream::Write(
 
     if (cbBytesToWrite > MAXDWORD)
     {
-        log::Error(_L_, E_INVALIDARG, L"Too many bytes\r\n");
+        spdlog::error("Too many bytes");
         return E_INVALIDARG;
     }
 

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2020 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -10,24 +10,17 @@
 
 #include <strsafe.h>
 
-#include "USNInfo.h"
-#include "SystemDetails.h"
-#include "LogFileWriter.h"
-
-#include "USNJournalWalker.h"
-#include "USNJournalWalkerOffline.h"
-
-#include "USNRecordFileInfo.h"
-#include "TableOutputWriter.h"
-
-#include "SnapshotVolumeReader.h"
-
-#include "FileStream.h"
-#include "PipeStream.h"
-
 #include <boost/scope_exit.hpp>
 
-using namespace std;
+#include "USNInfo.h"
+#include "USNJournalWalker.h"
+#include "USNJournalWalkerOffline.h"
+#include "USNRecordFileInfo.h"
+#include "TableOutputWriter.h"
+#include "SnapshotVolumeReader.h"
+#include "SystemDetails.h"
+#include "FileStream.h"
+#include "PipeStream.h"
 
 using namespace Orc;
 using namespace Orc::Command::USNInfo;
@@ -86,7 +79,6 @@ HRESULT Main::USNRecordInformation(
 {
     try
     {
-
         HRESULT hr = S_OK;
 
         // ComputerName
@@ -109,32 +101,44 @@ HRESULT Main::USNRecordInformation(
         output.WriteString(std::wstring_view(pElt->FileName, pElt->FileNameLength / sizeof(WCHAR)));
 
         if (!config.bCompactForm)
+        {
             output.WriteString(szFullName);
+        }
         else
+        {
             output.WriteNothing();
+        }
 
         output.WriteAttributes(pElt->FileAttributes);
 
         if (!config.bCompactForm)
+        {
             // Nicely formatted reason
             output.WriteFlags(pElt->Reason);
+        }
         else
+        {
             output.WriteInteger(pElt->Reason);
+        }
 
         output.WriteInteger(volreader->VolumeSerialNumber());
 
         auto snapshot_reader = std::dynamic_pointer_cast<SnapshotVolumeReader>(volreader);
 
         if (snapshot_reader)
+        {
             output.WriteGUID(snapshot_reader->GetSnapshotID());
+        }
         else
+        {
             output.WriteGUID(GUID_NULL);
+        }
 
         output.WriteEndOfLine();
     }
     catch (WCHAR* e)
     {
-        log::Info(_L_, L"\r\nCould not WriteFileInformation for %s : %s\r\n", szFullName, e);
+        spdlog::error(L"Exception: could not WriteFileInformation for '{}': {}", szFullName, e);
     }
 
     return S_OK;
@@ -142,25 +146,28 @@ HRESULT Main::USNRecordInformation(
 
 HRESULT Main::Run()
 {
-    HRESULT hr = E_FAIL;
-
-    if (FAILED(hr = LoadWinTrust()))
+    HRESULT hr = LoadWinTrust();
+    if (FAILED(hr))
+    {
         return hr;
+    }
 
     const auto& unique_locs = config.locs.GetAltitudeLocations();
     std::vector<std::shared_ptr<Location>> locations;
 
     // keep only the locations we're parsing
     std::copy_if(
-        begin(unique_locs), end(unique_locs), back_inserter(locations), [](const shared_ptr<Location>& item) -> bool {
-            return item->GetParse();
-        });
+        std::cbegin(unique_locs),
+        std::cend(unique_locs),
+        std::back_inserter(locations),
+        [](const std::shared_ptr<Location>& item) -> bool { return item->GetParse(); });
 
     if (config.output.Type == OutputSpec::Kind::Archive)
     {
-        if (FAILED(hr = m_outputs.Prepare(config.output)))
+        hr = m_outputs.Prepare(config.output);
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to prepare archive for %s\r\n", config.output.Path.c_str());
+            spdlog::error(L"Failed to prepare archive for '{}' (code: {:#x})", config.output.Path, hr);
             return hr;
         }
     }
@@ -168,93 +175,68 @@ HRESULT Main::Run()
     BOOST_SCOPE_EXIT(&config, &m_outputs) { m_outputs.CloseAll(config.output); }
     BOOST_SCOPE_EXIT_END;
 
-    if (FAILED(hr = m_outputs.GetWriters(config.output, L"USNInfo", locations)))
+    hr = m_outputs.GetWriters(config.output, L"USNInfo", locations);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to get writers for locations\r\n");
+        spdlog::error(L"Failed to get writers for locations (code: {:#x})", hr);
         return hr;
     }
 
-    if (FAILED(
-            hr = m_outputs.ForEachOutput(
-                config.output, [this](const MultipleOutput<LocationOutput>::OutputPair& dir) -> HRESULT {
-                    HRESULT hr = E_FAIL;
+    hr = m_outputs.ForEachOutput(
+        config.output, [this](const MultipleOutput<LocationOutput>::OutputPair& dir) -> HRESULT {
+            m_console.Print(L"Parsing volume '{}'", dir.first.m_pLoc->GetLocation());
+            USNJournalWalkerOffline walker;
 
-                    log::Info(_L_, L"\r\nParsing volume %s\r\n", dir.first.m_pLoc->GetLocation().c_str());
-
-                    USNJournalWalkerOffline walker(_L_);
-
-                    if (FAILED(hr = walker.Initialize(dir.first.m_pLoc)))
-                    {
-                        if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
-                        {
-                            log::Warning(
-                                _L_,
-                                hr,
-                                L"File system not eligible for volume %s\r\n\r\n",
-                                dir.first.m_pLoc->GetLocation().c_str());
-                        }
-                        else
-                        {
-                            log::Error(
-                                _L_,
-                                hr,
-                                L"Failed to init walk for volume %s\r\n\r\n",
-                                dir.first.m_pLoc->GetLocation().c_str());
-                        }
-                    }
-                    else
-                    {
-                        if (walker.GetUsnJournal())
-                        {
-                            IUSNJournalWalker::Callbacks callbacks;
-                            callbacks.RecordCallback = [](const std::shared_ptr<VolumeReader>& volreader,
-                                                          WCHAR* szFullName,
-                                                          USN_RECORD* pElt) {};
-
-                            if (FAILED(hr = walker.EnumJournal(callbacks)))
-                            {
-                                log::Error(
-                                    _L_,
-                                    hr,
-                                    L"Failed to enum MFT records %s\r\n",
-                                    dir.first.m_pLoc->GetLocation().c_str());
-                            }
-                            else
-                            {
-                                callbacks.RecordCallback = [this, dir](
-                                                               const std::shared_ptr<VolumeReader>& volreader,
-                                                               WCHAR* szFullName,
-                                                               USN_RECORD* pElt) {
-                                    USNRecordInformation(*dir.second, volreader, szFullName, pElt);
-                                };
-
-                                if (FAILED(hr = walker.ReadJournal(callbacks)))
-                                {
-                                    log::Error(
-                                        _L_,
-                                        hr,
-                                        L"Failed to walk volume %s\r\n",
-                                        dir.first.m_pLoc->GetLocation().c_str());
-                                }
-                                else
-                                {
-                                    log::Info(_L_, L"\r\nDone!\r\n");
-                                }
-                            }
-                        }
-                        else
-                        {
-                            log::Info(
-                                _L_,
-                                L"Did not find a USN journal on following volume %s\r\n",
-                                dir.first.m_pLoc->GetLocation().c_str());
-                        }
-                    }
-
+            HRESULT hr = walker.Initialize(dir.first.m_pLoc);
+            if (FAILED(hr))
+            {
+                if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
+                {
+                    spdlog::warn(L"File system not eligible for volume '{}'", dir.first.m_pLoc->GetLocation());
                     return S_OK;
-                })))
+                }
+
+                spdlog::error(
+                    L"Failed to init walk for volume '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
+                return hr;
+            }
+
+            if (!walker.GetUsnJournal())
+            {
+                spdlog::warn(L"Did not find a USN journal on following volume '{}'", dir.first.m_pLoc->GetLocation());
+                return S_OK;
+            }
+
+            IUSNJournalWalker::Callbacks callbacks;
+            callbacks.RecordCallback =
+                [](const std::shared_ptr<VolumeReader>& volreader, WCHAR* szFullName, USN_RECORD* pElt) {};
+
+            hr = walker.EnumJournal(callbacks);
+            if (FAILED(hr))
+            {
+                spdlog::error(L"Failed to enum MFT records '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
+                return S_OK;
+            }
+
+            callbacks.RecordCallback =
+                [this, dir](const std::shared_ptr<VolumeReader>& volreader, WCHAR* szFullName, USN_RECORD* pElt) {
+                    USNRecordInformation(*dir.second, volreader, szFullName, pElt);
+                };
+
+            hr = walker.ReadJournal(callbacks);
+            if (FAILED(hr))
+            {
+                spdlog::error(L"Failed to walk volume '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
+                return S_OK;
+            }
+
+            spdlog::info(L"Done");
+            return S_OK;
+        });
+
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed during the enumeration of output items\r\n");
+        spdlog::error("Failed during the enumeration of output items (code: {:#x})", hr);
         return hr;
     }
 

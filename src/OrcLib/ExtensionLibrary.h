@@ -31,7 +31,7 @@ public:
 
     HRESULT operator()()
     {
-        const auto ext = ExtensionLibrary::GetShared<Ext>(false, nullptr);
+        const auto ext = ExtensionLibrary::GetShared<Ext>(false);
         if (ext)
             ext->UnloadAndCleanup();
         return S_OK;
@@ -46,7 +46,6 @@ class ORCLIB_API ExtensionLibrary
 
 public:
     ExtensionLibrary(
-        logger pLog,
         const std::wstring& strKeyword,
         const std::wstring& strX86LibRef,
         const std::wstring& strX64LibRef,
@@ -58,12 +57,12 @@ public:
     bool CheckLoaded();
 
     template <class Library>
-    static const std::shared_ptr<Library> GetLibrary(logger pLog = nullptr, bool bInitialize = true)
+    static const std::shared_ptr<Library> GetLibrary(bool bInitialize = true)
     {
         try
         {
             HRESULT hr = E_FAIL;
-            const std::shared_ptr<Library>& pLib = GetShared<Library>(true, std::move(pLog));
+            const std::shared_ptr<Library>& pLib = GetShared<Library>(true);
 
             if (!bInitialize)
                 return pLib;
@@ -109,7 +108,6 @@ public:
     virtual ~ExtensionLibrary(void);
 
 protected:
-    logger _L_;
     bool m_bInitialized = false;
 
     CriticalSection m_cs;
@@ -204,18 +202,18 @@ protected:
     HRESULT ToDesiredName(const std::wstring& libName);
 
     template <class Library>
-    static const std::shared_ptr<Library> GetShared(bool bMakeNew = true, logger pLog = nullptr)
+    static const std::shared_ptr<Library> GetShared(bool bMakeNew = true)
     {
         static std::weak_ptr<Library> g_pLibrary;
 
         auto shared = g_pLibrary.lock();
 
-        if (shared == nullptr && bMakeNew && pLog != nullptr)
+        if (shared == nullptr && bMakeNew)
         {
             static CriticalSection g_cs;
             ScopedLock sc(g_cs);
 
-            shared = std::make_shared<Library>(pLog);
+            shared = std::make_shared<Library>();
             g_pLibrary = shared;
         }
 
@@ -236,8 +234,8 @@ class ORCLIB_API TemplateExtension : public ExtensionLibrary
     friend class ExtensionLibrary;
 
 public:
-    TemplateExtension(logger pLog)
-        : ExtensionLibrary(pLog, L"template", L"template.dll", L"template.dll") {};
+    TemplateExtension()
+        : ExtensionLibrary(L"template", L"template.dll", L"template.dll") {};
     virtual ~TemplateExtension() {}
     STDMETHOD(Initialize)() { return S_OK; }
 };

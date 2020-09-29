@@ -12,8 +12,6 @@
 #include "MftRecordAttribute.h"
 #include "AttributeList.h"
 
-#include "LogFileWriter.h"
-
 #include "VolumeReader.h"
 
 #include <algorithm>

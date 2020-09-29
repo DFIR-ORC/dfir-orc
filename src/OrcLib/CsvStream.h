@@ -23,9 +23,9 @@ private:
     bool m_bReady = false;
 
 public:
-    Stream(const logger& pLog)
-        : ByteStream(pLog)
-        , m_Cruncher(pLog) {};
+    Stream()
+        : ByteStream()
+        , m_Cruncher() {};
 
     STDMETHOD(Initialize)
     (bool bfirstRowIsColumnNames, WCHAR wcSeparator, WCHAR wcQuote, const WCHAR* szDateFormat, DWORD dwSkipLines);

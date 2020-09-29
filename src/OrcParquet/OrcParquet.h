@@ -21,9 +21,5 @@
 
 namespace Orc {
 
-class LogFileWriter;
-using log = LogFileWriter;
-using logger = std::shared_ptr<LogFileWriter>;
-
-ORCPARQUET_API std::shared_ptr<TableOutput::IStreamWriter> StreamTableFactory(const Orc::logger& pLog);
+ORCPARQUET_API std::shared_ptr<TableOutput::IStreamWriter> StreamTableFactory();
 }  // namespace Orc

@@ -36,8 +36,8 @@ class ORCLIB_API MftRecordAttribute : public std::enable_shared_from_this<MftRec
     friend class AttributeListEntry;
 
 protected:
-    MFTRecord* m_pHostRecord;
     PATTRIBUTE_RECORD_HEADER m_pHeader;
+    MFTRecord* m_pHostRecord;
 
     std::unique_ptr<MFTUtils::NonResidentDataAttrInfo> m_pNonResidentInfo;
 
@@ -143,19 +143,15 @@ public:
     }
 
     HRESULT GetStreams(
-        const logger& pLog,
         const std::shared_ptr<VolumeReader>& pVolReader,
         std::shared_ptr<ByteStream>& rawStream,
         std::shared_ptr<ByteStream>& dataStream);
-    HRESULT GetStreams(const logger& pLog, const std::shared_ptr<VolumeReader>& pVolReader);
+    HRESULT GetStreams(const std::shared_ptr<VolumeReader>& pVolReader);
 
-    std::shared_ptr<ByteStream> GetDataStream(const logger& pLog, const std::shared_ptr<VolumeReader>& pVolReader);
-    std::shared_ptr<ByteStream> GetRawStream(const logger& pLog, const std::shared_ptr<VolumeReader>& pVolReader);
+    std::shared_ptr<ByteStream> GetDataStream(const std::shared_ptr<VolumeReader>& pVolReader);
+    std::shared_ptr<ByteStream> GetRawStream(const std::shared_ptr<VolumeReader>& pVolReader);
 
-    HRESULT GetHashInformation(
-        const logger& pLog,
-        const std::shared_ptr<VolumeReader>& pVolReader,
-        CryptoHashStream::Algorithm required);
+    HRESULT GetHashInformation(const std::shared_ptr<VolumeReader>& pVolReader, CryptoHashStream::Algorithm required);
 
     HRESULT AddContinuationAttribute(const std::shared_ptr<MftRecordAttribute>& pMftRecordAttribute);
 
@@ -216,29 +212,29 @@ public:
             m_pRoot = nullptr;
     };
 
-    virtual HRESULT Open(const logger& pLog);
+    virtual HRESULT Open();
 
-    ATTRIBUTE_TYPE_CODE IndexedAttributeType()
+    ATTRIBUTE_TYPE_CODE IndexedAttributeType() const
     {
         if (m_pRoot != nullptr)
             return m_pRoot->IndexedAttributeType;
         return $UNUSED;
     };
 
-    ULONG SizePerIndex()
+    ULONG SizePerIndex() const
     {
         if (m_pRoot != nullptr)
             return m_pRoot->BytesPerIndexBuffer;
         return 0L;
     }
-    ULONG BlocksPerIndex()
+    ULONG BlocksPerIndex() const
     {
         if (m_pRoot != nullptr)
             return m_pRoot->BlocksPerIndexBuffer;
         return 0L;
     }
 
-    PINDEX_ENTRY FirstIndexEntry() { return (PINDEX_ENTRY)NtfsFirstIndexEntry(&m_pRoot->IndexHeader); }
+    PINDEX_ENTRY FirstIndexEntry() const { return (PINDEX_ENTRY)NtfsFirstIndexEntry(&m_pRoot->IndexHeader); }
 
     LPBYTE FirstFreeByte()
     {

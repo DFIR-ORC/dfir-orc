@@ -177,24 +177,26 @@ HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::wstring_view& svSt
 
     switch (Type)
     {
-    case UTF16Type:
-    case XMLType:
-        boundData.WString->iIndicator = svString.size() * sizeof(WCHAR);
-        wmemcpy_s(boundData.WString->Data, dwStrMaxLen, svString.data(), svString.size());
-        break;
-    case UTF8Type:
-        boundData.AString->iIndicator = svString.size();
-        if (FAILED(hr = WideToAnsi(nullptr, svString.data(), SafeInt<DWORD>(svString.size()), boundData.AString->Data, dwStrMaxLen)))
-            return hr;
-        break;
-    case BinaryType:
-        boundData.Binary->iIndicator = svString.size() * sizeof(WCHAR);
-        wmemcpy_s((WCHAR*)boundData.Binary->Data, dwStrMaxLen, svString.data(), svString.size());
-        break;
-    case Nothing:
-        return S_OK;
-    default:
-        return E_NOTIMPL;
+        case UTF16Type:
+        case XMLType:
+            boundData.WString->iIndicator = svString.size() * sizeof(WCHAR);
+            wmemcpy_s(boundData.WString->Data, dwStrMaxLen, svString.data(), svString.size());
+            break;
+        case UTF8Type:
+            boundData.AString->iIndicator = svString.size();
+            if (FAILED(
+                    hr = WideToAnsi(
+                        svString.data(), SafeInt<DWORD>(svString.size()), boundData.AString->Data, dwStrMaxLen)))
+                return hr;
+            break;
+        case BinaryType:
+            boundData.Binary->iIndicator = svString.size() * sizeof(WCHAR);
+            wmemcpy_s((WCHAR*)boundData.Binary->Data, dwStrMaxLen, svString.data(), svString.size());
+            break;
+        case Nothing:
+            return S_OK;
+        default:
+            return E_NOTIMPL;
     }
 
     return S_OK;
@@ -212,30 +214,26 @@ HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::string_view& svStr
 
     switch (Type)
     {
-    case UTF16Type:
-    case XMLType:
-        boundData.WString->iIndicator = svString.size() * sizeof(WCHAR);
-        if (FAILED(
-            hr = AnsiToWide(
-                nullptr,
-                svString.data(),
-                SafeInt<DWORD>(svString.size()),
-                boundData.WString->Data,
-                dwStrMaxLen)))
-            return hr;
-        break;
-    case UTF8Type:
-        boundData.AString->iIndicator = svString.size();
-        memcpy_s((CHAR*)boundData.AString->Data, dwStrMaxLen, svString.data(), svString.size());
-        break;
-    case BinaryType:
-        boundData.Binary->iIndicator = svString.size();
-        memcpy_s((CHAR*)boundData.Binary->Data, dwStrMaxLen, svString.data(), svString.size());
-        break;
-    case Nothing:
-        return S_OK;
-    default:
-        return E_NOTIMPL;
+        case UTF16Type:
+        case XMLType:
+            boundData.WString->iIndicator = svString.size() * sizeof(WCHAR);
+            if (FAILED(
+                    hr = AnsiToWide(
+                        svString.data(), SafeInt<DWORD>(svString.size()), boundData.WString->Data, dwStrMaxLen)))
+                return hr;
+            break;
+        case UTF8Type:
+            boundData.AString->iIndicator = svString.size();
+            memcpy_s((CHAR*)boundData.AString->Data, dwStrMaxLen, svString.data(), svString.size());
+            break;
+        case BinaryType:
+            boundData.Binary->iIndicator = svString.size();
+            memcpy_s((CHAR*)boundData.Binary->Data, dwStrMaxLen, svString.data(), svString.size());
+            break;
+        case Nothing:
+            return S_OK;
+        default:
+            return E_NOTIMPL;
     }
     return S_OK;
 }
@@ -248,38 +246,35 @@ HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::wstring_view& sz
 
     switch (Type)
     {
-    case UTF16Type:
-    case XMLType:
-    {
-        Buffer<WCHAR, MAX_PATH> buffer;
-        buffer.view_of(boundData.WString->Data, dwMaxLen.value_or(DBMAXCHAR), 0L);
-        auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
-        boundData.WString->iIndicator = buffer.size() * sizeof(WCHAR);
-    }
-    break;
-    case UTF8Type:
-    {
-        Buffer<WCHAR, MAX_PATH> buffer;
-        auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
-        if (buffer.size() > dwMaxLen.value_or(DBMAXCHAR))
-            return E_NOT_SUFFICIENT_BUFFER;
-        if (FAILED(hr = WideToAnsi(nullptr, (LPWSTR)buffer, boundData.AString->Data, dwMaxLen.value_or(DBMAXCHAR))))
-            return hr;
-        boundData.AString->iIndicator = buffer.size();
-    }
-    break;
-    case BinaryType:
-    {
-        Buffer<WCHAR, MAX_PATH> buffer;
-        buffer.view_of((WCHAR*)boundData.Binary->Data, dwMaxLen.value_or(DBMAXCHAR), 0L);
-        auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
-        boundData.Binary->iIndicator = buffer.size() * sizeof(WCHAR);
-    }
-    break;
-    case Nothing:
-        return S_OK;
-    default:
-        return E_NOTIMPL;
+        case UTF16Type:
+        case XMLType: {
+            Buffer<WCHAR, MAX_PATH> buffer;
+            buffer.view_of(boundData.WString->Data, dwMaxLen.value_or(DBMAXCHAR), 0L);
+            auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+            boundData.WString->iIndicator = buffer.size() * sizeof(WCHAR);
+        }
+        break;
+        case UTF8Type: {
+            Buffer<WCHAR, MAX_PATH> buffer;
+            auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+            if (buffer.size() > dwMaxLen.value_or(DBMAXCHAR))
+                return E_NOT_SUFFICIENT_BUFFER;
+            if (FAILED(hr = WideToAnsi((LPWSTR)buffer, boundData.AString->Data, dwMaxLen.value_or(DBMAXCHAR))))
+                return hr;
+            boundData.AString->iIndicator = buffer.size();
+        }
+        break;
+        case BinaryType: {
+            Buffer<WCHAR, MAX_PATH> buffer;
+            buffer.view_of((WCHAR*)boundData.Binary->Data, dwMaxLen.value_or(DBMAXCHAR), 0L);
+            auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+            boundData.Binary->iIndicator = buffer.size() * sizeof(WCHAR);
+        }
+        break;
+        case Nothing:
+            return S_OK;
+        default:
+            return E_NOTIMPL;
     }
 
     return S_OK;
@@ -293,38 +288,35 @@ HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::string_view& szF
     
     switch (Type)
     {
-    case UTF16Type:
-    case XMLType:
-    {
-        Buffer<CHAR, MAX_PATH> buffer;
-        auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
-        if (buffer.size() > dwStrMaxLen)
-            return E_NOT_SUFFICIENT_BUFFER;
-        if (FAILED(hr = AnsiToWide(nullptr, (LPSTR)buffer, boundData.WString->Data, dwStrMaxLen)))
-            return hr;
-        boundData.WString->iIndicator = buffer.size()*sizeof(WCHAR);
-    }
-    break;
-    case UTF8Type:
-    {
-        Buffer<CHAR, MAX_PATH> buffer;
-        buffer.view_of(boundData.AString->Data, dwStrMaxLen, 0L);
-        auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
-        boundData.AString->iIndicator = buffer.size();
-    }
-    break;
-    case BinaryType:
-    {
-        Buffer<CHAR, MAX_PATH> buffer;
-        buffer.view_of((CHAR*)boundData.Binary->Data, dwStrMaxLen, 0L);
-        auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
-        boundData.Binary->iIndicator = buffer.size();
-    }
-    break;
-    case Nothing:
-        return S_OK;
-    default:
-        return E_NOTIMPL;
+        case UTF16Type:
+        case XMLType: {
+            Buffer<CHAR, MAX_PATH> buffer;
+            auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+            if (buffer.size() > dwStrMaxLen)
+                return E_NOT_SUFFICIENT_BUFFER;
+            if (FAILED(hr = AnsiToWide((LPSTR)buffer, boundData.WString->Data, dwStrMaxLen)))
+                return hr;
+            boundData.WString->iIndicator = buffer.size() * sizeof(WCHAR);
+        }
+        break;
+        case UTF8Type: {
+            Buffer<CHAR, MAX_PATH> buffer;
+            buffer.view_of(boundData.AString->Data, dwStrMaxLen, 0L);
+            auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+            boundData.AString->iIndicator = buffer.size();
+        }
+        break;
+        case BinaryType: {
+            Buffer<CHAR, MAX_PATH> buffer;
+            buffer.view_of((CHAR*)boundData.Binary->Data, dwStrMaxLen, 0L);
+            auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+            boundData.Binary->iIndicator = buffer.size();
+        }
+        break;
+        case Nothing:
+            return S_OK;
+        default:
+            return E_NOTIMPL;
     }
 
     return S_OK;
@@ -1075,24 +1067,12 @@ HRESULT BoundColumn::WriteEnum(DWORD dwEnum, const WCHAR* EnumValues[])
         if (szValue == NULL)
             szValue = L"IllegalEnumValue";
 
-        if (wcslen(szValue) > dwMaxLen)
-            return E_NOT_SUFFICIENT_BUFFER;
-        boundData.AString->iIndicator = wcslen(szValue) * sizeof(CHAR);
-        if (FAILED(hr = WideToAnsi(nullptr, szValue, boundData.AString->Data, dwMaxLen.value())))
-            return hr;
-    }
-    break;
-    case FixedBinaryType:
-        if (sizeof(DWORD) > dwLen)
-            return E_NOT_SUFFICIENT_BUFFER;
-        boundData.Binary->iIndicator = sizeof(DWORD);
-        *((DWORD*)boundData.Binary->Data) = dwEnum;
-        break;
-    case BinaryType:
-        if (sizeof(DWORD) > dwMaxLen)
-            return E_NOT_SUFFICIENT_BUFFER;
-        boundData.Binary->iIndicator = sizeof(DWORD);
-        *((DWORD*)boundData.Binary->Data) = dwEnum;
+            if (wcslen(szValue) > dwMaxLen)
+                return E_NOT_SUFFICIENT_BUFFER;
+            boundData.AString->iIndicator = wcslen(szValue) * sizeof(CHAR);
+            if (FAILED(hr = WideToAnsi(szValue, boundData.AString->Data, dwMaxLen.value())))
+                return hr;
+        }
         break;
     case Nothing:
         return S_OK;
@@ -1159,26 +1139,23 @@ HRESULT BoundColumn::WriteFlags(DWORD dwFlags, const FlagsDefinition FlagValues[
         boundData.WString->iIndicator = dwMaxLen.value() * sizeof(WCHAR) - dwBytesLeft;
     }
     break;
-    case UTF8Type:
-    {
+    case UTF8Type: {
         bool bFirst = true;
         int idx = 0;
         LPSTR pCur = boundData.AString->Data;
         size_t dwBytesLeft = dwMaxLen.value();
         CHAR szBuf[MAX_PATH];
 
-        WCHAR wszSep[2] = { cSeparator, '\0' };
+        WCHAR wszSep[2] = {cSeparator, '\0'};
         CHAR szSep[2];
-        if (FAILED(WideToAnsi(nullptr, wszSep, szSep, 2)))
+        if (FAILED(WideToAnsi(wszSep, szSep, 2)))
             return hr;
 
         while (FlagValues[idx].dwFlag != 0xFFFFFFFF)
         {
             if (dwFlags & FlagValues[idx].dwFlag)
             {
-                if (FAILED(WideToAnsi(nullptr, FlagValues[idx].szShortDescr, szBuf, MAX_PATH)))
-                    return hr;
-                if (bFirst)
+                if (dwFlags & FlagValues[idx].dwFlag)
                 {
                     bFirst = false;
                     if (FAILED(
@@ -1274,7 +1251,7 @@ HRESULT BoundColumn::WriteExactFlags(DWORD dwFlags, const FlagsDefinition FlagVa
 
         while (FlagValues[idx].dwFlag != 0xFFFFFFFF)
         {
-            if (FAILED(WideToAnsi(nullptr, FlagValues[idx].szShortDescr, szBuf, MAX_PATH)))
+            if (FAILED(WideToAnsi(FlagValues[idx].szShortDescr, szBuf, MAX_PATH)))
                 return hr;
             if (dwFlags == FlagValues[idx].dwFlag)
             {

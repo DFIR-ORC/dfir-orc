@@ -24,23 +24,16 @@ struct NTFS_COMP_INFO
     size_t buf_size_b;  // size of buffer in bytes (1 compression unit)
 };
 
-class LogFileWriter;
+HRESULT ntfs_uncompress_reset(NTFS_COMP_INFO* comp);
+HRESULT ntfs_uncompress_setup(unsigned int block_size, NTFS_COMP_INFO* comp, UINT compunit_size_c);
 
-HRESULT ntfs_uncompress_reset(const logger& pLog, NTFS_COMP_INFO* comp);
-HRESULT ntfs_uncompress_setup(const logger& pLog, unsigned int block_size, NTFS_COMP_INFO* comp, UINT compunit_size_c);
-
-HRESULT ntfs_uncompress_done(const logger& pLog, NTFS_COMP_INFO* comp);
+HRESULT ntfs_uncompress_done(NTFS_COMP_INFO* comp);
 
 // SleuthKit
-HRESULT ntfs_uncompress_compunit(const logger& pLog, NTFS_COMP_INFO* comp);
+HRESULT ntfs_uncompress_compunit(NTFS_COMP_INFO* comp);
 
 // NTFS-3G
-HRESULT ntfs_decompress(
-    const logger& pLog,
-    uint8_t* dest,
-    const size_t dest_size,
-    uint8_t* const cb_start,
-    const size_t cb_size);
+HRESULT ntfs_decompress(uint8_t* dest, const size_t dest_size, uint8_t* const cb_start, const size_t cb_size);
 
 }  // namespace Orc
 

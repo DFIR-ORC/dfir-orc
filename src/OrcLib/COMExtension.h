@@ -15,17 +15,11 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class COMExtension : public ExtensionLibrary
 {
 public:
-    COMExtension(
-        logger& _L_,
-        const std::wstring& strKeyword,
-        const std::wstring& strX86LibRef,
-        const std::wstring& strX64LibRef)
-        : ExtensionLibrary(_L_, strKeyword, strX86LibRef, strX64LibRef) {};
+    COMExtension(const std::wstring& strKeyword, const std::wstring& strX86LibRef, const std::wstring& strX64LibRef)
+        : ExtensionLibrary(strKeyword, strX86LibRef, strX64LibRef) {};
 
     virtual std::pair<HRESULT, HINSTANCE> LoadThisLibrary(const std::wstring& strLibFile);
 

@@ -1,9 +1,10 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2020 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl (ANSSI)
 //
 #include "stdafx.h"
 
@@ -11,34 +12,38 @@
 
 using namespace Orc;
 
-struct UploadNotification_make_shared_enabler : public Orc::UploadNotification {
-	inline UploadNotification_make_shared_enabler(Orc::UploadNotification::Type type, Orc::UploadNotification::Status status, const std::wstring& keyword, const std::wstring& descr, HRESULT hr) :
-		Orc::UploadNotification(type, status, keyword, descr, hr) {}
+namespace {
+
+// Enable the use of std::make_shared with UploadNotification protected constructor
+struct UploadNotificationT : public Orc::UploadNotification
+{
+    template <typename... Args>
+    inline UploadNotificationT(Args&&... args)
+        : UploadNotification(std::forward<Args>(args)...)
+    {
+    }
 };
 
-Orc::UploadNotification::Notification Orc::UploadNotification::MakeSuccessNotification(Type type, const std::wstring& keyword)
+}  // namespace
+
+Orc::UploadNotification::Notification Orc::UploadNotification::MakeSuccessNotification(
+    const UploadMessage::Ptr& request,
+    Type type,
+    const std::wstring& source,
+    const std::wstring& destination)
 {
-	return std::make_shared<UploadNotification_make_shared_enabler>(type, Success, keyword, L"", S_OK);
+    return std::make_shared<UploadNotificationT>(type, Success, request, source, destination, S_OK, L"");
 }
 
-Orc::UploadNotification::Notification Orc::UploadNotification::MakeFailureNotification(Type type, HRESULT hr, const std::wstring& keyword, const std::wstring& description)
+Orc::UploadNotification::Notification Orc::UploadNotification::MakeFailureNotification(
+    const UploadMessage::Ptr& request,
+    Type type,
+    const std::wstring& source,
+    const std::wstring& destination,
+    HRESULT hr,
+    const std::wstring& description)
 {
-	return std::make_shared<UploadNotification_make_shared_enabler>(type, Failure, keyword, description, hr);
+    return std::make_shared<UploadNotificationT>(type, Failure, request, source, destination, hr, description);
 }
 
-Orc::UploadNotification::Notification Orc::UploadNotification::MakeUploadStartedSuccessNotification(const std::wstring& keyword, const std::wstring& strFileName)
-{
-	auto retval =
-		std::make_shared<UploadNotification_make_shared_enabler>(Started, Success, keyword, L"Archive creation started", S_OK);
-	retval->m_path = strFileName;
-	return retval;
-}
-
-Orc::UploadNotification::Notification Orc::UploadNotification::MakeAddFileSucessNotification(const std::wstring& keyword, const std::wstring& strFileName)
-{
-	auto retval = std::make_shared<UploadNotification_make_shared_enabler>(FileAddition, Success, keyword, L"", S_OK);
-	retval->m_path = strFileName;
-	return retval;
-}
-
-UploadNotification::~UploadNotification(void) {}
+UploadNotification::~UploadNotification() {}

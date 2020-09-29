@@ -11,6 +11,8 @@
 
 #include "OrcCommand.h"
 
+#include <boost/logic/tribool.hpp>
+
 #include "UtilitiesMain.h"
 
 #include "ConfigFileReader.h"
@@ -22,11 +24,12 @@
 #include "TableOutputWriter.h"
 
 #include "ByteStream.h"
+#include "OrcLimits.h"
 
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
 
-#include <boost/logic/tribool.hpp>
+#include "Utils/TypeTraits.h"
 
 #include <vector>
 #include <set>
@@ -60,29 +63,9 @@ enum LimitStatus
     FailedToComputeLimits = 1 << 7,
 
     NoLimits = 1 << 8
-
 };
 
-class Limits
-{
-public:
-    Limits() = default;
-
-    bool bIgnoreLimits = false;
-
-    DWORDLONG dwlMaxBytesTotal = INFINITE;
-    DWORDLONG dwlAccumulatedBytesTotal = 0LL;
-    bool bMaxBytesTotalReached = false;
-
-    DWORDLONG dwlMaxBytesPerSample = INFINITE;
-    bool bMaxBytesPerSampleReached = false;
-
-    DWORD dwMaxSampleCount = INFINITE;
-    DWORD dwAccumulatedSampleCount = 0LL;
-    bool bMaxSampleCountReached = false;
-};
-
-enum ContentType
+enum class ContentType
 {
     INVALID = 0,
     DATA,
@@ -90,10 +73,12 @@ enum ContentType
     RAW
 };
 
+std::wstring ToString(ContentType contentType);
+
 class ContentSpec
 {
 public:
-    ContentType Type = INVALID;
+    ContentType Type = ContentType::INVALID;
 
     size_t MinChars = 0L;
     size_t MaxChars = 0L;
@@ -131,8 +116,8 @@ public:
         friend class Main;
 
     public:
-        Configuration(logger pLog)
-            : Locations(std::move(pLog))
+        Configuration()
+            : Locations()
         {
             bAddShadows = boost::indeterminate;
         }
@@ -339,10 +324,10 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#GETTHIS_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog)
-        , config(pLog)
-        , FileFinder(pLog) {};
+    Main()
+        : UtilitiesMain()
+        , config()
+        , FileFinder() {};
 
     void PrintUsage();
     void PrintParameters();

@@ -15,8 +15,7 @@
 
 using namespace Orc;
 
-VolumeReader::VolumeReader(logger pLog, const WCHAR* szSnapshotName)
-    : _L_(std::move(pLog))
+VolumeReader::VolumeReader(const WCHAR* szSnapshotName)
 {
     wcscpy_s(m_szLocation, MAX_PATH, szSnapshotName);
 }
@@ -46,20 +45,16 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
             && (pbs->PackedBpb.SectorsPerCluster != 0x40) && (pbs->PackedBpb.SectorsPerCluster != 0x80))
         {
             // sectors per cluster isn't a supported value
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                L"NTFS : SectorsPerCluster is not a supported value!\r\n");
-            return hr;
+            spdlog::error("NTFS: SectorsPerCluster is not a supported value");
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
         else if (
             pbs->PackedBpb.ReservedSectors != 0 || pbs->PackedBpb.Fats != 0 || pbs->PackedBpb.RootEntries != 0
             || pbs->PackedBpb.Sectors != 0 || pbs->PackedBpb.SectorsPerFat != 0 || pbs->PackedBpb.LargeSectors != 0)
         {
             // one of the fields that should be null are not null
-            log::Error(
-                _L_, hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"NTFS : fields that should be zero is not zero!\n");
-            return hr;
+            spdlog::error("NTFS: fields that should be zero is not zero");
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
         m_BytesPerSector = pbs->PackedBpb.BytesPerSector;
         m_BytesPerCluster = (ULONG)pbs->PackedBpb.SectorsPerCluster * m_BytesPerSector;
@@ -75,12 +70,8 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
 
         if (m_BytesPerFRS % 1024 != 0)
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                L"NTFS : Bytes per File Record is not a multiple of 1024 - 0x%X\r\n",
-                m_BytesPerFRS);
-            return hr;
+            spdlog::error("NTFS: Bytes per File Record is not a multiple of 1024 - {:#x}", m_BytesPerFRS);
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
 
         m_NumberOfSectors = pbs->NumberSectors;

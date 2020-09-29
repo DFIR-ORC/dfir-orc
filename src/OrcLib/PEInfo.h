@@ -16,12 +16,11 @@
 namespace Orc {
 
 class FileInfo;
-class LogFileWriter;
 
 class ORCLIB_API PEInfo
 {
 public:
-    PEInfo(logger pLog, FileInfo& fileInfo);
+    PEInfo(FileInfo& fileInfo);
     ~PEInfo();
 
     bool HasFileVersionInfo();
@@ -47,7 +46,6 @@ public:
     HRESULT OpenAllHash(Intentions localIntentions);
 
 private:
-    logger _L_;
     FileInfo& m_FileInfo;
 };
 }  // namespace Orc

@@ -23,8 +23,6 @@ typedef BYTE const* LPCBYTE;
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API CBinaryBuffer
 {
     friend class MemoryStream;
@@ -33,8 +31,8 @@ private:
     BYTE* m_pData;
     size_t m_size;
     bool m_bOwnMemory;
-    bool m_bVirtualAlloc;
     bool m_bJunk;
+    bool m_bVirtualAlloc;
 
     static HCRYPTPROV g_hProv;
 
@@ -73,8 +71,8 @@ public:
         : m_pData(other.m_pData)
         , m_size(other.m_size)
         , m_bOwnMemory(other.m_bOwnMemory)
-        , m_bVirtualAlloc(other.m_bVirtualAlloc)
         , m_bJunk(other.m_bJunk)
+        , m_bVirtualAlloc(other.m_bVirtualAlloc)
     {
         // Copy the data pointer and its length from the
         // source object.
@@ -273,7 +271,7 @@ public:
         return !memcmp(m_pData, other.m_pData, m_size);
     };
 
-    HRESULT PrintHex(const logger& pLog, LPCWSTR szIndent = L"") const;
+    HRESULT PrintHex(LPCWSTR szIndent = L"") const;
 
     ~CBinaryBuffer(void) { RemoveAll(); }
 };

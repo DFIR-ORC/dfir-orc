@@ -8,8 +8,6 @@
 #include "stdafx.h"
 #include "PipeStream.h"
 
-#include "LogFileWriter.h"
-
 using namespace Orc;
 
 HRESULT PipeStream::CreatePipe(__in DWORD nSize)
@@ -23,7 +21,8 @@ HRESULT PipeStream::CreatePipe(__in DWORD nSize)
 
     if (!::CreatePipe(&hReadPipe, &hWritePipe, NULL, nSize))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to create anonymous pipe\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CreatePipe: cannot create anonymous pipe (code: {:#x})", hr);
         return hr;
     }
     {
@@ -57,15 +56,15 @@ __data_entrypoint(File) HRESULT PipeStream::Read(
 
         if (hr == HRESULT_FROM_WIN32(ERROR_BROKEN_PIPE))
         {
-            log::Verbose(_L_, L"Broken pipe!!\r\n");
+            spdlog::debug("Broken pipe");
         }
         else
         {
-            log::Error(_L_, hr, L"ReadFile failed\r\n");
+            spdlog::error("ReadFile failed");
             return hr;
         }
     }
-    log::Verbose(_L_, L"ReadFile read %d bytes (hFile=0x%lx)\r\n", dwBytesRead, m_hReadPipe);
+    spdlog::debug("ReadFile read {} bytes (hFile={:p})", dwBytesRead, m_hReadPipe);
     *pcbBytesRead = dwBytesRead;
     return S_OK;
 }
@@ -81,36 +80,36 @@ PipeStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbByt
     DWORD cbBytesWritten = 0;
     if (cbBytes > MAXDWORD)
     {
-        log::Error(_L_, E_INVALIDARG, L"Too many bytes\r\n");
+        spdlog::error("PipeStream: Write: Too many bytes");
         return E_INVALIDARG;
     }
 
     if (!WriteFile(m_hWritePipe, pBuffer, static_cast<DWORD>(cbBytes), &cbBytesWritten, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"WriteFile failed\r\n");
+        spdlog::error("Failed WriteFile (code: {:#x})", hr);
         return hr;
     }
-    log::Verbose(_L_, L"WriteFile %d bytes succeeded (hFile=0x%lx)\r\n", cbBytesWritten, m_hWritePipe);
+    spdlog::debug("WriteFile {} bytes succeeded (hFile=0x{:p})", cbBytesWritten, m_hWritePipe);
     *pcbBytesWritten = cbBytesWritten;
     return S_OK;
 }
 
 HRESULT PipeStream::SetFilePointer(__in LONGLONG, __in DWORD, __out_opt PULONG64)
 {
-    log::Verbose(_L_, L"SetFilePointer is not implemented on pipes\r\n");
+    spdlog::debug("PipeStream: SetFilePointer is not implemented");
     return S_OK;
 }
 
 ULONG64 PipeStream::GetSize()
 {
-    log::Verbose(_L_, L"GetFileSizeEx is not implemented on pipes\r\n");
+    spdlog::debug("PipeStream: GetSize is not implemented");
     return (ULONG64)-1;
 }
 
 HRESULT PipeStream::SetSize(ULONG64)
 {
-    log::Verbose(_L_, L"SetSize is not implemented on pipes\r\n");
+    spdlog::debug("PipeStream: SetSize is not implemented");
     return S_OK;
 }
 
@@ -140,8 +139,7 @@ PipeStream::Peek(_Out_opt_ LPVOID lpBuffer, _In_ DWORD nBufferSize, _Out_opt_ LP
     DWORD dwBytesRead = 0L;
     if (!PeekNamedPipe(m_hReadPipe, lpBuffer, nBufferSize, &dwBytesRead, NULL, NULL))
     {
-        HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"PeekNamedPipe failed\r\n");
+        spdlog::error("Failed PeekNamedPipe (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
     }
 
     if (dwBytesRead > 0L && lpBytesRead)
@@ -165,7 +163,7 @@ HRESULT PipeStream::Close()
         DWORD dwBytesWritten = 0L;
         WriteFile(hWritePipe, &EmptyBuffer, 0L, &dwBytesWritten, NULL);  // Signal to the other end we're closing...
         CloseHandle(hWritePipe);
-        log::Verbose(_L_, L"CloseHandle (hFile=0x%lx)\r\n", hWritePipe);
+        spdlog::debug("CloseHandle (hFile: {:p})", hWritePipe);
         hWritePipe = INVALID_HANDLE_VALUE;
     }
     return S_OK;
@@ -181,7 +179,7 @@ PipeStream::~PipeStream()
             std::swap(hReadPipe, m_hReadPipe);
         }
         CloseHandle(hReadPipe);
-        log::Verbose(_L_, L"CloseHandle (hFile=0x%lx)\r\n", hReadPipe);
+        spdlog::debug("CloseHandle (hFile: {:p})", hReadPipe);
         hReadPipe = INVALID_HANDLE_VALUE;
     }
     if (m_hWritePipe != INVALID_HANDLE_VALUE)
@@ -193,7 +191,7 @@ PipeStream::~PipeStream()
         }
 
         CloseHandle(hWritePipe);
-        log::Verbose(_L_, L"CloseHandle (hFile=0x%lx)\r\n", hWritePipe);
+        spdlog::debug("CloseHandle (hFile: {:p})", hWritePipe);
         hWritePipe = INVALID_HANDLE_VALUE;
     }
 }

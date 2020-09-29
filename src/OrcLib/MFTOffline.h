@@ -15,12 +15,11 @@
 namespace Orc {
 
 class OfflineMFTReader;
-class LogFileWriter;
 
 class ORCLIB_API MFTOffline : public IMFT
 {
 public:
-    MFTOffline(logger pLog, std::shared_ptr<OfflineMFTReader>& volReader);
+    MFTOffline(std::shared_ptr<OfflineMFTReader>& volReader);
     virtual ~MFTOffline();
 
     // from IMFT
@@ -36,7 +35,6 @@ public:
 private:
     std::shared_ptr<OfflineMFTReader> m_pVolReader;
     std::shared_ptr<OfflineMFTReader> m_pFetchReader;
-    logger _L_;
 
     MFTUtils::SafeMFTSegmentNumber m_RootUSN;
 };

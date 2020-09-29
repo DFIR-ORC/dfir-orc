@@ -7,7 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "Buffer.h"
 #include "Registry.h"
 
@@ -20,41 +19,38 @@ namespace Orc::Test {
     TEST_CLASS(RegistryTest)
     {
     private:
-        logger _L_;
         UnitTestHelper helper;
 
     public:
         TEST_METHOD_INITIALIZE(Initialize)
         {
-            _L_ = std::make_shared<LogFileWriter>();
-            helper.InitLogFileWriter(_L_);
         }
 
-        TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+        TEST_METHOD_CLEANUP(Finalize) {}
 
 
         TEST_METHOD(ReadKeyNotFound)
         {
             auto BuildBranch = Registry::Read<std::wstring>(
-                _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\UnknownVersion)", L"BuildBranch");
+                HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\UnknownVersion)", L"BuildBranch");
             Assert::IsTrue(BuildBranch.is_err());
             Assert::IsTrue(BuildBranch.err_value() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
         }
         TEST_METHOD(ReadValueNotFound)
         {
             auto BuildBranch = Registry::Read<std::wstring>(
-                _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"UnknownBranch");
+                HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"UnknownBranch");
             Assert::IsTrue(BuildBranch.is_err());
             Assert::IsTrue(BuildBranch.err_value() == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
         }
         TEST_METHOD(ReadString)
         {
             auto BuildBranch = Registry::Read<std::wstring>(
-                _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"BuildBranch");
+                HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"BuildBranch");
 
             if (BuildBranch.is_err())
             {
-                log::Error(_L_, BuildBranch.err_value(), L"Failed to read BuildBranch, test not performed\r\n");
+                spdlog::error(L"Failed to read BuildBranch, test not performed (code: {:#x})", BuildBranch.err_value());
                 return;
             }
 
@@ -65,14 +61,14 @@ namespace Orc::Test {
         TEST_METHOD(ReadDWORD)
         {
             auto VersionNumber = Registry::Read<ULONG32>(
-                _L_,
                 HKEY_LOCAL_MACHINE,
                 LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)",
                 L"CurrentMajorVersionNumber");
 
             if (VersionNumber.is_err())
             {
-                log::Error(_L_, VersionNumber.err_value(), L"Failed to read VersionNumber, test not performed\r\n");
+                spdlog::error(
+                    L"Failed to read VersionNumber, test not performed (code: {:#x})", VersionNumber.err_value());
                 return;
             }
 
@@ -82,14 +78,13 @@ namespace Orc::Test {
         TEST_METHOD(ReadQWORD)
         {
             auto InstallTime = Registry::Read<ULONG64>(
-                _L_,
                 HKEY_LOCAL_MACHINE,
                 LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)",
                 L"InstallTime");
 
             if (InstallTime.is_err())
             {
-                log::Error(_L_, InstallTime.err_value(), L"Failed to read InstallTime, test not performed\r\n");
+                spdlog::error(L"Failed to read InstallTime, test not performed (code: {:#x})", InstallTime.err_value());
                 return;
             }
 
@@ -108,10 +103,10 @@ namespace Orc::Test {
         TEST_METHOD(ReadPath)
         {
             auto PathName = Registry::Read<std::filesystem::path>(
-                _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"PathName");
+                HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"PathName");
             if (PathName.is_err())
             {
-                log::Error(_L_, PathName.err_value(), L"Failed to read PathName, test not performed\r\n");
+                spdlog::error(L"Failed to read PathName, test not performed (code: {:#x})", PathName.err_value());
                 return;
             }
 
@@ -121,11 +116,13 @@ namespace Orc::Test {
         TEST_METHOD(ReadBinary)
         {
             auto DigitalProductId = Registry::Read<ByteBuffer>(
-                _L_, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"DigitalProductId4");
+                HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion)", L"DigitalProductId4");
 
             if(DigitalProductId.is_err())
             {
-                log::Error(_L_, DigitalProductId.err_value(), L"Failed to read DigitalProductId4, test not performed\r\n");
+                spdlog::error(
+                    L"Failed to read DigitalProductId4, test not performed (code: {:#x})",
+                    DigitalProductId.err_value());
                 return;
             }
             Assert::IsTrue(DigitalProductId.is_ok());
@@ -134,4 +131,3 @@ namespace Orc::Test {
         }
     };
 }
-

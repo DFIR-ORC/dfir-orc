@@ -43,13 +43,12 @@ public:
     std::wstring m_description;
 
     DiskChunkStream(
-        logger pLog,
         std::wstring diskName,
         ULONGLONG offset,
         DWORD size,
         std::wstring description,
         std::wstring diskInterface = L"")
-        : ByteStream(std::move(pLog))
+        : ByteStream()
         , m_DiskName(diskName)
         , m_offset(offset)
         , m_size(size)
@@ -64,7 +63,7 @@ public:
             m_DiskInterface = diskInterface;
         }
 
-        m_diskReader.reset(new CDiskExtent(pLog, m_DiskInterface));
+        m_diskReader.reset(new CDiskExtent(m_DiskInterface));
 
         Open();
         SetFilePointer(0, FILE_BEGIN, NULL);

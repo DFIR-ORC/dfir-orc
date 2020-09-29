@@ -12,7 +12,6 @@
 #include "ExtractData.h"
 
 #include "ParameterCheck.h"
-#include "LogFileWriter.h"
 #include "TableOutputWriter.h"
 #include "ConfigFile_ExtractData.h"
 #include "ImportDefinition.h"
@@ -36,7 +35,7 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaItem)
         tableName = L"extract";
     }
 
-    config.reportOutput.Schema = TableOutput::GetColumnsFromConfig(_L_, tableName.c_str(), schemaItem);
+    config.reportOutput.Schema = TableOutput::GetColumnsFromConfig(tableName.c_str(), schemaItem);
     return S_OK;
 }
 
@@ -51,7 +50,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configItem)
 
     if (configItem[EXTRACTDATA_OUTPUT])
     {
-        hr = config.output.Configure(_L_, config.output.supportedTypes, configItem[EXTRACTDATA_OUTPUT]);
+        hr = config.output.Configure(config.output.supportedTypes, configItem[EXTRACTDATA_OUTPUT]);
         if (FAILED(hr))
         {
             return hr;
@@ -60,8 +59,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configItem)
 
     if (configItem[EXTRACTDATA_REPORT_OUTPUT])
     {
-        hr = config.reportOutput.Configure(
-            _L_, config.reportOutput.supportedTypes, configItem[EXTRACTDATA_REPORT_OUTPUT]);
+        hr = config.reportOutput.Configure(config.reportOutput.supportedTypes, configItem[EXTRACTDATA_REPORT_OUTPUT]);
         if (FAILED(hr))
         {
             return hr;
@@ -86,13 +84,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configItem)
         hr = GetIntegerFromArg(cliArg.c_str(), li);
         if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Invalid concurrency value specified '%s' must be an integer.\r\n", cliArg.c_str());
+            spdlog::error(L"Invalid concurrency value specified '{}' must be an integer.", cliArg);
             return hr;
         }
 
         if (li.QuadPart > MAXDWORD)
         {
-            log::Error(_L_, hr, L"concurrency value specified '%s' seems invalid.\r\n", cliArg.c_str());
+            spdlog::error(L"concurrency value specified '{}' seems invalid.", cliArg);
             return hr;
         }
 
@@ -103,7 +101,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configItem)
     {
         for (const auto& inputNode : configItem[EXTRACTDATA_INPUT].NodeList)
         {
-            Main::InputItem inputItem(_L_);
+            Main::InputItem inputItem;
 
             if (inputNode[EXTRACTDATA_INPUT_DIRECTORY])
             {
@@ -118,7 +116,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configItem)
             hr = GetDefinitionFromConfig(inputNode, inputItem.importDefinitions);
             if (FAILED(hr))
             {
-                log::Error(_L_, hr, L"Failed to configure import definitions\r\n");
+                spdlog::error(L"Failed to configure import definitions");
             }
 
             config.inputItems.push_back(std::move(inputItem));
@@ -165,7 +163,7 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& configItem, ImportDefini
             hr = GetIgnoreItemFromConfig(ignoreItem, import);
             if (FAILED(hr))
             {
-                log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
+                spdlog::error(L"Failed to get import definition item config");
             }
 
             import.ToDo = ImportDefinition::Ignore;
@@ -181,7 +179,7 @@ HRESULT Main::GetDefinitionFromConfig(const ConfigItem& configItem, ImportDefini
             hr = GetImportItemFromConfig(extractItem, import);
             if (FAILED(hr))
             {
-                log::Error(_L_, hr, L"Failed to get import definition item config\r\n");
+                spdlog::error(L"Failed to get import definition item config");
             }
 
             import.ToDo = ImportDefinition::Extract;
@@ -216,13 +214,13 @@ HRESULT Main::ParseArgument(std::wstring_view arg, Configuration& config)
     {
         case L'/':
         case L'-':
-            if (OutputOption(arg.data() + 1, L"Out", OutputSpec::Directory, config.output))
+            if (OutputOption(arg.data() + 1, L"Out", OutputSpec::Kind::Directory, config.output))
                 break;
 
-            if (OutputOption(arg.data() + 1, L"Report", OutputSpec::TableFile, config.reportOutput))
+            if (OutputOption(arg.data() + 1, L"Report", OutputSpec::Kind::TableFile, config.reportOutput))
                 break;
 
-            if (OutputOption(arg.data() + 1, L"Temp", OutputSpec::Directory, config.tempOutput))
+            if (OutputOption(arg.data() + 1, L"Temp", OutputSpec::Kind::Directory, config.tempOutput))
                 break;
 
             if (BooleanOption(arg.data() + 1, L"Recursive", config.bRecursive))
@@ -249,12 +247,11 @@ HRESULT Main::ParseArgument(std::wstring_view arg, Configuration& config)
             auto path = ExpandEnvironmentStringsApi(arg.data(), ec);
             if (ec)
             {
-                hr = HRESULT_FROM_WIN32(ec.value());
-                log::Warning(_L_, hr, L"Invalid input '%s' specified\r\n", arg.data());
-                return hr;
+                spdlog::warn(L"Invalid input '{}' specified (code: {:#x})", arg.data(), ec.value());
+                return HRESULT_FROM_WIN32(ec.value());
             }
 
-            Main::InputItem inputItem(_L_);
+            Main::InputItem inputItem;
             inputItem.path = path;
             inputItem.matchRegex = L".*";  // regex filter for "on disk" files to extract
 
@@ -293,12 +290,11 @@ HRESULT Main::CheckConfiguration()
         const auto workingDir = GetWorkingDirectoryApi(ec);
         if (ec)
         {
-            hr = HRESULT_FROM_WIN32(ec.value());
-            log::Error(_L_, hr, L"%s", AnsiToWide(_L_, ec.message()));
-            return hr;
+            spdlog::error("Failed GetWorkingDirectory (code: {:#x})", ec.value());
+            return HRESULT_FROM_WIN32(ec.value());
         }
 
-        config.output.Configure(_L_, OutputSpec::Kind::Directory, workingDir.c_str());
+        config.output.Configure(OutputSpec::Kind::Directory, workingDir.c_str());
     }
 
     if (config.tempOutput.Type == OutputSpec::Kind::None)
@@ -307,13 +303,13 @@ HRESULT Main::CheckConfiguration()
     }
     else
     {
-        log::Verbose(_L_, L"No temporary folder provided, defaulting to %TEMP%\r\n");
+        spdlog::debug("No temporary folder provided, defaulting to %TEMP%");
 
         WCHAR szTempDir[MAX_PATH];
         hr = UtilGetTempDirPath(szTempDir, MAX_PATH);
         if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to provide a default temporary folder\r\n");
+            spdlog::error("Failed to provide a default temporary folder (code: {:#x})", hr);
         }
     }
 

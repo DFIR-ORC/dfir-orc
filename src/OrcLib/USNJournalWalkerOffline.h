@@ -26,7 +26,7 @@ class ORCLIB_API USNJournalWalkerOffline
     , public IUSNJournalWalker
 {
 public:
-    USNJournalWalkerOffline(logger pLog);
+    USNJournalWalkerOffline();
     virtual ~USNJournalWalkerOffline();
 
     const std::shared_ptr<ByteStream>& GetUsnJournal() const;
@@ -52,7 +52,6 @@ public:
     static void SetBufferSize(DWORD size);
 
 private:
-    logger _L_;
     LocationSet m_Locations;
 
     std::shared_ptr<ByteStream> m_USNJournal;

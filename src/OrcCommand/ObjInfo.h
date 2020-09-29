@@ -9,22 +9,14 @@
 #pragma once
 
 #include "OrcCommand.h"
-
 #include "OutputSpec.h"
-
 #include "UtilitiesMain.h"
-
-#include "ArchiveMessage.h"
-#include "ArchiveNotification.h"
-#include "ArchiveAgent.h"
-
 #include "TableOutputWriter.h"
 
 #pragma managed(push, off)
 
 namespace Orc {
 
-class LogFileWriter;
 
 namespace Command::ObjInfo {
 
@@ -89,9 +81,9 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#OBJINFO_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog)
-        , m_outputs(pLog)
+    Main()
+        : UtilitiesMain()
+        , m_outputs()
     {
     }
 

@@ -27,7 +27,7 @@ class ORCLIB_API NTFSStream : public ByteStream
 {
 
 public:
-    NTFSStream(logger pLog);
+    NTFSStream();
     ~NTFSStream();
 
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };

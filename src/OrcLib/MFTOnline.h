@@ -9,18 +9,16 @@
 
 #include "OrcLib.h"
 #include "IMFT.h"
+#include "VolumeReader.h"
 
 #pragma managed(push, off)
 
 namespace Orc {
 
-class VolumeReader;
-class LogFileWriter;
-
 class ORCLIB_API MFTOnline : public IMFT
 {
 public:
-    MFTOnline(logger pLog, std::shared_ptr<VolumeReader>& volReader);
+    MFTOnline(std::shared_ptr<VolumeReader>& volReader);
     virtual ~MFTOnline();
 
     // from IMFT
@@ -38,7 +36,6 @@ public:
 private:
     std::shared_ptr<VolumeReader> m_pVolReader;
     std::shared_ptr<VolumeReader> m_pFetchReader;
-    logger _L_;
 
     HRESULT GetMFTExtents(const CBinaryBuffer& buffer);
 

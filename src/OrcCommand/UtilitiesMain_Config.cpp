@@ -9,7 +9,6 @@
 
 #include "UtilitiesMain.h"
 
-#include "LogFileWriter.h"
 #include "ParameterCheck.h"
 #include "ConfigFileReader.h"
 #include "ConfigFile.h"
@@ -34,16 +33,16 @@ HRESULT UtilitiesMain::ReadConfiguration(
 
     if (FAILED(hr = init(configitem)))
     {
-        log::Error(_L_, hr, L"Failed to initialize config item schema\r\n");
+        spdlog::error(L"Failed to initialize config item schema");
         return hr;
     }
 
-    ConfigFileReader r(_L_);
+    ConfigFileReader r;
     if (FAILED(
             hr = ConfigFile::LookupAndReadConfiguration(
-                _L_, argc, argv, r, szCmdLineOption, szResourceID, szRefResourceID, szConfigExt, configitem)))
+                argc, argv, r, szCmdLineOption, szResourceID, szRefResourceID, szConfigExt, configitem)))
     {
-        log::Error(_L_, hr, L"Failed to lookup and read item schema\r\n");
+        spdlog::error(L"Failed to lookup and read item schema");
         return hr;
     }
 

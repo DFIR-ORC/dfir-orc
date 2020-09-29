@@ -7,8 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
-
 #include "OutputSpec.h"
 
 #include "TableOutputWriter.h"
@@ -30,17 +28,13 @@ namespace Orc::Test {
 TEST_CLASS(TableOutput)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
-    TEST_METHOD_INITIALIZE(Initialize)
-    {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
-    }
+    TEST_METHOD_INITIALIZE(Initialize) {}
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
+
     TEST_METHOD(BasicTest)
     {
         using namespace Orc::TableOutput;
@@ -50,7 +44,7 @@ public:
 
         auto options = std::make_unique<CSV::Options>();
 
-        auto stream_writer = Orc::TableOutput::GetCSVWriter(_L_, std::move(options));
+        auto stream_writer = Orc::TableOutput::GetCSVWriter(std::move(options));
         Assert::IsTrue((bool)stream_writer, L"Failed to instantiate parquet writer");
 
         constexpr auto mem = 0;
@@ -59,7 +53,7 @@ public:
 
         if (mem)
         {
-            auto mem_stream = std::make_shared<MemoryStream>(_L_);
+            auto mem_stream = std::make_shared<MemoryStream>();
             Assert::IsTrue((bool)mem_stream);
 
             auto hr = mem_stream->OpenForReadWrite();
@@ -70,7 +64,7 @@ public:
         }
         else
         {
-            auto file_stream = std::make_shared<FileStream>(_L_);
+            auto file_stream = std::make_shared<FileStream>();
             Assert::IsTrue((bool)file_stream);
 
 			std::wstring tempPath;
@@ -195,11 +189,11 @@ public:
         if (auto mem_stream = std::dynamic_pointer_cast<MemoryStream>(stream); mem_stream)
         {
             auto buffer = mem_stream->GetConstBuffer();
-            log::Info(_L_, L"Table has %d bytes\r\n", buffer.GetCount());
+            spdlog::info(L"Table has {} bytes", buffer.GetCount());
         }
         else
         {
-            log::Info(_L_, L"Table has %I64d bytes\r\n", stream->GetSize());
+            spdlog::info(L"Table has {} bytes", stream->GetSize());
         }
     }
 

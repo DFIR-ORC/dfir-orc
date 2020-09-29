@@ -54,7 +54,7 @@ HRESULT FileCopyDownloadTask::Initialize(const bool bDelayedDeletion)
         std::wstring strLocalPath;
         GetOutputFile(file.strLocalPath.c_str(), strLocalPath, true);
 
-        log::Info(_L_, L"Copying %s to %s\r\n", strRemotePath.c_str(), strLocalPath.c_str());
+        spdlog::info(L"Copying '{}' to '{}'", strRemotePath, strLocalPath);
 
         if (!CopyFileEx(
                 strRemotePath.c_str(),
@@ -64,16 +64,12 @@ HRESULT FileCopyDownloadTask::Initialize(const bool bDelayedDeletion)
                 &bCancelled,
                 COPY_FILE_ALLOW_DECRYPTED_DESTINATION))
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Failed to copy %s to %s\r\n",
-                strRemotePath.c_str(),
-                strLocalPath.c_str());
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Failed to copy '{}' to '{}' (code: {:#x})", strRemotePath, strLocalPath, hr);
             return hr;
         }
 
-        log::Verbose(_L_, L"Successfully copied %s to %s\r\n", strRemotePath.c_str(), strLocalPath.c_str());
+        spdlog::debug(L"Successfully copied '{}' to '{}'", strRemotePath, strLocalPath);
     }
     return S_OK;
 }
@@ -85,7 +81,7 @@ std::wstring FileCopyDownloadTask::GetCompletionCommandLine()
     std::wstring strCmdSpec;
     if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
     {
-        log::Error(_L_, hr, L"Failed to determine command\r\n");
+        spdlog::error("Failed to determine command (code: {:#x})", hr);
     }
     else
     {
@@ -130,7 +126,7 @@ HRESULT FileCopyDownloadTask::Finalise()
     std::wstring strCmdSpec;
     if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
     {
-        log::Error(_L_, hr, L"Failed to determine command\r\n");
+        spdlog::error("Failed to determine command");
     }
 
     std::wstring strCmdLine = GetCompletionCommandLine();
@@ -141,7 +137,7 @@ HRESULT FileCopyDownloadTask::Finalise()
     ZeroMemory(&si, sizeof(si));
     ZeroMemory(&pi, sizeof(pi));
 
-    log::Info(_L_, L"Running completion command \"%s\"\r\n", strCmdLine.c_str());
+    spdlog::info(L"Running completion command '{}'", strCmdLine);
     if (!CreateProcessW(
             strCmdSpec.c_str(),
             (LPWSTR)strCmdLine.c_str(),
@@ -154,15 +150,11 @@ HRESULT FileCopyDownloadTask::Finalise()
             &si,
             &pi))
     {
-        log::Error(
-            _L_,
-            hr = HRESULT_FROM_WIN32(GetLastError()),
-            L"Failed to create process %s with cmdLine: %s\r\n",
-            strCmdSpec.c_str(),
-            strCmdLine.c_str());
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to create process: '{}' with cmdLine: '{}' (code: {:#x})", strCmdSpec, strCmdLine, hr);
         return hr;
     }
-    log::Verbose(_L_, L"Successfully created completion process\r\n");
+    spdlog::debug(L"Successfully created completion process");
 
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
@@ -180,7 +172,7 @@ std::wstring FileCopyDownloadTask::GetRemoteFullPath(const std::wstring& strRemo
 std::shared_ptr<DownloadTask> FileCopyDownloadTask::GetRetryTask()
 {
     // SMB always makes it possible to attempt BITS over SMB
-    auto retval = std::make_shared<BITSDownloadTask>(_L_, m_strJobName.c_str());
+    auto retval = std::make_shared<BITSDownloadTask>(m_strJobName.c_str());
 
     retval->m_files = m_files;
     retval->m_Protocol = DownloadTask::BITSProtocol::BITS_SMB;

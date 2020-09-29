@@ -15,8 +15,9 @@
 
 #include "CommandExecute.h"
 
-#include "LogFileWriter.h"
 #include "ByteStream.h"
+
+#include <spdlog/spdlog.h>
 
 using namespace std;
 using namespace Concurrency;
@@ -25,9 +26,8 @@ using namespace Orc;
 
 static const NTSTATUS STATUS_PIPE_BROKEN = 0xC000014BL;
 
-ProcessRedirect::ProcessRedirect(logger pLog, ProcessInOut selection)
+ProcessRedirect::ProcessRedirect(ProcessInOut selection)
     : m_Status(Initialized)
-    , _L_(std::move(pLog))
     , m_Select(selection)
     , m_pBS(NULL)
     , m_bCloseStream(false)
@@ -39,15 +39,17 @@ ProcessRedirect::ProcessRedirect(logger pLog, ProcessInOut selection)
     m_ASyncIO.pThis = this;
 }
 
-struct ProcessRedirect_make_shared_enabler : public Orc::ProcessRedirect {
-	inline ProcessRedirect_make_shared_enabler(logger pLog, ProcessInOut selection) : Orc::ProcessRedirect(pLog, selection) {};
+struct ProcessRedirect_make_shared_enabler : public Orc::ProcessRedirect
+{
+    inline ProcessRedirect_make_shared_enabler(ProcessInOut selection)
+        : Orc::ProcessRedirect(selection) {};
 };
 
 
 std::shared_ptr<ProcessRedirect>
-ProcessRedirect::MakeRedirect(logger pLog, ProcessInOut selection, std::shared_ptr<ByteStream> pBS, bool bClose)
+ProcessRedirect::MakeRedirect(ProcessInOut selection, std::shared_ptr<ByteStream> pBS, bool bClose)
 {
-    auto retval = make_shared<ProcessRedirect_make_shared_enabler>(std::move(pLog), selection);
+    auto retval = make_shared<ProcessRedirect_make_shared_enabler>(selection);
 
     retval->m_pBS = pBS;
     retval->m_bCloseStream = bClose;
@@ -92,7 +94,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
             ULONGLONG ullBytesWritten = 0L;
             if (FAILED(hr = m_pBS->Write(m_ASyncIO.Buffer, dwNumberOfBytesTransfered, &ullBytesWritten)))
             {
-                log::Warning(_L_, hr, L"Failed to write incoming data");
+                spdlog::warn(L"Failed to write incoming data (code: {:#x})", hr);
             }
         }
         if (m_ReadHandle != INVALID_HANDLE_VALUE)
@@ -112,7 +114,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
                         Close();
                         break;
                     default:
-                        log::Error(_L_, HRESULT_FROM_WIN32(dwLastError), L"ReadFile from child failed\r\n");
+                        spdlog::error(L"ReadFile from child failed (code: {:#x})", HRESULT_FROM_WIN32(dwLastError));
                         break;
                 }
             }
@@ -137,7 +139,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
                         Close();
                         break;
                     default:
-                        log::Error(_L_, HRESULT_FROM_WIN32(dwLastError), L"ReadFile from child failed\r\n");
+                        spdlog::error("ReadFile from child failed (code: {:#x})", HRESULT_FROM_WIN32(dwLastError));
                         break;
                 }
             }

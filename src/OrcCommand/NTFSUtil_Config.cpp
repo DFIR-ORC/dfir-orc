@@ -10,7 +10,6 @@
 
 #include "Robustness.h"
 #include "ParameterCheck.h"
-#include "LogFileWriter.h"
 #include "TableOutputWriter.h"
 
 #include "NTFSUtil.h"
@@ -26,7 +25,7 @@ ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.output.TableKey.empty() ? L"Vss" : config.output.TableKey.c_str(), schemaitem);
+        config.output.TableKey.empty() ? L"Vss" : config.output.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 
@@ -115,7 +114,7 @@ HRESULT Main::CheckConfiguration()
 {
     if (config.bConfigure && config.bPrintDetails)
     {
-        log::Error(_L_, E_INVALIDARG, L"Cannot configure USN journal AND detail location\r\n");
+        spdlog::error("Cannot configure USN journal AND detail location");
         return E_INVALIDARG;
     }
 
@@ -123,17 +122,17 @@ HRESULT Main::CheckConfiguration()
     {
         if (config.strVolume.empty() && config.cmd == Main::USN)
         {
-            log::Error(_L_, E_INVALIDARG, L"No volume set to be configured\r\n");
+            spdlog::error("No volume set to be configured");
             return E_INVALIDARG;
         }
         if (config.dwlMaxSize == 0 && config.dwlMinSize == 0)
         {
-            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used (at least minsize or maxsize must be specified)\r\n");
+            spdlog::error("Invalid USN configuration values used (at least minsize or maxsize must be specified)");
             return E_INVALIDARG;
         }
         else if ((config.dwlMaxSize == 0 || config.dwlMinSize == 0) && config.dwlAllocDelta == 0)
         {
-            log::Error(_L_, E_INVALIDARG, L"Invalid USN configuration values used (allocation delta is missing)\r\n");
+            spdlog::error("Invalid USN configuration values used (allocation delta is missing)");
             return E_INVALIDARG;
         }
     }

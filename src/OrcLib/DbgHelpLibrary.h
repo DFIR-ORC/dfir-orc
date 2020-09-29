@@ -38,7 +38,7 @@ private:
     concurrency::critical_section m_cs;
 
 public:
-    DbgHelpLibrary(logger pLog);
+    DbgHelpLibrary();
 
     STDMETHOD(Initialize)();
 

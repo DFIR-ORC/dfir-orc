@@ -34,7 +34,7 @@ protected:
     HRESULT CommitBuffer(size_t dwPosition, size_t dwCommitSize);
 
 public:
-    MemoryStream(logger pLog);
+    MemoryStream();
     ~MemoryStream();
 
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };

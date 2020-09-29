@@ -38,6 +38,7 @@ std::string FlagsToString(DWORD flags, const FlagsDefinition flagValues[], CHAR 
             {
                 bFirst = false;
                 fmt::format_to(std::back_inserter(out), "{}", description);
+                continue;
             }
 
             fmt::format_to(std::back_inserter(out), "{}{}", separator, description);

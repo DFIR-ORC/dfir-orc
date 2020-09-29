@@ -12,6 +12,8 @@
 
 #include "VolumeReader.h"
 
+#include <spdlog/spdlog.h>
+
 using namespace Orc;
 
 inline auto IsCharLtrZero(DWORD C)
@@ -68,8 +70,8 @@ HRESULT MFTUtils::GetAttributeNRExtents(
 
         if (countRecord > PairDataLen)
         {
-            // bad record
-            log::Error(pVolReader->GetLogger(), HRESULT_FROM_WIN32(GetLastError()), L"Got a bad VCN/LCN record!\r\n");
+            HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Got a bad VCN/LCN record (code: {:#x})", hr);
             break;
         }
 
@@ -326,11 +328,9 @@ HRESULT MFTUtils::MultiSectorFixup(PFILE_RECORD_SEGMENT_HEADER pFRS, const std::
         {
             _ASSERT(false);
         }
-        log::Error(
-            pVolReader->GetLogger(),
-            hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            L"FILE Signature doesn't match in Fixup\r\n");
-        return hr;
+
+        spdlog::error("FILE Signature doesn't match in Fixup");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     LONG lBytesPerSector = pVolReader->GetBytesPerSector();
@@ -351,13 +351,8 @@ HRESULT MFTUtils::MultiSectorFixup(PFILE_RECORD_SEGMENT_HEADER pFRS, const std::
 
         if (*((WORD*)dest) != fixupsig)
         {
-            log::Error(
-                pVolReader->GetLogger(),
-                hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                L"FILE Fixup %hd does not match signature %hd\r\n",
-                *((WORD*)dest),
-                fixupsig);
-            return hr;
+            spdlog::error(L"FILE Fixup {} does not match signature {}", *((WORD*)dest), fixupsig);
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
         *(WORD*)dest = fixuparray[i];
         dest += lBytesPerSector;
@@ -383,15 +378,12 @@ HRESULT MFTUtils::MultiSectorFixup(
     {
         if (!memcmp((PCHAR)pHeader->Signature, "\0\0\0\0", 4))
         {
-            log::Verbose(
-                pVolReader->GetLogger(),
-                L"Failed to parse $INDEX_ALLOCATION header : invalid block (uninitialized)\r\n");
+            spdlog::debug("Failed to parse $INDEX_ALLOCATION header : invalid block (uninitialized)");
         }
         else
         {
-            log::Verbose(
-                pVolReader->GetLogger(),
-                L"Failed to parse $INDEX_ALLOCATION header (%C%C%C%C)\r\n",
+            spdlog::debug(
+                "Failed to parse $INDEX_ALLOCATION header ({}{}{}{})",
                 (CHAR)pHeader->Signature[0],
                 (CHAR)pHeader->Signature[1],
                 (CHAR)pHeader->Signature[2],
@@ -418,8 +410,7 @@ HRESULT MFTUtils::MultiSectorFixup(
 
         if (*((WORD*)dest) != fixupsig)
         {
-            log::Info(
-                pVolReader->GetLogger(), L"INDX Fixup %hd does not match signature %hd\r\n", *((WORD*)dest), fixupsig);
+            spdlog::info(L"INDX Fixup {} does not match signature {}", *((WORD*)dest), fixupsig);
             return E_FAIL;
         }
         *(WORD*)dest = fixuparray[i];

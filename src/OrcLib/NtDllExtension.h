@@ -19,15 +19,13 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API NtDllExtension : public ExtensionLibrary
 {
     friend class ExtensionLibrary;
 
 public:
-    NtDllExtension(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"ntdll", L"ntdll.dll", L"ntdll.dll") {};
+    NtDllExtension()
+        : ExtensionLibrary(L"ntdll", L"ntdll.dll", L"ntdll.dll") {};
     virtual ~NtDllExtension() {}
     STDMETHOD(Initialize)();
 

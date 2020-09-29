@@ -14,8 +14,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 enum ServiceStatus
 {
     Inexistent,
@@ -39,10 +37,9 @@ class ORCLIB_API Driver : public std::enable_shared_from_this<Driver>
     friend class DriverTermination;
 
 public:
-    Driver(logger pLog, std::shared_ptr<DriverMgmt> manager, std::wstring serviceName)
-        : m_manager(std::move(manager))
-        , m_strServiceName(std::move(serviceName))
-        , _L_(std::move(pLog))
+    Driver(std::shared_ptr<DriverMgmt> manager, std::wstring serviceName)
+        : m_strServiceName(std::move(serviceName))
+        , m_manager(std::move(manager))
     {
     }
 
@@ -58,7 +55,6 @@ public:
 private:
     HRESULT Install(const std::wstring& strX86DriverRef, const std::wstring& strX64DriverRef);
 
-    logger _L_;
     std::wstring m_strServiceName;
     std::wstring m_strDriverRef;
     std::wstring m_strDriverFileName;
@@ -73,9 +69,8 @@ class ORCLIB_API DriverMgmt : public std::enable_shared_from_this<DriverMgmt>
     friend class DriverTermination;
 
 public:
-    DriverMgmt(logger pLog, const std::wstring& strComputerName = L"")
-        : _L_(std::move(pLog))
-        , m_strComputerName(strComputerName) {};
+    DriverMgmt(const std::wstring& strComputerName = L"")
+        : m_strComputerName(strComputerName) {};
 
     DriverMgmt(DriverMgmt&& other) = default;
 
@@ -89,24 +84,19 @@ public:
     ~DriverMgmt() { Disconnect(); }
 
 private:
-    static HRESULT
-    InstallDriver(const logger& pLog, __in SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in LPCTSTR ServiceExe);
-    static HRESULT RemoveDriver(const logger& pLog, __in SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
-    static HRESULT StartDriver(const logger& pLog, __in SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
-    static HRESULT StopDriver(const logger& pLog, __in SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
-    static HRESULT GetDriverStatus(const logger& pLog, __in SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
-    static HRESULT
-    ManageDriver(const logger& pLog, __in LPCTSTR DriverName, __in LPCTSTR ServiceName, __in USHORT Function);
-    static HRESULT
-    SetupDriverName(const logger& pLog, WCHAR* DriverLocation, WCHAR* szDriverFileName, ULONG BufferLength);
+    static HRESULT InstallDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in LPCTSTR ServiceExe);
+    static HRESULT RemoveDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
+    static HRESULT StartDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
+    static HRESULT StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
+    static HRESULT GetDriverStatus(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
+    static HRESULT ManageDriver(LPCTSTR DriverName, __in LPCTSTR ServiceName, __in USHORT Function);
+    static HRESULT SetupDriverName(WCHAR* DriverLocation, WCHAR* szDriverFileName, ULONG BufferLength);
     static HRESULT GetDriverBinaryPathName(
-        const logger& pLog,
         __in SC_HANDLE SchSCManager,
         const WCHAR* DriverName,
         WCHAR* szDriverFileName,
         ULONG BufferLength);
 
-    logger _L_;
 
     SC_HANDLE m_SchSCManager = NULL;
     SC_HANDLE m_SchService = NULL;

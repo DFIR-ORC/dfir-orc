@@ -9,18 +9,19 @@
 
 #include "OrcLib.h"
 
-#include "RegistryWalker.h"
-#include "ByteStream.h"
-#include "CaseInsensitive.h"
-#include "FileFind.h"
-
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <iterator>
 #include <regex>
 
-#include <boost\algorithm\searching\boyer_moore.hpp>
+#include <boost/algorithm/searching/boyer_moore.hpp>
+
+#include "RegistryWalker.h"
+#include "ByteStream.h"
+#include "CaseInsensitive.h"
+#include "FileFind.h"
+#include "Output/Text/Tree.h"
 
 #pragma managed(push, off)
 
@@ -34,21 +35,22 @@ struct ValueTypeDefinition
     ValueType Type;
 };
 
-static const ValueTypeDefinition g_ValyeTypeDefinitions[] = {{L"_REG_NONE_", RegNone},
-                                                             {L"REG_SZ", RegSZ},
-                                                             {L"REG_EXPAND_SZ", ExpandSZ},
-                                                             {L"REG_BINARY", RegBin},
-                                                             {L"REG_DWORD", RegDWORD},
-                                                             {L"REG_DWORD_LITTLE_ENDIAN", RegDWORD},
-                                                             {L"REG_DWORD_BIG_ENDIAN", RegDWORDBE},
-                                                             {L"REG_LINK", RegLink},
-                                                             {L"REG_MULTI_SZ", RegMultiSZ},
-                                                             {L"REG_RESOURCE_LIST", RegResourceList},
-                                                             {L"REG_FULL_RESOURCE_DESCRIPTOR", RegResourceDescr},
-                                                             {L"REG_RESOURCE_REQUIREMENTS_LIST", RegResourceReqList},
-                                                             {L"REG_QWORD", RegQWORD},
-                                                             {L"REG_QWORD_LITTLE_ENDIAN", RegQWORD},
-                                                             {L"_REG_FIRST_INVALID_", RegMaxType}};
+static const ValueTypeDefinition g_ValueTypeDefinitions[] = {
+    {L"_REG_NONE_", RegNone},
+    {L"REG_SZ", RegSZ},
+    {L"REG_EXPAND_SZ", ExpandSZ},
+    {L"REG_BINARY", RegBin},
+    {L"REG_DWORD", RegDWORD},
+    {L"REG_DWORD_LITTLE_ENDIAN", RegDWORD},
+    {L"REG_DWORD_BIG_ENDIAN", RegDWORDBE},
+    {L"REG_LINK", RegLink},
+    {L"REG_MULTI_SZ", RegMultiSZ},
+    {L"REG_RESOURCE_LIST", RegResourceList},
+    {L"REG_FULL_RESOURCE_DESCRIPTOR", RegResourceDescr},
+    {L"REG_RESOURCE_REQUIREMENTS_LIST", RegResourceReqList},
+    {L"REG_QWORD", RegQWORD},
+    {L"REG_QWORD_LITTLE_ENDIAN", RegQWORD},
+    {L"_REG_FIRST_INVALID_", RegMaxType}};
 
 class ORCLIB_API RegFind
 {
@@ -322,10 +324,8 @@ public:
         std::vector<KeyNameMatch> MatchingKeys;
         std::vector<ValueNameMatch> MatchingValues;
 
-        HRESULT Write(const logger& pLog, ITableOutput& output);
-        HRESULT Write(
-            const logger& pLog,
-            IStructuredOutput& pWriter);
+        HRESULT Write(ITableOutput& output);
+        HRESULT Write(IStructuredOutput& pWriter);
     };
 
     typedef std::function<void(const std::vector<std::shared_ptr<Match>>& aMatch)> FoundKeyMatchCallback;
@@ -413,8 +413,6 @@ private:
         SearchTermUnordered>
         MatchesMap;
 
-    logger _L_;
-
     TermMap m_ExactKeyNameSpecs;
     TermMap m_ExactKeyPathSpecs;
     TermMap m_ExactValueNameSpecs;
@@ -491,10 +489,9 @@ private:
     static ValueType GetRegistryValueType(LPCWSTR szValueType);
 
 public:
-    RegFind(logger pLog)
-        : _L_(std::move(pLog)) {};
+    RegFind() {}
 
-    static std::shared_ptr<SearchTerm> GetSearchTermFromConfig(const ConfigItem& item, logger pLog = nullptr);
+    static std::shared_ptr<SearchTerm> GetSearchTermFromConfig(const ConfigItem& item);
 
     HRESULT AddRegFindFromConfig(const std::vector<ConfigItem>& items);
     HRESULT AddRegFindFromTemplate(const std::vector<ConfigItem>& items);
@@ -509,6 +506,32 @@ public:
     void ClearMatches() { m_Matches.clear(); }
 
     void PrintSpecs() const;
+
+    template <typename T>
+    void PrintSpecs(Orc::Text::Tree<T>& root) const
+    {
+        auto node = root.AddNode(L"Registry search details:");
+
+        for (const auto& e : m_ExactKeyNameSpecs)
+        {
+            node.Add(L"{}", e.second->GetDescription());
+        }
+
+        for (const auto& e : m_ExactKeyPathSpecs)
+        {
+            node.Add(L"{}", e.second->GetDescription());
+        }
+
+        for (const auto& e : m_ExactValueNameSpecs)
+        {
+            node.Add(L"{}", e.second->GetDescription());
+        }
+
+        for (const auto& e : m_Specs)
+        {
+            node.Add(L"{}", e->GetDescription());
+        }
+    }
 
     ~RegFind(void) {};
 };

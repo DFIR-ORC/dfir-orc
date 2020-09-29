@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "OrcCommand.h"
+#include "UtilitiesMain.h"
 
 #include <memory>
 #include <string>
@@ -16,28 +16,29 @@
 #include <set>
 #include <chrono>
 
-#include "TableOutput.h"
+#include <boost/logic/tribool.hpp>
 
+#include "OrcCommand.h"
 #include "CommandMessage.h"
 #include "CommandAgent.h"
-
-#include "UtilitiesMain.h"
-
 #include "ConfigFile.h"
-
 #include "WolfExecution.h"
+#include "TableOutput.h"
 
-#include <boost\logic\tribool.hpp>
+#include "Output/Console/Journal.h"
+#include "Utils/EnumFlags.h"
 
 #pragma managed(push, off)
 
-using namespace std;
+using namespace std::literals;
 
-namespace Orc::Command::Wolf {
+namespace Orc {
+namespace Command::Wolf {
+
+struct FileInformations;
 
 class ORCUTILS_API Main : public UtilitiesMain
 {
-
 public:
     enum WolfLauncherAction
     {
@@ -54,7 +55,7 @@ public:
         High
     };
 
-    enum WolfPowerState
+    enum class WolfPowerState
     {
         Unmodified = 0L,
         SystemRequired = ES_SYSTEM_REQUIRED,
@@ -62,6 +63,8 @@ public:
         UserPresent = ES_USER_PRESENT,
         AwayMode = ES_AWAYMODE_REQUIRED
     };
+
+    static std::wstring ToString(WolfPowerState value);
 
     enum WolfLogMode
     {
@@ -109,7 +112,7 @@ public:
         bool bRepeatOnce = false;
         bool bRepeatCreateNew = false;
         bool bRepeatOverwrite = false;
-        WolfExecution::Repeat RepeatBehavior = WolfExecution::NotSet;
+        WolfExecution::Repeat RepeatBehavior = WolfExecution::Repeat::NotSet;
 
         bool bBeepWhenDone = false;
         bool bAddConfigToArchive = true;
@@ -124,10 +127,11 @@ public:
 
         WolfPriority Priority = WolfPriority::Low;
 
-        std::set<wstring> strPowerStates;
+        std::set<std::wstring> strPowerStates;
 
         WolfPowerState PowerState = WolfPowerState::Unmodified;
         LocationSet::Altitude DefaultAltitude = LocationSet::Altitude::NotSet;
+        std::vector<std::shared_ptr<WolfExecution::Recipient>> m_Recipients;
     };
 
 public:
@@ -144,11 +148,10 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#WOLFLAUNCHER_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(std::move(pLog)) {};
+    Main()
+        : UtilitiesMain()
+        , m_journal(m_console) {};
 
-    // defined in WolfLauncher_Output.cpp
-    virtual void PrintHeader(LPCWSTR szToolName, LPCWSTR szDescription, LPCWSTR szVersion);
     void PrintUsage();
     void PrintFooter();
     void PrintParameters();
@@ -164,6 +167,8 @@ public:
     HRESULT Run();
 
 private:
+    OrcCommand::Output::Journal m_journal;
+
     Configuration config;
 
     std::vector<std::unique_ptr<WolfExecution>> m_wolfexecs;
@@ -175,18 +180,9 @@ private:
     std::unique_ptr<UploadMessage::UnboundedMessageBuffer> m_pUploadMessageQueue;
     std::unique_ptr<Concurrency::call<UploadNotification::Notification>> m_pUploadNotification;
 
-    std::vector<std::shared_ptr<WolfExecution::Recipient>> m_Recipients;
+    std::shared_ptr<WolfExecution::Recipient> GetRecipient(const std::wstring& strName);
 
-    std::shared_ptr<WolfExecution::Recipient> GetRecipient(const std::wstring& strName)
-    {
-        auto it = std::find_if(
-            begin(m_Recipients), end(m_Recipients), [&strName](const std::shared_ptr<WolfExecution::Recipient>& item) {
-                return !strName.compare(item->Name);
-            });
-        if (it != end(m_Recipients))
-            return *it;
-        return nullptr;
-    }
+    HRESULT GetOutputFileInformations(const WolfExecution& exec, FileInformations& fileInformations);
 
     HRESULT InitializeUpload(const OutputSpec::Upload& uploadspec);
     HRESULT UploadSingleFile(const std::wstring& fileName, const std::wstring& filePath);
@@ -194,7 +190,7 @@ private:
 
     std::shared_ptr<WolfExecution::Recipient> GetRecipientFromItem(const ConfigItem& item);
 
-    boost::logic::tribool SetWERDontShowUI(DWORD dwNewValue);  // returns DontShowUI previous value
+    HRESULT SetWERDontShowUI(DWORD dwNewValue, DWORD& dwOldValue);
 
     HRESULT CreateAndUploadOutline();
 
@@ -202,12 +198,19 @@ private:
 
     HRESULT SetDefaultAltitude()
     {
-        LocationSet::ConfigureDefaultAltitude(_L_, config.DefaultAltitude);
+        LocationSet::ConfigureDefaultAltitude(config.DefaultAltitude);
         return S_OK;
     }
 
     HRESULT Run_Execute();
+    HRESULT ExecuteKeyword(WolfExecution& execution);
     HRESULT Run_Keywords();
 };
-}  // namespace Orc::Command::Wolf
+
+}  // namespace Command::Wolf
+
+ENABLE_BITMASK_OPERATORS(Command::Wolf::Main::WolfPowerState);
+
+}  // namespace Orc
+
 #pragma managed(pop)

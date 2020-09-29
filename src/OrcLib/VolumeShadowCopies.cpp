@@ -12,8 +12,6 @@
 
 #include "Location.h"
 
-#include "LogFileWriter.h"
-
 #include "SystemDetails.h"
 
 #include "VssAPIExtension.h"
@@ -30,7 +28,7 @@
 
 using namespace Orc;
 
-const FlagsDefinition VolumeShadowCopies::g_VssFlags[] = {
+const Orc::FlagsDefinition VolumeShadowCopies::g_VssFlags[] = {
     {0x00000001, L"VSS_VOLSNAP_ATTR_PERSISTENT", L"The shadow copy is persistent across reboots."},
     {0x00000002, L"VSS_VOLSNAP_ATTR_NO_AUTORECOVERY", L"Auto-recovery is disabled for the shadow copy."},
     {0x00000004,
@@ -84,10 +82,10 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
 
     try
     {
-        m_vssapi = ExtensionLibrary::GetLibrary<VssAPIExtension>(_L_);
+        m_vssapi = ExtensionLibrary::GetLibrary<VssAPIExtension>();
         if (m_vssapi == nullptr)
         {
-            log::Error(_L_, E_FAIL, L"Failed to load VSSAPI dll, feature is not available\r\n");
+            spdlog::error("Failed to load VSSAPI dll, feature is not available");
             return E_FAIL;
         }
 
@@ -96,12 +94,12 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
         {
             if (hr == E_ACCESSDENIED)
             {
-                log::Warning(_L_, hr, L"Access denied when connecting to VSS Service (not running as admin?)\r\n");
+                spdlog::warn("Access denied when connecting to VSS Service (not running as admin?) (code: {:#x})", hr);
                 return hr;
             }
             else
             {
-                log::Error(_L_, hr, L"Failed to connect to VSS service\r\n");
+                spdlog::error("Failed to connect to VSS service (code: {:#x})", hr);
                 return hr;
             }
         }
@@ -110,22 +108,21 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
         {
             if ((hr == VSS_E_UNEXPECTED) && SystemDetails::IsWOW64())
             {
-                log::Warning(
-                    _L_,
-                    hr,
-                    L"Failed to initalise VSS service, most likely cause: you are running a 32 bits process on x64 "
-                    L"system\r\n");
+                spdlog::warn(
+                    "Failed to initalise VSS service, most likely cause: you are running a 32 bits process on x64 "
+                    "system (code: {:#x})",
+                    hr);
             }
             else
             {
-                log::Error(_L_, hr, L"Failed to initalise VSS service\r\n");
+                spdlog::error("Failed to initalise VSS service (code: {:#x})", hr);
             }
             return hr;
         }
 
         if (FAILED(hr = pVssBackup->SetContext(VSS_CTX_ALL)))
         {
-            log::Error(_L_, hr, L"Failed to set context on VSS service\r\n");
+            spdlog::error("Failed to set context on VSS service (code: {:#x})", hr);
             return hr;
         }
 
@@ -158,11 +155,7 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
                 }
                 else
                 {
-                    log::Warning(
-                        _L_,
-                        E_UNEXPECTED,
-                        L"Unexpected object type (%d) returned by the IVssEnumObject\r\n",
-                        Snaps[i].Type);
+                    spdlog::warn("Unexpected object type '{}' returned by the IVssEnumObject", Snaps[i].Type);
                 }
             }
             if (ulSnapReturned < ulSnapCount)
@@ -174,9 +167,9 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
         pEnum.Release();
         pVssBackup.Release();
     }
-    catch (...)
+    catch (const std::exception& e)
     {
-        log::Error(_L_, E_FAIL, L"System Exception during snapshot enumeration\r\n");
+        spdlog::error("System Exception during snapshot enumeration: {}", e.what());
         return E_FAIL;
     }
     return S_OK;

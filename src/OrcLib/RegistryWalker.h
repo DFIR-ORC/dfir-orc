@@ -19,8 +19,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 #pragma pack(push)
 #pragma pack(8)
 
@@ -283,8 +281,6 @@ private:
     std::function<void(const RegistryKey&)> m_RegistryKeyCallBack;
     std::function<void(const RegistryValue&)> m_RegistryValueCallback;
 
-    logger _L_;
-
     BYTE* FixOffset(DWORD offset) const { return (m_pHiveBuffer + (int)offset + 0x1000); };
 
     bool IsOffsetValid(DWORD dwOffset) const
@@ -327,8 +323,8 @@ private:
     void SetHiveIsNotComplete();
 
 public:
-    RegistryHive(logger pLog, const std::wstring& HiveName);
-    RegistryHive(logger pLog);
+    RegistryHive(const std::wstring& HiveName);
+    RegistryHive();
 
     HRESULT LoadHive(ByteStream& HiveStream);
     HRESULT Walk(

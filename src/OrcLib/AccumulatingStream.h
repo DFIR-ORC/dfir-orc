@@ -13,8 +13,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class TemporaryStream;
 
 class ORCLIB_API AccumulatingStream : public ChainingStream
@@ -25,8 +23,8 @@ private:
     DWORD m_dwBlockSize = 0;
 
 public:
-    AccumulatingStream(logger pLog)
-        : ChainingStream(std::move(pLog)) {};
+    AccumulatingStream()
+        : ChainingStream() {};
 
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
 

@@ -8,6 +8,7 @@
 #pragma once
 
 #include "OutputWriter.h"
+#include "Flags.h"
 #include "VssAPIExtension.h"
 
 #pragma warning(disable : 4091)
@@ -18,7 +19,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
 class Location;
 
 class ORCLIB_API VolumeShadowCopies
@@ -49,15 +49,9 @@ public:
     };
 
 private:
-    logger _L_;
     std::shared_ptr<VssAPIExtension> m_vssapi;
 
 public:
-    VolumeShadowCopies(logger pLog)
-        : _L_(std::move(pLog))
-    {
-    }
-
     HRESULT EnumerateShadows(std::vector<Shadow>& shadows);
 
     ~VolumeShadowCopies();

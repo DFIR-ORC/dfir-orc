@@ -14,8 +14,8 @@
 
 using namespace Orc;
 
-VHDVolumeReader::VHDVolumeReader(logger pLog, const WCHAR* szLocation)
-    : CompleteVolumeReader(std::move(pLog), szLocation)
+VHDVolumeReader::VHDVolumeReader(const WCHAR* szLocation)
+    : CompleteVolumeReader(szLocation)
 {
 }
 
@@ -23,23 +23,23 @@ HRESULT VHDVolumeReader::LoadDiskFooter()
 {
     HRESULT hr = E_FAIL;
 
-    FileStream stream(_L_);
+    FileStream stream;
 
     if (FAILED(hr = stream.ReadFrom(m_szLocation)))
     {
-        log::Error(_L_, hr, L"Failed to open location %s\r\n", m_szLocation);
+        spdlog::error(L"Failed to open location '{}' (code: {:#x})", m_szLocation, hr);
         return hr;
     }
     ULONGLONG ullNewPostion = 0LL;
     if (FAILED(hr = stream.SetFilePointer(-(LONGLONG)sizeof(Footer), FILE_END, &ullNewPostion)))
     {
-        log::Error(_L_, hr, L"Failed to move to VHD's footer %s\r\n", m_szLocation);
+        spdlog::error(L"Failed to move to VHD's footer '{}' (code: {:#x})", m_szLocation, hr);
         return hr;
     }
     ULONGLONG ullRead = 0L;
     if (FAILED(hr = stream.Read(&m_Footer, sizeof(Footer), &ullRead)))
     {
-        log::Error(_L_, hr, L"Failed to read VHD's footer %s\r\n", m_szLocation);
+        spdlog::error(L"Failed to read VHD's footer '{}' (code: {:#x})", m_szLocation, hr);
         return hr;
     }
     m_Footer.Features = _byteswap_ulong(m_Footer.Features);
@@ -77,13 +77,12 @@ std::shared_ptr<VolumeReader> VHDVolumeReader::GetVolumeReader()
     HRESULT hr = E_FAIL;
     switch (GetDiskType())
     {
-        case FixedHardDisk:
-        {
-            auto retval = std::make_shared<FixedVHDVolumeReader>(_L_, m_szLocation);
+        case FixedHardDisk: {
+            auto retval = std::make_shared<FixedVHDVolumeReader>(m_szLocation);
 
             if (FAILED(hr = retval->LoadDiskProperties()))
             {
-                log::Error(_L_, hr, L"Failed to load VHD properties\r\n");
+                spdlog::error(L"Failed to load VHD properties (code: {:#x})", hr);
                 return nullptr;
             }
             return retval;
@@ -97,7 +96,7 @@ VHDVolumeReader::~VHDVolumeReader(void) {}
 
 std::shared_ptr<VolumeReader> FixedVHDVolumeReader::DuplicateReader()
 {
-    auto retval = std::make_shared<FixedVHDVolumeReader>(_L_, m_szLocation);
+    auto retval = std::make_shared<FixedVHDVolumeReader>(m_szLocation);
 
     retval->m_Footer = m_Footer;
 
@@ -110,15 +109,15 @@ HRESULT FixedVHDVolumeReader::LoadDiskProperties()
 
     if (FAILED(hr = LoadDiskFooter()))
     {
-        log::Error(_L_, hr, L"Failed to load VHD disk footer\r\n");
+        spdlog::error(L"Failed to load VHD disk footer (code: {:#x})", hr);
         return hr;
     }
 
-    CDiskExtent extent(_L_, m_szLocation);
+    CDiskExtent extent(m_szLocation);
 
     if (FAILED(hr = extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        log::Error(_L_, hr, L"Failed to open vhd %s\r\n", m_szLocation);
+        spdlog::error(L"Failed to open vhd: '{}' (code: {:#x})", m_szLocation, hr);
         return hr;
     }
 

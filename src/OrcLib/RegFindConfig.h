@@ -23,11 +23,6 @@ class ConfigItem;
 class ORCLIB_API RegFindConfig
 {
 public:
-    RegFindConfig(logger pLog)
-        : _L_(std::move(pLog))
-    {
-    }
-
     HRESULT GetConfiguration(
         const ConfigItem& item,
         LocationSet& HivesLocation,
@@ -39,7 +34,6 @@ public:
     ~RegFindConfig(void);
 
 private:
-    logger _L_;
 };
 
 }  // namespace Orc

@@ -43,27 +43,27 @@ private:
 public:
     static HRESULT CheckCompatibleVersion();
 
-    BITSAgent(
-        logger pLog,
-        UploadMessage::ISource& msgSource,
-        UploadMessage::ITarget& msgTarget,
-        UploadNotification::ITarget& target)
-        : UploadAgent(std::move(pLog), msgSource, msgTarget, target) {};
+    BITSAgent(UploadMessage::ISource& msgSource, UploadMessage::ITarget& msgTarget, UploadNotification::ITarget& target)
+        : UploadAgent(msgSource, msgTarget, target) {};
 
-    virtual HRESULT Initialize();
+    HRESULT Initialize() override;
 
-    virtual HRESULT
-    UploadFile(const std::wstring& strLocalName, const std::wstring& strRemoteName, bool bDeleteWhenCopied);
+    HRESULT
+    UploadFile(
+        const std::wstring& strLocalName,
+        const std::wstring& strRemoteName,
+        bool bDeleteWhenCopied,
+        const std::shared_ptr<const UploadMessage>& request) override;
 
-    virtual HRESULT IsComplete(bool bReadyToExit);
+    HRESULT IsComplete(bool bReadyToExit) override;
 
-    virtual HRESULT Cancel();
+    HRESULT Cancel() override;
 
-    virtual HRESULT UnInitialize();
+    HRESULT UnInitialize() override;
 
-    virtual HRESULT CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdwFileSize = nullptr);
-    virtual std::wstring GetRemoteFullPath(const std::wstring& strRemoteName);
-    virtual std::wstring GetRemotePath(const std::wstring& strRemoteName);
+    HRESULT CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdwFileSize = nullptr) override;
+    std::wstring GetRemoteFullPath(const std::wstring& strRemoteName) override;
+    std::wstring GetRemotePath(const std::wstring& strRemoteName) override;
 
     ~BITSAgent();
 };

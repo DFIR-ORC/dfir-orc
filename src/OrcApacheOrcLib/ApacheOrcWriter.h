@@ -37,12 +37,11 @@ class Writer
     friend struct MakeSharedEnabler;
 
 public:
-    static std::shared_ptr<Writer> MakeNew(logger pLog, std::unique_ptr<Options>&& options);
+    static std::shared_ptr<Writer> MakeNew(std::unique_ptr<Options>&& options);
 
     Writer(const Writer&) = delete;
     Writer(Writer&& other) noexcept
     {
-        std::swap(_L_, other._L_);
         std::swap(m_pTermination, other.m_pTermination);
         wcscpy_s(m_szFileName, other.m_szFileName);
     }
@@ -127,11 +126,9 @@ public:
     virtual HRESULT WriteEndOfLine() override final;
 
 private:
-    Writer(logger pLog, std::unique_ptr<Options>&& options);
+    Writer(std::unique_ptr<Options>&& options);
 
     HRESULT AddColumnAndCheckNumbers();
-
-    logger _L_;
 
     std::unique_ptr<Options> m_Options;
     std::shared_ptr<WriterTermination> m_pTermination;

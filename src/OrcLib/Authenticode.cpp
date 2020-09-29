@@ -10,12 +10,12 @@
 
 #include "Authenticode.h"
 
+#include "Flags.h"
 #include "ByteStream.h"
 #include "MemoryStream.h"
 #include "CryptoHashStream.h"
 
 #include "libpehash-pe.h"
-#include "LogFileWriter.h"
 #include "SystemDetails.h"
 
 #include "WinTrustExtension.h"
@@ -42,9 +42,8 @@ const FlagsDefinition Authenticode::AuthenticodeStatusDefs[] = {
     {(DWORD)-1, NULL, NULL}};
 
 // TODO: failure should be handleable by caller
-Authenticode::Authenticode(const logger& pLog)
-    : m_wintrust(pLog)
-    , _L_(pLog)
+Authenticode::Authenticode()
+    : m_wintrust()
 {
     HRESULT hr = E_FAIL;
 
@@ -52,14 +51,14 @@ Authenticode::Authenticode(const logger& pLog)
     {
         if (FAILED(hr = m_wintrust.Load()))
         {
-            log::Warning(_L_, hr, L"Failed to load WinTrust\r\n");
+            spdlog::warn("Failed to load WinTrust (code: {:#x})", hr);
             return;
         }
     }
 
-    if (FAILED(hr=m_wintrust.CryptCATAdminAcquireContext(&m_hContext)))
+    if (FAILED(hr = m_wintrust.CryptCATAdminAcquireContext(&m_hContext)))
     {
-        log::Warning(_L_, hr, L"Failed to acquired context\r\n");
+        spdlog::warn("Failed to acquired context (code: {:#x})", hr);
         return;
     }
 
@@ -71,14 +70,14 @@ Authenticode::Authenticode(const logger& pLog)
         L"MY");
     if (m_hMachineStore == NULL)
     {
-        log::Warning(_L_, HRESULT_FROM_WIN32(GetLastError()), L"Failed to open cert store\r\n");
+        spdlog::warn("Failed to open cert store (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
         return;
     }
 }
 
-DWORD Authenticode::ExpectedHashSize(const logger& pLog)
+DWORD Authenticode::ExpectedHashSize()
 {
-    const auto wintrust = ExtensionLibrary::GetLibrary<WinTrustExtension>(pLog);
+    const auto wintrust = ExtensionLibrary::GetLibrary<WinTrustExtension>();
 
     WCHAR szPath[MAX_PATH];
 
@@ -96,7 +95,7 @@ DWORD Authenticode::ExpectedHashSize(const logger& pLog)
 
     HCATADMIN hContext = NULL;
 
-    if (auto hr=wintrust->CryptCATAdminAcquireContext(&hContext); FAILED(hr))
+    if (auto hr = wintrust->CryptCATAdminAcquireContext(&hContext); FAILED(hr))
     {
         return (DWORD)-1;
     }
@@ -104,7 +103,7 @@ DWORD Authenticode::ExpectedHashSize(const logger& pLog)
     BOOST_SCOPE_EXIT_END;
 
     DWORD cbHash = 0L;
-    if (auto hr=wintrust->CryptCATAdminCalcHashFromFileHandle(hFile, &cbHash, nullptr, 0); FAILED(hr))
+    if (auto hr = wintrust->CryptCATAdminCalcHashFromFileHandle(hFile, &cbHash, nullptr, 0); FAILED(hr))
     {
         return (DWORD)-1;
     }
@@ -174,7 +173,11 @@ HRESULT Authenticode::VerifyEmbeddedSignature(LPCWSTR szFileName, HANDLE hFile, 
 }
 
 HRESULT
-Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffer& hash, HCATINFO& hCatalog, AuthenticodeData& data)
+Authenticode::VerifySignatureWithCatalogs(
+    LPCWSTR szFileName,
+    const CBinaryBuffer& hash,
+    HCATINFO& hCatalog,
+    AuthenticodeData& data)
 {
     DBG_UNREFERENCED_PARAMETER(szFileName);
     CATALOG_INFO InfoStruct;
@@ -190,7 +193,7 @@ Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffe
 
     std::wstring MemberTag = hash.ToHex();
 
-    log::Verbose(_L_, L"The file is associated with catalog: '%s'.\r\n", InfoStruct.wszCatalogFile);
+    spdlog::debug(L"The file is associated with catalog: '{}'", InfoStruct.wszCatalogFile);
 
     // Fill in catalog info structure.
     WINTRUST_CATALOG_INFO WintrustCatalogStructure;
@@ -230,12 +233,12 @@ Authenticode::VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffe
 
     if (FAILED(ExtractCatalogSigners(InfoStruct.wszCatalogFile, data.Signers, data.SignersCAs, data.CertStores)))
     {
-        log::Verbose(_L_, L"Failed to extract signer information from catalog %s\r\n", InfoStruct.wszCatalogFile);
+        spdlog::debug(L"Failed to extract signer information from catalog '{}'", InfoStruct.wszCatalogFile);
     }
 
     if (FAILED(EvaluateCheck(lStatus, data)))
     {
-        log::Verbose(_L_, L"Failed to evaluate result of signature check %s\r\n", InfoStruct.wszCatalogFile);
+        spdlog::debug(L"Failed to evaluate result of signature check '{}'", InfoStruct.wszCatalogFile);
     }
 
     if (data.isSigned && data.bSignatureVerifies)
@@ -282,22 +285,22 @@ HRESULT Authenticode::EvaluateCheck(LONG lStatus, AuthenticodeData& data)
                 || TRUST_E_PROVIDER_UNKNOWN == dwLastError)
             {
                 // The file was not signed.
-                log::Verbose(_L_, L"The file is not signed.\r\n");
+                spdlog::debug("The file is not signed.");
                 hr = S_OK;
             }
             else
             {
                 // The signature was not valid or there was an error
                 // opening the file.
-                log::Verbose(_L_, L"An unknown error occurred trying to verify the signature.\r\n");
                 hr = HRESULT_FROM_WIN32(dwLastError);
+                spdlog::debug("An unknown error occurred trying to verify the signature (code: {:#x})", hr);
             }
             break;
 
         case TRUST_E_EXPLICIT_DISTRUST:
             // The hash that represents the subject or the publisher
             // is not allowed by the admin or user.
-            log::Verbose(_L_, L"The signature is present, but specifically disallowed.\r\n");
+            spdlog::debug("The signature is present, but specifically disallowed");
             data.isSigned = true;
             data.bSignatureVerifies = false;
             data.AuthStatus = AUTHENTICODE_SIGNED_NOT_VERIFIED;
@@ -306,7 +309,7 @@ HRESULT Authenticode::EvaluateCheck(LONG lStatus, AuthenticodeData& data)
 
         case TRUST_E_SUBJECT_NOT_TRUSTED:
             // The user clicked "No" when asked to install and run.
-            log::Verbose(_L_, L"The signature is present, but not trusted.\r\n");
+            spdlog::debug("The signature is present, but not trusted");
             data.isSigned = true;
             data.bSignatureVerifies = false;
             data.AuthStatus = AUTHENTICODE_SIGNED_NOT_VERIFIED;
@@ -320,13 +323,12 @@ HRESULT Authenticode::EvaluateCheck(LONG lStatus, AuthenticodeData& data)
             admin policy has disabled user trust. No signature,
             publisher or time stamp errors.
             */
-            log::Verbose(
-                _L_,
-                L"CRYPT_E_SECURITY_SETTINGS - The hash "
-                L"representing the subject or the publisher wasn't "
-                L"explicitly trusted by the admin and admin policy "
-                L"has disabled user trust. No signature, publisher "
-                L"or timestamp errors.\r\n");
+            spdlog::debug(
+                "CRYPT_E_SECURITY_SETTINGS - The hash "
+                "representing the subject or the publisher wasn't "
+                "explicitly trusted by the admin and admin policy "
+                "has disabled user trust. No signature, publisher "
+                "or timestamp errors.");
             data.isSigned = true;
             data.bSignatureVerifies = false;
             data.AuthStatus = AUTHENTICODE_SIGNED_NOT_VERIFIED;
@@ -337,7 +339,7 @@ HRESULT Authenticode::EvaluateCheck(LONG lStatus, AuthenticodeData& data)
             // The UI was disabled in dwUIChoice or the admin policy
             // has disabled user trust. lStatus contains the
             // publisher or time stamp chain error.
-            log::Verbose(_L_, L"Error is: 0x%lx.\r\n", lStatus);
+            spdlog::debug("Error is: {:#x}", lStatus);
             data.isSigned = false;
             data.bSignatureVerifies = false;
             data.AuthStatus = AUTHENTICODE_NOT_SIGNED;
@@ -361,6 +363,7 @@ HRESULT Authenticode::Verify(LPCWSTR pwszSourceFile, AuthenticodeData& data)
     if (INVALID_HANDLE_VALUE == hFile)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed CreateFile (code: {:#x})", hr);
         return hr;
     }
     BOOST_SCOPE_EXIT(hFile) { CloseHandle(hFile); }
@@ -371,15 +374,25 @@ HRESULT Authenticode::Verify(LPCWSTR pwszSourceFile, AuthenticodeData& data)
     // Get the size we need for our hash.
     DWORD HashSize = 0L;
     if (FAILED(hr = m_wintrust.CryptCATAdminCalcHashFromFileHandle(hFile, &HashSize, nullptr, 0L)))
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed CryptCATAdminCalcHashFromFileHandle (code: {:#x})", hr);
         return hr;
+    }
 
     // Allocate memory.
     if (!hash.SetCount(HashSize))
+    {
         return E_OUTOFMEMORY;
+    }
 
     // Actually calculate the hash
-	if (FAILED(hr = m_wintrust.CryptCATAdminCalcHashFromFileHandle(hFile, &HashSize, hash.GetData(), 0L)))
-		return hr;
+    if (FAILED(hr = m_wintrust.CryptCATAdminCalcHashFromFileHandle(hFile, &HashSize, hash.GetData(), 0L)))
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed CryptCATAdminCalcHashFromFileHandle (code: {:#x})", hr);
+        return hr;
+    }
 
     PE_Hashs hashs;
 
@@ -417,7 +430,7 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
 
     // Load data in a memory stream
 
-    auto memstream = std::make_shared<MemoryStream>(_L_);
+    auto memstream = std::make_shared<MemoryStream>();
     if (memstream == nullptr)
         return E_OUTOFMEMORY;
 
@@ -458,12 +471,12 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
     if (cChunks == -1)
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 
-    auto hashstream = std::make_shared<CryptoHashStream>(_L_);
+    auto hashstream = std::make_shared<CryptoHashStream>();
 
-    static DWORD dwRequestedHashSize = Authenticode::ExpectedHashSize(_L_);
+    static DWORD dwRequestedHashSize = Authenticode::ExpectedHashSize();
 
-    CryptoHashStream::Algorithm algs =
-        dwRequestedHashSize == BYTES_IN_SHA1_HASH ? CryptoHashStream::Algorithm::SHA1 : CryptoHashStream::Algorithm::SHA256;
+    CryptoHashStream::Algorithm algs = dwRequestedHashSize == BYTES_IN_SHA1_HASH ? CryptoHashStream::Algorithm::SHA1
+                                                                                 : CryptoHashStream::Algorithm::SHA256;
 
     hashstream->OpenToWrite(algs, nullptr);
 
@@ -498,7 +511,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
     {
         if (FAILED(hr = FindCatalogForHash(hashs.sha256, bIsCatalogSigned, hCatalog)))
         {
-            log::Verbose(_L_, L"Could not find a catalog for SHA256 hash\r\n");
+            spdlog::debug("Could not find a catalog for SHA256 hash (code: {:#x})", hr);
         }
         else if (bIsCatalogSigned)
         {
@@ -507,7 +520,8 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
 
             if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
             {
-                log::Warning(_L_, L"CryptCATAdminReleaseCatalogContext failed with: %x\r\n", GetLastError());
+                spdlog::warn(
+                    "Failed CryptCATAdminReleaseCatalogContext (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
             }
 
             return hr;
@@ -518,7 +532,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
     {
         if (FAILED(hr = FindCatalogForHash(hashs.sha1, bIsCatalogSigned, hCatalog)))
         {
-            log::Verbose(_L_, L"Could not find a catalog for SHA1 hash\r\n");
+            spdlog::debug("Could not find a catalog for SHA1 hash (code: {:#x})", hr);
         }
         else if (bIsCatalogSigned)
         {
@@ -527,7 +541,8 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
 
             if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
             {
-                log::Warning(_L_, L"CryptCATAdminReleaseCatalogContext failed with: %x\r\n", GetLastError());
+                spdlog::warn(
+                    "Failed CryptCATAdminReleaseCatalogContext (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
             }
 
             return hr;
@@ -538,7 +553,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
     {
         if (FAILED(hr = FindCatalogForHash(hashs.md5, bIsCatalogSigned, hCatalog)))
         {
-            log::Verbose(_L_, L"Could not find a catalog for MD5 hash\r\n");
+            spdlog::debug(L"Could not find a catalog for MD5 hash (code: {:#x})", hr);
         }
         else if (bIsCatalogSigned)
         {
@@ -547,7 +562,8 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
 
             if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
             {
-                log::Warning(_L_, L"CryptCATAdminReleaseCatalogContext failed with: %x\r\n", GetLastError());
+                spdlog::warn(
+                    "Failed CryptCATAdminReleaseCatalogContext (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
             }
 
             return hr;
@@ -588,7 +604,7 @@ HRESULT Orc::Authenticode::ExtractSignatureSize(const CBinaryBuffer& signature, 
             NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"Failed CryptQueryObject");
+        spdlog::error(L"Failed CryptQueryObject (code: {:#x})", hr);
         return hr;
     }
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
@@ -601,7 +617,7 @@ HRESULT Orc::Authenticode::ExtractSignatureSize(const CBinaryBuffer& signature, 
         if (!CryptMsgGetParam(hMsg, CMSG_CONTENT_PARAM, 0, NULL, &dwBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            log::Error(_L_, hr, L"Failed to query authenticode content info");
+            spdlog::error(L"Failed to query authenticode content info (code: {:#x})", hr);
             return hr;
         }
         cbSize = dwBytes;
@@ -635,7 +651,9 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
             &hMsg,
             NULL))
     {
-        return hr = HRESULT_FROM_WIN32(GetLastError());
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CryptQueryObject (code: {:#x})", hr);
+        return hr;
     }
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
     BOOST_SCOPE_EXIT_END;
@@ -646,7 +664,8 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
         DWORD dwBytes = 0L;
         if (!CryptMsgGetParam(hMsg, CMSG_CONTENT_PARAM, 0, NULL, &dwBytes))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to query authenticode content info\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to query authenticode content info (code: {:#x})", hr);
             return hr;
         }
         CBinaryBuffer msgContent;
@@ -654,15 +673,16 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
 
         if (!CryptMsgGetParam(hMsg, CMSG_CONTENT_PARAM, 0, msgContent.GetData(), &dwBytes))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to get authenticode content info\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to get authenticode content info (code: {:#x})", hr);
             return hr;
         }
 
         dwBytes = 0L;
         if (!CryptMsgGetParam(hMsg, CMSG_INNER_CONTENT_TYPE_PARAM, 0, NULL, &dwBytes))
         {
-            log::Error(
-                _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to query authenticode content type info\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to query authenticode content type info (code: {:#x})", hr);
             return hr;
         }
 
@@ -676,10 +696,8 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
                 NULL,
                 &dwBytes))
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Failed to decode authenticode SPC_INDIRECT_DATA info length\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to decode authenticode SPC_INDIRECT_DATA info length (code: {:#x})", hr);
             return hr;
         }
 
@@ -696,10 +714,8 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
                 decodedIndirectData.GetData(),
                 &dwBytes))
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Failed to decode authenticode SPC_INDIRECT_DATA info\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to decode authenticode SPC_INDIRECT_DATA info (code: {:#x})", hr);
             return hr;
         }
         PSPC_INDIRECT_DATA_CONTENT pIndirectData = (PSPC_INDIRECT_DATA_CONTENT)decodedIndirectData.GetData();
@@ -746,7 +762,9 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
             &hMsg,
             NULL))
     {
-        return hr = HRESULT_FROM_WIN32(GetLastError());
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CryptQueryObject (code: {:#x})", hr);
+        return hr;
     }
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
     BOOST_SCOPE_EXIT_END;
@@ -757,7 +775,8 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
         DWORD dwBytes = 0L;
         if (!CryptMsgGetParam(hMsg, CMSG_SIGNER_INFO_PARAM, 0, NULL, &dwBytes))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to query authenticode content info\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to query authenticode content info (code: {:#x})", hr);
             return hr;
         }
         CBinaryBuffer msgContent;
@@ -765,7 +784,8 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
 
         if (!CryptMsgGetParam(hMsg, CMSG_SIGNER_INFO_PARAM, 0, msgContent.GetData(), &dwBytes))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to get authenticode content info\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to get authenticode content info (code: {:#x})", hr);
             return hr;
         }
 
@@ -788,7 +808,8 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
                         NULL,
                         &dwSize))
                 {
-                    log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptDecodeObject failed\n");
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::error("Failed CryptDecodeObject (code: {:#x})", hr);
                     return hr;
                 }
 
@@ -807,7 +828,8 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
                         buffer.GetData(),
                         &dwSize))
                 {
-                    log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptDecodeObject failed\n");
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::error("Failed CryptDecodeObject (code: {:#x})", hr);
                     return hr;
                 }
 
@@ -830,7 +852,8 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
                                 (PVOID)&data.Timestamp,
                                 &dwData))
                         {
-                            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptDecodeObject failed\n");
+                            hr = HRESULT_FROM_WIN32(GetLastError());
+                            spdlog::error("Failed CryptDecodeObject (code: {:#x})", hr);
                             break;
                         }
                         break;  // Break from for loop.
@@ -854,10 +877,15 @@ HRESULT Authenticode::ExtractNestedSignature(
 
     if (!CryptMsgGetParam(hMsg, CMSG_SIGNER_UNAUTH_ATTR_PARAM, dwSignerIndex, NULL, &cbNeeded))
     {
-        if (GetLastError() == CRYPT_E_ATTRIBUTES_MISSING)  // There is no nested signature information to retrieve
-            return S_OK;
+        hr = HRESULT_FROM_WIN32(GetLastError());
 
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to retrieve nested signature size\r\n");
+        if (hr == CRYPT_E_ATTRIBUTES_MISSING)
+        {
+            // There is no nested signature information to retrieve
+            return S_OK;
+        }
+
+        spdlog::error("Failed to retrieve nested signature size (code: {:#x})", hr);
         return hr;
     }
 
@@ -866,7 +894,8 @@ HRESULT Authenticode::ExtractNestedSignature(
 
     if (!CryptMsgGetParam(hMsg, CMSG_SIGNER_UNAUTH_ATTR_PARAM, dwSignerIndex, crypt_attributes.GetData(), &cbNeeded))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to retrieve nested signature\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to retrieve nested signature (code: {:#x})", hr);
         return hr;
     }
 
@@ -881,7 +910,7 @@ HRESULT Authenticode::ExtractNestedSignature(
 
         if (!strcmp(pAttr.pszObjId, szOID_NESTED_SIGNATURE))
         {
-            log::Debug(_L_, L"Found one nested signature!!!\r\n");
+            spdlog::trace("Found one nested signature");
 
             DWORD dwEncoding, dwContentType, dwFormatType;
             HCERTSTORE hCertStore = NULL;
@@ -904,7 +933,9 @@ HRESULT Authenticode::ExtractNestedSignature(
                     &hMsg,
                     NULL))
             {
-                return hr = HRESULT_FROM_WIN32(GetLastError());
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::error("Failed CryptDecodeObject (code: {:#x})", hr);
+                return hr;
             }
             BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
             BOOST_SCOPE_EXIT_END;
@@ -924,12 +955,11 @@ HRESULT Authenticode::ExtractNestedSignature(
 
                 dwSignerIndex++;
             }
-            if (GetLastError() != CRYPT_E_INVALID_INDEX)
+
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            if (hr != CRYPT_E_INVALID_INDEX)
             {
-                log::Error(
-                    _L_,
-                    hr = HRESULT_FROM_WIN32(GetLastError()),
-                    L"Failed to extract signer information from blob\r\n");
+                spdlog::error("Failed to extract signer information from blob (code: {:#x})", hr);
                 return hr;
             }
         }
@@ -967,7 +997,9 @@ HRESULT Authenticode::ExtractSignatureSigners(
             &hMsg,
             NULL))
     {
-        return hr = HRESULT_FROM_WIN32(GetLastError());
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CryptDecodeObject (code: {:#x})", hr);
+        return hr;
     }
 
     certStores.push_back(hCertStore);
@@ -990,7 +1022,8 @@ HRESULT Authenticode::ExtractSignatureSigners(
     }
     if (GetLastError() != CRYPT_E_INVALID_INDEX)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to extract signer information from blob\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to extract signer information from blob (code: {:#x})", hr);
         return hr;
     }
 
@@ -1019,7 +1052,8 @@ HRESULT Authenticode::ExtractSignatureSigners(
                 NULL,
                 &pChain))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to obtain certificate chain\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to obtain certificate chain (code: {:#x})", hr);
             break;
         }
         BOOST_SCOPE_EXIT(pChain) { CertFreeCertificateChain(pChain); }
@@ -1064,11 +1098,8 @@ HRESULT Authenticode::ExtractCatalogSigners(
             &hMsg,
             NULL))
     {
-        log::Error(
-            _L_,
-            hr = HRESULT_FROM_WIN32(GetLastError()),
-            L"Failed to extract signature information from catalog %s\r\n",
-            szCatalogFile);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to extract signature information from catalog '{}' (code: {:#x})", szCatalogFile, hr);
         return hr;
     }
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
@@ -1087,11 +1118,8 @@ HRESULT Authenticode::ExtractCatalogSigners(
     }
     if (GetLastError() != CRYPT_E_INVALID_INDEX)
     {
-        log::Error(
-            _L_,
-            hr = HRESULT_FROM_WIN32(GetLastError()),
-            L"Failed to extract signer information from catalog %s\r\n",
-            szCatalogFile);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to extract signer information from catalog '{}' (code: {:#x})", szCatalogFile, hr);
         return hr;
     }
 
@@ -1112,7 +1140,8 @@ HRESULT Authenticode::ExtractCatalogSigners(
 
         if (!CertGetCertificateChain(HCCE_LOCAL_MACHINE, signer, NULL, NULL, &params, 0L, NULL, &pChain))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to obtain certificate chain\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to obtain certificate chain (code: {:#x})", hr);
             return hr;
         }
         BOOST_SCOPE_EXIT(pChain) { CertFreeCertificateChain(pChain); }
@@ -1157,8 +1186,10 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
 
             if (FAILED(hr = ExtractSignatureHash(signature, data)))
             {
-                log::Error(
-                    _L_, hr, L"Failed to extract hash from signature in the security directory of %s\r\n", szFileName);
+                spdlog::error(
+                    L"Failed to extract hash from signature in the security directory of '{}' (code: {:#x})",
+                    szFileName,
+                    hr);
             }
             if (hashs.md5.GetCount() == data.SignedHashs.md5.GetCount())
             {
@@ -1201,11 +1232,7 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
             }
             else
             {
-                log::Warning(
-                    _L_,
-                    E_UNEXPECTED,
-                    L"None of the available hashs could be used to compare to the hash in the signature: signature "
-                    L"could not be verified\r\n");
+                spdlog::warn("Signature could not be verified");
                 data.bSignatureVerifies = false;
             }
 
@@ -1213,20 +1240,20 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
 
             if (FAILED(hr = ExtractSignatureTimeStamp(signature, data)))
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Failed to extract timestamp information from signature in the security directory of %s\r\n",
-                    szFileName);
+                spdlog::error(
+                    L"Failed to extract timestamp information from signature in the security directory of '{}' (code: "
+                    L"{:#x})",
+                    szFileName,
+                    hr);
             }
 
-            if (FAILED(hr = ExtractSignatureSigners(signature, data.Timestamp, data.Signers, data.SignersCAs, data.CertStores)))
+            hr = ExtractSignatureSigners(signature, data.Timestamp, data.Signers, data.SignersCAs, data.CertStores);
+            if (FAILED(hr))
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Failed to extract signer information from signature in the security directory of %s\r\n",
-                    szFileName);
+                spdlog::error(
+                    L"Failed to extract signer info from signature from security directory of '{}' (code: {:#x})",
+                    szFileName,
+                    hr);
             }
         }
 
@@ -1261,8 +1288,10 @@ HRESULT Orc::Authenticode::SignatureSize(LPCWSTR szFileName, const CBinaryBuffer
             DWORD dwSignatureSize = 0L;
             if (FAILED(hr = ExtractSignatureSize(signature, dwSignatureSize)))
             {
-                log::Error(
-                    _L_, hr, L"Failed to extract hash from signature in the security directory of '%s'", szFileName);
+                spdlog::error(
+                    L"Failed to extract hash from signature in the security directory of '{}' (code: {:#x})",
+                    szFileName,
+                    hr);
             }
             else
                 cbSize += dwSignatureSize;

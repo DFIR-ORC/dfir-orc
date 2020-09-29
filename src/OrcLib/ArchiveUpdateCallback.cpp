@@ -24,8 +24,6 @@
 
 #include "ArchiveUpdateCallback.h"
 
-#include "LogFileWriter.h"
-
 using namespace std;
 using namespace lib7z;
 
@@ -51,14 +49,12 @@ private:
 }  // namespace
 
 ArchiveUpdateCallback::ArchiveUpdateCallback(
-    logger pLog,
     Archive::ArchiveItems& items,
     Archive::ArchiveIndexes& indexes,
     bool bFinal,
     Archive::ArchiveCallback pCallback,
     const std::wstring& pwd)
     : m_refCount(0)
-    , _L_(std::move(pLog))
     , m_Items(items)
     , m_curIndex(0L)
     , m_curIndexInArchive((UInt32)indexes.size())
@@ -380,12 +376,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
     if (operationResult != NArchive::NUpdate::NOperationResult::kOK)
     {
         HRESULT hr = E_FAIL;
-        log::Error(
-            _L_,
-            hr,
-            L"Failed operation on: %s (code: %d)\r\n",
-            m_Items[m_curIndex].NameInArchive.c_str(),
-            operationResult);
+        spdlog::error(L"Failed operation on: '{}' (code: {:#x})", m_Items[m_curIndex].NameInArchive, operationResult);
         if (item.m_archivedCallback)
         {
             item.m_archivedCallback(hr);
@@ -393,7 +384,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
         }
     }
 
-    log::Verbose(_L_, L"INFO: Archive of %s succeed\r\n", m_Items[m_curIndex].NameInArchive.c_str());
+    spdlog::debug(L"Archive of '{}' succeed", m_Items[m_curIndex].NameInArchive);
 
     item.Index = m_curIndexInArchive;
     m_Indexes[m_curIndexInArchive] = m_curIndex;

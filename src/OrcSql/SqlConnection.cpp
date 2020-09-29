@@ -33,7 +33,7 @@ STDMETHODIMP Connection::Initialize()
     {
         if (FAILED(hr = LoadSqlNativeClient()))
         {
-            log::Error(_L_, hr, L"Failed to load SQL Native Client (path=%s)\r\n", L"SQLNCLI11.DLL");
+            spdlog::error(L"Failed to load SQL Native Client SQLNCLI11.DLL (code: {:#x})", hr);
             return hr;
         }
         bSqlNativeInitialized = true;
@@ -47,7 +47,7 @@ STDMETHODIMP Connection::Connect(const std::wstring& strConnString)
 
     if (FAILED(hr = Initialize()))
     {
-        log::Error(_L_, hr, L"Failed to initialize SQL connection\r\n");
+        spdlog::error(L"Failed to initialize SQL connection (code: {:#x})", hr);
         return hr;
     }
 
@@ -134,7 +134,7 @@ STDMETHODIMP Connection::Connect(const std::wstring& strConnString)
         m_bIsConnected = true;
     }
 
-    log::Verbose(_L_, L"VERBOSE: Successfully connected to SQL DSN %s\r\n", strConnString.c_str());
+    spdlog::debug(L"Successfully connected to SQL DSN: {}", strConnString);
     return S_OK;
 }
 
@@ -322,7 +322,7 @@ HRESULT Connection::TruncateTable(const std::wstring& strTableName)
 
     if (!IsTablePresent(strTableName))
     {
-        log::Warning(_L_, E_UNEXPECTED, L"Cannot truncate inexistant table %s\r\n", strTableName.c_str());
+        spdlog::warn(L"Cannot truncate inexistant table '{}'", strTableName);
         return S_OK;
     }
 
@@ -460,28 +460,25 @@ STDMETHODIMP Connection::LoadSqlNativeClient(LPCWSTR szSqlLib, LPCWSTR szODBCLib
     hSqlNcli = LoadLibraryEx(szSqlLib, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
     if (hSqlNcli == NULL)
     {
-        log::Error(
-            _L_,
-            hr = HRESULT_FROM_WIN32(GetLastError()),
-            L"Failed to load sql native client using %s path\r\n",
-            szSqlLib);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to load sql native client using '{}' (code: {:#x})", szSqlLib, hr);
         return hr;
     }
     else
     {
-        log::Verbose(_L_, L"SqlWriter: Loaded %s successfully\r\n", szSqlLib);
+        spdlog::debug(L"SqlWriter: Loaded '{}' successfully", szSqlLib);
     }
 
     hODBC = LoadLibraryEx(szODBCLib, NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
     if (hODBC == NULL)
     {
-        log::Error(
-            _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to load ODBC client using %s path\r\n", szODBCLib);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to load ODBC client using '{}' (code: {:#x})", szODBCLib, hr);
         return hr;
     }
     else
     {
-        log::Verbose(_L_, L"SqlWriter: Loaded %s successfully\r\n", szODBCLib);
+        spdlog::debug(L"SqlWriter: Loaded '{}' successfully", szODBCLib);
     }
 
 #define LOAD_SQLENTRY(Module, Type, Variable, Name)                                                                    \
@@ -489,7 +486,7 @@ STDMETHODIMP Connection::LoadSqlNativeClient(LPCWSTR szSqlLib, LPCWSTR szODBCLib
     if (Variable == NULL)                                                                                              \
     {                                                                                                                  \
         hr = HRESULT_FROM_WIN32(GetLastError());                                                                       \
-        log::Error(_L_, hr, L"Could not resolve %S\r\n", Name);                                                        \
+        spdlog::error("Could not resolve: '{}' (code: {:#x})", Name, hr);                                              \
         FreeLibrary(hSqlNcli);                                                                                         \
         hSqlNcli = NULL;                                                                                               \
         FreeLibrary(hODBC);                                                                                            \
@@ -514,7 +511,7 @@ STDMETHODIMP Connection::LoadSqlNativeClient(LPCWSTR szSqlLib, LPCWSTR szODBCLib
 
 #undef LOAD_SQLENTRY
 
-    log::Verbose(_L_, L"SqlWriter: Initialized successfully\r\n");
+    spdlog::debug(L"SqlWriter: Initialized successfully");
     bSqlNativeInitialized = true;
 
     return S_OK;
@@ -536,7 +533,7 @@ void Connection::HandleDiagnosticRecord(SQLSMALLINT hType, RETCODE RetCode)
         hHandle = m_henv;
     else
     {
-        log::Error(_L_, E_INVALIDARG, L"Invalid hType provided, must be either SQL_HANDLE_DBC or SQL_HANDLE_ENV\r\n");
+        spdlog::error(L"Invalid hType provided, must be either SQL_HANDLE_DBC or SQL_HANDLE_ENV");
         return;
     }
 
@@ -550,7 +547,7 @@ void Connection::HandleDiagnosticRecord(SQLHANDLE Handle, SQLSMALLINT hType, RET
 
     if (RetCode == SQL_INVALID_HANDLE)
     {
-        log::Error(_L_, E_FAIL, L"Invalid SqlWriter handle!\r\n");
+        spdlog::error(L"Invalid SqlWriter handle");
         return;
     }
 
@@ -575,15 +572,14 @@ void Connection::HandleDiagnosticRecord(SQLHANDLE Handle, SQLSMALLINT hType, RET
         {
             if (RetCode != SQL_SUCCESS && RetCode != SQL_SUCCESS_WITH_INFO)
             {
-                log::Error(_L_, E_FAIL, L"[%5.5s] %s (%d)\n", wszState, wszMessage, iError);
+                spdlog::error(E_FAIL, L"[{}] {} ({})", wszState, wszMessage, iError);
             }
             else
             {
-                log::Verbose(_L_, L"INFO: [%5.5s] %s (%d)\n", wszState, wszMessage, iError);
+                spdlog::debug(L"[{}] {} ({})", wszState, wszMessage, iError);
             }
         }
     }
-    return;
 }
 
 STDMETHODIMP Connection::Disconnect()

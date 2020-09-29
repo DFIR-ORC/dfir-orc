@@ -12,16 +12,14 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API TeeStream : public ByteStream
 {
 protected:
     std::vector<std::shared_ptr<ByteStream>> m_Streams;
 
 public:
-    TeeStream(logger pLog)
-        : ByteStream(std::move(pLog)) {};
+    TeeStream()
+        : ByteStream() {};
 
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
 

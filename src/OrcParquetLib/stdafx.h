@@ -67,8 +67,9 @@
 
 #include <eh.h>
 
+#include <spdlog/spdlog.h>
+
 #include "OrcLib.h"
-#include "LogFileWriter.h"
 #include "BinaryBuffer.h"
 
 #include "ParquetDefinitions.h"

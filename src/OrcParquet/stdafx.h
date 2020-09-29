@@ -45,5 +45,4 @@
 #include <atlbase.h>
 
 #include "OrcLib.h"
-#include "LogFileWriter.h"
 #include "BinaryBuffer.h"

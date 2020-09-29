@@ -9,7 +9,6 @@
 
 #include "FatFileEntry.h"
 
-#include "LogFileWriter.h"
 #include "BinaryBuffer.h"
 
 #include <memory>
@@ -25,17 +24,14 @@ TEST_CLASS(FatFileEntryTest)
 
 private:
     static const DWORD g_TestFileSize = 10240;
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(FatFileEntryBasicTest)
     {

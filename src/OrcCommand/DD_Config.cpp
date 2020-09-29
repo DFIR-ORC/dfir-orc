@@ -14,8 +14,6 @@
 
 #include "TableOutputWriter.h"
 
-#include "LogFileWriter.h"
-
 using namespace Orc;
 using namespace Orc::Command::DD;
 
@@ -28,7 +26,7 @@ ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.output.TableKey.empty() ? L"DDTable" : config.output.TableKey.c_str(), schemaitem);
+        config.output.TableKey.empty() ? L"DDTable" : config.output.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 
@@ -91,12 +89,12 @@ HRESULT Main::CheckConfiguration()
     // Here we check to tool's provided configuration and adjust (if need be) some parameters to default values
     if (config.strIF.empty())
     {
-        log::Error(_L_, E_INVALIDARG, L"No if parameter passed\r\n");
+        spdlog::error("No if parameter passed");
         return E_INVALIDARG;
     }
     if (config.OF.empty())
     {
-        log::Error(_L_, E_INVALIDARG, L"No if parameter passed\r\n");
+        spdlog::error("No if parameter passed");
         return E_INVALIDARG;
     }
 

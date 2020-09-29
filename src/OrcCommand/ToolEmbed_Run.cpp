@@ -10,45 +10,40 @@
 
 #include "ToolEmbed.h"
 
-#include "Robustness.h"
+#include <boost/scope_exit.hpp>
 
+#include "Robustness.h"
 #include "StructuredOutputWriter.h"
 #include "EmbeddedResource.h"
 #include "ConfigFileReader.h"
-#include "LogFileWriter.h"
-
 #include "ConfigFile_ToolEmbed.h"
 
-#include "boost\scope_exit.hpp"
-
-using namespace std;
-
-using namespace Orc;
 using namespace Orc::Command::ToolEmbed;
+using namespace Orc;
 
 HRESULT Main::WriteEmbedConfig(
-    const std::wstring& strOutputFile,
-    const std::wstring& strMothership,
+    const std::wstring& outputPath,
+    const std::wstring& mothershipPath,
     const std::vector<EmbeddedResource::EmbedSpec>& values)
 {
     OutputSpec outputEmbedFile;
 
     outputEmbedFile.Type = OutputSpec::Kind::StructuredFile;
-    outputEmbedFile.Path = strOutputFile;
+    outputEmbedFile.Path = outputPath;
     outputEmbedFile.OutputEncoding = OutputSpec::Encoding::UTF8;
 
-    auto writer = StructuredOutputWriter::GetWriter(_L_, outputEmbedFile, nullptr);
+    auto writer = StructuredOutputWriter::GetWriter(outputEmbedFile, nullptr);
 
     if (writer == nullptr)
     {
-        log::Error(_L_, E_FAIL, L"Failed to create structured output writer for %s\r\n", strOutputFile.c_str());
+        spdlog::error(L"Failed to create structured output writer for '{}'", outputPath);
         return E_FAIL;
     }
 
     writer->BeginElement(L"toolembed");
 
     writer->BeginElement(L"input");
-    writer->Write(strMothership.c_str());
+    writer->Write(mothershipPath.c_str());
     writer->EndElement(L"input");
 
     for (const auto& item : values)
@@ -95,33 +90,29 @@ HRESULT Main::Run_Embed()
     // First, create the output file.
     if (!CopyFile(config.strInputFile.c_str(), config.Output.Path.c_str(), FALSE))
     {
-        log::Error(
-            _L_,
-            HRESULT_FROM_WIN32(GetLastError()),
-            L"Failed to copy file %s into %s\n",
-            config.strInputFile.c_str(),
-            config.Output.Path.c_str());
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to copy file '{}' into '{}' (code: {:#x})", config.strInputFile, config.Output.Path, hr);
         return hr;
     }
 
-    log::Info(_L_, L"\r\nUpdating resources in %s\r\n", config.Output.Path.c_str());
+    m_console.Print(L"Updating resources in '{}'", config.Output.Path);
 
-    if (FAILED(hr = EmbeddedResource::UpdateResources(_L_, config.Output.Path, config.ToEmbed)))
+    hr = EmbeddedResource::UpdateResources(config.Output.Path, config.ToEmbed);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to update resources in file %s\r\n", config.Output.Path.c_str());
+        spdlog::error(L"Failed to update resources in file '{}' (code: {:#x})", config.Output.Path, hr);
+
         if (!DeleteFile(config.Output.Path.c_str()))
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Failed to delete failed output file %s\n",
-                config.Output.Path.c_str());
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Failed to delete failed output file '{}' (code: {:#x})", config.Output.Path, hr);
             return hr;
         }
+
         return hr;
     }
 
-    log::Info(_L_, L"Done updating resources in %s\r\n\r\n", config.Output.Path.c_str());
+    spdlog::info(L"Done updating resources in '{}'", config.Output.Path);
 
     return S_OK;
 }
@@ -139,37 +130,42 @@ HRESULT Main::Run_Dump()
 
     std::vector<EmbeddedResource::EmbedSpec> values;
 
-    if (FAILED(hr = EmbeddedResource::EnumValues(_L_, config.strInputFile, values)))
+    hr = EmbeddedResource::EnumValues(config.strInputFile, values);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to enumerate values from %s\n", config.strInputFile.c_str());
-        return hr;
-    }
-    if (FAILED(hr = EmbeddedResource::EnumBinaries(_L_, config.strInputFile, values)))
-    {
-        log::Error(_L_, hr, L"Failed to enumerate binaries from %s\n", config.strInputFile.c_str());
+        spdlog::error(L"Failed to enumerate values from '{}' (code: {:#x})", config.strInputFile, hr);
         return hr;
     }
 
-    if (FAILED(hr = EmbeddedResource::ExpandArchivesAndBinaries(_L_, L".", values)))
+    hr = EmbeddedResource::EnumBinaries(config.strInputFile, values);
+    if (FAILED(hr))
     {
-        log::Error(
-            _L_,
-            hr,
-            L"Failed to expand files and archivesfrom %s into Ms\n",
-            config.strInputFile.c_str(),
-            config.Output.Path.c_str());
+        spdlog::error(L"Failed to enumerate binaries from '{}' (code: {:#x})", config.strInputFile, hr);
         return hr;
     }
 
-    if (FAILED(hr = EmbeddedResource::DeleteEmbeddedRessources(_L_, config.strInputFile, L".\\Mothership.exe", values)))
+    hr = EmbeddedResource::ExpandArchivesAndBinaries(L".", values);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to delete ressources from %s\n", config.strInputFile.c_str());
+        spdlog::error(
+            L"Failed to expand files and archivesfrom '{}' into '{}' (code: {:#x})",
+            config.strInputFile,
+            config.Output.Path,
+            hr);
         return hr;
     }
 
-    if (FAILED(hr = WriteEmbedConfig(L".\\Embed.xml", L".\\Mothership.exe", values)))
+    hr = EmbeddedResource::DeleteEmbeddedRessources(config.strInputFile, L".\\Mothership.exe", values);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to write embedding configuration for dump\r\n");
+        spdlog::error(L"Failed to delete ressources from '{}' (code: {:#x})", config.strInputFile, hr);
+        return hr;
+    }
+
+    hr = WriteEmbedConfig(L".\\Embed.xml", L".\\Mothership.exe", values);
+    if (FAILED(hr))
+    {
+        spdlog::error("Failed to write embedding configuration for dump (code: {:#x})", hr);
         return hr;
     }
 
@@ -191,24 +187,26 @@ HRESULT Main::Run_FromDump()
     config.strConfigFile = L".\\Embed.xml";
     config.strInputFile = L".\\Mothership.exe";
 
-    ConfigFileReader reader(_L_);
-
     ConfigItem embed_config;
-    if (FAILED(hr = Orc::Config::ToolEmbed::root(embed_config)))
+    hr = Orc::Config::ToolEmbed::root(embed_config);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to create config item to embed\r\n");
+        spdlog::error("Failed to create config item to embed (code: {:#x})", hr);
         return hr;
     }
 
-    if (FAILED(hr = reader.ReadConfig(config.strConfigFile.c_str(), embed_config)))
+    ConfigFileReader reader;
+    hr = reader.ReadConfig(config.strConfigFile.c_str(), embed_config);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to read embed config file %s\r\n", config.strConfigFile.c_str());
+        spdlog::error(L"Failed to read embed config file '{}' (code: {:#x})", config.strConfigFile, hr);
         return hr;
     }
 
-    if (FAILED(hr = GetConfigurationFromConfig(embed_config)))
+    hr = GetConfigurationFromConfig(embed_config);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to obtain embed configuration\r\n", config.strConfigFile.c_str());
+        spdlog::error(L"Failed to obtain embed configuration '{}' (code: {:#x})", config.strConfigFile, hr);
         return hr;
     }
 
@@ -217,8 +215,6 @@ HRESULT Main::Run_FromDump()
 
 HRESULT Main::Run()
 {
-    HRESULT hr = E_FAIL;
-
     switch (config.Todo)
     {
         case Main::Action::Embed:

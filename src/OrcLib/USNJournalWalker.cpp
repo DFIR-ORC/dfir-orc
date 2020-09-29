@@ -50,7 +50,7 @@ HRESULT USNJournalWalker::Initialize(const std::shared_ptr<Location>& loc)
 {
     HRESULT hr = E_FAIL;
 
-    if (loc->GetType() != Location::MountedVolume)
+    if (loc->GetType() != Location::Type::MountedVolume)
     {
         return E_INVALIDARG;
     }

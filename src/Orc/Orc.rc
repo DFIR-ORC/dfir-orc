@@ -81,13 +81,13 @@ END
 
 2 TEXTINCLUDE 
 BEGIN
-    "#include ""windows.h""\r\n"
+    "#include ""windows.h"""
     "\0"
 END
 
 3 TEXTINCLUDE 
 BEGIN
-    "\r\n"
+    ""
     "\0"
 END
 

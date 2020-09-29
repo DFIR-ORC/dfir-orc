@@ -33,10 +33,10 @@ using namespace Orc;
 HRESULT
 SqlImportAgent::Initialize(const OutputSpec& databaseOutput, const OutputSpec& tempOutput, TableDescription& table)
 {
-    m_wevtapi = ExtensionLibrary::GetLibrary<EvtLibrary>(_L_);
+    m_wevtapi = ExtensionLibrary::GetLibrary<EvtLibrary>();
     if (!m_wevtapi)
     {
-        log::Error(_L_, E_FAIL, L"Failed to initialize wevtapi extension\r\n");
+        spdlog::error("Failed to initialize wevtapi extension");
         return E_FAIL;
     }
 
@@ -46,7 +46,7 @@ SqlImportAgent::Initialize(const OutputSpec& databaseOutput, const OutputSpec& t
 
     if (FAILED(hr = InitializeTableColumns(table)))
     {
-        log::Error(_L_, hr, L"Failed to initialize table columns for table %s\r\n", table.name.c_str());
+        spdlog::error(L"Failed to initialize table columns for table '{}' (code: {:#x})", table.name, hr);
         return hr;
     }
 
@@ -62,7 +62,7 @@ HRESULT SqlImportAgent::InitializeTableColumns(TableDescription& table)
 
     m_TableDefinition.first = table;
 
-    ConfigFileReader r(_L_);
+    ConfigFileReader r;
 
     ConfigItem schemaconfig;
     Orc::Config::Common::sqlschema(schemaconfig);
@@ -70,27 +70,24 @@ HRESULT SqlImportAgent::InitializeTableColumns(TableDescription& table)
     if (EmbeddedResource::IsResourceBased(m_TableDefinition.first.Schema))
     {
         CBinaryBuffer buf;
-        if (FAILED(hr = EmbeddedResource::ExtractToBuffer(_L_, m_TableDefinition.first.Schema, buf)))
+        if (FAILED(hr = EmbeddedResource::ExtractToBuffer(m_TableDefinition.first.Schema, buf)))
         {
-            log::Error(_L_, hr, L"\r\nFailed to load schema \"%s\"\r\n", m_TableDefinition.first.Schema.c_str());
+            spdlog::error(L"Failed to load schema '{}' (code: {:#x})", m_TableDefinition.first.Schema, hr);
             return hr;
         }
 
-        auto memstream = std::make_shared<MemoryStream>(_L_);
+        auto memstream = std::make_shared<MemoryStream>();
 
         if (FAILED(hr = memstream->OpenForReadOnly(buf.GetData(), buf.GetCount())))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Failed to create stream for config ressource %s\r\n",
-                m_TableDefinition.first.Schema.c_str());
+            spdlog::error(
+                L"Failed to create stream for config ressource '{}' (code: {:#x})", m_TableDefinition.first.Schema, hr);
             return hr;
         }
 
         if (FAILED(hr = r.ReadConfig(memstream, schemaconfig)))
         {
-            log::Error(_L_, hr, L"\r\nFailed to load schema \"%s\"\r\n", m_TableDefinition.first.Schema.c_str());
+            spdlog::error(L"Failed to load schema '{}' (code: {:#x})", m_TableDefinition.first.Schema, hr);
             return hr;
         }
     }
@@ -98,22 +95,19 @@ HRESULT SqlImportAgent::InitializeTableColumns(TableDescription& table)
     {
         if (FAILED(hr = r.ReadConfig(m_TableDefinition.first.Schema.c_str(), schemaconfig)))
         {
-            log::Error(_L_, hr, L"\r\nFailed to load schema \"%s\"\r\n", m_TableDefinition.first.Schema.c_str());
+            spdlog::error(L"Failed to load schema '{}' (code: {:#x})", m_TableDefinition.first.Schema, hr);
             return hr;
         }
     }
 
-    m_TableDefinition.second =
-        TableOutput::GetColumnsFromConfig(_L_, m_TableDefinition.first.Key.c_str(), schemaconfig);
+    m_TableDefinition.second = TableOutput::GetColumnsFromConfig(m_TableDefinition.first.Key.c_str(), schemaconfig);
 
     if (!m_TableDefinition.second)
     {
-        log::Error(
-            _L_,
-            E_FAIL,
-            L"\r\nSchema %s (key=%s) failed to load: empty column list\r\n",
-            m_TableDefinition.first.Schema.c_str(),
-            m_TableDefinition.first.Key.c_str());
+        spdlog::error(
+            L"Schema '{}' (key: '{}') failed to load: empty column list",
+            m_TableDefinition.first.Schema,
+            m_TableDefinition.first.Key);
         return E_FAIL;
     }
 
@@ -124,11 +118,11 @@ HRESULT SqlImportAgent::InitializeTable(TableDescription& table)
 {
     HRESULT hr = E_FAIL;
 
-    auto pSqlConnection = TableOutput::GetSqlConnection(_L_, nullptr);
+    auto pSqlConnection = TableOutput::GetSqlConnection(std::make_unique<TableOutput::Options>());
 
     if (FAILED(hr = pSqlConnection->Connect(m_databaseOutput.ConnectionString.c_str())))
     {
-        log::Error(_L_, hr, L"Could not connect to SQL %s\r\n", m_databaseOutput.ConnectionString.c_str());
+        spdlog::error(L"Could not connect to SQL '{}' (code: {:#x})", m_databaseOutput.ConnectionString, hr);
         return hr;
     }
 
@@ -139,7 +133,7 @@ HRESULT SqlImportAgent::InitializeTable(TableDescription& table)
         case TableDisposition::Truncate:
             if (FAILED(hr = pSqlConnection->TruncateTable(table.name)))
             {
-                log::Error(_L_, hr, L"Failed to truncate table %s\r\n", table.name.c_str());
+                spdlog::error(L"Failed to truncate table '{}' (code: {:#x})", table.name, hr);
             }
             break;
         case TableDisposition::CreateNew:
@@ -147,19 +141,19 @@ HRESULT SqlImportAgent::InitializeTable(TableDescription& table)
             const auto& Columns = GetTableColumns();
             if (Columns)
             {
-                log::Error(_L_, hr, L"Failed to get table definition for %s\r\n", table.name.c_str());
+                spdlog::error(L"Failed to get table definition for '{}' (code: {:#x})", table.name, hr);
                 return hr;
             }
             if (pSqlConnection->IsTablePresent(table.name))
             {
                 if (FAILED(hr = pSqlConnection->DropTable(table.name)))
                 {
-                    log::Error(_L_, hr, L"Failed to create table %s\r\n", table.name.c_str());
+                    spdlog::error(L"Failed to create table '{}' (code: {:#x})", table.name, hr);
                 }
             }
             if (FAILED(hr = pSqlConnection->CreateTable(table.name, Columns, table.bCompress, table.bTABLOCK)))
             {
-                log::Error(_L_, hr, L"Failed to create table %s\r\n", table.name.c_str());
+                spdlog::error(L"Failed to create table '{}' (code: {:#x})", table.name, hr);
             }
         }
         break;
@@ -169,15 +163,13 @@ HRESULT SqlImportAgent::InitializeTable(TableDescription& table)
 
     if (!m_TableDefinition.first.BeforeStatement.empty())
     {
-        log::Info(
-            _L_, L"\tExecuting \"before\" import statement for table %s\r\n", m_TableDefinition.first.name.c_str());
+        spdlog::info(L"Executing \"before\" import statement for table '{}'", m_TableDefinition.first.name);
         if (FAILED(hr = pSqlConnection->ExecuteStatement(m_TableDefinition.first.BeforeStatement)))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Failed to execute \"before\" statement for table %s\r\n",
-                m_TableDefinition.first.name.c_str());
+            spdlog::error(
+                L"Failed to execute \"before\" statement for table '{}' (code: {:#x})",
+                m_TableDefinition.first.name,
+                hr);
         }
     }
 
@@ -194,34 +186,34 @@ std::shared_ptr<TableOutput::IWriter> SqlImportAgent::GetOutputWriter(ImportItem
 
     if (pDefItem == nullptr)
     {
-        log::Error(_L_, E_POINTER, L"No Import definition item found for item %s\r\n", input.name.c_str());
+        spdlog::error(L"No Import definition item found for item '{}'", input.name);
         return nullptr;
     }
 
     const auto& columns = GetTableColumns();
     if (!columns)
     {
-        log::Error(_L_, E_FAIL, L"Failed to load columns for table %s, key %s\r\n", pDefItem->tableName.c_str());
+        spdlog::error(L"Failed to load columns for table: '{}'", pDefItem->tableName);
         return nullptr;
     }
 
-    auto retval = TableOutput::GetSqlWriter(_L_, nullptr);
+    auto retval = TableOutput::GetSqlWriter(std::make_unique<TableOutput::Options>());
 
     if (FAILED(hr = retval->SetConnection(m_pSqlConnection)))
     {
-        log::Error(_L_, hr, L"Failed to connect to SQL server %s\r\n", m_databaseOutput.ConnectionString.c_str());
+        spdlog::error(L"Failed to connect to SQL server '{}' (code: {:#x})", m_databaseOutput.ConnectionString, hr);
         return nullptr;
     }
 
     if (FAILED(hr = retval->SetSchema(columns)))
     {
-        log::Error(_L_, hr, L"Failed to add schema definition to reader\r\n");
+        spdlog::error("Failed to add schema definition to reader (code: {:#x})", hr);
         return nullptr;
     }
 
     if (FAILED(hr = retval->BindColumns(pDefItem->tableName.c_str())))
     {
-        log::Error(_L_, hr, L"Failed to bind columns to SQL reader\r\n");
+        spdlog::error("Failed to bind columns to SQL reader (code: {:#x})", hr);
         return nullptr;
     }
     return retval;
@@ -240,47 +232,45 @@ HRESULT SqlImportAgent::ImportCSVData(ImportItem& input)
 
     if (pDefItem == nullptr)
     {
-        log::Error(
-            _L_, E_POINTER, L"No Import definition item found for item %s\r\n", m_TableDefinition.first.name.c_str());
+        spdlog::error(L"No Import definition item found for item '{}'", m_TableDefinition.first.name);
         return E_POINTER;
     }
 
     const auto& columns = GetTableColumns();
     if (!columns)
     {
-        log::Error(
-            _L_, E_FAIL, L"Failed to load columns for table %s, key %s\r\n", m_TableDefinition.first.name.c_str());
+        spdlog::error(L"Failed to load columns for table '{}'", m_TableDefinition.first.name);
         return E_FAIL;
     }
 
-    auto pStream = input.GetInputStream(_L_);
+    auto pStream = input.GetInputStream();
 
     if (pStream)
         input.ullBytesExtracted = pStream->GetSize();
     else
     {
-        log::Error(_L_, E_FAIL, L"No input stream for table %s, key %s\r\n", m_TableDefinition.first.name.c_str());
+        spdlog::error(L"No input stream for table '{}'", m_TableDefinition.first.name);
         return E_FAIL;
     }
 
-    auto pCSV = std::make_unique<TableOutput::CSV::FileReader>(_L_);
+    auto pCSV = std::make_unique<TableOutput::CSV::FileReader>();
 
     if (FAILED(hr = pCSV->OpenStream(pStream)))
     {
-        log::Error(_L_, hr, L"Failed to open CSV file %s\r\n", input.name.c_str(), hr);
+        spdlog::error(L"Failed to open CSV file '{}' (code: {:#x})", input.name, hr);
         return hr;
     }
 
     switch (pCSV->GetEncoding())
     {
         case OutputSpec::Encoding::UTF16:
-            log::Verbose(_L_, L"\tImporting %s (UTF16)...\r\n", input.name.c_str());
+            spdlog::debug(L"Importing '{}' (UTF16)...", input.name);
             break;
         case OutputSpec::Encoding::UTF8:
-            log::Verbose(_L_, L"\tImporting %s (UTF8)...\r\n", input.name.c_str());
+            spdlog::debug(L"Importing '{}' (UTF8)...", input.name);
             break;
         default:
-            log::Error(_L_, E_INVALIDARG, L"Unsupported encoding in %s\r\n", input.name.c_str());
+            spdlog::error(L"Unsupported encoding in '{}'", input.name);
             return E_INVALIDARG;
     }
 
@@ -288,14 +278,14 @@ HRESULT SqlImportAgent::ImportCSVData(ImportItem& input)
     {
         if (FAILED(hr = pCSV->PeekHeaders()))
         {
-            log::Error(_L_, hr, L"\r\nFailed to peek headers for file %s\r\n", input.name.c_str());
+            spdlog::error(L"Failed to peek headers for file '{}' (code: {:#x})", input.name, hr);
             return hr;
         }
 
         if (FAILED(hr = pCSV->PeekTypes())
             && hr != HRESULT_FROM_WIN32(ERROR_HANDLE_EOF))  // it is not an issue if peek types hit EOF
         {
-            log::Error(_L_, hr, L"\r\nFailed to peek types for file %s\r\n", input.name.c_str());
+            spdlog::error(L"Failed to peek types for file '{}' (code: {:#x})", input.name, hr);
             return hr;
         }
     }
@@ -303,41 +293,41 @@ HRESULT SqlImportAgent::ImportCSVData(ImportItem& input)
     {
         if (FAILED(hr = pCSV->SetSchema(columns)))
         {
-            log::Error(_L_, hr, L"\r\nFailed to set import schema for file %s\r\n", input.name.c_str());
+            spdlog::error(L"Failed to set import schema for file '{}' (code: {:#x})", input.name, hr);
             return hr;
         }
         if (FAILED(hr = pCSV->SkipHeaders()))
         {
-            log::Error(_L_, hr, L"\r\nFailed to skip header line for file %s\r\n", input.name.c_str());
+            spdlog::error(L"Failed to skip header line for file '{}' (code: {:#x})", input.name, hr);
             return hr;
         }
     }
 
-    auto pSQL = TableOutput::GetSqlWriter(_L_, nullptr);
+    auto pSQL = TableOutput::GetSqlWriter(std::make_unique<TableOutput::Options>());
 
     if (FAILED(hr = pSQL->SetConnection(m_pSqlConnection)))
     {
-        log::Error(_L_, hr, L"Failed to connect to SQL server %s\r\n", m_databaseOutput.ConnectionString.c_str());
+        spdlog::error(L"Failed to connect to SQL server '{}' (code: {:#x})", m_databaseOutput.ConnectionString, hr);
         return hr;
     }
 
     if (FAILED(hr = pSQL->SetSchema(columns)))
     {
-        log::Error(_L_, hr, L"Failed to add schema definition to reader\r\n");
+        spdlog::error(L"Failed to add schema definition to reader (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = pSQL->BindColumns(pDefItem->tableName.c_str())))
     {
-        log::Error(_L_, hr, L"Failed to bind columns to SQL reader\r\n");
+        spdlog::error(L"Failed to bind columns to SQL reader (code: {:#x})", hr);
         return hr;
     }
 
-    CsvToSql convert(_L_);
+    CsvToSql convert;
 
     if (FAILED(hr = convert.Initialize(std::move(pCSV), std::move(pSQL))))
     {
-        log::Error(_L_, hr, L"\r\nFailed to initialize CsvToSql converter\r\n");
+        spdlog::error(L"Failed to initialize CsvToSql converter (code: {:#x})", hr);
     }
 
     TableOutput::CSV::FileReader::Record record;
@@ -345,15 +335,14 @@ HRESULT SqlImportAgent::ImportCSVData(ImportItem& input)
     {
         if (FAILED(hr))
         {
-            log::Verbose(
-                _L_, L"\r\nINFO: Failed to import line %I64d (hr=0x%lx)\r\n", convert.CSV()->GetCurrentLine(), hr);
+            spdlog::debug(L"Failed to import line {} (code: {:#x})", convert.CSV()->GetCurrentLine(), hr);
         }
     }
 
     input.ullLinesImported = convert.CSV()->GetCurrentLine();
-    log::Verbose(_L_, L"%I64d lines imported for %s\r\n", convert.CSV()->GetCurrentLine(), input.name.c_str());
+    spdlog::debug(L"{} lines imported for '{}'", convert.CSV()->GetCurrentLine(), input.name);
 
-    log::Verbose(_L_, L"\tImported %s...\r\n", input.name.c_str());
+    spdlog::debug(L"Imported '{}'...", input.name);
 
     input.Stream->Close();
     input.Stream = nullptr;
@@ -383,10 +372,10 @@ HRESULT SqlImportAgent::ImportSingleEvent(
 {
     HRESULT hr = E_FAIL;
 
-    const auto evtlib = ExtensionLibrary::GetLibrary<EvtLibrary>(_L_);
+    const auto evtlib = ExtensionLibrary::GetLibrary<EvtLibrary>();
     if (evtlib == nullptr)
     {
-        log::Error(_L_, E_FAIL, L"Unable to load the wevtapi.dll extension library\r\n");
+        spdlog::error(L"Unable to load the wevtapi.dll extension library");
         return E_FAIL;
     }
 
@@ -405,15 +394,15 @@ HRESULT SqlImportAgent::ImportSingleEvent(
 
         if (ERROR_INSUFFICIENT_BUFFER != lastError)
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(lastError), L"Failed to render event (%s)\r\n", input.name.c_str());
+            hr = HRESULT_FROM_WIN32(lastError);
+            spdlog::error(L"Failed to render event '{}' (code: {:#x})", input.name, hr);
             return hr;
         }
 
         if (!buffer.SetCount(dwBufferUsed))
         {
-            log::Error(
-                _L_, hr = E_OUTOFMEMORY, L"Failed to allocate event rendering buffer (%s)\r\n", input.name.c_str());
-            return hr;
+            spdlog::error(L"Failed to allocate event rendering buffer '{}'", input.name);
+            return E_OUTOFMEMORY;
         }
 
         if (!evtlib->EvtRender(
@@ -425,7 +414,8 @@ HRESULT SqlImportAgent::ImportSingleEvent(
                 &dwBufferUsed,
                 &dwPropertyCount))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(lastError), L"Failed to render event (%s)\r\n", input.name.c_str());
+            hr = HRESULT_FROM_WIN32(lastError);
+            spdlog::error(L"Failed to render event '{}' (code: {:#x})", input.name, hr);
             return hr;
         }
     }
@@ -511,8 +501,7 @@ HRESULT SqlImportAgent::ImportSingleEvent(
             {
                 if (!xmlbuffer.SetCount(dwBufferUsed))
                 {
-                    log::Error(
-                        _L_, E_OUTOFMEMORY, L"Not enough memory to render event in xml for %s\r\n", input.name.c_str());
+                    spdlog::error(L"Not enough memory to render event in xml for '{}' (code: {:#x})", input.name, hr);
                     output.WriteNothing();
                 }
                 else if (FAILED(
@@ -525,7 +514,7 @@ HRESULT SqlImportAgent::ImportSingleEvent(
                                  &dwBufferUsed,
                                  &dwPropertyCount)))
                 {
-                    log::Error(_L_, hr, L"EvtRender failed to render event in xml for %s\r\n", input.name.c_str());
+                    spdlog::error(L"EvtRender failed to render event in xml for '{}' (code: {:#x})", input.name, hr);
                     output.WriteNothing();
                 }
                 else
@@ -542,7 +531,7 @@ HRESULT SqlImportAgent::ImportSingleEvent(
     }
     if (FAILED(output.WriteEndOfLine()))
     {
-        log::Error(_L_, hr, L"EvtRender failed to send event for %s\r\n", input.name.c_str());
+        spdlog::error(L"EvtRender failed to send event for '{}'", input.name);
     }
 
     return S_OK;
@@ -570,7 +559,7 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
     auto pWriter = GetOutputWriter(input);
     if (!pWriter)
     {
-        log::Error(_L_, E_FAIL, L"Failed to create the output writer to store import %s\r\n", input.name.c_str());
+        spdlog::error(L"Failed to create the output writer to store import '{}'", input.name);
         return E_FAIL;
     }
     BOOST_SCOPE_EXIT(&pWriter)
@@ -583,11 +572,11 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
     }
     BOOST_SCOPE_EXIT_END;
 
-    auto pStream = input.GetInputStream(_L_);
+    auto pStream = input.GetInputStream();
 
     if (!pStream)
     {
-        log::Error(_L_, E_FAIL, L"No valid input stream\r\n");
+        spdlog::error("No valid input stream");
         return E_FAIL;
     }
 
@@ -602,17 +591,17 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
     std::replace(begin(strID), end(strID), L'\t', L'_');
     std::replace(begin(strID), end(strID), L'\\', L'_');
 
-    if (FAILED(hr = ::UtilGetUniquePath(_L_, m_tempOutput.Path.c_str(), strID.c_str(), strTempFile, hFile)))
+    if (FAILED(hr = ::UtilGetUniquePath(m_tempOutput.Path.c_str(), strID.c_str(), strTempFile, hFile)))
     {
-        log::Error(_L_, hr, L"Failed to create temporary file in %s\r\n", m_tempOutput.Path.c_str());
+        spdlog::error(L"Failed to create temporary file in '{}' (code: {:#x})", m_tempOutput.Path, hr);
         return hr;
     }
 
-    BOOST_SCOPE_EXIT(strTempFile, &hFile, &_L_)
+    BOOST_SCOPE_EXIT(strTempFile, &hFile)
     {
         if (hFile != INVALID_HANDLE_VALUE)
             CloseHandle(hFile);
-        ::UtilDeleteTemporaryFile(_L_, strTempFile.c_str());
+        ::UtilDeleteTemporaryFile(strTempFile.c_str());
     }
     BOOST_SCOPE_EXIT_END;
 
@@ -623,7 +612,7 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
         hFile = INVALID_HANDLE_VALUE;
         if (FAILED(hr = pTempStream->MoveTo(strTempFile.c_str())))
         {
-            log::Error(_L_, hr, L"Failed to move file event log to file %s\r\n");
+            spdlog::error(L"Failed to move file event log to file: {} (code: {:#x})", strTempFile, hr);
             return hr;
         }
         pTempStream->Close();
@@ -631,17 +620,17 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
     }
     else
     {
-        auto pFileStream = std::make_shared<FileStream>(_L_);
+        auto pFileStream = std::make_shared<FileStream>();
 
         if (!pFileStream)
         {
-            log::Error(_L_, E_OUTOFMEMORY, L"Failed to create file stream\r\n");
+            spdlog::error("Failed to create file stream");
             return E_OUTOFMEMORY;
         }
 
         if (FAILED(hr = pFileStream->OpenHandle(hFile)))
         {
-            log::Error(_L_, E_OUTOFMEMORY, L"Failed to open handle to temporary file\r\n");
+            spdlog::error("Failed to open handle to temporary file (code: {:#x})", hr);
             return E_OUTOFMEMORY;
         }
         hFile = INVALID_HANDLE_VALUE;
@@ -649,7 +638,7 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
         ULONGLONG ullCopiedBytes = 0LL;
         if (FAILED(hr = pStream->CopyTo(pFileStream, &ullCopiedBytes)))
         {
-            log::Error(_L_, hr, L"Failed to open handle to temporary file\r\n");
+            spdlog::error("Failed to open handle to temporary file (code: {:#x})", hr);
             return hr;
         }
         pStream->Close();
@@ -657,10 +646,10 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
 
     // Event Log opening
 
-    const auto evtlib = ExtensionLibrary::GetLibrary<EvtLibrary>(_L_);
+    const auto evtlib = ExtensionLibrary::GetLibrary<EvtLibrary>();
     if (evtlib == nullptr)
     {
-        log::Error(_L_, E_FAIL, L"Unable to load the wevtapi.dll extension library\r\n");
+        spdlog::error(L"Unable to load the wevtapi.dll extension library");
         return E_FAIL;
     }
     {
@@ -668,11 +657,8 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
 
         if (hResults == NULL)
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Failed to query EventLog file %s\r\n",
-                strTempFile.c_str());
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Failed to query EventLog file '{}' (code: {:#x})", strTempFile, hr);
             return hr;
         }
 
@@ -688,7 +674,8 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
         EVT_HANDLE hSystemContext = evtlib->EvtCreateRenderContext(0, nullptr, EvtRenderContextSystem);
         if (NULL == hSystemContext)
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"EvtCreateRenderContext failed\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed EvtCreateRenderContext (code: {:#x})", hr);
             return hr;
         }
 
@@ -706,7 +693,7 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
             {
                 if (hr != HRESULT_FROM_WIN32(ERROR_NO_MORE_ITEMS))
                 {
-                    log::Error(_L_, hr, L"Failed to retrieve events\r\n");
+                    spdlog::error("Failed to retrieve events (code: {:#x})", hr);
                     return hr;
                 }
                 else
@@ -734,7 +721,7 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
                 if (FAILED(hr1))
                 {
                     pWriter->AbandonRow();
-                    log::Error(_L_, hr1, L"Failed to import event from log %s\r\n", input.name.c_str());
+                    spdlog::error(L"Failed to import event from log '{}' (code: {:#x})", input.name, hr1);
                 }
 
                 evtlib->EvtClose(hEvents[i]);
@@ -769,7 +756,7 @@ HRESULT SqlImportAgent::ImportHiveData(ImportItem& input)
     auto pWriter = GetOutputWriter(input);
     if (!pWriter)
     {
-        log::Error(_L_, E_FAIL, L"Failed to create the output writer to store import %s\r\n", input.name.c_str());
+        spdlog::error(L"Failed to create the output writer to store import '{}'", input.name);
         return E_FAIL;
     }
     BOOST_SCOPE_EXIT(&pWriter)
@@ -784,21 +771,21 @@ HRESULT SqlImportAgent::ImportHiveData(ImportItem& input)
 
     auto& output = *pWriter;
 
-    auto pStream = input.GetInputStream(_L_);
+    auto pStream = input.GetInputStream();
 
     if (!pStream)
     {
-        log::Error(_L_, E_FAIL, L"No input stream to import for %s\r\n", input.name.c_str());
+        spdlog::error(L"No input stream to import for '{}'", input.name);
         return E_FAIL;
     }
 
     input.ullBytesExtracted = pStream->GetSize();
 
-    RegistryHive regwalker(_L_);
+    RegistryHive regwalker;
 
     if (FAILED(hr = regwalker.LoadHive(*pStream)))
     {
-        log::Error(_L_, hr, L"Failed to load hive %s\r\n", input.name.c_str());
+        spdlog::error(L"Failed to load hive '{}' (code: {:#x})", input.name, hr);
         return hr;
     }
 
@@ -826,14 +813,14 @@ HRESULT SqlImportAgent::ImportHiveData(ImportItem& input)
                     output.WriteString(pValue->GetValueName().c_str());
 
                     DWORD i = 0;
-                    while (g_ValyeTypeDefinitions[i].Type != pValue->GetType() && i < _countof(g_ValyeTypeDefinitions))
+                    while (g_ValueTypeDefinitions[i].Type != pValue->GetType() && i < _countof(g_ValueTypeDefinitions))
                     {
                         i++;
                     }
-                    if (i == _countof(g_ValyeTypeDefinitions))
+                    if (i == _countof(g_ValueTypeDefinitions))
                         output.WriteString("REG_NO_TYPE (!)");
                     else
-                        output.WriteString(g_ValyeTypeDefinitions[i].szTypeName);
+                        output.WriteString(g_ValueTypeDefinitions[i].szTypeName);
 
                     const BYTE* pDatas = NULL;
                     size_t dwLen = 0;
@@ -924,7 +911,7 @@ HRESULT SqlImportAgent::ImportHiveData(ImportItem& input)
                     input.ullLinesImported++;
                 })))
     {
-        log::Error(_L_, hr, L"Failed to load hive %s\r\n", input.name.c_str());
+        spdlog::error(L"Failed to load hive '{}' (code: {:#x})", input.name, hr);
         return hr;
     }
 
@@ -937,15 +924,13 @@ HRESULT SqlImportAgent::Finalize()
 
     if (!m_TableDefinition.first.AfterStatement.empty())
     {
-        log::Info(
-            _L_, L"\tExecuting \"after\" import statement for table %s\r\n", m_TableDefinition.first.name.c_str());
+        spdlog::info(L"Executing \"after\" import statement for table '{}'", m_TableDefinition.first.name);
         if (FAILED(hr = m_pSqlConnection->ExecuteStatement(m_TableDefinition.first.AfterStatement)))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Failed to execute \"after\" statement for table %s\r\n",
-                m_TableDefinition.first.name.c_str());
+            spdlog::error(
+                L"Failed to execute \"after\" statement for table '{}' (code: {:#x})",
+                m_TableDefinition.first.name,
+                hr);
         }
     }
     return S_OK;
@@ -1016,7 +1001,7 @@ void SqlImportAgent::run()
     {
         if (request->m_Request == ImportMessage::Complete)
         {
-            log::Verbose(_L_, L"ImportAgent received a complete message\r\n");
+            spdlog::debug(L"ImportAgent received a complete message");
         }
         else
         {
@@ -1060,8 +1045,9 @@ SqlImportAgent::~SqlImportAgent()
         HRESULT hr = E_FAIL;
         if (FAILED(hr = m_pSqlConnection->Disconnect()))
         {
-            log::Error(_L_, hr, L"Could not disconnet from SQL %s\r\n", m_databaseOutput.ConnectionString.c_str());
+            spdlog::error(L"Could not disconnect from SQL '{}' (code: {:#x})", m_databaseOutput.ConnectionString, hr);
         }
+
         m_pSqlConnection = nullptr;
     }
 }

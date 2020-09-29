@@ -19,8 +19,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API EmbeddedResource
 {
 public:
@@ -271,7 +269,6 @@ public:
 
 private:
     static HRESULT _UpdateResource(
-        const logger& pLog,
         HANDLE hOutput,
         const WCHAR* szModule,
         const WCHAR* szType,
@@ -331,7 +328,6 @@ public:
     }
 
     static HRESULT SplitResourceReference(
-        const logger& pLog,
         const std::wstring& Ref,
         std::wstring& HostBinary,
         std::wstring& ResName,
@@ -339,7 +335,6 @@ public:
         std::wstring& FormatName);
 
     static HRESULT LocateResource(
-        const logger& pLog,
         const std::wstring& HostBinary,
         const std::wstring& ResName,
         const WCHAR* szResType,
@@ -347,13 +342,11 @@ public:
         HRSRC& hRes,
         std::wstring& strModuleFileName);
 
-    static HRESULT
-    UpdateResources(const logger& pLog, const std::wstring& strPEToUpdate, const std::vector<EmbedSpec>& ToEmbed);
+    static HRESULT UpdateResources(const std::wstring& strPEToUpdate, const std::vector<EmbedSpec>& ToEmbed);
 
     static HRESULT GetSelf(std::wstring& outputFile);
 
     static HRESULT ExtractToFile(
-        const logger& pLog,
         const std::wstring& szImageFileRessourceID,
         const std::wstring& Keyword,
         LPCWSTR szSDDLFormat,
@@ -361,68 +354,58 @@ public:
         const std::wstring& strTempDir,
         std::wstring& outputFile);
     static HRESULT ExtractToFile(
-        const logger& pLog,
         const std::wstring& szImageFileRessourceID,
         const std::wstring& Keyword,
         LPCWSTR szSDDL,
         const std::wstring& strTempDir,
         std::wstring& outputFile);
 
-    static HRESULT
-    ExtractToBuffer(const logger& pLog, const std::wstring& szImageFileRessourceID, CBinaryBuffer& Buffer);
+    static HRESULT ExtractToBuffer(const std::wstring& szImageFileRessourceID, CBinaryBuffer& Buffer);
 
     template <typename _T, size_t _DeclElts>
-    static HRESULT
-    ExtractToBuffer(const logger& pLog, const std::wstring& szImageFileRessourceID, Buffer<_T, _DeclElts>& Buffer);
+    static HRESULT ExtractToBuffer(const std::wstring& szImageFileRessourceID, Buffer<_T, _DeclElts>& Buffer);
 
-    static HRESULT
-    ExtractValue(const logger& pLog, const std::wstring& Module, const std::wstring& Name, std::wstring& Value);
-    static HRESULT
-    ExtractBuffer(const logger& pLog, const std::wstring& Module, const std::wstring& Name, CBinaryBuffer& Value);
+    static HRESULT ExtractValue(const std::wstring& Module, const std::wstring& Name, std::wstring& Value);
+    static HRESULT ExtractBuffer(const std::wstring& Module, const std::wstring& Name, CBinaryBuffer& Value);
 
-    static HRESULT ExtractRun(const logger& pLog, const std::wstring& Module, std::wstring& Value)
+    static HRESULT ExtractRun(const std::wstring& Module, std::wstring& Value)
     {
-        return ExtractValue(pLog, Module, std::wstring(L"RUN"), Value);
+        return ExtractValue(Module, std::wstring(L"RUN"), Value);
     }
-    static HRESULT ExtractRun32(const logger& pLog, const std::wstring& Module, std::wstring& Value)
+    static HRESULT ExtractRun32(const std::wstring& Module, std::wstring& Value)
     {
-        return ExtractValue(pLog, Module, std::wstring(L"RUN32"), Value);
+        return ExtractValue(Module, std::wstring(L"RUN32"), Value);
     }
-    static HRESULT ExtractRun64(const logger& pLog, const std::wstring& Module, std::wstring& Value)
+    static HRESULT ExtractRun64(const std::wstring& Module, std::wstring& Value)
     {
-        return ExtractValue(pLog, Module, std::wstring(L"RUN64"), Value);
+        return ExtractValue(Module, std::wstring(L"RUN64"), Value);
     }
-
-    static HRESULT ExtractRunWithArgs(
-        const logger& pLog,
-        const std::wstring& Module,
-        std::wstring& strToExecuteRef,
-        std::wstring& strRunArgs);
-    static bool IsConfiguredToRun(const logger& pLog);
-
-    static HRESULT ExtractRunArgs(const logger& pLog, const std::wstring& Module, std::wstring& Value)
-    {
-        return ExtractValue(pLog, Module, std::wstring(L"RUN_ARGS"), Value);
-    }
-
-    static HRESULT ExtractRun32Args(const logger& pLog, const std::wstring& Module, std::wstring& Value)
-    {
-        return ExtractValue(pLog, Module, std::wstring(L"RUN32_ARGS"), Value);
-    }
-
-    static HRESULT ExtractRun64Args(const logger& pLog, const std::wstring& Module, std::wstring& Value)
-    {
-        return ExtractValue(pLog, Module, std::wstring(L"RUN64_ARGS"), Value);
-    }
-
-    static HRESULT EnumValues(const logger& pLog, const std::wstring& Module, std::vector<EmbedSpec>& values);
-    static HRESULT EnumBinaries(const logger& pLog, const std::wstring& Module, std::vector<EmbedSpec>& values);
 
     static HRESULT
-    ExpandArchivesAndBinaries(const logger& pLog, const std::wstring& outDir, std::vector<EmbedSpec>& values);
+    ExtractRunWithArgs(const std::wstring& Module, std::wstring& strToExecuteRef, std::wstring& strRunArgs);
+    static bool IsConfiguredToRun();
+
+    static HRESULT ExtractRunArgs(const std::wstring& Module, std::wstring& Value)
+    {
+        return ExtractValue(Module, std::wstring(L"RUN_ARGS"), Value);
+    }
+
+    static HRESULT ExtractRun32Args(const std::wstring& Module, std::wstring& Value)
+    {
+        return ExtractValue(Module, std::wstring(L"RUN32_ARGS"), Value);
+    }
+
+    static HRESULT ExtractRun64Args(const std::wstring& Module, std::wstring& Value)
+    {
+        return ExtractValue(Module, std::wstring(L"RUN64_ARGS"), Value);
+    }
+
+    static HRESULT EnumValues(const std::wstring& Module, std::vector<EmbedSpec>& values);
+    static HRESULT EnumBinaries(const std::wstring& Module, std::vector<EmbedSpec>& values);
+
+    static HRESULT ExpandArchivesAndBinaries(const std::wstring& outDir, std::vector<EmbedSpec>& values);
 
     static HRESULT DeleteEmbeddedRessources(
-        const logger& pLog,
         const std::wstring& inModule,
         const std::wstring& outModule,
         std::vector<EmbedSpec>& values);
@@ -447,7 +430,6 @@ static constexpr LPCWSTR RESSOURCE_GENERIC_READ_BA = L"D:PAI(A;;FR;;;BA)";
 
 template <typename _T, size_t _DeclElts>
 static HRESULT Orc::EmbeddedResource::ExtractToBuffer(
-    const logger& pLog,
     const std::wstring& szImageFileRessourceID,
     Buffer<_T, _DeclElts>& Buffer)
 {
@@ -458,22 +440,21 @@ static HRESULT Orc::EmbeddedResource::ExtractToBuffer(
 
     std::wstring MotherShip, ResName, NameInArchive, FormatName;
 
-    if (SUCCEEDED(
-            hr = SplitResourceReference(pLog, szImageFileRessourceID, MotherShip, ResName, NameInArchive, FormatName)))
+    if (SUCCEEDED(hr = SplitResourceReference(szImageFileRessourceID, MotherShip, ResName, NameInArchive, FormatName)))
     {
         if (NameInArchive.empty())
         {
             // Resource is directly embedded in memory
             // Resource is directly embedded in resource
 
-            std::shared_ptr<ResourceStream> res = std::make_shared<ResourceStream>(pLog);
+            std::shared_ptr<ResourceStream> res = std::make_shared<ResourceStream>();
 
             HRSRC hRes = NULL;
             HMODULE hModule = NULL;
             std::wstring strBinaryPath;
-            if (FAILED(hr = LocateResource(pLog, MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+            if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
-                log::Verbose(pLog, L"WARNING: Could not locate resource %s\r\n", szImageFileRessourceID.c_str());
+                spdlog::warn(L"Could not locate resource {} (code: {:#x})", szImageFileRessourceID, hr);
                 return hr;
             }
 
@@ -481,30 +462,32 @@ static HRESULT Orc::EmbeddedResource::ExtractToBuffer(
             // First find and load the required resource
             if ((hFileResource = LoadResource(hModule, hRes)) == NULL)
             {
-                log::Verbose(pLog, L"WARNING: Could not load ressource\r\n");
-                return HRESULT_FROM_WIN32(GetLastError());
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::warn(L"Could not load ressource (code: {:#x})", hr);
+                return hr;
             }
 
             // Now open and map this to a disk file
             LPVOID lpData = NULL;
             if ((lpData = LockResource(hFileResource)) == NULL)
             {
-                log::Verbose(pLog, L"WARNING: Could not lock ressource\r\n");
-                return HRESULT_FROM_WIN32(GetLastError());
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::warn(L"Could not lock ressource (code: {:#x})", hr);
+                return hr;
             }
 
             DWORD dwSize = 0L;
             if ((dwSize = SizeofResource(hModule, hRes)) == 0)
             {
                 auto hr = HRESULT_FROM_WIN32(GetLastError());
-                log::Error(pLog, hr, L"Could not compute ressource size\r\n");
+                spdlog::error(L"Could not compute ressource size (code: {:#x})", hr);
                 return hr;
             }
 
             if ((dwSize % sizeof(_T)) > 0)
             {
                 auto hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-                log::Error(pLog, hr, L"Resource's size is not compatible with buffer's type\r\n");
+                spdlog::error(L"Resource's size is not compatible with buffer's type (code: {:#x})", hr);
                 return hr;
             }
 
@@ -517,20 +500,20 @@ static HRESULT Orc::EmbeddedResource::ExtractToBuffer(
             if (fmt == ArchiveFormat::Unknown)
                 fmt = ArchiveFormat::SevenZip;
 
-            auto extract = ArchiveExtract::MakeExtractor(fmt, pLog);
+            auto extract = ArchiveExtract::MakeExtractor(fmt);
 
-            auto MakeArchiveStream = [&pLog, &MotherShip, &ResName, &szImageFileRessourceID](
-                                         std::shared_ptr<ByteStream>& stream) -> HRESULT {
+            auto MakeArchiveStream =
+                [&MotherShip, &ResName, &szImageFileRessourceID](std::shared_ptr<ByteStream>& stream) -> HRESULT {
                 HRESULT hr = E_FAIL;
 
-                shared_ptr<ResourceStream> res = make_shared<ResourceStream>(pLog);
+                shared_ptr<ResourceStream> res = make_shared<ResourceStream>();
 
                 HRSRC hRes = NULL;
                 HMODULE hModule = NULL;
                 std::wstring strBinaryPath;
-                if (FAILED(hr = LocateResource(pLog, MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+                if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
-                    log::Verbose(pLog, L"WARNING: Could not locate resource %s\r\n", szImageFileRessourceID.c_str());
+                    spdlog::warn(L"Could not locate resource (code: {:#x})", szImageFileRessourceID, hr);
                     return hr;
                 }
 
@@ -542,10 +525,10 @@ static HRESULT Orc::EmbeddedResource::ExtractToBuffer(
             };
 
             std::shared_ptr<MemoryStream> pOutput;
-            auto MakeWriteStream = [pLog, &pOutput](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+            auto MakeWriteStream = [&pOutput](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
                 HRESULT hr = E_FAIL;
 
-                auto stream = std::make_shared<MemoryStream>(pLog);
+                auto stream = std::make_shared<MemoryStream>();
 
                 if (item.Size > 0)
                 {
@@ -571,40 +554,26 @@ static HRESULT Orc::EmbeddedResource::ExtractToBuffer(
                     return true;
                 return false;
             };
+
             if (FAILED(hr = extract->Extract(MakeArchiveStream, ShouldItemBeExtracted, MakeWriteStream)))
                 return hr;
 
             const auto& items = extract->GetExtractedItems();
             if (items.empty())
             {
-                log::Warning(
-                    pLog,
-                    HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND),
-                    L"Could not locate item \"%s\" in resource \"%s\"\r\n",
-                    NameInArchive.c_str(),
-                    ResName.c_str());
+                spdlog::warn(L"Could not locate item '{}' in resource '{}'", NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
             }
+
             if (items.size() > 1)
             {
-                log::Warning(
-                    pLog,
-                    HRESULT_FROM_WIN32(ERROR_TOO_MANY_NAMES),
-                    L"%d items matched name \"%s\" in resource \"%s\"\r\n",
-                    items.size(),
-                    NameInArchive.c_str(),
-                    ResName.c_str());
+                spdlog::warn(L"{} items matched name '{}' in resource '{}'", items.size(), NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_TOO_MANY_NAMES);
             }
 
             if (!pOutput)
             {
-                log::Warning(
-                    pLog,
-                    HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND),
-                    L"Invalid output stream for item \"%s\" in resource \"%s\"\r\n",
-                    NameInArchive.c_str(),
-                    ResName.c_str());
+                spdlog::warn(L"Invalid output stream for item '{}' in resource '{}'", NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
             }
 
@@ -613,21 +582,17 @@ static HRESULT Orc::EmbeddedResource::ExtractToBuffer(
 
             if ((itembuffer.GetCount() % sizeof(_T)) > 0)
             {
-                auto hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-                log::Error(pLog, hr, L"Uncompressed resource's size is not compatible with buffer's type\r\n");
-                return hr;
+                spdlog::error(L"Uncompressed resource's size is not compatible with buffer's type");
+                return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
             }
+
             Buffer.assign(
                 reinterpret_cast<_T*>(itembuffer.GetData()), SafeInt<ULONG>(itembuffer.GetCount() / sizeof(_T)));
         }
     }
     else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
     {
-        log::Error(
-            pLog,
-            hr,
-            L"\"%s\" does not match a typical embedded ressource pattern\r\n",
-            szImageFileRessourceID.c_str());
+        spdlog::error(L"'{}' does not match a typical embedded ressource pattern", szImageFileRessourceID);
         return E_INVALIDARG;
     }
 

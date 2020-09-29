@@ -39,8 +39,8 @@ protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();
 
 public:
-    InterfaceReader(logger pLog, const WCHAR* szLocation)
-        : CompleteVolumeReader(std::move(pLog), szLocation) {};
+    InterfaceReader(const WCHAR* szLocation)
+        : CompleteVolumeReader(szLocation) {};
     InterfaceReader(InterfaceReader&&) noexcept = default;
 
     void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }

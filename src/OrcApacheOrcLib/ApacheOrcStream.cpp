@@ -31,7 +31,7 @@ void Orc::TableOutput::ApacheOrc::Stream::write(const void* buf, size_t length)
 
         if (auto hr = m_Stream->Write((PVOID)buf, length, &ullBytesWritten); FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to write into orc file");
+            spdlog::error("Failed to write into orc file (code: {:#x})", hr);
         }
     }
 }

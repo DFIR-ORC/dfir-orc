@@ -9,8 +9,6 @@
 #include "stdafx.h"
 #include "JobObject.h"
 
-#include "LogFileWriter.h"
-
 #include "Privilege.h"
 
 #include "NtDllExtension.h"
@@ -26,24 +24,16 @@ using namespace boost;
 
 using namespace Orc;
 
-HRESULT JobObject::GetHandle(
-    const logger& pLog,
-    DWORD dwSourcePid,
-    HANDLE hSourceHandle,
-    DWORD dwDesiredAccess,
-    HANDLE& hHandle,
-    bool bPreserveJob)
+HRESULT
+JobObject::GetHandle(DWORD dwSourcePid, HANDLE hSourceHandle, DWORD dwDesiredAccess, HANDLE& hHandle, bool bPreserveJob)
 {
     HRESULT hr = E_FAIL;
 
     HANDLE hSourceProcess = OpenProcess(PROCESS_DUP_HANDLE, FALSE, dwSourcePid);
     if (hSourceProcess == NULL)
     {
-        log::Verbose(
-            pLog,
-            L"Failed to open process (pid=%d, hr=0x%lx)\r\n",
-            dwSourcePid,
-            hr = HRESULT_FROM_WIN32(GetLastError()));
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed to open process (pid: {}, code: {:#x})", dwSourcePid, hr);
         return hr;
     }
 
@@ -53,51 +43,47 @@ HRESULT JobObject::GetHandle(
     hHandle = INVALID_HANDLE_VALUE;
     if (!DuplicateHandle(hSourceProcess, hSourceHandle, GetCurrentProcess(), &hHandle, dwDesiredAccess, FALSE, 0L))
     {
-        log::Verbose(pLog, L"Failed to duplicate handle (hr=0x%lx)\r\n", hr = HRESULT_FROM_WIN32(GetLastError()));
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::debug("Failed to duplicate handle (code: {:#x})", hr);
+
         if (!bPreserveJob)
         {
             PSID pPrevOwner = NULL;
-            if (FAILED(hr = TakeOwnership(pLog, SE_KERNEL_OBJECT, hSourceHandle, pPrevOwner)))
+            if (FAILED(hr = TakeOwnership(SE_KERNEL_OBJECT, hSourceHandle, pPrevOwner)))
             {
-                log::Verbose(pLog, L"Failed to take ownership of handle (hr=0x%lx)\r\n", hr);
+                spdlog::debug("Failed to take ownership of handle (code: {:#x})", hr);
             }
             else
             {
-                log::Verbose(pLog, L"Took ownership of handle, retry DuplicateHandle\r\n");
+                spdlog::debug("Took ownership of handle, retry DuplicateHandle");
 
                 PSID pMySid = NULL;
-                if (FAILED(hr = GetMyCurrentSID(pLog, pMySid)))
+                if (FAILED(hr = GetMyCurrentSID(pMySid)))
                 {
-                    log::Verbose(
-                        pLog,
-                        L"Failed to take ownership of handle (hr=0x%lx)\r\n",
-                        hr = HRESULT_FROM_WIN32(GetLastError()));
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::debug("Failed to take ownership of handle (code: {:#x})", hr);
                 }
                 else
                 {
-                    if (FAILED(hr = ::GrantAccess(pLog, SE_KERNEL_OBJECT, hSourceHandle, pMySid, dwDesiredAccess)))
+                    if (FAILED(hr = ::GrantAccess(SE_KERNEL_OBJECT, hSourceHandle, pMySid, dwDesiredAccess)))
                     {
-                        log::Verbose(
-                            pLog,
-                            L"Failed to take ownership of handle (hr=0x%lx)\r\n",
-                            hr = HRESULT_FROM_WIN32(GetLastError()));
+                        hr = HRESULT_FROM_WIN32(GetLastError());
+                        spdlog::debug("Failed to take ownership of handle (code: {:#x})", hr);
                     }
                     else
                     {
-                        log::Verbose(pLog, L"Granted desired access to handle, retry DuplicateHandle\r\n");
+                        spdlog::debug("Granted desired access to handle, retry DuplicateHandle");
                     }
                 }
                 if (!DuplicateHandle(
                         hSourceProcess, hSourceHandle, GetCurrentProcess(), &hHandle, dwDesiredAccess, FALSE, 0L))
                 {
-                    log::Verbose(
-                        pLog,
-                        L"Failed to duplicate handle (again...) (hr=0x%lx)\r\n",
-                        hr = HRESULT_FROM_WIN32(GetLastError()));
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::debug("Failed to duplicate handle (again...) (code: {:#x})", hr);
                 }
                 else
                 {
-                    log::Verbose(pLog, L"DuplicateHandle succeeded after taking ownership\r\n");
+                    spdlog::debug("DuplicateHandle succeeded after taking ownership");
                 }
             }
         }
@@ -107,19 +93,19 @@ HRESULT JobObject::GetHandle(
     return S_OK;
 }
 
-HRESULT JobObject::GetHandleTypeName(const logger& pLog, DWORD dwSourcePid, HANDLE hSourceHandle, wstring& strType)
+HRESULT JobObject::GetHandleTypeName(DWORD dwSourcePid, HANDLE hSourceHandle, wstring& strType)
 {
     HRESULT hr = E_FAIL;
     strType = L"(null)";
 
     HANDLE hHandle = INVALID_HANDLE_VALUE;
-    if (FAILED(hr = GetHandle(pLog, dwSourcePid, hSourceHandle, GENERIC_READ, hHandle)))
+    if (FAILED(hr = GetHandle(dwSourcePid, hSourceHandle, GENERIC_READ, hHandle)))
         return hr;
 
     BOOST_SCOPE_EXIT((hHandle)) { CloseHandle(hHandle); }
     BOOST_SCOPE_EXIT_END;
 
-    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>(pLog);
+    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>();
 
     ULONG ulReturnedBytes = 0;
     hr = pNtDll->NtQueryObject(hHandle, ObjectTypeInformation, nullptr, 0L, &ulReturnedBytes);
@@ -156,7 +142,7 @@ bool JobObject::IsProcessInJob(HANDLE hProcess)
 
     if (!::IsProcessInJob(hProcess == INVALID_HANDLE_VALUE ? GetCurrentProcess() : hProcess, m_hJob, &bIsProcessInJob))
     {
-        log::Error(_L_, HRESULT_FROM_WIN32(GetLastError()), L"Failed to determine if in job\r\n");
+        spdlog::error("Failed to determine if in job (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
         return false;
     }
     return bIsProcessInJob == TRUE ? true : false;
@@ -166,28 +152,28 @@ HRESULT JobObject::GrantAccess(PSID pSid, ACCESS_MASK mask)
 {
     HRESULT hr = E_FAIL;
 
-    if (FAILED(hr = ::GrantAccess(_L_, SE_KERNEL_OBJECT, m_hJob, pSid, mask)))
+    if (FAILED(hr = ::GrantAccess(SE_KERNEL_OBJECT, m_hJob, pSid, mask)))
     {
-        log::Verbose(_L_, L"First attempt to grant access right to job failed (hr=0x%lx)\r\n", hr);
+        spdlog::debug("First attempt to grant access right to job failed (code: {:#x})", hr);
     }
     else
     {
-        log::Verbose(_L_, L"First attempt to grant access right to job succeeded\r\n");
+        spdlog::debug("First attempt to grant access right to job succeeded");
         return S_OK;
     }
 
     HANDLE hSettableHandle = INVALID_HANDLE_VALUE;
-    if (FAILED(hr = GetHandle(_L_, GetCurrentProcessId(), m_hJob, WRITE_DAC, hSettableHandle)))
+    if (FAILED(hr = GetHandle(GetCurrentProcessId(), m_hJob, WRITE_DAC, hSettableHandle)))
     {
         PSID pPreviousOwner = nullptr;
-        if (FAILED(hr = TakeOwnership(_L_, SE_KERNEL_OBJECT, m_hJob, pPreviousOwner)))
+        if (FAILED(hr = TakeOwnership(SE_KERNEL_OBJECT, m_hJob, pPreviousOwner)))
         {
-            log::Verbose(_L_, L"Failed to take ownership of job\r\n");
+            spdlog::debug("Failed to take ownership of job (code: {:#x})", hr);
             return hr;
         }
-        if (FAILED(hr = GetHandle(_L_, GetCurrentProcessId(), m_hJob, WRITE_DAC, hSettableHandle)))
+        if (FAILED(hr = GetHandle(GetCurrentProcessId(), m_hJob, WRITE_DAC, hSettableHandle)))
         {
-            log::Verbose(_L_, L"Failed to obtain settable job object\r\n");
+            spdlog::debug("Failed to obtain settable job object (code: {:#x})", hr);
             return hr;
         }
     }
@@ -199,25 +185,25 @@ HRESULT JobObject::GrantAccess(PSID pSid, ACCESS_MASK mask)
     }
     BOOST_SCOPE_EXIT_END;
 
-    if (FAILED(hr = ::GrantAccess(_L_, SE_KERNEL_OBJECT, hSettableHandle, pSid, mask)))
+    if (FAILED(hr = ::GrantAccess(SE_KERNEL_OBJECT, hSettableHandle, pSid, mask)))
     {
-        log::Verbose(_L_, L"Failed to grant access right to job\r\n");
+        spdlog::debug("Failed to grant access right to job (code: {:#x})", hr);
         return hr;
     }
 
     return S_OK;
 }
 
-HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJob)
+HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
 {
     using namespace msl::utilities;
     HRESULT hr = E_FAIL;
     hJob = INVALID_HANDLE_VALUE;
 
-    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>(pLog);
+    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>();
     if (!pNtDll)
     {
-        log::Error(pLog, E_FAIL, L"Could not load ntdll\r\n");
+        spdlog::error("Could not load ntdll");
         return E_FAIL;
     }
 
@@ -227,12 +213,12 @@ HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJo
 
     if (!bIsProcessInJob)
     {
-        log::Verbose(pLog, L"This process is not part of any job\r\n");
+        spdlog::debug("This process is not part of any job");
         return S_OK;
     }
     else
     {
-        log::Verbose(pLog, L"This process is part of a job\r\n");
+        spdlog::debug("This process is part of a job");
     }
 
     HANDLE hEmptyJob = CreateJobObject(NULL, L"OnlyToGetJobType");
@@ -241,13 +227,14 @@ HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJo
 
     if (hEmptyJob == INVALID_HANDLE_VALUE)
     {
-        log::Error(pLog, hr = HRESULT_FROM_WIN32(GetLastError()), L"Could not create empty job object\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Could not create empty job object (code: {:#x})", hr);
         return hr;
     }
 
-    if (FAILED(hr = SetPrivilege(pLog, SE_DEBUG_NAME, TRUE)))
+    if (FAILED(hr = SetPrivilege(SE_DEBUG_NAME, TRUE)))
     {
-        log::Verbose(pLog, L"Debug privilege is _not_ held\r\n");
+        spdlog::debug("Debug privilege is _not_ held (code: {:#x})", hr);
     }
 
     ULONG ulNeededBytes = 0L;
@@ -277,37 +264,37 @@ HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJo
     }
     if (FAILED(hr))
     {
-        log::Verbose(pLog, L"Failed to retrieve handle information (hr = 0x%lx)\r\n", hr);
+        spdlog::debug("Failed to retrieve handle information (code: {:#x})", hr);
         return hr;
     }
     
     UCHAR ucJobType = 0;
     DWORD dwProcessID = GetCurrentProcessId();
 
-    log::Verbose(pLog, L"Found %d handles\r\n", pHandleInfo->ulCount);
+    spdlog::debug("Found {} handles", pHandleInfo->ulCount);
 
     for (unsigned int i = 0; i < pHandleInfo->ulCount && ucJobType == 0; i++)
     {
         if (pHandleInfo->HandleInformation[i].ProcessID == dwProcessID
             && ((HANDLE)pHandleInfo->HandleInformation[i].HANDLE == hEmptyJob))
         {
-            log::Verbose(pLog, L"Job Type Number= %d\r\n", pHandleInfo->HandleInformation[i].ObjectTypeNumber);
+            spdlog::debug("Job Type Number: {}", pHandleInfo->HandleInformation[i].ObjectTypeNumber);
             ucJobType = pHandleInfo->HandleInformation[i].ObjectTypeNumber;
             break;
         }
     }
     if (ucJobType == 0)
     {
-        log::Error(pLog, E_FAIL, L"Could not determine job type by simple enumeration\r\n");
+        spdlog::error("Could not determine job type by simple enumeration");
     }
     else
     {
-        log::Verbose(pLog, L"Job type number is %d\r\n", ucJobType);
+        spdlog::debug("Job type number is {}", ucJobType);
     }
 
     bool bPreserveJob = false;
     // Enable the SE_TAKE_OWNERSHIP_NAME privilege.
-    if (FAILED(hr = SetPrivilege(pLog, SE_TAKE_OWNERSHIP_NAME, TRUE)))
+    if (FAILED(hr = SetPrivilege(SE_TAKE_OWNERSHIP_NAME, TRUE)))
     {
         bPreserveJob = true;
     }
@@ -320,7 +307,6 @@ HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJo
             HANDLE hOtherJob = INVALID_HANDLE_VALUE;
 
             if (SUCCEEDED(GetHandle(
-                    pLog,
                     pHandleInfo->HandleInformation[i].ProcessID,
                     (HANDLE)pHandleInfo->HandleInformation[i].HANDLE,
                     JOB_OBJECT_QUERY,
@@ -331,7 +317,7 @@ HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJo
                 BOOL bIsProcessInJob = false;
                 if (!::IsProcessInJob(hProcess, hOtherJob, &bIsProcessInJob))
                 {
-                    log::Verbose(pLog, L"Failed to determine if process is in this job\r\n");
+                    spdlog::debug("Failed to determine if process is in this job");
                 }
                 if (bIsProcessInJob)
                 {
@@ -345,33 +331,28 @@ HRESULT JobObject::GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJo
         }
     }
 
-    if (FAILED(hr = SetPrivilege(pLog, SE_DEBUG_NAME, FALSE)))
+    if (FAILED(hr = SetPrivilege(SE_DEBUG_NAME, FALSE)))
     {
-        log::Verbose(pLog, L"Debug privilege is _not_ held\r\n");
+        spdlog::debug("Debug privilege is _not_ held");
     }
 
     if (bIsProcessInJob)
     {
-        log::Verbose(
-            pLog,
-            L"This process was not found part of any of the jobs enumerated (but runs within one, tried %d job "
-            L"handles, failed %d ones)\r\n",
-            ulTriedHandles,
-            ulFailedHandles);
+        spdlog::debug("Failed to find process job (handles tried: {}, failed: {})", ulTriedHandles, ulFailedHandles);
     }
     return S_FALSE;
 }
 
-JobObject JobObject::GetJobObject(const logger& pLog, HANDLE hProcess)
+JobObject JobObject::GetJobObject(HANDLE hProcess)
 {
     HRESULT hr = E_FAIL;
     HANDLE hJob = INVALID_HANDLE_VALUE;
 
-    if (SUCCEEDED(hr = JobObject::GetJobObject(pLog, hProcess, hJob)))
+    if (SUCCEEDED(hr = JobObject::GetJobObject(hProcess, hJob)))
     {
-        return JobObject(pLog, hJob);
+        return JobObject(hJob);
     }
-    return JobObject(pLog);
+    return JobObject();
 }
 
 HRESULT Orc::JobObject::AssociateCompletionPort(HANDLE hCP, LPVOID pCompletionKey) const
@@ -380,12 +361,8 @@ HRESULT Orc::JobObject::AssociateCompletionPort(HANDLE hCP, LPVOID pCompletionKe
     JOBOBJECT_ASSOCIATE_COMPLETION_PORT JACP = {pCompletionKey, hCP};
     if (!SetInformationJobObject(m_hJob, JobObjectAssociateCompletionPortInformation, &JACP, sizeof(JACP)))
     {
-        log::Error(
-            _L_,
-            hr = HRESULT_FROM_WIN32(GetLastError()),
-            L"Failed to associate job object with completion port (job 0x%lX, cp 0x%lX)\r\n",
-            m_hJob,
-            hCP);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to associate job object with completion port (job: {:p}, cp: {:p})", m_hJob, hCP);
         return hr;
     }
     return S_OK;
@@ -405,18 +382,18 @@ bool JobObject::IsBreakAwayAllowed()
             sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
             &dwReturnedBytes))
     {
-        log::Error(_L_, HRESULT_FROM_WIN32(GetLastError()), L"Failed to QueryInformationJobObject on job\r\n");
+        spdlog::error("Failed to QueryInformationJobObject on job (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
         return false;
     }
     if (LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK
         || LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK)
     {
-        log::Verbose(_L_, L"Job verification is OK with breakaway\r\n");
+        spdlog::debug("Job verification is OK with breakaway");
         return true;
     }
     else
     {
-        log::Verbose(_L_, L"Job configuration does not allow breakaway\r\n");
+        spdlog::debug("Job configuration does not allow breakaway");
         return false;
     }
 }
@@ -436,33 +413,33 @@ HRESULT JobObject::AllowBreakAway(bool bPreserveJob)
             sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
             &dwReturnedBytes))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to QueryInformationJobObject on job\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to QueryInformationJobObject on job (code: {:#x})", hr);
         return hr;
     }
     if (LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK
         || LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK)
     {
-        log::Verbose(_L_, L"Job already allows breakaway\r\n");
+        spdlog::debug("Job already allows breakaway");
         return S_OK;
     }
 
     HANDLE hSettableJob = INVALID_HANDLE_VALUE;
     if (FAILED(
-            hr = GetHandle(
-                _L_, GetCurrentProcessId(), m_hJob, JOB_OBJECT_QUERY | JOB_OBJECT_SET_ATTRIBUTES, hSettableJob)))
+            hr = GetHandle(GetCurrentProcessId(), m_hJob, JOB_OBJECT_QUERY | JOB_OBJECT_SET_ATTRIBUTES, hSettableJob)))
     {
         if (bPreserveJob)
         {
-            log::Error(_L_, hr, L"Failed to get a settable job\r\n");
+            spdlog::error("Failed to get a settable job (code: {:#x})", hr);
             return hr;
         }
         else
         {
             PSID pMySID = nullptr;
 
-            if (FAILED(hr = GetMyCurrentSID(_L_, pMySID)))
+            if (FAILED(hr = GetMyCurrentSID(pMySID)))
             {
-                log::Error(_L_, hr, L"Failed to obtain my current SID\r\n");
+                spdlog::error(L"Failed to obtain my current SID (code: {:#x})", hr);
                 return hr;
             }
             BOOST_SCOPE_EXIT(&pMySID)
@@ -475,18 +452,17 @@ HRESULT JobObject::AllowBreakAway(bool bPreserveJob)
 
             if (FAILED(hr = GrantAccess(pMySID, JOB_OBJECT_QUERY | JOB_OBJECT_SET_ATTRIBUTES)))
             {
-                log::Error(_L_, hr, L"Failed to grant myself acces to job\r\n");
+                spdlog::error("Failed to grant myself acces to job (code: {:#x})", hr);
                 return hr;
             }
             if (FAILED(
                     hr = GetHandle(
-                        _L_,
                         GetCurrentProcessId(),
                         m_hJob,
                         JOB_OBJECT_QUERY | JOB_OBJECT_SET_ATTRIBUTES,
                         hSettableJob)))
             {
-                log::Error(_L_, hr, L"Failed to obtain a settable handle to the job\r\n");
+                spdlog::error("Failed to obtain a settable handle to the job (code: {:#x})", hr);
                 return hr;
             }
         }
@@ -503,7 +479,8 @@ HRESULT JobObject::AllowBreakAway(bool bPreserveJob)
     if (!SetInformationJobObject(
             hSettableJob, JobObjectExtendedLimitInformation, &LimitInfo, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to SetInformationJobObject on job\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to SetInformationJobObject on job (code: {:#x})", hr);
         return hr;
     }
     return S_OK;
@@ -525,22 +502,22 @@ HRESULT JobObject::BlockBreakAway(bool bPreserveJob)
             sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
             &dwReturnedBytes))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to QueryInformationJobObject on job\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to QueryInformationJobObject on job (code: {:#x})", hr);
         return hr;
     }
     if (!(LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK)
         && (LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK))
     {
-        log::Verbose(_L_, L"INFO: Job already block breakaway\r\n");
+        spdlog::debug("Job already block breakaway");
         return S_OK;
     }
 
     HANDLE hSettableJob = INVALID_HANDLE_VALUE;
     if (FAILED(
-            hr = GetHandle(
-                _L_, GetCurrentProcessId(), m_hJob, JOB_OBJECT_QUERY | JOB_OBJECT_SET_ATTRIBUTES, hSettableJob)))
+            hr = GetHandle(GetCurrentProcessId(), m_hJob, JOB_OBJECT_QUERY | JOB_OBJECT_SET_ATTRIBUTES, hSettableJob)))
     {
-        log::Error(_L_, hr, L"Failed to get a settable job\r\n");
+        spdlog::error("Failed to get a settable job");
         return hr;
     }
 
@@ -549,7 +526,8 @@ HRESULT JobObject::BlockBreakAway(bool bPreserveJob)
     if (!SetInformationJobObject(
             hSettableJob, JobObjectExtendedLimitInformation, &LimitInfo, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to SetInformationJobObject on job\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to SetInformationJobObject on job (code: {:#x})", hr);
         CloseHandle(hSettableJob);
         return HRESULT_FROM_WIN32(GetLastError());
     }

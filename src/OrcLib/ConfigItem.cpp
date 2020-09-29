@@ -16,6 +16,8 @@
 #include "EmbeddedResource.h"
 #include "ParameterCheck.h"
 
+#include <spdlog/spdlog.h>
+
 auto constexpr STATUS_SUCCESS = (0);
 
 using namespace std;
@@ -58,17 +60,14 @@ Orc::ConfigItem::operator DWORD() const
                 throw Orc::Exception(
                     Continue,
                     hr,
-                    L"%s is not a valid value for this attribute (does not convert to a DWORD)\r\n",
+                    L"%s is not a valid value for this attribute (does not convert to a DWORD)",
                     strData.c_str());
         }
     }
     else if (auto hr = GetFileSizeFromArg(strData.c_str(), li); FAILED(hr))
     {
         throw Orc::Exception(
-            Continue,
-            hr,
-            L"%s is not a valid value for this attribute (does not convert to a DWORD)\r\n",
-            strData.c_str());
+            Continue, hr, L"%s is not a valid value for this attribute (does not convert to a DWORD)", strData.c_str());
     }
 
     if (li.HighPart != 0)
@@ -76,7 +75,7 @@ Orc::ConfigItem::operator DWORD() const
         throw Orc::Exception(
             Continue,
             HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            L"%s is not a valid value for this attribute (does not fit a DWORD)\r\n",
+            L"%s is not a valid value for this attribute (does not fit a DWORD)",
             strData.c_str());
     }
     return li.LowPart;
@@ -93,7 +92,7 @@ Orc::ConfigItem::operator DWORD32() const
                 throw Orc::Exception(
                     Continue,
                     hr,
-                    L"%s is not a valid value for this attribute (does not convert to a DWORD32)\r\n",
+                    L"%s is not a valid value for this attribute (does not convert to a DWORD32)",
                     strData.c_str());
         }
     }
@@ -102,7 +101,7 @@ Orc::ConfigItem::operator DWORD32() const
         throw Orc::Exception(
             Continue,
             hr,
-            L"%s is not a valid value for this attribute (does not convert to a DWORD32)\r\n",
+            L"%s is not a valid value for this attribute (does not convert to a DWORD32)",
             strData.c_str());
     }
 
@@ -111,7 +110,7 @@ Orc::ConfigItem::operator DWORD32() const
         throw Orc::Exception(
             Continue,
             HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            L"%s is not a valid value for this attribute (does not fit a DWORD32)\r\n",
+            L"%s is not a valid value for this attribute (does not fit a DWORD32)",
             strData.c_str());
     }
     return li.LowPart;
@@ -128,7 +127,7 @@ Orc::ConfigItem::operator DWORD64() const
                 throw Orc::Exception(
                     Continue,
                     hr,
-                    L"%s is not a valid value for this attribute (does not convert to a DWORD64)\r\n",
+                    L"%s is not a valid value for this attribute (does not convert to a DWORD64)",
                     strData.c_str());
         }
     }
@@ -137,7 +136,7 @@ Orc::ConfigItem::operator DWORD64() const
         throw Orc::Exception(
             Continue,
             hr,
-            L"%s is not a valid value for this attribute (does not convert to a DWORD64)\r\n",
+            L"%s is not a valid value for this attribute (does not convert to a DWORD64)",
             strData.c_str());
     }
 
@@ -166,6 +165,7 @@ HRESULT ConfigItem::AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags fl
 {
     if (index != SubItems.size())
     {
+        spdlog::error(L"Failed to add attribute '{}'", szAttr);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
 
@@ -179,20 +179,11 @@ HRESULT ConfigItem::AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags fl
     return S_OK;
 }
 
-HRESULT Orc::ConfigItem::AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags flags, const logger& pLog)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = AddAttribute(szAttr, index, flags)))
-    {
-        log::Error(pLog, hr, L"Failed to add attribute %s at index %d\r\n", szAttr, index);
-    }
-    return hr;
-}
-
 HRESULT ConfigItem::AddChildNode(LPCWSTR szName, DWORD index, ConfigItemFlags flags)
 {
     if (index != SubItems.size())
     {
+        spdlog::error(L"Failed to add child node '{}' at index {}", szName, index);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
     ConfigItem newitem;
@@ -205,20 +196,11 @@ HRESULT ConfigItem::AddChildNode(LPCWSTR szName, DWORD index, ConfigItemFlags fl
     return S_OK;
 }
 
-HRESULT Orc::ConfigItem::AddChildNode(LPCWSTR szName, DWORD index, ConfigItemFlags flags, const logger& pLog)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = AddChildNode(szName, index, flags)))
-    {
-        log::Error(pLog, hr, L"Failed to add child node %s at index %d\r\n", szName, index);
-    }
-    return hr;
-}
-
 HRESULT ConfigItem::AddChildNodeList(LPCWSTR szName, DWORD index, ConfigItemFlags flags)
 {
     if (index != SubItems.size())
     {
+        spdlog::error(L"Failed to add child node list '{}' at index {}", szName, index);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
 
@@ -232,72 +214,24 @@ HRESULT ConfigItem::AddChildNodeList(LPCWSTR szName, DWORD index, ConfigItemFlag
     return S_OK;
 }
 
-HRESULT Orc::ConfigItem::AddChildNodeList(LPCWSTR szName, DWORD index, ConfigItemFlags flags, const logger& pLog)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = AddChildNodeList(szName, index, flags)))
-    {
-        log::Error(pLog, hr, L"Failed to add child node list %s at index %d\r\n", szName, index);
-    }
-    return hr;
-}
-
 HRESULT ConfigItem::AddChild(const ConfigItem& item)
 {
     if (item.dwIndex != SubItems.size())
     {
+        spdlog::error(L"Failed to add child '{}' at index {}", item.strName, item.dwIndex);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
     SubItems.push_back(item);
     return S_OK;
-}
-
-HRESULT Orc::ConfigItem::AddChild(const ConfigItem& item, const logger& pLog)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = AddChild(item)))
-    {
-        log::Error(pLog, hr, L"Failed to add child %s at index %d\r\n", item.strName.c_str(), item.dwIndex);
-    }
-    return hr;
 }
 
 HRESULT ConfigItem::AddChild(ConfigItem&& item)
 {
     if (item.dwIndex != SubItems.size())
     {
+        spdlog::error(L"Failed to add child '{}' at index {}", item.strName, item.dwIndex);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
     SubItems.push_back(item);
     return S_OK;
-}
-
-HRESULT Orc::ConfigItem::AddChild(ConfigItem&& item, const logger& pLog)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = AddChild(item)))
-    {
-        log::Error(pLog, hr, L"Failed to add attribute %s at index %d\r\n", item.strName.c_str(), item.dwIndex);
-    }
-    return hr;
-}
-
-HRESULT Orc::ConfigItem::AddChild(AdderFunction adder, DWORD dwIdx, const logger& pLog)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = AddChild(adder, dwIdx)))
-    {
-        log::Error(pLog, hr, L"Failed to add children at index %d\r\n", dwIdx);
-    }
-    return hr;
-}
-
-HRESULT Orc::ConfigItem::AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwIdx, const logger& pLog)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = AddChild(szName, adder, dwIdx)))
-    {
-        log::Error(pLog, hr, L"Failed to add children at index %d\r\n", dwIdx);
-    }
-    return hr;
 }

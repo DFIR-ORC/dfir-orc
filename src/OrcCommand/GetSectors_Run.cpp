@@ -8,7 +8,6 @@
 
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "GetSectors.h"
 #include "PartitionTable.h"
 #include "TemporaryStream.h"
@@ -22,8 +21,6 @@
 #include <filesystem>
 #include <array>
 
-using namespace std;
-
 namespace fs = std::filesystem;
 
 using namespace Orc;
@@ -36,16 +33,13 @@ using namespace Orc::Command::GetSectors;
  *  - ParameterOption : attention à l'ordre des déclarations
  *  - les fichiers avec caractères exotiques ne sont pas ajoutés à une archive ZIP mais le retour de l'utilitaire
  d'archivage indique que tout s'est bien passé
-
-    TODO :
-
  */
 
 HRESULT Main::Run()
 {
     HRESULT hr = E_FAIL;
 
-    wstring diskInterfaceToRead = L"";
+    std::wstring diskInterfaceToRead;
     if (config.lowInterface)
     {
         // Try to get a low interface on the disk by using the setupAPI functions
@@ -59,44 +53,44 @@ HRESULT Main::Run()
     if (config.dumpLegacyBootCode || config.dumpUefiFull)
     {
         // Legacy boot code and UEFI predefined logic
-        if (FAILED(DumpBootCode(config.diskName, diskInterfaceToRead)))
+        hr = DumpBootCode(config.diskName, diskInterfaceToRead);
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"[%s] Error while dumping legacy or UEFI boot code\r\n", config.diskName.c_str());
+            spdlog::error(L"Failed to dump boot code of '{}' (code: {:#x})", config.diskName, hr);
         }
     }
 
     if (config.dumpSlackSpace)
     {
         // Slack space predefined logic
-        if (FAILED(DumpSlackSpace(config.diskName, diskInterfaceToRead)))
+        hr = DumpSlackSpace(config.diskName, diskInterfaceToRead);
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"[%s] Error while dumping slack space\r\n", config.diskName.c_str());
+            spdlog::error(L"Failed to dump slack space of '{}' (code: {:#x})", config.diskName, hr);
         }
     }
 
     if (config.customSample)
     {
         // Specific data requested by the user
-        if (FAILED(DumpCustomSample(config.diskName, diskInterfaceToRead)))
+        hr = DumpCustomSample(config.diskName, diskInterfaceToRead);
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"[%s] Error while dumping custom sample\r\n", config.diskName.c_str());
+            spdlog::error(L"Failed to dump custom sample of '{}' (code: {:#x})", config.diskName, hr);
         }
     }
 
     // Produce results
-    if (FAILED(CollectDiskChunks(config.Output)))
+    hr = CollectDiskChunks(config.Output);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Error while writing results\r\n");
-    }
-    else
-    {
-        hr = S_OK;
+        spdlog::error(L"Error while writing results for '{}' (code: {:#x})", config.diskName, hr);
     }
 
     return hr;
 }
 
-wstring Main::getBootDiskName()
+std::wstring Main::getBootDiskName()
 {
     DWORD ret = 0;
     WCHAR systemDirectory[MAX_PATH];
@@ -105,24 +99,23 @@ wstring Main::getBootDiskName()
     ret = GetWindowsDirectoryW(systemDirectory, MAX_PATH);
     if (ret == 0 || ret >= MAX_PATH)
     {
-        log::Error(_L_, HRESULT_FROM_WIN32(GetLastError()), L"Failed to retrieve windows directory\r\n");
-        return L"";
+        spdlog::error("Failed GetWindowsDirectory (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+        return {};
     }
 
     // Construct volume string in the form \\.\X:
     WCHAR volumeLetter = systemDirectory[0];
-    wstring volume = L"\\\\.\\";
+    std::wstring volume = L"\\\\.\\";
     volume += volumeLetter;
     volume += L":";
 
-    HANDLE hVolume = 0;
-    // Open volume
-    hVolume =
+    HANDLE hVolume =
         CreateFileW(volume.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL);
     if (hVolume == INVALID_HANDLE_VALUE)
     {
-        log::Error(_L_, HRESULT_FROM_WIN32(GetLastError()), L"Failed to open volume %s\r\n", volume.c_str());
-        return L"";
+        spdlog::error(
+            L"Failed CreateFileW to open volume '{}' (code: {:#x})", volume, HRESULT_FROM_WIN32(GetLastError()));
+        return {};
     }
 
     BOOST_SCOPE_EXIT(&hVolume)
@@ -135,10 +128,9 @@ wstring Main::getBootDiskName()
     }
     BOOST_SCOPE_EXIT_END;
 
-    BOOL ioctlBool;
     VOLUME_DISK_EXTENTS outBuffer;
     DWORD bytesReturned = 0, ioctlLastError = 0;
-    ioctlBool = DeviceIoControl(
+    BOOL ioctlBool = DeviceIoControl(
         hVolume, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, 0, &outBuffer, sizeof(outBuffer), &bytesReturned, NULL);
     if (!ioctlBool)
     {
@@ -149,18 +141,15 @@ wstring Main::getBootDiskName()
             // However we are only interested in the first disk and
             // the array "outBuffer.Extents" we provided is of size 1,
             // so we do not need the additionnal data. We do nothing.
-
-            log::Info(
-                _L_, L"[getBootDiskName] IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS returned error ERROR_MORE_DATA\r\n");
+            spdlog::debug(L"Failed IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS: ERROR_MORE_DATA");
         }
         else
         {
-            log::Error(
-                _L_,
-                HRESULT_FROM_WIN32(lastError),
-                L"Failed to retrive volume disk extents for %s\r\n",
-                volume.c_str());
-            return L"";
+            spdlog::error(
+                L"Failed to retrieve volume disk extents for '{}' (code: {:#x})",
+                volume,
+                HRESULT_FROM_WIN32(lastError));
+            return {};
         }
     }
 
@@ -168,10 +157,10 @@ wstring Main::getBootDiskName()
     // DiskNumber member of the DISK_EXTENT structure is the number of the disk,
     // this is the same number that is used to construct the name of the disk,
     // for example, the X in "\\?\PhysicalDriveX"
-    wstring diskName = L"\\\\.\\PhysicalDrive";
+    std::wstring diskName = L"\\\\.\\PhysicalDrive";
     diskName += std::to_wstring(outBuffer.Extents[0].DiskNumber);
 
-    // log::Info(_L_, L"Deduced boot disk : %s\r\n", diskName.c_str());
+    m_console.Print(L"Found boot disk: {}", diskName);
 
     return diskName;
 }
@@ -187,25 +176,28 @@ int64_t Main::getDiskSignature(const std::wstring& diskName)
     CBinaryBuffer cBuf;
     cBuf.SetCount(MBR_SIZE_IN_BYTES);
     cBuf.ZeroMe();
-    DiskChunkStream mbrChunk(_L_, diskName, 0, MBR_SIZE_IN_BYTES, L"MBR");
-    if (FAILED(mbrChunk.Read(cBuf.GetData(), MBR_SIZE_IN_BYTES, NULL)))
+    DiskChunkStream mbrChunk(diskName, 0, MBR_SIZE_IN_BYTES, L"MBR");
+    HRESULT hr = mbrChunk.Read(cBuf.GetData(), MBR_SIZE_IN_BYTES, NULL);
+    if (FAILED(hr))
     {
+        spdlog::error(L"Failed to read disk signature (code: {:#x})", hr);
         return -1;
     }
 
     if (cBuf.GetCount() < 0x1BC)
     {
+        spdlog::error(L"Failed to read disk signature (unexpected size)");
         return -1;
     }
 
     UINT32 signature = *((UINT32*)(cBuf.GetData() + 0x1B8));
-    // log::Info(_L_, L"Signature of the disk \"%s\" : 0x%08X\r\n", diskName.c_str(), signature);
+    spdlog::debug(L"Signature of the disk '{}': {:#x}", diskName, signature);
     return signature;
 }
 
 int64_t Main::getBootDiskSignature()
 {
-    wstring bootDiskName = getBootDiskName();
+    std::wstring bootDiskName = getBootDiskName();
     if (bootDiskName.empty())
     {
         return -1;
@@ -217,9 +209,9 @@ int64_t Main::getBootDiskSignature()
 std::wstring Main::identifyLowDiskInterfaceByMbrSignature(const std::wstring& diskName)
 {
     std::vector<EnumDisk::PhysicalDisk> disksList;
-    EnumDisk diskEnum(_L_);
+    EnumDisk diskEnum;
     int64_t diskSig = 0;
-    std::wstring diskInterface = L"";
+    std::wstring diskInterface;
 
     diskSig = getDiskSignature(diskName);
     if (diskSig != -1)
@@ -231,11 +223,7 @@ std::wstring Main::identifyLowDiskInterfaceByMbrSignature(const std::wstring& di
             if (getDiskSignature(disk.InterfacePath) == diskSig)
             {
                 diskInterface = disk.InterfacePath;
-                log::Info(
-                    _L_,
-                    L"[%s] Read operations can use the low interface \"%s\"\r\n",
-                    diskName.c_str(),
-                    disk.InterfacePath.c_str());
+                spdlog::debug(L"Read operations on '{}' can use the low interface '{}'", diskName, disk.InterfacePath);
                 break;
             }
         }
@@ -262,10 +250,12 @@ HRESULT Main::DiskChunk::read()
     }
 
     // Initialize a raw disk reader
-    CDiskExtent diskReader(_L_, m_DiskInterface);
-    if (FAILED(hr = diskReader.Open(FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING)))
+    CDiskExtent diskReader(m_DiskInterface);
+
+    hr = diskReader.Open(FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to open a disk for read access (%s)\n", m_DiskInterface.c_str());
+        spdlog::error(L"Failed to open '{}' for read access (code: {:#x})", m_DiskInterface, hr);
         return hr;
     }
 
@@ -274,7 +264,7 @@ HRESULT Main::DiskChunk::read()
 
     if (diskSize == 0 || diskSectorSize == 0)
     {
-        log::Error(_L_, E_FAIL, L"Unknown disk size or sector size\r\n");
+        spdlog::error("Unknown disk size or sector size");
         return E_FAIL;
     }
 
@@ -292,12 +282,7 @@ HRESULT Main::DiskChunk::read()
 
     if (m_ulChunkOffset >= diskSize)
     {
-        log::Error(
-            _L_,
-            E_FAIL,
-            L"[GetSectorsCmd] Offset to read is beyond end of disk. (offset = %llu, disk size = %llu)\r\n",
-            m_ulChunkOffset,
-            diskSize);
+        spdlog::error("Offset to read: {} is beyond end of disk: {})", m_ulChunkOffset, diskSize);
         return E_FAIL;
     }
 
@@ -310,17 +295,22 @@ HRESULT Main::DiskChunk::read()
     {
         return hr;
     }
+
     offset.QuadPart = m_ulChunkOffset;
 
-    if (FAILED(hr = diskReader.Seek(offset, NULL, FILE_BEGIN)))
+    hr = diskReader.Seek(offset, NULL, FILE_BEGIN);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to seek at offset %llu (%s)\n", m_ulChunkOffset, m_DiskInterface.c_str());
+        spdlog::error(L"Failed to seek on '{}' at offset {} (code: {:#x})", m_DiskInterface, m_ulChunkOffset, hr);
         return hr;
     }
 
     if (getReadingTime && !QueryPerformanceCounter(&perfCountBefore))
     {
-        log::Info(_L_, L"QueryPerformanceCounter before reading at offset %llu failed", m_ulChunkOffset);
+        spdlog::error(
+            L"Failed QueryPerformanceCounter before reading at offset {} (code: {:#x})",
+            m_ulChunkOffset,
+            HRESULT_FROM_WIN32(GetLastError()));
         getReadingTime = false;
     }
 
@@ -349,20 +339,25 @@ HRESULT Main::DiskChunk::read()
     else
     {
         // Read all data at once. If an error occurs, no data will be available.
-        if (FAILED(hr = diskReader.Read(m_cBuf.GetData(), m_ulChunkSize, &numberOfbytesRead)))
+        hr = diskReader.Read(m_cBuf.GetData(), m_ulChunkSize, &numberOfbytesRead);
+        if (FAILED(hr))
         {
             // Free the memory for the buffer, m_cBuf.GetData() will return NULL
             m_cBuf.RemoveAll();
 
-            log::Error(_L_, hr, L"Failed to read at offset %llu (%s)\n", m_ulChunkOffset, m_DiskInterface.c_str());
+            spdlog::error(L"Failed on '{}' to read at offset {}", m_DiskInterface, m_ulChunkOffset);
             return hr;
         }
+
         bytesSuccessfullyRead = numberOfbytesRead;
     }
 
     if (getReadingTime && !QueryPerformanceCounter(&perfCountAfter))
     {
-        log::Info(_L_, L"QueryPerformanceCounter after reading at offset %llu failed", m_ulChunkOffset);
+        spdlog::error(
+            L"Failed QueryPerformanceCounter before reading at offset {} (code: {:#x})",
+            m_ulChunkOffset,
+            HRESULT_FROM_WIN32(GetLastError()));
         getReadingTime = false;
     }
 
@@ -373,14 +368,13 @@ HRESULT Main::DiskChunk::read()
 
     if (bytesSuccessfullyRead != m_ulChunkSize)
     {
-        log::Warning(
-            _L_,
-            hr,
-            L"Failed to read all of the %lu bytes at offset %llu, only %lu bytes have been read (%s)\n",
+        spdlog::warn(
+            L"Failed on '{}' to read all of the {} bytes at offset {}, only {} bytes have been read",
+            m_DiskInterface,
             m_ulChunkSize,
             m_ulChunkOffset,
-            bytesSuccessfullyRead,
-            m_DiskInterface.c_str());
+            bytesSuccessfullyRead);
+
         m_ulChunkSize = bytesSuccessfullyRead;
         m_cBuf.SetCount(m_ulChunkSize);
     }
@@ -428,11 +422,12 @@ bool Main::extractInfoFromLocation(
 std::shared_ptr<DiskChunkStream>
 Main::readAtVolumeLevel(const std::wstring& diskName, ULONGLONG offset, DWORD size, const std::wstring& description)
 {
-    LocationSet aSet(_L_);
+    LocationSet aSet;
 
+    spdlog::debug(L"readAtVolumeLevel: device '{}' at offset: {}", diskName, offset);
     if (auto hr = aSet.EnumerateLocations(); FAILED(hr))
     {
-        log::Error(_L_, hr, L"[GetSectorsCmd::readAtVolumeLevel] Failed to enumerate locations\r\n");
+        spdlog::error(L"Failed to enumerate locations (code: {:#x})", hr);
         return nullptr;
     }
 
@@ -448,30 +443,26 @@ Main::readAtVolumeLevel(const std::wstring& diskName, ULONGLONG offset, DWORD si
         LocationSet::VolumeLocations volumeLocations = volume.second;
         bool found = false;
 
+        // TODO fabienfl: I do not trust this loop, found is set for a location immediately changed
         for (const auto& location : volumeLocations.Locations)
         {
+            spdlog::debug(L"Accessing location: '{}', type: {}", location, location->GetType());
+
             if (found)
             {
-                log::Info(
-                    _L_,
-                    L"[GetSectorsCmd::readAtVolumeLevel] Higher level access for %s : %s of type %d\r\n",
-                    diskName.c_str(),
-                    location->GetLocation().c_str(),
-                    location->GetType());
+                // Higher level allows to bypass disk encryption
+                spdlog::info(L"Higher level access for '{}'", location->GetLocation());
                 if (location->GetType() == Location::Type::MountedVolume)
                 {
-                    if ((offset > volOffset) && (offset < (volOffset + volSize)))
+                    if (offset < volOffset || offset >= volOffset + volSize)
                     {
-                        log::Info(
-                            _L_,
-                            L"[GetSectorsCmd::readAtVolumeLevel] Reading using the device %s to bypass potential disk "
-                            L"encryption (for partition at offset %llu of disk %s).\r\n",
-                            location->GetLocation().c_str(),
-                            volOffset,
-                            diskName.c_str());
-                        return std::make_shared<DiskChunkStream>(
-                            _L_, diskName, offset - volOffset, size, description, location->GetLocation());
+                        spdlog::error(L"Failed to use high level interface, offset is outside volume boundary");
+                        found = false;
+                        continue;
                     }
+
+                    return std::make_shared<DiskChunkStream>(
+                        diskName, offset - volOffset, size, description, location->GetLocation());
                 }
             }
             else if (extractInfoFromLocation(location, volDeviceName, volOffset, volSize))
@@ -480,19 +471,16 @@ Main::readAtVolumeLevel(const std::wstring& diskName, ULONGLONG offset, DWORD si
                     && (offset < (volOffset + volSize)))
                 {
                     // The data we want to read is located in this volume
-                    log::Info(
-                        _L_,
-                        L"[GetSectorsCmd::readAtVolumeLevel] Found %s by using altitude selector. Now trying to get a "
-                        L"higher level access.\r\n",
-                        location->GetLocation().c_str());
+                    spdlog::error(
+                        L"Found '{}' by using altitude selector. Now trying to get a higher level access",
+                        location->GetLocation());
                     found = true;
                 }
             }
         }
     }
 
-    log::Info(
-        _L_, L"[GetSectorsCmd::readAtVolumeLevel] Failed to get a higher access level for %s\r\n", diskName.c_str());
+    spdlog::error(L"Failed to get a higher access level");
     return nullptr;
 }
 
@@ -505,16 +493,17 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
     DWORD numberOfbytesRead = 0, retval = 0;
 
     // List partitions
-    PartitionTable partTable(_L_);
-    if (FAILED(hr = partTable.LoadPartitionTable(diskName.c_str())))
+    PartitionTable partTable;
+    hr = partTable.LoadPartitionTable(diskName.c_str());
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to load partition table\r\n");
+        spdlog::error("Failed to load partition table (code: {:#x})", hr);
         return hr;
     }
 
     if (partTable.Table().empty())
     {
-        log::Warning(_L_, hr = E_UNEXPECTED, L"Partition Table empty\r\n");
+        spdlog::warn("Partition table is empty");
         return hr;
     }
 
@@ -538,11 +527,9 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
                 if (partition.Size > config.uefiFullMaxSize)  // Truncate the dump if the partition is too large
                 {
                     efiPartitionSizeToDump = (DWORD)config.uefiFullMaxSize;
-                    log::Warning(
-                        _L_,
-                        hr,
-                        L"UEFI partition too large, the dump will be truncated to %d bytes (partition start offset "
-                        L"%llu, real size %llu bytes).",
+                    spdlog::warn(
+                        L"UEFI partition too large, the dump will be truncated to {} bytes (partition start offset "
+                        L"{}, real size {} bytes).",
                         efiPartitionSizeToDump,
                         partition.Start,
                         partition.Size);
@@ -553,7 +540,7 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
                 }
 
                 dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-                    _L_, diskName, partition.Start, efiPartitionSizeToDump, L"EFI-partition", diskInterfaceToRead));
+                    diskName, partition.Start, efiPartitionSizeToDump, L"EFI-partition", diskInterfaceToRead));
             }
         }
     }
@@ -572,7 +559,7 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
      *  Dump MBR
      */
     dumpedChunks.push_back(
-        std::make_shared<DiskChunkStream>(_L_, diskName, 0, MBR_SIZE_IN_BYTES, L"MBR", diskInterfaceToRead));
+        std::make_shared<DiskChunkStream>(diskName, 0, MBR_SIZE_IN_BYTES, L"MBR", diskInterfaceToRead));
 
     std::shared_ptr<DiskChunkStream> vbrChunk, vbrBackupChunk;
     DWORD64 hiddenSectors = 0, hiddenSectorsVbrBackup = 0;
@@ -584,9 +571,8 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
     // Iterate over partitions
     for (const auto& partition : partTable.Table())
     {
-        log::Info(
-            _L_,
-            L"Partition number %u, Type %u, Flags %u, SectorSize %u, Start %llu, End %llu, Size %llu\r\n",
+        m_console.Print(
+            "Partition number: {}, type: {}, flags: {}, sector size: {}, start: {}, end: {}, size: {}",
             partition.PartitionNumber,
             partition.PartitionType,
             partition.PartitionFlags,
@@ -608,7 +594,7 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
              */
             description = L"VBR of " + partitionDesc;
             vbrChunk = std::make_shared<DiskChunkStream>(
-                _L_, diskName, partition.Start, VBR_SIZE_IN_BYTES, description.c_str(), diskInterfaceToRead);
+                diskName, partition.Start, VBR_SIZE_IN_BYTES, description.c_str(), diskInterfaceToRead);
             dumpedChunks.push_back(vbrChunk);
 
             /*
@@ -620,7 +606,6 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
             {
                 // VBR should be located just after the end of the NTFS partition
                 vbrBackupChunk = std::make_shared<DiskChunkStream>(
-                    _L_,
                     diskName,
                     partition.Start + partition.Size,
                     VBR_SIZE_IN_BYTES,
@@ -631,7 +616,6 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
             {
                 // VBR should be located at the end of the NTFS partition
                 vbrBackupChunk = std::make_shared<DiskChunkStream>(
-                    _L_,
                     diskName,
                     partition.Start + partition.Size - VBR_SIZE_IN_BYTES,
                     VBR_SIZE_IN_BYTES,
@@ -681,34 +665,29 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
                 auto vbr = reinterpret_cast<PackedBootSector*>(vbr_cBuf.GetData());
                 if (vbr == NULL || readRetVal != S_OK)
                 {
-                    log::Info(
-                        _L_,
-                        L"Cannot parse VBR of partition number %u (%s)\r\n",
-                        partition.PartitionNumber,
-                        diskName.c_str());
+                    spdlog::debug(
+                        L"Cannot parse VBR of partition number {} on '{}'", partition.PartitionNumber, diskName);
                 }
                 else if (reinterpret_cast<BYTE*>(vbr)[0x1FE] == 0x55 && reinterpret_cast<BYTE*>(vbr)[0x1FF] == 0xAA)
                 {
                     hiddenSectors = vbr->PackedBpb.HiddenSectors;
-                    log::Info(
-                        _L_,
-                        L"VBR hidden sector value for partition number %u : %llu (%s)\r\n",
+                    m_console.Print(
+                        L"VBR hidden sector value for partition number {}: {} on '{}'",
                         partition.PartitionNumber,
                         hiddenSectors,
-                        diskName.c_str());
+                        diskName);
 
                     iplSizeInBytes = IPL_SIZE_IN_SECTORS * partition.SectorSize;
                     iplOffset = hiddenSectors * partition.SectorSize + partition.SectorSize;
 
                     description = L"IPL of " + partitionDesc;
                     dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-                        _L_, diskName, iplOffset, iplSizeInBytes, description.c_str(), diskInterfaceToRead));
+                        diskName, iplOffset, iplSizeInBytes, description.c_str(), diskInterfaceToRead));
 
                     if (iplOffset != (partition.Start + partition.SectorSize))
                     {
                         description = L"Data at offset where IPL is usually located for " + partitionDesc;
                         auto dataAtUsualIplPlace = std::make_shared<DiskChunkStream>(
-                            _L_,
                             diskName,
                             partition.Start + partition.SectorSize,
                             iplSizeInBytes,
@@ -719,11 +698,7 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
                 }
                 else
                 {
-                    log::Info(
-                        _L_,
-                        L"Invalid VBR for partition number %u (%s)\r\n",
-                        partition.PartitionNumber,
-                        diskName.c_str());
+                    spdlog::debug(L"Invalid VBR for partition number {} on '{}'", partition.PartitionNumber, diskName);
                 }
             }
 
@@ -738,21 +713,17 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
                 auto vbr = reinterpret_cast<PackedBootSector*>(vbr_cBuf.GetData());
                 if (vbr == NULL || readRetVal != S_OK)
                 {
-                    log::Info(
-                        _L_,
-                        L"Cannot parse VBR backup of partition number %u (%s)\r\n",
-                        partition.PartitionNumber,
-                        diskName.c_str());
+                    spdlog::debug(
+                        L"Cannot parse VBR backup of partition number {} '{}'", partition.PartitionNumber, diskName);
                 }
                 else if (reinterpret_cast<BYTE*>(vbr)[0x1FE] == 0x55 && reinterpret_cast<BYTE*>(vbr)[0x1FF] == 0xAA)
                 {
                     hiddenSectorsVbrBackup = vbr->PackedBpb.HiddenSectors;
-                    log::Info(
-                        _L_,
-                        L"VBR backup hidden sector value for partition number %u : 0x%llu (%s)\r\n",
+                    m_console.Print(
+                        L"VBR backup hidden sector value for partition number {}: {:#x}) on '{}'",
                         partition.PartitionNumber,
                         hiddenSectorsVbrBackup,
-                        diskName.c_str());
+                        diskName);
 
                     // Only dump IPL at this offset if it is different from the one found in normal VBR
                     if (hiddenSectorsVbrBackup != hiddenSectors)
@@ -762,16 +733,13 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
 
                         description = L"IPL of " + partitionDesc + L" by following VBR backup";
                         dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-                            _L_, diskName, iplOffset, iplSizeInBytes, description.c_str(), diskInterfaceToRead));
+                            diskName, iplOffset, iplSizeInBytes, description.c_str(), diskInterfaceToRead));
                     }
                 }
                 else
                 {
-                    log::Info(
-                        _L_,
-                        L"Invalid VBR backup for partition number %u (%s)\r\n",
-                        partition.PartitionNumber,
-                        diskName.c_str());
+                    spdlog::debug(
+                        L"Invalid VBR backup for partition number {} on '{}'", partition.PartitionNumber, diskName);
                 }
             }
         }
@@ -782,15 +750,15 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
 
 HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskInterfaceToRead)
 {
-    HRESULT hr = E_FAIL;
-    CDiskExtent diskExtent(_L_, diskInterfaceToRead);
+    CDiskExtent diskExtent(diskInterfaceToRead);
     LARGE_INTEGER offsetToRead;
     ULONGLONG dwBytesRead = 0;
     ULONG sectorSize;
 
-    if (FAILED(hr = diskExtent.Open(FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
+    HRESULT hr = diskExtent.Open(FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Could not open Location %s\r\n", diskExtent.GetName().c_str());
+        spdlog::error(L"Could not open Location '{}' (code: {:#x})", diskExtent.GetName(), hr);
         return hr;
     }
 
@@ -812,7 +780,7 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
     }
 
     auto gptHeaderPrimary = std::make_shared<DiskChunkStream>(
-        _L_, diskName, offsetToRead.QuadPart, sectorSize, L"GPT-primary-header", diskInterfaceToRead);
+        diskName, offsetToRead.QuadPart, sectorSize, L"GPT-primary-header", diskInterfaceToRead);
     dumpedChunks.push_back(gptHeaderPrimary);
 
     CBinaryBuffer buffer;
@@ -826,30 +794,25 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
         // check GPT signature
         if (std::strncmp(reinterpret_cast<char*>(gptHeader->Signature), "EFI PART", 8))
         {
-            log::Error(_L_, hr, L"[GetSectorsCmd::DumpRawGPT] Bad GPT signature\r\n");
+            spdlog::error(L"Bad GPT signature");
             return hr;
         }
 
         // check validity of some parameters
         if (gptHeader->NumberOfPartitionEntries > 128)
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Abnormally large number of GPT partition entries (%d)\r\n",
-                gptHeader->NumberOfPartitionEntries);
+            spdlog::error("Abnormally large number of GPT partition entries: {}", gptHeader->NumberOfPartitionEntries);
             return hr;
         }
 
         if (gptHeader->SizeofPartitionEntry > 0x10000)
         {
-            log::Error(_L_, hr, L"Abnormally large partition entry (%d)\r\n", gptHeader->SizeofPartitionEntry);
+            spdlog::error("Abnormally large partition entry: {}", gptHeader->SizeofPartitionEntry);
             return hr;
         }
 
         // Dump partition table entries
         dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-            _L_,
             diskName,
             gptHeader->PartitionEntryLba * sectorSize,
             gptHeader->NumberOfPartitionEntries * gptHeader->SizeofPartitionEntry,
@@ -860,12 +823,7 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
         // Get the secondary GPT
         */
         auto gptHeaderSecondary = std::make_shared<DiskChunkStream>(
-            _L_,
-            diskName,
-            gptHeader->AlternativeLba * sectorSize,
-            sectorSize,
-            L"GPT-secondary-header",
-            diskInterfaceToRead);
+            diskName, gptHeader->AlternativeLba * sectorSize, sectorSize, L"GPT-secondary-header", diskInterfaceToRead);
         dumpedChunks.push_back(gptHeaderSecondary);
 
         buffer.ZeroMe();
@@ -877,34 +835,27 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
             // check GPT signature
             if (std::strncmp(reinterpret_cast<char*>(gptHeader->Signature), "EFI PART", 8))
             {
-                log::Error(_L_, hr, L"[GetSectorsCmd::DumpRawGPT] Bad GPT signature (secondary GPT)\r\n");
+                spdlog::error(L"Bad GPT signature (secondary GPT)");
                 return hr;
             }
 
             // check validity of some parameters
             if (gptHeader->NumberOfPartitionEntries > 128)
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Abnormally large number of GPT partition entries (%d) (secondary GPT)\r\n",
+                spdlog::error(
+                    L"Abnormally large number of GPT partition entries: {} (secondary GPT)",
                     gptHeader->NumberOfPartitionEntries);
                 return hr;
             }
 
             if (gptHeader->SizeofPartitionEntry > 0x10000)
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Abnormally large partition entry (%d) (secondary GPT)\r\n",
-                    gptHeader->SizeofPartitionEntry);
+                spdlog::error(L"Abnormally large partition entry: {} (secondary GPT)", gptHeader->SizeofPartitionEntry);
                 return hr;
             }
 
             // Dump partition table entries
             dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-                _L_,
                 diskName,
                 gptHeader->PartitionEntryLba * sectorSize,
                 gptHeader->NumberOfPartitionEntries * gptHeader->SizeofPartitionEntry,
@@ -916,7 +867,7 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
     return S_OK;
 }
 
-bool partitionSortByStartAddress(std::map<string, ULONGLONG>& item1, std::map<string, ULONGLONG>& item2)
+bool partitionSortByStartAddress(std::map<std::string, ULONGLONG>& item1, std::map<std::string, ULONGLONG>& item2)
 {
     return item1["start"] < item2["start"];
 }
@@ -925,22 +876,23 @@ HRESULT Main::DumpSlackSpace(const std::wstring& diskName, const std::wstring& d
 {
     HRESULT hr = E_FAIL;
     PVOID pBuf = NULL;
-    PartitionTable pt(_L_);
+    PartitionTable pt;
 
-    std::vector<std::map<string, ULONGLONG>> usedLocations;
-    std::map<string, ULONGLONG> loc;
+    std::vector<std::map<std::string, ULONGLONG>> usedLocations;
+    std::map<std::string, ULONGLONG> loc;
     ULONGLONG ulSlackSpaceOffset = 0;
     DWORD slackSpaceSize = 0;
 
-    if (FAILED(hr = pt.LoadPartitionTable(diskName.c_str())))
+    hr = pt.LoadPartitionTable(diskName.c_str());
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to load partition table\r\n");
+        spdlog::error("Failed to load partition table (code: {:#x})", hr);
         return hr;
     }
 
     if (pt.Table().empty())
     {
-        log::Warning(_L_, E_UNEXPECTED, L"Partition Table empty\r\n");
+        spdlog::warn("Partition Table empty");
         return 0;
     }
 
@@ -962,15 +914,17 @@ HRESULT Main::DumpSlackSpace(const std::wstring& diskName, const std::wstring& d
     });
 
     // Get the disk size to add a dummy end of disk location
-    CDiskExtent diskReader(_L_, diskInterfaceToRead);
+    CDiskExtent diskReader(diskInterfaceToRead);
     ULONGLONG diskSize = 0;
     if (FAILED(hr = diskReader.Open(FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_NO_BUFFERING)))
     {
-        log::Error(_L_, hr, L"Failed to open a disk for read access (%s)\n", diskInterfaceToRead.c_str());
+        spdlog::error(L"Failed to open a disk for read access '{}' (code: {:#x})", diskInterfaceToRead, hr);
         return hr;
     }
+
     diskReader.Close();
     diskSize = diskReader.GetLength();
+
     // Add a dummy end of disk location
     loc["start"] = diskSize, loc["end"] = diskSize;
     usedLocations.push_back(loc);
@@ -993,22 +947,24 @@ HRESULT Main::DumpSlackSpace(const std::wstring& diskName, const std::wstring& d
             }
 
             auto diskChunk = std::make_shared<DiskChunkStream>(
-                _L_, diskName, ulSlackSpaceOffset, slackSpaceSize, L"Disk slack space", diskInterfaceToRead);
+                diskName, ulSlackSpaceOffset, slackSpaceSize, L"Disk slack space", diskInterfaceToRead);
             diskChunk->setSectorBySectorMode(true);
             dumpedChunks.push_back(diskChunk);
         }
+
         if (curLoc["end"] > farthestEnd)
         {
             farthestEnd = curLoc["end"];
         }
     }
+
     return S_OK;
 }
 
 HRESULT Main::DumpCustomSample(const std::wstring& diskName, const std::wstring& diskInterfaceToRead)
 {
     dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-        _L_, diskName, config.customSampleOffset, config.customSampleSize, L"Custom sample", diskInterfaceToRead));
+        diskName, config.customSampleOffset, config.customSampleSize, L"Custom sample", diskInterfaceToRead));
     return S_OK;
 }
 
@@ -1018,9 +974,8 @@ HRESULT Main::CollectDiskChunks(const OutputSpec& output)
 
     switch (output.Type)
     {
-        case OutputSpec::Archive:
-        {
-            auto compressor = ArchiveCreate::MakeCreate(config.Output.ArchiveFormat, _L_, true);
+        case OutputSpec::Kind::Archive: {
+            auto compressor = ArchiveCreate::MakeCreate(config.Output.ArchiveFormat, true);
 
             auto [hr, CSV] = CreateDiskChunkArchiveAndCSV(config.Output.Path, compressor);
 
@@ -1033,17 +988,16 @@ HRESULT Main::CollectDiskChunks(const OutputSpec& output)
                 diskChunk->SetFilePointer(0, FILE_BEGIN, NULL);
 
                 hr = CollectDiskChunk(compressor, *CSV, diskChunk);
-                if
-                    FAILED(hr)
-                    {
-                        log::Error(_L_, hr, L"Unable to archive result for %s\r\n", diskChunk->m_description.c_str());
-                    }
+                if (FAILED(hr))
+                {
+                    spdlog::error(L"Unable to archive result for '{}' (code: {:#x})", diskChunk->m_description, hr);
+                }
             }
+
             FinalizeArchive(compressor, CSV);
         }
         break;
-        case OutputSpec::Directory:
-        {
+        case OutputSpec::Kind::Directory: {
             auto [hr, CSV] = CreateOutputDirLogFileAndCSV(config.Output.Path);
 
             if (FAILED(hr))
@@ -1055,12 +1009,12 @@ HRESULT Main::CollectDiskChunks(const OutputSpec& output)
                 diskChunk->SetFilePointer(0, FILE_BEGIN, NULL);
 
                 hr = CollectDiskChunk(config.Output.Path, *CSV, diskChunk);
-                if
-                    FAILED(hr)
-                    {
-                        log::Error(_L_, hr, L"Unable to archive result for %s\r\n", diskChunk->m_description.c_str());
-                    }
+                if (FAILED(hr))
+                {
+                    spdlog::error(L"Unable to archive result for '{}' (code: {:#x})", diskChunk->m_description, hr);
+                }
             }
+
             CSV->Close();
         }
         break;
@@ -1082,53 +1036,34 @@ Main::CreateDiskChunkArchiveAndCSV(const std::wstring& pArchivePath, const std::
     fs::path tempdir;
     tempdir = fs::path(pArchivePath).parent_path();
 
-    auto stream_log = std::make_shared<LogFileWriter>(0x1000);
-    stream_log->SetConsoleLog(_L_->ConsoleLog());
-    stream_log->SetDebugLog(_L_->DebugLog());
-    stream_log->SetVerboseLog(_L_->VerboseLog());
-
-    auto logStream = std::make_shared<TemporaryStream>(stream_log);
-
-    if (FAILED(hr = logStream->Open(tempdir.wstring(), L"GetSectors", 5 * 1024 * 1024)))
-    {
-        log::Error(_L_, hr, L"Failed to create temp stream\r\n");
-        return {hr, nullptr};
-    }
-    if (FAILED(hr = _L_->LogToStream(logStream)))
-    {
-        log::Error(_L_, hr, L"Failed to initialize temp logging\r\n");
-        return {hr, nullptr};
-    }
-
-    auto csvStream = std::make_shared<TemporaryStream>(_L_);
+    auto csvStream = std::make_shared<TemporaryStream>();
 
     if (FAILED(hr = csvStream->Open(tempdir.wstring(), L"GetSectors", 1 * 1024 * 1024)))
     {
-        log::Error(_L_, hr, L"Failed to create temp stream\r\n");
+        spdlog::error(L"Failed to create temp stream (code: {:#x})", hr);
         return {hr, nullptr};
     }
 
     auto options = std::make_unique<TableOutput::CSV::Options>();
     options->Encoding = config.Output.OutputEncoding;
 
-    auto CSV = TableOutput::CSV::Writer::MakeNew(_L_, std::move(options));
+    auto CSV = TableOutput::CSV::Writer::MakeNew(std::move(options));
 
     if (FAILED(hr = CSV->WriteToStream(csvStream)))
     {
-        log::Error(_L_, hr, L"Failed to initialize CSV stream\r\n");
+        spdlog::error(L"Failed to initialize CSV stream (code: {:#x})", hr);
         return {hr, nullptr};
     }
     CSV->SetSchema(config.Output.Schema);
 
     if (FAILED(hr = compressor->InitArchive(pArchivePath.c_str())))
     {
-        log::Error(_L_, hr, L"Failed to initialize archive file %s\r\n", pArchivePath.c_str());
+        spdlog::error(L"Failed to initialize archive file '{}' (code: {:#x})", pArchivePath, hr);
         return {hr, nullptr};
     }
 
-    compressor->SetCallback([this](const Archive::ArchiveItem& item) {
-        log::Info(_L_, L"\tFile archived : %s\r\n", item.NameInArchive.c_str());
-    });
+    compressor->SetCallback(
+        [this](const Archive::ArchiveItem& item) { spdlog::info(L"File archived: '{}'", item.NameInArchive); });
 
     return {S_OK, std::move(CSV)};
 }
@@ -1139,7 +1074,9 @@ Main::CreateOutputDirLogFileAndCSV(const std::wstring& strOutputDir)
     HRESULT hr = E_FAIL;
 
     if (strOutputDir.empty())
+    {
         return {E_POINTER, nullptr};
+    }
 
     fs::path outDir(strOutputDir);
 
@@ -1148,34 +1085,19 @@ Main::CreateOutputDirLogFileAndCSV(const std::wstring& strOutputDir)
         case fs::file_type::not_found:
             if (create_directories(outDir))
             {
-                log::Verbose(_L_, L"Created output directory %s\r\n", strOutputDir.c_str());
+                spdlog::debug(L"Created output directory '{}'", strOutputDir);
             }
             else
             {
-                log::Verbose(_L_, L"Output directory %s already exists\r\n", strOutputDir.c_str());
+                spdlog::debug(L"Output directory '{}' already exists", strOutputDir);
             }
             break;
         case fs::file_type::directory:
-            log::Verbose(_L_, L"Specified output directory %s exists and is a directory\r\n", strOutputDir.c_str());
+            spdlog::debug(L"Specified output directory '{}' exists and is a directory", strOutputDir);
             break;
         default:
-            log::Error(
-                _L_,
-                E_INVALIDARG,
-                L"Specified output directory %s exists and is not a directory\r\n",
-                strOutputDir.c_str());
+            spdlog::error(L"Specified output directory '{}' exists and is not a directory", strOutputDir);
             break;
-    }
-
-    fs::path logFile;
-
-    logFile = outDir;
-    logFile /= L"GetSectors.log";
-
-    if (!_L_->IsLoggingToFile())
-    {
-        if (FAILED(hr = _L_->LogToFile(logFile.wstring().c_str())))
-            return {hr, nullptr};
     }
 
     fs::path csvFile(outDir);
@@ -1184,10 +1106,13 @@ Main::CreateOutputDirLogFileAndCSV(const std::wstring& strOutputDir)
     auto options = std::make_unique<TableOutput::CSV::Options>();
     options->Encoding = config.Output.OutputEncoding;
 
-    auto CSV = TableOutput::CSV::Writer::MakeNew(_L_, std::move(options));
+    auto CSV = TableOutput::CSV::Writer::MakeNew(std::move(options));
 
-    if (FAILED(hr = CSV->WriteToFile(csvFile.wstring().c_str())))
+    hr = CSV->WriteToFile(csvFile.wstring().c_str());
+    if (FAILED(hr))
+    {
         return {hr, nullptr};
+    }
 
     CSV->SetSchema(config.Output.Schema);
 
@@ -1199,26 +1124,27 @@ HRESULT Main::CollectDiskChunk(
     ITableOutput& output,
     std::shared_ptr<DiskChunkStream> diskChunk)
 {
-    HRESULT hr = E_FAIL;
-    wstring strComputerName;
-    SystemDetails::GetOrcComputerName(strComputerName);
-
-    if (FAILED(hr = compressor->AddStream(diskChunk->getSampleName().c_str(), L"dummy", diskChunk)))
+    HRESULT hr = compressor->AddStream(diskChunk->getSampleName().c_str(), L"dummy", diskChunk);
+    if (FAILED(hr))
     {
+        // TODO: fabienfl: should return on failure ?
         // note : pas d'erreur lorsqu'un sample avec un nom bizarre n'a pas été mis dans dans un zip
-        log::Error(_L_, hr, L"Failed to add a sample to the archive\r\n");
+        spdlog::error(L"Failed to add a sample to the archive (code: {:#x})", hr);
     }
-    else
+
+    std::wstring computerName;
+    SystemDetails::GetOrcComputerName(computerName);
+    hr = AddDiskChunkRefToCSV(output, computerName, *diskChunk);
+    if (FAILED(hr))
     {
-        if (FAILED(hr = AddDiskChunkRefToCSV(output, strComputerName, *diskChunk)))
-        {
-            log::Error(_L_, hr, L"Failed to add a sample metadata to csv\r\n");
-        }
-        if (FAILED(hr = compressor->FlushQueue()))
-        {
-            log::Error(_L_, hr, L"Failed to flush queue to %s\r\n", config.Output.Path.c_str());
-            return hr;
-        }
+        spdlog::error(L"Failed to add a sample metadata to csv (code: {:#x})", hr);
+    }
+
+    hr = compressor->FlushQueue();
+    if (FAILED(hr))
+    {
+        spdlog::error(L"Failed to flush queue to '{}' (code: {:#x})", config.Output.Path, hr);
+        return hr;
     }
 
     return S_OK;
@@ -1239,35 +1165,24 @@ HRESULT Main::FinalizeArchive(
         auto pCSVStream = pStreamWriter->GetStream();
         if (pCSVStream && pCSVStream->GetSize() > 0LL)
         {
-            if (FAILED(hr = pCSVStream->SetFilePointer(0, FILE_BEGIN, nullptr)))
+            hr = pCSVStream->SetFilePointer(0, FILE_BEGIN, nullptr);
+            if (FAILED(hr))
             {
-                log::Error(_L_, hr, L"Failed to rewind csv stream\r\n");
+                spdlog::error(L"Failed to rewind csv stream (code: {:#x})", hr);
             }
-            if (FAILED(hr = compressor->AddStream(L"GetSectors.csv", L"GetSectors.csv", pCSVStream)))
+
+            hr = compressor->AddStream(L"GetSectors.csv", L"GetSectors.csv", pCSVStream);
+            if (FAILED(hr))
             {
-                log::Error(_L_, hr, L"Failed to add GetSectors.csv\r\n");
+                spdlog::error(L"Failed to add GetSectors.csv (code: {:#x})", hr);
             }
         }
     }
 
-    // Archive log file
-    auto pLogStream = _L_->GetByteStream();
-    _L_->CloseLogToStream(false);
-    if (pLogStream && pLogStream->GetSize() > 0LL)
+    hr = compressor->Complete();
+    if (FAILED(hr))
     {
-        if (FAILED(hr = pLogStream->SetFilePointer(0, FILE_BEGIN, nullptr)))
-        {
-            log::Error(_L_, hr, L"Failed to rewind log stream\r\n");
-        }
-        if (FAILED(hr = compressor->AddStream(L"GetSectors.log", L"GetSectors.log", pLogStream)))
-        {
-            log::Error(_L_, hr, L"Failed to add GetSectors.log\r\n");
-        }
-    }
-
-    if (FAILED(hr = compressor->Complete()))
-    {
-        log::Error(_L_, hr, L"Failed to complete %s\r\n", config.Output.Path.c_str());
+        spdlog::error(L"Failed to complete '{}' (code: {:#x})", config.Output.Path, hr);
         return hr;
     }
 
@@ -1278,43 +1193,44 @@ HRESULT Main::FinalizeArchive(
 HRESULT
 Main::CollectDiskChunk(const std::wstring& outputdir, ITableOutput& output, std::shared_ptr<DiskChunkStream> diskChunk)
 {
-    HRESULT hr = E_FAIL;
-    fs::path output_dir(outputdir);
-    wstring strComputerName;
-    SystemDetails::GetOrcComputerName(strComputerName);
-    fs::path sampleFile = output_dir / fs::path(diskChunk->getSampleName());
-    FileStream outputStream(_L_);
-
-    ULONGLONG ullBytesWritten = 0LL, ullBytesRead = 0LL;
-
     // TODO : read by chunks
     CBinaryBuffer cBuf;
     cBuf.SetCount((size_t)diskChunk->GetSize());
     cBuf.ZeroMe();
 
-    hr = diskChunk->Read(cBuf.GetData(), cBuf.GetCount(), &ullBytesRead);
+    ULONGLONG ullBytesRead = 0LL;
+    HRESULT hr = diskChunk->Read(cBuf.GetData(), cBuf.GetCount(), &ullBytesRead);
     if (hr != S_OK)
     {
         return hr;
     }
 
-    if (FAILED(hr = outputStream.WriteTo(sampleFile.wstring().c_str())))
+    const fs::path outputDir(outputdir);
+    const fs::path sampleFile = outputDir / fs::path(diskChunk->getSampleName());
+    FileStream outputStream;
+    hr = outputStream.WriteTo(sampleFile.wstring().c_str());
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to create sample file %s\r\n", sampleFile.wstring().c_str());
+        spdlog::error(L"Failed to create sample file '{}' (code: {:#x})", sampleFile, hr);
         return hr;
     }
 
-    if (FAILED(hr = outputStream.Write(cBuf.GetData(), cBuf.GetCount(), &ullBytesWritten)))
+    ULONGLONG ullBytesWritten = 0LL;
+    hr = outputStream.Write(cBuf.GetData(), cBuf.GetCount(), &ullBytesWritten);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed while writing to sample %s\r\n", sampleFile.string().c_str());
+        spdlog::error(L"Failed while writing to sample '{}' (code: {:#x})", sampleFile, hr);
         return hr;
     }
 
     outputStream.Close();
 
-    if (FAILED(hr = AddDiskChunkRefToCSV(output, strComputerName, *diskChunk)))
+    std::wstring computerName;
+    SystemDetails::GetOrcComputerName(computerName);
+    hr = AddDiskChunkRefToCSV(output, computerName, *diskChunk);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to add diskChunk metadata to csv\r\n");
+        spdlog::error(L"Failed to add diskChunk metadata to csv (code: {:#x}", hr);
         return hr;
     }
 
@@ -1324,17 +1240,14 @@ Main::CollectDiskChunk(const std::wstring& outputdir, ITableOutput& output, std:
 HRESULT
 Main::AddDiskChunkRefToCSV(ITableOutput& output, const std::wstring& strComputerName, DiskChunkStream& diskChunk)
 {
-
-    HRESULT hr = E_FAIL;
-
-    output.WriteString(strComputerName.c_str());
-    output.WriteString(diskChunk.m_DiskName.c_str());
-    output.WriteString(diskChunk.m_description.c_str());
-    output.WriteString(diskChunk.getSampleName().c_str());
+    output.WriteString(strComputerName);
+    output.WriteString(diskChunk.m_DiskName);
+    output.WriteString(diskChunk.m_description);
+    output.WriteString(diskChunk.getSampleName());
     output.WriteInteger(diskChunk.m_offset);
     output.WriteInteger(diskChunk.m_size);
     output.WriteInteger(diskChunk.m_readingTime);
-    output.WriteString(diskChunk.m_DiskInterface.c_str());
+    output.WriteString(diskChunk.m_DiskInterface);
     output.WriteInteger(diskChunk.m_diskReader->GetLogicalSectorSize());
     output.WriteEndOfLine();
 

@@ -7,7 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "CryptoUtilities.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -18,28 +17,25 @@ namespace Orc::Test {
 TEST_CLASS(CryptoUtilitiesTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(CryptoUtilitiesBasicTest)
     {
         {
             HCRYPTPROV hProv = NULL;
-            Assert::IsTrue(S_OK == CryptoUtilities::AcquireContext(_L_, hProv));
+            Assert::IsTrue(S_OK == CryptoUtilities::AcquireContext(hProv));
             Assert::IsTrue(hProv != NULL);
         }
         {
             HCRYPTPROV hProv = NULL;
-            Assert::IsTrue(S_OK == CryptoUtilities::AcquireContext(_L_, hProv));
+            Assert::IsTrue(S_OK == CryptoUtilities::AcquireContext(hProv));
             Assert::IsTrue(hProv != NULL);
         }
     }

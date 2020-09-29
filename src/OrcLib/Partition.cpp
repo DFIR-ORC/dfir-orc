@@ -1,82 +1,193 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2020 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl (ANSSI)
 //
 #include "stdafx.h"
 
 #include "Partition.h"
 
-#include <sstream>
+#include <fmt/format.h>
 
-#include <boost/io/ios_state.hpp>
+#include <boost/algorithm/string/join.hpp>
 
-using namespace Orc;
+namespace Orc {
 
-std::wostream& Orc::operator<<(std::wostream& o, const Orc::Partition& p)
+std::wstring Partition::ToString(Type type)
 {
-    boost::io::ios_flags_saver fs(std::cerr);
-
-    if (p.IsNTFS())
-        o << L"NTFS";
-    else if (p.IsFAT12())
-        o << L"FAT12";
-    else if (p.IsFAT16())
-        o << L"FAT16";
-    else if (p.IsFAT32())
-        o << L"FAT32";
-    else if (p.IsREFS())
-        o << L"REFS";
-    else if (p.IsESP())
-        o << L"ESP";
-    else if (p.IsMicrosoftReserved())
-        o << L"MICROSOFT_RESERVED";
-    else if (p.IsBitLocked())
-        o << L"BitLocked";
-    else if (!p.IsValid())
-        o << L"INVALID";
-    else
-        o << L"OTHER";
-
-    if (p.IsValid())
+    switch (type)
     {
-        o << L" - number : " << p.PartitionNumber << L" - start offset : 0x" << std::hex << p.Start
-          << L" - end offset : 0x" << p.End << L" - size : 0x" << p.Size << L" - flags :";
-
-        std::wstringstream flags;
-
-        if (p.IsBootable())
-        {
-            flags << L" BOOTABLE";
-        }
-        if (p.IsSystem())
-        {
-            flags << L" SYSTEM";
-        }
-        if (p.IsReadOnly())
-        {
-            flags << L" RO";
-        }
-        if (p.IsHidden())
-        {
-            flags << L" HIDDEN";
-        }
-        if (p.IsNotAutoMountable())
-        {
-            flags << L" NO_AUTO_MOUNT";
-        }
-
-        if (flags.str().empty())
-        {
-            o << L" NONE";
-        }
-        else
-        {
-            o << flags.str();
-        }
+        case Type::BitLocked:
+            return L"Bitlocked";
+        case Type::ESP:
+            return L"ESP";
+        case Type::Extended:
+            return L"Extended";
+        case Type::FAT12:
+            return L"FAT12";
+        case Type::FAT16:
+            return L"FAT16";
+        case Type::FAT32:
+            return L"FAT32";
+        case Type::GPT:
+            return L"GPT";
+        case Type::Invalid:
+            return L"Invalid";
+        case Type::MICROSOFT_RESERVED:
+            return L"MICROSOFT_RESERVED";
+        case Type::NTFS:
+            return L"NTFS";
+        case Type::Other:
+            return L"Other";
+        case Type::REFS:
+            return L"REFS";
     }
 
-    return o;
+    return L"Unsupported";
 }
+
+std::wstring Partition::ToString(Flags flags)
+{
+    std::vector<std::wstring> activeFlags;
+
+    if (flags & Flags::Bootable)
+    {
+        activeFlags.push_back(L"BOOTABLE");
+    }
+
+    if (flags & Flags::Hidden)
+    {
+        activeFlags.push_back(L"HIDDEN");
+    }
+
+    if (flags & Flags::Invalid)
+    {
+        activeFlags.push_back(L"INVALID");
+    }
+
+    if (flags & Flags::NoAutoMount)
+    {
+        activeFlags.push_back(L"NO_AUTO_MOUNT");
+    }
+
+    if (flags & Flags::None)
+    {
+        activeFlags.push_back(L"NONE");
+    }
+
+    if (flags & Flags::ReadOnly)
+    {
+        activeFlags.push_back(L"READONLY");
+    }
+
+    if (flags & Flags::System)
+    {
+        activeFlags.push_back(L"SYSTEM");
+    }
+
+    return boost::join(activeFlags, L" ");
+}
+
+bool Partition::IsBootable() const
+{
+    return PartitionFlags & Flags::Bootable;
+}
+
+bool Partition::IsSystem() const
+{
+    return PartitionFlags & Flags::System;
+}
+
+bool Partition::IsReadOnly() const
+{
+    return PartitionFlags & Flags::ReadOnly;
+}
+
+bool Partition::IsHidden() const
+{
+    return PartitionFlags & Flags::Hidden;
+}
+
+bool Partition::IsNotAutoMountable() const
+{
+    return PartitionFlags & Flags::NoAutoMount;
+}
+
+bool Partition::IsFAT12() const
+{
+    return PartitionType == Type::FAT12;
+}
+
+bool Partition::IsFAT16() const
+{
+    return PartitionType == Type::FAT16;
+}
+
+bool Partition::IsFAT32() const
+{
+    return PartitionType == Type::FAT32;
+}
+
+bool Partition::IsREFS() const
+{
+    return PartitionType == Type::REFS;
+}
+
+bool Partition::IsNTFS() const
+{
+    return PartitionType == Type::NTFS;
+}
+
+bool Partition::IsExtented() const
+{
+    return PartitionType == Type::Extended;
+}
+
+bool Partition::IsGPT() const
+{
+    return PartitionType == Type::GPT;
+}
+
+bool Partition::IsESP() const
+{
+    return PartitionType == Type::ESP;
+}
+
+bool Partition::IsBitLocked() const
+{
+    return PartitionType == Type::BitLocked;
+}
+
+bool Partition::IsMicrosoftReserved() const
+{
+    return PartitionType == Type::MICROSOFT_RESERVED;
+}
+
+bool Partition::IsValid() const
+{
+    return PartitionType != Type::Invalid;
+}
+
+std::wstring Partition::ToString(const Partition& partition)
+{
+    if (partition.IsValid())
+    {
+        return fmt::format(
+            L"type: {}, number: {}, offsets: {:#x}-{:#x}, size: {}, flags: {}",
+            partition.PartitionType,
+            partition.PartitionNumber,
+            partition.Start,
+            partition.End,
+            partition.Size,
+            partition.PartitionFlags);
+    }
+    else
+    {
+        return fmt::format(L"Invalid, type: {}", partition.PartitionType);
+    }
+}
+
+}  // namespace Orc

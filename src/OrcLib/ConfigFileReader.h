@@ -31,7 +31,7 @@ private:
     HRESULT NavigateConfigNode(const CComPtr<IXmlReader>& pReader, ConfigItem& config);
 
 public:
-    ConfigFileReader(logger pLog, bool bLogComment = true);
+    ConfigFileReader(bool bLogComment = true);
 
     HRESULT ReadConfig(const WCHAR* pCfgFile, ConfigItem& config, LPCWSTR szEncodingHint = NULL);
     HRESULT

@@ -43,7 +43,7 @@ public:
 
     YaraConfig& operator=(const YaraConfig& other) = default;
 
-    static YaraConfig Get(const logger& pLog, const ConfigItem& item);
+    static YaraConfig Get(const ConfigItem& item);
 
     HRESULT SetBlockSize(ULONG Size)
     {
@@ -113,10 +113,7 @@ private:
 class YaraScanner
 {
 public:
-    YaraScanner(logger pLog)
-        : _L_(std::move(pLog))
-    {
-    }
+    YaraScanner() {}
 
     HRESULT Initialize(bool bWithCompiler = true);
     HRESULT Configure(std::unique_ptr<YaraConfig>& config);
@@ -179,10 +176,9 @@ public:
 
     HRESULT PrintConfiguration();
 
-    static std::vector<std::string> GetRulesSpec(
-        const logger& L,
-        LPCSTR szRules);  // takes are of the splitting of rules
-    static std::vector<std::string> GetRulesSpec(const logger& L, LPCWSTR szRules);
+    // takes are of the splitting of rules
+    static std::vector<std::string> GetRulesSpec(LPCSTR szRules);
+    static std::vector<std::string> GetRulesSpec(LPCWSTR szRules);
 
     ~YaraScanner();
 
@@ -221,7 +217,6 @@ private:
     YR_RULES* GetRules();
 
     std::shared_ptr<YaraStaticExtension> m_yara;
-    logger _L_;
 
     YaraConfig m_config;
 

@@ -30,7 +30,7 @@ class ORCLIB_API Location
     friend class LocationSet;
 
 public:
-    enum Type
+    enum class Type
     {
         Undetermined = 0,
         OfflineMFT,
@@ -48,14 +48,15 @@ public:
         Snapshot,
     };
 
+    static std::wstring ToString(Type locationType);
+
 private:
-    logger _L_;
 
     std::shared_ptr<VolumeReader> m_Reader;
     std::wstring m_Location;
     std::wstring m_Identifier;
     std::vector<CDiskExtent> m_Extents;
-    Type m_Type = Undetermined;
+    Type m_Type = Type::Undetermined;
     std::vector<std::wstring> m_Paths;
     std::vector<std::wstring> m_SubDirs;
 
@@ -72,7 +73,7 @@ private:
     }
 
 public:
-    Location(logger pLog, const std::wstring& Location, Type type);
+    Location(const std::wstring& Location, Type type);
 
     const std::wstring& GetLocation() const { return m_Location; }
     const std::wstring& GetIdentifier()

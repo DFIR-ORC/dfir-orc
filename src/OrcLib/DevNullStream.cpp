@@ -10,8 +10,8 @@
 
 using namespace Orc;
 
-DevNullStream::DevNullStream(logger pLog)
-    : ByteStream(std::move(pLog))
+DevNullStream::DevNullStream()
+    : ByteStream()
 {
 }
 

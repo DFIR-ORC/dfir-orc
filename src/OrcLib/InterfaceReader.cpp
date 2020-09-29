@@ -8,13 +8,14 @@
 #include "stdafx.h"
 #include "InterfaceReader.h"
 
-#include "LogFileWriter.h"
-
 #include "PartitionTable.h"
+#include "WideAnsi.h"
 
 #include <regex>
 
 #include <boost\scope_exit.hpp>
+
+#include <spdlog/spdlog.h>
 
 using namespace Orc;
 
@@ -57,13 +58,14 @@ HRESULT InterfaceReader::LoadDiskProperties()
         }
         else
         {
-            log::Error(_L_, E_INVALIDARG, L"Invalid physical drive reference: %s\r\n", m_szLocation);
+            spdlog::error(L"Invalid physical drive reference: '{}'", m_szLocation);
             return E_INVALIDARG;
         }
     }
-    catch (std::out_of_range)
+    catch (const std::out_of_range& e)
     {
-        log::Error(_L_, E_INVALIDARG, L"Invalid physical drive reference: %s\r\n", m_szLocation);
+        auto [hr, msg] = AnsiToWide(e.what());
+        spdlog::error(L"Invalid physical drive reference: '{}' ({})", m_szLocation, msg);
         return E_INVALIDARG;
     }
 
@@ -71,11 +73,11 @@ HRESULT InterfaceReader::LoadDiskProperties()
 
     if (m_uiPartNum != (UINT)-1)
     {
-        PartitionTable pt(_L_);
+        PartitionTable pt;
 
         if (FAILED(hr = pt.LoadPartitionTable(m_InterfacePath.c_str())))
         {
-            log::Error(_L_, hr, L"Invalid partition table found on interface %s\r\n", m_InterfacePath.c_str());
+            spdlog::error(L"Invalid partition table found on interface '{}' (code: {:#x})", m_InterfacePath, hr);
             return hr;
         }
 
@@ -83,13 +85,13 @@ HRESULT InterfaceReader::LoadDiskProperties()
         {
             if (part.PartitionNumber == m_uiPartNum)
             {
-                CDiskExtent Extent(_L_, m_InterfacePath, part.Start, part.Size, part.SectorSize);
+                CDiskExtent Extent(m_InterfacePath, part.Start, part.Size, part.SectorSize);
 
                 if (FAILED(
                         hr = Extent.Open(
                             (FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
                 {
-                    log::Error((_L_), hr, L"Failed to open the interface, so bailing...\r\n");
+                    spdlog::error(L"Failed to open the interface '{}' (code: {:#x})", m_InterfacePath, hr);
                     return hr;
                 }
 
@@ -99,10 +101,10 @@ HRESULT InterfaceReader::LoadDiskProperties()
     }
     else if (m_ullOffset != (ULONGLONG)-1)
     {
-        CDiskExtent Extent(_L_, m_InterfacePath.c_str(), m_ullOffset, m_ullLength, m_uiSectorSize);
+        CDiskExtent Extent(m_InterfacePath.c_str(), m_ullOffset, m_ullLength, m_uiSectorSize);
         if (FAILED(hr = Extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
         {
-            log::Error((_L_), hr, L"Failed to open the drive, so bailing...\r\n");
+            spdlog::error(L"Failed to open the drive '{}' (code: {:#x})", m_InterfacePath, hr);
             return hr;
         }
 
@@ -110,8 +112,7 @@ HRESULT InterfaceReader::LoadDiskProperties()
     }
     else
     {
-        log::Error(
-            _L_, E_INVALIDARG, L"No partition number or offset specified for interface reader: %s\r\n", m_szLocation);
+        spdlog::error(L"No partition number or offset specified for interface reader: '{}'", m_szLocation);
         return E_INVALIDARG;
     }
 
@@ -131,7 +132,7 @@ HRESULT InterfaceReader::LoadDiskProperties()
 
 std::shared_ptr<VolumeReader> InterfaceReader::DuplicateReader()
 {
-    auto retval = std::make_shared<InterfaceReader>(_L_, m_szLocation);
+    auto retval = std::make_shared<InterfaceReader>(m_szLocation);
 
     retval->m_uiPartNum = m_uiPartNum;
 

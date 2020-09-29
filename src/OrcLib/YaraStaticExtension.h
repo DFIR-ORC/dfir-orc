@@ -17,7 +17,7 @@ namespace Orc {
 class ORCLIB_API YaraStaticExtension
 {
 public:
-    YaraStaticExtension::YaraStaticExtension(logger pLog) {}
+    YaraStaticExtension::YaraStaticExtension() {}
 
     int yr_initialize(void);
     int yr_compiler_create(YR_COMPILER** compiler);

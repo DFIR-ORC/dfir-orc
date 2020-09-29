@@ -11,9 +11,9 @@
 
 #include "EmbeddedResource.h"
 
-#include "LogFileWriter.h"
-
 #include "Temporary.h"
+
+#include <spdlog/spdlog.h>
 
 using namespace std;
 using namespace Orc;
@@ -27,11 +27,11 @@ HRESULT CommandAgentResources::ExtractRessource(
 
     if (EmbeddedResource::IsResourceBased(strRef))
     {
-        if (FAILED(
-                hr = EmbeddedResource::ExtractToFile(
-                    _L_, strRef, strKeyword, RESSOURCE_READ_EXECUTE_BA, m_strTempDirectory, strExtracted)))
+        hr = EmbeddedResource::ExtractToFile(
+            strRef, strKeyword, RESSOURCE_READ_EXECUTE_BA, m_strTempDirectory, strExtracted);
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to extract ressource %s\r\n", strRef.c_str());
+            spdlog::error(L"Failed to extract ressource '{}' (code: {:#x})", strRef, hr);
             return hr;
         }
     }
@@ -76,21 +76,20 @@ HRESULT CommandAgentResources::DeleteTemporaryRessource(const std::wstring& strR
 
     if (it == end(m_TempRessources))
     {
-        log::Verbose(_L_, L"Ressource %s not found in temporary extracted ressources\r\n", strRef.c_str());
+        spdlog::debug(L"Ressource '{}' not found in temporary extracted ressources", strRef);
         return S_OK;  // Nothing to delete here
     }
 
     if (!it->second.empty())
     {
-        log::Verbose(_L_, L"No temporary file associated with %s\r\n", strRef.c_str());
+        spdlog::debug(L"No temporary file associated with '{}'", strRef);
         return S_OK;
     }
 
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = UtilDeleteTemporaryFile(_L_, it->second.c_str())))
+    if (FAILED(hr = UtilDeleteTemporaryFile(it->second.c_str())))
     {
-        log::Error(
-            _L_, hr, L"Failed to delete temporary ressource %s (temp is %s)\r\n", strRef.c_str(), it->second.c_str());
+        spdlog::error(L"Failed to delete temporary ressource '{}' (temp: '{}', code: {:#x})", strRef, it->second, hr);
         return hr;
     }
     return S_OK;
@@ -102,14 +101,10 @@ HRESULT CommandAgentResources::DeleteTemporaryRessources()
         begin(m_TempRessources), end(m_TempRessources), [this](const std::pair<std::wstring, std::wstring>& item) {
             HRESULT hr = E_FAIL;
 
-            if (FAILED(hr = UtilDeleteTemporaryFile(_L_, item.second.c_str())))
+            if (FAILED(hr = UtilDeleteTemporaryFile(item.second.c_str())))
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Failed to delete temporary ressource %s (temp is %s)\r\n",
-                    item.first.c_str(),
-                    item.second.c_str());
+                spdlog::error(
+                    L"Failed to delete temporary ressource {} (temp: {}, code: {:#x})", item.first, item.second, hr);
             }
         });
 
@@ -121,6 +116,6 @@ CommandAgentResources::~CommandAgentResources()
     HRESULT hr = E_FAIL;
     if (FAILED(hr = DeleteTemporaryRessources()))
     {
-        log::Error(_L_, hr, L"Failed to delete all extrated temporary ressources (in ~CommandAgentResources)\r\n");
+        spdlog::error(L"~CommandAgentResources: failed to delete all extrated temporary ressources (code: {:#x})", hr);
     }
 }

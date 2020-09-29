@@ -8,6 +8,8 @@
 //
 #pragma once
 
+#include "Utils/EnumFlags.h"
+
 #pragma managed(push, off)
 
 namespace Orc {
@@ -20,7 +22,7 @@ using ITableOutput = TableOutput::IOutput;
 static constexpr const unsigned __int64 One = 1;
 
 // Usefull with http://blogs.msdn.com/vcblog/archive/2008/03/10/visual-studio-2008-enum-bit-flags-visualization.aspx
-enum Intentions : DWORDLONG
+enum class Intentions : DWORDLONG
 {
     FILEINFO_NONE = 0,
 
@@ -117,6 +119,8 @@ enum Intentions : DWORDLONG
 
     FILEINFO_ALL = (unsigned long long)-1
 };
+
+ENABLE_BITMASK_OPERATORS(Intentions);
 
 class ORCLIB_API IIntentionsHandler
 {

@@ -11,14 +11,12 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class CryptoUtilities
 {
 public:
     CryptoUtilities() = delete;
 
-    static HRESULT AcquireContext(_In_ const logger& pLog, _Out_ HCRYPTPROV& hCryptProv);
+    static HRESULT AcquireContext(_Out_ HCRYPTPROV& hCryptProv);
 };
 
 }  // namespace Orc

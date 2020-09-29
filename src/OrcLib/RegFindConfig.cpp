@@ -29,15 +29,16 @@ HRESULT RegFindConfig::GetConfiguration(
     {
         for (const auto& configItem : item[CONFIG_HIVE_FILEFIND].NodeList)
         {
-            std::shared_ptr<FileFind::SearchTerm> term = FileFind::GetSearchTermFromConfig(configItem, _L_);
+            std::shared_ptr<FileFind::SearchTerm> term = FileFind::GetSearchTermFromConfig(configItem);
 
             if (term != nullptr)
             {
                 HRESULT hr = E_FAIL;
                 if (FAILED(hr = HivesFind.AddTerm(term)))
                 {
-                    log::Error(_L_, hr, L"Failed to add registry search term\r\n");
+                    spdlog::error(L"Failed to add registry search term (code: {:#x})", hr);
                 }
+
                 FileFindTerms.push_back(term);
             }
         }
@@ -45,13 +46,13 @@ HRESULT RegFindConfig::GetConfiguration(
 
     if (FAILED(hr = reg.AddRegFindFromConfig(item[CONFIG_HIVE_REGFIND].NodeList)))
     {
-        log::Error(_L_, hr, L"Error in specific registry find parsing in config file\r\n");
+        spdlog::error(L"Error in specific registry find parsing in config file (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = reg.AddRegFindFromTemplate(item[CONFIG_HIVE_TEMPLATE].NodeList)))
     {
-        log::Error(_L_, hr, L"Error in specific registry find parsing in template file\r\n");
+        spdlog::error(L"Error in specific registry find parsing in template file (code: {:#x})", hr);
         return hr;
     }
 

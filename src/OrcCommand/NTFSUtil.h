@@ -16,8 +16,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class MFTRecord;
 class MftRecordAttribute;
 
@@ -78,42 +76,37 @@ public:
 private:
     Configuration config;
 
-    HANDLE OpenVolume(LPCWSTR szVolumePath);
-
-    // USN Journal Command
-    HRESULT GetUSNJournalConfiguration(HANDLE hVolume, DWORDLONG& MaximumSize, DWORDLONG& AllocationDelta);
-    HRESULT PrintUSNJournalConfiguration(HANDLE hVolume);
-    HRESULT ConfigureUSNJournal(HANDLE hVolume);
+    HRESULT CommandUSN();
+    HRESULT CommandEnum();
 
     // Record command
-    HRESULT PrintRecordDetails(const std::shared_ptr<VolumeReader>& volReader, MFTRecord* pRecord);
     HRESULT PrintNonResidentAttributeDetails(
         const std::shared_ptr<VolumeReader>& volReader,
         MFTRecord* pRecord,
         const std::shared_ptr<MftRecordAttribute>& pAttr,
         DWORD dwIndex);
-    HRESULT PrintRecordDetails(ULONGLONG ullRecord);
+    HRESULT CommandRecord(ULONGLONG ullRecord);
 
     // Find record
     HRESULT FindRecord(const std::wstring& strTerm);
 
     // Location command
-    HRESULT PrintMasterFileDetails();
+    HRESULT CommandMFT();
 
     // Location command
-    HRESULT PrintLocationDetails();
+    HRESULT CommandLoc();
 
     // Enumerate possible locations
     HRESULT PrintAllLocations();
 
     // HexDump
-    HRESULT PrintHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize);
+    HRESULT CommandHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize);
 
     // Vss
-    HRESULT PrintVss();
+    HRESULT CommandVss();
 
     // BitLocker
-    HRESULT PrintBitLocker();
+    HRESULT CommandBitLocker();
 
 public:
     static LPCWSTR ToolName() { return L"NTFSUtil"; }
@@ -129,8 +122,8 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#NTFSUTIL_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(std::move(pLog))
+    Main()
+        : UtilitiesMain()
     {
     }
 
@@ -140,10 +133,6 @@ public:
     void PrintFooter();
 
     HRESULT CheckConfiguration();
-
-    const std::wstring& GetVolumePath() const { return config.strVolume; };
-
-    bool ShouldConfigureUSNJournal() const { return config.cmd == USN ? config.bConfigure : false; };
 
     HRESULT GetSchemaFromConfig(const ConfigItem& schemaitem);
 

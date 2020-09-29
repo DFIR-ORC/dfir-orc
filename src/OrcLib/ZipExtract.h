@@ -20,7 +20,7 @@ class ORCLIB_API ZipExtract : public ArchiveExtract
     friend class ArchiveExtract;
 
 public:
-    ZipExtract(logger pLog, bool bComputeHash = false);
+    ZipExtract(bool bComputeHash = false);
 
 	STDMETHOD(Extract)
     (__in MakeArchiveStream makeArchiveStream,

@@ -26,8 +26,6 @@ class ArchiveUpdateCallback
 private:
     long m_refCount;
 
-    logger _L_;
-
     Archive::ArchiveItems& m_Items;
     Archive::ArchiveIndexes& m_Indexes;
 
@@ -51,7 +49,6 @@ private:
 
 public:
     ArchiveUpdateCallback(
-        logger pLog,
         Archive::ArchiveItems& items,
         Archive::ArchiveIndexes& indexes,
         bool bFinal,

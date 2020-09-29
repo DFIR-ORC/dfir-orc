@@ -26,8 +26,8 @@ protected:
     STDMETHOD(OpenCertStore)();
 
 public:
-    MessageStream(logger pLog)
-        : ChainingStream(std::move(pLog))
+    MessageStream()
+        : ChainingStream()
     {
         ZeroMemory(&m_StreamInfo, sizeof(CMSG_STREAM_INFO));
     };

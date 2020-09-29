@@ -15,7 +15,6 @@
 
 #include "ParameterCheck.h"
 #include "SystemDetails.h"
-#include "LogFileWriter.h"
 #include "TableOutputWriter.h"
 
 #include "ConfigFile.h"
@@ -35,19 +34,19 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    ConfigFile reader(_L_);
+    ConfigFile reader;
 
-    if (FAILED(hr = config.output.Configure(_L_, configitem[USNINFO_OUTPUT])))
+    if (FAILED(hr = config.output.Configure(configitem[USNINFO_OUTPUT])))
         return hr;
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(configitem[USNINFO_LOCATIONS])))
     {
-        log::Error(_L_, hr, L"Failed to get locations definition from config\r\n");
+        spdlog::error("Failed to get locations definition from config (code: {:#x})", hr);
         return hr;
     }
     if (FAILED(hr = config.locs.AddKnownLocations(configitem[USNINFO_KNOWNLOCATIONS])))
     {
-        log::Error(_L_, hr, L"Failed to get known locations\r\n");
+        spdlog::error("Failed to get known locations (code: {:#x})", hr);
         return hr;
     }
 
@@ -61,7 +60,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.output.TableKey.empty() ? L"USNInfo" : config.output.TableKey.c_str(), schemaitem);
+        config.output.TableKey.empty() ? L"USNInfo" : config.output.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 
@@ -112,20 +111,18 @@ HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
 
-    if (config.strComputerName.empty())
+    if (m_utilitiesConfig.strComputerName.empty())
     {
-        SystemDetails::GetOrcComputerName(config.strComputerName);
+        SystemDetails::GetOrcComputerName(m_utilitiesConfig.strComputerName);
     }
 
     config.locs.Consolidate(config.bAddShadows, FSVBR::FSType::NTFS);
 
     if (config.locs.IsEmpty() != S_OK)
     {
-        log::Error(
-            _L_,
-            E_INVALIDARG,
-            L"No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
-            L"want parsed\r\n");
+        spdlog::error(
+            "No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
+            "want parsed");
         return E_INVALIDARG;
     }
 
@@ -142,18 +139,17 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.output.Path.c_str())))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Specified file information output directory (%s) is not a directory\r\n",
-                config.output.Path.c_str());
+            spdlog::error(
+                L"Specified file information output directory '{}' is not a directory (code: {:#x})",
+                config.output.Path,
+                hr);
             return hr;
         }
     }
 
     if (!config.output.Schema)
     {
-        log::Info(_L_, L"WARNING: Sql Schema is empty\r\n");
+        spdlog::warn("Sql Schema is empty");
     }
 
     return S_OK;

@@ -12,8 +12,6 @@
 
 #include "BinaryBuffer.h"
 
-#include "LogFileWriter.h"
-
 #include "CryptoUtilities.h"
 
 #include "OrcException.h"
@@ -476,15 +474,14 @@ inline CHAR GetChar(BYTE aByte)
     return isAscii[aByte] ? (CHAR)aByte : '.';
 }
 
-HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
+HRESULT CBinaryBuffer::PrintHex(LPCWSTR szIndent) const
 {
     size_t offset = 0;
     while (offset + 16 < m_size)
     {
-        log::Info(
-            pLog,
+        spdlog::info(
             L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X "
-            L"%2.2X\t%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c\r\n",
+            L"%2.2X\t%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
             szIndent,
             offset,
             Get<BYTE>(offset + 0),
@@ -526,20 +523,18 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
         switch (m_size - offset)
         {
             case 1:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X                                                                                   "
-                    L"       \t%c\r\n",
+                    L"       \t%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
                     GetChar(Get<BYTE>(offset + 0)));
                 break;
             case 2:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X                                                                             "
-                    L"       \t%c%c\r\n",
+                    L"       \t%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -548,10 +543,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 1)));
                 break;
             case 3:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X                                                                       "
-                    L"       \t%c%c%c\r\n",
+                    L"       \t%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -562,10 +556,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 2)));
                 break;
             case 4:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X                                                                 "
-                    L"       \t%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -578,10 +571,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 3)));
                 break;
             case 5:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X                                                           "
-                    L"       \t%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -596,10 +588,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 4)));
                 break;
             case 6:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X                                                     "
-                    L"       \t%c%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -616,10 +607,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 5)));
                 break;
             case 7:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X                                               "
-                    L"       \t%c%c%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -638,10 +628,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 6)));
                 break;
             case 8:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X                                         "
-                    L"       \t%c%c%c%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -662,10 +651,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 7)));
                 break;
             case 9:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X                                   "
-                    L"       \t%c%c%c%c%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -688,10 +676,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 8)));
                 break;
             case 10:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X                             "
-                    L"       \t%c%c%c%c%c%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -716,10 +703,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 9)));
                 break;
             case 11:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X                       "
-                    L"       \t%c%c%c%c%c%c%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c%c%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -746,10 +732,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 10)));
                 break;
             case 12:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X                 "
-                    L"       \t%c%c%c%c%c%c%c%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c%c%c%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -778,10 +763,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 11)));
                 break;
             case 13:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X           "
-                    L"       \t%c%c%c%c%c%c%c%c%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c%c%c%c%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -812,10 +796,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 12)));
                 break;
             case 14:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X     "
-                    L"       \t%c%c%c%c%c%c%c%c%c%c%c%c%c%c\r\n",
+                    L"       \t%c%c%c%c%c%c%c%c%c%c%c%c%c%c",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),
@@ -848,10 +831,9 @@ HRESULT CBinaryBuffer::PrintHex(const logger& pLog, LPCWSTR szIndent) const
                     GetChar(Get<BYTE>(offset + 13)));
                 break;
             case 15:
-                log::Info(
-                    pLog,
+                spdlog::info(
                     L"%s[%.4u] %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X %2.2X "
-                    L"%2.2X     \t%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c  \r\n",
+                    L"%2.2X     \t%c%c%c%c%c%c%c%c%c%c%c%c%c%c%c  ",
                     szIndent,
                     offset,
                     Get<BYTE>(offset + 0),

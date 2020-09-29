@@ -13,8 +13,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class FileMappingStream : public ByteStream
 {
 private:
@@ -32,8 +30,8 @@ private:
     HRESULT CommitSize(ULONGLONG ullNewSize);
 
 public:
-    FileMappingStream(logger pLog)
-        : ByteStream(std::move(pLog))
+    FileMappingStream()
+        : ByteStream()
         , m_hMapping(INVALID_HANDLE_VALUE)
         , m_pMapped(nullptr)
         , m_dwProtect(0L)

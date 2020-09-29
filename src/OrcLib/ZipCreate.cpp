@@ -42,13 +42,13 @@ using namespace Orc;
 
 namespace {
 
-void StoreFileHashes(Archive::ArchiveItems& items, bool releaseInputStreams, Orc::logger& _L_)
+void StoreFileHashes(Archive::ArchiveItems& items, bool releaseInputStreams)
 {
     for (auto& item : items)
     {
         if (item.currentStatus != Archive::ArchiveItem::Status::Done)
         {
-            log::Warning(_L_, E_FAIL, L"Unexpected archive status: %d", item.currentStatus);
+            spdlog::warn("Unexpected archive status: {}", item.currentStatus);
             continue;
         }
 
@@ -74,8 +74,8 @@ void StoreFileHashes(Archive::ArchiveItems& items, bool releaseInputStreams, Orc
 
 }  // namespace
 
-ZipCreate::ZipCreate(logger pLog, bool bComputeHash)
-    : ArchiveCreate(std::move(pLog), bComputeHash)
+ZipCreate::ZipCreate(bool bComputeHash)
+    : ArchiveCreate(bComputeHash)
     , m_FormatGUID(CLSID_NULL)
     , m_CompressionLevel(Fast)
 {
@@ -101,11 +101,7 @@ ZipCreate::CompressionLevel ZipCreate::GetCompressionLevel(const std::wstring& s
     if (equalCaseInsensitive(strLevel, L"Ultra"))
         return ZipCreate::CompressionLevel::Ultra;
 
-    log::Warning(
-        _L_,
-        E_INVALIDARG,
-        L"Selecting default compression level (unrecognised parameter was %s)\r\n",
-        strLevel.c_str());
+    spdlog::warn(L"Selecting default compression level (unrecognised parameter was '{}')", strLevel);
 
     return ZipCreate::CompressionLevel::Fast;
 }
@@ -140,13 +136,13 @@ STDMETHODIMP ZipCreate::InitArchive(PCWSTR pwzArchivePath, Archive::ArchiveCallb
 {
     HRESULT hr = E_FAIL;
 
-    auto filestream = make_shared<FileStream>(_L_);
+    auto filestream = make_shared<FileStream>();
 
     m_ArchiveName = pwzArchivePath;
     if (FAILED(
             hr = filestream->OpenFile(pwzArchivePath, GENERIC_WRITE | GENERIC_READ, 0L, NULL, CREATE_ALWAYS, 0L, NULL)))
     {
-        log::Error(_L_, hr, L"Failed to open %s for writing\r\n", pwzArchivePath);
+        spdlog::error(L"Failed to open '{}' for writing (code: {:#x})", pwzArchivePath, hr);
         return hr;
     }
 
@@ -167,14 +163,14 @@ ZipCreate::InitArchive(__in const std::shared_ptr<ByteStream>& pOutputStream, Ar
             m_FormatGUID = CLSID_CFormatZip;
             break;
         default:
-            log::Verbose(_L_, L"Not format specified for a archive, defaulting to 7zip\r\n");
+            spdlog::debug("No format specified for a archive, defaulting to 7zip");
             m_FormatGUID = CLSID_CFormat7z;
             break;
     }
 
     if (m_FormatGUID == CLSID_NULL)
     {
-        log::Verbose(_L_, L"Failed to find a format matching extension, defaulting to 7zip");
+        spdlog::debug("Failed to find a format matching extension, defaulting to 7zip");
         m_FormatGUID = CLSID_CFormat7z;
     }
 
@@ -194,10 +190,10 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
 {
     HRESULT hr = E_FAIL;
 
-    const auto pZipLib = ZipLibrary::GetZipLibrary(_L_);
+    const auto pZipLib = ZipLibrary::GetZipLibrary();
     if (pZipLib == nullptr)
     {
-        log::Error(_L_, E_FAIL, L"FAILED to load 7zip.dll\r\n");
+        spdlog::error(L"FAILED to load 7zip.dll");
         return E_FAIL;
     }
 
@@ -207,7 +203,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
         CComPtr<IOutArchive> pArchiver;
         if (FAILED(hr = pZipLib->CreateObject(&m_FormatGUID, &IID_IOutArchive, reinterpret_cast<void**>(&pArchiver))))
         {
-            log::Error(_L_, hr, L"Failed to create archiver\r\n");
+            spdlog::error(L"Failed to create archiver");
             return hr;
         }
 
@@ -225,13 +221,13 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
 
             if ((hr = m_TempStream->CanRead()) != S_OK)
             {
-                log::Error(_L_, hr, L"Temp archive stream cannot be read\r\n");
+                spdlog::error(L"Temp archive stream cannot be read");
                 return E_UNEXPECTED;
             }
 
             if (FAILED(hr = m_TempStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
             {
-                log::Error(_L_, hr, L"Failed to rewind Temp stream\r\n");
+                spdlog::error(L"Failed to rewind temp stream (code: {:#x})", hr);
                 return hr;
             }
 
@@ -239,13 +235,13 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
 
             CComQIPtr<IInArchive, &IID_IInArchive> inarchive = pArchiver;
 
-            CComPtr<ArchiveOpenCallback> callback = new ArchiveOpenCallback(_L_);
+            CComPtr<ArchiveOpenCallback> callback = new ArchiveOpenCallback();
 
             if (inarchive != nullptr)
             {
                 if (FAILED(hr = inarchive->Open(infile, nullptr, callback)))
                 {
-                    log::Error(_L_, hr, L"Failed to open archive stream\r\n");
+                    spdlog::error(L"Failed to open archive stream (code: {:#x})", hr);
                     return hr;
                 }
             }
@@ -259,7 +255,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
         else
         {
             // Creating a new temporary stream
-            std::shared_ptr<TemporaryStream> pNewTemp = std::make_shared<TemporaryStream>(_L_);
+            std::shared_ptr<TemporaryStream> pNewTemp = std::make_shared<TemporaryStream>();
 
             fs::path tempdir;
             if (!m_ArchiveName.empty())
@@ -269,7 +265,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
             auto tempstr = tempdir.wstring();
             if (FAILED(hr = pNewTemp->Open(tempstr, L"ZipStream", 100 * 1024 * 1024)))
             {
-                log::Error(_L_, hr, L"Failed to create temp stream\r\n", hr);
+                spdlog::error(L"Failed to create temp stream (code: {:#x})", hr);
                 return hr;
             }
 
@@ -293,18 +289,18 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
         }
 
         CComPtr<ArchiveUpdateCallback> callback =
-            new ArchiveUpdateCallback(_L_, m_Items, m_Indexes, bFinal, m_Callback, m_Password);
+            new ArchiveUpdateCallback(m_Items, m_Indexes, bFinal, m_Callback, m_Password);
 
         if ((hr = pArchiver->UpdateItems(outFile, (UInt32)m_Items.size(), callback)) != S_OK)
         {
             // returning S_FALSE also indicates error
-            log::Error(_L_, hr, L"Failed to update %s\r\n", m_ArchiveName.c_str());
+            spdlog::error(L"Failed to update '{}' (code: {:#x})", m_ArchiveName, hr);
             return hr;
         }
     }
 
     const bool kReleaseInputStreams = true;
-    StoreFileHashes(m_Items, kReleaseInputStreams, _L_);
+    StoreFileHashes(m_Items, kReleaseInputStreams);
 
     auto leftover_found = std::find_if(begin(m_Items), end(m_Items), [](const ArchiveItem& item) {
         return item.Index == (DWORD)-1;
@@ -331,11 +327,9 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
     {
         for (const auto& item : m_Queue)
         {
-            log::Warning(
-                _L_,
-                S_OK,
-                L"Queued item %s was not included in archive (Size=%I64d bytes)\r\n",
-                item.NameInArchive.c_str(),
+            spdlog::warn(
+                L"Queued item '{}' was not included in archive ({} bytes)",
+                item.NameInArchive,
                 item.Stream != nullptr ? item.Stream->GetSize() : 0LL);
         }
         m_TempStream = nullptr;
@@ -374,7 +368,7 @@ STDMETHODIMP ZipCreate::Complete()
         {
             if (FAILED(hr = m_TempStream->MoveTo(m_ArchiveStream)))
             {
-                log::Error(_L_, hr, L"Failed to copy Temp stream to output stream\r\n");
+                spdlog::error(L"Failed to copy Temp stream to output stream (code: {:#x})", hr);
                 return hr;
             }
             m_ArchiveStream->Close();
@@ -384,7 +378,7 @@ STDMETHODIMP ZipCreate::Complete()
             m_ArchiveStream->Close();
             if (FAILED(hr = m_TempStream->MoveTo(m_ArchiveName.c_str())))
             {
-                log::Error(_L_, hr, L"Failed to copy Temp stream to output stream\r\n");
+                spdlog::error(L"Failed to copy Temp stream to output stream (code: {:#x})", hr);
                 return hr;
             }
         }

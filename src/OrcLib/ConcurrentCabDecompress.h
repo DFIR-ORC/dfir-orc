@@ -20,8 +20,6 @@
 #include "StreamMessage.h"
 #include "StreamAgent.h"
 
-class LogFileWriter;
-
 class TASKUTILS_API ConcurrentCabDecompress
 {
 public:

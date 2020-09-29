@@ -21,10 +21,6 @@ struct ISequentialStream;
 
 namespace Orc {
 
-class LogFileWriter;
-using log = LogFileWriter;
-using logger = std::shared_ptr<LogFileWriter>;
-
 class OutputSpec;
 class CryptoHashStream;
 
@@ -35,11 +31,6 @@ class ORCLIB_API ByteStream
     friend class ChainingStream;
 
 protected:
-    logger _L_;
-
-    ByteStream(logger pLog)
-        : _L_(std::move(pLog)) {};
-
     virtual std::shared_ptr<ByteStream> _GetHashStream();
 
 public:
@@ -80,7 +71,7 @@ public:
 
     STDMETHOD(Close)() PURE;
 
-    static std::shared_ptr<ByteStream> GetStream(const logger& pLog, const OutputSpec& output);
+    static std::shared_ptr<ByteStream> GetStream(const OutputSpec& output);
 
     static std::shared_ptr<ByteStream> GetHashStream(const std::shared_ptr<ByteStream>& aStream);
 

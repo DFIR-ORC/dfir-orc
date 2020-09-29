@@ -414,7 +414,17 @@ HRESULT Orc::Config::Common::logging(ConfigItem& parent, DWORD dwIndex)
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"file", CONFIG_LOGFILE, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"trace", CONFIG_TRACE, ConfigItem::OPTION)))
+        return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"debug", CONFIG_DEBUG, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"info", CONFIG_INFO, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"warn", CONFIG_WARN, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"error", CONFIG_ERROR, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"critical", CONFIG_CRITICAL, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"verbose", CONFIG_VERBOSE, ConfigItem::OPTION)))
         return hr;

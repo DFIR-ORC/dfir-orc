@@ -16,7 +16,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
 class ByteStream;
 
 namespace StructuredOutput::JSON {
@@ -79,7 +78,7 @@ private:
     _RapidWriter rapidWriter;
 
 public:
-    Writer(logger pLog, std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& pOptions);
+    Writer(std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& options);
     Writer(const Writer&) = delete;
 
     virtual HRESULT Close() override final;
@@ -167,8 +166,8 @@ private:
     HRESULT WriteNamed_(LPCWSTR szName, Args&&... args);
 };
 
-std::shared_ptr<StructuredOutput::IWriter> GetWriter(const logger& pLog, std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& pOptions);
-
+std::shared_ptr<StructuredOutput::IWriter>
+GetWriter(std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& pOptions);
 
 }  // namespace StructuredOutput::JSON
 

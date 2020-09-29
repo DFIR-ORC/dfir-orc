@@ -11,8 +11,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include "LogFileWriter.h"
-
 using namespace std;
 
 using namespace std::string_literals;
@@ -31,11 +29,9 @@ private:
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     class TestFriend
     {
@@ -62,12 +58,12 @@ public:
 
     TEST_METHOD(LogWriterBasicTest)
     {
-        _L_->WriteString(L"Hello world!!\r\n");
+        _L_->WriteString(L"Hello world!!");
 
-        log::Info(_L_, L"Test avec accents: éèêëàâäùiïîç\r\n");
-        log::Info(_L_, L"Test avec accents: éèêëàâäùiïîç\r\n");
-        log::Error(_L_, E_FAIL, L"This is an error message...\r\n");
-        log::Warning(_L_, E_FAIL, L"Same as a warning\r\n");
+        spdlog::info(L"Test avec accents: éèêëàâäùiïîç");
+        spdlog::info(L"Test avec accents: éèêëàâäùiïîç");
+        spdlog::error(L"This is an error message...");
+        spdlog::warn(L"Same as a warning");
     }
 
     TEST_METHOD(LogWriterStreamTest)

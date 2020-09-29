@@ -7,7 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "CryptoHashStream.h"
 #include "MemoryStream.h"
 
@@ -19,17 +18,13 @@ namespace Orc::Test {
 TEST_CLASS(HashStreamTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
-    TEST_METHOD_INITIALIZE(Initialize)
-    {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
-    }
+    TEST_METHOD_INITIALIZE(Initialize) {}
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
+
     TEST_METHOD(HashStreamBasicTest)
     {
         // hash data
@@ -38,7 +33,7 @@ public:
 
             auto algs = CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256;
 
-            auto hashstream = std::make_shared<CryptoHashStream>(_L_);
+            auto hashstream = std::make_shared<CryptoHashStream>();
             Assert::IsTrue(SUCCEEDED(hashstream->OpenToWrite(algs, nullptr)));
 
             ULONGLONG ullHashed = 0LL;
@@ -115,7 +110,7 @@ public:
 
             auto algs = CryptoHashStream::Algorithm::SHA256;
 
-            auto hashstream = std::make_shared<CryptoHashStream>(_L_);
+            auto hashstream = std::make_shared<CryptoHashStream>();
             Assert::IsTrue(S_OK == hashstream->OpenToWrite(algs, nullptr));
 
             ULONGLONG ullHashed = 0LL;
@@ -136,10 +131,10 @@ public:
             // write & hash data
             unsigned char data[5] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
 
-            auto pMemStream = std::make_shared<MemoryStream>(_L_);
+            auto pMemStream = std::make_shared<MemoryStream>();
             Assert::IsTrue(S_OK == pMemStream->OpenForReadWrite(sizeof(data)));
 
-            auto hashstream = std::make_shared<CryptoHashStream>(_L_);
+            auto hashstream = std::make_shared<CryptoHashStream>();
             Assert::IsTrue(
                 S_OK == hashstream->OpenToWrite(CryptoHashStream::Algorithm::MD5, pMemStream));
 
@@ -164,7 +159,7 @@ public:
         {
             unsigned char data[5] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE};
 
-            auto pMemStream = std::make_shared<MemoryStream>(_L_);
+            auto pMemStream = std::make_shared<MemoryStream>();
             Assert::IsTrue(S_OK == pMemStream->OpenForReadWrite(sizeof(data)));
 
             ULONGLONG ullDataWritten = 0LL;
@@ -173,7 +168,7 @@ public:
             Assert::IsTrue(ullDataWritten == 5);
             Assert::IsTrue(!memcmp(data, pMemStream->GetConstBuffer().GetData(), sizeof(data)));
 
-            auto hashstream = std::make_shared<CryptoHashStream>(_L_);
+            auto hashstream = std::make_shared<CryptoHashStream>();
             Assert::IsTrue(
                 S_OK == hashstream->OpenToRead(CryptoHashStream::Algorithm::MD5, pMemStream));
 

@@ -9,7 +9,6 @@
 
 #include "FatTable.h"
 
-#include "LogFileWriter.h"
 #include "BinaryBuffer.h"
 
 #include <memory>
@@ -22,17 +21,14 @@ namespace Orc::Test {
 TEST_CLASS(FatTableTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(Fat32TableBasicTest)
     {

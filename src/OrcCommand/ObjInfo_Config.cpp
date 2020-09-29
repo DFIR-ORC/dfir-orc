@@ -25,7 +25,7 @@ ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.output.TableKey.empty() ? L"ObjInfo" : config.output.TableKey.c_str(), schemaitem);
+        config.output.TableKey.empty() ? L"ObjInfo" : config.output.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 

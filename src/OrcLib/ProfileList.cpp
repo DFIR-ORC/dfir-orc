@@ -16,7 +16,7 @@
 
 using namespace stx;
 
-Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
+Orc::ProfileResult Orc::ProfileList::GetProfiles()
 {
     HKEY hKey = nullptr;
     if (auto status = RegOpenKeyExW(
@@ -27,7 +27,7 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
             &hKey);
         status != ERROR_SUCCESS)
     {
-        log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to open registry key ProfileList\r\n");
+        spdlog::error(L"Failed to open registry key ProfileList (code: {:#x})", HRESULT_FROM_WIN32(status));
         return Err(HRESULT_FROM_WIN32(status));
     }
     BOOST_SCOPE_EXIT(&hKey) { RegCloseKey(hKey); }
@@ -51,7 +51,10 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
             if (status == ERROR_NO_MORE_ITEMS)
                 break;
 
-            log::Error(pLog, HRESULT_FROM_WIN32(status), L"Failed to enumerate registry key ProfileList at index %d\r\n", dwIndex);
+            spdlog::error(
+                L"Failed to enumerate registry key ProfileList at index {} (code: {:#x})",
+                dwIndex,
+                HRESULT_FROM_WIN32(status));
             return Err(HRESULT_FROM_WIN32(status));
         }
         else
@@ -64,16 +67,14 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
 
             ByteBuffer sid;
 
-            auto rSID = Registry::Read<ByteBuffer>(pLog, hKey, keyName.get(), L"Sid");
+            auto rSID = Registry::Read<ByteBuffer>(hKey, keyName.get(), L"Sid");
             if (rSID.is_err())
             {
-                log::Verbose(
-                    pLog,
-                    L"Failed to read SID for profile %s, using key name\r\n", keyName.get());
+                spdlog::debug(L"Failed to read SID for profile {}, using key name", keyName.get());
                 PSID pSID = NULL;
                 if(!ConvertStringSidToSidW(keyName.get(), &pSID))
                 {
-                    log::Verbose(pLog, L"Failed profile key name %s is not a valid sid\r\n", keyName.get());
+                    spdlog::debug(L"Failed profile key name {} is not a valid sid", keyName.get());
                     continue;
                 }
                 sid.assign((LPBYTE) pSID, GetLengthSid(pSID));
@@ -87,11 +88,10 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
                 LPWSTR pSID;
                 if (!ConvertSidToStringSidW((PSID)sid.get_as<PSID>(), &pSID))
                 {
-                    log::Warning(
-                        pLog,
-                        HRESULT_FROM_WIN32(GetLastError()),
-                        L"Failed to convert SID to a string for profile %s\r\n",
-                        keyName.get());
+                    spdlog::warn(
+                        L"Failed to convert SID to a string for profile {} (code: {#x})",
+                        keyName.get(),
+                        HRESULT_FROM_WIN32(GetLastError()));
                     continue;
                 }
                 profile.strSID.assign(pSID);
@@ -119,11 +119,10 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
                 &cchDomainName,
                 &SidNameUse))
             {
-                log::Warning(
-                    pLog,
-                    HRESULT_FROM_WIN32(GetLastError()),
-                    L"Failed to convert SID into a username for profile %s\r\n",
-                    keyName.get());
+                spdlog::warn(
+                    L"Failed to convert SID into a username for profile {} (code: {:#x})",
+                    keyName.get(),
+                    HRESULT_FROM_WIN32(GetLastError()));
             }
             else
             {
@@ -138,20 +137,21 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
                 profile.SidNameUse = SidNameUse;
             }
 
-            auto ProfileImagePath =
-                Registry::Read<std::filesystem::path>(pLog, hKey, keyName.get(), L"ProfileImagePath");
+            auto ProfileImagePath = Registry::Read<std::filesystem::path>(hKey, keyName.get(), L"ProfileImagePath");
             if (ProfileImagePath.is_err())
             {
-                log::Warning(pLog, std::move(ProfileImagePath).err(), L"Failed to read ProfileImagePath for profile %s\r\n", keyName.get());
+                spdlog::warn(
+                    L"Failed to read ProfileImagePath for profile {} (code: {:#x})",
+                    keyName.get(),
+                    std::move(ProfileImagePath).err());
                 continue;
             }
             profile.ProfilePath = std::move(ProfileImagePath).unwrap();
 
             {
                 auto LocalProfileLoadTimeHigh =
-                    Registry::Read<ULONG32>(pLog, hKey, keyName.get(), L"LocalProfileLoadTimeHigh");
-                auto LocalProfileLoadTimeLow =
-                    Registry::Read<ULONG32>(pLog, hKey, keyName.get(), L"LocalProfileLoadTimeLow");
+                    Registry::Read<ULONG32>(hKey, keyName.get(), L"LocalProfileLoadTimeHigh");
+                auto LocalProfileLoadTimeLow = Registry::Read<ULONG32>(hKey, keyName.get(), L"LocalProfileLoadTimeLow");
 
                 if (LocalProfileLoadTimeHigh.is_ok() && LocalProfileLoadTimeLow.is_ok())
                 {
@@ -164,9 +164,9 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
             }
             {
                 auto LocalProfileUnloadTimeHigh =
-                    Registry::Read<ULONG32>(pLog, hKey, keyName.get(), L"LocalProfileUnloadTimeHigh");
+                    Registry::Read<ULONG32>(hKey, keyName.get(), L"LocalProfileUnloadTimeHigh");
                 auto LocalProfileUnloadTimeLow =
-                    Registry::Read<ULONG32>(pLog, hKey, keyName.get(), L"LocalProfileUnloadTimeLow");
+                    Registry::Read<ULONG32>(hKey, keyName.get(), L"LocalProfileUnloadTimeLow");
 
                 if (LocalProfileUnloadTimeHigh.is_ok() && LocalProfileUnloadTimeLow.is_ok())
                 {
@@ -178,7 +178,7 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
                 }
             }
             {
-                auto State = Registry::Read<ULONG32>(pLog, hKey, keyName.get(), L"State");
+                auto State = Registry::Read<ULONG32>(hKey, keyName.get(), L"State");
                 if (State.is_ok())
                 {
                     profile.State = std::move(State).unwrap();
@@ -191,50 +191,50 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles(const logger& pLog)
     return Ok(std::move(retval));
 }
 
-stx::Result<std::filesystem::path, HRESULT> Orc::ProfileList::DefaultProfilePath(const logger& pLog)
+stx::Result<std::filesystem::path, HRESULT> Orc::ProfileList::DefaultProfilePath()
 {
     return Registry::Read<std::filesystem::path>(
-        pLog, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"Default");
+        HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"Default");
 }
 
-stx::Result<std::wstring, HRESULT> Orc::ProfileList::DefaultProfile(const logger& pLog)
+stx::Result<std::wstring, HRESULT> Orc::ProfileList::DefaultProfile()
 {
     return Registry::Read<std::wstring>(
-        pLog, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"Default");
+        HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"Default");
 }
 
-stx::Result<std::wstring, HRESULT> Orc::ProfileList::ProfilesDirectory(const logger& pLog)
+stx::Result<std::wstring, HRESULT> Orc::ProfileList::ProfilesDirectory()
 {
     return Registry::Read<std::wstring>(
-        pLog, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"ProfilesDirectory");
+        HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"ProfilesDirectory");
 }
 
-stx::Result<std::filesystem::path, HRESULT> Orc::ProfileList::ProfilesDirectoryPath(const logger& pLog)
+stx::Result<std::filesystem::path, HRESULT> Orc::ProfileList::ProfilesDirectoryPath()
 {
     return Registry::Read<std::filesystem::path>(
-        pLog, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"ProfilesDirectory");
+        HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"ProfilesDirectory");
 }
 
-stx::Result<std::wstring, HRESULT> Orc::ProfileList::ProgramData(const logger& pLog)
+stx::Result<std::wstring, HRESULT> Orc::ProfileList::ProgramData()
 {
     return Registry::Read<std::wstring>(
-        pLog, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"ProgramData");
+        HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"ProgramData");
 }
 
-stx::Result<std::filesystem::path, HRESULT> Orc::ProfileList::ProgramDataPath(const logger& pLog)
+stx::Result<std::filesystem::path, HRESULT> Orc::ProfileList::ProgramDataPath()
 {
     return Registry::Read<std::filesystem::path>(
-        pLog, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"ProgramData");
+        HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"ProgramData");
 }
 
-stx::Result<std::wstring, HRESULT> Orc::ProfileList::PublicProfile(const logger& pLog)
+stx::Result<std::wstring, HRESULT> Orc::ProfileList::PublicProfile()
 {
     return Registry::Read<std::wstring>(
-        pLog, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"Public");
+        HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"Public");
 }
 
-stx::Result<std::filesystem::path, HRESULT> Orc::ProfileList::PublicProfilePath(const logger& pLog)
+stx::Result<std::filesystem::path, HRESULT> Orc::ProfileList::PublicProfilePath()
 {
     return Registry::Read<std::filesystem::path>(
-        pLog, HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"Public");
+        HKEY_LOCAL_MACHINE, LR"(SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList)", L"Public");
 }

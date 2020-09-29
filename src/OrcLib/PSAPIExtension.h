@@ -20,14 +20,12 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API PSAPIExtension : public ExtensionLibrary
 {
 
 public:
-    PSAPIExtension(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"psapi", L"psapi.dll", L"psapi.dll") {};
+    PSAPIExtension()
+        : ExtensionLibrary(L"psapi", L"psapi.dll", L"psapi.dll") {};
 
     STDMETHOD(Initialize)();
 

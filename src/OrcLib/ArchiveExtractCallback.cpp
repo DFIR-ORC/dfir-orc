@@ -17,7 +17,6 @@
 #include "OutByteStreamWrapper.h"
 #include "InByteStreamWrapper.h"
 #include "ParameterCheck.h"
-#include "LogFileWriter.h"
 
 #include "PropVariant.h"
 
@@ -31,7 +30,6 @@ using namespace lib7z;
 using namespace Orc;
 
 ArchiveExtractCallback::ArchiveExtractCallback(
-    logger pLog,
     const CComPtr<IInArchive>& archiveHandler,
     const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
     Archive::ArchiveItems& Extracted,
@@ -40,7 +38,6 @@ ArchiveExtractCallback::ArchiveExtractCallback(
     bool bComputeHash,
     const std::wstring& pwd)
     : m_refCount(0)
-    , _L_(std::move(pLog))
     , m_bComputeHash(bComputeHash)
     , m_ShouldBeExtracted(pShouldBeExtracted)
     , m_Extracted(Extracted)
@@ -113,7 +110,7 @@ std::shared_ptr<ByteStream> ArchiveExtractCallback::GetStreamToWrite()
     auto filestream = m_MakeWriteAbleStream(m_currentItem);
     if (!filestream)
     {
-        log::Error(_L_, E_FAIL, L"Failed to create writeable stream for %s\r\n", m_currentItem.NameInArchive.c_str());
+        spdlog::error(L"Failed to create writeable stream for {}", m_currentItem.NameInArchive);
         return nullptr;
     }
 
@@ -122,7 +119,7 @@ std::shared_ptr<ByteStream> ArchiveExtractCallback::GetStreamToWrite()
         return filestream;
     }
 
-    auto hashstream = make_shared<CryptoHashStream>(_L_);
+    auto hashstream = make_shared<CryptoHashStream>();
     hr = hashstream->OpenToRead(CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, filestream);
     if (FAILED(hr))
     {
@@ -187,25 +184,13 @@ STDMETHODIMP ArchiveExtractCallback::SetOperationResult(Int32 operationResult)
     switch (operationResult)
     {
         case NArchive::NExtract::NOperationResult::kCRCError:
-            log::Error(
-                _L_,
-                HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                L"CRC error when extracting %s\r\n",
-                m_currentItem.NameInArchive.c_str());
+            spdlog::error(L"CRC error when extracting '{}'", m_currentItem.NameInArchive);
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         case NArchive::NExtract::NOperationResult::kDataError:
-            log::Error(
-                _L_,
-                HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                L"Data error when extracting %s\r\n",
-                m_currentItem.NameInArchive.c_str());
+            spdlog::error(L"Data error when extracting '{}'", m_currentItem.NameInArchive);
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         case NArchive::NExtract::NOperationResult::kUnsupportedMethod:
-            log::Error(
-                _L_,
-                HRESULT_FROM_WIN32(ERROR_UNSUPPORTED_COMPRESSION),
-                L"Unsupported method Error when extracting %s\r\n",
-                m_currentItem.NameInArchive.c_str());
+            spdlog::error(L"Unsupported method Error when extracting '{}'", m_currentItem.NameInArchive);
             return HRESULT_FROM_WIN32(ERROR_UNSUPPORTED_COMPRESSION);
         case NArchive::NExtract::NOperationResult::kOK:
             break;

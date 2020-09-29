@@ -26,8 +26,8 @@ protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();
 
 public:
-    SystemStorageReader(logger pLog, const WCHAR* szLocation)
-        : CompleteVolumeReader(std::move(pLog), szLocation)
+    SystemStorageReader(const WCHAR* szLocation)
+        : CompleteVolumeReader(szLocation)
     {
     }
 

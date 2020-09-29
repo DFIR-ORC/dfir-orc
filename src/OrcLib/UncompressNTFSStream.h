@@ -23,7 +23,7 @@ class ORCLIB_API UncompressNTFSStream : public ChainingStream
 {
 
 public:
-    UncompressNTFSStream(logger pLog);
+    UncompressNTFSStream();
     virtual ~UncompressNTFSStream(void);
 
     STDMETHOD(IsOpen)()

@@ -12,8 +12,6 @@
 
 #include "Archive.h"
 
-#include "LogFileWriter.h"
-
 #include "ZipLibrary.h"
 
 #include "CaseInsensitive.h"
@@ -42,7 +40,7 @@ Orc::ArchiveFormat Archive::GetArchiveFormat(const std::wstring_view& filepath)
     if (equalCaseInsensitive(ext, L"7z"))
         return ArchiveFormat::SevenZip;
 
-    const auto pZipLib = ZipLibrary::GetZipLibrary(nullptr);
+    const auto pZipLib = ZipLibrary::GetZipLibrary();
     if (pZipLib == nullptr)
         return ArchiveFormat::Unknown;
 

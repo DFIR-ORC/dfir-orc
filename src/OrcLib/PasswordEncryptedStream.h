@@ -15,8 +15,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class PasswordEncryptedStream : public ChainingStream
 {
 private:
@@ -34,8 +32,8 @@ private:
     HRESULT DecryptData(CBinaryBuffer& pData, BOOL bFinal, DWORD& dwDecryptedBytes);
 
 public:
-    PasswordEncryptedStream(logger pLog)
-        : ChainingStream(std::move(pLog))
+    PasswordEncryptedStream()
+        : ChainingStream()
     {
         m_bEncrypting = boost::indeterminate;
     }

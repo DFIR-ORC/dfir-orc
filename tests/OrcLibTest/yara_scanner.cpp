@@ -8,7 +8,6 @@
 
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "YaraScanner.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -21,21 +20,16 @@ namespace Orc::Test {
 TEST_CLASS(YaraScannerTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
-    TEST_METHOD_INITIALIZE(Initialize)
-    {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
-    }
+    TEST_METHOD_INITIALIZE(Initialize) {}
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(SimpleScan)
     {
-        YaraScanner scanner(_L_);
+        YaraScanner scanner;
 
         Assert::IsTrue(SUCCEEDED(scanner.Initialize()));
 

@@ -26,6 +26,8 @@
 
 #pragma comment(lib, "Crypt32.lib")
 
+#include <spdlog/spdlog.h>
+
 using namespace Orc;
 
 const WCHAR* FileInfo::g_pszExecutableFileExtensions[] = {
@@ -42,7 +44,6 @@ const WCHAR* FileInfo::g_pszArchiveFileExtensions[] =
     {L".ZIP", L".RAR", L".CAB", L".UPX", L".TAR", L".ARC", L".LHA", L".TZ", NULL};
 
 FileInfo::FileInfo(
-    logger pLog,
     std::wstring strComputerName,
     const std::shared_ptr<VolumeReader>& pVolReader,
     Intentions DefaultIntentions,
@@ -50,8 +51,7 @@ FileInfo::FileInfo(
     LPCWSTR szFullName,
     DWORD dwLen,
     Authenticode& codeVerifyTrust)
-    : m_PEInfo(pLog, *this)
-    , _L_(std::move(pLog))
+    : m_PEInfo(*this)
     , m_hFile(INVALID_HANDLE_VALUE)
     , m_pVolReader(pVolReader)
     , m_szFullName(szFullName)
@@ -85,155 +85,155 @@ HRESULT FileInfo::HandleIntentions(const Intentions& intention, ITableOutput& ou
 
     switch (intention)
     {
-        case FILEINFO_COMPUTERNAME:
+        case Intentions::FILEINFO_COMPUTERNAME:
             hr = WriteComputerName(output);
             break;
 
-        case FILEINFO_VOLUMEID:
+        case Intentions::FILEINFO_VOLUMEID:
             hr = WriteVolumeID(output);
             break;
 
-        case FILEINFO_FILENAME:
+        case Intentions::FILEINFO_FILENAME:
             hr = WriteFileName(output);
             break;
 
-        case FILEINFO_PARENTNAME:
+        case Intentions::FILEINFO_PARENTNAME:
             hr = WriteParentName(output);
             break;
 
-        case FILEINFO_FULLNAME:
+        case Intentions::FILEINFO_FULLNAME:
             hr = WriteFullName(output);
             break;
 
-        case FILEINFO_EXTENSION:
+        case Intentions::FILEINFO_EXTENSION:
             hr = WriteExtension(output);
             break;
 
-        case FILEINFO_FILESIZE:
+        case Intentions::FILEINFO_FILESIZE:
             hr = WriteSizeInBytes(output);
             break;
 
-        case FILEINFO_ATTRIBUTES:
+        case Intentions::FILEINFO_ATTRIBUTES:
             hr = WriteAttributes(output);
             break;
 
-        case FILEINFO_CREATIONDATE:
+        case Intentions::FILEINFO_CREATIONDATE:
             hr = WriteCreationDate(output);
             break;
 
-        case FILEINFO_LASTMODDATE:
+        case Intentions::FILEINFO_LASTMODDATE:
             hr = WriteLastModificationDate(output);
             break;
 
-        case FILEINFO_LASTACCDATE:
+        case Intentions::FILEINFO_LASTACCDATE:
             hr = WriteLastAccessDate(output);
             break;
 
-        case FILEINFO_RECORDINUSE:
+        case Intentions::FILEINFO_RECORDINUSE:
             hr = WriteRecordInUse(output);
             break;
 
-        case FILEINFO_SHORTNAME:
+        case Intentions::FILEINFO_SHORTNAME:
             hr = WriteShortName(output);
             break;
 
-        case FILEINFO_MD5:
+        case Intentions::FILEINFO_MD5:
             hr = WriteMD5(output);
             break;
 
-        case FILEINFO_SHA1:
+        case Intentions::FILEINFO_SHA1:
             hr = WriteSHA1(output);
             break;
 
-        case FILEINFO_FIRST_BYTES:
+        case Intentions::FILEINFO_FIRST_BYTES:
             hr = WriteFirstBytes(output);
             break;
 
-        case FILEINFO_VERSION:
+        case Intentions::FILEINFO_VERSION:
             hr = WriteVersion(output);
             break;
 
-        case FILEINFO_COMPANY:
+        case Intentions::FILEINFO_COMPANY:
             hr = WriteCompanyName(output);
             break;
 
-        case FILEINFO_PRODUCT:
+        case Intentions::FILEINFO_PRODUCT:
             hr = WriteProductName(output);
             break;
 
-        case FILEINFO_ORIGINALNAME:
+        case Intentions::FILEINFO_ORIGINALNAME:
             hr = WriteOriginalFileName(output);
             break;
 
-        case FILEINFO_PLATFORM:
+        case Intentions::FILEINFO_PLATFORM:
             hr = WritePlatform(output);
             break;
 
-        case FILEINFO_TIMESTAMP:
+        case Intentions::FILEINFO_TIMESTAMP:
             hr = WriteTimeStamp(output);
             break;
 
-        case FILEINFO_SUBSYSTEM:
+        case Intentions::FILEINFO_SUBSYSTEM:
             hr = WriteSubSystem(output);
             break;
 
-        case FILEINFO_FILETYPE:
+        case Intentions::FILEINFO_FILETYPE:
             hr = WriteFileType(output);
             break;
 
-        case FILEINFO_FILEOS:
+        case Intentions::FILEINFO_FILEOS:
             hr = WriteFileOS(output);
             break;
 
-        case FILEINFO_SHA256:
+        case Intentions::FILEINFO_SHA256:
             hr = WriteSHA256(output);
             break;
 
-        case FILEINFO_PE_MD5:
+        case Intentions::FILEINFO_PE_MD5:
             hr = WritePeMD5(output);
             break;
 
-        case FILEINFO_PE_SHA1:
+        case Intentions::FILEINFO_PE_SHA1:
             hr = WritePeSHA1(output);
             break;
 
-        case FILEINFO_PE_SHA256:
+        case Intentions::FILEINFO_PE_SHA256:
             hr = WritePeSHA256(output);
             break;
 
-        case FILEINFO_SECURITY_DIRECTORY:
+        case Intentions::FILEINFO_SECURITY_DIRECTORY:
             hr = WriteSecurityDirectory(output);
             break;
 
-        case FILEINFO_AUTHENTICODE_STATUS:
+        case Intentions::FILEINFO_AUTHENTICODE_STATUS:
             hr = WriteAuthenticodeStatus(output);
             break;
 
-        case FILEINFO_AUTHENTICODE_SIGNER:
+        case Intentions::FILEINFO_AUTHENTICODE_SIGNER:
             hr = WriteAuthenticodeSigner(output);
             break;
 
-        case FILEINFO_AUTHENTICODE_SIGNER_THUMBPRINT:
+        case Intentions::FILEINFO_AUTHENTICODE_SIGNER_THUMBPRINT:
             hr = WriteAuthenticodeSignerThumbprint(output);
             break;
 
-        case FILEINFO_AUTHENTICODE_CA:
+        case Intentions::FILEINFO_AUTHENTICODE_CA:
             hr = WriteAuthenticodeCA(output);
             break;
 
-        case FILEINFO_AUTHENTICODE_CA_THUMBPRINT:
+        case Intentions::FILEINFO_AUTHENTICODE_CA_THUMBPRINT:
             hr = WriteAuthenticodeCAThumbprint(output);
             break;
 
-        case FILEINFO_SSDEEP:
+        case Intentions::FILEINFO_SSDEEP:
             hr = WriteSSDeep(output);
             break;
 
-        case FILEINFO_TLSH:
+        case Intentions::FILEINFO_TLSH:
             hr = WriteTLSH(output);
             break;
 
-        case FILEINFO_SIGNED_HASH:
+        case Intentions::FILEINFO_SIGNED_HASH:
             hr = WriteSignedHash(output);
             break;
 
@@ -254,7 +254,6 @@ HRESULT FileInfo::HandleIntentions(const Intentions& intention, ITableOutput& ou
 }
 
 HRESULT FileInfo::WriteFileInformation(
-    const logger& pLog,
     const ColumnNameDef columnNames[],
     ITableOutput& output,
     const std::vector<Filter>& filters)
@@ -264,7 +263,7 @@ HRESULT FileInfo::WriteFileInformation(
     Intentions localIntentions = FilterIntentions(filters);
 
     const ColumnNameDef* pCurCol = columnNames;
-    while (pCurCol->dwIntention != FILEINFO_NONE)
+    while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
     {
         DWORD ColId = output.GetCurrentColumnID();
 
@@ -274,9 +273,8 @@ HRESULT FileInfo::WriteFileInformation(
             {
                 if (FAILED(hr = HandleIntentions(pCurCol->dwIntention, output)))
                 {
-                    log::Verbose(
-                        pLog,
-                        L"VERBOSE: Column %s failed to be written for %s (hr=0x%lx)\r\n",
+                    spdlog::debug(
+                        L"VERBOSE: Column '{}' failed to be written for '{}' (code: {:#x}))",
                         pCurCol->szColumnName,
                         m_szFullName,
                         hr);
@@ -289,8 +287,7 @@ HRESULT FileInfo::WriteFileInformation(
         }
         catch (Orc::Exception& e)
         {
-            e.PrintMessage(_L_);
-            log::Error(_L_, E_FAIL, L"\r\nError while writing column %s\r\n", output.GetCurrentColumn().ColumnName.c_str());
+            spdlog::error(L"Error while writing column '{}': {}", output.GetCurrentColumn().ColumnName, e.Description);
             output.AbandonColumn();
         }
 
@@ -344,9 +341,9 @@ bool FileInfo::HasSpecificExtension(const WCHAR* pszName, const WCHAR* pszExtens
 }
 
 Intentions
-FileInfo::GetIntentions(const logger& pLog, const WCHAR* Params, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[])
+FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[])
 {
-    Intentions dwIntentions = FILEINFO_NONE;
+    Intentions dwIntentions = Intentions::FILEINFO_NONE;
     WCHAR szParams[MAX_PATH];
     WCHAR* pCur = szParams;
 
@@ -365,7 +362,7 @@ FileInfo::GetIntentions(const logger& pLog, const WCHAR* Params, const ColumnNam
             auto bNameFound = false;
 
             const ColumnNameDef* pCurAlias = aliasNames;
-            while (pCurAlias->dwIntention != FILEINFO_NONE)
+            while (pCurAlias->dwIntention != Intentions::FILEINFO_NONE)
             {
                 if (!_wcsicmp(pCur, pCurAlias->szColumnName))
                 {
@@ -377,7 +374,7 @@ FileInfo::GetIntentions(const logger& pLog, const WCHAR* Params, const ColumnNam
             }
 
             const ColumnNameDef* pCurCol = columnNames;
-            while (pCurCol->dwIntention != FILEINFO_NONE)
+            while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
             {
                 if (!_wcsicmp(pCur, pCurCol->szColumnName))
                 {
@@ -389,7 +386,7 @@ FileInfo::GetIntentions(const logger& pLog, const WCHAR* Params, const ColumnNam
             }
             if (!bNameFound)
             {
-                log::Warning(pLog, E_INVALIDARG, L"Parameter %s was not recognized as a valid column name\r\n", pCur);
+                spdlog::warn(L"Parameter '{}' was not recognized as a valid column name", pCur);
             }
             szParams[i] = L',';
             pCur = &(szParams[i]) + 1;
@@ -400,7 +397,7 @@ FileInfo::GetIntentions(const logger& pLog, const WCHAR* Params, const ColumnNam
 
 Intentions FileInfo::GetFilterIntentions(const std::vector<Filter>& filters)
 {
-    Intentions intentions = FILEINFO_NONE;
+    Intentions intentions = Intentions::FILEINFO_NONE;
 
     std::for_each(filters.begin(), filters.end(), [&intentions](const Filter& item) {
         intentions = static_cast<Intentions>(intentions | item.intent);
@@ -409,7 +406,6 @@ Intentions FileInfo::GetFilterIntentions(const std::vector<Filter>& filters)
 }
 
 HRESULT FileInfo::BindColumns(
-    const logger& pLog,
     const ColumnNameDef columnNames[],
     Intentions dwIntentions,
     const std::vector<TableOutput::Column>& sqlcolumns,
@@ -418,7 +414,7 @@ HRESULT FileInfo::BindColumns(
     DWORD dwIndex = 0L;
     const ColumnNameDef* pCurCol = columnNames;
 
-    while (pCurCol->dwIntention != FILEINFO_NONE)
+    while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
     {
         if (dwIntentions & pCurCol->dwIntention)
         {
@@ -433,10 +429,8 @@ HRESULT FileInfo::BindColumns(
                 Writer.AddColumn(dwIndex, pCurCol->szColumnName, it->Type, it->dwMaxLen.value());
             else
             {
-                log::Error(
-                    pLog,
-                    E_FAIL,
-                    L"Could not find a column type for %s in schema definition, binding it to nothing\r\n",
+                spdlog::error(
+                    L"Could not find a column type for '{}' in schema definition, binding it to nothing",
                     pCurCol->szColumnName);
                 Writer.AddColumn(dwIndex, pCurCol->szColumnName, TableOutput::ColumnType::Nothing, 0);
             }
@@ -458,7 +452,7 @@ DWORD FileInfo::GetRequiredAccessMask(const ColumnNameDef columnNames[])
 {
     DWORD dwRequiredAccess = 0L;
     const ColumnNameDef* pCurCol = columnNames;
-    while (pCurCol->dwIntention != FILEINFO_NONE)
+    while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
     {
         if (m_DefaultIntentions & pCurCol->dwIntention)
             dwRequiredAccess |= pCurCol->dwRequiredAccess;
@@ -467,7 +461,7 @@ DWORD FileInfo::GetRequiredAccessMask(const ColumnNameDef columnNames[])
 
     std::for_each(m_Filters.begin(), m_Filters.end(), [&dwRequiredAccess, &columnNames](const Filter& filter) {
         const ColumnNameDef* pCurCol = columnNames;
-        while (pCurCol->dwIntention != FILEINFO_NONE)
+        while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
         {
             if (filter.intent & pCurCol->dwIntention)
                 dwRequiredAccess |= pCurCol->dwRequiredAccess;
@@ -568,12 +562,14 @@ HRESULT FileInfo::OpenHash()
 
     Intentions localIntentions = FilterIntentions(m_Filters);
 
-    if (localIntentions & FILEINFO_MD5 || localIntentions & FILEINFO_SHA1 || localIntentions & FILEINFO_SHA256
-        || localIntentions & FILEINFO_SSDEEP || localIntentions & FILEINFO_TLSH)
+    if (localIntentions & Intentions::FILEINFO_MD5 || localIntentions & Intentions::FILEINFO_SHA1
+        || localIntentions & Intentions::FILEINFO_SHA256 || localIntentions & Intentions::FILEINFO_SSDEEP
+        || localIntentions & Intentions::FILEINFO_TLSH)
     {
-        if (localIntentions & FILEINFO_PE_MD5 || localIntentions & FILEINFO_PE_SHA1
-            || localIntentions & FILEINFO_PE_SHA256 || localIntentions & FILEINFO_AUTHENTICODE_STATUS
-            || localIntentions & FILEINFO_AUTHENTICODE_SIGNER)
+        if (localIntentions & Intentions::FILEINFO_PE_MD5 || localIntentions & Intentions::FILEINFO_PE_SHA1
+            || localIntentions & Intentions::FILEINFO_PE_SHA256
+            || localIntentions & Intentions::FILEINFO_AUTHENTICODE_STATUS
+            || localIntentions & Intentions::FILEINFO_AUTHENTICODE_SIGNER)
         {
             if (FAILED(hr = m_PEInfo.CheckPEInformation()))
                 return hr;
@@ -586,8 +582,10 @@ HRESULT FileInfo::OpenHash()
             return OpenCryptoAndFuzzyHash(localIntentions);
     }
     else if (
-        localIntentions & FILEINFO_PE_MD5 || localIntentions & FILEINFO_PE_SHA1 || localIntentions & FILEINFO_PE_SHA256
-        || localIntentions & FILEINFO_AUTHENTICODE_STATUS || localIntentions & FILEINFO_AUTHENTICODE_SIGNER)
+        localIntentions & Intentions::FILEINFO_PE_MD5 || localIntentions & Intentions::FILEINFO_PE_SHA1
+        || localIntentions & Intentions::FILEINFO_PE_SHA256
+        || localIntentions & Intentions::FILEINFO_AUTHENTICODE_STATUS
+        || localIntentions & Intentions::FILEINFO_AUTHENTICODE_SIGNER)
     {
         if (FAILED(hr = m_PEInfo.CheckPEInformation()))
             return hr;
@@ -605,11 +603,11 @@ HRESULT FileInfo::OpenCryptoHash(Intentions localIntentions)
         return S_OK;
 
     CryptoHashStream::Algorithm algs = CryptoHashStream::Algorithm::Undefined;
-    if (localIntentions & FILEINFO_MD5)
+    if (localIntentions & Intentions::FILEINFO_MD5)
         algs |= CryptoHashStream::Algorithm::MD5;
-    if (localIntentions & FILEINFO_SHA1)
+    if (localIntentions & Intentions::FILEINFO_SHA1)
         algs |= CryptoHashStream::Algorithm::SHA1;
-    if (localIntentions & FILEINFO_SHA256)
+    if (localIntentions & Intentions::FILEINFO_SHA256)
         algs |= CryptoHashStream::Algorithm::SHA256;
 
     auto stream = GetDetails()->GetDataStream();
@@ -619,7 +617,7 @@ HRESULT FileInfo::OpenCryptoHash(Intentions localIntentions)
 
     stream->SetFilePointer(0L, FILE_BEGIN, NULL);
 
-    auto hashstream = std::make_shared<CryptoHashStream>(_L_);
+    auto hashstream = std::make_shared<CryptoHashStream>();
     if (hashstream == nullptr)
         return E_OUTOFMEMORY;
 
@@ -663,10 +661,10 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
         return S_OK;
 
     FuzzyHashStream::Algorithm algs = FuzzyHashStream::Algorithm::Undefined;
-    if (localIntentions & FILEINFO_SSDEEP)
-        algs |= FuzzyHashStream::SSDeep;
-    if (localIntentions & FILEINFO_TLSH)
-        algs |= FuzzyHashStream::TLSH;
+    if (localIntentions & Intentions::FILEINFO_SSDEEP)
+        algs |= FuzzyHashStream::Algorithm::SSDeep;
+    if (localIntentions & Intentions::FILEINFO_TLSH)
+        algs |= FuzzyHashStream::Algorithm::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
 
@@ -675,7 +673,7 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
 
     stream->SetFilePointer(0L, FILE_BEGIN, NULL);
 
-    auto hashstream = std::make_shared<FuzzyHashStream>(_L_);
+    auto hashstream = std::make_shared<FuzzyHashStream>();
     if (hashstream == nullptr)
         return E_OUTOFMEMORY;
 
@@ -688,17 +686,22 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
 
     if (ullWritten > 0)
     {
-        if (algs & FuzzyHashStream::Algorithm::SSDeep
-            && FAILED(hr = hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, GetDetails()->SSDeep())))
+        if (algs & FuzzyHashStream::Algorithm::SSDeep)
         {
-            if (hr != MK_E_UNAVAILABLE)
+            hr = hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, GetDetails()->SSDeep());
+            if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
+            {
                 return hr;
+            }
         }
-        if (algs & FuzzyHashStream::Algorithm::TLSH
-            && FAILED(hr = hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH())))
+
+        if (algs & FuzzyHashStream::Algorithm::TLSH)
         {
-            if (hr != MK_E_UNAVAILABLE)
+            hr = hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH());
+            if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
+            {
                 return hr;
+            }
         }
     }
 
@@ -713,18 +716,18 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
         return S_OK;
 
     CryptoHashStream::Algorithm crypto_algs = CryptoHashStream::Algorithm::Undefined;
-    if (localIntentions & FILEINFO_MD5)
+    if (localIntentions & Intentions::FILEINFO_MD5)
         crypto_algs |= CryptoHashStream::Algorithm::MD5;
-    if (localIntentions & FILEINFO_SHA1)
+    if (localIntentions & Intentions::FILEINFO_SHA1)
         crypto_algs |= CryptoHashStream::Algorithm::SHA1;
-    if (localIntentions & FILEINFO_SHA256)
+    if (localIntentions & Intentions::FILEINFO_SHA256)
         crypto_algs |= CryptoHashStream::Algorithm::SHA256;
 
     FuzzyHashStream::Algorithm fuzzy_algs = FuzzyHashStream::Algorithm::Undefined;
-    if (localIntentions & FILEINFO_SSDEEP)
-        fuzzy_algs |= FuzzyHashStream::SSDeep;
-    if (localIntentions & FILEINFO_TLSH)
-        fuzzy_algs |= FuzzyHashStream::TLSH;
+    if (localIntentions & Intentions::FILEINFO_SSDEEP)
+        fuzzy_algs |= FuzzyHashStream::Algorithm::SSDeep;
+    if (localIntentions & Intentions::FILEINFO_TLSH)
+        fuzzy_algs |= FuzzyHashStream::Algorithm::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
 
@@ -739,7 +742,7 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
 
     if (crypto_algs != CryptoHashStream::Algorithm::Undefined)
     {
-        crypto_hashstream = std::make_shared<CryptoHashStream>(_L_);
+        crypto_hashstream = std::make_shared<CryptoHashStream>();
         if (crypto_hashstream == nullptr)
             return E_OUTOFMEMORY;
 
@@ -751,7 +754,7 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
 
     if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
     {
-        fuzzy_hashstream = std::make_shared<FuzzyHashStream>(_L_);
+        fuzzy_hashstream = std::make_shared<FuzzyHashStream>();
         if (fuzzy_hashstream == nullptr)
             return E_OUTOFMEMORY;
 
@@ -787,8 +790,7 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
         }
 #ifdef ORC_BUILD_SSDEEP
         if (fuzzy_algs & FuzzyHashStream::Algorithm::SSDeep
-            && FAILED(
-                hr = fuzzy_hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, GetDetails()->SSDeep())))
+            && FAILED(hr = fuzzy_hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, GetDetails()->SSDeep())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
@@ -837,14 +839,15 @@ HRESULT FileInfo::OpenAuthenticode()
                 hr = m_codeVerifyTrust.Verify(
                     m_szFullName, GetDetails()->SecurityDirectory(), GetDetails()->GetPEHashs(), data)))
         {
-            log::Warning(_L_, hr, L"WinVerifyTrust failed for file %s\r\n", m_szFullName);
+            spdlog::warn(L"WinVerifyTrust failed for file '{}' (code: {:#x})", m_szFullName, hr);
         }
     }
     else
     {
-        if (FAILED(hr = m_codeVerifyTrust.VerifyAnySignatureWithCatalogs(m_szFullName, GetDetails()->GetPEHashs(), data)))
+        if (FAILED(
+                hr = m_codeVerifyTrust.VerifyAnySignatureWithCatalogs(m_szFullName, GetDetails()->GetPEHashs(), data)))
         {
-            log::Warning(_L_, hr, L"WinVerifyTrust failed for file %s\r\n", m_szFullName);
+            spdlog::warn(L"WinVerifyTrust failed for file '{}' (code: {:#x})", m_szFullName, hr);
         }
     }
     GetDetails()->SetAuthenticodeData(std::move(data));
@@ -931,7 +934,7 @@ HRESULT FileInfo::WriteOwnerSid(ITableOutput& output)
     if (ERROR_SUCCESS != dwStatus)
         return HRESULT_FROM_WIN32(dwStatus);
 
-    BOOST_SCOPE_EXIT(&pSD) { :: LocalFree(pSD); }
+    BOOST_SCOPE_EXIT(&pSD) { ::LocalFree(pSD); }
     BOOST_SCOPE_EXIT_END
 
     WCHAR* StringSid = NULL;
@@ -1165,8 +1168,7 @@ HRESULT FileInfo::WriteFileType(ITableOutput& output)
                 return output.WriteString(L"Application");
             case VFT_DLL:
                 return output.WriteString(L"DLL");
-            case VFT_DRV:
-            {
+            case VFT_DRV: {
                 switch (m_pFFI->dwFileSubtype)
                 {
                     case VFT2_UNKNOWN:
@@ -1196,10 +1198,9 @@ HRESULT FileInfo::WriteFileType(ITableOutput& output)
                     case VFT2_DRV_VERSIONED_PRINTER:
                         return output.WriteString(L"Driver Printer Versioned");
                 }
-                return output.WriteFormated(L"Driver {0:#x}-{0:#x}", m_pFFI->dwFileType, m_pFFI->dwFileSubtype);
+                return output.WriteFormated(L"Driver {:#x}-{:#x}", m_pFFI->dwFileType, m_pFFI->dwFileSubtype);
             }
-            case VFT_FONT:
-            {
+            case VFT_FONT: {
                 switch (m_pFFI->dwFileSubtype)
                 {
                     case VFT2_FONT_RASTER:
@@ -1209,14 +1210,14 @@ HRESULT FileInfo::WriteFileType(ITableOutput& output)
                     case VFT2_FONT_TRUETYPE:
                         return output.WriteString(L"Font TrueType");
                 }
-                return output.WriteFormated(L"Font {0:#x}-{0:#x}", m_pFFI->dwFileType, m_pFFI->dwFileSubtype);
+                return output.WriteFormated(L"Font {:#x}-{:#x}", m_pFFI->dwFileType, m_pFFI->dwFileSubtype);
             }
             case VFT_VXD:
                 return output.WriteString(L"VXD");
             case VFT_STATIC_LIB:
                 return output.WriteString(L"Lib");
         }
-        return output.WriteFormated(L"{0:#x}-{0:#x}", m_pFFI->dwFileType, m_pFFI->dwFileSubtype);
+        return output.WriteFormated(L"{:#x}-{:#x}", m_pFFI->dwFileType, m_pFFI->dwFileSubtype);
     }
     return output.WriteNothing();
 }
@@ -1348,7 +1349,7 @@ HRESULT FileInfo::WriteSSDeep(ITableOutput& output)
             return output.WriteNothing();
         return hr;
     }
-    return output.WriteString(GetDetails()->SSDeep().c_str());
+    return output.WriteString(GetDetails()->SSDeep());
 #else
     return output.WriteNothing();
 #endif
@@ -1363,7 +1364,7 @@ HRESULT FileInfo::WriteTLSH(ITableOutput& output)
             return output.WriteNothing();
         return hr;
     }
-    return output.WriteString(GetDetails()->TLSH().c_str());
+    return output.WriteString(GetDetails()->TLSH());
 }
 
 HRESULT FileInfo::WriteSignedHash(ITableOutput& output)
@@ -1464,7 +1465,7 @@ HRESULT FileInfo::WriteSecurityDirectorySignatureSize(ITableOutput& output)
         DWORD cbSize = 0L;
         if (FAILED(hr = m_codeVerifyTrust.SignatureSize(m_szFullName, GetDetails()->SecurityDirectory(), cbSize)))
         {
-            log::Warning(_L_, L"SignatureSize failed for file '%s'", m_szFullName);
+            spdlog::warn(L"SignatureSize failed for file '{}' (code: {:#x})", m_szFullName, hr);
         }
         return output.WriteInteger(cbSize);
     }
@@ -1540,7 +1541,7 @@ HRESULT FileInfo::WriteAuthenticodeSigner(ITableOutput& output)
         }
     }
 
-    return output.WriteString(signerstream.str().c_str());
+    return output.WriteString(signerstream.str());
 }
 
 HRESULT FileInfo::WriteAuthenticodeSignerThumbprint(ITableOutput& output)
@@ -1569,7 +1570,7 @@ HRESULT FileInfo::WriteAuthenticodeSignerThumbprint(ITableOutput& output)
         DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
         if (!CertGetCertificateContextProperty(signer, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
         {
-            log::Verbose(_L_, L"Failed to extract certificate thumbprint\r\n");
+            spdlog::debug(L"Failed to extract certificate thumbprint");
         }
         else
         {
@@ -1585,7 +1586,7 @@ HRESULT FileInfo::WriteAuthenticodeSignerThumbprint(ITableOutput& output)
         }
     }
 
-    return output.WriteString(signerstream.str().c_str());
+    return output.WriteString(signerstream.str());
 }
 
 HRESULT FileInfo::WriteAuthenticodeCA(ITableOutput& output)
@@ -1624,7 +1625,7 @@ HRESULT FileInfo::WriteAuthenticodeCA(ITableOutput& output)
             bIsFirst = false;
         }
     }
-    return output.WriteString(castream.str().c_str());
+    return output.WriteString(castream.str());
 }
 
 HRESULT FileInfo::WriteAuthenticodeCAThumbprint(ITableOutput& output)
@@ -1653,7 +1654,7 @@ HRESULT FileInfo::WriteAuthenticodeCAThumbprint(ITableOutput& output)
         DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
         if (!CertGetCertificateContextProperty(ca, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
         {
-            log::Verbose(_L_, L"Failed to extract certificate thumbprint\r\n");
+            spdlog::debug(L"Failed to extract certificate thumbprint");
         }
         else
         {
@@ -1669,7 +1670,7 @@ HRESULT FileInfo::WriteAuthenticodeCAThumbprint(ITableOutput& output)
         }
     }
 
-    return output.WriteString(castream.str().c_str());
+    return output.WriteString(castream.str());
 }
 
 bool FileInfo::FilterApplies(const Filter& filter)

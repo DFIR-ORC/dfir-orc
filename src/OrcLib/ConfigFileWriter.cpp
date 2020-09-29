@@ -15,6 +15,8 @@
 
 #include "FileStream.h"
 
+#include <spdlog/spdlog.h>
+
 using namespace std;
 
 using namespace Orc;
@@ -40,7 +42,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                                 hr = pWriter->WriteAttributeString(
                                     NULL, item.strName.c_str(), NULL, item.c_str())))
                         {
-                            log::Warning(_L_, hr, L"Failed to write item");
+                            spdlog::warn("Failed to write item (code: {:#x})", hr);
                             return;
                         }
                     }
@@ -57,7 +59,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                 {
                     if (FAILED(hr = pWriter->WriteEndElement()))
                     {
-                        XmlLiteExtension::LogError(_L_, hr, nullptr);
+                        XmlLiteExtension::LogError(hr, nullptr);
                         return hr;
                     }
                 }
@@ -67,7 +69,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                     {
                         if (FAILED(hr = pWriter->WriteString(config.strData.c_str())))
                         {
-                            XmlLiteExtension::LogError(_L_, hr, nullptr);
+                            XmlLiteExtension::LogError(hr, nullptr);
                             return hr;
                         }
                     }
@@ -87,7 +89,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                         });
                     if (FAILED(hr = pWriter->WriteEndElement()))
                     {
-                        XmlLiteExtension::LogError(_L_, hr, nullptr);
+                        XmlLiteExtension::LogError(hr, nullptr);
                         return hr;
                     }
                 }
@@ -98,7 +100,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                 if (FAILED(
                         hr = pWriter->WriteAttributeString(NULL, config.strName.c_str(), NULL, config.c_str())))
                 {
-                    XmlLiteExtension::LogError(_L_, hr, nullptr);
+                    XmlLiteExtension::LogError(hr, nullptr);
                 }
                 break;
             case ConfigItem::NODELIST:
@@ -118,11 +120,11 @@ ConfigFileWriter::WriteConfig(const wstring& strConfigFile, const WCHAR* szDescr
 {
     HRESULT hr = E_FAIL;
 
-    auto stream = std::make_shared<FileStream>(_L_);
+    auto stream = std::make_shared<FileStream>();
 
     if (FAILED(hr = stream->WriteTo(strConfigFile.c_str())))
     {
-        log::Error(_L_, hr, L"Failed to open xml file %s for writing\r\n", strConfigFile.c_str());
+        spdlog::error(L"Failed to open xml file '{}' for writing (code: {:#x})", strConfigFile, hr);
         return hr;
     }
 
@@ -150,67 +152,67 @@ HRESULT ConfigFileWriter::WriteConfig(
         return hr;
 
     CComPtr<IXmlWriter> pWriter;
-    m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
+    m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
     if (!m_xmllite)
     {
-        log::Error(_L_, E_FAIL, L"Failed to load xmllite\r\n");
+        spdlog::error(L"Failed to load xmllite");
         return E_FAIL;
     }
 
     if (FAILED(hr = m_xmllite->CreateXmlWriter(IID_IXmlWriter, (PVOID*)&pWriter, nullptr)))
     {
-        XmlLiteExtension::LogError(_L_, hr, nullptr);
-        log::Error(_L_, hr, L"Failed to instantiate Xml writer\r\n");
+        XmlLiteExtension::LogError(hr, nullptr);
+        spdlog::error(L"Failed to instantiate Xml writer (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = pWriter->SetOutput(stream)))
     {
-        XmlLiteExtension::LogError(_L_, hr, nullptr);
-        log::Error(_L_, hr, L"Failed to set output stream\r\n", hr);
+        XmlLiteExtension::LogError(hr, nullptr);
+        spdlog::error(L"Failed to set output stream (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = pWriter->SetProperty(XmlWriterProperty_Indent, TRUE)))
     {
-        XmlLiteExtension::LogError(_L_, hr, nullptr);
-        log::Error(_L_, hr, L"Failed to set indentation property\r\n", hr);
+        XmlLiteExtension::LogError(hr, nullptr);
+        spdlog::error(L"Failed to set indentation property (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = pWriter->WriteStartDocument(XmlStandalone_Omit)))
     {
-        XmlLiteExtension::LogError(_L_, hr, nullptr);
-        log::Error(_L_, hr, L"Failed to write start document\r\n", hr);
+        XmlLiteExtension::LogError(hr, nullptr);
+        spdlog::error(L"Failed to write start document (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = pWriter->WriteComment(szDescription)))
     {
-        XmlLiteExtension::LogError(_L_, hr, nullptr);
-        log::Error(_L_, hr, L"Failed to write description\r\n", hr);
+        XmlLiteExtension::LogError(hr, nullptr);
+        spdlog::error(L"Failed to write description (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = WriteConfig(pWriter, config)))
     {
-        XmlLiteExtension::LogError(_L_, hr, nullptr);
-        log::Error(_L_, hr, L"Failed to write configuration\r\n", hr);
+        XmlLiteExtension::LogError(hr, nullptr);
+        spdlog::error(L"Failed to write configuration (code: {:#x})", hr);
         return hr;
     }
 
     // WriteEndDocument closes any open elements or attributes
     if (FAILED(hr = pWriter->WriteEndDocument()))
     {
-        XmlLiteExtension::LogError(_L_, hr, nullptr);
-        log::Error(_L_, hr, L"Failed to write end document\r\n", hr);
+        XmlLiteExtension::LogError(hr, nullptr);
+        spdlog::error(L"Failed to write end document (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = pWriter->Flush()))
     {
-        XmlLiteExtension::LogError(_L_, hr, nullptr);
-        log::Error(_L_, hr, L"Failed to flush\r\n", hr);
+        XmlLiteExtension::LogError(hr, nullptr);
+        spdlog::error(L"Failed to flush (code: {:#x})", hr);
         return hr;
     }
 

@@ -29,8 +29,6 @@ class IOutput;
 class IWriter;
 using ITableOutput = TableOutput::IOutput;
 
-class LogFileWriter;
-
 using SystemTags = std::set<std::wstring>;
 
 class ORCLIB_API SystemDetails
@@ -48,7 +46,7 @@ public:
     static HRESULT SetSystemTags(SystemTags tags);
 
     static HRESULT GetDescriptionString(std::wstring& strDescription);
-    static HRESULT WriteDescriptionString(const logger& pLog);
+    static HRESULT WriteDescriptionString();
     static HRESULT WriteDescriptionString(ITableOutput& output);
 
     static HRESULT GetOSVersion(DWORD& dwMajor, DWORD& dwMinor);
@@ -66,32 +64,32 @@ public:
 
     };
 
-    static stx::Result<std::vector<CPUInformation>,HRESULT> GetCPUInfo(const logger& pLog);
+    static stx::Result<std::vector<CPUInformation>, HRESULT> GetCPUInfo();
 
-    static stx::Result<MEMORYSTATUSEX, HRESULT> GetPhysicalMemory(const logger& pLog);
+    static stx::Result<MEMORYSTATUSEX, HRESULT> GetPhysicalMemory();
 
     static HRESULT GetPageSize(DWORD& dwPageSize);
     static HRESULT GetLargePageSize(DWORD& dwPageSize);
 
     static HRESULT GetComputerName_(std::wstring& strComputerName);
-    static HRESULT WriteComputerName(const logger& pLog);
+    static HRESULT WriteComputerName();
     static HRESULT WriteComputerName(ITableOutput& output);
 
     static HRESULT GetFullComputerName(std::wstring& strComputerName);
-    static HRESULT WriteFullComputerName(const logger& pLog);
+    static HRESULT WriteFullComputerName();
     static HRESULT WriteFullComputerName(ITableOutput& output);
 
     static HRESULT SetOrcComputerName(const std::wstring& strComputerName);
     static HRESULT GetOrcComputerName(std::wstring& strComputerName);
-    static HRESULT WriteOrcComputerName(const logger& pLog);
+    static HRESULT WriteOrcComputerName();
     static HRESULT WriteOrcComputerName(ITableOutput& output);
 
     static HRESULT SetOrcFullComputerName(const std::wstring& strComputerName);
     static HRESULT GetOrcFullComputerName(std::wstring& strComputerName);
-    static HRESULT WriteOrcFullComputerName(const logger& pLog);
+    static HRESULT WriteOrcFullComputerName();
     static HRESULT WriteOrcFullComputerName(ITableOutput& output);
 
-    static HRESULT WriteProductype(ITableOutput& output);
+    static HRESULT WriteProductType(ITableOutput& output);
 
     static HRESULT GetTimeStamp(std::wstring& strTimeStamp);
 
@@ -99,10 +97,10 @@ public:
     static HRESULT AmIElevated(bool& bIsElevated);
     static HRESULT UserSID(std::wstring& strSID);
 
-    static stx::Result<DWORD, HRESULT> GetParentProcessId(const logger& pLog);
+    static stx::Result<DWORD, HRESULT> GetParentProcessId();
 
     static stx::Result<std::wstring, HRESULT> GetCmdLine();
-    static stx::Result<std::wstring, HRESULT> GetCmdLine(const logger& pLog, DWORD dwPid);
+    static stx::Result<std::wstring, HRESULT> GetCmdLine(DWORD dwPid);
 
     static HRESULT GetSystemLocale(std::wstring& strLocale);
     static HRESULT GetUserLocale(std::wstring& strLocale);
@@ -138,7 +136,7 @@ public:
         std::optional<DWORD> ConfigManagerErrorCode;
     };
 
-    static stx::Result<std::vector<PhysicalDrive>, HRESULT> GetPhysicalDrives(const logger& pLog);
+    static stx::Result<std::vector<PhysicalDrive>, HRESULT> GetPhysicalDrives();
 
     struct MountedVolume
     {
@@ -157,7 +155,7 @@ public:
         std::optional<ULONG32> ErrorCode;
     };
 
-    static stx::Result<std::vector<MountedVolume>, HRESULT> GetMountedVolumes(const logger& pLog);
+    static stx::Result<std::vector<MountedVolume>, HRESULT> GetMountedVolumes();
 
     struct QFE
     {
@@ -167,7 +165,7 @@ public:
         std::wstring InstallDate;
     };
 
-    static stx::Result<std::vector<QFE>, HRESULT> GetOsQFEs(const logger& pLog);
+    static stx::Result<std::vector<QFE>, HRESULT> GetOsQFEs();
 
     struct EnvVariable
     {
@@ -175,7 +173,7 @@ public:
         std::wstring Value;
     };
 
-    static stx::Result<std::vector<EnvVariable>, HRESULT> GetEnvironment(const logger& pLog);
+    static stx::Result<std::vector<EnvVariable>, HRESULT> GetEnvironment();
 
     static bool IsWOW64();
 

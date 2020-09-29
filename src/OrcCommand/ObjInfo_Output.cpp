@@ -9,39 +9,46 @@
 #include "stdafx.h"
 
 #include "ObjInfo.h"
-#include "LogFileWriter.h"
 
 #include "ToolVersion.h"
 
-using namespace Orc;
+#include "Usage.h"
+
 using namespace Orc::Command::ObjInfo;
+using namespace Orc::Text;
+using namespace Orc;
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\r\n"
-        L"	usage: DFIR-Orc.exe ObjInfo\r\n"
-        L"\r\n"
-        L"\t/out=<Output>       : Output file or archive\r\n");
-    PrintCommonUsage();
-    return;
+    auto usageNode = m_console.OutputTree();
+
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe ObjInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>]",
+        "ObjInfo is a tool designed to list the set of Microsoft Windows named objects currently present on the "
+        "analyzed system.");
+
+    Usage::PrintOutputParameters(usageNode);
+    Usage::PrintMiscellaneousParameters(usageNode);
 }
 
 void Main::PrintParameters()
 {
-    SaveAndPrintStartTime();
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Parameters");
 
-    PrintComputerName();
+    PrintCommonParameters(node);
 
-    PrintOperatingSystem();
-
-    PrintOutputOption(config.output);
-
-    return;
+    m_console.PrintNewLine();
 }
 
 void Main::PrintFooter()
 {
-    PrintExecutionTime();
+    m_console.PrintNewLine();
+
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

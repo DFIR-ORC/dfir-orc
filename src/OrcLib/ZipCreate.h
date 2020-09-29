@@ -62,7 +62,7 @@ private:
     GUID m_FormatGUID;
     CompressionLevel m_CompressionLevel;
 
-    ZipCreate(logger pLo, bool bComputeHash = false);
+    ZipCreate(bool bComputeHash = false);
 
     STDMETHOD(SetCompressionLevel)(const CComPtr<IOutArchive>& pArchiver, CompressionLevel level);
 

@@ -17,14 +17,14 @@
 
 using namespace Orc;
 
-std::shared_ptr<TableOutput::IConnection> ConnectionFactory(const logger& pLog)
+std::shared_ptr<TableOutput::IConnection> ConnectionFactory()
 {
 #pragma comment(linker, "/export:ConnectionFactory=" __FUNCDNAME__)
-    return std::make_shared<TableOutput::Sql::Connection>(pLog);
+    return std::make_shared<TableOutput::Sql::Connection>();
 }
 
-std::shared_ptr<TableOutput::IConnectWriter> ConnectTableFactory(const logger& pLog)
+std::shared_ptr<TableOutput::IConnectWriter> ConnectTableFactory()
 {
 #pragma comment(linker, "/export:ConnectTableFactory=" __FUNCDNAME__)
-    return std::make_shared<TableOutput::Sql::Writer>(pLog);
+    return std::make_shared<TableOutput::Sql::Writer>();
 }

@@ -7,7 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "Partition.h"
 #include "FileStream.h"
 #include "MemoryStream.h"
@@ -27,21 +26,18 @@ namespace Orc::Test {
 TEST_CLASS(WindowsOverlayFile)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(BasicCompressionAPI)
     {
-        auto compressAPI = ExtensionLibrary::GetLibrary<CompressAPIExtension>(_L_);
+        auto compressAPI = ExtensionLibrary::GetLibrary<CompressAPIExtension>();
         // This is not related to cabinet archive format but on unfinished work about WOF support
         Assert::IsTrue((bool)compressAPI, L"Could not compression API cabinet.dll");
 
@@ -102,12 +98,12 @@ public:
 
         Assert::IsTrue(exists(sample), L"Sample file \\binaries\\vcpkg.exe.WofCompressedData does not exist");
 
-        auto wofStream = std::make_shared<FileStream>(_L_);
+        auto wofStream = std::make_shared<FileStream>();
         Assert::IsTrue(SUCCEEDED(wofStream->ReadFrom(sample.c_str())));
 
         ULONGLONG wofSize = wofStream->GetSize();
 
-        auto compressedStream = std::make_shared<MemoryStream>(_L_);
+        auto compressedStream = std::make_shared<MemoryStream>();
         Assert::IsTrue(SUCCEEDED(compressedStream->OpenForReadWrite()));
 
         ULONGLONG compressedSize = 0LLU;
@@ -117,7 +113,7 @@ public:
         Assert::AreEqual(compressedSize, wofSize);
         const auto compressedData = compressedStream->GetConstBuffer();
 
-        auto compressAPI = ExtensionLibrary::GetLibrary<CompressAPIExtension>(_L_);
+        auto compressAPI = ExtensionLibrary::GetLibrary<CompressAPIExtension>();
         COMPRESSOR_HANDLE decompressor = INVALID_HANDLE_VALUE;
         Assert::IsTrue(!compressAPI->CreateDecompressor(COMPRESS_ALGORITHM_MSZIP, nullptr, &decompressor));
 

@@ -26,8 +26,8 @@ class ORCLIB_API YaraExtension : public ExtensionLibrary
     friend class ExtensionLibrary;
 
 public:
-    YaraExtension(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"libyara.dll", L"YARA_X86DLL", L"YARA_X64DLL") {};
+    YaraExtension()
+        : ExtensionLibrary(L"libyara.dll", L"YARA_X86DLL", L"YARA_X64DLL") {};
 
     template <typename... Args>
     auto yr_initialize(Args&&... args)

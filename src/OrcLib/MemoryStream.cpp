@@ -13,7 +13,6 @@
 #include "Temporary.h"
 #include "BinaryBuffer.h"
 
-#include "LogFileWriter.h"
 #include "OrcException.h"
 
 #include "SystemDetails.h"
@@ -38,7 +37,6 @@ HRESULT MemoryStream::Close()
 
 HRESULT MemoryStream::Duplicate(const MemoryStream& other)
 {
-    _L_ = other._L_;
     if (other.m_bReadOnly)
     {
         m_pBuffer = other.m_pBuffer;
@@ -182,7 +180,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
                 NULL, std::min(MEMORY_STREAM_RESERVE_MAX, dwReserveSize), MEM_RESERVE, PAGE_READWRITE);
             if (!m_pBuffer)
             {
-                log::Verbose(_L_, L"WARNING: Could not reserve %i bytes\r\n", dwReserveSize);
+                spdlog::warn("Could not reserve {} bytes", dwReserveSize);
             }
             else
                 m_cbReservedBytes = dwReserveSize;
@@ -203,7 +201,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
 
         if (!pNewBuffer)
         {
-            log::Error(_L_, E_OUTOFMEMORY, L"Could not allocate %i bytes\r\n", dwCommitSize);
+            spdlog::error("Could not allocate {} bytes", dwCommitSize);
             return E_OUTOFMEMORY;
         }
     }
@@ -213,7 +211,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
         DWORD dwPageSize = 0L;
         if (FAILED(hr = SystemDetails::GetPageSize(dwPageSize)))
         {
-            log::Error(_L_, hr, L"Failed to decommit pages: could not retrieve page size\r\n");
+            spdlog::error(L"Failed to decommit pages: could not retrieve page size (code: {:#x})", hr);
         }
         else
         {
@@ -224,7 +222,8 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
                 LPBYTE pFirstPageToDecommit = m_pBuffer + (((dwCommitSize / dwPageSize) + 1) * dwPageSize);
                 if (!VirtualFree(pFirstPageToDecommit, dwPagesToUnCommit * dwPageSize, MEM_DECOMMIT))
                 {
-                    log::Error(_L_, HRESULT_FROM_WIN32(GetLastError()), L"Failed to decommit pages\r\n");
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::error("Failed to decommit pages (code: {:#x})", hr);
                 }
             }
         }
@@ -266,13 +265,14 @@ HRESULT MemoryStream::Write(
 
     if (m_bReadOnly)
     {
-        log::Error(_L_, hr = E_ACCESSDENIED, L"Invalid write to read-only memory stream\r\n");
-        return hr;
+        spdlog::error("Invalid write to read-only memory stream");
+        return E_ACCESSDENIED;
     }
 
     if (m_dwCurrFilePointer + cbBytesToWrite < m_dwCurrFilePointer)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW), L"File pointer overflowed\r\n");
+        hr = HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW);
+        spdlog::error("File pointer overflowed");
         return hr;
     }
 
@@ -294,7 +294,7 @@ HRESULT MemoryStream::Write(
 
             if (dwAllocSize < cbBytesToWrite + m_dwCurrFilePointer)
             {
-                log::Error(_L_, E_OUTOFMEMORY, L"Alloc size overflowed while rounding up\r\n");
+                spdlog::error("Alloc size overflowed while rounding up");
                 return E_OUTOFMEMORY;
             }
         }
@@ -400,8 +400,8 @@ HRESULT MemoryStream::SetSize(ULONG64 ullNewSize)
     return SetBufferSize(0LL, (size_t)ullNewSize);
 }
 
-MemoryStream::MemoryStream(logger pLog)
-    : ByteStream(std::move(pLog))
+MemoryStream::MemoryStream()
+    : ByteStream()
 {
     m_cbBuffer = 0;
     m_cbBufferCommitSize = 0;

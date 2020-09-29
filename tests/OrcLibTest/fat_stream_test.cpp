@@ -12,7 +12,6 @@
 #include "CryptoHashStream.h"
 #include "DevNullStream.h"
 
-#include "LogFileWriter.h"
 #include "BinaryBuffer.h"
 #include "VolumeReaderTest.h"
 
@@ -29,17 +28,12 @@ TEST_CLASS(FatStreamTest)
 private:
     LONGLONG m_Offset;
     static const DWORD g_TestFileSize = 10240;
-    logger _L_;
     UnitTestHelper helper;
 
 public:
-    TEST_METHOD_INITIALIZE(Initialize)
-    {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
-    }
+    TEST_METHOD_INITIALIZE(Initialize) {}
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(FatStreamBasicTest)
     {
@@ -66,13 +60,13 @@ public:
         VolumeReaderTest::SeekCallBack seekCallBack = [this](ULONGLONG offset) {
             m_Offset = offset;
 
-            log::Info(_L_, L"Seek with offset=%llu\r\n", offset);
+            spdlog::info(L"Seek with offset=%llu", offset);
             return S_OK;
         };
 
         VolumeReaderTest::ReadCallBack readCallBack =
             [this](ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead) {
-                log::Info(_L_, L"Read with size=%d\r\n", ullBytesToRead);
+                spdlog::info(L"Read with size=%d", ullBytesToRead);
 
                 ULONGLONG i = 0;
                 for (; i < ullBytesToRead; i++)
@@ -84,12 +78,12 @@ public:
                 return S_OK;
             };
 
-        VolumeReaderTest volReader(_L_, &seekCallBack, &readCallBack);
+        VolumeReaderTest volReader(&seekCallBack, &readCallBack);
         std::shared_ptr<VolumeReaderTest> volReaderPtr = std::make_shared<VolumeReaderTest>(volReader);
         std::shared_ptr<FatFileEntry> fPtr = std::make_shared<FatFileEntry>(f);
 
         // create FatStream
-        FatStream stream(_L_, volReaderPtr, fPtr);
+        FatStream stream(volReaderPtr, fPtr);
         Assert::IsTrue(g_TestFileSize == stream.GetSize());
         Assert::IsTrue(S_OK == stream.CanRead());
         Assert::IsTrue(!(stream.CanWrite() == S_OK));
@@ -151,7 +145,7 @@ public:
         CBinaryBuffer sha1;
         CBinaryBuffer md5;
 
-        auto hashstream = std::make_shared<CryptoHashStream>(_L_);
+        auto hashstream = std::make_shared<CryptoHashStream>();
 
         Assert::IsTrue(
             S_OK
@@ -159,7 +153,7 @@ public:
                 CryptoHashStream::Algorithm::SHA256 | CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1,
                 std::make_shared<FatStream>(stream)));
 
-        auto devnull = std::make_shared<DevNullStream>(_L_);
+        auto devnull = std::make_shared<DevNullStream>();
         ULONGLONG ullWritten = 0LL;
         Assert::IsTrue(S_OK == hashstream->CopyTo(devnull, &ullWritten));
         Assert::IsTrue(S_OK == hashstream->GetMD5(md5));

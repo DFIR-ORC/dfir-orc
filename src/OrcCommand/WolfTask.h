@@ -12,11 +12,11 @@
 #include "CommandNotification.h"
 #include "CommandMessage.h"
 
+#include "Output/Console/Journal.h"
+
 #pragma managed(push, off)
 
 namespace Orc {
-
-class LogFileWriter;
 
 namespace Command::Wolf {
 
@@ -35,7 +35,9 @@ public:
     } Status;
 
 private:
-    std::wstring m_cmdKeyword;
+    OrcCommand::Output::Journal& m_journal;
+    std::wstring m_commandSet;
+    std::wstring m_command;
 
     DWORD m_dwPID = 0L;
     DWORD m_dwExitCode = 0L;
@@ -50,14 +52,13 @@ private:
 
     Status m_Status = Init;
 
-    logger _L_;
-
 public:
     WolfTask() = delete;
 
-    WolfTask(logger pLog, const std::wstring& keyword)
-        : m_cmdKeyword(keyword)
-        , _L_(std::move(pLog))
+    WolfTask(const std::wstring& commandSet, const std::wstring& command, OrcCommand::Output::Journal& journal)
+        : m_journal(journal)
+        , m_commandSet(commandSet)
+        , m_command(command)
     {
         ZeroMemory(&m_Times, sizeof(PROCESS_TIMES));
         ZeroMemory(&m_LastActiveTime, sizeof(FILETIME));
@@ -65,11 +66,10 @@ public:
     };
 
     HRESULT ApplyNotification(
-        const DWORD dwLongerKeyword,
         const std::shared_ptr<CommandNotification>& notification,
         std::vector<std::shared_ptr<CommandMessage>>& actions);
 
-    ~WolfTask(void);
+    ~WolfTask();
 };
 }  // namespace Command::Wolf
 }  // namespace Orc

@@ -13,7 +13,6 @@
 #include "FileInfoCommon.h"
 #include "Temporary.h"
 #include "SystemDetails.h"
-#include "LogFileWriter.h"
 
 using namespace Orc;
 using namespace Orc::Command::FatInfo;
@@ -26,9 +25,8 @@ ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     m_Config.output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, m_Config.output.TableKey.empty() ? L"fileinfo" : m_Config.output.TableKey.c_str(), schemaitem);
+        m_Config.output.TableKey.empty() ? L"fileinfo" : m_Config.output.TableKey.c_str(), schemaitem);
     m_Config.volumesStatsOutput.Schema = TableOutput::GetColumnsFromConfig(
-        _L_,
         m_Config.volumesStatsOutput.TableKey.empty() ? L"volstats" : m_Config.volumesStatsOutput.TableKey.c_str(),
         schemaitem);
     return S_OK;
@@ -46,7 +44,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
                 m_Config.DefaultIntentions = static_cast<Intentions>(
                     m_Config.DefaultIntentions
                     | FileInfo::GetIntentions(
-                        _L_, item.c_str(), FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                        item.c_str(), FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
         });
 
     std::for_each(begin(configitem[ADD].NodeList), end(configitem[ADD].NodeList), [this](const ConfigItem& item) {
@@ -56,7 +54,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
 
         if (FAILED(
                 hr1 = FileInfoCommon::GetFilterFromConfig(
-                    _L_, item, filter, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames)))
+                    item, filter, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames)))
             return;
         else
         {
@@ -77,7 +75,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
         filter.bInclude = false;
 
         hr1 = FileInfoCommon::GetFilterFromConfig(
-            _L_, item, filter, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames);
+            item, filter, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames);
 
         if (FAILED(hr1))
             return;
@@ -102,14 +100,14 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    if (FAILED(hr = m_Config.output.Configure(_L_, configitem[FATINFO_OUTPUT])))
+    if (FAILED(hr = m_Config.output.Configure(configitem[FATINFO_OUTPUT])))
     {
-        log::Error(_L_, hr, L"Invalid output specified\r\n");
+        spdlog::error("Invalid output specified");
         return hr;
     }
 
     if (configitem[FATINFO_COMPUTER])
-        m_Config.strComputerName = configitem[FATINFO_COMPUTER];
+        m_utilitiesConfig.strComputerName = configitem[FATINFO_COMPUTER];
 
     m_Config.bResurrectRecords = GetResurrectFromConfig(configitem);
     m_Config.bPopSystemObjects = GetPopulateSystemObjectsFromConfig(configitem);
@@ -120,13 +118,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = m_Config.locs.AddLocationsFromConfigItem(configitem[FATINFO_LOCATIONS])))
     {
-        log::Error(_L_, hr, L"Failed to get locations definition from config\r\n");
+        spdlog::error("Failed to get locations definition from config (code: {:x})", hr);
         return hr;
     }
 
     if (FAILED(hr = GetColumnsAndFiltersFromConfig(configitem)))
     {
-        log::Error(_L_, hr, L"Failed to get column definition from config\r\n");
+        spdlog::error("Failed to get column definition from config (code: {:x})", hr);
         return hr;
     }
 
@@ -170,7 +168,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
             case L'-':
                 if (OutputOption(argv[i] + 1, L"out", m_Config.output))
                     ;
-                else if (ParameterOption(argv[i] + 1, L"Computer", m_Config.strComputerName))
+                else if (ParameterOption(argv[i] + 1, L"Computer", m_utilitiesConfig.strComputerName))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"ResurrectRecords", m_Config.bResurrectRecords))
                     ;
@@ -201,7 +199,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             m_Config.DefaultIntentions = static_cast<Intentions>(
                                 m_Config.DefaultIntentions
                                 | FatFileInfo::GetIntentions(
-                                    _L_, pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                                    pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
                             pCur = pNext + 1;
                         }
                         else
@@ -209,7 +207,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             m_Config.DefaultIntentions = static_cast<Intentions>(
                                 m_Config.DefaultIntentions
                                 | FatFileInfo::GetIntentions(
-                                    _L_, pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
+                                    pCur, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames));
                             pCur = NULL;
                         }
                     }
@@ -230,7 +228,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
     if (FAILED(
             hr = FileInfoCommon::GetFiltersFromArgcArgv(
-                _L_, argc, argv, m_Config.Filters, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames)))
+                argc, argv, m_Config.Filters, FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames)))
         return hr;
 
     return S_OK;
@@ -240,14 +238,14 @@ HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
 
-    if (m_Config.strComputerName.empty())
+    if (m_utilitiesConfig.strComputerName.empty())
     {
-        SystemDetails::GetOrcComputerName(m_Config.strComputerName);
+        SystemDetails::GetOrcComputerName(m_utilitiesConfig.strComputerName);
     }
-	else
-	{
-		SystemDetails::SetOrcComputerName(m_Config.strComputerName);
-	}
+    else
+    {
+        SystemDetails::SetOrcComputerName(m_utilitiesConfig.strComputerName);
+    }
 
     m_Config.locs.Consolidate(false, FSVBR::FSType::FAT);
 
@@ -265,10 +263,10 @@ HRESULT Main::CheckConfiguration()
         m_Config.volumesStatsOutput.OutputEncoding = m_Config.output.OutputEncoding;
     }
 
-    if (m_Config.DefaultIntentions == FILEINFO_NONE)
+    if (m_Config.DefaultIntentions == Intentions::FILEINFO_NONE)
     {
         m_Config.DefaultIntentions =
-            FatFileInfo::GetIntentions(_L_, L"Default", FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames);
+            FatFileInfo::GetIntentions(L"Default", FatFileInfo::g_FatAliasNames, FatFileInfo::g_FatColumnNames);
     }
 
     if (boost::logic::indeterminate(m_Config.bResurrectRecords))
@@ -278,17 +276,17 @@ HRESULT Main::CheckConfiguration()
 
     m_Config.ColumnIntentions = static_cast<Intentions>(
         m_Config.DefaultIntentions
-        | (m_Config.Filters.empty() ? FILEINFO_NONE : FileInfo::GetFilterIntentions(m_Config.Filters)));
+        | (m_Config.Filters.empty() ? Intentions::FILEINFO_NONE : FileInfo::GetFilterIntentions(m_Config.Filters)));
 
     if (m_Config.output.Type == OutputSpec::Kind::Directory)
     {
-        if (FAILED(hr = ::VerifyDirectoryExists(m_Config.output.Path.c_str())))
+        hr = ::VerifyDirectoryExists(m_Config.output.Path.c_str());
+        if (FAILED(hr))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Specified file information output directory (%s) is not a directory\r\n",
-                m_Config.output.Path.c_str());
+            spdlog::error(
+                L"Specified file information output directory '{}' is not a directory (code: {:#x})",
+                m_Config.output.Path,
+                hr);
             return hr;
         }
     }

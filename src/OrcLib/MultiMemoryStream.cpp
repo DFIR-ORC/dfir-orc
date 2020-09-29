@@ -12,8 +12,6 @@
 
 #include "Temporary.h"
 
-#include "LogFileWriter.h"
-
 using namespace Orc;
 
 HRESULT MultiMemoryStream::Close()
@@ -100,7 +98,7 @@ HRESULT MultiMemoryStream::Write(
 
     if (m_bReadOnly)
     {
-        log::Error(_L_, E_ACCESSDENIED, L"Invalid write to read-only memory stream\r\n");
+        spdlog::error("Invalid write to read-only memory stream");
         return E_ACCESSDENIED;
     }
 
@@ -162,8 +160,8 @@ HRESULT MultiMemoryStream::SetFilePointer(__in LONGLONG, __in DWORD dwMoveMethod
     return S_OK;
 }
 
-MultiMemoryStream::MultiMemoryStream(logger pLog)
-    : ByteStream(std::move(pLog))
+MultiMemoryStream::MultiMemoryStream()
+    : ByteStream()
 {
     m_bReadOnly = FALSE;
 }

@@ -12,124 +12,98 @@
 
 #include "SystemDetails.h"
 
-#include "LogFileWriter.h"
-
 #include "ToolVersion.h"
 
-using namespace std;
+#include "Output/Text/Print/LocationSet.h"
+#include "Output/Text/Print/OutputSpec.h"
 
-using namespace Orc;
+#include "Usage.h"
+
 using namespace Orc::Command::RegInfo;
+using namespace Orc::Text;
+using namespace Orc;
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\n"
-        L"	usage: DFIR-Orc.exe RegInfo\r\n"
-        L"\r\n"
-        L"\t/config=<ConfigFile> : Specify a XML config file\r\n"
-        L"\r\n"
-        L"\t/Out=<OutputSpec>     : Registry information output specification\r\n"
-        L"\t\tOutput specification can be one of:\r\n"
-        L"\t\t\tA file that will contain output for all locations\r\n"
-        L"\t\t\tA directory that will contain one file per location (<Output>_<Location identifier>.csv)\r\n"
-        L"\r\n"
-        L"\t/utf8,/utf16       : Select utf8 or utf16 encoding (default is utf8)\r\n");
-    PrintCommonUsage();
-    return;
+    auto usageNode = m_console.OutputTree();
+
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe RegInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>]",
+        "RegInfo is a registry parser which can analyze either online or offline registry files.");
+
+    Usage::PrintOutputParameters(usageNode);
+
+    constexpr std::array kCustomMiscParameters = {Usage::kMiscParameterComputer};
+    Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
 }
 
 void Main::PrintParameters()
 {
-    SaveAndPrintStartTime();
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Parameters");
 
-    PrintComputerName();
+    PrintCommonParameters(node);
 
-    PrintOperatingSystem();
+    PrintValue(node, L"Output", config.Output);
+    PrintValues(node, L"Locations", config.m_HiveQuery.m_HivesLocation.GetParsedLocations());
 
-    PrintOutputOption(config.Output);
-
-    log::Info(_L_, L"**********************\r\n");
-    log::Info(_L_, L"***** Locations ******\r\n");
-    log::Info(_L_, L"**********************\r\n");
-
-    if (config.m_HiveQuery.m_HivesLocation.GetLocations().size() > 0)
+    for (size_t i = 0; i < config.m_HiveQuery.m_Queries.size(); ++i)
     {
-        log::Info(_L_, L"\r\nVolumes, Folders to parse:\r\n");
+        const auto& query = config.m_HiveQuery.m_Queries[i];
 
-        config.m_HiveQuery.m_HivesLocation.PrintLocations(true, L"\t");
+        auto queryNode = node.AddNode("Query #{}:", i);
 
-        log::Info(_L_, L"\r\n");
+        auto matchingHives = queryNode.AddNode("Matching hives:");
+        for (const auto& [searchTerm, searchQuery] : config.m_HiveQuery.m_FileFindMap)
+        {
+            if (query == searchQuery)
+            {
+                matchingHives.Add(searchTerm->GetDescription());
+            }
+        }
+
+        if (config.m_HiveQuery.m_FileNameMap.size() > 0)
+        {
+            auto parsedHivesNode = queryNode.AddNode("Parsed hives:");
+            for (const auto& [name, searchQuery] : config.m_HiveQuery.m_FileNameMap)
+            {
+                if (query == searchQuery)
+                {
+                    parsedHivesNode.Add(name);
+                }
+            }
+        }
+
+        if (config.Information != REGINFO_NONE)
+        {
+            auto registryInfoNode = queryNode.AddNode("Registry information to dump:");
+
+            const RegInfoDescription* pCur = _InfoDescription;
+            while (pCur->Type != REGINFO_NONE)
+            {
+                if (pCur->Type & config.Information)
+                {
+                    registryInfoNode.Add(L"{} ({})", pCur->ColumnName, pCur->Description);
+                }
+
+                pCur++;
+            }
+        }
+
+        query->QuerySpec.PrintSpecs(queryNode);
     }
 
-    log::Info(_L_, L"**********************\r\n");
-    log::Info(_L_, L"***** /Locations *****\r\n");
-    log::Info(_L_, L"**********************\r\n");
-
-    log::Info(_L_, L"**********************\r\n");
-    log::Info(_L_, L"** Query list start ** \r\n");
-    log::Info(_L_, L"**********************\r\n");
-    std::for_each(
-        begin(config.m_HiveQuery.m_Queries),
-        end(config.m_HiveQuery.m_Queries),
-        [this](shared_ptr<HiveQuery::SearchQuery> Query) {
-            log::Info(_L_, L"\r\n++++++ Query ++++++\r\n");
-            log::Info(_L_, L"Registry hives matching:\r\n");
-
-            for_each(
-                config.m_HiveQuery.m_FileFindMap.begin(),
-                config.m_HiveQuery.m_FileFindMap.end(),
-                [this,
-                 Query](std::pair<std::shared_ptr<FileFind::SearchTerm>, std::shared_ptr<HiveQuery::SearchQuery>> p) {
-                    if (p.second.get() == Query.get())
-                    {
-                        log::Info(_L_, (p.first->GetDescription().c_str()));
-                        log::Info(_L_, L"\r\n");
-                    }
-                });
-            log::Info(_L_, L"\r\n");
-            log::Info(_L_, L"Registry hives to parse:\r\n");
-            for_each(
-                config.m_HiveQuery.m_FileNameMap.begin(),
-                config.m_HiveQuery.m_FileNameMap.end(),
-                [this, Query](std::pair<std::wstring, std::shared_ptr<HiveQuery::SearchQuery>> p) {
-                    if (p.second.get() == Query.get())
-                    {
-
-                        log::Info(_L_, L"%s\r\n", p.first.c_str());
-                    }
-                });
-
-            if (config.Information != REGINFO_NONE)
-            {
-                log::Info(_L_, L"\r\nRegistry information to dump:\r\n");
-
-                const RegInfoDescription* pCur = _InfoDescription;
-
-                while (pCur->Type != REGINFO_NONE)
-                {
-                    if (pCur->Type & config.Information)
-                    {
-                        log::Info(_L_, L"\t%s (%s)\r\n", pCur->ColumnName, pCur->Description);
-                    }
-                    pCur++;
-                }
-                log::Info(_L_, L"\r\n");
-            }
-
-            Query->QuerySpec.PrintSpecs();
-            log::Info(_L_, L"\r\n++++++ /Query +++++\r\n");
-        });
-
-    log::Info(_L_, L"**********************\r\n");
-    log::Info(_L_, L"**  Query list end  ** \r\n");
-    log::Info(_L_, L"**********************\r\n\r\n");
+    m_console.PrintNewLine();
 }
 
 void Main::PrintFooter()
 {
-    PrintExecutionTime();
+    m_console.PrintNewLine();
 
-    return;
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

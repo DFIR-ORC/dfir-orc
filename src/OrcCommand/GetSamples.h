@@ -17,6 +17,8 @@
 
 #include "TaskTracker.h"
 
+#include "OrcLimits.h"
+
 #include "GetThis.h"
 
 #pragma managed(push, off)
@@ -47,7 +49,7 @@ public:
         std::wstring getthisArgs;
 
         LocationSet locs;
-        GetThis::Limits limits;
+        Limits limits;
 
         OutputSpec::Encoding csvEncoding = OutputSpec::Encoding::UTF8;
         bool bLoadAutoruns = false;
@@ -57,8 +59,8 @@ public:
         bool bInstallNTrack = false;
         bool bRemoveNTrack = false;
 
-        Configuration(logger pLog)
-            : locs(std::move(pLog))
+        Configuration()
+            : locs()
         {
             getThisConfig.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile);
             samplesOutput.supportedTypes =
@@ -101,9 +103,9 @@ public:
 
     HRESULT GetSchemaFromConfig(const ConfigItem& schemaitem);
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog)
-        , config(pLog) {};
+    Main()
+        : UtilitiesMain()
+        , config() {};
 
     void PrintUsage();
     void PrintParameters();

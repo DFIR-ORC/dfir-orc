@@ -13,8 +13,6 @@
 #include "ByteStream.h"
 #include "PipeStream.h"
 
-#include "LogFileWriter.h"
-
 #include <boost/scope_exit.hpp>
 
 using namespace Orc;
@@ -112,7 +110,7 @@ STDMETHODIMP JournalingStream::Open(const std::shared_ptr<ByteStream>& pChainedS
 
     if (pChainedStream->CanWrite() == S_FALSE)
     {
-        log::Error(_L_, E_INVALIDARG, L"Chained stream not able to write cannot be used in a journaling stream\r\n");
+        spdlog::error("Chained stream not able to write cannot be used in a journaling stream");
         return E_INVALIDARG;
     }
 
@@ -123,7 +121,7 @@ STDMETHODIMP JournalingStream::Open(const std::shared_ptr<ByteStream>& pChainedS
     ULONGLONG ullBytesWritten = 0LL;
     if (FAILED(hr = m_pChainedStream->Write(&Header, sizeof(JRNL_HEADER), &ullBytesWritten)))
     {
-        log::Error(_L_, hr, L"Failed to write journal header to chained stream\r\n");
+        spdlog::error("Failed to write journal header to chained stream (code: {:#x})", hr);
         return hr;
     }
 
@@ -138,7 +136,9 @@ STDMETHODIMP JournalingStream::Read(
     DBG_UNREFERENCED_PARAMETER(pReadBuffer);
     DBG_UNREFERENCED_PARAMETER(cbBytes);
     DBG_UNREFERENCED_PARAMETER(pcbBytesRead);
-    log::Error(_L_, HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION), L"Impossible to read from a journaling stream\r\n");
+
+    spdlog::error("Cannot read from a journaling stream");
+
     return HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION);
 }
 
@@ -168,9 +168,10 @@ STDMETHODIMP JournalingStream::Write(
     ULONGLONG ullBytesWritten = 0LL;
     if (FAILED(hr = m_pChainedStream->Write(buffer.GetData(), cbBytesToWrite + sizeof(WRITE_HEADER), &ullBytesWritten)))
     {
-        log::Error(_L_, hr, L"Failed to write to journal's chained stream\r\n");
+        spdlog::error(L"Failed to write to journal's chained stream (code: {:#x})", hr);
         return hr;
     }
+
     if (pcbBytesWritten)
     {
         if (ullBytesWritten > sizeof(WRITE_HEADER))
@@ -204,12 +205,12 @@ JournalingStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMove
     ULONGLONG ullBytesWritten = 0LL;
     if (FAILED(hr = m_pChainedStream->Write(&header, sizeof(SEEK_HEADER), &ullBytesWritten)))
     {
-        log::Error(_L_, hr, L"Failed to write to journal's chained stream\r\n");
+        spdlog::error(L"Failed to write to journal's chained stream (code: {:#x})", hr);
         return hr;
     }
     if (ullBytesWritten != sizeof(SEEK_HEADER))
     {
-        log::Warning(_L_, E_UNEXPECTED, L"Did not write the complete journaled seek operation\r\n");
+        spdlog::warn("Did not write the complete journaled seek operation");
     }
 
     switch (dwMoveMethod)
@@ -243,7 +244,7 @@ STDMETHODIMP_(ULONG64) JournalingStream::GetSize()
 STDMETHODIMP JournalingStream::SetSize(ULONG64 ullSize)
 {
     DBG_UNREFERENCED_PARAMETER(ullSize);
-    log::Warning(_L_, E_NOTIMPL, L"SetSize is not implemented in JournalingStream::SetFilePointer\r\n");
+    spdlog::warn("SetSize is not implemented in JournalingStream::SetFilePointer");
     return E_NOTIMPL;
 }
 
@@ -254,21 +255,22 @@ STDMETHODIMP JournalingStream::Close()
     CLOSE_HEADER Header;
 
     ULONGLONG ullBytesWritten = 0LL;
-    if (FAILED(hr = m_pChainedStream->Write(&Header, sizeof(CLOSE_HEADER), &ullBytesWritten)))
+    hr = m_pChainedStream->Write(&Header, sizeof(CLOSE_HEADER), &ullBytesWritten);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to write journal header to chained stream\r\n");
+        spdlog::error(L"Failed to write journal header to chained stream (code: {:#x})", hr);
         return hr;
     }
     if (FAILED(hr = m_pChainedStream->Close()))
     {
-        log::Error(_L_, hr, L"Failed to close journal header chained stream\r\n");
+        spdlog::error(L"Failed to close journal header chained stream (code: {:#x})", hr);
         return hr;
     }
     bClosed = true;
     return S_OK;
 }
 
-HRESULT JournalingStream::IsStreamJournalized(const logger& pLog, const std::shared_ptr<ByteStream>& pStream)
+HRESULT JournalingStream::IsStreamJournalized(const std::shared_ptr<ByteStream>& pStream)
 {
     HRESULT hr = E_FAIL;
 
@@ -278,22 +280,24 @@ HRESULT JournalingStream::IsStreamJournalized(const logger& pLog, const std::sha
 
         if (FAILED(hr = pStream->SetFilePointer(0LL, FILE_CURRENT, &ullCurrentPosition)))
         {
-            log::Error(pLog, hr, L"Failed to save stream's current position\r\n");
+            spdlog::error(L"Failed to save stream's current position (code: {:#x})", hr);
             return hr;
         }
 
-        BOOST_SCOPE_EXIT(&pStream, &ullCurrentPosition, &hr, &pLog)
+        BOOST_SCOPE_EXIT(&pStream, &ullCurrentPosition, &hr)
         {
-            if (FAILED(hr = pStream->SetFilePointer(ullCurrentPosition, FILE_BEGIN, NULL)))
+            hr = pStream->SetFilePointer(ullCurrentPosition, FILE_BEGIN, NULL);
+            if (FAILED(hr))
             {
-                log::Error(pLog, hr, L"Failed to reset stream's position\r\n");
+                spdlog::error(L"Failed to reset stream's position (code: {:#x})", hr);
             }
         }
         BOOST_SCOPE_EXIT_END
 
-        if (FAILED(hr = pStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
+        hr = pStream->SetFilePointer(0LL, FILE_BEGIN, NULL);
+        if (FAILED(hr))
         {
-            log::Error(pLog, hr, L"Failed to set stream's current position to stream's beginning\r\n");
+            spdlog::error("Failed to set stream's current position to stream's beginning (code: {:#x})", hr);
             return hr;
         }
 
@@ -302,10 +306,10 @@ HRESULT JournalingStream::IsStreamJournalized(const logger& pLog, const std::sha
             return E_POINTER;
 
         ULONGLONG ullBytesRead = 0LL;
-        if (FAILED(hr = pStream->Read(buffer.GetData(), sizeof(JRNL_HEADER), &ullBytesRead)))
+        hr = pStream->Read(buffer.GetData(), sizeof(JRNL_HEADER), &ullBytesRead);
+        if (FAILED(hr))
         {
-            log::Error(pLog, hr, L"Failed to read stream's header\r\n");
-
+            spdlog::error("Failed to read stream's header (code: {:#x})", hr);
             return hr;
         }
 
@@ -325,16 +329,17 @@ HRESULT JournalingStream::IsStreamJournalized(const logger& pLog, const std::sha
 
         if (!pPipe)
         {
-            log::Warning(pLog, E_UNEXPECTED, L"Unseekable stream (not a pipe), cannot be observed for its format\r\n");
+            spdlog::warn("Unseekable stream (not a pipe), cannot be observed for its format");
         }
         else
         {
             JRNL_HEADER jrnl_header;
             DWORD dwBytesRead = 0L;
 
-            if (FAILED(hr = pPipe->Peek(&jrnl_header, sizeof(JRNL_HEADER), &dwBytesRead, NULL)))
+            hr = pPipe->Peek(&jrnl_header, sizeof(JRNL_HEADER), &dwBytesRead, NULL);
+            if (FAILED(hr))
             {
-                log::Error(pLog, hr, L"Failed to read stream's JRNL header\r\n");
+                spdlog::error("Failed to read stream's JRNL header (code: {:#x})", hr);
                 return hr;
             }
 
@@ -354,7 +359,6 @@ HRESULT JournalingStream::IsStreamJournalized(const logger& pLog, const std::sha
 }
 
 HRESULT JournalingStream::ReplayJournalStream(
-    const logger& pLog,
     const std::shared_ptr<ByteStream>& pFromStream,
     const std::shared_ptr<ByteStream>& pToStream)
 {
@@ -371,18 +375,14 @@ HRESULT JournalingStream::ReplayJournalStream(
     ULONGLONG ullBytesRead = 0LL;
     if (FAILED(hr = pFromStream->Read(&jrnl_header, sizeof(jrnl_header), &ullBytesRead)))
     {
-        log::Error(pLog, hr, L"Failed to read journal header from FromStream\r\n");
+        spdlog::error(L"Failed to read journal header from FromStream");
         return hr;
     }
 
     if (memcmp(jrnl_header.Signature, default_jrnl_header.Signature, sizeof(jrnl_header.Signature)))
     {
-        log::Error(
-            pLog,
-            HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            L"Stream signature \"%4.4S\" does not match expected \"%4.4S\"\r\n",
-            jrnl_header.Signature,
-            default_jrnl_header.Signature);
+        spdlog::error(
+            "Stream signature '{}' does not match expected '{}'", jrnl_header.Signature, default_jrnl_header.Signature);
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
@@ -395,7 +395,7 @@ HRESULT JournalingStream::ReplayJournalStream(
 
     if (FAILED(hr = pFromStream->Read(&OpHeader, sizeof(OpHeader), &ullBytesRead)))
     {
-        log::Error(pLog, hr, L"Failed to read operation header from FromStream\r\n");
+        spdlog::error(L"Failed to read operation header from FromStream (code: {:#x})", hr);
         return hr;
     }
 
@@ -421,14 +421,14 @@ HRESULT JournalingStream::ReplayJournalStream(
                     ullBytesRead = 0LL;
                     if (FAILED(hr = pFromStream->Read(buffer.GetData(), ullBytesLeftToRead, &ullBytesRead)))
                     {
-                        log::Error(pLog, hr, L"Failed to read data from FromStream\r\n");
+                        spdlog::error(L"Failed to read data from FromStream (code: {:#x})", hr);
                         return hr;
                     }
 
                     ULONGLONG ullBytesWritten = 0LL;
                     if (FAILED(hr = pToStream->Write(buffer.GetData(), ullBytesRead, &ullBytesWritten)))
                     {
-                        log::Error(pLog, hr, L"Failed to write data to ToStream\r\n");
+                        spdlog::error(L"Failed to write data to ToStream (code: {:#x})", hr);
                         return hr;
                     }
                     ullAccumulatedBytes += ullBytesRead;
@@ -446,7 +446,7 @@ HRESULT JournalingStream::ReplayJournalStream(
                         hr = pToStream->SetFilePointer(
                             pSeekHeader->llDistanteToMove, pSeekHeader->dwMoveMethod, &ullCurPos)))
                 {
-                    log::Error(pLog, hr, L"Seek operation failed\r\n");
+                    spdlog::error(L"Seek operation failed (code: {:#x})", hr);
                     return hr;
                 }
             }
@@ -455,23 +455,19 @@ HRESULT JournalingStream::ReplayJournalStream(
             {
                 if (FAILED(hr = pToStream->Close()))
                 {
-                    log::Error(pLog, hr, L"Close operation failed\r\n");
+                    spdlog::error(L"Close operation failed (code: {:#x})", hr);
                     return hr;
                 }
             }
             break;
             default:
-                log::Error(
-                    pLog,
-                    HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                    L"Invalid operation code %4.4S in operation hreader\r\n",
-                    OpHeader.OpHeader.Signature);
+                spdlog::error("Invalid operation code {} in operation hreader", OpHeader.OpHeader.Signature);
                 break;
         }
 
         if (FAILED(hr = pFromStream->Read(&OpHeader, sizeof(OpHeader), &ullBytesRead)))
         {
-            log::Error(pLog, hr, L"Failed to read journal header from FromStream\r\n");
+            spdlog::error(L"Failed to read journal header from FromStream (code: {:#x})", hr);
             return hr;
         }
     }

@@ -20,17 +20,25 @@ HRESULT Orc::SparseStream::OpenFile(
 	__in_opt HANDLE hTemplate)
 {
 
-	if (auto hr = Orc::FileStream::OpenFile(pwzPath, dwDesiredAccess, dwSharedMode, pSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplate); FAILED(hr))
-		return hr;
-	
-	if (!DeviceIoControl(m_hFile, FSCTL_SET_SPARSE, NULL, 0L, NULL, 0L, NULL, NULL))
-	{
-		auto hr = HRESULT_FROM_WIN32(GetLastError());
-		log::Error(_L_, hr, L"Failed to set file \"%s\" sparse\r\n", pwzPath);
-		return hr;
-	}
+    if (auto hr = Orc::FileStream::OpenFile(
+            pwzPath,
+            dwDesiredAccess,
+            dwSharedMode,
+            pSecurityAttributes,
+            dwCreationDisposition,
+            dwFlagsAndAttributes,
+            hTemplate);
+        FAILED(hr))
+        return hr;
 
-	return S_OK;
+    if (!DeviceIoControl(m_hFile, FSCTL_SET_SPARSE, NULL, 0L, NULL, 0L, NULL, NULL))
+    {
+        auto hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to set file '{}' sparse (code: {:#x})", pwzPath, hr);
+        return hr;
+    }
+
+    return S_OK;
 }
 
 STDMETHODIMP Orc::SparseStream::SetSize(ULONG64 ullSize)
@@ -38,7 +46,7 @@ STDMETHODIMP Orc::SparseStream::SetSize(ULONG64 ullSize)
     if (!DeviceIoControl(m_hFile, FSCTL_SET_SPARSE, NULL, 0L, NULL, 0L, NULL, NULL))
     {
         auto hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"Failed to set file \"%s\" sparse\r\n", m_strPath.c_str());
+        spdlog::error(L"Failed to set file '{}' sparse (code: {:#x})", m_strPath, hr);
         return hr;
     }
     return Orc::FileStream::SetSize(ullSize);
@@ -73,11 +81,10 @@ STDMETHODIMP Orc::SparseStream::GetAllocatedRanges(std::vector<FILE_ALLOCATED_RA
         {
             if (auto err = ::GetLastError(); err != ERROR_MORE_DATA)
             {
-                log::Error(
-                    _L_,
-                    HRESULT_FROM_WIN32(err),
-                    L"Failed to read allocated ranges of sparse stream %s\r\n",
-                    m_strPath.c_str());
+                spdlog::error(
+                    L"Failed to read allocated ranges of sparse stream '{}' (code: {:#x})",
+                    m_strPath,
+                    HRESULT_FROM_WIN32(err));
                 return HRESULT_FROM_WIN32(err);
             }
             bMoreData = true;

@@ -14,8 +14,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ArchiveOpenCallback
     : public IArchiveOpenCallback
     , public ICryptoGetTextPassword
@@ -23,10 +21,8 @@ class ArchiveOpenCallback
 private:
     long m_refCount;
 
-    logger _L_;
-
 public:
-    ArchiveOpenCallback(logger pLog);
+    ArchiveOpenCallback();
     virtual ~ArchiveOpenCallback();
 
     STDMETHOD(QueryInterface)(REFIID iid, void** ppvObject);

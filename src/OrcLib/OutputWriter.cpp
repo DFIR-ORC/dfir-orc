@@ -14,6 +14,4 @@
 
 #include <regex>
 
-using namespace std;
-
 using namespace Orc;

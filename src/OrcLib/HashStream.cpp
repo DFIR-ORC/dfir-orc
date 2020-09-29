@@ -61,7 +61,7 @@ HRESULT HashStream::Write(
 
     if (cbBytesToWrite > MAXDWORD)
     {
-        log::Error(_L_, E_INVALIDARG, L"Too many bytes to Hash\r\n");
+        spdlog::error("HashStream: Too many bytes to hash");
         return E_INVALIDARG;
     }
 

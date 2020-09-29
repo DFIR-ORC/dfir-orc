@@ -18,12 +18,8 @@ using namespace std::string_literals;
 class ApacheOrcOutputWriter : public TableOutputExtension
 {
 public:
-    ApacheOrcOutputWriter(logger pLog)
-        : TableOutputExtension(
-            std::move(pLog),
-            L"orcapacheorc.dll"s,
-            L"APACHEORC_X86DLL"s,
-            L"APACHEORC_X64DLL"s) {};
+    ApacheOrcOutputWriter()
+        : TableOutputExtension(L"orcapacheorc.dll"s, L"APACHEORC_X86DLL"s, L"APACHEORC_X64DLL"s) {};
     ~ApacheOrcOutputWriter() {};
 };
 

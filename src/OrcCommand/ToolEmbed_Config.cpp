@@ -14,7 +14,6 @@
 #include "ParameterCheck.h"
 #include "EmbeddedResource.h"
 #include "SystemDetails.h"
-#include "LogFileWriter.h"
 
 #include "ConfigFile_ToolEmbed.h"
 
@@ -29,23 +28,23 @@ ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 }
 
 HRESULT
-Main::GetNameValuePairFromConfigItem(const logger& pLog, const ConfigItem& item, EmbeddedResource::EmbedSpec& spec)
+Main::GetNameValuePairFromConfigItem(const ConfigItem& item, EmbeddedResource::EmbedSpec& spec)
 {
     if (wcscmp(item.strName.c_str(), L"pair"))
     {
-        log::Verbose(pLog, L"item passed is not a name value pair\r\n");
+        spdlog::debug("item passed is not a name value pair");
         return E_FAIL;
     }
 
     if (!item[TOOLEMBED_PAIRNAME])
     {
-        log::Verbose(pLog, L"name attribute is missing in name value pair\r\n");
+        spdlog::debug("name attribute is missing in name value pair");
         return E_FAIL;
     }
 
     if (!item[TOOLEMBED_PAIRVALUE])
     {
-        log::Verbose(pLog, L"value attribute is missing in name value pair\r\n");
+        spdlog::debug("value attribute is missing in name value pair");
         return E_FAIL;
     }
 
@@ -57,23 +56,23 @@ Main::GetNameValuePairFromConfigItem(const logger& pLog, const ConfigItem& item,
     return S_OK;
 }
 
-HRESULT Main::GetAddFileFromConfigItem(const logger& pLog, const ConfigItem& item, EmbeddedResource::EmbedSpec& spec)
+HRESULT Main::GetAddFileFromConfigItem(const ConfigItem& item, EmbeddedResource::EmbedSpec& spec)
 {
     if (wcscmp(item.strName.c_str(), L"file"))
     {
-        log::Verbose(pLog, L"item passed is not a file addition request\r\n");
+        spdlog::debug("item passed is not a file addition request");
         return E_FAIL;
     }
 
     if (!item[TOOLEMBED_FILENAME])
     {
-        log::Verbose(pLog, L"name attribute is missing in file addition request\r\n");
+        spdlog::debug("name attribute is missing in file addition request");
         return E_FAIL;
     }
 
     if (!item[TOOLEMBED_FILEPATH])
     {
-        log::Verbose(pLog, L"path attribute is missing in file addition request\r\n");
+        spdlog::debug("path attribute is missing in file addition request");
         return E_FAIL;
     }
 
@@ -84,11 +83,10 @@ HRESULT Main::GetAddFileFromConfigItem(const logger& pLog, const ConfigItem& ite
         HRESULT hr = E_FAIL;
         if (FAILED(hr = ExpandFilePath(((const std::wstring&)item[TOOLEMBED_FILEPATH]).c_str(), strInputFile)))
         {
-            log::Error(
-                pLog,
-                hr,
-                L"Error in specified file (%s) to add in config file\r\n",
-                item[TOOLEMBED_FILEPATH].c_str());
+            spdlog::error(
+                L"Error in specified file '{}' to add in config file (code: {:#x})",
+                item[TOOLEMBED_FILEPATH].c_str(),
+                hr);
             return hr;
         }
     }
@@ -100,19 +98,19 @@ HRESULT Main::GetAddFileFromConfigItem(const logger& pLog, const ConfigItem& ite
     return S_OK;
 }
 
-HRESULT Main::GetAddArchiveFromConfigItem(const logger& pLog, const ConfigItem& item, EmbeddedResource::EmbedSpec& spec)
+HRESULT Main::GetAddArchiveFromConfigItem(const ConfigItem& item, EmbeddedResource::EmbedSpec& spec)
 {
     HRESULT hr = E_FAIL;
 
     if (wcscmp(item.strName.c_str(), L"archive"))
     {
-        log::Verbose(pLog, L"item passed is not a archive addition request\r\n");
+        spdlog::debug("item passed is not a archive addition request");
         return E_FAIL;
     }
 
     if (!item[TOOLEMBED_ARCHIVE_NAME])
     {
-        log::Verbose(pLog, L"name attribute is missing in archive addition request\r\n");
+        spdlog::debug("name attribute is missing in archive addition request");
         return E_FAIL;
     }
 
@@ -132,7 +130,7 @@ HRESULT Main::GetAddArchiveFromConfigItem(const logger& pLog, const ConfigItem& 
 
     if (!item[TOOLEMBED_FILE2ARCHIVE])
     {
-        log::Verbose(pLog, L"files to archive items are missing in archive addition request\r\n");
+        spdlog::debug("files to archive items are missing in archive addition request");
         return E_FAIL;
     }
 
@@ -142,7 +140,7 @@ HRESULT Main::GetAddArchiveFromConfigItem(const logger& pLog, const ConfigItem& 
     std::for_each(
         begin(item[TOOLEMBED_FILE2ARCHIVE].NodeList),
         end(item[TOOLEMBED_FILE2ARCHIVE].NodeList),
-        [&pLog, &items, &hr](const ConfigItem& item2cab) {
+        [&items, &hr](const ConfigItem& item2cab) {
             EmbeddedResource::EmbedSpec::ArchiveItem toCab;
 
             toCab.Name = item2cab[TOOLEMBED_FILE2ARCHIVE_NAME];
@@ -152,11 +150,10 @@ HRESULT Main::GetAddArchiveFromConfigItem(const logger& pLog, const ConfigItem& 
             HRESULT subhr = E_FAIL;
             if (FAILED(subhr = ExpandFilePath(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(), strInputFile)))
             {
-                log::Error(
-                    pLog,
-                    subhr,
-                    L"Error in specified file (%s) to add to cab file\r\n",
-                    item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str());
+                spdlog::error(
+                    L"Error in specified file '{}' to add to cab file (code: {:#x})",
+                    item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(),
+                    subhr);
                 hr = subhr;
                 return;
             }
@@ -184,10 +181,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    ConfigFile reader(_L_);
-
-    if (FAILED(hr = reader.ConfigureLogging(configitem[TOOLEMBED_LOGGING], _L_)))
-        return hr;
+    ConfigFile reader;
 
     {
         if (FAILED(hr = reader.GetInputFile(configitem[TOOLEMBED_INPUT], config.strInputFile)))
@@ -197,7 +191,6 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     {
         if (FAILED(
                 hr = config.Output.Configure(
-                    _L_,
                     static_cast<OutputSpec::Kind>(OutputSpec::Kind::File | OutputSpec::Kind::Directory),
                     configitem[TOOLEMBED_OUTPUT])))
         {
@@ -216,7 +209,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 HRESULT local_hr = E_FAIL;
                 EmbeddedResource::EmbedSpec spec = EmbeddedResource::EmbedSpec::AddVoid();
 
-                if (SUCCEEDED(local_hr = GetNameValuePairFromConfigItem(_L_, item, spec)))
+                if (SUCCEEDED(local_hr = GetNameValuePairFromConfigItem(item, spec)))
                 {
                     if (spec.Type != EmbeddedResource::EmbedSpec::Void)
                         config.ToEmbed.push_back(std::move(spec));
@@ -239,7 +232,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 HRESULT local_hr = E_FAIL;
                 EmbeddedResource::EmbedSpec spec = EmbeddedResource::EmbedSpec::AddVoid();
 
-                if (SUCCEEDED(local_hr = GetAddFileFromConfigItem(_L_, item, spec)))
+                if (SUCCEEDED(local_hr = GetAddFileFromConfigItem(item, spec)))
                 {
                     if (spec.Type != EmbeddedResource::EmbedSpec::Void)
                         config.ToEmbed.push_back(std::move(spec));
@@ -262,7 +255,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 HRESULT local_hr = E_FAIL;
                 EmbeddedResource::EmbedSpec spec = EmbeddedResource::EmbedSpec::AddVoid();
 
-                if (SUCCEEDED(local_hr = GetAddArchiveFromConfigItem(_L_, item, spec)))
+                if (SUCCEEDED(local_hr = GetAddArchiveFromConfigItem(item, spec)))
                 {
                     if (spec.Type != EmbeddedResource::EmbedSpec::Void)
                         config.ToEmbed.push_back(std::move(spec));
@@ -338,8 +331,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX86(std::move(strParameter)));
                     else
                     {
-                        log::Error(
-                            _L_, E_INVALIDARG, L"Invalid ressource pattern specified: %s\r\n", strParameter.c_str());
+                        spdlog::error(L"Invalid ressource pattern specified: {}", strParameter);
                         return E_INVALIDARG;
                     }
                 }
@@ -349,8 +341,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX64(std::move(strParameter)));
                     else
                     {
-                        log::Error(
-                            _L_, E_INVALIDARG, L"Invalid ressource pattern specified: %s\r\n", strParameter.c_str());
+                        spdlog::error(L"Invalid ressource pattern specified: '{}'", strParameter);
                         return E_INVALIDARG;
                     }
                 }
@@ -360,8 +351,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun(std::move(strParameter)));
                     else
                     {
-                        log::Error(
-                            _L_, E_INVALIDARG, L"Invalid ressource pattern specified: %s\r\n", strParameter.c_str());
+                        spdlog::error(L"Invalid ressource pattern specified: '{}'", strParameter);
                         return E_INVALIDARG;
                     }
                 }
@@ -376,7 +366,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
                         if (FAILED(hr = ExpandFilePath(s[1].str().c_str(), szFile, MAX_PATH)))
                         {
-                            log::Error(_L_, hr, L"Invalid file to embed specified: %s\r\n", strParameter.c_str());
+                            spdlog::error(L"Invalid file to embed specified: {}", strParameter);
                             return E_INVALIDARG;
                         }
                         if (s[2].matched)
@@ -386,7 +376,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     }
                     else
                     {
-                        log::Error(_L_, E_INVALIDARG, L"Option /AddFile should be like: /AddFile=File.cab,Name\r\n");
+                        spdlog::error(L"Option /AddFile should be like: /AddFile=File.cab,Name");
                         return E_INVALIDARG;
                     }
                 }
@@ -401,10 +391,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     }
                     else
                     {
-                        log::Error(
-                            _L_,
-                            E_INVALIDARG,
-                            L"Option /Remove should be like: /Remove=101 or /Remove=ResourceCab\r\n");
+                        spdlog::error("Option /Remove should be like: /Remove=101 or /Remove=ResourceCab");
                         return E_INVALIDARG;
                     }
                 }
@@ -432,7 +419,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         }
                         else
                         {
-                            log::Error(_L_, E_INVALIDARG, L"Option should be like: /Name=Value\r\n");
+                            spdlog::error("Option should be like: /Name=Value");
                             return E_INVALIDARG;
                         }
                     }
@@ -454,31 +441,28 @@ HRESULT Main::CheckConfiguration()
 
     if (dwMajor < 6 && dwMinor < 2)
     {
-        log::Error(
-            _L_,
-            E_ABORT,
-            L"ToolEmbed cannot be used on downlevel platform, please run ToolEmbed on Windows 7+ systems\r\n");
+        spdlog::error("ToolEmbed cannot be used on downlevel platform, please run ToolEmbed on Windows 7+ systems");
         return E_ABORT;
     }
 
     switch (config.Todo)
     {
         case Main::Embed:
-            if (config.Output.Type != OutputSpec::File)
+            if (config.Output.Type != OutputSpec::Kind::File)
             {
-                log::Error(_L_, E_INVALIDARG, L"ToolEmbed can only embed into an output file\r\n");
+                spdlog::error("ToolEmbed can only embed into an output file");
                 return E_INVALIDARG;
             }
             break;
         case Main::FromDump:
-            if (config.Output.Type != OutputSpec::File)
+            if (config.Output.Type != OutputSpec::Kind::File)
             {
-                log::Error(_L_, E_INVALIDARG, L"ToolEmbed can only embed from a dump into an output file\r\n");
+                spdlog::error("ToolEmbed can only embed from a dump into an output file");
                 return E_INVALIDARG;
             }
             if (!config.strConfigFile.empty())
             {
-                log::Error(_L_, E_INVALIDARG, L"ToolEmbed embedding from a dump cannot use a config file\r\n");
+                spdlog::error("ToolEmbed embedding from a dump cannot use a config file");
                 return E_INVALIDARG;
             }
             break;
@@ -489,18 +473,14 @@ HRESULT Main::CheckConfiguration()
                 WCHAR szFullPath[MAX_PATH] = {0};
                 if (!GetFullPathName(config.strInputFile.c_str(), MAX_PATH, szFullPath, NULL))
                 {
-                    log::Error(
-                        _L_,
-                        E_INVALIDARG,
-                        L"Failed to compute full path name for path %s\r\n",
-                        config.strInputFile.c_str());
+                    spdlog::error(L"Failed to compute full path name for: '{}'", config.strInputFile);
                     return E_INVALIDARG;
                 }
                 config.strInputFile.assign(szFullPath);
             }
-            if (config.Output.Type != OutputSpec::Directory)
+            if (config.Output.Type != OutputSpec::Kind::Directory)
             {
-                log::Error(_L_, E_INVALIDARG, L"ToolEmbed can only dump a configuration into a directory\r\n");
+                spdlog::error("ToolEmbed can only dump a configuration into a directory");
                 return E_INVALIDARG;
             }
             break;

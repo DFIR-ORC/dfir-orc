@@ -13,14 +13,12 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class FileCopyDownloadTask : public DownloadTask
 {
 
 public:
-    FileCopyDownloadTask(logger pLog, LPCWSTR szJobName)
-        : DownloadTask(std::move(pLog), szJobName) {};
+    FileCopyDownloadTask(LPCWSTR szJobName)
+        : DownloadTask(szJobName) {};
 
     virtual HRESULT Initialize(const bool bDelayedDeletion);
     virtual HRESULT Finalise();

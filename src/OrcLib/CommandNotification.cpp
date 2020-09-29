@@ -12,9 +12,21 @@
 
 #include "CommandNotification.h"
 
-using namespace std;
-
 using namespace Orc;
+
+namespace {
+
+// Enable the use of std::make_shared with CommandNotification protected constructor
+struct CommandNotificationT : public Orc::CommandNotification
+{
+    template <typename... Args>
+    inline CommandNotificationT(Args&&... args)
+        : CommandNotification(std::forward<Args>(args)...)
+    {
+    }
+};
+
+}  // namespace
 
 CommandNotification::CommandNotification(CommandNotification::Event anevent)
     : m_Event(anevent)
@@ -27,15 +39,10 @@ CommandNotification::CommandNotification(CommandNotification::Event anevent)
 {
 }
 
-struct CommandNotification_make_shared_enabler : public Orc::CommandNotification {
-	inline CommandNotification_make_shared_enabler(CommandNotification::Event anevent) : Orc::CommandNotification(anevent) {};
-};
-
-
 CommandNotification::Notification
 CommandNotification::NotifyStarted(DWORD dwPid, const std::wstring& Keyword, HANDLE hProcess)
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::Started);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Started);
 
     retval->m_Result = CommandNotification::Success;
     retval->m_dwPid = dwPid;
@@ -54,7 +61,7 @@ CommandNotification::NotifyStarted(DWORD dwPid, const std::wstring& Keyword, HAN
 CommandNotification::Notification
 CommandNotification::NotifyProcessTerminated(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess)
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::Terminated);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Terminated);
 
     retval->m_Result = CommandNotification::Success;
     retval->m_dwPid = dwPid;
@@ -88,7 +95,7 @@ CommandNotification::NotifyProcessTerminated(DWORD dwPid, const std::wstring& Ke
 // Job Notifictions
 CommandNotification::Notification CommandNotification::NotifyJobEmpty()
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::JobEmpty);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::JobEmpty);
 
     retval->m_Result = Information;
 
@@ -97,7 +104,7 @@ CommandNotification::Notification CommandNotification::NotifyJobEmpty()
 
 CommandNotification::Notification CommandNotification::NotifyJobTimeLimit()
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::JobTimeLimit);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::JobTimeLimit);
 
     retval->m_Result = Information;
 
@@ -106,7 +113,7 @@ CommandNotification::Notification CommandNotification::NotifyJobTimeLimit()
 
 CommandNotification::Notification CommandNotification::NotifyJobMemoryLimit()
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::JobMemoryLimit);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::JobMemoryLimit);
 
     retval->m_Result = Information;
 
@@ -115,7 +122,7 @@ CommandNotification::Notification CommandNotification::NotifyJobMemoryLimit()
 
 CommandNotification::Notification CommandNotification::NotifyJobProcessLimit()
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::JobProcessLimit);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::JobProcessLimit);
 
     retval->m_Result = Information;
 
@@ -125,7 +132,7 @@ CommandNotification::Notification CommandNotification::NotifyJobProcessLimit()
 // Job Notifications for Process
 CommandNotification::Notification CommandNotification::NotifyProcessTimeLimit(DWORD_PTR dwPid)
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::ProcessTimeLimit);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::ProcessTimeLimit);
 
     retval->m_dwPid = dwPid;
     retval->m_Result = Information;
@@ -134,7 +141,7 @@ CommandNotification::Notification CommandNotification::NotifyProcessTimeLimit(DW
 
 CommandNotification::Notification CommandNotification::NotifyProcessMemoryLimit(DWORD_PTR dwPid)
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::ProcessMemoryLimit);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::ProcessMemoryLimit);
 
     retval->m_dwPid = dwPid;
     retval->m_Result = Information;
@@ -143,7 +150,7 @@ CommandNotification::Notification CommandNotification::NotifyProcessMemoryLimit(
 
 CommandNotification::Notification CommandNotification::NotifyProcessAbnormalTermination(DWORD_PTR dwPid)
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::ProcessAbnormalTermination);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::ProcessAbnormalTermination);
 
     retval->m_dwPid = dwPid;
     retval->m_Result = Failure;
@@ -160,7 +167,7 @@ CommandNotification::Notification CommandNotification::NotifyProcessAbnormalTerm
 
 CommandNotification::Notification CommandNotification::NotifyRunningProcess(const std::wstring& keyword, DWORD dwPid)
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::Running);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Running);
 
     retval->m_Keyword = keyword;
     retval->m_dwPid = dwPid;
@@ -171,7 +178,7 @@ CommandNotification::Notification CommandNotification::NotifyRunningProcess(cons
 
 CommandNotification::Notification CommandNotification::NotifyRunningProcess(std::wstring&& keyword, DWORD dwPid)
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::Running);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Running);
 
     std::swap(retval->m_Keyword, keyword);
     retval->m_dwPid = dwPid;
@@ -182,7 +189,7 @@ CommandNotification::Notification CommandNotification::NotifyRunningProcess(std:
 
 CommandNotification::Notification CommandNotification::NotifyCanceled()
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::Canceled);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Canceled);
 
     retval->m_Result = CommandNotification::Success;
 
@@ -191,7 +198,7 @@ CommandNotification::Notification CommandNotification::NotifyCanceled()
 
 CommandNotification::Notification CommandNotification::NotifyTerminateAll()
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::AllTerminated);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::AllTerminated);
 
     retval->m_Result = CommandNotification::Success;
     return retval;
@@ -199,7 +206,7 @@ CommandNotification::Notification CommandNotification::NotifyTerminateAll()
 
 CommandNotification::Notification CommandNotification::NotifyDone(const std::wstring& keyword, const HANDLE hJob)
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(CommandNotification::Done);
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Done);
 
     retval->m_Keyword = keyword;
     retval->m_Result = CommandNotification::Success;
@@ -256,7 +263,7 @@ CommandNotification::Notification CommandNotification::NotifyFailure(
     DWORD dwPid,
     const std::wstring& Keyword)
 {
-    auto retval = make_shared<CommandNotification_make_shared_enabler>(anevent);
+    auto retval = std::make_shared<::CommandNotificationT>(anevent);
 
     retval->m_hr = hr;
     retval->m_Result = CommandNotification::Failure;
@@ -271,9 +278,11 @@ CommandNotification::~CommandNotification(void)
     if (m_pIoCounters)
         free(m_pIoCounters);
     m_pIoCounters = nullptr;
+
     if (m_pProcessTimes)
         free(m_pProcessTimes);
     m_pProcessTimes = nullptr;
+
     if (m_pJobStats)
         free(m_pJobStats);
     m_pJobStats = nullptr;

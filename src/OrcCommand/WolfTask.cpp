@@ -10,13 +10,10 @@
 
 #include "WolfTask.h"
 
-#include "LogFileWriter.h"
-
 using namespace Orc;
 using namespace Orc::Command::Wolf;
 
 HRESULT WolfTask::ApplyNotification(
-    const DWORD dwLongerKeyword,
     const std::shared_ptr<CommandNotification>& notification,
     std::vector<std::shared_ptr<CommandMessage>>& actions)
 {
@@ -26,36 +23,33 @@ HRESULT WolfTask::ApplyNotification(
     switch (notification->GetEvent())
     {
         case CommandNotification::Started:
-            log::Info(
-                _L_,
-                L"pid=%-5d %*s: Start\r\n",
-                m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                dwLongerKeyword + 10,
-                m_cmdKeyword.c_str());
+            m_journal.Print(
+                m_commandSet, m_command, L"Started (pid: {})", m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
+
             m_dwPID = static_cast<DWORD>(notification->GetProcessID());
             m_StartTime = notification->GetStartTime();
             m_Status = Running;
+
             break;
         case CommandNotification::Terminated:
             if (notification->GetExitCode() == 0)
             {
-                log::Info(
-                    _L_,
-                    L"pid=%-5d %*s: Successfully terminates\r\n",
-                    m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                    dwLongerKeyword + 10,
-                    m_cmdKeyword.c_str());
+                m_journal.Print(
+                    m_commandSet,
+                    m_command,
+                    L"Successfully terminated (pid: {})",
+                    m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
             }
             else
             {
-                log::Info(
-                    _L_,
-                    L"pid=%-5d %*s: Terminates (exitcode=0x%lx)\r\n",
+                m_journal.Print(
+                    m_commandSet,
+                    m_command,
+                    L"Terminated with an error (pid: {}, code: {:#x})",
                     m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                    dwLongerKeyword + 10,
-                    m_cmdKeyword.c_str(),
                     notification->GetExitCode());
             }
+
             m_dwExitCode = notification->GetExitCode();
             m_Status = Done;
             break;
@@ -64,7 +58,7 @@ HRESULT WolfTask::ApplyNotification(
             break;
         case CommandNotification::Running:
             // Process is still running, checking if it hangs...
-            log::Verbose(_L_, L"Task %s is running (pid=%d)\r\n", m_cmdKeyword.c_str(), m_dwPID);
+            spdlog::debug(L"Task {} is running (pid: {})", m_command, m_dwPID);
             {
                 HANDLE hProcess =
                     OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, static_cast<DWORD>(notification->GetProcessID()));
@@ -111,12 +105,10 @@ HRESULT WolfTask::ApplyNotification(
                             {
                                 if (dwHangTime - m_dwLastReportedHang >= 30)
                                 {
-                                    log::Info(
-                                        _L_,
-                                        L"pid=%-5d %*s: Hanged for %d secs\r\n",
+                                    spdlog::critical(
+                                        L"{} (pid: {}): Hanged for {} secs",
+                                        m_command,
                                         m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                                        dwLongerKeyword + 10,
-                                        m_cmdKeyword.c_str(),
                                         dwHangTime);
                                     m_dwLastReportedHang = dwHangTime;
                                 }
@@ -124,13 +116,10 @@ HRESULT WolfTask::ApplyNotification(
                             }
                             else
                             {
-                                log::Verbose(
-                                    _L_,
-                                    L"pid=%-5d %*s: Process consumed %d msecs\r\n",
+                                spdlog::debug(
+                                    L"{} (pid: {}): Process consumed {} msecs",
+                                    m_command,
                                     m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                                    dwLongerKeyword + 10,
-                                    m_cmdKeyword.c_str(),
-                                    m_cmdKeyword.c_str(),
                                     (NowTime.dwLowDateTime - m_LastActiveTime.dwLowDateTime) / (10000));
                             }
                         }
@@ -141,45 +130,39 @@ HRESULT WolfTask::ApplyNotification(
             break;
         case CommandNotification::ProcessTimeLimit:
             // Process has reached its time limit, kill it!
-            log::Info(
-                _L_,
-                L"pid=%-5d %*s: CPU Time limit, it will now be terminated\r\n",
-                m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                dwLongerKeyword + 10,
-                m_cmdKeyword.c_str());
+            spdlog::critical(
+                L"{} (pid: {}): CPU Time limit, it will now be terminated",
+                m_command,
+                m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
+
             actions.push_back(CommandMessage::MakeTerminateMessage(
                 static_cast<DWORD>(static_cast<DWORD64>(notification->GetProcessID()))));
+
             m_Status = Failed;
             break;
         case CommandNotification::ProcessAbnormalTermination:
-            log::Info(
-                _L_,
-                L"pid=%-5d %*s: Abnormal termination (exitcode=0x%lx)\r\n",
+            spdlog::critical(
+                L"{} (pid: {}): Abnormal termination (code: {:#x})",
+                m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                dwLongerKeyword + 10,
-                m_cmdKeyword.c_str(),
                 notification->GetExitCode());
             m_dwExitCode = notification->GetExitCode();
             m_Status = Failed;
             break;
         case CommandNotification::ProcessMemoryLimit:
-            log::Info(
-                _L_,
-                L"pid=%-5d %*s: Memory limit, it will now be terminated\r\n",
-                m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                dwLongerKeyword + 10,
-                m_cmdKeyword.c_str());
+            spdlog::critical(
+                L"{} (pid: {}): Memory limit, it will now be terminated",
+                m_command,
+                m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
             // Process has reached its memory limit, kill it!
             actions.push_back(CommandMessage::MakeTerminateMessage(m_dwPID));
             m_Status = Failed;
             break;
         case CommandNotification::AllTerminated:
-            log::Info(
-                _L_,
-                L"pid=%-5d %*s: Memory limit, it will now be terminated\r\n",
-                m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                dwLongerKeyword + 10,
-                m_cmdKeyword.c_str());
+            spdlog::critical(
+                L"{} (pid: {}): Memory limit, it will now be terminated",
+                m_command,
+                m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
             m_Status = Failed;
             break;
         case CommandNotification::JobTimeLimit:

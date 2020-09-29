@@ -13,8 +13,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API JournalingStream : public ChainingStream
 {
 private:
@@ -23,8 +21,8 @@ private:
     bool bClosed = false;
 
 public:
-    JournalingStream(logger pLog)
-        : ChainingStream(std::move(pLog)) {};
+    JournalingStream()
+        : ChainingStream() {};
 
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
 
@@ -62,11 +60,9 @@ public:
 
     STDMETHOD(Close)();
 
-    static HRESULT ReplayJournalStream(
-        const logger& pLog,
-        const std::shared_ptr<ByteStream>& pFromStream,
-        const std::shared_ptr<ByteStream>& pToStream);
-    static HRESULT IsStreamJournalized(const logger& pLog, const std::shared_ptr<ByteStream>& pStream);
+    static HRESULT
+    ReplayJournalStream(const std::shared_ptr<ByteStream>& pFromStream, const std::shared_ptr<ByteStream>& pToStream);
+    static HRESULT IsStreamJournalized(const std::shared_ptr<ByteStream>& pStream);
 
     virtual ~JournalingStream();
 };

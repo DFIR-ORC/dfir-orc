@@ -54,7 +54,6 @@ set(SRC_UTILITIES
     "profile_list.cpp"
     "registry.cpp"
     "temporary.cpp"
-    "logwriter.cpp"
     "result.cpp"
     "system_details.cpp"
     "wide_ansi.cpp"

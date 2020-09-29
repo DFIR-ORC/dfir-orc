@@ -29,7 +29,7 @@ HRESULT VssAPIExtension::Initialize()
 
         if (m_CreateVssBackupComponents == nullptr || m_VssFreeSnapshotProperties == nullptr)
         {
-            log::Error(_L_, E_UNEXPECTED, L"Failed to initialize VSSAPI\r\n");
+            spdlog::error("Failed to initialize VSSAPI");
             return E_UNEXPECTED;
         }
 

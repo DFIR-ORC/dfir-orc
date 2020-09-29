@@ -18,11 +18,12 @@
 #include "JobObject.h"
 #include "ProcessRedirect.h"
 #include "ParameterCheck.h"
-#include "LogFileWriter.h"
 
 #include "Temporary.h"
 
 #include "Robustness.h"
+
+#include <spdlog/spdlog.h>
 
 using namespace std;
 
@@ -152,9 +153,8 @@ void OnComplete::CancelTerminationHandler()
     }
 }
 
-CommandExecute::CommandExecute(logger pLog, const std::wstring& Keyword)
-    : _L_(std::move(pLog))
-    , m_Keyword(Keyword)
+CommandExecute::CommandExecute(const std::wstring& Keyword)
+    : m_Keyword(Keyword)
     , m_RedirectStatus(ProcessRedirect::Initialized)
 {
     m_dwExitCode = 0L;
@@ -170,7 +170,7 @@ HRESULT CommandExecute::AddRedirection(const shared_ptr<ProcessRedirect>& redire
             return redirect->Selection() & item->Selection();
         }))
     {
-        log::Error(_L_, E_INVALIDARG, L"a redirection for this handle is already added\r\n");
+        spdlog::error("a redirection for this handle is already added");
         return E_INVALIDARG;
     }
     else
@@ -190,19 +190,15 @@ HRESULT CommandExecute::AddExecutableToRun(const std::wstring& szImageFilePath)
 {
     if (!m_ImageFilePath.empty())
     {
-        log::Error(
-            _L_,
-            E_INVALIDARG,
-            L"%s has already been set the binary to execute. %s tried to overwrite",
-            m_ImageFilePath.c_str(),
-            szImageFilePath.c_str());
+        spdlog::error(
+            L"{} has already been set the binary to execute. {} tried to overwrite", m_ImageFilePath, szImageFilePath);
         return E_INVALIDARG;
     }
 
     WCHAR inputfile[MAX_PATH] = {0};
     if (FAILED(ExpandFilePath(szImageFilePath.c_str(), inputfile, MAX_PATH)))
     {
-        log::Error(_L_, E_INVALIDARG, L"%s is not a valid file to use\r\n", szImageFilePath.c_str());
+        spdlog::error(L"{} is not a valid file to use", szImageFilePath);
         return E_INVALIDARG;
     }
     m_ImageFilePath.assign(inputfile);
@@ -285,12 +281,7 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
 
     if (cmdLineBuilder.size() > MAX_CMDLINE)
     {
-        log::Error(
-            _L_,
-            E_INVALIDARG,
-            L"Command line too long (length=%d): \t%s\r\n",
-            cmdLineBuilder.size(),
-            cmdLineBuilder.c_str());
+        spdlog::error(L"Command line too long (length: {}): {}", cmdLineBuilder.size(), cmdLineBuilder);
         return E_INVALIDARG;
     }
 
@@ -300,7 +291,7 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
 
     if (bBreakAway && job.IsValid())
     {
-        log::Verbose(_L_, L"INFO: Launching process is in a job, we need to check if break away is OK\r\n");
+        spdlog::debug("INFO: Launching process is in a job, we need to check if break away is OK");
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION LimitInfo;
         DWORD dwReturnedBytes = 0L;
         if (!QueryInformationJobObject(
@@ -310,21 +301,19 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
                 sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
                 &dwReturnedBytes))
         {
-            log::Error(_L_, HRESULT_FROM_WIN32(GetLastError()), L"Failed to QueryInformationJobObject on job\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed to QueryInformationJobObject on job (code: {:#x})", hr);
             return hr;
         }
         if (LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK
             || LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_SILENT_BREAKAWAY_OK)
         {
-            log::Verbose(_L_, L"Job verification is OK with breakaway\r\n");
+            spdlog::debug("Job verification is OK with breakaway");
         }
         else
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
-                L"Job limit configuration is NOT OK with the command engine (breakaway is not allowed)\r\n");
-            return hr;
+            spdlog::error("Job limit configuration is NOT OK with the command engine (breakaway is not allowed)");
+            return HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED);
         }
     }
 
@@ -368,25 +357,25 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
                 &m_si,
                 &m_pi))
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Could not start \"%s\" with command line \"%s\"\r\n",
-                m_ImageFilePath.c_str(),
-                szCommandLine.data());
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(
+                L"Could not start '{}' with command line '{}' (code: {:#x})",
+                m_ImageFilePath,
+                szCommandLine.data(),
+                hr);
             return hr;
         }
     }
 
     if (!m_DumpFilePath.empty())
     {
-        wstring dumpKeyword(m_Keyword.c_str());
+        wstring dumpKeyword(m_Keyword);
         dumpKeyword.append(L".dmp");
-        log::Verbose(_L_, L"Attaching debugger to %s\r\n", m_Keyword.c_str());
-        m_pDebugger = DebugAgent::DebugProcess(_L_, m_pi.dwProcessId, m_DumpFilePath, dumpKeyword);
+        spdlog::debug(L"Attaching debugger to '{}'", m_Keyword);
+        m_pDebugger = DebugAgent::DebugProcess(m_pi.dwProcessId, m_DumpFilePath, dumpKeyword);
         if (m_pDebugger)
         {
-            log::Verbose(_L_, L"Debugger attached to %s\r\n", m_Keyword.c_str());
+            spdlog::debug(L"Debugger attached to '{}'", m_Keyword);
         }
     }
 
@@ -395,7 +384,7 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
         if (!AssignProcessToJobObject(job.GetHandle(), m_pi.hProcess))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            log::Error(_L_, hr, L"Could not assign process \"%s\" to job object \r\n", m_Keyword.c_str());
+            spdlog::error(L"Could not assign process '{}' to job object (code: {:#x})", m_Keyword, hr);
             TerminateProcess(m_pi.hProcess, (UINT)-1);
             return hr;
         }
@@ -403,10 +392,10 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
 
     if (ResumeThread(m_pi.hThread) == -1)
     {
-        HRESULT hr2 = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr2, L"Failed to resume process \"%s\"\r\n", m_Keyword.c_str());
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to resume process '{}' (code: {:#x})", m_Keyword, hr);
         TerminateProcess(m_pi.hProcess, (UINT)-1);
-        return hr2;
+        return hr;
     }
 
     WaitForInputIdle(m_pi.hProcess, 1000);
@@ -515,7 +504,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
 
                 if (FAILED(hr = GetFileNameForFile(dump.c_str(), szDumpFileName, MAX_PATH)))
                 {
-                    log::Error(_L_, hr, L"Could not deduce file name from path %s\r\n", dump.c_str());
+                    spdlog::error(L"Could not deduce file name from path '{}' (code: {:#x})", dump, hr);
                 }
                 else
                 {
@@ -549,11 +538,11 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             }
                             else
                             {
-                                log::Error(
-                                    _L_,
-                                    HRESULT_FROM_WIN32(GetLastError()),
-                                    L"no directory to cab for path %s, ignored\r\n",
-                                    action->Fullpath().c_str());
+                                HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+                                spdlog::error(
+                                    L"no directory to cab for path '{}', ignored (code: {:#x})",
+                                    action->Fullpath(),
+                                    hr);
                             }
                         }
                         break;
@@ -563,15 +552,12 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                         {
                             if (!RemoveDirectory(action->Fullpath().c_str()))
                             {
-                                log::Error(
-                                    _L_,
-                                    HRESULT_FROM_WIN32(GetLastError()),
-                                    L"Failed to delete directory %s\r\n",
-                                    action->Fullpath().c_str());
+                                HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
+                                spdlog::error(L"Failed to delete directory '{}' (code: {:#x})", action->Fullpath(), hr);
                             }
                             else
                             {
-                                log::Verbose(_L_, L"Successfully deleted file %s\r\n", action->Fullpath().c_str());
+                                spdlog::debug(L"Successfully deleted file '{}'", action->Fullpath());
                             }
                         }
                     }
@@ -598,11 +584,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             }
                             else
                             {
-                                log::Error(
-                                    _L_,
-                                    HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND),
-                                    L"no file to cab for path %s, ignored\r\n",
-                                    action->Fullpath().c_str());
+                                spdlog::error(L"no file to cab for path '{}', ignored", action->Fullpath());
                             }
                         }
                         break;
@@ -612,15 +594,14 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                         {
                             if (!DeleteFile(action->Fullpath().c_str()))
                             {
-                                log::Error(
-                                    _L_,
-                                    HRESULT_FROM_WIN32(GetLastError()),
-                                    L"Failed to delete file %s\r\n",
-                                    action->Fullpath().c_str());
+                                spdlog::error(
+                                    L"Failed to delete file '{}' (code: {:#x})",
+                                    action->Fullpath(),
+                                    HRESULT_FROM_WIN32(GetLastError()));
                             }
                             else
                             {
-                                log::Verbose(_L_, L"Successfully deleted file %s\r\n", action->Fullpath().c_str());
+                                spdlog::debug(L"Successfully deleted file '{}'", action->Fullpath());
                             }
                         }
                     }
@@ -641,7 +622,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             HRESULT hr = E_FAIL;
                             if (FAILED(hr = action->GetStream()->SetFilePointer(0L, FILE_BEGIN, NULL)))
                             {
-                                log::Error(_L_, hr, L"Failed to reset stream before adding it to cab!\r\n");
+                                spdlog::error(L"Failed to reset stream before adding it to cab! (code: {:#x})", hr);
                             }
                             auto archiveRequest =
                                 ArchiveMessage::MakeAddStreamRequest(action->Name(), action->GetStream(), true);
@@ -649,11 +630,9 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                         }
                         else
                         {
-                            log::Error(
-                                _L_,
-                                E_INVALIDARG,
-                                L"Archive action planned and no archive agent available, no cab addition for file %s\r\n",
-                                action->Fullpath().c_str());
+                            spdlog::error(
+                                L"Archive action planned and no archive agent available, no cab addition for file '{}'",
+                                action->Fullpath());
                         }
                         break;
                     case OnComplete::Delete:

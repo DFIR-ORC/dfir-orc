@@ -18,8 +18,8 @@ using namespace std::string_literals;
 class ParquetOutputWriter : public TableOutputExtension
 {
 public:
-    ParquetOutputWriter(logger pLog)
-        : TableOutputExtension(std::move(pLog), L"orcparquet.dll"s, L"ORCPARQUET_X86DLL"s, L"ORCPARQUET_X64DLL"s) {};
+    ParquetOutputWriter()
+        : TableOutputExtension(L"orcparquet.dll"s, L"ORCPARQUET_X86DLL"s, L"ORCPARQUET_X64DLL"s) {};
     ~ParquetOutputWriter() {};
 };
 

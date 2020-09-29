@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2020 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -9,157 +9,151 @@
 #include "stdafx.h"
 
 #include "WolfLauncher.h"
-
-#include "LogFileWriter.h"
 #include "SystemDetails.h"
-
 #include "ToolVersion.h"
+#include "Usage.h"
+#include "Output/Text/Print/OutputSpec.h"
+#include "Output/Text/Print/LocationSet.h"
+#include "Output/Text/Print/Bool.h"
 
-using namespace std;
-
-using namespace Orc;
 using namespace Orc::Command::Wolf;
+using namespace Orc::Text;
+using namespace Orc;
 
-void Main::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, LPCWSTR szVersion)
+namespace Orc {
+namespace Command {
+namespace Wolf {
+
+std::wstring Main::ToString(Main::WolfPowerState value)
 {
-    log::Info(_L_, L"\r\nDFIR-Orc %s", szVersion);
+    std::vector<std::wstring> properties;
 
-    const std::wstring metaName(kOrcMetaNameW);
-    const std::wstring metaVersion(kOrcMetaVersionW);
-    if (!metaName.empty() && !metaVersion.empty())
+    if (value == Main::WolfPowerState::Unmodified)
     {
-        log::Info(_L_, L" (%s %s)\r\n", metaName.c_str(), metaVersion.c_str());
+        return L"<SystemDefault>";
     }
-    else
+
+    if (value & Main::WolfPowerState::SystemRequired)
     {
-        log::Info(_L_, L"\r\n");
+        properties.push_back(L"SystemRequired");
     }
+
+    if (value & Main::WolfPowerState::DisplayRequired)
+    {
+        properties.push_back(L"DisplayRequired");
+    }
+
+    if (value & Main::WolfPowerState::UserPresent)
+    {
+        properties.push_back(L"UserPresent");
+    }
+
+    if (value & Main::WolfPowerState::AwayMode)
+    {
+        properties.push_back(L"AwayMode");
+    }
+
+    return boost::join(properties, L",");
 }
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\r\n"
-        L"usage: DFIR-Orc.Exe [/config=<ConfigFile>] [/out=<Folder>]\r\n"
-        L"\t/config=<ConfigFile>        : Specify a XML config file\r\n"
-        L"\t/local=<ConfigFile>         : Specify a XML local config file\r\n"
-        L"\r\n"
-        L"\t/Out=<Folder>               : Output files will be created here\r\n"
-        L"\t/utf8,/utf16		         : Select utf8 or utf16 encoding (default is utf8, this is for CSV "
-        L"files "
-        L"only)\r\n"
-        L"\r\n"
-        L"\t/TempDir=<Folder>           : Temporary files will be created here\r\n"
-        L"\r\n"
-        L"\t/Keys                       : Displays the configured archives and commands keywords\r\n"
-        L"\t/Key=<Keyword>,...          : Selects an explicit comma separated list of keywords to execute, all other "
-        L"keywords are not executed/generated\r\n"
-        L"\t/+Key=<Keyword>,...         : Enables optional archives or commands using a comma separated list of "
-        L"keywords\r\n"
-        L"\t/-Key=<Keyword>,...         : Disables archives or commands using a comma separated list of keywords\r\n"
-        L"\r\n"
-        L"\t/Once                       : Skip cab creation if file exists\r\n"
-        L"\t/Overwrite                  : Overwrite existing file\r\n"
-        L"\t/CreateNew                  : Create a unique new file name if file exists\r\n"
-        L"\t/ChildDebug                 : Attach a debugger to child processes, dump memory in case of crash\r\n"
-        L"\t/NoChildDebug               : Block child debugging (if selected in config file)\r\n"
-        L"\t/Priority=<level>           : Change default process priority to Low, Normal or High\r\n"
-        L"\t/PowerState=<Requirements>  : Require system to stay on. Possible values are SystemRequired, "
-        L"DisplayRequired, UserPresent, AwayMode. Recommended: SystemRequired,AwayMode\r\n"
-        L"\t/Computer=<ComputerName>    : Sets the OrcComputer name for all DFIR-Orc tools\r\n"
-        L"\t/FullComputer=<ComputerName>: Sets the OrcFullComputer name for all DFIR-Orc tools\r\n"
-        L"\t/SystemType=<SystemType>    : Sets the system type as typically used in {SystemType} to name archives\r\n"
-        L"\t/Offline=<ImagePath>        : Sets the DFIR-Orc to work on a disk image, will set %OfflineLocation% and "
-        L"explicitely select archive DFIR-ORC_Offline");
-    PrintCommonUsage();
+    auto usageNode = m_console.OutputTree();
+
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe [/Config=<File>] [/Local=<File> [/Out=<Folder|File.csv|Archive.7z>] "
+        "[/Once|/Overwrite|/CreateNew] [/Computer=<Name>] [/FullComputer=<Name>] [/PowerState=<Requirements>] "
+        "[/ChildDebug|/NoChildDebug] [/Offline=<FilePath>] [/SystemType=<WorkStation|Server|DomainController>] [/keys]",
+        "When DFIR-Orc executable is 'configured' it will be run in multiple processes which parent(s) will watch and "
+        "administer (see online documentation). The top-level options specified here can affect parent and childs "
+        "processes.");
+
+    Usage::PrintOutputParameters(usageNode);
+
+    constexpr std::array kSpecificParameters = {
+        Usage::Parameter {
+            "/CreateNew",
+            "A new archive is created each time DFIR-Orc.exe is run, with names suffixed by _1.7z, _2.7z, etc. An "
+            "alternative is to use the {TimeStamp} pattern in the archive name"},
+        Usage::Parameter {
+            "/Once", "If the target file already exists (and is not empty), then this archive is skipped"},
+        Usage::Parameter {"/Overwrite", "Previous archives are overwritten by new executions of DFIR-Orc.exe"},
+        Usage::Parameter {
+            "/PowerState=<Requirements>",
+            "Require system to stay on with one or more value from: SystemRequired, DisplayRequired, UserPresent, "
+            "AwayMode (recommended: 'SystemRequired,AwayMode')"},
+        Usage::Parameter {
+            "/Offline=<FilePath>",
+            "Sets the DFIR-Orc to work on a disk image. It will set %OfflineLocation% and explicitely select archive "
+            "DFIR-ORC_Offline"},
+        Usage::Parameter {
+            "/Keys",
+            "Display the archives and commands of a configured binary DFIR-Orc.exe. No command is executed, no "
+            "archives are created."},
+        Usage::Parameter {
+            "/Key=<KeyWords>",
+            "Comma separated list of commands to be executed or archive to be created (ex: 'GetYara,NTFSInfo) based on "
+            "embedded configuration'"},
+        Usage::Parameter {"/+Key=<KeyWord>", "Enables one or multiple archive generation or command execution"},
+        Usage::Parameter {"/-Key=<KeyWord>", "Disable one or multiple archive generation or command execution"}};
+
+    Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
+
+    constexpr std::array kCustomMiscParameters = {
+        Usage::kMiscParameterLocal,
+        Usage::kMiscParameterComputer,
+        Usage::kMiscParameterFullComputer,
+        Usage::Parameter {
+            "/SystemType=<WorkStation|Server|DomainController>",
+            "Override the Windows edition type running on this computer"},
+        Usage::kMiscParameterTempDir,
+        Usage::kMiscParameterCompression,
+        Usage::Parameter {"/ChildDebug", "Attach a debugger to child processes, dump memory in case of crash"},
+        Usage::Parameter {"/NoChildDebug", "Block child debugging (if selected in config file)"}};
+    Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
+
+    Usage::PrintLoggingParameters(usageNode);
 }
 
 void Main::PrintParameters()
 {
-    SaveAndPrintStartTime();
-    PrintComputerName();
-    PrintWhoAmI();
-    PrintSystemType();
-    PrintSystemTags();
-    PrintOperatingSystem();
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Parameters");
 
-    if (config.strOfflineLocation.has_value())
-    {
-        log::Info(_L_, L"Offline location      : %s\r\n", config.strOfflineLocation.value().c_str());
-    }
+    PrintCommonParameters(node);
 
-    PrintOutputOption(L"Output", config.Output);
-    PrintOutputOption(L"Temp", config.TempWorkingDir);
-    if (config.Log.IsFile())
-        log::Info(_L_, L"Log file              : %s\r\n", config.Log.Path.c_str());
-    if (config.Outline.IsFile())
-        log::Info(_L_, L"Outline file          : %s\r\n", config.Outline.Path.c_str());
+    PrintValues(node, L"Recipients", config.m_Recipients);
+    PrintValue(node, L"Output", config.Output);
+    PrintValue(node, L"TempDir", config.TempWorkingDir);
+    PrintValue(node, L"Child debug", config.bChildDebug);
+    PrintValue(node, L"CreateNew", config.bRepeatCreateNew);
+    PrintValue(node, L"Once", config.bRepeatOnce);
+    PrintValue(node, L"Overwrite", config.bRepeatOverwrite);
+    PrintValue(node, L"Repeat behavior", WolfExecution::ToString(config.RepeatBehavior));
+    PrintValue(node, L"Offline", config.strOfflineLocation.value_or(L"<empty>"));
+    PrintValue(node, L"Log file", config.Log.Path);
+    PrintValue(node, L"Outline file", config.Outline.Path);
+    PrintValue(node, L"Priority", config.Priority);
+    PrintValue(node, L"Power State", ToString(config.PowerState));
+    PrintValue(node, L"Key selection", fmt::format(L"{}", boost::join(config.OnlyTheseKeywords, L", ")));
+    PrintValues(node, L"Enable keys", config.EnableKeywords);
+    PrintValues(node, L"Disable keys", config.DisableKeywords);
 
-    switch (config.RepeatBehavior)
-    {
-        case WolfExecution::CreateNew:
-            log::Info(_L_, L"Repeat Behavior       : Create New file names\r\n");
-            break;
-        case WolfExecution::Once:
-            log::Info(_L_, L"Repeat Behavior       : Run once then skip\r\n");
-            break;
-        case WolfExecution::Overwrite:
-            log::Info(_L_, L"Repeat Behavior       : Overwrite existing output file names\r\n");
-            break;
-        case WolfExecution::NotSet:
-            log::Info(_L_, L"Repeat Behavior       : No global override set (config behavior used)\r\n");
-            break;
-        default:
-            log::Info(_L_, L"Repeat Behavior       : Invalid\r\n");
-    }
-    switch (config.Priority)
-    {
-        case Low:
-            log::Info(_L_, L"Priority              : Low\r\n");
-            break;
-        case Normal:
-            log::Info(_L_, L"Priority              : Normal\r\n");
-            break;
-        case High:
-            log::Info(_L_, L"Priority              : High\r\n");
-            break;
-    }
-
-    if (config.PowerState != Unmodified)
-    {
-        log::Info(_L_, L"Power management      : ");
-        bool bFirst = true;
-        if (config.PowerState & SystemRequired)
-        {
-            log::Info(_L_, L"%sSystemRequired", L"");
-            bFirst = false;
-        }
-        if (config.PowerState & DisplayRequired)
-        {
-            log::Info(_L_, L"%sDisplayRequired", bFirst ? L"" : L",");
-            bFirst = false;
-        }
-        if (config.PowerState & UserPresent)
-        {
-            log::Info(_L_, L"%sUserPresent", bFirst ? L"" : L",");
-            bFirst = false;
-        }
-        if (config.PowerState & AwayMode)
-        {
-            log::Info(_L_, L"%sAwayMode", bFirst ? L"" : L",");
-            bFirst = false;
-        }
-        log::Info(_L_, L"\r\n");
-    }
-
-    log::Info(_L_, L"\r\n");
-    return;
+    m_console.PrintNewLine();
 }
 
 void Main::PrintFooter()
 {
-    log::Info(_L_, L"\r\n");
-    PrintExecutionTime();
-    return;
+    m_console.PrintNewLine();
+
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }
+
+}  // namespace Wolf
+}  // namespace Command
+}  // namespace Orc

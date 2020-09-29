@@ -33,7 +33,7 @@ public:
     static Altitude GetAltitudeFromString(std::wstring_view svAltitude);
     static std::wstring GetStringFromAltitude(Altitude alt);
 
-    static HRESULT ConfigureDefaultAltitude(const logger& pLog, const Altitude alt);
+    static HRESULT ConfigureDefaultAltitude(const Altitude alt);
 
     static Altitude GetDefaultAltitude();
 
@@ -53,7 +53,6 @@ public:
     } VolumeLocations;
 
 private:
-    logger _L_;
     Locations m_Locations;
     std::unordered_map<ULONGLONG, VolumeLocations> m_Volumes;
     std::vector<std::shared_ptr<Location>> m_UniqueLocations;
@@ -101,11 +100,10 @@ private:
     HRESULT Reset();
 
 public:
-    LocationSet(logger pLog)
-        : _L_(std::move(pLog)) {};
+    LocationSet() {}
+
     LocationSet(LocationSet&& anOther)
     {
-        std::swap(_L_, anOther._L_);
         std::swap(m_Locations, anOther.m_Locations);
         m_bMountedVolumesPopulated = anOther.m_bMountedVolumesPopulated;
         m_bPhysicalDrivesPopulated = anOther.m_bPhysicalDrivesPopulated;
@@ -113,10 +111,12 @@ public:
         m_bSystemObjectsPopulated = anOther.m_bSystemObjectsPopulated;
     };
 
+    LocationSet(const LocationSet& anOther) = default;
     LocationSet& operator=(const LocationSet&) = default;
 
     // accessors
     const Locations& GetLocations() const { return m_Locations; }
+    std::vector<std::shared_ptr<Orc::Location>> GetParsedLocations();
 
     const std::vector<std::shared_ptr<Location>>& GetUniqueLocations() const { return m_UniqueLocations; };
     const std::vector<std::shared_ptr<Location>>& GetAltitudeLocations() const { return m_AltitudeLocations; };

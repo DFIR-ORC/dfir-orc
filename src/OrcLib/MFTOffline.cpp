@@ -8,15 +8,15 @@
 #include "StdAfx.h"
 
 #include "MFTOffline.h"
-#include "LogFileWriter.h"
 
 #include "OfflineMFTReader.h"
 
+#include <spdlog/spdlog.h>
+
 using namespace Orc;
 
-MFTOffline::MFTOffline(logger pLog, std::shared_ptr<OfflineMFTReader>& volReader)
+MFTOffline::MFTOffline(std::shared_ptr<OfflineMFTReader>& volReader)
     : m_pVolReader(volReader)
-    , _L_(std::move(pLog))
 {
     m_RootUSN = $ROOT_FILE_REFERENCE_NUMBER;
 }
@@ -47,7 +47,7 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         == SetFilePointer(m_pVolReader->GetHandle(), Start.LowPart, &Start.HighPart, FILE_BEGIN))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(_L_, hr, L"Could not seek to offset %d in MFT file\r\n", Start.LowPart);
+        spdlog::error(L"Could not seek to offset {} in MFT file (code: {:#x})", Start.LowPart, hr);
         return hr;
     }
 
@@ -68,13 +68,13 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         if (!ReadFile(m_pVolReader->GetHandle(), buffer.GetData(), m_pVolReader->GetBytesPerFRS(), &dwBytesRead, NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            log::Error(_L_, hr, L"Could not read in MFT file\r\n");
+            spdlog::error(L"Could not read in MFT file (code: {:#x})", hr);
             return hr;
         }
 
         if (dwBytesRead != m_pVolReader->GetBytesPerFRS())
         {
-            log::Verbose(_L_, L"Reached end of offline MFT\r\n");
+            spdlog::debug(L"Reached end of offline MFT (code: {:#x})", hr);
             return S_OK;
         }
 
@@ -83,9 +83,8 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         if ((pHeader->MultiSectorHeader.Signature[0] != 'F') || (pHeader->MultiSectorHeader.Signature[1] != 'I')
             || (pHeader->MultiSectorHeader.Signature[2] != 'L') || (pHeader->MultiSectorHeader.Signature[3] != 'E'))
         {
-            log::Verbose(
-                _L_,
-                L"Skipping... MultiSectorHeader.Signature is not FILE - \"%c%c%c%c\".\r\n",
+            spdlog::debug(
+                L"Skipping... MultiSectorHeader.Signature is not FILE - '{}{}{}{}'",
                 pHeader->MultiSectorHeader.Signature[0],
                 pHeader->MultiSectorHeader.Signature[1],
                 pHeader->MultiSectorHeader.Signature[2],
@@ -97,11 +96,13 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
-                log::Verbose(_L_, L"INFO: stopping enumeration\r\n");
+                spdlog::debug("INFO: stopping enumeration (code: {:#x})", hr);
                 return hr;
             }
-            log::Verbose(_L_, L"WARNING: Add Record Callback failed\r\n");
+
+            spdlog::warn("Add Record Callback failed (code: {:#x})", hr);
         }
+
         ullCurrentIndex++;
         ullCurrentMftIndex++;
     }
@@ -150,7 +151,7 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
             == SetFilePointer(m_pFetchReader->GetHandle(), Index.LowPart, &Index.HighPart, FILE_BEGIN))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            log::Error(_L_, hr, L"Could not seek to offset %I64d in MFT file\r\n", Index.QuadPart);
+            spdlog::error(L"Could not seek to offset {} in MFT file (code: {:#x})", Index.QuadPart, hr);
             continue;
         }
 
@@ -163,7 +164,7 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
                 NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            log::Error(_L_, hr, L"Could not read %d bytes in MFT file\r\n", m_pFetchReader->GetBytesPerFRS());
+            spdlog::error(L"Could not read {} bytes in MFT file (code: {:#x})", m_pFetchReader->GetBytesPerFRS(), hr);
             continue;
         }
 
@@ -172,9 +173,8 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
         if ((pHeader->MultiSectorHeader.Signature[0] != 'F') || (pHeader->MultiSectorHeader.Signature[1] != 'I')
             || (pHeader->MultiSectorHeader.Signature[2] != 'L') || (pHeader->MultiSectorHeader.Signature[3] != 'E'))
         {
-            log::Verbose(
-                _L_,
-                L"Skipping... MultiSectorHeader.Signature is not FILE - \"%c%c%c%c\".\r\n",
+            spdlog::debug(
+                L"Skipping... MultiSectorHeader.Signature is not FILE - '{}{}{}{}'",
                 pHeader->MultiSectorHeader.Signature[0],
                 pHeader->MultiSectorHeader.Signature[1],
                 pHeader->MultiSectorHeader.Signature[2],
@@ -189,18 +189,16 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
 
         if (NtfsSegmentNumber(&read_record_frn) != NtfsSegmentNumber(&idx))
         {
-            log::Verbose(
-                _L_,
-                L"Skipping... %I64X does not match the expected %I64X\r\n",
+            spdlog::debug(
+                L"Skipping... {} does not match the expected {}",
                 NtfsSegmentNumber(&read_record_frn),
                 NtfsSegmentNumber(&idx));
             continue;
         }
         if (read_record_frn.SequenceNumber != idx.SequenceNumber)
         {
-            log::Verbose(
-                _L_,
-                L"Skipping... Sequence numbed %d does not match the expected %d\r\n",
+            spdlog::debug(
+                L"Skipping... Sequence numbed {} does not match the expected {}",
                 read_record_frn.SequenceNumber,
                 idx.SequenceNumber);
             continue;
@@ -211,15 +209,15 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
         {
             if (hr == E_OUTOFMEMORY)
             {
-                log::Error(_L_, hr, L"Add Record Callback failed, not enough memory to continue\r\n");
+                spdlog::error(L"Add Record Callback failed, not enough memory to continue (code: {:#x})", hr);
                 return hr;
             }
             else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
-                log::Verbose(_L_, L"Add Record Callback asks for enumeration to stop...\r\n");
+                spdlog::debug(L"Add Record Callback asks for enumeration to stop... (code: {:#x})", hr);
                 return hr;
             }
-            log::Verbose(_L_, L"WARNING: Add Record Callback failed\r\n");
+            spdlog::debug(L"WARNING: Add Record Callback failed");
         }
     }
 
@@ -234,7 +232,7 @@ ULONG MFTOffline::GetMFTRecordCount() const
 
     if (FileSize.QuadPart % m_pVolReader->GetBytesPerFRS())
     {
-        log::Verbose(_L_, L"Weird, MFT size is not a multiple of records...");
+        spdlog::debug(L"Weird, MFT size is not a multiple of records...");
     }
 
     return FileSize.LowPart / m_pVolReader->GetBytesPerFRS();

@@ -15,7 +15,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
 class ByteStream;
 
 namespace TableOutput::CSV {
@@ -83,8 +82,7 @@ public:
     };
 
 public:
-    Cruncher(logger pLog)
-        : _L_(std::move(pLog))
+    Cruncher()
     {
         m_liFilePos.QuadPart = 0;
         m_liFileSize.QuadPart = 0;
@@ -124,7 +122,6 @@ public:
     ~Cruncher();
 
 protected:
-    logger _L_;
 
     RecordSchema m_Schema;
 
@@ -134,7 +131,7 @@ protected:
     std::wstring m_strDateFormat = L"yyyy-MM-dd hh:mm:ss.000";
     DWORD m_dwSkipLines = 0L;
 
-    OutputSpec::Encoding m_csvEncoding = OutputSpec::Encoding::Undetermined;
+    OutputSpec::Encoding m_csvEncoding = OutputSpec::Encoding::kUnknown;
 
     CircularStorage m_Store;
     LPBYTE m_pUTF8Buffer = NULL;

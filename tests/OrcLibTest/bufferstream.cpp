@@ -8,7 +8,6 @@
 
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "BufferStream.h"
 
 #include <numeric>
@@ -23,21 +22,16 @@ namespace Orc::Test {
 TEST_CLASS(BufferStreamTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
-    TEST_METHOD_INITIALIZE(Initialize)
-    {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
-    }
+    TEST_METHOD_INITIALIZE(Initialize) {}
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(Basic)
     {
-        auto buf_stream = std::make_shared<BufferStream<MAX_PATH>>(_L_);
+        auto buf_stream = std::make_shared<BufferStream<MAX_PATH>>();
 
         std::vector<BYTE> bytes(1024);
 

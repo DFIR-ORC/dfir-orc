@@ -7,8 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
-
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 using namespace Orc;
 using namespace Orc::Test;
@@ -17,17 +15,14 @@ namespace Orc::Test {
 TEST_CLASS(MFTTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(MFTRecordTest) {
         // TODO

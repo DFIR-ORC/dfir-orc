@@ -11,73 +11,93 @@
 #include "DD.h"
 
 #include "ToolVersion.h"
-#include "LogFileWriter.h"
+
+#include "Usage.h"
+
+#include "Output/Text/Fmt/formatter.h"
+#include "Output/Text/Print/Bool.h"
+#include "Output/Text/Print/OutputSpec.h"
 
 using namespace Orc;
 using namespace Orc::Command::DD;
 
 void Main::PrintUsage()
 {
-    // Display the tool's usage
-    log::Info(
-        _L_,
-        L"\r\n"
-        L"	usage: DD.Exe \r\n"
-        L"\r\n"
-        L"\t/out=<Output>       : Output file or archive\r\n"
-        L"\t/if=<input_stream>  : Input stream\r\n"
-        L"\t/of=<output_stream> : Output streams\r\n"
-        L"\t/bs=<BlockSize>     : Copy per blocks of <BlockSize> bytes (default is 512)\r\n"
-        L"\t/count=<BlockCount> : Copy <BlockCount> blocks of <BlockSize> bytes\r\n"
-        L"\t/skip=<BlockCount>  : Skip <BlockCount> blocks of <BlockSize> bytes from input device\r\n"
-        L"\t/seek=<BlockCount>  : Seek <BlockCount> blocks of <BlockSize> bytes on ouput device\r\n"
-        L"\t/hash=<hashes>      : Comma separatelist of supported hash function (MD5|SHA1|SHA256)\r\n"
-        L"\t/noerror            : Continue on error\r\n"
-        L"\t/notrunc            : Do not truncate output stream\r\n"
-        );
-    PrintCommonUsage();
+    auto usageNode = m_console.OutputTree();
 
-    return;
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe DD [/out=<Folder|Outfile.csv|Archive.7z>] /if=<InputLocation> /of=<OutputLocation> "
+        "/bs=<BlockSize> /count=<BlockCount> [/skip=<BlockCount>] [/seek=<BlockCount>] [/hash=<Hashes>] [/noerror] "
+        "[/notrunc]",
+        "Dump tool inspired from linux 'dd' command");
+
+    constexpr std::array kSpecificParameters = {
+        Usage::Parameter {"/IF=<InputLocation>", "Source stream, see Location section"},
+        Usage::Parameter {"/OF=<OutputLocation>", "Output stream, see Location section"},
+        Usage::Parameter {"/BS=<BlockSize>", ""},
+        Usage::Parameter {"/Count=<BlockCount>", ""},
+        Usage::Parameter {"/Skip=<BlockCount>", ""},
+        Usage::Parameter {"/Seek=<BlockCount>", ""},
+        Usage::Parameter {"/Hash=<Hashes>", ""},
+        Usage::Parameter {"/NoError", ""},
+        Usage::Parameter {"/NoTrunc", ""},
+    };
+
+    Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
+
+    Usage::PrintLocationParameters(usageNode);
+
+    Usage::PrintOutputParameters(usageNode);
+
+    Usage::PrintMiscellaneousParameters(usageNode);
+
+    Usage::PrintLoggingParameters(usageNode);
 }
 
 void Main::PrintParameters()
 {
-    // Parameters are displayed when the configuration is complete and checked
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Parameters");
 
-    SaveAndPrintStartTime();
+    PrintCommonParameters(node);
 
-    PrintComputerName();
+    PrintValue(node, L"Output report", config.output);
+    PrintValue(node, L"Input", config.strIF);
+    PrintValues(node, L"Output(s)", config.OF);
 
-    PrintOperatingSystem();
-
-    PrintOutputOption(config.output);
-
-    PrintStringOption(L"Input", config.strIF.c_str());
-
-    for (const auto& out : config.OF)
+    if (config.BlockSize.QuadPart > 0LL)
     {
-        PrintStringOption(L"Output", out.c_str());
+        PrintValue(node, L"Block size", Traits::ByteQuantity(config.BlockSize.QuadPart));
     }
-    if(config.BlockSize.QuadPart > 0LL)
-        PrintIntegerOption(L"Block size (bytes)", config.BlockSize.QuadPart);
+
     if (config.Count.QuadPart > 0LL)
-        PrintIntegerOption(L"Count (blocks)", config.Count.QuadPart);
+    {
+        PrintValue(node, L"Block count", config.Count.QuadPart);
+    }
+
     if (config.Skip.QuadPart > 0LL)
-        PrintIntegerOption(L"Skip (input)", config.Skip.QuadPart);
+    {
+        PrintValue(node, L"Skipped block", config.Skip.QuadPart);
+    }
+
     if (config.Seek.QuadPart > 0LL)
-        PrintIntegerOption(L"Seek (output)", config.Seek.QuadPart);
-    
-    PrintBooleanOption(L"No Error", config.NoError);
-    PrintBooleanOption(L"No Truncation", config.NoTrunc);
-    PrintHashAlgorithmOption(L"Hashs", config.Hash);
+    {
+        PrintValue(node, L"Seek", config.Seek.QuadPart);
+    }
 
-    log::Info(_L_, L"\r\n\r\n");
-
-    return;
+    PrintValue(node, L"No Error", config.NoError);
+    PrintValue(node, L"No Truncation", config.NoTrunc);
+    PrintValue(node, L"Hashs", config.Hash);
 }
 
 void Main::PrintFooter()
 {
-    // Footer is displayed when the Run exits
-    PrintExecutionTime();
+    m_console.PrintNewLine();
+
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

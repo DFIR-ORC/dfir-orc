@@ -39,14 +39,12 @@ class SqlImportAgent : public Concurrency::agent
 
 public:
     SqlImportAgent(
-        logger pLog,
         ImportMessage::ISource& source,
         ImportNotification::ITarget& target,
         ImportBytesSemaphore& memSem,
         ImportBytesSemaphore& fileSem,
         LONG* plInProgressItems)
-        : _L_(std::move(pLog))
-        , m_source(source)
+        : m_source(source)
         , m_target(target)
         , m_fileSemaphore(fileSem)
         , m_memSemaphore(memSem)
@@ -63,7 +61,6 @@ public:
     virtual ~SqlImportAgent();
 
 private:
-    logger _L_;
 
     ImportNotification::ITarget& m_target;
     ImportMessage::ISource& m_source;

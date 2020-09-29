@@ -31,13 +31,13 @@ END
 
 2 TEXTINCLUDE
 BEGIN
-    "#include ""windows.h""\r\n"
+    "#include ""windows.h"""
     "\0"
 END
 
 3 TEXTINCLUDE
 BEGIN
-    "\r\n"
+    ""
     "\0"
 END
 
@@ -65,8 +65,6 @@ REGINFO_SQLSCHEMA       BINARY                  "RegInfoSqlSchema.xml"
 
 FASTFIND_SQLSCHEMA BINARY "..\OrcCommand\FastFindSqlSchema.xml"
 
-IMPORTDATA_SQLSCHEMA    BINARY                  "ImportDataSqlSchema.xml"
-
 EXTRACTDATA_REPORT_SQLSCHEMA BINARY             "ExtractDataReportSqlSchema.xml"
 
 GETSECTORS_SQLSCHEMA    BINARY                  "GetSectorsSchema.xml"
@@ -76,8 +74,6 @@ NTFSUTIL_SQLSCHEMA      BINARY                  "NTFSUtilSqlSchema.xml"
 FATINFO_SQLSCHEMA       BINARY                  "FatInfoSqlSchema.xml"
 
 DD_SQLSCHEMA            BINARY                  "DDSqlSchema.xml"
-
-GETCOMOBJECTS_SQLSCHEMA BINARY                  "GetComObjectsSqlSchema.xml"
 
 #endif    // Neutral resources
 /////////////////////////////////////////////////////////////////////////////

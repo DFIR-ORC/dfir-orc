@@ -7,13 +7,14 @@
 //
 #include "stdafx.h"
 
+#include <boost/scope_exit.hpp>
+
 #include "FatInfo.h"
 #include "FatWalker.h"
 #include "FatFileInfo.h"
 #include "FileInfoCommon.h"
-#include "LogFileWriter.h"
 
-#include <boost\scope_exit.hpp>
+#include "Output/Text/Print/Location.h"
 
 using namespace Orc;
 using namespace Orc::Command::FatInfo;
@@ -22,90 +23,92 @@ HRESULT Main::Run()
 {
     HRESULT hr = E_FAIL;
 
+    BOOST_SCOPE_EXIT(&m_Config, &m_FileInfoOutput) { m_FileInfoOutput.CloseAll(m_Config.output); }
+    BOOST_SCOPE_EXIT_END;
+
     LoadWinTrust();
 
     const auto& locs = m_Config.locs.GetAltitudeLocations();
-    std::vector<std::shared_ptr<Location>> locations;
-    std::vector<std::shared_ptr<Location>> allLocations;
-
-    std::copy_if(begin(locs), end(locs), back_inserter(locations), [](const std::shared_ptr<Location>& loc) {
-        if (loc == nullptr)
-            return false;
-
-        return (loc->GetParse() && (loc->IsFAT12() || loc->IsFAT16() || loc->IsFAT32()));
-    });
-
-    std::copy_if(begin(locs), end(locs), back_inserter(allLocations), [](const std::shared_ptr<Location>& loc) {
-        if (loc == nullptr)
-            return false;
-
-        return (loc->IsFAT12() || loc->IsFAT16() || loc->IsFAT32());
-    });
 
     if (m_Config.output.Type == OutputSpec::Kind::Archive || m_Config.output.Type == OutputSpec::Kind::Directory)
     {
         if (m_Config.output.Type == OutputSpec::Kind::Archive)
         {
-            if (FAILED(hr = m_FileInfoOutput.Prepare(m_Config.output)))
+            hr = m_FileInfoOutput.Prepare(m_Config.output);
+            if (FAILED(hr))
             {
-                log::Error(_L_, hr, L"Failed to prepare archive for %s\r\n", m_Config.output.Path.c_str());
+                spdlog::error(L"Failed to prepare archive for '{}'", m_Config.output.Path);
                 return hr;
             }
         }
+
+        std::vector<std::shared_ptr<Location>> allLocations;
+        std::copy_if(
+            std::cbegin(locs),
+            std::cend(locs),
+            std::back_inserter(allLocations),
+            [](const std::shared_ptr<Location>& loc) {
+                assert(loc != nullptr);
+                return loc->IsFAT12() || loc->IsFAT16() || loc->IsFAT32();
+            });
+
         m_FileInfoOutput.WriteVolStats(m_Config.volumesStatsOutput, allLocations);
     }
 
-    BOOST_SCOPE_EXIT(&m_Config, &m_FileInfoOutput) { m_FileInfoOutput.CloseAll(m_Config.output); }
-    BOOST_SCOPE_EXIT_END;
+    std::vector<std::shared_ptr<Location>> locations;
+    std::copy_if(
+        std::cbegin(locs), std::cend(locs), std::back_inserter(locations), [](const std::shared_ptr<Location>& loc) {
+            assert(loc != nullptr);
+            return loc->GetParse() && (loc->IsFAT12() || loc->IsFAT16() || loc->IsFAT32());
+        });
 
-    if (FAILED(hr = m_FileInfoOutput.GetWriters(m_Config.output, L"FatInfo", locations)))
+    hr = m_FileInfoOutput.GetWriters(m_Config.output, L"FatInfo", locations);
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to create file information writers\r\n");
+        spdlog::error(L"Failed to create file information writers (code: {:#x})", hr);
         return hr;
     }
 
     m_FileInfoOutput.ForEachOutput(
         m_Config.output, [this](const MultipleOutput<LocationOutput>::OutputPair& dir) -> HRESULT {
-            log::Info(_L_, L"\r\nParsing %s\r\n", dir.first.GetIdentifier().c_str());
+            auto locationNode = m_console.OutputTree().AddNode("Parsing:");
+            Print(locationNode, dir.first.m_pLoc);
 
             FatWalker::Callbacks callBacks;
             callBacks.m_FileEntryCall = [this, &dir](
                                             const std::shared_ptr<VolumeReader>& volreader,
                                             const WCHAR* szFullName,
                                             const std::shared_ptr<FatFileEntry>& fileEntry) {
-                HRESULT hr = E_FAIL;
-
-                FatFileInfo fi(
-                    _L_,
-                    m_Config.strComputerName.c_str(),
-                    m_Config.DefaultIntentions,
-                    m_Config.Filters,
-                    szFullName,
-                    (DWORD)wcslen(szFullName),
-                    volreader,
-                    fileEntry,
-                    m_CodeVerifier);
-
                 try
                 {
-                    if (FAILED(
-                            hr = fi.WriteFileInformation(
-                                _L_, FatFileInfo::g_FatColumnNames, *dir.second, m_Config.Filters)))
+                    FatFileInfo fi(
+                        m_utilitiesConfig.strComputerName.c_str(),
+                        m_Config.DefaultIntentions,
+                        m_Config.Filters,
+                        szFullName,
+                        (DWORD)wcslen(szFullName),
+                        volreader,
+                        fileEntry,
+                        m_CodeVerifier);
+
+                    HRESULT hr = fi.WriteFileInformation(FatFileInfo::g_FatColumnNames, *dir.second, m_Config.Filters);
+                    if (FAILED(hr))
                     {
-                        log::Error(_L_, hr, L"\r\nCould not WriteFileInformation for %s\r\n", szFullName);
+                        spdlog::error(L"Could not WriteFileInformation for '{}' (code: {:#x})", szFullName, hr);
                         return hr;
                     }
                 }
                 catch (WCHAR* e)
                 {
-                    log::Error(_L_, E_FAIL, L"\r\nCould not WriteFileInformation for %s : %s\r\n", szFullName, e);
+                    spdlog::error(L"Could not WriteFileInformation for '{}': {}", szFullName, e);
                     return E_FAIL;
                 }
+
                 return S_OK;
             };
 
-            FatWalker walker(_L_);
-            walker.Init(dir.first.m_pLoc, (bool)m_Config.bResurrectRecords);
+            FatWalker walker;
+            walker.Init(dir.first.m_pLoc, static_cast<bool>(m_Config.bResurrectRecords));
             walker.Process(callBacks);
 
             return S_OK;

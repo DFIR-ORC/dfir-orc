@@ -24,12 +24,13 @@ class RobustStructuredOptions : public StructuredOutputOptions
 class ORCLIB_API RobustStructuredWriter : public StructuredOutputWriter
 {
 protected:
-
     const std::shared_ptr<StructuredOutputWriter> m_pWriter;
 
 public:
-    RobustStructuredWriter(logger pLog, const std::shared_ptr<StructuredOutputWriter>& pWriter, std::unique_ptr<RobustStructuredOptions> pOptions = nullptr)
-        : StructuredOutputWriter(std::move(pLog), std::move(pOptions))
+    RobustStructuredWriter(
+        const std::shared_ptr<StructuredOutputWriter>& pWriter,
+        std::unique_ptr<RobustStructuredOptions> pOptions = nullptr)
+        : StructuredOutputWriter(std::move(pOptions))
         , m_pWriter(pWriter) {};
 
     virtual HRESULT Close() override final;

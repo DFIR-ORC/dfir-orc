@@ -16,7 +16,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
 class ByteStream;
 
 namespace TableOutput::CSV {
@@ -81,7 +80,7 @@ public:
     };
 
 public:
-    FileReader(logger pLog);
+    FileReader();
 
     HRESULT SetDateFormat(const WCHAR* szDateFormat = L"yyyy-MM-dd hh:mm:ss.000");
     HRESULT SetBooleanFormat(const WCHAR* szBooleanFormat);
@@ -128,8 +127,6 @@ public:
     ~FileReader(void);
 
 private:
-    logger _L_;
-
     RecordSchema m_Schema;
     std::wstring m_strFileName;
     bool m_bfirstRowIsColumnNames;

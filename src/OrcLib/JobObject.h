@@ -15,8 +15,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 static const auto SystemHandleInformation = 16;
 static const auto SystemObjectInformation = 17;
 
@@ -39,9 +37,8 @@ struct SystemHandleInformationData
 class ORCLIB_API JobObject
 {
 private:
-    static HRESULT GetHandleTypeName(const logger& pLog, DWORD hSourcePid, HANDLE hSourceHandle, std::wstring& strType);
+    static HRESULT GetHandleTypeName(DWORD hSourcePid, HANDLE hSourceHandle, std::wstring& strType);
     static HRESULT GetHandle(
-        const logger& pLog,
         DWORD hSourcePid,
         HANDLE hSourceHandle,
         DWORD dwDesiredAccess,
@@ -50,17 +47,14 @@ private:
 
     HANDLE m_hJob;
     bool m_bClose = false;
-    logger _L_;
 
 public:
-    JobObject()
-        : m_hJob(INVALID_HANDLE_VALUE) {};
-    JobObject(logger pLog, HANDLE hJob = INVALID_HANDLE_VALUE)
+    JobObject(HANDLE hJob = INVALID_HANDLE_VALUE)
         : m_hJob(hJob)
-        , _L_(std::move(pLog)) {};
-    JobObject(logger pLog, LPCWSTR szJobName)
+    {
+    }
+    JobObject(LPCWSTR szJobName)
         : m_hJob(INVALID_HANDLE_VALUE)
-        , _L_(std::move(pLog))
     {
         m_hJob = CreateJobObject(NULL, L"OnlyToGetJobType");
         if (m_hJob == NULL)
@@ -86,8 +80,8 @@ public:
     bool operator==(const JobObject& other) const { return other.m_hJob == m_hJob; }
     bool operator!=(const JobObject& other) const { return other.m_hJob != m_hJob; }
 
-    static HRESULT GetJobObject(const logger& pLog, HANDLE hProcess, HANDLE& hJob);
-    static JobObject GetJobObject(const logger& pLog, HANDLE hProcess = INVALID_HANDLE_VALUE);
+    static HRESULT GetJobObject(HANDLE hProcess, HANDLE& hJob);
+    static JobObject GetJobObject(HANDLE hProcess = INVALID_HANDLE_VALUE);
 
     HRESULT AssociateCompletionPort(HANDLE hCP, LPVOID pCompletionKey) const;
 

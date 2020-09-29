@@ -14,7 +14,6 @@
 #include "Temporary.h"
 #include "ConfigFile_NTFSInfo.h"
 #include "FileInfoCommon.h"
-#include "LogFileWriter.h"
 
 #include <vector>
 #include <algorithm>
@@ -43,7 +42,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
                 config.DefaultIntentions = static_cast<Intentions>(
                     config.DefaultIntentions
                     | FileInfo::GetIntentions(
-                        _L_, item.c_str(), NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                        item.c_str(), NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
         });
 
     std::for_each(begin(configitem[ADD].NodeList), end(configitem[ADD].NodeList), [this](const ConfigItem& item) {
@@ -53,7 +52,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
 
         if (FAILED(
                 hr1 = FileInfoCommon::GetFilterFromConfig(
-                    _L_, item, filter, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames)))
+                    item, filter, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames)))
             return;
         else
         {
@@ -74,7 +73,7 @@ HRESULT Main::GetColumnsAndFiltersFromConfig(const ConfigItem& configItem)
         filter.bInclude = false;
 
         hr1 = FileInfoCommon::GetFilterFromConfig(
-            _L_, item, filter, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames);
+            item, filter, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames);
 
         if (FAILED(hr1))
             return;
@@ -153,33 +152,33 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    if (FAILED(hr = config.outFileInfo.Configure(_L_, configitem[NTFSINFO_FILEINFO])))
+    if (FAILED(hr = config.outFileInfo.Configure(configitem[NTFSINFO_FILEINFO])))
     {
-        log::Error(_L_, hr, L"Invalid output specified\r\n");
+        spdlog::error("Invalid output specified (code: {:#x})", hr);
         return hr;
     }
 
-    if (FAILED(hr = config.outAttrInfo.Configure(_L_, configitem[NTFSINFO_ATTRINFO])))
+    if (FAILED(hr = config.outAttrInfo.Configure(configitem[NTFSINFO_ATTRINFO])))
     {
-        log::Error(_L_, hr, L"Invalid attrinfo output specified\r\n");
+        spdlog::error("Invalid attrinfo output specified (code: {:#x})", hr);
         return hr;
     }
 
-    if (FAILED(hr = config.outI30Info.Configure(_L_, configitem[NTFSINFO_I30INFO])))
+    if (FAILED(hr = config.outI30Info.Configure(configitem[NTFSINFO_I30INFO])))
     {
-        log::Error(_L_, hr, L"Invalid attrinfo output specified\r\n");
+        spdlog::error("Invalid attrinfo output specified (code: {:#x})", hr);
         return hr;
     }
 
-    if (FAILED(hr = config.outTimeLine.Configure(_L_, configitem[NTFSINFO_TIMELINE])))
+    if (FAILED(hr = config.outTimeLine.Configure(configitem[NTFSINFO_TIMELINE])))
     {
-        log::Error(_L_, hr, L"Invalid timeline output file specified\r\n");
+        spdlog::error("Invalid timeline output file specified (code: {:#x})", hr);
         return hr;
     }
 
-    if (FAILED(hr = config.outSecDescrInfo.Configure(_L_, configitem[NTFSINFO_SECDESCR])))
+    if (FAILED(hr = config.outSecDescrInfo.Configure(configitem[NTFSINFO_SECDESCR])))
     {
-        log::Error(_L_, hr, L"Invalid secdescr output file specified\r\n");
+        spdlog::error(L"Invalid secdescr output file specified (code: {:#x})", hr);
         return hr;
     }
 
@@ -199,7 +198,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 ExpandEnvironmentStringsW(configitem[NTFSINFO_COMPUTER].c_str(), szComputerName, dwComputerLen);
             actualLen > 0)
         {
-            config.strComputerName.assign(szComputerName, actualLen - 1);
+            m_utilitiesConfig.strComputerName.assign(szComputerName, actualLen - 1);
         }
     }
 
@@ -226,13 +225,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(locationsConfig)))
     {
-        log::Error(_L_, hr, L"Failed to get locations definition from config\r\n");
+        spdlog::error(L"Failed to get locations definition from config (code: {:#x})", hr);
         return hr;
     }
 
     if (FAILED(hr = GetColumnsAndFiltersFromConfig(configitem)))
     {
-        log::Error(_L_, hr, L"Failed to get column definition from config\r\n");
+        spdlog::error(L"Failed to get column definition from config (code: {:#x})", hr);
         return hr;
     }
 
@@ -242,21 +241,18 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.outFileInfo.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.outFileInfo.TableKey.empty() ? L"fileinfo" : config.outFileInfo.TableKey.c_str(), schemaitem);
+        config.outFileInfo.TableKey.empty() ? L"fileinfo" : config.outFileInfo.TableKey.c_str(), schemaitem);
     config.volumesStatsOutput.Schema = TableOutput::GetColumnsFromConfig(
-        _L_,
         config.volumesStatsOutput.TableKey.empty() ? L"volstats" : config.volumesStatsOutput.TableKey.c_str(),
         schemaitem);
     config.outAttrInfo.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.outAttrInfo.TableKey.empty() ? L"attrinfo" : config.outAttrInfo.TableKey.c_str(), schemaitem);
+        config.outAttrInfo.TableKey.empty() ? L"attrinfo" : config.outAttrInfo.TableKey.c_str(), schemaitem);
     config.outI30Info.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.outI30Info.TableKey.empty() ? L"i30info" : config.outI30Info.TableKey.c_str(), schemaitem);
+        config.outI30Info.TableKey.empty() ? L"i30info" : config.outI30Info.TableKey.c_str(), schemaitem);
     config.outTimeLine.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.outTimeLine.TableKey.empty() ? L"timeline" : config.outTimeLine.TableKey.c_str(), schemaitem);
+        config.outTimeLine.TableKey.empty() ? L"timeline" : config.outTimeLine.TableKey.c_str(), schemaitem);
     config.outSecDescrInfo.Schema = TableOutput::GetColumnsFromConfig(
-        _L_,
-        config.outSecDescrInfo.TableKey.empty() ? L"secdescr" : config.outSecDescrInfo.TableKey.c_str(),
-        schemaitem);
+        config.outSecDescrInfo.TableKey.empty() ? L"secdescr" : config.outSecDescrInfo.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 
@@ -277,12 +273,11 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     {
                         if (config.strWalker.compare(L"USN") && config.strWalker.compare(L"MFT"))
                         {
-                            log::Error(
-                                _L_, E_INVALIDARG, L"Option /Walker should be like: /Walker=USN or /Walker=MFT\r\n");
+                            spdlog::error("Option /Walker should be like: /Walker=USN or /Walker=MFT");
                             return E_INVALIDARG;
                         }
                     }
-                    else if (ParameterOption(argv[i] + 1, L"Computer", config.strComputerName))
+                    else if (ParameterOption(argv[i] + 1, L"Computer", m_utilitiesConfig.strComputerName))
                         ;
                     else if (OutputOption(argv[i] + 1, L"FileInfo", config.outFileInfo))
                         ;
@@ -335,7 +330,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                                 config.DefaultIntentions = static_cast<Intentions>(
                                     config.DefaultIntentions
                                     | NtfsFileInfo::GetIntentions(
-                                        _L_, pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                                        pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
                                 pCur = pNext + 1;
                             }
                             else
@@ -343,7 +338,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                                 config.DefaultIntentions = static_cast<Intentions>(
                                     config.DefaultIntentions
                                     | NtfsFileInfo::GetIntentions(
-                                        _L_, pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
+                                        pCur, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames));
                                 pCur = NULL;
                             }
                         }
@@ -356,7 +351,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
     }
     catch (...)
     {
-        log::Error(_L_, E_ABORT, L"NTFSInfo failed during argument parsing, exiting\r\n");
+        spdlog::error("NTFSInfo failed during argument parsing, exiting");
         return E_ABORT;
     }
     // argc/argv parameters only
@@ -371,7 +366,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
     if (FAILED(
             hr = FileInfoCommon::GetFiltersFromArgcArgv(
-                _L_, argc, argv, config.Filters, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames)))
+                argc, argv, config.Filters, NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames)))
         return hr;
 
     return S_OK;
@@ -383,13 +378,13 @@ HRESULT Main::CheckConfiguration()
 
     if (!config.strWalker.compare(L"USN"))
     {
-        log::Debug(_L_, L"USN requirement: 'EXACT' altitude enforced");
+        spdlog::trace("USN requirement: 'EXACT' altitude enforced");
         config.locs.GetAltitude() = LocationSet::Altitude::Exact;
     }
 
-    if (config.strComputerName.empty())
+    if (m_utilitiesConfig.strComputerName.empty())
     {
-        SystemDetails::GetOrcComputerName(config.strComputerName);
+        SystemDetails::GetOrcComputerName(m_utilitiesConfig.strComputerName);
     }
 
     if (config.bGetKnownLocations)
@@ -408,11 +403,9 @@ HRESULT Main::CheckConfiguration()
 
     if (config.locs.IsEmpty() != S_OK)
     {
-        log::Error(
-            _L_,
-            E_INVALIDARG,
+        spdlog::error(
             L"No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
-            L"want parsed\r\n");
+            L"want parsed");
         return E_INVALIDARG;
     }
 
@@ -431,10 +424,10 @@ HRESULT Main::CheckConfiguration()
         config.volumesStatsOutput.OutputEncoding = config.outFileInfo.OutputEncoding;
     }
 
-    if (config.DefaultIntentions == FILEINFO_NONE)
+    if (config.DefaultIntentions == Intentions::FILEINFO_NONE)
     {
         config.DefaultIntentions =
-            NtfsFileInfo::GetIntentions(_L_, L"Default", NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames);
+            NtfsFileInfo::GetIntentions(L"Default", NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames);
     }
 
     if (boost::logic::indeterminate(config.bResurrectRecords))
@@ -448,17 +441,16 @@ HRESULT Main::CheckConfiguration()
 
     config.ColumnIntentions = static_cast<Intentions>(
         config.DefaultIntentions
-        | (config.Filters.empty() ? FILEINFO_NONE : NtfsFileInfo::GetFilterIntentions(config.Filters)));
+        | (config.Filters.empty() ? Intentions::FILEINFO_NONE : NtfsFileInfo::GetFilterIntentions(config.Filters)));
 
     if (config.outFileInfo.Type == OutputSpec::Kind::Directory)
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.outFileInfo.Path.c_str())))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Specified file information output directory (%s) is not a directory\r\n",
-                config.outFileInfo.Path.c_str());
+            spdlog::error(
+                L"Specified file information output directory '{}' is not a directory (code: {:#x})",
+                config.outFileInfo.Path,
+                hr);
             return hr;
         }
     }
@@ -466,11 +458,10 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.outAttrInfo.Path.c_str())))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Specified attribute information output directory (%s) is not a directory\r\n",
-                config.outAttrInfo.Path.c_str());
+            spdlog::error(
+                L"Specified attribute information output directory '{}' is not a directory (code: {:#x})",
+                config.outAttrInfo.Path,
+                hr);
             return hr;
         }
     }
@@ -478,11 +469,10 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.outTimeLine.Path.c_str())))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Specified timeline information output directory (%s) is not a directory\r\n",
-                config.outTimeLine.Path.c_str());
+            spdlog::error(
+                L"Specified timeline information output directory '{}' is not a directory (code: {:#x})",
+                config.outTimeLine.Path,
+                hr);
             return hr;
         }
     }
@@ -490,18 +480,17 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.outSecDescrInfo.Path.c_str())))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Specified secdescr information output directory (%s) is not a directory\r\n",
-                config.outSecDescrInfo.Path.c_str());
+            spdlog::error(
+                L"Specified secdescr information output directory '{}' is not a directory (code: {:#x})",
+                config.outSecDescrInfo.Path,
+                hr);
             return hr;
         }
     }
 
     if (config.strWalker.empty())
     {
-        log::Error(_L_, E_INVALIDARG, L"A parser must be selected\r\n");
+        spdlog::error("A parser must be selected");
         return E_INVALIDARG;
     }
 

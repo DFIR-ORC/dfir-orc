@@ -10,7 +10,6 @@
 #include "Robustness.h"
 #include "ParameterCheck.h"
 #include "GetSectors.h"
-#include "LogFileWriter.h"
 
 #include <filesystem>
 
@@ -25,7 +24,7 @@ ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.Output.Schema = TableOutput::GetColumnsFromConfig(
-        _L_, config.Output.TableKey.empty() ? L"GetSectors" : config.Output.TableKey.c_str(), schemaitem);
+        config.Output.TableKey.empty() ? L"GetSectors" : config.Output.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 
@@ -69,8 +68,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else
                 {
-                    log::Info(_L_, L"[!] Unknown option : \"%s\".\r\n", argv[i]);
-                    log::Info(_L_, L"Use /help to list the available options.\r\n");
+                    spdlog::error(L"[!] Unknown option : \"%s\".", argv[i]);
+                    spdlog::error(L"Use /help to list the available options.");
                     exit(-1);
                 }
                 break;
@@ -86,7 +85,7 @@ HRESULT Main::CheckConfiguration()
 {
     if ((!config.customSample) && (!config.dumpLegacyBootCode) && (!config.dumpSlackSpace) && (!config.dumpUefiFull))
     {
-        log::Info(_L_, L"[!] You must specify something to dump.\r\nUse /help to list the available options.\r\n");
+        spdlog::error(L"[!] You must specify something to dump. Use /help to list the available options.");
         return E_FAIL;
     }
 
@@ -98,7 +97,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
     {
-        log::Info(_L_, L"INFO: No output explicitely specified: creating GetSectors.7z in current directory\r\n");
+        spdlog::warn(L"INFO: No output explicitely specified: creating GetSectors.7z in current directory");
         config.Output.Path = L"GetSectors.7z";
         config.Output.Type = OutputSpec::Kind::Archive;
         config.Output.ArchiveFormat = ArchiveFormat::SevenZip;

@@ -143,8 +143,8 @@ class ChakraExtension : public ExtensionLibrary
     }
 
 public:
-    ChakraExtension(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"chakracore.dll"s, L"CHAKRACORE_X86DLL"s, L"CHAKRACORE_X64DLL"s) {};
+    ChakraExtension()
+        : ExtensionLibrary(L"chakracore.dll"s, L"CHAKRACORE_X86DLL"s, L"CHAKRACORE_X64DLL"s) {};
 
     template <typename... Args>
     auto JsCreateRuntime(Args&&... args)

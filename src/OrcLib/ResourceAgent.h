@@ -17,8 +17,6 @@
 
 #include "MemoryAgent.h"
 
-class LogFileWriter;
-
 class ResourceAgent : public MemoryAgent
 {
 private:

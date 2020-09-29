@@ -7,8 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
-
 #include "LocationSet.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -20,33 +18,28 @@ namespace Orc::Test {
 TEST_CLASS(LocationsTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
-    TEST_METHOD_INITIALIZE(Initialize)
-    {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
-    }
+    TEST_METHOD_INITIALIZE(Initialize) {}
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(LocationsSetBasicTest)
     {
         LocationSet::Locations locations;
 
         {
-            std::shared_ptr<Location> loc0 = std::make_shared<Location>(_L_, L"Test0", Location::PhysicalDriveVolume);
+            std::shared_ptr<Location> loc0 = std::make_shared<Location>(L"Test0", Location::Type::PhysicalDriveVolume);
             locations.insert(std::make_pair(L"Test0", loc0));
 
-            std::shared_ptr<Location> loc1 = std::make_shared<Location>(_L_, L"Test1", Location::ImageFileDisk);
+            std::shared_ptr<Location> loc1 = std::make_shared<Location>(L"Test1", Location::Type::ImageFileDisk);
             locations.insert(std::make_pair(L"Test1", loc1));
 
-            std::shared_ptr<Location> loc2 = std::make_shared<Location>(_L_, L"Test2", Location::ImageFileVolume);
+            std::shared_ptr<Location> loc2 = std::make_shared<Location>(L"Test2", Location::Type::ImageFileVolume);
             locations.insert(std::make_pair(L"Test2", loc2));
 
-            std::shared_ptr<Location> loc3 = std::make_shared<Location>(_L_, L"Test3", Location::MountedVolume);
+            std::shared_ptr<Location> loc3 = std::make_shared<Location>(L"Test3", Location::Type::MountedVolume);
             locations.insert(std::make_pair(L"Test3", loc3));
 
             Assert::IsTrue(4 == locations.size());
@@ -58,7 +51,7 @@ public:
 
         {
             locations.clear();
-            std::shared_ptr<Location> loc1 = std::make_shared<Location>(_L_, L"Test1", Location::ImageFileDisk);
+            std::shared_ptr<Location> loc1 = std::make_shared<Location>(L"Test1", Location::Type::ImageFileDisk);
             locations.insert(std::make_pair(L"Test1", loc1));
 
             Assert::IsTrue(1 == locations.size());
@@ -68,7 +61,7 @@ public:
 
         {
             locations.clear();
-            std::shared_ptr<Location> loc2 = std::make_shared<Location>(_L_, L"Test2", Location::ImageFileVolume);
+            std::shared_ptr<Location> loc2 = std::make_shared<Location>(L"Test2", Location::Type::ImageFileVolume);
             locations.insert(std::make_pair(L"Test2", loc2));
 
             Assert::IsTrue(1 == locations.size());
@@ -78,7 +71,7 @@ public:
 
         {
             locations.clear();
-            std::shared_ptr<Location> loc0 = std::make_shared<Location>(_L_, L"Test0", Location::PhysicalDriveVolume);
+            std::shared_ptr<Location> loc0 = std::make_shared<Location>(L"Test0", Location::Type::PhysicalDriveVolume);
             locations.insert(std::make_pair(L"Test0", loc0));
 
             Assert::IsTrue(1 == locations.size());
@@ -88,10 +81,10 @@ public:
 
         {
             locations.clear();
-            std::shared_ptr<Location> loc0 = std::make_shared<Location>(_L_, L"Test0", Location::PhysicalDriveVolume);
+            std::shared_ptr<Location> loc0 = std::make_shared<Location>(L"Test0", Location::Type::PhysicalDriveVolume);
             locations.insert(std::make_pair(L"Test0", loc0));
 
-            std::shared_ptr<Location> loc1 = std::make_shared<Location>(_L_, L"Test1", Location::ImageFileDisk);
+            std::shared_ptr<Location> loc1 = std::make_shared<Location>(L"Test1", Location::Type::ImageFileDisk);
             loc1->SetIsValid(true);
             locations.insert(std::make_pair(L"Test1", loc1));
 
@@ -106,7 +99,7 @@ public:
     {
         HRESULT hr = E_FAIL;
 
-        LocationSet aSet(_L_);
+        LocationSet aSet;
         aSet.SetPopulatePhysicalDrives(false);
 
         Assert::IsTrue(S_OK == aSet.EnumerateLocations());

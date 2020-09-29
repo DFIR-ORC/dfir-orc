@@ -16,7 +16,7 @@ namespace Orc {
 class ORCLIB_API DevNullStream : public ByteStream
 {
 public:
-    DevNullStream(logger pLog);
+    DevNullStream();
     virtual ~DevNullStream(void);
 
     STDMETHOD(IsOpen)() { return S_OK; };

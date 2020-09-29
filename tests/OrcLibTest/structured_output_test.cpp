@@ -7,8 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
-
 #include "StructuredOutputWriter.h"
 #include "RobustStructuredWriter.h"
 #include "XmlOutputWriter.h"
@@ -37,17 +35,14 @@ namespace Orc::Test {
 TEST_CLASS(StructuredOutputTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     HRESULT WriterSingleTest(const std::shared_ptr<StructuredOutput::IOutput>& _writer)
     {
@@ -254,7 +249,7 @@ public:
     {
         // Compare with expected result;
 
-        auto hash_stream = std::make_shared<CryptoHashStream>(_L_);
+        auto hash_stream = std::make_shared<CryptoHashStream>();
 
         Assert::IsTrue(SUCCEEDED(hash_stream->OpenToWrite(CryptoHashStream::Algorithm::SHA1, nullptr)));
 
@@ -273,27 +268,27 @@ public:
     {
         HRESULT hr = E_FAIL;
 
-        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
+        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
 
-        auto result_stream = std::make_shared<MemoryStream>(_L_);
+        auto result_stream = std::make_shared<MemoryStream>();
         Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
         auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
         options->Encoding = OutputSpec::Encoding::UTF8;
 
-        auto writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
+        auto writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
         Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"817B16409158FE82616DCCB6199E2AC55A3D3CC9")));
 
         writer.reset();
 
-        result_stream = std::make_shared<MemoryStream>(_L_);
+        result_stream = std::make_shared<MemoryStream>();
         Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
         options = std::make_unique<Orc::StructuredOutput::XML::Options>();
         options->Encoding = OutputSpec::Encoding::UTF16;
-        writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
+        writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
         Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3EC3C8E033C4618BB0276787AB1EB3B79DC8FDFD")));
@@ -301,35 +296,35 @@ public:
 
     TEST_METHOD(RobustStructuredOutputTest)
     {
-        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
+        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
 
         HRESULT hr = E_FAIL;
 
-        auto result_stream = std::make_shared<MemoryStream>(_L_);
+        auto result_stream = std::make_shared<MemoryStream>();
         Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
         auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
         options->Encoding = OutputSpec::Encoding::UTF8;
 
-        auto writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
+        auto writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
 
         auto robust_writer =
-            std::make_shared<RobustStructuredWriter>(_L_, std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
+            std::make_shared<RobustStructuredWriter>(std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
         Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"817B16409158FE82616DCCB6199E2AC55A3D3CC9")));
 
         robust_writer.reset();
 
-        result_stream = std::make_shared<MemoryStream>(_L_);
+        result_stream = std::make_shared<MemoryStream>();
         Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
         options = std::make_unique<Orc::StructuredOutput::XML::Options>();
         options->Encoding = OutputSpec::Encoding::UTF16;
 
-        writer = StructuredOutputWriter::GetWriter(_L_, result_stream, OutputSpec::Kind::XML, std::move(options));
+        writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
         robust_writer =
-            std::make_shared<RobustStructuredWriter>(_L_, std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
+            std::make_shared<RobustStructuredWriter>(std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
         Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3EC3C8E033C4618BB0276787AB1EB3B79DC8FDFD")));
@@ -339,16 +334,9 @@ public:
     {
         HRESULT hr = E_FAIL;
 
-        auto Silence = std::make_shared<LogFileWriter>();
-        LogFileWriter::Initialize(Silence);
-        Silence->SetConsoleLog(false);
-        Silence->SetDebugLog(false);
-        Silence->SetLogCallback(nullptr);
-        Silence->SetVerboseLog(false);
-
         auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
         options->Encoding = OutputSpec::Encoding::UTF8;
-        const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, std::move(options));
+        const auto _writer = StructuredOutputWriter::GetWriter(stream, OutputSpec::Kind::XML, std::move(options));
 
         const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
@@ -381,17 +369,10 @@ public:
     {
         HRESULT hr = E_FAIL;
 
-        auto Silence = std::make_shared<LogFileWriter>();
-        LogFileWriter::Initialize(Silence);
-        Silence->SetConsoleLog(false);
-        Silence->SetDebugLog(false);
-        Silence->SetLogCallback(nullptr);
-        Silence->SetVerboseLog(false);
-
         auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
         options->Encoding = OutputSpec::Encoding::UTF8;
 
-        const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, nullptr);
+        const auto _writer = StructuredOutputWriter::GetWriter(stream, OutputSpec::Kind::XML, nullptr);
         const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
@@ -423,18 +404,10 @@ public:
     {
         HRESULT hr = E_FAIL;
 
-        auto Silence = std::make_shared<LogFileWriter>();
-        LogFileWriter::Initialize(Silence);
-        Silence->SetConsoleLog(false);
-        Silence->SetDebugLog(false);
-        Silence->SetLogCallback(nullptr);
-        Silence->SetVerboseLog(false);
-
-        
         auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
         options->Encoding = OutputSpec::Encoding::UTF8;
 
-        const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, nullptr);
+        const auto _writer = StructuredOutputWriter::GetWriter(stream, OutputSpec::Kind::XML, nullptr);
         const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
@@ -466,18 +439,10 @@ public:
     {
         HRESULT hr = E_FAIL;
 
-        auto Silence = std::make_shared<LogFileWriter>();
-        LogFileWriter::Initialize(Silence);
-        Silence->SetConsoleLog(false);
-        Silence->SetDebugLog(false);
-        Silence->SetLogCallback(nullptr);
-        Silence->SetVerboseLog(false);
-
-        
         auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
         options->Encoding = OutputSpec::Encoding::UTF8;
         
-        const auto _writer = StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, std::move(options));
+        const auto _writer = StructuredOutputWriter::GetWriter(stream, OutputSpec::Kind::XML, std::move(options));
         const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
@@ -509,19 +474,12 @@ public:
     {
         HRESULT hr = E_FAIL;
 
-        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
-
-        auto Silence = std::make_shared<LogFileWriter>();
-        LogFileWriter::Initialize(Silence);
-        Silence->SetConsoleLog(false);
-        Silence->SetDebugLog(false);
-        Silence->SetLogCallback(nullptr);
-        Silence->SetVerboseLog(false);
+        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
 
         auto options = std::make_unique<Orc::StructuredOutput::XML::Options>();
         options->Encoding = OutputSpec::Encoding::UTF8;
         const auto _writer =
-            StructuredOutputWriter::GetWriter(Silence, stream, OutputSpec::Kind::XML, std::move(options));
+            StructuredOutputWriter::GetWriter(stream, OutputSpec::Kind::XML, std::move(options));
         const auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
@@ -571,13 +529,13 @@ public:
 
     TEST_METHOD(StructuredOutputGarbageElementTest)
     {
-        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
+        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
 
         HRESULT hr = E_FAIL;
 
         for (WCHAR x = 0x01; x < 0xFFFF; x++)
         {
-            auto result_stream = std::make_shared<MemoryStream>(_L_);
+            auto result_stream = std::make_shared<MemoryStream>();
             Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
             hr = WriteGargabeElementTest(result_stream, x);
@@ -595,13 +553,13 @@ public:
 
     TEST_METHOD(StructuredOutputGarbagePairTest)
     {
-        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
+        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
 
         HRESULT hr = E_FAIL;
 
         for (WCHAR x = 0x01; x < 0xFFFF; x++)
         {
-            auto result_stream = std::make_shared<MemoryStream>(_L_);
+            auto result_stream = std::make_shared<MemoryStream>();
             Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
             hr = WriteGargabePairTest(result_stream, x);
@@ -619,13 +577,13 @@ public:
 
     TEST_METHOD(StructuredOutputGarbageStringTest)
     {
-        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
+        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
 
         HRESULT hr = E_FAIL;
 
         for (WCHAR x = 0x01; x < 0xFFFF; x++)
         {
-            auto result_stream = std::make_shared<MemoryStream>(_L_);
+            auto result_stream = std::make_shared<MemoryStream>();
             Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
             hr = WriteGargabeStringTest(result_stream, x);
 
@@ -653,11 +611,11 @@ public:
     {
         HRESULT hr = E_FAIL;
 
-        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
+        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
 
         for (WCHAR x = 0x01; x < 0xFFFF; x++)
         {
-            auto result_stream = std::make_shared<MemoryStream>(_L_);
+            auto result_stream = std::make_shared<MemoryStream>();
             Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
             hr = WriteGargabeCommentTest(result_stream, x);
             // if (SUCCEEDED(hr))
@@ -684,9 +642,9 @@ public:
     {
         HRESULT hr = E_FAIL;
 
-        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
+        auto xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
 
-        auto result_stream = std::make_shared<MemoryStream>(_L_);
+        auto result_stream = std::make_shared<MemoryStream>();
         Assert::IsTrue(SUCCEEDED(result_stream->OpenForReadWrite()));
 
         Assert::IsTrue(SUCCEEDED(WriteSanitizedTest(result_stream)));
@@ -696,10 +654,10 @@ public:
     TEST_METHOD(JSONStructuredOutput)
     {
 
-        auto stream = std::make_shared<MemoryStream>(_L_);
+        auto stream = std::make_shared<MemoryStream>();
         Assert::IsTrue(SUCCEEDED(stream->OpenForReadWrite()));
 
-        auto writer = StructuredOutput::JSON::GetWriter(_L_, stream, nullptr);
+        auto writer = StructuredOutput::JSON::GetWriter(stream, nullptr);
 
         writer->BeginElement(L"element");
         writer->WriteNamed(L"name", L"value");

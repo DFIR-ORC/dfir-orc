@@ -9,50 +9,45 @@
 
 #include "OrcLib.h"
 
+#include <conio.h>
+#include <iostream>
+#include <chrono>
+
+#include <boost/logic/tribool.hpp>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/scope_exit.hpp>
+#include <boost/stacktrace.hpp>
+#include <concrt.h>
+
 #include "ConfigFile.h"
-
 #include "Archive.h"
-
 #include "ParameterCheck.h"
-
 #include "Robustness.h"
-
 #include "ConfigFile_Common.h"
-
 #include "ArchiveMessage.h"
 #include "ArchiveNotification.h"
 #include "ArchiveAgent.h"
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
-#include "LogFileWriter.h"
-
 #include "LocationSet.h"
-
 #include "ToolVersion.h"
 #include "SystemDetails.h"
-
 #include "TableOutputWriter.h"
-
 #include "ExtensionLibrary.h"
-
-#include <concrt.h>
-
-#include <boost/logic/tribool.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/scope_exit.hpp>
-
-#include <conio.h>
-#include <iostream>
-#include <chrono>
-
 #include "Log/Logger.h"
+#include "Output/Console/Console.h"
+#include "Output/Text/Print.h"
+#include "Output/Text/Fmt/FILE_NAME.h"
+#include "Output/Text/Fmt/FILETIME.h"
+#include "Output/Text/Fmt/SYSTEMTIME.h"
+#include "Utils/Guard.h"
+#include "UtilitiesLogger.h"
 
 #pragma managed(push, off)
 
 namespace Orc {
-
-class LogFileWriter;
 
 namespace Command {
 
@@ -65,6 +60,27 @@ public:
         std::wstring strConfigFile;
     };
 
+    // Common configuration
+    class UtilitiesConfiguration
+    {
+    public:
+        enum class LogLevel
+        {
+            kDefault = 0,
+            kCritical,
+            kError,
+            kWarn,
+            kInfo,
+            kDebug,
+            kTrace
+        };
+
+        std::wstring strComputerName;
+        std::filesystem::path logFile;
+        LogLevel logLevel;
+        bool logToConsole;
+    };
+
     template <class T>
     class MultipleOutput
     {
@@ -73,16 +89,12 @@ public:
 
     private:
         std::vector<OutputPair> m_outputs;
-        mutable logger _L_;
 
         ArchiveMessage::UnboundedMessageBuffer m_messageBuf;
         std::unique_ptr<Concurrency::call<ArchiveNotification::Notification>> m_notificationBuf;
         std::shared_ptr<ArchiveAgent> m_pArchiveAgent;
 
     public:
-        MultipleOutput(logger pLog)
-            : _L_(std::move(pLog)) {};
-
         std::vector<OutputPair>& Outputs() { return m_outputs; };
 
         HRESULT WriteVolStats(const OutputSpec& volStatsSpec, const std::vector<std::shared_ptr<Location>>& locations)
@@ -91,7 +103,7 @@ public:
             std::shared_ptr<TableOutput::IWriter> volStatWriter;
 
             if (volStatsSpec.Type == OutputSpec::Kind::Archive || volStatsSpec.Type == OutputSpec::Kind::Directory)
-                volStatWriter = Orc::TableOutput::GetWriter(_L_, L"volstats.csv", volStatsSpec);
+                volStatWriter = Orc::TableOutput::GetWriter(L"volstats.csv", volStatsSpec);
             else
                 return S_OK;
 
@@ -143,39 +155,39 @@ public:
                         switch (item->GetType())
                         {
                             case ArchiveNotification::ArchiveStarted:
-                                log::Info(_L_, L"Archive: %s started\r\n", item->Keyword().c_str());
+                                spdlog::info(L"Archive: '{}' started", item->Keyword());
                                 break;
                             case ArchiveNotification::FileAddition:
-                                log::Info(_L_, L"Archive: File %s added\r\n", item->Keyword().c_str());
+                                spdlog::info(L"Archive: File '{}' added", item->Keyword());
                                 break;
                             case ArchiveNotification::DirectoryAddition:
-                                log::Info(_L_, L"Archive: Directory %s added\r\n", item->Keyword().c_str());
+                                spdlog::info(L"Archive: Directory '{}' added", item->Keyword());
                                 break;
                             case ArchiveNotification::StreamAddition:
-                                log::Info(_L_, L"Archive: Output %s added\r\n", item->Keyword().c_str());
+                                spdlog::info(L"Archive: Output '{}' added", item->Keyword());
                                 break;
                             case ArchiveNotification::ArchiveComplete:
-                                log::Info(_L_, L"Archive: %s is complete\r\n", item->Keyword().c_str());
+                                spdlog::info(L"Archive: '{}' is complete", item->Keyword());
                                 break;
                         }
                     }
                     else
                     {
-                        log::Error(
-                            _L_,
-                            item->GetHResult(),
-                            L"ArchiveOperation: Operation for %s failed \"%s\"\r\n",
-                            item->Keyword().c_str(),
-                            item->Description().c_str());
+                        spdlog::error(
+                            L"ArchiveOperation: Operation for '{}' failed \"{}\" (code: {:#x})",
+                            item->Keyword(),
+                            item->Description(),
+                            item->GetHResult());
                     }
+
                     return;
                 });
 
-            m_pArchiveAgent = std::make_unique<ArchiveAgent>(_L_, m_messageBuf, m_messageBuf, *m_notificationBuf);
+            m_pArchiveAgent = std::make_unique<ArchiveAgent>(m_messageBuf, m_messageBuf, *m_notificationBuf);
 
             if (!m_pArchiveAgent->start())
             {
-                log::Error(_L_, E_FAIL, L"Archive agent failed to start\r\n");
+                spdlog::error("Archive agent as failed to start");
                 return E_FAIL;
             }
 
@@ -202,11 +214,10 @@ public:
                 case OutputSpec::Kind::Parquet | OutputSpec::Kind::TableFile:
                 case OutputSpec::Kind::ORC:
                 case OutputSpec::Kind::ORC | OutputSpec::Kind::TableFile:
-                case OutputSpec::Kind::SQL:
-                {
-                    if (nullptr == (pWriter = ::Orc::TableOutput::GetWriter(_L_, output)))
+                case OutputSpec::Kind::SQL: {
+                    if (nullptr == (pWriter = ::Orc::TableOutput::GetWriter(output)))
                     {
-                        log::Error(_L_, E_FAIL, L"Failed to create ouput writer\r\n");
+                        spdlog::error("Failed to create ouput writer");
                         return E_FAIL;
                     }
                     for (auto& out : m_outputs)
@@ -215,8 +226,7 @@ public:
                     }
                 }
                 break;
-                case OutputSpec::Kind::Directory:
-                {
+                case OutputSpec::Kind::Directory: {
                     for (auto& out : m_outputs)
                     {
                         std::shared_ptr<::Orc::TableOutput::IWriter> pW;
@@ -224,17 +234,16 @@ public:
                         WCHAR szOutputFile[MAX_PATH];
                         StringCchPrintf(
                             szOutputFile, MAX_PATH, L"%s_%s.csv", szPrefix, out.first.GetIdentifier().c_str());
-                        if (nullptr == (pW = ::Orc::TableOutput::GetWriter(_L_, szOutputFile, output)))
+                        if (nullptr == (pW = ::Orc::TableOutput::GetWriter(szOutputFile, output)))
                         {
-                            log::Error(_L_, E_FAIL, L"Failed to create output file information file\r\n");
+                            spdlog::error("Failed to create output file information");
                             return E_FAIL;
                         }
                         out.second = pW;
                     }
                 }
                 break;
-                case OutputSpec::Kind::Archive:
-                {
+                case OutputSpec::Kind::Archive: {
                     DWORD idx = 0L;
 
                     for (auto& out : m_outputs)
@@ -250,9 +259,9 @@ public:
                             szPrefix,
                             idx++,
                             out.first.GetIdentifier().c_str());
-                        if (nullptr == (pW = ::Orc::TableOutput::GetWriter(_L_, szOutputFile, output)))
+                        if (nullptr == (pW = ::Orc::TableOutput::GetWriter(szOutputFile, output)))
                         {
-                            log::Error(_L_, E_FAIL, L"Failed to create output file information file\r\n");
+                            spdlog::error("Failed to create output file information file");
                             return E_FAIL;
                         }
 
@@ -262,8 +271,7 @@ public:
                         {
                             Concurrency::send(
                                 m_messageBuf,
-                                ArchiveMessage::MakeAddStreamRequest(
-                                    szOutputFile, pStreamWriter->GetStream(), true));
+                                ArchiveMessage::MakeAddStreamRequest(szOutputFile, pStreamWriter->GetStream(), true));
                         }
                         out.second = pW;
                     }
@@ -303,8 +311,7 @@ public:
 
                 if (FAILED(hr = aCallback(item)))
                 {
-                    log::Error(
-                        _L_, hr, L"Failed during callback on output item %s\r\n", item.first.GetIdentifier().c_str());
+                    spdlog::error(L"Failed during callback on output item '{}'", item.first.GetIdentifier());
                 }
             }
             return S_OK;
@@ -408,7 +415,7 @@ public:
                 }
                 catch (concurrency::operation_timed_out&)
                 {
-                    log::Error(_L_, E_FAIL, L"Complete archive operation has timed out\r\n");
+                    spdlog::error("Complete archive operation has timed out");
                     return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
                 }
             }
@@ -416,15 +423,16 @@ public:
         }
     };
 
-private:
+protected:
+    UtilitiesLogger m_logging;
+
+    mutable Output::Console m_console;
+
     SYSTEMTIME theStartTime;
     SYSTEMTIME theFinishTime;
     DWORD theStartTickCount;
     DWORD theFinishTickCount;
-
-protected:
-    mutable logger _L_;
-    Orc::Logger m_logger;
+    UtilitiesConfiguration m_utilitiesConfig;
 
     std::vector<std::shared_ptr<ExtensionLibrary>> m_extensions;
     HRESULT LoadCommonExtensions();
@@ -432,7 +440,104 @@ protected:
     HRESULT LoadEvtLibrary();
     HRESULT LoadPSAPI();
 
-    HRESULT SaveAndPrintStartTime();
+    void PrintCommonParameters();
+    auto Configure(int argc, const wchar_t* argv[]) { return m_logging.Configure(argc, argv); }
+
+    template <typename T>
+    void PrintCommonParameters(Orc::Text::Tree<T>& root)
+    {
+        PrintValue(root, "Start time", theStartTime);
+
+        std::wstring computerName;
+        SystemDetails::GetComputerName_(computerName);
+        PrintValue(root, "Computer name", computerName);
+
+        std::wstring fullComputerName;
+        SystemDetails::GetFullComputerName(fullComputerName);
+        if (fullComputerName != computerName)
+        {
+            PrintValue(root, "Full computer name", fullComputerName);
+        }
+
+        std::wstring orcComputerName;
+        SystemDetails::GetOrcComputerName(orcComputerName);
+        if (computerName != orcComputerName)
+        {
+            PrintValue(root, "DFIR-Orc computer name", orcComputerName);
+        }
+
+        std::wstring orcFullComputerName;
+        SystemDetails::GetOrcFullComputerName(orcFullComputerName);
+        if (orcFullComputerName != fullComputerName && orcFullComputerName != orcComputerName)
+        {
+            PrintValue(root, "DFIR-Orc computer", orcFullComputerName);
+        }
+
+        std::wstring description;
+        SystemDetails::GetDescriptionString(description);
+        PrintValue(root, "Operating system", description);
+
+        std::wstring userName;
+        SystemDetails::WhoAmI(userName);
+        bool bIsElevated = false;
+        SystemDetails::AmIElevated(bIsElevated);
+        PrintValue(root, L"User", fmt::format(L"{}{}", userName, bIsElevated ? L" (elevated)" : L""));
+
+        std::wstring systemType;
+        SystemDetails::GetSystemType(systemType);
+        PrintValue(root, L"System type", systemType);
+
+        PrintValue(root, L"System tags", boost::join(SystemDetails::GetSystemTags(), ", "));
+    }
+
+    template <typename T>
+    void PrintCommonFooter(Orc::Text::Tree<T>& root)
+    {
+        PrintValue(root, "Finish time", theFinishTime);
+
+        // TODO: std::chrono
+        DWORD dwElapsed;
+        if (theFinishTickCount < theStartTickCount)
+        {
+            dwElapsed = (MAXDWORD - theStartTickCount) + theFinishTickCount;
+        }
+        else
+        {
+            dwElapsed = theFinishTickCount - theStartTickCount;
+        }
+
+        DWORD dwMillisec = dwElapsed % 1000;
+        DWORD dwSec = (dwElapsed / 1000) % 60;
+        DWORD dwMin = (dwElapsed / (1000 * 60)) % 60;
+        DWORD dwHour = (dwElapsed / (1000 * 60 * 60)) % 24;
+        DWORD dwDay = (dwElapsed / (1000 * 60 * 60 * 24));
+
+        std::vector<std::wstring> durations;
+        if (dwDay)
+        {
+            durations.push_back(fmt::format(L"{} day(s)", dwDay));
+        }
+
+        if (dwHour)
+        {
+            durations.push_back(fmt::format(L"{} hour(s)", dwHour));
+        }
+
+        if (dwMin)
+        {
+            durations.push_back(fmt::format(L"{} min(s)", dwMin));
+        }
+
+        if (dwSec)
+        {
+            durations.push_back(fmt::format(L"{} sec(s)", dwSec));
+        }
+
+        durations.push_back(fmt::format(L"{} msecs", dwMillisec));
+
+        PrintValue(root, "Elapsed time", boost::join(durations, L", "));
+    }
+
     HRESULT PrintSystemType();
     HRESULT PrintSystemTags();
     HRESULT PrintComputerName();
@@ -450,7 +555,7 @@ protected:
     HRESULT PrintIntegerOption(LPCWSTR szOptionName, ULONGLONG ullOption);
     HRESULT PrintHashAlgorithmOption(LPCWSTR szOptionName, CryptoHashStream::Algorithm algs);
     HRESULT PrintHashAlgorithmOption(LPCWSTR szOptionName, FuzzyHashStream::Algorithm algs);
-
+    void PrintStartTime();
     HRESULT PrintStringOption(LPCWSTR szOptionName, LPCWSTR szOption);
     HRESULT PrintFormatedStringOption(LPCWSTR szOptionName, LPCWSTR szFormat, va_list argList);
     HRESULT PrintFormatedStringOption(LPCWSTR szOptionName, LPCWSTR szFormat, ...);
@@ -564,7 +669,7 @@ protected:
             LPCWSTR pEquals = wcschr(szArg, L'=');
             if (!pEquals)
             {
-                log::Error(_L_, E_INVALIDARG, L"Option /%s should be like: /%s=<Value>\r\n", szOption, szOption);
+                spdlog::error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
                 return false;
             }
             else
@@ -602,15 +707,8 @@ protected:
     bool IgnoreCommonOptions(LPCWSTR szArg);
 
 public:
-    UtilitiesMain(logger pLog)
-        : _L_(std::move(pLog))
-    {
-        ZeroMemory(&theStartTime, sizeof(SYSTEMTIME));
-        ZeroMemory(&theFinishTime, sizeof(SYSTEMTIME));
-        theStartTickCount = 0L;
-        theFinishTickCount = 0L;
-        m_extensions.reserve(10);
-    };
+    UtilitiesMain();
+    virtual ~UtilitiesMain() {}
 
     HRESULT ReadConfiguration(
         int argc,
@@ -622,7 +720,7 @@ public:
         ConfigItem& configitem,
         ConfigItem::InitFunction init);
 
-    static bool IsProcessParent(LPCWSTR szImageName, logger& logger);
+    static bool IsProcessParent(LPCWSTR szImageName);
 
     //
     //
@@ -639,7 +737,8 @@ public:
     virtual void PrintUsage() = 0;
     virtual void PrintLoggingUsage();
     virtual void PrintPriorityUsage();
-    virtual void PrintCommonUsage() {
+    virtual void PrintCommonUsage()
+    {
         PrintLoggingUsage();
         PrintPriorityUsage();
     }
@@ -652,37 +751,20 @@ public:
     {
         Robustness::Initialize(UtilityT::ToolName());
 
-        HRESULT hr = E_FAIL;
-        logger _L_;
+        UtilityT Cmd;
+        Cmd.Configure(argc, argv);
 
-        try
-        {
-            _L_ = std::make_shared<LogFileWriter>();
-            LogFileWriter::Initialize(_L_);
-            LogFileWriter::ConfigureLoggingOptions(argc, argv, _L_);
-        }
-        catch (std::exception& e)
-        {
-            std::cerr << "std::exception during LogFileWrite initialisation" << std::endl;
-            std::cerr << "Caught " << e.what() << std::endl;
-            std::cerr << "Type " << typeid(e).name() << std::endl;
-            return E_ABORT;
-        }
-        catch (...)
-        {
-            std::cerr << "Exception during LogFileWrite initialisation" << std::endl;
-            return E_ABORT;
-        }
+        HRESULT hr = E_FAIL;
 
         WSADATA wsa_data;
-        if(WSAStartup(MAKEWORD(2, 2), &wsa_data))
+        if (WSAStartup(MAKEWORD(2, 2), &wsa_data))
         {
-            log::Error(_L_,HRESULT_FROM_WIN32(WSAGetLastError()), L"Failed to initialize WinSock 2.2\r\n");
+            spdlog::critical(L"Failed to initialize WinSock 2.2 (code: {:#x})", HRESULT_FROM_WIN32(WSAGetLastError()));
         }
 
         if (FAILED(hr = CoInitializeEx(0, COINIT_MULTITHREADED)))
         {
-            log::Error(_L_, hr, L"Failed to initialize COM library\r\n");
+            spdlog::error("Failed to initialize COM library (code: {:#x})", hr);
             return hr;
         }
 
@@ -699,15 +781,11 @@ public:
                     NULL  // Reserved
                     )))
         {
-            log::Warning(_L_, hr, L"Failed to initialize COM security\r\n");
+            spdlog::warn("Failed to initialize COM security");
         }
 
-        UtilityT Cmd(_L_);
-
         Cmd.WaitForDebugger(argc, argv);
-
         Cmd.LoadCommonExtensions();
-
         Cmd.PrintHeader(UtilityT::ToolName(), UtilityT::ToolDescription(), kOrcFileVerStringW);
 
         try
@@ -785,11 +863,22 @@ public:
             return E_ABORT;
         }
 
+        // save the start time
+        GetSystemTime(&Cmd.theStartTime);
+        Cmd.theStartTickCount = GetTickCount();
+
+        if (!Cmd.m_utilitiesConfig.strComputerName.empty())
+        {
+            SystemDetails::SetOrcComputerName(Cmd.m_utilitiesConfig.strComputerName);
+        }
+
+        // Parameters are displayed when the configuration is complete and checked
         Cmd.PrintParameters();
 
         try
         {
-            if (FAILED(hr = Cmd.Run()))
+            hr = Cmd.Run();
+            if (FAILED(hr))
             {
                 return hr;
             }
@@ -799,36 +888,31 @@ public:
             std::cerr << "std::exception during execution" << std::endl;
             std::cerr << "Caught " << e.what() << std::endl;
             std::cerr << "Type " << typeid(e).name() << std::endl;
+            boost::stacktrace::stacktrace();
             return E_ABORT;
         }
         catch (...)
         {
             std::cerr << "Exception during during execution" << std::endl;
+            boost::stacktrace::stacktrace();
             return E_ABORT;
         }
 
+        GetSystemTime(&Cmd.theFinishTime);
+        Cmd.theFinishTickCount = GetTickCount();
         Cmd.PrintFooter();
 
-        DWORD dwErrorCount = _L_->GetErrorCount();
-
-        if (dwErrorCount > 0)
+        if (WSACleanup())
         {
-            log::Info(_L_, L"\r\nInformation           : %d errors occurred during program execution\r\n", dwErrorCount);
-        }
-
-        _L_->Close();
-
-        if(WSACleanup())
-        {
-            log::Error(_L_, HRESULT_FROM_WIN32(WSAGetLastError()), L"Failed to cleanup WinSock 2.2\r\n");
+            spdlog::error(L"Failed to cleanup WinSock 2.2 (code: {:#x})", HRESULT_FROM_WIN32(WSAGetLastError()));
         }
 
         Robustness::UnInitialize(INFINITE);
-        return dwErrorCount;
+        // TODO: return dwErrorCount;
+        return 0;
     }
-
-    ~UtilitiesMain(void);
 };
+
 }  // namespace Command
 }  // namespace Orc
 

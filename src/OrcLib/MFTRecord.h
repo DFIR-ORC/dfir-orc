@@ -49,7 +49,7 @@ public:
 
     bool IsParsed() const { return m_bParsed; };
     bool IsRecordInUse() const { return m_pRecord != nullptr ? m_pRecord->Flags & FILE_RECORD_SEGMENT_IN_USE : false; };
-    bool IsBaseRecord()
+    bool IsBaseRecord() const
     {
         if (m_pRecord != nullptr)
         {
@@ -176,14 +176,12 @@ private:
     PFILE_NAME GetMain_PFILE_NAME() const;
 
     HRESULT ParseAttribute(
-        const logger& pLog,
         const std::shared_ptr<VolumeReader>& VolReader,
         PATTRIBUTE_RECORD_HEADER pAttribute,
         DWORD dwAttributeLen,
         std::shared_ptr<MftRecordAttribute>& pNewAttr);
 
     HRESULT ParseRecord(
-        const logger& pLog,
         const std::shared_ptr<VolumeReader>& VolReader,
         PFILE_RECORD_SEGMENT_HEADER pRecord,
         DWORD dwRecordLen,

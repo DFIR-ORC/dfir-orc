@@ -12,7 +12,6 @@
 
 #include "FastFind.h"
 
-#include "LogFileWriter.h"
 #include "SystemDetails.h"
 #include "ParameterCheck.h"
 #include "WideAnsi.h"
@@ -37,15 +36,11 @@ using namespace Orc::Command::FastFind;
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.outFileSystem.Schema = TableOutput::GetColumnsFromConfig(
-        _L_,
         config.outFileSystem.TableKey.empty() ? L"FastFindFileSystem" : config.outFileSystem.TableKey.c_str(),
         schemaitem);
     config.outRegsitry.Schema = TableOutput::GetColumnsFromConfig(
-        _L_,
-        config.outRegsitry.TableKey.empty() ? L"FastFindRegistry" : config.outRegsitry.TableKey.c_str(),
-        schemaitem);
+        config.outRegsitry.TableKey.empty() ? L"FastFindRegistry" : config.outRegsitry.TableKey.c_str(), schemaitem);
     config.outObject.Schema = TableOutput::GetColumnsFromConfig(
-        _L_,
         config.outObject.TableKey.empty() ? L"FastFindObject" : config.outObject.TableKey.c_str(),
         schemaitem);
     return S_OK;
@@ -60,18 +55,15 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
-    ConfigFile::ConfigureLogging(configitem[FASTFIND_LOGGING], _L_);
-
     if (configitem[FASTFIND_VERSION])
     {
         config.strVersion = configitem[FASTFIND_VERSION];
     }
 
-    ConfigFile reader(_L_);
+    ConfigFile reader;
 
     if (FAILED(
             hr = config.outFileSystem.Configure(
-                _L_,
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile),
                 configitem[FASTFIND_OUTPUT_FILESYSTEM])))
     {
@@ -79,19 +71,18 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     if (FAILED(
             hr = config.outRegsitry.Configure(
-                _L_, static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile), configitem[FASTFIND_OUTPUT_REGISTRY])))
+                static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile), configitem[FASTFIND_OUTPUT_REGISTRY])))
     {
         return hr;
     }
     if (FAILED(
             hr = config.outObject.Configure(
-                _L_, static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile), configitem[FASTFIND_OUTPUT_OBJECT])))
+                static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile), configitem[FASTFIND_OUTPUT_OBJECT])))
     {
         return hr;
     }
     if (FAILED(
             hr = config.outStructured.Configure(
-                _L_,
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::StructuredFile),
                 configitem[FASTFIND_OUTPUT_STRUCTURED])))
     {
@@ -104,29 +95,29 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         if (FAILED(
                 hr = config.FileSystem.Locations.AddLocationsFromConfigItem(filesystem[FASTFIND_FILESYSTEM_LOCATIONS])))
         {
-            log::Error(_L_, hr, L"Error in specific locations parsing in config file\r\n");
+            spdlog::error(L"Error in specific locations parsing in config file");
             return hr;
         }
 
         if (FAILED(hr = config.FileSystem.Locations.AddKnownLocations(filesystem[FASTFIND_FILESYSTEM_KNOWNLOCATIONS])))
         {
-            log::Error(_L_, hr, L"Error in knownlocations parsing in config file\r\n");
+            spdlog::error(L"Error in knownlocations parsing in config file");
             return hr;
         }
 
         if (FAILED(hr = config.FileSystem.Files.AddTermsFromConfig(filesystem[FASTFIND_FILESYSTEM_FILEFIND])))
         {
-            log::Error(_L_, hr, L"Error in specific file find parsing in config file\r\n");
+            spdlog::error(L"Error in specific file find parsing in config file");
             return hr;
         }
         if (FAILED(hr = config.FileSystem.Files.AddExcludeTermsFromConfig(filesystem[FASTFIND_FILESYSTEM_EXCLUDE])))
         {
-            log::Error(_L_, hr, L"Error in specific file find parsing in config file\r\n");
+            spdlog::error(L"Error in specific file find parsing in config file");
             return hr;
         }
         if (filesystem[FASTFIND_FILESYSTEM_YARA])
         {
-            config.Yara = std::make_unique<YaraConfig>(YaraConfig::Get(_L_, filesystem[FASTFIND_FILESYSTEM_YARA]));
+            config.Yara = std::make_unique<YaraConfig>(YaraConfig::Get(filesystem[FASTFIND_FILESYSTEM_YARA]));
         }
     }
 
@@ -136,7 +127,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 hr = config.Registry.Locations.AddLocationsFromConfigItem(
                     configitem[FASTFIND_REGISTRY][FASTFIND_REGISTRY_LOCATIONS])))
         {
-            log::Error(_L_, hr, L"Error in specific locations parsing in config file\r\n");
+            spdlog::error(L"Error in specific locations parsing in config file");
             return hr;
         }
 
@@ -144,7 +135,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 hr = config.Registry.Locations.AddKnownLocations(
                     configitem[FASTFIND_REGISTRY][FASTFIND_REGISTRY_KNOWNLOCATIONS])))
         {
-            log::Error(_L_, hr, L"Error in knownlocations parsing in config file\r\n");
+            spdlog::error(L"Error in knownlocations parsing in config file");
             return hr;
         }
 
@@ -152,12 +143,12 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             begin(configitem[FASTFIND_REGISTRY][FASTFIND_REGISTRY_HIVE].NodeList),
             end(configitem[FASTFIND_REGISTRY][FASTFIND_REGISTRY_HIVE].NodeList),
             [this, &hr](const ConfigItem& item) {
-                RegFindConfig regconfig(_L_);
+                RegFindConfig regconfig;
 
                 std::vector<std::shared_ptr<FileFind::SearchTerm>> FileFindTerms;
                 std::vector<std::wstring> FileNameList;
 
-                RegFind regfind(_L_);
+                RegFind regfind;
 
                 if (FAILED(
                         hr = regconfig.GetConfiguration(
@@ -168,7 +159,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                             FileNameList,
                             FileFindTerms)))
                 {
-                    log::Error(_L_, hr, L"Error in specific registry find parsing un config file\r\n");
+                    spdlog::error(L"Error in specific registry find parsing un config file");
                     return hr;
                 }
 
@@ -188,11 +179,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
                 anItem.ObjType = ObjectDirectory::GetObjectType(item[FASTFIND_OBJECT_FIND_TYPE]);
                 if (anItem.ObjType == ObjectDirectory::ObjectType::Invalid)
                 {
-                    log::Warning(
-                        _L_,
-                        E_INVALIDARG,
-                        L"Invalid object type provided: %s\r\n",
-                        item[FASTFIND_OBJECT_FIND_TYPE].c_str());
+                    spdlog::warn(L"Invalid object type provided: {}", item[FASTFIND_OBJECT_FIND_TYPE].c_str());
                     continue;
                 }
 
@@ -257,10 +244,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     LPCWSTR pEquals = wcschr(argv[i], L'=');
                     if (!pEquals)
                     {
-                        log::Error(
-                            _L_,
-                            E_INVALIDARG,
-                            L"Option /Names should be like: /Names=Kernel32.dll,nt*.sys,:ADSName,*.txt#EAName\r\n");
+                        spdlog::error(
+                            "Option /Names should be like: /Names=Kernel32.dll,nt*.sys,:ADSName,*.txt#EAName");
                         return E_INVALIDARG;
                     }
                     else
@@ -345,7 +330,7 @@ HRESULT Main::CheckConfiguration()
 
     if (FAILED(hr = config.FileSystem.Files.InitializeYara(config.Yara)))
     {
-        log::Error(_L_, hr, L"Failed to initialize yara scanner\r\n");
+        spdlog::error(L"Failed to initialize yara scanner");
         return hr;
     }
 

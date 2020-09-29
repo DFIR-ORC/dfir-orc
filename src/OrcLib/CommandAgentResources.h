@@ -18,21 +18,16 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API CommandAgentResources
 {
 private:
-    logger _L_;
-
     std::wstring m_strTempDirectory;
     std::map<std::wstring, std::wstring, CaseInsensitive> m_TempRessources;
 
     HRESULT ExtractRessource(const std::wstring& strRef, const std::wstring& strKeyword, std::wstring& strExtracted);
 
 public:
-    CommandAgentResources(logger pLog)
-        : _L_(std::move(pLog)) {};
+    CommandAgentResources() {}
 
     HRESULT SetTempDirectory(const std::wstring& strTempDir)
     {

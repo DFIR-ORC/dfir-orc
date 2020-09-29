@@ -20,10 +20,7 @@ using namespace Orc::TableOutput::Parquet;
 //	return std::string_view();
 //}
 
-Orc::TableOutput::Parquet::Stream::Stream(logger pLog)
-    : _L_(std::move(pLog))
-{
-}
+Orc::TableOutput::Parquet::Stream::Stream() {}
 
 HRESULT Orc::TableOutput::Parquet::Stream::Open(std::shared_ptr<ByteStream> stream)
 {

@@ -9,10 +9,13 @@
 
 #include "OrcLib.h"
 
-#include <string>
+#include <functional>
 #include <memory>
+#include <string>
 
 #include <agents.h>
+
+#include "UploadMessage.h"
 
 #pragma managed(push, off)
 
@@ -20,8 +23,9 @@ namespace Orc {
 
 class ORCLIB_API UploadNotification
 {
-
 public:
+    using Callback = std::function<void(const UploadNotification& callback)>;
+
     typedef enum _Status
     {
         Success,
@@ -46,45 +50,60 @@ public:
     typedef Concurrency::ISource<Notification> ISource;
 
 public:
+    static Notification MakeSuccessNotification(
+        const UploadMessage::Ptr& request,
+        Type type,
+        const std::wstring& source,
+        const std::wstring& destination);
 
-	static Notification MakeSuccessNotification(Type type, const std::wstring& keyword);
-    static Notification
-		MakeFailureNotification(Type type, HRESULT hr, const std::wstring& keyword, const std::wstring& description);
+    static Notification MakeFailureNotification(
+        const UploadMessage::Ptr& request,
+        Type type,
+        const std::wstring& source,
+        const std::wstring& destination,
+        HRESULT hr,
+        const std::wstring& description);
 
-    static Notification
-		MakeUploadStartedSuccessNotification(const std::wstring& keyword, const std::wstring& strFileName);
-
-	static Notification MakeAddFileSucessNotification(const std::wstring& keyword, const std::wstring& strFileName);
-
-    Status GetStatus() const { return m_Status; };
+    Status GetStatus() const { return m_status; };
     HRESULT GetHResult() const { return m_hr; };
-    Type GetType() const { return m_Type; };
+    Type GetType() const { return m_type; };
+    const std::wstring& Keyword() const { return m_request->Keyword(); };
 
-    const std::wstring& Keyword() const { return m_keyword; };
+    const UploadMessage::Ptr& Request() const { return m_request; }
+    const std::wstring& Source() const { return m_source; }
+    const std::wstring& Destination() const { return m_destination; }
     const std::wstring& Description() const { return m_description; }
-    const std::wstring& GetFileName() const { return m_path; }
 
-    ~UploadNotification(void);
+    virtual ~UploadNotification();
 
 private:
-    Status m_Status;
-    Type m_Type;
-    std::wstring m_keyword;
+    Status m_status;
+    Type m_type;
+
+    const UploadMessage::Ptr m_request;
+    const std::wstring m_source;
+    const std::wstring m_destination;
     std::wstring m_description;
-    std::wstring m_path;
     HRESULT m_hr;
 
 protected:
-
-    UploadNotification(Type type, Status status, const std::wstring& keyword, const std::wstring& descr, HRESULT hr)
-        : m_Type(type)
-        , m_Status(status)
-        , m_keyword(keyword)
-        , m_description(descr)
+    UploadNotification(
+        Type type,
+        Status status,
+        const UploadMessage::Ptr& request,
+        const std::wstring& source,
+        const std::wstring& destination,
+        HRESULT hr,
+        const std::wstring& description)
+        : m_type(type)
+        , m_status(status)
+        , m_request(request)
+        , m_source(source)
+        , m_destination(destination)
         , m_hr(hr)
+        , m_description(description)
     {
     }
-
 };
 
 }  // namespace Orc

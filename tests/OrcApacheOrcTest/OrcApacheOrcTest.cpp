@@ -8,8 +8,6 @@
 #include "stdafx.h"
 #include "CppUnitTest.h"
 
-#include "LogFileWriter.h"
-
 #include "EmbeddedResource.h"
 
 #include "Robustness.h"
@@ -26,17 +24,10 @@ END_TEST_MODULE_ATTRIBUTE()
 
 TEST_MODULE_INITIALIZE(ModuleInitialize)
 {
-    Logger::WriteMessage(L"In Module Initialize");
-    Orc::LogFileWriter L;
-    L.SetLogCallback([](const WCHAR* szMsg, DWORD dwSize, DWORD& dwWritten) -> HRESULT {
-        Logger::WriteMessage(szMsg);
-        return S_OK;
-    });
 }
 
 TEST_MODULE_CLEANUP(ModuleCleanup)
 {
-    Logger::WriteMessage(L"In Module Cleanup");
     Robustness::Terminate();
 }
 

@@ -9,6 +9,7 @@
 
 #include "OrcLib.h"
 #include "BinaryBuffer.h"
+#include "Utils/EnumFlags.h"
 
 #include "FatDataStructures.h"
 
@@ -40,6 +41,31 @@ public:
         BITLOCKER = 0x20,
         ALL = 0xFFFFFFF
     };
+
+    static std::wstring ToString(FSType fsType)
+    {
+        switch (fsType)
+        {
+            case FSType::ALL:
+                return L"ALL";
+            case FSType::BITLOCKER:
+                return L"Bit Locker";
+            case FSType::FAT:
+                return L"FAT";
+            case FSType::FAT12:
+                return L"FAT12";
+            case FSType::FAT16:
+                return L"FAT16";
+            case FSType::FAT32:
+                return L"FAT32";
+            case FSType::NTFS:
+                return L"NTFS";
+            case FSType::REFS:
+                return L"REFS";
+        }
+
+        return L"Unknown";
+    }
 
     static boolean IsFSSupported(const std::wstring& fsName)
     {
@@ -158,6 +184,9 @@ public:
         }
     }
 };
+
+ENABLE_BITMASK_OPERATORS(FSVBR::FSType);
+
 }  // namespace Orc
 
 #pragma managed(pop)

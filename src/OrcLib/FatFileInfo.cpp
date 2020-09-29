@@ -19,7 +19,6 @@
 using namespace Orc;
 
 FatFileInfo::FatFileInfo(
-    logger pLog,
     LPCWSTR szComputerName,
     Intentions DefaultIntentions,
     const std::vector<Filter>& Filters,
@@ -28,15 +27,7 @@ FatFileInfo::FatFileInfo(
     const std::shared_ptr<VolumeReader>& pVolReader,
     const std::shared_ptr<FatFileEntry>& fileEntry,
     Authenticode& codeVerifyTrust)
-    : FileInfo(
-        std::move(pLog),
-        szComputerName,
-        pVolReader,
-        DefaultIntentions,
-        Filters,
-        szFullName,
-        dwLen,
-        codeVerifyTrust)
+    : FileInfo(szComputerName, pVolReader, DefaultIntentions, Filters, szFullName, dwLen, codeVerifyTrust)
     , m_FatFileEntry(fileEntry)
 {
     m_hFile = INVALID_HANDLE_VALUE;
@@ -53,7 +44,7 @@ std::shared_ptr<ByteStream> FatFileInfo::GetFileStream()
 {
     if (m_FileStream == nullptr)
     {
-        m_FileStream = std::make_shared<FatStream>(_L_, m_pVolReader, m_FatFileEntry);
+        m_FileStream = std::make_shared<FatStream>(m_pVolReader, m_FatFileEntry);
     }
 
     return m_FileStream;

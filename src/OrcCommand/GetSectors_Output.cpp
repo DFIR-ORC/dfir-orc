@@ -1,68 +1,87 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2020 ANSSI. All Rights Reserved.
 //
 // Author(s): Jeremie Christin
+//            fabienfl (ANSSI)
 //
 #include "stdafx.h"
 #include "GetSectors.h"
 #include "ToolVersion.h"
-#include "LogFileWriter.h"
 
-using namespace Orc;
+#include "Usage.h"
+
+#include "Output/Text/Print/Bool.h"
+#include "Utils/TypeTraits.h"
+
 using namespace Orc::Command::GetSectors;
+using namespace Orc::Text;
+using namespace Orc;
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\r\n"
-        L"Usage: DFIR-Orc.exe GetSectors [options]\r\n"
-        L"\r\n"
-        L"Utility to dump disk sectors.\r\n"
-        L"Predefined logics are implemented to automatically dump data of interest like boot sectors or sectors outside any partition (disk slackspace).\r\n"
-        L"\r\n"
-        L"Dump options :\r\n"
-        L"\t/LegacyBootCode       Predefined logic to dump MBR, VBRs and IPLs.\r\n"
-        L"\t/UefiFull		      Dump the entire EFI partition.\r\n"
-        L"\t/UefiFullMaxSize	  Maximum size to dump for the UEFI partition. A larger\r\n"
-		L"\t                        partition will be truncated. Default : 5 MB.\r\n"
-        L"\t/SlackSpace           Predefined logic to dump sectors samples outside any\r\n"
-        L"\t                        partition.\r\n"
-        L"\t/SlackSpaceDumpSize   Size in bytes of a slackspace sample. It defaults\r\n"
-        L"\t                        to 5 Mo.\r\n"
-        L"\t/Custom               Dump a specific disk extent. Use /CustomOffset and\r\n"
-        L"\t                        /CustomSize.\r\n"
-        L"\t/CustomOffset=OFFSET  Specify the specific disk extent offset in bytes.\r\n"
-        L"\t/CustomSize=SIZE      Specify the specific disk extent size in bytes. It\r\n"
-        L"\t                        defaults to 512.\r\n"
-        L"\r\n"
-        L"\tGeneral options :\r\n"
-        L"\t/out=OUTPUT           Specify the name of the container to write results.\r\n"
-        L"\t                        The container can be a folder or an archive (7z,\r\n"
-        L"\t                        zip, cab...).\r\n"
-        L"\t/Disk=DEVICE          Specify the name of the disk device to read sectors\r\n"
-        L"\t                        from, in the form \"\\\\.\\PhysicalDriveX\". When\r\n"
-        L"\t                        not specified, it defaults to the Windows boot disk.\r\n"
-        L"\t/NotLowInterface      Do not try to obtain a low interface on the disk device\r\n"
-        L"\t                        using the setupAPI functions.\r\n"
-       );
+    auto usageNode = m_console.OutputTree();
 
-    PrintCommonUsage();
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe GetSectors [/Config=<ConfigFile>] [/Out=<Folder|Outfile.csv|Archive.7z>] "
+        "[/LegacyBootCode] [/UefiFull] [/UefiFullMaxSize] [/SlackSpace] [/SlackSpaceDumpSize] [/Custom] "
+        "[/CustomOffset=<offset>] [/CustomSize=<size>] [/Disk=<device>] [/NotLowInterface]",
+        "GetSectors is designed to collect low-level disk data, i.e. data not related to the file system. As such, it "
+        "can typically be used to collect the boot sector, the boot code, the partition tables, slack space on the "
+        "disk (typically the available sectors after the last partition), etc.");
 
-    return;
+    Usage::PrintOutputParameters(usageNode);
+
+    constexpr std::array kSpecificParameters = {
+        Usage::Parameter {"/LegacyBootCode", "Dump MBR, VBRs and IPLs"},
+        Usage::Parameter {"/UefiFull", "Dump the entire EFI partition"},
+        Usage::Parameter {"/UefiFullMaxSize", "Maximum dump size for the UEFI partition (default: 5MB)"},
+        Usage::Parameter {"/SlackSpace", "Dump sectors samples outside any partition"},
+        Usage::Parameter {"/SlackSpaceDumpSize", "Byte size of a slackspace sample (default: 5MB)"},
+        Usage::Parameter {"/Custom", "Enable custom dump mode and requires /CustomOffset and /CustomSize"},
+        Usage::Parameter {"/CustomOffset=<offset>", "Disk extent offset"},
+        Usage::Parameter {"/CustomSize=<size>", "Disk extent byte size in bytes (default: 512)"},
+        Usage::Parameter {
+            "/Disk=<device>",
+            "Specifies the name of the disk device to read sectors from (ex: '\\\\.\\PhysicalDrive0', 'd:\\disk.dd')"},
+        Usage::Parameter {
+            "/NotLowInterface",
+            "The tool does not try to obtain a low interface on the disk device using the setupAPI functions"}};
+
+    Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
+    Usage::PrintMiscellaneousParameters(usageNode);
+    Usage::PrintLoggingParameters(usageNode);
 }
 
 void Main::PrintParameters()
 {
-    SaveAndPrintStartTime();
-    PrintComputerName();
-    log::Info(_L_, L"Disk name             : %s\r\n", config.diskName.c_str());
-    return;
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Parameters");
+
+    PrintCommonParameters(node);
+
+    PrintValue(node, "Disk name", config.diskName);
+    PrintValue(node, "LegacyBootCode", config.dumpLegacyBootCode);
+    PrintValue(node, "UefiFull", config.dumpUefiFull);
+    PrintValue(node, "UefiFullMaxSize", Traits::ByteQuantity(config.uefiFullMaxSize));
+    PrintValue(node, "SlackSpace", config.dumpSlackSpace);
+    PrintValue(node, "SlackSpaceSize", Traits::ByteQuantity(config.slackSpaceDumpSize));
+    PrintValue(node, "Custom", config.customSample);
+    PrintValue(node, "CustomOffset", config.customSampleOffset);
+    PrintValue(node, "CustomSize", Traits::ByteQuantity(config.customSampleSize));
+    PrintValue(node, "NotLowInterface", !config.lowInterface);
+
+    m_console.PrintNewLine();
 }
 
 void Main::PrintFooter()
 {
-    PrintExecutionTime();
+    auto root = m_console.OutputTree();
+
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

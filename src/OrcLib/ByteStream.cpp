@@ -10,8 +10,6 @@
 
 #include "Temporary.h"
 
-#include "LogFileWriter.h"
-
 #include "CryptoHashStream.h"
 #include "OutputSpec.h"
 
@@ -99,14 +97,13 @@ std::shared_ptr<ByteStream> ByteStream::_GetHashStream()
     return nullptr;
 }
 
-std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const logger& pLog, const OutputSpec& output)
+std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const OutputSpec& output)
 {
     auto hr = E_FAIL;
     switch (output.supportedTypes)
     {
-        case OutputSpec::Kind::File:
-        {
-            auto retval = std::make_shared<FileStream>(pLog);
+        case OutputSpec::Kind::File: {
+            auto retval = std::make_shared<FileStream>();
 
             switch (output.Disposition)
             {
@@ -121,13 +118,12 @@ std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const logger& pLog, const
                                 FILE_ATTRIBUTE_NORMAL,
                                 NULL)))
                     {
-                        log::Error(pLog, hr, L"Failed to open stream for path %s\r\n", output.Path.c_str());
+                        spdlog::error(L"Failed to open stream for path '{}' (code: {:#x})", output.Path, hr);
                         return nullptr;
                     }
                     if (FAILED(hr = retval->SetFilePointer(0L, FILE_END, NULL)))
                     {
-                        log::Error(
-                            pLog, hr, L"Failed to move to the end of the file for path %s\r\n", output.Path.c_str());
+                        spdlog::error(L"Failed to move to the end of the file for '{}' (code: {:#x})", output.Path, hr);
                         return nullptr;
                     }
                     return retval;
@@ -136,7 +132,7 @@ std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const logger& pLog, const
                             hr = retval->OpenFile(
                                 output.Path.c_str(), GENERIC_WRITE, 0L, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL)))
                     {
-                        log::Error(pLog, hr, L"Failed to open stream for path %s\r\n", output.Path.c_str());
+                        spdlog::error(L"Failed to open stream for path '{}' (code: {:#x})", output.Path, hr);
                         return nullptr;
                     }
                     return retval;
@@ -151,7 +147,7 @@ std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const logger& pLog, const
                                 FILE_ATTRIBUTE_NORMAL,
                                 NULL)))
                     {
-                        log::Error(pLog, hr, L"Failed to open stream for path %s\r\n", output.Path.c_str());
+                        spdlog::error(L"Failed to open stream for path '{}' (code: {:#x})", output.Path, hr);
                         return nullptr;
                     }
                     return retval;
@@ -159,12 +155,11 @@ std::shared_ptr<ByteStream> Orc::ByteStream::GetStream(const logger& pLog, const
                     return nullptr;
             }
         }
-        case OutputSpec::Kind::Pipe:
-        {
-            auto retval = std::make_shared<PipeStream>(pLog);
+        case OutputSpec::Kind::Pipe: {
+            auto retval = std::make_shared<PipeStream>();
             if (FAILED(hr = retval->CreatePipe()))
             {
-                log::Error(pLog, hr, L"Failed to create pipe\r\n");
+                spdlog::error("Failed to create pipe (code: {:#x})", hr);
                 return nullptr;
             }
             return retval;

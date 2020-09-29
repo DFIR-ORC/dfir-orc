@@ -18,8 +18,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 struct CreateProcessArgs
 {
 
@@ -42,8 +40,6 @@ class DebugAgent : public std::enable_shared_from_this<DebugAgent>
 {
 
 private:
-    logger _L_;
-
     std::wstring m_strDirectory;
     std::wstring m_strKeyword;
 
@@ -60,14 +56,11 @@ private:
 
     void DebugLoop();
 
-    DebugAgent(logger pLog, const std::wstring& strDirectory, const std::wstring& strKeyword);
+    DebugAgent(const std::wstring& strDirectory, const std::wstring& strKeyword);
 
 public:
-    static std::shared_ptr<DebugAgent> DebugProcess(
-        const logger& pLog,
-        DWORD dwProcessID,
-        const std::wstring& strDirectory,
-        const std::wstring& strKeyword);
+    static std::shared_ptr<DebugAgent>
+    DebugProcess(DWORD dwProcessID, const std::wstring& strDirectory, const std::wstring& strKeyword);
 
     const std::vector<std::wstring>& GetDumpList() const { return m_Dumps; };
 

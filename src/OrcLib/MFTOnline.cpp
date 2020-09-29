@@ -8,16 +8,17 @@
 #include "StdAfx.h"
 
 #include "MFTOnline.h"
-#include "LogFileWriter.h"
+
 #include "VolumeReader.h"
+
+#include <spdlog/spdlog.h>
 
 using namespace Orc;
 
 static const auto DEFAULT_FRS_PER_READ = 64;
 
-MFTOnline::MFTOnline(logger pLog, std::shared_ptr<VolumeReader>& volReader)
+MFTOnline::MFTOnline(std::shared_ptr<VolumeReader>& volReader)
     : m_pVolReader(volReader)
-    , _L_(std::move(pLog))
 {
     m_MftOffset = 0LL;
     m_RootUSN = 0LL;
@@ -50,7 +51,7 @@ HRESULT MFTOnline::Initialize()
     }
     catch (...)
     {
-        log::Info(_L_, L"Exception thrown when processing MFT!!!\r\n");
+        spdlog::info(L"Exception thrown when processing MFT");
     }
 
     return S_OK;
@@ -67,7 +68,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
 
     if (ulBytesPerFRS == 0 || ulBytesPerCluster == 0)
     {
-        log::Error(_L_, hr, L"Invalid NTFS volume\r\n");
+        spdlog::error("Invalid NTFS volume");
         return hr;
     }
 
@@ -90,19 +91,18 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
         ULONGLONG ullBytesRead = 0LL;
         if (FAILED(hr = m_pVolReader->Read(Offset1, mftBuf, ulBytesPerFRS, ullBytesRead)))
         {
-            log::Error(_L_, hr, L"Failed to read the %u MFT record!\r\n", i);
+            spdlog::error("Failed to read the {} MFT record (code: {:#x})", i, hr);
             break;
         }
         if (FAILED(hr = m_pVolReader->Read(Offset2, mftMirrBuf, ulBytesPerFRS, ullBytesRead)))
         {
-            log::Error(_L_, hr, L"Failed to read the %u Mirror MFT record!\r\n", i);
+            spdlog::error(L"Failed to read the {} Mirror MFT record (code: {:#x})", i, hr);
             break;
         }
 
         if (0 != memcmp(mftBuf.GetData(), mftMirrBuf.GetData(), ulBytesPerFRS))
         {
-            log::Warning(
-                _L_, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"Records #%u from $MFT and $MFTMirr do not match\r\n", i);
+            spdlog::warn(L"Records #{} from $MFT and $MFTMirr do not match", i);
         }
 
         PFILE_RECORD_SEGMENT_HEADER pData = (PFILE_RECORD_SEGMENT_HEADER)mftBuf.GetData();
@@ -110,8 +110,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
         if ((pData->MultiSectorHeader.Signature[0] != 'F') || (pData->MultiSectorHeader.Signature[1] != 'I')
             || (pData->MultiSectorHeader.Signature[2] != 'L') || (pData->MultiSectorHeader.Signature[3] != 'E'))
         {
-            log::Error(
-                _L_, HRESULT_FROM_WIN32(ERROR_INVALID_DATA), L"MFT rec (%u) doesn't have a file signature!\r\n", i);
+            spdlog::error(L"MFT record #{} doesn't have a file signature", i);
             break;
         }
     }
@@ -125,7 +124,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
 
     if (FAILED(hr = m_pVolReader->Read(m_MftOffset, record, ulBytesPerFRS, ullBytesRead)))
     {
-        log::Error(_L_, hr, L"Failed to read MFT record!\r\n");
+        spdlog::error(L"Failed to read MFT record!");
         return hr;
     }
 
@@ -133,7 +132,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
 
     if (!(pData->Flags & FILE_RECORD_SEGMENT_IN_USE))
     {
-        log::Error(_L_, E_UNEXPECTED, L"MFT record marked as not in use!\r\n");
+        spdlog::error("MFT record marked as 'not in use'");
         return E_UNEXPECTED;
     }
 
@@ -141,10 +140,9 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
 
     if (pData->FirstAttributeOffset > realLength)
     {
-        log::Error(
-            _L_,
-            hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            L"MFT Record length (%u) is smaller than First attribute Offset (%u)!\r\n",
+        hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
+        spdlog::error(
+            L"MFT Record length is smaller than First attribute Offset ({}/{})",
             realLength,
             pData->FirstAttributeOffset);
         return hr;
@@ -165,21 +163,17 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
         }
         if (pAttrData->RecordLength == 0)
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                L"MFT - an attribute's (Attribute TypeCode = %x) Record length is zero.\r\n",
-                pAttrData->TypeCode);
+            hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
+            spdlog::error(
+                L"MFT - an attribute's (Attribute TypeCode: {:#x}) Record length is zero", pAttrData->TypeCode);
         }
 
         if ($DATA == pAttrData->TypeCode)
         {
             if (pAttrData->FormCode == RESIDENT_FORM)
             {
-                log::Error(
-                    _L_,
-                    hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                    L"MFT - not expecting data attribute to be in resident form!\r\n");
+                hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
+                spdlog::error(L"MFT - not expecting data attribute to be in resident form");
                 break;
             }
             else  // non-resident form
@@ -187,10 +181,8 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
                 m_MFT0Info.DataSize = pAttrData->Form.Nonresident.ValidDataLength;
                 if (FAILED(hr = MFTUtils::GetAttributeNRExtents(pAttrData, m_MFT0Info, m_pVolReader)))
                 {
-                    log::Error(
-                        _L_,
-                        hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                        L"MFT - failed to get non resident extents!\r\n");
+                    hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
+                    spdlog::error("MFT - failed to get non resident extents");
                     break;
                 }
                 hr = S_OK;
@@ -200,11 +192,10 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
 
         if (pAttrData->RecordLength > nAttrLength)
         {
-            log::Error(
-                _L_,
-                hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                L"MFT - an attribute's (Attribute TypeCode = 0x%lx) Record length (%u) is greater than the attribute "
-                L"length (%u).\r\n",
+            hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
+            spdlog::error(
+                L"MFT - an attribute's (Attribute TypeCode = {:#x}) Record length ({}) is greater than the attribute "
+                L"length ({}).",
                 pAttrData->TypeCode,
                 pAttrData->RecordLength,
                 nAttrLength);
@@ -229,7 +220,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
 
         if (FAILED(hr = m_pVolReader->Read(Offset, RootRecordBuffer, ulBytesPerFRS, ullBytesRead)))
         {
-            log::Error(_L_, hr, L"Failed to read the %u MFT record!\n", i);
+            spdlog::error(L"Failed to read the {} MFT record (code: {:#x})", i, hr);
             return hr;
         }
 
@@ -262,13 +253,13 @@ ULONG MFTOnline::GetMFTRecordCount() const
 
     if (ulBytesPerFRS == 0)
     {
-        log::Error(_L_, E_FAIL, L"Invalid NTFS volume\r\n");
+        spdlog::error(L"Invalid NTFS volume");
         return 0;
     }
 
     if (ullMFTSize % ulBytesPerFRS)
     {
-        log::Verbose(_L_, L"Weird, MFT size is not a multiple of records...\r\n");
+        spdlog::debug(L"Weird, MFT size is not a multiple of records...");
     }
 
     LARGE_INTEGER li;
@@ -330,21 +321,18 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
                     hr = m_pVolReader->Read(
                         extent_position, localReadBuffer, ulBytesPerFRS * ullFRSToRead, ullBytesRead)))
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Failed to read %I64d bytes from at position %I64d\r\n",
+                spdlog::error(
+                    L"Failed to read {} bytes from at position {} (code: {:#x})",
                     extent_position,
-                    ulBytesPerFRS * ullFRSToRead);
+                    ulBytesPerFRS * ullFRSToRead,
+                    hr);
                 return hr;
             }
 
             if (ullBytesRead % ulBytesPerFRS > 0)
             {
-                log::Warning(
-                    _L_,
-                    hr,
-                    L"Failed to read only complete records\r\n",
+                spdlog::warn(
+                    L"Failed to read only complete records {} at position {}",
                     extent_position,
                     ulBytesPerFRS * ullFRSToRead);
             }
@@ -353,7 +341,7 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
             {
                 if (ullCurrentIndex * ulBytesPerFRS != position + (i * ulBytesPerFRS))
                 {
-                    log::Warning(_L_, E_FAIL, L"Index is out of sequence\r\n");
+                    spdlog::warn("Index is out of sequence");
                 }
 
                 CBinaryBuffer tempFRS(localReadBuffer.GetData() + i * ulBytesPerFRS, ulBytesPerFRS);
@@ -362,20 +350,20 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
                 {
                     if (hr == E_OUTOFMEMORY)
                     {
-                        log::Error(_L_, hr, L"Add Record Callback failed, not enough memory to continue\r\n");
+                        spdlog::error("Add Record Callback failed, not enough memory to continue (code: {:#x})", hr);
                         return hr;
                     }
                     else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
                     {
-                        log::Verbose(_L_, L"Add Record Callback asks for enumeration to stop...\r\n");
+                        spdlog::debug("Add Record Callback asks for enumeration to stop (code: {:#x})", hr);
                         return hr;
                     }
-                    log::Verbose(_L_, L"WARNING: Add Record Callback failed\r\n");
+                    spdlog::warn("Add Record Callback failed (code: {:#x})", hr);
                 }
 
                 if (ullCurrentIndex != ullCurrentFRNIndex)
                 {
-                    log::Verbose(_L_, L"Current index does not match current FRN index\r\n");
+                    spdlog::debug(L"Current index does not match current FRN index");
                 }
                 ullCurrentFRNIndex++;
                 ullCurrentIndex++;
@@ -434,8 +422,8 @@ HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUt
             ULONGLONG ullBytesRead = 0LL;
             if (FAILED(hr = m_pFetchReader->Read(ullVolumeOffset, localReadBuffer, ulBytesPerFRS, ullBytesRead)))
             {
-                log::Error(
-                    _L_, hr, L"Failed to read %I64d bytes from at position %I64d\r\n", ullVolumeOffset, ulBytesPerFRS);
+                spdlog::error(
+                    L"Failed to read {} bytes from at position {} (code: {:#x})", ullVolumeOffset, ulBytesPerFRS, hr);
                 break;
             }
 
@@ -444,9 +432,8 @@ HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUt
             if ((pHeader->MultiSectorHeader.Signature[0] != 'F') || (pHeader->MultiSectorHeader.Signature[1] != 'I')
                 || (pHeader->MultiSectorHeader.Signature[2] != 'L') || (pHeader->MultiSectorHeader.Signature[3] != 'E'))
             {
-                log::Verbose(
-                    _L_,
-                    L"Skipping... MultiSectorHeader.Signature is not FILE - \"%c%c%c%c\".\r\n",
+                spdlog::debug(
+                    L"Skipping... MultiSectorHeader.Signature is not FILE - '{}{}{}{}'",
                     pHeader->MultiSectorHeader.Signature[0],
                     pHeader->MultiSectorHeader.Signature[1],
                     pHeader->MultiSectorHeader.Signature[2],
@@ -465,9 +452,8 @@ HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUt
 
             if (NtfsSegmentNumber(&read_record_frn) != NtfsSegmentNumber(&frn[frnIdx]))
             {
-                log::Verbose(
-                    _L_,
-                    L"Skipping... %I64X does not match the expected %I64X\r\n",
+                spdlog::debug(
+                    L"Skipping... {} does not match the expected {}",
                     NtfsSegmentNumber(&read_record_frn),
                     NtfsSegmentNumber(&frn[frnIdx]));
                 frnIdx++;
@@ -479,9 +465,8 @@ HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUt
             }
             if (read_record_frn.SequenceNumber != frn[frnIdx].SequenceNumber)
             {
-                log::Verbose(
-                    _L_,
-                    L"Skipping... Sequence numbed %d does not match the expected %d\r\n",
+                spdlog::debug(
+                    L"Skipping... Sequence numbed {} does not match the expected {}",
                     read_record_frn.SequenceNumber,
                     frn[frnIdx].SequenceNumber);
                 frnIdx++;
@@ -496,15 +481,16 @@ HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUt
             {
                 if (hr == E_OUTOFMEMORY)
                 {
-                    log::Error(_L_, hr, L"Add Record Callback failed, not enough memory to continue\r\n");
+                    spdlog::error("Add Record Callback failed, not enough memory to continue");
                     break;
                 }
                 else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
                 {
-                    log::Verbose(_L_, L"Add Record Callback asks for enumeration to stop...\r\n");
+                    spdlog::debug("Add Record Callback asks for enumeration to stop...");
                     return hr;
                 }
-                log::Verbose(_L_, L"WARNING: Add Record Callback failed\r\n");
+
+                spdlog::warn("Add Record Callback failed (code: {:#x})", hr);
             }
             frnIdx++;
             if (frnIdx >= frn.size())

@@ -24,8 +24,8 @@ private:
      _Inout_ DWORD* pcbHashData) = nullptr;
 
 public:
-    MSIExtension(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"msi.dll", L"msi.dll", L"msi.dll") {};
+    MSIExtension()
+        : ExtensionLibrary(L"msi.dll", L"msi.dll", L"msi.dll") {};
 
     STDMETHOD(Initialize)();
 

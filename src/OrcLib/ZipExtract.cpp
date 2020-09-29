@@ -23,7 +23,6 @@
 #include "OutByteStreamWrapper.h"
 #include "InByteStreamWrapper.h"
 #include "ParameterCheck.h"
-#include "LogFileWriter.h"
 
 #include "ArchiveOpenCallback.h"
 #include "ArchiveExtractCallback.h"
@@ -35,8 +34,8 @@ using namespace lib7z;
 
 using namespace Orc;
 
-ZipExtract::ZipExtract(logger pLog, bool bComputeHash)
-    : ArchiveExtract(std::move(pLog), bComputeHash)
+ZipExtract::ZipExtract(bool bComputeHash)
+    : ArchiveExtract(bComputeHash)
 {
 }
 
@@ -56,10 +55,10 @@ STDMETHODIMP ZipExtract::Extract(
     if (MakeWriteAbleStream == nullptr)
         return E_INVALIDARG;
 
-    const auto pZipLib = ZipLibrary::GetZipLibrary(_L_);
+    const auto pZipLib = ZipLibrary::GetZipLibrary();
     if (pZipLib == nullptr)
     {
-        log::Error(_L_, E_FAIL, L"Failed to load 7zip.dll\r\n");
+        spdlog::error(L"Failed to load 7zip.dll");
         return E_FAIL;
     }
 
@@ -67,7 +66,7 @@ STDMETHODIMP ZipExtract::Extract(
 
     if (FAILED(hr = pZipLib->CreateObject(&CLSID_CFormat7z, &IID_IInArchive, reinterpret_cast<void**>(&archive))))
     {
-        log::Error(_L_, hr, L"Failed to create archive reader\r\n");
+        spdlog::error(L"Failed to create archive reader (code: {:#x})", hr);
         return hr;
     }
 
@@ -75,26 +74,26 @@ STDMETHODIMP ZipExtract::Extract(
 
     if (FAILED(hr = makeArchiveStream(InputStream)))
     {
-        log::Error(_L_, hr, L"Failed to make archive stream\r\n");
+        spdlog::error(L"Failed to make archive stream (code: {:#x})", hr);
         return hr;
     }
 
     CComQIPtr<IInStream, &IID_IInStream> infile = new InByteStreamWrapper(InputStream);
-    CComPtr<ArchiveOpenCallback> openCallback = new ArchiveOpenCallback(_L_);
+    CComPtr<ArchiveOpenCallback> openCallback = new ArchiveOpenCallback();
 
     if ((hr = archive->Open(infile, 0, openCallback)) != S_OK)
     {
-        log::Error(_L_, hr, L"Failed when opening archive\r\n");
+        spdlog::error(L"Failed when opening archive (code: {:#x})", hr);
         return hr;
     }
 
     CComPtr<ArchiveExtractCallback> extractCallback = new ArchiveExtractCallback(
-        _L_, archive, pShouldBeExtracted, m_Items, MakeWriteAbleStream, m_Callback, m_bComputeHash, m_Password);
+        archive, pShouldBeExtracted, m_Items, MakeWriteAbleStream, m_Callback, m_bComputeHash, m_Password);
 
     hr = archive->Extract(NULL, (UInt32)-1, false, extractCallback);
     if (hr != S_OK)  // returning S_FALSE also indicates error
     {
-        log::Error(_L_, hr, L"Failed when extracting archive\r\n");
+        spdlog::error(L"Failed when extracting archive (code: {:#x})", hr);
         return hr;
     }
 

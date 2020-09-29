@@ -18,8 +18,8 @@ using namespace std::string_literals;
 class SqlOutputWriter : public TableOutputExtension
 {
 public:
-    SqlOutputWriter(logger pLog)
-        : TableOutputExtension(std::move(pLog), L"orcsql.dll"s, L"ORCSQL_X86DLL"s, L"ORCSQL_X64DLL"s) {};
+    SqlOutputWriter()
+        : TableOutputExtension(L"orcsql.dll"s, L"ORCSQL_X86DLL"s, L"ORCSQL_X64DLL"s) {};
     ~SqlOutputWriter() {};
 };
 

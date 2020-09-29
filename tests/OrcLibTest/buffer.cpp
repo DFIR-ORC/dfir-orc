@@ -10,8 +10,6 @@
 
 #include "CppUnitTest.h"
 
-#include "LogFileWriter.h"
-
 #include "Buffer.h"
 
 #include <filesystem>

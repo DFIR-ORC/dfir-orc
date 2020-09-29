@@ -96,16 +96,15 @@ struct Options : Orc::TableOutput::Options
 };
 }  // namespace OptRowColumn
 
-[[nodiscard]] std::shared_ptr<IWriter> GetWriter(const logger& pLog, const OutputSpec& out);
-[[nodiscard]] std::shared_ptr<IWriter> GetWriter(const logger& pLog, LPCWSTR szFileName, const OutputSpec& out);
+[[nodiscard]] std::shared_ptr<IWriter> GetWriter(const OutputSpec& out);
+[[nodiscard]] std::shared_ptr<IWriter> GetWriter(LPCWSTR szFileName, const OutputSpec& out);
 
-[[nodiscard]] std::shared_ptr<IStreamWriter> GetCSVWriter(const logger& pLog, std::unique_ptr<Options>&& options);
-[[nodiscard]] std::shared_ptr<IStreamWriter> GetParquetWriter(const logger& pLog, std::unique_ptr<Options>&& options);
-[[nodiscard]] std::shared_ptr<IStreamWriter>
-GetApacheOrcnWriter(const logger& pLog, std::unique_ptr<Options>&& options);
+[[nodiscard]] std::shared_ptr<IStreamWriter> GetCSVWriter(std::unique_ptr<Options> options);
+[[nodiscard]] std::shared_ptr<IStreamWriter> GetParquetWriter(std::unique_ptr<Options> options);
+[[nodiscard]] std::shared_ptr<IStreamWriter> GetApacheOrcWriter(std::unique_ptr<Options> options);
 
-[[nodiscard]] std::shared_ptr<IConnectWriter> GetSqlWriter(const logger& pLog, std::unique_ptr<Options>&& options);
-[[nodiscard]] std::shared_ptr<IConnection> GetSqlConnection(const logger& pLog, std::unique_ptr<Options>&& options);
+[[nodiscard]] std::shared_ptr<IConnectWriter> GetSqlWriter(std::unique_ptr<Options> options);
+[[nodiscard]] std::shared_ptr<IConnection> GetSqlConnection(std::unique_ptr<Options> options);
 
 class IStreamWriter : public IWriter
 {
@@ -149,7 +148,7 @@ protected:
 public:
 };
 
-Schema GetColumnsFromConfig(const logger& pLog, LPCWSTR szTableName, const ConfigItem& item);
+Schema GetColumnsFromConfig(LPCWSTR szTableName, const ConfigItem& item);
 }  // namespace TableOutput
 }  // namespace Orc
 

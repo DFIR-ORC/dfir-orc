@@ -15,6 +15,8 @@
 
 #include "FileStream.h"
 
+#include <spdlog/spdlog.h>
+
 using namespace Orc;
 
 typedef NTSTATUS(__stdcall* pvfNtOpenFile)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PIO_STATUS_BLOCK, ULONG, ULONG);
@@ -24,7 +26,6 @@ static const auto FILEINFO_STREAMINFO_BUFLEN = (1024);
 static const auto FILEINFO_STREAMNAME_BUFLEN = (1024);
 
 USNRecordFileInfo::USNRecordFileInfo(
-    logger pLog,
     LPCWSTR szComputerName,
     const std::shared_ptr<VolumeReader>& pVolReader,
     Intentions dwDefaultIntentions,
@@ -33,7 +34,6 @@ USNRecordFileInfo::USNRecordFileInfo(
     USN_RECORD* pElt,
     Authenticode& verifytrust)
     : NtfsFileInfo(
-        std::move(pLog),
         szComputerName,
         pVolReader,
         dwDefaultIntentions,
@@ -97,7 +97,7 @@ HRESULT USNRecordFileInfo::Open()
 
         IO_STATUS_BLOCK IoStatusBlock;
 
-        const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>(_L_);
+        const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>();
         if (pNtDll == nullptr)
         {
             return E_FAIL;
@@ -169,13 +169,14 @@ std::shared_ptr<ByteStream> USNRecordFileInfo::GetFileStream()
     if (FAILED(hr = CheckFileHandle()))
         return nullptr;
 
-    auto retval = std::make_shared<FileStream>(_L_);
+    auto retval = std::make_shared<FileStream>();
 
     if (FAILED(hr = retval->CopyHandle(m_hFile)))
     {
-        log::Verbose(_L_, L"Failed to open file %s (to get a stream to it!", m_szFullName);
+        spdlog::debug(L"Failed to open file '{}' (code: {:#x})", m_szFullName, hr);
         return nullptr;
     }
+
     GetDetails()->SetDataStream(retval);
     return retval;
 }
@@ -263,7 +264,7 @@ typedef enum _NT_FILE_INFORMATION_CLASS
 
 HRESULT USNRecordFileInfo::OpenStreamInformation()
 {
-    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>(_L_);
+    const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>();
 
     HRESULT hr = E_FAIL;
     if (FAILED(hr = CheckFileHandle()))

@@ -8,7 +8,6 @@
 #include "StdAfx.h"
 
 #include "RunningProcesses.h"
-#include "LogFileWriter.h"
 
 #include <TlHelp32.h>
 
@@ -23,7 +22,8 @@ HRESULT RunningProcesses::EnumProcesses()
     HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
     if (hSnapshot == INVALID_HANDLE_VALUE)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Unable to create snapshot\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Unable to create snapshot (code: {:#x})", hr);
         return hr;
     }
 
@@ -35,7 +35,8 @@ HRESULT RunningProcesses::EnumProcesses()
     {
         if (GetLastError() != ERROR_NO_MORE_FILES)
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Process32First() has failed\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed Process32First (code: {:#x})", hr);
             return hr;
         }
     }
@@ -51,14 +52,19 @@ HRESULT RunningProcesses::EnumProcesses()
             info.m_ParentPid = pe.th32ParentProcessID;
             info.m_Pid = pe.th32ProcessID;
             info.strModule = make_shared<wstring>(pe.szExeFile);
-            log::Debug(_L_, L"EnumProcess %s\r\n", pe.szExeFile);
+            spdlog::trace(L"EnumProcess '{}'", pe.szExeFile);
             m_Processes.push_back(info);
         }
 
         retval = Process32Next(hSnapshot, &pe);
         if (!retval)
+        {
             if (GetLastError() != ERROR_NO_MORE_FILES)
-                log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Process32Next() has failed\r\n");
+            {
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::error("Failed Process32Next (code: {:#x})", hr);
+            }
+        }
     }
 
     sort(m_Processes.begin(), m_Processes.end(), [](const ProcessInfo& info1, const ProcessInfo& info2) {

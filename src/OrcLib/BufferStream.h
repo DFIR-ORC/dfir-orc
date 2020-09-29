@@ -11,7 +11,6 @@
 
 #include "ByteStream.h"
 #include "Buffer.h"
-#include "LogFileWriter.h"
 
 #include <safeint.h>
 
@@ -26,8 +25,8 @@ class BufferStream : public ByteStream
 {
 
 public:
-    BufferStream(logger pLog)
-        : ByteStream(std::move(pLog))
+    BufferStream()
+        : ByteStream()
     {
     }
     virtual ~BufferStream() {}
@@ -64,12 +63,7 @@ public:
         }
         catch (const Exception& e)
         {
-            log::Error(
-                _L_,
-                E_OUTOFMEMORY,
-                L"Failed to allocate %I64d bytes in BufferStream (%s)\r\n",
-                newSize,
-                e.Description.c_str());
+            spdlog::error(L"Failed to allocate {} bytes in BufferStream: {}", newSize, e.Description);
             return E_OUTOFMEMORY;
         }
         return S_OK;
@@ -124,8 +118,8 @@ inline STDMETHODIMP_(HRESULT __stdcall)
 
     if (m_dwCurrFilePointer + cbBytesToWrite < m_dwCurrFilePointer)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW), L"File pointer overflowed\r\n");
-        return hr;
+        spdlog::error("File pointer overflowed");
+        return HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW);
     }
 
     //
@@ -142,12 +136,10 @@ inline STDMETHODIMP_(HRESULT __stdcall)
         }
         catch (const Exception& e)
         {
-            log::Error(
-                _L_,
-                E_OUTOFMEMORY,
-                L"Failed to resize BufferStream to SetFilePointer(%I64d) (%s)\r\n",
+            spdlog::error(
+                L"Failed SetFilePointer({}) to resize BufferStream: {}",
                 cbBytesToWrite + m_dwCurrFilePointer,
-                e.Description.c_str());
+                e.Description);
             return E_OUTOFMEMORY;
         }
     }
@@ -206,12 +198,7 @@ inline STDMETHODIMP_(HRESULT __stdcall)
         }
         catch (const Exception& e)
         {
-            log::Error(
-                _L_,
-                E_OUTOFMEMORY,
-                L"Failed to resize BufferStream to SetFilePointer(%I64d) (%s)\r\n",
-                dwNewFilePointer,
-                e.Description.c_str());
+            spdlog::error(L"Failed SetFilePointer({}) to resize BufferStream: {}", dwNewFilePointer, e.Description);
             return E_OUTOFMEMORY;
         }
     }

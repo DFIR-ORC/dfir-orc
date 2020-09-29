@@ -35,8 +35,6 @@ struct FILE_DIRECTORY_INFORMATION
 };
 using PFILE_DIRECTORY_INFORMATION = FILE_DIRECTORY_INFORMATION*;
 
-class LogFileWriter;
-
 class ORCLIB_API FileDirectory
 {
 public:
@@ -81,20 +79,13 @@ public:
             FileAttributes = fileAttributes;
         }
 
-        HRESULT Write(const logger& pLog, ITableOutput& output, const std::wstring& strDescription) const;
-        HRESULT Write(
-            const logger& pLog,
-            IStructuredOutput& pWriter,
-            LPCWSTR szElement = L"object") const;
+        HRESULT Write(ITableOutput& output, const std::wstring& strDescription) const;
+        HRESULT Write(IStructuredOutput& pWriter, LPCWSTR szElement = L"object") const;
     };
 
 private:
-    logger _L_;
 
 public:
-    FileDirectory(logger pLog)
-        : _L_(std::move(pLog)) {};
-
     HRESULT ParseFileDirectory(const std::wstring& aObjDir, Callback aCallback);
     HRESULT ParseFileDirectory(const std::wstring& aObjDir, std::vector<FileInstance>& objects);
 

@@ -13,54 +13,76 @@
 #include "FastFind.h"
 
 #include "SystemDetails.h"
-#include "LogFileWriter.h"
 
 #include "ToolVersion.h"
 
-using namespace std;
+#include "Usage.h"
+
+#include "Output/Text/Print/OutputSpec.h"
 
 using namespace Orc;
 using namespace Orc::Command::FastFind;
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\r\n"
-        L"usage: FastFind.Exe [/config=<ConfigFile>]...\r\n"
-        L"\r\n"
-        L"\t/Altitude=<Exact|Highest|Lowest>    : Defines the strategy used to translate a given location into the optimal access path to the volume\r\n"
-		L"\t/config=<ConfigFile>                : Configuration file (or resource reference)\r\n"
-        L"\t/filesystem=<FileName>.csv          : All NTFS related finds are logged in <FileName>.csv\r\n"
-        L"\t/object=<FileName>.csv              : All System objects related finds are logged in <FileName>.csv\r\n"
-        L"\t/out=<FileName.xml>                 : All finds are logged into an XML file\r\n"
-        L"\t/yara=<Rules.Yara>                  : Add rules files for Yara scan\r\n"
-		L"\t/SkipDeleted                        : Do not attempt to match against deleted records\r\n"
-		L"\t/Names=<NamesSpec>                  : Add names to search terms (Kernel32.dll,nt*.sys,:ADSName,*.txt#EAName)\r\n"
-		L"\t/Version=<Description>              : Add a version description to FastFind output\r\n"
-        L"\r\n");
-    PrintCommonUsage();
-    return;
+    auto usageNode = m_console.OutputTree();
+
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe FastFind [/Config=<ConfigFile>] ...",
+        "FastFind can leverage a collection of indicators to enable sophisticated indicator search. It can look up "
+        "mounted file systems, registry or Windows objects directory using signature, patterns... Since FastFind aims "
+        "to analyze thousands of systems, it requires minimal interaction. To achieve this goal, FastFind uses an XML "
+        "configuration file embedded as a resource to specify the indicators to look for.");
+
+    constexpr std::array kSpecificParameters = {
+        Usage::Parameter {
+            "/Names=<Name>", "Add additional names to search terms (Kernel32.dll,nt*.sys,:ADSName,*.txt#EAName)"},
+        Usage::Parameter {"/Version=<Description>", "Add a custom version description to the output"},
+        Usage::Parameter {"/SkipDeleted", "Do not attempt to match against deleted records"},
+        Usage::Parameter {"/Yara", "Add rules files for Yara scan"}};
+
+    Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
+
+    constexpr std::array kOutputParameters = {
+        Usage::Parameter {"/Out=<FilePath>.xml", "Complete list of found items (xml)"},
+        Usage::Parameter {"/FileSystem=<FilePath>.csv", "NTFS related found items"},
+        Usage::Parameter {"/Object=<FilePath>.csv", "System objects related found items"}};
+
+    Usage::PrintParameters(usageNode, Usage::kCategoryOutputParameters, kOutputParameters);
+
+    Usage::PrintLocationParameters(usageNode);
+
+    Usage::PrintLoggingParameters(usageNode);
+    Usage::PrintMiscellaneousParameters(usageNode);
 }
 
 void Main::PrintParameters()
 {
-    PrintComputerName();
-    PrintOperatingSystem();
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Parameters");
+
+    PrintCommonParameters(node);
 
     if (!config.strVersion.empty())
     {
-        log::Info(_L_, L"Version               : %s\r\n", config.strVersion.c_str());
+        PrintValue(node, L"Version", config.strVersion);
     }
-	PrintOutputOption(L"Filesystem", config.outFileSystem);
-	PrintOutputOption(L"Registry", config.outRegsitry);
-	PrintOutputOption(L"Object", config.outObject);
-	PrintOutputOption(L"Structured", config.outStructured);
 
-    SaveAndPrintStartTime();
+    PrintValue(node, L"Filesystem", config.outFileSystem);
+    PrintValue(node, L"Registry", config.outRegsitry);
+    PrintValue(node, L"Object", config.outObject);
+    PrintValue(node, L"Structured", config.outStructured);
+
+    m_console.PrintNewLine();
 }
 
 void Main::PrintFooter()
 {
-    PrintExecutionTime();
+    auto root = m_console.OutputTree();
+
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

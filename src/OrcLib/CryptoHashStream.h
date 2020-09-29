@@ -12,19 +12,19 @@
 
 #include <memory>
 
+#include "Utils/EnumFlags.h"
+
 #include "CryptoUtilities.h"
 
 #pragma managed(push, off)
 
 namespace Orc {
 
-class LogFileWriter;
 
 class ORCLIB_API CryptoHashStream : public HashStream
 {
 public:
-
-    enum Algorithm : char
+    enum class Algorithm : char
     {
         Undefined = 0,
         MD5 = 1 << 0,
@@ -32,36 +32,10 @@ public:
         SHA256 = 1 << 2
     };
 
-    friend Algorithm& operator^=(Algorithm& left, const Algorithm rigth)
-    {
-        left = static_cast<Algorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
-        return left;
-    }
-    friend Algorithm& operator|=(Algorithm& left, const Algorithm rigth)
-    {
-        left = static_cast<Algorithm>(static_cast<char>(left) | static_cast<char>(rigth));
-        return left;
-    }
-
-    friend Algorithm operator^(const Algorithm left, const Algorithm rigth)
-    {
-        return static_cast<Algorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
-    }
-    friend Algorithm operator|(const Algorithm left, const Algorithm rigth)
-    {
-        return static_cast<Algorithm>(static_cast<char>(left) | static_cast<char>(rigth));
-    }
-    friend Algorithm operator&(const Algorithm left, const Algorithm rigth)
-    {
-        return static_cast<Algorithm>(static_cast<char>(left) & static_cast<char>(rigth));
-    }
-
-
-
 protected:
     Algorithm m_Algorithms;
-    HCRYPTHASH m_Sha1;
     HCRYPTHASH m_Sha256;
+    HCRYPTHASH m_Sha1;
     HCRYPTHASH m_MD5;
 
     static HCRYPTPROV g_hProv;
@@ -70,8 +44,8 @@ protected:
     STDMETHOD(HashData(LPBYTE pBuffer, DWORD dwBytesToHash));
 
 public:
-    CryptoHashStream(logger pLog)
-        : HashStream(std::move(pLog))
+    CryptoHashStream()
+        : HashStream()
         , m_Sha256(NULL)
         , m_Sha1(NULL)
         , m_MD5(NULL) {};
@@ -95,6 +69,8 @@ public:
     static Algorithm GetSupportedAlgorithm(std::wstring_view svAlgo);
     static std::wstring GetSupportedAlgorithm(Algorithm algs);
 };
+
+ENABLE_BITMASK_OPERATORS(CryptoHashStream::Algorithm)
 
 }  // namespace Orc
 

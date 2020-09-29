@@ -22,8 +22,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 using PidList = std::vector<DWORD>;
 
 enum ModuleType
@@ -54,7 +52,6 @@ class ORCLIB_API RunningCode
 {
 private:
     ModuleMap m_ModMap;
-    logger _L_;
 
     HRESULT EnumModules(DWORD dwPID);
     HRESULT EnumProcessesModules();
@@ -63,11 +60,6 @@ private:
     HRESULT SnapEnumProcessesModules();
 
 public:
-    RunningCode(logger pLog)
-        : _L_(std::move(pLog))
-    {
-    }
-
     HRESULT EnumRunningCode();
 
     HRESULT GetUniqueModules(Modules& modules, ModuleType type = MODULETYPE_ALL);

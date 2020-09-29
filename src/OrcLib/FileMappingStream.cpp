@@ -8,8 +8,6 @@
 #include "stdafx.h"
 #include "FileMappingStream.h"
 
-#include "LogFileWriter.h"
-
 using namespace Orc;
 
 STDMETHODIMP
@@ -27,18 +25,15 @@ FileMappingStream::Open(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG 
         case PAGE_READWRITE:
             break;
         default:
-            log::Error(
-                _L_,
-                E_INVALIDARG,
-                L"The only allowed protection for FileMappingStream are PAGE_READONLY _or_ PAGE_READWRITE\r\n");
+            spdlog::error("The only allowed protection for FileMappingStream are PAGE_READONLY _or_ PAGE_READWRITE");
             return E_INVALIDARG;
     }
 
     m_hMapping = CreateFileMapping(hFile, NULL, flProtect | SEC_RESERVE, liMaxSize.HighPart, liMaxSize.LowPart, lpName);
     if (m_hMapping == INVALID_HANDLE_VALUE)
     {
-        log::Error(
-            _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to CreateFileMapping from hFile=0x%lx\r\n", hFile);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CreateFileMapping (hFile: 0x{:p}, code: {:#x})", hFile, hr);
         return hr;
     }
 
@@ -61,9 +56,10 @@ FileMappingStream::Open(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG 
     {
         CloseHandle(m_hMapping);
         m_hMapping = INVALID_HANDLE_VALUE;
-        log::Error(
-            _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to CreateFileMapping from hFile=0x%lx\r\n", hFile);
-        return HRESULT_FROM_WIN32(GetLastError());
+
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed MapViewOfFile (hFile: 0x{:p}, code: {:#x})", hFile, hr);
+        return hr;
     }
 
     return S_OK;
@@ -97,7 +93,8 @@ HRESULT FileMappingStream::CommitSize(ULONGLONG ullNewSize)
 
     if (NULL == VirtualAlloc(m_pMapped, static_cast<size_t>(ullNewSize), MEM_COMMIT, m_dwPageProtect))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to Commit size %I64d\r\n", ullNewSize);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed VirtualAlloc: cannot Commit size {} (code: {:#x})", ullNewSize, hr);
         return hr;
     }
 
@@ -106,10 +103,16 @@ HRESULT FileMappingStream::CommitSize(ULONGLONG ullNewSize)
 
     if (!VirtualQuery(m_pMapped, &mbi, sizeof(MEMORY_BASIC_INFORMATION)))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to VirtualQuery 0x%I64x\r\n", m_pMapped);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed VirtualQuery on 0x{:p} (code: {:#x})", m_pMapped, hr);
 
         if (!VirtualFree(m_pMapped, static_cast<size_t>(ullNewSize), MEM_DECOMMIT))
-            log::Error(_L_, HRESULT_FROM_WIN32(GetLastError()), L"Failed to decommit 0x%I64x\r\n", m_pMapped);
+        {
+            spdlog::error(
+                "Failed VirtualFree: cannot decommit 0x{:p} (code: {:#x})",
+                m_pMapped,
+                HRESULT_FROM_WIN32(GetLastError()));
+        }
 
         return hr;
     }

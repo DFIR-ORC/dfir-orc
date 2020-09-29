@@ -133,8 +133,8 @@ public:
 
     static LPCWSTR DefaultSchema() { return nullptr; }
 
-    Main(logger pLog)
-        : UtilitiesMain(std::move(pLog))
+    Main()
+        : UtilitiesMain()
     {
         ZeroMemory(&m_si, sizeof(STARTUPINFOEX));
         m_si.StartupInfo.cb = sizeof(STARTUPINFO);

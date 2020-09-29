@@ -25,13 +25,10 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API UploadAgent : public Concurrency::agent
 {
 public:
     static std::shared_ptr<UploadAgent> CreateUploadAgent(
-        const logger& pLog,
         const OutputSpec::Upload& uploadSpec,
         UploadMessage::ISource& msgSource,
         UploadMessage::ITarget& msgTarget,
@@ -49,8 +46,6 @@ protected:
     UploadNotification::ITarget& m_notificationTarget;
     UploadMessage::ITarget& m_requestTarget;
     UploadMessage::ISource& m_requestsource;
-
-    logger _L_;
 
     OutputSpec::Upload m_config;
 
@@ -71,12 +66,10 @@ protected:
 
 protected:
     UploadAgent(
-        logger pLog,
         UploadMessage::ISource& msgSource,
         UploadMessage::ITarget& msgTarget,
         UploadNotification::ITarget& notifyTarget)
-        : _L_(std::move(pLog))
-        , m_requestsource(msgSource)
+        : m_requestsource(msgSource)
         , m_requestTarget(msgTarget)
         , m_notificationTarget(notifyTarget)
     {
@@ -84,8 +77,11 @@ protected:
 
     virtual HRESULT Initialize() PURE;
 
-    virtual HRESULT
-    UploadFile(const std::wstring& strLocalName, const std::wstring& strRemoteName, bool bDeleteWhenCopied) PURE;
+    virtual HRESULT UploadFile(
+        const std::wstring& strLocalName,
+        const std::wstring& strRemoteName,
+        bool bDeleteWhenCopied,
+        const std::shared_ptr<const UploadMessage>& request) PURE;
 
     virtual HRESULT IsComplete(bool bReadyToExit = false) PURE;
 

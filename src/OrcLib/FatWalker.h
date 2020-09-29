@@ -29,7 +29,7 @@ class VolumeReader;
 class ORCLIB_API FatWalker
 {
 public:
-    FatWalker(logger pLog);
+    FatWalker();
     ~FatWalker();
 
     typedef std::function<void(
@@ -89,7 +89,6 @@ private:
     HRESULT PrintFileEntry(const FatFileEntry& fileEntry) const;
 
 private:
-    logger _L_;
     std::shared_ptr<Location> m_Location;
     CBinaryBuffer m_RootDirectoryBuffer;
     ULONGLONG m_ullRootDirectoryOffset;

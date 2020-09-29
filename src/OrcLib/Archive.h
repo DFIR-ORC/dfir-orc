@@ -87,8 +87,6 @@ public:
     using ArchiveCallback = std::function<void(const ArchiveItem& item)>;
 
 protected:
-    logger _L_;
-
     ArchiveItems m_Items;
     ArchiveIndexes m_Indexes;
     concurrency::critical_section m_cs;
@@ -98,9 +96,8 @@ protected:
     ArchiveCallback m_Callback;
 
 public:
-    Archive(logger pLog, bool bComputeHash)
-        : _L_(std::move(pLog))
-        , m_bComputeHash(bComputeHash)
+    Archive(bool bComputeHash)
+        : m_bComputeHash(bComputeHash)
         , m_Callback(nullptr) {};
 
     const ArchiveItems& Items() { return m_Items; };

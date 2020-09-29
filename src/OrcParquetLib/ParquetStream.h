@@ -15,7 +15,7 @@ namespace Orc::TableOutput::Parquet {
 class Stream : public arrow::io::ReadWriteFileInterface
 {
 public:
-    Stream(logger pLog);
+    Stream();
 
     HRESULT Open(std::shared_ptr<ByteStream> stream);
 
@@ -45,8 +45,6 @@ public:
 
 private:
     std::shared_ptr<ByteStream> m_Stream;
-
-    logger _L_;
 };
 
 }  // namespace Orc::TableOutput::Parquet

@@ -19,8 +19,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ArchiveExtractCallback
     : public IArchiveExtractCallback
     , public ICryptoGetTextPassword
@@ -28,7 +26,6 @@ class ArchiveExtractCallback
 public:
 private:
     long m_refCount;
-    logger _L_;
 
     CComPtr<IInArchive> m_archiveHandler;
     ArchiveExtract::MakeOutputStream m_MakeWriteAbleStream;
@@ -45,7 +42,6 @@ private:
 
 public:
     ArchiveExtractCallback(
-        logger pLog,
         const CComPtr<IInArchive>& archiveHandler,
         const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
         Archive::ArchiveItems& Extracted,

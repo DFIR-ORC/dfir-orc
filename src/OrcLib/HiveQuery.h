@@ -18,14 +18,12 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class HiveQuery
 {
 public:
-    HiveQuery(const logger& pLog)
-        : m_HivesLocation(pLog)
-        , m_HivesFind(pLog)
+    HiveQuery()
+        : m_HivesLocation()
+        , m_HivesFind()
     {
     }
 
@@ -37,8 +35,8 @@ public:
         // Search query to apply
         RegFind QuerySpec;
 
-        SearchQuery(logger pLog)
-            : QuerySpec(pLog) {};
+        SearchQuery()
+            : QuerySpec() {};
     };
 
     // search queries
@@ -49,7 +47,7 @@ public:
     FileFind m_HivesFind;
 
     // Open hives for searching
-    HRESULT BuildStreamList(const logger& pLog);
+    HRESULT BuildStreamList();
 
     std::vector<std::wstring> m_HivesFileList;
 

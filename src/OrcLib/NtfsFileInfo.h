@@ -18,7 +18,6 @@ class ORCLIB_API NtfsFileInfo : public FileInfo
 {
 public:
     NtfsFileInfo(
-        logger pLog,
         std::wstring strComputerName,
         const std::shared_ptr<VolumeReader>& pVolReader,
         Intentions dwDefaultIntentions,

@@ -13,8 +13,6 @@
 #include "MFTRecord.h"
 #include "MftRecordAttribute.h"
 
-#include "LogFileWriter.h"
-
 #include "VolumeReader.h"
 #include "WideAnsi.h"
 
@@ -23,6 +21,8 @@
 #include "UncompressNTFSStream.h"
 
 #include "SystemDetails.h"
+
+#include <spdlog/spdlog.h>
 
 using namespace std;
 
@@ -238,14 +238,13 @@ HRESULT MftRecordAttribute::GetNonResidentSegmentsToRead(
     return S_OK;
 }
 
-HRESULT MftRecordAttribute::GetStreams(const logger& pLog, const std::shared_ptr<VolumeReader>& pVolReader)
+HRESULT MftRecordAttribute::GetStreams(const std::shared_ptr<VolumeReader>& pVolReader)
 {
     std::shared_ptr<ByteStream> rawStream, dataStream;
-    return GetStreams(pLog, pVolReader, rawStream, dataStream);
+    return GetStreams(pVolReader, rawStream, dataStream);
 }
 
 HRESULT MftRecordAttribute::GetStreams(
-    const logger& pLog,
     const std::shared_ptr<VolumeReader>& pVolReader,
     std::shared_ptr<ByteStream>& rawStream,
     std::shared_ptr<ByteStream>& dataStream)
@@ -266,12 +265,11 @@ HRESULT MftRecordAttribute::GetStreams(
     {
         switch (m_pHeader->Form.Nonresident.CompressionUnit)
         {
-            case 0:
-            {
-                auto stream = make_shared<NTFSStream>(pLog);
+            case 0: {
+                auto stream = make_shared<NTFSStream>();
                 if (FAILED(hr = stream->OpenStream(pVolReader, shared_from_this())))
                 {
-                    log::Error(pLog, hr, L"Failed to open NTFSStream\r\n");
+                    spdlog::error("Failed to open NTFSStream (code: {:#x})", hr);
                     return hr;
                 }
                 dataStream = rawStream = stream;
@@ -286,16 +284,14 @@ HRESULT MftRecordAttribute::GetStreams(
             }
             case 1:
             case 2:
-            case 3:
-            {
-                log::Info(
-                    pLog,
-                    L"INFO: Record with unsupported compression unit value (%d), collecting raw data\r\n",
+            case 3: {
+                spdlog::info(
+                    L"INFO: Collect record with unsupported compression unit value: {}",
                     m_pHeader->Form.Nonresident.CompressionUnit);
-                auto stream = make_shared<NTFSStream>(pLog);
+                auto stream = make_shared<NTFSStream>();
                 if (FAILED(hr = stream->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
-                    log::Error(pLog, hr, L"Failed to open NTFSStream\r\n");
+                    spdlog::error(L"Failed to open NTFSStream (code: {:#x})", hr);
                     return hr;
                 }
                 dataStream = rawStream = stream;
@@ -308,19 +304,18 @@ HRESULT MftRecordAttribute::GetStreams(
                 }
                 return S_OK;
             }
-            case 4:
-            {
-                auto rawdata = make_shared<NTFSStream>(pLog);
+            case 4: {
+                auto rawdata = make_shared<NTFSStream>();
                 if (FAILED(hr = rawdata->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
-                    log::Error(pLog, hr, L"Failed to open NTFSStream\r\n");
+                    spdlog::error(L"Failed to open NTFSStream (code: {:#x})", hr);
                     return hr;
                 }
 
-                auto datastream = make_shared<UncompressNTFSStream>(pLog);
+                auto datastream = make_shared<UncompressNTFSStream>();
                 if (FAILED(hr = datastream->Open(rawdata, 16 * pVolReader->GetBytesPerCluster())))
                 {
-                    log::Error(pLog, hr, L"Failed to open UncompressNTFSStream\r\n");
+                    spdlog::error(L"Failed to open UncompressNTFSStream (code: {:#x})", hr);
                     return hr;
                 }
                 else if (hr == S_FALSE)
@@ -328,18 +323,16 @@ HRESULT MftRecordAttribute::GetStreams(
                     auto pFN = m_pHostRecord->GetDefaultFileName();
                     if (pFN != nullptr && pFN->FileNameLength <= pVolReader->MaxComponentLength())
                     {
-                        log::Verbose(
-                            pLog,
-                            L"Issues when opening compressed file %.*s (record is 0x%I64X)\r\n",
-                            pFN->FileNameLength,
-                            pFN->FileName,
+                        std::wstring_view fileName(pFN->FileName, pFN->FileNameLength);
+                        spdlog::debug(
+                            L"Issues when opening compressed file: '{}' with record {:#x})",
+                            fileName,
                             m_pHostRecord->GetSafeMFTSegmentNumber());
                     }
                     else
                     {
-                        log::Verbose(
-                            pLog,
-                            L"Issues when opening compressed file (record is 0x%I64X)\r\n",
+                        spdlog::debug(
+                            L"Issues when opening compressed file with record {:#x})",
                             m_pHostRecord->GetSafeMFTSegmentNumber());
                     }
                 }
@@ -358,7 +351,7 @@ HRESULT MftRecordAttribute::GetStreams(
     }
     else if (m_pHeader->FormCode == RESIDENT_FORM)
     {
-        auto stream = make_shared<BufferStream<MAX_PATH>>(pLog);
+        auto stream = make_shared<BufferStream<MAX_PATH>>();
 
         if (FAILED(hr = stream->Open()))
             return hr;
@@ -400,8 +393,7 @@ HRESULT MftRecordAttribute::CleanCachedData()
     return S_OK;
 }
 
-std::shared_ptr<ByteStream>
-MftRecordAttribute::GetDataStream(const logger& pLog, const std::shared_ptr<VolumeReader>& pVolReader)
+std::shared_ptr<ByteStream> MftRecordAttribute::GetDataStream(const std::shared_ptr<VolumeReader>& pVolReader)
 {
     HRESULT hr = E_FAIL;
 
@@ -413,13 +405,12 @@ MftRecordAttribute::GetDataStream(const logger& pLog, const std::shared_ptr<Volu
 
     std::shared_ptr<ByteStream> rawStream, dataStream;
 
-    if (SUCCEEDED(hr = GetStreams(pLog, pVolReader, rawStream, dataStream)))
+    if (SUCCEEDED(hr = GetStreams(pVolReader, rawStream, dataStream)))
         return dataStream;
     return nullptr;
 }
 
-std::shared_ptr<ByteStream>
-MftRecordAttribute::GetRawStream(const logger& pLog, const std::shared_ptr<VolumeReader>& pVolReader)
+std::shared_ptr<ByteStream> MftRecordAttribute::GetRawStream(const std::shared_ptr<VolumeReader>& pVolReader)
 {
     HRESULT hr = E_FAIL;
 
@@ -431,13 +422,12 @@ MftRecordAttribute::GetRawStream(const logger& pLog, const std::shared_ptr<Volum
 
     std::shared_ptr<ByteStream> rawStream, dataStream;
 
-    if (SUCCEEDED(hr = GetStreams(pLog, pVolReader, rawStream, dataStream)))
+    if (SUCCEEDED(hr = GetStreams(pVolReader, rawStream, dataStream)))
         return rawStream;
     return nullptr;
 }
 
 HRESULT MftRecordAttribute::GetHashInformation(
-    const logger& pLog,
     const std::shared_ptr<VolumeReader>& pVolReader,
     CryptoHashStream::Algorithm required)
 {
@@ -458,17 +448,17 @@ HRESULT MftRecordAttribute::GetHashInformation(
     if (needed == CryptoHashStream::Algorithm::Undefined)
         return S_OK;
 
-    auto stream = GetDataStream(pLog, pVolReader);
+    auto stream = GetDataStream(pVolReader);
     if (!stream)
         return E_FAIL;
 
     if (FAILED(hr = stream->SetFilePointer(0LL, SEEK_SET, nullptr)))
     {
-        log::Verbose(pLog, L"Failed to seek pointer to 0 for data attribute (hr=0x%lx)\r\n", hr);
+        spdlog::debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
         return hr;
     }
 
-    shared_ptr<CryptoHashStream> pHashStream = make_shared<CryptoHashStream>(pLog);
+    shared_ptr<CryptoHashStream> pHashStream = make_shared<CryptoHashStream>();
     if (!pHashStream)
         return E_OUTOFMEMORY;
 
@@ -481,7 +471,7 @@ HRESULT MftRecordAttribute::GetHashInformation(
 
     if (FAILED(hr = stream->SetFilePointer(0LL, SEEK_SET, nullptr)))
     {
-        log::Verbose(pLog, L"Failed to seek pointer to 0 for data attribute (hr=0x%lx)\r\n", hr);
+        spdlog::debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
         return hr;
     }
 
@@ -510,7 +500,7 @@ HRESULT MftRecordAttribute::GetHashInformation(
     return S_OK;
 }
 
-HRESULT IndexRootAttribute::Open(const logger& pLog)
+HRESULT IndexRootAttribute::Open()
 {
     if (m_pRoot != nullptr)
         return S_OK;
@@ -518,14 +508,12 @@ HRESULT IndexRootAttribute::Open(const logger& pLog)
     {
         switch (m_pHeader->Form.Nonresident.CompressionUnit)
         {
-            case 0:
-            {
-                log::Error(pLog, E_NOTIMPL, L"NON RESIDENT $INDEX_ROOT attribute are not supported\r\n");
+            case 0: {
+                spdlog::error("NON RESIDENT $INDEX_ROOT attribute are not supported");
                 return E_NOTIMPL;
             }
-            default:
-            {
-                log::Error(pLog, E_NOTIMPL, L"Compressed $INDEX_ROOT attribute are not supported\r\n");
+            default: {
+                spdlog::error("Compressed $INDEX_ROOT attribute are not supported");
                 return E_NOTIMPL;
             }
         }
@@ -620,7 +608,7 @@ HRESULT ExtendedAttribute::Parse(const std::shared_ptr<VolumeReader>& VolReader)
     {
         WCHAR szName[MAX_PATH];
 
-        if (FAILED(hr = AnsiToWide(NULL, pEAInfo->EaName, pEAInfo->EaNameLength, szName, MAX_PATH)))
+        if (FAILED(hr = AnsiToWide(pEAInfo->EaName, pEAInfo->EaNameLength, szName, MAX_PATH)))
             return hr;
 
         m_Items.push_back(pair<wstring, CBinaryBuffer>(

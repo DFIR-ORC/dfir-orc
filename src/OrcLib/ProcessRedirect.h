@@ -18,7 +18,6 @@ auto constexpr BUFFER_SIZE = 10240;
 
 namespace Orc {
 
-class LogFileWriter;
 class CByteStream;
 class CommandExecute;
 class ProcessRedirect;
@@ -54,7 +53,7 @@ public:
 
 public:
     static std::shared_ptr<ProcessRedirect>
-    MakeRedirect(logger pLog, ProcessInOut selection, std::shared_ptr<ByteStream> pBS, bool bClose = true);
+    MakeRedirect(ProcessInOut selection, std::shared_ptr<ByteStream> pBS, bool bClose = true);
 
     ProcessInOut Selection() { return m_Select; };
 
@@ -85,8 +84,6 @@ private:
 
     RedirectStatus m_Status = RedirectStatus::Closed;
 
-    logger _L_;
-
     Concurrency::critical_section m_cs;
 
     void SetStatus(RedirectStatus status);
@@ -99,7 +96,7 @@ private:
     HRESULT ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD dwNumberOfBytesTransfered);
 
 protected:
-    ProcessRedirect(logger pLog, ProcessInOut selection);
+    ProcessRedirect(ProcessInOut selection);
 };
 
 }  // namespace Orc

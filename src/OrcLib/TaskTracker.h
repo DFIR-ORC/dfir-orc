@@ -238,8 +238,7 @@ struct CausalityItem
                         break;
                     case EventType::DriverLoads:
                     case EventType::ModuleLoads:
-                    case EventType::ModuleUnloads:
-                    {
+                    case EventType::ModuleUnloads: {
                         CaseInsensitive compare;
 
                         if (Sample != nullptr && item.Sample != nullptr)
@@ -302,8 +301,6 @@ public:
     using ProcessLifeLine = std::set<std::shared_ptr<CausalityItem>, ProcessLife>;
 
 private:
-    logger _L_;
-
     std::vector<std::pair<std::wstring, std::wstring>> m_PathMappings;
 
     bool m_bTkResults;
@@ -342,17 +339,18 @@ private:
     std::shared_ptr<SampleItem> InsertSampleInformation(SampleItem& sample);
 
 public:
-    TaskTracker(const logger& pLog)
-        : m_rc(pLog)
+    TaskTracker()
+        : m_rc()
         , m_bTkResults(false)
         , m_brc(false)
         , m_brp(false)
-        , m_rp(pLog)
+        , m_rp()
         , m_bars(false)
-        , m_ars(pLog)
-        , m_authenticode(pLog)
-        , m_Locations(pLog)
-        , _L_(pLog) {};
+        , m_ars()
+        , m_authenticode()
+        , m_Locations()
+    {
+    }
 
     HRESULT InitializeMappings();
     HRESULT LoadRunningTasksAndModules();

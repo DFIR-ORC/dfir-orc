@@ -7,7 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "BinaryBuffer.h"
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
@@ -19,17 +18,14 @@ TEST_CLASS(BinaryBufferTest)
 {
 private:
     LARGE_INTEGER m_Offset;
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(BinaryBufferBasicTest)
     {

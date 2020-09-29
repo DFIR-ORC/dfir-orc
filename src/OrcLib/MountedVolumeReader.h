@@ -21,7 +21,7 @@ class ORCLIB_API MountedVolumeReader : public CompleteVolumeReader
 {
 public:
     MountedVolumeReader(MountedVolumeReader&&) noexcept = default;
-    MountedVolumeReader(logger pLog, const WCHAR* szLocation);
+    MountedVolumeReader(const WCHAR* szLocation);
 
     void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
 

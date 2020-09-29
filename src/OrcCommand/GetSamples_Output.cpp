@@ -9,101 +9,101 @@
 #include "stdafx.h"
 
 #include "GetSamples.h"
-#include "LogFileWriter.h"
 #include "ToolVersion.h"
 
 #include <string>
 
-using namespace std;
+#include "Usage.h"
+#include "Output/Text/Fmt/formatter.h"
+#include "Output/Text/Print/Bool.h"
+#include "Output/Text/Print/OutputSpec.h"
 
-using namespace Orc;
 using namespace Orc::Command::GetSamples;
+using namespace Orc::Text;
+using namespace Orc;
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\n"
-        L"usage: DFIR-Orc.exe GetSamples [/Config=GetSamplesConfig.xml] [/Out=GetSample.7z]\r\n"
-        L"                               [/GetThisConfig=GetThisConfig.xml] [/Autoruns[=<AutoRuns.xml>]]\r\n"
-        L"                               [/TempDir=c:\\temp]\r\n"
-        L"\r\n\r\n"
-        L"\t/GetThisConfig=GetThisConfig.xml : Output result config file for GetThis into GetThisConfig.xml\r\n"
-        L"\t/GetThisArgs=\"/nolimits [...]\" : Arguments to be forwared to 'GetThis'\r\n"
-        L"\t/SampleInfo=GetSamplesInfo.csv   : Collect sample related information into GetSamplesInfo.csv\r\n"
-        L"\t/MaxPerSampleBytes=<max bytes>   : Do not collect sample bigger than <max bytes>\r\n"
-        L"\t/MaxTotalBytes=<max bytes>       : Stop collecting when reaching <max bytes>\r\n"
-        L"\t/MaxSampleCount=<max count>      : Stop collecting when reaching <max count>\r\n"
-        L"\t/NoLimits                        : Do not set collection limit (be careful: output can get very big)\r\n"
-        L"\t/TimeLine=Timeline.csv           : Collect timeline related information into Timeline.csv\r\n"
-        L"\t/Out=GetSamples.7z               : Run GetThis using generated config file and collect samples into "
-        L"GetSample.7z\r\n"
-        L"\t/Compression=<CompressionLevel>  : Set archive compression level\r\n"
-        L"\t/Password=<aPassword>            : For archive formats supporting it, set archive password\r\n"
-        L"\t/Autoruns=Autoruns.xml           : Path to existing autoruns.xml file -> File is loaded instead of running "
-        L"autoruns\r\n"
-        L"\t                                   If file does not exist, autorunsc.exe is run and output placed in the "
-        L"file\r\n"
-        L"\t/Autoruns                        : Extract and run autorunsc.exe to collect ASE information\r\n"
-        L"\t/TempDir=c:\\temp                 : Use c:\\temp to store temporary files\r\n"
-        L"\t/NoSigCheck                      : Do not check all sample signatures (only signatures in autoruns output "
-        L"will be used)\r\n"
-        L"\r\n");
-    PrintCommonUsage();
+    auto usageNode = m_console.OutputTree();
+
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe GetSamples [/Config=GetSamplesConfig.xml] [/GetThisConfig=GetThisConfig.xml] "
+        "[/Autoruns[=<AutoRuns.xml>] [/out=<Folder|File.csv|Archive.7z>] ...",
+        "GetSamples was developed to add automatic sample collection. DFIR ORC collects multiple artefacts, which in "
+        "turn allow the analyst to pivot and determine which files to examine. GetSamples was created to identify and "
+        "collect these files beforehand, to minimize the chances of having to get back to the analyzed system. "
+        "Typically, targets include binaries registered in ASEP (AutoStart Extension Points), startup folders, loaded "
+        "in processes, etc.");
+
+    constexpr std::array kSpecificParameters = {
+        Usage::Parameter {"/Autoruns", "Always execute autorunsc.exe to collect ASE information"},
+        Usage::Parameter {
+            "/Autoruns=<autoruns.xml>", "Create autoruns.xml or use it as input to avoid running autoruns"},
+        Usage::Parameter {"/GetThisArgs=<...>", "Arguments to be forwarded to 'GetThis' (ex: '/nolimits')"},
+        Usage::Parameter {"/NoSigCheck", "Check only sample signatures from autoruns output"}};
+    Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
+
+    Usage::PrintLimitsParameters(usageNode);
+
+    constexpr std::array kCustomOutputParameters = {
+        Usage::Parameter {"/GetThisConfig=<FilePath>", "Output path to 'GetThis' generated configuration"},
+        Usage::Parameter {"/SampleInfo=<FilePath.csv>", "Sample related information"},
+        Usage::Parameter {"/TimeLine=<FilePath.csv>", "Timeline related information"}};
+    Usage::PrintOutputParameters(usageNode, kCustomOutputParameters);
+
+    constexpr std::array kCustomMiscParameters = {
+        Usage::kMiscParameterCompression,
+        Usage::kMiscParameterPassword,
+        Usage::Parameter {"/TempDir=<DirectoryPath>", "Use 'DirectoryPath' to store temporary files"}};
+    Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
+
+    Usage::PrintLoggingParameters(usageNode);
 }
 
 void Main::PrintParameters()
 {
-    PrintComputerName();
-    PrintOperatingSystem();
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode(L"Parameters");
 
-    log::Info(_L_, L"\r\nRunning with options:\r\n");
-    if (config.bRunAutoruns)
+    PrintCommonParameters(node);
+
+    PrintValue(node, L"Embedded autorun", config.bRunAutoruns);
+
+    if (config.autorunsOutput.Type != OutputSpec::Kind::None)
     {
-        log::Info(_L_, L"\tEmbedded Autoruns enabled\r\n");
-        if (config.bKeepAutorunsXML && !config.autorunsOutput.Type != OutputSpec::None)
-            log::Info(_L_, L"\tAutoruns output saved in %s\r\n", config.autorunsOutput.Path.c_str());
-    }
-    else if (config.autorunsOutput.Type != OutputSpec::None)
-    {
-        log::Info(_L_, L"\tUsing Autoruns XML %s\r\n", config.autorunsOutput.Path.c_str());
+        if (config.bKeepAutorunsXML)
+        {
+            PrintValue(node, L"Autoruns input XML", config.autorunsOutput.Path);
+        }
+        else
+        {
+            PrintValue(node, L"Autoruns output XML", config.autorunsOutput.Path);
+        }
     }
     else
     {
-        log::Info(_L_, L"\tNot using Autoruns ASE information\r\n", config.autorunsOutput.Path.c_str());
+        PrintValue(node, L"Autoruns XML", "<Not using ASE information>");
     }
 
-    if (config.getThisConfig.Type == OutputSpec::File)
-    {
-        log::Info(_L_, L"\tCreate GetThis configuration in %s\r\n", config.getThisConfig.Path.c_str());
-    }
+    PrintValue(node, L"GetThis configuration", config.getThisConfig);
+    PrintValue(node, L"Output", config.samplesOutput);
+    PrintValue(node, L"Sample information", config.sampleinfoOutput);
+    PrintValue(node, L"Timeline information", config.timelineOutput);
+    PrintValue(node, L"Temporary output", config.tmpdirOutput);
 
-    PrintOutputOption(config.samplesOutput);
+    PrintValue(node, "Ignore signatures", config.bNoSigCheck);
 
-    if (config.sampleinfoOutput.Type != OutputSpec::None)
-    {
-        log::Info(_L_, L"\tCollect sample related information in %s\r\n", config.sampleinfoOutput.Path.c_str());
-    }
-
-    if (config.timelineOutput.Type != OutputSpec::None)
-    {
-        log::Info(_L_, L"\tCollect timeline information in %s\r\n", config.timelineOutput.Path.c_str());
-    }
-
-    if (config.tmpdirOutput.Type != OutputSpec::None)
-    {
-        log::Info(_L_, L"\tCreate temporary files in %s\r\n", config.tmpdirOutput.Path.c_str());
-    }
-
-    if (config.bNoSigCheck)
-    {
-        log::Info(_L_, L"\tDo not check sample signatures\r\n");
-    }
-
-    SaveAndPrintStartTime();
+    m_console.PrintNewLine();
 }
 
 void Main::PrintFooter()
 {
-    PrintExecutionTime();
+    m_console.PrintNewLine();
+
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

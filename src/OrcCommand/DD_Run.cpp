@@ -12,7 +12,6 @@
 #include "CryptoHashStream.h"
 
 #include "SystemDetails.h"
-#include "LogFileWriter.h"
 #include "TableOutputWriter.h"
 
 #include "DD.h"
@@ -25,31 +24,34 @@ using namespace Orc::Command::DD;
 HRESULT Main::Run()
 {
     std::shared_ptr<ByteStream> input_stream;
-    std::shared_ptr<FileStream> input_file_stream = std::make_shared<FileStream>(_L_);
+    std::shared_ptr<FileStream> input_file_stream = std::make_shared<FileStream>();
 
-    if (auto hr = loc_set.EnumerateLocations(); FAILED(hr))
+    HRESULT hr = loc_set.EnumerateLocations();
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to enumerate locations\r\n");
+        spdlog::critical(L"Failed to enumerate locations (code: {:#x})", hr);
         return hr;
     }
 
     //std::vector<std::shared_ptr<Location>> addedLocs;
     //if (auto hr = loc_set.AddLocation(config.strIF.c_str(), addedLocs); FAILED(hr))
     //{
-    //    log::Error(_L_, hr, L"Failed to enumerate locations\r\n");
+    //    spdlog::error(L"Failed to enumerate locations");
     //    return hr;
     //}
 
-    if (auto hr = input_file_stream->OpenFile(
-                config.strIF.c_str(),
-                FILE_READ_DATA,
-                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                NULL,
-                OPEN_EXISTING,
-                FILE_FLAG_SEQUENTIAL_SCAN,
-        NULL); FAILED(hr))
+    hr = input_file_stream->OpenFile(
+        config.strIF.c_str(),
+        FILE_READ_DATA,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_SEQUENTIAL_SCAN,
+        NULL);
+
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to open %s to read data\r\n", config.strIF.c_str());
+        spdlog::critical(L"Failed to open '{}' to read data (code: {:#x})", config.strIF, hr);
         return hr;
     }
 
@@ -69,13 +71,14 @@ HRESULT Main::Run()
 
     if (config.Hash != CryptoHashStream::Algorithm::Undefined)
     {
-        auto hash_stream = std::make_shared<CryptoHashStream>(_L_);
-
-        if (auto hr = hash_stream->OpenToRead(config.Hash, input_file_stream); FAILED(hr))
+        auto hash_stream = std::make_shared<CryptoHashStream>();
+        auto hr = hash_stream->OpenToRead(config.Hash, input_file_stream);
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to open hash stream for input\r\n");
+            spdlog::critical("Failed to open hash stream for input (code: {:#x})", hr);
             return hr;
         }
+
         input_stream = hash_stream;
     }
     else
@@ -89,22 +92,22 @@ HRESULT Main::Run()
     {
         std::shared_ptr<ByteStream> out_stream;
 
-        auto out_file_stream = std::make_shared<FileStream>(_L_);
+        auto out_file_stream = std::make_shared<FileStream>();
 
         if (auto hr = out_file_stream->OpenFile(out.c_str(), GENERIC_WRITE, 0L, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); FAILED(hr))
         {
-            log::Warning(_L_, hr, L"Failed to open %s to write data\r\n", config.strIF.c_str());
+            spdlog::warn(L"Failed to open '{}' for write (code: {:#x})", config.strIF, hr);
             out_stream = out_file_stream = nullptr;
         }
         else
         {
             if (config.Hash != CryptoHashStream::Algorithm::Undefined)
             {
-                auto hash_stream = std::make_shared<CryptoHashStream>(_L_);
+                auto hash_stream = std::make_shared<CryptoHashStream>();
 
                 if (auto hr = hash_stream->OpenToWrite(config.Hash, out_file_stream); FAILED(hr))
                 {
-                    log::Error(_L_, hr, L"Failed to open hash stream for input\r\n");
+                    spdlog::error(L"Failed to open hash stream '{}' for input (code: {:#x})", out, hr);
                     return hr;
                 }
                 out_stream = hash_stream;
@@ -121,7 +124,7 @@ HRESULT Main::Run()
 
     if (!bValidOutput)
     {
-        log::Error(_L_, E_INVALIDARG, L"None of the supplied output can be opened, nowhere to write to\r\n");
+        spdlog::error("None of the supplied output can be opened, nowhere to write to");
         return E_INVALIDARG;
     }
 
@@ -132,12 +135,11 @@ HRESULT Main::Run()
         if (auto hr = input_stream->SetFilePointer(
                     config.BlockSize.QuadPart * config.Skip.QuadPart, FILE_BEGIN, &ullCurrentCursor); FAILED(hr))
         {
-            log::Error(
-                _L_,
-                hr,
-                L"Failed to skip %I64d bytes from input stream %s\r\n",
+            spdlog::error(
+                L"Failed to skip {} bytes from input stream '{}' (code: {:#x})",
                 config.BlockSize.QuadPart * config.Skip.QuadPart,
-                config.strIF.c_str());
+                config.strIF,
+                hr);
             return hr;
         }
     }
@@ -152,24 +154,22 @@ HRESULT Main::Run()
                     if (auto hr = out.second->SetFilePointer(
                             config.BlockSize.QuadPart * config.Seek.QuadPart, FILE_BEGIN, nullptr); FAILED(hr))
                     {
-                        log::Warning(
-                            _L_,
-                            hr,
-                            L"Failed to seek %I64d bytes in output stream %s\r\n",
+                        spdlog::warn(
+                            L"Failed to seek {} bytes in output stream '{}' (code: {:#x})",
                             config.BlockSize.QuadPart * config.Seek.QuadPart,
-                            out.first.c_str());
+                            out.first,
+                            hr);
                     }
                 }
                 else
                 {
                     if (auto hr = out.second->SetSize(config.BlockSize.QuadPart * config.Seek.QuadPart); FAILED(hr))
                     {
-                        log::Warning(
-                            _L_,
-                            hr,
-                            L"Failed to truncate %I64d bytes in output stream %s\r\n",
+                        spdlog::warn(
+                            L"Failed to truncate {} in bytesoutput stream '{}' (code: {:#x})",
                             config.BlockSize.QuadPart * config.Seek.QuadPart,
-                            out.first.c_str());
+                            out.first,
+                            hr);
                     }
                 }
             }
@@ -203,24 +203,20 @@ HRESULT Main::Run()
                 if (auto hr = input_file_stream->SetFilePointer(
                         config.BlockSize.QuadPart, FILE_CURRENT, NULL); FAILED(hr))
                 {
-                    log::Error(
-                        _L_,
-                        hr,
-                        L"\nFailed to seek to %I64d bytes offset after error\r\n",
+                    spdlog::error(
+                        L"Failed to seek to {} bytes offset after error with '{}' (absolute offset {})",
                         buffer.GetCount(),
-                        config.strIF.c_str(),
+                        config.strIF,
                         ullAbsoluteOffset);
                     break;
                 }
             }
             else
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"\nFailed to read %I64d bytes from input stream %s (absolute offset %I64d)\r\n",
+                spdlog::error(
+                    L"Failed to read {} bytes from input stream {} (absolute offset {})",
                     buffer.GetCount(),
-                    config.strIF.c_str(),
+                    config.strIF,
                     ullAbsoluteOffset);
                 break;
             }
@@ -228,8 +224,7 @@ HRESULT Main::Run()
 
         if (ullRead == 0LL)
         {
-            // Done reading
-            log::Verbose(_L_, L"Done reading from input stream\r\n");
+            spdlog::debug("Done reading from input stream");
             break;
         }
         else
@@ -238,11 +233,7 @@ HRESULT Main::Run()
             auto ullNewCursor = 0LLU;
             if (auto hr = input_stream->SetFilePointer(ullCurrentCursor, FILE_BEGIN, &ullNewCursor); FAILED(hr))
             {
-                log::Error(
-                        _L_,
-                        hr,
-                        L"\nFailed to seek to %I64d offset\r\n",
-                        ullCurrentCursor);
+                spdlog::error("Failed to seek to {} offset", ullCurrentCursor);
             }
             assert(ullNewCursor == ullCurrentCursor);
         }
@@ -254,12 +245,7 @@ HRESULT Main::Run()
             if (output.second != nullptr
                 && FAILED(hr = output.second->Write(buffer.GetData(), ullRead, &ullWritten)))
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Failed to write %I64d bytes to output stream %s\r\n",
-                    buffer.GetCount(),
-                    output.first.c_str());
+                spdlog::error(L"Failed to write {} bytes to output stream '{}'", buffer.GetCount(), output.first);
             }
         }
 
@@ -282,9 +268,8 @@ HRESULT Main::Run()
         else
             szProgress[0] = L'\0';
 
-        log::Progress(
-            _L_,
-            L"%s%I64d blocks of %I64d bytes copied (%I64d Mbytes) (now:%.2f MB/sec, average:%.2f MB/sec)\r",
+        m_console.Print(
+            L"{}% {} blocks of {} bytes copied ({} Mbytes) (now: {} MB/sec, average: {} MB/sec)",
             szProgress,
             ullBlockCount,
             std::min(config.BlockSize.QuadPart, ullRead),
@@ -294,14 +279,14 @@ HRESULT Main::Run()
 
         if (config.Count.QuadPart > 0LL && ullBlockCount >= config.Count.QuadPart)
         {
-            log::Verbose(_L_, L"Read accounted blocks from input stream\r\n");
+            spdlog::debug(L"Read accounted blocks from input stream");
             break;
         }
     }
 
     if (auto hr = input_stream->Close(); FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to close input stream %s\r\n", buffer.GetCount(), config.strIF.c_str());
+        spdlog::error(L"Failed to close input stream '{}' (code: {:#x})", config.strIF, hr);
         return hr;
     }
 
@@ -310,14 +295,14 @@ HRESULT Main::Run()
         auto hr = E_FAIL;
         if (output.second != nullptr && FAILED(hr = output.second->Close()))
         {
-            log::Error(_L_, hr, L"Failed to close input stream %s\r\n", buffer.GetCount(), output.first.c_str());
+            spdlog::error(L"Failed to close input stream '{}'", output.first);
         }
     }
 
     FILETIME theFinishTime;
     GetSystemTimeAsFileTime(&theFinishTime);
 
-    const auto writer = TableOutput::GetWriter(_L_, config.output);
+    const auto writer = TableOutput::GetWriter(config.output);
 
     if (writer != nullptr)
     {
@@ -386,6 +371,6 @@ HRESULT Main::Run()
         writer->Close();
     }
 
-    log::Info(_L_, L"\nDone!\r\n");
+    spdlog::info("Done");
     return S_OK;
 }

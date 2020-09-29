@@ -19,8 +19,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 struct ProcessInfo
 {
     std::shared_ptr<std::wstring> strModule;
@@ -39,15 +37,10 @@ using ProcessVector = std::vector<ProcessInfo>;
 class ORCLIB_API RunningProcesses
 {
 private:
-    logger _L_;
-
     ProcessVector m_Processes;
 
 public:
-    RunningProcesses(logger pLog)
-        : _L_(std::move(pLog))
-    {
-    }
+    RunningProcesses() {}
 
     HRESULT EnumProcesses();
 

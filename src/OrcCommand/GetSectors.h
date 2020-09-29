@@ -77,17 +77,14 @@ private:
         std::wstring m_description;
         CBinaryBuffer m_cBuf;
         boolean m_sectorBySectorMode = true;
-        logger _L_;
 
         DiskChunk(
-            logger pLog,
             std::wstring diskName,
             ULONGLONG offset,
             DWORD size,
             std::wstring desc,
             std::wstring diskInterface = L"")
-            : _L_(std::move(pLog))
-            , m_DiskName(diskName)
+            : m_DiskName(diskName)
             , m_DiskInterface(diskName)
             , m_ulChunkOffset(offset)
             , m_ulChunkSize(size)
@@ -158,8 +155,8 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#GETSECTORS_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(std::move(pLog))
+    Main()
+        : UtilitiesMain()
     {
     }
 

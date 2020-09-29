@@ -8,10 +8,14 @@
 
 #include "stdafx.h"
 
-#include "ToolEmbed.h"
-#include "LogFileWriter.h"
+#include <functional>
 
+#include "ToolEmbed.h"
 #include "ToolVersion.h"
+#include "Usage.h"
+
+#include "Output/Text/Print/OutputSpec.h"
+#include "Output/Text/Print/EmbedSpec.h"
 
 SYSTEMTIME theStartTime;
 SYSTEMTIME theFinishTime;
@@ -20,101 +24,81 @@ DWORD theFinishTickCount;
 
 using namespace std;
 
-using namespace Orc;
 using namespace Orc::Command::ToolEmbed;
+using namespace Orc::Text;
+using namespace Orc;
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\n"
-        L"usage: DFIR-Orc.exe ToolEmbed /Input=MotherShipCmd.exe [/Out=Tool.exe] [/AddFile=FileToEmbed.cab,101]+ "
-        L"[/Name=Value]+\r\n"
-        L"\r\n"
-        L"\t/config=<ConfigFile>               : Specify a XML config file\r\n"
-        L"\t/Input=MotherShipCmd.exe           : File used as input, if /output is not specified, input is modified\r\n"
-        L"\t/Out=<Tool.exe>|<DumpDir>          : Make a copy of input to update with specified ressources\r\n"
-        L"\t/AddFile=FileToEmbed.cab,CabName   : Embeds FileToEmbed.cab into Tool.exe as ressource CabName\r\n"
-        L"\t/Run=cab:CabName|AutoTest.exe      : Extract&Run AutoTest.exe from embedded CabName ressource\r\n"
-        L"\t/Run32=cab:CabName|AutoTest.exe    : Extract&Run AutoTest.exe from embedded CabName ressource only on x86 "
-        L"platform\r\n"
-        L"\t/Run64=cab:CabName|AutoTest_x64.exe: Extract&Run AutoTest.exe from embedded CabName ressource only on x64 "
-        L"platform\r\n"
-        L"\t/Name=Value                        : Adds ressource Name with content Value\r\n"
-        L"\t/Dump=<configuredbinary.exe>       : Dumps the configured ressources into a folder (specified with "
-        L"/out=<dir>) along with associated embed.xml\r\n"
-        L"\r\n");
-    PrintCommonUsage();
+    auto usageNode = m_console.OutputTree();
+
+    Usage::PrintHeader(
+        usageNode,
+        "Usage: DFIR-Orc.exe ToolEmbed [/Config=<toolembed.xml> | /dump=<ConfiguredBinary.exe>] /out=dump-dir>",
+        "ToolEmbed is used to add resources (binaries, configuration files) to a DFIR ORC binary. It takes an XML "
+        "configuration file as input. ToolEmbed is also able to extract all the resources from a configured binary, "
+        "thanks to the /dump option. This can be useful to quickly edit a configuration and obtain a new configured "
+        "binary.");
+
+    constexpr std::array kSpecificParameters = {
+        Usage::Parameter {
+            "/Input=<Path>", "Path to the binary which ToolEmbed uses as a 'Mothership' or main executable"},
+        Usage::Parameter {"/Output=<Path>", "Output file. Copy of the input file with the specified resources added"},
+        Usage::Parameter {"/Run=<Resource>", "Specify which binary should be run by 'Mothership' or /Input binary"},
+        Usage::Parameter {
+            "/Run32=<Resource>",
+            "Specify which binary should be run by 'Mothership' or '/Input' binary on 32 bit platform"},
+        Usage::Parameter {
+            "/Run64=<Resource>",
+            "Specify which binary should be run by 'Mothership' or '/Input' binary on 64 bit platform"},
+        Usage::Parameter {"/AddFile=<Path>,<Name>", "Add specified file <Path> as resource with name <Name>"},
+        Usage::Parameter {"/Dump[=<Path>]", "Extract the resources from current or specified binary"}};
+
+    Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
+
+    constexpr std::array kCustomMiscParameters = {Usage::kMiscParameterComputer};
+    Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
+
+    Usage::PrintLoggingParameters(usageNode);
 }
 
 void Main::PrintParameters()
 {
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Parameters");
 
-    SaveAndPrintStartTime();
+    PrintCommonParameters(node);
 
-    log::Info(_L_, L"\tInput  file   : %s\r\n", config.strInputFile.c_str());
-    log::Info(_L_, L"\tOutput file   : %s\r\n", config.Output.Path.c_str());
+    PrintValue(node, L"Input", config.strInputFile);
+    PrintValue(node, L"Output", config.Output);
 
-    bool bFileAdditions = false;
-    for (const auto& item : config.ToEmbed)
-    {
-        if (item.Type == EmbeddedResource::EmbedSpec::File)
-        {
-            if (!bFileAdditions)
-            {
-                log::Info(_L_, L"\r\n\tEmbed files: \r\n");
-                bFileAdditions = true;
-            }
-            log::Info(_L_, L"\t\t%s with %s\r\n", item.Name.c_str(), item.Value.c_str());
-        }
-    }
-
-    bool bNameValuePairs = false;
-    for (const auto& item : config.ToEmbed)
-    {
-        if (item.Type == EmbeddedResource::EmbedSpec::NameValuePair)
-        {
-            if (!bNameValuePairs)
-            {
-                log::Info(_L_, L"\r\n\tName=Value pairs: \r\n");
-                bNameValuePairs = true;
-            }
-            log::Info(_L_, L"\t\t%s = %s\r\n", item.Name.c_str(), item.Value.c_str());
-        }
-    }
-
-    for (const auto& item : config.ToEmbed)
-    {
-        if (item.Type == EmbeddedResource::EmbedSpec::Archive)
-        {
-            log::Info(_L_, L"\r\n\tCreate archive: %s\r\n", item.Name.c_str());
-            auto cabitems = item.ArchiveItems;
-            for (const auto& anitem : cabitems)
-            {
-                log::Info(_L_, L"\t\t%s --> %s\r\n", anitem.Path.c_str(), anitem.Name.c_str());
-            }
-        }
-    }
-
-    bool bDeletions = false;
+    std::vector<std::reference_wrapper<const EmbeddedResource::EmbedSpec>> toEmbed;
+    std::vector<std::reference_wrapper<const EmbeddedResource::EmbedSpec>> toRemove;
     for (const auto& item : config.ToEmbed)
     {
         if (item.Type == EmbeddedResource::EmbedSpec::ValuesDeletion
             || item.Type == EmbeddedResource::EmbedSpec::BinaryDeletion)
         {
-            if (!bDeletions)
-            {
-                log::Info(_L_, L"\r\n\tRemove IDs: \t");
-                bDeletions = true;
-            }
-            log::Info(_L_, L"%s ", item.Name.c_str());
+            toRemove.push_back({item});
+            continue;
         }
+
+        toEmbed.push_back(item);
     }
-    if (bDeletions)
-        log::Info(_L_, L"\r\n");
+
+    PrintValues(node, L"Items to embed", toEmbed);
+    PrintValues(node, L"Items to remove", toRemove);
+
+    m_console.PrintNewLine();
 }
 
 void Main::PrintFooter()
 {
-    PrintExecutionTime();
+    m_console.PrintNewLine();
+
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

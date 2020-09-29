@@ -11,8 +11,6 @@
 #include <initguid.h>
 #include <diskguid.h>
 
-#include "LogFileWriter.h"
-
 #include "PhysicalDiskReader.h"
 #include "PartitionTable.h"
 
@@ -23,8 +21,8 @@ using namespace Orc;
 
 static const auto MAX_PARTITION_TABLE = 16;
 
-PhysicalDiskReader::PhysicalDiskReader(logger pLog, const WCHAR* szLocation)
-    : CompleteVolumeReader(std::move(pLog), szLocation)
+PhysicalDiskReader::PhysicalDiskReader(const WCHAR* szLocation)
+    : CompleteVolumeReader(szLocation)
 {
     ZeroMemory(m_szPhysDrive, MAX_PATH * sizeof(WCHAR));
     ZeroMemory(m_szDiskGUID, MAX_PATH * sizeof(WCHAR));
@@ -52,7 +50,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
                 m_uiDiskNum = (UINT)std::stoul(m[REGEX_PHYSICALDRIVE_NUM].str());
             else
             {
-                log::Error(_L_, E_INVALIDARG, L"Invalid physical drive number specification\r\n");
+                spdlog::error("Invalid physical drive number specification");
             }
 
             if (m[REGEX_PHYSICALDRIVE_PARTITION_NUM].matched)
@@ -107,23 +105,23 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
         }
         else
         {
-            log::Error(_L_, E_INVALIDARG, L"Invalid physical drive reference: %s\r\n", m_szLocation);
+            spdlog::error(L"Invalid physical drive reference: '{}'", m_szLocation);
             return E_INVALIDARG;
         }
     }
     catch (std::out_of_range)
     {
-        log::Error(_L_, E_INVALIDARG, L"Invalid physical drive reference: %s\r\n", m_szLocation);
+        spdlog::error(L"Invalid physical drive reference: '{}'", m_szLocation);
         return E_INVALIDARG;
     }
 
     if (m_ullOffset == (ULONGLONG)-1) // If no offset has been specified, we need to lookup the partition we are interested in (-1 -> active part, other -> use part num)
     {
-        PartitionTable pt(_L_);
+        PartitionTable pt;
 
         if (FAILED(hr = pt.LoadPartitionTable(m_szPhysDrive)))
         {
-            log::Error(_L_, hr, L"Failed to load partition table for %s\r\n", m_szPhysDrive);
+            spdlog::error(L"Failed to load partition table for {} (code: {:#x})", m_szPhysDrive, hr);
             return hr;
         }
 
@@ -153,16 +151,15 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
 
         if (m_uiPartNum == (UINT)-1)
         {
-            log::Error(
-                _L_, E_FAIL, L"Failed to determine partition to parse for \\\\.\\PhysicalDrive%d\r\n", m_uiDiskNum);
+            spdlog::error(L"Failed to determine partition to parse for \\\\.\\PhysicalDrive{}", m_uiDiskNum);
             return E_FAIL;
         }
     }
 
-    CDiskExtent Extent(_L_, m_szPhysDrive, m_ullOffset, m_ullLength, m_BytesPerSector);
+    CDiskExtent Extent(m_szPhysDrive, m_ullOffset, m_ullLength, m_BytesPerSector);
     if (FAILED(hr = Extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        log::Error((_L_), hr, L"Failed to open the drive, so bailing...\r\n");
+        spdlog::error(L"Failed to open the drive: '{}' (code: {:#x})", m_szPhysDrive, hr);
         return hr;
     }
 
@@ -184,7 +181,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
 
 std::shared_ptr<VolumeReader> PhysicalDiskReader::DuplicateReader()
 {
-    auto retval = std::make_shared<PhysicalDiskReader>(_L_, m_szLocation);
+    auto retval = std::make_shared<PhysicalDiskReader>(m_szLocation);
 
     retval->m_uiDiskNum = m_uiDiskNum;
     retval->m_uiPartNum = m_uiPartNum;

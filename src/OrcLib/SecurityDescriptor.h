@@ -11,17 +11,13 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class SecurityDescriptor
 {
 private:
-    logger _L_;
     PSECURITY_DESCRIPTOR m_SD = nullptr;
 
 public:
-    SecurityDescriptor(logger pLog)
-        : _L_(std::move(pLog)) {};
+    SecurityDescriptor() {}
 
     HRESULT ConvertFromSDDL(LPCWSTR szSDDL);
 

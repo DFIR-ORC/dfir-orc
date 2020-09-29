@@ -7,7 +7,6 @@
 //
 #include "stdafx.h"
 
-#include "LogFileWriter.h"
 #include "USNJournalWalkerOffline.h"
 #include "ArchiveExtract.h"
 #include "FileStream.h"
@@ -30,17 +29,14 @@ namespace Orc::Test {
 TEST_CLASS(USNJournalTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(USNJournalWalkerOfflineBasicTest)
     {
@@ -172,7 +168,7 @@ public:
         // WIN XP
         {
             m_NbRecords = 0;
-            ProcessArchive(_L_, helper.GetDirectoryName(__WFILE__) + L"\\usn_journal\\winxp.7z");
+            ProcessArchive(helper.GetDirectoryName(__WFILE__) + L"\\usn_journal\\winxp.7z");
             Assert::IsTrue(m_NbRecords == 0x3e);
         }
 
@@ -180,7 +176,7 @@ public:
         {
             USNJournalWalkerOffline::SetBufferSize(512);
             m_NbRecords = 0;
-            ProcessArchive(_L_, helper.GetDirectoryName(__WFILE__) + L"\\usn_journal\\win7.7z");
+            ProcessArchive(helper.GetDirectoryName(__WFILE__) + L"\\usn_journal\\win7.7z");
             Assert::IsTrue(m_NbRecords == 0x947E);
         }
 
@@ -188,7 +184,7 @@ public:
         {
             USNJournalWalkerOffline::SetBufferSize(2018);
             m_NbRecords = 0;
-            ProcessArchive(_L_, helper.GetDirectoryName(__WFILE__) + L"\\usn_journal\\win10.7z");
+            ProcessArchive(helper.GetDirectoryName(__WFILE__) + L"\\usn_journal\\win10.7z");
             Assert::IsTrue(m_NbRecords == 0xA34F);
         }
     }
@@ -199,12 +195,12 @@ private:
     typedef std::map<int, std::wstring> ITEM_PATHS;
     ITEMS m_Items;
 
-    void ProcessArchive(const logger& pLog, const std::wstring& archive)
+    void ProcessArchive(const std::wstring& archive)
     {
         // first extract archive
         LPCWSTR archiveStr = archive.c_str();
 
-        Assert::AreEqual(ExtractArchive(pLog, archiveStr), S_OK);
+        Assert::AreEqual(ExtractArchive(archiveStr), S_OK);
 
         // load VBR
         CBinaryBuffer buffer;
@@ -218,7 +214,7 @@ private:
         // load MFT
         LPCWSTR mft = m_Items[1].Path.c_str();
 
-        std::shared_ptr<Location> loc = std::make_shared<Location>(pLog, mft, Location::OfflineMFT);
+        std::shared_ptr<Location> loc = std::make_shared<Location>(mft, Location::Type::OfflineMFT);
 
         {
             std::shared_ptr<VolumeReader> volReader = loc->GetReader();
@@ -232,7 +228,7 @@ private:
             // this local scope ensures that the volreader (and streams) are closed before we delete the temp files
 
             // initialize walker that will parse MFT
-            USNJournalWalkerOffline walker(pLog);
+            USNJournalWalkerOffline walker;
 
             Assert::AreEqual(walker.Initialize(loc), S_OK);
             loc.reset();
@@ -275,12 +271,12 @@ private:
         });
     }
 
-    HRESULT ExtractArchive(const logger& pLog, LPCWSTR archive)
+    HRESULT ExtractArchive(LPCWSTR archive)
     {
-        auto MakeArchiveStream = [pLog, archive](std::shared_ptr<ByteStream>& stream) -> HRESULT {
+        auto MakeArchiveStream = [archive](std::shared_ptr<ByteStream>& stream) -> HRESULT {
             HRESULT hr = E_FAIL;
 
-            std::shared_ptr<FileStream> fs(std::make_shared<FileStream>(pLog));
+            std::shared_ptr<FileStream> fs(std::make_shared<FileStream>());
             fs->ReadFrom(archive);
 
             if (FAILED(fs->IsOpen()))
@@ -293,7 +289,7 @@ private:
 
         auto ShouldItemBeExtracted = [](const std::wstring& strNameInArchive) -> bool { return true; };
 
-        auto MakeWriteStream = [this, pLog](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+        auto MakeWriteStream = [this](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
             HRESULT hr = E_FAIL;
 
             WCHAR szTempDir[MAX_PATH];
@@ -306,18 +302,18 @@ private:
                 if (FAILED(UtilGetUniquePath(szTempDir, item.NameInArchive.c_str(), item.Path)))
                     return nullptr;
 
-                auto pStream = std::make_shared<FileStream>(pLog);
+                auto pStream = std::make_shared<FileStream>();
                 pStream->OpenFile(item.Path.c_str(), GENERIC_WRITE | GENERIC_READ, 0L, NULL, CREATE_ALWAYS, 0L, NULL);
 
                 return pStream;
             }
             else
             {
-                auto pStream = std::make_shared<TemporaryStream>(pLog);
+                auto pStream = std::make_shared<TemporaryStream>();
 
                 if (FAILED(hr = pStream->Open(szTempDir, item.NameInArchive, 1 * 1024 * 1024, false)))
                 {
-                    log::Error(pLog, hr, L"Failed to open temporary archive\r\n");
+                    spdlog::error("Failed to open temporary archive (code: {:#x})", hr);
                     return nullptr;
                 }
 
@@ -349,7 +345,7 @@ private:
         };
 
         return helper.ExtractArchive(
-            pLog, ArchiveFormat::SevenZip, MakeArchiveStream, ShouldItemBeExtracted, MakeWriteStream, ArchiveCallback);
+            ArchiveFormat::SevenZip, MakeArchiveStream, ShouldItemBeExtracted, MakeWriteStream, ArchiveCallback);
     }
 };
 }  // namespace Orc::Test

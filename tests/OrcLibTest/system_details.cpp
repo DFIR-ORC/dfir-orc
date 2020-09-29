@@ -11,11 +11,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include "LogFileWriter.h"
-
 #include "SystemDetails.h"
-
-using namespace std;
 
 using namespace std::string_literals;
 
@@ -27,17 +23,14 @@ namespace Orc::Test {
 TEST_CLASS(SystemDetailsTest)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(OsVersion)
     {
@@ -74,7 +67,7 @@ public:
     }
     TEST_METHOD(PhysicalDrives)
     {
-        auto result = SystemDetails::GetPhysicalDrives(_L_);
+        auto result = SystemDetails::GetPhysicalDrives();
         Assert::IsTrue(result.is_ok());
         auto drives = move(result).unwrap();
         Assert::IsFalse(drives.empty());
@@ -86,7 +79,7 @@ public:
     }
     TEST_METHOD(MountedVolumes)
     {
-        auto result = SystemDetails::GetMountedVolumes(_L_);
+        auto result = SystemDetails::GetMountedVolumes();
         Assert::IsTrue(result.is_ok());
         auto volumes = move(result).unwrap();
         Assert::IsFalse(volumes.empty());
@@ -108,7 +101,7 @@ public:
 
     TEST_METHOD(QFE)
     {
-        auto result = SystemDetails::GetOsQFEs(_L_);
+        auto result = SystemDetails::GetOsQFEs();
         Assert::IsTrue(result.is_ok(), L"Failed to retrieve installed OS QFEs");
 
         auto qfes = move(result).unwrap();
@@ -120,11 +113,11 @@ public:
     }
     TEST_METHOD(Environment)
     {
-        auto result = SystemDetails::GetEnvironment(_L_);
+        auto result = SystemDetails::GetEnvironment();
 
         Assert::IsTrue(result.is_ok());
 
-        auto envs = move(result).unwrap();
+        auto envs = std::move(result).unwrap();
         Assert::IsFalse(envs.empty());
         for (const auto& env : envs)
         {
@@ -135,16 +128,16 @@ public:
     TEST_METHOD(CommandLine)
     {
         auto cmdLine = SystemDetails::GetCmdLine();
-        auto cmdLineWMI = SystemDetails::GetCmdLine(_L_, GetCurrentProcessId());
+        auto cmdLineWMI = SystemDetails::GetCmdLine(GetCurrentProcessId());
         Assert::IsTrue(cmdLine.is_ok());
         Assert::IsTrue(cmdLineWMI.is_ok());
-        Assert::AreEqual(move(cmdLine).unwrap(), move(cmdLineWMI).unwrap());
+        Assert::AreEqual(std::move(cmdLine).unwrap(), std::move(cmdLineWMI).unwrap());
 
-        auto parent_id = SystemDetails::GetParentProcessId(_L_);
+        auto parent_id = SystemDetails::GetParentProcessId();
         Assert::IsTrue(parent_id.is_ok());
-        auto parentCmdLine = SystemDetails::GetCmdLine(_L_, move(parent_id).unwrap());
+        auto parentCmdLine = SystemDetails::GetCmdLine(std::move(parent_id).unwrap());
         Assert::IsTrue(parentCmdLine.is_ok());
-        Assert::IsFalse(move(parentCmdLine).unwrap().empty());
+        Assert::IsFalse(std::move(parentCmdLine).unwrap().empty());
         
     }
 

@@ -18,7 +18,6 @@
 #include "ImportAgent.h"
 #include "ImportMessage.h"
 #include "ImportNotification.h"
-#include "LogFileWriter.h"
 #include "CommandAgent.h"
 #include "SystemDetails.h"
 
@@ -143,15 +142,15 @@ void WriteReport(TableOutput::IWriter& writer, const ImportNotification::Notific
     WriteSuccessfulReport(writer, notification);
 }
 
-HRESULT ExecuteAgent(ImportAgent& agent, logger& _L_)
+HRESULT ExecuteAgent(ImportAgent& agent)
 {
     HRESULT hr = E_FAIL;
 
-    log::Info(_L_, L"\r\nExtracting data...\r\n");
+    spdlog::info(L"Extracting data...");
 
     if (!agent.start())
     {
-        log::Error(_L_, E_FAIL, L"Failed to start import Agent failed\r\n");
+        spdlog::critical(L"Failed to start import Agent failed");
         return E_FAIL;
     }
 
@@ -161,30 +160,11 @@ HRESULT ExecuteAgent(ImportAgent& agent, logger& _L_)
     }
     catch (concurrency::operation_timed_out timeout)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(ERROR_TIMEOUT), L"Timed out while waiting for agent completion");
-        return hr;
+        spdlog::critical("Timed out while waiting for agent completion");
+        return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
     }
 
     return S_OK;
-}
-
-void QueueForExtractions(ImportAgent& agent, const std::vector<Main::InputItem>& inputItems, logger& _L_)
-{
-    // log::Info(_L_, L"\r\nEnumerate input files...");
-
-    // ULONG ulInputFiles = 0L;
-    // for (const auto& inputItem : inputItems)
-    //{
-    //    auto files = GetInputFiles(inputItem);
-    //    for (auto& file : files)
-    //    {
-    //        ++ulInputFiles;
-    //        auto expand = ImportMessage::MakeExpandRequest(std::move(file));
-    //        agent.SendRequest(expand);
-    //    }
-    //}
-
-    // log::Info(_L_, L" Queued %d input files for extraction\r\n\r\n", ulInputFiles);
 }
 
 }  // namespace
@@ -219,7 +199,7 @@ Main::AddDirectoryForInput(const fs::path& path, const InputItem& input, std::ve
         hr = AddFileForInput(*dirIt, input, inputPaths);
         if (FAILED(hr))
         {
-            log::Warning(_L_, hr, L"Failed to process '%s'", dirIt->path());
+            spdlog::warn("Failed to process '{}'", dirIt->path());
         }
     }
 
@@ -263,7 +243,7 @@ HRESULT Main::AddFileForInput(const fs::path& path, const InputItem& input, std:
 
     if (input.matchRegex.empty())
     {
-        log::Verbose(_L_, L"Input file added: '%s'\r\n", item.name);
+        spdlog::debug(L"Input file added: '{}'", item.name);
         inputPaths.push_back(item);
         return S_OK;
     }
@@ -273,12 +253,12 @@ HRESULT Main::AddFileForInput(const fs::path& path, const InputItem& input, std:
 
     if (SUCCEEDED(hr))
     {
-        log::Verbose(_L_, L"Input file added: '%s'\r\n", item.name.c_str());
+        spdlog::debug(L"Input file added: '{}'", item.name);
         inputPaths.push_back(std::move(item));
         return S_OK;
     }
 
-    log::Verbose(_L_, L"Input file '%s' does not match '%s'\r\n", item.name.c_str(), input.matchRegex.c_str());
+    spdlog::debug(L"Input file '{}' does not match '{}'", item.name, input.matchRegex);
     return S_OK;
 }
 
@@ -295,7 +275,7 @@ std::vector<ImportItem> Main::GetInputFiles(const Main::InputItem& input)
     const auto isDirectory = fs::is_directory(input.path, ec);
     if (ec)
     {
-        log::Warning(_L_, HRESULT_FROM_WIN32(ec.value()), L"Invalid input '%s' specified\r\n", input.path);
+        spdlog::warn(L"Invalid input '{}' specified (code: {:#x})", input.path, ec.value());
         return {};
     }
 
@@ -311,7 +291,7 @@ std::vector<ImportItem> Main::GetInputFiles(const Main::InputItem& input)
 
     if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to add input files for '%s'\r\n", input.path.c_str());
+        spdlog::error(L"Failed to add input files for '{}' (code: {:#x})", input.path, hr);
         return {};
     }
 
@@ -328,10 +308,10 @@ HRESULT Main::Run()
         return hr;
     }
 
-    auto reportWriter = TableOutput::GetWriter(_L_, config.reportOutput);
+    auto reportWriter = TableOutput::GetWriter(config.reportOutput);
     if (reportWriter == nullptr)
     {
-        log::Verbose(_L_, L"No report writer, extraction report will be disabled\r\n");
+        spdlog::debug("No report writer, extraction report will be disabled");
     }
 
     m_notificationCb = std::make_unique<call<ImportNotification::Notification>>(
@@ -344,18 +324,17 @@ HRESULT Main::Run()
             }
         });
 
-    auto importAgent =
-        std::make_unique<ImportAgent>(_L_, m_importRequestBuffer, m_importRequestBuffer, *m_notificationCb);
+    auto importAgent = std::make_unique<ImportAgent>(m_importRequestBuffer, m_importRequestBuffer, *m_notificationCb);
 
     hr = importAgent->InitializeOutputs(config.output, OutputSpec(), config.tempOutput);
     if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to initialize import agent output\r\n");
+        spdlog::error("Failed to initialize import agent output (code: {:#x}", hr);
         return hr;
     }
 
     //::QueueExtractions(*importAgent, _L_);
-    log::Info(_L_, L"\r\nEnumerate input files...");
+    m_console.Print(L"Enumerate input files...");
 
     ULONG ulInputFiles = 0L;
     for (const auto& inputItem : config.inputItems)
@@ -369,17 +348,16 @@ HRESULT Main::Run()
         }
     }
 
-    log::Info(_L_, L" Queued %d input files for extraction\r\n\r\n", ulInputFiles);
+    m_console.Print(L"Queued {} input files for extraction", ulInputFiles);
 
-    hr = ::ExecuteAgent(*importAgent, _L_);
+    hr = ::ExecuteAgent(*importAgent);
     if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed while extractingt\r\n");
+        spdlog::error("Failed while extracting");
         return hr;
     }
 
-    log::Info(_L_, L"\r\nSome statistics\r\n)");
-    importAgent->LogStatistics(_L_);
+    importAgent->LogStatistics();
 
     if (reportWriter)
     {

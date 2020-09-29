@@ -10,10 +10,11 @@
 
 #include "OrcException.h"
 
-#include "LogFileWriter.h"
 #include "WideAnsi.h"
 
 #include "fmt/format.h"
+
+#include <spdlog/spdlog.h>
 
 using namespace Orc;
 
@@ -28,9 +29,9 @@ Exception::Exception(ExceptionSeverity status, std::wstring descr)
 {
 }
 
-HRESULT Exception::PrintMessage(const Orc::logger& pLog) const
+HRESULT Exception::PrintMessage() const
 {
-    Orc::log::Error(pLog, E_FAIL, L"Exception Occured: %s\r\n", Description.c_str());
+    spdlog::error(L"Exception Occured: {}", Description);
     return S_OK;
 }
 
@@ -41,7 +42,7 @@ char const* Exception::what() const
     if (What.has_value())
         return What.value().c_str();
 
-    auto [hr, str] = Orc::WideToAnsi(nullptr, fmt::format(L"Exception: {}", Description));
+    auto [hr, str] = Orc::WideToAnsi(fmt::format(L"Exception: {}", Description));
     if (SUCCEEDED(hr))
         What.emplace(std::move(str));
 

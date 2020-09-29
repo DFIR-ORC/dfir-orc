@@ -22,10 +22,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-using log = LogFileWriter;
-using logger = std::shared_ptr<LogFileWriter>;
-
 ORCSQL_API std::shared_ptr<TableOutput::IConnection> ConnectionFactory(const Orc::logger& pLog);
 ORCSQL_API std::shared_ptr<TableOutput::IConnectWriter> ConnectTableFactory(const Orc::logger& pLog);
 }  // namespace Orc

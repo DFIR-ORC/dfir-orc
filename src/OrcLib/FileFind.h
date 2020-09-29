@@ -292,7 +292,6 @@ public:
         };
 
         HRESULT AddAttributeMatch(
-            const logger& pLog,
             const std::shared_ptr<VolumeReader> pVolReader,
             const std::shared_ptr<MftRecordAttribute>& pAttribute,
             std::optional<MatchingRuleCollection> matchedRules = std::nullopt);
@@ -316,11 +315,8 @@ public:
             return S_OK;
         }
 
-        HRESULT Write(const logger& pLog, ITableOutput& output);
-        HRESULT Write(
-            const logger& pLog,
-            IStructuredOutput& pWriter,
-            LPCWSTR szElement = L"filefind_match");
+        HRESULT Write(ITableOutput& output);
+        HRESULT Write(IStructuredOutput& pWriter, LPCWSTR szElement = L"filefind_match");
 
         bool DeletedRecord;
         FILE_REFERENCE FRN;
@@ -334,12 +330,11 @@ public:
     typedef std::function<void(const std::shared_ptr<Match>& aMatch, bool& bStop)> FoundMatchCallback;
 
 public:
-    FileFind(logger pLog,
-             bool bProvideStream = true,
-             CryptoHashStream::Algorithm matchHash = CryptoHashStream::Algorithm::Undefined,
-             bool storeMatches = true)
-        : _L_(std::move(pLog))
-        , m_FullNameBuilder(nullptr)
+    FileFind(
+        bool bProvideStream = true,
+        CryptoHashStream::Algorithm matchHash = CryptoHashStream::Algorithm::Undefined,
+        bool storeMatches = true)
+        : m_FullNameBuilder(nullptr)
         , m_bProvideStream(bProvideStream)
         , m_MatchHash(matchHash)
         , m_storeMatches(storeMatches)
@@ -359,7 +354,7 @@ public:
 
     HRESULT CheckYara();
 
-    static std::shared_ptr<SearchTerm> GetSearchTermFromConfig(const ConfigItem& item, logger pLog = nullptr);
+    static std::shared_ptr<SearchTerm> GetSearchTermFromConfig(const ConfigItem& item);
 
     HRESULT AddTermsFromConfig(const ConfigItem& items);
     HRESULT AddTerm(const std::shared_ptr<SearchTerm>& FindSpec);
@@ -383,7 +378,6 @@ private:
         CaseInsensitiveUnordered>;
     using TermMapOfSizes = std::unordered_multimap<ULONGLONG, std::shared_ptr<SearchTerm>>;
 
-    logger _L_;
 
     TermMapOfNames m_ExactNameTerms;
     TermMapOfNames m_ExactPathTerms;

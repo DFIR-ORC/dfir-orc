@@ -50,16 +50,16 @@ HRESULT Orc::TableOutput::Parquet::WriterTermination::operator()()
 
 struct Orc::TableOutput::Parquet::Writer::MakeSharedEnabler : public Orc::TableOutput::Parquet::Writer
 {
-    MakeSharedEnabler(logger pLog, std::unique_ptr<Options>&& options)
-        : Writer(std::move(pLog), std::move(options))
+    MakeSharedEnabler(std::unique_ptr<Options>&& options)
+        : Writer(std::move(options))
     {
     }
 };
 
 std::shared_ptr<Orc::TableOutput::Parquet::Writer>
-Orc::TableOutput::Parquet::Writer::MakeNew(logger pLog, std::unique_ptr<Options>&& options)
+Orc::TableOutput::Parquet::Writer::MakeNew(std::unique_ptr<Options>&& options)
 {
-    auto retval = std::make_shared<MakeSharedEnabler>(std::move(pLog), std::move(options));
+    auto retval = std::make_shared<MakeSharedEnabler>(std::move(options));
 
     std::wstring strDescr = L"Termination for ParquetWriter";
     retval->m_pTermination = std::make_shared<WriterTermination>(strDescr, retval);
@@ -67,9 +67,8 @@ Orc::TableOutput::Parquet::Writer::MakeNew(logger pLog, std::unique_ptr<Options>
     return retval;
 }
 
-Orc::TableOutput::Parquet::Writer::Writer(logger pLog, std::unique_ptr<Options>&& options)
-    : _L_(std::move(pLog))
-    , m_Options(std::move(options))
+Orc::TableOutput::Parquet::Writer::Writer(std::unique_ptr<Options>&& options)
+    : m_Options(std::move(options))
 {
 }
 
@@ -183,7 +182,7 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
                         values_builder.emplace_back(std::move(builder));
                     else
                     {
-                        throw Orc::Exception(Fatal, E_POINTER, L"Failed to create builder for field\r\n");
+                        throw Orc::Exception(Fatal, E_POINTER, L"Failed to create builder for field");
                     }
                 }
                 retval.emplace_back(
@@ -197,10 +196,7 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
             default:
             {
                 throw Orc::Exception(
-                    Fatal,
-                    E_INVALIDARG,
-                    L"Failed to create builder for type %S\r\n",
-                    column->type()->ToString().c_str());
+                    Fatal, E_INVALIDARG, L"Failed to create builder for type %S", column->type()->ToString().c_str());
             }
         }
     }
@@ -229,10 +225,10 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
 
     for (const auto& column : m_Schema)
     {
-        auto [hr, strName] = WideToAnsi(_L_, column->ColumnName);
+        auto [hr, strName] = WideToAnsi(column->ColumnName);
         if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Invalid column name %s", column->ColumnName.c_str());
+            spdlog::error(L"Invalid column name: '{}' (code: {:#x})", column->ColumnName, hr);
             break;
         }
 
@@ -298,7 +294,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
                     {
                         auto index = fmt::format("{:#08x}", value.Index);
 
-                        if (auto [hr, str] = WideToAnsi(_L_, value.strValue); SUCCEEDED(hr))
+                        if (auto [hr, str] = WideToAnsi(value.strValue); SUCCEEDED(hr))
                             metadata->Append(index, str);
                     }
                 }
@@ -320,7 +316,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
                     {
                         auto index = fmt::format("{:#08x}", value.dwFlag);
 
-                        if (auto [hr, str] = WideToAnsi(_L_, value.strFlag); SUCCEEDED(hr))
+                        if (auto [hr, str] = WideToAnsi(value.strFlag); SUCCEEDED(hr))
                             metadata->Append(index, str);
                     }
                 }
@@ -329,7 +325,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
                 break;
             }
             default:
-                log::Error(_L_, E_FAIL, L"Unupported (parquet) column type for column %s", column->ColumnName.c_str());
+                spdlog::error(L"Unupported (parquet) column type for column: '{}'", column->ColumnName);
                 return E_FAIL;
         }
     }
@@ -350,7 +346,7 @@ HRESULT Orc::TableOutput::Parquet::Writer::WriteToFile(const WCHAR* szFileName)
     if (szFileName == NULL)
         return E_POINTER;
 
-    auto pFileStream = std::make_shared<FileStream>(_L_);
+    auto pFileStream = std::make_shared<FileStream>();
 
     if (pFileStream == nullptr)
         return E_OUTOFMEMORY;
@@ -375,14 +371,14 @@ Orc::TableOutput::Parquet::Writer::WriteToStream(const std::shared_ptr<ByteStrea
     m_bCloseStream = bCloseStream;
     m_pByteStream = pStream;
 
-    auto arrow_output_stream = std::make_shared<Orc::TableOutput::Parquet::Stream>(_L_);
+    auto arrow_output_stream = std::make_shared<Orc::TableOutput::Parquet::Stream>();
 
     if (auto hr = arrow_output_stream->Open(pStream); FAILED(hr))
         return hr;
 
     if (m_arrowSchema->num_fields() == 0 || m_arrowBuilders.size() == 0)
     {
-        log::Error(_L_, E_FAIL, L"Cannot write to a parquet file without a schema");
+        spdlog::error(L"Cannot write to a parquet file without a schema");
         return E_FAIL;
     }
 
@@ -401,7 +397,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::Flush()
 {
     ScopedLock sl(m_cs);
 
-    log::Verbose(_L_, L"Orc::TableOutput::Parquet::Writer::Flush");
+    spdlog::debug(L"Orc::TableOutput::Parquet::Writer::Flush");
 
     std::vector<std::shared_ptr<arrow::Array>> arrays;
     arrays.reserve(m_arrowBuilders.size());
@@ -422,14 +418,14 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::Flush()
     auto table = arrow::Table::Make(m_arrowSchema, arrays);
     if (!table)
     {
-        log::Error(_L_, E_FAIL, L"Failed to create arrow table (to flush)\r\n");
+        spdlog::error(L"Failed to create arrow table (to flush)");
         return E_FAIL;
     }
 
     auto status = m_arrowWriter->WriteTable(*table, table->num_rows());
     if (!status.ok())
     {
-        log::Error(_L_, E_FAIL, L"Failed to write arrow table (%S)\r\n", status.ToString().c_str());
+        spdlog::error("Failed to write arrow table '{}'", status.ToString());
         return E_FAIL;
     }
 
@@ -443,7 +439,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::Close()
 
     if (auto hr = Flush(); FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to flush arrow table\r\n");
+        spdlog::error("Failed to flush arrow table");
         return hr;
     }
 
@@ -465,7 +461,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::AddColumnAndCheckNumbers()
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
             ExceptionSeverity::Fatal,
-            L"Too many columns written to Parquet (got %d, max is %d)",
+            L"Too many columns written to Parquet (got {}, max is {})",
             counter,
             m_dwColumnNumber);
     }
@@ -522,7 +518,7 @@ HRESULT Orc::TableOutput::Parquet::Writer::WriteEndOfLine()
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
             ExceptionSeverity::Fatal,
-            L"Too few columns written to Parquet (got %d, max is %d)",
+            L"Too few columns written to Parquet (got {}, max is {})",
             counter,
             m_dwColumnNumber);
     }
@@ -532,7 +528,7 @@ HRESULT Orc::TableOutput::Parquet::Writer::WriteEndOfLine()
         m_dwColumnCounter = 0L;
         throw Orc::Exception(
             ExceptionSeverity::Fatal,
-            L"Too many columns written to Parquet (got %d, max is %d)",
+            L"Too many columns written to Parquet (got {}, max is {})",
             counter,
             m_dwColumnNumber);
     }
@@ -543,7 +539,7 @@ HRESULT Orc::TableOutput::Parquet::Writer::WriteEndOfLine()
     {
         if (m_dwBatchRowCount >= m_Options->BatchSize.value())
         {
-            log::Verbose(_L_, L"Batch is full --> Flush() (%d rows)", m_dwBatchRowCount);
+            spdlog::debug(L"Batch is full --> Flush() ({} rows)", m_dwBatchRowCount);
             if (auto hr = Flush(); FAILED(hr))
                 return hr;
         }
@@ -562,7 +558,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::wstring& 
                     (uint32_t)strString.size() * sizeof(WCHAR));
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
             {
-                if (auto [hr, utf8] = WideToAnsi(_L_, strString); SUCCEEDED(hr))
+                if (auto [hr, utf8] = WideToAnsi(strString); SUCCEEDED(hr))
                 {
                     arg->Append(utf8);
                 }
@@ -588,7 +584,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::wstring_v
                     (uint32_t)strString.size() * sizeof(WCHAR));
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
             {
-                if (auto [hr, utf8] = WideToAnsi(_L_, strString); SUCCEEDED(hr))
+                if (auto [hr, utf8] = WideToAnsi(strString); SUCCEEDED(hr))
                 {
                     arg->Append(utf8);
                 }
@@ -613,7 +609,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const WCHAR* szStrin
                     reinterpret_cast<const uint8_t* const>(szString), (uint32_t)wcslen(szString) * sizeof(WCHAR));
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
             {
-                if (auto [hr, utf8] = WideToAnsi(_L_, szString); SUCCEEDED(hr))
+                if (auto [hr, utf8] = WideToAnsi(szString); SUCCEEDED(hr))
                 {
                     arg->Append(utf8);
                 }
@@ -637,7 +633,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteCharArray(const WCHAR* szSt
                 arg->Append(reinterpret_cast<const uint8_t* const>(szString), (uint32_t)dwCharCount * sizeof(WCHAR));
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
             {
-                if (auto [hr, utf8] = WideToAnsi(_L_, std::wstring_view(szString, dwCharCount)); SUCCEEDED(hr))
+                if (auto [hr, utf8] = WideToAnsi(std::wstring_view(szString, dwCharCount)); SUCCEEDED(hr))
                 {
                     arg->Append(utf8);
                 }

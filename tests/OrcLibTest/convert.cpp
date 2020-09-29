@@ -11,8 +11,6 @@
 #include <iostream>
 #include <iomanip>
 
-#include "LogFileWriter.h"
-
 #include "Convert.h"
 
 using namespace std;
@@ -27,17 +25,14 @@ namespace Orc::Test {
 TEST_CLASS(Convert)
 {
 private:
-    logger _L_;
     UnitTestHelper helper;
 
 public:
     TEST_METHOD_INITIALIZE(Initialize)
     {
-        _L_ = std::make_shared<LogFileWriter>();
-        helper.InitLogFileWriter(_L_);
     }
 
-    TEST_METHOD_CLEANUP(Finalize) { helper.FinalizeLogFileWriter(_L_); }
+    TEST_METHOD_CLEANUP(Finalize) {}
 
     TEST_METHOD(IntegerConvert)
     {

@@ -23,7 +23,7 @@ using namespace Orc;
 
 std::shared_ptr<VolumeReader> SystemStorageReader::DuplicateReader()
 {
-    auto retval = std::make_shared<SystemStorageReader>(_L_, m_szLocation);
+    auto retval = std::make_shared<SystemStorageReader>(m_szLocation);
 
     retval->m_uiPartNum = m_uiPartNum;
 
@@ -48,7 +48,7 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
 
     if (!regex_match(location, m, storage_regex))
     {
-        log::Error(_L_, E_INVALIDARG, L"%s does not match a valid image file name\r\n", location.c_str());
+        spdlog::error(L"'{}' does not match a valid image file name", location);
         return E_INVALIDARG;
     }
 
@@ -58,14 +58,14 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
         strImageFile = m[REGEX_SYSTEMSTORAGE_SPEC].str();
     }
 
-    CDiskExtent extent(_L_, strImageFile);
+    CDiskExtent extent(strImageFile);
 
     if (m[REGEX_SYSTEMSTORAGE_PARTITION_SPEC].matched)
     {
-        PartitionTable pt(_L_);
+        PartitionTable pt;
         if (FAILED(hr = pt.LoadPartitionTable(strImageFile.c_str())))
         {
-            log::Error(_L_, hr, L"Failed to load partition table for %s\r\n", strImageFile.c_str());
+            spdlog::error(L"Failed to load partition table for '{}' (code: {:#x})", strImageFile, hr);
             return hr;
         }
 
@@ -106,7 +106,7 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
         {
             if (FAILED(hr = GetFileSizeFromArg(m[REGEX_SYSTEMSTORAGE_OFFSET].str().c_str(), offset)))
             {
-                log::Error(_L_, hr, L"Invalid offset specified: %s\r\n", m[REGEX_SYSTEMSTORAGE_OFFSET].str().c_str());
+                spdlog::error(L"Invalid offset specified: {} (code: {:#x})", m[REGEX_SYSTEMSTORAGE_OFFSET].str(), hr);
                 return hr;
             }
         }
@@ -115,7 +115,7 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
         {
             if (FAILED(hr = GetFileSizeFromArg(m[REGEX_SYSTEMSTORAGE_SIZE].str().c_str(), size)))
             {
-                log::Error(_L_, hr, L"Invalid size specified: %s\r\n", m[REGEX_SYSTEMSTORAGE_SIZE].str().c_str());
+                spdlog::error(L"Invalid size specified: {} (code: {:#x})", m[REGEX_SYSTEMSTORAGE_SIZE].str(), hr);
                 return hr;
             }
         }
@@ -124,8 +124,8 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
         {
             if (FAILED(hr = GetFileSizeFromArg(m[REGEX_SYSTEMSTORAGE_SECTOR].str().c_str(), sector)))
             {
-                log::Error(
-                    _L_, hr, L"Invalid sector size specified: %s\r\n", m[REGEX_SYSTEMSTORAGE_SECTOR].str().c_str());
+                spdlog::error(
+                    L"Invalid sector size specified: '{}' (code: {:#x})", m[REGEX_SYSTEMSTORAGE_SECTOR].str(), hr);
                 return hr;
             }
         }
@@ -137,7 +137,7 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
 
     if (FAILED(hr = extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        log::Error((_L_), hr, L"Failed to open image %s\r\n", strImageFile.c_str());
+        spdlog::error(L"Failed to open image: '{}' (code: {:#x})", strImageFile, hr);
         return hr;
     }
 

@@ -28,8 +28,8 @@ private:
     HRESULT GetDecryptionMaterial();
 
 public:
-    DecodeMessageStream(logger pLog)
-        : MessageStream(std::move(pLog))
+    DecodeMessageStream()
+        : MessageStream()
     {
         ZeroMemory(&m_DecryptParam, sizeof(CMSG_CTRL_DECRYPT_PARA));
         m_DecryptParam.cbSize = sizeof(CMSG_CTRL_DECRYPT_PARA);

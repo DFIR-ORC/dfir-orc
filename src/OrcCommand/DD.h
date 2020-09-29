@@ -21,8 +21,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 namespace Command::DD {
 
 class ORCUTILS_API Main : public UtilitiesMain
@@ -74,8 +72,9 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#DD_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog), loc_set(std::move(pLog))
+    Main()
+        : UtilitiesMain()
+        , loc_set()
     {
     }
 

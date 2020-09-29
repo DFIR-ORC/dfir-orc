@@ -23,7 +23,6 @@
 namespace Orc {
 
 class CBinaryBuffer;
-class LogFileWriter;
 
 namespace StructuredOutput {
 
@@ -57,25 +56,19 @@ public:
 
     using _Buffer = Buffer<WCHAR, 128>;
 
-    Writer(Orc::logger pLog, std::unique_ptr<Options>&& pOptions)
-        : _L_(std::move(pLog))
-        , m_Options(std::move(pOptions))
+    Writer(std::unique_ptr<Options>&& pOptions)
+        : m_Options(std::move(pOptions))
     {
     }
 
-    static std::shared_ptr<IWriter> GetWriter(
-        const logger& pLog,
-        std::shared_ptr<ByteStream> stream,
-        OutputSpec::Kind kindOfFile,
-        std::unique_ptr<Options>&& pOptions);
     static std::shared_ptr<IWriter>
-    GetWriter(const logger& pLog, const OutputSpec& outFile, std::unique_ptr<Options>&& pOptions);
+    GetWriter(std::shared_ptr<ByteStream> stream, OutputSpec::Kind kindOfFile, std::unique_ptr<Options>&& options);
+    static std::shared_ptr<IWriter> GetWriter(const OutputSpec& outFile, std::unique_ptr<Options>&& options);
     static std::shared_ptr<IWriter> GetWriter(
-        const logger& pLog,
         const OutputSpec& outFile,
-        const std::wstring& strPattern,
-        const std::wstring& strName,
-        std::unique_ptr<Options>&& pOptions);
+        const std::wstring& pattern,
+        const std::wstring& name,
+        std::unique_ptr<Options>&& options);
 
 protected:
     
@@ -99,11 +92,10 @@ protected:
     HRESULT WriteBuffer(_Buffer& buffer, IN_ADDR& ip);
 
 protected:
-    Orc::logger _L_;
     std::unique_ptr<Options> m_Options;
 };
 
-}  // namespace StrucuturedOutput
+}  // namespace StructuredOutput
 
 using StructuredOutputOptions = StructuredOutput::Options;
 using StructuredOutputWriter = StructuredOutput::Writer;

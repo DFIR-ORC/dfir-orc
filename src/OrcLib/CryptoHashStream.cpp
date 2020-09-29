@@ -10,8 +10,6 @@
 
 #include "CryptoHashStream.h"
 
-#include "LogFileWriter.h"
-
 #include "SystemDetails.h"
 
 #include "CryptoUtilities.h"
@@ -47,7 +45,7 @@ HRESULT CryptoHashStream::OpenToRead(Algorithm algs, const std::shared_ptr<ByteS
 
     if (pChained->IsOpen() != S_OK)
     {
-        log::Error(_L_, E_FAIL, L"Chained stream to HashStream must be opened\r\n");
+        spdlog::error(L"Chained stream to HashStream must be opened");
         return E_FAIL;
     }
 
@@ -64,7 +62,7 @@ HRESULT CryptoHashStream::OpenToWrite(Algorithm algs, const std::shared_ptr<Byte
 
     if (pChainedStream != nullptr && pChainedStream->IsOpen() != S_OK)
     {
-        log::Error(_L_, E_FAIL, L"Chained stream to HashStream must be opened if provided\r\n");
+        spdlog::error(L"Chained stream to HashStream must be opened if provided");
         return E_FAIL;
     }
 
@@ -95,27 +93,29 @@ HRESULT CryptoHashStream::ResetHash(bool bContinue)
         if (g_hProv == NULL)
         {
             // Acquire the best available crypto provider
-            if (FAILED(hr = CryptoUtilities::AcquireContext(_L_, g_hProv)))
+            if (FAILED(hr = CryptoUtilities::AcquireContext(g_hProv)))
             {
-                log::Error(_L_, hr, L"Failed to initialize providers\r\n");
+                spdlog::error(L"Failed to initialize providers (code: {:#x})", hr);
                 return hr;
             }
         }
         m_bHashIsValid = true;
 
-        if ((m_Algorithms & MD5) && !CryptCreateHash(g_hProv, CALG_MD5, 0, 0, &m_MD5))
+        if ((m_Algorithms & Algorithm::MD5) && !CryptCreateHash(g_hProv, CALG_MD5, 0, 0, &m_MD5))
         {
-            log::Verbose(_L_, L"Failed to initialise MD5 hash (hr=0x%lx)\r\n", hr = HRESULT_FROM_WIN32(GetLastError()));
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::debug(L"Failed to initialise MD5 hash (code: {:#x})", hr);
         }
-        if ((m_Algorithms & SHA1) && !CryptCreateHash(g_hProv, CALG_SHA1, 0, 0, &m_Sha1))
+
+        if ((m_Algorithms & Algorithm::SHA1) && !CryptCreateHash(g_hProv, CALG_SHA1, 0, 0, &m_Sha1))
         {
-            log::Verbose(
-                _L_, L"Failed to initialise SHA1 hash (hr=0x%lx)\r\n", hr = HRESULT_FROM_WIN32(GetLastError()));
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::debug(L"Failed to initialise SHA1 hash (code: {:#x})", hr);
         }
-        if ((m_Algorithms & SHA256) && !CryptCreateHash(g_hProv, CALG_SHA_256, 0, 0, &m_Sha256))
+        if ((m_Algorithms & Algorithm::SHA256) && !CryptCreateHash(g_hProv, CALG_SHA_256, 0, 0, &m_Sha256))
         {
-            log::Verbose(
-                _L_, L"Failed to initialise SHA256 hash (hr=0x%lx)\r\n", hr = HRESULT_FROM_WIN32(GetLastError()));
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::debug(L"Failed to initialise SHA256 hash (code: {:#x})", hr);
         }
     }
     return S_OK;
@@ -146,15 +146,15 @@ HRESULT CryptoHashStream::GetHash(Algorithm alg, CBinaryBuffer& hash)
         DWORD cbHash = 0L;
         switch (alg)
         {
-            case MD5:
+            case Algorithm::MD5:
                 cbHash = BYTES_IN_MD5_HASH;
                 hHash = m_MD5;
                 break;
-            case SHA1:
+            case Algorithm::SHA1:
                 cbHash = BYTES_IN_SHA1_HASH;
                 hHash = m_Sha1;
                 break;
-            case SHA256:
+            case Algorithm::SHA256:
                 cbHash = BYTES_IN_SHA256_HASH;
                 hHash = m_Sha256;
                 break;

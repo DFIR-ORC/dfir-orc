@@ -12,7 +12,6 @@
 #include "DiskStructures.h"
 #include "FSVBR.h"
 
-#include "LogFileWriter.h"
 #include "DiskExtent.h"
 
 #include "NtfsDataStructures.h"
@@ -23,13 +22,14 @@
 #include <locale>
 #include <codecvt>
 
+#include <spdlog/spdlog.h>
+
 using namespace Orc;
 
 static const unsigned char MBR_SIGNATURE[2] = {0x55, 0xAA};
 static const std::string GPT_SIGNATURE("EFI PART");
 
-PartitionTable::PartitionTable(logger pLog)
-    : _L_(std::move(pLog))
+PartitionTable::PartitionTable()
 {
     m_pDiskExtent = NULL;
 }
@@ -51,7 +51,7 @@ HRESULT PartitionTable::LoadPartitionTable(const WCHAR* szDeviceOrImage)
         m_pDiskExtent->Close();
     }
 
-    m_pDiskExtent = new CDiskExtent(_L_, szDeviceOrImage);
+    m_pDiskExtent = new CDiskExtent(szDeviceOrImage);
     return LoadPartitionTable(*m_pDiskExtent);
 }
 
@@ -78,12 +78,12 @@ HRESULT PartitionTable::LoadPartitionTable(IDiskExtent& diskExtent)
         // get sector size
         UINT sectorSize = GetSectorSize(diskExtent);
 
-        log::Debug(_L_, L"Parsing MBR partition table for : %s\r\n", diskExtent.GetName().c_str());
+        spdlog::trace(L"Parsing MBR partition table for '{}'", diskExtent.GetName());
         return ParseMBRPartitionTable(diskExtent, sectorSize, pMBR);
     }
     else
     {
-        log::Error(_L_, E_INVALIDARG, L"Not a valid MBR signature in %s\r\n", diskExtent.GetName().c_str());
+        spdlog::error(L"Not a valid MBR signature in '{}'", diskExtent.GetName());
         return E_INVALIDARG;
     }
 }
@@ -333,7 +333,7 @@ HRESULT PartitionTable::ParseMBRPartitionTable(IDiskExtent& diskExtend, UINT sec
         DiskPartition* pPartition = &pMBR->PartitionTable[i];
         Partition p(GetPartitionNumber());
 
-        log::Debug(_L_, L"Parsing partition entry #%d\r\n", i);
+        spdlog::trace(L"Parsing partition entry #{}", i);
         ParseDiskPartition(pPartition, sectorSize, p, 0);
 
         if (p.IsExtented())
@@ -347,11 +347,11 @@ HRESULT PartitionTable::ParseMBRPartitionTable(IDiskExtent& diskExtend, UINT sec
             if (FAILED(ReadDiskExtend(diskExtend, buffer)))
                 return hr;
 
-            log::Debug(_L_, L"Found an extended partition. Parsing extended partition\r\n");
+            spdlog::trace(L"Found an extended partition. Parsing extended partition");
 
             if (FAILED(hr = ParseExtendedPartition(diskExtend, p, (ExtendedBootRecord*)buffer.GetData(), p.Start)))
             {
-                log::Error(_L_, hr, L"Failed to parse extended partition of %s\r\n", diskExtend.GetName().c_str());
+                spdlog::error(L"Failed to parse extended partition of {} (code: {:#x})", diskExtend.GetName(), hr);
                 return hr;
             }
         }
@@ -359,7 +359,7 @@ HRESULT PartitionTable::ParseMBRPartitionTable(IDiskExtent& diskExtend, UINT sec
         {
             // protective MBR -> there must be a GPT partition table right after
             // so we read the 2nd sector
-            log::Debug(_L_, L"Found a GPT partition. Parsing now GPT partition table\r\n");
+            spdlog::trace(L"Found a GPT partition. Parsing now GPT partition table");
 
             CBinaryBuffer buffer;
             buffer.SetCount(sizeof(GPTHeader));
@@ -375,17 +375,17 @@ HRESULT PartitionTable::ParseMBRPartitionTable(IDiskExtent& diskExtend, UINT sec
             // try first partition table
             if (FAILED(hr = ParseGPTPartitionTable(diskExtend, sectorSize, gptHeader)))
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Failed to parse GPT partition of %s using primary GPT header\r\n. Will now try backup GPT "
-                    L"header\r\n",
-                    diskExtend.GetName().c_str());
+                spdlog::error(
+                    L"Failed to parse GPT partition of {} using primary GPT header. Will now try backup GPT header "
+                    L"(code: {:#x})",
+                    diskExtend.GetName(),
+                    hr);
 
                 // try second partition table
-
                 if (FAILED(SeekDiskExtend(diskExtend, gptHeader->AlternativeLba * sectorSize)))
+                {
                     return hr;
+                }
 
                 if (FAILED(ReadDiskExtend(diskExtend, buffer)))
                     return hr;
@@ -394,11 +394,10 @@ HRESULT PartitionTable::ParseMBRPartitionTable(IDiskExtent& diskExtend, UINT sec
                         hr = ParseGPTPartitionTable(
                             diskExtend, sectorSize, reinterpret_cast<PGPTHeader>(buffer.GetData()))))
                 {
-                    log::Error(
-                        _L_,
-                        hr,
-                        L"Failed to parse GPT partition of %s using backup GPT header\r\n",
-                        diskExtend.GetName().c_str());
+                    spdlog::error(
+                        L"Failed to parse GPT partition of {} using backup GPT header (code: {:#x})",
+                        diskExtend.GetName(),
+                        hr);
                     return hr;
                 }
             }
@@ -422,7 +421,7 @@ HRESULT PartitionTable::ParseGPTPartitionTable(IDiskExtent& diskExtend, UINT sec
     // check GPT signature
     if (std::strncmp(reinterpret_cast<char*>(pGPTHeader->Signature), GPT_SIGNATURE.c_str(), 8))
     {
-        log::Error(_L_, hr, L"Bad GPT signature\r\n");
+        spdlog::error(L"Bad GPT signature");
         return hr;
     }
 
@@ -434,15 +433,14 @@ HRESULT PartitionTable::ParseGPTPartitionTable(IDiskExtent& diskExtend, UINT sec
 
     if (headerCrc != Crc32(headerBuffer))
     {
-        log::Error(_L_, hr, L"Bad CRC32 for GPT partition header\r\n");
+        spdlog::error(L"Bad CRC32 for GPT partition header");
         return hr;
     }
 
     // check validity of some parameters
     if (pGPTHeader->NumberOfPartitionEntries > 128)
     {
-        log::Warning(
-            _L_, hr, L"Abnormally large number of GPT partition entries (%d)\r\n", pGPTHeader->NumberOfPartitionEntries);
+        spdlog::warn("Abnormally large number of GPT partition entries: {}", pGPTHeader->NumberOfPartitionEntries);
     }
 
     CBinaryBuffer buffer;
@@ -466,7 +464,7 @@ HRESULT PartitionTable::ParseGPTPartitionTable(IDiskExtent& diskExtend, UINT sec
 
     if (tableCrc != pGPTHeader->PartitionEntryArrayCrc32)
     {
-        log::Warning(_L_, hr, L"Bad CRC32 for GPT partition table\r\n");
+        spdlog::warn("Bad CRC32 for GPT partition table");
     }
 
     LONGLONG offset = 0;
@@ -504,10 +502,8 @@ HRESULT PartitionTable::ParseExtendedPartition(
 
     if (pExtendedRecord->MBRSignature[1] != 0xAA && pExtendedRecord->MBRSignature[0] != 0x55)
     {
-        log::Warning(
-            _L_,
-            hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            L"Extended partition's signature failed to verify (%X%X) --> Partition ignored\r\n",
+        spdlog::warn(
+            "Extended partition's signature failed to verify ({:#x}{:#x}) --> Partition ignored",
             pExtendedRecord->MBRSignature[0],
             pExtendedRecord->MBRSignature[1]);
         return S_OK;
@@ -527,7 +523,7 @@ HRESULT PartitionTable::ParseExtendedPartition(
     if (pNextExtendedPartition->NumberOfSector == 0)  // Last extended part read;
         return S_OK;
 
-    log::Debug(_L_, L"Found an extended partition. Parsing extended partition\r\n");
+    spdlog::trace("Found an extended partition. Parsing extended partition");
 
     //
     // Not the last, continue parsing (recursively)
@@ -547,7 +543,7 @@ HRESULT PartitionTable::ParseExtendedPartition(
 
     if (FAILED(hr = ParseExtendedPartition(diskExtend, p, pNextExtendedRecord, offset)))
     {
-        log::Error(_L_, hr, L"Failed to parse extended partition\r\n");
+        spdlog::error("Failed to parse extended partition (code: {:#x})", hr);
         return hr;
     }
 
@@ -558,10 +554,7 @@ void PartitionTable::AddPartition(const Orc::Partition& p)
 {
     m_Table.push_back(p);
 
-    std::wstringstream ss;
-    ss << L"Partition added. " << p;
-
-    log::Debug(_L_, L"%s\r\n", ss.str().c_str());
+    spdlog::trace(L"Partition added: {}", p);
 }
 
 UINT8 PartitionTable::GetPartitionNumber()
@@ -575,7 +568,7 @@ HRESULT PartitionTable::OpenDiskExtend(IDiskExtent& diskExtend)
 
     if (FAILED(hr = diskExtend.Open(FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        log::Error(_L_, hr, L"Could not open Location %s\r\n", diskExtend.GetName().c_str());
+        spdlog::error(L"Could not open Location '{}' (code: {:#x})", diskExtend.GetName(), hr);
         return hr;
     }
 
@@ -592,7 +585,7 @@ HRESULT PartitionTable::SeekDiskExtend(IDiskExtent& diskExtend, UINT64 offset)
 
     if (FAILED(hr = diskExtend.Seek(off, &newpos, FILE_BEGIN)))
     {
-        log::Error(_L_, hr, L"Failed to seek from Location %s\r\n", diskExtend.GetName().c_str());
+        spdlog::error(L"Failed to seek from Location '{}' (code: {:#x})", diskExtend.GetName(), hr);
         return hr;
     }
 
@@ -606,7 +599,7 @@ HRESULT PartitionTable::ReadDiskExtend(IDiskExtent& diskExtend, CBinaryBuffer& b
 
     if (FAILED(hr = diskExtend.Read(buffer.GetData(), (DWORD)buffer.GetCount(), &dwBytesRead)))
     {
-        log::Error(_L_, hr, L"Failed to read from Location %s\r\n", diskExtend.GetName().c_str());
+        spdlog::error(L"Failed to read from Location '{}' (code: {:#x})", diskExtend.GetName(), hr);
         return hr;
     }
 

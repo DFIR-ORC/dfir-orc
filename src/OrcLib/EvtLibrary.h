@@ -172,8 +172,8 @@ class ORCLIB_API EvtLibrary : public ExtensionLibrary
     friend class ExtensionLibrary;
 
 public:
-    EvtLibrary(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"wevtapi", L"Wevtapi.dll", L"Wevtapi.dll") {};
+    EvtLibrary()
+        : ExtensionLibrary(L"wevtapi", L"Wevtapi.dll", L"Wevtapi.dll") {};
 
     STDMETHOD(Initialize)();
 

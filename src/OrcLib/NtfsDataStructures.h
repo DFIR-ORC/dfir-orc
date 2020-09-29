@@ -218,10 +218,10 @@ constexpr auto NTFS_MAX_ATTR_NAME_LEN = 255;
 
 struct STANDARD_INFORMATION
 {
-    LONGLONG CreationTime;
-    LONGLONG LastModificationTime;
-    LONGLONG LastChangeTime;
-    LONGLONG LastAccessTime;
+    FILETIME CreationTime;
+    FILETIME LastModificationTime;
+    FILETIME LastChangeTime;
+    FILETIME LastAccessTime;
     ULONG FileAttributes;
     ULONG MaximumVersions;
     ULONG VersionNumber;
@@ -403,6 +403,11 @@ constexpr auto NtfsFirstIndexEntry(PINDEX_HEADER IH)
 constexpr auto NtfsNextIndexEntry(PINDEX_ENTRY IE)
 {
     return (PINDEX_ENTRY)((PCHAR)(IE) + (ULONG)(IE)->Length);
+}
+
+constexpr auto NtfsNextIndexEntry(const INDEX_ENTRY* IE)
+{
+    return (const INDEX_ENTRY*)((PCHAR)(IE) + (ULONG)(IE)->Length);
 }
 
 enum REPARSE_POINT_TYPE_AND_FLAGS

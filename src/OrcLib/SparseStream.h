@@ -21,8 +21,8 @@ namespace Orc {
 class ORCLIB_API SparseStream : public FileStream
 {
 public:
-    SparseStream(logger pLog)
-        : FileStream(std::move(pLog))
+    SparseStream()
+        : FileStream()
     {
     }
     ~SparseStream();

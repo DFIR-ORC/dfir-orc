@@ -9,7 +9,6 @@
 
 #include "PasswordEncryptedStream.h"
 
-#include "LogFileWriter.h"
 #include "CryptoUtilities.h"
 
 #include <boost/scope_exit.hpp>
@@ -22,16 +21,17 @@ HRESULT PasswordEncryptedStream::GetKeyMaterial(const std::wstring& pwd)
 {
     HRESULT hr = E_FAIL;
 
-    if (FAILED(hr = CryptoUtilities::AcquireContext(_L_, m_hCryptProv)))
+    if (FAILED(hr = CryptoUtilities::AcquireContext(m_hCryptProv)))
     {
-        log::Error(_L_, hr, L"Failed to CryptAcquireContext\r\n");
+        spdlog::error("Failed to CryptAcquireContext (code: {:#x})", hr);
         return hr;
     }
 
     HCRYPTHASH hHash = NULL;
     if (!CryptCreateHash(m_hCryptProv, CALG_SHA1, 0, 0, &hHash))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to CryptCreateHash\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CryptCreateHash (code: {:#x})", hr);
         return hr;
     }
     BOOST_SCOPE_EXIT(hHash) { CryptDestroyHash(hHash); }
@@ -39,20 +39,23 @@ HRESULT PasswordEncryptedStream::GetKeyMaterial(const std::wstring& pwd)
 
     if (!CryptHashData(hHash, (BYTE*)pwd.c_str(), (DWORD)pwd.size() * sizeof(WCHAR), 0))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to CryptHashData\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed CryptHashData (code: {:#x})", hr);
         return hr;
     }
 
     if (!CryptDeriveKey(m_hCryptProv, ENCRYPT_ALGORITHM, hHash, 0L, &m_hKey))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to CryptDeriveKey\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed CryptDeriveKey (code: {:#x})", hr);
         return hr;
     }
 
     DWORD dwDataLen = sizeof(DWORD);
     if (!CryptGetKeyParam(m_hKey, KP_BLOCKLEN, (BYTE*)&m_dwBlockLen, &dwDataLen, 0L))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to CryptGetKeyParam\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed CryptGetKeyParam (code: {:#x})", hr);
         return hr;
     }
     return S_OK;
@@ -91,7 +94,7 @@ HRESULT PasswordEncryptedStream::EncryptData(CBinaryBuffer& pData, BOOL bFinal, 
     HRESULT hr = E_FAIL;
     if (m_hCryptProv == NULL || m_hKey == NULL)
     {
-        log::Error(_L_, E_UNEXPECTED, L"No key to encrypt with\r\n");
+        spdlog::error("EncryptData: No key to encrypt with");
         return E_UNEXPECTED;
     }
 
@@ -108,14 +111,11 @@ HRESULT PasswordEncryptedStream::EncryptData(CBinaryBuffer& pData, BOOL bFinal, 
     {
         if (dwEncryptedBytes % m_dwBlockLen != 0)
         {
-            log::Error(
-                _L_,
-                hr = NTE_BAD_DATA,
-                L"Blocks to encrypt must be aligned on cipher block boundaries (data is %d bytes, block size is "
-                L"%d)\r\n",
+            spdlog::error(
+                "Blocks to encrypt must be aligned on cipher block boundaries (data is {} bytes, block size is {})",
                 dwEncryptedBytes,
                 m_dwBlockLen);
-            return hr;
+            return NTE_BAD_DATA;
         }
     }
 
@@ -128,13 +128,15 @@ HRESULT PasswordEncryptedStream::EncryptData(CBinaryBuffer& pData, BOOL bFinal, 
             dwDataLen = dwEncryptedBytes;
             if (!CryptEncrypt(m_hKey, NULL, bFinal, 0L, pData.GetData(), &dwDataLen, (DWORD)pData.GetCount()))
             {
-                log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptEncrypt failed!\r\n");
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::error("Failed CryptEncrypt (code: {:#x})", hr);
                 return hr;
             }
         }
         else
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CryptEncrypt failed!\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed CryptEncrypt (code: {:#x})", hr);
             return hr;
         }
     }
@@ -150,7 +152,7 @@ HRESULT PasswordEncryptedStream::DecryptData(CBinaryBuffer& pData, BOOL bFinal, 
     HRESULT hr = E_FAIL;
     if (m_hCryptProv == NULL || m_hKey == NULL)
     {
-        log::Error(_L_, E_UNEXPECTED, L"No key to encrypt with\r\n");
+        spdlog::error("DecryptData: No key to decrypt with");
         return E_UNEXPECTED;
     }
 
@@ -166,8 +168,8 @@ HRESULT PasswordEncryptedStream::DecryptData(CBinaryBuffer& pData, BOOL bFinal, 
 
     if (!CryptDecrypt(m_hKey, NULL, bFinal, 0L, pData.GetData(), &dwToDecrypt))
     {
-        log::Error(
-            _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to decrypt data (%d bytes)\r\n", dwDecryptedBytes);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed to decrypt data ({} bytes, code: {:#x})", dwDecryptedBytes, hr);
         return hr;
     }
     dwDecryptedBytes = dwToDecrypt;
@@ -218,7 +220,7 @@ HRESULT PasswordEncryptedStream::Read(
         }
         else
         {
-            log::Verbose(_L_, L"PasswordEncryptedStream is not configured!\r\n");
+            spdlog::debug(L"PasswordEncryptedStream is not configured!");
         }
 
         *pcbBytesRead = dwBytesDecrypted;
@@ -227,11 +229,8 @@ HRESULT PasswordEncryptedStream::Read(
         {
             if (FAILED(hr = m_pChainedStream->SetFilePointer(dwBytesDecrypted - cbBytesRead, FILE_CURRENT, NULL)))
             {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Failed to SetFilePointer according to left overs (%d bytes)\r\n",
-                    dwBytesDecrypted - cbBytesRead);
+                spdlog::error(
+                    "Failed to SetFilePointer according to left overs ({} bytes)", dwBytesDecrypted - cbBytesRead);
                 return hr;
             }
         }
@@ -271,7 +270,7 @@ HRESULT PasswordEncryptedStream::Write(
 
             if (FAILED(hr = EncryptData(m_Buffer, FALSE, dwToProcess)))
             {
-                log::Error(_L_, hr, L"Failed to encrypt data (%d bytes)\r\n", dwToProcess);
+                spdlog::error("Failed to encrypt data ({} bytes, code: {:#x})", dwToProcess, hr);
                 return hr;
             }
         }
@@ -279,19 +278,19 @@ HRESULT PasswordEncryptedStream::Write(
         {
             if (FAILED(hr = DecryptData(m_Buffer, FALSE, dwToProcess)))
             {
-                log::Error(_L_, hr, L"Failed to decrypt data (%d bytes)\r\n", dwToProcess);
+                spdlog::error("Failed to decrypt data ({} bytes, code: {:#x})", dwToProcess, hr);
                 return hr;
             }
         }
         else
         {
-            log::Verbose(_L_, L"PasswordEncryptedStream is not configured!\r\n");
+            spdlog::debug("PasswordEncryptedStream is not configured");
         }
 
         ULONGLONG ullWritten = 0LL;
         if (FAILED(hr = m_pChainedStream->Write(m_Buffer.GetData(), dwToProcess, &ullWritten)))
         {
-            log::Error(_L_, hr, L"Failed to write encrypted data (%d bytes)\r\n", dwToProcess);
+            spdlog::error("Failed to write encrypted data ({} bytes, code: {:#x})", dwToProcess, hr);
             return hr;
         }
         _ASSERT(ullWritten == dwToProcess);
@@ -335,7 +334,7 @@ HRESULT PasswordEncryptedStream::Close()
         {
             if (FAILED(hr = EncryptData(m_Buffer, TRUE, dwToProcess)))
             {
-                log::Error(_L_, hr, L"Failed to encrypt data (%d bytes)\r\n", dwToProcess);
+                spdlog::error("Failed to encrypt data ({} bytes, code: {:#x})", dwToProcess, hr);
                 return hr;
             }
         }
@@ -343,19 +342,19 @@ HRESULT PasswordEncryptedStream::Close()
         {
             if (FAILED(hr = DecryptData(m_Buffer, TRUE, dwToProcess)))
             {
-                log::Error(_L_, hr, L"Failed to decrypt data (%d bytes)\r\n", dwToProcess);
+                spdlog::error("Failed to decrypt data ({} bytes, code: {:#x})", dwToProcess, hr);
                 return hr;
             }
         }
         else
         {
-            log::Verbose(_L_, L"PasswordEncryptedStream is not configured!\r\n");
+            spdlog::debug("PasswordEncryptedStream is not configured");
         }
 
         ULONGLONG ullWritten = 0LL;
         if (FAILED(hr = m_pChainedStream->Write(m_Buffer.GetData(), dwToProcess, &ullWritten)))
         {
-            log::Error(_L_, hr, L"Failed to write encrypted data (%d bytes)\r\n", dwToProcess);
+            spdlog::error(L"Failed to write encrypted data ({} bytes, code: {:#x})", dwToProcess, hr);
             return hr;
         }
         _ASSERT(ullWritten == dwToProcess);

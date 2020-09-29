@@ -87,8 +87,10 @@ public:
     std::wstring Description;
 
     TerminationHandler(std::wstring strDescr, short sPriority)
-        : Description(std::move(strDescr))
-        , Priority(sPriority) {};
+        : Priority(sPriority)
+        , Description(std::move(strDescr))
+    {
+    }
 };
 
 class ORCLIB_API Robustness

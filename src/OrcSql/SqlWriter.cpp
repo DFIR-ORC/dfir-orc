@@ -26,8 +26,8 @@
 using namespace Orc;
 using namespace Orc::TableOutput;
 
-Orc::TableOutput::Sql::Writer::Writer(logger pLog, DWORD dwTransactionRowCount)
-    : _L_(std::move(pLog))
+Orc::TableOutput::Sql::Writer::Writer(DWORD dwTransactionRowCount)
+    : _L_()
     , m_dwMaxTransactionRowCount(dwTransactionRowCount)
     , m_dwRowsInTransaction(0)
     , m_dwSentCount(0)
@@ -42,14 +42,14 @@ HRESULT Orc::TableOutput::Sql::Writer::SetConnection(const std::shared_ptr<IConn
 
     if (!pConnection->IsConnected())
     {
-        log::Error(_L_, E_INVALIDARG, L"Provided SQL connection is not connected\r\n");
+        spdlog::error(E_INVALIDARG, L"Provided SQL connection is not connected");
         return E_INVALIDARG;
     }
 
     auto connection = std::dynamic_pointer_cast<Connection>(pConnection);
     if (!connection)
     {
-        log::Error(_L_, E_INVALIDARG, L"Invalid SQL connection\r\n");
+        spdlog::error(E_INVALIDARG, L"Invalid SQL connection");
         return E_INVALIDARG;
     }
     m_pSQL = connection;
@@ -128,7 +128,7 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::BindColumns(LPCWSTR szTable)
         m_pSQL->Disconnect();
         return E_FAIL;
     }
-    log::Verbose(_L_, L"VERBOSE: Successfully initialised bulk copy to table %s\r\n", szTable);
+    spdlog::debug(L"Successfully initialised bulk copy to table: '{}'", szTable);
 
     static NoData NoBoundData = { SQL_NULL_DATA };
 
@@ -518,15 +518,13 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::BindColumns(LPCWSTR szTable)
         }
         if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed to bind column %s (ID=%d)\r\n", item.ColumnName.c_str(), item.dwColumnID);
+            spdlog::error(L"Failed to bind column '{}' (id={}, code: {:#x})", item.ColumnName, item.dwColumnID, hr);
             return;
         }
-        else
-        {
-            log::Verbose(_L_, L"INFO: Column %s (id=%d) is now bound\r\n", item.ColumnName.c_str(), item.dwColumnID);
-        }
-        return;
+
+        spdlog::debug(L"Column '{}' (id={}) is now bound", item.ColumnName, item.dwColumnID);
     });
+
     if (FAILED(hr))
     {
         AbandonColumn();
@@ -554,7 +552,7 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::SendRow()
 
     if (!m_bBound)
     {
-        log::Error(_L_, E_NOT_SET, L"Attempt to send row without bound columns\r\n");
+        spdlog::error(E_NOT_SET, L"Attempt to send row without bound columns");
         return E_NOT_SET;
     }
 
@@ -607,8 +605,7 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::Done()
         return E_FAIL;
     }
     m_dwSentCount += nbRows;
-    log::Verbose(_L_, L"INFO: Wrote %d accumulated rows\r\n", m_dwWroteCount);
-    log::Verbose(_L_, L"INFO: Send %d accumulated rows\r\n", m_dwSentCount);
+    spdlog::debug(L"Accumulated rows: written: {}, sent: {}", m_dwWroteCount, m_dwSentCount);
     return S_OK;
 }
 
@@ -621,7 +618,7 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::Flush()
         return E_FAIL;
     }
     m_dwSentCount += nbSentRows;
-    log::Verbose(_L_, L"VERBOSE: Successfully comitted %d rows\r\n", m_dwRowsInTransaction);
+    spdlog::debug(L"Successfully comitted {} rows", m_dwRowsInTransaction);
     m_dwRowsInTransaction = 0;
     return S_OK;
 }
@@ -631,7 +628,7 @@ STDMETHODIMP Orc::TableOutput::Sql::Writer::Close()
     HRESULT hr = E_FAIL;
     if (FAILED(hr = Done()))
     {
-        log::Error(_L_, hr, L"Failed to bcp_done the last batch of data\r\n");
+        spdlog::error(L"Failed to bcp_done the last batch of data (code: {:#x})", hr);
     }
     return S_OK;
 }
@@ -959,12 +956,8 @@ HRESULT Orc::TableOutput::Sql::Writer::WriteEndOfLine()
 {
     if (m_CurCol != m_Columns.size())
     {
-        log::Error(
-            _L_,
-            E_UNEXPECTED,
-            L"End of row does not have appropriate writes (columns=%d, writes=%d)\r\n",
-            m_Columns.size(),
-            m_CurCol);
+        spdlog::error(
+            L"End of row does not have appropriate writes (columns={}, writes={})", m_Columns.size(), m_CurCol);
         AbandonRow();
         return E_UNEXPECTED;
     }

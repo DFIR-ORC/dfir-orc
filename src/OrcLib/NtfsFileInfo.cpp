@@ -8,7 +8,6 @@
 #include "StdAfx.h"
 
 #include "NtfsFileInfo.h"
-#include "LogFileWriter.h"
 
 #include "FileStream.h"
 
@@ -27,7 +26,6 @@
 using namespace Orc;
 
 NtfsFileInfo::NtfsFileInfo(
-    logger pLog,
     std::wstring strComputerName,
     const std::shared_ptr<VolumeReader>& pVolReader,
     Intentions DefaultIntentions,
@@ -35,15 +33,7 @@ NtfsFileInfo::NtfsFileInfo(
     LPCWSTR szFullName,
     DWORD dwLen,
     Authenticode& codeVerifyTrust)
-    : FileInfo(
-        std::move(pLog),
-        std::move(strComputerName),
-        pVolReader,
-        DefaultIntentions,
-        Filters,
-        szFullName,
-        dwLen,
-        codeVerifyTrust)
+    : FileInfo(std::move(strComputerName), pVolReader, DefaultIntentions, Filters, szFullName, dwLen, codeVerifyTrust)
 {
 }
 
@@ -65,99 +55,99 @@ HRESULT NtfsFileInfo::HandleIntentions(const Intentions& intention, ITableOutput
     {
         switch (intention)
         {
-            case FILEINFO_LASTATTRCHGDATE:
+            case Intentions::FILEINFO_LASTATTRCHGDATE:
                 hr = WriteLastAttrChangeDate(output);
                 break;
 
-            case FILEINFO_FN_CREATIONDATE:
+            case Intentions::FILEINFO_FN_CREATIONDATE:
                 hr = WriteFileNameCreationDate(output);
                 break;
 
-            case FILEINFO_FN_LASTMODDATE:
+            case Intentions::FILEINFO_FN_LASTMODDATE:
                 hr = WriteFileNameLastModificationDate(output);
                 break;
 
-            case FILEINFO_FN_LASTACCDATE:
+            case Intentions::FILEINFO_FN_LASTACCDATE:
                 hr = WriteFileNameLastAccessDate(output);
                 break;
 
-            case FILEINFO_FN_LASTATTRMODDATE:
+            case Intentions::FILEINFO_FN_LASTATTRMODDATE:
                 hr = WriteFileNameLastAttrModificationDate(output);
                 break;
 
-            case FILEINFO_USN:
+            case Intentions::FILEINFO_USN:
                 hr = WriteUSN(output);
                 break;
 
-            case FILEINFO_FRN:
+            case Intentions::FILEINFO_FRN:
                 hr = WriteFRN(output);
                 break;
 
-            case FILEINFO_PARENTFRN:
+            case Intentions::FILEINFO_PARENTFRN:
                 hr = WriteParentFRN(output);
                 break;
 
-            case FILEINFO_EXTENDED_ATTRIBUTE:
+            case Intentions::FILEINFO_EXTENDED_ATTRIBUTE:
                 hr = WriteExtendedAttributes(output);
                 break;
 
-            case FILEINFO_ADS:
+            case Intentions::FILEINFO_ADS:
                 hr = WriteADS(output);
                 break;
 
-            case FILEINFO_OWNERID:
+            case Intentions::FILEINFO_OWNERID:
                 hr = WriteOwnerId(output);
                 break;
 
-            case FILEINFO_OWNERSID:
+            case Intentions::FILEINFO_OWNERSID:
                 hr = WriteOwnerSid(output);
                 break;
 
-            case FILEINFO_OWNER:
+            case Intentions::FILEINFO_OWNER:
                 hr = WriteOwner(output);
                 break;
 
-            case FILEINFO_FILENAMEID:
+            case Intentions::FILEINFO_FILENAMEID:
                 hr = WriteFilenameID(output);
                 break;
 
-            case FILEINFO_DATAID:
+            case Intentions::FILEINFO_DATAID:
                 hr = WriteDataID(output);
                 break;
 
-            case FILEINFO_FILENAMEFLAGS:
+            case Intentions::FILEINFO_FILENAMEFLAGS:
                 hr = WriteFilenameFlags(output);
                 break;
 
-            case FILEINFO_SEC_DESCR_ID:
+            case Intentions::FILEINFO_SEC_DESCR_ID:
                 hr = WriteSecDescrID(output);
                 break;
 
-            case FILEINFO_EA_SIZE:
+            case Intentions::FILEINFO_EA_SIZE:
                 hr = WriteEASize(output);
                 break;
 
-            case FILEINFO_FILENAME_IDX:
+            case Intentions::FILEINFO_FILENAME_IDX:
                 hr = WriteFilenameIndex(output);
                 break;
 
-            case FILEINFO_DATA_IDX:
+            case Intentions::FILEINFO_DATA_IDX:
                 hr = WriteDataIndex(output);
                 break;
 
-            case FILEINFO_SNAPSHOTID:
+            case Intentions::FILEINFO_SNAPSHOTID:
                 hr = WriteSnapshotID(output);
                 break;
 
-            case FILEINFO_SSDEEP:
+            case Intentions::FILEINFO_SSDEEP:
                 hr = WriteSSDeep(output);
                 break;
 
-            case FILEINFO_TLSH:
+            case Intentions::FILEINFO_TLSH:
                 hr = WriteTLSH(output);
                 break;
 
-            case FILEINFO_SIGNED_HASH:
+            case Intentions::FILEINFO_SIGNED_HASH:
                 hr = WriteSignedHash(output);
                 break;
 

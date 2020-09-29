@@ -20,32 +20,26 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API WMI
 {
 
 private:
-
     CComPtr<IWbemLocator> m_pLocator;
     CComPtr<IWbemServices> m_pServices;
 
 public:
-    WMI() {};
-
-    HRESULT Initialize(const logger& pLog);
+    HRESULT Initialize();
 
     HRESULT WMICreateProcess(
-        const logger& pLog,
         LPCWSTR szCurrentDirectory,
         LPCWSTR szCommandLine,
         DWORD dwCreationFlags,
         DWORD dwPriority,
         DWORD& dwStatus);
 
-    stx::Result<CComPtr<IEnumWbemClassObject>,HRESULT> Query(const logger& pLog, LPCWSTR szQuery) const;
+    stx::Result<CComPtr<IEnumWbemClassObject>, HRESULT> Query(LPCWSTR szQuery) const;
 
-    HRESULT WMIEnumPhysicalMedia(const logger& pLog, std::vector<std::wstring>& physicaldrives) const;
+    HRESULT WMIEnumPhysicalMedia(std::vector<std::wstring>& physicaldrives) const;
 
     template <typename _T>
     static stx::Result<_T, HRESULT> GetProperty(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)

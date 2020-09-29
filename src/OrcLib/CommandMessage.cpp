@@ -10,14 +10,21 @@
 
 #include "CommandMessage.h"
 
-using namespace std;
-
 using namespace Orc;
 
+namespace {
 
-struct CommandMessage_make_shared_enabler : public CommandMessage {
-	inline CommandMessage_make_shared_enabler(CmdRequest request) : CommandMessage(request) {};
+// Enable the use of std::make_shared with CommandMessage protected constructor
+struct CommandMessageT : public Orc::CommandMessage
+{
+    template <typename... Args>
+    inline CommandMessageT(Args&&... args)
+        : CommandMessage(std::forward<Args>(args)...)
+    {
+    }
 };
+
+}  // namespace
 
 CommandMessage::CommandMessage(CommandMessage::CmdRequest request)
     : m_Request(request)
@@ -28,44 +35,44 @@ CommandMessage::CommandMessage(CommandMessage::CmdRequest request)
 
 CommandMessage::Message CommandMessage::MakeCancelAnyPendingAndStopMessage()
 {
-    auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::CancelAnyPendingAndStop);
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::CancelAnyPendingAndStop);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeTerminateMessage(DWORD dwProcessID)
 {
-	auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::Terminate);
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Terminate);
     retval->m_dwPid = dwProcessID;
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeTerminateAllMessage()
 {
-    auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::TerminateAll);
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::TerminateAll);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeRefreshRunningList()
 {
-	auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::RefreshRunningList);
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::RefreshRunningList);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeDoneMessage()
 {
-    auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::Done);
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Done);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeQueryRunningListMessage()
 {
-	auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::QueryRunningList);
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::QueryRunningList);
     return retval;
 }
 
 CommandMessage::Message CommandMessage::MakeExecuteMessage(const std::wstring& keyword)
 {
-    auto retval = make_shared<CommandMessage_make_shared_enabler>(CommandMessage::Execute);
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Execute);
     retval->m_Keyword = keyword;
     return retval;
 }
@@ -137,11 +144,8 @@ HRESULT CommandMessage::PushOutputFile(
     return S_OK;
 }
 
-HRESULT CommandMessage::PushOutputFile(
-    const LONG OrderID,
-    const std::wstring& szName,
-    const std::wstring& Keyword,
-    bool bHash)
+HRESULT
+CommandMessage::PushOutputFile(const LONG OrderID, const std::wstring& szName, const std::wstring& Keyword, bool bHash)
 {
     CommandParameter output(CommandParameter::OutFile);
 
@@ -225,11 +229,7 @@ HRESULT CommandMessage::PushTempOutputFile(
     return S_OK;
 }
 
-HRESULT CommandMessage::PushStdOut(
-    const LONG OrderID,
-    const std::wstring& Keyword,
-    bool bCabWhenComplete,
-    bool bHash)
+HRESULT CommandMessage::PushStdOut(const LONG OrderID, const std::wstring& Keyword, bool bCabWhenComplete, bool bHash)
 {
     CommandParameter output(CommandParameter::StdOut);
 
@@ -242,11 +242,7 @@ HRESULT CommandMessage::PushStdOut(
     return S_OK;
 }
 
-HRESULT CommandMessage::PushStdErr(
-    const LONG OrderID,
-    const std::wstring& Keyword,
-    bool bCabWhenComplete,
-    bool bHash)
+HRESULT CommandMessage::PushStdErr(const LONG OrderID, const std::wstring& Keyword, bool bCabWhenComplete, bool bHash)
 {
     CommandParameter output(CommandParameter::StdErr);
 
@@ -259,11 +255,8 @@ HRESULT CommandMessage::PushStdErr(
     return S_OK;
 }
 
-HRESULT CommandMessage::PushStdOutErr(
-    const LONG OrderID,
-    const std::wstring& Keyword,
-    bool bCabWhenComplete,
-    bool bHash)
+HRESULT
+CommandMessage::PushStdOutErr(const LONG OrderID, const std::wstring& Keyword, bool bCabWhenComplete, bool bHash)
 {
     CommandParameter output(CommandParameter::StdOut);
 
@@ -276,4 +269,4 @@ HRESULT CommandMessage::PushStdOutErr(
     return S_OK;
 }
 
-CommandMessage::~CommandMessage(void) {}
+CommandMessage::~CommandMessage() {}

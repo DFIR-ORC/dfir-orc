@@ -57,16 +57,16 @@ HRESULT Orc::TableOutput::ApacheOrc::WriterTermination::operator()()
 
 struct Orc::TableOutput::ApacheOrc::Writer::MakeSharedEnabler : public Orc::TableOutput::ApacheOrc::Writer
 {
-    MakeSharedEnabler(logger pLog, std::unique_ptr<Options>&& options)
-        : Writer(std::move(pLog), std::move(options))
+    MakeSharedEnabler(std::unique_ptr<Options>&& options)
+        : Writer(std::move(options))
     {
     }
 };
 
 std::shared_ptr<Orc::TableOutput::ApacheOrc::Writer>
-Orc::TableOutput::ApacheOrc::Writer::MakeNew(logger pLog, std::unique_ptr<Options>&& options)
+Orc::TableOutput::ApacheOrc::Writer::MakeNew(std::unique_ptr<Options>&& options)
 {
-    auto retval = std::make_shared<MakeSharedEnabler>(std::move(pLog), std::move(options));
+    auto retval = std::make_shared<MakeSharedEnabler>(std::move(options));
 
     std::wstring strDescr = L"Termination for ParquetWriter";
     retval->m_pTermination = std::make_shared<WriterTermination>(strDescr, retval);
@@ -74,9 +74,8 @@ Orc::TableOutput::ApacheOrc::Writer::MakeNew(logger pLog, std::unique_ptr<Option
     return retval;
 }
 
-Orc::TableOutput::ApacheOrc::Writer::Writer(logger pLog, std::unique_ptr<Options>&& options)
-    : _L_(std::move(pLog))
-    , m_Options(std::move(options))
+Orc::TableOutput::ApacheOrc::Writer::Writer(std::unique_ptr<Options>&& options)
+    : m_Options(std::move(options))
 {
 
     if (m_Options && m_Options->BatchSize.has_value())
@@ -157,10 +156,10 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::SetSchema(const TableOutput::S
 
     for (const auto& column : m_Schema)
     {
-        auto [hr, strName] = WideToAnsi(_L_, column->ColumnName);
+        auto [hr, strName] = WideToAnsi(column->ColumnName);
         if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Invalid column name %s", column->ColumnName.c_str());
+            spdlog::error(L"Invalid column name: '{}' (code: {:#x})", column->ColumnName, hr);
             break;
         }
 
@@ -236,7 +235,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::SetSchema(const TableOutput::S
                 type = createPrimitiveType(TypeKind::INT);
                 break;
             default:
-                log::Error(_L_, E_FAIL, L"Unupported (orc) column type for column %s", column->ColumnName.c_str());
+                spdlog::error(L"Unupported (orc) column type for column: '{}'", column->ColumnName);
         }
 
         if (type)
@@ -258,7 +257,7 @@ HRESULT Orc::TableOutput::ApacheOrc::Writer::WriteToFile(const WCHAR* szFileName
     if (szFileName == NULL)
         return E_POINTER;
 
-    auto pFileStream = std::make_shared<FileStream>(_L_);
+    auto pFileStream = std::make_shared<FileStream>();
 
     if (pFileStream == nullptr)
         return E_OUTOFMEMORY;
@@ -283,7 +282,7 @@ Orc::TableOutput::ApacheOrc::Writer::WriteToStream(const std::shared_ptr<ByteStr
     m_bCloseStream = bCloseStream;
     m_pByteStream = pStream;
 
-    m_OrcStream = std::make_unique<Stream>(_L_);
+    m_OrcStream = std::make_unique<Stream>();
 
     if (auto hr = m_OrcStream->Open(pStream); FAILED(hr))
         return hr;
@@ -327,7 +326,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::Close()
 
     if (auto hr = Flush(); FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to flush arrow table\r\n");
+        spdlog::error(L"Failed to flush arrow table (code: {:#x})", hr);
         return hr;
     }
 
@@ -448,7 +447,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteString(const std::wstring
 
         Buffer<CHAR, MAX_PATH> ansiString;
 
-        if (auto hr = WideToAnsi(_L_, strString, ansiString); FAILED(hr))
+        if (auto hr = WideToAnsi(strString, ansiString); FAILED(hr))
         {
             AbandonColumn();
             return hr;
@@ -483,7 +482,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteString(const std::wstring
         }
         Buffer<CHAR, MAX_PATH> ansiString;
 
-        if (auto hr = WideToAnsi(_L_, strString, ansiString); FAILED(hr))
+        if (auto hr = WideToAnsi(strString, ansiString); FAILED(hr))
         {
             AbandonColumn();
             return hr;
@@ -520,7 +519,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteString(const WCHAR* szStr
         }
         Buffer<CHAR, MAX_PATH> ansiString;
 
-        if (auto hr = WideToAnsi(_L_, szString, static_cast<DWORD>(strSize), ansiString); FAILED(hr))
+        if (auto hr = WideToAnsi(szString, static_cast<DWORD>(strSize), ansiString); FAILED(hr))
         {
             AbandonColumn();
             return hr;
@@ -555,7 +554,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteCharArray(const WCHAR* sz
         }
         Buffer<CHAR, MAX_PATH> ansiString;
 
-        if (auto hr = WideToAnsi(_L_, szString, dwCharCount, ansiString); FAILED(hr))
+        if (auto hr = WideToAnsi(szString, dwCharCount, ansiString); FAILED(hr))
         {
             AbandonColumn();
             return hr;

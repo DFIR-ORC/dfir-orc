@@ -9,37 +9,41 @@
 #include "stdafx.h"
 
 #include "Mothership.h"
-#include "LogFileWriter.h"
 
+#include "Output/Text/Print/Bool.h"
 #include "ToolVersion.h"
+#include "Usage.h"
 
-using namespace Orc;
 using namespace Orc::Command::Mothership;
+using namespace Orc::Text;
+using namespace Orc;
 
 void Main::PrintUsage()
 {
-    log::Info(
-        _L_,
-        L"\r\n"
-        L"usage: DFIR-Orc.Exe help for more information\r\n"
-        L"\r\n");
+    auto usageNode = m_console.OutputTree();
+
+    Usage::PrintHeader(usageNode, "Usage: DFIR-Orc.exe help", "");
 }
 
 void Main::PrintParameters()
 {
-    if (_L_->VerboseLog())
-    {
-        PrintBooleanOption(L"No wait", config.bNoWait);
-        PrintBooleanOption(L"Preserve job", config.bPreserveJob);
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Parameters");
 
-        SaveAndPrintStartTime();
-    }
+    PrintCommonParameters(node);
+    PrintValue(node, L"No wait", config.bNoWait);
+    PrintValue(node, L"Preserve job", config.bPreserveJob);
+
+    m_console.PrintNewLine();
 }
 
 void Main::PrintFooter()
 {
-    if (_L_->VerboseLog())
-    {
-        PrintExecutionTime();
-    }
+    m_console.PrintNewLine();
+
+    auto root = m_console.OutputTree();
+    auto node = root.AddNode("Statistics");
+    PrintCommonFooter(node);
+
+    m_console.PrintNewLine();
 }

@@ -11,6 +11,7 @@
 #include <map>
 
 #include "OrcLib.h"
+#include "Flags.h"
 
 #include "CaseInsensitive.h"
 
@@ -24,7 +25,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
 class CBinaryBuffer;
 class ByteStream;
 
@@ -96,7 +96,6 @@ public:
     };
 
 private:
-    logger _L_;
     HCERTSTORE m_hMachineStore = INVALID_HANDLE_VALUE;
     HANDLE m_hContext = INVALID_HANDLE_VALUE;
     std::map<std::wstring, HANDLE, CaseInsensitive> m_StateMap;
@@ -134,9 +133,9 @@ private:
         std::vector<HCERTSTORE>& certStores);
 
 public:
-    Authenticode(const logger& pLog);
+    Authenticode();
 
-    static DWORD ExpectedHashSize(const logger& pLog);
+    static DWORD ExpectedHashSize();
 
     // Catalog based verifications
     HRESULT Verify(LPCWSTR szFileName, AuthenticodeData& data);

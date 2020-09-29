@@ -11,8 +11,6 @@
 #include "FileInfoCommon.h"
 #include "FileInfo.h"
 
-#include "LogFileWriter.h"
-
 using namespace Orc;
 using namespace Orc::Command;
 
@@ -79,7 +77,6 @@ WCHAR** FileInfoCommon::GetFilterExtCustomFromString(LPCWSTR szExtCustom)
 }
 
 HRESULT FileInfoCommon::GetFilterFromConfig(
-    const logger& pLog,
     const ConfigItem& config,
     Filter& filter,
     const ColumnNameDef aliasNames[],
@@ -90,16 +87,16 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
 
     if (config)
     {
-        filter.intent = FileInfo::GetIntentions(pLog, config.c_str(), aliasNames, columnNames);
-        if (filter.intent == FILEINFO_NONE)
+        filter.intent = FileInfo::GetIntentions(config.c_str(), aliasNames, columnNames);
+        if (filter.intent == Intentions::FILEINFO_NONE)
         {
-            log::Error(pLog, E_INVALIDARG, L"Column specified (%s) is invalid\r\n", config.c_str());
+            spdlog::error(L"Column specified '{}' is invalid", config.c_str());
             return E_INVALIDARG;
         }
     }
     else
     {
-        log::Error(pLog, E_INVALIDARG, L"Column filter specified with no column definition\r\n");
+        spdlog::error("Column filter specified with no column definition");
         return E_INVALIDARG;
     }
 
@@ -113,7 +110,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_PEHEADER;
         if (bDefined)
         {
-            log::Error(pLog, E_INVALIDARG, L"Ignored criteria HasPE, critera already defined\r\n");
+            spdlog::error("Ignored criteria HasPE, critera already defined");
         }
         else
             bDefined = true;
@@ -123,7 +120,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_EXTBINARY;
         if (bDefined)
         {
-            log::Error(pLog, E_INVALIDARG, L"Ignored criteria ExtBinary, critera already defined\r\n");
+            spdlog::error("Ignored criteria ExtBinary, critera already defined");
         }
         else
             bDefined = true;
@@ -133,7 +130,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_EXTARCHIVE;
         if (bDefined)
         {
-            log::Error(pLog, E_INVALIDARG, L"Ignored criteria ExtArchive, critera already defined\r\n");
+            spdlog::error("Ignored criteria ExtArchive, critera already defined");
         }
         else
             bDefined = true;
@@ -143,7 +140,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_EXTCUSTOM;
         if (bDefined)
         {
-            log::Error(pLog, E_INVALIDARG, L"Ignored criteria Ext, critera already defined\r\n");
+            spdlog::error("Ignored criteria Ext, critera already defined");
         }
         else
             bDefined = true;
@@ -155,7 +152,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_SIZEMORE;
         if (bDefined)
         {
-            log::Error(pLog, E_INVALIDARG, L"Ignored criteria SizeGT, critera already defined\r\n");
+            spdlog::error("Ignored criteria SizeGT, critera already defined");
         }
         else
             bDefined = true;
@@ -168,7 +165,7 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
         filter.type = FILEFILTER_SIZELESS;
         if (bDefined)
         {
-            log::Error(pLog, E_INVALIDARG, L"Ignored criteria SizeLT, critera already defined\r\n");
+            spdlog::error("Ignored criteria SizeLT, critera already defined");
         }
         else
             bDefined = true;
@@ -184,7 +181,6 @@ HRESULT FileInfoCommon::GetFilterFromConfig(
 }
 
 HRESULT FileInfoCommon::GetFiltersFromArgcArgv(
-    const logger& pLog,
     int argc,
     LPCWSTR argv[],
     std::vector<Filter>& filters,
@@ -206,9 +202,9 @@ HRESULT FileInfoCommon::GetFiltersFromArgcArgv(
             if ((argv[i][0] == L'/' || argv[i][0] == L'-') && (argv[i][1] == L'+' || argv[i][1] == L'-'))
             {
                 Filter aFilter;
-                if (FAILED(hr = GetFilterFromArg(pLog, argv[i], aFilter, aliasNames, columnNames)))
+                if (FAILED(hr = GetFilterFromArg(argv[i], aFilter, aliasNames, columnNames)))
                 {
-                    log::Warning(pLog, hr, L"Failed to interpret parameter \"%s\": Ignored\r\n", argv[i]);
+                    spdlog::warn(L"Failed to interpret parameter '{}': ignored", argv[i]);
                 }
                 else
                 {
@@ -222,7 +218,6 @@ HRESULT FileInfoCommon::GetFiltersFromArgcArgv(
 }
 
 HRESULT FileInfoCommon::GetFilterFromArg(
-    const logger& pLog,
     LPCWSTR szConstArg,
     Filter& filter,
     const ColumnNameDef aliasNames[],
@@ -257,9 +252,9 @@ HRESULT FileInfoCommon::GetFilterFromArg(
     }
 
     *pColon = L'\0';
-    filter.intent = FileInfo::GetIntentions(pLog, szArg + 2, aliasNames, columnNames);
+    filter.intent = FileInfo::GetIntentions(szArg + 2, aliasNames, columnNames);
 
-    if (filter.intent == FILEINFO_NONE)
+    if (filter.intent == Intentions::FILEINFO_NONE)
     {
         free(szArg);
         return E_INVALIDARG;

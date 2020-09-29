@@ -9,20 +9,11 @@
 #pragma once
 
 #include "OrcCommand.h"
-
 #include "Location.h"
-
 #include "ConfigFile.h"
-
 #include "Location.h"
-
 #include "UtilitiesMain.h"
-
 #include "ParameterCheck.h"
-
-#include "ArchiveMessage.h"
-#include "ArchiveNotification.h"
-#include "ArchiveAgent.h"
 
 #pragma managed(push, off)
 
@@ -34,8 +25,8 @@ public:
     class Configuration : public UtilitiesMain::Configuration
     {
     public:
-        Configuration(logger pLog)
-            : locs(std::move(pLog))
+        Configuration()
+            : locs()
         {
             output.supportedTypes = static_cast<OutputSpec::Kind>(
                 OutputSpec::Kind::SQL | OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory
@@ -103,10 +94,10 @@ public:
 
     static LPCWSTR DefaultSchema() { return L"res:#USNINFO_SQLSCHEMA"; }
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog)
-        , config(pLog)
-        , m_outputs(pLog) {};
+    Main()
+        : UtilitiesMain()
+        , config()
+        , m_outputs() {};
 
     // implemented in USNInfo_Output.cpp
     void PrintUsage();

@@ -15,8 +15,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 namespace Test {
 
 class UnitTestHelper
@@ -24,13 +22,9 @@ class UnitTestHelper
 public:
     UnitTestHelper() {};
 
-    void UnitTestHelper::InitLogFileWriter(const logger& pLog);
-    void UnitTestHelper::FinalizeLogFileWriter(const logger& pLog);
-
     std::wstring GetDirectoryName(const std::wstring& path);
 
     HRESULT ExtractArchive(
-        const logger& pLog,
         ArchiveFormat format,
         ArchiveExtract::MakeArchiveStream makeArchiveStream,
         const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,

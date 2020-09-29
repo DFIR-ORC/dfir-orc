@@ -12,7 +12,6 @@
 
 #include "RunningProcesses.h"
 #include "CaseInsensitive.h"
-#include "LogFileWriter.h"
 
 #include "ConfigFile_OrcConfig.h"
 
@@ -122,7 +121,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[ORC_DOWNLOAD])
     {
-        m_DownloadTask = DownloadTask::GetTaskFromConfig(_L_, configitem[ORC_DOWNLOAD]);
+        m_DownloadTask = DownloadTask::GetTaskFromConfig(configitem[ORC_DOWNLOAD]);
         if (m_DownloadTask != nullptr)
         {
             config.bUseLocalCopy = true;
@@ -131,16 +130,15 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[ORC_TEMP])
     {
-        if (FAILED(hr = config.Temporary.Configure(_L_, OutputSpec::Kind::Directory, configitem[ORC_TEMP])))
+        if (FAILED(hr = config.Temporary.Configure(OutputSpec::Kind::Directory, configitem[ORC_TEMP])))
         {
-            log::Warning(
-                _L_,
-                hr,
-                L"Failed to configure temporary folder \"%s\", defaulting to %%TEMP%%\r\n",
-                configitem[ORC_TEMP].c_str());
-            if (FAILED(hr = config.Temporary.Configure(_L_, OutputSpec::Kind::Directory, L"%TEMP%")))
+            spdlog::warn(
+                L"Failed to configure temporary folder '{}', defaulting to %%TEMP%% (code: {:#x})",
+                configitem[ORC_TEMP].c_str(),
+                hr);
+            if (FAILED(hr = config.Temporary.Configure(OutputSpec::Kind::Directory, L"%TEMP%")))
             {
-                log::Warning(_L_, hr, L"Failed to configure temporary folder \"%%TEMP%%\"");
+                spdlog::warn("Failed to configure temporary folder \"%%TEMP%%\" (code: {:#x}", hr);
             }
         }
     }
@@ -163,7 +161,7 @@ HRESULT Main::CheckConfiguration()
 
     if (!config.strParentName.empty())
     {
-        log::Verbose(_L_, L"Looking for reparenting child to %s\r\n", config.strParentName.c_str());
+        spdlog::debug(L"Looking for reparenting child to '{}'", config.strParentName);
         size_t parentArg = 0;
         if (SUCCEEDED(GetIntegerFromArg(config.strParentName.c_str(), parentArg)))
         {
@@ -173,11 +171,11 @@ HRESULT Main::CheckConfiguration()
         else
         {
             // the parent passed is a process name
-            RunningProcesses rp(_L_);
+            RunningProcesses rp;
 
             if (FAILED(hr = rp.EnumProcesses()))
             {
-                log::Error(_L_, hr, L"Failed to enumerate running processes, reparenting won't be available\r\n");
+                spdlog::error(L"Failed to enumerate running processes, reparenting won't be available");
                 return hr;
             }
 
@@ -193,21 +191,20 @@ HRESULT Main::CheckConfiguration()
 
             if (it != end(processes))
             {
-                log::Verbose(_L_, L"Reparenting child under %s (pid=%d)\r\n", config.strParentName.c_str(), it->m_Pid);
+                spdlog::debug(L"Reparenting child under '{}' (pid: {})", config.strParentName, it->m_Pid);
                 config.dwParentID = it->m_Pid;
             }
             else
             {
-                log::Error(
-                    _L_,
-                    E_FAIL,
-                    L"Desired parent (%s) for reparenting could not be found, reparenting won't happen\r\n");
+                spdlog::error(
+                    L"Desired parent '{}' for reparenting could not be found, reparenting won't happen",
+                    config.strParentName);
             }
         }
     }
     else
     {
-        log::Verbose(_L_, L"No reparenting for child\r\n");
+        spdlog::debug("No reparenting for child");
     }
     return S_OK;
 }

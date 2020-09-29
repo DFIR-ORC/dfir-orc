@@ -47,9 +47,9 @@ public:
 
 private:
     HRESULT
-    GetNameValuePairFromConfigItem(const logger& pLog, const ConfigItem& item, EmbeddedResource::EmbedSpec& spec);
-    HRESULT GetAddFileFromConfigItem(const logger& pLog, const ConfigItem& item, EmbeddedResource::EmbedSpec& spec);
-    HRESULT GetAddArchiveFromConfigItem(const logger& pLog, const ConfigItem& item, EmbeddedResource::EmbedSpec& spec);
+    GetNameValuePairFromConfigItem(const ConfigItem& item, EmbeddedResource::EmbedSpec& spec);
+    HRESULT GetAddFileFromConfigItem(const ConfigItem& item, EmbeddedResource::EmbedSpec& spec);
+    HRESULT GetAddArchiveFromConfigItem(const ConfigItem& item, EmbeddedResource::EmbedSpec& spec);
 
     Configuration config;
 
@@ -76,8 +76,8 @@ public:
 
     static LPCWSTR DefaultSchema() { return nullptr; }
 
-    Main(logger pLog)
-        : UtilitiesMain(std::move(pLog))
+    Main()
+        : UtilitiesMain()
     {
     }
 

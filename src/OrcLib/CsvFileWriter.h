@@ -36,16 +36,12 @@ class ORCLIB_API Writer
     : public ::Orc::TableOutput::Writer
     , public ::Orc::TableOutput::IStreamWriter
 {
-    struct MakeSharedEnabler;
-    friend struct MakeSharedEnabler;
-
 public:
-    static std::shared_ptr<Writer> MakeNew(logger pLog, std::unique_ptr<TableOutput::Options>&& options);
+    static std::shared_ptr<Writer> MakeNew(std::unique_ptr<TableOutput::Options>&& options);
 
     Writer(const Writer&) = delete;
     Writer(Writer&& other) noexcept
     {
-        std::swap(_L_, other._L_);
         std::swap(m_pTermination, other.m_pTermination);
         wcscpy_s(m_szFileName, other.m_szFileName);
         std::swap(m_buffer, other.m_buffer);
@@ -94,7 +90,7 @@ public:
             return WriteNothing();
         }
 
-        auto [hr, wstr] = AnsiToWide(_L_, strString);
+        auto [hr, wstr] = AnsiToWide(strString);
         if (FAILED(hr))
         {
             return hr;
@@ -109,7 +105,7 @@ public:
             return WriteNothing();
         }
 
-        auto [hr, wstr] = AnsiToWide(_L_, strString);
+        auto [hr, wstr] = AnsiToWide(strString);
         if (FAILED(hr))
         {
             return hr;
@@ -203,10 +199,8 @@ public:
 
     ~Writer(void);
 
-private:
+protected:
     STDMETHOD(WriteHeaders)(const ::Orc::TableOutput::Schema& columns);
-
-    logger _L_;
 
     fmt::wmemory_buffer m_buffer;
 
@@ -239,7 +233,7 @@ private:
         return m_dwPageSize;
     }
 
-    Writer(logger pLog, std::unique_ptr<Options>&& options);
+    Writer(std::unique_ptr<Options>&& options);
 
     //
     // Workaround: 'Unescaped double quote characters in csv files #13 (github)'
@@ -257,8 +251,8 @@ private:
 
         EscapeQuoteInserter(T& wrapped)
             : m_wrapped(wrapped)
-            , quoteCount(0)
             , previousWasQuote(false)
+            , quoteCount(0)
         {
         }
 
@@ -301,15 +295,8 @@ private:
         }
         catch (const fmt::format_error& error)
         {
-            const auto [hr, errorMsg] = AnsiToWide(_L_, error.what());
-            log::Error(_L_, E_INVALIDARG, L"fmt::format_error: %s\r\n", errorMsg);
+            spdlog::error("fmt::format_error: {}", error.what());
             return E_INVALIDARG;
-        }
-        catch (const fmt::system_error& system_error)
-        {
-            const auto [hr, errorMsg] = AnsiToWide(_L_, system_error.what());
-            log::Error(_L_, HRESULT_FROM_WIN32(system_error.error_code()), L"fmt::system_error: %s\r\n", errorMsg);
-            return HRESULT_FROM_WIN32(system_error.error_code());
         }
 
         if (m_buffer.size() > (80 * m_buffer.capacity() / 100))

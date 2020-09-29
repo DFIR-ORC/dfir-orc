@@ -12,8 +12,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 namespace Test {
 /*
  * fake implementation of a VolumeReader class for test purpose
@@ -27,7 +25,7 @@ public:
         HRESULT(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead)>
         ReadCallBack;
 
-    VolumeReaderTest(const logger& pLog, SeekCallBack* seekCallBack, ReadCallBack* readCallBack);
+    VolumeReaderTest(SeekCallBack* seekCallBack, ReadCallBack* readCallBack);
     virtual ~VolumeReaderTest();
 
     virtual const WCHAR* ShortVolumeName() { return L"Test"; }

@@ -22,13 +22,10 @@
 #include "SystemDetails.h"
 #include "Temporary.h"
 
-#include "LogFileWriter.h"
-
 using namespace std;
 using namespace Orc;
 
 HRESULT EmbeddedResource::_UpdateResource(
-    const logger& pLog,
     HANDLE hOutput,
     const WCHAR* szModule,
     const WCHAR* szType,
@@ -44,15 +41,16 @@ HRESULT EmbeddedResource::_UpdateResource(
         hOut = BeginUpdateResource(szModule, FALSE);
         if (hOut == NULL)
         {
-            log::Error(
-                pLog, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to update ressource in %s\r\n", szModule);
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Failed to update ressource in '{}' (code: {:#x})", szModule, hr);
             return hr;
         }
     }
 
     if (!UpdateResource(hOut, szType, szName, MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL), pData, cbSize))
     {
-        log::Error(pLog, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to add ressource %s\r\n", szName);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to add ressource '{}' (code: {:#x})", szName, hr);
         return hr;
     }
 
@@ -60,18 +58,15 @@ HRESULT EmbeddedResource::_UpdateResource(
     {
         if (!EndUpdateResource(hOut, FALSE))
         {
-            log::Error(
-                pLog, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to update ressource in %s\r\n", szModule);
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Failed to update ressource in '{}' (code: {:#x})", szModule, hr);
             return hr;
         }
     }
     return S_OK;
 }
 
-HRESULT EmbeddedResource::UpdateResources(
-    const logger& pLog,
-    const std::wstring& strPEToUpdate,
-    const std::vector<EmbedSpec>& ToEmbed)
+HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, const std::vector<EmbedSpec>& ToEmbed)
 {
     HRESULT hr = S_OK;
 
@@ -89,11 +84,8 @@ HRESULT EmbeddedResource::UpdateResources(
         hOutput = BeginUpdateResource(strPEToUpdate.c_str(), FALSE);
         if (hOutput == NULL)
         {
-            log::Error(
-                pLog,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Failed to update ressource in %s\r\n",
-                strPEToUpdate.c_str());
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Failed to update ressource in '{}' (code: {:#x})", strPEToUpdate, hr);
             return hr;
         }
     }
@@ -108,7 +100,6 @@ HRESULT EmbeddedResource::UpdateResources(
 
                 if (SUCCEEDED(
                         hr = _UpdateResource(
-                            pLog,
                             hOutput,
                             strPEToUpdate.c_str(),
                             EmbeddedResource::VALUES(),
@@ -116,13 +107,12 @@ HRESULT EmbeddedResource::UpdateResources(
                             (LPVOID)item.Value.c_str(),
                             (DWORD)item.Value.size() * sizeof(WCHAR))))
                 {
-                    log::Verbose(pLog, L"Successfully added %s=%s\r\n", item.Name.c_str(), item.Value.c_str());
+                    spdlog::debug(L"Successfully added {}={}", item.Name, item.Value);
                 }
                 break;
             case EmbeddedResource::EmbedSpec::ValuesDeletion:
                 if (SUCCEEDED(
                         hr = _UpdateResource(
-                            pLog,
                             hOutput,
                             strPEToUpdate.c_str(),
                             EmbeddedResource::VALUES(),
@@ -130,13 +120,12 @@ HRESULT EmbeddedResource::UpdateResources(
                             NULL,
                             0L)))
                 {
-                    log::Verbose(pLog, L"Successfully delete resource at position %s\r\n", item.Name.c_str());
+                    spdlog::debug(L"Successfully delete resource at position '{}' (code: {:#x})", item.Name, hr);
                 }
                 break;
             case EmbeddedResource::EmbedSpec::BinaryDeletion:
                 if (SUCCEEDED(
                         hr = _UpdateResource(
-                            pLog,
                             hOutput,
                             strPEToUpdate.c_str(),
                             EmbeddedResource::BINARY(),
@@ -144,7 +133,7 @@ HRESULT EmbeddedResource::UpdateResources(
                             NULL,
                             0L)))
                 {
-                    log::Verbose(pLog, L"Successfully delete resource at position %s\r\n", item.Name.c_str());
+                    spdlog::debug(L"Successfully delete resource at position '{}' (code: {:#x})", item.Name, hr);
                 }
                 break;
             default:
@@ -155,11 +144,8 @@ HRESULT EmbeddedResource::UpdateResources(
     {
         if (!EndUpdateResource(hOutput, FALSE))
         {
-            log::Error(
-                pLog,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Failed to update ressource in %s\n",
-                strPEToUpdate.c_str());
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Failed to update ressource in '{}' (code: {:#x})", strPEToUpdate, hr);
             return hr;
         }
     }
@@ -170,35 +156,34 @@ HRESULT EmbeddedResource::UpdateResources(
 
         switch (item.Type)
         {
-            case EmbeddedResource::EmbedSpec::File:
-            {
-                auto filestream = make_shared<FileStream>(pLog);
+            case EmbeddedResource::EmbedSpec::File: {
+                auto filestream = make_shared<FileStream>();
 
                 if (FAILED(hr = filestream->ReadFrom(item.Value.c_str())))
                 {
-                    log::Error(pLog, hr, L"Failed to update ressource in %s\r\n", item.Value.c_str());
+                    spdlog::error(L"Failed to update ressource in '{}' (code: {:#x})", item.Value, hr);
                     return hr;
                 }
 
-                auto memstream = std::make_shared<MemoryStream>(pLog);
+                auto memstream = std::make_shared<MemoryStream>();
 
                 if (FAILED(hr = memstream->OpenForReadWrite()))
                 {
-                    log::Error(pLog, hr, L"Failed to open mem resource in %s\r\n", item.Value.c_str());
+                    spdlog::error(L"Failed to open mem resource in '{}' (code: {:#x})", item.Value, hr);
                     return hr;
                 }
                 ULONGLONG ullFileSize = filestream->GetSize();
 
                 if (FAILED(hr = memstream->SetSize((DWORD)ullFileSize)))
                 {
-                    log::Error(pLog, hr, L"Failed set size of mem resource in %s\r\n", item.Value.c_str());
+                    spdlog::error(L"Failed set size of mem resource in '{}' (code: {:#x})", item.Value, hr);
                     return hr;
                 }
 
                 ULONGLONG ullBytesWritten = 0LL;
                 if (FAILED(hr = filestream->CopyTo(memstream, &ullBytesWritten)))
                 {
-                    log::Error(pLog, hr, L"Failed to copy %s to a memory stream\r\n", item.Value.c_str());
+                    spdlog::error(L"Failed to copy '{}' to a memory stream (code: {:#x})", item.Value, hr);
                     return hr;
                 }
 
@@ -207,7 +192,6 @@ HRESULT EmbeddedResource::UpdateResources(
 
                 if (SUCCEEDED(
                         hr = _UpdateResource(
-                            pLog,
                             INVALID_HANDLE_VALUE,
                             strPEToUpdate.c_str(),
                             EmbeddedResource::BINARY(),
@@ -215,8 +199,7 @@ HRESULT EmbeddedResource::UpdateResources(
                             data.GetData(),
                             (DWORD)data.GetCount())))
                 {
-                    log::Verbose(
-                        pLog, L"Successfully added %s at position %s\r\n", item.Value.c_str(), item.Name.c_str());
+                    spdlog::debug(L"Successfully added '{}' at position '{}'", item.Value, item.Name);
                 }
             }
             break;
@@ -231,33 +214,33 @@ HRESULT EmbeddedResource::UpdateResources(
 
                 if (fmt == ArchiveFormat::Unknown)
                 {
-                    log::Error(pLog, E_INVALIDARG, L"Failed to use archive format %s\r\n", item.ArchiveFormat.c_str());
+                    spdlog::error(L"Failed to use archive format '{}'", item.ArchiveFormat);
                     return E_INVALIDARG;
                 }
-                auto creator = ArchiveCreate::MakeCreate(fmt, pLog, false);
+                auto creator = ArchiveCreate::MakeCreate(fmt, false);
 
-                auto memstream = std::make_shared<MemoryStream>(pLog);
+                auto memstream = std::make_shared<MemoryStream>();
 
                 if (FAILED(hr = memstream->OpenForReadWrite()))
                 {
-                    log::Error(pLog, hr, L"Failed to initialize memory stream\r\n");
+                    spdlog::error("Failed to initialize memory stream (code: {:#x})", hr);
                     return hr;
                 }
 
                 if (FAILED(hr = creator->InitArchive(memstream)))
                 {
-                    log::Error(pLog, hr, L"Failed to initialize archive stream\r\n");
+                    spdlog::error(L"Failed to initialize archive stream (code: {:#x})", hr);
                     return hr;
                 }
 
 				if(!item.ArchiveCompression.empty())
                 {
-					if (FAILED(hr = creator->SetCompressionLevel(item.ArchiveCompression)))
-					{
-						log::Error(pLog, hr, L"Invalid compression level %s\r\n", item.ArchiveCompression.c_str());
-						return hr;
-					}
-				}
+                    if (FAILED(hr = creator->SetCompressionLevel(item.ArchiveCompression)))
+                    {
+                        spdlog::error(L"Invalid compression level '{}' (code: {:#x})", item.ArchiveCompression, hr);
+                        return hr;
+                    }
+                }
 
                 hr = S_OK;
 
@@ -265,18 +248,18 @@ HRESULT EmbeddedResource::UpdateResources(
                 {
                     if (FAILED(creator->AddFile(arch_item.Name.c_str(), arch_item.Path.c_str(), false)))
                     {
-                        log::Error(pLog, hr, L"Failed to add file %s to archive\r\n", arch_item.Path.c_str());
+                        spdlog::error(L"Failed to add file '{}' to archive", arch_item.Path);
                         return hr;
                     }
                     else
                     {
-                        log::Verbose(pLog, L"Successfully added %s to archive\r\n", arch_item.Path.c_str());
+                        spdlog::debug(L"Successfully added '{}' to archive", arch_item.Path);
                     }
                 }
 
                 if (FAILED(hr = creator->Complete()))
                 {
-                    log::Error(pLog, hr, L"Failed to complete archive\r\n");
+                    spdlog::error("Failed to complete archive (code: {:#x})", hr);
                     return hr;
                 }
 
@@ -285,7 +268,6 @@ HRESULT EmbeddedResource::UpdateResources(
 
                 if (SUCCEEDED(
                         hr = _UpdateResource(
-                            pLog,
                             INVALID_HANDLE_VALUE,
                             strPEToUpdate.c_str(),
                             EmbeddedResource::BINARY(),
@@ -293,7 +275,7 @@ HRESULT EmbeddedResource::UpdateResources(
                             data.GetData(),
                             (DWORD)data.GetCount())))
                 {
-                    log::Verbose(pLog, L"Successfully added archive %s\r\n", item.Name.c_str());
+                    spdlog::debug(L"Successfully added archive '{}'", item.Name);
                 }
                 else
                     return hr;

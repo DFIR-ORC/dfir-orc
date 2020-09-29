@@ -30,7 +30,7 @@
 
 #include "CaseInsensitive.h"
 
-#include "LogFileWriter.h"
+#include <spdlog/spdlog.h>
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -121,7 +121,6 @@ HRESULT EmbeddedResource::GetSelfArgument(const std::wstring& strRef, std::wstri
 }
 
 HRESULT EmbeddedResource::SplitResourceReference(
-    const logger& pLog,
     const std::wstring& Ref,
     std::wstring& HostBinary,
     std::wstring& ResName,
@@ -132,18 +131,18 @@ HRESULT EmbeddedResource::SplitResourceReference(
 
     if (!regex_match(Ref, s_archive, ArchRessourceRegEx()))
     {
-        log::Verbose(pLog, L"%s is not an embedded archive resource pattern\r\n", Ref.c_str());
+        spdlog::debug(L"'{}' is not an embedded archive resource pattern", Ref);
         wsmatch s_res;
         if (!regex_match(Ref, s_res, ResRessourceRegEx()))
         {
             wsmatch s_self;
             if (!regex_match(Ref, s_self, SelfReferenceRegEx()))
             {
-                log::Verbose(pLog, L"%s is resource pattern for self reference (%s)\r\n", Ref.c_str());
+                spdlog::debug(L"'{}' is resource pattern for self reference", Ref);
             }
             else
             {
-                log::Verbose(pLog, L"\"%s\" does not match a typical embedded ressource pattern\r\n", Ref.c_str());
+                spdlog::debug(L"'{}' does not match a typical embedded ressource pattern", Ref);
                 return HRESULT_FROM_WIN32(ERROR_NO_MATCH);
             }
         }
@@ -152,12 +151,7 @@ HRESULT EmbeddedResource::SplitResourceReference(
             FormatName.assign(L"res");
             HostBinary = s_res[REGEX_RES_MOTHERSHIP];
             ResName = s_res[REGEX_RES_RESSOURCENAME];
-            log::Verbose(
-                pLog,
-                L"%s is ressource pattern for binary %s resource %s\r\n",
-                Ref.c_str(),
-                HostBinary.c_str(),
-                ResName.c_str());
+            spdlog::debug(L"'{}' is resource pattern for binary '{}' resource '{}'", Ref, HostBinary, ResName);
         }
     }
     else
@@ -167,30 +161,23 @@ HRESULT EmbeddedResource::SplitResourceReference(
         ResName = s_archive[REGEX_ARCHIVE_RESSOURCENAME];
         NameInArchive = s_archive[REGEX_ARCHIVE_FILENAME];
         HostBinary = s_archive[REGEX_ARCHIVE_MOTHERSHIP];
-        log::Verbose(
-            pLog,
-            L"%s is an embedded archive ressource pattern (binary=%s,res=%s,file=%s,format=%s)\r\n",
-            Ref.c_str(),
-            HostBinary.c_str(),
-            ResName.c_str(),
-            NameInArchive.c_str(),
-            FormatName.c_str());
+        spdlog::debug(
+            L"'{}' is an embedded archive ressource pattern (binary: {}, res: {}, file: {}, format: {})",
+            Ref,
+            HostBinary,
+            ResName,
+            NameInArchive,
+            FormatName);
     }
     if (!HostBinary.empty())
     {
-        log::Error(
-            pLog,
-            E_NOTIMPL,
-            L"Host binary %s specified in ressource %s is no longer implemented\r\n",
-            HostBinary.c_str(),
-            Ref.c_str());
+        spdlog::error(L"Host binary '{}' specified in ressource '{}' is no longer implemented", HostBinary, Ref);
         return E_NOTIMPL;
     }
     return S_OK;
 }
 
 HRESULT EmbeddedResource::LocateResource(
-    const logger& pLog,
     const std::wstring& HostBinary,
     const std::wstring& ResName,
     const WCHAR* szResType,
@@ -215,11 +202,8 @@ HRESULT EmbeddedResource::LocateResource(
         hInstance = LoadLibraryEx(HostBinary.c_str(), NULL, dwLoadLibraryFlags);
         if (hInstance == NULL)
         {
-            log::Warning(
-                pLog,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Ressource file %s failed to load, trying default instance\r\n",
-                HostBinary.c_str());
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::warn(L"Ressource file '{}' failed to load (code: {:#x}), trying default instance", HostBinary, hr);
             hInstance = GetDefaultHINSTANCE();
         }
     }
@@ -232,7 +216,7 @@ HRESULT EmbeddedResource::LocateResource(
     if ((hResource = FindResource(hInstance, ResName.c_str(), szResType)) == NULL)
     {
         // checking parent process for "mothershipness"
-        RunningProcesses rp(pLog);
+        RunningProcesses rp;
 
         if (FAILED(hr = rp.EnumProcesses()))
             return hr;
@@ -251,11 +235,8 @@ HRESULT EmbeddedResource::LocateResource(
                 HANDLE hParent = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, dwParents[i]);
                 if (hParent == NULL)
                 {
-                    log::Verbose(
-                        pLog,
-                        L"Failed to open process %d (hr=0x%lx)\r\n",
-                        dwParents[i],
-                        hr = HRESULT_FROM_WIN32(GetLastError()));
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::debug(L"Failed to open process '{}' (code: {:#x})", dwParents[i], hr);
                     continue;
                 }
 
@@ -273,29 +254,18 @@ HRESULT EmbeddedResource::LocateResource(
                 ZeroMemory(szParentFileName, MAX_PATH * sizeof(WCHAR));
                 if (!GetModuleFileNameEx(hParent, NULL, szParentFileName, MAX_PATH))
                 {
-                    log::Verbose(
-                        pLog,
-                        L"Failed to get module file name for processID:%d (hr=0x%lx)\r\n",
-                        dwParents[i],
-                        hr = HRESULT_FROM_WIN32(GetLastError()));
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::debug(L"Failed to get module file name for processID: {} (code: {:#x})", dwParents[i], hr);
                     continue;
                 }
 
-                log::Verbose(
-                    pLog,
-                    L"INFO: Opening %s for ressource %s of type %s\r\n",
-                    szParentFileName,
-                    ResName.c_str(),
-                    szResType);
+                spdlog::debug(L"Opening '{}' for ressource '{}' of type '{}'", szParentFileName, ResName, szResType);
 
                 hInstance = LoadLibraryEx(szParentFileName, NULL, dwLoadLibraryFlags);
                 if (hInstance == NULL)
                 {
-                    log::Verbose(
-                        pLog,
-                        L"Ressource file %s failed to load (hr=0x%lx)\r\n",
-                        szParentFileName,
-                        hr = HRESULT_FROM_WIN32(GetLastError()));
+                    hr = HRESULT_FROM_WIN32(GetLastError());
+                    spdlog::debug(L"Ressource file '{}' failed to load (code: {:#x})", szParentFileName, hr);
                     continue;
                 }
                 if ((hResource = FindResource(hInstance, ResName.c_str(), szResType)) == NULL)
@@ -320,10 +290,8 @@ HRESULT EmbeddedResource::LocateResource(
         ZeroMemory(szFileName, MAX_PATH * sizeof(WCHAR));
         if (!GetModuleFileName(hInstance, szFileName, MAX_PATH))
         {
-            log::Verbose(
-                pLog,
-                L"Failed to get module file name for current process (hr=0x%lx)\r\n",
-                hr = HRESULT_FROM_WIN32(GetLastError()));
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::debug("Failed to get module file name for current process (code: {:#x})", hr);
         }
         strBinaryPath.assign(szFileName);
         hRes = hResource;
@@ -334,7 +302,7 @@ HRESULT EmbeddedResource::LocateResource(
     return S_OK;
 }
 
-bool EmbeddedResource::IsConfiguredToRun(const logger& pLog)
+bool EmbeddedResource::IsConfiguredToRun()
 {
     HRESULT hr = S_OK;
     std::wstring strToExecuteRef;
@@ -348,18 +316,18 @@ bool EmbeddedResource::IsConfiguredToRun(const logger& pLog)
     switch (Arch)
     {
         case PROCESSOR_ARCHITECTURE_INTEL:
-            if (FAILED(hr = EmbeddedResource::ExtractRun32(pLog, L"", strToExecuteRef)))
+            if (FAILED(hr = EmbeddedResource::ExtractRun32(L"", strToExecuteRef)))
             {
-                if (FAILED(hr = EmbeddedResource::ExtractRun(pLog, L"", strToExecuteRef)))
+                if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
                 {
                     return false;
                 }
             }
             break;
         case PROCESSOR_ARCHITECTURE_AMD64:
-            if (FAILED(hr = EmbeddedResource::ExtractRun64(pLog, L"", strToExecuteRef)))
+            if (FAILED(hr = EmbeddedResource::ExtractRun64(L"", strToExecuteRef)))
             {
-                if (FAILED(hr = EmbeddedResource::ExtractRun(pLog, L"", strToExecuteRef)))
+                if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
                 {
                     return false;
                 }
@@ -373,7 +341,6 @@ bool EmbeddedResource::IsConfiguredToRun(const logger& pLog)
 }
 
 HRESULT EmbeddedResource::ExtractRunWithArgs(
-    const logger& pLog,
     const std::wstring& Module,
     std::wstring& strToExecuteRef,
     std::wstring& strRunArgs)
@@ -384,43 +351,43 @@ HRESULT EmbeddedResource::ExtractRunWithArgs(
     WORD Arch = 0;
     if (FAILED(hr = SystemDetails::GetArchitecture(Arch)))
     {
-        log::Error(pLog, hr, L"Failed to determine system architecture\r\n");
+        spdlog::error("Failed to determine system architecture (code: {:#x})", hr);
         return hr;
     }
 
     switch (Arch)
     {
         case PROCESSOR_ARCHITECTURE_INTEL:
-            if (FAILED(hr = EmbeddedResource::ExtractRun32(pLog, L"", strToExecuteRef)))
+            if (FAILED(hr = EmbeddedResource::ExtractRun32(L"", strToExecuteRef)))
             {
-                if (FAILED(hr = EmbeddedResource::ExtractRun(pLog, L"", strToExecuteRef)))
+                if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
                 {
-                    log::Error(pLog, hr, L"Not RUN ressource found to execute\r\n");
+                    spdlog::error("Not RUN ressource found to execute (code: {:#x})", hr);
                     return hr;
                 }
                 else
-                    EmbeddedResource::ExtractRunArgs(pLog, L"", strRunArgs);
+                    EmbeddedResource::ExtractRunArgs(L"", strRunArgs);
             }
             else
-                EmbeddedResource::ExtractRun32Args(pLog, L"", strRunArgs);
+                EmbeddedResource::ExtractRun32Args(L"", strRunArgs);
             break;
         case PROCESSOR_ARCHITECTURE_AMD64:
-            if (FAILED(hr = EmbeddedResource::ExtractRun64(pLog, L"", strToExecuteRef)))
+            if (FAILED(hr = EmbeddedResource::ExtractRun64(L"", strToExecuteRef)))
             {
-                if (FAILED(hr = EmbeddedResource::ExtractRun(pLog, L"", strToExecuteRef)))
+                if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
                 {
-                    log::Error(pLog, hr, L"Not RUN ressource found to execute\r\n");
+                    spdlog::error(L"Not RUN ressource found to execute (code: {:#x})", hr);
                     return hr;
                 }
                 else
-                    EmbeddedResource::ExtractRunArgs(pLog, L"", strRunArgs);
+                    EmbeddedResource::ExtractRunArgs(L"", strRunArgs);
             }
             else
-                EmbeddedResource::ExtractRun64Args(pLog, L"", strRunArgs);
+                EmbeddedResource::ExtractRun64Args(L"", strRunArgs);
 
             break;
         default:
-            log::Error(pLog, E_FAIL, L"Architecture %d is not supported\r\n", Arch);
+            spdlog::error("Architecture '{}' is not supported", Arch);
             return E_FAIL;
     }
 
@@ -439,7 +406,6 @@ HRESULT EmbeddedResource::GetSelf(std::wstring& outputFile)
 }
 
 HRESULT Orc::EmbeddedResource::ExtractToFile(
-    const logger& pLog,
     const std::wstring& szImageFileRessourceID,
     const std::wstring& Keyword,
     LPCWSTR szSDDLFormat,
@@ -451,11 +417,10 @@ HRESULT Orc::EmbeddedResource::ExtractToFile(
 
     swprintf_s(szSDDL, MAX_PATH, szSDDLFormat, szSID);
 
-    return ExtractToFile(pLog, szImageFileRessourceID, Keyword, szSDDL, strTempDir, outputFile);
+    return ExtractToFile(szImageFileRessourceID, Keyword, szSDDL, strTempDir, outputFile);
 }
 
 HRESULT EmbeddedResource::ExtractToFile(
-    const logger& pLog,
     const std::wstring& szImageFileRessourceID,
     const std::wstring& Keyword,
     LPCWSTR szSDDL,
@@ -485,21 +450,20 @@ HRESULT EmbeddedResource::ExtractToFile(
 
     wstring MotherShip, ResName, NameInArchive, FormatName;
 
-    if (SUCCEEDED(
-            hr = SplitResourceReference(pLog, szImageFileRessourceID, MotherShip, ResName, NameInArchive, FormatName)))
+    if (SUCCEEDED(hr = SplitResourceReference(szImageFileRessourceID, MotherShip, ResName, NameInArchive, FormatName)))
     {
         if (NameInArchive.empty())
         {
             // Resource is directly embedded in resource
 
-            shared_ptr<ResourceStream> res = make_shared<ResourceStream>(pLog);
+            shared_ptr<ResourceStream> res = make_shared<ResourceStream>();
 
             HRSRC hRes = NULL;
             HMODULE hModule = NULL;
             std::wstring strBinaryPath;
-            if (FAILED(hr = LocateResource(pLog, MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+            if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
-                log::Verbose(pLog, L"WARNING: Could not locate resource %s\r\n", szImageFileRessourceID.c_str());
+                spdlog::warn(L"Could not locate resource '{}' (code: {:#x})", szImageFileRessourceID, hr);
                 return hr;
             }
 
@@ -511,7 +475,6 @@ HRESULT EmbeddedResource::ExtractToFile(
 
             if (FAILED(
                     hr = UtilGetUniquePath(
-                        pLog,
                         szTempDir,
                         Keyword.c_str(),
                         fileName,
@@ -523,7 +486,6 @@ HRESULT EmbeddedResource::ExtractToFile(
                 {
                     if (FAILED(
                             hr = UtilGetUniquePath(
-                                pLog,
                                 szTempDir,
                                 Keyword.c_str(),
                                 fileName,
@@ -531,27 +493,27 @@ HRESULT EmbeddedResource::ExtractToFile(
                                 FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
                                 szSDDL)))
                     {
-                        log::Error(pLog, hr, L"Failed to create extracted file %s\r\n", fileName.c_str());
+                        spdlog::error(L"Failed to create extracted file '{}' (code: {:#x})", fileName, hr);
                         return hr;
                     }
                 }
                 else
                 {
-                    log::Error(pLog, hr, L"Failed to create extracted file %s\r\n", fileName.c_str());
+                    spdlog::error(L"Failed to create extracted file '{}' (code: {:#x})", fileName, hr);
                     return hr;
                 }
             }
 
-            shared_ptr<FileStream> fs = make_shared<FileStream>(pLog);
+            shared_ptr<FileStream> fs = make_shared<FileStream>();
             if (FAILED(hr = fs->OpenHandle(hFile)))
             {
-                log::Error(pLog, hr, L"Failed to create extracted file %s\r\n", fileName.c_str());
+                spdlog::error(L"Failed to create extracted '{}' (code: {:#x})", fileName, hr);
                 return hr;
             }
             ULONGLONG nbBytes = 0;
             if (FAILED(hr = res->CopyTo(fs, &nbBytes)))
             {
-                log::Error(pLog, hr, L"Failed to copy resource to file %s\r\n", fileName.c_str());
+                spdlog::error(L"Failed to copy resource to '{} (code: {:#x})'", fileName, hr);
                 return hr;
             }
             fs->Close();
@@ -566,7 +528,7 @@ HRESULT EmbeddedResource::ExtractToFile(
             if (fmt == ArchiveFormat::Unknown)
                 fmt = ArchiveFormat::SevenZip;
 
-            auto extract = ArchiveExtract::MakeExtractor(fmt, pLog);
+            auto extract = ArchiveExtract::MakeExtractor(fmt);
 
             vector<wstring> ToExtract;
 
@@ -584,11 +546,8 @@ HRESULT EmbeddedResource::ExtractToFile(
     }
     else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
     {
-        log::Error(
-            pLog,
-            hr,
-            L"\"%s\" does not match a typical embedded ressource pattern\r\n",
-            szImageFileRessourceID.c_str());
+        spdlog::error(
+            L"'{}' does not match a typical embedded ressource pattern (code: {:#x})", szImageFileRessourceID, hr);
         return E_INVALIDARG;
     }
 
@@ -596,28 +555,27 @@ HRESULT EmbeddedResource::ExtractToFile(
 }
 
 HRESULT
-EmbeddedResource::ExtractToBuffer(const logger& pLog, const std::wstring& szImageFileRessourceID, CBinaryBuffer& Buffer)
+EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CBinaryBuffer& Buffer)
 {
     HRESULT hr = E_FAIL;
 
     wstring MotherShip, ResName, NameInArchive, FormatName;
 
-    if (SUCCEEDED(
-            hr = SplitResourceReference(pLog, szImageFileRessourceID, MotherShip, ResName, NameInArchive, FormatName)))
+    if (SUCCEEDED(hr = SplitResourceReference(szImageFileRessourceID, MotherShip, ResName, NameInArchive, FormatName)))
     {
         if (NameInArchive.empty())
         {
             // Resource is directly embedded in memory
             // Resource is directly embedded in resource
 
-            shared_ptr<ResourceStream> res = make_shared<ResourceStream>(pLog);
+            shared_ptr<ResourceStream> res = make_shared<ResourceStream>();
 
             HRSRC hRes = NULL;
             HMODULE hModule = NULL;
             std::wstring strBinaryPath;
-            if (FAILED(hr = LocateResource(pLog, MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+            if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
-                log::Verbose(pLog, L"WARNING: Could not locate resource %s\r\n", szImageFileRessourceID.c_str());
+                spdlog::debug(L"Failed to locate resource: '{}' (code: {:#x})", szImageFileRessourceID, hr);
                 return hr;
             }
 
@@ -625,23 +583,25 @@ EmbeddedResource::ExtractToBuffer(const logger& pLog, const std::wstring& szImag
             // First find and load the required resource
             if ((hFileResource = LoadResource(hModule, hRes)) == NULL)
             {
-                log::Verbose(pLog, L"WARNING: Could not load ressource\r\n");
-                return HRESULT_FROM_WIN32(GetLastError());
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::debug(L"Failed to load resource: '{}' (code: {:#x})", szImageFileRessourceID, hr);
+                return hr;
             }
 
             // Now open and map this to a disk file
             LPVOID lpData = NULL;
             if ((lpData = LockResource(hFileResource)) == NULL)
             {
-                log::Verbose(pLog, L"WARNING: Could not lock ressource\r\n");
-                return HRESULT_FROM_WIN32(GetLastError());
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::debug(L"Failed to lock resource: '{}' (code: {#:x})", szImageFileRessourceID, hr);
+                return hr;
             }
 
             DWORD dwSize = 0L;
             if ((dwSize = SizeofResource(hModule, hRes)) == 0)
             {
                 HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-                log::Error(pLog, hr, L"Could not compute ressource size\r\n");
+                spdlog::debug(L"Failed to compute resource size: '{}' (code: {:#x})", szImageFileRessourceID, hr);
                 return hr;
             }
 
@@ -655,20 +615,20 @@ EmbeddedResource::ExtractToBuffer(const logger& pLog, const std::wstring& szImag
             if (fmt == ArchiveFormat::Unknown)
                 fmt = ArchiveFormat::SevenZip;
 
-            auto extract = ArchiveExtract::MakeExtractor(fmt, pLog);
+            auto extract = ArchiveExtract::MakeExtractor(fmt);
 
-            auto MakeArchiveStream = [&pLog, &MotherShip, &ResName, &szImageFileRessourceID](
-                                         std::shared_ptr<ByteStream>& stream) -> HRESULT {
+            auto MakeArchiveStream =
+                [&MotherShip, &ResName, &szImageFileRessourceID](std::shared_ptr<ByteStream>& stream) -> HRESULT {
                 HRESULT hr = E_FAIL;
 
-                shared_ptr<ResourceStream> res = make_shared<ResourceStream>(pLog);
+                shared_ptr<ResourceStream> res = make_shared<ResourceStream>();
 
                 HRSRC hRes = NULL;
                 HMODULE hModule = NULL;
                 std::wstring strBinaryPath;
-                if (FAILED(hr = LocateResource(pLog, MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+                if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
-                    log::Verbose(pLog, L"WARNING: Could not locate resource %s\r\n", szImageFileRessourceID.c_str());
+                    spdlog::debug(L"Could not locate resource (code: {:#x})", szImageFileRessourceID, hr);
                     return hr;
                 }
 
@@ -680,10 +640,10 @@ EmbeddedResource::ExtractToBuffer(const logger& pLog, const std::wstring& szImag
             };
 
             std::shared_ptr<MemoryStream> pOutput;
-            auto MakeWriteStream = [pLog, &pOutput](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+            auto MakeWriteStream = [&pOutput](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
                 HRESULT hr = E_FAIL;
 
-                auto stream = std::make_shared<MemoryStream>(pLog);
+                auto stream = std::make_shared<MemoryStream>();
 
                 if (item.Size > 0)
                 {
@@ -715,34 +675,18 @@ EmbeddedResource::ExtractToBuffer(const logger& pLog, const std::wstring& szImag
             const auto& items = extract->GetExtractedItems();
             if (items.empty())
             {
-                log::Warning(
-                    pLog,
-                    HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND),
-                    L"Could not locate item \"%s\" in resource \"%s\"\r\n",
-                    NameInArchive.c_str(),
-                    ResName.c_str());
+                spdlog::warn(L"Could not locate item '{}' in resource '{}'", NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
             }
             if (items.size() > 1)
             {
-                log::Warning(
-                    pLog,
-                    HRESULT_FROM_WIN32(ERROR_TOO_MANY_NAMES),
-                    L"%d items matched name \"%s\" in resource \"%s\"\r\n",
-                    items.size(),
-                    NameInArchive.c_str(),
-                    ResName.c_str());
+                spdlog::warn(L"{} items matched name '{}' in resource '{}'", items.size(), NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_TOO_MANY_NAMES);
             }
 
             if (!pOutput)
             {
-                log::Warning(
-                    pLog,
-                    HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND),
-                    L"Invalid output stream for item \"%s\" in resource \"%s\"\r\n",
-                    NameInArchive.c_str(),
-                    ResName.c_str());
+                spdlog::warn(L"Invalid output stream for item '{}' in resource '{}'", NameInArchive, ResName);
                 return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
             }
             pOutput->GrabBuffer(Buffer);
@@ -750,11 +694,8 @@ EmbeddedResource::ExtractToBuffer(const logger& pLog, const std::wstring& szImag
     }
     else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
     {
-        log::Error(
-            pLog,
-            hr,
-            L"\"%s\" does not match a typical embedded ressource pattern\r\n",
-            szImageFileRessourceID.c_str());
+        spdlog::error(
+            L"'{}' does not match a typical embedded ressource pattern (code: {:#x})", szImageFileRessourceID, hr);
         return E_INVALIDARG;
     }
 
@@ -762,7 +703,6 @@ EmbeddedResource::ExtractToBuffer(const logger& pLog, const std::wstring& szImag
 }
 
 HRESULT EmbeddedResource::ExtractValue(
-    const logger& pLog,
     const std::wstring& Module,
     const std::wstring& Name,
     std::wstring& Value)
@@ -772,7 +712,7 @@ HRESULT EmbeddedResource::ExtractValue(
     HMODULE hModule = NULL;
     std::wstring strBinaryPath;
 
-    if (FAILED(hr = LocateResource(pLog, Module, Name, VALUES(), hModule, hRes, strBinaryPath)))
+    if (FAILED(hr = LocateResource(Module, Name, VALUES(), hModule, hRes, strBinaryPath)))
     {
         return hr;
     }
@@ -784,14 +724,15 @@ HRESULT EmbeddedResource::ExtractValue(
     if (hFileResource == NULL)
     {
         auto hr = HRESULT_FROM_WIN32(GetLastError());
-        log::Error(pLog, hr, L"Failed to LoadResource \"%s\" in module \"%s\"\r\n", Name.c_str(), Module.c_str());
+        spdlog::error(L"Failed to LoadResource '{}' in module '{}' (code: {:#x})", Name, Module, hr);
         return hr;
     }
 
     LPWSTR lpStr = NULL;
     if ((lpStr = (LPWSTR)LockResource(hFileResource)) == NULL)
     {
-        log::Error(pLog, hr = HRESULT_FROM_WIN32(GetLastError()), L"Could not lock ressource\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to LockResource '{}' in module '{}' (code: {:#x})", Name, Module, hr);
         if (hModule != NULL)
             FreeLibrary(hModule);
         return hr;
@@ -802,7 +743,8 @@ HRESULT EmbeddedResource::ExtractValue(
 
     if ((dwSize = SizeofResource(hModule, hRes)) == 0)
     {
-        log::Error(pLog, hr = HRESULT_FROM_WIN32(GetLastError()), L"Could not compute ressource size\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to compute resource size '{}', in module '{}' (code: {:#x})", Name, Module, hr);
         if (hModule != NULL)
             FreeLibrary(hModule);
         return hr;
@@ -818,7 +760,6 @@ HRESULT EmbeddedResource::ExtractValue(
 }
 
 HRESULT EmbeddedResource::ExtractBuffer(
-    const logger& pLog,
     const std::wstring& Module,
     const std::wstring& Name,
     CBinaryBuffer& Value)
@@ -828,7 +769,7 @@ HRESULT EmbeddedResource::ExtractBuffer(
     std::wstring strBinaryPath;
     HMODULE hModule = NULL;
 
-    if (FAILED(hr = LocateResource(pLog, Module, Name, BINARY(), hModule, hRes, strBinaryPath)))
+    if (FAILED(hr = LocateResource(Module, Name, BINARY(), hModule, hRes, strBinaryPath)))
     {
         return hr;
     }
@@ -842,7 +783,8 @@ HRESULT EmbeddedResource::ExtractBuffer(
 
     if ((lpVoid = LockResource(hFileResource)) == NULL)
     {
-        log::Error(pLog, hr = HRESULT_FROM_WIN32(GetLastError()), L"Could not lock ressource\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to LockResource '{}' in module '{}' (code: {:#x})", Name, Module, hr);
         if (hModule != GetDefaultHINSTANCE())
             FreeLibrary(hModule);
         return hr;
@@ -853,7 +795,8 @@ HRESULT EmbeddedResource::ExtractBuffer(
 
     if ((dwSize = SizeofResource(hModule, hRes)) == 0)
     {
-        log::Error(pLog, hr = HRESULT_FROM_WIN32(GetLastError()), L"Could not compute ressource size\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to compute resource size '{}', in module '{}' (code: {:#x})", Name, Module, hr);
         if (hModule != GetDefaultHINSTANCE())
             FreeLibrary(hModule);
         return hr;
@@ -872,15 +815,12 @@ HRESULT EmbeddedResource::ExtractBuffer(
 struct V_EnumResourceNamesEx_Param
 {
 
-    V_EnumResourceNamesEx_Param(
-        logger plog,
-        const std::wstring& strModule,
-        std::vector<EmbeddedResource::EmbedSpec>& values)
-        : pLog(plog)
-        , Module(strModule)
-        , Values(values) {};
+    V_EnumResourceNamesEx_Param(const std::wstring& strModule, std::vector<EmbeddedResource::EmbedSpec>& values)
+        : Module(strModule)
+        , Values(values)
+    {
+    }
 
-    logger pLog;
     const std::wstring& Module;
     std::vector<EmbeddedResource::EmbedSpec>& Values;
 };
@@ -895,9 +835,9 @@ BOOL CALLBACK V_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
     wstring strName(lpszName);
     wstring strValue;
 
-    if (FAILED(hr = EmbeddedResource::ExtractValue(param->pLog, param->Module, strName, strValue)))
+    if (FAILED(hr = EmbeddedResource::ExtractValue(param->Module, strName, strValue)))
     {
-        log::Error(param->pLog, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to extract value %s\r\n", lpszName);
+        spdlog::error(L"Failed to extract value '{}' (code: {:#x})", lpszName, hr);
         return TRUE;
     }
 
@@ -906,7 +846,7 @@ BOOL CALLBACK V_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
     return TRUE;
 }
 
-HRESULT EmbeddedResource::EnumValues(const logger& pLog, const std::wstring& Module, std::vector<EmbedSpec>& values)
+HRESULT EmbeddedResource::EnumValues(const std::wstring& Module, std::vector<EmbedSpec>& values)
 {
     HRESULT hr = E_FAIL;
     HMODULE hInstance = NULL;
@@ -923,33 +863,26 @@ HRESULT EmbeddedResource::EnumValues(const logger& pLog, const std::wstring& Mod
     {
         if (VerifyFileExists(Module.c_str()) == S_FALSE)
         {
-            log::Error(
-                pLog,
-                hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND),
-                L"Ressource file %s does not exist\r\n",
-                Module.c_str());
-            return hr;
+            spdlog::error(L"Ressource file '{}' does not exist", Module);
+            return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
         }
 
         hInstance = LoadLibraryEx(Module.c_str(), NULL, dwLoadLibraryFlags);
         if (hInstance == NULL)
         {
-            log::Error(
-                pLog,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Ressource file %s could not be loaded\r\n",
-                Module.c_str());
+            hr = HRESULT_FROM_WIN32(GetLastError()),
+            spdlog::error(L"Ressource file '{}' could not be loaded (code: {:#x})", Module, hr);
             return hr;
         }
     }
 
-    V_EnumResourceNamesEx_Param param = {pLog, Module, values};
+    V_EnumResourceNamesEx_Param param = {Module, values};
 
-    const auto pExt = ExtensionLibrary::GetLibrary<Kernel32Extension>(pLog);
+    const auto pExt = ExtensionLibrary::GetLibrary<Kernel32Extension>();
 
     if (FAILED(hr = pExt->EnumResourceNamesW(hInstance, VALUES(), V_EnumResourceNamesEx_Function, (ULONG_PTR)&param)))
     {
-        log::Error(pLog, hr, L"Failed to enumerate values ressources\r\n");
+        spdlog::error(L"Failed to enumerate values ressources (code: {:#x})", hr);
         return hr;
     }
 
@@ -958,14 +891,11 @@ HRESULT EmbeddedResource::EnumValues(const logger& pLog, const std::wstring& Mod
 
 struct B_EnumResourceNamesEx_Param
 {
-    B_EnumResourceNamesEx_Param(
-        logger pLog,
-        const std::wstring& strModule,
-        std::vector<EmbeddedResource::EmbedSpec>& values)
-        : _L_(pLog)
-        , Module(strModule)
-        , Values(values) {};
-    logger _L_;
+    B_EnumResourceNamesEx_Param(const std::wstring& strModule, std::vector<EmbeddedResource::EmbedSpec>& values)
+        : Module(strModule)
+        , Values(values)
+    {
+    }
     const std::wstring& Module;
     std::vector<EmbeddedResource::EmbedSpec>& Values;
 };
@@ -980,9 +910,9 @@ BOOL CALLBACK B_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
     wstring strName(lpszName);
     CBinaryBuffer buffer;
 
-    if (FAILED(hr = EmbeddedResource::ExtractBuffer(param->_L_, param->Module, strName, buffer)))
+    if (FAILED(hr = EmbeddedResource::ExtractBuffer(param->Module, strName, buffer)))
     {
-        log::Error(param->_L_, hr, L"Failed to extract binary ressource %s\r\n", lpszName);
+        spdlog::error(L"Failed to extract binary ressource '{}' (code: {:#x})", lpszName, hr);
         return TRUE;
     }
     param->Values.push_back(EmbeddedResource::EmbedSpec::AddBinary(std::move(strName), std::move(buffer)));
@@ -990,7 +920,7 @@ BOOL CALLBACK B_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
     return TRUE;
 }
 
-HRESULT EmbeddedResource::EnumBinaries(const logger& pLog, const std::wstring& Module, std::vector<EmbedSpec>& values)
+HRESULT EmbeddedResource::EnumBinaries(const std::wstring& Module, std::vector<EmbedSpec>& values)
 {
     HRESULT hr = E_FAIL;
     HMODULE hInstance = NULL;
@@ -1007,33 +937,26 @@ HRESULT EmbeddedResource::EnumBinaries(const logger& pLog, const std::wstring& M
     {
         if (VerifyFileExists(Module.c_str()) == S_FALSE)
         {
-            log::Error(
-                pLog,
-                hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND),
-                L"Ressource file %s does not exist\r\n",
-                Module.c_str());
-            return hr;
+            spdlog::error(L"Ressource file '{}' does not exist", Module);
+            return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
         }
 
         hInstance = LoadLibraryEx(Module.c_str(), NULL, dwLoadLibraryFlags);
         if (hInstance == NULL)
         {
-            log::Error(
-                pLog,
-                hr = HRESULT_FROM_WIN32(GetLastError()),
-                L"Ressource file %s could not be loaded\r\n",
-                Module.c_str());
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Ressource file '{}' could not be loaded (code: {:#x})", Module, hr);
             return hr;
         }
     }
 
-    B_EnumResourceNamesEx_Param param = {pLog, Module, values};
+    B_EnumResourceNamesEx_Param param = {Module, values};
 
-    const auto pExt = ExtensionLibrary::GetLibrary<Kernel32Extension>(pLog);
+    const auto pExt = ExtensionLibrary::GetLibrary<Kernel32Extension>();
 
     if (FAILED(hr = pExt->EnumResourceNamesW(hInstance, BINARY(), B_EnumResourceNamesEx_Function, (ULONG_PTR)&param)))
     {
-        log::Error(pLog, hr, L"Failed to enumerate values ressources\r\n");
+        spdlog::error("Failed to enumerate values ressources (code: {:#x})", hr);
         return hr;
     }
 
@@ -1041,7 +964,6 @@ HRESULT EmbeddedResource::EnumBinaries(const logger& pLog, const std::wstring& M
 }
 
 HRESULT EmbeddedResource::ExpandArchivesAndBinaries(
-    const logger& pLog,
     const std::wstring& outDir,
     std::vector<EmbedSpec>& values)
 {
@@ -1096,28 +1018,28 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(
 
     for (const auto& item : binaries)
     {
-        auto inBinary = std::make_shared<MemoryStream>(pLog);
+        auto inBinary = std::make_shared<MemoryStream>();
 
         if (FAILED(hr = inBinary->OpenForReadOnly(item.BinaryValue.GetData(), item.BinaryValue.GetCount())))
         {
-            log::Error(pLog, hr, L"Failed to open memory stream for ressource\r\n");
+            spdlog::error("Failed to open memory stream for ressource (code: {:#x})", hr);
             continue;
         }
 
         wstring out = outDir + L"\\" + item.Name;
 
-        auto outFile = std::make_shared<FileStream>(pLog);
+        auto outFile = std::make_shared<FileStream>();
 
         if (FAILED(hr = outFile->WriteTo(out.c_str())))
         {
-            log::Error(pLog, hr, L"Failed to create output file %s\r\n", out.c_str());
+            spdlog::error(L"Failed to create output file '{}' (code: {:#x})", out, hr);
             continue;
         }
         ULONGLONG cbWritten = 0LL;
 
         if (FAILED(hr = inBinary->CopyTo(outFile, &cbWritten)))
         {
-            log::Error(pLog, hr, L"Failed to write ressource content to output file %s\r\n", out.c_str());
+            spdlog::error(L"Failed to write ressource content to output file '{}' (code: {:#x})", out, hr);
             continue;
         }
         values.push_back(EmbedSpec::AddFile(item.Name, out));
@@ -1125,18 +1047,18 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(
 
     for (const auto& item : archives)
     {
-        auto archStream = std::make_shared<MemoryStream>(pLog);
+        auto archStream = std::make_shared<MemoryStream>();
 
         if (FAILED(hr = archStream->OpenForReadOnly(item.BinaryValue.GetData(), item.BinaryValue.GetCount())))
         {
-            log::Error(pLog, hr, L"Failed to open memory stream for ressource\r\n");
+            spdlog::error(L"Failed to open memory stream for ressource (code: {:#x})", hr);
             continue;
         }
 
-        auto extractor = ArchiveExtract::MakeExtractor(Archive::GetArchiveFormat(item.ArchiveFormat), pLog);
+        auto extractor = ArchiveExtract::MakeExtractor(Archive::GetArchiveFormat(item.ArchiveFormat));
         if (!extractor)
         {
-            log::Error(pLog, hr, L"Failed to create extractor for ressource\r\n");
+            spdlog::error(L"Failed to create extractor for ressource");
             continue;
         }
 
@@ -1146,7 +1068,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(
 
         if (FAILED(hr = extractor->Extract(archStream, out.c_str(), nullptr)))
         {
-            log::Error(pLog, hr, L"Failed to extract ressource into %s\r\n", out.c_str());
+            spdlog::error(L"Failed to extract ressource into '{}' (code: {:#x})", out, hr);
             continue;
         }
 
@@ -1169,7 +1091,6 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(
 }
 
 HRESULT EmbeddedResource::DeleteEmbeddedRessources(
-    const logger& pLog,
     const std::wstring& inModule,
     const std::wstring& outModule,
     std::vector<EmbedSpec>& values)
@@ -1179,14 +1100,14 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
 
     if (values.empty())
     {
-        if (FAILED(hr = EnumValues(pLog, inModule, to_delete)))
+        if (FAILED(hr = EnumValues(inModule, to_delete)))
         {
-            log::Error(pLog, hr, L"Failed to enumerate ressources to delete\r\n");
+            spdlog::error("Failed to enumerate ressources to delete (code: {:#x})", hr);
             return hr;
         }
-        if (FAILED(hr = EnumBinaries(pLog, inModule, to_delete)))
+        if (FAILED(hr = EnumBinaries(inModule, to_delete)))
         {
-            log::Error(pLog, hr, L"Failed to enumerate ressources to delete\r\n");
+            spdlog::error("Failed to enumerate ressources to delete (code: {:#x})", hr);
             return hr;
         }
     }
@@ -1200,14 +1121,14 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
         item.DeleteMe();
     }
 
-    auto inStream = std::make_shared<FileStream>(pLog);
+    auto inStream = std::make_shared<FileStream>();
     std::wstring inputFile;
 
     if (inModule.empty())
     {
         if (FAILED(hr = GetSelf(inputFile)))
         {
-            log::Error(pLog, hr, L"Failed to get my own path\r\n", inputFile.c_str());
+            spdlog::error(L"Failed to get my own path: '{}' (code: {:#x})", inputFile, hr);
             return hr;
         }
     }
@@ -1218,16 +1139,16 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
 
     if (FAILED(hr = inStream->ReadFrom(inputFile.c_str())))
     {
-        log::Error(pLog, hr, L"Failed to open input binary %s to update ressources\r\n", inputFile.c_str());
+        spdlog::error(L"Failed to open input binary '{}' to update ressources (code: {:#x})", inputFile, hr);
         return hr;
     }
 
-    auto outStream = std::make_shared<FileStream>(pLog);
+    auto outStream = std::make_shared<FileStream>();
     if (FAILED(
             hr = outStream->OpenFile(
                 outModule.c_str(), GENERIC_WRITE, 0L, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL)))
     {
-        log::Error(pLog, hr, L"Failed to open output binary %s to update ressources\r\n", outModule.c_str());
+        spdlog::error(L"Failed to open output binary '{}' to update ressources (code: {:#x})", outModule, hr);
         return hr;
     }
     ULONGLONG ullWritten = 0LL;
@@ -1235,15 +1156,15 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
 
     if (FAILED(hr = inStream->CopyTo(outStream, &ullWritten)))
     {
-        log::Error(pLog, hr, L"Failed to copy %s to %s\r\n", inputFile.c_str(), outModule.c_str());
+        spdlog::error(L"Failed to copy '{}' to '{}' (code: {:#x})", inputFile, outModule, hr);
         return hr;
     }
     inStream->Close();
     outStream->Close();
 
-    if (FAILED(hr = UpdateResources(pLog, outModule, to_delete)))
+    if (FAILED(hr = UpdateResources(outModule, to_delete)))
     {
-        log::Error(pLog, hr, L"Failed to update ressources in %s\r\n", outModule.c_str());
+        spdlog::error(L"Failed to update ressources in '{}' (code: {:#x})", outModule, hr);
         return hr;
     }
 

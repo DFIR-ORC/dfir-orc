@@ -24,8 +24,8 @@ private:
     HRESULT WriteConfig(const CComPtr<IXmlWriter>& pWriter, const ConfigItem& config);
 
 public:
-    ConfigFileWriter(logger pLog)
-        : ConfigFile(std::move(pLog))
+    ConfigFileWriter()
+        : ConfigFile()
     {
     }
 

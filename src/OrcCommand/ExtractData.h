@@ -29,7 +29,6 @@
 namespace Orc {
 
 class ImportMessage;
-class LogFileWriter;
 
 namespace Command::ExtractData {
 
@@ -40,8 +39,6 @@ public:
     class InputItem
     {
     private:
-        logger _L_;
-
     public:
         std::wstring matchRegex;  // filename regex
         std::wstring path;
@@ -51,16 +48,14 @@ public:
 
         std::wstring Description() { return path + L"\\" + matchRegex; }
 
+        InputItem() {}
         InputItem(InputItem&& other) noexcept = default;
-        InputItem(logger pLog)
-            : _L_(pLog)
-            , importDefinitions(pLog) {};
     };
 
     class Configuration : public UtilitiesMain::Configuration
     {
     public:
-        Configuration(logger pLog)
+        Configuration()
         {
             reportOutput.supportedTypes = static_cast<OutputSpec::Kind>(
                 OutputSpec::Kind::CSV | OutputSpec::Kind::TSV | OutputSpec::Kind::TableFile);
@@ -94,9 +89,9 @@ public:
     static LPCWSTR DefaultSchema() { return L"res:#EXTRACTDATA_REPORT_SQLSCHEMA"; }
     HRESULT GetSchemaFromConfig(const ConfigItem& schemaitem);
 
-    Main(logger pLog)
-        : UtilitiesMain(pLog)
-        , config(pLog)
+    Main()
+        : UtilitiesMain()
+        , config()
         , m_importRequestBuffer() {};
 
     void PrintUsage();

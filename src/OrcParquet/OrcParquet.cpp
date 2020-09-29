@@ -16,13 +16,12 @@
 
 using namespace Orc;
 
-std::shared_ptr<TableOutput::IStreamWriter>
-StreamTableFactory(const logger& pLog, std::unique_ptr<TableOutput::Options>&& options)
+std::shared_ptr<TableOutput::IStreamWriter> StreamTableFactory(std::unique_ptr<TableOutput::Options> options)
 {
 #pragma comment(linker, "/export:StreamTableFactory=" __FUNCDNAME__)
 
     std::unique_ptr<TableOutput::Parquet::Options> pParquetOpt(
         dynamic_cast<TableOutput::Parquet::Options*>(options.release()));
 
-    return Orc::TableOutput::Parquet::Writer::MakeNew(pLog, std::move(pParquetOpt));
+    return Orc::TableOutput::Parquet::Writer::MakeNew(std::move(pParquetOpt));
 }

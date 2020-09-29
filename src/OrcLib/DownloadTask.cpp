@@ -24,7 +24,7 @@ using namespace std;
 
 using namespace Orc;
 
-std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog, const ConfigItem& item)
+std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const ConfigItem& item)
 {
     if (item.strName.compare(L"download") != 0)
         return nullptr;
@@ -42,19 +42,15 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
     {
         if (equalCaseInsensitive(item[CONFIG_DOWNLOAD_METHOD], L"bits"))
         {
-            retval = std::make_shared<BITSDownloadTask>(pLog, strJobName.c_str());
+            retval = std::make_shared<BITSDownloadTask>(strJobName.c_str());
         }
         else if (equalCaseInsensitive(item[CONFIG_DOWNLOAD_METHOD], L"filecopy"))
         {
-            retval = std::make_shared<FileCopyDownloadTask>(pLog, strJobName.c_str());
+            retval = std::make_shared<FileCopyDownloadTask>(strJobName.c_str());
         }
         else
         {
-            log::Error(
-                pLog,
-                E_INVALIDARG,
-                L"Invalid download method \"%s\"\r\n",
-                item[CONFIG_DOWNLOAD_METHOD].c_str());
+            spdlog::error(L"Invalid download method '{}'", item[CONFIG_DOWNLOAD_METHOD].c_str());
             return nullptr;
         }
     }
@@ -129,11 +125,10 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const logger& pLog
             strName = file[CONFIG_DOWNLOAD_FILE_NAME];
             if (FAILED(hr = GetOutputFile(file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str(), strLocalName, true)))
             {
-                log::Error(
-                    pLog,
-                    hr,
-                    L"Error while computing local file name for download task (%s)\r\n",
-                    file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str());
+                spdlog::error(
+                    L"Error while computing local file name for download task: '{}' (code: {:#x})",
+                    file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str(),
+                    hr);
             }
 
             if (file[CONFIG_DOWNLOAD_FILE_DELETE])

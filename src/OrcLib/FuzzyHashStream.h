@@ -9,6 +9,8 @@
 
 #include "HashStream.h"
 
+#include "Utils/EnumFlags.h"
+
 #pragma managed(push, off)
 
 class Tlsh;
@@ -16,43 +18,17 @@ struct fuzzy_state;
 
 namespace Orc {
 
-class LogFileWriter;
-
 class FuzzyHashStream : public HashStream
 {
 public:
-    enum Algorithm
+    enum class Algorithm
     {
         Undefined = 0,
         SSDeep = 1 << 0,
         TLSH = 1 << 1
     };
 
-    friend Algorithm& operator^=(Algorithm& left, const Algorithm rigth)
-    {
-        left = static_cast<Algorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
-        return left;
-    }
-    friend Algorithm& operator|=(Algorithm& left, const Algorithm rigth)
-    {
-        left = static_cast<Algorithm>(static_cast<char>(left) | static_cast<char>(rigth));
-        return left;
-    }
-
-    friend Algorithm operator^(const Algorithm left, const Algorithm rigth)
-    {
-        return static_cast<Algorithm>(static_cast<char>(left) ^ static_cast<char>(rigth));
-    }
-    friend Algorithm operator|(const Algorithm left, const Algorithm rigth)
-    {
-        return static_cast<Algorithm>(static_cast<char>(left) | static_cast<char>(rigth));
-    }
-    friend Algorithm operator&(const Algorithm left, const Algorithm rigth)
-    {
-        return static_cast<Algorithm>(static_cast<char>(left) & static_cast<char>(rigth));
-    }
-
-    FuzzyHashStream(logger pLog);
+    FuzzyHashStream();
 
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
 
@@ -68,8 +44,8 @@ public:
     STDMETHOD(GetHash)(Algorithm alg, CBinaryBuffer& Hash);
     STDMETHOD(GetHash)(Algorithm alg, std::wstring& Hash);
 
-    STDMETHOD(GetSSDeep)(CBinaryBuffer& hash) { return GetHash(FuzzyHashStream::SSDeep, hash); };
-    STDMETHOD(GetTLSH)(CBinaryBuffer& hash) { return GetHash(FuzzyHashStream::TLSH, hash); };
+    STDMETHOD(GetSSDeep)(CBinaryBuffer& hash) { return GetHash(FuzzyHashStream::Algorithm::SSDeep, hash); };
+    STDMETHOD(GetTLSH)(CBinaryBuffer& hash) { return GetHash(FuzzyHashStream::Algorithm::TLSH, hash); };
 
     static Algorithm GetSupportedAlgorithm(LPCWSTR szAlgo);
     static std::wstring GetSupportedAlgorithm(Algorithm algs);
@@ -77,10 +53,12 @@ public:
     virtual ~FuzzyHashStream();
 
 protected:
-    Algorithm m_Algorithms = Undefined;
+    Algorithm m_Algorithms = Algorithm::Undefined;
     std::unique_ptr<Tlsh> m_tlsh;
     struct fuzzy_state* m_ssdeep = nullptr;
 };
+
+ENABLE_BITMASK_OPERATORS(FuzzyHashStream::Algorithm);
 
 }  // namespace Orc
 

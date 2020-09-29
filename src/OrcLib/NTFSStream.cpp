@@ -12,16 +12,14 @@
 
 #include "Temporary.h"
 
-#include "LogFileWriter.h"
-
 #include "VolumeReader.h"
 #include "MFTRecord.h"
 #include "MFTUtils.h"
 
 using namespace Orc;
 
-NTFSStream::NTFSStream(logger pLog)
-    : ByteStream(std::move(pLog))
+NTFSStream::NTFSStream()
+    : ByteStream()
 {
     m_pVolReader = NULL;
     m_CurrentPosition = 0LL;
@@ -232,7 +230,7 @@ NTFSStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod
         case FILE_END:
             if (DistanceToMove > 0)
             {
-                log::Error(_L_, E_INVALIDARG, L"Cannot move past the end of the file (%I64d)\r\n", DistanceToMove);
+                spdlog::error("Cannot move past the end of the file ({})", DistanceToMove);
                 return E_INVALIDARG;
             }
 

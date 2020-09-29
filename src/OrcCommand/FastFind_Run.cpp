@@ -28,7 +28,6 @@
 #include "SnapshotVolumeReader.h"
 
 #include "CaseInsensitive.h"
-#include "LogFileWriter.h"
 
 #include "boost/scope_exit.hpp"
 
@@ -37,17 +36,55 @@ using namespace std;
 using namespace Orc;
 using namespace Orc::Command::FastFind;
 
+namespace {
+
+template <typename T>
+void PrintFoundFile(
+    Orc::Text::Tree<T>& root,
+    const std::wstring& path,
+    const std::wstring& matchDescription,
+    bool isDeleted)
+{
+    root.AddWithoutEOL(L"{:<24} {} ({})", L"Found file:", path, matchDescription);
+    if (isDeleted)
+    {
+        root.Append(" [DELETED]");
+    }
+
+    root.AddEOL();
+}
+
+template <typename T>
+void PrintFoundKey(Orc::Text::Tree<T>& root, const std::string& path)
+{
+    root.Add("{:<24} {}", "Found registry key:", path);
+}
+
+template <typename T>
+void PrintFoundValue(Orc::Text::Tree<T>& root, const std::string& key, const std::string& value)
+{
+    root.Add(L"{:<24} {} ({})", L"Found registry value:", key, value);
+}
+
+template <typename T>
+void PrintFoundWindowsObject(Orc::Text::Tree<T>& root, const std::wstring& name, const std::wstring& description)
+{
+    root.Add(L"{:>24} {} ({})", L"Found windows object:", name, description);
+}
+
+}  // namespace
+
 HRESULT Main::RegFlushKeys()
 {
     bool bSuccess = true;
     DWORD dwGLE = 0L;
 
-    log::Info(_L_, L"\r\nFlushing HKEY_LOCAL_MACHINE\r\n");
+    spdlog::debug("Flushing HKEY_LOCAL_MACHINE");
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
         bSuccess = false;
 
-    log::Info(_L_, L"Flushing HKEY_USERS\r\n");
+    spdlog::debug("Flushing HKEY_USERS");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
         bSuccess = false;
@@ -64,45 +101,31 @@ HRESULT Main::RunFileSystem()
     if (pStructuredOutput)
         pStructuredOutput->BeginCollection(L"filesystem");
 
-    if (FAILED(
-            hr = config.FileSystem.Files.Find(
-                config.FileSystem.Locations,
-                [this](const std::shared_ptr<FileFind::Match>& aMatch, bool& bStop) {
-                    wstring strMatchDescr = aMatch->Term->GetDescription();
+    hr = config.FileSystem.Files.Find(
+        config.FileSystem.Locations,
+        [this](const std::shared_ptr<FileFind::Match>& aMatch, bool& bStop) {
+            wstring strMatchDescr = aMatch->Term->GetDescription();
 
-                    bool bDeleted = aMatch->DeletedRecord;
-                    std::for_each(
-                        begin(aMatch->MatchingNames),
-                        end(aMatch->MatchingNames),
-                        [strMatchDescr, bDeleted, this](const FileFind::Match::NameMatch& aNameMatch) {
-                            if (bDeleted)
-                            {
-                                log::Info(
-                                    _L_,
-                                    L"Found (deleted)       : %s (%s)\r\n",
-                                    aNameMatch.FullPathName.c_str(),
-                                    strMatchDescr.c_str());
-                            }
-                            else
-                            {
-                                log::Info(
-                                    _L_,
-                                    L"Found                 : %s (%s)\r\n",
-                                    aNameMatch.FullPathName.c_str(),
-                                    strMatchDescr.c_str());
-                            }
-                        });
+            bool bDeleted = aMatch->DeletedRecord;
+            std::for_each(
+                begin(aMatch->MatchingNames),
+                end(aMatch->MatchingNames),
+                [strMatchDescr, bDeleted, this](const FileFind::Match::NameMatch& aNameMatch) {
+                    ::PrintFoundFile(m_console.OutputTree(), aNameMatch.FullPathName, strMatchDescr, bDeleted);
+                });
 
-                    if (pFileSystemTableOutput)
-                        aMatch->Write(_L_, *pFileSystemTableOutput);
-                    if (pStructuredOutput)
-                        aMatch->Write(_L_, *pStructuredOutput, nullptr);
+            if (pFileSystemTableOutput)
+                aMatch->Write(*pFileSystemTableOutput);
+            if (pStructuredOutput)
+                aMatch->Write(*pStructuredOutput, nullptr);
 
-                    return;
-                },
-                true)))
+            return;
+        },
+        true);
+
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed while parsing locations\r\n");
+        spdlog::error(L"Failed while parsing locations");
         return hr;
     }
 
@@ -117,26 +140,26 @@ HRESULT Main::RunRegistry()
 
     RegFlushKeys();
 
-    if (FAILED(
-            hr = config.Registry.Files.Find(
-                config.Registry.Locations,
-                [this](const std::shared_ptr<FileFind::Match>& aFileMatch, bool& bStop) {
-                    log::Verbose(
-                        _L_,
-                        L"Hive %s matches %s\t\n",
-                        aFileMatch->MatchingNames.front().FullPathName.c_str(),
-                        aFileMatch->Term->GetDescription().c_str());
-                },
-                false)))
+    hr = config.Registry.Files.Find(
+        config.Registry.Locations,
+        [this](const std::shared_ptr<FileFind::Match>& aFileMatch, bool& bStop) {
+            spdlog::debug(
+                L"Hive '{}' matches '{}'",
+                aFileMatch->MatchingNames.front().FullPathName,
+                aFileMatch->Term->GetDescription());
+        },
+        false);
+
+    if (FAILED(hr))
     {
-        log::Error(_L_, hr, L"Failed to parse location while searching for registry hives\r\n");
+        spdlog::error(L"Failed to parse location while searching for registry hives");
     }
 
     pStructuredOutput->BeginCollection(L"registry");
 
     for (const auto& aFileMatch : config.Registry.Files.Matches())
     {
-        log::Verbose(_L_, L"Parsing registry hive %s\t\n", aFileMatch->MatchingNames.front().FullPathName.c_str());
+        spdlog::debug(L"Parsing registry hive '{}'", aFileMatch->MatchingNames.front().FullPathName);
 
         if (pStructuredOutput)
         {
@@ -164,18 +187,14 @@ HRESULT Main::RunRegistry()
 
                 if (FAILED(hr = aregfind.Find(data.DataStream, nullptr, nullptr)))
                 {
-                    log::Error(
-                        _L_,
-                        hr,
-                        L"Failed while parsing registry hive %s\r\n",
-                        aFileMatch->MatchingNames.front().FullPathName.c_str());
+                    spdlog::error(
+                        L"Failed while parsing registry hive '{}' (code: {:#x})",
+                        aFileMatch->MatchingNames.front().FullPathName,
+                        hr);
                 }
                 else
                 {
-                    log::Verbose(
-                        _L_,
-                        L"Successfully parsed hive %s\r\n",
-                        aFileMatch->MatchingNames.front().FullPathName.c_str());
+                    spdlog::debug(L"Successfully parsed hive '{}'", aFileMatch->MatchingNames.front().FullPathName);
                     // write matching elements
 
                     auto& Results = aregfind.Matches();
@@ -185,20 +204,16 @@ HRESULT Main::RunRegistry()
                         // write matching keys
                         for (const auto& key : elt.second->MatchingKeys)
                         {
-                            log::Info(_L_, L"Found Key          : %S\r\n", key.KeyName.c_str());
+                            ::PrintFoundKey(m_console.OutputTree(), key.KeyName);
                         }
 
                         for (const auto& value : elt.second->MatchingValues)
                         {
-                            log::Info(
-                                _L_,
-                                L"Found Value        : %S (Key %S)\r\n",
-                                value.ValueName.c_str(),
-                                value.KeyName.c_str());
+                            ::PrintFoundValue(m_console.OutputTree(), value.ValueName, value.KeyName);
                         }
 
                         if (pStructuredOutput)
-                            elt.second->Write(_L_, *pStructuredOutput);
+                            elt.second->Write(*pStructuredOutput);
                     }
                 }
             }
@@ -224,13 +239,14 @@ HRESULT Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDir
     {
         pStructuredOutput->BeginElement(szElement);
         pStructuredOutput->WriteNamed(L"description", spec.Description().c_str());
-        obj.Write(_L_, *pStructuredOutput);
+        obj.Write(*pStructuredOutput);
         pStructuredOutput->EndElement(szElement);
     }
     if (pObjectTableOutput)
     {
-        obj.Write(_L_, *pObjectTableOutput, spec.Description());
+        obj.Write(*pObjectTableOutput, spec.Description());
     }
+
     return S_OK;
 }
 
@@ -243,15 +259,16 @@ Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const FileDirectory::Fi
     {
         pStructuredOutput->BeginElement(szElement);
         pStructuredOutput->WriteNamed(L"description", spec.Description().c_str());
-        file.Write(_L_, *pStructuredOutput);
+        file.Write(*pStructuredOutput);
         pStructuredOutput->EndElement(szElement);
 
     }
 
     if (pObjectTableOutput)
     {
-        file.Write(_L_, *pObjectTableOutput, spec.Description());
+        file.Write(*pObjectTableOutput, spec.Description());
     }
+
     return S_OK;
 }
 
@@ -264,12 +281,12 @@ HRESULT Main::RunObject()
 
     for (const auto& objdir : ObjectDirs)
     {
-        ObjectDirectory objectdir(_L_);
+        ObjectDirectory objectdir;
         std::vector<ObjectDirectory::ObjectInstance> objects;
 
         if (FAILED(hr = objectdir.ParseObjectDirectory(objdir, objects)))
         {
-            log::Error(_L_, hr, L"Failed to parse object directory %s\r\n", objdir.c_str());
+            spdlog::error(L"Failed to parse object directory '{}' (code: {:#x})", objdir, hr);
         }
         else
         {
@@ -292,8 +309,7 @@ HRESULT Main::RunObject()
                                 if (!PathMatchSpec(object.Name.c_str(), spec.strName.c_str()))
                                     continue;  //
                                 break;
-                            case ObjectSpec::MatchType::Regex:
-                            {
+                            case ObjectSpec::MatchType::Regex: {
                                 if (spec.name_regexp != nullptr)
                                 {
                                     wsmatch m;
@@ -319,8 +335,7 @@ HRESULT Main::RunObject()
                                 if (!PathMatchSpec(object.Path.c_str(), spec.strPath.c_str()))
                                     continue;  //
                                 break;
-                            case ObjectSpec::MatchType::Regex:
-                            {
+                            case ObjectSpec::MatchType::Regex: {
                                 if (spec.path_regexp != nullptr)
                                 {
                                     wsmatch m;
@@ -335,9 +350,7 @@ HRESULT Main::RunObject()
                     }
 
                     // Dropping here means no previous test rejected the object
-                    log::Info(
-                        _L_, L"Found                 : %s (%s)\r\n", object.Path.c_str(), spec.Description().c_str());
-
+                    ::PrintFoundWindowsObject(m_console.OutputTree(), object.Path, spec.Description());
                     LogObjectMatch(spec, object, nullptr);
                 }
             }
@@ -346,12 +359,12 @@ HRESULT Main::RunObject()
 
     for (const auto& filedir : FileDirs)
     {
-        FileDirectory filedirectory(_L_);
+        FileDirectory filedirectory;
         std::vector<FileDirectory::FileInstance> files;
 
         if (FAILED(hr = filedirectory.ParseFileDirectory(filedir, files)))
         {
-            log::Error(_L_, hr, L"Failed to parse file directory %s\r\n", filedir.c_str());
+            spdlog::error(L"Failed to parse file directory {} (code: {:#x})", filedir, hr);
         }
         else
         {
@@ -374,8 +387,7 @@ HRESULT Main::RunObject()
                                 if (!PathMatchSpec(file.Name.c_str(), spec.strName.c_str()))
                                     continue;  //
                                 break;
-                            case ObjectSpec::MatchType::Regex:
-                            {
+                            case ObjectSpec::MatchType::Regex: {
                                 if (spec.name_regexp != nullptr)
                                 {
                                     wsmatch m;
@@ -401,8 +413,7 @@ HRESULT Main::RunObject()
                                 if (!PathMatchSpec(file.Path.c_str(), spec.strPath.c_str()))
                                     continue;  //
                                 break;
-                            case ObjectSpec::MatchType::Regex:
-                            {
+                            case ObjectSpec::MatchType::Regex: {
                                 if (spec.path_regexp != nullptr)
                                 {
                                     wsmatch m;
@@ -444,22 +455,22 @@ HRESULT Main::Run()
     SystemDetails::GetOrcComputerName(ComputerName);
 
     if (config.outFileSystem.Type != OutputSpec::Kind::None)
-        pFileSystemTableOutput = TableOutput::GetWriter(_L_, config.outFileSystem);
+        pFileSystemTableOutput = TableOutput::GetWriter(config.outFileSystem);
 
     if (config.outRegsitry.Type != OutputSpec::Kind::None)
-        pRegistryTableOutput = TableOutput::GetWriter(_L_, config.outRegsitry);
+        pRegistryTableOutput = TableOutput::GetWriter(config.outRegsitry);
 
     if (config.outObject.Type != OutputSpec::Kind::None)
-        pObjectTableOutput = TableOutput::GetWriter(_L_, config.outObject);
+        pObjectTableOutput = TableOutput::GetWriter(config.outObject);
 
     if (config.outStructured.Type & OutputSpec::Kind::StructuredFile)
     {
-        pStructuredOutput = StructuredOutputWriter::GetWriter(_L_, config.outStructured, nullptr);
+        pStructuredOutput = StructuredOutputWriter::GetWriter(config.outStructured, nullptr);
     }
     else if (config.outStructured.Type == OutputSpec::Kind::Directory)
     {
         auto writer = StructuredOutputWriter::GetWriter(
-            _L_, config.outStructured, L"{Name}_{SystemType}_{ComputerName}.xml", L"FastFind", nullptr);
+            config.outStructured, L"{Name}_{SystemType}_{ComputerName}.xml", L"FastFind", nullptr);
         pStructuredOutput = std::dynamic_pointer_cast<StructuredOutputWriter>(writer);
     }
 
@@ -507,5 +518,6 @@ HRESULT Main::Run()
         pStructuredOutput->Close();
         pStructuredOutput = nullptr;
     }
+
     return S_OK;
 }

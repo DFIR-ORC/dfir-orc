@@ -35,9 +35,6 @@
 namespace Orc {
 
 // Utilities
-class LogFileWriter;
-using log = LogFileWriter;
-using logger = std::shared_ptr<LogFileWriter>;
 
 class Exception;
 enum ExceptionSeverity : short;

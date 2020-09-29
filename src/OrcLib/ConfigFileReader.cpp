@@ -17,12 +17,14 @@
 
 #include "CaseInsensitive.h"
 
+#include <spdlog/spdlog.h>
+
 using namespace std;
 
 using namespace Orc;
 
-ConfigFileReader::ConfigFileReader(logger pLog, bool bLogComment)
-    : ConfigFile(std::move(pLog))
+ConfigFileReader::ConfigFileReader(bool bLogComment)
+    : ConfigFile()
 {
     m_bLogComments = bLogComment;
 }
@@ -43,12 +45,12 @@ HRESULT ConfigFileReader::NavigateConfigNodeList(const CComPtr<IXmlReader>& pRea
 
     if (FAILED(hr = NavigateConfigAttributes(pReader, config.NodeList.back())))
     {
-        log::Error(_L_, hr, L"Failed to parse node %s attributes\r\n", config.strName.c_str());
+        spdlog::error(L"Failed to parse node '{}'' attributes (code: {:#x})", config.strName.c_str(), hr);
         return hr;
     }
     if (FAILED(hr = NavigateConfigNode(pReader, config.NodeList.back())))
     {
-        log::Error(_L_, hr, L"Error reading element in node list\r\n");
+        spdlog::error(L"Error reading element in node list (code: {:#x})", hr);
         return hr;
     }
 
@@ -68,7 +70,7 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
 
         if (FAILED(hr = pReader->MoveToFirstAttribute()))
         {
-            XmlLiteExtension::LogError(_L_, hr, pReader);
+            XmlLiteExtension::LogError(hr, pReader);
             return hr;
         }
 
@@ -77,7 +79,7 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
             const WCHAR* pName = NULL;
             if (FAILED(hr = pReader->GetLocalName(&pName, NULL)))
             {
-                XmlLiteExtension::LogError(_L_, hr, pReader);
+                XmlLiteExtension::LogError(hr, pReader);
                 pReader->MoveToElement();
                 return hr;
             }
@@ -90,8 +92,7 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
 
             if (it == end(config.SubItems))
             {
-                log::Warning(
-                    _L_, HRESULT_FROM_NT(NTE_NOT_FOUND), L"Unexpected attribute '%s' in configuration\r\n", pName);
+                spdlog::warn(L"Unexpected attribute '{}' in configuration", pName);
             }
             else
             {
@@ -99,7 +100,7 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
                 const WCHAR* pValue = NULL;
                 if (FAILED(hr = pReader->GetValue(&pValue, NULL)))
                 {
-                    XmlLiteExtension::LogError(_L_, hr, pReader);
+                    XmlLiteExtension::LogError(hr, pReader);
                     pReader->MoveToElement();
                     return hr;
                 }
@@ -124,18 +125,13 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
     const WCHAR* pName = NULL;
     if (FAILED(hr = pReader->GetLocalName(&pName, NULL)))
     {
-        XmlLiteExtension::LogError(_L_, hr, pReader);
+        XmlLiteExtension::LogError(hr, pReader);
         return hr;
     }
 
     if (equalCaseInsensitive(config.strName, pName) == false)
     {
-        log::Error(
-            _L_,
-            E_INVALIDARG,
-            L"Error parsing configuration, incorrect element '%s' for item '%s'\r\n",
-            pName,
-            config.strName.c_str());
+        spdlog::error(L"Error parsing configuration, incorrect element '{}' for item '{}'", pName, config.strName);
         return E_INVALIDARG;
     }
 
@@ -158,7 +154,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 const WCHAR* pLocalName = NULL;
                 if (FAILED(hr = pReader->GetLocalName(&pLocalName, NULL)))
                 {
-                    XmlLiteExtension::LogError(_L_, hr, pReader);
+                    XmlLiteExtension::LogError(hr, pReader);
                     return hr;
                 }
 
@@ -169,8 +165,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
 
                 if (it == end(config.SubItems))
                 {
-                    log::Warning(
-                        _L_, HRESULT_FROM_NT(NTE_NOT_FOUND), L"Unexpected element %s in configuration\r\n", pLocalName);
+                    spdlog::warn(L"Unexpected element '{}' in configuration", pLocalName);
                 }
                 else
                 {
@@ -189,7 +184,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
 
                             if (FAILED(hr = NavigateConfigAttributes(pReader, it->NodeList.back())))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node '%s' attributes\r\n", pLocalName);
+                                spdlog::error(L"Failed to parse node '{}' attributes (code: {:#x})", pLocalName, hr);
                                 return hr;
                             }
                         }
@@ -197,7 +192,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                         {
                             if (FAILED(hr = NavigateConfigAttributes(pReader, *it)))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node '%s' attributes\r\n", pLocalName);
+                                spdlog::error(L"Failed to parse node '{}' attributes (code: {:#x})", pLocalName, hr);
                                 return hr;
                             }
                         }
@@ -208,12 +203,12 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                         {
                             if (FAILED(hr = NavigateConfigAttributes(pReader, *it)))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node '%s' attributes\r\n", pLocalName);
+                                spdlog::error(L"Failed to parse node '{}' attributes (code: {:#x})", pLocalName, hr);
                                 return hr;
                             }
                             if (FAILED(hr = NavigateConfigNode(pReader, *it)))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node '%s'\r\n", pLocalName);
+                                spdlog::error(L"Failed to parse node '{}' (code: {:#x})", pLocalName, hr);
                                 return hr;
                             }
                         }
@@ -221,17 +216,18 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                         {
                             if (FAILED(hr = NavigateConfigNodeList(pReader, *it)))
                             {
-                                log::Error(_L_, hr, L"Failed to parse node list '%s'\r\n", pLocalName);
+                                spdlog::error(L"Failed to parse node list '{}' (code: {:#x})", pLocalName, hr);
                                 return hr;
                             }
                         }
                         else
                         {
-                            log::Error(_L_, E_INVALIDARG, L"Failed to element '%s': invalid node type\r\n", pLocalName);
+                            spdlog::error(L"Failed to element '{}': invalid node type", pLocalName);
                             return E_INVALIDARG;
                         }
                     }
                 }
+
                 dwCurrentIndex++;
             }
             break;
@@ -240,12 +236,12 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 const WCHAR* pValue = NULL;
                 if (FAILED(hr = pReader->GetValue(&pValue, NULL)))
                 {
-                    XmlLiteExtension::LogError(_L_, hr, pReader);
+                    XmlLiteExtension::LogError(hr, pReader);
                     return hr;
                 }
                 if (!pValue || L'\0' == (*pValue))
                 {
-                    log::Error(_L_, E_UNEXPECTED, L"Error empty value\r\n");
+                    spdlog::error("Error empty value");
                     return hr;
                 }
                 config.strData = pValue;
@@ -256,18 +252,13 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 const WCHAR* pLocalName = NULL;
                 if (FAILED(hr = pReader->GetLocalName(&pLocalName, NULL)))
                 {
-                    XmlLiteExtension::LogError(_L_, hr, pReader);
+                    XmlLiteExtension::LogError(hr, pReader);
                     return hr;
                 }
 
                 if (equalCaseInsensitive(config.strName, pLocalName) == false)
                 {
-                    log::Warning(
-                        _L_,
-                        HRESULT_FROM_NT(NTE_NOT_FOUND),
-                        L"Unexpected of element %s in configuration item '%s'\r\n",
-                        pLocalName,
-                        config.strName.c_str());
+                    spdlog::warn(L"Unexpected of element '{}' in configuration item '{}'", pLocalName, config.strName);
                 }
                 return S_OK;
             }
@@ -280,7 +271,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
     }
     if (FAILED(hr))
     {
-        XmlLiteExtension::LogError(_L_, hr, pReader);
+        XmlLiteExtension::LogError(hr, pReader);
         return hr;
     }
     return S_OK;
@@ -290,14 +281,14 @@ HRESULT ConfigFileReader::ReadConfig(const WCHAR* pCfgFile, ConfigItem& config, 
 {
     HRESULT hr = E_FAIL;
 
-    auto filestream = std::make_shared<FileStream>(_L_);
+    auto filestream = std::make_shared<FileStream>();
 
     if (filestream == nullptr)
         return E_OUTOFMEMORY;
 
     if (FAILED(hr = filestream->ReadFrom(pCfgFile)))
     {
-        log::Error(_L_, hr, L"Failed to open configuration file '%s'\r\n", pCfgFile);
+        spdlog::error(L"Failed to open configuration file '{}'", pCfgFile);
         return hr;
     }
 
@@ -316,11 +307,11 @@ HRESULT ConfigFileReader::ReadConfig(
     if (FAILED(hr = ByteStream::Get_IStream(streamConfig, &stream)))
         return hr;
 
-    m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>(_L_);
+    m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
 
     if (m_xmllite == nullptr)
     {
-        log::Error(_L_, E_FAIL, L"Failed to load xmllite extension library\r\n");
+        spdlog::error("Failed to load xmllite extension library");
         return E_FAIL;
     }
 
@@ -328,8 +319,8 @@ HRESULT ConfigFileReader::ReadConfig(
 
     if (FAILED(hr = m_xmllite->CreateXmlReader(IID_IXmlReader, (PVOID*)&pReader, nullptr)))
     {
-        XmlLiteExtension::LogError(_L_, hr, pReader);
-        log::Error(_L_, hr, L"Failed to instantiate Xml reader\r\n");
+        XmlLiteExtension::LogError(hr, pReader);
+        spdlog::error("Failed to instantiate Xml reader (code: {:#x})", hr);
         return hr;
     }
 
@@ -337,8 +328,8 @@ HRESULT ConfigFileReader::ReadConfig(
     {
         if (FAILED(hr = pReader->SetInput(stream)))
         {
-            XmlLiteExtension::LogError(_L_, hr, pReader);
-            log::Error(_L_, hr, L"Failed to set input stream\r\n");
+            XmlLiteExtension::LogError(hr, pReader);
+            spdlog::error("Failed to set input stream (code: {:#x})", hr);
             return hr;
         }
     }
@@ -350,14 +341,14 @@ HRESULT ConfigFileReader::ReadConfig(
                 hr = m_xmllite->CreateXmlReaderInputWithEncodingName(
                     stream, nullptr, szEncodingHint, FALSE, L"", &pInput)))
         {
-            XmlLiteExtension::LogError(_L_, hr, pReader);
-            log::Error(_L_, hr, L"Failed to set output stream\r\n");
+            XmlLiteExtension::LogError(hr, pReader);
+            spdlog::error("Failed to set output stream (code: {:#x})", hr);
             return hr;
         }
         if (FAILED(hr = pReader->SetInput(pInput)))
         {
-            XmlLiteExtension::LogError(_L_, hr, pReader);
-            log::Error(_L_, hr, L"Failed to set input stream\r\n");
+            XmlLiteExtension::LogError(hr, pReader);
+            spdlog::error("Failed to set input stream (code: {:#x})", hr);
             return hr;
         }
     }
@@ -377,20 +368,20 @@ HRESULT ConfigFileReader::ReadConfig(
                     const WCHAR* pName = NULL;
                     if (FAILED(hr = pReader->GetLocalName(&pName, NULL)))
                     {
-                        XmlLiteExtension::LogError(_L_, hr, pReader);
+                        XmlLiteExtension::LogError(hr, pReader);
                         return hr;
                     }
                     if (equalCaseInsensitive(config.strName, pName))
                     {
                         if (FAILED(hr = NavigateConfigAttributes(pReader, config)))
                         {
-                            log::Error(_L_, hr, L"Failed to parse node '%s' attributes\r\n", pName);
+                            spdlog::error(L"Failed to parse node '{}' attributes (code: {:#x})", pName, hr);
                             return hr;
                         }
 
                         if (FAILED(hr = NavigateConfigNode(pReader, config)))
                         {
-                            log::Error(_L_, hr, L"Error parsing root '%s' element\r\n", pName);
+                            spdlog::error(L"Error parsing root '{}' element (code: {:#x})", pName, hr);
                             return hr;
                         }
                     }
@@ -404,9 +395,10 @@ HRESULT ConfigFileReader::ReadConfig(
 
     if (FAILED(hr))
     {
-        XmlLiteExtension::LogError(_L_, hr, pReader);
+        XmlLiteExtension::LogError(hr, pReader);
         return hr;
     }
+
     return S_OK;
 }
 

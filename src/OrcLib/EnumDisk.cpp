@@ -9,7 +9,6 @@
 
 #include "EnumDisk.h"
 
-#include "LogFileWriter.h"
 #include "BinaryBuffer.h"
 
 #include <setupapi.h>  // for SetupDiXxx functions.
@@ -18,6 +17,8 @@
 #include <devguid.h>
 
 #include <boost\scope_exit.hpp>
+
+#include <spdlog/spdlog.h>
 
 using namespace Orc;
 
@@ -120,11 +121,12 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
     {
         if (GetLastError() == ERROR_NO_MORE_ITEMS)
         {
-            log::Verbose(_L_, L"No more interfaces\n");
+            spdlog::debug(L"No more interfaces");
         }
         else
         {
-            log::Error(_L_, hr = GetLastError(), L"SetupDiEnumDeviceInterfaces failed\r\n");
+            hr = GetLastError();
+            spdlog::error(L"Failed SetupDiEnumDeviceInterfaces (code: {:#x})", hr);
             return hr;
         }
         return S_FALSE;
@@ -141,7 +143,8 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
 
         if (GetLastError() != ERROR_INSUFFICIENT_BUFFER)
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"SetupDiGetDeviceInterfaceDetail failed\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error(L"Failed SetupDiGetDeviceInterfaceDetail (code: {:#x})", hr);
             return hr;
         }
     }
@@ -155,15 +158,15 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
         (PSP_DEVICE_INTERFACE_DETAIL_DATA)malloc(interfaceDetailDataSize);
     if (interfaceDetailData == NULL)
     {
-        log::Error(_L_, E_OUTOFMEMORY, L"Unable to allocate memory to get the interface detail data.\r\n");
+        spdlog::error("Unable to allocate memory to get the interface detail data");
         return E_OUTOFMEMORY;
     }
     interfaceDetailData->cbSize = sizeof(SP_INTERFACE_DEVICE_DETAIL_DATA);
     if (!SetupDiGetDeviceInterfaceDetail(
             hDevInfo, &interfaceData, interfaceDetailData, interfaceDetailDataSize, &interfaceDetailDataSize, NULL))
     {
-        log::Error(
-            _L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Error in SetupDiGetDeviceInterfaceDetail failed\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed SetupDiGetDeviceInterfaceDetail (code: {:#x})", hr);
         return hr;
     }
     BOOST_SCOPE_EXIT(&interfaceDetailData) { free(interfaceDetailData); }
@@ -173,7 +176,7 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
     // Now we have the device path. Open the device interface
     // to send Pass Through command
 
-    log::Verbose(_L_, L"Interface: %s\r\n", interfaceDetailData->DevicePath);
+    spdlog::debug(L"Interface: {}", interfaceDetailData->DevicePath);
 
     aDisk.InterfacePath = interfaceDetailData->DevicePath;
 
@@ -196,7 +199,8 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
 
     if (hDevice == INVALID_HANDLE_VALUE)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"CreateFile for disk interface failed\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed CreateFile for disk interface (code: {:#x})", hr);
         return hr;
     }
 
@@ -217,7 +221,8 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
             &returnedLength,
             NULL))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"IOCTL on disk interface failed.\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed IOCTL on disk interface (code: {:#x})", hr);
     }
     else
     {
@@ -238,7 +243,8 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
                 &returnedLength,
                 NULL))
         {
-            log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"IOCTL_STORAGE_QUERY_PROPERTY failed\r\n");
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            spdlog::error("Failed IOCTL_STORAGE_QUERY_PROPERTY (code: {:#x})", hr);
             return hr;
         }
     }
@@ -265,7 +271,8 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
     if (!DeviceIoControl(
             hDevice, IOCTL_SCSI_PASS_THROUGH, &sptwb, sizeof(SCSI_PASS_THROUGH), &sptwb, length, &returned, FALSE))
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"IOCTL failed with error");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed IOCTL_SCSI_PASS_THROUGH (code: {:#x})", hr);
         return hr;
     }
 
@@ -289,7 +296,8 @@ HRESULT EnumDisk::EnumerateDisks(std::vector<PhysicalDisk>& disks, const GUID gu
 
     if (hDevInfo == INVALID_HANDLE_VALUE)
     {
-        log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"SetupDiGetClassDevs failed\r\n");
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error("Failed SetupDiGetClassDevs (code: {:#x})", hr);
         return hr;
     }
     BOOST_SCOPE_EXIT((&hDevInfo))

@@ -13,7 +13,7 @@
 #include <fmt/format.h>
 
 #include "Output/Text/Format.h"
-#include "Output/Text/Fmt/SystemTime.h"
+#include "Output/Text/Fmt/SYSTEMTIME.h"
 
 // All time displayed are UTC so a FILETIME must converted to UTC (SYSTEMTIME)
 

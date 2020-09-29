@@ -9,6 +9,8 @@
 
 #include "ZipLibrary.h"
 
+#include <optional>
+
 #include <boost/algorithm/string.hpp>
 
 #include <7zip/Archive/IArchive.h>
@@ -16,7 +18,6 @@
 #include <7zip/7zip.h>
 #include <7zip/extras.h>
 
-#include "LogFileWriter.h"
 #include "PropVariant.h"
 
 using namespace Orc;
@@ -83,16 +84,16 @@ Find(const std::vector<Orc::ZipLibrary::ArchiveFormat>& formats, const std::wstr
 }
 }  // namespace
 
-std::unique_ptr<ZipLibrary> ZipLibrary::CreateZipLibrary(logger log)
+std::unique_ptr<ZipLibrary> ZipLibrary::CreateZipLibrary()
 {
-    auto zip = std::unique_ptr<ZipLibrary>(new ZipLibrary(std::move(log)));
+    auto zip = std::unique_ptr<ZipLibrary>(new ZipLibrary());
     if (FAILED(zip->Initialize()))
         return nullptr;
 
     return zip;
 }
 
-std::shared_ptr<ZipLibrary> ZipLibrary::GetZipLibrary(logger log)
+std::shared_ptr<ZipLibrary> ZipLibrary::GetZipLibrary()
 {
     static std::weak_ptr<ZipLibrary> singleton;
 
@@ -102,7 +103,7 @@ std::shared_ptr<ZipLibrary> ZipLibrary::GetZipLibrary(logger log)
         return lib;
     }
 
-    lib = CreateZipLibrary(std::move(log));
+    lib = CreateZipLibrary();
     if (lib == nullptr)
     {
         return nullptr;
@@ -110,11 +111,6 @@ std::shared_ptr<ZipLibrary> ZipLibrary::GetZipLibrary(logger log)
 
     singleton = lib;
     return lib;
-}
-
-ZipLibrary::ZipLibrary(std::shared_ptr<LogFileWriter> log)
-    : _L_(std::move(log))
-{
 }
 
 ZipLibrary::~ZipLibrary() = default;
@@ -148,7 +144,7 @@ HRESULT ZipLibrary::GetAvailableFormats(std::vector<ArchiveFormat>& formats) con
     UInt32 numFormats = 1;
     if (FAILED(hr = ::GetNumberOfFormats(&numFormats)))
     {
-        log::Error(_L_, hr, L"Failed to get number of format functions\r\n");
+        spdlog::error(L"Failed to get number of format functions (code: {:#x})", hr);
         return hr;
     }
 
@@ -159,14 +155,14 @@ HRESULT ZipLibrary::GetAvailableFormats(std::vector<ArchiveFormat>& formats) con
 
         if (FAILED(hr = ::GetHandlerProperty2((UInt32)i, NArchive::NHandlerPropID::kUpdate, &prop)))
         {
-            log::Error(_L_, hr, L"Failed to get handler of property func kUpdate\r\n");
+            spdlog::error(L"Failed to get handler of property func kUpdate (code: {:#x})", hr);
             return hr;
         }
         fmt.UpdateCapable = prop.boolVal ? true : false;
 
         if (FAILED(hr = ::GetHandlerProperty2((UInt32)i, NArchive::NHandlerPropID::kName, &prop)))
         {
-            log::Error(_L_, hr, L"Failed to get handler of property func kName\r\n");
+            spdlog::error(L"Failed to get handler of property func kName (code: {:#x})", hr);
             return hr;
         }
 
@@ -177,7 +173,7 @@ HRESULT ZipLibrary::GetAvailableFormats(std::vector<ArchiveFormat>& formats) con
 
         if (FAILED(hr = ::GetHandlerProperty2((UInt32)i, NArchive::NHandlerPropID::kExtension, &prop)))
         {
-            log::Error(_L_, hr, L"Failed to get handler of property func kExtension\r\n");
+            spdlog::error(L"Failed to get handler of property func kExtension (code: {:#x})", hr);
             return hr;
         }
 
@@ -190,7 +186,7 @@ HRESULT ZipLibrary::GetAvailableFormats(std::vector<ArchiveFormat>& formats) con
 
         if (FAILED(hr = ::GetHandlerProperty2((UInt32)i, NArchive::NHandlerPropID::kClassID, &prop)))
         {
-            log::Error(_L_, hr, L"Failed to get handler of property func kClassID\r\n");
+            spdlog::error(L"Failed to get handler of property func kClassID (code: {:#x})", hr);
             return hr;
         }
 
@@ -222,7 +218,7 @@ HRESULT ZipLibrary::GetAvailableCodecs(std::vector<ArchiveCodec>& codecs) const
 
         if (FAILED(hr = ::GetMethodProperty((UInt32)i, NMethodPropID::kName, &prop)))
         {
-            log::Error(_L_, hr, L"Failed to get method of property func kName\r\n");
+            spdlog::error(L"Failed to get method of property func kName (code: {:#x})", hr);
             return hr;
         }
 
@@ -233,7 +229,7 @@ HRESULT ZipLibrary::GetAvailableCodecs(std::vector<ArchiveCodec>& codecs) const
 
         if (FAILED(hr = ::GetMethodProperty((UInt32)i, NMethodPropID::kID, &prop)))
         {
-            log::Error(_L_, hr, L"Failed to get method of property func kID\r\n");
+            spdlog::error(L"Failed to get method of property func kID (code: {:#x})", hr);
             return hr;
         }
 

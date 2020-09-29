@@ -19,6 +19,8 @@
 
 #include "AutoRuns.h"
 
+#include <spdlog/spdlog.h>
+
 static const auto AUTORUNS_ITEM = 0L;
 static const auto AUTORUNS_ITEM_ITEM = 0L;
 
@@ -44,9 +46,8 @@ using namespace std;
 
 using namespace Orc;
 
-AutoRuns::AutoRuns(const logger& pLog)
-    : m_Reader(pLog)
-    , _L_(pLog)
+AutoRuns::AutoRuns()
+    : m_Reader()
 {
     HRESULT hr = E_FAIL;
 
@@ -54,29 +55,29 @@ AutoRuns::AutoRuns(const logger& pLog)
 
     if (FAILED(hr = m_AutoRuns.AddChildNodeList(L"item", AUTORUNS_ITEM_ITEM, ConfigItem::MANDATORY)))
     {
-        log::Warning(_L_, hr, L"Failed to populate child node list\r\n");
+        spdlog::warn("Failed to populate child node list (code: {:#x})", hr);
         return;
     }
 
     ConfigItem& item = m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM];
 
-    item.AddChildNode(L"location", AUTORUNS_LOCATION_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"time", AUTORUNS_TIME, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"itemname", AUTORUNS_ITEMNAME_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"enabled", AUTORUNS_ENABLED_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"launchstring", AUTORUNS_LAUNCHSTRING_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"profile", AUTORUNS_PROFILE_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"description", AUTORUNS_DESCRIPTION_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"company", AUTORUNS_COMPANY_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"signer", AUTORUNS_SIGNER_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"version", AUTORUNS_VERSION_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"imagepath", AUTORUNS_IMAGEPATH_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"md5hash", AUTORUNS_MD5HASH_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"sha1hash", AUTORUNS_SHA1HASH_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"sha256hash", AUTORUNS_SHA256HASH_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"pesha1hash", AUTORUNS_PESHA1HASH_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"pesha256hash", AUTORUNS_PESHA256HASH_ITEM, ConfigItem::OPTION, _L_);
-    item.AddChildNode(L"impHash", AUTORUNS_IMPHASH_ITEM, ConfigItem::OPTION, _L_);
+    item.AddChildNode(L"location", AUTORUNS_LOCATION_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"time", AUTORUNS_TIME, ConfigItem::OPTION);
+    item.AddChildNode(L"itemname", AUTORUNS_ITEMNAME_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"enabled", AUTORUNS_ENABLED_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"launchstring", AUTORUNS_LAUNCHSTRING_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"profile", AUTORUNS_PROFILE_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"description", AUTORUNS_DESCRIPTION_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"company", AUTORUNS_COMPANY_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"signer", AUTORUNS_SIGNER_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"version", AUTORUNS_VERSION_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"imagepath", AUTORUNS_IMAGEPATH_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"md5hash", AUTORUNS_MD5HASH_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"sha1hash", AUTORUNS_SHA1HASH_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"sha256hash", AUTORUNS_SHA256HASH_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"pesha1hash", AUTORUNS_PESHA1HASH_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"pesha256hash", AUTORUNS_PESHA256HASH_ITEM, ConfigItem::OPTION);
+    item.AddChildNode(L"impHash", AUTORUNS_IMPHASH_ITEM, ConfigItem::OPTION);
 }
 
 HRESULT AutoRuns::LoadAutoRunsXml(const WCHAR* szXmlFile)
@@ -93,10 +94,10 @@ HRESULT AutoRuns::LoadAutoRunsXml(const WCHAR* szXmlFile)
     if (FAILED(hr = m_Reader.CheckConfig(m_AutoRuns)))
         return hr;
 
-    auto filestream = std::make_shared<FileStream>(_L_);
+    auto filestream = std::make_shared<FileStream>();
     if (filestream == nullptr)
         return E_OUTOFMEMORY;
-    auto memstream = std::make_shared<MemoryStream>(_L_);
+    auto memstream = std::make_shared<MemoryStream>();
     if (memstream == nullptr)
         return E_OUTOFMEMORY;
 
@@ -120,11 +121,11 @@ HRESULT AutoRuns::LoadAutoRunsXml(const CBinaryBuffer& XmlData)
 {
     HRESULT hr = E_FAIL;
 
-    auto memstream = std::make_shared<MemoryStream>(_L_);
+    auto memstream = std::make_shared<MemoryStream>();
 
     if (FAILED(hr = memstream->OpenForReadOnly(XmlData.GetData(), XmlData.GetCount())))
     {
-        log::Error(_L_, hr, L"Failed to open autoruns memory stream\r\n");
+        spdlog::error(L"Failed to open autoruns memory stream");
         return hr;
     }
 
@@ -210,9 +211,9 @@ HRESULT AutoRuns::GetAutoRunFiles(std::vector<std::wstring>& Modules)
     return S_OK;
 }
 
-HRESULT AutoRuns::PrintAutoRuns(const logger& pLog)
+HRESULT AutoRuns::PrintAutoRuns()
 {
-    return m_Reader.PrintConfig(m_AutoRuns, 0L, pLog);
+    return m_Reader.PrintConfig(m_AutoRuns, 0L);
 }
 
 HRESULT AutoRuns::EnumItems(AutoRunsEnumItemCallback pCallBack, LPVOID pContext)

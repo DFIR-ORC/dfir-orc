@@ -27,8 +27,24 @@
 
 #include <fmt/ostream.h>
 
+#include <spdlog/spdlog.h>
+
 using namespace Orc;
 namespace fs = std::filesystem;
+
+namespace {
+
+// Enable the use of std::make_shared with Writer protected constructor
+struct WriterT : public Orc::TableOutput::CSV::Writer
+{
+    template <typename... Args>
+    inline WriterT(Args&&... args)
+        : Writer(std::forward<Args>(args)...)
+    {
+    }
+};
+
+}  // namespace
 
 class Orc::TableOutput::CSV::WriterTermination : public TerminationHandler
 {
@@ -52,25 +68,15 @@ HRESULT Orc::TableOutput::CSV::WriterTermination::operator()()
     return S_OK;
 }
 
-Orc::TableOutput::CSV::Writer::Writer(logger pLog, std::unique_ptr<Options>&& options)
-    : _L_(std::move(pLog))
-    , m_Options(std::move(options))
+Orc::TableOutput::CSV::Writer::Writer(std::unique_ptr<Options>&& options)
+    : m_Options(std::move(options))
 {
 }
 
-struct Orc::TableOutput::CSV::Writer::MakeSharedEnabler : public Orc::TableOutput::CSV::Writer
-{
-    MakeSharedEnabler(logger pLog, std::unique_ptr<Options>&& options)
-        : Orc::TableOutput::CSV::Writer(std::move(pLog), std::move(options))
-    {
-    }
-};
-
 std::shared_ptr<Orc::TableOutput::CSV::Writer>
-Orc::TableOutput::CSV::Writer::MakeNew(logger pLog, std::unique_ptr<TableOutput::Options>&& options)
+Orc::TableOutput::CSV::Writer::MakeNew(std::unique_ptr<TableOutput::Options>&& options)
 {
-    auto retval =
-        std::make_shared<MakeSharedEnabler>(std::move(pLog), dynamic_unique_ptr_cast<CSV::Options>(std::move(options)));
+    auto retval = std::make_shared<::WriterT>(dynamic_unique_ptr_cast<CSV::Options>(std::move(options)));
 
     if (FAILED(retval->InitializeBuffer(retval->m_Options->dwBufferSize)))
         return nullptr;
@@ -136,16 +142,15 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::SetSchema(const Schema& schema)
             if (FAILED(hr = WriteHeaders(m_Schema)))
             {
                 if (m_szFileName)
-                    log::Error(_L_, hr, L"Could not write columns to specified file %s\r\n", m_szFileName);
+                    spdlog::error(L"Could not write columns to specified file '{}'", m_szFileName);
                 else
-                    log::Error(_L_, hr, L"Could not write columns to specified stream\r\n", m_szFileName);
+                    spdlog::error(L"Could not write columns to specified stream '{}'", m_szFileName);
                 return hr;
             }
         }
     }
     catch (Orc::Exception& e)
     {
-        e.PrintMessage(_L_);
         return e.GetHRESULT();
     }
     return S_OK;
@@ -210,7 +215,7 @@ HRESULT Orc::TableOutput::CSV::Writer::WriteToFile(const WCHAR* szFileName)
     if (szFileName == NULL)
         return E_POINTER;
 
-    auto pFileStream = std::make_shared<FileStream>(_L_);
+    auto pFileStream = std::make_shared<FileStream>();
 
     if (pFileStream == nullptr)
         return E_OUTOFMEMORY;
@@ -415,7 +420,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteFormated_(const std::string_vie
 
     std::string_view result_string((LPCSTR)buffer, buffer.size());
 
-    if (auto [hr, wstr] = AnsiToWide(_L_, result_string); SUCCEEDED(hr))
+    if (auto [hr, wstr] = AnsiToWide(result_string); SUCCEEDED(hr))
     {
         if (auto hr = FormatColumn(wstr); FAILED(hr))
         {
@@ -875,7 +880,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const CHAR* szString)
     std::replace(begin(strXML), end(strXML), '\r', ' ');
     std::replace(begin(strXML), end(strXML), '\n', ' ');
 
-    if (auto [hr, wstr] = AnsiToWide(_L_, strXML); SUCCEEDED(hr))
+    if (auto [hr, wstr] = AnsiToWide(strXML); SUCCEEDED(hr))
     {
         if (auto hr = FormatColumn(wstr); FAILED(hr))
         {
@@ -895,7 +900,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const CHAR* szString)
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const CHAR* szString, DWORD dwCharCount)
 {
-    if (auto [hr, wstr] = AnsiToWide(_L_, std::string_view(szString, dwCharCount)); SUCCEEDED(hr))
+    if (auto [hr, wstr] = AnsiToWide(std::string_view(szString, dwCharCount)); SUCCEEDED(hr))
     {
         std::replace(begin(wstr), end(wstr), L'\r', L' ');
         std::replace(begin(wstr), end(wstr), L'\n', L' ');

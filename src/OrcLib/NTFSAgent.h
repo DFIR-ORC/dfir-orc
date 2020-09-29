@@ -19,7 +19,6 @@
 class VolumeReader;
 class MFTRecord;
 class DataAttribute;
-class LogFileWriter;
 
 class NTFSAgent : public StreamAgent
 {

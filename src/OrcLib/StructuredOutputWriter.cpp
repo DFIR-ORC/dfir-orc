@@ -10,17 +10,11 @@
 
 #include "StructuredOutputWriter.h"
 
-
 #include "OutputSpec.h"
-
-#include "LogFileWriter.h"
-
 #include "FileStream.h"
 
-using namespace Orc;
-
-using namespace std;
 using namespace std::string_view_literals;
+using namespace Orc;
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, ULONG32 dwValue, bool bInHex)
 {
@@ -155,7 +149,7 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(
 
     int idx = 0;
 
-    auto current = back_insert_iterator(buffer);
+    auto current = std::back_insert_iterator(buffer);
     while (FlagValues[idx].dwFlag != 0xFFFFFFFF)
     {
         if (dwFlags & FlagValues[idx].dwFlag)
@@ -184,12 +178,12 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, DWORD dwFlag
 
     int idx = 0;
 
-    auto current = back_insert_iterator(buffer);
+    auto current = std::back_insert_iterator(buffer);
     while (FlagValues[idx].dwFlag != 0xFFFFFFFF)
     {
         if (dwFlags & FlagValues[idx].dwFlag)
         {
-            fmt::format_to(back_insert_iterator(buffer), L"{}"sv, FlagValues[idx].szShortDescr);
+            fmt::format_to(std::back_insert_iterator(buffer), L"{}"sv, FlagValues[idx].szShortDescr);
             return S_OK;
         }
         idx++;
@@ -200,7 +194,7 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, DWORD dwFlag
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, IN_ADDR& ip)
 {
     fmt::format_to(
-        back_insert_iterator(buffer),
+        std::back_insert_iterator(buffer),
         L"{}.{}.{}.{}"sv,
         ip.S_un.S_un_b.s_b1,
         ip.S_un.S_un_b.s_b2,
@@ -213,10 +207,9 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, IN_ADDR& ip)
 #include "JSONOutputWriter.h"
 
 std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
-    const logger& pLog,
     std::shared_ptr<ByteStream> stream,
     OutputSpec::Kind kindOfFile,
-    std::unique_ptr<StructuredOutputOptions>&& pOptions)
+    std::unique_ptr<StructuredOutputOptions>&& options)
 {
     switch (kindOfFile)
     {
@@ -228,11 +221,11 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
         case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::XML: {
 
             auto retval =
-                std::make_shared<XmlOutputWriter>(pLog, dynamic_unique_ptr_cast<XmlOutputOptions>(std::move(pOptions)));
+                std::make_shared<XmlOutputWriter>(dynamic_unique_ptr_cast<XmlOutputOptions>(std::move(options)));
 
             if (auto hr = retval->SetOutput(stream); FAILED(hr))
             {
-                log::Error(pLog, hr, L"Failed to set output\r\n");
+                spdlog::error(L"Failed to set output (code: {:#x})", hr);
                 return nullptr;
             }
             return retval;
@@ -240,7 +233,8 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
         break;
         case OutputSpec::Kind::JSON:
         case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON: {
-            auto retval = StructuredOutput::JSON::GetWriter(pLog, stream, dynamic_unique_ptr_cast<JSONOutputOptions>(std::move(pOptions)));
+            auto retval = StructuredOutput::JSON::GetWriter(
+                stream, dynamic_unique_ptr_cast<JSONOutputOptions>(std::move(options)));
 
             return retval;
         }
@@ -248,29 +242,27 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
         case OutputSpec::Kind::Directory:
             break;
         default:
-            log::Error(pLog, E_INVALIDARG, L"Invalid type of output to create StructuredOutputWriter\r\n");
+            spdlog::error(L"Invalid type of output to create StructuredOutputWriter");
             return nullptr;
     }
     return nullptr;
 }
 
 std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
-    const logger& pLog,
     const OutputSpec& outFile,
     std::unique_ptr<StructuredOutputOptions>&& pOptions)
 {
-    auto stream = std::make_shared<FileStream>(pLog);
+    auto stream = std::make_shared<FileStream>();
 
     if (auto hr = stream->WriteTo(outFile.Path.c_str()); FAILED(hr))
     {
-        log::Error(pLog, hr, L"Failed to open file %s for writing\r\n", outFile.Path.c_str());
+        spdlog::error(L"Failed to open file '{}' for writing (code: {:#x})", outFile.Path, hr);
         return nullptr;
     }
-    return GetWriter(pLog, stream, outFile.Type, std::move(pOptions));
+    return GetWriter(stream, outFile.Type, std::move(pOptions));
 }
 
 std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
-    const logger& pLog,
     const OutputSpec& outFile,
     const std::wstring& strPattern,
     const std::wstring& strName,
@@ -278,7 +270,7 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
 {
     if (outFile.Type != OutputSpec::Kind::Directory)
     {
-        log::Error(pLog, E_INVALIDARG, L"Invalid type of output to create StructuredOutputWriter\r\n");
+        spdlog::error(L"Invalid type of output to create StructuredOutputWriter");
         return nullptr;
     }
 
@@ -290,12 +282,12 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
     StringCchPrintf(szOutputFile, MAX_PATH, L"%s\\%s", outFile.Path.c_str(), strFile.c_str());
 
     OutputSpec fileSpec;
-    if (auto hr = fileSpec.Configure(pLog, OutputSpec::Kind::StructuredFile, szOutputFile)
-        ; FAILED(hr))
+    auto hr = fileSpec.Configure(OutputSpec::Kind::StructuredFile, szOutputFile);
+    if (FAILED(hr))
     {
-        log::Error(pLog, E_INVALIDARG, L"Failed to configure output file for path %s\r\n", szOutputFile);
+        spdlog::error(L"Failed to configure output file for path '{}' (code: {:#x})", szOutputFile, hr);
         return nullptr;
     }
 
-    return GetWriter(pLog, fileSpec, std::move(pOptions));
+    return GetWriter(fileSpec, std::move(pOptions));
 }

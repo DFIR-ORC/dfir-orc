@@ -6,7 +6,8 @@
 // Author(s): Jean Gautier (ANSSI)
 //
 #pragma once
-#include "bytestream.h"
+
+#include "ByteStream.h"
 
 #pragma managed(push, off)
 
@@ -18,8 +19,8 @@ protected:
     std::shared_ptr<ByteStream> m_pChainedStream;
 
 public:
-    ChainingStream(logger pLog)
-        : ByteStream(std::move(pLog)) {};
+    ChainingStream()
+        : ByteStream() {};
     virtual ~ChainingStream(void);
 
     STDMETHOD(IsOpen)()

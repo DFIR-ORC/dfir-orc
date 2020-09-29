@@ -14,12 +14,13 @@
 #include <In6addr.h>
 #include <inaddr.h>
 
+#include "Flags.h"
+
 #pragma managed(push, off)
 
 namespace Orc {
 
     class CBinaryBuffer;
-    class LogFileWriter;
 
 namespace StructuredOutput {
 

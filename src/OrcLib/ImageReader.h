@@ -13,8 +13,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ImageReader : public CompleteVolumeReader
 {
 private:
@@ -24,7 +22,7 @@ protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();
 
 public:
-    ImageReader(logger pLog, const WCHAR* szImageFile);
+    ImageReader(const WCHAR* szImageFile);
 
     void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
 

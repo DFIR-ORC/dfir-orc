@@ -10,8 +10,6 @@
 
 #include "CopyFileAgent.h"
 
-#include "LogFileWriter.h"
-
 #include <sstream>
 
 using namespace std;
@@ -62,7 +60,7 @@ HRESULT CopyFileAgent::Initialize()
 
         if ((dwRet = WNetAddConnection2(&nr, szPass, szUser, CONNECT_TEMPORARY)) != NO_ERROR)
         {
-            log::Error(_L_, HRESULT_FROM_WIN32(dwRet), L"Failed to add a connection to %s\r\n", szUNC);
+            spdlog::error(L"Failed to add a connection to '{}' (code: {:#x})", szUNC, HRESULT_FROM_WIN32(dwRet));
         }
         else
         {
@@ -99,7 +97,11 @@ static DWORD WINAPI CopyProgressRoutine(
 }
 
 HRESULT
-CopyFileAgent::UploadFile(const std::wstring& strLocalName, const std::wstring& strRemoteName, bool bDeleteWhenCopied)
+CopyFileAgent::UploadFile(
+    const std::wstring& source,
+    const std::wstring& strRemoteName,
+    bool bDeleteWhenCopied,
+    const std::shared_ptr<const UploadMessage>& request)
 {
     HRESULT hr = E_FAIL;
 
@@ -108,31 +110,28 @@ CopyFileAgent::UploadFile(const std::wstring& strLocalName, const std::wstring& 
     BOOL bCancelled = FALSE;
 
     if (!CopyFileEx(
-            strLocalName.c_str(),
+            source.c_str(),
             strFullPath.c_str(),
             CopyProgressRoutine,
             NULL,
             &bCancelled,
             COPY_FILE_ALLOW_DECRYPTED_DESTINATION))
     {
-        log::Error(
-            _L_,
-            hr = HRESULT_FROM_WIN32(GetLastError()),
-            L"Failed to copy %s to %s\r\n",
-            strLocalName.c_str(),
-            strFullPath.c_str());
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        spdlog::error(L"Failed to copy '{}' to '{}' (code: {:#x})", source, strFullPath, hr);
         return hr;
     }
 
-    log::Verbose(_L_, L"Successfully copied %s to %s\r\n", strLocalName.c_str(), strFullPath.c_str());
+    spdlog::debug(L"Successfully copied '{}' to '{}'", source, strFullPath);
 
     if (bDeleteWhenCopied)
     {
-        if (!DeleteFile(strLocalName.c_str()))
+        if (!DeleteFile(source.c_str()))
         {
             if (GetLastError() != ERROR_FILE_NOT_FOUND)
             {
-                log::Error(_L_, hr = HRESULT_FROM_WIN32(GetLastError()), L"Failed to delete file %s after upload\r\n");
+                hr = HRESULT_FROM_WIN32(GetLastError());
+                spdlog::error(L"Failed to delete file '{}' after upload (code: {:#x})", source, hr);
                 return hr;
             }
         }

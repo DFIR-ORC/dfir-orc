@@ -8,13 +8,12 @@
 #include "stdafx.h"
 
 #include "VolumeReaderTest.h"
-#include "LogFileWriter.h"
 
 using namespace Orc;
 using namespace Orc::Test;
 
-VolumeReaderTest::VolumeReaderTest(const logger& pLog, SeekCallBack* seekCallBack, ReadCallBack* readCallBack)
-    : VolumeReader(pLog, L"\\")
+VolumeReaderTest::VolumeReaderTest(SeekCallBack* seekCallBack, ReadCallBack* readCallBack)
+    : VolumeReader(L"\\")
     , m_SeekCallBack(seekCallBack)
     , m_ReadCallBack(readCallBack)
 {
@@ -57,5 +56,5 @@ std::shared_ptr<VolumeReader> VolumeReaderTest::ReOpen(DWORD dwDesiredAccess, DW
 
 std::shared_ptr<VolumeReader> VolumeReaderTest::DuplicateReader()
 {
-    return std::make_shared<VolumeReaderTest>(_L_, m_SeekCallBack, m_ReadCallBack);
+    return std::make_shared<VolumeReaderTest>(m_SeekCallBack, m_ReadCallBack);
 }

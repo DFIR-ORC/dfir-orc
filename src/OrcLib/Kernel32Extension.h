@@ -25,8 +25,8 @@ class ORCLIB_API Kernel32Extension : public ExtensionLibrary
     friend class ExtensionLibrary;
 
 public:
-    Kernel32Extension(logger pLog)
-        : ExtensionLibrary(std::move(pLog), L"kernel32"s, L"kernel32.dll"s, L"kernel32.dll"s) {};
+    Kernel32Extension()
+        : ExtensionLibrary(L"kernel32"s, L"kernel32.dll"s, L"kernel32.dll"s) {};
 
     template <typename... Args>
     auto InitializeProcThreadAttributeList(Args&&... args)

@@ -14,8 +14,6 @@
 
 namespace Orc {
 
-class LogFileWriter;
-
 class ORCLIB_API VHDVolumeReader : public CompleteVolumeReader
 {
 public:
@@ -61,7 +59,7 @@ protected:
     HRESULT LoadDiskFooter(void);
 
 public:
-    VHDVolumeReader(logger pLog, const WCHAR* szLocation);
+    VHDVolumeReader(const WCHAR* szLocation);
 
     void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
 
@@ -84,8 +82,8 @@ protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();
 
 public:
-    FixedVHDVolumeReader(logger pLog, const WCHAR* szLocation)
-        : VHDVolumeReader(std::move(pLog), szLocation)
+    FixedVHDVolumeReader(const WCHAR* szLocation)
+        : VHDVolumeReader(szLocation)
     {
     }
 

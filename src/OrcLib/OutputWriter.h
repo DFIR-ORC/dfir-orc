@@ -22,19 +22,6 @@ struct OutputOptions
     virtual ~OutputOptions() {};
 };
 
-struct FlagsDefinition
-{
-    constexpr FlagsDefinition(const DWORD flag, LPCWSTR shorter, LPCWSTR longer)
-        : dwFlag(flag)
-        , szShortDescr(shorter)
-        , szLongDescr(longer)
-    {
-    }
-    DWORD dwFlag;
-    LPCWSTR szShortDescr;
-    LPCWSTR szLongDescr;
-};
-
 class ORCLIB_API OutputWriter
 {
 public:

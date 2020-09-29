@@ -9,15 +9,14 @@
 
 #include "OrcLib.h"
 
+#include "Utils/EnumFlags.h"
+
 #pragma managed(push, off)
 
 namespace Orc {
 
 class ORCLIB_API Partition
 {
-
-    friend std::ostream& operator<<(std::ostream& o, const Orc::Partition& p);
-
 public:
     enum class Type
     {
@@ -34,6 +33,9 @@ public:
         BitLocked,
         Other
     };
+
+    static std::wstring ToString(Type type);
+
     enum class Flags : std::int32_t
     {
         None = 0x0,
@@ -45,6 +47,8 @@ public:
         NoAutoMount = 0x100000
     };
 
+    static std::wstring ToString(Flags flags);
+
     Partition(UINT8 partitionNumber = 0)
         : PartitionType(Type::Invalid)
         , SysFlags(0)
@@ -55,39 +59,24 @@ public:
         , End(0)
         , Size(0) {};
 
-    bool IsBootable() const
-    {
-        return (static_cast<std::int32_t>(PartitionFlags) & static_cast<std::int32_t>(Flags::Bootable)) > 0;
-    }
-    bool IsSystem() const
-    {
-        return (static_cast<std::int32_t>(PartitionFlags) & static_cast<std::int32_t>(Flags::System)) > 0;
-    }
-    bool IsReadOnly() const
-    {
-        return (static_cast<std::int32_t>(PartitionFlags) & static_cast<std::int32_t>(Flags::ReadOnly)) > 0;
-    }
-    bool IsHidden() const
-    {
-        return (static_cast<std::int32_t>(PartitionFlags) & static_cast<std::int32_t>(Flags::Hidden)) > 0;
-    }
-    bool IsNotAutoMountable() const
-    {
-        return (static_cast<std::int32_t>(PartitionFlags) & static_cast<std::int32_t>(Flags::NoAutoMount)) > 0;
-    }
+    bool IsBootable() const;
+    bool IsSystem() const;
+    bool IsReadOnly() const;
+    bool IsHidden() const;
+    bool IsNotAutoMountable() const;
 
-    bool IsFAT12() const { return PartitionType == Type::FAT12; }
-    bool IsFAT16() const { return PartitionType == Type::FAT16; }
-    bool IsFAT32() const { return PartitionType == Type::FAT32; }
-    bool IsREFS() const { return PartitionType == Type::REFS; }
-    bool IsNTFS() const { return PartitionType == Type::NTFS; }
-    bool IsExtented() const { return PartitionType == Type::Extended; }
-    bool IsGPT() const { return PartitionType == Type::GPT; }
-    bool IsESP() const { return PartitionType == Type::ESP; }
-    bool IsBitLocked() const { return PartitionType == Type::BitLocked; }
-    bool IsMicrosoftReserved() const { return PartitionType == Type::MICROSOFT_RESERVED; }
+    bool IsFAT12() const;
+    bool IsFAT16() const;
+    bool IsFAT32() const;
+    bool IsREFS() const;
+    bool IsNTFS() const;
+    bool IsExtented() const;
+    bool IsGPT() const;
+    bool IsESP() const;
+    bool IsBitLocked() const;
+    bool IsMicrosoftReserved() const;
 
-    bool IsValid() const { return PartitionType != Type::Invalid; }
+    bool IsValid() const;
 
     Type PartitionType;
     UINT8 SysFlags;
@@ -98,10 +87,12 @@ public:
     UINT64 End;
     UINT64 Size;
 
+    static std::wstring ToString(const Partition& partition);
+
     ~Partition(void) {};
 };
 
-std::wostream& operator<<(std::wostream& o, const Orc::Partition& p);
+ENABLE_BITMASK_OPERATORS(Partition::Flags);
 
 }  // namespace Orc
 

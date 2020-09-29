@@ -30,7 +30,7 @@ protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();
 
 public:
-    PhysicalDiskReader(logger pLog, const WCHAR* szLocation);
+    PhysicalDiskReader(const WCHAR* szLocation);
 
     void Accept(VolumeReaderVisitor& visitor) const override { return visitor.Visit(*this); }
 

@@ -68,4 +68,3 @@
 #include <eh.h>
 
 #include "OrcLib.h"
-#include "LogFileWriter.h"

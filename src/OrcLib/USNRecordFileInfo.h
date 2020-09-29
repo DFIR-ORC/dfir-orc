@@ -73,7 +73,6 @@ public:
     virtual HRESULT WriteSecDescrID(ITableOutput& output);
 
     USNRecordFileInfo(
-        logger pLog,
         LPCWSTR szComputerName,
         const std::shared_ptr<VolumeReader>& pVolReader,
         Intentions dwDefaultIntentions,

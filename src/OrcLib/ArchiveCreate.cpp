@@ -23,7 +23,7 @@ using namespace std;
 
 using namespace Orc;
 
-std::shared_ptr<ArchiveCreate> ArchiveCreate::MakeCreate(ArchiveFormat fmt, logger pLog, bool bComputeHash)
+std::shared_ptr<ArchiveCreate> ArchiveCreate::MakeCreate(ArchiveFormat fmt, bool bComputeHash)
 {
     std::shared_ptr<ArchiveCreate> retval;
     switch (fmt)
@@ -31,7 +31,7 @@ std::shared_ptr<ArchiveCreate> ArchiveCreate::MakeCreate(ArchiveFormat fmt, logg
         case ArchiveFormat::Zip:
         case ArchiveFormat::SevenZip:
         case ArchiveFormat::SevenZipSupported:
-            retval = std::shared_ptr<ZipCreate>(new ZipCreate(std::move(pLog), bComputeHash));
+            retval = std::shared_ptr<ZipCreate>(new ZipCreate(bComputeHash));
             break;
         default:
             return nullptr;
@@ -40,8 +40,8 @@ std::shared_ptr<ArchiveCreate> ArchiveCreate::MakeCreate(ArchiveFormat fmt, logg
     return std::move(retval);
 }
 
-ArchiveCreate::ArchiveCreate(logger pLog, bool bComputeHash)
-    : Archive(std::move(pLog), bComputeHash)
+ArchiveCreate::ArchiveCreate(bool bComputeHash)
+    : Archive(bComputeHash)
 {
 }
 
@@ -62,7 +62,7 @@ std::shared_ptr<ByteStream> ArchiveCreate::GetStreamToAdd(const std::shared_ptr<
         return astream;
     }
 
-    auto pHashStream = make_shared<CryptoHashStream>(_L_);
+    auto pHashStream = make_shared<CryptoHashStream>();
     hr = pHashStream->OpenToRead(CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, astream);
     if (FAILED(hr))
     {
@@ -81,7 +81,7 @@ STDMETHODIMP ArchiveCreate::AddFile(__in PCWSTR pwzNameInArchive, __in PCWSTR pw
     item.bDeleteWhenAdded = bDeleteWhenDone;
 
     {
-        auto stream = make_shared<FileStream>(_L_);
+        auto stream = make_shared<FileStream>();
 
         if (FAILED(
                 hr = stream->OpenFile(
@@ -93,7 +93,7 @@ STDMETHODIMP ArchiveCreate::AddFile(__in PCWSTR pwzNameInArchive, __in PCWSTR pw
                     FILE_FLAG_SEQUENTIAL_SCAN | (bDeleteWhenDone ? FILE_FLAG_DELETE_ON_CLOSE : 0L),
                     NULL)))
         {
-            log::Error(_L_, hr, L"Failed to open file to archive %s\r\n", pwzFileName);
+            spdlog::error(L"Failed to open file to archive {} (code: {:#x})", pwzFileName, hr);
             return hr;
         }
 
@@ -119,11 +119,11 @@ STDMETHODIMP ArchiveCreate::AddBuffer(__in_opt PCWSTR pwzNameInArchive, __in PVO
 
     item.NameInArchive = pwzNameInArchive;
 
-    auto stream = make_shared<MemoryStream>(_L_);
+    auto stream = make_shared<MemoryStream>();
 
     if (FAILED(hr = stream->OpenForReadOnly(pData, cbData)))
     {
-        log::Error(_L_, hr, L"Failed to open buffer to archive\r\n");
+        spdlog::error(L"Failed to open buffer to archive");
         return hr;
     }
 

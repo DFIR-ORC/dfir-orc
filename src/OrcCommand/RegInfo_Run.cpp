@@ -27,15 +27,16 @@
 #include "TableOutput.h"
 
 #include "ParameterCheck.h"
-#include "LogFileWriter.h"
 #include "WideAnsi.h"
 
 #include "RegistryWalker.h"
 
-using namespace std;
-
 using namespace Orc;
 using namespace Orc::Command::RegInfo;
+
+// Characters banned from output (break csv file...)
+// end the table with a null character
+constexpr WCHAR kOutputBadChars[] = {'\n', '"', '\0'};
 
 Main::RegInfoDescription Main::_InfoDescription[] = {
     {REGINFO_COMPUTERNAME, L"ComputerName", L"Name of computer"},
@@ -63,262 +64,242 @@ Main::RegInfoDescription Main::_AliasDescription[] = {
     {REGINFO_ALL, L"All", L"All available information"},
     {REGINFO_NONE, NULL, NULL}};
 
-HRESULT Main::BindColumns(
-    const logger& pLog,
-    Main::RegInfoType columns,
-    const std::vector<TableOutput::Column>& sqlcolumns,
-    const std::shared_ptr<TableOutput::IWriter>& pWriter)
+HRESULT Main::WriteComputerName(ITableOutput& output)
 {
-    DWORD dwIndex = 0L;
-
-    const RegInfoDescription* pCurCol = _InfoDescription;
-
-    DWORD dwMaxColumns = 0L;
-
-    auto pConnectedWriter = std::dynamic_pointer_cast<TableOutput::IConnectWriter>(pWriter);
-    if (!pConnectedWriter)
-    {
-        log::Error(pLog, E_INVALIDARG, L"Table writer is not of connected type, no binding of columns");
-        return E_INVALIDARG;
-    }
-
-    // NULL First column
-
-    while (pCurCol->Type != REGINFO_NONE)
-    {
-        auto it =
-            std::find_if(begin(sqlcolumns), end(sqlcolumns), [pCurCol](const TableOutput::Column& coldef) -> bool {
-                return pCurCol->ColumnName == coldef.ColumnName;
-            });
-
-        if (it == end(sqlcolumns))
-        {
-            log::Error(pLog, E_UNEXPECTED, L"Column name %s is NOT listed in Schema... Binding to NULL\r\n");
-            dwIndex++;
-            pConnectedWriter->AddColumn(dwIndex, pCurCol->ColumnName, TableOutput::Nothing);
-        }
-        else
-        {
-            if (columns & pCurCol->Type)
-            {
-                dwIndex++;
-                pConnectedWriter->AddColumn(dwIndex, pCurCol->ColumnName, it->Type, it->dwMaxLen);
-            }
-            else
-            {
-                dwIndex++;
-                pConnectedWriter->AddColumn(dwIndex, pCurCol->ColumnName, TableOutput::Nothing);
-            }
-        }
-        pCurCol++;
-    }
-    if (!dwIndex)
-        return E_INVALIDARG;
-
-    return S_OK;
-}
-
-HRESULT Main::WriteCompName(ITableOutput& output)
-{
-    HRESULT hr = E_FAIL;
-
     if (config.Information & REGINFO_COMPUTERNAME)
     {
-        if (config.strComputerName.empty())
+        if (m_utilitiesConfig.strComputerName.empty())
+        {
             SystemDetails::WriteComputerName(output);
+        }
         else
-            output.WriteString(config.strComputerName.c_str());
+        {
+            output.WriteString(m_utilitiesConfig.strComputerName);
+        }
     }
     else
+    {
         output.WriteNothing();
+    }
 
     return S_OK;
 }
 
-HRESULT Main::WriteTermName(ITableOutput& output, const std::shared_ptr<RegFind::SearchTerm>& Term)
+HRESULT Main::WriteTermName(ITableOutput& output, const std::shared_ptr<RegFind::SearchTerm>& term)
 {
-    HRESULT hr = E_FAIL;
-
     if (config.Information & REGINFO_TERMNAME)
     {
-        output.WriteString(Term->GetTermName().c_str());
+        output.WriteString(term->GetTermName());
     }
     else
+    {
         output.WriteNothing();
+    }
 
     return S_OK;
 }
 
-HRESULT Main::WriteSearchDescription(ITableOutput& output, const std::shared_ptr<RegFind::SearchTerm>& Term)
+HRESULT Main::WriteSearchDescription(ITableOutput& output, const std::shared_ptr<RegFind::SearchTerm>& term)
 {
-    HRESULT hr = E_FAIL;
-
     if (config.Information & REGINFO_TERMDESCRIPTION)
     {
-        output.WriteInteger((DWORD)Term->m_criteriaRequired);
+        output.WriteInteger((DWORD)term->m_criteriaRequired);
     }
     else
+    {
         output.WriteNothing();
+    }
 
     return S_OK;
 }
 
-HRESULT Main::WriteKeyInformation(ITableOutput& output, RegFind::Match::KeyNameMatch& Match)
+HRESULT Main::WriteKeyInformation(ITableOutput& output, const RegFind::Match::KeyNameMatch& match)
 {
-    HRESULT hr = E_FAIL;
-
     if (config.Information & REGINFO_LASTMODDATE)
-        output.WriteFileTime(Match.LastModificationTime);
+    {
+        output.WriteFileTime(match.LastModificationTime);
+    }
     else
+    {
         output.WriteNothing();
+    }
 
     if (config.Information & REGINFO_KEYNAME)
-        output.WriteString(Match.ShortKeyName.c_str());
+    {
+        output.WriteString(match.ShortKeyName);
+    }
     else
+    {
         output.WriteNothing();
+    }
 
     if (config.Information & REGINFO_KEYTREE)
     {
-        output.WriteString(Match.KeyName.c_str());
+        output.WriteString(match.KeyName);
     }
     else
+    {
         output.WriteNothing();
+    }
 
     return S_OK;
 }
 
-// helper function
-inline bool ContainsBadChars(LPWSTR wstrString, size_t StrLen)
+inline bool ContainsBadChars(LPWSTR pString, size_t strLength)
 {
     DWORD i = 0;
     size_t j = 0;
-    while (OutputBadChars[i] != '\0')
+
+    while (kOutputBadChars[i] != '\0')
     {
-        for (j = 0; j < StrLen; j++)
+        for (j = 0; j < strLength; j++)
         {
-            if (wstrString[j] == OutputBadChars[i])
+            if (pString[j] == kOutputBadChars[i])
             {
                 return true;
             }
         }
+
         i++;
     }
+
     return false;
 }
 
-HRESULT DumpValue(const logger& pLog, RegFind::Match::ValueNameMatch& Match, std::wstring wstrFullPath)
+HRESULT DumpValue(const RegFind::Match::ValueNameMatch& match, std::wstring outputPath)
 {
-    HRESULT hr;
-    FileStream DataDumpFile(pLog);
-    size_t dwLen = Match.DatasLength;
+    FileStream dataDumpFile;
 
-    if (FAILED(hr = DataDumpFile.WriteTo(wstrFullPath.c_str())))
+    HRESULT hr = dataDumpFile.WriteTo(outputPath.c_str());
+    if (FAILED(hr))
     {
-        log::Error(pLog, hr, L"Can't open file \"%S\" (reason : 0x%x)\r\n", wstrFullPath.c_str(), hr);
+        spdlog::error(L"Can't open file '{}' (code: {:#x})", outputPath, hr);
         return hr;
     }
 
-    ULONGLONG ulWritten;
-    DataDumpFile.Write(Match.Datas.get(), Match.DatasLength, &ulWritten);
+    ULONGLONG ulWritten = 0;
+    const size_t dwLen = match.DatasLength;
+    dataDumpFile.Write(match.Datas.get(), match.DatasLength, &ulWritten);
     if (ulWritten != dwLen)
-        log::Error(
-            pLog, hr, L"Can't write content of value %s (key: %s).", Match.ValueName.c_str(), Match.KeyName.c_str());
-    DataDumpFile.Close();
+    {
+        spdlog::error("Can't write content of value: '{}' with key: '{}'", match.ValueName, match.KeyName);
+    }
 
+    dataDumpFile.Close();
     return hr;
 }
 
 std::wstring GetFullPath(
-    const logger& pLog,
-    std::string& KeyName,
-    std::string& ValueName,
-    std::wstring& NamePrefix,
-    std::wstring& OutputPath)
+    const std::string& keyName,
+    const std::string& valueName,
+    const std::wstring& namePrefix,
+    std::wstring& outputPath)
 {
-
-    std::string DataDumpFileName(KeyName + "_" + ValueName);
-    std::wstring wstrDataDumpFileName;
-    AnsiToWide(pLog, DataDumpFileName, wstrDataDumpFileName);
-    wstring FullName = NamePrefix + L"_" + wstrDataDumpFileName + L".ddmp";
-    replace(FullName.begin(), FullName.end(), '\\', '_');
-    replace(FullName.begin(), FullName.end(), ':', '_');
-    replace(FullName.begin(), FullName.end(), '/', '_');
-    replace(FullName.begin(), FullName.end(), '*', '_');
-    replace(FullName.begin(), FullName.end(), '?', '_');
-    replace(FullName.begin(), FullName.end(), '>', '_');
-    replace(FullName.begin(), FullName.end(), '<', '_');
-    replace(FullName.begin(), FullName.end(), '|', '_');
-    return std::wstring(OutputPath + L"\\" + FullName);
+    std::string dataDumpFileName(keyName + "_" + valueName);
+    std::wstring dataDumpFileNameW;
+    AnsiToWide(dataDumpFileName, dataDumpFileNameW);
+    std::wstring fullName = namePrefix + L"_" + dataDumpFileNameW + L".ddmp";
+    std::replace(fullName.begin(), fullName.end(), '\\', '_');
+    std::replace(fullName.begin(), fullName.end(), ':', '_');
+    std::replace(fullName.begin(), fullName.end(), '/', '_');
+    std::replace(fullName.begin(), fullName.end(), '*', '_');
+    std::replace(fullName.begin(), fullName.end(), '?', '_');
+    std::replace(fullName.begin(), fullName.end(), '>', '_');
+    std::replace(fullName.begin(), fullName.end(), '<', '_');
+    std::replace(fullName.begin(), fullName.end(), '|', '_');
+    return outputPath + L"\\" + fullName;
 }
 
 HRESULT Main::WriteValueInformation(
-    const logger& pLog,
     ITableOutput& output,
-    RegFind::Match::ValueNameMatch& Match,
-    std::wstring& FileNamePrefix,
-    size_t CvsMaxsize)
+    const RegFind::Match::ValueNameMatch& match,
+    const std::wstring& fileNamePrefix,
+    size_t csvMaxSize)
 {
     HRESULT hr = S_OK;
 
     if (config.Information & REGINFO_LASTMODDATE)
-        output.WriteFileTime(Match.LastModificationTime);
+    {
+        output.WriteFileTime(match.LastModificationTime);
+    }
     else
+    {
         output.WriteNothing();
+    }
 
     if (config.Information & REGINFO_KEYNAME)
-        output.WriteString(Match.ShortKeyName.c_str());
+    {
+        output.WriteString(match.ShortKeyName);
+    }
     else
+    {
         output.WriteNothing();
+    }
 
     if (config.Information & REGINFO_KEYTREE)
     {
-        output.WriteString(Match.KeyName.c_str());
+        output.WriteString(match.KeyName);
     }
     else
+    {
         output.WriteNothing();
+    }
 
     if (config.Information & REGINFO_VALUENAME)
     {
-        output.WriteString(Match.ValueName.c_str());
+        output.WriteString(match.ValueName);
     }
     else
+    {
         output.WriteNothing();
+    }
 
     if (config.Information & REGINFO_VALUETYPE)
     {
         DWORD i = 0;
-        while (g_ValyeTypeDefinitions[i].Type != Match.ValueType && i < _countof(g_ValyeTypeDefinitions))
+        while (g_ValueTypeDefinitions[i].Type != match.ValueType && i < _countof(g_ValueTypeDefinitions))
         {
             i++;
         }
-        if (i == _countof(g_ValyeTypeDefinitions))
+
+        if (i == _countof(g_ValueTypeDefinitions))
+        {
             output.WriteString("REG_NO_TYPE (!)");
+        }
         else
-            output.WriteString(g_ValyeTypeDefinitions[i].szTypeName);
+        {
+            output.WriteString(g_ValueTypeDefinitions[i].szTypeName);
+        }
     }
     else
+    {
         output.WriteNothing();
+    }
 
     if (config.Information & REGINFO_VALUESIZE)
-        output.WriteInteger((ULONGLONG)Match.DatasLength);
+    {
+        output.WriteInteger((ULONGLONG)match.DatasLength);
+    }
     else
+    {
         output.WriteNothing();
+    }
 
     if (config.Information & REGINFO_VALUEFLAG)
     {
-        if (Match.Datas.get() == nullptr)
+        if (match.Datas.get() == nullptr)
         {
             output.WriteString("NOTINHIVE");
         }
         else
         {
-            if (Match.DatasLength > CvsMaxsize)
+            if (match.DatasLength > csvMaxSize)
             {
                 output.WriteString("DUMPFILE");
             }
             else if (
-                ((Match.ValueType == REG_SZ) || (Match.ValueType == REG_MULTI_SZ) || (Match.ValueType == REG_EXPAND_SZ))
-                && (ContainsBadChars((LPWSTR)(Match.Datas.get()), Match.DatasLength / sizeof(WCHAR))))
+                ((match.ValueType == REG_SZ) || (match.ValueType == REG_MULTI_SZ) || (match.ValueType == REG_EXPAND_SZ))
+                && (ContainsBadChars((LPWSTR)(match.Datas.get()), match.DatasLength / sizeof(WCHAR))))
             {
                 output.WriteString("HASBADCHARS");
             }
@@ -329,28 +310,29 @@ HRESULT Main::WriteValueInformation(
         }
     }
     else
+    {
         output.WriteNothing();
+    }
 
     if (config.Information & REGINFO_VALUE)
     {
-        if (Match.Datas.get() == nullptr)
+        if (match.Datas.get() == nullptr)
         {
             output.WriteNothing();
             output.WriteNothing();
         }
         else
         {
-            size_t dwLen = Match.DatasLength;
-            if (dwLen > CvsMaxsize)
+            size_t dwLen = match.DatasLength;
+            if (dwLen > csvMaxSize)
             {
                 // Do not write value into CSV
                 output.WriteNothing();
                 if (config.Information & REGINFO_VALUEDUMPFILE)
                 {
-
-                    wstring wstrFullPath =
-                        GetFullPath(_L_, Match.KeyName, Match.ValueName, FileNamePrefix, config.Output.Path);
-                    hr = DumpValue(pLog, Match, wstrFullPath);
+                    std::wstring wstrFullPath =
+                        GetFullPath(match.KeyName, match.ValueName, fileNamePrefix, config.Output.Path);
+                    hr = DumpValue(match, wstrFullPath);
 
                     output.WriteString(wstrFullPath.c_str());
                 }
@@ -361,226 +343,203 @@ HRESULT Main::WriteValueInformation(
             }
             else
             {
-                CBinaryBuffer DataBuffer(Match.Datas.get(), dwLen);
-
-                wstring wstrData;
-                BYTE* pDataBuffer;
-                wstring* wstrTmp;
+                CBinaryBuffer dataBuffer(match.Datas.get(), dwLen);
+                std::wstring* wstrTmp;
                 LPWSTR lpCurrent;
 
-                switch (Match.ValueType)
+                switch (match.ValueType)
                 {
-
                     case REG_BINARY:
                     case REG_DWORD_BIG_ENDIAN:
-                        output.WriteBytes(DataBuffer);
-                        // No file dump
+                        output.WriteBytes(dataBuffer);
                         output.WriteNothing();
                         break;
                         // endianness...
                     case REG_DWORD:
-                    case REG_QWORD:
-                        pDataBuffer = new BYTE[Match.DatasLength];
-                        for (dwLen = Match.DatasLength; dwLen > 0; dwLen--)
+                    case REG_QWORD: {
+                        BYTE* pDataBuffer = new BYTE[match.DatasLength];
+                        for (dwLen = match.DatasLength; dwLen > 0; dwLen--)
                         {
-                            pDataBuffer[Match.DatasLength - dwLen] = Match.Datas.get()[dwLen - 1];
+                            pDataBuffer[match.DatasLength - dwLen] = match.Datas.get()[dwLen - 1];
                         }
-                        DataBuffer.SetData(pDataBuffer, Match.DatasLength);
+
+                        dataBuffer.SetData(pDataBuffer, match.DatasLength);
                         delete[] pDataBuffer;
 
-                        output.WriteBytes(DataBuffer);
-                        // No file dump
+                        output.WriteBytes(dataBuffer);
                         output.WriteNothing();
                         break;
-
+                    }
                     case REG_EXPAND_SZ:
                     case REG_SZ:
-                        if (ContainsBadChars((LPWSTR)(Match.Datas.get()), Match.DatasLength / sizeof(WCHAR)))
+                        if (ContainsBadChars((LPWSTR)(match.Datas.get()), match.DatasLength / sizeof(WCHAR)))
                         {
-                            wstring wstrFullPath =
-                                GetFullPath(_L_, Match.KeyName, Match.ValueName, FileNamePrefix, config.Output.Path);
-                            hr = DumpValue(pLog, Match, wstrFullPath);
+                            std::wstring wstrFullPath =
+                                GetFullPath(match.KeyName, match.ValueName, fileNamePrefix, config.Output.Path);
+                            hr = DumpValue(match, wstrFullPath);
                             output.WriteNothing();
                             output.WriteString(wstrFullPath.c_str());
                         }
                         else
                         {
-                            output.WriteString((LPWSTR)(Match.Datas.get()));
-                            // No file dump
+                            output.WriteString((LPWSTR)(match.Datas.get()));
                             output.WriteNothing();
                         }
                         break;
                     case REG_MULTI_SZ:
 
-                        if (ContainsBadChars((LPWSTR)(Match.Datas.get()), Match.DatasLength / sizeof(WCHAR)))
+                        if (ContainsBadChars((LPWSTR)(match.Datas.get()), match.DatasLength / sizeof(WCHAR)))
                         {
-                            wstring wstrFullPath =
-                                GetFullPath(_L_, Match.KeyName, Match.ValueName, FileNamePrefix, config.Output.Path);
-                            hr = DumpValue(pLog, Match, wstrFullPath);
+                            std::wstring wstrFullPath =
+                                GetFullPath(match.KeyName, match.ValueName, fileNamePrefix, config.Output.Path);
+                            hr = DumpValue(match, wstrFullPath);
 
                             output.WriteNothing();
                             output.WriteString(wstrFullPath.c_str());
                         }
                         else
                         {
+                            std::wstring wstrData;
+
                             dwLen = 0;
-                            lpCurrent = (LPWSTR)Match.Datas.get();
-                            while (dwLen < Match.DatasLength)
+                            lpCurrent = (LPWSTR)match.Datas.get();
+                            while (dwLen < match.DatasLength)
                             {
-                                wstrTmp = new wstring(lpCurrent);
+                                wstrTmp = new std::wstring(lpCurrent);
                                 dwLen += (wcslen(lpCurrent) + 1) * sizeof(WCHAR);
                                 lpCurrent += wcslen(lpCurrent) + 1;
                                 wstrData += *wstrTmp + L" <> ";
                                 delete wstrTmp;
                             }
-                            output.WriteString(wstrData.c_str());
-                            // No file dump
+                            output.WriteString(wstrData);
                             output.WriteNothing();
                         }
                         break;
                     default:
                         output.WriteNothing();
-                        // No file dump
                         output.WriteNothing();
                         break;
                 }
             }
         }
     }
+
     return hr;
 }
 
 HRESULT Main::Run()
 {
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = LoadWinTrust()))
+    HRESULT hr = LoadWinTrust();
+    if (FAILED(hr))
+    {
+        spdlog::critical("Failed LoadWinTrust (code: {:#x})", hr);
         return hr;
+    }
 
     // Flush key before runnning
     // Useless if MFT parser not used but done every time so nobody will forget to mention it in configuration...
     DWORD dwGLE = 0L;
 
-    log::Info(_L_, L"Flushing HKEY_LOCAL_MACHINE\r\n");
+    spdlog::debug("Flushing HKEY_LOCAL_MACHINE");
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
-        log::Error(_L_, HRESULT_FROM_WIN32(dwGLE), L"Flushing HKEY_LOCAL_MACHINE failed.\r\n");
+    {
+        spdlog::error("Flushing HKEY_LOCAL_MACHINE failed (code: {:#x})", HRESULT_FROM_WIN32(dwGLE));
+    }
 
-    log::Info(_L_, L"Flushing HKEY_USERS\r\n");
+    spdlog::debug(L"Flushing HKEY_USERS");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
-        log::Error(_L_, HRESULT_FROM_WIN32(dwGLE), L"Flushing HKEY_USERS failed.\r\n");
-
-    log::Info(_L_, L"Finding files required.\r\n");
-    if (FAILED(hr = config.m_HiveQuery.BuildStreamList(_L_)))
     {
-        log::Error(_L_, hr, L"Failed to build hive stream list\r\n");
+        spdlog::error(L"Flushing HKEY_USERS failed (code: {:#x})", HRESULT_FROM_WIN32(dwGLE));
+    }
+
+    hr = config.m_HiveQuery.BuildStreamList();
+    if (FAILED(hr))
+    {
+        spdlog::error("Failed to build hive stream list(code: {:#x})", hr);
         return hr;
     }
 
-    std::for_each(
-        config.m_HiveQuery.m_Queries.begin(),
-        config.m_HiveQuery.m_Queries.end(),
-        [this](shared_ptr<HiveQuery::SearchQuery> Query) {
-            HRESULT hr = E_FAIL;
+    for (const auto& query : config.m_HiveQuery.m_Queries)
+    {
+        GetSystemTimeAsFileTime(&m_collectionDate);
 
-            GetSystemTimeAsFileTime(&CollectionDate);
-            SystemDetails::GetOrcComputerName(ComputerName);
+        std::shared_ptr<TableOutput::IWriter> pRegInfoWriter;
 
-            std::shared_ptr<TableOutput::IWriter> pRegInfoWriter;
-
-            if (config.Output.Type & OutputSpec::Kind::TableFile)
+        if (config.Output.Type & OutputSpec::Kind::TableFile)
+        {
+            pRegInfoWriter = GetRegInfoWriter(config.Output);
+            if (nullptr == pRegInfoWriter)
             {
-                if (nullptr == (pRegInfoWriter = GetRegInfoWriter(config.Output)))
+                spdlog::error("Failed to create output file");
+                return E_FAIL;
+            }
+        }
+
+        auto root = m_console.OutputTree();
+        for (const auto& hive : query->StreamList)
+        {
+            auto node = root.AddNode("Parsing hive '{}'", hive.FileName);
+
+            if (config.Output.Type & OutputSpec::Kind::Directory)
+            {
+                std::wstring fileName(hive.FileName);
+                std::replace(fileName.begin(), fileName.end(), L'\\', L'_');
+                std::replace(fileName.begin(), fileName.end(), L':', L'_');
+
+                pRegInfoWriter = GetRegInfoWriter(config.Output, fileName);
+                if (nullptr == pRegInfoWriter)
                 {
-                    log::Error(_L_, E_FAIL, L"Failed to create output file.\r\n");
-                    return E_FAIL;
+                    spdlog::error("Failed to create output file information file");
+                    continue;
                 }
             }
 
-            log::Info(_L_, L"Hive parsing :\r\n");
-            std::for_each(
-                begin(Query->StreamList), end(Query->StreamList), [this, &pRegInfoWriter, Query](Hive& aHive) {
-                    HRESULT hr = E_FAIL;
+            if (!hive.Stream)
+            {
+                spdlog::error(L"Can't open hive '{}'", hive.FileName);
+                continue;
+            }
 
-                    log::Info(_L_, L"\tParsing hive %s\r\n", aHive.FileName.c_str());
+            hr = query->QuerySpec.Find(hive.Stream, nullptr, nullptr);
+            if (FAILED(hr))
+            {
+                spdlog::error(L"Failed to search into hive '{}' (code: {:#x})", hive.FileName, hr);
+                continue;
+            }
 
-                    if (config.Output.Type & OutputSpec::Kind::Directory)
-                    {
-                        // generate log filename from hive path
+            auto& output = *pRegInfoWriter;
+            for (const auto& [searchTerm, result] : query->QuerySpec.Matches())
+            {
+                for (const auto& key : result->MatchingKeys)
+                {
+                    WriteComputerName(output);
+                    WriteTermName(output, searchTerm);
+                    WriteSearchDescription(output, searchTerm);
+                    WriteKeyInformation(output, key);
+                    output.WriteNothing();
+                    output.WriteNothing();
+                    output.WriteNothing();
+                    output.WriteNothing();
+                    output.WriteNothing();
+                    output.WriteNothing();
+                    output.WriteEndOfLine();
+                }
 
-                        std::wstring aFileName(aHive.FileName);
+                for (const auto& value : result->MatchingValues)
+                {
+                    WriteComputerName(output);
+                    WriteTermName(output, searchTerm);
+                    WriteSearchDescription(output, searchTerm);
+                    WriteValueInformation(output, value, hive.FileName, config.CsvValueLengthLimit);
+                    output.WriteEndOfLine();
+                }
+            }
+        }
 
-                        std::replace(aFileName.begin(), aFileName.end(), L'\\', L'_');
-                        std::replace(aFileName.begin(), aFileName.end(), L':', L'_');
+        query->QuerySpec.ClearMatches();
+    }
 
-                        if (nullptr == (pRegInfoWriter = GetRegInfoWriter(config.Output, aFileName)))
-                        {
-                            log::Error(_L_, E_FAIL, L"Failed to create output file information file\r\n");
-                            return;
-                        }
-                    }
-
-                    auto& output = *pRegInfoWriter;
-
-                    if (aHive.Stream)
-                    {
-                        if (FAILED(hr = Query->QuerySpec.Find(aHive.Stream, nullptr, nullptr)))
-                        {
-                            log::Error(_L_, E_FAIL, L"Failed to search into hive \"%s\"\r\n", aHive.FileName);
-                        }
-                        else
-                        {
-                            auto& Results = Query->QuerySpec.Matches();
-
-                            // write matching elements
-                            for_each(
-                                Results.begin(),
-                                Results.end(),
-                                [this, &output, &aHive](
-                                    std::pair<shared_ptr<RegFind::SearchTerm>, std::shared_ptr<RegFind::Match>> elt) {
-                                    // write matching keys
-                                    for_each(
-                                        elt.second->MatchingKeys.begin(),
-                                        elt.second->MatchingKeys.end(),
-                                        [this, &output, elt](RegFind::Match::KeyNameMatch& key) {
-                                            WriteCompName(output);
-                                            WriteTermName(output, elt.first);
-                                            WriteSearchDescription(output, elt.first);
-                                            WriteKeyInformation(output, key);
-                                            output.WriteNothing();
-                                            output.WriteNothing();
-                                            output.WriteNothing();
-                                            output.WriteNothing();
-                                            output.WriteNothing();
-                                            output.WriteNothing();
-                                            output.WriteEndOfLine();
-                                        });
-
-                                    // write matching values
-
-                                    for_each(
-                                        elt.second->MatchingValues.begin(),
-                                        elt.second->MatchingValues.end(),
-                                        [this, &output, elt, &aHive](RegFind::Match::ValueNameMatch& value) {
-                                            WriteCompName(output);
-                                            WriteTermName(output, elt.first);
-                                            WriteSearchDescription(output, elt.first);
-                                            WriteValueInformation(
-                                                _L_, output, value, aHive.FileName, config.CsvValueLengthLimit);
-                                            output.WriteEndOfLine();
-                                        });
-                                });
-                        }
-                    }
-                    else
-                    {
-                        log::Error(_L_, E_FAIL, L"Can't open hive \"%s\"\r\n", aHive.FileName);
-                    }
-                    Query->QuerySpec.ClearMatches();
-                });
-
-            log::Info(_L_, L"\r\n\r\n");
-            return hr;
-        });
-    return S_OK;
+    return hr;
 }
