@@ -272,9 +272,11 @@ private:
 
     FileFind FileFinder;
     FILETIME CollectionDate;
-    std::wstring ComputerName;
+    const std::wstring ComputerName;
     Limits GlobalLimits;
     std::unordered_set<std::wstring> SampleNames;
+    std::shared_ptr<Orc::ArchiveCreate> m_compressor;
+    std::shared_ptr<Orc::TableOutput::IStreamWriter> m_tableWriter;
 
     static HRESULT CreateSampleFileName(
         const ContentSpec& content,
@@ -290,26 +292,25 @@ private:
     HRESULT
     AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std::shared_ptr<FileFind::Match>& aMatch);
 
-    HRESULT AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerName, const SampleRef& sampleRef);
+    HRESULT AddSampleRefToCSV(ITableOutput& output, const SampleRef& sampleRef) const;
 
-    std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
-    CreateOutputDirLogFileAndCSV(const std::filesystem::path& outDir);
+    HRESULT WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, const SampleSet& samples) const;
+    HRESULT WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, const SampleRef& sample) const;
 
-    HRESULT CollectMatchingSamples(
-        const std::shared_ptr<ArchiveCreate>& compressor,
-        ITableOutput& output,
-        SampleSet& MatchingSamples);
-    HRESULT CollectMatchingSamples(const std::wstring& strOutputDir, ITableOutput& output, SampleSet& MatchingSamples);
+    HRESULT WriteSamples(const std::filesystem::path& outputDir, const SampleSet& samples) const;
+    HRESULT WriteSample(const std::filesystem::path& outputDir, const SampleRef& sample) const;
 
-    HRESULT HashOffLimitSamples(SampleSet& MatchingSamples) const;
+    void FinalizeHashes(const Main::SampleRef& sample) const;
 
-    HRESULT CollectMatchingSamples(const OutputSpec& output, SampleSet& MatchingSamples);
+    HRESULT CollectSamples(const OutputSpec& output, const SampleSet& samples);
 
     HRESULT FindMatchingSamples();
 
     HRESULT RegFlushKeys();
 
 public:
+    Main();
+
     static LPCWSTR ToolName() { return L"GetThis"; }
     static LPCWSTR ToolDescription() { return L"Sample collection"; }
 
@@ -322,11 +323,6 @@ public:
     static LPCWSTR LocalConfiguration() { return nullptr; }
 
     static LPCWSTR DefaultSchema() { return L"res:#GETTHIS_SQLSCHEMA"; }
-
-    Main()
-        : UtilitiesMain()
-        , config()
-        , FileFinder() {};
 
     void PrintUsage();
     void PrintParameters();
@@ -345,6 +341,16 @@ public:
     HRESULT CheckConfiguration();
 
     HRESULT Run();
+
+private:
+    HRESULT InitOutput();
+    HRESULT CloseOutput();
+
+    HRESULT InitArchiveOutput();
+    HRESULT InitDirectoryOutput();
+
+    HRESULT CloseArchiveOutput();
+    HRESULT CloseDirectoryOutput();
 };
 }  // namespace Command::GetThis
 }  // namespace Orc

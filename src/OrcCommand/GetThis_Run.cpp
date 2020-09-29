@@ -28,6 +28,7 @@
 #include "SnapshotVolumeReader.h"
 
 #include "SystemDetails.h"
+#include "WinApiHelper.h"
 
 #include <string>
 #include <memory>
@@ -99,7 +100,7 @@ std::shared_ptr<TableOutput::IStreamWriter> CreateCsvWriter(
 {
     auto csvStream = std::make_shared<TemporaryStream>();
 
-    hr = csvStream->Open(out.parent_path(), out.filename(), 1 * 1024 * 1024);
+    hr = csvStream->Open(out.parent_path(), out.filename(), 5 * 1024 * 1024);
     if (FAILED(hr))
     {
         Log::Error(L"Failed to create temp stream (code: {:#x})", hr);
@@ -153,45 +154,73 @@ std::shared_ptr<TemporaryStream> CreateLogStream(const std::filesystem::path& ou
     return logStream;
 }
 
-}  // namespace
+std::wstring RetrieveComputerName(const std::wstring& defaultName, logger& _L_)
+{
+    std::wstring name;
 
-std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>> Main::CreateOutputDirLogFileAndCSV(const fs::path& outDir)
+    HRESULT hr = SystemDetails::GetOrcComputerName(name);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to retrieve computer name (code: {:#x})", hr);
+        return L"[unknown]";
+    }
+
+    return name;
+}
+
+HRESULT CopyStream(Orc::ByteStream& src, const fs::path& outPath)
 {
     HRESULT hr = E_FAIL;
     std::error_code ec;
 
-    fs::create_directories(outDir, ec);
+    fs::create_directories(outPath.parent_path(), ec);
     if (ec)
     {
         hr = HRESULT_FROM_WIN32(ec.value());
-        _L_->Error(hr, L"Failed to create output directory");
-        return {hr, nullptr};
+        Log::Error(L"Failed to create sample directory (code: {:#x})", hr);
+        return hr;
     }
 
-    if (!_L_->IsLoggingToFile())
-    {
-        const fs::path logFile = outDir / L"GetThis.log";
-        hr = _L_->LogToFile(logFile.c_str());
-        if (FAILED(hr))
-        {
-            return {hr, nullptr};
-        }
-    }
-
-    auto options = std::make_unique<TableOutput::CSV::Options>();
-    options->Encoding = config.Output.OutputEncoding;
-
-    auto csvStream = TableOutput::CSV::Writer::MakeNew(_L_, std::move(options));
-    const fs::path csvPath = outDir / L"GetThis.csv";
-    hr = csvStream->WriteToFile(csvPath);
+    FileStream outputStream;
+    hr = outputStream.WriteTo(outPath.c_str());
     if (FAILED(hr))
     {
-        return {hr, nullptr};
+        Log::Error(L"Failed to create sample '{}' (code: {:#x})", outPath);
+        return hr;
     }
 
-    csvStream->SetSchema(config.Output.Schema);
+    ULONGLONG ullBytesWritten = 0LL;
+    hr = src.CopyTo(outputStream, &ullBytesWritten);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed while writing sample '{}' (code: {:#x})", outPath, hr);
+        return hr;
+    }
 
-    return {hr, csvStream};
+    hr = outputStream.Close();
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to close sample '{}' (code: {:#x})", outPath, hr);
+        return hr;
+    }
+
+    hr = src.Close();
+    if (FAILED(hr))
+    {
+        Log::Warn(L"Failed to close input steam for '{}' (code: {:#x})", outPath, hr);
+    }
+
+    return S_OK;
+}
+
+}  // namespace
+
+Main::Main(logger pLog)
+    : UtilitiesMain(pLog)
+    , config(pLog)
+    , FileFinder(pLog)
+    , ComputerName(::RetrieveComputerName(L"Default", pLog))
+{
 }
 
 HRESULT Main::RegFlushKeys()
@@ -457,7 +486,7 @@ LimitStatus Main::SampleLimitStatus(const Limits& GlobalLimits, const Limits& Lo
 }
 
 HRESULT
-Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerName, const Main::SampleRef& sample)
+Main::AddSampleRefToCSV(ITableOutput& output, const Main::SampleRef& sample) const
 {
     static const FlagsDefinition AttrTypeDefs[] = {
         {$UNUSED, L"$UNUSED", L"$UNUSED"},
@@ -483,7 +512,7 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
     {
         for (const auto& name : match->MatchingNames)
         {
-            output.WriteString(strComputerName.c_str());
+            output.WriteString(ComputerName);
 
             output.WriteInteger(match->VolumeReader->VolumeSerialNumber());
 
@@ -681,269 +710,317 @@ Main::AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std:
     return S_OK;
 }
 
-HRESULT
-Main::CollectMatchingSamples(const std::shared_ptr<ArchiveCreate>& compressor, ITableOutput& output, SampleSet& Samples)
+HRESULT Main::WriteSample(const std::shared_ptr<ArchiveCreate>& compressor, const SampleRef& sample) const
+{
+    if (sample.OffLimits)
+    {
+        return S_OK;
+    }
+
+    std::wstring strName;
+    sample.Matches.front()->GetMatchFullName(
+        sample.Matches.front()->MatchingNames.front(), sample.Matches.front()->MatchingAttributes.front(), strName);
+
+    const auto itemArchivedCb = [this, &sample](HRESULT hrArchived) {
+        FinalizeHashes(sample);
+
+        HRESULT hr = AddSampleRefToCSV(m_tableWriter->GetTableOutput(), sample);
+        if (FAILED(hr))
+        {
+            log::Error(
+                _L_,
+                hr,
+                L"Failed to add sample %s metadata to csv\r\n",
+                sample.Matches.front()->MatchingNames.front().FullPathName.c_str());
+        }
+    };
+
+    HRESULT hr = compressor->AddStream(sample.SampleName.c_str(), strName.c_str(), sample.CopyStream, itemArchivedCb);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to add sample %s\r\n", sample.SampleName.c_str());
+    }
+
+    return S_OK;
+}
+
+HRESULT Main::WriteSamples(const std::shared_ptr<ArchiveCreate>& compressor, const SampleSet& samples) const
+{
+    log::Info(_L_, L"\r\nAdding matching samples to archive:\r\n");
+
+    for (const auto& sample : samples)
+    {
+        HRESULT hr = WriteSample(compressor, sample);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to write sample '%s'", sample.SampleName.c_str());
+            continue;
+        }
+    }
+
+    return S_OK;
+}
+
+HRESULT Main::WriteSample(const std::filesystem::path& outputDir, const SampleRef& sample) const
 {
     HRESULT hr = E_FAIL;
 
-    std::for_each(begin(Samples), end(Samples), [this, compressor, &hr](const SampleRef& sampleRef) {
-        if (!sampleRef.OffLimits)
-        {
-            wstring strName;
-            sampleRef.Matches.front()->GetMatchFullName(
-                sampleRef.Matches.front()->MatchingNames.front(),
-                sampleRef.Matches.front()->MatchingAttributes.front(),
-                strName);
-            if (FAILED(hr = compressor->AddStream(sampleRef.SampleName.c_str(), strName.c_str(), sampleRef.CopyStream)))
-            {
-                log::Error(_L_, hr, L"Failed to add sample %s\r\n", sampleRef.SampleName.c_str());
-            }
-        }
-    });
-
-    log::Info(_L_, L"\r\nAdding matching samples to archive:\r\n");
-    compressor->SetCallback(
-        [this](const OrcArchive::ArchiveItem& item) { log::Info(_L_, L"\t%s\r\n", item.Path.c_str()); });
-
-    if (FAILED(hr = compressor->FlushQueue()))
+    if (sample.OffLimits)
     {
-        log::Error(_L_, hr, L"Failed to flush queue to %s\r\n", config.Output.Path.c_str());
+        return S_OK;
+    }
+
+    const fs::path sampleFile = outputDir / fs::path(sample.SampleName);
+
+    std::error_code ec;
+    fs::create_directories(sampleFile.parent_path(), ec);
+    if (ec)
+    {
+        hr = HRESULT_FROM_WIN32(ec.value());
+        log::Error(_L_, HRESULT_FROM_WIN32(ec.value()), L"Failed to create sample directory");
         return hr;
     }
 
-    wstring strComputerName;
-    SystemDetails::GetOrcComputerName(strComputerName);
+    // As SampleSet is an std::set, iterator are const (key is built on value). It is safe to const_cast here
+    // because the stream is not part of the key
+    ByteStream& src = const_cast<ByteStream&>(*sample.CopyStream);
+    hr = ::CopyStream(src, sampleFile, _L_);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to copy stream of '%s'", sampleFile);
+        return hr;
+    }
 
-    std::for_each(
-        begin(Samples), end(Samples), [this, strComputerName, compressor, &output, &hr](const SampleRef& sampleRef) {
-            if (sampleRef.HashStream)
-            {
-                sampleRef.HashStream->GetMD5(const_cast<CBinaryBuffer&>(sampleRef.MD5));
-                sampleRef.HashStream->GetSHA1(const_cast<CBinaryBuffer&>(sampleRef.SHA1));
-                sampleRef.HashStream->GetSHA256(const_cast<CBinaryBuffer&>(sampleRef.SHA256));
-            }
+    FinalizeHashes(sample);
 
-            if (sampleRef.FuzzyHashStream)
-            {
-                sampleRef.FuzzyHashStream->GetSSDeep(const_cast<CBinaryBuffer&>(sampleRef.SSDeep));
-                sampleRef.FuzzyHashStream->GetTLSH(const_cast<CBinaryBuffer&>(sampleRef.TLSH));
-            }
-
-            if (FAILED(hr = AddSampleRefToCSV(output, strComputerName, sampleRef)))
-            {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Failed to add sample %s metadata to csv\r\n",
-                    sampleRef.Matches.front()->MatchingNames.front().FullPathName.c_str());
-                return;
-            }
-        });
+    hr = AddSampleRefToCSV(m_tableWriter->GetTableOutput(), sample);
+    if (FAILED(hr))
+    {
+        log::Error(
+            _L_,
+            hr,
+            L"Failed to add sample %s metadata to csv\r\n",
+            sample.Matches.front()->MatchingNames.front().FullPathName.c_str());
+        return hr;
+    }
 
     return S_OK;
 }
 
 HRESULT
-Main::CollectMatchingSamples(const std::wstring& outputdir, ITableOutput& output, SampleSet& MatchingSamples)
+Main::WriteSamples(const fs::path& outputDir, const SampleSet& samples) const
 {
-    HRESULT hr = E_FAIL;
-
-    if (MatchingSamples.empty())
-        return S_OK;
-
-    fs::path output_dir(outputdir);
-
-    wstring strComputerName;
-    SystemDetails::GetOrcComputerName(strComputerName);
-
-    log::Info(_L_, L"\r\nCopying matching samples to %s\r\n", outputdir.c_str());
-
-    for (const auto& sample_ref : MatchingSamples)
-    {
-        if (!sample_ref.OffLimits)
-        {
-            fs::path sampleFile = output_dir / fs::path(sample_ref.SampleName);
-
-            FileStream outputStream(_L_);
-
-            if (FAILED(hr = outputStream.WriteTo(sampleFile.wstring().c_str())))
-            {
-                log::Error(_L_, hr, L"Failed to create sample file %s\r\n", sampleFile.wstring().c_str());
-                break;
-            }
-
-            ULONGLONG ullBytesWritten = 0LL;
-            if (FAILED(hr = sample_ref.CopyStream->CopyTo(outputStream, &ullBytesWritten)))
-            {
-                log::Error(_L_, hr, L"Failed while writing to sample %s\r\n", sampleFile.string().c_str());
-                break;
-            }
-
-            outputStream.Close();
-            sample_ref.CopyStream->Close();
-
-            log::Info(
-                _L_, L"\t%s copied (%I64d bytes)\r\n", sample_ref.SampleName.c_str(), sample_ref.CopyStream->GetSize());
-        }
-    }
-
-    for (const auto& sample_ref : MatchingSamples)
-    {
-        fs::path sampleFile = output_dir / fs::path(sample_ref.SampleName);
-
-        if (sample_ref.HashStream)
-        {
-            sample_ref.HashStream->GetMD5(const_cast<CBinaryBuffer&>(sample_ref.MD5));
-            sample_ref.HashStream->GetSHA1(const_cast<CBinaryBuffer&>(sample_ref.SHA1));
-            sample_ref.HashStream->GetSHA256(const_cast<CBinaryBuffer&>(sample_ref.SHA256));
-        }
-
-        if (sample_ref.FuzzyHashStream)
-        {
-            sample_ref.FuzzyHashStream->GetSSDeep(const_cast<CBinaryBuffer&>(sample_ref.SSDeep));
-            sample_ref.FuzzyHashStream->GetTLSH(const_cast<CBinaryBuffer&>(sample_ref.TLSH));
-        }
-
-        if (FAILED(hr = AddSampleRefToCSV(output, strComputerName, sample_ref)))
-        {
-            log::Error(_L_, hr, L"Failed to add sample %s metadata to csv\r\n", sampleFile.string().c_str());
-            break;
-        }
-    }
-    return S_OK;
-}
-
-HRESULT Main::CollectMatchingSamples(const OutputSpec& output, SampleSet& MatchingSamples)
-{
-    HRESULT hr = E_FAIL;
-
-    switch (output.Type)
-    {
-        case OutputSpec::Archive: {
-            const auto& archivePath = fs::path(config.Output.Path);
-
-            auto compressor = ::CreateCompressor(config.Output, CompressorFlags::kNone, hr, _L_);
-            if (compressor == nullptr)
-            {
-                return hr;
-            }
-
-            const fs::path tempDir = archivePath.parent_path();
-            std::shared_ptr<TemporaryStream> logStream;
-            logStream = ::CreateLogStream(tempDir / L"GetThisLogStream", hr, _L_);
-            if (logStream == nullptr)
-            {
-                log::Error(_L_, hr, L"Failed to create log stream\r\n");
-                return hr;
-            }
-
-            auto csvWriter = ::CreateCsvWriter(
-                tempDir / L"GetThisCsvStream", config.Output.Schema, config.Output.OutputEncoding, hr, _L_);
-            if (csvWriter == nullptr)
-            {
-                log::Error(_L_, hr, L"Failed to create log stream\r\n");
-                return hr;
-            }
-
-            hr = CollectMatchingSamples(compressor, csvWriter->GetTableOutput(), MatchingSamples);
-            if (FAILED(hr))
-            {
-                return hr;
-            }
-
-            csvWriter->Flush();
-
-            if (csvWriter->GetStream())
-            {
-                auto stream = csvWriter->GetStream();
-                if (stream->GetSize())
-                {
-                    hr = stream->SetFilePointer(0, FILE_BEGIN, nullptr);
-                    if (FAILED(hr))
-                    {
-                        log::Error(_L_, hr, L"Failed to rewind csv stream\r\n");
-                    }
-
-                    hr = compressor->AddStream(L"GetThis.csv", L"GetThis.csv", stream);
-                    if (FAILED(hr))
-                    {
-                        log::Error(_L_, hr, L"Failed to add GetThis.csv\r\n");
-                    }
-                }
-            }
-
-            auto pLogStream = _L_->GetByteStream();
-            _L_->CloseLogToStream(false);
-
-            if (pLogStream && pLogStream->GetSize() > 0LL)
-            {
-                if (FAILED(hr = pLogStream->SetFilePointer(0, FILE_BEGIN, nullptr)))
-                {
-                    log::Error(_L_, hr, L"Failed to rewind log stream\r\n");
-                }
-                if (FAILED(hr = compressor->AddStream(L"GetThis.log", L"GetThis.log", pLogStream)))
-                {
-                    log::Error(_L_, hr, L"Failed to add GetThis.log\r\n");
-                }
-            }
-
-            if (FAILED(hr = compressor->Complete()))
-            {
-                log::Error(_L_, hr, L"Failed to complete %s\r\n", config.Output.Path.c_str());
-                return hr;
-            }
-
-            csvWriter->Close();
-        }
-        break;
-        case OutputSpec::Directory: {
-            auto [hr, csvWriter] = CreateOutputDirLogFileAndCSV({config.Output.Path});
-            if (csvWriter == nullptr)
-            {
-                return hr;
-            }
-
-            hr = CollectMatchingSamples(config.Output.Path, csvWriter->GetTableOutput(), MatchingSamples);
-            if (FAILED(hr))
-            {
-                return hr;
-            }
-
-            csvWriter->Close();
-        }
-        break;
-        default:
-            return E_NOTIMPL;
-    }
-
-    return S_OK;
-}
-
-HRESULT Main::HashOffLimitSamples(SampleSet& samples) const
-{
-    auto devnull = std::make_shared<DevNullStream>(_L_);
-
-    log::Info(_L_, L"\r\nComputing hash of off limit samples\r\n");
+    log::Info(_L_, L"\r\nCopying matching samples to %s\r\n", outputDir.c_str());
 
     for (auto& sample : samples)
     {
-        if (!sample.OffLimits)
+        HRESULT hr = WriteSample(outputDir, sample);
+        if (FAILED(hr))
         {
+            log::Error(_L_, hr, L"Failed to write sample '%s'", sample.SampleName.c_str());
             continue;
         }
 
+        log::Info(_L_, L"\t%s copied (%I64d bytes)\r\n", sample.SampleName.c_str(), sample.CopyStream->GetSize());
+    }
+
+    return S_OK;
+}
+
+void Main::FinalizeHashes(const Main::SampleRef& sample) const
+{
+    if (!sample.HashStream)
+    {
+        return;
+    }
+
+    if (sample.OffLimits && config.bReportAll && config.CryptoHashAlgs != CryptoHashStream::Algorithm::Undefined)
+    {
+        // Stream that were not collected must be read for HashStream
         ULONGLONG ullBytesWritten = 0LL;
-        HRESULT hr = sample.CopyStream->CopyTo(devnull, &ullBytesWritten);
+
+        auto nullstream = DevNullStream();
+        HRESULT hr = sample.CopyStream->CopyTo(nullstream, &ullBytesWritten);
         if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"Failed while computing hash of sample\r\n");
-            break;
+            Log::Error(L"Failed while computing hash of '{}' (code: {:#x})", sample.SampleName, hr);
         }
 
         sample.CopyStream->Close();
     }
 
+    sample.HashStream->GetMD5(const_cast<CBinaryBuffer&>(sample.MD5));
+    sample.HashStream->GetSHA1(const_cast<CBinaryBuffer&>(sample.SHA1));
+    sample.HashStream->GetSHA256(const_cast<CBinaryBuffer&>(sample.SHA256));
+
+    if (sample.FuzzyHashStream)
+    {
+        sample.FuzzyHashStream->GetSSDeep(const_cast<CBinaryBuffer&>(sample.SSDeep));
+        sample.FuzzyHashStream->GetTLSH(const_cast<CBinaryBuffer&>(sample.TLSH));
+    }
+}
+
+HRESULT Main::InitArchiveOutput()
+{
+    HRESULT hr = E_FAIL;
+
+    const fs::path archivePath = config.Output.Path;
+    auto tempDir = archivePath.parent_path();
+    if (tempDir.empty())
+    {
+        std::error_code ec;
+        tempDir = GetWorkingDirectoryApi(ec);
+        if (ec)
+        {
+            Log::Warn(L"Failed to resolve current working directory (code: {:#x})", ec.value());
+        }
+    }
+
+    ::CreateLogStream(tempDir / L"GetThisLogStream", hr, _L_);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to create log stream\r\n");
+        return hr;
+    }
+
+    m_compressor = ::CreateCompressor(config.Output, CompressorFlags::kNone, hr, _L_);
+    if (m_compressor == nullptr)
+    {
+        Log::Error(L"Failed to create compressor");
+        return hr;
+    }
+
+    m_tableWriter =
+        ::CreateCsvWriter(tempDir / L"GetThisCsvStream", config.Output.Schema, config.Output.OutputEncoding, hr);
+    if (m_tableWriter == nullptr)
+    {
+        Log::Error(L"Failed to create csv stream (code: {:#x})", hr);
+        return hr;
+    }
+
     return S_OK;
+}
+
+HRESULT Main::CloseArchiveOutput()
+{
+    _ASSERT(m_compressor);
+    _ASSERT(m_tableWriter);
+
+    m_compressor->FlushQueue();
+
+    HRESULT hr = m_tableWriter->Flush();
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to flush csv writer\r\n");
+    }
+
+    auto tableStream = m_tableWriter->GetStream();
+    if (tableStream && tableStream->GetSize())
+    {
+        hr = tableStream->SetFilePointer(0, FILE_BEGIN, nullptr);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to rewind csv stream\r\n");
+        }
+
+        hr = m_compressor->AddStream(L"GetThis.csv", L"GetThis.csv", tableStream);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to add GetThis.csv\r\n");
+        }
+    }
+
+    auto logStream = _L_->GetByteStream();
+    _L_->CloseLogToStream(false);
+
+    if (logStream && logStream->GetSize() > 0LL)
+    {
+        hr = logStream->SetFilePointer(0, FILE_BEGIN, nullptr);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to rewind log stream\r\n");
+        }
+
+        hr = m_compressor->AddStream(L"GetThis.log", L"GetThis.log", logStream);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to add GetThis.log\r\n");
+        }
+    }
+
+    hr = m_compressor->Complete();
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to complete %s\r\n", config.Output.Path.c_str());
+        return hr;
+    }
+
+    hr = tableStream->Close();
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed to close csv writer\r\n");
+        return hr;
+    }
+
+    return S_OK;
+}
+
+HRESULT Main::InitDirectoryOutput()
+{
+    HRESULT hr = E_FAIL;
+    std::error_code ec;
+
+    const fs::path outputDir(config.Output.Path);
+    fs::create_directories(outputDir, ec);
+    if (ec)
+    {
+        hr = HRESULT_FROM_WIN32(ec.value());
+        Log::Error(L"Failed to create output directory (code: {:#x})", hr);
+        return hr;
+    }
+
+    m_tableWriter =
+        ::CreateCsvWriter(outputDir / L"GetThis.csv", config.Output.Schema, config.Output.OutputEncoding, hr);
+    if (m_tableWriter == nullptr)
+    {
+        Log::Error(L"Failed to create csv stream (code: {:#x})", hr);
+        return hr;
+    }
+
+    return S_OK;
+}
+
+HRESULT Main::CloseDirectoryOutput()
+{
+    HRESULT hr = m_tableWriter->Flush();
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to flush table stream (code: {:#x})", hr);
+        return hr;
+    }
+
+    hr = m_tableWriter->Close();
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to close table stream (code: {:#x})", hr);
+        return hr;
+    }
+
+    return S_OK;
+}
+
+HRESULT Main::CollectSamples(const OutputSpec& output, const SampleSet& samples)
+{
+    if (OutputSpec::Archive == output.Type)
+    {
+        return WriteSamples(m_compressor, samples);
+    }
+    else if (OutputSpec::Directory == output.Type)
+    {
+        return WriteSamples(config.Output.Path, samples);
+    }
+
+    return E_NOTIMPL;
 }
 
 HRESULT Main::FindMatchingSamples()
@@ -1087,6 +1164,46 @@ HRESULT Main::FindMatchingSamples()
     return S_OK;
 }
 
+HRESULT Main::InitOutput()
+{
+    if (config.Output.Type == OutputSpec::Kind::Archive)
+    {
+        return InitArchiveOutput();
+    }
+    else if (config.Output.Type == OutputSpec::Kind::Directory)
+    {
+        return InitDirectoryOutput();
+    }
+
+    return E_NOTIMPL;
+}
+
+HRESULT Main::CloseOutput()
+{
+    HRESULT hr = E_FAIL;
+
+    if (config.Output.Type == OutputSpec::Kind::Archive)
+    {
+        hr = CloseArchiveOutput();
+        if (FAILED(hr))
+        {
+            Log::Error(L"Cannot close archive output (code: {:#x})", hr);
+            return hr;
+        }
+    }
+    else if (config.Output.Type == OutputSpec::Kind::Directory)
+    {
+        hr = CloseDirectoryOutput();
+        if (FAILED(hr))
+        {
+            Log::Error(L"Cannot close directory output (code: {:#x})", hr);
+            return hr;
+        }
+    }
+
+    return hr;
+}
+
 HRESULT Main::Run()
 {
     HRESULT hr = E_FAIL;
@@ -1110,22 +1227,22 @@ HRESULT Main::Run()
 
     try
     {
-        if (FAILED(hr = FindMatchingSamples()))
+        hr = InitOutput();
+        if (FAILED(hr))
         {
-            log::Error(_L_, hr, L"\r\nGetThis failed while matching samples\r\n");
+            Log::Error(L"Cannot initialize output mode (code: {:#x})", hr);
             return hr;
         }
 
-        if (config.bReportAll && config.CryptoHashAlgs != CryptoHashStream::Algorithm::Undefined)
+        hr = FindMatchingSamples();
+        if (FAILED(hr))
         {
-            hr = HashOffLimitSamples(Samples);
-            if (FAILED(hr))
-            {
-                return hr;
-            }
+            Log::Error(L"GetThis failed while matching samples (code: {:#x})", hr);
+            return hr;
         }
 
-        if (FAILED(hr = CollectMatchingSamples(config.Output, Samples)))
+        hr = CollectSamples(config.Output, Samples);
+        if (FAILED(hr))
         {
             log::Error(_L_, hr, L"\r\nGetThis failed while collecting samples\r\n");
             return hr;
@@ -1139,9 +1256,7 @@ HRESULT Main::Run()
     }
     catch (...)
     {
-        log::Error(_L_, E_ABORT, L"\r\nGetThis failed during sample collection, terminating archive\r\n");
-        _L_->CloseLogFile();
-
+        Log::Error(L"GetThis failed during sample collection, terminating archive");
         return E_ABORT;
     }
 
