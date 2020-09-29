@@ -141,7 +141,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::SetSchema(const Schema& schema)
             auto hr = E_FAIL;
             if (FAILED(hr = WriteHeaders(m_Schema)))
             {
-                if (m_szFileName)
+                if (wcslen(m_szFileName))
                     spdlog::error(L"Could not write columns to specified file '{}'", m_szFileName);
                 else
                     spdlog::error(L"Could not write columns to specified stream '{}'", m_szFileName);
