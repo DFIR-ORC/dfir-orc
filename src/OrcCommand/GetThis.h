@@ -295,6 +295,7 @@ private:
 
     HRESULT FindMatchingSamples();
 
+
 public:
     Main();
 

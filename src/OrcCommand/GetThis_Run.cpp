@@ -456,7 +456,41 @@ std::unique_ptr<ByteStream> ConfigureStringStream(
     return stream;
 }
 
-HRESULT RegFlushKeys(logger& _L_)
+std::wstring CreateUniqueSampleName(
+    const ContentType& contentType,
+    const std::wstring& qualifier,
+    const PFILE_NAME pFileName,
+    const std::wstring& dataName,
+    const std::unordered_set<std::wstring>& givenNames)
+{
+
+    _ASSERT(pFileName);
+    if (pFileName == nullptr)
+    {
+        return {};
+    }
+
+    DWORD dwIdx = 0L;
+    std::wstring name;
+    std::unordered_set<std::wstring>::iterator it;
+    do
+    {
+        name = ::CreateSampleFileName(contentType, pFileName, dataName, dwIdx);
+        if (!qualifier.empty())
+        {
+            name.insert(0, L"\\");
+            name.insert(0, qualifier);
+        }
+
+        it = givenNames.find(name);
+        dwIdx++;
+
+    } while (it != std::cend(givenNames));
+
+    return name;
+}
+
+HRESULT RegFlushKeys()
 {
     bool bSuccess = true;
     DWORD dwGLE = 0L;
@@ -1075,32 +1109,12 @@ HRESULT Main::FindMatchingSamples()
                     break;
             }
 
-            std::wstring sampleName;
-            DWORD dwIdx = 0L;
-            std::unordered_set<std::wstring>::iterator it;
-
-            do
-            {
-                const auto filename = aMatch->MatchingNames[0].FILENAME();
-                if (filename == nullptr)
-                {
-                    break;
-                }
-
-                sampleName = ::CreateSampleFileName(sample.Content.Type, filename, attribute.AttrName, dwIdx);
-                if (!aSpecIt->Name.empty())
-                {
-                    sampleName.insert(0, L"\\");
-                    sampleName.insert(0, aSpecIt->Name);
-                }
-
-                it = SampleNames.find(sampleName);
-                dwIdx++;
-
-            } while (it != std::cend(SampleNames));
-
-            SampleNames.insert(sampleName);
-            sample.SampleName = sampleName;
+            sample.SampleName = CreateUniqueSampleName(
+                sample.Content.Type,
+                aSpecIt->Name,
+                aMatch->MatchingNames[0].FILENAME(),
+                attribute.AttrName,
+                SampleNames);
 
             hr = ConfigureSampleStreams(sample);
             if (FAILED(hr))
