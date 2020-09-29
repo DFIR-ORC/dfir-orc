@@ -27,20 +27,27 @@ namespace detail {
 template <typename T>
 struct StdoutContainerAdapter
 {
-};
+    using value_type = T;
+    void push_back(T c)
+    {
+        Traits::get_std_out<T>() << c;
 
-template <>
-struct StdoutContainerAdapter<char>
-{
-    using value_type = char;
-    void push_back(char c) { std::cout << c; }
-};
-
-template <>
-struct StdoutContainerAdapter<wchar_t>
-{
-    using value_type = wchar_t;
-    void push_back(wchar_t c) { std::wcout << c; }
+        // Using stdout with multiple threads requires synchronization so it should not be bothering to have a 'static'
+        // here
+        static std::basic_string<T> line;
+        if (c == Traits::newline_v<T>)
+        {
+            if (line.size() > 1)
+            {
+                Log::Debug(Logger::Facility::kLogFile, line);
+                line.clear();
+            }
+        }
+        else
+        {
+            line.push_back(c);
+        }
+    }
 };
 
 }  // namespace detail
