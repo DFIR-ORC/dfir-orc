@@ -67,7 +67,6 @@ private:
 
     bool m_bDeleteWhenDone;
     bool m_bHashData;
-    DWORD m_dwXORPattern;
 
 protected:
     
@@ -75,7 +74,6 @@ protected:
         : m_Request(request)
         , m_Status(Open)
         , m_bHashData(false)
-        , m_dwXORPattern(0L)
         , m_bDeleteWhenDone(false)
         , m_Format(ArchiveFormat::Unknown) {};
 
@@ -94,20 +92,17 @@ public:
         const std::wstring& szCabbedName,
         const std::wstring& szFileName,
         bool bHashData = false,
-        DWORD dwXORPattern = 0,
         bool bDeleteWhenDone = false);
     static Message MakeAddDirectoryRequest(
         const std::wstring& szDirCabbedName,
         const std::wstring& szDirName,
         const std::wstring& szPattern,
         bool bHashData = false,
-        DWORD dwXORPattern = 0,
         bool bDeleteWhenDone = false);
     static Message MakeAddStreamRequest(
         const std::wstring& szCabbedName,
         const std::shared_ptr<ByteStream>& aStream,
-        bool bHashData = false,
-        DWORD dwXORPattern = 0);
+        bool bHashData = false);
 
     static Message MakeFlushQueueRequest();
     static Message MakeCompleteRequest();
@@ -116,7 +111,6 @@ public:
 
     Request GetRequest() const { return m_Request; };
     Status GetStatus() const { return m_Status; };
-    DWORD GetXORPattern() const { return m_dwXORPattern; };
     bool GetComputeHash() const { return m_bHashData; };
     bool GetDeleteWhenDone() const { return m_bDeleteWhenDone; };
 

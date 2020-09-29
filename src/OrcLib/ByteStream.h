@@ -26,7 +26,6 @@ using log = LogFileWriter;
 using logger = std::shared_ptr<LogFileWriter>;
 
 class OutputSpec;
-class XORStream;
 class CryptoHashStream;
 
 class ByteStreamVisitor;
@@ -42,7 +41,6 @@ protected:
         : _L_(std::move(pLog)) {};
 
     virtual std::shared_ptr<ByteStream> _GetHashStream();
-    virtual std::shared_ptr<ByteStream> _GetXORStream();
 
 public:
     virtual ~ByteStream();
@@ -85,7 +83,6 @@ public:
     static std::shared_ptr<ByteStream> GetStream(const logger& pLog, const OutputSpec& output);
 
     static std::shared_ptr<ByteStream> GetHashStream(const std::shared_ptr<ByteStream>& aStream);
-    static std::shared_ptr<ByteStream> GetXORStream(const std::shared_ptr<ByteStream>& aStream);
 
     static HRESULT Get_IInStream(const std::shared_ptr<ByteStream>& aStream, ::IInStream** pInStream);
     static HRESULT Get_IStream(const std::shared_ptr<ByteStream>& aStream, ::IStream** pStream);

@@ -84,7 +84,6 @@ source_group(Disk\\FS\\Fat FILES ${SRC_DISK_FS_FAT})
 
 set(SRC_INOUT_BYTESTREAM_CRYPTOSTREAM
     "hash_stream_test.cpp"
-    "xor_stream_test.cpp"
     "fuzzy_hash_stream.cpp"
 )
 

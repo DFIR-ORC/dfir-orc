@@ -24,7 +24,6 @@
 #include "FileStream.h"
 #include "TemporaryStream.h"
 #include "CryptoHashStream.h"
-#include "XORStream.h"
 #include "InByteStreamWrapper.h"
 #include "OutByteStreamWrapper.h"
 
@@ -75,8 +74,8 @@ void StoreFileHashes(Archive::ArchiveItems& items, bool releaseInputStreams, Orc
 
 }  // namespace
 
-ZipCreate::ZipCreate(logger pLog, bool bComputeHash, DWORD XORPattern)
-    : ArchiveCreate(std::move(pLog), bComputeHash, XORPattern)
+ZipCreate::ZipCreate(logger pLog, bool bComputeHash)
+    : ArchiveCreate(std::move(pLog), bComputeHash)
     , m_FormatGUID(CLSID_NULL)
     , m_CompressionLevel(Fast)
 {

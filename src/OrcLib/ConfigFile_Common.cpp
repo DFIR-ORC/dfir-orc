@@ -25,8 +25,6 @@ HRESULT Orc::Config::Common::output(ConfigItem& parent, DWORD dwIndex, const WCH
     if (FAILED(
             hr = parent.SubItems[dwIndex].AddAttribute(L"compression", CONFIG_OUTPUT_COMPRESSION, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"XOR", CONFIG_OUTPUT_XORPATTERN, ConfigItem::OPTION)))
-        return hr;
     if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"encoding", CONFIG_OUTPUT_ENCODING, ConfigItem::OPTION)))
         return hr;
     if (FAILED(

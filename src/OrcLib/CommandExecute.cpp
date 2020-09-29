@@ -544,7 +544,6 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                                     action->Fullpath(),
                                     action->MatchPattern(),
                                     true,
-                                    0L,
                                     action->DeleteWhenDone());
                                 Concurrency::send(action->ArchiveTarget(), archiveRequest);
                             }
@@ -594,7 +593,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             if (SUCCEEDED(VerifyFileExists(action->Fullpath().c_str())))
                             {
                                 auto archiveRequest = ArchiveMessage::MakeAddFileRequest(
-                                    action->Name(), action->Fullpath(), true, 0L, action->DeleteWhenDone());
+                                    action->Name(), action->Fullpath(), true, action->DeleteWhenDone());
                                 Concurrency::send(action->ArchiveTarget(), archiveRequest);
                             }
                             else
@@ -645,7 +644,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                                 log::Error(_L_, hr, L"Failed to reset stream before adding it to cab!\r\n");
                             }
                             auto archiveRequest =
-                                ArchiveMessage::MakeAddStreamRequest(action->Name(), action->GetStream(), true, 0L);
+                                ArchiveMessage::MakeAddStreamRequest(action->Name(), action->GetStream(), true);
                             Concurrency::send(action->ArchiveTarget(), archiveRequest);
                         }
                         else

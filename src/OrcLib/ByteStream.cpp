@@ -13,7 +13,6 @@
 #include "LogFileWriter.h"
 
 #include "CryptoHashStream.h"
-#include "XORStream.h"
 #include "OutputSpec.h"
 
 #include "FileStream.h"
@@ -96,10 +95,6 @@ HRESULT ByteStream::CopyTo(__in ByteStream& outStream, const ULONGLONG ullChunk,
 }
 
 std::shared_ptr<ByteStream> ByteStream::_GetHashStream()
-{
-    return nullptr;
-}
-std::shared_ptr<ByteStream> ByteStream::_GetXORStream()
 {
     return nullptr;
 }
@@ -187,16 +182,6 @@ std::shared_ptr<ByteStream> ByteStream::GetHashStream(const std::shared_ptr<Byte
         return hs;
     else
         return aStream->_GetHashStream();
-}
-
-std::shared_ptr<ByteStream> ByteStream::GetXORStream(const std::shared_ptr<ByteStream>& aStream)
-{
-    std::shared_ptr<XORStream> hs = std::dynamic_pointer_cast<XORStream>(aStream);
-
-    if (hs)
-        return hs;
-    else
-        return aStream->_GetXORStream();
 }
 
 HRESULT ByteStream::Get_IInStream(const std::shared_ptr<ByteStream>& aStream, ::IInStream** pInStream)

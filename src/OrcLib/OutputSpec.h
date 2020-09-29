@@ -154,7 +154,6 @@ public:
     Encoding OutputEncoding = Encoding::UTF8;
     LPCWSTR szSeparator = L",";
     LPCWSTR szQuote = L"\"";
-    DWORD XOR = 0L;
 
     OutputSpec() noexcept = default;
     OutputSpec(OutputSpec&&) noexcept = default;

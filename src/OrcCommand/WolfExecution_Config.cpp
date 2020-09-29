@@ -452,22 +452,22 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 }
                 if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"StdOut"))
                 {
-                    command->PushStdOut(output.dwOrderIndex, strName, true, 0L, true);
+                    command->PushStdOut(output.dwOrderIndex, strName, true, true);
                 }
                 else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"StdErr"))
                 {
-                    command->PushStdErr(output.dwOrderIndex, strName, true, 0L, true);
+                    command->PushStdErr(output.dwOrderIndex, strName, true, true);
                 }
                 else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"StdOutErr"))
                 {
-                    command->PushStdOutErr(output.dwOrderIndex, strName, true, 0L, true);
+                    command->PushStdOutErr(output.dwOrderIndex, strName, true, true);
                 }
                 else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"File"))
                 {
                     if (szPattern == NULL)
-                        command->PushOutputFile(output.dwOrderIndex, strName, strName, 0L, true);
+                        command->PushOutputFile(output.dwOrderIndex, strName, strName, true);
                     else
-                        command->PushOutputFile(output.dwOrderIndex, strName, strName, szPattern, 0L, true);
+                        command->PushOutputFile(output.dwOrderIndex, strName, strName, szPattern, true);
                 }
                 else if (!_wcsicmp(output[WOLFLAUNCHER_OUTSOURCE].c_str(), L"Directory"))
                 {
@@ -475,12 +475,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                     {
                         if (szPattern == NULL)
                             command->PushOutputDirectory(
-                                output.dwOrderIndex,
-                                strName,
-                                strName,
-                                output[WOLFLAUNCHER_OUTFILEMATCH],
-                                0L,
-                                true);
+                                output.dwOrderIndex, strName, strName, output[WOLFLAUNCHER_OUTFILEMATCH], true);
                         else
                             command->PushOutputDirectory(
                                 output.dwOrderIndex,
@@ -488,16 +483,14 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                                 strName,
                                 output[WOLFLAUNCHER_OUTFILEMATCH],
                                 szPattern,
-                                0L,
                                 true);
                     }
                     else
                     {
                         if (szPattern == NULL)
-                            command->PushOutputDirectory(output.dwOrderIndex, strName, strName, L"*", 0L, true);
+                            command->PushOutputDirectory(output.dwOrderIndex, strName, strName, L"*", true);
                         else
-                            command->PushOutputDirectory(
-                                output.dwOrderIndex, strName, strName, L"*", szPattern, 0L, true);
+                            command->PushOutputDirectory(output.dwOrderIndex, strName, strName, L"*", szPattern, true);
                     }
                 }
             });

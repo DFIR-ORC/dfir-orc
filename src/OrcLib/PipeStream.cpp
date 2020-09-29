@@ -81,7 +81,7 @@ PipeStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbByt
     DWORD cbBytesWritten = 0;
     if (cbBytes > MAXDWORD)
     {
-        log::Error(_L_, E_INVALIDARG, L"Too many bytes to XOR\r\n");
+        log::Error(_L_, E_INVALIDARG, L"Too many bytes\r\n");
         return E_INVALIDARG;
     }
 

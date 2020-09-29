@@ -289,7 +289,7 @@ HRESULT StringsStream::OpenForStrings(const shared_ptr<ByteStream>& pChained, si
 
     if (pChained->IsOpen() != S_OK)
     {
-        log::Error(_L_, E_FAIL, L"Chained stream to XORStream must be opened\r\n");
+        log::Error(_L_, E_FAIL, L"Chained stream must be opened\r\n");
         return E_FAIL;
     }
     m_pChainedStream = pChained;
@@ -731,7 +731,7 @@ HRESULT StringsStream::Write(
 
     if (cbBytesToWrite > MAXDWORD)
     {
-        log::Error(_L_, E_INVALIDARG, L"Too many bytes to XOR\r\n");
+        log::Error(_L_, E_INVALIDARG, L"Too many bytes\r\n");
         return E_INVALIDARG;
     }
 

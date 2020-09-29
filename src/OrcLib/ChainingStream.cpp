@@ -10,7 +10,6 @@
 #include "ChainingStream.h"
 
 #include "CryptoHashStream.h"
-#include "XORStream.h"
 
 using namespace std;
 using namespace Orc;
@@ -24,17 +23,6 @@ std::shared_ptr<ByteStream> ChainingStream::_GetHashStream()
         return std::dynamic_pointer_cast<ByteStream>(hs);
     else if (m_pChainedStream)
         return m_pChainedStream->_GetHashStream();
-    else
-        return nullptr;
-}
-
-std::shared_ptr<ByteStream> ChainingStream::_GetXORStream()
-{
-    shared_ptr<XORStream> xs = std::dynamic_pointer_cast<XORStream>(m_pChainedStream);
-    if (xs)
-        return std::dynamic_pointer_cast<ByteStream>(xs);
-    else if (m_pChainedStream)
-        return m_pChainedStream->_GetXORStream();
     else
         return nullptr;
 }

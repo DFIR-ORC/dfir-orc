@@ -174,7 +174,6 @@ class CryptoHashStream;
 class FuzzyHashStream;
 class HashStream;
 class PasswordEncryptedStream;
-class XORStream;
 
 // In&Out/ByteStream/FSStream
 class FatStream;

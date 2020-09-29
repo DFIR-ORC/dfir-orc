@@ -48,7 +48,6 @@ public:
     };
 
     virtual std::shared_ptr<ByteStream> _GetHashStream();
-    virtual std::shared_ptr<ByteStream> _GetXORStream();
 };
 
 }  // namespace Orc

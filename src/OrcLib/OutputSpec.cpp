@@ -260,21 +260,21 @@ HRESULT OutputSpec::Configure(
     if (supported & static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL))
     {
         bool bDone = false;
-        if (HasValue(item, CONFIG_OUTPUT_CONNECTION))
+        if (::HasValue(item, CONFIG_OUTPUT_CONNECTION))
         {
             Type = OutputSpec::Kind::SQL;
             ConnectionString = item.SubItems[CONFIG_OUTPUT_CONNECTION];
             bDone = true;
         }
-        if (HasValue(item, CONFIG_OUTPUT_TABLE))
+        if (::HasValue(item, CONFIG_OUTPUT_TABLE))
         {
             TableName = item.SubItems[CONFIG_OUTPUT_TABLE];
         }
-        if (HasValue(item, CONFIG_OUTPUT_KEY))
+        if (::HasValue(item, CONFIG_OUTPUT_KEY))
         {
             TableKey = item.SubItems[CONFIG_OUTPUT_KEY];
         }
-        if (HasValue(item, CONFIG_OUTPUT_DISPOSITION))
+        if (::HasValue(item, CONFIG_OUTPUT_DISPOSITION))
         {
             if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"createnew")
                 || equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"create_new"))
@@ -309,22 +309,8 @@ HRESULT OutputSpec::Configure(
         }
     }
 
-    XOR = 0L;
-    if (HasValue(item, CONFIG_OUTPUT_XORPATTERN))
-    {
-        if (FAILED(hr = GetIntegerFromHexaString(item.SubItems[CONFIG_OUTPUT_XORPATTERN].c_str(), XOR)))
-        {
-            log::Error(
-                pLog,
-                hr,
-                L"Invalid XOR pattern for outputdir in config file: %s\r\n",
-                item.SubItems[CONFIG_OUTPUT_XORPATTERN].c_str());
-            return hr;
-        }
-    }
-
     OutputEncoding = OutputSpec::Encoding::UTF8;
-    if (HasValue(item, CONFIG_OUTPUT_ENCODING))
+    if (::HasValue(item, CONFIG_OUTPUT_ENCODING))
     {
         if (equalCaseInsensitive(item.SubItems[CONFIG_OUTPUT_ENCODING].c_str(), L"utf8"))
         {
@@ -345,12 +331,12 @@ HRESULT OutputSpec::Configure(
         }
     }
 
-    if (HasValue(item, CONFIG_OUTPUT_COMPRESSION))
+    if (::HasValue(item, CONFIG_OUTPUT_COMPRESSION))
     {
         Compression = item.SubItems[CONFIG_OUTPUT_COMPRESSION];
     }
 
-    if (HasValue(item, CONFIG_OUTPUT_PASSWORD))
+    if (::HasValue(item, CONFIG_OUTPUT_PASSWORD))
     {
         Password = item.SubItems[CONFIG_OUTPUT_PASSWORD];
     }
@@ -359,7 +345,7 @@ HRESULT OutputSpec::Configure(
 
 HRESULT OutputSpec::Upload::Configure(const logger& pLog, const ConfigItem& item)
 {
-    if (HasValue(item, CONFIG_UPLOAD_METHOD))
+    if (::HasValue(item, CONFIG_UPLOAD_METHOD))
     {
         if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_METHOD], L"BITS"sv))
         {

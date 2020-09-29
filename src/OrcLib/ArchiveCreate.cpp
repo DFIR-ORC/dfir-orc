@@ -16,7 +16,6 @@
 #include "MemoryStream.h"
 #include "NTFSStream.h"
 #include "CryptoHashStream.h"
-#include "XORStream.h"
 
 #include "ZipCreate.h"
 
@@ -41,18 +40,14 @@ std::shared_ptr<ArchiveCreate> ArchiveCreate::MakeCreate(ArchiveFormat fmt, logg
     return std::move(retval);
 }
 
-ArchiveCreate::ArchiveCreate(logger pLog, bool bComputeHash, DWORD XORPattern)
+ArchiveCreate::ArchiveCreate(logger pLog, bool bComputeHash)
     : Archive(std::move(pLog), bComputeHash)
-    , m_XORPattern(XORPattern)
 {
 }
 
 ArchiveCreate::~ArchiveCreate(void) {}
 
-std::shared_ptr<ByteStream> ArchiveCreate::GetStreamToAdd(
-    const std::shared_ptr<ByteStream>& astream,
-    const std::wstring& strCabbedName,
-    std::wstring& strPrefixedName)
+std::shared_ptr<ByteStream> ArchiveCreate::GetStreamToAdd(const std::shared_ptr<ByteStream>& astream)
 {
     HRESULT hr = E_FAIL;
 
@@ -62,61 +57,19 @@ std::shared_ptr<ByteStream> ArchiveCreate::GetStreamToAdd(
     // Move back to the begining of the stream
     astream->SetFilePointer(0LL, FILE_BEGIN, nullptr);
 
-    if (m_XORPattern != 0L)
+    if (!m_bComputeHash)
     {
-        WCHAR szPrefixedName[MAX_PATH];
-
-        shared_ptr<XORStream> pXORStream = make_shared<XORStream>(_L_);
-
-        if (FAILED(hr = pXORStream->SetXORPattern(m_XORPattern)))
-        {
-            return nullptr;
-        }
-
-        if (FAILED(hr = pXORStream->XORPrefixFileName(strCabbedName.c_str(), szPrefixedName, MAX_PATH)))
-        {
-            return nullptr;
-        }
-
-        strPrefixedName.assign(szPrefixedName);
-
-        if (m_bComputeHash)
-        {
-            shared_ptr<CryptoHashStream> pHashStream = make_shared<CryptoHashStream>(_L_);
-
-            if (FAILED(
-                    hr = pHashStream->OpenToRead(
-                        CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, astream)))
-                return nullptr;
-            if (FAILED(hr = pXORStream->OpenForXOR(pHashStream)))
-                return nullptr;
-
-            return pXORStream;
-        }
-        else
-        {
-            if (FAILED(hr = pXORStream->OpenForXOR(astream)))
-                return nullptr;
-            return pXORStream;
-        }
+        return astream;
     }
-    else
+
+    auto pHashStream = make_shared<CryptoHashStream>(_L_);
+    hr = pHashStream->OpenToRead(CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, astream);
+    if (FAILED(hr))
     {
-        strPrefixedName = strCabbedName;
-
-        if (m_bComputeHash)
-        {
-            shared_ptr<CryptoHashStream> pHashStream = make_shared<CryptoHashStream>(_L_);
-
-            if (FAILED(
-                    hr = pHashStream->OpenToRead(
-                        CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, astream)))
-                return nullptr;
-            return pHashStream;
-        }
-        else
-            return astream;
+        return nullptr;
     }
+
+    return pHashStream;
 }
 
 STDMETHODIMP ArchiveCreate::AddFile(__in PCWSTR pwzNameInArchive, __in PCWSTR pwzFileName, bool bDeleteWhenDone)
@@ -146,7 +99,7 @@ STDMETHODIMP ArchiveCreate::AddFile(__in PCWSTR pwzNameInArchive, __in PCWSTR pw
 
         item.Path = pwzFileName;
         item.NameInArchive = pwzNameInArchive;
-        item.Stream = GetStreamToAdd(stream, item.NameInArchive, item.NameInArchive);
+        item.Stream = GetStreamToAdd(stream);
     }
 
     if (item.Stream)
@@ -174,7 +127,7 @@ STDMETHODIMP ArchiveCreate::AddBuffer(__in_opt PCWSTR pwzNameInArchive, __in PVO
         return hr;
     }
 
-    item.Stream = GetStreamToAdd(stream, pwzNameInArchive, item.NameInArchive);
+    item.Stream = GetStreamToAdd(stream);
 
     if (item.Stream)
     {
@@ -194,7 +147,7 @@ STDMETHODIMP ArchiveCreate::AddStream(
     ArchiveItem item;
 
     item.NameInArchive = pwzNameInArchive;
-    item.Stream = GetStreamToAdd(pStream, item.NameInArchive, item.NameInArchive);
+    item.Stream = GetStreamToAdd(pStream);
     item.Size = pStream->GetSize();
     item.Path = pwzPath;
 

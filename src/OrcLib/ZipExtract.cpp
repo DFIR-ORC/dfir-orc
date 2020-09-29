@@ -19,7 +19,6 @@
 #include "ZipLibrary.h"
 
 #include "FileStream.h"
-#include "XORStream.h"
 #include "CryptoHashStream.h"
 #include "OutByteStreamWrapper.h"
 #include "InByteStreamWrapper.h"

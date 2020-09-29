@@ -474,7 +474,6 @@ HRESULT ConfigFile::SetOutputSpec(ConfigItem& item, const OutputSpec& outputSpec
 HRESULT ConfigFile::GetOutputDir(
     const ConfigItem& item,
     std::wstring& outputDir,
-    DWORD& dwXOR,
     OutputSpec::Encoding& anEncoding)
 {
     HRESULT hr = E_FAIL;
@@ -487,20 +486,6 @@ HRESULT ConfigFile::GetOutputDir(
             return hr;
         }
 
-        dwXOR = 0L;
-
-        if (item.SubItems[CONFIG_XORPATTERN])
-        {
-            if (FAILED(hr = GetIntegerFromHexaString(item.SubItems[CONFIG_XORPATTERN].c_str(), dwXOR)))
-            {
-                log::Error(
-                    _L_,
-                    hr,
-                    L"Invalid XOR pattern for outputdir in config file: \"%s\"\r\n",
-                    item.SubItems[CONFIG_XORPATTERN].c_str());
-                return hr;
-            }
-        }
         anEncoding = OutputSpec::Encoding::UTF8;
         if (item.SubItems.size() > CONFIG_CSVENCODING)
         {
@@ -533,16 +518,9 @@ HRESULT ConfigFile::GetOutputDir(
 HRESULT ConfigFile::SetOutputDir(
     ConfigItem& item,
     const std::wstring& outputDir,
-    const DWORD dwXOR,
     OutputSpec::Encoding anEncoding)
 {
     item.strData = outputDir;
-
-    WCHAR szPattern[12];
-    swprintf_s(szPattern, 12, L"0x%lx", dwXOR);
-
-    item.SubItems[CONFIG_XORPATTERN].strData = szPattern;
-    item.SubItems[CONFIG_XORPATTERN].Status = ConfigItem::PRESENT;
 
     switch (anEncoding)
     {

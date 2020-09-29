@@ -44,7 +44,6 @@ public:
     std::wstring Name;
     std::wstring Pattern;
     std::wstring MatchPattern;  // Only with OutDirectory
-    DWORD dwXOR;
     LONG OrderId;
     bool bHash;
 
@@ -52,7 +51,6 @@ public:
 
     CommandParameter(ParamKind kind)
         : Kind(kind)
-        , dwXOR(0L)
         , bHash(false)
         , bCabWhenComplete(true)
         , OrderId(0L) {};
@@ -65,7 +63,6 @@ public:
         std::swap(Pattern, other.Pattern);
         std::swap(MatchPattern, other.MatchPattern);
         OrderId = other.OrderId;
-        dwXOR = other.dwXOR;
         bHash = other.bHash;
         bCabWhenComplete = other.bCabWhenComplete;
     }
@@ -123,26 +120,25 @@ public:
     static Message MakeExecuteMessage(const std::wstring& keyword);
 
     HRESULT PushExecutable(const LONG OrderID, const std::wstring& szBinary, const std::wstring& Keyword);
+
     HRESULT PushArgument(const LONG OrderID, const std::wstring& Keyword);
+
     HRESULT PushInputFile(const LONG OrderID, const std::wstring& szFileName, const std::wstring& Keyword);
+
     HRESULT PushInputFile(
         const LONG OrderID,
         const std::wstring& szFileName,
         const std::wstring& Keyword,
         const std::wstring& pattern);
 
-    HRESULT PushOutputFile(
-        const LONG OrderID,
-        const std::wstring& szFileName,
-        const std::wstring& Keyword,
-        DWORD dwXOR = 0,
-        bool bHash = false);
+    HRESULT
+    PushOutputFile(const LONG OrderID, const std::wstring& szFileName, const std::wstring& Keyword, bool bHash = false);
+
     HRESULT PushOutputFile(
         const LONG OrderID,
         const std::wstring& szFileName,
         const std::wstring& Keyword,
         const std::wstring& pattern,
-        DWORD dwXOR = 0,
         bool bHash = false);
 
     HRESULT PushOutputDirectory(
@@ -150,55 +146,41 @@ public:
         const std::wstring& szFileName,
         const std::wstring& Keyword,
         const std::wstring& FileMatchPattern,
-        DWORD dwXOR = 0,
         bool bHash = false);
+
     HRESULT PushOutputDirectory(
         const LONG OrderID,
         const std::wstring& szFileName,
         const std::wstring& Keyword,
         const std::wstring& FileMatchPattern,
         const std::wstring& ArgPattern,
-        DWORD dwXOR = 0,
         bool bHash = false);
 
     HRESULT PushTempOutputFile(
         const LONG OrderID,
         const std::wstring& szFileName,
         const std::wstring& Keyword,
-        DWORD dwXOR = 0,
         bool bHash = false);
+
     HRESULT PushTempOutputFile(
         const LONG OrderID,
         const std::wstring& szFileName,
         const std::wstring& Keyword,
         const std::wstring& pattern,
-        DWORD dwXOR = 0,
         bool bHash = false);
 
-    HRESULT PushStdOut(
-        const LONG OrderID,
-        const std::wstring& Keyword,
-        bool bCabWhenComplete,
-        DWORD dwXOR = 0,
-        bool bHash = false);
-    HRESULT PushStdErr(
-        const LONG OrderID,
-        const std::wstring& Keyword,
-        bool bCabWhenComplete,
-        DWORD dwXOR = 0,
-        bool bHash = false);
-    HRESULT PushStdOutErr(
-        const LONG OrderID,
-        const std::wstring& Keyword,
-        bool bCabWhenComplete,
-        DWORD dwXOR = 0,
-        bool bHash = false);
+    HRESULT PushStdOut(const LONG OrderID, const std::wstring& Keyword, bool bCabWhenComplete, bool bHash = false);
+
+    HRESULT PushStdErr(const LONG OrderID, const std::wstring& Keyword, bool bCabWhenComplete, bool bHash = false);
+
+    HRESULT PushStdOutErr(const LONG OrderID, const std::wstring& Keyword, bool bCabWhenComplete, bool bHash = false);
 
     HRESULT SetQueueBehavior(const QueueBehavior behavior)
     {
         m_QueueAction = behavior;
         return S_OK;
     };
+
     QueueBehavior GetQueueBehavior() { return m_QueueAction; };
 
     void SetOptional() { m_bOptional = true; }

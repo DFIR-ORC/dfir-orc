@@ -30,17 +30,12 @@ protected:
     ULONG64 m_cbTotalData;  // # of bytes that needs to be compressed
     ULONG64 m_cbAddedSoFar;  // # of bytes that have been compressed
 
-    DWORD m_XORPattern;
-
     ArchiveFormat m_Format;
     ArchiveItems m_Queue;
 
-    std::shared_ptr<ByteStream> GetStreamToAdd(
-        const std::shared_ptr<ByteStream>& astream,
-        const std::wstring& strCabbedName,
-        std::wstring& strPrefixedName);
+    std::shared_ptr<ByteStream> GetStreamToAdd(const std::shared_ptr<ByteStream>& astream);
 
-    ArchiveCreate(logger pLog, bool bComputeHash, DWORD XORPattern);
+    ArchiveCreate(logger pLog, bool bComputeHash);
 
 public:
     static std::shared_ptr<ArchiveCreate> MakeCreate(ArchiveFormat fmt, logger pLog, bool bComputeHash = false);

@@ -359,25 +359,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     {
                         config.content = config.GetContentSpecFromString(strContent);
                     }
-                    else if (!_wcsnicmp(argv[i] + 1, L"XOR", wcslen(L"XOR")))
-                    {
-                        DWORD dwXOR = 0L;
-                        LPCWSTR pEquals = wcschr(argv[i], L'=');
-                        if (!pEquals)
-                        {
-                            log::Error(_L_, E_INVALIDARG, L"Option /XOR should be like: /XOR=0xBADF00D0\r\n");
-                            return E_INVALIDARG;
-                        }
-                        else
-                        {
-                            if (FAILED(GetIntegerFromHexaString(pEquals + 1, dwXOR)))
-                            {
-                                log::Error(_L_, E_INVALIDARG, L"Invalid XOR pattern: %s\r\n", pEquals + 1);
-                                return E_INVALIDARG;
-                            }
-                            config.Output.XOR = dwXOR;
-                        }
-                    }
                     else if (AltitudeOption(argv[i] + 1, L"Altitude", config.Locations.GetAltitude()))
                         ;
                     else if (CryptoHashAlgorithmOption(argv[i] + 1, L"Hash", config.CryptoHashAlgs))

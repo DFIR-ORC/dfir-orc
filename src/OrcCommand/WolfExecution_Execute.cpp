@@ -739,27 +739,27 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
         send(
             m_ArchiveMessageBuffer,
             ArchiveMessage::MakeAddFileRequest(
-                L"ProcessStatistics.csv", m_ProcessStatisticsOutput.Path, false, 0L, true));
+                L"ProcessStatistics.csv", m_ProcessStatisticsOutput.Path, false, true));
     }
 
     if (VerifyFileExists(m_JobStatisticsOutput.Path.c_str()) == S_OK)
     {
         send(
             m_ArchiveMessageBuffer,
-            ArchiveMessage::MakeAddFileRequest(L"JobStatistics.csv", m_JobStatisticsOutput.Path, false, 0L, true));
+            ArchiveMessage::MakeAddFileRequest(L"JobStatistics.csv", m_JobStatisticsOutput.Path, false, true));
     }
 
     if (m_configStream != nullptr)
     {
         m_configStream->SetFilePointer(0LL, FILE_BEGIN, NULL);
-        send(m_ArchiveMessageBuffer, ArchiveMessage::MakeAddStreamRequest(L"Config.xml", m_configStream, false, 0L));
+        send(m_ArchiveMessageBuffer, ArchiveMessage::MakeAddStreamRequest(L"Config.xml", m_configStream, false));
     }
     if (m_localConfigStream != nullptr)
     {
         m_localConfigStream->SetFilePointer(0LL, FILE_BEGIN, NULL);
         send(
             m_ArchiveMessageBuffer,
-            ArchiveMessage::MakeAddStreamRequest(L"LocalConfig.xml", m_localConfigStream, false, 0L));
+            ArchiveMessage::MakeAddStreamRequest(L"LocalConfig.xml", m_localConfigStream, false));
     }
 
     send(m_ArchiveMessageBuffer, ArchiveMessage::MakeCompleteRequest());

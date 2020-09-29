@@ -59,7 +59,6 @@ ArchiveMessage::Message ArchiveMessage::MakeAddFileRequest(
     const std::wstring& szNameInArchive,
     const std::wstring& szFileName,
     bool bHashData,
-    DWORD dwXORPattern,
     bool bDeleteWhenDone)
 {
     auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::AddFile);
@@ -67,7 +66,6 @@ ArchiveMessage::Message ArchiveMessage::MakeAddFileRequest(
     retval->m_Keyword = szNameInArchive;
     retval->m_Name = szFileName;
     retval->m_bHashData = bHashData;
-    retval->m_dwXORPattern = dwXORPattern;
     retval->m_bDeleteWhenDone = bDeleteWhenDone;
     return retval;
 }
@@ -77,7 +75,6 @@ ArchiveMessage::Message ArchiveMessage::MakeAddDirectoryRequest(
     const std::wstring& szDirName,
     const std::wstring& szPattern,
     bool bHashData,
-    DWORD dwXORPattern,
     bool bDeleteOnCompletion)
 {
     auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::AddDirectory);
@@ -86,7 +83,6 @@ ArchiveMessage::Message ArchiveMessage::MakeAddDirectoryRequest(
     retval->m_Name = szDirName;
     retval->m_Pattern = szPattern;
     retval->m_bHashData = bHashData;
-    retval->m_dwXORPattern = dwXORPattern;
     retval->m_bDeleteWhenDone = bDeleteOnCompletion;
     return retval;
 }
@@ -94,15 +90,13 @@ ArchiveMessage::Message ArchiveMessage::MakeAddDirectoryRequest(
 ArchiveMessage::Message ArchiveMessage::MakeAddStreamRequest(
     const std::wstring& szCabbedName,
     const std::shared_ptr<ByteStream>& aStream,
-    bool bHashData,
-    DWORD dwXORPattern)
+    bool bHashData)
 {
     auto retval = make_shared<ArchiveMessage_make_shared_enabler>(ArchiveMessage::AddStream);
     retval->m_Status = ArchiveMessage::Wait;
     retval->m_Keyword = szCabbedName;
     retval->m_Name = szCabbedName;
     retval->m_bHashData = bHashData;
-    retval->m_dwXORPattern = dwXORPattern;
     retval->m_Stream = aStream;
     return retval;
 }

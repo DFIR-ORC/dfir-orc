@@ -19,7 +19,6 @@ class CryptoHashStream;
 class FuzzyHashStream;
 class NTFSStream;
 class UncompressNTFSStream;
-class XORStream;
 class ResourceStream;
 class PipeStream;
 class OnDiskChunkStream;
@@ -39,7 +38,6 @@ public:
     virtual void Visit(FuzzyHashStream& element) {}
     virtual void Visit(NTFSStream& element) {}
     virtual void Visit(UncompressNTFSStream& element) {}
-    virtual void Visit(XORStream& element) {}
     virtual void Visit(ResourceStream& element) {}
     virtual void Visit(PipeStream& element) {}
     virtual void Visit(OnDiskChunkStream& element) {}

@@ -124,7 +124,6 @@ HRESULT CommandMessage::PushOutputFile(
     const std::wstring& szName,
     const std::wstring& Keyword,
     const std::wstring& pattern,
-    DWORD dwXOR,
     bool bHash)
 {
     CommandParameter output(CommandParameter::OutFile);
@@ -133,7 +132,6 @@ HRESULT CommandMessage::PushOutputFile(
     output.Name = szName;
     output.Keyword = Keyword;
     output.Pattern = pattern;
-    output.dwXOR = dwXOR;
     output.bHash = bHash;
     m_Parameters.push_back(std::move(output));
     return S_OK;
@@ -143,7 +141,6 @@ HRESULT CommandMessage::PushOutputFile(
     const LONG OrderID,
     const std::wstring& szName,
     const std::wstring& Keyword,
-    DWORD dwXOR,
     bool bHash)
 {
     CommandParameter output(CommandParameter::OutFile);
@@ -151,7 +148,6 @@ HRESULT CommandMessage::PushOutputFile(
     output.OrderId = OrderID;
     output.Name = szName;
     output.Keyword = Keyword;
-    output.dwXOR = dwXOR;
     output.bHash = bHash;
     m_Parameters.push_back(std::move(output));
     return S_OK;
@@ -163,7 +159,6 @@ HRESULT CommandMessage::PushOutputDirectory(
     const std::wstring& Keyword,
     const std::wstring& filematchPattern,
     const std::wstring& pattern,
-    DWORD dwXOR,
     bool bHash)
 {
     CommandParameter output(CommandParameter::OutDirectory);
@@ -173,7 +168,6 @@ HRESULT CommandMessage::PushOutputDirectory(
     output.Keyword = Keyword;
     output.Pattern = pattern;
     output.MatchPattern = filematchPattern;
-    output.dwXOR = dwXOR;
     output.bHash = bHash;
     m_Parameters.push_back(std::move(output));
     return S_OK;
@@ -184,7 +178,6 @@ HRESULT CommandMessage::PushOutputDirectory(
     const std::wstring& szName,
     const std::wstring& Keyword,
     const std::wstring& filematchPattern,
-    DWORD dwXOR,
     bool bHash)
 {
     CommandParameter output(CommandParameter::OutDirectory);
@@ -193,7 +186,6 @@ HRESULT CommandMessage::PushOutputDirectory(
     output.Name = szName;
     output.Keyword = Keyword;
     output.MatchPattern = filematchPattern;
-    output.dwXOR = dwXOR;
     output.bHash = bHash;
     m_Parameters.push_back(std::move(output));
     return S_OK;
@@ -204,7 +196,6 @@ HRESULT CommandMessage::PushTempOutputFile(
     const std::wstring& szName,
     const std::wstring& Keyword,
     const std::wstring& pattern,
-    DWORD dwXOR,
     bool bHash)
 {
     CommandParameter output(CommandParameter::OutTempFile);
@@ -213,7 +204,6 @@ HRESULT CommandMessage::PushTempOutputFile(
     output.Name = szName;
     output.Keyword = Keyword;
     output.Pattern = pattern;
-    output.dwXOR = dwXOR;
     output.bHash = bHash;
     m_Parameters.push_back(std::move(output));
     return S_OK;
@@ -223,7 +213,6 @@ HRESULT CommandMessage::PushTempOutputFile(
     const LONG OrderID,
     const std::wstring& szName,
     const std::wstring& Keyword,
-    DWORD dwXOR,
     bool bHash)
 {
     CommandParameter output(CommandParameter::OutTempFile);
@@ -231,7 +220,6 @@ HRESULT CommandMessage::PushTempOutputFile(
     output.OrderId = OrderID;
     output.Name = szName;
     output.Keyword = Keyword;
-    output.dwXOR = dwXOR;
     output.bHash = bHash;
     m_Parameters.push_back(std::move(output));
     return S_OK;
@@ -241,7 +229,6 @@ HRESULT CommandMessage::PushStdOut(
     const LONG OrderID,
     const std::wstring& Keyword,
     bool bCabWhenComplete,
-    DWORD dwXOR,
     bool bHash)
 {
     CommandParameter output(CommandParameter::StdOut);
@@ -249,7 +236,6 @@ HRESULT CommandMessage::PushStdOut(
     output.OrderId = OrderID;
     output.Keyword = Keyword;
     output.Name = Keyword;
-    output.dwXOR = dwXOR;
     output.bHash = bHash;
     output.bCabWhenComplete = bCabWhenComplete;
     m_Parameters.push_back(std::move(output));
@@ -260,7 +246,6 @@ HRESULT CommandMessage::PushStdErr(
     const LONG OrderID,
     const std::wstring& Keyword,
     bool bCabWhenComplete,
-    DWORD dwXOR,
     bool bHash)
 {
     CommandParameter output(CommandParameter::StdErr);
@@ -268,7 +253,6 @@ HRESULT CommandMessage::PushStdErr(
     output.OrderId = OrderID;
     output.Keyword = Keyword;
     output.Name = Keyword;
-    output.dwXOR = dwXOR;
     output.bHash = bHash;
     output.bCabWhenComplete = bCabWhenComplete;
     m_Parameters.push_back(std::move(output));
@@ -279,7 +263,6 @@ HRESULT CommandMessage::PushStdOutErr(
     const LONG OrderID,
     const std::wstring& Keyword,
     bool bCabWhenComplete,
-    DWORD dwXOR,
     bool bHash)
 {
     CommandParameter output(CommandParameter::StdOut);
@@ -287,7 +270,6 @@ HRESULT CommandMessage::PushStdOutErr(
     output.OrderId = OrderID;
     output.Keyword = Keyword;
     output.Name = Keyword;
-    output.dwXOR = dwXOR;
     output.bHash = bHash;
     output.bCabWhenComplete = bCabWhenComplete;
     m_Parameters.push_back(std::move(output));

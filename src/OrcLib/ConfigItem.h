@@ -166,19 +166,17 @@ constexpr auto CONFIG_DEBUG = 1U;
 constexpr auto CONFIG_VERBOSE = 2U;
 constexpr auto CONFIG_NOCONSOLE = 3U;
 
-constexpr auto CONFIG_XORPATTERN = 0U;
-constexpr auto CONFIG_CSVENCODING = 1U;
+constexpr auto CONFIG_CSVENCODING = 0U;
 
 // Output
 constexpr auto CONFIG_OUTPUT_FORMAT = 0U;
 constexpr auto CONFIG_OUTPUT_COMPRESSION = 1U;
-constexpr auto CONFIG_OUTPUT_XORPATTERN = 2U;
-constexpr auto CONFIG_OUTPUT_ENCODING = 3U;
-constexpr auto CONFIG_OUTPUT_CONNECTION = 4U;
-constexpr auto CONFIG_OUTPUT_TABLE = 5U;
-constexpr auto CONFIG_OUTPUT_KEY = 6U;
-constexpr auto CONFIG_OUTPUT_DISPOSITION = 7U;
-constexpr auto CONFIG_OUTPUT_PASSWORD = 8U;
+constexpr auto CONFIG_OUTPUT_ENCODING = 2U;
+constexpr auto CONFIG_OUTPUT_CONNECTION = 3U;
+constexpr auto CONFIG_OUTPUT_TABLE = 4U;
+constexpr auto CONFIG_OUTPUT_KEY = 5U;
+constexpr auto CONFIG_OUTPUT_DISPOSITION = 6U;
+constexpr auto CONFIG_OUTPUT_PASSWORD = 7U;
 
 // UPLOAD
 constexpr auto CONFIG_UPLOAD_METHOD = 0U;

@@ -317,8 +317,6 @@ set(SRC_INOUT_BYTESTREAM_CRYPTOSTREAM
     "HashStream.h"
     "PasswordEncryptedStream.cpp"
     "PasswordEncryptedStream.h"
-    "XORStream.cpp"
-    "XORStream.h"
 )
 
 source_group(In&Out\\ByteStream\\CryptoStream

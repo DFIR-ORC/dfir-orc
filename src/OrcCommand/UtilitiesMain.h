@@ -118,7 +118,7 @@ public:
                 volStatWriter->Close();
                 auto pStreamWriter = std::dynamic_pointer_cast<TableOutput::IStreamWriter>(volStatWriter);
                 if (volStatsSpec.Type == OutputSpec::Kind::Archive && pStreamWriter && pStreamWriter->GetStream())
-                    AddStream(volStatsSpec, L"volstats.csv", pStreamWriter->GetStream(), false, 0L, true);
+                    AddStream(volStatsSpec, L"volstats.csv", pStreamWriter->GetStream(), false, true);
             }
             else
             {
@@ -261,7 +261,7 @@ public:
                             Concurrency::send(
                                 m_messageBuf,
                                 ArchiveMessage::MakeAddStreamRequest(
-                                    szOutputFile, pStreamWriter->GetStream(), true, 0L));
+                                    szOutputFile, pStreamWriter->GetStream(), true));
                         }
                         out.second = pW;
                     }
@@ -313,7 +313,6 @@ public:
             const std::wstring& szNameInArchive,
             const std::wstring& szFileName,
             bool bHashData,
-            DWORD dwXORPattern,
             bool bDeleteWhenDone)
         {
             switch (output.Type)
@@ -326,7 +325,7 @@ public:
                         concurrency::send(
                             m_messageBuf,
                             ArchiveMessage::MakeAddFileRequest(
-                                szNameInArchive, szFileName, bHashData, dwXORPattern, bDeleteWhenDone));
+                                szNameInArchive, szFileName, bHashData, bDeleteWhenDone));
                     }
                     break;
                 default:
@@ -340,7 +339,6 @@ public:
             const std::wstring& szNameInArchive,
             const std::shared_ptr<ByteStream>& pStream,
             bool bHashData,
-            DWORD dwXORPattern,
             bool bDeleteWhenDone)
         {
             switch (output.Type)
@@ -439,7 +437,6 @@ protected:
     HRESULT PrintOperatingSystem();
     HRESULT PrintExecutionTime();
     LPCWSTR GetEncoding(OutputSpec::Encoding anEncoding);
-    LPCWSTR GetXOR(DWORD dwXOR);
     LPCWSTR GetCompression(const std::wstring& strCompression);
     HRESULT PrintOutputOption(const OutputSpec& anOutput) { return PrintOutputOption(L"Output", anOutput); }
     HRESULT PrintOutputOption(LPCWSTR szOutputName, const OutputSpec& anOutput);

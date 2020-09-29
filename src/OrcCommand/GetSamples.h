@@ -49,7 +49,6 @@ public:
         LocationSet locs;
         GetThis::Limits limits;
 
-        DWORD dwXOR = 0L;
         OutputSpec::Encoding csvEncoding = OutputSpec::Encoding::UTF8;
         bool bLoadAutoruns = false;
         bool bRunAutoruns = true;

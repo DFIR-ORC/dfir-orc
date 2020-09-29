@@ -35,7 +35,6 @@ public:
 
     public:
         std::wstring diskName;
-        DWORD dwCabXOR;
         DWORDLONG slackSpaceDumpSize;
         OutputSpec Output;
 

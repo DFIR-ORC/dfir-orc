@@ -21,7 +21,6 @@
 #include "LogFileWriter.h"
 
 #include "FileStream.h"
-#include "XORStream.h"
 #include "CryptoHashStream.h"
 #include "ResourceStream.h"
 

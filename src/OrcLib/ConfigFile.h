@@ -64,11 +64,10 @@ public:
     HRESULT SetOutputSpec(ConfigItem& item, const OutputSpec& outputSpec);
 
     HRESULT
-    GetOutputDir(const ConfigItem& item, std::wstring& outputDir, DWORD& dwXOR, OutputSpec::Encoding& anEncoding);
+    GetOutputDir(const ConfigItem& item, std::wstring& outputDir, OutputSpec::Encoding& anEncoding);
     HRESULT SetOutputDir(
         ConfigItem& item,
         const std::wstring& outputDir,
-        const DWORD dwXOR,
         OutputSpec::Encoding anEncoding = OutputSpec::Encoding::UTF8);
 
     HRESULT GetOutputFile(const ConfigItem& item, std::wstring& outputFile, OutputSpec::Encoding& anEncoding);

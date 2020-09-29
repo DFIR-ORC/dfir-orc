@@ -304,17 +304,6 @@ LPCWSTR UtilitiesMain::GetEncoding(OutputSpec::Encoding anEncoding)
     }
 }
 
-LPCWSTR UtilitiesMain::GetXOR(DWORD dwXOR)
-{
-    if (dwXOR)
-    {
-        static WCHAR szStatement[] = L" (XOR with 0xFFFFFFFF)";
-        swprintf_s(szStatement, L"(XOR with 0x%8.8X)", dwXOR);
-        return szStatement;
-    }
-    return L"";
-}
-
 LPCWSTR UtilitiesMain::GetCompression(const std::wstring& strCompression)
 {
     if (strCompression.empty())
@@ -337,69 +326,62 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
     case OutputSpec::Kind::Directory:
         log::Info(
             _L_,
-            L"%-8.8s directory    : %s%s%s\r\n",
+            L"%-8.8s directory    : %s%s\r\n",
             szOutputName,
             anOutput.Path.c_str(),
-            GetXOR(anOutput.XOR),
             GetEncoding(anOutput.OutputEncoding));
         break;
     case OutputSpec::Kind::Archive:
         log::Info(
             _L_,
-            L"%-8.8s archive      : %s%s%s%s\r\n",
+            L"%-8.8s archive      : %s%s%s\r\n",
             szOutputName,
             anOutput.Path.c_str(),
-            GetXOR(anOutput.XOR),
             GetEncoding(anOutput.OutputEncoding),
             GetCompression(anOutput.Compression));
         break;
     case OutputSpec::Kind::TableFile:
         log::Info(
             _L_,
-            L"%-8.8s table        : %s%s%s\r\n",
+            L"%-8.8s table        : %s%s\r\n",
             szOutputName,
             anOutput.Path.c_str(),
-            GetXOR(anOutput.XOR),
             GetEncoding(anOutput.OutputEncoding));
         break;
     case OutputSpec::Kind::CSV:
     case OutputSpec::Kind::TableFile | OutputSpec::Kind::CSV:
         log::Info(
             _L_,
-            L"%-8.8s CSV          : %s%s%s\r\n",
+            L"%-8.8s CSV          : %s%s\r\n",
             szOutputName,
             anOutput.Path.c_str(),
-            GetXOR(anOutput.XOR),
             GetEncoding(anOutput.OutputEncoding));
         break;
     case OutputSpec::Kind::TSV:
     case OutputSpec::Kind::TableFile | OutputSpec::Kind::TSV:
         log::Info(
             _L_,
-            L"%-8.8s TSV          : %s%s%s\r\n",
+            L"%-8.8s TSV          : %s%s\r\n",
             szOutputName,
             anOutput.Path.c_str(),
-            GetXOR(anOutput.XOR),
             GetEncoding(anOutput.OutputEncoding));
         break;
     case OutputSpec::Kind::Parquet:
     case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
         log::Info(
             _L_,
-            L"%-8.8s Parquet      : %s%s%s\r\n",
+            L"%-8.8s Parquet      : %s%s\r\n",
             szOutputName,
             anOutput.Path.c_str(),
-            GetXOR(anOutput.XOR),
             GetEncoding(anOutput.OutputEncoding));
         break;
     case OutputSpec::Kind::ORC:
     case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
         log::Info(
             _L_,
-            L"%-8.8s Parquet      : %s%s%s\r\n",
+            L"%-8.8s Parquet      : %s%s\r\n",
             szOutputName,
             anOutput.Path.c_str(),
-            GetXOR(anOutput.XOR),
             GetEncoding(anOutput.OutputEncoding));
         break;
     case OutputSpec::Kind::StructuredFile:
@@ -407,19 +389,17 @@ HRESULT UtilitiesMain::PrintOutputOption(LPCWSTR szOutputName, const OutputSpec&
     case OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON:
         log::Info(
             _L_,
-            L"%-8.8s structured   : %s%s%s\r\n",
+            L"%-8.8s structured   : %s%s\r\n",
             szOutputName,
             anOutput.Path.c_str(),
-            GetXOR(anOutput.XOR),
             GetEncoding(anOutput.OutputEncoding));
         break;
     case OutputSpec::Kind::File:
         log::Info(
             _L_,
-            L"%-8.8s file         : %s%s%s\r\n",
+            L"%-8.8s file         : %s%s\r\n",
             szOutputName,
             anOutput.Path.c_str(),
-            GetXOR(anOutput.XOR),
             GetEncoding(anOutput.OutputEncoding));
         break;
     case OutputSpec::Kind::SQL:

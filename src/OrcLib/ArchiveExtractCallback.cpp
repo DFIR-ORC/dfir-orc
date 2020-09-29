@@ -13,7 +13,6 @@
 #include "ArchiveExtractCallback.h"
 
 #include "FileStream.h"
-#include "XORStream.h"
 #include "CryptoHashStream.h"
 #include "OutByteStreamWrapper.h"
 #include "InByteStreamWrapper.h"
@@ -110,73 +109,27 @@ STDMETHODIMP ArchiveExtractCallback::SetCompleted(const UInt64* completeValue)
 std::shared_ptr<ByteStream> ArchiveExtractCallback::GetStreamToWrite()
 {
     HRESULT hr = E_FAIL;
-    std::shared_ptr<ByteStream> retval;
-    shared_ptr<XORStream> pXORStream;
-
-    if (XORStream::IsNameXORPrefixed(m_currentItem.NameInArchive.c_str()) == S_OK)
-    {
-        WCHAR szUnprefix[MAX_PATH];
-        DWORD dwPattern;
-
-        pXORStream = make_shared<XORStream>(_L_);
-
-        if (FAILED(hr = pXORStream->GetXORPatternFromName(m_currentItem.NameInArchive.c_str(), dwPattern)))
-            return nullptr;
-
-        if (FAILED(hr = pXORStream->XORUnPrefixFileName(m_currentItem.NameInArchive.c_str(), szUnprefix, MAX_PATH)))
-            return nullptr;
-
-        pXORStream->SetXORPattern(dwPattern);
-        m_currentItem.NameInArchive = szUnprefix;
-    }
 
     auto filestream = m_MakeWriteAbleStream(m_currentItem);
-
     if (!filestream)
     {
         log::Error(_L_, E_FAIL, L"Failed to create writeable stream for %s\r\n", m_currentItem.NameInArchive.c_str());
         return nullptr;
     }
 
-    if (pXORStream)
+    if (!m_bComputeHash)
     {
+        return filestream;
+    }
 
-        if (m_bComputeHash)
-        {
-            auto hashstream = make_shared<CryptoHashStream>(_L_);
-            if (FAILED(
-                    hr = hashstream->OpenToRead(
-                        CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1,
-                        filestream)))
-                return nullptr;
-            if (FAILED(hr = pXORStream->OpenForXOR(hashstream)))
-                return nullptr;
-        }
-        else
-        {
-            if (FAILED(hr = pXORStream->OpenForXOR(filestream)))
-                return nullptr;
-        }
-        retval = pXORStream;
-    }
-    else
+    auto hashstream = make_shared<CryptoHashStream>(_L_);
+    hr = hashstream->OpenToRead(CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, filestream);
+    if (FAILED(hr))
     {
-        if (m_bComputeHash)
-        {
-            auto hashstream = make_shared<CryptoHashStream>(_L_);
-            if (FAILED(
-                    hr = hashstream->OpenToRead(
-                        CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1,
-                        filestream)))
-                return nullptr;
-            retval = hashstream;
-        }
-        else
-        {
-            retval = filestream;
-        }
+        return nullptr;
     }
-    return retval;
+
+    return hashstream;
 }
 
 STDMETHODIMP ArchiveExtractCallback::GetStream(UInt32 index, ISequentialOutStream** outStream, Int32 askExtractMode)

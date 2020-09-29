@@ -21,7 +21,6 @@
 #include "TemporaryStream.h"
 #include "DevNullStream.h"
 #include "StringsStream.h"
-#include "XORStream.h"
 #include "CryptoHashStream.h"
 #include "ParameterCheck.h"
 #include "ArchiveExtract.h"
@@ -366,65 +365,32 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sampleRef)
             break;
     }
 
-    if (config.Output.XOR != 0L)
+    std::shared_ptr<ByteStream> upstream = stream;
+
+    CryptoHashStream::Algorithm algs = config.CryptoHashAlgs;
+
+    if (algs != CryptoHashStream::Algorithm::Undefined)
     {
-        WCHAR szPrefixedName[MAX_PATH];
-
-        shared_ptr<XORStream> pXORStream = make_shared<XORStream>(_L_);
-
-        if (FAILED(hr = pXORStream->SetXORPattern(config.Output.XOR)))
-        {
-            return hr;
-        }
-
-        if (FAILED(hr = pXORStream->XORPrefixFileName(sampleRef.SampleName.c_str(), szPrefixedName, MAX_PATH)))
-        {
-            return hr;
-        }
-
-        sampleRef.SampleName.assign(szPrefixedName);
-
         sampleRef.HashStream = make_shared<CryptoHashStream>(_L_);
-
-        CryptoHashStream::Algorithm algs = config.CryptoHashAlgs;
-
-        if (FAILED(hr = sampleRef.HashStream->OpenToRead(algs, stream)))
+        if (FAILED(hr = sampleRef.HashStream->OpenToRead(algs, upstream)))
             return hr;
-        if (FAILED(hr = pXORStream->OpenForXOR(sampleRef.HashStream)))
-            return hr;
-
-        sampleRef.CopyStream = pXORStream;
+        upstream = sampleRef.HashStream;
     }
     else
     {
-        std::shared_ptr<ByteStream> upstream = stream;
-
-        CryptoHashStream::Algorithm algs = config.CryptoHashAlgs;
-
-        if (algs != CryptoHashStream::Algorithm::Undefined)
-        {
-            sampleRef.HashStream = make_shared<CryptoHashStream>(_L_);
-            if (FAILED(hr = sampleRef.HashStream->OpenToRead(algs, upstream)))
-                return hr;
-            upstream = sampleRef.HashStream;
-        }
-        else
-        {
-            upstream = stream;
-        }
-
-        FuzzyHashStream::Algorithm fuzzy_algs = config.FuzzyHashAlgs;
-        if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
-        {
-            sampleRef.FuzzyHashStream = make_shared<FuzzyHashStream>(_L_);
-            if (FAILED(hr = sampleRef.FuzzyHashStream->OpenToRead(fuzzy_algs, upstream)))
-                return hr;
-            upstream = sampleRef.FuzzyHashStream;
-        }
-
-        sampleRef.CopyStream = upstream;
+        upstream = stream;
     }
 
+    FuzzyHashStream::Algorithm fuzzy_algs = config.FuzzyHashAlgs;
+    if (fuzzy_algs != FuzzyHashStream::Algorithm::Undefined)
+    {
+        sampleRef.FuzzyHashStream = make_shared<FuzzyHashStream>(_L_);
+        if (FAILED(hr = sampleRef.FuzzyHashStream->OpenToRead(fuzzy_algs, upstream)))
+            return hr;
+        upstream = sampleRef.FuzzyHashStream;
+    }
+
+    sampleRef.CopyStream = upstream;
     sampleRef.SampleSize = sampleRef.CopyStream->GetSize();
     return S_OK;
 }

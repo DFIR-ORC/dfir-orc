@@ -43,7 +43,7 @@ HRESULT UncompressNTFSStream::Open(const std::shared_ptr<ByteStream>& pChained, 
 
     if (pChained->IsOpen() != S_OK)
     {
-        log::Error(_L_, E_FAIL, L"Chained stream to XORStream must be opened\r\n");
+        log::Error(_L_, E_FAIL, L"Chained stream must be opened\r\n");
         return E_FAIL;
     }
 
