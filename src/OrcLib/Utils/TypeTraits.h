@@ -283,6 +283,22 @@ template <typename T>
 constexpr auto semicolon_v = semicolon<T>::value;
 
 //
+// Get std::cout or std::wcout depending on parameter
+//
+template <class T>
+auto& get_std_out()
+{
+    if constexpr (std::is_same_v<T, char>)
+    {
+        return std::cout;
+    }
+    else
+    {
+        return std::wcout;
+    }
+}
+
+//
 // Strong type for integral type used as byte quantity
 //
 template <class T>
