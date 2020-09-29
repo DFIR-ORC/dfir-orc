@@ -257,7 +257,7 @@ private:
                 return false;
             }
 
-            if (memcmp(&lhs.SnapshotID, &rhs.SnapshotID, sizeof(GUID) != 0))
+            if (memcmp(&lhs.SnapshotID, &rhs.SnapshotID, sizeof(GUID)) != 0)
             {
                 return false;
             }
