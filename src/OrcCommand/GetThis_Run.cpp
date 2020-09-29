@@ -457,10 +457,8 @@ LimitStatus Main::SampleLimitStatus(const Limits& GlobalLimits, const Limits& Lo
 }
 
 HRESULT
-Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerName, const Main::SampleRef& sampleRef)
+Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerName, const Main::SampleRef& sample)
 {
-    HRESULT hr = E_FAIL;
-
     static const FlagsDefinition AttrTypeDefs[] = {
         {$UNUSED, L"$UNUSED", L"$UNUSED"},
         {$STANDARD_INFORMATION, L"$STANDARD_INFORMATION", L"$STANDARD_INFORMATION"},
@@ -481,45 +479,43 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
         {$FIRST_USER_DEFINED_ATTRIBUTE, L"$FIRST_USER_DEFINED_ATTRIBUTE", L"$FIRST_USER_DEFINED_ATTRIBUTE"},
         {$END, L"$END", L"$END"}};
 
-    for (auto match_it = begin(sampleRef.Matches); match_it != end(sampleRef.Matches); ++match_it)
+    for (const auto& match : sample.Matches)
     {
-        for (auto name_it = begin((*match_it)->MatchingNames); name_it != end((*match_it)->MatchingNames); ++name_it)
+        for (const auto& name : match->MatchingNames)
         {
             output.WriteString(strComputerName.c_str());
 
-            output.WriteInteger((*match_it)->VolumeReader->VolumeSerialNumber());
+            output.WriteInteger(match->VolumeReader->VolumeSerialNumber());
 
             {
-                LARGE_INTEGER* pLI = (LARGE_INTEGER*)&(name_it->FILENAME()->ParentDirectory);
+                LARGE_INTEGER* pLI = (LARGE_INTEGER*)&(name.FILENAME()->ParentDirectory);
                 output.WriteInteger((DWORDLONG)pLI->QuadPart);
             }
             {
-                LARGE_INTEGER* pLI = (LARGE_INTEGER*)&((*match_it)->FRN);
+                LARGE_INTEGER* pLI = (LARGE_INTEGER*)&(match->FRN);
                 output.WriteInteger((DWORDLONG)pLI->QuadPart);
             }
 
-            output.WriteString(name_it->FullPathName.c_str());
+            output.WriteString(name.FullPathName);
 
-            if (sampleRef.OffLimits)
+            if (sample.OffLimits)
+            {
                 output.WriteNothing();
+            }
             else
-                output.WriteString(sampleRef.SampleName.c_str());
+            {
+                output.WriteString(sample.SampleName);
+            }
 
-            output.WriteFileSize(sampleRef.SampleSize);
+            output.WriteFileSize(sample.SampleSize);
 
-            if (!sampleRef.MD5.empty())
-                output.WriteBytes(sampleRef.MD5);
-            else
-                output.WriteNothing();
+            output.WriteBytes(sample.MD5);
 
-            if (!sampleRef.SHA1.empty())
-                output.WriteBytes(sampleRef.SHA1);
-            else
-                output.WriteNothing();
+            output.WriteBytes(sample.SHA1);
 
-            output.WriteString((*match_it)->Term->GetDescription().c_str());
+            output.WriteString(match->Term->GetDescription());
 
-            switch (sampleRef.Content.Type)
+            switch (sample.Content.Type)
             {
                 case DATA:
                     output.WriteString(L"data");
@@ -531,50 +527,44 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
                     output.WriteNothing();
             }
 
-            output.WriteFileTime(sampleRef.CollectionDate);
+            output.WriteFileTime(sample.CollectionDate);
 
-            output.WriteFileTime((*match_it)->StandardInformation->CreationTime);
-            output.WriteFileTime((*match_it)->StandardInformation->LastModificationTime);
-            output.WriteFileTime((*match_it)->StandardInformation->LastAccessTime);
-            output.WriteFileTime((*match_it)->StandardInformation->LastChangeTime);
+            output.WriteFileTime(match->StandardInformation->CreationTime);
+            output.WriteFileTime(match->StandardInformation->LastModificationTime);
+            output.WriteFileTime(match->StandardInformation->LastAccessTime);
+            output.WriteFileTime(match->StandardInformation->LastChangeTime);
 
-            output.WriteFileTime(name_it->FILENAME()->Info.CreationTime);
-            output.WriteFileTime(name_it->FILENAME()->Info.LastModificationTime);
-            output.WriteFileTime(name_it->FILENAME()->Info.LastAccessTime);
-            output.WriteFileTime(name_it->FILENAME()->Info.LastChangeTime);
+            output.WriteFileTime(name.FILENAME()->Info.CreationTime);
+            output.WriteFileTime(name.FILENAME()->Info.LastModificationTime);
+            output.WriteFileTime(name.FILENAME()->Info.LastAccessTime);
+            output.WriteFileTime(name.FILENAME()->Info.LastChangeTime);
 
-            output.WriteExactFlags((*match_it)->MatchingAttributes[sampleRef.AttributeIndex].Type, AttrTypeDefs);
+            output.WriteExactFlags(match->MatchingAttributes[sample.AttributeIndex].Type, AttrTypeDefs);
 
-            output.WriteString((*match_it)->MatchingAttributes[sampleRef.AttributeIndex].AttrName.c_str());
+            output.WriteString(match->MatchingAttributes[sample.AttributeIndex].AttrName);
 
-            output.WriteInteger((DWORD)sampleRef.InstanceID);
+            output.WriteInteger((DWORD)sample.InstanceID);
 
-            output.WriteGUID(sampleRef.SnapshotID);
+            output.WriteGUID(sample.SnapshotID);
 
-            if (!sampleRef.SHA256.empty())
-                output.WriteBytes(sampleRef.SHA256);
-            else
-                output.WriteNothing();
+            output.WriteBytes(sample.SHA256);
 
-            if (!sampleRef.SSDeep.empty())
-                output.WriteString(sampleRef.SSDeep.GetP<CHAR>());
-            else
-                output.WriteNothing();
+            output.WriteBytes(sample.SSDeep);
 
-            if (!sampleRef.TLSH.empty())
-                output.WriteString(sampleRef.TLSH.GetP<CHAR>());
-            else
-                output.WriteNothing();
+            output.WriteBytes(sample.TLSH);
 
-            const auto& rules = (*match_it)->MatchingAttributes[sampleRef.AttributeIndex].YaraRules;
+            const auto& rules = match->MatchingAttributes[sample.AttributeIndex].YaraRules;
             if (rules.has_value())
             {
-                stringstream aStream;
+                std::stringstream aStream;
                 const char* const delim = "; ";
 
-                std::copy(begin(rules.value()), end(rules.value()), std::ostream_iterator<std::string>(aStream, delim));
+                std::copy(
+                    std::cbegin(rules.value()),
+                    std::cend(rules.value()),
+                    std::ostream_iterator<std::string>(aStream, delim));
 
-                output.WriteString(aStream.str().c_str());
+                output.WriteString(aStream.str());
             }
             else
             {
@@ -584,6 +574,7 @@ Main::AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerNam
             output.WriteEndOfLine();
         }
     }
+
     return S_OK;
 }
 
