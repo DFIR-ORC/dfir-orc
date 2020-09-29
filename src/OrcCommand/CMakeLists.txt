@@ -43,6 +43,7 @@ set(SRC_COMMON
     "ToolVersion.h"
     "ToolVersion.cpp"
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"
+    "Usage.h"
 )
 
 source_group(Common FILES ${SRC_COMMON})
