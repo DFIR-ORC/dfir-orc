@@ -25,3 +25,4 @@
 #include "Output/Text/Fmt/Fwd/PartitionType.h"
 #include "Output/Text/Fmt/Fwd/PartitionFlags.h"
 #include "Output/Text/Fmt/Fwd/SYSTEMTIME.h"
+#include "Output/Text/Fmt/Fwd/TimeUtc.h"

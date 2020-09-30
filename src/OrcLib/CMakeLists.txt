@@ -577,6 +577,7 @@ set(SRC_INOUT_TEXT_FMT
     "Output/Text/Fmt/PartitionFlags.h"
     "Output/Text/Fmt/PartitionType.h"
     "Output/Text/Fmt/SYSTEMTIME.h"
+    "Output/Text/Fmt/TimeUtc.h"
     "Output/Text/Fmt/Fwd/ByteQuantity.h"
     "Output/Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
     "Output/Text/Fmt/Fwd/error_code.h"
@@ -591,7 +592,8 @@ set(SRC_INOUT_TEXT_FMT
     "Output/Text/Fmt/Fwd/Partition.h"
     "Output/Text/Fmt/Fwd/PartitionFlags.h"
     "Output/Text/Fmt/Fwd/PartitionType.h"
-    "Output/Text/Fmt/Fwd/SYSTEMTIME.h")
+    "Output/Text/Fmt/Fwd/SYSTEMTIME.h"
+    "Output/Text/Fmt/Fwd/TimeUtc.h")
 
 source_group(In&Out\\Output\\Text\\Fmt FILES ${SRC_INOUT_TEXT_FMT})
 

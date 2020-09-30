@@ -386,5 +386,23 @@ struct Offset
     T value;
 };
 
+//
+// Strong type for UTC time
+//
+template <class T>
+struct TimeUtc
+{
+    using value_type = T;
+
+    TimeUtc(T quantity)
+        : value(quantity)
+    {
+    }
+
+    operator T&() { return value; }
+    operator T() const { return value; }
+    T value;
+};
+
 }  // namespace Traits
 }  // namespace Orc
