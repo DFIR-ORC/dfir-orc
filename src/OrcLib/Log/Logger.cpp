@@ -77,9 +77,9 @@ Logger::Logger(std::initializer_list<std::pair<Facility, std::shared_ptr<spdlog:
     });
 
     // https://github.com/gabime/spdlog/wiki/3.-Custom-formatting
-    // The following could output: '[17:49:47.335][I] this is a foobar log'
+    // The following could output: '2020-09-30T13:43:41.256Z [I] this is a foobar log'
     // The %^...%$ options specify coloring range, only one is currently supported
-    spdlog::set_pattern("%^[%H:%M:%S.%e][%L] %v%$");
+    spdlog::set_pattern("%^%Y-%m-%dT%T.%eZ [%L] %v%$", spdlog::pattern_time_type::utc);
 }
 
 uint64_t Logger::warningCount() const

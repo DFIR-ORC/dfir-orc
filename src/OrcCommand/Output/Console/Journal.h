@@ -38,7 +38,7 @@ public:
 
         {
             std::lock_guard lock(m_mutex);
-            m_console.Write(L"[{:%H:%M.%S}] {:<16}{:<16}", fmt::gmtime(now), commandSet, agent);
+            m_console.Write(L"{:%Y-%m-%dT%H:%M.%SZ}   {:<16}{:<16}", fmt::gmtime(now), commandSet, agent);
             m_console.Print(std::forward<FmtArgs>(status)...);
         }
     }

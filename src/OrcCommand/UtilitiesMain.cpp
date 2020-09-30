@@ -37,9 +37,9 @@ using namespace Orc;
 using namespace Orc::Command;
 
 UtilitiesMain::UtilitiesMain()
+    : theStartTime({0})
+    , theFinishTime({0})
 {
-    ZeroMemory(&theStartTime, sizeof(SYSTEMTIME));
-    ZeroMemory(&theFinishTime, sizeof(SYSTEMTIME));
     theStartTickCount = 0L;
     theFinishTickCount = 0L;
     m_extensions.reserve(10);

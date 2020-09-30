@@ -41,6 +41,7 @@
 #include "Output/Text/Fmt/FILE_NAME.h"
 #include "Output/Text/Fmt/FILETIME.h"
 #include "Output/Text/Fmt/SYSTEMTIME.h"
+#include "Output/Text/Fmt/TimeUtc.h"
 #include "Utils/Guard.h"
 #include "UtilitiesLogger.h"
 
@@ -424,8 +425,8 @@ protected:
 
     mutable Output::Console m_console;
 
-    SYSTEMTIME theStartTime;
-    SYSTEMTIME theFinishTime;
+    Traits::TimeUtc<SYSTEMTIME> theStartTime;
+    Traits::TimeUtc<SYSTEMTIME> theFinishTime;
     DWORD theStartTickCount;
     DWORD theFinishTickCount;
     UtilitiesConfiguration m_utilitiesConfig;
@@ -832,7 +833,7 @@ public:
         }
 
         // save the start time
-        GetSystemTime(&Cmd.theStartTime);
+        GetSystemTime(&Cmd.theStartTime.value);
         Cmd.theStartTickCount = GetTickCount();
 
         if (!Cmd.m_utilitiesConfig.strComputerName.empty())
@@ -866,7 +867,7 @@ public:
             return E_ABORT;
         }
 
-        GetSystemTime(&Cmd.theFinishTime);
+        GetSystemTime(&Cmd.theFinishTime.value);
         Cmd.theFinishTickCount = GetTickCount();
         Cmd.PrintFooter();
 
