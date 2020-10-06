@@ -316,7 +316,7 @@ public:
         }
 
         HRESULT Write(ITableOutput& output);
-        HRESULT Write(IStructuredOutput& pWriter, LPCWSTR szElement = L"filefind_match");
+        HRESULT Write(IStructuredOutput& pWriter, LPCWSTR szElement);
 
         bool DeletedRecord;
         FILE_REFERENCE FRN;
