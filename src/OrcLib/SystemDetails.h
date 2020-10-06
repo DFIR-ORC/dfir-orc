@@ -107,7 +107,7 @@ public:
     static HRESULT GetSystemLanguage(std::wstring& strLocale);
     static HRESULT GetUserLanguage(std::wstring& strLocale);
 
-    static HRESULT GetCurrentWorkingDirectory(std::wstring& strCMD);
+    static HRESULT GetCurrentWorkingDirectory(std::filesystem::path& cwd);
 
     static HRESULT GetProcessBinary(std::wstring& strFullPath);
 
