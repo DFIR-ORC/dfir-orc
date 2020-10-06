@@ -139,11 +139,16 @@ STDMETHODIMP ArchiveExtract::Extract(
         [pwzExtractRootDir, szSDDL, this](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
+        std::wstring fileName;
+        std::replace_copy(
+            begin(item.NameInArchive), end(item.NameInArchive), std::back_insert_iterator(fileName), L'\\', L'_');
+        std::replace(begin(fileName), end(fileName), L'/', L'_');
+
         HANDLE hFile = INVALID_HANDLE_VALUE;
         if (FAILED(
                 hr = UtilGetUniquePath(
                     pwzExtractRootDir,
-                    item.NameInArchive.c_str(),
+                    fileName.c_str(),
                     item.Path,
                     hFile,
                     FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
