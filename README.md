@@ -83,6 +83,16 @@ bootstrap-vcpkg.bat
 vcpkg --vcpkg-root . install fmt:x64-windows-static ...
 ```
 
+## License
+
+The contents of this repository is available under [LGPL2.1+ license](LICENSE.txt).
+The name DFIR ORC and the associated logo belongs to ANSSI, no use is permitted without express approval.
+
+---
+
+Le contenu de ce dépôt est disponible sous licence LGPL2.1+, tel qu'indiqué [ici](LICENSE.txt).
+Le nom DFIR ORC et le logo associé appartiennent à l'ANSSI, aucun usage n'est permis sans autorisation expresse.
+
 
 ## Acknowledgments
 DFIR ORC is disclosing Microsoft source code with Microsoft's permission.
