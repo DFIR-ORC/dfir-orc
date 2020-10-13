@@ -17,7 +17,9 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
-#include <boost/stacktrace.hpp>
+#ifdef ORC_BUILD_BACKTRACE
+#    include <boost/stacktrace.hpp>
+#endif
 #include <concrt.h>
 
 #include "ConfigFile.h"
@@ -878,6 +880,7 @@ public:
                 return hr;
             }
         }
+#ifdef ORC_BUILD_BACKTRACE
         catch (std::exception& e)
         {
             std::cerr << "std::exception during execution" << std::endl;
@@ -892,7 +895,20 @@ public:
             boost::stacktrace::stacktrace();
             return E_ABORT;
         }
-
+#else
+        catch (std::exception& e)
+        {
+            std::cerr << "std::exception during execution" << std::endl;
+            std::cerr << "Caught " << e.what() << std::endl;
+            std::cerr << "Type " << typeid(e).name() << std::endl;
+            return E_ABORT;
+        }
+        catch (...)
+        {
+            std::cerr << "Exception during during execution" << std::endl;
+            return E_ABORT;
+        }
+#endif
         GetSystemTime(&Cmd.theFinishTime.value);
         Cmd.theFinishTickCount = GetTickCount();
         Cmd.PrintFooter();
