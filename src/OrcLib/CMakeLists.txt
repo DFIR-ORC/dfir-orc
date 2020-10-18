@@ -563,6 +563,7 @@ source_group(In&Out\\Output\\Text FILES ${SRC_INOUT_TEXT})
 set(SRC_INOUT_TEXT_FMT
     "Output/Text/Fmt/ByteQuantity.h"
     "Output/Text/Fmt/CryptoHashStreamAlgorithm.h"
+    "Output/Text/Fmt/error_code.h"
     "Output/Text/Fmt/FILE_NAME.h"
     "Output/Text/Fmt/FILETIME.h"
     "Output/Text/Fmt/Formatter.h"
@@ -580,6 +581,7 @@ set(SRC_INOUT_TEXT_FMT
     "Output/Text/Fmt/SYSTEMTIME.h"
     "Output/Text/Fmt/Fwd/ByteQuantity.h"
     "Output/Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
+    "Output/Text/Fmt/Fwd/error_code.h"
     "Output/Text/Fmt/Fwd/FILE_NAME.h"
     "Output/Text/Fmt/Fwd/FILETIME.h"
     "Output/Text/Fmt/Fwd/FSVBR.h"

@@ -12,6 +12,7 @@
 #include "Output/Text/Fmt/GUID.h"
 #include "Output/Text/Fmt/Fwd/ByteQuantity.h"
 #include "Output/Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
+#include "Output/Text/Fmt/Fwd/error_code.h"
 #include "Output/Text/Fmt/Fwd/FILE_NAME.h"
 #include "Output/Text/Fmt/Fwd/FILETIME.h"
 #include "Output/Text/Fmt/Fwd/FSVBR.h"
