@@ -7,6 +7,8 @@
 //
 #pragma once
 
+#include "Utils/Fwd/Iconv.h"
+
 #include <string>
 #include <system_error>
 #include <type_traits>
@@ -17,9 +19,6 @@
 #include "Utils/TypeTraits.h"
 
 namespace Orc {
-
-constexpr auto kFailedConversion = "<failed_conversion>";
-constexpr auto kFailedConversionW = L"<failed_conversion>";
 
 std::string Utf16ToUtf8(LPCWSTR utf16, std::error_code& ec);
 std::string Utf16ToUtf8(LPWSTR utf16, std::error_code& ec);
