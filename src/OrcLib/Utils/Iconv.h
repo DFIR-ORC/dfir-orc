@@ -27,6 +27,19 @@ std::wstring Utf8ToUtf16(LPCSTR utf16, std::error_code& ec);
 std::wstring Utf8ToUtf16(LPSTR utf16, std::error_code& ec);
 
 template <typename T>
+std::string Utf16ToUtf8(const T& utf16, const std::string& onError)
+{
+    std::error_code ec;
+    const auto utf8 = Orc::Utf16ToUtf8(utf16, ec);
+    if (ec)
+    {
+        return onError;
+    }
+
+    return utf8;
+}
+
+template <typename T>
 std::string Utf16ToUtf8(const T& utf16, std::error_code& ec)
 {
     static_assert(std::is_same_v<typename T::value_type, wchar_t>, "Utf16ToUtf8 expected input value_type: 'wchar_t'");
@@ -115,6 +128,19 @@ std::wstring Utf8ToUtf16(const T& utf8, std::error_code& ec)
     }
 
     assert(converted == requiredSize);
+    return utf16;
+}
+
+template <typename T>
+std::wstring Utf8ToUtf16(const T& utf8, const std::wstring& onError)
+{
+    std::error_code ec;
+    const auto utf16 = Orc::Utf8ToUtf16(utf8, ec);
+    if (ec)
+    {
+        return onError;
+    }
+
     return utf16;
 }
 
