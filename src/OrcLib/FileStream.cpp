@@ -194,7 +194,7 @@ HRESULT FileStream::Duplicate(const FileStream& other)
         return E_INVALIDARG;
     }
 
-    const auto pk32 = ExtensionLibrary::GetLibrary<Kernel32Extension>(true);
+    const auto pk32 = ExtensionLibrary::GetLibrary<Kernel32Extension>();
 
     HANDLE hFile = INVALID_HANDLE_VALUE;
     if ((hFile = pk32->ReOpenFile(other.m_hFile, GENERIC_READ, FILE_SHARE_READ, FILE_FLAG_SEQUENTIAL_SCAN))
