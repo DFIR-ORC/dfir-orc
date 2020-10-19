@@ -77,9 +77,9 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
     HANDLE hThread = OpenThread(THREAD_GET_CONTEXT, FALSE, debug_event.dwThreadId);
     if (hThread == NULL)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed OpenThread (tid: {}, code: {:#x})", debug_event.dwThreadId, hr);
-        return hr;
+        const auto ec = LastWin32Error();
+        Log::Error(L"Failed OpenThread (tid: {}, code: {:#x})", debug_event.dwThreadId, ec);
+        return ToHRESULT(ec);
     }
 
     CONTEXT threadContext;
@@ -187,7 +187,7 @@ void DebugAgent::DebugLoop()
                     {
                         Log::Debug(
                             "Exception occured in child process (code: {:#x})",
-                            m_Event.u.Exception.ExceptionRecord.ExceptionCode);
+                            SystemError(m_Event.u.Exception.ExceptionRecord.ExceptionCode));
                         if (SUCCEEDED(hr = CreateMinidump(m_Event)))
                         {
                             Log::Debug(L"Dump file created: '{}'", m_Dumps.back());
@@ -219,7 +219,7 @@ void DebugAgent::DebugLoop()
                 Log::Debug("DebugEvent: UNLOAD_DLL_DEBUG_EVENT");
                 break;
             default:
-                Log::Debug("DebugEvent: Unknown Debug event code: {:#x}", m_Event.dwDebugEventCode);
+                Log::Debug("DebugEvent: Unknown Debug event code: {}", m_Event.dwDebugEventCode);
         }
 
         // Let the debuggee continue

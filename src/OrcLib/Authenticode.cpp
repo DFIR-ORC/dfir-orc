@@ -70,7 +70,7 @@ Authenticode::Authenticode()
         L"MY");
     if (m_hMachineStore == NULL)
     {
-        Log::Warn("Failed to open cert store (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+        Log::Warn("Failed to open cert store (code: {:#x})", LastWin32Error());
         return;
     }
 }
@@ -520,8 +520,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
 
             if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
             {
-                Log::Warn(
-                    "Failed CryptCATAdminReleaseCatalogContext (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+                Log::Warn("Failed CryptCATAdminReleaseCatalogContext (code: {:#x})", LastWin32Error());
             }
 
             return hr;
@@ -541,8 +540,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
 
             if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
             {
-                Log::Warn(
-                    "Failed CryptCATAdminReleaseCatalogContext (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+                Log::Warn("Failed CryptCATAdminReleaseCatalogContext (code: {:#x})", LastWin32Error());
             }
 
             return hr;
@@ -562,8 +560,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
 
             if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
             {
-                Log::Warn(
-                    "Failed CryptCATAdminReleaseCatalogContext (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+                Log::Warn("Failed CryptCATAdminReleaseCatalogContext (code: {:#x})", LastWin32Error());
             }
 
             return hr;

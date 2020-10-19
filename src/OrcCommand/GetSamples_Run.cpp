@@ -98,7 +98,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
 
     if (command->ExitCode() != 0)
     {
-        Log::Error(L"Autoruns failed (exitcode: {:#x})", command->ExitCode());
+        Log::Error(L"Autoruns failed (exit status: {:#x})", command->ExitCode());
         return E_FAIL;
     }
 

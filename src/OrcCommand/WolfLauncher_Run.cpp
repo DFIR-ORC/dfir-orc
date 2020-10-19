@@ -63,9 +63,7 @@ GetLocalOutputFileInformations(const Orc::Command::Wolf::WolfExecution& exec, Fi
     if (!GetFileAttributesExW(exec.GetOutputFullPath().c_str(), GetFileExInfoStandard, &data))
     {
         Log::Warn(
-            L"Failed to obtain file attributes of '{}' (code: {:#x})",
-            exec.GetOutputFullPath(),
-            HRESULT_FROM_WIN32(GetLastError()));
+            L"Failed to obtain file attributes of '{}' (code: {:#x})", exec.GetOutputFullPath(), LastWin32Error());
         return S_OK;
     }
 
@@ -144,7 +142,7 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
                     L"UPLOAD: Operation for '{}' failed: '{}' (code: {:#x})",
                     upload->Source(),
                     upload->Description(),
-                    upload->GetHResult());
+                    SystemError(upload->GetHResult()));
 
                 m_journal.Print(
                     upload->Keyword(),
@@ -152,7 +150,7 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
                     L"Failed upload for '{}': {} (code: {:#x})",
                     upload->Source(),
                     upload->Description(),
-                    upload->GetHResult());
+                    SystemError(upload->GetHResult()));
 
                 return;
             }
@@ -446,8 +444,8 @@ HRESULT Main::Run_Execute()
         m_logging.fileSink()->Open(config.Log.Path, ec);
         if (ec)
         {
-            Log::Error("Failed to create log stream (code: {:#x})", ec.value());
-            return ec.value();
+            Log::Error("Failed to create log stream (code: {:#x})", ec);
+            return ToHRESULT(ec);
         }
     }
 

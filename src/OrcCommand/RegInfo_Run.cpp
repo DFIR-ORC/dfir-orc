@@ -444,14 +444,14 @@ HRESULT Main::Run()
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
     {
-        Log::Error("Flushing HKEY_LOCAL_MACHINE failed (code: {:#x})", HRESULT_FROM_WIN32(dwGLE));
+        Log::Error("Flushing HKEY_LOCAL_MACHINE failed (code: {:#x})", Win32Error(dwGLE));
     }
 
     Log::Debug(L"Flushing HKEY_USERS");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
     {
-        Log::Error(L"Flushing HKEY_USERS failed (code: {:#x})", HRESULT_FROM_WIN32(dwGLE));
+        Log::Error(L"Flushing HKEY_USERS failed (code: {:#x})", Win32Error(dwGLE));
     }
 
     hr = config.m_HiveQuery.BuildStreamList();

@@ -363,7 +363,7 @@ void Main::SecurityDescriptorInformation(
     if (!ConvertSecurityDescriptorToStringSecurityDescriptor(
             &pEntry->SecurityDescriptor, SDDL_REVISION_1, InfoFlags, &szSDDL, NULL))
     {
-        Log::Debug("Failed to convert security descriptor to SDDL (code: {:#x}))", HRESULT_FROM_WIN32(GetLastError()));
+        Log::Debug("Failed to convert security descriptor to SDDL (code: {:#x}))", LastWin32Error());
         output.WriteNothing();
         if (szSDDL != nullptr)
         {
@@ -386,8 +386,7 @@ void Main::SecurityDescriptorInformation(
         if (!ConvertStringSecurityDescriptorToSecurityDescriptor(
                 szSDDL, SDDL_REVISION_1, &pNormalisedSecDescr, &ulNormalisedSecDescrLength))
         {
-            Log::Debug(
-                "Failed to convert SDDL to security descriptor (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+            Log::Debug("Failed to convert SDDL to security descriptor (code: {:#x})", LastWin32Error());
             output.WriteNothing();
         }
         else

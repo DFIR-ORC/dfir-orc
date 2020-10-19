@@ -131,10 +131,11 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
         if (liLength.LowPart == INVALID_FILE_SIZE && ((lastError = GetLastError()) != NO_ERROR))
         {
             Log::Warn(
-                L"CDiskExtent: Unable to determine disk size (GetFileSize code: {:#x}, IOCTL_DISK_GET_LENGTH_INFO "
-                L"code: {:#x})",
-                HRESULT_FROM_WIN32(lastError),
-                ioctlLastError);
+                L"CDiskExtent: Unable to determine disk size with GetFileSize (code: {:#x})", Win32Error(lastError));
+
+            Log::Warn(
+                L"CDiskExtent: Unable to determine disk size with IOCTL_DISK_GET_LENGTH_INFO (code: {:#x})",
+                Win32Error(ioctlLastError));
             m_Length = 0;
         }
     }

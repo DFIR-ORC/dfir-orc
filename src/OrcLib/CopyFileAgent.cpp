@@ -60,7 +60,7 @@ HRESULT CopyFileAgent::Initialize()
 
         if ((dwRet = WNetAddConnection2(&nr, szPass, szUser, CONNECT_TEMPORARY)) != NO_ERROR)
         {
-            Log::Error(L"Failed to add a connection to '{}' (code: {:#x})", szUNC, HRESULT_FROM_WIN32(dwRet));
+            Log::Error(L"Failed to add a connection to '{}' (code: {:#x})", szUNC, Win32Error(dwRet));
         }
         else
         {

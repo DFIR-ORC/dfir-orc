@@ -168,7 +168,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
                     L"Failed creating archive '{}': {} (code: {:#x})",
                     archive->Keyword(),
                     archive->Description(),
-                    archive->GetHResult());
+                    SystemError(archive->GetHResult()));
 
                 m_journal.Print(
                     archive->Keyword(),
@@ -176,7 +176,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
                     L"Failed creating archive '{}': {} (code: {:#x})",
                     archive->GetFileName(),
                     archive->Description(),
-                    archive->GetHResult());
+                    SystemError(archive->GetHResult()));
 
                 return;
             }

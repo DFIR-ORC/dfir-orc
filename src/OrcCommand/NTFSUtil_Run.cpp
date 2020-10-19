@@ -59,7 +59,7 @@ HANDLE OpenVolume(const std::wstring& volume)
 
     if (hVolume == INVALID_HANDLE_VALUE)
     {
-        Log::Debug(L"Failed to open volume: '{}' (code: {:#x})", volume, HRESULT_FROM_WIN32(GetLastError()));
+        Log::Debug(L"Failed to open volume: '{}' (code: {:#x})", volume, LastWin32Error());
         return INVALID_HANDLE_VALUE;
     }
 

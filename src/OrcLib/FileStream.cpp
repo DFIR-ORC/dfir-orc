@@ -149,7 +149,7 @@ HRESULT FileStream::CopyHandle(HANDLE hFile)
 
     if (hFile == INVALID_HANDLE_VALUE)
     {
-        Log::Error("Failed CopyHandle (hFile: {:p}, code: {:#x})", hFile, GetLastError());
+        Log::Error("Failed CopyHandle (hFile: {:p}, code: {:#x})", hFile, LastWin32Error());
         return E_INVALIDARG;
     }
     HANDLE hDupHandle = INVALID_HANDLE_VALUE;
@@ -172,7 +172,7 @@ HRESULT FileStream::OpenHandle(HANDLE hFile)
 
     if (hFile == INVALID_HANDLE_VALUE)
     {
-        Log::Error("Failed OpenHandle (hFile: {:p}, code: {:#x})", hFile, HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error("Failed OpenHandle (hFile: {:p}, code: {:#x})", hFile, LastWin32Error());
         return E_INVALIDARG;
     }
 
@@ -190,7 +190,7 @@ HRESULT FileStream::Duplicate(const FileStream& other)
 
     if (other.m_hFile == INVALID_HANDLE_VALUE)
     {
-        Log::Error("Failed Duplicate (hFile: {:p}, code: {:#x})", other.m_hFile, HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error("Failed Duplicate (hFile: {:p}, code: {:#x})", other.m_hFile, LastWin32Error());
         return E_INVALIDARG;
     }
 
@@ -328,7 +328,7 @@ ULONG64 FileStream::GetSize()
     if (!GetFileSizeEx(m_hFile, &Size))
     {
 
-        Log::Error("Failed GetFileSizeEx (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error("Failed GetFileSizeEx (code: {:#x})", LastWin32Error());
         return ULONG64(-1);
     }
 

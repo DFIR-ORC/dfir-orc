@@ -142,7 +142,7 @@ bool JobObject::IsProcessInJob(HANDLE hProcess)
 
     if (!::IsProcessInJob(hProcess == INVALID_HANDLE_VALUE ? GetCurrentProcess() : hProcess, m_hJob, &bIsProcessInJob))
     {
-        Log::Error("Failed to determine if in job (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error("Failed to determine if in job (code: {:#x})", LastWin32Error());
         return false;
     }
     return bIsProcessInJob == TRUE ? true : false;
@@ -384,7 +384,7 @@ bool JobObject::IsBreakAwayAllowed()
             sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION),
             &dwReturnedBytes))
     {
-        Log::Error("Failed to QueryInformationJobObject on job (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error("Failed to QueryInformationJobObject on job (code: {:#x})", LastWin32Error());
         return false;
     }
     if (LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK

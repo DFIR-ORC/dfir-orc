@@ -376,7 +376,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
     if (operationResult != NArchive::NUpdate::NOperationResult::kOK)
     {
         HRESULT hr = E_FAIL;
-        Log::Error(L"Failed operation on: '{}' (code: {:#x})", m_Items[m_curIndex].NameInArchive, operationResult);
+        Log::Error(L"Failed operation on: '{}' (result: {:#x})", m_Items[m_curIndex].NameInArchive, operationResult);
         if (item.m_archivedCallback)
         {
             item.m_archivedCallback(hr);

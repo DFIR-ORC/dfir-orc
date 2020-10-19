@@ -888,7 +888,7 @@ void ImportAgent::LogNotification(const ImportNotification::Notification& notifi
 
     if (FAILED(notification->GetHR()))
     {
-        Log::Error(L"{}: Failed (code: {:#x})", notification->Item().name, notification->GetHR());
+        Log::Error(L"{}: Failed (code: {:#x})", notification->Item().name, SystemError(notification->GetHR()));
         return;
     }
 

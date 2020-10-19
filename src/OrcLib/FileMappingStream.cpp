@@ -108,10 +108,7 @@ HRESULT FileMappingStream::CommitSize(ULONGLONG ullNewSize)
 
         if (!VirtualFree(m_pMapped, static_cast<size_t>(ullNewSize), MEM_DECOMMIT))
         {
-            Log::Error(
-                "Failed VirtualFree: cannot decommit 0x{:p} (code: {:#x})",
-                m_pMapped,
-                HRESULT_FROM_WIN32(GetLastError()));
+            Log::Error("Failed VirtualFree: cannot decommit 0x{:p} (code: {:#x})", m_pMapped, LastWin32Error());
         }
 
         return hr;

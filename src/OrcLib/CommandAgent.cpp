@@ -639,8 +639,9 @@ DWORD WINAPI CommandAgent::JobObjectNotificationRoutine(__in LPVOID lpParameter)
             if (err != ERROR_INVALID_HANDLE && err != ERROR_ABANDONED_WAIT_0)
             {
                 // Error invalid handle "somewhat" expected. Log the others
-                Log::Error(L"Failed GetQueuedCompletionStatus (code: {:#x})", HRESULT_FROM_WIN32(err));
+                Log::Error(L"Failed GetQueuedCompletionStatus (code: {:#x})", Win32Error(err));
             }
+
             return 0;
         }
     }
@@ -693,10 +694,7 @@ void CommandAgent::run()
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, (ULONG_PTR)this, 0);
     if (m_hCompletionPort == NULL)
     {
-        Log::Error(
-            L"Failed to create IO Completion port for job object (code: {:#x})",
-            m_Keyword,
-            HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error(L"Failed to create IO Completion port for job object (code: {:#x})", m_Keyword, LastWin32Error());
         done();
         return;
     }
@@ -790,7 +788,7 @@ void CommandAgent::run()
 
     if (!m_Job.IsValid())
     {
-        Log::Error(L"Failed to create '{}' job object (code: {:#x})", m_Keyword, HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error(L"Failed to create '{}' job object (code: {:#x})", m_Keyword, LastWin32Error());
         done();
         return;
     }
@@ -835,9 +833,7 @@ void CommandAgent::run()
                 sizeof(JOBOBJECT_END_OF_JOB_TIME_INFORMATION),
                 NULL))
         {
-            Log::Error(
-                "Failed to retrieve end of job behavior on job object (code: {:#x})",
-                HRESULT_FROM_WIN32(GetLastError()));
+            Log::Error("Failed to retrieve end of job behavior on job object (code: {:#x})", LastWin32Error());
             done();
             return;
         }
@@ -854,7 +850,7 @@ void CommandAgent::run()
         {
             Log::Warn(
                 L"Failed to set end of job behavior (to post at end of job) on job object (code: {:#x})",
-                HRESULT_FROM_WIN32(GetLastError()));
+                LastWin32Error());
         }
     }
 

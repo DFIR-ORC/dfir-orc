@@ -591,9 +591,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             if (!DeleteFile(action->Fullpath().c_str()))
                             {
                                 Log::Error(
-                                    L"Failed to delete file '{}' (code: {:#x})",
-                                    action->Fullpath(),
-                                    HRESULT_FROM_WIN32(GetLastError()));
+                                    L"Failed to delete file '{}' (code: {:#x})", action->Fullpath(), LastWin32Error());
                             }
                             else
                             {

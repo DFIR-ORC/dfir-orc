@@ -170,8 +170,9 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         WCHAR szFullPath[MAX_PATH];
         if (!GetModuleFileName(m_hModule, szFullPath, MAX_PATH))
         {
-            Log::Debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strNewLibRef, hr);
-            return HRESULT_FROM_WIN32(GetLastError());
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strNewLibRef, SystemError(hr));
+            return hr;
         }
         m_strLibFile = szFullPath;
         Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", strNewLibRef);

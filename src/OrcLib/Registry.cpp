@@ -49,6 +49,8 @@ Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, 
     if (auto status = RegQueryValueExW(hKey, szValueName, NULL, &dwValueType, (LPBYTE)valueBuffer.get(), &cbBytes);
         status != ERROR_SUCCESS)
     {
+        const auto error = Win32Error(status);
+
         if (status == ERROR_MORE_DATA)
         {
             Log::Error(L"Unexepected registry value \"{}\" is bigger than expected (ULONG32)", szValueName);
@@ -109,6 +111,7 @@ Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, 
     if (auto status = RegQueryValueExW(hKey, szValueName, NULL, &dwValueType, (LPBYTE)valueBuffer.get(), &cbBytes);
         status != ERROR_SUCCESS)
     {
+        const auto result = Win32Error(status);
         if (status == ERROR_MORE_DATA)
         {
             Log::Error(L"Unexepected registry value \"{}\" is bigger than expected (ULONG32)", szValueName);
@@ -167,6 +170,8 @@ Result<Orc::ByteBuffer> Orc::Registry::Read<Orc::ByteBuffer>(HKEY hParentKey, LP
     if (auto status = RegQueryValueExW(hKey, szValueName, NULL, &dwValueType, (LPBYTE)valueBuffer.get(), &cbBytes);
         status != ERROR_SUCCESS)
     {
+        const auto result = Win32Error(status);
+
         if (status == ERROR_MORE_DATA)
         {
             valueBuffer.resize(cbBytes / sizeof(BYTE));
@@ -184,7 +189,7 @@ Result<Orc::ByteBuffer> Orc::Registry::Read<Orc::ByteBuffer>(HKEY hParentKey, LP
         else
         {
             Log::Error(
-                L"Failed to reg value \"{}:{}\" value (code: {:#x})",
+                L"Failed to query registry value \"{}:{}\" value [{}]",
                 szKeyName ? szKeyName : L"",
                 szValueName,
                 result);
@@ -232,6 +237,8 @@ Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR s
     if (auto status = RegQueryValueExW(hKey, szValueName, NULL, &dwValueType, (LPBYTE)valueBuffer.get(), &cbBytes);
         status != ERROR_SUCCESS)
     {
+        const auto result = Win32Error(status);
+
         if (status == ERROR_MORE_DATA)
         {
             valueBuffer.resize(cbBytes / sizeof(WCHAR));

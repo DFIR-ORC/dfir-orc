@@ -139,7 +139,7 @@ PipeStream::Peek(_Out_opt_ LPVOID lpBuffer, _In_ DWORD nBufferSize, _Out_opt_ LP
     DWORD dwBytesRead = 0L;
     if (!PeekNamedPipe(m_hReadPipe, lpBuffer, nBufferSize, &dwBytesRead, NULL, NULL))
     {
-        Log::Error("Failed PeekNamedPipe (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error("Failed PeekNamedPipe (code: {:#x})", LastWin32Error());
     }
 
     if (dwBytesRead > 0L && lpBytesRead)

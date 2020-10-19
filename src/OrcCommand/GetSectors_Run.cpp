@@ -99,7 +99,7 @@ std::wstring Main::getBootDiskName()
     ret = GetWindowsDirectoryW(systemDirectory, MAX_PATH);
     if (ret == 0 || ret >= MAX_PATH)
     {
-        Log::Error("Failed GetWindowsDirectory (code: {:#x})", HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error("Failed GetWindowsDirectory (code: {:#x})", LastWin32Error());
         return {};
     }
 
@@ -113,7 +113,7 @@ std::wstring Main::getBootDiskName()
         CreateFileW(volume.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL);
     if (hVolume == INVALID_HANDLE_VALUE)
     {
-        Log::Error(L"Failed CreateFileW to open volume '{}' (code: {:#x})", volume, HRESULT_FROM_WIN32(GetLastError()));
+        Log::Error(L"Failed CreateFileW to open volume '{}' (code: {:#x})", volume, LastWin32Error());
         return {};
     }
 
@@ -142,10 +142,7 @@ std::wstring Main::getBootDiskName()
         }
         else
         {
-            Log::Error(
-                L"Failed to retrieve volume disk extents for '{}' (code: {:#x})",
-                volume,
-                HRESULT_FROM_WIN32(lastError));
+            Log::Error(L"Failed to retrieve volume disk extents for '{}' (code: {:#x})", volume, Win32Error(lastError));
             return {};
         }
     }
@@ -307,7 +304,7 @@ HRESULT Main::DiskChunk::read()
         Log::Error(
             L"Failed QueryPerformanceCounter before reading at offset {} (code: {:#x})",
             m_ulChunkOffset,
-            HRESULT_FROM_WIN32(GetLastError()));
+            LastWin32Error());
         getReadingTime = false;
     }
 
@@ -354,7 +351,7 @@ HRESULT Main::DiskChunk::read()
         Log::Error(
             L"Failed QueryPerformanceCounter before reading at offset {} (code: {:#x})",
             m_ulChunkOffset,
-            HRESULT_FROM_WIN32(GetLastError()));
+            LastWin32Error());
         getReadingTime = false;
     }
 

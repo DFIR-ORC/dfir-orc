@@ -113,7 +113,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
                         Close();
                         break;
                     default:
-                        Log::Error(L"ReadFile from child failed (code: {:#x})", HRESULT_FROM_WIN32(dwLastError));
+                        Log::Error(L"ReadFile from child failed (code: {:#x})", Win32Error(dwLastError));
                         break;
                 }
             }
@@ -138,7 +138,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
                         Close();
                         break;
                     default:
-                        Log::Error("ReadFile from child failed (code: {:#x})", HRESULT_FROM_WIN32(dwLastError));
+                        Log::Error("ReadFile from child failed (code: {:#x})", Win32Error(dwLastError));
                         break;
                 }
             }

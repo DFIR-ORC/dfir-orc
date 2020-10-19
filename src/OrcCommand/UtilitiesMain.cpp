@@ -58,7 +58,7 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
     if (FAILED(pNtDll->NtQueryInformationProcess(
             GetCurrentProcess(), ProcessBasicInformation, &pbi, (ULONG)sizeof(PROCESS_BASIC_INFORMATION), nullptr)))
     {
-        Log::Error(L"Failed NtQueryInformationProcess (code: {:#x})", GetLastError());
+        Log::Error(L"Failed NtQueryInformationProcess (code: {:#x})", LastWin32Error());
         return false;
     }
 

@@ -13,6 +13,7 @@
 #include "Archive.h"
 
 #include "Log/Log.h"
+#include "Utils/Result.h"
 
 #include <regex>
 

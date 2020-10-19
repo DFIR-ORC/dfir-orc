@@ -9,6 +9,7 @@
 #include "StdAfx.h"
 
 #include "WolfTask.h"
+#include "Utils/Result.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -141,12 +142,14 @@ HRESULT WolfTask::ApplyNotification(
             m_Status = Failed;
             break;
         case CommandNotification::ProcessAbnormalTermination:
+            m_dwExitCode = notification->GetExitCode();
+
             Log::Critical(
                 L"{} (pid: {}): Abnormal termination (code: {:#x})",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
-                notification->GetExitCode());
-            m_dwExitCode = notification->GetExitCode();
+                Win32Error(m_dwExitCode));
+
             m_Status = Failed;
             break;
         case CommandNotification::ProcessMemoryLimit:

@@ -79,14 +79,12 @@ STDMETHODIMP Orc::SparseStream::GetAllocatedRanges(std::vector<FILE_ALLOCATED_RA
                 &nbBytesReturned,
                 NULL))
         {
-            if (auto err = ::GetLastError(); err != ERROR_MORE_DATA)
+            if (auto err = LastWin32Error(); err.value() != ERROR_MORE_DATA)
             {
-                Log::Error(
-                    L"Failed to read allocated ranges of sparse stream '{}' (code: {:#x})",
-                    m_strPath,
-                    HRESULT_FROM_WIN32(err));
-                return HRESULT_FROM_WIN32(err);
+                Log::Error(L"Failed to read allocated ranges of sparse stream '{}' (code: {:#x})", m_strPath, err);
+                return ToHRESULT(err);
             }
+
             bMoreData = true;
         }
 

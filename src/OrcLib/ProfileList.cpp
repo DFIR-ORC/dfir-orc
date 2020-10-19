@@ -118,7 +118,7 @@ ProfileResult ProfileList::GetProfiles()
                 Log::Warn(
                     L"Failed to convert SID into a username for profile {} (code: {:#x})",
                     keyName.get(),
-                    HRESULT_FROM_WIN32(GetLastError()));
+                    LastWin32Error());
             }
             else
             {

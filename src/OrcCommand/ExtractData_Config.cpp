@@ -289,8 +289,8 @@ HRESULT Main::CheckConfiguration()
         const auto workingDir = GetWorkingDirectoryApi(ec);
         if (ec)
         {
-            Log::Error("Failed GetWorkingDirectory (code: {:#x})", ec.value());
-            return HRESULT_FROM_WIN32(ec.value());
+            Log::Error("Failed GetWorkingDirectory (code: {:#x})", ec);
+            return ToHRESULT(ec);
         }
 
         config.output.Configure(OutputSpec::Kind::Directory, workingDir.c_str());
