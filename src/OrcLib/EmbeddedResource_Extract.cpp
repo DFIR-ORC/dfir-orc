@@ -65,7 +65,7 @@ wregex& Orc::EmbeddedResource::ArchRessourceRegEx()
 
 std::wregex& Orc::EmbeddedResource::ResRessourceRegEx()
 {
-    static wregex g_ResRessourceRegEx(L"(res:([a-zA-Z0-9\\-_\\.]*))#([a-zA-Z0-9\\-_\\.]+)");
+    static wregex g_ResRessourceRegEx(L"(res:([a-zA-Z0-9\\-_\\.]*))#([a-zA-Z0-9\\-_\\.\\\\/]+)");
     return g_ResRessourceRegEx;
 }
 
@@ -972,7 +972,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
 
         std::wstring strArchFormat;
 
-        if (item.Type == EmbedSpec::Buffer)
+        if (item.Type == EmbedSpec::EmbedType::Buffer)
         {
             bool bArchive = true;
 
@@ -993,19 +993,19 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
             {
                 item.ArchiveFormat = strArchFormat;
                 archives.push_back(item);
-                item.Type = EmbedSpec::Void;
+                item.Type = EmbedSpec::EmbedType::Void;
             }
             else
             {
-                item.Type = EmbedSpec::File;
+                item.Type = EmbedSpec::EmbedType::File;
                 binaries.push_back(item);
-                item.Type = EmbedSpec::Void;
+                item.Type = EmbedSpec::EmbedType::Void;
             }
         }
     }
 
-    auto new_end =
-        std::remove_if(begin(values), end(values), [](const EmbedSpec& item) { return item.Type == EmbedSpec::Void; });
+    auto new_end = std::remove_if(
+        begin(values), end(values), [](const EmbedSpec& item) { return item.Type == EmbedSpec::EmbedType::Void; });
     values.erase(new_end, end(values));
 
     for (const auto& item : binaries)

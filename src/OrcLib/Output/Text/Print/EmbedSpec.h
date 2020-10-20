@@ -20,21 +20,21 @@ void Print(Orc::Text::Tree<T>& node, const EmbeddedResource::EmbedSpec& embedIte
 {
     switch (embedItem.Type)
     {
-        case EmbeddedResource::EmbedSpec::File:
+        case EmbeddedResource::EmbedSpec::EmbedType::File:
             node.Add(L"File: {} {}", embedItem.Name, embedItem.Value);
             break;
-        case EmbeddedResource::EmbedSpec::NameValuePair:
+        case EmbeddedResource::EmbedSpec::EmbedType::NameValuePair:
             node.Add(L"Value: {}={}", embedItem.Name, embedItem.Value);
             break;
-        case EmbeddedResource::EmbedSpec::Archive: {
+        case EmbeddedResource::EmbedSpec::EmbedType::Archive: {
             for (const auto& archive : embedItem.ArchiveItems)
             {
                 node.Add(L"Archive: {} -> {}", archive.Path, archive.Name);
             }
             break;
         }
-        case EmbeddedResource::EmbedSpec::ValuesDeletion:
-        case EmbeddedResource::EmbedSpec::BinaryDeletion:
+        case EmbeddedResource::EmbedSpec::EmbedType::ValuesDeletion:
+        case EmbeddedResource::EmbedSpec::EmbedType::BinaryDeletion:
             node.Add(L"Remove ID: {}", embedItem.Name);
             break;
     }

@@ -76,8 +76,8 @@ void Main::PrintParameters()
     std::vector<std::reference_wrapper<const EmbeddedResource::EmbedSpec>> toRemove;
     for (const auto& item : config.ToEmbed)
     {
-        if (item.Type == EmbeddedResource::EmbedSpec::ValuesDeletion
-            || item.Type == EmbeddedResource::EmbedSpec::BinaryDeletion)
+        if (item.Type == EmbeddedResource::EmbedSpec::EmbedType::ValuesDeletion
+            || item.Type == EmbeddedResource::EmbedSpec::EmbedType::BinaryDeletion)
         {
             toRemove.push_back({item});
             continue;

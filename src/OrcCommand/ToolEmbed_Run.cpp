@@ -50,19 +50,19 @@ HRESULT Main::WriteEmbedConfig(
     {
         switch (item.Type)
         {
-            case EmbeddedResource::EmbedSpec::File:
+            case EmbeddedResource::EmbedSpec::EmbedType::File:
                 writer->BeginElement(L"file");
                 writer->WriteNamed(L"name", item.Name.c_str());
                 writer->WriteNamed(L"path", item.Value.c_str());
                 writer->EndElement(L"file");
                 break;
-            case EmbeddedResource::EmbedSpec::NameValuePair:
+            case EmbeddedResource::EmbedSpec::EmbedType::NameValuePair:
                 writer->BeginElement(L"pair");
                 writer->WriteNamed(L"name", item.Name.c_str());
                 writer->WriteNamed(L"value", item.Value.c_str());
                 writer->EndElement(L"pair");
                 break;
-            case EmbeddedResource::EmbedSpec::Archive:
+            case EmbeddedResource::EmbedSpec::EmbedType::Archive:
                 writer->BeginElement(L"archive");
                 writer->WriteNamed(L"name", item.Name.c_str());
                 writer->WriteNamed(L"format", item.ArchiveFormat.c_str());
