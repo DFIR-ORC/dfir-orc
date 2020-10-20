@@ -97,7 +97,7 @@ public:
     }
 
     // Move assignment operator.
-    CBinaryBuffer& operator=(CBinaryBuffer&& other) 
+    CBinaryBuffer& operator=(CBinaryBuffer&& other)
     {
         if (this != &other)
         {

@@ -235,7 +235,7 @@ HRESULT Main::AddFileForInput(const fs::path& path, const InputItem& input, std:
     item.name = path.filename();
     item.definitions = &input.importDefinitions;
     item.definitionItem = item.DefinitionItemLookup(ImportDefinition::Extract);
-    //item.definitionItem = ImportDefinition::Extract;
+    // item.definitionItem = ImportDefinition::Extract;
     item.format = item.GetFileFormat();
     item.isToExtract = true;
     item.isToIgnore = false;

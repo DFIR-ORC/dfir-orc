@@ -702,10 +702,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
     return S_OK;
 }
 
-HRESULT EmbeddedResource::ExtractValue(
-    const std::wstring& Module,
-    const std::wstring& Name,
-    std::wstring& Value)
+HRESULT EmbeddedResource::ExtractValue(const std::wstring& Module, const std::wstring& Name, std::wstring& Value)
 {
     HRESULT hr = E_FAIL;
     HRSRC hRes = NULL;
@@ -759,10 +756,7 @@ HRESULT EmbeddedResource::ExtractValue(
     return S_OK;
 }
 
-HRESULT EmbeddedResource::ExtractBuffer(
-    const std::wstring& Module,
-    const std::wstring& Name,
-    CBinaryBuffer& Value)
+HRESULT EmbeddedResource::ExtractBuffer(const std::wstring& Module, const std::wstring& Name, CBinaryBuffer& Value)
 {
     HRESULT hr = E_FAIL;
     HRSRC hRes = NULL;
@@ -963,9 +957,7 @@ HRESULT EmbeddedResource::EnumBinaries(const std::wstring& Module, std::vector<E
     return S_OK;
 }
 
-HRESULT EmbeddedResource::ExpandArchivesAndBinaries(
-    const std::wstring& outDir,
-    std::vector<EmbedSpec>& values)
+HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, std::vector<EmbedSpec>& values)
 {
     HRESULT hr = E_FAIL;
 

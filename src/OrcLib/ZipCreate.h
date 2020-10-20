@@ -25,7 +25,7 @@ class TemporaryStream;
 class ORCLIB_API ZipCreate : public ArchiveCreate
 {
     friend class ArchiveCreate;
-    
+
 public:
     typedef enum _CL
     {

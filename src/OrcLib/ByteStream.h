@@ -36,7 +36,7 @@ protected:
 public:
     virtual ~ByteStream();
 
-    virtual void Accept(ByteStreamVisitor& visitor) { return visitor.Visit(*this);  };
+    virtual void Accept(ByteStreamVisitor& visitor) { return visitor.Visit(*this); };
 
     STDMETHOD(IsOpen)() PURE;
     STDMETHOD(CanRead)() PURE;

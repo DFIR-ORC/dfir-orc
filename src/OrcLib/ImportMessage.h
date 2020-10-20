@@ -51,9 +51,7 @@ public:
     };
 
 protected:
-
-	ImportMessage(void) {};
-
+    ImportMessage(void) {};
 
 private:
     ImportItem m_item;

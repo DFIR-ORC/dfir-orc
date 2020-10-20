@@ -574,7 +574,7 @@ public:
             [index](auto&& arg) -> auto { return arg.get(index); }, m_store);
     }
 
-    explicit operator _T*(void)const { return get(); }
+    explicit operator _T*(void) const { return get(); }
 
     bool owns(void) const
     {

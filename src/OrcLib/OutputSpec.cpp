@@ -206,7 +206,7 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
         fmt::arg(L"TimeStamp", strTimeStamp),
         fmt::arg(L"SystemType", strSystemType));
 
-      return S_OK;
+    return S_OK;
 }
 
 bool OutputSpec::IsDirectory() const
@@ -252,7 +252,7 @@ HRESULT OutputSpec::Configure(
 
     Type = OutputSpec::Kind::None;
 
-    if (OutputSpec::Kind::SQL & supported) // Getting the SQL stuff out of the door asap
+    if (OutputSpec::Kind::SQL & supported)  // Getting the SQL stuff out of the door asap
     {
         static std::wregex reConnectionString(LR"RAW(^(([\w\s]+=[\w\s{}.]+;?)+)#([\w]+)$)RAW");
 
@@ -284,7 +284,6 @@ HRESULT OutputSpec::Configure(
     }
     else
         outPath = strInputString;
-
 
     WCHAR szExpanded[MAX_PATH] = {0};
     ExpandEnvironmentStrings(outPath.c_str(), szExpanded, MAX_PATH);
@@ -389,10 +388,8 @@ HRESULT OutputSpec::Configure(
     return S_FALSE;
 }
 
-HRESULT OutputSpec::Configure(
-    OutputSpec::Kind supported,
-    const ConfigItem& item,
-    std::optional<std::filesystem::path> parent)
+HRESULT
+OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::optional<std::filesystem::path> parent)
 {
     HRESULT hr = E_FAIL;
 

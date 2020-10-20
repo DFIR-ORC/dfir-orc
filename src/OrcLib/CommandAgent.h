@@ -114,7 +114,6 @@ public:
     ~CommandAgent(void);
 
 protected:
-
     Semaphore m_MaximumRunningSemaphore;
 
     JobObject m_Job;

@@ -87,7 +87,6 @@ private:
     static RegInfoDescription _InfoDescription[];
     static RegInfoDescription _AliasDescription[];
 
-
 public:
     class Configuration : public UtilitiesMain::Configuration
     {

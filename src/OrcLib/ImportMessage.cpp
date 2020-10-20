@@ -10,8 +10,9 @@
 
 using namespace Orc;
 
-struct ImportMessage_make_shared_enabler : public Orc::ImportMessage {
-	inline ImportMessage_make_shared_enabler() = default;
+struct ImportMessage_make_shared_enabler : public Orc::ImportMessage
+{
+    inline ImportMessage_make_shared_enabler() = default;
 };
 
 ImportMessage::Message ImportMessage::MakeBeforeStatementRequest(const ImportStatement& statement)

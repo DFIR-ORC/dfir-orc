@@ -111,7 +111,6 @@ private:
     std::shared_ptr<ByteStream> m_stream;
 
     bool m_bDeleteWhenDone;
-
 };
 
 }  // namespace Orc

@@ -1578,15 +1578,16 @@ inline value exception::to_js_exception(const position_conversion_functor_t& pos
     try
     {
         JsValueRef exc;
-        static const wchar_t* error_messages[] = {L"Invalid argument",
-                                                  L"Null argument",
-                                                  L"Argument not an object",
-                                                  L"Out of memory",
-                                                  L"Script error",
-                                                  L"Syntax error",
-                                                  L"Fatal error",
-                                                  L"Exception",
-                                                  L"Unexpected code"};
+        static const wchar_t* error_messages[] = {
+            L"Invalid argument",
+            L"Null argument",
+            L"Argument not an object",
+            L"Out of memory",
+            L"Script error",
+            L"Syntax error",
+            L"Fatal error",
+            L"Exception",
+            L"Unexpected code"};
         check(chakra()->JsCreateError(
             value {error_messages[static_cast<int>(std::get<0>(einfo))] + L": "s + std::get<1>(einfo)}, &exc));
         check(chakra()->JsSetException(exc));

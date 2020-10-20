@@ -20,7 +20,6 @@
 
 namespace Orc {
 
-
 class ORCLIB_API CryptoHashStream : public HashStream
 {
 public:

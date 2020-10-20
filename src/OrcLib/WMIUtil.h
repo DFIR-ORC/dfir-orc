@@ -47,7 +47,6 @@ public:
         static_assert(false, "Property read for your type must be via a specialised version");
     }
 
-
     ~WMI();
 };
 

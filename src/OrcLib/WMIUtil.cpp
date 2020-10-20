@@ -209,11 +209,12 @@ stx::Result<CComPtr<IEnumWbemClassObject>, HRESULT> Orc::WMI::Query(LPCWSTR szRe
 {
     CComPtr<IEnumWbemClassObject> pEnumerator;
     if (auto hr = m_pServices->ExecQuery(
-                bstr_t("WQL"),
-                bstr_t(szRequest),
-                WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
-                NULL,
-                &pEnumerator); FAILED(hr))
+            bstr_t("WQL"),
+            bstr_t(szRequest),
+            WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
+            NULL,
+            &pEnumerator);
+        FAILED(hr))
     {
         spdlog::error(L"Query \"{}\" failed (code: {:#x})", szRequest, hr);
         return Err(std::move(hr));
@@ -222,9 +223,8 @@ stx::Result<CComPtr<IEnumWbemClassObject>, HRESULT> Orc::WMI::Query(LPCWSTR szRe
     return Ok(std::move(pEnumerator));
 }
 
-
 template <>
-stx::Result<bool,HRESULT> Orc::WMI::GetProperty<bool>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty) 
+stx::Result<bool, HRESULT> Orc::WMI::GetProperty<bool>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
@@ -248,7 +248,7 @@ stx::Result<SHORT, HRESULT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClas
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return Err(std::move(hr));
 
-    if (propType != CIM_SINT16 )
+    if (propType != CIM_SINT16)
         return Err(E_NOT_VALID_STATE);
 
     if (!(vtProp.vt & VT_I2) && FAILED(vtProp.ChangeType(VT_I2)))
@@ -256,7 +256,6 @@ stx::Result<SHORT, HRESULT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClas
 
     return Ok(std::move((SHORT)vtProp.iVal));
 }
-
 
 template <>
 stx::Result<USHORT, HRESULT> Orc::WMI::GetProperty<USHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
@@ -367,16 +366,15 @@ Orc::WMI::GetProperty<std::wstring>(const CComPtr<IWbemClassObject>& obj, LPCWST
     return Ok(std::wstring(vtProp.bstrVal, SysStringLen(vtProp.bstrVal)));
 }
 
-
 template <>
-stx::Result<std::vector<std::wstring>,HRESULT>
+stx::Result<std::vector<std::wstring>, HRESULT>
 Orc::WMI::GetProperty<std::vector<std::wstring>>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     CComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return Err(std::move(hr));
-    if (propType != CIM_FLAG_ARRAY || !(vtProp.vt & (VT_ARRAY|VT_BSTR)))
+    if (propType != CIM_FLAG_ARRAY || !(vtProp.vt & (VT_ARRAY | VT_BSTR)))
         return Err(E_NOT_VALID_STATE);
     return Err(E_NOTIMPL);
 }

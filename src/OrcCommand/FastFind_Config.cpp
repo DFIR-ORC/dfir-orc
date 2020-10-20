@@ -41,8 +41,7 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
     config.outRegsitry.Schema = TableOutput::GetColumnsFromConfig(
         config.outRegsitry.TableKey.empty() ? L"FastFindRegistry" : config.outRegsitry.TableKey.c_str(), schemaitem);
     config.outObject.Schema = TableOutput::GetColumnsFromConfig(
-        config.outObject.TableKey.empty() ? L"FastFindObject" : config.outObject.TableKey.c_str(),
-        schemaitem);
+        config.outObject.TableKey.empty() ? L"FastFindObject" : config.outObject.TableKey.c_str(), schemaitem);
     return S_OK;
 }
 
@@ -64,8 +63,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(
             hr = config.outFileSystem.Configure(
-                static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile),
-                configitem[FASTFIND_OUTPUT_FILESYSTEM])))
+                static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile), configitem[FASTFIND_OUTPUT_FILESYSTEM])))
     {
         return hr;
     }

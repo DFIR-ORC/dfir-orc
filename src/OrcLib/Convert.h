@@ -14,11 +14,10 @@
 
 namespace Orc {
 
-
 template <
     typename To,
     typename From,
-    std::enable_if_t<std::is_integral<To>::value, int > = 0,
+    std::enable_if_t<std::is_integral<To>::value, int> = 0,
     std::enable_if_t<std::is_integral<From>::value, int> = 0>
 static To ConvertTo(From from)
 {
@@ -30,7 +29,6 @@ static To ConvertTo(From from)
 
     return msl::utilities::SafeInt<To>(from);
 }
-
 
 static FILETIME ConvertToFILETIME(LONGLONG fileTime)
 {

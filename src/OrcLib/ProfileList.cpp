@@ -44,7 +44,7 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles()
         DWORD keyLength = MAX_KEY_NAME;
         FILETIME lastWrite {0};
 
-        auto status = RegEnumKeyExW(hKey, dwIndex++, keyName.get(), &keyLength, NULL, NULL, NULL,&lastWrite);
+        auto status = RegEnumKeyExW(hKey, dwIndex++, keyName.get(), &keyLength, NULL, NULL, NULL, &lastWrite);
 
         if (status != ERROR_SUCCESS)
         {
@@ -72,12 +72,12 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles()
             {
                 spdlog::debug(L"Failed to read SID for profile {}, using key name", keyName.get());
                 PSID pSID = NULL;
-                if(!ConvertStringSidToSidW(keyName.get(), &pSID))
+                if (!ConvertStringSidToSidW(keyName.get(), &pSID))
                 {
                     spdlog::debug(L"Failed profile key name {} is not a valid sid", keyName.get());
                     continue;
                 }
-                sid.assign((LPBYTE) pSID, GetLengthSid(pSID));
+                sid.assign((LPBYTE)pSID, GetLengthSid(pSID));
                 LocalFree(pSID);
                 profile.strSID.assign(keyName.get(), keyName.size());
             }
@@ -98,26 +98,24 @@ Orc::ProfileResult Orc::ProfileList::GetProfiles()
                 LocalFree(pSID);
             }
 
-            
-            Buffer<WCHAR,MAX_PATH> accountName;
+            Buffer<WCHAR, MAX_PATH> accountName;
             accountName.reserve(accountName.inner_elts());
-            DWORD cchAcountName =  accountName.capacity();
+            DWORD cchAcountName = accountName.capacity();
 
-            Buffer<WCHAR,MAX_PATH> domainName;
+            Buffer<WCHAR, MAX_PATH> domainName;
             domainName.reserve(domainName.inner_elts());
             DWORD cchDomainName = domainName.capacity();
 
             SID_NAME_USE SidNameUse;
 
-
-            if(!LookupAccountSidW(
-                NULL,
-                (PSID)sid.get_as<PSID>(),
-                accountName.get(),
-                &cchAcountName,
-                domainName.get(),
-                &cchDomainName,
-                &SidNameUse))
+            if (!LookupAccountSidW(
+                    NULL,
+                    (PSID)sid.get_as<PSID>(),
+                    accountName.get(),
+                    &cchAcountName,
+                    domainName.get(),
+                    &cchDomainName,
+                    &SidNameUse))
             {
                 spdlog::warn(
                     L"Failed to convert SID into a username for profile {} (code: {:#x})",

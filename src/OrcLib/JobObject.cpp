@@ -244,10 +244,12 @@ HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
     if (pHandleInfo == nullptr)
         return E_OUTOFMEMORY;
 
-    BOOST_SCOPE_EXIT(&pHandleInfo) { // Ensure pHandleInfo is freed upon scope exit
-        if(pHandleInfo)
-           ::free(pHandleInfo);
-    } BOOST_SCOPE_EXIT_END;
+    BOOST_SCOPE_EXIT(&pHandleInfo)
+    {  // Ensure pHandleInfo is freed upon scope exit
+        if (pHandleInfo)
+            ::free(pHandleInfo);
+    }
+    BOOST_SCOPE_EXIT_END;
 
     while ((hr = pNtDll->NtQuerySystemInformation(
                 (SYSTEM_INFORMATION_CLASS)SystemHandleInformation, pHandleInfo, ulHandleInfoSize, &ulNeededBytes))
@@ -267,7 +269,7 @@ HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
         spdlog::debug("Failed to retrieve handle information (code: {:#x})", hr);
         return hr;
     }
-    
+
     UCHAR ucJobType = 0;
     DWORD dwProcessID = GetCurrentProcessId();
 
@@ -457,10 +459,7 @@ HRESULT JobObject::AllowBreakAway(bool bPreserveJob)
             }
             if (FAILED(
                     hr = GetHandle(
-                        GetCurrentProcessId(),
-                        m_hJob,
-                        JOB_OBJECT_QUERY | JOB_OBJECT_SET_ATTRIBUTES,
-                        hSettableJob)))
+                        GetCurrentProcessId(), m_hJob, JOB_OBJECT_QUERY | JOB_OBJECT_SET_ATTRIBUTES, hSettableJob)))
             {
                 spdlog::error("Failed to obtain a settable handle to the job (code: {:#x})", hr);
                 return hr;

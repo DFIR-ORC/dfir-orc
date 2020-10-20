@@ -802,7 +802,7 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
 
         return fs.GetSize();
     };
-    
+
     GetSystemTimeAsFileTime(&m_ArchiveFinishTime);
     {
         auto start = Orc::ConvertTo(m_StartTime);

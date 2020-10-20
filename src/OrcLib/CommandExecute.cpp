@@ -517,8 +517,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
     std::for_each(m_OnCompleteActions.begin(), m_OnCompleteActions.end(), [this](const shared_ptr<OnComplete>& action) {
         switch (action->GetObjectType())
         {
-            case OnComplete::Directory:
-            {
+            case OnComplete::Directory: {
                 switch (action->GetAction())
                 {
                     case OnComplete::Archive:
@@ -546,8 +545,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             }
                         }
                         break;
-                    case OnComplete::Delete:
-                    {
+                    case OnComplete::Delete: {
                         if (!action->Fullpath().empty())
                         {
                             if (!RemoveDirectory(action->Fullpath().c_str()))
@@ -567,8 +565,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                 }
             }
             break;
-            case OnComplete::File:
-            {
+            case OnComplete::File: {
                 switch (action->GetAction())
                 {
                     case OnComplete::Archive:
@@ -588,8 +585,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             }
                         }
                         break;
-                    case OnComplete::Delete:
-                    {
+                    case OnComplete::Delete: {
                         if (!action->Fullpath().empty())
                         {
                             if (!DeleteFile(action->Fullpath().c_str()))
@@ -611,8 +607,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                 }
             }
             break;
-            case OnComplete::Stream:
-            {
+            case OnComplete::Stream: {
                 switch (action->GetAction())
                 {
                     case OnComplete::Archive:
@@ -644,12 +639,10 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                 }
                 break;
             }
-            default:
-            {
+            default: {
                 switch (action->GetAction())
                 {
-                    case OnComplete::FlushArchiveQueue:
-                    {
+                    case OnComplete::FlushArchiveQueue: {
                         auto archive_request = ArchiveMessage::MakeFlushQueueRequest();
                         Concurrency::send(action->ArchiveTarget(), archive_request);
                     }

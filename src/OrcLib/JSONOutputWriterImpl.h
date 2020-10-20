@@ -1,6 +1,5 @@
 #pragma once
 
-
 namespace Orc::StructuredOutput::JSON {
 
 template <class _RapidWriter>

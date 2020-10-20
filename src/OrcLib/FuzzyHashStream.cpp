@@ -14,7 +14,7 @@
 
 #ifdef ORC_BUILD_SSDEEP
 #    include "ssdeep/fuzzy.h"
-#endif // ORC_BUILD_SSDEEP
+#endif  // ORC_BUILD_SSDEEP
 
 using namespace Orc;
 
@@ -25,7 +25,7 @@ FuzzyHashStream::Algorithm FuzzyHashStream::GetSupportedAlgorithm(LPCWSTR szAlgo
     {
         return Algorithm::SSDeep;
     }
-#endif // ORC_BUILD_SSDEEP
+#endif  // ORC_BUILD_SSDEEP
     if (!_wcsnicmp(szAlgo, L"tlsh", wcslen(L"tlsh")))
     {
         return Algorithm::TLSH;

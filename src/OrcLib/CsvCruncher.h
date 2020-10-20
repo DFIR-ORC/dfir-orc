@@ -122,7 +122,6 @@ public:
     ~Cruncher();
 
 protected:
-
     RecordSchema m_Schema;
 
     bool m_bfirstRowIsColumnNames = true;

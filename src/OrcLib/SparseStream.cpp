@@ -11,13 +11,13 @@
 #include "SparseStream.h"
 
 HRESULT Orc::SparseStream::OpenFile(
-	__in PCWSTR pwzPath,
-	__in DWORD dwDesiredAccess,
-	__in DWORD dwSharedMode,
-	__in_opt PSECURITY_ATTRIBUTES pSecurityAttributes,
-	__in DWORD dwCreationDisposition,
-	__in DWORD dwFlagsAndAttributes,
-	__in_opt HANDLE hTemplate)
+    __in PCWSTR pwzPath,
+    __in DWORD dwDesiredAccess,
+    __in DWORD dwSharedMode,
+    __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes,
+    __in DWORD dwCreationDisposition,
+    __in DWORD dwFlagsAndAttributes,
+    __in_opt HANDLE hTemplate)
 {
 
     if (auto hr = Orc::FileStream::OpenFile(
@@ -55,7 +55,7 @@ STDMETHODIMP Orc::SparseStream::SetSize(ULONG64 ullSize)
 STDMETHODIMP Orc::SparseStream::GetAllocatedRanges(std::vector<FILE_ALLOCATED_RANGE_BUFFER>& ranges)
 {
     FILE_ALLOCATED_RANGE_BUFFER queryrange;  // Range to be examined
-  
+
     queryrange.FileOffset.QuadPart = 0LLU;  // File range to query
     queryrange.Length.QuadPart = GetSize();  //   (the whole file)
 
@@ -108,8 +108,4 @@ STDMETHODIMP Orc::SparseStream::GetAllocatedRanges(std::vector<FILE_ALLOCATED_RA
     return S_OK;
 }
 
-
-Orc::SparseStream::~SparseStream()
-{
-}
-
+Orc::SparseStream::~SparseStream() {}

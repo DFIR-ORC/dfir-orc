@@ -48,10 +48,7 @@ Main::GetNameValuePairFromConfigItem(const ConfigItem& item, EmbeddedResource::E
         return E_FAIL;
     }
 
-    std::swap(
-        spec,
-        EmbeddedResource::EmbedSpec::AddNameValuePair(
-            item[TOOLEMBED_PAIRNAME], item[TOOLEMBED_PAIRVALUE]));
+    std::swap(spec, EmbeddedResource::EmbedSpec::AddNameValuePair(item[TOOLEMBED_PAIRNAME], item[TOOLEMBED_PAIRVALUE]));
 
     return S_OK;
 }

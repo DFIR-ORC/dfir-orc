@@ -55,7 +55,6 @@ public:
 
     STDMETHOD(Flush)() PURE;
     STDMETHOD(Close)() PURE;
-
 };
 
 namespace CSV {
@@ -94,7 +93,7 @@ struct Options : Orc::TableOutput::Options
     std::optional<DWORD> BatchSize;
     std::optional<std::pair<std::wstring, std::vector<BYTE>>> TimeZone;
 };
-}  // namespace OptRowColumn
+}  // namespace ApacheOrc
 
 [[nodiscard]] std::shared_ptr<IWriter> GetWriter(const OutputSpec& out);
 [[nodiscard]] std::shared_ptr<IWriter> GetWriter(LPCWSTR szFileName, const OutputSpec& out);

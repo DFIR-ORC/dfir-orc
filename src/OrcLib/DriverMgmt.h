@@ -97,7 +97,6 @@ private:
         WCHAR* szDriverFileName,
         ULONG BufferLength);
 
-
     SC_HANDLE m_SchSCManager = NULL;
     SC_HANDLE m_SchService = NULL;
     std::wstring m_strComputerName;

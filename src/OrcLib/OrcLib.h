@@ -21,8 +21,6 @@
 #    define ORCLIB_API
 #endif
 
-
-
 #pragma managed(push, off)
 
 #include <map>
@@ -228,7 +226,6 @@ class BITSDownloadTask;
 class DownloadTask;
 class FileCopyDownloadTask;
 
-
 // In&Out/StructuredOutput/XML
 
 namespace StructuredOutput {
@@ -254,8 +251,6 @@ class XmlLiteExtension;
 using XmlOutputOptions = StructuredOutput::XML::Options;
 
 using JSONOutputOptions = StructuredOutput::JSON::Options;
-
-
 
 // In&Out/TableOutput/CSV
 namespace TableOutput::CSV {
@@ -285,7 +280,6 @@ class IWriter;
 using ITableOutput = TableOutput::IOutput;
 using ITableWriter = TableOutput::IWriter;
 
-
 // In&Out/Import
 class ImportAgent;
 class ImportBytesSemaphore;
@@ -314,7 +308,6 @@ std::unique_ptr<Derived> static_unique_ptr_cast(std::unique_ptr<Base>&& p)
     auto d = static_cast<Derived*>(p.release());
     return std::unique_ptr<Derived>(d);
 }
-
 
 }  // namespace Orc
 

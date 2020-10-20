@@ -295,11 +295,7 @@ constexpr auto NTFS_SB_IS_COMPRESSED = 0x8000;
  *
  * Return 0 if success or -EOVERFLOW on error in the compressed stream.
  */
-HRESULT Orc::ntfs_decompress(
-    uint8_t* dest,
-    const size_t dest_size,
-    uint8_t* const cb_start,
-    const size_t cb_size)
+HRESULT Orc::ntfs_decompress(uint8_t* dest, const size_t dest_size, uint8_t* const cb_start, const size_t cb_size)
 {
     /*
      * Pointers into the compressed data, i.e. the compression block (cb),

@@ -92,10 +92,8 @@ public:
         m_fileSemaphore.SetCapacity(100LL * 1024 * 1024 * 1024);
     }
 
-    HRESULT InitializeOutputs(
-        const OutputSpec& extractOutput,
-        const OutputSpec& importOutput,
-        const OutputSpec& tempOutput);
+    HRESULT
+    InitializeOutputs(const OutputSpec& extractOutput, const OutputSpec& importOutput, const OutputSpec& tempOutput);
 
     HRESULT InitializeTables(std::vector<TableDescription>& tables);
     HRESULT FinalizeTables();
@@ -133,7 +131,6 @@ public:
     ~ImportAgent(void) = default;
 
 private:
-
     ImportNotification::ITarget& m_target;
     ImportMessage::ISource& m_source;
     ImportMessage::ITarget& m_import_target;

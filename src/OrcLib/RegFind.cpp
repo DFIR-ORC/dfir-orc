@@ -145,8 +145,7 @@ HRESULT RegFind::Match::Write(ITableOutput& output)
     return S_OK;
 }
 
-HRESULT RegFind::Match::Write(
-    IStructuredOutput& pWriter)
+HRESULT RegFind::Match::Write(IStructuredOutput& pWriter)
 {
     string strMatchDescr = Term->GetDescription();
 
@@ -185,8 +184,8 @@ HRESULT RegFind::Match::Write(
         pWriter.BeginElement(nullptr);
         {
             pWriter.WriteNamedFormated(L"key", L"%S", aKeyNameMatch.KeyName.c_str());
-            pWriter.WriteNamed(L"subkeys_count", (UINT32) aKeyNameMatch.SubKeysCount);
-            pWriter.WriteNamed(L"values_count", (UINT32) aKeyNameMatch.ValuesCount);
+            pWriter.WriteNamed(L"subkeys_count", (UINT32)aKeyNameMatch.SubKeysCount);
+            pWriter.WriteNamed(L"values_count", (UINT32)aKeyNameMatch.ValuesCount);
             pWriter.WriteNamed(L"lastmodified_key", aKeyNameMatch.LastModificationTime);
         }
         pWriter.EndElement(nullptr);

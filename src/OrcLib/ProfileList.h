@@ -51,11 +51,9 @@ public:
     // 0800       Temporary profile loaded.
     DWORD State = 0LU;
 
-
     std::optional<FILETIME> LocalLoadTime;
     std::optional<FILETIME> LocalUnloadTime;
     FILETIME ProfileKeyLastWrite;
-
 };
 using ProfileResult = stx::Result<std::vector<Profile>, HRESULT>;
 

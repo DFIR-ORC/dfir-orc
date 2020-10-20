@@ -17,7 +17,6 @@
 #include <inaddr.h>
 #include <ObjIdl.h>
 
-
 #pragma managed(push, off)
 
 namespace Orc {
@@ -43,17 +42,17 @@ namespace XML {
 struct ORCLIB_API Options : public StructuredOutput::Options
 {
 };
-}
+}  // namespace XML
 
 using JSONOutputOptions = JSON::Options;
-using XMLOutputOptions  = XML::Options;
+using XMLOutputOptions = XML::Options;
 
-
-class ORCLIB_API Writer : public Orc::OutputWriter, public IWriter
+class ORCLIB_API Writer
+    : public Orc::OutputWriter
+    , public IWriter
 {
 
 public:
-
     using _Buffer = Buffer<WCHAR, 128>;
 
     Writer(std::unique_ptr<Options>&& pOptions)
@@ -71,7 +70,6 @@ public:
         std::unique_ptr<Options>&& options);
 
 protected:
-    
     HRESULT WriteBuffer(_Buffer& buffer, ULONG32 dwValue, bool bInHex = false);
     HRESULT WriteBuffer(_Buffer& buffer, ULONG64 ullValue, bool bInHex = false);
     HRESULT WriteBuffer(_Buffer& buffer, LONG32 dwValue, bool bInHex = false);

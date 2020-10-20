@@ -22,7 +22,7 @@ class ORCLIB_API ZipExtract : public ArchiveExtract
 public:
     ZipExtract(bool bComputeHash = false);
 
-	STDMETHOD(Extract)
+    STDMETHOD(Extract)
     (__in MakeArchiveStream makeArchiveStream,
      __in const ItemShouldBeExtractedCallback pShouldBeExtracted,
      __in MakeOutputStream MakeWriteAbleStream);

@@ -61,7 +61,6 @@ public:
         DWORD LogicalProcessors = 0LU;
         std::wstring Name;
         std::wstring Description;
-
     };
 
     static stx::Result<std::vector<CPUInformation>, HRESULT> GetCPUInfo();

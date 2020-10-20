@@ -71,7 +71,6 @@ HRESULT Orc::StructuredOutput::Writer::WriteAttributesBuffer(_Buffer& buffer, DW
     return S_OK;
 }
 
-
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, FILETIME fileTime)
 {
     HRESULT hr = E_FAIL;
@@ -96,9 +95,9 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, FILETIME fil
 HRESULT Orc::StructuredOutput::Writer::WriteFileTimeBuffer(_Buffer& buffer, ULONGLONG fileTime)
 {
     FILETIME ft;
-    ft.dwLowDateTime  = ((LARGE_INTEGER*)&fileTime)->LowPart;
+    ft.dwLowDateTime = ((LARGE_INTEGER*)&fileTime)->LowPart;
     ft.dwHighDateTime = ((LARGE_INTEGER*)&fileTime)->HighPart;
-    return WriteBuffer(buffer,ft);
+    return WriteBuffer(buffer, ft);
 }
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, const WCHAR* szArray, DWORD dwCharCount)
@@ -168,7 +167,7 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(
     }
 
     if (bFirst == true)  // None of the flags matched
-        return WriteBuffer(buffer, (ULONG32) dwFlags, true);
+        return WriteBuffer(buffer, (ULONG32)dwFlags, true);
     return S_OK;
 }
 
@@ -188,7 +187,7 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, DWORD dwFlag
         }
         idx++;
     }
-    return WriteBuffer(buffer, (ULONG32) dwFlags);
+    return WriteBuffer(buffer, (ULONG32)dwFlags);
 }
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, IN_ADDR& ip)
@@ -248,9 +247,8 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
     return nullptr;
 }
 
-std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
-    const OutputSpec& outFile,
-    std::unique_ptr<StructuredOutputOptions>&& pOptions)
+std::shared_ptr<StructuredOutput::IWriter>
+StructuredOutput::Writer::GetWriter(const OutputSpec& outFile, std::unique_ptr<StructuredOutputOptions>&& pOptions)
 {
     auto stream = std::make_shared<FileStream>();
 
@@ -276,7 +274,6 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
 
     std::wstring strFile;
     OutputSpec::ApplyPattern(strPattern, strName, strFile);
-
 
     WCHAR szOutputFile[MAX_PATH];
     StringCchPrintf(szOutputFile, MAX_PATH, L"%s\\%s", outFile.Path.c_str(), strFile.c_str());

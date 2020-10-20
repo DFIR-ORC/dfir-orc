@@ -42,10 +42,10 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
             case L'/':
             case L'-':
                 if (OutputOption(
-                    argv[i] + 1,
-                    L"Out",
-                    static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory),
-                    config.output))
+                        argv[i] + 1,
+                        L"Out",
+                        static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory),
+                        config.output))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"if", config.strIF))
                     ;
@@ -109,8 +109,6 @@ HRESULT Main::CheckConfiguration()
     {
         config.BlockSize.QuadPart = 512;
     }
-
-
 
     return S_OK;
 }

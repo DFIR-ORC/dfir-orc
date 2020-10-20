@@ -103,10 +103,7 @@ public:
     HRESULT PrintToBuffer(const CHAR* szFormat, ...);
     HRESULT PrintToBuffer(const CHAR* szFormat, va_list argList);
 
-	HRESULT WriteString(const std::wstring& strString)
-	{
-		return WriteString(std::wstring_view(strString));
-	}
+    HRESULT WriteString(const std::wstring& strString) { return WriteString(std::wstring_view(strString)); }
     HRESULT WriteString(const std::wstring_view& szString);
     HRESULT WriteString(const WCHAR* szString)
     {
@@ -118,15 +115,9 @@ public:
     }
     HRESULT WriteFormatedString(const WCHAR* szFormat, ...);
 
-    HRESULT WriteString(const std::string& strString)
-    {
-        return WriteString(std::string_view(strString));
-    }
+    HRESULT WriteString(const std::string& strString) { return WriteString(std::string_view(strString)); }
     HRESULT WriteString(const std::string_view& strString);
-    HRESULT WriteString(const CHAR* szString)
-    {
-        return WriteString(std::string_view(szString, strlen(szString)));
-    }
+    HRESULT WriteString(const CHAR* szString) { return WriteString(std::string_view(szString, strlen(szString))); }
     HRESULT WriteCharArray(const CHAR* szArray, DWORD dwCharCount)
     {
         return WriteString(std::string_view(szArray, dwCharCount));
@@ -135,7 +126,7 @@ public:
 
     HRESULT WriteFormated(const std::wstring_view& szFormat, IOutput::wformat_args args);
     HRESULT WriteFormated(const std::string_view& szFormat, IOutput::format_args args);
-    
+
     HRESULT WriteAttributes(DWORD dwAttibutes);
     HRESULT WriteFileTime(FILETIME fileTime);
     HRESULT WriteFileTime(LONGLONG fileTime);

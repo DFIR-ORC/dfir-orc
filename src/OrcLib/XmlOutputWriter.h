@@ -31,7 +31,6 @@ protected:
     std::shared_ptr<XmlLiteExtension> m_xmllite;
     CComPtr<IXmlWriter> m_pWriter;
     std::stack<std::wstring> m_collectionStack;
-public:
 
 public:
     Writer(std::unique_ptr<Options>&& pOptions);
@@ -55,7 +54,7 @@ public:
 
     virtual HRESULT Write(bool bBoolean) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, bool bBoolean) override final;
-  
+
     virtual HRESULT Write(ULONG32 dwValue, bool bInHex = false) override final { return Write_(dwValue, bInHex); };
     virtual HRESULT WriteNamed(LPCWSTR szName, ULONG32 dwValue, bool bInHex = false) override final
     {
@@ -88,20 +87,19 @@ public:
     {
         return WriteNamed_(szName, ullValue, bInHex);
     }
-        
+
     virtual HRESULT WriteAttributes(DWORD dwAttibutes) override final;
     virtual HRESULT WriteNamedAttributes(LPCWSTR szName, DWORD dwAttibutes) override final;
 
     virtual HRESULT WriteFileTime(ULONGLONG fileTime) override final;
     virtual HRESULT WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime) override final;
 
-    
     virtual HRESULT Write(FILETIME fileTime) override final { return Write_(fileTime); }
     virtual HRESULT WriteNamed(LPCWSTR szName, FILETIME fileTime) override final
     {
         return WriteNamed_(szName, fileTime);
     }
-    
+
     virtual HRESULT Write(const WCHAR* szArray, DWORD dwCharCount) override final
     {
         return Write_(szArray, dwCharCount);
@@ -119,7 +117,7 @@ public:
     {
         return WriteNamed_(szName, pSHA1, dwLen, b0xPrefix);
     }
-    
+
     virtual HRESULT Write(const CBinaryBuffer& Buffer, bool b0xPrefix) override final
     {
         return Write_(Buffer, b0xPrefix);
@@ -172,7 +170,8 @@ private:
         if (auto hr = StructuredOutput::Writer::WriteBuffer(buffer, std::forward<Args>(args)...); FAILED(hr))
             return hr;
 
-        if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, buffer.empty() ? L"" : buffer.get()); FAILED(hr))
+        if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, buffer.empty() ? L"" : buffer.get());
+            FAILED(hr))
         {
             XmlLiteExtension::LogError(hr);
             return hr;
@@ -197,7 +196,7 @@ private:
 };
 }  // namespace StructuredOutput::XML
 
-    using XmlOutputWriter = StructuredOutput::XML::Writer;
+using XmlOutputWriter = StructuredOutput::XML::Writer;
 
 }  // namespace Orc
 #pragma managed(pop)

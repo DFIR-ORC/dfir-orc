@@ -114,10 +114,7 @@ public:
         return WriteColumn(wstr);
     }
 
-    STDMETHOD(WriteString)(const CHAR* szString) override final
-    {
-        return WriteString(std::string_view(szString));
-    }
+    STDMETHOD(WriteString)(const CHAR* szString) override final { return WriteString(std::string_view(szString)); }
 
     STDMETHOD(WriteCharArray)(const CHAR* szArray, DWORD dwCharCount) override final
     {
@@ -134,7 +131,8 @@ public:
         return WriteColumn(strString);
     }
 
-    STDMETHOD(WriteString)(const std::wstring_view& strString) override final {
+    STDMETHOD(WriteString)(const std::wstring_view& strString) override final
+    {
         if (strString.empty())
         {
             return WriteNothing();
@@ -143,9 +141,7 @@ public:
         return WriteColumn(strString);
     }
 
-    STDMETHOD(WriteString)(const WCHAR* szString) override final {
-        return WriteString(std::wstring_view(szString));
-    }
+    STDMETHOD(WriteString)(const WCHAR* szString) override final { return WriteString(std::wstring_view(szString)); }
 
     STDMETHOD(WriteCharArray)(const WCHAR* szArray, DWORD dwCharCount) override final
     {

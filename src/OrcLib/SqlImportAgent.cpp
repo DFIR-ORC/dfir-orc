@@ -136,8 +136,7 @@ HRESULT SqlImportAgent::InitializeTable(TableDescription& table)
                 spdlog::error(L"Failed to truncate table '{}' (code: {:#x})", table.name, hr);
             }
             break;
-        case TableDisposition::CreateNew:
-        {
+        case TableDisposition::CreateNew: {
             const auto& Columns = GetTableColumns();
             if (Columns)
             {
@@ -712,7 +711,6 @@ HRESULT SqlImportAgent::ImportEvtxData(ImportItem& input)
             }
             BOOST_SCOPE_EXIT_END;
 
-
             for (DWORD i = 0; i < dwReturned; i++)
             {
 
@@ -873,8 +871,7 @@ HRESULT SqlImportAgent::ImportHiveData(ImportItem& input)
                         case ValueType::RegResourceReqList:
                             output.WriteNothing();
                             break;
-                        case ValueType::RegMultiSZ:
-                        {
+                        case ValueType::RegMultiSZ: {
                             WCHAR* wstrTmp = (WCHAR*)pDatas;
                             size_t dwTmp = 0;
                             bool bFirst = true;

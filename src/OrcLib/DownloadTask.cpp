@@ -64,7 +64,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const ConfigItem& 
 
         std::wsmatch s;
 
-        if (std::regex_match((const std::wstring&) item.SubItems[CONFIG_DOWNLOAD_SERVER], s, r))
+        if (std::regex_match((const std::wstring&)item.SubItems[CONFIG_DOWNLOAD_SERVER], s, r))
         {
             if (!_wcsicmp(s[1].str().c_str(), L"http"))
             {
@@ -92,7 +92,7 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const ConfigItem& 
 
     if (item.SubItems[CONFIG_DOWNLOAD_ROOTPATH])
     {
-        auto rootpath = (std::wstring_view) item.SubItems[CONFIG_DOWNLOAD_ROOTPATH];
+        auto rootpath = (std::wstring_view)item.SubItems[CONFIG_DOWNLOAD_ROOTPATH];
         std::replace_copy(
             begin(rootpath),
             end(rootpath),

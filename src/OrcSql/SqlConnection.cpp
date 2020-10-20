@@ -187,8 +187,7 @@ HRESULT Connection::CreateTable(
                 }
                 else
                 {
-                    stmt << L" VARCHAR ( MAX ) "
-                         << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
+                    stmt << L" VARCHAR ( MAX ) " << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
                 }
                 break;
             case TableOutput::ColumnType::UTF16Type:
@@ -204,8 +203,8 @@ HRESULT Connection::CreateTable(
                 }
                 else
                 {
-                    stmt << L" NVARCHAR ( MAX ) "
-                         << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
+                    stmt << L" NVARCHAR ( MAX ) " << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L","
+                         << endl;
                 }
                 break;
             case TableOutput::ColumnType::BinaryType:
@@ -221,8 +220,8 @@ HRESULT Connection::CreateTable(
                 }
                 else
                 {
-                    stmt << L" VARBINARY ( MAX ) "
-                         << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L"," << endl;
+                    stmt << L" VARBINARY ( MAX ) " << (column->bAllowsNullValues ? L"NULL" : L"NOT NULL") << L","
+                         << endl;
                 }
                 break;
             case TableOutput::ColumnType::FixedBinaryType:

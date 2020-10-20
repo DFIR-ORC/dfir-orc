@@ -73,14 +73,14 @@ public:
 
 private:
     HANDLE m_ReadHandle = INVALID_HANDLE_VALUE;
-    HANDLE m_WriteHandle= INVALID_HANDLE_VALUE;
-    HANDLE m_DuplicateHandle= INVALID_HANDLE_VALUE;
+    HANDLE m_WriteHandle = INVALID_HANDLE_VALUE;
+    HANDLE m_DuplicateHandle = INVALID_HANDLE_VALUE;
     ProcessInOut m_Select = ProcessInOut::StdOutput;
 
     std::shared_ptr<ByteStream> m_pBS;
     bool m_bCloseStream = true;
 
-	PROCESS_REDIRECT m_ASyncIO{ 0 };
+    PROCESS_REDIRECT m_ASyncIO {0};
 
     RedirectStatus m_Status = RedirectStatus::Closed;
 

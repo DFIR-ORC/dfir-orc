@@ -115,7 +115,8 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
         return E_INVALIDARG;
     }
 
-    if (m_ullOffset == (ULONGLONG)-1) // If no offset has been specified, we need to lookup the partition we are interested in (-1 -> active part, other -> use part num)
+    if (m_ullOffset == (ULONGLONG)-1)  // If no offset has been specified, we need to lookup the partition we are
+                                       // interested in (-1 -> active part, other -> use part num)
     {
         PartitionTable pt;
 

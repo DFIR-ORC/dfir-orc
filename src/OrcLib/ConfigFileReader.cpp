@@ -146,8 +146,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
     {
         switch (nodeType)
         {
-            case XmlNodeType_Element:
-            {
+            case XmlNodeType_Element: {
 
                 // if you are not interested in the length it may be faster to use
                 // NULL for the length parameter
@@ -231,8 +230,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 dwCurrentIndex++;
             }
             break;
-            case XmlNodeType_Text:
-            {
+            case XmlNodeType_Text: {
                 const WCHAR* pValue = NULL;
                 if (FAILED(hr = pReader->GetValue(&pValue, NULL)))
                 {
@@ -247,8 +245,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 config.strData = pValue;
             }
             break;
-            case XmlNodeType_EndElement:
-            {
+            case XmlNodeType_EndElement: {
                 const WCHAR* pLocalName = NULL;
                 if (FAILED(hr = pReader->GetLocalName(&pLocalName, NULL)))
                 {
@@ -263,8 +260,7 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 return S_OK;
             }
             break;
-            default:
-            {
+            default: {
             }
             break;
         }
@@ -359,8 +355,7 @@ HRESULT ConfigFileReader::ReadConfig(
     {
         switch (nodeType)
         {
-            case XmlNodeType_Element:
-            {
+            case XmlNodeType_Element: {
                 if (!pReader->IsEmptyElement())
                 {
                     // if you are not interested in the length it may be faster to use

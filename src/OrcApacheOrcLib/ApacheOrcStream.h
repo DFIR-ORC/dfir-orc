@@ -49,4 +49,4 @@ private:
     std::string m_Name;
 };
 
-}  // namespace Orc::TableOutput::OptRowColumn
+}  // namespace Orc::TableOutput::ApacheOrc

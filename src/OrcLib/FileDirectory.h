@@ -84,7 +84,6 @@ public:
     };
 
 private:
-
 public:
     HRESULT ParseFileDirectory(const std::wstring& aObjDir, Callback aCallback);
     HRESULT ParseFileDirectory(const std::wstring& aObjDir, std::vector<FileInstance>& objects);

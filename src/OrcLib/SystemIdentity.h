@@ -15,7 +15,6 @@
 
 namespace Orc {
 
-    
 static constexpr const unsigned __int64 One = 1;
 static constexpr const unsigned __int64 MinusOne = 0xFFFFFFFFFFFFFFFF;
 
@@ -26,7 +25,7 @@ enum IdentityArea : DWORDLONG
     Process = (One),
 
     OperatingSystem = (One << 1),
-    Network         = (One << 2),
+    Network = (One << 2),
     PhysicalDrives = (One << 3),
     MountedVolumes = (One << 4),
     PhysicalMemory = (One << 5),
@@ -43,14 +42,15 @@ class SystemIdentity
 {
 
 public:
-
-    static HRESULT Write(const std::shared_ptr<StructuredOutput::IOutput>& writer, IdentityArea areas = IdentityArea::All); 
+    static HRESULT
+    Write(const std::shared_ptr<StructuredOutput::IOutput>& writer, IdentityArea areas = IdentityArea::All);
 
     static HRESULT
     CurrentProcess(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"process");
-    static HRESULT
-    CurrentUser(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"user");
-    static HRESULT System(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"system"); // Includes OS, PhysicalDrives, MountedVolumes,CPU, Memory & Network
+    static HRESULT CurrentUser(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"user");
+    static HRESULT System(
+        const std::shared_ptr<StructuredOutput::IOutput>& writer,
+        const LPCWSTR elt = L"system");  // Includes OS, PhysicalDrives, MountedVolumes,CPU, Memory & Network
     static HRESULT
     OperatingSystem(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"operating_system");
     static HRESULT Network(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"network");
@@ -64,9 +64,6 @@ public:
 
     static HRESULT
     Profiles(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"profile_list");
-
-
 };
 
-}
-
+}  // namespace Orc

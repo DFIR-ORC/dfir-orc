@@ -231,7 +231,8 @@ HRESULT Main::RunRegistry()
     return S_OK;
 }
 
-HRESULT Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::ObjectInstance& obj, LPCWSTR szElement)
+HRESULT
+Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::ObjectInstance& obj, LPCWSTR szElement)
 {
     HRESULT hr = E_FAIL;
 
@@ -261,7 +262,6 @@ Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const FileDirectory::Fi
         pStructuredOutput->WriteNamed(L"description", spec.Description().c_str());
         file.Write(*pStructuredOutput);
         pStructuredOutput->EndElement(szElement);
-
     }
 
     if (pObjectTableOutput)
@@ -436,7 +436,7 @@ HRESULT Main::RunObject()
 
     if (pStructuredOutput)
         pStructuredOutput->EndCollection(L"object_directory");
-    
+
     return S_OK;
 }
 

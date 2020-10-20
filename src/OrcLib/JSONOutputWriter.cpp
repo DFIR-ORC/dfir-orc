@@ -30,7 +30,7 @@ Writer<_RapidWriter, _Ch>::Writer(std::shared_ptr<ByteStream> stream, std::uniqu
     , m_Stream(std::move(stream))
     , rapidWriter(m_Stream)
 {
-     rapidWriter.StartObject();
+    rapidWriter.StartObject();
 }
 
 std::shared_ptr<StructuredOutput::IWriter>
@@ -87,7 +87,6 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::BeginElement(LPC
     rapidWriter.StartObject();
     return S_OK;
 }
-
 
 template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::EndElement(LPCWSTR szElement)
@@ -158,7 +157,6 @@ Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated(LPCWS
     return S_OK;
 }
 
-
 template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(LPCWSTR szValue)
 {
@@ -201,7 +199,6 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(LONG32 uiV
 
     return S_OK;
 }
-
 
 template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, LONG32 lValue, bool bInHex)
@@ -253,8 +250,7 @@ Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szNam
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT
-Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, LONG64 llValue, bool bInHex)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, LONG64 llValue, bool bInHex)
 {
     return WriteNamed_(szName, llValue, bInHex);
 }
@@ -306,10 +302,8 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFileTime(UL
     return S_OK;
 }
 
-
 template <class _RapidWriter, typename _Ch>
-HRESULT
-Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime)
+HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime)
 {
     rapidWriter.Key(szName);
     return WriteFileTime(fileTime);
@@ -475,7 +469,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Write(DWORD dwFl
     if (szValue == NULL)
     {
         // No flags where recognised, write value in Hex
-        if (FAILED(Write((ULONG32) dwFlags, true)))
+        if (FAILED(Write((ULONG32)dwFlags, true)))
             return hr;
         return S_OK;
     }

@@ -55,7 +55,6 @@ public:
         LocationSet locs;
         std::wstring strComputerName;
 
-
         boost::logic::tribool bResurrectRecords;
         boost::logic::tribool bPopSystemObjects;
 

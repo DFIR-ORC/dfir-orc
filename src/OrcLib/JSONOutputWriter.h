@@ -20,14 +20,12 @@ class ByteStream;
 
 namespace StructuredOutput::JSON {
 
-
 template <typename _Ch>
 class Stream
 {
 public:
-
     using Ch = _Ch;
-    
+
     Stream(std::shared_ptr<ByteStream> a_stream)
         : m_stream(std::move(a_stream))
     {
@@ -68,12 +66,10 @@ private:
     Buffer<_Ch, 1024> m_buffer;
 };
 
-
 template <class _RapidWriter, typename _Ch>
 class Writer : public StructuredOutput::Writer
 {
 private:
-
     Stream<_Ch> m_Stream;
     _RapidWriter rapidWriter;
 
@@ -160,7 +156,6 @@ public:
 
     ~Writer();
 
-
 private:
     template <typename... Args>
     HRESULT WriteNamed_(LPCWSTR szName, Args&&... args);
@@ -172,6 +167,5 @@ GetWriter(std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& pOption
 }  // namespace StructuredOutput::JSON
 
 using JSONOutputOptions = StructuredOutput::JSON::Options;
-
 
 }  // namespace Orc

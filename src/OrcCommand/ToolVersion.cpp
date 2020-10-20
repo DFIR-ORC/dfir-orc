@@ -11,7 +11,7 @@
 #include "ToolVersion.h"
 #include "ToolVersionRes.h"
 
-const int kVersion[4] = { ORC_VERSION };
+const int kVersion[4] = {ORC_VERSION};
 const char* kOrcVersionString = ORC_VERSION_STRING;
 const wchar_t* kOrcVersionStringW = ORC_VERSION_STRINGW;
 const char* kOrcFileVerString = ORC_FILEVER_STRING;

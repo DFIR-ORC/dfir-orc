@@ -437,8 +437,7 @@ HRESULT JournalingStream::ReplayJournalStream(
             }
 
             break;
-            case 0x4b454553:
-            {
+            case 0x4b454553: {
                 SEEK_HEADER* pSeekHeader = (SEEK_HEADER*)&OpHeader;
 
                 ULONG64 ullCurPos = 0LL;
@@ -451,8 +450,7 @@ HRESULT JournalingStream::ReplayJournalStream(
                 }
             }
             break;
-            case 0x534f4c43:
-            {
+            case 0x534f4c43: {
                 if (FAILED(hr = pToStream->Close()))
                 {
                     spdlog::error(L"Close operation failed (code: {:#x})", hr);

@@ -69,7 +69,6 @@ auto formatMessage(const HRESULT hr, FormatContext& ctx)
     return;
 }
 
-
 template <typename T = VoidResult>
 stx::Result<T, HRESULT> make_hr(HRESULT hr)
 {
@@ -186,7 +185,6 @@ auto fmt::formatter<stx::v1::Result<Orc::VoidResult, HRESULT>, wchar_t>::format(
         fmt::format_to(ctx.out(), L"S_OK");
     return ctx.out();
 }
-
 
 #    endif
 

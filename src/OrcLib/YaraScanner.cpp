@@ -32,14 +32,13 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
 
     if (item[CONFIG_YARA_SOURCE])
     {
-        boost::split(retval.Sources(), (std::wstring_view) item[CONFIG_YARA_SOURCE], boost::is_any_of(L",;"));
+        boost::split(retval.Sources(), (std::wstring_view)item[CONFIG_YARA_SOURCE], boost::is_any_of(L",;"));
     }
 
     if (item[CONFIG_YARA_BLOCK])
     {
         LARGE_INTEGER blockSize = {0L};
-        if (SUCCEEDED(GetFileSizeFromArg(item[CONFIG_YARA_BLOCK].c_str(), blockSize))
-            && blockSize.QuadPart > 0LL)
+        if (SUCCEEDED(GetFileSizeFromArg(item[CONFIG_YARA_BLOCK].c_str(), blockSize)) && blockSize.QuadPart > 0LL)
         {
             if (blockSize.QuadPart > MAXDWORD)
             {
@@ -57,8 +56,7 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
     if (item[CONFIG_YARA_OVERLAP])
     {
         LARGE_INTEGER overlapSize = {0L};
-        if (SUCCEEDED(GetFileSizeFromArg(item[CONFIG_YARA_OVERLAP].c_str(), overlapSize))
-            && overlapSize.QuadPart > 0LL)
+        if (SUCCEEDED(GetFileSizeFromArg(item[CONFIG_YARA_OVERLAP].c_str(), overlapSize)) && overlapSize.QuadPart > 0LL)
         {
             if (overlapSize.QuadPart > MAXDWORD)
             {
@@ -482,8 +480,7 @@ HRESULT Orc::YaraScanner::Scan(const std::shared_ptr<ByteStream>& stream, Matchi
         {
             case YaraScanMethod::Blocks:
                 return Scan(stream, m_config.blockSize(), m_config.overlapSize(), matchingRules);
-            case YaraScanMethod::FileMapping:
-            {
+            case YaraScanMethod::FileMapping: {
                 ULONG ulBytesScanned = 0;
                 return ScanFileMapping(stream, matchingRules, ulBytesScanned);
             }

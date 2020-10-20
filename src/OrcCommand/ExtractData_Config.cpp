@@ -241,8 +241,7 @@ HRESULT Main::ParseArgument(std::wstring_view arg, Configuration& config)
             PrintUsage();
             return E_INVALIDARG;
 
-        default:
-        {
+        default: {
             std::error_code ec;
             auto path = ExpandEnvironmentStringsApi(arg.data(), ec);
             if (ec)
@@ -256,18 +255,18 @@ HRESULT Main::ParseArgument(std::wstring_view arg, Configuration& config)
             inputItem.matchRegex = L".*";  // regex filter for "on disk" files to extract
 
             // match filter for "in archive" files to ignore
-            //ImportDefinition::Item ignoreFilter;
+            // ImportDefinition::Item ignoreFilter;
             // ignoreFilter.nameMatch = L"";  // wildcard filter for "in archive" files to ignore
             // ignoreFilter.ToDo = ImportDefinition::Ignore;
-            //inputItem.importDefinitions.m_itemDefinitions.push_back(std::move(ignoreFilter));
+            // inputItem.importDefinitions.m_itemDefinitions.push_back(std::move(ignoreFilter));
 
             // match filter for "in archive" files to extract
-             ImportDefinition::Item extractFilter;
-             extractFilter.nameMatch = L"*";  // wildcard filter for "in archive" files to extract
-             extractFilter.ToDo = ImportDefinition::Extract;
-             extractFilter.Password = L"";
+            ImportDefinition::Item extractFilter;
+            extractFilter.nameMatch = L"*";  // wildcard filter for "in archive" files to extract
+            extractFilter.ToDo = ImportDefinition::Extract;
+            extractFilter.Password = L"";
 
-             inputItem.importDefinitions.m_itemDefinitions.push_back(std::move(extractFilter));
+            inputItem.importDefinitions.m_itemDefinitions.push_back(std::move(extractFilter));
 
             // config.inputDirs.push_back(std::move(path));
             config.inputItems.push_back(std::move(inputItem));

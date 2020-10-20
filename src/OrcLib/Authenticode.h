@@ -62,7 +62,7 @@ public:
         std::vector<PCCERT_CONTEXT> SignersCAs;
         std::vector<HCERTSTORE> CertStores;
         PE_Hashs SignedHashs;
-        FILETIME Timestamp{ 0 };
+        FILETIME Timestamp {0};
 
         AuthenticodeData() = default;
         AuthenticodeData(const AuthenticodeData& other) = default;
@@ -107,7 +107,11 @@ private:
     HRESULT EvaluateCheck(LONG lStatus, AuthenticodeData& data);
 
     HRESULT VerifyEmbeddedSignature(LPCWSTR szFileName, HANDLE hFile, AuthenticodeData& data);
-    HRESULT VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffer& hash, HCATINFO& hCatalog, AuthenticodeData& data);
+    HRESULT VerifySignatureWithCatalogs(
+        LPCWSTR szFileName,
+        const CBinaryBuffer& hash,
+        HCATINFO& hCatalog,
+        AuthenticodeData& data);
 
     HRESULT ExtractSignatureSize(const CBinaryBuffer& signature, DWORD& cbSize);
     HRESULT ExtractSignatureHash(const CBinaryBuffer& signature, AuthenticodeData& data);

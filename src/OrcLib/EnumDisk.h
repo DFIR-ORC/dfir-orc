@@ -30,7 +30,6 @@ public:
     ~EnumDisk();
 
 private:
-
     HRESULT GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk, const GUID guidDeviceClass);
 };
 

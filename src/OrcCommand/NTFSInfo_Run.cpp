@@ -710,8 +710,7 @@ HRESULT Main::RunThroughMFT()
                                                     MFTRecord* pElt,
                                                     const PFILE_NAME pFileName,
                                                     const std::shared_ptr<DataAttribute>& pDataAttr) {
-                FileAndDataInformation(
-                    *fileinfoIterator->second, volreader, pElt, pFileName, pDataAttr);
+                FileAndDataInformation(*fileinfoIterator->second, volreader, pElt, pFileName, pDataAttr);
             };
             callBacks.DirectoryCallback = [this, fileinfoIterator](
                                               const std::shared_ptr<VolumeReader>& volreader,

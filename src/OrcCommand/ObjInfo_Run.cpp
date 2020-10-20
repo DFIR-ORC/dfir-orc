@@ -29,15 +29,15 @@ std::wstring Main::DirectoryOutput::GetIdentifier()
         end(retval),
         [](const WCHAR inchar) -> bool {
             return (
-                inchar == L'<'  ||  //< (less than)
-                inchar == L'>'  ||  //> (greater than)
-                inchar == L':'  ||  //: (colon)
+                inchar == L'<' ||  //< (less than)
+                inchar == L'>' ||  //> (greater than)
+                inchar == L':' ||  //: (colon)
                 inchar == L'\"' ||  //" (double quote)
-                inchar == L'/'  ||  /// (forward slash)
+                inchar == L'/' ||  /// (forward slash)
                 inchar == L'\\' ||  //\ (backslash)
-                inchar == L'|'  ||  //| (vertical bar or pipe)
-                inchar == L'?'  ||  //? (question mark)
-                inchar == L'*');    //* (asterisk)
+                inchar == L'|' ||  //| (vertical bar or pipe)
+                inchar == L'?' ||  //? (question mark)
+                inchar == L'*');  //* (asterisk)
         },
         L'_');
 
@@ -75,7 +75,6 @@ HRESULT Main::Run()
     m_console.Print(L"Enumerating object directories:");
 
     m_outputs.ForEachOutput(config.output, [this](const MultipleOutput<DirectoryOutput>::OutputPair& dir) -> HRESULT {
-
         using namespace std::string_view_literals;
 
         HRESULT hr = E_FAIL;

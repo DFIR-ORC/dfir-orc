@@ -98,10 +98,7 @@ public:
         return m_pWriter->WriteNamed(szName, ullValue, bInHex);
     }
 
-    virtual HRESULT WriteFileTime(ULONGLONG fileTime) override final
-    {
-        return m_pWriter->WriteFileTime(fileTime);
-    }
+    virtual HRESULT WriteFileTime(ULONGLONG fileTime) override final { return m_pWriter->WriteFileTime(fileTime); }
     virtual HRESULT WriteNamedFileTime(LPCWSTR szName, ULONGLONG fileTime) override final
     {
         return m_pWriter->WriteNamedFileTime(szName, fileTime);
@@ -125,7 +122,8 @@ public:
     virtual HRESULT Write(const WCHAR* szArray, DWORD dwCharCount) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, const WCHAR* szArray, DWORD dwCharCount) override final;
 
-    virtual HRESULT Write(const BYTE pSHA1[], DWORD dwLen, bool b0xPrefix) override final {
+    virtual HRESULT Write(const BYTE pSHA1[], DWORD dwLen, bool b0xPrefix) override final
+    {
         return m_pWriter->Write(pSHA1, dwLen, b0xPrefix);
     }
     virtual HRESULT WriteNamed(LPCWSTR szName, const BYTE pSHA1[], DWORD dwLen, bool b0xPrefix) override final
@@ -133,7 +131,8 @@ public:
         return m_pWriter->WriteNamed(szName, pSHA1, dwLen, b0xPrefix);
     }
 
-    virtual HRESULT Write(const CBinaryBuffer& Buffer, bool b0xPrefix) override final {
+    virtual HRESULT Write(const CBinaryBuffer& Buffer, bool b0xPrefix) override final
+    {
         return m_pWriter->Write(Buffer, b0xPrefix);
     }
     virtual HRESULT WriteNamed(LPCWSTR szName, const CBinaryBuffer& Buffer, bool b0xPrefix) override final
@@ -141,7 +140,8 @@ public:
         return m_pWriter->WriteNamed(szName, Buffer, b0xPrefix);
     }
 
-    virtual HRESULT Write(DWORD dwEnum, const WCHAR* EnumValues[]) override final {
+    virtual HRESULT Write(DWORD dwEnum, const WCHAR* EnumValues[]) override final
+    {
         return m_pWriter->Write(dwEnum, EnumValues);
     }
     virtual HRESULT WriteNamed(LPCWSTR szName, DWORD dwEnum, const WCHAR* EnumValues[]) override final
@@ -149,7 +149,8 @@ public:
         return m_pWriter->WriteNamed(szName, dwEnum, EnumValues);
     }
 
-    virtual HRESULT Write(DWORD dwFlags, const FlagsDefinition FlagValues[], WCHAR cSeparator) override final {
+    virtual HRESULT Write(DWORD dwFlags, const FlagsDefinition FlagValues[], WCHAR cSeparator) override final
+    {
         return m_pWriter->Write(dwFlags, FlagValues, cSeparator);
     }
     virtual HRESULT
@@ -158,7 +159,8 @@ public:
         return m_pWriter->WriteNamed(szName, dwFlags, FlagValues, cSeparator);
     }
 
-    virtual HRESULT Write(DWORD dwFlags, const FlagsDefinition FlagValues[]) override final {
+    virtual HRESULT Write(DWORD dwFlags, const FlagsDefinition FlagValues[]) override final
+    {
         return m_pWriter->Write(dwFlags, FlagValues);
     }
     virtual HRESULT WriteNamed(LPCWSTR szName, DWORD dwFlags, const FlagsDefinition FlagValues[]) override final

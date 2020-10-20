@@ -1123,22 +1123,23 @@ HRESULT FileInfo::WriteFileOS(ITableOutput& output)
 
     if (GetDetails()->FileVersionAvailable())
     {
-        static const FlagsDefinition SubOSDefs[] = {{VOS__BASE, L"Unknown", L"Unknown"},
-                                                    {VOS__WINDOWS16, L"WINDOWS16", L"WINDOWS16"},
-                                                    {VOS__PM16, L"PM16", L"PM16"},
-                                                    {VOS__PM32, L"PM32", L"PM32"},
-                                                    {VOS__WINDOWS32, L"WINDOWS32", L"WINDOWS32"},
-                                                    {VOS_DOS, L"DOS", L"DOS"},
-                                                    {VOS_OS216, L"OS/2-16", L"OS/2-16"},
-                                                    {VOS_OS232, L"OS/2-32", L"OS/2-32"},
-                                                    {VOS_NT, L"NT", L"NT"},
-                                                    {VOS_WINCE, L"CE", L"CE"},
-                                                    {VOS_DOS_WINDOWS16, L"DOS-Win16", L"DOS-Win16"},
-                                                    {VOS_DOS_WINDOWS32, L"DOS-Win32", L"DOS-Win32"},
-                                                    {VOS_OS216_PM16, L"OS/2-16_PM-16", L"OS/2-16_PM-16"},
-                                                    {VOS_OS232_PM32, L"OS/2-32_PM-32", L"OS/2-32_PM-32"},
-                                                    {VOS_NT_WINDOWS32, L"NT-Win32", L"NT-Win32"},
-                                                    {(DWORD)-1, NULL, NULL}};
+        static const FlagsDefinition SubOSDefs[] = {
+            {VOS__BASE, L"Unknown", L"Unknown"},
+            {VOS__WINDOWS16, L"WINDOWS16", L"WINDOWS16"},
+            {VOS__PM16, L"PM16", L"PM16"},
+            {VOS__PM32, L"PM32", L"PM32"},
+            {VOS__WINDOWS32, L"WINDOWS32", L"WINDOWS32"},
+            {VOS_DOS, L"DOS", L"DOS"},
+            {VOS_OS216, L"OS/2-16", L"OS/2-16"},
+            {VOS_OS232, L"OS/2-32", L"OS/2-32"},
+            {VOS_NT, L"NT", L"NT"},
+            {VOS_WINCE, L"CE", L"CE"},
+            {VOS_DOS_WINDOWS16, L"DOS-Win16", L"DOS-Win16"},
+            {VOS_DOS_WINDOWS32, L"DOS-Win32", L"DOS-Win32"},
+            {VOS_OS216_PM16, L"OS/2-16_PM-16", L"OS/2-16_PM-16"},
+            {VOS_OS232_PM32, L"OS/2-32_PM-32", L"OS/2-32_PM-32"},
+            {VOS_NT_WINDOWS32, L"NT-Win32", L"NT-Win32"},
+            {(DWORD)-1, NULL, NULL}};
 
         VS_FIXEDFILEINFO* pFFI = GetDetails()->GetFixedFileInfo();
         return output.WriteExactFlags(pFFI->dwFileOS, SubOSDefs);

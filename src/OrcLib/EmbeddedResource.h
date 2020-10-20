@@ -429,9 +429,8 @@ static constexpr LPCWSTR RESSOURCE_GENERIC_READ_BA = L"D:PAI(A;;FR;;;BA)";
 #include "ResourceStream.h"
 
 template <typename _T, size_t _DeclElts>
-static HRESULT Orc::EmbeddedResource::ExtractToBuffer(
-    const std::wstring& szImageFileRessourceID,
-    Buffer<_T, _DeclElts>& Buffer)
+static HRESULT
+Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, Buffer<_T, _DeclElts>& Buffer)
 {
     using namespace std;
     using namespace msl::utilities;

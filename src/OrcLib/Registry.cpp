@@ -301,5 +301,5 @@ Orc::Registry::Read<std::filesystem::path>(HKEY hParentKey, LPWSTR szKeyName, LP
 {
     return Read<std::wstring>(hParentKey, szKeyName, szValueName).and_then([](auto&& value) {
         return std::filesystem::path(std::move(value));
-        });
+    });
 }

@@ -45,7 +45,6 @@ struct ProcessRedirect_make_shared_enabler : public Orc::ProcessRedirect
         : Orc::ProcessRedirect(selection) {};
 };
 
-
 std::shared_ptr<ProcessRedirect>
 ProcessRedirect::MakeRedirect(ProcessInOut selection, std::shared_ptr<ByteStream> pBS, bool bClose)
 {

@@ -83,83 +83,67 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
     {
         switch (column->type()->id())
         {
-            case arrow::Type::NA:
-            {
+            case arrow::Type::NA: {
                 retval.emplace_back(std::make_unique<arrow::NullBuilder>(pool));
                 break;
             }
-            case arrow::Type::BOOL:
-            {
+            case arrow::Type::BOOL: {
                 retval.emplace_back(std::make_unique<arrow::BooleanBuilder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::UINT8:
-            {
+            case arrow::Type::UINT8: {
                 retval.emplace_back(std::make_unique<arrow::UInt8Builder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::INT8:
-            {
+            case arrow::Type::INT8: {
                 retval.emplace_back(std::make_unique<arrow::Int8Builder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::UINT16:
-            {
+            case arrow::Type::UINT16: {
                 retval.emplace_back(std::make_unique<arrow::UInt16Builder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::INT16:
-            {
+            case arrow::Type::INT16: {
                 retval.emplace_back(std::make_unique<arrow::Int16Builder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::UINT32:
-            {
+            case arrow::Type::UINT32: {
                 retval.emplace_back(std::make_unique<arrow::UInt32Builder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::INT32:
-            {
+            case arrow::Type::INT32: {
                 retval.emplace_back(std::make_unique<arrow::Int32Builder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::UINT64:
-            {
+            case arrow::Type::UINT64: {
                 retval.emplace_back(std::make_unique<arrow::UInt64Builder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::INT64:
-            {
+            case arrow::Type::INT64: {
                 retval.emplace_back(std::make_unique<arrow::Int64Builder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::TIMESTAMP:
-            {
+            case arrow::Type::TIMESTAMP: {
                 retval.emplace_back(std::make_unique<arrow::TimestampBuilder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::STRING:
-            {
+            case arrow::Type::STRING: {
                 retval.emplace_back(std::make_unique<arrow::StringBuilder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::BINARY:
-            {
+            case arrow::Type::BINARY: {
                 retval.emplace_back(std::make_unique<arrow::BinaryBuilder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::FIXED_SIZE_BINARY:
-            {
+            case arrow::Type::FIXED_SIZE_BINARY: {
                 retval.emplace_back(std::make_unique<arrow::FixedSizeBinaryBuilder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::DICTIONARY:
-            {
+            case arrow::Type::DICTIONARY: {
                 retval.emplace_back(std::make_unique<arrow::StringDictionaryBuilder>(column->type(), pool));
                 break;
             }
-            case arrow::Type::LIST:
-            {
+            case arrow::Type::LIST: {
                 std::unique_ptr<arrow::ArrayBuilder> value_builder;
                 std::shared_ptr<arrow::DataType> value_type =
                     dynamic_cast<const arrow::ListType&>(*column->type()).value_type();
@@ -167,8 +151,7 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
                 retval.emplace_back(std::make_unique<arrow::ListBuilder>(pool, std::move(value_builder)));
                 break;
             }
-            case arrow::Type::STRUCT:
-            {
+            case arrow::Type::STRUCT: {
                 const std::vector<std::shared_ptr<arrow::Field>>& fields = column->type()->children();
                 std::vector<std::shared_ptr<arrow::ArrayBuilder>> values_builder;
 
@@ -189,12 +172,10 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
                     std::make_unique<arrow::StructBuilder>(column->type(), pool, std::move(values_builder)));
                 break;
             }
-            case arrow::Type::MAP:
-            {
+            case arrow::Type::MAP: {
                 break;
             }
-            default:
-            {
+            default: {
                 throw Orc::Exception(
                     Fatal, E_INVALIDARG, L"Failed to create builder for type %S", column->type()->ToString().c_str());
             }
@@ -283,8 +264,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
             case GUIDType:
                 schema_definition.push_back(arrow::field(strName, arrow::fixed_size_binary(16), true));
                 break;
-            case EnumType:
-            {
+            case EnumType: {
                 std::shared_ptr<arrow::KeyValueMetadata> metadata;
 
                 if (column->EnumValues.has_value())
@@ -305,8 +285,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
             case XMLType:
                 schema_definition.push_back(arrow::field(strName, arrow::binary(), true));
                 break;
-            case FlagsType:
-            {
+            case FlagsType: {
                 std::shared_ptr<arrow::KeyValueMetadata> metadata;
 
                 if (column->FlagsValues.has_value())

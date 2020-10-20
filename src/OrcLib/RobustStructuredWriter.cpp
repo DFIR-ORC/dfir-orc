@@ -197,7 +197,6 @@ HRESULT RobustStructuredWriter::WriteComment(LPCWSTR szComment)
     return m_pWriter->WriteComment(strComment.c_str());
 }
 
-
 HRESULT RobustStructuredWriter::Close()
 {
     return m_pWriter->Close();

@@ -40,4 +40,4 @@ private:
     size_t m_initialSize = 0;
 };
 
-}  // namespace Orc::TableOutput::OptRowColumn
+}  // namespace Orc::TableOutput::ApacheOrc

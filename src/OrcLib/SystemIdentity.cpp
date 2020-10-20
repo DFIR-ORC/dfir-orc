@@ -433,8 +433,7 @@ HRESULT Orc::SystemIdentity::MountedVolumes(const std::shared_ptr<StructuredOutp
             {SystemDetails::DriveType::Drive_Remote, L"Remote", L"Remote"},
             {SystemDetails::DriveType::Drive_CDRom, L"CDROM", L"Drive_CDRom"},
             {SystemDetails::DriveType::Drive_RamDisk, L"RAMDisk", L"RAMDisk"},
-            {0xFFFFFFFF, NULL, NULL}
-        };
+            {0xFFFFFFFF, NULL, NULL}};
 
         writer->WriteNamed(L"path", volume.Path.c_str());
         writer->WriteNamed(L"label", volume.Label.c_str());

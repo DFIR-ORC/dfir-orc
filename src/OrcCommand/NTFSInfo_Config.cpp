@@ -185,9 +185,8 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     auto walker = GetWalkerFromConfig(configitem);
     if (!walker.empty())
     {
-		config.strWalker = walker;
+        config.strWalker = walker;
     }
-
 
     if (configitem[NTFSINFO_COMPUTER])
     {
@@ -301,10 +300,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (EncodingOption(argv[i] + 1, config.outFileInfo.OutputEncoding))
                     {
-                        config.outI30Info.OutputEncoding =
-                            config.outAttrInfo.OutputEncoding =
-                            config.outTimeLine.OutputEncoding =
-                            config.outSecDescrInfo.OutputEncoding =
+                        config.outI30Info.OutputEncoding = config.outAttrInfo.OutputEncoding =
+                            config.outTimeLine.OutputEncoding = config.outSecDescrInfo.OutputEncoding =
                                 config.outFileInfo.OutputEncoding;
                     }
                     else if (AltitudeOption(argv[i] + 1, L"Altitude", config.locs.GetAltitude()))

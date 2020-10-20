@@ -185,8 +185,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::ReadMoreData()
 
     switch (m_csvEncoding)
     {
-        case OutputSpec::Encoding::UTF16:
-        {
+        case OutputSpec::Encoding::UTF16: {
             if (FAILED(hr = m_pStream->Read(m_Store.EndOfCursor(), CSV_READ_CHUNK_IN_BYTES, &nbRead)))
             {
                 if (hr != HRESULT_FROM_WIN32(ERROR_HANDLE_EOF))
@@ -203,8 +202,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::ReadMoreData()
             m_liStoreBytes.QuadPart += nbRead;
         }
         break;
-        case OutputSpec::Encoding::UTF8:
-        {
+        case OutputSpec::Encoding::UTF8: {
             if (FAILED(hr = m_pStream->Read(m_pUTF8Buffer, CSV_READ_CHUNK_IN_BYTES / 2, &nbRead)))
             {
                 if (hr != HRESULT_FROM_WIN32(ERROR_HANDLE_EOF))
@@ -681,8 +679,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::CoerceToColumn(WCHAR* szToken, DWORD 
             if (FAILED(hr = CLSIDFromString(szToken, &value.guid)))
                 return hr;
             break;
-        case Boolean:
-        {
+        case Boolean: {
             if (dwTokenLength == 1)
             {
                 if (*szToken == m_BoolChar[0])

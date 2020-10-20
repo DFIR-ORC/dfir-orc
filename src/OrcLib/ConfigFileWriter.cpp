@@ -29,8 +29,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
     {
         switch (config.Type)
         {
-            case ConfigItem::NODE:
-            {
+            case ConfigItem::NODE: {
                 pWriter->WriteStartElement(NULL, config.strName.c_str(), NULL);
 
                 // Adding attributes
@@ -38,9 +37,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                     HRESULT hr = E_FAIL;
                     if (item && item.Type & ConfigItem::ATTRIBUTE)
                     {
-                        if (FAILED(
-                                hr = pWriter->WriteAttributeString(
-                                    NULL, item.strName.c_str(), NULL, item.c_str())))
+                        if (FAILED(hr = pWriter->WriteAttributeString(NULL, item.strName.c_str(), NULL, item.c_str())))
                         {
                             spdlog::warn("Failed to write item (code: {:#x})", hr);
                             return;
@@ -80,8 +77,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                         begin(config.SubItems),
                         end(config.SubItems),
                         [this, &pWriter, &bHasChild](const ConfigItem& item) {
-                            if (item && (item.Type == ConfigItem::NODE)
-                                || (item.Type == ConfigItem::NODELIST))
+                            if (item && (item.Type == ConfigItem::NODE) || (item.Type == ConfigItem::NODELIST))
                             {
                                 WriteConfig(pWriter, item);
                                 bHasChild = true;
@@ -97,8 +93,7 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
 
             break;
             case ConfigItem::ATTRIBUTE:
-                if (FAILED(
-                        hr = pWriter->WriteAttributeString(NULL, config.strName.c_str(), NULL, config.c_str())))
+                if (FAILED(hr = pWriter->WriteAttributeString(NULL, config.strName.c_str(), NULL, config.c_str())))
                 {
                     XmlLiteExtension::LogError(hr, nullptr);
                 }

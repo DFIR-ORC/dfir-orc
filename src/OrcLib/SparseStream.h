@@ -27,7 +27,7 @@ public:
     }
     ~SparseStream();
 
-	HRESULT OpenFile(
+    HRESULT OpenFile(
         __in PCWSTR pwzPath,
         __in DWORD dwDesiredAccess,
         __in DWORD dwSharedMode,
@@ -46,4 +46,3 @@ private:
 }  // namespace Orc
 
 #pragma managed(pop)
-

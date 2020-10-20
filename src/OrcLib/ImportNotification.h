@@ -46,7 +46,6 @@ private:
     HRESULT m_hr = E_FAIL;
 
 protected:
-
     ImportNotification(HRESULT hr, ActionTaken action, const ImportItem& item)
         : m_hr(hr)
         , m_item(item)
@@ -61,14 +60,14 @@ protected:
     }
 
 public:
-	static Notification MakeExtractNotification(const ImportItem& import_item);
-	static Notification MakeExtractNotification(ImportItem&& import_item);
-	static Notification MakeImportNotification(const ImportItem& import_item);
-	static Notification MakeImportNotification(ImportItem&& import_item);
-	static Notification MakeIgnoreNotification(const ImportItem& import_item);
-	static Notification MakeIgnoreNotification(ImportItem&& import_item);
-	static Notification MakeFailureNotification(HRESULT hr, const ImportItem& import_item);
-	static Notification MakeFailureNotification(HRESULT hr, ImportItem&& import_item);
+    static Notification MakeExtractNotification(const ImportItem& import_item);
+    static Notification MakeExtractNotification(ImportItem&& import_item);
+    static Notification MakeImportNotification(const ImportItem& import_item);
+    static Notification MakeImportNotification(ImportItem&& import_item);
+    static Notification MakeIgnoreNotification(const ImportItem& import_item);
+    static Notification MakeIgnoreNotification(ImportItem&& import_item);
+    static Notification MakeFailureNotification(HRESULT hr, const ImportItem& import_item);
+    static Notification MakeFailureNotification(HRESULT hr, ImportItem&& import_item);
 
     HRESULT GetHR() const { return m_hr; }
     const ImportItem& Item() const { return m_item; }

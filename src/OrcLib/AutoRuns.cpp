@@ -165,22 +165,23 @@ HRESULT AutoRuns::GetAutoRuns(AutoRunsVector& autoruns)
         begin(m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM].NodeList),
         end(m_AutoRuns.SubItems[AUTORUNS_ITEM_ITEM].NodeList),
         [&autoruns](const ConfigItem& item) {
-            AutoRunItem autorun_item = {item.SubItems[AUTORUNS_LOCATION_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_ITEMNAME_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_ENABLED_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_DESCRIPTION_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_COMPANY_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_VERSION_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_IMAGEPATH_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_MD5HASH_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_SHA1HASH_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_SHA256HASH_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_PESHA1HASH_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_PESHA256HASH_ITEM].c_str(),
-                                        item.SubItems[AUTORUNS_IMPHASH_ITEM].c_str(),
-                                        false};
+            AutoRunItem autorun_item = {
+                item.SubItems[AUTORUNS_LOCATION_ITEM].c_str(),
+                item.SubItems[AUTORUNS_ITEMNAME_ITEM].c_str(),
+                item.SubItems[AUTORUNS_ENABLED_ITEM].c_str(),
+                item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].c_str(),
+                item.SubItems[AUTORUNS_DESCRIPTION_ITEM].c_str(),
+                item.SubItems[AUTORUNS_COMPANY_ITEM].c_str(),
+                item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(),
+                item.SubItems[AUTORUNS_VERSION_ITEM].c_str(),
+                item.SubItems[AUTORUNS_IMAGEPATH_ITEM].c_str(),
+                item.SubItems[AUTORUNS_MD5HASH_ITEM].c_str(),
+                item.SubItems[AUTORUNS_SHA1HASH_ITEM].c_str(),
+                item.SubItems[AUTORUNS_SHA256HASH_ITEM].c_str(),
+                item.SubItems[AUTORUNS_PESHA1HASH_ITEM].c_str(),
+                item.SubItems[AUTORUNS_PESHA256HASH_ITEM].c_str(),
+                item.SubItems[AUTORUNS_IMPHASH_ITEM].c_str(),
+                false};
 
             if (!wcsncmp(
                     autorun_item.ImagePath,
@@ -190,8 +191,7 @@ HRESULT AutoRuns::GetAutoRuns(AutoRunsVector& autoruns)
                 autorun_item.ImagePath += wcslen(L"File not found: ");
             }
             if (item.SubItems[AUTORUNS_SIGNER_ITEM] && !item.SubItems[AUTORUNS_SIGNER_ITEM].empty())
-                if (!_wcsnicmp(
-                        item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
+                if (!_wcsnicmp(item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(), L"(Verified) ", wcslen(L"(Verified) ")))
                     autorun_item.IsVerified = true;
 
             autoruns.push_back(autorun_item);
@@ -219,22 +219,23 @@ HRESULT AutoRuns::PrintAutoRuns()
 HRESULT AutoRuns::EnumItems(AutoRunsEnumItemCallback pCallBack, LPVOID pContext)
 {
     std::for_each(begin(m_AutoRuns.NodeList), end(m_AutoRuns.NodeList), [pCallBack, pContext](const ConfigItem& item) {
-        AutoRunItem autorun_item = {item.SubItems[AUTORUNS_LOCATION_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_ITEMNAME_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_ENABLED_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_DESCRIPTION_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_COMPANY_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_VERSION_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_IMAGEPATH_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_MD5HASH_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_SHA1HASH_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_SHA256HASH_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_PESHA1HASH_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_PESHA256HASH_ITEM].c_str(),
-                                    item.SubItems[AUTORUNS_IMPHASH_ITEM].c_str(),
-                                    false};
+        AutoRunItem autorun_item = {
+            item.SubItems[AUTORUNS_LOCATION_ITEM].c_str(),
+            item.SubItems[AUTORUNS_ITEMNAME_ITEM].c_str(),
+            item.SubItems[AUTORUNS_ENABLED_ITEM].c_str(),
+            item.SubItems[AUTORUNS_LAUNCHSTRING_ITEM].c_str(),
+            item.SubItems[AUTORUNS_DESCRIPTION_ITEM].c_str(),
+            item.SubItems[AUTORUNS_COMPANY_ITEM].c_str(),
+            item.SubItems[AUTORUNS_SIGNER_ITEM].c_str(),
+            item.SubItems[AUTORUNS_VERSION_ITEM].c_str(),
+            item.SubItems[AUTORUNS_IMAGEPATH_ITEM].c_str(),
+            item.SubItems[AUTORUNS_MD5HASH_ITEM].c_str(),
+            item.SubItems[AUTORUNS_SHA1HASH_ITEM].c_str(),
+            item.SubItems[AUTORUNS_SHA256HASH_ITEM].c_str(),
+            item.SubItems[AUTORUNS_PESHA1HASH_ITEM].c_str(),
+            item.SubItems[AUTORUNS_PESHA256HASH_ITEM].c_str(),
+            item.SubItems[AUTORUNS_IMPHASH_ITEM].c_str(),
+            false};
 
         if (!wcsncmp(
                 autorun_item.ImagePath,

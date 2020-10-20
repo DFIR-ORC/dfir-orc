@@ -51,7 +51,6 @@ public:
     static std::wstring ToString(Type locationType);
 
 private:
-
     std::shared_ptr<VolumeReader> m_Reader;
     std::wstring m_Location;
     std::wstring m_Identifier;

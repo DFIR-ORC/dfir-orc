@@ -150,7 +150,7 @@ HRESULT ObjectDirectory::ObjectInstance::Write(
 {
     pWriter.BeginElement(szElement);
 
-    pWriter.WriteNamed(L"type", (DWORD) Type, ObjectDirectory::g_ObjectTypeDefinition);
+    pWriter.WriteNamed(L"type", (DWORD)Type, ObjectDirectory::g_ObjectTypeDefinition);
     pWriter.WriteNamed(L"name", Name.c_str());
 
     if (!Path.empty())
@@ -240,8 +240,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
 
             switch (type)
             {
-                case ObjectType::SymbolicLink:
-                {
+                case ObjectType::SymbolicLink: {
                     HANDLE hSymLink = INVALID_HANDLE_VALUE;
 
                     OBJECT_ATTRIBUTES SymLinkAttr;
@@ -296,8 +295,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
                 break;
                 case Invalid:
                     break;
-                case Directory:
-                {
+                case Directory: {
                     if (bRecursive)
                     {
                         if (FAILED(hr = ParseObjectDirectory(path, objects, bRecursive)))
@@ -316,8 +314,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
                         std::move(path));
                 }
                 break;
-                default:
-                {
+                default: {
                     objects.emplace_back(
                         type,
                         std::wstring(pObjInfo->Name.Buffer, pObjInfo->Name.Length / sizeof(WCHAR)),

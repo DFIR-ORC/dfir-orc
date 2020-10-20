@@ -33,8 +33,8 @@ HRESULT Main::Run()
         return hr;
     }
 
-    //std::vector<std::shared_ptr<Location>> addedLocs;
-    //if (auto hr = loc_set.AddLocation(config.strIF.c_str(), addedLocs); FAILED(hr))
+    // std::vector<std::shared_ptr<Location>> addedLocs;
+    // if (auto hr = loc_set.AddLocation(config.strIF.c_str(), addedLocs); FAILED(hr))
     //{
     //    spdlog::error(L"Failed to enumerate locations");
     //    return hr;
@@ -94,7 +94,9 @@ HRESULT Main::Run()
 
         auto out_file_stream = std::make_shared<FileStream>();
 
-        if (auto hr = out_file_stream->OpenFile(out.c_str(), GENERIC_WRITE, 0L, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); FAILED(hr))
+        if (auto hr = out_file_stream->OpenFile(
+                out.c_str(), GENERIC_WRITE, 0L, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            FAILED(hr))
         {
             spdlog::warn(L"Failed to open '{}' for write (code: {:#x})", config.strIF, hr);
             out_stream = out_file_stream = nullptr;
@@ -133,7 +135,8 @@ HRESULT Main::Run()
     if (config.Skip.QuadPart > 0LL)
     {
         if (auto hr = input_stream->SetFilePointer(
-                    config.BlockSize.QuadPart * config.Skip.QuadPart, FILE_BEGIN, &ullCurrentCursor); FAILED(hr))
+                config.BlockSize.QuadPart * config.Skip.QuadPart, FILE_BEGIN, &ullCurrentCursor);
+            FAILED(hr))
         {
             spdlog::error(
                 L"Failed to skip {} bytes from input stream '{}' (code: {:#x})",
@@ -152,7 +155,8 @@ HRESULT Main::Run()
                 if (config.NoTrunc)
                 {
                     if (auto hr = out.second->SetFilePointer(
-                            config.BlockSize.QuadPart * config.Seek.QuadPart, FILE_BEGIN, nullptr); FAILED(hr))
+                            config.BlockSize.QuadPart * config.Seek.QuadPart, FILE_BEGIN, nullptr);
+                        FAILED(hr))
                     {
                         spdlog::warn(
                             L"Failed to seek {} bytes in output stream '{}' (code: {:#x})",
@@ -200,8 +204,8 @@ HRESULT Main::Run()
             {
                 ZeroMemory(buffer.GetData(), buffer.GetCount());
                 ullRead = config.BlockSize.QuadPart;
-                if (auto hr = input_file_stream->SetFilePointer(
-                        config.BlockSize.QuadPart, FILE_CURRENT, NULL); FAILED(hr))
+                if (auto hr = input_file_stream->SetFilePointer(config.BlockSize.QuadPart, FILE_CURRENT, NULL);
+                    FAILED(hr))
                 {
                     spdlog::error(
                         L"Failed to seek to {} bytes offset after error with '{}' (absolute offset {})",
@@ -242,8 +246,7 @@ HRESULT Main::Run()
         {
             ULONGLONG ullWritten = 0LL;
             auto hr = E_FAIL;
-            if (output.second != nullptr
-                && FAILED(hr = output.second->Write(buffer.GetData(), ullRead, &ullWritten)))
+            if (output.second != nullptr && FAILED(hr = output.second->Write(buffer.GetData(), ullRead, &ullWritten)))
             {
                 spdlog::error(L"Failed to write {} bytes to output stream '{}'", buffer.GetCount(), output.first);
             }

@@ -110,8 +110,7 @@ HRESULT BITSAgent::Initialize()
     else
         return hr;
 
-
-    //TODO: Mutualize this code between the copyfileagent & bitsagent
+    // TODO: Mutualize this code between the copyfileagent & bitsagent
     if (m_config.bitsMode == OutputSpec::BITSMode::SMB && !m_config.UserName.empty())
     {
         NETRESOURCE nr;

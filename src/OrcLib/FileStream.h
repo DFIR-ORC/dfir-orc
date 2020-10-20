@@ -99,8 +99,8 @@ public:
     STDMETHOD(Close)();
 
 protected:
-    HANDLE          m_hFile = INVALID_HANDLE_VALUE;
-    std::wstring    m_strPath;
+    HANDLE m_hFile = INVALID_HANDLE_VALUE;
+    std::wstring m_strPath;
     CriticalSection m_cs;
 };
 

@@ -53,8 +53,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<Byte
     }
 
     auto options = dynamic_cast<Options*>(m_Options.get());
-    auto encoding = options ? options->Encoding
-                            : OutputSpec::Encoding::UTF8;
+    auto encoding = options ? options->Encoding : OutputSpec::Encoding::UTF8;
 
     if (encoding == OutputSpec::Encoding::UTF16)
     {
@@ -233,7 +232,6 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamed(LPCWSTR szName, LPCWSTR s
     return S_OK;
 }
 
-
 HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated(const WCHAR* szFormat, ...)
 {
     va_list argList;
@@ -274,7 +272,6 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated(const WCHAR* szFormat,
     }
     return S_OK;
 }
-
 
 HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated(LPCWSTR szName, const WCHAR* szFormat, ...)
 {
@@ -372,7 +369,6 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFileTime(LPCWSTR szName, U
     }
     return S_OK;
 }
-
 
 HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedAttributes(LPCWSTR szName, DWORD dwFileAttributes)
 {
@@ -494,7 +490,6 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamed(LPCWSTR szName, DWORD dwE
     }
     return S_OK;
 }
-
 
 HRESULT Orc::StructuredOutput::XML::Writer::Write(IN6_ADDR& ip)
 {

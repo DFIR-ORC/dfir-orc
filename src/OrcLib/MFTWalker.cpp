@@ -1526,7 +1526,8 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                 }
                 else if (pRecord->m_pBaseFileRecord != NULL)
                 {
-                    if (pRecord->m_pBaseFileRecord->m_pAttributeList && pRecord->m_pBaseFileRecord->m_pAttributeList->IsPresent())
+                    if (pRecord->m_pBaseFileRecord->m_pAttributeList
+                        && pRecord->m_pBaseFileRecord->m_pAttributeList->IsPresent())
                         pAttributeList = pRecord->m_pBaseFileRecord->m_pAttributeList;
                 }
 

@@ -113,12 +113,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
             case EmbeddedResource::EmbedSpec::ValuesDeletion:
                 if (SUCCEEDED(
                         hr = _UpdateResource(
-                            hOutput,
-                            strPEToUpdate.c_str(),
-                            EmbeddedResource::VALUES(),
-                            item.Name.c_str(),
-                            NULL,
-                            0L)))
+                            hOutput, strPEToUpdate.c_str(), EmbeddedResource::VALUES(), item.Name.c_str(), NULL, 0L)))
                 {
                     spdlog::debug(L"Successfully delete resource at position '{}' (code: {:#x})", item.Name, hr);
                 }
@@ -126,12 +121,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
             case EmbeddedResource::EmbedSpec::BinaryDeletion:
                 if (SUCCEEDED(
                         hr = _UpdateResource(
-                            hOutput,
-                            strPEToUpdate.c_str(),
-                            EmbeddedResource::BINARY(),
-                            item.Name.c_str(),
-                            NULL,
-                            0L)))
+                            hOutput, strPEToUpdate.c_str(), EmbeddedResource::BINARY(), item.Name.c_str(), NULL, 0L)))
                 {
                     spdlog::debug(L"Successfully delete resource at position '{}' (code: {:#x})", item.Name, hr);
                 }
@@ -203,8 +193,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                 }
             }
             break;
-            case EmbeddedResource::EmbedSpec::Archive:
-            {
+            case EmbeddedResource::EmbedSpec::Archive: {
                 ArchiveFormat fmt = ArchiveFormat::Unknown;
 
                 if (item.ArchiveFormat.empty())
@@ -233,7 +222,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                     return hr;
                 }
 
-				if(!item.ArchiveCompression.empty())
+                if (!item.ArchiveCompression.empty())
                 {
                     if (FAILED(hr = creator->SetCompressionLevel(item.ArchiveCompression)))
                     {

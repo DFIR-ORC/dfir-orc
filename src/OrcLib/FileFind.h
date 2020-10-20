@@ -378,7 +378,6 @@ private:
         CaseInsensitiveUnordered>;
     using TermMapOfSizes = std::unordered_multimap<ULONGLONG, std::shared_ptr<SearchTerm>>;
 
-
     TermMapOfNames m_ExactNameTerms;
     TermMapOfNames m_ExactPathTerms;
     TermMapOfSizes m_SizeTerms;

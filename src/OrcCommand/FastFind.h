@@ -45,7 +45,8 @@ public:
         : Locations()
         , Files(
               true,
-              CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256) {};
+              CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1
+                  | CryptoHashStream::Algorithm::SHA256) {};
 
     LocationSet Locations;
     FileFind Files;
@@ -196,7 +197,7 @@ public:
                         break;
                     case MatchType::Regex:
                         descr += L"'name matches regex ";
-                        //descr += str
+                        // descr += str
                         break;
                 }
                 descr += strName;
@@ -275,7 +276,10 @@ private:
     std::vector<std::wstring> ObjectDirs;
     std::vector<std::wstring> FileDirs;
 
-    HRESULT LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::ObjectInstance& obj, LPCWSTR szElement = nullptr);
+    HRESULT LogObjectMatch(
+        const ObjectSpec::ObjectItem& spec,
+        const ObjectDirectory::ObjectInstance& obj,
+        LPCWSTR szElement = nullptr);
     HRESULT LogObjectMatch(
         const ObjectSpec::ObjectItem& spec,
         const FileDirectory::FileInstance& file,

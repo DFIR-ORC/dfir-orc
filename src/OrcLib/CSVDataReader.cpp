@@ -335,8 +335,7 @@ System::Object ^ CSVDataReader::GetValue(int Ordinal)
             return m_pCurrentRecord->Values[Ordinal].dwInteger;
         case ::LargeInteger:
             return m_pCurrentRecord->Values[Ordinal].liLargeInteger.QuadPart;
-        case ::DateTime:
-        {
+        case ::DateTime: {
             LARGE_INTEGER ft;
             ft.LowPart = m_pCurrentRecord->Values[Ordinal].ftDateTime.dwLowDateTime;
             ft.HighPart = m_pCurrentRecord->Values[Ordinal].ftDateTime.dwHighDateTime;
@@ -382,8 +381,7 @@ int CSVDataReader::GetValues(cli::array<System::Object ^, 1> ^ theArray)
             case ::LargeInteger:
                 local[i] = m_pCurrentRecord->Values[i].liLargeInteger.QuadPart;
                 break;
-            case ::DateTime:
-            {
+            case ::DateTime: {
                 LARGE_INTEGER ft;
                 ft.LowPart = m_pCurrentRecord->Values[i].ftDateTime.dwLowDateTime;
                 ft.HighPart = m_pCurrentRecord->Values[i].ftDateTime.dwHighDateTime;
@@ -714,8 +712,7 @@ System::String ^ CSVDataReader::GetString(int Ordinal)
             return System::Convert::ToString((int)m_pCurrentRecord->Values[Ordinal].dwInteger);
         case ::LargeInteger:
             return System::Convert::ToString(m_pCurrentRecord->Values[Ordinal].liLargeInteger.QuadPart);
-        case ::DateTime:
-        {
+        case ::DateTime: {
             LARGE_INTEGER ft;
             ft.LowPart = m_pCurrentRecord->Values[Ordinal].ftDateTime.dwLowDateTime;
             ft.HighPart = m_pCurrentRecord->Values[Ordinal].ftDateTime.dwHighDateTime;
@@ -779,8 +776,7 @@ System::DateTime CSVDataReader::GetDateTime(int Ordinal)
             return System::Convert::ToDateTime((int)m_pCurrentRecord->Values[Ordinal].dwInteger);
         case ::LargeInteger:
             return System::Convert::ToDateTime(m_pCurrentRecord->Values[Ordinal].liLargeInteger.QuadPart);
-        case ::DateTime:
-        {
+        case ::DateTime: {
             LARGE_INTEGER ft;
             ft.LowPart = m_pCurrentRecord->Values[Ordinal].ftDateTime.dwLowDateTime;
             ft.HighPart = m_pCurrentRecord->Values[Ordinal].ftDateTime.dwHighDateTime;

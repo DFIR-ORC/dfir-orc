@@ -94,7 +94,6 @@ private:
     PJOB_STATISTICS m_pJobStats;
 
 protected:
-
     CommandNotification(Event result);
 
 public:

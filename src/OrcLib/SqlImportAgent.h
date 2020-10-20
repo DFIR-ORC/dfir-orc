@@ -61,7 +61,6 @@ public:
     virtual ~SqlImportAgent();
 
 private:
-
     ImportNotification::ITarget& m_target;
     ImportMessage::ISource& m_source;
 

@@ -17,7 +17,6 @@
 
 namespace Orc {
 
-
 namespace Command::ObjInfo {
 
 class ORCUTILS_API Main : public UtilitiesMain

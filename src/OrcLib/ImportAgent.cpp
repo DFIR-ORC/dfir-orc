@@ -675,8 +675,7 @@ HRESULT ImportAgent::ImportOneItem(ImportMessage::Message request)
 
     switch (request->Item().format)
     {
-        case ImportItem::Envelopped:
-        {
+        case ImportItem::Envelopped: {
             const auto it = m_Tasks.push_back(make_task<std::function<void()>>([this, request]() {
                 HRESULT hr = E_FAIL;
                 if (FAILED(hr = EnveloppedItem(request->m_item)))
@@ -687,12 +686,10 @@ HRESULT ImportAgent::ImportOneItem(ImportMessage::Message request)
             m_TaskGroup.run(*it);
         }
         break;
-        case ImportItem::Archive:
-        {
+        case ImportItem::Archive: {
             switch (type)
             {
-                case ImportMessage::Extract:
-                {
+                case ImportMessage::Extract: {
                     const auto it = m_Tasks.push_back(make_task<std::function<void()>>([this, request]() {
                         HRESULT hr = E_FAIL;
                         if (FAILED(hr = ExtractItem(request->m_item)))
@@ -703,8 +700,7 @@ HRESULT ImportAgent::ImportOneItem(ImportMessage::Message request)
                     m_TaskGroup.run(*it);
                 }
                 break;
-                case ImportMessage::Expand:
-                {
+                case ImportMessage::Expand: {
                     const auto it = m_Tasks.push_back(make_task<std::function<void()>>([this, request]() {
                         HRESULT hr = E_FAIL;
                         if (FAILED(hr = ExpandItem(request->m_item)))
@@ -720,8 +716,7 @@ HRESULT ImportAgent::ImportOneItem(ImportMessage::Message request)
         case ImportItem::CSV:
             switch (type)
             {
-                case ImportMessage::Extract:
-                {
+                case ImportMessage::Extract: {
                     const auto it = m_Tasks.push_back(make_task<std::function<void()>>([this, request]() {
                         HRESULT hr = E_FAIL;
                         if (FAILED(hr = ExtractItem(request->m_item)))
@@ -740,8 +735,7 @@ HRESULT ImportAgent::ImportOneItem(ImportMessage::Message request)
         case ImportItem::EventLog:
             switch (type)
             {
-                case ImportMessage::Extract:
-                {
+                case ImportMessage::Extract: {
                     const auto it = m_Tasks.push_back(make_task<std::function<void()>>([this, request]() {
                         HRESULT hr = E_FAIL;
                         if (FAILED(hr = ExtractItem(request->m_item)))
@@ -759,8 +753,7 @@ HRESULT ImportAgent::ImportOneItem(ImportMessage::Message request)
         case ImportItem::RegistryHive:
             switch (type)
             {
-                case ImportMessage::Extract:
-                {
+                case ImportMessage::Extract: {
                     const auto it = m_Tasks.push_back(make_task<std::function<void()>>([this, request]() {
                         HRESULT hr = E_FAIL;
                         if (FAILED(hr = ExtractItem(request->m_item)))
@@ -780,8 +773,7 @@ HRESULT ImportAgent::ImportOneItem(ImportMessage::Message request)
         case ImportItem::Text:
             switch (type)
             {
-                case ImportMessage::Extract:
-                {
+                case ImportMessage::Extract: {
                     const auto it = m_Tasks.push_back(make_task<std::function<void()>>([this, request]() {
                         HRESULT hr = E_FAIL;
                         if (FAILED(hr = ExtractItem(request->m_item)))

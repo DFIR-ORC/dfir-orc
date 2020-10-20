@@ -81,10 +81,7 @@ HRESULT ORCLIB_API WideToAnsi(__in const std::wstring_view src, Buffer<CHAR, _De
 }
 
 template <size_t _DeclElts>
-HRESULT ORCLIB_API WideToAnsi(
-    __in_ecount(cchSrc) PCWSTR pwszSrc,
-    __in DWORD cchSrc,
-    Buffer<CHAR, _DeclElts>& dest)
+HRESULT ORCLIB_API WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cchSrc, Buffer<CHAR, _DeclElts>& dest)
 {
 
     using namespace std;
@@ -235,10 +232,7 @@ HRESULT ORCLIB_API AnsiToWide(__in const std::string_view src, Buffer<WCHAR, _De
 }
 
 template <size_t _DeclElts>
-HRESULT ORCLIB_API AnsiToWide(
-    __in_ecount(cchSrc) PCSTR pwszSrc,
-    __in DWORD cchSrc,
-    Buffer<WCHAR, _DeclElts>& dest)
+HRESULT ORCLIB_API AnsiToWide(__in_ecount(cchSrc) PCSTR pwszSrc, __in DWORD cchSrc, Buffer<WCHAR, _DeclElts>& dest)
 {
 
     HRESULT hr = E_FAIL;

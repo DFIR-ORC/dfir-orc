@@ -542,8 +542,7 @@ INT_PTR ConcurrentCabDecompress::FDINotify(__in FDINOTIFICATIONTYPE fdint, __in 
 
     switch (fdint)
     {
-        case fdintCOPY_FILE:
-        {
+        case fdintCOPY_FILE: {
             HRESULT hr = E_FAIL;
             wstring strFileName;
 

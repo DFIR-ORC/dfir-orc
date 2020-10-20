@@ -47,12 +47,10 @@ STDMETHODIMP TemporaryStream::CanSeek()
     return S_FALSE;
 }
 
-STDMETHODIMP TemporaryStream::Open(
-    const fs::path& output,
-    DWORD dwMemThreshold,
-    bool bReleaseOnClose)
+STDMETHODIMP TemporaryStream::Open(const fs::path& output, DWORD dwMemThreshold, bool bReleaseOnClose)
 {
-    return TemporaryStream::Open(output.parent_path().wstring(), output.filename().wstring(), dwMemThreshold, bReleaseOnClose);
+    return TemporaryStream::Open(
+        output.parent_path().wstring(), output.filename().wstring(), dwMemThreshold, bReleaseOnClose);
 }
 
 STDMETHODIMP TemporaryStream::Open(

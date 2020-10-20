@@ -302,8 +302,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
             {
                 case CommandParameter::StdOut:
                 case CommandParameter::StdErr:
-                case CommandParameter::StdOutErr:
-                {
+                case CommandParameter::StdOutErr: {
                     wstring strFileName;
 
                     if (FAILED(hr = ApplyPattern(parameter.Keyword, L"", L"", strFileName)))
@@ -324,8 +323,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     }
                 }
                 break;
-                case CommandParameter::OutFile:
-                {
+                case CommandParameter::OutFile: {
                     wstring strInterpretedName;
 
                     if (FAILED(hr = GetOutputFile(parameter.Name.c_str(), strInterpretedName)))
@@ -369,13 +367,11 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     }
                 }
                 break;
-                case CommandParameter::OutTempFile:
-                {
+                case CommandParameter::OutTempFile: {
                     // I don't really know if we need those...
                 }
                 break;
-                case CommandParameter::OutDirectory:
-                {
+                case CommandParameter::OutDirectory: {
                     wstring strInterpretedName;
 
                     if (FAILED(hr = GetOutputFile(parameter.Name.c_str(), strInterpretedName)))
@@ -435,8 +431,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     if (FAILED(hr = retval->AddArgument(parameter.Keyword, parameter.OrderId)))
                         return;
                     break;
-                case CommandParameter::Executable:
-                {
+                case CommandParameter::Executable: {
 
                     if (EmbeddedResource::IsResourceBased(parameter.Name))
                     {
@@ -457,8 +452,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     }
                 }
                 break;
-                case CommandParameter::InFile:
-                {
+                case CommandParameter::InFile: {
                     if (EmbeddedResource::IsResourceBased(parameter.Name))
                     {
                         wstring extracted;
@@ -783,7 +777,7 @@ void CommandAgent::run()
                 m_bWillRequireBreakAway = false;
 
                 auto [major, minor] = SystemDetails::GetOSVersion();
-                if ((major >= 6 && minor >= 2) ||major >= 10)
+                if ((major >= 6 && minor >= 2) || major >= 10)
                 {
                     spdlog::debug(L"Current Windows version allows nested jobs. We create our own job and use it!");
                     m_Job = JobObject(m_Keyword.c_str());
@@ -1051,8 +1045,7 @@ void CommandAgent::run()
                     });
             }
             break;
-            case CommandMessage::Terminate:
-            {
+            case CommandMessage::Terminate: {
                 HANDLE hProcess =
                     OpenProcess(PROCESS_TERMINATE | PROCESS_QUERY_INFORMATION, FALSE, request->ProcessID());
 

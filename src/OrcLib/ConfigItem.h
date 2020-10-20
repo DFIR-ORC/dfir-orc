@@ -120,7 +120,7 @@ public:  // METHODS
     explicit operator std::wstring() const { return strData; }
 
     LPCWSTR c_str() const { return strData.c_str(); }
-    size_t  size() const { return strData.size(); }
+    size_t size() const { return strData.size(); }
     bool empty() const { return strData.empty(); }
 
     explicit operator DWORD() const;
@@ -135,7 +135,7 @@ public:  // METHODS
     }
 
     operator std::wstring_view() const { return std::wstring_view(strData); }
-    operator const std::wstring&() const { return strData; }
+    operator const std::wstring &() const { return strData; }
 
     ConfigItem& Item(LPCWSTR szIndex);
     const ConfigItem& Item(LPCWSTR szIndex) const;

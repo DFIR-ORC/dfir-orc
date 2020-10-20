@@ -33,7 +33,6 @@ public:
     }
 };
 
-
 template <>
 stx::Result<ULONG32, HRESULT> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
 
@@ -55,6 +54,6 @@ template <>
 stx::Result<std::filesystem::path, HRESULT>
 Orc::Registry::Read<std::filesystem::path>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
 
-} // namespace Orc
+}  // namespace Orc
 
 #pragma managed(pop)

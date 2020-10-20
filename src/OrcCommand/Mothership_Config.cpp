@@ -25,28 +25,27 @@ using namespace std;
 using namespace Orc;
 using namespace Orc::Command::Mothership;
 
-namespace
+namespace {
+void WriteArgument(std::wstringstream& stream, std::wstring_view& arg)
 {
-    void WriteArgument(std::wstringstream& stream, std::wstring_view& arg)
+    if (arg.find(' ') != std::wstring::npos)
     {
-        if (arg.find(' ') != std::wstring::npos)
+        auto valuePos = arg.find_first_of('=');
+        if (valuePos != std::wstring_view::npos)
         {
-            auto valuePos = arg.find_first_of('=');
-            if (valuePos != std::wstring_view::npos)
-            {
-                valuePos += 1;
+            valuePos += 1;
 
-                // Add quotes to escape spaces
-                const auto variable = arg.substr(0, valuePos);
-                const auto value = arg.substr(valuePos, arg.size() - valuePos);
+            // Add quotes to escape spaces
+            const auto variable = arg.substr(0, valuePos);
+            const auto value = arg.substr(valuePos, arg.size() - valuePos);
 
-                stream << " " << variable << "\"" << value << "\"";
-                return;
-            }
+            stream << " " << variable << "\"" << value << "\"";
+            return;
         }
-
-        stream << " " << arg;
     }
+
+    stream << " " << arg;
+}
 }  // namespace
 
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
