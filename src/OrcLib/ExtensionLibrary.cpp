@@ -46,10 +46,10 @@ ExtensionLibrary::ExtensionLibrary(
 
 HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
 {
-    HRESULT hr = E_FAIL;
+    using namespace std::filesystem;
 
     std::wstring strSID;
-    if (FAILED(hr = SystemDetails::UserSID(strSID)))
+    if (auto hr = SystemDetails::UserSID(strSID); FAILED(hr))
     {
         Log::Error(L"Failed to get current user SID (code: {:#x})", hr);
         return hr;
@@ -58,14 +58,14 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
     if (EmbeddedResource::IsResourceBased(strFileRef))
     {
         std::wstring strExtractedFile;
-        if (FAILED(
-                hr = EmbeddedResource::ExtractToFile(
-                    strFileRef,
-                    m_strKeyword,
-                    RESSOURCE_READ_EXECUTE_SID,
-                    strSID.c_str(),
-                    m_tempDir.wstring(),
-                    strExtractedFile)))
+        if (auto hr = EmbeddedResource::ExtractToFile(
+                strFileRef,
+                m_strKeyword,
+                RESSOURCE_READ_EXECUTE_SID,
+                strSID.c_str(),
+                m_tempDir.wstring(),
+                strExtractedFile);
+            FAILED(hr))
         {
             Log::Debug(
                 L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})",
@@ -76,7 +76,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         }
         m_bDeleteOnClose = true;
 
-        if (FAILED(hr = ToDesiredName(strExtractedFile)))
+        if (auto hr = ToDesiredName(strExtractedFile); FAILED(hr))
         {
             Log::Warn(
                 L"Failed to extract rename extracted file from '{}' to '{}' (code: {:#x})",
@@ -99,37 +99,51 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
 
     Log::Debug(L"ExtensionLibrary: Loading value '{}'", strFileRef);
     wstring strNewLibRef;
-    if (SUCCEEDED(EmbeddedResource::ExtractValue(L"", strFileRef, strNewLibRef)))
+    if (auto hr = EmbeddedResource::ExtractValue(L"", strFileRef, strNewLibRef); SUCCEEDED(hr))
     {
         Log::Debug(L"ExtensionLibrary: Loaded value {}={} successfully", strFileRef, strNewLibRef);
         if (EmbeddedResource::IsResourceBased(strNewLibRef))
         {
-            std::wstring strExtractedFile;
+            std::vector<std::pair<std::wstring, std::wstring>> strExtractedFiles;
 
             if (FAILED(
-                    hr = EmbeddedResource::ExtractToFile(
+                    hr = EmbeddedResource::ExtractToDirectory(
                         strNewLibRef,
                         m_strKeyword,
                         RESSOURCE_READ_EXECUTE_SID,
                         strSID.c_str(),
                         m_tempDir.wstring(),
-                        strExtractedFile)))
+                        strExtractedFiles)))
             {
                 Log::Debug(
                     L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})", strNewLibRef, m_tempDir, hr);
                 return hr;
             }
-            m_bDeleteOnClose = true;
 
-            if (FAILED(hr = ToDesiredName(strExtractedFile)))
+            for (const auto& file : strExtractedFiles)
             {
-                Log::Warn(
-                    L"Failed to extract rename extracted file from '{}' to '{}' (code: {:#x})",
-                    strExtractedFile,
-                    m_strDesiredName,
-                    hr);
-                m_libFile = strExtractedFile;
+                path archive_path = file.first;
+                path extracted_path = file.second;
+
+                // When extracting extension libraries, we need the files to keep their original file names for proper
+                // dependency loading
+                path desired_path = extracted_path;
+                desired_path.replace_filename(archive_path.filename());
+
+                std::error_code ec;
+                rename(extracted_path, desired_path, ec);
+                if (ec)
+                    Log::Warn(L"Failed to rename extension library name {} to {}", extracted_path, desired_path);
+                else if (desired_path.filename() == m_strDesiredName)
+                    m_libFile = desired_path;
             }
+            if (m_libFile.empty())
+            {
+                Log::Error(L"Desired file name {} was not found in {} extracted files", m_strDesiredName);
+                return E_INVALIDARG;
+            }
+
+            m_bDeleteOnClose = true;
 
             auto [hr, hModule] = LoadThisLibrary(m_libFile);
             if (hModule == NULL || FAILED(hr))
@@ -143,8 +157,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         }
 
         // Last chance, try loading the file
-        auto [hr, hModule] = LoadThisLibrary(strNewLibRef);
-        if (hModule == NULL || FAILED(hr))
+        if (auto [hr, hModule] = LoadThisLibrary(strNewLibRef); hModule == NULL || FAILED(hr))
         {
             Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", strNewLibRef, hr);
             return hr;
@@ -186,7 +199,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
     WCHAR szFullPath[MAX_PATH];
     if (!GetModuleFileName(m_hModule, szFullPath, MAX_PATH))
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
+        auto hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strFileRef, hr);
         return hr;
     }

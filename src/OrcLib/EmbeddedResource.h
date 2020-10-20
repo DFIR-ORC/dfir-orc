@@ -364,6 +364,21 @@ public:
         const std::wstring& strTempDir,
         std::wstring& outputFile);
 
+    static HRESULT ExtractToDirectory(
+        const std::wstring& szImageFileRessourceID,
+        const std::wstring& Keyword,
+        LPCWSTR szSDDL,
+        const std::wstring& strTempDir,
+        std::vector<std::pair<std::wstring, std::wstring>>& outputFiles);
+
+    static HRESULT ExtractToDirectory(
+        const std::wstring& szImageFileRessourceID,
+        const std::wstring& Keyword,
+        LPCWSTR szSDDLFormat,
+        LPCWSTR szSID,
+        const std::wstring& strTempDir,
+        std::vector<std::pair<std::wstring, std::wstring>>& outputFiles);
+
     static HRESULT ExtractToBuffer(const std::wstring& szImageFileRessourceID, CBinaryBuffer& Buffer);
 
     template <typename _T, size_t _DeclElts>
