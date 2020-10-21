@@ -181,7 +181,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
                 m_MFT0Info.DataSize = pAttrData->Form.Nonresident.ValidDataLength;
                 if (FAILED(hr = MFTUtils::GetAttributeNRExtents(pAttrData, m_MFT0Info, m_pVolReader)))
                 {
-                    hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
+                    hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
                     spdlog::error("MFT - failed to get non resident extents");
                     break;
                 }
