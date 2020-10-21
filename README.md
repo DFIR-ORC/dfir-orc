@@ -56,7 +56,6 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 | ORC_BUILD_FASTFIND   | OFF                   | Build FastFind binary            |
 | ORC_BUILD_ORC        | ON                    | Build Orc binary                 |
 | ORC_BUILD_PARQUET    | OFF                   | Build Parquet module (x64)       |
-| ORC_BUILD_SQL        | OFF                   | Build SQL module [1]             |
 | ORC_BUILD_SSDEEP     | OFF                   | Build with ssdeep support        |
 | ORC_BUILD_JSON       | ON                    | Build with JSON enabled          |
 | ORC_USE_STATIC_CRT   | ON                    | Use static runtime               |
@@ -65,10 +64,7 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 | VCPKG_TARGET_TRIPLET | Autodetect            | VCPKG triplet to use             |
 | CMAKE_TOOLCHAIN_FILE | Autodetect            | VCPKG's toolchain file           |
 
-
-[1] `ORC_BUILD_SQL=ON` requires [SQL Server Native Client](https://docs.microsoft.com/en-us/sql/relational-databases/native-client/applications/installing-sql-server-native-client?view=sql-server-2017)
-
-[2] The `xmllite.dll` is native after patched Windows XP SP2
+[1] The `xmllite.dll` is native after patched Windows XP SP2
 
 **Note:** Some combinations may be irrelevant.
 

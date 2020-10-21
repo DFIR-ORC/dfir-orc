@@ -24,10 +24,6 @@ if(ORC_BUILD_PARQUET)
     add_subdirectory(OrcParquet)
 endif()
 
-if(ORC_BUILD_SQL)
-    add_subdirectory(OrcSql)
-endif()
-
 if(ORC_BUILD_ORC)
     add_subdirectory(Orc)
 endif()

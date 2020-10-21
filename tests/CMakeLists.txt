@@ -17,7 +17,3 @@ endif()
 if(ORC_BUILD_PARQUET)
     add_subdirectory(OrcParquetTest)
 endif()
-
-if(ORC_BUILD_SQL)
-    add_subdirectory(OrcSqlTest)
-endif()
