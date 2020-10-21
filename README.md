@@ -52,7 +52,6 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 | ORC_DOWNLOADS_ONLY   | OFF                   | Only download vcpkg dependencies |
 | ORC_BUILD_VCPKG      | ON                    | Build vcpkg dependencies         |
 | ORC_BUILD_APACHE_ORC | OFF                   | Build Apache Orc module          |
-| ORC_BUILD_CHAKRACORE | OFF                   | Build with ChakraCore support    |
 | ORC_BUILD_COMMAND    | ON                    | Build OrcCommand library         |
 | ORC_BUILD_FASTFIND   | OFF                   | Build FastFind binary            |
 | ORC_BUILD_ORC        | ON                    | Build Orc binary                 |

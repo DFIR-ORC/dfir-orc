@@ -5,7 +5,6 @@ option(ORC_USE_STATIC_CRT "Use static runtime" ON)
 option(ORC_BUILD_VCPKG "Build vcpkg dependencies" ON)
 
 option(ORC_BUILD_APACHE_ORC "Build Apache's ORC module" OFF)
-option(ORC_BUILD_CHAKRACORE "Build with chakracore support" OFF)
 option(ORC_BUILD_COMMAND    "Build any OrcCommand based command" ON)
 option(ORC_BUILD_FASTFIND   "Build FastFind binary" ON)
 option(ORC_BUILD_ORC        "Build Orc binary" ON)
@@ -100,13 +99,6 @@ if(ORC_VCPKG_ROOT)
 
     if(ORC_BUILD_PARQUET)
         list(APPEND _PACKAGES arrow)
-    endif()
-
-    if(ORC_BUILD_CHAKRACORE)
-        list(APPEND _PACKAGES
-            chakracore:x86-windows
-            chakracore:x64-windows
-        )
     endif()
 
     if(ORC_BUILD_SSDEEP)

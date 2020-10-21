@@ -243,17 +243,6 @@ set(SRC_EXTENSIONLIBRARIES
 
 source_group(ExtensionLibraries FILES ${SRC_EXTENSIONLIBRARIES})
 
-if(ORC_BUILD_CHAKRACORE)
-    set(SRC_EXTENSIONLIBRARIES_CHAKRA
-        "ChakraBridge.h"
-        "ChakraExtension.cpp"
-        "ChakraExtension.h"
-        "ChakraMacros.h"
-    )
-
-    source_group(ExtensionLibraries\\Chakra FILES ${SRC_EXTENSIONLIBRARIES_CHAKRA})
-endif()
-
 set(SRC_EXTENSIONLIBRARIES_YARA
     "YaraStaticExtension.cpp"
     "YaraStaticExtension.h"
@@ -816,7 +805,6 @@ add_library(OrcLib
         ${SRC_DISK_LOCATION}
         ${SRC_DISK_VOLUME}
         ${SRC_EXTENSIONLIBRARIES}
-        ${SRC_EXTENSIONLIBRARIES_CHAKRA}
         ${SRC_EXTENSIONLIBRARIES_YARA}
         ${SRC_INOUT}
         ${SRC_INOUT_ARCHIVE}
@@ -887,11 +875,6 @@ if(ORC_BUILD_SSDEEP)
     find_package(ssdeep CONFIG REQUIRED)
     target_link_libraries(OrcLib PUBLIC ssdeep::fuzzy)
 endif()
-
- if(ORC_BUILD_CHAKRACORE)
-    find_package(chakracore REQUIRED)
-    target_link_libraries(OrcLib PUBLIC chakracore::chakracore-header-only)
- endif()
 
 if(NOT ORC_DISABLE_PRECOMPILED_HEADERS)
     target_precompile_headers(OrcLib PRIVATE stdafx.h)

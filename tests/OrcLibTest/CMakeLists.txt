@@ -107,11 +107,6 @@ source_group(Authenticode FILES ${SRC_AUTHENTICODE})
 set(SRC_LOCATIONS "locations.cpp")
 source_group(Locations FILES ${SRC_LOCATIONS})
 
-if(ORC_BUILD_CHAKRACORE)
-    set(SRC_CHAKRACORE "chakra_basic.cpp")
-    source_group(ChakraCore FILES ${SRC_CHAKRACORE})
-endif()
-
 set(SRC_YARA "yara_basic.cpp" "yara_scanner.cpp")
 source_group(Yara FILES ${SRC_YARA})
 
@@ -170,7 +165,6 @@ add_library(OrcLibTest
         ${SRC_RUNNINGCODE}
         ${SRC_AUTHENTICODE}
         ${SRC_LOCATIONS}
-        ${SRC_CHAKRACORE}
         ${SRC_YARA}
         ${SRC_INOUT_TABLEOUTPUT}
         ${SRC_PLAYLISTS}
@@ -192,53 +186,6 @@ target_link_libraries(OrcLibTest
 target_precompile_headers(OrcLibTest PRIVATE stdafx.h)
 
 set_target_properties(OrcLibTest PROPERTIES FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
-
-if(ORC_BUILD_CHAKRACORE)
-    find_package(chakracore REQUIRED)
-
-    if( ${TARGET_ARCH} STREQUAL "x86")
-        add_custom_command(
-            TARGET OrcLibTest
-            POST_BUILD
-            DEPENDS rcedit
-
-            COMMAND $<TARGET_FILE:rcedit>
-                set --type "VALUES"
-                    --name "CHAKRACORE_X86DLL"
-                    --value-utf16 "7z:#CHAKRACORE_X86^|ChakraCore_x86.dll"
-                    $<TARGET_FILE:OrcLibTest>
-
-            COMMAND $<TARGET_FILE:rcedit>
-                set --type "BINARY"
-                    --name "CHAKRACORE_X86"
-                    --value-path "${CHAKRACORE_DLL_X86_RELEASE}"
-                    --compress=7z
-                    $<TARGET_FILE:OrcLibTest>
-
-        )
-    elseif( ${TARGET_ARCH} STREQUAL "x64")
-        add_custom_command(
-            TARGET OrcLibTest
-            POST_BUILD
-            DEPENDS rcedit
-
-            COMMAND $<TARGET_FILE:rcedit>
-                set --type "VALUES"
-                    --name "CHAKRACORE_X64DLL"
-                    --value-utf16 '7z:#CHAKRACORE_X64^|ChakraCore_x64.dll'
-                    $<TARGET_FILE:OrcLibTest>
-
-            COMMAND $<TARGET_FILE:rcedit>
-                set --type "BINARY"
-                    --name "CHAKRACORE_X64"
-                    --value-path "${CHAKRACORE_DLL_X64_RELEASE}"
-                    --compress=7z
-                    $<TARGET_FILE:OrcLibTest>
-        )
-    else()
-        message(FATAL_ERROR "Unsupported architecture")
-    endif()
-endif()
 
 # Embed the dll in itself for "SimpleValue" test
 add_custom_command(
