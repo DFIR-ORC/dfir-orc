@@ -243,24 +243,8 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
             if (major < 10)
                 tags.insert(L"RTM"s);
             break;
-        case 1:
-            tags.insert(L"SP1"s);
-            break;
-        case 2:
-            tags.insert(L"SP2"s);
-            break;
-        case 3:
-            tags.insert(L"SP3"s);
-            break;
-        case 4:
-            tags.insert(L"SP4"s);
-            break;
-        case 5:
-            tags.insert(L"SP5"s);
-            break;
-        case 6:
-            tags.insert(L"SP6"s);
-            break;
+        default:
+            tags.insert(fmt::format(L"SP{}"sv, g_pDetailsBlock->osvi.wServicePackMajor));
     }
 
     tags.insert(L"Windows"s);
