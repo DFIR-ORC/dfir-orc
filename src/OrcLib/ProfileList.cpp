@@ -27,9 +27,9 @@ ProfileResult ProfileList::GetProfiles()
             &hKey);
         status != ERROR_SUCCESS)
     {
-        const auto error = Win32Error(status);
-        Log::Error(L"Failed to open registry key ProfileList (code: {:#x})", error);
-        return error;
+        const auto ec = Win32Error(status);
+        Log::Error(L"Failed to open registry key ProfileList [{}]", ec);
+        return ec;
     }
     BOOST_SCOPE_EXIT(&hKey) { RegCloseKey(hKey); }
     BOOST_SCOPE_EXIT_END;
@@ -51,9 +51,9 @@ ProfileResult ProfileList::GetProfiles()
         {
             if (status == ERROR_NO_MORE_ITEMS)
                 break;
-            const auto error = Win32Error(status);
-            Log::Error(L"Failed to enumerate registry key ProfileList at index {} (code: {:#x})", dwIndex, error);
-            return error;
+            const auto ec = Win32Error(status);
+            Log::Error(L"Failed to enumerate registry key ProfileList at index {} [{}]", dwIndex, ec);
+            return ec;
         }
         else
             keyName.use(keyLength);
@@ -87,9 +87,7 @@ ProfileResult ProfileList::GetProfiles()
                 if (!ConvertSidToStringSidW((PSID)sid.get_as<PSID>(), &pSID))
                 {
                     Log::Warn(
-                        L"Failed to convert SID to a string for profile {} (code: {#x})",
-                        keyName.get(),
-                        HRESULT_FROM_WIN32(GetLastError()));
+                        L"Failed to convert SID to a string for profile {} [{}]", keyName.get(), LastWin32Error());
                     continue;
                 }
                 profile.strSID.assign(pSID);
@@ -116,9 +114,7 @@ ProfileResult ProfileList::GetProfiles()
                     &SidNameUse))
             {
                 Log::Warn(
-                    L"Failed to convert SID into a username for profile {} (code: {:#x})",
-                    keyName.get(),
-                    LastWin32Error());
+                    L"Failed to convert SID into a username for profile {} [{}]", keyName.get(), LastWin32Error());
             }
             else
             {
@@ -137,9 +133,7 @@ ProfileResult ProfileList::GetProfiles()
             if (ProfileImagePath.has_error())
             {
                 Log::Warn(
-                    L"Failed to read ProfileImagePath for profile {} (code: {:#x})",
-                    keyName.get(),
-                    std::move(ProfileImagePath).has_error());
+                    L"Failed to read ProfileImagePath for profile {} [{}]", keyName.get(), ProfileImagePath.error());
                 continue;
             }
             profile.ProfilePath = *ProfileImagePath;

@@ -55,7 +55,7 @@ HRESULT MFTWalker::Initialize(const shared_ptr<Location>& loc, bool bIncludeNoIn
 
     if (FAILED(hr = m_pVolReader->LoadDiskProperties()))
     {
-        Log::Error(L"Failed to load disk properties for location '{}' (code: {:#x})", loc->GetLocation(), hr);
+        Log::Error(L"Failed to load disk properties for location '{}' [{}]", loc->GetLocation(), SystemError(hr));
         return hr;
     }
 
@@ -218,7 +218,7 @@ HRESULT MFTWalker::UpdateAttributeList(MFTRecord* pRecord)
                         pRecord->m_bIsDirectory = true;
                         if (FAILED(hr = AddDirectoryName(pRecord)))
                         {
-                            Log::Warn("Failed to update directory map (code: {:#x})", hr);
+                            Log::Warn("Failed to update directory map [{}]", SystemError(hr));
                         }
                     }
                 }
@@ -232,7 +232,7 @@ HRESULT MFTWalker::UpdateAttributeList(MFTRecord* pRecord)
         {
             if (FAILED(hr = AddDirectoryName(pRecord)))
             {
-                Log::Warn("Failed to update directory map (code: {:#x})", hr);
+                Log::Warn("Failed to update directory map [{}]", SystemError(hr));
             }
         }
     }
@@ -885,7 +885,7 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
 
                             if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
                             {
-                                Log::Debug(L"Failed to fixup carved $INDEX_ALLOCATION (code: {:#x})", hr);
+                                Log::Debug(L"Failed to fixup carved $INDEX_ALLOCATION [{}]", SystemError(hr));
                                 return S_OK;
                             }
                             else
@@ -911,7 +911,7 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                         return S_OK;
                     })))
         {
-            Log::Error(L"Failed to read from $INDEX_ALLOCATION (code: {:#x})", hr);
+            Log::Error(L"Failed to read from $INDEX_ALLOCATION [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -962,7 +962,7 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
     std::shared_ptr<BitmapAttribute> pBM;
     if (FAILED(hr = pRecord->GetIndexAttributes(m_pVolReader, L"$SII", pIR, pIA, pBM)))
     {
-        Log::Error(L"Failed to find $SII attributes (code: {:#x})", hr);
+        Log::Error(L"Failed to find $SII attributes [{}]", SystemError(hr));
         return hr;
     }
 
@@ -982,7 +982,7 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
         ULONGLONG ToRead = 0ULL;
         if (FAILED(hr = pIA->DataSize(m_pVolReader, ToRead)))
         {
-            Log::Error(L"Failed to determine $INDEX_ALLOCATION size (code: {:#x})", hr);
+            Log::Error(L"Failed to determine $INDEX_ALLOCATION size [{}]", SystemError(hr));
             return hr;
         }
 
@@ -1004,7 +1004,7 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
                         {
                             if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
                             {
-                                Log::Error(L"Failed to fixup $INDEX_ALLOCATION header (code: {:#x})", hr);
+                                Log::Error(L"Failed to fixup $INDEX_ALLOCATION header [{}]", SystemError(hr));
                                 return hr;
                             }
                             else
@@ -1027,7 +1027,7 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
                         return S_OK;
                     })))
         {
-            Log::Error(L"Failed to read from $INDEX_ALLOCATION (code: {:#x})", hr);
+            Log::Error(L"Failed to read from $INDEX_ALLOCATION [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -1053,8 +1053,9 @@ HRESULT MFTWalker::SimpleCallCallbackForRecord(MFTRecord* pRecord, bool& bFreeRe
             if (FAILED(hr = ParseI30AndCallback(pRecord)))
             {
                 Log::Error(
-                    L"Failed to parse $I30 for record {:#x} (code: {#:x})",
-                    NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()));
+                    L"Failed to parse $I30 for record {:#x} [{}]",
+                    NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()),
+                    SystemError(hr));
             }
         }
 
@@ -1146,9 +1147,9 @@ HRESULT MFTWalker::FullCallCallbackForRecord(MFTRecord* pRecord, bool& bFreeReco
                         if (FAILED(hr = ParseI30AndCallback(pRecord)))
                         {
                             Log::Error(
-                                "Failed to parse $I30 for record 0x{} (code: {:#x})",
+                                "Failed to parse $I30 for record 0x{} [{}]",
                                 NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()),
-                                hr);
+                                SystemError(hr));
                         }
                     }
                 }
@@ -1234,7 +1235,7 @@ HRESULT MFTWalker::WalkRecords(bool bIsFinalWalk)
                     hr = pRecord->ParseRecord(
                         m_pVolReader, pRecord->m_pRecord, m_pVolReader->GetBytesPerFRS(), pBaseRecord)))
             {
-                Log::Error("Failed to parse record even if every record is now loaded (code: {#x})", hr);
+                Log::Error("Failed to parse record even if every record is now loaded [{}]", SystemError(hr));
             }
             if (pRecord->IsParsed())
             {
@@ -1259,7 +1260,7 @@ HRESULT MFTWalker::WalkRecords(bool bIsFinalWalk)
             {
                 if (FAILED(hr = Parse$SecureAndCallback(pRecord)))
                 {
-                    Log::Trace("Failed to parse $Secure {} (code: {:#x})", RefNumber, hr);
+                    Log::Trace("Failed to parse $Secure {} [{}]", RefNumber, SystemError(hr));
                 }
             }
             if (FAILED(hr = m_pCallbackCall(this, pRecord, bFreeRecord)))
@@ -1279,7 +1280,7 @@ HRESULT MFTWalker::WalkRecords(bool bIsFinalWalk)
             Log::Trace(L"Deleting record {}", RefNumber);
             if (FAILED(freeHR = DeleteRecord(pRecord)))
             {
-                Log::Trace(L"Record {} failed deletion (code: {:#x})", RefNumber, freeHR);
+                Log::Trace(L"Record {} failed deletion [{}]", RefNumber, SystemError(freeHR));
             }
             else
             {
@@ -1512,9 +1513,9 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                 if (FAILED(hr = AddDirectoryName(pRecord)))
                 {
                     Log::Debug(
-                        "Record {}: Failed to add directory name (code: {:#x})",
+                        "Record {}: Failed to add directory name [{}]",
                         NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber),
-                        hr);
+                        SystemError(hr));
                 }
                 std::shared_ptr<AttributeList> pAttributeList;
 
@@ -1569,9 +1570,9 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                                         else if (FAILED(hr))
                                         {
                                             Log::Debug(
-                                                L"Parsing child record {} failed (code: {:#x})",
+                                                L"Parsing child record {} failed [{}]",
                                                 NtfsFullSegmentNumber(&(attr.m_pListEntry->SegmentReference)),
-                                                hr);
+                                                SystemError(hr));
                                         }
                                     }
                                 }
@@ -1596,9 +1597,9 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                 else
                 {
                     Log::Error(
-                        L"Parsing record failed {} (code: {:#x})",
+                        L"Parsing record failed {} [{}]",
                         NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber),
-                        hr);
+                        SystemError(hr));
                 }
                 DeleteRecord(pRecord);
             }
@@ -1642,7 +1643,7 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
 
         if (FAILED(hr = AddRecord(ullRecordIndex, Data, pRecord)))
         {
-            Log::Error("Failed to add record {} (code: {:#x})", ullRecordIndex, hr);
+            Log::Error("Failed to add record {} [{}]", ullRecordIndex, SystemError(hr));
             return hr;
         }
 
@@ -1731,13 +1732,13 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
                             return S_OK;
                         })))
             {
-                Log::Error("Failed to fetch records (code: {:#x})", hr);
+                Log::Error("Failed to fetch records [{}]", SystemError(hr));
                 break;
             }
 
             if (FAILED(hr = UpdateAttributeList(pRecord)))
             {
-                Log::Error("Failed to update attribute list (code: {:#x})", hr);
+                Log::Error("Failed to update attribute list [{}]", SystemError(hr));
                 break;
             }
             if (NtfsFullSegmentNumber(&pRecord->m_pRecord->BaseFileRecordSegment) != 0LL
@@ -1755,7 +1756,7 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
             {
                 if (FAILED(hr = UpdateAttributeList(pRecord->m_pBaseFileRecord)))
                 {
-                    Log::Error("Failed to update master record attribute list (code: {:#x})", hr);
+                    Log::Error("Failed to update master record attribute list [{}]", SystemError(hr));
                     break;
                 }
             }
@@ -1772,9 +1773,9 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
                 if (FAILED(hr = Parse$SecureAndCallback(pRecord)))
                 {
                     Log::Debug(
-                        "Failed to parse $Secure {} (code: {:#x})",
+                        "Failed to parse $Secure {} [{}]",
                         NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()),
-                        hr);
+                        SystemError(hr));
                 }
             }
 
@@ -1916,7 +1917,7 @@ HRESULT MFTWalker::Statistics(const WCHAR* szMsg)
             Log::Info("Record: {:#x}", pRecord->GetSafeMFTSegmentNumber());
         })))
     {
-        Log::Error("Failed to enumerate segment store entries (code: {:#x})", hr);
+        Log::Error("Failed to enumerate segment store entries [{}]", SystemError(hr));
     }
 
 #endif

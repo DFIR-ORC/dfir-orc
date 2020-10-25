@@ -146,7 +146,7 @@ HRESULT BITSAgent::Initialize()
 
         if ((dwRet = WNetAddConnection2(&nr, szPass, szUser, CONNECT_TEMPORARY)) != NO_ERROR)
         {
-            Log::Error(L"Failed to add a connection to {} (code: {:#x})", szUNC, Win32Error(dwRet));
+            Log::Error(L"Failed to add a connection to {} [{}]", szUNC, Win32Error(dwRet));
         }
         else
         {
@@ -181,7 +181,7 @@ BITSAgent::UploadFile(
     hr = m_pbcm->CreateJob(m_config.JobName.c_str(), BG_JOB_TYPE_UPLOAD, &JobId, &job);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to create job '{}' for background copy (code: {:#x})", m_config.JobName, hr);
+        Log::Error(L"Failed to create job '{}' for background copy [{}]", m_config.JobName, SystemError(hr));
         return hr;
     }
 
@@ -189,7 +189,7 @@ BITSAgent::UploadFile(
     hr = job->QueryInterface(IID_IBackgroundCopyJob2, reinterpret_cast<void**>(&job2));
     if (!job2)
     {
-        Log::Critical(L"Failed to retrieve IID_IBackgroundCopyJob2 interface (code: {:#x})", hr);
+        Log::Critical(L"Failed to retrieve IID_IBackgroundCopyJob2 interface [{}]", SystemError(hr));
         return hr;
     }
 
@@ -235,7 +235,7 @@ BITSAgent::UploadFile(
 
             if (FAILED(hr = job2->SetCredentials(&creds)))
             {
-                Log::Error("Failed to set credentials on the BITS job (code: {:#x})", hr);
+                Log::Error("Failed to set credentials on the BITS job [{}]", SystemError(hr));
             }
             else
             {
@@ -248,7 +248,7 @@ BITSAgent::UploadFile(
 
     if (FAILED(hr = job->AddFile(strRemotePath.c_str(), strLocalName.c_str())))
     {
-        Log::Error(L"Failed to add file '{}' to BITS job '{}' (code: {:#x})", strLocalName, m_config.JobName, hr);
+        Log::Error(L"Failed to add file '{}' to BITS job '{}' [{}]", strLocalName, m_config.JobName, SystemError(hr));
         return hr;
     }
 
@@ -260,7 +260,7 @@ BITSAgent::UploadFile(
         ulNotifyFlags |= BG_NOTIFY_JOB_TRANSFERRED | BG_NOTIFY_JOB_ERROR;
         if (FAILED(hr = job->SetNotifyFlags(ulNotifyFlags)))
         {
-            Log::Error("Failed to SetNotifyFlags to delete uploaded files (code: {:#x})", hr);
+            Log::Error("Failed to SetNotifyFlags to delete uploaded files [{}]", SystemError(hr));
         }
     }
     else
@@ -277,7 +277,7 @@ BITSAgent::UploadFile(
         std::wstring strCmdSpec;
         if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
         {
-            Log::Error(L"Failed to determine command spec %ComSpec% (code: {:#x})", hr);
+            Log::Error(L"Failed to determine command spec %ComSpec% [{}]", SystemError(hr));
         }
         else
         {
@@ -304,14 +304,14 @@ BITSAgent::UploadFile(
 
             if (FAILED(hr = job2->SetNotifyCmdLine(strCmdSpec.c_str(), cmdLine.str().c_str())))
             {
-                Log::Error(L"Failed to SetNotifyCmdLine to delete uploaded files");
+                Log::Error(L"Failed to SetNotifyCmdLine to delete uploaded files [{}]", SystemError(hr));
             }
             else
             {
                 ulNotifyFlags |= BG_NOTIFY_JOB_TRANSFERRED | BG_NOTIFY_JOB_ERROR;
                 if (FAILED(hr = job2->SetNotifyFlags(ulNotifyFlags)))
                 {
-                    Log::Error(L"Failed to SetNotifyFlags to delete uploaded files");
+                    Log::Error(L"Failed to SetNotifyFlags to delete uploaded files [{}]", SystemError(hr));
                 }
                 // We're done, files will be deleted on upload completion
             }
@@ -435,7 +435,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hSession == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed WinHttpOpen on '{}' (code: {:#x})", m_config.ServerName, hr);
+        Log::Error(L"Failed WinHttpOpen on '{}' [{}]", m_config.ServerName, SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hSession)) { WinHttpCloseHandle(hSession); }
@@ -446,7 +446,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hConnect == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed WinHttpConnect on '{}' (code: {:#x})", m_config.ServerName, hr);
+        Log::Error(L"Failed WinHttpConnect on '{}' [{}]", m_config.ServerName, SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hConnect)) { WinHttpCloseHandle(hConnect); }
@@ -464,7 +464,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hRequest == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to open request to {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+        Log::Error(L"Failed to open request to {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hRequest)) { WinHttpCloseHandle(hRequest); }
@@ -474,7 +474,8 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to send status request for {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+        Log::Error(
+            L"Failed to send status request for {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
         return hr;
     }
 
@@ -482,7 +483,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (!WinHttpReceiveResponse(hRequest, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to receive response to {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+        Log::Error(L"Failed to receive response to {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
         return hr;
     }
 
@@ -497,7 +498,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             WINHTTP_NO_HEADER_INDEX))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to query status code {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+        Log::Error(L"Failed to query status code {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
         return hr;
     }
 
@@ -510,7 +511,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         if (!WinHttpQueryAuthSchemes(hRequest, &dwSupportedSchemes, &dwFirstScheme, &dwTarget))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to query status code {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+            Log::Error(L"Failed to query status code {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
 
@@ -522,10 +523,10 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         else
         {
             Log::Error(
-                L"No supported authentication scheme available {}/{} (code: {:#x})",
+                L"No supported authentication scheme available {}/{} [{}]",
                 m_config.ServerName,
                 strRemotePath,
-                hr);
+                SystemError(hr));
             return hr;
         }
 
@@ -534,7 +535,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
             Log::Error(
-                L"Failed WinHttpSetCredentials with {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+                L"Failed WinHttpSetCredentials with {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
 
@@ -542,7 +543,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed WinHttpSendRequest on {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+            Log::Error(L"Failed WinHttpSendRequest on {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
 
@@ -550,7 +551,8 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         if (!WinHttpReceiveResponse(hRequest, NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to receive response to {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+            Log::Error(
+                L"Failed to receive response to {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
 
@@ -563,7 +565,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 WINHTTP_NO_HEADER_INDEX))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to query status code {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+            Log::Error(L"Failed to query status code {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
     }
@@ -583,7 +585,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
                 Log::Error(
-                    L"Failed to query content length {}/{} (code: {:#x})", m_config.ServerName, strRemotePath, hr);
+                    L"Failed to query content length {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
                 return hr;
             }
         }

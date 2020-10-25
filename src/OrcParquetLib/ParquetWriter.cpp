@@ -16,6 +16,7 @@
 #include "OrcException.h"
 #include "WideAnsi.h"
 #include "Buffer.h"
+#include "Utils/Result.h"
 
 #include <string>
 #include <string_view>
@@ -219,7 +220,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
         auto [hr, strName] = WideToAnsi(column->ColumnName);
         if (FAILED(hr))
         {
-            Log::Error(L"Invalid column name: '{}' (code: {:#x})", column->ColumnName, hr);
+            Log::Error(L"Invalid column name: '{}' [{}]", column->ColumnName, SystemError(hr));
             break;
         }
 

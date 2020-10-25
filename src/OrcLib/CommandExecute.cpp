@@ -302,7 +302,7 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
                 &dwReturnedBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to QueryInformationJobObject on job (code: {:#x})", hr);
+            Log::Error("Failed to QueryInformationJobObject on job [{}]", SystemError(hr));
             return hr;
         }
         if (LimitInfo.BasicLimitInformation.LimitFlags & JOB_OBJECT_LIMIT_BREAKAWAY_OK
@@ -359,10 +359,10 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
             Log::Error(
-                L"Could not start '{}' with command line '{}' (code: {:#x})",
+                L"Could not start '{}' with command line '{}' [{}]",
                 m_ImageFilePath,
                 szCommandLine.data(),
-                hr);
+                SystemError(hr));
             return hr;
         }
     }
@@ -384,7 +384,7 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
         if (!AssignProcessToJobObject(job.GetHandle(), m_pi.hProcess))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Could not assign process '{}' to job object (code: {:#x})", m_Keyword, hr);
+            Log::Error(L"Could not assign process '{}' to job object [{}]", m_Keyword, SystemError(hr));
             TerminateProcess(m_pi.hProcess, (UINT)-1);
             return hr;
         }
@@ -393,7 +393,7 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
     if (ResumeThread(m_pi.hThread) == -1)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to resume process '{}' (code: {:#x})", m_Keyword, hr);
+        Log::Error(L"Failed to resume process '{}' [{}]", m_Keyword, SystemError(hr));
         TerminateProcess(m_pi.hProcess, (UINT)-1);
         return hr;
     }
@@ -504,7 +504,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
 
                 if (FAILED(hr = GetFileNameForFile(dump.c_str(), szDumpFileName, MAX_PATH)))
                 {
-                    Log::Error(L"Could not deduce file name from path '{}' (code: {:#x})", dump, hr);
+                    Log::Error(L"Could not deduce file name from path '{}' [{}]", dump, SystemError(hr));
                 }
                 else
                 {
@@ -539,9 +539,9 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             {
                                 HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
                                 Log::Error(
-                                    L"no directory to cab for path '{}', ignored (code: {:#x})",
+                                    L"no directory to cab for path '{}', ignored [{}]",
                                     action->Fullpath(),
-                                    hr);
+                                    SystemError(hr));
                             }
                         }
                         break;
@@ -551,7 +551,8 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             if (!RemoveDirectory(action->Fullpath().c_str()))
                             {
                                 HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-                                Log::Error(L"Failed to delete directory '{}' (code: {:#x})", action->Fullpath(), hr);
+                                Log::Error(
+                                    L"Failed to delete directory '{}' [{}]", action->Fullpath(), SystemError(hr));
                             }
                             else
                             {
@@ -590,8 +591,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                         {
                             if (!DeleteFile(action->Fullpath().c_str()))
                             {
-                                Log::Error(
-                                    L"Failed to delete file '{}' (code: {:#x})", action->Fullpath(), LastWin32Error());
+                                Log::Error(L"Failed to delete file '{}' [{}]", action->Fullpath(), LastWin32Error());
                             }
                             else
                             {
@@ -615,7 +615,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             HRESULT hr = E_FAIL;
                             if (FAILED(hr = action->GetStream()->SetFilePointer(0L, FILE_BEGIN, NULL)))
                             {
-                                Log::Error(L"Failed to reset stream before adding it to cab! (code: {:#x})", hr);
+                                Log::Error(L"Failed to reset stream before adding it to cab! [{}]", SystemError(hr));
                             }
                             auto archiveRequest =
                                 ArchiveMessage::MakeAddStreamRequest(action->Name(), action->GetStream(), true);

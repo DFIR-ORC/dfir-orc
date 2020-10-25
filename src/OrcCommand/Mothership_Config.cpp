@@ -133,12 +133,12 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
         if (FAILED(hr = config.Temporary.Configure(OutputSpec::Kind::Directory, configitem[ORC_TEMP])))
         {
             Log::Warn(
-                L"Failed to configure temporary folder '{}', defaulting to %%TEMP%% (code: {:#x})",
+                L"Failed to configure temporary folder '{}', defaulting to %%TEMP%% [{}]",
                 configitem[ORC_TEMP].c_str(),
-                hr);
+                SystemError(hr));
             if (FAILED(hr = config.Temporary.Configure(OutputSpec::Kind::Directory, L"%TEMP%")))
             {
-                Log::Warn("Failed to configure temporary folder \"%%TEMP%%\" (code: {:#x})", hr);
+                Log::Warn("Failed to configure temporary folder '%%TEMP%%' [{}]", SystemError(hr));
             }
         }
     }

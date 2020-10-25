@@ -65,7 +65,7 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
         PartitionTable pt;
         if (FAILED(hr = pt.LoadPartitionTable(strImageFile.c_str())))
         {
-            Log::Error(L"Failed to load partition table for '{}' (code: {:#x})", strImageFile, hr);
+            Log::Error(L"Failed to load partition table for '{}' [{}]", strImageFile, SystemError(hr));
             return hr;
         }
 
@@ -106,7 +106,7 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
         {
             if (FAILED(hr = GetFileSizeFromArg(m[REGEX_SYSTEMSTORAGE_OFFSET].str().c_str(), offset)))
             {
-                Log::Error(L"Invalid offset specified: {} (code: {:#x})", m[REGEX_SYSTEMSTORAGE_OFFSET].str(), hr);
+                Log::Error(L"Invalid offset specified: {} [{}]", m[REGEX_SYSTEMSTORAGE_OFFSET].str(), SystemError(hr));
                 return hr;
             }
         }
@@ -115,7 +115,7 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
         {
             if (FAILED(hr = GetFileSizeFromArg(m[REGEX_SYSTEMSTORAGE_SIZE].str().c_str(), size)))
             {
-                Log::Error(L"Invalid size specified: {} (code: {:#x})", m[REGEX_SYSTEMSTORAGE_SIZE].str(), hr);
+                Log::Error(L"Invalid size specified: {} [{}]", m[REGEX_SYSTEMSTORAGE_SIZE].str(), SystemError(hr));
                 return hr;
             }
         }
@@ -125,7 +125,7 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
             if (FAILED(hr = GetFileSizeFromArg(m[REGEX_SYSTEMSTORAGE_SECTOR].str().c_str(), sector)))
             {
                 Log::Error(
-                    L"Invalid sector size specified: '{}' (code: {:#x})", m[REGEX_SYSTEMSTORAGE_SECTOR].str(), hr);
+                    L"Invalid sector size specified: '{}' [{}]", m[REGEX_SYSTEMSTORAGE_SECTOR].str(), SystemError(hr));
                 return hr;
             }
         }
@@ -137,7 +137,7 @@ HRESULT SystemStorageReader::LoadDiskProperties(void)
 
     if (FAILED(hr = extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        Log::Error(L"Failed to open image: '{}' (code: {:#x})", strImageFile, hr);
+        Log::Error(L"Failed to open image: '{}' [{}]", strImageFile, SystemError(hr));
         return hr;
     }
 

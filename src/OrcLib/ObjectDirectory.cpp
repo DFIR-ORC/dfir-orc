@@ -187,7 +187,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
 
     if (FAILED(hr = pNtDll->NtOpenDirectoryObject(&hRoot, GENERIC_READ, &ObjAttr)))
     {
-        Log::Error(L"Failed to open object directory '{}' (code: {:#x})", aObjDir, hr);
+        Log::Error(L"Failed to open object directory '{}' [{}]", aObjDir, SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hRoot)) { CloseHandle(hRoot); }
@@ -302,10 +302,10 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
                         if (FAILED(hr = ParseObjectDirectory(path, objects, bRecursive)))
                         {
                             Log::Warn(
-                                L"Failed to recursively parse directory '{}' (subdir '{}') (code: {:#x})",
+                                L"Failed to recursively parse directory '{}' (subdir '{}') [{}]",
                                 aObjDir,
                                 path,
-                                hr);
+                                SystemError(hr));
                         }
                     }
 

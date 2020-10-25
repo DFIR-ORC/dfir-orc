@@ -155,10 +155,10 @@ STDMETHODIMP ArchiveExtract::Extract(
                     szSDDL)))
         {
             Log::Error(
-                L"Failed to get unique path for file '{}' in '{}' (code: {:#x})",
+                L"Failed to get unique path for file '{}' in '{}' [{}]",
                 item.NameInArchive,
                 pwzExtractRootDir,
-                hr);
+                SystemError(hr));
             return nullptr;
         }
 
@@ -175,7 +175,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, MAX_PATH)))
         {
-            Log::Error(L"Failed to get directory for file '{}' (code: {:#x})", item.Path, hr);
+            Log::Error(L"Failed to get directory for file '{}' [{}]", item.Path, SystemError(hr));
             return nullptr;
         }
         fs::path absolute(szDirectory);
@@ -281,10 +281,10 @@ STDMETHODIMP ArchiveExtract::Extract(
                     szSDDL)))
         {
             Log::Error(
-                L"Failed to get unique path for file '{}' in '{}' (code: {:#x})",
+                L"Failed to get unique path for file '{}' in '{}' [{}]",
                 item.NameInArchive,
                 pwzExtractRootDir,
-                hr);
+                SystemError(hr));
             return nullptr;
         }
 
@@ -292,7 +292,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, MAX_PATH)))
         {
-            Log::Error(L"Failed to get directory for file '{}' (code: {:#x})", item.Path, hr);
+            Log::Error(L"Failed to get directory for file '{}' [{}]", item.Path, SystemError(hr));
             return nullptr;
         }
         fs::path absolute(szDirectory);
@@ -349,10 +349,10 @@ STDMETHODIMP ArchiveExtract::Extract(
                     szSDDL)))
         {
             Log::Error(
-                L"Failed to get unique path for file '{}' in '{}' (code: {:#x})",
+                L"Failed to get unique path for file '{}' in '{}' [{}]",
                 item.NameInArchive,
                 pwzExtractRootDir,
-                hr);
+                SystemError(hr));
             return nullptr;
         }
 
@@ -360,7 +360,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
         if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, MAX_PATH)))
         {
-            Log::Error(L"Failed to get directory for file '{}' (code: {:#x})", item.Path, hr);
+            Log::Error(L"Failed to get directory for file '{}' [{}]", item.Path, SystemError(hr));
             return nullptr;
         }
         fs::path absolute(szDirectory);

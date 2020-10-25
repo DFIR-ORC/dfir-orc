@@ -68,7 +68,7 @@ STDMETHODIMP TemporaryStream::Open(
         WCHAR szTempDir[MAX_PATH] = {0};
         if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
         {
-            Log::Warn("Failed to create temporary path (code: {:#x})", hr);
+            Log::Warn("Failed to create temporary path [{}]", SystemError(hr));
             return hr;
         }
         m_strTemp = szTempDir;
@@ -90,7 +90,7 @@ STDMETHODIMP TemporaryStream::Open(
 
     if (FAILED(hr = m_pMemStream->SetSize(dwMemThreshold)))
     {
-        Log::Error("Failed to resize memory buffer (code: {:#x})", hr);
+        Log::Error("Failed to resize memory buffer [{}]", SystemError(hr));
         return hr;
     }
 
@@ -99,7 +99,7 @@ STDMETHODIMP TemporaryStream::Open(
         Log::Debug("Failed to open memstream for {} bytes, using file stream", dwMemThreshold);
         if (FAILED(hr = MoveToFileStream(nullptr)))
         {
-            Log::Error("Failed to Open temporary stream into a file stream (code: {:#x})", hr);
+            Log::Error("Failed to Open temporary stream into a file stream [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -317,7 +317,7 @@ STDMETHODIMP TemporaryStream::MoveTo(const std::shared_ptr<ByteStream> pStream)
 
         if (FAILED(hr = UtilDeleteTemporaryFile(m_strFileName.c_str())))
         {
-            Log::Error(L"Failed to delete temp file '{}' (code: {:#x})", m_strFileName, hr);
+            Log::Error(L"Failed to delete temp file '{}' [{}]", m_strFileName, SystemError(hr));
             return hr;
         }
         m_strFileName.clear();
@@ -356,7 +356,7 @@ TemporaryStream::~TemporaryStream(void)
     {
         if (FAILED(hr = UtilDeleteTemporaryFile(m_strFileName.c_str())))
         {
-            Log::Error(L"Failed to delete temp file '{}' (code: {:#x})", m_strFileName, hr);
+            Log::Error(L"Failed to delete temp file '{}' [{}]", m_strFileName, SystemError(hr));
         }
         m_strFileName.clear();
     }

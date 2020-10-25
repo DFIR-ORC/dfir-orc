@@ -31,7 +31,7 @@ HRESULT CommandAgentResources::ExtractRessource(
             strRef, strKeyword, RESSOURCE_READ_EXECUTE_BA, m_strTempDirectory, strExtracted);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to extract ressource '{}' (code: {:#x})", strRef, hr);
+            Log::Error(L"Failed to extract ressource '{}' [{}]", strRef, SystemError(hr));
             return hr;
         }
     }
@@ -89,7 +89,8 @@ HRESULT CommandAgentResources::DeleteTemporaryRessource(const std::wstring& strR
     HRESULT hr = E_FAIL;
     if (FAILED(hr = UtilDeleteTemporaryFile(it->second.c_str())))
     {
-        Log::Error(L"Failed to delete temporary ressource '{}' (temp: '{}', code: {:#x})", strRef, it->second, hr);
+        Log::Error(
+            L"Failed to delete temporary ressource '{}' (temp: '{}', [{}])", strRef, it->second, SystemError(hr));
         return hr;
     }
     return S_OK;
@@ -104,7 +105,10 @@ HRESULT CommandAgentResources::DeleteTemporaryRessources()
             if (FAILED(hr = UtilDeleteTemporaryFile(item.second.c_str())))
             {
                 Log::Error(
-                    L"Failed to delete temporary ressource {} (temp: {}, code: {:#x})", item.first, item.second, hr);
+                    L"Failed to delete temporary ressource {} (temp: {}, [{}])",
+                    item.first,
+                    item.second,
+                    SystemError(hr));
             }
         });
 
@@ -116,6 +120,6 @@ CommandAgentResources::~CommandAgentResources()
     HRESULT hr = E_FAIL;
     if (FAILED(hr = DeleteTemporaryRessources()))
     {
-        Log::Error(L"~CommandAgentResources: failed to delete all extrated temporary ressources (code: {:#x})", hr);
+        Log::Error(L"~CommandAgentResources: failed to delete all extrated temporary ressources [{}]", SystemError(hr));
     }
 }

@@ -39,7 +39,7 @@ STDMETHODIMP COMExtension::Initialize()
     {
         if (auto hr = Load(); FAILED(hr))
         {
-            Log::Error(L"Failed to load COM Extension {} (code: {:#x})", m_strKeyword, hr);
+            Log::Error(L"Failed to load COM Extension {} [{}]", m_strKeyword, SystemError(hr));
             return hr;
         }
     }

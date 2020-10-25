@@ -163,13 +163,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.m_HiveQuery.m_HivesLocation.AddLocationsFromConfigItem(configitem[REGINFO_LOCATION])))
     {
-        Log::Error("Error in specific locations parsing in config file (code: {:#x})", hr);
+        Log::Error("Error in specific locations parsing in config file [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = config.m_HiveQuery.m_HivesLocation.AddKnownLocations(configitem[REGINFO_KNOWNLOCATIONS])))
     {
-        Log::Error(L"Error in specific known locations parsing in config file (code: {:#x})", hr);
+        Log::Error(L"Error in specific known locations parsing in config file [{}]", SystemError(hr));
         return hr;
     }
 

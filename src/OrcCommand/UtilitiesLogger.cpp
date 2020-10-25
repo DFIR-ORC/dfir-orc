@@ -9,10 +9,11 @@
 
 #include "stdafx.h"
 
+#include <optional>
+
 #include "UtilitiesLogger.h"
 #include "ParameterCheck.h"
-
-#include <optional>
+#include "Utils/Result.h"
 
 using namespace Orc;
 
@@ -135,7 +136,7 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
                     {
                         if (FAILED(hr = GetOutputFile(pEquals + 1, szLogFile, MAX_PATH)))
                         {
-                            Log::Error(L"Invalid logging file specified: {} (code: {:#x})", pEquals + 1, hr);
+                            Log::Error(L"Invalid logging file specified: {} [{}]", pEquals + 1, SystemError(hr));
                             continue;
                         }
 

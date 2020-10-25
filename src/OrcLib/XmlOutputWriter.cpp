@@ -49,7 +49,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<Byte
     if (FAILED(hr = m_xmllite->CreateXmlWriter(IID_IXmlWriter, (PVOID*)&pWriter, nullptr)))
     {
         XmlLiteExtension::LogError(hr);
-        Log::Error(L"Failed to instantiate Xml writer (code: {:#x})", hr);
+        Log::Error(L"Failed to instantiate Xml writer [{}]", SystemError(hr));
         return hr;
     }
 
@@ -61,13 +61,13 @@ HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<Byte
         if (FAILED(hr = m_xmllite->CreateXmlWriterOutputWithEncodingName(stream, nullptr, L"utf-16", &pWriterOutput)))
         {
             XmlLiteExtension::LogError(hr);
-            Log::Error(L"Failed to instantiate Xml writer with encoding hint (code: {:#x})", hr);
+            Log::Error(L"Failed to instantiate Xml writer with encoding hint [{}]", SystemError(hr));
             return hr;
         }
         if (FAILED(hr = pWriter->SetOutput(pWriterOutput)))
         {
             XmlLiteExtension::LogError(hr);
-            Log::Error(L"Failed to set output stream (code: {:#x})", hr);
+            Log::Error(L"Failed to set output stream [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -76,7 +76,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<Byte
         if (FAILED(hr = pWriter->SetOutput(stream)))
         {
             XmlLiteExtension::LogError(hr);
-            Log::Error(L"Failed to set output stream (code: {:#x})", hr);
+            Log::Error(L"Failed to set output stream [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -84,14 +84,14 @@ HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<Byte
     if (FAILED(hr = pWriter->SetProperty(XmlWriterProperty_Indent, TRUE)))
     {
         XmlLiteExtension::LogError(hr);
-        Log::Error(L"Failed to set indentation property (code: {:#x})", hr);
+        Log::Error(L"Failed to set indentation property [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = pWriter->WriteStartDocument(XmlStandalone_Omit)))
     {
         XmlLiteExtension::LogError(hr);
-        Log::Error(L"Failed to write start document (code: {:#x})", hr);
+        Log::Error(L"Failed to write start document [{}]", SystemError(hr));
         return hr;
     }
 

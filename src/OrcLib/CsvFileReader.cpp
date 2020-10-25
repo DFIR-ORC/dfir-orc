@@ -129,7 +129,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::OpenStream(
 
     if (FAILED(hr = SetBooleanFormat(szBoolFormat)))
     {
-        Log::Error(L"Failed to set boolean format from '{}' (code: {:#x})", szBoolFormat, hr);
+        Log::Error(L"Failed to set boolean format from '{}' [{}]", szBoolFormat, SystemError(hr));
     }
 
     if (m_csvEncoding == OutputSpec::Encoding::kUnknown)
@@ -1001,7 +1001,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::ParseNextLine(Record& record)
 
         if (FAILED(hr = CoerceToColumn(szToken, dwTokenLength, record.Values[i])))
         {
-            Log::Warn(L"Failed to coerce {} into its destination type (code: {:#x})", szToken, hr);
+            Log::Warn(L"Failed to coerce {} into its destination type [{}]", szToken, SystemError(hr));
         }
         if (bReachedNewLine && i != m_Schema.Column.size() - 1)
         {

@@ -203,7 +203,7 @@ HRESULT EmbeddedResource::LocateResource(
         if (hInstance == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Warn(L"Ressource file '{}' failed to load (code: {:#x}), trying default instance", HostBinary, hr);
+            Log::Warn(L"Ressource file '{}' failed to load [{}], trying default instance", HostBinary, SystemError(hr));
             hInstance = GetDefaultHINSTANCE();
         }
     }
@@ -236,7 +236,7 @@ HRESULT EmbeddedResource::LocateResource(
                 if (hParent == NULL)
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Debug(L"Failed to open process '{}' (code: {:#x})", dwParents[i], hr);
+                    Log::Debug(L"Failed to open process '{}' [{}]", dwParents[i], SystemError(hr));
                     continue;
                 }
 
@@ -255,7 +255,7 @@ HRESULT EmbeddedResource::LocateResource(
                 if (!GetModuleFileNameEx(hParent, NULL, szParentFileName, MAX_PATH))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Debug(L"Failed to get module file name for processID: {} (code: {:#x})", dwParents[i], hr);
+                    Log::Debug(L"Failed to get module file name for processID: {} [{}]", dwParents[i], SystemError(hr));
                     continue;
                 }
 
@@ -265,7 +265,7 @@ HRESULT EmbeddedResource::LocateResource(
                 if (hInstance == NULL)
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Debug(L"Ressource file '{}' failed to load (code: {:#x})", szParentFileName, hr);
+                    Log::Debug(L"Ressource file '{}' failed to load [{}]", szParentFileName, SystemError(hr));
                     continue;
                 }
                 if ((hResource = FindResource(hInstance, ResName.c_str(), szResType)) == NULL)
@@ -291,7 +291,7 @@ HRESULT EmbeddedResource::LocateResource(
         if (!GetModuleFileName(hInstance, szFileName, MAX_PATH))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug("Failed to get module file name for current process (code: {:#x})", hr);
+            Log::Debug("Failed to get module file name for current process [{}]", SystemError(hr));
         }
         strBinaryPath.assign(szFileName);
         hRes = hResource;
@@ -351,7 +351,7 @@ HRESULT EmbeddedResource::ExtractRunWithArgs(
     WORD Arch = 0;
     if (FAILED(hr = SystemDetails::GetArchitecture(Arch)))
     {
-        Log::Error("Failed to determine system architecture (code: {:#x})", hr);
+        Log::Error("Failed to determine system architecture [{}]", SystemError(hr));
         return hr;
     }
 
@@ -362,7 +362,7 @@ HRESULT EmbeddedResource::ExtractRunWithArgs(
             {
                 if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
                 {
-                    Log::Error("Not RUN ressource found to execute (code: {:#x})", hr);
+                    Log::Error("Not RUN ressource found to execute [{}]", SystemError(hr));
                     return hr;
                 }
                 else
@@ -376,7 +376,7 @@ HRESULT EmbeddedResource::ExtractRunWithArgs(
             {
                 if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
                 {
-                    Log::Error(L"Not RUN ressource found to execute (code: {:#x})", hr);
+                    Log::Error(L"Not RUN ressource found to execute [{}]", SystemError(hr));
                     return hr;
                 }
                 else
@@ -498,12 +498,15 @@ HRESULT EmbeddedResource::ExtractToDirectory(
         if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
         {
             Log::Error(
-                L"'{}' does not match a typical embedded ressource pattern (code: {:#x})", szImageFileRessourceID, hr);
+                L"'{}' does not match a typical embedded ressource pattern [{}]",
+                szImageFileRessourceID,
+                SystemError(hr));
             return E_INVALIDARG;
         }
         else
         {
-            Log::Error(L"'{}' failed to match a supported ressource pattern (code: {:#x})", szImageFileRessourceID, hr);
+            Log::Error(
+                L"'{}' failed to match a supported ressource pattern [{}]", szImageFileRessourceID, SystemError(hr));
             return E_INVALIDARG;
         }
     }
@@ -519,7 +522,7 @@ HRESULT EmbeddedResource::ExtractToDirectory(
         std::wstring strBinaryPath;
         if (auto hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath); FAILED(hr))
         {
-            Log::Warn(L"Could not locate resource '{}' (code: {:#x})", szImageFileRessourceID, hr);
+            Log::Warn(L"Could not locate resource '{}' [{}]", szImageFileRessourceID, SystemError(hr));
             return hr;
         }
 
@@ -549,13 +552,13 @@ HRESULT EmbeddedResource::ExtractToDirectory(
                         szSDDL);
                     FAILED(hr))
                 {
-                    Log::Error(L"Failed to create extracted file '{}' (code: {:#x})", fileName, hr);
+                    Log::Error(L"Failed to create extracted file '{}' [{}]", fileName, SystemError(hr));
                     return hr;
                 }
             }
             else
             {
-                Log::Error(L"Failed to create extracted file '{}' (code: {:#x})", fileName, hr);
+                Log::Error(L"Failed to create extracted file '{}' [{}]", fileName, SystemError(hr));
                 return hr;
             }
         }
@@ -563,13 +566,13 @@ HRESULT EmbeddedResource::ExtractToDirectory(
         shared_ptr<FileStream> fs = make_shared<FileStream>();
         if (auto hr = fs->OpenHandle(hFile); FAILED(hr))
         {
-            Log::Error(L"Failed to create extracted '{}' (code: {:#x})", fileName, hr);
+            Log::Error(L"Failed to create extracted '{}' [{}]", fileName, SystemError(hr));
             return hr;
         }
         ULONGLONG nbBytes = 0;
         if (auto hr = res->CopyTo(fs, &nbBytes); FAILED(hr))
         {
-            Log::Error(L"Failed to copy resource to '{} (code: {:#x})'", fileName, hr);
+            Log::Error(L"Failed to copy resource to '{} [{}]'", fileName, SystemError(hr));
             return hr;
         }
         fs->Close();
@@ -626,7 +629,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
             std::wstring strBinaryPath;
             if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
-                Log::Debug(L"Failed to locate resource: '{}' (code: {:#x})", szImageFileRessourceID, hr);
+                Log::Debug(L"Failed to locate resource: '{}' [{}]", szImageFileRessourceID, SystemError(hr));
                 return hr;
             }
 
@@ -635,7 +638,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
             if ((hFileResource = LoadResource(hModule, hRes)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Debug(L"Failed to load resource: '{}' (code: {:#x})", szImageFileRessourceID, hr);
+                Log::Debug(L"Failed to load resource: '{}' [{}]", szImageFileRessourceID, SystemError(hr));
                 return hr;
             }
 
@@ -644,7 +647,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
             if ((lpData = LockResource(hFileResource)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Debug(L"Failed to lock resource: '{}' (code: {#:x})", szImageFileRessourceID, hr);
+                Log::Debug(L"Failed to lock resource: '{}' [{}]", szImageFileRessourceID, SystemError(hr));
                 return hr;
             }
 
@@ -652,7 +655,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
             if ((dwSize = SizeofResource(hModule, hRes)) == 0)
             {
                 HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Debug(L"Failed to compute resource size: '{}' (code: {:#x})", szImageFileRessourceID, hr);
+                Log::Debug(L"Failed to compute resource size: '{}' [{}]", szImageFileRessourceID, SystemError(hr));
                 return hr;
             }
 
@@ -679,7 +682,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
                 std::wstring strBinaryPath;
                 if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
-                    Log::Debug(L"Could not locate resource (code: {:#x})", szImageFileRessourceID, hr);
+                    Log::Debug(L"Could not locate resource [{}]", szImageFileRessourceID, SystemError(hr));
                     return hr;
                 }
 
@@ -746,7 +749,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
     else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
     {
         Log::Error(
-            L"'{}' does not match a typical embedded ressource pattern (code: {:#x})", szImageFileRessourceID, hr);
+            L"'{}' does not match a typical embedded ressource pattern [{}]", szImageFileRessourceID, SystemError(hr));
         return E_INVALIDARG;
     }
 
@@ -772,7 +775,7 @@ HRESULT EmbeddedResource::ExtractValue(const std::wstring& Module, const std::ws
     if (hFileResource == NULL)
     {
         auto hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to LoadResource '{}' in module '{}' (code: {:#x})", Name, Module, hr);
+        Log::Error(L"Failed to LoadResource '{}' in module '{}' [{}]", Name, Module, SystemError(hr));
         return hr;
     }
 
@@ -780,7 +783,7 @@ HRESULT EmbeddedResource::ExtractValue(const std::wstring& Module, const std::ws
     if ((lpStr = (LPWSTR)LockResource(hFileResource)) == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to LockResource '{}' in module '{}' (code: {:#x})", Name, Module, hr);
+        Log::Error(L"Failed to LockResource '{}' in module '{}' [{}]", Name, Module, SystemError(hr));
         if (hModule != NULL)
             FreeLibrary(hModule);
         return hr;
@@ -792,7 +795,7 @@ HRESULT EmbeddedResource::ExtractValue(const std::wstring& Module, const std::ws
     if ((dwSize = SizeofResource(hModule, hRes)) == 0)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to compute resource size '{}', in module '{}' (code: {:#x})", Name, Module, hr);
+        Log::Error(L"Failed to compute resource size '{}', in module '{}' [{}]", Name, Module, SystemError(hr));
         if (hModule != NULL)
             FreeLibrary(hModule);
         return hr;
@@ -829,7 +832,7 @@ HRESULT EmbeddedResource::ExtractBuffer(const std::wstring& Module, const std::w
     if ((lpVoid = LockResource(hFileResource)) == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to LockResource '{}' in module '{}' (code: {:#x})", Name, Module, hr);
+        Log::Error(L"Failed to LockResource '{}' in module '{}' [{}]", Name, Module, SystemError(hr));
         if (hModule != GetDefaultHINSTANCE())
             FreeLibrary(hModule);
         return hr;
@@ -841,7 +844,7 @@ HRESULT EmbeddedResource::ExtractBuffer(const std::wstring& Module, const std::w
     if ((dwSize = SizeofResource(hModule, hRes)) == 0)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to compute resource size '{}', in module '{}' (code: {:#x})", Name, Module, hr);
+        Log::Error(L"Failed to compute resource size '{}', in module '{}' [{}]", Name, Module, SystemError(hr));
         if (hModule != GetDefaultHINSTANCE())
             FreeLibrary(hModule);
         return hr;
@@ -882,7 +885,7 @@ BOOL CALLBACK V_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
 
     if (FAILED(hr = EmbeddedResource::ExtractValue(param->Module, strName, strValue)))
     {
-        Log::Error(L"Failed to extract value '{}' (code: {:#x})", lpszName, hr);
+        Log::Error(L"Failed to extract value '{}' [{}]", lpszName, SystemError(hr));
         return TRUE;
     }
 
@@ -916,7 +919,7 @@ HRESULT EmbeddedResource::EnumValues(const std::wstring& Module, std::vector<Emb
         if (hInstance == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError()),
-            Log::Error(L"Ressource file '{}' could not be loaded (code: {:#x})", Module, hr);
+            Log::Error(L"Ressource file '{}' could not be loaded [{}]", Module, SystemError(hr));
             return hr;
         }
     }
@@ -927,7 +930,7 @@ HRESULT EmbeddedResource::EnumValues(const std::wstring& Module, std::vector<Emb
 
     if (FAILED(hr = pExt->EnumResourceNamesW(hInstance, VALUES(), V_EnumResourceNamesEx_Function, (ULONG_PTR)&param)))
     {
-        Log::Error(L"Failed to enumerate values ressources (code: {:#x})", hr);
+        Log::Error(L"Failed to enumerate values ressources [{}]", SystemError(hr));
         return hr;
     }
 
@@ -957,7 +960,7 @@ BOOL CALLBACK B_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
 
     if (FAILED(hr = EmbeddedResource::ExtractBuffer(param->Module, strName, buffer)))
     {
-        Log::Error(L"Failed to extract binary ressource '{}' (code: {:#x})", lpszName, hr);
+        Log::Error(L"Failed to extract binary ressource '{}' [{}]", lpszName, SystemError(hr));
         return TRUE;
     }
     param->Values.push_back(EmbeddedResource::EmbedSpec::AddBinary(std::move(strName), std::move(buffer)));
@@ -990,7 +993,7 @@ HRESULT EmbeddedResource::EnumBinaries(const std::wstring& Module, std::vector<E
         if (hInstance == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Ressource file '{}' could not be loaded (code: {:#x})", Module, hr);
+            Log::Error(L"Ressource file '{}' could not be loaded [{}]", Module, SystemError(hr));
             return hr;
         }
     }
@@ -1001,7 +1004,7 @@ HRESULT EmbeddedResource::EnumBinaries(const std::wstring& Module, std::vector<E
 
     if (FAILED(hr = pExt->EnumResourceNamesW(hInstance, BINARY(), B_EnumResourceNamesEx_Function, (ULONG_PTR)&param)))
     {
-        Log::Error("Failed to enumerate values ressources (code: {:#x})", hr);
+        Log::Error("Failed to enumerate values ressources [{}]", SystemError(hr));
         return hr;
     }
 
@@ -1065,7 +1068,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
 
         if (FAILED(hr = inBinary->OpenForReadOnly(item.BinaryValue.GetData(), item.BinaryValue.GetCount())))
         {
-            Log::Error("Failed to open memory stream for ressource (code: {:#x})", hr);
+            Log::Error("Failed to open memory stream for ressource [{}]", SystemError(hr));
             continue;
         }
 
@@ -1075,14 +1078,14 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
 
         if (FAILED(hr = outFile->WriteTo(out.c_str())))
         {
-            Log::Error(L"Failed to create output file '{}' (code: {:#x})", out, hr);
+            Log::Error(L"Failed to create output file '{}' [{}]", out, SystemError(hr));
             continue;
         }
         ULONGLONG cbWritten = 0LL;
 
         if (FAILED(hr = inBinary->CopyTo(outFile, &cbWritten)))
         {
-            Log::Error(L"Failed to write ressource content to output file '{}' (code: {:#x})", out, hr);
+            Log::Error(L"Failed to write ressource content to output file '{}' [{}]", out, SystemError(hr));
             continue;
         }
         values.push_back(EmbedSpec::AddFile(item.Name, out));
@@ -1094,7 +1097,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
 
         if (FAILED(hr = archStream->OpenForReadOnly(item.BinaryValue.GetData(), item.BinaryValue.GetCount())))
         {
-            Log::Error(L"Failed to open memory stream for ressource (code: {:#x})", hr);
+            Log::Error(L"Failed to open memory stream for ressource [{}]", SystemError(hr));
             continue;
         }
 
@@ -1111,7 +1114,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
 
         if (FAILED(hr = extractor->Extract(archStream, out.c_str(), nullptr)))
         {
-            Log::Error(L"Failed to extract ressource into '{}' (code: {:#x})", out, hr);
+            Log::Error(L"Failed to extract ressource into '{}' [{}]", out, SystemError(hr));
             continue;
         }
 
@@ -1145,12 +1148,12 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
     {
         if (FAILED(hr = EnumValues(inModule, to_delete)))
         {
-            Log::Error("Failed to enumerate ressources to delete (code: {:#x})", hr);
+            Log::Error("Failed to enumerate ressources to delete [{}]", SystemError(hr));
             return hr;
         }
         if (FAILED(hr = EnumBinaries(inModule, to_delete)))
         {
-            Log::Error("Failed to enumerate ressources to delete (code: {:#x})", hr);
+            Log::Error("Failed to enumerate ressources to delete [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -1171,7 +1174,7 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
     {
         if (FAILED(hr = GetSelf(inputFile)))
         {
-            Log::Error(L"Failed to get my own path: '{}' (code: {:#x})", inputFile, hr);
+            Log::Error(L"Failed to get my own path: '{}' [{}]", inputFile, SystemError(hr));
             return hr;
         }
     }
@@ -1182,7 +1185,7 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
 
     if (FAILED(hr = inStream->ReadFrom(inputFile.c_str())))
     {
-        Log::Error(L"Failed to open input binary '{}' to update ressources (code: {:#x})", inputFile, hr);
+        Log::Error(L"Failed to open input binary '{}' to update ressources [{}]", inputFile, SystemError(hr));
         return hr;
     }
 
@@ -1191,7 +1194,7 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
             hr = outStream->OpenFile(
                 outModule.c_str(), GENERIC_WRITE, 0L, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL)))
     {
-        Log::Error(L"Failed to open output binary '{}' to update ressources (code: {:#x})", outModule, hr);
+        Log::Error(L"Failed to open output binary '{}' to update ressources [{}]", outModule, SystemError(hr));
         return hr;
     }
     ULONGLONG ullWritten = 0LL;
@@ -1199,7 +1202,7 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
 
     if (FAILED(hr = inStream->CopyTo(outStream, &ullWritten)))
     {
-        Log::Error(L"Failed to copy '{}' to '{}' (code: {:#x})", inputFile, outModule, hr);
+        Log::Error(L"Failed to copy '{}' to '{}' [{}]", inputFile, outModule, SystemError(hr));
         return hr;
     }
     inStream->Close();
@@ -1207,7 +1210,7 @@ HRESULT EmbeddedResource::DeleteEmbeddedRessources(
 
     if (FAILED(hr = UpdateResources(outModule, to_delete)))
     {
-        Log::Error(L"Failed to update ressources in '{}' (code: {:#x})", outModule, hr);
+        Log::Error(L"Failed to update ressources in '{}' [{}]", outModule, SystemError(hr));
         return hr;
     }
 

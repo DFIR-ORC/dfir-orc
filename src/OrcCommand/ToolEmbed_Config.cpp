@@ -80,9 +80,9 @@ HRESULT Main::GetAddFileFromConfigItem(const ConfigItem& item, EmbeddedResource:
         if (FAILED(hr = ExpandFilePath(((const std::wstring&)item[TOOLEMBED_FILEPATH]).c_str(), strInputFile)))
         {
             Log::Error(
-                L"Error in specified file '{}' to add in config file (code: {:#x})",
+                L"Error in specified file '{}' to add in config file [{}]",
                 item[TOOLEMBED_FILEPATH].c_str(),
-                hr);
+                SystemError(hr));
             return hr;
         }
     }
@@ -144,9 +144,9 @@ HRESULT Main::GetAddArchiveFromConfigItem(const ConfigItem& item, EmbeddedResour
             if (FAILED(subhr = ExpandFilePath(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(), strInputFile)))
             {
                 Log::Error(
-                    L"Error in specified file '{}' to add to cab file (code: {:#x})",
+                    L"Error in specified file '{}' to add to cab file [{}]",
                     item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(),
-                    subhr);
+                    SystemError(subhr));
                 hr = subhr;
                 return;
             }

@@ -71,7 +71,7 @@ HRESULT MFTUtils::GetAttributeNRExtents(
         if (countRecord > PairDataLen)
         {
             HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Got a bad VCN/LCN record (code: {:#x})", hr);
+            Log::Error("Got a bad VCN/LCN record [{}]", SystemError(hr));
             break;
         }
 

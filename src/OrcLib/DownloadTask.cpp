@@ -126,9 +126,9 @@ std::shared_ptr<DownloadTask> DownloadTask::GetTaskFromConfig(const ConfigItem& 
             if (FAILED(hr = GetOutputFile(file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str(), strLocalName, true)))
             {
                 Log::Error(
-                    L"Error while computing local file name for download task: '{}' (code: {:#x})",
+                    L"Error while computing local file name for download task: '{}' [{}]",
                     file[CONFIG_DOWNLOAD_FILE_LOCALPATH].c_str(),
-                    hr);
+                    SystemError(hr));
             }
 
             if (file[CONFIG_DOWNLOAD_FILE_DELETE])

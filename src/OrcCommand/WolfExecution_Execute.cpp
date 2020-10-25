@@ -132,7 +132,7 @@ HRESULT WolfExecution::BuildFullArchiveName()
 
         if (FAILED(hr = GetFileNameForFile(m_strArchiveFullPath.c_str(), szFileName, MAX_PATH)))
         {
-            Log::Error("Unable to extract archive file name (code: {:#x})", hr);
+            Log::Error("Unable to extract archive file name [{}]", SystemError(hr));
             return hr;
         }
 
@@ -165,7 +165,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
             if (FAILED(hr))
             {
                 Log::Critical(
-                    L"Failed creating archive '{}': {} (code: {:#x})",
+                    L"Failed creating archive '{}': {} [{}]",
                     archive->Keyword(),
                     archive->Description(),
                     SystemError(archive->GetHResult()));
@@ -173,7 +173,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
                 m_journal.Print(
                     archive->Keyword(),
                     operation,
-                    L"Failed creating archive '{}': {} (code: {:#x})",
+                    L"Failed creating archive '{}': {} [{}]",
                     archive->GetFileName(),
                     archive->Description(),
                     SystemError(archive->GetHResult()));
@@ -221,7 +221,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
         if (FAILED(hr = pOutputStream->WriteTo(m_strOutputFullPath.c_str())))
         {
-            Log::Error(L"Failed to open file for write: '{}' (code: {:#x})", m_strOutputFullPath, hr);
+            Log::Error(L"Failed to open file for write: '{}' [{}]", m_strOutputFullPath, SystemError(hr));
             return hr;
         }
 
@@ -231,13 +231,13 @@ HRESULT WolfExecution::CreateArchiveAgent()
         {
             if (FAILED(hr = pEncodingStream->AddRecipient(recipient->Certificate)))
             {
-                Log::Error(L"Failed to add certificate for recipient '{}' (code: {:#x})", recipient->Name, hr);
+                Log::Error(L"Failed to add certificate for recipient '{}' [{}]", recipient->Name, SystemError(hr));
                 return hr;
             }
         }
         if (FAILED(hr = pEncodingStream->Initialize(pOutputStream)))
         {
-            Log::Error(L"Failed initialize encoding stream for '{}' (code: {:#x})", m_strOutputFullPath, hr);
+            Log::Error(L"Failed initialize encoding stream for '{}' [{}]", m_strOutputFullPath, SystemError(hr));
             return hr;
         }
 
@@ -249,7 +249,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
             if (FAILED(hr = pJournalingStream->Open(pEncodingStream)))
             {
-                Log::Error(L"Failed open journaling stream to write (code: {:#x})", hr);
+                Log::Error(L"Failed open journaling stream to write [{}]", SystemError(hr));
                 return hr;
             }
             pFinalStream = pJournalingStream;
@@ -260,7 +260,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
             if (FAILED(hr = pAccumulatingStream->Open(pEncodingStream, m_Temporary.Path, 100 * 1024 * 1024)))
             {
-                Log::Error(L"Failed open accumulating stream to write (code: {:#x})", hr);
+                Log::Error(L"Failed open accumulating stream to write [{}]", SystemError(hr));
                 return hr;
             }
             pFinalStream = pAccumulatingStream;
@@ -272,7 +272,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
             if (FAILED(hr = pClearStream->WriteTo(m_strArchiveFullPath.c_str())))
             {
-                Log::Error(L"Failed initialize file stream for '{}' (code: {:#x})", m_strArchiveFullPath, hr);
+                Log::Error(L"Failed initialize file stream for '{}' [{}]", m_strArchiveFullPath, SystemError(hr));
                 return hr;
             }
 
@@ -281,10 +281,10 @@ HRESULT WolfExecution::CreateArchiveAgent()
             if (FAILED(hr = pTeeTream->Open({pClearStream, pFinalStream})))
             {
                 Log::Error(
-                    L"Failed initialize tee stream for '{}' & '{}' (code: {:#x})",
+                    L"Failed initialize tee stream for '{}' & '{}' [{}]",
                     m_strOutputFileName,
                     m_strArchiveFullPath,
-                    hr);
+                    SystemError(hr));
                 return hr;
             }
 
@@ -303,7 +303,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
         if (FAILED(hr = pOutputStream->WriteTo(m_strOutputFullPath.c_str())))
         {
-            Log::Error(L"Failed open file '{}' to write (code: {:#x})", m_strOutputFullPath, hr);
+            Log::Error(L"Failed open file '{}' to write [{}]", m_strOutputFullPath, SystemError(hr));
             return hr;
         }
 
@@ -594,13 +594,13 @@ HRESULT WolfExecution::CreateCommandAgent(
             case PROCESSOR_ARCHITECTURE_AMD64:
                 if (FAILED(hr = EmbeddedResource::ExtractValue(L"", L"WOLFLAUNCHER_DBGHELP64", strDbgHelpRef)))
                 {
-                    Log::Debug("WOLFLAUNCHER_DBGHELP64 is not set, won't use dbgelp (code: {:#x})", hr);
+                    Log::Debug("WOLFLAUNCHER_DBGHELP64 is not set, won't use dbgelp [{}]", SystemError(hr));
                 }
                 break;
             case PROCESSOR_ARCHITECTURE_INTEL:
                 if (FAILED(hr = EmbeddedResource::ExtractValue(L"", L"WOLFLAUNCHER_DBGHELP32", strDbgHelpRef)))
                 {
-                    Log::Debug("WOLFLAUNCHER_DBGHELP32 is not set, won't use dbgelp (code: {:#x})", hr);
+                    Log::Debug("WOLFLAUNCHER_DBGHELP32 is not set, won't use dbgelp [{}]", SystemError(hr));
                 }
                 break;
         }
@@ -613,9 +613,9 @@ HRESULT WolfExecution::CreateCommandAgent(
     if (FAILED(hr))
     {
         Log::Error(
-            L"WolfLauncher cmd agent failed during initialisation (output directory: '{}', code: {:#x})",
+            L"WolfLauncher cmd agent failed during initialisation (output directory: '{}', [{}])",
             m_Temporary.Path,
-            hr);
+            SystemError(hr));
         return hr;
     }
 
@@ -690,7 +690,7 @@ HRESULT WolfExecution::CompleteExecution()
     }
     if (FAILED(hr = m_cmdAgent->UnInitialize()))
     {
-        Log::Error("WolfLauncher cmd agent failed during unload (code: {:#x})", hr);
+        Log::Error("WolfLauncher cmd agent failed during unload [{}]", SystemError(hr));
         return hr;
     }
     return S_OK;

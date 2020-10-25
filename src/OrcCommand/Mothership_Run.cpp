@@ -94,13 +94,13 @@ HRESULT Main::ChangeTemporaryEnvironment()
     if (!SetEnvironmentVariableW(L"TEMP", config.Temporary.Path.c_str()))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to set %TEMP% to '{}' (code: {:#x})", config.Temporary.Path, hr);
+        Log::Error(L"Failed to set %TEMP% to '{}' [{}]", config.Temporary.Path, SystemError(hr));
         return E_INVALIDARG;
     }
     if (!SetEnvironmentVariableW(L"TMP", config.Temporary.Path.c_str()))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to set %TMP% to '{}' (code: {:#x})", config.Temporary.Path, hr);
+        Log::Error(L"Failed to set %TMP% to '{}' [{}]", config.Temporary.Path, SystemError(hr));
         return E_INVALIDARG;
     }
 
@@ -134,7 +134,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         hr = ExpandFilePath(L"%ComSpec%", strCreateProcessBinary);
         if (FAILED(hr))
         {
-            Log::Error("Failed to evaluate command spec '%ComSpec%' (code: {:#x})", hr);
+            Log::Error("Failed to evaluate command spec '%ComSpec%' [{}]", SystemError(hr));
             return hr;
         }
 
@@ -200,7 +200,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         hr = pk32->InitializeProcThreadAttributeList(nullptr, 1, 0, &sizeToAlloc);
         if (FAILED(hr) && hr != HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER))
         {
-            Log::Error("Failed to obtain tread attribute list size (code: {:#x})", hr);
+            Log::Error("Failed to obtain tread attribute list size [{}]", SystemError(hr));
             return hr;
         }
 
@@ -213,7 +213,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         hr = pk32->InitializeProcThreadAttributeList(pAttrList, 1, 0, &sizeToAlloc);
         if (FAILED(hr))
         {
-            Log::Error("Failed to obtain tread attribute list (code: {:#x})", hr);
+            Log::Error("Failed to obtain tread attribute list [{}]", SystemError(hr));
             return hr;
         }
 
@@ -222,7 +222,9 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
             Log::Error(
-                "Failed OpenProcess on parent pid {} with PROCESS_CREATE_PROCESS (code: {:#x})", config.dwParentID, hr);
+                "Failed OpenProcess on parent pid {} with PROCESS_CREATE_PROCESS [{}]",
+                config.dwParentID,
+                SystemError(hr));
             return hr;
         }
 
@@ -230,7 +232,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
             pAttrList, 0, PROC_THREAD_ATTRIBUTE_PARENT_PROCESS, &m_hParentProcess, sizeof(hParent), nullptr, nullptr);
         if (FAILED(hr))
         {
-            Log::Error("Failed to add process handle to attribute list (code: {:#x})", hr);
+            Log::Error("Failed to add process handle to attribute list [{}]", SystemError(hr));
             return hr;
         }
 
@@ -256,7 +258,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
             &m_pi))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Could not start '{}' with command line '{}' (code: {:#x})", command, szCommandLine.data(), hr);
+        Log::Error(L"Could not start '{}' with command line '{}' [{}]", command, szCommandLine.data(), SystemError(hr));
         return hr;
     }
 
@@ -284,7 +286,7 @@ HRESULT Main::LaunchWMI()
     hr = GetProcessModuleFullPath(szMyselfName, MAX_PATH);
     if (FAILED(hr))
     {
-        Log::Error("Failed to obtain own process full path (code: {:#x})", hr);
+        Log::Error("Failed to obtain own process full path [{}]", SystemError(hr));
         return hr;
     }
 
@@ -310,7 +312,7 @@ HRESULT Main::LaunchWMI()
         hr = ExpandFilePath(L"%ComSpec%", strCreateProcessBinary);
         if (FAILED(hr))
         {
-            Log::Error("Failed to evaluate command spec %ComSpec% (code: {:#x})", hr);
+            Log::Error("Failed to evaluate command spec %ComSpec% [{}]", SystemError(hr));
             return hr;
         }
 
@@ -362,7 +364,7 @@ HRESULT Main::LaunchWMI()
     hr = wmi.Initialize();
     if (FAILED(hr))
     {
-        Log::Error("Failed to initialize WMI (code: {:#x})", hr);
+        Log::Error("Failed to initialize WMI [{}]", SystemError(hr));
         return hr;
     }
 
@@ -372,7 +374,8 @@ HRESULT Main::LaunchWMI()
     hr = wmi.WMICreateProcess(nullptr, szCommandLine.data(), config.dwCreationFlags, 0L, dwStatus);
     if (FAILED(hr) || dwStatus != 0L)
     {
-        Log::Error(L"Could not start command line '{}' (status: {}, code: {:#x})", szCommandLine.data(), dwStatus, hr);
+        Log::Error(
+            L"Could not start command line '{}' (status: {}) [{}]", szCommandLine.data(), dwStatus, SystemError(hr));
         return hr;
     }
 
@@ -399,7 +402,7 @@ HRESULT Main::LaunchSelf()
                 hr = job.AllowBreakAway(config.bPreserveJob);
                 if (FAILED(hr))
                 {
-                    Log::Error("Failed to allow break away from job (code: {:#x})", hr);
+                    Log::Error("Failed to allow break away from job [{}]", SystemError(hr));
                     return hr;
                 }
 
@@ -413,7 +416,7 @@ HRESULT Main::LaunchSelf()
     hr = GetProcessModuleFullPath(szMyselfName, MAX_PATH);
     if (FAILED(hr))
     {
-        Log::Error("Failed to obtain own process full path (code: {:#x})", hr);
+        Log::Error("Failed to obtain own process full path [{}]", SystemError(hr));
         return hr;
     }
 
@@ -424,7 +427,7 @@ HRESULT Main::LaunchSelf()
         HRESULT _hr = job.BlockBreakAway();
         if (FAILED(_hr))
         {
-            Log::Error("Failed to block break away from job (code: {:#x})", _hr);
+            Log::Error("Failed to block break away from job [{}]", SystemError(_hr));
         }
         else
         {
@@ -444,7 +447,7 @@ HRESULT Main::LaunchRun()
     HRESULT hr = EmbeddedResource::ExtractRunWithArgs(L"", strToExecuteRef, strRunArgs);
     if (FAILED(hr))
     {
-        Log::Error("Not RUN ressource found to execute");
+        Log::Error("Not RUN ressource found to execute [{}]", SystemError(hr));
         return hr;
     }
 
@@ -458,7 +461,7 @@ HRESULT Main::LaunchRun()
         strToExecuteRef, L"ToExecute.exe", RESSOURCE_READ_EXECUTE_BA, config.Temporary.Path, strToExecute);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to extract resource '{}' to file", strToExecuteRef);
+        Log::Error(L"Failed to extract resource '{}' to file [{}]", strToExecuteRef, SystemError(hr));
         return hr;
     }
 
@@ -504,13 +507,14 @@ HRESULT Main::LaunchRun()
                 if (dwRetries > 20)
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Error(L"Could not delete file '{}' (code: {:#x})", strToExecute, hr);
+                    Log::Error(L"Could not delete file '{}' [{}]", strToExecute, SystemError(hr));
                     return hr;
                 }
                 else
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Debug(L"Could not delete file '{}' (retries: {}, code: {:#x})", strToExecute, dwRetries, hr);
+                    Log::Debug(
+                        L"Could not delete file '{}' (retries: {}) [{}]", strToExecute, dwRetries, SystemError(hr));
                     dwRetries++;
                     Sleep(500);
                 }
@@ -544,11 +548,11 @@ HRESULT Main::DownloadLocalCopy()
 
     if (FAILED(hr = m_DownloadTask->Initialize(config.bNoWait ? true : false)))
     {
-        Log::Error("Failed to initialize download task (code: {:#x})", hr);
+        Log::Error("Failed to initialize download task [{}]", SystemError(hr));
     }
     else if (FAILED(hr = m_DownloadTask->Finalise()))
     {
-        Log::Error("Failed to finalize download task (code: {:#x})", hr);
+        Log::Error("Failed to finalize download task [{}]", SystemError(hr));
     }
     else
     {
@@ -565,14 +569,14 @@ HRESULT Main::DownloadLocalCopy()
     hr = retry->Initialize(config.bNoWait ? true : false);
     if (FAILED(hr))
     {
-        Log::Error("Failed to initialize download task (code: {:#x})", hr);
+        Log::Error("Failed to initialize download task [{}]", SystemError(hr));
         return hr;
     }
 
     hr = retry->Finalise();
     if (FAILED(hr))
     {
-        Log::Error("Failed to finalize download task (code: {:#x})", hr);
+        Log::Error("Failed to finalize download task [{}]", SystemError(hr));
         return hr;
     }
 
@@ -586,7 +590,7 @@ HRESULT Main::Run()
     hr = ChangeTemporaryEnvironment();
     if (FAILED(hr))
     {
-        Log::Warn("Failed to modify temp directory (code: {:#x})", hr);
+        Log::Warn("Failed to modify temp directory [{}]", SystemError(hr));
     }
 
     if (config.bUseLocalCopy && m_DownloadTask)
@@ -596,7 +600,7 @@ HRESULT Main::Run()
         hr = SystemDetails::GetProcessBinary(strProcessBinary);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to obtain process' binary, cancelling download task");
+            Log::Error(L"Failed to obtain process' binary, cancelling download task [{}]", SystemError(hr));
         }
         else
         {
@@ -622,7 +626,7 @@ HRESULT Main::Run()
                     hr = DownloadLocalCopy();
                     if (FAILED(hr))
                     {
-                        Log::Error(L"Downloading to local device failed, download task ignored (code: {:#x})", hr);
+                        Log::Error(L"Downloading to local device failed, download task ignored [{}]", SystemError(hr));
                         break;
                     }
 

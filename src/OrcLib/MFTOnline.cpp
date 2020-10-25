@@ -91,12 +91,12 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
         ULONGLONG ullBytesRead = 0LL;
         if (FAILED(hr = m_pVolReader->Read(Offset1, mftBuf, ulBytesPerFRS, ullBytesRead)))
         {
-            Log::Error("Failed to read the {} MFT record (code: {:#x})", i, hr);
+            Log::Error("Failed to read the {} MFT record [{}]", i, SystemError(hr));
             break;
         }
         if (FAILED(hr = m_pVolReader->Read(Offset2, mftMirrBuf, ulBytesPerFRS, ullBytesRead)))
         {
-            Log::Error(L"Failed to read the {} Mirror MFT record (code: {:#x})", i, hr);
+            Log::Error(L"Failed to read the {} Mirror MFT record [{}]", i, SystemError(hr));
             break;
         }
 
@@ -219,7 +219,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
 
         if (FAILED(hr = m_pVolReader->Read(Offset, RootRecordBuffer, ulBytesPerFRS, ullBytesRead)))
         {
-            Log::Error(L"Failed to read the {} MFT record (code: {:#x})", i, hr);
+            Log::Error(L"Failed to read the {} MFT record [{}]", i, SystemError(hr));
             return hr;
         }
 
@@ -321,10 +321,10 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
                         extent_position, localReadBuffer, ulBytesPerFRS * ullFRSToRead, ullBytesRead)))
             {
                 Log::Error(
-                    L"Failed to read {} bytes from at position {} (code: {:#x})",
+                    L"Failed to read {} bytes from at position {} [{}]",
                     extent_position,
                     ulBytesPerFRS * ullFRSToRead,
-                    hr);
+                    SystemError(hr));
                 return hr;
             }
 
@@ -349,15 +349,15 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
                 {
                     if (hr == E_OUTOFMEMORY)
                     {
-                        Log::Error("Add Record Callback failed, not enough memory to continue (code: {:#x})", hr);
+                        Log::Error("Add Record Callback failed, not enough memory to continue [{}]", SystemError(hr));
                         return hr;
                     }
                     else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
                     {
-                        Log::Debug("Add Record Callback asks for enumeration to stop (code: {:#x})", hr);
+                        Log::Debug("Add Record Callback asks for enumeration to stop [{}]", SystemError(hr));
                         return hr;
                     }
-                    Log::Warn("Add Record Callback failed (code: {:#x})", hr);
+                    Log::Warn("Add Record Callback failed [{}]", SystemError(hr));
                 }
 
                 if (ullCurrentIndex != ullCurrentFRNIndex)
@@ -422,7 +422,10 @@ HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUt
             if (FAILED(hr = m_pFetchReader->Read(ullVolumeOffset, localReadBuffer, ulBytesPerFRS, ullBytesRead)))
             {
                 Log::Error(
-                    L"Failed to read {} bytes from at position {} (code: {:#x})", ullVolumeOffset, ulBytesPerFRS, hr);
+                    L"Failed to read {} bytes from at position {} [{}]",
+                    ullVolumeOffset,
+                    ulBytesPerFRS,
+                    SystemError(hr));
                 break;
             }
 
@@ -489,7 +492,7 @@ HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUt
                     return hr;
                 }
 
-                Log::Warn("Add Record Callback failed (code: {:#x})", hr);
+                Log::Warn("Add Record Callback failed [{}]", SystemError(hr));
             }
             frnIdx++;
             if (frnIdx >= frn.size())

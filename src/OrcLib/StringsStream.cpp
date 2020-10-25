@@ -668,7 +668,7 @@ HRESULT StringsStream::Read(
     CBinaryBuffer strings;
     if (FAILED(hr = processBuffer(CBinaryBuffer((LPBYTE)pReadBuffer, static_cast<size_t>(cbBytesRead)), strings)))
     {
-        Log::Error(L"Failed to extract strings from read buffer (code: {:#x})", hr);
+        Log::Error(L"Failed to extract strings from read buffer [{}]", SystemError(hr));
         return hr;
     }
     if (m_cchExtracted * sizeof(UCHAR) > cbBytes)

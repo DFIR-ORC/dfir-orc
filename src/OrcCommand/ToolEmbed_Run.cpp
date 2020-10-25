@@ -91,7 +91,8 @@ HRESULT Main::Run_Embed()
     if (!CopyFile(config.strInputFile.c_str(), config.Output.Path.c_str(), FALSE))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to copy file '{}' into '{}' (code: {:#x})", config.strInputFile, config.Output.Path, hr);
+        Log::Error(
+            L"Failed to copy file '{}' into '{}' [{}]", config.strInputFile, config.Output.Path, SystemError(hr));
         return hr;
     }
 
@@ -100,12 +101,12 @@ HRESULT Main::Run_Embed()
     hr = EmbeddedResource::UpdateResources(config.Output.Path, config.ToEmbed);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to update resources in file '{}' (code: {:#x})", config.Output.Path, hr);
+        Log::Error(L"Failed to update resources in file '{}' [{}]", config.Output.Path, SystemError(hr));
 
         if (!DeleteFile(config.Output.Path.c_str()))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to delete failed output file '{}' (code: {:#x})", config.Output.Path, hr);
+            Log::Error(L"Failed to delete failed output file '{}' [{}]", config.Output.Path, SystemError(hr));
             return hr;
         }
 
@@ -133,14 +134,14 @@ HRESULT Main::Run_Dump()
     hr = EmbeddedResource::EnumValues(config.strInputFile, values);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to enumerate values from '{}' (code: {:#x})", config.strInputFile, hr);
+        Log::Error(L"Failed to enumerate values from '{}' [{}]", config.strInputFile, SystemError(hr));
         return hr;
     }
 
     hr = EmbeddedResource::EnumBinaries(config.strInputFile, values);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to enumerate binaries from '{}' (code: {:#x})", config.strInputFile, hr);
+        Log::Error(L"Failed to enumerate binaries from '{}' [{}]", config.strInputFile, SystemError(hr));
         return hr;
     }
 
@@ -148,24 +149,24 @@ HRESULT Main::Run_Dump()
     if (FAILED(hr))
     {
         Log::Error(
-            L"Failed to expand files and archivesfrom '{}' into '{}' (code: {:#x})",
+            L"Failed to expand files and archivesfrom '{}' into '{}' [{}]",
             config.strInputFile,
             config.Output.Path,
-            hr);
+            SystemError(hr));
         return hr;
     }
 
     hr = EmbeddedResource::DeleteEmbeddedRessources(config.strInputFile, L".\\Mothership.exe", values);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to delete ressources from '{}' (code: {:#x})", config.strInputFile, hr);
+        Log::Error(L"Failed to delete ressources from '{}' [{}]", config.strInputFile, SystemError(hr));
         return hr;
     }
 
     hr = WriteEmbedConfig(L".\\Embed.xml", L".\\Mothership.exe", values);
     if (FAILED(hr))
     {
-        Log::Error("Failed to write embedding configuration for dump (code: {:#x})", hr);
+        Log::Error("Failed to write embedding configuration for dump [{}]", SystemError(hr));
         return hr;
     }
 
@@ -191,7 +192,7 @@ HRESULT Main::Run_FromDump()
     hr = Orc::Config::ToolEmbed::root(embed_config);
     if (FAILED(hr))
     {
-        Log::Error("Failed to create config item to embed (code: {:#x})", hr);
+        Log::Error("Failed to create config item to embed [{}]", SystemError(hr));
         return hr;
     }
 
@@ -199,14 +200,14 @@ HRESULT Main::Run_FromDump()
     hr = reader.ReadConfig(config.strConfigFile.c_str(), embed_config);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to read embed config file '{}' (code: {:#x})", config.strConfigFile, hr);
+        Log::Error(L"Failed to read embed config file '{}' [{}]", config.strConfigFile, SystemError(hr));
         return hr;
     }
 
     hr = GetConfigurationFromConfig(embed_config);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to obtain embed configuration '{}' (code: {:#x})", config.strConfigFile, hr);
+        Log::Error(L"Failed to obtain embed configuration '{}' [{}]", config.strConfigFile, SystemError(hr));
         return hr;
     }
 

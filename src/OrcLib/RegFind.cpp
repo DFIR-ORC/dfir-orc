@@ -339,7 +339,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
 
         if (FAILED(hr = GetBytesFromHexaString(Data.c_str(), static_cast<DWORD>(Data.size()), retval->m_DataContent)))
         {
-            Log::Error(L"Invalid bytes for content '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_HEX], hr);
+            Log::Error(L"Invalid bytes for content '{}' [{}]", item[CONFIG_REGFIND_DATA_HEX], SystemError(hr));
             return nullptr;
         }
         // Also initiate unicode version of pattern (in case pattern tested against SZ values)
@@ -354,15 +354,15 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE].c_str(), li)))
         {
-            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE], hr);
+            Log::Error(L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE], SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
             Log::Error(
-                L"Invalid negative file size specification: '{}' (code: {:#x})",
+                L"Invalid negative file size specification: '{}' [{}]",
                 item[CONFIG_REGFIND_DATA_SIZE].c_str(),
-                hr);
+                SystemError(hr));
             return nullptr;
         }
         retval->m_ulDataSize = li.QuadPart;
@@ -375,13 +375,16 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_LT].c_str(), li)))
         {
-            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_LT], hr);
+            Log::Error(
+                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE_LT], SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
             Log::Error(
-                L"Invalid negative file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE], hr);
+                L"Invalid negative file size specification: '{}' [{}]",
+                item[CONFIG_REGFIND_DATA_SIZE],
+                SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart == 0)
@@ -399,7 +402,8 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_GT].c_str(), li)))
         {
-            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_GT], hr);
+            Log::Error(
+                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE_GT], SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
@@ -418,7 +422,8 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_LE].c_str(), li)))
         {
-            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_LE], hr);
+            Log::Error(
+                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE_LE], SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
@@ -437,7 +442,8 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_GE].c_str(), li)))
         {
-            Log::Error(L"Invalid file size specification: '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_SIZE_GE], hr);
+            Log::Error(
+                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE_GE], SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
@@ -521,7 +527,9 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
                     Data.c_str(), static_cast<DWORD>(Data.size()), retval->m_DataContentContains)))
         {
             Log::Error(
-                L"Invalid bytes for content '{}' (code: {:#x})", item[CONFIG_REGFIND_DATA_CONTAINS_HEX].c_str(), hr);
+                L"Invalid bytes for content '{}' [{}]",
+                item[CONFIG_REGFIND_DATA_CONTAINS_HEX].c_str(),
+                SystemError(hr));
             return nullptr;
         }
 
@@ -546,7 +554,7 @@ HRESULT RegFind::AddRegFindFromConfig(const std::vector<ConfigItem>& items)
             HRESULT hr = E_FAIL;
             if (FAILED(hr = AddSearchTerm(term)))
             {
-                Log::Error(L"Failed to add registry search term (code: {:#x})", hr);
+                Log::Error(L"Failed to add registry search term [{}]", SystemError(hr));
             }
         }
     }
@@ -595,18 +603,18 @@ HRESULT RegFind::AddRegFindFromTemplate(const std::vector<ConfigItem>& items)
                 if (FAILED(hr = TemplateConfig.ReadConfig(memstream, NewItem)))
                 {
                     Log::Error(
-                        L"Failed to read config resource '{}' (code: {:#x})",
+                        L"Failed to read config resource '{}' [{}]",
                         item[CONFIG_TEMPLATE_LOCATION].c_str(),
-                        hr);
+                        SystemError(hr));
                     return hr;
                 }
             }
             else
             {
                 Log::Error(
-                    L"Failed to extract config from resource '{}' (code: {:#x})",
+                    L"Failed to extract config from resource '{}' [{}]",
                     item[CONFIG_TEMPLATE_LOCATION].c_str(),
-                    hr);
+                    SystemError(hr));
                 return hr;
             }
         }
@@ -615,7 +623,7 @@ HRESULT RegFind::AddRegFindFromTemplate(const std::vector<ConfigItem>& items)
             if (FAILED(hr = TemplateConfig.ReadConfig(item[CONFIG_TEMPLATE_LOCATION].c_str(), NewItem)))
             {
                 Log::Error(
-                    L"Failed to open template file '{}' (code: {:#x})", item[CONFIG_TEMPLATE_LOCATION].c_str(), hr);
+                    L"Failed to open template file '{}' [{}]", item[CONFIG_TEMPLATE_LOCATION].c_str(), SystemError(hr));
                 return hr;
             }
         }
@@ -629,7 +637,7 @@ HRESULT RegFind::AddRegFindFromTemplate(const std::vector<ConfigItem>& items)
                 term->SetTermName(item[CONFIG_TEMPLATE_NAME]);
                 if (FAILED(hr = AddSearchTerm(term)))
                 {
-                    Log::Error(L"Failed to add registry search term (code: {:#x})", hr);
+                    Log::Error(L"Failed to add registry search term [{}]", SystemError(hr));
                 }
             }
         }
@@ -1854,7 +1862,7 @@ HRESULT RegFind::Find(
         hr = Hive.LoadHive(*location);
         if (hr != S_OK)
         {
-            Log::Error(L"Failed RegFind::Find: cannot load hive (code: {:#x})", hr);
+            Log::Error(L"Failed RegFind::Find: cannot load hive [{}]", SystemError(hr));
             return hr;
         }
 
@@ -1874,7 +1882,7 @@ HRESULT RegFind::Find(
 
         if (FAILED(hr = Hive.Walk(CallbackOnKey, CallBackOnValue)))
         {
-            Log::Error(L"Failed RegFind::Find: cannot walk hive (code: {:#x})", hr);
+            Log::Error(L"Failed RegFind::Find: cannot walk hive [{}]", SystemError(hr));
             return hr;
         }
     }

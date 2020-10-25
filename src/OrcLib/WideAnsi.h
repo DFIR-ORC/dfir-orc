@@ -14,6 +14,7 @@
 #include <iostream>
 
 #include "Log/Log.h"
+#include "Utils/Result.h"
 
 #pragma managed(push, off)
 
@@ -46,11 +47,11 @@ HRESULT ORCLIB_API WideToAnsi(__in const std::wstring_view src, Buffer<CHAR, _De
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed WideCharToMultiByte (code: {:#x})", hr);
+            Log::Error(L"Failed WideCharToMultiByte [{}]", SystemError(hr));
         }
         else
         {
-            std::cerr << "WideCharToMultiByte failed:" << hex << hr << endl;
+            std::cerr << "WideCharToMultiByte failed:" << hex << SystemError(hr) << endl;
         }
         return hr;
     }
@@ -70,11 +71,11 @@ HRESULT ORCLIB_API WideToAnsi(__in const std::wstring_view src, Buffer<CHAR, _De
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed WideCharToMultiByte (code: {:#x})", hr);
+            Log::Error(L"Failed WideCharToMultiByte [{}]", SystemError(hr));
         }
         else
         {
-            std::cerr << "WideCharToMultiByte failed:" << hex << hr << endl;
+            std::cerr << "WideCharToMultiByte failed:" << hex << SystemError(hr) << endl;
         }
         dest.clear();
         return hr;
@@ -95,11 +96,11 @@ HRESULT ORCLIB_API WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cch
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed WideCharToMultiByte (code: {:#x})", hr);
+            Log::Error(L"Failed WideCharToMultiByte [{}]", SystemError(hr));
         }
         else
         {
-            cerr << "WideCharToMultiByte failed:" << hex << hr << endl;
+            cerr << "WideCharToMultiByte failed:" << hex << SystemError(hr) << endl;
         }
         return hr;
     }
@@ -119,11 +120,11 @@ HRESULT ORCLIB_API WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cch
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed WideCharToMultiByte (code: {:#x})", hr);
+            Log::Error(L"Failed WideCharToMultiByte [{}]", SystemError(hr));
         }
         else
         {
-            cerr << "WideCharToMultiByte failed:" << hex << hr << endl;
+            cerr << "WideCharToMultiByte failed:" << hex << SystemError(hr) << endl;
         }
         dest.clear();
         return hr;
@@ -144,11 +145,11 @@ HRESULT ORCLIB_API WideToAnsi(PCWSTR pwszSrc, Buffer<CHAR, _DeclElts>& dest)
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed WideCharToMultiByte (code: {:#x})", hr);
+            Log::Error(L"Failed WideCharToMultiByte [{}]", SystemError(hr));
         }
         else
         {
-            cerr << "WideCharToMultiByte failed:" << hex << hr << endl;
+            cerr << "WideCharToMultiByte failed:" << hex << SystemError(hr) << endl;
         }
         return hr;
     }
@@ -161,11 +162,11 @@ HRESULT ORCLIB_API WideToAnsi(PCWSTR pwszSrc, Buffer<CHAR, _DeclElts>& dest)
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed WideCharToMultiByte (code: {:#x})", hr);
+            Log::Error(L"Failed WideCharToMultiByte [{}]", SystemError(hr));
         }
         else
         {
-            cerr << "WideCharToMultiByte failed:" << hex << hr << endl;
+            cerr << "WideCharToMultiByte failed:" << hex << SystemError(hr) << endl;
         }
         dest.clear();
         return hr;
@@ -203,11 +204,11 @@ HRESULT ORCLIB_API AnsiToWide(__in const std::string_view src, Buffer<WCHAR, _De
         hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed MultiByteToWideChar (code: {:#x})", hr);
+            Log::Error(L"Failed MultiByteToWideChar [{}]", SystemError(hr));
         }
         else
         {
-            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << SystemError(hr) << std::endl;
         }
         return hr;
     }
@@ -221,11 +222,11 @@ HRESULT ORCLIB_API AnsiToWide(__in const std::string_view src, Buffer<WCHAR, _De
         hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed MultiByteToWideChar (code: {:#x})", hr);
+            Log::Error(L"Failed MultiByteToWideChar [{}]", SystemError(hr));
         }
         else
         {
-            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << SystemError(hr) << std::endl;
         }
         dest.clear();
         return hr;
@@ -246,11 +247,11 @@ HRESULT ORCLIB_API AnsiToWide(__in_ecount(cchSrc) PCSTR pwszSrc, __in DWORD cchS
         hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed MultiByteToWideChar (code: {:#x})", hr);
+            Log::Error(L"Failed MultiByteToWideChar [{}]", SystemError(hr));
         }
         else
         {
-            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << SystemError(hr) << std::endl;
         }
         return hr;
     }
@@ -262,11 +263,11 @@ HRESULT ORCLIB_API AnsiToWide(__in_ecount(cchSrc) PCSTR pwszSrc, __in DWORD cchS
         hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed MultiByteToWideChar (code: {:#x})", hr);
+            Log::Error(L"Failed MultiByteToWideChar [{}]", SystemError(hr));
         }
         else
         {
-            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << SystemError(hr) << std::endl;
         }
         dest.clear();
         return hr;
@@ -286,11 +287,11 @@ HRESULT ORCLIB_API AnsiToWide(PCSTR pwszSrc, Buffer<WCHAR, _DeclElts>& dest)
         hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed MultiByteToWideChar (code: {:#x})", hr);
+            Log::Error(L"Failed MultiByteToWideChar [{}]", SystemError(hr));
         }
         else
         {
-            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << SystemError(hr) << std::endl;
         }
         return hr;
     }
@@ -302,11 +303,11 @@ HRESULT ORCLIB_API AnsiToWide(PCSTR pwszSrc, Buffer<WCHAR, _DeclElts>& dest)
         hr = HRESULT_FROM_WIN32(GetLastError());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed MultiByteToWideChar (code: {:#x})", hr);
+            Log::Error(L"Failed MultiByteToWideChar [{}]", SystemError(hr));
         }
         else
         {
-            std::cerr << "MultiByteToWideChar failed:" << std::hex << hr << std::endl;
+            std::cerr << "MultiByteToWideChar failed:" << std::hex << SystemError(hr) << std::endl;
         }
         dest.clear();
         return hr;

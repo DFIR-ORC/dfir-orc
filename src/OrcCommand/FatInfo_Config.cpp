@@ -118,13 +118,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = m_Config.locs.AddLocationsFromConfigItem(configitem[FATINFO_LOCATIONS])))
     {
-        Log::Error("Failed to get locations definition from config (code: {:#x})", hr);
+        Log::Error("Failed to get locations definition from config [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = GetColumnsAndFiltersFromConfig(configitem)))
     {
-        Log::Error("Failed to get column definition from config (code: {:#x})", hr);
+        Log::Error("Failed to get column definition from config [{}]", SystemError(hr));
         return hr;
     }
 
@@ -284,9 +284,9 @@ HRESULT Main::CheckConfiguration()
         if (FAILED(hr))
         {
             Log::Error(
-                L"Specified file information output directory '{}' is not a directory (code: {:#x})",
+                L"Specified file information output directory '{}' is not a directory [{}]",
                 m_Config.output.Path,
-                hr);
+                SystemError(hr));
             return hr;
         }
     }

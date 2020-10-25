@@ -75,7 +75,7 @@ public:
 
         if (CloseHandle(handle) == FALSE)
         {
-            Log::Warn("Failed on CloseHandle (code: {:#x})", LastWin32Error());
+            Log::Warn("Failed on CloseHandle [{}]", LastWin32Error());
         }
     }
 

@@ -274,10 +274,10 @@ HRESULT FileInfo::WriteFileInformation(
                 if (FAILED(hr = HandleIntentions(pCurCol->dwIntention, output)))
                 {
                     Log::Debug(
-                        L"VERBOSE: Column '{}' failed to be written for '{}' (code: {:#x}))",
+                        L"VERBOSE: Column '{}' failed to be written for '{}' [{}])",
                         pCurCol->szColumnName,
                         m_szFullName,
-                        hr);
+                        SystemError(hr));
                     if (output.GetCurrentColumnID() == ColId)
                         hr = output.AbandonColumn();
                 }
@@ -836,7 +836,7 @@ HRESULT FileInfo::OpenAuthenticode()
                 hr = m_codeVerifyTrust.Verify(
                     m_szFullName, GetDetails()->SecurityDirectory(), GetDetails()->GetPEHashs(), data)))
         {
-            Log::Warn(L"WinVerifyTrust failed for file '{}' (code: {:#x})", m_szFullName, hr);
+            Log::Warn(L"WinVerifyTrust failed for file '{}' [{}]", m_szFullName, SystemError(hr));
         }
     }
     else
@@ -844,7 +844,7 @@ HRESULT FileInfo::OpenAuthenticode()
         if (FAILED(
                 hr = m_codeVerifyTrust.VerifyAnySignatureWithCatalogs(m_szFullName, GetDetails()->GetPEHashs(), data)))
         {
-            Log::Warn(L"WinVerifyTrust failed for file '{}' (code: {:#x})", m_szFullName, hr);
+            Log::Warn(L"WinVerifyTrust failed for file '{}' [{}]", m_szFullName, SystemError(hr));
         }
     }
     GetDetails()->SetAuthenticodeData(std::move(data));
@@ -1463,7 +1463,7 @@ HRESULT FileInfo::WriteSecurityDirectorySignatureSize(ITableOutput& output)
         DWORD cbSize = 0L;
         if (FAILED(hr = m_codeVerifyTrust.SignatureSize(m_szFullName, GetDetails()->SecurityDirectory(), cbSize)))
         {
-            Log::Warn(L"SignatureSize failed for file '{}' (code: {:#x})", m_szFullName, hr);
+            Log::Warn(L"SignatureSize failed for file '{}' [{}]", m_szFullName, SystemError(hr));
         }
         return output.WriteInteger(cbSize);
     }

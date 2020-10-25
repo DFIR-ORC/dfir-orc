@@ -579,7 +579,7 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
                 if (!MoveFileEx(pszPath, NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Error(L"Failed to delay deletion until reboot for file '{}' (code: {:#x})", pszPath, hr);
+                    Log::Error(L"Failed to delay deletion until reboot for file '{}' [{}]", pszPath, SystemError(hr));
                     return hr;
                 }
                 return S_OK;
@@ -587,7 +587,7 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
             else
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Debug(L"Could not delete file '{}' (code: {:#x}, retries: {})", pszPath, hr, dwRetries);
+                Log::Debug(L"Could not delete file '{}' ([{}], retries: {})", pszPath, SystemError(hr), dwRetries);
                 dwRetries++;
                 Sleep(200);
             }
@@ -610,7 +610,7 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryDirectory(const std::filesystem::path
     for (auto& p : std::filesystem::recursive_directory_iterator(path))
     {
         if (auto hr = UtilDeleteTemporaryFile(p.path()); FAILED(hr))
-            Log::Error(L"Failed to delete temp file {} (hr:{:#010x})", p.path(), hr);
+            Log::Error(L"Failed to delete temp file {} (hr:{:#010x})", p.path(), SystemError(hr));
     }
 
     std::error_code ec;

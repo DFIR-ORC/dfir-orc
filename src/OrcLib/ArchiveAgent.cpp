@@ -95,7 +95,7 @@ HRESULT ArchiveAgent::CompleteOnFlush(bool bFinal)
                             if (!RemoveDirectory(action.Fullpath().c_str()))
                             {
                                 hr = action.m_hr = HRESULT_FROM_WIN32(GetLastError());
-                                Log::Error(L"Failed to delete directory '{}' (code: {:#x})", action.Fullpath(), hr);
+                                Log::Error(L"Failed to delete directory '{}' [{}]", action.Fullpath(), SystemError(hr));
                             }
                             else
                             {
@@ -119,7 +119,7 @@ HRESULT ArchiveAgent::CompleteOnFlush(bool bFinal)
                             if (!DeleteFile(action.Fullpath().c_str()))
                             {
                                 hr = action.m_hr = HRESULT_FROM_WIN32(GetLastError());
-                                Log::Error(L"Failed to delete directory '{}' (code: {:#x})", action.Fullpath(), hr);
+                                Log::Error(L"Failed to delete directory '{}' [{}]", action.Fullpath(), SystemError(hr));
                             }
                             else
                             {
@@ -359,7 +359,7 @@ void ArchiveAgent::run()
                     if (!FindClose(hFind))
                     {
                         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-                        Log::Warn("Failed to close FindFile while adding directory to CAB (code: {:#x})", hr);
+                        Log::Warn("Failed to close FindFile while adding directory to CAB [{}]", SystemError(hr));
                     }
                 }
 

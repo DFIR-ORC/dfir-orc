@@ -36,7 +36,8 @@ DWORD WINAPI DebugAgent::StaticDebugLoopProc(__in LPVOID lpParameter)
     if (!DebugActiveProcess(pThis->m_dwProcessID))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed to attach debugger to running process (pid: {}, code: {:#x})", pThis->m_dwProcessID, hr);
+        Log::Error(
+            "Failed to attach debugger to running process (pid: {}, [{}])", pThis->m_dwProcessID, SystemError(hr));
         return hr;
     }
     else
@@ -70,7 +71,7 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
     if (hFile == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed CreateFile on '{}' (code: {:#x})", strTempDumpFileName, hr);
+        Log::Error(L"Failed CreateFile on '{}' [{}]", strTempDumpFileName, SystemError(hr));
         return hr;
     }
     // Create the minidump
@@ -78,7 +79,8 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
     if (hThread == NULL)
     {
         const auto ec = LastWin32Error();
-        Log::Error(L"Failed OpenThread (tid: {}, code: {:#x})", debug_event.dwThreadId, ec);
+        Log::Error(L"Failed OpenThread (tid: {}, [{}])", debug_event.dwThreadId, ec
+        );
         return ToHRESULT(ec);
     }
 
@@ -116,10 +118,9 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error(
-            "Failed to CreateMinidump: OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_READ) failed (pid: {}, code: "
-            "{:#x})",
+            "Failed to CreateMinidump: OpenProcess(PROCESS_QUERY_INFORMATION|PROCESS_VM_READ) failed (pid: {}, [{}])",
             m_dwProcessID,
-            hr);
+            SystemError(hr));
         CloseHandle(hFile);
         return hr;
     }
@@ -128,7 +129,7 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
 
     if (FAILED(hr = pDbgDll->MiniDumpWriteDump(hProcess, m_dwProcessID, hFile, mdt, &mdei, nullptr, nullptr)))
     {
-        Log::Error(L"Failed on MiniDumpWriteDump (code: {:#x})", hr);
+        Log::Error(L"Failed on MiniDumpWriteDump [{}]", SystemError(hr));
         return hr;
     }
     else
@@ -186,7 +187,7 @@ void DebugAgent::DebugLoop()
                     if (!m_Event.u.Exception.dwFirstChance)
                     {
                         Log::Debug(
-                            "Exception occured in child process (code: {:#x})",
+                            "Exception occured in child process [{}]",
                             SystemError(m_Event.u.Exception.ExceptionRecord.ExceptionCode));
                         if (SUCCEEDED(hr = CreateMinidump(m_Event)))
                         {
@@ -226,7 +227,7 @@ void DebugAgent::DebugLoop()
         if (!ContinueDebugEvent(m_Event.dwProcessId, m_Event.dwThreadId, dwExceptionHandled))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to ContinueDebugEvent() (code: {:#x})", hr);
+            Log::Error("Failed to ContinueDebugEvent() [{}]", SystemError(hr));
             return;
         }
     } while (bContinue);
@@ -246,7 +247,7 @@ DebugAgent::DebugProcess(DWORD dwProcessID, const std::wstring& strDirectory, co
             (LPTHREAD_START_ROUTINE)DebugAgent::StaticDebugLoopProc, pAgent.get(), WT_EXECUTELONGFUNCTION))
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to queue debugger agent (code: {:#x})", hr);
+        Log::Error(L"Failed to queue debugger agent [{}]", SystemError(hr));
         return nullptr;
     }
     return pAgent;

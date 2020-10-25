@@ -636,7 +636,7 @@ HRESULT Orc::TableOutput::CSV::Cruncher::ParseNextLine(Record& record)
 
         if (FAILED(hr = CoerceToColumn(szToken, dwTokenLength, record.Values[i])))
         {
-            Log::Warn(L"Failed to coerce {} into its destination type (code: {:#x})", szToken, hr);
+            Log::Warn(L"Failed to coerce {} into its destination type [{}]", szToken, SystemError(hr));
         }
         if (bReachedNewLine && i != m_Schema.Column.size() - 1)
         {

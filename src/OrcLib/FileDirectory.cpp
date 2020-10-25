@@ -133,7 +133,7 @@ HRESULT FileDirectory::ParseFileDirectory(const std::wstring& aObjDir, FileDirec
 
         if (FAILED(hr))
         {
-            Log::Error("Failed NtQueryDirectoryFile (code: {:#x})", hr);
+            Log::Error("Failed NtQueryDirectoryFile [{}]", SystemError(hr));
             return hr;
         }
 

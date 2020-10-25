@@ -58,7 +58,7 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
     if (FAILED(pNtDll->NtQueryInformationProcess(
             GetCurrentProcess(), ProcessBasicInformation, &pbi, (ULONG)sizeof(PROCESS_BASIC_INFORMATION), nullptr)))
     {
-        Log::Error(L"Failed NtQueryInformationProcess (code: {:#x})", LastWin32Error());
+        Log::Error(L"Failed NtQueryInformationProcess [{}]", LastWin32Error());
         return false;
     }
 
@@ -71,7 +71,7 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
     if (hParent == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed OpenProcess (parent process pid: {}, code: {:#x})", dwParentId, hr);
+        Log::Error("Failed OpenProcess (parent process pid: {}, [{}])", dwParentId, SystemError(hr));
         return false;
     }
 
@@ -87,7 +87,7 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
     if (!GetProcessImageFileName(hParent, szImageFileName, MAX_PATH))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed GetProcessImageFileName (code {:#x})", hr);
+        Log::Error("Failed GetProcessImageFileName [{}]", SystemError(hr));
         return false;
     }
 

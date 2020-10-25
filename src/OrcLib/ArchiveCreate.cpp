@@ -93,7 +93,7 @@ STDMETHODIMP ArchiveCreate::AddFile(__in PCWSTR pwzNameInArchive, __in PCWSTR pw
                     FILE_FLAG_SEQUENTIAL_SCAN | (bDeleteWhenDone ? FILE_FLAG_DELETE_ON_CLOSE : 0L),
                     NULL)))
         {
-            Log::Error(L"Failed to open file to archive {} (code: {:#x})", pwzFileName, hr);
+            Log::Error(L"Failed to open file to archive {} [{}]", pwzFileName, SystemError(hr));
             return hr;
         }
 

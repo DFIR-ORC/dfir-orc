@@ -108,7 +108,7 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
     if (INVALID_HANDLE_VALUE == m_hFile)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug(L"Failed CreateFile(FILE_FLAG_SEQUENTIAL_SCAN) - '{}' (code: {:#x})", m_Name, hr);
+        Log::Debug(L"Failed CreateFile(FILE_FLAG_SEQUENTIAL_SCAN) - '{}' [{}]", m_Name, SystemError(hr));
         return hr;
     }
 
@@ -130,11 +130,10 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
         m_Length = liLength.QuadPart;
         if (liLength.LowPart == INVALID_FILE_SIZE && ((lastError = GetLastError()) != NO_ERROR))
         {
-            Log::Warn(
-                L"CDiskExtent: Unable to determine disk size with GetFileSize (code: {:#x})", Win32Error(lastError));
+            Log::Warn(L"CDiskExtent: Unable to determine disk size with GetFileSize [{}]", Win32Error(lastError));
 
             Log::Warn(
-                L"CDiskExtent: Unable to determine disk size with IOCTL_DISK_GET_LENGTH_INFO (code: {:#x})",
+                L"CDiskExtent: Unable to determine disk size with IOCTL_DISK_GET_LENGTH_INFO [{}]",
                 Win32Error(ioctlLastError));
             m_Length = 0;
         }
@@ -178,7 +177,7 @@ HRESULT CDiskExtent::Read(__in_bcount(dwCount) PVOID lpBuf, DWORD dwCount, PDWOR
     if (!ReadFile(m_hFile, lpBuf, dwCount, &dwBytesRead, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Warn(L"Failed to read {} bytes from disk extent (code: {:#x})", dwCount, hr);
+        Log::Warn(L"Failed to read {} bytes from disk extent [{}]", dwCount, SystemError(hr));
         *pdwBytesRead = 0;
         return hr;
     }
@@ -200,7 +199,7 @@ HRESULT CDiskExtent::Seek(LARGE_INTEGER liDistanceToMove, PLARGE_INTEGER pliNewF
     if (!SetFilePointerEx(m_hFile, liDistanceToMove, &m_liCurrentPos, dwFrom))
     {
         auto lastError = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to set file pointer on file (code: {:#x})", lastError);
+        Log::Error(L"Failed to set file pointer on file [{}]", SystemError(lastError));
         return lastError;
     }
     if (pliNewFilePointer != NULL)
@@ -242,7 +241,7 @@ CDiskExtent CDiskExtent::ReOpen(DWORD dwDesiredAccess, DWORD dwShareMode, DWORD 
                 GetCurrentProcess(), m_hFile, GetCurrentProcess(), &ext.m_hFile, dwDesiredAccess, FALSE, 0L))
         {
             HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to duplicate disk extent's handle (code: {:#x})", hr);
+            Log::Error("Failed to duplicate disk extent's handle [{}]", SystemError(hr));
             ext.m_hFile = INVALID_HANDLE_VALUE;
         }
     }

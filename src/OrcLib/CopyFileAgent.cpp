@@ -60,7 +60,7 @@ HRESULT CopyFileAgent::Initialize()
 
         if ((dwRet = WNetAddConnection2(&nr, szPass, szUser, CONNECT_TEMPORARY)) != NO_ERROR)
         {
-            Log::Error(L"Failed to add a connection to '{}' (code: {:#x})", szUNC, Win32Error(dwRet));
+            Log::Error(L"Failed to add a connection to '{}' [{}]", szUNC, Win32Error(dwRet));
         }
         else
         {
@@ -118,7 +118,7 @@ CopyFileAgent::UploadFile(
             COPY_FILE_ALLOW_DECRYPTED_DESTINATION))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to copy '{}' to '{}' (code: {:#x})", source, strFullPath, hr);
+        Log::Error(L"Failed to copy '{}' to '{}' [{}]", source, strFullPath, SystemError(hr));
         return hr;
     }
 
@@ -131,7 +131,7 @@ CopyFileAgent::UploadFile(
             if (GetLastError() != ERROR_FILE_NOT_FOUND)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error(L"Failed to delete file '{}' after upload (code: {:#x})", source, hr);
+                Log::Error(L"Failed to delete file '{}' after upload [{}]", source, SystemError(hr));
                 return hr;
             }
         }

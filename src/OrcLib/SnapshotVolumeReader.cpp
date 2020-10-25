@@ -53,7 +53,7 @@ HRESULT SnapshotVolumeReader::LoadDiskProperties(void)
 
     if (FAILED(hr = extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        Log::Error(L"Failed to open the drive '{}' (code: {:#x})", m_Shadow.DeviceInstance, hr);
+        Log::Error(L"Failed to open the drive '{}' [{}]", m_Shadow.DeviceInstance, SystemError(hr));
         return hr;
     }
 

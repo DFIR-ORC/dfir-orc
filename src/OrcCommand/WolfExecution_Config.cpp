@@ -93,7 +93,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
                     hr = EmbeddedResource::SplitResourceReference(
                         strExeRef, strModule, strResource, strCabbedName, strFormat)))
             {
-                Log::Error(L"The ressource specified '{}' could not be split (code: {:#x})", strExeRef, hr);
+                Log::Error(L"The ressource specified '{}' could not be split [{}]", strExeRef, SystemError(hr));
                 return E_FAIL;
             }
 
@@ -104,7 +104,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
                     hr = EmbeddedResource::LocateResource(
                         strModule, strResource, EmbeddedResource::BINARY(), hModule, hRes, strBinaryPath)))
             {
-                Log::Error(L"The ressource specified '{}' could not be located (code: {:#x})", strExeRef, hr);
+                Log::Error(L"The ressource specified '{}' could not be located [{}]", strExeRef, SystemError(hr));
                 return E_FAIL;
             }
             else
@@ -121,7 +121,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
         hr = ExpandFilePath(strExeRef.c_str(), strExeFile);
         if (FAILED(hr))
         {
-            Log::Error(L"Executable file '{}' does not exist or is not a file (code: {:#x})", strExeRef, hr);
+            Log::Error(L"Executable file '{}' does not exist or is not a file [{}]", strExeRef, SystemError(hr));
             return E_FAIL;
         }
 
@@ -129,7 +129,7 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
         if (FAILED(hr))
         {
 
-            Log::Error(L"Executable file '{}' is not a compatible binary (code: {:#x})", strExeFile, hr);
+            Log::Error(L"Executable file '{}' is not a compatible binary [{}]", strExeFile, SystemError(hr));
             return E_FAIL;
         }
 
@@ -176,7 +176,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
             DWORD dwWinMajor = 0, dwWinMinor = 0;
             if (FAILED(hr = SystemDetails::GetOSVersion(dwWinMajor, dwWinMinor)))
             {
-                Log::Error("Could not get OS version, statement ignored (code: {:#x})", hr);
+                Log::Error("Could not get OS version, statement ignored [{}]", SystemError(hr));
                 return nullptr;
             }
             else
@@ -261,7 +261,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
 
         if (FAILED(hr = SystemDetails::GetSystemType(strProductType)))
         {
-            Log::Error("Failed to retrieve system product type (code: {:#x})", hr);
+            Log::Error("Failed to retrieve system product type [{}]", SystemError(hr));
             return nullptr;
         }
 
@@ -357,7 +357,8 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                         szResName, strModule, strResource, strCabbedName, strFormat);
                     if (FAILED(hr1))
                     {
-                        Log::Error(L"The ressource specified '{}' could not be split (code: {:#x})", szResName, hr1);
+                        Log::Error(
+                            L"The ressource specified '{}' could not be split [{}]", szResName, SystemError(hr1));
                         hr = hr1;
                         return;
                     }
@@ -369,7 +370,8 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                         strModule, strResource, EmbeddedResource::BINARY(), hModule, hRes, strBinaryPath);
                     if (FAILED(hr1))
                     {
-                        Log::Error(L"The ressource specified '{}' could not be located (code: {:#x})", szResName, hr1);
+                        Log::Error(
+                            L"The ressource specified '{}' could not be located [{}]", szResName, SystemError(hr1));
                         hr = hr1;
                         return;
                     }
@@ -395,7 +397,8 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                     }
                     else
                     {
-                        Log::Error(L"Input file '{}' does not exist or is not a file (code: {:#x})", strInputFile, hr1);
+                        Log::Error(
+                            L"Input file '{}' does not exist or is not a file [{}]", strInputFile, SystemError(hr1));
                         hr = hr1;
                         return;
                     }
@@ -520,7 +523,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     WORD arch = 0;
     if (FAILED(hr = SystemDetails::GetArchitecture(arch)))
     {
-        Log::Warn(L"Failed to retrieve architecture (code: {:#x})", hr);
+        Log::Warn(L"Failed to retrieve architecture [{}]", SystemError(hr));
         return hr;
     }
 

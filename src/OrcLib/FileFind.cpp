@@ -729,9 +729,9 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         else
         {
             Log::Warn(
-                L"string '{}' passed as binstring could not be converted to ANSI (code: {:#x})",
+                L"string '{}' passed as binstring could not be converted to ANSI [{}]",
                 item[CONFIG_FILEFIND_CONTAINS],
-                hr);
+                SystemError(hr));
         }
     }
     if (item[CONFIG_FILEFIND_CONTAINS_HEX])
@@ -762,9 +762,9 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         else
         {
             Log::Warn(
-                L"String '{}' passed as header string could not be converted to ANSI (code: {:#x})",
+                L"String '{}' passed as header string could not be converted to ANSI [{}]",
                 item[CONFIG_FILEFIND_HEADER],
-                hr);
+                SystemError(hr));
         }
     }
     if (item[CONFIG_FILEFIND_HEADER_HEX])
@@ -780,7 +780,10 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         }
         else
         {
-            Log::Warn(L"Invalid hex string passed as header: {} (code: {})", item[CONFIG_FILEFIND_HEADER_HEX], hr);
+            Log::Warn(
+                L"Invalid hex string passed as header: {} [{}]",
+                item[CONFIG_FILEFIND_HEADER_HEX],
+                SystemError(hr));
         }
     }
     if (item[CONFIG_FILEFIND_HEADER_REGEX])
@@ -788,7 +791,8 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         std::string ansiRegEx;
         if (FAILED(hr = WideToAnsi((std::wstring_view)item[CONFIG_FILEFIND_HEADER_REGEX], ansiRegEx)))
         {
-            Log::Warn(L"Invalid hex string passed as header: {} (code: {:#x})", item[CONFIG_FILEFIND_HEADER_HEX], hr);
+            Log::Warn(
+                L"Invalid hex string passed as header: {} [{}]", item[CONFIG_FILEFIND_HEADER_HEX], SystemError(hr));
         }
         else
         {
@@ -2737,7 +2741,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchHash(
 
         if (FAILED(hr = pDataAttr->GetHashInformation(m_pVolReader, m_NeededHash)))
         {
-            Log::Error(L"Failed to compute hash for data attribute (code: {:#x})", hr);
+            Log::Error(L"Failed to compute hash for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
 
@@ -2784,7 +2788,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
         boost::algorithm::boyer_moore<BYTE*> boyermoore(aTerm->Contains.begin(), aTerm->Contains.end());
@@ -2832,7 +2836,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
     }
@@ -2860,14 +2864,14 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
 
         auto [hr, matchingRules] = m_YaraScan->Scan(pDataStream);
         if (FAILED(hr))
         {
-            Log::Debug("Failed to yara scan data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to yara scan data attribute [{}]", SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
         if (!matchingRules.empty())
@@ -2912,7 +2916,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchHeader(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
 
@@ -2926,7 +2930,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchHeader(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
 
@@ -2953,7 +2957,7 @@ FileFind::RegExHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::share
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
 
@@ -2974,7 +2978,7 @@ FileFind::RegExHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::share
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
     }
@@ -2996,7 +3000,7 @@ FileFind::HexHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
 
@@ -3017,7 +3021,7 @@ FileFind::HexHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+            Log::Debug(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
     }
@@ -3562,9 +3566,9 @@ HRESULT FileFind::EvaluateMatchCallCallback(
             if (FAILED(hr = ComputeMatchHashes(aMatch)))
             {
                 Log::Warn(
-                    L"Failed to compute hashes for match '{}' (code: {:#x})",
+                    L"Failed to compute hashes for match '{}' [{}]",
                     aMatch->MatchingNames.front().FullPathName,
-                    hr);
+                    SystemError(hr));
             }
         }
 
@@ -3941,11 +3945,11 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
             {
-                Log::Debug(L"File system not eligible for volume '{}' (code: {:#x})", aLoc->GetLocation(), hr);
+                Log::Debug(L"File system not eligible for volume '{}' [{}]", aLoc->GetLocation(), SystemError(hr));
             }
             else
             {
-                Log::Debug(L"Failed to init walk for volume '{}' (code: {:#x})", aLoc->GetLocation(), hr);
+                Log::Debug(L"Failed to init walk for volume '{}' [{}]", aLoc->GetLocation(), SystemError(hr));
             }
         }
         else
@@ -4016,7 +4020,7 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
 
             if (FAILED(hr = walk.Walk(cbs)))
             {
-                Log::Debug(L"Failed to walk volume '{}' (code: {:#x})", aLoc->GetLocation(), hr);
+                Log::Debug(L"Failed to walk volume '{}' [{}]", aLoc->GetLocation(), SystemError(hr));
             }
             else
             {

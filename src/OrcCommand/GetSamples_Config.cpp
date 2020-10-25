@@ -107,7 +107,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                             hr = config.autorunsOutput.Configure(OutputSpec::Kind::File, pEquals + 1);
                             if (FAILED(hr))
                             {
-                                Log::Error(L"Invalid autoruns file specified: '{}' (code: {:#x})", pEquals + 1, hr);
+                                Log::Error(L"Invalid autoruns file specified: '{}' [{}]", pEquals + 1, SystemError(hr));
                                 return E_INVALIDARG;
                             }
                             else
@@ -271,13 +271,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(configitem[GETSAMPLES_LOCATIONS])))
     {
-        Log::Error("Error in specific locations parsing in config file (code: {:#x})", hr);
+        Log::Error("Error in specific locations parsing in config file [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = config.locs.AddKnownLocations(configitem[GETSAMPLES_KNOWNLOCATIONS])))
     {
-        Log::Error("Error in known locations parsing (code: {:#x})", hr);
+        Log::Error("Error in known locations parsing [{}]", SystemError(hr));
         return hr;
     }
 
@@ -311,7 +311,7 @@ HRESULT Main::CheckConfiguration()
         WCHAR szTempDir[MAX_PATH];
         if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
         {
-            Log::Error("Failed to determine default temp folder (code: {:#x})", hr);
+            Log::Error("Failed to determine default temp folder [{}]", SystemError(hr));
             return hr;
         }
         config.tmpdirOutput.Path = szTempDir;

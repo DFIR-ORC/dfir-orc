@@ -175,18 +175,18 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                         szReferenceConfigResource, strBinary, strResName, strNameInArchive, strFormat)))
             {
                 Log::Warn(
-                    L"Failed to locate '{}' value as a reference for local resource lookup (code: {:#x})",
+                    L"Failed to locate '{}' value as a reference for local resource lookup [{}]",
                     szReferenceConfigResource,
-                    hr);
+                    SystemError(hr));
             }
 
             if (FAILED(
                     hr = EmbeddedResource::LocateResource(strBinary, strResName, L"BINARY", hMod, hRes, strBinaryPath)))
             {
                 Log::Warn(
-                    L"Failed to locate '{}' value as a reference for local resource lookup (code: {:#x})",
+                    L"Failed to locate '{}' value as a reference for local resource lookup [{}]",
                     szReferenceConfigResource,
-                    hr);
+                    SystemError(hr));
             }
             else
             {
@@ -222,13 +222,13 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
         // Config file is used, let's read it
         if (FAILED(hr = r.ReadConfig(strConfigFile.c_str(), Config)))
         {
-            Log::Error(L"Failed to read config file '{}' (code: {:#x})", strConfigFile, hr);
+            Log::Error(L"Failed to read config file '{}' [{}]", strConfigFile, SystemError(hr));
             return hr;
         }
 
         if (FAILED(hr = r.CheckConfig(Config)))
         {
-            Log::Error(L"Config file '{}' is incorrect and cannot be used (code: {:#x})", strConfigFile, hr);
+            Log::Error(L"Config file '{}' is incorrect and cannot be used [{}]", strConfigFile, SystemError(hr));
             return hr;
         }
     }
@@ -241,28 +241,31 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
 
             if (FAILED(hr = memstream->OpenForReadOnly(buffer.GetData(), buffer.GetCount())))
             {
-                Log::Error(L"Failed to create stream for config ressource '{}' (code: {:#x})", strConfigResource, hr);
+                Log::Error(
+                    L"Failed to create stream for config ressource '{}' [{}]", strConfigResource, SystemError(hr));
                 return hr;
             }
 
             // Config file is used, let's read it
             if (FAILED(hr = r.ReadConfig(memstream, Config)))
             {
-                Log::Error(L"Failed to read config resource '{}' (code: {:#x})", strConfigResource, hr);
+                Log::Error(L"Failed to read config resource '{}' [{}]", strConfigResource, SystemError(hr));
                 return hr;
             }
 
             if (FAILED(hr = r.CheckConfig(Config)))
             {
                 Log::Error(
-                    L"Config resource '{}' is incorrect and cannot be used (code: {:#x})", strConfigResource, hr);
+                    L"Config resource '{}' is incorrect and cannot be used [{}]", strConfigResource, SystemError(hr));
                 return hr;
             }
         }
         else
         {
             Log::Debug(
-                L"WARNING: Configuration could not be loaded from resource '{}' (code: {:#x})", strConfigResource, hr);
+                L"WARNING: Configuration could not be loaded from resource '{}' [{}]",
+                strConfigResource,
+                SystemError(hr));
         }
     }
     else if (szDefaultConfigResource != nullptr)
@@ -277,26 +280,26 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
 
             if (FAILED(hr = memstream->OpenForReadOnly(buffer.GetData(), buffer.GetCount())))
             {
-                Log::Error(L"Failed to create stream for config ressource '{}' (code: {:#x})", strConfigRef, hr);
+                Log::Error(L"Failed to create stream for config ressource '{}' [{}]", strConfigRef, SystemError(hr));
                 return hr;
             }
 
             if (FAILED(hr = r.ReadConfig(memstream, Config)))
             {
-                Log::Error(L"Failed to read config resource '{}' (code: {:#x})", strConfigRef, hr);
+                Log::Error(L"Failed to read config resource '{}' [{}]", strConfigRef, SystemError(hr));
                 return hr;
             }
 
             if (FAILED(hr = r.CheckConfig(Config)))
             {
-                Log::Error(L"Config resource '{}' is incorrect and cannot be used (code: {:#x})", strConfigRef, hr);
+                Log::Error(L"Config resource '{}' is incorrect and cannot be used [{}]", strConfigRef, SystemError(hr));
                 return hr;
             }
         }
         else
         {
             Log::Debug(
-                L"WARNING: Configuration could not be loaded from resource '{}' (code: {:#x})", strConfigRef, hr);
+                L"WARNING: Configuration could not be loaded from resource '{}' [{}]", strConfigRef, SystemError(hr));
         }
     }
     return S_OK;
@@ -439,7 +442,7 @@ HRESULT ConfigFile::GetOutputDir(const ConfigItem& item, std::wstring& outputDir
     {
         if (FAILED(hr = ::GetOutputDir(item.c_str(), outputDir)))
         {
-            Log::Error(L"Error in specified outputdir '{}' in config file (code: {:#x})", item, hr);
+            Log::Error(L"Error in specified outputdir '{}' in config file [{}]", item, SystemError(hr));
             return hr;
         }
 
@@ -459,9 +462,9 @@ HRESULT ConfigFile::GetOutputDir(const ConfigItem& item, std::wstring& outputDir
                 else
                 {
                     Log::Error(
-                        L"Invalid encoding for outputdir in config file: '{}' (code: {:#x})",
+                        L"Invalid encoding for outputdir in config file: '{}' [{}]",
                         item.SubItems[CONFIG_CSVENCODING],
-                        hr);
+                        SystemError(hr));
                     return hr;
                 }
             }
@@ -501,7 +504,7 @@ HRESULT ConfigFile::GetOutputFile(const ConfigItem& item, std::wstring& outputFi
     {
         if (FAILED(hr = ::GetOutputFile(item.c_str(), outputFile)))
         {
-            Log::Error(L"Error in specified output file in config file (code: {:#x})", hr);
+            Log::Error(L"Error in specified output file in config file [{}]", SystemError(hr));
             return hr;
         }
         anEncoding = OutputSpec::Encoding::UTF8;
@@ -521,9 +524,9 @@ HRESULT ConfigFile::GetOutputFile(const ConfigItem& item, std::wstring& outputFi
                 else
                 {
                     Log::Error(
-                        L"Invalid encoding for outputcab in config file: '{}' (code: {:#x})",
+                        L"Invalid encoding for outputcab in config file: '{}' [{}]",
                         item.SubItems[CONFIG_CSVENCODING].c_str(),
-                        hr);
+                        SystemError(hr));
                     return hr;
                 }
             }
@@ -561,7 +564,7 @@ HRESULT ConfigFile::GetInputFile(const ConfigItem& item, std::wstring& inputFile
     {
         if (FAILED(hr = ::ExpandFilePath(item.c_str(), inputFile)))
         {
-            Log::Error(L"Error in specified inputfile in config file '{}' (code: {:#x})", item, hr);
+            Log::Error(L"Error in specified inputfile in config file '{}' [{}]", item, SystemError(hr));
             return hr;
         }
     }

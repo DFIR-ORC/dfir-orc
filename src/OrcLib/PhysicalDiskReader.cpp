@@ -122,7 +122,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
 
         if (FAILED(hr = pt.LoadPartitionTable(m_szPhysDrive)))
         {
-            Log::Error(L"Failed to load partition table for {} (code: {:#x})", m_szPhysDrive, hr);
+            Log::Error(L"Failed to load partition table for {} [{}]", m_szPhysDrive, SystemError(hr));
             return hr;
         }
 
@@ -160,7 +160,7 @@ HRESULT PhysicalDiskReader::LoadDiskProperties(void)
     CDiskExtent Extent(m_szPhysDrive, m_ullOffset, m_ullLength, m_BytesPerSector);
     if (FAILED(hr = Extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        Log::Error(L"Failed to open the drive: '{}' (code: {:#x})", m_szPhysDrive, hr);
+        Log::Error(L"Failed to open the drive: '{}' [{}]", m_szPhysDrive, SystemError(hr));
         return hr;
     }
 

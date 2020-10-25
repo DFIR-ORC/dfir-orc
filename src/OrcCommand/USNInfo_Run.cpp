@@ -167,7 +167,7 @@ HRESULT Main::Run()
         hr = m_outputs.Prepare(config.output);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.output.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' [{}]", config.output.Path, SystemError(hr));
             return hr;
         }
     }
@@ -178,7 +178,7 @@ HRESULT Main::Run()
     hr = m_outputs.GetWriters(config.output, L"USNInfo", locations);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to get writers for locations (code: {:#x})", hr);
+        Log::Error(L"Failed to get writers for locations [{}]", SystemError(hr));
         return hr;
     }
 
@@ -196,7 +196,8 @@ HRESULT Main::Run()
                     return S_OK;
                 }
 
-                Log::Error(L"Failed to init walk for volume '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
+                Log::Error(
+                    L"Failed to init walk for volume '{}' [{}]", dir.first.m_pLoc->GetLocation(), SystemError(hr));
                 return hr;
             }
 
@@ -213,7 +214,7 @@ HRESULT Main::Run()
             hr = walker.EnumJournal(callbacks);
             if (FAILED(hr))
             {
-                Log::Error(L"Failed to enum MFT records '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
+                Log::Error(L"Failed to enum MFT records '{}' [{}]", dir.first.m_pLoc->GetLocation(), SystemError(hr));
                 return S_OK;
             }
 
@@ -225,7 +226,7 @@ HRESULT Main::Run()
             hr = walker.ReadJournal(callbacks);
             if (FAILED(hr))
             {
-                Log::Error(L"Failed to walk volume '{}' (code: {:#x})", dir.first.m_pLoc->GetLocation(), hr);
+                Log::Error(L"Failed to walk volume '{}' [{}]", dir.first.m_pLoc->GetLocation(), SystemError(hr));
                 return S_OK;
             }
 
@@ -235,7 +236,7 @@ HRESULT Main::Run()
 
     if (FAILED(hr))
     {
-        Log::Error("Failed during the enumeration of output items (code: {:#x})", hr);
+        Log::Error("Failed during the enumeration of output items [{}]", SystemError(hr));
         return hr;
     }
 

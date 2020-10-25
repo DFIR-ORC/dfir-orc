@@ -23,7 +23,7 @@ HRESULT RunningProcesses::EnumProcesses()
     if (hSnapshot == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Unable to create snapshot (code: {:#x})", hr);
+        Log::Error("Unable to create snapshot [{}]", SystemError(hr));
         return hr;
     }
 
@@ -36,7 +36,7 @@ HRESULT RunningProcesses::EnumProcesses()
         if (GetLastError() != ERROR_NO_MORE_FILES)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed Process32First (code: {:#x})", hr);
+            Log::Error("Failed Process32First [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -62,7 +62,7 @@ HRESULT RunningProcesses::EnumProcesses()
             if (GetLastError() != ERROR_NO_MORE_FILES)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error("Failed Process32Next (code: {:#x})", hr);
+                Log::Error("Failed Process32Next [{}]", SystemError(hr));
             }
         }
     }

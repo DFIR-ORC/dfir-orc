@@ -58,7 +58,7 @@ HRESULT DriverTermination::operator()()
         if (SchSCManager == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed OpenSCManager in termination handler (code: {:#x})", hr);
+            Log::Error("Failed OpenSCManager in termination handler [{}]", SystemError(hr));
         }
         else
         {
@@ -71,14 +71,14 @@ HRESULT DriverTermination::operator()()
 
             if (FAILED(hr = Orc::DriverMgmt::StopDriver(SchSCManager, driver->Name().c_str())))
             {
-                Log::Error("Failed StopDriver in termination handler (code: {:#x})", hr);
+                Log::Error("Failed StopDriver in termination handler [{}]", SystemError(hr));
             }
             else
             {
                 Log::Debug(L"Successfully stopped driver {}", driver->Name());
                 if (FAILED(hr = Orc::DriverMgmt::RemoveDriver(SchSCManager, driver->Name().c_str())))
                 {
-                    Log::Error("Failed RemoveDriver in termination handler (code: {:#x})", hr);
+                    Log::Error("Failed RemoveDriver in termination handler [{}]", SystemError(hr));
                 }
                 else
                 {
@@ -92,9 +92,9 @@ HRESULT DriverTermination::operator()()
         if (FAILED(hr = UtilDeleteTemporaryFile(driver->m_strDriverFileName.c_str())))
         {
             Log::Error(
-                L"Attempt to remove driver file '{}' in termination handler failed (code: {:#x})",
+                L"Attempt to remove driver file '{}' in termination handler failed [{}]",
                 driver->m_strDriverFileName,
-                hr);
+                SystemError(hr));
             return hr;
         }
     }
@@ -116,7 +116,7 @@ HRESULT DriverMgmt::ConnectToSCM()
     if (m_SchSCManager == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed to connect to Service Control Manager (code: {:#x})", hr);
+        Log::Error("Failed to connect to Service Control Manager [{}]", SystemError(hr));
         return hr;
     }
     return S_OK;
@@ -144,7 +144,7 @@ HRESULT DriverMgmt::SetTemporaryDirectory(const std::wstring& strTempDir)
     HRESULT hr = E_FAIL;
     if (FAILED(hr = GetOutputDir(strTempDir.c_str(), m_strTempDir, true)))
     {
-        Log::Error(L"Failed to create temporary directory '{}' (code: {:#x})", strTempDir, hr);
+        Log::Error(L"Failed to create temporary directory '{}' [{}]", strTempDir, SystemError(hr));
         return hr;
     }
     return S_OK;
@@ -201,10 +201,10 @@ HRESULT Orc::Driver::Install(const std::wstring& strX86DriverRef, const std::wst
                         m_strDriverFileName)))
             {
                 Log::Error(
-                    L"Failed to extract driver resource '{}' into '{}' (code: {:#x})",
+                    L"Failed to extract driver resource '{}' into '{}' [{}]",
                     strNewLibRef,
                     m_manager->m_strTempDir,
-                    hr);
+                    SystemError(hr));
 
                 return hr;
             }
@@ -229,10 +229,10 @@ HRESULT Orc::Driver::Install(const std::wstring& strX86DriverRef, const std::wst
                         strDriverFileName)))
             {
                 Log::Error(
-                    L"Failed to extract driver resource '{}' into '{}' (code: {:#x})",
+                    L"Failed to extract driver resource '{}' into '{}' [{}]",
                     m_strDriverRef,
                     m_manager->m_strTempDir,
-                    hr);
+                    SystemError(hr));
                 return hr;
             }
         }
@@ -247,16 +247,17 @@ HRESULT Orc::Driver::Install(const std::wstring& strX86DriverRef, const std::wst
                 m_manager->m_SchSCManager, m_strServiceName.c_str(), m_strDriverFileName.c_str())))
     {
         Log::Error(
-            L"Failed to install driver '{}' with service name '{}' (code: {:#x})",
+            L"Failed to install driver '{}' with service name '{}' [{}]",
             m_strDriverRef,
             m_strServiceName,
-            hr);
+            SystemError(hr));
 
         if (m_bDeleteDriverOnClose)
         {
             if (FAILED(hr = UtilDeleteTemporaryFile(m_strDriverFileName.c_str())))
             {
-                Log::Error(L"Failed to delete temporary driver file name '{}' (code: {:#x})", m_strDriverFileName, hr);
+                Log::Error(
+                    L"Failed to delete temporary driver file name '{}' [{}]", m_strDriverFileName, SystemError(hr));
                 return hr;
             }
         }
@@ -280,7 +281,7 @@ std::shared_ptr<Orc::Driver> DriverMgmt::GetDriver(
 
     if (auto hr = retval->Install(strX86DriverRef, strX64DriverRef); FAILED(hr))
     {
-        Log::Error(L"Failed to install driver '{}' (code: {:#x})", strServiceName, hr);
+        Log::Error(L"Failed to install driver '{}' [{}]", strServiceName, SystemError(hr));
         return nullptr;
     }
     return retval;
@@ -294,7 +295,7 @@ HRESULT Driver::UnInstall()
 
     if (FAILED(hr = DriverMgmt::RemoveDriver(m_manager->m_SchSCManager, m_strServiceName.c_str())))
     {
-        Log::Error(L"Failed RemoveDriver on '{}' (code: {:#x})", m_strServiceName, hr);
+        Log::Error(L"Failed RemoveDriver on '{}' [{}]", m_strServiceName, SystemError(hr));
         return hr;
     }
 
@@ -312,9 +313,9 @@ HRESULT Driver::UnInstall()
                     if (FAILED(hr = UtilDeleteTemporaryFile(driver->m_strDriverFileName.c_str())))
                     {
                         Log::Error(
-                            L"Failed to delete temporary driver file '{}' (code: {:#x})",
+                            L"Failed to delete temporary driver file '{}' [{}]",
                             driver->m_strDriverFileName,
-                            hr);
+                            SystemError(hr));
                     }
                 }
             }
@@ -332,7 +333,7 @@ HRESULT Driver::Start()
 
     if (FAILED(hr = DriverMgmt::StartDriver(m_manager->m_SchSCManager, m_strServiceName.c_str())))
     {
-        Log::Error(L"Failed to start driver '{}' (code: {:#x})", m_strServiceName, hr);
+        Log::Error(L"Failed to start driver '{}' [{}]", m_strServiceName, SystemError(hr));
         return hr;
     }
     return S_OK;
@@ -347,7 +348,7 @@ HRESULT Driver::Stop()
     {
         if (GetLastError() != ERROR_SERVICE_NOT_ACTIVE)  // We ignore error if driver was already stopped...
         {
-            Log::Error(L"Failed to stop driver '{}' (code: {:#x})", m_strServiceName, hr);
+            Log::Error(L"Failed to stop driver '{}' [{}]", m_strServiceName, SystemError(hr));
             return hr;
         }
     }
@@ -418,7 +419,7 @@ HRESULT Orc::DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCTSTR
             if (schService == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error("Failed OpenService (code: {:#x})", hr);
+                Log::Error("Failed OpenService [{}]", SystemError(hr));
                 return hr;
             }
             else
@@ -437,7 +438,7 @@ HRESULT Orc::DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCTSTR
                         NULL))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Error("Failed ChangeServiceConfig (code: {:#x})", hr);
+                    Log::Error("Failed ChangeServiceConfig [{}]", SystemError(hr));
                     return hr;
                 }
             }
@@ -446,7 +447,7 @@ HRESULT Orc::DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCTSTR
         else
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed CreateService (code: {:#x})", hr);
+            Log::Error(L"Failed CreateService [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -478,7 +479,7 @@ HRESULT Orc::DriverMgmt::ManageDriver(__in LPCTSTR DriverName, __in LPCTSTR Serv
     if (!schSCManager)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Info("Failed OpenSCManager (code: {:#x})", hr);
+        Log::Info("Failed OpenSCManager [{}]", SystemError(hr));
         return hr;
     }
 
@@ -547,7 +548,7 @@ HRESULT Orc::DriverMgmt::RemoveDriver(SC_HANDLE SchSCManager, __in LPCTSTR Drive
     if (schService == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed OpenService (code: {:#x})", hr);
+        Log::Error("Failed OpenService [{}]", SystemError(hr));
         return hr;
     }
 
@@ -556,7 +557,7 @@ HRESULT Orc::DriverMgmt::RemoveDriver(SC_HANDLE SchSCManager, __in LPCTSTR Drive
     if (!DeleteService(schService))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed DeleteService (code: {:#x})", hr);
+        Log::Error(L"Failed DeleteService [{}]", SystemError(hr));
         return hr;
     }
 
@@ -589,7 +590,7 @@ HRESULT Orc::DriverMgmt::StartDriver(SC_HANDLE SchSCManager, __in LPCTSTR Driver
     if (schService == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed OpenService (code: {:#x})", hr);
+        Log::Error("Failed OpenService [{}]", SystemError(hr));
         return hr;
     }
 
@@ -607,7 +608,7 @@ HRESULT Orc::DriverMgmt::StartDriver(SC_HANDLE SchSCManager, __in LPCTSTR Driver
         else
         {
             hr = HRESULT_FROM_WIN32(err);
-            Log::Error("Failed StartService (code: {:#x})", hr);
+            Log::Error("Failed StartService [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -638,7 +639,7 @@ HRESULT Orc::DriverMgmt::StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverN
     if (schService == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed OpenService (code: {:#x})", hr);
+        Log::Error("Failed OpenService [{}]", SystemError(hr));
         return hr;
     }
 
@@ -647,7 +648,7 @@ HRESULT Orc::DriverMgmt::StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverN
     if (!ControlService(schService, SERVICE_CONTROL_STOP, &serviceStatus))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed ControlService (code: {:#x})", hr);
+        Log::Error("Failed ControlService [{}]", SystemError(hr));
         return hr;
     }
 
@@ -677,7 +678,7 @@ HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverN
     if (schService == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed OpenService (code: {:#x})", hr);
+        Log::Error("Failed OpenService [{}]", SystemError(hr));
         return hr;
     }
 
@@ -695,14 +696,14 @@ HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverN
                     schService, SC_STATUS_PROCESS_INFO, serviceStatus.get(), serviceStatus.capacity(), &cbNeeded))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error("Failed QueryServiceStatusEx (code: {:#x})", hr);
+                Log::Error("Failed QueryServiceStatusEx [{}]", SystemError(hr));
                 return hr;
             }
         }
         else
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed QueryServiceStatusEx (code: {:#x})", hr);
+            Log::Error(L"Failed QueryServiceStatusEx [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -741,7 +742,7 @@ Orc::DriverMgmt::SetupDriverName(WCHAR* DriverLocation, WCHAR* szDriverFileName,
     if (auto driverLocLen = GetCurrentDirectory(BufferLength, DriverLocation); driverLocLen == 0)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed GetCurrentDirectory (code: {:#x})", hr);
+        Log::Error(L"Failed GetCurrentDirectory [{}]", SystemError(hr));
         return hr;
     }
 
@@ -761,7 +762,7 @@ Orc::DriverMgmt::SetupDriverName(WCHAR* DriverLocation, WCHAR* szDriverFileName,
         == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"'{}' is not present in '{}' (code: {:#x})", szDriverFileName, DriverLocation, hr);
+        Log::Error(L"'{}' is not present in '{}' [{}]", szDriverFileName, DriverLocation, SystemError(hr));
         return hr;
     }
 
@@ -790,7 +791,7 @@ HRESULT Orc::DriverMgmt::GetDriverBinaryPathName(
     if (schService == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed OpenService on '{}' (code: {:#x})", DriverName, hr);
+        Log::Error(L"Failed OpenService on '{}' [{}]", DriverName, SystemError(hr));
         return hr;
     }
 
@@ -826,7 +827,7 @@ HRESULT Orc::DriverMgmt::GetDriverBinaryPathName(
     if (lastError != ERROR_SUCCESS)
     {
         hr = HRESULT_FROM_WIN32(lastError);
-        Log::Error(L"Failed QueryServiceConfig on '{}' (code: {:#x})", DriverName, hr);
+        Log::Error(L"Failed QueryServiceConfig on '{}' [{}]", DriverName, SystemError(hr));
         return hr;
     }
 

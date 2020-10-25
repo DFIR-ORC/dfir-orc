@@ -46,9 +46,9 @@ HRESULT MFTRecord::ParseRecord(
                     VolReader, m_pBaseFileRecord->m_pRecord, VolReader->GetBytesPerFRS(), NULL)))
         {
             Log::Debug(
-                L"Skipping... Base Record could not be parsed... (FRN: {:#x}, code: {:#x})",
+                L"Skipping... Base Record could not be parsed... (FRN: {:#x}, [{}])",
                 NtfsFullSegmentNumber(&(m_pBaseFileRecord->m_FileReferenceNumber)),
-                hr);
+                SystemError(hr));
             return hr;
         }
     }

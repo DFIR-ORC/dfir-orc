@@ -348,7 +348,7 @@ HRESULT PartitionTable::ParseMBRPartitionTable(IDiskExtent& diskExtend, UINT sec
 
             if (FAILED(hr = ParseExtendedPartition(diskExtend, p, (ExtendedBootRecord*)buffer.GetData(), p.Start)))
             {
-                Log::Error(L"Failed to parse extended partition of {} (code: {:#x})", diskExtend.GetName(), hr);
+                Log::Error(L"Failed to parse extended partition of {} [{}]", diskExtend.GetName(), SystemError(hr));
                 return hr;
             }
         }
@@ -374,9 +374,9 @@ HRESULT PartitionTable::ParseMBRPartitionTable(IDiskExtent& diskExtend, UINT sec
             {
                 Log::Error(
                     L"Failed to parse GPT partition of {} using primary GPT header. Will now try backup GPT header "
-                    L"(code: {:#x})",
+                    L"[{}]",
                     diskExtend.GetName(),
-                    hr);
+                    SystemError(hr));
 
                 // try second partition table
                 if (FAILED(SeekDiskExtend(diskExtend, gptHeader->AlternativeLba * sectorSize)))
@@ -392,9 +392,9 @@ HRESULT PartitionTable::ParseMBRPartitionTable(IDiskExtent& diskExtend, UINT sec
                             diskExtend, sectorSize, reinterpret_cast<PGPTHeader>(buffer.GetData()))))
                 {
                     Log::Error(
-                        L"Failed to parse GPT partition of {} using backup GPT header (code: {:#x})",
+                        L"Failed to parse GPT partition of {} using backup GPT header [{}]",
                         diskExtend.GetName(),
-                        hr);
+                        SystemError(hr));
                     return hr;
                 }
             }
@@ -540,7 +540,7 @@ HRESULT PartitionTable::ParseExtendedPartition(
 
     if (FAILED(hr = ParseExtendedPartition(diskExtend, p, pNextExtendedRecord, offset)))
     {
-        Log::Error("Failed to parse extended partition (code: {:#x})", hr);
+        Log::Error("Failed to parse extended partition [{}]", SystemError(hr));
         return hr;
     }
 
@@ -565,7 +565,7 @@ HRESULT PartitionTable::OpenDiskExtend(IDiskExtent& diskExtend)
 
     if (FAILED(hr = diskExtend.Open(FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
     {
-        Log::Error(L"Could not open Location '{}' (code: {:#x})", diskExtend.GetName(), hr);
+        Log::Error(L"Could not open Location '{}' [{}]", diskExtend.GetName(), SystemError(hr));
         return hr;
     }
 
@@ -582,7 +582,7 @@ HRESULT PartitionTable::SeekDiskExtend(IDiskExtent& diskExtend, UINT64 offset)
 
     if (FAILED(hr = diskExtend.Seek(off, &newpos, FILE_BEGIN)))
     {
-        Log::Error(L"Failed to seek from Location '{}' (code: {:#x})", diskExtend.GetName(), hr);
+        Log::Error(L"Failed to seek from Location '{}' [{}]", diskExtend.GetName(), SystemError(hr));
         return hr;
     }
 
@@ -596,7 +596,7 @@ HRESULT PartitionTable::ReadDiskExtend(IDiskExtent& diskExtend, CBinaryBuffer& b
 
     if (FAILED(hr = diskExtend.Read(buffer.GetData(), (DWORD)buffer.GetCount(), &dwBytesRead)))
     {
-        Log::Error(L"Failed to read from Location '{}' (code: {:#x})", diskExtend.GetName(), hr);
+        Log::Error(L"Failed to read from Location '{}' [{}]", diskExtend.GetName(), SystemError(hr));
         return hr;
     }
 

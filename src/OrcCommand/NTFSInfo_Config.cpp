@@ -154,31 +154,31 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.outFileInfo.Configure(configitem[NTFSINFO_FILEINFO])))
     {
-        Log::Error("Invalid output specified (code: {:#x})", hr);
+        Log::Error("Invalid output specified [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = config.outAttrInfo.Configure(configitem[NTFSINFO_ATTRINFO])))
     {
-        Log::Error("Invalid attrinfo output specified (code: {:#x})", hr);
+        Log::Error("Invalid attrinfo output specified [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = config.outI30Info.Configure(configitem[NTFSINFO_I30INFO])))
     {
-        Log::Error("Invalid attrinfo output specified (code: {:#x})", hr);
+        Log::Error("Invalid attrinfo output specified [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = config.outTimeLine.Configure(configitem[NTFSINFO_TIMELINE])))
     {
-        Log::Error("Invalid timeline output file specified (code: {:#x})", hr);
+        Log::Error("Invalid timeline output file specified [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = config.outSecDescrInfo.Configure(configitem[NTFSINFO_SECDESCR])))
     {
-        Log::Error(L"Invalid secdescr output file specified (code: {:#x})", hr);
+        Log::Error(L"Invalid secdescr output file specified [{}]", SystemError(hr));
         return hr;
     }
 
@@ -224,13 +224,13 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(locationsConfig)))
     {
-        Log::Error(L"Failed to get locations definition from config (code: {:#x})", hr);
+        Log::Error(L"Failed to get locations definition from config [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = GetColumnsAndFiltersFromConfig(configitem)))
     {
-        Log::Error(L"Failed to get column definition from config (code: {:#x})", hr);
+        Log::Error(L"Failed to get column definition from config [{}]", SystemError(hr));
         return hr;
     }
 
@@ -445,9 +445,9 @@ HRESULT Main::CheckConfiguration()
         if (FAILED(hr = ::VerifyDirectoryExists(config.outFileInfo.Path.c_str())))
         {
             Log::Error(
-                L"Specified file information output directory '{}' is not a directory (code: {:#x})",
+                L"Specified file information output directory '{}' is not a directory [{}]",
                 config.outFileInfo.Path,
-                hr);
+                SystemError(hr));
             return hr;
         }
     }
@@ -456,9 +456,9 @@ HRESULT Main::CheckConfiguration()
         if (FAILED(hr = ::VerifyDirectoryExists(config.outAttrInfo.Path.c_str())))
         {
             Log::Error(
-                L"Specified attribute information output directory '{}' is not a directory (code: {:#x})",
+                L"Specified attribute information output directory '{}' is not a directory [{}]",
                 config.outAttrInfo.Path,
-                hr);
+                SystemError(hr));
             return hr;
         }
     }
@@ -467,9 +467,9 @@ HRESULT Main::CheckConfiguration()
         if (FAILED(hr = ::VerifyDirectoryExists(config.outTimeLine.Path.c_str())))
         {
             Log::Error(
-                L"Specified timeline information output directory '{}' is not a directory (code: {:#x})",
+                L"Specified timeline information output directory '{}' is not a directory [{}]",
                 config.outTimeLine.Path,
-                hr);
+                SystemError(hr));
             return hr;
         }
     }
@@ -478,9 +478,9 @@ HRESULT Main::CheckConfiguration()
         if (FAILED(hr = ::VerifyDirectoryExists(config.outSecDescrInfo.Path.c_str())))
         {
             Log::Error(
-                L"Specified secdescr information output directory '{}' is not a directory (code: {:#x})",
+                L"Specified secdescr information output directory '{}' is not a directory [{}]",
                 config.outSecDescrInfo.Path,
-                hr);
+                SystemError(hr));
             return hr;
         }
     }

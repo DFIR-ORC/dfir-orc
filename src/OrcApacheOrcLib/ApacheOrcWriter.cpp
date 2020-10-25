@@ -165,7 +165,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::SetSchema(const TableOutput::S
         auto [hr, strName] = WideToAnsi(column->ColumnName);
         if (FAILED(hr))
         {
-            Log::Error(L"Invalid column name: '{}' (code: {:#x})", column->ColumnName, hr);
+            Log::Error(L"Invalid column name: '{}' [{}]", column->ColumnName, SystemError(hr));
             break;
         }
 
@@ -332,7 +332,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::Close()
 
     if (auto hr = Flush(); FAILED(hr))
     {
-        Log::Error(L"Failed to flush arrow table (code: {:#x})", hr);
+        Log::Error(L"Failed to flush arrow table [{}]", SystemError(hr));
         return hr;
     }
 

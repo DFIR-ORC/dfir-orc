@@ -21,7 +21,7 @@ HRESULT CryptoUtilities::AcquireContext(_Out_ HCRYPTPROV& hCryptProv)
         if (!CryptAcquireContext(&hCryptProv, NULL, *pszProvider, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug(L"Failed to initialize provider: '{}' (code: {:#x})", *pszProvider, hr);
+            Log::Debug(L"Failed to initialize provider: '{}' [{}]", *pszProvider, SystemError(hr));
         }
         else
             break;

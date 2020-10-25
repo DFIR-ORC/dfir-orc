@@ -40,7 +40,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
         hr = tk.LoadAutoRuns(config.autorunsOutput.Path.c_str());
         if (FAILED(hr))
         {
-            Log::Error("Failed to load autoruns (code: {:#x})", hr);
+            Log::Error("Failed to load autoruns [{}]", SystemError(hr));
             return hr;
         }
 
@@ -60,7 +60,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
     hr = EmbeddedResource::ExtractValue(L"", L"AUTORUNS", strAutorunsRef);
     if (FAILED(hr))
     {
-        Log::Error("Could not find ressource reference to AutoRuns (code: {:#x})", hr);
+        Log::Error("Could not find ressource reference to AutoRuns [{}]", SystemError(hr));
         return hr;
     }
 
@@ -69,7 +69,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
         strAutorunsRef, L"autorunsc.exe", RESSOURCE_READ_EXECUTE_BA, szTempDir, strAutorunsCmd);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to extract '{}' to '{}' (code: {:#x})", strAutorunsRef, szTempDir, hr);
+        Log::Error(L"Failed to extract '{}' to '{}' [{}]", strAutorunsRef, szTempDir, SystemError(hr));
         return hr;
     }
 
@@ -130,7 +130,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
     m_console.Print(L"Loading autoruns data...");
     if (FAILED(hr = tk.LoadAutoRuns(buffer)))
     {
-        Log::Error("Failed to load autoruns data (code: {:#x})", hr);
+        Log::Error("Failed to load autoruns data [{}]", SystemError(hr));
         return hr;
     }
 
@@ -142,7 +142,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
         hr = fs->WriteTo(config.autorunsOutput.Path.c_str());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to create file '{}' (code: {:#x})", config.autorunsOutput.Path, hr);
+            Log::Error(L"Failed to create file '{}' [{}]", config.autorunsOutput.Path, SystemError(hr));
             // Continue execution normally
             return S_OK;
         }
@@ -150,7 +150,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
         hr = tk.SaveAutoRuns(fs);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to save autoruns data to '{}' (code: {:#x})", config.autorunsOutput.Path, hr);
+            Log::Error(L"Failed to save autoruns data to '{}' [{}]", config.autorunsOutput.Path, SystemError(hr));
             // Continue execution normally
             return S_OK;
         }
@@ -375,7 +375,7 @@ HRESULT Main::RunGetThis(const std::wstring& strConfigFile, LPCWSTR szTempDir)
         config.getthisRef, config.getthisName, RESSOURCE_READ_EXECUTE_BA, szTempDir, strGetThisCmd);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to load extract getthis to '{}' (code: {:#x})", szTempDir, hr);
+        Log::Error(L"Failed to load extract getthis to '{}' [{}]", szTempDir, SystemError(hr));
         return hr;
     }
 
@@ -432,7 +432,7 @@ HRESULT Main::Run()
     hr = tk.LoadRunningTasksAndModules();
     if (FAILED(hr))
     {
-        Log::Error("Failed to load running Tasks and Modules (code: {:#x})", hr);
+        Log::Error("Failed to load running Tasks and Modules [{}]", SystemError(hr));
         return hr;
     }
 
@@ -442,7 +442,7 @@ HRESULT Main::Run()
     hr = LoadAutoRuns(tk, config.tmpdirOutput.Path.c_str());
     if (FAILED(hr))
     {
-        Log::Error("Failed to load autoruns data (code: {:#x})", hr);
+        Log::Error("Failed to load autoruns data [{}]", SystemError(hr));
         return hr;
     }
 
@@ -453,7 +453,7 @@ HRESULT Main::Run()
     hr = tk.CoalesceResults(results);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to compile results (code: {:#x})", hr);
+        Log::Error(L"Failed to compile results [{}]", SystemError(hr));
         return hr;
     }
 
@@ -466,7 +466,7 @@ HRESULT Main::Run()
         hr = tk.CheckSamplesSignature();
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to compile results (code: {:#x})", hr);
+            Log::Error(L"Failed to compile results [{}]", SystemError(hr));
             return hr;
         }
 
@@ -490,7 +490,7 @@ HRESULT Main::Run()
         hr = WriteTimeline(timeline);
         if (FAILED(hr))
         {
-            Log::Error("Failed to write timeline information (code: {:#x})", hr);
+            Log::Error("Failed to write timeline information [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -514,7 +514,7 @@ HRESULT Main::Run()
         hr = WriteGetThisConfig(strConfigFile, tk.GetAltitudeLocations(), results);
         if (FAILED(hr))
         {
-            Log::Error("Failed to write getthis configuration (code: {:#x})", hr);
+            Log::Error("Failed to write getthis configuration [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -524,7 +524,7 @@ HRESULT Main::Run()
         hr = RunGetThis(strConfigFile, config.tmpdirOutput.Path.c_str());
         if (FAILED(hr))
         {
-            Log::Error("Failed to run getthis (code: {:#x})", hr);
+            Log::Error("Failed to run getthis [{}]", SystemError(hr));
             return hr;
         }
     }

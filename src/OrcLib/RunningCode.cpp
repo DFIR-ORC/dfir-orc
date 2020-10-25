@@ -70,7 +70,7 @@ HRESULT RunningCode::EnumProcessesModules()
         HRESULT hr2 = E_FAIL;
         if (FAILED(hr2 = EnumModules(pProcesses[i])))
         {
-            Log::Debug(L"Could not load modules for process: {} (code: {:#x})", pProcesses[i], hr2);
+            Log::Debug(L"Could not load modules for process: {} [{}]", pProcesses[i], SystemError(hr2));
         }
     }
     return hr;
@@ -93,7 +93,7 @@ HRESULT RunningCode::EnumModules(DWORD dwPID)
     if ((hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, dwPID)) == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug(L"EnumModules: OpenProcess failed for pid {} (code: {:#x})", dwPID, hr);
+        Log::Debug(L"EnumModules: OpenProcess failed for pid {} [{}]", dwPID, SystemError(hr));
         return hr;
     }
 
@@ -238,7 +238,7 @@ HRESULT RunningCode::SnapEnumProcessesModules()
     if (hSnapshot == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Unable to create snapshot (code: {:#x})", hr);
+        Log::Error("Unable to create snapshot [{}]", SystemError(hr));
         return hr;
     }
 
@@ -248,7 +248,7 @@ HRESULT RunningCode::SnapEnumProcessesModules()
     if (!Module32First(hSnapshot, &me32))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed Module32First (code: {:#x})", hr);
+        Log::Error("Failed Module32First [{}]", SystemError(hr));
         CloseHandle(hSnapshot);
         return hr;
     }
@@ -289,15 +289,15 @@ HRESULT RunningCode::EnumRunningCode()
 
     if (FAILED(hr = EnumProcessesModules()))
     {
-        Log::Error("Failed to enumerate process's modules (code: {:#x})", hr);
+        Log::Error("Failed to enumerate process's modules [{}]", SystemError(hr));
     }
     if (FAILED(hr = EnumDeviceDrivers()))
     {
-        Log::Error("Failed to enumerate device drivers (code: {:#x})", hr);
+        Log::Error("Failed to enumerate device drivers [{}]", SystemError(hr));
     }
     if (FAILED(hr = SnapEnumProcessesModules()))
     {
-        Log::Error("Failed to enumerate SNAPSHOT modules (code: {:#x})", hr);
+        Log::Error("Failed to enumerate SNAPSHOT modules [{}]", SystemError(hr));
     }
     return S_OK;
 }

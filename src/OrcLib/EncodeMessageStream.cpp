@@ -109,7 +109,7 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
     {
         if (FAILED(hr = CryptoUtilities::AcquireContext(m_hProv)))
         {
-            Log::Error(L"Failed to acquire suitable Crypto Service Provider (code: {:#x})", hr);
+            Log::Error(L"Failed to acquire suitable Crypto Service Provider [{}]", SystemError(hr));
             return hr;
         }
         EncodeInfo.ContentEncryptionAlgorithm.pszObjId = szOID_RSA_DES_EDE3_CBC;
@@ -148,7 +148,7 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
     if (m_hMsg == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed to open message for encoding (code: {:#x})", hr);
+        Log::Error("Failed to open message for encoding [{}]", SystemError(hr));
         return hr;
     }
 
@@ -190,7 +190,7 @@ HRESULT EncodeMessageStream::Write(
     if (!CryptMsgUpdate(m_hMsg, (const BYTE*)pBuffer, static_cast<DWORD>(cbBytes), FALSE))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CryptMsgUpdate (code: {:#x})", hr);
+        Log::Error("Failed CryptMsgUpdate [{}]", SystemError(hr));
         return hr;
     }
     *pcbBytesWritten = cbBytes;
@@ -234,13 +234,13 @@ HRESULT EncodeMessageStream::Close()
         if (!CryptMsgUpdate(m_hMsg, NULL, 0L, TRUE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed CryptMsgUpdate (on final call, code: {:#x})", hr);
+            Log::Error(L"Failed CryptMsgUpdate (on final call, [{}])", SystemError(hr));
             return hr;
         }
         if (!CryptMsgClose(m_hMsg))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed CryptMsgClose (code: {:#x})", hr);
+            Log::Error("Failed CryptMsgClose [{}]", SystemError(hr));
             m_hMsg = NULL;
             return hr;
         }

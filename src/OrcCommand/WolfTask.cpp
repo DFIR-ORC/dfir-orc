@@ -46,7 +46,7 @@ HRESULT WolfTask::ApplyNotification(
                 m_journal.Print(
                     m_commandSet,
                     m_command,
-                    L"Terminated with an error (pid: {}, code: {:#x})",
+                    L"Terminated with an error (pid: {}, exit code: {:#x})",
                     m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
                     notification->GetExitCode());
             }
@@ -145,7 +145,7 @@ HRESULT WolfTask::ApplyNotification(
             m_dwExitCode = notification->GetExitCode();
 
             Log::Critical(
-                L"{} (pid: {}): Abnormal termination (code: {:#x})",
+                L"{} (pid: {}): Abnormal termination [{}]",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
                 Win32Error(m_dwExitCode));

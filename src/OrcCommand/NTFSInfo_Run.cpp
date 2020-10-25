@@ -141,14 +141,14 @@ HRESULT Main::RunThroughUSNJournal()
             }
             else
             {
-                Log::Warn(L"Failed to init walk for '{}' (code: {:#x})", loc->GetLocation(), hr);
+                Log::Warn(L"Failed to init walk for '{}' [{}]", loc->GetLocation(), SystemError(hr));
             }
         }
         else
         {
             if (FAILED(hr = walk.EnumJournal(callbacks)))
             {
-                Log::Error(L"Failed to walk volume '{}' (code: {:#x})", loc->GetLocation(), hr);
+                Log::Error(L"Failed to walk volume '{}' [{}]", loc->GetLocation(), SystemError(hr));
             }
             else
             {
@@ -363,7 +363,7 @@ void Main::SecurityDescriptorInformation(
     if (!ConvertSecurityDescriptorToStringSecurityDescriptor(
             &pEntry->SecurityDescriptor, SDDL_REVISION_1, InfoFlags, &szSDDL, NULL))
     {
-        Log::Debug("Failed to convert security descriptor to SDDL (code: {:#x}))", LastWin32Error());
+        Log::Debug("Failed to convert security descriptor to SDDL [{}])", LastWin32Error());
         output.WriteNothing();
         if (szSDDL != nullptr)
         {
@@ -386,7 +386,7 @@ void Main::SecurityDescriptorInformation(
         if (!ConvertStringSecurityDescriptorToSecurityDescriptor(
                 szSDDL, SDDL_REVISION_1, &pNormalisedSecDescr, &ulNormalisedSecDescrLength))
         {
-            Log::Debug("Failed to convert SDDL to security descriptor (code: {:#x})", LastWin32Error());
+            Log::Debug("Failed to convert SDDL to security descriptor [{}]", LastWin32Error());
             output.WriteNothing();
         }
         else
@@ -533,7 +533,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_FileInfoOutput.Prepare(config.outFileInfo)))
         {
-            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outFileInfo.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' [{}]", config.outFileInfo.Path, SystemError(hr));
             return hr;
         }
     }
@@ -542,7 +542,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_AttrOutput.Prepare(config.outAttrInfo)))
         {
-            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outAttrInfo.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' [{}]", config.outAttrInfo.Path, SystemError(hr));
             return hr;
         }
     }
@@ -551,7 +551,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_I30Output.Prepare(config.outI30Info)))
         {
-            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outI30Info.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' [{}]", config.outI30Info.Path, SystemError(hr));
             return hr;
         }
     }
@@ -560,7 +560,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_TimeLineOutput.Prepare(config.outTimeLine)))
         {
-            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outTimeLine.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' [{}]", config.outTimeLine.Path, SystemError(hr));
             return hr;
         }
     }
@@ -569,7 +569,7 @@ HRESULT Main::Prepare()
     {
         if (FAILED(hr = m_SecDescrOutput.Prepare(config.outSecDescrInfo)))
         {
-            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.outSecDescrInfo.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' [{}]", config.outSecDescrInfo.Path, SystemError(hr));
             return hr;
         }
     }
@@ -583,31 +583,31 @@ HRESULT Main::GetWriters(std::vector<std::shared_ptr<Location>>& locations)
 
     if (FAILED(hr = m_FileInfoOutput.GetWriters(config.outFileInfo, L"NTFSInfo", locations)))
     {
-        Log::Error("Failed to create file information writers (code: {:#x})", hr);
+        Log::Error("Failed to create file information writers [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = m_AttrOutput.GetWriters(config.outAttrInfo, L"AttrInfo", locations)))
     {
-        Log::Error("Failed to create attribute information writers (code: {:#x})", hr);
+        Log::Error("Failed to create attribute information writers [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = m_I30Output.GetWriters(config.outI30Info, L"I30Info", locations)))
     {
-        Log::Error("Failed to create I30 information writers (code: {:#x})", hr);
+        Log::Error("Failed to create I30 information writers [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = m_TimeLineOutput.GetWriters(config.outTimeLine, L"NTFSTimeLine", locations)))
     {
-        Log::Error("Failed to create timeline information writers (code: {:#x})", hr);
+        Log::Error("Failed to create timeline information writers [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = m_SecDescrOutput.GetWriters(config.outSecDescrInfo, L"SecDescr", locations)))
     {
-        Log::Error("Failed to create security descriptors information writers (code: {:#x})", hr);
+        Log::Error("Failed to create security descriptors information writers [{}]", SystemError(hr));
         return hr;
     }
     return S_OK;
@@ -650,7 +650,7 @@ HRESULT Main::RunThroughMFT()
     {
         if (FAILED(hr = Prepare()))
         {
-            Log::Error("Failed to prepare outputs (code: {:#x})", hr);
+            Log::Error("Failed to prepare outputs [{}]", SystemError(hr));
             return hr;
         }
 
@@ -659,7 +659,7 @@ HRESULT Main::RunThroughMFT()
 
     if (FAILED(hr = GetWriters(locations)))
     {
-        Log::Error("Failed to create writers for NTFSInfo (code: {:#x})", hr);
+        Log::Error("Failed to create writers for NTFSInfo [{}]", SystemError(hr));
         return hr;
     }
 
@@ -778,7 +778,7 @@ HRESULT Main::RunThroughMFT()
             }
             else
             {
-                Log::Error(L"Failed to init walk for '{}' (code: {:#x})", loc->GetLocation(), hr);
+                Log::Error(L"Failed to init walk for '{}' [{}]", loc->GetLocation(), SystemError(hr));
             }
         }
         else
@@ -786,7 +786,7 @@ HRESULT Main::RunThroughMFT()
             m_FullNameBuilder = walker.GetFullNameBuilder();
             if (FAILED(hr = walker.Walk(callBacks)))
             {
-                Log::Error(L"Failed to walk volume '{}' (code: {:#x})", loc->GetLocation(), hr);
+                Log::Error(L"Failed to walk volume '{}' [{}]", loc->GetLocation(), SystemError(hr));
             }
             else
             {
@@ -812,7 +812,7 @@ HRESULT Main::Run()
         {
             if (FAILED(hr = RunThroughUSNJournal()))
             {
-                Log::Error("Failed to enumerate the USNs (code: {:#x})", hr);
+                Log::Error("Failed to enumerate the USNs [{}]", SystemError(hr));
                 return hr;
             }
         }
@@ -820,7 +820,7 @@ HRESULT Main::Run()
         {
             if (FAILED(hr = RunThroughMFT()))
             {
-                Log::Error("Failed to enumerate the MFT records (code: {:#x})", hr);
+                Log::Error("Failed to enumerate the MFT records [{}]", SystemError(hr));
                 return hr;
             }
         }

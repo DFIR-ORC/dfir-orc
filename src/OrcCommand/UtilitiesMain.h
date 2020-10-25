@@ -178,10 +178,10 @@ public:
                     else
                     {
                         Log::Error(
-                            L"ArchiveOperation: Operation for '{}' failed \"{}\" (code: {:#x})",
+                            L"ArchiveOperation: Operation for '{}' failed '{}' [{}]",
                             item->Keyword(),
                             item->Description(),
-                            item->GetHResult());
+                            SystemError(item->GetHResult()));
                     }
 
                     return;
@@ -758,12 +758,12 @@ public:
         WSADATA wsa_data;
         if (WSAStartup(MAKEWORD(2, 2), &wsa_data))
         {
-            Log::Critical(L"Failed to initialize WinSock 2.2 (code: {:#x})", HRESULT_FROM_WIN32(WSAGetLastError()));
+            Log::Critical(L"Failed to initialize WinSock 2.2 [{}]", Win32Error(WSAGetLastError()));
         }
 
         if (FAILED(hr = CoInitializeEx(0, COINIT_MULTITHREADED)))
         {
-            Log::Error("Failed to initialize COM library (code: {:#x})", hr);
+            Log::Error("Failed to initialize COM library [{}]", SystemError(hr));
             return hr;
         }
 
@@ -909,7 +909,7 @@ public:
 
         if (WSACleanup())
         {
-            Log::Error(L"Failed to cleanup WinSock 2.2 (code: {:#x})", HRESULT_FROM_WIN32(WSAGetLastError()));
+            Log::Error(L"Failed to cleanup WinSock 2.2 [{}]", Win32Error(WSAGetLastError()));
         }
 
         Robustness::UnInitialize(INFINITE);

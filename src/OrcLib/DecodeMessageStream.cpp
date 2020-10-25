@@ -58,7 +58,7 @@ STDMETHODIMP DecodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
     if (m_hSystemStore == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CertOpenSystemStore (code: {:#x})", hr);
+        Log::Error("Failed CertOpenSystemStore [{}]", SystemError(hr));
         return hr;
     }
 
@@ -95,7 +95,7 @@ HRESULT DecodeMessageStream::GetCertPrivateKey(
         if (GetLastError() != ERROR_MORE_DATA)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed CertGetCertificateContextProperty (code: {:#x})", hr);
+            Log::Error("Failed CertGetCertificateContextProperty [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -107,7 +107,7 @@ HRESULT DecodeMessageStream::GetCertPrivateKey(
     if (!CertGetCertificateContextProperty(pCertContext, CERT_KEY_PROV_INFO_PROP_ID, pProvInfo, &cbProvInfo))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CertGetCertificateContextProperty (code: {:#x})", hr);
+        Log::Error("Failed CertGetCertificateContextProperty [{}]", SystemError(hr));
         return hr;
     }
 
@@ -124,7 +124,7 @@ HRESULT DecodeMessageStream::GetCertPrivateKey(
             &fCallerFreeProvOrNCryptKey))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CryptAcquireCertificatePrivateKey (code: {:#x})", hr);
+        Log::Error("Failed CryptAcquireCertificatePrivateKey [{}]", SystemError(hr));
         return hr;
     }
 
@@ -147,7 +147,7 @@ HRESULT DecodeMessageStream::GetRecipients()
     if (!CryptMsgGetParam(m_hMsg, CMSG_RECIPIENT_COUNT_PARAM, 0L, &dwRecipientCount, &cbRecipientCount))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CryptMsgGetParam (code: {:#x})", hr);
+        Log::Error("Failed CryptMsgGetParam [{}]", SystemError(hr));
     }
     else
     {
@@ -161,7 +161,7 @@ HRESULT DecodeMessageStream::GetRecipients()
                 if (GetLastError() != ERROR_MORE_DATA)
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Error("Failed CryptMsgGetParam (code: {:#x})", hr);
+                    Log::Error("Failed CryptMsgGetParam [{}]", SystemError(hr));
                     return hr;
                 }
             }
@@ -175,7 +175,7 @@ HRESULT DecodeMessageStream::GetRecipients()
             if (!CryptMsgGetParam(m_hMsg, CMSG_RECIPIENT_INFO_PARAM, i, pRecipientInfo, &cbRecipientInfo))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error("Failed CryptMsgGetParam (code: {:#x})", hr);
+                Log::Error("Failed CryptMsgGetParam [{}]", SystemError(hr));
             }
             else
             {
@@ -201,7 +201,7 @@ HRESULT DecodeMessageStream::GetRecipients()
                             m_hCertStore, pCertContext, CERT_STORE_ADD_NEW, &pMyCertContext))
                     {
                         hr = HRESULT_FROM_WIN32(GetLastError());
-                        Log::Error("Failed CertAddCertificateContextToStore (code: {:#x})", hr);
+                        Log::Error("Failed CertAddCertificateContextToStore [{}]", SystemError(hr));
                         return hr;
                     }
                     m_Recipients.push_back(pMyCertContext);
@@ -233,7 +233,7 @@ HRESULT DecodeMessageStream::GetDecryptionMaterial()
         else if (GetLastError() != ERROR_MORE_DATA)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed CryptMsgGetParam (code: {:#x})", hr);
+            Log::Error("Failed CryptMsgGetParam [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -245,7 +245,7 @@ HRESULT DecodeMessageStream::GetDecryptionMaterial()
     if (!CryptMsgGetParam(m_hMsg, CMSG_ENVELOPE_ALGORITHM_PARAM, 0L, pAlgId, &cbAlgId))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CryptMsgGetParam (code: {:#x})", hr);
+        Log::Error("Failed CryptMsgGetParam [{}]", SystemError(hr));
         return hr;
     }
     Log::Debug("CryptMsgGetParam says that encryption information is now available");
@@ -253,7 +253,7 @@ HRESULT DecodeMessageStream::GetDecryptionMaterial()
     if (FAILED(GetRecipients()))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed to determine the list of recipients (code: {:#x})", hr);
+        Log::Error("Failed to determine the list of recipients [{}]", SystemError(hr));
         return hr;
     }
 
@@ -271,7 +271,7 @@ HRESULT DecodeMessageStream::GetDecryptionMaterial()
             if (!CryptMsgControl(m_hMsg, CMSG_CRYPT_RELEASE_CONTEXT_FLAG, CMSG_CTRL_DECRYPT, &params))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error("Failed CryptMsgControl (code: {:#x})", hr);
+                Log::Error("Failed CryptMsgControl [{}]", SystemError(hr));
                 return hr;
             }
             else
@@ -307,7 +307,7 @@ HRESULT DecodeMessageStream::Write(
     if (!CryptMsgUpdate(m_hMsg, (const BYTE*)pBuffer, static_cast<DWORD>(cbBytes), FALSE))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CryptMsgUpdate (code: {:#x})", hr);
+        Log::Error("Failed CryptMsgUpdate [{}]", SystemError(hr));
         return hr;
     }
 
@@ -355,13 +355,13 @@ HRESULT DecodeMessageStream::Close()
         if (!CryptMsgUpdate(m_hMsg, NULL, 0L, TRUE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed CryptMsgUpdate on final call (code: {:#x})", hr);
+            Log::Error("Failed CryptMsgUpdate on final call [{}]", SystemError(hr));
             return hr;
         }
         if (!CryptMsgClose(m_hMsg))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed CryptMsgClose (code: {:#x})", hr);
+            Log::Error("Failed CryptMsgClose [{}]", SystemError(hr));
             m_hMsg = NULL;
             return hr;
         }

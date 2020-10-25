@@ -188,9 +188,9 @@ HRESULT Main::RunRegistry()
                 if (FAILED(hr = aregfind.Find(data.DataStream, nullptr, nullptr)))
                 {
                     Log::Error(
-                        L"Failed while parsing registry hive '{}' (code: {:#x})",
+                        L"Failed while parsing registry hive '{}' [{}]",
                         aFileMatch->MatchingNames.front().FullPathName,
-                        hr);
+                        SystemError(hr));
                 }
                 else
                 {
@@ -286,7 +286,7 @@ HRESULT Main::RunObject()
 
         if (FAILED(hr = objectdir.ParseObjectDirectory(objdir, objects)))
         {
-            Log::Error(L"Failed to parse object directory '{}' (code: {:#x})", objdir, hr);
+            Log::Error(L"Failed to parse object directory '{}' [{}]", objdir, SystemError(hr));
         }
         else
         {
@@ -364,7 +364,7 @@ HRESULT Main::RunObject()
 
         if (FAILED(hr = filedirectory.ParseFileDirectory(filedir, files)))
         {
-            Log::Error(L"Failed to parse file directory {} (code: {:#x})", filedir, hr);
+            Log::Error(L"Failed to parse file directory {} [{}]", filedir, SystemError(hr));
         }
         else
         {

@@ -144,7 +144,7 @@ STDMETHODIMP ZipCreate::InitArchive(PCWSTR pwzArchivePath, OrcArchive::ArchiveCa
     if (FAILED(
             hr = filestream->OpenFile(pwzArchivePath, GENERIC_WRITE | GENERIC_READ, 0L, NULL, CREATE_ALWAYS, 0L, NULL)))
     {
-        Log::Error(L"Failed to open '{}' for writing (code: {:#x})", pwzArchivePath, hr);
+        Log::Error(L"Failed to open '{}' for writing [{}]", pwzArchivePath, SystemError(hr));
         return hr;
     }
 
@@ -229,7 +229,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
 
             if (FAILED(hr = m_TempStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
             {
-                Log::Error(L"Failed to rewind temp stream (code: {:#x})", hr);
+                Log::Error(L"Failed to rewind temp stream [{}]", SystemError(hr));
                 return hr;
             }
 
@@ -242,7 +242,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
                 CComPtr<ArchiveOpenCallback> callback = new ArchiveOpenCallback();
                 if (FAILED(hr = inarchive->Open(infile, nullptr, callback)))
                 {
-                    Log::Error(L"Failed to open archive stream (code: {:#x})", hr);
+                    Log::Error(L"Failed to open archive stream [{}]", SystemError(hr));
                     return hr;
                 }
             }
@@ -266,7 +266,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
             auto tempstr = tempdir.wstring();
             if (FAILED(hr = pNewTemp->Open(tempstr, L"ZipStream", 100 * 1024 * 1024)))
             {
-                Log::Error(L"Failed to create temp stream (code: {:#x})", hr);
+                Log::Error(L"Failed to create temp stream [{}]", SystemError(hr));
                 return hr;
             }
 
@@ -295,7 +295,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
         if ((hr = pArchiver->UpdateItems(outFile, (UInt32)m_Items.size(), callback)) != S_OK)
         {
             // returning S_FALSE also indicates error
-            Log::Error(L"Failed to update '{}' (code: {:#x})", m_ArchiveName, hr);
+            Log::Error(L"Failed to update '{}' [{}]", m_ArchiveName, SystemError(hr));
             return hr;
         }
     }
@@ -369,7 +369,7 @@ STDMETHODIMP ZipCreate::Complete()
         {
             if (FAILED(hr = m_TempStream->MoveTo(m_ArchiveStream)))
             {
-                Log::Error(L"Failed to copy Temp stream to output stream (code: {:#x})", hr);
+                Log::Error(L"Failed to copy Temp stream to output stream [{}]", SystemError(hr));
                 return hr;
             }
             m_ArchiveStream->Close();
@@ -379,7 +379,7 @@ STDMETHODIMP ZipCreate::Complete()
             m_ArchiveStream->Close();
             if (FAILED(hr = m_TempStream->MoveTo(m_ArchiveName.c_str())))
             {
-                Log::Error(L"Failed to copy Temp stream to output stream (code: {:#x})", hr);
+                Log::Error(L"Failed to copy Temp stream to output stream [{}]", SystemError(hr));
                 return hr;
             }
         }

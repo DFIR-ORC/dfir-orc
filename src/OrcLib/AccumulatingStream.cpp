@@ -44,7 +44,7 @@ STDMETHODIMP AccumulatingStream::Open(
 
     if (FAILED(hr = m_pTempStream->Open(strTempDir, L"AccumulatingStream", dwMemThreshold)))
     {
-        Log::Error("Failed to create temporary stream in a accumulating stream (code: {:#x})", hr);
+        Log::Error("Failed to create temporary stream in a accumulating stream [{}]", SystemError(hr));
         return hr;
     }
 
@@ -102,7 +102,7 @@ STDMETHODIMP AccumulatingStream::Close()
 
     if (FAILED(hr = m_pTempStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
     {
-        Log::Error("Failed to reset temporary stream in accumulating stream (code: {:#x})", hr);
+        Log::Error("Failed to reset temporary stream in accumulating stream [{}]", SystemError(hr));
         return hr;
     }
 
@@ -115,7 +115,7 @@ STDMETHODIMP AccumulatingStream::Close()
 
     if (FAILED(hr = m_pTempStream->Read(buffer.GetData(), m_dwBlockSize, &ullBytesRead)))
     {
-        Log::Error("Failed to read from temporary stream in accumulating stream (code: {:#x})", hr);
+        Log::Error("Failed to read from temporary stream in accumulating stream [{}]", SystemError(hr));
         return hr;
     }
 
@@ -124,7 +124,7 @@ STDMETHODIMP AccumulatingStream::Close()
         ULONGLONG ullBytesWritten = 0LL;
         if (FAILED(hr = m_pChainedStream->Write(buffer.GetData(), ullBytesRead, &ullBytesWritten)))
         {
-            Log::Error(L"Failed to read from temporary stream in accumulating stream (code: {:#x})", hr);
+            Log::Error(L"Failed to read from temporary stream in accumulating stream [{}]", SystemError(hr));
             return hr;
         }
 

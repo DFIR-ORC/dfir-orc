@@ -55,7 +55,7 @@ AutoRuns::AutoRuns()
 
     if (FAILED(hr = m_AutoRuns.AddChildNodeList(L"item", AUTORUNS_ITEM_ITEM, ConfigItem::MANDATORY)))
     {
-        Log::Warn("Failed to populate child node list (code: {:#x})", hr);
+        Log::Warn("Failed to populate child node list [{}]", SystemError(hr));
         return;
     }
 

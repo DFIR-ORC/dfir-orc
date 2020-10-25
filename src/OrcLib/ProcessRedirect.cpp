@@ -93,7 +93,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
             ULONGLONG ullBytesWritten = 0L;
             if (FAILED(hr = m_pBS->Write(m_ASyncIO.Buffer, dwNumberOfBytesTransfered, &ullBytesWritten)))
             {
-                Log::Warn(L"Failed to write incoming data (code: {:#x})", hr);
+                Log::Warn(L"Failed to write incoming data [{}]", SystemError(hr));
             }
         }
         if (m_ReadHandle != INVALID_HANDLE_VALUE)
@@ -113,7 +113,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
                         Close();
                         break;
                     default:
-                        Log::Error(L"ReadFile from child failed (code: {:#x})", Win32Error(dwLastError));
+                        Log::Error(L"ReadFile from child failed [{}]", Win32Error(dwLastError));
                         break;
                 }
             }
@@ -138,7 +138,7 @@ HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD 
                         Close();
                         break;
                     default:
-                        Log::Error("ReadFile from child failed (code: {:#x})", Win32Error(dwLastError));
+                        Log::Error("ReadFile from child failed [{}]", Win32Error(dwLastError));
                         break;
                 }
             }

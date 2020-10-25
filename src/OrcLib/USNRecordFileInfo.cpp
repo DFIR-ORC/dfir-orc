@@ -173,7 +173,7 @@ std::shared_ptr<ByteStream> USNRecordFileInfo::GetFileStream()
 
     if (FAILED(hr = retval->CopyHandle(m_hFile)))
     {
-        Log::Debug(L"Failed to open file '{}' (code: {:#x})", m_szFullName, hr);
+        Log::Debug(L"Failed to open file '{}' [{}]", m_szFullName, SystemError(hr));
         return nullptr;
     }
 

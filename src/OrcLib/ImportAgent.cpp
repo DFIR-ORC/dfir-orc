@@ -121,7 +121,7 @@ HRESULT ImportAgent::UnWrapMessage(
 
     if (FAILED(hr = pDecodeStream->Initialize(pOutputStream)))
     {
-        Log::Error("Failed to initialise decoding stream to unwrap message (code: {:#x})", hr);
+        Log::Error("Failed to initialise decoding stream to unwrap message [{}]", SystemError(hr));
         return hr;
     }
 
@@ -129,7 +129,7 @@ HRESULT ImportAgent::UnWrapMessage(
 
     if (FAILED(hr = pMessageStream->CopyTo(pDecodeStream, &cbBytesWritten)))
     {
-        Log::Error("Failed to unwrap envelopped message (code: {:#x})", hr);
+        Log::Error("Failed to unwrap envelopped message [{}]", SystemError(hr));
         return hr;
     }
     else
@@ -160,26 +160,26 @@ HRESULT ImportAgent::EnveloppedItem(ImportItem& input)
     auto pTempStream = std::make_shared<TemporaryStream>();
     if (FAILED(hr = pTempStream->Open(m_tempOutput.Path.c_str(), input.name, 100 * 1024 * 1024, false)))
     {
-        Log::Error(L"Failed to open temporary stream (code: {:#x})", hr);
+        Log::Error(L"Failed to open temporary stream [{}]", SystemError(hr));
         return hr;
     }
 
     auto pEnveloppedStream = input.GetInputStream();
     if (!pEnveloppedStream)
     {
-        Log::Error(L"Failed to open envelopped stream (code: {:#x})", hr);
+        Log::Error(L"Failed to open envelopped stream [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = UnWrapMessage(pEnveloppedStream, pTempStream)))
     {
-        Log::Error(L"Failed to unwrap message (code: {:#x})", hr);
+        Log::Error(L"Failed to unwrap message [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = pTempStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
     {
-        Log::Error(L"Failed to rewind unwrapped stream (code: {:#x})", hr);
+        Log::Error(L"Failed to rewind unwrapped stream [{}]", SystemError(hr));
         return hr;
     }
 
@@ -209,20 +209,20 @@ HRESULT ImportAgent::EnveloppedItem(ImportItem& input)
         auto pOutputStream = std::make_shared<TemporaryStream>();
         if (FAILED(hr = pOutputStream->Open(m_tempOutput.Path.c_str(), output.name, 100 * 1024 * 1024, false)))
         {
-            Log::Error("Failed to open temporary archive (code: {:#x})", hr);
+            Log::Error("Failed to open temporary archive [{}]", SystemError(hr));
             return hr;
         }
 
         if (FAILED(hr = JournalingStream::ReplayJournalStream(pTempStream, pOutputStream)))
         {
-            Log::Error("Failed to replay journaled archive (code: {:#x})", hr);
+            Log::Error("Failed to replay journaled archive [{}]", SystemError(hr));
             return hr;
         }
         pTempStream->Close();
 
         if (FAILED(hr = pOutputStream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
         {
-            Log::Error("Failed to rewind output stream (code: {:#x})", hr);
+            Log::Error("Failed to rewind output stream [{}]", SystemError(hr));
             return hr;
         }
         output.Stream = pOutputStream;
@@ -418,7 +418,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
         if (FAILED(hr = pStream->Open(m_tempOutput.Path.c_str(), item.NameInArchive, 800 * 1024 * 1024, false)))
         {
-            Log::Error("Failed to open temporary archive (code: {:#x})", hr);
+            Log::Error("Failed to open temporary archive [{}]", SystemError(hr));
             return nullptr;
         }
         output_item.Stream = pStream;
@@ -462,7 +462,7 @@ HRESULT ImportAgent::ExpandItem(ImportItem& input)
 
     if (FAILED(hr = extractor->Extract(MakeArchiveStream, ShouldItemBeExtracted, MakeWriteStream)))
     {
-        Log::Error(L"Failed to extract archive '{}' (code: {:#x})", input.name, hr);
+        Log::Error(L"Failed to extract archive '{}' [{}]", input.name, SystemError(hr));
         return hr;
     }
     if (input.Stream)
@@ -486,7 +486,7 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
         wstring strOutputDir;
         if (FAILED(hr = GetOutputDir(m_extractOutput.Path.c_str(), strOutputDir, true)))
         {
-            Log::Error(L"Failed to create output file (code: {:#x})", hr);
+            Log::Error(L"Failed to create output file [{}]", SystemError(hr));
             return hr;
         }
 
@@ -504,7 +504,7 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
         if (err)
         {
             hr = HRESULT_FROM_WIN32(err.value());
-            Log::Error(L"Failed to create output directory '{}' (code: {:#x})", output_path.parent_path(), hr);
+            Log::Error(L"Failed to create output directory '{}' [{}]", output_path.parent_path(), SystemError(hr));
             return hr;
         }
 
@@ -519,7 +519,7 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
 
             if (FAILED(hr = tempStream->MoveTo(strOutput.c_str())))
             {
-                Log::Error(L"Failed to extract '{}' to file '{}' (code: {:#x})", input.fullName, strOutput, hr);
+                Log::Error(L"Failed to extract '{}' to file '{}' [{}]", input.fullName, strOutput, SystemError(hr));
                 return hr;
             }
             Log::Debug(L"'{}' is extracted to '{}'", input.fullName, strOutput);
@@ -538,7 +538,7 @@ HRESULT ImportAgent::ExtractItem(ImportItem& input)
             ULONGLONG ullWritten = 0LL;
             if (FAILED(hr = input.Stream->CopyTo(fileStream, &ullWritten)))
             {
-                Log::Error(L"Failed to extract '{}' to file '{}' (code: {:#x})", input.fullName, strOutput, hr);
+                Log::Error(L"Failed to extract '{}' to file '{}' [{}]", input.fullName, strOutput, SystemError(hr));
                 return hr;
             }
             Log::Debug(L"'{}' is extracted to '{}'", input.fullName, strOutput);
@@ -619,7 +619,8 @@ HRESULT ImportAgent::InitializeTables(std::vector<TableDescription>& tables)
             {
                 if (FAILED(hr = pAgent->Initialize(m_databaseOutput, m_tempOutput, table)))
                 {
-                    Log::Error(L"Failed to initialize SQL import agent for table '{}' (code: {:#x})", table.name, hr);
+                    Log::Error(
+                        L"Failed to initialize SQL import agent for table '{}' [{}]", table.name, SystemError(hr));
                     return hr;
                 }
 
@@ -644,7 +645,7 @@ HRESULT ImportAgent::InitializeTables(std::vector<TableDescription>& tables)
         std::make_unique<SqlImportAgent>(flow->block, m_target, m_memSemaphore, m_fileSemaphore, &m_lInProgressItems);
     if (!pAgent->start())
     {
-        Log::Error("Failed to start SQL import agent for dummy table (code: {:#x})", hr);
+        Log::Error("Failed to start SQL import agent for dummy table [{}]", SystemError(hr));
         return hr;
     }
     m_pAgents.emplace_back(std::move(pAgent));
@@ -661,7 +662,7 @@ HRESULT ImportAgent::FinalizeTables()
     {
         if (FAILED(hr = agent->Finalize()))
         {
-            Log::Error("Failed to finalize agent (code: {:#x})", hr);
+            Log::Error("Failed to finalize agent [{}]", SystemError(hr));
         }
     }
     return S_OK;
@@ -889,7 +890,7 @@ void ImportAgent::LogNotification(const ImportNotification::Notification& notifi
 
     if (FAILED(notification->GetHR()))
     {
-        Log::Error(L"{}: Failed (code: {:#x})", notification->Item().name, SystemError(notification->GetHR()));
+        Log::Error(L"{}: Failed [{}]", notification->Item().name, SystemError(notification->GetHR()));
         return;
     }
 

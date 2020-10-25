@@ -65,7 +65,7 @@ HRESULT Main::Run()
     hr = m_FileInfoOutput.GetWriters(m_Config.output, L"FatInfo", locations);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to create file information writers (code: {:#x})", hr);
+        Log::Error(L"Failed to create file information writers [{}]", SystemError(hr));
         return hr;
     }
 
@@ -94,7 +94,7 @@ HRESULT Main::Run()
                     HRESULT hr = fi.WriteFileInformation(FatFileInfo::g_FatColumnNames, *dir.second, m_Config.Filters);
                     if (FAILED(hr))
                     {
-                        Log::Error(L"Could not WriteFileInformation for '{}' (code: {:#x})", szFullName, hr);
+                        Log::Error(L"Could not WriteFileInformation for '{}' [{}]", szFullName, SystemError(hr));
                         return hr;
                     }
                 }

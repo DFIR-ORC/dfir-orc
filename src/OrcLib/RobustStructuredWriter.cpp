@@ -234,7 +234,7 @@ HRESULT RobustStructuredWriter::Write(const WCHAR* szArray, DWORD dwCharCount)
 
     if (FAILED(hr = StringCchPrintfW((LPWSTR)buffer.GetData(), dwCharCount, L"%.*s", dwCharCount, szArray)))
     {
-        Log::Error("Failed to write WChar Array (code: {:#x})", hr);
+        Log::Error("Failed to write WChar Array [{}]", SystemError(hr));
         return hr;
     }
 
@@ -262,7 +262,7 @@ HRESULT RobustStructuredWriter::WriteNamed(LPCWSTR szName, const WCHAR* szArray,
 
     if (FAILED(hr = StringCchPrintfW((LPWSTR)buffer.GetData(), dwCharCount, L"%.*s", dwCharCount, szArray)))
     {
-        Log::Error("Failed to write WChar Array (code: {:#x})", hr);
+        Log::Error("Failed to write WChar Array [{}]", SystemError(hr));
         return hr;
     }
 

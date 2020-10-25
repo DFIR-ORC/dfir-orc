@@ -69,7 +69,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
 
             if (FAILED(hr = retval->WriteToFile(out.Path)))
             {
-                Log::Error(L"Could not create specified file: '{}' (code: {:#x})", out.Path, hr);
+                Log::Error(L"Could not create specified file: '{}' [{}]", out.Path, SystemError(hr));
                 return nullptr;
             }
 
@@ -77,7 +77,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
             {
                 if (FAILED(hr = retval->SetSchema(out.Schema)))
                 {
-                    Log::Error(L"Could not set schema to CSV file: '{}' (code: {:#x})", out.Path, hr);
+                    Log::Error(L"Could not set schema to CSV file: '{}' [{}]", out.Path, SystemError(hr));
                     return nullptr;
                 }
             }
@@ -100,14 +100,14 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
             {
                 if (FAILED(hr = pWriter->SetSchema(out.Schema)))
                 {
-                    Log::Error(L"Could not write columns to parquet file: {} (code: {:#x})", out.Path, hr);
+                    Log::Error(L"Could not write columns to parquet file: {} [{}]", out.Path, SystemError(hr));
                     return nullptr;
                 }
             }
 
             if (FAILED(hr = pWriter->WriteToFile(out.Path)))
             {
-                Log::Error(L"Could not create specified file: {} (code: {:#x})", out.Path, hr);
+                Log::Error(L"Could not create specified file: {} [{}]", out.Path, SystemError(hr));
                 return nullptr;
             }
             return pWriter;
@@ -128,14 +128,14 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
             {
                 if (FAILED(hr = pWriter->SetSchema(out.Schema)))
                 {
-                    Log::Error(L"Could not write columns to parquet file {} (code: {:#x})", out.Path, hr);
+                    Log::Error(L"Could not write columns to parquet file {} [{}]", out.Path, SystemError(hr));
                     return nullptr;
                 }
             }
 
             if (FAILED(hr = pWriter->WriteToFile(out.Path)))
             {
-                Log::Error(L"Could not create specified file: {} (code: {:#x})", out.Path, hr);
+                Log::Error(L"Could not create specified file: {} [{}]", out.Path, SystemError(hr));
                 return nullptr;
             }
             return pWriter;
@@ -153,7 +153,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
 
             if (FAILED(hr = pSqlConnection->Connect(out.ConnectionString)))
             {
-                Log::Error(L"Could not connect to SQL '{}' (code: {:#x})", out.ConnectionString, hr);
+                Log::Error(L"Could not connect to SQL '{}' [{}]", out.ConnectionString, SystemError(hr));
                 return nullptr;
             }
 
@@ -164,7 +164,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
                 case OutputSpec::Disposition::Truncate:
                     if (FAILED(hr = pSqlConnection->TruncateTable(out.TableName)))
                     {
-                        Log::Error(L"Failed to truncate table '{}' (code: {:#x})", out.TableName, hr);
+                        Log::Error(L"Failed to truncate table '{}' [{}]", out.TableName, SystemError(hr));
                     }
                     break;
                 case OutputSpec::Disposition::CreateNew: {
@@ -172,22 +172,22 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
                     {
                         if (FAILED(hr = pSqlConnection->DropTable(out.TableName)))
                         {
-                            Log::Error(L"Failed to drop table '{}' (code: {:#x})", out.TableName, hr);
+                            Log::Error(L"Failed to drop table '{}' [{}]", out.TableName, SystemError(hr));
                         }
                     }
                     if (out.Schema)
                     {
                         if (FAILED(hr = pSqlConnection->CreateTable(out.TableName, out.Schema)))
                         {
-                            Log::Error(L"Failed to create table '{}' (code: {:#x})", out.TableName, hr);
+                            Log::Error(L"Failed to create table '{}' [{}]", out.TableName, SystemError(hr));
                         }
                     }
                     else
                     {
                         Log::Error(
-                            L"Failed to create table {} (code: {:#x}) -> No column definition available",
+                            L"Failed to create table {} [{}] -> No column definition available",
                             out.TableName,
-                            hr);
+                            SystemError(hr));
                     }
                 }
                 break;
@@ -198,7 +198,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
 
             if (FAILED(hr = pSqlWriter->SetConnection(pSqlConnection)))
             {
-                Log::Error(L"Could not connect to SQL '{}' (code: {:#x})", out.ConnectionString, hr);
+                Log::Error(L"Could not connect to SQL '{}' [{}]", out.ConnectionString, SystemError(hr));
                 return nullptr;
             }
 
@@ -206,12 +206,12 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
             {
                 if (FAILED(hr = pSqlWriter->SetSchema(out.Schema)))
                 {
-                    Log::Error(L"Could not add SQL columns (code: {:#x})", hr);
+                    Log::Error(L"Could not add SQL columns [{}]", SystemError(hr));
                     return nullptr;
                 }
                 if (FAILED(hr = pSqlWriter->BindColumns(out.TableName.c_str())))
                 {
-                    Log::Error(L"Could not bind SQL columns (code: {:#x})", hr);
+                    Log::Error(L"Could not bind SQL columns [{}]", SystemError(hr));
                     return nullptr;
                 }
             }
@@ -257,7 +257,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(LPCWSTR szFileName, const O
 
             if (FAILED(hr = pFileStream->WriteTo(strFilePath.c_str())))
             {
-                Log::Error(L"Could not create output file: '{} (code: {:#x})'", strFilePath, hr);
+                Log::Error(L"Could not create output file: '{} [{}]'", strFilePath, SystemError(hr));
                 return nullptr;
             }
             pStream = pFileStream;
@@ -268,7 +268,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(LPCWSTR szFileName, const O
 
             if (FAILED(hr = pPipe->CreatePipe()))
             {
-                Log::Error(L"Could not create output pipe for output '{}' (code: {:#x})", szFileName, hr);
+                Log::Error(L"Could not create output pipe for output '{}' [{}]", szFileName, SystemError(hr));
                 return nullptr;
             }
             pStream = pPipe;
@@ -285,7 +285,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(LPCWSTR szFileName, const O
 
     if (FAILED(hr = retval->WriteToStream(pStream)))
     {
-        Log::Error(L"Could not write to byte stream (code: {:#x})", hr);
+        Log::Error(L"Could not write to byte stream [{}]", SystemError(hr));
         return nullptr;
     }
 
@@ -293,7 +293,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(LPCWSTR szFileName, const O
     {
         if (FAILED(hr = retval->SetSchema(out.Schema)))
         {
-            Log::Error(L"Could not write columns to output file (code: {:#x})", hr);
+            Log::Error(L"Could not write columns to output file [{}]", SystemError(hr));
             return nullptr;
         }
     }
@@ -564,7 +564,7 @@ TableOutput::Schema Orc::TableOutput::GetColumnsFromConfig(const LPCWSTR szTable
                 if (e.IsCritical())
                     throw;
 
-                Log::Error(L"{} (code: {:#x})", e.Description, SystemError(e.GetHRESULT()));
+                Log::Error(L"{} [{}]", e.Description, SystemError(e.GetHRESULT()));
             }
             catch (...)
             {

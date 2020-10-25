@@ -48,7 +48,7 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
             if (FAILED(hr = retval.SetBlockSize(blockSize.LowPart)))
             {
                 Log::Error(
-                    L"Failed to configure block size with '{}' (code: {:#x})", item[CONFIG_YARA_BLOCK].c_str(), hr);
+                    L"Failed to configure block size with '{}' [{}]", item[CONFIG_YARA_BLOCK].c_str(), SystemError(hr));
                 return retval;
             }
         }
@@ -66,7 +66,9 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
             if (FAILED(hr = retval.SetOverlapSize(overlapSize.LowPart)))
             {
                 Log::Error(
-                    L"Failed to configure overlap size with '{}' (code: {:#x})", item[CONFIG_YARA_OVERLAP].c_str(), hr);
+                    L"Failed to configure overlap size with '{}' [{}]",
+                    item[CONFIG_YARA_OVERLAP].c_str(),
+                    SystemError(hr));
                 return retval;
             }
         }
@@ -84,7 +86,9 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
         if (FAILED(retval.SetScanMethod((std::wstring)item[CONFIG_YARA_SCAN_METHOD])))
         {
             Log::Error(
-                L"Failed to configure scan method with '{}' (code: {:#x})", item[CONFIG_YARA_SCAN_METHOD].c_str(), hr);
+                L"Failed to configure scan method with '{}' [{}]",
+                item[CONFIG_YARA_SCAN_METHOD].c_str(),
+                SystemError(hr));
             return retval;
         }
     }
@@ -165,13 +169,13 @@ HRESULT Orc::YaraScanner::AddRules(const std::wstring& yara_content_spec)
 
         if (FAILED(hr = EmbeddedResource::ExtractToBuffer(yara_content_spec, buffer)))
         {
-            Log::Error(L"Failed to find and extract ressource '{}' (code: {:#x})", yara_content_spec, hr);
+            Log::Error(L"Failed to find and extract ressource '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
 
         if (FAILED(hr = AddRules(buffer)))
         {
-            Log::Error(L"Failed to add rules from ressource '{}' (code: {:#x})", yara_content_spec, hr);
+            Log::Error(L"Failed to add rules from ressource '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
     }
@@ -183,13 +187,13 @@ HRESULT Orc::YaraScanner::AddRules(const std::wstring& yara_content_spec)
 
         if (FAILED(hr = fstream->ReadFrom(yara_content_spec.c_str())))
         {
-            Log::Error(L"Failed to open rules file '{}' (code: {:#x})", yara_content_spec, hr);
+            Log::Error(L"Failed to open rules file '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
 
         if (FAILED(hr = AddRules(fstream)))
         {
-            Log::Error(L"Failed to add rules from ressource '{}' (code: {:#x})", yara_content_spec, hr);
+            Log::Error(L"Failed to add rules from ressource '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
     }
@@ -206,13 +210,13 @@ HRESULT Orc::YaraScanner::AddRules(const std::shared_ptr<ByteStream>& stream)
 
         if (FAILED(hr = memstream->OpenForReadWrite((ULONG)stream->GetSize())))
         {
-            Log::Error(L"Failed to open memstream for {} bytes read/write (code: {:#x})", stream->GetSize(), hr);
+            Log::Error(L"Failed to open memstream for {} bytes read/write [{}]", stream->GetSize(), SystemError(hr));
             return hr;
         }
         ULONGLONG bytesCopied = 0LL;
         if (FAILED(hr = stream->CopyTo(memstream, &bytesCopied)))
         {
-            Log::Error(L"Failed to copy yara stream's {} bytes (code: {:#x})", stream->GetSize(), hr);
+            Log::Error(L"Failed to copy yara stream's {} bytes [{}]", stream->GetSize(), SystemError(hr));
             return hr;
         }
     }
@@ -402,13 +406,13 @@ HRESULT Orc::YaraScanner::Scan(const LPCWSTR& szFileName, MatchingRuleCollection
 
     if (FAILED(hr = fileStream->ReadFrom(szFileName)))
     {
-        Log::Error(L"Failed to open '{}' for yara scan (code: {:#x})", szFileName, hr);
+        Log::Error(L"Failed to open '{}' for yara scan [{}]", szFileName, SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = Scan(fileStream, matchingRules)))
     {
-        Log::Error(L"Failed to scan '{}' for yara scan (code: {:#x})", szFileName, hr);
+        Log::Error(L"Failed to scan '{}' for yara scan [{}]", szFileName, SystemError(hr));
         return hr;
     }
 
@@ -515,7 +519,7 @@ HRESULT Orc::YaraScanner::ScanFrom(
         if (FAILED(
                 hr = stream->Read(buffer.GetP<BYTE>(static_cast<size_t>(bytesRead)), (UINT)leftToRead, &ullBytesRead)))
         {
-            Log::Error("Failed to read {} bytes from stream for yara scan (code: {:#x})", buffer.GetCount(), hr);
+            Log::Error("Failed to read {} bytes from stream for yara scan [{}]", buffer.GetCount(), SystemError(hr));
             break;
         }
 
@@ -548,7 +552,8 @@ HRESULT Orc::YaraScanner::ScanFileMapping(
     HRESULT hr = fmstream->Open(INVALID_HANDLE_VALUE, PAGE_READWRITE, stream->GetSize(), L"YaraScan");
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to create pagefile backed filemapping (size: {}, code: {:#x})", stream->GetSize(), hr);
+        Log::Error(
+            L"Failed to create pagefile backed filemapping (size: {}, [{}])", stream->GetSize(), SystemError(hr));
         return hr;
     }
 
@@ -556,20 +561,20 @@ HRESULT Orc::YaraScanner::ScanFileMapping(
     if (FAILED(hr = stream->CopyTo(fmstream, &ullBytesCopied)))
     {
         Log::Error(
-            "Failed to copy file into file mapping (size: {}, copied: {}, code: {:#x})",
+            "Failed to copy file into file mapping (size: {}, copied: {}, [{}])",
             stream->GetSize(),
             ullBytesCopied,
-            hr);
+            SystemError(hr));
         return hr;
     }
 
     if (ullBytesCopied != stream->GetSize())
     {
         Log::Error(
-            "Failed to copy all file content into file mapping (size: {}, copied: {}, code: {:#x})",
+            "Failed to copy all file content into file mapping (size: {}, copied: {}, [{}])",
             stream->GetSize(),
             ullBytesCopied,
-            hr);
+            SystemError(hr));
         return hr;
     }
 
@@ -624,7 +629,7 @@ HRESULT Orc::YaraScanner::Scan(
         ULONG bytes = 0L;
         if (FAILED(hr = ScanFrom(stream, FILE_CURRENT, 0LL, buffer, matchingRules, bytes)))
         {
-            Log::Error("Stream yara scan failed (code: {:#x})", hr);
+            Log::Error("Stream yara scan failed [{}]", SystemError(hr));
             return hr;
         }
         if (bytes == 0)  // we have reached a (portentially unexpected) end of file
@@ -643,7 +648,7 @@ HRESULT Orc::YaraScanner::Scan(
         {
             if (FAILED(hr = Scan(overlap, overlapCurrentSize, matchingRules)))
             {
-                Log::Error("Stream yara overlap scan failed (code: {:#x})", hr);
+                Log::Error("Stream yara overlap scan failed [{}]", SystemError(hr));
                 return hr;
             }
             overlapCurrentSize = 0L;
@@ -812,7 +817,7 @@ Orc::YaraScanner::GetMemoryStream(const std::shared_ptr<ByteStream>& byteStream)
 
         if (FAILED(hr = memstream->OpenForReadWrite(static_cast<DWORD>(byteStream->GetSize()))))
         {
-            Log::Error(L"Failed to allocate %I64d bytes in memory stream (code: {:#x})", byteStream->GetSize(), hr);
+            Log::Error(L"Failed to allocate %I64d bytes in memory stream [{}]", byteStream->GetSize(), SystemError(hr));
             return std::make_pair(hr, nullptr);
         }
 
@@ -820,7 +825,7 @@ Orc::YaraScanner::GetMemoryStream(const std::shared_ptr<ByteStream>& byteStream)
         if (FAILED(hr = byteStream->CopyTo(memstream, &ullBytesCopied)))
         {
             Log::Error(
-                L"Failed to load stream %I64d bytes into memory stream (code: {:#x})", byteStream->GetSize(), hr);
+                L"Failed to load stream %I64d bytes into memory stream [{}]", byteStream->GetSize(), SystemError(hr));
             return std::make_pair(hr, nullptr);
         }
 

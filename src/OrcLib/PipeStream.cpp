@@ -22,7 +22,7 @@ HRESULT PipeStream::CreatePipe(__in DWORD nSize)
     if (!::CreatePipe(&hReadPipe, &hWritePipe, NULL, nSize))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CreatePipe: cannot create anonymous pipe (code: {:#x})", hr);
+        Log::Error("Failed CreatePipe: cannot create anonymous pipe [{}]", SystemError(hr));
         return hr;
     }
     {
@@ -87,7 +87,7 @@ PipeStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbByt
     if (!WriteFile(m_hWritePipe, pBuffer, static_cast<DWORD>(cbBytes), &cbBytesWritten, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed WriteFile (code: {:#x})", hr);
+        Log::Error("Failed WriteFile [{}]", SystemError(hr));
         return hr;
     }
     Log::Debug("WriteFile {} bytes succeeded (hFile=0x{:p})", cbBytesWritten, m_hWritePipe);
@@ -139,7 +139,7 @@ PipeStream::Peek(_Out_opt_ LPVOID lpBuffer, _In_ DWORD nBufferSize, _Out_opt_ LP
     DWORD dwBytesRead = 0L;
     if (!PeekNamedPipe(m_hReadPipe, lpBuffer, nBufferSize, &dwBytesRead, NULL, NULL))
     {
-        Log::Error("Failed PeekNamedPipe (code: {:#x})", LastWin32Error());
+        Log::Error("Failed PeekNamedPipe [{}]", LastWin32Error());
     }
 
     if (dwBytesRead > 0L && lpBytesRead)

@@ -212,7 +212,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
         DWORD dwPageSize = 0L;
         if (FAILED(hr = SystemDetails::GetPageSize(dwPageSize)))
         {
-            Log::Error(L"Failed to decommit pages: could not retrieve page size (code: {:#x})", hr);
+            Log::Error(L"Failed to decommit pages: could not retrieve page size [{}]", SystemError(hr));
         }
         else
         {
@@ -224,7 +224,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
                 if (!VirtualFree(pFirstPageToDecommit, dwPagesToUnCommit * dwPageSize, MEM_DECOMMIT))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Error("Failed to decommit pages (code: {:#x})", hr);
+                    Log::Error("Failed to decommit pages [{}]", SystemError(hr));
                 }
             }
         }

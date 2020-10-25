@@ -173,7 +173,7 @@ HRESULT DumpValue(const RegFind::Match::ValueNameMatch& match, std::wstring outp
     HRESULT hr = dataDumpFile.WriteTo(outputPath.c_str());
     if (FAILED(hr))
     {
-        Log::Error(L"Can't open file '{}' (code: {:#x})", outputPath, hr);
+        Log::Error(L"Can't open file '{}' [{}]", outputPath, SystemError(hr));
         return hr;
     }
 
@@ -432,7 +432,7 @@ HRESULT Main::Run()
     HRESULT hr = LoadWinTrust();
     if (FAILED(hr))
     {
-        Log::Critical("Failed LoadWinTrust (code: {:#x})", hr);
+        Log::Critical("Failed LoadWinTrust [{}]", SystemError(hr));
         return hr;
     }
 
@@ -444,20 +444,20 @@ HRESULT Main::Run()
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
     {
-        Log::Error("Flushing HKEY_LOCAL_MACHINE failed (code: {:#x})", Win32Error(dwGLE));
+        Log::Error("Flushing HKEY_LOCAL_MACHINE failed [{}]", Win32Error(dwGLE));
     }
 
     Log::Debug(L"Flushing HKEY_USERS");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
     {
-        Log::Error(L"Flushing HKEY_USERS failed (code: {:#x})", Win32Error(dwGLE));
+        Log::Error(L"Flushing HKEY_USERS failed [{}]", Win32Error(dwGLE));
     }
 
     hr = config.m_HiveQuery.BuildStreamList();
     if (FAILED(hr))
     {
-        Log::Error("Failed to build hive stream list(code: {:#x})", hr);
+        Log::Error("Failed to build hive stream list[{}]", SystemError(hr));
         return hr;
     }
 
@@ -505,7 +505,7 @@ HRESULT Main::Run()
             hr = query->QuerySpec.Find(hive.Stream, nullptr, nullptr);
             if (FAILED(hr))
             {
-                Log::Error(L"Failed to search into hive '{}' (code: {:#x})", hive.FileName, hr);
+                Log::Error(L"Failed to search into hive '{}' [{}]", hive.FileName, SystemError(hr));
                 continue;
             }
 

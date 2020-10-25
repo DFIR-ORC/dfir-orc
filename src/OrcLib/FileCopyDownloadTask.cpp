@@ -65,7 +65,7 @@ HRESULT FileCopyDownloadTask::Initialize(const bool bDelayedDeletion)
                 COPY_FILE_ALLOW_DECRYPTED_DESTINATION))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to copy '{}' to '{}' (code: {:#x})", strRemotePath, strLocalPath, hr);
+            Log::Error(L"Failed to copy '{}' to '{}' [{}]", strRemotePath, strLocalPath, SystemError(hr));
             return hr;
         }
 
@@ -81,7 +81,7 @@ std::wstring FileCopyDownloadTask::GetCompletionCommandLine()
     std::wstring strCmdSpec;
     if (FAILED(hr = ExpandFilePath(L"%ComSpec%", strCmdSpec)))
     {
-        Log::Error("Failed to determine command (code: {:#x})", hr);
+        Log::Error("Failed to determine command [{}]", SystemError(hr));
     }
     else
     {
@@ -151,7 +151,7 @@ HRESULT FileCopyDownloadTask::Finalise()
             &pi))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to create process: '{}' with cmdLine: '{}' (code: {:#x})", strCmdSpec, strCmdLine, hr);
+        Log::Error(L"Failed to create process: '{}' with cmdLine: '{}' [{}]", strCmdSpec, strCmdLine, SystemError(hr));
         return hr;
     }
     Log::Debug(L"Successfully created completion process");

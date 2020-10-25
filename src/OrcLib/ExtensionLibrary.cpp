@@ -51,7 +51,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
     std::wstring strSID;
     if (auto hr = SystemDetails::UserSID(strSID); FAILED(hr))
     {
-        Log::Error(L"Failed to get current user SID (code: {:#x})", hr);
+        Log::Error(L"Failed to get current user SID [{}]", SystemError(hr));
         return hr;
     }
 
@@ -68,10 +68,10 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
             FAILED(hr))
         {
             Log::Debug(
-                L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})",
+                L"Failed to extract resource '{}' into temp dir '{}' [{}]",
                 strFileRef,
                 m_tempDir.wstring(),
-                hr);
+                SystemError(hr));
             return hr;
         }
         m_bDeleteOnClose = true;
@@ -79,17 +79,17 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         if (auto hr = ToDesiredName(strExtractedFile); FAILED(hr))
         {
             Log::Warn(
-                L"Failed to extract rename extracted file from '{}' to '{}' (code: {:#x})",
+                L"Failed to extract rename extracted file from '{}' to '{}' [{}]",
                 strExtractedFile,
                 m_strDesiredName,
-                hr);
+                SystemError(hr));
             m_libFile = strExtractedFile;
         }
 
         auto [hr, hModule] = LoadThisLibrary(m_libFile);
         if (hModule == NULL || FAILED(hr))
         {
-            Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_libFile, hr);
+            Log::Debug(L"Failed to load extension lib using '{}' path [{}]", m_libFile, SystemError(hr));
             return hr;
         }
         m_hModule = hModule;
@@ -116,7 +116,10 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                         strExtractedFiles)))
             {
                 Log::Debug(
-                    L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})", strNewLibRef, m_tempDir, hr);
+                    L"Failed to extract resource '{}' into temp dir '{}' [{}]",
+                    strNewLibRef,
+                    m_tempDir,
+                    SystemError(hr));
                 return hr;
             }
 
@@ -148,7 +151,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
             auto [hr, hModule] = LoadThisLibrary(m_libFile);
             if (hModule == NULL || FAILED(hr))
             {
-                Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_libFile, hr);
+                Log::Debug(L"Failed to load extension lib using '{}' path [{}]", m_libFile, SystemError(hr));
                 return hr;
             }
             m_hModule = hModule;
@@ -159,7 +162,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         // Last chance, try loading the file
         if (auto [hr, hModule] = LoadThisLibrary(strNewLibRef); hModule == NULL || FAILED(hr))
         {
-            Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", strNewLibRef, hr);
+            Log::Debug(L"Failed to load extension lib using '{}' path [{}]", strNewLibRef, SystemError(hr));
             return hr;
         }
         else
@@ -173,7 +176,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         if (!GetModuleFileName(m_hModule, szFullPath, MAX_PATH))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strNewLibRef, SystemError(hr));
+            Log::Debug(L"Failed to get file path for extension lib '{}' [{}]", strNewLibRef, SystemError(hr));
             return hr;
         }
         m_libFile = szFullPath;
@@ -186,7 +189,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         auto [hr, hModule] = LoadThisLibrary(strFileRef);
         if (hModule == NULL || FAILED(hr))
         {
-            Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", strFileRef, hr);
+            Log::Debug(L"Failed to load extension lib using '{}' path [{}]", strFileRef, SystemError(hr));
             return hr;
         }
         else
@@ -200,7 +203,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
     if (!GetModuleFileName(m_hModule, szFullPath, MAX_PATH))
     {
         auto hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strFileRef, hr);
+        Log::Debug(L"Failed to get file path for extension lib '{}' [{}]", strFileRef, SystemError(hr));
         return hr;
     }
     m_libFile = szFullPath;
@@ -266,11 +269,11 @@ FARPROC Orc::ExtensionLibrary::GetEntryPoint(const CHAR* szFunctionName, bool bM
 
         if (bMandatory)
         {
-            Log::Error("Failed GetProcAddress on '{}' (code: {:#x})", szFunctionName, hr);
+            Log::Error("Failed GetProcAddress on '{}' [{}]", szFunctionName, SystemError(hr));
         }
         else
         {
-            Log::Debug("Failed GetProcAddress on '{}' (code: {:#x})", szFunctionName, hr);
+            Log::Debug("Failed GetProcAddress on '{}' [{}]", szFunctionName, SystemError(hr));
         }
         return nullptr;
     }
@@ -357,7 +360,7 @@ HRESULT ExtensionLibrary::Load(std::optional<std::filesystem::path> tempDir)
         }
         else
         {
-            Log::Debug(L"TryLoad failed for reference '{}' (code: {:#x})", ref, hr);
+            Log::Debug(L"TryLoad failed for reference '{}' [{}]", ref, SystemError(hr));
             last_hr = hr;
         }
     }

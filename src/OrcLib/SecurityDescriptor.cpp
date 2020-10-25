@@ -22,7 +22,7 @@ HRESULT SecurityDescriptor::ConvertFromSDDL(LPCWSTR szSDDL)
     if (!ConvertStringSecurityDescriptorToSecurityDescriptor(szSDDL, SDDL_REVISION_1, &retval, &ulLength))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to convert string '{}' into a valid security descriptor (code: {:#x})", szSDDL, hr);
+        Log::Error(L"Failed to convert string '{}' into a valid security descriptor [{}]", szSDDL, SystemError(hr));
         return hr;
     }
 

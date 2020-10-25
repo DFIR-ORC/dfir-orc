@@ -41,12 +41,12 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(configitem[USNINFO_LOCATIONS])))
     {
-        Log::Error("Failed to get locations definition from config (code: {:#x})", hr);
+        Log::Error("Failed to get locations definition from config [{}]", SystemError(hr));
         return hr;
     }
     if (FAILED(hr = config.locs.AddKnownLocations(configitem[USNINFO_KNOWNLOCATIONS])))
     {
-        Log::Error("Failed to get known locations (code: {:#x})", hr);
+        Log::Error("Failed to get known locations [{}]", SystemError(hr));
         return hr;
     }
 
@@ -140,9 +140,9 @@ HRESULT Main::CheckConfiguration()
         if (FAILED(hr = ::VerifyDirectoryExists(config.output.Path.c_str())))
         {
             Log::Error(
-                L"Specified file information output directory '{}' is not a directory (code: {:#x})",
+                L"Specified file information output directory '{}' is not a directory [{}]",
                 config.output.Path,
-                hr);
+                SystemError(hr));
             return hr;
         }
     }

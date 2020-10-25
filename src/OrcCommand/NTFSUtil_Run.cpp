@@ -59,7 +59,7 @@ HANDLE OpenVolume(const std::wstring& volume)
 
     if (hVolume == INVALID_HANDLE_VALUE)
     {
-        Log::Debug(L"Failed to open volume: '{}' (code: {:#x})", volume, LastWin32Error());
+        Log::Debug(L"Failed to open volume: '{}' [{}]", volume, LastWin32Error());
         return INVALID_HANDLE_VALUE;
     }
 
@@ -88,7 +88,7 @@ HRESULT GetUSNJournalConfiguration(HANDLE hVolume, DWORDLONG& maximumSize, DWORD
                 Log::Error("An attempt is made to read USN journal while being inactive");
                 break;
             default:
-                Log::Error("Failed FSCTL_QUERY_USN_JOURNAL (code: {:#x})", hr);
+                Log::Error("Failed FSCTL_QUERY_USN_JOURNAL [{}]", SystemError(hr));
         }
 
         return hr;
@@ -145,7 +145,7 @@ HRESULT ConfigureUSNJournal(HANDLE hVolume, DWORDLONG dwlMinSize, DWORDLONG dwlM
                 Log::Error("An attempt is made to modify the journal while a journal deletion is in process");
                 break;
             default:
-                Log::Error("Failed FSCTL_QUERY_USN_JOURNAL (code: {:#x})", hr);
+                Log::Error("Failed FSCTL_QUERY_USN_JOURNAL [{}]", SystemError(hr));
         }
 
         return hr;
@@ -164,7 +164,7 @@ HRESULT Main::CommandUSN()
     Guard::FileHandle hVolume = OpenVolume(config.strVolume);
     if (hVolume == INVALID_HANDLE_VALUE)
     {
-        Log::Critical(L"Failed to open volume: '{}' (code: {:#x})", config.strVolume, hr);
+        Log::Critical(L"Failed to open volume: '{}' [{}]", config.strVolume, SystemError(hr));
         return E_FAIL;
     }
 
@@ -176,7 +176,7 @@ HRESULT Main::CommandUSN()
         if (FAILED(hr))
         {
             Log::Critical(
-                L"Failed to obtain USN configuration values for volume: '{}' (code: {:#x})", config.strVolume, hr);
+                L"Failed to obtain USN configuration values for volume: '{}' [{}]", config.strVolume, SystemError(hr));
             return hr;
         }
 
@@ -196,7 +196,7 @@ HRESULT Main::CommandUSN()
         hr = ::ConfigureUSNJournal(hVolume, config.dwlMinSize, config.dwlMaxSize, config.dwlAllocDelta);
         if (FAILED(hr))
         {
-            Log::Critical(L"Failed to configure USN journal for volume '{}' (code: {:#x})", config.strVolume, hr);
+            Log::Critical(L"Failed to configure USN journal for volume '{}' [{}]", config.strVolume, SystemError(hr));
             return hr;
         }
 
@@ -208,9 +208,9 @@ HRESULT Main::CommandUSN()
             if (FAILED(hr))
             {
                 Log::Critical(
-                    L"Failed to obtain new USN configuration values for volume: '{}' (code: {:#x})",
+                    L"Failed to obtain new USN configuration values for volume: '{}' [{}]",
                     config.strVolume,
-                    hr);
+                    SystemError(hr));
                 return hr;
             }
 
@@ -232,7 +232,7 @@ HRESULT Main::CommandEnum()
     HRESULT hr = locations.EnumerateLocations();
     if (FAILED(hr))
     {
-        Log::Error("Failed to enumerate locations (code: {:#x})", hr);
+        Log::Error("Failed to enumerate locations [{}]", SystemError(hr));
         return hr;
     }
 
@@ -267,7 +267,7 @@ HRESULT Main::CommandLoc()
         hr = pt.LoadPartitionTable(canonical.c_str());
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to load partition table for '{}' (code: {:#x})", canonical, hr);
+            Log::Error(L"Failed to load partition table for '{}' [{}]", canonical, SystemError(hr));
             return hr;
         }
 
@@ -279,7 +279,7 @@ HRESULT Main::CommandLoc()
     hr = locationSet.AddLocations(config.strVolume.c_str(), addedLocations, false);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to parse location '{}' (code: {:#x})", config.strVolume, hr);
+        Log::Error(L"Failed to parse location '{}' [{}]", config.strVolume, SystemError(hr));
         return hr;
     }
 
@@ -291,14 +291,14 @@ HRESULT Main::CommandLoc()
         auto reader = location->GetReader();
         if (reader == nullptr)
         {
-            Log::Debug(L"Failed to retrieve reader for '{}' (code: {:#x})", location->GetLocation(), hr);
+            Log::Debug(L"Failed to retrieve reader for '{}' [{}]", location->GetLocation(), SystemError(hr));
             continue;
         }
 
         HRESULT hr = reader->LoadDiskProperties();
         if (FAILED(hr))
         {
-            Log::Debug(L"Failed to load disk properties for '{}' (code: {:#x})", location->GetLocation(), hr);
+            Log::Debug(L"Failed to load disk properties for '{}' [{}]", location->GetLocation(), SystemError(hr));
             continue;
         }
 
@@ -314,7 +314,7 @@ HRESULT Main::CommandLoc()
             hr = walker.Initialize(location);
             if (FAILED(hr))
             {
-                Log::Debug(L"Failed to parse MFT for '{}' (code: {:#x})", location->GetLocation(), hr);
+                Log::Debug(L"Failed to parse MFT for '{}' [{}]", location->GetLocation(), SystemError(hr));
                 continue;
             }
 
@@ -370,7 +370,7 @@ HRESULT Main::CommandRecord(ULONGLONG ullRecord)
     hr = loc->GetReader()->LoadDiskProperties();
     if (FAILED(hr))
     {
-        Log::Error(L"Unable to load disk properties for location: '{}' (code: {:#x})", loc->GetLocation(), hr);
+        Log::Error(L"Unable to load disk properties for location: '{}' [{}]", loc->GetLocation(), SystemError(hr));
         return hr;
     }
 
@@ -419,7 +419,7 @@ HRESULT Main::CommandRecord(ULONGLONG ullRecord)
         }
         else
         {
-            Log::Error("Failed during MFT walk on volume (code: {:#x})", hr);
+            Log::Error("Failed during MFT walk on volume [{}]", SystemError(hr));
         }
     }
 
@@ -460,7 +460,7 @@ HRESULT Main::CommandMFT()
         hr = volreader->LoadDiskProperties();
         if (FAILED(hr))
         {
-            Log::Error(L"Unable to load disk properties for location: '{}' (code: {:#x})", loc->GetLocation(), hr);
+            Log::Error(L"Unable to load disk properties for location: '{}' [{}]", loc->GetLocation(), SystemError(hr));
             continue;
         }
 
@@ -508,7 +508,7 @@ HRESULT Main::CommandMFT()
             // hr = volreader->Read(extent.DiskOffset, buffer, 1024, ullBytesRead);
             // if (FAILED(hr))
             //{
-            //    Log::Error(L"Failed to read first MFT record in extent (code: {:#x})", hr);
+            //    Log::Error(L"Failed to read first MFT record in extent [{}]", SystemError(hr));
             //    continue;
             //}
 
@@ -541,7 +541,7 @@ HRESULT Main::CommandMFT()
         hr = walker.Initialize(loc);
         if (FAILED(hr))
         {
-            Log::Warn(L"Could not initialize walker for volume: '{}' (code: {:#x})", loc->GetIdentifier(), hr);
+            Log::Warn(L"Could not initialize walker for volume: '{}' [{}]", loc->GetIdentifier(), SystemError(hr));
             continue;
         }
 
@@ -556,7 +556,7 @@ HRESULT Main::CommandMFT()
         hr = walker.Walk(callbacks);
         if (FAILED(hr))
         {
-            Log::Warn(L"Could not walk volume: '{}' (code: {:#x})", loc->GetIdentifier(), hr);
+            Log::Warn(L"Could not walk volume: '{}' [{}]", loc->GetIdentifier(), SystemError(hr));
             continue;
         }
 
@@ -593,7 +593,7 @@ HRESULT Main::CommandHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize)
         hr = loc->GetReader()->LoadDiskProperties();
         if (FAILED(hr))
         {
-            Log::Error(L"Unable to load disk properties for location: '{}' (code: {:#x})", loc->GetLocation(), hr);
+            Log::Error(L"Unable to load disk properties for location: '{}' [{}]", loc->GetLocation(), SystemError(hr));
             return hr;
         }
 
@@ -613,7 +613,7 @@ HRESULT Main::CommandHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize)
     hr = volreader->LoadDiskProperties();
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to load disk properties for volume: '{}' (code: {:#x})", config.strVolume, hr);
+        Log::Error(L"Failed to load disk properties for volume: '{}' [{}]", config.strVolume, SystemError(hr));
     }
 
     if (volreader->GetBytesPerCluster() == 0)
@@ -634,7 +634,7 @@ HRESULT Main::CommandHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize)
         ZeroMemory(buffer.GetData(), buffer.GetCount());
         if (FAILED(hr = volreader->Read(dwlOffset, buffer, volreader->GetBytesPerCluster(), ullThisRead)))
         {
-            Log::Error(L"Failed to read volume '{}' (code: {:#x})", config.strVolume, hr);
+            Log::Error(L"Failed to read volume '{}' [{}]", config.strVolume, SystemError(hr));
             return hr;
         }
 
@@ -668,7 +668,7 @@ HRESULT Main::CommandVss()
     HRESULT hr = vss.EnumerateShadows(shadows);
     if (FAILED(hr))
     {
-        Log::Critical("Failed to list volume shadow copies (code: {:#x})", hr);
+        Log::Critical("Failed to list volume shadow copies [{}]", SystemError(hr));
         return hr;
     }
 
@@ -748,7 +748,7 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
     HRESULT hr = aSet.EnumerateLocations();
     if (FAILED(hr))
     {
-        Log::Critical(L"Failed to enumerate locations (code: {:#x})", hr);
+        Log::Critical(L"Failed to enumerate locations [{}]", SystemError(hr));
         return hr;
     }
 
@@ -758,7 +758,7 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
         hr = aSet.AddLocations(config.strVolume.c_str(), addedLocs);
         if (FAILED(hr))
         {
-            Log::Critical(L"Failed to add location '{}' (code: {:#x})", config.strVolume, hr);
+            Log::Critical(L"Failed to add location '{}' [{}]", config.strVolume, SystemError(hr));
             return hr;
         }
     }

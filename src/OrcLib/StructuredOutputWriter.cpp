@@ -223,7 +223,7 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
 
             if (auto hr = retval->SetOutput(stream); FAILED(hr))
             {
-                Log::Error(L"Failed to set output (code: {:#x})", hr);
+                Log::Error(L"Failed to set output [{}]", SystemError(hr));
                 return nullptr;
             }
             return retval;
@@ -253,7 +253,7 @@ StructuredOutput::Writer::GetWriter(const OutputSpec& outFile, std::unique_ptr<S
 
     if (auto hr = stream->WriteTo(outFile.Path.c_str()); FAILED(hr))
     {
-        Log::Error(L"Failed to open file '{}' for writing (code: {:#x})", outFile.Path, hr);
+        Log::Error(L"Failed to open file '{}' for writing [{}]", outFile.Path, SystemError(hr));
         return nullptr;
     }
     return GetWriter(stream, outFile.Type, std::move(pOptions));
@@ -281,7 +281,7 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
     auto hr = fileSpec.Configure(OutputSpec::Kind::StructuredFile, szOutputFile);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to configure output file for path '{}' (code: {:#x})", szOutputFile, hr);
+        Log::Error(L"Failed to configure output file for path '{}' [{}]", szOutputFile, SystemError(hr));
         return nullptr;
     }
 

@@ -280,7 +280,7 @@ HRESULT RegistryHive::LoadHive(ByteStream& HiveStream)
         free(m_pHiveBuffer);
         m_pHiveBuffer = nullptr;
         m_ulHiveBufferSize = 0L;
-        Log::Error("Error during hive header parsing (code: {:#x})", hr);
+        Log::Error("Error during hive header parsing [{}]", SystemError(hr));
         return hr;
     }
 
@@ -289,7 +289,7 @@ HRESULT RegistryHive::LoadHive(ByteStream& HiveStream)
         free(m_pHiveBuffer);
         m_pHiveBuffer = nullptr;
         m_ulHiveBufferSize = 0;
-        Log::Error("Error during hive hbin header parsing (code: {:#x})", hr);
+        Log::Error("Error during hive hbin header parsing [{}]", SystemError(hr));
         return hr;
     }
     return S_OK;
@@ -806,7 +806,7 @@ HRESULT RegistryHive::ParseLiRi(
     bSubkeyIsResident = true;
     if ((hr = CheckLiHeader(pRiLiHeader)) != S_OK)
     {
-        Log::Error("Key '{}': Li/ri header is invalid (code: {:#x})", CurrentKey->GetKeyName(), hr);
+        Log::Error("Key '{}': Li/ri header is invalid [{}]", CurrentKey->GetKeyName(), SystemError(hr));
         return hr;
     }
 

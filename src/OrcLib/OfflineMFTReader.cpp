@@ -61,7 +61,7 @@ HRESULT OfflineMFTReader::LoadDiskProperties()
         == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Could not open offline MFT file '{}' (code: {:#x})", m_szMFTFileName, hr);
+        Log::Error(L"Could not open offline MFT file '{}' [{}]", m_szMFTFileName, SystemError(hr));
         return hr;
     }
 

@@ -269,7 +269,7 @@ HRESULT MftRecordAttribute::GetStreams(
                 auto stream = make_shared<NTFSStream>();
                 if (FAILED(hr = stream->OpenStream(pVolReader, shared_from_this())))
                 {
-                    Log::Error("Failed to open NTFSStream (code: {:#x})", hr);
+                    Log::Error("Failed to open NTFSStream [{}]", SystemError(hr));
                     return hr;
                 }
                 dataStream = rawStream = stream;
@@ -291,7 +291,7 @@ HRESULT MftRecordAttribute::GetStreams(
                 auto stream = make_shared<NTFSStream>();
                 if (FAILED(hr = stream->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
-                    Log::Error(L"Failed to open NTFSStream (code: {:#x})", hr);
+                    Log::Error(L"Failed to open NTFSStream [{}]", SystemError(hr));
                     return hr;
                 }
                 dataStream = rawStream = stream;
@@ -308,14 +308,14 @@ HRESULT MftRecordAttribute::GetStreams(
                 auto rawdata = make_shared<NTFSStream>();
                 if (FAILED(hr = rawdata->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
-                    Log::Error(L"Failed to open NTFSStream (code: {:#x})", hr);
+                    Log::Error(L"Failed to open NTFSStream [{}]", SystemError(hr));
                     return hr;
                 }
 
                 auto datastream = make_shared<UncompressNTFSStream>();
                 if (FAILED(hr = datastream->Open(rawdata, 16 * pVolReader->GetBytesPerCluster())))
                 {
-                    Log::Error(L"Failed to open UncompressNTFSStream (code: {:#x})", hr);
+                    Log::Error(L"Failed to open UncompressNTFSStream [{}]", SystemError(hr));
                     return hr;
                 }
                 else if (hr == S_FALSE)
@@ -454,7 +454,7 @@ HRESULT MftRecordAttribute::GetHashInformation(
 
     if (FAILED(hr = stream->SetFilePointer(0LL, SEEK_SET, nullptr)))
     {
-        Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+        Log::Debug(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
         return hr;
     }
 
@@ -471,7 +471,7 @@ HRESULT MftRecordAttribute::GetHashInformation(
 
     if (FAILED(hr = stream->SetFilePointer(0LL, SEEK_SET, nullptr)))
     {
-        Log::Debug(L"Failed to seek pointer to 0 for data attribute (code: {:#x})", hr);
+        Log::Debug(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
         return hr;
     }
 

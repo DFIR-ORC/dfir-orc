@@ -57,7 +57,7 @@ HRESULT Main::Run()
         hr = m_outputs.Prepare(config.output);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to prepare archive for '{}' (code: {:#x})", config.output.Path, hr);
+            Log::Error(L"Failed to prepare archive for '{}' [{}]", config.output.Path, SystemError(hr));
             return hr;
         }
     }
@@ -68,7 +68,7 @@ HRESULT Main::Run()
     hr = m_outputs.GetWriters(config.output, L"ObjInfo");
     if (FAILED(hr))
     {
-        Log::Error("Failed to create objinfo output writers (code: {:#x})", hr);
+        Log::Error("Failed to create objinfo output writers [{}]", SystemError(hr));
         return hr;
     }
 
@@ -109,7 +109,7 @@ HRESULT Main::Run()
                 else
                 {
                     Log::Error(
-                        L"Failed to enumerate objects in directory '{}' (code: {:#x})", dir.first.m_Directory, hr);
+                        L"Failed to enumerate objects in directory '{}' [{}]", dir.first.m_Directory, SystemError(hr));
                     return hr;
                 }
                 break;
@@ -126,7 +126,7 @@ HRESULT Main::Run()
                 else
                 {
                     Log::Error(
-                        L"Failed to enumerate objects in directory '{}' (code: {:#x})", dir.first.m_Directory, hr);
+                        L"Failed to enumerate objects in directory '{}' [{}]", dir.first.m_Directory, SystemError(hr));
                     return hr;
                 }
 

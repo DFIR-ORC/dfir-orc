@@ -275,7 +275,7 @@ std::vector<ImportItem> Main::GetInputFiles(const Main::InputItem& input)
     const auto isDirectory = fs::is_directory(input.path, ec);
     if (ec)
     {
-        Log::Warn(L"Invalid input '{}' specified (code: {:#x})", input.path, ec.value());
+        Log::Warn(L"Invalid input '{}' specified [{}]", input.path, ec.value());
         return {};
     }
 
@@ -291,7 +291,7 @@ std::vector<ImportItem> Main::GetInputFiles(const Main::InputItem& input)
 
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to add input files for '{}' (code: {:#x})", input.path, hr);
+        Log::Error(L"Failed to add input files for '{}' [{}]", input.path, SystemError(hr));
         return {};
     }
 
@@ -329,7 +329,7 @@ HRESULT Main::Run()
     hr = importAgent->InitializeOutputs(config.output, OutputSpec(), config.tempOutput);
     if (FAILED(hr))
     {
-        Log::Error("Failed to initialize import agent output (code: {:#x})", hr);
+        Log::Error("Failed to initialize import agent output [{}]", SystemError(hr));
         return hr;
     }
 

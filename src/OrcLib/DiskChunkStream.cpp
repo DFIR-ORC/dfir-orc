@@ -24,7 +24,9 @@ HRESULT __stdcall DiskChunkStream::Open()
     else
     {
         Log::Error(
-            L"DiskChunkStream::Open: Failed to open a disk for read access : {} (code: {:#x})", m_DiskInterface, hr);
+            L"DiskChunkStream::Open: Failed to open a disk for read access : {} [{}]",
+            m_DiskInterface,
+            SystemError(hr));
     }
     return hr;
 }
@@ -132,10 +134,10 @@ HRESULT __stdcall DiskChunkStream::Read(
             // Free the memory for the buffer, m_cBuf.GetData() will return NULL
             cBuf.RemoveAll();
             Log::Error(
-                L"DiskChunkStream::Read: Failed to read at offset {} ({}) (code: {:#x})",
+                L"DiskChunkStream::Read: Failed to read at offset {} ({}) [{}]",
                 m_offset + m_chunkPointer - m_deltaFromDiskToChunkPointer,
                 m_DiskInterface,
-                hr);
+                SystemError(hr));
             return hr;
         }
     }
@@ -249,10 +251,10 @@ HRESULT __stdcall DiskChunkStream::SetFilePointer(
     if (FAILED(hr = m_diskReader->Seek(diskOffset, NULL, FILE_BEGIN)))
     {
         Log::Error(
-            L"DiskChunkStream::SetFilePointer: Failed to seek at offset {} ({}) (code: {:#x})",
+            L"DiskChunkStream::SetFilePointer: Failed to seek at offset {} ({}) [{}]",
             diskOffset.QuadPart,
             m_DiskInterface,
-            hr);
+            SystemError(hr));
         return hr;
     }
 

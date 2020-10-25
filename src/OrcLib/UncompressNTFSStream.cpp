@@ -209,7 +209,8 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
         ULONGLONG ullThisRead = 0LL;
         if (FAILED(hr = m_pChainedStream->Read(buffer.GetData() + ullRead, buffer.GetCount() - ullRead, &ullThisRead)))
         {
-            Log::Error(L"Failed to read {} bytes from chained stream (code: {:#x})", buffer.GetCount() - ullRead, hr);
+            Log::Error(
+                L"Failed to read {} bytes from chained stream [{}]", buffer.GetCount() - ullRead, SystemError(hr));
             return hr;
         }
         if (ullThisRead == 0LL)
@@ -247,9 +248,9 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
                     {
                         Log::Warn(
                             L"Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data "
-                            L"(code: {:#x})",
+                            L"[{}]",
                             info.comp_len,
-                            hr);
+                            SystemError(hr));
                         CopyMemory(
                             (LPBYTE)uncompressedData.GetData() + uncomp_processed,
                             (char*)buffer.GetData() + uncomp_processed,
@@ -285,10 +286,9 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
                     // If decompression failed and CUs not compressed information is not available, we assume the CU was
                     // not compressed
                     Log::Warn(
-                        "Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data (code: "
-                        "{:#x})",
+                        "Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data [{}]",
                         info.comp_len,
-                        hr);
+                        SystemError(hr));
                     CopyMemory(
                         (LPBYTE)uncompressedData.GetData() + uncomp_processed,
                         (char*)buffer.GetData() + uncomp_processed,
@@ -322,9 +322,9 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
                     {
                         Log::Warn(
                             L"Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data "
-                            L"(code: {:#x})",
+                            L"[{}]",
                             info.comp_len,
-                            hr);
+                            SystemError(hr));
                         CopyMemory(
                             (LPBYTE)uncompressedData.GetData() + uncomp_processed,
                             (char*)buffer.GetData() + uncomp_processed,

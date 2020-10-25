@@ -47,7 +47,7 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         == SetFilePointer(m_pVolReader->GetHandle(), Start.LowPart, &Start.HighPart, FILE_BEGIN))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Could not seek to offset {} in MFT file (code: {:#x})", Start.LowPart, hr);
+        Log::Error(L"Could not seek to offset {} in MFT file [{}]", Start.LowPart, SystemError(hr));
         return hr;
     }
 
@@ -68,13 +68,13 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         if (!ReadFile(m_pVolReader->GetHandle(), buffer.GetData(), m_pVolReader->GetBytesPerFRS(), &dwBytesRead, NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Could not read in MFT file (code: {:#x})", hr);
+            Log::Error(L"Could not read in MFT file [{}]", SystemError(hr));
             return hr;
         }
 
         if (dwBytesRead != m_pVolReader->GetBytesPerFRS())
         {
-            Log::Debug(L"Reached end of offline MFT (code: {:#x})", hr);
+            Log::Debug(L"Reached end of offline MFT [{}]", SystemError(hr));
             return S_OK;
         }
 
@@ -96,11 +96,11 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
-                Log::Debug("INFO: stopping enumeration (code: {:#x})", hr);
+                Log::Debug("INFO: stopping enumeration [{}]", SystemError(hr));
                 return hr;
             }
 
-            Log::Warn("Add Record Callback failed (code: {:#x})", hr);
+            Log::Warn("Add Record Callback failed [{}]", SystemError(hr));
         }
 
         ullCurrentIndex++;
@@ -151,7 +151,7 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
             == SetFilePointer(m_pFetchReader->GetHandle(), Index.LowPart, &Index.HighPart, FILE_BEGIN))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Could not seek to offset {} in MFT file (code: {:#x})", Index.QuadPart, hr);
+            Log::Error(L"Could not seek to offset {} in MFT file [{}]", Index.QuadPart, SystemError(hr));
             continue;
         }
 
@@ -164,7 +164,7 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
                 NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Could not read {} bytes in MFT file (code: {:#x})", m_pFetchReader->GetBytesPerFRS(), hr);
+            Log::Error(L"Could not read {} bytes in MFT file [{}]", m_pFetchReader->GetBytesPerFRS(), SystemError(hr));
             continue;
         }
 
@@ -209,12 +209,12 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
         {
             if (hr == E_OUTOFMEMORY)
             {
-                Log::Error(L"Add Record Callback failed, not enough memory to continue (code: {:#x})", hr);
+                Log::Error(L"Add Record Callback failed, not enough memory to continue [{}]", SystemError(hr));
                 return hr;
             }
             else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
-                Log::Debug(L"Add Record Callback asks for enumeration to stop... (code: {:#x})", hr);
+                Log::Debug(L"Add Record Callback asks for enumeration to stop... [{}]", SystemError(hr));
                 return hr;
             }
             Log::Debug(L"WARNING: Add Record Callback failed");

@@ -166,7 +166,7 @@ HRESULT TaskTracker::LoadNTrackResults()
     if (hDevice == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("NTrack is not installed or not started. Failed CreateFile (code: {:#x})", hr);
+        Log::Debug("NTrack is not installed or not started. Failed CreateFile [{}]", SystemError(hr));
         return hr;
     }
     //
@@ -178,7 +178,7 @@ HRESULT TaskTracker::LoadNTrackResults()
     if (!TkResults)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed VirtualAlloc (code: {:#x})", hr);
+        Log::Error("Failed VirtualAlloc [{}]", SystemError(hr));
         CloseHandle(hDevice);
         return hr;
     }
@@ -189,7 +189,7 @@ HRESULT TaskTracker::LoadNTrackResults()
     if (!DeviceIoControl(hDevice, (DWORD)IOCTL_GET_DATA, NULL, 0, TkResults, sizeof(TRACEDATA), &bytesReturned, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed DeviceIoControl (code: {:#x})", hr);
+        Log::Error("Failed DeviceIoControl [{}]", SystemError(hr));
         VirtualFree(TkResults, 0L, MEM_RELEASE);
         CloseHandle(hDevice);
         return hr;
@@ -257,10 +257,10 @@ HRESULT TaskTracker::SaveAutoRuns(const std::shared_ptr<ByteStream>& stream)
             if (FAILED(hr = xmlstream->CopyTo(stream, &cbWritten)))
             {
                 Log::Error(
-                    "Did not write complete data for autoruns (written: {}, expected: {}, code: {:#x})",
+                    "Did not write complete data for autoruns (written: {}, expected: {}, [{}])",
                     cbWritten,
                     xmlstream->GetSize(),
-                    hr);
+                    SystemError(hr));
                 return hr;
             }
 
@@ -565,7 +565,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
             wstring new_path;
             if (FAILED(hr = ReParsePath(info.strModule, new_path)))
             {
-                Log::Error(L"Failed while reparsing '{}' path (code: {:#x})", info.strModule, hr);
+                Log::Error(L"Failed while reparsing '{}' path [{}]", info.strModule, SystemError(hr));
             }
             else if (hr == S_OK)
                 info.strModule = new_path;
@@ -599,7 +599,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
                 wstring new_path;
                 if (FAILED(hr = ReParsePath(item.ImagePath, new_path)))
                 {
-                    Log::Error(L"Failed while reparsing '{}' path (code: {:#x})", item.ImagePath, hr);
+                    Log::Error(L"Failed while reparsing '{}' path [{}]", item.ImagePath, SystemError(hr));
                 }
                 else
                 {
@@ -762,7 +762,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
 
         if (FAILED(hr = m_rc.GetUniqueModules(modules, MODULETYPE_ALL)))
         {
-            Log::Error("Failed to enumerate loaded modules (code: {:#x})", hr);
+            Log::Error("Failed to enumerate loaded modules [{}]", SystemError(hr));
             return hr;
         }
 
@@ -771,7 +771,7 @@ HRESULT TaskTracker::CoalesceResults(vector<shared_ptr<SampleItem>>& samplesinfo
             wstring new_path;
             if (FAILED(hr = ReParsePath(item.strModule, new_path)))
             {
-                Log::Error(L"Failed while reparsing '{}' path (code: {:#x})", item.strModule, hr);
+                Log::Error(L"Failed while reparsing '{}' path [{}]", item.strModule, SystemError(hr));
             }
             else if (hr == S_OK)
                 item.strModule = new_path;
@@ -910,7 +910,7 @@ HRESULT TaskTracker::CheckSampleSignatureStatus(const std::shared_ptr<SampleItem
 
     if (FAILED(hr = m_authenticode.Verify(sample->FullPath.c_str(), data)))
     {
-        Log::Error(L"Verify signature failed for '{}' (code: {:#x})", sample->FullPath, hr);
+        Log::Error(L"Verify signature failed for '{}' [{}]", sample->FullPath, SystemError(hr));
     }
     else
     {

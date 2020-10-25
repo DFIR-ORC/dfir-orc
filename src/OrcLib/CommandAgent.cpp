@@ -104,7 +104,7 @@ CommandAgent::PrepareRedirection(const shared_ptr<CommandExecute>& cmd, const Co
 
     if (FAILED(hr = stream->Open(m_TempDir, L"CommandRedirection", 4 * 1024 * 1024)))
     {
-        Log::Error(L"Failed to create temporary stream (code: {:#x})", hr);
+        Log::Error(L"Failed to create temporary stream [{}]", SystemError(hr));
         return nullptr;
     }
 
@@ -131,7 +131,7 @@ CommandAgent::PrepareRedirection(const shared_ptr<CommandExecute>& cmd, const Co
         HRESULT hr2 = E_FAIL;
         if (FAILED(hr2 = retval->CreatePipe(output.Keyword.c_str())))
         {
-            Log::Error("Could not create pipe for process redirection (code: {:#x})", hr2);
+            Log::Error("Could not create pipe for process redirection [{}]", SystemError(hr2));
             return nullptr;
         }
     }
@@ -307,7 +307,8 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = ApplyPattern(parameter.Keyword, L"", L"", strFileName)))
                     {
-                        Log::Error(L"Failed to apply parttern on output name '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(
+                            L"Failed to apply parttern on output name '{}' [{}]", parameter.Name, SystemError(hr));
                         return;
                     }
 
@@ -327,7 +328,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = GetOutputFile(parameter.Name.c_str(), strInterpretedName)))
                     {
-                        Log::Error(L"GetOutputFile failed, skipping file '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(L"GetOutputFile failed, skipping file '{}' [{}]", parameter.Name, SystemError(hr));
                         return;
                     }
 
@@ -335,7 +336,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = ApplyPattern(strInterpretedName, L"", L"", strFileName)))
                     {
-                        Log::Error(L"Failed to apply parttern on '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(L"Failed to apply parttern on '{}' [{}]", parameter.Name, SystemError(hr));
                         return;
                     }
 
@@ -349,7 +350,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = UtilGetUniquePath(szTempDir, strFileName.c_str(), strFilePath)))
                     {
-                        Log::Error(L"UtilGetUniquePath failed, skipping file '{}' (code: {:#x})", strFileName, hr);
+                        Log::Error(L"UtilGetUniquePath failed, skipping file '{}' [{}]", strFileName, SystemError(hr));
                         return;
                     }
                     else
@@ -375,7 +376,8 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = GetOutputFile(parameter.Name.c_str(), strInterpretedName)))
                     {
-                        Log::Error(L"GetOutputFile failed, skipping directory '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(
+                            L"GetOutputFile failed, skipping directory '{}' [{}]", parameter.Name, SystemError(hr));
                         return;
                     }
 
@@ -389,7 +391,8 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     if (FAILED(hr = ApplyPattern(strInterpretedName, L"", L"", strDirName)))
                     {
-                        Log::Error(L"Failed to apply parttern on output name '{}' (code: {:#x})", parameter.Name, hr);
+                        Log::Error(
+                            L"Failed to apply parttern on output name '{}' [{}]", parameter.Name, SystemError(hr));
                         return;
                     }
 
@@ -397,7 +400,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     if (FAILED(hr = UtilGetUniquePath(szTempDir, strDirName.c_str(), strDirPath)))
                     {
                         Log::Error(
-                            L"UtilGetUniquePath failed, skipping directory '{}':  (code: {:#x})", strDirName, hr);
+                            L"UtilGetUniquePath failed, skipping directory '{}':  [{}]", strDirName, SystemError(hr));
                         return;
                     }
 
@@ -409,7 +412,9 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                         {
                             hr = HRESULT_FROM_WIN32(GetLastError());
                             Log::Error(
-                                L"Could not create directory, skipping directory '{}' (code: {:#x})", strDirPath, hr);
+                                L"Could not create directory, skipping directory '{}' [{}]",
+                                strDirPath,
+                                SystemError(hr));
                             return;
                         }
                     }
@@ -436,7 +441,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                         if (FAILED(hr = m_Ressources.GetResource(parameter.Name, parameter.Keyword, extracted)))
                         {
-                            Log::Error(L"Failed to extract ressource '{}' (code: {:#x})", parameter.Name, hr);
+                            Log::Error(L"Failed to extract ressource '{}' [{}]", parameter.Name, SystemError(hr));
                             return;
                         }
                         if (FAILED(hr = retval->AddExecutableToRun(extracted)))
@@ -461,7 +466,8 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                                     m_TempDir,
                                     extracted)))
                         {
-                            Log::Error(L"Failed to extract ressource '{}' from cab (code: {:#x})", parameter.Name, hr);
+                            Log::Error(
+                                L"Failed to extract ressource '{}' from cab [{}]", parameter.Name, SystemError(hr));
                             return;
                         }
                         wstring Arg;
@@ -606,7 +612,8 @@ HRESULT CommandAgent::ExecuteNextCommand()
                     WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error(L"Could not register for process '{}' termination (code: {:#x})", command->GetKeyword(), hr);
+                Log::Error(
+                    L"Could not register for process '{}' termination [{}]", command->GetKeyword(), SystemError(hr));
                 return hr;
             }
 
@@ -639,7 +646,7 @@ DWORD WINAPI CommandAgent::JobObjectNotificationRoutine(__in LPVOID lpParameter)
             if (err != ERROR_INVALID_HANDLE && err != ERROR_ABANDONED_WAIT_0)
             {
                 // Error invalid handle "somewhat" expected. Log the others
-                Log::Error(L"Failed GetQueuedCompletionStatus (code: {:#x})", Win32Error(err));
+                Log::Error(L"Failed GetQueuedCompletionStatus [{}]", Win32Error(err));
             }
 
             return 0;
@@ -694,7 +701,7 @@ void CommandAgent::run()
     m_hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, (ULONG_PTR)this, 0);
     if (m_hCompletionPort == NULL)
     {
-        Log::Error(L"Failed to create IO Completion port for job object (code: {:#x})", m_Keyword, LastWin32Error());
+        Log::Error(L"Failed to create IO Completion port for job object [{}]", m_Keyword, LastWin32Error());
         done();
         return;
     }
@@ -788,14 +795,14 @@ void CommandAgent::run()
 
     if (!m_Job.IsValid())
     {
-        Log::Error(L"Failed to create '{}' job object (code: {:#x})", m_Keyword, LastWin32Error());
+        Log::Error(L"Failed to create '{}' job object [{}]", m_Keyword, LastWin32Error());
         done();
         return;
     }
 
     if (FAILED(hr = m_Job.AssociateCompletionPort(m_hCompletionPort, this)))
     {
-        Log::Error(L"Failed to associate job object with completion port '{}' (code: {:#x})", m_Keyword, hr);
+        Log::Error(L"Failed to associate job object with completion port '{}' [{}]", m_Keyword, SystemError(hr));
         done();
         return;
     }
@@ -811,14 +818,14 @@ void CommandAgent::run()
             if (m_bLimitsMUSTApply)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError()),
-                Log::Error("Failed to set basic UI restrictions on job object (code: {:#x})", hr);
+                Log::Error("Failed to set basic UI restrictions on job object [{}]", SystemError(hr));
                 done();
                 return;
             }
             else
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Warn("Failed to set basic UI restrictions on job object (code: {:#x})", hr);
+                Log::Warn("Failed to set basic UI restrictions on job object [{}]", SystemError(hr));
             }
         }
     }
@@ -833,7 +840,7 @@ void CommandAgent::run()
                 sizeof(JOBOBJECT_END_OF_JOB_TIME_INFORMATION),
                 NULL))
         {
-            Log::Error("Failed to retrieve end of job behavior on job object (code: {:#x})", LastWin32Error());
+            Log::Error("Failed to retrieve end of job behavior on job object [{}]", LastWin32Error());
             done();
             return;
         }
@@ -849,8 +856,7 @@ void CommandAgent::run()
         if (!SetInformationJobObject(m_Job.GetHandle(), JobObjectEndOfJobTimeInformation, &joeojti, sizeof(joeojti)))
         {
             Log::Warn(
-                L"Failed to set end of job behavior (to post at end of job) on job object (code: {:#x})",
-                LastWin32Error());
+                L"Failed to set end of job behavior (to post at end of job) on job object [{}]", LastWin32Error());
         }
     }
 
@@ -875,14 +881,14 @@ void CommandAgent::run()
                 if (m_bLimitsMUSTApply)
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError()),
-                    Log::Error("Failed to set CPU Rate limits on job object (code: {:#x})", hr);
+                    Log::Error("Failed to set CPU Rate limits on job object [{}]", SystemError(hr));
                     done();
                     return;
                 }
                 else
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Warn(L"Failed to CPU Rate limits on job object (code: {:#x})", hr);
+                    Log::Warn(L"Failed to CPU Rate limits on job object [{}]", SystemError(hr));
                 }
             }
             else
@@ -893,7 +899,8 @@ void CommandAgent::run()
         else
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Warn(L"CPU Rate limit: this Windows version does not support this feature (<6.2) (code: {:#x})", hr);
+            Log::Warn(
+                L"CPU Rate limit: this Windows version does not support this feature (<6.2) [{}]", SystemError(hr));
         }
     }
 
@@ -908,14 +915,14 @@ void CommandAgent::run()
             if (m_bLimitsMUSTApply)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error(L"Failed to set extended limits on job object (code: {:#x})", hr);
+                Log::Error(L"Failed to set extended limits on job object [{}]", SystemError(hr));
                 done();
                 return;
             }
             else
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Warn(L"Failed to set extended limits on job object (code: {:#x})", hr);
+                Log::Warn(L"Failed to set extended limits on job object [{}]", SystemError(hr));
             }
         }
     }
@@ -934,7 +941,7 @@ void CommandAgent::run()
             &returnedLength))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to obtain extended limits on job object (code: {:#x})", hr);
+        Log::Error(L"Failed to obtain extended limits on job object [{}]", SystemError(hr));
         done();
         return;
     }
@@ -963,7 +970,7 @@ void CommandAgent::run()
                 sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to set extended limits on job object (code: {:#x})", hr);
+            Log::Error(L"Failed to set extended limits on job object [{}]", SystemError(hr));
             done();
             return;
         }
@@ -973,7 +980,7 @@ void CommandAgent::run()
     if (!QueueUserWorkItem(JobObjectNotificationRoutine, m_hCompletionPort, WT_EXECUTEDEFAULT))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to queue user work item for completion port (code: {:#x})", m_Keyword, hr);
+        Log::Error(L"Failed to queue user work item for completion port [{}]", m_Keyword, SystemError(hr));
         done();
         return;
     }
@@ -1074,7 +1081,7 @@ void CommandAgent::run()
                 if (!TerminateJobObject(m_Job.GetHandle(), (UINT)-1))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Error(L"Failed to terminate job object '{}' (code: {:#x})", request->Keyword(), hr);
+                    Log::Error(L"Failed to terminate job object '{}' [{}]", request->Keyword(), SystemError(hr));
                 }
                 SendResult(CommandNotification::NotifyTerminateAll());
             }
@@ -1117,7 +1124,7 @@ void CommandAgent::run()
 
         if (FAILED(hr = ExecuteNextCommand()))
         {
-            Log::Error(L"Failed to execute next command (code: {:#x})", hr);
+            Log::Error(L"Failed to execute next command [{}]", SystemError(hr));
         }
 
         if (m_bStopping && m_RunningCommands.size() == 0 && m_CommandQueue.empty())

@@ -111,7 +111,7 @@ HRESULT USNJournalWalkerOffline::EnumJournal(const IUSNJournalWalker::Callbacks&
 
     if (FAILED(hr = walk.Initialize(locations.begin()->second, true)))
     {
-        Log::Error(L"Failed during MFT walk initialisation (code: {:#x})", hr);
+        Log::Error(L"Failed during MFT walk initialisation [{}]", SystemError(hr));
         return hr;
     }
 
@@ -161,7 +161,7 @@ HRESULT USNJournalWalkerOffline::EnumJournal(const IUSNJournalWalker::Callbacks&
         }
         else
         {
-            Log::Error(L"Failed during MFT walk (code: {:#x})", hr);
+            Log::Error(L"Failed during MFT walk [{}]", SystemError(hr));
         }
         return hr;
     }

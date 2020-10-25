@@ -29,7 +29,7 @@ HRESULT Main::Run()
     HRESULT hr = loc_set.EnumerateLocations();
     if (FAILED(hr))
     {
-        Log::Critical(L"Failed to enumerate locations (code: {:#x})", hr);
+        Log::Critical(L"Failed to enumerate locations [{}]", SystemError(hr));
         return hr;
     }
 
@@ -51,7 +51,7 @@ HRESULT Main::Run()
 
     if (FAILED(hr))
     {
-        Log::Critical(L"Failed to open '{}' to read data (code: {:#x})", config.strIF, hr);
+        Log::Critical(L"Failed to open '{}' to read data [{}]", config.strIF, SystemError(hr));
         return hr;
     }
 
@@ -75,7 +75,7 @@ HRESULT Main::Run()
         auto hr = hash_stream->OpenToRead(config.Hash, input_file_stream);
         if (FAILED(hr))
         {
-            Log::Critical("Failed to open hash stream for input (code: {:#x})", hr);
+            Log::Critical("Failed to open hash stream for input [{}]", SystemError(hr));
             return hr;
         }
 
@@ -98,7 +98,7 @@ HRESULT Main::Run()
                 out.c_str(), GENERIC_WRITE, 0L, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
             FAILED(hr))
         {
-            Log::Warn(L"Failed to open '{}' for write (code: {:#x})", config.strIF, hr);
+            Log::Warn(L"Failed to open '{}' for write [{}]", config.strIF, SystemError(hr));
             out_stream = out_file_stream = nullptr;
         }
         else
@@ -109,7 +109,7 @@ HRESULT Main::Run()
 
                 if (auto hr = hash_stream->OpenToWrite(config.Hash, out_file_stream); FAILED(hr))
                 {
-                    Log::Error(L"Failed to open hash stream '{}' for input (code: {:#x})", out, hr);
+                    Log::Error(L"Failed to open hash stream '{}' for input [{}]", out, SystemError(hr));
                     return hr;
                 }
                 out_stream = hash_stream;
@@ -139,10 +139,10 @@ HRESULT Main::Run()
             FAILED(hr))
         {
             Log::Error(
-                L"Failed to skip {} bytes from input stream '{}' (code: {:#x})",
+                L"Failed to skip {} bytes from input stream '{}' [{}]",
                 config.BlockSize.QuadPart * config.Skip.QuadPart,
                 config.strIF,
-                hr);
+                SystemError(hr));
             return hr;
         }
     }
@@ -159,10 +159,10 @@ HRESULT Main::Run()
                         FAILED(hr))
                     {
                         Log::Warn(
-                            L"Failed to seek {} bytes in output stream '{}' (code: {:#x})",
+                            L"Failed to seek {} bytes in output stream '{}' [{}]",
                             config.BlockSize.QuadPart * config.Seek.QuadPart,
                             out.first,
-                            hr);
+                            SystemError(hr));
                     }
                 }
                 else
@@ -170,10 +170,10 @@ HRESULT Main::Run()
                     if (auto hr = out.second->SetSize(config.BlockSize.QuadPart * config.Seek.QuadPart); FAILED(hr))
                     {
                         Log::Warn(
-                            L"Failed to truncate {} in bytesoutput stream '{}' (code: {:#x})",
+                            L"Failed to truncate {} in bytesoutput stream '{}' [{}]",
                             config.BlockSize.QuadPart * config.Seek.QuadPart,
                             out.first,
-                            hr);
+                            SystemError(hr));
                     }
                 }
             }
@@ -289,7 +289,7 @@ HRESULT Main::Run()
 
     if (auto hr = input_stream->Close(); FAILED(hr))
     {
-        Log::Error(L"Failed to close input stream '{}' (code: {:#x})", config.strIF, hr);
+        Log::Error(L"Failed to close input stream '{}' [{}]", config.strIF, SystemError(hr));
         return hr;
     }
 

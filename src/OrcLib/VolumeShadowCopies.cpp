@@ -94,12 +94,12 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
         {
             if (hr == E_ACCESSDENIED)
             {
-                Log::Warn("Access denied when connecting to VSS Service (not running as admin?) (code: {:#x})", hr);
+                Log::Warn("Access denied when connecting to VSS Service (not running as admin?) [{}]", SystemError(hr));
                 return hr;
             }
             else
             {
-                Log::Error("Failed to connect to VSS service (code: {:#x})", hr);
+                Log::Error("Failed to connect to VSS service [{}]", SystemError(hr));
                 return hr;
             }
         }
@@ -110,19 +110,19 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
             {
                 Log::Warn(
                     "Failed to initalise VSS service, most likely cause: you are running a 32 bits process on x64 "
-                    "system (code: {:#x})",
-                    hr);
+                    "system [{}]",
+                    SystemError(hr));
             }
             else
             {
-                Log::Error("Failed to initalise VSS service (code: {:#x})", hr);
+                Log::Error("Failed to initalise VSS service [{}]", SystemError(hr));
             }
             return hr;
         }
 
         if (FAILED(hr = pVssBackup->SetContext(VSS_CTX_ALL)))
         {
-            Log::Error("Failed to set context on VSS service (code: {:#x})", hr);
+            Log::Error("Failed to set context on VSS service [{}]", SystemError(hr));
             return hr;
         }
 

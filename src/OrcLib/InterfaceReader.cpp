@@ -77,7 +77,7 @@ HRESULT InterfaceReader::LoadDiskProperties()
 
         if (FAILED(hr = pt.LoadPartitionTable(m_InterfacePath.c_str())))
         {
-            Log::Error(L"Invalid partition table found on interface '{}' (code: {:#x})", m_InterfacePath, hr);
+            Log::Error(L"Invalid partition table found on interface '{}' [{}]", m_InterfacePath, SystemError(hr));
             return hr;
         }
 
@@ -91,7 +91,7 @@ HRESULT InterfaceReader::LoadDiskProperties()
                         hr = Extent.Open(
                             (FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
                 {
-                    Log::Error(L"Failed to open the interface '{}' (code: {:#x})", m_InterfacePath, hr);
+                    Log::Error(L"Failed to open the interface '{}' [{}]", m_InterfacePath, SystemError(hr));
                     return hr;
                 }
 
@@ -104,7 +104,7 @@ HRESULT InterfaceReader::LoadDiskProperties()
         CDiskExtent Extent(m_InterfacePath.c_str(), m_ullOffset, m_ullLength, m_uiSectorSize);
         if (FAILED(hr = Extent.Open((FILE_SHARE_READ | FILE_SHARE_WRITE), OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN)))
         {
-            Log::Error(L"Failed to open the drive '{}' (code: {:#x})", m_InterfacePath, hr);
+            Log::Error(L"Failed to open the drive '{}' [{}]", m_InterfacePath, SystemError(hr));
             return hr;
         }
 

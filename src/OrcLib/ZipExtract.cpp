@@ -66,7 +66,7 @@ STDMETHODIMP ZipExtract::Extract(
 
     if (FAILED(hr = pZipLib->CreateObject(&CLSID_CFormat7z, &IID_IInArchive, reinterpret_cast<void**>(&archive))))
     {
-        Log::Error(L"Failed to create archive reader (code: {:#x})", hr);
+        Log::Error(L"Failed to create archive reader [{}]", SystemError(hr));
         return hr;
     }
 
@@ -74,7 +74,7 @@ STDMETHODIMP ZipExtract::Extract(
 
     if (FAILED(hr = makeArchiveStream(InputStream)))
     {
-        Log::Error(L"Failed to make archive stream (code: {:#x})", hr);
+        Log::Error(L"Failed to make archive stream [{}]", SystemError(hr));
         return hr;
     }
 
@@ -83,7 +83,7 @@ STDMETHODIMP ZipExtract::Extract(
 
     if ((hr = archive->Open(infile, 0, openCallback)) != S_OK)
     {
-        Log::Error(L"Failed when opening archive (code: {:#x})", hr);
+        Log::Error(L"Failed when opening archive [{}]", SystemError(hr));
         return hr;
     }
 
@@ -93,7 +93,7 @@ STDMETHODIMP ZipExtract::Extract(
     hr = archive->Extract(NULL, (UInt32)-1, false, extractCallback);
     if (hr != S_OK)  // returning S_FALSE also indicates error
     {
-        Log::Error(L"Failed when extracting archive (code: {:#x})", hr);
+        Log::Error(L"Failed when extracting archive [{}]", SystemError(hr));
         return hr;
     }
 

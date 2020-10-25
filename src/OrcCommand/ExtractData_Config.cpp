@@ -246,7 +246,7 @@ HRESULT Main::ParseArgument(std::wstring_view arg, Configuration& config)
             auto path = ExpandEnvironmentStringsApi(arg.data(), ec);
             if (ec)
             {
-                Log::Warn(L"Invalid input '{}' specified (code: {:#x})", arg.data(), ec.value());
+                Log::Warn(L"Invalid input '{}' specified [{}]", arg.data(), ec.value());
                 return HRESULT_FROM_WIN32(ec.value());
             }
 
@@ -289,7 +289,7 @@ HRESULT Main::CheckConfiguration()
         const auto workingDir = GetWorkingDirectoryApi(ec);
         if (ec)
         {
-            Log::Error("Failed GetWorkingDirectory (code: {:#x})", ec);
+            Log::Error("Failed GetWorkingDirectory [{}]", ec);
             return ToHRESULT(ec);
         }
 
@@ -308,7 +308,7 @@ HRESULT Main::CheckConfiguration()
         hr = UtilGetTempDirPath(szTempDir, MAX_PATH);
         if (FAILED(hr))
         {
-            Log::Error("Failed to provide a default temporary folder (code: {:#x})", hr);
+            Log::Error("Failed to provide a default temporary folder [{}]", SystemError(hr));
         }
     }
 

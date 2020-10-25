@@ -225,7 +225,7 @@ HRESULT Orc::LocationSet::ConfigureDefaultAltitude(const Altitude alt)
     if (!SetEnvironmentVariableW(OrcDefaultAltitudeEnv, strAltitude.c_str()))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to set %%{}%% to '{}' (code: {:#x})", OrcDefaultAltitudeEnv, strAltitude, hr);
+        Log::Error(L"Failed to set %%{}%% to '{}' [{}]", OrcDefaultAltitudeEnv, strAltitude, SystemError(hr));
         return E_INVALIDARG;
     }
 
@@ -355,7 +355,8 @@ Location::Type LocationSet::DeduceLocationType(const WCHAR* szLocation)
 
                     if (FAILED(hr = GetFileSizeFromArg(m[REGEX_IMAGE_OFFSET].str().c_str(), offset)))
                     {
-                        Log::Error(L"Invalid offset specified: '{}' (code: {:#x})", m[REGEX_IMAGE_OFFSET].str(), hr);
+                        Log::Error(
+                            L"Invalid offset specified: '{}' [{}]", m[REGEX_IMAGE_OFFSET].str(), SystemError(hr));
                         return Location::Type::Undetermined;
                     }
 
@@ -363,7 +364,8 @@ Location::Type LocationSet::DeduceLocationType(const WCHAR* szLocation)
                     {
                         if (FAILED(hr = GetFileSizeFromArg(m[REGEX_IMAGE_SIZE].str().c_str(), size)))
                         {
-                            Log::Error(L"Invalid size specified: '{}' (code: {:#x})", m[REGEX_IMAGE_SIZE].str(), hr);
+                            Log::Error(
+                                L"Invalid size specified: '{}' [{}]", m[REGEX_IMAGE_SIZE].str(), SystemError(hr));
                             return Location::Type::Undetermined;
                         }
                     }
@@ -372,9 +374,9 @@ Location::Type LocationSet::DeduceLocationType(const WCHAR* szLocation)
                         if (FAILED(hr = GetFileSizeFromArg(m[REGEX_IMAGE_SECTOR].str().c_str(), sector)))
                         {
                             Log::Error(
-                                L"Invalid sector size specified: '{}' (code: {:#x})",
+                                L"Invalid sector size specified: '{}' [{}]",
                                 m[REGEX_IMAGE_SECTOR].str().c_str(),
-                                hr);
+                                SystemError(hr));
                             return Location::Type::Undetermined;
                         }
                     }
@@ -387,7 +389,7 @@ Location::Type LocationSet::DeduceLocationType(const WCHAR* szLocation)
 
                 if (FAILED(hr = extent.Open(FILE_SHARE_READ | FILE_SHARE_WRITE, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL)))
                 {
-                    Log::Error(L"Could not open location: {} (code: {:#x})", Location, hr);
+                    Log::Error(L"Could not open location: {} [{}]", Location, SystemError(hr));
                     return Location::Type::Undetermined;
                 }
 
@@ -397,7 +399,7 @@ Location::Type LocationSet::DeduceLocationType(const WCHAR* szLocation)
 
                 if (FAILED(hr = extent.Read(buffer.GetData(), (DWORD)buffer.GetCount(), &dwBytesRead)))
                 {
-                    Log::Error(L"Failed to read from location: {} (code: {:#x})", Location, hr);
+                    Log::Error(L"Failed to read from location: {} [{}]", Location, SystemError(hr));
                     return Location::Type::Undetermined;
                 }
 
@@ -414,7 +416,7 @@ Location::Type LocationSet::DeduceLocationType(const WCHAR* szLocation)
 
                     if (FAILED(hr = pt.LoadPartitionTable(imageFileName.c_str())))
                     {
-                        Log::Error(L"Failed to load partition table for '{}' (code: {:#x})", imageFileName, hr);
+                        Log::Error(L"Failed to load partition table for '{}' [{}]", imageFileName, SystemError(hr));
                         return Location::Type::Undetermined;
                     }
 
@@ -558,32 +560,32 @@ HRESULT LocationSet::EnumerateLocations()
 
     if (!m_bMountedVolumesPopulated && FAILED(hr = PopulateMountedVolumes()))
     {
-        Log::Warn("Failed to parse mounted volumes (code: {:#x})", hr);
+        Log::Warn("Failed to parse mounted volumes [{}]", SystemError(hr));
     }
 
     if (!m_bPhysicalDrivesPopulated && FAILED(hr = PopulatePhysicalDrives()))
     {
-        Log::Warn("Failed to parse physical drives (code: {:#x})", hr);
+        Log::Warn("Failed to parse physical drives [{}]", SystemError(hr));
     }
 
     if (!m_bInterfacesPopulated && FAILED(hr = PopulateSystemObjects(true)))
     {
-        Log::Warn("Failed to parse interfaces (code: {:#x})", hr);
+        Log::Warn("Failed to parse interfaces [{}]", SystemError(hr));
     }
 
     if (!m_bSystemObjectsPopulated && FAILED(hr = PopulateSystemObjects(false)))
     {
-        Log::Warn("Failed to parse system objects (code: {:#x})", hr);
+        Log::Warn("Failed to parse system objects [{}]", SystemError(hr));
     }
 
     if (!m_bShadowsPopulated && FAILED(hr = PopulateShadows()))
     {
-        Log::Warn("Failed to add VSS shadow Copies (code: {:#x})", hr);
+        Log::Warn("Failed to add VSS shadow Copies [{}]", SystemError(hr));
     }
 
     if (FAILED(hr = EliminateDuplicateLocations()))
     {
-        Log::Error("Failed to eliminate duplicate locations (code: {:#x})", hr);
+        Log::Error("Failed to eliminate duplicate locations [{}]", SystemError(hr));
         return hr;
     }
 
@@ -640,7 +642,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
                     imageFile = m[REGEX_IMAGE_SPEC].str();
                     if (FAILED(hr = pt.LoadPartitionTable(imageFile.c_str())))
                     {
-                        Log::Error(L"Failed to load partition table for '{}' (code: {:#x})", canonical, hr);
+                        Log::Error(L"Failed to load partition table for '{}' [{}]", canonical, SystemError(hr));
                         return hr;
                     }
                 }
@@ -677,7 +679,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
                                 hr =
                                     AddLocation(location, Location::Type::ImageFileVolume, subdir, addedLoc, bToParse)))
                         {
-                            Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                            Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                         }
                         else
                         {
@@ -695,7 +697,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
                                 hr =
                                     AddLocation(location, Location::Type::ImageFileVolume, subdir, addedLoc, bToParse)))
                         {
-                            Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                            Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                         }
                         else
                         {
@@ -711,7 +713,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
 
             if (FAILED(hr = pt.LoadPartitionTable(canonical.c_str())))
             {
-                Log::Error(L"Failed to load partition table for '{}' (code: {:#x})", canonical, hr);
+                Log::Error(L"Failed to load partition table for '{}' [{}]", canonical, SystemError(hr));
                 return hr;
             }
 
@@ -721,7 +723,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
 
                 if (FAILED(hr = AddLocation(location, Location::Type::PhysicalDriveVolume, subdir, addedLoc, bToParse)))
                 {
-                    Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                    Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                 }
                 else
                 {
@@ -740,7 +742,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
                 {
                     if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
                     {
-                        Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                        Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                     }
                     else
                     {
@@ -754,7 +756,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
                 {
                     if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
                     {
-                        Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                        Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                     }
                     else
                     {
@@ -769,7 +771,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
 
             if (FAILED(hr = pt.LoadPartitionTable(canonical.c_str())))
             {
-                Log::Error(L"Failed to load partition table for '{}' (code: {:#x})", canonical, hr);
+                Log::Error(L"Failed to load partition table for '{}' [{}]", canonical, SystemError(hr));
                 return hr;
             }
 
@@ -779,7 +781,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
 
                 if (FAILED(hr = AddLocation(location, locType, subdir, addedLoc, bToParse)))
                 {
-                    Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                    Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                 }
                 else
                 {
@@ -796,7 +798,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
                 {
                     if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
                     {
-                        Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                        Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                     }
                     else
                     {
@@ -814,7 +816,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
                 if (FAILED(
                         hr = AddLocation(canonical, Location::Type::SystemStorageVolume, subdir, addedLoc, bToParse)))
                 {
-                    Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                    Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                 }
                 else
                 {
@@ -827,7 +829,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
 
                 if (FAILED(hr = pt.LoadPartitionTable(canonical.c_str())))
                 {
-                    Log::Error(L"Failed to load partition table for '{}' (code: {:#x})", canonical, hr);
+                    Log::Error(L"Failed to load partition table for '{}' [{}]", canonical, SystemError(hr));
                     return hr;
                 }
 
@@ -837,7 +839,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
 
                     if (FAILED(hr = AddLocation(location, locType, subdir, addedLoc, bToParse)))
                     {
-                        Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                        Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                     }
                     else
                     {
@@ -853,7 +855,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
             {
                 if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
                 {
-                    Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                    Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                 }
                 else
                 {
@@ -870,7 +872,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
                 {
                     if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
                     {
-                        Log::Error(L"Failed to add location '{}' (code: {:#x})", canonical, hr);
+                        Log::Error(L"Failed to add location '{}' [{}]", canonical, SystemError(hr));
                     }
                     else
                     {
@@ -886,7 +888,7 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
         case Location::Type::ImageFileVolume:
             if (FAILED(hr = AddLocation(canonical, locType, subdir, addedLoc, bToParse)))
             {
-                Log::Error(L"Failed to add location '{}' (code: {:#x})", szLocation, hr);
+                Log::Error(L"Failed to add location '{}' [{}]", szLocation, SystemError(hr));
                 return hr;
             }
             addedLocs.push_back(addedLoc);
@@ -905,7 +907,7 @@ HRESULT LocationSet::AddLocationsFromConfigItem(const ConfigItem& config)
 
     if (FAILED(hr = EnumerateLocations()))
     {
-        Log::Error("Failed to enumerate volume locations (code: {:#x})", hr);
+        Log::Error("Failed to enumerate volume locations [{}]", SystemError(hr));
         return hr;  // fatal
     }
 
@@ -1037,7 +1039,7 @@ HRESULT LocationSet::AddKnownLocations()
             {
                 if (FAILED(hr = AddLocations(path.c_str(), addedLocs)))
                 {
-                    Log::Warn(L"Invalid location '{}' ignored (code: {:#x})", path, hr);
+                    Log::Warn(L"Invalid location '{}' ignored [{}]", path, SystemError(hr));
                 }
             }
         }
@@ -1065,7 +1067,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
     if (hFindHandle == INVALID_HANDLE_VALUE)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed FindFirstVolumeW (code: {:#x})", hr);
+        Log::Error("Failed FindFirstVolumeW [{}]", SystemError(hr));
         return hr;
     }
 
@@ -1104,7 +1106,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
             if (CharCount == 0)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Warn(L"Failed QueryDosDeviceW (code: {:#x})", hr);
+                Log::Warn(L"Failed QueryDosDeviceW [{}]", SystemError(hr));
                 continue;
             }
 
@@ -1120,7 +1122,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
                 if (hr != HRESULT_FROM_WIN32(ERROR_MORE_DATA))
                 {
                     Log::Warn(
-                        L"Failed GetVolumePathNamesForVolumeName for volume '{}' (code: {:#x})", szVolumeName, hr);
+                        L"Failed GetVolumePathNamesForVolumeName for volume '{}' [{}]", szVolumeName, SystemError(hr));
                     continue;
                 }
             }
@@ -1145,7 +1147,9 @@ HRESULT LocationSet::PopulateMountedVolumes()
                     if (hr != HRESULT_FROM_WIN32(ERROR_MORE_DATA))
                     {
                         Log::Warn(
-                            L"Failed GetVolumePathNamesForVolumeName for volume '{}' (code: {:#x})", szVolumeName, hr);
+                            L"Failed GetVolumePathNamesForVolumeName for volume '{}' [{}]",
+                            szVolumeName,
+                            SystemError(hr));
                         continue;
                     }
                 }
@@ -1184,7 +1188,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
                 }
                 else
                 {
-                    Log::Warn(L"Failed to open volume '{}' (code: {:#x})", szVolumeName, hr);
+                    Log::Warn(L"Failed to open volume '{}' [{}]", szVolumeName, SystemError(hr));
                 }
                 continue;
             }
@@ -1212,16 +1216,16 @@ HRESULT LocationSet::PopulateMountedVolumes()
                         if (hr == HRESULT_FROM_WIN32(ERROR_INVALID_FUNCTION))
                         {
                             Log::Debug(
-                                L"Expected failed IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS for volume '{}' (code: {:#x})",
+                                L"Expected failed IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS for volume '{}' [{}]",
                                 szVolumeName,
-                                hr);
+                                SystemError(hr));
                         }
                         else
                         {
                             Log::Warn(
-                                L"Failed IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS for volume '{}' (code: {:#x})",
+                                L"Failed IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS for volume '{}' [{}]",
                                 szVolumeName,
-                                hr);
+                                SystemError(hr));
                             continue;
                         }
                     }
@@ -1248,9 +1252,9 @@ HRESULT LocationSet::PopulateMountedVolumes()
                         {
                             hr = HRESULT_FROM_WIN32(GetLastError());
                             Log::Warn(
-                                L"Failed IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS for volume '{}' (code: {:#x})",
+                                L"Failed IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS for volume '{}' [{}]",
                                 szVolumeName,
-                                hr);
+                                SystemError(hr));
                             continue;
                         }
                     }
@@ -1293,7 +1297,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
                     std::shared_ptr<Location> addedLoc;
                     if (FAILED(hr = AddLocation(loc, addedLoc, false)))
                     {
-                        Log::Warn(L"Failed to add Location '{}' (code: {:#x})", loc->GetLocation(), hr);
+                        Log::Warn(L"Failed to add Location '{}' [{}]", loc->GetLocation(), SystemError(hr));
                         continue;
                     }
 
@@ -1303,7 +1307,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
                         std::shared_ptr<Location> addedPath;
                         if (FAILED(hr2 = AddLocation(item, loc, addedPath, false)))
                         {
-                            Log::Warn(L"Failed to add Location '{}' (code: {:#x})", loc->GetLocation(), hr2);
+                            Log::Warn(L"Failed to add Location '{}' [{}]", loc->GetLocation(), SystemError(hr2));
                             continue;
                         }
                     }
@@ -1327,7 +1331,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
 
                     if (FAILED(hr = AddLocation(dev_loc, addedLoc, false)))
                     {
-                        Log::Warn(L"Failed to add Location '{}' (code: {:#x})", dev_loc->GetLocation(), hr);
+                        Log::Warn(L"Failed to add Location '{}' [{}]", dev_loc->GetLocation(), SystemError(hr));
                         continue;
                     }
                 }
@@ -1342,7 +1346,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
 
             if (hr != HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
-                Log::Error(L"FindNextVolumeW failed (code: {:#x})", hr);
+                Log::Error(L"FindNextVolumeW failed [{}]", SystemError(hr));
                 break;
             }
             hr = S_OK;
@@ -1370,14 +1374,14 @@ HRESULT LocationSet::PopulatePhysicalDrives()
 
     if (FAILED(hr = wmi.Initialize()))
     {
-        Log::Error(L"Failed to initialize WMI (code: {:#x})", hr);
+        Log::Error(L"Failed to initialize WMI [{}]", SystemError(hr));
         return hr;
     }
 
     vector<wstring> output;
     if (FAILED(hr = wmi.WMIEnumPhysicalMedia(output)))
     {
-        Log::Error(L"Failed to enum physical media via WMI (code: {:#x})", hr);
+        Log::Error(L"Failed to enum physical media via WMI [{}]", SystemError(hr));
         return hr;
     }
 
@@ -1387,7 +1391,7 @@ HRESULT LocationSet::PopulatePhysicalDrives()
 
         if (FAILED(hr = AddLocations(drive.c_str(), addedLocs, false)))
         {
-            Log::Warn(L"Failed to add physical drive '{}' (code: {:#x})", drive, hr);
+            Log::Warn(L"Failed to add physical drive '{}' [{}]", drive, SystemError(hr));
         }
     }
 
@@ -1406,7 +1410,7 @@ HRESULT LocationSet::PopulateShadows()
 
     if (FAILED(hr = vss.EnumerateShadows(m_Shadows)))
     {
-        Log::Warn("VSS functionatility is not available (code: {:#x})", hr);
+        Log::Warn("VSS functionatility is not available [{}]", SystemError(hr));
     }
     else
     {
@@ -1416,7 +1420,7 @@ HRESULT LocationSet::PopulateShadows()
 
             if (FAILED(hr = AddLocations(shadow.DeviceInstance.c_str(), addedLocs, false)))
             {
-                Log::Error(L"Failed to add volume shadow copy '{}' (code: {:#x})", shadow.DeviceInstance, hr);
+                Log::Error(L"Failed to add volume shadow copy '{}' [{}]", shadow.DeviceInstance, SystemError(hr));
             }
             else
             {
@@ -1613,7 +1617,7 @@ HRESULT LocationSet::PopulateSystemObjects(bool bInterfacesOnly)
 
                 if (FAILED(hr = AddLocations(re.c_str(), addedLocs, false)))
                 {
-                    Log::Error(L"Failed to add system object '{}' (code: {:#x})", re, hr);
+                    Log::Error(L"Failed to add system object '{}' [{}]", re, SystemError(hr));
                 }
             }
             else if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
@@ -1660,7 +1664,7 @@ HRESULT LocationSet::PopulateSystemObjects(bool bInterfacesOnly)
 
                             if (FAILED(hr = AddLocations(location.c_str(), addedLocs, false)))
                             {
-                                Log::Error(L"Failed to add system object '{}' (code: {:#x})", re, hr);
+                                Log::Error(L"Failed to add system object '{}' [{}]", re, SystemError(hr));
                             }
                         }
                     }
@@ -2253,7 +2257,7 @@ HRESULT LocationSet::PrintLocations(bool bOnlyParsedOnes, LPCWSTR szIndent) cons
                 Log::Info(L" ");
                 for (const auto& location : item->GetPaths())
                 {
-                    Log::Info(L"\"{}\" ", location);
+                    Log::Info(L"'{}' ", location);
                 }
             }
 
@@ -2285,13 +2289,13 @@ HRESULT LocationSet::PrintLocationsByVolume(bool bOnlyParsedOnes, LPCWSTR szInde
             auto& paths = item.Paths;
             for (const auto& location : paths)
             {
-                Log::Info(L"\"{}\" ", location);
+                Log::Info(L"'{}' ", location);
             }
         }
 
         if (!item.SubDirs.empty())
         {
-            Log::Info(L"{}\t", szIndent);
+            Log::Info(L"{}", szIndent);
             LPCWSTR szI = szIndent;
             auto& subdirs = item.SubDirs;
             size_t dwCharCount = 0;
@@ -2299,12 +2303,12 @@ HRESULT LocationSet::PrintLocationsByVolume(bool bOnlyParsedOnes, LPCWSTR szInde
                 dwCharCount += location.size();
                 if (dwCharCount > 60)
                 {
-                    Log::Info(L"\"{}\"\r\n{}\t", location, szI);
+                    Log::Info(L"'{}': {}", location, szI);
                     dwCharCount = 0;
                 }
                 else
                 {
-                    Log::Info(L"\"{}\" ", location);
+                    Log::Info(L"'{}' ", location);
                 }
             });
         }

@@ -136,7 +136,7 @@ void UploadAgent::run()
                     if (!FindClose(hFind))
                     {
                         hr = HRESULT_FROM_WIN32(GetLastError());
-                        Log::Warn("Failed to close FindFile while adding directory to copy (code: {:#x})", hr);
+                        Log::Warn("Failed to close FindFile while adding directory to copy [{}]", SystemError(hr));
                     }
                 }
             }
@@ -245,7 +245,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
                 return nullptr;
             if (FAILED(hr = retval->SetConfiguration(uploadSpec)))
             {
-                Log::Error(L"Failed to configure CopyFileAgent (code: {:#x})", hr);
+                Log::Error(L"Failed to configure CopyFileAgent [{}]", SystemError(hr));
                 return nullptr;
             }
         }
@@ -269,7 +269,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
                 newConfig.Method = OutputSpec::UploadMethod::FileCopy;
                 if (FAILED(hr = retval->SetConfiguration(newConfig)))
                 {
-                    Log::Error(L"Failed to configure CopyFileAgent (code: {:#x})", hr);
+                    Log::Error(L"Failed to configure CopyFileAgent [{}]", SystemError(hr));
                     return nullptr;
                 }
             }
@@ -286,7 +286,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
 
     if (FAILED(hr = retval->Initialize()))
     {
-        Log::Error(L"Failed to initialize CopyFileAgent (code: {:#x})", hr);
+        Log::Error(L"Failed to initialize CopyFileAgent [{}]", SystemError(hr));
         return nullptr;
     }
     return retval;

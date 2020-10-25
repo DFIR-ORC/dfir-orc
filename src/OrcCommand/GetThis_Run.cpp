@@ -87,7 +87,7 @@ std::shared_ptr<TableOutput::IStreamWriter> CreateCsvWriter(
     hr = csvStream->Open(out.parent_path(), out.filename(), 5 * 1024 * 1024);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to create temp stream (code: {:#x})", hr);
+        Log::Error(L"Failed to create temp stream [{}]", SystemError(hr));
         return nullptr;
     }
 
@@ -98,14 +98,14 @@ std::shared_ptr<TableOutput::IStreamWriter> CreateCsvWriter(
     hr = csvWriter->WriteToStream(csvStream);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to initialize CSV stream (code: {:#x})", hr);
+        Log::Error(L"Failed to initialize CSV stream [{}]", SystemError(hr));
         return nullptr;
     }
 
     hr = csvWriter->SetSchema(schema);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to set CSV schema (code: {:#x})", hr);
+        Log::Error(L"Failed to set CSV schema [{}]", SystemError(hr));
         return nullptr;
     }
 
@@ -121,7 +121,7 @@ void CompressTable(
     HRESULT hr = tableWriter->Flush();
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to flush csv writer (code: {:#x})", hr);
+        Log::Error(L"Failed to flush csv writer [{}]", SystemError(hr));
     }
 
     auto tableStream = tableWriter->GetStream();
@@ -133,14 +133,14 @@ void CompressTable(
     hr = tableStream->SetFilePointer(0, FILE_BEGIN, nullptr);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to rewind csv stream (code: {:#x})", hr);
+        Log::Error(L"Failed to rewind csv stream [{}]", SystemError(hr));
     }
 
     auto item = std::make_unique<Archive::Item>(tableStream, L"GetThis.csv");
     compressor->Add(std::move(item));
     if (ec)
     {
-        Log::Error(L"Failed to add GetThis.csv (code: {:#x})", ec.value());
+        Log::Error(L"Failed to add GetThis.csv [{}]", ec.value());
     }
 }
 
@@ -151,7 +151,7 @@ std::wstring RetrieveComputerName(const std::wstring& defaultName)
     HRESULT hr = SystemDetails::GetOrcComputerName(name);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to retrieve computer name (code: {:#x})", hr);
+        Log::Error(L"Failed to retrieve computer name [{}]", SystemError(hr));
         return L"[unknown]";
     }
 
@@ -167,7 +167,7 @@ HRESULT CopyStream(Orc::ByteStream& src, const fs::path& outPath)
     if (ec)
     {
         hr = HRESULT_FROM_WIN32(ec.value());
-        Log::Error(L"Failed to create sample directory (code: {:#x})", hr);
+        Log::Error(L"Failed to create sample directory [{}]", SystemError(hr));
         return hr;
     }
 
@@ -175,7 +175,7 @@ HRESULT CopyStream(Orc::ByteStream& src, const fs::path& outPath)
     hr = outputStream.WriteTo(outPath.c_str());
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to create sample '{}' (code: {:#x})", outPath);
+        Log::Error(L"Failed to create sample '{}' [{}]", outPath, SystemError(hr));
         return hr;
     }
 
@@ -183,21 +183,21 @@ HRESULT CopyStream(Orc::ByteStream& src, const fs::path& outPath)
     hr = src.CopyTo(outputStream, &ullBytesWritten);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed while writing sample '{}' (code: {:#x})", outPath, hr);
+        Log::Error(L"Failed while writing sample '{}' [{}]", outPath, SystemError(hr));
         return hr;
     }
 
     hr = outputStream.Close();
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to close sample '{}' (code: {:#x})", outPath, hr);
+        Log::Error(L"Failed to close sample '{}' [{}]", outPath, SystemError(hr));
         return hr;
     }
 
     hr = src.Close();
     if (FAILED(hr))
     {
-        Log::Warn(L"Failed to close input steam for '{}' (code: {:#x})", outPath, hr);
+        Log::Warn(L"Failed to close input steam for '{}' [{}]", outPath, SystemError(hr));
     }
 
     return S_OK;
@@ -570,7 +570,7 @@ std::unique_ptr<Main::SampleRef> Main::CreateSample(
     HRESULT hr = ConfigureSampleStreams(*sample);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to configure sample reference for '{}' (code: {:#x})", sample->SampleName, hr);
+        Log::Error(L"Failed to configure sample reference for '{}' [{}]", sample->SampleName, SystemError(hr));
     }
 
     return sample;
@@ -772,9 +772,9 @@ HRESULT Main::WriteSample(
         if (FAILED(hrTable))
         {
             Log::Error(
-                L"Failed to add sample '{}' metadata to csv (code: {:#x})",
+                L"Failed to add sample '{}' metadata to csv [{}]",
                 sample->Matches.front()->MatchingNames.front().FullPathName,
-                hrTable);
+                SystemError(hrTable));
         }
 
         if (writtenCb)
@@ -814,7 +814,7 @@ HRESULT Main::WriteSample(
         hrCopy = ::CopyStream(*sample->CopyStream, sampleFile);
         if (FAILED(hrCopy))
         {
-            Log::Error(L"Failed to copy stream of '{}' (code: {:#x})", sampleFile, hrCopy);
+            Log::Error(L"Failed to copy stream of '{}' [{}]", sampleFile, SystemError(hrCopy));
         }
     }
 
@@ -824,9 +824,9 @@ HRESULT Main::WriteSample(
     if (FAILED(hrCsv))
     {
         Log::Error(
-            L"Failed to add sample '{}' metadata to csv (code: {:#x})",
+            L"Failed to add sample '{}' metadata to csv [{}]",
             sample->Matches.front()->MatchingNames.front().FullPathName,
-            hrCsv);
+            SystemError(hrCsv));
     }
 
     if (SUCCEEDED(hrCopy) && SUCCEEDED(hrCsv))
@@ -858,7 +858,7 @@ void Main::FinalizeHashes(const Main::SampleRef& sample) const
         HRESULT hr = sample.CopyStream->CopyTo(nullstream, &ullBytesWritten);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed while computing hash of '{}' (code: {:#x})", sample.SampleName, hr);
+            Log::Error(L"Failed while computing hash of '{}' [{}]", sample.SampleName, SystemError(hr));
         }
 
         sample.CopyStream->Close();
@@ -887,7 +887,7 @@ HRESULT Main::InitArchiveOutput()
         tempDir = GetWorkingDirectoryApi(ec);
         if (ec)
         {
-            Log::Warn(L"Failed to resolve current working directory (code: {:#x})", ec.value());
+            Log::Warn(L"Failed to resolve current working directory [{}]", ec.value());
         }
     }
 
@@ -902,7 +902,7 @@ HRESULT Main::InitArchiveOutput()
         ::CreateCsvWriter(tempDir / L"GetThisCsvStream", config.Output.Schema, config.Output.OutputEncoding, hr);
     if (m_tableWriter == nullptr)
     {
-        Log::Error(L"Failed to create csv stream (code: {:#x})", hr);
+        Log::Error(L"Failed to create csv stream [{}]", SystemError(hr));
         return hr;
     }
 
@@ -919,7 +919,7 @@ HRESULT Main::CloseArchiveOutput()
     m_compressor->Flush(ec);
     if (ec)
     {
-        Log::Error(L"Failed to compress '{}' (code: {:#x})", config.Output.Path, ec.value());
+        Log::Error(L"Failed to compress '{}' [{}]", config.Output.Path, ec.value());
     }
 
     ::CompressTable(m_compressor, m_tableWriter);
@@ -927,7 +927,7 @@ HRESULT Main::CloseArchiveOutput()
     m_compressor->Close(ec);
     if (ec)
     {
-        Log::Error(L"Failed to close archive (code: {:#x})", ec.value());
+        Log::Error(L"Failed to close archive [{}]", ec.value());
     }
 
     return S_OK;
@@ -943,7 +943,7 @@ HRESULT Main::InitDirectoryOutput()
     if (ec)
     {
         hr = HRESULT_FROM_WIN32(ec.value());
-        Log::Error(L"Failed to create output directory (code: {:#x})", hr);
+        Log::Error(L"Failed to create output directory [{}]", SystemError(hr));
         return hr;
     }
 
@@ -951,7 +951,7 @@ HRESULT Main::InitDirectoryOutput()
         ::CreateCsvWriter(outputDir / L"GetThis.csv", config.Output.Schema, config.Output.OutputEncoding, hr);
     if (m_tableWriter == nullptr)
     {
-        Log::Error(L"Failed to create csv stream (code: {:#x})", hr);
+        Log::Error(L"Failed to create csv stream [{}]", SystemError(hr));
         return hr;
     }
 
@@ -963,14 +963,14 @@ HRESULT Main::CloseDirectoryOutput()
     HRESULT hr = m_tableWriter->Flush();
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to flush table stream (code: {:#x})", hr);
+        Log::Error(L"Failed to flush table stream [{}]", SystemError(hr));
         return hr;
     }
 
     hr = m_tableWriter->Close();
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to close table stream (code: {:#x})", hr);
+        Log::Error(L"Failed to close table stream [{}]", SystemError(hr));
         return hr;
     }
 
@@ -1028,7 +1028,7 @@ void Main::OnSampleWritten(const SampleRef& sample, const SampleSpec& sampleSpec
 
     if (FAILED(hrWrite))
     {
-        Log::Error(L"[FAILED] '{}', {} bytes (code: {:#x})", name, sample.SampleSize, hrWrite);
+        Log::Error(L"[FAILED] '{}', {} bytes [{}]", name, sample.SampleSize, SystemError(hrWrite));
         return;
     }
 
@@ -1175,7 +1175,7 @@ HRESULT Main::CloseOutput()
         hr = CloseArchiveOutput();
         if (FAILED(hr))
         {
-            Log::Error(L"Cannot close archive output (code: {:#x})", hr);
+            Log::Error(L"Cannot close archive output [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -1184,7 +1184,7 @@ HRESULT Main::CloseOutput()
         hr = CloseDirectoryOutput();
         if (FAILED(hr))
         {
-            Log::Error(L"Cannot close directory output (code: {:#x})", hr);
+            Log::Error(L"Cannot close directory output [{}]", SystemError(hr));
             return hr;
         }
     }
@@ -1207,7 +1207,7 @@ HRESULT Main::Run()
             hr = ::RegFlushKeys();
             if (FAILED(hr))
             {
-                Log::Error(L"Failed to flush keys (code: {:#x})", hr);
+                Log::Error(L"Failed to flush keys [{}]", SystemError(hr));
                 return hr;
             }
         }
@@ -1215,21 +1215,21 @@ HRESULT Main::Run()
         hr = InitOutput();
         if (FAILED(hr))
         {
-            Log::Error(L"Cannot initialize output mode (code: {:#x})", hr);
+            Log::Error(L"Cannot initialize output mode [{}]", SystemError(hr));
             return hr;
         }
 
         hr = FindMatchingSamples();
         if (FAILED(hr))
         {
-            Log::Error(L"GetThis failed while matching samples (code: {:#x})", hr);
+            Log::Error(L"GetThis failed while matching samples [{}]", SystemError(hr));
             return hr;
         }
 
         hr = CloseOutput();
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to close output (code: {:#x})", hr);
+            Log::Error(L"Failed to close output [{}]", SystemError(hr));
         }
     }
     catch (...)

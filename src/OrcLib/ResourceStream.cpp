@@ -43,14 +43,14 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
     if ((hResource = FindResource(hInstance, MAKEINTRESOURCE(resourceID), L"BINARY")) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed FindResource '{}' (code: {:#x})", resourceID, hr);
+        Log::Debug("Failed FindResource '{}' [{}]", resourceID, SystemError(hr));
         return hr;
     }
 
     if ((hFileResource = LoadResource(hInstance, hResource)) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed LoadResource '{}' (code: {:#x})", resourceID, hr);
+        Log::Debug("Failed LoadResource '{}' [{}]", resourceID, SystemError(hr));
         return hr;
     }
 
@@ -60,7 +60,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
     if ((lpFile = LockResource(hFileResource)) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed LockResource '{}' (code: {:#x})", resourceID, hr);
+        Log::Debug("Failed LockResource '{}' [{}]", resourceID, SystemError(hr));
         return hr;
     }
 
@@ -69,7 +69,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
     if ((dwSize = SizeofResource(hInstance, hResource)) == 0)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed SizeofResource '{}' (code: {:#x})", resourceID, hr);
+        Log::Debug("Failed SizeofResource '{}' [{}]", resourceID, SystemError(hr));
         return hr;
     }
     {
@@ -92,7 +92,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
     if ((hFileResource = LoadResource(hInstance, hResource)) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed LoadResource (code: {:#x})", hr);
+        Log::Debug("Failed LoadResource [{}]", SystemError(hr));
         return hr;
     }
 
@@ -101,7 +101,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
     if ((lpFile = LockResource(hFileResource)) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed LockResource (code: {:#x})", hr);
+        Log::Debug("Failed LockResource [{}]", SystemError(hr));
         return hr;
     }
 
@@ -110,7 +110,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
     if ((dwSize = SizeofResource(hInstance, hResource)) == 0)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed SizeofResource (code: {:#x})", hr);
+        Log::Debug("Failed SizeofResource [{}]", SystemError(hr));
         return hr;
     }
     {
