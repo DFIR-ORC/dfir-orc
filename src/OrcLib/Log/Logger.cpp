@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright ï¿½ 2020 ANSSI. All Rights Reserved.
+// Copyright © 2020 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl
 //
@@ -18,10 +18,7 @@
 #include <fstream>
 
 #include <spdlog/logger.h>
-
-#ifdef ORC_BUILD_BACKTRACE
-#    include <boost/stacktrace.hpp>
-#endif
+#include <boost/stacktrace.hpp>
 
 using namespace Orc;
 
@@ -70,17 +67,14 @@ Logger::Logger(std::initializer_list<std::pair<Facility, std::shared_ptr<spdlog:
     // Default upstream log level filter (sinks will not received filtered logs)
     spdlog::set_level(spdlog::level::debug);
 
-#ifdef ORC_BUILD_BACKTRACE
     spdlog::enable_backtrace(512);
+
+    // This is error handler will help to fix log formatting error
     spdlog::set_error_handler([](const std::string& msg) {
         std::cerr << msg << std::endl;
         std::cerr << "Stack trace:" << std::endl;
         std::cerr << boost::stacktrace::stacktrace();
     });
-#else
-    spdlog::set_error_handler([](const std::string& msg) { std::cerr << msg << std::endl; });
-#endif
-    // This is error handler will help to fix log formatting error
 
     // https://github.com/gabime/spdlog/wiki/3.-Custom-formatting
     // The following could output: '2020-09-30T13:43:41.256Z [I] this is a foobar log'
@@ -118,7 +112,7 @@ void Logger::DumpBacktrace()
         sinks[i]->set_level(spdlog::level::trace);
     }
 
-    // spdlog::dump_backtrace();
+    spdlog::dump_backtrace();
 
     for (size_t i = 0; i < sinks.size(); ++i)
     {
