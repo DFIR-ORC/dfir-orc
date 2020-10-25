@@ -60,15 +60,13 @@ JobObject::GetHandle(DWORD dwSourcePid, HANDLE hSourceHandle, DWORD dwDesiredAcc
                 PSID pMySid = NULL;
                 if (FAILED(hr = GetMyCurrentSID(pMySid)))
                 {
-                    hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Debug("Failed to take ownership of handle (code: {:#x})", hr);
+                    Log::Debug("Failed to get current user SID (code: {:#x})", hr);
                 }
                 else
                 {
                     if (FAILED(hr = ::GrantAccess(SE_KERNEL_OBJECT, hSourceHandle, pMySid, dwDesiredAccess)))
                     {
-                        hr = HRESULT_FROM_WIN32(GetLastError());
-                        Log::Debug("Failed to take ownership of handle (code: {:#x})", hr);
+                        Log::Debug("Failed to grant access to source handle (code: {:#x})", hr);
                     }
                     else
                     {
