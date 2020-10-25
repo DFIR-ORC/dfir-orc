@@ -199,7 +199,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
                 if (SUCCEEDED(local_hr = GetNameValuePairFromConfigItem(item, spec)))
                 {
-                    if (spec.Type != EmbeddedResource::EmbedSpec::Void)
+                    if (spec.Type != EmbeddedResource::EmbedSpec::EmbedType::Void)
                         config.ToEmbed.push_back(std::move(spec));
                 }
                 else
@@ -222,7 +222,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
                 if (SUCCEEDED(local_hr = GetAddFileFromConfigItem(item, spec)))
                 {
-                    if (spec.Type != EmbeddedResource::EmbedSpec::Void)
+                    if (spec.Type != EmbeddedResource::EmbedSpec::EmbedType::Void)
                         config.ToEmbed.push_back(std::move(spec));
                 }
                 else
@@ -245,7 +245,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
                 if (SUCCEEDED(local_hr = GetAddArchiveFromConfigItem(item, spec)))
                 {
-                    if (spec.Type != EmbeddedResource::EmbedSpec::Void)
+                    if (spec.Type != EmbeddedResource::EmbedSpec::EmbedType::Void)
                         config.ToEmbed.push_back(std::move(spec));
                 }
                 else

@@ -151,15 +151,15 @@ HRESULT RegFind::Match::Write(IStructuredOutput& pWriter)
 
     pWriter.BeginElement(L"regfind_match");
 
-    pWriter.WriteNamedFormated(L"description", L"%S", strMatchDescr.c_str());
+    pWriter.WriteNamedFormated(L"description", "{}", strMatchDescr);
 
     pWriter.BeginCollection(L"value");
     for (const auto& aValueNameMatch : MatchingValues)
     {
         pWriter.BeginElement(nullptr);
         {
-            pWriter.WriteNamedFormated(L"key", L"%S", aValueNameMatch.KeyName.c_str());
-            pWriter.WriteNamedFormated(L"value", L"%S", aValueNameMatch.ValueName.c_str());
+            pWriter.WriteNamed(L"key", aValueNameMatch.KeyName);
+            pWriter.WriteNamed(L"value", aValueNameMatch.ValueName);
 
             for (UINT idx = 0; g_ValueTypeDefinitions[idx].Type != RegMaxType; idx++)
             {
@@ -172,7 +172,7 @@ HRESULT RegFind::Match::Write(IStructuredOutput& pWriter)
 
             pWriter.WriteNamed(L"lastmodified_key", aValueNameMatch.LastModificationTime);
 
-            pWriter.WriteNamedFormated(L"data_size", L"%Iu", aValueNameMatch.DatasLength);
+            pWriter.WriteNamed(L"data_size", aValueNameMatch.DatasLength);
         }
         pWriter.EndElement(nullptr);
     }
@@ -183,7 +183,7 @@ HRESULT RegFind::Match::Write(IStructuredOutput& pWriter)
     {
         pWriter.BeginElement(nullptr);
         {
-            pWriter.WriteNamedFormated(L"key", L"%S", aKeyNameMatch.KeyName.c_str());
+            pWriter.WriteNamedFormated(L"key", aKeyNameMatch.KeyName);
             pWriter.WriteNamed(L"subkeys_count", (UINT32)aKeyNameMatch.SubKeysCount);
             pWriter.WriteNamed(L"values_count", (UINT32)aKeyNameMatch.ValuesCount);
             pWriter.WriteNamed(L"lastmodified_key", aKeyNameMatch.LastModificationTime);

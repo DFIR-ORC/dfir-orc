@@ -12,6 +12,7 @@
 #include "TableOutputWriter.h"
 #include "BinaryBuffer.h"
 #include "Unicode.h"
+#include "WideAnsi.h"
 
 using namespace std;
 
@@ -61,55 +62,65 @@ HRESULT RobustStructuredWriter::EndCollection(LPCWSTR szCollection)
     return m_pWriter->EndCollection(strElt.c_str());
 }
 
-HRESULT RobustStructuredWriter::WriteFormated(const WCHAR* szFormat, ...)
+HRESULT RobustStructuredWriter::WriteFormated_(const std::wstring_view& szFormat, wformat_args args)
 {
-    HRESULT hr = E_FAIL;
-    std::wstring strValue;
+    using namespace std::string_view_literals;
 
-    va_list argList;
-    va_start(argList, szFormat);
+    if (m_pWriter == nullptr)
+        return E_POINTER;
 
-    const DWORD dwMaxChar = 1024;
-    WCHAR szBuffer[dwMaxChar];
-    hr = StringCchVPrintfW(szBuffer, dwMaxChar, szFormat, argList);
-    va_end(argList);
-    if (FAILED(hr))
-    {
-        Log::Error("Failed to write formated string (code: {:#x})", hr);
-        return hr;
-    }
+    Buffer<WCHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
-    if (FAILED(hr = SanitizeString(xml_attr_value_table, szBuffer, strValue)))
-        return hr;
+    std::wstring_view result_string = buffer.size() > 0 ? std::wstring_view(buffer.get(), buffer.size()) : L""sv;
 
-    return m_pWriter->Write(strValue.c_str());
+    return Write(result_string);
 }
 
-HRESULT RobustStructuredWriter::WriteNamedFormated(LPCWSTR szName, const WCHAR* szFormat, ...)
+HRESULT RobustStructuredWriter::WriteFormated_(const std::string_view& szFormat, format_args args)
 {
-    HRESULT hr = E_FAIL;
-    std::wstring strName, strValue;
+    using namespace std::string_view_literals;
 
-    if (FAILED(hr = ReplaceInvalidChars(xml_element_table, szName, strName)))
-        return hr;
+    if (m_pWriter == nullptr)
+        return E_POINTER;
 
-    va_list argList;
-    va_start(argList, szFormat);
+    Buffer<CHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
-    const DWORD dwMaxChar = 1024;
-    WCHAR szBuffer[dwMaxChar];
-    hr = StringCchVPrintfW(szBuffer, dwMaxChar, szFormat, argList);
-    va_end(argList);
-    if (FAILED(hr))
-    {
-        Log::Error(L"Failed to write formated string (code: {:#x})", hr);
-        return hr;
-    }
+    std::string_view result_string = buffer.size() > 0 ? std::string_view(buffer.get(), buffer.size()) : ""sv;
 
-    if (FAILED(hr = SanitizeString(xml_attr_value_table, szBuffer, strValue)))
-        return hr;
+    return Write(result_string);
+}
 
-    return m_pWriter->WriteNamed(strName.c_str(), strValue.c_str());
+HRESULT
+RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, wformat_args args)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    Buffer<WCHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+
+    std::wstring_view result_string = buffer.size() > 0 ? std::wstring_view(buffer.get(), buffer.size()) : L""sv;
+
+    return WriteNamed(szName, result_string);
+}
+
+HRESULT RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, format_args args)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    Buffer<CHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+
+    std::string_view result_string = buffer.size() > 0 ? std::string_view(buffer.get(), buffer.size()) : ""sv;
+
+    return WriteNamed(szName, result_string);
 }
 
 HRESULT RobustStructuredWriter::Write(LPCWSTR szValue)
@@ -134,6 +145,85 @@ HRESULT RobustStructuredWriter::WriteNamed(LPCWSTR szName, LPCWSTR szValue)
         return hr;
 
     return m_pWriter->WriteNamed(strName.c_str(), strValue.c_str());
+}
+
+HRESULT RobustStructuredWriter::Write(const std::wstring_view str)
+{
+    HRESULT hr = E_FAIL;
+    std::wstring strValue;
+
+    if (FAILED(hr = SanitizeString(xml_attr_value_table, str, strValue)))
+        return hr;
+
+    return m_pWriter->Write(strValue);
+}
+
+HRESULT RobustStructuredWriter::WriteNamed(LPCWSTR szName, const std::wstring_view str)
+{
+    HRESULT hr = E_FAIL;
+    std::wstring strName, strValue;
+
+    if (FAILED(hr = ReplaceInvalidChars(xml_element_table, szName, strName)))
+        return hr;
+    if (FAILED(hr = SanitizeString(xml_attr_value_table, str, strValue)))
+        return hr;
+
+    return m_pWriter->WriteNamed(strName.c_str(), strValue.c_str());
+}
+
+HRESULT RobustStructuredWriter::Write(const std::wstring& str)
+{
+    HRESULT hr = E_FAIL;
+    std::wstring strValue;
+
+    if (FAILED(hr = SanitizeString(xml_attr_value_table, str, strValue)))
+        return hr;
+
+    return m_pWriter->Write(strValue);
+}
+
+HRESULT RobustStructuredWriter::WriteNamed(LPCWSTR szName, const std::wstring& str)
+{
+    HRESULT hr = E_FAIL;
+    std::wstring strName, strValue;
+
+    if (FAILED(hr = ReplaceInvalidChars(xml_element_table, szName, strName)))
+        return hr;
+    if (FAILED(hr = SanitizeString(xml_attr_value_table, str, strValue)))
+        return hr;
+
+    return m_pWriter->WriteNamed(strName.c_str(), strValue.c_str());
+}
+
+HRESULT RobustStructuredWriter::Write(const std::string_view str)
+{
+    HRESULT hr = E_FAIL;
+    std::wstring wstr, strValue;
+
+    if (FAILED(hr = AnsiToWide(str, wstr)))
+        return hr;
+
+    if (FAILED(hr = SanitizeString(xml_attr_value_table, wstr, strValue)))
+        return hr;
+
+    return m_pWriter->Write(strValue);
+}
+
+HRESULT RobustStructuredWriter::WriteNamed(LPCWSTR szName, const std::string_view str)
+{
+    HRESULT hr = E_FAIL;
+    std::wstring strName, wstr, strValue;
+
+    if (FAILED(hr = ReplaceInvalidChars(xml_element_table, szName, strName)))
+        return hr;
+
+    if (FAILED(hr = AnsiToWide(str, wstr)))
+        return hr;
+
+    if (FAILED(hr = SanitizeString(xml_attr_value_table, wstr, strValue)))
+        return hr;
+
+    return m_pWriter->WriteNamed(strName.c_str(), strValue);
 }
 
 HRESULT RobustStructuredWriter::Write(const WCHAR* szArray, DWORD dwCharCount)

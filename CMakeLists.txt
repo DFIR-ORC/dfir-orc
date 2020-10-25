@@ -11,6 +11,8 @@ option(ORC_BUILD_ORC        "Build Orc binary" ON)
 option(ORC_BUILD_PARQUET    "Build Parquet module" OFF)
 option(ORC_BUILD_SSDEEP     "Build with ssdeep support" OFF)
 option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" ON)
+option(ORC_BUILD_BACKTRACE  "Build with stack backtrace enabled" ON)
+
 option(ORC_DOWNLOADS_ONLY   "Do not build ORC but only download vcpkg third parties" OFF)
 option(ORC_DISABLE_PRECOMPILED_HEADERS "Disable precompiled headers" OFF)
 
@@ -79,7 +81,6 @@ if(ORC_VCPKG_ROOT)
         boost-multi-index
         boost-outcome
         boost-scope-exit
-        boost-stacktrace
         fmt
         spdlog
         tlsh
@@ -92,6 +93,11 @@ if(ORC_VCPKG_ROOT)
         cli11
     )
 
+    if(ORC_BUILD_BACKTRACE)
+        add_compile_definitions(ORC_BUILD_BACKTRACE)
+        list(APPEND _PACKAGES boost-stacktrace)
+    endif()
+
     if(ORC_BUILD_APACHE_ORC)
         list(APPEND _PACKAGES orc)
     endif()
@@ -101,7 +107,7 @@ if(ORC_VCPKG_ROOT)
     endif()
 
     if(ORC_BUILD_SSDEEP)
-        add_definitions(-DORC_BUILD_SSDEEP)
+        add_compile_definitions(ORC_BUILD_SSDEEP)
         list(APPEND _PACKAGES ssdeep)
     endif()
 

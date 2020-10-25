@@ -53,7 +53,8 @@ public:
     }
     Exception(std::wstring descr);
     Exception(Severity status, _In_ HRESULT hr)
-        : m_HRESULT(hr)
+        : Severity(status)
+        , m_HRESULT(hr)
     {
     }
 

@@ -87,5 +87,14 @@ void PrintValue(Orc::Text::Tree<T>& node, const U& name, const OutputSpec& outpu
     }
 }
 
+template <typename T, typename U>
+void PrintValue(Orc::Text::Tree<T>& node, const U& name, const std::optional<OutputSpec>& output)
+{
+    if (output.has_value())
+    {
+        PrintValue(node, name, *output);
+    }
+}
+
 }  // namespace Text
 }  // namespace Orc

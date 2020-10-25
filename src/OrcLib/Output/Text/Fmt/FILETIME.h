@@ -17,15 +17,17 @@
 template <typename FormatContext>
 auto fmt::formatter<FILETIME>::format(const FILETIME& ft, FormatContext& ctx) -> decltype(ctx.out())
 {
-    SYSTEMTIME stUTC;
-    FileTimeToSystemTime(&ft, &stUTC);
-    return formatter<std::string_view>::format(Orc::Text::FormatSystemTimeA(stUTC), ctx);
+    SYSTEMTIME stUTC {0};
+    if (FileTimeToSystemTime(&ft, &stUTC))
+        return formatter<std::string_view>::format(Orc::Text::FormatSystemTimeA(stUTC), ctx);
+    return ctx.out();
 }
 
 template <typename FormatContext>
 auto fmt::formatter<FILETIME, wchar_t>::format(const FILETIME& ft, FormatContext& ctx) -> decltype(ctx.out())
 {
-    SYSTEMTIME stUTC;
-    FileTimeToSystemTime(&ft, &stUTC);
-    return formatter<std::wstring_view, wchar_t>::format(Orc::Text::FormatSystemTimeW(stUTC), ctx);
+    SYSTEMTIME stUTC {0};
+    if (FileTimeToSystemTime(&ft, &stUTC))
+        return formatter<std::wstring_view, wchar_t>::format(Orc::Text::FormatSystemTimeW(stUTC), ctx);
+    return ctx.out();
 }

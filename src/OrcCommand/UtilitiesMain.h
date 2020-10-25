@@ -17,7 +17,9 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
-#include <boost/stacktrace.hpp>
+#ifdef ORC_BUILD_BACKTRACE
+#    include <boost/stacktrace.hpp>
+#endif
 #include <concrt.h>
 
 #include "ConfigFile.h"
@@ -542,10 +544,36 @@ protected:
     // Option handling
     //
     bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Kind supportedTypes, OutputSpec& anOutput);
+
+    template <typename OptionType>
+    bool
+    OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Kind supportedTypes, std::optional<OptionType>& parameter)
+    {
+        OptionType result;
+        if (OutputOption(szArg, szOption, supportedTypes, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
+
     bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec& anOutput)
     {
         return OutputOption(szArg, szOption, anOutput.supportedTypes, anOutput);
     };
+
+    template <typename OptionType>
+    bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType> parameter)
+    {
+        OptionType result;
+        if (OutputOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
 
     bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
     template <typename OptionType>
@@ -852,6 +880,7 @@ public:
                 return hr;
             }
         }
+#ifdef ORC_BUILD_BACKTRACE
         catch (std::exception& e)
         {
             std::cerr << "std::exception during execution" << std::endl;
@@ -866,7 +895,20 @@ public:
             boost::stacktrace::stacktrace();
             return E_ABORT;
         }
-
+#else
+        catch (std::exception& e)
+        {
+            std::cerr << "std::exception during execution" << std::endl;
+            std::cerr << "Caught " << e.what() << std::endl;
+            std::cerr << "Type " << typeid(e).name() << std::endl;
+            return E_ABORT;
+        }
+        catch (...)
+        {
+            std::cerr << "Exception during during execution" << std::endl;
+            return E_ABORT;
+        }
+#endif
         GetSystemTime(&Cmd.theFinishTime.value);
         Cmd.theFinishTickCount = GetTickCount();
         Cmd.PrintFooter();

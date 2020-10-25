@@ -14,6 +14,7 @@
 #include "XmlLiteExtension.h"
 #include "OutputSpec.h"
 #include "ByteStream.h"
+#include "WideAnsi.h"
 
 #include <xmllite.h>
 #include <boost/scope_exit.hpp>
@@ -232,27 +233,20 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamed(LPCWSTR szName, LPCWSTR s
     return S_OK;
 }
 
-HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated(const WCHAR* szFormat, ...)
+HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::wstring_view& szFormat, wformat_args args)
 {
-    va_list argList;
-    va_start(argList, szFormat);
+    using namespace std::string_view_literals;
 
-    HRESULT hr = E_FAIL;
-    const DWORD dwMaxChar = 1024;
-    WCHAR szBuffer[dwMaxChar];
+    if (m_pWriter == nullptr)
+        return E_POINTER;
 
-    hr = StringCchVPrintfW(szBuffer, dwMaxChar, szFormat, argList);
-    va_end(argList);
-
-    if (FAILED(hr))
-    {
-        Log::Error(L"Failed to write formated string (code: {:#x})", hr);
-        return hr;
-    }
+    Buffer<WCHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+    buffer.append(L"\0");
 
     if (m_collectionStack.empty())
     {
-        if (FAILED(hr = m_pWriter->WriteString(szBuffer)))
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
         {
             XmlLiteExtension::LogError(hr);
             return hr;
@@ -264,7 +258,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated(const WCHAR* szFormat,
         BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
         BOOST_SCOPE_EXIT_END;
 
-        if (FAILED(hr = m_pWriter->WriteString(szBuffer)))
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
         {
             XmlLiteExtension::LogError(hr);
             return hr;
@@ -273,31 +267,246 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated(const WCHAR* szFormat,
     return S_OK;
 }
 
-HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated(LPCWSTR szName, const WCHAR* szFormat, ...)
+HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::string_view& szFormat, format_args args)
 {
-    va_list argList;
-    va_start(argList, szFormat);
+    using namespace std::string_view_literals;
 
-    HRESULT hr = E_FAIL;
-    const DWORD dwMaxChar = 1024;
-    WCHAR szBuffer[dwMaxChar];
+    if (m_pWriter == nullptr)
+        return E_POINTER;
 
-    hr = StringCchVPrintfW(szBuffer, dwMaxChar, szFormat, argList);
-    va_end(argList);
+    Buffer<CHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+    buffer.append("\0");
 
+    std::string_view result_string = buffer.size() > 0 ? std::string_view(buffer.get(), buffer.size()) : ""sv;
+
+    auto [hr, wstr] = Orc::AnsiToWide(result_string);
     if (FAILED(hr))
-    {
-        Log::Error(L"Failed to write formated string (code: {:#x})", hr);
         return hr;
-    }
 
-    if (FAILED(hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, szBuffer)))
+    if (m_collectionStack.empty())
+    {
+        if (auto hr = m_pWriter->WriteString(wstr.c_str()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+
+        if (auto hr = m_pWriter->WriteString(wstr.c_str()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr);
+            return hr;
+        }
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated_(
+    LPCWSTR szName,
+    const std::wstring_view& szFormat,
+    wformat_args args)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    Buffer<WCHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+    buffer.append(L"\0");
+
+    if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, buffer.get()); FAILED(hr))
     {
         XmlLiteExtension::LogError(hr);
         return hr;
     }
     return S_OK;
 }
+
+HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated_(
+    LPCWSTR szName,
+    const std::string_view& szFormat,
+    format_args args)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    Buffer<CHAR, MAX_PATH> buffer;
+    auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
+
+    std::string_view result_string = buffer.size() > 0 ? std::string_view(buffer.get(), buffer.size()) : ""sv;
+
+    auto [hr, wstr] = Orc::AnsiToWide(result_string);
+    if (FAILED(hr))
+        return hr;
+
+    if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, wstr.c_str()); FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr);
+        return hr;
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::Write(const std::wstring_view str)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    Buffer<WCHAR, MAX_PATH> buffer;
+    buffer.set(str.data(), str.size() + 1, str.size());
+    buffer.append(L'\0');
+
+    if (m_collectionStack.empty())
+    {
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+
+        if (auto hr = m_pWriter->WriteString(buffer.get()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr);
+            return hr;
+        }
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::Write(const std::wstring& str)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    if (m_collectionStack.empty())
+    {
+        if (auto hr = m_pWriter->WriteString(str.c_str()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+
+        if (auto hr = m_pWriter->WriteString(str.c_str()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr);
+            return hr;
+        }
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::WriteNamed(LPCWSTR szName, const std::wstring_view str)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    Buffer<WCHAR, MAX_PATH> buffer;
+    buffer.set(str.data(), str.size() + 1, str.size());
+    buffer.append(L'\0');
+
+    if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, buffer.get()); FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr);
+        return hr;
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::WriteNamed(LPCWSTR szName, const std::wstring& str)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, str.c_str()); FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr);
+        return hr;
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::Write(const std::string_view str)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    auto [hr, wstr] = Orc::AnsiToWide(str);
+    if (FAILED(hr))
+        return hr;
+
+    if (m_collectionStack.empty())
+    {
+        if (auto hr = m_pWriter->WriteString(wstr.c_str()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr);
+            return hr;
+        }
+    }
+    else
+    {
+        BeginElement(m_collectionStack.top().c_str());
+        BOOST_SCOPE_EXIT(this_) { this_->EndElement(this_->m_collectionStack.top().c_str()); }
+        BOOST_SCOPE_EXIT_END;
+
+        if (auto hr = m_pWriter->WriteString(wstr.c_str()); FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr);
+            return hr;
+        }
+    }
+    return S_OK;
+}
+
+HRESULT Orc::StructuredOutput::XML::Writer::WriteNamed(LPCWSTR szName, const std::string_view str)
+{
+    using namespace std::string_view_literals;
+
+    if (m_pWriter == nullptr)
+        return E_POINTER;
+
+    auto [hr, wstr] = Orc::AnsiToWide(str);
+    if (FAILED(hr))
+        return hr;
+
+    if (auto hr = m_pWriter->WriteAttributeString(NULL, szName, NULL, wstr.c_str()); FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr);
+        return hr;
+    }
+    return S_OK;
+}
+
 HRESULT Orc::StructuredOutput::XML::Writer::WriteAttributes(DWORD dwFileAttributes)
 {
     _Buffer buffer;

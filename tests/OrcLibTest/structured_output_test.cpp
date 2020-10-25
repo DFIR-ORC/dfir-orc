@@ -46,6 +46,9 @@ public:
 
     HRESULT WriterSingleTest(const std::shared_ptr<StructuredOutput::IOutput>& _writer)
     {
+        using namespace std::string_view_literals;
+        using namespace std::string_literals;
+
         auto writer = std::dynamic_pointer_cast<StructuredOutput::IWriter>(_writer);
 
         Assert::IsNotNull(writer.get());
@@ -57,8 +60,50 @@ public:
 
         Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_path", L"c:\\windows\\system32\\kernel32.dll")));
 
-        Assert::IsTrue(SUCCEEDED(
-            writer->WriteNamedFormated(L"test_format", L"%s %S %X %d", L"test", "alternate", 24, 56)));
+        {
+            Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"test_string")));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_string_view", "This is a string view"sv)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_string", "This is a string"s)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamedFormated(L"test_format", "string: {} {} {} {}", "test", "alternate"sv, 24, 56)));
+            {
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"string")));
+                Assert::IsTrue(SUCCEEDED(writer->Write("This is a string"s)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"string")));
+            }
+            {
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"string_view")));
+                Assert::IsTrue(SUCCEEDED(writer->Write("This is a string"sv)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"string_view")));
+            }
+            {
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"string_fmt")));
+                Assert::IsTrue(SUCCEEDED(writer->WriteFormated("string: {} {} {} {}", "test", "alternate"sv, 24, 56)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"string_fmt")));
+            }
+            Assert::IsTrue(SUCCEEDED(writer->EndElement(L"test_string")));
+        }
+        {
+            Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"test_wstring")));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_wstring_view", L"This is a wstring view"sv)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamed(L"test_wstring", L"This is a wstring"s)));
+            Assert::IsTrue(SUCCEEDED(writer->WriteNamedFormated(L"wstring_fmt", L"wstring: {} {} {} {}", L"test", L"alternate"sv, 24, 56)));
+            {
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"wstring")));
+                Assert::IsTrue(SUCCEEDED(writer->Write(L"This is a wstring"s)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"wstring")));
+            }
+            {
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"wstring_view")));
+                Assert::IsTrue(SUCCEEDED(writer->Write(L"This is a wstring"sv)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"wstring_view")));
+            }
+            {
+                Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"wstring_fmt")));
+                Assert::IsTrue(SUCCEEDED(writer->WriteFormated(L"wtring: {} {} {} {}", L"test", L"alternate", 24, 56)));
+                Assert::IsTrue(SUCCEEDED(writer->EndElement(L"wstring_fmt")));
+            }
+            Assert::IsTrue(SUCCEEDED(writer->EndElement(L"wtest_string")));
+        }
 
         {
             Assert::IsTrue(SUCCEEDED(writer->BeginElement(L"test_boolean")));
@@ -279,7 +324,7 @@ public:
         auto writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"817B16409158FE82616DCCB6199E2AC55A3D3CC9")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3038DD6F8A0B50BF69E193ABBA94183212763A4B")));
 
         writer.reset();
 
@@ -291,7 +336,7 @@ public:
         writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3EC3C8E033C4618BB0276787AB1EB3B79DC8FDFD")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"0632A91DC98CBF17428082C12F759AD98D951AAF")));
     }
 
     TEST_METHOD(RobustStructuredOutputTest)
@@ -312,7 +357,7 @@ public:
             std::make_shared<RobustStructuredWriter>(std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"817B16409158FE82616DCCB6199E2AC55A3D3CC9")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3038DD6F8A0B50BF69E193ABBA94183212763A4B")));
 
         robust_writer.reset();
 
@@ -327,7 +372,7 @@ public:
             std::make_shared<RobustStructuredWriter>(std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3EC3C8E033C4618BB0276787AB1EB3B79DC8FDFD")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"0632A91DC98CBF17428082C12F759AD98D951AAF")));
     }
 
     HRESULT WriteGargabeElementTest(const std::shared_ptr<ByteStream>& stream, WCHAR wGarbageCode)

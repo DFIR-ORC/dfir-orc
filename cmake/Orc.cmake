@@ -17,8 +17,6 @@ add_compile_definitions(
     _UNICODE
     NOMINMAX
     BOOST_NO_SWPRINTF
-    _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
-    _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
 )
 
 if(${TARGET_ARCH} STREQUAL "x64")
@@ -32,7 +30,6 @@ string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # TODO: Qspectre disable option is not supported until cmake 3.15.2
 add_compile_options(
-    /wd4995
     /EHa      # Enable C++ exception with SEH (required by Robustness.cpp: _set_se_translator)
   # /Gy       # Enable function level linking
   # /JMC      # Debug only Just My Code

@@ -30,21 +30,21 @@ class TeeStream;
 class ByteStreamVisitor
 {
 public:
-    virtual void Visit(ByteStream& element) {}
-    virtual void Visit(FileStream& element) {}
-    virtual void Visit(TemporaryStream& element) {}
-    virtual void Visit(MemoryStream& element) {}
-    virtual void Visit(CryptoHashStream& element) {}
-    virtual void Visit(FuzzyHashStream& element) {}
-    virtual void Visit(NTFSStream& element) {}
-    virtual void Visit(UncompressNTFSStream& element) {}
-    virtual void Visit(ResourceStream& element) {}
-    virtual void Visit(PipeStream& element) {}
-    virtual void Visit(OnDiskChunkStream& element) {}
-    virtual void Visit(EncodeMessageStream& element) {}
-    virtual void Visit(JournalingStream& element) {}
-    virtual void Visit(AccumulatingStream& element) {}
-    virtual void Visit(TeeStream& element) {}
+    virtual void Visit(ByteStream&) {}
+    virtual void Visit(FileStream&) {}
+    virtual void Visit(TemporaryStream&) {}
+    virtual void Visit(MemoryStream&) {}
+    virtual void Visit(CryptoHashStream&) {}
+    virtual void Visit(FuzzyHashStream&) {}
+    virtual void Visit(NTFSStream&) {}
+    virtual void Visit(UncompressNTFSStream&) {}
+    virtual void Visit(ResourceStream&) {}
+    virtual void Visit(PipeStream&) {}
+    virtual void Visit(OnDiskChunkStream&) {}
+    virtual void Visit(EncodeMessageStream&) {}
+    virtual void Visit(JournalingStream&) {}
+    virtual void Visit(AccumulatingStream&) {}
+    virtual void Visit(TeeStream&) {}
 };
 
 }  // namespace Orc

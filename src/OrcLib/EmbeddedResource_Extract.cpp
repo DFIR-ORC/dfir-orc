@@ -59,13 +59,13 @@ EmbeddedResource::EmbeddedResource(void) {}
 wregex& Orc::EmbeddedResource::ArchRessourceRegEx()
 {
     static wregex g_ArchRessourceRegEx(
-        L"((7z|zip):([a-zA-Z0-9_\\-\\.]*))#([a-zA-Z0-9_\\-\\.]+)\\|([a-zA-Z0-9\\-_\\.\\\\/]+)");
+        L"((7z|zip):([a-zA-Z0-9_\\-\\.]*))#([a-zA-Z0-9_\\-\\.]+)\\|([a-zA-Z0-9\\-_\\*\\.\\\\/]+)");
     return g_ArchRessourceRegEx;
 }
 
 std::wregex& Orc::EmbeddedResource::ResRessourceRegEx()
 {
-    static wregex g_ResRessourceRegEx(L"(res:([a-zA-Z0-9\\-_\\.]*))#([a-zA-Z0-9\\-_\\.]+)");
+    static wregex g_ResRessourceRegEx(L"(res:([a-zA-Z0-9\\-_\\.]*))#([a-zA-Z0-9\\-_\\.\\\\/]+)");
     return g_ResRessourceRegEx;
 }
 
@@ -427,8 +427,47 @@ HRESULT EmbeddedResource::ExtractToFile(
     const std::wstring& strOutputDir,
     std::wstring& outputFile)
 {
-    HRESULT hr = E_FAIL;
+    std::vector<std::pair<std::wstring, std::wstring>> outputFiles;
+    if (auto hr = ExtractToDirectory(szImageFileRessourceID, Keyword, szSDDL, strOutputDir, outputFiles); FAILED(hr))
+        return hr;
+    if (outputFiles.size() == 1)
+    {
+        std::swap(outputFile, outputFiles[0].second);
+        return S_OK;
+    }
 
+    if (outputFiles.size() > 1)
+    {
+        Log::Error(L"More than one file were extracted from {}", szImageFileRessourceID);
+        return E_INVALIDARG;
+    }
+
+    Log::Error(L"No file extracted from {}", szImageFileRessourceID);
+    return E_INVALIDARG;
+}
+
+HRESULT Orc::EmbeddedResource::ExtractToDirectory(
+    const std::wstring& szImageFileRessourceID,
+    const std::wstring& Keyword,
+    LPCWSTR szSDDLFormat,
+    LPCWSTR szSID,
+    const std::wstring& strTempDir,
+    std::vector<std::pair<std::wstring, std::wstring>>& outputFiles)
+{
+    WCHAR szSDDL[MAX_PATH] = {0};
+
+    swprintf_s(szSDDL, MAX_PATH, szSDDLFormat, szSID);
+
+    return ExtractToDirectory(szImageFileRessourceID, Keyword, szSDDL, strTempDir, outputFiles);
+}
+
+HRESULT EmbeddedResource::ExtractToDirectory(
+    const std::wstring& szImageFileRessourceID,
+    const std::wstring& Keyword,
+    LPCWSTR szSDDL,
+    const std::wstring& strOutputDir,
+    std::vector<std::pair<std::wstring, std::wstring>>& outputFiles)
+{
     WCHAR szTempDir[MAX_PATH];
 
     if (!strOutputDir.empty())
@@ -437,120 +476,132 @@ HRESULT EmbeddedResource::ExtractToFile(
     }
     else
     {
-        if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
+        if (auto hr = UtilGetTempDirPath(szTempDir, MAX_PATH); FAILED(hr))
             return hr;
     }
 
     if (IsSelf(szImageFileRessourceID))
     {
-        if (FAILED(GetSelf(outputFile)))
+        std::wstring myself;
+
+        if (auto hr = GetSelf(myself); FAILED(hr))
             return hr;
+        outputFiles.emplace_back(std::make_pair(myself, myself));
         return S_OK;
     }
 
     wstring MotherShip, ResName, NameInArchive, FormatName;
 
-    if (SUCCEEDED(hr = SplitResourceReference(szImageFileRessourceID, MotherShip, ResName, NameInArchive, FormatName)))
+    if (auto hr = SplitResourceReference(szImageFileRessourceID, MotherShip, ResName, NameInArchive, FormatName);
+        FAILED(hr))
     {
-        if (NameInArchive.empty())
+        if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
         {
-            // Resource is directly embedded in resource
+            Log::Error(
+                L"'{}' does not match a typical embedded ressource pattern (code: {:#x})", szImageFileRessourceID, hr);
+            return E_INVALIDARG;
+        }
+        else
+        {
+            Log::Error(L"'{}' failed to match a supported ressource pattern (code: {:#x})", szImageFileRessourceID, hr);
+            return E_INVALIDARG;
+        }
+    }
 
-            shared_ptr<ResourceStream> res = make_shared<ResourceStream>();
+    if (NameInArchive.empty())
+    {
+        // Resource is directly embedded in resource
 
-            HRSRC hRes = NULL;
-            HMODULE hModule = NULL;
-            std::wstring strBinaryPath;
-            if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+        shared_ptr<ResourceStream> res = make_shared<ResourceStream>();
+
+        HRSRC hRes = NULL;
+        HMODULE hModule = NULL;
+        std::wstring strBinaryPath;
+        if (auto hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath); FAILED(hr))
+        {
+            Log::Warn(L"Could not locate resource '{}' (code: {:#x})", szImageFileRessourceID, hr);
+            return hr;
+        }
+
+        if (auto hr = res->OpenForReadOnly(hModule, hRes); FAILED(hr))
+            return hr;
+
+        wstring fileName;
+        HANDLE hFile = INVALID_HANDLE_VALUE;
+
+        if (auto hr = UtilGetUniquePath(
+                szTempDir,
+                Keyword.c_str(),
+                fileName,
+                hFile,
+                FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+                szSDDL);
+            FAILED(hr))
+        {
+            if (hr == HRESULT_FROM_WIN32(ERROR_FILE_EXISTS))
             {
-                Log::Warn(L"Could not locate resource '{}' (code: {:#x})", szImageFileRessourceID, hr);
-                return hr;
-            }
-
-            if (FAILED(res->OpenForReadOnly(hModule, hRes)))
-                return hr;
-
-            wstring fileName;
-            HANDLE hFile = INVALID_HANDLE_VALUE;
-
-            if (FAILED(
-                    hr = UtilGetUniquePath(
+                if (auto hr = UtilGetUniquePath(
                         szTempDir,
                         Keyword.c_str(),
                         fileName,
                         hFile,
                         FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
-                        szSDDL)))
-            {
-                if (hr == HRESULT_FROM_WIN32(ERROR_FILE_EXISTS))
-                {
-                    if (FAILED(
-                            hr = UtilGetUniquePath(
-                                szTempDir,
-                                Keyword.c_str(),
-                                fileName,
-                                hFile,
-                                FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
-                                szSDDL)))
-                    {
-                        Log::Error(L"Failed to create extracted file '{}' (code: {:#x})", fileName, hr);
-                        return hr;
-                    }
-                }
-                else
+                        szSDDL);
+                    FAILED(hr))
                 {
                     Log::Error(L"Failed to create extracted file '{}' (code: {:#x})", fileName, hr);
                     return hr;
                 }
             }
-
-            shared_ptr<FileStream> fs = make_shared<FileStream>();
-            if (FAILED(hr = fs->OpenHandle(hFile)))
+            else
             {
-                Log::Error(L"Failed to create extracted '{}' (code: {:#x})", fileName, hr);
+                Log::Error(L"Failed to create extracted file '{}' (code: {:#x})", fileName, hr);
                 return hr;
             }
-            ULONGLONG nbBytes = 0;
-            if (FAILED(hr = res->CopyTo(fs, &nbBytes)))
-            {
-                Log::Error(L"Failed to copy resource to '{} (code: {:#x})'", fileName, hr);
-                return hr;
-            }
-            fs->Close();
-            res->Close();
+        }
 
-            outputFile.swap(fileName);
+        shared_ptr<FileStream> fs = make_shared<FileStream>();
+        if (auto hr = fs->OpenHandle(hFile); FAILED(hr))
+        {
+            Log::Error(L"Failed to create extracted '{}' (code: {:#x})", fileName, hr);
+            return hr;
+        }
+        ULONGLONG nbBytes = 0;
+        if (auto hr = res->CopyTo(fs, &nbBytes); FAILED(hr))
+        {
+            Log::Error(L"Failed to copy resource to '{} (code: {:#x})'", fileName, hr);
+            return hr;
+        }
+        fs->Close();
+        res->Close();
+
+        outputFiles.emplace_back(std::make_pair(fileName, fileName));
+    }
+    else
+    {
+        // Resource is based in an archive... extracting file
+        auto fmt = ArchiveExtract::GetArchiveFormat(FormatName);
+        if (fmt == ArchiveFormat::Unknown)
+            fmt = ArchiveFormat::SevenZip;
+
+        auto extract = ArchiveExtract::MakeExtractor(fmt);
+
+        vector<wstring> ToExtract;
+
+        ToExtract.push_back(NameInArchive);
+        if (auto hr = extract->Extract(szImageFileRessourceID.c_str(), szTempDir, szSDDL, ToExtract); FAILED(hr))
+            return hr;
+
+        if (!extract->Items().empty())
+        {
+            for (auto&& item : extract->Items())
+            {
+                outputFiles.emplace_back(std::make_pair(std::move(item.NameInArchive), std::move(item.Path)));
+            }
         }
         else
-        {
-            // Resource is based in an archive... extracting file
-            auto fmt = ArchiveExtract::GetArchiveFormat(FormatName);
-            if (fmt == ArchiveFormat::Unknown)
-                fmt = ArchiveFormat::SevenZip;
-
-            auto extract = ArchiveExtract::MakeExtractor(fmt);
-
-            vector<wstring> ToExtract;
-
-            ToExtract.push_back(NameInArchive);
-            if (FAILED(hr = extract->Extract(szImageFileRessourceID.c_str(), szTempDir, szSDDL, ToExtract)))
-                return hr;
-
-            if (!extract->Items().empty())
-            {
-                outputFile = begin(extract->Items())->Path;
-            }
-            else
-                return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-        }
+            return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     }
-    else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
-    {
-        Log::Error(
-            L"'{}' does not match a typical embedded ressource pattern (code: {:#x})", szImageFileRessourceID, hr);
-        return E_INVALIDARG;
-    }
-
     return S_OK;
 }
 
@@ -972,7 +1023,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
 
         std::wstring strArchFormat;
 
-        if (item.Type == EmbedSpec::Buffer)
+        if (item.Type == EmbedSpec::EmbedType::Buffer)
         {
             bool bArchive = true;
 
@@ -993,19 +1044,19 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
             {
                 item.ArchiveFormat = strArchFormat;
                 archives.push_back(item);
-                item.Type = EmbedSpec::Void;
+                item.Type = EmbedSpec::EmbedType::Void;
             }
             else
             {
-                item.Type = EmbedSpec::File;
+                item.Type = EmbedSpec::EmbedType::File;
                 binaries.push_back(item);
-                item.Type = EmbedSpec::Void;
+                item.Type = EmbedSpec::EmbedType::Void;
             }
         }
     }
 
-    auto new_end =
-        std::remove_if(begin(values), end(values), [](const EmbedSpec& item) { return item.Type == EmbedSpec::Void; });
+    auto new_end = std::remove_if(
+        begin(values), end(values), [](const EmbedSpec& item) { return item.Type == EmbedSpec::EmbedType::Void; });
     values.erase(new_end, end(values));
 
     for (const auto& item : binaries)

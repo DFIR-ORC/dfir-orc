@@ -15,6 +15,10 @@
 #include "SystemDetails.h"
 
 #include "Robustness.h"
+#include "Output/Text/Fmt/path.h"
+#include "Output/Text/Fmt/optional.h"
+
+#include "Log/Log.h"
 
 #include "WideAnsi.h"
 
@@ -22,8 +26,6 @@
 
 #include <concrt.h>
 #include <filesystem>
-
-#include "Log/Log.h"
 
 using namespace std;
 using namespace Orc;
@@ -35,46 +37,19 @@ namespace Orc {
 ExtensionLibrary::ExtensionLibrary(
     const std::wstring& strKeyword,
     const std::wstring& strX86LibRef,
-    const std::wstring& strX64LibRef,
-    const std::wstring& strTempDir)
+    const std::wstring& strX64LibRef)
     : m_strKeyword(strKeyword)
     , m_strX86LibRef(strX86LibRef)
     , m_strX64LibRef(strX64LibRef)
-    , m_strTempDir(strTempDir)
 {
-}
-
-bool Orc::ExtensionLibrary::CheckInitialized()
-{
-    HRESULT hr = E_FAIL;
-    if (!IsInitialized())
-    {
-        if (FAILED(hr = Initialize()))
-        {
-            Log::Error("Failed to initialize library (code: {:#x})", hr);
-            return false;
-        }
-    }
-    return true;
-}
-
-bool Orc::ExtensionLibrary::CheckLoaded()
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = Load()))
-    {
-        Log::Error(L"Failed to load library (code: {:#x})", hr);
-        return false;
-    }
-    return true;
 }
 
 HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
 {
-    HRESULT hr = E_FAIL;
+    using namespace std::filesystem;
 
     std::wstring strSID;
-    if (FAILED(hr = SystemDetails::UserSID(strSID)))
+    if (auto hr = SystemDetails::UserSID(strSID); FAILED(hr))
     {
         Log::Error(L"Failed to get current user SID (code: {:#x})", hr);
         return hr;
@@ -83,79 +58,106 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
     if (EmbeddedResource::IsResourceBased(strFileRef))
     {
         std::wstring strExtractedFile;
-        if (FAILED(
-                hr = EmbeddedResource::ExtractToFile(
-                    strFileRef,
-                    m_strKeyword,
-                    RESSOURCE_READ_EXECUTE_SID,
-                    strSID.c_str(),
-                    m_strTempDir,
-                    strExtractedFile)))
+        if (auto hr = EmbeddedResource::ExtractToFile(
+                strFileRef,
+                m_strKeyword,
+                RESSOURCE_READ_EXECUTE_SID,
+                strSID.c_str(),
+                m_tempDir.wstring(),
+                strExtractedFile);
+            FAILED(hr))
         {
             Log::Debug(
-                L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})", strFileRef, m_strTempDir, hr);
+                L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})",
+                strFileRef,
+                m_tempDir.wstring(),
+                hr);
             return hr;
         }
         m_bDeleteOnClose = true;
 
-        if (FAILED(hr = ToDesiredName(strExtractedFile)))
-            return hr;
+        if (auto hr = ToDesiredName(strExtractedFile); FAILED(hr))
+        {
+            Log::Warn(
+                L"Failed to extract rename extracted file from '{}' to '{}' (code: {:#x})",
+                strExtractedFile,
+                m_strDesiredName,
+                hr);
+            m_libFile = strExtractedFile;
+        }
 
-        auto [hr, hModule] = LoadThisLibrary(m_strLibFile);
+        auto [hr, hModule] = LoadThisLibrary(m_libFile);
         if (hModule == NULL || FAILED(hr))
         {
-            Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_strLibFile, hr);
+            Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_libFile, hr);
             return hr;
         }
         m_hModule = hModule;
-        Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", m_strLibFile);
+        Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", m_libFile);
         return S_OK;
     }
 
     Log::Debug(L"ExtensionLibrary: Loading value '{}'", strFileRef);
     wstring strNewLibRef;
-    if (SUCCEEDED(EmbeddedResource::ExtractValue(L"", strFileRef, strNewLibRef)))
+    if (auto hr = EmbeddedResource::ExtractValue(L"", strFileRef, strNewLibRef); SUCCEEDED(hr))
     {
         Log::Debug(L"ExtensionLibrary: Loaded value {}={} successfully", strFileRef, strNewLibRef);
         if (EmbeddedResource::IsResourceBased(strNewLibRef))
         {
-            std::wstring strExtractedFile;
+            std::vector<std::pair<std::wstring, std::wstring>> strExtractedFiles;
 
             if (FAILED(
-                    hr = EmbeddedResource::ExtractToFile(
+                    hr = EmbeddedResource::ExtractToDirectory(
                         strNewLibRef,
                         m_strKeyword,
                         RESSOURCE_READ_EXECUTE_SID,
                         strSID.c_str(),
-                        m_strTempDir,
-                        strExtractedFile)))
+                        m_tempDir.wstring(),
+                        strExtractedFiles)))
             {
                 Log::Debug(
-                    L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})",
-                    strNewLibRef,
-                    m_strTempDir,
-                    hr);
+                    L"Failed to extract resource '{}' into temp dir '{}' (code: {:#x})", strNewLibRef, m_tempDir, hr);
                 return hr;
             }
+
+            for (const auto& file : strExtractedFiles)
+            {
+                path archive_path = file.first;
+                path extracted_path = file.second;
+
+                // When extracting extension libraries, we need the files to keep their original file names for proper
+                // dependency loading
+                path desired_path = extracted_path;
+                desired_path.replace_filename(archive_path.filename());
+
+                std::error_code ec;
+                rename(extracted_path, desired_path, ec);
+                if (ec)
+                    Log::Warn(L"Failed to rename extension library name {} to {}", extracted_path, desired_path);
+                else if (desired_path.filename() == m_strDesiredName)
+                    m_libFile = desired_path;
+            }
+            if (m_libFile.empty())
+            {
+                Log::Error(L"Desired file name {} was not found in {} extracted files", m_strDesiredName);
+                return E_INVALIDARG;
+            }
+
             m_bDeleteOnClose = true;
 
-            if (FAILED(hr = ToDesiredName(strExtractedFile)))
-                return hr;
-
-            auto [hr, hModule] = LoadThisLibrary(m_strLibFile);
+            auto [hr, hModule] = LoadThisLibrary(m_libFile);
             if (hModule == NULL || FAILED(hr))
             {
-                Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_strLibFile, hr);
+                Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", m_libFile, hr);
                 return hr;
             }
             m_hModule = hModule;
-            Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", m_strLibFile);
+            Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", m_libFile);
             return S_OK;
         }
 
         // Last chance, try loading the file
-        auto [hr, hModule] = LoadThisLibrary(strNewLibRef);
-        if (hModule == NULL || FAILED(hr))
+        if (auto [hr, hModule] = LoadThisLibrary(strNewLibRef); hModule == NULL || FAILED(hr))
         {
             Log::Debug(L"Failed to load extension lib using '{}' path (code: {:#x})", strNewLibRef, hr);
             return hr;
@@ -174,7 +176,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
             Log::Debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strNewLibRef, SystemError(hr));
             return hr;
         }
-        m_strLibFile = szFullPath;
+        m_libFile = szFullPath;
         Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", strNewLibRef);
         return S_OK;
     }
@@ -197,19 +199,19 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
     WCHAR szFullPath[MAX_PATH];
     if (!GetModuleFileName(m_hModule, szFullPath, MAX_PATH))
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
+        auto hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Debug(L"Failed to get file path for extension lib '{}' (code: {:#x})", strFileRef, hr);
         return hr;
     }
-    m_strLibFile = szFullPath;
-    Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", m_strLibFile);
+    m_libFile = szFullPath;
+    Log::Debug(L"ExtensionLibrary: Loaded '{}' successfully", m_libFile);
 
     return S_OK;
 }
 
-std::pair<HRESULT, HINSTANCE> Orc::ExtensionLibrary::LoadThisLibrary(const std::wstring& strLibFile)
+std::pair<HRESULT, HINSTANCE> Orc::ExtensionLibrary::LoadThisLibrary(const std::filesystem::path& libFile)
 {
-    auto hInst = LoadLibraryEx(strLibFile.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+    auto hInst = LoadLibraryEx(libFile.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
     if (hInst == NULL)
     {
         auto hr = HRESULT_FROM_WIN32(GetLastError());
@@ -238,14 +240,12 @@ HRESULT Orc::ExtensionLibrary::ToDesiredName(const std::wstring& libName)
         std::filesystem::rename(extractedFileName, finalName, ec);
 
         if (ec)
-        {
-            Log::Error(L"Failed to rename file '{}' to '{}': {})", extractedFileName, finalName, ec);
-            return E_FAIL;
-        }
-        m_strLibFile = finalName.wstring();
+            Log::Warn(L"Failed to rename file '{}' to '{}': {})", extractedFileName, finalName, ec);
+
+        m_libFile = finalName;
     }
     else
-        m_strLibFile = libName;
+        m_libFile = libName;
     return S_OK;
 }
 
@@ -277,38 +277,68 @@ FARPROC Orc::ExtensionLibrary::GetEntryPoint(const CHAR* szFunctionName, bool bM
     return retval;
 }
 
-HRESULT ExtensionLibrary::Load(const std::wstring& strAlternateRef)
+HRESULT ExtensionLibrary::Load(std::optional<std::filesystem::path> tempDir)
 {
-    HRESULT hr = E_FAIL;
+    using namespace std::filesystem;
 
     if (m_hModule != NULL)
         return S_OK;
 
-    if (!strAlternateRef.empty())
-    {
-        m_strLibRef = strAlternateRef;
-    }
-    else
-    {
-        WORD wArch = 0;
-        if (FAILED(hr = SystemDetails::GetArchitecture(wArch)))
-            return hr;
+    WORD wArch = 0;
+    if (auto hr = SystemDetails::GetArchitecture(wArch); FAILED(hr))
+        return hr;
 
-        switch (wArch)
+    if (tempDir.has_value())
+    {
+        if (exists(*tempDir))
         {
-            case PROCESSOR_ARCHITECTURE_INTEL:
-                m_strLibRef = m_strX86LibRef;
-                break;
-            case PROCESSOR_ARCHITECTURE_AMD64:
-                if (SystemDetails::IsWOW64())
-                    m_strLibRef = m_strX86LibRef;
-                else
-                    m_strLibRef = m_strX64LibRef;
-                break;
-            default:
-                Log::Error(L"Unsupported architecture: {}", wArch);
-                return hr;
+            if (is_directory(*tempDir))
+            {
+                Log::Debug(L"Using existing directory {} to load extension library", tempDir);
+                m_tempDir = std::move(*tempDir);
+            }
+            else
+                Log::Warn(
+                    L"Specified temporary directory {} for extenstion library exists and is not a directory -> ignored",
+                    tempDir);
         }
+        else
+        {
+            Log::Debug(L"Creating temporary directory {} for extension library", tempDir);
+            std::error_code ec;
+            if (!create_directories(*tempDir, ec))
+            {
+                Log::Error(
+                    L"Specified temporary directory {} for extenstion library could not be created -> ignored",
+                    tempDir);
+            }
+            else if (!ec)
+            {
+                m_tempDir = std::move(*tempDir);
+                m_bDeleteTemp = true;
+            }
+        }
+    }
+
+    if (m_tempDir.empty())
+    {
+        m_tempDir = DefaultExtensionDirectory();
+    }
+
+    switch (wArch)
+    {
+        case PROCESSOR_ARCHITECTURE_INTEL:
+            m_strLibRef = m_strX86LibRef;
+            break;
+        case PROCESSOR_ARCHITECTURE_AMD64:
+            if (SystemDetails::IsWOW64())
+                m_strLibRef = m_strX86LibRef;
+            else
+                m_strLibRef = m_strX64LibRef;
+            break;
+        default:
+            Log::Error(L"Unsupported architecture: {}", wArch);
+            return HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED);
     }
 
     std::vector<std::wstring> refs;
@@ -317,9 +347,10 @@ HRESULT ExtensionLibrary::Load(const std::wstring& strAlternateRef)
 
     boost::split(refs, m_strLibRef, boost::is_any_of(L";,"));
 
+    auto last_hr = E_FAIL;
     for (auto& ref : refs)
     {
-        if (SUCCEEDED(hr = TryLoad(ref)))
+        if (auto hr = TryLoad(ref); SUCCEEDED(hr))
         {
             Log::Debug(L"TryLoad succeeded for reference '{}'", ref);
             return S_OK;
@@ -327,10 +358,11 @@ HRESULT ExtensionLibrary::Load(const std::wstring& strAlternateRef)
         else
         {
             Log::Debug(L"TryLoad failed for reference '{}' (code: {:#x})", ref, hr);
+            last_hr = hr;
         }
     }
     Log::Error(L"Failed to load extension DLL '{}' using the reference values: '{}'", m_strKeyword, m_strLibRef);
-    return hr;
+    return last_hr;
 }
 
 STDMETHODIMP ExtensionLibrary::UnLoad()
@@ -343,7 +375,6 @@ STDMETHODIMP ExtensionLibrary::UnLoad()
 
     if (m_hModule != NULL)
     {
-
         ScopedLock lock(m_cs);
         HMODULE hmod = m_hModule;
         m_hModule = NULL;
@@ -355,15 +386,17 @@ STDMETHODIMP ExtensionLibrary::UnLoad()
 STDMETHODIMP ExtensionLibrary::Cleanup()
 {
     UnLoad();
-    if (!m_strLibFile.empty() && m_bDeleteOnClose)
+    if (!m_libFile.empty() && m_bDeleteOnClose)
     {
         ScopedLock lock(m_cs);
-        HRESULT hr = E_FAIL;
 
-        if (FAILED(hr = UtilDeleteTemporaryFile(m_strLibFile.c_str())))
-        {
+        if (auto hr = UtilDeleteTemporaryFile(m_libFile); FAILED(hr))
             return hr;
-        }
+    }
+    if (m_bDeleteTemp && !m_tempDir.empty() && std::filesystem::exists(m_tempDir))
+    {
+        if (auto hr = UtilDeleteTemporaryDirectory(m_tempDir); FAILED(hr))
+            return hr;
     }
 
     return S_OK;
@@ -385,13 +418,13 @@ STDMETHODIMP Orc::ExtensionLibrary::UnloadAndCleanup()
 
         FreeThisLibrary(hmod);
 
-        if (!m_strLibFile.empty() && m_bDeleteOnClose)
+        if (!m_libFile.empty() && m_bDeleteOnClose)
         {
             DWORD dwRetries = 0L;
             while (dwRetries < Orc::DELETION_RETRIES)
             {
                 HRESULT hr = E_FAIL;
-                if (SUCCEEDED(hr = UtilDeleteTemporaryFile(m_strLibFile.c_str(), 1)))
+                if (SUCCEEDED(hr = UtilDeleteTemporaryFile(m_libFile.c_str(), 1)))
                 {
                     return S_OK;
                 }
@@ -406,4 +439,52 @@ STDMETHODIMP Orc::ExtensionLibrary::UnloadAndCleanup()
 ExtensionLibrary::~ExtensionLibrary(void)
 {
     UnloadAndCleanup();
+}
+
+const std::filesystem::path&
+Orc::ExtensionLibrary::DefaultExtensionDirectory(std::optional<std::filesystem::path> aDefaultDir)
+{
+    static std::filesystem::path defaultDir;
+
+    if (aDefaultDir.has_value())
+    {
+        if (exists(*aDefaultDir))
+        {
+            if (is_directory(*aDefaultDir))
+            {
+                Log::Debug(L"Using existing directory {} as default to load extension library", aDefaultDir);
+                defaultDir = std::move(*aDefaultDir);
+            }
+            else
+                Log::Warn(
+                    L"Specified temporary directory {} as default for extenstion library exists and is not a directory "
+                    L"-> ignored",
+                    aDefaultDir);
+        }
+        else
+        {
+            Log::Debug(L"Creating temporary directory {} as default for extension library", aDefaultDir);
+            std::error_code ec;
+            if (!create_directories(*aDefaultDir, ec))
+            {
+                Log::Error(
+                    L"Specified temporary directory {} as default for extenstion library could not be created -> "
+                    L"ignored",
+                    aDefaultDir);
+            }
+            else if (!ec)
+            {
+                defaultDir = std::move(*aDefaultDir);
+            }
+        }
+    }
+
+    if (defaultDir.empty())
+    {
+        WCHAR szTempDir[MAX_PATH];
+        if (auto hr = UtilGetTempDirPath(szTempDir, MAX_PATH); SUCCEEDED(hr))
+            defaultDir = szTempDir;
+    }
+
+    return defaultDir;
 }

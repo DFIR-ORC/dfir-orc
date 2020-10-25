@@ -51,6 +51,9 @@ HRESULT ORCLIB_API UtilGetPath(__in PCWSTR pwzDir, __in PCWSTR pwzDesiredName, _
 BOOL ORCLIB_API UtilPathIsDirectory(__in PCWSTR pwszPath);
 
 HRESULT ORCLIB_API UtilDeleteTemporaryFile(LPCWSTR pszPath);
+HRESULT ORCLIB_API UtilDeleteTemporaryFile(const std::filesystem::path& path);
+
+HRESULT ORCLIB_API UtilDeleteTemporaryDirectory(const std::filesystem::path& path);
 
 static constexpr auto DELETION_RETRIES = 50;
 

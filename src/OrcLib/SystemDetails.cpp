@@ -243,24 +243,8 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
             if (major < 10)
                 tags.insert(L"RTM"s);
             break;
-        case 1:
-            tags.insert(L"SP1"s);
-            break;
-        case 2:
-            tags.insert(L"SP2"s);
-            break;
-        case 3:
-            tags.insert(L"SP3"s);
-            break;
-        case 4:
-            tags.insert(L"SP4"s);
-            break;
-        case 5:
-            tags.insert(L"SP5"s);
-            break;
-        case 6:
-            tags.insert(L"SP6"s);
-            break;
+        default:
+            tags.insert(fmt::format(L"SP{}"sv, g_pDetailsBlock->osvi.wServicePackMajor));
     }
 
     tags.insert(L"Windows"s);
@@ -1695,7 +1679,7 @@ HRESULT SystemDetails::LoadSystemDetails()
     return S_OK;
 }
 
-HRESULT SystemDetails::GetCurrentWorkingDirectory(std::wstring& strCWD)
+HRESULT SystemDetails::GetCurrentWorkingDirectory(std::filesystem::path& cwd)
 {
     WCHAR path[MAX_PATH];
     DWORD retval = 0L;
@@ -1705,17 +1689,17 @@ HRESULT SystemDetails::GetCurrentWorkingDirectory(std::wstring& strCWD)
     }
     if (retval > MAX_PATH)
     {
-        CBinaryBuffer buffer;
-        buffer.SetCount(retval);
-        if (!(retval = GetCurrentDirectory(retval, buffer.GetP<WCHAR>())))
+        Buffer<WCHAR> buffer;
+        buffer.resize(retval);
+        if (!(retval = GetCurrentDirectory(retval, buffer.get())))
         {
             return HRESULT_FROM_WIN32(GetLastError());
         }
-        strCWD.assign(buffer.GetP<WCHAR>(), retval);
+        cwd = std::filesystem::path(std::wstring_view(buffer.get(), retval)).lexically_normal();
     }
     else
     {
-        strCWD.assign(path, retval);
+        cwd = std::filesystem::path(std::wstring_view(path, retval)).lexically_normal();
     }
     return S_OK;
 }

@@ -86,11 +86,17 @@ public:
     virtual HRESULT BeginCollection(LPCWSTR szCollection) override final;
     virtual HRESULT EndCollection(LPCWSTR szCollection) override final;
 
-    virtual HRESULT WriteFormated(const WCHAR* szFormat, ...) override final;
-    virtual HRESULT WriteNamedFormated(LPCWSTR szName, const WCHAR* szFormat, ...) override final;
-
     virtual HRESULT Write(LPCWSTR szString) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, const WCHAR* szValue) override final;
+
+    virtual HRESULT Write(const std::wstring_view str) override final;
+    virtual HRESULT WriteNamed(LPCWSTR szName, const std::wstring_view str) override final;
+
+    virtual HRESULT Write(const std::wstring& str) override final;
+    virtual HRESULT WriteNamed(LPCWSTR szName, const std::wstring& str) override final;
+
+    virtual HRESULT Write(const std::string_view str) override final;
+    virtual HRESULT WriteNamed(LPCWSTR szName, const std::string_view str) override final;
 
     virtual HRESULT Write(bool bBoolean) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, bool bBoolean) override final;
@@ -160,6 +166,14 @@ public:
 private:
     template <typename... Args>
     HRESULT WriteNamed_(LPCWSTR szName, Args&&... args);
+
+protected:
+    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, wformat_args args) override final;
+    virtual HRESULT WriteFormated_(const std::string_view& szFormat, format_args args) override final;
+    virtual HRESULT
+    WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, wformat_args args) override final;
+    virtual HRESULT
+    WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, format_args args) override final;
 };
 
 std::shared_ptr<StructuredOutput::IWriter>

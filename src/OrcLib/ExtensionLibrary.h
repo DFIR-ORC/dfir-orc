@@ -12,7 +12,7 @@
 #include "OrcLib.h"
 
 #include "CriticalSection.h"
-
+#include "WideAnsi.h"
 #include "Robustness.h"
 
 #include <optional>
@@ -42,54 +42,72 @@ public:
     ExtensionLibrary(
         const std::wstring& strKeyword,
         const std::wstring& strX86LibRef,
-        const std::wstring& strX64LibRef,
-        const std::wstring& strTempDir = L"");
+        const std::wstring& strX64LibRef);
 
     ExtensionLibrary(ExtensionLibrary&&) noexcept = default;
 
-    bool CheckInitialized();
-    bool CheckLoaded();
+    template <class Library>
+    static std::wstring Name()
+    {
+        using namespace std::string_literals;
+        if (auto [hr, wstr] = AnsiToWide(typeid(Library).name()); SUCCEEDED(hr))
+            return wstr;
+        else
+            return L"(invalid library name)"s;
+    }
 
     template <class Library>
-    static const std::shared_ptr<Library> GetLibrary(bool bInitialize = true)
+    static const std::shared_ptr<Library> GetLibrary(std::optional<std::filesystem::path> tempDir = std::nullopt, bool bShared = true)
     {
         try
         {
-            const std::shared_ptr<Library>& pLib = GetShared<Library>(true);
+            const std::shared_ptr<Library>& pLib = bShared ? GetShared<Library>(true) : std::make_shared<Library>();
 
-            if (!bInitialize)
-                return pLib;
-
-            if (pLib != nullptr)
+            if (!pLib)
             {
-                if (!pLib->IsLoaded())
-                {
-                    if (pLib->CheckLoaded())
-                    {
-                        if (!pLib->m_UnLoadHandler)
-                        {
-                            pLib->m_UnLoadHandler =
-                                std::make_shared<ExtensionLibraryHandler<Library>>(L"ExtensionLibraryUnLoad");
-                            Robustness::AddTerminationHandler(pLib->m_UnLoadHandler);
-                        }
-                        return pLib;
-                    }
-                    else
-                        return nullptr;
-                }
-
-                return pLib->CheckInitialized() ? pLib : nullptr;
+                Log::Error(L"Failed to get shared ptr to library {}", Name<Library>());
+                return nullptr;
             }
-            return nullptr;
+
+            if (!pLib->IsLoaded())
+            {
+                Log::Debug(L"Library {} is not yet loaded", Name<Library>());
+
+                if (auto hr = pLib->Load(tempDir); FAILED(hr))
+                {
+                    Log::Error(L"Library {} is not be loaded", Name<Library>());
+                    return nullptr;
+                }
+            }
+
+            if (!pLib->IsInitialized())
+            {
+                if (auto hr = pLib->Initialize(); FAILED(hr))
+                {
+                    Log::Error(L"Library {} is loaded but could not be initialized", Name<Library>());
+                    return nullptr;
+                }
+            }
+            Log::Debug(L"Library {} is loaded and initialized", Name<Library>());
+
+            if (!pLib->m_UnLoadHandler)
+            {
+                pLib->m_UnLoadHandler = std::make_shared<ExtensionLibraryHandler<Library>>(L"ExtensionLibraryUnLoad");
+                Robustness::AddTerminationHandler(pLib->m_UnLoadHandler);
+            }
+            return pLib;
         }
-        catch (std::exception e)
+        catch (const std::exception& e)
         {
+            auto [hr, wstr] = AnsiToWide(e.what());
+            Log::Critical(L"Library {} raised an exception: {}", Name<Library>(), wstr);
             return nullptr;
         }
     }
 
-    HRESULT Load(const std::wstring& strAlternateFileRef = L"");
-    const std::wstring& LibraryFile() const { return m_strLibFile; }
+    HRESULT
+    Load(std::optional<std::filesystem::path> tempDir = std::nullopt);
+    const std::filesystem::path& LibraryFile() const { return m_libFile; }
 
     STDMETHOD(UnLoad());
     STDMETHOD(Cleanup());
@@ -99,6 +117,9 @@ public:
     bool IsInitialized() const { return m_bInitialized; }
 
     virtual ~ExtensionLibrary(void);
+
+    static const std::filesystem::path&
+    DefaultExtensionDirectory(std::optional<std::filesystem::path> aDefaultDir = std::nullopt);
 
 protected:
     bool m_bInitialized = false;
@@ -124,7 +145,7 @@ protected:
         return S_OK;
     };
 
-    virtual std::pair<HRESULT, HINSTANCE> LoadThisLibrary(const std::wstring& strLibFile);
+    virtual std::pair<HRESULT, HINSTANCE> LoadThisLibrary(const std::filesystem::path& libFile);
 
     virtual void FreeThisLibrary(HINSTANCE hInstance)
     {
@@ -183,13 +204,13 @@ protected:
 
     std::wstring m_strLibRef;  // Effective, contextual ref used to locate extension lib
 
-    std::wstring m_strLibFile;
-    std::wstring m_strTempDir;
+    std::filesystem::path m_libFile;
+    std::filesystem::path m_tempDir;
+    bool m_bDeleteTemp = false;
 
     std::optional<std::wstring> m_strDesiredName;
 
     bool m_bDeleteOnClose = false;
-
     std::shared_ptr<TerminationHandler> m_UnLoadHandler;
 
     HRESULT ToDesiredName(const std::wstring& libName);
@@ -220,7 +241,7 @@ protected:
     {
         return (T)GetEntryPoint(szFunctionName, bMandatory);
     };
-};
+};  // namespace Orc
 
 template <class Ext>
 HRESULT ExtensionLibraryHandler<Ext>::operator()()

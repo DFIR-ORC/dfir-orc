@@ -229,7 +229,7 @@ CDiskExtent CDiskExtent::ReOpen(DWORD dwDesiredAccess, DWORD dwShareMode, DWORD 
     ext.m_PhysicalSectorSize = m_PhysicalSectorSize;
     ext.m_Start = m_Start;
 
-    const auto k32 = ExtensionLibrary::GetLibrary<Kernel32Extension>(true);
+    const auto k32 = ExtensionLibrary::GetLibrary<Kernel32Extension>();
 
     if (k32 != nullptr)
     {

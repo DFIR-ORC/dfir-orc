@@ -96,7 +96,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
 
         switch (item.Type)
         {
-            case EmbeddedResource::EmbedSpec::NameValuePair:
+            case EmbeddedResource::EmbedSpec::EmbedType::NameValuePair:
 
                 if (SUCCEEDED(
                         hr = _UpdateResource(
@@ -110,7 +110,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                     Log::Debug(L"Successfully added {}={}", item.Name, item.Value);
                 }
                 break;
-            case EmbeddedResource::EmbedSpec::ValuesDeletion:
+            case EmbeddedResource::EmbedSpec::EmbedType::ValuesDeletion:
                 if (SUCCEEDED(
                         hr = _UpdateResource(
                             hOutput, strPEToUpdate.c_str(), EmbeddedResource::VALUES(), item.Name.c_str(), NULL, 0L)))
@@ -118,7 +118,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                     Log::Debug(L"Successfully delete resource at position '{}' (code: {:#x})", item.Name, hr);
                 }
                 break;
-            case EmbeddedResource::EmbedSpec::BinaryDeletion:
+            case EmbeddedResource::EmbedSpec::EmbedType::BinaryDeletion:
                 if (SUCCEEDED(
                         hr = _UpdateResource(
                             hOutput, strPEToUpdate.c_str(), EmbeddedResource::BINARY(), item.Name.c_str(), NULL, 0L)))
@@ -146,7 +146,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
 
         switch (item.Type)
         {
-            case EmbeddedResource::EmbedSpec::File: {
+            case EmbeddedResource::EmbedSpec::EmbedType::File: {
                 auto filestream = make_shared<FileStream>();
 
                 if (FAILED(hr = filestream->ReadFrom(item.Value.c_str())))
@@ -193,7 +193,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                 }
             }
             break;
-            case EmbeddedResource::EmbedSpec::Archive: {
+            case EmbeddedResource::EmbedSpec::EmbedType::Archive: {
                 ArchiveFormat fmt = ArchiveFormat::Unknown;
 
                 if (item.ArchiveFormat.empty())

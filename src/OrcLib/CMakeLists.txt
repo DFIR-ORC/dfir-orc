@@ -565,8 +565,14 @@ set(SRC_INOUT_TEXT_FMT
     "Output/Text/Fmt/Partition.h"
     "Output/Text/Fmt/PartitionFlags.h"
     "Output/Text/Fmt/PartitionType.h"
+    "Output/Text/Fmt/path.h"
     "Output/Text/Fmt/SYSTEMTIME.h"
     "Output/Text/Fmt/TimeUtc.h"
+)
+
+source_group(In&Out\\Output\\Text\\Fmt FILES ${SRC_INOUT_TEXT_FMT})
+
+set(SRC_INOUT_TEXT_FMT_FWD
     "Output/Text/Fmt/Fwd/ByteQuantity.h"
     "Output/Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
     "Output/Text/Fmt/Fwd/error_code.h"
@@ -584,7 +590,8 @@ set(SRC_INOUT_TEXT_FMT
     "Output/Text/Fmt/Fwd/SYSTEMTIME.h"
     "Output/Text/Fmt/Fwd/TimeUtc.h")
 
-source_group(In&Out\\Output\\Text\\Fmt FILES ${SRC_INOUT_TEXT_FMT})
+source_group(In&Out\\Output\\Text\\Fmt\\Fwd FILES ${SRC_INOUT_TEXT_FMT_FWD})
+
 
 set(SRC_INOUT_TEXT_PRINT
     "Output/Text/Print.h"
@@ -832,6 +839,7 @@ add_library(OrcLib
         ${SRC_INOUT_CONSOLE}
         ${SRC_INOUT_TEXT}
         ${SRC_INOUT_TEXT_FMT}
+        ${SRC_INOUT_TEXT_FMT_FWD}
         ${SRC_INOUT_TEXT_PRINT}
         ${SRC_INOUT_UPLOAD}
         ${SRC_LOG}
