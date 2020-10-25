@@ -18,7 +18,10 @@
 #include <fstream>
 
 #include <spdlog/logger.h>
-#include <boost/stacktrace.hpp>
+
+#ifdef ORC_BUILD_BOOSTSTACK_TRACE
+#    include <boost/stacktrace.hpp>
+#endif
 
 using namespace Orc;
 
@@ -72,8 +75,11 @@ Logger::Logger(std::initializer_list<std::pair<Facility, std::shared_ptr<spdlog:
     // This is error handler will help to fix log formatting error
     spdlog::set_error_handler([](const std::string& msg) {
         std::cerr << msg << std::endl;
+
+#ifdef ORC_BUILD_BOOSTSTACK_TRACE
         std::cerr << "Stack trace:" << std::endl;
         std::cerr << boost::stacktrace::stacktrace();
+#endif
     });
 
     // https://github.com/gabime/spdlog/wiki/3.-Custom-formatting

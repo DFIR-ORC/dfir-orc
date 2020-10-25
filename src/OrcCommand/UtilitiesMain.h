@@ -13,12 +13,16 @@
 #include <iostream>
 #include <chrono>
 
+#include <concrt.h>
+
 #include <boost/logic/tribool.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
-#include <boost/stacktrace.hpp>
-#include <concrt.h>
+
+#ifdef ORC_BUILD_BOOST_STACKTRACE
+#    include <boost/stacktrace.hpp>
+#endif
 
 #include "ConfigFile.h"
 #include "Archive.h"
@@ -883,13 +887,19 @@ public:
             std::cerr << "std::exception during execution" << std::endl;
             std::cerr << "Caught " << e.what() << std::endl;
             std::cerr << "Type " << typeid(e).name() << std::endl;
+
+#ifdef ORC_BUILD_BOOST_STACKTRACE
             boost::stacktrace::stacktrace();
+#endif
             return E_ABORT;
         }
         catch (...)
         {
             std::cerr << "Exception during during execution" << std::endl;
+
+#ifdef ORC_BUILD_BOOST_STACKTRACE
             boost::stacktrace::stacktrace();
+#endif
             return E_ABORT;
         }
 
