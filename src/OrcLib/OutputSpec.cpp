@@ -239,7 +239,7 @@ HRESULT OutputSpec::Configure(
     }
     if (OutputSpec::Kind::Archive & supported)
     {
-        auto fmt = Archive::GetArchiveFormat(extension.c_str());
+        auto fmt = OrcArchive::GetArchiveFormat(extension.c_str());
         if (fmt != ArchiveFormat::Unknown)
         {
             Type = OutputSpec::Kind::Archive;
@@ -356,7 +356,7 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
         }
         if (::HasValue(item, CONFIG_OUTPUT_FORMAT))
         {
-            ArchiveFormat = Archive::GetArchiveFormat(item.SubItems[CONFIG_OUTPUT_FORMAT]);
+            ArchiveFormat = OrcArchive::GetArchiveFormat(item.SubItems[CONFIG_OUTPUT_FORMAT]);
         }
     }
 

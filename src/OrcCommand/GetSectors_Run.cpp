@@ -1056,7 +1056,7 @@ Main::CreateDiskChunkArchiveAndCSV(const std::wstring& pArchivePath, const std::
     }
 
     compressor->SetCallback(
-        [this](const Archive::ArchiveItem& item) { Log::Info(L"File archived: '{}'", item.NameInArchive); });
+        [this](const OrcArchive::ArchiveItem& item) { Log::Info(L"File archived: '{}'", item.NameInArchive); });
 
     return {S_OK, std::move(CSV)};
 }

@@ -691,7 +691,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
             };
 
             std::shared_ptr<MemoryStream> pOutput;
-            auto MakeWriteStream = [&pOutput](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+            auto MakeWriteStream = [&pOutput](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
                 HRESULT hr = E_FAIL;
 
                 auto stream = std::make_shared<MemoryStream>();
@@ -1098,7 +1098,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
             continue;
         }
 
-        auto extractor = ArchiveExtract::MakeExtractor(Archive::GetArchiveFormat(item.ArchiveFormat));
+        auto extractor = ArchiveExtract::MakeExtractor(OrcArchive::GetArchiveFormat(item.ArchiveFormat));
         if (!extractor)
         {
             Log::Error(L"Failed to create extractor for ressource");

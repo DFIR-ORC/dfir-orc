@@ -32,9 +32,9 @@ using namespace Orc;
 ArchiveExtractCallback::ArchiveExtractCallback(
     const CComPtr<IInArchive>& archiveHandler,
     const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
-    Archive::ArchiveItems& Extracted,
+    OrcArchive::ArchiveItems& Extracted,
     ArchiveExtract::MakeOutputStream MakeWriteAbleStream,
-    Archive::ArchiveCallback pCallback,
+    OrcArchive::ArchiveCallback pCallback,
     bool bComputeHash,
     const std::wstring& pwd)
     : m_refCount(0)

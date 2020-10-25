@@ -41,7 +41,7 @@ std::shared_ptr<ArchiveCreate> ArchiveCreate::MakeCreate(ArchiveFormat fmt, bool
 }
 
 ArchiveCreate::ArchiveCreate(bool bComputeHash)
-    : Archive(bComputeHash)
+    : OrcArchive(bComputeHash)
 {
 }
 

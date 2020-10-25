@@ -40,7 +40,7 @@ HRESULT UnitTestHelper::ExtractArchive(
     ArchiveExtract::MakeArchiveStream makeArchiveStream,
     const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
     ArchiveExtract::MakeOutputStream MakeWriteAbleStream,
-    Archive::ArchiveCallback archiveCallback)
+    OrcArchive::ArchiveCallback archiveCallback)
 {
     HRESULT hr = E_FAIL;
 

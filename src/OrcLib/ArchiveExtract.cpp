@@ -136,7 +136,7 @@ STDMETHODIMP ArchiveExtract::Extract(
     };
 
     auto MakeWriteStream =
-        [pwzExtractRootDir, szSDDL, this](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+        [pwzExtractRootDir, szSDDL, this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
         std::wstring fileName;
@@ -266,7 +266,7 @@ STDMETHODIMP ArchiveExtract::Extract(
     };
 
     auto MakeWriteStream =
-        [pwzExtractRootDir, szSDDL, this](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+        [pwzExtractRootDir, szSDDL, this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
         HANDLE hFile = INVALID_HANDLE_VALUE;
@@ -334,7 +334,7 @@ STDMETHODIMP ArchiveExtract::Extract(
     };
 
     auto MakeWriteStream =
-        [pwzExtractRootDir, szSDDL, this](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+        [pwzExtractRootDir, szSDDL, this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
         HANDLE hFile = INVALID_HANDLE_VALUE;

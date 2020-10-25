@@ -21,7 +21,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ArchiveCreate : public Archive
+class ORCLIB_API ArchiveCreate : public OrcArchive
 {
 
 protected:
@@ -38,10 +38,11 @@ protected:
 public:
     static std::shared_ptr<ArchiveCreate> MakeCreate(ArchiveFormat fmt, bool bComputeHash = false);
 
-    STDMETHOD(InitArchive)(__in PCWSTR pwzArchivePath, Archive::ArchiveCallback pCallback = nullptr) PURE;
-    STDMETHOD(InitArchive)(__in const std::filesystem::path& path, Archive::ArchiveCallback pCallback = nullptr) PURE;
+    STDMETHOD(InitArchive)(__in PCWSTR pwzArchivePath, OrcArchive::ArchiveCallback pCallback = nullptr) PURE;
     STDMETHOD(InitArchive)
-    (__in const std::shared_ptr<ByteStream>& pOutputStream, Archive::ArchiveCallback pCallback = nullptr) PURE;
+    (__in const std::filesystem::path& path, OrcArchive::ArchiveCallback pCallback = nullptr) PURE;
+    STDMETHOD(InitArchive)
+    (__in const std::shared_ptr<ByteStream>& pOutputStream, OrcArchive::ArchiveCallback pCallback = nullptr) PURE;
 
     STDMETHOD(SetCompressionLevel)(__in const std::wstring& strLevel) PURE;
 

@@ -123,7 +123,7 @@ public:
             retval.Type = EmbedType::Archive;
             retval.Name = Name;
             retval.ArchiveItems = Value;
-            retval.ArchiveFormat = Archive::GetArchiveFormatString(Archive::GetArchiveFormat(Name));
+            retval.ArchiveFormat = OrcArchive::GetArchiveFormatString(OrcArchive::GetArchiveFormat(Name));
             return retval;
         };
         static EmbedSpec AddArchive(
@@ -543,7 +543,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             };
 
             std::shared_ptr<MemoryStream> pOutput;
-            auto MakeWriteStream = [&pOutput](Archive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
+            auto MakeWriteStream = [&pOutput](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
                 HRESULT hr = E_FAIL;
 
                 auto stream = std::make_shared<MemoryStream>();

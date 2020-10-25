@@ -15,6 +15,13 @@
 
 #include "UtilitiesMain.h"
 
+#include <filesystem>
+#include <vector>
+#include <set>
+#include <string>
+
+#include <boost/logic/tribool.hpp>
+
 #include "ConfigFileReader.h"
 #include "ConfigFileReader.h"
 #include "MFTWalker.h"
@@ -29,11 +36,8 @@
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
 
-#include "Utils/TypeTraits.h"
-
-#include <vector>
-#include <set>
-#include <string>
+#include "Archive/Appender.h"
+#include "Archive/7z/Archive7z.h"
 
 #pragma managed(push, off)
 
@@ -147,9 +151,6 @@ public:
         static std::wregex g_ContentRegEx;
     };
 
-private:
-    Configuration config;
-
     class SampleRef
     {
     public:
@@ -164,17 +165,18 @@ private:
 
         ULONGLONG SampleSize = 0LL;
         FILETIME CollectionDate;
-        bool OffLimits = false;
 
-        LONGLONG VolumeSerial;  //   |
-        MFT_SEGMENT_REFERENCE FRN;  //   |--> Uniquely identifies a data stream to collect
-        USHORT InstanceID;  //   |
-        size_t AttributeIndex = 0;  // AttributeIndex because each attribute from the match is a sample
+        LONGLONG VolumeSerial;
+        MFT_SEGMENT_REFERENCE FRN;
+        USHORT InstanceID;
+        size_t AttributeIndex = 0;
         ContentSpec Content;
         std::shared_ptr<CryptoHashStream> HashStream;
         std::shared_ptr<FuzzyHashStream> FuzzyHashStream;
         std::shared_ptr<ByteStream> CopyStream;
         GUID SnapshotID;
+        LimitStatus LimitStatus;
+        std::wstring SourcePath;
 
         std::vector<std::shared_ptr<FileFind::Match>> Matches;
 
@@ -193,7 +195,7 @@ private:
             std::swap(SHA1, Other.SHA1);
             std::swap(SampleSize, Other.SampleSize);
             CollectionDate = Other.CollectionDate;
-            OffLimits = Other.OffLimits;
+            std::swap(LimitStatus, Other.LimitStatus);
             std::swap(Matches, Other.Matches);
             AttributeIndex = Other.AttributeIndex;
             InstanceID = Other.InstanceID;
@@ -201,6 +203,29 @@ private:
             std::swap(CopyStream, Other.CopyStream);
             std::swap(Content, Other.Content);
             std::swap(SnapshotID, Other.SnapshotID);
+            std::swap(SourcePath, Other.SourcePath);
+        }
+
+        bool IsOfflimits() const
+        {
+            switch (LimitStatus)
+            {
+                case NoLimits:
+                case SampleWithinLimits:
+                    return false;
+                case GlobalSampleCountLimitReached:
+                case GlobalMaxBytesPerSample:
+                case GlobalMaxBytesTotal:
+                case LocalSampleCountLimitReached:
+                case LocalMaxBytesPerSample:
+                case LocalMaxBytesTotal:
+                case FailedToComputeLimits:
+                    return true;
+                default:
+                    _ASSERT("Unhandled 'LimitStatus' case");
+            }
+
+            return true;
         }
 
         bool operator<(const SampleRef& rigth) const
@@ -228,16 +253,43 @@ private:
         };
     };
 
-    struct SampleRefHasher
+    struct SampleId
     {
-        size_t operator()(const SampleRef& ref) const { return ref.FRN.SegmentNumberLowPart; }
+        explicit SampleId(const SampleRef& sample)
+            : FRN(sample.FRN)
+            , AttributeIndex(sample.AttributeIndex)
+            , VolumeSerial(sample.VolumeSerial)
+            , SnapshotId(sample.SnapshotID)
+        {
+        }
+
+        const MFT_SEGMENT_REFERENCE FRN;
+        const size_t AttributeIndex;
+        const LONGLONG VolumeSerial;
+        const GUID SnapshotId;
     };
 
-    struct SampleRefComparator
+    struct SampleIdHasher
     {
-        bool operator()(const SampleRef& lhs, const SampleRef& rhs) const
+        size_t operator()(const SampleId& sampleId) const { return sampleId.FRN.SegmentNumberLowPart; }
+    };
+
+    struct SampleIdComparator
+    {
+        bool operator()(const SampleId& lhs, const SampleId& rhs) const
         {
+            // Low first because of its higher probability of not matching
             if (lhs.FRN.SegmentNumberLowPart != rhs.FRN.SegmentNumberLowPart)
+            {
+                return false;
+            }
+
+            if (lhs.FRN.SegmentNumberHighPart != rhs.FRN.SegmentNumberHighPart)
+            {
+                return false;
+            }
+
+            if (lhs.FRN.SequenceNumber != rhs.FRN.SequenceNumber)
             {
                 return false;
             }
@@ -247,17 +299,12 @@ private:
                 return false;
             }
 
-            if (lhs.Matches.empty() || rhs.Matches.empty())
-            {
-                return false;
-            }
-
             if (lhs.VolumeSerial != rhs.VolumeSerial)
             {
                 return false;
             }
 
-            if (memcmp(&lhs.SnapshotID, &rhs.SnapshotID, sizeof(GUID)) != 0)
+            if (memcmp(&lhs.SnapshotId, &rhs.SnapshotId, sizeof(GUID)) != 0)
             {
                 return false;
             }
@@ -266,51 +313,54 @@ private:
         }
     };
 
-    using SampleSet = std::unordered_set<SampleRef, SampleRefHasher, SampleRefComparator>;
-    SampleSet Samples;
+private:
+    Configuration config;
+
+    using SampleIds = std::unordered_set<SampleId, SampleIdHasher, SampleIdComparator>;
+    SampleIds m_sampleIds;
 
     FileFind FileFinder;
     FILETIME CollectionDate;
-    std::wstring ComputerName;
+    const std::wstring ComputerName;
     Limits GlobalLimits;
     std::unordered_set<std::wstring> SampleNames;
+    std::unique_ptr<Archive::Appender<Archive::Archive7z>> m_compressor;
+    std::shared_ptr<Orc::TableOutput::IStreamWriter> m_tableWriter;
 
-    static HRESULT CreateSampleFileName(
-        const ContentSpec& content,
-        const PFILE_NAME pFileName,
-        const std::wstring& DataName,
-        DWORD idx,
-        std::wstring& SampleFileName);
+    HRESULT ConfigureSampleStreams(SampleRef& sample) const;
 
-    HRESULT ConfigureSampleStreams(SampleRef& sampleRef);
+    HRESULT AddSampleRefToCSV(ITableOutput& output, const SampleRef& sampleRef) const;
 
-    static LimitStatus SampleLimitStatus(const Limits& GlobalLimits, const Limits& LocalLimits, DWORDLONG DataSize);
+    std::unique_ptr<SampleRef> CreateSample(
+        const std::shared_ptr<FileFind::Match>& match,
+        const size_t attributeIndex,
+        const SampleSpec& sampleSpec,
+        const std::unordered_set<std::wstring>& givenSampleNames) const;
 
-    HRESULT
-    AddSamplesForMatch(LimitStatus status, const SampleSpec& aSpec, const std::shared_ptr<FileFind::Match>& aMatch);
+    using SampleWrittenCb = std::function<void(const SampleRef&, HRESULT hrWrite)>;
 
-    HRESULT AddSampleRefToCSV(ITableOutput& output, const std::wstring& strComputerName, const SampleRef& sampleRef);
+    HRESULT WriteSample(
+        Archive::Appender<Archive::Archive7z>& compressor,
+        std::unique_ptr<SampleRef> pSample,
+        SampleWrittenCb writtenCb = {}) const;
 
-    std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
-    CreateOutputDirLogFileAndCSV(const std::wstring& pOutputDir);
-    std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
-    CreateArchiveLogFileAndCSV(const std::wstring& pArchivePath, const std::shared_ptr<ArchiveCreate>& compressor);
+    HRESULT WriteSample(
+        const std::filesystem::path& outputDir,
+        std::unique_ptr<SampleRef> sample,
+        SampleWrittenCb writtenCb = {}) const;
 
-    HRESULT CollectMatchingSamples(
-        const std::shared_ptr<ArchiveCreate>& compressor,
-        ITableOutput& output,
-        SampleSet& MatchingSamples);
-    HRESULT CollectMatchingSamples(const std::wstring& strOutputDir, ITableOutput& output, SampleSet& MatchingSamples);
+    void UpdateSamplesLimits(SampleSpec& sampleSpec, const SampleRef& sample);
 
-    HRESULT HashOffLimitSamples(ITableOutput& output, SampleSet& MatchingSamples);
-
-    HRESULT CollectMatchingSamples(const OutputSpec& output, SampleSet& MatchingSamples);
+    void FinalizeHashes(const Main::SampleRef& sample) const;
 
     HRESULT FindMatchingSamples();
 
-    HRESULT RegFlushKeys();
+    void OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool bStop);
+    void OnSampleWritten(const SampleRef& sample, const SampleSpec& sampleSpec, HRESULT hrWrite) const;
 
 public:
+    Main();
+
     static LPCWSTR ToolName() { return L"GetThis"; }
     static LPCWSTR ToolDescription() { return L"Sample collection"; }
 
@@ -323,11 +373,6 @@ public:
     static LPCWSTR LocalConfiguration() { return nullptr; }
 
     static LPCWSTR DefaultSchema() { return L"res:#GETTHIS_SQLSCHEMA"; }
-
-    Main()
-        : UtilitiesMain()
-        , config()
-        , FileFinder() {};
 
     void PrintUsage();
     void PrintParameters();
@@ -346,6 +391,18 @@ public:
     HRESULT CheckConfiguration();
 
     HRESULT Run();
+
+private:
+    HRESULT InitOutput();
+    HRESULT CloseOutput();
+
+    HRESULT InitArchiveOutput();
+    HRESULT InitDirectoryOutput();
+
+    HRESULT CloseArchiveOutput();
+    HRESULT CloseDirectoryOutput();
 };
+
 }  // namespace Command::GetThis
+
 }  // namespace Orc

@@ -291,7 +291,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
             pFinalStream = pTeeTream;
         }
 
-        ArchiveFormat fmt = Archive::GetArchiveFormat(m_strArchiveFileName);
+        ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
         auto request = ArchiveMessage::MakeOpenRequest(m_strArchiveFileName, fmt, pFinalStream, m_strCompressionLevel);
         request->SetCommandSet(m_commandSet);
@@ -307,7 +307,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
             return hr;
         }
 
-        ArchiveFormat fmt = Archive::GetArchiveFormat(m_strArchiveFileName);
+        ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
         auto request = ArchiveMessage::MakeOpenRequest(m_strArchiveFileName, fmt, pOutputStream, m_strCompressionLevel);
         request->SetCommandSet(m_commandSet);

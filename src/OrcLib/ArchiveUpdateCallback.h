@@ -26,8 +26,8 @@ class ArchiveUpdateCallback
 private:
     long m_refCount;
 
-    Archive::ArchiveItems& m_Items;
-    Archive::ArchiveIndexes& m_Indexes;
+    OrcArchive::ArchiveItems& m_Items;
+    OrcArchive::ArchiveIndexes& m_Indexes;
 
     std::vector<size_t> m_pipeStreamIndexes;
     std::vector<size_t> m_memoryStreamIndexes;
@@ -37,7 +37,7 @@ private:
 
     bool m_bFinal = false;
 
-    Archive::ArchiveCallback m_Callback;
+    OrcArchive::ArchiveCallback m_Callback;
 
     std::wstring m_Password;
 
@@ -47,10 +47,10 @@ private:
 
 public:
     ArchiveUpdateCallback(
-        Archive::ArchiveItems& items,
-        Archive::ArchiveIndexes& indexes,
+        OrcArchive::ArchiveItems& items,
+        OrcArchive::ArchiveIndexes& indexes,
         bool bFinal,
-        Archive::ArchiveCallback pCallback = nullptr,
+        OrcArchive::ArchiveCallback pCallback = nullptr,
         const std::wstring& pwd = L"");
 
     virtual ~ArchiveUpdateCallback();

@@ -35,18 +35,18 @@ private:
     std::wstring m_Password;
 
     ArchiveExtract::ItemShouldBeExtractedCallback m_ShouldBeExtracted = nullptr;
-    Archive::ArchiveItems& m_Extracted;
-    Archive::ArchiveCallback m_pCallback;
+    OrcArchive::ArchiveItems& m_Extracted;
+    OrcArchive::ArchiveCallback m_pCallback;
 
-    Archive::ArchiveItem m_currentItem;
+    OrcArchive::ArchiveItem m_currentItem;
 
 public:
     ArchiveExtractCallback(
         const CComPtr<IInArchive>& archiveHandler,
         const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
-        Archive::ArchiveItems& Extracted,
+        OrcArchive::ArchiveItems& Extracted,
         ArchiveExtract::MakeOutputStream MakeWriteAbleStream,
-        Archive::ArchiveCallback pCallback,
+        OrcArchive::ArchiveCallback pCallback,
         bool bComputeHash,
         const std::wstring& pwd = L"");
 
