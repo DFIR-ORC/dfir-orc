@@ -483,7 +483,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (!WinHttpReceiveResponse(hRequest, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to receive response to {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
+        Log::Debug(L"Failed to receive response to {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
         return hr;
     }
 
@@ -551,7 +551,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         if (!WinHttpReceiveResponse(hRequest, NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(
+            Log::Debug(
                 L"Failed to receive response to {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
