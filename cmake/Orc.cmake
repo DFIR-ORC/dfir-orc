@@ -25,26 +25,25 @@ if(${TARGET_ARCH} STREQUAL "x64")
     )
 endif()
 
-# Fix warning with 'cl' about overriding existing value
-string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+# BEWARE: Option order matters
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # C4995: Function that was marked with pragma deprecated.
+    #
+    # Enable this would triggers some error when using clang-tidy with PCH.
+    # Did not investigate but confirmed multiple times it was the cause.
+    #
+    # ---
+    #
+    # error: exception handling was enabled in PCH file but is currently disabled [clang-diagnostic-error]
+    # 1 error generated.
+    # Error while processing C:\dev\orc\dfir-orc\tests\OrcLibTest\binary_buffer_test.cpp.
+    # Found compiler errors, but -fix-errors was not specified.
+    # Fixes have NOT been applied.
+    #
+    # Found compiler error(s).
+    #
+    add_compile_options(/wd4995)
 
-# TODO: Qspectre disable option is not supported until cmake 3.15.2
-add_compile_options(
-    /EHa      # Enable C++ exception with SEH (required by Robustness.cpp: _set_se_translator)
-  # /Gy       # Enable function level linking
-  # /JMC      # Debug only Just My Code
-    /Oy-      # Omit frame pointer
-   # /Qpar     # Enable Parallel Code Generation
-   # /Qspectre-  # No need of mitigation as MS disable theirs when as administrator
-    /sdl      # Enable additional security checks
-  # /Zi       # Program database for edit and continue (debug only)
-    /bigobj
-)
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # Multi processor compilation
-    add_compile_options("/MP")
-else()
     add_compile_options(
         -Wpointer-to-int-cast
         -Wno-deprecated-declarations
@@ -81,7 +80,28 @@ else()
         -Wno-unused-variable
         -Wno-writable-strings
     )
+endif()
 
+# Fix warning with 'cl' about overriding existing value
+string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+# TODO: Qspectre disable option is not supported until cmake 3.15.2
+add_compile_options(
+    /EHa      # Enable C++ exception with SEH (required by Robustness.cpp: _set_se_translator)
+  # /Gy       # Enable function level linking
+  # /JMC      # Debug only Just My Code
+    /Oy-      # Omit frame pointer
+   # /Qpar     # Enable Parallel Code Generation
+   # /Qspectre-  # No need of mitigation as MS disable theirs when as administrator
+    /sdl      # Enable additional security checks
+  # /Zi       # Program database for edit and continue (debug only)
+    /bigobj
+)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # Multi processor compilation
+    add_compile_options("/MP")
+else()
     # TODO: enable SAFESEH when clang add support
     add_link_options("/SAFESEH:NO")
 endif()
