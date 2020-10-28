@@ -164,8 +164,8 @@ public:
     }
 
 protected:
-    STDMETHOD(WriteFormated_)(const std::wstring_view& szFormat, IOutput::wformat_args args) override final;
-    STDMETHOD(WriteFormated_)(const std::string_view& szFormat, IOutput::format_args args) override final;
+    HRESULT WriteFormated_(const std::wstring_view& szFormat, IOutput::wformat_args args) override final;
+    HRESULT WriteFormated_(const std::string_view& szFormat, IOutput::format_args args) override final;
 
 public:
     STDMETHOD(WriteAttributes)(DWORD dwAttibutes) override final;

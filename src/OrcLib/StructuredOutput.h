@@ -157,10 +157,10 @@ public:
     }
 
 protected:
-    STDMETHOD(WriteFormated_)(const std::wstring_view& szFormat, wformat_args args) PURE;
-    STDMETHOD(WriteFormated_)(const std::string_view& szFormat, format_args args) PURE;
-    STDMETHOD(WriteNamedFormated_)(LPCWSTR szName, const std::wstring_view& szFormat, wformat_args args) PURE;
-    STDMETHOD(WriteNamedFormated_)(LPCWSTR szName, const std::string_view& szFormat, format_args args) PURE;
+    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, wformat_args args) PURE;
+    virtual HRESULT WriteFormated_(const std::string_view& szFormat, format_args args) PURE;
+    virtual HRESULT WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, wformat_args args) PURE;
+    virtual HRESULT WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, format_args args) PURE;
 
 #endif
 };

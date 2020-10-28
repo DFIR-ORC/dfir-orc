@@ -391,7 +391,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteNothing()
     return S_OK;
 }
 
-STDMETHODIMP
+HRESULT
 Orc::TableOutput::CSV::Writer::WriteFormated_(const std::wstring_view& szFormat, IOutput::wformat_args args)
 {
     using namespace std::string_view_literals;
@@ -410,7 +410,7 @@ Orc::TableOutput::CSV::Writer::WriteFormated_(const std::wstring_view& szFormat,
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteFormated_(const std::string_view& szFormat, IOutput::format_args args)
+HRESULT Orc::TableOutput::CSV::Writer::WriteFormated_(const std::string_view& szFormat, IOutput::format_args args)
 {
     Buffer<CHAR, MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
