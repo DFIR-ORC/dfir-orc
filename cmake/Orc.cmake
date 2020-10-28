@@ -26,6 +26,13 @@ if(${TARGET_ARCH} STREQUAL "x64")
 endif()
 
 # BEWARE: Option order matters
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # C4995: Function that was marked with pragma deprecated.
+    # This is currently required by fmt 7.0.0
+    add_compile_options(/wd4995)
+endif()
+
+# BEWARE: Option order matters
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # C4995: Function that was marked with pragma deprecated.
     #
