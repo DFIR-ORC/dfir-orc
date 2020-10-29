@@ -110,6 +110,7 @@ private:
     HRESULT VerifyEmbeddedSignature(LPCWSTR szFileName, HANDLE hFile, AuthenticodeData& data);
     HRESULT VerifySignatureWithCatalogs(LPCWSTR szFileName, const CBinaryBuffer& hash, HCATINFO& hCatalog, AuthenticodeData& data);
 
+    HRESULT ExtractSignatureSize(const CBinaryBuffer& signature, DWORD& cbSize);
     HRESULT ExtractSignatureHash(const CBinaryBuffer& signature, AuthenticodeData& data);
     HRESULT ExtractSignatureTimeStamp(const CBinaryBuffer& signature, AuthenticodeData& data);
 
@@ -144,6 +145,7 @@ public:
 
     // Security directory verification
     HRESULT Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_Hashs& hashs, AuthenticodeData& data);
+    HRESULT SignatureSize(LPCWSTR szFileName, const CBinaryBuffer& secdir, DWORD& cbSize);
 
     HRESULT CloseCatalogState();
 

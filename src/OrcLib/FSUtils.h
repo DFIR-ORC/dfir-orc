@@ -112,6 +112,9 @@ enum Intentions : DWORDLONG
 
     FILEINFO_SIGNED_HASH = (One << 58),
 
+    FILEINFO_SECURITY_DIRECTORY_SIZE = (One << 59),
+    FILEINFO_SECURITY_DIRECTORY_SIGNATURE_SIZE = (One << 60),
+
     FILEINFO_ALL = (unsigned long long)-1
 };
 

@@ -93,6 +93,9 @@
         <utf8 name="TLSH" maxlen="256" />
 
         <binary name="SignedHash"  maxlen="32" />
+        
+        <uint32 name="SecurityDirectorySize" allows_null="yes" />
+        <uint32 name="SecurityDirectorySignatureSize" allows_null="yes" />
 
     </table>
 

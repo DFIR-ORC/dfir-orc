@@ -237,6 +237,14 @@ HRESULT FileInfo::HandleIntentions(const Intentions& intention, ITableOutput& ou
             hr = WriteSignedHash(output);
             break;
 
+        case Intentions::FILEINFO_SECURITY_DIRECTORY_SIZE:
+            hr = WriteSecurityDirectorySize(output);
+            break;
+
+        case Intentions::FILEINFO_SECURITY_DIRECTORY_SIGNATURE_SIZE:
+            hr = WriteSecurityDirectorySignatureSize(output);
+            break;
+
         default:
             return E_FAIL;
             break;
@@ -1423,6 +1431,55 @@ HRESULT FileInfo::WriteSecurityDirectory(ITableOutput& output)
             &cchString);
 
         return output.WriteString(szWstr);
+    }
+    return output.WriteNothing();
+}
+
+HRESULT FileInfo::WriteSecurityDirectorySize(ITableOutput& output)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = m_PEInfo.CheckSecurityDirectory()))
+    {
+        if (hr == HRESULT_FROM_WIN32(ERROR_DIRECTORY) || hr == HRESULT_FROM_WIN32(ERROR_NO_DATA))
+            return output.WriteNothing();
+        return hr;
+    }
+
+    if (IsDirectory() || !m_PEInfo.HasPEHeader())
+    {
+        return output.WriteNothing();
+    }
+
+    if (GetDetails()->SecurityDirectory().GetCount())
+    {
+        return output.WriteInteger((DWORD)GetDetails()->SecurityDirectory().GetCount());
+    }
+    return output.WriteNothing();
+}
+
+HRESULT FileInfo::WriteSecurityDirectorySignatureSize(ITableOutput& output)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = m_PEInfo.CheckSecurityDirectory()))
+    {
+        if (hr == HRESULT_FROM_WIN32(ERROR_DIRECTORY) || hr == HRESULT_FROM_WIN32(ERROR_NO_DATA))
+            return output.WriteNothing();
+        return hr;
+    }
+
+    if (IsDirectory() || !m_PEInfo.HasPEHeader())
+    {
+        return output.WriteNothing();
+    }
+
+    if (GetDetails()->SecurityDirectoryAvailable())
+    {
+        DWORD cbSize = 0L;
+        if (FAILED(hr = m_codeVerifyTrust.SignatureSize(m_szFullName, GetDetails()->SecurityDirectory(), cbSize)))
+        {
+            log::Warning(_L_, L"SignatureSize failed for file '%s'", m_szFullName);
+        }
+        return output.WriteInteger(cbSize);
     }
     return output.WriteNothing();
 }
