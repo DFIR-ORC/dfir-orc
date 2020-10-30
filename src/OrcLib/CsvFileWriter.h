@@ -48,17 +48,13 @@ public:
         std::swap(_L_, other._L_);
         std::swap(m_pTermination, other.m_pTermination);
         wcscpy_s(m_szFileName, other.m_szFileName);
-        std::swap(m_dwBufferSize, other.m_dwBufferSize);
-        std::swap(m_pBuffer, other.m_pBuffer);
+        std::swap(m_buffer, other.m_buffer);
+        std::swap(m_bufferUtf8, other.m_bufferUtf8);
         std::swap(m_Options, other.m_Options);
-        std::swap(m_pUTF8Buffer, other.m_pUTF8Buffer);
-        std::swap(m_dwUTF8BufferSize, other.m_dwUTF8BufferSize);
         std::swap(m_bBOMWritten, other.m_bBOMWritten);
         std::swap(m_pByteStream, other.m_pByteStream);
         std::swap(m_bCloseStream, other.m_bCloseStream);
-        std::swap(m_pCurrent, other.m_pCurrent);
         std::swap(m_dwColumnCounter, other.m_dwColumnCounter);
-        std::swap(m_dwCount, other.m_dwCount);
         std::swap(m_dwColumnNumber, other.m_dwColumnNumber);
         std::swap(m_dwPageSize, other.m_dwPageSize);
     }
@@ -212,25 +208,20 @@ private:
 
     logger _L_;
 
+    fmt::wmemory_buffer m_buffer;
+
     std::shared_ptr<WriterTermination> m_pTermination;
 
     WCHAR m_szFileName[MAX_PATH] = {0};
 
-    DWORD m_dwBufferSize = 0L;  // in bytes
-    LPWSTR m_pBuffer = nullptr;
-
-    LPSTR m_pUTF8Buffer = nullptr;
-    DWORD m_dwUTF8BufferSize = 0L;  // in CHARs
+    std::vector<char> m_bufferUtf8;
 
     bool m_bBOMWritten = false;
     std::shared_ptr<ByteStream> m_pByteStream = nullptr;
     bool m_bCloseStream = true;
     CriticalSection m_cs;
 
-    WCHAR* m_pCurrent = nullptr;
     DWORD m_dwColumnCounter = 0L;
-    DWORD m_dwCount = 0L;  // in bytes
-
     DWORD m_dwColumnNumber = 0L;
 
     std::unique_ptr<Options> m_Options;
@@ -297,26 +288,15 @@ private:
     template <typename... Args>
     HRESULT FormatToBuffer(const std::wstring_view& strFormat, Args&&... args)
     {
-        using char_type = WCHAR;
-        using buffer_type = Buffer<char_type>;
-        using wformat_iterator = std::back_insert_iterator<buffer_type>;
-        using wformat_args = fmt::format_args_t<wformat_iterator, char_type>;
-        using context = fmt::basic_format_context<wformat_iterator, char_type>;
-
-        DWORD remaining = (m_dwBufferSize - m_dwCount) / sizeof(char_type);
-
-        buffer_type buffer;
-        buffer.view_of(m_pCurrent, remaining);
-
         try
         {
             if (strFormat.find(L"\"{}\"") != std::wstring::npos)
             {
-                fmt::format_to(std::back_inserter(EscapeQuoteInserter(buffer)), strFormat, args...);
+                fmt::format_to(std::back_inserter(EscapeQuoteInserter(m_buffer)), strFormat, args...);
             }
             else
             {
-                fmt::format_to(std::back_inserter(buffer), strFormat, args...);
+                fmt::format_to(m_buffer, strFormat, args...);
             }
         }
         catch (const fmt::format_error& error)
@@ -332,75 +312,16 @@ private:
             return HRESULT_FROM_WIN32(system_error.error_code());
         }
 
-        if (buffer.is_view())
-        {
-            if (buffer.full())
-            {
-                // Flush the buffer as it is full, size must be updated to include last formatted data
-                m_dwCount += buffer.size() * sizeof(char_type);
-                if (auto hr = Flush(); FAILED(hr))
-                {
-                    return hr;
-                }
-
-                return S_OK;
-            }
-
-            m_dwCount += buffer.size() * sizeof(char_type);
-            m_pCurrent += buffer.size();
-            return S_OK;
-        }
-        else
+        if (m_buffer.size() > (80 * m_buffer.capacity() / 100))
         {
             // Flush cache buffer 'm_pBuffer' first then process the one allocated for formatting
             if (auto hr = Flush(); FAILED(hr))
             {
                 return hr;
             }
-
-            if (buffer.size() < m_dwBufferSize)
-            {
-                // Push previously formatted data into the buffer as it was not handled by 'Flush'
-                buffer_type new_buffer;
-                new_buffer.view_of(m_pBuffer, m_dwBufferSize);
-                new_buffer.append(buffer);
-
-                m_dwCount += new_buffer.size() * sizeof(char_type);
-                m_pCurrent += new_buffer.size();
-
-                return S_OK;
-            }
-            else
-            {
-                //
-                // Flush all as it will not be possible to hold everything at once in 'm_pBuffer'.
-                //
-                // With a buffer of 1MB it is really unusual to have bigger cell but it can happen. For example
-                // 'mrt.exe' has a SecurityDirectory of 4MB.
-                //
-                const auto internalBufferCch = m_dwBufferSize / sizeof(wchar_t);
-                const auto chunkCount = buffer.size() / internalBufferCch;
-
-                for (size_t i = 0; i <= chunkCount; i++)
-                {
-                    const size_t chunkSizeCch =
-                        (i != chunkCount) ? internalBufferCch : buffer.size() % internalBufferCch;
-
-                    std::wstring_view chunk(buffer.get() + i * internalBufferCch, chunkSizeCch);
-                    std::copy(std::cbegin(chunk), std::cend(chunk), m_pBuffer);
-                    m_dwCount = chunkSizeCch * sizeof(wchar_t);
-
-                    if (auto hr = Flush(); FAILED(hr))
-                    {
-                        return hr;
-                    }
-                }
-
-                return S_OK;
-            }
         }
 
-        return E_FAIL;
+        return S_OK;
     }
 
     template <typename... Args>

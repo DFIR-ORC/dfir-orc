@@ -23,6 +23,7 @@
 #include "OrcException.h"
 
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/scope_exit.hpp>
 
 #include <fmt/ostream.h>
 
@@ -160,25 +161,8 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::InitializeBuffer(DWORD dwBufferSize)
         dwPagesToAlloc++;
 
     DWORD dwBytesToAlloc = dwPagesToAlloc * PageSize();
-    m_pBuffer = (WCHAR*)VirtualAlloc(NULL, dwBytesToAlloc, MEM_COMMIT, PAGE_READWRITE);
-    if (m_pBuffer == NULL)
-        return HRESULT_FROM_WIN32(GetLastError());
-
-    m_pCurrent = m_pBuffer;
-    m_dwCount = 0;
-    m_dwBufferSize = dwBytesToAlloc;
-
-    switch (m_Options->Encoding)
-    {
-        case OutputSpec::Encoding::UTF8:
-            m_pUTF8Buffer = (LPSTR)VirtualAlloc(NULL, dwBytesToAlloc, MEM_COMMIT, PAGE_READWRITE);
-            if (m_pUTF8Buffer == NULL)
-                return HRESULT_FROM_WIN32(GetLastError());
-            m_dwUTF8BufferSize = dwBytesToAlloc;
-            break;
-        default:
-            break;
-    }
+    m_buffer.reserve(dwBytesToAlloc / sizeof(decltype(m_buffer)::value_type));
+    m_bufferUtf8.reserve(dwBytesToAlloc);
 
     return S_OK;
 }
@@ -196,15 +180,13 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBOM()
 
         switch (m_Options->Encoding)
         {
-            case OutputSpec::Encoding::UTF8:
-            {
+            case OutputSpec::Encoding::UTF8: {
                 BYTE bom[3] = {0xEF, 0xBB, 0xBF};
                 if (auto hr = m_pByteStream->Write(bom, 3 * sizeof(BYTE), &bytesWritten); FAILED(hr))
                     return hr;
             }
             break;
-            case OutputSpec::Encoding::UTF16:
-            {
+            case OutputSpec::Encoding::UTF16: {
                 BYTE bom[2] = {0xFF, 0xFE};
                 if (auto hr = m_pByteStream->Write(bom, 2 * sizeof(BYTE), &bytesWritten); FAILED(hr))
                     return hr;
@@ -265,46 +247,68 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::Flush()
 {
     ScopedLock sl(m_cs);
 
-    LPBYTE pBuffer = NULL;
+    // Always clearing the buffer is the best trade-off. It is a growable buffer, a failure in this function coud
+    // trigger a massive memory usage as caller will continue to fill it
+    BOOST_SCOPE_EXIT(&m_buffer) { m_buffer.clear(); }
+    BOOST_SCOPE_EXIT_END;
+
+    if (m_pByteStream == nullptr)
+    {
+        return S_OK;
+    }
+
+    std::string_view writeBuffer;
     DWORD dwBytesToWrite = 0L;
+
+    // TODO: fix this with a growable buffer
+    // utf8 buffer size must follow utf16 buffer with a margin for conversion
+    const auto kBufferElementCb = sizeof(decltype(m_buffer)::value_type);
+    const auto kExpectedUtf8Cb = (m_buffer.size() + 8192) * kBufferElementCb;
+    if (m_bufferUtf8.capacity() < kExpectedUtf8Cb)
+    {
+        m_bufferUtf8.reserve(kExpectedUtf8Cb);
+    }
 
     switch (m_Options->Encoding)
     {
         case OutputSpec::Encoding::UTF8:
             dwBytesToWrite = WideCharToMultiByte(
-                CP_UTF8, 0L, m_pBuffer, (m_dwCount / sizeof(WCHAR)), m_pUTF8Buffer, m_dwUTF8BufferSize, NULL, NULL);
+                CP_UTF8,
+                0L,
+                reinterpret_cast<LPCWCH>(m_buffer.data()),
+                m_buffer.size(),
+                reinterpret_cast<LPSTR>(m_bufferUtf8.data()),
+                m_bufferUtf8.capacity(),
+                NULL,
+                NULL);
+
             if (!dwBytesToWrite)
             {
                 return HRESULT_FROM_WIN32(GetLastError());
             }
-            pBuffer = (LPBYTE)m_pUTF8Buffer;
+
+            writeBuffer = std::string_view(m_bufferUtf8.data(), dwBytesToWrite);
             break;
         case OutputSpec::Encoding::UTF16:
-            pBuffer = (LPBYTE)m_pBuffer;
-            dwBytesToWrite = m_dwCount;
+            writeBuffer = std::string_view(reinterpret_cast<char*>(m_buffer.data()), m_buffer.size() * sizeof(wchar_t));
             break;
         default:
             return E_INVALIDARG;
     }
 
-    if (m_pByteStream)
+    ULONGLONG ullBytesWritten;
+    // TODO: this const cast is safe but interface requires it
+    auto hr = m_pByteStream->Write(const_cast<char*>(writeBuffer.data()), writeBuffer.size(), &ullBytesWritten);
+    if (FAILED(hr))
     {
-        ULONGLONG ullBytesWritten;
-        if (auto hr = m_pByteStream->Write((LPBYTE)pBuffer, dwBytesToWrite, &ullBytesWritten); FAILED(hr))
-            return hr;
-
-        if (ullBytesWritten < dwBytesToWrite)
-        {
-            return HRESULT_FROM_WIN32(ERROR_WRITE_FAULT);
-        }
+        return hr;
     }
 
-    DWORD dwOldProtect = 0L;
-    if (m_pCurrent != nullptr && m_pBuffer != nullptr)
+    if (ullBytesWritten < dwBytesToWrite)
     {
-        m_pCurrent = m_pBuffer;
-        m_dwCount = 0;
+        return HRESULT_FROM_WIN32(ERROR_WRITE_FAULT);
     }
+
     return S_OK;
 }
 
@@ -317,20 +321,14 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::Close()
         Robustness::RemoveTerminationHandler(m_pTermination);
         m_pTermination = nullptr;
     }
-    if (m_pCurrent)
-    {
-        Flush();
-        m_pCurrent = NULL;
-    }
+
+    Flush();
+
     if (m_pByteStream != nullptr && m_bCloseStream)
     {
         m_pByteStream->Close();
     }
-    if (m_pBuffer)
-    {
-        VirtualFree(m_pBuffer, 0, MEM_RELEASE);
-        m_pBuffer = NULL;
-    }
+
     return S_OK;
 }
 
