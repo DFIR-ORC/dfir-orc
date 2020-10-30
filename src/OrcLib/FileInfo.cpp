@@ -281,7 +281,7 @@ HRESULT FileInfo::WriteFileInformation(
                         m_szFullName,
                         hr);
                     if (output.GetCurrentColumnID() == ColId)
-                        hr = output.WriteNothing();
+                        hr = output.AbandonColumn();
                 }
             }
             else
@@ -864,17 +864,14 @@ HRESULT FileInfo::WriteVolumeID(ITableOutput& output)
     HRESULT hr = E_FAIL;
 
     if (FAILED(hr = output.WriteInteger(m_pVolReader->VolumeSerialNumber())))
-    {
         return hr;
-    }
 
     return S_OK;
 }
 
 HRESULT FileInfo::WriteFullName(ITableOutput& output)
 {
-    output.WriteString(m_szFullName);
-    return S_OK;
+    return output.WriteString(m_szFullName);
 }
 
 HRESULT FileInfo::WriteFileName(ITableOutput& output)
@@ -906,7 +903,9 @@ HRESULT FileInfo::WriteExtension(ITableOutput& output)
     WCHAR ext[_MAX_EXT];
     errno_t err;
     if ((err = _wsplitpath_s(m_szFullName, NULL, 0L, NULL, 0L, NULL, 0L, ext, _MAX_EXT)) != 0)
+    {
         return HRESULT_FROM_WIN32(err);
+    }
 
     return output.WriteFormated(L"{}", ext);
 }
@@ -939,10 +938,7 @@ HRESULT FileInfo::WriteOwnerSid(ITableOutput& output)
     if (!ConvertSidToStringSid(pSidOwner, &StringSid))
         return HRESULT_FROM_WIN32(GetLastError());
     else
-    {
-        hr = output.WriteString(StringSid);
-        return hr;
-    }
+        return output.WriteString(StringSid);
 }
 
 HRESULT FileInfo::WriteOwner(ITableOutput& output)
@@ -978,12 +974,9 @@ HRESULT FileInfo::WriteOwner(ITableOutput& output)
         {
             WCHAR* StringSid = NULL;
             if (!ConvertSidToStringSid(pSidOwner, &StringSid))
-                return err;
+                return HRESULT_FROM_WIN32(err);
             else
-            {
-                hr = output.WriteString(StringSid);
-                return hr;
-            }
+                return output.WriteString(StringSid);
         }
         else
             return HRESULT_FROM_WIN32(GetLastError());
@@ -1402,9 +1395,6 @@ HRESULT FileInfo::WriteSecurityDirectory(ITableOutput& output)
         return hr;
     }
 
-    DWORD dwMajor = 0L, dwMinor = 0L;
-    SystemDetails::GetOSVersion(dwMajor, dwMinor);
-
     if (GetDetails()->SecurityDirectory().GetCount())
     {
         DWORD cchString = 0L;
@@ -1446,14 +1436,11 @@ HRESULT FileInfo::WriteSecurityDirectorySize(ITableOutput& output)
     }
 
     if (IsDirectory() || !m_PEInfo.HasPEHeader())
-    {
         return output.WriteNothing();
-    }
 
     if (GetDetails()->SecurityDirectory().GetCount())
-    {
         return output.WriteInteger((DWORD)GetDetails()->SecurityDirectory().GetCount());
-    }
+
     return output.WriteNothing();
 }
 
@@ -1489,16 +1476,11 @@ HRESULT FileInfo::WriteFirstBytes(ITableOutput& output)
     HRESULT hr = E_FAIL;
 
     if (FAILED(CheckFirstBytes()))
-    {
-        output.AbandonColumn();
         return hr;
-    }
 
     if (FAILED(hr = output.WriteBytes(GetDetails()->FirstBytes())))
-    {
-        output.AbandonColumn();
         return hr;
-    }
+
     return S_OK;
 }
 
@@ -1642,7 +1624,6 @@ HRESULT FileInfo::WriteAuthenticodeCA(ITableOutput& output)
             bIsFirst = false;
         }
     }
-
     return output.WriteString(castream.str().c_str());
 }
 
