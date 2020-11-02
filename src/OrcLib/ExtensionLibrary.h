@@ -57,11 +57,12 @@ public:
     }
 
     template <class Library>
-    static const std::shared_ptr<Library> GetLibrary(std::optional<std::filesystem::path> tempDir = std::nullopt)
+    static const std::shared_ptr<Library> GetLibrary(std::optional<std::filesystem::path> tempDir = std::nullopt, bool bShared = true)
     {
         try
         {
-            const std::shared_ptr<Library>& pLib = GetShared<Library>(true);
+            const std::shared_ptr<Library>& pLib = bShared ? GetShared<Library>(true) : std::make_shared<Library>();
+
             if (!pLib)
             {
                 Log::Error(L"Failed to get shared ptr to library {}", Name<Library>());
