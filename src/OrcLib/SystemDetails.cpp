@@ -243,7 +243,8 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
     switch (g_pDetailsBlock->osvi.wServicePackMajor)
     {
         case 0:
-            tags.insert(L"RTM"s);
+            if (major < 10)
+                tags.insert(L"RTM"s);
             break;
         case 1:
             tags.insert(L"SP1"s);
@@ -264,6 +265,8 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
             tags.insert(L"SP6"s);
             break;
     }
+
+    tags.insert(L"Windows"s);
 
     std::wstring strProductType;
     if (auto hr = GetSystemType(strProductType); FAILED(hr))
