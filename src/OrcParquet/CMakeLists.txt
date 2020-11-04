@@ -39,11 +39,11 @@ target_precompile_headers(OrcParquet PRIVATE stdafx.h)
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
     install(TARGETS OrcParquet
         CONFIGURATIONS ${CONFIG}
-        DESTINATION bin/${CONFIG}
+        DESTINATION ${CONFIG}
     )
 
     install(FILES $<TARGET_PDB_FILE:OrcParquet>
         CONFIGURATIONS ${CONFIG}
-        DESTINATION pdb/${CONFIG} OPTIONAL
+        DESTINATION ${CONFIG} OPTIONAL
     )
 endforeach()

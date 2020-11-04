@@ -88,11 +88,11 @@ endif()
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
     install(TARGETS FastFind
         CONFIGURATIONS ${CONFIG}
-        DESTINATION bin/${CONFIG}
+        DESTINATION ${CONFIG}
     )
 
     install(FILES $<TARGET_PDB_FILE:FastFind>
         CONFIGURATIONS ${CONFIG}
-        DESTINATION pdb/${CONFIG} OPTIONAL
+        DESTINATION ${CONFIG} OPTIONAL
     )
 endforeach()

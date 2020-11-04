@@ -150,13 +150,11 @@ set_property(TARGET Orc APPEND PROPERTY LINK_FLAGS "/DEBUG /MANIFESTUAC:\"level=
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
     install(TARGETS Orc
         CONFIGURATIONS ${CONFIG}
-        DESTINATION bin/${CONFIG}
+        DESTINATION ${CONFIG}
     )
 
     install(FILES $<TARGET_PDB_FILE:Orc>
         CONFIGURATIONS ${CONFIG}
-        DESTINATION pdb/${CONFIG} OPTIONAL
+        DESTINATION ${CONFIG} OPTIONAL
     )
 endforeach()
-
-#install(SCRIPT)

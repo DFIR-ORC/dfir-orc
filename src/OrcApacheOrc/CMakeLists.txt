@@ -38,11 +38,11 @@ target_precompile_headers(OrcApacheOrc PRIVATE stdafx.h)
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
     install(TARGETS OrcApacheOrc
         CONFIGURATIONS ${CONFIG}
-        DESTINATION bin/${CONFIG}
+        DESTINATION ${CONFIG}
     )
 
     install(FILES $<TARGET_PDB_FILE:OrcApacheOrc>
         CONFIGURATIONS ${CONFIG}
-        DESTINATION pdb/${CONFIG} OPTIONAL
+        DESTINATION ${CONFIG} OPTIONAL
     )
 endforeach()
