@@ -156,11 +156,15 @@ function Build-Orc
     foreach($Arch in $Architecture)
     {
         $BuildDir = Join-Path "${BuildDirectory}" "${Arch}"
-        if($Clean)
+        if (Test-Path -PathType Container $BuildDir)
         {
-            Remove-Item -Force -Recurse -Path $BuildDir -ErrorAction Ignore
+            if($Clean)
+            {
+                Remove-Item -Force -Recurse -Path $BuildDir
+            }
+
+            New-Item -Force -ItemType Directory -Path $BuildDir | Out-Null
         }
-        New-Item -Force -ItemType Directory -Path $BuildDir | Out-Null
 
         $Generator = $Generators[$Toolchain + "_" + $Arch]
 
