@@ -116,7 +116,13 @@ const ORCLIB_API ColumnNameDef NtfsFileInfo::g_NtfsColumnNames[] = {
 
     {FILEINFO_SIGNED_HASH, L"SignedHash", L"The signed hash inside the security directory of the PE", 0L},
 
-    {FILEINFO_NONE, NULL, NULL, 0L}};
+    {Intentions::FILEINFO_SECURITY_DIRECTORY_SIZE, L"SecurityDirectorySize", L"The size of the security directory", 0L},
+    {Intentions::FILEINFO_SECURITY_DIRECTORY_SIGNATURE_SIZE,
+     L"SecurityDirectorySignatureSize",
+     L"The size of the signature inside the security directory",
+     0L},
+
+    {Intentions::FILEINFO_NONE, NULL, NULL, 0L}};
 
 const ORCLIB_API ColumnNameDef NtfsFileInfo::g_NtfsAliasNames[] = {
     {static_cast<Intentions>(

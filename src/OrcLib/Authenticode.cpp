@@ -560,6 +560,56 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
     return S_OK;
 }
 
+HRESULT Orc::Authenticode::ExtractSignatureSize(const CBinaryBuffer& signature, DWORD& cbSize)
+{
+    HRESULT hr = E_FAIL;
+    DWORD dwContentType = 0L;
+    HCRYPTMSG hMsg = NULL;
+    DWORD dwMsgAndCertEncodingType = 0L;
+    DWORD dwFormatType = 0;
+
+    cbSize = 0L;
+
+    CRYPT_DATA_BLOB blob;
+    blob.cbData = (DWORD)signature.GetCount();
+    blob.pbData = signature.GetData();
+
+    if (!CryptQueryObject(
+            CERT_QUERY_OBJECT_BLOB,
+            &blob,
+            CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED,
+            CERT_QUERY_FORMAT_FLAG_BINARY,
+            0L,
+            &dwMsgAndCertEncodingType,
+            &dwContentType,
+            &dwFormatType,
+            NULL,
+            &hMsg,
+            NULL))
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        log::Error(_L_, hr, L"Failed CryptQueryObject");
+        return hr;
+    }
+    BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
+    BOOST_SCOPE_EXIT_END;
+
+    if (dwContentType == CERT_QUERY_CONTENT_PKCS7_SIGNED && dwFormatType == CERT_QUERY_FORMAT_BINARY)
+    {
+        // Expected message type: PKCS7_SIGNED in binary format
+        DWORD dwBytes = 0L;
+        if (!CryptMsgGetParam(hMsg, CMSG_CONTENT_PARAM, 0, NULL, &dwBytes))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            log::Error(_L_, hr, L"Failed to query authenticode content info");
+            return hr;
+        }
+        cbSize = dwBytes;
+        return S_OK;
+    }
+    return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+}
+
 HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, AuthenticodeData& data)
 {
     HRESULT hr = E_FAIL;
@@ -1178,6 +1228,44 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
                     L"Failed to extract signer information from signature in the security directory of %s\r\n",
                     szFileName);
             }
+        }
+
+        if (pWin->dwLength > 0)
+        {
+            dwIndex += pWin->dwLength;
+            pWin = (LPWIN_CERTIFICATE)(secdir.GetData() + dwIndex);
+        }
+        else
+            break;
+    }
+    return S_OK;
+}
+
+HRESULT Orc::Authenticode::SignatureSize(LPCWSTR szFileName, const CBinaryBuffer& secdir, DWORD& cbSize)
+{
+    HRESULT hr = E_FAIL;
+    // this PE has a security directory, the file is signed
+
+    // init return value
+    cbSize = 0;
+
+    LPWIN_CERTIFICATE pWin = (LPWIN_CERTIFICATE)secdir.GetData();
+    DWORD dwIndex = 0;
+
+    while (dwIndex < secdir.GetCount())
+    {
+        if (pWin->wCertificateType == WIN_CERT_TYPE_PKCS_SIGNED_DATA && pWin->wRevision == WIN_CERT_REVISION_2_0)
+        {
+            CBinaryBuffer signature(pWin->bCertificate, pWin->dwLength);
+
+            DWORD dwSignatureSize = 0L;
+            if (FAILED(hr = ExtractSignatureSize(signature, dwSignatureSize)))
+            {
+                log::Error(
+                    _L_, hr, L"Failed to extract hash from signature in the security directory of '%s'", szFileName);
+            }
+            else
+                cbSize += dwSignatureSize;
         }
 
         if (pWin->dwLength > 0)

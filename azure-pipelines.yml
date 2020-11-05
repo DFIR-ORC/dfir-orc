@@ -1,10 +1,5 @@
 trigger:
-  - master
-
-parameters:
-- name: PublishRelease
-  type: boolean
-  default: true
+  - release/*
 
 stages:
   - stage: Build
@@ -18,7 +13,6 @@ stages:
         arch: "x86"
 
   - stage: Publish
-    condition: ${{parameters.PublishRelease}}
     jobs:
     - job: RetrieveAndPublish
       steps:
@@ -30,32 +24,53 @@ stages:
         inputs:
           buildType: 'current'
           downloadType: 'single'
-          artifactName: 'drop_x86'
+          artifactName: 'dfir-orc_x86'
           downloadPath: '$(Build.ArtifactStagingDirectory)'
 
       - task: DownloadBuildArtifacts@0
         inputs:
           buildType: 'current'
           downloadType: 'single'
-          artifactName: 'drop_x64'
+          artifactName: 'dfir-orc_x64'
           downloadPath: '$(Build.ArtifactStagingDirectory)'
 
-      - task: GitHubRelease@0
+      - task: GitHubRelease@1
         inputs:
           gitHubConnection: 'github.com_jgautier-anssi'
-          repositoryName: $(Build.Repository.Name)
+          repositoryName: '$(Build.Repository.Name)'
           action: 'create'
-          target: $(Build.SourceVersion)
-          tagSource: 'auto'
-          tagPattern: '^v?[0-9]+\.[0-9]+\.[0-9]+'
+          target: '$(Build.SourceVersion)'
+          tagSource: 'gitTag'
+          tagPattern: '^v?[0-9]+\.[0-9]+\.[0-9]+-(alpha|beta|rc)[0-9]+'
+          isPreRelease: true
           assets: |
-            $(Build.ArtifactStagingDirectory)/drop_x64/bin/MinSizeRel/DFIR-Orc_x64.exe
-            $(Build.ArtifactStagingDirectory)/drop_x64/pdb/MinSizeRel/DFIR-Orc_x64.pdb
-            $(Build.ArtifactStagingDirectory)/drop_x64/bin/MinSizeRel/FastFind_x64.exe
-            $(Build.ArtifactStagingDirectory)/drop_x64/pdb/MinSizeRel/FastFind_x64.pdb
-            $(Build.ArtifactStagingDirectory)/drop_x86/bin/MinSizeRel/DFIR-Orc_x86.exe
-            $(Build.ArtifactStagingDirectory)/drop_x86/pdb/MinSizeRel/DFIR-Orc_x86.pdb
-            $(Build.ArtifactStagingDirectory)/drop_x86/bin/MinSizeRel/FastFind_x86.exe
-            $(Build.ArtifactStagingDirectory)/drop_x86/pdb/MinSizeRel/FastFind_x86.pdb
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x64/bin/MinSizeRel/DFIR-Orc_x64.exe
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x64/pdb/MinSizeRel/DFIR-Orc_x64.pdb
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x64/bin/MinSizeRel/FastFind_x64.exe
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x64/pdb/MinSizeRel/FastFind_x64.pdb
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x86/bin/MinSizeRel/DFIR-Orc_x86.exe
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x86/pdb/MinSizeRel/DFIR-Orc_x86.pdb
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x86/bin/MinSizeRel/FastFind_x86.exe
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x86/pdb/MinSizeRel/FastFind_x86.pdb
+          changeLogCompareToRelease: 'lastFullRelease'
+          changeLogType: 'commitBased'
+
+      - task: GitHubRelease@1
+        inputs:
+          gitHubConnection: 'github.com_jgautier-anssi'
+          repositoryName: '$(Build.Repository.Name)'
+          action: 'create'
+          target: '$(Build.SourceVersion)'
+          tagSource: 'gitTag'
+          tagPattern: '^v?[0-9]+\.[0-9]+\.[0-9]+$'
+          assets: |
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x64/bin/MinSizeRel/DFIR-Orc_x64.exe
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x64/pdb/MinSizeRel/DFIR-Orc_x64.pdb
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x64/bin/MinSizeRel/FastFind_x64.exe
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x64/pdb/MinSizeRel/FastFind_x64.pdb
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x86/bin/MinSizeRel/DFIR-Orc_x86.exe
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x86/pdb/MinSizeRel/DFIR-Orc_x86.pdb
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x86/bin/MinSizeRel/FastFind_x86.exe
+            $(Build.ArtifactStagingDirectory)/dfir-orc_x86/pdb/MinSizeRel/FastFind_x86.pdb
           changeLogCompareToRelease: 'lastFullRelease'
           changeLogType: 'commitBased'

@@ -150,6 +150,9 @@ protected:
     HRESULT WriteAuthenticodeCA(ITableOutput& output);
     HRESULT WriteAuthenticodeCAThumbprint(ITableOutput& output);
 
+    HRESULT WriteSecurityDirectorySize(ITableOutput& output);
+    HRESULT WriteSecurityDirectorySignatureSize(ITableOutput& output);
+
 protected:
 
     logger _L_;
