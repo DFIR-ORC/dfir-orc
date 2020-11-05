@@ -142,6 +142,13 @@ function Build-Orc
         $CMakeGenerationOptions += "-DORC_BUILD_PARQUET=ON"
     }
 
+    $CMakeExe = Find-CMake
+    if(-not $CMakeExe)
+    {
+        Write-Error "Cannot find 'cmake.exe'"
+        return
+    }
+
     foreach($Arch in $Architecture)
     {
         $BuildDir = "$BuildDirectory/$Arch"
@@ -155,13 +162,6 @@ function Build-Orc
         Push-Location $BuildDir
 
         $Generator = $Generators[$Toolchain + "_" + $Arch]
-
-        $CMakeExe = Find-CMake
-        if(-not $CMakeExe)
-        {
-            Write-Error "Cannot find 'cmake.exe'"
-            return
-        }
 
         try
         {
