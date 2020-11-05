@@ -148,6 +148,10 @@ function Build-Orc
         Write-Error "Cannot find 'cmake.exe'"
         return
     }
+    else
+    {
+        Invoke-NativeCommand $CMakeExe --version
+    }
 
     foreach($Arch in $Architecture)
     {
