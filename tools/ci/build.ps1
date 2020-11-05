@@ -53,7 +53,7 @@ function Build-Orc
         [Parameter(Mandatory = $False)]
         [ValidateNotNullOrEmpty()]
         [System.IO.DirectoryInfo]
-        $BuildDirectory = "$Source/build",
+        $BuildDirectory = (Join-Path "${Source}" "build"),
         [Parameter(Mandatory = $False)]
         [ValidateNotNullOrEmpty()]
         [System.IO.DirectoryInfo]
@@ -89,7 +89,7 @@ function Build-Orc
         $Clean
     )
 
-    $OrcPath = (Resolve-Path -Path $Source).Path
+    $OrcPath = (Resolve-Path -Path $Source).Path.trim("\")
 
     if(-not $Vcpkg) {
         $Vcpkg = "${OrcPath}\external\vcpkg"
@@ -104,12 +104,12 @@ function Build-Orc
 
     if(-not [System.IO.Path]::IsPathRooted($BuildDirectory))
     {
-        $BuildDirectory = "$OrcPath/$BuildDirectory"
+        $BuildDirectory = Join-Path "${OrcPath}" "${BuildDirectory}"
     }
 
     if(-not [System.IO.Path]::IsPathRooted($Output))
     {
-        $Output = "$OrcPath/$Output"
+        $Output = Join-Path "$OrcPath" "${Output}"
     }
 
     $Generators = @{
@@ -151,7 +151,7 @@ function Build-Orc
 
     foreach($Arch in $Architecture)
     {
-        $BuildDir = "$BuildDirectory/$Arch"
+        $BuildDir = Join-Path "${BuildDirectory}" "${Arch}"
         if($Clean)
         {
             Remove-Item -Force -Recurse -Path $BuildDir -ErrorAction Ignore
