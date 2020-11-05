@@ -126,6 +126,7 @@ function Build-Orc
     }
 
     $CMakeGenerationOptions = @(
+        "-S `"${OrcPath}`""
         "-T v141_xp"
         "-DORC_BUILD_VCPKG=ON"
         "-DORC_VCPKG_ROOT=`"${Vcpkg}`""
@@ -156,32 +157,16 @@ function Build-Orc
         {
             Remove-Item -Force -Recurse -Path $BuildDir -ErrorAction Ignore
         }
-
         New-Item -Force -ItemType Directory -Path $BuildDir | Out-Null
-
-        Push-Location $BuildDir
 
         $Generator = $Generators[$Toolchain + "_" + $Arch]
 
-        try
+        foreach($Config in $Configuration)
         {
-            foreach($Config in $Configuration)
-            {
-                $Parameters = $Generator + $CMakeGenerationOptions + "-DVCPKG_TARGET_TRIPLET=${Arch}-windows-${Runtime}" + "$OrcPath"
-                Invoke-NativeCommand $CMakeExe $Parameters
-
-                Invoke-NativeCommand $CMakeExe "--build . --config ${Config} -- -maxcpucount"
-
-                Invoke-NativeCommand $CMakeExe "--install . --prefix ${Output} --config ${Config}"
-            }
-        }
-        catch
-        {
-            throw
-        }
-        finally
-        {
-            Pop-Location
+            $Parameters = $Generator + $CMakeGenerationOptions + "-DVCPKG_TARGET_TRIPLET=${Arch}-windows-${Runtime}" + "-B `"${BuildDir}`""
+            Invoke-NativeCommand $CMakeExe $Parameters
+            Invoke-NativeCommand $CMakeExe "--build ${BuildDir} --config ${Config} -- -maxcpucount"
+            Invoke-NativeCommand $CMakeExe "--install ${BuildDir} --prefix ${Output} --config ${Config}"
         }
     }
 }
