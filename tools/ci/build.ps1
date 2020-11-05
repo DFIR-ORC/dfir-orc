@@ -59,7 +59,7 @@ function Build-Orc
         [System.IO.DirectoryInfo]
         $Output,
         [Parameter(Mandatory = $True)]
-        [ValidateSet('x86', 'x64')]
+        [ValidateSet('x86', 'x64', IgnoreCase=$false)]
         [String[]]
         $Architecture,
         [Parameter(Mandatory = $False)]
@@ -67,11 +67,11 @@ function Build-Orc
         [String]
         $Toolchain = 'vs2019',
         [Parameter(Mandatory = $True)]
-        [ValidateSet('Debug', 'MinSizeRel', 'RelWithDebInfo')]
+        [ValidateSet('Debug', 'MinSizeRel', 'RelWithDebInfo', IgnoreCase=$false)]
         [String[]]
         $Configuration,
         [Parameter(Mandatory = $False)]
-        [ValidateSet('static', 'dynamic')]
+        [ValidateSet('static', 'dynamic', IgnoreCase=$false)]
         [String]
         $Runtime = 'static',
         [Parameter(Mandatory = $False)]
