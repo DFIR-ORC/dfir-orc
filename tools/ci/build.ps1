@@ -37,10 +37,10 @@ function Build-Orc
         None or error on failure.
 
     .EXAMPLE
-        Build DFIR-Orc in 'F:\dfir-orc\build' and place artifacts in 'F:\dfir-orc\build\bin\' and 'F:\dfir-orc\build\pdb\'
+        Build DFIR-Orc in 'F:\dfir-orc\build'
 
         . F:\Orc\tools\ci\build.ps1
-        Build-Orc -Path F:\dfir-orc -Clean -Configuration Debug,MinSizeRel -Architecture x86,x64 -Runtime static
+        Build-Orc -Source c:\dfir-orc\ -Architecture x86,x64 -Configuration Debug,MinSizeRel
     #>
 
     [cmdletbinding()]
