@@ -1,5 +1,4 @@
-# TODO: add switch to disable OrcLibTest build
-# TODO: add function or a switch for Orc complete configuration
+$ErrorActionPreference  = "Stop"
 
 function Build-Orc
 {
