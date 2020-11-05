@@ -28,6 +28,9 @@ function Build-Orc
     .PARAMETER Runtime
         Target runtime (static, dynamic). Default value: 'static'.
 
+    .PARAMETER Vcpkg
+        Override default directory for vcpkg
+
     .PARAMETER Clean
         Clean build directory
 
@@ -72,6 +75,10 @@ function Build-Orc
         [String]
         $Runtime = 'static',
         [Parameter(Mandatory = $False)]
+        [ValidateNotNullOrEmpty()]
+        [System.IO.DirectoryInfo]
+        $Vcpkg,
+        [Parameter(Mandatory = $False)]
         [switch]
         $ApacheOrc,
         [Parameter(Mandatory = $False)]
@@ -83,6 +90,11 @@ function Build-Orc
     )
 
     $OrcPath = (Resolve-Path -Path $Source).Path
+
+    if(-not $Vcpkg) {
+        $Vcpkg = "${OrcPath}\external\vcpkg"
+    }
+    $Vcpkg = (Resolve-Path -Path $Vcpkg).Path.trim("\")
 
     # Map cmake architecture option against $Architecture
     $CMakeArch = @{
@@ -116,7 +128,8 @@ function Build-Orc
     $CMakeGenerationOptions = @(
         "-T v141_xp"
         "-DORC_BUILD_VCPKG=ON"
-        "-DCMAKE_TOOLCHAIN_FILE=`"${OrcPath}\external\vcpkg\scripts\buildsystems\vcpkg.cmake`""
+        "-DORC_VCPKG_ROOT=`"${Vcpkg}`""
+        "-DCMAKE_TOOLCHAIN_FILE=`"${Vcpkg}\scripts\buildsystems\vcpkg.cmake`""
     )
 
     if($ApacheOrc)
