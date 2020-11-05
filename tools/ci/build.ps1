@@ -85,6 +85,9 @@ function Build-Orc
         $Parquet,
         [Parameter(Mandatory = $False)]
         [switch]
+        $SSDeep,
+        [Parameter(Mandatory = $False)]
+        [switch]
         $Clean
     )
 
@@ -140,6 +143,11 @@ function Build-Orc
     if($Parquet)
     {
         $CMakeGenerationOptions += "-DORC_BUILD_PARQUET=ON"
+    }
+
+    if($SSDeep)
+    {
+        $CMakeGenerationOptions += "-DORC_BUILD_SSDEEP=ON"
     }
 
     $CMakeExe = Find-CMake
