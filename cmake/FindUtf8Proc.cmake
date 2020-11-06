@@ -4,7 +4,6 @@
 # Copyright © 2011-2019 ANSSI. All Rights Reserved.
 #
 # Author(s): fabienfl
-#            Jean Gautier
 #
 
 # Unfortunately the directory search order has 'debug' first:
@@ -21,37 +20,21 @@ foreach(item ${CMAKE_PREFIX_PATH})
     endif()
 endforeach()
 
-find_package(brotli REQUIRED)
-find_package(BZip2 REQUIRED)
-find_package(double-conversion REQUIRED)
-find_package(Snappy CONFIG REQUIRED)
-find_package(thrift REQUIRED)
-find_package(LZ4 REQUIRED)
-find_package(utf8proc REQUIRED)
-find_package(ZLIB REQUIRED)
-find_package(zstd CONFIG REQUIRED)
+if(ORC_USE_STATIC_CRT)
+    set(STATIC_SUFFIX "_static")
+endif()
 
-find_library(ARROW_LIB_DEBUG NAMES arrow)
-
-find_library(ARROW_LIB_RELEASE
-    NAMES arrow
+find_library(UTF8PROC_LIB_DEBUG NAMES utf8proc${STATIC_SUFFIX})
+find_library(UTF8PROC_LIB_RELEASE
+    NAMES utf8proc${STATIC_SUFFIX}
     PATHS ${RELEASE_LIBRARIES_PATH}
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH
 )
 
-add_library(Arrow::Arrow INTERFACE IMPORTED)
+add_library(utf8proc::utf8proc INTERFACE IMPORTED)
 
-target_link_libraries(Arrow::Arrow
+target_link_libraries(utf8proc::utf8proc
     INTERFACE
-        brotli::brotli
-        BZip2::BZip2
-        double-conversion::double-conversion
-        LZ4::LZ4
-        Snappy::snappy
-        thrift::thrift
-        utf8proc::utf8proc
-        ZLIB::ZLIB
-        libzstd
-        debug ${ARROW_LIB_DEBUG} optimized ${ARROW_LIB_RELEASE}
+        debug ${UTF8PROC_LIB_DEBUG} optimized ${UTF8PROC_LIB_RELEASE}
 )
