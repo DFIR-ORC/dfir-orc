@@ -233,7 +233,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamed(LPCWSTR szName, LPCWSTR s
     return S_OK;
 }
 
-HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::wstring_view& szFormat, wformat_args args)
+HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args)
 {
     using namespace std::string_view_literals;
 
@@ -267,7 +267,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::wstring_vi
     return S_OK;
 }
 
-HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::string_view& szFormat, format_args args)
+HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::string_view& szFormat, fmt::format_args args)
 {
     using namespace std::string_view_literals;
 
@@ -310,7 +310,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::string_vie
 HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated_(
     LPCWSTR szName,
     const std::wstring_view& szFormat,
-    wformat_args args)
+    fmt::wformat_args args)
 {
     using namespace std::string_view_literals;
 
@@ -332,7 +332,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated_(
 HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated_(
     LPCWSTR szName,
     const std::string_view& szFormat,
-    format_args args)
+    fmt::format_args args)
 {
     using namespace std::string_view_literals;
 

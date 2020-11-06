@@ -168,12 +168,12 @@ public:
     ~Writer();
 
 protected:
-    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, wformat_args args) override final;
-    virtual HRESULT WriteFormated_(const std::string_view& szFormat, format_args args) override final;
+    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args) override final;
+    virtual HRESULT WriteFormated_(const std::string_view& szFormat, fmt::format_args args) override final;
     virtual HRESULT
-    WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, wformat_args args) override final;
+    WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, fmt::wformat_args args) override final;
     virtual HRESULT
-    WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, format_args args) override final;
+    WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, fmt::format_args args) override final;
 
 private:
     template <typename... Args>

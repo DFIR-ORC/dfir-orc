@@ -164,8 +164,8 @@ public:
     }
 
 protected:
-    HRESULT WriteFormated_(const std::wstring_view& szFormat, IOutput::wformat_args args) override final;
-    HRESULT WriteFormated_(const std::string_view& szFormat, IOutput::format_args args) override final;
+    HRESULT WriteFormated_(const std::string_view& szFormat, fmt::format_args args) override final;
+    HRESULT WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args) override final;
 
 public:
     STDMETHOD(WriteAttributes)(DWORD dwAttibutes) override final;
@@ -297,11 +297,11 @@ protected:
             if (strFormat.find(L"\"{}\"") != std::wstring::npos)
             {
                 auto escapedBuffer = EscapeQuoteInserter(m_buffer);
-                fmt::format_to(std::back_inserter(escapedBuffer), strFormat, args...);
+                fmt::format_to(std::back_inserter(escapedBuffer), strFormat, std::forward<Args>(args)...);
             }
             else
             {
-                fmt::format_to(m_buffer, strFormat, args...);
+                fmt::format_to(m_buffer, strFormat, std::forward<Args>(args)...);
             }
         }
         catch (const fmt::format_error& error)

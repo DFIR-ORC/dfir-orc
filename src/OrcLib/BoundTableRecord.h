@@ -124,8 +124,8 @@ public:
     }
     HRESULT WriteFormatedString(const CHAR* szFormat, ...);
 
-    HRESULT WriteFormated(const std::wstring_view& szFormat, IOutput::wformat_args args);
-    HRESULT WriteFormated(const std::string_view& szFormat, IOutput::format_args args);
+    HRESULT WriteFormated(const std::wstring_view& szFormat, fmt::wformat_args args);
+    HRESULT WriteFormated(const std::string_view& szFormat, fmt::format_args args);
 
     HRESULT WriteAttributes(DWORD dwAttibutes);
     HRESULT WriteFileTime(FILETIME fileTime);

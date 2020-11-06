@@ -62,7 +62,7 @@ HRESULT RobustStructuredWriter::EndCollection(LPCWSTR szCollection)
     return m_pWriter->EndCollection(strElt.c_str());
 }
 
-HRESULT RobustStructuredWriter::WriteFormated_(const std::wstring_view& szFormat, wformat_args args)
+HRESULT RobustStructuredWriter::WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args)
 {
     using namespace std::string_view_literals;
 
@@ -77,7 +77,7 @@ HRESULT RobustStructuredWriter::WriteFormated_(const std::wstring_view& szFormat
     return Write(result_string);
 }
 
-HRESULT RobustStructuredWriter::WriteFormated_(const std::string_view& szFormat, format_args args)
+HRESULT RobustStructuredWriter::WriteFormated_(const std::string_view& szFormat, fmt::format_args args)
 {
     using namespace std::string_view_literals;
 
@@ -93,7 +93,7 @@ HRESULT RobustStructuredWriter::WriteFormated_(const std::string_view& szFormat,
 }
 
 HRESULT
-RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, wformat_args args)
+RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, fmt::wformat_args args)
 {
     using namespace std::string_view_literals;
 
@@ -108,7 +108,8 @@ RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::wstring_v
     return WriteNamed(szName, result_string);
 }
 
-HRESULT RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, format_args args)
+HRESULT
+RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, fmt::format_args args)
 {
     using namespace std::string_view_literals;
 

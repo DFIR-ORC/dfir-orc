@@ -114,7 +114,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::EndCollection(LP
 template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
     const std::wstring_view& szFormat,
-    wformat_args args)
+    fmt::wformat_args args)
 {
     Buffer<WCHAR, MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
@@ -126,7 +126,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
 template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
     const std::string_view& szFormat,
-    format_args args)
+    fmt::format_args args)
 {
     Buffer<CHAR, MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
@@ -144,7 +144,7 @@ template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated_(
     LPCWSTR szName,
     const std::wstring_view& szFormat,
-    wformat_args args)
+    fmt::wformat_args args)
 {
     rapidWriter.Key(szName);
     WriteFormated_(szFormat, args);
@@ -155,7 +155,7 @@ template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated_(
     LPCWSTR szName,
     const std::string_view& szFormat,
-    format_args args)
+    fmt::format_args args)
 {
     rapidWriter.Key(szName);
     WriteFormated_(szFormat, args);

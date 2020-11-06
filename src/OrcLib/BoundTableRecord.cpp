@@ -239,7 +239,7 @@ HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::string_view& svStr
     return S_OK;
 }
 
-HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::wstring_view& szFormat, IOutput::wformat_args args)
+HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::wstring_view& szFormat, fmt::wformat_args args)
 {
     HRESULT hr = E_FAIL;
 
@@ -281,7 +281,7 @@ HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::wstring_view& sz
     return S_OK;
 }
 
-HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::string_view& szFormat, IOutput::format_args args)
+HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::string_view& szFormat, fmt::format_args args)
 {
     HRESULT hr = E_FAIL;
 
