@@ -19,29 +19,29 @@ public:
 
     HRESULT Open(std::shared_ptr<ByteStream> stream);
 
-    virtual arrow::Status GetSize(int64_t* size) override final;
+    arrow::Result<int64_t> GetSize() override final;
 
-    virtual bool supports_zero_copy() const override final { return false; };
+    bool supports_zero_copy() const override final { return false; };
 
-    virtual arrow::Status Read(int64_t nbytes, int64_t* bytes_read, void* out) override final;
-    virtual arrow::Status Read(int64_t nbytes, std::shared_ptr<arrow::Buffer>* out) override final;
+    arrow::Result<int64_t> Read(int64_t nbytes, void* out) override final;
+    arrow::Result<std::shared_ptr<arrow::Buffer>> Read(int64_t nbytes) override final;
 
-    virtual arrow::Status ReadAt(int64_t position, int64_t nbytes, int64_t* bytes_read, void* out) override final;
-    virtual arrow::Status ReadAt(int64_t position, int64_t nbytes, std::shared_ptr<arrow::Buffer>* out) override final;
+    arrow::Result<int64_t> ReadAt(int64_t position, int64_t nbytes, void* out) override final;
+    arrow::Result<std::shared_ptr<arrow::Buffer>> ReadAt(int64_t position, int64_t nbytes) override final;
 
-    virtual arrow::Status Seek(int64_t position) override final;
-    virtual arrow::Status Tell(int64_t* position) const override final;
+    arrow::Status Seek(int64_t position) override final;
+    arrow::Result<int64_t> Tell() const override final;
 
-    virtual arrow::Status Write(const void* data, int64_t nbytes) override final;
-    virtual arrow::Status WriteAt(int64_t position, const void* data, int64_t nbytes) override final;
+    arrow::Status Write(const void* data, int64_t nbytes) override final;
+    arrow::Status WriteAt(int64_t position, const void* data, int64_t nbytes) override final;
 
-    virtual arrow::Status Flush() override final;
+    arrow::Status Flush() override final;
 
-    virtual arrow::Status Close() override final;
+    arrow::Status Close() override final;
 
-    virtual bool closed() const override final;
+    bool closed() const override final;
 
-    virtual ~Stream() override;
+    ~Stream() override;
 
 private:
     std::shared_ptr<ByteStream> m_Stream;

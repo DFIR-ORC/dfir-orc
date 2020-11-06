@@ -34,22 +34,15 @@ HRESULT Orc::TableOutput::Parquet::Stream::Open(std::shared_ptr<ByteStream> stre
     return S_OK;
 }
 
-arrow::Status Orc::TableOutput::Parquet::Stream::GetSize(int64_t* size)
+arrow::Result<int64_t> Orc::TableOutput::Parquet::Stream::GetSize()
 {
     if (!m_Stream)
         return Status::Invalid("Invalid stream"s);
 
-    auto _size = m_Stream->GetSize();
-
-    if (size)
-        *size = _size;
-    else
-        return Status::Invalid("Invalid argument"s);
-
-    return Status::OK();
+    return m_Stream->GetSize();
 }
 
-arrow::Status Orc::TableOutput::Parquet::Stream::Read(int64_t nbytes, int64_t* bytes_read, void* out)
+Result<int64_t> Orc::TableOutput::Parquet::Stream::Read(int64_t nbytes, void* out)
 {
     if (!m_Stream)
         return Status::Invalid("Invalid stream"s);
@@ -60,22 +53,37 @@ arrow::Status Orc::TableOutput::Parquet::Stream::Read(int64_t nbytes, int64_t* b
     if (FAILED(hr))
         return Status::IOError("Failed to read stream"s);
 
-    if (bytes_read)
-        *bytes_read = bytesRead;
-
-    return Status::OK();
+    return bytesRead;
 }
 
-arrow::Status Orc::TableOutput::Parquet::Stream::Read(int64_t nbytes, std::shared_ptr<arrow::Buffer>* out)
+arrow::Result<std::shared_ptr<arrow::Buffer>> Orc::TableOutput::Parquet::Stream::Read(int64_t nbytes)
 {
     if (!m_Stream)
         return Status::Invalid("Invalid stream"s);
 
-    return Status::OK();
+    auto buffer = arrow::AllocateResizableBuffer(nbytes, arrow::default_memory_pool());
+    if (!buffer.ok())
+    {
+        return buffer.status();
+    }
+
+    auto pBuffer = buffer.MoveValueUnsafe();
+    auto bytes_read = Read(nbytes, pBuffer->mutable_data());
+    if (!bytes_read.ok())
+    {
+        return bytes_read.status();
+    }
+
+    auto status = pBuffer->Resize(bytes_read.ValueUnsafe(), false);
+    if (!status.ok())
+    {
+        return status;
+    }
+
+    return pBuffer;
 }
 
-arrow::Status
-Orc::TableOutput::Parquet::Stream::ReadAt(int64_t position, int64_t nbytes, int64_t* bytes_read, void* out)
+arrow::Result<int64_t> Orc::TableOutput::Parquet::Stream::ReadAt(int64_t position, int64_t nbytes, void* out)
 {
     if (!m_Stream)
         return Status::Invalid("Invalid stream"s);
@@ -91,27 +99,16 @@ Orc::TableOutput::Parquet::Stream::ReadAt(int64_t position, int64_t nbytes, int6
     if (FAILED(hr))
         return Status::IOError("Failed to read stream"s);
 
-    if (bytes_read)
-        *bytes_read = bytesRead;
-
-    return Status::OK();
+    return bytesRead;
 }
 
-arrow::Status
-Orc::TableOutput::Parquet::Stream::ReadAt(int64_t position, int64_t nbytes, std::shared_ptr<arrow::Buffer>* out)
+arrow::Result<std::shared_ptr<arrow::Buffer>>
+Orc::TableOutput::Parquet::Stream::ReadAt(int64_t position, int64_t nbytes)
 {
     if (FAILED(m_Stream->SetFilePointer(position, FILE_BEGIN, NULL)))
         return Status::IOError("Failed to set file pointer on arrow stream"s);
 
-    std::shared_ptr<ResizableBuffer> buffer;
-    ARROW_RETURN_NOT_OK(arrow::AllocateResizableBuffer(arrow::default_memory_pool(), nbytes, &buffer));
-
-    int64_t bytes_read = 0LL;
-    ARROW_RETURN_NOT_OK(Read(nbytes, &bytes_read, buffer->mutable_data()));
-    ARROW_RETURN_NOT_OK(buffer->Resize(bytes_read, false));
-    if (out)
-        *out = buffer;
-    return Status::OK();
+    return Read(nbytes);
 }
 
 arrow::Status Orc::TableOutput::Parquet::Stream::Seek(int64_t position)
@@ -127,7 +124,7 @@ arrow::Status Orc::TableOutput::Parquet::Stream::Seek(int64_t position)
     return Status::OK();
 }
 
-arrow::Status Orc::TableOutput::Parquet::Stream::Tell(int64_t* position) const
+arrow::Result<int64_t> Orc::TableOutput::Parquet::Stream::Tell() const
 {
     if (!m_Stream)
         return Status::Invalid("Invalid stream"s);
@@ -139,10 +136,7 @@ arrow::Status Orc::TableOutput::Parquet::Stream::Tell(int64_t* position) const
         return Status::IOError("Failed to retrieve curent position"s);
     }
 
-    if (position)
-        *position = currentPos;
-
-    return Status::OK();
+    return currentPos;
 }
 
 arrow::Status Orc::TableOutput::Parquet::Stream::Write(const void* data, int64_t nbytes)
