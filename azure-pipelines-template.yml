@@ -9,6 +9,7 @@ jobs:
   - checkout: self
     clean: true
     submodules: true
+  - task: NuGetAuthenticate@0
   - task: PowerShell@2
     inputs:
       targetType: 'inline'
