@@ -16,6 +16,7 @@
 #include <string>
 #include <array>
 #include <set>
+#include <filesystem>
 
 #pragma managed(push, off)
 
