@@ -19,6 +19,7 @@ enum class CompressionType
 };
 
 std::string ToString( CompressionType type );
+CompressionType ToCompressionType( const std::string& value );
 
 std::istream& operator>>( std::istream& in, CompressionType& type );
 

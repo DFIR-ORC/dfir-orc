@@ -28,18 +28,29 @@ namespace fs = std::filesystem;
 using OptionsUtf8 = CmdSet::OptionsUtf8;
 using OptionsUtf16 = CmdSet::OptionsUtf16;
 
-namespace {
+namespace CLI {
+namespace detail {
 
-template < typename T >
-std::istringstream& operator>>(
-    std::istringstream& in,
-    std::optional< T >& val )
+template <>
+inline bool lexical_cast< rcedit::CompressionType >(
+    const std::string& input,
+    rcedit::CompressionType& output )
 {
-    T v;
-    in >> v;
-    val = v;
-    return in;
+    try {
+        output = rcedit::ToCompressionType( input );
+    }
+    catch( const std::exception& e ) {
+        std::cerr << e.what();
+        return false;
+    }
+
+    return true;
 }
+
+}  // namespace detail
+}  // namespace CLI
+
+namespace {
 
 void UpdateFileResource(
     const fs::path& path,
