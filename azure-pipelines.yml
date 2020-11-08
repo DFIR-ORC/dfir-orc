@@ -3,7 +3,7 @@ trigger:
 
 variables:
 - name: VCPKG_BINARY_SOURCES
-  value: 'clear;nuget,https://pkgs.dev.azure.com/jeangautier/dfir-orc/_packaging/vcpkg/nuget/v3/index.json,readwrite'
+  value: 'clear;nuget,https://pkgs.dev.azure.com/jeangautier/dfir-orc/_packaging/vcpkg/nuget/v3/index.json,readwrite;clear;nuget,https://pkgs.dev.azure.com/fabienfl-orc/_packaging/fabienfl-orc/nuget/v3/index.json,readwrite'
 
 stages:
   - stage: Build
