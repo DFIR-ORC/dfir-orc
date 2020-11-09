@@ -10,11 +10,13 @@
 
 #include "OrcLib.h"
 
+#include "Utils/Result.h"
+
 #pragma managed(push, off)
 
 namespace Orc {
 
-enum ServiceStatus
+enum class DriverStatus
 {
     Inexistent,
     Installed,
@@ -50,7 +52,7 @@ public:
     HRESULT Start();
     HRESULT Stop();
 
-    ServiceStatus GetStatus();
+    Result<DriverStatus> GetStatus();
 
 private:
     HRESULT Install(const std::wstring& strX86DriverRef, const std::wstring& strX64DriverRef);
@@ -88,7 +90,7 @@ private:
     static HRESULT RemoveDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
     static HRESULT StartDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
     static HRESULT StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
-    static HRESULT GetDriverStatus(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
+    static HRESULT GetDriverStatus(SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __out DriverStatus& status);
     static HRESULT ManageDriver(LPCTSTR DriverName, __in LPCTSTR ServiceName, __in USHORT Function);
     static HRESULT SetupDriverName(WCHAR* DriverLocation, WCHAR* szDriverFileName, ULONG BufferLength);
     static HRESULT GetDriverBinaryPathName(

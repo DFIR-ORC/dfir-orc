@@ -355,13 +355,18 @@ HRESULT Driver::Stop()
     return S_OK;
 }
 
-ServiceStatus Orc::Driver::GetStatus()
+Orc::Result<DriverStatus> Orc::Driver::GetStatus()
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = m_manager->ConnectToSCM()))
-        return ServiceStatus::Inexistent;
+        return SystemError(hr);
 
-    return ServiceStatus();
+    Orc::DriverStatus status;
+    if (auto hr = DriverMgmt::GetDriverStatus(m_manager->m_SchSCManager, m_strServiceName.c_str(), status); FAILED(hr))
+        return SystemError(hr);
+
+    return status;
+
 }
 
 HRESULT Orc::DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in LPCTSTR ServiceExe)
@@ -655,9 +660,8 @@ HRESULT Orc::DriverMgmt::StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverN
     return S_OK;
 }  //  StopDriver
 
-HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverName)
+HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverName, DriverStatus& status)
 {
-    HRESULT hr = E_FAIL;
     SC_HANDLE schService;
 
     //
@@ -677,7 +681,7 @@ HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverN
 
     if (schService == NULL)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
+        auto hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error("Failed OpenService [{}]", SystemError(hr));
         return hr;
     }
@@ -695,14 +699,14 @@ HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverN
             if (!QueryServiceStatusEx(
                     schService, SC_STATUS_PROCESS_INFO, serviceStatus.get(), serviceStatus.capacity(), &cbNeeded))
             {
-                hr = HRESULT_FROM_WIN32(GetLastError());
+                auto hr = HRESULT_FROM_WIN32(GetLastError());
                 Log::Error("Failed QueryServiceStatusEx [{}]", SystemError(hr));
                 return hr;
             }
         }
         else
         {
-            hr = HRESULT_FROM_WIN32(GetLastError());
+            auto hr = HRESULT_FROM_WIN32(GetLastError());
             Log::Error(L"Failed QueryServiceStatusEx [{}]", SystemError(hr));
             return hr;
         }
@@ -714,22 +718,24 @@ HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverN
     switch (pStatus->dwCurrentState)
     {
         case SERVICE_CONTINUE_PENDING:
-            return ServiceStatus::PendingContinue;
+            status = DriverStatus::PendingContinue;
         case SERVICE_PAUSE_PENDING:
-            return ServiceStatus::PendingPause;
+            status = DriverStatus::PendingPause;
         case SERVICE_PAUSED:
-            return ServiceStatus::Paused;
+            status = DriverStatus::Paused;
         case SERVICE_RUNNING:
-            return ServiceStatus::Started;
+            status = DriverStatus::Started;
         case SERVICE_START_PENDING:
-            return ServiceStatus::PendingStart;
+            status = DriverStatus::PendingStart;
         case SERVICE_STOP_PENDING:
-            return ServiceStatus::PendingStop;
+            status = DriverStatus::PendingStop;
         case SERVICE_STOPPED:
-            return ServiceStatus::Stopped;
+            status = DriverStatus::Stopped;
         default:
-            return ServiceStatus::Inexistent;
+            status = DriverStatus::Inexistent;
     }
+
+    return S_OK;
 }
 
 HRESULT
