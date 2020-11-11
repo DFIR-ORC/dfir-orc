@@ -20,62 +20,62 @@ std::shared_ptr<Logger>& DefaultLogger();
 void SetDefaultLogger(std::shared_ptr<Logger> instance);
 
 template <typename... Args>
-void Trace(const Args&... args)
+void Trace(Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Trace(args...);
+        instance->Trace(std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Debug(const Args&... args)
+void Debug(Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Debug(args...);
+        instance->Debug(std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Info(const Args&... args)
+void Info(Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Info(args...);
+        instance->Info(std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Warn(const Args&... args)
+void Warn(Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Warn(args...);
+        instance->Warn(std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Error(const Args&... args)
+void Error(Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Error(args...);
+        instance->Error(std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Critical(const Args&... args)
+void Critical(Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Critical(args...);
+        instance->Critical(std::forward<Args>(args)...);
     }
 }
 

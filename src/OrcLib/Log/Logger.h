@@ -49,80 +49,80 @@ public:
     void DumpBacktrace();
 
     template <typename... Args>
-    void Trace(Facility id, const Args&... args)
+    void Trace(Facility id, Args&&... args)
     {
-        Get(id)->trace(args...);
+        Get(id)->trace(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Trace(const Args&... args)
+    void Trace(Args&&... args)
     {
-        Trace(Facility::kDefault, args...);
+        Trace(Facility::kDefault, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Debug(Facility id, const Args&... args)
+    void Debug(Facility id, Args&&... args)
     {
-        Get(id)->debug(args...);
+        Get(id)->debug(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Debug(const Args&... args)
+    void Debug(Args&&... args)
     {
-        Debug(Facility::kDefault, args...);
+        Debug(Facility::kDefault, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Info(Facility id, const Args&... args)
+    void Info(Facility id, Args&&... args)
     {
-        Get(id)->info(args...);
+        Get(id)->info(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Info(const Args&... args)
+    void Info(Args&&... args)
     {
-        Info(Facility::kDefault, args...);
+        Info(Facility::kDefault, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Warn(Facility id, const Args&... args)
+    void Warn(Facility id, Args&&... args)
     {
-        Get(id)->warn(args...);
+        Get(id)->warn(std::forward<Args>(args)...);
         ++m_warningCount;
     }
 
     template <typename... Args>
-    void Warn(const Args&... args)
+    void Warn(Args&&... args)
     {
-        Warn(Facility::kDefault, args...);
+        Warn(Facility::kDefault, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Error(Facility id, const Args&... args)
+    void Error(Facility id, Args&&... args)
     {
-        Get(id)->error(args...);
+        Get(id)->error(std::forward<Args>(args)...);
         ++m_errorCount;
     }
 
     template <typename... Args>
-    void Error(const Args&... args)
+    void Error(Args&&... args)
     {
-        Error(Facility::kDefault, args...);
+        Error(Facility::kDefault, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Critical(Facility id, const Args&... args)
+    void Critical(Facility id, Args&&... args)
     {
-        Get(id)->critical(args...);
+        Get(id)->critical(std::forward<Args>(args)...);
         ++m_criticalCount;
 
         DumpBacktrace();
     }
 
     template <typename... Args>
-    void Critical(const Args&... args)
+    void Critical(Args&&... args)
     {
-        Critical(Facility::kDefault, args...);
+        Critical(Facility::kDefault, std::forward<Args>(args)...);
     }
 
     const std::shared_ptr<spdlog::logger>& Get(Facility id) const
