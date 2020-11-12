@@ -44,7 +44,8 @@ void Main::PrintUsage()
 
     {
         constexpr std::array kCustomMiscParameters = {
-            Usage::kMiscParameterComputer, Usage::kMiscParameterResurrectRecords};
+            Usage::kMiscParameterComputer, Usage::kMiscParameterResurrectRecords, Usage::kMiscParameterCompression};
+
         Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
     }
 
