@@ -12,8 +12,9 @@
 #include <filesystem>
 #include <set>
 
-#include <Psapi.h>
+#include <psapi.h>
 
+#include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -634,14 +635,53 @@ bool UtilitiesMain::IgnoreConfigOptions(LPCWSTR szArg)
     return false;
 }
 
+bool UtilitiesMain::IgnoreEarlyOptions(LPCWSTR szArg)
+{
+    const std::vector<std::wstring_view> kIgnoredList = {L"computer", L"fullcomputer", L"systemtype"};
+
+    std::wstring arg(szArg);
+
+    const auto pos = arg.find_first_of(L'=');
+    if (pos != std::wstring::npos)
+    {
+        arg.resize(pos);
+    }
+
+    boost::algorithm::to_lower(arg);
+
+    for (const auto& ignored : kIgnoredList)
+    {
+        if (ignored == arg)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool UtilitiesMain::IgnoreCommonOptions(LPCWSTR szArg)
 {
     if (IgnoreWaitForDebuggerOption(szArg))
+    {
         return true;
+    }
+
     if (IgnoreConfigOptions(szArg))
+    {
         return true;
+    }
+
     if (IgnoreLoggingOptions(szArg))
+    {
         return true;
+    }
+
+    if (IgnoreEarlyOptions(szArg))
+    {
+        return true;
+    }
+
     return false;
 }
 

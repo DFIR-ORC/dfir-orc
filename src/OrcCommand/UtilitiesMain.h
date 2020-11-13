@@ -441,7 +441,61 @@ protected:
     HRESULT LoadEvtLibrary();
     HRESULT LoadPSAPI();
 
-    auto Configure(int argc, const wchar_t* argv[]) { return m_logging.Configure(argc, argv); }
+    auto Configure(int argc, const wchar_t* argv[])
+    {
+        m_logging.Configure(argc, argv);
+
+        // FIX: Some arguments must be processed very early as others depends
+        // on their value. This is not a clean fix but a more global refactor is
+        // required on options handling...
+        std::wstring computerName;
+        std::wstring fullComputerName;
+        std::wstring systemType;
+
+        for (int i = 0; i < argc; i++)
+        {
+
+            switch (argv[i][0])
+            {
+                case L'/':
+                case L'-':
+                    if (ParameterOption(argv[i] + 1, L"Computer", computerName))
+                        ;
+                    else if (ParameterOption(argv[i] + 1, L"FullComputer", fullComputerName))
+                        ;
+                    else if (ParameterOption(argv[i] + 1, L"SystemType", systemType))
+                        ;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if (computerName.empty() && !fullComputerName.empty())
+        {
+            computerName = fullComputerName;
+        }
+
+        if (fullComputerName.empty() && !computerName.empty())
+        {
+            fullComputerName = computerName;
+        }
+
+        if (!computerName.empty())
+        {
+            SystemDetails::SetOrcComputerName(computerName);
+        }
+
+        if (!fullComputerName.empty())
+        {
+            SystemDetails::SetOrcFullComputerName(fullComputerName);
+        }
+
+        if (!systemType.empty())
+        {
+            SystemDetails::SetSystemType(systemType);
+        }
+    }
 
     template <typename T>
     void PrintCommonParameters(Orc::Text::Tree<T>& root)
@@ -687,6 +741,7 @@ protected:
     bool IgnoreLoggingOptions(LPCWSTR szArg);
     bool IgnoreConfigOptions(LPCWSTR szArg);
     bool IgnoreCommonOptions(LPCWSTR szArg);
+    bool IgnoreEarlyOptions(LPCWSTR szArg);
 
 public:
     UtilitiesMain();
