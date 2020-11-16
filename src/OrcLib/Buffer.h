@@ -916,9 +916,6 @@ using Buffer = Detail::Buffer<_T, _DeclElts>;
 
 #ifndef __cplusplus_cli
 
-#    include <fmt/format.h>
-#    include <fmt/printf.h>
-
 namespace fmt {
 
 template <typename _T, size_t _DeclElts, typename Char>
