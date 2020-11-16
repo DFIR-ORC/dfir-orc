@@ -154,9 +154,15 @@ void Robustness::seTransFunction(unsigned int u, EXCEPTION_POINTERS* pExp)
     if (!g_termination.Block()->_bSilent)
     {
         if (g_termination.Block()->_szProcessDescr)
+        {
             wprintf(L"\n%s: ERROR: System exception: 0x%lx\n", g_termination.Block()->_szProcessDescr, u);
+            Log::Critical(L"{}: System exception: {}", g_termination.Block()->_szProcessDescr, SystemError(u));
+        }
         else
+        {
             wprintf(L"\nERROR: System exception: 0x%lx\n", u);
+            Log::Critical("System exception: {}", SystemError(u));
+        }
     }
 
     throw SystemException(u, pExp);

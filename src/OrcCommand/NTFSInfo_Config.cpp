@@ -400,7 +400,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.locs.IsEmpty() != S_OK)
     {
-        Log::Error(
+        Log::Critical(
             L"No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
             L"want parsed");
         return E_INVALIDARG;
