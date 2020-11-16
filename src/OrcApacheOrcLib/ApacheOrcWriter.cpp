@@ -573,7 +573,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteCharArray(const WCHAR* sz
     return S_OK;
 }
 
-STDMETHODIMP
+HRESULT
 Orc::TableOutput::ApacheOrc::Writer::WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args)
 {
     Buffer<WCHAR, MAX_PATH> buffer;
@@ -675,7 +675,7 @@ STDMETHODIMP Orc::TableOutput::ApacheOrc::Writer::WriteCharArray(const CHAR* szS
     return S_OK;
 }
 
-STDMETHODIMP
+HRESULT
 Orc::TableOutput::ApacheOrc::Writer::WriteFormated_(const std::string_view& szFormat, fmt::format_args args)
 {
     Buffer<CHAR, MAX_PATH> buffer;
