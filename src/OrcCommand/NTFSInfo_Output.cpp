@@ -82,7 +82,7 @@ void Main::PrintParameters()
 
     PrintValue(node, "Output columns", config.ColumnIntentions, NtfsFileInfo::g_NtfsColumnNames);
     PrintValue(node, "Default columns", config.DefaultIntentions, NtfsFileInfo::g_NtfsColumnNames);
-    PrintValue(node, "Filters", config.Filters);
+    PrintValue(node, "Filters", config.Filters, NtfsFileInfo::g_NtfsColumnNames);
 
     m_console.PrintNewLine();
 }
