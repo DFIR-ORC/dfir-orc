@@ -1,5 +1,31 @@
 # ChangeLog
 
+## [10.1.0-rc2] - 2020-11-20
+### Changed
+- Column 'ParentName': remove trailing '\'
+- Autorunsc: use UTC time format
+- vcpkg: update spdlog to v1.8.1
+
+### Fixed
+- Parsing issue on some MFT
+- Output: fix 7z creation causing crashes
+- Log: format system errors as unsigned hex values
+- Log: option 'StdOutErr' will now properly includes 'stderr' output
+- Log: move many errors from 'Error' level to 'Critical'
+- Log: fix shadowed formatters causing some unformatted output value
+- Console: fix unformatted output value of 'filters' parameter
+- Option: partially ignored options '/Computer', '/FullComputer', '/SystemType'
+- OrcApache: calling convention mismatch on x86 causing crashes
+
+### Added
+- Usage: add missing usage options
+- WolfLauncher: print real file size for compressed items
+- WolfLauncher: print archive size once completed
+- WolfLauncher: print file size for queued upload items
+
+### Removed
+- Dead code: 'OutputFileOption', 'OutputDirOption'
+
 ## [10.1.0-rc1] - 2020-11-09
 
 ### Changed
