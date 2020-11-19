@@ -163,7 +163,7 @@ public:
                                 Log::Info(L"Archive: '{}' started", item->Keyword());
                                 break;
                             case ArchiveNotification::FileAddition:
-                                Log::Info(L"Archive: File '{}' added", item->Keyword());
+                                Log::Info(L"Archive: File '{}' added ({})", item->Keyword(), item->FileSize());
                                 break;
                             case ArchiveNotification::DirectoryAddition:
                                 Log::Info(L"Archive: Directory '{}' added", item->Keyword());

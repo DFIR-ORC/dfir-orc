@@ -16,6 +16,7 @@
 
 #include "BinaryBuffer.h"
 #include "ArchiveMessage.h"
+#include "Utils/TypeTraits.h"
 
 #pragma managed(push, off)
 
@@ -56,6 +57,7 @@ private:
     std::wstring m_fileName;
     std::wstring m_description;
     std::wstring m_compressionLevel;
+    std::optional<Traits::ByteQuantity<uint64_t>> m_fileSize;
     HRESULT m_hr;
 
     CBinaryBuffer m_md5;
@@ -103,6 +105,10 @@ public:
     const std::wstring& Description() const { return m_description; }
     const std::wstring& GetFileName() const { return m_fileName; }
     const std::wstring& GetCompressionLevel() const { return m_compressionLevel; }
+
+    void SetFileSize(const std::filesystem::path& path);
+    void SetFileSize(uint64_t size) { m_fileSize = size; }
+    std::optional<Traits::ByteQuantity<uint64_t>> FileSize() const { return m_fileSize; }
 
     const CBinaryBuffer& MD5() const { return m_md5; };
     const CBinaryBuffer& SHA1() const { return m_sha1; };

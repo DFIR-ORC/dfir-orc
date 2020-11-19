@@ -55,4 +55,17 @@ Orc::ArchiveNotification::Notification Orc::ArchiveNotification::MakeArchiveStar
     return retval;
 }
 
+void Orc::ArchiveNotification::SetFileSize(const std::filesystem::path& path)
+{
+    std::error_code ec;
+    auto size = std::filesystem::file_size(path, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed to get file size for '{}' [{}]", path, ec);
+        return;
+    }
+
+    SetFileSize(size);
+}
+
 Orc::ArchiveNotification::~ArchiveNotification() {}
