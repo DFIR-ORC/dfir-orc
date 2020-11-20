@@ -35,7 +35,6 @@ endif()
 
 add_executable(Orc
     "stdafx.h"
-    "stdafx.cpp"
     ${SRC}
 )
 

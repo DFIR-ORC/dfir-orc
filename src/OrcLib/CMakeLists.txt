@@ -46,7 +46,7 @@ set(SRC_COMMON
 )
 
 # stdafx.[cpp|h] must be included first, don't include them in SRC_COMMON
-source_group(Common FILES "stdafx.h" "stdafx.cpp" ${SRC_COMMON})
+source_group(Common FILES "stdafx.h" ${SRC_COMMON})
 
 set(SRC_CONFIG
     "ConfigFile.cpp"
@@ -254,7 +254,6 @@ source_group(ExtensionLibraries\\Yara FILES ${SRC_EXTENSIONLIBRARIES_YARA})
 
 set(SRC_INOUT
     "LocationOutput.h"
-    "OutputWriter.cpp"
     "OutputWriter.h"
 )
 
@@ -818,7 +817,6 @@ source_group(Utilities\\WinApi FILES ${SRC_UTILITIES_WINAPIHELPER})
 add_library(OrcLib
     STATIC
         "stdafx.h"
-        "stdafx.cpp"
         ${SRC_COMMAND}
         ${SRC_COMMON}
         ${SRC_CONFIG}

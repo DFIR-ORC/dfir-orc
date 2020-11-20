@@ -23,12 +23,11 @@ set(SRC
 
 set(SRC_COMMON "targetver.h")
 
-source_group(Common FILES ${SRC_COMMON} "stdafx.cpp" "stdafx.h")
+source_group(Common FILES ${SRC_COMMON} "stdafx.h")
 
 add_library(OrcApacheOrcLib
     STATIC
         "stdafx.h"
-        "stdafx.cpp"
         ${SRC}
         ${SRC_COMMON}
 )

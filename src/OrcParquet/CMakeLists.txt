@@ -15,12 +15,11 @@ find_package(Boost REQUIRED)
 set(SRC "OrcParquet.cpp")
 
 set(SRC_COMMON "dllmain.cpp" "targetver.h")
-source_group(Common FILES ${SRC_COMMON} "stdafx.cpp" "stdafx.h")
+source_group(Common FILES ${SRC_COMMON} "stdafx.h")
 
 add_library(OrcParquet
     SHARED
         "stdafx.h"
-        "stdafx.cpp"
         ${SRC}
         ${SRC_COMMON}
 )

@@ -36,7 +36,6 @@ set(SRC_COMMON
     "FileInfoCommon.h"
     "OrcCommand.rc"
     "OrcCommand.h"
-    "stdafx.cpp"
     "stdafx.h"
     "targetver.h"
     "Output/Console/Journal.h"
