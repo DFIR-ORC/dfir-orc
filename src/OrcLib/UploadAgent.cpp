@@ -45,6 +45,11 @@ void UploadAgent::run()
                 {
                     notification = UploadNotification::MakeSuccessNotification(
                         request, UploadNotification::FileAddition, request->LocalName(), request->RemoteName());
+
+                    if (notification)
+                    {
+                        notification->SetFileSize(request->LocalName());
+                    }
                 }
 
                 if (notification)
@@ -120,12 +125,18 @@ void UploadAgent::run()
                             {
                                 notification = UploadNotification::MakeSuccessNotification(
                                     request, UploadNotification::FileAddition, strFileName, strRemoteName);
+
+                                if (notification)
+                                {
+                                    notification->SetFileSize(strFileName);
+                                }
                             }
 
                             if (notification)
                             {
                                 SendResult(notification);
                             }
+
                         }
                         else
                         {

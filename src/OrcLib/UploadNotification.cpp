@@ -46,4 +46,17 @@ Orc::UploadNotification::Notification Orc::UploadNotification::MakeFailureNotifi
     return std::make_shared<UploadNotificationT>(type, Failure, request, source, destination, hr, description);
 }
 
+void UploadNotification::SetFileSize(const std::filesystem::path& path)
+{
+    std::error_code ec;
+    auto size = std::filesystem::file_size(path, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed to get file size for '{}' [{}]", path, ec);
+        return;
+    }
+
+    SetFileSize(size);
+}
+
 UploadNotification::~UploadNotification() {}
