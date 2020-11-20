@@ -23,7 +23,7 @@ void FormatByteQuantityTo(OutputIt out, const Orc::Traits::ByteQuantity<T>& quan
 
     T value = quantity.value;
     size_t index = 0;
-    for (; index < units.size(); ++index)
+    for (; index < units.size() - 1; ++index)
     {
         if (value < step)
         {
@@ -44,7 +44,7 @@ void FormatByteQuantityToW(OutputIt out, const Orc::Traits::ByteQuantity<T>& qua
 
     T value = quantity.value;
     size_t index = 0;
-    for (; index < units.size(); ++index)
+    for (; index < units.size() - 1; ++index)
     {
         if (value < step)
         {
