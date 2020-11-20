@@ -201,7 +201,11 @@ HRESULT WolfExecution::CreateArchiveAgent()
                     m_journal.Print(archive->CommandSet(), operation, L"Add stream: {}", archive->Keyword());
                     break;
                 case ArchiveNotification::ArchiveComplete:
-                    m_journal.Print(archive->CommandSet(), operation, L"Completed: {}", archive->Keyword());
+                    m_journal.Print(
+                        archive->CommandSet(),
+                        operation, L"Completed: {} ({})",
+                        archive->Keyword(),
+                        archive->FileSize());
                     break;
             }
         });

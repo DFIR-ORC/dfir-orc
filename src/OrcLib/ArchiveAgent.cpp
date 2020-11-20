@@ -444,6 +444,10 @@ void ArchiveAgent::run()
                 {
                     notification = ArchiveNotification::MakeSuccessNotification(
                         request, ArchiveNotification::ArchiveComplete, m_cabName);
+                    if (notification)
+                    {
+                        notification->SetFileSize(m_cabName);
+                    }
                 }
 
                 if (notification)

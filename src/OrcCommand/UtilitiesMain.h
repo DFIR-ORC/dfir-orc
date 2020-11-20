@@ -172,7 +172,7 @@ public:
                                 Log::Info(L"Archive: Output '{}' added", item->Keyword());
                                 break;
                             case ArchiveNotification::ArchiveComplete:
-                                Log::Info(L"Archive: '{}' is complete", item->Keyword());
+                                Log::Info(L"Archive: '{}' is complete ({})", item->Keyword(), item->FileSize());
                                 break;
                         }
                     }
