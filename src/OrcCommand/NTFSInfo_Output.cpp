@@ -20,6 +20,7 @@
 #include "Output/Text/Print/Intentions.h"
 #include "Output/Text/Print/Filter.h"
 #include "Output/Text/Print/LocationSet.h"
+#include "Output/Text/Print/Location.h"
 
 #include "Usage.h"
 

@@ -15,31 +15,35 @@
 namespace Orc {
 namespace Text {
 
-template <typename T>
-void Print(Orc::Text::Tree<T>& root, const Partition& partition)
+template <>
+struct Printer<Partition>
 {
-    if (partition.IsValid())
+    template <typename T>
+    static void Output(Orc::Text::Tree<T>& root, const Partition& partition)
     {
-        auto flags = Partition::ToString(partition.PartitionFlags);
-        if (flags.size())
+        if (partition.IsValid())
         {
-            flags = fmt::format(L", flags: {}", flags);
-        }
+            auto flags = Partition::ToString(partition.PartitionFlags);
+            if (flags.size())
+            {
+                flags = fmt::format(L", flags: {}", flags);
+            }
 
-        root.Add(
-            "Partition: #{}, type: {}, offsets: {:#x}-{:#x}, size: {}{}",
-            partition.PartitionNumber,
-            partition.PartitionType,
-            partition.Start,
-            partition.End,
-            partition.Size,
-            flags);
+            root.Add(
+                "Partition: #{}, type: {}, offsets: {:#x}-{:#x}, size: {}{}",
+                partition.PartitionNumber,
+                partition.PartitionType,
+                partition.Start,
+                partition.End,
+                partition.Size,
+                flags);
+        }
+        else
+        {
+            root.Add("Partition type: {}{}", partition.PartitionType);
+        }
     }
-    else
-    {
-        root.Add("Partition type: {}{}", partition.PartitionType);
-    }
-}
+};
 
 }  // namespace Text
 }  // namespace Orc

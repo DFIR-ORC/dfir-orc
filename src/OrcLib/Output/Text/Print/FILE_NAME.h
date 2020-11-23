@@ -15,22 +15,26 @@
 namespace Orc {
 namespace Text {
 
-template <typename T>
-void Print(Orc::Text::Tree<T>& root, const FILE_NAME& file_name)
+template <>
+struct Printer<FILE_NAME>
 {
-    const auto parentFRN = NtfsFullSegmentNumber(&file_name.ParentDirectory);
-    const auto& creation = *(reinterpret_cast<const FILETIME*>(&file_name.Info.CreationTime));
-    const auto& lastModification = *(reinterpret_cast<const FILETIME*>(&file_name.Info.LastModificationTime));
-    const auto& lastAccess = *(reinterpret_cast<const FILETIME*>(&file_name.Info.LastAccessTime));
-    const auto& lastChange = *(reinterpret_cast<const FILETIME*>(&file_name.Info.LastChangeTime));
+    template <typename T>
+    static void Output(Orc::Text::Tree<T>& node, const FILE_NAME& value)
+    {
+        const auto parentFRN = NtfsFullSegmentNumber(&file_name.ParentDirectory);
+        const auto& creation = *(reinterpret_cast<const FILETIME*>(&file_name.Info.CreationTime));
+        const auto& lastModification = *(reinterpret_cast<const FILETIME*>(&file_name.Info.LastModificationTime));
+        const auto& lastAccess = *(reinterpret_cast<const FILETIME*>(&file_name.Info.LastAccessTime));
+        const auto& lastChange = *(reinterpret_cast<const FILETIME*>(&file_name.Info.LastChangeTime));
 
-    auto node = root.AddNode(file_name);
-    node.Add("Parent directory FRN: {:#016x}", parentFRN);
-    node.Add("CreationTime: {}", creation);
-    node.Add("LastModificationTime: {}", lastModification);
-    node.Add("LastAccessTime: {}", lastAccess);
-    node.Add("LastChangeTime: {}", lastChange);
-}
+        auto node = root.AddNode(file_name);
+        node.Add("Parent directory FRN: {:#016x}", parentFRN);
+        node.Add("CreationTime: {}", creation);
+        node.Add("LastModificationTime: {}", lastModification);
+        node.Add("LastAccessTime: {}", lastAccess);
+        node.Add("LastChangeTime: {}", lastChange);
+    }
+};
 
 }  // namespace Text
 }  // namespace Orc

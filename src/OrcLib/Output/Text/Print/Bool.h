@@ -13,11 +13,15 @@
 namespace Orc {
 namespace Text {
 
-template <typename T>
-void Print(Orc::Text::Tree<T>& root, const bool& value)
+template <>
+struct Printer<bool>
 {
-    Print(root, value ? L"On" : L"Off");
-}
+    template <typename T>
+    static void Output(Orc::Text::Tree<T>& node, bool value)
+    {
+        Print(node, value ? L"On" : L"Off");
+    }
+};
 
 }  // namespace Text
 }  // namespace Orc

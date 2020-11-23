@@ -178,22 +178,6 @@ void Print(Orc::Text::Tree<T>& root, const MFTRecord& record, const std::shared_
             }
         }
     }
-
-    // if (record.IsDirectory() && volume)
-    //{
-    //    FormatDirectoryAttributes(root, record, volume, std::error_code());
-    //}
-
-    // if (!attributes.empty())
-    //{
-    //    auto attributesNode = root.AddNode("Attributes");
-
-    //    for (size_t i = 0; i < attributes.size(); ++i)
-    //    {
-    //        auto attributeNode = attributesNode.AddNode("Attribute #{}", i);
-    //        ::Format(attributeNode, attributes[i].Attribute(), volume);
-    //    }
-    //}
 }
 
 }  // namespace Text

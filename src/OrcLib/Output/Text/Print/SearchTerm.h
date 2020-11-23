@@ -15,18 +15,15 @@
 namespace Orc {
 namespace Text {
 
-template <typename T>
-void Print(Orc::Text::Tree<T>& root, const std::shared_ptr<FileFind::SearchTerm>& term)
+template <>
+struct Printer<FileFind::SearchTerm>
 {
-    assert(term);
-    Print(root, *term);
-}
-
-template <typename T>
-void Print(Orc::Text::Tree<T>& root, const FileFind::SearchTerm& term)
-{
-    Print(root, term.GetDescription());
-}
+    template <typename T>
+    static void Output(Orc::Text::Tree<T>& root, const FileFind::SearchTerm& term)
+    {
+        Print(root, term.GetDescription());
+    }
+};
 
 }  // namespace Text
 }  // namespace Orc
