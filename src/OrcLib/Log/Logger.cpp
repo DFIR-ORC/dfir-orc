@@ -19,7 +19,7 @@
 
 #include <spdlog/logger.h>
 
-#ifdef ORC_BUILD_BOOSTSTACK_TRACE
+#ifdef ORC_BUILD_BOOST_STACKTRACE
 #    include <boost/stacktrace.hpp>
 #endif
 
@@ -76,7 +76,7 @@ Logger::Logger(std::initializer_list<std::pair<Facility, std::shared_ptr<spdlog:
     spdlog::set_error_handler([](const std::string& msg) {
         std::cerr << msg << std::endl;
 
-#ifdef ORC_BUILD_BOOSTSTACK_TRACE
+#ifdef ORC_BUILD_BOOST_STACKTRACE
         std::cerr << "Stack trace:" << std::endl;
         std::cerr << boost::stacktrace::stacktrace();
 #endif

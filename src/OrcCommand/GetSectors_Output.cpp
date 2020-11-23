@@ -52,7 +52,10 @@ void Main::PrintUsage()
             "The tool does not try to obtain a low interface on the disk device using the setupAPI functions"}};
 
     Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
-    Usage::PrintMiscellaneousParameters(usageNode);
+
+    constexpr std::array kCustomMiscParameters = {Usage::kMiscParameterCompression};
+    Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
+
     Usage::PrintLoggingParameters(usageNode);
 }
 

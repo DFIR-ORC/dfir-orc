@@ -436,9 +436,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         bool bDump = false;
         bool bFromDump = false;
 
-        std::wstring strComputerName;
-        std::wstring strFullComputerName;
-        std::wstring strSystemType;
         std::wstring strTags;
 
         for (int i = 0; i < argc; i++)
@@ -493,12 +490,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (AltitudeOption(argv[i] + 1, L"Altitude", config.DefaultAltitude))
                         ;
-                    else if (ParameterOption(argv[i] + 1, L"Computer", strComputerName))
-                        ;
-                    else if (ParameterOption(argv[i] + 1, L"FullComputer", strFullComputerName))
-                        ;
-                    else if (ParameterOption(argv[i] + 1, L"SystemType", strSystemType))
-                        ;
                     else if (ParameterOption(argv[i] + 1, L"Tags", strTags))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Offline", config.strOfflineLocation))
@@ -543,20 +534,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
             }
         }
 
-        if (strComputerName.empty() && !strFullComputerName.empty())
-        {
-            strComputerName = strFullComputerName;
-        }
-        if (strFullComputerName.empty() && !strComputerName.empty())
-        {
-            strFullComputerName = strComputerName;
-        }
-        if (!strComputerName.empty())
-            SystemDetails::SetOrcComputerName(strComputerName);
-        if (!strFullComputerName.empty())
-            SystemDetails::SetOrcFullComputerName(strFullComputerName);
-        if (!strSystemType.empty())
-            SystemDetails::SetSystemType(strSystemType);
         if (!strTags.empty())
         {
             using tokenizer =

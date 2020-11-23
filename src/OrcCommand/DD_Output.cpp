@@ -50,7 +50,8 @@ void Main::PrintUsage()
 
     Usage::PrintOutputParameters(usageNode);
 
-    Usage::PrintMiscellaneousParameters(usageNode);
+    constexpr std::array kCustomMiscParameters = {Usage::kMiscParameterCompression};
+    Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
 
     Usage::PrintLoggingParameters(usageNode);
 }

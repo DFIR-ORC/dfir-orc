@@ -120,7 +120,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.locs.IsEmpty() != S_OK)
     {
-        Log::Error(
+        Log::Critical(
             "No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
             "want parsed");
         return E_INVALIDARG;
@@ -139,7 +139,7 @@ HRESULT Main::CheckConfiguration()
     {
         if (FAILED(hr = ::VerifyDirectoryExists(config.output.Path.c_str())))
         {
-            Log::Error(
+            Log::Critical(
                 L"Specified file information output directory '{}' is not a directory [{}]",
                 config.output.Path,
                 SystemError(hr));

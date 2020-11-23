@@ -106,7 +106,7 @@ HRESULT WolfTask::ApplyNotification(
                             {
                                 if (dwHangTime - m_dwLastReportedHang >= 30)
                                 {
-                                    Log::Critical(
+                                    Log::Error(
                                         L"{} (pid: {}): Hanged for {} secs",
                                         m_command,
                                         m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,

@@ -30,6 +30,15 @@ function Build-Orc
     .PARAMETER Vcpkg
         Override default directory for vcpkg
 
+    .PARAMETER ApacheOrc
+        Build with ApacheOrc support
+
+    .PARAMETER Parquet
+        Build with Parquet support
+
+    .PARAMETER SSDeep
+        Build with SSDeep support
+
     .PARAMETER Clean
         Clean build directory
 

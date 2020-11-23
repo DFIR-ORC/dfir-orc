@@ -18,6 +18,23 @@ using namespace std;
 
 using namespace Orc;
 
+namespace {
+
+void SetFileSize(const OrcArchive::ArchiveItem& item, ArchiveNotification& notification)
+{
+    // ArchiveItem's size is initialized with ByteStream::GetSize() which will return -1 if unsupported
+    if (item.Size && item.Size != -1)
+    {
+        notification.SetFileSize(item.Size);
+    }
+    else
+    {
+        notification.SetFileSize(item.Path);
+    }
+}
+
+}  // namespace
+
 HRESULT ArchiveAgent::OnCompleteTerminationHandler::operator()()
 {
     switch (m_object)
@@ -215,7 +232,10 @@ void ArchiveAgent::run()
                                     auto notification = ArchiveNotification::MakeSuccessNotification(
                                         request, ArchiveNotification::FileAddition, item.NameInArchive);
                                     if (notification)
+                                    {
+                                        SetFileSize(item, *notification);
                                         SendResult(notification);
+                                    }
                                 });
 
                                 notification = ArchiveNotification::MakeArchiveStartedSuccessNotification(
@@ -255,7 +275,10 @@ void ArchiveAgent::run()
                                 auto notification = ArchiveNotification::MakeSuccessNotification(
                                     request, ArchiveNotification::FileAddition, item.NameInArchive);
                                 if (notification)
+                                {
+                                    SetFileSize(item, *notification);
                                     SendResult(notification);
+                                }
                             });
 
                             notification = ArchiveNotification::MakeArchiveStartedSuccessNotification(
@@ -421,6 +444,10 @@ void ArchiveAgent::run()
                 {
                     notification = ArchiveNotification::MakeSuccessNotification(
                         request, ArchiveNotification::ArchiveComplete, m_cabName);
+                    if (notification)
+                    {
+                        notification->SetFileSize(m_cabName);
+                    }
                 }
 
                 if (notification)

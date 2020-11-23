@@ -187,7 +187,12 @@ HRESULT WolfExecution::CreateArchiveAgent()
                     m_journal.Print(archive->CommandSet(), operation, L"Started");
                     break;
                 case ArchiveNotification::FileAddition:
-                    m_journal.Print(archive->CommandSet(), operation, L"Add file: {}", archive->Keyword());
+                    m_journal.Print(
+                        archive->CommandSet(),
+                        operation,
+                        L"Add file: {} ({})",
+                        archive->Keyword(),
+                        archive->FileSize());
                     break;
                 case ArchiveNotification::DirectoryAddition:
                     m_journal.Print(archive->CommandSet(), operation, L"Add directory: {}", archive->Keyword());
@@ -196,7 +201,11 @@ HRESULT WolfExecution::CreateArchiveAgent()
                     m_journal.Print(archive->CommandSet(), operation, L"Add stream: {}", archive->Keyword());
                     break;
                 case ArchiveNotification::ArchiveComplete:
-                    m_journal.Print(archive->CommandSet(), operation, L"Completed: {}", archive->Keyword());
+                    m_journal.Print(
+                        archive->CommandSet(),
+                        operation, L"Completed: {} ({})",
+                        archive->Keyword(),
+                        archive->FileSize());
                     break;
             }
         });

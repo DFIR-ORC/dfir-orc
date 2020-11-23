@@ -31,25 +31,59 @@ struct fmt::formatter<std::error_code, wchar_t> : public fmt::formatter<std::wst
 template <typename FormatContext>
 auto fmt::formatter<std::error_code>::format(const std::error_code& ec, FormatContext& ctx) -> decltype(ctx.out())
 {
-    const auto message = ec.message();
-    if (message.size())
+    std::string s;
+
+    if (ec.category() == std::system_category())
     {
-        return fmt::format_to(ctx.out(), "{:#x}: {}", ec.value(), message);
+        fmt::format_to(std::back_inserter(s), "{:#x}", static_cast<uint32_t>(ec.value()));
+    }
+    else
+    {
+        fmt::format_to(std::back_inserter(s), "{}", ec.value());
     }
 
-    return fmt::format_to(ctx.out(), "{:#x}", ec.value());
+    auto message = ec.message();
+    if (!message.empty())
+    {
+        auto pos = message.rfind("\r\n");
+        if (pos != std::string::npos && pos == message.size() - 2)
+        {
+            message = message.substr(0, pos);
+        }
+
+        fmt::format_to(std::back_inserter(s), ": {}", message);
+    }
+
+    return formatter<std::string_view>::format(s, ctx);
 }
 
 template <typename FormatContext>
 auto fmt::formatter<std::error_code, wchar_t>::format(const std::error_code& ec, FormatContext& ctx)
     -> decltype(ctx.out())
 {
-    const auto message = ec.message();
-    if (message.size())
+    std::wstring s;
+
+    if (ec.category() == std::system_category())
     {
-        const auto utf16 = Orc::Utf8ToUtf16(message, Orc::kFailedConversionW);
-        return fmt::format_to(ctx.out(), L"{:#x}: {}", ec.value(), utf16);
+        fmt::format_to(std::back_inserter(s), L"{:#x}", static_cast<uint32_t>(ec.value()));
+    }
+    else
+    {
+        fmt::format_to(std::back_inserter(s), L"{}", ec.value());
     }
 
-    return fmt::format_to(ctx.out(), L"{:#x}", ec.value());
+    auto message = ec.message();
+    if (!message.empty())
+    {
+        auto pos = message.rfind("\r\n");
+        if (pos != std::string::npos && pos == message.size() - 2)
+        {
+            message = message.substr(0, pos);
+        }
+
+        const auto utf16 = Orc::Utf8ToUtf16(message, Orc::kFailedConversionW);
+        fmt::format_to(std::back_inserter(s), L": {}", utf16);
+    }
+
+    return formatter<std::wstring_view, wchar_t>::format(s, ctx);
 }

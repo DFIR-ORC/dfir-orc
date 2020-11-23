@@ -258,7 +258,7 @@ HRESULT CommandMessage::PushStdErr(const LONG OrderID, const std::wstring& Keywo
 HRESULT
 CommandMessage::PushStdOutErr(const LONG OrderID, const std::wstring& Keyword, bool bCabWhenComplete, bool bHash)
 {
-    CommandParameter output(CommandParameter::StdOut);
+    CommandParameter output(CommandParameter::StdOutErr);
 
     output.OrderId = OrderID;
     output.Keyword = Keyword;

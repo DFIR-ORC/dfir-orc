@@ -16,6 +16,7 @@
 #include <agents.h>
 
 #include "UploadMessage.h"
+#include "Utils/TypeTraits.h"
 
 #pragma managed(push, off)
 
@@ -74,6 +75,10 @@ public:
     const std::wstring& Destination() const { return m_destination; }
     const std::wstring& Description() const { return m_description; }
 
+    void SetFileSize(const std::filesystem::path& path);
+    void SetFileSize(uint64_t size) { m_fileSize = size; }
+    std::optional<Traits::ByteQuantity<uint64_t>> FileSize() const { return m_fileSize; }
+
     virtual ~UploadNotification();
 
 private:
@@ -84,6 +89,7 @@ private:
     const std::wstring m_source;
     const std::wstring m_destination;
     std::wstring m_description;
+    std::optional<Traits::ByteQuantity<uint64_t>> m_fileSize;
     HRESULT m_hr;
 
 protected:

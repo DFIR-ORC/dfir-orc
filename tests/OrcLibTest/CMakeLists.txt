@@ -149,7 +149,6 @@ source_group(Playlists FILES ${SRC_PLAYLISTS})
 add_library(OrcLibTest
     SHARED
         "stdafx.h"
-        "stdafx.cpp"
 		"OrcLibTest.rc"
         ${SRC_COMMON}
         ${SRC_DISK_VOLUME}

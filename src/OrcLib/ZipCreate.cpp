@@ -235,8 +235,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
 
             CComPtr<InByteStreamWrapper> infile = new InByteStreamWrapper(m_TempStream);
 
-            CComPtr<IInArchive> inarchive;
-            pArchiver->QueryInterface(IID_IInArchive, (void**)&pArchiver);
+            CComQIPtr<IInArchive, &IID_IInArchive> inarchive(pArchiver);
             if (inarchive != nullptr)
             {
                 CComPtr<ArchiveOpenCallback> callback = new ArchiveOpenCallback();

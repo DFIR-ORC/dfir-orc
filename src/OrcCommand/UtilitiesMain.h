@@ -12,6 +12,7 @@
 #include <conio.h>
 #include <iostream>
 #include <chrono>
+#include <filesystem>
 
 #include <concrt.h>
 
@@ -162,7 +163,7 @@ public:
                                 Log::Info(L"Archive: '{}' started", item->Keyword());
                                 break;
                             case ArchiveNotification::FileAddition:
-                                Log::Info(L"Archive: File '{}' added", item->Keyword());
+                                Log::Info(L"Archive: File '{}' added ({})", item->Keyword(), item->FileSize());
                                 break;
                             case ArchiveNotification::DirectoryAddition:
                                 Log::Info(L"Archive: Directory '{}' added", item->Keyword());
@@ -171,7 +172,7 @@ public:
                                 Log::Info(L"Archive: Output '{}' added", item->Keyword());
                                 break;
                             case ArchiveNotification::ArchiveComplete:
-                                Log::Info(L"Archive: '{}' is complete", item->Keyword());
+                                Log::Info(L"Archive: '{}' is complete ({})", item->Keyword(), item->FileSize());
                                 break;
                         }
                     }
@@ -441,7 +442,61 @@ protected:
     HRESULT LoadEvtLibrary();
     HRESULT LoadPSAPI();
 
-    auto Configure(int argc, const wchar_t* argv[]) { return m_logging.Configure(argc, argv); }
+    auto Configure(int argc, const wchar_t* argv[])
+    {
+        m_logging.Configure(argc, argv);
+
+        // FIX: Some arguments must be processed very early as others depends
+        // on their value. This is not a clean fix but a more global refactor is
+        // required on options handling...
+        std::wstring computerName;
+        std::wstring fullComputerName;
+        std::wstring systemType;
+
+        for (int i = 0; i < argc; i++)
+        {
+
+            switch (argv[i][0])
+            {
+                case L'/':
+                case L'-':
+                    if (ParameterOption(argv[i] + 1, L"Computer", computerName))
+                        ;
+                    else if (ParameterOption(argv[i] + 1, L"FullComputer", fullComputerName))
+                        ;
+                    else if (ParameterOption(argv[i] + 1, L"SystemType", systemType))
+                        ;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if (computerName.empty() && !fullComputerName.empty())
+        {
+            computerName = fullComputerName;
+        }
+
+        if (fullComputerName.empty() && !computerName.empty())
+        {
+            fullComputerName = computerName;
+        }
+
+        if (!computerName.empty())
+        {
+            SystemDetails::SetOrcComputerName(computerName);
+        }
+
+        if (!fullComputerName.empty())
+        {
+            SystemDetails::SetOrcFullComputerName(fullComputerName);
+        }
+
+        if (!systemType.empty())
+        {
+            SystemDetails::SetSystemType(systemType);
+        }
+    }
 
     template <typename T>
     void PrintCommonParameters(Orc::Text::Tree<T>& root)
@@ -577,32 +632,6 @@ protected:
         return false;
     }
 
-    bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
-    template <typename OptionType>
-    bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType> parameter)
-    {
-        OptionType result;
-        if (OutputFileOption(szArg, szOption, result))
-        {
-            parameter.emplace(std::move(result));
-            return true;
-        }
-        return false;
-    }
-
-    bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
-    template <typename OptionType>
-    bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
-    {
-        OptionType result;
-        if (OutputDirOption(szArg, szOption, result))
-        {
-            parameter.emplace(std::move(result));
-            return true;
-        }
-        return false;
-    }
-
     bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile);
     template <typename OptionType>
     bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
@@ -713,6 +742,7 @@ protected:
     bool IgnoreLoggingOptions(LPCWSTR szArg);
     bool IgnoreConfigOptions(LPCWSTR szArg);
     bool IgnoreCommonOptions(LPCWSTR szArg);
+    bool IgnoreEarlyOptions(LPCWSTR szArg);
 
 public:
     UtilitiesMain();
@@ -758,12 +788,12 @@ public:
         WSADATA wsa_data;
         if (WSAStartup(MAKEWORD(2, 2), &wsa_data))
         {
-            Log::Critical(L"Failed to initialize WinSock 2.2 [{}]", Win32Error(WSAGetLastError()));
+            Log::Error(L"Failed to initialize WinSock 2.2 [{}]", Win32Error(WSAGetLastError()));
         }
 
         if (FAILED(hr = CoInitializeEx(0, COINIT_MULTITHREADED)))
         {
-            Log::Error("Failed to initialize COM library [{}]", SystemError(hr));
+            Log::Critical(L"Failed to initialize COM library [{}]", SystemError(hr));
             return hr;
         }
 
@@ -802,9 +832,16 @@ public:
                             nullptr,
                             schemaitem,
                             Orc::Config::Common::sqlschema)))
+                {
+                    Log::Critical(L"Failed to parse schema configuration item [{}]", SystemError(hr));
                     return hr;
+                }
+
                 if (FAILED(hr = Cmd.GetSchemaFromConfig(schemaitem)))
+                {
+                    Log::Critical(L"Failed to process configuration schema [{}]", SystemError(hr));
                     return hr;
+                }
             }
 
             if (UtilityT::DefaultConfiguration() != nullptr || UtilityT::ConfigurationExtension() != nullptr)
@@ -820,9 +857,16 @@ public:
                             UtilityT::ConfigurationExtension(),
                             configitem,
                             UtilityT::GetXmlConfigBuilder())))
+                {
+                    Log::Critical(L"Failed to parse default configuration [{}]", SystemError(hr));
                     return hr;
+                }
+
                 if (FAILED(hr = Cmd.GetConfigurationFromConfig(configitem)))
+                {
+                    Log::Critical(L"Failed to parse xml configuration [{}]", SystemError(hr));
                     return hr;
+                }
             }
 
             if (UtilityT::LocalConfiguration() != nullptr || UtilityT::LocalConfigurationExtension() != nullptr)
@@ -840,25 +884,33 @@ public:
                             UtilityT::GetXmlLocalConfigBuilder())))
                     return hr;
                 if (FAILED(hr = Cmd.GetLocalConfigurationFromConfig(configitem)))
+                {
+                    Log::Critical(L"Failed to parse local xml configuration [{}]", SystemError(hr));
                     return hr;
+                }
             }
 
             if (FAILED(hr = Cmd.GetConfigurationFromArgcArgv(argc, argv)))
+            {
+                Log::Critical(L"Failed to parse command line arguments [{}]", SystemError(hr));
                 return hr;
+            }
 
             if (FAILED(hr = Cmd.CheckConfiguration()))
+            {
+                Log::Critical(L"Failed while checking configuration [{}]", SystemError(hr));
                 return hr;
+            }
         }
         catch (std::exception& e)
         {
-            std::cerr << "std::exception during configuration evaluation" << std::endl;
-            std::cerr << "Caught " << e.what() << std::endl;
-            std::cerr << "Type " << typeid(e).name() << std::endl;
+            Log::Critical(
+                "Exception during configuration evaluation. Type: {}, Reason: {}", typeid(e).name(), e.what());
             return E_ABORT;
         }
         catch (...)
         {
-            std::cerr << "Exception during configuration evaluation" << std::endl;
+            Log::Critical("Exception during configuration evaluation");
             return E_ABORT;
         }
 
@@ -879,14 +931,13 @@ public:
             hr = Cmd.Run();
             if (FAILED(hr))
             {
+                Log::Critical(L"Command failed with {}", SystemError(hr));
                 return hr;
             }
         }
         catch (std::exception& e)
         {
-            std::cerr << "std::exception during execution" << std::endl;
-            std::cerr << "Caught " << e.what() << std::endl;
-            std::cerr << "Type " << typeid(e).name() << std::endl;
+            Log::Critical("Exception during execution. Type: {}, Reason: {}", typeid(e).name(), e.what());
 
 #ifdef ORC_BUILD_BOOST_STACKTRACE
             boost::stacktrace::stacktrace();
@@ -895,7 +946,7 @@ public:
         }
         catch (...)
         {
-            std::cerr << "Exception during during execution" << std::endl;
+            Log::Critical("Exception during configuration evaluation.");
 
 #ifdef ORC_BUILD_BOOST_STACKTRACE
             boost::stacktrace::stacktrace();
@@ -918,7 +969,10 @@ public:
         //        Until then, always dump the backtrace with a Log::Critical
         if (Cmd.m_logging.logger().errorCount())
         {
-            Log::Critical(L"Dump log backtrace due to some previously encoutered error(s)");
+            Log::Critical(
+                L"Dump log backtrace due to some previously encoutered error(s). "
+                L"This could probably be ignored, you may NOT have encoutered any critical error. Error levels are "
+                L"being reevaluated and this backtrace could help in case of mistakes.");
         }
 
         return static_cast<int>(Cmd.m_logging.logger().errorCount() + Cmd.m_logging.logger().criticalCount());

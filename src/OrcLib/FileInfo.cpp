@@ -895,6 +895,13 @@ HRESULT FileInfo::WriteParentName(ITableOutput& output)
     if ((err = _wsplitpath_s(m_szFullName, drive, _MAX_DRIVE, dir, _MAX_DIR, NULL, 0L, NULL, 0L)) != 0)
         return HRESULT_FROM_WIN32(err);
 
+    // Internal [76]: avoid path ending with '\\' for weak csv parsers
+    const auto dirLength = wcslen(dir);
+    if (dirLength && dir[dirLength - 1] == L'\\')
+    {
+        dir[dirLength - 1] = L'\0';
+    }
+
     return output.WriteFormated(L"{}{}", drive, dir);
 }
 

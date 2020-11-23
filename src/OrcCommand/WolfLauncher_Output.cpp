@@ -113,7 +113,21 @@ void Main::PrintUsage()
         Usage::kMiscParameterTempDir,
         Usage::kMiscParameterCompression,
         Usage::Parameter {"/ChildDebug", "Attach a debugger to child processes, dump memory in case of crash"},
-        Usage::Parameter {"/NoChildDebug", "Block child debugging (if selected in config file)"}};
+        Usage::Parameter {"/NoChildDebug", "Block child debugging (if selected in config file)"},
+        Usage::Parameter {
+            "/archive_timeout",
+            "Configures the time (in minutes) the engine will wait for the archive to complete. Upon timeout, this "
+            "archive will be canceled"},
+        Usage::Parameter {
+            "/command_timeout",
+            "Configures the time (in minutes) the engine will wait for the last command(s) to complete. Upon timeout, "
+            "the command engine will stop, kill any pending process and move on with archive completion"},
+        Usage::Parameter {
+            "/WERDontShowUI",
+            "Configures Windows Error Reporting to prevent blocking UI in case of a crash during DFIR ORC execution. "
+            "WER previous configuration is restored at the end of DFIR ORC execution"}
+        };
+
     Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
 
     Usage::PrintLoggingParameters(usageNode);

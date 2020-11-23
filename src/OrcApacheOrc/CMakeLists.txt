@@ -13,12 +13,11 @@ orc_add_compile_options()
 set(SRC "OrcApacheOrc.cpp")
 
 set(SRC_COMMON "dllmain.cpp" "targetver.h")
-source_group(Common FILES ${SRC_COMMON} "stdafx.cpp" "stdafx.h")
+source_group(Common FILES ${SRC_COMMON} "stdafx.h")
 
 add_library(OrcApacheOrc
     SHARED
         "stdafx.h"
-        "stdafx.cpp"
         ${SRC}
         ${SRC_COMMON}
 )

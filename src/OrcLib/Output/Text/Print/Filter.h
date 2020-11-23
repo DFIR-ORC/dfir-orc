@@ -12,6 +12,7 @@
 
 #include "Output/Text/Print.h"
 #include "Output/Text/Print/Intentions.h"
+#include "Output/Text/Fmt/ByteQuantity.h"
 
 #include "FSUtils.h"
 
@@ -19,15 +20,17 @@ namespace Orc {
 namespace Text {
 
 template <typename T, typename U>
-void PrintValue(Orc::Text::Tree<T>& node, const U& name, const std::vector<Orc::Filter>& filters)
+void PrintValue(
+    Orc::Text::Tree<T>& node,
+    const U& name,
+    const std::vector<Orc::Filter>& filters,
+    const ColumnNameDef* pCurCol)
 {
     if (filters.empty())
     {
         PrintValue(node, name, kStringEmpty);
         return;
     }
-
-    auto filtersNode = node.AddNode("{}:", name);
 
     for (const auto& filter : filters)
     {
@@ -36,12 +39,10 @@ void PrintValue(Orc::Text::Tree<T>& node, const U& name, const std::vector<Orc::
         switch (filter.type)
         {
             case FILEFILTER_EXTBINARY:
-                PrintValue(
-                    filtersNode, fmt::format(L"{} columns for files with binary extensions", action), filter.intent);
+                PrintValue(node, fmt::format(L"{} for binary extensions", action), filter.intent, pCurCol);
                 break;
             case FILEFILTER_EXTSCRIPT:
-                PrintValue(
-                    filtersNode, fmt::format(L"{} columns for files with script extensions", action), filter.intent);
+                PrintValue(node, fmt::format(L"{} for script extensions", action), filter.intent, pCurCol);
                 break;
             case FILEFILTER_EXTCUSTOM: {
                 std::vector<std::wstring> customExtensions;
@@ -50,42 +51,37 @@ void PrintValue(Orc::Text::Tree<T>& node, const U& name, const std::vector<Orc::
                 {
                     customExtensions.push_back({*pCurExt});
                 }
+
                 std::sort(std::begin(customExtensions), std::end(customExtensions));
 
                 PrintValue(
-                    filtersNode,
-                    fmt::format(
-                        L"{} columns for files with custom extensions: {}",
-                        action,
-                        boost::join(customExtensions, L" ,")),
+                    node,
+                    fmt::format(L"{} for custom extensions: {}", action, boost::join(customExtensions, L" ,")),
                     filter.intent);
             }
             break;
             case FILEFILTER_EXTARCHIVE:
-                PrintValue(
-                    filtersNode, fmt::format(L"{} columns for files with archive extensions", action), filter.intent);
+                PrintValue(node, fmt::format(L"{} for archive extensions", action), filter.intent, pCurCol);
                 break;
             case FILEFILTER_PEHEADER:
-                PrintValue(
-                    filtersNode, fmt::format(L"{} columns for files with valid PE header", action), filter.intent);
+                PrintValue(node, fmt::format(L"{} for PE header", action), filter.intent, pCurCol);
                 break;
             case FILEFILTER_VERSIONINFO:
-                PrintValue(
-                    filtersNode,
-                    fmt::format(L"{} columns for files with valid VERSION_INFO resource", action),
-                    filter.intent);
+                PrintValue(node, fmt::format(L"{} for VERSION_INFO resource", action), filter.intent, pCurCol);
                 break;
             case FILEFILTER_SIZELESS:
                 PrintValue(
-                    filtersNode,
-                    fmt::format(L"{} columns for files smaller than {} bytes", action, filter.filterdata.size.LowPart),
-                    filter.intent);
+                    node,
+                    fmt::format(L"{} for files <{}", action, Traits::ByteQuantity(filter.filterdata.size.QuadPart)),
+                    filter.intent,
+                    pCurCol);
                 break;
             case FILEFILTER_SIZEMORE:
                 PrintValue(
-                    filtersNode,
-                    fmt::format(L"{} columns for files bigger than {} bytes", action, filter.filterdata.size.LowPart),
-                    filter.intent);
+                    node,
+                    fmt::format(L"{} for files >{}", action, Traits::ByteQuantity(filter.filterdata.size.QuadPart)),
+                    filter.intent,
+                    pCurCol);
                 break;
         }
     }

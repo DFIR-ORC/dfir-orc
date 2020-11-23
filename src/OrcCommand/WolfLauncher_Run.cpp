@@ -160,7 +160,8 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
                     m_journal.Print(upload->Keyword(), operation, L"Start");
                     break;
                 case UploadNotification::FileAddition:
-                    m_journal.Print(upload->Keyword(), operation, L"Add file: {}", upload->Source());
+                    m_journal.Print(
+                        upload->Keyword(), operation, L"Add file: {} ({})", upload->Source(), upload->FileSize());
                     break;
                 case UploadNotification::DirectoryAddition:
                     m_journal.Print(upload->Keyword(), operation, L"Add directory: {}", upload->Source());

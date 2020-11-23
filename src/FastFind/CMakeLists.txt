@@ -29,7 +29,6 @@ set(SRC
 
 add_executable(FastFind
     "stdafx.h"
-    "stdafx.cpp"
     ${SRC}
     "FastFind.rc"
 	"Compatibility.manifest"

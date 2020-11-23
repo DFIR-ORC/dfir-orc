@@ -731,15 +731,24 @@ HRESULT MFTRecordFileInfo::WriteEASize(ITableOutput& output)
 
     for (const auto& item : attrlist)
     {
-
-        if (item.TypeCode() == $EA)
+        if (item.TypeCode() != $EA)
         {
-            if (FAILED(item.Attribute()->DataSize(m_pVolReader, dwlDataSize)))
-            {
-                dwlDataSize = 0L;
-            }
+            continue;
+        }
+
+        auto attribute = item.Attribute();
+        if (attribute == nullptr)
+        {
             break;
         }
+
+        HRESULT hr = attribute->DataSize(m_pVolReader, dwlDataSize);
+        if (FAILED(hr))
+        {
+            dwlDataSize = 0L;
+        }
+
+        break;
     }
 
     return output.WriteInteger(dwlDataSize);

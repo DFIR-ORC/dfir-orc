@@ -22,6 +22,7 @@
 #include <string_view>
 
 #include "ParquetDefinitions.h"
+#include "Utils/Result.h"
 
 using namespace Orc;
 
