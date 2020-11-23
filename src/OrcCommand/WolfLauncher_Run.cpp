@@ -402,15 +402,15 @@ HRESULT Main::SetLauncherPriority(WolfPriority priority)
 {
     switch (priority)
     {
-        case Low:
+        case WolfPriority::Low:
             SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
             break;
-        case Normal:
+        case WolfPriority::Normal:
             SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
             break;
-        case High:
+        case WolfPriority::High:
             SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
             break;

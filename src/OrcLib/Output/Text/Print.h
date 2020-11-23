@@ -18,8 +18,8 @@
 namespace Orc {
 namespace Text {
 
-constexpr auto kStringEmpty = std::string_view("<Empty>");
-constexpr auto kStringEmptyW = std::wstring_view(L"<Empty>");
+constexpr auto kEmpty = std::string_view("<Empty>");
+constexpr auto kEmptyW = std::wstring_view(L"<Empty>");
 constexpr auto kError = std::string_view("<Error>");
 constexpr auto kErrorW = std::wstring_view(L"<Error>");
 constexpr auto kNoneAvailable = std::string_view("N/A");

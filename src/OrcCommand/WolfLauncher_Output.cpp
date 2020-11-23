@@ -12,6 +12,7 @@
 #include "SystemDetails.h"
 #include "ToolVersion.h"
 #include "Usage.h"
+#include "Output/Text/Fmt/WolfPriority.h"
 #include "Output/Text/Print/OutputSpec.h"
 #include "Output/Text/Print/LocationSet.h"
 #include "Output/Text/Print/Bool.h"
@@ -24,6 +25,21 @@ using namespace Orc;
 namespace Orc {
 namespace Command {
 namespace Wolf {
+
+std::wstring Main::ToString(WolfPriority value)
+{
+    switch (value)
+    {
+        case WolfPriority::Low:
+            return L"Low";
+        case WolfPriority::Normal:
+            return L"Normal";
+        case WolfPriority::High:
+            return L"High";
+        default:
+            return L"<Unknown>";
+    }
+}
 
 std::wstring Main::ToString(Main::WolfPowerState value)
 {
@@ -154,7 +170,8 @@ void Main::PrintParameters()
     PrintValue(node, L"Outline file", config.Outline.Path);
     PrintValue(node, L"Priority", config.Priority);
     PrintValue(node, L"Power State", ToString(config.PowerState));
-    PrintValue(node, L"Key selection", fmt::format(L"{}", boost::join(config.OnlyTheseKeywords, L", ")));
+    auto keySelection = boost::join(config.OnlyTheseKeywords, L", ");
+    PrintValue(node, L"Key selection", keySelection.empty() ? Text::kNoneW : keySelection);
     PrintValues(node, L"Enable keys", config.EnableKeywords);
     PrintValues(node, L"Disable keys", config.DisableKeywords);
 

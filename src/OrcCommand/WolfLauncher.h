@@ -46,12 +46,14 @@ public:
         FromDump
     };
 
-    enum WolfPriority
+    enum class WolfPriority
     {
         Low,
         Normal,
         High
     };
+
+    static std::wstring ToString(WolfPriority value);
 
     enum class WolfPowerState
     {
