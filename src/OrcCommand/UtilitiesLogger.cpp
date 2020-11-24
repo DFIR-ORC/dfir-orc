@@ -164,6 +164,7 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
 
     if (level)
     {
-        spdlog::set_level(*level);
+        m_logger->Get(Logger::Facility::kDefault)->set_level(*level);
+        m_logger->Get(Logger::Facility::kLogFile)->set_level(*level);
     }
 }

@@ -68,7 +68,8 @@ Logger::Logger(std::initializer_list<std::pair<Facility, std::shared_ptr<spdlog:
     spdlog::set_default_logger(Logger::Get(Facility::kDefault));
 
     // Default upstream log level filter (sinks will not received filtered logs)
-    spdlog::set_level(spdlog::level::debug);
+    Get(Facility::kDefault)->set_level(spdlog::level::debug);
+    Get(Facility::kLogFile)->set_level(spdlog::level::debug);
 
     spdlog::enable_backtrace(512);
 
