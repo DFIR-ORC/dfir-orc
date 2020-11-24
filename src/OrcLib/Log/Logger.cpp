@@ -53,7 +53,7 @@ Logger::Logger(std::initializer_list<std::pair<Facility, std::shared_ptr<spdlog:
     , m_criticalCount(0)
 {
     auto facility_count = std::underlying_type_t<Facility>(Facility::kFacilityCount);
-    m_loggers.resize(facility_count);
+    m_loggers.resize(facility_count - 1);
 
     for (auto&& [facility, logger] : loggers)
     {
