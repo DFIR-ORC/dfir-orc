@@ -279,7 +279,6 @@ FileStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbByt
         return hr;
     }
 
-    Log::Trace("WriteFile {} bytes succeeded (hFile: {:p})", cbBytesWritten, m_hFile);
     *pcbBytesWritten = cbBytesWritten;
     return S_OK;
 }

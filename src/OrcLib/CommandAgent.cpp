@@ -1004,8 +1004,6 @@ void CommandAgent::run()
             }
             break;
             case CommandMessage::RefreshRunningList: {
-                Log::Debug("CommandAgent: Refreshing running command list");
-
                 Concurrency::critical_section::scoped_lock s(m_cs);
                 auto new_end = std::remove_if(
                     m_RunningCommands.begin(),
