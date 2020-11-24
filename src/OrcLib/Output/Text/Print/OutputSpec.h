@@ -32,16 +32,16 @@ struct Printer<OutputSpec::Upload>
         PrintValue(root, "Method", upload.Method);
         PrintValue(root, "Operation", upload.Operation);
         PrintValue(root, "Mode", upload.Mode);
-        PrintValue(root, "User", upload.UserName.empty() ? kStringEmptyW : upload.UserName);
+        PrintValue(root, "User", upload.UserName.empty() ? kEmptyW : upload.UserName);
         PrintValue(root, "Password", upload.Password.empty() ? L"<no>" : L"<yes>");
         PrintValue(root, "Auth", upload.AuthScheme);
-        PrintValue(root, "Job", upload.JobName.empty() ? kStringEmptyW : upload.JobName);
+        PrintValue(root, "Job", upload.JobName.empty() ? kEmptyW : upload.JobName);
 
         const auto includes = boost::join(upload.FilterInclude, L", ");
-        PrintValue(root, "Include", includes.empty() ? kStringEmptyW : includes);
+        PrintValue(root, "Include", includes.empty() ? kEmptyW : includes);
 
         const auto excludes = boost::join(upload.FilterExclude, L", ");
-        PrintValue(root, "Exclude", excludes.empty() ? kStringEmptyW : excludes);
+        PrintValue(root, "Exclude", excludes.empty() ? kEmptyW : excludes);
     }
 };
 
@@ -53,7 +53,7 @@ struct Printer<OutputSpec>
     {
         if (output.Path.empty() && output.Type != OutputSpec::Kind::SQL)
         {
-            Print(root, kStringEmpty);
+            Print(root, kEmpty);
             return;
         }
 

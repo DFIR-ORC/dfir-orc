@@ -119,7 +119,7 @@ void PrintValue(Orc::Text::Tree<T>& root, const U& name, const LocationSet& loca
 {
     if (locationSet.GetLocations().empty())
     {
-        PrintValue(root, name, kStringEmpty);
+        PrintValue(root, name, kEmpty);
         return;
     }
 

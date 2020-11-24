@@ -310,9 +310,9 @@ protected:
             return E_INVALIDARG;
         }
 
+        // Flush when buffer is over 80% of its capacity
         if (m_buffer.size() > (80 * m_buffer.capacity() / 100))
         {
-            // Flush cache buffer 'm_pBuffer' first then process the one allocated for formatting
             if (auto hr = Flush(); FAILED(hr))
             {
                 return hr;

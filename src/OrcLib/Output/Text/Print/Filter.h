@@ -28,7 +28,7 @@ void PrintValue(
 {
     if (filters.empty())
     {
-        PrintValue(node, name, kStringEmpty);
+        PrintValue(node, name, kEmpty);
         return;
     }
 
