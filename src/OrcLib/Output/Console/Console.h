@@ -39,7 +39,7 @@ struct StdoutContainerAdapter
         {
             if (line.size() > 1)
             {
-                Log::Debug(Logger::Facility::kLogFile, line);
+                Log::Info(Logger::Facility::kLogFile, line);
                 line.clear();
             }
         }
