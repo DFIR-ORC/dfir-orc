@@ -108,7 +108,10 @@ uint64_t Logger::criticalCount() const
 // dedicated sink should be done so all logs would be automatically sorted.
 void Logger::DumpBacktrace()
 {
-    const auto& sinks = Get(Facility::kDefault)->sinks();
+    auto defaultLogger = Get(Facility::kDefault);
+    const auto initialLevel = defaultLogger->level();
+    defaultLogger->set_level(spdlog::level::trace);
+    const auto& sinks = defaultLogger->sinks();
 
     std::vector<spdlog::level::level_enum> levels;
     for (size_t i = 0; i < sinks.size(); ++i)
@@ -125,6 +128,8 @@ void Logger::DumpBacktrace()
     {
         sinks[i]->set_level(levels[i]);
     }
+
+    defaultLogger->set_level(initialLevel);
 }
 
 void Logger::Set(Facility id, std::shared_ptr<spdlog::logger> logger)
