@@ -106,17 +106,7 @@ protected:
 
     void set_pattern_(const std::string& pattern) override
     {
-        m_pattern = pattern;
-
-        if (m_fileSink)
-        {
-            m_fileSink->set_pattern(pattern);
-        }
-
-        if (m_memorySink)
-        {
-            m_memorySink->set_pattern(pattern);
-        }
+        set_formatter_(std::make_unique<spdlog::pattern_formatter>(pattern));
     }
 
     void set_formatter_(std::unique_ptr<spdlog::formatter> formatter) override
@@ -189,7 +179,6 @@ private:
     std::unique_ptr<MemorySink> m_memorySink;
     std::filesystem::path m_path;
     std::atomic_bool m_lazyClose;
-    std::string m_pattern;
     std::unique_ptr<spdlog::formatter> m_formatter;
 };
 
