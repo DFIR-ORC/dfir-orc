@@ -16,7 +16,7 @@
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-#include "Log/MemorySink.h"
+#include "Log/Sink/MemorySink.h"
 
 //
 // FileSink will cache some logs into a MemorySink until the log file is opened

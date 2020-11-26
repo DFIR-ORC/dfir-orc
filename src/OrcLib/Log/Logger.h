@@ -15,8 +15,8 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-#include "Log/MemorySink.h"
-#include "Log/FileSink.h"
+#include "Log/Sink/MemorySink.h"
+#include "Log/Sink/FileSink.h"
 
 namespace Orc {
 
