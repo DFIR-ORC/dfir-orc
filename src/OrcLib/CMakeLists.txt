@@ -658,6 +658,9 @@ set(SRC_LOG
     "Log/Log.h"
     "Log/Logger.cpp"
     "Log/Logger.h"
+    "Log/SpdlogLogger.h"
+    "Log/SpdlogLogger.cpp"
+    "Log/SpdlogSink.h"
 )
 
 source_group(Log FILES ${SRC_LOG})

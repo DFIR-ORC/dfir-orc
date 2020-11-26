@@ -20,6 +20,9 @@
 
 #include "ByteStream.h"
 
+namespace Orc {
+namespace Log {
+
 template <typename Mutex>
 class ByteStreamSink : public spdlog::sinks::base_sink<Mutex>
 {
@@ -64,3 +67,6 @@ protected:
 private:
     std::shared_ptr<Orc::ByteStream> m_stream;
 };
+
+}  // namespace Log
+}  // namespace Orc

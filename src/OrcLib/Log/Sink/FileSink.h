@@ -23,6 +23,7 @@
 //
 
 namespace Orc {
+namespace Log {
 
 template <typename Mutex>
 class FileSink : public spdlog::sinks::base_sink<Mutex>
@@ -182,4 +183,5 @@ private:
     std::unique_ptr<spdlog::formatter> m_formatter;
 };
 
+}  // namespace Log
 }  // namespace Orc

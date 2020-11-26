@@ -143,7 +143,7 @@ HRESULT Orc::GetMyCurrentSID(PSID& pSid)
         return hr;
     }
 
-    if (Log::DefaultLogger()->Get(Logger::Facility::kDefault)->level() == spdlog::level::debug)
+    if (Log::DefaultLogger()->Get(Logger::Facility::kDefault)->Level() == spdlog::level::debug)
     {
         LPWSTR pszSid = nullptr;
         if (!ConvertSidToStringSid(pSid, &pszSid))
