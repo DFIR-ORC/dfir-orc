@@ -11,6 +11,8 @@
 
 #include <optional>
 
+#include <spdlog/cfg/env.h>
+
 #include "UtilitiesLogger.h"
 #include "ParameterCheck.h"
 #include "Utils/Result.h"
@@ -151,6 +153,9 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
                 }
         }
     }
+
+    // Load log levels from environment variable (ex: "SPDLOG_LEVEL=info,mylogger=trace")
+    spdlog::cfg::load_env_levels();
 
     if (verbose)
     {
