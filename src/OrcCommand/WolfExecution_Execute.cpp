@@ -741,8 +741,16 @@ HRESULT WolfExecution::TerminateAllAndComplete()
 HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue)
 {
     HRESULT hr = E_FAIL;
-    m_ProcessStatisticsWriter->Close();
-    m_JobStatisticsWriter->Close();
+
+    if (m_ProcessStatisticsWriter)
+    {
+        m_ProcessStatisticsWriter->Close();
+    }
+
+    if (m_JobStatisticsWriter)
+    {
+        m_JobStatisticsWriter->Close();
+    }
 
     if (VerifyFileExists(m_ProcessStatisticsOutput.Path.c_str()) == S_OK)
     {
