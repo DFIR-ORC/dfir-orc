@@ -29,82 +29,81 @@ template <typename Mutex>
 class FileSink : public spdlog::sinks::base_sink<Mutex>
 {
 public:
-    using SpdlogFileSink = spdlog::sinks::basic_file_sink<Mutex>;
-    using MemorySink = MemorySink<std::vector<uint8_t>, Mutex>;
+    // No need of mutexes since FileSink synchronisation will be made on 'Mutex'
+    using SpdlogFileSink = spdlog::sinks::basic_file_sink_st;
+    using MemorySink = MemorySink<std::vector<uint8_t>, spdlog::details::null_mutex>;
+
+    const size_t kMemorySinkSize = 4096;
 
     FileSink()
         : m_fileSink()
-        , m_memorySink(std::make_unique<MemorySink>(4096))
-        , m_path()
-        , m_lazyClose(false)
+        , m_memorySink(std::make_unique<MemorySink>(kMemorySinkSize))
     {
     }
 
     void Open(const std::filesystem::path& path, std::error_code& ec)
     {
-        // Log file cannot be opened directly from a multithreaded context
-        if (IsOpen())
+        std::lock_guard<Mutex> lock(mutex_);
+
+        if (m_fileSink != nullptr)
         {
             ec = std::make_error_code(std::errc::device_or_resource_busy);
             return;
         }
 
-        m_path = path;
-    }
-
-    bool IsOpen() const { return m_fileSink != nullptr; }
-
-    void Close()
-    {
-        m_lazyClose = true;
-
-        // Calling flush with lazyclose will close the file sink behind the base_sink mutex
-        spdlog::sinks::base_sink<Mutex>::flush();
-    }
-
-protected:
-    std::unique_ptr<SpdlogFileSink> LazyOpen(
-        const std::filesystem::path& path,
-        const std::unique_ptr<MemorySink>& memorySink,
-        std::error_code& ec) const
-    {
         std::filesystem::remove(path);
 
-        if (memorySink)
+        // Dump memorySink if any
+        if (m_memorySink)
         {
             try
             {
                 std::fstream log;
                 log.open(path, std::ios::out | std::ios::binary);
 
-                const auto& in = memorySink->buffer();
+                const auto& in = m_memorySink->buffer();
                 std::ostream_iterator<char> out(log);
                 std::copy(std::cbegin(in), std::cend(in), out);
             }
             catch (const std::system_error& e)
             {
                 ec = e.code();
-                return {};
+                return;
             }
             catch (...)
             {
                 ec = std::make_error_code(std::errc::interrupted);
-                return {};
+                return;
             }
+
+            m_memorySink.reset();
         }
 
-        auto fileSink = std::make_unique<SpdlogFileSink>(path.string());
+        m_fileSink = std::make_unique<SpdlogFileSink>(path.string());
 
         // Current sink_it_ will handle filtering
-        fileSink->set_level(spdlog::level::trace);
+        m_fileSink->set_level(spdlog::level::trace);
         if (m_formatter)
         {
-            fileSink->set_formatter(m_formatter->clone());
+            m_fileSink->set_formatter(m_formatter->clone());
         }
-
-        return fileSink;
     }
 
+    bool IsOpen()
+    {
+        std::lock_guard<Mutex> lock(mutex_);
+        return m_fileSink != nullptr;
+    }
+
+    void Close()
+    {
+        std::lock_guard<Mutex> lock(mutex_);
+        flush_();
+        m_memorySink = std::make_unique<MemorySink>(kMemorySinkSize);
+        m_fileSink.reset();
+    }
+
+protected:
     void set_pattern_(const std::string& pattern) override
     {
         set_formatter_(std::make_unique<spdlog::pattern_formatter>(pattern));
@@ -133,24 +132,6 @@ protected:
             return;
         }
 
-        if (m_path.empty() == false && m_lazyClose == false)
-        {
-            // Lazy open file is made here for thread safety
-            std::error_code ec;
-            auto fileSink = LazyOpen(m_path, m_memorySink, ec);
-            if (ec)
-            {
-                std::cerr << "Failed to open log file: " << m_path << " (" << ec.message() << ")" << std::endl;
-            }
-            else
-            {
-                m_fileSink = std::move(fileSink);
-                m_memorySink.reset();
-                m_fileSink->log(msg);
-                return;
-            }
-        }
-
         if (m_memorySink)
         {
             m_memorySink->log(msg);
@@ -162,24 +143,12 @@ protected:
         if (m_fileSink)
         {
             m_fileSink->flush();
-
-            // Lazy reset sink is made here for thread safety
-            if (m_lazyClose)
-            {
-                m_fileSink.reset();
-            }
-        }
-        else
-        {
-            m_memorySink->flush();
         }
     }
 
 private:
     std::unique_ptr<SpdlogFileSink> m_fileSink;
     std::unique_ptr<MemorySink> m_memorySink;
-    std::filesystem::path m_path;
-    std::atomic_bool m_lazyClose;
     std::unique_ptr<spdlog::formatter> m_formatter;
 };
 
