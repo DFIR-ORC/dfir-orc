@@ -120,6 +120,8 @@ private:
     HRESULT DownloadLocalCopy();
 
 public:
+    void Configure(int argc, const wchar_t* argv[]) override;
+
     static LPCWSTR ToolName() { return L"Mothership"; }
     static LPCWSTR ToolDescription() { return nullptr; }
 
