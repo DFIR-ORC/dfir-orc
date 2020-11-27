@@ -121,7 +121,7 @@ Orc::SystemIdentity::CurrentProcess(const std::shared_ptr<StructuredOutput::IOut
         CurrentUser(writer);
 
         auto environ_result = SystemDetails::GetEnvironment();
-        if (environ_result.has_error())
+        if (environ_result.has_value())
         {
             writer->BeginCollection(L"environment");
             BOOST_SCOPE_EXIT(&writer) { writer->EndCollection(L"environment"); }
@@ -258,7 +258,7 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
 
     {
         auto qfes = SystemDetails::GetOsQFEs();
-        if (qfes.has_error())
+        if (qfes.has_value())
         {
             writer->BeginCollection(L"qfe");
             for (const auto& qfe : qfes.value())
@@ -282,7 +282,7 @@ HRESULT Orc::SystemIdentity::Network(const std::shared_ptr<StructuredOutput::IOu
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndElement(elt); }
     BOOST_SCOPE_EXIT_END;
     {
-        if (auto result = SystemDetails::GetNetworkAdapters(); result.has_error())
+        if (auto result = SystemDetails::GetNetworkAdapters(); result.has_value())
         {
             writer->BeginCollection(L"adapter");
             BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(L"adapter"); }
