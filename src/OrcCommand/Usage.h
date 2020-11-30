@@ -255,7 +255,7 @@ auto PrintColumnSelectionParameter(
             const ColumnNameDef* pCurCol = pColumnNames;
             while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
             {
-                if (pCurAlias->dwIntention & pCurCol->dwIntention)
+                if ((pCurAlias->dwIntention & pCurCol->dwIntention) == pCurCol->dwIntention)
                 {
                     PrintValue(aliasNode, pCurCol->szColumnName, pCurCol->szColumnDesc);
                     dwNumCol++;

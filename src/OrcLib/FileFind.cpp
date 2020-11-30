@@ -781,9 +781,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         else
         {
             Log::Warn(
-                L"Invalid hex string passed as header: {} [{}]",
-                item[CONFIG_FILEFIND_HEADER_HEX],
-                SystemError(hr));
+                L"Invalid hex string passed as header: {} [{}]", item[CONFIG_FILEFIND_HEADER_HEX], SystemError(hr));
         }
     }
     if (item[CONFIG_FILEFIND_HEADER_REGEX])
@@ -3496,11 +3494,14 @@ HRESULT FileFind::ComputeMatchHashes(const std::shared_ptr<Match>& aMatch)
     for (auto& attr_match : aMatch->MatchingAttributes)
     {
         CryptoHashStream::Algorithm needed = CryptoHashStream::Algorithm::Undefined;
-        if (m_MatchHash & CryptoHashStream::Algorithm::MD5 && attr_match.MD5.empty())
+        if ((m_MatchHash & CryptoHashStream::Algorithm::MD5) == CryptoHashStream::Algorithm::MD5
+            && attr_match.MD5.empty())
             needed |= CryptoHashStream::Algorithm::MD5;
-        if (m_MatchHash & CryptoHashStream::Algorithm::SHA1 && attr_match.SHA1.empty())
+        if ((m_MatchHash & CryptoHashStream::Algorithm::SHA1) == CryptoHashStream::Algorithm::SHA1
+            && attr_match.SHA1.empty())
             needed |= CryptoHashStream::Algorithm::SHA1;
-        if (m_MatchHash & CryptoHashStream::Algorithm::SHA256 && attr_match.SHA256.empty())
+        if ((m_MatchHash & CryptoHashStream::Algorithm::SHA256) == CryptoHashStream::Algorithm::SHA256
+            && attr_match.SHA256.empty())
             needed |= CryptoHashStream::Algorithm::SHA256;
 
         if (needed != CryptoHashStream::Algorithm::Undefined)
@@ -3525,19 +3526,19 @@ HRESULT FileFind::ComputeMatchHashes(const std::shared_ptr<Match>& aMatch)
 
             if (ullWritten > 0)
             {
-                if (needed & CryptoHashStream::Algorithm::MD5
+                if ((needed & CryptoHashStream::Algorithm::MD5) == CryptoHashStream::Algorithm::MD5
                     && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::MD5, attr_match.MD5)))
                 {
                     if (hr != MK_E_UNAVAILABLE)
                         return hr;
                 }
-                if (needed & CryptoHashStream::Algorithm::SHA1
+                if ((needed & CryptoHashStream::Algorithm::SHA1) == CryptoHashStream::Algorithm::SHA1
                     && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, attr_match.SHA1)))
                 {
                     if (hr != MK_E_UNAVAILABLE)
                         return hr;
                 }
-                if (needed & CryptoHashStream::Algorithm::SHA256
+                if ((needed & CryptoHashStream::Algorithm::SHA256) == CryptoHashStream::Algorithm::SHA256
                     && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, attr_match.SHA256)))
                 {
                     if (hr != MK_E_UNAVAILABLE)

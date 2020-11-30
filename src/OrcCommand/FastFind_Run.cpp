@@ -463,7 +463,7 @@ HRESULT Main::Run()
     if (config.outObject.Type != OutputSpec::Kind::None)
         pObjectTableOutput = TableOutput::GetWriter(config.outObject);
 
-    if (config.outStructured.Type & OutputSpec::Kind::StructuredFile)
+    if ((config.outStructured.Type & OutputSpec::Kind::StructuredFile) == OutputSpec::Kind::StructuredFile)
     {
         pStructuredOutput = StructuredOutputWriter::GetWriter(config.outStructured, nullptr);
     }

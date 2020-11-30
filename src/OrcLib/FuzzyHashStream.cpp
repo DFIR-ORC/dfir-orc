@@ -46,7 +46,7 @@ std::wstring FuzzyHashStream::GetSupportedAlgorithm(Algorithm algs)
         retval.append(L"SSDeep");
     }
 #endif  // ORC_BUILD_SSDEEP
-    if (algs & FuzzyHashStream::Algorithm::TLSH)
+    if ((algs & FuzzyHashStream::Algorithm::TLSH) == FuzzyHashStream::Algorithm::TLSH)
     {
         if (retval.empty())
             retval.append(L"TLSH");
@@ -128,7 +128,7 @@ HRESULT FuzzyHashStream::ResetHash(bool bContinue)
     }
 #endif  // ORC_BUILD_SSDEEP
 
-    if (m_Algorithms & FuzzyHashStream::Algorithm::TLSH)
+    if ((m_Algorithms & FuzzyHashStream::Algorithm::TLSH) == FuzzyHashStream::Algorithm::TLSH)
     {
         m_tlsh = std::make_unique<Tlsh>();
     }
@@ -173,7 +173,7 @@ HRESULT FuzzyHashStream::GetHash(FuzzyHashStream::Algorithm alg, CBinaryBuffer& 
 #endif  // ORC_BUILD_SSDEEP
                 break;
             case FuzzyHashStream::Algorithm::TLSH:
-                if (m_Algorithms & FuzzyHashStream::Algorithm::TLSH && m_tlsh)
+                if ((m_Algorithms & FuzzyHashStream::Algorithm::TLSH) == FuzzyHashStream::Algorithm::TLSH && m_tlsh)
                 {
                     if (!m_tlsh->isValid())
                     {

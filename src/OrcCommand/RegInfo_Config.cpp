@@ -246,7 +246,7 @@ HRESULT Main::CheckConfiguration()
         Log::Error("No valid output specified (only directory or csv|tsv are allowed");
         return E_INVALIDARG;
     }
-    if (config.Output.Type & OutputSpec::Kind::Archive)
+    if ((config.Output.Type & OutputSpec::Kind::Archive) == OutputSpec::Kind::Archive)
     {
         Log::Error("Archive output is not supported (only directory or csv|tsv are allowed");
         return E_INVALIDARG;

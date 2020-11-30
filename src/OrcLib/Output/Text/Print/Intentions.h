@@ -22,7 +22,7 @@ void PrintValue(Orc::Text::Tree<T>& root, const N& name, Orc::Intentions intenti
 
     while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
     {
-        if (intentions & pCurCol->dwIntention)
+        if ((intentions & pCurCol->dwIntention) == pCurCol->dwIntention)
         {
             columns.push_back(pCurCol->szColumnName);
         }
