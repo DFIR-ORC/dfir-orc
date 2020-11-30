@@ -241,12 +241,12 @@ HRESULT Main::CheckConfiguration()
 {
     config.m_HiveQuery.m_HivesLocation.Consolidate(false, FSVBR::FSType::NTFS);
 
-    if (config.Output.Type == OutputSpec::Kind::None)
+    if (HasFlag(config.Output.Type, OutputSpec::Kind::None))
     {
         Log::Error("No valid output specified (only directory or csv|tsv are allowed");
         return E_INVALIDARG;
     }
-    if (config.Output.Type & OutputSpec::Kind::Archive)
+    if (HasFlag(config.Output.Type, OutputSpec::Kind::Archive))
     {
         Log::Error("Archive output is not supported (only directory or csv|tsv are allowed");
         return E_INVALIDARG;

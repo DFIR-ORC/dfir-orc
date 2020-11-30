@@ -19,37 +19,37 @@ std::wstring ToString(PartitionFlags flags)
 {
     std::vector<std::wstring> activeFlags;
 
-    if (flags & PartitionFlags::Bootable)
+    if (HasFlag(flags, PartitionFlags::Bootable))
     {
         activeFlags.push_back(L"BOOTABLE");
     }
 
-    if (flags & PartitionFlags::Hidden)
+    if (HasFlag(flags, PartitionFlags::Hidden))
     {
         activeFlags.push_back(L"HIDDEN");
     }
 
-    if (flags & PartitionFlags::Invalid)
+    if (HasFlag(flags, PartitionFlags::Invalid))
     {
         activeFlags.push_back(L"INVALID");
     }
 
-    if (flags & PartitionFlags::NoAutoMount)
+    if (HasFlag(flags, PartitionFlags::NoAutoMount))
     {
         activeFlags.push_back(L"NO_AUTO_MOUNT");
     }
 
-    if (flags & PartitionFlags::None)
+    if (HasFlag(flags, PartitionFlags::None))
     {
         activeFlags.push_back(L"NONE");
     }
 
-    if (flags & PartitionFlags::ReadOnly)
+    if (HasFlag(flags, PartitionFlags::ReadOnly))
     {
         activeFlags.push_back(L"READONLY");
     }
 
-    if (flags & PartitionFlags::System)
+    if (HasFlag(flags, PartitionFlags::System))
     {
         activeFlags.push_back(L"SYSTEM");
     }

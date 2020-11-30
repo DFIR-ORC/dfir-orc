@@ -16,27 +16,27 @@ namespace Orc {
 
 bool Partition::IsBootable() const
 {
-    return PartitionFlags & Flags::Bootable;
+    return HasFlag(PartitionFlags, Flags::Bootable);
 }
 
 bool Partition::IsSystem() const
 {
-    return PartitionFlags & Flags::System;
+    return HasFlag(PartitionFlags, Flags::System);
 }
 
 bool Partition::IsReadOnly() const
 {
-    return PartitionFlags & Flags::ReadOnly;
+    return HasFlag(PartitionFlags, Flags::ReadOnly);
 }
 
 bool Partition::IsHidden() const
 {
-    return PartitionFlags & Flags::Hidden;
+    return HasFlag(PartitionFlags, Flags::Hidden);
 }
 
 bool Partition::IsNotAutoMountable() const
 {
-    return PartitionFlags & Flags::NoAutoMount;
+    return HasFlag(PartitionFlags, Flags::NoAutoMount);
 }
 
 bool Partition::IsFAT12() const

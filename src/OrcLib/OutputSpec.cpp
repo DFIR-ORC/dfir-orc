@@ -97,36 +97,39 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
 
 bool OutputSpec::IsDirectory() const
 {
-    return Type & Kind::Directory;
+    return HasFlag(Type, Kind::Directory);
 };
 
 bool OutputSpec::IsFile() const
 {
-    return Type & Kind::File || Type & Kind::TableFile || Type & Kind::StructuredFile || Type & Kind::Archive
-        || Type & Kind::CSV || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC || Type & Kind::XML
-        || Type & Kind::JSON;
+    return HasAnyFlag(
+        Type,
+        Kind::File | Kind::TableFile | Kind::StructuredFile | Kind::Archive | Kind::CSV | Kind::TSV | Kind::Parquet
+            | Kind::ORC | Kind::XML | Kind::JSON);
 }
 
 // the same but without archive
 bool OutputSpec::IsRegularFile() const
 {
-    return Type & Kind::File || Type & Kind::TableFile || Type & Kind::StructuredFile || Type & Kind::CSV
-        || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC || Type & Kind::XML || Type & Kind::JSON;
+    return HasAnyFlag(
+        Type,
+        Kind::File | Kind::TableFile | Kind::StructuredFile | Kind::CSV | Kind::TSV | Kind::Parquet | Kind::ORC
+            | Kind::XML | Kind::JSON);
 }
 
 bool OutputSpec::IsTableFile() const
 {
-    return Type & Kind::TableFile || Type & Kind::CSV || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC;
+    return HasAnyFlag(Type, Kind::TableFile | Kind::CSV | Kind::TSV | Kind::Parquet | Kind::ORC);
 }
 
 bool OutputSpec::IsStructuredFile() const
 {
-    return Type & Kind::StructuredFile || Type & Kind::XML || Type & Kind::JSON;
+    return HasAnyFlag(Type, Kind::StructuredFile | Kind::XML | Kind::JSON);
 }
 
 bool OutputSpec::IsArchive() const
 {
-    return Type & Kind::Archive;
+    return HasFlag(Type, Kind::Archive);
 }
 
 HRESULT OutputSpec::Configure(
@@ -138,7 +141,7 @@ HRESULT OutputSpec::Configure(
 
     Type = OutputSpec::Kind::None;
 
-    if (OutputSpec::Kind::SQL & supported)  // Getting the SQL stuff out of the door asap
+    if (HasFlag(supported, OutputSpec::Kind::SQL))  // Getting the SQL stuff out of the door asap
     {
         static std::wregex reConnectionString(LR"RAW(^(([\w\s]+=[\w\s{}.]+;?)+)#([\w]+)$)RAW");
 
@@ -188,7 +191,7 @@ HRESULT OutputSpec::Configure(
 
     auto extension = outPath.extension();
 
-    if (OutputSpec::Kind::TableFile & supported)
+    if (HasFlag(supported, OutputSpec::Kind::TableFile))
     {
         if (equalCaseInsensitive(extension.c_str(), L".csv"sv))
         {
@@ -219,7 +222,7 @@ HRESULT OutputSpec::Configure(
             return Orc::GetOutputFile(outPath.c_str(), Path, true);
         }
     }
-    if (OutputSpec::Kind::StructuredFile & supported)
+    if (HasFlag(supported, OutputSpec::Kind::StructuredFile))
     {
         if (equalCaseInsensitive(extension.c_str(), L".xml"sv))
         {
@@ -228,7 +231,7 @@ HRESULT OutputSpec::Configure(
             return Orc::GetOutputFile(outPath.c_str(), Path, true);
         }
     }
-    if (OutputSpec::Kind::StructuredFile & supported)
+    if (HasFlag(supported, OutputSpec::Kind::StructuredFile))
     {
         if (equalCaseInsensitive(extension.c_str(), L".json"sv))
         {
@@ -237,7 +240,7 @@ HRESULT OutputSpec::Configure(
             return Orc::GetOutputFile(outPath.c_str(), Path, true);
         }
     }
-    if (OutputSpec::Kind::Archive & supported)
+    if (HasFlag(supported, OutputSpec::Kind::Archive))
     {
         auto fmt = OrcArchive::GetArchiveFormat(extension.c_str());
         if (fmt != ArchiveFormat::Unknown)
@@ -248,7 +251,7 @@ HRESULT OutputSpec::Configure(
         }
     }
 
-    if (OutputSpec::Kind::Directory & supported && wcslen(extension.c_str()) == 0L && !outPath.empty())
+    if (HasFlag(supported, OutputSpec::Kind::Directory) && wcslen(extension.c_str()) == 0L && !outPath.empty())
     {
         // Output without extension could very well be a dir
         if (SUCCEEDED(VerifyDirectoryExists(outPath.c_str())))
@@ -266,7 +269,7 @@ HRESULT OutputSpec::Configure(
         }
     }
 
-    if (OutputSpec::Kind::File & supported)
+    if (HasFlag(supported, OutputSpec::Kind::File))
     {
         Type = OutputSpec::Kind::File;
         return Orc::GetOutputFile(outPath.c_str(), Path, true);
@@ -284,7 +287,7 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
 
     Type = OutputSpec::Kind::None;
 
-    if (supported & static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL))
+    if (HasFlag(supported, OutputSpec::Kind::SQL))
     {
         bool bDone = false;
         if (::HasValue(item, CONFIG_OUTPUT_CONNECTION))

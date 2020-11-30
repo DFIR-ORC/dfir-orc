@@ -504,7 +504,7 @@ HRESULT WolfExecution::CreateCommandAgent(
     m_pTermination = std::make_shared<WOLFExecutionTerminate>(m_commandSet, this);
     Robustness::AddTerminationHandler(m_pTermination);
 
-    if (m_ProcessStatisticsOutput.Type & OutputSpec::Kind::TableFile)
+    if (HasFlag(m_ProcessStatisticsOutput.Type, OutputSpec::Kind::TableFile))
     {
         m_ProcessStatisticsWriter = TableOutput::GetWriter(m_ProcessStatisticsOutput);
 
@@ -514,7 +514,7 @@ HRESULT WolfExecution::CreateCommandAgent(
         }
     }
 
-    if (m_JobStatisticsOutput.Type & OutputSpec::Kind::TableFile)
+    if (HasFlag(m_JobStatisticsOutput.Type, OutputSpec::Kind::TableFile))
     {
         m_JobStatisticsWriter = TableOutput::GetWriter(m_JobStatisticsOutput);
         if (m_JobStatisticsWriter == nullptr)

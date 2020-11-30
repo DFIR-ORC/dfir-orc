@@ -175,12 +175,12 @@ public:
         m_Temporary = temporary;
 
         m_JobStatisticsOutput = jobstats;
-        if (m_JobStatisticsOutput.Type & OutputSpec::Kind::TableFile)
+        if (HasFlag(m_JobStatisticsOutput.Type, OutputSpec::Kind::TableFile))
         {
             m_JobStatisticsOutput.Path = m_Temporary.Path + L"\\" + m_JobStatisticsOutput.Path;
         }
         m_ProcessStatisticsOutput = processstats;
-        if (m_ProcessStatisticsOutput.Type & OutputSpec::Kind::TableFile)
+        if (HasFlag(m_ProcessStatisticsOutput.Type, OutputSpec::Kind::TableFile))
         {
             m_ProcessStatisticsOutput.Path = m_Temporary.Path + L"\\" + m_ProcessStatisticsOutput.Path;
         }
