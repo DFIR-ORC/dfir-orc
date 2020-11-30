@@ -467,7 +467,7 @@ HRESULT Main::Run()
 
         std::shared_ptr<TableOutput::IWriter> pRegInfoWriter;
 
-        if ((config.Output.Type & OutputSpec::Kind::TableFile) == OutputSpec::Kind::TableFile)
+        if (config.Output.Type & OutputSpec::Kind::TableFile)
         {
             pRegInfoWriter = GetRegInfoWriter(config.Output);
             if (nullptr == pRegInfoWriter)
@@ -482,7 +482,7 @@ HRESULT Main::Run()
         {
             auto node = root.AddNode("Parsing hive '{}'", hive.FileName);
 
-            if ((config.Output.Type & OutputSpec::Kind::Directory) == OutputSpec::Kind::Directory)
+            if (config.Output.Type & OutputSpec::Kind::Directory)
             {
                 std::wstring fileName(hive.FileName);
                 std::replace(fileName.begin(), fileName.end(), L'\\', L'_');

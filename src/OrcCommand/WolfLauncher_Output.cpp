@@ -50,22 +50,22 @@ std::wstring Main::ToString(Main::WolfPowerState value)
         return L"<SystemDefault>";
     }
 
-    if ((value & Main::WolfPowerState::SystemRequired) == Main::WolfPowerState::SystemRequired)
+    if (value & Main::WolfPowerState::SystemRequired)
     {
         properties.push_back(L"SystemRequired");
     }
 
-    if ((value & Main::WolfPowerState::DisplayRequired) == Main::WolfPowerState::DisplayRequired)
+    if (value & Main::WolfPowerState::DisplayRequired)
     {
         properties.push_back(L"DisplayRequired");
     }
 
-    if ((value & Main::WolfPowerState::UserPresent) == Main::WolfPowerState::UserPresent)
+    if (value & Main::WolfPowerState::UserPresent)
     {
         properties.push_back(L"UserPresent");
     }
 
-    if ((value & Main::WolfPowerState::AwayMode) == Main::WolfPowerState::AwayMode)
+    if (value & Main::WolfPowerState::AwayMode)
     {
         properties.push_back(L"AwayMode");
     }

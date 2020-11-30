@@ -97,42 +97,36 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
 
 bool OutputSpec::IsDirectory() const
 {
-    return (Type & Kind::Directory) == Kind::Directory;
+    return Type & Kind::Directory;
 };
 
 bool OutputSpec::IsFile() const
 {
-    return (Type & Kind::File) == Kind::File || (Type & Kind::TableFile) == Kind::TableFile
-        || (Type & Kind::StructuredFile) == Kind::StructuredFile || (Type & Kind::Archive) == Kind::Archive
-        || (Type & Kind::CSV) == Kind::CSV || (Type & Kind::TSV) == Kind::TSV || (Type & Kind::Parquet) == Kind::Parquet
-        || (Type & Kind::ORC) == Kind::ORC || (Type & Kind::XML) == Kind::XML || (Type & Kind::JSON) == Kind::JSON;
+    return Type & Kind::File || Type & Kind::TableFile || Type & Kind::StructuredFile || Type & Kind::Archive
+        || Type & Kind::CSV || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC || Type & Kind::XML
+        || Type & Kind::JSON;
 }
 
 // the same but without archive
 bool OutputSpec::IsRegularFile() const
 {
-    return (Type & Kind::File) == Kind::File || (Type & Kind::TableFile) == Kind::TableFile
-        || (Type & Kind::StructuredFile) == Kind::StructuredFile || (Type & Kind::CSV) == Kind::CSV
-        || (Type & Kind::TSV) == Kind::TSV || (Type & Kind::Parquet) == Kind::Parquet || (Type & Kind::ORC) == Kind::ORC
-        || (Type & Kind::XML) == Kind::XML || (Type & Kind::JSON) == Kind::JSON;
+    return Type & Kind::File || Type & Kind::TableFile || Type & Kind::StructuredFile || Type & Kind::CSV
+        || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC || Type & Kind::XML || Type & Kind::JSON;
 }
 
 bool OutputSpec::IsTableFile() const
 {
-    return (Type & Kind::TableFile) == Kind::TableFile || (Type & Kind::CSV) == Kind::CSV
-        || (Type & Kind::TSV) == Kind::TSV || (Type & Kind::Parquet) == Kind::Parquet
-        || (Type & Kind::ORC) == Kind::ORC;
+    return Type & Kind::TableFile || Type & Kind::CSV || Type & Kind::TSV || Type & Kind::Parquet || Type & Kind::ORC;
 }
 
 bool OutputSpec::IsStructuredFile() const
 {
-    return (Type & Kind::StructuredFile) == Kind::StructuredFile || (Type & Kind::XML) == Kind::XML
-        || (Type & Kind::JSON) == Kind::JSON;
+    return Type & Kind::StructuredFile || Type & Kind::XML || Type & Kind::JSON;
 }
 
 bool OutputSpec::IsArchive() const
 {
-    return (Type & Kind::Archive) == Kind::Archive;
+    return Type & Kind::Archive;
 }
 
 HRESULT OutputSpec::Configure(
@@ -144,7 +138,7 @@ HRESULT OutputSpec::Configure(
 
     Type = OutputSpec::Kind::None;
 
-    if ((supported & OutputSpec::Kind::SQL) == OutputSpec::Kind::SQL)  // Getting the SQL stuff out of the door asap
+    if (OutputSpec::Kind::SQL & supported)  // Getting the SQL stuff out of the door asap
     {
         static std::wregex reConnectionString(LR"RAW(^(([\w\s]+=[\w\s{}.]+;?)+)#([\w]+)$)RAW");
 
@@ -194,7 +188,7 @@ HRESULT OutputSpec::Configure(
 
     auto extension = outPath.extension();
 
-    if ((supported & OutputSpec::Kind::TableFile) == OutputSpec::Kind::TableFile)
+    if (OutputSpec::Kind::TableFile & supported)
     {
         if (equalCaseInsensitive(extension.c_str(), L".csv"sv))
         {
@@ -225,7 +219,7 @@ HRESULT OutputSpec::Configure(
             return Orc::GetOutputFile(outPath.c_str(), Path, true);
         }
     }
-    if ((supported & OutputSpec::Kind::StructuredFile) == OutputSpec::Kind::StructuredFile)
+    if (OutputSpec::Kind::StructuredFile & supported)
     {
         if (equalCaseInsensitive(extension.c_str(), L".xml"sv))
         {
@@ -234,7 +228,7 @@ HRESULT OutputSpec::Configure(
             return Orc::GetOutputFile(outPath.c_str(), Path, true);
         }
     }
-    if ((supported & OutputSpec::Kind::StructuredFile) == OutputSpec::Kind::StructuredFile)
+    if (OutputSpec::Kind::StructuredFile & supported)
     {
         if (equalCaseInsensitive(extension.c_str(), L".json"sv))
         {
@@ -243,7 +237,7 @@ HRESULT OutputSpec::Configure(
             return Orc::GetOutputFile(outPath.c_str(), Path, true);
         }
     }
-    if ((supported & OutputSpec::Kind::Archive) == OutputSpec::Kind::Archive)
+    if (OutputSpec::Kind::Archive & supported)
     {
         auto fmt = OrcArchive::GetArchiveFormat(extension.c_str());
         if (fmt != ArchiveFormat::Unknown)
@@ -254,8 +248,7 @@ HRESULT OutputSpec::Configure(
         }
     }
 
-    if ((supported & OutputSpec::Kind::Directory) == OutputSpec::Kind::Directory && wcslen(extension.c_str()) == 0L
-        && !outPath.empty())
+    if (OutputSpec::Kind::Directory & supported && wcslen(extension.c_str()) == 0L && !outPath.empty())
     {
         // Output without extension could very well be a dir
         if (SUCCEEDED(VerifyDirectoryExists(outPath.c_str())))
@@ -273,7 +266,7 @@ HRESULT OutputSpec::Configure(
         }
     }
 
-    if ((supported & OutputSpec::Kind::File) == OutputSpec::Kind::File)
+    if (OutputSpec::Kind::File & supported)
     {
         Type = OutputSpec::Kind::File;
         return Orc::GetOutputFile(outPath.c_str(), Path, true);
@@ -291,7 +284,7 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
 
     Type = OutputSpec::Kind::None;
 
-    if ((supported & static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL)) == OutputSpec::Kind::SQL)
+    if (supported & static_cast<OutputSpec::Kind>(OutputSpec::Kind::SQL))
     {
         bool bDone = false;
         if (::HasValue(item, CONFIG_OUTPUT_CONNECTION))

@@ -473,7 +473,7 @@ HRESULT Main::Run()
         Log::Info(L"Verifying code signatures... Done");
     }
 
-    if ((config.sampleinfoOutput.Type & OutputSpec::Kind::TableFile) == OutputSpec::Kind::TableFile)
+    if (config.sampleinfoOutput.Type & OutputSpec::Kind::TableFile)
     {
         hr = WriteSampleInformation(results);
         if (FAILED(hr))
@@ -483,7 +483,7 @@ HRESULT Main::Run()
         }
     }
 
-    if ((config.timelineOutput.Type & OutputSpec::Kind::TableFile) == OutputSpec::Kind::TableFile)
+    if (config.timelineOutput.Type & OutputSpec::Kind::TableFile)
     {
         // Collect time line related information
         const TaskTracker::TimeLine& timeline = tk.GetTimeLine();
