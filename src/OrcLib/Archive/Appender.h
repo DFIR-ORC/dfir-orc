@@ -44,6 +44,7 @@ public:
             const auto tempPath = GetTempPathApi(ec);
             if (ec)
             {
+                Log::Error("Failed to get temporary path [{}]", ec);
                 return {};
             }
 
@@ -51,6 +52,7 @@ public:
             if (FAILED(hr))
             {
                 ec.assign(hr, std::system_category());
+                Log::Error(L"Failed to open temporary path {} [{}]", tempPath, ec);
                 return {};
             }
         }
@@ -106,6 +108,7 @@ public:
         m_archiver.Compress(dstStream, srcStream, ec);
         if (ec)
         {
+            Log::Error("Failed to compress stream [{}]", ec);
             return;
         }
 
@@ -113,6 +116,7 @@ public:
         if (FAILED(hr))
         {
             ec.assign(hr, std::system_category());
+            Log::Error("Failed to seek source stream [{}]", ec);
             return;
         }
 
@@ -120,6 +124,7 @@ public:
         if (FAILED(hr))
         {
             ec.assign(hr, std::system_category());
+            Log::Error("Failed to resize source stream [{}]", ec);
             return;
         }
 
@@ -137,6 +142,7 @@ public:
         Flush(ec);
         if (ec)
         {
+            Log::Error("Failed to flush stream [{}]", ec);
             return;
         }
 
@@ -144,8 +150,8 @@ public:
         HRESULT hr = tempStream->MoveTo(m_output.c_str());
         if (FAILED(hr))
         {
-            // TODO: add log
             ec.assign(hr, std::system_category());
+            Log::Error(L"Failed to move stream to {} [{}]", m_output, ec);
             return;
         }
     }

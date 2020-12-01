@@ -244,8 +244,6 @@ __data_entrypoint(File) HRESULT FileStream::Read(
         return hr;
     }
 
-    Log::Trace(L"ReadFile read {} bytes (hFile: {:p})", dwBytesRead, m_hFile);
-
     *pcbBytesRead = dwBytesRead;
     return S_OK;
 }

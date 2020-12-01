@@ -693,6 +693,8 @@ HRESULT Main::CheckConfiguration()
 
         if (!config.strCompressionLevel.empty())
         {
+            Log::Debug(
+                L"Command has no compression level, using main compression level: {}", config.strCompressionLevel);
             wolfexec->SetCompressionLevel(config.strCompressionLevel);
         }
 

@@ -68,11 +68,11 @@ ProfileResult ProfileList::GetProfiles()
             auto rSID = Registry::Read<ByteBuffer>(hKey, keyName.get(), L"Sid");
             if (rSID.has_error())
             {
-                Log::Debug(L"Failed to read SID for profile {}, using key name", keyName.get());
+                Log::Warn(L"Failed to read SID for profile using key name: '{}'", keyName.get());
                 PSID pSID = NULL;
                 if (!ConvertStringSidToSidW(keyName.get(), &pSID))
                 {
-                    Log::Debug(L"Failed profile key name {} is not a valid sid", keyName.get());
+                    Log::Error(L"Failed to convert to SID the key '{}'", keyName.get());
                     continue;
                 }
                 sid.assign((LPBYTE)pSID, GetLengthSid(pSID));

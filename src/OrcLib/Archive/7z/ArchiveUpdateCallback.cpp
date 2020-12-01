@@ -11,8 +11,10 @@
 #include "Archive/7z/ArchiveUpdateCallback.h"
 
 #include "Archive/7z/InStreamAdapter.h"
+#include "Utils/Result.h"
 
 using namespace Orc::Archive;
+using namespace Orc;
 
 namespace {
 
@@ -25,7 +27,7 @@ FILETIME NowTimestamp()
     BOOL ret = SystemTimeToFileTime(&st, &ft);
     if (ret == FALSE)
     {
-        // TODO: add log
+        Log::Error("Failed to convert SystemTime to FileTime [{}]", LastWin32Error());
         return {0};
     }
 
@@ -33,6 +35,9 @@ FILETIME NowTimestamp()
 }
 
 }  // namespace
+
+namespace Orc {
+namespace Archive {
 
 ArchiveUpdateCallback::ArchiveUpdateCallback(Items items, std::wstring password, uint64_t numberOfInputArchiveItems)
     : m_newItems(std::move(items))
@@ -235,7 +240,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
 
     if (operationResult != NArchive::NUpdate::NOperationResult::kOK)
     {
-        // TODO: add log
+        Log::Error("Failure code for operation result");
         m_ec.assign(E_FAIL, std::system_category());
     }
 
@@ -280,3 +285,6 @@ STDMETHODIMP ArchiveUpdateCallback::CryptoGetTextPassword2(Int32* pPasswordIsDef
 
     return S_OK;
 }
+
+}  // namespace Archive
+}  // namespace Orc

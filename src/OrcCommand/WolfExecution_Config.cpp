@@ -808,11 +808,15 @@ HRESULT WolfExecution::SetRepeatBehaviour(const Repeat behavior)
     return S_OK;
 }
 
-HRESULT WolfExecution::SetCompressionLevel(const std::wstring& strCompressionLevel)
+HRESULT WolfExecution::SetCompressionLevel(const std::wstring& level)
 {
-    if (strCompressionLevel.empty())
+    if (level.empty())
+    {
+        Log::Debug(L"Specified compression level is empty");
         return S_OK;
+    }
 
-    m_strCompressionLevel = strCompressionLevel;
+    Log::Debug(L"Set compression level to {}", level);
+    m_strCompressionLevel = level;
     return S_OK;
 }
