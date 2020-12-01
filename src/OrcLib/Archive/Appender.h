@@ -73,15 +73,7 @@ public:
         , m_tempStreams({std::move(tempStream1), std::move(tempStream2)})
         , m_srcStreamIndex(0)
         , m_isFirstFlush(true)
-        , m_compressionLevel(m_archiver.CompressionLevel())
     {
-        // Put some low compression until the final call from 'Close' method
-        std::error_code ec;
-        m_archiver.SetCompressionLevel(CompressionLevel::kFastest, ec);
-        if (ec)
-        {
-            // TODO: add log
-        }
     }
 
     void Add(std::unique_ptr<Item> item) { m_archiver.Add(std::move(item)); }
@@ -133,12 +125,6 @@ public:
 
     void Close(std::error_code& ec)
     {
-        m_archiver.SetCompressionLevel(m_compressionLevel, ec);
-        if (ec)
-        {
-            return;
-        }
-
         Flush(ec);
         if (ec)
         {
@@ -164,7 +150,6 @@ private:
     const std::array<std::shared_ptr<TemporaryStream>, 2> m_tempStreams;
     uint8_t m_srcStreamIndex;
     bool m_isFirstFlush;
-    CompressionLevel m_compressionLevel;
 };
 
 }  // namespace Archive
