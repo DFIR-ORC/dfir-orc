@@ -30,6 +30,11 @@ struct StdoutContainerAdapter
     using value_type = T;
     void push_back(T c)
     {
+        if (c == 0)
+        {
+            return;
+        }
+
         Traits::get_std_out<T>() << c;
 
         // Using stdout with multiple threads requires synchronization so it should not be bothering to have a 'static'
