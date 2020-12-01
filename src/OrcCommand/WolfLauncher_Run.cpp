@@ -586,6 +586,7 @@ HRESULT Main::Run_Execute()
         {
             auto [lock, console] = m_journal.Console();
 
+            console.PrintNewLine();
             auto commandSetNode = console.OutputTree().AddNode("Command set '{}'", exec->GetKeyword());
             auto parametersNode = commandSetNode.AddNode("Parameters");
             PrintValue(
