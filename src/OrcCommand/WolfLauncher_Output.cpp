@@ -183,7 +183,7 @@ void Main::PrintFooter()
     m_console.PrintNewLine();
 
     auto root = m_console.OutputTree();
-    auto node = root.AddNode("Statistics");
+    auto node = root.AddNode("DFIR-Orc WolfLauncher statistics");
     PrintCommonFooter(node);
 
     m_console.PrintNewLine();

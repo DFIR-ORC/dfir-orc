@@ -826,6 +826,9 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
         auto end = Orc::ConvertTo(m_ArchiveFinishTime);
         auto duration = end - start;
 
+        m_journal.Print(
+            GetKeyword(), L"Archive", L"Ended (output: {} bytes, elapsed: {:%T})", archiveSize(), duration);
+
         Log::Info(
             L"{}: {} (took {} seconds, size {} bytes)",
             GetKeyword(),
