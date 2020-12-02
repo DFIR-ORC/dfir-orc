@@ -532,33 +532,32 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         return S_OK;
 
     CryptoHashStream::Algorithm algs = CryptoHashStream::Algorithm::Undefined;
-    if (localIntentions & Intentions::FILEINFO_MD5)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_MD5))
         algs |= CryptoHashStream::Algorithm::MD5;
-    if (localIntentions & Intentions::FILEINFO_SHA1)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SHA1))
         algs |= CryptoHashStream::Algorithm::SHA1;
-    if (localIntentions & Intentions::FILEINFO_SHA256)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SHA256))
         algs |= CryptoHashStream::Algorithm::SHA256;
 
     CryptoHashStream::Algorithm pe_algs = CryptoHashStream::Algorithm::Undefined;
-    if (localIntentions & Intentions::FILEINFO_PE_MD5)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_PE_MD5))
         pe_algs |= CryptoHashStream::Algorithm::MD5;
-    if (localIntentions & Intentions::FILEINFO_PE_SHA1)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_PE_SHA1))
         pe_algs |= CryptoHashStream::Algorithm::SHA1;
-    if (localIntentions & Intentions::FILEINFO_PE_SHA256)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_PE_SHA256))
         pe_algs |= CryptoHashStream::Algorithm::SHA256;
 
     FuzzyHashStream::Algorithm fuzzy_algs = FuzzyHashStream::Algorithm::Undefined;
 
 #ifdef ORC_BUILD_SSDEEP
-    if (localIntentions & Intentions::FILEINFO_SSDEEP)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SSDEEP)
         fuzzy_algs = fuzzy_algs | FuzzyHashStream::Algorithm::SSDeep;
 #endif
 
-    if (localIntentions & Intentions::FILEINFO_TLSH)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_TLSH))
         fuzzy_algs |= FuzzyHashStream::Algorithm::TLSH;
 
-    if (localIntentions & Intentions::FILEINFO_AUTHENTICODE_STATUS
-        || localIntentions & Intentions::FILEINFO_AUTHENTICODE_SIGNER)
+    if (HasAnyFlag(localIntentions, Intentions::FILEINFO_AUTHENTICODE_STATUS | Intentions::FILEINFO_AUTHENTICODE_SIGNER))
     {
         pe_algs |=
             CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256;
@@ -595,7 +594,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         ULONGLONG ullHashed = 0LL;
         hashstream->Write(pData.GetData(), ullWritten, &ullHashed);
 
-        if (algs & CryptoHashStream::Algorithm::MD5)
+        if (HasFlag(algs, CryptoHashStream::Algorithm::MD5))
         {
             hr = hashstream->GetHash(CryptoHashStream::Algorithm::MD5, m_FileInfo.GetDetails()->MD5());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -604,7 +603,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
             }
         }
 
-        if (algs & CryptoHashStream::Algorithm::SHA1)
+        if (HasFlag(algs, CryptoHashStream::Algorithm::SHA1))
         {
             hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, m_FileInfo.GetDetails()->SHA1());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -613,7 +612,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
             }
         }
 
-        if (algs & CryptoHashStream::Algorithm::SHA256)
+        if (HasFlag(algs, CryptoHashStream::Algorithm::SHA256))
         {
             hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, m_FileInfo.GetDetails()->SHA256());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -631,7 +630,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         ULONGLONG ullHashed = 0LL;
         hashstream->Write(pData.GetData(), ullWritten, &ullHashed);
 
-        if (fuzzy_algs & FuzzyHashStream::Algorithm::SSDeep)
+        if (HasFlag(fuzzy_algs, FuzzyHashStream::Algorithm::SSDeep))
         {
             hr = hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, m_FileInfo.GetDetails()->SSDeep());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -640,7 +639,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
             }
         }
 
-        if (fuzzy_algs & FuzzyHashStream::Algorithm::TLSH)
+        if (HasFlag(fuzzy_algs, FuzzyHashStream::Algorithm::TLSH))
         {
             hr = hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, m_FileInfo.GetDetails()->TLSH());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -691,7 +690,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
             ullPeHashed += ullThisWriteHashed;
         }
 
-        if (pe_algs & CryptoHashStream::Algorithm::MD5)
+        if (HasFlag(pe_algs, CryptoHashStream::Algorithm::MD5))
         {
             hr = pe_hashstream->GetHash(CryptoHashStream::Algorithm::MD5, m_FileInfo.GetDetails()->PeMD5());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -700,7 +699,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
             }
         }
 
-        if (pe_algs & CryptoHashStream::Algorithm::SHA1)
+        if (HasFlag(pe_algs, CryptoHashStream::Algorithm::SHA1))
         {
             hr = pe_hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, m_FileInfo.GetDetails()->PeSHA1());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -709,7 +708,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
             }
         }
 
-        if (pe_algs & CryptoHashStream::Algorithm::SHA256)
+        if (HasFlag(pe_algs, CryptoHashStream::Algorithm::SHA256))
         {
             hr = pe_hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, m_FileInfo.GetDetails()->PeSHA256());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -783,14 +782,14 @@ HRESULT PEInfo::OpenPeHash(Intentions localIntentions)
     auto hashstream = std::make_shared<CryptoHashStream>();
 
     CryptoHashStream::Algorithm algs = CryptoHashStream::Algorithm::Undefined;
-    if (localIntentions & Intentions::FILEINFO_PE_MD5)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_PE_MD5))
         algs |= CryptoHashStream::Algorithm::MD5;
-    if (localIntentions & Intentions::FILEINFO_PE_SHA1)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_PE_SHA1))
         algs |= CryptoHashStream::Algorithm::SHA1;
-    if (localIntentions & Intentions::FILEINFO_PE_SHA256)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_PE_SHA256))
         algs |= CryptoHashStream::Algorithm::SHA256;
-    if (localIntentions & Intentions::FILEINFO_AUTHENTICODE_STATUS
-        || localIntentions & Intentions::FILEINFO_AUTHENTICODE_SIGNER)
+    if (HasAnyFlag(
+            localIntentions, Intentions::FILEINFO_AUTHENTICODE_STATUS | Intentions::FILEINFO_AUTHENTICODE_SIGNER))
     {
         algs |=
             CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256;
@@ -806,19 +805,19 @@ HRESULT PEInfo::OpenPeHash(Intentions localIntentions)
         ullHashed += ullThisWriteHashed;
     }
 
-    if (algs & CryptoHashStream::Algorithm::MD5
+    if (HasFlag(algs, CryptoHashStream::Algorithm::MD5)
         && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::MD5, m_FileInfo.GetDetails()->PeMD5())))
     {
         if (hr != MK_E_UNAVAILABLE)
             return hr;
     }
-    if (algs & CryptoHashStream::Algorithm::SHA1
+    if (HasFlag(algs, CryptoHashStream::Algorithm::SHA1)
         && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, m_FileInfo.GetDetails()->PeSHA1())))
     {
         if (hr != MK_E_UNAVAILABLE)
             return hr;
     }
-    if (algs & CryptoHashStream::Algorithm::SHA256
+    if (HasFlag(algs, CryptoHashStream::Algorithm::SHA256)
         && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, m_FileInfo.GetDetails()->PeSHA256())))
     {
         if (hr != MK_E_UNAVAILABLE)

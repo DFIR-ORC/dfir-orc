@@ -1,5 +1,24 @@
 # ChangeLog
 
+## [10.1.0-rc3] - 2020-12-02
+### Changed
+- Log: enhance FileSink synchronisation
+
+### Fixed
+- WolfLauncher: fix log file format for a configurated DFIR-Orc
+- Log: add support for SPDLOG_LEVEL env variable
+- Values incorrectly displayed as addresses instead of readable strings
+- Outline: missing 'qfe', 'network', 'environment' sections
+- GetSectors: failure when no disk was specified
+- Column filter processing inserting some empty lines (',,,,,,,,,,,,,,,')
+- GetThis: fix compression level
+
+### Added
+- WolfLauncher: print a 'Ended' line in the journal with statistics
+
+### Removed
+- Dead code: ByteStreamSink
+
 ## [10.1.0-rc2] - 2020-11-20
 ### Changed
 - Column 'ParentName': remove trailing '\'

@@ -16,24 +16,28 @@
 namespace Orc {
 namespace Text {
 
-template <typename T>
-void Print(Orc::Text::Tree<T>& root, const Orc::MFTUtils::NonResidentAttributeExtent& extent)
+template <>
+struct Printer<Orc::MFTUtils::NonResidentAttributeExtent>
 {
-    if (!extent.bZero)
+    template <typename T>
+    static void Output(Orc::Text::Tree<T>& root, const Orc::MFTUtils::NonResidentAttributeExtent& extent)
     {
-        root.Add(
-            L"LowestVCN: {:#018x}, Offset: {}, Allocated size: {}, Size: {}",
-            extent.LowestVCN,
-            Traits::Offset(extent.DiskOffset),
-            Traits::ByteQuantity(extent.DiskAlloc),
-            Traits::ByteQuantity(extent.DataSize));
+        if (!extent.bZero)
+        {
+            root.Add(
+                L"LowestVCN: {:#018x}, Offset: {}, Allocated size: {}, Size: {}",
+                extent.LowestVCN,
+                Traits::Offset(extent.DiskOffset),
+                Traits::ByteQuantity(extent.DiskAlloc),
+                Traits::ByteQuantity(extent.DataSize));
+        }
+        else
+        {
+            // Segment is SPARSE, only unallocated zeroes
+            root.Add(L"Sparse entry, Size: {}", Traits::ByteQuantity(extent.DataSize));
+        }
     }
-    else
-    {
-        // Segment is SPARSE, only unallocated zeroes
-        root.Add(L"Sparse entry, Size: {}", Traits::ByteQuantity(extent.DataSize));
-    }
-}
+};
 
 }  // namespace Text
 }  // namespace Orc

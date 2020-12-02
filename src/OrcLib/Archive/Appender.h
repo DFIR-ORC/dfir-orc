@@ -44,6 +44,7 @@ public:
             const auto tempPath = GetTempPathApi(ec);
             if (ec)
             {
+                Log::Error("Failed to get temporary path [{}]", ec);
                 return {};
             }
 
@@ -51,6 +52,7 @@ public:
             if (FAILED(hr))
             {
                 ec.assign(hr, std::system_category());
+                Log::Error(L"Failed to open temporary path {} [{}]", tempPath, ec);
                 return {};
             }
         }
@@ -71,15 +73,7 @@ public:
         , m_tempStreams({std::move(tempStream1), std::move(tempStream2)})
         , m_srcStreamIndex(0)
         , m_isFirstFlush(true)
-        , m_compressionLevel(m_archiver.CompressionLevel())
     {
-        // Put some low compression until the final call from 'Close' method
-        std::error_code ec;
-        m_archiver.SetCompressionLevel(CompressionLevel::kFastest, ec);
-        if (ec)
-        {
-            // TODO: add log
-        }
     }
 
     void Add(std::unique_ptr<Item> item) { m_archiver.Add(std::move(item)); }
@@ -106,6 +100,7 @@ public:
         m_archiver.Compress(dstStream, srcStream, ec);
         if (ec)
         {
+            Log::Error("Failed to compress stream [{}]", ec);
             return;
         }
 
@@ -113,6 +108,7 @@ public:
         if (FAILED(hr))
         {
             ec.assign(hr, std::system_category());
+            Log::Error("Failed to seek source stream [{}]", ec);
             return;
         }
 
@@ -120,6 +116,7 @@ public:
         if (FAILED(hr))
         {
             ec.assign(hr, std::system_category());
+            Log::Error("Failed to resize source stream [{}]", ec);
             return;
         }
 
@@ -128,15 +125,10 @@ public:
 
     void Close(std::error_code& ec)
     {
-        m_archiver.SetCompressionLevel(m_compressionLevel, ec);
-        if (ec)
-        {
-            return;
-        }
-
         Flush(ec);
         if (ec)
         {
+            Log::Error("Failed to flush stream [{}]", ec);
             return;
         }
 
@@ -144,8 +136,8 @@ public:
         HRESULT hr = tempStream->MoveTo(m_output.c_str());
         if (FAILED(hr))
         {
-            // TODO: add log
             ec.assign(hr, std::system_category());
+            Log::Error(L"Failed to move stream to {} [{}]", m_output, ec);
             return;
         }
     }
@@ -158,7 +150,6 @@ private:
     const std::array<std::shared_ptr<TemporaryStream>, 2> m_tempStreams;
     uint8_t m_srcStreamIndex;
     bool m_isFirstFlush;
-    CompressionLevel m_compressionLevel;
 };
 
 }  // namespace Archive

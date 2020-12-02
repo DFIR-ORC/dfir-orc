@@ -107,12 +107,14 @@ Lib7zCompressionLevel ToLib7zLevel(CompressionLevel level)
 
 void SetCompressionLevel(const CComPtr<IOutArchive>& archiver, CompressionLevel level, std::error_code& ec)
 {
+    Log::Debug("Archive7z: SetCompressionLevel to {}", level);
+
     CMyComPtr<ISetProperties> setProperties;
     HRESULT hr = archiver->QueryInterface(IID_ISetProperties, (void**)&setProperties);
     if (setProperties == nullptr)
     {
         ec.assign(hr, std::system_category());
-        // TODO: spdlog::warn("Failed retrieve IID_ISetProperties: {}", ec.message());
+        Log::Error("Failed to set compresion level on IID_ISetProperties [{}]", ec);
         return;
     }
 
@@ -124,7 +126,7 @@ void SetCompressionLevel(const CComPtr<IOutArchive>& archiver, CompressionLevel 
     if (FAILED(hr))
     {
         ec.assign(hr, std::system_category());
-        // TODO: spdlog::warn("Failed to set property: {}", ec.message());
+        Log::Error("Failed to change compresion level while setting property [{}]", ec);
         return;
     }
 }
@@ -168,14 +170,14 @@ void Archive7z::Compress(
     if (FAILED(hr))
     {
         ec.assign(hr, std::system_category());
-        // TODO: spdlog::debug("Failed to get IID_IOutArchive: {}", ec.message());
+        Log::Error(L"Failed to retrieve IID_IOutArchive [{}]", ec);
         return;
     }
 
     ::SetCompressionLevel(archiver, m_compressionLevel, ec);
     if (ec)
     {
-        // TODO: spdlog::debug("Failed to update compression level");
+        Log::Error(L"Failed to update compression level to {} [{}]", m_compressionLevel, ec);
         return;
     }
 
@@ -186,7 +188,7 @@ void Archive7z::Compress(
         if (FAILED(hr))
         {
             ec.assign(hr, std::system_category());
-            // TODO: log::Error(_L_, hr, L"Temp archive stream cannot be read\r\n");
+            Log::Error(L"Failed to read 'inputArchive' [{}]", ec);
             return;
         }
 
@@ -194,7 +196,7 @@ void Archive7z::Compress(
         if (FAILED(hr))
         {
             ec.assign(hr, std::system_category());
-            // TODO: log::Error(_L_, hr, L"Failed to rewind Temp stream\r\n");
+            Log::Error(L"Failed to seek input archive to the begining [{}]", ec);
             return;
         }
 
@@ -205,7 +207,7 @@ void Archive7z::Compress(
         if (FAILED(hr))
         {
             ec.assign(hr, std::system_category());
-            // TODO: log::Error(_L_, hr, L"Failed to open archive stream\r\n");
+            Log::Error(L"Failed to open input archive [{}]", ec);
             return;
         }
 
@@ -213,6 +215,7 @@ void Archive7z::Compress(
         if (FAILED(hr))
         {
             ec.assign(hr, std::system_category());
+            Log::Error(L"Failed to retrieve number of items [{}]", ec);
             return;
         }
     }
@@ -229,7 +232,7 @@ void Archive7z::Compress(
     if (FAILED(hr))
     {
         ec.assign(hr, std::system_category());
-        // TODO: spdlog::debug("Failed to compress: {}", ec.message());
+        Log::Error("Failed to update archive [{}]", ec);
         return;
     }
 

@@ -59,7 +59,6 @@ HRESULT WolfTask::ApplyNotification(
             break;
         case CommandNotification::Running:
             // Process is still running, checking if it hangs...
-            Log::Debug(L"Task {} is running (pid: {})", m_command, m_dwPID);
             {
                 HANDLE hProcess =
                     OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, static_cast<DWORD>(notification->GetProcessID()));

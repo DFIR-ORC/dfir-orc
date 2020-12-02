@@ -64,7 +64,7 @@ __data_entrypoint(File) HRESULT PipeStream::Read(
             return hr;
         }
     }
-    Log::Debug("ReadFile read {} bytes (hFile={:p})", dwBytesRead, m_hReadPipe);
+
     *pcbBytesRead = dwBytesRead;
     return S_OK;
 }

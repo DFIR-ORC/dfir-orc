@@ -13,12 +13,11 @@
 #include <mutex>
 
 #include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
-#include "Log/MemorySink.h"
-#include "Log/FileSink.h"
+#include "SpdlogLogger.h"
 
 namespace Orc {
+namespace Log {
 
 /*!
  * \brief Wrapper over spdlog that dispatches logging on spdlog::logger.
@@ -29,9 +28,6 @@ namespace Orc {
 class Logger
 {
 public:
-    using ConsoleSink = spdlog::sinks::wincolor_stderr_sink_mt;
-    using FileSink = FileSink<std::mutex>;
-
     enum class Facility : size_t
     {
         kDefault = 0,
@@ -40,18 +36,16 @@ public:
         kFacilityCount
     };
 
-    Logger(std::initializer_list<std::pair<Facility, std::shared_ptr<spdlog::logger>>> loggers);
+    Logger(std::initializer_list<std::pair<Facility, SpdlogLogger::Ptr>> loggers);
 
     uint64_t warningCount() const;
     uint64_t errorCount() const;
     uint64_t criticalCount() const;
 
-    void DumpBacktrace();
-
     template <typename... Args>
     void Trace(Facility id, Args&&... args)
     {
-        Get(id)->trace(std::forward<Args>(args)...);
+        Get(id)->Trace(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -63,7 +57,7 @@ public:
     template <typename... Args>
     void Debug(Facility id, Args&&... args)
     {
-        Get(id)->debug(std::forward<Args>(args)...);
+        Get(id)->Debug(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -75,7 +69,7 @@ public:
     template <typename... Args>
     void Info(Facility id, Args&&... args)
     {
-        Get(id)->info(std::forward<Args>(args)...);
+        Get(id)->Info(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -87,7 +81,7 @@ public:
     template <typename... Args>
     void Warn(Facility id, Args&&... args)
     {
-        Get(id)->warn(std::forward<Args>(args)...);
+        Get(id)->Warn(std::forward<Args>(args)...);
         ++m_warningCount;
     }
 
@@ -100,7 +94,7 @@ public:
     template <typename... Args>
     void Error(Facility id, Args&&... args)
     {
-        Get(id)->error(std::forward<Args>(args)...);
+        Get(id)->Error(std::forward<Args>(args)...);
         ++m_errorCount;
     }
 
@@ -113,10 +107,14 @@ public:
     template <typename... Args>
     void Critical(Facility id, Args&&... args)
     {
-        Get(id)->critical(std::forward<Args>(args)...);
+        Get(id)->Critical(std::forward<Args>(args)...);
         ++m_criticalCount;
 
-        DumpBacktrace();
+        auto defaultLogger = Get(Facility::kDefault);
+        if (defaultLogger)
+        {
+            defaultLogger->DumpBacktrace();
+        }
     }
 
     template <typename... Args>
@@ -125,7 +123,7 @@ public:
         Critical(Facility::kDefault, std::forward<Args>(args)...);
     }
 
-    const std::shared_ptr<spdlog::logger>& Get(Facility id) const
+    const SpdlogLogger::Ptr& Get(Facility id) const
     {
         const auto facilityNumber = std::underlying_type_t<Facility>(id);
 
@@ -136,14 +134,18 @@ public:
         return logger;
     }
 
-    void Set(Facility id, std::shared_ptr<spdlog::logger> logger);
+    void Set(Facility id, SpdlogLogger::Ptr logger);
 
 private:
-    std::vector<std::shared_ptr<spdlog::logger>> m_loggers;
+    std::vector<SpdlogLogger::Ptr> m_loggers;
 
     std::atomic<uint64_t> m_warningCount;
     std::atomic<uint64_t> m_errorCount;
     std::atomic<uint64_t> m_criticalCount;
 };
+
+}  // namespace Log
+
+using Logger = Orc::Log::Logger;
 
 }  // namespace Orc

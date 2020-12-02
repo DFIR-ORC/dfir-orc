@@ -10,16 +10,23 @@
 
 #include <string_view>
 #include <functional>
+#include <memory>
+#include <optional>
 
 #include "Output/Text/Tree.h"
 
 namespace Orc {
 namespace Text {
 
-constexpr auto kStringEmpty = std::string_view("<Empty>");
-constexpr auto kStringEmptyW = std::wstring_view(L"<Empty>");
+constexpr auto kEmpty = std::string_view("<Empty>");
+constexpr auto kEmptyW = std::wstring_view(L"<Empty>");
+constexpr auto kError = std::string_view("<Error>");
+constexpr auto kErrorW = std::wstring_view(L"<Error>");
+constexpr auto kNoneAvailable = std::string_view("N/A");
+constexpr auto kNoneAvailableW = std::wstring_view(L"N/A");
+constexpr auto kNone = std::string_view("None");
+constexpr auto kNoneW = std::wstring_view(L"None");
 
-// Default function to be specialized for custom output
 template <typename T, typename N>
 void PrintKey(Orc::Text::Tree<T>& root, const N& key)
 {
@@ -30,11 +37,45 @@ void PrintKey(Orc::Text::Tree<T>& root, const N& key)
     root.AddWithoutEOL(L"{:<34}", decoratedKey);
 }
 
-// Default function to be specialized for custom output
+// To be specialized...
+template <typename V>
+struct Printer
+{
+    template <typename T>
+    static void Output(Orc::Text::Tree<T>& root, const V& value)
+    {
+        root.Add(L"{}", value);
+    }
+};
+
 template <typename T, typename V>
 void Print(Orc::Text::Tree<T>& root, const V& value)
 {
-    root.Add(L"{}", value);
+    Printer<V>::Output(root, value);
+}
+
+template <typename T, typename V>
+void Print(Orc::Text::Tree<T>& root, const std::shared_ptr<V>& value)
+{
+    if (value == nullptr)
+    {
+        Print(root, kErrorW);
+        return;
+    }
+
+    Printer<V>::Output(root, *value);
+}
+
+template <typename T, typename V>
+void Print(Orc::Text::Tree<T>& root, const std::optional<V>& item)
+{
+    if (!item.has_value())
+    {
+        Print(root, kNoneAvailableW);
+        return;
+    }
+
+    Printer<V>::Print(root, *item);
 }
 
 template <typename T, typename V>
@@ -56,7 +97,7 @@ void PrintValues(Orc::Text::Tree<T>& root, const N& name, const V& values)
 {
     if (values.size() == 0)
     {
-        PrintValue(root, name, L"None");
+        PrintValue(root, name, kNoneW);
         return;
     }
 

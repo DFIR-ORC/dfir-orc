@@ -442,7 +442,7 @@ protected:
     HRESULT LoadEvtLibrary();
     HRESULT LoadPSAPI();
 
-    auto Configure(int argc, const wchar_t* argv[])
+    virtual void Configure(int argc, const wchar_t* argv[])
     {
         m_logging.Configure(argc, argv);
 

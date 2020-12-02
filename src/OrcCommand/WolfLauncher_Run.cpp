@@ -106,6 +106,16 @@ namespace Wolf {
 
 const wchar_t kWolfLauncher[] = L"WolfLauncher";
 
+void Main::Configure(int argc, const wchar_t* argv[])
+{
+    UtilitiesMain::Configure(argc, argv);
+
+    // As WolfLauncher output is already kind of log journal, let's keep it and avoid Logger to add another timestamp
+    auto defaultLogger = m_logging.logger().Get(Logger::Facility::kDefault);
+    defaultLogger->SetLevel(m_logging.consoleSink()->Level());
+    defaultLogger->SetPattern("%v");
+}
+
 std::shared_ptr<WolfExecution::Recipient> Main::GetRecipient(const std::wstring& strName)
 {
     const auto it = std::find_if(
@@ -402,15 +412,15 @@ HRESULT Main::SetLauncherPriority(WolfPriority priority)
 {
     switch (priority)
     {
-        case Low:
+        case WolfPriority::Low:
             SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
             break;
-        case Normal:
+        case WolfPriority::Normal:
             SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
             break;
-        case High:
+        case WolfPriority::High:
             SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
             break;
@@ -576,6 +586,7 @@ HRESULT Main::Run_Execute()
         {
             auto [lock, console] = m_journal.Console();
 
+            console.PrintNewLine();
             auto commandSetNode = console.OutputTree().AddNode("Command set '{}'", exec->GetKeyword());
             auto parametersNode = commandSetNode.AddNode("Parameters");
             PrintValue(

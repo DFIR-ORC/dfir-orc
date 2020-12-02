@@ -46,14 +46,17 @@ public:
         FromDump
     };
 
-    enum WolfPriority
+    enum class WolfPriority
     {
         Low,
         Normal,
         High
     };
 
+    static std::wstring ToString(WolfPriority value);
+
     enum class WolfPowerState
+
     {
         Unmodified = 0L,
         SystemRequired = ES_SYSTEM_REQUIRED,
@@ -133,6 +136,8 @@ public:
     };
 
 public:
+    void Configure(int argc, const wchar_t* argv[]) override;
+
     static LPCWSTR ToolName() { return L"WolfLauncher"; }
     static LPCWSTR ToolDescription() { return L"DFIR-ORC command scheduler"; }
 

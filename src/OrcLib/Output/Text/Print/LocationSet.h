@@ -38,85 +38,88 @@ bool HasSameAttributes(InputIt first, InputIt last)
 
 }  // namespace detail
 
-template <typename T>
-void Print(Orc::Text::Tree<T>& root, const LocationSet& locationSet)
+template <>
+struct Printer<LocationSet>
 {
-    using SerialNumber = ULONGLONG;
-    std::map<SerialNumber, std::set<const Location*>> locationsBySerial;
-    for (const auto& [serial, location] : locationSet.GetLocations())
+    template <typename T>
+    static void Output(Orc::Text::Tree<T>& root, const LocationSet& locationSet)
     {
-        assert(location);
-        if (location->IsValid())
+        using SerialNumber = ULONGLONG;
+        std::map<SerialNumber, std::set<const Location*>> locationsBySerial;
+        for (const auto& [serial, location] : locationSet.GetLocations())
         {
-            locationsBySerial[location->SerialNumber()].insert(location.get());
-        }
-        else
-        {
-            locationsBySerial[ULLONG_MAX].insert(location.get());
-        }
-    }
-
-    for (const auto& [serial, locations] : locationsBySerial)
-    {
-        const std::wstring serialW =
-            serial != ULLONG_MAX ? fmt::format(L"{:0>16X}", serial) : fmt::format(L"{:>16}", L"<Invalid serial>");
-
-        // Verify for each volume that informations are consitent/identical to display them once or always
-        const auto constantAttributes = detail::HasSameAttributes(std::cbegin(locations), std::cend(locations));
-
-        std::wstring serialNodeString;
-        if (constantAttributes)
-        {
-            const auto location = *locations.cbegin();
-
-            std::vector<std::wstring> attributes;
-            attributes.push_back(serialW);
-            attributes.push_back(location->IsValid() ? L"Valid" : L"Invalid");
-            attributes.push_back(ToString(location->GetFSType()));
-
-            serialNodeString = fmt::format(L"Volume: {}", boost::join(attributes, L", "));
-        }
-        else
-        {
-            serialNodeString = fmt::format(L"Volume: {}", serialW);
-        }
-
-        auto serialNode = root.AddNode(serialNodeString);
-
-        for (const auto location : locations)
-        {
-            if (!constantAttributes)
+            assert(location);
+            if (location->IsValid())
             {
-                PrintValue(serialNode, L"", *location);
-                continue;
+                locationsBySerial[location->SerialNumber()].insert(location.get());
+            }
+            else
+            {
+                locationsBySerial[ULLONG_MAX].insert(location.get());
+            }
+        }
+
+        for (const auto& [serial, locations] : locationsBySerial)
+        {
+            const std::wstring serialW =
+                serial != ULLONG_MAX ? fmt::format(L"{:0>16X}", serial) : fmt::format(L"{:>16}", L"<Invalid serial>");
+
+            // Verify for each volume that informations are consitent/identical to display them once or always
+            const auto constantAttributes = detail::HasSameAttributes(std::cbegin(locations), std::cend(locations));
+
+            std::wstring serialNodeString;
+            if (constantAttributes)
+            {
+                const auto location = *locations.cbegin();
+
+                std::vector<std::wstring> attributes;
+                attributes.push_back(serialW);
+                attributes.push_back(location->IsValid() ? L"Valid" : L"Invalid");
+                attributes.push_back(ToString(location->GetFSType()));
+
+                serialNodeString = fmt::format(L"Volume: {}", boost::join(attributes, L", "));
+            }
+            else
+            {
+                serialNodeString = fmt::format(L"Volume: {}", serialW);
             }
 
-            std::wstring mountPoints;
-            const auto mountPointList = detail::GetMountPointList(*location);
-            if (mountPointList.size())
+            auto serialNode = root.AddNode(serialNodeString);
+
+            for (const auto location : locations)
             {
-                mountPoints = fmt::format(L"  [{}]", boost::join(mountPointList, L", "));
+                if (!constantAttributes)
+                {
+                    PrintValue(serialNode, L"", *location);
+                    continue;
+                }
+
+                std::wstring mountPoints;
+                const auto mountPointList = detail::GetMountPointList(*location);
+                if (mountPointList.size())
+                {
+                    mountPoints = fmt::format(L"  [{}]", boost::join(mountPointList, L", "));
+                }
+
+                serialNode.Add(
+                    L"{:<34}  {}{}", fmt::format(L"{}:", location->GetType()), location->GetLocation(), mountPoints);
+
+                // TODO: Having access to FormatTo would be good. A version without header, conversion to FmtArg0
+                // encoding, conversion to container's encoding auto value = FormatTo(L"{:<34}  {}{}",
+                // fmt::format(L"{}:", location->GetType()), location->GetLocation(), mountPoints); Print(node, value);
             }
 
-            serialNode.Add(
-                L"{:<34}  {}{}", fmt::format(L"{}:", location->GetType()), location->GetLocation(), mountPoints);
-
-            // TODO: Having access to FormatTo would be good. A version without header, conversion to FmtArg0 encoding,
-            // conversion to container's encoding
-            // auto value = FormatTo(L"{:<34}  {}{}", fmt::format(L"{}:", location->GetType()), location->GetLocation(),
-            // mountPoints); Print(node, value);
+            serialNode.AddEmptyLine();
         }
-
-        serialNode.AddEmptyLine();
     }
-}
+};
 
 template <typename T, typename U>
 void PrintValue(Orc::Text::Tree<T>& root, const U& name, const LocationSet& locationSet)
 {
     if (locationSet.GetLocations().empty())
     {
-        PrintValue(root, name, kStringEmpty);
+        PrintValue(root, name, kEmpty);
         return;
     }
 

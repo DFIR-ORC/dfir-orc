@@ -379,11 +379,11 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     if (configitem[ORC_PRIORITY])
     {
         if (!_wcsicmp(L"Normal", configitem[ORC_PRIORITY].c_str()))
-            config.Priority = Normal;
+            config.Priority = WolfPriority::Normal;
         else if (!_wcsicmp(L"Low", configitem[ORC_PRIORITY].c_str()))
-            config.Priority = Low;
+            config.Priority = WolfPriority::Low;
         else if (!_wcsicmp(L"High", configitem[ORC_PRIORITY].c_str()))
-            config.Priority = High;
+            config.Priority = WolfPriority::High;
     }
 
     if (configitem[ORC_POWERSTATE])
@@ -499,11 +499,11 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     else if (ParameterOption(argv[i] + 1, L"Priority", strPriority))
                     {
                         if (!_wcsicmp(L"Normal", strPriority.c_str()))
-                            config.Priority = Normal;
+                            config.Priority = WolfPriority::Normal;
                         else if (!_wcsicmp(L"Low", strPriority.c_str()))
-                            config.Priority = Low;
+                            config.Priority = WolfPriority::Low;
                         else if (!_wcsicmp(L"High", strPriority.c_str()))
-                            config.Priority = High;
+                            config.Priority = WolfPriority::High;
                     }
                     else if (BooleanOption(argv[i] + 1, L"WERDontShowUI", config.bWERDontShowUI))
                         ;
@@ -693,6 +693,8 @@ HRESULT Main::CheckConfiguration()
 
         if (!config.strCompressionLevel.empty())
         {
+            Log::Debug(
+                L"Command has no compression level, using main compression level: {}", config.strCompressionLevel);
             wolfexec->SetCompressionLevel(config.strCompressionLevel);
         }
 

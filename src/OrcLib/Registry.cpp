@@ -25,7 +25,7 @@ Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, 
             status != ERROR_SUCCESS)
         {
             const auto ec = Win32Error(status);
-            Log::Error(L"Failed to registry key {} [{}]", szKeyName, ec);
+            Log::Debug(L"Failed to open registry key {} [{}]", szKeyName, ec);
             return ec;
         }
     }
@@ -53,12 +53,12 @@ Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, 
 
         if (status == ERROR_MORE_DATA)
         {
-            Log::Error(L"Unexepected registry value '{}' is bigger than expected (ULONG32)", szValueName);
+            Log::Error(L"Unexpected registry value '{}' is bigger than expected (ULONG32)", szValueName);
             return ec;
         }
         else
         {
-            Log::Error(L"Failed to open registry '{}' value [{}]", szValueName, ec);
+            Log::Debug(L"Failed to open registry value '{}' [{}]", szValueName, ec);
             return ec;
         }
     }
@@ -69,7 +69,7 @@ Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, 
 
     if (dwValueType != REG_DWORD || (dwValueType != REG_BINARY && cbBytes != sizeof(ULONG32)))
     {
-        Log::Error(L"Unexpected value \"{}\" type (not ULONG32 compatible)", szValueName);
+        Log::Error(L"Unexpected value '{}' type (not ULONG32 compatible)", szValueName);
         return Win32Error(ERROR_DATATYPE_MISMATCH);
     }
 
@@ -87,7 +87,7 @@ Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, 
             status != ERROR_SUCCESS)
         {
             const auto ec = Win32Error(status);
-            Log::Error(L"Failed to registry key {} [{}]", szKeyName, ec);
+            Log::Error(L"Failed to open registry key {} [{}]", szKeyName, ec);
             return ec;
         }
     }
@@ -114,12 +114,12 @@ Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, 
         const auto ec = Win32Error(status);
         if (status == ERROR_MORE_DATA)
         {
-            Log::Error(L"Unexepected registry value '{}' is bigger than expected (ULONG32)", szValueName);
+            Log::Error(L"Unexpected registry value '{}' is bigger than expected (ULONG32)", szValueName);
             return ec;
         }
         else
         {
-            Log::Error(L"Failed to open registry '{}' value [{}]", szValueName, ec);
+            Log::Debug(L"Failed to query registry '{}' value [{}]", szValueName, ec);
             return ec;
         }
     }
@@ -129,7 +129,7 @@ Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, 
     }
     if (dwValueType != REG_QWORD || (dwValueType != REG_BINARY && cbBytes != sizeof(ULONG64)))
     {
-        Log::Error(L"Unexpected value \"{}\" type (not ULONG32 compatible)", szValueName);
+        Log::Error(L"Unexpected value '{}' type (not ULONG32 compatible)", szValueName);
         return Win32Error(ERROR_DATATYPE_MISMATCH);
     }
 
@@ -147,7 +147,7 @@ Result<Orc::ByteBuffer> Orc::Registry::Read<Orc::ByteBuffer>(HKEY hParentKey, LP
             status != ERROR_SUCCESS)
         {
             const auto ec = Win32Error(status);
-            Log::Error(L"Failed to registry key {} [{}]", szKeyName, ec);
+            Log::Debug(L"Failed to open registry key {} [{}]", szKeyName, ec);
             return ec;
         }
     }
@@ -178,14 +178,15 @@ Result<Orc::ByteBuffer> Orc::Registry::Read<Orc::ByteBuffer>(HKEY hParentKey, LP
             if (auto status = RegQueryValueExW(hKey, szValueName, NULL, NULL, (LPBYTE)valueBuffer.get(), &cbBytes);
                 status != ERROR_SUCCESS)
             {
-                Log::Error(L"Failed to reg value '{}:{}' value [{}]", szKeyName ? szKeyName : L"", szValueName, ec);
+                Log::Debug(
+                    L"Failed to query registry value '{}:{}' value [{}]", szKeyName ? szKeyName : L"", szValueName, ec);
                 return ec;
             }
         }
         else
         {
-            Log::Error(
-                L"Failed to query registry value \"{}:{}\" value [{}]", szKeyName ? szKeyName : L"", szValueName, ec);
+            Log::Debug(
+                L"Failed to query registry value '{}:{}' value [{}]", szKeyName ? szKeyName : L"", szValueName, ec);
             return ec;
         }
     }
@@ -207,7 +208,7 @@ Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR s
             status != ERROR_SUCCESS)
         {
             const auto result = Win32Error(status);
-            Log::Error(L"Failed to registry key '{}' [{}]", szKeyName, result);
+            Log::Error(L"Failed to open registry key '{}' [{}]", szKeyName, result);
             return result;
         }
     }
@@ -238,13 +239,13 @@ Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR s
             if (auto status = RegQueryValueExW(hKey, szValueName, NULL, NULL, (LPBYTE)valueBuffer.get(), &cbBytes);
                 status != ERROR_SUCCESS)
             {
-                Log::Error(L"Failed to reg value '{}' value [{}])", szValueName, ec);
+                Log::Debug(L"Failed to query registry value '{}' value [{}])", szValueName, ec);
                 return ec;
             }
         }
         else
         {
-            Log::Error(L"Failed to open profile list '{}' value [{}]", szValueName, ec);
+            Log::Debug(L"Failed to query registry value '{}' [{}]", szValueName, ec);
             return ec;
         }
     }

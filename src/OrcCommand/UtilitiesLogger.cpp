@@ -11,51 +11,85 @@
 
 #include <optional>
 
+#include <spdlog/cfg/env.h>
+
+#ifdef ORC_BUILD_BOOST_STACKTRACE
+#    include <boost/stacktrace.hpp>
+#endif
+
 #include "UtilitiesLogger.h"
 #include "ParameterCheck.h"
 #include "Utils/Result.h"
 
+using namespace Orc::Command;
+using namespace Orc::Log;
 using namespace Orc;
 
 namespace {
 
-std::shared_ptr<Logger::ConsoleSink> CreateConsoleSink()
+std::unique_ptr<SpdlogLogger> CreateSpdlogLogger(const std::string& name)
 {
-    auto console = std::make_shared<Logger::ConsoleSink>();
-    console->set_level(spdlog::level::critical);
-    return console;
+    auto logger = std::make_unique<SpdlogLogger>(name);
+
+    // This is error handler will help to fix log formatting error
+    logger->SetErrorHandler([](const std::string& msg) {
+        std::cerr << msg << std::endl;
+
+#ifdef ORC_BUILD_BOOST_STACKTRACE
+        std::cerr << "Stack trace:" << std::endl;
+        std::cerr << boost::stacktrace::stacktrace();
+#endif
+    });
+
+    // Default upstream log level filter (sinks will not received filtered logs)
+    logger->SetLevel(spdlog::level::debug);
+
+    return logger;
 }
 
-std::shared_ptr<Logger::FileSink> CreateFileSink()
+std::shared_ptr<Command::UtilitiesLogger::ConsoleSink> CreateConsoleSink()
 {
-    auto file = std::make_shared<Logger::FileSink>();
+    auto sink = std::make_shared<Command::UtilitiesLogger::ConsoleSink>();
+    sink->SetLevel(spdlog::level::critical);
+    return sink;
+}
+
+std::shared_ptr<Command::UtilitiesLogger::FileSink> CreateFileSink()
+{
+    auto sink = std::make_shared<Command::UtilitiesLogger::FileSink>();
 
     // Allow all logs to be print, they will be filtered by the upstream level set by spdlog::set_level
-    file->set_level(spdlog::level::trace);
-    return file;
+    sink->SetLevel(spdlog::level::trace);
+    return sink;
 }
 
-std::pair<std::shared_ptr<spdlog::logger>, std::shared_ptr<spdlog::logger>>
-CreateFacilities(std::shared_ptr<Logger::ConsoleSink> consoleSink, std::shared_ptr<Logger::FileSink> fileSink)
+std::pair<SpdlogLogger::Ptr, SpdlogLogger::Ptr> CreateFacilities(SpdlogSink::Ptr consoleSink, SpdlogSink::Ptr fileSink)
 {
     std::vector<std::shared_ptr<spdlog::logger>> loggers;
 
-    auto defaultLogger = std::make_shared<spdlog::logger>("default", spdlog::sinks_init_list {consoleSink, fileSink});
+    auto defaultLogger = ::CreateSpdlogLogger("default");
+    defaultLogger->Add(consoleSink);
+    defaultLogger->Add(fileSink);
+    defaultLogger->EnableBacktrace(512);
+    defaultLogger->SetFormatter(
+        std::make_unique<spdlog::pattern_formatter>(Log::kDefaultLogPattern, spdlog::pattern_time_type::utc));
 
-    auto fileLogger = std::make_shared<spdlog::logger>("file", fileSink);
-    fileSink->set_level(spdlog::level::trace);  // delegate filtering to the sink
+    auto fileLogger = ::CreateSpdlogLogger("file");
+    fileLogger->Add(fileSink);
+    fileLogger->SetFormatter(
+        std::make_unique<spdlog::pattern_formatter>(Log::kDefaultLogPattern, spdlog::pattern_time_type::utc));
 
-    return {defaultLogger, fileLogger};
+    return {std::move(defaultLogger), std::move(fileLogger)};
 }
 
 }  // namespace
 
 Orc::Command::UtilitiesLogger::UtilitiesLogger()
 {
-    m_fileSink = CreateFileSink();
-    m_consoleSink = CreateConsoleSink();
+    m_fileSink = ::CreateFileSink();
+    m_consoleSink = ::CreateConsoleSink();
 
-    auto [defaultLogger, fileLogger] = CreateFacilities(m_consoleSink, m_fileSink);
+    auto [defaultLogger, fileLogger] = ::CreateFacilities(m_consoleSink, m_fileSink);
 
     auto loggers = {
         std::make_pair(Logger::Facility::kDefault, defaultLogger),
@@ -152,6 +186,9 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
         }
     }
 
+    // Load log levels from environment variable (ex: "SPDLOG_LEVEL=info,mylogger=trace")
+    spdlog::cfg::load_env_levels();
+
     if (verbose)
     {
         if (!level)
@@ -159,11 +196,12 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
             level = spdlog::level::debug;
         }
 
-        m_consoleSink->set_level(*level);
+        m_consoleSink->SetLevel(*level);
     }
 
     if (level)
     {
-        spdlog::set_level(*level);
+        m_logger->Get(Logger::Facility::kDefault)->SetLevel(*level);
+        m_logger->Get(Logger::Facility::kLogFile)->SetLevel(*level);
     }
 }

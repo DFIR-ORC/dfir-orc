@@ -269,7 +269,7 @@ HRESULT FileInfo::WriteFileInformation(
 
         try
         {
-            if (localIntentions & pCurCol->dwIntention)
+            if (HasFlag(localIntentions, pCurCol->dwIntention))
             {
                 if (FAILED(hr = HandleIntentions(pCurCol->dwIntention, output)))
                 {
@@ -413,7 +413,7 @@ HRESULT FileInfo::BindColumns(
 
     while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
     {
-        if (dwIntentions & pCurCol->dwIntention)
+        if (HasFlag(dwIntentions, pCurCol->dwIntention))
         {
             dwIndex++;
 
@@ -451,7 +451,7 @@ DWORD FileInfo::GetRequiredAccessMask(const ColumnNameDef columnNames[])
     const ColumnNameDef* pCurCol = columnNames;
     while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
     {
-        if (m_DefaultIntentions & pCurCol->dwIntention)
+        if (HasFlag(m_DefaultIntentions, pCurCol->dwIntention))
             dwRequiredAccess |= pCurCol->dwRequiredAccess;
         pCurCol++;
     }
@@ -460,7 +460,7 @@ DWORD FileInfo::GetRequiredAccessMask(const ColumnNameDef columnNames[])
         const ColumnNameDef* pCurCol = columnNames;
         while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
         {
-            if (filter.intent & pCurCol->dwIntention)
+            if (HasFlag(filter.intent, pCurCol->dwIntention))
                 dwRequiredAccess |= pCurCol->dwRequiredAccess;
             pCurCol++;
         }
@@ -559,14 +559,15 @@ HRESULT FileInfo::OpenHash()
 
     Intentions localIntentions = FilterIntentions(m_Filters);
 
-    if (localIntentions & Intentions::FILEINFO_MD5 || localIntentions & Intentions::FILEINFO_SHA1
-        || localIntentions & Intentions::FILEINFO_SHA256 || localIntentions & Intentions::FILEINFO_SSDEEP
-        || localIntentions & Intentions::FILEINFO_TLSH)
+    if (HasAnyFlag(
+            localIntentions,
+            Intentions::FILEINFO_MD5 | Intentions::FILEINFO_SHA1 | Intentions::FILEINFO_SHA256
+                | Intentions::FILEINFO_SSDEEP | Intentions::FILEINFO_TLSH))
     {
-        if (localIntentions & Intentions::FILEINFO_PE_MD5 || localIntentions & Intentions::FILEINFO_PE_SHA1
-            || localIntentions & Intentions::FILEINFO_PE_SHA256
-            || localIntentions & Intentions::FILEINFO_AUTHENTICODE_STATUS
-            || localIntentions & Intentions::FILEINFO_AUTHENTICODE_SIGNER)
+        if (HasAnyFlag(
+                localIntentions,
+                Intentions::FILEINFO_PE_MD5 | Intentions::FILEINFO_PE_SHA1 | Intentions::FILEINFO_PE_SHA256
+                    | Intentions::FILEINFO_AUTHENTICODE_STATUS | Intentions::FILEINFO_AUTHENTICODE_SIGNER))
         {
             if (FAILED(hr = m_PEInfo.CheckPEInformation()))
                 return hr;
@@ -578,11 +579,10 @@ HRESULT FileInfo::OpenHash()
         else
             return OpenCryptoAndFuzzyHash(localIntentions);
     }
-    else if (
-        localIntentions & Intentions::FILEINFO_PE_MD5 || localIntentions & Intentions::FILEINFO_PE_SHA1
-        || localIntentions & Intentions::FILEINFO_PE_SHA256
-        || localIntentions & Intentions::FILEINFO_AUTHENTICODE_STATUS
-        || localIntentions & Intentions::FILEINFO_AUTHENTICODE_SIGNER)
+    else if (HasAnyFlag(
+                 localIntentions,
+                 Intentions::FILEINFO_PE_MD5 | Intentions::FILEINFO_PE_SHA1 | Intentions::FILEINFO_PE_SHA256
+                     | Intentions::FILEINFO_AUTHENTICODE_STATUS | Intentions::FILEINFO_AUTHENTICODE_SIGNER))
     {
         if (FAILED(hr = m_PEInfo.CheckPEInformation()))
             return hr;
@@ -600,11 +600,11 @@ HRESULT FileInfo::OpenCryptoHash(Intentions localIntentions)
         return S_OK;
 
     CryptoHashStream::Algorithm algs = CryptoHashStream::Algorithm::Undefined;
-    if (localIntentions & Intentions::FILEINFO_MD5)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_MD5))
         algs |= CryptoHashStream::Algorithm::MD5;
-    if (localIntentions & Intentions::FILEINFO_SHA1)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SHA1))
         algs |= CryptoHashStream::Algorithm::SHA1;
-    if (localIntentions & Intentions::FILEINFO_SHA256)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SHA256))
         algs |= CryptoHashStream::Algorithm::SHA256;
 
     auto stream = GetDetails()->GetDataStream();
@@ -627,19 +627,19 @@ HRESULT FileInfo::OpenCryptoHash(Intentions localIntentions)
 
     if (ullWritten > 0)
     {
-        if (algs & CryptoHashStream::Algorithm::MD5
+        if (HasFlag(algs, CryptoHashStream::Algorithm::MD5)
             && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::MD5, GetDetails()->MD5())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (algs & CryptoHashStream::Algorithm::SHA1
+        if (HasFlag(algs, CryptoHashStream::Algorithm::SHA1)
             && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, GetDetails()->SHA1())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (algs & CryptoHashStream::Algorithm::SHA256
+        if (HasFlag(algs, CryptoHashStream::Algorithm::SHA256)
             && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, GetDetails()->SHA256())))
         {
             if (hr != MK_E_UNAVAILABLE)
@@ -658,9 +658,9 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
         return S_OK;
 
     FuzzyHashStream::Algorithm algs = FuzzyHashStream::Algorithm::Undefined;
-    if (localIntentions & Intentions::FILEINFO_SSDEEP)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SSDEEP))
         algs |= FuzzyHashStream::Algorithm::SSDeep;
-    if (localIntentions & Intentions::FILEINFO_TLSH)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_TLSH))
         algs |= FuzzyHashStream::Algorithm::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
@@ -683,7 +683,7 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
 
     if (ullWritten > 0)
     {
-        if (algs & FuzzyHashStream::Algorithm::SSDeep)
+        if (HasFlag(algs, FuzzyHashStream::Algorithm::SSDeep))
         {
             hr = hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, GetDetails()->SSDeep());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -692,7 +692,7 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
             }
         }
 
-        if (algs & FuzzyHashStream::Algorithm::TLSH)
+        if (HasFlag(algs, FuzzyHashStream::Algorithm::TLSH))
         {
             hr = hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
@@ -713,17 +713,17 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
         return S_OK;
 
     CryptoHashStream::Algorithm crypto_algs = CryptoHashStream::Algorithm::Undefined;
-    if (localIntentions & Intentions::FILEINFO_MD5)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_MD5))
         crypto_algs |= CryptoHashStream::Algorithm::MD5;
-    if (localIntentions & Intentions::FILEINFO_SHA1)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SHA1))
         crypto_algs |= CryptoHashStream::Algorithm::SHA1;
-    if (localIntentions & Intentions::FILEINFO_SHA256)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SHA256))
         crypto_algs |= CryptoHashStream::Algorithm::SHA256;
 
     FuzzyHashStream::Algorithm fuzzy_algs = FuzzyHashStream::Algorithm::Undefined;
-    if (localIntentions & Intentions::FILEINFO_SSDEEP)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SSDEEP))
         fuzzy_algs |= FuzzyHashStream::Algorithm::SSDeep;
-    if (localIntentions & Intentions::FILEINFO_TLSH)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_TLSH))
         fuzzy_algs |= FuzzyHashStream::Algorithm::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
@@ -767,33 +767,33 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
 
     if (ullWritten > 0)
     {
-        if (crypto_algs & CryptoHashStream::Algorithm::MD5
+        if (HasFlag(crypto_algs, CryptoHashStream::Algorithm::MD5)
             && FAILED(hr = crypto_hashstream->GetHash(CryptoHashStream::Algorithm::MD5, GetDetails()->MD5())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (crypto_algs & CryptoHashStream::Algorithm::SHA1
+        if (HasFlag(crypto_algs, CryptoHashStream::Algorithm::SHA1)
             && FAILED(hr = crypto_hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, GetDetails()->SHA1())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
-        if (crypto_algs & CryptoHashStream::Algorithm::SHA256
+        if (HasFlag(crypto_algs, CryptoHashStream::Algorithm::SHA256)
             && FAILED(hr = crypto_hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, GetDetails()->SHA256())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
 #ifdef ORC_BUILD_SSDEEP
-        if (fuzzy_algs & FuzzyHashStream::Algorithm::SSDeep
+        if (HasFlag(fuzzy_algs, FuzzyHashStream::Algorithm::SSDeep)
             && FAILED(hr = fuzzy_hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, GetDetails()->SSDeep())))
         {
             if (hr != MK_E_UNAVAILABLE)
                 return hr;
         }
 #endif
-        if (fuzzy_algs & FuzzyHashStream::Algorithm::TLSH
+        if (HasFlag(fuzzy_algs, FuzzyHashStream::Algorithm::TLSH)
             && FAILED(hr = fuzzy_hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH())))
         {
             if (hr != MK_E_UNAVAILABLE)

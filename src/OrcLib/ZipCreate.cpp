@@ -110,8 +110,11 @@ HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, Co
 {
     HRESULT hr = E_FAIL;
 
+    Log::Debug(L"ZipCreate: {}: set compression level to {}", m_ArchiveName, level);
+
     if (!pArchiver)
     {
+        Log::Error("ZipCreate: Failed to update compression level: invalid pointer");
         return E_POINTER;
     }
 
@@ -121,10 +124,16 @@ HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, Co
 
     CComPtr<ISetProperties> setter;
     if (FAILED(hr = pArchiver->QueryInterface(IID_ISetProperties, reinterpret_cast<void**>(&setter))))
+    {
+        Log::Error("Failed to retrieve IID_ISetProperties [{}]", SystemError(hr));
         return hr;
+    }
 
     if (FAILED(hr = setter->SetProperties(names, values, numProps)))
+    {
+        Log::Error("Failed to set properties [{}]", SystemError(hr));
         return hr;
+    }
 
     return S_OK;
 }
@@ -181,9 +190,16 @@ ZipCreate::InitArchive(__in const std::shared_ptr<ByteStream>& pOutputStream, Or
     return S_OK;
 }
 
-HRESULT ZipCreate::SetCompressionLevel(__in const std::wstring& strLevel)
+HRESULT ZipCreate::SetCompressionLevel(__in const std::wstring& level)
 {
-    m_CompressionLevel = GetCompressionLevel(strLevel);
+    if (level.empty())
+    {
+        Log::Debug(L"Specified compression level is empty");
+        return S_OK;
+    }
+
+    Log::Debug(L"Updated internal compression level to {}", level);
+    m_CompressionLevel = GetCompressionLevel(level);
 
     return S_OK;
 }
@@ -210,7 +226,10 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
         }
 
         if (FAILED(hr = SetCompressionLevel(pArchiver, m_CompressionLevel)))
+        {
+            Log::Error(L"Failed to set compression level to {} [{}]", m_CompressionLevel, SystemError(hr));
             return hr;
+        }
 
         if (pArchiver == nullptr)
             return E_NOT_VALID_STATE;

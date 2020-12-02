@@ -84,6 +84,11 @@ public:
     };
 };
 
+void Main::Configure(int argc, const wchar_t* argv[])
+{
+    UtilitiesMain::Configure(argc, argv);
+}
+
 HRESULT Main::ChangeTemporaryEnvironment()
 {
     HRESULT hr = E_FAIL;

@@ -14,6 +14,7 @@
 #include <cassert>
 
 namespace Orc {
+namespace Log {
 
 template <typename T, typename Mutex>
 class MemorySink : public spdlog::sinks::base_sink<Mutex>
@@ -41,4 +42,5 @@ private:
     T m_buffer;
 };
 
+}  // namespace Log
 }  // namespace Orc

@@ -23,35 +23,32 @@ namespace detail {
 std::vector<std::wstring> GetMountPointList(const Location& location);
 }
 
-template <typename T>
-void Print(Orc::Text::Tree<T>& node, const std::shared_ptr<Orc::Location>& location)
+template <>
+struct Printer<Orc::Location>
 {
-    assert(location);
-    Print(node, *location);
-}
-
-template <typename T>
-void Print(Orc::Text::Tree<T>& node, const Orc::Location& location)
-{
-    std::vector<std::wstring> properties;
-
-    properties.push_back(ToString(location.GetType()));
-
-    if (location.IsValid())
+    template <typename T>
+    static void Output(Orc::Text::Tree<T>& node, const Orc::Location& location)
     {
-        properties.push_back(fmt::format(L"Serial: {:0>16X}", location.SerialNumber()));
-    }
+        std::vector<std::wstring> properties;
 
-    properties.push_back(location.IsValid() ? L"Valid" : L"Invalid");
-    properties.push_back(ToString(location.GetFSType()));
-    const auto mountPointList = detail::GetMountPointList(location);
-    if (mountPointList.size())
-    {
-        properties.push_back(fmt::format(L"[{}]", boost::join(mountPointList, L", ")));
-    }
+        properties.push_back(ToString(location.GetType()));
 
-    Print(node, fmt::format(L"{}  [{}]", location.GetLocation(), boost::join(properties, L", ")));
-}
+        if (location.IsValid())
+        {
+            properties.push_back(fmt::format(L"Serial: {:0>16X}", location.SerialNumber()));
+        }
+
+        properties.push_back(location.IsValid() ? L"Valid" : L"Invalid");
+        properties.push_back(ToString(location.GetFSType()));
+        const auto mountPointList = detail::GetMountPointList(location);
+        if (mountPointList.size())
+        {
+            properties.push_back(fmt::format(L"[{}]", boost::join(mountPointList, L", ")));
+        }
+
+        Print(node, fmt::format(L"{}  [{}]", location.GetLocation(), boost::join(properties, L", ")));
+    }
+};
 
 }  // namespace Text
 }  // namespace Orc

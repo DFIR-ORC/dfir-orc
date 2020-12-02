@@ -235,6 +235,8 @@ set(SRC_WOLFLAUNCHER
     "WolfLauncher_Run.cpp"
     "WolfTask.cpp"
     "WolfTask.h"
+    "Output/Text/Fmt/WolfPriority.h"
+    "Output/Text/Print/Recipient.h"
     "WolfLauncherSqlSchema.xml"
 )
 

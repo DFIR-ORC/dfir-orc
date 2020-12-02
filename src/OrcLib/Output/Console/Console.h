@@ -30,6 +30,11 @@ struct StdoutContainerAdapter
     using value_type = T;
     void push_back(T c)
     {
+        if (c == 0)
+        {
+            return;
+        }
+
         Traits::get_std_out<T>() << c;
 
         // Using stdout with multiple threads requires synchronization so it should not be bothering to have a 'static'
@@ -37,11 +42,8 @@ struct StdoutContainerAdapter
         static std::basic_string<T> line;
         if (c == Traits::newline_v<T>)
         {
-            if (line.size() > 1)
-            {
-                Log::Debug(Logger::Facility::kLogFile, line);
-                line.clear();
-            }
+            Log::Info(Logger::Facility::kLogFile, line);
+            line.clear();
         }
         else
         {

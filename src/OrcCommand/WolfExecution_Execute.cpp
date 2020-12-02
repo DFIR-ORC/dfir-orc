@@ -504,7 +504,7 @@ HRESULT WolfExecution::CreateCommandAgent(
     m_pTermination = std::make_shared<WOLFExecutionTerminate>(m_commandSet, this);
     Robustness::AddTerminationHandler(m_pTermination);
 
-    if (m_ProcessStatisticsOutput.Type & OutputSpec::Kind::TableFile)
+    if (HasFlag(m_ProcessStatisticsOutput.Type, OutputSpec::Kind::TableFile))
     {
         m_ProcessStatisticsWriter = TableOutput::GetWriter(m_ProcessStatisticsOutput);
 
@@ -514,7 +514,7 @@ HRESULT WolfExecution::CreateCommandAgent(
         }
     }
 
-    if (m_JobStatisticsOutput.Type & OutputSpec::Kind::TableFile)
+    if (HasFlag(m_JobStatisticsOutput.Type, OutputSpec::Kind::TableFile))
     {
         m_JobStatisticsWriter = TableOutput::GetWriter(m_JobStatisticsOutput);
         if (m_JobStatisticsWriter == nullptr)
@@ -741,8 +741,16 @@ HRESULT WolfExecution::TerminateAllAndComplete()
 HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue)
 {
     HRESULT hr = E_FAIL;
-    m_ProcessStatisticsWriter->Close();
-    m_JobStatisticsWriter->Close();
+
+    if (m_ProcessStatisticsWriter)
+    {
+        m_ProcessStatisticsWriter->Close();
+    }
+
+    if (m_JobStatisticsWriter)
+    {
+        m_JobStatisticsWriter->Close();
+    }
 
     if (VerifyFileExists(m_ProcessStatisticsOutput.Path.c_str()) == S_OK)
     {
@@ -817,6 +825,9 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
         auto start = Orc::ConvertTo(m_StartTime);
         auto end = Orc::ConvertTo(m_ArchiveFinishTime);
         auto duration = end - start;
+
+        m_journal.Print(
+            GetKeyword(), L"Archive", L"Ended (output: {} bytes, elapsed: {:%T})", archiveSize(), duration);
 
         Log::Info(
             L"{}: {} (took {} seconds, size {} bytes)",

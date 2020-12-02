@@ -12,9 +12,11 @@
 #include "SystemDetails.h"
 #include "ToolVersion.h"
 #include "Usage.h"
+#include "Output/Text/Fmt/WolfPriority.h"
 #include "Output/Text/Print/OutputSpec.h"
 #include "Output/Text/Print/LocationSet.h"
 #include "Output/Text/Print/Bool.h"
+#include "Output/Text/Print/Recipient.h"
 
 using namespace Orc::Command::Wolf;
 using namespace Orc::Text;
@@ -23,6 +25,21 @@ using namespace Orc;
 namespace Orc {
 namespace Command {
 namespace Wolf {
+
+std::wstring Main::ToString(WolfPriority value)
+{
+    switch (value)
+    {
+        case WolfPriority::Low:
+            return L"Low";
+        case WolfPriority::Normal:
+            return L"Normal";
+        case WolfPriority::High:
+            return L"High";
+        default:
+            return L"<Unknown>";
+    }
+}
 
 std::wstring Main::ToString(Main::WolfPowerState value)
 {
@@ -33,22 +50,22 @@ std::wstring Main::ToString(Main::WolfPowerState value)
         return L"<SystemDefault>";
     }
 
-    if (value & Main::WolfPowerState::SystemRequired)
+    if (HasFlag(value, Main::WolfPowerState::SystemRequired))
     {
         properties.push_back(L"SystemRequired");
     }
 
-    if (value & Main::WolfPowerState::DisplayRequired)
+    if (HasFlag(value, Main::WolfPowerState::DisplayRequired))
     {
         properties.push_back(L"DisplayRequired");
     }
 
-    if (value & Main::WolfPowerState::UserPresent)
+    if (HasFlag(value, Main::WolfPowerState::UserPresent))
     {
         properties.push_back(L"UserPresent");
     }
 
-    if (value & Main::WolfPowerState::AwayMode)
+    if (HasFlag(value, Main::WolfPowerState::AwayMode))
     {
         properties.push_back(L"AwayMode");
     }
@@ -153,7 +170,8 @@ void Main::PrintParameters()
     PrintValue(node, L"Outline file", config.Outline.Path);
     PrintValue(node, L"Priority", config.Priority);
     PrintValue(node, L"Power State", ToString(config.PowerState));
-    PrintValue(node, L"Key selection", fmt::format(L"{}", boost::join(config.OnlyTheseKeywords, L", ")));
+    auto keySelection = boost::join(config.OnlyTheseKeywords, L", ");
+    PrintValue(node, L"Key selection", keySelection.empty() ? Text::kNoneW : keySelection);
     PrintValues(node, L"Enable keys", config.EnableKeywords);
     PrintValues(node, L"Disable keys", config.DisableKeywords);
 
@@ -165,7 +183,7 @@ void Main::PrintFooter()
     m_console.PrintNewLine();
 
     auto root = m_console.OutputTree();
-    auto node = root.AddNode("Statistics");
+    auto node = root.AddNode("DFIR-Orc WolfLauncher statistics");
     PrintCommonFooter(node);
 
     m_console.PrintNewLine();
