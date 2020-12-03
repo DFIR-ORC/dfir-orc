@@ -78,7 +78,7 @@ public:
     };
 
 private:
-    OrcCommand::Output::Journal& m_journal;
+    Command::Output::Journal& m_journal;
     std::wstring m_logFilePath;
 
     std::wstring m_commandSet;
@@ -275,7 +275,7 @@ public:
 
     HRESULT CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue);
 
-    WolfExecution(OrcCommand::Output::Journal& journal)
+    WolfExecution(Command::Output::Journal& journal)
         : m_journal(journal)
     {
     }

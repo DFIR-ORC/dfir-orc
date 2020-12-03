@@ -35,7 +35,7 @@ public:
     } Status;
 
 private:
-    OrcCommand::Output::Journal& m_journal;
+    Orc::Command::Output::Journal& m_journal;
     std::wstring m_commandSet;
     std::wstring m_command;
 
@@ -55,7 +55,7 @@ private:
 public:
     WolfTask() = delete;
 
-    WolfTask(const std::wstring& commandSet, const std::wstring& command, OrcCommand::Output::Journal& journal)
+    WolfTask(const std::wstring& commandSet, const std::wstring& command, Command::Output::Journal& journal)
         : m_journal(journal)
         , m_commandSet(commandSet)
         , m_command(command)

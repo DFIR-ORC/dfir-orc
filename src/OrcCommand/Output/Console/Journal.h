@@ -19,8 +19,7 @@
 
 #include "UploadNotification.h"
 
-namespace OrcCommand {
-namespace Output {
+namespace Orc::Command::Output {
 
 class Journal
 {
@@ -54,5 +53,4 @@ private:
     Orc::Output::Console& m_console;
 };
 
-}  // namespace Output
-}  // namespace OrcCommand
+}  // namespace Orc::Command::Output

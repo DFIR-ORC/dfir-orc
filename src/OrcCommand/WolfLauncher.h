@@ -170,7 +170,7 @@ public:
     HRESULT Run();
 
 private:
-    OrcCommand::Output::Journal m_journal;
+    Command::Output::Journal m_journal;
 
     Configuration config;
 
