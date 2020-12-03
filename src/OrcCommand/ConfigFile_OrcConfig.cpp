@@ -11,7 +11,7 @@
 #include "ConfigFile_Common.h"
 
 #include "ConfigFile_OrcConfig.h"
-#include "ConfigFile_WOLFLauncher.h"
+#include "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
 
 HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
 {

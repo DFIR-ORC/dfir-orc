@@ -59,7 +59,7 @@ USNINFO_SQLSCHEMA       BINARY                  "USNInfoSqlSchema.xml"
 
 OBJINFO_SQLSCHEMA       BINARY                  "ObjInfoSqlSchema.xml"
 
-WOLFLAUNCHER_SQLSCHEMA  BINARY                  "WolfLauncherSqlSchema.xml"
+WOLFLAUNCHER_SQLSCHEMA  BINARY                  "Command/WolfLauncher/WolfLauncherSqlSchema.xml"
 
 REGINFO_SQLSCHEMA       BINARY                  "RegInfoSqlSchema.xml"
 

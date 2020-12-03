@@ -21,7 +21,7 @@
 #include "NTFSUtil.h"
 #include "ToolEmbed.h"
 #include "USNInfo.h"
-#include "WolfLauncher.h"
+#include "Command/WolfLauncher/WolfLauncher.h"
 #include "ObjInfo.h"
 #include "FatInfo.h"
 #include "DD.h"

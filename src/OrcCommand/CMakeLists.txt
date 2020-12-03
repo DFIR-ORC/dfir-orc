@@ -142,6 +142,8 @@ set(SRC_MOTHERSHIP
     "Mothership_Config.cpp"
     "Mothership_Output.cpp"
     "Mothership_Run.cpp"
+    "ConfigFile_OrcConfig.cpp"
+    "ConfigFile_OrcConfig.h"
 )
 
 source_group(MotherShip FILES ${SRC_MOTHERSHIP})
@@ -220,24 +222,21 @@ set(SRC_USNINFO
 source_group(USNInfo FILES ${SRC_USNINFO})
 
 set(SRC_WOLFLAUNCHER
-    "ConfigFile_OrcConfig.cpp"
-    "ConfigFile_OrcConfig.h"
-    "ConfigFile_WOLFLauncher.cpp"
-    "ConfigFile_WOLFLauncher.h"
-    "WolfExecution.cpp"
-    "WolfExecution.h"
-    "WolfExecution_Config.cpp"
-    "WolfExecution_Execute.cpp"
-    "WolfLauncher.h"
-    "WolfLauncherSqlSchema.xml"
-    "WolfLauncher_Config.cpp"
-    "WolfLauncher_Output.cpp"
-    "WolfLauncher_Run.cpp"
-    "WolfTask.cpp"
-    "WolfTask.h"
+    "Command/WolfLauncher/ConfigFile_WOLFLauncher.cpp"
+    "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
+    "Command/WolfLauncher/WolfExecution.cpp"
+    "Command/WolfLauncher/WolfExecution.h"
+    "Command/WolfLauncher/WolfExecution_Config.cpp"
+    "Command/WolfLauncher/WolfExecution_Execute.cpp"
+    "Command/WolfLauncher/WolfLauncher.h"
+    "Command/WolfLauncher/WolfLauncher_Config.cpp"
+    "Command/WolfLauncher/WolfLauncher_Output.cpp"
+    "Command/WolfLauncher/WolfLauncher_Run.cpp"
+    "Command/WolfLauncher/WolfTask.cpp"
+    "Command/WolfLauncher/WolfTask.h"
+    "Command/WolfLauncher/WolfLauncherSqlSchema.xml"
     "Output/Text/Fmt/WolfPriority.h"
     "Output/Text/Print/Recipient.h"
-    "WolfLauncherSqlSchema.xml"
 )
 
 source_group(WolfLauncher FILES ${SRC_WOLFLAUNCHER})
@@ -270,7 +269,6 @@ target_include_directories(OrcCommand
         ${Boost_INCLUDE_DIRS}
     PUBLIC
         ${GENERATED_SRC_DIR}
-    INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
