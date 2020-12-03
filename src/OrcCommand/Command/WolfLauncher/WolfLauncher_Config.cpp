@@ -23,8 +23,8 @@
 #include "LocationSet.h"
 #include "CaseInsensitive.h"
 #include "SystemDetails.h"
-#include "ConfigFile_WOLFLauncher.h"
 #include "ConfigFile_OrcConfig.h"
+#include "ConfigFile_WOLFLauncher.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
