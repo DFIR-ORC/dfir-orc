@@ -88,8 +88,6 @@ public:
                     return nullptr;
                 }
             }
-            Log::Debug(L"Library {} is loaded and initialized", Name<Library>());
-
             if (!pLib->m_UnLoadHandler)
             {
                 pLib->m_UnLoadHandler = std::make_shared<ExtensionLibraryHandler<Library>>(L"ExtensionLibraryUnLoad");

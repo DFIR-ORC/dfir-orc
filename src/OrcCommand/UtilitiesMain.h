@@ -987,6 +987,7 @@ public:
         }
         catch (...)
         {
+            std::cerr << "Exception during during command execution" << std::endl;
             Log::Critical("Exception during configuration evaluation.");
 
 #ifdef ORC_BUILD_BOOST_STACKTRACE
@@ -1011,8 +1012,8 @@ public:
         if (Cmd.m_logging.logger().errorCount())
         {
             Log::Critical(
-                L"Dump log backtrace due to some previously encoutered error(s). "
-                L"This could probably be ignored, you may NOT have encoutered any critical error. Error levels are "
+                L"Dump log backtrace due to some previously encountered error(s). "
+                L"This could probably be ignored, you may NOT have encountered any critical error. Error levels are "
                 L"being reevaluated and this backtrace could help in case of mistakes.");
         }
 

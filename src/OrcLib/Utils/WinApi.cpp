@@ -13,6 +13,7 @@
 #include <psapi.h>
 
 #include "Utils/WinApi.h"
+#include "Log/Log.h"
 
 namespace Orc {
 
@@ -35,20 +36,23 @@ std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, size_t cbMa
         if (cchDone == 0)
         {
             ec.assign(GetLastError(), std::system_category());
+            Log::Debug(L"Failed ExpandEnvironmentStringsApi '{}' [{}]", szEnvString, ec);
             return {};
         }
 
         if (cchDone != cchRequired)
         {
             ec.assign(ERROR_INVALID_DATA, std::system_category());
+            Log::Debug(L"Failed ExpandEnvironmentStringsApi '{}'", szEnvString);
             return {};
         }
 
         // remove terminating NULL character
         output.resize(cchDone - 1);
     }
-    catch (const std::length_error&)
+    catch (const std::length_error& e)
     {
+        Log::Debug("Failed ExpandEnvironmentStringsApi '{}' [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }
@@ -74,14 +78,16 @@ std::wstring GetWorkingDirectoryApi(size_t cbMaxOutput, std::error_code& ec) noe
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
+            Log::Debug(L"Failed GetWorkingDirectoryApi [{}]", ec);
             return {};
         }
 
         directory.resize(cch);
         directory.shrink_to_fit();
     }
-    catch (const std::length_error&)
+    catch (const std::length_error& e)
     {
+        Log::Debug("Failed GetWorkingDirectoryApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }
@@ -107,14 +113,16 @@ std::wstring GetTempPathApi(size_t cbMaxOutput, std::error_code& ec) noexcept
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
+            Log::Debug(L"Failed GetTempPathApi [{}]", ec);
             return {};
         }
 
         path.resize(cch);
         path.shrink_to_fit();
     }
-    catch (const std::length_error&)
+    catch (const std::length_error& e)
     {
+        Log::Debug("Failed GetTempPathApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }
@@ -142,14 +150,16 @@ GetTempFileNameApi(const wchar_t* lpPathName, const wchar_t* lpPrefixString, UIN
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
+            Log::Debug(L"Failed GetTempFileNameApi [{}]", ec);
             return {};
         }
 
         path.resize(cch);
         path.shrink_to_fit();
     }
-    catch (const std::length_error&)
+    catch (const std::length_error& e)
     {
+        Log::Debug("Failed GetTempFileNameApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }
@@ -176,6 +186,7 @@ std::wstring GetModuleFileNameApi(HMODULE hModule, size_t cbMaxOutput, std::erro
         if (lastError != ERROR_SUCCESS)
         {
             ec.assign(lastError, std::system_category());
+            Log::Debug(L"Failed GetModuleFileNameApi [{}]", ec);
             return {};
         }
 
@@ -188,6 +199,7 @@ std::wstring GetModuleFileNameApi(HMODULE hModule, size_t cbMaxOutput, std::erro
             // ERROR_SUCCESS.
             //
             ec.assign(ERROR_INSUFFICIENT_BUFFER, std::system_category());
+            Log::Debug(L"Failed GetModuleFileNameApi [{}]", ec);
             return {};
         }
 
@@ -196,6 +208,7 @@ std::wstring GetModuleFileNameApi(HMODULE hModule, size_t cbMaxOutput, std::erro
     }
     catch (const std::length_error& e)
     {
+        Log::Debug("Failed GetModuleFileNameApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }
@@ -222,6 +235,7 @@ std::wstring GetModuleFileNameExApi(HANDLE hProcess, HMODULE hModule, size_t cbM
         if (cch == 0 || lastError != ERROR_SUCCESS)
         {
             ec.assign(lastError, std::system_category());
+            Log::Debug(L"Failed GetModuleFileNameExApi [{}]", ec);
             return {};
         }
 
@@ -230,6 +244,7 @@ std::wstring GetModuleFileNameExApi(HANDLE hProcess, HMODULE hModule, size_t cbM
     }
     catch (const std::length_error& e)
     {
+        Log::Debug("Failed GetModuleFileNameExApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }

@@ -183,7 +183,7 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        Log::Error(L"Option /{} should be like: /{}=c:\\temp", szOption, szOption);
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp", szOption);
         return false;
     }
     if (pEquals != szArg + cchOption)
@@ -213,7 +213,7 @@ bool UtilitiesMain::OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstri
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        Log::Error(L"Option /{} should be like: /{}=c:\\temp\\OutputFile.csv", szOption, szOption);
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp\\OutputFile.csv", szOption);
         return false;
     }
     if (auto hr = GetOutputFile(pEquals + 1, strOutputFile, true); FAILED(hr))
@@ -232,7 +232,7 @@ bool UtilitiesMain::OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        Log::Error(L"Option /{} should be like: /{}=c:\\temp", szOption, szOption);
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp", szOption);
         return false;
     }
     if (auto hr = GetOutputDir(pEquals + 1, strOutputDir, true); FAILED(hr))
@@ -251,7 +251,7 @@ bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        Log::Error(L"Option /{} should be like: /{}=c:\\temp\\InputFile.csv", szOption, szOption);
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp\\InputFile.csv", szOption);
         return false;
     }
 

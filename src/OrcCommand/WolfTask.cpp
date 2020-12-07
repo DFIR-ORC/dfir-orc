@@ -130,7 +130,7 @@ HRESULT WolfTask::ApplyNotification(
             break;
         case CommandNotification::ProcessTimeLimit:
             // Process has reached its time limit, kill it!
-            Log::Critical(
+            Log::Error(
                 L"{} (pid: {}): CPU Time limit, it will now be terminated",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
@@ -143,7 +143,7 @@ HRESULT WolfTask::ApplyNotification(
         case CommandNotification::ProcessAbnormalTermination:
             m_dwExitCode = notification->GetExitCode();
 
-            Log::Critical(
+            Log::Error(
                 L"{} (pid: {}): Abnormal termination [{}]",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID,
@@ -152,7 +152,7 @@ HRESULT WolfTask::ApplyNotification(
             m_Status = Failed;
             break;
         case CommandNotification::ProcessMemoryLimit:
-            Log::Critical(
+            Log::Error(
                 L"{} (pid: {}): Memory limit, it will now be terminated",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
@@ -161,7 +161,7 @@ HRESULT WolfTask::ApplyNotification(
             m_Status = Failed;
             break;
         case CommandNotification::AllTerminated:
-            Log::Critical(
+            Log::Error(
                 L"{} (pid: {}): Memory limit, it will now be terminated",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);

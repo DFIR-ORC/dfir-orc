@@ -70,7 +70,10 @@ HRESULT BITSAgent::Initialize()
     HRESULT hr = E_FAIL;
 
     if (m_config.Method != OutputSpec::UploadMethod::BITS)
+    {
+        Log::Error("BITSAgent failed to initialize because of invalid method");
         return E_UNEXPECTED;
+    }
 
     // Specify the appropriate COM threading model for your application.
     hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
@@ -96,19 +99,22 @@ HRESULT BITSAgent::Initialize()
                     (void**)&m_pbcm);
                 if (FAILED(hr))
                 {
-                    Log::Error(L"Failed to create instance of background copy manager 2.0");
+                    Log::Error(L"BITSAgent failed to create instance of background copy manager 2.0");
                     return hr;
                 }
             }
             else
             {
-                Log::Error(L"Failed to create instance of background copy manager 2.5");
+                Log::Error(L"BITSAgent failed to create instance of background copy manager 2.5");
                 return hr;
             }
         }
     }
     else
+    {
+        Log::Error(L"BITSAgent failed CoInitializeEx [{}]", SystemError(hr));
         return hr;
+    }
 
     // TODO: Mutualize this code between the copyfileagent & bitsagent
     if (m_config.bitsMode == OutputSpec::BITSMode::SMB && !m_config.UserName.empty())
@@ -146,7 +152,7 @@ HRESULT BITSAgent::Initialize()
 
         if ((dwRet = WNetAddConnection2(&nr, szPass, szUser, CONNECT_TEMPORARY)) != NO_ERROR)
         {
-            Log::Error(L"Failed to add a connection to {} [{}]", szUNC, Win32Error(dwRet));
+            Log::Error(L"BITSAgent failed to add a connection to {} [{}]", szUNC, Win32Error(dwRet));
         }
         else
         {
