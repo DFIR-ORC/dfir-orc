@@ -27,6 +27,7 @@ HRESULT WolfTask::ApplyNotification(
             m_journal.Print(
                 m_commandSet, m_command, L"Started (pid: {})", m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
 
+            m_commandLine = notification->GetProcessCommandLine();
             m_dwPID = static_cast<DWORD>(notification->GetProcessID());
             m_startTime = notification->GetStartTime();
             m_status = Running;

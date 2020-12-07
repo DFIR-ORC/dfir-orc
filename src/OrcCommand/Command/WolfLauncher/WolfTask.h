@@ -53,6 +53,7 @@ public:
     const std::wstring& CommandSet() const { return m_commandSet; }
     DWORD Pid() const { return m_dwPID; }
     DWORD ExitCode() const { return m_dwExitCode; }
+    const std::wstring& CommandLine() const { return m_commandLine; }
 
     HRESULT ApplyNotification(
         const std::shared_ptr<CommandNotification>& notification,
@@ -63,6 +64,7 @@ private:
 
     std::wstring m_commandSet;
     std::wstring m_command;
+    std::wstring m_commandLine;
 
     DWORD m_dwPID;
     DWORD m_dwExitCode;
@@ -72,7 +74,6 @@ private:
 
     FILETIME m_startTime;
     FILETIME m_lastActiveTime;
-
 
     Status m_status;
 

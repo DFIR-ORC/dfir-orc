@@ -341,13 +341,18 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
     }
 
     {
-        std::vector<WCHAR> szCommandLine(MAX_CMDLINE);
+        // Use 'MAX_CMDLINE - 1' to ensure space for the null character inserted since C++11
+        std::wstring commandLine(cmdLineBuilder);
+        if (commandLine.size() > MAX_CMDLINE - 1)
+        {
+            commandLine.resize(MAX_CMDLINE - 1);
+        }
 
-        wcsncpy_s(szCommandLine.data(), MAX_CMDLINE, cmdLineBuilder.c_str(), cmdLineBuilder.size());
+        m_commandLine = commandLine;
 
-        if (!CreateProcess(
+        if (!CreateProcessW(
                 m_ImageFilePath.c_str(),
-                szCommandLine.data(),
+                commandLine.data(),
                 NULL,
                 NULL,
                 TRUE,
@@ -359,10 +364,7 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
             Log::Error(
-                L"Could not start '{}' with command line '{}' [{}]",
-                m_ImageFilePath,
-                szCommandLine.data(),
-                SystemError(hr));
+                L"Could not start '{}' with command line '{}' [{}]", m_ImageFilePath, commandLine, SystemError(hr));
             return hr;
         }
     }

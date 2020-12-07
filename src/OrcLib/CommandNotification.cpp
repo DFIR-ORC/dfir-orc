@@ -39,14 +39,18 @@ CommandNotification::CommandNotification(CommandNotification::Event anevent)
 {
 }
 
-CommandNotification::Notification
-CommandNotification::NotifyStarted(DWORD dwPid, const std::wstring& Keyword, HANDLE hProcess)
+CommandNotification::Notification CommandNotification::NotifyStarted(
+    DWORD dwPid,
+    const std::wstring& Keyword,
+    HANDLE hProcess,
+    const std::wstring& commandLine)
 {
     auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Started);
 
     retval->m_Result = CommandNotification::Success;
     retval->m_dwPid = dwPid;
     retval->m_Keyword = Keyword;
+    retval->m_commandLine = commandLine;
 
     if (hProcess != INVALID_HANDLE_VALUE)
     {

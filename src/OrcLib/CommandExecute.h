@@ -202,6 +202,7 @@ public:
 private:
     ProcessStatus m_Status;
     DWORD m_dwExitCode;
+    std::wstring m_commandLine;
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
 
