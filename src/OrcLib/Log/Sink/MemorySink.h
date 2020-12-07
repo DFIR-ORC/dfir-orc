@@ -1,5 +1,3 @@
-#pragma once
-
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
@@ -7,6 +5,7 @@
 //
 // Author(s): fabienfl
 //
+#pragma once
 
 #include <spdlog/sinks/base_sink.h>
 
@@ -17,10 +16,10 @@ namespace Orc {
 namespace Log {
 
 template <typename T, typename Mutex>
-class MemorySink : public spdlog::sinks::base_sink<Mutex>
+class MemorySink final : public spdlog::sinks::base_sink<Mutex>
 {
 public:
-    MemorySink(size_t size) { m_buffer.reserve(size); }
+    explicit MemorySink(size_t size) { m_buffer.reserve(size); }
 
     T& buffer() { return m_buffer; }
     const T& buffer() const { return m_buffer; }

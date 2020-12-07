@@ -128,7 +128,7 @@ private:
     DWORD m_dwLongerTaskKeyword = 0L;
 
     CommandMessage::PriorityMessageBuffer m_cmdAgentBuffer;
-    std::unique_ptr<Concurrency::call<CommandNotification::Notification>> m_cmdNotification;
+    std::unique_ptr<Concurrency::call<CommandNotification::Ptr>> m_cmdNotification;
     std::unique_ptr<CommandAgent> m_cmdAgent;
 
     JobRestrictions m_Restrictions;
@@ -142,10 +142,10 @@ private:
     CommandMessage::Message SetCommandFromConfigItem(const ConfigItem& item);
     HRESULT GetExecutableToRun(const ConfigItem& item, std::wstring& strExeToRun, std::wstring& strArgToAdd);
 
-    HRESULT AddProcessStatistics(ITableOutput& output, const CommandNotification::Notification& notification);
-    HRESULT AddJobStatistics(ITableOutput& output, const CommandNotification::Notification& notification);
+    HRESULT AddProcessStatistics(ITableOutput& output, const CommandNotification::Ptr& notification);
+    HRESULT AddJobStatistics(ITableOutput& output, const CommandNotification::Ptr& notification);
 
-    HRESULT NotifyTask(const CommandNotification::Notification& item);
+    HRESULT NotifyTask(const CommandNotification::Ptr& item);
 
     static std::wregex g_WinVerRegEx;
 

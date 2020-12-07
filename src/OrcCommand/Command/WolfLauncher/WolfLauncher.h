@@ -153,7 +153,9 @@ public:
 
     Main()
         : UtilitiesMain()
-        , m_journal(m_console) {};
+        , m_journal(m_console)
+    {
+    }
 
     void PrintUsage();
     void PrintFooter();

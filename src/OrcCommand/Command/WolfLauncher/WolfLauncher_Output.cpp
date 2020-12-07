@@ -142,8 +142,7 @@ void Main::PrintUsage()
         Usage::Parameter {
             "/WERDontShowUI",
             "Configures Windows Error Reporting to prevent blocking UI in case of a crash during DFIR ORC execution. "
-            "WER previous configuration is restored at the end of DFIR ORC execution"}
-        };
+            "WER previous configuration is restored at the end of DFIR ORC execution"}};
 
     Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
 

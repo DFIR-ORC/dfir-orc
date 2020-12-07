@@ -157,58 +157,51 @@ HRESULT WolfExecution::CreateArchiveAgent()
 {
     HRESULT hr = E_FAIL;
 
-    m_archiveNotification = std::make_unique<Concurrency::call<ArchiveNotification::Notification>>(
-        [this](const ArchiveNotification::Notification& archive) {
-            const std::wstring operation = L"Archive";
+    m_archiveNotification = std::make_unique<
+        Concurrency::call<ArchiveNotification::Notification>>([this](const ArchiveNotification::Notification& archive) {
+        const std::wstring operation = L"Archive";
 
-            HRESULT hr = archive->GetHResult();
-            if (FAILED(hr))
-            {
-                Log::Critical(
-                    L"Failed creating archive '{}': {} [{}]",
-                    archive->Keyword(),
-                    archive->Description(),
-                    SystemError(archive->GetHResult()));
+        HRESULT hr = archive->GetHResult();
+        if (FAILED(hr))
+        {
+            Log::Critical(
+                L"Failed creating archive '{}': {} [{}]",
+                archive->Keyword(),
+                archive->Description(),
+                SystemError(archive->GetHResult()));
 
+            m_journal.Print(
+                archive->Keyword(),
+                operation,
+                L"Failed creating archive '{}': {} [{}]",
+                archive->GetFileName(),
+                archive->Description(),
+                SystemError(archive->GetHResult()));
+
+            return;
+        }
+
+        switch (archive->GetType())
+        {
+            case ArchiveNotification::ArchiveStarted:
+                m_journal.Print(archive->CommandSet(), operation, L"Started");
+                break;
+            case ArchiveNotification::FileAddition:
                 m_journal.Print(
-                    archive->Keyword(),
-                    operation,
-                    L"Failed creating archive '{}': {} [{}]",
-                    archive->GetFileName(),
-                    archive->Description(),
-                    SystemError(archive->GetHResult()));
-
-                return;
-            }
-
-            switch (archive->GetType())
-            {
-                case ArchiveNotification::ArchiveStarted:
-                    m_journal.Print(archive->CommandSet(), operation, L"Started");
-                    break;
-                case ArchiveNotification::FileAddition:
-                    m_journal.Print(
-                        archive->CommandSet(),
-                        operation,
-                        L"Add file: {} ({})",
-                        archive->Keyword(),
-                        archive->FileSize());
-                    break;
-                case ArchiveNotification::DirectoryAddition:
-                    m_journal.Print(archive->CommandSet(), operation, L"Add directory: {}", archive->Keyword());
-                    break;
-                case ArchiveNotification::StreamAddition:
-                    m_journal.Print(archive->CommandSet(), operation, L"Add stream: {}", archive->Keyword());
-                    break;
-                case ArchiveNotification::ArchiveComplete:
-                    m_journal.Print(
-                        archive->CommandSet(),
-                        operation, L"Completed: {} ({})",
-                        archive->Keyword(),
-                        archive->FileSize());
-                    break;
-            }
-        });
+                    archive->CommandSet(), operation, L"Add file: {} ({})", archive->Keyword(), archive->FileSize());
+                break;
+            case ArchiveNotification::DirectoryAddition:
+                m_journal.Print(archive->CommandSet(), operation, L"Add directory: {}", archive->Keyword());
+                break;
+            case ArchiveNotification::StreamAddition:
+                m_journal.Print(archive->CommandSet(), operation, L"Add stream: {}", archive->Keyword());
+                break;
+            case ArchiveNotification::ArchiveComplete:
+                m_journal.Print(
+                    archive->CommandSet(), operation, L"Completed: {} ({})", archive->Keyword(), archive->FileSize());
+                break;
+        }
+    });
 
     m_archiveAgent =
         std::make_unique<ArchiveAgent>(m_ArchiveMessageBuffer, m_ArchiveMessageBuffer, *m_archiveNotification);
@@ -326,7 +319,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
     return S_OK;
 }
 
-HRESULT WolfExecution::AddProcessStatistics(ITableOutput& output, const CommandNotification::Notification& notification)
+HRESULT WolfExecution::AddProcessStatistics(ITableOutput& output, const CommandNotification::Ptr& notification)
 {
     SystemDetails::WriteComputerName(output);
 
@@ -386,7 +379,7 @@ HRESULT WolfExecution::AddProcessStatistics(ITableOutput& output, const CommandN
     return S_OK;
 }
 
-HRESULT WolfExecution::AddJobStatistics(ITableOutput& output, const CommandNotification::Notification& notification)
+HRESULT WolfExecution::AddJobStatistics(ITableOutput& output, const CommandNotification::Ptr& notification)
 {
     HRESULT hr = E_FAIL;
 
@@ -455,7 +448,7 @@ HRESULT WolfExecution::AddJobStatistics(ITableOutput& output, const CommandNotif
     return S_OK;
 }
 
-HRESULT WolfExecution::NotifyTask(const CommandNotification::Notification& item)
+HRESULT WolfExecution::NotifyTask(const CommandNotification::Ptr& item)
 {
     HRESULT hr = E_FAIL;
 
@@ -523,8 +516,8 @@ HRESULT WolfExecution::CreateCommandAgent(
         }
     }
 
-    m_cmdNotification = std::make_unique<Concurrency::call<CommandNotification::Notification>>(
-        [this](const CommandNotification::Notification& item) {
+    m_cmdNotification =
+        std::make_unique<Concurrency::call<CommandNotification::Ptr>>([this](const CommandNotification::Ptr& item) {
             HRESULT hr = E_FAIL;
 
             if (item)
@@ -826,8 +819,7 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
         auto end = Orc::ConvertTo(m_ArchiveFinishTime);
         auto duration = end - start;
 
-        m_journal.Print(
-            GetKeyword(), L"Archive", L"Ended (output: {} bytes, elapsed: {:%T})", archiveSize(), duration);
+        m_journal.Print(GetKeyword(), L"Archive", L"Ended (output: {} bytes, elapsed: {:%T})", archiveSize(), duration);
 
         Log::Info(
             L"{}: {} (took {} seconds, size {} bytes)",

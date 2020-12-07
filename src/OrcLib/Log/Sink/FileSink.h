@@ -1,5 +1,3 @@
-#pragma once
-
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
@@ -7,6 +5,7 @@
 //
 // Author(s): fabienfl
 //
+#pragma once
 
 #include <memory>
 #include <cassert>
@@ -27,7 +26,7 @@ namespace Orc {
 namespace Log {
 
 template <typename Mutex>
-class FileSink : public spdlog::sinks::base_sink<Mutex>
+class FileSink final : public spdlog::sinks::base_sink<Mutex>
 {
 public:
     // No need of mutexes since FileSink synchronisation will be made on 'Mutex'

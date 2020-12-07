@@ -1690,13 +1690,7 @@ HRESULT SystemDetails::LoadSystemDetails()
         GetSystemTime(&st);
 
         g_pDetailsBlock->strTimeStamp = fmt::format(
-            L"{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}"sv,
-            st.wYear,
-            st.wMonth,
-            st.wDay,
-            st.wHour,
-            st.wMinute,
-            st.wSecond);
+            L"{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}"sv, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     }
     return S_OK;
 }

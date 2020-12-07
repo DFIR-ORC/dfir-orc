@@ -70,6 +70,7 @@ public:
         Done
     };
 
+    using Ptr = std::shared_ptr<CommandNotification>;
     using Notification = std::shared_ptr<CommandNotification>;
     using UnboundedMessageBuffer = Concurrency::unbounded_buffer<Notification>;
 

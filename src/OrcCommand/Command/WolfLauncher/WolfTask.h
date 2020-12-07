@@ -34,43 +34,52 @@ public:
         Done
     } Status;
 
-private:
-    Orc::Command::Output::Journal& m_journal;
-    std::wstring m_commandSet;
-    std::wstring m_command;
-
-    DWORD m_dwPID = 0L;
-    DWORD m_dwExitCode = 0L;
-
-    DWORD m_dwLastReportedHang = 30;
-    DWORD m_dwMostReportedHang = 0;
-
-    FILETIME m_StartTime;
-    FILETIME m_LastActiveTime;
-
-    PROCESS_TIMES m_Times;
-
-    Status m_Status = Init;
-
-public:
-    WolfTask() = delete;
-
     WolfTask(const std::wstring& commandSet, const std::wstring& command, Command::Output::Journal& journal)
         : m_journal(journal)
         , m_commandSet(commandSet)
         , m_command(command)
+        , m_dwPID(0)
+        , m_dwExitCode(-1)
+        , m_dwLastReportedHang(30)
+        , m_dwMostReportedHang(0)
+        , m_status(Init)
     {
-        ZeroMemory(&m_Times, sizeof(PROCESS_TIMES));
-        ZeroMemory(&m_LastActiveTime, sizeof(FILETIME));
-        ZeroMemory(&m_StartTime, sizeof(FILETIME));
+        ZeroMemory(&m_times, sizeof(PROCESS_TIMES));
+        ZeroMemory(&m_lastActiveTime, sizeof(FILETIME));
+        ZeroMemory(&m_startTime, sizeof(FILETIME));
     };
+
+    const std::wstring& Command() const { return m_command; }
+    const std::wstring& CommandSet() const { return m_commandSet; }
+    DWORD Pid() const { return m_dwPID; }
+    DWORD ExitCode() const { return m_dwExitCode; }
 
     HRESULT ApplyNotification(
         const std::shared_ptr<CommandNotification>& notification,
         std::vector<std::shared_ptr<CommandMessage>>& actions);
 
-    ~WolfTask();
+private:
+    Orc::Command::Output::Journal& m_journal;
+
+    std::wstring m_commandSet;
+    std::wstring m_command;
+
+    DWORD m_dwPID;
+    DWORD m_dwExitCode;
+
+    DWORD m_dwLastReportedHang;
+    DWORD m_dwMostReportedHang;
+
+    FILETIME m_startTime;
+    FILETIME m_lastActiveTime;
+
+
+    Status m_status;
+
+    PROCESS_TIMES m_times;
 };
+
 }  // namespace Command::Wolf
 }  // namespace Orc
+
 #pragma managed(pop)
