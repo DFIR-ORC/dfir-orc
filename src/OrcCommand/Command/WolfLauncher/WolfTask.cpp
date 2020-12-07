@@ -176,6 +176,12 @@ HRESULT WolfTask::ApplyNotification(
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
 
+            m_journal.Print(
+                m_commandSet,
+                m_command,
+                "{}: cpu time limit reached, terminating pid: {}",
+                m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
+
             actions.push_back(CommandMessage::MakeTerminateMessage(
                 static_cast<DWORD>(static_cast<DWORD64>(notification->GetProcessID()))));
 
@@ -197,6 +203,13 @@ HRESULT WolfTask::ApplyNotification(
                 L"{} (pid: {}): Memory limit, it will now be terminated",
                 m_command,
                 m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
+
+            m_journal.Print(
+                m_commandSet,
+                m_command,
+                "{}: memory limit reached, terminating pid: {}",
+                m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
+
             // Process has reached its memory limit, kill it!
             actions.push_back(CommandMessage::MakeTerminateMessage(m_dwPID));
             m_status = Failed;
