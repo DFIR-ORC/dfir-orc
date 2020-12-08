@@ -722,6 +722,8 @@ set(SRC_UTILITIES
     "Utils/Iconv.h"
     "Utils/MakeArray.h"
     "Utils/Result.h"
+    "Utils/Time.cpp"
+    "Utils/Time.h"
     "Utils/TypeTraits.h"
 )
 

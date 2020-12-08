@@ -38,8 +38,8 @@ using namespace Orc;
 using namespace Orc::Command;
 
 UtilitiesMain::UtilitiesMain()
-    : theStartTime({0})
-    , theFinishTime({0})
+    : theStartTime()
+    , theFinishTime()
 {
     theStartTickCount = 0L;
     theFinishTickCount = 0L;
