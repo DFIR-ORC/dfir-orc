@@ -24,6 +24,8 @@
 #include "WideAnsi.h"
 #include "WMIUtil.h"
 #include "BinaryBuffer.h"
+#include "Utils/Time.h"
+#include "Utils/TypeTraits.h"
 
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
@@ -39,6 +41,7 @@ struct SystemDetailsBlock
     std::wstring strComputerName;
     std::wstring strFullComputerName;
     std::wstring strTimeStamp;
+    Traits::TimeUtc<SYSTEMTIME> timestamp;
     std::optional<std::wstring> strOrcComputerName;
     std::optional<std::wstring> strOrcFullComputerName;
     std::optional<std::wstring> strProductType;
@@ -637,6 +640,16 @@ HRESULT SystemDetails::GetTimeStamp(std::wstring& strTimeStamp)
 
     strTimeStamp.assign(g_pDetailsBlock->strTimeStamp);
     return S_OK;
+}
+
+Result<Traits::TimeUtc<SYSTEMTIME>> SystemDetails::GetTimeStamp()
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+    {
+        return SystemError(hr);
+    }
+
+    return g_pDetailsBlock->timestamp;
 }
 
 HRESULT SystemDetails::WhoAmI(std::wstring& strMe)
