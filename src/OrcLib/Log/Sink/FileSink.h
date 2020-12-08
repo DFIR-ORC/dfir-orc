@@ -41,6 +41,8 @@ public:
     {
     }
 
+    ~FileSink() override { Close(); }
+
     void Open(const std::filesystem::path& path, std::error_code& ec)
     {
         std::lock_guard<Mutex> lock(mutex_);
