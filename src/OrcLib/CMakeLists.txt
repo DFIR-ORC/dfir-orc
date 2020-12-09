@@ -586,6 +586,7 @@ set(SRC_INOUT_TEXT_FMT
     "Output/Text/Fmt/PartitionFlags.h"
     "Output/Text/Fmt/PartitionType.h"
     "Output/Text/Fmt/path.h"
+    "Output/Text/Fmt/Result.h"
     "Output/Text/Fmt/SYSTEMTIME.h"
     "Output/Text/Fmt/TimeUtc.h"
 )
@@ -608,6 +609,7 @@ set(SRC_INOUT_TEXT_FMT_FWD
     "Output/Text/Fmt/Fwd/PartitionFlags.h"
     "Output/Text/Fmt/Fwd/PartitionType.h"
     "Output/Text/Fmt/Fwd/SYSTEMTIME.h"
+    "Output/Text/Fmt/Fwd/Result.h"
     "Output/Text/Fmt/Fwd/TimeUtc.h")
 
 source_group(In&Out\\Output\\Text\\Fmt\\Fwd FILES ${SRC_INOUT_TEXT_FMT_FWD})
