@@ -17,6 +17,9 @@ template <typename T>
 using Result = boost::outcome_v2::std_result<T>;
 
 template <typename T>
+using Success = boost::outcome_v2::success_type<T>;
+
+template <typename T>
 T& operator*(Result<T>& result)
 {
     return result.value();
