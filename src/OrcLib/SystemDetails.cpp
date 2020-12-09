@@ -642,6 +642,15 @@ HRESULT SystemDetails::GetTimeStamp(std::wstring& strTimeStamp)
     return S_OK;
 }
 
+HRESULT SystemDetails::GetTimeStampISO8601(std::wstring& strTimeStamp)
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return hr;
+
+    strTimeStamp = ToStringIso8601(g_pDetailsBlock->timestamp);
+    return S_OK;
+}
+
 Result<Traits::TimeUtc<SYSTEMTIME>> SystemDetails::GetTimeStamp()
 {
     if (auto hr = LoadSystemDetails(); FAILED(hr))
@@ -1677,17 +1686,17 @@ HRESULT SystemDetails::LoadSystemDetails()
     }
 
     {
-        SYSTEMTIME stNow;
-        GetSystemTime(&stNow);
+        auto& st = g_pDetailsBlock->timestamp.value;
+        GetSystemTime(&st);
 
         g_pDetailsBlock->strTimeStamp = fmt::format(
             L"{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}"sv,
-            stNow.wYear,
-            stNow.wMonth,
-            stNow.wDay,
-            stNow.wHour,
-            stNow.wMinute,
-            stNow.wSecond);
+            st.wYear,
+            st.wMonth,
+            st.wDay,
+            st.wHour,
+            st.wMinute,
+            st.wSecond);
     }
     return S_OK;
 }
