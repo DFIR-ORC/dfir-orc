@@ -76,6 +76,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::Close()
 {
     rapidWriter.EndObject();
     m_Stream.Flush();
+    m_Stream.Close();
     return S_OK;
 }
 
