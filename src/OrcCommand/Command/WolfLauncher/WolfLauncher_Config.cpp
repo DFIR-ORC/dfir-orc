@@ -178,6 +178,15 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
+    if (configitem[WOLFLAUNCHER_OUTCOME])
+    {
+        auto hr = E_FAIL;
+        if (FAILED(hr = config.Outcome.Configure(configitem[WOLFLAUNCHER_OUTCOME])))
+        {
+            Log::Warn(L"Failed to configure DFIR-Orc outcome file [{}]", SystemError(hr));
+        }
+    }
+
     if (!configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT])
     {
         config.msCommandTerminationTimeOut = 3h;
@@ -232,7 +241,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     for (const ConfigItem& archiveitem : configitem[WOLFLAUNCHER_ARCHIVE].NodeList)
     {
-        auto exec = std::make_unique<WolfExecution>(m_journal);
+        auto exec = std::make_unique<WolfExecution>(m_journal, m_outcome);
         hr = exec->SetJobConfigFromConfig(archiveitem);
         if (FAILED(hr))
         {
@@ -452,6 +461,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (OutputOption(argv[i] + 1, L"Outline", OutputSpec::Kind::StructuredFile, config.Outline))
                         ;
+                    else if (OutputOption(argv[i] + 1, L"Outcome", OutputSpec::Kind::StructuredFile, config.Outcome))
+                        ;
                     else if (BooleanOption(argv[i] + 1, L"Keys", bKeywords))
                         ;
                     else if (BooleanOption(argv[i] + 1, L"Execute", bExecute))
@@ -644,6 +655,20 @@ HRESULT Main::CheckConfiguration()
         {
             // We need to apply the output directory path to the outline file
             config.Outline.Path = std::filesystem::path(config.Output.Path) / config.Outline.FileName;
+        }
+        else
+        {
+            Log::Error(L"Invalid outline file type");
+            return E_INVALIDARG;
+        }
+    }
+
+    if (config.Outcome.Type != OutputSpec::Kind::None)
+    {
+        if (config.Outcome.IsStructuredFile())
+        {
+            // We need to apply the output directory path to the outline file
+            config.Outcome.Path = std::filesystem::path(config.Output.Path) / config.Outcome.FileName;
         }
         else
         {

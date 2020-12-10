@@ -167,6 +167,7 @@ void Main::PrintParameters()
     PrintValue(node, L"Offline", config.strOfflineLocation.value_or(L"<empty>"));
     PrintValue(node, L"Log file", config.Log.Path);
     PrintValue(node, L"Outline file", config.Outline.Path);
+    PrintValue(node, L"Outcome file", config.Outcome.Path);
     PrintValue(node, L"Priority", config.Priority);
     PrintValue(node, L"Power State", ToString(config.PowerState));
     auto keySelection = boost::join(config.OnlyTheseKeywords, L", ");

@@ -85,6 +85,7 @@ public:
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::SQL);
             Log.supportedTypes = OutputSpec::Kind::File;
             Outline.supportedTypes = OutputSpec::Kind::StructuredFile;
+            Outcome.supportedTypes = OutputSpec::Kind::StructuredFile;
             TempWorkingDir.supportedTypes = OutputSpec::Kind::Directory;
         };
 
@@ -96,6 +97,7 @@ public:
 
         OutputSpec Log;
         OutputSpec Outline;
+        OutputSpec Outcome;
 
         std::wstring strCompressionLevel;
 
@@ -154,6 +156,7 @@ public:
     Main()
         : UtilitiesMain()
         , m_journal(m_console)
+        , m_outcome()
     {
     }
 
@@ -173,6 +176,7 @@ public:
 
 private:
     Command::Output::Journal m_journal;
+    Wolf::Outcome::Outcome m_outcome;
 
     Configuration config;
 

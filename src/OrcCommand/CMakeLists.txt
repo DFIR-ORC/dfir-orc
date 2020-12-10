@@ -224,6 +224,8 @@ source_group(USNInfo FILES ${SRC_USNINFO})
 set(SRC_WOLFLAUNCHER
     "Command/WolfLauncher/ConfigFile_WOLFLauncher.cpp"
     "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
+    "Command/WolfLauncher/Outcome.h"
+    "Command/WolfLauncher/Outcome.cpp"
     "Command/WolfLauncher/WolfExecution.cpp"
     "Command/WolfLauncher/WolfExecution.h"
     "Command/WolfLauncher/WolfExecution_Config.cpp"

@@ -25,6 +25,7 @@
 #include "Robustness.h"
 
 #include "Output/Console/Journal.h"
+#include "Command/WolfLauncher/Outcome.h"
 
 #pragma managed(push, off)
 
@@ -79,6 +80,8 @@ public:
 
 private:
     Command::Output::Journal& m_journal;
+    Command::Wolf::Outcome::Outcome& m_outcome;
+
     std::wstring m_logFilePath;
 
     std::wstring m_commandSet;
@@ -275,8 +278,9 @@ public:
 
     HRESULT CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue);
 
-    WolfExecution(Command::Output::Journal& journal)
+    WolfExecution(Command::Output::Journal& journal, Wolf::Outcome::Outcome& outcome)
         : m_journal(journal)
+        , m_outcome(outcome)
     {
     }
 
