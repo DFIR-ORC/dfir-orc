@@ -302,11 +302,11 @@ public:
 
         HRESULT ForEachOutput(const OutputSpec& output, std::function<HRESULT(const OutputPair& out)> aCallback)
         {
-            Guard::ScopeGuard sg([&output, this] { CloseAll(output); });
+            Guard::Scope sg([&output, this] { CloseAll(output); });
 
             for (auto& item : m_outputs)
             {
-                Guard::ScopeGuard forGuard([&output, &item, this]() { CloseOne(output, item); });
+                Guard::Scope forGuard([&output, &item, this]() { CloseOne(output, item); });
 
                 HRESULT hr = E_FAIL;
                 // Actually enumerate objects here

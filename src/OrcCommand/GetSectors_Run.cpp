@@ -117,7 +117,7 @@ std::wstring Main::getBootDiskName()
         return {};
     }
 
-    Guard::ScopeGuard sg([&hVolume]() {
+    Guard::Scope sg([&hVolume]() {
         if (hVolume != INVALID_HANDLE_VALUE)
         {
             CloseHandle(hVolume);
