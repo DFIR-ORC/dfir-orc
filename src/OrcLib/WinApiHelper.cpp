@@ -161,4 +161,50 @@ std::wstring GetTempFileNameApi(const wchar_t* lpPathName, std::error_code& ec) 
     return GetTempFileNameApi(lpPathName, nullptr, 0, ec);
 }
 
+std::wstring GetModuleFileNameApi(HMODULE hModule, size_t cbMaxOutput, std::error_code& ec) noexcept
+{
+    std::wstring path;
+
+    try
+    {
+        path.resize(cbMaxOutput);
+
+        DWORD cch = ::GetModuleFileNameW(hModule, path.data(), path.size());
+
+        DWORD lastError = GetLastError();
+        if (lastError != ERROR_SUCCESS)
+        {
+            ec.assign(lastError, std::system_category());
+            return {};
+        }
+
+        if (cch == path.size())
+        {
+            // Assume it is an error for compatibility with XP, see MSDN remark:
+            //
+            // Windows XP: If the buffer is too small to hold the module name, the function returns nSize. The last
+            // error code remains ERROR_SUCCESS. If nSize is zero, the return value is zero and the last error code is
+            // ERROR_SUCCESS.
+            //
+            ec.assign(ERROR_INSUFFICIENT_BUFFER, std::system_category());
+            return {};
+        }
+
+        path.resize(cch);
+        path.shrink_to_fit();
+    }
+    catch (const std::length_error& e)
+    {
+        ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+
+    return path;
+}
+
+std::wstring GetModuleFileNameApi(HMODULE hModule, std::error_code& ec) noexcept
+{
+    return GetModuleFileNameApi(hModule, 32767 * sizeof(wchar_t), ec);
+}
+
 }  // namespace Orc

@@ -44,6 +44,12 @@ std::wstring GetTempFileNameApi(
 
 std::wstring GetTempFileNameApi(const wchar_t* lpPathName, std::error_code& ec) noexcept;
 
+// GetModuleFileName wrapper with custom maximum buffer size
+std::wstring GetModuleFileNameApi(HMODULE hModule, size_t cbMaxOutput, std::error_code& ec) noexcept;
+
+// GetModuleFileName wrapper with default maximum buffer size of 32767 characters
+std::wstring GetModuleFileNameApi(HMODULE hModule, std::error_code& ec) noexcept;
+
 }  // namespace Orc
 
 #pragma managed(pop)
