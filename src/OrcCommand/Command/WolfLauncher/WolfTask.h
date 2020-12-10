@@ -64,6 +64,7 @@ public:
 
     std::optional<std::chrono::microseconds> UserTime() const { return m_userTime; }
     std::optional<std::chrono::microseconds> KernelTime() const { return m_kernelTime; }
+    std::optional<IO_COUNTERS> IoCounters() const { return m_ioCounters; }
 
     HRESULT ApplyNotification(
         const std::shared_ptr<CommandNotification>& notification,
@@ -90,6 +91,8 @@ private:
 
     std::optional<std::chrono::microseconds> m_userTime;
     std::optional<std::chrono::microseconds> m_kernelTime;
+
+    std::optional<IO_COUNTERS> m_ioCounters;
 
     Status m_status;
 

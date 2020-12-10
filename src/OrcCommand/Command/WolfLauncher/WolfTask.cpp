@@ -86,6 +86,13 @@ HRESULT WolfTask::ApplyNotification(
                 GetSystemTimeAsFileTime(&now);
                 m_exitTime = now;
             }
+
+            auto ioCounters = notification->GetProcessIoCounters();
+            if (ioCounters)
+            {
+                m_ioCounters = *ioCounters;
+            }
+
             break;
         }
         case CommandNotification::Canceled:
