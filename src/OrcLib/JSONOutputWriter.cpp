@@ -120,7 +120,9 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
     Buffer<WCHAR, MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
-    rapidWriter.String(buffer.get(), buffer.size());
+    std::wstring_view result_string = buffer.empty() ? L""sv : std::wstring_view(buffer.get(), buffer.size());
+
+    rapidWriter.String(result_string.data(), result_string.size());
     return S_OK;
 }
 
@@ -132,7 +134,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
     Buffer<CHAR, MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
-    std::string_view result_string = buffer.size() > 0 ? std::string_view(buffer.get(), buffer.size()) : ""sv;
+    std::string_view result_string = buffer.empty() ? ""sv : std::string_view(buffer.get(), buffer.size());
     auto [hr, wstr] = Orc::AnsiToWide(result_string);
     if (FAILED(hr))
         return hr;
