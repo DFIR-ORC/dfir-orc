@@ -16,6 +16,24 @@
 
 using namespace Orc;
 
+STDMETHODIMP Orc::FileStream::Clone(std::shared_ptr<ByteStream>& clone)
+{
+    auto new_stream = std::make_shared<Orc::FileStream>();
+    if (auto hr = new_stream->Duplicate(*this); FAILED(hr))
+        return hr;
+
+    ULONG64 ullCurPos = 0LLU;
+    if (auto hr = SetFilePointer(0LL, FILE_CURRENT, &ullCurPos); FAILED(hr))
+        return hr;
+
+    ULONG64 ullDupCurPos = 0LLU;
+    if (auto hr = new_stream->SetFilePointer(ullCurPos, FILE_BEGIN, &ullDupCurPos); FAILED(hr))
+        return hr;
+
+    clone = new_stream;
+    return S_OK;
+}
+
 /*
     CFileStream::Close
 

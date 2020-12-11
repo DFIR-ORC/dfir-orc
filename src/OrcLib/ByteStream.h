@@ -69,10 +69,11 @@ public:
     STDMETHOD_(ULONG64, GetSize)() PURE;
     STDMETHOD(SetSize)(ULONG64) PURE;
 
+    STDMETHOD(Clone)(std::shared_ptr<ByteStream>& clone) { return E_NOTIMPL; }
+
     STDMETHOD(Close)() PURE;
 
     static std::shared_ptr<ByteStream> GetStream(const OutputSpec& output);
-
     static std::shared_ptr<ByteStream> GetHashStream(const std::shared_ptr<ByteStream>& aStream);
 
     static HRESULT Get_IInStream(const std::shared_ptr<ByteStream>& aStream, ::IInStream** pInStream);

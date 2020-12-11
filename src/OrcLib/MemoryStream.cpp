@@ -31,6 +31,25 @@ static const size_t MEMORY_STREAM_THRESHOLD_INCREMENT = (1024 * 1024 * 16);
 
 static const size_t MEMORY_STREAM_RESERVE_MAX = (1024 * 1024 * 200);
 
+STDMETHODIMP Orc::MemoryStream::Clone(std::shared_ptr<ByteStream>& clone)
+{
+    auto new_stream = std::make_shared<MemoryStream>();
+
+    if (auto hr = new_stream->Duplicate(*this); FAILED(hr))
+        return hr;
+
+    ULONG64 ullCurPos = 0LLU;
+    if (auto hr = SetFilePointer(0LL, FILE_CURRENT, &ullCurPos); FAILED(hr))
+        return hr;
+
+    ULONG64 ullDupCurPos = 0LLU;
+    if (auto hr = new_stream->SetFilePointer(ullCurPos, FILE_BEGIN, &ullDupCurPos); FAILED(hr))
+        return hr;
+
+    clone = new_stream;
+    return S_OK;
+}
+
 HRESULT MemoryStream::Close()
 {
     return S_OK;

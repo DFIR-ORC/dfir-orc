@@ -73,6 +73,7 @@ public:
     STDMETHOD_(ULONG64, GetSize)();
     STDMETHOD(SetSize)(ULONG64 ullSize);
 
+    STDMETHOD(Clone)(std::shared_ptr<ByteStream>& clone);
     STDMETHOD(Close)();
 
     HRESULT Duplicate(const MemoryStream& other);
