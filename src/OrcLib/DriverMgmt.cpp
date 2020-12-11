@@ -360,6 +360,49 @@ HRESULT Orc::Driver::DisableStart()
     return DriverMgmt::SetStartupMode(m_manager->m_SchSCManager, m_strServiceName.c_str(), DriverStartupMode::Disabled);
 }
 
+HRESULT Orc::Driver::OpenDevicePath(std::wstring strDevicePath, DWORD dwRequiredAccess)
+{
+    if (m_hDevice != INVALID_HANDLE_VALUE)
+        CloseHandle(m_hDevice);
+
+    m_hDevice = CreateFileW(strDevicePath.c_str(), dwRequiredAccess, 0, NULL, OPEN_EXISTING, 0, NULL);
+    if (m_hDevice == INVALID_HANDLE_VALUE)
+    {
+        auto code = Orc::LastWin32Error();
+        Log::Error(L"Failed to open {} device for driver {} (hr:{})", strDevicePath, m_strServiceName, code);
+        return code.value();
+    }
+    std::swap(m_strDevicePath, strDevicePath);
+    return S_OK;
+}
+
+HRESULT Orc::Driver::DeviceIoControl(
+    DWORD dwIoControlCode,
+    LPVOID lpInBuffer,
+    DWORD nInBufferSize,
+    LPVOID lpOutBuffer,
+    DWORD nOutBufferSize,
+    LPDWORD lpBytesReturned,
+    LPOVERLAPPED lpOverlapped)
+{
+
+    if (!::DeviceIoControl(
+            m_hDevice,
+            dwIoControlCode,
+            lpInBuffer,
+            nInBufferSize,
+            lpOutBuffer,
+            nOutBufferSize,
+            lpBytesReturned,
+            lpOverlapped))
+    {
+        auto hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Debug(L"Driver {} DeviceIoControl({}) failed {}", m_strServiceName, dwIoControlCode, SystemError(hr));
+        return hr;
+    }
+    return S_OK;
+}
+
 Orc::Result<DriverStatus> Orc::Driver::GetStatus()
 {
     HRESULT hr = E_FAIL;
@@ -708,15 +751,15 @@ HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverN
     //
     // Request that the service stop.
     Buffer<BYTE, sizeof(SERVICE_STATUS_PROCESS)> serviceStatus;
+    serviceStatus.resize(sizeof(SERVICE_STATUS_PROCESS));
     DWORD cbNeeded = 0L;
-    if (!QueryServiceStatusEx(
-            schService, SC_STATUS_PROCESS_INFO, serviceStatus.get(), serviceStatus.capacity(), &cbNeeded))
+    if (!QueryServiceStatusEx(schService, SC_STATUS_PROCESS_INFO, serviceStatus.get(), serviceStatus.size(), &cbNeeded))
     {
         if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
         {
             serviceStatus.reserve(cbNeeded);
             if (!QueryServiceStatusEx(
-                    schService, SC_STATUS_PROCESS_INFO, serviceStatus.get(), serviceStatus.capacity(), &cbNeeded))
+                    schService, SC_STATUS_PROCESS_INFO, serviceStatus.get(), serviceStatus.size(), &cbNeeded))
             {
                 auto hr = HRESULT_FROM_WIN32(GetLastError());
                 Log::Error("Failed QueryServiceStatusEx [{}]", SystemError(hr));
