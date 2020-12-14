@@ -10,6 +10,7 @@
 
 #include <windows.h>
 #include <safeint.h>
+#include <psapi.h>
 
 #include "WinApiHelper.h"
 
@@ -205,6 +206,40 @@ std::wstring GetModuleFileNameApi(HMODULE hModule, size_t cbMaxOutput, std::erro
 std::wstring GetModuleFileNameApi(HMODULE hModule, std::error_code& ec) noexcept
 {
     return GetModuleFileNameApi(hModule, 32767 * sizeof(wchar_t), ec);
+}
+
+std::wstring GetModuleFileNameExApi(HANDLE hProcess, HMODULE hModule, size_t cbMaxOutput, std::error_code& ec) noexcept
+{
+    std::wstring path;
+
+    try
+    {
+        path.resize(cbMaxOutput);
+
+        DWORD cch = ::GetModuleFileNameExW(hProcess, hModule, path.data(), path.size());
+
+        DWORD lastError = GetLastError();
+        if (cch == 0 || lastError != ERROR_SUCCESS)
+        {
+            ec.assign(lastError, std::system_category());
+            return {};
+        }
+
+        path.resize(cch);
+        path.shrink_to_fit();
+    }
+    catch (const std::length_error& e)
+    {
+        ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+
+    return path;
+}
+
+std::wstring GetModuleFileNameExApi(HANDLE hProcess, HMODULE hModule, std::error_code& ec) noexcept
+{
+    return GetModuleFileNameExApi(hProcess, hModule, 32767 * sizeof(wchar_t), ec);
 }
 
 }  // namespace Orc
