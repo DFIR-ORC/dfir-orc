@@ -57,6 +57,7 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 | ORC_BUILD_ORC        | ON                    | Build Orc binary                 |
 | ORC_BUILD_PARQUET    | OFF                   | Build Parquet module (x64)       |
 | ORC_BUILD_SSDEEP     | OFF                   | Build with ssdeep support        |
+| ORC_BUILD_TLSH       | OFF                   | Build with tslh support          |
 | ORC_BUILD_JSON       | ON                    | Build with JSON enabled          |
 | ORC_USE_STATIC_CRT   | ON                    | Use static runtime               |
 | ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory             |

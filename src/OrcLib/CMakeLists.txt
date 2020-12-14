@@ -13,7 +13,6 @@ orc_add_compile_options()
 find_package(7zip CONFIG REQUIRED)
 find_package(Boost REQUIRED)
 find_package(fmt REQUIRED)
-find_package(tlsh CONFIG REQUIRED)
 find_package(VisualStudio REQUIRED)
 find_package(Yara REQUIRED)
 
@@ -864,7 +863,6 @@ target_link_libraries(OrcLib
         Wintrust.lib
         Crypt32.lib
         fmt::fmt-header-only
-        tlsh::tlsh
         VisualStudio::CppUnitTest
         yara::yara
         ws2_32.lib
@@ -873,6 +871,11 @@ target_link_libraries(OrcLib
 
 find_package(RapidJSON CONFIG REQUIRED)
 target_include_directories(OrcLib PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
+
+if(ORC_BUILD_TLSH)
+    find_package(tlsh CONFIG REQUIRED)
+    target_link_libraries(OrcLib PUBLIC tlsh::tlsh)
+endif()
 
 if(ORC_BUILD_SSDEEP)
     find_package(ssdeep CONFIG REQUIRED)

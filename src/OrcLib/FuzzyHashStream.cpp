@@ -11,7 +11,9 @@
 #include "WideAnsi.h"
 #include "BinaryBuffer.h"
 
-#include "tlsh/tlsh.h"
+#ifdef ORC_BUILD_TLSH
+#    include "tlsh/tlsh.h"
+#endif  // ORC_BUILD_TLSH
 
 #ifdef ORC_BUILD_SSDEEP
 #    include "ssdeep/fuzzy.h"
@@ -27,10 +29,14 @@ FuzzyHashStream::Algorithm FuzzyHashStream::GetSupportedAlgorithm(LPCWSTR szAlgo
         return Algorithm::SSDeep;
     }
 #endif  // ORC_BUILD_SSDEEP
+
+#ifdef ORC_BUILD_TSLH
     if (!_wcsnicmp(szAlgo, L"tlsh", wcslen(L"tlsh")))
     {
         return Algorithm::TLSH;
     }
+#endif  // ORC_BUILD_TLSH
+
     return Algorithm::Undefined;
 }
 
@@ -46,6 +52,8 @@ std::wstring FuzzyHashStream::GetSupportedAlgorithm(Algorithm algs)
         retval.append(L"SSDeep");
     }
 #endif  // ORC_BUILD_SSDEEP
+
+#ifdef ORC_BUILD_TLSH
     if (HasFlag(algs, FuzzyHashStream::Algorithm::TLSH))
     {
         if (retval.empty())
@@ -53,6 +61,8 @@ std::wstring FuzzyHashStream::GetSupportedAlgorithm(Algorithm algs)
         else
             retval.append(L",TLSH");
     }
+#endif  // ORC_BUILD_TLSH
+
     return retval;
 }
 
@@ -100,21 +110,18 @@ HRESULT FuzzyHashStream::OpenToWrite(FuzzyHashStream::Algorithm algs, const std:
 
 STDMETHODIMP FuzzyHashStream::Close()
 {
+#ifdef ORC_BUILD_TLSH
     if (m_tlsh)
     {
         m_tlsh->final();
     }
+#endif  // ORC_BUILD_TLSH
 
     return HashStream::Close();
 }
 
 HRESULT FuzzyHashStream::ResetHash(bool bContinue)
 {
-    if (m_tlsh)
-    {
-        m_tlsh->reset();
-    }
-
 #ifdef ORC_BUILD_SSDEEP
     if (m_ssdeep)
     {
@@ -128,20 +135,30 @@ HRESULT FuzzyHashStream::ResetHash(bool bContinue)
     }
 #endif  // ORC_BUILD_SSDEEP
 
+#ifdef ORC_BUILD_TLSH
+    if (m_tlsh)
+    {
+        m_tlsh->reset();
+    }
+
     if (HasFlag(m_Algorithms, FuzzyHashStream::Algorithm::TLSH))
     {
         m_tlsh = std::make_unique<Tlsh>();
     }
+#endif  // ORC_BUILD_TLSH
+
     m_bHashIsValid = true;
     return S_OK;
 }
 
 HRESULT FuzzyHashStream::HashData(LPBYTE pBuffer, DWORD dwBytesToHash)
 {
+#ifdef ORC_BUILD_TLSH
     if (m_tlsh)
     {
         m_tlsh->update(pBuffer, dwBytesToHash);
     }
+#endif  // ORC_BUILD_TLSH
 
 #ifdef ORC_BUILD_SSDEEP
     if (m_ssdeep)
@@ -173,6 +190,7 @@ HRESULT FuzzyHashStream::GetHash(FuzzyHashStream::Algorithm alg, CBinaryBuffer& 
 #endif  // ORC_BUILD_SSDEEP
                 break;
             case FuzzyHashStream::Algorithm::TLSH:
+#ifdef ORC_BUILD_TLSH
                 if (HasFlag(m_Algorithms, FuzzyHashStream::Algorithm::TLSH) && m_tlsh)
                 {
                     if (!m_tlsh->isValid())
@@ -187,6 +205,7 @@ HRESULT FuzzyHashStream::GetHash(FuzzyHashStream::Algorithm alg, CBinaryBuffer& 
                     }
                     return S_OK;
                 }
+#endif  // ORC_BUILD_TLSH
                 break;
             default:
                 return E_INVALIDARG;
@@ -222,5 +241,7 @@ FuzzyHashStream::~FuzzyHashStream()
     }
 #endif  // ORC_BUILD_SSDEEP
 
+#ifdef ORC_BUILD_TLSH
     m_tlsh.reset();
+#endif
 }

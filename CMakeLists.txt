@@ -9,6 +9,7 @@ option(ORC_BUILD_COMMAND    "Build any OrcCommand based command" ON)
 option(ORC_BUILD_FASTFIND   "Build FastFind binary" ON)
 option(ORC_BUILD_ORC        "Build Orc binary" ON)
 option(ORC_BUILD_PARQUET    "Build Parquet module" OFF)
+option(ORC_BUILD_TLSH       "Build with tlsh support" OFF)
 option(ORC_BUILD_SSDEEP     "Build with ssdeep support" OFF)
 option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" ON)
 option(ORC_BUILD_BOOST_STACKTRACE  "Build with stack backtrace enabled" ON)
@@ -83,7 +84,6 @@ if(ORC_VCPKG_ROOT)
         boost-scope-exit
         fmt
         spdlog
-        tlsh
         yara
         rapidjson
     )
@@ -96,6 +96,11 @@ if(ORC_VCPKG_ROOT)
     if(ORC_BUILD_BOOST_STACKTRACE)
         add_compile_definitions(ORC_BUILD_BOOST_STACKTRACE)
         list(APPEND _PACKAGES boost-stacktrace)
+    endif()
+
+    if(ORC_BUILD_TLSH)
+        add_definitions(-DORC_BUILD_TLSH)
+        list(APPEND _PACKAGES tlsh)
     endif()
 
     if(ORC_BUILD_APACHE_ORC)
