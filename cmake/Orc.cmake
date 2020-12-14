@@ -20,6 +20,20 @@ add_compile_definitions(
     _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS
 )
 
+if("${CMAKE_SYSTEM_VERSION}" STREQUAL "5.1")
+        add_compile_definitions(
+            _WIN32_WINNT=0x0501
+            WINVER=0x0501
+            NTDDI_VERSION=0x05010200
+        )
+elseif("${CMAKE_SYSTEM_VERSION}" STREQUAL "6.1")
+        add_compile_definitions(
+            _WIN32_WINNT=0x0601
+            WINVER=0x0601
+            NTDDI_VERSION=0x06010000
+        )
+endif()
+
 if(${TARGET_ARCH} STREQUAL "x64")
     add_compile_definitions(
         _WIN64
