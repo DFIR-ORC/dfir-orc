@@ -392,76 +392,6 @@ HRESULT WolfExecution::AddProcessStatistics(ITableOutput& output, const CommandN
 
     return S_OK;
 }
-
-HRESULT WolfExecution::AddJobStatistics(ITableOutput& output, const CommandNotification::Ptr& notification)
-{
-    HRESULT hr = E_FAIL;
-
-    SystemDetails::WriteComputerName(output);
-
-    output.WriteString(notification->GetKeyword());
-    output.WriteFileTime(m_StartTime);
-    output.WriteFileTime(m_FinishTime);
-
-    LARGE_INTEGER start, end;
-    start.HighPart = m_StartTime.dwHighDateTime;
-    start.LowPart = m_StartTime.dwLowDateTime;
-
-    end.HighPart = m_FinishTime.dwHighDateTime;
-    end.LowPart = m_FinishTime.dwLowDateTime;
-
-    LARGE_INTEGER elapsed;
-
-    elapsed.QuadPart = (end.QuadPart - start.QuadPart) / (10000 * 1000);
-
-    output.WriteInteger(elapsed.QuadPart);
-
-    PJOB_STATISTICS pJobStats = notification->GetJobStatictics();
-
-    if (pJobStats != nullptr)
-    {
-        output.WriteInteger(pJobStats->TotalUserTime.QuadPart);
-        output.WriteInteger(pJobStats->TotalKernelTime.QuadPart);
-        output.WriteInteger(pJobStats->TotalPageFaultCount);
-        output.WriteInteger(pJobStats->TotalProcesses);
-        output.WriteInteger(pJobStats->ActiveProcesses);
-        output.WriteInteger(pJobStats->TotalTerminatedProcesses);
-        output.WriteInteger(pJobStats->PeakProcessMemoryUsed);
-        output.WriteInteger(pJobStats->PeakJobMemoryUsed);
-
-        output.WriteInteger(pJobStats->IoInfo.ReadOperationCount);
-        output.WriteInteger(pJobStats->IoInfo.ReadTransferCount);
-        output.WriteInteger(pJobStats->IoInfo.WriteOperationCount);
-        output.WriteInteger(pJobStats->IoInfo.WriteTransferCount);
-        output.WriteInteger(pJobStats->IoInfo.OtherOperationCount);
-        output.WriteInteger(pJobStats->IoInfo.OtherTransferCount);
-    }
-    else
-    {
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-    }
-
-    SystemDetails::WriteDescriptionString(output);
-    SystemDetails::WriteProductType(output);
-
-    output.WriteEndOfLine();
-    return S_OK;
-}
-
 HRESULT WolfExecution::NotifyTask(const CommandNotification::Ptr& item)
 {
     HRESULT hr = E_FAIL;
@@ -476,6 +406,7 @@ HRESULT WolfExecution::NotifyTask(const CommandNotification::Ptr& item)
             task = taskiter->second;
         }
     }
+
     if (task == nullptr)
     {
         auto taskiter = m_TasksByKeyword.find(item->GetKeyword());
@@ -518,15 +449,6 @@ HRESULT WolfExecution::CreateCommandAgent(
         if (m_ProcessStatisticsWriter == nullptr)
         {
             Log::Error("Failed to initialize ProcessStatistics writer");
-        }
-    }
-
-    if (HasFlag(m_JobStatisticsOutput.Type, OutputSpec::Kind::TableFile))
-    {
-        m_JobStatisticsWriter = TableOutput::GetWriter(m_JobStatisticsOutput);
-        if (m_JobStatisticsWriter == nullptr)
-        {
-            Log::Error("Failed to initialize JobStatistics writer");
         }
     }
 
@@ -586,7 +508,6 @@ HRESULT WolfExecution::CreateCommandAgent(
                                 duration.count() / 10000000);
                         }
 
-                        AddJobStatistics(*m_JobStatisticsWriter, item);
                         Log::Info("JOB: Complete");
 
                         auto lock = m_outcome.Lock();
@@ -818,22 +739,10 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
         m_ProcessStatisticsWriter->Close();
     }
 
-    if (m_JobStatisticsWriter)
-    {
-        m_JobStatisticsWriter->Close();
-    }
-
     if (VerifyFileExists(m_ProcessStatisticsOutput.Path.c_str()) == S_OK)
     {
         auto request =
             ArchiveMessage::MakeAddFileRequest(L"ProcessStatistics.csv", m_ProcessStatisticsOutput.Path, false, true);
-        Concurrency::send(m_ArchiveMessageBuffer, request);
-    }
-
-    if (VerifyFileExists(m_JobStatisticsOutput.Path.c_str()) == S_OK)
-    {
-        auto request =
-            ArchiveMessage::MakeAddFileRequest(L"JobStatistics.csv", m_JobStatisticsOutput.Path, false, true);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
 

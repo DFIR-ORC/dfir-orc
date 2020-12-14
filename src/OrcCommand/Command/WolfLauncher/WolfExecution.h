@@ -127,9 +127,6 @@ private:
     FILETIME m_FinishTime;
     FILETIME m_ArchiveFinishTime;
 
-    std::shared_ptr<TableOutput::IWriter> m_JobStatisticsWriter;
-    OutputSpec m_JobStatisticsOutput;
-
     std::vector<CommandMessage::Message> m_Commands;
 
     std::map<std::wstring, std::shared_ptr<WolfTask>> m_TasksByKeyword;
@@ -149,7 +146,6 @@ private:
     std::vector<std::shared_ptr<Recipient>> m_Recipients;
 
     HRESULT AddProcessStatistics(ITableOutput& output, const CommandNotification::Ptr& notification);
-    HRESULT AddJobStatistics(ITableOutput& output, const CommandNotification::Ptr& notification);
     static std::wregex g_WinVerRegEx;
 
     std::shared_ptr<ByteStream> m_configStream;
@@ -167,7 +163,6 @@ public:
     HRESULT SetOutput(
         const OutputSpec& output,
         const OutputSpec& temporary,
-        const OutputSpec& jobstats,
         const OutputSpec& processstats)
     {
         if (output.Type != OutputSpec::Kind::Directory)
@@ -177,11 +172,6 @@ public:
             return E_INVALIDARG;
         m_Temporary = temporary;
 
-        m_JobStatisticsOutput = jobstats;
-        if (HasFlag(m_JobStatisticsOutput.Type, OutputSpec::Kind::TableFile))
-        {
-            m_JobStatisticsOutput.Path = m_Temporary.Path + L"\\" + m_JobStatisticsOutput.Path;
-        }
         m_ProcessStatisticsOutput = processstats;
         if (HasFlag(m_ProcessStatisticsOutput.Type, OutputSpec::Kind::TableFile))
         {

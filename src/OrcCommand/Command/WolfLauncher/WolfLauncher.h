@@ -79,8 +79,6 @@ public:
         Configuration()
         {
             Output.supportedTypes = OutputSpec::Kind::Directory;
-            JobStatistics.supportedTypes =
-                static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::SQL);
             ProcessStatistics.supportedTypes =
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::SQL);
             Log.supportedTypes = OutputSpec::Kind::File;
@@ -92,7 +90,6 @@ public:
         WolfLauncherAction SelectedAction = Execute;
 
         OutputSpec Output;
-        OutputSpec JobStatistics;
         OutputSpec ProcessStatistics;
 
         OutputSpec Log;
@@ -164,7 +161,6 @@ public:
     void PrintFooter();
     void PrintParameters();
 
-    HRESULT GetSchemaFromConfig(const ConfigItem& schemaitem);
     HRESULT GetConfigurationFromConfig(const ConfigItem& configitem);
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem);
 

@@ -31,8 +31,6 @@ using namespace Orc::Command::Wolf;
 
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
-    config.JobStatistics.Schema = TableOutput::GetColumnsFromConfig(
-        config.JobStatistics.TableKey.empty() ? L"JobStatistics" : config.JobStatistics.TableKey.c_str(), schemaitem);
     config.ProcessStatistics.Schema = TableOutput::GetColumnsFromConfig(
         config.ProcessStatistics.TableKey.empty() ? L"ProcessStatistics" : config.ProcessStatistics.TableKey.c_str(),
         schemaitem);
@@ -677,15 +675,6 @@ HRESULT Main::CheckConfiguration()
         }
     }
 
-    if (config.JobStatistics.Type == OutputSpec::Kind::None)
-    {
-        if (FAILED(hr = config.JobStatistics.Configure(OutputSpec::Kind::TableFile, L"JobStatistics.csv")))
-        {
-            Log::Error("Failed to set job statistics output [{}]", SystemError(hr));
-            return hr;
-        }
-    }
-
     if (config.ProcessStatistics.Type == OutputSpec::Kind::None)
     {
         if (FAILED(hr = config.ProcessStatistics.Configure(OutputSpec::Kind::TableFile, L"ProcessStatistics.csv")))
@@ -713,7 +702,7 @@ HRESULT Main::CheckConfiguration()
     for (const auto& wolfexec : m_wolfexecs)
     {
         wolfexec->SetRepeatBehaviour(config.RepeatBehavior);
-        wolfexec->SetOutput(config.Output, config.TempWorkingDir, config.JobStatistics, config.ProcessStatistics);
+        wolfexec->SetOutput(config.Output, config.TempWorkingDir, config.ProcessStatistics);
         wolfexec->SetRecipients(config.m_Recipients);
 
         if (!config.strCompressionLevel.empty())
