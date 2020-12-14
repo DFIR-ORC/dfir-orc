@@ -314,7 +314,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         writer->WriteNamed(L"version", L"1.0");
         writer->BeginElement(L"dfir-orc");
         {
-            writer->WriteNamed(L"dfir_orc_id", kOrcFileVerStringW);
+            writer->WriteNamed(L"version", kOrcFileVerStringW);
 
             FILETIME ft;
             GetSystemTimeAsFileTime(&ft);
