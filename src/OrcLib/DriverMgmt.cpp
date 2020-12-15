@@ -355,6 +355,11 @@ HRESULT Driver::Stop()
     return S_OK;
 }
 
+HRESULT Orc::Driver::DisableStart()
+{
+    return DriverMgmt::SetStartupMode(m_manager->m_SchSCManager, m_strServiceName.c_str(), DriverStartupMode::Disabled);
+}
+
 Orc::Result<DriverStatus> Orc::Driver::GetStatus()
 {
     HRESULT hr = E_FAIL;
@@ -838,5 +843,64 @@ HRESULT Orc::DriverMgmt::GetDriverBinaryPathName(
     }
 
     wcscpy_s(szDriverFileName, BufferLength, pServiceConfig->lpBinaryPathName);
+    return S_OK;
+}
+
+HRESULT
+Orc::DriverMgmt::SetStartupMode(__in SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in DriverStartupMode mode)
+{
+    HRESULT hr = E_FAIL;
+    SC_HANDLE schService;
+
+    //
+    // Open the handle to the existing service.
+    schService = OpenService(SchSCManager, DriverName, SERVICE_ALL_ACCESS);
+    if (schService == NULL)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Error(L"OpenService failed for '{}' [{}]", DriverName, SystemError(hr));
+        return hr;
+    }
+
+    BOOST_SCOPE_EXIT(&schService)
+    {
+        if (schService)
+        {
+            CloseServiceHandle(schService);
+            schService = NULL;
+        }
+    }
+    BOOST_SCOPE_EXIT_END;
+
+    DWORD dwServiceStart = 0;
+
+    switch (mode)
+    {
+        case DriverStartupMode::Auto:
+            dwServiceStart = SERVICE_AUTO_START;
+            break;
+        case DriverStartupMode::Boot:
+            dwServiceStart = SERVICE_BOOT_START;
+            break;
+        case DriverStartupMode::Demand:
+            dwServiceStart = SERVICE_DEMAND_START;
+            break;
+        case DriverStartupMode::Disabled:
+            dwServiceStart = SERVICE_DISABLED;
+            break;
+        case DriverStartupMode::System:
+            dwServiceStart = SERVICE_SYSTEM_START;
+            break;
+        default:
+            throw Exception(Severity::Fatal, L"Invalid driver startup mode: {}", mode);
+    }
+
+    if (!ChangeServiceConfigW(
+            schService, SERVICE_NO_CHANGE, dwServiceStart, SERVICE_NO_CHANGE, NULL, NULL, NULL, NULL, NULL, NULL, NULL))
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Error(L"ChangeServiceConfig failed for '{}' [{}]", DriverName, SystemError(hr));
+        return hr;
+    }
     return S_OK;
 }

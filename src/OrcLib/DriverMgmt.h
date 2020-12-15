@@ -29,6 +29,15 @@ enum class DriverStatus
     PendingContinue
 };
 
+enum class DriverStartupMode
+{
+    Auto,
+    Boot,
+    Demand,
+    Disabled,
+    System
+};
+
 class DriverMgmt;
 
 class DriverTermination;
@@ -51,6 +60,7 @@ public:
 
     HRESULT Start();
     HRESULT Stop();
+    HRESULT DisableStart();
 
     Result<DriverStatus> GetStatus();
 
@@ -98,6 +108,8 @@ private:
         const WCHAR* DriverName,
         WCHAR* szDriverFileName,
         ULONG BufferLength);
+    static HRESULT SetStartupMode(SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in DriverStartupMode mode);
+
 
     SC_HANDLE m_SchSCManager = NULL;
     SC_HANDLE m_SchService = NULL;
