@@ -53,7 +53,12 @@ public:
             return;
         }
 
-        std::filesystem::remove(path);
+        std::filesystem::remove(path, ec);
+        if (ec)
+        {
+            Log::Debug(L"Failed to remove '{}' [{}]", path, ec);
+            ec.clear();
+        }
 
         // Dump memorySink if any
         if (m_memorySink)

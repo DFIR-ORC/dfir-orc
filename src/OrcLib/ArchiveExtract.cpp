@@ -180,14 +180,11 @@ STDMETHODIMP ArchiveExtract::Extract(
         }
         fs::path absolute(szDirectory);
 
-        try
+        std::error_code ec;
+        fs::create_directories(absolute, ec);
+        if (ec)
         {
-            fs::create_directories(absolute);
-        }
-        catch (const fs::filesystem_error& error)
-        {
-            const auto [hr, msg] = AnsiToWide(error.what());
-            Log::Error(L"Failed to create directory '{}' while processing file '{}': {}", absolute, item.Path, msg);
+            Log::Error(L"Failed to create directory '{}' while processing file '{}' [{}]", absolute, item.Path, ec);
             return nullptr;
         }
 
@@ -297,13 +294,11 @@ STDMETHODIMP ArchiveExtract::Extract(
         }
         fs::path absolute(szDirectory);
 
-        try
+        std::error_code ec;
+        fs::create_directories(absolute, ec);
+        if (ec)
         {
-            fs::create_directories(absolute);
-        }
-        catch (const fs::filesystem_error& error)
-        {
-            auto code = error.code();
+            Log::Error(L"Failed to create directory '{}' [{}]", absolute, ec);
             return nullptr;
         }
 
@@ -365,15 +360,14 @@ STDMETHODIMP ArchiveExtract::Extract(
         }
         fs::path absolute(szDirectory);
 
-        try
+        std::error_code ec;
+        fs::create_directories(absolute, ec);
+        if (ec)
         {
-            fs::create_directories(absolute);
-        }
-        catch (const fs::filesystem_error& exception)
-        {
-            auto code = exception.code();
+            Log::Error(L"Failed to create directory '{}' [{}]", absolute, ec);
             return nullptr;
         }
+
         auto filestream = make_shared<FileStream>();
         if (FAILED(hr = filestream->OpenHandle(hFile)))
             return nullptr;

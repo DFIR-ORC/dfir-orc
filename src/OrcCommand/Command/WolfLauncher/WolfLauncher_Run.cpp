@@ -573,7 +573,8 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             outlineSize());
     }
 
-    if (std::filesystem::exists(config.Outline.Path))
+    std::error_code ec;
+    if (std::filesystem::exists(config.Outline.Path, ec))
     {
         if (auto hr = UploadSingleFile(config.Outline.FileName, config.Outline.Path); FAILED(hr))
         {

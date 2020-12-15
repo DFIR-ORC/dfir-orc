@@ -1110,7 +1110,13 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
 
         wstring out = outDir + L"\\" + item.Name;
 
-        fs::create_directories(fs::path(out));
+        std::error_code ec;
+        fs::create_directories(fs::path(out), ec);
+        if (ec)
+        {
+            Log::Error(L"Failed to create directory '{}' [{}]", out, ec);
+            continue;
+        }
 
         if (FAILED(hr = extractor->Extract(archStream, out.c_str(), nullptr)))
         {
