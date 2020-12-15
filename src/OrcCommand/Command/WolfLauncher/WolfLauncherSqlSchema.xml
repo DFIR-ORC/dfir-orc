@@ -28,23 +28,4 @@
 
   </table>
 
-  <table key="ProcessStatistics">
-
-    <utf8 name="ComputerName" maxlen="50" />
-    <utf8 name="Keyword" maxlen="256" />
-    <uint32 name="ProcessID" />
-    <uint32 name="ExitCode" />
-    <timestamp name="CreationTime" />
-    <timestamp name="ExitTime" />
-    <uint64 name="UserTimeIn100Nano" />
-    <uint64 name="KernelTimeIn100Nano" />
-    <uint64 name="ReadOperationCount" />
-    <uint64 name="BytesRead" />
-    <uint64 name="WriteOperationCount" />
-    <uint64 name="BytesWritten" />
-    <uint64 name="OtherOperationCount" />
-    <uint64 name="BytesOther" />
-
-  </table>
-
 </sqlschema>

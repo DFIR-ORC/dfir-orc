@@ -29,14 +29,6 @@
 using namespace Orc;
 using namespace Orc::Command::Wolf;
 
-HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
-{
-    config.ProcessStatistics.Schema = TableOutput::GetColumnsFromConfig(
-        config.ProcessStatistics.TableKey.empty() ? L"ProcessStatistics" : config.ProcessStatistics.TableKey.c_str(),
-        schemaitem);
-    return S_OK;
-}
-
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 {
     return Orc::Config::Wolf::root;
@@ -675,15 +667,6 @@ HRESULT Main::CheckConfiguration()
         }
     }
 
-    if (config.ProcessStatistics.Type == OutputSpec::Kind::None)
-    {
-        if (FAILED(hr = config.ProcessStatistics.Configure(OutputSpec::Kind::TableFile, L"ProcessStatistics.csv")))
-        {
-            Log::Error("Failed to set process statistics output [{}]", SystemError(hr));
-            return hr;
-        }
-    }
-
     if (config.bRepeatCreateNew)
     {
         config.RepeatBehavior = WolfExecution::Repeat::CreateNew;
@@ -702,7 +685,7 @@ HRESULT Main::CheckConfiguration()
     for (const auto& wolfexec : m_wolfexecs)
     {
         wolfexec->SetRepeatBehaviour(config.RepeatBehavior);
-        wolfexec->SetOutput(config.Output, config.TempWorkingDir, config.ProcessStatistics);
+        wolfexec->SetOutput(config.Output, config.TempWorkingDir);
         wolfexec->SetRecipients(config.m_Recipients);
 
         if (!config.strCompressionLevel.empty())

@@ -333,65 +333,6 @@ HRESULT WolfExecution::CreateArchiveAgent()
     return S_OK;
 }
 
-HRESULT WolfExecution::AddProcessStatistics(ITableOutput& output, const CommandNotification::Ptr& notification)
-{
-    SystemDetails::WriteComputerName(output);
-
-    output.WriteString(notification->GetKeyword());
-    output.WriteInteger(notification->GetProcessID());
-    output.WriteInteger(notification->GetExitCode());
-
-    PPROCESS_TIMES pTimes = notification->GetProcessTimes();
-
-    if (pTimes != nullptr)
-    {
-        output.WriteFileTime(pTimes->CreationTime);
-        output.WriteFileTime(pTimes->ExitTime);
-
-        LARGE_INTEGER UserTime;
-        UserTime.HighPart = pTimes->UserTime.dwHighDateTime;
-        UserTime.LowPart = pTimes->UserTime.dwLowDateTime;
-
-        output.WriteInteger(UserTime.QuadPart);
-
-        LARGE_INTEGER KernelTime;
-        KernelTime.HighPart = pTimes->KernelTime.dwHighDateTime;
-        KernelTime.LowPart = pTimes->KernelTime.dwLowDateTime;
-
-        output.WriteInteger(KernelTime.QuadPart);
-    }
-    else
-    {
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-    }
-
-    PIO_COUNTERS pIOCounters = notification->GetProcessIoCounters();
-
-    if (pIOCounters != nullptr)
-    {
-        output.WriteInteger(pIOCounters->ReadOperationCount);
-        output.WriteInteger(pIOCounters->ReadTransferCount);
-        output.WriteInteger(pIOCounters->WriteOperationCount);
-        output.WriteInteger(pIOCounters->WriteTransferCount);
-        output.WriteInteger(pIOCounters->OtherOperationCount);
-        output.WriteInteger(pIOCounters->OtherTransferCount);
-    }
-    else
-    {
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-        output.WriteNothing();
-    }
-    output.WriteEndOfLine();
-
-    return S_OK;
-}
 HRESULT WolfExecution::NotifyTask(const CommandNotification::Ptr& item)
 {
     HRESULT hr = E_FAIL;
@@ -441,16 +382,6 @@ HRESULT WolfExecution::CreateCommandAgent(
 
     m_pTermination = std::make_shared<WOLFExecutionTerminate>(m_commandSet, this);
     Robustness::AddTerminationHandler(m_pTermination);
-
-    if (HasFlag(m_ProcessStatisticsOutput.Type, OutputSpec::Kind::TableFile))
-    {
-        m_ProcessStatisticsWriter = TableOutput::GetWriter(m_ProcessStatisticsOutput);
-
-        if (m_ProcessStatisticsWriter == nullptr)
-        {
-            Log::Error("Failed to initialize ProcessStatistics writer");
-        }
-    }
 
     m_cmdNotification =
         std::make_unique<Concurrency::call<CommandNotification::Ptr>>([this](const CommandNotification::Ptr& item) {
@@ -733,18 +664,6 @@ HRESULT WolfExecution::TerminateAllAndComplete()
 HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue)
 {
     HRESULT hr = E_FAIL;
-
-    if (m_ProcessStatisticsWriter)
-    {
-        m_ProcessStatisticsWriter->Close();
-    }
-
-    if (VerifyFileExists(m_ProcessStatisticsOutput.Path.c_str()) == S_OK)
-    {
-        auto request =
-            ArchiveMessage::MakeAddFileRequest(L"ProcessStatistics.csv", m_ProcessStatisticsOutput.Path, false, true);
-        Concurrency::send(m_ArchiveMessageBuffer, request);
-    }
 
     if (m_configStream != nullptr)
     {

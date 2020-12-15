@@ -120,9 +120,6 @@ private:
 
     OutputSpec m_Temporary;
 
-    OutputSpec m_ProcessStatisticsOutput;
-    std::shared_ptr<TableOutput::IWriter> m_ProcessStatisticsWriter;
-
     FILETIME m_StartTime;
     FILETIME m_FinishTime;
     FILETIME m_ArchiveFinishTime;
@@ -145,7 +142,6 @@ private:
 
     std::vector<std::shared_ptr<Recipient>> m_Recipients;
 
-    HRESULT AddProcessStatistics(ITableOutput& output, const CommandNotification::Ptr& notification);
     static std::wregex g_WinVerRegEx;
 
     std::shared_ptr<ByteStream> m_configStream;
@@ -160,10 +156,7 @@ public:
         return S_OK;
     };
 
-    HRESULT SetOutput(
-        const OutputSpec& output,
-        const OutputSpec& temporary,
-        const OutputSpec& processstats)
+    HRESULT SetOutput(const OutputSpec& output, const OutputSpec& temporary)
     {
         if (output.Type != OutputSpec::Kind::Directory)
             return E_INVALIDARG;
@@ -172,11 +165,6 @@ public:
             return E_INVALIDARG;
         m_Temporary = temporary;
 
-        m_ProcessStatisticsOutput = processstats;
-        if (HasFlag(m_ProcessStatisticsOutput.Type, OutputSpec::Kind::TableFile))
-        {
-            m_ProcessStatisticsOutput.Path = m_Temporary.Path + L"\\" + m_ProcessStatisticsOutput.Path;
-        }
         return S_OK;
     };
 

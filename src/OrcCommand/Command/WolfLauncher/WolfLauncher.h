@@ -79,8 +79,6 @@ public:
         Configuration()
         {
             Output.supportedTypes = OutputSpec::Kind::Directory;
-            ProcessStatistics.supportedTypes =
-                static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::SQL);
             Log.supportedTypes = OutputSpec::Kind::File;
             Outline.supportedTypes = OutputSpec::Kind::StructuredFile;
             Outcome.supportedTypes = OutputSpec::Kind::StructuredFile;
@@ -90,7 +88,6 @@ public:
         WolfLauncherAction SelectedAction = Execute;
 
         OutputSpec Output;
-        OutputSpec ProcessStatistics;
 
         OutputSpec Log;
         OutputSpec Outline;
