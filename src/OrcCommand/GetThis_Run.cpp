@@ -33,7 +33,7 @@
 #include "SnapshotVolumeReader.h"
 
 #include "SystemDetails.h"
-#include "WinApiHelper.h"
+#include "Utils/WinApi.h"
 
 #include "NtfsDataStructures.h"
 

@@ -12,7 +12,7 @@
 #include <safeint.h>
 #include <psapi.h>
 
-#include "WinApiHelper.h"
+#include "Utils/WinApi.h"
 
 namespace Orc {
 

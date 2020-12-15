@@ -27,6 +27,9 @@
 
 #include "Utils/Guard.h"
 #include "Utils/TypeTraits.h"
+#include "Utils/Time.h"
+#include "Utils/WinApi.h"
+#include "Output/Text/Fmt/Result.h"
 #include "Output/Text/Print/Bool.h"
 
 using namespace Concurrency;

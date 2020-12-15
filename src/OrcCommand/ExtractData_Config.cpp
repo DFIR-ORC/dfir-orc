@@ -18,8 +18,8 @@
 #include "EmbeddedResource.h"
 #include "Temporary.h"
 #include "CaseInsensitive.h"
-#include "WinApiHelper.h"
 #include "WideAnsi.h"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 using namespace Orc::Command::ExtractData;

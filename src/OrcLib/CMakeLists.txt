@@ -727,6 +727,8 @@ set(SRC_UTILITIES
     "Utils/Time.cpp"
     "Utils/Time.h"
     "Utils/TypeTraits.h"
+    "Utils/WinApi.cpp"
+    "Utils/WinApi.h"
 )
 
 source_group(Utilities FILES ${SRC_UTILITIES})
@@ -812,13 +814,6 @@ set(SRC_UTILITIES_TEST
 )
 
 source_group(Utilities\\Test FILES ${SRC_UTILITIES_TEST})
-
-set(SRC_UTILITIES_WINAPIHELPER
-    "WinApiHelper.cpp"
-    "WinApiHelper.h"
-)
-
-source_group(Utilities\\WinApi FILES ${SRC_UTILITIES_WINAPIHELPER})
 
 add_library(OrcLib
     STATIC
