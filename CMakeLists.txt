@@ -48,6 +48,7 @@ if(NOT CMAKE_SYSTEM_VERSION)
     endif()
 endif()
 
+# Setup repository related variables and force refresh on new commits
 include(cmake/GitInfo.cmake)
 git_monitor_status()
 git_info(
@@ -57,6 +58,7 @@ git_info(
     COMMIT ORC_COMMIT
 )
 
+message(WARNING "BEWARE: VCPKG is currently compatible ONLY with ENGLISH version of Visual Studio.")
 
 # Configure triplet dynamically with options chosen from CMake
 set(OVERLAY_TRIPLETS ${CMAKE_BINARY_DIR}/vcpkg/triplets)
