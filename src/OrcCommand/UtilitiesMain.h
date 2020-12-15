@@ -659,11 +659,26 @@ protected:
     }
 
     bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile);
+
     template <typename OptionType>
     bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
     {
         OptionType result;
         if (InputFileOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
+
+    bool InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile);
+
+    template <typename OptionType>
+    bool InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
+    {
+        OptionType result;
+        if (InputDirOption(szArg, szOption, result))
         {
             parameter.emplace(std::move(result));
             return true;

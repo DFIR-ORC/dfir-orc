@@ -243,7 +243,7 @@ bool UtilitiesMain::OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
     return true;
 }
 
-bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile)
+bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile)
 {
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
         return false;
@@ -255,9 +255,29 @@ bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
         return false;
     }
 
-    if (auto hr = ExpandFilePath(pEquals + 1, strOutputFile); FAILED(hr))
+    if (auto hr = ExpandFilePath(pEquals + 1, strInputFile); FAILED(hr))
     {
         Log::Error(L"Invalid input file specified: {}", pEquals + 1);
+        return false;
+    }
+    return true;
+}
+
+bool UtilitiesMain::InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputDir)
+{
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
+    {
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp\\InputDirectory", szOption);
+        return false;
+    }
+
+    if (auto hr = ExpandDirectoryPath(pEquals + 1, strInputDir); FAILED(hr))
+    {
+        Log::Error(L"Invalid input directory specified: {}", pEquals + 1);
         return false;
     }
     return true;
