@@ -42,11 +42,15 @@ public:
         , m_dwExitCode(-1)
         , m_dwLastReportedHang(30)
         , m_dwMostReportedHang(0)
+        , m_userTime()
+        , m_kernelTime()
         , m_status(Init)
     {
         ZeroMemory(&m_times, sizeof(PROCESS_TIMES));
         ZeroMemory(&m_lastActiveTime, sizeof(FILETIME));
         ZeroMemory(&m_startTime, sizeof(FILETIME));
+        ZeroMemory(&m_creationTime, sizeof(FILETIME));
+        ZeroMemory(&m_exitTime, sizeof(FILETIME));
     };
 
     const std::wstring& Command() const { return m_command; }
@@ -54,6 +58,12 @@ public:
     DWORD Pid() const { return m_dwPID; }
     DWORD ExitCode() const { return m_dwExitCode; }
     const std::wstring& CommandLine() const { return m_commandLine; }
+
+    FILETIME CreationTime() const { return m_creationTime; }
+    FILETIME ExitTime() const { return m_exitTime; }
+
+    std::optional<std::chrono::microseconds> UserTime() const { return m_userTime; }
+    std::optional<std::chrono::microseconds> KernelTime() const { return m_kernelTime; }
 
     HRESULT ApplyNotification(
         const std::shared_ptr<CommandNotification>& notification,
@@ -74,6 +84,12 @@ private:
 
     FILETIME m_startTime;
     FILETIME m_lastActiveTime;
+
+    FILETIME m_creationTime;
+    FILETIME m_exitTime;
+
+    std::optional<std::chrono::microseconds> m_userTime;
+    std::optional<std::chrono::microseconds> m_kernelTime;
 
     Status m_status;
 

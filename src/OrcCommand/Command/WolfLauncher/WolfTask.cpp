@@ -14,6 +14,21 @@
 using namespace Orc;
 using namespace Orc::Command::Wolf;
 
+namespace {
+
+std::chrono::microseconds ConvertExecutionTime(const FILETIME& ft)
+{
+    ULARGE_INTEGER ull;
+    ull.LowPart = ft.dwLowDateTime;
+    ull.HighPart = ft.dwHighDateTime;
+
+    // See section REMARKS:
+    // https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes
+    return std::chrono::microseconds(ull.QuadPart / 10);
+}
+
+}  // namespace
+
 HRESULT WolfTask::ApplyNotification(
     const std::shared_ptr<CommandNotification>& notification,
     std::vector<std::shared_ptr<CommandMessage>>& actions)
@@ -33,7 +48,7 @@ HRESULT WolfTask::ApplyNotification(
             m_status = Running;
 
             break;
-        case CommandNotification::Terminated:
+        case CommandNotification::Terminated: {
             if (notification->GetExitCode() == 0)
             {
                 m_journal.Print(
@@ -54,7 +69,25 @@ HRESULT WolfTask::ApplyNotification(
 
             m_dwExitCode = notification->GetExitCode();
             m_status = Done;
+
+            auto processTimes = notification->GetProcessTimes();
+            if (processTimes)
+            {
+                m_userTime = ConvertExecutionTime(processTimes->UserTime);
+                m_kernelTime = ConvertExecutionTime(processTimes->KernelTime);
+                m_creationTime = processTimes->CreationTime;
+                m_exitTime = processTimes->ExitTime;
+            }
+            else
+            {
+                m_creationTime = m_startTime;
+
+                FILETIME now;
+                GetSystemTimeAsFileTime(&now);
+                m_exitTime = now;
+            }
             break;
+        }
         case CommandNotification::Canceled:
             m_status = Cancelled;
             break;
