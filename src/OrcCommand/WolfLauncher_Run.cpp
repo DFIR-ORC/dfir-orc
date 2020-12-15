@@ -24,6 +24,7 @@
 #include "Convert.h"
 #include "FileStream.h"
 #include "SystemIdentity.h"
+#include "DevNullStream.h"
 
 #include "Utils/Guard.h"
 #include "Utils/TypeTraits.h"
@@ -33,6 +34,7 @@
 #include "Output/Text/Print/Bool.h"
 
 using namespace Concurrency;
+using namespace Orc;
 
 namespace {
 
@@ -99,6 +101,61 @@ HRESULT GetRemoteOutputFileInformations(
     }
 
     return S_OK;
+}
+
+Result<std::wstring> Sha256(const std::filesystem::path& path)
+{
+    auto fileStream = std::make_shared<FileStream>();
+
+    HRESULT hr = fileStream->OpenFile(
+        path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to open: '{}' [{}]", path, SystemError(hr));
+        return SystemError(hr);
+    }
+
+    CryptoHashStream hash;
+    hr = hash.OpenToRead(CryptoHashStream::Algorithm::SHA256, fileStream);
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to open hashstream: '{}' [{}]", path, SystemError(hr));
+        return SystemError(hr);
+    }
+
+    ULONGLONG ullBytesWritten;
+    hr = hash.CopyTo(DevNullStream(), &ullBytesWritten);
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to consume stream: '{}' [{}]", path, SystemError(hr));
+        return SystemError(hr);
+    }
+
+    std::wstring sha256;
+    hr = hash.GetHash(CryptoHashStream::Algorithm::SHA256, sha256);
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to get sha256: '{}' [{}]", path, SystemError(hr));
+        return SystemError(hr);
+    }
+
+    Log::Debug(L"Sha256 for '{}': {}", path, sha256);
+    return sha256;
+}
+
+Result<std::wstring> GetProcessExecutableSha256(DWORD dwProcessId)
+{
+    Guard::Handle hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
+    if (!hProcess)
+    {
+        const auto error = LastWin32Error();
+        Log::Debug(L"Failed OpenProcess: {} [{}]", dwProcessId, error);
+        return error;
+    }
+
+    std::error_code ec;
+    const auto path = GetModuleFileNameExApi(hProcess.get(), NULL, ec);
+    return Sha256(path);
 }
 
 }  // namespace
@@ -329,7 +386,15 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             {
                 auto mothership_cmdline = SystemDetails::GetCmdLine(mothership_id.value());
                 if (mothership_cmdline)
+                {
                     writer->WriteNamed(L"command", mothership_cmdline.value().c_str());
+                }
+
+                const auto sha256 = GetProcessExecutableSha256(mothership_id.value());
+                if (sha256)
+                {
+                    writer->WriteNamed(L"sha256", sha256.value());
+                }
             }
             writer->WriteNamed(L"output", config.Output.Path.c_str());
             writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());
