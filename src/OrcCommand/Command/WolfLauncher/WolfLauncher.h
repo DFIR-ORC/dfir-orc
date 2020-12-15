@@ -175,6 +175,32 @@ public:
     HRESULT Run();
 
 private:
+    std::shared_ptr<WolfExecution::Recipient> GetRecipient(const std::wstring& strName);
+
+    HRESULT InitializeUpload(const OutputSpec::Upload& uploadspec);
+    HRESULT UploadSingleFile(const std::wstring& fileName, const std::wstring& filePath);
+    HRESULT CompleteUpload();
+
+    std::shared_ptr<WolfExecution::Recipient> GetRecipientFromItem(const ConfigItem& item);
+
+    HRESULT SetWERDontShowUI(DWORD dwNewValue, DWORD& dwOldValue);
+
+    HRESULT CreateAndUploadOutline();
+    Orc::Result<void> Main::CreateAndUploadOutcome();
+
+    HRESULT SetLauncherPriority(WolfPriority priority);
+
+    HRESULT SetDefaultAltitude()
+    {
+        LocationSet::ConfigureDefaultAltitude(config.DefaultAltitude);
+        return S_OK;
+    }
+
+    HRESULT Run_Execute();
+    HRESULT ExecuteKeyword(WolfExecution& execution);
+    HRESULT Run_Keywords();
+
+private:
     Command::Output::Journal m_journal;
     Wolf::Outcome::Outcome m_outcome;
 
@@ -188,30 +214,6 @@ private:
     std::shared_ptr<UploadAgent> m_pUploadAgent;
     std::unique_ptr<UploadMessage::UnboundedMessageBuffer> m_pUploadMessageQueue;
     std::unique_ptr<Concurrency::call<UploadNotification::Notification>> m_pUploadNotification;
-
-    std::shared_ptr<WolfExecution::Recipient> GetRecipient(const std::wstring& strName);
-
-    HRESULT InitializeUpload(const OutputSpec::Upload& uploadspec);
-    HRESULT UploadSingleFile(const std::wstring& fileName, const std::wstring& filePath);
-    HRESULT CompleteUpload();
-
-    std::shared_ptr<WolfExecution::Recipient> GetRecipientFromItem(const ConfigItem& item);
-
-    HRESULT SetWERDontShowUI(DWORD dwNewValue, DWORD& dwOldValue);
-
-    HRESULT CreateAndUploadOutline();
-
-    HRESULT SetLauncherPriority(WolfPriority priority);
-
-    HRESULT SetDefaultAltitude()
-    {
-        LocationSet::ConfigureDefaultAltitude(config.DefaultAltitude);
-        return S_OK;
-    }
-
-    HRESULT Run_Execute();
-    HRESULT ExecuteKeyword(WolfExecution& execution);
-    HRESULT Run_Keywords();
 };
 
 }  // namespace Command::Wolf

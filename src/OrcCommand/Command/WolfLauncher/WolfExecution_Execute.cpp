@@ -39,6 +39,7 @@
 
 #include "WolfTask.h"
 #include "Convert.h"
+#include "Utils/Time.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -153,54 +154,70 @@ HRESULT WolfExecution::BuildFullArchiveName()
     return S_OK;
 }
 
+void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notification& notification)
+{
+    const std::wstring operation = L"Archive";
+
+    HRESULT hr = notification->GetHResult();
+    if (FAILED(hr))
+    {
+        const auto error = SystemError(notification->GetHResult());
+        Log::Error(
+            L"Failed creating archive '{}': {} [{}]", notification->Keyword(), notification->Description(), error);
+        m_journal.Print(
+            notification->Keyword(), operation, L"Archive failed '{}' [{}]", notification->GetFileName(), error);
+        return;
+    }
+
+    auto lock = m_outcome.Lock();
+    auto& outcomeArchive = m_outcome.GetCommandSet(m_commandSet).GetArchive();
+
+    switch (notification->GetType())
+    {
+        case ArchiveNotification::ArchiveStarted: {
+            m_journal.Print(m_commandSet, operation, L"Started");
+            outcomeArchive.SetName(notification->GetFileName());
+            break;
+        }
+        case ArchiveNotification::FileAddition: {
+            m_journal.Print(
+                m_commandSet, operation, L"Add file: {} ({})", notification->Keyword(), notification->FileSize());
+
+            Outcome::Archive::Item item;
+            item.SetName(notification->Keyword());
+            item.SetSize(notification->FileSize());
+            outcomeArchive.Add(item);
+            break;
+        }
+        case ArchiveNotification::DirectoryAddition: {
+            m_journal.Print(m_commandSet, operation, L"Add directory: {}", notification->Keyword());
+            break;
+        }
+        case ArchiveNotification::StreamAddition: {
+            m_journal.Print(m_commandSet, operation, L"Add stream: {}", notification->Keyword());
+
+            Outcome::Archive::Item item;
+            item.SetName(notification->Keyword());
+            item.SetSize(notification->FileSize());
+            outcomeArchive.Add(item);
+            break;
+        }
+        case ArchiveNotification::ArchiveComplete: {
+            m_journal.Print(
+                m_commandSet, operation, L"Completed: {} ({})", notification->Keyword(), notification->FileSize());
+
+            outcomeArchive.SetSize(notification->FileSize());
+            break;
+        }
+    }
+}
+
 HRESULT WolfExecution::CreateArchiveAgent()
 {
     HRESULT hr = E_FAIL;
 
-    m_archiveNotification = std::make_unique<
-        Concurrency::call<ArchiveNotification::Notification>>([this](const ArchiveNotification::Notification& archive) {
-        const std::wstring operation = L"Archive";
-
-        HRESULT hr = archive->GetHResult();
-        if (FAILED(hr))
-        {
-            Log::Critical(
-                L"Failed creating archive '{}': {} [{}]",
-                archive->Keyword(),
-                archive->Description(),
-                SystemError(archive->GetHResult()));
-
-            m_journal.Print(
-                archive->Keyword(),
-                operation,
-                L"Failed creating archive '{}': {} [{}]",
-                archive->GetFileName(),
-                archive->Description(),
-                SystemError(archive->GetHResult()));
-
-            return;
-        }
-
-        switch (archive->GetType())
-        {
-            case ArchiveNotification::ArchiveStarted:
-                m_journal.Print(m_commandSet, operation, L"Started");
-                break;
-            case ArchiveNotification::FileAddition:
-                m_journal.Print(m_commandSet, operation, L"Add file: {} ({})", archive->Keyword(), archive->FileSize());
-                break;
-            case ArchiveNotification::DirectoryAddition:
-                m_journal.Print(m_commandSet, operation, L"Add directory: {}", archive->Keyword());
-                break;
-            case ArchiveNotification::StreamAddition:
-                m_journal.Print(m_commandSet, operation, L"Add stream: {}", archive->Keyword());
-                break;
-            case ArchiveNotification::ArchiveComplete:
-                m_journal.Print(
-                    m_commandSet, operation, L"Completed: {} ({})", archive->Keyword(), archive->FileSize());
-                break;
-        }
-    });
+    m_archiveNotification = std::make_unique<Concurrency::call<ArchiveNotification::Notification>>(
+        [this](const ArchiveNotification::Notification& notification) { ArchiveNotificationHandler(notification); });
 
     m_archiveAgent =
         std::make_unique<ArchiveAgent>(m_ArchiveMessageBuffer, m_ArchiveMessageBuffer, *m_archiveNotification);
@@ -532,7 +549,6 @@ HRESULT WolfExecution::CreateCommandAgent(
                     }
                     break;
                     case CommandNotification::Terminated:
-                        AddProcessStatistics(*m_ProcessStatisticsWriter, item);
                         break;
                     case CommandNotification::Running:
                         break;
@@ -557,7 +573,7 @@ HRESULT WolfExecution::CreateCommandAgent(
                     case CommandNotification::AllTerminated:
                         Log::Warn("JOB: Job was autoritatively terminated");
                         break;
-                    case CommandNotification::Done:
+                    case CommandNotification::Done: {
                         GetSystemTimeAsFileTime(&m_FinishTime);
                         {
                             auto start = Orc::ConvertTo(m_StartTime);
@@ -572,7 +588,72 @@ HRESULT WolfExecution::CreateCommandAgent(
 
                         AddJobStatistics(*m_JobStatisticsWriter, item);
                         Log::Info("JOB: Complete");
+
+                        auto lock = m_outcome.Lock();
+
+                        auto& commandSetOutcome = m_outcome.GetCommandSet(item->GetKeyword());
+                        commandSetOutcome.SetKeyword(item->GetKeyword());
+                        commandSetOutcome.SetStart(FromFileTime(m_StartTime));
+                        commandSetOutcome.SetEnd(FromFileTime(m_FinishTime));
+
+                        const auto jobStats = item->GetJobStatictics();
+                        if (jobStats)
+                        {
+                            Outcome::JobStatistics statistics;
+
+                            statistics.SetPageFaultCount(jobStats->TotalPageFaultCount);
+                            statistics.SetProcessCount(jobStats->TotalProcesses);
+                            statistics.SetActiveProcessCount(jobStats->ActiveProcesses);
+                            statistics.SetTerminatedProcessCount(jobStats->TotalTerminatedProcesses);
+                            statistics.SetPeakProcessMemory(jobStats->PeakProcessMemoryUsed);
+                            statistics.SetPeakJobMemory(jobStats->PeakJobMemoryUsed);
+                            statistics.SetIOCounters(jobStats->IoInfo);
+
+                            commandSetOutcome.SetJobStatistics(statistics);
+                        }
+
+                        for (const auto& [keyword, task] : m_TasksByPID)
+                        {
+                            if (task == nullptr)
+                            {
+                                Log::Critical("Invalid task");
+                                continue;
+                            }
+
+                            {
+                                auto& commandOutcome = commandSetOutcome.GetCommand(task->Command());
+                                commandOutcome.SetCommandLineValue(task->CommandLine());
+                                commandOutcome.SetCreationTime(FromFileTime(task->CreationTime()));
+                                commandOutcome.SetExitTime(FromFileTime(task->ExitTime()));
+
+                                const auto& userTime = task->UserTime();
+                                if (userTime)
+                                {
+                                    commandOutcome.SetUserTime(
+                                        std::chrono::duration_cast<std::chrono::seconds>(*userTime));
+                                }
+
+                                const auto& kernelTime = task->KernelTime();
+                                if (kernelTime)
+                                {
+                                    commandOutcome.SetKernelTime(
+                                        std::chrono::duration_cast<std::chrono::seconds>(*kernelTime));
+                                }
+
+                                commandOutcome.SetExitCode(task->ExitCode());
+                                commandOutcome.SetPid(task->Pid());
+                                commandOutcome.SetKeyword(task->Command());
+
+                                const auto& taskIoCounters = task->IoCounters();
+                                if (taskIoCounters)
+                                {
+                                    commandOutcome.SetIOCounters(*taskIoCounters);
+                                }
+                            }
+                        }
+
                         break;
+                    }
                 }
                 NotifyTask(item);
             }

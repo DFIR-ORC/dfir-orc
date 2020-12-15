@@ -143,6 +143,19 @@ Result<std::wstring> Sha256(const std::filesystem::path& path)
     return sha256;
 }
 
+Result<std::wstring> GetCurrentExecutableSha256()
+{
+    std::error_code ec;
+    const auto path = GetModuleFileNameApi(NULL, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed to get module path [{}]", ec);
+        return ec;
+    }
+
+    return Sha256(path);
+}
+
 Result<std::wstring> GetProcessExecutableSha256(DWORD dwProcessId)
 {
     Guard::Handle hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
@@ -156,6 +169,101 @@ Result<std::wstring> GetProcessExecutableSha256(DWORD dwProcessId)
     std::error_code ec;
     const auto path = GetModuleFileNameExApi(hProcess.get(), NULL, ec);
     return Sha256(path);
+}
+
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
+{
+    auto lock = outcome.Lock();
+
+    {
+        std::wstring computerName;
+        SystemDetails::GetComputerName_(computerName);
+        outcome.SetComputerNameValue(computerName);
+    }
+
+    const auto timestamp = SystemDetails::GetTimeStamp();
+    if (timestamp)
+    {
+        auto timestampTp = FromSystemTime(timestamp.value());
+        if (timestampTp)
+        {
+            outcome.SetTimestamp(*timestampTp);
+        }
+    }
+
+    auto mothershipPID = SystemDetails::GetParentProcessId();
+    if (mothershipPID)
+    {
+        auto& mothership = outcome.GetMothership();
+
+        auto commandLine = SystemDetails::GetCmdLine(mothershipPID.value());
+        if (commandLine)
+        {
+            mothership.SetCommandLineValue(commandLine.value());
+        }
+
+        auto sha256 = GetProcessExecutableSha256(mothershipPID.value());
+        if (sha256)
+        {
+            mothership.SetSha256(sha256.value());
+        }
+    }
+
+    auto& wolfLauncher = outcome.GetWolfLauncher();
+
+    const auto sha256 = GetCurrentExecutableSha256();
+    if (sha256)
+    {
+        wolfLauncher.SetSha256(sha256.value());
+    }
+
+    wolfLauncher.SetVersion(kOrcFileVerString);
+    wolfLauncher.SetCommandLineValue(GetCommandLineW());
+}
+
+Result<uint64_t> GetFileSize(const std::filesystem::path& path)
+{
+    FileStream fs;
+    HRESULT hr = fs.ReadFrom(path.c_str());
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to read file '{}' [{}]", hr);
+        return SystemError(hr);
+    }
+
+    return fs.GetSize();
+}
+
+Orc::Result<void> DumpOutcome(Command::Wolf::Outcome::Outcome& outcome, const OutputSpec& output)
+{
+    auto options = std::make_unique<StructuredOutput::JSON::Options>();
+    options->Encoding = OutputSpec::Encoding::UTF8;
+    options->bPrettyPrint = true;
+
+    auto writer = StructuredOutputWriter::GetWriter(output, std::move(options));
+    if (writer == nullptr)
+    {
+        Log::Error(L"Failed to create writer for outcome file {}", output.Path);
+        return SystemError(E_FAIL);
+    }
+
+    auto rv = Write(outcome, writer);
+    if (rv.has_error())
+    {
+        Log::Error(L"Failed to write outcome file [{}]", rv);
+        return rv;
+    }
+
+    HRESULT hr = writer->Close();
+    if (FAILED(hr))
+    {
+        const auto error = SystemError(hr);
+        Log::Error(L"Failed to close outcome file [{}]", error);
+        return error;
+    }
+
+    Log::Debug(L"Written outcome file: '{}' (size: {})", output.Path, ToOptional(GetFileSize(output.Path)));
+    return Orc::Success<void>();
 }
 
 }  // namespace
@@ -512,6 +620,44 @@ HRESULT Main::Run()
     return S_OK;
 }
 
+Orc::Result<void> Main::CreateAndUploadOutcome()
+{
+    ::UpdateOutcome(m_outcome);
+
+    auto rv = ::DumpOutcome(m_outcome, config.Outcome);
+    if (rv.has_error())
+    {
+
+        Log::Error(L"Failed to dump outcome file [{}]", rv);
+        return rv;
+    }
+
+    std::error_code ec;
+    auto exists = std::filesystem::exists(config.Outcome.Path, ec);
+    if (ec)
+    {
+        Log::Error(L"Failed to upload outcome file [{}]", ec);
+        return ec;
+    }
+
+    if (!exists)
+    {
+        const auto ec = std::make_error_code(std::errc::no_such_file_or_directory);
+        Log::Error(L"Failed to upload outcome file [{}]", ec);
+        return ec;
+    }
+
+    HRESULT hr = UploadSingleFile(config.Outcome.FileName, config.Outcome.Path);
+    if (FAILED(hr))
+    {
+        const auto error = SystemError(hr);
+        Log::Error(L"Failed to upload outcome file [{}]", error);
+        return error;
+    }
+
+    return Success<void>();
+}
+
 HRESULT Main::Run_Execute()
 {
     HRESULT hr = E_FAIL;
@@ -721,6 +867,13 @@ HRESULT Main::Run_Execute()
             continue;
         }
     }
+
+    auto rv = CreateAndUploadOutcome();
+    if (rv.has_error())
+    {
+        Log::Error(L"Failed to upload outcome [{}]", rv);
+    }
+
     const auto& fileSink = m_logging.fileSink();
     if (fileSink->IsOpen())
     {

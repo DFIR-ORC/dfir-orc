@@ -79,6 +79,12 @@ public:
     };
 
 private:
+    void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notification& notfication);
+    CommandMessage::Message SetCommandFromConfigItem(const ConfigItem& item);
+    HRESULT GetExecutableToRun(const ConfigItem& item, std::wstring& strExeToRun, std::wstring& strArgToAdd);
+    HRESULT NotifyTask(const CommandNotification::Ptr& item);
+
+private:
     Command::Output::Journal& m_journal;
     Command::Wolf::Outcome::Outcome& m_outcome;
 
@@ -135,21 +141,15 @@ private:
     std::unique_ptr<CommandAgent> m_cmdAgent;
 
     JobRestrictions m_Restrictions;
-    std::chrono::milliseconds m_ElapsedTime;  // in millisecs
+    std::chrono::milliseconds m_ElapsedTime;
 
     std::unique_ptr<Concurrency::timer<CommandMessage::Message>> m_RefreshTimer;
     std::unique_ptr<Concurrency::timer<CommandMessage::Message>> m_KillerTimer;
 
     std::vector<std::shared_ptr<Recipient>> m_Recipients;
 
-    CommandMessage::Message SetCommandFromConfigItem(const ConfigItem& item);
-    HRESULT GetExecutableToRun(const ConfigItem& item, std::wstring& strExeToRun, std::wstring& strArgToAdd);
-
     HRESULT AddProcessStatistics(ITableOutput& output, const CommandNotification::Ptr& notification);
     HRESULT AddJobStatistics(ITableOutput& output, const CommandNotification::Ptr& notification);
-
-    HRESULT NotifyTask(const CommandNotification::Ptr& item);
-
     static std::wregex g_WinVerRegEx;
 
     std::shared_ptr<ByteStream> m_configStream;
