@@ -632,6 +632,32 @@ protected:
         return false;
     }
 
+    bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
+    template <typename OptionType>
+    bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType> parameter)
+    {
+        OptionType result;
+        if (OutputFileOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
+
+    bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
+    template <typename OptionType>
+    bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
+    {
+        OptionType result;
+        if (OutputDirOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
+
     bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile);
     template <typename OptionType>
     bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)

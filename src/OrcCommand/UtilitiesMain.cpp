@@ -205,6 +205,44 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
     return true;
 }
 
+bool UtilitiesMain::OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile)
+{
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
+    {
+        Log::Error(L"Option /{} should be like: /{}=c:\\temp\\OutputFile.csv", szOption, szOption);
+        return false;
+    }
+    if (auto hr = GetOutputFile(pEquals + 1, strOutputFile, true); FAILED(hr))
+    {
+        Log::Error(L"Invalid output dir specified: {}", pEquals + 1);
+        return false;
+    }
+    return true;
+}
+
+bool UtilitiesMain::OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputDir)
+{
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
+    {
+        Log::Error(L"Option /{} should be like: /{}=c:\\temp", szOption, szOption);
+        return false;
+    }
+    if (auto hr = GetOutputDir(pEquals + 1, strOutputDir, true); FAILED(hr))
+    {
+        Log::Error(L"Invalid output dir specified: {}", pEquals + 1);
+        return false;
+    }
+    return true;
+}
+
 bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile)
 {
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
