@@ -184,21 +184,20 @@ HRESULT WolfExecution::CreateArchiveAgent()
         switch (archive->GetType())
         {
             case ArchiveNotification::ArchiveStarted:
-                m_journal.Print(archive->CommandSet(), operation, L"Started");
+                m_journal.Print(m_commandSet, operation, L"Started");
                 break;
             case ArchiveNotification::FileAddition:
-                m_journal.Print(
-                    archive->CommandSet(), operation, L"Add file: {} ({})", archive->Keyword(), archive->FileSize());
+                m_journal.Print(m_commandSet, operation, L"Add file: {} ({})", archive->Keyword(), archive->FileSize());
                 break;
             case ArchiveNotification::DirectoryAddition:
-                m_journal.Print(archive->CommandSet(), operation, L"Add directory: {}", archive->Keyword());
+                m_journal.Print(m_commandSet, operation, L"Add directory: {}", archive->Keyword());
                 break;
             case ArchiveNotification::StreamAddition:
-                m_journal.Print(archive->CommandSet(), operation, L"Add stream: {}", archive->Keyword());
+                m_journal.Print(m_commandSet, operation, L"Add stream: {}", archive->Keyword());
                 break;
             case ArchiveNotification::ArchiveComplete:
                 m_journal.Print(
-                    archive->CommandSet(), operation, L"Completed: {} ({})", archive->Keyword(), archive->FileSize());
+                    m_commandSet, operation, L"Completed: {} ({})", archive->Keyword(), archive->FileSize());
                 break;
         }
     });
@@ -296,7 +295,6 @@ HRESULT WolfExecution::CreateArchiveAgent()
         ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
         auto request = ArchiveMessage::MakeOpenRequest(m_strArchiveFileName, fmt, pFinalStream, m_strCompressionLevel);
-        request->SetCommandSet(m_commandSet);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
     else
@@ -312,7 +310,6 @@ HRESULT WolfExecution::CreateArchiveAgent()
         ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
         auto request = ArchiveMessage::MakeOpenRequest(m_strArchiveFileName, fmt, pOutputStream, m_strCompressionLevel);
-        request->SetCommandSet(m_commandSet);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
 
@@ -749,7 +746,6 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     {
         auto request =
             ArchiveMessage::MakeAddFileRequest(L"ProcessStatistics.csv", m_ProcessStatisticsOutput.Path, false, true);
-        request->SetCommandSet(m_commandSet);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
 
@@ -757,7 +753,6 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     {
         auto request =
             ArchiveMessage::MakeAddFileRequest(L"JobStatistics.csv", m_JobStatisticsOutput.Path, false, true);
-        request->SetCommandSet(m_commandSet);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
 
@@ -765,7 +760,6 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     {
         m_configStream->SetFilePointer(0LL, FILE_BEGIN, NULL);
         auto request = ArchiveMessage::MakeAddStreamRequest(L"Config.xml", m_configStream, false);
-        request->SetCommandSet(m_commandSet);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
 
@@ -773,12 +767,10 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     {
         m_localConfigStream->SetFilePointer(0LL, FILE_BEGIN, NULL);
         auto request = ArchiveMessage::MakeAddStreamRequest(L"LocalConfig.xml", m_localConfigStream, false);
-        request->SetCommandSet(m_commandSet);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
 
     auto request = ArchiveMessage::MakeCompleteRequest();
-    request->SetCommandSet(m_commandSet);
     Concurrency::send(m_ArchiveMessageBuffer, request);
 
     Log::Debug(L"WAITING FOR ARCHIVE to COMPLETE");
@@ -841,14 +833,12 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
 
                     auto request =
                         UploadMessage::MakeUploadFileRequest(m_strOutputFileName, m_strOutputFullPath, false);
-                    request->SetKeyword(m_commandSet);
                     Concurrency::send(pUploadMessageQueue, request);
                 }
                 break;
                 case OutputSpec::UploadOperation::Move: {
 
                     auto request = UploadMessage::MakeUploadFileRequest(m_strOutputFileName, m_strOutputFullPath, true);
-                    request->SetKeyword(m_commandSet);
                     Concurrency::send(pUploadMessageQueue, request);
                 }
                 break;
