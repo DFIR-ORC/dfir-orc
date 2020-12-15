@@ -7,6 +7,8 @@
 //
 #pragma once
 
+#include <optional>
+
 #include <boost/outcome/outcome.hpp>
 
 namespace Orc {
@@ -24,6 +26,17 @@ template <typename T>
 const T& operator*(const Result<T>& result)
 {
     return result.value();
+}
+
+template <typename T>
+std::optional<T> ToOptional(const Orc::Result<T>& result)
+{
+    if (result.has_value())
+    {
+        return result.value();
+    }
+
+    return {};
 }
 
 inline std::error_code SystemError(HRESULT hr)
