@@ -78,7 +78,7 @@ public:
 
     HRESULT SetTemporaryDirectory(const std::wstring& strTempDir);
 
-    std::shared_ptr<Driver> GetDriver(
+    std::shared_ptr<Driver> AddDriver(
         const std::wstring& strServiceName,
         const std::wstring& strX86DriverRef,
         const std::wstring& strX64DriverRef);

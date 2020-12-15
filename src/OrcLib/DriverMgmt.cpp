@@ -272,7 +272,7 @@ HRESULT Orc::Driver::Install(const std::wstring& strX86DriverRef, const std::wst
     return S_OK;
 }
 
-std::shared_ptr<Orc::Driver> DriverMgmt::GetDriver(
+std::shared_ptr<Orc::Driver> DriverMgmt::AddDriver(
     const std::wstring& strServiceName,
     const std::wstring& strX86DriverRef,
     const std::wstring& strX64DriverRef)
