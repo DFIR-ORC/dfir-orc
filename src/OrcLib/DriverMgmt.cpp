@@ -374,6 +374,20 @@ Orc::Result<DriverStatus> Orc::Driver::GetStatus()
 
 }
 
+std::shared_ptr<Driver> Orc::DriverMgmt::GetDriver(const std::wstring& strServiceName)
+{
+    auto retval = std::make_shared<Driver>(shared_from_this(), strServiceName);
+
+    auto status = retval->GetStatus();
+    if (status && status.value() != DriverStatus::Inexistent)
+    {
+        // a driver was found!
+        return retval;
+    }
+    // failed to retrieve an existing driver/service
+    return nullptr;
+}
+
 HRESULT Orc::DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in LPCTSTR ServiceExe)
 
 {

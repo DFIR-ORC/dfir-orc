@@ -93,6 +93,8 @@ public:
         const std::wstring& strX86DriverRef,
         const std::wstring& strX64DriverRef);
 
+    std::shared_ptr<Driver> GetDriver(const std::wstring& strServiceName);
+
     ~DriverMgmt() { Disconnect(); }
 
 private:
