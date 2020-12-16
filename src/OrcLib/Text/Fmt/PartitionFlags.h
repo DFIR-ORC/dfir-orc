@@ -11,7 +11,7 @@
 #include "Text/Fmt/Fwd/PartitionFlags.h"
 
 #include "Text/Format.h"
-#include "Utils/Iconv.h"
+#include "Text/Iconv.h"
 #include <PartitionFlags.h>
 
 template <typename FormatContext>

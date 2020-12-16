@@ -12,7 +12,7 @@
 
 #include <CryptoHashStreamAlgorithm.h>
 
-#include "Utils/Iconv.h"
+#include "Text/Iconv.h"
 
 template <typename FormatContext>
 auto fmt::formatter<Orc::CryptoHashStreamAlgorithm>::format(

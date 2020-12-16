@@ -11,7 +11,7 @@
 #include "Text/Fmt/Fwd/Partition.h"
 
 #include "Text/Format.h"
-#include "Utils/Iconv.h"
+#include "Text/Iconv.h"
 #include <Partition.h>
 
 template <typename FormatContext>

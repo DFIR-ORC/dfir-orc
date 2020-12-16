@@ -12,7 +12,7 @@
 
 #include <FuzzyHashStreamAlgorithm.h>
 
-#include "Utils/Iconv.h"
+#include "Text/Iconv.h"
 
 template <typename FormatContext>
 auto fmt::formatter<Orc::FuzzyHashStreamAlgorithm>::format(
