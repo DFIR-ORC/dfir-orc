@@ -98,6 +98,9 @@ if(ORC_VCPKG_ROOT)
     endif()
 
     if(ORC_BUILD_APACHE_ORC)
+        if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
+            message(FATAL_ERROR "Apache Orc requires Seven or later")
+        endif()
         list(APPEND _PACKAGES orc)
     endif()
 
