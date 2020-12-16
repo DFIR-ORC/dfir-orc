@@ -526,13 +526,9 @@ source_group(In&Out\\TableOutput\\ApacheOrc
     FILES ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
 )
 
-set(SRC_INOUT_CONSOLE
-    "Output/Console/Console.h"
-)
-
-source_group(In&Out\\Output\\Console FILES ${SRC_INOUT_CONSOLE})
-
 set(SRC_TEXT
+    "Text/Console.h"
+    "Text/Console.cpp"
     "Text/Iconv.cpp"
     "Text/Iconv.h"
     "Text/Format.h"

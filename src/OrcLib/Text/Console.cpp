@@ -8,6 +8,6 @@
 
 #include "stdafx.h"
 
-#include "Output/Console/Console.h"
+#include "Text/Console.h"
 
 using namespace Orc;

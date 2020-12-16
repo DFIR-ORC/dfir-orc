@@ -15,7 +15,7 @@
 
 #include <fmt/chrono.h>
 
-#include "Output/Console/Console.h"
+#include "Text/Console.h"
 
 #include "UploadNotification.h"
 

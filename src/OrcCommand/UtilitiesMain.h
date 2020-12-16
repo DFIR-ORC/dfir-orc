@@ -41,7 +41,7 @@
 #include "TableOutputWriter.h"
 #include "ExtensionLibrary.h"
 #include "Log/Log.h"
-#include "Output/Console/Console.h"
+#include "Text/Console.h"
 #include "Text/Print.h"
 #include "Text/Fmt/FILE_NAME.h"
 #include "Text/Fmt/FILETIME.h"

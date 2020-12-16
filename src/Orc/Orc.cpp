@@ -25,7 +25,7 @@
 #include "FatInfo.h"
 #include "DD.h"
 
-#include "Output/Console/Console.h"
+#include "Text/Console.h"
 #include "Text/Tree.h"
 
 #include "ToolVersion.h"
