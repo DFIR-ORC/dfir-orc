@@ -34,7 +34,7 @@ public:
         Done
     } Status;
 
-    WolfTask(const std::wstring& commandSet, const std::wstring& command, Command::Output::Journal& journal)
+    WolfTask(const std::wstring& commandSet, const std::wstring& command, Journal& journal)
         : m_journal(journal)
         , m_commandSet(commandSet)
         , m_command(command)
@@ -71,7 +71,7 @@ public:
         std::vector<std::shared_ptr<CommandMessage>>& actions);
 
 private:
-    Orc::Command::Output::Journal& m_journal;
+    Journal& m_journal;
 
     std::wstring m_commandSet;
     std::wstring m_command;

@@ -194,7 +194,7 @@ private:
     HRESULT Run_Keywords();
 
 private:
-    Command::Output::Journal m_journal;
+    Journal m_journal;
     Wolf::Outcome::Outcome m_outcome;
 
     Configuration config;

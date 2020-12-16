@@ -85,7 +85,7 @@ private:
     HRESULT NotifyTask(const CommandNotification::Ptr& item);
 
 private:
-    Command::Output::Journal& m_journal;
+    Command::Wolf::Journal& m_journal;
     Command::Wolf::Outcome::Outcome& m_outcome;
 
     std::wstring m_logFilePath;
@@ -256,7 +256,7 @@ public:
 
     HRESULT CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue);
 
-    WolfExecution(Command::Output::Journal& journal, Wolf::Outcome::Outcome& outcome)
+    WolfExecution(Journal& journal, Wolf::Outcome::Outcome& outcome)
         : m_journal(journal)
         , m_outcome(outcome)
     {
