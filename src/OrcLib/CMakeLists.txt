@@ -533,10 +533,14 @@ set(SRC_INOUT_CONSOLE
 source_group(In&Out\\Output\\Console FILES ${SRC_INOUT_CONSOLE})
 
 set(SRC_TEXT
+    "Text/Iconv.cpp"
+    "Text/Iconv.h"
     "Text/Format.h"
     "Text/HexDump.h"
     "Text/Tree.h"
-    "Text/Tree.cpp")
+    "Text/Tree.cpp"
+    "Text/Fwd/Iconv.h"
+)
 
 source_group(Text FILES ${SRC_TEXT})
 
@@ -693,8 +697,6 @@ set(SRC_UTILITIES
     "Flags.h"
     "Utils/EnumFlags.h"
     "Utils/Guard.h"
-    "Utils/Iconv.cpp"
-    "Utils/Iconv.h"
     "Utils/MakeArray.h"
     "Utils/Result.h"
     "Utils/Time.cpp"
