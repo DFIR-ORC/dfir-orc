@@ -38,7 +38,6 @@ set(SRC_COMMON
     "OrcCommand.h"
     "stdafx.h"
     "targetver.h"
-    "Output/Console/Journal.h"
     "ToolVersion.h"
     "ToolVersion.cpp"
     "UtilitiesLogger.cpp"
@@ -212,6 +211,7 @@ source_group(USNInfo FILES ${SRC_USNINFO})
 set(SRC_WOLFLAUNCHER
     "Command/WolfLauncher/ConfigFile_WOLFLauncher.cpp"
     "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
+    "Command/WolfLauncher/Journal.h"
     "Command/WolfLauncher/Outcome.h"
     "Command/WolfLauncher/Outcome.cpp"
     "Command/WolfLauncher/WolfExecution.cpp"

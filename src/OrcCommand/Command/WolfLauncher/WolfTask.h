@@ -12,7 +12,7 @@
 #include "CommandNotification.h"
 #include "CommandMessage.h"
 
-#include "Output/Console/Journal.h"
+#include "Command/WolfLauncher/Journal.h"
 
 #pragma managed(push, off)
 

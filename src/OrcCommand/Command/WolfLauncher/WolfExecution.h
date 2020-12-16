@@ -24,7 +24,7 @@
 #include "UploadMessage.h"
 #include "Robustness.h"
 
-#include "Output/Console/Journal.h"
+#include "Command/WolfLauncher/Journal.h"
 #include "Command/WolfLauncher/Outcome.h"
 
 #pragma managed(push, off)

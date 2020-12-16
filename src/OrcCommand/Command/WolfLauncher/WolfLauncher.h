@@ -25,7 +25,7 @@
 #include "WolfExecution.h"
 #include "TableOutput.h"
 
-#include "Output/Console/Journal.h"
+#include "Command/WolfLauncher/Journal.h"
 #include "Utils/EnumFlags.h"
 
 #pragma managed(push, off)
