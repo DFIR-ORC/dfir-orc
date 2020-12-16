@@ -426,7 +426,7 @@ public:
 protected:
     UtilitiesLogger m_logging;
 
-    mutable Output::Console m_console;
+    mutable Text::Console m_console;
 
     Traits::TimeUtc<SYSTEMTIME> theStartTime;
     Traits::TimeUtc<SYSTEMTIME> theFinishTime;

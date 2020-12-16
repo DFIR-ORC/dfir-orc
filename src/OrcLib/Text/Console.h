@@ -20,7 +20,7 @@
 #include "Utils/TypeTraits.h"
 
 namespace Orc {
-namespace Output {
+namespace Text {
 
 namespace detail {
 
@@ -122,5 +122,5 @@ private:
     Text::Tree<Buffer> m_tree;
 };
 
-}  // namespace Output
+}  // namespace Text
 }  // namespace Orc

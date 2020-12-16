@@ -24,7 +24,7 @@ namespace Orc::Command::Output {
 class Journal
 {
 public:
-    Journal::Journal(Orc::Output::Console& console)
+    Journal::Journal(Orc::Text::Console& console)
         : m_mutex()
         , m_console(console)
     {
@@ -42,15 +42,15 @@ public:
         }
     }
 
-    auto Console() { return std::pair<std::lock_guard<std::mutex>, Orc::Output::Console&> {m_mutex, m_console}; }
+    auto Console() { return std::pair<std::lock_guard<std::mutex>, Orc::Text::Console&> {m_mutex, m_console}; }
     auto Console() const
     {
-        return std::pair<std::lock_guard<std::mutex>, const Orc::Output::Console&> {m_mutex, m_console};
+        return std::pair<std::lock_guard<std::mutex>, const Orc::Text::Console&> {m_mutex, m_console};
     }
 
 private:
     mutable std::mutex m_mutex;
-    Orc::Output::Console& m_console;
+    Orc::Text::Console& m_console;
 };
 
 }  // namespace Orc::Command::Output

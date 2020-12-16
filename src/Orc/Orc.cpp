@@ -45,7 +45,7 @@ struct ToolDescription
 };
 
 using namespace Orc::Command;
-using namespace Orc::Output;
+using namespace Orc::Text;
 using namespace Orc;
 
 ToolDescription g_Tools[] = {
