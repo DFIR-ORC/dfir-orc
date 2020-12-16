@@ -41,7 +41,7 @@ std::wstring FuzzyHashStream::GetSupportedAlgorithm(Algorithm algs)
     retval.reserve(16);
 
 #ifdef ORC_BUILD_SSDEEP
-    if (algs & FuzzyHashStream::Algorithm::SSDeep)
+    if (HasFlag(algs, FuzzyHashStream::Algorithm::SSDeep))
     {
         retval.append(L"SSDeep");
     }
@@ -122,7 +122,7 @@ HRESULT FuzzyHashStream::ResetHash(bool bContinue)
         m_ssdeep = nullptr;
     }
 
-    if (m_Algorithms & FuzzyHashStream::Algorithm::SSDeep)
+    if (HasFlag(m_Algorithms, FuzzyHashStream::Algorithm::SSDeep))
     {
         m_ssdeep = fuzzy_new();
     }
@@ -162,7 +162,7 @@ HRESULT FuzzyHashStream::GetHash(FuzzyHashStream::Algorithm alg, CBinaryBuffer& 
         {
             case FuzzyHashStream::Algorithm::SSDeep:
 #ifdef ORC_BUILD_SSDEEP
-                if (m_Algorithms & FuzzyHashStream::Algorithm::SSDeep && m_ssdeep)
+                if (HasFlag(m_Algorithms, FuzzyHashStream::Algorithm::SSDeep) && m_ssdeep)
                 {
                     Hash.SetCount(FUZZY_MAX_RESULT);
                     Hash.ZeroMe();

@@ -550,7 +550,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
     FuzzyHashStream::Algorithm fuzzy_algs = FuzzyHashStream::Algorithm::Undefined;
 
 #ifdef ORC_BUILD_SSDEEP
-    if (HasFlag(localIntentions, Intentions::FILEINFO_SSDEEP)
+    if (HasFlag(localIntentions, Intentions::FILEINFO_SSDEEP))
         fuzzy_algs = fuzzy_algs | FuzzyHashStream::Algorithm::SSDeep;
 #endif
 
