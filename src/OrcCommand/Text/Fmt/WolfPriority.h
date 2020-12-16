@@ -12,7 +12,7 @@
 
 #include <system_error>
 
-#include "Output/Text/Format.h"
+#include "Text/Format.h"
 #include "Utils/Iconv.h"
 
 template <>

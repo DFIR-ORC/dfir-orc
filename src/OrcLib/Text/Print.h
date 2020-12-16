@@ -13,7 +13,7 @@
 #include <memory>
 #include <optional>
 
-#include "Output/Text/Tree.h"
+#include "Text/Tree.h"
 
 namespace Orc {
 namespace Text {

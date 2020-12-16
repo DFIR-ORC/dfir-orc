@@ -14,8 +14,8 @@
 
 #include "ToolVersion.h"
 
-#include "Output/Text/Print/LocationSet.h"
-#include "Output/Text/Print/OutputSpec.h"
+#include "Text/Print/LocationSet.h"
+#include "Text/Print/OutputSpec.h"
 
 #include "Usage.h"
 

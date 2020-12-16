@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "Output/Text/Print/Ntfs/MFTRecord.h"
+#include "Text/Print/Ntfs/MFTRecord.h"
 
 namespace Orc {
 namespace Text {

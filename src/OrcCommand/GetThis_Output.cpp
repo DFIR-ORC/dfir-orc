@@ -16,12 +16,12 @@
 #include "FileFind.h"
 #include "ToolVersion.h"
 
-#include "Output/Text/Print.h"
-#include "Output/Text/Fmt/formatter.h"
-#include "Output/Text/Print/Bool.h"
-#include "Output/Text/Print/LocationSet.h"
-#include "Output/Text/Print/OutputSpec.h"
-#include "Output/Text/Print/SearchTerm.h"
+#include "Text/Print.h"
+#include "Text/Fmt/formatter.h"
+#include "Text/Print/Bool.h"
+#include "Text/Print/LocationSet.h"
+#include "Text/Print/OutputSpec.h"
+#include "Text/Print/SearchTerm.h"
 #include "Utils/MakeArray.h"
 #include "Usage.h"
 

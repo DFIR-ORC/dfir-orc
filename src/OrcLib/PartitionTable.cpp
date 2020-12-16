@@ -21,9 +21,9 @@
 #include "NtfsDataStructures.h"
 #include "diskguid.h"
 
-#include "Output/Text/Fmt/Partition.h"
+#include "Text/Fmt/Partition.h"
 
-#include "Output/Text/Fmt/Partition.h"
+#include "Text/Fmt/Partition.h"
 
 using namespace Orc;
 

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/TimeUtc.h"
+#include "Text/Fmt/Fwd/TimeUtc.h"
 
 #include <array>
 #include <string>
@@ -16,7 +16,7 @@
 #include <windows.h>
 
 #include "Utils/TypeTraits.h"
-#include "Output/Text/Fmt/Fwd/SYSTEMTIME.h"
+#include "Text/Fmt/Fwd/SYSTEMTIME.h"
 
 namespace Orc {
 namespace Text {

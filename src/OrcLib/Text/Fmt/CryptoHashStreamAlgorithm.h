@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
+#include "Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
 
 #include <CryptoHashStreamAlgorithm.h>
 

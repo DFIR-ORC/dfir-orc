@@ -10,7 +10,7 @@
 
 #include "Mothership.h"
 
-#include "Output/Text/Print/Bool.h"
+#include "Text/Print/Bool.h"
 #include "ToolVersion.h"
 #include "Usage.h"
 

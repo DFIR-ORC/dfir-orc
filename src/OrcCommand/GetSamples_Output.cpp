@@ -14,9 +14,9 @@
 #include <string>
 
 #include "Usage.h"
-#include "Output/Text/Fmt/formatter.h"
-#include "Output/Text/Print/Bool.h"
-#include "Output/Text/Print/OutputSpec.h"
+#include "Text/Fmt/formatter.h"
+#include "Text/Print/Bool.h"
+#include "Text/Print/OutputSpec.h"
 
 using namespace Orc::Command::GetSamples;
 using namespace Orc::Text;

@@ -16,11 +16,11 @@
 
 #include "ToolVersion.h"
 #include "SystemDetails.h"
-#include "Output/Text/Print/OutputSpec.h"
-#include "Output/Text/Print/Intentions.h"
-#include "Output/Text/Print/Filter.h"
-#include "Output/Text/Print/LocationSet.h"
-#include "Output/Text/Print/Location.h"
+#include "Text/Print/OutputSpec.h"
+#include "Text/Print/Intentions.h"
+#include "Text/Print/Filter.h"
+#include "Text/Print/LocationSet.h"
+#include "Text/Print/Location.h"
 
 #include "Usage.h"
 

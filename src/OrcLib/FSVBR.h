@@ -12,7 +12,7 @@
 #include "FSVBR_FSType.h"
 
 #include "FatDataStructures.h"
-#include "Output/Text/Fmt/FSVBR.h"
+#include "Text/Fmt/FSVBR.h"
 
 #pragma managed(push, off)
 

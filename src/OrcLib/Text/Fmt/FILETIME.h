@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/FILETIME.h"
+#include "Text/Fmt/Fwd/FILETIME.h"
 
-#include "Output/Text/Fmt/SYSTEMTIME.h"
+#include "Text/Fmt/SYSTEMTIME.h"
 
 // All time displayed are UTC so a FILETIME must converted to UTC (SYSTEMTIME)
 

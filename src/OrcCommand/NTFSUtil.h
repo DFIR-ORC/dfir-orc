@@ -12,7 +12,7 @@
 
 #include "UtilitiesMain.h"
 
-#include "Output/Text/Fmt/Offset.h"
+#include "Text/Fmt/Offset.h"
 
 #pragma managed(push, off)
 

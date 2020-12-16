@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/Offset.h"
+#include "Text/Fmt/Fwd/Offset.h"
 
 #include "Utils/TypeTraits.h"
 

@@ -15,7 +15,7 @@
 #include "VolumeShadowCopies.h"
 #include "DiskExtent.h"
 #include "FSVBR.h"
-#include "Output/Text/Fmt/LocationType.h"
+#include "Text/Fmt/LocationType.h"
 
 #pragma managed(push, off)
 

@@ -10,8 +10,8 @@
 
 #include "stdafx.h"
 
-#include "Output/Text/Fmt/Formatter.h"
+#include "Text/Fmt/Formatter.h"
 
-#include "Output/Text/Fmt/Offset.h"
+#include "Text/Fmt/Offset.h"
 
 // Orc::Traits::Offset<int64_t>;

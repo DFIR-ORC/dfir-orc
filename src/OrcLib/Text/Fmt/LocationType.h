@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/LocationType.h"
+#include "Text/Fmt/Fwd/LocationType.h"
 
 #include <windows.h>
 
-#include "Output/Text/Format.h"
+#include "Text/Format.h"
 #include <LocationType.h>
 
 template <typename FormatContext>

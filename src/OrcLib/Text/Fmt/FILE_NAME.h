@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/FILE_NAME.h"
+#include "Text/Fmt/Fwd/FILE_NAME.h"
 
 #include "NtfsDataStructures.h"
 

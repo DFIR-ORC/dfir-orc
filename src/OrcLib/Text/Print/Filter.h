@@ -10,9 +10,9 @@
 
 #include <string_view>
 
-#include "Output/Text/Print.h"
-#include "Output/Text/Print/Intentions.h"
-#include "Output/Text/Fmt/ByteQuantity.h"
+#include "Text/Print.h"
+#include "Text/Print/Intentions.h"
+#include "Text/Fmt/ByteQuantity.h"
 
 #include "FSUtils.h"
 

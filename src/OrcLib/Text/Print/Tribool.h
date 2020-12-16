@@ -10,7 +10,7 @@
 
 #include <boost/logic/tribool.hpp>
 
-#include "Output/Text/Print.h"
+#include "Text/Print.h"
 
 namespace Orc {
 namespace Text {

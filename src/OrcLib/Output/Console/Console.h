@@ -15,8 +15,8 @@
 
 #include <iostream>
 
-#include "Output/Text/Format.h"
-#include "Output/Text/Tree.h"
+#include "Text/Format.h"
+#include "Text/Tree.h"
 #include "Utils/TypeTraits.h"
 
 namespace Orc {

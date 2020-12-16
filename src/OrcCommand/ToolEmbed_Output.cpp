@@ -14,8 +14,8 @@
 #include "ToolVersion.h"
 #include "Usage.h"
 
-#include "Output/Text/Print/OutputSpec.h"
-#include "Output/Text/Print/EmbedSpec.h"
+#include "Text/Print/OutputSpec.h"
+#include "Text/Print/EmbedSpec.h"
 
 SYSTEMTIME theStartTime;
 SYSTEMTIME theFinishTime;

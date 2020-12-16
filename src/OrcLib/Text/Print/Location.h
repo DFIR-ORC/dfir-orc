@@ -13,7 +13,7 @@
 
 #include <boost/algorithm/string/join.hpp>
 
-#include "Output/Text/Print.h"
+#include "Text/Print.h"
 #include <Location.h>
 
 namespace Orc {

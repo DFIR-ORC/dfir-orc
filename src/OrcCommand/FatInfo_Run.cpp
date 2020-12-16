@@ -14,7 +14,7 @@
 #include "FatFileInfo.h"
 #include "FileInfoCommon.h"
 
-#include "Output/Text/Print/Location.h"
+#include "Text/Print/Location.h"
 
 using namespace Orc;
 using namespace Orc::Command::FatInfo;

@@ -16,7 +16,7 @@
 #include "TableOutput.h"
 
 #include "OutputSpecTypes.h"
-#include "Output/Text/Fmt/OutputSpecTypes.h"
+#include "Text/Fmt/OutputSpecTypes.h"
 
 #pragma managed(push, off)
 

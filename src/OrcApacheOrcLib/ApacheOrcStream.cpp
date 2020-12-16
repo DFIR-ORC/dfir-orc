@@ -11,7 +11,7 @@
 #include "ApacheOrcStream.h"
 
 #include "Log/Log.h"
-#include "Output/Text/Fmt/error_code.h"
+#include "Text/Fmt/error_code.h"
 #include "Utils/Result.h"
 
 uint64_t Orc::TableOutput::ApacheOrc::Stream::getLength() const

@@ -8,7 +8,7 @@
 
 #include "stdafx.h"
 
-#include "Output/Text/Print/Location.h"
+#include "Text/Print/Location.h"
 
 namespace Orc {
 namespace Text {

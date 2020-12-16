@@ -15,8 +15,8 @@
 #include "SystemDetails.h"
 
 #include "Robustness.h"
-#include "Output/Text/Fmt/path.h"
-#include "Output/Text/Fmt/optional.h"
+#include "Text/Fmt/path.h"
+#include "Text/Fmt/optional.h"
 
 #include "Log/Log.h"
 

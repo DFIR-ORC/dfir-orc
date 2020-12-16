@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/Partition.h"
+#include "Text/Fmt/Fwd/Partition.h"
 
-#include "Output/Text/Format.h"
+#include "Text/Format.h"
 #include "Utils/Iconv.h"
 #include <Partition.h>
 

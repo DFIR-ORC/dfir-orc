@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Output/Text/Print.h"
+#include "Text/Print.h"
 
 #include <EmbeddedResource.h>
 

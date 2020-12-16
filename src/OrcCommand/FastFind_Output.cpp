@@ -18,7 +18,7 @@
 
 #include "Usage.h"
 
-#include "Output/Text/Print/OutputSpec.h"
+#include "Text/Print/OutputSpec.h"
 
 using namespace Orc;
 using namespace Orc::Command::FastFind;

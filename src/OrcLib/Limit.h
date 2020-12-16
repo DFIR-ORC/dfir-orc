@@ -11,7 +11,7 @@
 
 #include "Utils/TypeTraits.h"
 
-#include "Output/Text/Fmt/Limit.h"
+#include "Text/Fmt/Limit.h"
 
 namespace Orc {
 

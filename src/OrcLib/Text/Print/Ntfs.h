@@ -8,6 +8,6 @@
 
 #pragma once
 
-#include "Output/Text/Print/Ntfs/AttributeListEntry.h"
-#include "Output/Text/Print/Ntfs/NonResidentAttributeExtent.h"
-#include "Output/Text/Print/Ntfs/MFTRecord.h"
+#include "Text/Print/Ntfs/AttributeListEntry.h"
+#include "Text/Print/Ntfs/NonResidentAttributeExtent.h"
+#include "Text/Print/Ntfs/MFTRecord.h"

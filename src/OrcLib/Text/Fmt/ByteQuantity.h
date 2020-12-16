@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/ByteQuantity.h"
+#include "Text/Fmt/Fwd/ByteQuantity.h"
 
 #include <array>
 #include <string>

@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/FuzzyHashStreamAlgorithm.h"
+#include "Text/Fmt/Fwd/FuzzyHashStreamAlgorithm.h"
 
 #include <FuzzyHashStreamAlgorithm.h>
 

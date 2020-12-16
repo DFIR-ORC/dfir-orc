@@ -8,7 +8,7 @@
 
 #include "stdafx.h"
 
-#include "Output/Text/Tree.h"
+#include "Text/Tree.h"
 
 #include <assert.h>
 

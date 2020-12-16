@@ -12,9 +12,9 @@
 
 #include <fmt/format.h>
 
-#include "Output/Text/Fmt/Fwd/OutputSpecTypes.h"
+#include "Text/Fmt/Fwd/OutputSpecTypes.h"
 
-#include "Output/Text/Format.h"
+#include "Text/Format.h"
 #include <OutputSpec.h>
 
 template <typename FormatContext>

@@ -13,9 +13,9 @@
 
 #include "ToolVersion.h"
 
-#include "Output/Text/Print/OutputSpec.h"
-#include "Output/Text/Print/Intentions.h"
-#include "Output/Text/Print/Filter.h"
+#include "Text/Print/OutputSpec.h"
+#include "Text/Print/Intentions.h"
+#include "Text/Print/Filter.h"
 
 #include "Usage.h"
 

@@ -10,10 +10,10 @@
 
 #include <boost/algorithm/string/join.hpp>
 
-#include "Output/Text/Fmt/OutputSpecTypes.h"
-#include "Output/Text/Print.h"
-#include "Output/Text/Print/Bool.h"
-#include "Output/Text/Print/Tribool.h"
+#include "Text/Fmt/OutputSpecTypes.h"
+#include "Text/Print.h"
+#include "Text/Print/Bool.h"
+#include "Text/Print/Tribool.h"
 
 #include <OutputSpec.h>
 

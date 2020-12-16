@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/FSVBR.h"
-#include "Output/Text/Format.h"
+#include "Text/Fmt/Fwd/FSVBR.h"
+#include "Text/Format.h"
 
 #include <FSVBR.h>
 

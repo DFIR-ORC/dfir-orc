@@ -11,7 +11,7 @@
 #include <array>
 #include <string_view>
 
-#include "Output/Text/Format.h"
+#include "Text/Format.h"
 
 namespace Orc {
 namespace Text {

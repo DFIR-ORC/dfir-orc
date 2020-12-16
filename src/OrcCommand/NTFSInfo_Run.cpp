@@ -28,7 +28,7 @@
 #include "ParameterCheck.h"
 #include "Privilege.h"
 #include "EmbeddedResource.h"
-#include "Output/Text/Print/Location.h"
+#include "Text/Print/Location.h"
 
 using namespace std;
 

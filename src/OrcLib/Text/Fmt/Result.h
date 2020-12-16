@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/Result.h"
+#include "Text/Fmt/Fwd/Result.h"
 
 #include "Utils/Result.h"
 

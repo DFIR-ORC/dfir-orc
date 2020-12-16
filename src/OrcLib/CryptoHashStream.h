@@ -14,7 +14,7 @@
 
 #include "CryptoUtilities.h"
 #include "CryptoHashStreamAlgorithm.h"
-#include "Output/Text/Fmt/CryptoHashStreamAlgorithm.h"
+#include "Text/Fmt/CryptoHashStreamAlgorithm.h"
 
 #pragma managed(push, off)
 

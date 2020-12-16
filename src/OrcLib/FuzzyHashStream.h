@@ -10,7 +10,7 @@
 #include "HashStream.h"
 
 #include "FuzzyHashStreamAlgorithm.h"
-#include "Output/Text/Fmt/FuzzyHashStreamAlgorithm.h"
+#include "Text/Fmt/FuzzyHashStreamAlgorithm.h"
 
 #pragma managed(push, off)
 

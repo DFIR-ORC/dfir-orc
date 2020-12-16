@@ -7,7 +7,7 @@
 //
 #pragma once
 
-#include "Output/Text/Tree.h"
+#include "Text/Tree.h"
 
 #include "FSUtils.h"
 

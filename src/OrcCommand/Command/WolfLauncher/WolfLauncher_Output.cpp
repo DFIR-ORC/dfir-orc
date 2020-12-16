@@ -12,11 +12,11 @@
 #include "SystemDetails.h"
 #include "ToolVersion.h"
 #include "Usage.h"
-#include "Output/Text/Fmt/WolfPriority.h"
-#include "Output/Text/Print/OutputSpec.h"
-#include "Output/Text/Print/LocationSet.h"
-#include "Output/Text/Print/Bool.h"
-#include "Output/Text/Print/Recipient.h"
+#include "Text/Fmt/WolfPriority.h"
+#include "Text/Print/OutputSpec.h"
+#include "Text/Print/LocationSet.h"
+#include "Text/Print/Bool.h"
+#include "Text/Print/Recipient.h"
 
 using namespace Orc::Command::Wolf;
 using namespace Orc::Text;

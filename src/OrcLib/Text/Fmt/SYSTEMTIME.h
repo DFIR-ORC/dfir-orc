@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/SYSTEMTIME.h"
+#include "Text/Fmt/Fwd/SYSTEMTIME.h"
 
 #include <windows.h>
 

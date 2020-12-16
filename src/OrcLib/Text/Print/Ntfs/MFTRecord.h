@@ -8,12 +8,12 @@
 
 #pragma once
 
-#include "Output/Text/Print.h"
+#include "Text/Print.h"
 
 #include <MFTRecord.h>
 #include "Utils/TypeTraits.h"
-#include "Output/Text/Print/Ntfs/AttributeListEntry.h"
-#include "Output/Text/Print/Ntfs/NonResidentAttributeExtent.h"
+#include "Text/Print/Ntfs/AttributeListEntry.h"
+#include "Text/Print/Ntfs/NonResidentAttributeExtent.h"
 
 namespace Orc {
 namespace Text {

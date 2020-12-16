@@ -26,7 +26,7 @@
 #include "DD.h"
 
 #include "Output/Console/Console.h"
-#include "Output/Text/Tree.h"
+#include "Text/Tree.h"
 
 #include "ToolVersion.h"
 #include "Usage.h"

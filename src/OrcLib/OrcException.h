@@ -14,7 +14,7 @@
 
 #include <strsafe.h>
 
-#include "Output/Text/Fmt/optional.h"
+#include "Text/Fmt/optional.h"
 
 #pragma managed(push, off)
 

@@ -8,9 +8,9 @@
 
 #pragma once
 
-#include "Output/Text/Fmt/Fwd/Limit.h"
+#include "Text/Fmt/Fwd/Limit.h"
 
-#include "Output/Text/Fmt/ByteQuantity.h"
+#include "Text/Fmt/ByteQuantity.h"
 #include <Limit.h>
 
 template <typename T>

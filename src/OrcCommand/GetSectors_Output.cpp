@@ -13,8 +13,8 @@
 #include "Usage.h"
 
 #include "Utils/TypeTraits.h"
-#include "Output/Text/Fmt/Limit.h"
-#include "Output/Text/Print/Bool.h"
+#include "Text/Fmt/Limit.h"
+#include "Text/Print/Bool.h"
 
 using namespace Orc::Command::GetSectors;
 using namespace Orc::Text;
