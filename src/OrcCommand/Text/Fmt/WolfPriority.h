@@ -15,7 +15,7 @@
 #include "Output/Text/Format.h"
 #include "Utils/Iconv.h"
 
-template<>
+template <>
 struct fmt::formatter<Orc::Command::Wolf::Main::WolfPriority> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
@@ -32,7 +32,7 @@ struct fmt::formatter<Orc::Command::Wolf::Main::WolfPriority> : public fmt::form
     }
 };
 
-template<>
+template <>
 struct fmt::formatter<Orc::Command::Wolf::Main::WolfPriority, wchar_t>
     : public fmt::formatter<std::wstring_view, wchar_t>
 {

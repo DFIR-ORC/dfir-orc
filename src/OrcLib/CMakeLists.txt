@@ -532,83 +532,83 @@ set(SRC_INOUT_CONSOLE
 
 source_group(In&Out\\Output\\Console FILES ${SRC_INOUT_CONSOLE})
 
-set(SRC_INOUT_TEXT
-    "Output/Text/Format.h"
-    "Output/Text/HexDump.h"
-    "Output/Text/Tree.h"
-    "Output/Text/Tree.cpp")
+set(SRC_TEXT
+    "Text/Format.h"
+    "Text/HexDump.h"
+    "Text/Tree.h"
+    "Text/Tree.cpp")
 
-source_group(In&Out\\Output\\Text FILES ${SRC_INOUT_TEXT})
+source_group(Text FILES ${SRC_TEXT})
 
-set(SRC_INOUT_TEXT_FMT
-    "Output/Text/Fmt/ByteQuantity.h"
-    "Output/Text/Fmt/CryptoHashStreamAlgorithm.h"
-    "Output/Text/Fmt/error_code.h"
-    "Output/Text/Fmt/FILE_NAME.h"
-    "Output/Text/Fmt/FILETIME.h"
-    "Output/Text/Fmt/Formatter.h"
-    "Output/Text/Fmt/FSVBR.h"
-    "Output/Text/Fmt/FuzzyHashStreamAlgorithm.h"
-    "Output/Text/Fmt/GUID.h"
-    "Output/Text/Fmt/Limit.h"
-    "Output/Text/Fmt/LocationType.h"
-    "Output/Text/Fmt/optional.h"
-    "Output/Text/Fmt/Offset.h"
-    "Output/Text/Fmt/OutputSpecTypes.h"
-    "Output/Text/Fmt/Partition.h"
-    "Output/Text/Fmt/PartitionFlags.h"
-    "Output/Text/Fmt/PartitionType.h"
-    "Output/Text/Fmt/path.h"
-    "Output/Text/Fmt/Result.h"
-    "Output/Text/Fmt/SYSTEMTIME.h"
-    "Output/Text/Fmt/TimeUtc.h"
+set(SRC_TEXT_FMT
+    "Text/Fmt/ByteQuantity.h"
+    "Text/Fmt/CryptoHashStreamAlgorithm.h"
+    "Text/Fmt/error_code.h"
+    "Text/Fmt/FILE_NAME.h"
+    "Text/Fmt/FILETIME.h"
+    "Text/Fmt/Formatter.h"
+    "Text/Fmt/FSVBR.h"
+    "Text/Fmt/FuzzyHashStreamAlgorithm.h"
+    "Text/Fmt/GUID.h"
+    "Text/Fmt/Limit.h"
+    "Text/Fmt/LocationType.h"
+    "Text/Fmt/optional.h"
+    "Text/Fmt/Offset.h"
+    "Text/Fmt/OutputSpecTypes.h"
+    "Text/Fmt/Partition.h"
+    "Text/Fmt/PartitionFlags.h"
+    "Text/Fmt/PartitionType.h"
+    "Text/Fmt/path.h"
+    "Text/Fmt/Result.h"
+    "Text/Fmt/SYSTEMTIME.h"
+    "Text/Fmt/TimeUtc.h"
 )
 
-source_group(In&Out\\Output\\Text\\Fmt FILES ${SRC_INOUT_TEXT_FMT})
+source_group(Text\\Fmt FILES ${SRC_TEXT_FMT})
 
-set(SRC_INOUT_TEXT_FMT_FWD
-    "Output/Text/Fmt/Fwd/ByteQuantity.h"
-    "Output/Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
-    "Output/Text/Fmt/Fwd/error_code.h"
-    "Output/Text/Fmt/Fwd/FILE_NAME.h"
-    "Output/Text/Fmt/Fwd/FILETIME.h"
-    "Output/Text/Fmt/Fwd/FSVBR.h"
-    "Output/Text/Fmt/Fwd/FuzzyHashStreamAlgorithm.h"
-    "Output/Text/Fmt/Fwd/Limit.h"
-    "Output/Text/Fmt/Fwd/LocationType.h"
-    "Output/Text/Fmt/Fwd/Offset.h"
-    "Output/Text/Fmt/Fwd/OutputSpecTypes.h"
-    "Output/Text/Fmt/Fwd/Partition.h"
-    "Output/Text/Fmt/Fwd/PartitionFlags.h"
-    "Output/Text/Fmt/Fwd/PartitionType.h"
-    "Output/Text/Fmt/Fwd/SYSTEMTIME.h"
-    "Output/Text/Fmt/Fwd/Result.h"
-    "Output/Text/Fmt/Fwd/TimeUtc.h")
+set(SRC_TEXT_FMT_FWD
+    "Text/Fmt/Fwd/ByteQuantity.h"
+    "Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
+    "Text/Fmt/Fwd/error_code.h"
+    "Text/Fmt/Fwd/FILE_NAME.h"
+    "Text/Fmt/Fwd/FILETIME.h"
+    "Text/Fmt/Fwd/FSVBR.h"
+    "Text/Fmt/Fwd/FuzzyHashStreamAlgorithm.h"
+    "Text/Fmt/Fwd/Limit.h"
+    "Text/Fmt/Fwd/LocationType.h"
+    "Text/Fmt/Fwd/Offset.h"
+    "Text/Fmt/Fwd/OutputSpecTypes.h"
+    "Text/Fmt/Fwd/Partition.h"
+    "Text/Fmt/Fwd/PartitionFlags.h"
+    "Text/Fmt/Fwd/PartitionType.h"
+    "Text/Fmt/Fwd/SYSTEMTIME.h"
+    "Text/Fmt/Fwd/Result.h"
+    "Text/Fmt/Fwd/TimeUtc.h")
 
-source_group(In&Out\\Output\\Text\\Fmt\\Fwd FILES ${SRC_INOUT_TEXT_FMT_FWD})
+source_group(Text\\Fmt\\Fwd FILES ${SRC_TEXT_FMT_FWD})
 
 
-set(SRC_INOUT_TEXT_PRINT
-    "Output/Text/Print.h"
-    "Output/Text/Print/Bool.h"
-    "Output/Text/Print/EmbedSpec.h"
-    "Output/Text/Print/FILE_NAME.h"
-    "Output/Text/Print/Filter.h"
-    "Output/Text/Print/Intentions.h"
-    "Output/Text/Print/Location.h"
-    "Output/Text/Print/Location.cpp"
-    "Output/Text/Print/LocationSet.h"
-    "Output/Text/Print/Ntfs.h"
-    "Output/Text/Print/OutputSpec.h"
-    "Output/Text/Print/Partition.h"
-    "Output/Text/Print/SearchTerm.h"
-    "Output/Text/Print/Tribool.h"
-    "Output/Text/Print/Ntfs/NonResidentAttributeExtent.h"
-    "Output/Text/Print/Ntfs/MFTRecord.h"
-    "Output/Text/Print/Ntfs/MFTRecord.cpp"
+set(SRC_TEXT_PRINT
+    "Text/Print.h"
+    "Text/Print/Bool.h"
+    "Text/Print/EmbedSpec.h"
+    "Text/Print/FILE_NAME.h"
+    "Text/Print/Filter.h"
+    "Text/Print/Intentions.h"
+    "Text/Print/Location.h"
+    "Text/Print/Location.cpp"
+    "Text/Print/LocationSet.h"
+    "Text/Print/Ntfs.h"
+    "Text/Print/OutputSpec.h"
+    "Text/Print/Partition.h"
+    "Text/Print/SearchTerm.h"
+    "Text/Print/Tribool.h"
+    "Text/Print/Ntfs/NonResidentAttributeExtent.h"
+    "Text/Print/Ntfs/MFTRecord.h"
+    "Text/Print/Ntfs/MFTRecord.cpp"
 )
 
-source_group(In&Out\\Output\\Text\\Print FILES ${SRC_INOUT_TEXT_PRINT})
+source_group(Text\\Print FILES ${SRC_TEXT_PRINT})
 
 set(SRC_INOUT_UPLOAD
     "BITSAgent.cpp"
@@ -831,10 +831,10 @@ add_library(OrcLib
         ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
         ${SRC_INOUT_TABLEOUTPUT_SQL}
         ${SRC_INOUT_CONSOLE}
-        ${SRC_INOUT_TEXT}
-        ${SRC_INOUT_TEXT_FMT}
-        ${SRC_INOUT_TEXT_FMT_FWD}
-        ${SRC_INOUT_TEXT_PRINT}
+        ${SRC_TEXT}
+        ${SRC_TEXT_FMT}
+        ${SRC_TEXT_FMT_FWD}
+        ${SRC_TEXT_PRINT}
         ${SRC_INOUT_UPLOAD}
         ${SRC_LOG}
         ${SRC_OBJECT}
