@@ -62,18 +62,6 @@ set(SRC_DD
 
 source_group(DD FILES ${SRC_DD})
 
-set(SRC_EXTRACTDATA
-    "ConfigFile_ExtractData.cpp"
-    "ConfigFile_ExtractData.h"
-    "ExtractData.h"
-    "ExtractData_Config.cpp"
-    "ExtractData_Output.cpp"
-    "ExtractData_Run.cpp"
-    "ExtractDataReportSqlSchema.xml"
-)
-
-source_group(ExtractData FILES ${SRC_EXTRACTDATA})
-
 set(SRC_FASTFIND
     "ConfigFile_FastFind.cpp"
     "ConfigFile_FastFind.h"
@@ -248,7 +236,6 @@ add_library(OrcCommand
         ${SRC}
         ${SRC_COMMON}
         ${SRC_DD}
-        ${SRC_EXTRACTDATA}
         ${SRC_FASTFIND}
         ${SRC_FATINFO}
         ${SRC_GETSAMPLES}

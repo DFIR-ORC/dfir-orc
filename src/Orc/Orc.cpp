@@ -10,7 +10,6 @@
 
 #include "stdafx.h"
 
-#include "ExtractData.h"
 #include "FastFind.h"
 #include "GetSamples.h"
 #include "GetSectors.h"
@@ -61,7 +60,6 @@ ToolDescription g_Tools[] = {
     ToolDescription::Get<FatInfo::Main>(),
     ToolDescription::Get<ToolEmbed::Main>(),
     ToolDescription::Get<NTFSUtil::Main>(),
-    ToolDescription::Get<ExtractData::Main>(),
     ToolDescription::Get<RegInfo::Main>(),
     ToolDescription::Get<DD::Main>(),
     {nullptr, nullptr}};
