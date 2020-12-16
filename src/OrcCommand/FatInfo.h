@@ -42,11 +42,9 @@ public:
             ColumnIntentions = Intentions::FILEINFO_NONE;
             DefaultIntentions = Intentions::FILEINFO_NONE;
             output.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::Directory | OutputSpec::Kind::TableFile | OutputSpec::Kind::Archive
-                | OutputSpec::Kind::SQL);
+                OutputSpec::Kind::Directory | OutputSpec::Kind::TableFile | OutputSpec::Kind::Archive);
             volumesStatsOutput.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::Directory | OutputSpec::Kind::TableFile | OutputSpec::Kind::Archive
-                | OutputSpec::Kind::SQL);
+                OutputSpec::Kind::Directory | OutputSpec::Kind::TableFile | OutputSpec::Kind::Archive);
         };
 
         OutputSpec output;

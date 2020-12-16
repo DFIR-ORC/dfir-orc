@@ -456,24 +456,6 @@ set(SRC_INOUT_DOWNLOAD
 
 source_group(In&Out\\Download FILES ${SRC_INOUT_DOWNLOAD})
 
-set(SRC_INOUT_IMPORT
-    "ImportAgent.cpp"
-    "ImportAgent.h"
-    "ImportBytesSemaphore.h"
-    "ImportDefinition.cpp"
-    "ImportDefinition.h"
-    "ImportItem.cpp"
-    "ImportItem.h"
-    "ImportMessage.cpp"
-    "ImportMessage.h"
-    "ImportNotification.cpp"
-    "ImportNotification.h"
-    "SqlImportAgent.cpp"
-    "SqlImportAgent.h"
-)
-
-source_group(In&Out\\Import FILES ${SRC_INOUT_IMPORT})
-
 set(SRC_INOUT_LOGPARSER "LogParserDataReader.h")
 
 source_group(In&Out\\LogParser FILES ${SRC_INOUT_LOGPARSER})
@@ -544,14 +526,6 @@ set(SRC_INOUT_TABLEOUTPUT_APACHE_ORC ApacheOrcOutputWriter.h)
 source_group(In&Out\\TableOutput\\ApacheOrc
     FILES ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
 )
-
-set(SRC_INOUT_TABLEOUTPUT_SQL
-    "CsvToSql.cpp"
-    "CsvToSql.h"
-    "SqlOutputWriter.h"
-)
-
-source_group(In&Out\\TableOutput\\SQL FILES ${SRC_INOUT_TABLEOUTPUT_SQL})
 
 set(SRC_INOUT_CONSOLE
     "Output/Console/Console.h"

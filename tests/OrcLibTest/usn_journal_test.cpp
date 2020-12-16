@@ -11,7 +11,6 @@
 #include "ArchiveExtract.h"
 #include "FileStream.h"
 #include "OfflineMFTReader.h"
-#include "ImportItem.h"
 #include "TemporaryStream.h"
 #include "Temporary.h"
 #include "NtfsDataStructures.h"

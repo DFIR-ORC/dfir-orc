@@ -141,23 +141,6 @@ HRESULT OutputSpec::Configure(
 
     Type = OutputSpec::Kind::None;
 
-    if (HasFlag(supported, OutputSpec::Kind::SQL))  // Getting the SQL stuff out of the door asap
-    {
-        static std::wregex reConnectionString(LR"RAW(^(([\w\s]+=[\w\s{}.]+;?)+)#([\w]+)$)RAW");
-
-        std::wcmatch matches;
-        if (std::regex_match(strInputString.c_str(), matches, reConnectionString))
-        {
-            if (matches.size() == 4)
-            {
-                Type = OutputSpec::Kind::SQL;
-                ConnectionString = matches[1].str();
-                TableName = matches[3].str();
-                return S_OK;
-            }
-        }
-    }
-
     // Now on with regular file paths
     fs::path outPath;
 
@@ -286,68 +269,6 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
         return S_OK;
 
     Type = OutputSpec::Kind::None;
-
-    if (HasFlag(supported, OutputSpec::Kind::SQL))
-    {
-        bool bDone = false;
-        if (::HasValue(item, CONFIG_OUTPUT_CONNECTION))
-        {
-            bool bDone = false;
-            if (::HasValue(item, CONFIG_OUTPUT_CONNECTION))
-            {
-                Type = OutputSpec::Kind::SQL;
-                ConnectionString = item.SubItems[CONFIG_OUTPUT_CONNECTION];
-                bDone = true;
-            }
-            if (::HasValue(item, CONFIG_OUTPUT_TABLE))
-            {
-                TableName = item.SubItems[CONFIG_OUTPUT_TABLE];
-            }
-            if (::HasValue(item, CONFIG_OUTPUT_KEY))
-            {
-                TableKey = item.SubItems[CONFIG_OUTPUT_KEY];
-            }
-            if (::HasValue(item, CONFIG_OUTPUT_DISPOSITION))
-            {
-                if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"createnew"sv)
-                    || equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"create_new"sv))
-                    disposition = Disposition::CreateNew;
-                else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"truncate"sv))
-                    disposition = Disposition::Truncate;
-                else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"append"sv))
-                    disposition = Disposition::Append;
-                else
-                {
-                    Log::Warn(
-                        L"Invalid disposition \"{}\", defaulting to append", item[CONFIG_OUTPUT_DISPOSITION].c_str());
-                    disposition = Disposition::Append;
-                }
-            }
-        }
-        if (::HasValue(item, CONFIG_OUTPUT_TABLE))
-        {
-            TableName = item.SubItems[CONFIG_OUTPUT_TABLE];
-        }
-        if (::HasValue(item, CONFIG_OUTPUT_KEY))
-        {
-            TableKey = item.SubItems[CONFIG_OUTPUT_KEY];
-        }
-        if (::HasValue(item, CONFIG_OUTPUT_DISPOSITION))
-        {
-            if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"createnew"sv)
-                || equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"create_new"sv))
-                disposition = Disposition::CreateNew;
-            else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"truncate"sv))
-                disposition = Disposition::Truncate;
-            else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"append"sv))
-                disposition = Disposition::Append;
-            else
-            {
-                Log::Warn(L"Invalid disposition \"{}\", defaulting to append", item[CONFIG_OUTPUT_DISPOSITION].c_str());
-                disposition = Disposition::Append;
-            }
-        }
-    }
 
     ArchiveFormat = ArchiveFormat::Unknown;
     if (!item.empty())

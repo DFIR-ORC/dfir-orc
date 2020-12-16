@@ -51,7 +51,7 @@ struct Printer<OutputSpec>
     template <typename T>
     static void Output(Orc::Text::Tree<T>& root, const OutputSpec& output)
     {
-        if (output.Path.empty() && output.Type != OutputSpec::Kind::SQL)
+        if (output.Path.empty())
         {
             Print(root, kEmpty);
             return;
@@ -71,11 +71,6 @@ struct Printer<OutputSpec>
             {
                 properties.push_back(output.Compression);
             }
-        }
-
-        if (output.Type == OutputSpec::Kind::SQL)
-        {
-            properties.push_back(output.ConnectionString);
         }
 
         auto outputPath = output.Path;

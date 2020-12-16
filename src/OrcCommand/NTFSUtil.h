@@ -50,7 +50,7 @@ public:
             dwlMinSize = 0;
             dwlAllocDelta = 0;
             bPrintDetails = false;
-            output.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::SQL);
+            output.supportedTypes = static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile);
         };
 
         Command cmd;

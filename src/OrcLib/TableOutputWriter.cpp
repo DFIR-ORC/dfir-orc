@@ -17,7 +17,6 @@
 
 #include "TableOutput.h"
 #include "TableOutputWriter.h"
-#include "SqlOutputWriter.h"
 #include "ParquetOutputWriter.h"
 #include "ApacheOrcOutputWriter.h"
 #include "CsvFileWriter.h"
@@ -140,89 +139,7 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(const OutputSpec& out)
             }
             return pWriter;
         }
-        case OutputSpec::Kind::SQL: {
-            auto options = std::make_unique<TableOutput::Options>();
 
-            auto pSqlConnection = GetSqlConnection(std::move(options));
-
-            if (!pSqlConnection)
-            {
-                Log::Error("SQLServer connectivity is not available");
-                return nullptr;
-            }
-
-            if (FAILED(hr = pSqlConnection->Connect(out.ConnectionString)))
-            {
-                Log::Error(L"Could not connect to SQL '{}' [{}]", out.ConnectionString, SystemError(hr));
-                return nullptr;
-            }
-
-            switch (out.disposition)
-            {
-                case OutputSpec::Disposition::Append:
-                    break;
-                case OutputSpec::Disposition::Truncate:
-                    if (FAILED(hr = pSqlConnection->TruncateTable(out.TableName)))
-                    {
-                        Log::Error(L"Failed to truncate table '{}' [{}]", out.TableName, SystemError(hr));
-                    }
-                    break;
-                case OutputSpec::Disposition::CreateNew: {
-                    if (pSqlConnection->IsTablePresent(out.TableName))
-                    {
-                        if (FAILED(hr = pSqlConnection->DropTable(out.TableName)))
-                        {
-                            Log::Error(L"Failed to drop table '{}' [{}]", out.TableName, SystemError(hr));
-                        }
-                    }
-                    if (out.Schema)
-                    {
-                        if (FAILED(hr = pSqlConnection->CreateTable(out.TableName, out.Schema)))
-                        {
-                            Log::Error(L"Failed to create table '{}' [{}]", out.TableName, SystemError(hr));
-                        }
-                    }
-                    else
-                    {
-                        Log::Error(
-                            L"Failed to create table {} [{}] -> No column definition available",
-                            out.TableName,
-                            SystemError(hr));
-                    }
-                }
-                break;
-                default:
-                    break;
-            }
-            auto pSqlWriter = GetSqlWriter(std::move(options));
-
-            if (FAILED(hr = pSqlWriter->SetConnection(pSqlConnection)))
-            {
-                Log::Error(L"Could not connect to SQL '{}' [{}]", out.ConnectionString, SystemError(hr));
-                return nullptr;
-            }
-
-            if (out.Schema)
-            {
-                if (FAILED(hr = pSqlWriter->SetSchema(out.Schema)))
-                {
-                    Log::Error(L"Could not add SQL columns [{}]", SystemError(hr));
-                    return nullptr;
-                }
-                if (FAILED(hr = pSqlWriter->BindColumns(out.TableName.c_str())))
-                {
-                    Log::Error(L"Could not bind SQL columns [{}]", SystemError(hr));
-                    return nullptr;
-                }
-            }
-            else
-            {
-                Log::Error("Could not bind SQL columns, not column schema defined");
-                return nullptr;
-            }
-
-            return pSqlWriter;
-        }
         default:
             Log::Error("Invalid type of output to create SecDescrWriter");
             return nullptr;
@@ -247,9 +164,6 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(LPCWSTR szFileName, const O
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::TSV:
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
         case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
-        case OutputSpec::Kind::SQL:
-            Log::Error("Invalid type of output to create suffixed writer");
-            return nullptr;
         case OutputSpec::Kind::Directory: {
             std::wstring strFilePath = out.Path + L"\\" + szFileName;
 
@@ -305,16 +219,6 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(LPCWSTR szFileName, const O
     return retval;
 }
 
-std::shared_ptr<IConnection> Orc::TableOutput::GetSqlConnection(std::unique_ptr<Options> options)
-{
-    static auto extension = Orc::ExtensionLibrary::GetLibrary<SqlOutputWriter>();
-
-    if (!extension)
-        return nullptr;
-
-    return extension->ConnectionFactory(std::move(options));
-}
-
 std::shared_ptr<IStreamWriter> Orc::TableOutput::GetCSVWriter(std::unique_ptr<Options> options)
 {
     auto retval = Orc::TableOutput::CSV::Writer::MakeNew(std::move(options));
@@ -325,16 +229,6 @@ std::shared_ptr<IStreamWriter> Orc::TableOutput::GetCSVWriter(std::unique_ptr<Op
         return nullptr;
     }
     return retval;
-}
-
-std::shared_ptr<IConnectWriter> Orc::TableOutput::GetSqlWriter(std::unique_ptr<Options> options)
-{
-    static auto extension = Orc::ExtensionLibrary::GetLibrary<SqlOutputWriter>();
-
-    if (!extension)
-        return nullptr;
-
-    return extension->ConnectTableFactory(std::move(options));
 }
 
 std::shared_ptr<IStreamWriter> Orc::TableOutput::GetParquetWriter(std::unique_ptr<Options> options)

@@ -59,23 +59,17 @@ public:
             DefaultIntentions = Intentions::FILEINFO_NONE;
 
             outFileInfo.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive
-                | OutputSpec::Kind::SQL);
+                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive);
             volumesStatsOutput.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::Directory | OutputSpec::Kind::TableFile | OutputSpec::Kind::Archive
-                | OutputSpec::Kind::SQL);
+                OutputSpec::Kind::Directory | OutputSpec::Kind::TableFile | OutputSpec::Kind::Archive);
             outTimeLine.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive
-                | OutputSpec::Kind::SQL);
+                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive);
             outAttrInfo.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive
-                | OutputSpec::Kind::SQL);
+                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive);
             outI30Info.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive
-                | OutputSpec::Kind::SQL);
+                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive);
             outSecDescrInfo.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive
-                | OutputSpec::Kind::SQL);
+                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive);
         };
 
         std::wstring strWalker;

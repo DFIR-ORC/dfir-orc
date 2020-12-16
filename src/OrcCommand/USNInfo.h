@@ -29,8 +29,7 @@ public:
             : locs()
         {
             output.supportedTypes = static_cast<OutputSpec::Kind>(
-                OutputSpec::Kind::SQL | OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory
-                | OutputSpec::Kind::Archive);
+                OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive);
         };
 
         OutputSpec output;

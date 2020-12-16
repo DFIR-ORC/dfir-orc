@@ -218,8 +218,7 @@ public:
                 case OutputSpec::Kind::Parquet:
                 case OutputSpec::Kind::Parquet | OutputSpec::Kind::TableFile:
                 case OutputSpec::Kind::ORC:
-                case OutputSpec::Kind::ORC | OutputSpec::Kind::TableFile:
-                case OutputSpec::Kind::SQL: {
+                case OutputSpec::Kind::ORC | OutputSpec::Kind::TableFile: {
                     if (nullptr == (pWriter = ::Orc::TableOutput::GetWriter(output)))
                     {
                         Log::Error("Failed to create ouput writer");
@@ -396,7 +395,6 @@ public:
                 case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
                 case OutputSpec::Kind::ORC:
                 case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
-                case OutputSpec::Kind::SQL:
                     if (!m_outputs.empty() && m_outputs.front().second != nullptr)
                     {
                         m_outputs.front().second->Close();

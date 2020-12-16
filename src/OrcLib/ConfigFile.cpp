@@ -423,8 +423,6 @@ HRESULT ConfigFile::SetOutputSpec(ConfigItem& item, const OutputSpec& outputSpec
             }
             item.Status = ConfigItem::PRESENT;
             break;
-        case OutputSpec::Kind::SQL:
-            return E_NOTIMPL;
         case OutputSpec::Kind::TableFile:
             return E_NOTIMPL;
     }
