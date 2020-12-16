@@ -173,7 +173,7 @@ HRESULT Main::CheckConfiguration()
             // the parent passed is a process name
             RunningProcesses rp;
 
-            if (FAILED(hr = rp.EnumProcesses()))
+            if (FAILED(hr = rp.EnumerateProcesses()))
             {
                 Log::Error(L"Failed to enumerate running processes, reparenting won't be available");
                 return hr;

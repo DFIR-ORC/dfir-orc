@@ -146,7 +146,7 @@ HRESULT TaskTracker::LoadRunningTasksAndModules()
     if (FAILED(hr = m_rc.EnumRunningCode()))
         return hr;
     m_brc = true;
-    if (FAILED(hr = m_rp.EnumProcesses()))
+    if (FAILED(hr = m_rp.EnumerateProcesses()))
         return hr;
     m_brp = true;
     return S_OK;

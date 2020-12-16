@@ -218,7 +218,7 @@ HRESULT EmbeddedResource::LocateResource(
         // checking parent process for "mothershipness"
         RunningProcesses rp;
 
-        if (FAILED(hr = rp.EnumProcesses()))
+        if (FAILED(hr = rp.EnumerateProcesses()))
             return hr;
 
         const DWORD dwGenerations = 2;

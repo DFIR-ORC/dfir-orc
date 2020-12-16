@@ -42,7 +42,7 @@ private:
 public:
     RunningProcesses() {}
 
-    HRESULT EnumProcesses();
+    HRESULT EnumerateProcesses();
 
     HRESULT GetProcesses(ProcessVector& processes);
 
