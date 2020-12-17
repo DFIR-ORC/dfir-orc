@@ -73,6 +73,7 @@ std::wstring GetWorkingDirectoryApi(size_t cbMaxOutput, std::error_code& ec) noe
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
+            return {};
         }
 
         directory.resize(cch);
@@ -105,6 +106,7 @@ std::wstring GetTempPathApi(size_t cbMaxOutput, std::error_code& ec) noexcept
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
+            return {};
         }
 
         path.resize(cch);
@@ -139,6 +141,7 @@ GetTempFileNameApi(const wchar_t* lpPathName, const wchar_t* lpPrefixString, UIN
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
+            return {};
         }
 
         path.resize(cch);
