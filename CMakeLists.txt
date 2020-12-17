@@ -77,7 +77,6 @@ if(ORC_VCPKG_ROOT)
         7zip
         boost-algorithm
         boost-dynamic-bitset
-        boost-format
         boost-logic
         boost-multi-index
         boost-outcome
