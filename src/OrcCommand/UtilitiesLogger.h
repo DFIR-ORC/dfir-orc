@@ -56,12 +56,6 @@ public:
 
     void Configure(int argc, const wchar_t* argv[]) const;
 
-    auto OpenFile(const std::filesystem::path& path, std::error_code& ec) const
-    {
-        assert(m_fileSink);
-        m_fileSink->Open(path, ec);
-    }
-
     Orc::Logger& logger() { return *m_logger; }
     const Orc::Logger& logger() const { return *m_logger; }
 

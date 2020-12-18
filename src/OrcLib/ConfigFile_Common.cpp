@@ -433,11 +433,6 @@ HRESULT Orc::Config::Common::logging(ConfigItem& parent, DWORD dwIndex)
     return S_OK;
 }
 
-//<OutputSQL disposition="createnew" >
-//  <ConnectionString>Data Source=localhost;Initial Catalog=test;Integrated Security=SSPI;</ConnectionString>
-//  <Table key="Registry">Registry</Table>
-//</OutputSQL>
-
 HRESULT Orc::Config::Common::sql_table(ConfigItem& parent, DWORD dwIndex)
 {
     HRESULT hr = E_FAIL;

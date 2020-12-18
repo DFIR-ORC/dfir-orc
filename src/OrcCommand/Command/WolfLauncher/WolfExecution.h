@@ -88,8 +88,6 @@ private:
     Command::Wolf::Journal& m_journal;
     Command::Wolf::Outcome::Outcome& m_outcome;
 
-    std::wstring m_logFilePath;
-
     std::wstring m_commandSet;
     std::wstring m_strCompressionLevel;
     DWORD m_dwConcurrency;

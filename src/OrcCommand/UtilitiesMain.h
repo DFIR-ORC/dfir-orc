@@ -69,21 +69,8 @@ public:
     class UtilitiesConfiguration
     {
     public:
-        enum class LogLevel
-        {
-            kDefault = 0,
-            kCritical,
-            kError,
-            kWarn,
-            kInfo,
-            kDebug,
-            kTrace
-        };
-
         std::wstring strComputerName;
         std::filesystem::path logFile;
-        LogLevel logLevel;
-        bool logToConsole;
     };
 
     template <class T>
