@@ -9,7 +9,7 @@
 
 #include "stdafx.h"
 
-#include <optional>
+#include "UtilitiesLogger.h"
 
 #include <spdlog/cfg/env.h>
 
@@ -17,8 +17,6 @@
 #    include <boost/stacktrace.hpp>
 #endif
 
-#include "UtilitiesLogger.h"
-#include "ParameterCheck.h"
 #include "Utils/Result.h"
 
 using namespace Orc::Command;
@@ -84,6 +82,9 @@ std::pair<SpdlogLogger::Ptr, SpdlogLogger::Ptr> CreateFacilities(SpdlogSink::Ptr
 
 }  // namespace
 
+namespace Orc {
+namespace Command {
+
 UtilitiesLogger::UtilitiesLogger()
 {
     m_fileSink = ::CreateFileSink();
@@ -104,104 +105,5 @@ UtilitiesLogger::~UtilitiesLogger()
     Orc::Log::SetDefaultLogger(nullptr);
 }
 
-// Portage of LogFileWriter::ConfigureLoggingOptions
-// Parse directly argc/argv to allow initializing logs very early
-void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) const
-{
-    HRESULT hr = E_FAIL;
-    bool verbose = false;
-    std::optional<Log::Level> level;
-
-    for (int i = 0; i < argc; i++)
-    {
-        switch (argv[i][0])
-        {
-            case L'/':
-            case L'-':
-                if (!_wcsnicmp(argv[i] + 1, L"Verbose", wcslen(L"Verbose")))
-                {
-                    verbose = true;
-                }
-
-                if (!_wcsnicmp(argv[i] + 1, L"Critical", wcslen(L"Critical")))
-                {
-                    level = Log::Level::Critical;
-                    verbose = true;
-                }
-                if (!_wcsnicmp(argv[i] + 1, L"Error", wcslen(L"Error")))
-                {
-                    level = Log::Level::Error;
-                    verbose = true;
-                }
-                else if (!_wcsnicmp(argv[i] + 1, L"Warn", wcslen(L"Warn")))
-                {
-                    level = Log::Level::Warning;
-                    verbose = true;
-                }
-                else if (!_wcsnicmp(argv[i] + 1, L"Info", wcslen(L"Info")))
-                {
-                    level = Log::Level::Info;
-                    verbose = true;
-                }
-                else if (!_wcsnicmp(argv[i] + 1, L"Debug", wcslen(L"Debug")))
-                {
-                    level = Log::Level::Debug;
-                    verbose = true;
-                }
-                else if (!_wcsnicmp(argv[i] + 1, L"Trace", wcslen(L"Trace")))
-                {
-                    level = Log::Level::Trace;
-                    verbose = true;
-                }
-                else if (!_wcsnicmp(argv[i] + 1, L"NoConsole", wcslen(L"NoConsole")))
-                {
-                    verbose = false;
-                }
-                else if (!_wcsnicmp(argv[i] + 1, L"LogFile", wcslen(L"LogFile")))
-                {
-                    LPCWSTR pEquals = wcschr(argv[i], L'=');
-                    WCHAR szLogFile[MAX_PATH] = {};
-                    if (!pEquals)
-                    {
-                        Log::Error(L"Option /LogFile should be like: /LogFile=c:\\temp\\logfile.log\r\n");
-                        continue;
-                    }
-                    else
-                    {
-                        if (FAILED(hr = GetOutputFile(pEquals + 1, szLogFile, MAX_PATH)))
-                        {
-                            Log::Error(L"Invalid logging file specified: {} [{}]", pEquals + 1, SystemError(hr));
-                            continue;
-                        }
-
-                        std::error_code ec;
-                        m_fileSink->Open(szLogFile, FileDisposition::CreateNew, ec);
-                        if (ec)
-                        {
-                            Log::Error(L"Failed to initialize log file '{}': {}", szLogFile, ec);
-                            continue;
-                        }
-                    }
-                }
-        }
-    }
-
-    // Load log levels from environment variable (ex: "SPDLOG_LEVEL=info,mylogger=trace")
-    spdlog::cfg::load_env_levels();
-
-    if (verbose)
-    {
-        if (!level)
-        {
-            level = Log::Level::Debug;
-        }
-
-        m_consoleSink->SetLevel(*level);
-    }
-
-    if (level)
-    {
-        m_logger->Get(Logger::Facility::kDefault)->SetLevel(*level);
-        m_logger->Get(Logger::Facility::kLogFile)->SetLevel(*level);
-    }
-}
+}  // namespace Command
+}  // namespace Orc

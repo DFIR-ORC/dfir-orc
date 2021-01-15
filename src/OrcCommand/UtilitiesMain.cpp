@@ -48,7 +48,7 @@ UtilitiesMain::UtilitiesMain()
 
 void UtilitiesMain::Configure(int argc, const wchar_t* argv[])
 {
-    m_logging.Configure(argc, argv);
+    UtilitiesLoggerConfiguration::ApplyLogLevel(m_logging, argc, argv);
 
     // FIX: Some arguments must be processed very early as others depends
     // on their value. This is not a clean fix but a more global refactor is
@@ -736,7 +736,7 @@ bool UtilitiesMain::IgnoreLoggingOptions(LPCWSTR szArg)
         || !_wcsnicmp(szArg, L"Debug", wcslen(L"Debug")) || !_wcsnicmp(szArg, L"Info", wcslen(L"Info"))
         || !_wcsnicmp(szArg, L"Warn", wcslen(L"Warn")) || !_wcsnicmp(szArg, L"Error", wcslen(L"Error"))
         || !_wcsnicmp(szArg, L"Critical", wcslen(L"Critical")) || !_wcsnicmp(szArg, L"LogFile", wcslen(L"LogFile"))
-        || !_wcsnicmp(szArg, L"NoConsole", wcslen(L"NoConsole")))
+        || !_wcsnicmp(szArg, L"NoConsole", wcslen(L"NoConsole")) || !_wcsnicmp(szArg, L"Log", wcslen(L"Log")))
         return true;
     return false;
 }

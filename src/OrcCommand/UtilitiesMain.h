@@ -49,6 +49,7 @@
 #include "Text/Fmt/TimeUtc.h"
 #include "Utils/Guard.h"
 #include "Log/UtilitiesLogger.h"
+#include "Log/UtilitiesLoggerConfiguration.h"
 
 #pragma managed(push, off)
 
@@ -66,11 +67,10 @@ public:
     };
 
     // Common configuration
-    class UtilitiesConfiguration
+    struct UtilitiesConfiguration
     {
-    public:
         std::wstring strComputerName;
-        std::filesystem::path logFile;
+        UtilitiesLoggerConfiguration log;
     };
 
     template <class T>

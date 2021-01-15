@@ -19,6 +19,8 @@
 namespace Orc {
 namespace Command {
 
+class UtilitiesLoggerConfiguration;
+
 class UtilitiesLogger
 {
 public:
@@ -57,8 +59,6 @@ public:
 
     UtilitiesLogger();
     ~UtilitiesLogger();
-
-    void Configure(int argc, const wchar_t* argv[]) const;
 
     Orc::Logger& logger() { return *m_logger; }
     const Orc::Logger& logger() const { return *m_logger; }
