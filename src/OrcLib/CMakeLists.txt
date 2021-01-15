@@ -628,6 +628,8 @@ source_group(In&Out\\Upload FILES ${SRC_INOUT_UPLOAD})
 set(SRC_LOG
     "Log/Sink/FileSink.h"
     "Log/Sink/MemorySink.h"
+    "Log/Level.h"
+    "Log/Level.cpp"
     "Log/Log.cpp"
     "Log/Log.h"
     "Log/Logger.cpp"
