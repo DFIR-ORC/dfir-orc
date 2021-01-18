@@ -48,7 +48,7 @@
 #include "Text/Fmt/SYSTEMTIME.h"
 #include "Text/Fmt/TimeUtc.h"
 #include "Utils/Guard.h"
-#include "UtilitiesLogger.h"
+#include "Log/UtilitiesLogger.h"
 
 #pragma managed(push, off)
 

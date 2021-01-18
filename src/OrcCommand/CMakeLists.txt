@@ -40,10 +40,10 @@ set(SRC_COMMON
     "targetver.h"
     "ToolVersion.h"
     "ToolVersion.cpp"
-    "UtilitiesLogger.cpp"
-    "UtilitiesLogger.h"
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"
     "Usage.h"
+    "Log/UtilitiesLogger.cpp"
+    "Log/UtilitiesLogger.h"
 )
 
 source_group(Common FILES ${SRC_COMMON})
