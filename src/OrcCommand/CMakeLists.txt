@@ -38,16 +38,22 @@ set(SRC_COMMON
     "OrcCommand.h"
     "stdafx.h"
     "targetver.h"
-    "ToolVersion.h"
     "ToolVersion.cpp"
+    "ToolVersion.h"
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"
     "Usage.h"
-    "Log/UtilitiesLogger.cpp"
-    "Log/UtilitiesLogger.h"
 )
 
 source_group(Common FILES ${SRC_COMMON})
 
+set(SRC_LOG
+    "Log/UtilitiesLogger.cpp"
+    "Log/UtilitiesLogger.h"
+    "Log/UtilitiesLoggerConfiguration.h"
+    "Log/UtilitiesLoggerConfiguration.cpp"
+)
+
+source_group(Log FILES ${SRC_LOG})
 
 set(SRC_DD
     "ConfigFile_DD.cpp"
@@ -241,6 +247,7 @@ add_library(OrcCommand
         ${SRC_GETSAMPLES}
         ${SRC_GETSECTORS}
         ${SRC_GETTHIS}
+        ${SRC_LOG}
         ${SRC_MOTHERSHIP}
         ${SRC_NTFSINFO}
         ${SRC_NTFSUTIL}
