@@ -75,7 +75,7 @@ void Print(Orc::Text::Tree<T>& root, const std::optional<V>& item)
         return;
     }
 
-    Printer<V>::Print(root, *item);
+    Printer<V>::Output(root, *item);
 }
 
 template <typename T, typename V>
