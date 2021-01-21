@@ -86,6 +86,7 @@ public:
 
     operator ::HANDLE() const { return m_handle.get(); }
     HANDLE get() const { return m_handle.get(); }
+    HANDLE operator*() const { return m_handle.get(); }
 
 private:
     std::shared_ptr<void> m_handle;
