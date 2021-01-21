@@ -10,6 +10,7 @@
 #include "ConfigFile_NTFSInfo.h"
 #include "ConfigFile_Common.h"
 #include "FileInfoCommon.h"
+#include "Log/UtilitiesLoggerConfiguration.h"
 
 using namespace Orc::Config::Common;
 using namespace Orc::Command;
@@ -39,6 +40,8 @@ HRESULT Orc::Config::NTFSInfo::root(ConfigItem& item)
     if (FAILED(hr = item.AddChild(FileInfoCommon::ConfigItem_fileinfo_column, NTFSINFO_COLUMNS)))
         return hr;
     if (FAILED(hr = item.AddChild(logging, NTFSINFO_LOGGING)))
+        return hr;
+    if (FAILED(hr = item.AddChild(UtilitiesLoggerConfiguration::Register, NTFSINFO_LOG)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"walker", NTFSINFO_WALKER, ConfigItem::OPTION)))
         return hr;

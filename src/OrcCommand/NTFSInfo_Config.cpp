@@ -14,14 +14,16 @@
 #include "Temporary.h"
 #include "ConfigFile_NTFSInfo.h"
 #include "FileInfoCommon.h"
+#include "Log/UtilitiesLoggerConfiguration.h"
 
 #include <vector>
 #include <algorithm>
 
 using namespace std;
 
-using namespace Orc;
 using namespace Orc::Command::NTFSInfo;
+using namespace Orc::Command;
+using namespace Orc;
 
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 {
@@ -188,6 +190,16 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.strWalker = walker;
     }
 
+    if (configitem[NTFSINFO_LOGGING])
+    {
+        Log::Warn(L"The '<logging> configuration element is deprecated, please use '<log>' instead");
+    }
+
+    if (configitem[NTFSINFO_LOG])
+    {
+        UtilitiesLoggerConfiguration::Parse(configitem[NTFSINFO_LOG], m_utilitiesConfig.log);
+    }
+
     if (configitem[NTFSINFO_COMPUTER])
     {
         WCHAR szComputerName[MAX_PATH];
@@ -261,6 +273,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
     try
     {
+        UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
 
         for (int i = 0; i < argc; i++)
         {
@@ -372,6 +385,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     if (!config.strWalker.compare(L"USN"))
     {
