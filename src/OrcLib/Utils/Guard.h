@@ -87,6 +87,8 @@ public:
     operator ::HANDLE() const { return m_handle.get(); }
     HANDLE get() const { return m_handle.get(); }
     HANDLE operator*() const { return m_handle.get(); }
+    operator bool() const { return IsValid(); }
+    bool IsValid() const { return m_handle.get() != INVALID_HANDLE_VALUE; }
 
 private:
     std::shared_ptr<void> m_handle;
