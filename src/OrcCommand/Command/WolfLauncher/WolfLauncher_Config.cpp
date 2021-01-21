@@ -25,9 +25,12 @@
 #include "SystemDetails.h"
 #include "ConfigFile_OrcConfig.h"
 #include "ConfigFile_WOLFLauncher.h"
+#include "Log/UtilitiesLoggerConfiguration.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
+
+namespace fs = std::filesystem;
 
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 {
@@ -150,13 +153,25 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
-    if (configitem[WOLFLAUNCHER_LOG])
+    if (!configitem[WOLFLAUNCHER_LOG].empty())
     {
-        hr = config.Log.Configure(configitem[WOLFLAUNCHER_LOG]);
+        // Deprecated: compatibility with 10.0.x log configuration
+        OutputSpec output;
+        auto hr = output.Configure(configitem[WOLFLAUNCHER_LOG]);
         if (FAILED(hr))
         {
-            Log::Warn("Failed to configure DFIR-Orc log file [{}]", SystemError(hr));
+            Log::Warn(L"Failed to configure DFIR-Orc log file [{}]", SystemError(hr));
         }
+        else
+        {
+            m_utilitiesConfig.log.file.path = output.Path;
+            m_utilitiesConfig.log.file.encoding = ToEncoding(output.OutputEncoding);
+            m_utilitiesConfig.log.file.disposition = ToFileDisposition(output.disposition);
+        }
+    }
+    else if (configitem[WOLFLAUNCHER_LOG])
+    {
+        UtilitiesLoggerConfiguration::Parse(configitem[WOLFLAUNCHER_LOG], m_utilitiesConfig.log);
     }
 
     if (configitem[WOLFLAUNCHER_OUTLINE])
@@ -437,6 +452,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
         std::wstring strTags;
 
+        UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
         for (int i = 0; i < argc; i++)
         {
             std::wstring strPriority;
@@ -571,6 +588,25 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    fs::path logPath;
+    if (m_utilitiesConfig.log.file.path)
+    {
+        // Apply the output directory path to the log file
+        logPath = fs::path(config.Output.Path) / fs::path(*m_utilitiesConfig.log.file.path).filename();
+        m_utilitiesConfig.log.file.path = logPath;
+    }
+
+    if (m_utilitiesConfig.log.logFile)
+    {
+        // Deprecated: 10.0.x compatilbility options
+        // Apply the output directory path to the log file
+        logPath = fs::path(config.Output.Path) / fs::path(*m_utilitiesConfig.log.logFile).filename();
+        m_utilitiesConfig.log.logFile = logPath;
+    }
+
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
     if ((config.bRepeatCreateNew ? 1 : 0) + (config.bRepeatOnce ? 1 : 0) + (config.bRepeatOverwrite ? 1 : 0) > 1)
     {
         Log::Error("options /createnew, /once and /overwrite are mutually exclusive");
@@ -623,20 +659,6 @@ HRESULT Main::CheckConfiguration()
     {
         Log::Error("Invalid temporary location specification");
         return E_INVALIDARG;
-    }
-
-    if (config.Log.Type != OutputSpec::Kind::None)
-    {
-        if (config.Log.IsFile())
-        {
-            // We need to apply the output directory path to the log file
-            config.Log.Path = std::filesystem::path(config.Output.Path) / config.Log.FileName;
-        }
-        else
-        {
-            Log::Error("Invalid log file type");
-            return E_INVALIDARG;
-        }
     }
 
     if (config.Outline.Type != OutputSpec::Kind::None)

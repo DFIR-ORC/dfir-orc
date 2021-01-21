@@ -79,7 +79,6 @@ public:
         Configuration()
         {
             Output.supportedTypes = OutputSpec::Kind::Directory;
-            Log.supportedTypes = OutputSpec::Kind::File;
             Outline.supportedTypes = OutputSpec::Kind::StructuredFile;
             Outcome.supportedTypes = OutputSpec::Kind::StructuredFile;
             TempWorkingDir.supportedTypes = OutputSpec::Kind::Directory;
@@ -89,7 +88,6 @@ public:
 
         OutputSpec Output;
 
-        OutputSpec Log;
         OutputSpec Outline;
         OutputSpec Outcome;
 

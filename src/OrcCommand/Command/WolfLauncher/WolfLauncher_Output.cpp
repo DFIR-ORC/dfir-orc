@@ -165,7 +165,6 @@ void Main::PrintParameters()
     PrintValue(node, L"Overwrite", config.bRepeatOverwrite);
     PrintValue(node, L"Repeat behavior", WolfExecution::ToString(config.RepeatBehavior));
     PrintValue(node, L"Offline", config.strOfflineLocation.value_or(L"<empty>"));
-    PrintValue(node, L"Log file", config.Log.Path);
     PrintValue(node, L"Outline file", config.Outline.Path);
     PrintValue(node, L"Outcome file", config.Outcome.Path);
     PrintValue(node, L"Priority", config.Priority);

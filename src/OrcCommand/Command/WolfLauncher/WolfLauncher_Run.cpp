@@ -663,17 +663,6 @@ HRESULT Main::Run_Execute()
 {
     HRESULT hr = E_FAIL;
 
-    if (config.Log.Type != OutputSpec::Kind::None)
-    {
-        std::error_code ec;
-        m_logging.fileSink()->Open(config.Log.Path, FileDisposition::CreateNew, ec);
-        if (ec)
-        {
-            Log::Error("Failed to create log stream [{}]", ec);
-            return ToHRESULT(ec);
-        }
-    }
-
     if (config.Output.UploadOutput)
     {
         if (FAILED(hr = InitializeUpload(*config.Output.UploadOutput)))
@@ -880,9 +869,13 @@ HRESULT Main::Run_Execute()
     {
         fileSink->Close();
 
-        if (auto hr = UploadSingleFile(config.Log.FileName, config.Log.Path); FAILED(hr))
+        const auto localPath = fileSink->OutputPath();
+        if (localPath)
         {
-            Log::Error(L"Failed to upload log file [{}]", SystemError(hr));
+            if (auto hr = UploadSingleFile(localPath->filename(), *localPath); FAILED(hr))
+            {
+                Log::Error(L"Failed to upload log file [{}]", SystemError(hr));
+            }
         }
     }
 

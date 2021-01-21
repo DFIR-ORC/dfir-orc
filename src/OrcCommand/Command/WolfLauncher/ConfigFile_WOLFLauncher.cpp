@@ -11,6 +11,7 @@
 // WOLFLAUNCHER
 #include "ConfigFile_Common.h"
 #include "ConfigFile_WOLFLauncher.h"
+#include "Log/UtilitiesLoggerConfiguration.h"
 
 // <TempDir>%Temp%\WorkingTemp</TempDir>
 
@@ -175,7 +176,7 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(recipient, WOLFLAUNCHER_RECIPIENT)))
         return hr;
-    if (FAILED(hr = item.AddChild(L"log", Orc::Config::Common::output, WOLFLAUNCHER_LOG)))
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, WOLFLAUNCHER_LOG)))
         return hr;
     if (FAILED(hr = item.AddChild(L"outline", Orc::Config::Common::output, WOLFLAUNCHER_OUTLINE)))
         return hr;
