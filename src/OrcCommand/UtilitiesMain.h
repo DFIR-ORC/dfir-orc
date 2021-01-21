@@ -45,6 +45,7 @@
 #include "Text/Print.h"
 #include "Text/Fmt/FILE_NAME.h"
 #include "Text/Fmt/FILETIME.h"
+#include "Text/Fmt/optional.h"
 #include "Text/Fmt/SYSTEMTIME.h"
 #include "Text/Fmt/TimeUtc.h"
 #include "Utils/Guard.h"
@@ -474,6 +475,19 @@ protected:
         PrintValue(root, L"System type", systemType);
 
         PrintValue(root, L"System tags", boost::join(SystemDetails::GetSystemTags(), ", "));
+
+        std::wstring logFileName(Text::kEmptyW);
+        const auto& fileSink = m_logging.fileSink();
+        if (fileSink)
+        {
+            const auto path = fileSink->OutputPath();
+            if (path)
+            {
+                logFileName = *path;
+            }
+        }
+
+        PrintValue(root, L"Log file", logFileName);
     }
 
     template <typename T>
@@ -950,7 +964,7 @@ public:
 
         return static_cast<int>(Cmd.m_logging.logger().errorCount() + Cmd.m_logging.logger().criticalCount());
     }
-};
+};  // namespace Command
 
 }  // namespace Command
 }  // namespace Orc
