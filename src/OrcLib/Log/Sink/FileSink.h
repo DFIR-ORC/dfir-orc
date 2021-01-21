@@ -12,6 +12,7 @@
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
@@ -81,7 +82,16 @@ public:
             m_memorySink.reset();
         }
 
-        m_fileSink = std::make_unique<SpdlogFileSink>(path.string());
+        // use absolute path so spdlog's functions like Filename_t() will also return the same absolute path
+        auto absolutePath = std::filesystem::absolute(path, ec);
+        if (ec)
+        {
+            Log::Warn(L"Failed to resolve absolute path: {} [{}]", path, ec);
+            absolutePath = path;  // better than empty
+            ec.clear();
+        }
+
+        m_fileSink = std::make_unique<SpdlogFileSink>(absolutePath.string());
 
         // Current sink_it_ will handle filtering
         m_fileSink->set_level(spdlog::level::trace);
@@ -103,6 +113,16 @@ public:
         flush_();
         m_memorySink = std::make_unique<MemorySink>(kMemorySinkSize);
         m_fileSink.reset();
+    }
+
+    std::optional<std::filesystem::path> OutputPath() const
+    {
+        if (m_fileSink)
+        {
+            return m_fileSink->filename();
+        }
+
+        return {};
     }
 
 protected:

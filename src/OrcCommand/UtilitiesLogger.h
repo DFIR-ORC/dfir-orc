@@ -45,6 +45,7 @@ public:
         void Open(const std::filesystem::path& path, std::error_code& ec) { m_fileSink->Open(path, ec); }
         bool IsOpen() const { return m_fileSink->IsOpen(); }
         void Close() { return m_fileSink->Close(); }
+        std::optional<std::filesystem::path> OutputPath() const { return m_fileSink->OutputPath(); }
 
     private:
         FileSinkT* m_fileSink;
