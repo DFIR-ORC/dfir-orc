@@ -101,6 +101,16 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     ConfigFile reader;
 
+    if (configitem[GETTHIS_LOGGING])
+    {
+        Log::Warn(L"The '<logging> configuration element is deprecated, please use '<log>' instead");
+    }
+
+    if (configitem[GETTHIS_LOG])
+    {
+        UtilitiesLoggerConfiguration::Parse(configitem[GETTHIS_LOG], m_utilitiesConfig.log);
+    }
+
     if (FAILED(
             hr = config.Output.Configure(
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::Archive | OutputSpec::Kind::Directory),
@@ -301,6 +311,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
     try
     {
+        UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
         for (int i = 0; i < argc; i++)
         {
             switch (argv[i][0])
@@ -403,6 +415,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     if (boost::logic::indeterminate(config.bAddShadows))
         config.bAddShadows = false;

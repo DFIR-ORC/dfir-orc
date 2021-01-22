@@ -11,6 +11,8 @@
 // GETTHIS
 #include "ConfigFile_GetThis.h"
 
+#include "Log/UtilitiesLoggerConfiguration.h"
+
 using namespace Orc::Config::Common;
 
 HRESULT Orc::Config::GetThis::root(ConfigItem& item)
@@ -30,7 +32,10 @@ HRESULT Orc::Config::GetThis::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(samples, GETTHIS_SAMPLES)))
         return hr;
+    // Deprecated: for compatibility with 10.0.x (was always ignored)
     if (FAILED(hr = item.AddChild(logging, GETTHIS_LOGGING)))
+        return hr;
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, GETTHIS_LOG)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"flushregistry", GETTHIS_FLUSHREGISTRY, ConfigItem::OPTION)))
         return hr;
