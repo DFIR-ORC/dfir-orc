@@ -12,6 +12,8 @@
 
 #include "ConfigFile_GetSamples.h"
 
+#include "Log/UtilitiesLoggerConfiguration.h"
+
 using namespace Orc;
 using namespace Orc::Config;
 using namespace Orc::Config::Common;
@@ -77,7 +79,10 @@ HRESULT Orc::Config::GetSamples::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(::samples, GETSAMPLES_SAMPLES)))
         return hr;
+    // Deprecated: for compatibility with 10.0.x (was always ignored)
     if (FAILED(hr = item.AddChild(logging, GETSAMPLES_LOGGING)))
+        return hr;
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, GETSAMPLES_LOG)))
         return hr;
     if (FAILED(hr = item.AddChild(L"autoruns", output, GETSAMPLES_AUTORUNS)))
         return hr;

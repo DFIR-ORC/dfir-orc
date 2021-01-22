@@ -71,6 +71,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
 {
     HRESULT hr = E_FAIL;
 
+    UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
     for (int i = 0; i < argc; i++)
     {
         switch (argv[i][0])
@@ -167,6 +169,16 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     HRESULT hr = E_FAIL;
 
     ConfigFile reader;
+
+    if (configitem[GETSAMPLES_LOGGING])
+    {
+        Log::Warn(L"The '<logging> configuration element is deprecated, please use '<log>' instead");
+    }
+
+    if (configitem[GETSAMPLES_LOG])
+    {
+        UtilitiesLoggerConfiguration::Parse(configitem[GETSAMPLES_LOG], m_utilitiesConfig.log);
+    }
 
     if (FAILED(
             hr = config.samplesOutput.Configure(
@@ -287,6 +299,8 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     // TODO: make a function to use also in GetThis_config.cpp
     if (!config.limits.bIgnoreLimits
