@@ -102,6 +102,12 @@ public:
     void Error(Args&&... args)
     {
         Error(Facility::kDefault, std::forward<Args>(args)...);
+
+        auto defaultLogger = Get(Facility::kDefault);
+        if (defaultLogger)
+        {
+            defaultLogger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::Error);
+        }
     }
 
     template <typename... Args>
@@ -113,7 +119,7 @@ public:
         auto defaultLogger = Get(Facility::kDefault);
         if (defaultLogger)
         {
-            defaultLogger->DumpBacktrace();
+            defaultLogger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::CriticalError);
         }
     }
 

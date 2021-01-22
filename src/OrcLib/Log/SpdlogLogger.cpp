@@ -46,8 +46,18 @@ void SpdlogLogger::DisableBacktrace()
     m_logger->disable_backtrace();
 }
 
-void SpdlogLogger::DumpBacktrace()
+void SpdlogLogger::DumpBacktrace(BacktraceDumpReason reason)
 {
+    Log::Level trigger;
+    if (reason == BacktraceDumpReason::Manual)
+    {
+        trigger = Log::Level::Trace;
+    }
+    else
+    {
+        trigger = static_cast<Log::Level>(reason);
+    }
+
     // Backup log settings
     const auto loggerLevel = static_cast<Log::Level>(m_logger->level());
     m_logger->set_level(spdlog::level::trace);
@@ -63,7 +73,15 @@ void SpdlogLogger::DumpBacktrace()
     {
         sinksSettings[i] = {m_sinks[i]->Level(), m_sinks[i]->CloneFormatter()};
 
-        m_sinks[i]->SetLevel(Log::Level::Trace);
+        if (m_sinks[i]->BacktraceTrigger() != Log::Level::Off && trigger >= m_sinks[i]->BacktraceTrigger())
+        {
+            m_sinks[i]->SetLevel(Log::Level::Trace);
+        }
+        else
+        {
+            m_sinks[i]->SetLevel(Log::Level::Off);
+        }
+
         m_sinks[i]->SetFormatter(m_backtraceFormatter->clone());
     }
 
