@@ -32,6 +32,9 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 {
     bool bBool = false;
+
+    UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
     for (int i = 1; i < argc; i++)
     {
         switch (argv[i][0])
@@ -112,6 +115,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
 HRESULT Main::CheckConfiguration()
 {
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
     if (config.bConfigure && config.bPrintDetails)
     {
         Log::Error("Cannot configure USN journal AND detail location");
