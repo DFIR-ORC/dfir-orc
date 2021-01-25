@@ -26,6 +26,7 @@
 #include "FileStream.h"
 
 #include "TaskTracker.h"
+#include "Text/Iconv.h"
 
 using namespace Orc::Command::GetSamples;
 using namespace Orc;
@@ -394,6 +395,26 @@ HRESULT Main::RunGetThis(const std::wstring& strConfigFile, LPCWSTR szTempDir)
     {
         command->AddOnCompleteAction(
             std::make_shared<OnComplete>(OnComplete::Delete, L"GetThisConfig.xml", strConfigFile, nullptr));
+    }
+
+    auto logConfig = m_utilitiesConfig.log;
+    const auto fileSinkOutput = m_logging.fileSink()->OutputPath();
+    if (fileSinkOutput && logConfig.file.path)
+    {
+        std::error_code ec;
+
+        // Override output log path with the one currently being use to ensure using the same file
+        const auto logPath = fmt::format(L"\"{}\"", fileSinkOutput->c_str());
+        logConfig.file.path = logPath;
+
+        // Override any disposition to be sure to append
+        logConfig.file.disposition = FileDisposition::Append;
+    }
+
+    const auto logArguments = UtilitiesLoggerConfiguration::ToCommandLineArguments(logConfig);
+    if (logArguments)
+    {
+        strConfigArg += L" " + *logArguments;
     }
 
     command->AddArgument(strConfigArg, 0L);

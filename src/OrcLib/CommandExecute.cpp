@@ -392,6 +392,9 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
         }
     }
 
+    // Command as 'GetSamples' will create a child process 'GetThis' with the current log file path for appending
+    Log::Flush();
+
     if (ResumeThread(m_pi.hThread) == -1)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
