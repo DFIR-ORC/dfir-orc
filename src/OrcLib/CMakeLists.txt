@@ -254,6 +254,8 @@ source_group(ExtensionLibraries\\Yara FILES ${SRC_EXTENSIONLIBRARIES_YARA})
 set(SRC_INOUT
     "LocationOutput.h"
     "OutputWriter.h"
+    "FileDisposition.h"
+    "FileDisposition.cpp"
 )
 
 source_group(In&Out FILES ${SRC_INOUT})
