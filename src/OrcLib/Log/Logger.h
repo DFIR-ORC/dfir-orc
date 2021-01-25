@@ -123,6 +123,14 @@ public:
         Critical(Facility::kDefault, std::forward<Args>(args)...);
     }
 
+    void Flush()
+    {
+        for (auto& logger : m_loggers)
+        {
+            logger->Flush();
+        }
+    }
+
     const SpdlogLogger::Ptr& Get(Facility id) const
     {
         const auto facilityNumber = std::underlying_type_t<Facility>(id);

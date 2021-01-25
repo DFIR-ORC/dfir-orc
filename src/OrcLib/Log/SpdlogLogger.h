@@ -83,6 +83,8 @@ public:
         m_logger->critical(std::forward<Args>(args)...);
     }
 
+    void Flush() { m_logger->flush(); }
+
 private:
     std::shared_ptr<spdlog::logger> m_logger;
     std::unique_ptr<spdlog::formatter> m_backtraceFormatter;

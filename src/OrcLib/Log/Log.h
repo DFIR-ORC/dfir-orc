@@ -79,5 +79,14 @@ void Critical(Args&&... args)
     }
 }
 
+inline void Flush()
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Flush();
+    }
+}
+
 }  // namespace Log
 }  // namespace Orc
