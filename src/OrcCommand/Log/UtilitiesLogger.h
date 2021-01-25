@@ -42,7 +42,11 @@ public:
         {
         }
 
-        void Open(const std::filesystem::path& path, std::error_code& ec) { m_fileSink->Open(path, ec); }
+        void Open(const std::filesystem::path& path, FileDisposition disposition, std::error_code& ec)
+        {
+            m_fileSink->Open(path, disposition, ec);
+        }
+
         bool IsOpen() const { return m_fileSink->IsOpen(); }
         void Close() { return m_fileSink->Close(); }
         std::optional<std::filesystem::path> OutputPath() const { return m_fileSink->OutputPath(); }

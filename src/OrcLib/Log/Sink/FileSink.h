@@ -17,6 +17,7 @@
 #include <spdlog/sinks/basic_file_sink.h>
 
 #include "Log/Sink/MemorySink.h"
+#include "FileDisposition.h"
 
 //
 // FileSink will cache some logs into a MemorySink until the log file is opened
@@ -43,7 +44,7 @@ public:
 
     ~FileSink() override { Close(); }
 
-    void Open(const std::filesystem::path& path, std::error_code& ec)
+    void Open(const std::filesystem::path& path, FileDisposition disposition, std::error_code& ec)
     {
         std::lock_guard<Mutex> lock(mutex_);
 
@@ -53,11 +54,16 @@ public:
             return;
         }
 
-        std::filesystem::remove(path, ec);
-        if (ec)
+        if (disposition == FileDisposition::CreateNew)
         {
-            Log::Debug(L"Failed to remove '{}' [{}]", path, ec);
-            ec.clear();
+            std::filesystem::remove(path, ec);
+            if (ec)
+            {
+                Log::Warn(L"Failed to remove '{}' [{}]", path, ec);
+                ec.clear();
+            }
+
+            disposition = FileDisposition::Append;
         }
 
         // Dump memorySink if any
@@ -66,7 +72,7 @@ public:
             try
             {
                 std::fstream log;
-                log.open(path, std::ios::out | std::ios::binary);
+                log.open(path, std::ios::out | std::ios::binary | ToOpenMode(disposition));
 
                 const auto& in = m_memorySink->buffer();
                 std::ostream_iterator<char> out(log);
@@ -95,7 +101,7 @@ public:
             ec.clear();
         }
 
-        m_fileSink = std::make_unique<SpdlogFileSink>(absolutePath.string());
+        m_fileSink = std::make_unique<SpdlogFileSink>(absolutePath.string(), disposition == FileDisposition::Truncate);
 
         // Current sink_it_ will handle filtering
         m_fileSink->set_level(spdlog::level::trace);

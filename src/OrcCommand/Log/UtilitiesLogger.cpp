@@ -175,7 +175,7 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
                         }
 
                         std::error_code ec;
-                        m_fileSink->Open(szLogFile, ec);
+                        m_fileSink->Open(szLogFile, FileDisposition::CreateNew, ec);
                         if (ec)
                         {
                             Log::Error(L"Failed to initialize log file '{}': {}", szLogFile, ec);

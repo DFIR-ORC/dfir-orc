@@ -666,7 +666,7 @@ HRESULT Main::Run_Execute()
     if (config.Log.Type != OutputSpec::Kind::None)
     {
         std::error_code ec;
-        m_logging.fileSink()->Open(config.Log.Path, ec);
+        m_logging.fileSink()->Open(config.Log.Path, FileDisposition::CreateNew, ec);
         if (ec)
         {
             Log::Error("Failed to create log stream [{}]", ec);
