@@ -48,6 +48,8 @@ bool HasValue(const ConfigItem& item, DWORD dwIndex)
 
 }  // namespace
 
+namespace Orc {
+
 bool Orc::OutputSpec::IsPattern(const std::wstring& strPattern)
 {
     if (strPattern.find(L"{ComputerName}") != wstring::npos)
@@ -484,3 +486,38 @@ bool Orc::OutputSpec::Upload::IsFileUploaded(const std::wstring& file_name)
 
     return true;
 }
+
+OutputSpec::Disposition OutputSpec::ToDisposition(Orc::FileDisposition disposition)
+{
+    switch (disposition)
+    {
+        case FileDisposition::Append:
+            return OutputSpec::Disposition::Append;
+        case FileDisposition::CreateNew:
+            return OutputSpec::Disposition::CreateNew;
+        case FileDisposition::Truncate:
+            return OutputSpec::Disposition::Truncate;
+        default:
+            assert(nullptr);
+            return OutputSpec::Disposition::Append;
+    }
+}
+
+Orc::FileDisposition ToFileDisposition(OutputSpec::Disposition disposition)
+{
+    switch (disposition)
+    {
+        case OutputSpec::Disposition::Append:
+            return FileDisposition::Append;
+        case OutputSpec::Disposition::CreateNew:
+            return FileDisposition::CreateNew;
+        case OutputSpec::Disposition::Truncate:
+            return FileDisposition::Truncate;
+        default: {
+            assert(nullptr);
+            return FileDisposition::Unknown;
+        }
+    }
+}
+
+}  // namespace Orc
