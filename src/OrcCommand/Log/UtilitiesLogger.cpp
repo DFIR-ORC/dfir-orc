@@ -42,7 +42,7 @@ std::unique_ptr<SpdlogLogger> CreateSpdlogLogger(const std::string& name)
     });
 
     // Default upstream log level filter (sinks will not received filtered logs)
-    logger->SetLevel(spdlog::level::debug);
+    logger->SetLevel(Log::Level::Debug);
 
     return logger;
 }
@@ -50,7 +50,7 @@ std::unique_ptr<SpdlogLogger> CreateSpdlogLogger(const std::string& name)
 std::shared_ptr<Command::UtilitiesLogger::ConsoleSink> CreateConsoleSink()
 {
     auto sink = std::make_shared<Command::UtilitiesLogger::ConsoleSink>();
-    sink->SetLevel(spdlog::level::critical);
+    sink->SetLevel(Log::Level::Critical);
     return sink;
 }
 
@@ -59,7 +59,7 @@ std::shared_ptr<Command::UtilitiesLogger::FileSink> CreateFileSink()
     auto sink = std::make_shared<Command::UtilitiesLogger::FileSink>();
 
     // Allow all logs to be print, they will be filtered by the upstream level set by spdlog::set_level
-    sink->SetLevel(spdlog::level::trace);
+    sink->SetLevel(Log::Level::Trace);
     return sink;
 }
 
@@ -84,7 +84,7 @@ std::pair<SpdlogLogger::Ptr, SpdlogLogger::Ptr> CreateFacilities(SpdlogSink::Ptr
 
 }  // namespace
 
-Orc::Command::UtilitiesLogger::UtilitiesLogger()
+UtilitiesLogger::UtilitiesLogger()
 {
     m_fileSink = ::CreateFileSink();
     m_consoleSink = ::CreateConsoleSink();
@@ -99,7 +99,7 @@ Orc::Command::UtilitiesLogger::UtilitiesLogger()
     Orc::Log::SetDefaultLogger(m_logger);
 }
 
-Orc::Command::UtilitiesLogger::~UtilitiesLogger()
+UtilitiesLogger::~UtilitiesLogger()
 {
     Orc::Log::SetDefaultLogger(nullptr);
 }
@@ -110,7 +110,7 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
 {
     HRESULT hr = E_FAIL;
     bool verbose = false;
-    std::optional<spdlog::level::level_enum> level;
+    std::optional<Log::Level> level;
 
     for (int i = 0; i < argc; i++)
     {
@@ -125,32 +125,32 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
 
                 if (!_wcsnicmp(argv[i] + 1, L"Critical", wcslen(L"Critical")))
                 {
-                    level = spdlog::level::critical;
+                    level = Log::Level::Critical;
                     verbose = true;
                 }
                 if (!_wcsnicmp(argv[i] + 1, L"Error", wcslen(L"Error")))
                 {
-                    level = spdlog::level::err;
+                    level = Log::Level::Error;
                     verbose = true;
                 }
                 else if (!_wcsnicmp(argv[i] + 1, L"Warn", wcslen(L"Warn")))
                 {
-                    level = spdlog::level::warn;
+                    level = Log::Level::Warning;
                     verbose = true;
                 }
                 else if (!_wcsnicmp(argv[i] + 1, L"Info", wcslen(L"Info")))
                 {
-                    level = spdlog::level::info;
+                    level = Log::Level::Info;
                     verbose = true;
                 }
                 else if (!_wcsnicmp(argv[i] + 1, L"Debug", wcslen(L"Debug")))
                 {
-                    level = spdlog::level::debug;
+                    level = Log::Level::Debug;
                     verbose = true;
                 }
                 else if (!_wcsnicmp(argv[i] + 1, L"Trace", wcslen(L"Trace")))
                 {
-                    level = spdlog::level::trace;
+                    level = Log::Level::Trace;
                     verbose = true;
                 }
                 else if (!_wcsnicmp(argv[i] + 1, L"NoConsole", wcslen(L"NoConsole")))
@@ -193,7 +193,7 @@ void Orc::Command::UtilitiesLogger::Configure(int argc, const wchar_t* argv[]) c
     {
         if (!level)
         {
-            level = spdlog::level::debug;
+            level = Log::Level::Debug;
         }
 
         m_consoleSink->SetLevel(*level);

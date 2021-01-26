@@ -31,8 +31,8 @@ public:
 
     void Add(SpdlogSink::Ptr sink);
 
-    spdlog::level::level_enum Level() const;
-    void SetLevel(spdlog::level::level_enum level);
+    Log::Level Level() const;
+    void SetLevel(Log::Level level);
 
     void SetPattern(const std::string& pattern);
     void SetFormatter(std::unique_ptr<spdlog::formatter> formatter);

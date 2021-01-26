@@ -26,14 +26,14 @@ void SpdlogLogger::Add(SpdlogSink::Ptr sink)
     m_sinks.push_back(std::move(sink));
 }
 
-spdlog::level::level_enum SpdlogLogger::Level() const
+Log::Level SpdlogLogger::Level() const
 {
-    return m_logger->level();
+    return static_cast<Log::Level>(m_logger->level());
 }
 
-void SpdlogLogger::SetLevel(spdlog::level::level_enum level)
+void SpdlogLogger::SetLevel(Log::Level level)
 {
-    m_logger->set_level(level);
+    m_logger->set_level(static_cast<spdlog::level::level_enum>(level));
 }
 
 void SpdlogLogger::EnableBacktrace(size_t messageCount)
@@ -49,12 +49,12 @@ void SpdlogLogger::DisableBacktrace()
 void SpdlogLogger::DumpBacktrace()
 {
     // Backup log settings
-    const auto loggerLevel = m_logger->level();
+    const auto loggerLevel = static_cast<Log::Level>(m_logger->level());
     m_logger->set_level(spdlog::level::trace);
 
     struct SinkSettings
     {
-        spdlog::level::level_enum level;
+        Log::Level level;
         std::unique_ptr<spdlog::formatter> formatter;
     };
 
@@ -63,7 +63,7 @@ void SpdlogLogger::DumpBacktrace()
     {
         sinksSettings[i] = {m_sinks[i]->Level(), m_sinks[i]->CloneFormatter()};
 
-        m_sinks[i]->SetLevel(spdlog::level::trace);
+        m_sinks[i]->SetLevel(Log::Level::Trace);
         m_sinks[i]->SetFormatter(m_backtraceFormatter->clone());
     }
 
