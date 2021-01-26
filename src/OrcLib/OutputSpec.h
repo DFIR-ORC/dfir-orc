@@ -17,6 +17,7 @@
 
 #include "OutputSpecTypes.h"
 #include "FileDisposition.h"
+#include "Text/Encoding.h"
 #include "Text/Fmt/OutputSpecTypes.h"
 
 #pragma managed(push, off)
@@ -111,6 +112,8 @@ public:
 
     static OutputSpec::Disposition ToDisposition(Orc::FileDisposition disposition);
 
+    static OutputSpec::Encoding ToEncoding(Text::Encoding);
+
     HRESULT Configure(
         OutputSpec::Kind supportedTypes,
         const std::wstring& inputString,
@@ -135,6 +138,8 @@ public:
 };
 
 Orc::FileDisposition ToFileDisposition(OutputSpec::Disposition disposition);
+
+Text::Encoding ToEncoding(OutputSpec::Encoding encoding);
 
 }  // namespace Orc
 

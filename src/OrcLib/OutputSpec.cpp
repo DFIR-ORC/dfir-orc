@@ -503,6 +503,20 @@ OutputSpec::Disposition OutputSpec::ToDisposition(Orc::FileDisposition dispositi
     }
 }
 
+OutputSpec::Encoding OutputSpec::ToEncoding(Text::Encoding encoding)
+{
+    switch (encoding)
+    {
+        case Text::Encoding::Utf8:
+            return OutputSpec::Encoding::UTF8;
+        case Text::Encoding::Utf16:
+            return OutputSpec::Encoding::UTF16;
+        default:
+            assert(nullptr);
+            return OutputSpec::Encoding::kUnknown;
+    }
+}
+
 Orc::FileDisposition ToFileDisposition(OutputSpec::Disposition disposition)
 {
     switch (disposition)
@@ -516,6 +530,21 @@ Orc::FileDisposition ToFileDisposition(OutputSpec::Disposition disposition)
         default: {
             assert(nullptr);
             return FileDisposition::Unknown;
+        }
+    }
+}
+
+Text::Encoding ToEncoding(OutputSpec::Encoding encoding)
+{
+    switch (encoding)
+    {
+        case OutputSpec::Encoding::UTF8:
+            return Text::Encoding::Utf8;
+        case OutputSpec::Encoding::UTF16:
+            return Text::Encoding::Utf16;
+        default: {
+            assert(nullptr);
+            return Text::Encoding::Unknown;
         }
     }
 }
