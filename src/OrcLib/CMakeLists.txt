@@ -531,8 +531,10 @@ source_group(In&Out\\TableOutput\\ApacheOrc
 set(SRC_TEXT
     "Text/Console.h"
     "Text/Console.cpp"
-    "Text/Iconv.cpp"
+    "Text/Encoding.h"
+    "Text/Encoding.cpp"
     "Text/Iconv.h"
+    "Text/Iconv.cpp"
     "Text/Format.h"
     "Text/HexDump.h"
     "Text/Tree.h"
