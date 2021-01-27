@@ -34,7 +34,7 @@ public:
     using SpdlogFileSink = spdlog::sinks::basic_file_sink_st;
     using MemorySink = MemorySink<std::vector<uint8_t>, spdlog::details::null_mutex>;
 
-    const size_t kMemorySinkSize = 4096;
+    const size_t kMemorySinkSize = 16384;
 
     FileSink()
         : m_fileSink()
