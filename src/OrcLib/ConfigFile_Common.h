@@ -19,13 +19,13 @@ namespace Orc::Config::Common {
 // A few frequently used patterns
 
 // OUTPUT
-HRESULT ORCLIB_API output(ConfigItem& parent, DWORD dwIndex, const WCHAR* szEltName = L"output");
+HRESULT ORCLIB_API output(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName = L"output");
 
 // DOWNLOAD
-ORCLIB_API HRESULT download(ConfigItem& parent, DWORD dwIndex, const WCHAR* szEltName = L"download");
+ORCLIB_API HRESULT download(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName = L"download");
 
 // UPLOAD
-ORCLIB_API HRESULT upload(ConfigItem& parent, DWORD dwIndex, const WCHAR* szEltName = L"upload");
+ORCLIB_API HRESULT upload(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName = L"upload");
 
 // SAMPLE content attribute
 ORCLIB_API HRESULT content(ConfigItem& parent, DWORD dwIndex);

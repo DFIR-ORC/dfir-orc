@@ -15,10 +15,10 @@
 using namespace Orc;
 
 // OUTPUT
-HRESULT Orc::Config::Common::output(ConfigItem& parent, DWORD dwIndex, const WCHAR* szEltName)
+HRESULT Orc::Config::Common::output(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
 {
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = parent.AddChildNode(szEltName, dwIndex, ConfigItem::OPTION)))
+    if (FAILED(hr = parent.AddChildNode(elementName, dwIndex, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"format", CONFIG_OUTPUT_FORMAT, ConfigItem::OPTION)))
         return hr;
@@ -57,10 +57,10 @@ HRESULT download_file(ConfigItem& parent, DWORD dwIndex)
         return hr;
     return S_OK;
 }
-ORCLIB_API HRESULT Orc::Config::Common::download(ConfigItem& parent, DWORD dwIndex, const WCHAR* szEltName)
+ORCLIB_API HRESULT Orc::Config::Common::download(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
 {
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = parent.AddChildNode(szEltName, dwIndex, ConfigItem::OPTION)))
+    if (FAILED(hr = parent.AddChildNode(elementName, dwIndex, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"method", CONFIG_DOWNLOAD_METHOD, ConfigItem::MANDATORY)))
         return hr;
@@ -77,10 +77,10 @@ ORCLIB_API HRESULT Orc::Config::Common::download(ConfigItem& parent, DWORD dwInd
     return S_OK;
 }
 
-HRESULT Orc::Config::Common::upload(ConfigItem& parent, DWORD dwIndex, const WCHAR* szEltName)
+HRESULT Orc::Config::Common::upload(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
 {
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = parent.AddChildNode(szEltName, dwIndex, ConfigItem::OPTION)))
+    if (FAILED(hr = parent.AddChildNode(elementName, dwIndex, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"method", CONFIG_UPLOAD_METHOD, ConfigItem::OPTION)))
         return hr;

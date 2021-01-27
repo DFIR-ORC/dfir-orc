@@ -43,7 +43,7 @@ public:  // TYPES
     };
 
     typedef HRESULT (*AdderFunction)(ConfigItem& parent, DWORD dwIndex);
-    typedef HRESULT (*NamedAdderFunction)(ConfigItem& parent, DWORD dwIndex, LPCWSTR szName);
+    typedef HRESULT (*NamedAdderFunction)(ConfigItem& parent, DWORD dwIndex, std::wstring_view name);
     typedef HRESULT (*InitFunction)(ConfigItem& item);
 
 public:  // PROPERTIES
@@ -140,18 +140,23 @@ public:  // METHODS
     ConfigItem& Item(LPCWSTR szIndex);
     const ConfigItem& Item(LPCWSTR szIndex) const;
 
+    HRESULT AddAttribute(std::wstring_view name, DWORD index, ConfigItemFlags flags);
     HRESULT AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags flags);
 
+    HRESULT AddChildNode(std::wstring_view name, DWORD index, ConfigItemFlags flags);
     HRESULT AddChildNode(LPCWSTR szName, DWORD index, ConfigItemFlags flags);
 
     HRESULT AddChildNodeList(LPCWSTR szName, DWORD index, ConfigItemFlags flags);
+
     HRESULT AddChild(const ConfigItem& item);
 
     HRESULT AddChild(ConfigItem&& item);
 
     HRESULT AddChild(AdderFunction adder, DWORD dwIdx) { return adder(*this, dwIdx); }
 
-    HRESULT AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwIdx) { return adder(*this, dwIdx, szName); }
+    HRESULT AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwIdx);
+
+    HRESULT AddChild(std::wstring_view name, NamedAdderFunction adder, DWORD dwIdx);
 };
 
 }  // namespace Orc

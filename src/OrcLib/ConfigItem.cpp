@@ -164,17 +164,40 @@ const ConfigItem& ConfigItem::Item(LPCWSTR szIndex) const
     return *it;
 }
 
-HRESULT ConfigItem::AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags flags)
+HRESULT ConfigItem::AddAttribute(std::wstring_view name, DWORD index, ConfigItemFlags flags)
 {
     if (index != SubItems.size())
     {
-        Log::Error(L"Failed to add attribute '{}'", szAttr);
+        Log::Error(L"Failed to add attribute '{}'", name);
         return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
     }
 
     ConfigItem newitem;
     newitem.Type = ConfigItem::ATTRIBUTE;
-    newitem.strName = szAttr;
+    newitem.strName = name;
+    newitem.dwIndex = index;
+    newitem.Flags = flags;
+    newitem.Status = ConfigItem::MISSING;
+    SubItems.push_back(std::move(newitem));
+
+    return S_OK;
+}
+
+HRESULT ConfigItem::AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags flags)
+{
+    return AddAttribute(std::wstring_view(szAttr), index, flags);
+}
+
+HRESULT ConfigItem::AddChildNode(std::wstring_view name, DWORD index, ConfigItemFlags flags)
+{
+    if (index != SubItems.size())
+    {
+        Log::Error(L"Failed to add child node '{}' at index {}", name, index);
+        return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
+    }
+    ConfigItem newitem;
+    newitem.Type = ConfigItem::NODE;
+    newitem.strName = name;
     newitem.dwIndex = index;
     newitem.Flags = flags;
     newitem.Status = ConfigItem::MISSING;
@@ -184,19 +207,7 @@ HRESULT ConfigItem::AddAttribute(LPCWSTR szAttr, DWORD index, ConfigItemFlags fl
 
 HRESULT ConfigItem::AddChildNode(LPCWSTR szName, DWORD index, ConfigItemFlags flags)
 {
-    if (index != SubItems.size())
-    {
-        Log::Error(L"Failed to add child node '{}' at index {}", szName, index);
-        return HRESULT_FROM_WIN32(ERROR_INVALID_INDEX);
-    }
-    ConfigItem newitem;
-    newitem.Type = ConfigItem::NODE;
-    newitem.strName = szName;
-    newitem.dwIndex = index;
-    newitem.Flags = flags;
-    newitem.Status = ConfigItem::MISSING;
-    SubItems.push_back(std::move(newitem));
-    return S_OK;
+    return AddChildNode(std::wstring_view(szName), index, flags);
 }
 
 HRESULT ConfigItem::AddChildNodeList(LPCWSTR szName, DWORD index, ConfigItemFlags flags)
@@ -237,4 +248,14 @@ HRESULT ConfigItem::AddChild(ConfigItem&& item)
     }
     SubItems.push_back(item);
     return S_OK;
+}
+
+HRESULT ConfigItem::AddChild(std::wstring_view name, NamedAdderFunction adder, DWORD dwIdx)
+{
+    return adder(*this, dwIdx, name);
+}
+
+HRESULT ConfigItem::AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwIdx)
+{
+    return AddChild(std::wstring_view(szName), adder, dwIdx);
 }

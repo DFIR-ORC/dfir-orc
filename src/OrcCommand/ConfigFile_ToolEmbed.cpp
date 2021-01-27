@@ -69,10 +69,10 @@ HRESULT Orc::Config::ToolEmbed::pair(ConfigItem& parent, DWORD dwIndex)
     return S_OK;
 }
 
-HRESULT run(ConfigItem& parent, DWORD dwIndex, const WCHAR* szEltName)
+HRESULT run(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
 {
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = parent.AddChildNode(szEltName, dwIndex, ConfigItem::OPTION)))
+    if (FAILED(hr = parent.AddChildNode(elementName, dwIndex, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"args", TOOLEMBED_RUN_ARGS, ConfigItem::OPTION)))
         return hr;
