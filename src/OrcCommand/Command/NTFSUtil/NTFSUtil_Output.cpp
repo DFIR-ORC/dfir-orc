@@ -17,7 +17,7 @@
 #include "ToolVersion.h"
 #include "Usage.h"
 #include "Text/Print.h"
-#include "Text/Console.h"
+#include "Console.h"
 
 using namespace std;
 

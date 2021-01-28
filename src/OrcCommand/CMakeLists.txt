@@ -32,6 +32,7 @@ set(SRC
 source_group("" FILES ${SRC})
 
 set(SRC_COMMON
+    "Console.h"
     "FileInfoCommon.cpp"
     "FileInfoCommon.h"
     "OrcCommand.rc"
@@ -232,6 +233,7 @@ add_library(OrcCommand
     STATIC
         ${SRC}
         ${SRC_COMMON}
+        ${SRC_CONSOLE}
         ${SRC_DD}
         ${SRC_FASTFIND}
         ${SRC_FATINFO}

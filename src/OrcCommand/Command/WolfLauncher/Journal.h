@@ -15,7 +15,7 @@
 
 #include <fmt/chrono.h>
 
-#include "Text/Console.h"
+#include "Console.h"
 
 #include "UploadNotification.h"
 
@@ -24,7 +24,7 @@ namespace Orc::Command::Wolf {
 class Journal
 {
 public:
-    Journal::Journal(Orc::Text::Console& console)
+    Journal::Journal(Console& console)
         : m_mutex()
         , m_console(console)
     {
@@ -42,15 +42,15 @@ public:
         }
     }
 
-    auto Console() { return std::pair<std::lock_guard<std::mutex>, Orc::Text::Console&> {m_mutex, m_console}; }
+    auto Console() { return std::pair<std::lock_guard<std::mutex>, Command::Console&> {m_mutex, m_console}; }
     auto Console() const
     {
-        return std::pair<std::lock_guard<std::mutex>, const Orc::Text::Console&> {m_mutex, m_console};
+        return std::pair<std::lock_guard<std::mutex>, const Command::Console&> {m_mutex, m_console};
     }
 
 private:
     mutable std::mutex m_mutex;
-    Orc::Text::Console& m_console;
+    Command::Console& m_console;
 };
 
 }  // namespace Orc::Command::Wolf

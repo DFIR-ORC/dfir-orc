@@ -24,7 +24,7 @@
 #include "Command/FatInfo/FatInfo.h"
 #include "Command/DD/DD.h"
 #include "Mothership.h"
-#include "Text/Console.h"
+#include "Console.h"
 #include "Text/Tree.h"
 #include "ToolVersion.h"
 #include "Usage.h"

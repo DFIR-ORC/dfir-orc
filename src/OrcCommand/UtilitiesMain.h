@@ -40,8 +40,8 @@
 #include "SystemDetails.h"
 #include "TableOutputWriter.h"
 #include "ExtensionLibrary.h"
+#include "Console.h"
 #include "Log/Log.h"
-#include "Text/Console.h"
 #include "Text/Print.h"
 #include "Text/Fmt/FILE_NAME.h"
 #include "Text/Fmt/FILETIME.h"
@@ -414,7 +414,7 @@ public:
 protected:
     UtilitiesLogger m_logging;
 
-    mutable Text::Console m_console;
+    mutable Console m_console;
 
     Traits::TimeUtc<SYSTEMTIME> theStartTime;
     Traits::TimeUtc<SYSTEMTIME> theFinishTime;
