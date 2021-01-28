@@ -207,6 +207,20 @@ set(SRC_USNINFO
 source_group(USNInfo FILES ${SRC_USNINFO})
 
 set(SRC_WOLFLAUNCHER
+    "Command/WolfLauncher/Console/Stream/WideStreambufConverter.cpp"
+    "Command/WolfLauncher/Console/Stream/WideStreambufConverter.h"
+    "Command/WolfLauncher/Console/Stream/UncheckedStreambuf.h"
+    "Command/WolfLauncher/Console/Stream/UncheckedStreambuf.cpp"
+    "Command/WolfLauncher/Console/Stream/StreamRedirector.cpp"
+    "Command/WolfLauncher/Console/Stream/StreamRedirector.h"
+    "Command/WolfLauncher/Console/Stream/Tee.cpp"
+    "Command/WolfLauncher/Console/Stream/Tee.h"
+    "Command/WolfLauncher/Console/Stream/LazyFileStreambuf.cpp"
+    "Command/WolfLauncher/Console/Stream/LazyFileStreambuf.h"
+    "Command/WolfLauncher/Console/Stream/LazyFileStream.cpp"
+    "Command/WolfLauncher/Console/Stream/LazyFileStream.h"
+    "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.cpp"
+    "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.h"
     "Command/WolfLauncher/ConfigFile_WOLFLauncher.cpp"
     "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
     "Command/WolfLauncher/Journal.h"
