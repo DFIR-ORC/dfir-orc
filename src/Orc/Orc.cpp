@@ -15,7 +15,7 @@
 #include "GetSectors.h"
 #include "GetThis.h"
 #include "Mothership.h"
-#include "NTFSInfo.h"
+#include "Command/NTFSInfo/NTFSInfo.h"
 #include "RegInfo.h"
 #include "NTFSUtil.h"
 #include "ToolEmbed.h"

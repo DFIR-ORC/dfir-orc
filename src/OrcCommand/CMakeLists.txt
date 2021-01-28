@@ -142,15 +142,15 @@ set(SRC_MOTHERSHIP
 source_group(MotherShip FILES ${SRC_MOTHERSHIP})
 
 set(SRC_NTFSINFO
-    "ConfigFile_NTFSInfo.cpp"
-    "ConfigFile_NTFSInfo.h"
-    "NTFSInfo.h"
-    "NTFSInfoSample.xml"
-    "NTFSInfoSqlSchema.xml"
-    "NTFSInfo_Config.cpp"
-    "NTFSInfo_Output.cpp"
-    "NTFSInfo_Run.cpp"
-    "NTFSInfoSqlSchema.xml"
+    "Command/NTFSInfo/ConfigFile_NTFSInfo.cpp"
+    "Command/NTFSInfo/ConfigFile_NTFSInfo.h"
+    "Command/NTFSInfo/NTFSInfo.h"
+    "Command/NTFSInfo/NTFSInfoSample.xml"
+    "Command/NTFSInfo/NTFSInfoSqlSchema.xml"
+    "Command/NTFSInfo/NTFSInfo_Config.cpp"
+    "Command/NTFSInfo/NTFSInfo_Output.cpp"
+    "Command/NTFSInfo/NTFSInfo_Run.cpp"
+    "Command/NTFSInfo/NTFSInfoSqlSchema.xml"
 )
 
 source_group(NTFSInfo FILES ${SRC_NTFSINFO})
