@@ -48,16 +48,16 @@ set(SRC_COMMON
 source_group(Common FILES "stdafx.h" ${SRC_COMMON})
 
 set(SRC_CONFIG
-    "ConfigFile.cpp"
-    "ConfigFile.h"
-    "ConfigFile_Common.cpp"
-    "ConfigFile_Common.h"
-    "ConfigFileReader.cpp"
-    "ConfigFileReader.h"
-    "ConfigFileWriter.cpp"
-    "ConfigFileWriter.h"
-    "ConfigItem.cpp"
-    "ConfigItem.h"
+    "Configuration/ConfigFile.cpp"
+    "Configuration/ConfigFile.h"
+    "Configuration/ConfigFile_Common.cpp"
+    "Configuration/ConfigFile_Common.h"
+    "Configuration/ConfigFileReader.cpp"
+    "Configuration/ConfigFileReader.h"
+    "Configuration/ConfigFileWriter.cpp"
+    "Configuration/ConfigFileWriter.h"
+    "Configuration/ConfigItem.cpp"
+    "Configuration/ConfigItem.h"
 )
 
 source_group(Config FILES ${SRC_CONFIG})
