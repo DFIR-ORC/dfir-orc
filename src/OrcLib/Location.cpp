@@ -12,7 +12,7 @@
 
 #include "Location.h"
 
-#include "ConfigFileReader.h"
+#include "Configuration/ConfigFileReader.h"
 
 #include "PhysicalDiskReader.h"
 #include "InterfaceReader.h"

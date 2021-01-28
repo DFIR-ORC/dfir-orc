@@ -10,7 +10,7 @@
 
 #include "OrcLib.h"
 
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 
 constexpr auto WOLFLAUNCHER_EXENAME = 0L;
 constexpr auto WOLFLAUNCHER_EXERUN = 1L;

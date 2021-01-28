@@ -9,7 +9,7 @@
 #include "stdafx.h"
 
 #include "ParameterCheck.h"
-#include "ConfigFileReader.h"
+#include "Configuration/ConfigFileReader.h"
 #include "TableOutputWriter.h"
 #include "SystemDetails.h"
 

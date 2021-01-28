@@ -17,14 +17,14 @@
 #include "WideAnsi.h"
 #include "TableOutputWriter.h"
 
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "ConfigFile_FastFind.h"
 
 #include "RegFindConfig.h"
 
 #include "YaraScanner.h"
 
-#include "ConfigFileReader.h"
+#include "Configuration/ConfigFileReader.h"
 
 #include "FileFind.h"
 

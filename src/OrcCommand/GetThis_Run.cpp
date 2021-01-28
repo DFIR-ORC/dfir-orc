@@ -18,7 +18,7 @@
 
 #include "TableOutput.h"
 #include "CsvFileWriter.h"
-#include "ConfigFileReader.h"
+#include "Configuration/ConfigFileReader.h"
 #include "FileFind.h"
 #include "ByteStream.h"
 #include "FileStream.h"

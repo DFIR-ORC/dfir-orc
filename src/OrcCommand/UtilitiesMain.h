@@ -25,11 +25,11 @@
 #    include <boost/stacktrace.hpp>
 #endif
 
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "Archive.h"
 #include "ParameterCheck.h"
 #include "Robustness.h"
-#include "ConfigFile_Common.h"
+#include "Configuration/ConfigFile_Common.h"
 #include "ArchiveMessage.h"
 #include "ArchiveNotification.h"
 #include "ArchiveAgent.h"

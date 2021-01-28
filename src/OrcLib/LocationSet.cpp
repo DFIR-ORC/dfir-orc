@@ -34,7 +34,7 @@
 #include "ObjectDirectory.h"
 #include "Kernel32Extension.h"
 
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 
 #include "SystemDetails.h"
 #include "WMIUtil.h"

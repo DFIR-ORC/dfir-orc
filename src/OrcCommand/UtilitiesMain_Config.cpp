@@ -10,8 +10,8 @@
 #include "UtilitiesMain.h"
 
 #include "ParameterCheck.h"
-#include "ConfigFileReader.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFileReader.h"
+#include "Configuration/ConfigFile.h"
 #include "SystemDetails.h"
 
 #include "EmbeddedResource.h"

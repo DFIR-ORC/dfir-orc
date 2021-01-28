@@ -18,7 +18,7 @@
 
 #include "CaseInsensitive.h"
 
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "ConfigFile_WOLFLauncher.h"
 
 #include <safeint.h>

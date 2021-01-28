@@ -16,8 +16,8 @@
 
 #include "WolfLauncher.h"
 
-#include "ConfigFileReader.h"
-#include "ConfigFileWriter.h"
+#include "Configuration/ConfigFileReader.h"
+#include "Configuration/ConfigFileWriter.h"
 #include "TemporaryStream.h"
 #include "TableOutputWriter.h"
 #include "LocationSet.h"

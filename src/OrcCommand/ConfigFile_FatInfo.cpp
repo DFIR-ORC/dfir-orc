@@ -8,7 +8,7 @@
 #include "stdafx.h"
 
 #include "ConfigFile_FatInfo.h"
-#include "ConfigFile_Common.h"
+#include "Configuration/ConfigFile_Common.h"
 #include "FileInfoCommon.h"
 
 #include "Log/UtilitiesLoggerConfiguration.h"

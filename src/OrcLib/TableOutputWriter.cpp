@@ -12,7 +12,7 @@
 
 #include "OutputSpec.h"
 
-#include "ConfigItem.h"
+#include "Configuration/ConfigItem.h"
 #include "ParameterCheck.h"
 
 #include "TableOutput.h"

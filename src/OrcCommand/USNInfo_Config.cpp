@@ -17,7 +17,7 @@
 #include "SystemDetails.h"
 #include "TableOutputWriter.h"
 
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "ConfigFile_USNInfo.h"
 
 using namespace std;

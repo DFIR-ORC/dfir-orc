@@ -18,7 +18,7 @@
 #include <spdlog/cfg/env.h>
 
 #include "Log/UtilitiesLogger.h"
-#include "ConfigFile_Common.h"
+#include "Configuration/ConfigFile_Common.h"
 #include "ParameterCheck.h"
 #include "OutputSpec.h"
 

@@ -9,7 +9,7 @@
 #include "stdafx.h"
 
 // WOLFLAUNCHER
-#include "ConfigFile_Common.h"
+#include "Configuration/ConfigFile_Common.h"
 #include "ConfigFile_WOLFLauncher.h"
 #include "Log/UtilitiesLoggerConfiguration.h"
 

@@ -22,8 +22,8 @@
 
 #include <boost/logic/tribool.hpp>
 
-#include "ConfigFileReader.h"
-#include "ConfigFileReader.h"
+#include "Configuration/ConfigFileReader.h"
+#include "Configuration/ConfigFileReader.h"
 #include "MFTWalker.h"
 #include "Location.h"
 #include "ArchiveCreate.h"

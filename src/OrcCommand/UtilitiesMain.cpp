@@ -21,7 +21,7 @@
 #include <boost/scope_exit.hpp>
 
 #include "ParameterCheck.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "SystemDetails.h"
 #include "NtDllExtension.h"
 #include "Kernel32Extension.h"

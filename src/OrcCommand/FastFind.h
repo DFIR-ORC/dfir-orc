@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "OrcCommand.h"
-#include "ConfigFileReader.h"
+#include "Configuration/ConfigFileReader.h"
 
 #include "ConfigFile_FastFind.h"
 

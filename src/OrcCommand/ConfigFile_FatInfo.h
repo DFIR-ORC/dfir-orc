@@ -7,7 +7,7 @@
 //
 #include "OrcLib.h"
 
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 
 #pragma managed(push, off)
 

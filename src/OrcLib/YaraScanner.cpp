@@ -15,7 +15,7 @@
 #include "WideAnsi.h"
 #include "ParameterCheck.h"
 
-#include "ConfigFile_Common.h"
+#include "Configuration/ConfigFile_Common.h"
 
 #include "YaraScanner.h"
 #include "YaraStaticExtension.h"

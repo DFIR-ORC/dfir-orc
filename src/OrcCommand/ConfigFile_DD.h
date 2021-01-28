@@ -8,9 +8,9 @@
 #pragma once
 
 #include "OrcLib.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 
-#include "ConfigFile_Common.h"
+#include "Configuration/ConfigFile_Common.h"
 
 #pragma managed(push, off)
 

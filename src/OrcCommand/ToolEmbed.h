@@ -16,7 +16,7 @@
 #include "UtilitiesMain.h"
 
 #include "EmbeddedResource.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 
 #include "OutputSpec.h"
 

@@ -21,7 +21,7 @@
 #include "OrcCommand.h"
 #include "CommandMessage.h"
 #include "CommandAgent.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "WolfExecution.h"
 #include "TableOutput.h"
 

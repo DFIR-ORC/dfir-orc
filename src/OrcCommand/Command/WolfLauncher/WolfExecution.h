@@ -18,7 +18,7 @@
 #include "ArchiveAgent.h"
 #include "CommandAgent.h"
 #include "CommandMessage.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "TableOutputWriter.h"
 #include "UploadAgent.h"
 #include "UploadMessage.h"

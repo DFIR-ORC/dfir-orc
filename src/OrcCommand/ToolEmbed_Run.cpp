@@ -15,7 +15,7 @@
 #include "Robustness.h"
 #include "StructuredOutputWriter.h"
 #include "EmbeddedResource.h"
-#include "ConfigFileReader.h"
+#include "Configuration/ConfigFileReader.h"
 #include "ConfigFile_ToolEmbed.h"
 
 using namespace Orc::Command::ToolEmbed;

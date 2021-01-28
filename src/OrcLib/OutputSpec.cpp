@@ -18,7 +18,7 @@
 #include <boost/tokenizer.hpp>
 #include <fmt/format.h>
 
-#include "ConfigItem.h"
+#include "Configuration/ConfigItem.h"
 #include "ParameterCheck.h"
 #include "CaseInsensitive.h"
 #include "SystemDetails.h"

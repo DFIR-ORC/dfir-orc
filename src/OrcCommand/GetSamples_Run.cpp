@@ -14,7 +14,7 @@
 #include "SystemDetails.h"
 #include "EmbeddedResource.h"
 #include "Temporary.h"
-#include "ConfigFileWriter.h"
+#include "Configuration/ConfigFileWriter.h"
 #include "TableOutputWriter.h"
 
 #include "ConfigFile_GetThis.h"

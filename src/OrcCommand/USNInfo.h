@@ -10,7 +10,7 @@
 
 #include "OrcCommand.h"
 #include "Location.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "Location.h"
 #include "UtilitiesMain.h"
 #include "ParameterCheck.h"
