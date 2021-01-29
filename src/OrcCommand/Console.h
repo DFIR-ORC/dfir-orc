@@ -20,14 +20,16 @@
 #include "Utils/TypeTraits.h"
 
 namespace Orc {
-namespace Text {
+namespace Command {
 
 namespace detail {
 
+// Adapt stdout to container interface to directly write data on terminal and duplicate lines to the Logger
 template <typename T>
 struct StdoutContainerAdapter
 {
     using value_type = T;
+
     void push_back(T c)
     {
         if (c == 0)
@@ -122,5 +124,5 @@ private:
     Text::Tree<Buffer> m_tree;
 };
 
-}  // namespace Text
+}  // namespace Command
 }  // namespace Orc
