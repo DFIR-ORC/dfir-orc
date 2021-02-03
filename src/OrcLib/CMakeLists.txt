@@ -59,6 +59,8 @@ set(SRC_CONFIG
     "ConfigFileWriter.h"
     "ConfigItem.cpp"
     "ConfigItem.h"
+    "Configuration/Option.cpp"
+    "Configuration/Option.h"
 )
 
 source_group(Config FILES ${SRC_CONFIG})
