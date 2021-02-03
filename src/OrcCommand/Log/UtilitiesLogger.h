@@ -61,21 +61,21 @@ public:
 
         FileSink()
             : SpdlogSink(std::make_unique<FileSinkT>())
-            , m_fileSink(reinterpret_cast<FileSinkT*>(m_sink.get()))
+            , m_fileSink(reinterpret_cast<FileSinkT&>(*m_sink))
         {
         }
 
         void Open(const std::filesystem::path& path, FileDisposition disposition, std::error_code& ec)
         {
-            m_fileSink->Open(path, disposition, ec);
+            m_fileSink.Open(path, disposition, ec);
         }
 
-        bool IsOpen() const { return m_fileSink->IsOpen(); }
-        void Close() { return m_fileSink->Close(); }
-        std::optional<std::filesystem::path> OutputPath() const { return m_fileSink->OutputPath(); }
+        bool IsOpen() const { return m_fileSink.IsOpen(); }
+        void Close() { return m_fileSink.Close(); }
+        std::optional<std::filesystem::path> OutputPath() const { return m_fileSink.OutputPath(); }
 
     private:
-        FileSinkT* m_fileSink;
+        FileSinkT& m_fileSink;
     };
 
     UtilitiesLogger();
