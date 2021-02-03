@@ -203,11 +203,17 @@ void ConsoleConfiguration::Apply(StandardOutputRedirection& redirection, const C
         return;
     }
 
+    if (config.output.encoding && config.output.encoding != Text::Encoding::Utf8)
+    {
+        Log::Warn(L"Unupported encoding for console output file: {}", config.output.encoding);
+    }
+
     OutputSpec output = OutputSpec();
     HRESULT hr = output.Configure(*config.output.path);
     if (FAILED(hr))
     {
         Log::Error(L"Failed to configure console output file with: '{}' [{}]", config.output.path, SystemError(hr));
+        return;
     }
 
     std::error_code ec;

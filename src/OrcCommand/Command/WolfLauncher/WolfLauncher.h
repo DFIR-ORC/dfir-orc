@@ -27,6 +27,7 @@
 
 #include "Command/WolfLauncher/Journal.h"
 #include "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.h"
+#include "Command/WolfLauncher/Console/ConsoleConfiguration.h"
 #include "Utils/EnumFlags.h"
 
 #pragma managed(push, off)
@@ -196,6 +197,7 @@ private:
 
 private:
     StandardOutputRedirection::Ptr m_consoleRedirection;  // need a smart pointer because log sink will also own stream
+    ConsoleConfiguration m_consoleConfiguration;
 
     Journal m_journal;
     Wolf::Outcome::Outcome m_outcome;
