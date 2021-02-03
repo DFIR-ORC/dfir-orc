@@ -12,6 +12,9 @@
 #include "Log/Logger.h"
 
 #include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/sinks/dist_sink.h>
+#include <spdlog/sinks/ostream_sink.h>
+
 #include "Log/Sink/FileSink.h"
 
 #pragma managed(push, off)
@@ -27,10 +30,28 @@ public:
     class ConsoleSink : public Log::SpdlogSink
     {
     public:
-        ConsoleSink()
-            : SpdlogSink(std::make_unique<spdlog::sinks::wincolor_stderr_sink_mt>())
+        using TeeSink = spdlog::sinks::dist_sink_mt;
+        using StderrSink = spdlog::sinks::wincolor_stderr_sink_st;
+
+        ConsoleSink();
+
+        void Add(spdlog::sink_ptr sink)
         {
+            sink->set_formatter(CloneFormatter());
+            m_tee.add_sink(std::move(sink));
         }
+
+        void Add(std::shared_ptr<std::ostream> output)
+        {
+            using Sink = spdlog::sinks::ostream_sink_st;
+            using Deleter = std::function<void(Sink*)>;
+
+            std::unique_ptr<Sink, Deleter> sink(new Sink(*output), [output](Sink* s) { delete s; });
+            Add(std::move(sink));
+        }
+
+    private:
+        TeeSink& m_tee;
     };
 
     class FileSink : public Log::SpdlogSink

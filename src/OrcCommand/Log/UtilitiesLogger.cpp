@@ -80,10 +80,30 @@ std::pair<SpdlogLogger::Ptr, SpdlogLogger::Ptr> CreateFacilities(SpdlogSink::Ptr
     return {std::move(defaultLogger), std::move(fileLogger)};
 }
 
+spdlog::sink_ptr CreateStderrSink()
+{
+    return std::make_unique<UtilitiesLogger::ConsoleSink::StderrSink>();
+}
+
+std::unique_ptr<spdlog::sinks::sink> CreateTeeSink()
+{
+    using TeeSink = UtilitiesLogger::ConsoleSink::TeeSink;
+    using StderrSink = UtilitiesLogger::ConsoleSink::StderrSink;
+
+    std::vector<spdlog::sink_ptr> sinks = {std::make_shared<StderrSink>()};
+    return std::make_unique<TeeSink>(std::move(sinks));
+}
+
 }  // namespace
 
 namespace Orc {
 namespace Command {
+
+UtilitiesLogger::ConsoleSink::ConsoleSink()
+    : SpdlogSink(::CreateTeeSink())
+    , m_tee(reinterpret_cast<TeeSink&>(*m_sink))
+{
+}
 
 UtilitiesLogger::UtilitiesLogger()
 {
