@@ -42,7 +42,7 @@ struct StdoutContainerAdapter
         static std::basic_string<T> line;
         if (c == Traits::newline_v<T>)
         {
-            Log::Info(Logger::Facility::kLogFile, line);
+            Log::Info(Log::Facility::kLogFile, line);
             line.clear();
         }
         else

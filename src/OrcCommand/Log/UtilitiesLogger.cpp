@@ -93,8 +93,7 @@ UtilitiesLogger::UtilitiesLogger()
     auto [defaultLogger, fileLogger] = ::CreateFacilities(m_consoleSink, m_fileSink);
 
     auto loggers = {
-        std::make_pair(Logger::Facility::kDefault, defaultLogger),
-        std::make_pair(Logger::Facility::kLogFile, fileLogger)};
+        std::make_pair(Log::Facility::kDefault, defaultLogger), std::make_pair(Log::Facility::kLogFile, fileLogger)};
     m_logger = std::make_shared<Logger>(loggers);
 
     Orc::Log::SetDefaultLogger(m_logger);

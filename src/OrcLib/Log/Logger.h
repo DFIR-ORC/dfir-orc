@@ -158,6 +158,8 @@ private:
     std::atomic<uint64_t> m_criticalCount;
 };
 
+using Facility = Logger::Facility;
+
 }  // namespace Log
 
 using Logger = Orc::Log::Logger;
