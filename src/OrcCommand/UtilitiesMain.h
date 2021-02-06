@@ -956,10 +956,11 @@ public:
         //        Until then, always dump the backtrace with a Log::Critical
         if (Cmd.m_logging.logger().errorCount())
         {
-            Log::Critical(
+            Log::Info(
                 L"Dump log backtrace due to some previously encountered error(s). "
                 L"This could probably be ignored, you may NOT have encountered any critical error. Error levels are "
                 L"being reevaluated and this backtrace could help in case of mistakes.");
+            Log::DefaultFacility()->DumpBacktrace(Log::SpdlogLogger::BacktraceDumpReason::Manual);
         }
 
         return static_cast<int>(Cmd.m_logging.logger().errorCount() + Cmd.m_logging.logger().criticalCount());
