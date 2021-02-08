@@ -33,6 +33,7 @@
 #include "Text/Fmt/Result.h"
 #include "Text/Print/Bool.h"
 
+#include "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.h"
 using namespace Concurrency;
 using namespace Orc;
 
@@ -276,6 +277,8 @@ const wchar_t kWolfLauncher[] = L"WolfLauncher";
 
 void Main::Configure(int argc, const wchar_t* argv[])
 {
+    m_logging.consoleSink()->Add(m_consoleRedirection);
+
     UtilitiesMain::Configure(argc, argv);
 
     // As WolfLauncher output is already kind of log journal, let's keep it and avoid Logger to add another timestamp
