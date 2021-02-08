@@ -207,6 +207,8 @@ set(SRC_USNINFO
 source_group(USNInfo FILES ${SRC_USNINFO})
 
 set(SRC_WOLFLAUNCHER
+    "Command/WolfLauncher/Console/ConsoleConfiguration.h"
+    "Command/WolfLauncher/Console/ConsoleConfiguration.cpp"
     "Command/WolfLauncher/Console/Stream/WideStreambufConverter.cpp"
     "Command/WolfLauncher/Console/Stream/WideStreambufConverter.h"
     "Command/WolfLauncher/Console/Stream/UncheckedStreambuf.h"
