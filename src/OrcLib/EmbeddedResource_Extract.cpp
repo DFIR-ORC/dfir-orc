@@ -726,18 +726,6 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
             if (FAILED(hr = extract->Extract(MakeArchiveStream, ShouldItemBeExtracted, MakeWriteStream)))
                 return hr;
 
-            const auto& items = extract->GetExtractedItems();
-            if (items.empty())
-            {
-                Log::Warn(L"Could not locate item '{}' in resource '{}'", NameInArchive, ResName);
-                return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-            }
-            if (items.size() > 1)
-            {
-                Log::Warn(L"{} items matched name '{}' in resource '{}'", items.size(), NameInArchive, ResName);
-                return HRESULT_FROM_WIN32(ERROR_TOO_MANY_NAMES);
-            }
-
             if (!pOutput)
             {
                 Log::Warn(L"Invalid output stream for item '{}' in resource '{}'", NameInArchive, ResName);
