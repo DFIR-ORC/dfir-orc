@@ -61,8 +61,6 @@ void Utf16ToUtf8(const T& utf16, OutputIt out)
     std::copy(std::cbegin(utf8), std::cend(utf8), out);
 }
 
-}  // namespace details
-
 template <typename OutputIt, typename FmtArg0, typename... FmtArgs>
 void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 {
@@ -115,15 +113,29 @@ void FormatWithEncodingTo(OutputIt out, RawArg&& arg)
     }
 }
 
+}  // namespace details
+
 // Wrapper on fmt::format_to which provides:
 //   - conversion of FmtArgs arguments to FmtArg0 encoding
 //   - conversion of fmt::format_to output to container's encoding
 template <typename OutputIt, typename FmtArg0, typename... FmtArgs>
 void FormatToWithoutEOL(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 {
-    // Use TryConvertToEncoding to process char/wchar_t conversion to FmtArg0's value_type
-    using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
-    FormatWithEncodingTo(out, std::forward<FmtArg0>(arg0), TryEncodeTo<FmtCharT>(args)...);
+    try
+    {
+        // Use TryConvertToEncoding to process char/wchar_t conversion to FmtArg0's value_type
+        using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
+        details::FormatWithEncodingTo(out, std::forward<FmtArg0>(arg0), TryEncodeTo<FmtCharT>(args)...);
+    }
+    catch (const fmt::v7::format_error& e)
+    {
+        assert(nullptr && "Formatting error");
+        std::cerr << "Failed to format: " << e.what() << std::endl;
+
+#ifdef DEBUG
+        throw;
+#endif  // DEBUG
+    }
 }
 
 // Wrapper on fmt::format_to which provides:
