@@ -21,6 +21,44 @@ using namespace std;
 
 using namespace Orc;
 
+namespace {
+
+HRESULT SkipToElementEnd(const CComPtr<IXmlReader>& pReader, logger& _L_)
+{
+    XmlNodeType type = XmlNodeType_None;
+
+    UINT depth;
+    HRESULT hr = pReader->GetDepth(&depth);
+    if (FAILED(hr))
+    {
+        log::Error(_L_, hr, L"Failed get root element depth\r\n");
+        return hr;
+    }
+
+    UINT currentDepth;
+    do
+    {
+        hr = pReader->Read(&type);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed to read element\r\n");
+            return hr;
+        }
+
+        hr = pReader->GetDepth(&currentDepth);
+        if (FAILED(hr))
+        {
+            log::Error(_L_, hr, L"Failed get element depth\r\n");
+            return hr;
+        }
+
+    } while (type != XmlNodeType_EndElement || currentDepth != depth + 1);
+
+    return S_OK;
+}
+
+}  // namespace
+
 ConfigFileReader::ConfigFileReader(logger pLog, bool bLogComment)
     : ConfigFile(std::move(pLog))
 {
@@ -171,6 +209,18 @@ HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader,
                 {
                     log::Warning(
                         _L_, HRESULT_FROM_NT(NTE_NOT_FOUND), L"Unexpected element %s in configuration\r\n", pLocalName);
+
+                    // 'Skip' will invalidate 'pLocalName'
+                    const std::wstring name(pLocalName);
+
+                    hr = ::SkipToElementEnd(pReader, _L_);
+                    if (FAILED(hr))
+                    {
+                        log::Error(_L_, hr, L"Failed to skip to element end for node '%s'\r\n", name.c_str());
+                        return hr;
+                    }
+
+                    continue;
                 }
                 else
                 {
