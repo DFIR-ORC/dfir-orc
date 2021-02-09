@@ -172,10 +172,19 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             config.bWERDontShowUI = true;
     }
 
-    if (configitem[WOLFLAUNCHER_LOG])
+    if (configitem[WOLFLAUNCHER_LOG] && !configitem[WOLFLAUNCHER_CONSOLE])
     {
         auto hr = E_FAIL;
         if (FAILED(hr = config.Log.Configure(_L_, configitem[WOLFLAUNCHER_LOG])))
+        {
+            log::Warning(_L_, hr, L"Failed to configure DFIR-Orc log file\r\n");
+        }
+    }
+    else if (configitem[WOLFLAUNCHER_CONSOLE])
+    {
+        // For backward compatibility: if there is a WOLFLAUNCHER_CONSOLE element then override WOLFLAUNCHER_LOG
+        auto hr = E_FAIL;
+        if (FAILED(hr = config.Log.Configure(_L_, configitem[WOLFLAUNCHER_CONSOLE_OUTPUT])))
         {
             log::Warning(_L_, hr, L"Failed to configure DFIR-Orc log file\r\n");
         }

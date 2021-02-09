@@ -18,6 +18,30 @@
 
 using namespace Orc;
 
+namespace {
+
+HRESULT RegisterConsole(ConfigItem& parent, DWORD dwIndex, const WCHAR* szEltName)
+{
+    HRESULT hr = E_FAIL;
+
+    hr = parent.AddChildNode(szEltName, dwIndex, ConfigItem::OPTION);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    auto& consoleNode = parent[dwIndex];
+    hr = consoleNode.AddChild(L"output", Orc::Config::Common::output, WOLFLAUNCHER_CONSOLE_OUTPUT);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    return S_OK;
+}
+
+}  // namespace
+
 HRESULT wolf_execute(ConfigItem& parent, DWORD dwIndex)
 {
     HRESULT hr = E_FAIL;
@@ -176,6 +200,8 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
     if (FAILED(hr = item.AddChild(recipient, WOLFLAUNCHER_RECIPIENT)))
         return hr;
     if (FAILED(hr = item.AddChild(L"log", Orc::Config::Common::output, WOLFLAUNCHER_LOG)))
+        return hr;
+    if (FAILED(hr = item.AddChild(L"console", ::RegisterConsole, WOLFLAUNCHER_CONSOLE)))
         return hr;
     if (FAILED(hr = item.AddChild(L"outline", Orc::Config::Common::output, WOLFLAUNCHER_OUTLINE)))
         return hr;
