@@ -712,29 +712,6 @@ EmbeddedResource::ExtractToBuffer(const logger& pLog, const std::wstring& szImag
             if (FAILED(hr = extract->Extract(MakeArchiveStream, ShouldItemBeExtracted, MakeWriteStream)))
                 return hr;
 
-            const auto& items = extract->GetExtractedItems();
-            if (items.empty())
-            {
-                log::Warning(
-                    pLog,
-                    HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND),
-                    L"Could not locate item \"%s\" in resource \"%s\"\r\n",
-                    NameInArchive.c_str(),
-                    ResName.c_str());
-                return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-            }
-            if (items.size() > 1)
-            {
-                log::Warning(
-                    pLog,
-                    HRESULT_FROM_WIN32(ERROR_TOO_MANY_NAMES),
-                    L"%d items matched name \"%s\" in resource \"%s\"\r\n",
-                    items.size(),
-                    NameInArchive.c_str(),
-                    ResName.c_str());
-                return HRESULT_FROM_WIN32(ERROR_TOO_MANY_NAMES);
-            }
-
             if (!pOutput)
             {
                 log::Warning(
