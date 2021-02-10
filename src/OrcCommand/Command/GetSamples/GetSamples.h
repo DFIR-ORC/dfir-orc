@@ -19,7 +19,7 @@
 
 #include "OrcLimits.h"
 
-#include "GetThis.h"
+#include "Command/GetThis/GetThis.h"
 
 #pragma managed(push, off)
 

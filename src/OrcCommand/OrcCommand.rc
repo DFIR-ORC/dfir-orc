@@ -49,7 +49,7 @@ END
 // BINARY
 //
 
-GETTHIS_SQLSCHEMA       BINARY                  "GetThisSqlSchema.xml"
+GETTHIS_SQLSCHEMA       BINARY                  "Command/GetThis/GetThisSqlSchema.xml"
 
 NTFSINFO_SQLSCHEMA      BINARY                  "Command/NTFSInfo/NTFSInfoSqlSchema.xml"
 

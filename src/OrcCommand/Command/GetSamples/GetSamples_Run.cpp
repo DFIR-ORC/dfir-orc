@@ -17,7 +17,7 @@
 #include "Configuration/ConfigFileWriter.h"
 #include "TableOutputWriter.h"
 
-#include "ConfigFile_GetThis.h"
+#include "Command/GetThis/ConfigFile_GetThis.h"
 
 #include "CommandExecute.h"
 #include "JobObject.h"

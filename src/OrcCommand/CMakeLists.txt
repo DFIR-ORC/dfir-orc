@@ -118,14 +118,14 @@ set(SRC_GETSECTORS
 source_group(GetSectors FILES ${SRC_GETSECTORS})
 
 set(SRC_GETTHIS
-    "ConfigFile_GetThis.cpp"
-    "ConfigFile_GetThis.h"
-    "GetThis.h"
-    "GetThisSqlSchema.xml"
-    "GetThis_Config.cpp"
-    "GetThis_Output.cpp"
-    "GetThis_Run.cpp"
-    "GetThisSqlSchema.xml"
+    "Command/GetThis/ConfigFile_GetThis.cpp"
+    "Command/GetThis/ConfigFile_GetThis.h"
+    "Command/GetThis/GetThis.h"
+    "Command/GetThis/GetThisSqlSchema.xml"
+    "Command/GetThis/GetThis_Config.cpp"
+    "Command/GetThis/GetThis_Output.cpp"
+    "Command/GetThis/GetThis_Run.cpp"
+    "Command/GetThis/GetThisSqlSchema.xml"
 )
 
 source_group(GetThis FILES ${SRC_GETTHIS})
