@@ -18,7 +18,7 @@
 #include "Command/NTFSInfo/NTFSInfo.h"
 #include "Command/RegInfo/RegInfo.h"
 #include "Command/NTFSUtil/NTFSUtil.h"
-#include "ToolEmbed.h"
+#include "Command/ToolEmbed/ToolEmbed.h"
 #include "USNInfo.h"
 #include "Command/WolfLauncher/WolfLauncher.h"
 #include "Command/ObjInfo/ObjInfo.h"

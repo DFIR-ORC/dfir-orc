@@ -191,12 +191,12 @@ set(SRC_REGINFO
 source_group(RegInfo FILES ${SRC_REGINFO})
 
 set(SRC_TOOLEMBED
-    "ConfigFile_ToolEmbed.cpp"
-    "ConfigFile_ToolEmbed.h"
-    "ToolEmbed.h"
-    "ToolEmbed_Config.cpp"
-    "ToolEmbed_Output.cpp"
-    "ToolEmbed_Run.cpp"
+    "Command/ToolEmbed/ConfigFile_ToolEmbed.cpp"
+    "Command/ToolEmbed/ConfigFile_ToolEmbed.h"
+    "Command/ToolEmbed/ToolEmbed.h"
+    "Command/ToolEmbed/ToolEmbed_Config.cpp"
+    "Command/ToolEmbed/ToolEmbed_Output.cpp"
+    "Command/ToolEmbed/ToolEmbed_Run.cpp"
 )
 
 source_group(ToolEmbed FILES ${SRC_TOOLEMBED})
