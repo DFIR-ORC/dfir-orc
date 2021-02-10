@@ -178,14 +178,14 @@ set(SRC_OBJINFO
 source_group(ObjInfo FILES ${SRC_OBJINFO})
 
 set(SRC_REGINFO
-    "ConfigFile_RegInfo.cpp"
-    "ConfigFile_RegInfo.h"
-    "RegInfo.h"
-    "RegInfoSqlSchema.xml"
-    "RegInfo_Config.cpp"
-    "RegInfo_Output.cpp"
-    "RegInfo_Run.cpp"
-    "RegInfoSqlSchema.xml"
+    "Command/RegInfo/ConfigFile_RegInfo.cpp"
+    "Command/RegInfo/ConfigFile_RegInfo.h"
+    "Command/RegInfo/RegInfo.h"
+    "Command/RegInfo/RegInfoSqlSchema.xml"
+    "Command/RegInfo/RegInfo_Config.cpp"
+    "Command/RegInfo/RegInfo_Output.cpp"
+    "Command/RegInfo/RegInfo_Run.cpp"
+    "Command/RegInfo/RegInfoSqlSchema.xml"
 )
 
 source_group(RegInfo FILES ${SRC_REGINFO})

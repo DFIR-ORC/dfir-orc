@@ -61,7 +61,7 @@ OBJINFO_SQLSCHEMA       BINARY                  "Command/ObjInfo/ObjInfoSqlSchem
 
 WOLFLAUNCHER_SQLSCHEMA  BINARY                  "Command/WolfLauncher/WolfLauncherSqlSchema.xml"
 
-REGINFO_SQLSCHEMA       BINARY                  "RegInfoSqlSchema.xml"
+REGINFO_SQLSCHEMA       BINARY                  "Command/RegInfo/RegInfoSqlSchema.xml"
 
 FASTFIND_SQLSCHEMA BINARY                       "Command/FastFind/FastFindSqlSchema.xml"
 

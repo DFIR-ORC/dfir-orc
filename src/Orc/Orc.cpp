@@ -16,7 +16,7 @@
 #include "Command/GetThis/GetThis.h"
 #include "Mothership.h"
 #include "Command/NTFSInfo/NTFSInfo.h"
-#include "RegInfo.h"
+#include "Command/RegInfo/RegInfo.h"
 #include "Command/NTFSUtil/NTFSUtil.h"
 #include "ToolEmbed.h"
 #include "USNInfo.h"
