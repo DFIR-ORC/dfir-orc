@@ -14,7 +14,6 @@
 #include "Command/GetSamples/GetSamples.h"
 #include "Command/GetSectors/GetSectors.h"
 #include "Command/GetThis/GetThis.h"
-#include "Mothership.h"
 #include "Command/NTFSInfo/NTFSInfo.h"
 #include "Command/RegInfo/RegInfo.h"
 #include "Command/NTFSUtil/NTFSUtil.h"
@@ -24,10 +23,9 @@
 #include "Command/ObjInfo/ObjInfo.h"
 #include "Command/FatInfo/FatInfo.h"
 #include "Command/DD/DD.h"
-
+#include "Mothership.h"
 #include "Text/Console.h"
 #include "Text/Tree.h"
-
 #include "ToolVersion.h"
 #include "Usage.h"
 

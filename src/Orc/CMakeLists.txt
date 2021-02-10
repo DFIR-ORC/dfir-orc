@@ -20,12 +20,22 @@ configure_file(
     @ONLY
 )
 
+set(SRC_MOTHERSHIP
+    "Mothership.h"
+    "Mothership_Config.cpp"
+    "Mothership_Output.cpp"
+    "Mothership_Run.cpp"
+)
+
+source_group(MotherShip FILES ${SRC_MOTHERSHIP})
+
 set(SRC
     "targetver.h"
     "resource.h"
     "Orc.cpp"
     "Compatibility.manifest"
     "Orc.rc"
+    ${SRC_MOTHERSHIP}
     "${GENERATED_SRC_DIR}/Icon.h"
     )
 

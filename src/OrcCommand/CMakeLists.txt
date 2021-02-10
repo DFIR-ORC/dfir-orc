@@ -42,6 +42,8 @@ set(SRC_COMMON
     "ToolVersion.h"
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"
     "Usage.h"
+    "ConfigFile_OrcConfig.cpp"
+    "ConfigFile_OrcConfig.h"
 )
 
 source_group(Common FILES ${SRC_COMMON})
@@ -129,17 +131,6 @@ set(SRC_GETTHIS
 )
 
 source_group(GetThis FILES ${SRC_GETTHIS})
-
-set(SRC_MOTHERSHIP
-    "Mothership.h"
-    "Mothership_Config.cpp"
-    "Mothership_Output.cpp"
-    "Mothership_Run.cpp"
-    "ConfigFile_OrcConfig.cpp"
-    "ConfigFile_OrcConfig.h"
-)
-
-source_group(MotherShip FILES ${SRC_MOTHERSHIP})
 
 set(SRC_NTFSINFO
     "Command/NTFSInfo/ConfigFile_NTFSInfo.cpp"
