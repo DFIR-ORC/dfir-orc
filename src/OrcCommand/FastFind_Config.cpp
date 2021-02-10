@@ -73,6 +73,17 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     {
         return hr;
     }
+
+    if (configitem[FASTFIND_LOGGING])
+    {
+        Log::Warn(L"The '<logging> configuration element is deprecated, please use '<log>' instead");
+    }
+
+    if (configitem[FASTFIND_LOG])
+    {
+        UtilitiesLoggerConfiguration::Parse(configitem[FASTFIND_LOG], m_utilitiesConfig.log);
+    }
+
     if (FAILED(
             hr = config.outObject.Configure(
                 static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile), configitem[FASTFIND_OUTPUT_OBJECT])))
@@ -225,6 +236,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 {
     HRESULT hr = E_FAIL;
 
+    UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
     for (int i = 0; i < argc; i++)
     {
         switch (argv[i][0])
@@ -315,6 +328,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     bool bSomeThingToParse = false;
 

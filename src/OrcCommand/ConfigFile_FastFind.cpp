@@ -12,6 +12,8 @@
 
 #include "ConfigFile_FastFind.h"
 
+#include "Log/UtilitiesLoggerConfiguration.h"
+
 using namespace Orc::Config::Common;
 
 HRESULT Orc::Config::FastFind::object(ConfigItem& parent, DWORD dwIndex)
@@ -112,6 +114,8 @@ HRESULT Orc::Config::FastFind::root(ConfigItem& item)
     if (FAILED(hr = item.AddAttribute(L"version", FASTFIND_VERSION, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddChild(logging, FASTFIND_LOGGING)))
+        return hr;
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, FASTFIND_LOG)))
         return hr;
     if (FAILED(hr = item.AddChild(filesystem, FASTFIND_FILESYSTEM)))
         return hr;

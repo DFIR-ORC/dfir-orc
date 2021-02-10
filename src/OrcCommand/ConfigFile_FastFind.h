@@ -42,10 +42,11 @@ constexpr auto FASTFIND_REGISTRY_HIVE = 2L;
 
 constexpr auto FASTFIND_VERSION = 0L;
 constexpr auto FASTFIND_LOGGING = 1L;
-constexpr auto FASTFIND_FILESYSTEM = 2L;
-constexpr auto FASTFIND_REGISTRY = 3L;
-constexpr auto FASTFIND_SERVICE = 4L;
-constexpr auto FASTFIND_OBJECT = 5L;
+constexpr auto FASTFIND_LOG = 2L;
+constexpr auto FASTFIND_FILESYSTEM = 3L;
+constexpr auto FASTFIND_REGISTRY = 4L;
+constexpr auto FASTFIND_SERVICE = 5L;
+constexpr auto FASTFIND_OBJECT = 6L;
 
 constexpr auto FASTFIND_OUTPUT_FILESYSTEM = 6L;
 constexpr auto FASTFIND_OUTPUT_REGISTRY = 7L;
