@@ -1109,7 +1109,8 @@ bool UtilitiesMain::IgnoreWaitForDebuggerOption(LPCWSTR szArg)
 bool UtilitiesMain::IgnoreLoggingOptions(LPCWSTR szArg)
 {
     if (!_wcsnicmp(szArg, L"Verbose", wcslen(L"Verbose")) || !_wcsnicmp(szArg, L"Debug", wcslen(L"Debug"))
-        || !_wcsnicmp(szArg, L"LogFile", wcslen(L"LogFile")) || !_wcsnicmp(szArg, L"NoConsole", wcslen(L"NoConsole")))
+        || !_wcsnicmp(szArg, L"LogFile", wcslen(L"LogFile")) || !_wcsnicmp(szArg, L"NoConsole", wcslen(L"NoConsole"))
+        || !_wcsnicmp(szArg, L"Log:", wcslen(L"Log:")) || !_wcsnicmp(szArg, L"NoConsole", wcslen(L"NoConsole")))
         return true;
     return false;
 }
