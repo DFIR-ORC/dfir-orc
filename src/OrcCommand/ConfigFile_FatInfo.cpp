@@ -11,6 +11,8 @@
 #include "ConfigFile_Common.h"
 #include "FileInfoCommon.h"
 
+#include "Log/UtilitiesLoggerConfiguration.h"
+
 using namespace Orc::Config::Common;
 using namespace Orc::Command;
 
@@ -28,6 +30,8 @@ HRESULT Orc::Config::FatInfo::root(ConfigItem& item)
     if (FAILED(hr = item.AddChild(location, FATINFO_LOCATIONS)))
         return hr;
     if (FAILED(hr = item.AddChild(logging, FATINFO_LOGGING)))
+        return hr;
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, FATINFO_LOG)))
         return hr;
     if (FAILED(hr = item.AddChild(FileInfoCommon::ConfigItem_fileinfo_column, FATINFO_COLUMNS)))
         return hr;

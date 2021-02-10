@@ -122,6 +122,16 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         return hr;
     }
 
+    if (configitem[FATINFO_LOGGING])
+    {
+        Log::Warn(L"The '<logging> configuration element is deprecated, please use '<log>' instead");
+    }
+
+    if (configitem[FATINFO_LOG])
+    {
+        UtilitiesLoggerConfiguration::Parse(configitem[FATINFO_LOG], m_utilitiesConfig.log);
+    }
+
     if (FAILED(hr = GetColumnsAndFiltersFromConfig(configitem)))
     {
         Log::Error("Failed to get column definition from config [{}]", SystemError(hr));
@@ -158,6 +168,8 @@ boost::logic::tribool Main::GetPopulateSystemObjectsFromConfig(const ConfigItem&
 HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 {
     HRESULT hr = E_FAIL;
+
+    UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
 
     bool bBool = false;
     for (int i = 1; i < argc; i++)
@@ -237,6 +249,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     if (m_utilitiesConfig.strComputerName.empty())
     {

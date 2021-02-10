@@ -14,10 +14,11 @@
 constexpr auto FATINFO_OUTPUT = 0L;
 constexpr auto FATINFO_LOCATIONS = 1L;
 constexpr auto FATINFO_LOGGING = 2L;
-constexpr auto FATINFO_COLUMNS = 3L;
-constexpr auto FATINFO_RESURRECT = 4L;
-constexpr auto FATINFO_COMPUTER = 5L;
-constexpr auto FATINFO_POP_SYS_OBJ = 6L;
+constexpr auto FATINFO_LOG = 3L;
+constexpr auto FATINFO_COLUMNS = 4L;
+constexpr auto FATINFO_RESURRECT = 5L;
+constexpr auto FATINFO_COMPUTER = 6L;
+constexpr auto FATINFO_POP_SYS_OBJ = 7L;
 
 namespace Orc::Config::FatInfo {
 ORCLIB_API HRESULT root(ConfigItem& parent);
