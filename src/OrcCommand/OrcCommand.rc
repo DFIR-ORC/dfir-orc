@@ -53,7 +53,7 @@ GETTHIS_SQLSCHEMA       BINARY                  "GetThisSqlSchema.xml"
 
 NTFSINFO_SQLSCHEMA      BINARY                  "Command/NTFSInfo/NTFSInfoSqlSchema.xml"
 
-GETSAMPLES_SQLSCHEMA    BINARY                  "GetSamplesSchema.xml"
+GETSAMPLES_SQLSCHEMA    BINARY                  "Command/GetSamples/GetSamplesSchema.xml"
 
 USNINFO_SQLSCHEMA       BINARY                  "USNInfoSqlSchema.xml"
 

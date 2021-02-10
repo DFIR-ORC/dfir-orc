@@ -94,14 +94,14 @@ set(SRC_FATINFO
 source_group(FatInfo FILES ${SRC_FATINFO})
 
 set(SRC_GETSAMPLES
-    "ConfigFile_GetSamples.cpp"
-    "ConfigFile_GetSamples.h"
-    "GetSamples.h"
-    "GetSamplesSchema.xml"
-    "GetSamples_Config.cpp"
-    "GetSamples_Output.cpp"
-    "GetSamples_Run.cpp"
-    "GetSamplesSchema.xml"
+    "Command/GetSamples/ConfigFile_GetSamples.cpp"
+    "Command/GetSamples/ConfigFile_GetSamples.h"
+    "Command/GetSamples/GetSamples.h"
+    "Command/GetSamples/GetSamplesSchema.xml"
+    "Command/GetSamples/GetSamples_Config.cpp"
+    "Command/GetSamples/GetSamples_Output.cpp"
+    "Command/GetSamples/GetSamples_Run.cpp"
+    "Command/GetSamples/GetSamplesSchema.xml"
 )
 
 source_group(GetSamples FILES ${SRC_GETSAMPLES})

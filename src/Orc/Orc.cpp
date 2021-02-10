@@ -11,7 +11,7 @@
 #include "stdafx.h"
 
 #include "FastFind.h"
-#include "GetSamples.h"
+#include "Command/GetSamples/GetSamples.h"
 #include "GetSectors.h"
 #include "GetThis.h"
 #include "Mothership.h"
