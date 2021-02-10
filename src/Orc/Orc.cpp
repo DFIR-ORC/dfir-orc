@@ -12,7 +12,7 @@
 
 #include "Command/FastFind/FastFind.h"
 #include "Command/GetSamples/GetSamples.h"
-#include "GetSectors.h"
+#include "Command/GetSectors/GetSectors.h"
 #include "Command/GetThis/GetThis.h"
 #include "Mothership.h"
 #include "Command/NTFSInfo/NTFSInfo.h"

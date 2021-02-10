@@ -107,12 +107,12 @@ set(SRC_GETSAMPLES
 source_group(GetSamples FILES ${SRC_GETSAMPLES})
 
 set(SRC_GETSECTORS
-    "GetSectors.h"
-    "GetSectorsSchema.xml"
-    "GetSectors_Config.cpp"
-    "GetSectors_Output.cpp"
-    "GetSectors_Run.cpp"
-    "GetSectorsSchema.xml"
+    "Command/GetSectors/GetSectors.h"
+    "Command/GetSectors/GetSectorsSchema.xml"
+    "Command/GetSectors/GetSectors_Config.cpp"
+    "Command/GetSectors/GetSectors_Output.cpp"
+    "Command/GetSectors/GetSectors_Run.cpp"
+    "Command/GetSectors/GetSectorsSchema.xml"
 )
 
 source_group(GetSectors FILES ${SRC_GETSECTORS})

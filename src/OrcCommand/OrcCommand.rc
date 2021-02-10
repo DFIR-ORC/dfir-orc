@@ -65,7 +65,7 @@ REGINFO_SQLSCHEMA       BINARY                  "RegInfoSqlSchema.xml"
 
 FASTFIND_SQLSCHEMA BINARY                       "Command/FastFind/FastFindSqlSchema.xml"
 
-GETSECTORS_SQLSCHEMA    BINARY                  "GetSectorsSchema.xml"
+GETSECTORS_SQLSCHEMA    BINARY                  "Command/GetSectors/GetSectorsSchema.xml"
 
 NTFSUTIL_SQLSCHEMA      BINARY                  "NTFSUtilSqlSchema.xml"
 
