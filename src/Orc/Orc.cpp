@@ -17,7 +17,7 @@
 #include "Mothership.h"
 #include "Command/NTFSInfo/NTFSInfo.h"
 #include "RegInfo.h"
-#include "NTFSUtil.h"
+#include "Command/NTFSUtil/NTFSUtil.h"
 #include "ToolEmbed.h"
 #include "USNInfo.h"
 #include "Command/WolfLauncher/WolfLauncher.h"

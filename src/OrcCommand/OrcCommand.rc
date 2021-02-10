@@ -67,7 +67,7 @@ FASTFIND_SQLSCHEMA BINARY                       "Command/FastFind/FastFindSqlSch
 
 GETSECTORS_SQLSCHEMA    BINARY                  "Command/GetSectors/GetSectorsSchema.xml"
 
-NTFSUTIL_SQLSCHEMA      BINARY                  "NTFSUtilSqlSchema.xml"
+NTFSUTIL_SQLSCHEMA      BINARY                  "Command/NTFSUtil/NTFSUtilSqlSchema.xml"
 
 FATINFO_SQLSCHEMA       BINARY                  "Command/FatInfo/FatInfoSqlSchema.xml"
 

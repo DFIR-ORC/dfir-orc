@@ -156,12 +156,12 @@ set(SRC_NTFSINFO
 source_group(NTFSInfo FILES ${SRC_NTFSINFO})
 
 set(SRC_NTFSUTIL
-    "NTFSUtil.h"
-    "NTFSUtilSqlSchema.xml"
-    "NTFSUtil_Config.cpp"
-    "NTFSUtil_Output.cpp"
-    "NTFSUtil_Run.cpp"
-    "NTFSUtilSqlSchema.xml"
+    "Command/NTFSUtil/NTFSUtil.h"
+    "Command/NTFSUtil/NTFSUtilSqlSchema.xml"
+    "Command/NTFSUtil/NTFSUtil_Config.cpp"
+    "Command/NTFSUtil/NTFSUtil_Output.cpp"
+    "Command/NTFSUtil/NTFSUtil_Run.cpp"
+    "Command/NTFSUtil/NTFSUtilSqlSchema.xml"
 )
 
 source_group(NTFSUtil FILES ${SRC_NTFSUTIL})
