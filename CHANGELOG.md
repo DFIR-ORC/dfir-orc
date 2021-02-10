@@ -1,5 +1,19 @@
 # ChangeLog
 
+## [10.0.17] - 2021-10-02
+### Changed
+- build.ps1: stop on any error
+- build.ps1: multiple other improvements
+
+### Fixed
+- Embeded resources lookup for in-memory use
+- Configuration: do not exit on unknown configuration element
+
+### Added
+- build.ps1: option to build ssdeed
+- build.ps1: option to specify vcpkg directory
+- Configuration: compatibility with upcoming 10.1.x new log options
+
 ## [10.0.16] - 2020-11-09
 ### Added
 - CI: Azure: add support for release/* branches
