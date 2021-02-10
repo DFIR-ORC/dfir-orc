@@ -31,6 +31,8 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 
 HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 {
+    UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
     bool bBool = false;
     for (int i = 1; i < argc; i++)
     {
@@ -61,6 +63,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
 HRESULT Main::CheckConfiguration()
 {
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
     if (config.output.Type == OutputSpec::Kind::None)
     {
         config.output.Type = OutputSpec::Kind::TableFile;
