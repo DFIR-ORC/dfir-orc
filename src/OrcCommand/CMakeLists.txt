@@ -56,13 +56,13 @@ set(SRC_LOG
 source_group(Log FILES ${SRC_LOG})
 
 set(SRC_DD
-    "ConfigFile_DD.cpp"
-    "ConfigFile_DD.h"
-    "DD.h"
-    "DD_Config.cpp"
-    "DD_Output.cpp"
-    "DD_Run.cpp"
-    "DDSqlSchema.xml"
+    "Command/DD/ConfigFile_DD.cpp"
+    "Command/DD/ConfigFile_DD.h"
+    "Command/DD/DD.h"
+    "Command/DD/DD_Config.cpp"
+    "Command/DD/DD_Output.cpp"
+    "Command/DD/DD_Run.cpp"
+    "Command/DD/DDSqlSchema.xml"
 )
 
 source_group(DD FILES ${SRC_DD})

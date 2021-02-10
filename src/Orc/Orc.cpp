@@ -23,7 +23,7 @@
 #include "Command/WolfLauncher/WolfLauncher.h"
 #include "ObjInfo.h"
 #include "FatInfo.h"
-#include "DD.h"
+#include "Command/DD/DD.h"
 
 #include "Text/Console.h"
 #include "Text/Tree.h"

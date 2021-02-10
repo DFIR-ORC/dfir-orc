@@ -71,7 +71,7 @@ NTFSUTIL_SQLSCHEMA      BINARY                  "NTFSUtilSqlSchema.xml"
 
 FATINFO_SQLSCHEMA       BINARY                  "FatInfoSqlSchema.xml"
 
-DD_SQLSCHEMA            BINARY                  "DDSqlSchema.xml"
+DD_SQLSCHEMA            BINARY                  "Command/DD/DDSqlSchema.xml"
 
 #endif    // Neutral resources
 /////////////////////////////////////////////////////////////////////////////
