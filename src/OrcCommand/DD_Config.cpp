@@ -34,6 +34,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 {
     // Configuration is completed with command line args
 
+    UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
     bool bBool = false;
     for (int i = 1; i < argc; i++)
     {
@@ -86,6 +88,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
 HRESULT Main::CheckConfiguration()
 {
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
     // Here we check to tool's provided configuration and adjust (if need be) some parameters to default values
     if (config.strIF.empty())
     {

@@ -17,6 +17,7 @@
 constexpr auto DD_OUTPUT = 0L;
 constexpr auto DD_LOCATIONS = 1L;
 constexpr auto DD_LOGGING = 2L;
+constexpr auto DD_LOG = 3L;
 
 constexpr auto DD_EMPTYTOOL = 0L;
 

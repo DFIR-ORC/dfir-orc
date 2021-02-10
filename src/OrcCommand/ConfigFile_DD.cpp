@@ -12,6 +12,8 @@
 
 #include "ConfigFile_DD.h"
 
+#include "Log/UtilitiesLoggerConfiguration.h"
+
 using namespace Orc::Config::Common;
 
 HRESULT Orc::Config::DD::root(ConfigItem& item)
@@ -29,5 +31,8 @@ HRESULT Orc::Config::DD::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(logging, DD_LOGGING)))
         return hr;
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, DD_LOG)))
+        return hr;
+
     return S_OK;
 }
