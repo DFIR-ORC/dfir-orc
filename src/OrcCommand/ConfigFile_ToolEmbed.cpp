@@ -11,6 +11,8 @@
 // TOOLEMBED
 #include "ConfigFile_ToolEmbed.h"
 
+#include "Log/UtilitiesLoggerConfiguration.h"
+
 using namespace Orc;
 
 // <File name="GetThis.exe"          path="..\Win32\%Config%\GetThis.exe" />
@@ -106,6 +108,8 @@ HRESULT Orc::Config::ToolEmbed::root(ConfigItem& item)
     if (FAILED(hr = item.AddChild(archive, TOOLEMBED_ARCHIVE)))
         return hr;
     if (FAILED(hr = item.AddChild(Orc::Config::Common::logging, TOOLEMBED_LOGGING)))
+        return hr;
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, TOOLEMBED_LOG)))
         return hr;
     return S_OK;
 }

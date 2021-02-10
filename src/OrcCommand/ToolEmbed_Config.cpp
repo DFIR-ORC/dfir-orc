@@ -256,6 +256,16 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     if (FAILED(hr))
         return hr;
 
+    if (configitem[TOOLEMBED_LOGGING])
+    {
+        Log::Warn(L"The '<logging> configuration element is deprecated, please use '<log>' instead");
+    }
+
+    if (configitem[TOOLEMBED_LOG])
+    {
+        UtilitiesLoggerConfiguration::Parse(configitem[TOOLEMBED_LOG], m_utilitiesConfig.log);
+    }
+
     if (configitem[TOOLEMBED_RUN])
     {
         config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun(configitem[TOOLEMBED_RUN]));
@@ -283,6 +293,8 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
 HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 {
+    UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
     HRESULT hr = E_FAIL;
 
     std::wstring strParameter;
@@ -423,6 +435,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     DWORD dwMajor = 0, dwMinor = 0;
     SystemDetails::GetOSVersion(dwMajor, dwMinor);

@@ -39,6 +39,7 @@ constexpr auto TOOLEMBED_RUN64 = 5L;
 constexpr auto TOOLEMBED_FILE = 6L;
 constexpr auto TOOLEMBED_ARCHIVE = 7L;
 constexpr auto TOOLEMBED_LOGGING = 8L;
+constexpr auto TOOLEMBED_LOG = 9L;
 // <ToolEmbed>
 
 constexpr auto TOOLEMBED_TOOLEMBED = 0L;
