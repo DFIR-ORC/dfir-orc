@@ -69,7 +69,7 @@ GETSECTORS_SQLSCHEMA    BINARY                  "GetSectorsSchema.xml"
 
 NTFSUTIL_SQLSCHEMA      BINARY                  "NTFSUtilSqlSchema.xml"
 
-FATINFO_SQLSCHEMA       BINARY                  "FatInfoSqlSchema.xml"
+FATINFO_SQLSCHEMA       BINARY                  "Command/FatInfo/FatInfoSqlSchema.xml"
 
 DD_SQLSCHEMA            BINARY                  "Command/DD/DDSqlSchema.xml"
 

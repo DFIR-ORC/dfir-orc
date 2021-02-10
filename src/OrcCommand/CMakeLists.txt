@@ -81,14 +81,14 @@ set(SRC_FASTFIND
 source_group(FastFind FILES ${SRC_FASTFIND})
 
 set(SRC_FATINFO
-    "ConfigFile_FatInfo.cpp"
-    "ConfigFile_FatInfo.h"
-    "FatInfo.h"
-    "FatInfoSqlSchema.xml"
-    "FatInfo_Config.cpp"
-    "FatInfo_Output.cpp"
-    "FatInfo_Run.cpp"
-    "FatInfoSqlSchema.xml"
+    "Command/FatInfo/ConfigFile_FatInfo.cpp"
+    "Command/FatInfo/ConfigFile_FatInfo.h"
+    "Command/FatInfo/FatInfo.h"
+    "Command/FatInfo/FatInfoSqlSchema.xml"
+    "Command/FatInfo/FatInfo_Config.cpp"
+    "Command/FatInfo/FatInfo_Output.cpp"
+    "Command/FatInfo/FatInfo_Run.cpp"
+    "Command/FatInfo/FatInfoSqlSchema.xml"
 )
 
 source_group(FatInfo FILES ${SRC_FATINFO})
