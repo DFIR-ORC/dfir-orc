@@ -19,7 +19,7 @@
 #include "Command/RegInfo/RegInfo.h"
 #include "Command/NTFSUtil/NTFSUtil.h"
 #include "Command/ToolEmbed/ToolEmbed.h"
-#include "USNInfo.h"
+#include "Command/USNInfo/USNInfo.h"
 #include "Command/WolfLauncher/WolfLauncher.h"
 #include "Command/ObjInfo/ObjInfo.h"
 #include "Command/FatInfo/FatInfo.h"

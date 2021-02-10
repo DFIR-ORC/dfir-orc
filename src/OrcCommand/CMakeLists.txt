@@ -202,14 +202,14 @@ set(SRC_TOOLEMBED
 source_group(ToolEmbed FILES ${SRC_TOOLEMBED})
 
 set(SRC_USNINFO
-    "ConfigFile_USNInfo.cpp"
-    "ConfigFile_USNInfo.h"
-    "USNInfo.h"
-    "USNInfoSqlSchema.xml"
-    "USNInfo_Config.cpp"
-    "USNInfo_Output.cpp"
-    "USNInfo_Run.cpp"
-    "USNInfoSqlSchema.xml"
+    "Command/USNInfo/ConfigFile_USNInfo.cpp"
+    "Command/USNInfo/ConfigFile_USNInfo.h"
+    "Command/USNInfo/USNInfo.h"
+    "Command/USNInfo/USNInfoSqlSchema.xml"
+    "Command/USNInfo/USNInfo_Config.cpp"
+    "Command/USNInfo/USNInfo_Output.cpp"
+    "Command/USNInfo/USNInfo_Run.cpp"
+    "Command/USNInfo/USNInfoSqlSchema.xml"
 )
 
 source_group(USNInfo FILES ${SRC_USNINFO})
