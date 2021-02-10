@@ -63,7 +63,7 @@ WOLFLAUNCHER_SQLSCHEMA  BINARY                  "Command/WolfLauncher/WolfLaunch
 
 REGINFO_SQLSCHEMA       BINARY                  "RegInfoSqlSchema.xml"
 
-FASTFIND_SQLSCHEMA BINARY                       "FastFindSqlSchema.xml"
+FASTFIND_SQLSCHEMA BINARY                       "Command/FastFind/FastFindSqlSchema.xml"
 
 GETSECTORS_SQLSCHEMA    BINARY                  "GetSectorsSchema.xml"
 

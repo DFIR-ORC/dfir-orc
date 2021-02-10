@@ -10,7 +10,7 @@
 
 #include "stdafx.h"
 
-#include "FastFind.h"
+#include "Command/FastFind/FastFind.h"
 #include "Command/GetSamples/GetSamples.h"
 #include "GetSectors.h"
 #include "Command/GetThis/GetThis.h"

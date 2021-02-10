@@ -68,14 +68,14 @@ set(SRC_DD
 source_group(DD FILES ${SRC_DD})
 
 set(SRC_FASTFIND
-    "ConfigFile_FastFind.cpp"
-    "ConfigFile_FastFind.h"
-    "FastFind.h"
-    "FastFindSqlSchema.xml"
-    "FastFind_Config.cpp"
-    "FastFind_Output.cpp"
-    "FastFind_Run.cpp"
-    "FastFindSqlSchema.xml"
+    "Command/FastFind/ConfigFile_FastFind.cpp"
+    "Command/FastFind/ConfigFile_FastFind.h"
+    "Command/FastFind/FastFind.h"
+    "Command/FastFind/FastFindSqlSchema.xml"
+    "Command/FastFind/FastFind_Config.cpp"
+    "Command/FastFind/FastFind_Output.cpp"
+    "Command/FastFind/FastFind_Run.cpp"
+    "Command/FastFind/FastFindSqlSchema.xml"
 )
 
 source_group(FastFind FILES ${SRC_FASTFIND})
