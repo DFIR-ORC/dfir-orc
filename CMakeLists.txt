@@ -15,6 +15,7 @@ option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" ON)
 option(ORC_BUILD_BOOST_STACKTRACE  "Build with stack backtrace enabled" ON)
 option(ORC_DOWNLOADS_ONLY   "Do not build ORC but only download vcpkg third parties" OFF)
 option(ORC_DISABLE_PRECOMPILED_HEADERS "Disable precompiled headers" OFF)
+option(ORC_SWAPRUN_NET      "Enable PE option to for stable execution from network" ON)
 
 if(NOT ORC_BUILD_COMMAND)
     set(ORC_BUILD_FASTFIND OFF)

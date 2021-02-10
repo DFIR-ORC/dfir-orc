@@ -91,6 +91,14 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
     endif()
 endif()
 
+if(${ORC_SWAPRUN_NET})
+    add_custom_command(
+            TARGET Orc
+            POST_BUILD
+            COMMAND editbin /swaprun:net $<TARGET_FILE:Orc>
+    )
+endif()
+
 if(${ORC_BUILD_PARQUET})
 
     if("${TARGET_ARCH}" STREQUAL "x64")
