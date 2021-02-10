@@ -19,11 +19,12 @@
 constexpr auto REGINFO_OUTPUT = 0L;
 constexpr auto REGINFO_HIVE = 1L;
 constexpr auto REGINFO_LOGGING = 2L;
-constexpr auto REGINFO_INFORMATION = 3L;
-constexpr auto REGINFO_COMPUTER = 4L;
-constexpr auto REGINFO_LOCATION = 5L;
-constexpr auto REGINFO_KNOWNLOCATIONS = 6L;
-constexpr auto REGINFO_CSVLIMIT = 7L;
+constexpr auto REGINFO_LOG = 3L;
+constexpr auto REGINFO_INFORMATION = 4L;
+constexpr auto REGINFO_COMPUTER = 5L;
+constexpr auto REGINFO_LOCATION = 6L;
+constexpr auto REGINFO_KNOWNLOCATIONS = 7L;
+constexpr auto REGINFO_CSVLIMIT = 8L;
 
 constexpr auto REGINFO_REGINFO = 0L;
 constexpr auto REGINFO_TEMPLATE = 0L;

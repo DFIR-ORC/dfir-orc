@@ -11,6 +11,8 @@
 // REGINFO
 #include "ConfigFile_RegInfo.h"
 
+#include "Log/UtilitiesLoggerConfiguration.h"
+
 using namespace Orc::Config::Common;
 
 HRESULT Orc::Config::RegInfo::root(ConfigItem& item)
@@ -27,6 +29,8 @@ HRESULT Orc::Config::RegInfo::root(ConfigItem& item)
     if (FAILED(hr = item.AddChild(hive, REGINFO_HIVE)))
         return hr;
     if (FAILED(hr = item.AddChild(logging, REGINFO_LOGGING)))
+        return hr;
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, REGINFO_LOG)))
         return hr;
     if (FAILED(hr = item.AddChildNode(L"information", REGINFO_INFORMATION, ConfigItem::OPTION)))
         return hr;

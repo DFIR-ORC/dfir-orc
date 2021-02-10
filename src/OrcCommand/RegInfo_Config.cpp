@@ -151,6 +151,16 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             return hr;
         });
 
+    if (configitem[REGINFO_LOGGING])
+    {
+        Log::Warn(L"The '<logging> configuration element is deprecated, please use '<log>' instead");
+    }
+
+    if (configitem[REGINFO_LOG])
+    {
+        UtilitiesLoggerConfiguration::Parse(configitem[REGINFO_LOG], m_utilitiesConfig.log);
+    }
+
     if (configitem[REGINFO_INFORMATION])
     {
         config.Information = GetRegInfoType(configitem[REGINFO_INFORMATION].c_str());
@@ -178,6 +188,8 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
 HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 {
+    UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
     HRESULT hr = E_FAIL;
     try
     {
@@ -239,6 +251,8 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 
 HRESULT Main::CheckConfiguration()
 {
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
     config.m_HiveQuery.m_HivesLocation.Consolidate(false, FSVBR::FSType::NTFS);
 
     if (HasFlag(config.Output.Type, OutputSpec::Kind::None))
