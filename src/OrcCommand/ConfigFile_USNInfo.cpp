@@ -12,6 +12,8 @@
 
 #include "ConfigFile_USNInfo.h"
 
+#include "Log/UtilitiesLoggerConfiguration.h"
+
 HRESULT Orc::Config::USNInfo::root(ConfigItem& item)
 {
     HRESULT hr = E_FAIL;
@@ -28,6 +30,8 @@ HRESULT Orc::Config::USNInfo::root(ConfigItem& item)
     if (FAILED(hr = item.AddChild(Orc::Config::Common::knownlocations, USNINFO_KNOWNLOCATIONS)))
         return hr;
     if (FAILED(hr = item.AddChild(Orc::Config::Common::logging, USNINFO_LOGGING)))
+        return hr;
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, USNINFO_LOG)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"compact", USNINFO_COMPACT, ConfigItem::OPTION)))
         return hr;

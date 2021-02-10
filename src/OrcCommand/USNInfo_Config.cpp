@@ -50,6 +50,16 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         return hr;
     }
 
+    if (configitem[USNINFO_LOGGING])
+    {
+        Log::Warn(L"The '<logging> configuration element is deprecated, please use '<log>' instead");
+    }
+
+    if (configitem[USNINFO_LOG])
+    {
+        UtilitiesLoggerConfiguration::Parse(configitem[USNINFO_LOG], m_utilitiesConfig.log);
+    }
+
     config.bCompactForm = false;
     if (configitem[USNINFO_COMPACT])
         config.bCompactForm = true;
@@ -67,6 +77,8 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 {
     HRESULT hr = E_FAIL;
+
+    UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
 
     for (int i = 0; i < argc; i++)
     {
@@ -110,6 +122,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     if (m_utilitiesConfig.strComputerName.empty())
     {

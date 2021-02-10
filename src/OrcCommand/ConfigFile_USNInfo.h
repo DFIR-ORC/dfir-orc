@@ -18,7 +18,8 @@ constexpr auto USNINFO_OUTPUT = 0L;
 constexpr auto USNINFO_LOCATIONS = 1L;
 constexpr auto USNINFO_KNOWNLOCATIONS = 2L;
 constexpr auto USNINFO_LOGGING = 3L;
-constexpr auto USNINFO_COMPACT = 4L;
+constexpr auto USNINFO_LOG = 4L;
+constexpr auto USNINFO_COMPACT = 5L;
 
 constexpr auto USNINFO_USNINFO = 0L;
 
