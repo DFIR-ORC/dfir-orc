@@ -167,12 +167,12 @@ set(SRC_NTFSUTIL
 source_group(NTFSUtil FILES ${SRC_NTFSUTIL})
 
 set(SRC_OBJINFO
-    "ObjInfo.h"
-    "ObjInfoSqlSchema.xml"
-    "ObjInfo_Config.cpp"
-    "ObjInfo_Output.cpp"
-    "ObjInfo_Run.cpp"
-    "ObjInfoSqlSchema.xml"
+    "Command/ObjInfo/ObjInfo.h"
+    "Command/ObjInfo/ObjInfoSqlSchema.xml"
+    "Command/ObjInfo/ObjInfo_Config.cpp"
+    "Command/ObjInfo/ObjInfo_Output.cpp"
+    "Command/ObjInfo/ObjInfo_Run.cpp"
+    "Command/ObjInfo/ObjInfoSqlSchema.xml"
 )
 
 source_group(ObjInfo FILES ${SRC_OBJINFO})

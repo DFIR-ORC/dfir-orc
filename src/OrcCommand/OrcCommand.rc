@@ -57,7 +57,7 @@ GETSAMPLES_SQLSCHEMA    BINARY                  "Command/GetSamples/GetSamplesSc
 
 USNINFO_SQLSCHEMA       BINARY                  "USNInfoSqlSchema.xml"
 
-OBJINFO_SQLSCHEMA       BINARY                  "ObjInfoSqlSchema.xml"
+OBJINFO_SQLSCHEMA       BINARY                  "Command/ObjInfo/ObjInfoSqlSchema.xml"
 
 WOLFLAUNCHER_SQLSCHEMA  BINARY                  "Command/WolfLauncher/WolfLauncherSqlSchema.xml"
 

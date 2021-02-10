@@ -21,7 +21,7 @@
 #include "ToolEmbed.h"
 #include "USNInfo.h"
 #include "Command/WolfLauncher/WolfLauncher.h"
-#include "ObjInfo.h"
+#include "Command/ObjInfo/ObjInfo.h"
 #include "Command/FatInfo/FatInfo.h"
 #include "Command/DD/DD.h"
 
