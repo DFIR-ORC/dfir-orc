@@ -77,7 +77,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
     command->AddExecutableToRun(strAutorunsCmd);
     command->AddOnCompleteAction(
         std::make_shared<OnComplete>(OnComplete::Delete, L"autorunsc.exe", strAutorunsCmd, nullptr));
-    command->AddArgument(L"/accepteula -t -h -x -a *", 0L);
+    command->AddArgument(L"/accepteula -t -h -x -a * *", 0L);
 
     auto pMemStream = std::make_shared<MemoryStream>();
     hr = pMemStream->OpenForReadWrite();
