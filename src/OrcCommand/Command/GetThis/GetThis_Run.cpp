@@ -1078,7 +1078,7 @@ void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool
 
     if (aMatch->MatchingAttributes.empty())
     {
-        Log::Error(
+        Log::Warn(
             L"'{}' matched '{}' but no data related attribute was associated",
             aMatch->MatchingNames.front().FullPathName,
             aMatch->Term->GetDescription());
