@@ -1,5 +1,33 @@
 # ChangeLog
 
+## [10.1.0-rc4] - 2021-02-12
+### Changed
+- Do not exit after manageable formatting exception
+- cleanup: src/OrcCommand source tree layout and remove dead code
+- cmake: better handling of `WINVER`, `_WIN32_WINNT`, `NTDDI_VERSION` along with vcpkg
+
+### Fixed
+- Configuration: handle correctly unknown XML elements
+- Embeded resources lookup for in-memory use
+- GetSamples: handle correctly 'log' element configuration (not 'logging')
+- Log: most of the commands share now the same logging capabilities
+- WolfLauncher: UTC timestamp in console (or journal)
+- Fix SSDeep use
+
+### Added
+- Outcome: write execution summary into the file specified in WolfLauncher configuration with 'outcome' element
+- Enable SWAPRUN:NET flag to ensure stability when executed from network share
+- WolfLauncher: 'console' configuration element to tee output to a file
+- Log: new 'log' configuration element replacing 'logging' becoming deprecated
+- Log: configure separate log and backtrace levels for File and Console
+- Log: add advanced command line support for all log/console options
+- Log: the specified log file path support patterns (like '{TimeStamp}')
+- cmake: ORC_BUILD_TLSH option (default: OFF)
+
+### Removed
+- 'JobStatistics' (replaced by 'outcome')
+- 'ProcessStatistics' (replaced by 'outcome')
+
 ## [10.1.0-rc3] - 2020-12-02
 ### Changed
 - Log: enhance FileSink synchronisation
