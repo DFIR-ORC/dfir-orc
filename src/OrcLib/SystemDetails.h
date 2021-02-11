@@ -16,6 +16,7 @@
 #include <string>
 #include <array>
 #include <set>
+#include <filesystem>
 
 #pragma managed(push, off)
 
@@ -92,6 +93,8 @@ public:
     static HRESULT WriteProductType(ITableOutput& output);
 
     static HRESULT GetTimeStamp(std::wstring& strTimeStamp);
+    static HRESULT GetTimeStampISO8601(std::wstring& strTimeStamp);
+    static Result<Traits::TimeUtc<SYSTEMTIME>> GetTimeStamp();
 
     static HRESULT WhoAmI(std::wstring& strMe);
     static HRESULT AmIElevated(bool& bIsElevated);

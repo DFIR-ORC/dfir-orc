@@ -19,6 +19,13 @@
 #include <sstream>
 #include <iomanip>
 
+// CALG_SHA_256 could be undefined by 'WinCrypt.h' because of targetted WINVER
+#include <WinCrypt.h>
+#ifndef CALG_SHA_256
+#    define ALG_SID_SHA_256 12
+#    define CALG_SHA_256 (ALG_CLASS_HASH | ALG_TYPE_ANY | ALG_SID_SHA_256)
+#endif
+
 using namespace std;
 
 using namespace Orc;

@@ -12,6 +12,8 @@
 
 #include <spdlog/sinks/sink.h>
 
+#include "Log/Level.h"
+
 namespace Orc {
 namespace Log {
 
@@ -29,8 +31,11 @@ public:
 
     void AddTo(spdlog::logger& logger) { logger.sinks().push_back(m_sink); }
 
-    spdlog::level::level_enum Level() const { return m_sink->level(); }
-    void SetLevel(spdlog::level::level_enum level) { m_sink->set_level(level); }
+    Log::Level Level() const { return static_cast<Log::Level>(m_sink->level()); }
+    void SetLevel(Log::Level level) { m_sink->set_level(static_cast<spdlog::level::level_enum>(level)); }
+
+    Log::Level BacktraceTrigger() const { return m_backtraceTrigger; }
+    void SetBacktraceTrigger(Log::Level level) { m_backtraceTrigger = level; }
 
     std::unique_ptr<spdlog::formatter> CloneFormatter() const
     {
@@ -63,12 +68,14 @@ public:
 protected:
     SpdlogSink(std::unique_ptr<spdlog::sinks::sink> sink)
         : m_sink(std::move(sink))
+        , m_backtraceTrigger(Level::Off)
     {
     }
 
 protected:
     std::shared_ptr<spdlog::sinks::sink> m_sink;
     std::unique_ptr<spdlog::formatter> m_formatter;
+    Log::Level m_backtraceTrigger;
 };
 
 }  // namespace Log

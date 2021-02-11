@@ -74,6 +74,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
     }
     {
         ScopedLock sl(m_cs);
+        m_hInstance = hInstance;
         std::swap(m_hFileResource, hFileResource);
         std::swap(m_hResource, hResource);
     }
@@ -84,12 +85,9 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in WOR
 HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRSRC hRes)
 {
     HGLOBAL hFileResource = NULL;
-    HRSRC hResource = NULL;
 
     // First find and load the required resource
-    hResource = hRes;
-
-    if ((hFileResource = LoadResource(hInstance, hResource)) == NULL)
+    if ((hFileResource = LoadResource(hInstance, hRes)) == NULL)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Debug("Failed LoadResource [{}]", SystemError(hr));
@@ -107,7 +105,7 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
 
     DWORD dwSize = 0L;
 
-    if ((dwSize = SizeofResource(hInstance, hResource)) == 0)
+    if ((dwSize = SizeofResource(hInstance, hRes)) == 0)
     {
         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Debug("Failed SizeofResource [{}]", SystemError(hr));
@@ -115,8 +113,9 @@ HRESULT ResourceStream::OpenForReadOnly(__in const HINSTANCE hInstance, __in HRS
     }
     {
         ScopedLock sl(m_cs);
+        m_hInstance = hInstance;
         std::swap(m_hFileResource, hFileResource);
-        std::swap(m_hResource, hResource);
+        std::swap(m_hResource, hRes);
     }
 
     return MemoryStream::OpenForReadOnly(lpFile, dwSize);
@@ -155,6 +154,30 @@ HRESULT Orc::ResourceStream::OpenForReadOnly(const std::wstring& strResourceSpec
     if (auto hr = OpenForReadOnly(hMod, hRes); FAILED(hr))
         return hr;
 
+    return S_OK;
+}
+
+STDMETHODIMP Orc::ResourceStream::Clone(std::shared_ptr<ByteStream>& clone)
+{
+    auto new_stream = std::make_shared<ResourceStream>();
+
+    if (IsOpen() == S_FALSE)
+    {
+        clone = new_stream;
+        return S_OK;
+    }
+
+    if (auto hr = new_stream->OpenForReadOnly(m_hInstance, m_hResource); FAILED(hr))
+        return hr;
+
+    ULONG64 ullCurPos = 0LLU;
+    if (auto hr = SetFilePointer(0LL, FILE_CURRENT, &ullCurPos); FAILED(hr))
+        return hr;
+
+    ULONG64 ullDupCurPos = 0LLU;
+    if (auto hr = new_stream->SetFilePointer(ullCurPos, FILE_BEGIN, &ullDupCurPos); FAILED(hr))
+        return hr;
+    clone = new_stream;
     return S_OK;
 }
 

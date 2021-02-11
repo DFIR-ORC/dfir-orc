@@ -84,6 +84,14 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
     endif()
 endif()
 
+if(${ORC_SWAPRUN_NET})
+    add_custom_command(
+            TARGET FastFind
+            POST_BUILD
+            COMMAND editbin /swaprun:net $<TARGET_FILE:Orc>
+    )
+endif()
+
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)
     install(TARGETS FastFind
         CONFIGURATIONS ${CONFIG}

@@ -24,6 +24,8 @@
 #include "WideAnsi.h"
 #include "WMIUtil.h"
 #include "BinaryBuffer.h"
+#include "Utils/Time.h"
+#include "Utils/TypeTraits.h"
 
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
@@ -39,6 +41,7 @@ struct SystemDetailsBlock
     std::wstring strComputerName;
     std::wstring strFullComputerName;
     std::wstring strTimeStamp;
+    Traits::TimeUtc<SYSTEMTIME> timestamp;
     std::optional<std::wstring> strOrcComputerName;
     std::optional<std::wstring> strOrcFullComputerName;
     std::optional<std::wstring> strProductType;
@@ -637,6 +640,25 @@ HRESULT SystemDetails::GetTimeStamp(std::wstring& strTimeStamp)
 
     strTimeStamp.assign(g_pDetailsBlock->strTimeStamp);
     return S_OK;
+}
+
+HRESULT SystemDetails::GetTimeStampISO8601(std::wstring& strTimeStamp)
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+        return hr;
+
+    strTimeStamp = ToStringIso8601(g_pDetailsBlock->timestamp);
+    return S_OK;
+}
+
+Result<Traits::TimeUtc<SYSTEMTIME>> SystemDetails::GetTimeStamp()
+{
+    if (auto hr = LoadSystemDetails(); FAILED(hr))
+    {
+        return SystemError(hr);
+    }
+
+    return g_pDetailsBlock->timestamp;
 }
 
 HRESULT SystemDetails::WhoAmI(std::wstring& strMe)
@@ -1664,17 +1686,11 @@ HRESULT SystemDetails::LoadSystemDetails()
     }
 
     {
-        SYSTEMTIME stNow;
-        GetSystemTime(&stNow);
+        auto& st = g_pDetailsBlock->timestamp.value;
+        GetSystemTime(&st);
 
         g_pDetailsBlock->strTimeStamp = fmt::format(
-            L"{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}"sv,
-            stNow.wYear,
-            stNow.wMonth,
-            stNow.wDay,
-            stNow.wHour,
-            stNow.wMinute,
-            stNow.wSecond);
+            L"{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}"sv, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     }
     return S_OK;
 }

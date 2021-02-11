@@ -10,7 +10,7 @@
 
 #include "stdafx.h"
 
-#include "FastFind.h"
+#include "Command/FastFind/FastFind.h"
 
 using namespace std;
 

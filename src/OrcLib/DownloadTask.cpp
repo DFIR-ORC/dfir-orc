@@ -15,7 +15,7 @@
 
 #include "ParameterCheck.h"
 
-#include "ConfigItem.h"
+#include "Configuration/ConfigItem.h"
 
 #include <regex>
 #include <sstream>

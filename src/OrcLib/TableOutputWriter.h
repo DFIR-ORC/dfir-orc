@@ -102,9 +102,6 @@ struct Options : Orc::TableOutput::Options
 [[nodiscard]] std::shared_ptr<IStreamWriter> GetParquetWriter(std::unique_ptr<Options> options);
 [[nodiscard]] std::shared_ptr<IStreamWriter> GetApacheOrcWriter(std::unique_ptr<Options> options);
 
-[[nodiscard]] std::shared_ptr<IConnectWriter> GetSqlWriter(std::unique_ptr<Options> options);
-[[nodiscard]] std::shared_ptr<IConnection> GetSqlConnection(std::unique_ptr<Options> options);
-
 class IStreamWriter : public IWriter
 {
 public:

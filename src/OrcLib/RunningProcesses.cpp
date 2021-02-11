@@ -15,7 +15,7 @@ using namespace std;
 
 using namespace Orc;
 
-HRESULT RunningProcesses::EnumProcesses()
+HRESULT RunningProcesses::EnumerateProcesses()
 {
     HRESULT hr = E_FAIL;
     // Print the name and process identifier for each process.

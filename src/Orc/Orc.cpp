@@ -10,25 +10,22 @@
 
 #include "stdafx.h"
 
-#include "ExtractData.h"
-#include "FastFind.h"
-#include "GetSamples.h"
-#include "GetSectors.h"
-#include "GetThis.h"
+#include "Command/FastFind/FastFind.h"
+#include "Command/GetSamples/GetSamples.h"
+#include "Command/GetSectors/GetSectors.h"
+#include "Command/GetThis/GetThis.h"
+#include "Command/NTFSInfo/NTFSInfo.h"
+#include "Command/RegInfo/RegInfo.h"
+#include "Command/NTFSUtil/NTFSUtil.h"
+#include "Command/ToolEmbed/ToolEmbed.h"
+#include "Command/USNInfo/USNInfo.h"
+#include "Command/WolfLauncher/WolfLauncher.h"
+#include "Command/ObjInfo/ObjInfo.h"
+#include "Command/FatInfo/FatInfo.h"
+#include "Command/DD/DD.h"
 #include "Mothership.h"
-#include "NTFSInfo.h"
-#include "RegInfo.h"
-#include "NTFSUtil.h"
-#include "ToolEmbed.h"
-#include "USNInfo.h"
-#include "WolfLauncher.h"
-#include "ObjInfo.h"
-#include "FatInfo.h"
-#include "DD.h"
-
-#include "Output/Console/Console.h"
-#include "Output/Text/Tree.h"
-
+#include "Console.h"
+#include "Text/Tree.h"
 #include "ToolVersion.h"
 #include "Usage.h"
 
@@ -46,7 +43,7 @@ struct ToolDescription
 };
 
 using namespace Orc::Command;
-using namespace Orc::Output;
+using namespace Orc::Text;
 using namespace Orc;
 
 ToolDescription g_Tools[] = {
@@ -61,7 +58,6 @@ ToolDescription g_Tools[] = {
     ToolDescription::Get<FatInfo::Main>(),
     ToolDescription::Get<ToolEmbed::Main>(),
     ToolDescription::Get<NTFSUtil::Main>(),
-    ToolDescription::Get<ExtractData::Main>(),
     ToolDescription::Get<RegInfo::Main>(),
     ToolDescription::Get<DD::Main>(),
     {nullptr, nullptr}};

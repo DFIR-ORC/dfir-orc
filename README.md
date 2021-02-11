@@ -57,10 +57,12 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 | ORC_BUILD_ORC        | ON                    | Build Orc binary                 |
 | ORC_BUILD_PARQUET    | OFF                   | Build Parquet module (x64)       |
 | ORC_BUILD_SSDEEP     | OFF                   | Build with ssdeep support        |
+| ORC_BUILD_TLSH       | OFF                   | Build with tslh support          |
 | ORC_BUILD_JSON       | ON                    | Build with JSON enabled          |
 | ORC_USE_STATIC_CRT   | ON                    | Use static runtime               |
 | ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory             |
 | ORC_XMLLITE_PATH     |                       | XmlLite.dll path (xp sp2)        |
+| ORC_SWAPRUN_NET      | ON                    | Enable PE flag for network use   |
 | VCPKG_TARGET_TRIPLET | Autodetect            | VCPKG triplet to use             |
 | CMAKE_TOOLCHAIN_FILE | Autodetect            | VCPKG's toolchain file           |
 

@@ -394,8 +394,9 @@ struct TimeUtc
 {
     using value_type = T;
 
-    TimeUtc(T quantity)
-        : value(quantity)
+    template <typename... Args>
+    explicit TimeUtc(Args&&... args)
+        : value(std::forward<Args>(args)...)
     {
     }
 

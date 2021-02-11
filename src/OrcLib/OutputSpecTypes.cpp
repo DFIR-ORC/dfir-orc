@@ -97,8 +97,6 @@ std::wstring ToString(OutputSpecTypes::Kind kind)
             return L"parquet";
         case Orc::OutputSpecTypes::Kind::Pipe:
             return L"pipe";
-        case Orc::OutputSpecTypes::Kind::SQL:
-            return L"sql";
         case Orc::OutputSpecTypes::Kind::StructuredFile:
             return L"structured file";
         case Orc::OutputSpecTypes::Kind::TableFile:

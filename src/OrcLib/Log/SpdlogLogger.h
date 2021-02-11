@@ -27,19 +27,26 @@ class SpdlogLogger
 public:
     using Ptr = std::shared_ptr<SpdlogLogger>;
 
+    enum class BacktraceDumpReason
+    {
+        Manual = 0,
+        Error = static_cast<int>(Log::Level::Error),
+        CriticalError = static_cast<int>(Log::Level::Critical)
+    };
+
     SpdlogLogger(const std::string& name);
 
     void Add(SpdlogSink::Ptr sink);
 
-    spdlog::level::level_enum Level() const;
-    void SetLevel(spdlog::level::level_enum level);
+    Log::Level Level() const;
+    void SetLevel(Log::Level level);
 
     void SetPattern(const std::string& pattern);
     void SetFormatter(std::unique_ptr<spdlog::formatter> formatter);
 
     void EnableBacktrace(size_t messageCount);
     void DisableBacktrace();
-    void DumpBacktrace();
+    void DumpBacktrace(BacktraceDumpReason reason);
 
     void SetErrorHandler(std::function<void(const std::string&)> handler);
 
@@ -82,6 +89,8 @@ public:
     {
         m_logger->critical(std::forward<Args>(args)...);
     }
+
+    void Flush() { m_logger->flush(); }
 
 private:
     std::shared_ptr<spdlog::logger> m_logger;

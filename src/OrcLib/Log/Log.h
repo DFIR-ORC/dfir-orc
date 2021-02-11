@@ -17,6 +17,8 @@ namespace Log {
 
 std::shared_ptr<Logger>& DefaultLogger();
 
+SpdlogLogger::Ptr DefaultFacility();
+
 void SetDefaultLogger(std::shared_ptr<Logger> instance);
 
 template <typename... Args>
@@ -76,6 +78,15 @@ void Critical(Args&&... args)
     if (instance)
     {
         instance->Critical(std::forward<Args>(args)...);
+    }
+}
+
+inline void Flush()
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Flush();
     }
 }
 

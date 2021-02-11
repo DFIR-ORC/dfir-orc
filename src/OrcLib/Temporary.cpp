@@ -12,7 +12,7 @@
 
 #include "ParameterCheck.h"
 #include "SecurityDescriptor.h"
-#include "Output/Text/Fmt/error_code.h"
+#include "Text/Fmt/error_code.h"
 
 #include <boost/scope_exit.hpp>
 
@@ -610,14 +610,14 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryDirectory(const std::filesystem::path
     for (auto& p : std::filesystem::recursive_directory_iterator(path))
     {
         if (auto hr = UtilDeleteTemporaryFile(p.path()); FAILED(hr))
-            Log::Error(L"Failed to delete temp file {} (hr:{:#010x})", p.path(), SystemError(hr));
+            Log::Error(L"Failed to delete temp file {} [{}]", p.path(), SystemError(hr));
     }
 
     std::error_code ec;
     std::filesystem::remove_all(path, ec);
     if (ec)
     {
-        Log::Error(L"Failed to delete temp dir {} (ec:{})", path, ec);
+        Log::Error(L"Failed to delete temp dir {} [{}]", path, ec);
         return HRESULT_FROM_WIN32(ec.value());
     }
     return S_OK;

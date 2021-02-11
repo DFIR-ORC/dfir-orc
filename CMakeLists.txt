@@ -9,11 +9,13 @@ option(ORC_BUILD_COMMAND    "Build any OrcCommand based command" ON)
 option(ORC_BUILD_FASTFIND   "Build FastFind binary" ON)
 option(ORC_BUILD_ORC        "Build Orc binary" ON)
 option(ORC_BUILD_PARQUET    "Build Parquet module" OFF)
+option(ORC_BUILD_TLSH       "Build with tlsh support" OFF)
 option(ORC_BUILD_SSDEEP     "Build with ssdeep support" OFF)
 option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" ON)
 option(ORC_BUILD_BOOST_STACKTRACE  "Build with stack backtrace enabled" ON)
 option(ORC_DOWNLOADS_ONLY   "Do not build ORC but only download vcpkg third parties" OFF)
 option(ORC_DISABLE_PRECOMPILED_HEADERS "Disable precompiled headers" OFF)
+option(ORC_SWAPRUN_NET      "Enable PE option to for stable execution from network" ON)
 
 if(NOT ORC_BUILD_COMMAND)
     set(ORC_BUILD_FASTFIND OFF)
@@ -48,6 +50,7 @@ if(NOT CMAKE_SYSTEM_VERSION)
     endif()
 endif()
 
+# Setup repository related variables and force refresh on new commits
 include(cmake/GitInfo.cmake)
 git_monitor_status()
 git_info(
@@ -57,6 +60,7 @@ git_info(
     COMMIT ORC_COMMIT
 )
 
+message(WARNING "BEWARE: VCPKG is currently compatible ONLY with ENGLISH version of Visual Studio.")
 
 # Configure triplet dynamically with options chosen from CMake
 set(OVERLAY_TRIPLETS ${CMAKE_BINARY_DIR}/vcpkg/triplets)
@@ -75,14 +79,12 @@ if(ORC_VCPKG_ROOT)
         7zip
         boost-algorithm
         boost-dynamic-bitset
-        boost-format
         boost-logic
         boost-multi-index
         boost-outcome
         boost-scope-exit
         fmt
         spdlog
-        tlsh
         yara
         rapidjson
     )
@@ -97,7 +99,15 @@ if(ORC_VCPKG_ROOT)
         list(APPEND _PACKAGES boost-stacktrace)
     endif()
 
+    if(ORC_BUILD_TLSH)
+        add_definitions(-DORC_BUILD_TLSH)
+        list(APPEND _PACKAGES tlsh)
+    endif()
+
     if(ORC_BUILD_APACHE_ORC)
+        if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
+            message(FATAL_ERROR "Apache Orc requires Seven or later")
+        endif()
         list(APPEND _PACKAGES orc)
     endif()
 

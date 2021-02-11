@@ -102,6 +102,12 @@ public:
     void Error(Args&&... args)
     {
         Error(Facility::kDefault, std::forward<Args>(args)...);
+
+        auto defaultLogger = Get(Facility::kDefault);
+        if (defaultLogger)
+        {
+            defaultLogger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::Error);
+        }
     }
 
     template <typename... Args>
@@ -113,7 +119,7 @@ public:
         auto defaultLogger = Get(Facility::kDefault);
         if (defaultLogger)
         {
-            defaultLogger->DumpBacktrace();
+            defaultLogger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::CriticalError);
         }
     }
 
@@ -121,6 +127,14 @@ public:
     void Critical(Args&&... args)
     {
         Critical(Facility::kDefault, std::forward<Args>(args)...);
+    }
+
+    void Flush()
+    {
+        for (auto& logger : m_loggers)
+        {
+            logger->Flush();
+        }
     }
 
     const SpdlogLogger::Ptr& Get(Facility id) const
@@ -143,6 +157,8 @@ private:
     std::atomic<uint64_t> m_errorCount;
     std::atomic<uint64_t> m_criticalCount;
 };
+
+using Facility = Logger::Facility;
 
 }  // namespace Log
 

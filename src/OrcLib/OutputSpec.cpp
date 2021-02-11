@@ -18,7 +18,7 @@
 #include <boost/tokenizer.hpp>
 #include <fmt/format.h>
 
-#include "ConfigItem.h"
+#include "Configuration/ConfigItem.h"
 #include "ParameterCheck.h"
 #include "CaseInsensitive.h"
 #include "SystemDetails.h"
@@ -47,6 +47,8 @@ bool HasValue(const ConfigItem& item, DWORD dwIndex)
 }
 
 }  // namespace
+
+namespace Orc {
 
 bool Orc::OutputSpec::IsPattern(const std::wstring& strPattern)
 {
@@ -140,23 +142,6 @@ HRESULT OutputSpec::Configure(
     HRESULT hr = E_FAIL;
 
     Type = OutputSpec::Kind::None;
-
-    if (HasFlag(supported, OutputSpec::Kind::SQL))  // Getting the SQL stuff out of the door asap
-    {
-        static std::wregex reConnectionString(LR"RAW(^(([\w\s]+=[\w\s{}.]+;?)+)#([\w]+)$)RAW");
-
-        std::wcmatch matches;
-        if (std::regex_match(strInputString.c_str(), matches, reConnectionString))
-        {
-            if (matches.size() == 4)
-            {
-                Type = OutputSpec::Kind::SQL;
-                ConnectionString = matches[1].str();
-                TableName = matches[3].str();
-                return S_OK;
-            }
-        }
-    }
 
     // Now on with regular file paths
     fs::path outPath;
@@ -286,68 +271,6 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
         return S_OK;
 
     Type = OutputSpec::Kind::None;
-
-    if (HasFlag(supported, OutputSpec::Kind::SQL))
-    {
-        bool bDone = false;
-        if (::HasValue(item, CONFIG_OUTPUT_CONNECTION))
-        {
-            bool bDone = false;
-            if (::HasValue(item, CONFIG_OUTPUT_CONNECTION))
-            {
-                Type = OutputSpec::Kind::SQL;
-                ConnectionString = item.SubItems[CONFIG_OUTPUT_CONNECTION];
-                bDone = true;
-            }
-            if (::HasValue(item, CONFIG_OUTPUT_TABLE))
-            {
-                TableName = item.SubItems[CONFIG_OUTPUT_TABLE];
-            }
-            if (::HasValue(item, CONFIG_OUTPUT_KEY))
-            {
-                TableKey = item.SubItems[CONFIG_OUTPUT_KEY];
-            }
-            if (::HasValue(item, CONFIG_OUTPUT_DISPOSITION))
-            {
-                if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"createnew"sv)
-                    || equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"create_new"sv))
-                    disposition = Disposition::CreateNew;
-                else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"truncate"sv))
-                    disposition = Disposition::Truncate;
-                else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"append"sv))
-                    disposition = Disposition::Append;
-                else
-                {
-                    Log::Warn(
-                        L"Invalid disposition \"{}\", defaulting to append", item[CONFIG_OUTPUT_DISPOSITION].c_str());
-                    disposition = Disposition::Append;
-                }
-            }
-        }
-        if (::HasValue(item, CONFIG_OUTPUT_TABLE))
-        {
-            TableName = item.SubItems[CONFIG_OUTPUT_TABLE];
-        }
-        if (::HasValue(item, CONFIG_OUTPUT_KEY))
-        {
-            TableKey = item.SubItems[CONFIG_OUTPUT_KEY];
-        }
-        if (::HasValue(item, CONFIG_OUTPUT_DISPOSITION))
-        {
-            if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"createnew"sv)
-                || equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"create_new"sv))
-                disposition = Disposition::CreateNew;
-            else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"truncate"sv))
-                disposition = Disposition::Truncate;
-            else if (equalCaseInsensitive(item[CONFIG_OUTPUT_DISPOSITION], L"append"sv))
-                disposition = Disposition::Append;
-            else
-            {
-                Log::Warn(L"Invalid disposition \"{}\", defaulting to append", item[CONFIG_OUTPUT_DISPOSITION].c_str());
-                disposition = Disposition::Append;
-            }
-        }
-    }
 
     ArchiveFormat = ArchiveFormat::Unknown;
     if (!item.empty())
@@ -563,3 +486,67 @@ bool Orc::OutputSpec::Upload::IsFileUploaded(const std::wstring& file_name)
 
     return true;
 }
+
+OutputSpec::Disposition OutputSpec::ToDisposition(Orc::FileDisposition disposition)
+{
+    switch (disposition)
+    {
+        case FileDisposition::Append:
+            return OutputSpec::Disposition::Append;
+        case FileDisposition::CreateNew:
+            return OutputSpec::Disposition::CreateNew;
+        case FileDisposition::Truncate:
+            return OutputSpec::Disposition::Truncate;
+        default:
+            assert(nullptr);
+            return OutputSpec::Disposition::Append;
+    }
+}
+
+OutputSpec::Encoding OutputSpec::ToEncoding(Text::Encoding encoding)
+{
+    switch (encoding)
+    {
+        case Text::Encoding::Utf8:
+            return OutputSpec::Encoding::UTF8;
+        case Text::Encoding::Utf16:
+            return OutputSpec::Encoding::UTF16;
+        default:
+            assert(nullptr);
+            return OutputSpec::Encoding::kUnknown;
+    }
+}
+
+Orc::FileDisposition ToFileDisposition(OutputSpec::Disposition disposition)
+{
+    switch (disposition)
+    {
+        case OutputSpec::Disposition::Append:
+            return FileDisposition::Append;
+        case OutputSpec::Disposition::CreateNew:
+            return FileDisposition::CreateNew;
+        case OutputSpec::Disposition::Truncate:
+            return FileDisposition::Truncate;
+        default: {
+            assert(nullptr);
+            return FileDisposition::Unknown;
+        }
+    }
+}
+
+Text::Encoding ToEncoding(OutputSpec::Encoding encoding)
+{
+    switch (encoding)
+    {
+        case OutputSpec::Encoding::UTF8:
+            return Text::Encoding::Utf8;
+        case OutputSpec::Encoding::UTF16:
+            return Text::Encoding::Utf16;
+        default: {
+            assert(nullptr);
+            return Text::Encoding::Unknown;
+        }
+    }
+}
+
+}  // namespace Orc

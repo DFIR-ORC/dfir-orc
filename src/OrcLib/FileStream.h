@@ -96,6 +96,7 @@ public:
 
     const std::wstring& Path() const { return m_strPath; }
 
+    STDMETHOD(Clone)(std::shared_ptr<ByteStream>& clone);
     STDMETHOD(Close)();
 
 protected:

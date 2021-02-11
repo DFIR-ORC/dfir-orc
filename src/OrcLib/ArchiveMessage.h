@@ -58,7 +58,6 @@ private:
 
     std::wstring m_archiveFileName;
     std::wstring m_sourcePath;
-    std::wstring m_commandSet;
     std::wstring m_command;
     std::wstring m_nameInArchive;
     std::wstring m_pattern;
@@ -124,9 +123,6 @@ public:
     const std::wstring& SourcePath() const { return m_sourcePath; }
 
     const std::wstring& NameInArchive() const { return m_nameInArchive; }
-
-    const std::wstring& CommandSet() const { return m_commandSet; }
-    void SetCommandSet(const std::wstring& commandSet) { m_commandSet = commandSet; }
 
     const std::wstring& Command() const { return m_command; }
     void SetCommand(const std::wstring& command) { m_command = command; }

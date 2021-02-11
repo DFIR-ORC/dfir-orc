@@ -9,8 +9,8 @@
 #include "RegFind.h"
 #include "FileFind.h"
 
-#include "ConfigItem.h"
-#include "ConfigFileReader.h"
+#include "Configuration/ConfigItem.h"
+#include "Configuration/ConfigFileReader.h"
 #include "EmbeddedResource.h"
 
 #include "MemoryStream.h"
@@ -21,7 +21,7 @@
 #include "ParameterCheck.h"
 #include "WideAnsi.h"
 
-#include "ConfigFile_Common.h"
+#include "Configuration/ConfigFile_Common.h"
 
 #include <sstream>
 #include <iomanip>

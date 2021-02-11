@@ -70,6 +70,7 @@ public:
         Done
     };
 
+    using Ptr = std::shared_ptr<CommandNotification>;
     using Notification = std::shared_ptr<CommandNotification>;
     using UnboundedMessageBuffer = Concurrency::unbounded_buffer<Notification>;
 
@@ -93,11 +94,14 @@ private:
 
     PJOB_STATISTICS m_pJobStats;
 
+    std::wstring m_commandLine;
+
 protected:
     CommandNotification(Event result);
 
 public:
-    static Notification NotifyStarted(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess);
+    static Notification
+    NotifyStarted(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess, const std::wstring& commandLine);
     static Notification NotifyProcessTerminated(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess);
 
     // Job Notifictions
@@ -165,6 +169,8 @@ public:
             return m_pJobStats;
         return nullptr;
     };
+
+    const std::wstring& GetProcessCommandLine() const { return m_commandLine; }
 
     ~CommandNotification(void);
 };

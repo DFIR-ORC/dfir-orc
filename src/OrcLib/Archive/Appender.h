@@ -16,7 +16,7 @@
 #include "Archive/IArchive.h"
 #include "Archive/CompressionLevel.h"
 #include "Archive/Item.h"
-#include "WinApiHelper.h"
+#include "Utils/WinApi.h"
 
 namespace Orc {
 namespace Archive {

@@ -8,7 +8,7 @@
 #pragma once
 
 #include "OrcCommand.h"
-#include "ConfigItem.h"
+#include "Configuration/ConfigItem.h"
 
 #include "FSUtils.h"
 

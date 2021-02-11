@@ -14,7 +14,7 @@
 
 #include "WideAnsi.h"
 #include "ParameterCheck.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "MFTWalker.h"
 #include "DevNullStream.h"
 
@@ -25,7 +25,7 @@
 
 #include "Convert.h"
 
-#include "ConfigFile_Common.h"
+#include "Configuration/ConfigFile_Common.h"
 
 #include "SystemDetails.h"
 

@@ -53,9 +53,9 @@ class ORCLIB_API RunningCode
 private:
     ModuleMap m_ModMap;
 
-    HRESULT EnumModules(DWORD dwPID);
-    HRESULT EnumProcessesModules();
-    HRESULT EnumDeviceDrivers();
+    HRESULT EnumerateModules(DWORD dwPID);
+    HRESULT EnumerateProcessesModules();
+    HRESULT EnumerateDeviceDrivers();
 
     HRESULT SnapEnumProcessesModules();
 

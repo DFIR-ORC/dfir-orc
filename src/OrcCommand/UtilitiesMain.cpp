@@ -21,7 +21,7 @@
 #include <boost/scope_exit.hpp>
 
 #include "ParameterCheck.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "SystemDetails.h"
 #include "NtDllExtension.h"
 #include "Kernel32Extension.h"
@@ -38,13 +38,69 @@ using namespace Orc;
 using namespace Orc::Command;
 
 UtilitiesMain::UtilitiesMain()
-    : theStartTime({0})
-    , theFinishTime({0})
+    : theStartTime()
+    , theFinishTime()
 {
     theStartTickCount = 0L;
     theFinishTickCount = 0L;
     m_extensions.reserve(10);
 };
+
+void UtilitiesMain::Configure(int argc, const wchar_t* argv[])
+{
+    UtilitiesLoggerConfiguration::ApplyLogLevel(m_logging, argc, argv);
+
+    // FIX: Some arguments must be processed very early as others depends
+    // on their value. This is not a clean fix but a more global refactor is
+    // required on options handling...
+    std::wstring computerName;
+    std::wstring fullComputerName;
+    std::wstring systemType;
+
+    for (int i = 0; i < argc; i++)
+    {
+
+        switch (argv[i][0])
+        {
+            case L'/':
+            case L'-':
+                if (ParameterOption(argv[i] + 1, L"Computer", computerName))
+                    ;
+                else if (ParameterOption(argv[i] + 1, L"FullComputer", fullComputerName))
+                    ;
+                else if (ParameterOption(argv[i] + 1, L"SystemType", systemType))
+                    ;
+                break;
+            default:
+                break;
+        }
+    }
+
+    if (computerName.empty() && !fullComputerName.empty())
+    {
+        computerName = fullComputerName;
+    }
+
+    if (fullComputerName.empty() && !computerName.empty())
+    {
+        fullComputerName = computerName;
+    }
+
+    if (!computerName.empty())
+    {
+        SystemDetails::SetOrcComputerName(computerName);
+    }
+
+    if (!fullComputerName.empty())
+    {
+        SystemDetails::SetOrcFullComputerName(fullComputerName);
+    }
+
+    if (!systemType.empty())
+    {
+        SystemDetails::SetSystemType(systemType);
+    }
+}
 
 bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
 {
@@ -183,7 +239,7 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        Log::Error(L"Option /{} should be like: /{}=c:\\temp", szOption, szOption);
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp", szOption);
         return false;
     }
     if (pEquals != szArg + cchOption)
@@ -205,7 +261,7 @@ bool UtilitiesMain::OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Ki
     return true;
 }
 
-bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile)
+bool UtilitiesMain::OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile)
 {
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
         return false;
@@ -213,13 +269,71 @@ bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstrin
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        Log::Error(L"Option /{} should be like: /{}=c:\\temp\\InputFile.csv", szOption, szOption);
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp\\OutputFile.csv", szOption);
+        return false;
+    }
+    if (auto hr = GetOutputFile(pEquals + 1, strOutputFile, true); FAILED(hr))
+    {
+        Log::Error(L"Invalid output dir specified: {}", pEquals + 1);
+        return false;
+    }
+    return true;
+}
+
+bool UtilitiesMain::OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputDir)
+{
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
+    {
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp", szOption);
+        return false;
+    }
+    if (auto hr = GetOutputDir(pEquals + 1, strOutputDir, true); FAILED(hr))
+    {
+        Log::Error(L"Invalid output dir specified: {}", pEquals + 1);
+        return false;
+    }
+    return true;
+}
+
+bool UtilitiesMain::InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile)
+{
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
+    {
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp\\InputFile.csv", szOption);
         return false;
     }
 
-    if (auto hr = ExpandFilePath(pEquals + 1, strOutputFile); FAILED(hr))
+    if (auto hr = ExpandFilePath(pEquals + 1, strInputFile); FAILED(hr))
     {
         Log::Error(L"Invalid input file specified: {}", pEquals + 1);
+        return false;
+    }
+    return true;
+}
+
+bool UtilitiesMain::InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputDir)
+{
+    if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+        return false;
+
+    LPCWSTR pEquals = wcschr(szArg, L'=');
+    if (!pEquals)
+    {
+        Log::Error(L"Option /{0} should be like: /{0}=c:\\temp\\InputDirectory", szOption);
+        return false;
+    }
+
+    if (auto hr = ExpandDirectoryPath(pEquals + 1, strInputDir); FAILED(hr))
+    {
+        Log::Error(L"Invalid input directory specified: {}", pEquals + 1);
         return false;
     }
     return true;
@@ -622,7 +736,7 @@ bool UtilitiesMain::IgnoreLoggingOptions(LPCWSTR szArg)
         || !_wcsnicmp(szArg, L"Debug", wcslen(L"Debug")) || !_wcsnicmp(szArg, L"Info", wcslen(L"Info"))
         || !_wcsnicmp(szArg, L"Warn", wcslen(L"Warn")) || !_wcsnicmp(szArg, L"Error", wcslen(L"Error"))
         || !_wcsnicmp(szArg, L"Critical", wcslen(L"Critical")) || !_wcsnicmp(szArg, L"LogFile", wcslen(L"LogFile"))
-        || !_wcsnicmp(szArg, L"NoConsole", wcslen(L"NoConsole")))
+        || !_wcsnicmp(szArg, L"NoConsole", wcslen(L"NoConsole")) || !_wcsnicmp(szArg, L"Log", wcslen(L"Log")))
         return true;
     return false;
 }

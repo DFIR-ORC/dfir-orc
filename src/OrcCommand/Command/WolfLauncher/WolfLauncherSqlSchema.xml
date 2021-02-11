@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<sqlschema tool="WolfLauncher">
+
+  <table key="JobStatistics">
+
+    <utf8 name="ComputerName" maxlen="50" />
+    <utf8 name="JobName" maxlen="256" />
+    <timestamp name="StartTime" />
+    <timestamp name="FinishTime" />
+    <uint64 name="ElapsedTime" />
+    <uint64 name="TotalUserTime"  />
+    <uint64 name="TotalKernelTime"  />
+    <uint64 name="TotalPageFaultCount" />
+    <uint32 name="TotalProcesses" />
+    <uint32 name="ActiveProcesses" />
+    <uint32 name="TotalTerminatedProcesses" />
+    <uint64 name="PeakProcessMemoryUsed" />
+    <uint64 name="PeakJobMemoryUsed" />
+    <uint64 name="ReadOperationCount" />
+    <uint64 name="BytesRead" />
+    <uint64 name="WriteOperationCount" />
+    <uint64 name="BytesWritten" />
+    <uint64 name="OtherOperationCount" />
+    <uint64 name="BytesOther" />
+    <utf8 name="OperatingSystem" maxlen="50" />
+    <utf8 name="SystemDescription" maxlen="50" />
+
+  </table>
+
+</sqlschema>

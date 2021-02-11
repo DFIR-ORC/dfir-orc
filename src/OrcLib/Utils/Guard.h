@@ -17,15 +17,15 @@ namespace Orc {
 namespace Guard {
 
 template <typename T>
-class ScopeGuard
+class Scope final
 {
 public:
-    explicit ScopeGuard(T&& handler)
+    explicit Scope(T&& handler)
         : handler_(std::forward<T>(handler))
         , cancelled_(false)
     {
     }
-    ~ScopeGuard()
+    ~Scope()
     {
         if (cancelled_)
         {
@@ -35,15 +35,20 @@ public:
         {
             handler_();
         }
+        catch (const std::system_error& e)
+        {
+            Log::Warn("Guard::Scope's handler has thrown an exception: {}", e.code());
+        }
         catch (const std::exception& e)
         {
-            std::cerr << e.what() << std::endl;
+            std::cerr << "Guard::Scope's handler has thrown exception: " << e.what() << std::endl;
+            Log::Warn("Guard::Scope's handler has thrown exception: {}", e.what());
         }
     }
 
-    ScopeGuard(ScopeGuard&&) = default;
-    ScopeGuard(const ScopeGuard&) = delete;
-    void operator=(const ScopeGuard&) = delete;
+    Scope(Scope&&) = default;
+    Scope(const Scope&) = delete;
+    void operator=(const Scope&) = delete;
 
     void Cancel() { cancelled_ = true; }
 
@@ -53,12 +58,12 @@ private:
 };
 
 template <typename T>
-ScopeGuard<T> CreateScopeGuard(T&& handler)
+Scope<T> CreateScopeGuard(T&& handler)
 {
-    return ScopeGuard<T>(std::forward<T>(handler));
+    return Scope<T>(std::forward<T>(handler));
 }
 
-class FileHandle
+class FileHandle final
 {
 public:
     FileHandle(HANDLE handle = INVALID_HANDLE_VALUE)
@@ -81,12 +86,15 @@ public:
 
     operator ::HANDLE() const { return m_handle.get(); }
     HANDLE get() const { return m_handle.get(); }
+    HANDLE operator*() const { return m_handle.get(); }
+    operator bool() const { return IsValid(); }
+    bool IsValid() const { return m_handle.get() != INVALID_HANDLE_VALUE; }
 
 private:
     std::shared_ptr<void> m_handle;
 };
 
-class Handle
+class Handle final
 {
 public:
     Handle(HANDLE handle = nullptr)
@@ -103,7 +111,7 @@ public:
 
         if (CloseHandle(handle) == FALSE)
         {
-            Log::Warn("Failed on CloseHandle: {}", GetLastError());
+            Log::Warn("Failed on CloseHandle [{}]", LastWin32Error());
         }
     }
 

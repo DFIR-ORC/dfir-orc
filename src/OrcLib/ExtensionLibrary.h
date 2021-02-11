@@ -57,7 +57,8 @@ public:
     }
 
     template <class Library>
-    static const std::shared_ptr<Library> GetLibrary(std::optional<std::filesystem::path> tempDir = std::nullopt, bool bShared = true)
+    static const std::shared_ptr<Library>
+    GetLibrary(std::optional<std::filesystem::path> tempDir = std::nullopt, bool bShared = true)
     {
         try
         {
@@ -88,8 +89,6 @@ public:
                     return nullptr;
                 }
             }
-            Log::Debug(L"Library {} is loaded and initialized", Name<Library>());
-
             if (!pLib->m_UnLoadHandler)
             {
                 pLib->m_UnLoadHandler = std::make_shared<ExtensionLibraryHandler<Library>>(L"ExtensionLibraryUnLoad");

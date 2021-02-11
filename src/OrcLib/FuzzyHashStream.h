@@ -10,7 +10,7 @@
 #include "HashStream.h"
 
 #include "FuzzyHashStreamAlgorithm.h"
-#include "Output/Text/Fmt/FuzzyHashStreamAlgorithm.h"
+#include "Text/Fmt/FuzzyHashStreamAlgorithm.h"
 
 #pragma managed(push, off)
 
@@ -50,7 +50,11 @@ public:
 
 protected:
     Algorithm m_Algorithms = Algorithm::Undefined;
+
+#ifdef ORC_BUILD_TLSH
     std::unique_ptr<Tlsh> m_tlsh;
+#endif  // ORC_BUILD_TLSH
+
     struct fuzzy_state* m_ssdeep = nullptr;
 };
 

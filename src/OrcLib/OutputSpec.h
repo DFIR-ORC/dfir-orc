@@ -16,7 +16,9 @@
 #include "TableOutput.h"
 
 #include "OutputSpecTypes.h"
-#include "Output/Text/Fmt/OutputSpecTypes.h"
+#include "FileDisposition.h"
+#include "Text/Encoding.h"
+#include "Text/Fmt/OutputSpecTypes.h"
 
 #pragma managed(push, off)
 
@@ -108,6 +110,10 @@ public:
 
     static HRESULT ApplyPattern(const std::wstring& pattern, const std::wstring& name, std::wstring& fileName);
 
+    static OutputSpec::Disposition ToDisposition(Orc::FileDisposition disposition);
+
+    static OutputSpec::Encoding ToEncoding(Text::Encoding);
+
     HRESULT Configure(
         OutputSpec::Kind supportedTypes,
         const std::wstring& inputString,
@@ -130,6 +136,10 @@ public:
         return Configure(supportedTypes, item, std::move(parent));
     };
 };
+
+Orc::FileDisposition ToFileDisposition(OutputSpec::Disposition disposition);
+
+Text::Encoding ToEncoding(OutputSpec::Encoding encoding);
 
 }  // namespace Orc
 

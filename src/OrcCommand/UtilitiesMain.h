@@ -25,11 +25,11 @@
 #    include <boost/stacktrace.hpp>
 #endif
 
-#include "ConfigFile.h"
+#include "Configuration/ConfigFile.h"
 #include "Archive.h"
 #include "ParameterCheck.h"
 #include "Robustness.h"
-#include "ConfigFile_Common.h"
+#include "Configuration/ConfigFile_Common.h"
 #include "ArchiveMessage.h"
 #include "ArchiveNotification.h"
 #include "ArchiveAgent.h"
@@ -40,15 +40,17 @@
 #include "SystemDetails.h"
 #include "TableOutputWriter.h"
 #include "ExtensionLibrary.h"
+#include "Console.h"
 #include "Log/Log.h"
-#include "Output/Console/Console.h"
-#include "Output/Text/Print.h"
-#include "Output/Text/Fmt/FILE_NAME.h"
-#include "Output/Text/Fmt/FILETIME.h"
-#include "Output/Text/Fmt/SYSTEMTIME.h"
-#include "Output/Text/Fmt/TimeUtc.h"
+#include "Text/Print.h"
+#include "Text/Fmt/FILE_NAME.h"
+#include "Text/Fmt/FILETIME.h"
+#include "Text/Fmt/optional.h"
+#include "Text/Fmt/SYSTEMTIME.h"
+#include "Text/Fmt/TimeUtc.h"
 #include "Utils/Guard.h"
-#include "UtilitiesLogger.h"
+#include "Log/UtilitiesLogger.h"
+#include "Log/UtilitiesLoggerConfiguration.h"
 
 #pragma managed(push, off)
 
@@ -66,24 +68,10 @@ public:
     };
 
     // Common configuration
-    class UtilitiesConfiguration
+    struct UtilitiesConfiguration
     {
-    public:
-        enum class LogLevel
-        {
-            kDefault = 0,
-            kCritical,
-            kError,
-            kWarn,
-            kInfo,
-            kDebug,
-            kTrace
-        };
-
         std::wstring strComputerName;
-        std::filesystem::path logFile;
-        LogLevel logLevel;
-        bool logToConsole;
+        UtilitiesLoggerConfiguration log;
     };
 
     template <class T>
@@ -218,8 +206,7 @@ public:
                 case OutputSpec::Kind::Parquet:
                 case OutputSpec::Kind::Parquet | OutputSpec::Kind::TableFile:
                 case OutputSpec::Kind::ORC:
-                case OutputSpec::Kind::ORC | OutputSpec::Kind::TableFile:
-                case OutputSpec::Kind::SQL: {
+                case OutputSpec::Kind::ORC | OutputSpec::Kind::TableFile: {
                     if (nullptr == (pWriter = ::Orc::TableOutput::GetWriter(output)))
                     {
                         Log::Error("Failed to create ouput writer");
@@ -302,11 +289,11 @@ public:
 
         HRESULT ForEachOutput(const OutputSpec& output, std::function<HRESULT(const OutputPair& out)> aCallback)
         {
-            Guard::ScopeGuard sg([&output, this] { CloseAll(output); });
+            Guard::Scope sg([&output, this] { CloseAll(output); });
 
             for (auto& item : m_outputs)
             {
-                Guard::ScopeGuard forGuard([&output, &item, this]() { CloseOne(output, item); });
+                Guard::Scope forGuard([&output, &item, this]() { CloseOne(output, item); });
 
                 HRESULT hr = E_FAIL;
                 // Actually enumerate objects here
@@ -396,7 +383,6 @@ public:
                 case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
                 case OutputSpec::Kind::ORC:
                 case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
-                case OutputSpec::Kind::SQL:
                     if (!m_outputs.empty() && m_outputs.front().second != nullptr)
                     {
                         m_outputs.front().second->Close();
@@ -428,7 +414,7 @@ public:
 protected:
     UtilitiesLogger m_logging;
 
-    mutable Output::Console m_console;
+    mutable Console m_console;
 
     Traits::TimeUtc<SYSTEMTIME> theStartTime;
     Traits::TimeUtc<SYSTEMTIME> theFinishTime;
@@ -442,61 +428,7 @@ protected:
     HRESULT LoadEvtLibrary();
     HRESULT LoadPSAPI();
 
-    virtual void Configure(int argc, const wchar_t* argv[])
-    {
-        m_logging.Configure(argc, argv);
-
-        // FIX: Some arguments must be processed very early as others depends
-        // on their value. This is not a clean fix but a more global refactor is
-        // required on options handling...
-        std::wstring computerName;
-        std::wstring fullComputerName;
-        std::wstring systemType;
-
-        for (int i = 0; i < argc; i++)
-        {
-
-            switch (argv[i][0])
-            {
-                case L'/':
-                case L'-':
-                    if (ParameterOption(argv[i] + 1, L"Computer", computerName))
-                        ;
-                    else if (ParameterOption(argv[i] + 1, L"FullComputer", fullComputerName))
-                        ;
-                    else if (ParameterOption(argv[i] + 1, L"SystemType", systemType))
-                        ;
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        if (computerName.empty() && !fullComputerName.empty())
-        {
-            computerName = fullComputerName;
-        }
-
-        if (fullComputerName.empty() && !computerName.empty())
-        {
-            fullComputerName = computerName;
-        }
-
-        if (!computerName.empty())
-        {
-            SystemDetails::SetOrcComputerName(computerName);
-        }
-
-        if (!fullComputerName.empty())
-        {
-            SystemDetails::SetOrcFullComputerName(fullComputerName);
-        }
-
-        if (!systemType.empty())
-        {
-            SystemDetails::SetSystemType(systemType);
-        }
-    }
+    virtual void Configure(int argc, const wchar_t* argv[]);
 
     template <typename T>
     void PrintCommonParameters(Orc::Text::Tree<T>& root)
@@ -543,6 +475,19 @@ protected:
         PrintValue(root, L"System type", systemType);
 
         PrintValue(root, L"System tags", boost::join(SystemDetails::GetSystemTags(), ", "));
+
+        std::wstring logFileName(Text::kEmptyW);
+        const auto& fileSink = m_logging.fileSink();
+        if (fileSink)
+        {
+            const auto path = fileSink->OutputPath();
+            if (path)
+            {
+                logFileName = *path;
+            }
+        }
+
+        PrintValue(root, L"Log file", logFileName);
     }
 
     template <typename T>
@@ -632,12 +577,53 @@ protected:
         return false;
     }
 
+    bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
+    template <typename OptionType>
+    bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType> parameter)
+    {
+        OptionType result;
+        if (OutputFileOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
+
+    bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
+    template <typename OptionType>
+    bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
+    {
+        OptionType result;
+        if (OutputDirOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
+
     bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile);
+
     template <typename OptionType>
     bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
     {
         OptionType result;
         if (InputFileOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
+
+    bool InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile);
+
+    template <typename OptionType>
+    bool InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
+    {
+        OptionType result;
+        if (InputDirOption(szArg, szOption, result))
         {
             parameter.emplace(std::move(result));
             return true;
@@ -946,6 +932,7 @@ public:
         }
         catch (...)
         {
+            std::cerr << "Exception during during command execution" << std::endl;
             Log::Critical("Exception during configuration evaluation.");
 
 #ifdef ORC_BUILD_BOOST_STACKTRACE
@@ -969,15 +956,16 @@ public:
         //        Until then, always dump the backtrace with a Log::Critical
         if (Cmd.m_logging.logger().errorCount())
         {
-            Log::Critical(
-                L"Dump log backtrace due to some previously encoutered error(s). "
-                L"This could probably be ignored, you may NOT have encoutered any critical error. Error levels are "
+            Log::Info(
+                L"Dump log backtrace due to some previously encountered error(s). "
+                L"This could probably be ignored, you may NOT have encountered any critical error. Error levels are "
                 L"being reevaluated and this backtrace could help in case of mistakes.");
+            Log::DefaultFacility()->DumpBacktrace(Log::SpdlogLogger::BacktraceDumpReason::Manual);
         }
 
         return static_cast<int>(Cmd.m_logging.logger().errorCount() + Cmd.m_logging.logger().criticalCount());
     }
-};
+};  // namespace Command
 
 }  // namespace Command
 }  // namespace Orc

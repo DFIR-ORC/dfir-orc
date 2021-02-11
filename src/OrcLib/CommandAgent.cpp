@@ -617,8 +617,8 @@ HRESULT CommandAgent::ExecuteNextCommand()
                 return hr;
             }
 
-            auto notification =
-                CommandNotification::NotifyStarted(command->ProcessID(), command->GetKeyword(), command->m_pi.hProcess);
+            auto notification = CommandNotification::NotifyStarted(
+                command->ProcessID(), command->GetKeyword(), command->m_pi.hProcess, command->m_commandLine);
             SendResult(notification);
         }
         else

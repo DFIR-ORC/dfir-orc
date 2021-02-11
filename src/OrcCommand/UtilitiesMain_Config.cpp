@@ -10,8 +10,8 @@
 #include "UtilitiesMain.h"
 
 #include "ParameterCheck.h"
-#include "ConfigFileReader.h"
-#include "ConfigFile.h"
+#include "Configuration/ConfigFileReader.h"
+#include "Configuration/ConfigFile.h"
 #include "SystemDetails.h"
 
 #include "EmbeddedResource.h"
@@ -33,7 +33,7 @@ HRESULT UtilitiesMain::ReadConfiguration(
 
     if (FAILED(hr = init(configitem)))
     {
-        Log::Error(L"Failed to initialize config item schema");
+        Log::Error(L"Failed to initialize config item schema [{}]", SystemError(hr));
         return hr;
     }
 
@@ -42,7 +42,7 @@ HRESULT UtilitiesMain::ReadConfiguration(
             hr = ConfigFile::LookupAndReadConfiguration(
                 argc, argv, r, szCmdLineOption, szResourceID, szRefResourceID, szConfigExt, configitem)))
     {
-        Log::Error(L"Failed to lookup and read item schema");
+        Log::Error(L"Failed to lookup and read item schema [{}]", SystemError(hr));
         return hr;
     }
 

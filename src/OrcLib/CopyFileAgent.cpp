@@ -20,10 +20,16 @@ using namespace Orc;
 HRESULT CopyFileAgent::Initialize()
 {
     if (m_config.Method != OutputSpec::UploadMethod::FileCopy)
+    {
+        Log::Error("CopyFileAgent failed to initialize because of invalid method");
         return E_UNEXPECTED;
+    }
 
     if (m_config.Mode != OutputSpec::UploadMode::Synchronous)
+    {
+        Log::Error("CopyFileAgent failed to initialize because of unsupported upload mode");
         return E_UNEXPECTED;  // FileCopy only supports synchronous operation
+    }
 
     if (!m_config.UserName.empty())
     {
@@ -60,7 +66,7 @@ HRESULT CopyFileAgent::Initialize()
 
         if ((dwRet = WNetAddConnection2(&nr, szPass, szUser, CONNECT_TEMPORARY)) != NO_ERROR)
         {
-            Log::Error(L"Failed to add a connection to '{}' [{}]", szUNC, Win32Error(dwRet));
+            Log::Error(L"CopyFileAgent failed to add a connection to '{}' [{}]", szUNC, Win32Error(dwRet));
         }
         else
         {

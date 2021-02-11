@@ -60,7 +60,13 @@ public:
         m_buffer.clear();
     }
 
-    ~Stream() { m_stream->Close(); }
+    void Close()
+    {
+        Flush();
+        m_stream->Close();
+    }
+
+    ~Stream() { Close(); }
 
 private:
     std::shared_ptr<ByteStream> m_stream;

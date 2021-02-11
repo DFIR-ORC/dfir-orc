@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "ConfigFileReader.h"
+#include "Configuration/ConfigFileReader.h"
 
 #pragma managed(push, off)
 

@@ -11,7 +11,7 @@
 #include "NTFSCompression.h"
 #include "Utils/TypeTraits.h"
 #include "Log/Log.h"
-#include "Output/Text/Fmt/ByteQuantity.h"
+#include "Text/Fmt/ByteQuantity.h"
 
 /* uncompression values */
 constexpr auto NTFS_TOKEN_MASK = 1;

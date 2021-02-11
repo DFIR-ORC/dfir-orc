@@ -158,6 +158,8 @@ protected:
 class IWriter : public IOutput
 {
 public:
+    using Ptr = std::shared_ptr<IWriter>;
+
     virtual HRESULT Close() PURE;
 };
 

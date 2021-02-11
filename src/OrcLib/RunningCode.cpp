@@ -29,7 +29,7 @@ using namespace Orc;
 constexpr auto ENUM_PROCESS_BASE_COUNT = 1024;
 constexpr auto ENUM_PROCESS_BASE_INCR = 512;
 
-HRESULT RunningCode::EnumProcessesModules()
+HRESULT RunningCode::EnumerateProcessesModules()
 {
     SetPrivilege(SE_DEBUG_NAME, TRUE);
 
@@ -68,7 +68,7 @@ HRESULT RunningCode::EnumProcessesModules()
     for (unsigned int i = 0; i < (dwProcesses / sizeof(DWORD)); i++)
     {
         HRESULT hr2 = E_FAIL;
-        if (FAILED(hr2 = EnumModules(pProcesses[i])))
+        if (FAILED(hr2 = EnumerateModules(pProcesses[i])))
         {
             Log::Debug(L"Could not load modules for process: {} [{}]", pProcesses[i], SystemError(hr2));
         }
@@ -78,7 +78,7 @@ HRESULT RunningCode::EnumProcessesModules()
 
 constexpr auto ENUM_MODULES_BASE_COUNT = 1024;
 
-HRESULT RunningCode::EnumModules(DWORD dwPID)
+HRESULT RunningCode::EnumerateModules(DWORD dwPID)
 {
     HRESULT hr = E_FAIL;
     HANDLE hProcess = INVALID_HANDLE_VALUE;
@@ -167,7 +167,7 @@ HRESULT RunningCode::EnumModules(DWORD dwPID)
 #define ENUM_DEVICEDRIVERS_BASE_COUNT 1024
 #define ENUM_DEVICEDRIVERS_BASE_INCR 512
 
-HRESULT RunningCode::EnumDeviceDrivers()
+HRESULT RunningCode::EnumerateDeviceDrivers()
 {
     DWORD dwDeviceDrivers = ENUM_DEVICEDRIVERS_BASE_COUNT;
     LPVOID* phDeviceDrivers = nullptr;
@@ -287,11 +287,11 @@ HRESULT RunningCode::EnumRunningCode()
 {
     HRESULT hr = E_FAIL;
 
-    if (FAILED(hr = EnumProcessesModules()))
+    if (FAILED(hr = EnumerateProcessesModules()))
     {
         Log::Error("Failed to enumerate process's modules [{}]", SystemError(hr));
     }
-    if (FAILED(hr = EnumDeviceDrivers()))
+    if (FAILED(hr = EnumerateDeviceDrivers()))
     {
         Log::Error("Failed to enumerate device drivers [{}]", SystemError(hr));
     }

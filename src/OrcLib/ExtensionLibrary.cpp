@@ -15,8 +15,8 @@
 #include "SystemDetails.h"
 
 #include "Robustness.h"
-#include "Output/Text/Fmt/path.h"
-#include "Output/Text/Fmt/optional.h"
+#include "Text/Fmt/path.h"
+#include "Text/Fmt/optional.h"
 
 #include "Log/Log.h"
 
@@ -396,7 +396,9 @@ STDMETHODIMP ExtensionLibrary::Cleanup()
         if (auto hr = UtilDeleteTemporaryFile(m_libFile); FAILED(hr))
             return hr;
     }
-    if (m_bDeleteTemp && !m_tempDir.empty() && std::filesystem::exists(m_tempDir))
+
+    std::error_code ec;
+    if (m_bDeleteTemp && !m_tempDir.empty() && std::filesystem::exists(m_tempDir, ec))
     {
         if (auto hr = UtilDeleteTemporaryDirectory(m_tempDir); FAILED(hr))
             return hr;

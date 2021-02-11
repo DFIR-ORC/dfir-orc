@@ -42,10 +42,12 @@ public:
     STDMETHOD(OpenForReadOnly)(__in const HINSTANCE hInstance, __in HRSRC hRes);
     STDMETHOD(OpenForReadOnly)(__in const std::wstring& strResourceSpec);
 
+    STDMETHOD(Clone)(std::shared_ptr<ByteStream>& clone);
     STDMETHOD(Close)();
 
 protected:
     CriticalSection m_cs;
+    HINSTANCE m_hInstance = NULL;
     HGLOBAL m_hFileResource = NULL;
     HRSRC m_hResource = NULL;
 };

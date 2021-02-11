@@ -9,7 +9,7 @@
 #include "stdafx.h"
 #include "RegFindConfig.h"
 
-#include "ConfigItem.h"
+#include "Configuration/ConfigItem.h"
 
 using namespace Orc;
 

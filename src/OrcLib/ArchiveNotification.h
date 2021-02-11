@@ -101,7 +101,6 @@ public:
     Type GetType() const { return m_type; };
 
     const std::wstring& Keyword() const { return m_keyword; };
-    const std::wstring& CommandSet() const { return m_request->CommandSet(); }
     const std::wstring& Description() const { return m_description; }
     const std::wstring& GetFileName() const { return m_fileName; }
     const std::wstring& GetCompressionLevel() const { return m_compressionLevel; }

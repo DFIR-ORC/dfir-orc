@@ -49,31 +49,29 @@ END
 // BINARY
 //
 
-GETTHIS_SQLSCHEMA       BINARY                  "GetThisSqlSchema.xml"
+GETTHIS_SQLSCHEMA       BINARY                  "Command/GetThis/GetThisSqlSchema.xml"
 
-NTFSINFO_SQLSCHEMA      BINARY                  "NTFSInfoSqlSchema.xml"
+NTFSINFO_SQLSCHEMA      BINARY                  "Command/NTFSInfo/NTFSInfoSqlSchema.xml"
 
-GETSAMPLES_SQLSCHEMA    BINARY                  "GetSamplesSchema.xml"
+GETSAMPLES_SQLSCHEMA    BINARY                  "Command/GetSamples/GetSamplesSchema.xml"
 
-USNINFO_SQLSCHEMA       BINARY                  "USNInfoSqlSchema.xml"
+USNINFO_SQLSCHEMA       BINARY                  "Command/USNInfo/USNInfoSqlSchema.xml"
 
-OBJINFO_SQLSCHEMA       BINARY                  "ObjInfoSqlSchema.xml"
+OBJINFO_SQLSCHEMA       BINARY                  "Command/ObjInfo/ObjInfoSqlSchema.xml"
 
-WOLFLAUNCHER_SQLSCHEMA  BINARY                  "WolfLauncherSqlSchema.xml"
+WOLFLAUNCHER_SQLSCHEMA  BINARY                  "Command/WolfLauncher/WolfLauncherSqlSchema.xml"
 
-REGINFO_SQLSCHEMA       BINARY                  "RegInfoSqlSchema.xml"
+REGINFO_SQLSCHEMA       BINARY                  "Command/RegInfo/RegInfoSqlSchema.xml"
 
-FASTFIND_SQLSCHEMA BINARY "..\OrcCommand\FastFindSqlSchema.xml"
+FASTFIND_SQLSCHEMA BINARY                       "Command/FastFind/FastFindSqlSchema.xml"
 
-EXTRACTDATA_REPORT_SQLSCHEMA BINARY             "ExtractDataReportSqlSchema.xml"
+GETSECTORS_SQLSCHEMA    BINARY                  "Command/GetSectors/GetSectorsSchema.xml"
 
-GETSECTORS_SQLSCHEMA    BINARY                  "GetSectorsSchema.xml"
+NTFSUTIL_SQLSCHEMA      BINARY                  "Command/NTFSUtil/NTFSUtilSqlSchema.xml"
 
-NTFSUTIL_SQLSCHEMA      BINARY                  "NTFSUtilSqlSchema.xml"
+FATINFO_SQLSCHEMA       BINARY                  "Command/FatInfo/FatInfoSqlSchema.xml"
 
-FATINFO_SQLSCHEMA       BINARY                  "FatInfoSqlSchema.xml"
-
-DD_SQLSCHEMA            BINARY                  "DDSqlSchema.xml"
+DD_SQLSCHEMA            BINARY                  "Command/DD/DDSqlSchema.xml"
 
 #endif    // Neutral resources
 /////////////////////////////////////////////////////////////////////////////

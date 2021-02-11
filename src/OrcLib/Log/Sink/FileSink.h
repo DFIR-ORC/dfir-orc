@@ -1,5 +1,3 @@
-#pragma once
-
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
@@ -7,16 +5,19 @@
 //
 // Author(s): fabienfl
 //
+#pragma once
 
 #include <memory>
 #include <cassert>
 #include <fstream>
 #include <iostream>
+#include <filesystem>
 
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
 #include "Log/Sink/MemorySink.h"
+#include "FileDisposition.h"
 
 //
 // FileSink will cache some logs into a MemorySink until the log file is opened
@@ -26,14 +27,14 @@ namespace Orc {
 namespace Log {
 
 template <typename Mutex>
-class FileSink : public spdlog::sinks::base_sink<Mutex>
+class FileSink final : public spdlog::sinks::base_sink<Mutex>
 {
 public:
     // No need of mutexes since FileSink synchronisation will be made on 'Mutex'
     using SpdlogFileSink = spdlog::sinks::basic_file_sink_st;
     using MemorySink = MemorySink<std::vector<uint8_t>, spdlog::details::null_mutex>;
 
-    const size_t kMemorySinkSize = 4096;
+    const size_t kMemorySinkSize = 16384;
 
     FileSink()
         : m_fileSink()
@@ -41,7 +42,9 @@ public:
     {
     }
 
-    void Open(const std::filesystem::path& path, std::error_code& ec)
+    ~FileSink() override { Close(); }
+
+    void Open(const std::filesystem::path& path, FileDisposition disposition, std::error_code& ec)
     {
         std::lock_guard<Mutex> lock(mutex_);
 
@@ -51,7 +54,17 @@ public:
             return;
         }
 
-        std::filesystem::remove(path);
+        if (disposition == FileDisposition::CreateNew)
+        {
+            std::filesystem::remove(path, ec);
+            if (ec)
+            {
+                Log::Warn(L"Failed to remove '{}' [{}]", path, ec);
+                ec.clear();
+            }
+
+            disposition = FileDisposition::Append;
+        }
 
         // Dump memorySink if any
         if (m_memorySink)
@@ -59,7 +72,7 @@ public:
             try
             {
                 std::fstream log;
-                log.open(path, std::ios::out | std::ios::binary);
+                log.open(path, std::ios::out | std::ios::binary | ToOpenMode(disposition));
 
                 const auto& in = m_memorySink->buffer();
                 std::ostream_iterator<char> out(log);
@@ -79,7 +92,16 @@ public:
             m_memorySink.reset();
         }
 
-        m_fileSink = std::make_unique<SpdlogFileSink>(path.string());
+        // use absolute path so spdlog's functions like Filename_t() will also return the same absolute path
+        auto absolutePath = std::filesystem::absolute(path, ec);
+        if (ec)
+        {
+            Log::Warn(L"Failed to resolve absolute path: {} [{}]", path, ec);
+            absolutePath = path;  // better than empty
+            ec.clear();
+        }
+
+        m_fileSink = std::make_unique<SpdlogFileSink>(absolutePath.string(), disposition == FileDisposition::Truncate);
 
         // Current sink_it_ will handle filtering
         m_fileSink->set_level(spdlog::level::trace);
@@ -101,6 +123,16 @@ public:
         flush_();
         m_memorySink = std::make_unique<MemorySink>(kMemorySinkSize);
         m_fileSink.reset();
+    }
+
+    std::optional<std::filesystem::path> OutputPath() const
+    {
+        if (m_fileSink)
+        {
+            return m_fileSink->filename();
+        }
+
+        return {};
     }
 
 protected:

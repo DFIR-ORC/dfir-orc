@@ -21,7 +21,7 @@
 #include "ByteStream.h"
 #include "CaseInsensitive.h"
 #include "FileFind.h"
-#include "Output/Text/Tree.h"
+#include "Text/Tree.h"
 
 #pragma managed(push, off)
 
