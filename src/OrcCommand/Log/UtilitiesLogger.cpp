@@ -68,7 +68,7 @@ std::pair<SpdlogLogger::Ptr, SpdlogLogger::Ptr> CreateFacilities(SpdlogSink::Ptr
     auto defaultLogger = ::CreateSpdlogLogger("default");
     defaultLogger->Add(consoleSink);
     defaultLogger->Add(fileSink);
-    defaultLogger->EnableBacktrace(512);
+    defaultLogger->EnableBacktrace(64);
     defaultLogger->SetFormatter(
         std::make_unique<spdlog::pattern_formatter>(Log::kDefaultLogPattern, spdlog::pattern_time_type::utc));
 
