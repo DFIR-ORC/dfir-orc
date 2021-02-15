@@ -56,6 +56,12 @@ std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, size_t cbMa
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }
+    catch (...)
+    {
+        std::cerr << "ExpandEnvironmentStringsApi had unexpected recoverable exception" << std::endl;
+        ec = std::make_error_code(std::errc::resource_unavailable_try_again);
+        return {};
+    }
 
     return output;
 }
@@ -89,6 +95,12 @@ std::wstring GetWorkingDirectoryApi(size_t cbMaxOutput, std::error_code& ec) noe
     {
         Log::Debug("Failed GetWorkingDirectoryApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+    catch (...)
+    {
+        std::cerr << "GetWorkingDirectoryApi had unexpected recoverable exception" << std::endl;
+        ec = std::make_error_code(std::errc::resource_unavailable_try_again);
         return {};
     }
 
@@ -126,6 +138,12 @@ std::wstring GetTempPathApi(size_t cbMaxOutput, std::error_code& ec) noexcept
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }
+    catch (...)
+    {
+        std::cerr << "GetTempPathApi had unexpected recoverable exception" << std::endl;
+        ec = std::make_error_code(std::errc::resource_unavailable_try_again);
+        return {};
+    }
 
     return path;
 }
@@ -161,6 +179,12 @@ GetTempFileNameApi(const wchar_t* lpPathName, const wchar_t* lpPrefixString, UIN
     {
         Log::Debug("Failed GetTempFileNameApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+    catch (...)
+    {
+        std::cerr << "GetTempFileNameApi had unexpected recoverable exception" << std::endl;
+        ec = std::make_error_code(std::errc::resource_unavailable_try_again);
         return {};
     }
 
@@ -212,6 +236,12 @@ std::wstring GetModuleFileNameApi(HMODULE hModule, size_t cbMaxOutput, std::erro
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }
+    catch (...)
+    {
+        std::cerr << "GetTempFileNameApi had unexpected recoverable exception" << std::endl;
+        ec = std::make_error_code(std::errc::resource_unavailable_try_again);
+        return {};
+    }
 
     return path;
 }
@@ -246,6 +276,12 @@ std::wstring GetModuleFileNameExApi(HANDLE hProcess, HMODULE hModule, size_t cbM
     {
         Log::Debug("Failed GetModuleFileNameExApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+    catch (...)
+    {
+        std::cerr << "GetModuleFileNameExApi had unexpected recoverable exception" << std::endl;
+        ec = std::make_error_code(std::errc::resource_unavailable_try_again);
         return {};
     }
 
