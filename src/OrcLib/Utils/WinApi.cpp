@@ -293,4 +293,88 @@ std::wstring GetModuleFileNameExApi(HANDLE hProcess, HMODULE hModule, std::error
     return GetModuleFileNameExApi(hProcess, hModule, 32767 * sizeof(wchar_t), ec);
 }
 
+std::wstring GetComputerNameApi(size_t cbMaxOutput, std::error_code& ec) noexcept
+{
+    const DWORD cchMaxOutput = static_cast<DWORD>(cbMaxOutput / sizeof(wchar_t));
+
+    std::wstring result;
+    try
+    {
+        result.resize(cbMaxOutput);
+
+        DWORD nSize = cchMaxOutput;
+        size_t cch = ::GetComputerNameW(result.data(), &nSize);
+        if (cch == 0)
+        {
+            ec.assign(::GetLastError(), std::system_category());
+            Log::Debug(L"Failed GetComputerNameW [{}]", ec);
+            return {};
+        }
+
+        result.resize(cch);
+        result.shrink_to_fit();
+    }
+    catch (const std::length_error& e)
+    {
+        Log::Debug("Failed GetComputerNameApi [exception: {}]", e.what());
+        ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+    catch (...)
+    {
+        std::cerr << "GetComputerNameApi had unexpected recoverable exception" << std::endl;
+        ec = std::make_error_code(std::errc::resource_unavailable_try_again);
+        return {};
+    }
+
+    return result;
+}
+
+std::wstring GetComputerNameApi(std::error_code& ec) noexcept
+{
+    return GetComputerNameApi(256 * sizeof(wchar_t), ec);
+}
+
+std::wstring GetComputerNameExApi(ComputerNameFormat format, size_t cbMaxOutput, std::error_code& ec) noexcept
+{
+    const DWORD cchMaxOutput = static_cast<DWORD>(cbMaxOutput / sizeof(wchar_t));
+
+    std::wstring result;
+    try
+    {
+        result.resize(cbMaxOutput);
+
+        DWORD nSize = cchMaxOutput;
+        size_t cch = ::GetComputerNameW(result.data(), &nSize);
+        if (cch == 0)
+        {
+            ec.assign(::GetLastError(), std::system_category());
+            Log::Debug(L"Failed GetComputerNameW [{}]", ec);
+            return {};
+        }
+
+        result.resize(cch);
+        result.shrink_to_fit();
+    }
+    catch (const std::length_error& e)
+    {
+        Log::Debug("Failed GetComputerNameExApi [exception: {}]", e.what());
+        ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+    catch (...)
+    {
+        std::cerr << "GetComputerNameExApi had unexpected recoverable exception" << std::endl;
+        ec = std::make_error_code(std::errc::resource_unavailable_try_again);
+        return {};
+    }
+
+    return result;
+}
+
+std::wstring GetComputerNameExApi(ComputerNameFormat format, std::error_code& ec) noexcept
+{
+    return GetComputerNameExApi(format, 256 * sizeof(wchar_t), ec);
+}
+
 }  // namespace Orc
