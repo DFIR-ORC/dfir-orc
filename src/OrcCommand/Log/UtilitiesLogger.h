@@ -15,7 +15,7 @@
 #include <spdlog/sinks/dist_sink.h>
 #include <spdlog/sinks/ostream_sink.h>
 
-#include "Log/Sink/FileSink.h"
+#include "Log/FileSink.h"
 
 #pragma managed(push, off)
 
