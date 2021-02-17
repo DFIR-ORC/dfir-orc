@@ -32,7 +32,7 @@ std::shared_ptr<ByteStream>& Item::Stream()
     return m_stream;
 }
 
-size_t Item::Size() const
+uint64_t Item::Size() const
 {
     if (m_stream == nullptr)
     {
