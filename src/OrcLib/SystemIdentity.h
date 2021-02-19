@@ -59,7 +59,7 @@ public:
     static HRESULT
     MountedVolumes(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"mounted_volumes");
     static HRESULT
-    PhysicalMemory(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"pysical_memory");
+    PhysicalMemory(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"physical_memory");
     static HRESULT CPU(const std::shared_ptr<StructuredOutput::IOutput>& writer, const LPCWSTR elt = L"cpu");
 
     static HRESULT
