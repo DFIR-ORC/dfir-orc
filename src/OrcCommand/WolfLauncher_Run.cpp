@@ -205,9 +205,9 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             return E_INVALIDARG;
         }
 
+        writer->WriteNamed(L"version", L"1.0");
         writer->BeginElement(L"dfir-orc");
         {
-            writer->WriteNamed(L"version", L"1.0");
             writer->WriteNamed(L"dfir_orc_id", kOrcFileVerStringW);
 
             FILETIME ft;
