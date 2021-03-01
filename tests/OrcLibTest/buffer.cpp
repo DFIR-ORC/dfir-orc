@@ -69,15 +69,17 @@ TEST_METHOD(Capacity)
     Assert::AreEqual(04LU, buffer.size());
     Assert::IsTrue(buffer.is_heap());
 
-    buffer.reserve(4);
+    buffer.clear();
+    buffer.resize(4);
     Assert::AreEqual(16LU, buffer.capacity());
-    Assert::AreEqual(04LU, buffer.size());  // When store is InnerStore, capacity is fix at _DeclElts
+    Assert::AreEqual(04LU, buffer.size());
     Assert::IsTrue(buffer.is_inner());
 
-    buffer.reserve(0);
-    Assert::AreEqual(0LU, buffer.capacity());
-    Assert::AreEqual(0LU, buffer.size());  // When store is Empty, capacity is fix at 0
-    Assert::IsTrue(buffer.empty());
+    buffer.clear();
+    buffer.resize(50);
+    Assert::AreEqual(50LU, buffer.capacity());
+    Assert::AreEqual(50LU, buffer.size());
+    Assert::IsTrue(buffer.is_heap());
 }
 TEST_METHOD(ResizeNoContent)
 {
@@ -416,7 +418,7 @@ TEST_METHOD(Format)
 
     Assert::AreEqual(result_hex_limit, fmt::to_wstring(L"0x0000000001000000"));
 
-    Detail::BufferView<UCHAR> bv = dwords;
+    Detail::BufferSpan<UCHAR> bv = dwords;
     // auto result_view = fmt::format("{0:02X}", bv);
 
     return;

@@ -22,20 +22,26 @@ namespace Detail {
 using namespace std::string_view_literals;
 
 template <typename _T>
-class BufferView
+class BufferSpan
 {
 
     template <typename _TT, size_t _DeclElts>
     friend class Buffer;
 
-    BufferView(_T* ptr, ULONG Elts)
+public:
+    BufferSpan(_T* ptr, ULONG Elts)
     {
         m_Ptr = ptr;
         m_Elts = Elts;
     }
 
-public:
     ULONG size() const { return m_Elts; }
+    ULONG capacity() const { return m_Elts; }
+    void resize(ULONG newSize)
+    {
+        if (newSize < m_Elts)
+            m_Elts = newSize;
+    }
     _T* get() const { return m_Ptr; }
     const _T& operator[](ULONG idx) const
     {
@@ -131,7 +137,12 @@ private:
             delete[] OldPtr;
         }
 
-        _T* get(ULONG index = 0) const { return m_Ptr + index; }
+        _T* get(ULONG index = 0) const
+        {
+            if (index && index >= m_EltsAlloc)
+                throw Orc::Exception(Severity::Fatal, E_BOUNDS);
+            return m_Ptr + index;
+        }
 
         _T* relinquish()
         {
@@ -202,7 +213,12 @@ private:
                 throw Orc::Exception(Severity::Fatal, E_OUTOFMEMORY);
         }
 
-        _T* get(ULONG index = 0) const { return m_Ptr + index; }
+        _T* get(ULONG index = 0) const
+        {
+            if (index && index >= m_EltsInView)
+                throw Orc::Exception(Severity::Fatal, E_BOUNDS);
+            return m_Ptr + index;
+        }
 
         _T* relinquish()
         {
@@ -233,11 +249,11 @@ private:
                 std::begin(temp), std::end(temp), stdext::checked_array_iterator(std::begin(right.m_Elts), _DeclElts));
         }
 
-        InnerStore() = default;
-        InnerStore(InnerStore&& other) noexcept = default;
+        constexpr InnerStore() = default;
+        constexpr InnerStore(InnerStore&& other) noexcept = default;
         InnerStore(const InnerStore& other) = delete;
 
-        InnerStore& operator=(InnerStore&& other) noexcept = default;
+        constexpr InnerStore& operator=(InnerStore&& other) noexcept = default;
         InnerStore& operator=(const InnerStore& other) = delete;
 
         template <typename Iterator>
@@ -246,8 +262,8 @@ private:
             std::copy(begin, end, stdext::checked_array_iterator(m_Elts, _DeclElts));
         }
 
-        ULONG capacity() const { return _DeclElts; }
-        void reserve(ULONG Elts)
+        constexpr ULONG capacity() const { return _DeclElts; }
+        constexpr void reserve(ULONG Elts)
         {
             if (Elts > _DeclElts)
                 throw Orc::Exception(
@@ -264,7 +280,12 @@ private:
             return;
         }
 
-        _T* get(ULONG index = 0) const { return const_cast<_T*>(m_Elts + index); }
+        _T* get(ULONG index = 0) const
+        {
+            if (index >= _DeclElts)
+                throw Orc::Exception(Severity::Fatal, E_BOUNDS);
+            return const_cast<_T*>(m_Elts + index);
+        }
 
         _T* relinquish()
         {
@@ -273,22 +294,22 @@ private:
             return ptr;
         }
 
-        bool owns() const { return true; }
+        constexpr bool owns() const { return true; }
 
         _T m_Elts[_DeclElts];
     };
 
     struct EmptyStore
     {
-        friend void swap(EmptyStore& left, EmptyStore& right) noexcept {}
-        EmptyStore() {};
-        EmptyStore(EmptyStore&& other) noexcept = default;
-        EmptyStore(const EmptyStore& other) = delete;
+        constexpr friend void swap(EmptyStore& left, EmptyStore& right) noexcept {}
+        constexpr EmptyStore() {};
+        constexpr EmptyStore(EmptyStore&& other) noexcept = default;
+        constexpr EmptyStore(const EmptyStore& other) = delete;
 
-        EmptyStore& operator=(EmptyStore&& other) noexcept = default;
+        constexpr EmptyStore& operator=(EmptyStore&& other) noexcept = default;
         EmptyStore& operator=(const EmptyStore& other) = delete;
 
-        ULONG capacity() const { return 0; }
+        constexpr ULONG capacity() const { return 0; }
         void reserve(ULONG Elts)
         {
             throw Orc::Exception(Severity::Continue, L"Cannot reserve {} elements in empty store"sv, Elts);
@@ -298,15 +319,15 @@ private:
             throw Orc::Exception(Severity::Continue, L"Cannot assign {} elements to empty store"sv, Elts);
         }
 
-        _T* get(ULONG index = 0) const { return nullptr; }
+        constexpr _T* get(ULONG index = 0) const { return nullptr; }
 
-        _T* relinquish() { return nullptr; }
+        constexpr _T* relinquish() { return nullptr; }
     };
 
 public:
     using Store = std::variant<EmptyStore, InnerStore, HeapStore, ViewStore>;
 
-    Buffer() {}
+    constexpr Buffer() {}
     Buffer(Buffer&& other) noexcept
     {
         std::swap(m_store, other.m_store);
@@ -323,15 +344,21 @@ public:
         m_EltsUsed = (ULONG)list.size();
     }
 
+    Buffer(const BufferSpan<_T> span)
+        : m_store(ViewStore(span.m_Ptr, span.m_Elts))
+        , m_EltsUsed(span.m_Elts)
+    {
+    }
+
     ~Buffer(void) {}
 
-    bool is_heap() const { return std::holds_alternative<HeapStore>(m_store); }
-    bool is_inner() const { return std::holds_alternative<InnerStore>(m_store); }
-    bool is_view() const { return std::holds_alternative<ViewStore>(m_store); }
+    constexpr bool is_heap() const { return std::holds_alternative<HeapStore>(m_store); }
+    constexpr bool is_inner() const { return std::holds_alternative<InnerStore>(m_store); }
+    constexpr bool is_view() const { return std::holds_alternative<ViewStore>(m_store); }
 
-    bool full() const { return capacity() == size(); }
+    constexpr bool full() const { return capacity() == size(); }
 
-    bool empty() const { return std::holds_alternative<EmptyStore>(m_store); }
+    constexpr bool empty() const { return std::holds_alternative<EmptyStore>(m_store) ? true : m_EltsUsed == 0; }
     void set(_In_reads_(Elts) const _T* Ptr, _In_ ULONG Elts, _In_ ULONG Used)
     {
         if (Elts == 0)
@@ -388,7 +415,7 @@ public:
     }
 
     void assign(_In_ const Buffer& Other) { assign(Other.get_raw(), Other.size()); }
-    void assign(_In_ const BufferView<_T>& Other) { assign(Other.m_Ptr, Other.m_Elts); }
+    void assign(_In_ const BufferSpan<_T>& Other) { assign(Other.m_Ptr, Other.m_Elts); }
 
     const Buffer& view_of(_T* Ptr, ULONG EltsInView, std::optional<ULONG> InUse = std::nullopt)
     {
@@ -408,7 +435,7 @@ public:
     {
         view_of(Other.get_raw(), Other.size(), InUse);
     }
-    void view_of(_In_ const BufferView<_T>& Other, std::optional<ULONG> InUse = std::nullopt)
+    void view_of(_In_ const BufferSpan<_T>& Other, std::optional<ULONG> InUse = std::nullopt)
     {
         view_of(Other.m_Ptr, Other.m_Elts, InUse);
     }
@@ -504,7 +531,17 @@ public:
         m_EltsUsed = new_size;
     }
     void append(_In_ const Buffer& Other) { append(Other.get_raw(), Other.size()); }
-    void append(_In_ BufferView<_T>&& Other) { append(Other.m_Ptr, Other.m_Elts); }
+    void append(_In_ BufferSpan<_T>&& Other) { append(Other.m_Ptr, Other.m_Elts); }
+
+    void zero(_In_ const std::optional<ULONG> pos = std::nullopt, _In_ std::optional<ULONG> Elts = std::nullopt)
+    {
+        auto size_ = size();
+        auto position = pos.value_or(0LU);
+        auto elements = Elts.value_or(size_ - position);
+        if (pos >= size_)
+            return;
+        ZeroMemory(get(position), std::min(size_ - position, elements) * sizeof(_T));
+    }
 
     void push_back(const _T& elt)
     {
@@ -539,12 +576,17 @@ public:
             throw Orc::Exception(
                 Severity::Fatal, HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW), L"BufferEx::Resize count overflow"sv);
         }
+
+        if (Elts <= capacity())  // if we already have capacity, return
+            return;
+
         if (Elts == 0L)
         {
             m_store = EmptyStore();
             m_EltsUsed = 0;
             return;
         }
+
         if (Elts <= _DeclElts)
         {
             if (!std::holds_alternative<InnerStore>(m_store))
@@ -552,16 +594,13 @@ public:
         }
         else
         {
-            if (Elts > capacity())
+            auto new_store = HeapStore(Elts);
+            if (const auto current = get_raw())
             {
-                auto new_store = HeapStore(Elts);
-                if (const auto current = get_raw())
-                {
-                    std::copy(current, current + size(), stdext::checked_array_iterator(new_store.get(), Elts));
-                }
-
-                m_store = std::move(new_store);
+                std::copy(current, current + size(), stdext::checked_array_iterator(new_store.get(), Elts));
             }
+
+            m_store = std::move(new_store);
         }
 
         if (Elts < m_EltsUsed)
@@ -612,10 +651,12 @@ public:
     }
 
     template <typename _T_as>
-    const _T_as* const get_as() const
+    const _T_as* const get_as(ULONG index = 0) const
     {
+        if (index && index >= m_EltsUsed)
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index get_as({}) (size={})"sv, index, m_EltsUsed);
 
-        auto ptr = get_raw();
+        auto ptr = get_raw(index);
 
         if (!ptr)
         {
@@ -639,17 +680,17 @@ public:
     }
 
     template <typename _TT>
-    operator BufferView<_TT>() const
+    operator BufferSpan<_TT>() const
     {
-        return BufferView<_TT>(reinterpret_cast<_TT*>(get_raw()), size() * (sizeof(_T) / sizeof(_TT)));
+        return BufferSpan<_TT>(reinterpret_cast<_TT*>(get_raw()), size() * (sizeof(_T) / sizeof(_TT)));
     }
 
-    Buffer<_T, _DeclElts>& operator=(_In_ BufferView<_T>&& View)
+    Buffer<_T, _DeclElts>& operator=(_In_ BufferSpan<_T>&& View)
     {
         assign(View.m_Ptr, View.m_Elts);
         return *this;
     }
-    Buffer<_T, _DeclElts>& operator+=(_In_ BufferView<_T>&& View)
+    Buffer<_T, _DeclElts>& operator+=(_In_ BufferSpan<_T>&& View)
     {
         append(View.m_Ptr, View.m_Elts);
         return *this;
@@ -658,6 +699,12 @@ public:
     Buffer<_T, _DeclElts>& operator=(_In_ const Buffer<_T, _DeclElts>& Ptr)
     {
         assign(Ptr);
+        return *this;
+    }
+    Buffer<_T, _DeclElts>& operator=(_In_ Buffer<_T, _DeclElts>&& Ptr)
+    {
+        std::swap(m_store, Ptr.m_store);
+        std::swap(m_EltsUsed, Ptr.m_EltsUsed);
         return *this;
     }
     Buffer<_T, _DeclElts>& operator=(_In_opt_ const _T* Ptr) = delete;
@@ -698,24 +745,14 @@ public:
         return *(reinterpret_cast<const _To*>(get()));
     }
 
-    static ULONG StrNLen(const CHAR* str, size_t numberOfElements)
+    ULONG StrNLen() const
     {
-        ULONG len = 0;
-        const CHAR* pCur = str;
+        if (empty())
+            return 0;
 
-        while (len < numberOfElements && *pCur != 0)
-        {
-            pCur++;
-            len++;
-        }
-        return len;
-    }
-    static ULONG StrNLen(const WCHAR* str, size_t numberOfElements)
-    {
         ULONG len = 0;
-        const WCHAR* pCur = str;
-
-        while (len < numberOfElements && *pCur != 0)
+        auto pCur = get();
+        while (len < size() && *pCur != 0)
         {
             pCur++;
             len++;
@@ -734,7 +771,7 @@ public:
 
         constexpr wchar_t szNibbleToHex[] = {L"0123456789ABCDEF"};
 
-        BufferView<UCHAR> view(*this);
+        BufferSpan<UCHAR> view(*this);
 
         ULONG dumpLength = std::min<ULONG>(view.size(), dwMaxBytes);
 
@@ -778,7 +815,7 @@ public:
             if (_size == 0)
                 return std::string();
 
-            auto stringLength = StrNLen(_ptr, _size);
+            auto stringLength = StrNLen();
 
             if (stringLength == 0)
                 return std::string();
@@ -805,7 +842,7 @@ public:
             if (_size == 0)
                 return std::wstring();
 
-            auto stringLength = StrNLen(_ptr, _size);
+            auto stringLength = StrNLen();
 
             if (stringLength == 0)
                 return std::wstring();
@@ -827,22 +864,15 @@ public:
         }
     }
 
-    using allocator_type = std::allocator<_T>;
-    using value_type = typename allocator_type::value_type;
-    using const_reference = typename allocator_type::const_reference;
-    using difference_type = typename allocator_type::difference_type;
-    using size_type = typename allocator_type::size_type;
-    using const_pointer = const typename allocator_type::pointer;
+    using value_type = typename _T;
+    using reference = typename value_type&;
+    using const_reference = const typename value_type&;
+    using pointer = typename value_type*;
+    using const_pointer = const typename value_type*;
 
     class const_iterator
     {
     public:
-        using value_type = typename allocator_type::value_type;
-        using const_reference = typename allocator_type::const_reference;
-        using const_pointer = const typename allocator_type::pointer;
-        using difference_type = typename allocator_type::difference_type;
-        using size_type = typename allocator_type::size_type;
-        using iterator_category = typename std::bidirectional_iterator_tag;
 
         const_iterator(const _T* ptr) { m_current = const_cast<_T*>(ptr); }
         const_iterator(const_iterator&& other) noexcept { std::swap(m_current, other.m_current); };
@@ -868,10 +898,6 @@ public:
     class iterator
     {
     public:
-        using value_type = typename allocator_type::value_type;
-        using reference = typename allocator_type::reference;
-        using pointer = typename allocator_type::pointer;
-        using iterator_category = typename std::bidirectional_iterator_tag;
 
         iterator(const _T* ptr) { m_current = const_cast<_T*>(ptr); }
         iterator(iterator&& other) noexcept { std::swap(m_current, other.m_current); };
@@ -906,11 +932,6 @@ private:
 };
 
 }  // namespace Detail
-
-using ByteBuffer = Detail::Buffer<BYTE, 16>;
-
-template <typename _T, size_t _DeclElts>
-using Buffer = Detail::Buffer<_T, _DeclElts>;
 
 }  // namespace Orc
 
@@ -953,7 +974,7 @@ struct formatter<Orc::Buffer<_T, _DeclElts>, Char>
     basic_memory_buffer<Char> elt_format;
 };
 template <typename _T, typename Char>
-struct formatter<Orc::Detail::BufferView<_T>, Char>
+struct formatter<Orc::Detail::BufferSpan<_T>, Char>
 {
     template <typename ParseContext>
     constexpr auto parse(ParseContext& ctx)
@@ -976,7 +997,7 @@ struct formatter<Orc::Detail::BufferView<_T>, Char>
     }
 
     template <typename FormatContext>
-    auto format(const Orc::Detail::BufferView<_T>& buffer, FormatContext& ctx)
+    auto format(const Orc::Detail::BufferSpan<_T>& buffer, FormatContext& ctx)
     {
         for (const auto& item : buffer)
         {
