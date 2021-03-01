@@ -53,6 +53,28 @@ std::optional<T> ToOptional(Orc::Result<T>&& result)
     return {};
 }
 
+template <typename T>
+T ValueOr(Orc::Result<T>&& result, const T& fallback_value)
+{
+    if (result.has_value())
+    {
+        return std::move(result.value());
+    }
+
+    return fallback_value;
+}
+
+template <typename T>
+T ValueOr(Orc::Result<T>&& result, T&& fallback_value)
+{
+    if (result.has_value())
+    {
+        return std::move(result.value());
+    }
+
+    return std::move(fallback_value);
+}
+
 inline std::error_code SystemError(HRESULT hr)
 {
     return {hr, std::system_category()};
