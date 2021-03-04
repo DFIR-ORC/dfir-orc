@@ -133,7 +133,14 @@ public:
     {
         for (auto& logger : m_loggers)
         {
-            logger->Flush();
+            if (logger)
+            {
+                logger->Flush();
+            }
+            else
+            {
+                assert(false && "Unexpected null logger");
+            }
         }
     }
 
