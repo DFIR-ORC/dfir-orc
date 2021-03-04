@@ -29,7 +29,7 @@ public:
         return;
     }
 
-    STDMETHOD(Initialize)();
+    virtual HRESULT Initialize();
 
     HRESULT AddClassFactory(CLSID clsid);
 
@@ -42,6 +42,8 @@ public:
 
         return factory->CreateInstance(NULL, __uuidof(T), (LPVOID*)&pInterface);
     }
+
+    virtual HRESULT UnLoad() override;
 
     virtual ~COMExtension();
 

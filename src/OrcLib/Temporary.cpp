@@ -607,17 +607,11 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
 
 HRESULT ORCLIB_API Orc::UtilDeleteTemporaryDirectory(const std::filesystem::path& path)
 {
-    for (auto& p : std::filesystem::recursive_directory_iterator(path))
-    {
-        if (auto hr = UtilDeleteTemporaryFile(p.path()); FAILED(hr))
-            Log::Error(L"Failed to delete temp file {} [{}]", p.path(), SystemError(hr));
-    }
-
     std::error_code ec;
     std::filesystem::remove_all(path, ec);
     if (ec)
     {
-        Log::Error(L"Failed to delete temp dir {} [{}]", path, ec);
+        Log::Error(L"Failed to delete temp directory {} [{}]", path, ec);
         return HRESULT_FROM_WIN32(ec.value());
     }
     return S_OK;

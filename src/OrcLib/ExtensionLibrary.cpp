@@ -368,7 +368,7 @@ HRESULT ExtensionLibrary::Load(std::optional<std::filesystem::path> tempDir)
     return last_hr;
 }
 
-STDMETHODIMP ExtensionLibrary::UnLoad()
+HRESULT ExtensionLibrary::UnLoad()
 {
     if (m_UnLoadHandler)
     {
@@ -386,7 +386,7 @@ STDMETHODIMP ExtensionLibrary::UnLoad()
     return S_OK;
 }
 
-STDMETHODIMP ExtensionLibrary::Cleanup()
+HRESULT ExtensionLibrary::Cleanup()
 {
     UnLoad();
     if (!m_libFile.empty() && m_bDeleteOnClose)
@@ -407,7 +407,7 @@ STDMETHODIMP ExtensionLibrary::Cleanup()
     return S_OK;
 }
 
-STDMETHODIMP Orc::ExtensionLibrary::UnloadAndCleanup()
+HRESULT Orc::ExtensionLibrary::UnloadAndCleanup()
 {
     if (m_UnLoadHandler)
     {

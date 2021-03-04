@@ -28,7 +28,7 @@ std::pair<HRESULT, HINSTANCE> Orc::COMExtension::LoadThisLibrary(const std::wstr
         return std::make_pair(S_OK, hInst);
 }
 
-STDMETHODIMP COMExtension::Initialize()
+HRESULT COMExtension::Initialize()
 {
     ScopedLock sl(m_cs);
 
@@ -72,6 +72,13 @@ HRESULT COMExtension::AddClassFactory(CLSID clsid)
         m_ClassFactories.push_back(std::make_pair(clsid, std::move(factory)));
     }
     return S_OK;
+}
+
+HRESULT Orc::COMExtension::UnLoad()
+{
+    m_ClassFactories.clear();
+    m_DllGetClassObject = nullptr;
+    return ExtensionLibrary::UnLoad();
 }
 
 COMExtension::~COMExtension() {}
