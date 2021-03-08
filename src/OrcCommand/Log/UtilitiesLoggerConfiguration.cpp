@@ -41,6 +41,10 @@ constexpr auto kNoConsole = L"noconsole"sv;
 constexpr auto kConsole = L"console"sv;
 constexpr auto kFile = L"file"sv;
 
+constexpr auto kSyslog = L"syslog"sv;
+constexpr auto kHost = L"host"sv;
+constexpr auto kPort = L"port"sv;
+
 constexpr auto kTrace = L"trace"sv;
 constexpr auto kDebug = L"debug"sv;
 constexpr auto kInfo = L"info"sv;
@@ -59,12 +63,19 @@ enum LogConfigItems
 {
     CONFIGITEM_LOG_CONSOLE_NODE = CONFIGITEM_LOG_COMMON_ENUMCOUNT,
     CONFIGITEM_LOG_LOGFILE_NODE,
+    CONFIGITEM_LOG_SYSLOG_NODE,
     CONFIGITEM_LOG_ENUMCOUNT
 };
 
 enum LogFileConfigItems
 {
     CONFIGITEM_LOG_LOGFILE_OUTPUT = CONFIGITEM_LOG_COMMON_ENUMCOUNT
+};
+
+enum SyslogConfigItems
+{
+    CONFIGITEM_LOG_SYSLOG_HOST = CONFIGITEM_LOG_COMMON_ENUMCOUNT,
+    CONFIGITEM_LOG_SYSLOG_PORT
 };
 
 bool HasValue(const ConfigItem& item, DWORD dwIndex)
@@ -135,6 +146,37 @@ HRESULT RegisterFileOptions(ConfigItem& parent, DWORD dwIndex)
     }
 
     hr = fileNode.AddChild(kOutput, Orc::Config::Common::output, CONFIGITEM_LOG_LOGFILE_OUTPUT);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    return S_OK;
+}
+
+HRESULT RegisterSyslogOptions(ConfigItem& parent, DWORD dwIndex)
+{
+    HRESULT hr = parent.AddChildNode(kSyslog, dwIndex, ConfigItem::OPTION);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    auto& syslogNode = parent[dwIndex];
+
+    hr = RegisterCommonItems(syslogNode);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    hr = syslogNode.AddChildNode(kHost, CONFIGITEM_LOG_SYSLOG_HOST, ConfigItem::OPTION);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    hr = syslogNode.AddChildNode(kPort, CONFIGITEM_LOG_SYSLOG_PORT, ConfigItem::OPTION);
     if (FAILED(hr))
     {
         return hr;
@@ -281,6 +323,43 @@ bool SplitArgumentAndSubArguments(std::wstring_view input, std::wstring_view& ar
     return true;
 }
 
+bool ParseSyslogOptions(std::vector<Option>& options, UtilitiesLoggerConfiguration::SyslogOutput& output)
+{
+    for (auto& option : options)
+    {
+        if (!option.value || option.isParsed)
+        {
+            continue;
+        }
+
+        if (option.key == kHost)
+        {
+            output.host = *option.value;
+            option.isParsed = true;
+            continue;
+        }
+
+        if (option.key == kPort)
+        {
+            output.port = kPort;
+            option.isParsed = true;
+            continue;
+        }
+    }
+
+    if (!output.host.has_value())
+    {
+        return false;
+    }
+
+    if (!ParseCommonOptions(options, output))
+    {
+        return false;
+    }
+
+    return true;
+}
+
 bool ParseLogArgument(std::wstring_view input, UtilitiesLoggerConfiguration& configuration)
 {
     std::vector<Option> options;
@@ -295,7 +374,7 @@ bool ParseLogArgument(std::wstring_view input, UtilitiesLoggerConfiguration& con
     }
 
     // First sub-option should be log sink identifier: console, file, ...
-    constexpr std::array sinks = {kConsole, kFile};
+    constexpr std::array sinks = {kConsole, kFile, kSyslog};
     auto& sink = options.front();
     if (!boost::algorithm::any_of_equal(sinks, sink.key))
     {
@@ -309,6 +388,10 @@ bool ParseLogArgument(std::wstring_view input, UtilitiesLoggerConfiguration& con
     else if (sink.key == kFile)
     {
         sink.isParsed = ParseFileOptions(options, configuration.file);
+    }
+    else if (sink.key == kSyslog)
+    {
+        sink.isParsed = ParseSyslogOptions(options, configuration.syslog);
     }
 
     return std::all_of(std::cbegin(options), std::cend(options), [](auto& option) { return option.isParsed; });
@@ -338,6 +421,18 @@ void ApplyConsoleSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfigu
     else
     {
         logger.consoleSink()->SetLevel(Log::Level::Critical);
+    }
+}
+
+void ApplySyslogSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
+{
+    if (config.syslog.level)
+    {
+        logger.syslogSink()->SetLevel(*config.syslog.level);
+    }
+    else
+    {
+        logger.syslogSink()->SetLevel(Log::Level::Off);
     }
 }
 
@@ -443,6 +538,54 @@ Orc::Result<void> ApplyFileSinkConfiguration(UtilitiesLogger& logger, const Util
 
     std::error_code ec;
     logger.fileSink()->Open(path, disposition, ec);
+    return ec;
+}
+
+Orc::Result<void>
+ApplySyslogSinkConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLoggerConfiguration& config)
+{
+    ApplySyslogSinkLevel(utilitiesLogger, config);
+
+    if (config.syslog.backtraceTrigger)
+    {
+        utilitiesLogger.syslogSink()->SetBacktraceTrigger(*config.syslog.backtraceTrigger);
+    }
+    else
+    {
+        utilitiesLogger.syslogSink()->SetBacktraceTrigger(Log::Level::Off);
+    }
+
+    if (!config.syslog.host)
+    {
+        Log::Debug(L"Failed to configure syslog sink: missing host");
+        return std::errc::invalid_argument;
+    }
+
+    std::error_code ec;
+    const auto host = Utf16ToUtf8(*config.syslog.host, ec);
+    if (ec)
+    {
+        Log::Error(L"Failed to configure syslog sink host [{}]", ec);
+        return ec;
+    }
+
+    std::string port = "514";
+    if (config.syslog.port)
+    {
+        port = Utf16ToUtf8(*config.syslog.port, ec);
+        if (ec)
+        {
+            Log::Error(L"Failed to configure syslog sink port [{}]", ec);
+            return ec;
+        }
+    }
+
+    utilitiesLogger.syslogSink()->AddEndpoint(host, port, ec);
+    if (ec)
+    {
+        return ec;
+    }
+
     return ec;
 }
 
@@ -656,6 +799,12 @@ HRESULT UtilitiesLoggerConfiguration::Register(ConfigItem& parent, DWORD dwIndex
         return hr;
     }
 
+    hr = ::RegisterSyslogOptions(logNode, CONFIGITEM_LOG_SYSLOG_NODE);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
     return S_OK;
 }
 
@@ -701,12 +850,31 @@ void UtilitiesLoggerConfiguration::Parse(const ConfigItem& item, UtilitiesLogger
             }
         }
     }
+
+    if (item[CONFIGITEM_LOG_SYSLOG_NODE])
+    {
+        configuration.syslog.level = ::ParseLogLevel(item[CONFIGITEM_LOG_SYSLOG_NODE]);
+        configuration.syslog.backtraceTrigger = ::ParseBacktraceLevel(item[CONFIGITEM_LOG_SYSLOG_NODE]);
+
+        const auto& host = item[CONFIGITEM_LOG_SYSLOG_NODE][CONFIGITEM_LOG_SYSLOG_HOST];
+        if (!host.empty())
+        {
+            configuration.syslog.host = host;
+        }
+
+        const auto& port = item[CONFIGITEM_LOG_SYSLOG_NODE][CONFIGITEM_LOG_SYSLOG_PORT];
+        if (!port.empty())
+        {
+            configuration.syslog.port = port;
+        }
+    }
 }
 
 void UtilitiesLoggerConfiguration::ApplyLogLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
     ApplyConsoleSinkLevel(logger, config);
     ApplyFileSinkLevel(logger, config);
+    ApplySyslogSinkLevel(logger, config);
 
     // Load log levels from environment variable (ex: "SPDLOG_LEVEL=info,mylogger=trace")
     // BEWARE: 'config' is not updated with log levels defined by environment variables
@@ -724,6 +892,7 @@ void UtilitiesLoggerConfiguration::Apply(UtilitiesLogger& logger, const Utilitie
 {
     ::ApplyConsoleSinkConfiguration(logger, config);
     ::ApplyFileSinkConfiguration(logger, config);
+    ::ApplySyslogSinkConfiguration(logger, config);
 }
 
 std::optional<std::wstring>

@@ -50,6 +50,12 @@ struct UtilitiesLoggerConfiguration
         std::optional<FileDisposition> disposition;
     };
 
+    struct SyslogOutput : Output
+    {
+        std::optional<std::wstring> host;
+        std::optional<std::wstring> port;
+    };
+
     // Global flags value like '/debug' switch
     std::optional<Orc::Log::Level> level;
     std::optional<Orc::Log::Level> backtraceTrigger;
@@ -59,6 +65,7 @@ struct UtilitiesLoggerConfiguration
     // For specific flag values like /log:file,level=debug
     Output console;
     FileOutput file;
+    SyslogOutput syslog;
 };
 
 }  // namespace Command
