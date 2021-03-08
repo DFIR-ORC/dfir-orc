@@ -220,7 +220,11 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
     auto& wolfLauncher = outcome.GetWolfLauncher();
 
     const auto sha256 = GetCurrentExecutableSha256();
-    if (sha256)
+    if (sha256.has_error())
+    {
+        Log::Debug(L"Failed to compute sha256 on current executable [{}]", sha256.error());
+    }
+    else
     {
         wolfLauncher.SetSha256(sha256.value());
     }

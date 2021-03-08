@@ -32,8 +32,7 @@ struct UtilitiesLoggerConfiguration
     static void ApplyLogLevel(UtilitiesLogger& logger, int argc, const wchar_t* argv[]);
     static void ApplyLogLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config);
 
-    static std::optional<std::wstring>
-    UtilitiesLoggerConfiguration::ToCommandLineArguments(const UtilitiesLoggerConfiguration& config);
+    static std::optional<std::wstring> ToCommandLineArguments(const UtilitiesLoggerConfiguration& config);
 
     struct Output
     {

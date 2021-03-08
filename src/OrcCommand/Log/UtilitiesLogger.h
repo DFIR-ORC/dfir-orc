@@ -30,7 +30,7 @@ class UdpSocket;
 
 namespace Command {
 
-class UtilitiesLoggerConfiguration;
+struct UtilitiesLoggerConfiguration;
 
 class UtilitiesLogger
 {

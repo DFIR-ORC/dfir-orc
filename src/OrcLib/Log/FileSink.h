@@ -16,8 +16,12 @@
 #include <spdlog/sinks/base_sink.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
+#include "Log/Log.h"
 #include "Log/MemorySink.h"
 #include "FileDisposition.h"
+
+#include "Text/Fmt/path.h"
+#include "Text/Fmt/error_code.h"
 
 //
 // FileSink will cache some logs into a MemorySink until the log file is opened
@@ -46,7 +50,7 @@ public:
 
     void Open(const std::filesystem::path& path, FileDisposition disposition, std::error_code& ec)
     {
-        std::lock_guard<Mutex> lock(mutex_);
+        std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
 
         if (m_fileSink != nullptr)
         {
@@ -113,13 +117,13 @@ public:
 
     bool IsOpen()
     {
-        std::lock_guard<Mutex> lock(mutex_);
+        std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
         return m_fileSink != nullptr;
     }
 
     void Close()
     {
-        std::lock_guard<Mutex> lock(mutex_);
+        std::lock_guard<Mutex> lock(spdlog::sinks::base_sink<Mutex>::mutex_);
         flush_();
         m_memorySink = std::make_unique<MemorySink>(kMemorySinkSize);
         m_fileSink.reset();

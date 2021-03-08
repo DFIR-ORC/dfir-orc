@@ -76,7 +76,7 @@ public:
 
                 if (auto hr = pLib->Load(tempDir); FAILED(hr))
                 {
-                    Log::Error(L"Library {} is not be loaded", Name<Library>());
+                    Log::Error(L"Library {} is not loaded", Name<Library>());
                     return nullptr;
                 }
             }

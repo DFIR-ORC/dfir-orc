@@ -310,19 +310,6 @@ bool ParseFileOptions(std::vector<Option>& options, UtilitiesLoggerConfiguration
     return true;
 }
 
-bool SplitArgumentAndSubArguments(std::wstring_view input, std::wstring_view& argument, std::wstring_view& optionString)
-{
-    const auto subOptionsPos = input.find_first_of(L':');
-    if (subOptionsPos == std::wstring::npos)
-    {
-        return false;
-    }
-
-    argument = std::wstring_view(input.data(), subOptionsPos);
-    optionString = std::wstring_view(input.data() + subOptionsPos + 1);
-    return true;
-}
-
 bool ParseSyslogOptions(std::vector<Option>& options, UtilitiesLoggerConfiguration::SyslogOutput& output)
 {
     for (auto& option : options)

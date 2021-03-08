@@ -563,7 +563,6 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
                     pOutput = stream;
                     return stream;
                 }
-                return nullptr;
             };
 
             auto ShouldItemBeExtracted = [&NameInArchive](const std::wstring& strNameInArchive) -> bool {
