@@ -351,11 +351,11 @@ void ApplyConsoleSinkConfiguration(UtilitiesLogger& logger, const UtilitiesLogge
     }
     else if (config.backtraceTrigger)
     {
-        logger.fileSink()->SetBacktraceTrigger(*config.backtraceTrigger);
+        logger.consoleSink()->SetBacktraceTrigger(*config.backtraceTrigger);
     }
     else
     {
-        logger.fileSink()->SetBacktraceTrigger(Log::Level::Off);
+        logger.consoleSink()->SetBacktraceTrigger(Log::Level::Off);
     }
 }
 
