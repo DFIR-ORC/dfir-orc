@@ -110,7 +110,11 @@ auto PrintOutputParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&... c
 
 constexpr std::array kUsageLogging = {
     Parameter("/Verbose", "Display logs on console at debug level"),
-    Parameter("/LogFile=<filename>", "Specify log file"),
+    Parameter(
+        "/Log:{type},{option1,option2=value,...}",
+        "Specify log output type ('file', 'console' or 'syslog') and related options (output, level, backtrace).\n"
+        "Example: /Log:file,output=foo.log,level=info,backtrace=error"),
+    Parameter("/LogFile=<filename>", "[DEPRECATED] Specify log file"),
     Parameter("/Trace", "Set trace log level"),
     Parameter("/Debug", "Set debug log level"),
     Parameter("/Info", "Set info log level"),
