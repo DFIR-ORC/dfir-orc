@@ -919,6 +919,17 @@ HRESULT Main::Run_Execute()
         }
     }
 
+    const auto start = FromSystemTime(theStartTime);
+    if (start.has_error())
+    {
+        Log::Debug(L"Failed to convert start time to time point [{}]", start.error());
+        m_journal.Print(ToolName(), kInfo, L"Done");
+    }
+    else
+    {
+        m_journal.Print(ToolName(), kInfo, L"Done (elapsed: {:%T})", std::chrono::system_clock::now() - *start);
+    }
+
     if (config.bBeepWhenDone)
     {
         MessageBeep(MB_ICONINFORMATION);
