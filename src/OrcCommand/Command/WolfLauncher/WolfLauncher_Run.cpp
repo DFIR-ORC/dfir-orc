@@ -44,6 +44,8 @@ using namespace Concurrency;
 
 namespace {
 
+constexpr std::wstring_view kInfo = L"Info";
+
 struct FileInformations
 {
     bool exist;
@@ -776,6 +778,15 @@ HRESULT Main::Run_Execute()
         }
     }
     BOOST_SCOPE_EXIT_END;
+
+    const std::wstring metaName(kOrcMetaNameW);
+    const std::wstring_view metaVersion(kOrcMetaVersionW);
+    if (!metaName.empty() && !metaVersion.empty())
+    {
+        m_journal.Print(ToolName(), kInfo, L"{} ({})", metaName, metaVersion);
+    }
+
+    m_journal.Print(ToolName(), kInfo, L"Version: {}", kOrcVersionStringW);
 
     for (const auto& exec : m_wolfexecs)
     {

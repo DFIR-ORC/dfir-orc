@@ -820,7 +820,7 @@ void UtilitiesMain::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, L
         const std::wstring metaVersion(kOrcMetaVersionW);
         if (!metaName.empty() && !metaVersion.empty())
         {
-            m_console.Write("({} {})", metaName, metaVersion);
+            m_console.Write(" ({} {})", metaName, metaVersion);
         }
 
         m_console.PrintNewLine();
