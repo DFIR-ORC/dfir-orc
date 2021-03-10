@@ -1,5 +1,12 @@
 # ChangeLog
 
+## [10.0.18] - 2021-10-03
+### Changed
+- yara: remove libressl dependency and rely on wincrypt api
+- yara: remove jansson dependency and cuckoo module
+- fmt: update to 7.0.3
+- spdlog: update to 1.8.1
+
 ## [10.0.17] - 2021-10-02
 ### Changed
 - build.ps1: stop on any error
