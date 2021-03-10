@@ -42,6 +42,17 @@ std::optional<T> ToOptional(const Orc::Result<T>& result)
     return {};
 }
 
+template <typename T>
+std::optional<T> ToOptional(Orc::Result<T>&& result)
+{
+    if (result.has_value())
+    {
+        return std::move(result.value());
+    }
+
+    return {};
+}
+
 inline std::error_code SystemError(HRESULT hr)
 {
     return {hr, std::system_category()};
