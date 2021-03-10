@@ -16,10 +16,18 @@
 #include <spdlog/sinks/ostream_sink.h>
 
 #include "Log/FileSink.h"
+#include "Log/Syslog/SyslogSink.h"
 
 #pragma managed(push, off)
 
 namespace Orc {
+
+namespace Log {
+
+class UdpSocket;
+
+}
+
 namespace Command {
 
 class UtilitiesLoggerConfiguration;
@@ -35,19 +43,19 @@ public:
 
         ConsoleSink();
 
-        void Add(spdlog::sink_ptr sink)
+        void AddOutput(spdlog::sink_ptr sink)
         {
             sink->set_formatter(CloneFormatter());
             m_tee.add_sink(std::move(sink));
         }
 
-        void Add(std::shared_ptr<std::ostream> output)
+        void AddOutput(std::shared_ptr<std::ostream> output)
         {
             using Sink = spdlog::sinks::ostream_sink_st;
             using Deleter = std::function<void(Sink*)>;
 
             std::unique_ptr<Sink, Deleter> sink(new Sink(*output), [output](Sink* s) { delete s; });
-            Add(std::move(sink));
+            AddOutput(std::move(sink));
         }
 
     private:
@@ -78,6 +86,28 @@ public:
         FileSinkT& m_fileSink;
     };
 
+    class SyslogSink : public Log::SpdlogSink
+    {
+    public:
+        using SyslogSinkT = Log::SyslogSink<std::mutex>;
+
+        SyslogSink()
+            : SpdlogSink(std::make_unique<SyslogSinkT>())
+            , m_syslogSink(reinterpret_cast<SyslogSinkT&>(*m_sink))
+        {
+        }
+
+        void AddEndpoint(const std::string& host, const std::string& port, std::error_code& ec)
+        {
+            m_syslogSink.AddEndpoint(host, port, ec);
+        }
+
+        void AddEndpoint(Orc::Log::UdpSocket&& socket) { m_syslogSink.AddEndpoint(std::move(socket)); }
+
+    private:
+        SyslogSinkT& m_syslogSink;
+    };
+
     UtilitiesLogger();
     ~UtilitiesLogger();
 
@@ -86,11 +116,15 @@ public:
 
     const auto& fileSink() const { return m_fileSink; }
     const auto& consoleSink() const { return m_consoleSink; }
+    const auto& syslogSink() const { return m_syslogSink; }
+
+    static std::unique_ptr<Log::SpdlogLogger> CreateSpdlogLogger(const std::string& name);
 
 private:
     std::shared_ptr<Orc::Logger> m_logger;
     std::shared_ptr<FileSink> m_fileSink;
     std::shared_ptr<ConsoleSink> m_consoleSink;
+    std::shared_ptr<SyslogSink> m_syslogSink;
 };
 
 }  // namespace Command

@@ -32,10 +32,15 @@
 #include "Utils/WinApi.h"
 #include "Text/Fmt/Result.h"
 #include "Text/Print/Bool.h"
-
+#include "Log/Syslog/Syslog.h"
+#include "Log/Syslog/SyslogSink.h"
 #include "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.h"
-using namespace Concurrency;
+
+using namespace Orc::Command;
+using namespace Orc::Log;
 using namespace Orc;
+
+using namespace Concurrency;
 
 namespace {
 
@@ -277,7 +282,7 @@ const wchar_t kWolfLauncher[] = L"WolfLauncher";
 
 void Main::Configure(int argc, const wchar_t* argv[])
 {
-    m_logging.consoleSink()->Add(m_consoleRedirection);
+    m_logging.consoleSink()->AddOutput(m_consoleRedirection);
 
     UtilitiesMain::Configure(argc, argv);
 }

@@ -32,6 +32,7 @@ public:
     {
         kDefault = 0,
         kLogFile,
+        kJournal,
         kUnitTest,
         kFacilityCount
     };

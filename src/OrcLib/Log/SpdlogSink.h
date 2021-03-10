@@ -22,11 +22,15 @@ class SpdlogSink
 public:
     using Ptr = std::shared_ptr<SpdlogSink>;
 
-    // Use a template to control over the sink creation (no custom formatter or level without using the provided API).
-    template <typename T, typename... Args>
-    static std::unique_ptr<SpdlogSink> Create(Args&&... args)
+    SpdlogSink(std::unique_ptr<spdlog::sinks::sink> sink)
+        : m_sink(std::move(sink))
+        , m_backtraceTrigger(Level::Off)
     {
-        return std::make_unique<SpdlogSink>(std::make_unique<T>(std::forward<Args>(args)...));
+        auto formatter = CloneFormatter();
+        if (formatter)
+        {
+            m_sink->set_formatter(std::move(formatter));
+        }
     }
 
     void AddTo(spdlog::logger& logger) { logger.sinks().push_back(m_sink); }
@@ -63,13 +67,6 @@ public:
     {
         auto formatter = std::make_unique<spdlog::pattern_formatter>(pattern);
         SetFormatter(std::move(formatter));
-    }
-
-protected:
-    SpdlogSink(std::unique_ptr<spdlog::sinks::sink> sink)
-        : m_sink(std::move(sink))
-        , m_backtraceTrigger(Level::Off)
-    {
     }
 
 protected:
