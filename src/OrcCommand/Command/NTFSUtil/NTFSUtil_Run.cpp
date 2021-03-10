@@ -172,7 +172,7 @@ HRESULT Main::CommandUSN()
         auto maxSize = Traits::ByteQuantity<DWORDLONG>(0);
         auto delta = Traits::ByteQuantity<DWORDLONG>(0);
 
-        hr = ::GetUSNJournalConfiguration(hVolume, maxSize, delta);
+        hr = ::GetUSNJournalConfiguration(*hVolume, maxSize, delta);
         if (FAILED(hr))
         {
             Log::Critical(
@@ -193,7 +193,7 @@ HRESULT Main::CommandUSN()
 
     if (config.bConfigure)
     {
-        hr = ::ConfigureUSNJournal(hVolume, config.dwlMinSize, config.dwlMaxSize, config.dwlAllocDelta);
+        hr = ::ConfigureUSNJournal(*hVolume, config.dwlMinSize, config.dwlMaxSize, config.dwlAllocDelta);
         if (FAILED(hr))
         {
             Log::Critical(L"Failed to configure USN journal for volume '{}' [{}]", config.strVolume, SystemError(hr));
@@ -204,7 +204,7 @@ HRESULT Main::CommandUSN()
             auto maxSize = Traits::ByteQuantity<DWORDLONG>(0);
             auto delta = Traits::ByteQuantity<DWORDLONG>(0);
 
-            hr = ::GetUSNJournalConfiguration(hVolume, maxSize, delta);
+            hr = ::GetUSNJournalConfiguration(*hVolume, maxSize, delta);
             if (FAILED(hr))
             {
                 Log::Critical(

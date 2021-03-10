@@ -168,7 +168,7 @@ Result<std::wstring> GetProcessExecutableSha256(DWORD dwProcessId)
     }
 
     std::error_code ec;
-    const auto path = GetModuleFileNameExApi(hProcess.get(), NULL, ec);
+    const auto path = GetModuleFileNameExApi(hProcess.value(), NULL, ec);
     return Sha256(path);
 }
 
