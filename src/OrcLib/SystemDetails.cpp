@@ -244,10 +244,10 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
     {
         case 0:
             if (major < 10)
-                tags.insert(L"RTM"s);
+                tags.insert(L"Release#RTM"s);
             break;
         default:
-            tags.insert(fmt::format(L"SP{}"sv, g_pDetailsBlock->osvi.wServicePackMajor));
+            tags.insert(fmt::format(L"Release#SP{}"sv, g_pDetailsBlock->osvi.wServicePackMajor));
     }
 
     tags.insert(L"Windows"s);
