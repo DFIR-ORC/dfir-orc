@@ -284,6 +284,10 @@ void Main::Configure(int argc, const wchar_t* argv[])
 {
     m_logging.consoleSink()->AddOutput(m_consoleRedirection);
 
+    auto& journal = m_logging.logger().Get(Logger::Facility::kJournal);
+    journal->SetLevel(Log::Level::Info);
+    journal->Add(m_logging.syslogSink());
+
     UtilitiesMain::Configure(argc, argv);
 }
 
