@@ -55,14 +55,14 @@ void ParseConsoleOptions(std::vector<Option>& options, ConsoleConfiguration& con
 
         if (option.key == kDisposition)
         {
-            configuration.output.disposition = ToFileDisposition(*option.value);
+            configuration.output.disposition = ValueOr(ToFileDisposition(*option.value), FileDisposition::Unknown);
             option.isParsed = true;
             continue;
         }
 
         if (option.key == kEncoding)
         {
-            configuration.output.encoding = ToEncoding(*option.value);
+            configuration.output.encoding = ValueOr(ToEncoding(*option.value), Text::Encoding::Unknown);
             option.isParsed = true;
             continue;
         }

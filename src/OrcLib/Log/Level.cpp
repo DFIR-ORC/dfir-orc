@@ -36,7 +36,7 @@ std::wstring_view ToString(Level level)
     }
 }
 
-Level ToLevel(const std::wstring& level, std::error_code& ec)
+Orc::Result<Level> ToLevel(const std::wstring& level)
 {
     const std::map<std::wstring_view, Level> map = {
         {kLevelTrace, Level::Trace},
@@ -50,8 +50,7 @@ Level ToLevel(const std::wstring& level, std::error_code& ec)
     auto it = map.find(level);
     if (it == std::cend(map))
     {
-        ec = std::make_error_code(std::errc::invalid_argument);
-        return Level::Off;
+        return std::make_error_code(std::errc::invalid_argument);
     }
 
     return it->second;

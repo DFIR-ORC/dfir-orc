@@ -29,7 +29,7 @@ std::wstring_view ToString(Text::Encoding encoding)
     }
 }
 
-Text::Encoding ToEncoding(const std::wstring& disposition, std::error_code& ec)
+Result<Text::Encoding> ToEncoding(const std::wstring& disposition)
 {
     const std::map<std::wstring_view, Text::Encoding> map = {
         {kUtf8, Text::Encoding::Utf8}, {kUtf16, Text::Encoding::Utf16}};
@@ -37,8 +37,7 @@ Text::Encoding ToEncoding(const std::wstring& disposition, std::error_code& ec)
     auto it = map.find(disposition);
     if (it == std::cend(map))
     {
-        ec = std::make_error_code(std::errc::invalid_argument);
-        return Text::Encoding::Unknown;
+        return std::make_error_code(std::errc::invalid_argument);
     }
 
     return it->second;

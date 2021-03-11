@@ -23,7 +23,7 @@ enum class FileDisposition
 };
 
 std::wstring_view ToString(FileDisposition disposition);
-FileDisposition ToFileDisposition(const std::wstring& disposition, std::error_code& ec = std::error_code());
+Orc::Result<FileDisposition> ToFileDisposition(const std::wstring& disposition);
 
 std::ios_base::openmode ToOpenMode(FileDisposition disposition);
 

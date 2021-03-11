@@ -150,15 +150,14 @@ std::optional<Log::Level> ParseLogLevel(const ConfigItem& item)
         return {};
     }
 
-    std::error_code ec;
-    const auto level = Log::ToLevel(item[CONFIGITEM_LOG_COMMON_LEVEL].c_str(), ec);
-    if (ec)
+    const auto level = Log::ToLevel(item[CONFIGITEM_LOG_COMMON_LEVEL]);
+    if (!level)
     {
-        Log::Error(L"Failed to parse log level: {} [{}]", item[CONFIGITEM_LOG_COMMON_LEVEL].c_str(), ec);
+        Log::Error(L"Failed to parse log level: {} [{}]", item[CONFIGITEM_LOG_COMMON_LEVEL], level.error());
         return {};
     }
 
-    return level;
+    return *level;
 }
 
 std::optional<Log::Level> ParseBacktraceLevel(const ConfigItem& item)
@@ -168,22 +167,19 @@ std::optional<Log::Level> ParseBacktraceLevel(const ConfigItem& item)
         return {};
     }
 
-    std::error_code ec;
-    const auto level = Log::ToLevel(item[CONFIGITEM_LOG_COMMON_BACKTRACE].c_str(), ec);
-    if (ec)
+    const auto level = Log::ToLevel(item[CONFIGITEM_LOG_COMMON_BACKTRACE]);
+    if (!level)
     {
         Log::Error(
-            L"Failed to parse backtrace trigger level: {} [{}]", item[CONFIGITEM_LOG_COMMON_BACKTRACE].c_str(), ec);
+            L"Failed to parse backtrace trigger level: {} [{}]", item[CONFIGITEM_LOG_COMMON_BACKTRACE], level.error());
         return {};
     }
 
-    return level;
+    return *level;
 }
 
 bool ParseCommonOptions(std::vector<Option>& options, UtilitiesLoggerConfiguration::Output& output)
 {
-    std::error_code ec;
-
     for (auto& option : options)
     {
         if (option.isParsed)
@@ -193,30 +189,28 @@ bool ParseCommonOptions(std::vector<Option>& options, UtilitiesLoggerConfigurati
 
         if (option.key == kLevel && option.value)
         {
-            const auto level = Orc::Log::ToLevel(*option.value, ec);
-            if (ec)
+            const auto level = Orc::Log::ToLevel(*option.value);
+            if (!level)
             {
-                Log::Error(L"Failed to parse log level: {} [{}]", *option.value, ec);
-                ec.clear();
+                Log::Error(L"Failed to parse log level: {} [{}]", *option.value, level.error());
                 continue;
             }
 
-            output.level = level;
+            output.level = *level;
             option.isParsed = true;
             continue;
         }
 
         if (option.key == kBacktrace && option.value)
         {
-            const auto level = Orc::Log::ToLevel(*option.value, ec);
-            if (ec)
+            const auto level = Orc::Log::ToLevel(*option.value);
+            if (!level)
             {
-                Log::Error(L"Failed to parse backtrace trigger level: {} [{}]", *option.value, ec);
-                ec.clear();
+                Log::Error(L"Failed to parse backtrace trigger level: {} [{}]", *option.value, level.error());
                 continue;
             }
 
-            output.backtraceTrigger = level;
+            output.backtraceTrigger = *level;
             option.isParsed = true;
             continue;
         }
@@ -248,14 +242,14 @@ bool ParseFileOptions(std::vector<Option>& options, UtilitiesLoggerConfiguration
 
         if (option.key == kDisposition)
         {
-            output.disposition = ToFileDisposition(*option.value);
+            output.disposition = ValueOr(ToFileDisposition(*option.value), FileDisposition::Unknown);
             option.isParsed = true;
             continue;
         }
 
         if (option.key == kEncoding)
         {
-            output.encoding = ToEncoding(*option.value);
+            output.encoding = ValueOr(ToEncoding(*option.value), Text::Encoding::Unknown);
             option.isParsed = true;
             continue;
         }

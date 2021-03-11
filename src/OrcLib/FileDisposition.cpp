@@ -32,7 +32,7 @@ std::wstring_view ToString(FileDisposition disposition)
     }
 }
 
-FileDisposition ToFileDisposition(const std::wstring& disposition, std::error_code& ec)
+Orc::Result<FileDisposition> ToFileDisposition(const std::wstring& disposition)
 {
     const std::map<std::wstring_view, FileDisposition> map = {
         {kAppend, FileDisposition::Append},
@@ -42,8 +42,7 @@ FileDisposition ToFileDisposition(const std::wstring& disposition, std::error_co
     auto it = map.find(disposition);
     if (it == std::cend(map))
     {
-        ec = std::make_error_code(std::errc::invalid_argument);
-        return FileDisposition::Unknown;
+        return std::make_error_code(std::errc::invalid_argument);
     }
 
     return it->second;
