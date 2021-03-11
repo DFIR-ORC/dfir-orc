@@ -43,7 +43,7 @@ namespace Orc::Test {
             }
             catch (const Exception& e)
             {
-                if (e.Severity != Severity::Continue)
+                if (e.m_severity != Severity::Continue)
                     throw;
 
                 Assert::AreEqual("Exception: This is a dummy test exception", e.what(), L"what() did not return the exepected description");
@@ -58,7 +58,7 @@ namespace Orc::Test {
             }
             catch (const Exception& e)
             {
-                if (e.Severity != Severity::Continue)
+                if (e.m_severity != Severity::Continue)
                     throw;
 
                 Assert::AreEqual(
