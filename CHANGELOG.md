@@ -1,5 +1,27 @@
 # ChangeLog
 
+## [10.1.0-rc5] - 2021-03-12
+### Changed
+- Log: apply backtrace trigger level command line option earlier
+
+### Fixed
+- Build: add support for Visual Studio 16.9
+- GetThis: fix output archive creation
+- Multiple minor fixes: see commits for more details
+- NtfsUtil: fix missing dump of properties
+- Log: fix console's backtrace option handling
+
+### Added
+- Log: add syslog forwarding to WolfLauncher's timestamped output
+- Log: add new log options usage
+- Log: add start/end timestamp of WolfLauncher to journal
+- Log: add DFIR-Orc version of WolfLauncher's binary to journal
+
+### Removed
+- yara: remove libressl dependency and rely on wincrypt api
+- yara: remove jansson dependency and cuckoo module
+
+
 ## [10.1.0-rc4] - 2021-02-12
 ### Changed
 - Do not exit after manageable formatting exception
@@ -28,6 +50,7 @@
 - 'JobStatistics' (replaced by 'outcome')
 - 'ProcessStatistics' (replaced by 'outcome')
 
+
 ## [10.1.0-rc3] - 2020-12-02
 ### Changed
 - Log: enhance FileSink synchronisation
@@ -46,6 +69,7 @@
 
 ### Removed
 - Dead code: ByteStreamSink
+
 
 ## [10.1.0-rc2] - 2020-11-20
 ### Changed
@@ -73,8 +97,8 @@
 ### Removed
 - Dead code: 'OutputFileOption', 'OutputDirOption'
 
-## [10.1.0-rc1] - 2020-11-09
 
+## [10.1.0-rc1] - 2020-11-09
 ### Changed
 - GetThis: reduce memory usage by a factor of 3 depending on configuration
 - GetThis: major refactor to allow some future optmizations
@@ -112,6 +136,7 @@
 - Remove OrcSql component
 - Remove dead code
 
+
 ## [10.0.16] - 2020-11-09
 ### Added
 - CI: Azure: add support for release/* branches
@@ -120,6 +145,7 @@
 
 ### Fixed
 - CsvFileWriter: fix memory corruption
+
 
 ## [10.0.15] - 2020-09-28
 ### Added
