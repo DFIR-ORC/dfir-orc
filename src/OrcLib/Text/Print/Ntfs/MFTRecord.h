@@ -28,6 +28,28 @@ std::optional<Traits::ByteQuantity<uint64_t>> GetDataSize(const DataAttribute& d
 }  // namespace detail
 
 template <typename T>
+void PrintValueFileAttributes(Orc::Text::Tree<T>& root, const std::string& name, ULONG fileAttributes)
+{
+    const auto attributes = fmt::format(
+        "{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        fileAttributes & FILE_ATTRIBUTE_ARCHIVE ? 'A' : '.',
+        fileAttributes & FILE_ATTRIBUTE_COMPRESSED ? 'C' : '.',
+        fileAttributes & FILE_ATTRIBUTE_DIRECTORY ? 'D' : '.',
+        fileAttributes & FILE_ATTRIBUTE_ENCRYPTED ? 'E' : '.',
+        fileAttributes & FILE_ATTRIBUTE_HIDDEN ? 'H' : '.',
+        fileAttributes & FILE_ATTRIBUTE_NORMAL ? 'N' : '.',
+        fileAttributes & FILE_ATTRIBUTE_OFFLINE ? 'O' : '.',
+        fileAttributes & FILE_ATTRIBUTE_READONLY ? 'R' : '.',
+        fileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? 'L' : '.',
+        fileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? 'P' : '.',
+        fileAttributes & FILE_ATTRIBUTE_SYSTEM ? 'S' : '.',
+        fileAttributes & FILE_ATTRIBUTE_TEMPORARY ? 'T' : '.',
+        fileAttributes & FILE_ATTRIBUTE_VIRTUAL ? 'V' : '.');
+
+    PrintValue(root, name, attributes);
+}
+
+template <typename T>
 void Print(Orc::Text::Tree<T>& root, const MFTRecord& record, const std::shared_ptr<VolumeReader>& volume)
 {
     auto recordNode = root.AddNode(
@@ -71,7 +93,8 @@ void Print(Orc::Text::Tree<T>& root, const MFTRecord& record, const std::shared_
     }
 
     auto standardInfoNode = recordNode.AddNode("$STANDARD_INFORMATION");
-    PrintValue(standardInfoNode, "FileAttributes", record.GetStandardInformation()->FileAttributes);
+    detail::PrintValueFileAttributes(
+        standardInfoNode, "FileAttributes", record.GetStandardInformation()->FileAttributes);
     PrintValue(standardInfoNode, "CreationTime", record.GetStandardInformation()->CreationTime);
     PrintValue(standardInfoNode, "LastModificationTime", record.GetStandardInformation()->LastModificationTime);
     PrintValue(standardInfoNode, "LastAccessTime", record.GetStandardInformation()->LastAccessTime);
