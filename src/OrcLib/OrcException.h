@@ -16,6 +16,14 @@
 
 #include "Text/Fmt/optional.h"
 
+//
+// E_BOUNDS is not defined in SDK 7.1A
+// C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include\WinError.h
+//
+#ifndef E_BOUNDS
+#    define E_BOUNDS _HRESULT_TYPEDEF_(0x8000000BL)
+#endif
+
 #pragma managed(push, off)
 
 namespace Orc {
