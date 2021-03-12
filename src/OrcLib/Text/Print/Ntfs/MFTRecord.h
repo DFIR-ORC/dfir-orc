@@ -14,6 +14,7 @@
 #include "Utils/TypeTraits.h"
 #include "Text/Print/Ntfs/AttributeListEntry.h"
 #include "Text/Print/Ntfs/NonResidentAttributeExtent.h"
+#include "Text/Print/FILE_NAME.h"
 
 namespace Orc {
 namespace Text {
@@ -47,6 +48,44 @@ void PrintValueFileAttributes(Orc::Text::Tree<T>& root, const std::string& name,
         fileAttributes & FILE_ATTRIBUTE_VIRTUAL ? 'V' : '.');
 
     PrintValue(root, name, attributes);
+}
+
+template <typename T>
+void PrintFilenames(Orc::Text::Tree<T>& root, const std::string& name, const Orc::MFTRecord& record)
+{
+    const auto& names = record.GetFileNames();
+    if (names.empty())
+    {
+        return;
+    }
+
+    auto node = root.AddNode(name);
+
+    const auto& attributes = record.GetAttributeList();
+    const auto fileNameAttributeHeader = detail::GetAttributeRecordHeader(attributes, $FILE_NAME);
+    for (const auto pName : names)
+    {
+        if (pName == nullptr)
+        {
+            Log::Error("Invalid MFT record: {}", record.GetSafeMFTSegmentNumber());
+            continue;
+        }
+
+        Print(node, *pName);
+        if (fileNameAttributeHeader)
+        {
+            const auto rawName =
+                (PFILE_NAME)((LPBYTE)fileNameAttributeHeader + fileNameAttributeHeader->Form.Resident.ValueOffset);
+            if (pName == rawName)
+            {
+                PrintValue(node, "FileNameID", fileNameAttributeHeader->Instance);
+            }
+        }
+
+        node.AddEOL();
+    }
+
+    root.AddEmptyLine();
 }
 
 template <typename T>
@@ -103,38 +142,7 @@ void Print(Orc::Text::Tree<T>& root, const MFTRecord& record, const std::shared_
     PrintValue(standardInfoNode, "SecurityID", record.GetStandardInformation()->SecurityId);
     standardInfoNode.AddEmptyLine();
 
-    const auto& names = record.GetFileNames();
-    if (!names.empty())
-    {
-        const auto& attributes = record.GetAttributeList();
-
-        auto fileNamesNode = recordNode.AddNode(L"$FILE_NAMES");
-
-        const auto fileNameAttributeHeader = detail::GetAttributeRecordHeader(attributes, $FILE_NAME);
-        for (const auto pName : names)
-        {
-            if (pName == nullptr)
-            {
-                Log::Error("Invalid MFT record: {}", record.GetSafeMFTSegmentNumber());
-                continue;
-            }
-
-            fileNamesNode.AddWithoutEOL("Name: {}", *pName);
-            if (fileNameAttributeHeader)
-            {
-                const auto rawName =
-                    (PFILE_NAME)((LPBYTE)fileNameAttributeHeader + fileNameAttributeHeader->Form.Resident.ValueOffset);
-                if (pName == rawName)
-                {
-                    fileNamesNode.Append(", FileNameID: {}", fileNameAttributeHeader->Instance);
-                }
-            }
-
-            fileNamesNode.AddEOL();
-        }
-
-        recordNode.AddEmptyLine();
-    }
+    detail::PrintFilenames(recordNode, "$FILE_NAMES", record);
 
     const auto dataList = record.GetDataAttributes();
     if (!dataList.empty())
