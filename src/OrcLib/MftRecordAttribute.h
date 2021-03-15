@@ -262,13 +262,9 @@ class ORCLIB_API BitmapAttribute : public MftRecordAttribute
 {
     friend class MFTRecord;
 
-private:
-    boost::dynamic_bitset<size_t> m_bitset;
-
-    BitmapAttribute() = delete;
-    bool operator==(const IndexRootAttribute&) const = delete;
-
 public:
+    using block_type = size_t;
+
     BitmapAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord)
         : MftRecordAttribute(pHeader, pRecord) {
 
@@ -276,11 +272,17 @@ public:
 
     HRESULT LoadBitField(const std::shared_ptr<VolumeReader>& volreader);
 
-    bool operator[](size_t index) { return m_bitset[index]; }
+    bool operator[](block_type index) { return m_bitset[index]; }
 
-    const boost::dynamic_bitset<size_t>& Bits() const { return m_bitset; }
+    const boost::dynamic_bitset<block_type>& Bits() const { return m_bitset; }
 
     virtual ~BitmapAttribute() { CleanCachedData(); }
+
+private:
+    BitmapAttribute() = delete;
+    bool operator==(const IndexRootAttribute&) const = delete;
+
+    boost::dynamic_bitset<block_type> m_bitset;
 };
 
 class ORCLIB_API ReparsePointAttribute : public MftRecordAttribute
