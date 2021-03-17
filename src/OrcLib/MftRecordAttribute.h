@@ -272,7 +272,7 @@ public:
 
     HRESULT LoadBitField(const std::shared_ptr<VolumeReader>& volreader);
 
-    bool operator[](block_type index) { return m_bitset[index]; }
+    bool operator[](block_type index) const { return m_bitset[index]; }
 
     const boost::dynamic_bitset<block_type>& Bits() const { return m_bitset; }
 
