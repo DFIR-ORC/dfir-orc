@@ -411,6 +411,23 @@ void ApplyConsoleSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfigu
     }
 }
 
+void ApplyConsoleSinkBacktraceTrigger(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
+{
+    if (config.console.backtraceTrigger)
+    {
+        logger.consoleSink()->SetBacktraceTrigger(*config.console.backtraceTrigger);
+    }
+    else if (config.backtraceTrigger)
+    {
+        logger.consoleSink()->SetBacktraceTrigger(*config.backtraceTrigger);
+    }
+    else
+    {
+        logger.consoleSink()->SetBacktraceTrigger(Log::Level::Off);
+    }
+}
+
+
 void ApplySyslogSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
     if (config.syslog.level)
@@ -426,19 +443,7 @@ void ApplySyslogSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfigur
 void ApplyConsoleSinkConfiguration(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
     ApplyConsoleSinkLevel(logger, config);
-
-    if (config.console.backtraceTrigger)
-    {
-        logger.consoleSink()->SetBacktraceTrigger(*config.console.backtraceTrigger);
-    }
-    else if (config.backtraceTrigger)
-    {
-        logger.consoleSink()->SetBacktraceTrigger(*config.backtraceTrigger);
-    }
-    else
-    {
-        logger.consoleSink()->SetBacktraceTrigger(Log::Level::Off);
-    }
+    ApplyConsoleSinkBacktraceTrigger(logger, config);
 }
 
 void ApplyFileSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
@@ -464,10 +469,8 @@ void ApplyFileSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfigurat
     }
 }
 
-Orc::Result<void> ApplyFileSinkConfiguration(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
+void ApplyFileSinkBacktraceTrigger(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
-    ApplyFileSinkLevel(logger, config);
-
     if (config.file.backtraceTrigger)
     {
         logger.fileSink()->SetBacktraceTrigger(*config.file.backtraceTrigger);
@@ -480,6 +483,12 @@ Orc::Result<void> ApplyFileSinkConfiguration(UtilitiesLogger& logger, const Util
     {
         logger.fileSink()->SetBacktraceTrigger(Log::Level::Error);
     }
+}
+
+Orc::Result<void> ApplyFileSinkConfiguration(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
+{
+    ApplyFileSinkLevel(logger, config);
+    ApplyFileSinkBacktraceTrigger(logger, config);
 
     std::filesystem::path path;
     FileDisposition disposition = FileDisposition::CreateNew;
@@ -873,6 +882,22 @@ void UtilitiesLoggerConfiguration::ApplyLogLevel(UtilitiesLogger& logger, int ar
     UtilitiesLoggerConfiguration config;
     UtilitiesLoggerConfiguration::Parse(argc, argv, config);
     ApplyLogLevel(logger, config);
+}
+
+
+void UtilitiesLoggerConfiguration::ApplyBacktraceTrigger(
+    UtilitiesLogger& logger,
+    const UtilitiesLoggerConfiguration& config)
+{
+    ApplyConsoleSinkBacktraceTrigger(logger, config);
+    ApplyFileSinkBacktraceTrigger(logger, config);
+}
+
+void UtilitiesLoggerConfiguration::ApplyBacktraceTrigger(UtilitiesLogger& logger, int argc, const wchar_t* argv[])
+{
+    UtilitiesLoggerConfiguration config;
+    UtilitiesLoggerConfiguration::Parse(argc, argv, config);
+    ApplyBacktraceTrigger(logger, config);
 }
 
 void UtilitiesLoggerConfiguration::Apply(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)

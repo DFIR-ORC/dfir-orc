@@ -29,8 +29,12 @@ struct UtilitiesLoggerConfiguration
     static void Parse(const ConfigItem& item, UtilitiesLoggerConfiguration& config);
 
     static void Apply(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config);
+
     static void ApplyLogLevel(UtilitiesLogger& logger, int argc, const wchar_t* argv[]);
     static void ApplyLogLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config);
+
+    static void ApplyBacktraceTrigger(UtilitiesLogger& logger, int argc, const wchar_t* argv[]);
+    static void ApplyBacktraceTrigger(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config);
 
     static std::optional<std::wstring> ToCommandLineArguments(const UtilitiesLoggerConfiguration& config);
 
