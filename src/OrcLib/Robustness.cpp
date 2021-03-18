@@ -163,6 +163,8 @@ void Robustness::seTransFunction(unsigned int u, EXCEPTION_POINTERS* pExp)
             wprintf(L"\nERROR: System exception: 0x%lx\n", u);
             Log::Critical("System exception: {}", SystemError(u));
         }
+
+        assert(0 && "System exception");
     }
 
     throw SystemException(u, pExp);
