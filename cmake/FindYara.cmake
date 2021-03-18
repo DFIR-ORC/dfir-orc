@@ -7,8 +7,6 @@
 #            Jean Gautier
 #
 
-find_package(jansson REQUIRED)
-
 # Unfortunately the directory search order has 'debug' first:
 #
 # CMAKE_PREFIX_PATH=D:/vcpkg_2017/installed/x64-windows-static/debug;D:/vcpkg_2017/installed/x64-windows-static
@@ -38,5 +36,4 @@ add_library(yara::yara INTERFACE IMPORTED)
 target_link_libraries(yara::yara
     INTERFACE
         debug ${YARA_LIB_DEBUG} optimized ${YARA_LIB_RELEASE}
-        jansson::jansson
 )
