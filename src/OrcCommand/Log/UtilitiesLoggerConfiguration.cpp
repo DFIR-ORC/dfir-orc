@@ -436,7 +436,7 @@ void ApplySyslogSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfigur
     }
     else
     {
-        logger.syslogSink()->SetLevel(Log::Level::Off);
+        logger.syslogSink()->SetLevel(Log::Level::Info);
     }
 }
 
