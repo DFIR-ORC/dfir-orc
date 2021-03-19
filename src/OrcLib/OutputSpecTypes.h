@@ -55,19 +55,19 @@ enum class UploadMode : char
 
 enum class Kind
 {
-    None = 0,
-    TableFile = 1 << 0,
-    StructuredFile = 1 << 1,
-    File = 1 << 2,
-    Archive = 1 << 3,
-    Directory = 1 << 4,
-    Pipe = 1 << 5,
-    CSV = 1 << 6,
-    TSV = 1 << 7,
-    Parquet = 1 << 8,
-    XML = 1 << 9,
-    JSON = 1 << 10,
-    ORC = 1 << 11
+    None = 1,
+    TableFile = 1 << 1,
+    StructuredFile = 1 << 2,
+    File = 1 << 3,
+    Archive = 1 << 4,
+    Directory = 1 << 5,
+    Pipe = 1 << 6,
+    CSV = 1 << 7,
+    TSV = 1 << 8,
+    Parquet = 1 << 9,
+    XML = 1 << 10,
+    JSON = 1 << 11,
+    ORC = 1 << 12
 };
 
 enum Disposition
