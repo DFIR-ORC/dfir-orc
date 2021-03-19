@@ -7,9 +7,6 @@
 #            Jean Gautier
 #
 
-find_package(jansson REQUIRED)
-find_package(OpenSSL REQUIRED)
-
 # Unfortunately the directory search order has 'debug' first:
 #
 # CMAKE_PREFIX_PATH=D:/vcpkg_2017/installed/x64-windows-static/debug;D:/vcpkg_2017/installed/x64-windows-static
@@ -35,9 +32,8 @@ find_library(YARA_LIB_RELEASE
 
 add_library(yara::yara INTERFACE IMPORTED)
 
+# Add 'OpenSSL::Crypto' if yara is built with openssl or libressl
 target_link_libraries(yara::yara
     INTERFACE
         debug ${YARA_LIB_DEBUG} optimized ${YARA_LIB_RELEASE}
-        jansson::jansson
-        OpenSSL::Crypto
 )

@@ -27,13 +27,15 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <type_traits>
 
 #include <Windows.h>
+
+#include <Utils/Result.h>
 
 namespace Orc {
 
 // Utilities
-
 class Exception;
 enum class Severity : short;
 
@@ -43,10 +45,20 @@ class CBinaryBuffer;
 namespace Detail {
 template <typename _T, size_t _DeclElts = 1>
 class Buffer;
+template <typename _T>
+class BufferSpan;
 }
 template <typename _T, size_t _DeclElts = 1>
 using Buffer = Detail::Buffer<_T, _DeclElts>;
+
+template <typename _T, size_t _DeclElts = 1>
+using ResultBuffer = Result<Detail::Buffer<_T, _DeclElts>>;
+
+template <typename _T>
+using Span = Detail::BufferSpan<_T>;
+
 using ByteBuffer = Detail::Buffer<BYTE, 16>;
+using ResultByteBuffer = Result<Detail::Buffer<BYTE, 16>>;
 
 class CircularStorage;
 class HeapStorage;

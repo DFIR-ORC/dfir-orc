@@ -7,7 +7,6 @@
 //
 #pragma once
 
-#include "OrcCommand.h"
 #include "Configuration/ConfigItem.h"
 
 #include "FSUtils.h"
@@ -29,7 +28,7 @@ constexpr auto WRITERRORS = 3L;
 
 namespace Orc::Command {
 
-class ORCUTILS_API FileInfoCommon
+class FileInfoCommon
 {
 public:
     // filter related static methods

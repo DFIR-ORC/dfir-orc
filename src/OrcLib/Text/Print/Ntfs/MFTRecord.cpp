@@ -46,6 +46,51 @@ std::optional<Traits::ByteQuantity<uint64_t>> GetDataSize(const DataAttribute& d
     return {};
 }
 
+Orc::Result<std::string_view> AttributeTypeToString(ATTRIBUTE_TYPE_CODE code)
+{
+    switch (code)
+    {
+        case $UNUSED:
+            return std::string("$UNUSED");
+        case $STANDARD_INFORMATION:
+            return "$STANDARD_INFORMATION";
+        case $ATTRIBUTE_LIST:
+            return "$ATTRIBUTE_LIST";
+        case $FILE_NAME:
+            return "$FILE_NAME";
+        case $OBJECT_ID:
+            return "$OBJECT_ID";
+        case $SECURITY_DESCRIPTOR:
+            return "$SECURITY_DESCRIPTOR";
+        case $VOLUME_NAME:
+            return "$VOLUME_NAME";
+        case $VOLUME_INFORMATION:
+            return "$VOLUME_INFORMATION";
+        case $DATA:
+            return "$DATA";
+        case $INDEX_ROOT:
+            return "$INDEX_ROOT";
+        case $INDEX_ALLOCATION:
+            return "$INDEX_ALLOCATION";
+        case $BITMAP:
+            return "$BITMAP";
+        case $REPARSE_POINT:
+            return "$REPARSE_POINT";
+        case $EA_INFORMATION:
+            return "$EA_INFORMATION";
+        case $EA:
+            return "$EA";
+        case $LOGGED_UTILITY_STREAM:
+            return "$LOGGED_UTILITY_STREAM";
+        case $FIRST_USER_DEFINED_ATTRIBUTE:
+            return "$FIRST_USER_DEFINED_ATTRIBUTE";
+        case $END:
+            return "$END";
+        default:
+            return std::make_error_code(std::errc::invalid_argument);
+    }
+}
+
 }  // namespace detail
 }  // namespace Text
 }  // namespace Orc

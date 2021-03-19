@@ -69,6 +69,24 @@ OutputIt Hex(OutputIt out, T value)
 
 }  // namespace Detail
 
+template <typename InputIt, typename OutputIt>
+OutputIt ToHex(InputIt first, InputIt last, OutputIt out)
+{
+    const auto hex = std::string_view("0123456789ABCDEF");
+
+    for (auto it = first; it != last; ++it)
+    {
+        std::string_view input(reinterpret_cast<const char*>(&(*it)), sizeof(typename InputIt::value_type));
+        for (int i = input.size() - 1; i >= 0; --i)
+        {
+            *out++ = hex[(input[i] >> 4) & 0x0F];
+            *out++ = hex[input[i] & 0x0F];
+        }
+    }
+
+    return out;
+}
+
 //
 // Push back into 'out' of type U the hex dump of 'in' with indentation 'indent'
 //

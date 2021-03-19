@@ -32,12 +32,19 @@
 #include "Utils/WinApi.h"
 #include "Text/Fmt/Result.h"
 #include "Text/Print/Bool.h"
-
+#include "Log/Syslog/Syslog.h"
+#include "Log/Syslog/SyslogSink.h"
 #include "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.h"
-using namespace Concurrency;
+
+using namespace Orc::Command;
+using namespace Orc::Log;
 using namespace Orc;
 
+using namespace Concurrency;
+
 namespace {
+
+constexpr std::wstring_view kInfo = L"Info";
 
 struct FileInformations
 {
@@ -168,7 +175,7 @@ Result<std::wstring> GetProcessExecutableSha256(DWORD dwProcessId)
     }
 
     std::error_code ec;
-    const auto path = GetModuleFileNameExApi(hProcess.get(), NULL, ec);
+    const auto path = GetModuleFileNameExApi(hProcess.value(), NULL, ec);
     return Sha256(path);
 }
 
@@ -213,7 +220,11 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
     auto& wolfLauncher = outcome.GetWolfLauncher();
 
     const auto sha256 = GetCurrentExecutableSha256();
-    if (sha256)
+    if (sha256.has_error())
+    {
+        Log::Debug(L"Failed to compute sha256 on current executable [{}]", sha256.error());
+    }
+    else
     {
         wolfLauncher.SetSha256(sha256.value());
     }
@@ -277,7 +288,11 @@ const wchar_t kWolfLauncher[] = L"WolfLauncher";
 
 void Main::Configure(int argc, const wchar_t* argv[])
 {
-    m_logging.consoleSink()->Add(m_consoleRedirection);
+    m_logging.consoleSink()->AddOutput(m_consoleRedirection);
+
+    auto& journal = m_logging.logger().Get(Logger::Facility::kJournal);
+    journal->SetLevel(Log::Level::Info);
+    journal->Add(m_logging.syslogSink());
 
     UtilitiesMain::Configure(argc, argv);
 }
@@ -768,6 +783,15 @@ HRESULT Main::Run_Execute()
     }
     BOOST_SCOPE_EXIT_END;
 
+    const std::wstring metaName(kOrcMetaNameW);
+    const std::wstring_view metaVersion(kOrcMetaVersionW);
+    if (!metaName.empty() && !metaVersion.empty())
+    {
+        m_journal.Print(ToolName(), kInfo, L"{} ({})", metaName, metaVersion);
+    }
+
+    m_journal.Print(ToolName(), kInfo, L"Version: {}", kOrcVersionStringW);
+
     for (const auto& exec : m_wolfexecs)
     {
         if (exec->IsOptional())
@@ -897,6 +921,17 @@ HRESULT Main::Run_Execute()
         {
             Log::Error(L"Job failed to be re-configured to block breakaway [{}]", SystemError(hr));
         }
+    }
+
+    const auto start = FromSystemTime(theStartTime);
+    if (start.has_error())
+    {
+        Log::Debug(L"Failed to convert start time to time point [{}]", start.error());
+        m_journal.Print(ToolName(), kInfo, L"Done");
+    }
+    else
+    {
+        m_journal.Print(ToolName(), kInfo, L"Done (elapsed: {:%T})", std::chrono::system_clock::now() - *start);
     }
 
     if (config.bBeepWhenDone)

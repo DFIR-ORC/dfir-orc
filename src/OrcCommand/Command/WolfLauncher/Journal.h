@@ -31,14 +31,23 @@ public:
     }
 
     template <typename... FmtArgs>
-    void Print(const std::wstring& commandSet, const std::wstring& agent, FmtArgs&&... status) const
+    void Print(const std::wstring_view& commandSet, const std::wstring_view& agent, FmtArgs&&... status) const
     {
-        std::time_t now = std::time(nullptr);
+        std::wstring message;
+        Text::FormatToWithoutEOL(std::back_inserter(message), "{:<16} {:<26} ", commandSet, agent);
+        Text::FormatToWithoutEOL(std::back_inserter(message), std::forward<FmtArgs>(status)...);
 
+        // TODO: instead of using console directly the journal facility could have a custom console sink
         {
             std::lock_guard lock(m_mutex);
-            m_console.Write(L"{:%Y-%m-%dT%H:%M:%SZ}   {:<16} {:<26} ", fmt::gmtime(now), commandSet, agent);
-            m_console.Print(std::forward<FmtArgs>(status)...);
+            std::time_t now = std::time(nullptr);
+            m_console.Print(L"{:%Y-%m-%dT%H:%M:%SZ}   {}", fmt::gmtime(now), message);
+        }
+
+        const auto& journal = Orc::Log::DefaultLogger()->Get(Log::Facility::kJournal);
+        if (journal)
+        {
+            journal->Info(L"{}", message);
         }
     }
 

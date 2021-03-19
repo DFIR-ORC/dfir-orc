@@ -19,8 +19,8 @@
 
 #include <spdlog/logger.h>
 
-#include "Log/Sink/FileSink.h"
-#include "Log/Sink/MemorySink.h"
+#include "Log/FileSink.h"
+#include "Log/MemorySink.h"
 
 using namespace Orc::Log;
 using namespace Orc;

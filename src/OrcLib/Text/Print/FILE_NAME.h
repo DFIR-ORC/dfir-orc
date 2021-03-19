@@ -19,7 +19,7 @@ template <>
 struct Printer<FILE_NAME>
 {
     template <typename T>
-    static void Output(Orc::Text::Tree<T>& node, const FILE_NAME& value)
+    static void Output(Orc::Text::Tree<T>& root, const FILE_NAME& file_name)
     {
         const auto parentFRN = NtfsFullSegmentNumber(&file_name.ParentDirectory);
         const auto& creation = *(reinterpret_cast<const FILETIME*>(&file_name.Info.CreationTime));
@@ -27,12 +27,18 @@ struct Printer<FILE_NAME>
         const auto& lastAccess = *(reinterpret_cast<const FILETIME*>(&file_name.Info.LastAccessTime));
         const auto& lastChange = *(reinterpret_cast<const FILETIME*>(&file_name.Info.LastChangeTime));
 
-        auto node = root.AddNode(file_name);
-        node.Add("Parent directory FRN: {:#016x}", parentFRN);
-        node.Add("CreationTime: {}", creation);
-        node.Add("LastModificationTime: {}", lastModification);
-        node.Add("LastAccessTime: {}", lastAccess);
-        node.Add("LastChangeTime: {}", lastChange);
+        constexpr std::array fileFlags = {
+            "FILE_NAME_POSIX", "FILE_NAME_WIN32", "FILE_NAME_DOS83", "FILE_NAME_WIN32|FILE_NAME_DOS83"};
+
+        const auto flags = file_name.Flags < fileFlags.size() ? fileFlags[file_name.Flags] : "N/A";
+
+        PrintValue(root, L"Name", std::wstring_view(file_name.FileName, file_name.FileNameLength));
+        PrintValue(root, "Parent FRN", fmt::format("{:#016x}", parentFRN));
+        PrintValue(root, "Creation", creation);
+        PrintValue(root, "Last modification", lastModification);
+        PrintValue(root, "Last access", lastAccess);
+        PrintValue(root, "Last change", lastChange);
+        PrintValue(root, "Flags", flags);
     }
 };
 

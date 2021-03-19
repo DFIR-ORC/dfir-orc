@@ -425,7 +425,7 @@ HRESULT Orc::AnsiToWide(__in const std::string& src, std::wstring& dest)
         return hr;
     }
 
-    if (buffer.size() > 1)
+    if (buffer.size() > 0)
     {
         if (buffer[buffer.size() - 1] == 0)
             dest.assign(buffer.data(), buffer.size() - 1);  // we need to remove the trailing \0
@@ -469,7 +469,7 @@ HRESULT Orc::AnsiToWide(__in const std::string_view& src, std::wstring& dest)
         return hr;
     }
 
-    if (buffer.size() > 1)
+    if (buffer.size() > 0)
     {
         if (buffer[buffer.size() - 1] == 0)
             dest.assign(buffer.data(), buffer.size() - 1);  // we need to remove the trailing \0

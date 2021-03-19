@@ -49,6 +49,7 @@ UtilitiesMain::UtilitiesMain()
 void UtilitiesMain::Configure(int argc, const wchar_t* argv[])
 {
     UtilitiesLoggerConfiguration::ApplyLogLevel(m_logging, argc, argv);
+    UtilitiesLoggerConfiguration::ApplyBacktraceTrigger(m_logging, argc, argv);
 
     // FIX: Some arguments must be processed very early as others depends
     // on their value. This is not a clean fix but a more global refactor is
@@ -820,7 +821,7 @@ void UtilitiesMain::PrintHeader(LPCWSTR szToolName, LPCWSTR szToolDescription, L
         const std::wstring metaVersion(kOrcMetaVersionW);
         if (!metaName.empty() && !metaVersion.empty())
         {
-            m_console.Write("({} {})", metaName, metaVersion);
+            m_console.Write(" ({} {})", metaName, metaVersion);
         }
 
         m_console.PrintNewLine();

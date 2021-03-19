@@ -81,8 +81,9 @@ public:
     static HRESULT
     Get_ISequentialStream(const std::shared_ptr<ByteStream>& aStream, ::ISequentialStream** pSequentialStream);
 };
-}  // namespace Orc
 
 constexpr auto DEFAULT_READ_SIZE = (0x0200000);
+
+}  // namespace Orc
 
 #pragma managed(pop)

@@ -29,11 +29,14 @@ struct UtilitiesLoggerConfiguration
     static void Parse(const ConfigItem& item, UtilitiesLoggerConfiguration& config);
 
     static void Apply(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config);
+
     static void ApplyLogLevel(UtilitiesLogger& logger, int argc, const wchar_t* argv[]);
     static void ApplyLogLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config);
 
-    static std::optional<std::wstring>
-    UtilitiesLoggerConfiguration::ToCommandLineArguments(const UtilitiesLoggerConfiguration& config);
+    static void ApplyBacktraceTrigger(UtilitiesLogger& logger, int argc, const wchar_t* argv[]);
+    static void ApplyBacktraceTrigger(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config);
+
+    static std::optional<std::wstring> ToCommandLineArguments(const UtilitiesLoggerConfiguration& config);
 
     struct Output
     {
@@ -50,6 +53,12 @@ struct UtilitiesLoggerConfiguration
         std::optional<FileDisposition> disposition;
     };
 
+    struct SyslogOutput : Output
+    {
+        std::optional<std::wstring> host;
+        std::optional<std::wstring> port;
+    };
+
     // Global flags value like '/debug' switch
     std::optional<Orc::Log::Level> level;
     std::optional<Orc::Log::Level> backtraceTrigger;
@@ -59,6 +68,7 @@ struct UtilitiesLoggerConfiguration
     // For specific flag values like /log:file,level=debug
     Output console;
     FileOutput file;
+    SyslogOutput syslog;
 };
 
 }  // namespace Command

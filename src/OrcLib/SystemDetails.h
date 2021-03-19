@@ -10,6 +10,7 @@
 #include "OrcLib.h"
 
 #include "Utils/Result.h"
+#include "Utils/TypeTraits.h"
 #include "OutputWriter.h"
 
 #include <optional>

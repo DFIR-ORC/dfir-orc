@@ -126,15 +126,19 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
     else  // try to get file size with GetFileSize
     {
         ioctlLastError = GetLastError();
+        Log::Warn(
+            L"CDiskExtent: Unable to determine disk size of '{}' with IOCTL_DISK_GET_LENGTH_INFO [{}]",
+            m_Name,
+            Win32Error(ioctlLastError));
+
         liLength.LowPart = GetFileSize(m_hFile, &liLength.HighPart);
         m_Length = liLength.QuadPart;
         if (liLength.LowPart == INVALID_FILE_SIZE && ((lastError = GetLastError()) != NO_ERROR))
         {
-            Log::Warn(L"CDiskExtent: Unable to determine disk size with GetFileSize [{}]", Win32Error(lastError));
-
             Log::Warn(
-                L"CDiskExtent: Unable to determine disk size with IOCTL_DISK_GET_LENGTH_INFO [{}]",
-                Win32Error(ioctlLastError));
+                L"CDiskExtent: Unable to determine disk size of '{}' with GetFileSize [{}]",
+                m_Name,
+                Win32Error(lastError));
             m_Length = 0;
         }
     }
@@ -152,8 +156,12 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
     else
     {
         ioctlLastError = GetLastError();
-        // Log::Warn(E_FAIL, (L"[CDiskExtent] Unable to determine sector size (IOCTL_DISK_GET_DRIVE_GEOMETRY
-        // error=0x%lx), fallback to a size of 512.", ioctlLastError));
+
+        Log::Trace(
+            L"[CDiskExtent] Unable to get sector size of '{}' with IOCTL_DISK_GET_DRIVE_GEOMETRY, force 512 bytes [{}]",
+            m_Name,
+            SystemError(ioctlLastError));
+
         m_LogicalSectorSize = 512;
     }
 

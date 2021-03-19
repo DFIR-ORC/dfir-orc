@@ -16,6 +16,14 @@
 
 #include "Text/Fmt/optional.h"
 
+//
+// E_BOUNDS is not defined in SDK 7.1A
+// C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include\WinError.h
+//
+#ifndef E_BOUNDS
+#    define E_BOUNDS _HRESULT_TYPEDEF_(0x8000000BL)
+#endif
+
 #pragma managed(push, off)
 
 namespace Orc {
@@ -33,7 +41,7 @@ class Exception : public std::exception
 public:
     template <typename... Args>
     Exception(Severity status, _In_ HRESULT hr, std::wstring_view fmt, Args&&... args)
-        : Severity(status)
+        : m_severity(status)
         , m_HRESULT(hr)
     {
         Description = fmt::format(fmt, std::forward<Args>(args)...);
@@ -41,19 +49,19 @@ public:
 
     template <typename... Args>
     Exception(Severity status, std::wstring_view fmt, Args&&... args)
-        : Severity(status)
+        : m_severity(status)
     {
         Description = fmt::format(fmt, std::forward<Args>(args)...);
     }
 
     Exception() = default;
     Exception(Severity status)
-        : Severity(status)
+        : m_severity(status)
     {
     }
     Exception(std::wstring descr);
     Exception(Severity status, _In_ HRESULT hr)
-        : Severity(status)
+        : m_severity(status)
         , m_HRESULT(hr)
     {
     }
@@ -70,9 +78,9 @@ public:
         return Status;
     }
 
-    bool IsCritical() const { return Severity == Severity::Fatal; }
+    bool IsCritical() const { return m_severity == Severity::Fatal; }
 
-    Severity Severity = Severity::Unset;
+    Severity m_severity = Severity::Unset;
     std::wstring Description;
     HRESULT m_HRESULT = E_FAIL;
 

@@ -95,4 +95,22 @@ Result<std::wstring> ToStringIso8601(const std::chrono::system_clock::time_point
     return ToStringIso8601(time.value());
 }
 
+std::string ToAnsiStringIso8601(const Traits::TimeUtc<SYSTEMTIME>& time)
+{
+    const auto& st = time.value;
+    return fmt::format(
+        "{}-{:02}-{:02}T{:02}:{:02}:{:02}Z", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
+}
+
+Result<std::string> ToAnsiStringIso8601(const std::chrono::system_clock::time_point& tp)
+{
+    const auto time = ToSystemTime(tp);
+    if (time.has_error())
+    {
+        return time.error();
+    }
+
+    return ToAnsiStringIso8601(time.value());
+}
+
 }  // namespace Orc

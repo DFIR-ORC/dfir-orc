@@ -45,7 +45,7 @@ struct Printer<AttributeListEntry>
         }
         else
         {
-            root.Append("\n");
+            root.AddEOL();
         }
     }
 };

@@ -76,7 +76,7 @@ public:
 
                 if (auto hr = pLib->Load(tempDir); FAILED(hr))
                 {
-                    Log::Error(L"Library {} is not be loaded", Name<Library>());
+                    Log::Error(L"Library {} is not loaded", Name<Library>());
                     return nullptr;
                 }
             }
@@ -108,9 +108,9 @@ public:
     Load(std::optional<std::filesystem::path> tempDir = std::nullopt);
     const std::filesystem::path& LibraryFile() const { return m_libFile; }
 
-    STDMETHOD(UnLoad());
-    STDMETHOD(Cleanup());
-    STDMETHOD(UnloadAndCleanup());
+    virtual HRESULT UnLoad();
+    virtual HRESULT Cleanup();
+    virtual HRESULT UnloadAndCleanup();
 
     bool IsLoaded() const { return m_hModule != NULL ? true : false; }
     bool IsInitialized() const { return m_bInitialized; }
@@ -138,7 +138,7 @@ protected:
         func = GetExtension<FuncType>(szFuncName, false);
     };
 
-    STDMETHOD(Initialize)()
+    HRESULT Initialize()
     {
         // by default, we have nothing to initialize
         return S_OK;

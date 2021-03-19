@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Text/Tree.h"
+#include "Utils/TypeTraits.h"
 
 #include "FSUtils.h"
 
@@ -26,12 +27,21 @@ void PrintParameters(Orc::Text::Tree<T>& root)
 template <typename T, typename ParameterList0, typename... ParameterLists>
 void PrintParameters(Orc::Text::Tree<T>& root, ParameterList0&& parameterList0, ParameterLists&&... parameterLists)
 {
+    using CharT = Traits::underlying_char_type_t<T>;
+
     for (const auto& [parameterSwitch, description] : parameterList0)
     {
-        auto node = root.AddNode(parameterSwitch);
         if (!description.empty())
         {
-            node.Add(description);
+            auto node = root.AddNode(parameterSwitch);
+
+            // TODO: look for a replacement with string_view
+            std::vector<std::basic_string<CharT>> lines;
+            boost::split(lines, description, [](CharT c) { return c == Traits::newline<CharT>::value; });
+            for (const auto& line : lines)
+            {
+                node.Add(line);
+            }
         }
 
         root.AddEOL();
@@ -100,7 +110,11 @@ auto PrintOutputParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&... c
 
 constexpr std::array kUsageLogging = {
     Parameter("/Verbose", "Display logs on console at debug level"),
-    Parameter("/LogFile=<filename>", "Specify log file"),
+    Parameter(
+        "/Log:{type},{option1,option2=value,...}",
+        "Specify log output type ('file', 'console' or 'syslog') and related options (output, level, backtrace).\n"
+        "Example: /Log:file,output=foo.log,level=info,backtrace=error"),
+    Parameter("/LogFile=<filename>", "[DEPRECATED] Specify log file"),
     Parameter("/Trace", "Set trace log level"),
     Parameter("/Debug", "Set debug log level"),
     Parameter("/Info", "Set info log level"),

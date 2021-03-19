@@ -919,7 +919,7 @@ HRESULT Main::CloseArchiveOutput()
     m_compressor->Flush(ec);
     if (ec)
     {
-        Log::Error(L"Failed to compress '{}' [{}]", config.Output.Path, ec.value());
+        Log::Error(L"Failed to compress '{}' [{}]", config.Output.Path, ec);
     }
 
     ::CompressTable(m_compressor, m_tableWriter);
@@ -1117,9 +1117,20 @@ void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool
         SampleNames.insert(sample->SampleName);
         m_sampleIds.insert(SampleId(*sample));
 
-        hr = WriteSample(*m_compressor, std::move(sample), [this, &sampleSpec](const SampleRef& sample, HRESULT hr) {
-            OnSampleWritten(sample, sampleSpec, hr);
-        });
+        if (config.Output.Type == OutputSpec::Kind::Archive)
+        {
+            hr =
+                WriteSample(*m_compressor, std::move(sample), [this, &sampleSpec](const SampleRef& sample, HRESULT hr) {
+                    OnSampleWritten(sample, sampleSpec, hr);
+                });
+        }
+        else if (config.Output.Type == OutputSpec::Kind::Directory)
+        {
+            hr = WriteSample(
+                config.Output.Path, std::move(sample), [this, &sampleSpec](const SampleRef& sample, HRESULT hr) {
+                    OnSampleWritten(sample, sampleSpec, hr);
+                });
+        }
 
         if (FAILED(hr))
         {

@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "Utils/Result.h"
+
 #include <string_view>
 #include <string>
 
@@ -24,6 +26,6 @@ enum class Encoding
 }  // namespace Text
 
 std::wstring_view ToString(Text::Encoding encoding);
-Text::Encoding ToEncoding(const std::wstring& encoding, std::error_code& ec = std::error_code());
+Result<Text::Encoding> ToEncoding(const std::wstring& encoding);
 
 }  // namespace Orc

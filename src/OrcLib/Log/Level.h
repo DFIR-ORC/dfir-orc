@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "Utils/Result.h"
+
 #include <spdlog/common.h>
 
 namespace Orc {
@@ -33,7 +35,7 @@ enum class Level
 };
 
 std::wstring_view ToString(Log::Level level);
-Log::Level ToLevel(const std::wstring& level, std::error_code& ec = std::error_code());
+Orc::Result<Log::Level> ToLevel(const std::wstring& level);
 
 }  // namespace Log
 }  // namespace Orc

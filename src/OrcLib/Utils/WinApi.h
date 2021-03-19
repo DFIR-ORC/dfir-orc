@@ -56,6 +56,31 @@ std::wstring GetModuleFileNameExApi(HANDLE hProcess, HMODULE hModule, size_t cbM
 // GetModuleFileNameEx wrapper with default maximum buffer size of 32767 characters
 std::wstring GetModuleFileNameExApi(HANDLE hProcess, HMODULE hModule, std::error_code& ec) noexcept;
 
+// GetComputerNameW wrapper with custom maximum buffer size
+std::wstring GetComputerNameApi(size_t cbMaxOutput, std::error_code& ec) noexcept;
+
+// GetComputerNameW wrapper with default maximum buffer size of 256
+std::wstring GetComputerNameApi(std::error_code& ec) noexcept;
+
+enum class ComputerNameFormat
+{
+    ComputerNameNetBIOS,
+    ComputerNameDnsHostname,
+    ComputerNameDnsDomain,
+    ComputerNameDnsFullyQualified,
+    ComputerNamePhysicalNetBIOS,
+    ComputerNamePhysicalDnsHostname,
+    ComputerNamePhysicalDnsDomain,
+    ComputerNamePhysicalDnsFullyQualified,
+    ComputerNameMax
+};
+
+// GetComputerNameExW wrapper with custom maximum buffer size
+std::wstring GetComputerNameExApi(ComputerNameFormat format, size_t cbMaxOutput, std::error_code& ec) noexcept;
+
+// GetComputerNameExW wrapper with default maximum buffer size of 256
+std::wstring GetComputerNameExApi(ComputerNameFormat format, std::error_code& ec) noexcept;
+
 }  // namespace Orc
 
 #pragma managed(pop)

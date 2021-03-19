@@ -630,17 +630,28 @@ set(SRC_INOUT_UPLOAD
 source_group(In&Out\\Upload FILES ${SRC_INOUT_UPLOAD})
 
 set(SRC_LOG
-    "Log/Sink/FileSink.h"
-    "Log/Sink/MemorySink.h"
+    "Log/FileSink.h"
     "Log/Level.h"
     "Log/Level.cpp"
     "Log/Log.cpp"
     "Log/Log.h"
     "Log/Logger.cpp"
     "Log/Logger.h"
+    "Log/MemorySink.h"
     "Log/SpdlogLogger.h"
     "Log/SpdlogLogger.cpp"
     "Log/SpdlogSink.h"
+    "Log/Syslog/Syslog.h"
+    "Log/Syslog/Syslog.cpp"
+    "Log/Syslog/SyslogMessage.h"
+    "Log/Syslog/SyslogMessage.cpp"
+    "Log/Syslog/SyslogLevel.h"
+    "Log/Syslog/SyslogLevel.cpp"
+    "Log/Syslog/SyslogFacility.h"
+    "Log/Syslog/SyslogSink.h"
+    "Log/Syslog/SyslogSink.cpp"
+    "Log/Syslog/UdpSocket.h"
+    "Log/Syslog/UdpSocket.cpp"
 )
 
 source_group(Log FILES ${SRC_LOG})
@@ -699,6 +710,8 @@ set(SRC_UTILITIES
     "Flags.h"
     "Utils/EnumFlags.h"
     "Utils/Guard.h"
+    "Utils/Guard/Winsock.h"
+    "Utils/Guard/Winsock.cpp"
     "Utils/MakeArray.h"
     "Utils/Result.h"
     "Utils/Time.cpp"

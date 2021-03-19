@@ -30,4 +30,7 @@ time_t ToTime(const FILETIME& ft);
 std::wstring ToStringIso8601(const Traits::TimeUtc<SYSTEMTIME>& time);
 Result<std::wstring> ToStringIso8601(const std::chrono::system_clock::time_point& tp);
 
+std::string ToAnsiStringIso8601(const Traits::TimeUtc<SYSTEMTIME>& time);
+Result<std::string> ToAnsiStringIso8601(const std::chrono::system_clock::time_point& tp);
+
 }  // namespace Orc

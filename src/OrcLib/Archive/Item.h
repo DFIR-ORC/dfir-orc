@@ -27,7 +27,7 @@ public:
 
     const std::wstring& NameInArchive() const;
     std::shared_ptr<ByteStream>& Stream();
-    size_t Size() const;
+    uint64_t Size() const;
     const CompressedCallback& CompressedCb() const;
 
 private:

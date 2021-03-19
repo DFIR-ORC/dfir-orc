@@ -19,6 +19,11 @@ std::wstring ToString(PartitionFlags flags)
 {
     std::vector<std::wstring> activeFlags;
 
+    if (flags == PartitionFlags::None)
+    {
+        activeFlags.push_back(L"NONE");
+    }
+
     if (HasFlag(flags, PartitionFlags::Bootable))
     {
         activeFlags.push_back(L"BOOTABLE");
@@ -37,11 +42,6 @@ std::wstring ToString(PartitionFlags flags)
     if (HasFlag(flags, PartitionFlags::NoAutoMount))
     {
         activeFlags.push_back(L"NO_AUTO_MOUNT");
-    }
-
-    if (HasFlag(flags, PartitionFlags::None))
-    {
-        activeFlags.push_back(L"NONE");
     }
 
     if (HasFlag(flags, PartitionFlags::ReadOnly))
