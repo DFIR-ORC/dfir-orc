@@ -70,6 +70,11 @@ std::vector<std::wstring> ExpandOrcStringsLocation(const std::wstring& rawLocati
     using HandlerResult = Orc::Result<std::vector<std::wstring>>;
     using Handler = std::function<HandlerResult()>;
 
+    if (rawLocation.empty())
+    {
+        return {};
+    }
+
     // TODO: eventually cache the results, a better choice may be to Expand once
     const std::unordered_map<std::wstring, Handler> convertors = {{L"{UserProfiles}", GetUserProfiles}};
 
