@@ -11,9 +11,13 @@
 #include <string>
 #include <system_error>
 
-#include "Utils/Guard/Winsock.h"
-
 namespace Orc {
+
+namespace Guard {
+class Winsock;
+class Socket;
+}  // namespace Guard
+
 namespace Log {
 
 class UdpSocket final
@@ -27,8 +31,8 @@ private:
     void Connect(const std::string& host, const std::string& port, std::error_code& ec);
 
 private:
-    std::unique_ptr<Orc::Guard::Winsock> m_winsock;
-    Guard::Socket m_socket;
+    std::unique_ptr<Guard::Winsock> m_winsock;
+    std::unique_ptr<Guard::Socket> m_socket;
 };
 
 }  // namespace Log

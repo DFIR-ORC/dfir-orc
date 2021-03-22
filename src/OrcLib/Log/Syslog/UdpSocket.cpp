@@ -9,12 +9,13 @@
 #include "UdpSocket.h"
 
 #include "Log/Log.h"
+#include "Utils/Guard/Winsock.h"
 
 namespace Orc {
 namespace Log {
 
 UdpSocket::UdpSocket(const std::string& host, const std::string& port, std::error_code& ec)
-    : m_socket(INVALID_SOCKET)
+    : m_socket(std::make_unique<Orc::Guard::Socket>(INVALID_SOCKET))
 {
     m_winsock = Guard::Winsock::Create(2, 2, ec);
     if (ec)
@@ -33,7 +34,7 @@ UdpSocket::UdpSocket(const std::string& host, const std::string& port, std::erro
 
 void UdpSocket::Send(std::string_view buffer, std::error_code& ec)
 {
-    auto ret = ::send(m_socket.value(), buffer.data(), buffer.size(), 0);
+    auto ret = ::send(m_socket->value(), buffer.data(), buffer.size(), 0);
     if (ret == SOCKET_ERROR)
     {
         ec = LastWin32Error();
@@ -61,14 +62,14 @@ void UdpSocket::Connect(const std::string& host, const std::string& port, std::e
     ADDRINFO* AI;
     for (AI = addrInfo.get(); AI != NULL; AI = AI->ai_next)
     {
-        Guard::Socket socket = ::socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol);
-        if (socket == INVALID_SOCKET)
+        auto socket = std::make_unique<Guard::Socket>(::socket(AI->ai_family, AI->ai_socktype, AI->ai_protocol));
+        if (socket->value() == INVALID_SOCKET)
         {
             Log::Error(L"Failed to create socket [{}]", LastWin32Error());
             continue;
         }
 
-        ret = connect(*socket, AI->ai_addr, (int)AI->ai_addrlen);
+        ret = connect(**socket, AI->ai_addr, (int)AI->ai_addrlen);
         if (ret == SOCKET_ERROR)
         {
             Log::Error(L"Failed to connect socket [{}]", LastWin32Error());
