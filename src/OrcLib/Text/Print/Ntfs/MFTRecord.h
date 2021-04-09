@@ -522,7 +522,13 @@ void PrintDataAttribute(Orc::Text::Tree<T>& root, const MFTRecord& record, const
 
         auto entryNode = node.AddNode("Entry #{}", i);
         PrintValue(entryNode, "Name", std::wstring_view(data->NamePtr(), data->NameLength()));
-        PrintValue(entryNode, "Size", detail::GetDataSize(*data));
+
+        const auto dataSize = detail::GetDataSize(*data);
+        if (dataSize.has_value())
+        {
+            const auto size = fmt::format("{} ({} bytes)", *dataSize, (*dataSize).value);
+            PrintValue(entryNode, "Size", size);
+        }
 
         entryNode.Add("Resident: {}", data->IsResident());
         if (!data->IsResident())
@@ -586,7 +592,7 @@ void Print(Orc::Text::Tree<T>& root, const MFTRecord& record, const std::shared_
 
         for (const auto& [childFRN, childRecord] : childrens)
         {
-            PrintValue(childrensNode, "FRN", childFRN);
+            PrintValue(childrensNode, "FRN", Traits::Offset(childFRN));
         }
 
         childrensNode.AddEmptyLine();
