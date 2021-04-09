@@ -536,7 +536,7 @@ void PrintDataAttribute(Orc::Text::Tree<T>& root, const MFTRecord& record, const
 
             for (size_t j = 0; j < info->ExtentsVector.size(); ++j)
             {
-                const auto& extent = info->ExtentsVector[i];
+                const auto& extent = info->ExtentsVector[j];
                 Print(extentsNode, extent);
             }
         }
