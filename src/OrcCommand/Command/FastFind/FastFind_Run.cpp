@@ -155,7 +155,10 @@ HRESULT Main::RunRegistry()
         Log::Error(L"Failed to parse location while searching for registry hives");
     }
 
-    pStructuredOutput->BeginCollection(L"registry");
+    if (pStructuredOutput)
+    {
+        pStructuredOutput->BeginCollection(L"registry");
+    }
 
     for (const auto& aFileMatch : config.Registry.Files.Matches())
     {
