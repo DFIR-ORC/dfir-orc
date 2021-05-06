@@ -139,6 +139,7 @@ public:
         if (this != &o)
         {
             m_data = std::move(o.m_data);
+            m_invalidValue = o.m_invalidValue;
             o.m_data = m_invalidValue;
         }
 
@@ -162,7 +163,7 @@ public:
     bool operator==(const DescriptorGuard<T>& o) const { return m_data == o.m_data; }
 
 protected:
-    const T m_invalidValue;
+    T m_invalidValue;
     T m_data;
 };
 
