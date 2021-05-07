@@ -213,5 +213,34 @@ public:
     }
 };
 
+class Module final : public DescriptorGuard<HMODULE>
+{
+public:
+    Module(HMODULE module = NULL)
+        : DescriptorGuard(module, NULL)
+    {
+    }
+
+    Module(Module&& o) noexcept
+        : DescriptorGuard<HMODULE>(std::move(o))
+    {
+    }
+
+    Module& operator=(Module&& o) = default;
+
+    ~Module()
+    {
+        if (m_data == m_invalidValue)
+        {
+            return;
+        }
+
+        if (::FreeLibrary(m_data) == FALSE)
+        {
+            Log::Warn("Failed FreeLibrary [{}]", LastWin32Error());
+        }
+    }
+};
+
 }  // namespace Guard
 }  // namespace Orc
