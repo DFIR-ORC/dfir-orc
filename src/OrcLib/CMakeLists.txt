@@ -547,7 +547,6 @@ source_group(Text FILES ${SRC_TEXT})
 set(SRC_TEXT_FMT
     "Text/Fmt/ByteQuantity.h"
     "Text/Fmt/CryptoHashStreamAlgorithm.h"
-    "Text/Fmt/error_code.h"
     "Text/Fmt/FILE_NAME.h"
     "Text/Fmt/FILETIME.h"
     "Text/Fmt/Formatter.h"
@@ -556,14 +555,15 @@ set(SRC_TEXT_FMT
     "Text/Fmt/GUID.h"
     "Text/Fmt/Limit.h"
     "Text/Fmt/LocationType.h"
-    "Text/Fmt/optional.h"
     "Text/Fmt/Offset.h"
     "Text/Fmt/OutputSpecTypes.h"
     "Text/Fmt/Partition.h"
     "Text/Fmt/PartitionFlags.h"
     "Text/Fmt/PartitionType.h"
-    "Text/Fmt/path.h"
     "Text/Fmt/Result.h"
+    "Text/Fmt/std_error_code.h"
+    "Text/Fmt/std_filesystem.h"
+    "Text/Fmt/std_optional.h"
     "Text/Fmt/SYSTEMTIME.h"
     "Text/Fmt/TimeUtc.h"
 )
@@ -573,7 +573,6 @@ source_group(Text\\Fmt FILES ${SRC_TEXT_FMT})
 set(SRC_TEXT_FMT_FWD
     "Text/Fmt/Fwd/ByteQuantity.h"
     "Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
-    "Text/Fmt/Fwd/error_code.h"
     "Text/Fmt/Fwd/FILE_NAME.h"
     "Text/Fmt/Fwd/FILETIME.h"
     "Text/Fmt/Fwd/FSVBR.h"
@@ -586,6 +585,7 @@ set(SRC_TEXT_FMT_FWD
     "Text/Fmt/Fwd/PartitionFlags.h"
     "Text/Fmt/Fwd/PartitionType.h"
     "Text/Fmt/Fwd/SYSTEMTIME.h"
+    "Text/Fmt/Fwd/std_error_code.h"
     "Text/Fmt/Fwd/Result.h"
     "Text/Fmt/Fwd/TimeUtc.h")
 

@@ -8,6 +8,6 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/error_code.h"
+#include "Text/Fmt/Fwd/std_error_code.h"
 
 #include "Text/Iconv.h"
