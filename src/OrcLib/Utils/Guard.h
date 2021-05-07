@@ -175,6 +175,13 @@ public:
     {
     }
 
+    FileHandle(FileHandle&& handle) noexcept
+        : DescriptorGuard<HANDLE>(std::move(handle))
+    {
+    }
+
+    FileHandle& operator=(FileHandle&& o) = default;
+
     ~FileHandle()
     {
         if (m_data == m_invalidValue)
@@ -184,7 +191,7 @@ public:
 
         if (CloseHandle(m_data) == FALSE)
         {
-            Log::Warn("Failed on CloseHandle [{}]", LastWin32Error());
+            Log::Warn("Failed CloseHandle [{}]", LastWin32Error());
             return;
         }
     }
@@ -198,6 +205,13 @@ public:
     {
     }
 
+    Handle(Handle&& o) noexcept
+        : DescriptorGuard<HANDLE>(std::move(o))
+    {
+    }
+
+    Handle& operator=(Handle&& o) = default;
+
     ~Handle()
     {
         if (m_data == m_invalidValue)
@@ -205,7 +219,7 @@ public:
             return;
         }
 
-        if (CloseHandle(m_data) == FALSE)
+        if (::CloseHandle(m_data) == FALSE)
         {
             Log::Warn("Failed on CloseHandle [{}]", LastWin32Error());
             return;
