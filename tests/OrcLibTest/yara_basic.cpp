@@ -159,7 +159,12 @@ private:
     }
 
     static void compiler_callback(
-        int error_level, const char* file_name, int line_number, const char* message, void* user_data)
+        int error_level,
+        const char* file_name,
+        int line_number,
+        const YR_RULE* rule,
+        const char* message,
+        void* user_data)
     {
         auto pThis = (YaraBasicTest*)user_data;
         pThis->compiler_message(error_level, file_name, line_number, message);
@@ -189,7 +194,7 @@ private:
         }
         return CALLBACK_CONTINUE;
     }
-    static int scan_callback(int message, void* message_data, void* user_data)
+    static int scan_callback(YR_SCAN_CONTEXT* context, int message, void* message_data, void* user_data)
     {
         auto pThis = (YaraBasicTest*)user_data;
         return pThis->scan_message(message, message_data);
