@@ -142,8 +142,9 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                                 }
                                 else
                                 {
-                                    Log::Error(L"Invalid config file specified: '{}'", pEquals + 1);
-                                    return E_FAIL;
+                                    Log::Error(
+                                        L"Invalid config file specified: '{}' [{}]", pEquals + 1, SystemError(hr));
+                                    return hr;
                                 }
                             }
                         }
