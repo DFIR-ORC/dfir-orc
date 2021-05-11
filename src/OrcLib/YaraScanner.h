@@ -190,15 +190,20 @@ private:
     using ScanData = std::pair<YaraScanner*, std::vector<std::string>*>;
 
     void compiler_message(int error_level, const char* file_name, int line_number, const char* message);
-    static inline void
-    compiler_callback(int error_level, const char* file_name, int line_number, const char* message, void* user_data)
+    static inline void compiler_callback(
+        int error_level,
+        const char* file_name,
+        int line_number,
+        const YR_RULE* rule,
+        const char* message,
+        void* user_data)
     {
         auto pThis = (YaraScanner*)user_data;
         pThis->compiler_message(error_level, file_name, line_number, message);
     }
 
     int scan_message(int message, void* message_data, std::vector<std::string>& matchingRules);
-    static inline int scan_callback(int message, void* message_data, void* user_data);
+    static inline int scan_callback(YR_SCAN_CONTEXT* context, int message, void* message_data, void* user_data);
 
     static inline size_t read(void* ptr, size_t size, size_t count, void* user_data);
     static inline size_t write(const void* ptr, size_t size, size_t count, void* user_data);

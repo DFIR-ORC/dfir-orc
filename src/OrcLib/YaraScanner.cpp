@@ -768,7 +768,7 @@ int Orc::YaraScanner::scan_message(int message, void* message_data, MatchingRule
     return CALLBACK_CONTINUE;
 }
 
-int Orc::YaraScanner::scan_callback(int message, void* message_data, void* user_data)
+int Orc::YaraScanner::scan_callback(YR_SCAN_CONTEXT* context, int message, void* message_data, void* user_data)
 {
     auto scan_data = (ScanData*)user_data;
     if (scan_data)
