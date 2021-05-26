@@ -361,8 +361,13 @@ void Print(Orc::Text::Tree<T>& root, const std::string& name, const BitmapAttrib
 template <typename T>
 void PrintStandardInformation(Orc::Text::Tree<T>& root, const Orc::MFTRecord& record)
 {
-    auto node = root.AddNode("$STANDARD_INFORMATION");
+    auto standardInformation = record.GetStandardInformation();
+    if (standardInformation == nullptr)
+    {
+        return;
+    }
 
+    auto node = root.AddNode("$STANDARD_INFORMATION");
     detail::PrintValueFileAttributes(node, "FileAttributes", record.GetStandardInformation()->FileAttributes);
 
     PrintValue(node, "CreationTime", record.GetStandardInformation()->CreationTime);
