@@ -1,5 +1,13 @@
 # ChangeLog
 
+## [10.0.19] - 2021-01-06
+### Changed
+- yara: update to 4.0.2
+- GetSamples: enable autorunsc for all users
+
+### Fixed
+- fastfind: fix nullptr dereference when '/out' is not specified
+
 ## [10.0.18] - 2021-10-03
 ### Changed
 - yara: remove libressl dependency and rely on wincrypt api
