@@ -101,8 +101,11 @@ HRESULT Orc::FileFind::Match::AddAttributeMatch(
         }
     }
 
-    if (FAILED(pAttribute->GetStreams(pLog, pVolReader)))
+    hr = pAttribute->GetStreams(pLog, pVolReader);
+    if (FAILED(hr))
+    {
         return hr;
+    }
 
     AttributeMatch aMatch(pAttribute);
     pAttribute->DataSize(pVolReader, aMatch.DataSize);
