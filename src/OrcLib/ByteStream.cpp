@@ -72,13 +72,21 @@ HRESULT ByteStream::CopyTo(__in ByteStream& outStream, const ULONGLONG ullChunk,
     if (FAILED(hr = SetFilePointer(0, SEEK_SET, NULL)))
         return hr;
 
-    while (qwBytesCopied < GetSize())
+    const auto maxReadSize = GetSize();
+    while (qwBytesCopied < maxReadSize)
     {
         if (FAILED(hr = Read(buffer.GetData(), buffer.GetCount(), &ullBytesRead)))
             return hr;
 
         if (ullBytesRead == 0LL)
             break;  // When read returns 0 bytes read, we have reached the end of the file
+
+        // Avoid read issue with some stream like NtfsStream
+        const auto remainingToRead = maxReadSize - qwBytesCopied;
+        if (remainingToRead < ullBytesRead)
+        {
+            ullBytesRead = remainingToRead;
+        }
 
         if (FAILED(hr = outStream.Write(buffer.GetData(), ullBytesRead, &ullBytesWritten)))
             return hr;
