@@ -104,8 +104,6 @@ HRESULT Orc::FileFind::Match::AddAttributeMatch(
     if (FAILED(pAttribute->GetStreams(pLog, pVolReader)))
         return hr;
 
-    pAttribute->GetStreams(pLog, pVolReader);
-
     AttributeMatch aMatch(pAttribute);
     pAttribute->DataSize(pVolReader, aMatch.DataSize);
     std::swap(aMatch.YaraRules, matchedRules);
