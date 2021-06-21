@@ -1,3 +1,11 @@
+//
+// SPDX-License-Identifier: LGPL-2.1-or-later
+//
+// Copyright © 2021 ANSSI. All Rights Reserved.
+//
+// Author(s): fabienfl (ANSSI)
+//
+
 #pragma once
 
 #include <string_view>

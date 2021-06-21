@@ -16,6 +16,7 @@
 #include "DataDetails.h"
 #include "MFTUtils.h"
 #include "CryptoHashStream.h"
+#include "Filesystem/Ntfs/Compression/WofAlgorithm.h"
 
 #include <vector>
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
@@ -331,8 +332,17 @@ public:
 class ORCLIB_API WOFReparseAttribute : public ReparsePointAttribute
 {
 public:
-    WOFReparseAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord)
-        : ReparsePointAttribute(pHeader, pRecord) {};
+    WOFReparseAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord, std::error_code& ec);
+
+    Ntfs::WofAlgorithm Algorithm() const { return m_algorithm; }
+
+    HRESULT GetStreams(
+        const std::shared_ptr<VolumeReader>& pVolReader,
+        std::shared_ptr<ByteStream>& rawStream,
+        std::shared_ptr<ByteStream>& dataStream);
+
+private:
+    Ntfs::WofAlgorithm m_algorithm;
 };
 
 class ORCLIB_API ExtendedAttribute : public MftRecordAttribute

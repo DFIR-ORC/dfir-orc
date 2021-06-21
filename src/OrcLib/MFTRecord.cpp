@@ -483,8 +483,15 @@ HRESULT MFTRecord::ParseAttribute(
             }
             else if (ReparsePointAttribute::IsWindowsOverlayFile(flags))
             {
+                std::error_code ec;
+                pNewAttr = make_shared<WOFReparseAttribute>(pAttribute, this, ec);
+                if (ec)
+                {
+                    Log::Debug("Failed to parse wof reparse point [{}]", ec);
+                    return E_FAIL;
+                }
+
                 m_bIsOverlayFile = true;
-                pNewAttr = make_shared<WOFReparseAttribute>(pAttribute, this);
             }
             else
             {
