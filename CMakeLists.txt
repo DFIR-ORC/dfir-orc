@@ -84,6 +84,7 @@ if(ORC_VCPKG_ROOT)
         boost-outcome
         boost-scope-exit
         fmt
+        ms-gsl
         spdlog
         yara
         rapidjson
