@@ -13,6 +13,7 @@ orc_add_compile_options()
 find_package(7zip CONFIG REQUIRED)
 find_package(Boost REQUIRED)
 find_package(fmt REQUIRED)
+find_package(Microsoft.GSL CONFIG REQUIRED)
 find_package(VisualStudio REQUIRED)
 find_package(Yara REQUIRED)
 
@@ -708,6 +709,7 @@ set(SRC_UTILITIES
     "OrcException.h"
     "Flags.cpp"
     "Flags.h"
+    "Utils/BufferView.h"
     "Utils/EnumFlags.h"
     "Utils/Guard.h"
     "Utils/Guard/Winsock.h"
@@ -876,6 +878,7 @@ target_link_libraries(OrcLib
     PUBLIC
         7zip::7zip
         7zip::extras
+        Microsoft.GSL::GSL
         psapi.lib
         Wintrust.lib
         Crypt32.lib
