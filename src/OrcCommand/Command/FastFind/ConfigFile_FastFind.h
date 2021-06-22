@@ -48,10 +48,10 @@ constexpr auto FASTFIND_REGISTRY = 4L;
 constexpr auto FASTFIND_SERVICE = 5L;
 constexpr auto FASTFIND_OBJECT = 6L;
 
-constexpr auto FASTFIND_OUTPUT_FILESYSTEM = 6L;
-constexpr auto FASTFIND_OUTPUT_REGISTRY = 7L;
-constexpr auto FASTFIND_OUTPUT_OBJECT = 8L;
-constexpr auto FASTFIND_OUTPUT_STRUCTURED = 9L;
+constexpr auto FASTFIND_OUTPUT_FILESYSTEM = 7L;
+constexpr auto FASTFIND_OUTPUT_REGISTRY = 8L;
+constexpr auto FASTFIND_OUTPUT_OBJECT = 9L;
+constexpr auto FASTFIND_OUTPUT_STRUCTURED = 10L;
 
 constexpr auto FASTFIND_FASTFIND = 0L;
 

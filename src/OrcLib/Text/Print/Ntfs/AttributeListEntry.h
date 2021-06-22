@@ -33,7 +33,7 @@ struct Printer<AttributeListEntry>
         assert(!ec);
 
         root.AddWithoutEOL(
-            "Id: {:02}, Type: '{}', Name: '{}', Form: '{}'",
+            "Type: '{}', Name: '{}', Form: '{}', Id: {:02}",
             entry.Instance(),
             attributeType,
             attributeName,

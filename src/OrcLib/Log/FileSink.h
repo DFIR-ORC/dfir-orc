@@ -20,8 +20,8 @@
 #include "Log/MemorySink.h"
 #include "FileDisposition.h"
 
-#include "Text/Fmt/path.h"
-#include "Text/Fmt/error_code.h"
+#include "Text/Fmt/std_filesystem.h"
+#include "Text/Fmt/std_error_code.h"
 
 //
 // FileSink will cache some logs into a MemorySink until the log file is opened

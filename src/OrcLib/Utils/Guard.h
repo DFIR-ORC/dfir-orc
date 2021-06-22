@@ -139,6 +139,7 @@ public:
         if (this != &o)
         {
             m_data = std::move(o.m_data);
+            m_invalidValue = o.m_invalidValue;
             o.m_data = m_invalidValue;
         }
 
@@ -162,7 +163,7 @@ public:
     bool operator==(const DescriptorGuard<T>& o) const { return m_data == o.m_data; }
 
 protected:
-    const T m_invalidValue;
+    T m_invalidValue;
     T m_data;
 };
 
@@ -174,6 +175,13 @@ public:
     {
     }
 
+    FileHandle(FileHandle&& handle) noexcept
+        : DescriptorGuard<HANDLE>(std::move(handle))
+    {
+    }
+
+    FileHandle& operator=(FileHandle&& o) = default;
+
     ~FileHandle()
     {
         if (m_data == m_invalidValue)
@@ -183,7 +191,7 @@ public:
 
         if (CloseHandle(m_data) == FALSE)
         {
-            Log::Warn("Failed on CloseHandle [{}]", LastWin32Error());
+            Log::Warn("Failed CloseHandle [{}]", LastWin32Error());
             return;
         }
     }
@@ -197,6 +205,13 @@ public:
     {
     }
 
+    Handle(Handle&& o) noexcept
+        : DescriptorGuard<HANDLE>(std::move(o))
+    {
+    }
+
+    Handle& operator=(Handle&& o) = default;
+
     ~Handle()
     {
         if (m_data == m_invalidValue)
@@ -204,10 +219,39 @@ public:
             return;
         }
 
-        if (CloseHandle(m_data) == FALSE)
+        if (::CloseHandle(m_data) == FALSE)
         {
             Log::Warn("Failed on CloseHandle [{}]", LastWin32Error());
             return;
+        }
+    }
+};
+
+class Module final : public DescriptorGuard<HMODULE>
+{
+public:
+    Module(HMODULE module = NULL)
+        : DescriptorGuard(module, NULL)
+    {
+    }
+
+    Module(Module&& o) noexcept
+        : DescriptorGuard<HMODULE>(std::move(o))
+    {
+    }
+
+    Module& operator=(Module&& o) = default;
+
+    ~Module()
+    {
+        if (m_data == m_invalidValue)
+        {
+            return;
+        }
+
+        if (::FreeLibrary(m_data) == FALSE)
+        {
+            Log::Warn("Failed FreeLibrary [{}]", LastWin32Error());
         }
     }
 };

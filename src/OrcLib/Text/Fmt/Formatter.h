@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include "Text/Fmt/optional.h"
+#include "Text/Fmt/std_optional.h"
 #include "Text/Fmt/GUID.h"
 #include "Text/Fmt/Fwd/ByteQuantity.h"
 #include "Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
-#include "Text/Fmt/Fwd/error_code.h"
+#include "Text/Fmt/Fwd/std_error_code.h"
 #include "Text/Fmt/Fwd/FILE_NAME.h"
 #include "Text/Fmt/Fwd/FILETIME.h"
 #include "Text/Fmt/Fwd/FSVBR.h"

@@ -823,39 +823,21 @@ HRESULT Orc::GetIntegerFromHexaString(const CHAR* pszStr, DWORD& result)
 
 HRESULT Orc::GetIntegerFromHexaString(const WCHAR* pszStr, LARGE_INTEGER& result)
 {
-    result.HighPart = 0L;
-    result.LowPart = 0L;
+    result.QuadPart = 0L;
 
     if (pszStr == NULL)
         return E_POINTER;
     if (pszStr[0] != L'0' || (pszStr[1] != L'X' && pszStr[1] != L'x'))
         return E_INVALIDARG;
 
-    if (wcslen(pszStr) != 18)
-        return E_INVALIDARG;
-
-    for (int i = 2; i < 18; i++)
+    try
     {
-        if (pszStr[i] >= L'0' && pszStr[i] <= L'9')
-            continue;
-        if (pszStr[i] >= L'A' && pszStr[i] <= L'F')
-            continue;
-        if (pszStr[i] >= L'a' && pszStr[i] <= L'f')
-            continue;
-        return E_INVALIDARG;
+        result.QuadPart = std::stoull(pszStr, nullptr, 16);
     }
-
-    DWORDLONG mult = 1;
-    for (int j = 17; j > 1; j--)
+    catch (std::exception& e)
     {
-        if (pszStr[j] >= L'0' && pszStr[j] <= L'9')
-            result.QuadPart += (pszStr[j] - L'0') * mult;
-        else if (pszStr[j] >= L'A' && pszStr[j] <= L'F')
-            result.QuadPart += (pszStr[j] - L'A' + 10) * mult;
-        else if (pszStr[j] >= L'a' && pszStr[j] <= L'f')
-            result.QuadPart += (pszStr[j] - L'a' + 10) * mult;
-
-        mult *= 16;
+        Log::Error("Invalid argument for hex conversion: {}", e.what());
+        return E_INVALIDARG;
     }
     return S_OK;
 }

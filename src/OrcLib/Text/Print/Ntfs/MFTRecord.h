@@ -361,8 +361,13 @@ void Print(Orc::Text::Tree<T>& root, const std::string& name, const BitmapAttrib
 template <typename T>
 void PrintStandardInformation(Orc::Text::Tree<T>& root, const Orc::MFTRecord& record)
 {
-    auto node = root.AddNode("$STANDARD_INFORMATION");
+    auto standardInformation = record.GetStandardInformation();
+    if (standardInformation == nullptr)
+    {
+        return;
+    }
 
+    auto node = root.AddNode("$STANDARD_INFORMATION");
     detail::PrintValueFileAttributes(node, "FileAttributes", record.GetStandardInformation()->FileAttributes);
 
     PrintValue(node, "CreationTime", record.GetStandardInformation()->CreationTime);
@@ -517,7 +522,13 @@ void PrintDataAttribute(Orc::Text::Tree<T>& root, const MFTRecord& record, const
 
         auto entryNode = node.AddNode("Entry #{}", i);
         PrintValue(entryNode, "Name", std::wstring_view(data->NamePtr(), data->NameLength()));
-        PrintValue(entryNode, "Size", detail::GetDataSize(*data));
+
+        const auto dataSize = detail::GetDataSize(*data);
+        if (dataSize.has_value())
+        {
+            const auto size = fmt::format("{} ({} bytes)", *dataSize, (*dataSize).value);
+            PrintValue(entryNode, "Size", size);
+        }
 
         entryNode.Add("Resident: {}", data->IsResident());
         if (!data->IsResident())
@@ -536,7 +547,7 @@ void PrintDataAttribute(Orc::Text::Tree<T>& root, const MFTRecord& record, const
 
             for (size_t j = 0; j < info->ExtentsVector.size(); ++j)
             {
-                const auto& extent = info->ExtentsVector[i];
+                const auto& extent = info->ExtentsVector[j];
                 Print(extentsNode, extent);
             }
         }
@@ -581,7 +592,7 @@ void Print(Orc::Text::Tree<T>& root, const MFTRecord& record, const std::shared_
 
         for (const auto& [childFRN, childRecord] : childrens)
         {
-            PrintValue(childrensNode, "FRN", childFRN);
+            PrintValue(childrensNode, "FRN", Traits::Offset(childFRN));
         }
 
         childrensNode.AddEmptyLine();

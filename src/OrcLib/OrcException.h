@@ -14,7 +14,7 @@
 
 #include <strsafe.h>
 
-#include "Text/Fmt/optional.h"
+#include "Text/Fmt/std_optional.h"
 
 //
 // E_BOUNDS is not defined in SDK 7.1A

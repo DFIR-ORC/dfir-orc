@@ -12,7 +12,7 @@
 
 #include "ParameterCheck.h"
 #include "SecurityDescriptor.h"
-#include "Text/Fmt/error_code.h"
+#include "Text/Fmt/std_error_code.h"
 
 #include <boost/scope_exit.hpp>
 

@@ -9,6 +9,7 @@
 #include "SyslogSink.h"
 
 #include "Text/Iconv.h"
+#include "Utils/Guard/Winsock.h"
 
 using namespace Orc;
 

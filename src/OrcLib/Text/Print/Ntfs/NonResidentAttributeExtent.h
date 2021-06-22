@@ -25,16 +25,16 @@ struct Printer<Orc::MFTUtils::NonResidentAttributeExtent>
         if (!extent.bZero)
         {
             root.Add(
-                L"LowestVCN: {:#018x}, Offset: {}, Allocated size: {}, Size: {}",
+                L"LowestVCN: {:#018x}, Offset: {}, Size: {}, Allocated: {}",
                 extent.LowestVCN,
                 Traits::Offset(extent.DiskOffset),
-                Traits::ByteQuantity(extent.DiskAlloc),
-                Traits::ByteQuantity(extent.DataSize));
+                extent.DataSize,
+                Traits::ByteQuantity(extent.DiskAlloc));
         }
         else
         {
             // Segment is SPARSE, only unallocated zeroes
-            root.Add(L"Sparse entry, Size: {}", Traits::ByteQuantity(extent.DataSize));
+            root.Add(L"Sparse entry, Size: {}", extent.DataSize);
         }
     }
 };

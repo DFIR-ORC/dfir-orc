@@ -102,10 +102,13 @@ HRESULT Orc::FileFind::Match::AddAttributeMatch(
         }
     }
 
-    if (FAILED(pAttribute->GetStreams(pVolReader)))
+    hr = pAttribute->GetStreams(pVolReader);
+    if (FAILED(hr))
+    {
+        std::wstring_view name(pAttribute->NamePtr(), pAttribute->NameLength());
+        Log::Error(L"Failed to retrieve stream for a matching item (name: '{}') [{}]", name, SystemError(hr));
         return hr;
-
-    pAttribute->GetStreams(pVolReader);
+    }
 
     AttributeMatch aMatch(pAttribute);
     pAttribute->DataSize(pVolReader, aMatch.DataSize);
