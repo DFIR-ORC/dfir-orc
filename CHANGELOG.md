@@ -1,5 +1,15 @@
 # ChangeLog
 
+## [10.1.0-rc6] - 2021-06-22 - Release Candidate 5
+### Changed
+- GetSamples: enable autorunsc for all users
+- yara: update to 4.0.2
+- NtfsUtil: enhanced property display
+
+### Fixed
+- fastfind: fix xml configuration parsing ("invalid index")
+- fastfind: fix failure when no '/out' was specified
+
 ## [10.1.0-rc5] - 2021-03-12
 ### Changed
 - Log: apply backtrace trigger level command line option earlier
@@ -135,6 +145,38 @@
 - Remove ChakraCore component
 - Remove OrcSql component
 - Remove dead code
+
+
+## [10.0.19] - 2021-01-06
+### Changed
+- yara: update to 4.0.2
+- GetSamples: enable autorunsc for all users
+
+### Fixed
+- fastfind: fix nullptr dereference when '/out' is not specified
+
+
+## [10.0.18] - 2021-10-03
+### Changed
+- yara: remove libressl dependency and rely on wincrypt api
+- yara: remove jansson dependency and cuckoo module
+- fmt: update to 7.0.3
+- spdlog: update to 1.8.1
+
+
+## [10.0.17] - 2021-10-02
+### Changed
+- build.ps1: stop on any error
+- build.ps1: multiple other improvements
+
+### Fixed
+- Embeded resources lookup for in-memory use
+- Configuration: do not exit on unknown configuration element
+
+### Added
+- build.ps1: option to build ssdeed
+- build.ps1: option to specify vcpkg directory
+- Configuration: compatibility with upcoming 10.1.x new log options
 
 
 ## [10.0.16] - 2020-11-09
