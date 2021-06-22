@@ -58,11 +58,49 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
     auto command = std::make_shared<CommandExecute>(L"AutoRuns");
 
     std::wstring strAutorunsRef;
-    hr = EmbeddedResource::ExtractValue(L"", L"AUTORUNS", strAutorunsRef);
-    if (FAILED(hr))
-    {
-        Log::Error("Could not find ressource reference to AutoRuns [{}]", SystemError(hr));
+
+    WORD wArch = 0;
+    if (FAILED(hr = SystemDetails::GetArchitecture(wArch)))
         return hr;
+
+    switch (wArch)
+    {
+        case PROCESSOR_ARCHITECTURE_INTEL:
+            hr = EmbeddedResource::ExtractValue(L"", L"AUTORUNS", strAutorunsRef);
+            if (FAILED(hr))
+            {
+                Log::Error("Could not find ressource reference to AutoRuns [{}]", SystemError(hr));
+                return hr;
+            }
+            break;
+        case PROCESSOR_ARCHITECTURE_AMD64:
+            if (SystemDetails::IsWOW64())
+            {
+                hr = EmbeddedResource::ExtractValue(L"", L"AUTORUNS", strAutorunsRef);
+                if (FAILED(hr))
+                {
+                    Log::Error("Could not find ressource reference to AutoRuns [{}]", SystemError(hr));
+                    return hr;
+                }
+            }
+            else
+            {
+                hr = EmbeddedResource::ExtractValue(L"", L"AUTORUNS64", strAutorunsRef);
+                if (FAILED(hr))
+                {
+                    Log::Info("Could not find ressource reference to AutoRuns x64 fallback to x86 [{}]", SystemError(hr));
+                }
+                hr = EmbeddedResource::ExtractValue(L"", L"AUTORUNS", strAutorunsRef);
+                if (FAILED(hr))
+                {
+                    Log::Error("Could not find ressource reference to AutoRuns [{}]", SystemError(hr));
+                    return hr;
+                }
+            }
+            break;
+        default:
+            Log::Error("Unsupported architecture: {}", wArch);
+            return hr;
     }
 
     std::wstring strAutorunsCmd;
