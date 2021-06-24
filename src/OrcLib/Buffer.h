@@ -946,6 +946,9 @@ struct formatter<Orc::Buffer<_T, _DeclElts>, Char>
     constexpr auto parse(ParseContext& ctx)
     {
         auto it = ctx.begin();
+        if (it == ctx.end())
+            return it;
+
         if (*it == ':')
             ++it;
         auto end = it;
