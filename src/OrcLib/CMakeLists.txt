@@ -325,6 +325,7 @@ source_group(In&Out\\Archive\\SevenZip FILES ${SRC_INOUT_ARCHIVE_SEVENZIP})
 set(SRC_INOUT_BYTESTREAM
     "ByteStream.cpp"
     "ByteStream.h"
+    "ByteStreamHelpers.h"
 )
 
 source_group(In&Out\\ByteStream FILES ${SRC_INOUT_BYTESTREAM})
