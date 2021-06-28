@@ -14,6 +14,7 @@
 #include "ByteStream.h"
 #include "MemoryStream.h"
 #include "CryptoHashStream.h"
+#include "FileStream.h"
 
 #include "libpehash-pe.h"
 #include "SystemDetails.h"
@@ -28,12 +29,43 @@
 
 #include <boost/scope_exit.hpp>
 
+#include "PeParser.h"
+
 using namespace Orc;
+
+namespace {
+
+Authenticode::PE_Hashs To_PE_Hashs(const PeParser::PeHash& hashes)
+{
+    Authenticode::PE_Hashs h;
+
+    if (hashes.md5.has_value())
+    {
+        h.md5.SetCount(hashes.md5->size());
+        std::copy(std::cbegin(*hashes.md5), std::cend(*hashes.md5), h.md5.GetData());
+    }
+
+    if (hashes.sha1.has_value())
+    {
+        h.sha1.SetCount(hashes.sha1->size());
+        std::copy(std::cbegin(*hashes.sha1), std::cend(*hashes.sha1), h.sha1.GetData());
+    }
+
+    if (hashes.sha256.has_value())
+    {
+        h.sha256.SetCount(hashes.sha256->size());
+        std::copy(std::cbegin(*hashes.sha256), std::cend(*hashes.sha256), h.sha256.GetData());
+    }
+
+    return h;
+}
+
+}  // namespace
 
 static GUID WVTPolicyGUID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
 
 const FlagsDefinition Authenticode::AuthenticodeStatusDefs[] = {
-    {AUTHENTICODE_UNKNOWN, L"Unknwon", L"This file status is unknown"},
+    {AUTHENTICODE_UNKNOWN, L"Unknown", L"This file status is unknown"},
     {AUTHENTICODE_NOT_PE, L"NotPE", L"This is not a PE"},
     {AUTHENTICODE_SIGNED_VERIFIED, L"SignedVerified", L"This PE is signed and signature verifies"},
     {AUTHENTICODE_CATALOG_SIGNED_VERIFIED, L"CatalogSignedVerified", L"This PE's hash is catalog signed"},
@@ -349,152 +381,73 @@ HRESULT Authenticode::EvaluateCheck(LONG lStatus, AuthenticodeData& data)
     return hr;
 }
 
-HRESULT Authenticode::Verify(LPCWSTR pwszSourceFile, AuthenticodeData& data)
+HRESULT Authenticode::Verify(LPCWSTR path, AuthenticodeData& data)
 {
-    HRESULT hr = E_FAIL;
-
-    data.isSigned = false;
-    data.bSignatureVerifies = false;
-
-    HANDLE hFile = INVALID_HANDLE_VALUE;
-
-    // Open file.
-    hFile = CreateFile(pwszSourceFile, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-    if (INVALID_HANDLE_VALUE == hFile)
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed CreateFile [{}]", SystemError(hr));
-        return hr;
-    }
-    BOOST_SCOPE_EXIT(hFile) { CloseHandle(hFile); }
-    BOOST_SCOPE_EXIT_END;
-
-    CBinaryBuffer hash;
-
-    // Get the size we need for our hash.
-    DWORD HashSize = 0L;
-    if (FAILED(hr = m_wintrust.CryptCATAdminCalcHashFromFileHandle(hFile, &HashSize, nullptr, 0L)))
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed CryptCATAdminCalcHashFromFileHandle [{}]", SystemError(hr));
-        return hr;
-    }
-
-    // Allocate memory.
-    if (!hash.SetCount(HashSize))
-    {
-        return E_OUTOFMEMORY;
-    }
-
-    // Actually calculate the hash
-    if (FAILED(hr = m_wintrust.CryptCATAdminCalcHashFromFileHandle(hFile, &HashSize, hash.GetData(), 0L)))
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("Failed CryptCATAdminCalcHashFromFileHandle [{}]", SystemError(hr));
-        return hr;
-    }
-
-    PE_Hashs hashs;
-
-    if (HashSize == BYTES_IN_MD5_HASH)
-        hashs.md5 = hash;
-    else if (HashSize == BYTES_IN_SHA1_HASH)
-        hashs.sha1 = hash;
-    else if (HashSize == BYTES_IN_SHA256_HASH)
-        hashs.sha256 = hash;
-
-    hr = VerifyAnySignatureWithCatalogs(pwszSourceFile, hashs, data);
+    auto stream = std::make_shared<FileStream>();
+    HRESULT hr = stream->OpenFile(path, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
     if (FAILED(hr))
     {
+        Log::Debug(L"Failed to open file '{}' [{}]", path, SystemError(hr));
         return hr;
     }
 
-    if (data.AuthStatus != AUTHENTICODE_NOT_SIGNED)
-    {
-        return S_OK;
-    }
-
-    return VerifyEmbeddedSignature(pwszSourceFile, hFile, data);
+    return Verify(path, stream, data);
 }
 
 HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStream>& pStream, AuthenticodeData& data)
 {
     HRESULT hr = E_FAIL;
+    std::error_code ec;
 
-    data.isSigned = false;
-    data.bSignatureVerifies = false;
-
-    if (pStream == nullptr)
-        return E_POINTER;
-    pStream->SetFilePointer(0L, FILE_BEGIN, NULL);
-
-    // Load data in a memory stream
-
-    auto memstream = std::make_shared<MemoryStream>();
-    if (memstream == nullptr)
-        return E_OUTOFMEMORY;
-
-    if (FAILED(hr = memstream->OpenForReadWrite()))
-        return hr;
-
-    if (FAILED(hr = memstream->SetSize(pStream->GetSize())))
-        return hr;
-
-    ULONGLONG ullWritten = 0LL;
-    if (FAILED(hr = pStream->CopyTo(*memstream, &ullWritten)))
-        return hr;
-
-    if ((ullWritten % 8) != 0)
+    PeParser pe(pStream, ec);
+    if (ec)
     {
-        // Apparently, MS padds PEs with zeroes on 8 modulo...
-        DWORD dwToAdd = 8 - (ullWritten % 8);
-        const char padding[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-        ULONGLONG ullWritten = 0LL;
-        if (FAILED(hr = memstream->Write((LPVOID)padding, dwToAdd, &ullWritten)))
-            return hr;
+        Log::Debug(L"Failed to parse pe file (filename: {}) [{}]", szFileName, ec);
+        return ec.value();
     }
-    memstream->Close();
 
-    CBinaryBuffer pData;
-    memstream->GrabBuffer(pData);
-    typedef struct _PEChunks
+    if (pe.HasSecurityDirectory())
     {
-        uint32_t offset;
-        uint32_t length;
-    } PEChunks;
+        PeParser::PeHash hashes;
 
-    const unsigned int MaxChunks = 256;
-    PE_CHUNK chunks[MaxChunks];
-    ZeroMemory((BYTE*)chunks, sizeof(chunks));
-    int cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), chunks, MaxChunks);
+        // Exclude 'CryptoHashStream::Algorithm::MD5' as algorithm is untrusted
+        pe.GetAuthenticodeHash(
+            CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256, hashes, ec);
+        if (ec)
+        {
+            Log::Debug("Failed to compute pe hashes [{}]", ec);
+            return ec.value();
+        }
 
-    if (cChunks == -1)
-        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        std::vector<uint8_t> securityDirectory;
+        pe.ReadSecurityDirectory(securityDirectory, ec);
+        if (ec)
+        {
+            Log::Debug("Failed to read security directory [{}]", ec);
+            return ec.value();
+        }
 
-    auto hashstream = std::make_shared<CryptoHashStream>();
-
-    static DWORD dwRequestedHashSize = Authenticode::ExpectedHashSize();
-
-    CryptoHashStream::Algorithm algs = dwRequestedHashSize == BYTES_IN_SHA1_HASH ? CryptoHashStream::Algorithm::SHA1
+        CBinaryBuffer bb;
+        bb.SetCount(securityDirectory.size());
+        std::copy(std::cbegin(securityDirectory), std::cend(securityDirectory), bb.GetData());
+        return Verify(szFileName, bb, To_PE_Hashs(hashes), data);
+    }
+    else
+    {
+        // This will get to know which algorithm is used inside catalog so only required signature will be processed
+        static const DWORD dwRequestedHashSize = Authenticode::ExpectedHashSize();
+        static const auto algorithms = dwRequestedHashSize == BYTES_IN_SHA1_HASH ? CryptoHashStream::Algorithm::SHA1
                                                                                  : CryptoHashStream::Algorithm::SHA256;
+        PeParser::PeHash hashes;
+        pe.GetAuthenticodeHash(algorithms, hashes, ec);
+        if (ec)
+        {
+            Log::Debug("Failed to compute pe hashes [{}]", ec);
+            return ec.value();
+        }
 
-    hashstream->OpenToWrite(algs, nullptr);
-
-    ULONGLONG ullHashed = 0LL;
-    for (int i = 0; i < cChunks; ++i)
-    {
-        ULONGLONG ullThisWriteHashed = 0LL;
-        if (FAILED(hr = hashstream->Write(pData.GetData() + chunks[i].offset, chunks[i].length, &ullThisWriteHashed)))
-            return hr;
-        ullHashed += ullThisWriteHashed;
+        return VerifyAnySignatureWithCatalogs(szFileName, To_PE_Hashs(hashes), data);
     }
-
-    PE_Hashs hashs;
-    hashstream->GetMD5(hashs.md5);
-    hashstream->GetSHA1(hashs.sha1);
-    hashstream->GetSHA256(hashs.sha256);
-
-    return VerifyAnySignatureWithCatalogs(szFileName, hashs, data);
 }
 
 HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data)
