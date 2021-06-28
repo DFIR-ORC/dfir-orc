@@ -710,6 +710,7 @@ set(SRC_UTILITIES
     "Flags.cpp"
     "Flags.h"
     "Utils/BufferView.h"
+    "Utils/BufferSpan.h"
     "Utils/EnumFlags.h"
     "Utils/Guard.h"
     "Utils/Guard/Winsock.h"
