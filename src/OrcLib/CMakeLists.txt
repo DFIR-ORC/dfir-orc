@@ -254,6 +254,15 @@ set(SRC_EXTENSIONLIBRARIES_YARA
 
 source_group(ExtensionLibraries\\Yara FILES ${SRC_EXTENSIONLIBRARIES_YARA})
 
+set(SRC_FILE_FORMAT
+    "PeParser.h"
+    "PeParser.cpp"
+)
+
+source_group(FileFormat
+    FILES ${SRC_FILE_FORMAT}
+)
+
 set(SRC_INOUT
     "LocationOutput.h"
     "OutputWriter.h"
@@ -827,6 +836,7 @@ add_library(OrcLib
         ${SRC_DISK_VOLUME}
         ${SRC_EXTENSIONLIBRARIES}
         ${SRC_EXTENSIONLIBRARIES_YARA}
+        ${SRC_FILE_FORMAT}
         ${SRC_INOUT}
         ${SRC_INOUT_ARCHIVE}
         ${SRC_INOUT_ARCHIVE_SEVENZIP}
