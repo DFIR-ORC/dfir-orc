@@ -1188,7 +1188,7 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
                     szFileName,
                     SystemError(hr));
             }
-            if (hashs.md5.GetCount() == data.SignedHashs.md5.GetCount())
+            if (hashs.md5.GetCount() != 0 && hashs.md5.GetCount() == data.SignedHashs.md5.GetCount())
             {
                 if (!memcmp(hashs.md5.GetData(), data.SignedHashs.md5.GetData(), hashs.md5.GetCount()))
                 {
@@ -1201,7 +1201,7 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
                     data.bSignatureVerifies = false;
                 }
             }
-            else if (hashs.sha1.GetCount() == data.SignedHashs.sha1.GetCount())
+            else if (hashs.sha1.GetCount() != 0 && hashs.sha1.GetCount() == data.SignedHashs.sha1.GetCount())
             {
                 if (!memcmp(hashs.sha1.GetData(), data.SignedHashs.sha1.GetData(), hashs.sha1.GetCount()))
                 {
@@ -1214,7 +1214,7 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
                     data.bSignatureVerifies = false;
                 }
             }
-            else if (hashs.sha256.GetCount() == data.SignedHashs.sha256.GetCount())
+            else if (hashs.sha256.GetCount() != 0 && hashs.sha256.GetCount() == data.SignedHashs.sha256.GetCount())
             {
                 if (!memcmp(hashs.sha256.GetData(), data.SignedHashs.sha256.GetData(), hashs.sha256.GetCount()))
                 {
