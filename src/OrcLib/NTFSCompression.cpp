@@ -118,7 +118,7 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
             return E_FAIL;
         }
 
-        Log::Debug(L"ntfs_uncompress_compunit: Block size is {}", Traits::ByteQuantity(blk_size));
+        Log::Trace(L"ntfs_uncompress_compunit: Block size is {}", Traits::ByteQuantity(blk_size));
 
         /* The MSB identifies if the block is compressed */
         UCHAR iscomp;  // set to 1 if block is compressed
@@ -143,7 +143,7 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                 unsigned char header = comp->comp_buf[cl_index];
                 cl_index++;
 
-                Log::Debug("ntfs_uncompress_compunit: New Tag: {:#x}\n", header);
+                Log::Trace("ntfs_uncompress_compunit: New Tag: {:#x}\n", header);
 
                 for (int a = 0; a < 8 && cl_index < blk_end; a++)
                 {
@@ -154,7 +154,7 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                      */
                     if ((header & NTFS_TOKEN_MASK) == NTFS_SYMBOL_TOKEN)
                     {
-                        Log::Debug(L"ntfs_uncompress_compunit: Symbol Token: {}", cl_index);
+                        Log::Trace(L"ntfs_uncompress_compunit: Symbol Token: {}", cl_index);
 
                         if (comp->uncomp_idx >= comp->buf_size_b)
                         {
@@ -200,7 +200,7 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                         size_t start_position_index = comp->uncomp_idx - offset;
                         size_t end_position_index = start_position_index + length;
 
-                        Log::Debug(
+                        Log::Trace(
                             L"ntfs_uncompress_compunit: Phrase Token: {} {} {} {}", cl_index, length, offset, pheader);
 
                         /* Sanity checks on values */
