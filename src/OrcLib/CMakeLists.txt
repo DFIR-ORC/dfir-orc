@@ -411,6 +411,8 @@ set(SRC_INOUT_BYTESTREAM_UTILITYSTREAM
     "AccumulatingStream.cpp"
     "AccumulatingStream.h"
     "BufferStream.h"
+    "CacheStream.cpp"
+    "CacheStream.h"
     "ChainingStream.cpp"
     "ChainingStream.h"
     "DevNullStream.cpp"
