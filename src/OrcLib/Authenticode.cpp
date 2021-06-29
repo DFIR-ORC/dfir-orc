@@ -16,7 +16,6 @@
 #include "CryptoHashStream.h"
 #include "FileStream.h"
 
-#include "libpehash-pe.h"
 #include "SystemDetails.h"
 
 #include "WinTrustExtension.h"

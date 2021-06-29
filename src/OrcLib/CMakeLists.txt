@@ -695,8 +695,6 @@ set(SRC_RUNNINGCODE
     "Authenticode.h"
     "AutoRuns.cpp"
     "AutoRuns.h"
-    "libpehash-pe.h"
-    "libpehash-peutils.cpp"
     "MSIExtension.cpp"
     "MSIExtension.h"
     "PSAPIExtension.cpp"
