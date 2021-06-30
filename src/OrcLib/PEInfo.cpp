@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2021 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -16,6 +16,7 @@
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
 #include "MemoryStream.h"
+#include "CacheStream.h"
 
 #include "PeParser.h"
 
@@ -723,12 +724,11 @@ HRESULT PEInfo::OpenPeHash(Intentions localIntentions)
     }
 
     auto stream = m_FileInfo.GetDetails()->GetDataStream();
-
     if (stream == nullptr)
         return E_POINTER;
 
     std::error_code ec;
-    PeParser pe(stream, ec);
+    PeParser pe(std::make_shared<CacheStream>(std::move(stream)), ec);
     if (ec)
     {
         Log::Error(L"Failed to parse PE (path: {}) [{}]", m_FileInfo.m_szFullName, ec);

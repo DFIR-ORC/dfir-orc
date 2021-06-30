@@ -12,6 +12,7 @@
 
 #include "Flags.h"
 #include "ByteStream.h"
+#include "CacheStream.h"
 #include "MemoryStream.h"
 #include "CryptoHashStream.h"
 #include "FileStream.h"
@@ -398,7 +399,7 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
     HRESULT hr = E_FAIL;
     std::error_code ec;
 
-    PeParser pe(pStream, ec);
+    PeParser pe(std::make_shared<CacheStream>(pStream), ec);
     if (ec)
     {
         Log::Debug(L"Failed to parse pe file (filename: {}) [{}]", szFileName, ec);
