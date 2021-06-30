@@ -904,3 +904,5 @@ if(NOT ORC_DISABLE_PRECOMPILED_HEADERS)
 endif()
 
 set_target_properties(OrcLib PROPERTIES FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
+
+target_link_options(OrcLib PUBLIC "/STACK:4194304")
