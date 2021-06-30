@@ -57,6 +57,12 @@ public:
     template <typename... Args>
     void Trace(Args&&... args)
     {
+        // This is important to avoid formatting trace level logs because of spdlog way to handle backtrace
+        if (m_logger->level() > spdlog::level::trace)
+        {
+            return;
+        }
+
         m_logger->trace(std::forward<Args>(args)...);
     }
 
