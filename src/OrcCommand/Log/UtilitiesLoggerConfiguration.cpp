@@ -427,7 +427,6 @@ void ApplyConsoleSinkBacktraceTrigger(UtilitiesLogger& logger, const UtilitiesLo
     }
 }
 
-
 void ApplySyslogSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
     if (config.syslog.level)
@@ -553,7 +552,7 @@ ApplySyslogSinkConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLo
 
     if (!config.syslog.host)
     {
-        Log::Debug(L"Failed to configure syslog sink: missing host");
+        Log::Debug(L"Failed to configure syslog host: missing host");
         return std::errc::invalid_argument;
     }
 
@@ -561,7 +560,7 @@ ApplySyslogSinkConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLo
     const auto host = Utf16ToUtf8(*config.syslog.host, ec);
     if (ec)
     {
-        Log::Error(L"Failed to configure syslog sink host [{}]", ec);
+        Log::Error(L"Failed to configure syslog host [{}]", ec);
         return ec;
     }
 
@@ -571,7 +570,7 @@ ApplySyslogSinkConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLo
         port = Utf16ToUtf8(*config.syslog.port, ec);
         if (ec)
         {
-            Log::Error(L"Failed to configure syslog sink port [{}]", ec);
+            Log::Error(L"Failed configure syslog port [{}]", ec);
             return ec;
         }
     }
@@ -884,7 +883,6 @@ void UtilitiesLoggerConfiguration::ApplyLogLevel(UtilitiesLogger& logger, int ar
     ApplyLogLevel(logger, config);
 }
 
-
 void UtilitiesLoggerConfiguration::ApplyBacktraceTrigger(
     UtilitiesLogger& logger,
     const UtilitiesLoggerConfiguration& config)
@@ -903,8 +901,20 @@ void UtilitiesLoggerConfiguration::ApplyBacktraceTrigger(UtilitiesLogger& logger
 void UtilitiesLoggerConfiguration::Apply(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
     ::ApplyConsoleSinkConfiguration(logger, config);
-    ::ApplyFileSinkConfiguration(logger, config);
-    ::ApplySyslogSinkConfiguration(logger, config);
+
+    auto result = ::ApplyFileSinkConfiguration(logger, config);
+    if (!result)
+    {
+        Log::Debug("Failed to apply file sink configuration [{}]", result.error());
+        return;
+    }
+
+    result = ::ApplySyslogSinkConfiguration(logger, config);
+    if (!result)
+    {
+        Log::Debug("Failed to apply syslog sink configuration [{}]", result.error());
+        return;
+    }
 }
 
 std::optional<std::wstring>
