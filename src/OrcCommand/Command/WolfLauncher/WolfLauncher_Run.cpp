@@ -636,6 +636,12 @@ HRESULT Main::Run()
 
 Orc::Result<void> Main::CreateAndUploadOutcome()
 {
+    if (config.Outcome.Type == OutputSpec::Kind::None)
+    {
+        Log::Debug(L"No outcome file specified");
+        return Success<void>();
+    }
+
     ::UpdateOutcome(m_outcome);
 
     auto rv = ::DumpOutcome(m_outcome, config.Outcome);
