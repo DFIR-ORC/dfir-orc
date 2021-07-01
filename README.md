@@ -1,13 +1,17 @@
-[![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=master)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=master) [![LGPL licensed][img-license]](./LICENSE.txt)
-
-
 # DFIR ORC
+[![LGPL licensed][img-license]](./LICENSE.txt)
+
 
 ## Documentation
 https://dfir-orc.github.io
 
 
 ## Build
+| Branch       | Status                                                                                                                                                                                                                          |
+|:-------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| main         | [![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=main)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=main)                     |
+| release/10.0 | [![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=release/10.0.x)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=release/10.0.x) |
+| release/10.1 | [![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=release/10.1.x)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=release/10.1.x) |
 
 ### Requirements
 - Visual Studio >=2017 with this [configuration](.vsconfig) or alternatively use [vstools](docs/vstools/vstools.md)
@@ -87,5 +91,4 @@ vcpkg --vcpkg-root . install fmt:x64-windows-static ...
 ## Acknowledgments
 DFIR ORC is disclosing Microsoft source code with Microsoft's permission.
 
-[img-build]: https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/jeangautier.dfir-orc?branchName=master
 [img-license]: https://img.shields.io/github/license/DFIR-ORC/dfir-orc
