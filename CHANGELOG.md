@@ -1,5 +1,10 @@
 # ChangeLog
 
+## [10.0.20] - 2021-02-07
+### Added
+- WolfLauncher: add option `/nolimits[:<keyword>,...]`
+
+
 ## [10.0.19] - 2021-01-06
 ### Changed
 - yara: update to 4.0.2
@@ -8,12 +13,14 @@
 ### Fixed
 - fastfind: fix nullptr dereference when '/out' is not specified
 
+
 ## [10.0.18] - 2021-10-03
 ### Changed
 - yara: remove libressl dependency and rely on wincrypt api
 - yara: remove jansson dependency and cuckoo module
 - fmt: update to 7.0.3
 - spdlog: update to 1.8.1
+
 
 ## [10.0.17] - 2021-10-02
 ### Changed
@@ -29,6 +36,7 @@
 - build.ps1: option to specify vcpkg directory
 - Configuration: compatibility with upcoming 10.1.x new log options
 
+
 ## [10.0.16] - 2020-11-09
 ### Added
 - CI: Azure: add support for release/* branches
@@ -37,6 +45,7 @@
 
 ### Fixed
 - CsvFileWriter: fix memory corruption
+
 
 ## [10.0.15] - 2020-09-28
 ### Added
