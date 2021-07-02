@@ -140,6 +140,10 @@ void Main::PrintUsage()
             "Configures the time (in minutes) the engine will wait for the last command(s) to complete. Upon timeout, "
             "the command engine will stop, kill any pending process and move on with archive completion"},
         Usage::Parameter {
+            "/NoLimits[:<KeyWord1>,<Keyword2>, ...]",
+            "Override specified limits on GetThis or GetSamples on all commands or comma separated list (output can "
+            "get VERY big)"},
+        Usage::Parameter {
             "/WERDontShowUI",
             "Configures Windows Error Reporting to prevent blocking UI in case of a crash during DFIR ORC execution. "
             "WER previous configuration is restored at the end of DFIR ORC execution"}};
@@ -174,6 +178,16 @@ void Main::PrintParameters()
     PrintValue(node, L"Key selection", keySelection.empty() ? Text::kNoneW : keySelection);
     PrintValues(node, L"Enable keys", config.EnableKeywords);
     PrintValues(node, L"Disable keys", config.DisableKeywords);
+
+    const auto kNoLimits = L"No limits";
+    if (config.NoLimitsKeywords.empty())
+    {
+        PrintValue(node, kNoLimits, config.bNoLimits);
+    }
+    else
+    {
+        PrintValue(node, kNoLimits, boost::join(config.NoLimitsKeywords, L", "));
+    }
 
     m_console.PrintNewLine();
 }
