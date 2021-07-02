@@ -117,6 +117,8 @@ public:
         bool bNoJournaling = false;
         bool bTeeClearTextOutput = false;
         bool bWERDontShowUI = false;
+        bool bNoLimits = false;
+        std::set<std::wstring, CaseInsensitive> NoLimitsKeywords;
 
         std::set<std::wstring, CaseInsensitive> EnableKeywords;
         std::set<std::wstring, CaseInsensitive> DisableKeywords;

@@ -8,6 +8,11 @@
 
 #include "stdafx.h"
 
+#include <filesystem>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/tokenizer.hpp>
+
 #include "WolfLauncher.h"
 
 #include "ConfigFileReader.h"
@@ -32,6 +37,7 @@
 #include <filesystem>
 
 using namespace std;
+#include "Configuration/Option.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -48,6 +54,62 @@ HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
         schemaitem);
     return S_OK;
 }
+
+namespace {
+
+bool ParseNoLimitsArgument(std::wstring_view input, Main::Configuration& configuration)
+{
+    const auto kNoLimits = L"nolimits";
+    if (input == kNoLimits)
+    {
+        configuration.bNoLimits = true;
+        return true;
+    }
+
+    std::vector<Option> options;
+    if (!ParseSubArguments(input, kNoLimits, options))
+    {
+        return false;
+    }
+
+    if (options.size() == 0)
+    {
+        return false;
+    }
+
+    for (auto& option : options)
+    {
+        if (option.value)
+        {
+            // Do not accept: '/nolimits:GetEvt=foobar'
+            return false;
+        }
+
+        configuration.NoLimitsKeywords.insert(std::move(option.key));
+    }
+
+    return true;
+}
+
+void ApplyOptionNoLimits(const Main::Configuration& configuration, Orc::CommandMessage& command)
+{
+    if (configuration.bNoLimits == false
+        && configuration.NoLimitsKeywords.find(command.Keyword()) == std::cend(configuration.NoLimitsKeywords))
+    {
+        return;
+    }
+
+    if (command.GetParameters().size() > 1)
+    {
+        const auto& keyword = command.GetParameters()[1].Keyword;
+        if (boost::iequals(keyword, L"getthis") || boost::iequals(keyword, L"getsamples"))
+        {
+            command.PushArgument(command.GetParameters().size(), L"/nolimits");
+        }
+    }
+}
+
+}  // namespace
 
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 {
@@ -464,12 +526,15 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         for (int i = 0; i < argc; i++)
         {
             std::wstring strPriority;
+            std::wstring_view arg(argv[i] + 1);
 
             switch (argv[i][0])
             {
                 case L'/':
                 case L'-':
-                    if (OutputOption(
+                    if (::ParseNoLimitsArgument(arg, config))
+                        ;
+                    else if (OutputOption(
                             argv[i] + 1,
                             L"Out",
                             static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory),
@@ -888,6 +953,16 @@ HRESULT Main::CheckConfiguration()
                     }
                 }
             }
+        }
+    }
+
+    // Forward some options to executed commands like 'nolimits'
+    for (const auto& exec : m_wolfexecs)
+    {
+        for (const auto& command : exec->GetCommands())
+        {
+            assert(command);
+            ::ApplyOptionNoLimits(config, *command);
         }
     }
 
