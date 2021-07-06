@@ -462,7 +462,7 @@ HRESULT Main::CheckConfiguration()
         && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
     {
         Log::Critical(
-            L"No global (at samples level, MaxBytesTotal or MaxSampleCount) has been set: set limits in configuration "
+            L"No global (at samples level, MaxTotalBytes or MaxSampleCount) has been set: set limits in configuration "
             L"or use /nolimits");
         return E_INVALIDARG;
     }
