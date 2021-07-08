@@ -185,19 +185,19 @@ public:
     const std::wstring& GetCommandLineValue() const { return m_commandLine; }
     void SetCommandLineValue(const std::wstring& commandLine) { m_commandLine = commandLine; }
 
-    void SetSha256(const std::wstring& sha256) { m_sha256 = sha256; }
-    const std::wstring& GetSha256() const { return m_sha256; }
+    void SetSha1(const std::wstring& sha1) { m_sha1 = sha1; }
+    const std::wstring& GetSha1() const { return m_sha1; }
 
 private:
     std::wstring m_commandLine;
-    std::wstring m_sha256;
+    std::wstring m_sha1;
 };
 
 class WolfLauncher
 {
 public:
-    void SetSha256(const std::wstring& sha256) { m_sha256 = sha256; }
-    const std::wstring& GetSha256() const { return m_sha256; }
+    void SetSha1(const std::wstring& sha1) { m_sha1 = sha1; }
+    const std::wstring& GetSha1() const { return m_sha1; }
 
     void SetVersion(const std::string& version) { m_version = version; }
     const std::string& GetVersion() const { return m_version; }
@@ -206,7 +206,7 @@ public:
     void SetCommandLineValue(const std::wstring& commandLine) { m_commandLine = commandLine; }
 
 private:
-    std::wstring m_sha256;
+    std::wstring m_sha1;
     std::string m_version;
     std::wstring m_commandLine;
 };

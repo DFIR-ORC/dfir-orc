@@ -179,7 +179,7 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Mothersh
     writer->BeginElement(kRoot);
     Guard::Scope onExit([&]() { writer->EndElement(kRoot); });
 
-    writer->WriteNamed(L"sha256", mothership.GetSha256());
+    writer->WriteNamed(L"sha1", mothership.GetSha1());
     writer->WriteNamed(L"command_line", mothership.GetCommandLineValue());
 }
 
@@ -189,7 +189,7 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::WolfLaun
     writer->BeginElement(kNodeWolfLauncher);
     Guard::Scope onExit([&]() { writer->EndElement(kNodeWolfLauncher); });
 
-    writer->WriteNamed(L"sha256", wolfLauncher.GetSha256());
+    writer->WriteNamed(L"sha1", wolfLauncher.GetSha1());
     writer->WriteNamed(L"version", wolfLauncher.GetVersion());
     writer->WriteNamed(L"command_line", wolfLauncher.GetCommandLineValue());
 }

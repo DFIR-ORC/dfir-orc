@@ -210,23 +210,23 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
             mothership.SetCommandLineValue(commandLine.value());
         }
 
-        auto sha256 = GetProcessExecutableHash(mothershipPID.value(), CryptoHashStream::Algorithm::SHA256);
-        if (sha256)
+        auto sha1 = GetProcessExecutableHash(mothershipPID.value(), CryptoHashStream::Algorithm::SHA1);
+        if (sha1)
         {
-            mothership.SetSha256(sha256.value());
+            mothership.SetSha1(sha1.value());
         }
     }
 
     auto& wolfLauncher = outcome.GetWolfLauncher();
 
-    const auto sha256 = GetCurrentExecutableHash(CryptoHashStream::Algorithm::SHA256);
-    if (sha256.has_error())
+    const auto sha1 = GetCurrentExecutableHash(CryptoHashStream::Algorithm::SHA1);
+    if (sha1.has_error())
     {
-        Log::Debug(L"Failed to compute sha256 on current executable [{}]", sha256.error());
+        Log::Debug(L"Failed to compute sha256 on current executable [{}]", sha1.error());
     }
     else
     {
-        wolfLauncher.SetSha256(sha256.value());
+        wolfLauncher.SetSha1(sha1.value());
     }
 
     wolfLauncher.SetVersion(kOrcFileVerString);
@@ -511,11 +511,10 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                     writer->WriteNamed(L"command", mothership_cmdline.value().c_str());
                 }
 
-                const auto sha256 =
-                    GetProcessExecutableHash(mothership_id.value(), CryptoHashStream::Algorithm::SHA256);
-                if (sha256)
+                const auto sha1 = GetProcessExecutableHash(mothership_id.value(), CryptoHashStream::Algorithm::SHA1);
+                if (sha1)
                 {
-                    writer->WriteNamed(L"sha256", sha256.value());
+                    writer->WriteNamed(L"sha1", sha1.value());
                 }
             }
             writer->WriteNamed(L"output", config.Output.Path.c_str());
