@@ -111,7 +111,7 @@ HRESULT GetRemoteOutputFileInformations(
     return S_OK;
 }
 
-Result<std::wstring> Sha256(const std::filesystem::path& path)
+Result<std::wstring> Hash(const std::filesystem::path& path, CryptoHashStream::Algorithm algorithm)
 {
     auto fileStream = std::make_shared<FileStream>();
 
@@ -123,8 +123,8 @@ Result<std::wstring> Sha256(const std::filesystem::path& path)
         return SystemError(hr);
     }
 
-    CryptoHashStream hash;
-    hr = hash.OpenToRead(CryptoHashStream::Algorithm::SHA256, fileStream);
+    CryptoHashStream hashStream;
+    hr = hashStream.OpenToRead(algorithm, fileStream);
     if (FAILED(hr))
     {
         Log::Debug(L"Failed to open hashstream: '{}' [{}]", path, SystemError(hr));
@@ -132,26 +132,26 @@ Result<std::wstring> Sha256(const std::filesystem::path& path)
     }
 
     ULONGLONG ullBytesWritten;
-    hr = hash.CopyTo(DevNullStream(), &ullBytesWritten);
+    hr = hashStream.CopyTo(DevNullStream(), &ullBytesWritten);
     if (FAILED(hr))
     {
         Log::Debug(L"Failed to consume stream: '{}' [{}]", path, SystemError(hr));
         return SystemError(hr);
     }
 
-    std::wstring sha256;
-    hr = hash.GetHash(CryptoHashStream::Algorithm::SHA256, sha256);
+    std::wstring hash;
+    hr = hashStream.GetHash(algorithm, hash);
     if (FAILED(hr))
     {
-        Log::Debug(L"Failed to get sha256: '{}' [{}]", path, SystemError(hr));
+        Log::Debug(L"Failed to get {}: '{}' [{}]", algorithm, path, SystemError(hr));
         return SystemError(hr);
     }
 
-    Log::Debug(L"Sha256 for '{}': {}", path, sha256);
-    return sha256;
+    Log::Debug(L"Hash for '{}': {}:{}", path, algorithm, hash);
+    return hash;
 }
 
-Result<std::wstring> GetCurrentExecutableSha256()
+Result<std::wstring> GetCurrentExecutableHash(CryptoHashStream::Algorithm algorithm)
 {
     std::error_code ec;
     const auto path = GetModuleFileNameApi(NULL, ec);
@@ -161,10 +161,10 @@ Result<std::wstring> GetCurrentExecutableSha256()
         return ec;
     }
 
-    return Sha256(path);
+    return Hash(path, algorithm);
 }
 
-Result<std::wstring> GetProcessExecutableSha256(DWORD dwProcessId)
+Result<std::wstring> GetProcessExecutableHash(DWORD dwProcessId, CryptoHashStream::Algorithm algorithm)
 {
     Guard::Handle hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
     if (!hProcess)
@@ -176,7 +176,7 @@ Result<std::wstring> GetProcessExecutableSha256(DWORD dwProcessId)
 
     std::error_code ec;
     const auto path = GetModuleFileNameExApi(hProcess.value(), NULL, ec);
-    return Sha256(path);
+    return Hash(path, algorithm);
 }
 
 void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
@@ -210,7 +210,7 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
             mothership.SetCommandLineValue(commandLine.value());
         }
 
-        auto sha256 = GetProcessExecutableSha256(mothershipPID.value());
+        auto sha256 = GetProcessExecutableHash(mothershipPID.value(), CryptoHashStream::Algorithm::SHA256);
         if (sha256)
         {
             mothership.SetSha256(sha256.value());
@@ -219,7 +219,7 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
 
     auto& wolfLauncher = outcome.GetWolfLauncher();
 
-    const auto sha256 = GetCurrentExecutableSha256();
+    const auto sha256 = GetCurrentExecutableHash(CryptoHashStream::Algorithm::SHA256);
     if (sha256.has_error())
     {
         Log::Debug(L"Failed to compute sha256 on current executable [{}]", sha256.error());
@@ -511,7 +511,8 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                     writer->WriteNamed(L"command", mothership_cmdline.value().c_str());
                 }
 
-                const auto sha256 = GetProcessExecutableSha256(mothership_id.value());
+                const auto sha256 =
+                    GetProcessExecutableHash(mothership_id.value(), CryptoHashStream::Algorithm::SHA256);
                 if (sha256)
                 {
                     writer->WriteNamed(L"sha256", sha256.value());
