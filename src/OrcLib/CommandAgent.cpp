@@ -15,6 +15,7 @@
 #include "CommandAgent.h"
 
 #include "TemporaryStream.h"
+#include "FileStream.h"
 #include "EmbeddedResource.h"
 
 #include "Temporary.h"
@@ -25,12 +26,107 @@
 #include "Robustness.h"
 
 #include <array>
+#include <boost/algorithm/string.hpp>
 
 #include "Log/Log.h"
 
 using namespace std;
 
 using namespace Orc;
+
+namespace {
+
+bool GetKeyAndValue(std::wstring_view input, wchar_t separator, std::wstring_view& key, std::wstring_view& value)
+{
+    const auto separatorPos = input.find_first_of(separator);
+    if (separatorPos == std::wstring::npos)
+    {
+        key = std::wstring_view(input.data(), input.size());
+        value = std::wstring_view();
+        return true;
+    }
+
+    key = std::wstring_view(input.data(), separatorPos);
+    value = std::wstring_view(input.data() + separatorPos + 1);
+    return true;
+}
+
+bool ParseCommandLineArgument(std::wstring_view input, std::wstring_view& key, std::wstring_view& value)
+{
+    if (input.size() < 1 || (input[0] != '/' && input[0] != '\\'))
+    {
+        return false;
+    }
+
+    return GetKeyAndValue(std::wstring_view(input.data() + 1, input.size() - 1), L'=', key, value);
+}
+
+bool ParseCommandLineArgumentValue(std::wstring_view input, std::wstring_view expectedKey, std::wstring& value)
+{
+    std::vector<std::wstring> arguments;
+    boost::split(arguments, input, boost::is_any_of(" "));
+    for (const auto& argument : arguments)
+    {
+        std::wstring_view key;
+        std::wstring_view val;
+        if (ParseCommandLineArgument(argument, key, val) && key == expectedKey)
+        {
+            value = val;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// Lookup for '/config' argument to either a file or resource location
+std::shared_ptr<ByteStream> OpenCliConfig(std::wstring_view configLocation)
+{
+    HRESULT hr = E_FAIL;
+
+    if (EmbeddedResource::IsResourceBased(configLocation.data()))
+    {
+        CBinaryBuffer buffer;
+        hr = EmbeddedResource::ExtractToBuffer(configLocation.data(), buffer);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to extract config resource: {} [{}]", configLocation, SystemError(hr));
+            return nullptr;
+        }
+
+        auto memStream = std::make_shared<MemoryStream>();
+        ULONGLONG written;
+        hr = memStream->Write(buffer.GetData(), buffer.GetCount(), &written);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to read config file: {} [{}]", configLocation, SystemError(hr));
+            return nullptr;
+        }
+
+        return memStream;
+    }
+    else
+    {
+        auto fileStream = std::make_shared<FileStream>();
+        hr = fileStream->OpenFile(
+            configLocation.data(),
+            GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            0);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to read config file: {} [{}]", configLocation, SystemError(hr));
+            return nullptr;
+        }
+
+        return fileStream;
+    }
+}
+
+}  // namespace
 
 class Orc::CommandTerminationHandler : public TerminationHandler
 {
@@ -294,10 +390,23 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
     auto retval = std::make_shared<CommandExecute>(message->Keyword());
     HRESULT hr = S_OK;
 
+    std::optional<std::wstring> outArgument;
+    for (const auto& parameter : message->GetParameters())
+    {
+        std::wstring pattern;
+        if (parameter.Kind == CommandParameter::ParamKind::OutFile
+            && ParseCommandLineArgumentValue(parameter.Pattern, L"out", pattern))
+        {
+            std::filesystem::path filename = parameter.Name;
+            outArgument = filename.replace_extension().wstring();
+            break;
+        }
+    }
+
     std::for_each(
         message->GetParameters().cbegin(),
         message->GetParameters().cend(),
-        [this, &hr, retval](const CommandParameter& parameter) {
+        [this, &hr, &message, &outArgument, retval](const CommandParameter& parameter) {
             switch (parameter.Kind)
             {
                 case CommandParameter::StdOut:
@@ -429,10 +538,35 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                         retval->AddArgument(Arg, parameter.OrderId);
                 }
                 break;
-                case CommandParameter::Argument:
+                case CommandParameter::Argument: {
+                    // Embed configuration that has been specified with '/config'
+                    std::wstring value;
+                    if (ParseCommandLineArgumentValue(parameter.Keyword, L"config", value))
+                    {
+                        auto cliConfig = ::OpenCliConfig(value);
+                        if (cliConfig)
+                        {
+                            std::wstring configFileName;
+                            if (outArgument)
+                            {
+                                configFileName = *outArgument;
+                            }
+                            else
+                            {
+                                configFileName = message->Keyword();
+                            }
+
+                            configFileName = configFileName + L"_cli_config.xml";
+
+                            retval->AddOnCompleteAction(make_shared<OnComplete>(
+                                OnComplete::ArchiveAndDelete, configFileName, cliConfig, &m_archive));
+                        }
+                    }
+
                     if (FAILED(hr = retval->AddArgument(parameter.Keyword, parameter.OrderId)))
                         return;
                     break;
+                }
                 case CommandParameter::Executable: {
 
                     if (EmbeddedResource::IsResourceBased(parameter.Name))
