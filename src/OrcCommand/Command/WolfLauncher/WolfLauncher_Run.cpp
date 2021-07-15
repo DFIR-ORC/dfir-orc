@@ -491,6 +491,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 
         writer->WriteNamed(L"version", L"1.0");
         writer->BeginElement(L"dfir-orc");
+        writer->BeginElement(L"outline");
         {
             writer->WriteNamed(L"version", kOrcFileVerStringW);
 
@@ -547,6 +548,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             SystemIdentity::Write(writer);
         }
 
+        writer->EndElement(L"outline");
         writer->EndElement(L"dfir-orc");
         writer->Close();
     }
