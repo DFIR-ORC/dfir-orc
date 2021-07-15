@@ -99,7 +99,7 @@ HRESULT GetRemoteOutputFileInformations(
         hr = uploadAgent.CheckFileUpload(exec.GetOutputFileName(), &dwFileSize);
         if (FAILED(hr))
         {
-            return E_FAIL;
+            return hr;
         }
 
         fileInformations.exist = true;
@@ -841,6 +841,11 @@ HRESULT Main::Run_Execute()
                     {
                         commandSetNode.Add("Overwriting remote file: '{}' ({})", info.path, info.size);
                     }
+                    else
+                    {
+                        const auto path = m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName());
+                        Log::Error(L"Failed to check remote file status: '{}' [{}]", path, SystemError(hr));
+                    }
                 }
 
                 hr = ::GetLocalOutputFileInformations(*exec, info);
@@ -856,7 +861,12 @@ HRESULT Main::Run_Execute()
                 if (exec->ShouldUpload() && m_pUploadAgent)
                 {
                     hr = ::GetRemoteOutputFileInformations(*exec, *m_pUploadAgent, info);
-                    if (SUCCEEDED(hr) && (!info.size || *info.size != 0))
+                    if (FAILED(hr))
+                    {
+                        const auto path = m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName());
+                        Log::Error(L"Failed to check remote file status: '{}' [{}]", path, SystemError(hr));
+                    }
+                    else if (!info.size || *info.size != 0)
                     {
                         commandSetNode.Add(
                             "Skipping set because non-empty remote output file already exists: '{}' ({})",

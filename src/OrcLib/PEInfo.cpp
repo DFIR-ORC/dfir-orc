@@ -656,7 +656,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         PeParser pe(memstream, ec);
         if (ec)
         {
-            Log::Error("Failed to parse pe hash [{}]", ec);
+            Log::Error(L"Failed to parse pe hash {} [{}]", m_FileInfo.m_szFullName, ec);
             return ec.value();
         }
 
@@ -664,7 +664,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         pe.GetAuthenticodeHash(pe_algs, hashes, ec);
         if (ec)
         {
-            Log::Error("Failed to compute pe hash [{}]", ec);
+            Log::Error(L"Failed to compute pe hash [{}]", m_FileInfo.m_szFullName, ec);
             return ec.value();
         }
 

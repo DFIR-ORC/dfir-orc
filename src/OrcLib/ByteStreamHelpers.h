@@ -180,8 +180,8 @@ void ReadItem(ByteStream& stream, ItemT& output, std::error_code& ec)
 
     if (processed != sizeof(output))
     {
-        ec = std::make_error_code(std::errc::interrupted);
-        Log::Debug("Failed to read expected size ({}/{})", processed, sizeof(ItemT));
+        ec = std::make_error_code(std::errc::message_size);
+        Log::Trace("Failed to read expected size ({}/{})", processed, sizeof(ItemT));
         return;
     }
 }

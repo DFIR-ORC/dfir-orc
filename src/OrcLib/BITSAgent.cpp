@@ -441,7 +441,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hSession == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed WinHttpOpen on '{}' [{}]", m_config.ServerName, SystemError(hr));
+        Log::Debug(L"Failed WinHttpOpen on '{}' [{}]", m_config.ServerName, SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hSession)) { WinHttpCloseHandle(hSession); }
@@ -452,7 +452,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hConnect == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed WinHttpConnect on '{}' [{}]", m_config.ServerName, SystemError(hr));
+        Log::Debug(L"Failed WinHttpConnect on '{}' [{}]", m_config.ServerName, SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hConnect)) { WinHttpCloseHandle(hConnect); }
@@ -470,7 +470,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (hRequest == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to open request to {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
+        Log::Debug(L"Failed to open request to {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hRequest)) { WinHttpCloseHandle(hRequest); }
@@ -480,7 +480,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(
+        Log::Debug(
             L"Failed to send status request for {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
         return hr;
     }
@@ -504,7 +504,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             WINHTTP_NO_HEADER_INDEX))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to query status code {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
+        Log::Debug(L"Failed to query status code {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
         return hr;
     }
 
@@ -517,7 +517,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         if (!WinHttpQueryAuthSchemes(hRequest, &dwSupportedSchemes, &dwFirstScheme, &dwTarget))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to query status code {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
+            Log::Debug(L"Failed to query status code {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
 
@@ -528,7 +528,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             dwSelectedScheme = WINHTTP_AUTH_SCHEME_NTLM;
         else
         {
-            Log::Error(
+            Log::Debug(
                 L"No supported authentication scheme available {}/{} [{}]",
                 m_config.ServerName,
                 strRemotePath,
@@ -540,7 +540,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 hRequest, dwTarget, dwSelectedScheme, m_config.UserName.c_str(), m_config.Password.c_str(), NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(
+            Log::Debug(
                 L"Failed WinHttpSetCredentials with {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
@@ -549,7 +549,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
         if (!WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0, WINHTTP_NO_REQUEST_DATA, 0, 0, 0))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed WinHttpSendRequest on {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
+            Log::Debug(L"Failed WinHttpSendRequest on {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
 
@@ -571,7 +571,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 WINHTTP_NO_HEADER_INDEX))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to query status code {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
+            Log::Debug(L"Failed to query status code {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
             return hr;
         }
     }
@@ -590,7 +590,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                     WINHTTP_NO_HEADER_INDEX))
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error(
+                Log::Debug(
                     L"Failed to query content length {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
                 return hr;
             }
@@ -706,10 +706,21 @@ HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdw
     {
         case OutputSpec::BITSMode::HTTP:
         case OutputSpec::BITSMode::HTTPS:
-            return CheckFileUploadOverHttp(strRemoteName, pdwFileSize);
+            hr = CheckFileUploadOverHttp(strRemoteName, pdwFileSize);
+            if (FAILED(hr))
+            {
+                Log::Debug("Failed to check file status over http [{}]", SystemError(hr));
+                return hr;
+            }
         case OutputSpec::BITSMode::SMB:
-            return CheckFileUploadOverSMB(strRemoteName, pdwFileSize);
+            hr = CheckFileUploadOverSMB(strRemoteName, pdwFileSize);
+            if (FAILED(hr))
+            {
+                Log::Debug("Failed to check file status over smb [{}]", SystemError(hr));
+                return hr;
+            }
     }
+
     return S_OK;
 }
 

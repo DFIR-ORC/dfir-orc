@@ -1722,7 +1722,7 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
                                 bool bIsComplete = false;
                                 if (bIsComplete = IsRecordComplete(pRecord, missingRecords))
                                 {
-                                    Log::Debug("Fetched record {} is complete", ullRecordIndex);
+                                    Log::Trace("Fetched record {} is complete", ullRecordIndex);
                                 }
                                 else
                                 {

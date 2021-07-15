@@ -274,7 +274,7 @@ HRESULT FileInfo::WriteFileInformation(
                 if (FAILED(hr = HandleIntentions(pCurCol->dwIntention, output)))
                 {
                     Log::Debug(
-                        L"VERBOSE: Column '{}' failed to be written for '{}' [{}])",
+                        L"Failed to write column '{}' for '{}' [{}]",
                         pCurCol->szColumnName,
                         m_szFullName,
                         SystemError(hr));
