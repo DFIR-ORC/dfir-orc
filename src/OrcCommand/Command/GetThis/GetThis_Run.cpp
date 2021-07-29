@@ -521,6 +521,21 @@ private:
     GUID m_snapshotId;
 };
 
+PFILE_NAME GetLongestFileName(const std::vector<Orc::FileFind::Match::NameMatch>& nameMatches)
+{
+    PFILE_NAME name = nullptr;
+
+    for (const auto& match : nameMatches)
+    {
+        if (!name || name->FileNameLength < match.FILENAME()->FileNameLength)
+        {
+            name = match.FILENAME();
+        }
+    }
+
+    return name;
+}
+
 }  // namespace
 
 Main::Main()
@@ -561,7 +576,7 @@ std::unique_ptr<Main::SampleRef> Main::CreateSample(
     sample->SampleName = ::CreateUniqueSampleName(
         sample->Content.Type,
         sampleSpec.Name,
-        match->MatchingNames[0].FILENAME(),
+        ::GetLongestFileName(match->MatchingNames),
         attribute.AttrName,
         givenSampleNames);
 
