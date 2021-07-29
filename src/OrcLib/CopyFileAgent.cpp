@@ -25,7 +25,10 @@ HRESULT CopyFileAgent::Initialize()
         return E_UNEXPECTED;
 
     if (m_config.Mode != OutputSpec::UploadMode::Synchronous)
-        return E_UNEXPECTED;  // FileCopy only supports synchronous operation
+    {
+        log::Error(_L_, E_NOTIMPL, L"CopyFileAgent: unsupported upload mode (only synchronous is supported)\r\n");
+        return E_NOTIMPL;  // FileCopy only supports synchronous operation
+    }
 
     if (!m_config.UserName.empty())
     {
