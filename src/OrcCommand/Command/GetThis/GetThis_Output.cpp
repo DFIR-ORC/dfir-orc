@@ -106,13 +106,13 @@ std::wstring ToString(ContentType contentType)
     switch (contentType)
     {
         case ContentType::DATA:
-            return L"DATA";
+            return L"data";
         case ContentType::INVALID:
-            return L"INVALID";
+            return L"invalid";
         case ContentType::RAW:
-            return L"RAW";
+            return L"raw";
         case ContentType::STRINGS:
-            return L"STRINGS";
+            return L"strings";
     }
 
     return L"<Unhandled Type>";
