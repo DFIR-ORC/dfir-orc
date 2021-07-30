@@ -54,6 +54,23 @@ enum class CompressorFlags : uint32_t
     kComputeHash = 1
 };
 
+std::wstring ToString(const GUID& guid)
+{
+    std::wstring s;
+    s.resize(MAX_GUID_STRLEN);
+
+    auto guidCch = StringFromGUID2(guid, s.data(), s.size());
+    if (guidCch == 0)
+    {
+        // Cannot only fail with a too small buffer but MAX_GUID_STRLEN is used...
+        Log::Warn("Failed to convert GUID, buffer is too small");
+        return {};
+    }
+
+    s.resize(guidCch);
+    return s;
+}
+
 std::unique_ptr<Archive::Appender<Archive::Archive7z>> CreateCompressor(const OutputSpec& outputSpec)
 {
     using namespace Archive;
@@ -245,99 +262,47 @@ const wchar_t* ToString(ContentType contentType)
 }
 
 std::wstring
-CreateSampleFileName(const ContentType contentType, const PFILE_NAME pFileName, const std::wstring& dataName, DWORD idx)
+CreateSampleFileName(const Main::SampleRef& sample, const PFILE_NAME pFileName, const std::wstring& dataName)
 {
-    std::array<wchar_t, MAX_PATH> name;
+    std::array<wchar_t, 2048> name;
     int len = 0;
 
-    if (idx)
+    const auto FRN = reinterpret_cast<const LARGE_INTEGER*>(&sample.FRN)->QuadPart;
+    const auto parentFRN = reinterpret_cast<const LARGE_INTEGER*>(&pFileName->ParentDirectory)->QuadPart;
+    const auto contentType = Command::GetThis::ToString(sample.Content.Type);
+    const auto snapshotId = ::ToString(sample.SnapshotID);
+
+    if (dataName.size())
     {
-        if (dataName.size())
-        {
-            len = swprintf_s(
-                name.data(),
-                name.size(),
-                L"%*.*X%*.*X%*.*X_%.*s_%.*s_%u_%s",
-                (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
-                pFileName->ParentDirectory.SequenceNumber,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberHighPart) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberHighPart) * 2,
-                pFileName->ParentDirectory.SegmentNumberHighPart,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberLowPart) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberLowPart) * 2,
-                pFileName->ParentDirectory.SegmentNumberLowPart,
-                pFileName->FileNameLength,
-                pFileName->FileName,
-                (UINT)dataName.size(),
-                dataName.c_str(),
-                idx,
-                Command::GetThis::ToString(contentType).c_str());
-        }
-        else
-        {
-            len = swprintf_s(
-                name.data(),
-                name.size(),
-                L"%*.*X%*.*X%*.*X__%.*s_%u_%s",
-                (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
-                pFileName->ParentDirectory.SequenceNumber,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberHighPart) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberHighPart) * 2,
-                pFileName->ParentDirectory.SegmentNumberHighPart,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberLowPart) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberLowPart) * 2,
-                pFileName->ParentDirectory.SegmentNumberLowPart,
-                pFileName->FileNameLength,
-                pFileName->FileName,
-                idx,
-                Command::GetThis::ToString(contentType).c_str());
-        }
+        len = swprintf_s(
+            name.data(),
+            name.size(),
+            L"%llX_%llX_%llX_%x__%.*s_%.*s_%s.%s",
+            sample.VolumeSerial,
+            parentFRN,
+            FRN,
+            sample.InstanceID,
+            pFileName->FileNameLength,
+            pFileName->FileName,
+            (UINT)dataName.size(),
+            dataName.c_str(),
+            snapshotId.c_str(),
+            contentType.c_str());
     }
     else
     {
-        if (dataName.size())
-        {
-
-            len = swprintf_s(
-                name.data(),
-                name.size(),
-                L"%*.*X%*.*X%*.*X__%.*s_%.*s_%s",
-                (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
-                pFileName->ParentDirectory.SequenceNumber,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberHighPart) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberHighPart) * 2,
-                pFileName->ParentDirectory.SegmentNumberHighPart,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberLowPart) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberLowPart) * 2,
-                pFileName->ParentDirectory.SegmentNumberLowPart,
-                pFileName->FileNameLength,
-                pFileName->FileName,
-                (UINT)dataName.size(),
-                dataName.c_str(),
-                Command::GetThis::ToString(contentType).c_str());
-        }
-        else
-        {
-            len = swprintf_s(
-                name.data(),
-                name.size(),
-                L"%*.*X%*.*X%*.*X_%.*s_%s",
-                (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SequenceNumber) * 2,
-                pFileName->ParentDirectory.SequenceNumber,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberHighPart) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberHighPart) * 2,
-                pFileName->ParentDirectory.SegmentNumberHighPart,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberLowPart) * 2,
-                (int)sizeof(pFileName->ParentDirectory.SegmentNumberLowPart) * 2,
-                pFileName->ParentDirectory.SegmentNumberLowPart,
-                pFileName->FileNameLength,
-                pFileName->FileName,
-                Command::GetThis::ToString(contentType).c_str());
-        }
+        len = swprintf_s(
+            name.data(),
+            name.size(),
+            L"%llX_%llX_%llX_%x_%.*s_%s.%s",
+            sample.VolumeSerial,
+            parentFRN,
+            FRN,
+            sample.InstanceID,
+            pFileName->FileNameLength,
+            pFileName->FileName,
+            snapshotId.c_str(),
+            contentType.c_str());
     }
 
     if (len == -1)
@@ -445,35 +410,26 @@ std::unique_ptr<ByteStream> ConfigureStringStream(
 }
 
 std::wstring CreateUniqueSampleName(
-    const ContentType& contentType,
+    const Main::SampleRef& sample,
     const std::wstring& qualifier,
     const PFILE_NAME pFileName,
-    const std::wstring& dataName,
-    const std::unordered_set<std::wstring>& givenNames)
+    const std::wstring& dataName)
 {
-
     _ASSERT(pFileName);
     if (pFileName == nullptr)
     {
         return {};
     }
 
-    DWORD dwIdx = 0L;
     std::wstring name;
     std::unordered_set<std::wstring>::iterator it;
-    do
+
+    name = ::CreateSampleFileName(sample, pFileName, dataName);
+    if (!qualifier.empty())
     {
-        name = ::CreateSampleFileName(contentType, pFileName, dataName, dwIdx);
-        if (!qualifier.empty())
-        {
-            name.insert(0, L"\\");
-            name.insert(0, qualifier);
-        }
-
-        it = givenNames.find(name);
-        dwIdx++;
-
-    } while (it != std::cend(givenNames));
+        name.insert(0, L"\\");
+        name.insert(0, qualifier);
+    }
 
     return name;
 }
@@ -536,6 +492,16 @@ PFILE_NAME GetLongestFileName(const std::vector<Orc::FileFind::Match::NameMatch>
     return name;
 }
 
+PFILE_NAME GetLastFileName(const std::vector<Orc::FileFind::Match::NameMatch>& nameMatches)
+{
+    if (nameMatches.empty())
+    {
+        return nullptr;
+    }
+
+    return nameMatches[nameMatches.size() - 1].FILENAME();
+}
+
 }  // namespace
 
 Main::Main()
@@ -550,8 +516,7 @@ Main::Main()
 std::unique_ptr<Main::SampleRef> Main::CreateSample(
     const std::shared_ptr<FileFind::Match>& match,
     const size_t attributeIndex,
-    const SampleSpec& sampleSpec,
-    const std::unordered_set<std::wstring>& givenSampleNames) const
+    const SampleSpec& sampleSpec) const
 {
     const auto& attribute = match->MatchingAttributes[attributeIndex];
 
@@ -573,14 +538,18 @@ std::unique_ptr<Main::SampleRef> Main::CreateSample(
 
     sample->AttributeIndex = attributeIndex;
     sample->InstanceID = attribute.InstanceID;
-    sample->SampleName = ::CreateUniqueSampleName(
-        sample->Content.Type,
-        sampleSpec.Name,
-        ::GetLongestFileName(match->MatchingNames),
-        attribute.AttrName,
-        givenSampleNames);
-
     sample->SourcePath = ::GetMatchFullName(match->MatchingNames.front(), attribute);
+
+    // Keep 10.0 behavior for compatibility, eventually use ::GetLongestFileName when compatibility can be broken and
+    // remove parentFRN to only keep FRN in the filename
+    const auto lastFileName = ::GetLastFileName(match->MatchingNames);
+    if (!lastFileName)
+    {
+        Log::Error(L"Failed to retrieve sample file name for '{}'", sample->SampleName);
+        return nullptr;
+    }
+
+    sample->SampleName = ::CreateUniqueSampleName(*sample, sampleSpec.Name, lastFileName, attribute.AttrName);
 
     HRESULT hr = ConfigureSampleStreams(*sample);
     if (FAILED(hr))
@@ -1119,17 +1088,16 @@ void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool
     {
         const auto& attribute = aMatch->MatchingAttributes[i];
 
-        auto sample = CreateSample(aMatch, i, sampleSpec, SampleNames);
+        auto sample = CreateSample(aMatch, i, sampleSpec);
         if (m_sampleIds.find(SampleId(*sample)) != std::cend(m_sampleIds))
         {
-            Log::Debug(L"Not adding duplicate sample '{}' to archive", aMatch->MatchingNames.front().FullPathName);
+            Log::Info(L"Not adding duplicate sample '{}' to archive", aMatch->MatchingNames.front().FullPathName);
             continue;
         }
 
         UpdateSamplesLimits(sampleSpec, *sample);
 
-        // TODO: check that both sampleIds and SampleNames are resetted when volume changes
-        SampleNames.insert(sample->SampleName);
+        // TODO: memory optimization: check that sampleIds is resetted when volume changes
         m_sampleIds.insert(SampleId(*sample));
 
         if (config.Output.Type == OutputSpec::Kind::Archive)

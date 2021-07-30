@@ -323,7 +323,6 @@ private:
     FILETIME CollectionDate;
     const std::wstring ComputerName;
     Limits GlobalLimits;
-    std::unordered_set<std::wstring> SampleNames;
     std::unique_ptr<Archive::Appender<Archive::Archive7z>> m_compressor;
     std::shared_ptr<Orc::TableOutput::IStreamWriter> m_tableWriter;
 
@@ -334,8 +333,7 @@ private:
     std::unique_ptr<SampleRef> CreateSample(
         const std::shared_ptr<FileFind::Match>& match,
         const size_t attributeIndex,
-        const SampleSpec& sampleSpec,
-        const std::unordered_set<std::wstring>& givenSampleNames) const;
+        const SampleSpec& sampleSpec) const;
 
     using SampleWrittenCb = std::function<void(const SampleRef&, HRESULT hrWrite)>;
 
