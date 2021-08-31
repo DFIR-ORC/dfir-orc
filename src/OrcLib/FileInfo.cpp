@@ -26,6 +26,25 @@
 
 #pragma comment(lib, "Crypt32.lib")
 
+#ifndef IMAGE_FILE_MACHINE_TARGET_HOST
+#    define IMAGE_FILE_MACHINE_TARGET_HOST 0x0001
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_ARM64
+#    define IMAGE_FILE_MACHINE_ARM64 0xAA64
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_ARMNT
+#    define IMAGE_FILE_MACHINE_ARMNT 0x014C
+#endif
+
+//
+// Those value are undocumented, they are coming from Microsoft runtimes from:
+// \\Program Files\\WindowsPowerShell\\Modules\\MicrosoftTeams\\2.3.1\\netcoreapp3.1\\runtimes
+//
+#define IMAGE_FILE_MACHINE_OSX 0xC020
+#define IMAGE_FILE_MACHINE_LINUX 0xFD1D  // TODO: be more specific (linux-x64, ...)
+
 using namespace Orc;
 
 const WCHAR* FileInfo::g_pszExecutableFileExtensions[] = {
@@ -1001,6 +1020,9 @@ HRESULT FileInfo::WritePlatform(ITableOutput& output)
 
         static const FlagsDefinition MachineDefs[] = {
             {IMAGE_FILE_MACHINE_UNKNOWN, L"MachineUnknown", L"MachineUnknown"},
+            {IMAGE_FILE_MACHINE_TARGET_HOST, L"Target Host", L"Interacts with the host and not a WOW64 guest"},
+            {IMAGE_FILE_MACHINE_ARM64, L"ARM64", L"ARM64 Machine"},
+            {IMAGE_FILE_MACHINE_ALPHA64, L"ALPHA64", L"ALPHA64 Machine"},
             {IMAGE_FILE_MACHINE_I386, L"x86", L"X86 Machine"},
             {IMAGE_FILE_MACHINE_IA64, L"IA64", L"Titanium Machine"},
             {IMAGE_FILE_MACHINE_AMD64, L"x64", L"Machine"},
@@ -1017,6 +1039,7 @@ HRESULT FileInfo::WritePlatform(ITableOutput& output)
             {IMAGE_FILE_MACHINE_SH4, L"SH4 little-endian", L"SH4 little-endian Machine"},
             {IMAGE_FILE_MACHINE_SH5, L"SH5", L"SH5 Machine"},
             {IMAGE_FILE_MACHINE_ARM, L"ARM Little-Endian", L"ARM Little-Endian Machine"},
+            {IMAGE_FILE_MACHINE_ARMNT, L"ARM Thumb-2 Little-Endian", L"ARM Thumb-2 Little-Endian Machine"},
             {IMAGE_FILE_MACHINE_THUMB, L"THUMB", L"THUMB Machine"},
             {IMAGE_FILE_MACHINE_AM33, L"AM33", L"AM33 Machine"},
             {IMAGE_FILE_MACHINE_POWERPC, L"IBM PowerPC Little-Endian", L"IBM PowerPC Little-Endian Machine"},
@@ -1028,6 +1051,8 @@ HRESULT FileInfo::WritePlatform(ITableOutput& output)
             {IMAGE_FILE_MACHINE_CEF, L"CEF", L"CEF Machine"},
             {IMAGE_FILE_MACHINE_M32R, L"M32R little-endian", L"M32R little-endian Machine"},
             {IMAGE_FILE_MACHINE_CEE, L"CEE", L"CEE Machine"},
+            {IMAGE_FILE_MACHINE_OSX, L"OSX", L"OSX Machine [undocumented]"},
+            {IMAGE_FILE_MACHINE_LINUX, L"Linux", L"Linux Machine [undocumented]"},
             {(DWORD)-1, NULL, NULL}};
 
         // @@Platform
