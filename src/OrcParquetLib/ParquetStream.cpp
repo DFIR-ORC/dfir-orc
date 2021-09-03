@@ -42,7 +42,7 @@ arrow::Result<int64_t> Orc::TableOutput::Parquet::Stream::GetSize()
     return m_Stream->GetSize();
 }
 
-Result<int64_t> Orc::TableOutput::Parquet::Stream::Read(int64_t nbytes, void* out)
+arrow::Result<int64_t> Orc::TableOutput::Parquet::Stream::Read(int64_t nbytes, void* out)
 {
     if (!m_Stream)
         return Status::Invalid("Invalid stream"s);

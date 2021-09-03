@@ -18,6 +18,7 @@
 
 #ifndef __cplusplus_cli
 #    include <fmt/format.h>
+#    include <fmt/xchar.h>
 #endif
 
 #pragma managed(push, off)

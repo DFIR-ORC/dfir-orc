@@ -107,7 +107,11 @@ if(ORC_VCPKG_ROOT)
     endif()
 
     if(ORC_BUILD_PARQUET)
-        list(APPEND _PACKAGES arrow)
+        # Could be compatible with some workarounds within tz.cpp
+        if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
+            message(FATAL_ERROR "Parquet requires Seven or later")
+        endif()
+        list(APPEND _PACKAGES arrow libressl)
     endif()
 
     if(ORC_BUILD_SSDEEP)

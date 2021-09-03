@@ -74,13 +74,13 @@ void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
     else if constexpr (std::is_same_v<FmtCharT, char>)
     {
         fmt::basic_memory_buffer<char, 32768> utf8;
-        fmt::format_to(utf8, std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
+        fmt::format_to(std::back_inserter(utf8), std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
         details::Utf8ToUtf16(utf8, out);
     }
     else if constexpr (std::is_same_v<FmtCharT, wchar_t>)
     {
         fmt::basic_memory_buffer<wchar_t, 32768> utf16;
-        fmt::format_to(utf16, std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
+        fmt::format_to(std::back_inserter(utf16), std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
         details::Utf16ToUtf8(utf16, out);
     }
     else
@@ -127,7 +127,7 @@ void FormatToWithoutEOL(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
         using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
         details::FormatWithEncodingTo(out, std::forward<FmtArg0>(arg0), TryEncodeTo<FmtCharT>(args)...);
     }
-    catch (const fmt::v7::format_error& e)
+    catch (const fmt::v8::format_error& e)
     {
         assert(nullptr && "Formatting error");
         std::cerr << "Failed to format: " << e.what() << std::endl;
