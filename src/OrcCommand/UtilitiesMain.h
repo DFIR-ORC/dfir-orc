@@ -963,7 +963,7 @@ public:
             Log::DefaultFacility()->DumpBacktrace(Log::SpdlogLogger::BacktraceDumpReason::Manual);
         }
 
-        return static_cast<int>(Cmd.m_logging.logger().errorCount() + Cmd.m_logging.logger().criticalCount());
+        return static_cast<int>(Cmd.m_logging.logger().criticalCount());
     }
 };  // namespace Command
 
