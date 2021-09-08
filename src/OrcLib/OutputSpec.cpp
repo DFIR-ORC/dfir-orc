@@ -23,6 +23,7 @@
 #include "CaseInsensitive.h"
 #include "SystemDetails.h"
 #include "Archive.h"
+#include "Utils/WinApi.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -369,10 +370,19 @@ HRESULT OutputSpec::Upload::Configure(const ConfigItem& item)
         }
         if (::HasValue(item, CONFIG_UPLOAD_ROOTPATH))
         {
-            const std::wstring_view root = item.SubItems[CONFIG_UPLOAD_ROOTPATH];
+            std::error_code ec;
+            std::wstring root = ExpandEnvironmentStringsApi(item.SubItems[CONFIG_UPLOAD_ROOTPATH].c_str(), ec);
+            if (ec)
+            {
+                Log::Warn("Failed to expand environment variables [{}]", ec);
+
+                // There could be no environment variable and this is still better than nothing...
+                root = item.SubItems[CONFIG_UPLOAD_ROOTPATH];
+            }
+
             std::replace_copy(
-                begin(root),
-                end(root),
+                std::begin(root),
+                std::end(root),
                 back_inserter(RootPath),
                 bitsMode == BITSMode::SMB ? L'/' : L'\\',
                 bitsMode == BITSMode::SMB ? L'\\' : L'/');
