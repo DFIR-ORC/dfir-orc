@@ -104,6 +104,8 @@ HRESULT Orc::Config::Common::upload(ConfigItem& parent, DWORD dwIndex, std::wstr
         return hr;
     if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"include", CONFIG_UPLOAD_FILTER_INC, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"uri", CONFIG_UPLOAD_URI, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }
 
