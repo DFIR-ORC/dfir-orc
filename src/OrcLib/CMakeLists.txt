@@ -730,6 +730,8 @@ set(SRC_UTILITIES
     "Utils/Time.cpp"
     "Utils/Time.h"
     "Utils/TypeTraits.h"
+    "Utils/Uri.cpp"
+    "Utils/Uri.h"
     "Utils/WinApi.cpp"
     "Utils/WinApi.h"
 )
