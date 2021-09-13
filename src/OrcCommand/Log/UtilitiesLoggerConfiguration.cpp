@@ -533,7 +533,12 @@ Orc::Result<void> ApplyFileSinkConfiguration(UtilitiesLogger& logger, const Util
 
     std::error_code ec;
     logger.fileSink()->Open(path, disposition, ec);
-    return ec;
+    if (ec)
+    {
+        return ec;
+    }
+
+    return Success<void>();
 }
 
 Orc::Result<void>
@@ -581,7 +586,7 @@ ApplySyslogSinkConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLo
         return ec;
     }
 
-    return ec;
+    return Success<void>();
 }
 
 void OutputConfigurationToOptions(const UtilitiesLoggerConfiguration::Output& output, std::vector<Option>& options)
