@@ -354,11 +354,11 @@ LimitStatus SampleLimitStatus(const Limits& globalLimits, const Limits& localLim
         }
     }
 
-    if (globalLimits.dwlMaxBytesTotal != INFINITE)
+    if (globalLimits.dwlMaxTotalBytes != INFINITE)
     {
-        if (dataSize + globalLimits.dwlAccumulatedBytesTotal > globalLimits.dwlMaxBytesTotal)
+        if (dataSize + globalLimits.dwlAccumulatedBytesTotal > globalLimits.dwlMaxTotalBytes)
         {
-            return GlobalMaxBytesTotal;
+            return GlobalMaxTotalBytes;
         }
     }
 
@@ -370,11 +370,11 @@ LimitStatus SampleLimitStatus(const Limits& globalLimits, const Limits& localLim
         }
     }
 
-    if (localLimits.dwlMaxBytesTotal != INFINITE)
+    if (localLimits.dwlMaxTotalBytes != INFINITE)
     {
-        if (dataSize + localLimits.dwlAccumulatedBytesTotal > localLimits.dwlMaxBytesTotal)
+        if (dataSize + localLimits.dwlAccumulatedBytesTotal > localLimits.dwlMaxTotalBytes)
         {
-            return LocalMaxBytesTotal;
+            return LocalMaxTotalBytes;
         }
     }
 
@@ -982,8 +982,8 @@ void Main::UpdateSamplesLimits(SampleSpec& sampleSpec, const SampleRef& sample)
             GlobalLimits.bMaxBytesPerSampleReached = true;
             break;
 
-        case GlobalMaxBytesTotal:
-            GlobalLimits.bMaxBytesTotalReached = true;
+        case GlobalMaxTotalBytes:
+            GlobalLimits.bMaxTotalBytesReached = true;
             break;
 
         case LocalSampleCountLimitReached:
@@ -994,8 +994,8 @@ void Main::UpdateSamplesLimits(SampleSpec& sampleSpec, const SampleRef& sample)
             sampleSpec.PerSampleLimits.bMaxBytesPerSampleReached = true;
             break;
 
-        case LocalMaxBytesTotal:
-            sampleSpec.PerSampleLimits.bMaxBytesTotalReached = true;
+        case LocalMaxTotalBytes:
+            sampleSpec.PerSampleLimits.bMaxTotalBytesReached = true;
             break;
 
         case FailedToComputeLimits:
@@ -1031,8 +1031,8 @@ void Main::OnSampleWritten(const SampleRef& sample, const SampleSpec& sampleSpec
             m_console.Print(L"{}: Exceeds global per sample size limit ({})", name, GlobalLimits.dwlMaxBytesPerSample);
             break;
 
-        case GlobalMaxBytesTotal:
-            m_console.Print(L"{}: Global total sample size limit reached ({})", name, GlobalLimits.dwlMaxBytesTotal);
+        case GlobalMaxTotalBytes:
+            m_console.Print(L"{}: Global total sample size limit reached ({})", name, GlobalLimits.dwlMaxTotalBytes);
             break;
 
         case LocalSampleCountLimitReached:
@@ -1044,9 +1044,9 @@ void Main::OnSampleWritten(const SampleRef& sample, const SampleSpec& sampleSpec
                 L"{}: Exceeds per sample size limit ({})", name, sampleSpec.PerSampleLimits.dwlMaxBytesPerSample);
             break;
 
-        case LocalMaxBytesTotal:
+        case LocalMaxTotalBytes:
             m_console.Print(
-                L"{}: total sample size limit reached ({})", name, sampleSpec.PerSampleLimits.dwlMaxBytesTotal);
+                L"{}: total sample size limit reached ({})", name, sampleSpec.PerSampleLimits.dwlMaxTotalBytes);
             break;
 
         case FailedToComputeLimits:

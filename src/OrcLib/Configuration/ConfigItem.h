@@ -278,7 +278,7 @@ constexpr auto CONFIG_HIVE_REGFIND = 4L;
 
 constexpr auto CONFIG_HIVE_REGFIND_TEMPLATE = 0L;
 
-constexpr auto CONFIG_MAXBYTESTOTAL = 0U;
+constexpr auto CONFIG_MAXTOTALBYTES = 0U;
 constexpr auto CONFIG_MAXBYTESPERSAMPLE = 1U;
 constexpr auto CONFIG_MAXSAMPLECOUNT = 2U;
 constexpr auto CONFIG_SAMPLE_CONTENT = 3U;

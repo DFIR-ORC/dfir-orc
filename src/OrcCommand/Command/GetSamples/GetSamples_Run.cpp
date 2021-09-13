@@ -283,11 +283,11 @@ HRESULT Main::WriteGetThisConfig(
 
     getthisconfig[GETTHIS_SAMPLES].Status = ConfigItem::PRESENT;
 
-    if (config.limits.dwlMaxBytesTotal != INFINITE)
+    if (config.limits.dwlMaxTotalBytes != INFINITE)
     {
-        getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXBYTESTOTAL].strData =
-            std::to_wstring(config.limits.dwlMaxBytesTotal);
-        getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXBYTESTOTAL].Status = ConfigItem::PRESENT;
+        getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXTOTALBYTES].strData =
+            std::to_wstring(config.limits.dwlMaxTotalBytes);
+        getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXTOTALBYTES].Status = ConfigItem::PRESENT;
     }
 
     if (config.limits.dwlMaxBytesPerSample != INFINITE)

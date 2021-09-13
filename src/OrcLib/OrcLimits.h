@@ -23,9 +23,9 @@ public:
 
     bool bIgnoreLimits = false;
 
-    Limit<typename Traits::ByteQuantity<DWORDLONG>> dwlMaxBytesTotal = INFINITE;
+    Limit<typename Traits::ByteQuantity<DWORDLONG>> dwlMaxTotalBytes = INFINITE;
     DWORDLONG dwlAccumulatedBytesTotal = 0LL;
-    bool bMaxBytesTotalReached = false;
+    bool bMaxTotalBytesReached = false;
 
     Limit<Traits::ByteQuantity<DWORDLONG>> dwlMaxBytesPerSample = INFINITE;
     bool bMaxBytesPerSampleReached = false;

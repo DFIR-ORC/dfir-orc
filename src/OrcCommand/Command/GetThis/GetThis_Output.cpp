@@ -84,7 +84,7 @@ void PrintValues(
             sample.Content,
             sample.PerSampleLimits.dwMaxSampleCount,
             sample.PerSampleLimits.dwlMaxBytesPerSample,
-            sample.PerSampleLimits.dwlMaxBytesTotal);
+            sample.PerSampleLimits.dwlMaxTotalBytes);
 
         for (const auto& term : sample.Terms)
         {
@@ -179,7 +179,7 @@ void Main::PrintParameters()
     PrintValue(node, L"FuzzyHash", config.FuzzyHashAlgs);
     PrintValue(node, L"NoLimits", config.limits.bIgnoreLimits);
     PrintValue(node, L"MaxBytesPerSample", config.limits.dwlMaxBytesPerSample);
-    PrintValue(node, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal);
+    PrintValue(node, L"MaxTotalBytes", config.limits.dwlMaxTotalBytes);
     PrintValue(node, L"MaxSampleCount", config.limits.dwMaxSampleCount);
 
     PrintValues(node, L"Parsed locations", config.Locations.GetParsedLocations());

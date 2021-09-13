@@ -58,11 +58,11 @@ enum LimitStatus
 
     GlobalSampleCountLimitReached = 1,
     GlobalMaxBytesPerSample = 1 << 1,
-    GlobalMaxBytesTotal = 1 << 2,
+    GlobalMaxTotalBytes = 1 << 2,
 
     LocalSampleCountLimitReached = 1 << 3,
     LocalMaxBytesPerSample = 1 << 4,
-    LocalMaxBytesTotal = 1 << 5,
+    LocalMaxTotalBytes = 1 << 5,
 
     FailedToComputeLimits = 1 << 7,
 
@@ -215,10 +215,10 @@ public:
                     return false;
                 case GlobalSampleCountLimitReached:
                 case GlobalMaxBytesPerSample:
-                case GlobalMaxBytesTotal:
+                case GlobalMaxTotalBytes:
                 case LocalSampleCountLimitReached:
                 case LocalMaxBytesPerSample:
-                case LocalMaxBytesTotal:
+                case LocalMaxTotalBytes:
                 case FailedToComputeLimits:
                     return true;
                 default:
