@@ -199,6 +199,8 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
         }
     }
 
+    outcome.SetEndingTime(std::chrono::system_clock::now());
+
     auto mothershipPID = SystemDetails::GetParentProcessId();
     if (mothershipPID)
     {

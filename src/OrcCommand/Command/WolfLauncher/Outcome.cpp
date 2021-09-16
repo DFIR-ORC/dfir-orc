@@ -218,6 +218,12 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
                 writer->WriteNamed(L"timestamp", *timestamp);
             }
 
+            auto endingTime = ToStringIso8601(outcome.GetEndingTime());
+            if (endingTime.has_value())
+            {
+                writer->WriteNamed(L"end", *endingTime);
+            }
+
             writer->WriteNamed(L"computer_name", outcome.GetComputerNameValue());
 
             ::Write(writer, outcome.GetMothership());
