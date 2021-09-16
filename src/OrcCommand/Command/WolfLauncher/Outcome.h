@@ -214,7 +214,11 @@ private:
 class Outcome
 {
 public:
-    std::lock_guard<std::mutex> Lock() const { return std::lock_guard<std::mutex>(m_mutex); }
+    std::lock_guard<std::mutex> Lock() const
+    {
+        m_mutex.lock();
+        return {m_mutex, std::adopt_lock};
+    }
 
     CommandSet& GetCommandSet(const std::wstring& keyword) { return m_commandSets[keyword]; }
 

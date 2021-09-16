@@ -181,7 +181,7 @@ Result<std::wstring> GetProcessExecutableHash(DWORD dwProcessId, CryptoHashStrea
 
 void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
 {
-    auto lock = outcome.Lock();
+    auto&& lock = outcome.Lock();
 
     {
         std::wstring computerName;
