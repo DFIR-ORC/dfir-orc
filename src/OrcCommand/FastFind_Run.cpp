@@ -444,7 +444,7 @@ HRESULT Main::Run()
     GetSystemTime(&CollectionTime);
     SystemTimeToFileTime(&CollectionTime, &CollectionDate);
 
-    SystemDetails::GetOrcComputerName(ComputerName);
+    SystemDetails::GetOrcFullComputerName(ComputerName);
 
     if (config.outFileSystem.Type != OutputSpec::Kind::None)
         pFileSystemTableOutput = TableOutput::GetWriter(_L_, config.outFileSystem);
