@@ -87,7 +87,8 @@ void Main::PrintUsage()
         "processes.");
 
     constexpr std::array kCustomOutputParameters = {
-        Usage::Parameter {"/Outline=<File.json|File.xml>", "Generic system information file output"}};
+        Usage::Parameter {"/Outline=<File.json|File.xml>", "Generic system information output file"},
+        Usage::Parameter {"/Outcome=<File.json|File.xml>", "Execution information output file"}};
 
     Usage::PrintOutputParameters(usageNode, kCustomOutputParameters);
 
