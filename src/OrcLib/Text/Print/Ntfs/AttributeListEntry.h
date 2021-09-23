@@ -34,10 +34,10 @@ struct Printer<AttributeListEntry>
 
         root.AddWithoutEOL(
             "Type: '{}', Name: '{}', Form: '{}', Id: {:02}",
-            entry.Instance(),
             attributeType,
             attributeName,
-            entry.FormCode() == RESIDENT_FORM ? "R" : "NR");
+            entry.FormCode() == RESIDENT_FORM ? "R" : "NR",
+            entry.Instance());
 
         if (entry.LowestVCN() > 0)
         {
