@@ -813,7 +813,7 @@ HRESULT Main::WriteSample(
             SystemError(hrCsv));
     }
 
-    if (SUCCEEDED(hrCopy) && SUCCEEDED(hrCsv))
+    if ((SUCCEEDED(hrCopy) || sample->IsOfflimits()) && SUCCEEDED(hrCsv))
     {
         hr = S_OK;
     }
