@@ -183,7 +183,7 @@ HRESULT RegFind::Match::Write(IStructuredOutput& pWriter)
     {
         pWriter.BeginElement(nullptr);
         {
-            pWriter.WriteNamedFormated(L"key", aKeyNameMatch.KeyName);
+            pWriter.WriteNamed(L"key", aKeyNameMatch.KeyName);
             pWriter.WriteNamed(L"subkeys_count", (UINT32)aKeyNameMatch.SubKeysCount);
             pWriter.WriteNamed(L"values_count", (UINT32)aKeyNameMatch.ValuesCount);
             pWriter.WriteNamed(L"lastmodified_key", aKeyNameMatch.LastModificationTime);
