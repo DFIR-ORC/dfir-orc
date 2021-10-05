@@ -82,7 +82,7 @@ std::unique_ptr<Archive::Appender<Archive::Archive7z>> CreateCompressor(const Ou
         return {};
     }
 
-    Archive::Archive7z archiver(Archive::Format::k7z, compressionLevel, outputSpec.Password);
+    Archive::Archive7z archiver(ToArchiveFormatNg(outputSpec.ArchiveFormat), compressionLevel, outputSpec.Password);
 
     auto appender = Appender<Archive7z>::Create(std::move(archiver), fs::path(outputSpec.Path), 1024 * 1024 * 50, ec);
     if (ec)

@@ -23,7 +23,8 @@ class Item;
 
 enum class Format
 {
-    k7z = 0
+    k7z = 0,
+    k7zZip
 };
 
 class IArchive

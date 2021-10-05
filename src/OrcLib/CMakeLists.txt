@@ -282,6 +282,7 @@ set(SRC_INOUT_ARCHIVE
     "ArchiveExtract.cpp"
     "ArchiveExtract.h"
     "ArchiveFormat.h"
+    "ArchiveFormat.cpp"
     "ArchiveMessage.cpp"
     "ArchiveMessage.h"
     "ArchiveNotification.cpp"
