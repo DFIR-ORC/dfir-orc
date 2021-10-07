@@ -1,11 +1,21 @@
 # ChangeLog
 
-## [10.0.20] - 2021-02-07
+## [10.0.21] - 2021-10-07
+### Changed
+- fastfind: use full computer name as 'computer' output element
+
+### Fixed
+- add missing PE machine type
+- yara: fix log formatting
+- fastfind: fix match description for 'data_contains_hex'
+
+
+## [10.0.20] - 2021-07-02
 ### Added
 - WolfLauncher: add option `/nolimits[:<keyword>,...]`
 
 
-## [10.0.19] - 2021-01-06
+## [10.0.19] - 2021-06-01
 ### Changed
 - yara: update to 4.0.2
 - GetSamples: enable autorunsc for all users
@@ -14,7 +24,7 @@
 - fastfind: fix nullptr dereference when '/out' is not specified
 
 
-## [10.0.18] - 2021-10-03
+## [10.0.18] - 2021-03-10
 ### Changed
 - yara: remove libressl dependency and rely on wincrypt api
 - yara: remove jansson dependency and cuckoo module
@@ -22,7 +32,7 @@
 - spdlog: update to 1.8.1
 
 
-## [10.0.17] - 2021-10-02
+## [10.0.17] - 2021-02-10
 ### Changed
 - build.ps1: stop on any error
 - build.ps1: multiple other improvements
