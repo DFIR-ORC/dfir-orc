@@ -29,6 +29,28 @@
 using namespace std;
 using namespace Orc;
 
+namespace {
+
+template <typename InputIt, typename OutputIt>
+OutputIt ToHex(InputIt first, InputIt last, OutputIt out)
+{
+    const auto hex = std::string_view("0123456789ABCDEF");
+
+    for (auto it = first; it != last; ++it)
+    {
+        std::string_view input(reinterpret_cast<const char*>(&(*it)), sizeof(typename InputIt::value_type));
+        for (int i = input.size() - 1; i >= 0; --i)
+        {
+            *out++ = hex[(input[i] >> 4) & 0x0F];
+            *out++ = hex[input[i] & 0x0F];
+        }
+    }
+
+    return out;
+}
+
+}  // namespace
+
 RegFind::Match::KeyNameMatch::KeyNameMatch(const RegistryKey* const MatchingRegistryKey)
 {
     if (MatchingRegistryKey != nullptr)
@@ -1290,14 +1312,15 @@ std::string RegFind::SearchTerm::GetDescription() const
     {
         if (!bFirst)
             stream << ", ";
-        stream << "Data contains " << std::hex;
+        stream << "Data contains ";
+
+        std::string hexlify;
+        std::string_view view(
+            reinterpret_cast<const char*>(m_DataContentContains.GetData()), m_DataContentContains.GetCount());
+        ::ToHex(view.cbegin(), view.cend(), std::back_inserter(hexlify));
+        stream << hexlify;
+
         bFirst = false;
-        size_t i;
-        for (i = 0; i < m_DataContentContains.GetCount(); i++)
-        {
-            stream << m_DataContentContains[i];
-        }
-        stream << std::dec;
     }
     // Support of return value optimization by compiler
     return stream.str();
