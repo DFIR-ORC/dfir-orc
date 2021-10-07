@@ -50,14 +50,16 @@ void PrintValue(
                 while (*pCurExt)
                 {
                     customExtensions.push_back({*pCurExt});
+                    pCurExt++;
                 }
 
                 std::sort(std::begin(customExtensions), std::end(customExtensions));
 
                 PrintValue(
                     node,
-                    fmt::format(L"{} for custom extensions: {}", action, boost::join(customExtensions, L" ,")),
-                    filter.intent);
+                    fmt::format(L"{} for custom extensions: {}", action, boost::join(customExtensions, L", ")),
+                    filter.intent,
+                    pCurCol);
             }
             break;
             case FILEFILTER_EXTARCHIVE:
