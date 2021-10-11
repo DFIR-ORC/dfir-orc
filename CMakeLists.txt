@@ -82,11 +82,19 @@ if(ORC_VCPKG_ROOT)
         boost-multi-index
         boost-outcome
         boost-scope-exit
+        boost-system
+        boost-tokenizer
         fmt
         ms-gsl
         spdlog
         yara
         rapidjson
+    )
+
+    # Serialization pull a lot of deps and breaks XP SP2 because of boost-thread's "GetLogicalProcessorInformation"
+    add_compile_definitions(
+        BOOST_MULTI_INDEX_DISABLE_SERIALIZATION
+        BOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES
     )
 
     # Tools/rcedit specific dependencies
