@@ -18,6 +18,7 @@ SpdlogLogger::SpdlogLogger(const std::string& name)
     , m_backtraceFormatter(
           std::make_unique<spdlog::pattern_formatter>(kDefaultLogPattern, spdlog::pattern_time_type::utc))
     , m_backtraceTrigger(Level::Off)
+    , m_backtraceLevel(Level::Debug)
 {
 }
 
@@ -81,7 +82,7 @@ void SpdlogLogger::DumpBacktrace(BacktraceDumpReason reason)
 
         if (m_sinks[i]->Level() != Log::Level::Off)
         {
-            m_sinks[i]->SetLevel(Log::Level::Trace);
+            m_sinks[i]->SetLevel(m_backtraceLevel);
         }
 
         m_sinks[i]->SetFormatter(m_backtraceFormatter->clone());

@@ -51,6 +51,9 @@ public:
     Log::Level BacktraceTrigger() const { return m_backtraceTrigger; }
     void SetBacktraceTrigger(Log::Level level) { m_backtraceTrigger = level; }
 
+    Log::Level BacktraceLevel() const { return m_backtraceLevel; }
+    void SetBacktraceLevel(Log::Level level) { m_backtraceLevel = level; }
+
     void SetErrorHandler(std::function<void(const std::string&)> handler);
 
     void SetAsDefaultLogger();
@@ -105,6 +108,7 @@ private:
     std::shared_ptr<spdlog::logger> m_logger;
     std::unique_ptr<spdlog::formatter> m_backtraceFormatter;
     Log::Level m_backtraceTrigger;
+    Log::Level m_backtraceLevel;
     std::vector<SpdlogSink::Ptr> m_sinks;
 };
 
