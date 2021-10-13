@@ -93,7 +93,7 @@ HRESULT Orc::GetMyCurrentSID(PSID& pSid)
         {
             hr = HRESULT_FROM_WIN32(dwResult);
             Log::Error("Failed GetTokenInformation [{}]", SystemError(hr));
-            return FALSE;
+            return hr;
         }
     }
 
