@@ -143,18 +143,18 @@ HRESULT Orc::GetMyCurrentSID(PSID& pSid)
         return hr;
     }
 
-    if (Log::DefaultLogger()->Get(Log::Facility::kDefault)->Level() == Log::Level::Debug)
+#ifdef DEBUG
+    LPWSTR pszSid = nullptr;
+    if (!ConvertSidToStringSid(pSid, &pszSid))
     {
-        LPWSTR pszSid = nullptr;
-        if (!ConvertSidToStringSid(pSid, &pszSid))
-        {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed ConvertSidToStringSid [{}]", SystemError(hr));
-            return S_OK;
-        }
-        Log::Debug(L"The current process token owner is '{}'", pszSid);
-        LocalFree(pszSid);
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Error("Failed ConvertSidToStringSid [{}]", SystemError(hr));
+        return S_OK;
     }
+
+    Log::Debug(L"The current process token owner is '{}'", pszSid);
+    LocalFree(pszSid);
+#endif
 
     return S_OK;
 }

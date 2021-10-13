@@ -30,7 +30,9 @@ namespace {
 std::shared_ptr<Command::UtilitiesLogger::ConsoleSink> CreateConsoleSink()
 {
     auto sink = std::make_shared<Command::UtilitiesLogger::ConsoleSink>();
-    sink->SetLevel(Log::Level::Critical);
+
+    // Allow all logs to be print, they will be filtered by the upstream level set by spdlog::set_level
+    sink->SetLevel(Log::Level::Trace);
     return sink;
 }
 
@@ -46,8 +48,6 @@ std::shared_ptr<Command::UtilitiesLogger::FileSink> CreateFileSink()
 auto CreateSyslogSink()
 {
     auto sink = std::make_shared<Command::UtilitiesLogger::SyslogSink>();
-
-    // Allow all logs to be print, they will be filtered by the upstream level set by spdlog::set_level
     sink->SetLevel(Log::Level::Off);
     return sink;
 }
@@ -55,17 +55,19 @@ auto CreateSyslogSink()
 std::tuple<SpdlogLogger::Ptr, SpdlogLogger::Ptr, SpdlogLogger::Ptr>
 CreateFacilities(SpdlogSink::Ptr consoleSink, SpdlogSink::Ptr fileSink)
 {
-    auto default = UtilitiesLogger::CreateSpdlogLogger("default");
-    default->Add(consoleSink);
-    default->Add(fileSink);
-    default->EnableBacktrace(64);
-    default->SetFormatter(
+    auto console = UtilitiesLogger::CreateSpdlogLogger("console");
+    console->Add(consoleSink);
+    console->SetFormatter(
         std::make_unique<spdlog::pattern_formatter>(Log::kDefaultLogPattern, spdlog::pattern_time_type::utc));
+    console->EnableBacktrace(64);
+    console->SetBacktraceTrigger(Level::Critical);
 
     auto file = UtilitiesLogger::CreateSpdlogLogger("file");
     file->Add(fileSink);
     file->SetFormatter(
         std::make_unique<spdlog::pattern_formatter>(Log::kDefaultLogPattern, spdlog::pattern_time_type::utc));
+    file->EnableBacktrace(64);
+    console->SetBacktraceTrigger(Level::Error);
 
     auto journal = UtilitiesLogger::CreateSpdlogLogger("journal");
     journal->SetFormatter(
@@ -73,7 +75,7 @@ CreateFacilities(SpdlogSink::Ptr consoleSink, SpdlogSink::Ptr fileSink)
     journal->SetLevel(Level::Off);
     journal->DisableBacktrace();
 
-    return {std::move(default), std::move(file), std::move(journal)};
+    return {std::move(console), std::move(file), std::move(journal)};
 }
 
 spdlog::sink_ptr CreateStderrSink()
@@ -127,14 +129,16 @@ UtilitiesLogger::UtilitiesLogger()
     m_consoleSink = ::CreateConsoleSink();
     m_syslogSink = ::CreateSyslogSink();
 
-    auto [default, file, journal] = ::CreateFacilities(m_consoleSink, m_fileSink);
+    auto [console, file, journal] = ::CreateFacilities(m_consoleSink, m_fileSink);
 
     auto loggers = {
-        std::make_pair(Log::Facility::kDefault, default),
+        std::make_pair(Log::Facility::kConsole, console),
         std::make_pair(Log::Facility::kLogFile, file),
         std::make_pair(Log::Facility::kJournal, journal)};
 
     m_logger = std::make_shared<Logger>(loggers);
+    m_logger->AddToDefaultFacilities(Log::Facility::kConsole);
+    m_logger->AddToDefaultFacilities(Log::Facility::kLogFile);
 
     Orc::Log::SetDefaultLogger(m_logger);
 }

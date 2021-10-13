@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <set>
 
 #include <spdlog/spdlog.h>
 
@@ -30,7 +31,7 @@ class Logger
 public:
     enum class Facility : size_t
     {
-        kDefault = 0,
+        kConsole = 0,
         kLogFile,
         kJournal,
         kUnitTest,
@@ -46,88 +47,130 @@ public:
     template <typename... Args>
     void Trace(Facility id, Args&&... args)
     {
-        Get(id)->Trace(std::forward<Args>(args)...);
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Trace(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Trace(Args&&... args)
     {
-        Trace(Facility::kDefault, std::forward<Args>(args)...);
+        for (auto& logger : m_defaultFacilities)
+        {
+            logger->Trace(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Debug(Facility id, Args&&... args)
     {
-        Get(id)->Debug(std::forward<Args>(args)...);
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Debug(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Debug(Args&&... args)
     {
-        Debug(Facility::kDefault, std::forward<Args>(args)...);
+        for (auto& logger : m_defaultFacilities)
+        {
+            logger->Debug(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Info(Facility id, Args&&... args)
     {
-        Get(id)->Info(std::forward<Args>(args)...);
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Info(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Info(Args&&... args)
     {
-        Info(Facility::kDefault, std::forward<Args>(args)...);
+        for (auto& logger : m_defaultFacilities)
+        {
+            logger->Info(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Warn(Facility id, Args&&... args)
     {
-        Get(id)->Warn(std::forward<Args>(args)...);
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Warn(std::forward<Args>(args)...);
+        }
+
         ++m_warningCount;
     }
 
     template <typename... Args>
     void Warn(Args&&... args)
     {
-        Warn(Facility::kDefault, std::forward<Args>(args)...);
+        for (auto& logger : m_defaultFacilities)
+        {
+            logger->Warn(std::forward<Args>(args)...);
+        }
+
+        ++m_warningCount;
     }
 
     template <typename... Args>
     void Error(Facility id, Args&&... args)
     {
-        Get(id)->Error(std::forward<Args>(args)...);
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Error(std::forward<Args>(args)...);
+            logger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::Error);
+        }
+
         ++m_errorCount;
     }
 
     template <typename... Args>
     void Error(Args&&... args)
     {
-        Error(Facility::kDefault, std::forward<Args>(args)...);
-
-        auto defaultLogger = Get(Facility::kDefault);
-        if (defaultLogger)
+        for (auto& logger : m_defaultFacilities)
         {
-            defaultLogger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::Error);
+            logger->Error(std::forward<Args>(args)...);
+            logger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::Error);
         }
+
+        ++m_errorCount;
     }
 
     template <typename... Args>
     void Critical(Facility id, Args&&... args)
     {
-        Get(id)->Critical(std::forward<Args>(args)...);
         ++m_criticalCount;
 
-        auto defaultLogger = Get(Facility::kDefault);
-        if (defaultLogger)
+        auto& logger = Get(id);
+        if (logger)
         {
-            defaultLogger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::CriticalError);
+            logger->Critical(std::forward<Args>(args)...);
         }
     }
 
     template <typename... Args>
     void Critical(Args&&... args)
     {
-        Critical(Facility::kDefault, std::forward<Args>(args)...);
+        for (auto& logger : m_defaultFacilities)
+        {
+            logger->Critical(std::forward<Args>(args)...);
+            logger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::CriticalError);
+        }
+
+        ++m_criticalCount;
     }
 
     void Flush()
@@ -158,8 +201,19 @@ public:
 
     void Set(Facility id, SpdlogLogger::Ptr logger);
 
+    void AddToDefaultFacilities(Facility id)
+    {
+        auto& logger = Get(id);
+        assert(logger);
+        if (logger)
+        {
+            m_defaultFacilities.insert(logger);
+        }
+    }
+
 private:
     std::vector<SpdlogLogger::Ptr> m_loggers;
+    std::set<SpdlogLogger::Ptr> m_defaultFacilities;
 
     std::atomic<uint64_t> m_warningCount;
     std::atomic<uint64_t> m_errorCount;

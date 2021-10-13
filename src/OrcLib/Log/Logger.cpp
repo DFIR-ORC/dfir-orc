@@ -43,10 +43,10 @@ Logger::Logger(std::initializer_list<std::pair<Facility, SpdlogLogger::Ptr>> log
         }
     }
 
-    auto logger = Get(Facility::kDefault);
-    if (logger)
+    auto& defaultLogger = m_loggers[0];
+    if (defaultLogger)
     {
-        logger->SetAsDefaultLogger();
+        defaultLogger->SetAsDefaultLogger();
     }
 }
 
