@@ -27,13 +27,6 @@ class SpdlogLogger
 public:
     using Ptr = std::shared_ptr<SpdlogLogger>;
 
-    enum class BacktraceDumpReason
-    {
-        Manual = 0,
-        Error = static_cast<int>(Log::Level::Error),
-        CriticalError = static_cast<int>(Log::Level::Critical)
-    };
-
     SpdlogLogger(const std::string& name);
 
     void Add(SpdlogSink::Ptr sink);
@@ -46,7 +39,7 @@ public:
 
     void EnableBacktrace(size_t messageCount);
     void DisableBacktrace();
-    void DumpBacktrace(BacktraceDumpReason reason);
+    void DumpBacktrace();
 
     Log::Level BacktraceTrigger() const { return m_backtraceTrigger; }
     void SetBacktraceTrigger(Log::Level level) { m_backtraceTrigger = level; }
@@ -62,6 +55,11 @@ public:
 
     inline void Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, std::string_view msg)
     {
+        if (level >= m_backtraceTrigger && m_backtraceTrigger != Level::Off)
+        {
+            DumpBacktrace();
+        }
+
         m_logger->log(timepoint, spdlog::source_loc {}, static_cast<spdlog::level::level_enum>(level), msg);
     }
 
@@ -92,18 +90,33 @@ public:
     template <typename... Args>
     inline void Warn(Args&&... args)
     {
+        if (m_backtraceTrigger != Level::Off && m_backtraceTrigger >= Level::Warning)
+        {
+            DumpBacktrace();
+        }
+
         m_logger->warn(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     inline void Error(Args&&... args)
     {
+        if (m_backtraceTrigger != Level::Off && m_backtraceTrigger >= Level::Error)
+        {
+            DumpBacktrace();
+        }
+
         m_logger->error(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     inline void Critical(Args&&... args)
     {
+        if (m_backtraceTrigger == Level::Critical)
+        {
+            DumpBacktrace();
+        }
+
         m_logger->critical(std::forward<Args>(args)...);
     }
 

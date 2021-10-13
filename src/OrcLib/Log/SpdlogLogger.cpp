@@ -49,23 +49,8 @@ void SpdlogLogger::DisableBacktrace()
     m_logger->disable_backtrace();
 }
 
-void SpdlogLogger::DumpBacktrace(BacktraceDumpReason reason)
+void SpdlogLogger::DumpBacktrace()
 {
-    Log::Level trigger;
-    if (reason == BacktraceDumpReason::Manual)
-    {
-        trigger = Log::Level::Trace;
-    }
-    else
-    {
-        trigger = static_cast<Log::Level>(reason);
-    }
-
-    if (trigger < m_backtraceTrigger)
-    {
-        return;
-    }
-
     // Backup log settings
     const auto loggerLevel = static_cast<Log::Level>(m_logger->level());
     m_logger->set_level(spdlog::level::trace);
