@@ -240,6 +240,9 @@ public:
     Timestamp GetTimestamp() const { return m_timestamp; }
     void SetTimestamp(const Timestamp& timestamp) { m_timestamp = timestamp; }
 
+    Timestamp GetStartingTime() const { return m_startingTime; }
+    void SetStartingTime(const Timestamp& timestamp) { m_startingTime = timestamp; }
+
     Timestamp GetEndingTime() const { return m_endingTime; }
     void SetEndingTime(const Timestamp& timestamp) { m_endingTime = timestamp; }
 
@@ -255,6 +258,7 @@ private:
     Mothership m_mothership;
     WolfLauncher m_wolfLauncher;
     std::chrono::time_point<std::chrono::system_clock> m_timestamp;
+    std::chrono::time_point<std::chrono::system_clock> m_startingTime;
     std::chrono::time_point<std::chrono::system_clock> m_endingTime;
     std::unordered_map<std::wstring, CommandSet> m_commandSets;
 };

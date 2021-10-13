@@ -218,6 +218,12 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
                 writer->WriteNamed(L"timestamp", *timestamp);
             }
 
+            auto startingTime = ToStringIso8601(outcome.GetStartingTime());
+            if (startingTime.has_value())
+            {
+                writer->WriteNamed(L"start", *startingTime);
+            }
+
             auto endingTime = ToStringIso8601(outcome.GetEndingTime());
             if (endingTime.has_value())
             {

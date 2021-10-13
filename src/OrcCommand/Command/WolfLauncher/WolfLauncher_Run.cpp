@@ -196,6 +196,7 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
         if (timestampTp)
         {
             outcome.SetTimestamp(*timestampTp);
+            outcome.SetStartingTime(*timestampTp);
         }
     }
 
