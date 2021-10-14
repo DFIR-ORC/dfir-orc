@@ -45,6 +45,29 @@ public:
     uint64_t errorCount() const;
     uint64_t criticalCount() const;
 
+    template <typename FacilityIt, typename Timepoint, typename... Args>
+    inline void Log(FacilityIt first, FacilityIt last, const Timepoint& timepoint, Level level, Args&&... args)
+    {
+        if (first == last)
+        {
+            return;
+        }
+
+        fmt::memory_buffer msg;
+        Text::FormatToWithoutEOL(std::back_inserter(msg), std::forward<Args>(args)...);
+        for (auto it = first; it != last; ++it)
+        {
+            const SpdlogLogger::Ptr& logger = *it;
+            logger->Log(timepoint, level, std::string_view(msg.data(), msg.size()));
+        }
+    }
+
+    template <typename FacilityIt, typename... Args>
+    inline void Log(FacilityIt first, FacilityIt last, Log::Level level, Args&&... args)
+    {
+        Log(first, last, std::chrono::system_clock::now(), level, std::forward<Args>(args)...);
+    }
+
     template <typename... Args>
     void Trace(Facility id, Args&&... args)
     {
@@ -58,10 +81,10 @@ public:
     template <typename... Args>
     void Trace(Args&&... args)
     {
-        for (auto& logger : m_defaultFacilities)
-        {
-            logger->Trace(std::forward<Args>(args)...);
-        }
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Trace,
+            std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -77,10 +100,10 @@ public:
     template <typename... Args>
     void Debug(Args&&... args)
     {
-        for (auto& logger : m_defaultFacilities)
-        {
-            logger->Debug(std::forward<Args>(args)...);
-        }
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Debug,
+            std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -96,10 +119,7 @@ public:
     template <typename... Args>
     void Info(Args&&... args)
     {
-        for (auto& logger : m_defaultFacilities)
-        {
-            logger->Info(std::forward<Args>(args)...);
-        }
+        Log(std::cbegin(m_defaultFacilities), std::cend(m_defaultFacilities), Level::Info, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
@@ -117,11 +137,11 @@ public:
     template <typename... Args>
     void Warn(Args&&... args)
     {
-        for (auto& logger : m_defaultFacilities)
-        {
-            logger->Warn(std::forward<Args>(args)...);
-        }
 
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Warning,
+            std::forward<Args>(args)...);
         ++m_warningCount;
     }
 
@@ -132,7 +152,6 @@ public:
         if (logger)
         {
             logger->Error(std::forward<Args>(args)...);
-            logger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::Error);
         }
 
         ++m_errorCount;
@@ -141,12 +160,11 @@ public:
     template <typename... Args>
     void Error(Args&&... args)
     {
-        for (auto& logger : m_defaultFacilities)
-        {
-            logger->Error(std::forward<Args>(args)...);
-            logger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::Error);
-        }
 
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Error,
+            std::forward<Args>(args)...);
         ++m_errorCount;
     }
 
@@ -165,12 +183,11 @@ public:
     template <typename... Args>
     void Critical(Args&&... args)
     {
-        for (auto& logger : m_defaultFacilities)
-        {
-            logger->Critical(std::forward<Args>(args)...);
-            logger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::CriticalError);
-        }
 
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Critical,
+            std::forward<Args>(args)...);
         ++m_criticalCount;
     }
 
