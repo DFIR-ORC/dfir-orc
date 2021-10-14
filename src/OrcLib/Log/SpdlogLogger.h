@@ -60,10 +60,15 @@ public:
 
     const std::vector<SpdlogSink::Ptr>& Sinks();
 
-    template <typename... Args>
-    void Trace(Args&&... args)
+    inline void Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, std::string_view msg)
     {
-        // This is important to avoid formatting trace level logs because of spdlog way to handle backtrace
+        m_logger->log(timepoint, spdlog::source_loc {}, static_cast<spdlog::level::level_enum>(level), msg);
+    }
+
+    template <typename... Args>
+    inline void Trace(Args&&... args)
+    {
+        // Never forward trace level calls to avoid any spdlog's backtrace processing
         if (m_logger->level() > spdlog::level::trace)
         {
             return;
@@ -73,31 +78,31 @@ public:
     }
 
     template <typename... Args>
-    void Debug(Args&&... args)
+    inline void Debug(Args&&... args)
     {
         m_logger->debug(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Info(Args&&... args)
+    inline void Info(Args&&... args)
     {
         m_logger->info(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Warn(Args&&... args)
+    inline void Warn(Args&&... args)
     {
         m_logger->warn(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Error(Args&&... args)
+    inline void Error(Args&&... args)
     {
         m_logger->error(std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Critical(Args&&... args)
+    inline void Critical(Args&&... args)
     {
         m_logger->critical(std::forward<Args>(args)...);
     }
@@ -106,10 +111,10 @@ public:
 
 private:
     std::shared_ptr<spdlog::logger> m_logger;
+    std::vector<SpdlogSink::Ptr> m_sinks;
     std::unique_ptr<spdlog::formatter> m_backtraceFormatter;
     Log::Level m_backtraceTrigger;
     Log::Level m_backtraceLevel;
-    std::vector<SpdlogSink::Ptr> m_sinks;
 };
 
 }  // namespace Log

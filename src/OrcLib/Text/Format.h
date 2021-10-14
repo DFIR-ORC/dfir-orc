@@ -62,7 +62,7 @@ void Utf16ToUtf8(const T& utf16, OutputIt out)
 }
 
 template <typename OutputIt, typename FmtArg0, typename... FmtArgs>
-void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
+inline void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 {
     using BufferCharT = Traits::underlying_char_type_t<OutputIt>;
     using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
@@ -90,7 +90,7 @@ void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 }
 
 template <typename OutputIt, typename RawArg>
-void FormatWithEncodingTo(OutputIt out, RawArg&& arg)
+inline void FormatWithEncodingTo(OutputIt out, RawArg&& arg)
 {
     using BufferCharT = Traits::underlying_char_type_t<OutputIt>;
     using RawCharT = Traits::underlying_char_type_t<RawArg>;

@@ -16,6 +16,7 @@
 #include <spdlog/spdlog.h>
 
 #include "SpdlogLogger.h"
+#include "Text/Format.h"
 
 namespace Orc {
 namespace Log {
