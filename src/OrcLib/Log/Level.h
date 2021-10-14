@@ -23,7 +23,7 @@ constexpr std::wstring_view kLevelError = L"error";
 constexpr std::wstring_view kLevelCritical = L"critical";
 constexpr std::wstring_view kLevelOff = L"off";
 
-enum class Level
+enum class Level : uint16_t
 {
     Trace = SPDLOG_LEVEL_TRACE,
     Debug = SPDLOG_LEVEL_DEBUG,
@@ -31,7 +31,8 @@ enum class Level
     Warning = SPDLOG_LEVEL_WARN,
     Error = SPDLOG_LEVEL_ERROR,
     Critical = SPDLOG_LEVEL_CRITICAL,
-    Off = SPDLOG_LEVEL_OFF
+    Off = SPDLOG_LEVEL_OFF,
+    LevelCount = 7
 };
 
 std::wstring_view ToString(Log::Level level);
