@@ -30,9 +30,7 @@ namespace {
 std::shared_ptr<Command::UtilitiesLogger::ConsoleSink> CreateConsoleSink()
 {
     auto sink = std::make_shared<Command::UtilitiesLogger::ConsoleSink>();
-
-    // Allow all logs to be print, they will be filtered by the upstream level set by spdlog::set_level
-    sink->SetLevel(Log::Level::Trace);
+    sink->SetLevel(Log::Level::Critical);
     return sink;
 }
 
