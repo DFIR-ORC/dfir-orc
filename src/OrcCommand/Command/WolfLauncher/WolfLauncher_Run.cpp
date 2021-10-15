@@ -498,9 +498,9 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         {
             writer->WriteNamed(L"version", kOrcFileVerStringW);
 
-            FILETIME ft;
-            GetSystemTimeAsFileTime(&ft);
-            writer->WriteNamed(L"time", ft);
+            std::wstring start;
+            SystemDetails::GetTimeStampISO8601(start);
+            writer->WriteNamed(L"start", start);
 
             std::wstring strTimeStamp;
             SystemDetails::GetTimeStampISO8601(strTimeStamp);
