@@ -212,11 +212,8 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             writer->BeginElement(kNodeOutcome);
             Guard::Scope onExit([&]() { writer->EndElement(kNodeOutcome); });
 
-            auto timestamp = ToStringIso8601(outcome.GetTimestamp());
-            if (timestamp.has_value())
-            {
-                writer->WriteNamed(L"timestamp", *timestamp);
-            }
+            auto timestamp = outcome.GetTimestampKey();
+            writer->WriteNamed(L"timestamp", timestamp);
 
             auto startingTime = ToStringIso8601(outcome.GetStartingTime());
             if (startingTime.has_value())

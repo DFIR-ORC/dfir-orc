@@ -189,13 +189,21 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
         outcome.SetComputerNameValue(computerName);
     }
 
+    {
+        std::wstring timestampKey;
+        HRESULT hr = SystemDetails::GetTimeStamp(timestampKey);
+        if (SUCCEEDED(hr))
+        {
+            outcome.SetTimestampKey(timestampKey);
+        }
+    }
+
     const auto timestamp = SystemDetails::GetTimeStamp();
     if (timestamp)
     {
         auto timestampTp = FromSystemTime(timestamp.value());
         if (timestampTp)
         {
-            outcome.SetTimestamp(*timestampTp);
             outcome.SetStartingTime(*timestampTp);
         }
     }
@@ -503,7 +511,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             writer->WriteNamed(L"start", start);
 
             std::wstring strTimeStamp;
-            SystemDetails::GetTimeStampISO8601(strTimeStamp);
+            SystemDetails::GetTimeStamp(strTimeStamp);
             writer->WriteNamed(L"timestamp", strTimeStamp);
 
             auto mothership_id = SystemDetails::GetParentProcessId();

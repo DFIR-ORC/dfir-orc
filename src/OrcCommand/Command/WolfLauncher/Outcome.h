@@ -237,8 +237,8 @@ public:
     void SetComputerNameValue(const std::wstring& name) { m_computerName = name; }
 
     // Timestamp is used as a unique identifier between orc execution and multiple files
-    Timestamp GetTimestamp() const { return m_timestamp; }
-    void SetTimestamp(const Timestamp& timestamp) { m_timestamp = timestamp; }
+    std::wstring GetTimestampKey() const { return m_timestamp; }
+    void SetTimestampKey(const std::wstring& timestamp) { m_timestamp = timestamp; }
 
     Timestamp GetStartingTime() const { return m_startingTime; }
     void SetStartingTime(const Timestamp& timestamp) { m_startingTime = timestamp; }
@@ -257,7 +257,7 @@ private:
     std::wstring m_computerName;
     Mothership m_mothership;
     WolfLauncher m_wolfLauncher;
-    std::chrono::time_point<std::chrono::system_clock> m_timestamp;
+    std::wstring m_timestamp;
     std::chrono::time_point<std::chrono::system_clock> m_startingTime;
     std::chrono::time_point<std::chrono::system_clock> m_endingTime;
     std::unordered_map<std::wstring, CommandSet> m_commandSets;
