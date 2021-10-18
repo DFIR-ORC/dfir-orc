@@ -136,13 +136,19 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                 std::error_code ec;
                 rename(extracted_path, desired_path, ec);
                 if (ec)
-                    Log::Warn(L"Failed to rename extension library name {} to {}", extracted_path, desired_path);
+                {
+                    Log::Warn(
+                        L"Failed to rename extension library name {} to {} [{}]", extracted_path, desired_path, ec);
+                    m_libFile = extracted_path;
+                }
                 else if (desired_path.filename() == m_strDesiredName)
+                {
                     m_libFile = desired_path;
+                }
             }
             if (m_libFile.empty())
             {
-                Log::Error(L"Desired file name {} was not found in {} extracted files", m_strDesiredName);
+                Log::Error(L"Desired file name '{}' was not found in extracted files", m_strDesiredName);
                 return E_INVALIDARG;
             }
 
