@@ -15,6 +15,7 @@
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/tokenizer.hpp>
 #include <fmt/format.h>
 
@@ -23,6 +24,8 @@
 #include "CaseInsensitive.h"
 #include "SystemDetails.h"
 #include "Archive.h"
+#include "Utils/WinApi.h"
+#include "Utils/Uri.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -318,6 +321,8 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
 
 HRESULT OutputSpec::Upload::Configure(const ConfigItem& item)
 {
+    std::error_code ec;
+
     if (::HasValue(item, CONFIG_UPLOAD_METHOD))
     {
         if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_METHOD], L"BITS"sv))
@@ -336,13 +341,84 @@ HRESULT OutputSpec::Upload::Configure(const ConfigItem& item)
             JobName = item.SubItems[CONFIG_UPLOAD_JOBNAME];
         }
 
-        if (::HasValue(item, CONFIG_UPLOAD_SERVER))
+        std::optional<std::wstring> configUploadServer;
+        if (item.SubItems[CONFIG_UPLOAD_SERVER])
         {
-            static std::wregex r(L"(http|https|file):(//|\\\\)(.*)", std::regex_constants::icase);
+            configUploadServer = item.SubItems[CONFIG_UPLOAD_SERVER];
+        }
 
+        std::optional<std::wstring> configUploadRootPath;
+        if (item.SubItems[CONFIG_UPLOAD_ROOTPATH])
+        {
+            configUploadRootPath = item.SubItems[CONFIG_UPLOAD_ROOTPATH];
+        }
+
+        std::optional<std::wstring> configUploadUserName;
+        if (item.SubItems[CONFIG_UPLOAD_USER])
+        {
+            configUploadUserName = item.SubItems[CONFIG_UPLOAD_USER];
+        }
+
+        std::optional<std::wstring> configUploadPassword;
+        if (item.SubItems[CONFIG_UPLOAD_PASSWORD])
+        {
+            configUploadPassword = item.SubItems[CONFIG_UPLOAD_PASSWORD];
+        }
+
+        if (::HasValue(item, CONFIG_UPLOAD_URI))
+        {
+            if (configUploadServer || configUploadRootPath || configUploadUserName || configUploadPassword)
+            {
+                Log::Error(
+                    "Invalid configuration: 'uri' cannot be used along with 'server','path','username','password' "
+                    "attributes");
+                return E_INVALIDARG;
+            }
+
+            std::wstring configUploadUri = ExpandEnvironmentStringsApi(item[CONFIG_UPLOAD_URI].c_str(), ec);
+            if (ec)
+            {
+                Log::Warn("Failed to expand environment variables in uri [{}]", ec);
+
+                // There could be no environment variable and this is still better than nothing...
+                configUploadUri = item.SubItems[CONFIG_UPLOAD_URI];
+            }
+
+            Uri uri(configUploadUri, ec);
+            if (ec)
+            {
+                Log::Error(L"Failed to parse uri '{}' [{}]", item.SubItems[CONFIG_UPLOAD_URI], ec);
+                return E_INVALIDARG;
+            }
+
+            if (uri.Host())
+            {
+                configUploadServer = uri.Scheme().value_or(L"file") + L"://" + *uri.Host();
+            }
+
+            if (uri.Path())
+            {
+                configUploadRootPath = *uri.Path();
+            }
+
+            if (uri.UserName())
+            {
+                configUploadUserName = *uri.UserName();
+            }
+
+            if (uri.Password())
+            {
+                configUploadPassword = *uri.Password();
+            }
+        }
+        if (configUploadServer)
+        {
+            std::wstring server = ExpandEnvironmentStringsApi(configUploadServer->c_str(), ec);
+
+            static std::wregex r(L"(http|https|file):(//|\\\\)(.*)", std::regex_constants::icase);
             std::wsmatch s;
 
-            if (std::regex_match((const wstring&)item.SubItems[CONFIG_UPLOAD_SERVER], s, r))
+            if (std::regex_match(server, s, r))
             {
                 if (equalCaseInsensitive(s[1].str().c_str(), L"http"sv))
                 {
@@ -367,12 +443,20 @@ HRESULT OutputSpec::Upload::Configure(const ConfigItem& item)
                 return E_INVALIDARG;
             }
         }
-        if (::HasValue(item, CONFIG_UPLOAD_ROOTPATH))
+        if (configUploadRootPath)
         {
-            const std::wstring_view root = item.SubItems[CONFIG_UPLOAD_ROOTPATH];
+            std::wstring root = ExpandEnvironmentStringsApi(configUploadRootPath->c_str(), ec);
+            if (ec)
+            {
+                Log::Warn("Failed to expand environment variables [{}]", ec);
+
+                // There could be no environment variable and this is still better than nothing...
+                root = item.SubItems[CONFIG_UPLOAD_ROOTPATH];
+            }
+
             std::replace_copy(
-                begin(root),
-                end(root),
+                std::begin(root),
+                std::end(root),
                 back_inserter(RootPath),
                 bitsMode == BITSMode::SMB ? L'/' : L'\\',
                 bitsMode == BITSMode::SMB ? L'\\' : L'/');
@@ -381,18 +465,20 @@ HRESULT OutputSpec::Upload::Configure(const ConfigItem& item)
             {
                 RootPath = bitsMode == BITSMode::SMB ? L"\\" : L"/";
             }
-            else if (RootPath.front() != L'\\' || RootPath.front() != L'/')
+            else if (RootPath.front() != L'\\' && RootPath.front() != L'/')
             {
                 RootPath.insert(0, 1, bitsMode == BITSMode::SMB ? L'\\' : L'/');
             }
         }
-        if (::HasValue(item, CONFIG_UPLOAD_USER))
+
+        if (configUploadUserName)
         {
-            UserName = item.SubItems[CONFIG_UPLOAD_USER];
+            UserName = *configUploadUserName;
         }
-        if (::HasValue(item, CONFIG_UPLOAD_PASSWORD))
+
+        if (configUploadPassword)
         {
-            Password = item.SubItems[CONFIG_UPLOAD_PASSWORD];
+            Password = *configUploadPassword;
         }
 
         Operation = OutputSpec::UploadOperation::Copy;

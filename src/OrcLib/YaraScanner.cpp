@@ -744,7 +744,7 @@ int Orc::YaraScanner::scan_message(int message, void* message_data, MatchingRule
             Log::Debug("Scan finished");
             break;
         case CALLBACK_MSG_IMPORT_MODULE:
-            Log::Debug("Importing module {}", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);
+            Log::Debug("Importing module {}", ((YR_MODULE_IMPORT*)message_data)->module_name);
             break;
         case CALLBACK_MSG_MODULE_IMPORTED:
             Log::Debug("Module {} imported", ((YR_OBJECT_STRUCTURE*)message_data)->identifier);

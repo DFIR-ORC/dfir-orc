@@ -597,9 +597,9 @@ HRESULT EmbeddedResource::ExtractToDirectory(
 
         if (!extract->Items().empty())
         {
-            for (auto&& item : extract->Items())
+            for (const auto& item : extract->Items())
             {
-                outputFiles.emplace_back(std::make_pair(std::move(item.NameInArchive), std::move(item.Path)));
+                outputFiles.emplace_back(std::make_pair(item.NameInArchive, item.Path));
             }
         }
         else
@@ -682,7 +682,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, CB
                 std::wstring strBinaryPath;
                 if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
-                    Log::Debug(L"Could not locate resource [{}]", szImageFileRessourceID, SystemError(hr));
+                    Log::Debug(L"Could not locate resource: '{}' [{}]", szImageFileRessourceID, SystemError(hr));
                     return hr;
                 }
 
@@ -813,10 +813,16 @@ HRESULT EmbeddedResource::ExtractBuffer(const std::wstring& Module, const std::w
     {
         return HRESULT_FROM_WIN32(ERROR_RESOURCE_NAME_NOT_FOUND);
     }
+
     HGLOBAL hFileResource = LoadResource(hModule, hRes);
+    if (hFileResource == NULL)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Error(L"Failed to LoadResource '{}' in module '{}' [{}]", Name, Module, SystemError(hr));
+        return hr;
+    }
 
     LPVOID lpVoid = NULL;
-
     if ((lpVoid = LockResource(hFileResource)) == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
@@ -850,7 +856,6 @@ HRESULT EmbeddedResource::ExtractBuffer(const std::wstring& Module, const std::w
 
 struct V_EnumResourceNamesEx_Param
 {
-
     V_EnumResourceNamesEx_Param(const std::wstring& strModule, std::vector<EmbeddedResource::EmbedSpec>& values)
         : Module(strModule)
         , Values(values)
@@ -863,7 +868,6 @@ struct V_EnumResourceNamesEx_Param
 
 BOOL CALLBACK V_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, LONG_PTR lParam)
 {
-
     HRESULT hr = E_FAIL;
 
     V_EnumResourceNamesEx_Param* param = (V_EnumResourceNamesEx_Param*)lParam;
@@ -878,7 +882,6 @@ BOOL CALLBACK V_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
     }
 
     param->Values.emplace_back(EmbeddedResource::EmbedSpec::AddNameValuePair(std::move(strName), std::move(strValue)));
-
     return TRUE;
 }
 

@@ -1,13 +1,17 @@
-[![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=release/10.0.x)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=release/10.0.x) [![LGPL licensed][img-license]](./LICENSE.txt)
-
-
 # DFIR ORC
+[![LGPL licensed][img-license]](./LICENSE.txt)
+
 
 ## Documentation
 https://dfir-orc.github.io
 
 
 ## Build
+| Branch       | Status                                                                                                                                                                                                                          |
+|:-------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| main         | [![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=main)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=main)                     |
+| release/10.0 | [![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=release/10.0.x)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=release/10.0.x) |
+| release/10.1 | [![Build Status](https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=release/10.1.x)](https://dev.azure.com/jeangautier/dfir-orc/_build/latest?definitionId=1&branchName=release/10.1.x) |
 
 ### Requirements
 - Visual Studio >=2017 with this [configuration](.vsconfig) or alternatively use [vstools](docs/vstools/vstools.md)
@@ -57,7 +61,6 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 | ORC_BUILD_ORC        | ON                    | Build Orc binary                 |
 | ORC_BUILD_PARQUET    | OFF                   | Build Parquet module (x64)       |
 | ORC_BUILD_SSDEEP     | OFF                   | Build with ssdeep support        |
-| ORC_BUILD_TLSH       | OFF                   | Build with tslh support          |
 | ORC_BUILD_JSON       | ON                    | Build with JSON enabled          |
 | ORC_USE_STATIC_CRT   | ON                    | Use static runtime               |
 | ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory             |
@@ -94,5 +97,4 @@ Le nom DFIR ORC et le logo associé appartiennent à l'ANSSI, aucun usage n'est 
 ## Acknowledgments
 DFIR ORC is disclosing Microsoft source code with Microsoft's permission.
 
-[img-build]: https://dev.azure.com/jeangautier/dfir-orc/_apis/build/status/jeangautier.dfir-orc?branchName=master
 [img-license]: https://img.shields.io/github/license/DFIR-ORC/dfir-orc

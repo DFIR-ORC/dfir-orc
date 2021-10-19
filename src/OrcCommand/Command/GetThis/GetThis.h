@@ -58,11 +58,11 @@ enum LimitStatus
 
     GlobalSampleCountLimitReached = 1,
     GlobalMaxBytesPerSample = 1 << 1,
-    GlobalMaxBytesTotal = 1 << 2,
+    GlobalMaxTotalBytes = 1 << 2,
 
     LocalSampleCountLimitReached = 1 << 3,
     LocalMaxBytesPerSample = 1 << 4,
-    LocalMaxBytesTotal = 1 << 5,
+    LocalMaxTotalBytes = 1 << 5,
 
     FailedToComputeLimits = 1 << 7,
 
@@ -215,10 +215,10 @@ public:
                     return false;
                 case GlobalSampleCountLimitReached:
                 case GlobalMaxBytesPerSample:
-                case GlobalMaxBytesTotal:
+                case GlobalMaxTotalBytes:
                 case LocalSampleCountLimitReached:
                 case LocalMaxBytesPerSample:
-                case LocalMaxBytesTotal:
+                case LocalMaxTotalBytes:
                 case FailedToComputeLimits:
                     return true;
                 default:
@@ -323,7 +323,6 @@ private:
     FILETIME CollectionDate;
     const std::wstring ComputerName;
     Limits GlobalLimits;
-    std::unordered_set<std::wstring> SampleNames;
     std::unique_ptr<Archive::Appender<Archive::Archive7z>> m_compressor;
     std::shared_ptr<Orc::TableOutput::IStreamWriter> m_tableWriter;
 
@@ -334,8 +333,7 @@ private:
     std::unique_ptr<SampleRef> CreateSample(
         const std::shared_ptr<FileFind::Match>& match,
         const size_t attributeIndex,
-        const SampleSpec& sampleSpec,
-        const std::unordered_set<std::wstring>& givenSampleNames) const;
+        const SampleSpec& sampleSpec) const;
 
     using SampleWrittenCb = std::function<void(const SampleRef&, HRESULT hrWrite)>;
 

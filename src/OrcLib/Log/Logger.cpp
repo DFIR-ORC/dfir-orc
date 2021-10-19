@@ -26,10 +26,12 @@ using namespace Orc::Log;
 using namespace Orc;
 
 Logger::Logger(std::initializer_list<std::pair<Facility, SpdlogLogger::Ptr>> loggers)
-    : m_warningCount(0)
-    , m_errorCount(0)
-    , m_criticalCount(0)
+    : m_loggers()
+    , m_defaultFacilities()
+    , m_logCounters()
 {
+    std::fill(std::begin(m_logCounters), std::end(m_logCounters), 0);
+
     auto facility_count = std::underlying_type_t<Facility>(Facility::kFacilityCount);
     m_loggers.resize(facility_count - 1);
 
@@ -43,26 +45,26 @@ Logger::Logger(std::initializer_list<std::pair<Facility, SpdlogLogger::Ptr>> log
         }
     }
 
-    auto logger = Get(Facility::kDefault);
-    if (logger)
+    auto& defaultLogger = m_loggers[0];
+    if (defaultLogger)
     {
-        logger->SetAsDefaultLogger();
+        defaultLogger->SetAsDefaultLogger();
     }
 }
 
 uint64_t Logger::warningCount() const
 {
-    return m_warningCount;
+    return m_logCounters[std::underlying_type_t<Level>(Level::Warning)];
 }
 
 uint64_t Logger::errorCount() const
 {
-    return m_errorCount;
+    return m_logCounters[std::underlying_type_t<Level>(Level::Error)];
 }
 
 uint64_t Logger::criticalCount() const
 {
-    return m_criticalCount;
+    return m_logCounters[std::underlying_type_t<Level>(Level::Critical)];
 }
 
 void Logger::Set(Facility id, SpdlogLogger::Ptr logger)

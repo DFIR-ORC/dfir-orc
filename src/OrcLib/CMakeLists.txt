@@ -13,6 +13,7 @@ orc_add_compile_options()
 find_package(7zip CONFIG REQUIRED)
 find_package(Boost REQUIRED)
 find_package(fmt REQUIRED)
+find_package(Microsoft.GSL CONFIG REQUIRED)
 find_package(VisualStudio REQUIRED)
 find_package(Yara REQUIRED)
 
@@ -253,6 +254,15 @@ set(SRC_EXTENSIONLIBRARIES_YARA
 
 source_group(ExtensionLibraries\\Yara FILES ${SRC_EXTENSIONLIBRARIES_YARA})
 
+set(SRC_FILE_FORMAT
+    "PeParser.h"
+    "PeParser.cpp"
+)
+
+source_group(FileFormat
+    FILES ${SRC_FILE_FORMAT}
+)
+
 set(SRC_INOUT
     "LocationOutput.h"
     "OutputWriter.h"
@@ -272,6 +282,7 @@ set(SRC_INOUT_ARCHIVE
     "ArchiveExtract.cpp"
     "ArchiveExtract.h"
     "ArchiveFormat.h"
+    "ArchiveFormat.cpp"
     "ArchiveMessage.cpp"
     "ArchiveMessage.h"
     "ArchiveNotification.cpp"
@@ -324,6 +335,7 @@ source_group(In&Out\\Archive\\SevenZip FILES ${SRC_INOUT_ARCHIVE_SEVENZIP})
 set(SRC_INOUT_BYTESTREAM
     "ByteStream.cpp"
     "ByteStream.h"
+    "ByteStreamHelpers.h"
 )
 
 source_group(In&Out\\ByteStream FILES ${SRC_INOUT_BYTESTREAM})
@@ -359,6 +371,8 @@ set(SRC_INOUT_BYTESTREAM_FSSTREAM_NTFSSTREAM
     "NTFSStream.h"
     "UncompressNTFSStream.cpp"
     "UncompressNTFSStream.h"
+    "UncompressWofStream.cpp"
+    "UncompressWofStream.h"
 )
 
 source_group(In&Out\\ByteStream\\FSStream\\NTFSStream
@@ -400,6 +414,8 @@ set(SRC_INOUT_BYTESTREAM_UTILITYSTREAM
     "AccumulatingStream.cpp"
     "AccumulatingStream.h"
     "BufferStream.h"
+    "CacheStream.cpp"
+    "CacheStream.h"
     "ChainingStream.cpp"
     "ChainingStream.h"
     "DevNullStream.cpp"
@@ -528,6 +544,47 @@ set(SRC_INOUT_TABLEOUTPUT_APACHE_ORC ApacheOrcOutputWriter.h)
 
 source_group(In&Out\\TableOutput\\ApacheOrc
     FILES ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
+)
+
+set(SRC_FILESYSTEM
+    "Filesystem/Ntfs/Attribute/ReparsePoint/WofReparsePoint.h"
+    "Filesystem/Ntfs/Attribute/ReparsePoint/WofReparsePoint.cpp"
+    "Filesystem/Ntfs/Compression/WofChunks.h"
+    "Filesystem/Ntfs/Compression/WofChunks.cpp"
+    "Filesystem/Ntfs/Compression/WofStreamConcept.h"
+    "Filesystem/Ntfs/Compression/WofAlgorithm.h"
+    "Filesystem/Ntfs/Compression/WofAlgorithm.cpp"
+    "Filesystem/Ntfs/Compression/DecompressorConcept.h"
+    "Filesystem/Ntfs/Compression/Engine/Nt/NtAlgorithm.h"
+    "Filesystem/Ntfs/Compression/Engine/Nt/NtAlgorithm.cpp"
+    "Filesystem/Ntfs/Compression/Engine/Nt/NtApi.h"
+    "Filesystem/Ntfs/Compression/Engine/Nt/NtApi.cpp"
+    "Filesystem/Ntfs/Compression/Engine/Nt/NtDecompressorConcept.h"
+    "Filesystem/Ntfs/Compression/Engine/Nt/NtDecompressorConcept.cpp"
+    "Filesystem/Ntfs/Compression/Engine/Wimlib/WimlibAlgorithm.h"
+    "Filesystem/Ntfs/Compression/Engine/Wimlib/WimlibAlgorithm.cpp"
+    "Filesystem/Ntfs/Compression/Engine/Wimlib/WimlibApi.h"
+    "Filesystem/Ntfs/Compression/Engine/Wimlib/WimlibApi.cpp"
+    "Filesystem/Ntfs/Compression/Engine/Wimlib/WimlibErrorCategory.h"
+    "Filesystem/Ntfs/Compression/Engine/Wimlib/WimlibErrorCategory.cpp"
+)
+
+source_group(Filesystem
+    FILES ${SRC_FILESYSTEM}
+)
+
+set(SRC_STREAM
+    "Stream/BufferStreamConcept.h"
+    "Stream/ByteStreamConcept.h"
+    "Stream/FileStreamConcept.h"
+    "Stream/FileStreamConcept.cpp"
+    "Stream/SeekDirection.h"
+    "Stream/SpanStreamConcept.h"
+    "Stream/StreamConcept.h"
+)
+
+source_group(Stream
+    FILES ${SRC_STREAM}
 )
 
 set(SRC_TEXT
@@ -684,8 +741,6 @@ set(SRC_RUNNINGCODE
     "Authenticode.h"
     "AutoRuns.cpp"
     "AutoRuns.h"
-    "libpehash-pe.h"
-    "libpehash-peutils.cpp"
     "MSIExtension.cpp"
     "MSIExtension.h"
     "PSAPIExtension.cpp"
@@ -708,6 +763,10 @@ set(SRC_UTILITIES
     "OrcException.h"
     "Flags.cpp"
     "Flags.h"
+    "Utils/AllocationPolicy.h"
+    "Utils/AnyPtr.h"
+    "Utils/BufferView.h"
+    "Utils/BufferSpan.h"
     "Utils/EnumFlags.h"
     "Utils/Guard.h"
     "Utils/Guard/Winsock.h"
@@ -717,6 +776,8 @@ set(SRC_UTILITIES
     "Utils/Time.cpp"
     "Utils/Time.h"
     "Utils/TypeTraits.h"
+    "Utils/Uri.cpp"
+    "Utils/Uri.h"
     "Utils/WinApi.cpp"
     "Utils/WinApi.h"
 )
@@ -823,6 +884,7 @@ add_library(OrcLib
         ${SRC_DISK_VOLUME}
         ${SRC_EXTENSIONLIBRARIES}
         ${SRC_EXTENSIONLIBRARIES_YARA}
+        ${SRC_FILE_FORMAT}
         ${SRC_INOUT}
         ${SRC_INOUT_ARCHIVE}
         ${SRC_INOUT_ARCHIVE_SEVENZIP}
@@ -848,6 +910,8 @@ add_library(OrcLib
         ${SRC_INOUT_TABLEOUTPUT_APACHE_ORC}
         ${SRC_INOUT_TABLEOUTPUT_SQL}
         ${SRC_INOUT_CONSOLE}
+        ${SRC_FILESYSTEM}
+        ${SRC_STREAM}
         ${SRC_TEXT}
         ${SRC_TEXT_FMT}
         ${SRC_TEXT_FMT_FWD}
@@ -876,6 +940,7 @@ target_link_libraries(OrcLib
     PUBLIC
         7zip::7zip
         7zip::extras
+        Microsoft.GSL::GSL
         psapi.lib
         Wintrust.lib
         Crypt32.lib
@@ -904,3 +969,5 @@ if(NOT ORC_DISABLE_PRECOMPILED_HEADERS)
 endif()
 
 set_target_properties(OrcLib PROPERTIES FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
+
+target_link_options(OrcLib PUBLIC "/STACK:4194304")

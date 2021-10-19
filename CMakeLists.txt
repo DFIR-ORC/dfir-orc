@@ -9,7 +9,6 @@ option(ORC_BUILD_COMMAND    "Build any OrcCommand based command" ON)
 option(ORC_BUILD_FASTFIND   "Build FastFind binary" ON)
 option(ORC_BUILD_ORC        "Build Orc binary" ON)
 option(ORC_BUILD_PARQUET    "Build Parquet module" OFF)
-option(ORC_BUILD_TLSH       "Build with tlsh support" OFF)
 option(ORC_BUILD_SSDEEP     "Build with ssdeep support" OFF)
 option(ORC_BUILD_JSON       "Build with JSON StructuredOutput enabled" ON)
 option(ORC_BUILD_BOOST_STACKTRACE  "Build with stack backtrace enabled" ON)
@@ -83,10 +82,19 @@ if(ORC_VCPKG_ROOT)
         boost-multi-index
         boost-outcome
         boost-scope-exit
+        boost-system
+        boost-tokenizer
         fmt
+        ms-gsl
         spdlog
         yara
         rapidjson
+    )
+
+    # Serialization pull a lot of deps and breaks XP SP2 because of boost-thread's "GetLogicalProcessorInformation"
+    add_compile_definitions(
+        BOOST_MULTI_INDEX_DISABLE_SERIALIZATION
+        BOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES
     )
 
     # Tools/rcedit specific dependencies
@@ -99,11 +107,6 @@ if(ORC_VCPKG_ROOT)
         list(APPEND _PACKAGES boost-stacktrace)
     endif()
 
-    if(ORC_BUILD_TLSH)
-        add_definitions(-DORC_BUILD_TLSH)
-        list(APPEND _PACKAGES tlsh)
-    endif()
-
     if(ORC_BUILD_APACHE_ORC)
         if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
             message(FATAL_ERROR "Apache Orc requires Seven or later")
@@ -112,7 +115,11 @@ if(ORC_VCPKG_ROOT)
     endif()
 
     if(ORC_BUILD_PARQUET)
-        list(APPEND _PACKAGES arrow)
+        # Could be compatible with some workarounds within tz.cpp
+        if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
+            message(FATAL_ERROR "Parquet requires Seven or later")
+        endif()
+        list(APPEND _PACKAGES arrow libressl)
     endif()
 
     if(ORC_BUILD_SSDEEP)
@@ -142,7 +149,7 @@ if(ORC_DOWNLOADS_ONLY)
 endif()
 
 # Must be set AFTER 'VCPKG_TARGET_TRIPLET' is defined
-project(dfir-orc LANGUAGES C CXX)
+project(dfir-orc LANGUAGES C CXX ASM_MASM)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

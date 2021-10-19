@@ -1427,6 +1427,7 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                 m_CellStoreLastWalk = m_SegmentStore.AllocatedCells();
             }
 
+            // Get a new cell: a buffer to store Orc's MftRecord information followed by raw ntfs mft record data.
             LPVOID pBuf = m_SegmentStore.GetNewCell();
             if (pBuf == nullptr)
                 return E_OUTOFMEMORY;
@@ -1722,7 +1723,7 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
                                 bool bIsComplete = false;
                                 if (bIsComplete = IsRecordComplete(pRecord, missingRecords))
                                 {
-                                    Log::Debug("Fetched record {} is complete", ullRecordIndex);
+                                    Log::Trace("Fetched record {} is complete", ullRecordIndex);
                                 }
                                 else
                                 {

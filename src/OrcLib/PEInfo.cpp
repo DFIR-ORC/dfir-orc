@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2021 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -16,8 +16,9 @@
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
 #include "MemoryStream.h"
+#include "CacheStream.h"
 
-#include "libpehash-pe.h"
+#include "PeParser.h"
 
 #pragma comment(lib, "Crypt32.lib")
 
@@ -557,7 +558,8 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
     if (HasFlag(localIntentions, Intentions::FILEINFO_TLSH))
         fuzzy_algs |= FuzzyHashStream::Algorithm::TLSH;
 
-    if (HasAnyFlag(localIntentions, Intentions::FILEINFO_AUTHENTICODE_STATUS | Intentions::FILEINFO_AUTHENTICODE_SIGNER))
+    if (HasAnyFlag(
+            localIntentions, Intentions::FILEINFO_AUTHENTICODE_STATUS | Intentions::FILEINFO_AUTHENTICODE_SIGNER))
     {
         pe_algs |=
             CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256;
@@ -585,8 +587,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         return hr;
 
     // Crypto hash
-    CBinaryBuffer pData;
-    memstream->GrabBuffer(pData);
+    auto pData = memstream->GetBuffer();
     {
         auto hashstream = std::make_shared<CryptoHashStream>();
         hashstream->OpenToWrite(algs, nullptr);
@@ -649,74 +650,46 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         }
     }
 
-    if ((ullWritten % 8) != 0)
-    {
-        // Apparently, MS padds PEs with zeroes on 8 modulo...
-        DWORD dwToAdd = 8 - (ullWritten % 8);
-        const char padding[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-        ULONGLONG ullPaddingWritten = 0LL;
-        if (FAILED(hr = memstream->Write((LPVOID)padding, dwToAdd, &ullPaddingWritten)))
-            return hr;
-    }
-
     // Pe Hash
     {
-        const unsigned int MaxChunks = 256;
-        PE_CHUNK chunks[MaxChunks];
-        ZeroMemory((BYTE*)chunks, sizeof(chunks));
-        uint32_t cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), chunks, MaxChunks);
-
-        if (cChunks == -1)
+        std::error_code ec;
+        PeParser pe(memstream, ec);
+        if (ec)
         {
-            Log::Warn("Invalid PE chunks");
-            return S_OK;
+            Log::Error(L"Failed to parse pe hash {} [{}]", m_FileInfo.m_szFullName, ec);
+            return ec.value();
         }
 
-        // Check if chunks are OK
-
-        auto pe_hashstream = std::make_shared<CryptoHashStream>();
-        pe_hashstream->OpenToWrite(pe_algs, nullptr);
-
-        ULONGLONG ullPeHashed = 0LL;
-        for (uint32_t i = 0; i < cChunks; ++i)
+        PeParser::PeHash hashes;
+        pe.GetAuthenticodeHash(pe_algs, hashes, ec);
+        if (ec)
         {
-            ULONGLONG ullThisWriteHashed = 0LL;
-            hr = pe_hashstream->Write(pData.GetData() + chunks[i].offset, chunks[i].length, &ullThisWriteHashed);
-            if (FAILED(hr))
-            {
-                return hr;
-            }
-
-            ullPeHashed += ullThisWriteHashed;
+            Log::Error(L"Failed to compute pe hash [{}]", m_FileInfo.m_szFullName, ec);
+            return ec.value();
         }
 
         if (HasFlag(pe_algs, CryptoHashStream::Algorithm::MD5))
         {
-            hr = pe_hashstream->GetHash(CryptoHashStream::Algorithm::MD5, m_FileInfo.GetDetails()->PeMD5());
-            if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
-            {
-                return hr;
-            }
+            auto& bb = m_FileInfo.GetDetails()->PeMD5();
+            bb.SetCount(hashes.md5->size());
+            std::copy(std::cbegin(*hashes.md5), std::cend(*hashes.md5), std::begin(bb));
         }
 
-        if (HasFlag(pe_algs, CryptoHashStream::Algorithm::SHA1))
+        if (HasFlag(pe_algs, CryptoHashStream::Algorithm::SHA1) && hashes.sha1.has_value())
         {
-            hr = pe_hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, m_FileInfo.GetDetails()->PeSHA1());
-            if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
-            {
-                return hr;
-            }
+            auto& bb = m_FileInfo.GetDetails()->PeSHA1();
+            bb.SetCount(hashes.sha1->size());
+            std::copy(std::cbegin(*hashes.sha1), std::cend(*hashes.sha1), std::begin(bb));
         }
 
-        if (HasFlag(pe_algs, CryptoHashStream::Algorithm::SHA256))
+        if (HasFlag(pe_algs, CryptoHashStream::Algorithm::SHA256) && hashes.sha256.has_value())
         {
-            hr = pe_hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, m_FileInfo.GetDetails()->PeSHA256());
-            if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
-            {
-                return hr;
-            }
+            auto& bb = m_FileInfo.GetDetails()->PeSHA256();
+            bb.SetCount(hashes.sha256->size());
+            std::copy(std::cbegin(*hashes.sha256), std::cend(*hashes.sha256), std::begin(bb));
         }
     }
+
     return S_OK;
 }
 
@@ -736,51 +709,6 @@ HRESULT PEInfo::OpenPeHash(Intentions localIntentions)
     DWORD dwMajor = 0L, dwMinor = 0L;
     SystemDetails::GetOSVersion(dwMajor, dwMinor);
 
-    auto stream = m_FileInfo.GetDetails()->GetDataStream();
-
-    if (stream == nullptr)
-        return E_POINTER;
-    stream->SetFilePointer(0L, FILE_BEGIN, NULL);
-
-    // Load data in a memory stream
-
-    auto memstream = std::make_shared<MemoryStream>();
-    if (memstream == nullptr)
-        return E_OUTOFMEMORY;
-
-    if (FAILED(hr = memstream->OpenForReadWrite()))
-        return hr;
-
-    if (FAILED(hr = memstream->SetSize(stream->GetSize())))
-        return hr;
-
-    ULONGLONG ullWritten = 0LL;
-    if (FAILED(hr = stream->CopyTo(*memstream, &ullWritten)))
-        return hr;
-
-    if ((ullWritten % 8) != 0)
-    {
-        // Apparently, MS padds PEs with zeroes on 8 modulo...
-        DWORD dwToAdd = 8 - (ullWritten % 8);
-        const char padding[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-        ULONGLONG ullBytesWritten = 0LL;
-        if (FAILED(hr = memstream->Write((LPVOID)padding, dwToAdd, &ullBytesWritten)))
-            return hr;
-    }
-
-    CBinaryBuffer pData;
-    memstream->GrabBuffer(pData);
-
-    const unsigned int MaxChunks = 256;
-    PE_CHUNK chunks[MaxChunks];
-    ZeroMemory((BYTE*)chunks, sizeof(chunks));
-    int cChunks = calc_pe_chunks_real(pData.GetData(), pData.GetCount(), chunks, MaxChunks);
-
-    if (cChunks == -1)
-        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-
-    auto hashstream = std::make_shared<CryptoHashStream>();
-
     CryptoHashStream::Algorithm algs = CryptoHashStream::Algorithm::Undefined;
     if (HasFlag(localIntentions, Intentions::FILEINFO_PE_MD5))
         algs |= CryptoHashStream::Algorithm::MD5;
@@ -794,34 +722,46 @@ HRESULT PEInfo::OpenPeHash(Intentions localIntentions)
         algs |=
             CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256;
     }
-    hashstream->OpenToWrite(algs, nullptr);
 
-    ULONGLONG ullHashed = 0LL;
-    for (int i = 0; i < cChunks; ++i)
+    auto stream = m_FileInfo.GetDetails()->GetDataStream();
+    if (stream == nullptr)
+        return E_POINTER;
+
+    std::error_code ec;
+    PeParser pe(std::make_shared<CacheStream>(std::move(stream)), ec);
+    if (ec)
     {
-        ULONGLONG ullThisWriteHashed = 0LL;
-        if (FAILED(hr = hashstream->Write(pData.GetData() + chunks[i].offset, chunks[i].length, &ullThisWriteHashed)))
-            return hr;
-        ullHashed += ullThisWriteHashed;
+        Log::Error(L"Failed to parse PE (path: {}) [{}]", m_FileInfo.m_szFullName, ec);
+        return ec.value();
     }
 
-    if (HasFlag(algs, CryptoHashStream::Algorithm::MD5)
-        && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::MD5, m_FileInfo.GetDetails()->PeMD5())))
+    PeParser::PeHash hashes;
+    pe.GetAuthenticodeHash(algs, hashes, ec);
+    if (ec)
     {
-        if (hr != MK_E_UNAVAILABLE)
-            return hr;
+        Log::Error(L"Failed to compute PE hashes (path: {}) [{}]", m_FileInfo.m_szFullName, ec);
+        return ec.value();
     }
-    if (HasFlag(algs, CryptoHashStream::Algorithm::SHA1)
-        && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA1, m_FileInfo.GetDetails()->PeSHA1())))
+
+    if (HasFlag(algs, CryptoHashStream::Algorithm::MD5))
     {
-        if (hr != MK_E_UNAVAILABLE)
-            return hr;
+        auto& bb = m_FileInfo.GetDetails()->PeMD5();
+        bb.SetCount(hashes.md5->size());
+        std::copy(std::cbegin(*hashes.md5), std::cend(*hashes.md5), std::begin(bb));
     }
-    if (HasFlag(algs, CryptoHashStream::Algorithm::SHA256)
-        && FAILED(hr = hashstream->GetHash(CryptoHashStream::Algorithm::SHA256, m_FileInfo.GetDetails()->PeSHA256())))
+
+    if (HasFlag(algs, CryptoHashStream::Algorithm::SHA1) && hashes.sha1.has_value())
     {
-        if (hr != MK_E_UNAVAILABLE)
-            return hr;
+        auto& bb = m_FileInfo.GetDetails()->PeSHA1();
+        bb.SetCount(hashes.sha1->size());
+        std::copy(std::cbegin(*hashes.sha1), std::cend(*hashes.sha1), std::begin(bb));
+    }
+
+    if (HasFlag(algs, CryptoHashStream::Algorithm::SHA256) && hashes.sha256.has_value())
+    {
+        auto& bb = m_FileInfo.GetDetails()->PeSHA256();
+        bb.SetCount(hashes.sha256->size());
+        std::copy(std::cbegin(*hashes.sha256), std::cend(*hashes.sha256), std::begin(bb));
     }
 
     return S_OK;

@@ -37,6 +37,8 @@ private:
     static HCRYPTPROV g_hProv;
 
 public:
+    using value_type = uint8_t;
+
     CBinaryBuffer& operator=(const CBinaryBuffer& other)
     {
         CBinaryBuffer newThis(other);

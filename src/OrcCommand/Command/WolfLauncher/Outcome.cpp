@@ -179,7 +179,7 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Mothersh
     writer->BeginElement(kRoot);
     Guard::Scope onExit([&]() { writer->EndElement(kRoot); });
 
-    writer->WriteNamed(L"sha256", mothership.GetSha256());
+    writer->WriteNamed(L"sha1", mothership.GetSha1());
     writer->WriteNamed(L"command_line", mothership.GetCommandLineValue());
 }
 
@@ -189,7 +189,7 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::WolfLaun
     writer->BeginElement(kNodeWolfLauncher);
     Guard::Scope onExit([&]() { writer->EndElement(kNodeWolfLauncher); });
 
-    writer->WriteNamed(L"sha256", wolfLauncher.GetSha256());
+    writer->WriteNamed(L"sha1", wolfLauncher.GetSha1());
     writer->WriteNamed(L"version", wolfLauncher.GetVersion());
     writer->WriteNamed(L"command_line", wolfLauncher.GetCommandLineValue());
 }
@@ -212,10 +212,19 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             writer->BeginElement(kNodeOutcome);
             Guard::Scope onExit([&]() { writer->EndElement(kNodeOutcome); });
 
-            auto timestamp = ToStringIso8601(outcome.GetTimestamp());
-            if (timestamp.has_value())
+            auto timestamp = outcome.GetTimestampKey();
+            writer->WriteNamed(L"timestamp", timestamp);
+
+            auto startingTime = ToStringIso8601(outcome.GetStartingTime());
+            if (startingTime.has_value())
             {
-                writer->WriteNamed(L"timestamp", *timestamp);
+                writer->WriteNamed(L"start", *startingTime);
+            }
+
+            auto endingTime = ToStringIso8601(outcome.GetEndingTime());
+            if (endingTime.has_value())
+            {
+                writer->WriteNamed(L"end", *endingTime);
             }
 
             writer->WriteNamed(L"computer_name", outcome.GetComputerNameValue());

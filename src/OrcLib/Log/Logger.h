@@ -11,10 +11,12 @@
 #include <filesystem>
 #include <memory>
 #include <mutex>
+#include <set>
 
 #include <spdlog/spdlog.h>
 
 #include "SpdlogLogger.h"
+#include "Text/Format.h"
 
 namespace Orc {
 namespace Log {
@@ -30,7 +32,7 @@ class Logger
 public:
     enum class Facility : size_t
     {
-        kDefault = 0,
+        kConsole = 0,
         kLogFile,
         kJournal,
         kUnitTest,
@@ -43,91 +45,152 @@ public:
     uint64_t errorCount() const;
     uint64_t criticalCount() const;
 
+    template <typename FacilityIt, typename Timepoint, typename... Args>
+    inline void Log(FacilityIt first, FacilityIt last, const Timepoint& timepoint, Level level, Args&&... args)
+    {
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(level)];
+
+        if (first == last)
+        {
+            return;
+        }
+
+        fmt::memory_buffer msg;
+        Text::FormatToWithoutEOL(std::back_inserter(msg), std::forward<Args>(args)...);
+        for (auto it = first; it != last; ++it)
+        {
+            const SpdlogLogger::Ptr& logger = *it;
+            logger->Log(timepoint, level, std::string_view(msg.data(), msg.size()));
+        }
+    }
+
+    template <typename FacilityIt, typename... Args>
+    inline void Log(FacilityIt first, FacilityIt last, Log::Level level, Args&&... args)
+    {
+        Log(first, last, std::chrono::system_clock::now(), level, std::forward<Args>(args)...);
+    }
+
     template <typename... Args>
     void Trace(Facility id, Args&&... args)
     {
-        Get(id)->Trace(std::forward<Args>(args)...);
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Trace)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Trace(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Trace(Args&&... args)
     {
-        Trace(Facility::kDefault, std::forward<Args>(args)...);
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Trace,
+            std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void Debug(Facility id, Args&&... args)
     {
-        Get(id)->Debug(std::forward<Args>(args)...);
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Debug)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Debug(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Debug(Args&&... args)
     {
-        Debug(Facility::kDefault, std::forward<Args>(args)...);
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Debug,
+            std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void Info(Facility id, Args&&... args)
     {
-        Get(id)->Info(std::forward<Args>(args)...);
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Info)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Info(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Info(Args&&... args)
     {
-        Info(Facility::kDefault, std::forward<Args>(args)...);
+        Log(std::cbegin(m_defaultFacilities), std::cend(m_defaultFacilities), Level::Info, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void Warn(Facility id, Args&&... args)
     {
-        Get(id)->Warn(std::forward<Args>(args)...);
-        ++m_warningCount;
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Warning)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Warn(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Warn(Args&&... args)
     {
-        Warn(Facility::kDefault, std::forward<Args>(args)...);
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Warning,
+            std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void Error(Facility id, Args&&... args)
     {
-        Get(id)->Error(std::forward<Args>(args)...);
-        ++m_errorCount;
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Error)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Error(std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Error(Args&&... args)
     {
-        Error(Facility::kDefault, std::forward<Args>(args)...);
-
-        auto defaultLogger = Get(Facility::kDefault);
-        if (defaultLogger)
-        {
-            defaultLogger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::Error);
-        }
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Error,
+            std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     void Critical(Facility id, Args&&... args)
     {
-        Get(id)->Critical(std::forward<Args>(args)...);
-        ++m_criticalCount;
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Critical)];
 
-        auto defaultLogger = Get(Facility::kDefault);
-        if (defaultLogger)
+        auto& logger = Get(id);
+        if (logger)
         {
-            defaultLogger->DumpBacktrace(SpdlogLogger::BacktraceDumpReason::CriticalError);
+            logger->Critical(std::forward<Args>(args)...);
         }
     }
 
     template <typename... Args>
     void Critical(Args&&... args)
     {
-        Critical(Facility::kDefault, std::forward<Args>(args)...);
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Critical,
+            std::forward<Args>(args)...);
     }
 
     void Flush()
@@ -158,12 +221,20 @@ public:
 
     void Set(Facility id, SpdlogLogger::Ptr logger);
 
+    void AddToDefaultFacilities(Facility id)
+    {
+        auto& logger = Get(id);
+        assert(logger);
+        if (logger)
+        {
+            m_defaultFacilities.insert(logger);
+        }
+    }
+
 private:
     std::vector<SpdlogLogger::Ptr> m_loggers;
-
-    std::atomic<uint64_t> m_warningCount;
-    std::atomic<uint64_t> m_errorCount;
-    std::atomic<uint64_t> m_criticalCount;
+    std::set<SpdlogLogger::Ptr> m_defaultFacilities;
+    std::array<std::atomic<uint64_t>, static_cast<std::underlying_type_t<Level>>(Level::LevelCount)> m_logCounters;
 };
 
 using Facility = Logger::Facility;

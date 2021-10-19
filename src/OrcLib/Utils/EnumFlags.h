@@ -12,6 +12,7 @@
 //
 
 #include <type_traits>
+#include <assert.h>
 
 namespace Orc {
 

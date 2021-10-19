@@ -1,6 +1,42 @@
 # ChangeLog
 
-## [10.1.0-rc6] - 2021-06-22 - Release Candidate 5
+## [10.1.0-rc7] - 2021-10-15 - Release Candidate 7
+### Added
+- Add support for $DATA:WofCompressedData
+- WolfLauncher: add option `/nolimits[:<keyword>,...]`
+- WolfLauncher: embed configuration specified with '/config=<path>'
+- Outcome: add 'start' element to specify start of execution
+- Outcome: add 'end' element to specify end of execution
+- Upload target now support environment variables
+
+### Changed
+- Add logs on uploaded file status check
+- Outline: add 'outline' root node
+- Outline: rename "time" element to "start" and make it ISO
+- Outcome: use sha1 as default algorithm for Orc self hash
+- vcpkg: update to 2021.05.12 (fmt 8.0.1, spdlog: 1.9.2, ...)
+- FastFind: use full computer name as computer name
+- Log: improve backtrace for more complex configurations
+- Remove boost-serialization unused dependency
+- Log: Use same timestamp for Journal's log and syslog messages
+
+### Fixed
+- GetSamples: Fix authenticode handling
+- Fix XPSP2 XmlLite.dll loading
+- Outline: fix element 'timestamp'
+- GetThis: handle zip output (using 7z library)
+- FastFind: fix match description for 'data_contains_hex'
+- FastFind: fix format string issue for keys with braces
+- Fix missing API with XPSP2
+- Fix unexpected log message on success
+- Fix performance issue with NTFS compressed files
+- GetSamples: fix authenticode signature check with '/sampleinfo'
+
+### Removed
+- cmake: Remove option ORC_BUILD_TLSH
+
+
+## [10.1.0-rc6] - 2021-06-22 - Release Candidate 6
 ### Changed
 - GetSamples: enable autorunsc for all users
 - yara: update to 4.0.2
@@ -9,6 +45,7 @@
 ### Fixed
 - fastfind: fix xml configuration parsing ("invalid index")
 - fastfind: fix failure when no '/out' was specified
+
 
 ## [10.1.0-rc5] - 2021-03-12
 ### Changed
@@ -147,7 +184,22 @@
 - Remove dead code
 
 
-## [10.0.19] - 2021-01-06
+## [10.0.21] - 2021-10-07
+### Changed
+- fastfind: use full computer name as 'computer' output element
+
+### Fixed
+- add missing PE machine type
+- yara: fix log formatting
+- fastfind: fix match description for 'data_contains_hex'
+
+
+## [10.0.20] - 2021-07-02
+### Added
+- WolfLauncher: add option `/nolimits[:<keyword>,...]`
+
+
+## [10.0.19] - 2021-06-01
 ### Changed
 - yara: update to 4.0.2
 - GetSamples: enable autorunsc for all users
@@ -156,7 +208,7 @@
 - fastfind: fix nullptr dereference when '/out' is not specified
 
 
-## [10.0.18] - 2021-10-03
+## [10.0.18] - 2021-03-10
 ### Changed
 - yara: remove libressl dependency and rely on wincrypt api
 - yara: remove jansson dependency and cuckoo module
@@ -164,7 +216,7 @@
 - spdlog: update to 1.8.1
 
 
-## [10.0.17] - 2021-10-02
+## [10.0.17] - 2021-02-10
 ### Changed
 - build.ps1: stop on any error
 - build.ps1: multiple other improvements

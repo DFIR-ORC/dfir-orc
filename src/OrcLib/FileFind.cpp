@@ -2591,8 +2591,21 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingDataNameAndSize(
 {
     SearchTerm::Criteria retval = SearchTerm::Criteria::NONE;
 
-    for (auto data_iter = begin(pElt->GetDataAttributes()); data_iter != end(pElt->GetDataAttributes()); ++data_iter)
+    for (uint32_t i = 0; i < pElt->GetDataAttributes().size(); ++i)
     {
+        const auto& attribute = pElt->GetDataAttributes()[i];
+        if (attribute == nullptr)
+        {
+            Log::Error("Unexpected NULL data attribute");
+            continue;
+        }
+
+        // Ignore WofCompressedData valid entry
+        if (pElt->IsOverlayFile() && attribute->NameEquals(L"WofCompressedData"))
+        {
+            continue;
+        }
+
         SearchTerm::Criteria matchedDataNameOrSizeSpecs = SearchTerm::Criteria::NONE;
         if (requiredSpec & SearchTerm::Criteria::SIZE_EQ || requiredSpec & SearchTerm::Criteria::SIZE_GT
             || requiredSpec & SearchTerm::Criteria::SIZE_GE || requiredSpec & SearchTerm::Criteria::SIZE_LE
@@ -2600,7 +2613,7 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingDataNameAndSize(
         {
             ULONGLONG ullDataSize = 0LL;
 
-            if (FAILED((*data_iter)->DataSize(m_pVolReader, ullDataSize)))
+            if (FAILED(attribute->DataSize(m_pVolReader, ullDataSize)))
             {
                 continue;
             }
@@ -2612,11 +2625,12 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingDataNameAndSize(
             }
             matchedDataNameOrSizeSpecs = matchedDataNameOrSizeSpecs | aSpec;
         }
+
         if (requiredSpec & SearchTerm::Criteria::ADS_EXACT)
         {
-            if (pElt->HasNamedDataAttr() && *data_iter != nullptr)
+            if (pElt->HasNamedDataAttr())
             {
-                SearchTerm::Criteria aSpec = ExactADS(aTerm, (*data_iter)->NamePtr(), (*data_iter)->NameLength());
+                SearchTerm::Criteria aSpec = ExactADS(aTerm, attribute->NamePtr(), attribute->NameLength());
                 if (aSpec == SearchTerm::Criteria::NONE)
                 {
                     continue;
@@ -2624,11 +2638,12 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingDataNameAndSize(
                 matchedDataNameOrSizeSpecs = matchedDataNameOrSizeSpecs | aSpec;
             }
         }
+
         if (requiredSpec & SearchTerm::Criteria::ADS_MATCH)
         {
-            if (pElt->HasNamedDataAttr() && *data_iter != nullptr)
+            if (pElt->HasNamedDataAttr())
             {
-                SearchTerm::Criteria aSpec = MatchADS(aTerm, (*data_iter)->NamePtr(), (*data_iter)->NameLength());
+                SearchTerm::Criteria aSpec = MatchADS(aTerm, attribute->NamePtr(), attribute->NameLength());
                 if (aSpec == SearchTerm::Criteria::NONE)
                 {
                     continue;
@@ -2636,11 +2651,12 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingDataNameAndSize(
                 matchedDataNameOrSizeSpecs = matchedDataNameOrSizeSpecs | aSpec;
             }
         }
+
         if (requiredSpec & SearchTerm::Criteria::ADS_REGEX)
         {
-            if (pElt->HasNamedDataAttr() && *data_iter != nullptr)
+            if (pElt->HasNamedDataAttr())
             {
-                SearchTerm::Criteria aSpec = RegexADS(aTerm, (*data_iter)->NamePtr(), (*data_iter)->NameLength());
+                SearchTerm::Criteria aSpec = RegexADS(aTerm, attribute->NamePtr(), attribute->NameLength());
                 if (aSpec == SearchTerm::Criteria::NONE)
                 {
                     continue;
@@ -2648,6 +2664,7 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingDataNameAndSize(
                 matchedDataNameOrSizeSpecs = matchedDataNameOrSizeSpecs | aSpec;
             }
         }
+
         if (matchedDataNameOrSizeSpecs == requiredSpec)
         {
             if (aFileMatch == nullptr)
@@ -2655,9 +2672,9 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingDataNameAndSize(
                     m_pVolReader, aTerm, pElt->GetFileReferenceNumber(), !pElt->IsRecordInUse());
 
             if (m_bProvideStream)
-                aFileMatch->AddAttributeMatch(m_pVolReader, *data_iter);
+                aFileMatch->AddAttributeMatch(m_pVolReader, attribute);
             else
-                aFileMatch->AddAttributeMatch(*data_iter);
+                aFileMatch->AddAttributeMatch(attribute);
 
             retval = requiredSpec;
         }

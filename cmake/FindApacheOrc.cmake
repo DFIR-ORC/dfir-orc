@@ -45,6 +45,6 @@ target_link_libraries(ApacheOrc::ApacheOrc
         Snappy::snappy
         ZLIB::ZLIB
         LZ4::LZ4
-        libzstd
+        zstd::libzstd_static
         debug ${APACHE_ORC_LIB_DEBUG} optimized ${APACHE_ORC_LIB_RELEASE}
 )

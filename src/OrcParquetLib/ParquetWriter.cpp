@@ -160,7 +160,7 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
                 break;
             }
             case arrow::Type::STRUCT: {
-                const std::vector<std::shared_ptr<arrow::Field>>& fields = column->type()->children();
+                const auto& fields = column->type()->fields();
                 std::vector<std::shared_ptr<arrow::ArrayBuilder>> values_builder;
 
                 for (const auto& it : fields)

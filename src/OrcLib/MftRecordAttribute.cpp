@@ -19,14 +19,76 @@
 #include "BufferStream.h"
 #include "NTFSStream.h"
 #include "UncompressNTFSStream.h"
-
+#include "UncompressWofStream.h"
+#include "Filesystem/Ntfs/Attribute/ReparsePoint/WofReparsePoint.h"
 #include "SystemDetails.h"
-
 #include "Log/Log.h"
 
 using namespace std;
 
 using namespace Orc;
+
+namespace {
+
+const std::shared_ptr<Orc::DataAttribute> GetWofDataAttribute(Orc::MFTRecord& record)
+{
+    const auto si = record.GetStandardInformation();
+    if (!si)
+    {
+        Log::Error(L"Invalid WOF record: expect $DATA with Standard Information");
+        return nullptr;
+    }
+
+    if ((si->FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) != FILE_ATTRIBUTE_SPARSE_FILE)
+    {
+        Log::Error(L"Invalid WOF record: expect FILE_ATTRIBUTE_SPARSE_FILE");
+        return nullptr;
+    }
+
+    auto attribute = record.GetDataAttribute(L"");
+    if (!attribute)
+    {
+        Log::Error("Invalid WOF record: missing '$DATA' attribute");
+        return nullptr;
+    }
+
+    if (!attribute->IsNonResident())
+    {
+        Log::Error(L"Invalid WOF record: expect 'non resident' $DATA attribute");
+        return nullptr;
+    }
+
+    if (attribute->Header()->Form.Nonresident.TotalAllocated != 0)
+    {
+        Log::Error(L"Invalid WOF record: expect $DATA's 'TotalAllocated = 0'");
+        return nullptr;
+    }
+
+    if ((attribute->Header()->Flags & ATTRIBUTE_FLAG_SPARSE) != ATTRIBUTE_FLAG_SPARSE)
+    {
+        Log::Error(L"Invalid WOF record: expect $DATA with ATTRIBUTE_FLAG_SPARSE");
+        return nullptr;
+    }
+
+    return attribute;
+}
+
+std::shared_ptr<WOFReparseAttribute> GetWofReparsePoint(const Orc::MFTRecord& record)
+{
+    for (const auto& attribute : record.GetAttributeList())
+    {
+        const auto wofReparsePoint =
+            std::dynamic_pointer_cast<WOFReparseAttribute, MftRecordAttribute>(attribute.Attribute());
+        if (wofReparsePoint)
+        {
+            return wofReparsePoint;
+        }
+    }
+
+    return nullptr;
+}
+
+}  // namespace
 
 HRESULT MftRecordAttribute::AddContinuationAttribute(const shared_ptr<MftRecordAttribute>& pMftRecordAttribute)
 {
@@ -258,11 +320,37 @@ HRESULT MftRecordAttribute::GetStreams(
     }
 
     _ASSERT(pVolReader);
-
     _ASSERT(m_pHeader != nullptr);
 
     if (m_pHeader->FormCode == NONRESIDENT_FORM)
     {
+        if (m_pHeader->NameLength == 0 && m_pHostRecord->IsOverlayFile())
+        {
+            // Handle transparently $DATA for WofCompressedData files
+            const auto wofReparsePoint = ::GetWofReparsePoint(*m_pHostRecord);
+            if (!wofReparsePoint)
+            {
+                Log::Error("Invalid WOF record: missing WOF reparse point");
+                return E_FAIL;
+            }
+
+            hr = wofReparsePoint->GetStreams(pVolReader, rawStream, dataStream);
+            if (FAILED(hr))
+            {
+                Log::Error("Failed to retrieve wof stream [{}]", SystemError(hr));
+                return hr;
+            }
+
+            if (m_Details == nullptr)
+            {
+                m_Details = std::make_unique<DataDetails>();
+            }
+
+            m_Details->SetDataStream(dataStream);
+            m_Details->SetRawStream(rawStream);
+            return S_OK;
+        }
+
         switch (m_pHeader->Form.Nonresident.CompressionUnit)
         {
             case 0: {
@@ -664,5 +752,72 @@ HRESULT ReparsePointAttribute::CleanCachedData()
 {
     strSubstituteName.clear();
     strPrintName.clear();
+    return S_OK;
+}
+
+WOFReparseAttribute::WOFReparseAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord, std::error_code& ec)
+    : ReparsePointAttribute(pHeader, pRecord)
+    , m_algorithm(Ntfs::WofAlgorithm::kUnknown)
+{
+    PREPARSE_POINT_ATTRIBUTE pReparse =
+        (PREPARSE_POINT_ATTRIBUTE)(((BYTE*)Header()) + Header()->Form.Resident.ValueOffset);
+
+    BufferView repasePointView(reinterpret_cast<uint8_t*>(pReparse->Data), pReparse->DataLength);
+
+    const auto wofHeader = Ntfs::WofReparsePoint::Parse(repasePointView);
+    if (!wofHeader)
+    {
+        Log::Debug("Invalid wof header [{}]", wofHeader.error());
+        ec = wofHeader.error();
+        return;
+    }
+
+    m_algorithm = wofHeader.value().CompressionFormat();
+};
+
+HRESULT WOFReparseAttribute::GetStreams(
+    const std::shared_ptr<VolumeReader>& pVolReader,
+    std::shared_ptr<ByteStream>& rawStream,
+    std::shared_ptr<ByteStream>& dataStream)
+{
+    if (!m_pHostRecord)
+    {
+        Log::Error("Invalid WOF record: nullptr");
+        return E_FAIL;
+    }
+
+    auto dataAttribute = ::GetWofDataAttribute(*m_pHostRecord);
+    if (!dataAttribute)
+    {
+        Log::Error("Failed to retrieve wof $DATA attribute");
+        return E_FAIL;
+    }
+
+    auto wofAttribute = m_pHostRecord->GetDataAttribute(L"WofCompressedData");
+    if (!wofAttribute)
+    {
+        Log::Error("Invalid WOF record: missing 'WofCompressedData' attribute");
+        return E_FAIL;
+    }
+
+    auto ntfsStream = make_shared<NTFSStream>();
+    HRESULT hr = ntfsStream->OpenAllocatedDataStream(pVolReader, wofAttribute);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to open NTFSStream [{}]", SystemError(hr));
+        return hr;
+    }
+
+    // Nonresident: checked in '::GetWofDataAttribute()'
+    auto wofStream = make_shared<UncompressWofStream>();
+    hr = wofStream->Open(ntfsStream, m_algorithm, dataAttribute->Header()->Form.Nonresident.FileSize);
+    if (FAILED(hr))
+    {
+        Log::Debug("Failed to open wof stream [{}]", SystemError(hr));
+        return hr;
+    }
+
+    rawStream = ntfsStream;
+    dataStream = wofStream;
     return S_OK;
 }

@@ -99,7 +99,7 @@ HRESULT GetRemoteOutputFileInformations(
         hr = uploadAgent.CheckFileUpload(exec.GetOutputFileName(), &dwFileSize);
         if (FAILED(hr))
         {
-            return E_FAIL;
+            return hr;
         }
 
         fileInformations.exist = true;
@@ -111,7 +111,7 @@ HRESULT GetRemoteOutputFileInformations(
     return S_OK;
 }
 
-Result<std::wstring> Sha256(const std::filesystem::path& path)
+Result<std::wstring> Hash(const std::filesystem::path& path, CryptoHashStream::Algorithm algorithm)
 {
     auto fileStream = std::make_shared<FileStream>();
 
@@ -123,8 +123,8 @@ Result<std::wstring> Sha256(const std::filesystem::path& path)
         return SystemError(hr);
     }
 
-    CryptoHashStream hash;
-    hr = hash.OpenToRead(CryptoHashStream::Algorithm::SHA256, fileStream);
+    CryptoHashStream hashStream;
+    hr = hashStream.OpenToRead(algorithm, fileStream);
     if (FAILED(hr))
     {
         Log::Debug(L"Failed to open hashstream: '{}' [{}]", path, SystemError(hr));
@@ -132,26 +132,26 @@ Result<std::wstring> Sha256(const std::filesystem::path& path)
     }
 
     ULONGLONG ullBytesWritten;
-    hr = hash.CopyTo(DevNullStream(), &ullBytesWritten);
+    hr = hashStream.CopyTo(DevNullStream(), &ullBytesWritten);
     if (FAILED(hr))
     {
         Log::Debug(L"Failed to consume stream: '{}' [{}]", path, SystemError(hr));
         return SystemError(hr);
     }
 
-    std::wstring sha256;
-    hr = hash.GetHash(CryptoHashStream::Algorithm::SHA256, sha256);
+    std::wstring hash;
+    hr = hashStream.GetHash(algorithm, hash);
     if (FAILED(hr))
     {
-        Log::Debug(L"Failed to get sha256: '{}' [{}]", path, SystemError(hr));
+        Log::Debug(L"Failed to get {}: '{}' [{}]", algorithm, path, SystemError(hr));
         return SystemError(hr);
     }
 
-    Log::Debug(L"Sha256 for '{}': {}", path, sha256);
-    return sha256;
+    Log::Debug(L"Hash for '{}': {}:{}", path, algorithm, hash);
+    return hash;
 }
 
-Result<std::wstring> GetCurrentExecutableSha256()
+Result<std::wstring> GetCurrentExecutableHash(CryptoHashStream::Algorithm algorithm)
 {
     std::error_code ec;
     const auto path = GetModuleFileNameApi(NULL, ec);
@@ -161,10 +161,10 @@ Result<std::wstring> GetCurrentExecutableSha256()
         return ec;
     }
 
-    return Sha256(path);
+    return Hash(path, algorithm);
 }
 
-Result<std::wstring> GetProcessExecutableSha256(DWORD dwProcessId)
+Result<std::wstring> GetProcessExecutableHash(DWORD dwProcessId, CryptoHashStream::Algorithm algorithm)
 {
     Guard::Handle hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
     if (!hProcess)
@@ -176,17 +176,26 @@ Result<std::wstring> GetProcessExecutableSha256(DWORD dwProcessId)
 
     std::error_code ec;
     const auto path = GetModuleFileNameExApi(hProcess.value(), NULL, ec);
-    return Sha256(path);
+    return Hash(path, algorithm);
 }
 
 void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
 {
-    auto lock = outcome.Lock();
+    auto&& lock = outcome.Lock();
 
     {
         std::wstring computerName;
         SystemDetails::GetComputerName_(computerName);
         outcome.SetComputerNameValue(computerName);
+    }
+
+    {
+        std::wstring timestampKey;
+        HRESULT hr = SystemDetails::GetTimeStamp(timestampKey);
+        if (SUCCEEDED(hr))
+        {
+            outcome.SetTimestampKey(timestampKey);
+        }
     }
 
     const auto timestamp = SystemDetails::GetTimeStamp();
@@ -195,9 +204,11 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
         auto timestampTp = FromSystemTime(timestamp.value());
         if (timestampTp)
         {
-            outcome.SetTimestamp(*timestampTp);
+            outcome.SetStartingTime(*timestampTp);
         }
     }
+
+    outcome.SetEndingTime(std::chrono::system_clock::now());
 
     auto mothershipPID = SystemDetails::GetParentProcessId();
     if (mothershipPID)
@@ -210,23 +221,23 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
             mothership.SetCommandLineValue(commandLine.value());
         }
 
-        auto sha256 = GetProcessExecutableSha256(mothershipPID.value());
-        if (sha256)
+        auto sha1 = GetProcessExecutableHash(mothershipPID.value(), CryptoHashStream::Algorithm::SHA1);
+        if (sha1)
         {
-            mothership.SetSha256(sha256.value());
+            mothership.SetSha1(sha1.value());
         }
     }
 
     auto& wolfLauncher = outcome.GetWolfLauncher();
 
-    const auto sha256 = GetCurrentExecutableSha256();
-    if (sha256.has_error())
+    const auto sha1 = GetCurrentExecutableHash(CryptoHashStream::Algorithm::SHA1);
+    if (sha1.has_error())
     {
-        Log::Debug(L"Failed to compute sha256 on current executable [{}]", sha256.error());
+        Log::Debug(L"Failed to compute sha256 on current executable [{}]", sha1.error());
     }
     else
     {
-        wolfLauncher.SetSha256(sha256.value());
+        wolfLauncher.SetSha1(sha1.value());
     }
 
     wolfLauncher.SetVersion(kOrcFileVerString);
@@ -491,15 +502,16 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 
         writer->WriteNamed(L"version", L"1.0");
         writer->BeginElement(L"dfir-orc");
+        writer->BeginElement(L"outline");
         {
             writer->WriteNamed(L"version", kOrcFileVerStringW);
 
-            FILETIME ft;
-            GetSystemTimeAsFileTime(&ft);
-            writer->WriteNamed(L"time", ft);
+            std::wstring start;
+            SystemDetails::GetTimeStampISO8601(start);
+            writer->WriteNamed(L"start", start);
 
             std::wstring strTimeStamp;
-            SystemDetails::GetTimeStampISO8601(strTimeStamp);
+            SystemDetails::GetTimeStamp(strTimeStamp);
             writer->WriteNamed(L"timestamp", strTimeStamp);
 
             auto mothership_id = SystemDetails::GetParentProcessId();
@@ -511,10 +523,10 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                     writer->WriteNamed(L"command", mothership_cmdline.value().c_str());
                 }
 
-                const auto sha256 = GetProcessExecutableSha256(mothership_id.value());
-                if (sha256)
+                const auto sha1 = GetProcessExecutableHash(mothership_id.value(), CryptoHashStream::Algorithm::SHA1);
+                if (sha1)
                 {
-                    writer->WriteNamed(L"sha256", sha256.value());
+                    writer->WriteNamed(L"sha1", sha1.value());
                 }
             }
             writer->WriteNamed(L"output", config.Output.Path.c_str());
@@ -547,6 +559,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             SystemIdentity::Write(writer);
         }
 
+        writer->EndElement(L"outline");
         writer->EndElement(L"dfir-orc");
         writer->Close();
     }
@@ -636,6 +649,12 @@ HRESULT Main::Run()
 
 Orc::Result<void> Main::CreateAndUploadOutcome()
 {
+    if (config.Outcome.Type == OutputSpec::Kind::None)
+    {
+        Log::Debug(L"No outcome file specified");
+        return Success<void>();
+    }
+
     ::UpdateOutcome(m_outcome);
 
     auto rv = ::DumpOutcome(m_outcome, config.Outcome);
@@ -831,6 +850,11 @@ HRESULT Main::Run_Execute()
                     {
                         commandSetNode.Add("Overwriting remote file: '{}' ({})", info.path, info.size);
                     }
+                    else
+                    {
+                        const auto path = m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName());
+                        Log::Error(L"Failed to check remote file status: '{}' [{}]", path, SystemError(hr));
+                    }
                 }
 
                 hr = ::GetLocalOutputFileInformations(*exec, info);
@@ -846,7 +870,12 @@ HRESULT Main::Run_Execute()
                 if (exec->ShouldUpload() && m_pUploadAgent)
                 {
                     hr = ::GetRemoteOutputFileInformations(*exec, *m_pUploadAgent, info);
-                    if (SUCCEEDED(hr) && (!info.size || *info.size != 0))
+                    if (FAILED(hr))
+                    {
+                        const auto path = m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName());
+                        Log::Error(L"Failed to check remote file status: '{}' [{}]", path, SystemError(hr));
+                    }
+                    else if (!info.size || *info.size != 0)
                     {
                         commandSetNode.Add(
                             "Skipping set because non-empty remote output file already exists: '{}' ({})",

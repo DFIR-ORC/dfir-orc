@@ -149,9 +149,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.limits.dwlMaxBytesPerSample = (DWORD64)configitem[GETTHIS_SAMPLES][CONFIG_MAXBYTESPERSAMPLE];
     }
 
-    if (configitem[GETTHIS_SAMPLES][CONFIG_MAXBYTESTOTAL])
+    if (configitem[GETTHIS_SAMPLES][CONFIG_MAXTOTALBYTES])
     {
-        config.limits.dwlMaxBytesTotal = (DWORD64)configitem[GETTHIS_SAMPLES][CONFIG_MAXBYTESTOTAL];
+        config.limits.dwlMaxTotalBytes = (DWORD64)configitem[GETTHIS_SAMPLES][CONFIG_MAXTOTALBYTES];
     }
 
     if (configitem[GETTHIS_SAMPLES][CONFIG_MAXSAMPLECOUNT])
@@ -204,9 +204,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             {
                 aSpec.PerSampleLimits.dwlMaxBytesPerSample = (DWORD64)item[CONFIG_MAXBYTESPERSAMPLE];
             }
-            if (item[CONFIG_MAXBYTESTOTAL])
+            if (item[CONFIG_MAXTOTALBYTES])
             {
-                aSpec.PerSampleLimits.dwlMaxBytesTotal = (DWORD64)item[CONFIG_MAXBYTESTOTAL];
+                aSpec.PerSampleLimits.dwlMaxTotalBytes = (DWORD64)item[CONFIG_MAXTOTALBYTES];
             }
             if (item[CONFIG_MAXSAMPLECOUNT])
             {
@@ -355,7 +355,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (FileSizeOption(argv[i] + 1, L"MaxPerSampleBytes", config.limits.dwlMaxBytesPerSample))
                         ;
-                    else if (FileSizeOption(argv[i] + 1, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal))
+                    else if (FileSizeOption(argv[i] + 1, L"MaxTotalBytes", config.limits.dwlMaxTotalBytes))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"MaxSampleCount", config.limits.dwMaxSampleCount))
                         ;
@@ -459,10 +459,10 @@ HRESULT Main::CheckConfiguration()
 
     // TODO: make a function to use also in GetSamples_config.cpp
     if (!config.limits.bIgnoreLimits
-        && (config.limits.dwlMaxBytesTotal == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
+        && (config.limits.dwlMaxTotalBytes == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
     {
         Log::Critical(
-            L"No global (at samples level, MaxBytesTotal or MaxSampleCount) has been set: set limits in configuration "
+            L"No global (at samples level, MaxTotalBytes or MaxSampleCount) has been set: set limits in configuration "
             L"or use /nolimits");
         return E_INVALIDARG;
     }

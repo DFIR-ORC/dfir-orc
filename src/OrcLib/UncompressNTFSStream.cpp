@@ -513,6 +513,7 @@ HRESULT UncompressNTFSStream::SetFilePointer(
 
 ULONG64 UncompressNTFSStream::GetSize()
 {
+    // The ntfs stream will have the uncompressed size
     if (m_pChainedStream != nullptr)
         return m_pChainedStream->GetSize();
     LARGE_INTEGER Size = {0};

@@ -67,7 +67,10 @@ GUID ToGuid(Archive::Format format)
     {
         case Archive::Format::k7z:
             return CLSID_CFormat7z;
+        case Archive::Format::k7zZip:
+            return CLSID_CFormatZip;
         default:
+            Log::Error("Unexpected archive format, defaulting to 7z");
             return CLSID_CFormat7z;
     }
 }

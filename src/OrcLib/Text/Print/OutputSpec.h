@@ -83,7 +83,8 @@ struct Printer<OutputSpec>
 
         if (output.UploadOutput != nullptr)
         {
-            PrintValue(root, L"Upload configuration:", *(output.UploadOutput));
+            auto node = root.AddNode(4, L"Upload configuration:");
+            Print(node, *(output.UploadOutput));
         }
     }
 };

@@ -169,7 +169,7 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
         return;
     }
 
-    auto lock = m_outcome.Lock();
+    auto&& lock = m_outcome.Lock();
     auto& outcomeArchive = m_outcome.GetCommandSet(m_commandSet).GetArchive();
 
     switch (notification->GetType())
@@ -441,7 +441,7 @@ HRESULT WolfExecution::CreateCommandAgent(
 
                         Log::Info("JOB: Complete");
 
-                        auto lock = m_outcome.Lock();
+                        auto&& lock = m_outcome.Lock();
 
                         auto& commandSetOutcome = m_outcome.GetCommandSet(item->GetKeyword());
                         commandSetOutcome.SetKeyword(item->GetKeyword());

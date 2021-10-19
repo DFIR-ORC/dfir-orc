@@ -15,8 +15,11 @@ namespace Log {
 
 SpdlogLogger::SpdlogLogger(const std::string& name)
     : m_logger(std::make_shared<spdlog::logger>(name))
+    , m_sinks()
     , m_backtraceFormatter(
           std::make_unique<spdlog::pattern_formatter>(kDefaultLogPattern, spdlog::pattern_time_type::utc))
+    , m_backtraceTrigger(Level::Off)
+    , m_backtraceLevel(Level::Debug)
 {
 }
 
@@ -46,18 +49,8 @@ void SpdlogLogger::DisableBacktrace()
     m_logger->disable_backtrace();
 }
 
-void SpdlogLogger::DumpBacktrace(BacktraceDumpReason reason)
+void SpdlogLogger::DumpBacktrace()
 {
-    Log::Level trigger;
-    if (reason == BacktraceDumpReason::Manual)
-    {
-        trigger = Log::Level::Trace;
-    }
-    else
-    {
-        trigger = static_cast<Log::Level>(reason);
-    }
-
     // Backup log settings
     const auto loggerLevel = static_cast<Log::Level>(m_logger->level());
     m_logger->set_level(spdlog::level::trace);
@@ -73,13 +66,9 @@ void SpdlogLogger::DumpBacktrace(BacktraceDumpReason reason)
     {
         sinksSettings[i] = {m_sinks[i]->Level(), m_sinks[i]->CloneFormatter()};
 
-        if (m_sinks[i]->BacktraceTrigger() != Log::Level::Off && trigger >= m_sinks[i]->BacktraceTrigger())
+        if (m_sinks[i]->Level() != Log::Level::Off)
         {
-            m_sinks[i]->SetLevel(Log::Level::Trace);
-        }
-        else
-        {
-            m_sinks[i]->SetLevel(Log::Level::Off);
+            m_sinks[i]->SetLevel(m_backtraceLevel);
         }
 
         m_sinks[i]->SetFormatter(m_backtraceFormatter->clone());

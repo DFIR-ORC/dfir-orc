@@ -17,8 +17,6 @@ namespace Log {
 
 std::shared_ptr<Logger>& DefaultLogger();
 
-SpdlogLogger::Ptr DefaultFacility();
-
 void SetDefaultLogger(std::shared_ptr<Logger> instance);
 
 template <typename... Args>

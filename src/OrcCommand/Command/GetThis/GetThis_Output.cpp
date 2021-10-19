@@ -84,7 +84,7 @@ void PrintValues(
             sample.Content,
             sample.PerSampleLimits.dwMaxSampleCount,
             sample.PerSampleLimits.dwlMaxBytesPerSample,
-            sample.PerSampleLimits.dwlMaxBytesTotal);
+            sample.PerSampleLimits.dwlMaxTotalBytes);
 
         for (const auto& term : sample.Terms)
         {
@@ -106,13 +106,13 @@ std::wstring ToString(ContentType contentType)
     switch (contentType)
     {
         case ContentType::DATA:
-            return L"DATA";
+            return L"data";
         case ContentType::INVALID:
-            return L"INVALID";
+            return L"invalid";
         case ContentType::RAW:
-            return L"RAW";
+            return L"raw";
         case ContentType::STRINGS:
-            return L"STRINGS";
+            return L"strings";
     }
 
     return L"<Unhandled Type>";
@@ -179,7 +179,7 @@ void Main::PrintParameters()
     PrintValue(node, L"FuzzyHash", config.FuzzyHashAlgs);
     PrintValue(node, L"NoLimits", config.limits.bIgnoreLimits);
     PrintValue(node, L"MaxBytesPerSample", config.limits.dwlMaxBytesPerSample);
-    PrintValue(node, L"MaxTotalBytes", config.limits.dwlMaxBytesTotal);
+    PrintValue(node, L"MaxTotalBytes", config.limits.dwlMaxTotalBytes);
     PrintValue(node, L"MaxSampleCount", config.limits.dwMaxSampleCount);
 
     PrintValues(node, L"Parsed locations", config.Locations.GetParsedLocations());

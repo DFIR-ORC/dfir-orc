@@ -181,7 +181,7 @@ HRESULT CDiskExtent::Read(__in_bcount(dwCount) PVOID lpBuf, DWORD dwCount, PDWOR
     _ASSERT(pdwBytesRead != nullptr);
 
     DWORD dwBytesRead = 0;
-    Log::Debug(L"CDiskExtent: Reading {} bytes", dwCount);
+    Log::Trace(L"CDiskExtent: Reading {} bytes", dwCount);
     if (!ReadFile(m_hFile, lpBuf, dwCount, &dwBytesRead, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
@@ -202,7 +202,7 @@ HRESULT CDiskExtent::Seek(LARGE_INTEGER liDistanceToMove, PLARGE_INTEGER pliNewF
     if (dwFrom == FILE_BEGIN)
         liDistanceToMove.QuadPart += m_Start;
 
-    Log::Debug(L"Moving from {} to {}", m_liCurrentPos.QuadPart, liDistanceToMove.QuadPart);
+    Log::Trace(L"Moving from {} to {}", m_liCurrentPos.QuadPart, liDistanceToMove.QuadPart);
 
     if (!SetFilePointerEx(m_hFile, liDistanceToMove, &m_liCurrentPos, dwFrom))
     {

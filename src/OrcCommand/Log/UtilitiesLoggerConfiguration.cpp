@@ -411,22 +411,28 @@ void ApplyConsoleSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfigu
     }
 }
 
-void ApplyConsoleSinkBacktraceTrigger(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
+void ApplyConsoleBacktraceTrigger(UtilitiesLogger& utilitiesLogger, const UtilitiesLoggerConfiguration& config)
 {
+    auto& console = utilitiesLogger.logger().Get(Logger::Facility::kConsole);
+    if (!console)
+    {
+        Log::Debug("Failed to retrieve console facility");
+        return;
+    }
+
     if (config.console.backtraceTrigger)
     {
-        logger.consoleSink()->SetBacktraceTrigger(*config.console.backtraceTrigger);
+        console->SetBacktraceTrigger(*config.console.backtraceTrigger);
     }
     else if (config.backtraceTrigger)
     {
-        logger.consoleSink()->SetBacktraceTrigger(*config.backtraceTrigger);
+        console->SetBacktraceTrigger(*config.backtraceTrigger);
     }
     else
     {
-        logger.consoleSink()->SetBacktraceTrigger(Log::Level::Off);
+        console->SetBacktraceTrigger(Log::Level::Off);
     }
 }
-
 
 void ApplySyslogSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
@@ -440,10 +446,10 @@ void ApplySyslogSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfigur
     }
 }
 
-void ApplyConsoleSinkConfiguration(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
+void ApplyConsoleConfiguration(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
     ApplyConsoleSinkLevel(logger, config);
-    ApplyConsoleSinkBacktraceTrigger(logger, config);
+    ApplyConsoleBacktraceTrigger(logger, config);
 }
 
 void ApplyFileSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
@@ -469,26 +475,33 @@ void ApplyFileSinkLevel(UtilitiesLogger& logger, const UtilitiesLoggerConfigurat
     }
 }
 
-void ApplyFileSinkBacktraceTrigger(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
+void ApplyFileBacktraceTrigger(UtilitiesLogger& utilitiesLogger, const UtilitiesLoggerConfiguration& config)
 {
+    auto& file = utilitiesLogger.logger().Get(Logger::Facility::kLogFile);
+    if (!file)
+    {
+        Log::Debug("Failed to retrieve log file facility");
+        return;
+    }
+
     if (config.file.backtraceTrigger)
     {
-        logger.fileSink()->SetBacktraceTrigger(*config.file.backtraceTrigger);
+        file->SetBacktraceTrigger(*config.file.backtraceTrigger);
     }
     else if (config.backtraceTrigger)
     {
-        logger.fileSink()->SetBacktraceTrigger(*config.backtraceTrigger);
+        file->SetBacktraceTrigger(*config.backtraceTrigger);
     }
     else
     {
-        logger.fileSink()->SetBacktraceTrigger(Log::Level::Error);
+        file->SetBacktraceTrigger(Log::Level::Off);
     }
 }
 
-Orc::Result<void> ApplyFileSinkConfiguration(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
+Orc::Result<void> ApplyFileConfiguration(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
     ApplyFileSinkLevel(logger, config);
-    ApplyFileSinkBacktraceTrigger(logger, config);
+    ApplyFileBacktraceTrigger(logger, config);
 
     std::filesystem::path path;
     FileDisposition disposition = FileDisposition::CreateNew;
@@ -534,26 +547,38 @@ Orc::Result<void> ApplyFileSinkConfiguration(UtilitiesLogger& logger, const Util
 
     std::error_code ec;
     logger.fileSink()->Open(path, disposition, ec);
-    return ec;
+    if (ec)
+    {
+        return ec;
+    }
+
+    return Success<void>();
 }
 
 Orc::Result<void>
-ApplySyslogSinkConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLoggerConfiguration& config)
+ApplyJournalConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLoggerConfiguration& config)
 {
     ApplySyslogSinkLevel(utilitiesLogger, config);
 
+    auto& syslog = utilitiesLogger.logger().Get(Logger::Facility::kJournal);
+    if (!syslog)
+    {
+        Log::Debug("Failed to retrieve journal facility");
+        return std::make_error_code(std::errc::no_such_device);
+    }
+
     if (config.syslog.backtraceTrigger)
     {
-        utilitiesLogger.syslogSink()->SetBacktraceTrigger(*config.syslog.backtraceTrigger);
+        syslog->SetBacktraceTrigger(*config.syslog.backtraceTrigger);
     }
     else
     {
-        utilitiesLogger.syslogSink()->SetBacktraceTrigger(Log::Level::Off);
+        syslog->SetBacktraceTrigger(Log::Level::Off);
     }
 
     if (!config.syslog.host)
     {
-        Log::Debug(L"Failed to configure syslog sink: missing host");
+        Log::Debug(L"Failed to configure syslog host: missing host");
         return std::errc::invalid_argument;
     }
 
@@ -561,7 +586,7 @@ ApplySyslogSinkConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLo
     const auto host = Utf16ToUtf8(*config.syslog.host, ec);
     if (ec)
     {
-        Log::Error(L"Failed to configure syslog sink host [{}]", ec);
+        Log::Error(L"Failed to configure syslog host [{}]", ec);
         return ec;
     }
 
@@ -571,7 +596,7 @@ ApplySyslogSinkConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLo
         port = Utf16ToUtf8(*config.syslog.port, ec);
         if (ec)
         {
-            Log::Error(L"Failed to configure syslog sink port [{}]", ec);
+            Log::Error(L"Failed configure syslog port [{}]", ec);
             return ec;
         }
     }
@@ -582,7 +607,7 @@ ApplySyslogSinkConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLo
         return ec;
     }
 
-    return ec;
+    return Success<void>();
 }
 
 void OutputConfigurationToOptions(const UtilitiesLoggerConfiguration::Output& output, std::vector<Option>& options)
@@ -884,13 +909,12 @@ void UtilitiesLoggerConfiguration::ApplyLogLevel(UtilitiesLogger& logger, int ar
     ApplyLogLevel(logger, config);
 }
 
-
 void UtilitiesLoggerConfiguration::ApplyBacktraceTrigger(
     UtilitiesLogger& logger,
     const UtilitiesLoggerConfiguration& config)
 {
-    ApplyConsoleSinkBacktraceTrigger(logger, config);
-    ApplyFileSinkBacktraceTrigger(logger, config);
+    ApplyConsoleBacktraceTrigger(logger, config);
+    ApplyFileBacktraceTrigger(logger, config);
 }
 
 void UtilitiesLoggerConfiguration::ApplyBacktraceTrigger(UtilitiesLogger& logger, int argc, const wchar_t* argv[])
@@ -902,9 +926,21 @@ void UtilitiesLoggerConfiguration::ApplyBacktraceTrigger(UtilitiesLogger& logger
 
 void UtilitiesLoggerConfiguration::Apply(UtilitiesLogger& logger, const UtilitiesLoggerConfiguration& config)
 {
-    ::ApplyConsoleSinkConfiguration(logger, config);
-    ::ApplyFileSinkConfiguration(logger, config);
-    ::ApplySyslogSinkConfiguration(logger, config);
+    ::ApplyConsoleConfiguration(logger, config);
+
+    auto result = ::ApplyFileConfiguration(logger, config);
+    if (!result)
+    {
+        Log::Debug("Failed to apply file sink configuration [{}]", result.error());
+        return;
+    }
+
+    result = ::ApplyJournalConfiguration(logger, config);
+    if (!result)
+    {
+        Log::Debug("Failed to apply syslog sink configuration [{}]", result.error());
+        return;
+    }
 }
 
 std::optional<std::wstring>

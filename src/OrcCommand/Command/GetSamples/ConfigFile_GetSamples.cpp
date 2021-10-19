@@ -24,7 +24,7 @@ HRESULT samples(ConfigItem& parent, DWORD dwIndex)
     HRESULT hr = E_FAIL;
     if (FAILED(hr = parent.AddChildNode(L"samples", dwIndex, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"MaxTotalBytes", CONFIG_MAXBYTESTOTAL, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"MaxTotalBytes", CONFIG_MAXTOTALBYTES, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"MaxPerSampleBytes", CONFIG_MAXBYTESPERSAMPLE, ConfigItem::OPTION)))
         return hr;

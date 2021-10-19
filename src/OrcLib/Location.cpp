@@ -241,7 +241,7 @@ void Location::MakeIdentifier()
             std::wstringstream ss;
             ss << L"0x" << std::hex << SerialNumber();
 
-            m_Identifier = wstring(L"DiskInterface_Serial_") + ss.str();
+            m_Identifier = wstring(L"DiskInterface_") + ss.str();
         }
         break;
         case Type::SystemStorage:

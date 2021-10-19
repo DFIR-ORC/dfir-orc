@@ -1,12 +1,10 @@
-$ErrorActionPreference  = "Stop"
-
 function Build-Orc
 {
     <#
     .SYNOPSIS
         Build wrapper around CMake to ease CI integration.
 
-        Allow one-liners for building multiple configurations: x86, x64, Debug, MinSizeRel...
+        Allows one-liners for building multiple configurations: x86, x64, Debug, MinSizeRel...
 
     .PARAMETER Source
         Path to DFIR-ORC source root directory to build.
@@ -16,7 +14,7 @@ function Build-Orc
         Default value: '$Source/build'.
 
     .PARAMETER Output
-        Build artifacts output directory
+        Build artifacts output directory.
 
     .PARAMETER Architecture
         Target architecture (x86, x64).
@@ -28,74 +26,69 @@ function Build-Orc
         Target runtime (static, dynamic). Default value: 'static'.
 
     .PARAMETER Vcpkg
-        Override default directory for vcpkg
+        Override default directory for vcpkg.
 
     .PARAMETER ApacheOrc
-        Build with ApacheOrc support
+        Build with ApacheOrc support.
 
     .PARAMETER Parquet
-        Build with Parquet support
+        Build with Parquet support.
 
     .PARAMETER SSDeep
-        Build with SSDeep support
+        Build with SSDeep support.
 
     .PARAMETER Clean
-        Clean build directory
+        Clean build directory.
 
     .OUTPUTS
         None or error on failure.
 
     .EXAMPLE
-        Build DFIR-Orc in 'F:\dfir-orc\build'
+        Build DFIR-Orc in 'F:\dfir-orc\build'.
 
         . F:\Orc\tools\ci\build.ps1
         Build-Orc -Source c:\dfir-orc\ -Architecture x86,x64 -Configuration Debug,MinSizeRel
     #>
 
-    [cmdletbinding()]
     Param (
-        [Parameter(Mandatory = $True)]
-        [ValidateNotNullOrEmpty()]
+        [Parameter(Mandatory)]
         [System.IO.DirectoryInfo]
         $Source,
-        [Parameter(Mandatory = $False)]
-        [ValidateNotNullOrEmpty()]
+        [Parameter()]
         [System.IO.DirectoryInfo]
         $BuildDirectory = (Join-Path "${Source}" "build"),
-        [Parameter(Mandatory = $False)]
-        [ValidateNotNullOrEmpty()]
+        [Parameter()]
         [System.IO.DirectoryInfo]
         $Output,
-        [Parameter(Mandatory = $True)]
+        [Parameter(Mandatory)]
         [ValidateSet('x86', 'x64', IgnoreCase=$false)]
         [String[]]
         $Architecture,
-        [Parameter(Mandatory = $False)]
+        [Parameter()]
         [ValidateSet('vs2017', 'vs2019')]
         [String]
         $Toolchain = 'vs2019',
-        [Parameter(Mandatory = $True)]
+        [Parameter(Mandatory)]
         [ValidateSet('Debug', 'MinSizeRel', 'RelWithDebInfo', IgnoreCase=$false)]
         [String[]]
         $Configuration,
-        [Parameter(Mandatory = $False)]
+        [Parameter()]
         [ValidateSet('static', 'dynamic', IgnoreCase=$false)]
         [String]
         $Runtime = 'static',
-        [Parameter(Mandatory = $False)]
-        [ValidateNotNullOrEmpty()]
+        [Parameter()]
         [System.IO.DirectoryInfo]
         $Vcpkg,
-        [Parameter(Mandatory = $False)]
+        [Parameter()]
         [switch]
         $ApacheOrc,
-        [Parameter(Mandatory = $False)]
+        [Parameter()]
         [switch]
         $Parquet,
-        [Parameter(Mandatory = $False)]
+        [Parameter()]
         [switch]
         $SSDeep,
-        [Parameter(Mandatory = $False)]
+        [Parameter()]
         [switch]
         $Clean
     )
@@ -106,12 +99,6 @@ function Build-Orc
         $Vcpkg = "${OrcPath}\external\vcpkg"
     }
     $Vcpkg = (Resolve-Path -Path $Vcpkg).Path.trim("\")
-
-    # Map cmake architecture option against $Architecture
-    $CMakeArch = @{
-        "x86" = "Win32";
-        "x64" = "x64";
-    }
 
     if(-not [System.IO.Path]::IsPathRooted($BuildDirectory))
     {
@@ -236,14 +223,13 @@ function Find-CMake
 #
 # cmake.exe -G "Visual Studio 16 2019" -A x64 -T v141_xp -DORC_BUILD_VCPKG=ON -DCMAKE_TOOLCHAIN_FILE="C:\dev\orc\dfir-orc\external\vcpkg\scripts\buildsystems\vcpkg.cmake" "C:\dev\orc\dfir-orc\"
 #
-
 function Invoke-NativeCommand()
 {
     param(
-        [Parameter(ValueFromPipeline=$true, Mandatory=$true, Position=0)]
+        [Parameter(ValueFromPipeline=$true, Mandatory)]
         [string]
         $Command,
-        [Parameter(ValueFromPipeline=$true, Mandatory=$true, Position=1)]
+        [Parameter(ValueFromPipeline=$true, Mandatory)]
         [String[]]
         $Parameters
     )

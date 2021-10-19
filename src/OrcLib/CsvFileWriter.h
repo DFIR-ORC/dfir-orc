@@ -301,7 +301,7 @@ protected:
             }
             else
             {
-                fmt::format_to(m_buffer, strFormat, std::forward<Args>(args)...);
+                fmt::format_to(std::back_inserter(m_buffer), strFormat, std::forward<Args>(args)...);
             }
         }
         catch (const fmt::format_error& error)

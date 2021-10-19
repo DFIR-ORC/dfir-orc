@@ -10,6 +10,8 @@
 find_package(Arrow REQUIRED)
 find_package(BoostRegex REQUIRED COMPONENTS regex)
 find_package(BoostFilesystem REQUIRED COMPONENTS filesystem)
+find_package(OpenSSL REQUIRED)
+find_package(zstd CONFIG REQUIRED)
 
 # Unfortunately the directory search order has 'debug' first:
 #
@@ -52,5 +54,7 @@ target_link_libraries(Parquet::Parquet
         Arrow::Arrow
         boost::regex
         boost::filesystem
+        zstd::libzstd_static
+        OpenSSL::Crypto
         debug ${PARQUET_LIB_DEBUG} optimized ${PARQUET_LIB_RELEASE}
 )

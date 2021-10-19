@@ -52,6 +52,6 @@ target_link_libraries(Arrow::Arrow
         thrift::thrift
         utf8proc::utf8proc
         ZLIB::ZLIB
-        libzstd
+        zstd::libzstd_static
         debug ${ARROW_LIB_DEBUG} optimized ${ARROW_LIB_RELEASE}
 )

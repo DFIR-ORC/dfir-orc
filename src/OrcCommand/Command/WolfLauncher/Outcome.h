@@ -185,19 +185,19 @@ public:
     const std::wstring& GetCommandLineValue() const { return m_commandLine; }
     void SetCommandLineValue(const std::wstring& commandLine) { m_commandLine = commandLine; }
 
-    void SetSha256(const std::wstring& sha256) { m_sha256 = sha256; }
-    const std::wstring& GetSha256() const { return m_sha256; }
+    void SetSha1(const std::wstring& sha1) { m_sha1 = sha1; }
+    const std::wstring& GetSha1() const { return m_sha1; }
 
 private:
     std::wstring m_commandLine;
-    std::wstring m_sha256;
+    std::wstring m_sha1;
 };
 
 class WolfLauncher
 {
 public:
-    void SetSha256(const std::wstring& sha256) { m_sha256 = sha256; }
-    const std::wstring& GetSha256() const { return m_sha256; }
+    void SetSha1(const std::wstring& sha1) { m_sha1 = sha1; }
+    const std::wstring& GetSha1() const { return m_sha1; }
 
     void SetVersion(const std::string& version) { m_version = version; }
     const std::string& GetVersion() const { return m_version; }
@@ -206,7 +206,7 @@ public:
     void SetCommandLineValue(const std::wstring& commandLine) { m_commandLine = commandLine; }
 
 private:
-    std::wstring m_sha256;
+    std::wstring m_sha1;
     std::string m_version;
     std::wstring m_commandLine;
 };
@@ -214,7 +214,11 @@ private:
 class Outcome
 {
 public:
-    std::lock_guard<std::mutex> Lock() const { return std::lock_guard<std::mutex>(m_mutex); }
+    std::lock_guard<std::mutex> Lock() const
+    {
+        m_mutex.lock();
+        return {m_mutex, std::adopt_lock};
+    }
 
     CommandSet& GetCommandSet(const std::wstring& keyword) { return m_commandSets[keyword]; }
 
@@ -232,8 +236,15 @@ public:
     const std::wstring& GetComputerNameValue() const { return m_computerName; }
     void SetComputerNameValue(const std::wstring& name) { m_computerName = name; }
 
-    Timestamp GetTimestamp() const { return m_timestamp; }
-    void SetTimestamp(const Timestamp& timestamp) { m_timestamp = timestamp; }
+    // Timestamp is used as a unique identifier between orc execution and multiple files
+    std::wstring GetTimestampKey() const { return m_timestamp; }
+    void SetTimestampKey(const std::wstring& timestamp) { m_timestamp = timestamp; }
+
+    Timestamp GetStartingTime() const { return m_startingTime; }
+    void SetStartingTime(const Timestamp& timestamp) { m_startingTime = timestamp; }
+
+    Timestamp GetEndingTime() const { return m_endingTime; }
+    void SetEndingTime(const Timestamp& timestamp) { m_endingTime = timestamp; }
 
     WolfLauncher& GetWolfLauncher() { return m_wolfLauncher; }
     const WolfLauncher& GetWolfLauncher() const { return m_wolfLauncher; }
@@ -246,7 +257,9 @@ private:
     std::wstring m_computerName;
     Mothership m_mothership;
     WolfLauncher m_wolfLauncher;
-    std::chrono::time_point<std::chrono::system_clock> m_timestamp;
+    std::wstring m_timestamp;
+    std::chrono::time_point<std::chrono::system_clock> m_startingTime;
+    std::chrono::time_point<std::chrono::system_clock> m_endingTime;
     std::unordered_map<std::wstring, CommandSet> m_commandSets;
 };
 

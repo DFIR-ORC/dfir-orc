@@ -9,7 +9,10 @@
 
 #pragma managed(push, off)
 
+#include "Archive/IArchive.h"
+
 namespace Orc {
+
 enum ArchiveFormat
 {
     Unknown = 0,
@@ -17,5 +20,8 @@ enum ArchiveFormat
     Zip,
     SevenZipSupported,
 };
-}
+
+Archive::Format ToArchiveFormatNg(ArchiveFormat legacyFormat);
+
+}  // namespace Orc
 #pragma managed(pop)
