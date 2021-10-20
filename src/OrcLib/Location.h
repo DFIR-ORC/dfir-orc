@@ -32,6 +32,7 @@ class ORCLIB_API Location
 
 public:
     using Type = Orc::LocationType;
+    using Ptr = std::shared_ptr<Location>;
 
 private:
     std::shared_ptr<VolumeReader> m_Reader;

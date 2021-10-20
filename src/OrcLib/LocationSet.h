@@ -13,6 +13,7 @@
 
 #include <map>
 #include <unordered_map>
+#include <set>
 
 #pragma managed(push, off)
 
@@ -21,6 +22,8 @@ namespace Orc {
 class ORCLIB_API LocationSet
 {
 public:
+    using ShadowFilters = std::set<std::wstring, CaseInsensitive>;
+
     typedef std::map<std::wstring, std::shared_ptr<Location>, CaseInsensitive> Locations;
 
     typedef enum
@@ -95,7 +98,12 @@ private:
 
     HRESULT EliminateDuplicateLocations();
     HRESULT UniqueLocations(FSVBR::FSType filterFSTypes);
-    HRESULT AltitudeLocations(Altitude alt, bool bAddShadows, FSVBR::FSType filterFSTypes);
+
+    HRESULT AltitudeLocations(
+        LocationSet::Altitude alt,
+        bool bParseShadows,
+        const ShadowFilters& shadows,
+        FSVBR::FSType filterFSTypes);
 
     HRESULT Reset();
 
@@ -149,7 +157,7 @@ public:
     HRESULT AddKnownLocations(const ConfigItem& item);
     HRESULT AddKnownLocations();
 
-    HRESULT Consolidate(bool bParseShadows, FSVBR::FSType filterFSTypes)
+    HRESULT Consolidate(bool bParseShadows, const ShadowFilters& shadows, FSVBR::FSType filterFSTypes)
     {
         Reset();
 
@@ -162,9 +170,15 @@ public:
         ValidateLocations(m_Locations);
         EliminateInvalidLocations(m_Locations);
 
-        AltitudeLocations(m_Altitude, bParseShadows, filterFSTypes);
+        AltitudeLocations(m_Altitude, bParseShadows, shadows, filterFSTypes);
 
         return S_OK;
+    }
+
+    HRESULT Consolidate(bool bParseShadows, FSVBR::FSType filterFSTypes)
+    {
+        LocationSet::ShadowFilters shadows;
+        return Consolidate(bParseShadows, shadows, filterFSTypes);
     }
 
     static HRESULT EliminateUselessLocations(Locations& locations);
