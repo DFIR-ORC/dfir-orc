@@ -594,6 +594,16 @@ bool UtilitiesMain::BooleanOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic:
     return true;
 }
 
+bool UtilitiesMain::BooleanExactOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bPresent)
+{
+    if (wcslen(szArg) != wcslen(szOption))
+    {
+        return false;
+    }
+
+    return BooleanOption(szArg, szOption, bPresent);
+}
+
 bool UtilitiesMain::ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bPresent)
 {
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))

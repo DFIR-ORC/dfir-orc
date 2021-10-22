@@ -711,6 +711,7 @@ protected:
 
     bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
     bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bOption);
+    bool BooleanExactOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bPresent);
 
     bool ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
 
