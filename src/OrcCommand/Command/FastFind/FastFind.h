@@ -48,6 +48,7 @@ public:
     FileFind Files;
     boost::logic::tribool bAddShadows = boost::logic::indeterminate;
     std::optional<LocationSet::ShadowFilters> m_shadows;
+    std::optional<LocationSet::PathExcludes> m_excludes;
 };
 
 class RegistrySpec
@@ -65,6 +66,7 @@ public:
     std::vector<RegFind> RegistryFind;
     boost::logic::tribool bAddShadows = boost::logic::indeterminate;
     std::optional<LocationSet::ShadowFilters> m_shadows;
+    std::optional<LocationSet::PathExcludes> m_excludes;
 };
 
 class ObjectSpec
