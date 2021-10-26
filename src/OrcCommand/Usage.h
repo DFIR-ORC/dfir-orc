@@ -194,8 +194,10 @@ auto PrintLocationParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&...
             "/Altitude=<Exact|Highest|Lowest>",
             "Defines the strategy used to translate a given location into the optimal access path to the volume"},
         Parameter {
-            "/Shadows[=newest,mid,oldest,{GUID},...]",
-            "Add Volume Shadows Copies for selected volumes to parse"}};
+            "/Shadows[=newest,mid,oldest,{GUID},...]", "Add Volume Shadows Copies for selected volumes to parse"},
+        Parameter {
+            "/Exclude=\"%SYSTEMDRIVE%\",D:",
+            "Exclude volume from processing (does not exclude shadow copy volumes if enabled)"}};
 
     PrintParameters(root, "LOCATIONS PARAMETERS", kLocationsParameters);
 }
