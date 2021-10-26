@@ -389,6 +389,8 @@ HRESULT Orc::Config::Common::location(ConfigItem& parent, DWORD dwIndex, ConfigI
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"altitude", CONFIG_VOLUME_ALTITUDE, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"exclude", CONFIG_VOLUME_EXCLUDE, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }
 
