@@ -128,6 +128,11 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         {
             ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
         }
+
+        if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.m_excludes.has_value())
+        {
+            ParseLocationExcludes(item.SubItems[CONFIG_VOLUME_EXCLUDE], config.m_excludes);
+        }
     }
 
     if (boost::logic::indeterminate(config.bAddShadows))
@@ -354,6 +359,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (ShadowsOption(argv[i] + 1, L"Shadows", config.bAddShadows, config.m_shadows))
                         ;
+                    else if (LocationExcludeOption(argv[i] + 1, L"Exclude", config.m_excludes))
+                        ;
                     else if (ParameterOption(argv[i] + 1, L"Password", config.Output.Password))
                         ;
                     else if (FileSizeOption(argv[i] + 1, L"MaxPerSampleBytes", config.limits.dwlMaxBytesPerSample))
@@ -427,7 +434,10 @@ HRESULT Main::CheckConfiguration()
     }
 
     config.Locations.Consolidate(
-        (bool)config.bAddShadows, config.m_shadows.value_or(LocationSet::ShadowFilters()), FSVBR::FSType::NTFS);
+        (bool)config.bAddShadows,
+        config.m_shadows.value_or(LocationSet::ShadowFilters()),
+        config.m_excludes.value_or(LocationSet::PathExcludes()),
+        FSVBR::FSType::NTFS);
 
     if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
     {
