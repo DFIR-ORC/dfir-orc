@@ -594,6 +594,16 @@ bool UtilitiesMain::BooleanOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic:
     return true;
 }
 
+bool UtilitiesMain::BooleanExactOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bPresent)
+{
+    if (wcslen(szArg) != wcslen(szOption))
+    {
+        return false;
+    }
+
+    return BooleanOption(szArg, szOption, bPresent);
+}
+
 bool UtilitiesMain::ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bPresent)
 {
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
@@ -601,6 +611,51 @@ bool UtilitiesMain::ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& b
 
     bPresent = !bPresent;
     return true;
+}
+
+bool UtilitiesMain::ShadowsOption(
+    LPCWSTR szArg,
+    LPCWSTR szOption,
+    boost::logic::tribool& bAddShadows,
+    std::optional<LocationSet::ShadowFilters>& filters)
+{
+    if (BooleanExactOption(szArg, szOption, bAddShadows))
+    {
+        return true;
+    }
+
+    std::wstring shadows;
+    if (!ParameterOption(szArg, szOption, shadows))
+    {
+        return false;
+    }
+
+    ParseShadowOption(shadows, bAddShadows, filters);
+    return true;
+}
+
+void UtilitiesMain::ParseShadowOption(
+    const std::wstring& shadows,
+    boost::logic::tribool& bAddShadows,
+    std::optional<LocationSet::ShadowFilters>& filters)
+{
+    if (shadows.empty())
+    {
+        return;
+    }
+
+    if (shadows == L"no"sv)
+    {
+        bAddShadows = false;
+        return;
+    }
+
+    bAddShadows = true;
+    if (shadows != L"yes"sv)
+    {
+        filters = LocationSet::ShadowFilters();
+        boost::split(*filters, shadows, boost::is_any_of(L",;|"));
+    }
 }
 
 bool UtilitiesMain::CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, CryptoHashStream::Algorithm& algo)

@@ -711,8 +711,15 @@ protected:
 
     bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
     bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bOption);
+    bool BooleanExactOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bPresent);
 
     bool ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
+
+    bool ShadowsOption(
+        LPCWSTR szArg,
+        LPCWSTR szOption,
+        boost::logic::tribool& bAddShadows,
+        std::optional<LocationSet::ShadowFilters>& filters);
 
     bool CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, CryptoHashStream::Algorithm& algo);
     bool FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, FuzzyHashStream::Algorithm& algo);
@@ -729,6 +736,11 @@ protected:
     bool IgnoreConfigOptions(LPCWSTR szArg);
     bool IgnoreCommonOptions(LPCWSTR szArg);
     bool IgnoreEarlyOptions(LPCWSTR szArg);
+
+    static void ParseShadowOption(
+        const std::wstring& shadows,
+        boost::logic::tribool& bAddShadows,
+        std::optional<LocationSet::ShadowFilters>& filters);
 
 public:
     UtilitiesMain();

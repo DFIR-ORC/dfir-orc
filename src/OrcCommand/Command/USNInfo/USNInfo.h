@@ -8,11 +8,16 @@
 
 #pragma once
 
+#include "UtilitiesMain.h"
+
+#include <optional>
+
+#include <boost/logic/tribool.hpp>
+
 #include "OrcCommand.h"
 #include "Location.h"
 #include "Configuration/ConfigFile.h"
 #include "Location.h"
-#include "UtilitiesMain.h"
 #include "ParameterCheck.h"
 
 #pragma managed(push, off)
@@ -38,7 +43,8 @@ public:
         LocationSet locs;
 
         bool bCompactForm = false;
-        bool bAddShadows = false;
+        boost::logic::tribool bAddShadows;
+        std::optional<LocationSet::ShadowFilters> m_shadows;
     };
 
 private:

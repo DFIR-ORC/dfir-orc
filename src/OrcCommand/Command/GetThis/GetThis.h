@@ -9,16 +9,15 @@
 
 #pragma once
 
-#include "OrcCommand.h"
-
-#include <boost/logic/tribool.hpp>
-
 #include "UtilitiesMain.h"
+
+#include "OrcCommand.h"
 
 #include <filesystem>
 #include <vector>
 #include <set>
 #include <string>
+#include <optional>
 
 #include <boost/logic/tribool.hpp>
 
@@ -29,13 +28,10 @@
 #include "ArchiveCreate.h"
 #include "FileFind.h"
 #include "TableOutputWriter.h"
-
 #include "ByteStream.h"
 #include "OrcLimits.h"
-
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
-
 #include "Archive/Appender.h"
 #include "Archive/7z/Archive7z.h"
 
@@ -128,6 +124,7 @@ public:
         bool bFlushRegistry = false;
         bool bReportAll = false;
         boost::logic::tribool bAddShadows;
+        std::optional<LocationSet::ShadowFilters> m_shadows;
 
         OutputSpec Output;
 

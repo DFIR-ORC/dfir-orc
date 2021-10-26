@@ -193,7 +193,9 @@ auto PrintLocationParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&...
         Parameter {
             "/Altitude=<Exact|Highest|Lowest>",
             "Defines the strategy used to translate a given location into the optimal access path to the volume"},
-        Parameter {"/Shadows", "Add Volume Shadows Copies for selected volumes to parse"}};
+        Parameter {
+            "/Shadows[=newest,mid,oldest,{GUID},...]",
+            "Add Volume Shadows Copies for selected volumes to parse"}};
 
     PrintParameters(root, "LOCATIONS PARAMETERS", kLocationsParameters);
 }

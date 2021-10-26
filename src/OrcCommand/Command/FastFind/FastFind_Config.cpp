@@ -108,6 +108,20 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             return hr;
         }
 
+        boost::logic::tribool bAddShadows;
+        for (auto& item : filesystem[FASTFIND_FILESYSTEM_LOCATIONS].NodeList)
+        {
+            if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.FileSystem.m_shadows.has_value())
+            {
+                ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.FileSystem.m_shadows);
+            }
+        }
+
+        if (boost::logic::indeterminate(config.FileSystem.bAddShadows))
+        {
+            config.FileSystem.bAddShadows = bAddShadows;
+        }
+
         if (FAILED(hr = config.FileSystem.Locations.AddKnownLocations(filesystem[FASTFIND_FILESYSTEM_KNOWNLOCATIONS])))
         {
             Log::Error(L"Error in knownlocations parsing in config file");
@@ -138,6 +152,20 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         {
             Log::Error(L"Error in specific locations parsing in config file");
             return hr;
+        }
+
+        boost::logic::tribool bAddShadows;
+        for (auto& item : configitem[FASTFIND_REGISTRY_LOCATIONS].NodeList)
+        {
+            if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.Registry.m_shadows.has_value())
+            {
+                ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.Registry.m_shadows);
+            }
+        }
+
+        if (boost::logic::indeterminate(config.Registry.bAddShadows))
+        {
+            config.Registry.bAddShadows = bAddShadows;
         }
 
         if (FAILED(
@@ -248,8 +276,12 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (BooleanOption(argv[i] + 1, L"SkipDeleted", config.bSkipDeleted))
                     ;
-                else if (BooleanOption(argv[i] + 1, L"Shadows", config.bAddShadows))
-                    ;
+                else if (ShadowsOption(
+                             argv[i] + 1, L"Shadows", config.FileSystem.bAddShadows, config.FileSystem.m_shadows))
+                {
+                    config.Registry.bAddShadows = config.FileSystem.bAddShadows;
+                    config.Registry.m_shadows = config.FileSystem.m_shadows;
+                }
                 else if (!_wcsnicmp(argv[i] + 1, L"Names", wcslen(L"Names")))
                 {
                     LPCWSTR pEquals = wcschr(argv[i], L'=');
@@ -333,7 +365,20 @@ HRESULT Main::CheckConfiguration()
 
     bool bSomeThingToParse = false;
 
-    config.FileSystem.Locations.Consolidate(config.bAddShadows, FSVBR::FSType::NTFS);
+    if (boost::logic::indeterminate(config.FileSystem.bAddShadows))
+    {
+        config.FileSystem.bAddShadows = false;
+    }
+
+    if (boost::logic::indeterminate(config.Registry.bAddShadows))
+    {
+        config.Registry.bAddShadows = false;
+    }
+
+    config.FileSystem.Locations.Consolidate(
+        static_cast<bool>(config.FileSystem.bAddShadows),
+        config.FileSystem.m_shadows.value_or(LocationSet::ShadowFilters()),
+        FSVBR::FSType::NTFS);
 
     for (const auto& loc : config.FileSystem.Locations.GetAltitudeLocations())
     {
@@ -357,7 +402,10 @@ HRESULT Main::CheckConfiguration()
         }
     }
 
-    config.Registry.Locations.Consolidate(config.bAddShadows, FSVBR::FSType::NTFS);
+    config.Registry.Locations.Consolidate(
+        static_cast<bool>(config.Registry.bAddShadows),
+        config.Registry.m_shadows.value_or(LocationSet::ShadowFilters()),
+        FSVBR::FSType::NTFS);
 
     if (ObjectDirs.empty())
     {

@@ -121,15 +121,18 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     const ConfigItem& locationsConfig = configitem[GETTHIS_LOCATION];
 
+    boost::logic::tribool bAddShadows;
+    for (auto& item : locationsConfig.NodeList)
+    {
+        if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.m_shadows.has_value())
+        {
+            ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
+        }
+    }
+
     if (boost::logic::indeterminate(config.bAddShadows))
     {
-        for (auto& item : locationsConfig.NodeList)
-        {
-            if (item.SubItems[CONFIG_VOLUME_SHADOWS])
-            {
-                config.bAddShadows = true;
-            }
-        }
+        config.bAddShadows = bAddShadows;
     }
 
     if (FAILED(hr = config.Locations.AddLocationsFromConfigItem(configitem[GETTHIS_LOCATION])))
@@ -349,7 +352,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (BooleanOption(argv[i] + 1, L"NoLimits", config.limits.bIgnoreLimits))
                         ;
-                    else if (BooleanOption(argv[i] + 1, L"Shadows", config.bAddShadows))
+                    else if (ShadowsOption(argv[i] + 1, L"Shadows", config.bAddShadows, config.m_shadows))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Password", config.Output.Password))
                         ;
@@ -419,9 +422,12 @@ HRESULT Main::CheckConfiguration()
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     if (boost::logic::indeterminate(config.bAddShadows))
+    {
         config.bAddShadows = false;
+    }
 
-    config.Locations.Consolidate((bool)config.bAddShadows, FSVBR::FSType::NTFS);
+    config.Locations.Consolidate(
+        (bool)config.bAddShadows, config.m_shadows.value_or(LocationSet::ShadowFilters()), FSVBR::FSType::NTFS);
 
     if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
     {
