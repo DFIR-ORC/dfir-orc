@@ -230,6 +230,11 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         {
             ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
         }
+
+        if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.m_excludes.has_value())
+        {
+            ParseLocationExcludes(item.SubItems[CONFIG_VOLUME_EXCLUDE], config.m_excludes);
+        }
     }
 
     if (boost::logic::indeterminate(config.bAddShadows))
@@ -309,6 +314,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     else if (BooleanOption(argv[i] + 1, L"KnownLocations", config.bGetKnownLocations))
                         ;
                     else if (ShadowsOption(argv[i] + 1, L"Shadows", config.bAddShadows, config.m_shadows))
+                        ;
+                    else if (LocationExcludeOption(argv[i] + 1, L"Exclude", config.m_excludes))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"ResurrectRecords", config.bResurrectRecords))
                         ;
@@ -418,6 +425,7 @@ HRESULT Main::CheckConfiguration()
     config.locs.Consolidate(
         static_cast<bool>(config.bAddShadows),
         config.m_shadows.value_or(LocationSet::ShadowFilters()),
+        config.m_excludes.value_or(LocationSet::PathExcludes()),
         FSVBR::FSType::NTFS);
 
     if (config.locs.IsEmpty() != S_OK)
