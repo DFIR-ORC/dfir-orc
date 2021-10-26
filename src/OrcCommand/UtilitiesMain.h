@@ -721,6 +721,8 @@ protected:
         boost::logic::tribool& bAddShadows,
         std::optional<LocationSet::ShadowFilters>& filters);
 
+    bool LocationExcludeOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<LocationSet::PathExcludes>& excludes);
+
     bool CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, CryptoHashStream::Algorithm& algo);
     bool FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, FuzzyHashStream::Algorithm& algo);
 
@@ -741,6 +743,9 @@ protected:
         const std::wstring& shadows,
         boost::logic::tribool& bAddShadows,
         std::optional<LocationSet::ShadowFilters>& filters);
+
+    static void
+    ParseLocationExcludes(const std::wstring& rawExcludes, std::optional<LocationSet::PathExcludes>& excludes);
 
 public:
     UtilitiesMain();
