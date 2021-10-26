@@ -23,6 +23,7 @@ class ORCLIB_API LocationSet
 {
 public:
     using ShadowFilters = std::set<std::wstring, CaseInsensitive>;
+    using PathExcludes = std::set<std::wstring, CaseInsensitive>;
 
     typedef std::map<std::wstring, std::shared_ptr<Location>, CaseInsensitive> Locations;
 
@@ -103,6 +104,7 @@ private:
         LocationSet::Altitude alt,
         bool bParseShadows,
         const ShadowFilters& shadows,
+        const PathExcludes& excludes,
         FSVBR::FSType filterFSTypes);
 
     HRESULT Reset();
@@ -152,12 +154,18 @@ public:
 
     HRESULT
     AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<Location>>& addedLocs, bool bToParse = true);
-    HRESULT AddLocationsFromConfigItem(const ConfigItem& item);
+
+    HRESULT AddLocationsFromConfigItem(const ConfigItem& config);
     HRESULT AddLocationsFromArgcArgv(int argc, LPCWSTR argv[]);
     HRESULT AddKnownLocations(const ConfigItem& item);
     HRESULT AddKnownLocations();
 
-    HRESULT Consolidate(bool bParseShadows, const ShadowFilters& shadows, FSVBR::FSType filterFSTypes)
+    HRESULT
+    Consolidate(
+        bool bParseShadows,
+        const ShadowFilters& shadows,
+        const PathExcludes& excludes,
+        FSVBR::FSType filterFSTypes)
     {
         Reset();
 
@@ -170,7 +178,7 @@ public:
         ValidateLocations(m_Locations);
         EliminateInvalidLocations(m_Locations);
 
-        AltitudeLocations(m_Altitude, bParseShadows, shadows, filterFSTypes);
+        AltitudeLocations(m_Altitude, bParseShadows, shadows, excludes, filterFSTypes);
 
         return S_OK;
     }
@@ -178,7 +186,8 @@ public:
     HRESULT Consolidate(bool bParseShadows, FSVBR::FSType filterFSTypes)
     {
         LocationSet::ShadowFilters shadows;
-        return Consolidate(bParseShadows, shadows, filterFSTypes);
+        LocationSet::PathExcludes excludes;
+        return Consolidate(bParseShadows, shadows, excludes, filterFSTypes);
     }
 
     static HRESULT EliminateUselessLocations(Locations& locations);
