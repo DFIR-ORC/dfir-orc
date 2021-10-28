@@ -85,6 +85,9 @@ public:
     template <typename... Args>
     void Trace(Args&&... args)
     {
+        // FIXME: find a way to only enable trace when requested to limit cpu usage
+        return;
+
         Log(std::cbegin(m_defaultFacilities),
             std::cend(m_defaultFacilities),
             Level::Trace,
