@@ -329,7 +329,7 @@ bool ParseSyslogOptions(std::vector<Option>& options, UtilitiesLoggerConfigurati
 
         if (option.key == kPort)
         {
-            output.port = kPort;
+            output.port = *option.value;
             option.isParsed = true;
             continue;
         }
