@@ -157,6 +157,11 @@ public:  // METHODS
     HRESULT AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwIdx);
 
     HRESULT AddChild(std::wstring_view name, NamedAdderFunction adder, DWORD dwIdx);
+
+    HRESULT ToXml(std::wstring& output) const;
+
+private:
+    static std::shared_ptr<XmlLiteExtension> m_xmlLite;
 };
 
 }  // namespace Orc
