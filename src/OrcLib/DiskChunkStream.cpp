@@ -69,7 +69,7 @@ HRESULT __stdcall DiskChunkStream::CanRead()
     }
 }
 
-HRESULT __stdcall DiskChunkStream::Read(
+HRESULT __stdcall DiskChunkStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesRead)
@@ -170,7 +170,7 @@ HRESULT __stdcall DiskChunkStream::CanWrite()
     return E_FAIL;
 }
 
-HRESULT __stdcall DiskChunkStream::Write(const PVOID pBuffer, ULONGLONG cbBytes, PULONGLONG pcbBytesWritten)
+HRESULT __stdcall DiskChunkStream::Write_(const PVOID pBuffer, ULONGLONG cbBytes, PULONGLONG pcbBytesWritten)
 {
     return E_FAIL;
 }

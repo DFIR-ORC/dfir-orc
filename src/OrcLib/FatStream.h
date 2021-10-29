@@ -30,12 +30,12 @@ public:
     STDMETHOD(CanWrite)() { return S_FALSE; }
     STDMETHOD(CanSeek)() { return S_OK; }
 
-    STDMETHOD(Read)
+    STDMETHOD(Read_)
     (__out_bcount_part(cbBytesToRead, *pcbBytesRead) PVOID pBuffer,
      __in ULONGLONG cbBytesToRead,
      __out_opt PULONGLONG pcbBytesRead);
 
-    STDMETHOD(Write)
+    STDMETHOD(Write_)
     (__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out PULONGLONG pcbBytesWritten);
 
     STDMETHOD(SetFilePointer)

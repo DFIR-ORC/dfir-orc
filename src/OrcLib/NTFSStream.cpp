@@ -92,7 +92,7 @@ HRESULT NTFSStream::OpenAllocatedDataStream(
         cbBytes         -   Number of bytes to read from stream
         pcbBytesRead    -   Recieves the number of bytes copied to pReadBuffer
 */
-HRESULT NTFSStream::Read(
+HRESULT NTFSStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pullBytesRead)
@@ -158,7 +158,7 @@ HRESULT NTFSStream::Read(
         cbBytesToWrite  -   Number of bytes to write to the stream
         pcbBytesWritten -   Recieves the number of written to the stream
 */
-HRESULT NTFSStream::Write(
+HRESULT NTFSStream::Write_(
     __in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)

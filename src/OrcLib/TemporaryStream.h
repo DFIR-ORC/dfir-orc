@@ -55,12 +55,12 @@ public:
 
     STDMETHODIMP Open(const std::filesystem::path& output, DWORD dwMemThreshold, bool bReleaseOnClose = true);
 
-    STDMETHOD(Read)
+    STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
      __in ULONGLONG cbBytes,
      __out_opt PULONGLONG pcbBytesRead);
 
-    STDMETHOD(Write)
+    STDMETHOD(Write_)
     (__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten);
 
     STDMETHOD(SetFilePointer)

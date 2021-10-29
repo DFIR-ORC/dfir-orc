@@ -42,12 +42,12 @@ public:
         return S_OK;
     }
 
-    STDMETHOD(Read)
+    STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
      __in ULONGLONG cbBytes,
      __out_opt PULONGLONG pcbBytesRead);
 
-    STDMETHOD(Write)
+    STDMETHOD(Write_)
     (__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten);
 
     STDMETHOD(SetFilePointer)
@@ -79,7 +79,7 @@ private:
 
 template <size_t _DeclElts>
 inline STDMETHODIMP_(HRESULT __stdcall)
-    BufferStream<_DeclElts>::Read(PVOID pBuffer, ULONGLONG cbBytes, PULONGLONG pcbBytesRead)
+    BufferStream<_DeclElts>::Read_(PVOID pBuffer, ULONGLONG cbBytes, PULONGLONG pcbBytesRead)
 {
     using namespace msl::utilities;
 
@@ -105,7 +105,7 @@ inline STDMETHODIMP_(HRESULT __stdcall)
 
 template <size_t _DeclElts>
 inline STDMETHODIMP_(HRESULT __stdcall)
-    BufferStream<_DeclElts>::Write(const PVOID pBuffer, ULONGLONG cbBytesToWrite, PULONGLONG pcbBytesWritten)
+    BufferStream<_DeclElts>::Write_(const PVOID pBuffer, ULONGLONG cbBytesToWrite, PULONGLONG pcbBytesWritten)
 {
     using namespace msl::utilities;
     HRESULT hr = E_FAIL;

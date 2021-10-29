@@ -51,7 +51,7 @@ STDMETHODIMP AccumulatingStream::Open(
     return S_OK;
 }
 
-STDMETHODIMP AccumulatingStream::Read(
+STDMETHODIMP AccumulatingStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesRead)
@@ -63,7 +63,7 @@ STDMETHODIMP AccumulatingStream::Read(
     return HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION);
 }
 
-STDMETHODIMP AccumulatingStream::Write(
+STDMETHODIMP AccumulatingStream::Write_(
     __in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)

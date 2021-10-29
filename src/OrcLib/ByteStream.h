@@ -33,7 +33,21 @@ class ORCLIB_API ByteStream
 protected:
     virtual std::shared_ptr<ByteStream> _GetHashStream();
 
+    STDMETHOD(Read_)
+    (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
+     __in ULONGLONG cbBytes,
+     __out_opt PULONGLONG pcbBytesRead) PURE;
+
+    STDMETHOD(Write_)
+    (__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten) PURE;
+
 public:
+    ByteStream()
+        : m_totalRead(0)
+        , m_totalWritten(0)
+    {
+    }
+
     virtual ~ByteStream();
 
     virtual void Accept(ByteStreamVisitor& visitor) { return visitor.Visit(*this); };
@@ -43,13 +57,38 @@ public:
     STDMETHOD(CanWrite)() PURE;
     STDMETHOD(CanSeek)() PURE;
 
-    STDMETHOD(Read)
-    (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
-     __in ULONGLONG cbBytes,
-     __out_opt PULONGLONG pcbBytesRead) PURE;
+    HRESULT Read(
+        __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
+        __in ULONGLONG cbBytes,
+        __out_opt PULONGLONG pcbBytesRead)
+    {
+        uint64_t read = 0;
+        const auto hr = Read_(pBuffer, cbBytes, &read);
+        if (pcbBytesRead)
+        {
+            *pcbBytesRead = read;
+        }
 
-    STDMETHOD(Write)
-    (__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten) PURE;
+        m_totalRead += read;
+        return hr;
+    }
+
+    uint64_t TotalRead() const { return m_totalRead; }
+    uint64_t TotalWritten() const { return m_totalWritten; }
+
+    HRESULT
+    Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten)
+    {
+        uint64_t write = 0;
+        const auto hr = Write_(pBuffer, cbBytes, &write);
+        if (pcbBytesWritten)
+        {
+            *pcbBytesWritten = write;
+        }
+
+        m_totalWritten += write;
+        return hr;
+    }
 
     STDMETHOD(SetFilePointer)
     (__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod, __out_opt PULONG64 pCurrPointer) PURE;
@@ -80,6 +119,10 @@ public:
     static HRESULT Get_IStream(const std::shared_ptr<ByteStream>& aStream, ::IStream** pStream);
     static HRESULT
     Get_ISequentialStream(const std::shared_ptr<ByteStream>& aStream, ::ISequentialStream** pSequentialStream);
+
+private:
+    uint64_t m_totalRead;
+    uint64_t m_totalWritten;
 };
 
 constexpr auto DEFAULT_READ_SIZE = (0x0200000);
