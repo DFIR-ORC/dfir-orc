@@ -116,6 +116,8 @@ public:
 
         Criteria Required = Criteria::NONE;
 
+        std::wstring m_rule;
+
         std::wstring Name;  // Generic 'name information'
 
         std::wstring Path;  // Match against a full path (without DOS device name)
@@ -200,6 +202,7 @@ public:
         }
 
         HRESULT AddTermToConfig(ConfigItem& item);
+        const std::wstring& GetRule() const { return m_rule; }
     };
 
     class ORCLIB_API Match

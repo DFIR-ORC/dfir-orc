@@ -464,6 +464,8 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
 
     std::shared_ptr<FileFind::SearchTerm> fs = make_shared<FileFind::SearchTerm>();
 
+    item.ToXml(fs->m_rule);
+
     if (item[CONFIG_FILEFIND_NAME])
     {
         fs->FileName = item[CONFIG_FILEFIND_NAME];
