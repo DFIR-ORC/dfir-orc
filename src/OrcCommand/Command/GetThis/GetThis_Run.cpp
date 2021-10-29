@@ -566,7 +566,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sample) const
 
     _ASSERT(sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream->IsOpen() == S_OK);
 
-    auto& dataStream = sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream;
+    const auto& dataStream = sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream;
     hr = dataStream->SetFilePointer(0, FILE_BEGIN, NULL);
     if (FAILED(hr))
     {
