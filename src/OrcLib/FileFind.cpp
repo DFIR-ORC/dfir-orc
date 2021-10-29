@@ -10,33 +10,28 @@
 
 #include "FileFind.h"
 
-#include "CryptoHashStream.h"
+#include <sstream>
+#include <iomanip>
 
+#include <fmt/format.h>
+#include <boost\algorithm\searching\boyer_moore.hpp>
+
+#include <Shlwapi.h>
+
+#include "CryptoHashStream.h"
+#include "Configuration/ConfigItem.h"
+#include "Configuration/ConfigFileWriter.h"
 #include "WideAnsi.h"
 #include "ParameterCheck.h"
 #include "Configuration/ConfigFile.h"
 #include "MFTWalker.h"
 #include "DevNullStream.h"
-
 #include "SnapshotVolumeReader.h"
-
 #include "TableOutputWriter.h"
 #include "StructuredOutputWriter.h"
-
 #include "Convert.h"
-
 #include "Configuration/ConfigFile_Common.h"
-
 #include "SystemDetails.h"
-
-#include <sstream>
-#include <Shlwapi.h>
-#include <iomanip>
-
-#include <boost\algorithm\searching\boyer_moore.hpp>
-
-#include <fmt/format.h>
-
 #include "Log/Log.h"
 
 constexpr const unsigned int FILESPEC_FILENAME_INDEX = 1;
@@ -45,6 +40,35 @@ constexpr const unsigned int FILESPEC_SUBNAME_INDEX = 4;
 
 using namespace std;
 using namespace Orc;
+
+namespace {
+
+uint64_t SumStreamsReadLength(const MFTRecord& record, const std::shared_ptr<VolumeReader>& volumeReader)
+{
+    uint64_t sum = 0;
+
+    for (const auto& attribute : record.GetDataAttributes())
+    {
+        const auto rawStream = attribute->GetRawStream(volumeReader);
+        sum += rawStream ? rawStream->TotalRead() : 0;
+    }
+
+    return sum;
+}
+
+uint64_t SumStreamsReadLength(const std::vector<FileFind::Match::AttributeMatch>& attributeMatches)
+{
+    uint64_t sum = 0;
+
+    for (const auto& attribute : attributeMatches)
+    {
+        sum += attribute.RawStream ? attribute.RawStream->TotalRead() : 0;
+    }
+
+    return sum;
+}
+
+}  // namespace
 
 std::wregex& FileFind::DOSPattern()
 {
@@ -786,9 +810,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         else
         {
             Log::Warn(
-                L"Invalid hex string passed as header: {} [{}]",
-                item[CONFIG_FILEFIND_HEADER_HEX],
-                SystemError(hr));
+                L"Invalid hex string passed as header: {} [{}]", item[CONFIG_FILEFIND_HEADER_HEX], SystemError(hr));
         }
     }
     if (item[CONFIG_FILEFIND_HEADER_REGEX])
@@ -3246,7 +3268,9 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
     std::shared_ptr<Match>& aFileMatch,
     MFTRecord* pElt) const
 {
-    SearchTerm::Criteria requiredSpecs = aTerm->Required;
+    auto& profiler = aTerm->GetScopedMatchProfiler();
+
+    const SearchTerm::Criteria requiredSpecs = aTerm->Required;
     SearchTerm::Criteria matchedSpecs = matched;
 
     if (aTerm->DependsOnName())
@@ -3308,7 +3332,14 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
     {
         SearchTerm::Criteria requiredDataSpecs =
             static_cast<SearchTerm::Criteria>(aTerm->Required & SearchTerm::DataMask());
+
+        uint64_t initialReadLength = ::SumStreamsReadLength(*pElt, m_pVolReader);
+
         SearchTerm::Criteria matchedDataSpecs = AddMatchingData(aTerm, requiredDataSpecs, aFileMatch, pElt);
+
+        uint64_t finalReadLength = ::SumStreamsReadLength(*pElt, m_pVolReader);
+        profiler.AddReadLength(finalReadLength - initialReadLength);
+
         if (requiredDataSpecs == matchedDataSpecs)
             matchedSpecs |= matchedDataSpecs;
         else
@@ -3385,8 +3416,13 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
             aFileMatch->FRN = pElt->GetFileReferenceNumber();
         }
     }
+
     if (matchedSpecs == requiredSpecs)
+    {
+        profiler.AddMatch();
         return matchedSpecs;
+    }
+
     return SearchTerm::Criteria::NONE;
 }
 
@@ -3396,6 +3432,8 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermIn$I30AddMatching(
     std::shared_ptr<Match>& aFileMatch,
     const PFILE_NAME pFileName) const
 {
+    auto& profiler = aTerm->GetScopedMatchProfiler();
+
     SearchTerm::Criteria requiredSpecs = aTerm->Required;
     SearchTerm::Criteria matchedSpecs = matched;
 
@@ -3437,8 +3475,13 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermIn$I30AddMatching(
             aFileMatch->AddFileNameMatch(m_FullNameBuilder, pFileName);
         }
     }
+
     if (matchedSpecs == requiredSpecs)
+    {
+        profiler.AddMatch();
         return matchedSpecs;
+    }
+
     return SearchTerm::Criteria::NONE;
 }
 
@@ -3447,6 +3490,8 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInMatchExcludeMatching(
     const SearchTerm::Criteria matched,
     const std::shared_ptr<Match>& aFileMatch) const
 {
+    auto& profiler = aTerm->GetScopedMatchProfiler();
+
     SearchTerm::Criteria requiredSpecs = aTerm->Required;
     SearchTerm::Criteria matchedSpecs = matched;
 
@@ -3499,7 +3544,13 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInMatchExcludeMatching(
     {
         SearchTerm::Criteria requiredDataSpecs =
             static_cast<SearchTerm::Criteria>(aTerm->Required & SearchTerm::DataMask());
+
+        const uint64_t initialReadLength = ::SumStreamsReadLength(aFileMatch->MatchingAttributes);
         SearchTerm::Criteria matchedDataSpecs = ExcludeMatchingData(aTerm, requiredDataSpecs, aFileMatch);
+        const uint64_t finalReadLength = ::SumStreamsReadLength(aFileMatch->MatchingAttributes);
+
+        profiler.AddReadLength(finalReadLength - initialReadLength);
+
         if (requiredDataSpecs == matchedDataSpecs)
             matchedSpecs |= matchedDataSpecs;
         else
@@ -3507,7 +3558,11 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInMatchExcludeMatching(
     }
 
     if (matchedSpecs == requiredSpecs)
+    {
+        profiler.AddMatch();
         return matchedSpecs;
+    }
+
     return SearchTerm::Criteria::NONE;
 }
 
@@ -3581,33 +3636,47 @@ HRESULT FileFind::EvaluateMatchCallCallback(
     if (FAILED(hr = ExcludeMatch(aMatch)))
         return hr;
 
-    if (hr == S_FALSE)
-    {
-        if (m_MatchHash != CryptoHashStream::Algorithm::Undefined)
-        {
-            if (FAILED(hr = ComputeMatchHashes(aMatch)))
-            {
-                Log::Warn(
-                    L"Failed to compute hashes for match '{}' [{}]",
-                    aMatch->MatchingNames.front().FullPathName,
-                    SystemError(hr));
-            }
-        }
-
-        // the match has not matched a excluding term
-        Log::Debug(L"Adding match '{}'", aMatch->MatchingNames.front().FullPathName);
-        if (m_storeMatches)
-        {
-            m_Matches.push_back(aMatch);
-        }
-
-        if (aCallback)
-            aCallback(aMatch, bStop);
-    }
-    else
+    if (hr == S_OK)
     {
         Log::Debug(L"Match has been excluded");
+        return S_OK;
     }
+
+    assert(hr == S_FALSE);
+
+    auto& profiler = aMatch->Term->GetScopedCollectionProfiler();
+    auto initialReadLength = ::SumStreamsReadLength(aMatch->MatchingAttributes);
+
+    if (m_MatchHash != CryptoHashStream::Algorithm::Undefined)
+    {
+        if (FAILED(hr = ComputeMatchHashes(aMatch)))
+        {
+            Log::Warn(
+                L"Failed to compute hashes for match '{}' [{}]",
+                aMatch->MatchingNames.front().FullPathName,
+                SystemError(hr));
+        }
+    }
+
+    Log::Debug(L"Adding match '{}'", aMatch->MatchingNames.front().FullPathName);
+    if (m_storeMatches)
+    {
+        m_Matches.push_back(aMatch);
+    }
+
+    if (aCallback)
+    {
+        aCallback(aMatch, bStop);
+    }
+
+    auto finalReadLength = ::SumStreamsReadLength(aMatch->MatchingAttributes);
+
+    if (finalReadLength < initialReadLength)
+    {
+        int debug = 0;
+    }
+
+    profiler.AddReadLength(finalReadLength - initialReadLength);
     return S_OK;
 }
 
@@ -3641,13 +3710,14 @@ HRESULT FileFind::FindMatch(MFTRecord* pElt, bool& bStop, FileFind::FoundMatchCa
                         LookupTermInRecordAddMatching(name_it->second, SearchTerm::Criteria::NAME_EXACT, retval, pElt);
                     if (matched != SearchTerm::Criteria::NONE)
                     {
-                        // we do have a match!
                         if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                             return hr;
                         retval.reset();
                     }
                     else if (retval != nullptr)
+                    {
                         retval->Reset();
+                    }
                 }
             }
             if (!m_ExactPathTerms.empty() && m_FullNameBuilder != nullptr)
@@ -3662,9 +3732,9 @@ HRESULT FileFind::FindMatch(MFTRecord* pElt, bool& bStop, FileFind::FoundMatchCa
                         LookupTermInRecordAddMatching(path_it->second, SearchTerm::Criteria::PATH_EXACT, retval, pElt);
                     if (matched != SearchTerm::Criteria::NONE)
                     {
-                        // we do have a match!
                         if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                             return hr;
+
                         retval.reset();
                     }
                     else if (retval != nullptr)
@@ -3695,13 +3765,14 @@ HRESULT FileFind::FindMatch(MFTRecord* pElt, bool& bStop, FileFind::FoundMatchCa
                     LookupTermInRecordAddMatching(attr_it->second, SearchTerm::Criteria::SIZE_EQ, retval, pElt);
                 if (matched != SearchTerm::Criteria::NONE)
                 {
-                    // we do have a match!
                     if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                         return hr;
                     retval.reset();
                 }
                 else if (retval != nullptr)
+                {
                     retval->Reset();
+                }
             }
         }
     }
@@ -3711,13 +3782,14 @@ HRESULT FileFind::FindMatch(MFTRecord* pElt, bool& bStop, FileFind::FoundMatchCa
         auto matched = LookupTermInRecordAddMatching(term_it, SearchTerm::Criteria::NONE, retval, pElt);
         if (matched != SearchTerm::Criteria::NONE)
         {
-            // we do have a match!
             if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                 return hr;
             retval.reset();
         }
         else if (retval != nullptr)
+        {
             retval->Reset();
+        }
     }
 
     return S_OK;
@@ -3738,7 +3810,6 @@ HRESULT FileFind::FindI30Match(const PFILE_NAME pFileName, bool& bStop, FileFind
 
         for (auto name_it = name_list.first; name_it != name_list.second; ++name_it)
         {
-            // we do have a match!
             auto matched =
                 LookupTermIn$I30AddMatching(name_it->second, SearchTerm::Criteria::NAME_EXACT, retval, pFileName);
 
@@ -3764,7 +3835,6 @@ HRESULT FileFind::FindI30Match(const PFILE_NAME pFileName, bool& bStop, FileFind
                 LookupTermIn$I30AddMatching(path_it->second, SearchTerm::Criteria::PATH_EXACT, retval, pFileName);
             if (matched != SearchTerm::Criteria::NONE)
             {
-                // we do have a match!
                 if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                     return hr;
                 retval.reset();
@@ -3778,7 +3848,6 @@ HRESULT FileFind::FindI30Match(const PFILE_NAME pFileName, bool& bStop, FileFind
         auto matched = LookupTermIn$I30AddMatching(*term_it, SearchTerm::Criteria::NONE, retval, pFileName);
         if (matched != SearchTerm::Criteria::NONE)
         {
-            // we do have a match!
             if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                 return hr;
             retval.reset();
@@ -3875,7 +3944,6 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
                             LookupTermInMatchExcludeMatching(name_it->second, SearchTerm::Criteria::NAME_EXACT, aMatch);
                         if (matched != SearchTerm::Criteria::NONE)
                         {
-                            // we do have a match!
                             return true;
                         }
                     }
@@ -3889,7 +3957,6 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
                             LookupTermInMatchExcludeMatching(path_it->second, SearchTerm::Criteria::PATH_EXACT, aMatch);
                         if (matched != SearchTerm::Criteria::NONE)
                         {
-                            // we do have a Match
                             return true;
                         }
                     }
@@ -3912,7 +3979,6 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
                 auto matched = LookupTermInMatchExcludeMatching(attr_it->second, SearchTerm::Criteria::SIZE_EQ, aMatch);
                 if (matched != SearchTerm::Criteria::NONE)
                 {
-                    // we do have a Match
                     return S_OK;
                 }
             }
@@ -4079,3 +4145,8 @@ void FileFind::PrintSpecs() const
 }
 
 FileFind::~FileFind(void) {}
+
+const std::vector<FileFind::SearchTerm::Ptr>& FileFind::AllSearchTerms() const
+{
+    return m_AllTerms;
+}
