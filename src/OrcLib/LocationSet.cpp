@@ -206,6 +206,28 @@ void FilterLocations(
     }
 }
 
+void GetExcludedVolumeLocations(
+    LocationSet::VolumeLocations& volume,
+    const LocationSet::PathExcludes& excludedPaths,
+    std::vector<Location::Ptr>& excludedLocations)
+{
+    for (const auto& path : volume.Paths)
+    {
+        if (excludedPaths.find(path) != std::cend(excludedPaths))
+        {
+            std::copy(
+                std::cbegin(volume.Locations), std::cend(volume.Locations), std::back_inserter(excludedLocations));
+            Log::Info("Exclude: '{}'", path);
+            break;
+        }
+    }
+}
+
+bool NotContain(const Location::Ptr& location, const std::vector<Location::Ptr>& locations)
+{
+    return std::find(std::cbegin(locations), std::cend(locations), location) == std::cend(locations);
+}
+
 }  // namespace
 
 static const auto CSIDL_NONE = ((DWORD)-1);
@@ -2106,6 +2128,7 @@ HRESULT LocationSet::AltitudeLocations(
     LocationSet::Altitude alt,
     bool bParseShadows,
     const ShadowFilters& shadowFilters,
+    const PathExcludes& excludedPaths,
     FSVBR::FSType filterFSTypes)
 {
     HRESULT hr = E_FAIL;
@@ -2174,6 +2197,9 @@ HRESULT LocationSet::AltitudeLocations(
 
     for (auto& aPair : m_Volumes)
     {
+        std::vector<Location::Ptr> excludedLocations;
+        ::GetExcludedVolumeLocations(aPair.second, excludedPaths, excludedLocations);
+
         std::sort(
             begin(aPair.second.Locations),
             end(aPair.second.Locations),
@@ -2238,7 +2264,7 @@ HRESULT LocationSet::AltitudeLocations(
                     {
                         loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
                         loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
-                        loc->m_bParse = aPair.second.Parse;
+                        loc->m_bParse = aPair.second.Parse && ::NotContain(loc, excludedLocations);
                         retval.push_back(loc);
                         bActualData = true;
                     }
@@ -2250,7 +2276,7 @@ HRESULT LocationSet::AltitudeLocations(
                 {
                     loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
                     loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
-                    loc->m_bParse = aPair.second.Parse;
+                    loc->m_bParse = aPair.second.Parse && ::NotContain(loc, excludedLocations);
                     retval.push_back(loc);
                 }
                 break;

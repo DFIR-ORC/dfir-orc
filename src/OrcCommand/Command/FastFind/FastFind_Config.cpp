@@ -115,6 +115,11 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             {
                 ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.FileSystem.m_shadows);
             }
+
+            if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.FileSystem.m_excludes.has_value())
+            {
+                ParseLocationExcludes(item.SubItems[CONFIG_VOLUME_EXCLUDE], config.FileSystem.m_excludes);
+            }
         }
 
         if (boost::logic::indeterminate(config.FileSystem.bAddShadows))
@@ -160,6 +165,11 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.Registry.m_shadows.has_value())
             {
                 ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.Registry.m_shadows);
+            }
+
+            if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.Registry.m_excludes.has_value())
+            {
+                ParseLocationExcludes(item.SubItems[CONFIG_VOLUME_EXCLUDE], config.Registry.m_excludes);
             }
         }
 
@@ -282,6 +292,10 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     config.Registry.bAddShadows = config.FileSystem.bAddShadows;
                     config.Registry.m_shadows = config.FileSystem.m_shadows;
                 }
+                else if (LocationExcludeOption(argv[i] + 1, L"Exclude", config.FileSystem.m_excludes))
+                {
+                    config.Registry.m_excludes = config.FileSystem.m_excludes;
+                }
                 else if (!_wcsnicmp(argv[i] + 1, L"Names", wcslen(L"Names")))
                 {
                     LPCWSTR pEquals = wcschr(argv[i], L'=');
@@ -378,6 +392,7 @@ HRESULT Main::CheckConfiguration()
     config.FileSystem.Locations.Consolidate(
         static_cast<bool>(config.FileSystem.bAddShadows),
         config.FileSystem.m_shadows.value_or(LocationSet::ShadowFilters()),
+        config.FileSystem.m_excludes.value_or(LocationSet::PathExcludes()),
         FSVBR::FSType::NTFS);
 
     for (const auto& loc : config.FileSystem.Locations.GetAltitudeLocations())
@@ -405,6 +420,7 @@ HRESULT Main::CheckConfiguration()
     config.Registry.Locations.Consolidate(
         static_cast<bool>(config.Registry.bAddShadows),
         config.Registry.m_shadows.value_or(LocationSet::ShadowFilters()),
+        config.Registry.m_excludes.value_or(LocationSet::PathExcludes()),
         FSVBR::FSType::NTFS);
 
     if (ObjectDirs.empty())

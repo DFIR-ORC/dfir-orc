@@ -45,6 +45,7 @@ public:
         bool bCompactForm = false;
         boost::logic::tribool bAddShadows;
         std::optional<LocationSet::ShadowFilters> m_shadows;
+        std::optional<LocationSet::PathExcludes> m_excludes;
     };
 
 private:

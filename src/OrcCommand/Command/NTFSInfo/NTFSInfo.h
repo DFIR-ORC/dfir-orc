@@ -93,6 +93,7 @@ public:
         boost::logic::tribool bAddShadows;
         std::optional<LocationSet::ShadowFilters> m_shadows;
         boost::logic::tribool bPopSystemObjects;
+        std::optional<LocationSet::PathExcludes> m_excludes;
 
         Intentions ColumnIntentions;
         Intentions DefaultIntentions;

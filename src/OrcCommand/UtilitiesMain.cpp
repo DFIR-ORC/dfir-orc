@@ -31,6 +31,7 @@
 #include "EvtLibrary.h"
 #include "PSAPIExtension.h"
 #include "CaseInsensitive.h"
+#include "Utils/WinApi.h"
 
 using namespace std;
 
@@ -656,6 +657,64 @@ void UtilitiesMain::ParseShadowOption(
         filters = LocationSet::ShadowFilters();
         boost::split(*filters, shadows, boost::is_any_of(L",;|"));
     }
+}
+
+bool UtilitiesMain::LocationExcludeOption(
+    LPCWSTR szArg,
+    LPCWSTR szOption,
+    std::optional<LocationSet::PathExcludes>& excludes)
+{
+    std::wstring value;
+    if (!ParameterOption(szArg, szOption, value))
+    {
+        return false;
+    }
+
+    if (value.empty())
+    {
+        excludes = {};
+        return true;
+    }
+
+    ParseLocationExcludes(value, excludes);
+    return true;
+}
+
+void UtilitiesMain::ParseLocationExcludes(
+    const std::wstring& rawExcludes,
+    std::optional<LocationSet::PathExcludes>& excludes)
+{
+    if (rawExcludes.empty())
+    {
+        return;
+    }
+
+    std::vector<std::wstring> splits;
+    boost::split(splits, rawExcludes, boost::is_any_of(L",;|"));
+
+    for (auto& exclude : splits)
+    {
+        std::error_code ec;
+        exclude = ExpandEnvironmentStringsApi(exclude.c_str(), ec);
+        if (ec)
+        {
+            Log::Debug("Failed to expand environment variable for excluded path: '{}' [{}]", exclude, ec);
+            return;
+        }
+
+        if (exclude.size() == wstring_view(L"C:\\").size() && exclude[2] == L'/')
+        {
+            exclude[2] = L'\\';
+        }
+
+        if (exclude.size() == wstring_view(L"C:").size() && exclude[1] == L':')
+        {
+            exclude.push_back(L'\\');
+        }
+    }
+
+    excludes = LocationSet::PathExcludes();
+    excludes->insert(std::make_move_iterator(std::begin(splits)), std::make_move_iterator(std::end(splits)));
 }
 
 bool UtilitiesMain::CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, CryptoHashStream::Algorithm& algo)
