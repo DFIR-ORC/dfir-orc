@@ -185,8 +185,8 @@ void Main::PrintParameters()
     PrintValues(node, L"Parsed locations", config.Locations.GetParsedLocations());
 
     PrintValue(node, L"Default content", config.content);
-    ::PrintValues(node, L"Specific samples:", config.listofSpecs);
     PrintValues(node, L"Excluded samples", config.listOfExclusions);
+    ::PrintValues(node, L"Specific samples:", config.listofSpecs);
 
     if (config.limits.bIgnoreLimits)
     {

@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <sstream>
 
+#include "fmt/chrono.h"
 #include "TableOutput.h"
 #include "CsvFileWriter.h"
 #include "Configuration/ConfigFileReader.h"
@@ -34,6 +35,8 @@
 
 #include "SystemDetails.h"
 #include "Utils/WinApi.h"
+#include "Utils/TypeTraits.h"
+#include "Utils/String.h"
 
 #include "NtfsDataStructures.h"
 
@@ -69,6 +72,57 @@ std::wstring ToString(const GUID& guid)
 
     s.resize(guidCch);
     return s;
+}
+
+template <typename T>
+void PrintStatistics(Orc::Text::Tree<T>& root, const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
+{
+    auto statsNode = root.AddNode(L"Statistics for 'ntfs_find' rules:");
+    statsNode.AddEmptyLine();
+
+    if (searchTerms.empty())
+    {
+        statsNode.Add(L"<No rule defined>");
+        statsNode.AddEmptyLine();
+        return;
+    }
+
+    for (const auto& searchTerm : searchTerms)
+    {
+        const auto& stats = searchTerm->GetProfilingStatistics();
+
+        auto& rule = searchTerm->GetRule();
+        if (rule.empty())
+        {
+            Log::Warn("Failed to display statistics for an 'ntfs_find' empty rule");
+            continue;
+        }
+
+        if (StartsWith(searchTerm->m_rule, L"<ntfs_exclude"))
+        {
+            auto ruleNode = statsNode.AddNode(searchTerm->GetRule());
+            ruleNode.Add(
+                "Match: {:%H:%M:%S}, items: {}/{}, read: {}",
+                std::chrono::duration_cast<std::chrono::seconds>(stats.MatchTime()),
+                stats.Match(),
+                stats.Match() + stats.Miss(),
+                Traits::ByteQuantity(stats.MatchReadLength()));
+        }
+        else
+        {
+            auto ruleNode = statsNode.AddNode(searchTerm->GetRule());
+            ruleNode.Add(
+                "Match: {:%H:%M:%S}, items: {}/{}, read: {}, collection: {:%H:%M:%S}, collection read: {}",
+                std::chrono::duration_cast<std::chrono::seconds>(stats.MatchTime()),
+                stats.Match(),
+                stats.Match() + stats.Miss(),
+                Traits::ByteQuantity(stats.MatchReadLength()),
+                std::chrono::duration_cast<std::chrono::seconds>(stats.CollectionTime()),
+                Traits::ByteQuantity(stats.CollectionReadLength()));
+        }
+
+        statsNode.AddEmptyLine();
+    }
 }
 
 std::unique_ptr<Archive::Appender<Archive::Archive7z>> CreateCompressor(const OutputSpec& outputSpec)
@@ -1142,6 +1196,9 @@ HRESULT Main::FindMatchingSamples()
     {
         Log::Error(L"Failed while parsing locations");
     }
+
+    m_console.PrintNewLine();
+    ::PrintStatistics(m_console.OutputTree(), FileFinder.AllSearchTerms());
 
     return S_OK;
 }

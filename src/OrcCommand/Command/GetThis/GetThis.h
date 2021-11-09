@@ -108,6 +108,8 @@ public:
 
 using ListOfSampleSpecs = std::vector<SampleSpec>;
 
+const wchar_t kToolName[] = L"GetThis";
+
 class ORCUTILS_API Main : public UtilitiesMain
 {
 public:
@@ -357,7 +359,7 @@ private:
 public:
     Main();
 
-    static LPCWSTR ToolName() { return L"GetThis"; }
+    static LPCWSTR ToolName() { return kToolName; }
     static LPCWSTR ToolDescription() { return L"Sample collection"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();
