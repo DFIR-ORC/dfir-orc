@@ -29,6 +29,7 @@ class YaraScanner;
 enum class YaraScanMethod
 {
     Blocks,
+    BlocksLegacy,
     FileMapping
 };
 
@@ -113,7 +114,9 @@ private:
 class YaraScanner
 {
 public:
-    YaraScanner() {}
+    using MemoryBlockBuffer = std::vector<uint8_t>;
+
+    YaraScanner() { m_blockBuffer.reserve(1048576); }
 
     HRESULT Initialize(bool bWithCompiler = true);
     HRESULT Configure(std::unique_ptr<YaraConfig>& config);
@@ -134,6 +137,9 @@ public:
     {
         return Scan(buffer, (ULONG)buffer.GetCount(), matchingRules);
     }
+
+    HRESULT ScanBlocks(const std::shared_ptr<ByteStream>& stream, MatchingRuleCollection& matchingRules);
+
     HRESULT Scan(const std::shared_ptr<ByteStream>& stream, MatchingRuleCollection& matchingRules);
     HRESULT Scan(
         const std::shared_ptr<ByteStream>& stream,
@@ -229,6 +235,7 @@ private:
     YR_RULES* m_pRules = nullptr;
     ULONG m_ErrorCount = 0;
     ULONG m_WarningCount = 0;
+    MemoryBlockBuffer m_blockBuffer;
 };
 
 }  // namespace Orc
