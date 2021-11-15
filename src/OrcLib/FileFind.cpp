@@ -68,6 +68,26 @@ uint64_t SumStreamsReadLength(const std::vector<FileFind::Match::AttributeMatch>
     return sum;
 }
 
+bool IsExcludedDataAttribute(const Orc::MFTRecord& record, const Orc::DataAttribute& dataAttribute)
+{
+    // TODO: ignore hash for $BadClus, $Mft... (frn from 0-10) ?
+
+    const uint64_t frn = static_cast<uint64_t>(record.GetFileReferenceNumber().SegmentNumberHighPart) << 32
+        | record.GetFileReferenceNumber().SegmentNumberLowPart;
+
+    if (frn == 8 && L"$BadClus"sv == record.GetFileNames()[0]->FileName)
+    {
+        std::wstring_view attributeName(dataAttribute.NamePtr(), dataAttribute.NameLength());
+        if (attributeName.empty() || attributeName == L"$Bad")
+        {
+            // This is mostly a sparse file of bad clusters
+            return true;
+        }
+    }
+
+    return false;
+}
+
 }  // namespace
 
 std::wregex& FileFind::DOSPattern()
@@ -3083,6 +3103,11 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingData(
     SearchTerm::Criteria retval = SearchTerm::Criteria::NONE;
     for (const auto& data_attr : pElt->GetDataAttributes())
     {
+        if (::IsExcludedDataAttribute(*pElt, *data_attr))
+        {
+            continue;
+        }
+
         auto matchedDataSpecs = SearchTerm::Criteria::NONE;
         MatchingRuleCollection matchedRules;
 
