@@ -43,6 +43,22 @@ using namespace Orc;
 
 namespace {
 
+std::wstring GetFileName(const Orc::MFTRecord& record, const Orc::DataAttribute& dataAttribute)
+{
+    const auto kUnknown = L"<unknown>"sv;
+    std::wstring_view attributeName(dataAttribute.NamePtr(), dataAttribute.NameLength());
+
+    const auto pfilename = record.GetDefaultFileName();
+    std::wstring_view filename(pfilename->FileName, pfilename->FileNameLength);
+
+    if (attributeName.empty())
+    {
+        return filename.empty() ? std::wstring(kUnknown) : std::wstring(filename);
+    }
+
+    return fmt::format(L"{}:{}", filename.empty() ? kUnknown : filename, attributeName);
+}
+
 uint64_t SumStreamsReadLength(const MFTRecord& record, const std::shared_ptr<VolumeReader>& volumeReader)
 {
     uint64_t sum = 0;
@@ -2909,6 +2925,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
 
 std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollection>> Orc::FileFind::MatchYara(
     const std::shared_ptr<SearchTerm>& aTerm,
+    const Orc::MFTRecord& record,
     const std::shared_ptr<DataAttribute>& pDataAttr) const
 {
     HRESULT hr = E_FAIL;
@@ -2916,7 +2933,7 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
     if (!m_YaraScan)
     {
-        Log::Warn("Yara not initialized & yara rules selected");
+        Log::Error("Yara not initialized & yara rules selected");
         return {SearchTerm::Criteria::NONE, std::nullopt};
     }
 
@@ -2928,14 +2945,15 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Error(
+                "Failed Yara scan while seeking on '{}' [{}]", ::GetFileName(record, *pDataAttr), SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
 
         auto [hr, matchingRules] = m_YaraScan->Scan(pDataStream);
         if (FAILED(hr))
         {
-            Log::Debug("Failed to yara scan data attribute [{}]", SystemError(hr));
+            Log::Error("Failed Yara scan on '{}' [{}]", ::GetFileName(record, *pDataAttr), SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
         if (!matchingRules.empty())
@@ -3153,7 +3171,7 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingData(
         }
         if (requiredDataSpecs & SearchTerm::Criteria::YARA)
         {
-            auto [aSpec, matched] = MatchYara(aTerm, data_attr);
+            auto [aSpec, matched] = MatchYara(aTerm, *pElt, data_attr);
             if (matched.has_value())
                 std::swap(matchedRules, matched.value());
             if (aSpec == SearchTerm::Criteria::NONE)

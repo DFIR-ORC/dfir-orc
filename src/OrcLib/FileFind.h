@@ -645,7 +645,10 @@ private:
     SearchTerm::Criteria
     MatchContains(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_ptr<DataAttribute>& pDataAttr) const;
     std::pair<SearchTerm::Criteria, std::optional<MatchingRuleCollection>>
-    MatchYara(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_ptr<DataAttribute>& pDataAttr) const;
+
+    MatchYara(const std::shared_ptr<SearchTerm>& aTerm,
+        const Orc::MFTRecord& record,
+        const std::shared_ptr<DataAttribute>& pDataAttr) const;
 
     SearchTerm::Criteria AddMatchingData(
         const std::shared_ptr<SearchTerm>& aTerm,
