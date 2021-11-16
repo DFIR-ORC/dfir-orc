@@ -46,6 +46,14 @@ public:
         void* user_data,
         int timeout);
 
+    int yr_rules_scan_mem_blocks(
+        YR_RULES* rules,
+        YR_MEMORY_BLOCK_ITERATOR* iterator,
+        int flags,
+        YR_CALLBACK_FUNC callback,
+        void* user_data,
+        int timeout);
+
     int yr_finalize(void);
 };
 

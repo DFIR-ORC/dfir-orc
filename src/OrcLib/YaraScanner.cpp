@@ -25,6 +25,37 @@
 
 using namespace Orc;
 
+namespace {
+
+struct YaraMemoryBlockContext
+{
+    ByteStream& stream;
+    YaraScanner::MemoryBlockBuffer& buffer;
+    YR_MEMORY_BLOCK_ITERATOR iterator;
+    YR_MEMORY_BLOCK block;
+    uint64_t streamSize;  // cache stream size
+};
+
+const uint8_t* YaraFetchDataCallback(YR_MEMORY_BLOCK* block)
+{
+    auto context = reinterpret_cast<YaraMemoryBlockContext*>(block->context);
+
+    ULONGLONG bytesRead = 0;
+    HRESULT hr = context->stream.Read(context->buffer.data(), context->block.size, &bytesRead);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to read within 'fetch_data' callback [{}]", SystemError(hr));
+        context->iterator.last_error =
+            ERROR_CALLBACK_ERROR;  // Not sure setting this error is approriate, there is no documentation
+        return nullptr;
+    }
+
+    block->size = static_cast<size_t>(bytesRead);
+    return context->buffer.data();
+};
+
+}  // namespace
+
 Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
 {
     HRESULT hr = E_FAIL;
@@ -101,6 +132,8 @@ HRESULT Orc::YaraConfig::SetScanMethod(const std::wstring& strMethod)
 {
     if (!_wcsicmp(strMethod.c_str(), L"blocks"))
         _scanMethod = YaraScanMethod::Blocks;
+    else if (!_wcsicmp(strMethod.c_str(), L"blocks_legacy"))
+        _scanMethod = YaraScanMethod::BlocksLegacy;
     else if (!_wcsicmp(strMethod.c_str(), L"filemapping"))
         _scanMethod = YaraScanMethod::FileMapping;
     else
@@ -148,6 +181,8 @@ HRESULT Orc::YaraScanner::Configure(std::unique_ptr<YaraConfig>& config)
             m_config._timeOut = config->_timeOut.value();
 
         m_config = *config;
+
+        m_blockBuffer.resize(m_config.blockSize());
     }
     else
     {
@@ -461,8 +496,105 @@ HRESULT Orc::YaraScanner::Scan(const CBinaryBuffer& buffer, ULONG bytesToScan, M
     }
 }
 
+HRESULT YaraScanner::ScanBlocks(const std::shared_ptr<ByteStream>& stream, MatchingRuleCollection& matchingRules)
+{
+    ::YaraMemoryBlockContext context = {*stream, m_blockBuffer};
+    context.block.context = &context;
+    context.block.fetch_data =
+        ::YaraFetchDataCallback;  // BEWARE: will be called for both 'iterator.first' and 'iterator.next'
+    context.streamSize = stream->GetSize();  // TODO: still needed as of Yara v4.1.3 but should be useless in the future
+
+    context.iterator.context = reinterpret_cast<void*>(&context);
+    context.iterator.last_error = 0;
+
+    // BEWARE: the 'file_size' callback is optional
+    context.iterator.file_size = [](YR_MEMORY_BLOCK_ITERATOR* iterator) -> uint64_t {
+        auto context = reinterpret_cast<YaraMemoryBlockContext*>(iterator->context);
+        return context->stream.GetSize();
+    };
+
+    context.iterator.first = [](YR_MEMORY_BLOCK_ITERATOR* iterator) -> YR_MEMORY_BLOCK* {
+        auto context = reinterpret_cast<::YaraMemoryBlockContext*>(iterator->context);
+        if (context->stream.GetSize() == 0)
+        {
+            return nullptr;
+        }
+
+        ULONGLONG originalOffset;
+        HRESULT hr = context->stream.SetFilePointer(0, FILE_BEGIN, &originalOffset);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to seek within 'iterator.first' callback [{}]", SystemError(hr));
+            context->iterator.last_error =
+                ERROR_CALLBACK_ERROR;  // Not sure setting this error is approriate, there is no documentation
+            return nullptr;
+        }
+
+        // On first fetch only read 1MB as it will be often enough for header matching
+        context->block.size = std::min(context->buffer.size(), static_cast<size_t>(1048576));
+        context->block.base = 0;
+        return &context->block;
+    };
+
+    context.iterator.next = [](YR_MEMORY_BLOCK_ITERATOR* iterator) -> YR_MEMORY_BLOCK* {
+        auto context = reinterpret_cast<::YaraMemoryBlockContext*>(iterator->context);
+
+        if (context->iterator.last_error)
+        {
+            return nullptr;
+        }
+
+        context->block.base += context->block.size;
+        if (context->block.base == context->streamSize)
+        {
+            return nullptr;
+        }
+
+        context->block.size = context->buffer.size();  // TODO: std::min with stream size ?
+        return &context->block;
+    };
+
+    auto scan_details = std::make_pair(this, &matchingRules);
+
+    auto rv = m_yara->yr_rules_scan_mem_blocks(
+        GetRules(),
+        &context.iterator,
+        0,
+        scan_callback,
+        &scan_details,
+        static_cast<int>(std::chrono::seconds(m_config.timeOut()).count()));
+
+    switch (rv)
+    {
+        case ERROR_SUCCESS:
+            return S_OK;
+        case ERROR_INSUFFICIENT_MEMORY:
+            return E_OUTOFMEMORY;
+        case ERROR_TOO_MANY_SCAN_THREADS:
+            Log::Debug(L"Too many scan threads");
+            return E_FAIL;
+        case ERROR_SCAN_TIMEOUT:
+            Log::Debug(L"Yara scan timeout");
+            return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
+        case ERROR_CALLBACK_ERROR:
+            Log::Debug(L"Yara callback return an error");
+            return E_FAIL;
+        case ERROR_TOO_MANY_MATCHES:
+            Log::Debug(L"Too many matches in yara scan");
+            return S_OK;
+        default:
+            Log::Error(L"Unsupported yara error code [{}]", rv);
+            return E_FAIL;
+    }
+}
+
 HRESULT Orc::YaraScanner::Scan(const std::shared_ptr<ByteStream>& stream, MatchingRuleCollection& matchingRules)
 {
+    if (m_config.ScanMethod() == YaraScanMethod::Blocks)
+    {
+        return ScanBlocks(stream, matchingRules);
+    }
+
     HRESULT hr = E_FAIL;
     if (stream->GetSize() < m_config.blockSize())
     {
@@ -482,7 +614,7 @@ HRESULT Orc::YaraScanner::Scan(const std::shared_ptr<ByteStream>& stream, Matchi
     {
         switch (m_config.ScanMethod())
         {
-            case YaraScanMethod::Blocks:
+            case YaraScanMethod::BlocksLegacy:
                 return Scan(stream, m_config.blockSize(), m_config.overlapSize(), matchingRules);
             case YaraScanMethod::FileMapping: {
                 ULONG ulBytesScanned = 0;
@@ -768,7 +900,7 @@ size_t Orc::YaraScanner::read(void* ptr, size_t size, size_t count, void* user_d
 {
     auto pStream = (ByteStream*)user_data;
 
-    if (!pStream || !pStream->IsOpen() || !pStream->CanRead() == S_OK)
+    if (!pStream || pStream->IsOpen() != S_OK || pStream->CanRead() != S_OK)
         return 0;
 
     ULONGLONG cbBytesRead = 0LL;
@@ -784,7 +916,7 @@ size_t Orc::YaraScanner::write(const void* ptr, size_t size, size_t count, void*
 {
     auto pStream = (ByteStream*)user_data;
 
-    if (!pStream || !pStream->IsOpen() || !pStream->CanWrite() == S_OK)
+    if (!pStream || pStream->IsOpen() != S_OK || pStream->CanRead() != S_OK)
         return 0;
 
     ULONGLONG cbBytesWritten = 0LL;

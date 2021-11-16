@@ -76,6 +76,17 @@ int YaraStaticExtension::yr_rules_scan_mem(
     return ::yr_rules_scan_mem(rules, buffer, buffer_size, flags, callback, user_data, timeout);
 }
 
+int YaraStaticExtension::yr_rules_scan_mem_blocks(
+    YR_RULES* rules,
+    YR_MEMORY_BLOCK_ITERATOR* iterator,
+    int flags,
+    YR_CALLBACK_FUNC callback,
+    void* user_data,
+    int timeout)
+{
+    return ::yr_rules_scan_mem_blocks(rules, iterator, flags, callback, user_data, timeout);
+}
+
 int YaraStaticExtension::yr_finalize()
 {
     return ::yr_finalize();

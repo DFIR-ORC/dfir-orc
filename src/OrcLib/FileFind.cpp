@@ -14,7 +14,8 @@
 #include <iomanip>
 
 #include <fmt/format.h>
-#include <boost\algorithm\searching\boyer_moore.hpp>
+#include <boost/algorithm/searching/boyer_moore.hpp>
+#include <boost/algorithm/string/join.hpp>
 
 #include <Shlwapi.h>
 
@@ -43,6 +44,22 @@ using namespace Orc;
 
 namespace {
 
+std::wstring GetFileName(const Orc::MFTRecord& record, const Orc::DataAttribute& dataAttribute)
+{
+    const auto kUnknown = L"<unknown>"sv;
+    std::wstring_view attributeName(dataAttribute.NamePtr(), dataAttribute.NameLength());
+
+    const auto pfilename = record.GetDefaultFileName();
+    std::wstring_view filename(pfilename->FileName, pfilename->FileNameLength);
+
+    if (attributeName.empty())
+    {
+        return filename.empty() ? std::wstring(kUnknown) : std::wstring(filename);
+    }
+
+    return fmt::format(L"{}:{}", filename.empty() ? kUnknown : filename, attributeName);
+}
+
 uint64_t SumStreamsReadLength(const MFTRecord& record, const std::shared_ptr<VolumeReader>& volumeReader)
 {
     uint64_t sum = 0;
@@ -66,6 +83,26 @@ uint64_t SumStreamsReadLength(const std::vector<FileFind::Match::AttributeMatch>
     }
 
     return sum;
+}
+
+bool IsExcludedDataAttribute(const Orc::MFTRecord& record, const Orc::DataAttribute& dataAttribute)
+{
+    // TODO: ignore hash for $BadClus, $Mft... (frn from 0-10) ?
+
+    const uint64_t frn = static_cast<uint64_t>(record.GetFileReferenceNumber().SegmentNumberHighPart) << 32
+        | record.GetFileReferenceNumber().SegmentNumberLowPart;
+
+    if (frn == 8 && L"$BadClus"sv == record.GetFileNames()[0]->FileName)
+    {
+        std::wstring_view attributeName(dataAttribute.NamePtr(), dataAttribute.NameLength());
+        if (attributeName.empty() || attributeName == L"$Bad")
+        {
+            // This is mostly a sparse file of bad clusters
+            return true;
+        }
+    }
+
+    return false;
 }
 
 }  // namespace
@@ -221,7 +258,7 @@ HRESULT FileFind::Match::GetMatchFullNames(std::vector<std::wstring>& strNames)
 
 HRESULT FileFind::Match::Write(ITableOutput& output)
 {
-    wstring strMatchDescr = Term->GetDescription();
+    wstring strMatchDescr = GetMatchDescription();
 
     GUID SnapshotID;
     auto reader = std::dynamic_pointer_cast<SnapshotVolumeReader>(VolumeReader);
@@ -343,7 +380,7 @@ HRESULT FileFind::Match::Write(ITableOutput& output)
 
 HRESULT FileFind::Match::Write(IStructuredOutput& pWriter, LPCWSTR szElement)
 {
-    wstring strMatchDescr = Term->GetDescription();
+    wstring strMatchDescr = GetMatchDescription();
 
     pWriter.BeginElement(szElement);
 
@@ -438,6 +475,46 @@ HRESULT FileFind::Match::Write(IStructuredOutput& pWriter, LPCWSTR szElement)
     pWriter.EndElement(szElement);
 
     return S_OK;
+}
+
+std::wstring Orc::FileFind::Match::GetMatchDescription() const
+{
+    std::wstring description = Term->GetDescription();
+
+    if (!(Term->Required & FileFind::SearchTerm::Criteria::YARA))
+    {
+        return description;
+    }
+
+    if (Term->YaraRulesSpec != L"*" || MatchingAttributes.empty())
+    {
+        // If not wildcard would output something like 'Content matches yara rule(s): the_rule_name'
+        return description;
+    }
+
+    std::set<std::string> rules;
+    for (auto& matchingAttribute : MatchingAttributes)
+    {
+        if (!matchingAttribute.YaraRules.has_value())
+        {
+            continue;
+        }
+
+        std::copy(
+            std::cbegin(*matchingAttribute.YaraRules),
+            std::cend(*matchingAttribute.YaraRules),
+            std::inserter(rules, std::begin(rules)));
+    }
+
+    if (!rules.empty())
+    {
+        // Content matches yara rule(s): * [is_pe, pe_rule_foobar])
+        std::string yaraMatches = "[" + boost::join(rules, ", ") + "]";
+        std::error_code ec;
+        description += L" " + ::Utf8ToUtf16(yaraMatches, ec);
+    }
+
+    return description;
 }
 
 HRESULT Orc::FileFind::CheckYara()
@@ -1161,7 +1238,7 @@ wstring FileFind::SearchTerm::GetDescription() const
             stream << L", ";
         if (!YaraRules.empty())
         {
-            stream << L"Content matches yara rule(s) : " << YaraRulesSpec;
+            stream << L"Content matches yara rule(s): " << YaraRulesSpec;
         }
         bFirst = false;
     }
@@ -2889,6 +2966,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
 
 std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollection>> Orc::FileFind::MatchYara(
     const std::shared_ptr<SearchTerm>& aTerm,
+    const Orc::MFTRecord& record,
     const std::shared_ptr<DataAttribute>& pDataAttr) const
 {
     HRESULT hr = E_FAIL;
@@ -2896,7 +2974,7 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
     if (!m_YaraScan)
     {
-        Log::Warn("Yara not initialized & yara rules selected");
+        Log::Error("Yara not initialized & yara rules selected");
         return {SearchTerm::Criteria::NONE, std::nullopt};
     }
 
@@ -2908,14 +2986,15 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Error(
+                "Failed Yara scan while seeking on '{}' [{}]", ::GetFileName(record, *pDataAttr), SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
 
         auto [hr, matchingRules] = m_YaraScan->Scan(pDataStream);
         if (FAILED(hr))
         {
-            Log::Debug("Failed to yara scan data attribute [{}]", SystemError(hr));
+            Log::Error("Failed Yara scan on '{}' [{}]", ::GetFileName(record, *pDataAttr), SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
         if (!matchingRules.empty())
@@ -3083,6 +3162,11 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingData(
     SearchTerm::Criteria retval = SearchTerm::Criteria::NONE;
     for (const auto& data_attr : pElt->GetDataAttributes())
     {
+        if (::IsExcludedDataAttribute(*pElt, *data_attr))
+        {
+            continue;
+        }
+
         auto matchedDataSpecs = SearchTerm::Criteria::NONE;
         MatchingRuleCollection matchedRules;
 
@@ -3128,7 +3212,7 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingData(
         }
         if (requiredDataSpecs & SearchTerm::Criteria::YARA)
         {
-            auto [aSpec, matched] = MatchYara(aTerm, data_attr);
+            auto [aSpec, matched] = MatchYara(aTerm, *pElt, data_attr);
             if (matched.has_value())
                 std::swap(matchedRules, matched.value());
             if (aSpec == SearchTerm::Criteria::NONE)
