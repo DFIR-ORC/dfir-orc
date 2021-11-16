@@ -81,7 +81,7 @@ HRESULT CacheStream::Open()
     return S_OK;
 }
 
-HRESULT CacheStream::Read(
+HRESULT CacheStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesRead)
@@ -141,7 +141,7 @@ HRESULT CacheStream::Read(
     return S_OK;
 }
 
-HRESULT CacheStream::Write(
+HRESULT CacheStream::Write_(
     __in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)

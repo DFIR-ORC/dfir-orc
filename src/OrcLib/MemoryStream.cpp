@@ -135,7 +135,7 @@ cbBytesToRead   -   Number of bytes to read from stream
 pcbBytesRead    -   Recieves the number of bytes copied to pReadBuffer
 operation
 */
-HRESULT MemoryStream::Read(
+HRESULT MemoryStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesRead)
@@ -271,7 +271,7 @@ pWriteBuffer    -   Pointer to buffer to write from
 cbBytesToWrite  -   Number of bytes to write to the stream
 pcbBytesWritten -   Recieves the number of written to the stream
 */
-HRESULT MemoryStream::Write(
+HRESULT MemoryStream::Write_(
     __in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)

@@ -155,7 +155,7 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
     return S_OK;
 }
 
-__data_entrypoint(File) HRESULT EncodeMessageStream::Read(
+__data_entrypoint(File) HRESULT EncodeMessageStream::Read_(
     __out_bcount_part(cbBytesToRead, *pcbBytesRead) PVOID pBuffer,
     __in ULONGLONG cbBytesToRead,
     __out_opt PULONGLONG pcbBytesRead)
@@ -171,7 +171,7 @@ __data_entrypoint(File) HRESULT EncodeMessageStream::Read(
     return E_NOTIMPL;
 }
 
-HRESULT EncodeMessageStream::Write(
+HRESULT EncodeMessageStream::Write_(
     __in_bcount(cbBytes) const PVOID pBuffer,
     __in ULONGLONG cbBytes,
     __out PULONGLONG pcbBytesWritten)

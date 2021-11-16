@@ -61,7 +61,7 @@ HRESULT MultiMemoryStream::OpenForReadOnly(__in PVOID pBuffer, __in DWORD cbBuff
         cbBytesToRead   -   Number of bytes to read from stream
         pcbBytesRead    -   Recieves the number of bytes copied to pReadBuffer
 */
-HRESULT MultiMemoryStream::Read(
+HRESULT MultiMemoryStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesRead)
@@ -87,7 +87,7 @@ HRESULT MultiMemoryStream::Read(
         cbBytesToWrite  -   Number of bytes to write to the stream
         pcbBytesWritten -   Recieves the number of written to the stream
 */
-HRESULT MultiMemoryStream::Write(
+HRESULT MultiMemoryStream::Write_(
     __in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
     __in ULONGLONG,
     __out_opt PULONGLONG pcbBytesWritten)

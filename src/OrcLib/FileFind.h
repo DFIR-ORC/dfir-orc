@@ -10,7 +10,6 @@
 #include "OrcLib.h"
 
 #include "CaseInsensitive.h"
-
 #include "VolumeReader.h"
 #include "MFTWalker.h"
 #include "MFTRecord.h"
@@ -41,13 +40,138 @@ class YaraScanner;
 
 using MatchingRuleCollection = std::vector<std::string>;
 
+class SearchTermProfiling
+{
+public:
+    class ScopedMatchProfiler
+    {
+    private:
+        friend class SearchTermProfiling;
+
+        ScopedMatchProfiler(SearchTermProfiling& profiling)
+            : m_profiling(profiling)
+            , m_start(std::chrono::high_resolution_clock::now())
+        {
+            m_profiling.m_hasPendingScopedProfiler = true;
+        }
+
+    public:
+        ScopedMatchProfiler(ScopedMatchProfiler&& o) = default;
+
+        ~ScopedMatchProfiler()
+        {
+            m_profiling.m_matchTime += std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::high_resolution_clock::now() - m_start);
+
+            // Default behavior is to increase miss if there was no match
+            if (!m_hasMatched.has_value())
+            {
+                ++m_profiling.m_miss;
+            }
+
+            m_profiling.m_hasPendingScopedProfiler = false;
+        }
+
+        void AddMatch()
+        {
+            assert(m_hasMatched.has_value() == false);
+            m_hasMatched = true;
+            ++m_profiling.m_match;
+        }
+
+        void AddMiss()
+        {
+            assert(m_hasMatched.has_value() == false);
+            m_hasMatched = false;
+            ++m_profiling.m_miss;
+        }
+
+        void AddReadLength(uint64_t length) { m_profiling.m_matchReadLength += length; }
+
+    private:
+        SearchTermProfiling& m_profiling;
+        std::chrono::high_resolution_clock::time_point m_start;  // based on QueryPerformanceCounter
+        std::optional<bool> m_hasMatched;
+    };
+
+    class ScopedCollectionProfiler
+    {
+    private:
+        friend class SearchTermProfiling;
+
+        ScopedCollectionProfiler(SearchTermProfiling& profiling)
+            : m_profiling(profiling)
+            , m_start(std::chrono::high_resolution_clock::now())
+        {
+            m_profiling.m_hasPendingScopedProfiler = true;
+        }
+
+    public:
+        ScopedCollectionProfiler(ScopedCollectionProfiler&& o) = default;
+
+        ~ScopedCollectionProfiler()
+        {
+            m_profiling.m_collectionTime += std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::high_resolution_clock::now() - m_start);
+            m_profiling.m_hasPendingScopedProfiler = false;
+        }
+
+        void AddReadLength(uint64_t length) { m_profiling.m_collectionReadLength += length; }
+
+    private:
+        SearchTermProfiling& m_profiling;
+        std::chrono::high_resolution_clock::time_point m_start;  // based on QueryPerformanceCounter
+    };
+
+    SearchTermProfiling()
+        : m_match(0)
+        , m_miss(0)
+        , m_matchTime()
+        , m_matchReadLength(0)
+        , m_collectionTime()
+        , m_collectionReadLength(0)
+        , m_hasPendingScopedProfiler(false)
+    {
+    }
+
+    inline ScopedMatchProfiler GetScopedMatchProfiler()
+    {
+        assert(m_hasPendingScopedProfiler == false);
+        return {*this};
+    }
+
+    inline ScopedCollectionProfiler GetCollectionScopedProfiler()
+    {
+        assert(m_hasPendingScopedProfiler == false);
+        return {*this};
+    }
+
+    uint64_t Match() const { return m_match; }
+    uint64_t Miss() const { return m_miss; }
+    std::chrono::nanoseconds MatchTime() const { return m_matchTime; }
+    uint64_t MatchReadLength() const { return m_matchReadLength; }
+    std::chrono::nanoseconds CollectionTime() const { return m_collectionTime; }
+    uint64_t CollectionReadLength() const { return m_collectionReadLength; }
+
+private:
+    uint64_t m_match;
+    uint64_t m_miss;
+    std::chrono::nanoseconds m_matchTime;
+    uint64_t m_matchReadLength;
+    std::chrono::nanoseconds m_collectionTime;
+    uint64_t m_collectionReadLength;  // Read length for "finishing" for processing a matched item,
+                                      // including the 'FoundMatchCallback'
+    bool m_hasPendingScopedProfiler;  // Ensure no more than one scope is used in the call tree
+};
+
 class ORCLIB_API FileFind
 {
 public:
     class ORCLIB_API SearchTerm
     {
-
     public:
+        using Ptr = std::shared_ptr<SearchTerm>;
+
         enum Criteria : LONG64
         {
             NONE = 0,
@@ -85,6 +209,8 @@ public:
             YARA = 1 << 31
         };
 
+        SearchTermProfiling m_profiling;
+
         friend Criteria& operator^=(Criteria& left, const Criteria rigth)
         {
             left =
@@ -115,6 +241,8 @@ public:
         }
 
         Criteria Required = Criteria::NONE;
+
+        std::wstring m_rule;
 
         std::wstring Name;  // Generic 'name information'
 
@@ -200,6 +328,19 @@ public:
         }
 
         HRESULT AddTermToConfig(ConfigItem& item);
+
+        SearchTermProfiling::ScopedMatchProfiler GetScopedMatchProfiler()
+        {
+            return {m_profiling.GetScopedMatchProfiler()};
+        }
+
+        SearchTermProfiling::ScopedCollectionProfiler GetScopedCollectionProfiler()
+        {
+            return {m_profiling.GetCollectionScopedProfiler()};
+        }
+
+        SearchTermProfiling GetProfilingStatistics() const { return m_profiling; }
+        const std::wstring& GetRule() const { return m_rule; }
     };
 
     class ORCLIB_API Match
@@ -369,6 +510,8 @@ public:
     void PrintSpecs() const;
 
     ~FileFind(void);
+
+    const std::vector<std::shared_ptr<SearchTerm>>& AllSearchTerms() const;
 
 private:
     using TermMapOfNames = std::unordered_multimap<

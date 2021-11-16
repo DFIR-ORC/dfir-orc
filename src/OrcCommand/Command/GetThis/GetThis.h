@@ -108,6 +108,8 @@ public:
 
 using ListOfSampleSpecs = std::vector<SampleSpec>;
 
+const wchar_t kToolName[] = L"GetThis";
+
 class ORCUTILS_API Main : public UtilitiesMain
 {
 public:
@@ -128,6 +130,7 @@ public:
         std::optional<LocationSet::PathExcludes> m_excludes;
 
         OutputSpec Output;
+        OutputSpec m_statisticsOutput;
 
         ListOfSampleSpecs listofSpecs;
         std::vector<std::shared_ptr<FileFind::SearchTerm>> listOfExclusions;
@@ -357,7 +360,7 @@ private:
 public:
     Main();
 
-    static LPCWSTR ToolName() { return L"GetThis"; }
+    static LPCWSTR ToolName() { return kToolName; }
     static LPCWSTR ToolDescription() { return L"Sample collection"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();

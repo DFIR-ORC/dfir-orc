@@ -107,7 +107,7 @@ STDMETHODIMP TemporaryStream::Open(
     return S_OK;
 }
 
-STDMETHODIMP TemporaryStream::Read(
+STDMETHODIMP TemporaryStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesRead)
@@ -162,7 +162,7 @@ HRESULT TemporaryStream::MoveToFileStream(const std::shared_ptr<ByteStream>& aSt
     return S_OK;
 }
 
-STDMETHODIMP TemporaryStream::Write(
+STDMETHODIMP TemporaryStream::Write_(
     __in_bcount(cbBytes) const PVOID pBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesWritten)

@@ -174,6 +174,7 @@ void Main::PrintParameters()
     PrintCommonParameters(node);
 
     PrintValue(node, L"Output", config.Output);
+    PrintValue(node, L"Statistics", config.m_statisticsOutput);
     PrintValue(node, L"ReportAll", config.bReportAll);
     PrintValue(node, L"Hash", config.CryptoHashAlgs);
     PrintValue(node, L"FuzzyHash", config.FuzzyHashAlgs);
@@ -185,8 +186,8 @@ void Main::PrintParameters()
     PrintValues(node, L"Parsed locations", config.Locations.GetParsedLocations());
 
     PrintValue(node, L"Default content", config.content);
-    ::PrintValues(node, L"Specific samples:", config.listofSpecs);
     PrintValues(node, L"Excluded samples", config.listOfExclusions);
+    ::PrintValues(node, L"Specific samples:", config.listofSpecs);
 
     if (config.limits.bIgnoreLimits)
     {

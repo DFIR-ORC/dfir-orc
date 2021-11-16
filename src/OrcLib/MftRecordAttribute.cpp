@@ -313,10 +313,13 @@ HRESULT MftRecordAttribute::GetStreams(
 {
     HRESULT hr = E_FAIL;
 
-    if (m_Details != nullptr && m_Details->GetDataStream() != nullptr && m_Details->GetRawStream() != nullptr)
+    // BEWARE: I am not sure what is the purpose of this
+    if (m_Details && m_Details->GetDataStream() && m_Details->GetRawStream()
+        && m_Details->GetDataStream()->IsOpen() == S_OK && m_Details->GetRawStream()->IsOpen() == S_OK)
     {
         rawStream = m_Details->GetRawStream();
-        dataStream = m_Details->GetRawStream();
+        dataStream = m_Details->GetDataStream();
+        return S_OK;
     }
 
     _ASSERT(pVolReader);
@@ -488,8 +491,16 @@ std::shared_ptr<ByteStream> MftRecordAttribute::GetDataStream(const std::shared_
     if (!m_Details)
         m_Details = std::make_unique<DataDetails>();
 
-    if (const auto stream = m_Details->GetDataStream())
-        return stream;
+    const auto stream = m_Details->GetDataStream();
+    if (stream)
+    {
+        if (stream->IsOpen() == S_OK)
+        {
+            return stream;
+        }
+
+        Log::Debug("A cached data stream was closed and is being reopened");
+    }
 
     std::shared_ptr<ByteStream> rawStream, dataStream;
 
@@ -505,8 +516,16 @@ std::shared_ptr<ByteStream> MftRecordAttribute::GetRawStream(const std::shared_p
     if (!m_Details)
         m_Details = std::make_unique<DataDetails>();
 
-    if (const auto stream = m_Details->GetRawStream())
-        return stream;
+    const auto stream = m_Details->GetRawStream();
+    if (stream)
+    {
+        if (stream->IsOpen() == S_OK)
+        {
+            return stream;
+        }
+
+        Log::Debug("A cached raw stream was closed and is being reopened");
+    }
 
     std::shared_ptr<ByteStream> rawStream, dataStream;
 

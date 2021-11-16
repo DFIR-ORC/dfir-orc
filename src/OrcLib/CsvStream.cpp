@@ -26,7 +26,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Stream::Initialize(
     return S_OK;
 }
 
-STDMETHODIMP Orc::TableOutput::CSV::Stream::Write(
+STDMETHODIMP Orc::TableOutput::CSV::Stream::Write_(
     __in_bcount(cbBytes) const PVOID pBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesWritten)

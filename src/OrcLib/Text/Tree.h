@@ -85,7 +85,7 @@ private:
 
 public:
     /*!
-     * \brief Create a named root node
+     * \brief Create a named node
      *
      * Helper to create a structured text tree output.
      *
@@ -93,7 +93,7 @@ public:
      *   [offset][indentation][custom_text]
      *
      *   offset: number of spaces from the line start
-     *   indentLevel: indentation level
+     *   indentLevelIndex: indentation level
      *   FmtArgs: forward parameters to fmt to construct root's name
      */
     template <typename... FmtArgs>
@@ -109,7 +109,7 @@ public:
     }
 
     /*!
-     * \brief Create an unnamed root node
+     * \brief Create an unnamed node
      *
      *   offset: number of spaces from the line start
      *   indentLevelIndex: initial indentation level

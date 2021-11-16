@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <sstream>
 
+#include "fmt/chrono.h"
 #include "TableOutput.h"
 #include "CsvFileWriter.h"
 #include "Configuration/ConfigFileReader.h"
@@ -29,11 +30,13 @@
 #include "CryptoHashStream.h"
 #include "ParameterCheck.h"
 #include "ArchiveExtract.h"
-
+#include "StructuredOutputWriter.h"
 #include "SnapshotVolumeReader.h"
 
 #include "SystemDetails.h"
 #include "Utils/WinApi.h"
+#include "Utils/TypeTraits.h"
+#include "Utils/String.h"
 
 #include "NtfsDataStructures.h"
 
@@ -69,6 +72,177 @@ std::wstring ToString(const GUID& guid)
 
     s.resize(guidCch);
     return s;
+}
+
+template <typename T>
+void PrintStatistics(Orc::Text::Tree<T>& root, const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
+{
+    auto statsNode = root.AddNode(L"Statistics for 'ntfs_find' rules:");
+    statsNode.AddEmptyLine();
+
+    if (searchTerms.empty())
+    {
+        statsNode.Add(L"<No rule defined>");
+        statsNode.AddEmptyLine();
+        return;
+    }
+
+    for (const auto& searchTerm : searchTerms)
+    {
+        const auto& stats = searchTerm->GetProfilingStatistics();
+
+        auto& rule = searchTerm->GetRule();
+        if (rule.empty())
+        {
+            Log::Warn("Failed to display statistics for an 'ntfs_find' empty rule");
+            continue;
+        }
+
+        if (StartsWith(searchTerm->m_rule, L"<ntfs_exclude"))
+        {
+            auto ruleNode = statsNode.AddNode(searchTerm->GetRule());
+            ruleNode.Add(
+                "Match: {:%H:%M:%S}, items: {}/{}, read: {}",
+                std::chrono::duration_cast<std::chrono::seconds>(stats.MatchTime()),
+                stats.Match(),
+                stats.Match() + stats.Miss(),
+                Traits::ByteQuantity(stats.MatchReadLength()));
+        }
+        else
+        {
+            auto ruleNode = statsNode.AddNode(searchTerm->GetRule());
+            ruleNode.Add(
+                "Match: {:%H:%M:%S}, items: {}/{}, read: {}, collection: {:%H:%M:%S}, collection read: {}",
+                std::chrono::duration_cast<std::chrono::seconds>(stats.MatchTime()),
+                stats.Match(),
+                stats.Match() + stats.Miss(),
+                Traits::ByteQuantity(stats.MatchReadLength()),
+                std::chrono::duration_cast<std::chrono::seconds>(stats.CollectionTime()),
+                Traits::ByteQuantity(stats.CollectionReadLength()));
+        }
+
+        statsNode.AddEmptyLine();
+    }
+}
+
+void WriteNtfsFindStatistics(
+    const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms,
+    Orc::StructuredOutputWriter::IWriter::Ptr& writer)
+{
+    const auto kNodeRules = L"ntfs_find";
+    writer->BeginCollection(kNodeRules);
+    Guard::Scope onExit([&]() { writer->EndCollection(kNodeRules); });
+
+    for (const auto& searchTerm : searchTerms)
+    {
+        writer->BeginElement(nullptr);
+        Guard::Scope onExit([&]() { writer->EndElement(nullptr); });
+
+        const auto& stats = searchTerm->GetProfilingStatistics();
+
+        writer->WriteNamed(L"description", searchTerm->GetRule());
+        writer->WriteNamed(L"match_time", std::chrono::duration_cast<std::chrono::seconds>(stats.MatchTime()).count());
+        writer->WriteNamed(L"match_read", stats.MatchReadLength());
+        writer->WriteNamed(L"match", stats.Match());
+        writer->WriteNamed(L"miss", stats.Miss());
+        writer->WriteNamed(
+            L"collection_time", std::chrono::duration_cast<std::chrono::seconds>(stats.CollectionTime()).count());
+        writer->WriteNamed(L"collection_read", stats.CollectionReadLength());
+    }
+}
+
+Orc::Result<void> WriteStatistics(
+    const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms,
+    Orc::StructuredOutputWriter::IWriter::Ptr& writer)
+{
+    try
+    {
+        writer->WriteNamed(L"version", L"1.0");
+
+        const auto kNodeDfirOrc = L"dfir-orc";
+        writer->BeginElement(kNodeDfirOrc);
+        Guard::Scope onExit([&]() { writer->EndElement(kNodeDfirOrc); });
+
+        {
+            const auto kNodeGetthis = kToolName;
+            writer->BeginElement(kNodeGetthis);
+            Guard::Scope onExit([&]() { writer->EndElement(kNodeGetthis); });
+
+            {
+                const auto kNodeStats = L"statistics";
+                writer->BeginElement(kNodeStats);
+                Guard::Scope onExit([&]() { writer->EndElement(kNodeStats); });
+
+                WriteNtfsFindStatistics(searchTerms, writer);
+            }
+        }
+    }
+    catch (const std::system_error& e)
+    {
+        return e.code();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "std::exception writing statistics" << std::endl;
+        std::cerr << "Caught: " << e.what() << std::endl;
+        std::cerr << "Type: " << typeid(e).name() << std::endl;
+        return std::errc::state_not_recoverable;
+    }
+    catch (...)
+    {
+        std::cerr << "Exception during writing statistics" << std::endl;
+        return std::errc::state_not_recoverable;
+    }
+
+    return Orc::Success<void>();
+}
+
+Orc::Result<void>
+WriteStatistics(const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms, const OutputSpec& output)
+{
+    auto options = std::make_unique<StructuredOutput::JSON::Options>();
+    options->Encoding = OutputSpec::Encoding::UTF8;
+    options->bPrettyPrint = true;
+
+    if (output.Type != OutputSpecTypes::Kind::JSON)
+    {
+        Log::Error(L"Failed to write statistics, only json output is supported: {}", output.Path);
+        return std::errc::invalid_argument;
+    }
+
+    auto writer = StructuredOutputWriter::GetWriter(output, std::move(options));
+    if (writer == nullptr)
+    {
+        Log::Error(L"Failed to create writer for statistics file {}", output.Path);
+        return SystemError(E_FAIL);
+    }
+
+    auto rv = WriteStatistics(searchTerms, writer);
+    if (rv.has_error())
+    {
+        Log::Error(L"Failed to write statistics file [{}]", rv);
+        return rv;
+    }
+
+    HRESULT hr = writer->Close();
+    if (FAILED(hr))
+    {
+        const auto error = SystemError(hr);
+        Log::Error(L"Failed to close statistics file [{}]", error);
+        return error;
+    }
+
+    return Orc::Success<void>();
+}
+
+Orc::Result<void> WriteStatistics(
+    const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms,
+    const std::filesystem::path& path)
+{
+    OutputSpec output;
+    output.Type = OutputSpec::Kind::JSON;
+    output.Path = path;
+    return WriteStatistics(searchTerms, output);
 }
 
 std::unique_ptr<Archive::Appender<Archive::Archive7z>> CreateCompressor(const OutputSpec& outputSpec)
@@ -566,7 +740,7 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sample) const
 
     _ASSERT(sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream->IsOpen() == S_OK);
 
-    auto& dataStream = sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream;
+    const auto& dataStream = sample.Matches.front()->MatchingAttributes[sample.AttributeIndex].DataStream;
     hr = dataStream->SetFilePointer(0, FILE_BEGIN, NULL);
     if (FAILED(hr))
     {
@@ -1141,6 +1315,15 @@ HRESULT Main::FindMatchingSamples()
     if (FAILED(hr))
     {
         Log::Error(L"Failed while parsing locations");
+    }
+
+    m_console.PrintNewLine();
+    ::PrintStatistics(m_console.OutputTree(), FileFinder.AllSearchTerms());
+
+    auto rv = ::WriteStatistics(FileFinder.AllSearchTerms(), config.m_statisticsOutput);
+    if (rv.has_error())
+    {
+        Log::Error(L"Failed to write statistics file [{}]", rv);
     }
 
     return S_OK;

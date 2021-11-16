@@ -176,7 +176,7 @@ HRESULT PasswordEncryptedStream::DecryptData(CBinaryBuffer& pData, BOOL bFinal, 
     return S_OK;
 }
 
-HRESULT PasswordEncryptedStream::Read(
+HRESULT PasswordEncryptedStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesRead)
@@ -243,7 +243,7 @@ HRESULT PasswordEncryptedStream::Read(
     return S_OK;
 }
 
-HRESULT PasswordEncryptedStream::Write(
+HRESULT PasswordEncryptedStream::Write_(
     __in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)

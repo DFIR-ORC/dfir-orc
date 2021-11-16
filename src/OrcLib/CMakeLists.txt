@@ -773,6 +773,8 @@ set(SRC_UTILITIES
     "Utils/Guard/Winsock.cpp"
     "Utils/MakeArray.h"
     "Utils/Result.h"
+    "Utils/String.cpp"
+    "Utils/String.h"
     "Utils/Time.cpp"
     "Utils/Time.h"
     "Utils/TypeTraits.h"
