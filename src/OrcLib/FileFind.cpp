@@ -402,6 +402,7 @@ HRESULT FileFind::Match::Write(
             {
                 pWriter.BeginElement(nullptr);
                 {
+                    pWriter.WriteNamed(L"name", data_it->AttrName.c_str());
                     pWriter.WriteNamed(L"filesize", data_it->DataSize);
                     pWriter.WriteNamed(L"MD5", data_it->MD5, false);
                     pWriter.WriteNamed(L"SHA1", data_it->SHA1, false);
