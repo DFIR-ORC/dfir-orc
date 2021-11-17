@@ -694,6 +694,7 @@ set(SRC_LOG
     "Log/Log.h"
     "Log/Logger.cpp"
     "Log/Logger.h"
+    "Log/LogTerminationHandler.h"
     "Log/MemorySink.h"
     "Log/SpdlogLogger.h"
     "Log/SpdlogLogger.cpp"

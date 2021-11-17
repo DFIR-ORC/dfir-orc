@@ -51,6 +51,7 @@
 #include "Utils/Guard.h"
 #include "Log/UtilitiesLogger.h"
 #include "Log/UtilitiesLoggerConfiguration.h"
+#include "Log/LogTerminationHandler.h"
 
 #pragma managed(push, off)
 
@@ -782,6 +783,7 @@ public:
     static int WMain(int argc, const WCHAR* argv[])
     {
         Robustness::Initialize(UtilityT::ToolName());
+        Robustness::AddTerminationHandler(std::make_shared<LogTerminationHandler>());
 
         UtilityT Cmd;
         Cmd.Configure(argc, argv);
