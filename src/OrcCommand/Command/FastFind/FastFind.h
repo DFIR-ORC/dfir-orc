@@ -227,6 +227,8 @@ public:
     std::vector<ObjectItem> Items;
 };
 
+const wchar_t kToolName[] = L"FastFind";
+
 class ORCUTILS_API Main : public UtilitiesMain
 {
 public:
@@ -293,7 +295,7 @@ private:
     HRESULT RegFlushKeys();
 
 public:
-    static LPCWSTR ToolName() { return L"FastFind"; }
+    static LPCWSTR ToolName() { return kToolName; }
     static LPCWSTR ToolDescription() { return L"IOC Finder"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();

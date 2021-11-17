@@ -29,7 +29,8 @@
 
 #include "CaseInsensitive.h"
 
-#include "boost/scope_exit.hpp"
+#include <boost/scope_exit.hpp>
+#include <fmt/chrono.h>
 
 using namespace std;
 
@@ -37,6 +38,42 @@ using namespace Orc;
 using namespace Orc::Command::FastFind;
 
 namespace {
+
+template <typename T>
+void PrintStatistics(Orc::Text::Tree<T>& root, const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
+{
+    auto statsNode = root.AddNode(L"Statistics for 'ntfs_find' rules:");
+    statsNode.AddEmptyLine();
+
+    if (searchTerms.empty())
+    {
+        statsNode.Add(L"<No rule defined>");
+        statsNode.AddEmptyLine();
+        return;
+    }
+
+    for (const auto& searchTerm : searchTerms)
+    {
+        const auto& stats = searchTerm->GetProfilingStatistics();
+
+        auto& rule = searchTerm->GetRule();
+        if (rule.empty())
+        {
+            Log::Warn("Failed to display statistics for an 'ntfs_find' empty rule");
+            continue;
+        }
+
+        auto ruleNode = statsNode.AddNode(searchTerm->GetRule());
+        ruleNode.Add(
+            "Match: {:%H:%M:%S}, items: {}/{}, read: {}",
+            std::chrono::duration_cast<std::chrono::seconds>(stats.MatchTime()),
+            stats.Match(),
+            stats.Match() + stats.Miss(),
+            Traits::ByteQuantity(stats.MatchReadLength()));
+
+        ruleNode.AddEmptyLine();
+    }
+}
 
 template <typename T>
 void PrintFoundFile(
@@ -131,6 +168,9 @@ HRESULT Main::RunFileSystem()
 
     if (pStructuredOutput)
         pStructuredOutput->EndCollection(L"filesystem");
+
+    m_console.PrintNewLine();
+    ::PrintStatistics(m_console.OutputTree(), config.FileSystem.Files.AllSearchTerms());
     return S_OK;
 }
 
