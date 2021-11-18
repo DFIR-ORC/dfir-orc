@@ -242,11 +242,11 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             log::Warning(_L_, hr, L"Failed to configure DFIR-Orc log file\r\n");
         }
     }
-    else if (configitem[WOLFLAUNCHER_CONSOLE])
+    else if (configitem[WOLFLAUNCHER_CONSOLE] && configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_OUTPUT])
     {
         // For backward compatibility: if there is a WOLFLAUNCHER_CONSOLE element then override WOLFLAUNCHER_LOG
         auto hr = E_FAIL;
-        if (FAILED(hr = config.Log.Configure(_L_, configitem[WOLFLAUNCHER_CONSOLE_OUTPUT])))
+        if (FAILED(hr = config.Log.Configure(_L_, configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_OUTPUT])))
         {
             log::Warning(_L_, hr, L"Failed to configure DFIR-Orc log file\r\n");
         }
