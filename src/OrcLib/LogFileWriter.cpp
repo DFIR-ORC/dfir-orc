@@ -286,16 +286,6 @@ HRESULT LogFileWriter::LogToStream(const std::shared_ptr<ByteStream>& pStream)
     Concurrency::critical_section::scoped_lock s(m_output_cs);
     m_pByteStream = pStream;
 
-    if (m_pTermination)
-    {
-        Robustness::RemoveTerminationHandler(m_pTermination);
-    }
-    m_pTermination = nullptr;
-
-    if (m_pTermination)
-    {
-        m_pTermination->Description = L"Termination for agent";
-    }
     return S_OK;
 }
 
