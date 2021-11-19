@@ -596,7 +596,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                                 hr = EmbeddedResource::ExtractToFile(
                                     parameter.Name,
                                     parameter.Keyword,
-                                    RESSOURCE_GENERIC_READ_BA,
+                                    RESSOURCE_READ_EXECUTE_BA,
                                     m_TempDir,
                                     extracted)))
                         {
