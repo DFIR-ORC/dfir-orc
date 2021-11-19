@@ -10,6 +10,8 @@
 
 #include "FileFind.h"
 
+#include <boost/algorithm/searching/boyer_moore.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include "CryptoHashStream.h"
 
 #include "WideAnsi.h"
@@ -194,7 +196,7 @@ HRESULT FileFind::Match::GetMatchFullNames(std::vector<std::wstring>& strNames)
 
 HRESULT FileFind::Match::Write(const logger& pLog, ITableOutput& output)
 {
-    wstring strMatchDescr = Term->GetDescription();
+    wstring strMatchDescr = GetMatchDescription();
 
     GUID SnapshotID;
     auto reader = std::dynamic_pointer_cast<SnapshotVolumeReader>(VolumeReader);
@@ -321,7 +323,7 @@ HRESULT FileFind::Match::Write(
     IStructuredOutput& pWriter,
     LPCWSTR szElement)
 {
-    wstring strMatchDescr = Term->GetDescription();
+    wstring strMatchDescr = GetMatchDescription();
 
     pWriter.BeginElement(szElement);
 
@@ -417,6 +419,47 @@ HRESULT FileFind::Match::Write(
     pWriter.EndElement(szElement);
 
     return S_OK;
+}
+
+std::wstring Orc::FileFind::Match::GetMatchDescription() const
+{
+    std::wstring description = Term->GetDescription();
+
+    if (!(Term->Required & FileFind::SearchTerm::Criteria::YARA))
+    {
+        return description;
+    }
+
+    if (Term->YaraRulesSpec != L"*" || MatchingAttributes.empty())
+    {
+        // If not wildcard would output something like 'Content matches yara rule(s): the_rule_name'
+        return description;
+    }
+
+    std::set<std::string> rules;
+    for (auto& matchingAttribute : MatchingAttributes)
+    {
+        if (!matchingAttribute.YaraRules.has_value())
+        {
+            continue;
+        }
+
+        std::copy(
+            std::cbegin(*matchingAttribute.YaraRules),
+            std::cend(*matchingAttribute.YaraRules),
+            std::inserter(rules, std::begin(rules)));
+    }
+
+    if (!rules.empty())
+    {
+        // Content matches yara rule(s): * [is_pe, pe_rule_foobar])
+        std::string yaraMatches = "[" + boost::join(rules, ", ") + "]";
+        std::error_code ec;
+        auto [hr, utf16] = AnsiToWide({}, yaraMatches);
+        description += L" " + utf16;
+    }
+
+    return description;
 }
 
 HRESULT Orc::FileFind::CheckYara()
@@ -1190,7 +1233,7 @@ wstring FileFind::SearchTerm::GetDescription() const
             stream << L", ";
         if (!YaraRules.empty())
         {
-            stream << L"Content matches yara rule(s) : " << YaraRulesSpec;
+            stream << L"Content matches yara rule(s): " << YaraRulesSpec;
         }
         bFirst = false;
     }

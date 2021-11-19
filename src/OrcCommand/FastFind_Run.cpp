@@ -68,7 +68,7 @@ HRESULT Main::RunFileSystem()
             hr = config.FileSystem.Files.Find(
                 config.FileSystem.Locations,
                 [this](const std::shared_ptr<FileFind::Match>& aMatch, bool& bStop) {
-                    wstring strMatchDescr = aMatch->Term->GetDescription();
+                    const auto strMatchDescr = aMatch->GetMatchDescription();
 
                     bool bDeleted = aMatch->DeletedRecord;
                     std::for_each(

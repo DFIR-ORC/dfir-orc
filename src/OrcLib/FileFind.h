@@ -322,6 +322,8 @@ public:
             IStructuredOutput& pWriter,
             LPCWSTR szElement = L"filefind_match");
 
+        std::wstring GetMatchDescription() const;
+
         bool DeletedRecord;
         FILE_REFERENCE FRN;
         std::shared_ptr<SearchTerm> Term;
