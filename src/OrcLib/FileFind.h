@@ -459,6 +459,8 @@ public:
         HRESULT Write(ITableOutput& output);
         HRESULT Write(IStructuredOutput& pWriter, LPCWSTR szElement);
 
+        std::wstring GetMatchDescription() const;
+
         bool DeletedRecord;
         FILE_REFERENCE FRN;
         std::shared_ptr<SearchTerm> Term;
@@ -646,7 +648,8 @@ private:
     MatchContains(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_ptr<DataAttribute>& pDataAttr) const;
     std::pair<SearchTerm::Criteria, std::optional<MatchingRuleCollection>>
 
-    MatchYara(const std::shared_ptr<SearchTerm>& aTerm,
+    MatchYara(
+        const std::shared_ptr<SearchTerm>& aTerm,
         const Orc::MFTRecord& record,
         const std::shared_ptr<DataAttribute>& pDataAttr) const;
 
