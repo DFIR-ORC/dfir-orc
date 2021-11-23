@@ -12,7 +12,7 @@
 
 #include <filesystem>
 
-#include "Command/WolfLauncher/Console/Stream/LazyFileStreambuf.h"
+#include "Utils/StdStream/LazyFileStreambuf.h"
 #include "FileDisposition.h"
 
 namespace Orc {

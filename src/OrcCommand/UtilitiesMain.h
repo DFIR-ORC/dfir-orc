@@ -52,6 +52,7 @@
 #include "Log/UtilitiesLogger.h"
 #include "Log/UtilitiesLoggerConfiguration.h"
 #include "Log/LogTerminationHandler.h"
+#include "StandardOutputConsoleRedirection.h"
 
 #pragma managed(push, off)
 
@@ -785,6 +786,14 @@ public:
         Robustness::Initialize(UtilityT::ToolName());
         Robustness::AddTerminationHandler(std::make_shared<LogTerminationHandler>());
 
+        // Forward writes for stdout to WriteConsole for better performance if STD_OUTPUT_HANDLE is redirected
+        StandardOutputConsoleRedirection m_standardOutputFileTee;
+        DWORD dwConsoleMode = 0;
+        if (GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &dwConsoleMode))
+        {
+            m_standardOutputFileTee.Enable();
+        }
+
         UtilityT Cmd;
         Cmd.Configure(argc, argv);
 
@@ -819,6 +828,9 @@ public:
         }
 
         Cmd.WaitForDebugger(argc, argv);
+
+        // TODO: FIXME
+
         Cmd.LoadCommonExtensions();
         Cmd.PrintHeader(UtilityT::ToolName(), UtilityT::ToolDescription(), kOrcFileVerStringW);
 

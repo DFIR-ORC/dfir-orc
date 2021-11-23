@@ -34,7 +34,6 @@
 #include "Text/Print/Bool.h"
 #include "Log/Syslog/Syslog.h"
 #include "Log/Syslog/SyslogSink.h"
-#include "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.h"
 
 using namespace Orc::Command;
 using namespace Orc::Log;
@@ -299,7 +298,7 @@ const wchar_t kWolfLauncher[] = L"WolfLauncher";
 
 void Main::Configure(int argc, const wchar_t* argv[])
 {
-    m_logging.consoleSink()->AddOutput(m_consoleRedirection);
+    m_logging.consoleSink()->AddOutput(m_standardOutputFileTee);
 
     auto& journal = m_logging.logger().Get(Logger::Facility::kJournal);
     journal->SetLevel(Log::Level::Info);

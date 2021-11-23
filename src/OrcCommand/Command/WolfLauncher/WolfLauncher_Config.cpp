@@ -678,7 +678,7 @@ HRESULT Main::CheckConfiguration()
     {
         m_consoleConfiguration.output.path =
             fs::path(config.Output.Path) / fs::path(*m_consoleConfiguration.output.path).filename();
-        ConsoleConfiguration::Apply(*m_consoleRedirection, m_consoleConfiguration);
+        ConsoleConfiguration::Apply(*m_standardOutputFileTee, m_consoleConfiguration);
     }
 
     fs::path logPath;

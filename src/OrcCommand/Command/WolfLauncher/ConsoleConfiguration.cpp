@@ -17,7 +17,7 @@
 #include "Utils/Result.h"
 #include "Configuration/ConfigFile_Common.h"
 #include "Configuration/Option.h"
-#include "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.h"
+#include "Command/WolfLauncher/Console/StandardOutputFileTee.h"
 
 using namespace Orc::Command;
 using namespace Orc;
@@ -192,11 +192,11 @@ void ConsoleConfiguration::Parse(int argc, const wchar_t* argv[], ConsoleConfigu
     }
 }
 
-void ConsoleConfiguration::Apply(StandardOutputRedirection& redirection, const ConsoleConfiguration& config)
+void ConsoleConfiguration::Apply(StandardOutputFileTee& stdoutFileTee, const ConsoleConfiguration& config)
 {
     if (!config.output.path)
     {
-        redirection.Disable();
+        stdoutFileTee.Disable();
 
         // NOTE: Could also remove logger's console sink file redirection but it could make more harm than good
         // like unexpected reference kept, multithreading...
@@ -219,7 +219,7 @@ void ConsoleConfiguration::Apply(StandardOutputRedirection& redirection, const C
     std::error_code ec;
     const auto disposition = config.output.disposition.value_or(FileDisposition::Truncate);
 
-    redirection.Open(output.Path, disposition, ec);
+    stdoutFileTee.Open(output.Path, disposition, ec);
     if (ec)
     {
         Log::Error(L"Failed to redirect console output to '{}' [{}]", output.Path, ec);

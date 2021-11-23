@@ -161,7 +161,7 @@ void Main::PrintParameters()
 
     PrintCommonParameters(node);
 
-    PrintValue(node, L"Console file", m_consoleRedirection->Path() ? m_consoleRedirection->Path()->c_str() : kEmptyW);
+    PrintValue(node, L"Console file", m_standardOutputFileTee->Path() ? m_standardOutputFileTee->Path()->c_str() : kEmptyW);
     PrintValues(node, L"Recipients", config.m_Recipients);
     PrintValue(node, L"Output", config.Output);
     PrintValue(node, L"TempDir", config.TempWorkingDir);

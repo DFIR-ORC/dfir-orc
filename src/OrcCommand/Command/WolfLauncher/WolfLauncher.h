@@ -26,8 +26,8 @@
 #include "TableOutput.h"
 
 #include "Command/WolfLauncher/Journal.h"
-#include "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.h"
-#include "Command/WolfLauncher/Console/ConsoleConfiguration.h"
+#include "Command/WolfLauncher/Console/StandardOutputFileTee.h"
+#include "Command/WolfLauncher/ConsoleConfiguration.h"
 #include "Utils/EnumFlags.h"
 
 #pragma managed(push, off)
@@ -151,11 +151,11 @@ public:
 
     Main()
         : UtilitiesMain()
-        , m_consoleRedirection(std::make_shared<StandardOutputRedirection>())
+        , m_standardOutputFileTee(std::make_shared<StandardOutputFileTee>())
         , m_journal(m_console)
         , m_outcome()
     {
-        m_consoleRedirection->Enable();
+        m_standardOutputFileTee->Enable();
     }
 
     void PrintUsage();
@@ -198,7 +198,7 @@ private:
     HRESULT Run_Keywords();
 
 private:
-    StandardOutputRedirection::Ptr m_consoleRedirection;  // need a smart pointer because log sink will also own stream
+    StandardOutputFileTee::Ptr m_standardOutputFileTee;  // need a smart pointer because log sink will also own stream
     ConsoleConfiguration m_consoleConfiguration;
 
     Journal m_journal;

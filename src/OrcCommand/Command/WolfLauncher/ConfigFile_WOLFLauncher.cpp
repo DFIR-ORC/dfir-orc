@@ -12,7 +12,7 @@
 #include "Configuration/ConfigFile_Common.h"
 #include "ConfigFile_WOLFLauncher.h"
 #include "Log/UtilitiesLoggerConfiguration.h"
-#include "Command/WolfLauncher/Console/ConsoleConfiguration.h"
+#include "Command/WolfLauncher/ConsoleConfiguration.h"
 
 // <TempDir>%Temp%\WorkingTemp</TempDir>
 

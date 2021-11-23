@@ -783,6 +783,16 @@ set(SRC_UTILITIES
     "Utils/Uri.h"
     "Utils/WinApi.cpp"
     "Utils/WinApi.h"
+    "Utils/StdStream/LazyFileStreambuf.cpp"
+    "Utils/StdStream/LazyFileStreambuf.h"
+    "Utils/StdStream/LazyFileStream.cpp"
+    "Utils/StdStream/LazyFileStream.h"
+    "Utils/StdStream/StreamRedirector.cpp"
+    "Utils/StdStream/StreamRedirector.h"
+    "Utils/StdStream/Tee.cpp"
+    "Utils/StdStream/Tee.h"
+    "Utils/StdStream/WideStreambufConverter.cpp"
+    "Utils/StdStream/WideStreambufConverter.h"
 )
 
 source_group(Utilities FILES ${SRC_UTILITIES})
