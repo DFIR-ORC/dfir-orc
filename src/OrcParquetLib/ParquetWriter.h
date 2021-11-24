@@ -180,9 +180,11 @@ protected:
         std::unique_ptr<arrow::TimestampBuilder>,
         std::unique_ptr<arrow::BooleanBuilder>,
         std::unique_ptr<arrow::StringBuilder>,
+        std::unique_ptr<arrow::SparseUnionBuilder>,
         std::unique_ptr<arrow::BinaryBuilder>,
         std::unique_ptr<arrow::FixedSizeBinaryBuilder>,
         std::unique_ptr<arrow::StringDictionaryBuilder>,
+        std::unique_ptr<arrow::StructBuilder>,
         std::unique_ptr<arrow::ArrayBuilder>>;
 
     using Builders = std::vector<ColumnBuilder>;
