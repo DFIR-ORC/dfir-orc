@@ -676,6 +676,8 @@ HRESULT Main::CheckConfiguration()
 
     if (m_consoleConfiguration.output.path)
     {
+        m_consoleConfiguration.output.path =
+            fs::path(config.Output.Path) / fs::path(*m_consoleConfiguration.output.path).filename();
         ConsoleConfiguration::Apply(*m_consoleRedirection, m_consoleConfiguration);
     }
 
