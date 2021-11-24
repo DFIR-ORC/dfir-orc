@@ -141,7 +141,14 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                         L"Failed to rename extension library name {} to {} [{}]", extracted_path, desired_path, ec);
                     m_libFile = extracted_path;
                 }
-                else if (desired_path.filename() == m_strDesiredName)
+                else if (m_strDesiredName)
+                {
+                    if (desired_path.filename() == *m_strDesiredName)
+                    {
+                        m_libFile = desired_path;
+                    }
+                }
+                else
                 {
                     m_libFile = desired_path;
                 }
