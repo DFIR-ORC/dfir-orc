@@ -62,6 +62,7 @@ public:
     {
         if (m_ofstream.is_open())
         {
+            m_ofstream.flush();
             m_ofstream.close();
         }
     }
