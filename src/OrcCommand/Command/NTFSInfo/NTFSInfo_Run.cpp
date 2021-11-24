@@ -413,6 +413,9 @@ void Main::SecurityDescriptorInformation(
     else
         output.WriteGUID(GUID_NULL);
 
+    DWORD dwSecDescrLength = GetSecurityDescriptorLength(&pEntry->SecurityDescriptor);
+    output.WriteBytes((BYTE*)&pEntry->SecurityDescriptor, dwSecDescrLength);
+
     output.WriteEndOfLine();
     return;
 }

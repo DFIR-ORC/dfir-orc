@@ -181,6 +181,7 @@
         <uint32 name="NormalisedSize" />
         <uint32 name="DataSize" />
         <guid name="SnapshotID" allows_null="no" />
+        <utf8 name="SecurityDescriptor" maxlen="8000" fmt="{:02X}" />
     </table>
 
     <table key="volstats">
