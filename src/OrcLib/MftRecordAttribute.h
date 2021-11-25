@@ -156,6 +156,8 @@ public:
 
     HRESULT AddContinuationAttribute(const std::shared_ptr<MftRecordAttribute>& pMftRecordAttribute);
 
+    const MFTRecord* GetBaseRecord() const;
+
     virtual HRESULT CleanCachedData();
 
     virtual ~MftRecordAttribute() { m_pNonResidentInfo.reset(); };

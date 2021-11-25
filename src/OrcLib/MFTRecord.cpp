@@ -534,7 +534,7 @@ HRESULT MFTRecord::ParseAttribute(
     return S_OK;
 }
 
-const std::shared_ptr<DataAttribute> MFTRecord::GetDataAttribute(LPCWSTR szAttrName)
+const std::shared_ptr<DataAttribute> MFTRecord::GetDataAttribute(LPCWSTR szAttrName) const
 {
     std::shared_ptr<DataAttribute> retval;
     auto cbName = wcslen(szAttrName);

@@ -30,7 +30,7 @@ using namespace Orc;
 
 namespace {
 
-const std::shared_ptr<Orc::DataAttribute> GetWofDataAttribute(Orc::MFTRecord& record)
+const std::shared_ptr<Orc::DataAttribute> GetWofDataAttribute(const Orc::MFTRecord& record)
 {
     const auto si = record.GetStandardInformation();
     if (!si)
@@ -300,6 +300,16 @@ HRESULT MftRecordAttribute::GetNonResidentSegmentsToRead(
     return S_OK;
 }
 
+const MFTRecord* MftRecordAttribute::GetBaseRecord() const
+{
+    if (m_pHostRecord == nullptr)
+    {
+        return nullptr;
+    }
+
+    return m_pHostRecord->IsBaseRecord() ? m_pHostRecord : m_pHostRecord->GetFileBaseRecord();
+}
+
 HRESULT MftRecordAttribute::GetStreams(const std::shared_ptr<VolumeReader>& pVolReader)
 {
     std::shared_ptr<ByteStream> rawStream, dataStream;
@@ -312,6 +322,14 @@ HRESULT MftRecordAttribute::GetStreams(
     std::shared_ptr<ByteStream>& dataStream)
 {
     HRESULT hr = E_FAIL;
+
+
+    auto baseRecord = GetBaseRecord();
+    if (baseRecord == nullptr)
+    {
+        Log::Error(L"baseRecord == nullptr");
+        return E_FAIL;
+    }
 
     // BEWARE: I am not sure what is the purpose of this
     if (m_Details && m_Details->GetDataStream() && m_Details->GetRawStream()
@@ -327,10 +345,10 @@ HRESULT MftRecordAttribute::GetStreams(
 
     if (m_pHeader->FormCode == NONRESIDENT_FORM)
     {
-        if (m_pHeader->NameLength == 0 && m_pHostRecord->IsOverlayFile())
+        if (m_pHeader->NameLength == 0 && baseRecord && baseRecord->IsOverlayFile())
         {
             // Handle transparently $DATA for WofCompressedData files
-            const auto wofReparsePoint = ::GetWofReparsePoint(*m_pHostRecord);
+            const auto wofReparsePoint = ::GetWofReparsePoint(*baseRecord);
             if (!wofReparsePoint)
             {
                 Log::Error("Invalid WOF record: missing WOF reparse point");
@@ -411,20 +429,20 @@ HRESULT MftRecordAttribute::GetStreams(
                 }
                 else if (hr == S_FALSE)
                 {
-                    auto pFN = m_pHostRecord->GetDefaultFileName();
+                    auto pFN = baseRecord->GetDefaultFileName();
                     if (pFN != nullptr && pFN->FileNameLength <= pVolReader->MaxComponentLength())
                     {
                         std::wstring_view fileName(pFN->FileName, pFN->FileNameLength);
                         Log::Debug(
                             L"Issues when opening compressed file: '{}' with record {:#x})",
                             fileName,
-                            m_pHostRecord->GetSafeMFTSegmentNumber());
+                            baseRecord->GetSafeMFTSegmentNumber());
                     }
                     else
                     {
                         Log::Debug(
                             L"Issues when opening compressed file with record {:#x})",
-                            m_pHostRecord->GetSafeMFTSegmentNumber());
+                            baseRecord->GetSafeMFTSegmentNumber());
                     }
                 }
                 dataStream = datastream;
@@ -799,20 +817,21 @@ HRESULT WOFReparseAttribute::GetStreams(
     std::shared_ptr<ByteStream>& rawStream,
     std::shared_ptr<ByteStream>& dataStream)
 {
-    if (!m_pHostRecord)
+    auto baseRecord = GetBaseRecord();
+    if (!baseRecord)
     {
-        Log::Error("Invalid WOF record: nullptr");
+        Log::Error("Invalid WOF base record: nullptr");
         return E_FAIL;
     }
 
-    auto dataAttribute = ::GetWofDataAttribute(*m_pHostRecord);
+    auto dataAttribute = ::GetWofDataAttribute(*baseRecord);
     if (!dataAttribute)
     {
         Log::Error("Failed to retrieve wof $DATA attribute");
         return E_FAIL;
     }
 
-    auto wofAttribute = m_pHostRecord->GetDataAttribute(L"WofCompressedData");
+    auto wofAttribute = baseRecord->GetDataAttribute(L"WofCompressedData");
     if (!wofAttribute)
     {
         Log::Error("Invalid WOF record: missing 'WofCompressedData' attribute");
