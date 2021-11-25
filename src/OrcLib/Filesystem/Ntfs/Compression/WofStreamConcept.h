@@ -104,6 +104,12 @@ public:
             return totalProcessed;
         }
 
+        if (m_offset + totalProcessed == m_chunks.UncompressedSize())
+        {
+            m_offset = m_chunks.UncompressedSize();
+            return totalProcessed;
+        }
+
         // Decompress every other chunks but the last one for which the remaining buffer size could be too small
         auto endIndex = startIndex + output.size() / m_chunks.ChunkSize() + (output.size() % m_chunks.Size() ? 0 : 1);
         if (endIndex >= m_chunks.ChunkCount())
@@ -278,7 +284,13 @@ private:
         ReadRawChunk(chunkIndex, m_inputBuffer, ec);
         if (ec)
         {
-            Log::Debug("Failed to read chunk #{} [{}]", chunkIndex, ec);
+            Log::Debug(
+                "Failed to read chunk {}/{} (algorithm: {}, chunk size: {}) [{}]",
+                chunkIndex,
+                m_chunks.ChunkCount(),
+                m_chunks.Algorithm(),
+                m_chunks.ChunkSize(),
+                ec);
             return 0;
         }
 
@@ -295,7 +307,15 @@ private:
         m_decompressor->Decompress(m_inputBuffer, output.subspan(0, outputSize), ec);
         if (ec)
         {
-            Log::Error("Failed to decompress chunk #{} [{}]", chunkIndex, ec);
+            Log::Debug(
+                "Failed to decompress chunk {}/{} (algorithm: {}, chunk size: {}, input size: {}, output size: {}) [{}]",
+                chunkIndex,
+                m_chunks.ChunkCount(),
+                m_chunks.Algorithm(),
+                m_chunks.ChunkSize(),
+                m_inputBuffer.size(),
+                outputSize,
+                ec);
             return 0;
         }
 
