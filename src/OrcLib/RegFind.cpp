@@ -6,7 +6,11 @@
 // Author(s): Pierre-Sébastien BOST
 //
 #include "stdafx.h"
+
 #include "RegFind.h"
+
+#include <boost/algorithm/string.hpp>
+
 #include "FileFind.h"
 
 #include "ConfigItem.h"
@@ -1364,14 +1368,12 @@ RegFind::ExactKeyName(const std::shared_ptr<SearchTerm>& aTerm, const RegistryKe
 
     if (aTerm->m_criteriaRequired & SearchTerm::Criteria::KEY_NAME)
     {
-
-        if (aTerm->m_strKeyName.empty() || Regkey->GetShortKeyName().empty())
-            return RegFind::SearchTerm::Criteria::NONE;
-
-        if (_strnicmp(aTerm->m_strKeyName.c_str(), Regkey->GetShortKeyName().c_str(), aTerm->m_strKeyName.length())
-            == 0)
+        if(boost::iequals(aTerm->m_strKeyName, Regkey->GetShortKeyName()))
+        {
             return SearchTerm::Criteria::KEY_NAME;
+        }
     }
+
     return RegFind::SearchTerm::Criteria::NONE;
 }
 
@@ -1427,13 +1429,12 @@ RegFind::ExactKeyPath(const std::shared_ptr<SearchTerm>& aTerm, const RegistryKe
 
     if (aTerm->m_criteriaRequired & SearchTerm::Criteria::KEY_PATH)
     {
-
-        if (aTerm->m_strPathName.empty() || Regkey->GetKeyName().empty())
-            return RegFind::SearchTerm::Criteria::NONE;
-
-        if (_strnicmp(aTerm->m_strPathName.c_str(), Regkey->GetKeyName().c_str(), Regkey->GetKeyName().length()) == 0)
+        if (boost::iequals(aTerm->m_strPathName, Regkey->GetKeyName()))
+        {
             return SearchTerm::Criteria::KEY_PATH;
+        }
     }
+
     return RegFind::SearchTerm::Criteria::NONE;
 }
 
@@ -1487,13 +1488,15 @@ RegFind::ExactValueName(const std::shared_ptr<SearchTerm>& aTerm, const Registry
 {
     if (RegValue == nullptr)
         return RegFind::SearchTerm::Criteria::NONE;
+
     if (aTerm->m_criteriaRequired & SearchTerm::Criteria::VALUE_NAME)
     {
-
-        if (_strnicmp(aTerm->m_strValueName.c_str(), RegValue->GetValueName().c_str(), aTerm->m_strValueName.length())
-            == 0)
+        if (boost::iequals(aTerm->m_strValueName, RegValue->GetValueName()))
+        {
             return SearchTerm::Criteria::VALUE_NAME;
+        }
     }
+
     return RegFind::SearchTerm::Criteria::NONE;
 }
 
