@@ -1,13 +1,30 @@
 # ChangeLog
 
-## [10.0.21] - 2021-10-07
-### Changed
-- fastfind: use full computer name as 'computer' output element
+## [10.0.22] - 2021-12-01
+### changed
+- Yara: Update to 4.1.3
+- Allow extracted resources to be executed
 
 ### Fixed
-- add missing PE machine type
-- yara: fix log formatting
-- fastfind: fix match description for 'data_contains_hex'
+- Fix missing upload for pre-existing archive
+- FastFind, GetThis: fix registry match false positive
+- Log: Fix log option parsing for compatibility with 10.1.x usage
+- Log: Fix log flushing on unexpected exit
+- 7z archives: empty file handling for compatibility
+
+### Added
+- FastFind, GetThis: print ADS name on match
+- FastFind, GetThis: print yara rule name on match
+
+
+## [10.0.21] - 2021-10-07
+### Changed
+- FastFind: use full computer name as 'computer' output element
+
+### Fixed
+- Add missing PE machine type
+- Yara: Fix log formatting
+- FastFind: Fix match description for 'data_contains_hex'
 
 
 ## [10.0.20] - 2021-07-02
