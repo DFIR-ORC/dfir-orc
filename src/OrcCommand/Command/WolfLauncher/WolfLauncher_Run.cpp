@@ -894,6 +894,14 @@ HRESULT Main::Run_Execute()
                         info.path,
                         info.size);
                     commandSetNode.AddEmptyLine();
+
+                    // Archive is ready but was not uploaded
+                    hr = UploadSingleFile(exec->GetOutputFileName(), exec->GetOutputFullPath());
+                    if (FAILED(hr))
+                    {
+                        Log::Error(L"Failed to upload archive '{}' [{}]", exec->GetOutputFullPath(), SystemError(hr));
+                    }
+
                     continue;
                 }
             }
