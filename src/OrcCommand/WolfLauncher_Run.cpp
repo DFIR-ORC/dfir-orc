@@ -639,6 +639,14 @@ HRESULT Main::Run_Execute()
                                 exec->GetOutputFullPath().c_str(),
                                 bDebug ? L" (debug=on)" : L"",
                                 strRecipients.c_str());
+
+                            // File already exists but it is not uploaded yet. Previous 'CheckFileUpload' would prevent to get here
+                            hr = UploadSingleFile(exec->GetOutputFileName(), exec->GetOutputFullPath());
+                            if (FAILED(hr))
+                            {
+                                log::Error(_L_, hr, L"Failed to upload archive '%s'\r\n", exec->GetOutputFullPath());
+                            }
+
                             continue;
                         }
                     }
