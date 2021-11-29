@@ -810,6 +810,13 @@ WOFReparseAttribute::WOFReparseAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRe
     }
 
     m_algorithm = wofHeader.value().CompressionFormat();
+
+    if (m_algorithm == Ntfs::WofAlgorithm::kLzx)
+    {
+        Log::Debug("Unsupported wof algorithm");
+        ec = std::make_error_code(std::errc::function_not_supported);
+        return;
+    }
 };
 
 HRESULT WOFReparseAttribute::GetStreams(
