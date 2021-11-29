@@ -2702,8 +2702,10 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingDataNameAndSize(
             continue;
         }
 
-        // Ignore WofCompressedData valid entry
-        if (pElt->IsOverlayFile() && attribute->NameEquals(L"WofCompressedData"))
+        // Ignore WofCompressedData valid entry if not specifically required
+        const auto kWofCompressedData = L"WofCompressedData"sv;
+        if (pElt->IsOverlayFile() && attribute->NameEquals(kWofCompressedData.data())
+            && aTerm->ADSName != kWofCompressedData)
         {
             continue;
         }
