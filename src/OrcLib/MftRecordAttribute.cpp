@@ -75,6 +75,8 @@ const std::shared_ptr<Orc::DataAttribute> GetWofDataAttribute(const Orc::MFTReco
 
 std::shared_ptr<WOFReparseAttribute> GetWofReparsePoint(const Orc::MFTRecord& record)
 {
+    assert(record.IsParsed());  // This is 'ParseRecord' which populate 'm_pAttributeList'
+
     for (const auto& attribute : record.GetAttributeList())
     {
         const auto wofReparsePoint =
@@ -316,20 +318,46 @@ HRESULT MftRecordAttribute::GetStreams(const std::shared_ptr<VolumeReader>& pVol
     return GetStreams(pVolReader, rawStream, dataStream);
 }
 
+void MftRecordAttribute::LogStreamRequest(const MFTRecord* baseRecord) const
+{
+    if (!baseRecord)
+    {
+        return;
+    }
+
+    std::wstring_view filename;
+    auto pFileName = baseRecord->GetDefaultFileName();
+    if (pFileName)
+    {
+        filename = std::wstring_view(pFileName->FileName, pFileName->FileNameLength);
+    }
+
+    std::wstring_view attributeName(NamePtr(), NameLength());
+    if (attributeName.empty())
+    {
+        Log::Debug(
+            L"Getting new streams for '{}' (base frn: {:#x}, frn: {:#x})",
+            filename,
+            baseRecord ? NtfsFullSegmentNumber(&baseRecord->GetFileReferenceNumber()) : 0,
+            m_pHostRecord ? NtfsFullSegmentNumber(&m_pHostRecord->GetFileReferenceNumber()) : 0);
+    }
+    else
+    {
+        Log::Debug(
+            L"Getting new streams for '{}:{}' (base frn: {:#x}, frn: {:#x})",
+            filename,
+            attributeName,
+            baseRecord ? NtfsFullSegmentNumber(&baseRecord->GetFileReferenceNumber()) : 0,
+            m_pHostRecord ? NtfsFullSegmentNumber(&m_pHostRecord->GetFileReferenceNumber()) : 0);
+    }
+}
+
 HRESULT MftRecordAttribute::GetStreams(
     const std::shared_ptr<VolumeReader>& pVolReader,
     std::shared_ptr<ByteStream>& rawStream,
     std::shared_ptr<ByteStream>& dataStream)
 {
     HRESULT hr = E_FAIL;
-
-
-    auto baseRecord = GetBaseRecord();
-    if (baseRecord == nullptr)
-    {
-        Log::Error(L"baseRecord == nullptr");
-        return E_FAIL;
-    }
 
     // BEWARE: I am not sure what is the purpose of this
     if (m_Details && m_Details->GetDataStream() && m_Details->GetRawStream()
@@ -342,6 +370,11 @@ HRESULT MftRecordAttribute::GetStreams(
 
     _ASSERT(pVolReader);
     _ASSERT(m_pHeader != nullptr);
+
+    std::wstring_view filename;
+
+    const auto baseRecord = GetBaseRecord();
+    LogStreamRequest(baseRecord);
 
     if (m_pHeader->FormCode == NONRESIDENT_FORM)
     {
@@ -854,6 +887,12 @@ HRESULT WOFReparseAttribute::GetStreams(
     }
 
     // Nonresident: checked in '::GetWofDataAttribute()'
+    Log::Debug(
+        L"Open WOF stream (algorithm: {}, compressed size: {} uncompressed size: {})",
+        m_algorithm,
+        ntfsStream->GetSize(),
+        dataAttribute->Header()->Form.Nonresident.FileSize);
+
     auto wofStream = make_shared<UncompressWofStream>();
     hr = wofStream->Open(ntfsStream, m_algorithm, dataAttribute->Header()->Form.Nonresident.FileSize);
     if (FAILED(hr))

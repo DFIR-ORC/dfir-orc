@@ -2997,7 +2997,11 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
         auto [hr, matchingRules] = m_YaraScan->Scan(pDataStream);
         if (FAILED(hr))
         {
-            Log::Error("Failed Yara scan on '{}' [{}]", ::GetFileName(record, *pDataAttr), SystemError(hr));
+            Log::Error(
+                "Failed Yara scan on '{}' (frn: {:#x}) [{}]",
+                ::GetFileName(record, *pDataAttr),
+                NtfsFullSegmentNumber(&record.GetFileReferenceNumber()),
+                SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
         if (!matchingRules.empty())

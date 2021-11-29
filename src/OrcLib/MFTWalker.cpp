@@ -1462,7 +1462,7 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
             pRecord = pIter->second;
         }
 
-        Log::Trace("AddRecordCallback: adding record '{}'", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
+        Log::Trace("AddRecordCallback: adding record '{:#x}'", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
 
         if (ullRecordIndex != pRecord->m_FileReferenceNumber.SegmentNumberLowPart)
         {
@@ -1483,7 +1483,7 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
             {
 
                 Log::Trace(
-                    "Record {} is child record of {}",
+                    "MFT record {:#x} is child record of {:#x}",
                     NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber),
                     NtfsFullSegmentNumber(&(pRecord->m_pRecord->BaseFileRecordSegment)));
 
@@ -1500,13 +1500,13 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
             if (hr == S_FALSE)
             {
                 Log::Trace(
-                    "Skipping record {} (ParseRecord returned S_FALSE)",
+                    "Skipping MFT record as 'ParseRecord returned S_FALSE (frn: {:#x})",
                     NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
                 DeleteRecord(pRecord);
             }
             else if (hr == S_OK)
             {
-                Log::Trace(L"Record {} parsed", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
+                Log::Trace(L"MFT record parsed (frn: {:#x})", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
 
                 m_MFTMap.insert(pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>(
                     NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), pRecord));
@@ -1514,7 +1514,7 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                 if (FAILED(hr = AddDirectoryName(pRecord)))
                 {
                     Log::Debug(
-                        "Record {}: Failed to add directory name [{}]",
+                        "Failed to add directory name to MFTRecord (frn: {:#x}) [{}]",
                         NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber),
                         SystemError(hr));
                 }
@@ -1565,13 +1565,13 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                                         if (hr == S_FALSE)
                                         {
                                             Log::Trace(
-                                                L"Skipping record {:#x}",
+                                                L"Skipping MFT record (frn: {:#x})",
                                                 NtfsFullSegmentNumber(&(attr.m_pListEntry->SegmentReference)));
                                         }
                                         else if (FAILED(hr))
                                         {
                                             Log::Debug(
-                                                L"Parsing child record {} failed [{}]",
+                                                L"Failed to parse child record (frn: {:#x}) [{}]",
                                                 NtfsFullSegmentNumber(&(attr.m_pListEntry->SegmentReference)),
                                                 SystemError(hr));
                                         }
@@ -1598,7 +1598,7 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                 else
                 {
                     Log::Error(
-                        L"Parsing record failed {} [{}]",
+                        L"Failed to parse MFT record (frn: {:#x}) [{}]",
                         NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber),
                         SystemError(hr));
                 }
@@ -1607,7 +1607,7 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
         }
         else
         {
-            Log::Trace(L"Record {}: not in use, and ignored", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
+            Log::Trace(L"MFT record {:#x} not in use and ignored", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
             DeleteRecord(pRecord);
         }
     }

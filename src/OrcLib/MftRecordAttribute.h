@@ -161,6 +161,9 @@ public:
     virtual HRESULT CleanCachedData();
 
     virtual ~MftRecordAttribute() { m_pNonResidentInfo.reset(); };
+
+private:
+    void MftRecordAttribute::LogStreamRequest(const MFTRecord* baseRecord) const;
 };
 
 class ORCLIB_API AttributeListAttribute : public MftRecordAttribute
@@ -306,9 +309,9 @@ public:
 
     static REPARSE_POINT_TYPE_AND_FLAGS GetReparsePointType(PATTRIBUTE_RECORD_HEADER pHeader);
 
-    static bool IsJunction(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == 0xA0000003; }
-    static bool IsSymbolicLink(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == 0xA000000C; }
-    static bool IsWindowsOverlayFile(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == 0x80000017; }
+    static bool IsJunction(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == IO_REPARSE_TAG_MOUNT_POINT; }
+    static bool IsSymbolicLink(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == IO_REPARSE_TAG_SYMLINK; }
+    static bool IsWindowsOverlayFile(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == IO_REPARSE_TAG_WOF; }
 
     REPARSE_POINT_TYPE_AND_FLAGS Flags() const { return m_Flags; }
 
