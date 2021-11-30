@@ -144,7 +144,7 @@ void Main::PrintUsage()
         Usage::Parameter {"/ReportAll", "Add information about rejected samples (due to limits) to CSV"},
         Usage::Parameter {"/NoSigCheck", "Check only sample signatures from autoruns output"},
         Usage::Parameter {"/Hash=<MD5|SHA1|SHA256>", "Comma-separated list of hashes to compute"},
-        Usage::Parameter {"/FuzzyHash=<SSDeep|TLSH>", "Comma-separated list of 'FuzzyHash' hashes to compute"},
+        Usage::Parameter {"/FuzzyHash=<SSDeep>", "Comma-separated list of 'FuzzyHash' hashes to compute"},
         Usage::Parameter {"/Yara=<Rules.yara>", "List of Yara sources"}};
     Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
 
