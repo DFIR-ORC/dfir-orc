@@ -636,7 +636,7 @@ HRESULT Main::Run()
     }
     else if (config.outStructured.Type == OutputSpec::Kind::Directory)
     {
-        auto pStructuredOutput = StructuredOutputWriter::GetWriter(
+        pStructuredOutput = StructuredOutputWriter::GetWriter(
             config.outStructured, L"{Name}_{SystemType}_{ComputerName}.xml", L"FastFind", nullptr);
     }
 
