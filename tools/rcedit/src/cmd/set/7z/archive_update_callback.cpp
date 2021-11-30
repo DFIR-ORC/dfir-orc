@@ -62,6 +62,12 @@ void ArchiveUpdateCallback::Init(
         return;
     }
 
+    // 7z expects NULL streams for empty files
+    if( m_fileInfo.Size == 0 ) {
+        m_inStream = NULL;
+        return;
+    }
+
     CInFileStream* inFileStream = new CInFileStream;
     m_inStream = inFileStream;
 
@@ -89,6 +95,12 @@ void ArchiveUpdateCallback::Init(
     m_fileInfo.CTime = m_fileInfo.MTime = m_fileInfo.ATime;
     m_fileInfo.Attrib = FILE_ATTRIBUTE_NORMAL;
 
+    // 7z expects NULL streams for empty files
+    if( m_fileInfo.Size == 0 ) {
+        m_inStream = NULL;
+        return;
+    }
+
     m_inStream = new InMemStream( content );
 }
 
@@ -107,7 +119,7 @@ STDMETHODIMP ArchiveUpdateCallback::GetUpdateItemInfo(
     }
 
     if( indexInArchive ) {
-        *indexInArchive = ( UInt32 )(Int32)-1;
+        *indexInArchive = (UInt32)(Int32)-1;
     }
 
     return S_OK;
@@ -129,7 +141,7 @@ STDMETHODIMP ArchiveUpdateCallback::GetProperty(
 {
     NWindows::NCOM::CPropVariant prop;
 
-    // TODO: wtf?
+    // TODO: could be something strange here
     if( propID == kpidIsAnti ) {
         prop = false;
         prop.Detach( value );
@@ -169,7 +181,15 @@ STDMETHODIMP ArchiveUpdateCallback::GetStream(
     ISequentialInStream** inStream )
 {
     assert( index == 0 );
-    *inStream = m_inStream.Detach();
+
+    if( m_inStream ) {
+        *inStream = m_inStream.Detach();
+    }
+    else {
+        // 7z expects NULL streams for empty files
+        *inStream = NULL;
+    }
+
     return S_OK;
 }
 

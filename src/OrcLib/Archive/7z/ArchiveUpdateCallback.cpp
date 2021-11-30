@@ -12,6 +12,7 @@
 
 #include "Archive/7z/InStreamAdapter.h"
 #include "Utils/Result.h"
+#include "ByteStream.h"
 
 using namespace Orc::Archive;
 using namespace Orc;
@@ -221,6 +222,13 @@ STDMETHODIMP ArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream*
     }
 
     auto item = GetItem(index)->Stream();
+    if (item->GetSize() == 0)
+    {
+        // 7z expects NULL streams for empty files
+        *pInStream = NULL;
+        return S_OK;
+    }
+
     CComQIPtr<ISequentialInStream, &IID_ISequentialInStream> stream(new InStreamAdapter(item));
     *pInStream = stream.Detach();
 
