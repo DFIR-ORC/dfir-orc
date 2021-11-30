@@ -18,7 +18,6 @@ inline bool IsSurrogate(wchar_t cp)
 }  // namespace
 
 namespace Orc {
-namespace Command {
 
 WideStreambufConverter::WideStreambufConverter(std::basic_streambuf<char>* output)
     : m_output(output)
@@ -75,5 +74,4 @@ int WideStreambufConverter::sync()
     return m_output->pubsync();
 }
 
-}  // namespace Command
 }  // namespace Orc

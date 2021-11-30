@@ -26,8 +26,8 @@
 #include "TableOutput.h"
 
 #include "Command/WolfLauncher/Journal.h"
-#include "Command/WolfLauncher/Console/StandardOutputFileTee.h"
 #include "Command/WolfLauncher/ConsoleConfiguration.h"
+#include "Utils/StdStream/StandardOutput.h"
 #include "Utils/EnumFlags.h"
 
 #pragma managed(push, off)
@@ -151,11 +151,10 @@ public:
 
     Main()
         : UtilitiesMain()
-        , m_standardOutputFileTee(std::make_shared<StandardOutputFileTee>())
         , m_journal(m_console)
         , m_outcome()
     {
-        m_standardOutputFileTee->Enable();
+        m_standardOutput.EnableFileTee();
     }
 
     void PrintUsage();
@@ -198,7 +197,6 @@ private:
     HRESULT Run_Keywords();
 
 private:
-    StandardOutputFileTee::Ptr m_standardOutputFileTee;  // need a smart pointer because log sink will also own stream
     ConsoleConfiguration m_consoleConfiguration;
 
     Journal m_journal;

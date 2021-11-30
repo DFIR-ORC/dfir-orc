@@ -9,10 +9,8 @@
 #include "StreamRedirector.h"
 
 namespace Orc {
-namespace Command {
 
 template class StreamRedirector<char>;
 template class StreamRedirector<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

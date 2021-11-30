@@ -5,7 +5,6 @@
 //
 // Author(s): fabienfl
 //
-
 #pragma once
 
 #include <streambuf>
@@ -16,7 +15,6 @@
 #include "FileDisposition.h"
 
 namespace Orc {
-namespace Command {
 
 template <typename CharT>
 class LazyFileStreambuf : public std::basic_streambuf<CharT>
@@ -116,5 +114,4 @@ private:
 extern template class LazyFileStreambuf<char>;
 extern template class LazyFileStreambuf<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

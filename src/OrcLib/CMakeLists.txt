@@ -787,12 +787,18 @@ set(SRC_UTILITIES
     "Utils/StdStream/LazyFileStreambuf.h"
     "Utils/StdStream/LazyFileStream.cpp"
     "Utils/StdStream/LazyFileStream.h"
+    "Utils/StdStream/StandardOutput.h"
+    "Utils/StdStream/StandardOutput.cpp"
+    "Utils/StdStream/StandardOutputFileTee.h"
+    "Utils/StdStream/StandardOutputFileTee.cpp"
     "Utils/StdStream/StreamRedirector.cpp"
     "Utils/StdStream/StreamRedirector.h"
     "Utils/StdStream/Tee.cpp"
     "Utils/StdStream/Tee.h"
     "Utils/StdStream/WideStreambufConverter.cpp"
     "Utils/StdStream/WideStreambufConverter.h"
+    "Utils/StdStream/StandardOutputWriteConsoleRedirection.h"
+    "Utils/StdStream/StandardOutputWriteConsoleRedirection.cpp"
 )
 
 source_group(Utilities FILES ${SRC_UTILITIES})

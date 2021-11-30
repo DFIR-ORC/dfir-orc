@@ -26,7 +26,7 @@
 #include "ConfigFile_WOLFLauncher.h"
 #include "Log/UtilitiesLoggerConfiguration.h"
 #include "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
-#include "Command/WolfLauncher/Console/ConsoleConfiguration.h"
+#include "Command/WolfLauncher/ConsoleConfiguration.h"
 #include "Configuration/Option.h"
 
 using namespace Orc;
@@ -678,7 +678,7 @@ HRESULT Main::CheckConfiguration()
     {
         m_consoleConfiguration.output.path =
             fs::path(config.Output.Path) / fs::path(*m_consoleConfiguration.output.path).filename();
-        ConsoleConfiguration::Apply(*m_standardOutputFileTee, m_consoleConfiguration);
+        ConsoleConfiguration::Apply(m_standardOutput, m_consoleConfiguration);
     }
 
     fs::path logPath;

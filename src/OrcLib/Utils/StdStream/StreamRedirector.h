@@ -5,7 +5,6 @@
 //
 // Author(s): fabienfl
 //
-
 #pragma once
 
 #include <functional>
@@ -15,7 +14,6 @@
 #include "Utils/StdStream/Tee.h"
 
 namespace Orc {
-namespace Command {
 
 template <typename CharT>
 class StreamRedirector final
@@ -38,7 +36,7 @@ public:
     void Tee(std::basic_ostream<CharT>& input)
     {
         const auto original = input.rdbuf();
-        auto tee = std::make_shared<Orc::Command::Tee<CharT>>(m_output.rdbuf(), original);
+        auto tee = std::make_shared<Orc::Tee<CharT>>(m_output.rdbuf(), original);
         input.rdbuf(tee.get());
 
         m_resetters.push_back([original, tee, &input]() { input.rdbuf(original); });
@@ -62,5 +60,4 @@ private:
 extern template class StreamRedirector<char>;
 extern template class StreamRedirector<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

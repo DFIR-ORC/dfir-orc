@@ -12,13 +12,12 @@
 #include "Utils/StdStream/StreamRedirector.h"
 
 namespace Orc {
-namespace Command {
 
-class StandardOutputConsoleRedirection final
+class StandardOutputWriteConsoleRedirection final
 {
 public:
-    StandardOutputConsoleRedirection();
-    ~StandardOutputConsoleRedirection();
+    StandardOutputWriteConsoleRedirection();
+    ~StandardOutputWriteConsoleRedirection();
 
     void Enable();
     void Disable();
@@ -33,5 +32,4 @@ private:
     StreamRedirector<wchar_t> m_wredirector;
 };
 
-}  // namespace Command
 }  // namespace Orc

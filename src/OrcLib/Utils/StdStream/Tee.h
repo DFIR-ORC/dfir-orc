@@ -5,13 +5,11 @@
 //
 // Author(s): fabienfl
 //
-
 #pragma once
 
 #include <streambuf>
 
 namespace Orc {
-namespace Command {
 
 template <typename CharT>
 class Tee : public std::basic_streambuf<CharT>
@@ -65,5 +63,4 @@ private:
 extern template class Tee<char>;
 extern template class Tee<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

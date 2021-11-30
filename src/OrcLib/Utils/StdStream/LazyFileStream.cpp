@@ -9,10 +9,8 @@
 #include "LazyFileStream.h"
 
 namespace Orc {
-namespace Command {
 
 template class LazyFileStream<char>;
 template class LazyFileStream<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

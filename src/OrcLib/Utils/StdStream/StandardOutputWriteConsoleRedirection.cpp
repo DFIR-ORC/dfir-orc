@@ -5,8 +5,7 @@
 //
 // Author(s): fabienfl
 //
-
-#include "StandardOutputConsoleRedirection.h"
+#include "StandardOutputWriteConsoleRedirection.h"
 
 #include <Windows.h>
 
@@ -80,9 +79,8 @@ private:
 }  // namespace
 
 namespace Orc {
-namespace Command {
 
-StandardOutputConsoleRedirection::StandardOutputConsoleRedirection()
+StandardOutputWriteConsoleRedirection::StandardOutputWriteConsoleRedirection()
     : m_streambuf(std::make_unique<::ConsoleStreambuf<char>>())
     , m_wstreambuf(std::make_unique<::ConsoleStreambuf<wchar_t>>())
     , m_cout(m_streambuf.get())
@@ -92,24 +90,25 @@ StandardOutputConsoleRedirection::StandardOutputConsoleRedirection()
 {
 }
 
-StandardOutputConsoleRedirection::~StandardOutputConsoleRedirection()
+StandardOutputWriteConsoleRedirection::~StandardOutputWriteConsoleRedirection()
 {
     Disable();
 }
 
-void StandardOutputConsoleRedirection::Enable()
+void StandardOutputWriteConsoleRedirection::Enable()
 {
+    Log::Debug("Enable stdout redirection with WriteConsole");
+
     m_redirector.Take(std::cout);
     m_redirector.Take(std::cerr);
     m_wredirector.Take(std::wcout);
     m_wredirector.Take(std::wcerr);
 }
 
-void StandardOutputConsoleRedirection::Disable()
+void StandardOutputWriteConsoleRedirection::Disable()
 {
     m_redirector.Reset();
     m_wredirector.Reset();
 }
 
-}  // namespace Command
 }  // namespace Orc

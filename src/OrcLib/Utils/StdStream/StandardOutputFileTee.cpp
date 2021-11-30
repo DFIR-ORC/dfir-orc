@@ -10,7 +10,6 @@
 #include "Utils/StdStream/WideStreambufConverter.h"
 
 namespace Orc {
-namespace Command {
 
 StandardOutputFileTee::StandardOutputFileTee()
     : LazyFileStream<CharT>(16384)
@@ -23,6 +22,8 @@ StandardOutputFileTee::StandardOutputFileTee()
 
 void StandardOutputFileTee::Enable()
 {
+    Log::Debug("Enable stdout tee file");
+
     m_wideRedirection.Tee(std::wcout);
     m_wideRedirection.Tee(std::wcerr);
     m_redirection.Tee(std::cout);
@@ -35,10 +36,4 @@ void StandardOutputFileTee::Disable()
     m_wideRedirection.Reset();
 }
 
-const std::optional<std::filesystem::path>& StandardOutputFileTee::OutputPath() const
-{
-    return Path();
-}
-
-}  // namespace Command
 }  // namespace Orc

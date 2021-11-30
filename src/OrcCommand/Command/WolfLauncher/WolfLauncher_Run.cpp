@@ -298,7 +298,9 @@ const wchar_t kWolfLauncher[] = L"WolfLauncher";
 
 void Main::Configure(int argc, const wchar_t* argv[])
 {
-    m_logging.consoleSink()->AddOutput(m_standardOutputFileTee);
+    // Underlying spdlog's 'wincolor_sink' will write to console using 'WriteConsoleA' which bypass StandardOutput.
+    // Forward console sink output to StandardOutput tee file.
+    m_logging.consoleSink()->AddOutput(m_standardOutput.FileTeePtr());
 
     auto& journal = m_logging.logger().Get(Logger::Facility::kJournal);
     journal->SetLevel(Log::Level::Info);

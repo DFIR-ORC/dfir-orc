@@ -12,7 +12,6 @@
 #include "Utils/StdStream/StreamRedirector.h"
 
 namespace Orc {
-namespace Command {
 
 class StandardOutputFileTee : public LazyFileStream<char>
 {
@@ -21,8 +20,6 @@ public:
     using CharT = LazyFileStream<char>::char_type;
 
     StandardOutputFileTee();
-
-    const std::optional<std::filesystem::path>& OutputPath() const;
 
     void Enable();
     void Disable();
@@ -34,5 +31,4 @@ private:
     StreamRedirector<char> m_redirection;
 };
 
-}  // namespace Command
 }  // namespace Orc

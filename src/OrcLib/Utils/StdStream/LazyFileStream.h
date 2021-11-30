@@ -5,7 +5,6 @@
 //
 // Author(s): fabienfl
 //
-
 #pragma once
 
 #include <ostream>
@@ -16,7 +15,6 @@
 #include "FileDisposition.h"
 
 namespace Orc {
-namespace Command {
 
 template <typename CharT>
 class LazyFileStream : public std::basic_ostream<CharT>
@@ -44,5 +42,4 @@ private:
 extern template class LazyFileStream<char>;
 extern template class LazyFileStream<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

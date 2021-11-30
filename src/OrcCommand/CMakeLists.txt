@@ -45,8 +45,6 @@ set(SRC_COMMON
     "Usage.h"
     "ConfigFile_OrcConfig.cpp"
     "ConfigFile_OrcConfig.h"
-    "StandardOutputConsoleRedirection.cpp"
-    "StandardOutputConsoleRedirection.h"
 )
 
 source_group(Common FILES ${SRC_COMMON})
@@ -209,9 +207,6 @@ set(SRC_USNINFO
 source_group(USNInfo FILES ${SRC_USNINFO})
 
 set(SRC_WOLFLAUNCHER
-    "Command/WolfLauncher/Console/StandardOutputFileTee.cpp"
-    "Command/WolfLauncher/Console/StandardOutputFileTee.h"
-
     "Command/WolfLauncher/ConfigFile_WOLFLauncher.cpp"
     "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
     "Command/WolfLauncher/ConsoleConfiguration.h"
