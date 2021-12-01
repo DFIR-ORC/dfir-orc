@@ -95,6 +95,34 @@ protected:
         return c;
     }
 
+    std::streamsize xsputn(const CharT* s, std::streamsize count) override
+    {
+        std::basic_string_view<CharT> data(s, count);
+
+        try
+        {
+            if (m_ofstream.is_open())
+            {
+                m_ofstream << data;
+            }
+            else if (m_buffer.size() < m_buffer.capacity())
+            {
+                m_buffer.append(data);
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        catch (...)
+        {
+            assert(nullptr);
+            return 0;
+        }
+
+        return count;
+    }
+
     int sync() override
     {
         if (m_ofstream.is_open())

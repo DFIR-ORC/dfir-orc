@@ -42,6 +42,23 @@ protected:
         return c;
     }
 
+    std::streamsize xsputn(const CharT* s, std::streamsize count) override
+    {
+        BOOL ret = FALSE;
+        DWORD written;
+
+        if constexpr (std::is_same_v<CharT, char>)
+        {
+            ret = ::WriteConsoleA(m_hOutput, s, count, &written, nullptr);
+        }
+        else
+        {
+            ret = ::WriteConsoleW(m_hOutput, s, count, &written, nullptr);
+        }
+
+        return ret ? count : 0;
+    }
+
     int sync() override
     {
         if (!Flush())
@@ -55,20 +72,11 @@ protected:
 
     BOOL Flush()
     {
-        BOOL bRet = FALSE;
-        DWORD written;
-
-        if constexpr (std::is_same_v<CharT, char>)
-        {
-            bRet = ::WriteConsoleA(m_hOutput, m_buffer.data(), m_buffer.size(), &written, nullptr);
-        }
-        else
-        {
-            bRet = ::WriteConsoleW(m_hOutput, m_buffer.data(), m_buffer.size(), &written, nullptr);
-        }
-
+        // Call xsputn overrided method
+        const auto count = sputn(m_buffer.data(), m_buffer.size());
+        BOOL ret = (count == m_buffer.size());
         m_buffer.clear();
-        return bRet;
+        return ret;
     }
 
 private:
