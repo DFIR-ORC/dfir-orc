@@ -1,0 +1,50 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Default Config",
+            "description": "Default build using Visual Studio generator",
+            "generator": "Visual Studio 17 2022",
+            "toolset": "v143",
+            "architecture": "x64",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/external/vcpkg/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
+        {
+            "name": "ninja",
+            "inherits": "default",
+            "displayName": "Ninja Config",
+            "description": "Default build using Ninja generator",
+            "generator": "Ninja"
+        },
+        {
+            "name": "parquet",
+            "inherits": "default",
+            "displayName": "Parquet",
+            "description": "Parquet enabled configuration",
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/build_arrow",
+            "cacheVariables": {
+                "ORC_BUILD_PARQUET": {
+                    "type": "BOOL",
+                    "value": "ON"
+                  }
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "configurePreset": "default"
+        }
+    ]
+}
