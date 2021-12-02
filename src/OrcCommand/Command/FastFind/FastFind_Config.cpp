@@ -33,6 +33,27 @@ using namespace std;
 using namespace Orc;
 using namespace Orc::Command::FastFind;
 
+namespace {
+
+void InitializeStatisticsOutput(Orc::Command::FastFind::Main::Configuration& config)
+{
+    std::filesystem::path outputDirectory;
+    if (config.outStructured.IsFile())
+    {
+        outputDirectory = std::filesystem::path(config.outStructured.Path).parent_path();
+    }
+    else
+    {
+        outputDirectory = std::filesystem::path(config.outStructured.Path);
+    }
+
+    config.outStatistics.Path = (outputDirectory / L"statistics.json").c_str();
+    config.outStatistics.Type = OutputSpec::Kind::File;
+    config.outStatistics.OutputEncoding = OutputSpec::Encoding::UTF8;
+}
+
+}  // namespace
+
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.outFileSystem.Schema = TableOutput::GetColumnsFromConfig(
@@ -376,6 +397,8 @@ HRESULT Main::CheckConfiguration()
     HRESULT hr = E_FAIL;
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
+    ::InitializeStatisticsOutput(config);
 
     bool bSomeThingToParse = false;
 

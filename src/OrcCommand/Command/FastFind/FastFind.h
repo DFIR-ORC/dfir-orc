@@ -245,6 +245,7 @@ public:
         OutputSpec outObject;
 
         OutputSpec outStructured;
+        OutputSpec outStatistics;
 
         bool bAll = false;
         WCHAR Volume = 0;

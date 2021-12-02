@@ -75,6 +75,123 @@ void PrintStatistics(Orc::Text::Tree<T>& root, const std::vector<std::shared_ptr
     }
 }
 
+void WriteNtfsFindStatistics(
+    const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms,
+    Orc::StructuredOutputWriter::IWriter::Ptr& writer)
+{
+    const auto kNodeRules = L"ntfs_find";
+    writer->BeginCollection(kNodeRules);
+    Guard::Scope onExit([&]() { writer->EndCollection(kNodeRules); });
+
+    for (const auto& searchTerm : searchTerms)
+    {
+        writer->BeginElement(nullptr);
+        Guard::Scope onExit([&]() { writer->EndElement(nullptr); });
+
+        const auto& stats = searchTerm->GetProfilingStatistics();
+
+        writer->WriteNamed(L"description", searchTerm->GetRule());
+        writer->WriteNamed(L"match_time", std::chrono::duration_cast<std::chrono::seconds>(stats.MatchTime()).count());
+        writer->WriteNamed(L"match_read", stats.MatchReadLength());
+        writer->WriteNamed(L"match", stats.Match());
+        writer->WriteNamed(L"miss", stats.Miss());
+    }
+}
+
+Orc::Result<void> WriteStatistics(
+    const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms,
+    Orc::StructuredOutputWriter::IWriter::Ptr& writer)
+{
+    try
+    {
+        writer->WriteNamed(L"version", L"1.0");
+
+        const auto kNodeDfirOrc = L"dfir-orc";
+        writer->BeginElement(kNodeDfirOrc);
+        Guard::Scope onExit([&]() { writer->EndElement(kNodeDfirOrc); });
+
+        {
+            const auto kNodeGetthis = kToolName;
+            writer->BeginElement(kNodeGetthis);
+            Guard::Scope onExit([&]() { writer->EndElement(kNodeGetthis); });
+
+            {
+                const auto kNodeStats = L"statistics";
+                writer->BeginElement(kNodeStats);
+                Guard::Scope onExit([&]() { writer->EndElement(kNodeStats); });
+
+                WriteNtfsFindStatistics(searchTerms, writer);
+            }
+        }
+    }
+    catch (const std::system_error& e)
+    {
+        return e.code();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "std::exception writing statistics" << std::endl;
+        std::cerr << "Caught: " << e.what() << std::endl;
+        std::cerr << "Type: " << typeid(e).name() << std::endl;
+        return std::errc::state_not_recoverable;
+    }
+    catch (...)
+    {
+        std::cerr << "Exception during writing statistics" << std::endl;
+        return std::errc::state_not_recoverable;
+    }
+
+    return Orc::Success<void>();
+}
+
+Orc::Result<void>
+WriteStatistics(const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms, const OutputSpec& output)
+{
+    auto options = std::make_unique<StructuredOutput::JSON::Options>();
+    options->Encoding = OutputSpec::Encoding::UTF8;
+    options->bPrettyPrint = true;
+
+    if (output.Type != OutputSpecTypes::Kind::JSON)
+    {
+        Log::Error(L"Failed to write statistics, only json output is supported: {}", output.Path);
+        return std::errc::invalid_argument;
+    }
+
+    auto writer = StructuredOutputWriter::GetWriter(output, std::move(options));
+    if (writer == nullptr)
+    {
+        Log::Error(L"Failed to create writer for statistics file {}", output.Path);
+        return SystemError(E_FAIL);
+    }
+
+    auto rv = WriteStatistics(searchTerms, writer);
+    if (rv.has_error())
+    {
+        Log::Error(L"Failed to write statistics file [{}]", rv);
+        return rv;
+    }
+
+    HRESULT hr = writer->Close();
+    if (FAILED(hr))
+    {
+        const auto error = SystemError(hr);
+        Log::Error(L"Failed to close statistics file [{}]", error);
+        return error;
+    }
+
+    return Orc::Success<void>();
+}
+
+Orc::Result<void> WriteStatistics(
+    const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms,
+    const std::filesystem::path& path)
+{
+    OutputSpec output;
+    output.Type = OutputSpec::Kind::JSON;
+    output.Path = path;
+    return WriteStatistics(searchTerms, output);
+}
+
 template <typename T>
 void PrintFoundFile(
     Orc::Text::Tree<T>& root,
@@ -171,6 +288,13 @@ HRESULT Main::RunFileSystem()
 
     m_console.PrintNewLine();
     ::PrintStatistics(m_console.OutputTree(), config.FileSystem.Files.AllSearchTerms());
+
+    auto rv = ::WriteStatistics(config.FileSystem.Files.AllSearchTerms(), config.outStatistics.Path);
+    if (rv.has_error())
+    {
+        Log::Error(L"Failed to write statistics file [{}]", rv);
+    }
+
     return S_OK;
 }
 
