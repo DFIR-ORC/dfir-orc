@@ -36,6 +36,27 @@ constexpr auto REGEX_CONTENT_STRINGS_MAX = 6;
 constexpr auto CONTENT_STRINGS_DEFAULT_MIN = 3;
 constexpr auto CONTENT_STRINGS_DEFAULT_MAX = 1024;
 
+namespace {
+
+void InitializeStatisticsOutput(Orc::Command::GetThis::Main::Configuration& config)
+{
+    std::filesystem::path outputDirectory;
+    if (config.Output.IsFile())
+    {
+        outputDirectory = std::filesystem::path(config.Output.Path).parent_path();
+    }
+    else
+    {
+        outputDirectory = std::filesystem::path(config.Output.Path);
+    }
+
+    config.m_statisticsOutput.Path = (outputDirectory / L"statistics.json").c_str();
+    config.m_statisticsOutput.Type = OutputSpec::Kind::File;
+    config.m_statisticsOutput.OutputEncoding = OutputSpec::Encoding::UTF8;
+}
+
+}  // namespace
+
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.Output.Schema = TableOutput::GetColumnsFromConfig(
@@ -427,6 +448,8 @@ HRESULT Main::CheckConfiguration()
     HRESULT hr = E_FAIL;
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
+    ::InitializeStatisticsOutput(config);
 
     if (boost::logic::indeterminate(config.bAddShadows))
     {

@@ -130,6 +130,7 @@ public:
         std::optional<LocationSet::PathExcludes> m_excludes;
 
         OutputSpec Output;
+        OutputSpec m_statisticsOutput;
 
         ListOfSampleSpecs listofSpecs;
         std::vector<std::shared_ptr<FileFind::SearchTerm>> listOfExclusions;

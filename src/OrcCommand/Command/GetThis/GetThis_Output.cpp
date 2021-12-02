@@ -174,6 +174,7 @@ void Main::PrintParameters()
     PrintCommonParameters(node);
 
     PrintValue(node, L"Output", config.Output);
+    PrintValue(node, L"Statistics", config.m_statisticsOutput);
     PrintValue(node, L"ReportAll", config.bReportAll);
     PrintValue(node, L"Hash", config.CryptoHashAlgs);
     PrintValue(node, L"FuzzyHash", config.FuzzyHashAlgs);
