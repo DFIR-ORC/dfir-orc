@@ -43,8 +43,6 @@ set(SRC_COMMON
     "ToolVersion.h"
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"
     "Usage.h"
-    "ConfigFile_OrcConfig.cpp"
-    "ConfigFile_OrcConfig.h"
 )
 
 source_group(Common FILES ${SRC_COMMON})
@@ -58,199 +56,247 @@ set(SRC_LOG
 
 source_group(Log FILES ${SRC_LOG})
 
-set(SRC_DD
-    "Command/DD/ConfigFile_DD.cpp"
-    "Command/DD/ConfigFile_DD.h"
-    "Command/DD/DD.h"
-    "Command/DD/DD_Config.cpp"
-    "Command/DD/DD_Output.cpp"
-    "Command/DD/DD_Run.cpp"
-    "Command/DD/DDSqlSchema.xml"
-)
+set(SRC_COMMANDS "")
 
-source_group(DD FILES ${SRC_DD})
+if(ORC_COMMAND_DD)
+    set(SRC_DD
+        "Command/DD/ConfigFile_DD.cpp"
+        "Command/DD/ConfigFile_DD.h"
+        "Command/DD/DD.h"
+        "Command/DD/DD_Config.cpp"
+        "Command/DD/DD_Output.cpp"
+        "Command/DD/DD_Run.cpp"
+        "Command/DD/DDSqlSchema.xml"
+    )
 
-set(SRC_FASTFIND
-    "Command/FastFind/ConfigFile_FastFind.cpp"
-    "Command/FastFind/ConfigFile_FastFind.h"
-    "Command/FastFind/FastFind.h"
-    "Command/FastFind/FastFindSqlSchema.xml"
-    "Command/FastFind/FastFind_Config.cpp"
-    "Command/FastFind/FastFind_Output.cpp"
-    "Command/FastFind/FastFind_Run.cpp"
-    "Command/FastFind/FastFindSqlSchema.xml"
-)
+    source_group(DD FILES ${SRC_DD})
+    list(APPEND SRC_COMMANDS ${SRC_DD})
+    add_compile_definitions(ORC_COMMAND_DD)
+endif()
 
-source_group(FastFind FILES ${SRC_FASTFIND})
+if(ORC_COMMAND_FASTFIND)
+    set(SRC_FASTFIND
+        "Command/FastFind/ConfigFile_FastFind.cpp"
+        "Command/FastFind/ConfigFile_FastFind.h"
+        "Command/FastFind/FastFind.h"
+        "Command/FastFind/FastFindSqlSchema.xml"
+        "Command/FastFind/FastFind_Config.cpp"
+        "Command/FastFind/FastFind_Output.cpp"
+        "Command/FastFind/FastFind_Run.cpp"
+        "Command/FastFind/FastFindSqlSchema.xml"
+    )
+    source_group(FastFind FILES ${SRC_FASTFIND})
+    list(APPEND SRC_COMMANDS ${SRC_FASTFIND})
+    add_compile_definitions(ORC_COMMAND_FASTFIND)
+endif()
 
-set(SRC_FATINFO
-    "Command/FatInfo/ConfigFile_FatInfo.cpp"
-    "Command/FatInfo/ConfigFile_FatInfo.h"
-    "Command/FatInfo/FatInfo.h"
-    "Command/FatInfo/FatInfoSqlSchema.xml"
-    "Command/FatInfo/FatInfo_Config.cpp"
-    "Command/FatInfo/FatInfo_Output.cpp"
-    "Command/FatInfo/FatInfo_Run.cpp"
-    "Command/FatInfo/FatInfoSqlSchema.xml"
-)
+if(ORC_COMMAND_FATINFO)
+    set(SRC_FATINFO
+        "Command/FatInfo/ConfigFile_FatInfo.cpp"
+        "Command/FatInfo/ConfigFile_FatInfo.h"
+        "Command/FatInfo/FatInfo.h"
+        "Command/FatInfo/FatInfoSqlSchema.xml"
+        "Command/FatInfo/FatInfo_Config.cpp"
+        "Command/FatInfo/FatInfo_Output.cpp"
+        "Command/FatInfo/FatInfo_Run.cpp"
+        "Command/FatInfo/FatInfoSqlSchema.xml"
+    )
 
-source_group(FatInfo FILES ${SRC_FATINFO})
+    source_group(FatInfo FILES ${SRC_FATINFO})
+    list(APPEND SRC_COMMANDS ${SRC_FATINFO})
+    add_compile_definitions(ORC_COMMAND_FATINFO)
+endif()
 
-set(SRC_GETSAMPLES
-    "Command/GetSamples/ConfigFile_GetSamples.cpp"
-    "Command/GetSamples/ConfigFile_GetSamples.h"
-    "Command/GetSamples/GetSamples.h"
-    "Command/GetSamples/GetSamplesSchema.xml"
-    "Command/GetSamples/GetSamples_Config.cpp"
-    "Command/GetSamples/GetSamples_Output.cpp"
-    "Command/GetSamples/GetSamples_Run.cpp"
-    "Command/GetSamples/GetSamplesSchema.xml"
-)
+if(ORC_COMMAND_GETSAMPLES)
+    set(SRC_GETSAMPLES
+        "Command/GetSamples/ConfigFile_GetSamples.cpp"
+        "Command/GetSamples/ConfigFile_GetSamples.h"
+        "Command/GetSamples/GetSamples.h"
+        "Command/GetSamples/GetSamplesSchema.xml"
+        "Command/GetSamples/GetSamples_Config.cpp"
+        "Command/GetSamples/GetSamples_Output.cpp"
+        "Command/GetSamples/GetSamples_Run.cpp"
+        "Command/GetSamples/GetSamplesSchema.xml"
+    )
 
-source_group(GetSamples FILES ${SRC_GETSAMPLES})
+    source_group(GetSamples FILES ${SRC_GETSAMPLES})
+    list(APPEND SRC_COMMANDS ${SRC_GETSAMPLES})
+    add_compile_definitions(ORC_COMMAND_GETSAMPLES)
+endif()
 
-set(SRC_GETSECTORS
-    "Command/GetSectors/GetSectors.h"
-    "Command/GetSectors/GetSectorsSchema.xml"
-    "Command/GetSectors/GetSectors_Config.cpp"
-    "Command/GetSectors/GetSectors_Output.cpp"
-    "Command/GetSectors/GetSectors_Run.cpp"
-    "Command/GetSectors/GetSectorsSchema.xml"
-)
+if(ORC_COMMAND_GETSECTORS)
+    set(SRC_GETSECTORS
+        "Command/GetSectors/GetSectors.h"
+        "Command/GetSectors/GetSectorsSchema.xml"
+        "Command/GetSectors/GetSectors_Config.cpp"
+        "Command/GetSectors/GetSectors_Output.cpp"
+        "Command/GetSectors/GetSectors_Run.cpp"
+        "Command/GetSectors/GetSectorsSchema.xml"
+    )
 
-source_group(GetSectors FILES ${SRC_GETSECTORS})
+    source_group(GetSectors FILES ${SRC_GETSECTORS})
+    list(APPEND SRC_COMMANDS ${SRC_GETSECTORS})
+    add_compile_definitions(ORC_COMMAND_GETSECTORS)
+endif()
 
-set(SRC_GETTHIS
-    "Command/GetThis/ConfigFile_GetThis.cpp"
-    "Command/GetThis/ConfigFile_GetThis.h"
-    "Command/GetThis/GetThis.h"
-    "Command/GetThis/GetThisSqlSchema.xml"
-    "Command/GetThis/GetThis_Config.cpp"
-    "Command/GetThis/GetThis_Output.cpp"
-    "Command/GetThis/GetThis_Run.cpp"
-    "Command/GetThis/GetThisSqlSchema.xml"
-)
+if(ORC_COMMAND_GETTHIS)
+    set(SRC_GETTHIS
+        "Command/GetThis/ConfigFile_GetThis.cpp"
+        "Command/GetThis/ConfigFile_GetThis.h"
+        "Command/GetThis/GetThis.h"
+        "Command/GetThis/GetThisSqlSchema.xml"
+        "Command/GetThis/GetThis_Config.cpp"
+        "Command/GetThis/GetThis_Output.cpp"
+        "Command/GetThis/GetThis_Run.cpp"
+        "Command/GetThis/GetThisSqlSchema.xml"
+    )
 
-source_group(GetThis FILES ${SRC_GETTHIS})
+    source_group(GetThis FILES ${SRC_GETTHIS})
+    list(APPEND SRC_COMMANDS ${SRC_GETTHIS})
+    add_compile_definitions(ORC_COMMAND_GETTHIS)
+endif()
 
-set(SRC_NTFSINFO
-    "Command/NTFSInfo/ConfigFile_NTFSInfo.cpp"
-    "Command/NTFSInfo/ConfigFile_NTFSInfo.h"
-    "Command/NTFSInfo/NTFSInfo.h"
-    "Command/NTFSInfo/NTFSInfoSample.xml"
-    "Command/NTFSInfo/NTFSInfoSqlSchema.xml"
-    "Command/NTFSInfo/NTFSInfo_Config.cpp"
-    "Command/NTFSInfo/NTFSInfo_Output.cpp"
-    "Command/NTFSInfo/NTFSInfo_Run.cpp"
-    "Command/NTFSInfo/NTFSInfoSqlSchema.xml"
-)
+if(ORC_COMMAND_NTFSINFO)
+    set(SRC_NTFSINFO
+        "Command/NTFSInfo/ConfigFile_NTFSInfo.cpp"
+        "Command/NTFSInfo/ConfigFile_NTFSInfo.h"
+        "Command/NTFSInfo/NTFSInfo.h"
+        "Command/NTFSInfo/NTFSInfoSample.xml"
+        "Command/NTFSInfo/NTFSInfoSqlSchema.xml"
+        "Command/NTFSInfo/NTFSInfo_Config.cpp"
+        "Command/NTFSInfo/NTFSInfo_Output.cpp"
+        "Command/NTFSInfo/NTFSInfo_Run.cpp"
+        "Command/NTFSInfo/NTFSInfoSqlSchema.xml"
+    )
 
-source_group(NTFSInfo FILES ${SRC_NTFSINFO})
+    source_group(NTFSInfo FILES ${SRC_NTFSINFO})
+    list(APPEND SRC_COMMANDS ${SRC_NTFSINFO})
+    add_compile_definitions(ORC_COMMAND_NTFSINFO)
+endif()
 
-set(SRC_NTFSUTIL
-    "Command/NTFSUtil/NTFSUtil.h"
-    "Command/NTFSUtil/NTFSUtilSqlSchema.xml"
-    "Command/NTFSUtil/NTFSUtil_Config.cpp"
-    "Command/NTFSUtil/NTFSUtil_Output.cpp"
-    "Command/NTFSUtil/NTFSUtil_Run.cpp"
-    "Command/NTFSUtil/NTFSUtilSqlSchema.xml"
-)
+if(ORC_COMMAND_NTFSUTIL)
+    set(SRC_NTFSUTIL
+        "Command/NTFSUtil/NTFSUtil.h"
+        "Command/NTFSUtil/NTFSUtilSqlSchema.xml"
+        "Command/NTFSUtil/NTFSUtil_Config.cpp"
+        "Command/NTFSUtil/NTFSUtil_Output.cpp"
+        "Command/NTFSUtil/NTFSUtil_Run.cpp"
+        "Command/NTFSUtil/NTFSUtilSqlSchema.xml"
+    )
 
-source_group(NTFSUtil FILES ${SRC_NTFSUTIL})
+    source_group(NTFSUtil FILES ${SRC_NTFSUTIL})
+    list(APPEND SRC_COMMANDS ${SRC_NTFSUTIL})
+    add_compile_definitions(ORC_COMMAND_NTFSUTIL)
+endif()
 
-set(SRC_OBJINFO
-    "Command/ObjInfo/ObjInfo.h"
-    "Command/ObjInfo/ObjInfoSqlSchema.xml"
-    "Command/ObjInfo/ObjInfo_Config.cpp"
-    "Command/ObjInfo/ObjInfo_Output.cpp"
-    "Command/ObjInfo/ObjInfo_Run.cpp"
-    "Command/ObjInfo/ObjInfoSqlSchema.xml"
-)
+if(ORC_COMMAND_OBJINFO)
+    set(SRC_OBJINFO
+        "Command/ObjInfo/ObjInfo.h"
+        "Command/ObjInfo/ObjInfoSqlSchema.xml"
+        "Command/ObjInfo/ObjInfo_Config.cpp"
+        "Command/ObjInfo/ObjInfo_Output.cpp"
+        "Command/ObjInfo/ObjInfo_Run.cpp"
+        "Command/ObjInfo/ObjInfoSqlSchema.xml"
+    )
 
-source_group(ObjInfo FILES ${SRC_OBJINFO})
+    source_group(ObjInfo FILES ${SRC_OBJINFO})
+    list(APPEND SRC_COMMANDS ${SRC_OBJINFO})
+    add_compile_definitions(ORC_COMMAND_OBJINFO)
+endif()
 
-set(SRC_REGINFO
-    "Command/RegInfo/ConfigFile_RegInfo.cpp"
-    "Command/RegInfo/ConfigFile_RegInfo.h"
-    "Command/RegInfo/RegInfo.h"
-    "Command/RegInfo/RegInfoSqlSchema.xml"
-    "Command/RegInfo/RegInfo_Config.cpp"
-    "Command/RegInfo/RegInfo_Output.cpp"
-    "Command/RegInfo/RegInfo_Run.cpp"
-    "Command/RegInfo/RegInfoSqlSchema.xml"
-)
+if(ORC_COMMAND_REGINFO)
+    set(SRC_REGINFO
+        "Command/RegInfo/ConfigFile_RegInfo.cpp"
+        "Command/RegInfo/ConfigFile_RegInfo.h"
+        "Command/RegInfo/RegInfo.h"
+        "Command/RegInfo/RegInfoSqlSchema.xml"
+        "Command/RegInfo/RegInfo_Config.cpp"
+        "Command/RegInfo/RegInfo_Output.cpp"
+        "Command/RegInfo/RegInfo_Run.cpp"
+        "Command/RegInfo/RegInfoSqlSchema.xml"
+    )
 
-source_group(RegInfo FILES ${SRC_REGINFO})
+    source_group(RegInfo FILES ${SRC_REGINFO})
+    list(APPEND SRC_COMMANDS ${SRC_REGINFO})
+    add_compile_definitions(ORC_COMMAND_REGINFO)
+endif()
 
-set(SRC_TOOLEMBED
-    "Command/ToolEmbed/ConfigFile_ToolEmbed.cpp"
-    "Command/ToolEmbed/ConfigFile_ToolEmbed.h"
-    "Command/ToolEmbed/ToolEmbed.h"
-    "Command/ToolEmbed/ToolEmbed_Config.cpp"
-    "Command/ToolEmbed/ToolEmbed_Output.cpp"
-    "Command/ToolEmbed/ToolEmbed_Run.cpp"
-)
+if(ORC_COMMAND_TOOLEMBED)
+    set(SRC_TOOLEMBED
+        "Command/ToolEmbed/ConfigFile_ToolEmbed.cpp"
+        "Command/ToolEmbed/ConfigFile_ToolEmbed.h"
+        "Command/ToolEmbed/ToolEmbed.h"
+        "Command/ToolEmbed/ToolEmbed_Config.cpp"
+        "Command/ToolEmbed/ToolEmbed_Output.cpp"
+        "Command/ToolEmbed/ToolEmbed_Run.cpp"
+    )
 
-source_group(ToolEmbed FILES ${SRC_TOOLEMBED})
+    source_group(ToolEmbed FILES ${SRC_TOOLEMBED})
+    list(APPEND SRC_COMMANDS ${SRC_TOOLEMBED})
+    add_compile_definitions(ORC_COMMAND_TOOLEMBED)
+endif()
 
-set(SRC_USNINFO
-    "Command/USNInfo/ConfigFile_USNInfo.cpp"
-    "Command/USNInfo/ConfigFile_USNInfo.h"
-    "Command/USNInfo/USNInfo.h"
-    "Command/USNInfo/USNInfoSqlSchema.xml"
-    "Command/USNInfo/USNInfo_Config.cpp"
-    "Command/USNInfo/USNInfo_Output.cpp"
-    "Command/USNInfo/USNInfo_Run.cpp"
-    "Command/USNInfo/USNInfoSqlSchema.xml"
-)
+if(ORC_COMMAND_USNINFO)
+    set(SRC_USNINFO
+        "Command/USNInfo/ConfigFile_USNInfo.cpp"
+        "Command/USNInfo/ConfigFile_USNInfo.h"
+        "Command/USNInfo/USNInfo.h"
+        "Command/USNInfo/USNInfoSqlSchema.xml"
+        "Command/USNInfo/USNInfo_Config.cpp"
+        "Command/USNInfo/USNInfo_Output.cpp"
+        "Command/USNInfo/USNInfo_Run.cpp"
+        "Command/USNInfo/USNInfoSqlSchema.xml"
+    )
 
-source_group(USNInfo FILES ${SRC_USNINFO})
+    source_group(USNInfo FILES ${SRC_USNINFO})
+    list(APPEND SRC_COMMANDS ${SRC_USNINFO})
+    add_compile_definitions(ORC_COMMAND_USNINFO)
+endif()
 
-set(SRC_WOLFLAUNCHER
-    "Command/WolfLauncher/ConfigFile_WOLFLauncher.cpp"
-    "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
-    "Command/WolfLauncher/ConsoleConfiguration.h"
-    "Command/WolfLauncher/ConsoleConfiguration.cpp"
-    "Command/WolfLauncher/Journal.h"
-    "Command/WolfLauncher/Outcome.h"
-    "Command/WolfLauncher/Outcome.cpp"
-    "Command/WolfLauncher/WolfExecution.cpp"
-    "Command/WolfLauncher/WolfExecution.h"
-    "Command/WolfLauncher/WolfExecution_Config.cpp"
-    "Command/WolfLauncher/WolfExecution_Execute.cpp"
-    "Command/WolfLauncher/WolfLauncher.h"
-    "Command/WolfLauncher/WolfLauncher_Config.cpp"
-    "Command/WolfLauncher/WolfLauncher_Output.cpp"
-    "Command/WolfLauncher/WolfLauncher_Run.cpp"
-    "Command/WolfLauncher/WolfTask.cpp"
-    "Command/WolfLauncher/WolfTask.h"
-    "Command/WolfLauncher/WolfLauncherSqlSchema.xml"
-    "Text/Fmt/WolfPriority.h"
-    "Text/Print/Recipient.h"
-)
+if(ORC_COMMAND_WOLFLAUNCHER)
+    set(SRC_WOLFLAUNCHER
+        "Command/WolfLauncher/ConfigFile_WOLFLauncher.cpp"
+        "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
+        "Command/WolfLauncher/ConsoleConfiguration.h"
+        "Command/WolfLauncher/ConsoleConfiguration.cpp"
+        "Command/WolfLauncher/Journal.h"
+        "Command/WolfLauncher/Outcome.h"
+        "Command/WolfLauncher/Outcome.cpp"
+        "Command/WolfLauncher/WolfExecution.cpp"
+        "Command/WolfLauncher/WolfExecution.h"
+        "Command/WolfLauncher/WolfExecution_Config.cpp"
+        "Command/WolfLauncher/WolfExecution_Execute.cpp"
+        "Command/WolfLauncher/WolfLauncher.h"
+        "Command/WolfLauncher/WolfLauncher_Config.cpp"
+        "Command/WolfLauncher/WolfLauncher_Output.cpp"
+        "Command/WolfLauncher/WolfLauncher_Run.cpp"
+        "Command/WolfLauncher/WolfTask.cpp"
+        "Command/WolfLauncher/WolfTask.h"
+        "Command/WolfLauncher/WolfLauncherSqlSchema.xml"
+        "Text/Fmt/WolfPriority.h"
+        "Text/Print/Recipient.h"
+    )
 
-source_group(WolfLauncher FILES ${SRC_WOLFLAUNCHER})
+    source_group(WolfLauncher FILES ${SRC_WOLFLAUNCHER})
+    list(APPEND SRC_COMMANDS ${SRC_WOLFLAUNCHER})
+    add_compile_definitions(ORC_COMMAND_WOLFLAUNCHER)
+endif()
+
+if(ORC_BUILD_ORC OR ORC_COMMAND_WOLFLAUNCHER) # Building Orc.exe (i.e. Mothership) or WolfLauncher require those files
+    set(SRC_ORC_CONFIG
+        "ConfigFile_OrcConfig.cpp"
+        "ConfigFile_OrcConfig.h"
+    )
+    list(APPEND SRC_COMMANDS ${SRC_ORC_CONFIG})
+endif()
 
 add_library(OrcCommand
     STATIC
         ${SRC}
+        ${SRC_LOG}
         ${SRC_COMMON}
         ${SRC_CONSOLE}
-        ${SRC_DD}
-        ${SRC_FASTFIND}
-        ${SRC_FATINFO}
-        ${SRC_GETSAMPLES}
-        ${SRC_GETSECTORS}
-        ${SRC_GETTHIS}
-        ${SRC_LOG}
-        ${SRC_MOTHERSHIP}
-        ${SRC_NTFSINFO}
-        ${SRC_NTFSUTIL}
-        ${SRC_OBJINFO}
-        ${SRC_REGINFO}
-        ${SRC_TOOLEMBED}
-        ${SRC_USNINFO}
-        ${SRC_WOLFLAUNCHER}
+        ${SRC_COMMANDS}
 )
 
 target_sources(OrcCommand PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/OrcCommand.rc")
