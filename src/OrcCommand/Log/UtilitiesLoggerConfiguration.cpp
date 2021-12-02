@@ -431,7 +431,7 @@ void ApplyConsoleBacktraceTrigger(UtilitiesLogger& utilitiesLogger, const Utilit
     }
     else
     {
-        console->SetBacktraceTrigger(Log::Level::Off);
+        console->SetBacktraceTrigger(Log::Level::Critical);
     }
 }
 
