@@ -536,13 +536,13 @@ Orc::Result<void> ApplyFileConfiguration(UtilitiesLogger& logger, const Utilitie
     }
     else
     {
-        Log::Debug(L"Failed to configure file sink: missing path");
+        Log::Debug("Failed to configure file sink: missing path");
         return std::errc::invalid_argument;
     }
 
     if (encoding != Text::Encoding::Utf8)
     {
-        Log::Warn(L"Log file only support utf-8 encoding, utf-16 option will be overriden with utf-8");
+        Log::Warn("Log file only support utf-8 encoding, utf-16 option will be overriden with utf-8");
         encoding = Text::Encoding::Utf8;
     }
 

@@ -220,7 +220,7 @@ HRESULT PasswordEncryptedStream::Read_(
         }
         else
         {
-            Log::Debug(L"PasswordEncryptedStream is not configured!");
+            Log::Debug("PasswordEncryptedStream is not configured!");
         }
 
         *pcbBytesRead = dwBytesDecrypted;

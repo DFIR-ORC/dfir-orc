@@ -571,19 +571,19 @@ HRESULT YaraScanner::ScanBlocks(const std::shared_ptr<ByteStream>& stream, Match
         case ERROR_INSUFFICIENT_MEMORY:
             return E_OUTOFMEMORY;
         case ERROR_TOO_MANY_SCAN_THREADS:
-            Log::Debug(L"Too many scan threads");
+            Log::Debug("Too many scan threads");
             return E_FAIL;
         case ERROR_SCAN_TIMEOUT:
-            Log::Debug(L"Yara scan timeout");
+            Log::Debug("Yara scan timeout");
             return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
         case ERROR_CALLBACK_ERROR:
-            Log::Debug(L"Yara callback return an error");
+            Log::Debug("Yara callback return an error");
             return E_FAIL;
         case ERROR_TOO_MANY_MATCHES:
-            Log::Debug(L"Too many matches in yara scan");
+            Log::Debug("Too many matches in yara scan");
             return S_OK;
         default:
-            Log::Error(L"Unsupported yara error code [{}]", rv);
+            Log::Error("Unsupported yara error code [{}]", rv);
             return E_FAIL;
     }
 }

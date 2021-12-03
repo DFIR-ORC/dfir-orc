@@ -682,7 +682,7 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     auto request = ArchiveMessage::MakeCompleteRequest();
     Concurrency::send(m_ArchiveMessageBuffer, request);
 
-    Log::Debug(L"WAITING FOR ARCHIVE to COMPLETE");
+    Log::Debug("WAITING FOR ARCHIVE to COMPLETE");
 
     try
     {

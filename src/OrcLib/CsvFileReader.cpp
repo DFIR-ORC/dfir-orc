@@ -112,13 +112,13 @@ HRESULT Orc::TableOutput::CSV::FileReader::OpenStream(
         m_pStream->SetFilePointer(2L, 0L, FILE_BEGIN);
         m_liCurPos.QuadPart = 2LL;
         m_liFilePos.QuadPart = 2LL;
-        Log::Debug(L"UTF16 BOM detected");
+        Log::Debug("UTF16 BOM detected");
     }
     BYTE utf8bom[3] = {0xEF, 0xBB, 0xBF};
     if (Current[0] == utf8bom[0] && Current[1] == utf8bom[1] && Current[2] == utf8bom[2])
     {
         m_csvEncoding = OutputSpec::Encoding::UTF8;
-        Log::Debug(L"UTF8 BOM detected");
+        Log::Debug("UTF8 BOM detected");
         m_pStream->SetFilePointer(3L, 0L, FILE_BEGIN);
         m_liCurPos.QuadPart = 3LL;
         m_liFilePos.QuadPart = 3LL;
@@ -134,7 +134,7 @@ HRESULT Orc::TableOutput::CSV::FileReader::OpenStream(
 
     if (m_csvEncoding == OutputSpec::Encoding::kUnknown)
     {
-        Log::Debug(L"No valid BOM detected, defaulting to UTF8");
+        Log::Debug("No valid BOM detected, defaulting to UTF8");
         m_csvEncoding = OutputSpec::Encoding::UTF8;
     }
 

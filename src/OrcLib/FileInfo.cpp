@@ -1628,7 +1628,7 @@ HRESULT FileInfo::WriteAuthenticodeSignerThumbprint(ITableOutput& output)
         DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
         if (!CertGetCertificateContextProperty(signer, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
         {
-            Log::Debug(L"Failed to extract certificate thumbprint");
+            Log::Debug("Failed to extract certificate thumbprint");
         }
         else
         {
@@ -1712,7 +1712,7 @@ HRESULT FileInfo::WriteAuthenticodeCAThumbprint(ITableOutput& output)
         DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
         if (!CertGetCertificateContextProperty(ca, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
         {
-            Log::Debug(L"Failed to extract certificate thumbprint");
+            Log::Debug("Failed to extract certificate thumbprint");
         }
         else
         {

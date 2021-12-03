@@ -194,7 +194,7 @@ HRESULT ZipCreate::SetCompressionLevel(__in const std::wstring& level)
 {
     if (level.empty())
     {
-        Log::Debug(L"Specified compression level is empty");
+        Log::Debug("Specified compression level is empty");
         return S_OK;
     }
 

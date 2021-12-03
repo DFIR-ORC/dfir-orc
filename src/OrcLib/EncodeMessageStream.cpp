@@ -167,7 +167,7 @@ __data_entrypoint(File) HRESULT EncodeMessageStream::Read_(
     if (cbBytesToRead > MAXDWORD)
         return E_INVALIDARG;
 
-    Log::Debug(L"Cannot read from an EncodeMessageStream");
+    Log::Debug("Cannot read from an EncodeMessageStream");
     return E_NOTIMPL;
 }
 

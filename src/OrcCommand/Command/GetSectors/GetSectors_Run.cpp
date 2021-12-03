@@ -138,7 +138,7 @@ std::wstring Main::getBootDiskName()
             // However we are only interested in the first disk and
             // the array "outBuffer.Extents" we provided is of size 1,
             // so we do not need the additionnal data. We do nothing.
-            Log::Debug(L"Failed IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS: ERROR_MORE_DATA");
+            Log::Debug("Failed IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS: ERROR_MORE_DATA");
         }
         else
         {

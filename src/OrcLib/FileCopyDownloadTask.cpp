@@ -154,7 +154,7 @@ HRESULT FileCopyDownloadTask::Finalise()
         Log::Error(L"Failed to create process: '{}' with cmdLine: '{}' [{}]", strCmdSpec, strCmdLine, SystemError(hr));
         return hr;
     }
-    Log::Debug(L"Successfully created completion process");
+    Log::Debug("Successfully created completion process");
 
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);

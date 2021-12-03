@@ -232,7 +232,7 @@ void Print(
         // NOTE: condition was originally 'read <= 0' but reading the following code this seems more appropriate
         if (buffer.size() <= sizeof(INDEX_ALLOCATION_BUFFER))
         {
-            Log::Debug(L"Incomplete read of INDEX_ALLOCATION_BUFFER size (read: {})", buffer.size());
+            Log::Debug("Incomplete read of INDEX_ALLOCATION_BUFFER size (read: {})", buffer.size());
             break;
         }
 
@@ -244,7 +244,7 @@ void Print(
             hr = MFTUtils::MultiSectorFixup(indexAllocationBuffer, indexRootAttributes.SizePerIndex(), volume);
             if (FAILED(hr))
             {
-                Log::Debug(L"Failed to fix $INDEX_ALLOCATION header [{}]", SystemError(hr));
+                Log::Debug("Failed to fix $INDEX_ALLOCATION header [{}]", SystemError(hr));
                 continue;
             }
 
@@ -306,7 +306,7 @@ void Print(
             hr = MFTUtils::MultiSectorFixup(indexAllocationBuffer, indexRootAttributes.SizePerIndex(), volume);
             if (FAILED(hr))
             {
-                Log::Debug(L"Failed to fix $INDEX_ALLOCATION carved header [{}]", SystemError(hr));
+                Log::Debug("Failed to fix $INDEX_ALLOCATION carved header [{}]", SystemError(hr));
                 continue;
             }
 
@@ -398,7 +398,7 @@ void PrintIndexAttributes(
     HRESULT hr = record.GetIndexAttributes(volume, L"$I30", indexRoot, indexAllocation, bitmap);
     if (FAILED(hr))
     {
-        Log::Debug(L"Failed to find $I30 attributes [{}]", SystemError(hr));
+        Log::Debug("Failed to find $I30 attributes [{}]", SystemError(hr));
         return;
     }
 

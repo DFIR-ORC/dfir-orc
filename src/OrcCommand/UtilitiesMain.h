@@ -696,7 +696,7 @@ protected:
             LPCWSTR pEquals = wcschr(szArg, L'=');
             if (!pEquals)
             {
-                Log::Error(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
+                Log::Critical(L"Option /{} should be like: /{}=<Value>", szOption, szOption);
                 return false;
             }
             else

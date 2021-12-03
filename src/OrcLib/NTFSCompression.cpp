@@ -309,10 +309,10 @@ HRESULT Orc::ntfs_decompress(uint8_t* dest, const size_t dest_size, uint8_t* con
     uint8_t tag; /* Current tag. */
     int token; /* Loop counter for the eight tokens in tag. */
 
-    Log::Debug(L"Entering, cb_size = {:#x}", cb_size);
+    Log::Trace("Entering, cb_size = {:#x}", cb_size);
 
 do_next_sb:
-    Log::Debug(L"Beginning sub-block at offset {} in the cb", (int)(cb - cb_start));
+    Log::Trace("Beginning sub-block at offset {} in the cb", (int)(cb - cb_start));
     /*
      * Have we reached the end of the compression block or the end of the
      * decompressed data?  The latter can happen for example if the current
@@ -321,7 +321,7 @@ do_next_sb:
      */
     if (cb == cb_end || !le16_to_cpup((uint16_t*)cb) || dest == dest_end)
     {
-        Log::Debug(L"Completed. Returning success (0)");
+        Log::Trace("Completed. Returning success (0)");
         return S_OK;
     }
     /* Setup offset for the current sub-block destination. */
@@ -342,7 +342,7 @@ do_next_sb:
     /* Now, we are ready to process the current sub-block (sb). */
     if (!(le16_to_cpup((uint16_t*)cb) & NTFS_SB_IS_COMPRESSED))
     {
-        Log::Debug(L"Found uncompressed sub-block");
+        Log::Trace("Found uncompressed sub-block");
         /* This sb is not compressed, just copy it into destination. */
         /* Advance source position to first data byte. */
         cb += 2;
@@ -356,7 +356,7 @@ do_next_sb:
         dest += NTFS_SB_SIZE;
         goto do_next_sb;
     }
-    Log::Debug(L"Found compressed sub-block");
+    Log::Trace("Found compressed sub-block");
     /* This sb is compressed, decompress it into destination. */
     /* Forward to the first tag in the sub-block. */
     cb += 2;
@@ -368,7 +368,7 @@ do_next_tag:
         {
             int nr_bytes = (int)(dest_sb_end - dest);
 
-            Log::Debug(L"Filling incomplete sub-block with zeroes");
+            Log::Trace("Filling incomplete sub-block with zeroes");
             /* Zero remainder and update destination position. */
             memset(dest, 0, nr_bytes);
             dest += nr_bytes;

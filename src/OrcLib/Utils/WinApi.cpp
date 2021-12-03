@@ -84,7 +84,7 @@ std::wstring GetWorkingDirectoryApi(size_t cbMaxOutput, std::error_code& ec) noe
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
-            Log::Debug(L"Failed GetWorkingDirectoryApi [{}]", ec);
+            Log::Debug("Failed GetWorkingDirectoryApi [{}]", ec);
             return {};
         }
 
@@ -125,7 +125,7 @@ std::wstring GetTempPathApi(size_t cbMaxOutput, std::error_code& ec) noexcept
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
-            Log::Debug(L"Failed GetTempPathApi [{}]", ec);
+            Log::Debug("Failed GetTempPathApi [{}]", ec);
             return {};
         }
 
@@ -168,7 +168,7 @@ GetTempFileNameApi(const wchar_t* lpPathName, const wchar_t* lpPrefixString, UIN
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
-            Log::Debug(L"Failed GetTempFileNameApi [{}]", ec);
+            Log::Debug("Failed GetTempFileNameApi [{}]", ec);
             return {};
         }
 
@@ -210,7 +210,7 @@ std::wstring GetModuleFileNameApi(HMODULE hModule, size_t cbMaxOutput, std::erro
         if (lastError != ERROR_SUCCESS)
         {
             ec.assign(lastError, std::system_category());
-            Log::Debug(L"Failed GetModuleFileNameApi [{}]", ec);
+            Log::Debug("Failed GetModuleFileNameApi [{}]", ec);
             return {};
         }
 
@@ -223,7 +223,7 @@ std::wstring GetModuleFileNameApi(HMODULE hModule, size_t cbMaxOutput, std::erro
             // ERROR_SUCCESS.
             //
             ec.assign(ERROR_INSUFFICIENT_BUFFER, std::system_category());
-            Log::Debug(L"Failed GetModuleFileNameApi [{}]", ec);
+            Log::Debug("Failed GetModuleFileNameApi [{}]", ec);
             return {};
         }
 
@@ -265,7 +265,7 @@ std::wstring GetModuleFileNameExApi(HANDLE hProcess, HMODULE hModule, size_t cbM
         if (cch == 0 || lastError != ERROR_SUCCESS)
         {
             ec.assign(lastError, std::system_category());
-            Log::Debug(L"Failed GetModuleFileNameExApi [{}]", ec);
+            Log::Debug("Failed GetModuleFileNameExApi [{}]", ec);
             return {};
         }
 
@@ -307,7 +307,7 @@ std::wstring GetComputerNameApi(size_t cbMaxOutput, std::error_code& ec) noexcep
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
-            Log::Debug(L"Failed GetComputerNameW [{}]", ec);
+            Log::Debug("Failed GetComputerNameW [{}]", ec);
             return {};
         }
 
@@ -349,7 +349,7 @@ std::wstring GetComputerNameExApi(ComputerNameFormat format, size_t cbMaxOutput,
         if (cch == 0)
         {
             ec.assign(::GetLastError(), std::system_category());
-            Log::Debug(L"Failed GetComputerNameW [{}]", ec);
+            Log::Debug("Failed GetComputerNameW [{}]", ec);
             return {};
         }
 

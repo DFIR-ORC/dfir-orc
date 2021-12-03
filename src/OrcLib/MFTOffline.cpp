@@ -68,13 +68,13 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         if (!ReadFile(m_pVolReader->GetHandle(), buffer.GetData(), m_pVolReader->GetBytesPerFRS(), &dwBytesRead, NULL))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Could not read in MFT file [{}]", SystemError(hr));
+            Log::Error("Could not read in MFT file [{}]", SystemError(hr));
             return hr;
         }
 
         if (dwBytesRead != m_pVolReader->GetBytesPerFRS())
         {
-            Log::Debug(L"Reached end of offline MFT [{}]", SystemError(hr));
+            Log::Debug("Reached end of offline MFT [{}]", SystemError(hr));
             return S_OK;
         }
 
@@ -214,10 +214,10 @@ HRESULT MFTOffline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTU
             }
             else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
-                Log::Debug(L"Add Record Callback asks for enumeration to stop... [{}]", SystemError(hr));
+                Log::Debug("Add Record Callback asks for enumeration to stop... [{}]", SystemError(hr));
                 return hr;
             }
-            Log::Debug(L"WARNING: Add Record Callback failed");
+            Log::Debug("WARNING: Add Record Callback failed");
         }
     }
 
@@ -232,7 +232,7 @@ ULONG MFTOffline::GetMFTRecordCount() const
 
     if (FileSize.QuadPart % m_pVolReader->GetBytesPerFRS())
     {
-        Log::Debug(L"Weird, MFT size is not a multiple of records...");
+        Log::Debug("Weird, MFT size is not a multiple of records...");
     }
 
     return FileSize.LowPart / m_pVolReader->GetBytesPerFRS();

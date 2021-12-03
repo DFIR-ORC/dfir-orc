@@ -95,7 +95,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     else
     {
-        Log::Debug(L"INFO: No statisfactory ouput in config file");
+        Log::Debug("INFO: No statisfactory ouput in config file");
     }
 
     if (configitem[REGINFO_CSVLIMIT])

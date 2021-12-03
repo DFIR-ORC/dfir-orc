@@ -2912,7 +2912,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
         boost::algorithm::boyer_moore<BYTE*> boyermoore(aTerm->Contains.begin(), aTerm->Contains.end());
@@ -3729,7 +3729,7 @@ HRESULT FileFind::EvaluateMatchCallCallback(
 
     if (hr == S_OK)
     {
-        Log::Debug(L"Match has been excluded");
+        Log::Debug("Match has been excluded");
         return S_OK;
     }
 
@@ -4203,7 +4203,7 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
             }
             else
             {
-                Log::Debug(L"Done!");
+                Log::Debug("Done");
                 walk.Statistics(L"Done");
             }
         }

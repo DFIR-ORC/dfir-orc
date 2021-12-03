@@ -282,7 +282,7 @@ HRESULT Main::Run()
 
         if (config.Count.QuadPart > 0LL && ullBlockCount >= config.Count.QuadPart)
         {
-            Log::Debug(L"Read accounted blocks from input stream");
+            Log::Debug("Read accounted blocks from input stream");
             break;
         }
     }

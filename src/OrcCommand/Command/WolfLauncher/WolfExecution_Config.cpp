@@ -516,14 +516,14 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
     if (_wcsicmp(item.strName.c_str(), L"restrictions"))
     {
-        Log::Debug(L"item passed is not restrictions");
+        Log::Debug("item passed is not restrictions");
         return E_INVALIDARG;
     }
 
     WORD arch = 0;
     if (FAILED(hr = SystemDetails::GetArchitecture(arch)))
     {
-        Log::Warn(L"Failed to retrieve architecture [{}]", SystemError(hr));
+        Log::Warn("Failed to retrieve architecture [{}]", SystemError(hr));
         return hr;
     }
 
@@ -812,7 +812,7 @@ HRESULT WolfExecution::SetCompressionLevel(const std::wstring& level)
 {
     if (level.empty())
     {
-        Log::Debug(L"Specified compression level is empty");
+        Log::Debug("Specified compression level is empty");
         return S_OK;
     }
 

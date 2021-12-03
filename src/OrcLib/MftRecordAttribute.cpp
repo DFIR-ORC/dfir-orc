@@ -428,8 +428,9 @@ HRESULT MftRecordAttribute::GetStreams(
             case 2:
             case 3: {
                 Log::Info(
-                    L"INFO: Collect record with unsupported compression unit value: {}",
+                    "Collect record with unsupported compression unit value: {}",
                     m_pHeader->Form.Nonresident.CompressionUnit);
+
                 auto stream = make_shared<NTFSStream>();
                 if (FAILED(hr = stream->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
@@ -450,14 +451,14 @@ HRESULT MftRecordAttribute::GetStreams(
                 auto rawdata = make_shared<NTFSStream>();
                 if (FAILED(hr = rawdata->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
-                    Log::Error(L"Failed to open NTFSStream [{}]", SystemError(hr));
+                    Log::Error("Failed to open NTFSStream [{}]", SystemError(hr));
                     return hr;
                 }
 
                 auto datastream = make_shared<UncompressNTFSStream>();
                 if (FAILED(hr = datastream->Open(rawdata, 16 * pVolReader->GetBytesPerCluster())))
                 {
-                    Log::Error(L"Failed to open UncompressNTFSStream [{}]", SystemError(hr));
+                    Log::Error("Failed to open UncompressNTFSStream [{}]", SystemError(hr));
                     return hr;
                 }
                 else if (hr == S_FALSE)
@@ -612,7 +613,7 @@ HRESULT MftRecordAttribute::GetHashInformation(
 
     if (FAILED(hr = stream->SetFilePointer(0LL, SEEK_SET, nullptr)))
     {
-        Log::Debug(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+        Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
         return hr;
     }
 
@@ -629,7 +630,7 @@ HRESULT MftRecordAttribute::GetHashInformation(
 
     if (FAILED(hr = stream->SetFilePointer(0LL, SEEK_SET, nullptr)))
     {
-        Log::Debug(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+        Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
         return hr;
     }
 

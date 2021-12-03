@@ -613,14 +613,14 @@ HRESULT RegFlushKeys()
     bool bSuccess = true;
     DWORD dwGLE = 0L;
 
-    Log::Debug(L"Flushing HKEY_LOCAL_MACHINE");
+    Log::Debug("Flushing HKEY_LOCAL_MACHINE");
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
     {
         bSuccess = false;
     }
 
-    Log::Debug(L"Flushing HKEY_USERS");
+    Log::Debug("Flushing HKEY_USERS");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
     {
