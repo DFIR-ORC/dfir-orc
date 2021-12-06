@@ -14,7 +14,7 @@
 #pragma managed(push, off)
 
 namespace Orc {
-class ORCLIB_API YaraStaticExtension
+class YaraStaticExtension
 {
 public:
     YaraStaticExtension() {}

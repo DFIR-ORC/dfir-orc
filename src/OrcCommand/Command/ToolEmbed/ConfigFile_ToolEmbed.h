@@ -58,7 +58,7 @@ HRESULT file(ConfigItem& parent, DWORD dwIndex);
 HRESULT pair(ConfigItem& parent, DWORD dwIndex);
 
 // <ToolEmbed>
-ORCLIB_API HRESULT root(ConfigItem& item);
+HRESULT root(ConfigItem& item);
 
 }  // namespace Orc::Config::ToolEmbed
 

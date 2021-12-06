@@ -36,5 +36,5 @@ constexpr auto GETSAMPLES_NOLIMITS = 12L;
 constexpr auto GETSAMPLES_NOSIGCHECK = 13L;
 
 namespace Orc::Config::GetSamples {
-ORCLIB_API HRESULT root(ConfigItem& item);
+HRESULT root(ConfigItem& item);
 }

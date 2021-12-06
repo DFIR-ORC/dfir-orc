@@ -20,7 +20,7 @@ class VolumeReader;
 class DataDetails;
 class FatFileEntry;
 
-class ORCLIB_API FatFileInfo : public FileInfo
+class FatFileInfo : public FileInfo
 {
 public:
     FatFileInfo(

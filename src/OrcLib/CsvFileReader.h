@@ -20,7 +20,7 @@ class ByteStream;
 
 namespace TableOutput::CSV {
 
-class ORCLIB_API FileReader
+class FileReader
 {
 
 public:

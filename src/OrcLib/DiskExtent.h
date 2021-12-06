@@ -14,7 +14,7 @@
 
 namespace Orc {
 
-class ORCLIB_API CDiskExtent : public IDiskExtent
+class CDiskExtent : public IDiskExtent
 {
     friend class CompleteVolumeReader;
     friend class PartitionTable;

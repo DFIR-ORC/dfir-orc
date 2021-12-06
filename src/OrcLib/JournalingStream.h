@@ -13,7 +13,7 @@
 
 namespace Orc {
 
-class ORCLIB_API JournalingStream : public ChainingStream
+class JournalingStream : public ChainingStream
 {
 private:
     ULONGLONG m_ullCurrentPosition = 0LL;

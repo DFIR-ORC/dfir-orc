@@ -14,7 +14,7 @@
 
 namespace Orc {
 
-class ORCLIB_API VHDVolumeReader : public CompleteVolumeReader
+class VHDVolumeReader : public CompleteVolumeReader
 {
 public:
     typedef enum _DiskType
@@ -75,7 +75,7 @@ public:
     ~VHDVolumeReader(void);
 };
 
-class ORCLIB_API FixedVHDVolumeReader : public VHDVolumeReader
+class FixedVHDVolumeReader : public VHDVolumeReader
 {
 
 protected:

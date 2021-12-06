@@ -12,15 +12,15 @@
 
 namespace Orc {
 
-ORCLIB_API HRESULT SetPrivilege(WCHAR* szPrivilege, BOOL bEnablePrivilege);
+HRESULT SetPrivilege(WCHAR* szPrivilege, BOOL bEnablePrivilege);
 
-ORCLIB_API HRESULT GetMyCurrentSID(PSID& pSid);
+HRESULT GetMyCurrentSID(PSID& pSid);
 
-ORCLIB_API HRESULT GetObjectOwnerSID(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pSid);
+HRESULT GetObjectOwnerSID(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pSid);
 
-ORCLIB_API HRESULT TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPreviousOwnerSid);
+HRESULT TakeOwnership(SE_OBJECT_TYPE objType, HANDLE hObject, PSID& pPreviousOwnerSid);
 
-ORCLIB_API HRESULT GrantAccess(SE_OBJECT_TYPE objType, HANDLE hObject, PSID pSid, ACCESS_MASK mask);
+HRESULT GrantAccess(SE_OBJECT_TYPE objType, HANDLE hObject, PSID pSid, ACCESS_MASK mask);
 
 }  // namespace Orc
 

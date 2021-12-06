@@ -23,7 +23,7 @@
 
 namespace Orc {
 
-class ORCLIB_API EmbeddedResource
+class EmbeddedResource
 {
 public:
     class EmbedSpec

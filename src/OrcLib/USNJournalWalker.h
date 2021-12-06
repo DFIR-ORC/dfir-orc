@@ -18,7 +18,7 @@
 namespace Orc {
 class MountedVolumeReader;
 
-class ORCLIB_API USNJournalWalker
+class USNJournalWalker
     : public USNJournalWalkerBase
     , public IUSNJournalWalker
 {

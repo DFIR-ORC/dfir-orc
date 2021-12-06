@@ -22,5 +22,5 @@ constexpr auto DD_LOG = 3L;
 constexpr auto DD_EMPTYTOOL = 0L;
 
 namespace Orc::Config::DD {
-ORCLIB_API HRESULT root(ConfigItem& parent);
+HRESULT root(ConfigItem& parent);
 }

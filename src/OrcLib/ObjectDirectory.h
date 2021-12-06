@@ -16,7 +16,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ObjectDirectory
+class ObjectDirectory
 {
 public:
     enum ObjectType
@@ -54,7 +54,7 @@ public:
 
     static const FlagsDefinition g_ObjectTypeDefinition[];
 
-    class ORCLIB_API ObjectInstance
+    class ObjectInstance
     {
     public:
         ObjectType Type = ObjectType::Invalid;

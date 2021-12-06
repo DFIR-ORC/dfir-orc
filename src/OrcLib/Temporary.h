@@ -16,9 +16,9 @@
 
 namespace Orc {
 
-HRESULT ORCLIB_API UtilGetTempDirPath(__out_ecount(dwPathSize) PWSTR pwzTempDir, __in DWORD dwPathSize);
+HRESULT UtilGetTempDirPath(__out_ecount(dwPathSize) PWSTR pwzTempDir, __in DWORD dwPathSize);
 
-HRESULT ORCLIB_API UtilGetTempFile(
+HRESULT UtilGetTempFile(
     __out_opt HANDLE* phFile,
     __in_opt PCWSTR pwszDir,
     __in PCWSTR pwszExt,
@@ -28,7 +28,7 @@ HRESULT ORCLIB_API UtilGetTempFile(
     __in_opt DWORD dwShareMode = FILE_SHARE_READ,
     __in_opt DWORD dwFlags = 0);
 
-HRESULT ORCLIB_API UtilGetTempFile(
+HRESULT UtilGetTempFile(
     __out_opt HANDLE* phFile,
     __in_opt PCWSTR pwszDir,
     __in PCWSTR pwszExt,
@@ -37,8 +37,8 @@ HRESULT ORCLIB_API UtilGetTempFile(
     __in_opt DWORD dwShareMode = FILE_SHARE_READ,
     __in_opt DWORD dwFlags = 0);
 
-HRESULT ORCLIB_API UtilGetUniquePath(__in PCWSTR pwzDir, __in PCWSTR pwzDesiredName, __out std::wstring& pstrDestPath);
-HRESULT ORCLIB_API UtilGetUniquePath(
+HRESULT UtilGetUniquePath(__in PCWSTR pwzDir, __in PCWSTR pwzDesiredName, __out std::wstring& pstrDestPath);
+HRESULT UtilGetUniquePath(
     __in PCWSTR pwzDir,
     __in PCWSTR pwzDesiredName,
     __out std::wstring& pstrDestPath,
@@ -46,18 +46,18 @@ HRESULT ORCLIB_API UtilGetUniquePath(
     __in DWORD dwFlags = FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
     LPCWSTR szSDDL = NULL);
 
-HRESULT ORCLIB_API UtilGetPath(__in PCWSTR pwzDir, __in PCWSTR pwzDesiredName, __out std::wstring& pstrDestPath);
+HRESULT UtilGetPath(__in PCWSTR pwzDir, __in PCWSTR pwzDesiredName, __out std::wstring& pstrDestPath);
 
-BOOL ORCLIB_API UtilPathIsDirectory(__in PCWSTR pwszPath);
+BOOL UtilPathIsDirectory(__in PCWSTR pwszPath);
 
-HRESULT ORCLIB_API UtilDeleteTemporaryFile(LPCWSTR pszPath);
-HRESULT ORCLIB_API UtilDeleteTemporaryFile(const std::filesystem::path& path);
+HRESULT UtilDeleteTemporaryFile(LPCWSTR pszPath);
+HRESULT UtilDeleteTemporaryFile(const std::filesystem::path& path);
 
-HRESULT ORCLIB_API UtilDeleteTemporaryDirectory(const std::filesystem::path& path);
+HRESULT UtilDeleteTemporaryDirectory(const std::filesystem::path& path);
 
 static constexpr auto DELETION_RETRIES = 50;
 
-HRESULT ORCLIB_API UtilDeleteTemporaryFile(__in LPCWSTR pszPath, DWORD dwMaxRetries);
+HRESULT UtilDeleteTemporaryFile(__in LPCWSTR pszPath, DWORD dwMaxRetries);
 
 }  // namespace Orc
 

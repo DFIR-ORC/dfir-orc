@@ -164,10 +164,10 @@ private:
     bool m_hasPendingScopedProfiler;  // Ensure no more than one scope is used in the call tree
 };
 
-class ORCLIB_API FileFind
+class FileFind
 {
 public:
-    class ORCLIB_API SearchTerm
+    class SearchTerm
     {
     public:
         using Ptr = std::shared_ptr<SearchTerm>;
@@ -343,7 +343,7 @@ public:
         const std::wstring& GetRule() const { return m_rule; }
     };
 
-    class ORCLIB_API Match
+    class Match
     {
     public:
         class NameMatch

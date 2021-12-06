@@ -24,7 +24,7 @@ namespace Orc {
 
 class JobObject;
 
-class ORCLIB_API OnComplete
+class OnComplete
 {
 
 public:
@@ -144,7 +144,7 @@ private:
     std::shared_ptr<OnCompleteTerminationHandler> m_pTerminationHandler;
 };
 
-class ORCLIB_API CommandExecute
+class CommandExecute
 {
     friend class CommandAgent;
 

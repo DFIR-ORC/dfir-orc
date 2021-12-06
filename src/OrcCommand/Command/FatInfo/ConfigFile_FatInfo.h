@@ -21,5 +21,5 @@ constexpr auto FATINFO_COMPUTER = 6L;
 constexpr auto FATINFO_POP_SYS_OBJ = 7L;
 
 namespace Orc::Config::FatInfo {
-ORCLIB_API HRESULT root(ConfigItem& parent);
+HRESULT root(ConfigItem& parent);
 }

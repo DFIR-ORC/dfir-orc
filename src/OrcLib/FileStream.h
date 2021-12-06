@@ -19,7 +19,7 @@
 
 namespace Orc {
 
-class ORCLIB_API FileStream : public ByteStream
+class FileStream : public ByteStream
 {
 public:
     FileStream()

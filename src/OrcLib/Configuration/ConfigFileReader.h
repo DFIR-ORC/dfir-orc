@@ -20,7 +20,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ConfigFileReader : public ConfigFile
+class ConfigFileReader : public ConfigFile
 {
 private:
     std::shared_ptr<XmlLiteExtension> m_xmllite;

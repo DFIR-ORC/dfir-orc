@@ -82,5 +82,5 @@ namespace Orc::Config::Wolf {
 
 HRESULT recipient(ConfigItem& parent, DWORD dwIndex);
 
-ORCLIB_API HRESULT root(ConfigItem& item);
+HRESULT root(ConfigItem& item);
 }  // namespace Orc::Config::Wolf

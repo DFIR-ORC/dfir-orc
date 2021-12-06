@@ -13,7 +13,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ChainingStream : public ByteStream
+class ChainingStream : public ByteStream
 {
 protected:
     std::shared_ptr<ByteStream> m_pChainedStream;

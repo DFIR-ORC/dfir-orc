@@ -12,7 +12,7 @@
 
 namespace Orc {
 
-class ORCLIB_API DecodeMessageStream : public MessageStream
+class DecodeMessageStream : public MessageStream
 {
 private:
     CMSG_CTRL_DECRYPT_PARA m_DecryptParam;

@@ -22,7 +22,7 @@ struct OutputOptions
     virtual ~OutputOptions() {};
 };
 
-class ORCLIB_API OutputWriter
+class OutputWriter
 {
 public:
     virtual ~OutputWriter() {}

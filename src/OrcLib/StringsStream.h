@@ -16,7 +16,7 @@
 
 namespace Orc {
 
-class ORCLIB_API StringsStream : public ChainingStream
+class StringsStream : public ChainingStream
 {
 public:
     typedef struct _Options

@@ -17,7 +17,7 @@ namespace Orc {
 
 class FileInfo;
 
-class ORCLIB_API PEInfo
+class PEInfo
 {
 public:
     PEInfo(FileInfo& fileInfo);

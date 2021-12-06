@@ -20,7 +20,7 @@
 
 namespace Orc {
 
-class ORCLIB_API PSAPIExtension : public ExtensionLibrary
+class PSAPIExtension : public ExtensionLibrary
 {
 
 public:

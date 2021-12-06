@@ -16,7 +16,7 @@ namespace Orc {
 
 class OfflineMFTReader;
 
-class ORCLIB_API MFTOffline : public IMFT
+class MFTOffline : public IMFT
 {
 public:
     MFTOffline(std::shared_ptr<OfflineMFTReader>& volReader);

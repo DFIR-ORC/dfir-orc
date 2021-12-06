@@ -18,7 +18,7 @@ namespace Orc {
 
 class CBinaryBuffer;
 
-class ORCLIB_API CacheStream : public ByteStream
+class CacheStream : public ByteStream
 {
 public:
     using CacheBuffer = std::array<uint8_t, 512000>;

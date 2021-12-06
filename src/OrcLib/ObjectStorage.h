@@ -16,7 +16,7 @@ namespace Orc {
 static const DWORD g_FreePattern = 0xDDDDDDDD;
 static const DWORD g_FreshPattern = 0xCCCCCCCC;
 
-class ORCLIB_API ObjectStorage
+class ObjectStorage
 {
 
 private:

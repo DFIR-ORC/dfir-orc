@@ -20,7 +20,7 @@ namespace Orc {
 class Location;
 class VolumeReader;
 
-class ORCLIB_API IUSNJournalWalker
+class IUSNJournalWalker
 {
 
 public:

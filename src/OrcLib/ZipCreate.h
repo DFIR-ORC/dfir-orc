@@ -22,7 +22,7 @@ namespace Orc {
 class ZipLibrary;
 class TemporaryStream;
 
-class ORCLIB_API ZipCreate : public ArchiveCreate
+class ZipCreate : public ArchiveCreate
 {
     friend class ArchiveCreate;
 

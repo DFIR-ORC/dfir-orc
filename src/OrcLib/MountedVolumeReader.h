@@ -17,7 +17,7 @@ constexpr auto MAX_VOLUME_NAME = MAX_PATH;
 
 namespace Orc {
 // CNtfs
-class ORCLIB_API MountedVolumeReader : public CompleteVolumeReader
+class MountedVolumeReader : public CompleteVolumeReader
 {
 public:
     MountedVolumeReader(MountedVolumeReader&&) noexcept = default;

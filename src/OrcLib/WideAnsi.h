@@ -22,20 +22,20 @@ namespace Orc {
 
 class CBinaryBuffer;
 
-HRESULT ORCLIB_API WideToAnsi(
+HRESULT WideToAnsi(
     __in_ecount(cchSrc) PCWSTR pwszSrc,
     __in DWORD cchSrc,
     __out_ecount(cchDest) PSTR pszDest,
     __in DWORD cchDest);
-HRESULT ORCLIB_API WideToAnsi(__in PCWSTR pwszSrc, __out_ecount(cchDest) PSTR pszDest, __in DWORD cchDest);
-HRESULT ORCLIB_API WideToAnsi(__in const std::wstring& src, std::string& dest);
-HRESULT ORCLIB_API WideToAnsi(__in const std::wstring_view& src, std::string& dest);
-HRESULT ORCLIB_API WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cchSrc, CBinaryBuffer& dest);
-HRESULT ORCLIB_API WideToAnsi(__in PCWSTR pwszSrc, CBinaryBuffer& dest);
-HRESULT ORCLIB_API WideToAnsi(__in PCWSTR pszSrc, std::string& dest);
+HRESULT WideToAnsi(__in PCWSTR pwszSrc, __out_ecount(cchDest) PSTR pszDest, __in DWORD cchDest);
+HRESULT WideToAnsi(__in const std::wstring& src, std::string& dest);
+HRESULT WideToAnsi(__in const std::wstring_view& src, std::string& dest);
+HRESULT WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cchSrc, CBinaryBuffer& dest);
+HRESULT WideToAnsi(__in PCWSTR pwszSrc, CBinaryBuffer& dest);
+HRESULT WideToAnsi(__in PCWSTR pszSrc, std::string& dest);
 
 template <size_t _DeclElts>
-HRESULT ORCLIB_API WideToAnsi(__in const std::wstring_view src, Buffer<CHAR, _DeclElts>& dest)
+HRESULT WideToAnsi(__in const std::wstring_view src, Buffer<CHAR, _DeclElts>& dest)
 {
 
     using namespace std;
@@ -85,7 +85,7 @@ HRESULT ORCLIB_API WideToAnsi(__in const std::wstring_view src, Buffer<CHAR, _De
 }
 
 template <size_t _DeclElts>
-HRESULT ORCLIB_API WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cchSrc, Buffer<CHAR, _DeclElts>& dest)
+HRESULT WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cchSrc, Buffer<CHAR, _DeclElts>& dest)
 {
 
     using namespace std;
@@ -134,7 +134,7 @@ HRESULT ORCLIB_API WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cch
 }
 
 template <size_t _DeclElts>
-HRESULT ORCLIB_API WideToAnsi(PCWSTR pwszSrc, Buffer<CHAR, _DeclElts>& dest)
+HRESULT WideToAnsi(PCWSTR pwszSrc, Buffer<CHAR, _DeclElts>& dest)
 {
 
     using namespace std;
@@ -175,26 +175,26 @@ HRESULT ORCLIB_API WideToAnsi(PCWSTR pwszSrc, Buffer<CHAR, _DeclElts>& dest)
     return S_OK;
 }
 
-std::pair<HRESULT, std::string> ORCLIB_API WideToAnsi(__in PCWSTR pwszSrc);
-std::pair<HRESULT, std::string> ORCLIB_API WideToAnsi(__in const std::wstring& strSrc);
-std::pair<HRESULT, std::string> ORCLIB_API WideToAnsi(__in const std::wstring_view& strSrc);
+std::pair<HRESULT, std::string> WideToAnsi(__in PCWSTR pwszSrc);
+std::pair<HRESULT, std::string> WideToAnsi(__in const std::wstring& strSrc);
+std::pair<HRESULT, std::string> WideToAnsi(__in const std::wstring_view& strSrc);
 
-HRESULT ORCLIB_API AnsiToWide(
+HRESULT AnsiToWide(
     __in_ecount(cchSrc) PCSTR pszSrc,
     __in DWORD cchSrc,
     __out_ecount(cchDest) PWSTR pwzDest,
     __in DWORD cchDest);
-HRESULT ORCLIB_API AnsiToWide(__in PCSTR pszSrc, __out_ecount(cchDest) PWSTR pwzDest, __in DWORD cchDest);
-HRESULT ORCLIB_API AnsiToWide(__in const std::string& src, std::wstring& dest);
-HRESULT ORCLIB_API AnsiToWide(__in const std::string_view& src, std::wstring& dest);
-HRESULT ORCLIB_API AnsiToWide(__in_ecount(cchSrc) PCSTR pszSrc, __in DWORD cchSrc, CBinaryBuffer& dest);
-HRESULT ORCLIB_API AnsiToWide(__in PCSTR pszSrc, CBinaryBuffer& dest);
+HRESULT AnsiToWide(__in PCSTR pszSrc, __out_ecount(cchDest) PWSTR pwzDest, __in DWORD cchDest);
+HRESULT AnsiToWide(__in const std::string& src, std::wstring& dest);
+HRESULT AnsiToWide(__in const std::string_view& src, std::wstring& dest);
+HRESULT AnsiToWide(__in_ecount(cchSrc) PCSTR pszSrc, __in DWORD cchSrc, CBinaryBuffer& dest);
+HRESULT AnsiToWide(__in PCSTR pszSrc, CBinaryBuffer& dest);
 
-HRESULT ORCLIB_API AnsiToWide(__in PCSTR pszSrc, __in DWORD cchSrc, std::wstring& dest);
-HRESULT ORCLIB_API AnsiToWide(__in PCSTR pszSrc, std::wstring& dest);
+HRESULT AnsiToWide(__in PCSTR pszSrc, __in DWORD cchSrc, std::wstring& dest);
+HRESULT AnsiToWide(__in PCSTR pszSrc, std::wstring& dest);
 
 template <size_t _DeclElts>
-HRESULT ORCLIB_API AnsiToWide(__in const std::string_view src, Buffer<WCHAR, _DeclElts>& dest)
+HRESULT AnsiToWide(__in const std::string_view src, Buffer<WCHAR, _DeclElts>& dest)
 {
     HRESULT hr = E_FAIL;
     DWORD cchSize = 0;
@@ -236,7 +236,7 @@ HRESULT ORCLIB_API AnsiToWide(__in const std::string_view src, Buffer<WCHAR, _De
 }
 
 template <size_t _DeclElts>
-HRESULT ORCLIB_API AnsiToWide(__in_ecount(cchSrc) PCSTR pwszSrc, __in DWORD cchSrc, Buffer<WCHAR, _DeclElts>& dest)
+HRESULT AnsiToWide(__in_ecount(cchSrc) PCSTR pwszSrc, __in DWORD cchSrc, Buffer<WCHAR, _DeclElts>& dest)
 {
 
     HRESULT hr = E_FAIL;
@@ -277,7 +277,7 @@ HRESULT ORCLIB_API AnsiToWide(__in_ecount(cchSrc) PCSTR pwszSrc, __in DWORD cchS
 }
 
 template <size_t _DeclElts>
-HRESULT ORCLIB_API AnsiToWide(PCSTR pwszSrc, Buffer<WCHAR, _DeclElts>& dest)
+HRESULT AnsiToWide(PCSTR pwszSrc, Buffer<WCHAR, _DeclElts>& dest)
 {
     HRESULT hr = E_FAIL;
     DWORD cchSize = 0;
@@ -316,9 +316,9 @@ HRESULT ORCLIB_API AnsiToWide(PCSTR pwszSrc, Buffer<WCHAR, _DeclElts>& dest)
     return S_OK;
 }
 
-std::pair<HRESULT, std::wstring> ORCLIB_API AnsiToWide(__in PCSTR pwszSrc);
-std::pair<HRESULT, std::wstring> ORCLIB_API AnsiToWide(__in const std::string& strSrc);
-std::pair<HRESULT, std::wstring> ORCLIB_API AnsiToWide(__in const std::string_view& strSrc);
+std::pair<HRESULT, std::wstring> AnsiToWide(__in PCSTR pwszSrc);
+std::pair<HRESULT, std::wstring> AnsiToWide(__in const std::string& strSrc);
+std::pair<HRESULT, std::wstring> AnsiToWide(__in const std::string_view& strSrc);
 
 }  // namespace Orc
 

@@ -136,7 +136,7 @@ public:
     virtual BoundRecord& GetColumnDefinitions() PURE;
 };
 
-class ORCLIB_API Writer : public Orc::OutputWriter
+class Writer : public Orc::OutputWriter
 {
 protected:
     Schema m_Schema;

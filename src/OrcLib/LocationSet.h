@@ -19,7 +19,7 @@
 
 namespace Orc {
 
-class ORCLIB_API LocationSet
+class LocationSet
 {
 public:
     using ShadowFilters = std::set<std::wstring, CaseInsensitive>;

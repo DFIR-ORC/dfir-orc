@@ -19,7 +19,7 @@
 
 namespace Orc {
 
-class ORCLIB_API NtDllExtension : public ExtensionLibrary
+class NtDllExtension : public ExtensionLibrary
 {
     friend class ExtensionLibrary;
 

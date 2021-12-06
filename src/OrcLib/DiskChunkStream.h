@@ -13,7 +13,7 @@
 
 namespace Orc {
 
-class ORCLIB_API DiskChunkStream : public ByteStream
+class DiskChunkStream : public ByteStream
 {
 public:
     // Name of a device that identify the disk. Also the name used when writing results in output.

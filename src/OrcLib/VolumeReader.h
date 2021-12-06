@@ -21,7 +21,7 @@ constexpr auto MAX_PATH_LEN = 256;
 
 namespace Orc {
 
-class ORCLIB_API VolumeReader
+class VolumeReader
 {
 public:
     using CDiskExtentVector = std::vector<CDiskExtent>;

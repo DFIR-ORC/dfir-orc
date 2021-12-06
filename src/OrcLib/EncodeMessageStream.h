@@ -15,7 +15,7 @@
 
 namespace Orc {
 
-class ORCLIB_API EncodeMessageStream : public MessageStream
+class EncodeMessageStream : public MessageStream
 {
 protected:
     HCRYPTPROV m_hProv = NULL;

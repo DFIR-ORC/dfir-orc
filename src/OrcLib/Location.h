@@ -26,7 +26,7 @@ class LocationSet;
 
 class ConfigItem;
 
-class ORCLIB_API Location
+class Location
 {
     friend class LocationSet;
 

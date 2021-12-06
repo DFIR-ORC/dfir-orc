@@ -20,7 +20,7 @@ namespace Orc {
 class MemoryStream;
 class FileStream;
 
-class ORCLIB_API TemporaryStream : public ByteStream
+class TemporaryStream : public ByteStream
 {
 private:
     std::shared_ptr<MemoryStream> m_pMemStream;

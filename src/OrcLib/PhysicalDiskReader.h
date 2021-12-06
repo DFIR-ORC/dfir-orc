@@ -13,7 +13,7 @@
 
 namespace Orc {
 
-class ORCLIB_API PhysicalDiskReader : public CompleteVolumeReader
+class PhysicalDiskReader : public CompleteVolumeReader
 {
 private:
     UINT m_uiDiskNum = (UINT)-1;

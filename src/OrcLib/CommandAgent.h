@@ -73,7 +73,7 @@ struct JobRestrictions
 
 class CommandTerminationHandler;
 
-class ORCLIB_API CommandAgent : public Concurrency::agent
+class CommandAgent : public Concurrency::agent
 {
 public:
     CommandAgent(

@@ -18,7 +18,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ConfigItem
+class ConfigItem
 {
 public:  // TYPES
     enum ConfigItemType : char

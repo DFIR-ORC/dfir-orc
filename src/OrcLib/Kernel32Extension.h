@@ -20,7 +20,7 @@ namespace Orc {
 
 using namespace std::string_literals;
 
-class ORCLIB_API Kernel32Extension : public ExtensionLibrary
+class Kernel32Extension : public ExtensionLibrary
 {
     friend class ExtensionLibrary;
 

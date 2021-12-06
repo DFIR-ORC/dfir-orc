@@ -35,7 +35,7 @@ struct FILE_DIRECTORY_INFORMATION
 };
 using PFILE_DIRECTORY_INFORMATION = FILE_DIRECTORY_INFORMATION*;
 
-class ORCLIB_API FileDirectory
+class FileDirectory
 {
 public:
     typedef std::function<void(
@@ -44,7 +44,7 @@ public:
         const PFILE_DIRECTORY_INFORMATION pDirectoryInformation)>
         Callback;
 
-    class ORCLIB_API FileInstance
+    class FileInstance
     {
     public:
         std::wstring Name;

@@ -18,7 +18,7 @@
 
 namespace Orc {
 
-class ORCLIB_API MultiMemoryStream : public ByteStream
+class MultiMemoryStream : public ByteStream
 {
 
 protected:

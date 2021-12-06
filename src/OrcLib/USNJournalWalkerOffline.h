@@ -21,7 +21,7 @@ namespace Orc {
 class ByteStream;
 class MFTRecord;
 
-class ORCLIB_API USNJournalWalkerOffline
+class USNJournalWalkerOffline
     : public USNJournalWalkerBase
     , public IUSNJournalWalker
 {

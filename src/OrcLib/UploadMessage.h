@@ -21,7 +21,7 @@
 
 namespace Orc {
 
-class ORCLIB_API UploadMessage : public std::enable_shared_from_this<UploadMessage>
+class UploadMessage : public std::enable_shared_from_this<UploadMessage>
 {
 
 public:

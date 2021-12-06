@@ -24,7 +24,7 @@ namespace Orc {
 
 class VolumeReader;
 
-class ORCLIB_API MFTUtils
+class MFTUtils
 {
 
 public:
@@ -69,7 +69,7 @@ public:
 
     typedef std::vector<NonResidentAttributeExtent> NonResidentAttributeExtentVector;
 
-    class ORCLIB_API NonResidentDataAttrInfo
+    class NonResidentDataAttrInfo
     {
     public:
         NonResidentAttributeExtentVector ExtentsVector;  // holds the extent of the attribute

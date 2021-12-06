@@ -13,7 +13,7 @@
 
 namespace Orc {
 
-class ORCLIB_API DevNullStream : public ByteStream
+class DevNullStream : public ByteStream
 {
 public:
     DevNullStream();

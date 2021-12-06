@@ -26,7 +26,7 @@ class MountedVolumeReader;
 // Number of items in the VirtualStore
 constexpr auto USN_MAX_NUMBER = (0x80000);
 
-class ORCLIB_API USNJournalWalkerBase
+class USNJournalWalkerBase
 {
 public:
     USNJournalWalkerBase();

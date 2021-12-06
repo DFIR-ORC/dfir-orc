@@ -13,7 +13,7 @@
 
 namespace Orc {
 
-class ORCLIB_API EnumDisk
+class EnumDisk
 {
 public:
     class PhysicalDisk

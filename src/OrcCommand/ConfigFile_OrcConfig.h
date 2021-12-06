@@ -29,7 +29,7 @@ constexpr auto ORC_ALTITUDE = 11L;
 constexpr auto ORC_ORC = 0L;
 
 namespace Orc::Config::Wolf::Local {
-ORCLIB_API HRESULT root(Orc::ConfigItem& item);
+HRESULT root(Orc::ConfigItem& item);
 }
 
 #pragma managed(pop)

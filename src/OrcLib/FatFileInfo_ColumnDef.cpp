@@ -16,7 +16,7 @@
 
 using namespace Orc;
 
-const ORCLIB_API ColumnNameDef FatFileInfo::g_FatColumnNames[] = {
+const ColumnNameDef FatFileInfo::g_FatColumnNames[] = {
     {Intentions::FILEINFO_COMPUTERNAME, L"ComputerName", L"Computer name", 0L},
     {Intentions::FILEINFO_VOLUMEID, L"VolumeID", L"Volume ID", 0L},
 
@@ -91,7 +91,7 @@ const ORCLIB_API ColumnNameDef FatFileInfo::g_FatColumnNames[] = {
 
     {Intentions::FILEINFO_NONE, NULL, NULL, 0L}};
 
-const ORCLIB_API ColumnNameDef FatFileInfo::g_FatAliasNames[] = {
+const ColumnNameDef FatFileInfo::g_FatAliasNames[] = {
     {Intentions::FILEINFO_PARENTNAME | Intentions::FILEINFO_FILENAME | Intentions::FILEINFO_EXTENSION
          | Intentions::FILEINFO_ATTRIBUTES | Intentions::FILEINFO_FILESIZE | Intentions::FILEINFO_CREATIONDATE
          | Intentions::FILEINFO_LASTMODDATE | Intentions::FILEINFO_LASTACCDATE | Intentions::FILEINFO_RECORDINUSE,

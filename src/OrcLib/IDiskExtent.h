@@ -17,7 +17,7 @@
 
 namespace Orc {
 
-class ORCLIB_API IDiskExtent
+class IDiskExtent
 {
 public:
     virtual const std::wstring& GetName() const PURE;

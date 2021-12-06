@@ -26,7 +26,7 @@ class CryptoHashStream;
 
 class ByteStreamVisitor;
 
-class ORCLIB_API ByteStream
+class ByteStream
 {
     friend class ChainingStream;
 

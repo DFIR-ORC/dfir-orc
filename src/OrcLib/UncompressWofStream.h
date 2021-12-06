@@ -27,7 +27,7 @@ namespace Orc {
 
 class NTFSStream;
 
-class ORCLIB_API UncompressWofStream : public ChainingStream
+class UncompressWofStream : public ChainingStream
 {
 public:
     using ByteStreamT = ByteStreamConcept<std::shared_ptr<NTFSStream>>;

@@ -27,7 +27,7 @@ static const std::string FAT16_VBR_SIGNATURE("FAT16");
 static const std::string FAT32_VBR_SIGNATURE("FAT32");
 static const std::string FVE_VBR_SIGNATURE("-FVE-FS");
 
-class ORCLIB_API FSVBR
+class FSVBR
 {
 public:
     using FSType = FSVBR_FSType;

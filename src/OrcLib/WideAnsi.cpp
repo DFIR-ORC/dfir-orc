@@ -257,7 +257,7 @@ HRESULT Orc::WideToAnsi(PCWSTR pwszSrc, CBinaryBuffer& dest)
     return S_OK;
 }
 
-HRESULT ORCLIB_API Orc::WideToAnsi(PCWSTR pszSrc, std::string& dest)
+HRESULT Orc::WideToAnsi(PCWSTR pszSrc, std::string& dest)
 {
     if (pszSrc == nullptr)
         return E_INVALIDARG;
@@ -298,7 +298,7 @@ HRESULT ORCLIB_API Orc::WideToAnsi(PCWSTR pszSrc, std::string& dest)
     return S_OK;
 }
 
-std::pair<HRESULT, std::string> ORCLIB_API Orc::WideToAnsi(PCWSTR pwszSrc)
+std::pair<HRESULT, std::string> Orc::WideToAnsi(PCWSTR pwszSrc)
 {
     HRESULT hr = E_FAIL;
     std::string retval;
@@ -309,7 +309,7 @@ std::pair<HRESULT, std::string> ORCLIB_API Orc::WideToAnsi(PCWSTR pwszSrc)
         return {S_OK, std::move(retval)};
 }
 
-std::pair<HRESULT, std::string> ORCLIB_API Orc::WideToAnsi(const std::wstring& strSrc)
+std::pair<HRESULT, std::string> Orc::WideToAnsi(const std::wstring& strSrc)
 {
     HRESULT hr = E_FAIL;
     std::string retval;
@@ -320,7 +320,7 @@ std::pair<HRESULT, std::string> ORCLIB_API Orc::WideToAnsi(const std::wstring& s
         return {S_OK, std::move(retval)};
 }
 
-std::pair<HRESULT, std::string> ORCLIB_API Orc::WideToAnsi(const std::wstring_view& strSrc)
+std::pair<HRESULT, std::string> Orc::WideToAnsi(const std::wstring_view& strSrc)
 {
     HRESULT hr = E_FAIL;
     std::string retval;
@@ -524,7 +524,7 @@ Orc::AnsiToWide(__in_ecount(cchSrc) PCSTR pszSrc, __in DWORD cchSrc, CBinaryBuff
     return S_OK;
 }
 
-HRESULT ORCLIB_API Orc::AnsiToWide(LPCSTR pszSrc, CBinaryBuffer& dest)
+HRESULT Orc::AnsiToWide(LPCSTR pszSrc, CBinaryBuffer& dest)
 {
     boost::io::ios_flags_saver fs(std::cerr);
     HRESULT hr = E_FAIL;
@@ -566,7 +566,7 @@ HRESULT ORCLIB_API Orc::AnsiToWide(LPCSTR pszSrc, CBinaryBuffer& dest)
     return S_OK;
 }
 
-HRESULT ORCLIB_API Orc::AnsiToWide(PCSTR pszSrc, DWORD cchSrc, std::wstring& dest)
+HRESULT Orc::AnsiToWide(PCSTR pszSrc, DWORD cchSrc, std::wstring& dest)
 {
     HRESULT hr = E_FAIL;
 
@@ -590,7 +590,7 @@ HRESULT ORCLIB_API Orc::AnsiToWide(PCSTR pszSrc, DWORD cchSrc, std::wstring& des
     return S_OK;
 }
 
-HRESULT ORCLIB_API Orc::AnsiToWide(PCSTR pszSrc, std::wstring& dest)
+HRESULT Orc::AnsiToWide(PCSTR pszSrc, std::wstring& dest)
 {
     HRESULT hr = E_FAIL;
     CBinaryBuffer buffer;
@@ -605,7 +605,7 @@ HRESULT ORCLIB_API Orc::AnsiToWide(PCSTR pszSrc, std::wstring& dest)
     return S_OK;
 }
 
-std::pair<HRESULT, std::wstring> ORCLIB_API Orc::AnsiToWide(PCSTR pszSrc)
+std::pair<HRESULT, std::wstring> Orc::AnsiToWide(PCSTR pszSrc)
 {
     HRESULT hr = E_FAIL;
     std::wstring retval;
@@ -616,7 +616,7 @@ std::pair<HRESULT, std::wstring> ORCLIB_API Orc::AnsiToWide(PCSTR pszSrc)
         return std::make_pair(S_OK, std::move(retval));
 }
 
-std::pair<HRESULT, std::wstring> ORCLIB_API Orc::AnsiToWide(const std::string& pszSrc)
+std::pair<HRESULT, std::wstring> Orc::AnsiToWide(const std::string& pszSrc)
 {
     HRESULT hr = E_FAIL;
     std::wstring retval;
@@ -627,7 +627,7 @@ std::pair<HRESULT, std::wstring> ORCLIB_API Orc::AnsiToWide(const std::string& p
         return std::make_pair(S_OK, std::move(retval));
 }
 
-std::pair<HRESULT, std::wstring> ORCLIB_API Orc::AnsiToWide(const std::string_view& pszSrc)
+std::pair<HRESULT, std::wstring> Orc::AnsiToWide(const std::string_view& pszSrc)
 {
     HRESULT hr = E_FAIL;
     std::wstring retval;

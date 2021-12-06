@@ -19,7 +19,7 @@ namespace Orc {
 
 class NTFSStream;
 
-class ORCLIB_API UncompressNTFSStream : public ChainingStream
+class UncompressNTFSStream : public ChainingStream
 {
 
 public:

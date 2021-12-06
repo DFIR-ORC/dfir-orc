@@ -12,7 +12,7 @@
 
 namespace Orc {
 
-class ORCLIB_API TeeStream : public ByteStream
+class TeeStream : public ByteStream
 {
 protected:
     std::vector<std::shared_ptr<ByteStream>> m_Streams;

@@ -32,7 +32,7 @@ public:
     virtual ~Column() override final {};
 };
 
-class ORCLIB_API Writer
+class Writer
     : public ::Orc::TableOutput::Writer
     , public ::Orc::TableOutput::IStreamWriter
 {

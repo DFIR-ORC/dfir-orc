@@ -19,7 +19,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ArchiveExtract : public OrcArchive
+class ArchiveExtract : public OrcArchive
 {
 public:
     typedef std::function<std::shared_ptr<ByteStream>(OrcArchive::ArchiveItem& item)> MakeOutputStream;

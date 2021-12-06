@@ -21,7 +21,7 @@ namespace Orc {
 
 class VolumeReader;
 
-class ORCLIB_API MFTRecordFileInfo : public NtfsFileInfo
+class MFTRecordFileInfo : public NtfsFileInfo
 {
 
 public:

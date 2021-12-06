@@ -18,7 +18,7 @@
 
 namespace Orc {
 
-class ORCLIB_API Profile
+class Profile
 {
 public:
     // Profile's associated SID
@@ -57,7 +57,7 @@ public:
 };
 using ProfileResult = Result<std::vector<Profile>>;
 
-class ORCLIB_API ProfileList
+class ProfileList
 {
 public:
     static ProfileResult GetProfiles();

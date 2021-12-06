@@ -24,12 +24,12 @@
 
 namespace Orc {
 
-class ORCLIB_API MFTWalker;
+class MFTWalker;
 class MFTRecordFileInfo;
 
 typedef HRESULT(MFTRecordEnumDataCallBack)(ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data, PVOID pContext);
 
-class ORCLIB_API MFTRecord
+class MFTRecord
 {
     friend class MFTWalker;
     friend class MFTRecordFileInfo;

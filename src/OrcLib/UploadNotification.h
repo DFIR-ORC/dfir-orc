@@ -22,7 +22,7 @@
 
 namespace Orc {
 
-class ORCLIB_API UploadNotification
+class UploadNotification
 {
 public:
     using Callback = std::function<void(const UploadNotification& callback)>;

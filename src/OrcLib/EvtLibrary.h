@@ -167,7 +167,7 @@ typedef enum _EVT_RENDER_FLAGS
 
 } EVT_RENDER_FLAGS;
 
-class ORCLIB_API EvtLibrary : public ExtensionLibrary
+class EvtLibrary : public ExtensionLibrary
 {
     friend class ExtensionLibrary;
 

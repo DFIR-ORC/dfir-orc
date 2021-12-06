@@ -19,7 +19,7 @@ namespace Orc {
 
 class IDiskExtent;
 
-class ORCLIB_API PartitionTable
+class PartitionTable
 {
 public:
     PartitionTable();

@@ -60,7 +60,7 @@ namespace Orc {
 
 namespace Command {
 
-class ORCLIB_API UtilitiesMain
+class UtilitiesMain
 {
 public:
     class Configuration

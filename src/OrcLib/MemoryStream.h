@@ -18,7 +18,7 @@ namespace Orc {
 
 class CBinaryBuffer;
 
-class ORCLIB_API MemoryStream : public ByteStream
+class MemoryStream : public ByteStream
 {
 
 protected:

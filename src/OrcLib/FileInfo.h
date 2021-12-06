@@ -25,7 +25,7 @@ class VolumeReader;
 using ITableOutput = TableOutput::IOutput;
 class Writer;
 
-class ORCLIB_API FileInfo : public IIntentionsHandler
+class FileInfo : public IIntentionsHandler
 {
 public:
     friend class PEInfo;

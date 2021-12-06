@@ -20,7 +20,7 @@ namespace Orc {
 
 class ConfigItem;
 
-class ORCLIB_API RegFindConfig
+class RegFindConfig
 {
 public:
     HRESULT GetConfiguration(

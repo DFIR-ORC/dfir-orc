@@ -12,7 +12,7 @@
 
 namespace Orc {
 
-class ORCLIB_API MessageStream : public ChainingStream
+class MessageStream : public ChainingStream
 {
 protected:
     CMSG_STREAM_INFO m_StreamInfo;

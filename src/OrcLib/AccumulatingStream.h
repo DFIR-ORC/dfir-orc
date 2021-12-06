@@ -15,7 +15,7 @@ namespace Orc {
 
 class TemporaryStream;
 
-class ORCLIB_API AccumulatingStream : public ChainingStream
+class AccumulatingStream : public ChainingStream
 {
 private:
     std::shared_ptr<TemporaryStream> m_pTempStream;

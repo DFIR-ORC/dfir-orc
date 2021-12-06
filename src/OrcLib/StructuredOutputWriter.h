@@ -25,13 +25,13 @@ class CBinaryBuffer;
 
 namespace StructuredOutput {
 
-struct ORCLIB_API Options : public Orc::OutputOptions
+struct Options : public Orc::OutputOptions
 {
     OutputSpec::Encoding Encoding = OutputSpec::Encoding::UTF8;
 };
 
 namespace JSON {
-struct ORCLIB_API Options : public StructuredOutput::Options
+struct Options : public StructuredOutput::Options
 {
     bool bPrettyPrint = false;
     DWORD indentCharCount = 4;
@@ -39,7 +39,7 @@ struct ORCLIB_API Options : public StructuredOutput::Options
 }  // namespace JSON
 
 namespace XML {
-struct ORCLIB_API Options : public StructuredOutput::Options
+struct Options : public StructuredOutput::Options
 {
 };
 }  // namespace XML
@@ -47,7 +47,7 @@ struct ORCLIB_API Options : public StructuredOutput::Options
 using JSONOutputOptions = JSON::Options;
 using XMLOutputOptions = XML::Options;
 
-class ORCLIB_API Writer
+class Writer
     : public Orc::OutputWriter
     , public IWriter
 {

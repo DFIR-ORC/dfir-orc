@@ -32,7 +32,7 @@
 
 namespace Orc {
 
-class ORCLIB_API MFTWalker
+class MFTWalker
 {
     friend class MFTRecord;
 
@@ -132,7 +132,7 @@ private:
 
     std::unordered_map<MFTUtils::SafeMFTSegmentNumber, MFTRecord*> m_MFTMap;
 
-    class ORCLIB_API MFTFileNameWrapper
+    class MFTFileNameWrapper
     {
     public:
         PFILE_NAME m_pFileName;

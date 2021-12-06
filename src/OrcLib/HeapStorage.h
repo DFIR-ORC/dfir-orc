@@ -15,7 +15,7 @@
 
 namespace Orc {
 
-class ORCLIB_API HeapStorage
+class HeapStorage
 {
 
 private:

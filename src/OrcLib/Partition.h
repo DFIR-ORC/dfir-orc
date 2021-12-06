@@ -19,7 +19,7 @@
 
 namespace Orc {
 
-class ORCLIB_API Partition
+class Partition
 {
 public:
     using Type = PartitionType;

@@ -17,7 +17,7 @@ struct IXmlWriter;
 
 namespace Orc {
 
-class ORCLIB_API ConfigFileWriter : public ConfigFile
+class ConfigFileWriter : public ConfigFile
 {
 public:
     ConfigFileWriter()

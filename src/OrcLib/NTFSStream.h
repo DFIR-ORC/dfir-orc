@@ -23,7 +23,7 @@ class VolumeReader;
 class MFTRecord;
 class MftRecordAttribute;
 
-class ORCLIB_API NTFSStream : public ByteStream
+class NTFSStream : public ByteStream
 {
 
 public:

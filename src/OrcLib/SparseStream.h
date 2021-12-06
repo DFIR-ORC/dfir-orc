@@ -18,7 +18,7 @@
 
 namespace Orc {
 
-class ORCLIB_API SparseStream : public FileStream
+class SparseStream : public FileStream
 {
 public:
     SparseStream()

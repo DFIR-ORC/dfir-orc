@@ -57,7 +57,7 @@ HRESULT download_file(ConfigItem& parent, DWORD dwIndex)
         return hr;
     return S_OK;
 }
-ORCLIB_API HRESULT Orc::Config::Common::download(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
+HRESULT Orc::Config::Common::download(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = parent.AddChildNode(elementName, dwIndex, ConfigItem::OPTION)))

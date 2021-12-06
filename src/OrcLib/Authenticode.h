@@ -29,7 +29,7 @@ namespace Orc {
 class CBinaryBuffer;
 class ByteStream;
 
-class ORCLIB_API Authenticode
+class Authenticode
 {
 public:
     typedef enum

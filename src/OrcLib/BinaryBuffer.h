@@ -23,7 +23,7 @@ typedef BYTE const* LPCBYTE;
 
 namespace Orc {
 
-class ORCLIB_API CBinaryBuffer
+class CBinaryBuffer
 {
     friend class MemoryStream;
 

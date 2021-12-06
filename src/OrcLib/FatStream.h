@@ -19,7 +19,7 @@ namespace Orc {
 class VolumeReader;
 class FatFileEntry;
 
-class ORCLIB_API FatStream : public ByteStream
+class FatStream : public ByteStream
 {
 public:
     FatStream(const std::shared_ptr<VolumeReader>& pVolReader, const std::shared_ptr<FatFileEntry>& fileEntry);

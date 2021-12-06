@@ -18,7 +18,7 @@
 
 namespace Orc {
 
-class ORCLIB_API CommandAgentResources
+class CommandAgentResources
 {
 private:
     std::wstring m_strTempDirectory;

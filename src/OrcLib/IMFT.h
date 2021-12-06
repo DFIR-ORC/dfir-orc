@@ -14,7 +14,7 @@
 
 namespace Orc {
 
-class ORCLIB_API IMFT
+class IMFT
 {
 public:
     virtual ~IMFT() {}

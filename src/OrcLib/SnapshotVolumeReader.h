@@ -15,7 +15,7 @@
 
 namespace Orc {
 
-class ORCLIB_API SnapshotVolumeReader : public CompleteVolumeReader
+class SnapshotVolumeReader : public CompleteVolumeReader
 {
 private:
     VolumeShadowCopies::Shadow m_Shadow;
