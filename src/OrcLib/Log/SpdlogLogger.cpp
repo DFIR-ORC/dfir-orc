@@ -21,6 +21,7 @@ SpdlogLogger::SpdlogLogger(const std::string& name)
     , m_backtraceTrigger(Level::Off)
     , m_backtraceLevel(Level::Debug)
 {
+    m_logger->flush_on(spdlog::level::err);
 }
 
 void SpdlogLogger::Add(SpdlogSink::Ptr sink)
@@ -57,7 +58,7 @@ void SpdlogLogger::DumpBacktrace()
 
     struct SinkSettings
     {
-        Log::Level level;
+        Log::Level level = Level::Off;
         std::unique_ptr<spdlog::formatter> formatter;
     };
 
