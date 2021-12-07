@@ -15,7 +15,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ZipLibrary
+class ZipLibrary
 {
 public:
     class ArchiveFormat

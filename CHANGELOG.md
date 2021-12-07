@@ -1,5 +1,34 @@
 # ChangeLog
 
+## [10.1.0-rc8] - 2021-12-02 - Release Candidate 8
+### Added
+- Location: add options for shadow copy volumes specification (ex: '/shadows=<newest|mid|oldest|{GUID}>')
+- Location: add options for location exclusion (ex: '/exclude="%SYSTEMDRIVE%,D:')
+- FastFind, GetThis: display statistics for 'ntfs_find' rules
+- FastFind: write attribute name (ADS) on matching elements
+- FastFind: write mathing yara rules when selected with '*'
+- Flush logs on unexpected exit (Ctrl + C, ...)
+- tools: ci: vs2022 toolchain support
+
+### Changed
+- Yara: use version 4.1.3
+- FastFind, GetThis: yara rule optimisation with new Yara API
+- Allow extracted resource execution
+- Improve performances when lot of lines are printed
+- Log: flush on error log level
+- Parquet: improve utf-8 support
+
+### Fixed
+- 7z: fix empty file handling for compatibility
+- Fix pre-existing archive upload on new executions
+- Fix missing output directory from archive for third parties
+- fastfind, getthis: fix registry match false positive
+- Ntfs: fix WofCompressedData decompression
+- Ntfs: fix file access issue when requesting a closed stream
+- Syslog: fix option 'port' parsing
+- WolfLauncher: fix console file output path
+
+
 ## [10.1.0-rc7] - 2021-10-15 - Release Candidate 7
 ### Added
 - Add support for $DATA:WofCompressedData
@@ -184,14 +213,47 @@
 - Remove dead code
 
 
-## [10.0.21] - 2021-10-07
-### Changed
-- fastfind: use full computer name as 'computer' output element
+## [10.0.22] - 2021-11-26
+### changed
+- yara: update to 4.1.3
+- allow extracted resources to be executed
 
 ### Fixed
-- add missing PE machine type
-- yara: fix log formatting
-- fastfind: fix match description for 'data_contains_hex'
+- fix missing upload for pre-existing archive
+- fastfind, getthis: fix registry match false positive
+- log: fix log option parsing for compatibility with 10.1.x usage
+- log: fix log flushing on unexpected exit
+
+### Added
+- fastfind, getthis: print ADS name on match
+- fastfind, getthis: print yara rule name on match
+
+
+## [10.0.22] - 2021-12-01
+### changed
+- Yara: Update to 4.1.3
+- Allow extracted resources to be executed
+
+### Fixed
+- Fix missing upload for pre-existing archive
+- FastFind, GetThis: fix registry match false positive
+- Log: Fix log option parsing for compatibility with 10.1.x usage
+- Log: Fix log flushing on unexpected exit
+- 7z archives: empty file handling for compatibility
+
+### Added
+- FastFind, GetThis: print ADS name on match
+- FastFind, GetThis: print yara rule name on match
+
+
+## [10.0.21] - 2021-10-07
+### Changed
+- FastFind: use full computer name as 'computer' output element
+
+### Fixed
+- Add missing PE machine type
+- Yara: Fix log formatting
+- FastFind: Fix match description for 'data_contains_hex'
 
 
 ## [10.0.20] - 2021-07-02

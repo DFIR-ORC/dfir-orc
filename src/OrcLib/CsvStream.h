@@ -35,7 +35,7 @@ public:
     STDMETHOD(CanWrite)() { return S_OK; };
     STDMETHOD(CanSeek)() { return S_FALSE; };
 
-    STDMETHOD(Read)
+    STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesRead)
     {
         DBG_UNREFERENCED_PARAMETER(pBuffer);
@@ -44,7 +44,7 @@ public:
         return E_NOTIMPL;
     };
 
-    STDMETHOD(Write)
+    STDMETHOD(Write_)
     (__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten);
 
     STDMETHOD(SetFilePointer)

@@ -29,7 +29,7 @@ namespace Orc {
 
 class ConfigFileReader;
 
-class ORCLIB_API ConfigFile
+class ConfigFile
 {
 private:
 protected:

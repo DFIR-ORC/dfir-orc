@@ -13,7 +13,7 @@
 
 namespace Orc {
 
-class ORCLIB_API DiskChunkStream : public ByteStream
+class DiskChunkStream : public ByteStream
 {
 public:
     // Name of a device that identify the disk. Also the name used when writing results in output.
@@ -83,12 +83,12 @@ public:
     STDMETHOD(CanWrite)();
     STDMETHOD(CanSeek)();
 
-    STDMETHOD(Read)
+    STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
      __in ULONGLONG cbBytes,
      __out_opt PULONGLONG pcbBytesRead);
 
-    STDMETHOD(Write)
+    STDMETHOD(Write_)
     (__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten);
 
     STDMETHOD(SetFilePointer)

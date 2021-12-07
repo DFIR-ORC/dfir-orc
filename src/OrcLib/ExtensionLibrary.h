@@ -32,7 +32,7 @@ public:
     HRESULT operator()();
 };
 
-class ORCLIB_API ExtensionLibrary
+class ExtensionLibrary
 {
 
     template <class Ext>
@@ -251,7 +251,7 @@ HRESULT ExtensionLibraryHandler<Ext>::operator()()
     return S_OK;
 }
 
-class ORCLIB_API TemplateExtension : public ExtensionLibrary
+class TemplateExtension : public ExtensionLibrary
 {
     friend class ExtensionLibrary;
 

@@ -14,9 +14,9 @@
 // TASKAGENT_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
 #ifdef ORCLIB_EXPORTS
-#    define ORCLIB_API __declspec(dllexport)
+#    define __declspec(dllexport)
 #elif ORCLIB_IMPORTS
-#    define ORCLIB_API __declspec(dllimport)
+#    define __declspec(dllimport)
 #else  // STATIC linking
 #    define ORCLIB_API
 #endif

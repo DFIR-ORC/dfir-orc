@@ -34,7 +34,6 @@
 #include "Text/Print/Bool.h"
 #include "Log/Syslog/Syslog.h"
 #include "Log/Syslog/SyslogSink.h"
-#include "Command/WolfLauncher/Console/Stream/StandardOutputRedirection.h"
 
 using namespace Orc::Command;
 using namespace Orc::Log;
@@ -299,7 +298,9 @@ const wchar_t kWolfLauncher[] = L"WolfLauncher";
 
 void Main::Configure(int argc, const wchar_t* argv[])
 {
-    m_logging.consoleSink()->AddOutput(m_consoleRedirection);
+    // Underlying spdlog's 'wincolor_sink' will write to console using 'WriteConsoleA' which bypass StandardOutput.
+    // Forward console sink output to StandardOutput tee file.
+    m_logging.consoleSink()->AddOutput(m_standardOutput.FileTeePtr());
 
     auto& journal = m_logging.logger().Get(Logger::Facility::kJournal);
     journal->SetLevel(Log::Level::Info);
@@ -894,6 +895,14 @@ HRESULT Main::Run_Execute()
                         info.path,
                         info.size);
                     commandSetNode.AddEmptyLine();
+
+                    // Archive is ready but was not uploaded
+                    hr = UploadSingleFile(exec->GetOutputFileName(), exec->GetOutputFullPath());
+                    if (FAILED(hr))
+                    {
+                        Log::Error(L"Failed to upload archive '{}' [{}]", exec->GetOutputFullPath(), SystemError(hr));
+                    }
+
                     continue;
                 }
             }

@@ -10,33 +10,29 @@
 
 #include "FileFind.h"
 
-#include "CryptoHashStream.h"
+#include <sstream>
+#include <iomanip>
 
+#include <fmt/format.h>
+#include <boost/algorithm/searching/boyer_moore.hpp>
+#include <boost/algorithm/string/join.hpp>
+
+#include <Shlwapi.h>
+
+#include "CryptoHashStream.h"
+#include "Configuration/ConfigItem.h"
+#include "Configuration/ConfigFileWriter.h"
 #include "WideAnsi.h"
 #include "ParameterCheck.h"
 #include "Configuration/ConfigFile.h"
 #include "MFTWalker.h"
 #include "DevNullStream.h"
-
 #include "SnapshotVolumeReader.h"
-
 #include "TableOutputWriter.h"
 #include "StructuredOutputWriter.h"
-
 #include "Convert.h"
-
 #include "Configuration/ConfigFile_Common.h"
-
 #include "SystemDetails.h"
-
-#include <sstream>
-#include <Shlwapi.h>
-#include <iomanip>
-
-#include <boost\algorithm\searching\boyer_moore.hpp>
-
-#include <fmt/format.h>
-
 #include "Log/Log.h"
 
 constexpr const unsigned int FILESPEC_FILENAME_INDEX = 1;
@@ -45,6 +41,71 @@ constexpr const unsigned int FILESPEC_SUBNAME_INDEX = 4;
 
 using namespace std;
 using namespace Orc;
+
+namespace {
+
+std::wstring GetFileName(const Orc::MFTRecord& record, const Orc::DataAttribute& dataAttribute)
+{
+    const auto kUnknown = L"<unknown>"sv;
+    std::wstring_view attributeName(dataAttribute.NamePtr(), dataAttribute.NameLength());
+
+    const auto pfilename = record.GetDefaultFileName();
+    std::wstring_view filename(pfilename->FileName, pfilename->FileNameLength);
+
+    if (attributeName.empty())
+    {
+        return filename.empty() ? std::wstring(kUnknown) : std::wstring(filename);
+    }
+
+    return fmt::format(L"{}:{}", filename.empty() ? kUnknown : filename, attributeName);
+}
+
+uint64_t SumStreamsReadLength(const MFTRecord& record, const std::shared_ptr<VolumeReader>& volumeReader)
+{
+    uint64_t sum = 0;
+
+    for (const auto& attribute : record.GetDataAttributes())
+    {
+        const auto rawStream = attribute->GetRawStream(volumeReader);
+        sum += rawStream ? rawStream->TotalRead() : 0;
+    }
+
+    return sum;
+}
+
+uint64_t SumStreamsReadLength(const std::vector<FileFind::Match::AttributeMatch>& attributeMatches)
+{
+    uint64_t sum = 0;
+
+    for (const auto& attribute : attributeMatches)
+    {
+        sum += attribute.RawStream ? attribute.RawStream->TotalRead() : 0;
+    }
+
+    return sum;
+}
+
+bool IsExcludedDataAttribute(const Orc::MFTRecord& record, const Orc::DataAttribute& dataAttribute)
+{
+    // TODO: ignore hash for $BadClus, $Mft... (frn from 0-10) ?
+
+    const uint64_t frn = static_cast<uint64_t>(record.GetFileReferenceNumber().SegmentNumberHighPart) << 32
+        | record.GetFileReferenceNumber().SegmentNumberLowPart;
+
+    if (frn == 8 && L"$BadClus"sv == record.GetFileNames()[0]->FileName)
+    {
+        std::wstring_view attributeName(dataAttribute.NamePtr(), dataAttribute.NameLength());
+        if (attributeName.empty() || attributeName == L"$Bad")
+        {
+            // This is mostly a sparse file of bad clusters
+            return true;
+        }
+    }
+
+    return false;
+}
+
+}  // namespace
 
 std::wregex& FileFind::DOSPattern()
 {
@@ -197,7 +258,7 @@ HRESULT FileFind::Match::GetMatchFullNames(std::vector<std::wstring>& strNames)
 
 HRESULT FileFind::Match::Write(ITableOutput& output)
 {
-    wstring strMatchDescr = Term->GetDescription();
+    wstring strMatchDescr = GetMatchDescription();
 
     GUID SnapshotID;
     auto reader = std::dynamic_pointer_cast<SnapshotVolumeReader>(VolumeReader);
@@ -319,7 +380,7 @@ HRESULT FileFind::Match::Write(ITableOutput& output)
 
 HRESULT FileFind::Match::Write(IStructuredOutput& pWriter, LPCWSTR szElement)
 {
-    wstring strMatchDescr = Term->GetDescription();
+    wstring strMatchDescr = GetMatchDescription();
 
     pWriter.BeginElement(szElement);
 
@@ -400,6 +461,7 @@ HRESULT FileFind::Match::Write(IStructuredOutput& pWriter, LPCWSTR szElement)
             {
                 pWriter.BeginElement(nullptr);
                 {
+                    pWriter.WriteNamed(L"name", data_it->AttrName);
                     pWriter.WriteNamed(L"filesize", data_it->DataSize);
                     pWriter.WriteNamed(L"MD5", data_it->MD5, false);
                     pWriter.WriteNamed(L"SHA1", data_it->SHA1, false);
@@ -414,6 +476,46 @@ HRESULT FileFind::Match::Write(IStructuredOutput& pWriter, LPCWSTR szElement)
     pWriter.EndElement(szElement);
 
     return S_OK;
+}
+
+std::wstring Orc::FileFind::Match::GetMatchDescription() const
+{
+    std::wstring description = Term->GetDescription();
+
+    if (!(Term->Required & FileFind::SearchTerm::Criteria::YARA))
+    {
+        return description;
+    }
+
+    if (Term->YaraRulesSpec != L"*" || MatchingAttributes.empty())
+    {
+        // If not wildcard would output something like 'Content matches yara rule(s): the_rule_name'
+        return description;
+    }
+
+    std::set<std::string> rules;
+    for (auto& matchingAttribute : MatchingAttributes)
+    {
+        if (!matchingAttribute.YaraRules.has_value())
+        {
+            continue;
+        }
+
+        std::copy(
+            std::cbegin(*matchingAttribute.YaraRules),
+            std::cend(*matchingAttribute.YaraRules),
+            std::inserter(rules, std::begin(rules)));
+    }
+
+    if (!rules.empty())
+    {
+        // Content matches yara rule(s): * [is_pe, pe_rule_foobar])
+        std::string yaraMatches = "[" + boost::join(rules, ", ") + "]";
+        std::error_code ec;
+        description += L" " + ::Utf8ToUtf16(yaraMatches, ec);
+    }
+
+    return description;
 }
 
 HRESULT Orc::FileFind::CheckYara()
@@ -463,6 +565,8 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
     HRESULT hr = E_FAIL;
 
     std::shared_ptr<FileFind::SearchTerm> fs = make_shared<FileFind::SearchTerm>();
+
+    item.ToXml(fs->m_rule);
 
     if (item[CONFIG_FILEFIND_NAME])
     {
@@ -784,9 +888,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         else
         {
             Log::Warn(
-                L"Invalid hex string passed as header: {} [{}]",
-                item[CONFIG_FILEFIND_HEADER_HEX],
-                SystemError(hr));
+                L"Invalid hex string passed as header: {} [{}]", item[CONFIG_FILEFIND_HEADER_HEX], SystemError(hr));
         }
     }
     if (item[CONFIG_FILEFIND_HEADER_REGEX])
@@ -1137,7 +1239,7 @@ wstring FileFind::SearchTerm::GetDescription() const
             stream << L", ";
         if (!YaraRules.empty())
         {
-            stream << L"Content matches yara rule(s) : " << YaraRulesSpec;
+            stream << L"Content matches yara rule(s): " << YaraRulesSpec;
         }
         bFirst = false;
     }
@@ -2600,8 +2702,10 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingDataNameAndSize(
             continue;
         }
 
-        // Ignore WofCompressedData valid entry
-        if (pElt->IsOverlayFile() && attribute->NameEquals(L"WofCompressedData"))
+        // Ignore WofCompressedData valid entry if not specifically required
+        const auto kWofCompressedData = L"WofCompressedData"sv;
+        if (pElt->IsOverlayFile() && attribute->NameEquals(kWofCompressedData.data())
+            && aTerm->ADSName != kWofCompressedData)
         {
             continue;
         }
@@ -2865,6 +2969,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
 
 std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollection>> Orc::FileFind::MatchYara(
     const std::shared_ptr<SearchTerm>& aTerm,
+    const Orc::MFTRecord& record,
     const std::shared_ptr<DataAttribute>& pDataAttr) const
 {
     HRESULT hr = E_FAIL;
@@ -2872,7 +2977,7 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
     if (!m_YaraScan)
     {
-        Log::Warn("Yara not initialized & yara rules selected");
+        Log::Error("Yara not initialized & yara rules selected");
         return {SearchTerm::Criteria::NONE, std::nullopt};
     }
 
@@ -2884,14 +2989,19 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Error(
+                "Failed Yara scan while seeking on '{}' [{}]", ::GetFileName(record, *pDataAttr), SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
 
         auto [hr, matchingRules] = m_YaraScan->Scan(pDataStream);
         if (FAILED(hr))
         {
-            Log::Debug("Failed to yara scan data attribute [{}]", SystemError(hr));
+            Log::Error(
+                "Failed Yara scan on '{}' (frn: {:#x}) [{}]",
+                ::GetFileName(record, *pDataAttr),
+                NtfsFullSegmentNumber(&record.GetFileReferenceNumber()),
+                SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
         if (!matchingRules.empty())
@@ -3059,6 +3169,11 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingData(
     SearchTerm::Criteria retval = SearchTerm::Criteria::NONE;
     for (const auto& data_attr : pElt->GetDataAttributes())
     {
+        if (::IsExcludedDataAttribute(*pElt, *data_attr))
+        {
+            continue;
+        }
+
         auto matchedDataSpecs = SearchTerm::Criteria::NONE;
         MatchingRuleCollection matchedRules;
 
@@ -3104,7 +3219,7 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingData(
         }
         if (requiredDataSpecs & SearchTerm::Criteria::YARA)
         {
-            auto [aSpec, matched] = MatchYara(aTerm, data_attr);
+            auto [aSpec, matched] = MatchYara(aTerm, *pElt, data_attr);
             if (matched.has_value())
                 std::swap(matchedRules, matched.value());
             if (aSpec == SearchTerm::Criteria::NONE)
@@ -3244,7 +3359,9 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
     std::shared_ptr<Match>& aFileMatch,
     MFTRecord* pElt) const
 {
-    SearchTerm::Criteria requiredSpecs = aTerm->Required;
+    auto& profiler = aTerm->GetScopedMatchProfiler();
+
+    const SearchTerm::Criteria requiredSpecs = aTerm->Required;
     SearchTerm::Criteria matchedSpecs = matched;
 
     if (aTerm->DependsOnName())
@@ -3306,7 +3423,14 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
     {
         SearchTerm::Criteria requiredDataSpecs =
             static_cast<SearchTerm::Criteria>(aTerm->Required & SearchTerm::DataMask());
+
+        uint64_t initialReadLength = ::SumStreamsReadLength(*pElt, m_pVolReader);
+
         SearchTerm::Criteria matchedDataSpecs = AddMatchingData(aTerm, requiredDataSpecs, aFileMatch, pElt);
+
+        uint64_t finalReadLength = ::SumStreamsReadLength(*pElt, m_pVolReader);
+        profiler.AddReadLength(finalReadLength - initialReadLength);
+
         if (requiredDataSpecs == matchedDataSpecs)
             matchedSpecs |= matchedDataSpecs;
         else
@@ -3383,8 +3507,13 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
             aFileMatch->FRN = pElt->GetFileReferenceNumber();
         }
     }
+
     if (matchedSpecs == requiredSpecs)
+    {
+        profiler.AddMatch();
         return matchedSpecs;
+    }
+
     return SearchTerm::Criteria::NONE;
 }
 
@@ -3394,6 +3523,8 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermIn$I30AddMatching(
     std::shared_ptr<Match>& aFileMatch,
     const PFILE_NAME pFileName) const
 {
+    auto& profiler = aTerm->GetScopedMatchProfiler();
+
     SearchTerm::Criteria requiredSpecs = aTerm->Required;
     SearchTerm::Criteria matchedSpecs = matched;
 
@@ -3435,8 +3566,13 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermIn$I30AddMatching(
             aFileMatch->AddFileNameMatch(m_FullNameBuilder, pFileName);
         }
     }
+
     if (matchedSpecs == requiredSpecs)
+    {
+        profiler.AddMatch();
         return matchedSpecs;
+    }
+
     return SearchTerm::Criteria::NONE;
 }
 
@@ -3445,6 +3581,8 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInMatchExcludeMatching(
     const SearchTerm::Criteria matched,
     const std::shared_ptr<Match>& aFileMatch) const
 {
+    auto& profiler = aTerm->GetScopedMatchProfiler();
+
     SearchTerm::Criteria requiredSpecs = aTerm->Required;
     SearchTerm::Criteria matchedSpecs = matched;
 
@@ -3497,7 +3635,13 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInMatchExcludeMatching(
     {
         SearchTerm::Criteria requiredDataSpecs =
             static_cast<SearchTerm::Criteria>(aTerm->Required & SearchTerm::DataMask());
+
+        const uint64_t initialReadLength = ::SumStreamsReadLength(aFileMatch->MatchingAttributes);
         SearchTerm::Criteria matchedDataSpecs = ExcludeMatchingData(aTerm, requiredDataSpecs, aFileMatch);
+        const uint64_t finalReadLength = ::SumStreamsReadLength(aFileMatch->MatchingAttributes);
+
+        profiler.AddReadLength(finalReadLength - initialReadLength);
+
         if (requiredDataSpecs == matchedDataSpecs)
             matchedSpecs |= matchedDataSpecs;
         else
@@ -3505,7 +3649,11 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInMatchExcludeMatching(
     }
 
     if (matchedSpecs == requiredSpecs)
+    {
+        profiler.AddMatch();
         return matchedSpecs;
+    }
+
     return SearchTerm::Criteria::NONE;
 }
 
@@ -3579,33 +3727,47 @@ HRESULT FileFind::EvaluateMatchCallCallback(
     if (FAILED(hr = ExcludeMatch(aMatch)))
         return hr;
 
-    if (hr == S_FALSE)
-    {
-        if (m_MatchHash != CryptoHashStream::Algorithm::Undefined)
-        {
-            if (FAILED(hr = ComputeMatchHashes(aMatch)))
-            {
-                Log::Warn(
-                    L"Failed to compute hashes for match '{}' [{}]",
-                    aMatch->MatchingNames.front().FullPathName,
-                    SystemError(hr));
-            }
-        }
-
-        // the match has not matched a excluding term
-        Log::Debug(L"Adding match '{}'", aMatch->MatchingNames.front().FullPathName);
-        if (m_storeMatches)
-        {
-            m_Matches.push_back(aMatch);
-        }
-
-        if (aCallback)
-            aCallback(aMatch, bStop);
-    }
-    else
+    if (hr == S_OK)
     {
         Log::Debug(L"Match has been excluded");
+        return S_OK;
     }
+
+    assert(hr == S_FALSE);
+
+    auto& profiler = aMatch->Term->GetScopedCollectionProfiler();
+    auto initialReadLength = ::SumStreamsReadLength(aMatch->MatchingAttributes);
+
+    if (m_MatchHash != CryptoHashStream::Algorithm::Undefined)
+    {
+        if (FAILED(hr = ComputeMatchHashes(aMatch)))
+        {
+            Log::Warn(
+                L"Failed to compute hashes for match '{}' [{}]",
+                aMatch->MatchingNames.front().FullPathName,
+                SystemError(hr));
+        }
+    }
+
+    Log::Debug(L"Adding match '{}'", aMatch->MatchingNames.front().FullPathName);
+    if (m_storeMatches)
+    {
+        m_Matches.push_back(aMatch);
+    }
+
+    if (aCallback)
+    {
+        aCallback(aMatch, bStop);
+    }
+
+    auto finalReadLength = ::SumStreamsReadLength(aMatch->MatchingAttributes);
+
+    if (finalReadLength < initialReadLength)
+    {
+        int debug = 0;
+    }
+
+    profiler.AddReadLength(finalReadLength - initialReadLength);
     return S_OK;
 }
 
@@ -3639,13 +3801,14 @@ HRESULT FileFind::FindMatch(MFTRecord* pElt, bool& bStop, FileFind::FoundMatchCa
                         LookupTermInRecordAddMatching(name_it->second, SearchTerm::Criteria::NAME_EXACT, retval, pElt);
                     if (matched != SearchTerm::Criteria::NONE)
                     {
-                        // we do have a match!
                         if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                             return hr;
                         retval.reset();
                     }
                     else if (retval != nullptr)
+                    {
                         retval->Reset();
+                    }
                 }
             }
             if (!m_ExactPathTerms.empty() && m_FullNameBuilder != nullptr)
@@ -3660,9 +3823,9 @@ HRESULT FileFind::FindMatch(MFTRecord* pElt, bool& bStop, FileFind::FoundMatchCa
                         LookupTermInRecordAddMatching(path_it->second, SearchTerm::Criteria::PATH_EXACT, retval, pElt);
                     if (matched != SearchTerm::Criteria::NONE)
                     {
-                        // we do have a match!
                         if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                             return hr;
+
                         retval.reset();
                     }
                     else if (retval != nullptr)
@@ -3693,13 +3856,14 @@ HRESULT FileFind::FindMatch(MFTRecord* pElt, bool& bStop, FileFind::FoundMatchCa
                     LookupTermInRecordAddMatching(attr_it->second, SearchTerm::Criteria::SIZE_EQ, retval, pElt);
                 if (matched != SearchTerm::Criteria::NONE)
                 {
-                    // we do have a match!
                     if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                         return hr;
                     retval.reset();
                 }
                 else if (retval != nullptr)
+                {
                     retval->Reset();
+                }
             }
         }
     }
@@ -3709,13 +3873,14 @@ HRESULT FileFind::FindMatch(MFTRecord* pElt, bool& bStop, FileFind::FoundMatchCa
         auto matched = LookupTermInRecordAddMatching(term_it, SearchTerm::Criteria::NONE, retval, pElt);
         if (matched != SearchTerm::Criteria::NONE)
         {
-            // we do have a match!
             if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                 return hr;
             retval.reset();
         }
         else if (retval != nullptr)
+        {
             retval->Reset();
+        }
     }
 
     return S_OK;
@@ -3736,7 +3901,6 @@ HRESULT FileFind::FindI30Match(const PFILE_NAME pFileName, bool& bStop, FileFind
 
         for (auto name_it = name_list.first; name_it != name_list.second; ++name_it)
         {
-            // we do have a match!
             auto matched =
                 LookupTermIn$I30AddMatching(name_it->second, SearchTerm::Criteria::NAME_EXACT, retval, pFileName);
 
@@ -3762,7 +3926,6 @@ HRESULT FileFind::FindI30Match(const PFILE_NAME pFileName, bool& bStop, FileFind
                 LookupTermIn$I30AddMatching(path_it->second, SearchTerm::Criteria::PATH_EXACT, retval, pFileName);
             if (matched != SearchTerm::Criteria::NONE)
             {
-                // we do have a match!
                 if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                     return hr;
                 retval.reset();
@@ -3776,7 +3939,6 @@ HRESULT FileFind::FindI30Match(const PFILE_NAME pFileName, bool& bStop, FileFind
         auto matched = LookupTermIn$I30AddMatching(*term_it, SearchTerm::Criteria::NONE, retval, pFileName);
         if (matched != SearchTerm::Criteria::NONE)
         {
-            // we do have a match!
             if (FAILED(hr = EvaluateMatchCallCallback(aCallback, bStop, retval)))
                 return hr;
             retval.reset();
@@ -3873,7 +4035,6 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
                             LookupTermInMatchExcludeMatching(name_it->second, SearchTerm::Criteria::NAME_EXACT, aMatch);
                         if (matched != SearchTerm::Criteria::NONE)
                         {
-                            // we do have a match!
                             return true;
                         }
                     }
@@ -3887,7 +4048,6 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
                             LookupTermInMatchExcludeMatching(path_it->second, SearchTerm::Criteria::PATH_EXACT, aMatch);
                         if (matched != SearchTerm::Criteria::NONE)
                         {
-                            // we do have a Match
                             return true;
                         }
                     }
@@ -3910,7 +4070,6 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
                 auto matched = LookupTermInMatchExcludeMatching(attr_it->second, SearchTerm::Criteria::SIZE_EQ, aMatch);
                 if (matched != SearchTerm::Criteria::NONE)
                 {
-                    // we do have a Match
                     return S_OK;
                 }
             }
@@ -4077,3 +4236,8 @@ void FileFind::PrintSpecs() const
 }
 
 FileFind::~FileFind(void) {}
+
+const std::vector<FileFind::SearchTerm::Ptr>& FileFind::AllSearchTerms() const
+{
+    return m_AllTerms;
+}

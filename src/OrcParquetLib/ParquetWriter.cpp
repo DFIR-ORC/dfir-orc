@@ -165,11 +165,9 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
 
                 for (const auto& it : fields)
                 {
-
                     std::unique_ptr<arrow::ArrayBuilder> builder;
 
-                    auto status = arrow::MakeBuilder(pool, it->type(), &builder);
-                    if (status.ok())
+                    if (auto status = arrow::MakeBuilder(pool, it->type(), &builder); status.ok())
                         values_builder.emplace_back(std::move(builder));
                     else
                     {
@@ -179,6 +177,42 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
                 retval.emplace_back(
                     std::make_unique<arrow::StructBuilder>(column->type(), pool, std::move(values_builder)));
                 break;
+            }
+            case arrow::Type::DENSE_UNION: {
+                const auto& fields = column->type()->fields();
+                std::vector<std::shared_ptr<arrow::ArrayBuilder>> values_builder;
+
+                for (const auto& it : fields)
+                {
+                    std::unique_ptr<arrow::ArrayBuilder> builder;
+
+                    if (auto status = arrow::MakeBuilder(pool, it->type(), &builder); status.ok())
+                        values_builder.emplace_back(std::move(builder));
+                    else
+                    {
+                        throw Orc::Exception(Severity::Fatal, E_POINTER, L"Failed to create builder for field");
+                    }
+                }
+                retval.emplace_back(
+                    std::make_unique<arrow::DenseUnionBuilder>(pool, std::move(values_builder), column->type()));
+            }
+            case arrow::Type::SPARSE_UNION: {
+                const auto& fields = column->type()->fields();
+                std::vector<std::shared_ptr<arrow::ArrayBuilder>> values_builder;
+
+                for (const auto& it : fields)
+                {
+                    std::unique_ptr<arrow::ArrayBuilder> builder;
+
+                    if (auto status = arrow::MakeBuilder(pool, it->type(), &builder); status.ok())
+                        values_builder.emplace_back(std::move(builder));
+                    else
+                    {
+                        throw Orc::Exception(Severity::Fatal, E_POINTER, L"Failed to create builder for field");
+                    }
+                }
+                retval.emplace_back(
+                    std::make_unique<arrow::SparseUnionBuilder>(pool, std::move(values_builder), column->type()));
             }
             case arrow::Type::MAP: {
                 break;
@@ -261,7 +295,11 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
                 schema_definition.push_back(arrow::field(strName, arrow::timestamp(arrow::TimeUnit::MICRO), true));
                 break;
             case UTF16Type:
-                schema_definition.push_back(arrow::field(strName, arrow::binary(), true));
+                using namespace std::string_literals;
+                schema_definition.push_back(arrow::field(
+                    strName,
+                    arrow::struct_({arrow::field("utf8"s, arrow::utf8()), arrow::field("raw"s, arrow::binary())}),
+                    true));
                 break;
             case UTF8Type:
                 schema_definition.push_back(arrow::field(strName, arrow::utf8(), true));
@@ -320,7 +358,7 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::SetSchema(const TableOutput::Sch
                 return E_FAIL;
         }
     }
-    m_arrowSchema = std::make_shared<arrow::Schema>(schema_definition);
+    m_arrowSchema = std::make_shared<arrow::Schema>(std::move(schema_definition));
     m_arrowBuilders = GetBuilders();
     return S_OK;
 }
@@ -373,7 +411,7 @@ Orc::TableOutput::Parquet::Writer::WriteToStream(const std::shared_ptr<ByteStrea
         return E_FAIL;
     }
 
-    parquet::arrow::FileWriter::Open(
+    auto status = parquet::arrow::FileWriter::Open(
         *m_arrowSchema,
         ::arrow::default_memory_pool(),
         arrow_output_stream,
@@ -381,6 +419,11 @@ Orc::TableOutput::Parquet::Writer::WriteToStream(const std::shared_ptr<ByteStrea
         parquet::default_arrow_writer_properties(),
         &m_arrowWriter);
 
+    if (!status.ok())
+    {
+        Log::Error(L"Failed to create arrow writer");
+        return E_FAIL;
+    }
     return S_OK;
 }
 
@@ -389,6 +432,12 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::Flush()
     ScopedLock sl(m_cs);
 
     Log::Debug(L"Orc::TableOutput::Parquet::Writer::Flush");
+
+    if (!m_arrowWriter)
+    {
+        Log::Debug(L"Orc::TableOutput::Parquet::Writer::Flush: No arrrow writer");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_STATE);
+    }
 
     std::vector<std::shared_ptr<arrow::Array>> arrays;
     arrays.reserve(m_arrowBuilders.size());
@@ -463,6 +512,8 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteNothing()
             using T = std::decay_t<decltype(arg)>;
             if constexpr (!std::is_same_v<T, std::unique_ptr<arrow::ArrayBuilder>>)
                 arg->AppendNull();
+            else if constexpr (!std::is_same_v<T, std::unique_ptr<arrow::StructBuilder>>)
+                arg->AppendNull();
             else
                 throw Orc::Exception(Severity::Fatal, L"Cannot append WriteNothing via Array Builder");
         },
@@ -479,6 +530,8 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::AbandonRow()
             [](auto&& arg) {
                 using T = std::decay_t<decltype(arg)>;
                 if constexpr (!std::is_same_v<T, std::unique_ptr<arrow::ArrayBuilder>>)
+                    arg->AppendNull();
+                else if constexpr (!std::is_same_v<T, std::unique_ptr<arrow::StructBuilder>>)
                     arg->AppendNull();
                 else
                     throw Orc::Exception(Severity::Fatal, L"Cannot append AbandonRow via Array Builder");
@@ -531,47 +584,70 @@ HRESULT Orc::TableOutput::Parquet::Writer::WriteEndOfLine()
 
 STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::wstring& strString)
 {
-    std::visit(
-        [this, &strString](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, std::unique_ptr<arrow::BinaryBuilder>>)
-                arg->Append(
-                    reinterpret_cast<const uint8_t* const>(strString.data()),
-                    (uint32_t)strString.size() * sizeof(WCHAR));
-            else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
-            {
-                if (auto [hr, utf8] = WideToAnsi(strString); SUCCEEDED(hr))
-                {
-                    arg->Append(utf8);
-                }
-                else
-                    arg->AppendNull();
-            }
-            else
-                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a Unicode string");
-        },
-        m_arrowBuilders[m_dwColumnCounter]);
-    AddColumnAndCheckNumbers();
-    return S_OK;
+    return WriteString(std::wstring_view(strString));
 }
 
-STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::wstring_view& strString)
+STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::wstring_view& svString)
 {
     std::visit(
-        [this, &strString](auto&& arg) {
+        [this, svString](auto&& arg) {
             using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, std::unique_ptr<arrow::BinaryBuilder>>)
-                arg->Append(
-                    reinterpret_cast<const uint8_t* const>(strString.data()),
-                    (uint32_t)strString.size() * sizeof(WCHAR));
+            if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StructBuilder>>)
+            {
+                std::shared_ptr<arrow::StringBuilder> utf8_builder;
+                int utf8_id = 0;
+
+                std::shared_ptr<arrow::BinaryBuilder> raw_builder;
+                int raw_id = 0;
+
+                for (auto i = 0; i < arg->num_children(); i++)
+                {
+                    const auto& child_builder = arg->child_builder(i);
+                    if (!utf8_builder && child_builder->type()->id() == arrow::Type::STRING)
+                    {
+                        utf8_builder = std::dynamic_pointer_cast<arrow::StringBuilder>(child_builder);
+                        utf8_id = i;
+                    }
+                    else if (!raw_builder && child_builder->type()->id() == arrow::Type::BINARY)
+                    {
+                        raw_builder = std::dynamic_pointer_cast<arrow::BinaryBuilder>(child_builder);
+                        raw_id = i;
+                    }
+                    else
+                    {
+                        arg->AppendNull();
+                    }
+                }
+
+                if (utf8_builder)
+                {
+                    if (auto [hr, utf8] = WideToAnsi(svString); SUCCEEDED(hr))
+                    {
+                        utf8_builder->Append(utf8);
+                        if (raw_builder)
+                            raw_builder->AppendNull();
+                        arg->Append(true);
+                    }
+                    else
+                    {
+                        raw_builder->Append((uint8_t*)svString.data(), svString.size() * sizeof(wchar_t));
+                        if (utf8_builder)
+                            utf8_builder->AppendNull();
+                        arg->Append(true);
+                    }
+                }
+            }
             else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
             {
-                if (auto [hr, utf8] = WideToAnsi(strString); SUCCEEDED(hr))
+                if (auto [hr, utf8] = WideToAnsi(svString); SUCCEEDED(hr))
                 {
                     arg->Append(utf8);
                 }
                 else
+                {
+                    Log::Debug(L"Unicode to utf8 conversion failed");
                     arg->AppendNull();
+                }
             }
             else
                 throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a Unicode string");
@@ -583,51 +659,12 @@ STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::wstring_v
 
 STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const WCHAR* szString)
 {
-    std::visit(
-        [this, szString](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, std::unique_ptr<arrow::BinaryBuilder>>)
-                arg->Append(
-                    reinterpret_cast<const uint8_t* const>(szString), (uint32_t)wcslen(szString) * sizeof(WCHAR));
-            else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
-            {
-                if (auto [hr, utf8] = WideToAnsi(szString); SUCCEEDED(hr))
-                {
-                    arg->Append(utf8);
-                }
-                else
-                    arg->AppendNull();
-            }
-            else
-                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a Unicode string");
-        },
-        m_arrowBuilders[m_dwColumnCounter]);
-    AddColumnAndCheckNumbers();
-    return S_OK;
+    return WriteString(std::wstring_view(szString, wcslen(szString)));
 }
 
 STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteCharArray(const WCHAR* szString, DWORD dwCharCount)
 {
-    std::visit(
-        [this, szString, dwCharCount](auto&& arg) {
-            using T = std::decay_t<decltype(arg)>;
-            if constexpr (std::is_same_v<T, std::unique_ptr<arrow::BinaryBuilder>>)
-                arg->Append(reinterpret_cast<const uint8_t* const>(szString), (uint32_t)dwCharCount * sizeof(WCHAR));
-            else if constexpr (std::is_same_v<T, std::unique_ptr<arrow::StringBuilder>>)
-            {
-                if (auto [hr, utf8] = WideToAnsi(std::wstring_view(szString, dwCharCount)); SUCCEEDED(hr))
-                {
-                    arg->Append(utf8);
-                }
-                else
-                    arg->AppendNull();
-            }
-            else
-                throw Orc::Exception(Severity::Fatal, L"Not a valid arrow builder for a Unicode string");
-        },
-        m_arrowBuilders[m_dwColumnCounter]);
-    AddColumnAndCheckNumbers();
-    return S_OK;
+    return WriteString(std::wstring_view(szString, dwCharCount));
 }
 
 STDMETHODIMP
@@ -640,7 +677,7 @@ Orc::TableOutput::Parquet::Writer::WriteFormated_(const std::wstring_view& szFor
     if (buffer.empty())
         return WriteNothing();
     else
-        return WriteCharArray(buffer.get(), buffer.size());
+        return WriteString(std::wstring_view(buffer.get(), buffer.size()));
 }
 
 STDMETHODIMP Orc::TableOutput::Parquet::Writer::WriteString(const std::string& strString)

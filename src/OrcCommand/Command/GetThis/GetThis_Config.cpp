@@ -36,6 +36,27 @@ constexpr auto REGEX_CONTENT_STRINGS_MAX = 6;
 constexpr auto CONTENT_STRINGS_DEFAULT_MIN = 3;
 constexpr auto CONTENT_STRINGS_DEFAULT_MAX = 1024;
 
+namespace {
+
+void InitializeStatisticsOutput(Orc::Command::GetThis::Main::Configuration& config)
+{
+    std::filesystem::path outputDirectory;
+    if (config.Output.IsFile())
+    {
+        outputDirectory = std::filesystem::path(config.Output.Path).parent_path();
+    }
+    else
+    {
+        outputDirectory = std::filesystem::path(config.Output.Path);
+    }
+
+    config.m_statisticsOutput.Path = (outputDirectory / L"statistics.json").c_str();
+    config.m_statisticsOutput.Type = OutputSpec::Kind::File;
+    config.m_statisticsOutput.OutputEncoding = OutputSpec::Encoding::UTF8;
+}
+
+}  // namespace
+
 HRESULT Main::GetSchemaFromConfig(const ConfigItem& schemaitem)
 {
     config.Output.Schema = TableOutput::GetColumnsFromConfig(
@@ -121,15 +142,23 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     const ConfigItem& locationsConfig = configitem[GETTHIS_LOCATION];
 
+    boost::logic::tribool bAddShadows;
+    for (auto& item : locationsConfig.NodeList)
+    {
+        if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.m_shadows.has_value())
+        {
+            ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
+        }
+
+        if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.m_excludes.has_value())
+        {
+            ParseLocationExcludes(item.SubItems[CONFIG_VOLUME_EXCLUDE], config.m_excludes);
+        }
+    }
+
     if (boost::logic::indeterminate(config.bAddShadows))
     {
-        for (auto& item : locationsConfig.NodeList)
-        {
-            if (item.SubItems[CONFIG_VOLUME_SHADOWS])
-            {
-                config.bAddShadows = true;
-            }
-        }
+        config.bAddShadows = bAddShadows;
     }
 
     if (FAILED(hr = config.Locations.AddLocationsFromConfigItem(configitem[GETTHIS_LOCATION])))
@@ -349,7 +378,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (BooleanOption(argv[i] + 1, L"NoLimits", config.limits.bIgnoreLimits))
                         ;
-                    else if (BooleanOption(argv[i] + 1, L"Shadows", config.bAddShadows))
+                    else if (ShadowsOption(argv[i] + 1, L"Shadows", config.bAddShadows, config.m_shadows))
+                        ;
+                    else if (LocationExcludeOption(argv[i] + 1, L"Exclude", config.m_excludes))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Password", config.Output.Password))
                         ;
@@ -418,10 +449,18 @@ HRESULT Main::CheckConfiguration()
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
-    if (boost::logic::indeterminate(config.bAddShadows))
-        config.bAddShadows = false;
+    ::InitializeStatisticsOutput(config);
 
-    config.Locations.Consolidate((bool)config.bAddShadows, FSVBR::FSType::NTFS);
+    if (boost::logic::indeterminate(config.bAddShadows))
+    {
+        config.bAddShadows = false;
+    }
+
+    config.Locations.Consolidate(
+        (bool)config.bAddShadows,
+        config.m_shadows.value_or(LocationSet::ShadowFilters()),
+        config.m_excludes.value_or(LocationSet::PathExcludes()),
+        FSVBR::FSType::NTFS);
 
     if (config.Output.Type == OutputSpec::Kind::None || config.Output.Path.empty())
     {

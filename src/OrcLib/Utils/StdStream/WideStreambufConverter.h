@@ -5,13 +5,11 @@
 //
 // Author(s): fabienfl
 //
-
 #pragma once
 
 #include <streambuf>
 
 namespace Orc {
-namespace Command {
 
 class WideStreambufConverter : public std::basic_streambuf<wchar_t>
 {
@@ -26,5 +24,4 @@ private:
     std::basic_streambuf<char>* m_output;
 };
 
-}  // namespace Command
 }  // namespace Orc

@@ -21,7 +21,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ArchiveCreate : public OrcArchive
+class ArchiveCreate : public OrcArchive
 {
 
 protected:

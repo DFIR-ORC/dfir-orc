@@ -54,7 +54,7 @@ ULONG64 FatStream::GetSize()
     return m_FatFileEntry->GetSize();
 }
 
-HRESULT FatStream::Read(
+HRESULT FatStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pullBytesRead)
@@ -118,7 +118,7 @@ HRESULT FatStream::Read(
     return S_OK;
 }
 
-HRESULT FatStream::Write(
+HRESULT FatStream::Write_(
     __in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)

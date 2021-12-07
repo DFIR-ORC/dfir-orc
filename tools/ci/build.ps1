@@ -65,7 +65,7 @@ function Build-Orc
         [String[]]
         $Architecture,
         [Parameter()]
-        [ValidateSet('vs2017', 'vs2019')]
+        [ValidateSet('vs2017', 'vs2019', 'vs2022')]
         [String]
         $Toolchain = 'vs2019',
         [Parameter(Mandatory)]
@@ -119,6 +119,14 @@ function Build-Orc
         )
         "vs2019_x64" = @(
                 "-G `"Visual Studio 16 2019`""
+                "-A x64"
+        )
+        "vs2022_x86" = @(
+                "-G `"Visual Studio 17 2022`""
+                "-A Win32"
+        )
+        "vs2022_x64" = @(
+                "-G `"Visual Studio 17 2022`""
                 "-A x64"
         )
     }
@@ -191,6 +199,7 @@ function Find-CMake
     }
 
     $Locations = @(
+        "c:\Program Files\Microsoft Visual Studio\2022\*\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
         "c:\Program Files (x86)\Microsoft Visual Studio\2019\*\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
         "c:\Program Files (x86)\Microsoft Visual Studio\*\*\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe"
     )

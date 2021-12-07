@@ -34,7 +34,7 @@ struct SystemHandleInformationData
     SYSTEM_HANDLE_INFORMATON HandleInformation[1];
 };
 
-class ORCLIB_API JobObject
+class JobObject
 {
 private:
     static HRESULT GetHandleTypeName(DWORD hSourcePid, HANDLE hSourceHandle, std::wstring& strType);

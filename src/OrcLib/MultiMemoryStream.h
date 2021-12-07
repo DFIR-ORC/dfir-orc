@@ -18,7 +18,7 @@
 
 namespace Orc {
 
-class ORCLIB_API MultiMemoryStream : public ByteStream
+class MultiMemoryStream : public ByteStream
 {
 
 protected:
@@ -41,12 +41,12 @@ public:
 
     STDMETHOD(OpenForReadOnly)(__in PVOID pBuffer, __in DWORD cbBuffer);
 
-    STDMETHOD(Read)
+    STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
      __in ULONGLONG cbBytes,
      __out_opt PULONGLONG pcbBytesRead);
 
-    STDMETHOD(Write)
+    STDMETHOD(Write_)
     (__in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
      __in ULONGLONG cbBytesToWrite,
      __out_opt PULONGLONG pcbBytesWritten);

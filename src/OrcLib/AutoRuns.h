@@ -41,7 +41,7 @@ using AutoRunsVector = std::vector<AutoRunItem>;
 
 class CBinaryBuffer;
 
-class ORCLIB_API AutoRuns
+class AutoRuns
 {
 
     ConfigItem m_AutoRuns;

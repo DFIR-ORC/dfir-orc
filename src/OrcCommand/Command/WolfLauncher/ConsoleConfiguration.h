@@ -16,11 +16,11 @@
 namespace Orc {
 
 class ConfigItem;
+class StandardOutput;
 
 namespace Command {
 
 class UtilitiesLogger;
-class StandardOutputRedirection;
 
 struct ConsoleConfiguration
 {
@@ -29,7 +29,7 @@ struct ConsoleConfiguration
     static HRESULT Register(ConfigItem& parent, DWORD dwIndex);
     static void Parse(const ConfigItem& item, ConsoleConfiguration& configuration);
 
-    static void Apply(StandardOutputRedirection& redirection, const ConsoleConfiguration& config);
+    static void Apply(StandardOutput& standardOutput, const ConsoleConfiguration& config);
 
     struct OutputFile
     {

@@ -34,7 +34,7 @@ using PProcessInfo = ProcessInfo*;
 
 using ProcessVector = std::vector<ProcessInfo>;
 
-class ORCLIB_API RunningProcesses
+class RunningProcesses
 {
 private:
     ProcessVector m_Processes;

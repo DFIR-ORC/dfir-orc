@@ -118,7 +118,7 @@ std::unique_ptr<SpdlogLogger> UtilitiesLogger::CreateSpdlogLogger(const std::str
 
 UtilitiesLogger::ConsoleSink::ConsoleSink()
     : SpdlogSink(::CreateTeeSink())
-    , m_tee(reinterpret_cast<TeeSink&>(*m_sink))
+    , m_fileTee(reinterpret_cast<TeeSink&>(*m_sink))
 {
 }
 

@@ -5,7 +5,6 @@
 //
 // Author(s): fabienfl
 //
-
 #pragma once
 
 #include <streambuf>
@@ -16,7 +15,6 @@
 #include "FileDisposition.h"
 
 namespace Orc {
-namespace Command {
 
 template <typename CharT>
 class LazyFileStreambuf : public std::basic_streambuf<CharT>
@@ -62,6 +60,7 @@ public:
     {
         if (m_ofstream.is_open())
         {
+            m_ofstream.flush();
             m_ofstream.close();
         }
     }
@@ -96,6 +95,34 @@ protected:
         return c;
     }
 
+    std::streamsize xsputn(const CharT* s, std::streamsize count) override
+    {
+        std::basic_string_view<CharT> data(s, count);
+
+        try
+        {
+            if (m_ofstream.is_open())
+            {
+                m_ofstream << data;
+            }
+            else if (m_buffer.size() < m_buffer.capacity())
+            {
+                m_buffer.append(data);
+            }
+            else
+            {
+                return 0;
+            }
+        }
+        catch (...)
+        {
+            assert(nullptr);
+            return 0;
+        }
+
+        return count;
+    }
+
     int sync() override
     {
         if (m_ofstream.is_open())
@@ -115,5 +142,4 @@ private:
 extern template class LazyFileStreambuf<char>;
 extern template class LazyFileStreambuf<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

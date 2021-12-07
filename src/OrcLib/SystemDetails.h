@@ -34,7 +34,7 @@ using ITableOutput = TableOutput::IOutput;
 
 using SystemTags = std::set<std::wstring>;
 
-class ORCLIB_API SystemDetails
+class SystemDetails
 {
 
 private:

@@ -558,7 +558,7 @@ HRESULT Orc::UtilGetPath(__in PCWSTR pwszDir, __in PCWSTR pwszDesiredName, __out
     return S_OK;
 }
 
-HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
+HRESULT Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
 {
     HRESULT hr = E_FAIL;
     bool bDeleted = false;
@@ -605,7 +605,7 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
     return S_OK;
 }
 
-HRESULT ORCLIB_API Orc::UtilDeleteTemporaryDirectory(const std::filesystem::path& path)
+HRESULT Orc::UtilDeleteTemporaryDirectory(const std::filesystem::path& path)
 {
     std::error_code ec;
     std::filesystem::remove_all(path, ec);
@@ -617,12 +617,12 @@ HRESULT ORCLIB_API Orc::UtilDeleteTemporaryDirectory(const std::filesystem::path
     return S_OK;
 }
 
-HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(const std::filesystem::path& path)
+HRESULT Orc::UtilDeleteTemporaryFile(const std::filesystem::path& path)
 {
     return UtilDeleteTemporaryFile(path.c_str());
 }
 
-HRESULT ORCLIB_API Orc::UtilDeleteTemporaryFile(__in LPCWSTR pszPath, DWORD dwMaxRetries)
+HRESULT Orc::UtilDeleteTemporaryFile(__in LPCWSTR pszPath, DWORD dwMaxRetries)
 {
     HRESULT hr = E_FAIL;
     bool bDeleted = false;

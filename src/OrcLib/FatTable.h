@@ -18,7 +18,7 @@
 
 namespace Orc {
 
-class ORCLIB_API FatTable
+class FatTable
 {
 public:
     enum FatTableType

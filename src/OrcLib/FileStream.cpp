@@ -242,7 +242,7 @@ HRESULT FileStream::Duplicate(const FileStream& other)
         cbBytesToRead   -   Number of bytes to read into pBuffer
         pcbBytesRead    -   Will receive the number of bytes placed in pBuffer
 */
-__data_entrypoint(File) HRESULT FileStream::Read(
+__data_entrypoint(File) HRESULT FileStream::Read_(
     __out_bcount_part(cbBytesToRead, *pcbBytesRead) PVOID pBuffer,
     __in ULONGLONG cbBytesToRead,
     __out_opt PULONGLONG pcbBytesRead)
@@ -277,7 +277,7 @@ __data_entrypoint(File) HRESULT FileStream::Read(
         pcbBytesRead    -   Will recieve the number of bytes placed in pBuffer
 */
 HRESULT
-FileStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out PULONGLONG pcbBytesWritten)
+FileStream::Write_(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out PULONGLONG pcbBytesWritten)
 {
     HRESULT hr = E_FAIL;
 

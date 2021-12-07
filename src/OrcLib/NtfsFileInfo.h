@@ -14,7 +14,7 @@
 
 namespace Orc {
 
-class ORCLIB_API NtfsFileInfo : public FileInfo
+class NtfsFileInfo : public FileInfo
 {
 public:
     NtfsFileInfo(

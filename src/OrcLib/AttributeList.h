@@ -24,7 +24,7 @@ class MFTRecord;
 class MFTWalker;
 class AttributeList;
 
-class ORCLIB_API AttributeListEntry
+class AttributeListEntry
 {
     friend class MFTRecord;
     friend class MFTWalker;
@@ -123,7 +123,7 @@ public:
     ~AttributeListEntry() { m_pListEntry = nullptr; }
 };
 
-class ORCLIB_API AttributeList : public MftRecordAttribute
+class AttributeList : public MftRecordAttribute
 {
     friend class MFTRecord;
     friend class MFTWalker;

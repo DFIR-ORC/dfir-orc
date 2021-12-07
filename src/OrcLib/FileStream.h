@@ -19,7 +19,7 @@
 
 namespace Orc {
 
-class ORCLIB_API FileStream : public ByteStream
+class FileStream : public ByteStream
 {
 public:
     FileStream()
@@ -79,12 +79,12 @@ public:
      __in DWORD dwFlags,
      __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes);
 
-    STDMETHOD(Read)
+    STDMETHOD(Read_)
     (__out_bcount_part(cbBytesToRead, *pcbBytesRead) PVOID pBuffer,
      __in ULONGLONG cbBytesToRead,
      __out_opt PULONGLONG pcbBytesRead);
 
-    STDMETHOD(Write)
+    STDMETHOD(Write_)
     (__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out PULONGLONG pcbBytesWritten);
 
     STDMETHOD(SetFilePointer)

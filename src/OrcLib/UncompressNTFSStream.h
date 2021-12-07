@@ -19,7 +19,7 @@ namespace Orc {
 
 class NTFSStream;
 
-class ORCLIB_API UncompressNTFSStream : public ChainingStream
+class UncompressNTFSStream : public ChainingStream
 {
 
 public:
@@ -43,12 +43,12 @@ public:
 
     STDMETHOD(Open)(const std::shared_ptr<NTFSStream>& pChainedStream, DWORD dwCompressionUnit);
 
-    STDMETHOD(Read)
+    STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
      __in ULONGLONG cbBytes,
      __out_opt PULONGLONG pcbBytesRead);
 
-    STDMETHOD(Write)
+    STDMETHOD(Write_)
     (__in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
      __in ULONGLONG cbBytesToWrite,
      __out_opt PULONGLONG pcbBytesWritten);

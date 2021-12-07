@@ -30,7 +30,7 @@ HRESULT TeeStream::Open(std::vector<std::shared_ptr<ByteStream>>&& Streams)
     return S_OK;
 }
 
-HRESULT TeeStream::Read(
+HRESULT TeeStream::Read_(
     __out_bcount_part(cbBytesToRead, *pcbBytesRead) PVOID pBuffer,
     __in ULONGLONG cbBytesToRead,
     __out_opt PULONGLONG pcbBytesRead)
@@ -45,7 +45,7 @@ HRESULT TeeStream::Read(
 }
 
 HRESULT
-TeeStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten)
+TeeStream::Write_(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten)
 {
     if (cbBytes > MAXDWORD)
         return E_INVALIDARG;

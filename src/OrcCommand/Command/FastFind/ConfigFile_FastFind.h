@@ -57,11 +57,11 @@ constexpr auto FASTFIND_FASTFIND = 0L;
 
 namespace Orc::Config::FastFind {
 
-ORCLIB_API HRESULT object(ConfigItem& parent, DWORD dwIndex);
-ORCLIB_API HRESULT service(ConfigItem& parent, DWORD dwIndex);
-ORCLIB_API HRESULT registry(ConfigItem& parent, DWORD dwIndex);
-ORCLIB_API HRESULT filesystem(ConfigItem& parent, DWORD dwIndex);
+HRESULT object(ConfigItem& parent, DWORD dwIndex);
+HRESULT service(ConfigItem& parent, DWORD dwIndex);
+HRESULT registry(ConfigItem& parent, DWORD dwIndex);
+HRESULT filesystem(ConfigItem& parent, DWORD dwIndex);
 
-ORCLIB_API HRESULT root(ConfigItem& item);
+HRESULT root(ConfigItem& item);
 
 }  // namespace Orc::Config::FastFind

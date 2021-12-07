@@ -51,6 +51,8 @@
 #include "Utils/Guard.h"
 #include "Log/UtilitiesLogger.h"
 #include "Log/UtilitiesLoggerConfiguration.h"
+#include "Log/LogTerminationHandler.h"
+#include "Utils/StdStream/StandardOutput.h"
 
 #pragma managed(push, off)
 
@@ -58,7 +60,7 @@ namespace Orc {
 
 namespace Command {
 
-class ORCLIB_API UtilitiesMain
+class UtilitiesMain
 {
 public:
     class Configuration
@@ -414,6 +416,7 @@ public:
 protected:
     UtilitiesLogger m_logging;
 
+    StandardOutput m_standardOutput;
     mutable Console m_console;
 
     Traits::TimeUtc<SYSTEMTIME> theStartTime;
@@ -711,8 +714,17 @@ protected:
 
     bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
     bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bOption);
+    bool BooleanExactOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bPresent);
 
     bool ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
+
+    bool ShadowsOption(
+        LPCWSTR szArg,
+        LPCWSTR szOption,
+        boost::logic::tribool& bAddShadows,
+        std::optional<LocationSet::ShadowFilters>& filters);
+
+    bool LocationExcludeOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<LocationSet::PathExcludes>& excludes);
 
     bool CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, CryptoHashStream::Algorithm& algo);
     bool FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, FuzzyHashStream::Algorithm& algo);
@@ -729,6 +741,14 @@ protected:
     bool IgnoreConfigOptions(LPCWSTR szArg);
     bool IgnoreCommonOptions(LPCWSTR szArg);
     bool IgnoreEarlyOptions(LPCWSTR szArg);
+
+    static void ParseShadowOption(
+        const std::wstring& shadows,
+        boost::logic::tribool& bAddShadows,
+        std::optional<LocationSet::ShadowFilters>& filters);
+
+    static void
+    ParseLocationExcludes(const std::wstring& rawExcludes, std::optional<LocationSet::PathExcludes>& excludes);
 
 public:
     UtilitiesMain();
@@ -765,6 +785,7 @@ public:
     static int WMain(int argc, const WCHAR* argv[])
     {
         Robustness::Initialize(UtilityT::ToolName());
+        Robustness::AddTerminationHandler(std::make_shared<LogTerminationHandler>());
 
         UtilityT Cmd;
         Cmd.Configure(argc, argv);
@@ -800,6 +821,9 @@ public:
         }
 
         Cmd.WaitForDebugger(argc, argv);
+
+        // TODO: FIXME
+
         Cmd.LoadCommonExtensions();
         Cmd.PrintHeader(UtilityT::ToolName(), UtilityT::ToolDescription(), kOrcFileVerStringW);
 

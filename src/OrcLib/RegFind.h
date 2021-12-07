@@ -52,10 +52,10 @@ static const ValueTypeDefinition g_ValueTypeDefinitions[] = {
     {L"REG_QWORD_LITTLE_ENDIAN", RegQWORD},
     {L"_REG_FIRST_INVALID_", RegMaxType}};
 
-class ORCLIB_API RegFind
+class RegFind
 {
 public:
-    class ORCLIB_API SearchTerm
+    class SearchTerm
     {
 
     public:
@@ -169,10 +169,10 @@ public:
         bool DependsOnValueOrData() { return m_criteriaRequired & ValueOrDataMask() ? true : false; }
     };
 
-    class ORCLIB_API Match
+    class Match
     {
     public:
-        class ORCLIB_API KeyNameMatch
+        class KeyNameMatch
         {
             friend Match;
 
@@ -214,7 +214,7 @@ public:
             };
         };
 
-        class ORCLIB_API ValueNameMatch
+        class ValueNameMatch
         {
             friend Match;
 

@@ -13,7 +13,7 @@
 
 namespace Orc {
 
-class ORCLIB_API CopyFileAgent : public UploadAgent
+class CopyFileAgent : public UploadAgent
 {
 private:
     bool bAddedConnection = false;

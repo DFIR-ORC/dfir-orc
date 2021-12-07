@@ -9,16 +9,15 @@
 
 #pragma once
 
-#include "OrcCommand.h"
-
-#include <boost/logic/tribool.hpp>
-
 #include "UtilitiesMain.h"
+
+#include "OrcCommand.h"
 
 #include <filesystem>
 #include <vector>
 #include <set>
 #include <string>
+#include <optional>
 
 #include <boost/logic/tribool.hpp>
 
@@ -29,13 +28,10 @@
 #include "ArchiveCreate.h"
 #include "FileFind.h"
 #include "TableOutputWriter.h"
-
 #include "ByteStream.h"
 #include "OrcLimits.h"
-
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
-
 #include "Archive/Appender.h"
 #include "Archive/7z/Archive7z.h"
 
@@ -112,6 +108,8 @@ public:
 
 using ListOfSampleSpecs = std::vector<SampleSpec>;
 
+const wchar_t kToolName[] = L"GetThis";
+
 class ORCUTILS_API Main : public UtilitiesMain
 {
 public:
@@ -128,8 +126,11 @@ public:
         bool bFlushRegistry = false;
         bool bReportAll = false;
         boost::logic::tribool bAddShadows;
+        std::optional<LocationSet::ShadowFilters> m_shadows;
+        std::optional<LocationSet::PathExcludes> m_excludes;
 
         OutputSpec Output;
+        OutputSpec m_statisticsOutput;
 
         ListOfSampleSpecs listofSpecs;
         std::vector<std::shared_ptr<FileFind::SearchTerm>> listOfExclusions;
@@ -359,7 +360,7 @@ private:
 public:
     Main();
 
-    static LPCWSTR ToolName() { return L"GetThis"; }
+    static LPCWSTR ToolName() { return kToolName; }
     static LPCWSTR ToolDescription() { return L"Sample collection"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();

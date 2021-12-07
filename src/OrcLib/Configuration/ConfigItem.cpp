@@ -12,6 +12,7 @@
 
 #include "ConfigFile.h"
 #include "ConfigFileReader.h"
+#include "ConfigFileWriter.h"
 
 #include "EmbeddedResource.h"
 #include "ParameterCheck.h"
@@ -23,6 +24,8 @@ auto constexpr STATUS_SUCCESS = (0);
 using namespace std;
 
 using namespace Orc;
+
+std::shared_ptr<XmlLiteExtension> ConfigItem::m_xmlLite = nullptr;
 
 ConfigItem::ConfigItem(const ConfigItem& other) noexcept
 {
@@ -258,4 +261,59 @@ HRESULT ConfigItem::AddChild(std::wstring_view name, NamedAdderFunction adder, D
 HRESULT ConfigItem::AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwIdx)
 {
     return AddChild(std::wstring_view(szName), adder, dwIdx);
+}
+
+HRESULT ConfigItem::ToXml(std::wstring& output) const
+{
+    HRESULT hr = E_FAIL;
+    CComPtr<IStream> stream;
+
+    if (!m_xmlLite)
+    {
+        m_xmlLite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
+        if (!m_xmlLite)
+        {
+            Log::Error(L"Failed to load XmlLite");
+            return E_FAIL;
+        }
+    }
+
+    CComPtr<IXmlWriter> pWriter;
+    if (FAILED(hr = m_xmlLite->CreateXmlWriter(IID_IXmlWriter, (PVOID*)&pWriter, nullptr)))
+    {
+        XmlLiteExtension::LogError(hr, nullptr);
+        Log::Error(L"Failed to instantiate XmlWriter [{}]", SystemError(hr));
+        return hr;
+    }
+
+    auto memstream = std::make_shared<MemoryStream>();
+    if (FAILED(hr = ByteStream::Get_IStream(memstream, &stream)))
+    {
+        return hr;
+    }
+
+    if (FAILED(hr = pWriter->SetOutput(stream)))
+    {
+        XmlLiteExtension::LogError(hr, nullptr);
+        Log::Error(L"Failed to set output stream [{}]", SystemError(hr));
+        return hr;
+    }
+
+    if (FAILED(hr = ConfigFileWriter::WriteConfigNode(pWriter, *this)))
+    {
+        XmlLiteExtension::LogError(hr, nullptr);
+        Log::Error(L"Failed to write config item node [{}]", SystemError(hr));
+        return hr;
+    }
+
+    if (FAILED(hr = pWriter->Flush()))
+    {
+        XmlLiteExtension::LogError(hr, nullptr);
+        Log::Error(L"Failed to flush config item [{}]", SystemError(hr));
+        return hr;
+    }
+
+    auto buffer = memstream->GetConstBuffer();
+    std::copy(buffer.cbegin(), buffer.cend(), std::back_inserter(output));
+    return S_OK;
 }

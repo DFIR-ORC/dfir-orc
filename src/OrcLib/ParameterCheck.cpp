@@ -111,7 +111,7 @@ HRESULT Orc::GetOutputDir(
         szOutputDir, cchOutputFileLengthInWCHARS, bAllowRecursiveFolderCreation, MAX_CREATEDIR_RECURSIONS);
 }
 
-ORCLIB_API HRESULT Orc::GetOutputDir(const WCHAR* szInputString, std::wstring& strOutputDir, bool bCreateParentAsNeeded)
+HRESULT Orc::GetOutputDir(const WCHAR* szInputString, std::wstring& strOutputDir, bool bCreateParentAsNeeded)
 {
     HRESULT hr = E_FAIL;
 
@@ -172,7 +172,7 @@ HRESULT Orc::GetOutputFile(
     return S_OK;
 }
 
-ORCLIB_API HRESULT
+HRESULT
 Orc::GetOutputFile(const WCHAR* szInputString, std::wstring& strOutputFile, bool bCreateParentAsNeeded)
 {
     HRESULT hr = E_FAIL;
@@ -242,7 +242,7 @@ HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWOR
     return S_OK;
 }
 
-ORCLIB_API HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile)
+HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile)
 {
     HRESULT hr = E_FAIL;
 
@@ -275,7 +275,7 @@ HRESULT Orc::ExpandDirectoryPath(const WCHAR* szString, WCHAR* szDirectory, DWOR
     return HRESULT_FROM_WIN32(ERROR_INVALID_NAME);
 }
 
-ORCLIB_API HRESULT Orc::ExpandDirectoryPath(const WCHAR* szInput, std::wstring& inputDir)
+HRESULT Orc::ExpandDirectoryPath(const WCHAR* szInput, std::wstring& inputDir)
 {
     HRESULT hr = E_FAIL;
 
@@ -347,7 +347,7 @@ HRESULT Orc::VerifyFileIsBinary(const WCHAR* szInputFile)
     return S_FALSE;
 }
 
-ORCLIB_API HRESULT Orc::GetProcessModuleDirectory(WCHAR* szDirectory, DWORD cchDirectoryLengthInWCHARS)
+HRESULT Orc::GetProcessModuleDirectory(WCHAR* szDirectory, DWORD cchDirectoryLengthInWCHARS)
 {
     WCHAR szProcessFileName[MAX_PATH];
 
@@ -358,7 +358,7 @@ ORCLIB_API HRESULT Orc::GetProcessModuleDirectory(WCHAR* szDirectory, DWORD cchD
     return GetDirectoryForFile(szProcessFileName, szDirectory, cchDirectoryLengthInWCHARS);
 }
 
-ORCLIB_API HRESULT Orc::GetProcessModuleFileName(WCHAR* szFileName, DWORD cchFileNameLengthInWCHARS)
+HRESULT Orc::GetProcessModuleFileName(WCHAR* szFileName, DWORD cchFileNameLengthInWCHARS)
 {
     WCHAR szProcessFileName[MAX_PATH];
 
@@ -369,7 +369,7 @@ ORCLIB_API HRESULT Orc::GetProcessModuleFileName(WCHAR* szFileName, DWORD cchFil
     return GetFileNameForFile(szProcessFileName, szFileName, cchFileNameLengthInWCHARS);
 }
 
-ORCLIB_API HRESULT Orc::GetProcessModuleFullPath(WCHAR* szFullPath, DWORD cchFullPathLengthInWCHARS)
+HRESULT Orc::GetProcessModuleFullPath(WCHAR* szFullPath, DWORD cchFullPathLengthInWCHARS)
 {
     if (!GetModuleFileName(NULL, szFullPath, cchFullPathLengthInWCHARS))
     {
@@ -378,7 +378,7 @@ ORCLIB_API HRESULT Orc::GetProcessModuleFullPath(WCHAR* szFullPath, DWORD cchFul
     return S_OK;
 }
 
-ORCLIB_API HRESULT
+HRESULT
 Orc::GetDirectoryForFile(const WCHAR* szInputString, WCHAR* szDirectory, DWORD cchDirectoryLengthInWCHARS)
 {
     WCHAR path_buffer[_MAX_PATH];
@@ -409,7 +409,7 @@ Orc::GetDirectoryForFile(const WCHAR* szInputString, WCHAR* szDirectory, DWORD c
     return S_OK;
 }
 
-ORCLIB_API HRESULT
+HRESULT
 Orc::GetFileNameForFile(const WCHAR* szInputString, WCHAR* szFileName, DWORD cchFileNameLengthInWCHARS)
 {
     WCHAR path_buffer[_MAX_PATH];
@@ -441,7 +441,7 @@ Orc::GetFileNameForFile(const WCHAR* szInputString, WCHAR* szFileName, DWORD cch
     return S_OK;
 }
 
-ORCLIB_API HRESULT
+HRESULT
 Orc::GetExtensionForFile(const WCHAR* szInputString, WCHAR* szExtension, DWORD cchExtensionLengthInWCHARS)
 {
     WCHAR path_buffer[_MAX_PATH];
@@ -464,7 +464,7 @@ Orc::GetExtensionForFile(const WCHAR* szInputString, WCHAR* szExtension, DWORD c
     return S_OK;
 }
 
-ORCLIB_API HRESULT
+HRESULT
 Orc::GetBaseNameForFile(const WCHAR* szInputString, WCHAR* szBaseName, DWORD cchBaseNameLengthInWCHARS)
 {
     WCHAR path_buffer[_MAX_PATH];
@@ -487,7 +487,7 @@ Orc::GetBaseNameForFile(const WCHAR* szInputString, WCHAR* szBaseName, DWORD cch
     return S_OK;
 }
 
-ORCLIB_API HRESULT Orc::GetFileNameAndDirectoryForFile(
+HRESULT Orc::GetFileNameAndDirectoryForFile(
     const WCHAR* szInputString,
     WCHAR* szDirectory,
     DWORD cchDirectoryLengthInWCHARS,
@@ -580,7 +580,7 @@ HRESULT Orc::GetOutputCab(
     return S_OK;
 }
 
-ORCLIB_API HRESULT Orc::GetOutputCab(const WCHAR* szInputString, std::wstring& strOutputCab, bool bCreateParentAsNeeded)
+HRESULT Orc::GetOutputCab(const WCHAR* szInputString, std::wstring& strOutputCab, bool bCreateParentAsNeeded)
 {
     HRESULT hr = E_FAIL;
 

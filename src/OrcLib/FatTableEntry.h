@@ -24,7 +24,7 @@ static unsigned long FAT16_MAX_ENTRY_VALUE = 0xFFFF;
 static unsigned long FAT32_BAD_CLUSTER = 0x0FFFFFF7;
 static unsigned long FAT32_MAX_ENTRY_VALUE = 0x0FFFFFFF;
 
-class ORCLIB_API FatTableEntry
+class FatTableEntry
 {
 public:
     FatTableEntry()

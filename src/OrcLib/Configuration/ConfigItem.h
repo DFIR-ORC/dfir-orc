@@ -18,7 +18,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ConfigItem
+class ConfigItem
 {
 public:  // TYPES
     enum ConfigItemType : char
@@ -157,6 +157,11 @@ public:  // METHODS
     HRESULT AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwIdx);
 
     HRESULT AddChild(std::wstring_view name, NamedAdderFunction adder, DWORD dwIdx);
+
+    HRESULT ToXml(std::wstring& output) const;
+
+private:
+    static std::shared_ptr<XmlLiteExtension> m_xmlLite;
 };
 
 }  // namespace Orc
@@ -296,6 +301,7 @@ constexpr auto CONFIG_VOLUME_OFFSET = 4U;
 constexpr auto CONFIG_VOLUME_SIZE = 5U;
 constexpr auto CONFIG_VOLUME_SHADOWS = 6U;
 constexpr auto CONFIG_VOLUME_ALTITUDE = 7U;
+constexpr auto CONFIG_VOLUME_EXCLUDE = 8U;
 
 constexpr auto CONFIG_SQL_TABLEKEY = 0U;
 

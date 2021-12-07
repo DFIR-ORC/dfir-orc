@@ -48,7 +48,7 @@ using Modules = std::vector<ModuleInfo>;
 
 using RunningCodeEnumItemCallback = void(const ModuleInfo& item, LPVOID pContext);
 
-class ORCLIB_API RunningCode
+class RunningCode
 {
 private:
     ModuleMap m_ModMap;

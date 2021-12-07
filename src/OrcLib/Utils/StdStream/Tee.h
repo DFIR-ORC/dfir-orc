@@ -5,13 +5,11 @@
 //
 // Author(s): fabienfl
 //
-
 #pragma once
 
 #include <streambuf>
 
 namespace Orc {
-namespace Command {
 
 template <typename CharT>
 class Tee : public std::basic_streambuf<CharT>
@@ -45,6 +43,14 @@ protected:
         return c;
     }
 
+    std::streamsize xsputn(const CharT* s, std::streamsize count) override
+    {
+        auto count1 = m_s1->sputn(s, count);
+        auto count2 = m_s2->sputn(s, count);
+        assert(count1 == count2);
+        return count1 == count2 ? count1 : 0;
+    }
+
     int sync() override
     {
         const auto r1 = m_s1->pubsync();
@@ -65,5 +71,4 @@ private:
 extern template class Tee<char>;
 extern template class Tee<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

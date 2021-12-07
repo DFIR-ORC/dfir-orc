@@ -223,15 +223,23 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     const ConfigItem& locationsConfig = configitem[NTFSINFO_LOCATIONS];
 
+    boost::logic::tribool bAddShadows;
+    for (auto& item : locationsConfig.NodeList)
+    {
+        if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.m_shadows.has_value())
+        {
+            ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
+        }
+
+        if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.m_excludes.has_value())
+        {
+            ParseLocationExcludes(item.SubItems[CONFIG_VOLUME_EXCLUDE], config.m_excludes);
+        }
+    }
+
     if (boost::logic::indeterminate(config.bAddShadows))
     {
-        for (auto& item : locationsConfig.NodeList)
-        {
-            if (item.SubItems[CONFIG_VOLUME_SHADOWS])
-            {
-                config.bAddShadows = true;
-            }
-        }
+        config.bAddShadows = bAddShadows;
     }
 
     if (FAILED(hr = config.locs.AddLocationsFromConfigItem(locationsConfig)))
@@ -305,7 +313,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (BooleanOption(argv[i] + 1, L"KnownLocations", config.bGetKnownLocations))
                         ;
-                    else if (BooleanOption(argv[i] + 1, L"Shadows", config.bAddShadows))
+                    else if (ShadowsOption(argv[i] + 1, L"Shadows", config.bAddShadows, config.m_shadows))
+                        ;
+                    else if (LocationExcludeOption(argv[i] + 1, L"Exclude", config.m_excludes))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"ResurrectRecords", config.bResurrectRecords))
                         ;
@@ -364,6 +374,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         Log::Error("NTFSInfo failed during argument parsing, exiting");
         return E_ABORT;
     }
+
     // argc/argv parameters only
     if (boost::logic::indeterminate(config.bAddShadows))
         config.bAddShadows = false;
@@ -411,7 +422,11 @@ HRESULT Main::CheckConfiguration()
         config.bAddShadows = false;
     }
 
-    config.locs.Consolidate((bool)config.bAddShadows, FSVBR::FSType::NTFS);
+    config.locs.Consolidate(
+        static_cast<bool>(config.bAddShadows),
+        config.m_shadows.value_or(LocationSet::ShadowFilters()),
+        config.m_excludes.value_or(LocationSet::PathExcludes()),
+        FSVBR::FSType::NTFS);
 
     if (config.locs.IsEmpty() != S_OK)
     {

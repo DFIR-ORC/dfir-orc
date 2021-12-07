@@ -21,7 +21,7 @@ class RobustStructuredOptions : public StructuredOutputOptions
 {
 };
 
-class ORCLIB_API RobustStructuredWriter : public StructuredOutputWriter
+class RobustStructuredWriter : public StructuredOutputWriter
 {
 protected:
     const std::shared_ptr<StructuredOutputWriter> m_pWriter;

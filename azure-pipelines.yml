@@ -19,6 +19,8 @@ stages:
   - stage: Publish
     jobs:
     - job: RetrieveAndPublish
+      pool:
+        vmImage: 'windows-2019'
       steps:
       - checkout: self
         clean: false

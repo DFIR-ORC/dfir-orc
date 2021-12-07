@@ -26,7 +26,7 @@ namespace Orc {
 class Location;
 class VolumeReader;
 
-class ORCLIB_API FatWalker
+class FatWalker
 {
 public:
     FatWalker();

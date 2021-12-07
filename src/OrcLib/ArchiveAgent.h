@@ -24,12 +24,12 @@
 
 namespace Orc {
 
-class ORCLIB_API ArchiveAgent : public Concurrency::agent
+class ArchiveAgent : public Concurrency::agent
 {
     class OnCompleteTerminationHandler;
 
 public:
-    class ORCLIB_API OnComplete
+    class OnComplete
     {
         friend class ArchiveAgent;
 

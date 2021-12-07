@@ -29,7 +29,7 @@ constexpr auto NTFSINFO_COMPUTER = 12L;
 constexpr auto NTFSINFO_POP_SYS_OBJ = 13L;
 
 namespace Orc::Config::NTFSInfo {
-ORCLIB_API HRESULT root(ConfigItem& item);
+HRESULT root(ConfigItem& item);
 }
 
 #pragma managed(pop)

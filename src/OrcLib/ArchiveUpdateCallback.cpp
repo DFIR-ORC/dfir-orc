@@ -354,13 +354,17 @@ STDMETHODIMP ArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream*
         return E_POINTER;
     }
 
-    CComQIPtr<ISequentialInStream, &IID_ISequentialInStream> fileStream =
-        new InByteStreamWrapper(m_Items[index].Stream);
-
-    if (fileStream == nullptr)
-        return E_OUTOFMEMORY;
-
-    *inStream = fileStream.Detach();
+    if (m_Items[index].Stream->GetSize() == 0)
+    {
+        // 7z expects NULL streams for empty files
+        *inStream = NULL;
+    }
+    else
+    {
+        CComQIPtr<ISequentialInStream, &IID_ISequentialInStream> fileStream =
+            new InByteStreamWrapper(m_Items[index].Stream);
+        *inStream = fileStream.Detach();
+    }
 
     m_Items[index].currentStatus = OrcArchive::ArchiveItem::Status::Processing;
 

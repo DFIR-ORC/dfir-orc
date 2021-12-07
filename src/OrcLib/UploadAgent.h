@@ -25,7 +25,7 @@
 
 namespace Orc {
 
-class ORCLIB_API UploadAgent : public Concurrency::agent
+class UploadAgent : public Concurrency::agent
 {
 public:
     static std::shared_ptr<UploadAgent> CreateUploadAgent(

@@ -294,7 +294,7 @@ struct ProcessLife
     };
 };
 
-class ORCLIB_API TaskTracker
+class TaskTracker
 {
 public:
     using TimeLine = std::vector<std::shared_ptr<CausalityItem>>;

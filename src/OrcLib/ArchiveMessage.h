@@ -21,7 +21,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ArchiveMessage : public std::enable_shared_from_this<ArchiveMessage>
+class ArchiveMessage : public std::enable_shared_from_this<ArchiveMessage>
 {
 public:
     enum Request

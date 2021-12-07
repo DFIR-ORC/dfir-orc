@@ -21,7 +21,7 @@ namespace Orc {
 
 class Location;
 
-class ORCLIB_API VolumeShadowCopies
+class VolumeShadowCopies
 {
 public:
     static const FlagsDefinition g_VssFlags[];

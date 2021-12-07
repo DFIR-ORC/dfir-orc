@@ -27,7 +27,7 @@ namespace Orc {
 class ArchiveExtract;
 class ArchiveCompress;
 
-class ORCLIB_API OrcArchive
+class OrcArchive
 {
 public:
     class ArchiveItem

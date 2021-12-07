@@ -346,7 +346,7 @@ void ArchiveAgent::run()
                     {
                         if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
                         {
-                            std::wstring strFileName = request->Name();
+                            std::wstring strFileName = request->SourcePath();
                             strFileName.append(L"\\");
                             strFileName.append(ffd.cFileName);
 

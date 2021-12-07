@@ -9,10 +9,8 @@
 #include "Tee.h"
 
 namespace Orc {
-namespace Command {
 
 template class Tee<char>;
 template class Tee<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

@@ -5,14 +5,11 @@
 //
 // Author(s): fabienfl
 //
-
 #include "LazyFileStreambuf.h"
 
 namespace Orc {
-namespace Command {
 
 template class LazyFileStreambuf<char>;
 template class LazyFileStreambuf<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

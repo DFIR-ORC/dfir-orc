@@ -24,34 +24,32 @@ namespace Command {
 
 namespace detail {
 
-// Adapt stdout to container interface to directly write data on terminal and duplicate lines to the Logger
+// Adapter for a container interface to be usable with Text::Tree and fmt.
+// NOTE: log duplication could be done by redirecting stdout using existing StandardOutputRedirection classes
 template <typename T>
 struct StdoutContainerAdapter
 {
+public:
     using value_type = T;
 
     void push_back(T c)
     {
-        if (c == 0)
-        {
-            return;
-        }
-
-        Traits::get_std_out<T>() << c;
-
-        // Using stdout with multiple threads requires synchronization so it should not be bothering to have a 'static'
-        // here
-        static std::basic_string<T> line;
         if (c == Traits::newline_v<T>)
         {
-            Log::Info(Log::Facility::kLogFile, line);
-            line.clear();
+            Log::Info(Log::Facility::kLogFile, m_buffer);
+
+            m_buffer.push_back(c);
+            Traits::get_std_out<T>() << m_buffer;
+            m_buffer.clear();
         }
-        else
+        else if (c)
         {
-            line.push_back(c);
+            m_buffer.push_back(c);
         }
     }
+
+private:
+    std::basic_string<T> m_buffer;
 };
 
 }  // namespace detail

@@ -19,7 +19,7 @@
 
 namespace Orc {
 
-class ORCLIB_API FatFileEntry
+class FatFileEntry
 {
 public:
     friend std::wostream& operator<<(std::wostream& os, const FatFileEntry& fatFileEntry);

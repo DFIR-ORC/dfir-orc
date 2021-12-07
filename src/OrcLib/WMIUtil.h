@@ -20,7 +20,7 @@
 
 namespace Orc {
 
-class ORCLIB_API WMI
+class WMI
 {
 
 private:

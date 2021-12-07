@@ -15,7 +15,7 @@
 
 namespace Orc {
 
-class ORCLIB_API ZipExtract : public ArchiveExtract
+class ZipExtract : public ArchiveExtract
 {
     friend class ArchiveExtract;
 

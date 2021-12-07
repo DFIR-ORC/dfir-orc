@@ -27,7 +27,7 @@ class FileReader;
 }  // namespace TableOutput::CSV
 class CircularStream;
 
-class ORCLIB_API CircularStorage
+class CircularStorage
 {
 
     friend class TableOutput::CSV::Cruncher;

@@ -22,6 +22,7 @@
 #include "Configuration/Option.h"
 #include "ParameterCheck.h"
 #include "OutputSpec.h"
+#include "Utils/String.h"
 
 using namespace Orc::Command;
 using namespace Orc;
@@ -328,7 +329,7 @@ bool ParseSyslogOptions(std::vector<Option>& options, UtilitiesLoggerConfigurati
 
         if (option.key == kPort)
         {
-            output.port = kPort;
+            output.port = *option.value;
             option.isParsed = true;
             continue;
         }
@@ -430,7 +431,7 @@ void ApplyConsoleBacktraceTrigger(UtilitiesLogger& utilitiesLogger, const Utilit
     }
     else
     {
-        console->SetBacktraceTrigger(Log::Level::Off);
+        console->SetBacktraceTrigger(Log::Level::Critical);
     }
 }
 
@@ -703,16 +704,6 @@ std::optional<std::wstring> FileConfigurationToArgument(const UtilitiesLoggerCon
     return fmt::format(L"/{}:{}{}", kLog, kFile, Join(options, L",", L"", L""));
 }
 
-bool StartsWith(std::wstring_view string, std::wstring_view substring)
-{
-    if (string.size() < substring.size())
-    {
-        return false;
-    }
-
-    return boost::iequals(std::wstring_view(string.data(), substring.size()), substring);
-}
-
 }  // namespace
 
 namespace Orc {
@@ -732,39 +723,39 @@ void UtilitiesLoggerConfiguration::Parse(int argc, const wchar_t* argv[], Utilit
             case L'-':
                 if (::ParseLogArgument(arg, config))
                     ;
-                else if (::StartsWith(arg, kVerbose))
+                else if (StartsWith(arg, kVerbose))
                 {
                     config.verbose = true;
                 }
-                else if (::StartsWith(arg, kCritical))
+                else if (StartsWith(arg, kCritical))
                 {
                     config.level = Log::Level::Critical;
                 }
-                else if (::StartsWith(arg, kError))
+                else if (StartsWith(arg, kError))
                 {
                     config.level = Log::Level::Error;
                 }
-                else if (::StartsWith(arg, kWarn))
+                else if (StartsWith(arg, kWarn))
                 {
                     config.level = Log::Level::Warning;
                 }
-                else if (::StartsWith(arg, kInfo))
+                else if (StartsWith(arg, kInfo))
                 {
                     config.level = Log::Level::Info;
                 }
-                else if (::StartsWith(arg, kDebug))
+                else if (StartsWith(arg, kDebug))
                 {
                     config.level = Log::Level::Debug;
                 }
-                else if (::StartsWith(arg, kTrace))
+                else if (StartsWith(arg, kTrace))
                 {
                     config.level = Log::Level::Trace;
                 }
-                else if (::StartsWith(arg, kNoConsole))
+                else if (StartsWith(arg, kNoConsole))
                 {
                     config.verbose = false;
                 }
-                else if (::StartsWith(arg, kLogFile))
+                else if (StartsWith(arg, kLogFile))
                 {
                     // Legacy 'logfile'
                     LPCWSTR pEquals = wcschr(argv[i], L'=');

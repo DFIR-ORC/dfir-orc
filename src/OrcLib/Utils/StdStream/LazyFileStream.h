@@ -5,18 +5,16 @@
 //
 // Author(s): fabienfl
 //
-
 #pragma once
 
 #include <ostream>
 
 #include <filesystem>
 
-#include "Command/WolfLauncher/Console/Stream/LazyFileStreambuf.h"
+#include "Utils/StdStream/LazyFileStreambuf.h"
 #include "FileDisposition.h"
 
 namespace Orc {
-namespace Command {
 
 template <typename CharT>
 class LazyFileStream : public std::basic_ostream<CharT>
@@ -44,5 +42,4 @@ private:
 extern template class LazyFileStream<char>;
 extern template class LazyFileStream<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

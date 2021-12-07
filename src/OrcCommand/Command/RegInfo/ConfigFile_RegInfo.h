@@ -30,6 +30,6 @@ constexpr auto REGINFO_REGINFO = 0L;
 constexpr auto REGINFO_TEMPLATE = 0L;
 
 namespace Orc::Config::RegInfo {
-ORCLIB_API HRESULT root(ConfigItem& item);
+HRESULT root(ConfigItem& item);
 }
 #pragma managed(pop)

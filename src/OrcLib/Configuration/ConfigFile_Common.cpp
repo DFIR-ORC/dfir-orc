@@ -57,7 +57,7 @@ HRESULT download_file(ConfigItem& parent, DWORD dwIndex)
         return hr;
     return S_OK;
 }
-ORCLIB_API HRESULT Orc::Config::Common::download(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
+HRESULT Orc::Config::Common::download(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = parent.AddChildNode(elementName, dwIndex, ConfigItem::OPTION)))
@@ -388,6 +388,8 @@ HRESULT Orc::Config::Common::location(ConfigItem& parent, DWORD dwIndex, ConfigI
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"shadows", CONFIG_VOLUME_SHADOWS, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"altitude", CONFIG_VOLUME_ALTITUDE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"exclude", CONFIG_VOLUME_EXCLUDE, ConfigItem::OPTION)))
         return hr;
     return S_OK;
 }

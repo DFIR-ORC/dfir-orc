@@ -65,7 +65,7 @@ STDMETHODIMP DecodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
     return S_OK;
 }
 
-__data_entrypoint(File) HRESULT DecodeMessageStream::Read(
+__data_entrypoint(File) HRESULT DecodeMessageStream::Read_(
     __out_bcount_part(cbBytesToRead, *pcbBytesRead) PVOID pBuffer,
     __in ULONGLONG cbBytesToRead,
     __out_opt PULONGLONG pcbBytesRead)
@@ -288,7 +288,7 @@ HRESULT DecodeMessageStream::GetDecryptionMaterial()
     return S_OK;
 }
 
-HRESULT DecodeMessageStream::Write(
+HRESULT DecodeMessageStream::Write_(
     __in_bcount(cbBytes) const PVOID pBuffer,
     __in ULONGLONG cbBytes,
     __out PULONGLONG pcbBytesWritten)

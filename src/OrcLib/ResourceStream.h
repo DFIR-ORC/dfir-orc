@@ -17,7 +17,7 @@
 #pragma managed(push, off)
 
 namespace Orc {
-class ORCLIB_API ResourceStream : public MemoryStream
+class ResourceStream : public MemoryStream
 {
 
 public:

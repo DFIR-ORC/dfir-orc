@@ -24,12 +24,12 @@
 
 namespace Orc {
 
-class ORCLIB_API MFTWalker;
+class MFTWalker;
 class MFTRecordFileInfo;
 
 typedef HRESULT(MFTRecordEnumDataCallBack)(ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data, PVOID pContext);
 
-class ORCLIB_API MFTRecord
+class MFTRecord
 {
     friend class MFTWalker;
     friend class MFTRecordFileInfo;
@@ -67,6 +67,8 @@ public:
 
     PFILE_NAME GetDefaultFileName() const { return GetMain_PFILE_NAME(); };
 
+    const MFTRecord* GetFileBaseRecord() const { return m_pBaseFileRecord; }
+
     PSTANDARD_INFORMATION GetStandardInformation() const { return m_pStandardInformation; };
 
     const FILE_REFERENCE& GetFileReferenceNumber() const { return m_FileReferenceNumber; };
@@ -87,7 +89,7 @@ public:
     USHORT GetDataIndex(const std::shared_ptr<DataAttribute>& pDataAttr) const;
 
     const std::vector<std::shared_ptr<DataAttribute>>& GetDataAttributes() const { return m_DataAttrList; };
-    const std::shared_ptr<DataAttribute> GetDataAttribute(LPCWSTR szAttrName);
+    const std::shared_ptr<DataAttribute> GetDataAttribute(LPCWSTR szAttrName) const;
 
     const std::shared_ptr<IndexAllocationAttribute> GetIndexAllocationAttribute(LPCWSTR szAttrName) const;
     const std::shared_ptr<IndexRootAttribute> GetIndexRootAttribute(LPCWSTR szAttrName) const;

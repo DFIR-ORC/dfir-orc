@@ -30,5 +30,5 @@ constexpr auto GETTHIS_YARA = 11L;
 constexpr auto GETTHIS_GETTHIS = 0L;
 
 namespace Orc::Config::GetThis {
-ORCLIB_API HRESULT root(ConfigItem& item);
+HRESULT root(ConfigItem& item);
 }

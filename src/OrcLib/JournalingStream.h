@@ -13,7 +13,7 @@
 
 namespace Orc {
 
-class ORCLIB_API JournalingStream : public ChainingStream
+class JournalingStream : public ChainingStream
 {
 private:
     ULONGLONG m_ullCurrentPosition = 0LL;
@@ -42,12 +42,12 @@ public:
     //
     STDMETHOD(Open)(const std::shared_ptr<ByteStream>& pChainedStream);
 
-    STDMETHOD(Read)
+    STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
      __in ULONGLONG cbBytes,
      __out_opt PULONGLONG pcbBytesRead);
 
-    STDMETHOD(Write)
+    STDMETHOD(Write_)
     (__in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
      __in ULONGLONG cbBytesToWrite,
      __out_opt PULONGLONG pcbBytesWritten);

@@ -27,7 +27,7 @@ HRESULT DevNullStream::Open()
     return S_OK;
 }
 
-HRESULT DevNullStream::Read(
+HRESULT DevNullStream::Read_(
     __out_bcount_part(cbBytesToRead, *pcbBytesRead) PVOID pBuffer,
     __in ULONGLONG cbBytesToRead,
     __out_opt PULONGLONG pcbBytesRead)
@@ -41,7 +41,7 @@ HRESULT DevNullStream::Read(
 }
 
 HRESULT
-DevNullStream::Write(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out PULONGLONG pcbBytesWritten)
+DevNullStream::Write_(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out PULONGLONG pcbBytesWritten)
 {
 
     DBG_UNREFERENCED_PARAMETER(pBuffer);

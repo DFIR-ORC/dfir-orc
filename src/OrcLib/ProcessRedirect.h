@@ -29,7 +29,7 @@ typedef struct _PROCESS_REDIRECT
     BYTE Buffer[BUFFER_SIZE];
 } PROCESS_REDIRECT;
 
-class ORCLIB_API ProcessRedirect
+class ProcessRedirect
 {
 
     friend class CommandExecute;

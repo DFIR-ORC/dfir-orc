@@ -44,6 +44,26 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         Log::Error("Failed to get locations definition from config [{}]", SystemError(hr));
         return hr;
     }
+
+    boost::logic::tribool bAddShadows;
+    for (auto& item : configitem[USNINFO_LOCATIONS].NodeList)
+    {
+        if (item.SubItems[CONFIG_VOLUME_SHADOWS]  && !config.m_shadows.has_value())
+        {
+            ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
+        }
+
+        if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.m_excludes.has_value())
+        {
+            ParseLocationExcludes(item.SubItems[CONFIG_VOLUME_EXCLUDE], config.m_excludes);
+        }
+    }
+
+    if (boost::logic::indeterminate(config.bAddShadows))
+    {
+        config.bAddShadows = bAddShadows;
+    }
+
     if (FAILED(hr = config.locs.AddKnownLocations(configitem[USNINFO_KNOWNLOCATIONS])))
     {
         Log::Error("Failed to get known locations [{}]", SystemError(hr));
@@ -90,7 +110,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (BooleanOption(argv[i] + 1, L"Compact", config.bCompactForm))
                     ;
-                else if (BooleanOption(argv[i] + 1, L"Shadows", config.bAddShadows))
+                else if (ShadowsOption(argv[i] + 1, L"Shadows", config.bAddShadows, config.m_shadows))
+                    ;
+                else if (LocationExcludeOption(argv[i] + 1, L"Exclude", config.m_excludes))
                     ;
                 else if (EncodingOption(argv[i] + 1, config.output.OutputEncoding))
                     ;
@@ -130,7 +152,16 @@ HRESULT Main::CheckConfiguration()
         SystemDetails::GetOrcComputerName(m_utilitiesConfig.strComputerName);
     }
 
-    config.locs.Consolidate(config.bAddShadows, FSVBR::FSType::NTFS);
+    if (boost::logic::indeterminate(config.bAddShadows))
+    {
+        config.bAddShadows = false;
+    }
+
+    config.locs.Consolidate(
+        static_cast<bool>(config.bAddShadows),
+        config.m_shadows.value_or(LocationSet::ShadowFilters()),
+        config.m_excludes.value_or(LocationSet::PathExcludes()),
+        FSVBR::FSType::NTFS);
 
     if (config.locs.IsEmpty() != S_OK)
     {

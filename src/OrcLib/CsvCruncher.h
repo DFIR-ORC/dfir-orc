@@ -19,7 +19,7 @@ class ByteStream;
 
 namespace TableOutput::CSV {
 
-class ORCLIB_API Cruncher
+class Cruncher
 {
 
 public:

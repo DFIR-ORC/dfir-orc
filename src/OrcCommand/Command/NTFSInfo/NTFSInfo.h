@@ -9,7 +9,9 @@
 
 #include "UtilitiesMain.h"
 
-#include "boost/logic/tribool.hpp"
+#include <optional>
+
+#include <boost/logic/tribool.hpp>
 
 #include "OrcCommand.h"
 #include "Location.h"
@@ -89,7 +91,9 @@ public:
 
         boost::logic::tribool bResurrectRecords;
         boost::logic::tribool bAddShadows;
+        std::optional<LocationSet::ShadowFilters> m_shadows;
         boost::logic::tribool bPopSystemObjects;
+        std::optional<LocationSet::PathExcludes> m_excludes;
 
         Intentions ColumnIntentions;
         Intentions DefaultIntentions;

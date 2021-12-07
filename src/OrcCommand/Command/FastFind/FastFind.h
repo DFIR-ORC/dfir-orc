@@ -6,27 +6,23 @@
 // Author(s): Jean Gautier (ANSSI)
 //
 
+#include "UtilitiesMain.h"
+
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "OrcCommand.h"
 #include "Configuration/ConfigFileReader.h"
-
 #include "ConfigFile_FastFind.h"
-
 #include "Location.h"
 #include "TableOutput.h"
 #include "StructuredOutput.h"
 #include "FileFind.h"
 #include "RegFind.h"
-
 #include "ObjectDirectory.h"
 #include "FileDirectory.h"
-
 #include "OutputSpec.h"
-
-#include "UtilitiesMain.h"
-
 #include "CryptoHashStream.h"
 
 #pragma managed(push, off)
@@ -50,6 +46,9 @@ public:
 
     LocationSet Locations;
     FileFind Files;
+    boost::logic::tribool bAddShadows = boost::logic::indeterminate;
+    std::optional<LocationSet::ShadowFilters> m_shadows;
+    std::optional<LocationSet::PathExcludes> m_excludes;
 };
 
 class RegistrySpec
@@ -65,6 +64,9 @@ public:
     LocationSet Locations;
     FileFind Files;
     std::vector<RegFind> RegistryFind;
+    boost::logic::tribool bAddShadows = boost::logic::indeterminate;
+    std::optional<LocationSet::ShadowFilters> m_shadows;
+    std::optional<LocationSet::PathExcludes> m_excludes;
 };
 
 class ObjectSpec
@@ -225,6 +227,8 @@ public:
     std::vector<ObjectItem> Items;
 };
 
+const wchar_t kToolName[] = L"FastFind";
+
 class ORCUTILS_API Main : public UtilitiesMain
 {
 public:
@@ -241,12 +245,12 @@ public:
         OutputSpec outObject;
 
         OutputSpec outStructured;
+        OutputSpec outStatistics;
 
         bool bAll = false;
         WCHAR Volume = 0;
 
         bool bSkipDeleted = true;
-        bool bAddShadows = false;
 
         FileSystemSpec FileSystem;
         RegistrySpec Registry;
@@ -292,7 +296,7 @@ private:
     HRESULT RegFlushKeys();
 
 public:
-    static LPCWSTR ToolName() { return L"FastFind"; }
+    static LPCWSTR ToolName() { return kToolName; }
     static LPCWSTR ToolDescription() { return L"IOC Finder"; }
 
     static ConfigItem::InitFunction GetXmlConfigBuilder();

@@ -45,7 +45,7 @@ class DriverMgmt;
 
 class DriverTermination;
 
-class ORCLIB_API Driver : public std::enable_shared_from_this<Driver>
+class Driver : public std::enable_shared_from_this<Driver>
 {
     friend class DriverMgmt;
     friend class DriverTermination;
@@ -220,7 +220,7 @@ private:
     std::shared_ptr<DriverMgmt> m_manager;
 };
 
-class ORCLIB_API DriverMgmt : public std::enable_shared_from_this<DriverMgmt>
+class DriverMgmt : public std::enable_shared_from_this<DriverMgmt>
 {
     friend class Driver;
     friend class DriverTermination;

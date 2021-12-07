@@ -129,7 +129,7 @@ STDMETHODIMP JournalingStream::Open(const std::shared_ptr<ByteStream>& pChainedS
     return S_OK;
 }
 
-STDMETHODIMP JournalingStream::Read(
+STDMETHODIMP JournalingStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesRead)
@@ -143,7 +143,7 @@ STDMETHODIMP JournalingStream::Read(
     return HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION);
 }
 
-STDMETHODIMP JournalingStream::Write(
+STDMETHODIMP JournalingStream::Write_(
     __in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)

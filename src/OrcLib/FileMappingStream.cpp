@@ -65,7 +65,7 @@ FileMappingStream::Open(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG 
     return S_OK;
 }
 
-HRESULT FileMappingStream::Read(
+HRESULT FileMappingStream::Read_(
     __out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
     __in ULONGLONG cbBytes,
     __out_opt PULONGLONG pcbBytesRead)
@@ -117,7 +117,7 @@ HRESULT FileMappingStream::CommitSize(ULONGLONG ullNewSize)
     return S_OK;
 }
 
-HRESULT FileMappingStream::Write(
+HRESULT FileMappingStream::Write_(
     __in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)

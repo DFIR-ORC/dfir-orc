@@ -122,7 +122,7 @@ enum class Intentions : DWORDLONG
 
 ENABLE_BITMASK_OPERATORS(Intentions);
 
-class ORCLIB_API IIntentionsHandler
+class IIntentionsHandler
 {
 public:
     virtual ~IIntentionsHandler() {}

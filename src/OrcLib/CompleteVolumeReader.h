@@ -17,7 +17,7 @@
 
 namespace Orc {
 
-class ORCLIB_API CompleteVolumeReader : public VolumeReader
+class CompleteVolumeReader : public VolumeReader
 {
 
 public:

@@ -30,6 +30,10 @@
 
 #include "GenDataStructure.h"
 
+#ifndef IO_REPARSE_TAG_WOF
+#    define IO_REPARSE_TAG_WOF 0x80000017
+#endif
+
 using LCN = LONGLONG;
 using PLCN = LCN*;
 using VCN = LONGLONG;

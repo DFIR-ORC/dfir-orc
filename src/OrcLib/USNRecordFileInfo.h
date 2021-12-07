@@ -26,7 +26,7 @@ struct FILE_STREAM_INFORMATION
 };
 using PFILE_STREAM_INFORMATION = FILE_STREAM_INFORMATION*;
 
-class ORCLIB_API USNRecordFileInfo : public NtfsFileInfo
+class USNRecordFileInfo : public NtfsFileInfo
 {
 public:
     virtual HRESULT Open();

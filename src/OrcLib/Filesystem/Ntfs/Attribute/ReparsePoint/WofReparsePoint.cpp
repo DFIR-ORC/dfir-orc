@@ -53,12 +53,6 @@ Result<WofReparsePoint> WofReparsePoint::Parse(WofReparsePoint::Layout& layout)
         return ec;
     }
 
-    if (algorithm == WofAlgorithm::kLzx)
-    {
-        Log::Debug("Unsupported wof algorithm [{}]", ec);
-        return ec;
-    }
-
     return WofReparsePoint(layout);
 }
 

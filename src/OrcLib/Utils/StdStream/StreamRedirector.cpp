@@ -6,13 +6,11 @@
 // Author(s): fabienfl
 //
 
-#include "UncheckedStreambuf.h"
+#include "StreamRedirector.h"
 
 namespace Orc {
-namespace Command {
 
-template class UncheckedStreambuf<char>;
-template class UncheckedStreambuf<wchar_t>;
+template class StreamRedirector<char>;
+template class StreamRedirector<wchar_t>;
 
-}  // namespace Command
 }  // namespace Orc

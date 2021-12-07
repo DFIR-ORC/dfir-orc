@@ -29,10 +29,6 @@ public:
     size_t Decompress(BufferView input, gsl::span<uint8_t> output, std::error_code& ec);
 
 private:
-    ULONG GetWorkspaceSize(NtAlgorithm algorithm, std::error_code& ec);
-    std::vector<uint8_t> GetWorkspace(NtAlgorithm algorithm, std::error_code& ec);
-
-private:
     NtAlgorithm m_ntAlgorithm;
     std::vector<uint8_t> m_workspace;  // Usually ~160k
 };

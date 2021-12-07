@@ -68,7 +68,7 @@ public:
     }
 };
 
-class ORCLIB_API CommandMessage
+class CommandMessage
 {
 
 public:

@@ -28,7 +28,7 @@ public:
         , m_job(job) {};
 };
 
-class ORCLIB_API BITSAgent : public UploadAgent
+class BITSAgent : public UploadAgent
 {
 
 private:

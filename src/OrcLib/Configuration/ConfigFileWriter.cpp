@@ -21,7 +21,7 @@ using namespace std;
 
 using namespace Orc;
 
-HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const ConfigItem& config)
+HRESULT ConfigFileWriter::WriteConfigNode(const CComPtr<IXmlWriter>& pWriter, const ConfigItem& config)
 {
     HRESULT hr = E_FAIL;
 
@@ -76,10 +76,10 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                     std::for_each(
                         begin(config.SubItems),
                         end(config.SubItems),
-                        [this, &pWriter, &bHasChild](const ConfigItem& item) {
+                        [&pWriter, &bHasChild](const ConfigItem& item) {
                             if (item && (item.Type == ConfigItem::NODE) || (item.Type == ConfigItem::NODELIST))
                             {
-                                WriteConfig(pWriter, item);
+                                WriteConfigNode(pWriter, item);
                                 bHasChild = true;
                             }
                         });
@@ -99,8 +99,8 @@ HRESULT ConfigFileWriter::WriteConfig(const CComPtr<IXmlWriter>& pWriter, const 
                 }
                 break;
             case ConfigItem::NODELIST:
-                std::for_each(begin(config.NodeList), end(config.NodeList), [this, &pWriter](const ConfigItem& item) {
-                    WriteConfig(pWriter, item);
+                std::for_each(begin(config.NodeList), end(config.NodeList), [&pWriter](const ConfigItem& item) {
+                    WriteConfigNode(pWriter, item);
                 });
                 break;
             default:
@@ -189,7 +189,7 @@ HRESULT ConfigFileWriter::WriteConfig(
         return hr;
     }
 
-    if (FAILED(hr = WriteConfig(pWriter, config)))
+    if (FAILED(hr = WriteConfigNode(pWriter, config)))
     {
         XmlLiteExtension::LogError(hr, nullptr);
         Log::Error(L"Failed to write configuration [{}]", SystemError(hr));

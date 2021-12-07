@@ -26,7 +26,7 @@ namespace Orc {
 
 class ConfigItem;
 
-class ORCLIB_API OutputSpec
+class OutputSpec
 {
 public:
     using UploadAuthScheme = OutputSpecTypes::UploadAuthScheme;
@@ -39,7 +39,7 @@ public:
     using Status = OutputSpecTypes::Status;
     using Encoding = OutputSpecTypes::Encoding;
 
-    class ORCLIB_API Upload
+    class Upload
     {
     public:
         UploadMethod Method;

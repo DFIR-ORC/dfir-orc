@@ -101,6 +101,133 @@ std::vector<std::wstring> ExpandOrcStringsLocation(const std::wstring& rawLocati
     return out;
 }
 
+Result<GUID> ShadowFilterToGuid(const std::wstring& filter)
+{
+    const auto kGuidMinSize = 32;
+    if (filter.size() < kGuidMinSize)
+    {
+        return std::errc::invalid_argument;
+    }
+
+    auto guidFilter = filter;
+    if (guidFilter[0] != L'{' && guidFilter[guidFilter.size() - 1] != L'}')
+    {
+        guidFilter.insert(0, 1, L'{');
+        guidFilter.push_back(L'}');
+    }
+
+    CLSID guid;
+    HRESULT hr = CLSIDFromString(guidFilter.c_str(), &guid);
+    if (FAILED(hr))
+    {
+        return std::error_code(hr, std::system_category());
+    }
+
+    return guid;
+}
+
+struct ShadowCopyLocations
+{
+    struct CompareGUID
+    {
+        bool operator()(const GUID& lhs, const GUID& rhs) const { return memcmp(&lhs, &rhs, sizeof(GUID)) < 0; }
+    };
+
+    Location::Ptr oldest;
+    Location::Ptr mid;
+    Location::Ptr newest;
+    std::map<GUID, Location::Ptr, CompareGUID> guids;
+};
+
+void GetShadowCopyLocations(const std::vector<Location::Ptr>& locations, ShadowCopyLocations& shadows)
+{
+    std::vector<Location::Ptr> locationsWithShadow;
+    std::copy_if(std::cbegin(locations), std::cend(locations), std::back_inserter(locationsWithShadow), [](auto& loc) {
+        return loc->GetShadow() != nullptr;
+    });
+
+    if (locationsWithShadow.empty())
+    {
+        return;
+    }
+
+    std::sort(std::begin(locationsWithShadow), std::end(locationsWithShadow), [](const auto& lhs, const auto& rhs) {
+        return lhs->GetShadow()->CreationTime < rhs->GetShadow()->CreationTime;
+    });
+
+    shadows.newest = locationsWithShadow[locationsWithShadow.size() - 1];
+    shadows.mid = locationsWithShadow[(locationsWithShadow.size() - 1) / 2];
+    shadows.oldest = locationsWithShadow[0];
+
+    for (auto location : locationsWithShadow)
+    {
+        shadows.guids.emplace(location->GetShadow()->guid, location);
+    }
+}
+
+void FilterLocations(
+    const std::vector<Location::Ptr>& locations,
+    const LocationSet::ShadowFilters& filters,
+    std::set<Location::Ptr>& output)
+{
+    ShadowCopyLocations shadows;
+    GetShadowCopyLocations(locations, shadows);
+    if (shadows.guids.empty())
+    {
+        return;
+    }
+
+    if (shadows.newest && filters.find(L"newest") != std::cend(filters))
+    {
+        output.insert(shadows.newest);
+    }
+
+    if (shadows.mid && filters.find(L"mid") != std::cend(filters))
+    {
+        output.insert(shadows.mid);
+    }
+
+    if (shadows.oldest && filters.find(L"oldest") != std::cend(filters))
+    {
+        output.insert(shadows.oldest);
+    }
+
+    for (const auto& filter : filters)
+    {
+        auto guid = ShadowFilterToGuid(filter);
+        if (guid)
+        {
+            auto it = shadows.guids.find(*guid);
+            if (it != std::cend(shadows.guids))
+            {
+                output.insert(it->second);
+            }
+        }
+    }
+}
+
+void GetExcludedVolumeLocations(
+    LocationSet::VolumeLocations& volume,
+    const LocationSet::PathExcludes& excludedPaths,
+    std::vector<Location::Ptr>& excludedLocations)
+{
+    for (const auto& path : volume.Paths)
+    {
+        if (excludedPaths.find(path) != std::cend(excludedPaths))
+        {
+            std::copy(
+                std::cbegin(volume.Locations), std::cend(volume.Locations), std::back_inserter(excludedLocations));
+            Log::Info("Exclude: '{}'", path);
+            break;
+        }
+    }
+}
+
+bool NotContain(const Location::Ptr& location, const std::vector<Location::Ptr>& locations)
+{
+    return std::find(std::cbegin(locations), std::cend(locations), location) == std::cend(locations);
+}
+
 }  // namespace
 
 static const auto CSIDL_NONE = ((DWORD)-1);
@@ -1997,7 +2124,12 @@ HRESULT LocationSet::UniqueLocations(FSVBR::FSType filterFSTypes)
     return S_OK;
 }
 
-HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseShadows, FSVBR::FSType filterFSTypes)
+HRESULT LocationSet::AltitudeLocations(
+    LocationSet::Altitude alt,
+    bool bParseShadows,
+    const ShadowFilters& shadowFilters,
+    const PathExcludes& excludedPaths,
+    FSVBR::FSType filterFSTypes)
 {
     HRESULT hr = E_FAIL;
 
@@ -2065,6 +2197,9 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
 
     for (auto& aPair : m_Volumes)
     {
+        std::vector<Location::Ptr> excludedLocations;
+        ::GetExcludedVolumeLocations(aPair.second, excludedPaths, excludedLocations);
+
         std::sort(
             begin(aPair.second.Locations),
             end(aPair.second.Locations),
@@ -2098,6 +2233,13 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
             loc->m_SubDirs.clear();
         }
 
+        // case Altitude::Lowest|Altitude::Highest
+        std::set<Location::Ptr> shadowsSelection;
+        if (bParseShadows && !shadowFilters.empty())
+        {
+            ::FilterLocations(aPair.second.Locations, shadowFilters, shadowsSelection);
+        }
+
         switch (alt)
         {
             case Altitude::Lowest:
@@ -2109,17 +2251,20 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
                     {
                         if (bParseShadows)
                         {
-                            loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
-                            loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
-                            loc->m_bParse = aPair.second.Parse;
-                            retval.push_back(loc);
+                            if (shadowFilters.empty() || shadowsSelection.find(loc) != std::cend(shadowsSelection))
+                            {
+                                loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
+                                loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
+                                loc->m_bParse = aPair.second.Parse;
+                                retval.push_back(loc);
+                            }
                         }
                     }
                     else if (bActualData == false)
                     {
                         loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
                         loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
-                        loc->m_bParse = aPair.second.Parse;
+                        loc->m_bParse = aPair.second.Parse && ::NotContain(loc, excludedLocations);
                         retval.push_back(loc);
                         bActualData = true;
                     }
@@ -2131,7 +2276,7 @@ HRESULT LocationSet::AltitudeLocations(LocationSet::Altitude alt, bool bParseSha
                 {
                     loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
                     loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
-                    loc->m_bParse = aPair.second.Parse;
+                    loc->m_bParse = aPair.second.Parse && ::NotContain(loc, excludedLocations);
                     retval.push_back(loc);
                 }
                 break;

@@ -78,7 +78,7 @@ constexpr static const unsigned int ROBUSTNESS_UNLOAD_DLLS = 1 << 0;  // Unload 
 
 constexpr static const unsigned int ROBUSTNESS_LAST = 0;
 
-class ORCLIB_API TerminationHandler
+class TerminationHandler
 {
 
 public:
@@ -93,7 +93,7 @@ public:
     }
 };
 
-class ORCLIB_API Robustness
+class Robustness
 {
 public:
     static int handle_program_memory_depletion(size_t);

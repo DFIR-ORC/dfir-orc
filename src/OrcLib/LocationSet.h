@@ -13,14 +13,18 @@
 
 #include <map>
 #include <unordered_map>
+#include <set>
 
 #pragma managed(push, off)
 
 namespace Orc {
 
-class ORCLIB_API LocationSet
+class LocationSet
 {
 public:
+    using ShadowFilters = std::set<std::wstring, CaseInsensitive>;
+    using PathExcludes = std::set<std::wstring, CaseInsensitive>;
+
     typedef std::map<std::wstring, std::shared_ptr<Location>, CaseInsensitive> Locations;
 
     typedef enum
@@ -95,7 +99,13 @@ private:
 
     HRESULT EliminateDuplicateLocations();
     HRESULT UniqueLocations(FSVBR::FSType filterFSTypes);
-    HRESULT AltitudeLocations(Altitude alt, bool bAddShadows, FSVBR::FSType filterFSTypes);
+
+    HRESULT AltitudeLocations(
+        LocationSet::Altitude alt,
+        bool bParseShadows,
+        const ShadowFilters& shadows,
+        const PathExcludes& excludes,
+        FSVBR::FSType filterFSTypes);
 
     HRESULT Reset();
 
@@ -144,12 +154,18 @@ public:
 
     HRESULT
     AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<Location>>& addedLocs, bool bToParse = true);
-    HRESULT AddLocationsFromConfigItem(const ConfigItem& item);
+
+    HRESULT AddLocationsFromConfigItem(const ConfigItem& config);
     HRESULT AddLocationsFromArgcArgv(int argc, LPCWSTR argv[]);
     HRESULT AddKnownLocations(const ConfigItem& item);
     HRESULT AddKnownLocations();
 
-    HRESULT Consolidate(bool bParseShadows, FSVBR::FSType filterFSTypes)
+    HRESULT
+    Consolidate(
+        bool bParseShadows,
+        const ShadowFilters& shadows,
+        const PathExcludes& excludes,
+        FSVBR::FSType filterFSTypes)
     {
         Reset();
 
@@ -162,9 +178,16 @@ public:
         ValidateLocations(m_Locations);
         EliminateInvalidLocations(m_Locations);
 
-        AltitudeLocations(m_Altitude, bParseShadows, filterFSTypes);
+        AltitudeLocations(m_Altitude, bParseShadows, shadows, excludes, filterFSTypes);
 
         return S_OK;
+    }
+
+    HRESULT Consolidate(bool bParseShadows, FSVBR::FSType filterFSTypes)
+    {
+        LocationSet::ShadowFilters shadows;
+        LocationSet::PathExcludes excludes;
+        return Consolidate(bParseShadows, shadows, excludes, filterFSTypes);
     }
 
     static HRESULT EliminateUselessLocations(Locations& locations);

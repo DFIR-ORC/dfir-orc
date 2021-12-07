@@ -75,6 +75,7 @@ void Main::PrintParameters()
     PrintValue(node, L"Registry", config.outRegsitry);
     PrintValue(node, L"Object", config.outObject);
     PrintValue(node, L"Structured", config.outStructured);
+    PrintValue(node, L"Statistics", config.outStatistics);
 
     m_console.PrintNewLine();
 }

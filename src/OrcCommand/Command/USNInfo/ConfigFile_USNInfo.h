@@ -24,7 +24,7 @@ constexpr auto USNINFO_COMPACT = 5L;
 constexpr auto USNINFO_USNINFO = 0L;
 
 namespace Orc::Config::USNInfo {
-ORCLIB_API HRESULT root(ConfigItem& parent);
+HRESULT root(ConfigItem& parent);
 }
 
 #pragma managed(pop)

@@ -46,7 +46,7 @@ public:
         void AddOutput(spdlog::sink_ptr sink)
         {
             sink->set_formatter(CloneFormatter());
-            m_tee.add_sink(std::move(sink));
+            m_fileTee.add_sink(std::move(sink));
         }
 
         void AddOutput(std::shared_ptr<std::ostream> output)
@@ -59,7 +59,7 @@ public:
         }
 
     private:
-        TeeSink& m_tee;
+        TeeSink& m_fileTee;
     };
 
     class FileSink : public Log::SpdlogSink

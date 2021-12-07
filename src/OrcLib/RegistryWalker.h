@@ -237,7 +237,7 @@ struct SKHeader
 
 class RegistryKey;
 
-class ORCLIB_API RegistryValue
+class RegistryValue
 {
 private:
     const BYTE* const m_pDatas;
@@ -265,7 +265,7 @@ public:
     bool IsDataResident() const;
 };
 
-class ORCLIB_API RegistryHive
+class RegistryHive
 {
 private:
     BYTE* m_pHiveBuffer;
@@ -339,7 +339,7 @@ public:
     };
 };
 
-class ORCLIB_API RegistryKey
+class RegistryKey
 {
 
     friend HRESULT RegistryHive::Walk(

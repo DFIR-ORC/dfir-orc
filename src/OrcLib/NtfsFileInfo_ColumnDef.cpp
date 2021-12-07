@@ -13,7 +13,7 @@
 
 using namespace Orc;
 
-const ORCLIB_API ColumnNameDef NtfsFileInfo::g_NtfsColumnNames[] = {
+const ColumnNameDef NtfsFileInfo::g_NtfsColumnNames[] = {
     {Intentions::FILEINFO_COMPUTERNAME, L"ComputerName", L"Computer name", 0L},
     {Intentions::FILEINFO_VOLUMEID, L"VolumeID", L"Volume ID", 0L},
 
@@ -145,7 +145,7 @@ const ORCLIB_API ColumnNameDef NtfsFileInfo::g_NtfsColumnNames[] = {
 
     {Intentions::FILEINFO_NONE, NULL, NULL, 0L}};
 
-const ORCLIB_API ColumnNameDef NtfsFileInfo::g_NtfsAliasNames[] = {
+const ColumnNameDef NtfsFileInfo::g_NtfsAliasNames[] = {
     {static_cast<Intentions>(
          Intentions::FILEINFO_PARENTNAME | Intentions::FILEINFO_FILENAME | Intentions::FILEINFO_EXTENSION
          | Intentions::FILEINFO_ATTRIBUTES | Intentions::FILEINFO_FILESIZE | Intentions::FILEINFO_CREATIONDATE

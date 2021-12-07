@@ -23,7 +23,7 @@
 
 namespace Orc {
 
-class ORCLIB_API Registry
+class Registry
 {
 public:
     template <typename _T>

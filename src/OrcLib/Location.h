@@ -26,12 +26,13 @@ class LocationSet;
 
 class ConfigItem;
 
-class ORCLIB_API Location
+class Location
 {
     friend class LocationSet;
 
 public:
     using Type = Orc::LocationType;
+    using Ptr = std::shared_ptr<Location>;
 
 private:
     std::shared_ptr<VolumeReader> m_Reader;

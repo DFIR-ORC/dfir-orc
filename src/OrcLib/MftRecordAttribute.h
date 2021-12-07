@@ -29,7 +29,7 @@ class MFTRecord;
 class AttributeList;
 class AttributeListEntry;
 
-class ORCLIB_API MftRecordAttribute : public std::enable_shared_from_this<MftRecordAttribute>
+class MftRecordAttribute : public std::enable_shared_from_this<MftRecordAttribute>
 {
     friend class MFTWalker;
     friend class MFTRecord;
@@ -156,12 +156,17 @@ public:
 
     HRESULT AddContinuationAttribute(const std::shared_ptr<MftRecordAttribute>& pMftRecordAttribute);
 
+    const MFTRecord* GetBaseRecord() const;
+
     virtual HRESULT CleanCachedData();
 
     virtual ~MftRecordAttribute() { m_pNonResidentInfo.reset(); };
+
+private:
+    void MftRecordAttribute::LogStreamRequest(const MFTRecord* baseRecord) const;
 };
 
-class ORCLIB_API AttributeListAttribute : public MftRecordAttribute
+class AttributeListAttribute : public MftRecordAttribute
 {
     friend class MFTRecord;
 
@@ -176,7 +181,7 @@ public:
     virtual ~AttributeListAttribute() { CleanCachedData(); }
 };
 
-class ORCLIB_API DataAttribute : public MftRecordAttribute
+class DataAttribute : public MftRecordAttribute
 {
     friend class MFTRecord;
 
@@ -191,7 +196,7 @@ public:
     virtual ~DataAttribute() { CleanCachedData(); }
 };
 
-class ORCLIB_API IndexRootAttribute : public MftRecordAttribute
+class IndexRootAttribute : public MftRecordAttribute
 {
     friend class MFTRecord;
 
@@ -244,7 +249,7 @@ public:
     virtual ~IndexRootAttribute() { CleanCachedData(); }
 };
 
-class ORCLIB_API IndexAllocationAttribute : public MftRecordAttribute
+class IndexAllocationAttribute : public MftRecordAttribute
 {
     friend class MFTRecord;
 
@@ -259,7 +264,7 @@ public:
     virtual ~IndexAllocationAttribute() { CleanCachedData(); }
 };
 
-class ORCLIB_API BitmapAttribute : public MftRecordAttribute
+class BitmapAttribute : public MftRecordAttribute
 {
     friend class MFTRecord;
 
@@ -286,7 +291,7 @@ private:
     boost::dynamic_bitset<block_type> m_bitset;
 };
 
-class ORCLIB_API ReparsePointAttribute : public MftRecordAttribute
+class ReparsePointAttribute : public MftRecordAttribute
 {
     friend class MFTRecord;
 
@@ -304,9 +309,9 @@ public:
 
     static REPARSE_POINT_TYPE_AND_FLAGS GetReparsePointType(PATTRIBUTE_RECORD_HEADER pHeader);
 
-    static bool IsJunction(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == 0xA0000003; }
-    static bool IsSymbolicLink(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == 0xA000000C; }
-    static bool IsWindowsOverlayFile(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == 0x80000017; }
+    static bool IsJunction(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == IO_REPARSE_TAG_MOUNT_POINT; }
+    static bool IsSymbolicLink(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == IO_REPARSE_TAG_SYMLINK; }
+    static bool IsWindowsOverlayFile(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == IO_REPARSE_TAG_WOF; }
 
     REPARSE_POINT_TYPE_AND_FLAGS Flags() const { return m_Flags; }
 
@@ -315,21 +320,21 @@ public:
     virtual ~ReparsePointAttribute() { CleanCachedData(); }
 };
 
-class ORCLIB_API JunctionReparseAttribute : public ReparsePointAttribute
+class JunctionReparseAttribute : public ReparsePointAttribute
 {
 public:
     JunctionReparseAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord)
         : ReparsePointAttribute(pHeader, pRecord) {};
 };
 
-class ORCLIB_API SymlinkReparseAttribute : public ReparsePointAttribute
+class SymlinkReparseAttribute : public ReparsePointAttribute
 {
 public:
     SymlinkReparseAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord)
         : ReparsePointAttribute(pHeader, pRecord) {};
 };
 
-class ORCLIB_API WOFReparseAttribute : public ReparsePointAttribute
+class WOFReparseAttribute : public ReparsePointAttribute
 {
 public:
     WOFReparseAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord, std::error_code& ec);
@@ -345,7 +350,7 @@ private:
     Ntfs::WofAlgorithm m_algorithm;
 };
 
-class ORCLIB_API ExtendedAttribute : public MftRecordAttribute
+class ExtendedAttribute : public MftRecordAttribute
 {
     friend class MFTRecord;
 
