@@ -56,7 +56,7 @@ public:
         }
 
         fmt::memory_buffer msg;
-        Text::FormatToWithoutEOL(std::back_inserter(msg), std::forward<Args>(args)...);
+        fmt::format_to(std::back_inserter(msg), std::forward<Args>(args)...);
         for (auto it = first; it != last; ++it)
         {
             const SpdlogLogger::Ptr& logger = *it;

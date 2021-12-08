@@ -217,7 +217,7 @@ void GetExcludedVolumeLocations(
         {
             std::copy(
                 std::cbegin(volume.Locations), std::cend(volume.Locations), std::back_inserter(excludedLocations));
-            Log::Info("Exclude: '{}'", path);
+            Log::Info(L"Exclude: '{}'", path);
             break;
         }
     }

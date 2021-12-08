@@ -698,7 +698,7 @@ void UtilitiesMain::ParseLocationExcludes(
         exclude = ExpandEnvironmentStringsApi(exclude.c_str(), ec);
         if (ec)
         {
-            Log::Debug("Failed to expand environment variable for excluded path: '{}' [{}]", exclude, ec);
+            Log::Debug(L"Failed to expand environment variable for excluded path: '{}' [{}]", exclude, ec);
             return;
         }
 

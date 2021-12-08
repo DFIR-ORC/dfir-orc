@@ -2990,7 +2990,7 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
             Log::Error(
-                "Failed Yara scan while seeking on '{}' [{}]", ::GetFileName(record, *pDataAttr), SystemError(hr));
+                L"Failed Yara scan while seeking on '{}' [{}]", ::GetFileName(record, *pDataAttr), SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
 
@@ -2998,7 +2998,7 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
         if (FAILED(hr))
         {
             Log::Error(
-                "Failed Yara scan on '{}' (frn: {:#x}) [{}]",
+                L"Failed Yara scan on '{}' (frn: {:#x}) [{}]",
                 ::GetFileName(record, *pDataAttr),
                 NtfsFullSegmentNumber(&record.GetFileReferenceNumber()),
                 SystemError(hr));
