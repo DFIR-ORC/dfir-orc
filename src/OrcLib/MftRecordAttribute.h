@@ -163,7 +163,7 @@ public:
     virtual ~MftRecordAttribute() { m_pNonResidentInfo.reset(); };
 
 private:
-    void MftRecordAttribute::LogStreamRequest(const MFTRecord* baseRecord) const;
+    void LogStreamRequest(const MFTRecord* baseRecord) const;
 };
 
 class AttributeListAttribute : public MftRecordAttribute

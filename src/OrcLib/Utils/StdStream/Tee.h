@@ -26,7 +26,7 @@ public:
 protected:
     int_type overflow(int_type c) override
     {
-        using Traits = std::char_traits<char_type>;
+        using Traits = std::char_traits<CharT>;
 
         if (c == Traits::to_int_type(Traits::eof()))
         {
