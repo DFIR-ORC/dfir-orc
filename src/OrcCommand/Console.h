@@ -32,6 +32,13 @@ struct StdoutContainerAdapter
 public:
     using value_type = T;
 
+    void flush()
+    {
+        Traits::get_std_out<T>() << m_buffer;
+        m_buffer.clear();
+        Traits::get_std_out<T>().flush();
+    }
+
     void push_back(T c)
     {
         if (c == Traits::newline_v<T>)
@@ -116,6 +123,8 @@ public:
 
     // Append character to the console buffer
     void push_back(value_type c) { m_stdout.push_back(c); }
+
+    void Flush() { m_stdout.flush(); }
 
 private:
     Buffer m_stdout;

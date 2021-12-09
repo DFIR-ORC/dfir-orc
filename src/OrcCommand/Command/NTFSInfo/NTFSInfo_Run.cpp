@@ -179,6 +179,7 @@ void Main::DisplayProgress(const ULONG dwProgress)
         if (m_dwProgress % 2 == 0)
         {
             m_console.Write(L".");
+            m_console.Flush();
         }
 
         m_dwProgress = dwProgress;
