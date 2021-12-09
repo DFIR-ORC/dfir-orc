@@ -309,6 +309,11 @@ HRESULT FileInfo::HandleIntentions(const Intentions& intention, ITableOutput& ou
             hr = WriteSecurityDirectorySignatureSize(output);
             break;
 
+        case Intentions::FILEINFO_OWNER:
+        case Intentions::FILEINFO_OWNERID:
+        case Intentions::FILEINFO_OWNERSID:
+            return output.WriteNothing();
+
         default:
             return E_FAIL;
             break;
