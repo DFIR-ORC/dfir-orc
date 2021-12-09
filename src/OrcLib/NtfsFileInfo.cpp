@@ -144,7 +144,7 @@ HRESULT NtfsFileInfo::HandleIntentions(const Intentions& intention, ITableOutput
                 break;
 
             case Intentions::FILEINFO_TLSH:
-                hr = WriteTLSH(output);
+                hr = output.WriteNothing();
                 break;
 
             case Intentions::FILEINFO_SIGNED_HASH:

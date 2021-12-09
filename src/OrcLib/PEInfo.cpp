@@ -555,9 +555,6 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         fuzzy_algs = fuzzy_algs | FuzzyHashStream::Algorithm::SSDeep;
 #endif
 
-    if (HasFlag(localIntentions, Intentions::FILEINFO_TLSH))
-        fuzzy_algs |= FuzzyHashStream::Algorithm::TLSH;
-
     if (HasAnyFlag(
             localIntentions, Intentions::FILEINFO_AUTHENTICODE_STATUS | Intentions::FILEINFO_AUTHENTICODE_SIGNER))
     {
@@ -634,15 +631,6 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         if (HasFlag(fuzzy_algs, FuzzyHashStream::Algorithm::SSDeep))
         {
             hr = hashstream->GetHash(FuzzyHashStream::Algorithm::SSDeep, m_FileInfo.GetDetails()->SSDeep());
-            if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
-            {
-                return hr;
-            }
-        }
-
-        if (HasFlag(fuzzy_algs, FuzzyHashStream::Algorithm::TLSH))
-        {
-            hr = hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, m_FileInfo.GetDetails()->TLSH());
             if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
             {
                 return hr;

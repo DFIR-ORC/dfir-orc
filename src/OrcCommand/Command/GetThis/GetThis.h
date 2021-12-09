@@ -162,7 +162,6 @@ public:
         CBinaryBuffer SHA256;
 
         CBinaryBuffer SSDeep;
-        CBinaryBuffer TLSH;
 
         ULONGLONG SampleSize = 0LL;
         FILETIME CollectionDate;

@@ -14,7 +14,6 @@
 
 #pragma managed(push, off)
 
-class Tlsh;
 struct fuzzy_state;
 
 namespace Orc {
@@ -41,7 +40,6 @@ public:
     STDMETHOD(GetHash)(Algorithm alg, std::wstring& Hash);
 
     STDMETHOD(GetSSDeep)(CBinaryBuffer& hash) { return GetHash(FuzzyHashStream::Algorithm::SSDeep, hash); };
-    STDMETHOD(GetTLSH)(CBinaryBuffer& hash) { return GetHash(FuzzyHashStream::Algorithm::TLSH, hash); };
 
     static Algorithm GetSupportedAlgorithm(LPCWSTR szAlgo);
     static std::wstring GetSupportedAlgorithm(Algorithm algs);
@@ -50,10 +48,6 @@ public:
 
 protected:
     Algorithm m_Algorithms = Algorithm::Undefined;
-
-#ifdef ORC_BUILD_TLSH
-    std::unique_ptr<Tlsh> m_tlsh;
-#endif  // ORC_BUILD_TLSH
 
     struct fuzzy_state* m_ssdeep = nullptr;
 };

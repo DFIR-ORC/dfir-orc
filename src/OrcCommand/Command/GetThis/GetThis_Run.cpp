@@ -889,7 +889,7 @@ Main::AddSampleRefToCSV(ITableOutput& output, const Main::SampleRef& sample) con
 
             output.WriteBytes(sample.SSDeep);
 
-            output.WriteBytes(sample.TLSH);
+            output.WriteNothing();
 
             const auto& rules = match->MatchingAttributes[sample.AttributeIndex].YaraRules;
             if (rules.has_value())
@@ -1029,7 +1029,6 @@ void Main::FinalizeHashes(const Main::SampleRef& sample) const
     if (sample.FuzzyHashStream)
     {
         sample.FuzzyHashStream->GetSSDeep(const_cast<CBinaryBuffer&>(sample.SSDeep));
-        sample.FuzzyHashStream->GetTLSH(const_cast<CBinaryBuffer&>(sample.TLSH));
     }
 }
 

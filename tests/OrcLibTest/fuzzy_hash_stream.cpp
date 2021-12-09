@@ -36,9 +36,7 @@ public:
 
         auto fuzzy_stream = std::make_unique<FuzzyHashStream>();
 
-        Assert::IsTrue(SUCCEEDED(fuzzy_stream->OpenToRead(
-            FuzzyHashStream::Algorithm::SSDeep | FuzzyHashStream::Algorithm::TLSH,
-            filestream)));
+        Assert::IsTrue(SUCCEEDED(fuzzy_stream->OpenToRead(FuzzyHashStream::Algorithm::SSDeep, filestream)));
 
         auto devnull = std::make_shared<DevNullStream>();
         Assert::IsTrue(SUCCEEDED(devnull->Open()));
@@ -56,10 +54,6 @@ public:
             L"3072:LTA1oiyclh4NWZUFy13JwjhwDmBc6hZ/Eg:OyuKbycWa",
             ssdeep.c_str(),
             L"SSDeep value for ntfsinfo.exe does not match expected value");
-
-        std::wstring tlsh;
-        Assert::IsTrue(SUCCEEDED(fuzzy_stream->GetHash(FuzzyHashStream::Algorithm::TLSH, tlsh)));
-        Assert::AreEqual(L"96D3171173E58031F5F72A306AB49A625A3EFD729E34D58B73A8114D0AB1BD0DA35B33", tlsh.c_str());
 #endif  // ORC_BUILD_SSDEEP
 
         return;

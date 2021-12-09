@@ -249,7 +249,7 @@ HRESULT FileInfo::HandleIntentions(const Intentions& intention, ITableOutput& ou
             break;
 
         case Intentions::FILEINFO_TLSH:
-            hr = WriteTLSH(output);
+            hr = output.WriteNothing();
             break;
 
         case Intentions::FILEINFO_SIGNED_HASH:
@@ -581,7 +581,7 @@ HRESULT FileInfo::OpenHash()
     if (HasAnyFlag(
             localIntentions,
             Intentions::FILEINFO_MD5 | Intentions::FILEINFO_SHA1 | Intentions::FILEINFO_SHA256
-                | Intentions::FILEINFO_SSDEEP | Intentions::FILEINFO_TLSH))
+                | Intentions::FILEINFO_SSDEEP))
     {
         if (HasAnyFlag(
                 localIntentions,
@@ -679,8 +679,6 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
     FuzzyHashStream::Algorithm algs = FuzzyHashStream::Algorithm::Undefined;
     if (HasFlag(localIntentions, Intentions::FILEINFO_SSDEEP))
         algs |= FuzzyHashStream::Algorithm::SSDeep;
-    if (HasFlag(localIntentions, Intentions::FILEINFO_TLSH))
-        algs |= FuzzyHashStream::Algorithm::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
 
@@ -710,15 +708,6 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
                 return hr;
             }
         }
-
-        if (HasFlag(algs, FuzzyHashStream::Algorithm::TLSH))
-        {
-            hr = hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH());
-            if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
-            {
-                return hr;
-            }
-        }
     }
 
     return S_OK;
@@ -742,8 +731,6 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
     FuzzyHashStream::Algorithm fuzzy_algs = FuzzyHashStream::Algorithm::Undefined;
     if (HasFlag(localIntentions, Intentions::FILEINFO_SSDEEP))
         fuzzy_algs |= FuzzyHashStream::Algorithm::SSDeep;
-    if (HasFlag(localIntentions, Intentions::FILEINFO_TLSH))
-        fuzzy_algs |= FuzzyHashStream::Algorithm::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
 
@@ -812,12 +799,6 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
                 return hr;
         }
 #endif
-        if (HasFlag(fuzzy_algs, FuzzyHashStream::Algorithm::TLSH)
-            && FAILED(hr = fuzzy_hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH())))
-        {
-            if (hr != MK_E_UNAVAILABLE)
-                return hr;
-        }
     }
 
     return S_OK;
@@ -1383,18 +1364,6 @@ HRESULT FileInfo::WriteSSDeep(ITableOutput& output)
 #else
     return output.WriteNothing();
 #endif
-}
-
-HRESULT FileInfo::WriteTLSH(ITableOutput& output)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = CheckHash()))
-    {
-        if (hr == HRESULT_FROM_WIN32(ERROR_INVALID_FUNCTION) || hr == HRESULT_FROM_WIN32(ERROR_DIRECTORY))
-            return output.WriteNothing();
-        return hr;
-    }
-    return output.WriteString(GetDetails()->TLSH());
 }
 
 HRESULT FileInfo::WriteSignedHash(ITableOutput& output)

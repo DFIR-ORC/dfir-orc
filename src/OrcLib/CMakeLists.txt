@@ -973,11 +973,6 @@ target_link_libraries(OrcLib
 find_package(RapidJSON CONFIG REQUIRED)
 target_include_directories(OrcLib PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
 
-if(ORC_BUILD_TLSH)
-    find_package(tlsh CONFIG REQUIRED)
-    target_link_libraries(OrcLib PUBLIC tlsh::tlsh)
-endif()
-
 if(ORC_BUILD_SSDEEP)
     find_package(ssdeep CONFIG REQUIRED)
     target_link_libraries(OrcLib PUBLIC ssdeep::fuzzy)
