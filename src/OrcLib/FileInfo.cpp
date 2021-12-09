@@ -47,6 +47,51 @@
 #define IMAGE_FILE_MACHINE_OSX 0xC020
 #define IMAGE_FILE_MACHINE_LINUX 0xFD1D  // TODO: be more specific (linux-x64, ...)
 
+namespace {
+
+// Directory can have some of those attribute but usually they don't
+bool IsFailureAcceptedForDirectories(const Orc::Intentions& intention)
+{
+    using namespace Orc;
+
+    switch (intention)
+    {
+        case Intentions::FILEINFO_FILESIZE:
+        case Intentions::FILEINFO_MD5:
+        case Intentions::FILEINFO_SHA1:
+        case Intentions::FILEINFO_FIRST_BYTES:
+        case Intentions::FILEINFO_VERSION:
+        case Intentions::FILEINFO_COMPANY:
+        case Intentions::FILEINFO_PRODUCT:
+        case Intentions::FILEINFO_ORIGINALNAME:
+        case Intentions::FILEINFO_PLATFORM:
+        case Intentions::FILEINFO_TIMESTAMP:
+        case Intentions::FILEINFO_SUBSYSTEM:
+        case Intentions::FILEINFO_FILETYPE:
+        case Intentions::FILEINFO_FILEOS:
+        case Intentions::FILEINFO_SHA256:
+        case Intentions::FILEINFO_PE_MD5:
+        case Intentions::FILEINFO_PE_SHA1:
+        case Intentions::FILEINFO_PE_SHA256:
+        case Intentions::FILEINFO_SECURITY_DIRECTORY:
+        case Intentions::FILEINFO_AUTHENTICODE_STATUS:
+        case Intentions::FILEINFO_AUTHENTICODE_SIGNER:
+        case Intentions::FILEINFO_AUTHENTICODE_SIGNER_THUMBPRINT:
+        case Intentions::FILEINFO_AUTHENTICODE_CA:
+        case Intentions::FILEINFO_AUTHENTICODE_CA_THUMBPRINT:
+        case Intentions::FILEINFO_SSDEEP:
+        case Intentions::FILEINFO_TLSH:
+        case Intentions::FILEINFO_SIGNED_HASH:
+        case Intentions::FILEINFO_SECURITY_DIRECTORY_SIZE:
+        case Intentions::FILEINFO_SECURITY_DIRECTORY_SIGNATURE_SIZE:
+            return true;
+    }
+
+    return false;
+}
+
+}  // namespace
+
 using namespace Orc;
 
 const WCHAR* FileInfo::g_pszExecutableFileExtensions[] = {
@@ -292,13 +337,22 @@ HRESULT FileInfo::WriteFileInformation(
             {
                 if (FAILED(hr = HandleIntentions(pCurCol->dwIntention, output)))
                 {
-                    Log::Debug(
-                        L"Failed to write column '{}' for '{}' [{}]",
-                        pCurCol->szColumnName,
-                        m_szFullName,
-                        SystemError(hr));
-                    if (output.GetCurrentColumnID() == ColId)
-                        hr = output.AbandonColumn();
+                    if (IsDirectory() && ::IsFailureAcceptedForDirectories(pCurCol->dwIntention))
+                    {
+                        if (output.GetCurrentColumnID() == ColId)
+                            hr = output.WriteNothing();
+                    }
+                    else
+                    {
+                        Log::Debug(
+                            L"Failed to write column '{}' for '{}' [{}]",
+                            pCurCol->szColumnName,
+                            m_szFullName,
+                            SystemError(hr));
+
+                        if (output.GetCurrentColumnID() == ColId)
+                            hr = output.AbandonColumn();
+                    }
                 }
             }
             else
