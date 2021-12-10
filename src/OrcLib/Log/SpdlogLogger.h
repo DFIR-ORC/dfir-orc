@@ -63,6 +63,8 @@ public:
         m_logger->log(timepoint, spdlog::source_loc {}, static_cast<spdlog::level::level_enum>(level), msg);
     }
 
+    void Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, std::wstring_view msg);
+
     template <typename... Args>
     inline void Trace(Args&&... args)
     {

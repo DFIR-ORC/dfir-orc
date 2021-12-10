@@ -10,6 +10,8 @@
 
 #include "Log/SpdlogLogger.h"
 
+#include "Text/Iconv.h"
+
 namespace Orc {
 namespace Log {
 
@@ -121,6 +123,12 @@ void SpdlogLogger::SetAsDefaultLogger()
 const std::vector<SpdlogSink::Ptr>& SpdlogLogger::Sinks()
 {
     return m_sinks;
+}
+
+void SpdlogLogger::Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, std::wstring_view msg)
+{
+    const auto utf8 = Utf16ToUtf8(msg, "<encoding error>");
+    Log(timepoint, level, utf8);
 }
 
 }  // namespace Log
