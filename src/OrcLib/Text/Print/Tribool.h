@@ -15,29 +15,7 @@
 namespace Orc {
 namespace Text {
 
-template <>
-struct Printer<boost::logic::tribool>
-{
-    static void Output(Orc::Text::Tree& root, const boost::logic::tribool& value)
-    {
-        std::wstring_view valueString;
-
-        if (value)
-        {
-            valueString = L"On";
-        }
-        else if (!value)
-        {
-            valueString = L"Off";
-        }
-        else
-        {
-            valueString = L"Indeterminate";
-        }
-
-        Print(root, valueString);
-    }
-};
+void Print(Tree& node, const boost::logic::tribool& value);
 
 }  // namespace Text
 }  // namespace Orc

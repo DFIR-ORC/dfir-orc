@@ -5,9 +5,10 @@
 //
 // Author(s): fabienfl (ANSSI)
 //
+
 #pragma once
 
-#include "Text/Tree.h"
+#include "Text/Print.h"
 
 namespace Orc {
 
@@ -16,7 +17,7 @@ class VolumeReader;
 
 namespace Text {
 
-void Print(Orc::Text::Tree& root, const MFTRecord& record, const std::shared_ptr<VolumeReader>& volume);
+void Print(Tree& root, const MFTRecord& record, const std::shared_ptr<VolumeReader>& volume);
 
 }  // namespace Text
 }  // namespace Orc

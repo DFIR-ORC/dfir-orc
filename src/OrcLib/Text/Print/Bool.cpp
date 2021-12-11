@@ -1,22 +1,20 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright Â© 2020 ANSSI. All Rights Reserved.
+// Copyright © 2021 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl (ANSSI)
 //
 
-#pragma once
-
-#include "Text/Print.h"
+#include "Bool.h"
 
 namespace Orc {
-
-class Partition;
-
 namespace Text {
 
-void Print(Tree& root, const Partition& partition);
+void Print(Tree& node, bool value)
+{
+    node.Add(L"{}", value ? L"On" : L"Off");
+}
 
 }  // namespace Text
 }  // namespace Orc

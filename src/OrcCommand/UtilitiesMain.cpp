@@ -40,36 +40,36 @@ using namespace Orc::Command;
 
 void UtilitiesMain::PrintCommonParameters(Orc::Text::Tree& root)
 {
-    PrintValue(root, "Start time", theStartTime);
+    PrintValue(root, L"Start time", theStartTime);
 
     std::wstring computerName;
     SystemDetails::GetComputerName_(computerName);
-    PrintValue(root, "Computer name", computerName);
+    PrintValue(root, L"Computer name", computerName);
 
     std::wstring fullComputerName;
     SystemDetails::GetFullComputerName(fullComputerName);
     if (fullComputerName != computerName)
     {
-        PrintValue(root, "Full computer name", fullComputerName);
+        PrintValue(root, L"Full computer name", fullComputerName);
     }
 
     std::wstring orcComputerName;
     SystemDetails::GetOrcComputerName(orcComputerName);
     if (computerName != orcComputerName)
     {
-        PrintValue(root, "DFIR-Orc computer name", orcComputerName);
+        PrintValue(root, L"DFIR-Orc computer name", orcComputerName);
     }
 
     std::wstring orcFullComputerName;
     SystemDetails::GetOrcFullComputerName(orcFullComputerName);
     if (orcFullComputerName != fullComputerName && orcFullComputerName != orcComputerName)
     {
-        PrintValue(root, "DFIR-Orc computer", orcFullComputerName);
+        PrintValue(root, L"DFIR-Orc computer", orcFullComputerName);
     }
 
     std::wstring description;
     SystemDetails::GetDescriptionString(description);
-    PrintValue(root, "Operating system", description);
+    PrintValue(root, L"Operating system", description);
 
     std::wstring userName;
     SystemDetails::WhoAmI(userName);
@@ -99,11 +99,11 @@ void UtilitiesMain::PrintCommonParameters(Orc::Text::Tree& root)
 
 void UtilitiesMain::PrintCommonFooter(Orc::Text::Tree& root)
 {
-    PrintValue(root, "Warning(s)", m_logging.logger().warningCount());
-    PrintValue(root, "Error(s)", m_logging.logger().errorCount());
-    PrintValue(root, "Critical error(s)", m_logging.logger().criticalCount());
+    PrintValue(root, L"Warning(s)", m_logging.logger().warningCount());
+    PrintValue(root, L"Error(s)", m_logging.logger().errorCount());
+    PrintValue(root, L"Critical error(s)", m_logging.logger().criticalCount());
 
-    PrintValue(root, "Finish time", theFinishTime);
+    PrintValue(root, L"Finish time", theFinishTime);
 
     // TODO: std::chrono
     DWORD dwElapsed;
@@ -145,7 +145,7 @@ void UtilitiesMain::PrintCommonFooter(Orc::Text::Tree& root)
 
     durations.push_back(fmt::format(L"{} msecs", dwMillisec));
 
-    PrintValue(root, "Elapsed time", boost::join(durations, L", "));
+    PrintValue(root, L"Elapsed time", boost::join(durations, L", "));
 }
 
 UtilitiesMain::UtilitiesMain()

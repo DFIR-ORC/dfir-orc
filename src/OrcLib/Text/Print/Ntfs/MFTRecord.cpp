@@ -6,7 +6,7 @@
 // Author(s): fabienfl (ANSSI)
 //
 
-#include "Text/Print/Ntfs/MFTRecord.h"
+#include "MFTRecord.h"
 
 #include <string_view>
 #include <vector>
@@ -29,7 +29,7 @@ namespace Orc {
 namespace Text {
 
 template <typename T>
-std::string ToHexString(const boost::dynamic_bitset<T>& bitset)
+std::wstring ToHexString(const boost::dynamic_bitset<T>& bitset)
 {
     std::vector<T> bytes;
     bytes.reserve(bitset.num_blocks());
@@ -38,7 +38,7 @@ std::string ToHexString(const boost::dynamic_bitset<T>& bitset)
     std::string_view out(
         reinterpret_cast<const char*>(bytes.data()), bytes.size() * sizeof(typename decltype(bytes)::value_type));
 
-    std::string hex;
+    std::wstring hex;
     ToHex(std::crbegin(bytes), std::crend(bytes), std::back_inserter(hex));
     return hex;
 }
@@ -83,68 +83,68 @@ std::optional<Traits::ByteQuantity<uint64_t>> GetDataSize(const DataAttribute& d
     return {};
 }
 
-Orc::Result<std::string_view> AttributeTypeToString(ATTRIBUTE_TYPE_CODE code)
+Orc::Result<std::wstring_view> AttributeTypeToString(ATTRIBUTE_TYPE_CODE code)
 {
     switch (code)
     {
         case $UNUSED:
-            return std::string("$UNUSED");
+            return L"$UNUSED";
         case $STANDARD_INFORMATION:
-            return "$STANDARD_INFORMATION";
+            return L"$STANDARD_INFORMATION";
         case $ATTRIBUTE_LIST:
-            return "$ATTRIBUTE_LIST";
+            return L"$ATTRIBUTE_LIST";
         case $FILE_NAME:
-            return "$FILE_NAME";
+            return L"$FILE_NAME";
         case $OBJECT_ID:
-            return "$OBJECT_ID";
+            return L"$OBJECT_ID";
         case $SECURITY_DESCRIPTOR:
-            return "$SECURITY_DESCRIPTOR";
+            return L"$SECURITY_DESCRIPTOR";
         case $VOLUME_NAME:
-            return "$VOLUME_NAME";
+            return L"$VOLUME_NAME";
         case $VOLUME_INFORMATION:
-            return "$VOLUME_INFORMATION";
+            return L"$VOLUME_INFORMATION";
         case $DATA:
-            return "$DATA";
+            return L"$DATA";
         case $INDEX_ROOT:
-            return "$INDEX_ROOT";
+            return L"$INDEX_ROOT";
         case $INDEX_ALLOCATION:
-            return "$INDEX_ALLOCATION";
+            return L"$INDEX_ALLOCATION";
         case $BITMAP:
-            return "$BITMAP";
+            return L"$BITMAP";
         case $REPARSE_POINT:
-            return "$REPARSE_POINT";
+            return L"$REPARSE_POINT";
         case $EA_INFORMATION:
-            return "$EA_INFORMATION";
+            return L"$EA_INFORMATION";
         case $EA:
-            return "$EA";
+            return L"$EA";
         case $LOGGED_UTILITY_STREAM:
-            return "$LOGGED_UTILITY_STREAM";
+            return L"$LOGGED_UTILITY_STREAM";
         case $FIRST_USER_DEFINED_ATTRIBUTE:
-            return "$FIRST_USER_DEFINED_ATTRIBUTE";
+            return L"$FIRST_USER_DEFINED_ATTRIBUTE";
         case $END:
-            return "$END";
+            return L"$END";
         default:
             return std::make_error_code(std::errc::invalid_argument);
     }
 }
 
-void PrintValueFileAttributes(Orc::Text::Tree& root, const std::string& name, ULONG fileAttributes)
+void PrintValueFileAttributes(Orc::Text::Tree& root, const std::wstring& name, ULONG fileAttributes)
 {
     const auto attributes = fmt::format(
-        "{}{}{}{}{}{}{}{}{}{}{}{}{}",
-        fileAttributes & FILE_ATTRIBUTE_ARCHIVE ? 'A' : '.',
-        fileAttributes & FILE_ATTRIBUTE_COMPRESSED ? 'C' : '.',
-        fileAttributes & FILE_ATTRIBUTE_DIRECTORY ? 'D' : '.',
-        fileAttributes & FILE_ATTRIBUTE_ENCRYPTED ? 'E' : '.',
-        fileAttributes & FILE_ATTRIBUTE_HIDDEN ? 'H' : '.',
-        fileAttributes & FILE_ATTRIBUTE_NORMAL ? 'N' : '.',
-        fileAttributes & FILE_ATTRIBUTE_OFFLINE ? 'O' : '.',
-        fileAttributes & FILE_ATTRIBUTE_READONLY ? 'R' : '.',
-        fileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? 'L' : '.',
-        fileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? 'P' : '.',
-        fileAttributes & FILE_ATTRIBUTE_SYSTEM ? 'S' : '.',
-        fileAttributes & FILE_ATTRIBUTE_TEMPORARY ? 'T' : '.',
-        fileAttributes & FILE_ATTRIBUTE_VIRTUAL ? 'V' : '.');
+        L"{}{}{}{}{}{}{}{}{}{}{}{}{}",
+        fileAttributes & FILE_ATTRIBUTE_ARCHIVE ? L'A' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_COMPRESSED ? L'C' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_DIRECTORY ? L'D' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_ENCRYPTED ? L'E' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_HIDDEN ? L'H' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_NORMAL ? L'N' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_OFFLINE ? L'O' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_READONLY ? L'R' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? L'L' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? L'P' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_SYSTEM ? L'S' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_TEMPORARY ? L'T' : L'.',
+        fileAttributes & FILE_ATTRIBUTE_VIRTUAL ? L'V' : L'.');
 
     PrintValue(root, name, attributes);
 }
@@ -176,7 +176,7 @@ void PrintFilenameAttribute(Orc::Text::Tree& root, const Orc::MFTRecord& record)
                 (PFILE_NAME)((LPBYTE)fileNameAttributeHeader + fileNameAttributeHeader->Form.Resident.ValueOffset);
             if (pName == rawName)
             {
-                PrintValue(node, "FileNameID", fileNameAttributeHeader->Instance);
+                PrintValue(node, L"FileNameID", fileNameAttributeHeader->Instance);
             }
         }
 
@@ -208,25 +208,25 @@ void PrintFilenameAttribute(Orc::Text::Tree& root, const Orc::MFTRecord& record)
 //    }
 //}
 
-void Print(Orc::Text::Tree& root, const std::string& name, const IndexRootAttribute& attributes)
+void Print(Orc::Text::Tree& root, const std::wstring& name, const IndexRootAttribute& attributes)
 {
     auto node = root.AddNode(name);
-    PrintValue(node, "Name", std::wstring_view(attributes.NamePtr(), attributes.NameLength()));
+    PrintValue(node, L"Name", std::wstring_view(attributes.NamePtr(), attributes.NameLength()));
 
-    std::string type;
+    std::wstring type;
     const auto prettyTypeCode = AttributeTypeToString(attributes.IndexedAttributeType());
     if (prettyTypeCode)
     {
-        type = fmt::format("{:#x} ({})", attributes.IndexedAttributeType(), prettyTypeCode.value());
+        type = fmt::format(L"{:#x} ({})", attributes.IndexedAttributeType(), prettyTypeCode.value());
     }
     else
     {
-        type = fmt::format("{:#x}", attributes.IndexedAttributeType());
+        type = fmt::format(L"{:#x}", attributes.IndexedAttributeType());
     }
 
-    PrintValue(node, "Indexed attribute type", type);
-    PrintValue(node, "Size per index", attributes.SizePerIndex());
-    PrintValue(node, "Block per index", attributes.BlocksPerIndex());
+    PrintValue(node, L"Indexed attribute type", type);
+    PrintValue(node, L"Size per index", attributes.SizePerIndex());
+    PrintValue(node, L"Block per index", attributes.BlocksPerIndex());
 
     node.AddEmptyLine();
 
@@ -246,7 +246,7 @@ void Print(Orc::Text::Tree& root, const std::string& name, const IndexRootAttrib
 
 void Print(
     Orc::Text::Tree& root,
-    const std::string& name,
+    const std::wstring& name,
     IndexAllocationAttribute& attributes,  // cannot be const due to 'GetNonResidentInformation'
     const Orc::MFTRecord& record,
     const Orc::IndexRootAttribute& indexRootAttributes,
@@ -254,7 +254,7 @@ void Print(
     const std::shared_ptr<VolumeReader>& volume)
 {
     auto node = root.AddNode(name);
-    PrintValue(node, "Name", std::wstring_view(attributes.NamePtr(), attributes.NameLength()));
+    PrintValue(node, L"Name", std::wstring_view(attributes.NamePtr(), attributes.NameLength()));
 
     if (attributes.IsNonResident())
     {
@@ -263,8 +263,8 @@ void Print(
         {
             PrintValue(
                 node,
-                "Allocated size",
-                fmt::format("{} ({})", Traits::ByteQuantity(info->ExtentsSize), info->ExtentsSize));
+                L"Allocated size",
+                fmt::format(L"{} ({})", Traits::ByteQuantity(info->ExtentsSize), info->ExtentsSize));
 
             for (size_t i = 0; i < info->ExtentsVector.size(); ++i)
             {
@@ -272,14 +272,14 @@ void Print(
 
                 PrintValue(
                     node,
-                    fmt::format("Extent #{}", i),
+                    fmt::format(L"Extent #{}", i),
                     fmt::format(
-                        "Lowest VCN: {}, Offset: {}, Size: {} ({}), Sparse: {}",
+                        L"Lowest VCN: {}, Offset: {}, Size: {} ({}), Sparse: {}",
                         extent.LowestVCN,
                         Traits::Offset(extent.DiskOffset),
                         Traits::ByteQuantity(extent.DiskAlloc),
                         extent.DiskAlloc,
-                        extent.bZero ? "yes" : "no"));
+                        extent.bZero ? L"yes" : L"no"));
             }
         }
     }
@@ -339,8 +339,8 @@ void Print(
                 Print(fileNode, *file_name);
                 PrintValue(
                     fileNode,
-                    "IndexedAttrOwner",
-                    fmt::format("{:#016x}", NtfsFullSegmentNumber(&entry->FileReference)));
+                    L"IndexedAttrOwner",
+                    fmt::format(L"{:#016x}", NtfsFullSegmentNumber(&entry->FileReference)));
 
                 fileNode.AddEmptyLine();
             }
@@ -370,7 +370,7 @@ void Print(
                 Print(carvedNode, *file_name);
                 PrintValue(
                     carvedNode,
-                    "IndexedAttrOwner",
+                    L"IndexedAttrOwner",
                     fmt::format("{:#016x}", NtfsFullSegmentNumber(&entry->FileReference)));
 
                 carvedNode.AddEmptyLine();
@@ -403,7 +403,7 @@ void Print(
                 Print(carvedNode, *file_name);
                 PrintValue(
                     carvedNode,
-                    "IndexedAttrOwner",
+                    L"IndexedAttrOwner",
                     fmt::format("{:#016x}", NtfsFullSegmentNumber(&entry->FileReference)));
 
                 carvedNode.AddEmptyLine();
@@ -413,9 +413,9 @@ void Print(
 
     PrintValue(
         node,
-        "Statistics",
+        L"Statistics",
         fmt::format(
-            "{} file entries with {} carved in {} blocks of {}",
+            L"{} file entries with {} carved in {} blocks of {}",
             fileCount,
             carvedFileCount,
             blockId,
@@ -424,11 +424,11 @@ void Print(
     root.AddEmptyLine();
 }
 
-void Print(Orc::Text::Tree& root, const std::string& name, const BitmapAttribute& attributes)
+void Print(Orc::Text::Tree& root, const std::wstring& name, const BitmapAttribute& attributes)
 {
     auto node = root.AddNode(name);
-    PrintValue(node, "Name", std::wstring_view(attributes.NamePtr(), attributes.NameLength()));
-    PrintValue(node, "Bitmap", fmt::format("0x{}", ToHexString(attributes.Bits())));
+    PrintValue(node, L"Name", std::wstring_view(attributes.NamePtr(), attributes.NameLength()));
+    PrintValue(node, L"Bitmap", fmt::format(L"0x{}", ToHexString(attributes.Bits())));
     root.AddEmptyLine();
 }
 
@@ -441,14 +441,14 @@ void PrintStandardInformation(Orc::Text::Tree& root, const Orc::MFTRecord& recor
     }
 
     auto node = root.AddNode("$STANDARD_INFORMATION");
-    PrintValueFileAttributes(node, "FileAttributes", record.GetStandardInformation()->FileAttributes);
+    PrintValueFileAttributes(node, L"FileAttributes", record.GetStandardInformation()->FileAttributes);
 
-    PrintValue(node, "CreationTime", record.GetStandardInformation()->CreationTime);
-    PrintValue(node, "LastModificationTime", record.GetStandardInformation()->LastModificationTime);
-    PrintValue(node, "LastAccessTime", record.GetStandardInformation()->LastAccessTime);
-    PrintValue(node, "LastChangeTime", record.GetStandardInformation()->LastChangeTime);
-    PrintValue(node, "OwnerID", record.GetStandardInformation()->OwnerId);
-    PrintValue(node, "SecurityID", record.GetStandardInformation()->SecurityId);
+    PrintValue(node, L"CreationTime", record.GetStandardInformation()->CreationTime);
+    PrintValue(node, L"LastModificationTime", record.GetStandardInformation()->LastModificationTime);
+    PrintValue(node, L"LastAccessTime", record.GetStandardInformation()->LastAccessTime);
+    PrintValue(node, L"LastChangeTime", record.GetStandardInformation()->LastChangeTime);
+    PrintValue(node, L"OwnerID", record.GetStandardInformation()->OwnerId);
+    PrintValue(node, L"SecurityID", record.GetStandardInformation()->SecurityId);
 
     root.AddEmptyLine();
 }
@@ -476,17 +476,17 @@ void PrintIndexAttributes(
 
     if (indexRoot)
     {
-        Print(root, "$INDEX_ROOT", *indexRoot);
+        Print(root, L"$INDEX_ROOT", *indexRoot);
     }
 
     if (indexAllocation)
     {
-        Print(root, "$INDEX_ALLOCATION", *indexAllocation, record, *indexRoot, *bitmap, volume);
+        Print(root, L"$INDEX_ALLOCATION", *indexAllocation, record, *indexRoot, *bitmap, volume);
     }
 
     if (bitmap)
     {
-        Print(root, "$BITMAP", *bitmap);
+        Print(root, L"$BITMAP", *bitmap);
     }
 }
 
@@ -526,8 +526,8 @@ void PrintExtendedAttributes(
         {
             const auto& [name, data] = ea->Items()[i];
 
-            PrintValue(node, "Name", name);
-            PrintValue(node, "Size", data.GetCount());
+            PrintValue(node, L"Name", name);
+            PrintValue(node, L"Size", data.GetCount());
             node.AddHexDump("Data:", std::string_view(reinterpret_cast<const char*>(data.GetData()), data.GetCount()));
 
             node.AddEmptyLine();
@@ -561,9 +561,9 @@ void PrintReparsePointAttribute(Orc::Text::Tree& root, const Orc::MFTRecord& rec
 
             auto node = root.AddNode("$REPARSE_POINT");
 
-            PrintValue(node, "Flags", fmt::format("{:#x}", static_cast<ULONG>(reparsePoint->Flags())));
-            PrintValue(node, "Name", reparsePoint->PrintName());
-            PrintValue(node, "Alternate name", reparsePoint->SubstituteName());
+            PrintValue(node, L"Flags", fmt::format(L"{:#x}", static_cast<ULONG>(reparsePoint->Flags())));
+            PrintValue(node, L"Name", reparsePoint->PrintName());
+            PrintValue(node, L"Alternate name", reparsePoint->SubstituteName());
 
             node.AddEmptyLine();
         }
@@ -590,13 +590,13 @@ void PrintDataAttribute(Orc::Text::Tree& root, const MFTRecord& record, const st
         }
 
         auto entryNode = node.AddNode("Entry #{}", i);
-        PrintValue(entryNode, "Name", std::wstring_view(data->NamePtr(), data->NameLength()));
+        PrintValue(entryNode, L"Name", std::wstring_view(data->NamePtr(), data->NameLength()));
 
         const auto dataSize = GetDataSize(*data);
         if (dataSize.has_value())
         {
-            const auto size = fmt::format("{} ({} bytes)", *dataSize, (*dataSize).value);
-            PrintValue(entryNode, "Size", size);
+            const auto size = fmt::format(L"{} ({} bytes)", *dataSize, (*dataSize).value);
+            PrintValue(entryNode, L"Size", size);
         }
 
         entryNode.Add("Resident: {}", data->IsResident());
@@ -639,17 +639,17 @@ void Print(Orc::Text::Tree& root, const MFTRecord& record, const std::shared_ptr
     }
 
     auto recordNode = root.AddNode(
-        "MFT record {:#018x} {}{}{}{}{}{}{}{}{}",
+        L"MFT record {:#018x} {}{}{}{}{}{}{}{}{}",
         record.GetSafeMFTSegmentNumber(),
-        record.IsRecordInUse() ? "[in_use]" : "[deleted]",
-        record.IsDirectory() ? "[directory]" : "",
-        record.IsBaseRecord() ? "[base]" : "[child]",
-        record.IsJunction() ? "[junction]" : "",
-        record.IsOverlayFile() ? "[overlay]" : "",
-        record.IsSymbolicLink() ? "[symlink]" : "",
-        record.HasExtendedAttr() ? "[extended attr]" : "",
-        record.HasNamedDataAttr() ? "[named $DATA]" : "",
-        record.HasReparsePoint() ? "[reparse point]" : "");
+        record.IsRecordInUse() ? L"[in_use]" : L"[deleted]",
+        record.IsDirectory() ? L"[directory]" : L"",
+        record.IsBaseRecord() ? L"[base]" : L"[child]",
+        record.IsJunction() ? L"[junction]" : L"",
+        record.IsOverlayFile() ? L"[overlay]" : L"",
+        record.IsSymbolicLink() ? L"[symlink]" : L"",
+        record.HasExtendedAttr() ? L"[extended attr]" : L"",
+        record.HasNamedDataAttr() ? L"[named $DATA]" : L"",
+        record.HasReparsePoint() ? L"[reparse point]" : L"");
 
     const auto& childrens = record.GetChildRecords();
     if (!childrens.empty())
@@ -658,7 +658,7 @@ void Print(Orc::Text::Tree& root, const MFTRecord& record, const std::shared_ptr
 
         for (const auto& [childFRN, childRecord] : childrens)
         {
-            PrintValue(childrensNode, "FRN", Traits::Offset(childFRN));
+            PrintValue(childrensNode, L"FRN", Traits::Offset(childFRN));
         }
 
         childrensNode.AddEmptyLine();

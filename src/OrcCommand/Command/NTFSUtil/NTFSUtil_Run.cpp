@@ -187,8 +187,8 @@ HRESULT Main::CommandUSN()
         };
 
         auto usnNode = output.AddNode("USN configuration:");
-        PrintValue(usnNode, "MaxSize", maxSize);
-        PrintValue(usnNode, "Delta", delta);
+        PrintValue(usnNode, L"MaxSize", maxSize);
+        PrintValue(usnNode, L"Delta", delta);
     }
 
     if (config.bConfigure)
@@ -215,8 +215,8 @@ HRESULT Main::CommandUSN()
             }
 
             auto usnNode = output.AddNode("USN new configuration:");
-            PrintValue(usnNode, "MaxSize", maxSize);
-            PrintValue(usnNode, "Delta", delta);
+            PrintValue(usnNode, L"MaxSize", maxSize);
+            PrintValue(usnNode, L"Delta", delta);
         }
     }
 
@@ -258,7 +258,7 @@ HRESULT Main::CommandLoc()
     auto root = m_console.OutputTree();
 
     auto output = root.AddNode(L"Location '{}'", config.strVolume);
-    PrintValue(output, "Type", locationType);
+    PrintValue(output, L"Type", locationType);
 
     if (locationType == Location::Type::ImageFileDisk || locationType == Location::Type::PhysicalDrive
         || locationType == Location::Type::DiskInterface)
@@ -304,11 +304,11 @@ HRESULT Main::CommandLoc()
 
         if (location->IsNTFS())
         {
-            PrintValue(partitionNode, "FS type", "NTFS");
-            PrintValue(partitionNode, "Volume serial", fmt::format("{:#x}", reader->VolumeSerialNumber()));
-            PrintValue(partitionNode, "Component length", reader->MaxComponentLength());
-            PrintValue(partitionNode, "Bytes per cluster", reader->GetBytesPerCluster());
-            PrintValue(partitionNode, "Bytes per FRS", reader->GetBytesPerFRS());
+            PrintValue(partitionNode, L"FS type", "NTFS");
+            PrintValue(partitionNode, L"Volume serial", fmt::format(L"{:#x}", reader->VolumeSerialNumber()));
+            PrintValue(partitionNode, L"Component length", reader->MaxComponentLength());
+            PrintValue(partitionNode, L"Bytes per cluster", reader->GetBytesPerCluster());
+            PrintValue(partitionNode, L"Bytes per FRS", reader->GetBytesPerFRS());
 
             MFTWalker walker;
             hr = walker.Initialize(location);
@@ -318,25 +318,25 @@ HRESULT Main::CommandLoc()
                 continue;
             }
 
-            PrintValue(partitionNode, "Record count", walker.GetMFTRecordCount());
+            PrintValue(partitionNode, L"Record count", walker.GetMFTRecordCount());
         }
         else if (location->IsFAT12() || location->IsFAT16() || location->IsFAT32())
         {
             if (location->IsFAT12())
             {
-                PrintValue(partitionNode, "FS type", "FAT12");
+                PrintValue(partitionNode, L"FS type", "FAT12");
             }
             else if (location->IsFAT16())
             {
-                PrintValue(partitionNode, "FS type", "FAT16");
+                PrintValue(partitionNode, L"FS type", "FAT16");
             }
             else
             {
-                PrintValue(partitionNode, "FS type", "FAT32");
+                PrintValue(partitionNode, L"FS type", "FAT32");
             }
 
-            PrintValue(partitionNode, "Bytes per cluster", reader->GetBytesPerCluster());
-            PrintValue(partitionNode, "Volume serial", fmt::format("{:#x}", reader->VolumeSerialNumber()));
+            PrintValue(partitionNode, L"Bytes per cluster", reader->GetBytesPerCluster());
+            PrintValue(partitionNode, L"Volume serial", fmt::format(L"{:#x}", reader->VolumeSerialNumber()));
         }
     }
 

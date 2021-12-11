@@ -13,14 +13,7 @@
 namespace Orc {
 namespace Text {
 
-template <>
-struct Printer<bool>
-{
-    static void Output(Orc::Text::Tree& node, bool value)
-    {
-        Print(node, value ? L"On" : L"Off");
-    }
-};
+void Print(Tree& node, bool value);
 
 }  // namespace Text
 }  // namespace Orc

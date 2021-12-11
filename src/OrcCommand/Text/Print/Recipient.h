@@ -10,30 +10,12 @@
 
 #include "Text/Print.h"
 
-#include <boost/algorithm/string/join.hpp>
-
-#include "WolfExecution.h"
+#include "Command/WolfLauncher/WolfExecution.h"
 
 namespace Orc {
 namespace Text {
 
-template <>
-struct Printer<Orc::Command::Wolf::WolfExecution::Recipient>
-{
-    static void Output(Orc::Text::Tree& node, const Orc::Command::Wolf::WolfExecution::Recipient& recipient)
-    {
-        std::vector<std::wstring> ArchiveSpec;
-        auto archiveSpecs = boost::join(recipient.ArchiveSpec, L",");
-        if (archiveSpecs.empty())
-        {
-            Print(node, recipient.Name);
-        }
-        else
-        {
-            Print(node, fmt::format(L"{} [{}]", recipient.Name, archiveSpecs));
-        }
-    }
-};
+void Print(Tree& node, const Orc::Command::Wolf::WolfExecution::Recipient& recipient);
 
 }  // namespace Text
 }  // namespace Orc

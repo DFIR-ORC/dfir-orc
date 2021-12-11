@@ -24,7 +24,7 @@
 
 using namespace std;
 
-using namespace Orc;
+namespace Orc {
 
 Location::Location(const std::wstring& Location, Location::Type type)
     : m_Location(Location)
@@ -393,3 +393,27 @@ std::wostream& Orc::operator<<(std::wostream& o, const Location& l)
 
     return o;
 }
+
+std::vector<std::wstring> GetMountPointList(const Orc::Location& location)
+{
+    std::vector<std::wstring> mountPoints;
+
+    for (const auto& path : location.GetPaths())
+    {
+        if (location.GetSubDirs().empty())
+        {
+            mountPoints.push_back(fmt::format(L"\"{}\"", path));
+            continue;
+        }
+
+        for (const auto& subdir : location.GetSubDirs())
+        {
+            const auto fullPath = std::filesystem::path(path) / subdir;
+            mountPoints.push_back(fullPath);
+        }
+    }
+
+    return mountPoints;
+}
+
+}  // namespace Orc

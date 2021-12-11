@@ -79,11 +79,11 @@ void Main::PrintParameters()
     PrintValue(node, L"Timeline", config.outTimeLine);
     PrintValue(node, L"SecDescr", config.outSecDescrInfo);
 
-    PrintValues(node, "Parsed locations", config.locs.GetParsedLocations());
+    PrintValues(node, L"Parsed locations", config.locs.GetParsedLocations());
 
-    PrintValue(node, "Output columns", config.ColumnIntentions, NtfsFileInfo::g_NtfsColumnNames);
-    PrintValue(node, "Default columns", config.DefaultIntentions, NtfsFileInfo::g_NtfsColumnNames);
-    PrintValue(node, "Filters", config.Filters, NtfsFileInfo::g_NtfsColumnNames);
+    PrintValue(node, L"Output columns", config.ColumnIntentions, NtfsFileInfo::g_NtfsColumnNames);
+    PrintValue(node, L"Default columns", config.DefaultIntentions, NtfsFileInfo::g_NtfsColumnNames);
+    PrintValue(node, L"Filters", config.Filters, NtfsFileInfo::g_NtfsColumnNames);
 
     m_console.PrintNewLine();
 }
@@ -94,7 +94,7 @@ void Main::PrintFooter()
 
     auto root = m_console.OutputTree();
     auto node = root.AddNode("Statistics");
-    PrintValue(node, "Lines processed", dwTotalFileTreated);
+    PrintValue(node, L"Lines processed", dwTotalFileTreated);
     PrintCommonFooter(node);
 
     m_console.PrintNewLine();

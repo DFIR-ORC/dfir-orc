@@ -27,83 +27,76 @@ constexpr auto kNoneAvailableW = std::wstring_view(L"N/A");
 constexpr auto kNone = std::string_view("None");
 constexpr auto kNoneW = std::wstring_view(L"None");
 
-template <typename N>
-void PrintKey(Orc::Text::Tree& root, const N& key)
+template <typename T>
+inline void Print(Tree& node, const T& value)
 {
-    using value_type = Traits::underlying_char_type_t<N>;
-
-    std::basic_string<value_type> decoratedKey(key);
-    decoratedKey.push_back(Traits::semicolon_v<value_type>);
-    root.AddWithoutEOL(L"{:<34}", decoratedKey);
+    node.Add(L"{}", value);
 }
 
-// To be specialized...
-template <typename V>
-struct Printer
+inline std::wstring FormatKey(const std::wstring& key)
 {
-    static void Output(Orc::Text::Tree& root, const V& value)
-    {
-        root.Add(L"{}", value);
-    }
-};
-
-template <typename V>
-void Print(Orc::Text::Tree& root, const V& value)
-{
-    Printer<V>::Output(root, value);
+    std::wstring out(key);
+    out.push_back(L':');
+    return fmt::format(L"{:<34}", out);
 }
 
-template <typename V>
-void Print(Orc::Text::Tree& root, const std::shared_ptr<V>& value)
+inline void PrintKey(Tree& node, const std::wstring& key)
+{
+    node.AddWithoutEOL(FormatKey(key));
+}
+
+template<typename T>
+inline void PrintValue(Tree& node, const std::wstring& key, const T& value)
+{
+    PrintKey(node, key);
+    Print(node, value);
+}
+
+template <typename T>
+inline void Print(Tree& node, const std::shared_ptr<T>& value)
 {
     if (value == nullptr)
     {
-        Print(root, kErrorW);
+        Print(node, kErrorW);
         return;
     }
 
-    Printer<V>::Output(root, *value);
+    Print(node, *value);
 }
 
-template <typename V>
-void Print(Orc::Text::Tree& root, const std::optional<V>& item)
+template <typename T>
+void Print(Tree& node, const std::optional<T>& value)
 {
     if (!item.has_value())
     {
-        Print(root, kNoneAvailableW);
+        Print(node, kNoneAvailableW);
         return;
     }
 
-    Printer<V>::Output(root, *item);
+    Print(node, *item);
 }
 
-template <typename V>
-void Print(Orc::Text::Tree& root, const std::reference_wrapper<V> value)
+template <typename T>
+void Print(Tree& node, const std::reference_wrapper<T> value)
 {
-    Print(root, value.get());
-}
-
-// Default function to be specialized for custom output
-template <typename N, typename V>
-void PrintValue(Orc::Text::Tree& root, const N& name, const V& value)
-{
-    PrintKey(root, name);
-    Print(root, value);
+    Print(node, value.get());
 }
 
 template <typename N, typename V>
-void PrintValues(Orc::Text::Tree& root, const N& name, const V& values)
+void PrintValues(Tree& node, const N& name, const V& values)
 {
     if (values.size() == 0)
     {
-        PrintValue(root, name, kNoneW);
+        PrintValue(node, name, kNoneW);
         return;
     }
 
-    auto node = root.AddNode(34, L"{}:", name);
+    // TODO: use FormatKey
+    auto valuesNode = node.AddNode(34, L"{}:", name);
+    node.AddEmptyLine();
     for (const auto& value : values)
     {
-        Print(node, value);
+        Print(valuesNode, value);
     }
 }
 

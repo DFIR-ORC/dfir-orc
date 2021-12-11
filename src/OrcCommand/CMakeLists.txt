@@ -276,6 +276,7 @@ if(ORC_COMMAND_WOLFLAUNCHER)
         "Command/WolfLauncher/WolfLauncherSqlSchema.xml"
         "Text/Fmt/WolfPriority.h"
         "Text/Print/Recipient.h"
+        "Text/Print/Recipient.cpp"
     )
 
     source_group(WolfLauncher FILES ${SRC_WOLFLAUNCHER})

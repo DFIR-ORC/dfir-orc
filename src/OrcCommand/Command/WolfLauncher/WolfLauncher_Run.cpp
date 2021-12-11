@@ -836,9 +836,9 @@ HRESULT Main::Run_Execute()
             auto commandSetNode = console.OutputTree().AddNode("Command set '{}'", exec->GetKeyword());
             auto parametersNode = commandSetNode.AddNode("Parameters");
             PrintValue(
-                parametersNode, "UseEncryptionJournal", exec->IsChildDebugActive(config.bUseJournalWhenEncrypting));
-            PrintValue(parametersNode, "Debug", exec->IsChildDebugActive(config.bChildDebug));
-            PrintValue(parametersNode, "RepeatBehavior", WolfExecution::ToString(exec->RepeatBehaviour()));
+                parametersNode, L"UseEncryptionJournal", exec->IsChildDebugActive(config.bUseJournalWhenEncrypting));
+            PrintValue(parametersNode, L"Debug", exec->IsChildDebugActive(config.bChildDebug));
+            PrintValue(parametersNode, L"RepeatBehavior", WolfExecution::ToString(exec->RepeatBehaviour()));
 
             if (exec->RepeatBehaviour() == WolfExecution::Repeat::Overwrite)
             {

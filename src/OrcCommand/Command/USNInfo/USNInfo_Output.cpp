@@ -61,8 +61,8 @@ void Main::PrintParameters()
 
     PrintValue(node, L"Output", config.output);
 
-    PrintValues(node, "Parsed locations", config.locs.GetParsedLocations());
-    PrintValue(node, "Compact", config.bCompactForm);
+    PrintValues(node, L"Parsed locations", config.locs.GetParsedLocations());
+    PrintValue(node, L"Compact", config.bCompactForm);
 
     m_console.PrintNewLine();
 }

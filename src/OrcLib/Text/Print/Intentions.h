@@ -9,30 +9,12 @@
 #pragma once
 
 #include "Text/Print.h"
-
 #include "FSUtils.h"
 
 namespace Orc {
 namespace Text {
 
-template <typename N>
-void PrintValue(Orc::Text::Tree& root, const N& name, Orc::Intentions intentions, const ColumnNameDef* pCurCol)
-{
-    std::vector<std::wstring> columns;
-
-    while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
-    {
-        if (HasFlag(intentions, pCurCol->dwIntention))
-        {
-            columns.push_back(pCurCol->szColumnName);
-        }
-
-        pCurCol++;
-    }
-
-    std::sort(std::begin(columns), std::end(columns));
-    PrintValues(root, name, columns);
-}
+void PrintValue(Tree& node, const std::wstring& key, Orc::Intentions intentions, const ColumnNameDef* pCurCol);
 
 }  // namespace Text
 }  // namespace Orc

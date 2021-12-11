@@ -29,6 +29,7 @@
 #include "Privilege.h"
 #include "EmbeddedResource.h"
 #include "Text/Print/Location.h"
+#include "Text/Print/LocationSet.h"
 
 using namespace std;
 
