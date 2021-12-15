@@ -107,6 +107,7 @@ public:
                         volStatOutput.WriteString(reader->GetLocation());
                         volStatOutput.WriteString(FSVBR::GetFSName(reader->GetFSType()).c_str());
                         volStatOutput.WriteBool(loc->GetParse());
+                        volStatOutput.WriteString(fmt::format(L"{}", fmt::join(loc->GetPaths(), L";")));
                         volStatOutput.WriteEndOfLine();
                     }
                     else
