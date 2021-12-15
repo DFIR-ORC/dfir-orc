@@ -318,6 +318,20 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
         }
     }
 
+    // Fix index for empty files which is not updated as "SetOperationResult" is not called by 7z as for non-empty
+    // files.
+    for (size_t i = 0; i < m_Items.size(); ++i)
+    {
+        auto& item = m_Items[i];
+        if (item.currentStatus == OrcArchive::ArchiveItem::Selected && item.Size == 0)
+        {
+            assert(m_Indexes.size() <= m_Items.size());
+            item.currentStatus = OrcArchive::ArchiveItem::Done;
+            item.Index = m_Indexes.size();
+            m_Indexes[item.Index] = i;
+        }
+    }
+
     const bool kReleaseInputStreams = true;
     StoreFileHashes(m_Items, kReleaseInputStreams);
 
