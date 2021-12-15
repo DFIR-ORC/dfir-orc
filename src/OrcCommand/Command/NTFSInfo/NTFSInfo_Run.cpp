@@ -525,6 +525,7 @@ void Main::I30Information(
     else
         output.WriteGUID(GUID_NULL);
 
+    output.WriteInteger(pFileName->Info.Reserved18.DataSize);
     output.WriteEndOfLine();
 }
 
