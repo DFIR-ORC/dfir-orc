@@ -256,7 +256,13 @@ struct FILE_NAME_DUPLICATED_INFORMATION
     LONGLONG LastModificationTime;
     LONGLONG LastChangeTime;
     LONGLONG LastAccessTime;
-    UCHAR Reserved[0x18];
+    struct Reserved18
+    {
+        ULONGLONG AllocatedSize;
+        ULONGLONG DataSize;
+        ULONG FileAttributes;
+        ULONG ReparseTag;  // Could be also packed EA size as USHORT
+    } Reserved18;
 };
 
 struct FILE_NAME

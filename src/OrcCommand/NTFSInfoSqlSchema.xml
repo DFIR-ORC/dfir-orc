@@ -149,6 +149,7 @@
         <timestamp name="FileNameLastAccessDate" />
         <timestamp name="FileNameLastAttrModificationDate" />
         <guid   name="SnapshotID" allows_null="no" />
+        <uint64 name="DataSize" />
     </table>
 
     <table key="timeline">
