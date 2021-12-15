@@ -201,6 +201,7 @@
             <value index="0xFFFFFFF">ALL</value>
         </enum>
         <bool name="Parse" />
+        <utf16  name="MountPoint" maxlen="256" />
     </table>
 </sqlschema>
 
