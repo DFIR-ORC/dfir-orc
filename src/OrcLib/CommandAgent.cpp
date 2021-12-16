@@ -441,10 +441,23 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                         retval->AddArgument(Arg, parameter.OrderId);
                 }
                 break;
-                case CommandParameter::Argument:
-                    if (FAILED(hr = retval->AddArgument(parameter.Keyword, parameter.OrderId)))
+                case CommandParameter::Argument: {
+                    std::wstring arguments;
+                    arguments.resize(parameter.Keyword.size() + 512);
+                    auto rv = ExpandEnvironmentStringsW(parameter.Keyword.c_str(), arguments.data(), arguments.size());
+                    if (rv == 0)
+                    {
+                        arguments = parameter.Keyword;
+                    }
+                    else
+                    {
+                        arguments.resize(rv - 1);  // remove terminating NULL character
+                    }
+
+                    if (FAILED(hr = retval->AddArgument(arguments, parameter.OrderId)))
                         return;
                     break;
+                }
                 case CommandParameter::Executable:
                 {
 
