@@ -1,5 +1,16 @@
 # ChangeLog
 
+## [10.0.23] - 2021-12-16
+### Fixed
+- 7z archives: empty file handling for compatibility
+
+### Added
+- WolfLauncher: expand environment variables for `<Argument>` xml configuration element.
+- NTFSInfo: add 'DataSize' column to 'I30Info' output for $I30's file size
+- NTFSInfo: add 'MountPoint' column to 'volstats.csv' with assigned drive letter
+- FATInfo: add 'MountPoint' column to 'volstats.csv' with assigned drive letter
+
+
 ## [10.0.22] - 2021-12-01
 ### changed
 - Yara: Update to 4.1.3
