@@ -507,31 +507,7 @@ public:
 
     void PrintSpecs() const;
 
-    template <typename T>
-    void PrintSpecs(Orc::Text::Tree<T>& root) const
-    {
-        auto node = root.AddNode(L"Registry search details:");
-
-        for (const auto& e : m_ExactKeyNameSpecs)
-        {
-            node.Add(L"{}", e.second->GetDescription());
-        }
-
-        for (const auto& e : m_ExactKeyPathSpecs)
-        {
-            node.Add(L"{}", e.second->GetDescription());
-        }
-
-        for (const auto& e : m_ExactValueNameSpecs)
-        {
-            node.Add(L"{}", e.second->GetDescription());
-        }
-
-        for (const auto& e : m_Specs)
-        {
-            node.Add(L"{}", e->GetDescription());
-        }
-    }
+    void PrintSpecs(Orc::Text::Tree& root) const;
 
     ~RegFind(void) {};
 };

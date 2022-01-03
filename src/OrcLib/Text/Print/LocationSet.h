@@ -41,8 +41,7 @@ bool HasSameAttributes(InputIt first, InputIt last)
 template <>
 struct Printer<LocationSet>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const LocationSet& locationSet)
+    static void Output(Orc::Text::Tree& root, const LocationSet& locationSet)
     {
         using SerialNumber = ULONGLONG;
         std::map<SerialNumber, std::set<const Location*>> locationsBySerial;
@@ -114,8 +113,8 @@ struct Printer<LocationSet>
     }
 };
 
-template <typename T, typename U>
-void PrintValue(Orc::Text::Tree<T>& root, const U& name, const LocationSet& locationSet)
+template <typename U>
+void PrintValue(Orc::Text::Tree& root, const U& name, const LocationSet& locationSet)
 {
     if (locationSet.GetLocations().empty())
     {

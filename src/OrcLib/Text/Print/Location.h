@@ -26,8 +26,7 @@ std::vector<std::wstring> GetMountPointList(const Location& location);
 template <>
 struct Printer<Orc::Location>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& node, const Orc::Location& location)
+    static void Output(Orc::Text::Tree& node, const Orc::Location& location)
     {
         std::vector<std::wstring> properties;
 

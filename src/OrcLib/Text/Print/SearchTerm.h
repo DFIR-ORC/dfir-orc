@@ -18,8 +18,7 @@ namespace Text {
 template <>
 struct Printer<FileFind::SearchTerm>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const FileFind::SearchTerm& term)
+    static void Output(Orc::Text::Tree& root, const FileFind::SearchTerm& term)
     {
         Print(root, term.GetDescription());
     }

@@ -20,8 +20,7 @@ namespace Text {
 template <>
 struct Printer<Orc::Command::Wolf::WolfExecution::Recipient>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& node, const Orc::Command::Wolf::WolfExecution::Recipient& recipient)
+    static void Output(Orc::Text::Tree& node, const Orc::Command::Wolf::WolfExecution::Recipient& recipient)
     {
         std::vector<std::wstring> ArchiveSpec;
         auto archiveSpecs = boost::join(recipient.ArchiveSpec, L",");

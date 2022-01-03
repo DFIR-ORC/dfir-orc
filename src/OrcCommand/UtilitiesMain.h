@@ -53,6 +53,7 @@
 #include "Log/UtilitiesLoggerConfiguration.h"
 #include "Log/LogTerminationHandler.h"
 #include "Utils/StdStream/StandardOutput.h"
+#include "VolumeReader.h"
 
 #pragma managed(push, off)
 
@@ -434,117 +435,8 @@ protected:
 
     virtual void Configure(int argc, const wchar_t* argv[]);
 
-    template <typename T>
-    void PrintCommonParameters(Orc::Text::Tree<T>& root)
-    {
-        PrintValue(root, "Start time", theStartTime);
-
-        std::wstring computerName;
-        SystemDetails::GetComputerName_(computerName);
-        PrintValue(root, "Computer name", computerName);
-
-        std::wstring fullComputerName;
-        SystemDetails::GetFullComputerName(fullComputerName);
-        if (fullComputerName != computerName)
-        {
-            PrintValue(root, "Full computer name", fullComputerName);
-        }
-
-        std::wstring orcComputerName;
-        SystemDetails::GetOrcComputerName(orcComputerName);
-        if (computerName != orcComputerName)
-        {
-            PrintValue(root, "DFIR-Orc computer name", orcComputerName);
-        }
-
-        std::wstring orcFullComputerName;
-        SystemDetails::GetOrcFullComputerName(orcFullComputerName);
-        if (orcFullComputerName != fullComputerName && orcFullComputerName != orcComputerName)
-        {
-            PrintValue(root, "DFIR-Orc computer", orcFullComputerName);
-        }
-
-        std::wstring description;
-        SystemDetails::GetDescriptionString(description);
-        PrintValue(root, "Operating system", description);
-
-        std::wstring userName;
-        SystemDetails::WhoAmI(userName);
-        bool bIsElevated = false;
-        SystemDetails::AmIElevated(bIsElevated);
-        PrintValue(root, L"User", fmt::format(L"{}{}", userName, bIsElevated ? L" (elevated)" : L""));
-
-        std::wstring systemType;
-        SystemDetails::GetSystemType(systemType);
-        PrintValue(root, L"System type", systemType);
-
-        PrintValue(root, L"System tags", boost::join(SystemDetails::GetSystemTags(), ", "));
-
-        std::wstring logFileName(Text::kEmptyW);
-        const auto& fileSink = m_logging.fileSink();
-        if (fileSink)
-        {
-            const auto path = fileSink->OutputPath();
-            if (path)
-            {
-                logFileName = *path;
-            }
-        }
-
-        PrintValue(root, L"Log file", logFileName);
-    }
-
-    template <typename T>
-    void PrintCommonFooter(Orc::Text::Tree<T>& root)
-    {
-        PrintValue(root, "Warning(s)", m_logging.logger().warningCount());
-        PrintValue(root, "Error(s)", m_logging.logger().errorCount());
-        PrintValue(root, "Critical error(s)", m_logging.logger().criticalCount());
-
-        PrintValue(root, "Finish time", theFinishTime);
-
-        // TODO: std::chrono
-        DWORD dwElapsed;
-        if (theFinishTickCount < theStartTickCount)
-        {
-            dwElapsed = (MAXDWORD - theStartTickCount) + theFinishTickCount;
-        }
-        else
-        {
-            dwElapsed = theFinishTickCount - theStartTickCount;
-        }
-
-        DWORD dwMillisec = dwElapsed % 1000;
-        DWORD dwSec = (dwElapsed / 1000) % 60;
-        DWORD dwMin = (dwElapsed / (1000 * 60)) % 60;
-        DWORD dwHour = (dwElapsed / (1000 * 60 * 60)) % 24;
-        DWORD dwDay = (dwElapsed / (1000 * 60 * 60 * 24));
-
-        std::vector<std::wstring> durations;
-        if (dwDay)
-        {
-            durations.push_back(fmt::format(L"{} day(s)", dwDay));
-        }
-
-        if (dwHour)
-        {
-            durations.push_back(fmt::format(L"{} hour(s)", dwHour));
-        }
-
-        if (dwMin)
-        {
-            durations.push_back(fmt::format(L"{} min(s)", dwMin));
-        }
-
-        if (dwSec)
-        {
-            durations.push_back(fmt::format(L"{} sec(s)", dwSec));
-        }
-
-        durations.push_back(fmt::format(L"{} msecs", dwMillisec));
-
-        PrintValue(root, "Elapsed time", boost::join(durations, L", "));
-    }
+    void PrintCommonParameters(Orc::Text::Tree& root);
+    void PrintCommonFooter(Orc::Text::Tree& root);
 
     //
     // Option handling

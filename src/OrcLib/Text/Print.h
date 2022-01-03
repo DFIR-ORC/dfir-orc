@@ -27,8 +27,8 @@ constexpr auto kNoneAvailableW = std::wstring_view(L"N/A");
 constexpr auto kNone = std::string_view("None");
 constexpr auto kNoneW = std::wstring_view(L"None");
 
-template <typename T, typename N>
-void PrintKey(Orc::Text::Tree<T>& root, const N& key)
+template <typename N>
+void PrintKey(Orc::Text::Tree& root, const N& key)
 {
     using value_type = Traits::underlying_char_type_t<N>;
 
@@ -41,21 +41,20 @@ void PrintKey(Orc::Text::Tree<T>& root, const N& key)
 template <typename V>
 struct Printer
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const V& value)
+    static void Output(Orc::Text::Tree& root, const V& value)
     {
         root.Add(L"{}", value);
     }
 };
 
-template <typename T, typename V>
-void Print(Orc::Text::Tree<T>& root, const V& value)
+template <typename V>
+void Print(Orc::Text::Tree& root, const V& value)
 {
     Printer<V>::Output(root, value);
 }
 
-template <typename T, typename V>
-void Print(Orc::Text::Tree<T>& root, const std::shared_ptr<V>& value)
+template <typename V>
+void Print(Orc::Text::Tree& root, const std::shared_ptr<V>& value)
 {
     if (value == nullptr)
     {
@@ -66,8 +65,8 @@ void Print(Orc::Text::Tree<T>& root, const std::shared_ptr<V>& value)
     Printer<V>::Output(root, *value);
 }
 
-template <typename T, typename V>
-void Print(Orc::Text::Tree<T>& root, const std::optional<V>& item)
+template <typename V>
+void Print(Orc::Text::Tree& root, const std::optional<V>& item)
 {
     if (!item.has_value())
     {
@@ -78,22 +77,22 @@ void Print(Orc::Text::Tree<T>& root, const std::optional<V>& item)
     Printer<V>::Output(root, *item);
 }
 
-template <typename T, typename V>
-void Print(Orc::Text::Tree<T>& root, const std::reference_wrapper<V> value)
+template <typename V>
+void Print(Orc::Text::Tree& root, const std::reference_wrapper<V> value)
 {
     Print(root, value.get());
 }
 
 // Default function to be specialized for custom output
-template <typename T, typename N, typename V>
-void PrintValue(Orc::Text::Tree<T>& root, const N& name, const V& value)
+template <typename N, typename V>
+void PrintValue(Orc::Text::Tree& root, const N& name, const V& value)
 {
     PrintKey(root, name);
     Print(root, value);
 }
 
-template <typename T, typename N, typename V>
-void PrintValues(Orc::Text::Tree<T>& root, const N& name, const V& values)
+template <typename N, typename V>
+void PrintValues(Orc::Text::Tree& root, const N& name, const V& values)
 {
     if (values.size() == 0)
     {

@@ -39,8 +39,7 @@ using namespace Orc::Command::FastFind;
 
 namespace {
 
-template <typename T>
-void PrintStatistics(Orc::Text::Tree<T>& root, const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
+void PrintStatistics(Orc::Text::Tree& root, const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
 {
     auto statsNode = root.AddNode(L"Statistics for 'ntfs_find' rules:");
     statsNode.AddEmptyLine();
@@ -192,9 +191,8 @@ Orc::Result<void> WriteStatistics(
     return WriteStatistics(searchTerms, output);
 }
 
-template <typename T>
 void PrintFoundFile(
-    Orc::Text::Tree<T>& root,
+    Orc::Text::Tree& root,
     const std::wstring& path,
     const std::wstring& matchDescription,
     bool isDeleted)
@@ -208,20 +206,17 @@ void PrintFoundFile(
     root.AddEOL();
 }
 
-template <typename T>
-void PrintFoundKey(Orc::Text::Tree<T>& root, const std::string& path)
+void PrintFoundKey(Orc::Text::Tree& root, const std::string& path)
 {
     root.Add("{:<24} {}", "Found registry key:", path);
 }
 
-template <typename T>
-void PrintFoundValue(Orc::Text::Tree<T>& root, const std::string& key, const std::string& value)
+void PrintFoundValue(Orc::Text::Tree& root, const std::string& key, const std::string& value)
 {
     root.Add(L"{:<24} {} ({})", L"Found registry value:", key, value);
 }
 
-template <typename T>
-void PrintFoundWindowsObject(Orc::Text::Tree<T>& root, const std::wstring& name, const std::wstring& description)
+void PrintFoundWindowsObject(Orc::Text::Tree& root, const std::wstring& name, const std::wstring& description)
 {
     root.Add(L"{:>24} {} ({})", L"Found windows object:", name, description);
 }

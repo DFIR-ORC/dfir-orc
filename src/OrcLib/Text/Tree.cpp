@@ -15,6 +15,8 @@
 namespace Orc {
 namespace Text {
 
+template class BasicTree<StdoutContainerAdapter<wchar_t>>;
+
 template <>
 const std::basic_string_view<char>& GetIndent(uint16_t level)
 {

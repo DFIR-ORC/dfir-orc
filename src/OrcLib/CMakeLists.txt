@@ -594,6 +594,7 @@ set(SRC_TEXT
     "Text/Iconv.cpp"
     "Text/Format.h"
     "Text/HexDump.h"
+    "Text/StdoutContainerAdapter.h"
     "Text/Tree.h"
     "Text/Tree.cpp"
     "Text/Fwd/Iconv.h"

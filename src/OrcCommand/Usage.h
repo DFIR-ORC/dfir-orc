@@ -7,6 +7,12 @@
 //
 #pragma once
 
+#include <array>
+#include <string>
+#include <vector>
+
+#include <boost/algorithm/string/split.hpp>
+
 #include "Text/Tree.h"
 #include "Utils/TypeTraits.h"
 
@@ -19,15 +25,14 @@ namespace Usage {
 
 namespace detail {
 
-template <typename T>
-void PrintParameters(Orc::Text::Tree<T>& root)
+inline void PrintParameters(Orc::Text::Tree& root)
 {
 }
 
-template <typename T, typename ParameterList0, typename... ParameterLists>
-void PrintParameters(Orc::Text::Tree<T>& root, ParameterList0&& parameterList0, ParameterLists&&... parameterLists)
+template <typename ParameterList0, typename... ParameterLists>
+void PrintParameters(Orc::Text::Tree& root, ParameterList0&& parameterList0, ParameterLists&&... parameterLists)
 {
-    using CharT = Traits::underlying_char_type_t<T>;
+    using CharT = Traits::underlying_char_type_t<Orc::Text::Tree>;
 
     for (const auto& [parameterSwitch, description] : parameterList0)
     {
@@ -56,13 +61,13 @@ using Parameter = std::pair<std::string_view, std::string_view>;
 using Example = std::pair<std::string_view, std::string_view>;
 
 // Format header of an ORC tool like GetThis. The 'Description' argument should be a char type or a list of char type.
-template <typename T, typename U, typename V>
-void PrintHeader(Orc::Text::Tree<T>& root, const U& commandLine, const V& description)
+template <typename T, typename U>
+void PrintHeader(Orc::Text::Tree& root, const T& commandLine, const U& description)
 {
     root.Add(commandLine);
     root.AddEOL();
 
-    if constexpr (Traits::is_iterable_v<Traits::remove_all_t<V>>)
+    if constexpr (Traits::is_iterable_v<Traits::remove_all_t<U>>)
     {
         for (const auto paragraph : description)
         {
@@ -77,8 +82,8 @@ void PrintHeader(Orc::Text::Tree<T>& root, const U& commandLine, const V& descri
     }
 }
 
-template <typename T, typename U>
-void PrintParameter(Orc::Text::Tree<T>& root, const U& parameterSwitch, const U& description)
+template <typename T>
+void PrintParameter(Orc::Text::Tree& root, const T& parameterSwitch, const T& description)
 {
     auto node = root.AddNode(parameterSwitch);
     if (!description.empty())
@@ -88,8 +93,8 @@ void PrintParameter(Orc::Text::Tree<T>& root, const U& parameterSwitch, const U&
 }
 
 // Print multiple lists of parameters with their description as child of 'rootNode'
-template <typename T, typename ListsDescription, typename... ParameterLists>
-auto PrintParameters(Orc::Text::Tree<T>& root, const ListsDescription& description, ParameterLists&&... parameters)
+template <typename ListsDescription, typename... ParameterLists>
+auto PrintParameters(Orc::Text::Tree& root, const ListsDescription& description, ParameterLists&&... parameters)
 {
     auto node = root.AddNode(description);
     detail::PrintParameters(node, std::forward<ParameterLists>(parameters)...);
@@ -100,8 +105,8 @@ constexpr std::array kUsageOutput = {Parameter {"/Out=<Directory|File.csv|Archiv
 
 constexpr std::string_view kCategoryOutputParameters = "OUTPUT PARAMETERS";
 
-template <typename T, typename... CustomParameterLists>
-auto PrintOutputParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&... customParameters)
+template <typename... CustomParameterLists>
+auto PrintOutputParameters(Orc::Text::Tree& root, CustomParameterLists&&... customParameters)
 {
     auto node = PrintParameters(root, kCategoryOutputParameters, kUsageOutput);
     detail::PrintParameters(node, std::forward<CustomParameterLists>(customParameters)...);
@@ -123,8 +128,8 @@ constexpr std::array kUsageLogging = {
     Parameter("/Critical", "Set critical log level"),
     Parameter("/NoConsole", "Turns off console logging")};
 
-template <typename T, typename... CustomParameterLists>
-auto PrintLoggingParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&... customParameters)
+template <typename... CustomParameterLists>
+auto PrintLoggingParameters(Orc::Text::Tree& root, CustomParameterLists&&... customParameters)
 {
     auto node = PrintParameters(root, "LOGGING PARAMETERS", kUsageLogging);
     detail::PrintParameters(node, std::forward<CustomParameterLists>(customParameters)...);
@@ -160,8 +165,8 @@ constexpr auto kMiscParameterPassword = Usage::Parameter {"/Password=<password>"
 constexpr auto kMiscParameterTempDir =
     Usage::Parameter {"/TempDir=<DirectoryPath>", "Use 'DirectoryPath' to store temporary files"};
 
-template <typename T, typename... CustomParameterLists>
-auto PrintMiscellaneousParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&... customParameters)
+template <typename... CustomParameterLists>
+auto PrintMiscellaneousParameters(Orc::Text::Tree& root, CustomParameterLists&&... customParameters)
 {
     auto node = PrintParameters(root, "MISCELLANEOUS PARAMETERS", kUsageMiscellaneous);
     detail::PrintParameters(node, std::forward<CustomParameterLists>(customParameters)...);
@@ -174,8 +179,8 @@ constexpr std::array kUsageLimits = {
     Usage::Parameter {"/MaxTotalBytes=<max_byte>", "Do not collect more than 'max_byte'"},
     Usage::Parameter {"/NoLimits", "Do not set collection limit (output can get VERY big)"}};
 
-template <typename T, typename... CustomParameterLists>
-auto PrintLimitsParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&... customParameters)
+template <typename... CustomParameterLists>
+auto PrintLimitsParameters(Orc::Text::Tree& root, CustomParameterLists&&... customParameters)
 {
     auto node = PrintParameters(root, "COLLECTION LIMITS PARAMETERS", kUsageLimits);
     detail::PrintParameters(node, std::forward<CustomParameterLists>(customParameters)...);
@@ -184,8 +189,8 @@ auto PrintLimitsParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&... c
 
 constexpr auto kKnownLocations = Parameter {"/KnownLocations|/kl", "Scan a set of locations known to be of interest"};
 
-template <typename T, typename... CustomParameterLists>
-auto PrintLocationParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&... customParameters)
+template <typename... CustomParameterLists>
+auto PrintLocationParameters(Orc::Text::Tree& root, CustomParameterLists&&... customParameters)
 {
     constexpr std::array kLocationsParameters = {
         Parameter {
@@ -202,8 +207,8 @@ auto PrintLocationParameters(Orc::Text::Tree<T>& root, CustomParameterLists&&...
     PrintParameters(root, "LOCATIONS PARAMETERS", kLocationsParameters);
 }
 
-template <typename T, typename ExampleList>
-auto PrintExamples(Orc::Text::Tree<T>& root, ExampleList examples)
+template <typename ExampleList>
+Text::Tree PrintExamples(Text::Tree& root, ExampleList examples)
 {
     auto node = root.AddNode("EXAMPLES");
     for (const auto& [example, description] : examples)
@@ -217,77 +222,10 @@ auto PrintExamples(Orc::Text::Tree<T>& root, ExampleList examples)
     return node;
 }
 
-template <typename T>
-auto PrintColumnSelectionParameter(
-    Orc::Text::Tree<T>& root,
+void PrintColumnSelectionParameter(
+    Text::Tree& root,
     const Orc::ColumnNameDef* pColumnNames,
-    const Orc::ColumnNameDef* pAliases)
-{
-    {
-        constexpr std::array kColumnsParameters = {
-            Usage::Parameter {"/(+|-)<ColumnSelection,...>:<Filter>", "Custom list of columns to include or exclude"},
-            Usage::Parameter {
-                "/<DefaultColumnSelection>,...",
-                "Default, All, DeepScan, Details, Hashes, Fuzzy, PeHashes, Dates, RefNums, Authenticode"}};
-
-        Usage::PrintParameters(root, "COLUMNS PARAMETERS", kColumnsParameters);
-    }
-
-    {
-        auto columnSyntaxNode = root.AddNode("COLUMNS SELECTION SYNTAX");
-        columnSyntaxNode.AddEOL();
-
-        auto filterSyntaxNode = columnSyntaxNode.AddNode("Filter specification: [/(+|-)<ColSelection>:<Filter>]");
-        filterSyntaxNode.Add("'+' include columns");
-        filterSyntaxNode.Add("'-' exclude columns ");
-        filterSyntaxNode.Add("<ColSelection> is a comma separated list of columns or aliases");
-        filterSyntaxNode.AddEOL();
-    }
-
-    {
-        auto columnDescriptionNode = root.AddNode("COLUMNS DESCRIPTION");
-        const ColumnNameDef* pCurCol = pColumnNames;
-        while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
-        {
-            const auto columnName = fmt::format(L"{}:", pCurCol->szColumnName);
-            columnDescriptionNode.Add("{:<33} {}", columnName, pCurCol->szColumnDesc);
-            pCurCol++;
-        }
-
-        columnDescriptionNode.AddEOL();
-    }
-
-    {
-        auto columnAliasesNode = root.AddNode("COLUMNS ALIASES");
-        columnAliasesNode.AddEOL();
-        columnAliasesNode.Add("Alias names can be used to specify more than one column.");
-        columnAliasesNode.AddEOL();
-
-        const ColumnNameDef* pCurAlias = pAliases;
-
-        while (pCurAlias->dwIntention != Intentions::FILEINFO_NONE)
-        {
-            auto aliasNode = columnAliasesNode.AddNode("{}", pCurAlias->szColumnName);
-
-            DWORD dwNumCol = 0;
-            const ColumnNameDef* pCurCol = pColumnNames;
-            while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
-            {
-                if (HasFlag(pCurAlias->dwIntention, pCurCol->dwIntention))
-                {
-                    PrintValue(aliasNode, pCurCol->szColumnName, pCurCol->szColumnDesc);
-                    dwNumCol++;
-                }
-                pCurCol++;
-            }
-
-            aliasNode.AddEOL();
-            pCurAlias++;
-        }
-    }
-
-    root.AddEmptyLine();
-}
+    const Orc::ColumnNameDef* pAliases);
 
 }  // namespace Usage
 }  // namespace Command

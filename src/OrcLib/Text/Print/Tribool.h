@@ -18,8 +18,7 @@ namespace Text {
 template <>
 struct Printer<boost::logic::tribool>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const boost::logic::tribool& value)
+    static void Output(Orc::Text::Tree& root, const boost::logic::tribool& value)
     {
         std::wstring_view valueString;
 

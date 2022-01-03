@@ -19,9 +19,9 @@
 namespace Orc {
 namespace Text {
 
-template <typename T, typename U>
+template <typename U>
 void PrintValue(
-    Orc::Text::Tree<T>& node,
+    Orc::Text::Tree& node,
     const U& name,
     const std::vector<Orc::Filter>& filters,
     const ColumnNameDef* pCurCol)

@@ -19,8 +19,7 @@ namespace Text {
 template <>
 struct Printer<Orc::MFTUtils::NonResidentAttributeExtent>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const Orc::MFTUtils::NonResidentAttributeExtent& extent)
+    static void Output(Orc::Text::Tree& root, const Orc::MFTUtils::NonResidentAttributeExtent& extent)
     {
         if (!extent.bZero)
         {

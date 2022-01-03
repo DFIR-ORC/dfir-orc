@@ -5,17 +5,15 @@
 //
 // Author(s): Jean Gautier (ANSSI)
 //
+#include "stdafx.h"
 
-#include "StdAfx.h"
+#include <vector>
+#include <algorithm>
 
 #include "MFTRecord.h"
 #include "MftRecordAttribute.h"
 #include "AttributeList.h"
-
 #include "VolumeReader.h"
-
-#include <vector>
-#include <algorithm>
 
 #include "Log/Log.h"
 

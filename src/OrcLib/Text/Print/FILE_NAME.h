@@ -18,8 +18,7 @@ namespace Text {
 template <>
 struct Printer<FILE_NAME>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const FILE_NAME& file_name)
+    static void Output(Orc::Text::Tree& root, const FILE_NAME& file_name)
     {
         const auto parentFRN = NtfsFullSegmentNumber(&file_name.ParentDirectory);
         const auto& creation = *(reinterpret_cast<const FILETIME*>(&file_name.Info.CreationTime));

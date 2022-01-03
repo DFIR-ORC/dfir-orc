@@ -16,8 +16,7 @@ namespace Text {
 template <>
 struct Printer<bool>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& node, bool value)
+    static void Output(Orc::Text::Tree& node, bool value)
     {
         Print(node, value ? L"On" : L"Off");
     }

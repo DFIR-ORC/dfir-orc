@@ -23,8 +23,7 @@ namespace Text {
 template <>
 struct Printer<OutputSpec::Upload>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const OutputSpec::Upload& upload)
+    static void Output(Orc::Text::Tree& root, const OutputSpec::Upload& upload)
     {
         const auto serverInfo = fmt::format(L"{} ({})", upload.ServerName, upload.RootPath);
         PrintValue(root, "Server", serverInfo);
@@ -48,8 +47,7 @@ struct Printer<OutputSpec::Upload>
 template <>
 struct Printer<OutputSpec>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const OutputSpec& output)
+    static void Output(Orc::Text::Tree& root, const OutputSpec& output)
     {
         if (output.Path.empty())
         {

@@ -74,8 +74,7 @@ std::wstring ToString(const GUID& guid)
     return s;
 }
 
-template <typename T>
-void PrintStatistics(Orc::Text::Tree<T>& root, const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
+void PrintStatistics(Orc::Text::Tree& root, const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
 {
     auto statsNode = root.AddNode(L"Statistics for 'ntfs_find' rules:");
     statsNode.AddEmptyLine();

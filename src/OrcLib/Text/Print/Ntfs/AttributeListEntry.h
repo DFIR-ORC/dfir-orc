@@ -20,8 +20,7 @@ namespace Text {
 template <>
 struct Printer<AttributeListEntry>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const AttributeListEntry& entry)
+    static void Output(Orc::Text::Tree& root, const AttributeListEntry& entry)
     {
         std::error_code ec;
 

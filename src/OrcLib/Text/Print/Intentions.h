@@ -15,8 +15,8 @@
 namespace Orc {
 namespace Text {
 
-template <typename T, typename N>
-void PrintValue(Orc::Text::Tree<T>& root, const N& name, Orc::Intentions intentions, const ColumnNameDef* pCurCol)
+template <typename N>
+void PrintValue(Orc::Text::Tree& root, const N& name, Orc::Intentions intentions, const ColumnNameDef* pCurCol)
 {
     std::vector<std::wstring> columns;
 

@@ -18,8 +18,7 @@ namespace Text {
 template <>
 struct Printer<EmbeddedResource::EmbedSpec>
 {
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& node, const EmbeddedResource::EmbedSpec& embedItem)
+    static void Output(Orc::Text::Tree& node, const EmbeddedResource::EmbedSpec& embedItem)
     {
         switch (embedItem.Type)
         {

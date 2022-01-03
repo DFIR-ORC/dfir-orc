@@ -22,53 +22,13 @@
 namespace Orc {
 namespace Command {
 
-namespace detail {
-
-// Adapter for a container interface to be usable with Text::Tree and fmt.
-// NOTE: log duplication could be done by redirecting stdout using existing StandardOutputRedirection classes
-template <typename T>
-struct StdoutContainerAdapter
-{
-public:
-    using value_type = T;
-
-    void flush()
-    {
-        Traits::get_std_out<T>() << m_buffer;
-        m_buffer.clear();
-        Traits::get_std_out<T>().flush();
-    }
-
-    void push_back(T c)
-    {
-        if (c == Traits::newline_v<T>)
-        {
-            Log::Info(Log::Facility::kLogFile, m_buffer);
-
-            m_buffer.push_back(c);
-            Traits::get_std_out<T>() << m_buffer;
-            m_buffer.clear();
-        }
-        else if (c)
-        {
-            m_buffer.push_back(c);
-        }
-    }
-
-private:
-    std::basic_string<T> m_buffer;
-};
-
-}  // namespace detail
-
 class Console
 {
 public:
     // To avoid any unrequired encoding conversion string arguments should have identical 'value_type'
     using value_type = wchar_t;
 
-    // using Buffer = fmt::basic_memory_buffer<char, 32768>;
-    using Buffer = detail::StdoutContainerAdapter<value_type>;
+    using Buffer = StdoutContainerAdapter<value_type>;
 
     Console()
         : m_stdout({})
@@ -95,14 +55,14 @@ public:
     // Print to stdout the 'newline' character
     void PrintNewLine() { m_stdout.push_back(Traits::newline_v<value_type>); }
 
-    const Orc::Text::Tree<Buffer>& OutputTree() const { return m_tree; }
+    const Orc::Text::Tree& OutputTree() const { return m_tree; }
 
-    Orc::Text::Tree<Buffer>& OutputTree() { return m_tree; }
+    Orc::Text::Tree& OutputTree() { return m_tree; }
 
     template <typename... Args>
-    Orc::Text::Tree<Buffer> CreateOutputTree(uint16_t offset, uint16_t indentationLevel, Args&&... args)
+    Orc::Text::Tree CreateOutputTree(uint16_t offset, uint16_t indentationLevel, Args&&... args)
     {
-        return Text::Tree<Buffer>(m_stdout, offset, indentationLevel, std::forward<Args>(args)...);
+        return Text::Tree(m_stdout, offset, indentationLevel, std::forward<Args>(args)...);
     }
 
     // Write into the console's buffer the given fmt parameters without 'newline' character
@@ -128,7 +88,7 @@ public:
 
 private:
     Buffer m_stdout;
-    Text::Tree<Buffer> m_tree;
+    Text::Tree m_tree;
 };
 
 }  // namespace Command
