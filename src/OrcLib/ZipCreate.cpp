@@ -49,7 +49,12 @@ void StoreFileHashes(Archive::ArchiveItems& items, bool releaseInputStreams, Orc
     {
         if (item.currentStatus != Archive::ArchiveItem::Status::Done)
         {
-            log::Warning(_L_, E_FAIL, L"Unexpected archive status: %d", item.currentStatus);
+            log::Warning(
+                _L_,
+                E_FAIL,
+                L"Unexpected archive status: %d (name: %s)",
+                item.currentStatus,
+                item.NameInArchive.c_str());
             continue;
         }
 
@@ -301,6 +306,22 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
             // returning S_FALSE also indicates error
             log::Error(_L_, hr, L"Failed to update %s\r\n", m_ArchiveName.c_str());
             return hr;
+        }
+    }
+
+    // This is a hack which go away with 10.1 version. It will fix index for empty files which is not updated as
+    // "SetOperationResult" is not called by 7z as for non-empty files.
+    for (size_t i = 0; i < m_Items.size(); ++i)
+    {
+        auto& item = m_Items[i];
+
+        if (item.currentStatus == Archive::ArchiveItem::Selected && item.Size == 0)
+        {
+            assert(m_Indexes.size() <= m_Items.size());
+
+            item.currentStatus = Archive::ArchiveItem::Done;
+            item.Index = m_Indexes.size();
+            m_Indexes[item.Index] = i;
         }
     }
 

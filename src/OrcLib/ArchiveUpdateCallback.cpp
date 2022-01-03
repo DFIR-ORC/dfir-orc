@@ -125,12 +125,6 @@ size_t ArchiveUpdateCallback::DeviseNextBestAddition()
             continue;
         }
 
-        const auto memoryStream = std::static_pointer_cast<MemoryStream>(item.Stream);
-        if (memoryStream->GetSize() == 0)
-        {
-            continue;
-        }
-
         const auto index = *it;
         m_memoryStreamIndexes.erase(it);
         return index;
@@ -267,14 +261,14 @@ STDMETHODIMP ArchiveUpdateCallback::GetProperty(UInt32 index, PROPID propID, PRO
                 prop = false;
                 break;
             case kpidSize:
-                if (m_Items[it->second].Stream != nullptr)
-                    prop = m_Items[it->second].Stream->GetSize();
-                else
+                if (m_Items[it->second].Stream == nullptr)
+                {
                     prop = m_Items[it->second].Size;
-
-                if (prop.ulVal == 0L)
-                    prop.ulVal = (ULONG)-1;
-
+                }
+                else
+                {
+                    prop = m_Items[it->second].Stream->GetSize();
+                }
                 break;
             case kpidAttrib:
                 prop = (UInt32)FILE_ATTRIBUTE_NORMAL;
@@ -315,14 +309,14 @@ STDMETHODIMP ArchiveUpdateCallback::GetProperty(UInt32 index, PROPID propID, PRO
                 prop = false;
                 break;
             case kpidSize:
-                if (m_Items[index].Stream != nullptr)
-                    prop = m_Items[index].Stream->GetSize();
+                if (m_Items[index].Stream == nullptr)
+                {
+                    prop = static_cast<ULONG64>(0);
+                }
                 else
-                    prop = m_Items[index].Size;
-
-                if (prop.ulVal == 0L)
-                    prop.ulVal = (ULONG)-1;
-
+                {
+                    prop = m_Items[index].Stream->GetSize();
+                }
                 break;
             case kpidAttrib:
                 prop = (UInt32)FILE_ATTRIBUTE_NORMAL;
@@ -358,7 +352,7 @@ STDMETHODIMP ArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream*
         return E_POINTER;
     }
 
-    if (m_Items[index].Stream->GetSize() == 0)
+    if (m_Items[index].Stream == nullptr || m_Items[index].Stream->GetSize() == 0)
     {
         // 7z expects NULL streams for empty files
         *inStream = NULL;
