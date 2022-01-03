@@ -21,6 +21,7 @@ foreach(item ${CMAKE_PREFIX_PATH})
     endif()
 endforeach()
 
+find_package(re2 CONFIG REQUIRED)
 find_package(brotli REQUIRED)
 find_package(BZip2 REQUIRED)
 find_package(double-conversion REQUIRED)
@@ -44,6 +45,8 @@ add_library(Arrow::Arrow INTERFACE IMPORTED)
 
 target_link_libraries(Arrow::Arrow
     INTERFACE
+        Bcrypt.lib
+        re2::re2
         brotli::brotli
         BZip2::BZip2
         double-conversion::double-conversion
