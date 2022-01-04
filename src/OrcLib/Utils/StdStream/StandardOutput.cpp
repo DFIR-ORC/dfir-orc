@@ -86,8 +86,8 @@ void StandardOutput::EnableFileTee()
 
 void StandardOutput::DisableFileTee()
 {
-    m_fileTee->Close();
     m_hasTeeRedirection = false;
+    m_fileTee->Disable();
 }
 
 }  // namespace Orc

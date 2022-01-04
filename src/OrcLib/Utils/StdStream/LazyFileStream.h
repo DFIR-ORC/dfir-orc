@@ -32,7 +32,8 @@ public:
         return m_streambuf.Open(path, disposition, ec);
     }
 
-    void Close() { m_streambuf.Close(); }
+    void Close(std::error_code& ec) { m_streambuf.Close(ec); }
+
     void Flush(std::error_code& ec) { m_streambuf.Flush(ec); }
 
     const std::optional<std::filesystem::path>& Path() const { return m_streambuf.Path(); }
