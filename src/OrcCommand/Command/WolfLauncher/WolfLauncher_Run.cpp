@@ -924,6 +924,24 @@ HRESULT Main::Run_Execute()
         Log::Error(L"Failed to upload outcome [{}]", rv);
     }
 
+    if (m_standardOutput.FileTee().Path().has_value())
+    {
+        std::error_code ec;
+        m_standardOutput.Flush(ec);
+        if (ec)
+        {
+            Log::Error("Failed to flush standard output [{}]", ec);
+        }
+
+        const std::filesystem::path localPath = *m_standardOutput.FileTee().Path();
+        hr = UploadSingleFile(localPath.filename(), localPath);
+        if (FAILED(hr))
+        {
+            Log::Error(
+                L"Failed to upload console log file '{}' [{}]", m_standardOutput.FileTee().Path(), SystemError(hr));
+        }
+    }
+
     const auto& fileSink = m_logging.fileSink();
     if (fileSink->IsOpen())
     {
