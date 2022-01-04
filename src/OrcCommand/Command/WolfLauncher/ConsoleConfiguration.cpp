@@ -198,7 +198,7 @@ void ConsoleConfiguration::Apply(StandardOutput& standardOutput, const ConsoleCo
     {
         // NOTE: Could also remove logger's console sink file redirection but it could make more harm than good
         // like unexpected reference kept, multithreading...
-        standardOutput.DisableFileTee();
+        standardOutput.DisableTeeRedirection();
         return;
     }
 

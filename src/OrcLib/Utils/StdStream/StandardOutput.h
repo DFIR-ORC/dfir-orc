@@ -26,8 +26,8 @@ public:
     void EnableWriteConsoleRedirection();
     void DisableWriteConsoleRedirection();
 
-    void EnableFileTee();
-    void DisableFileTee();
+    void EnableTeeRedirection();
+    void DisableTeeRedirection();
 
     void OpenTeeFile(const std::filesystem::path& path, Orc::FileDisposition disposition, std::error_code& ec);
 

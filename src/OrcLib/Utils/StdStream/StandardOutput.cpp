@@ -23,7 +23,7 @@ StandardOutput::StandardOutput()
 StandardOutput::~StandardOutput()
 {
     DisableWriteConsoleRedirection();
-    DisableFileTee();
+    DisableTeeRedirection();
 
     Reset();
 }
@@ -78,13 +78,13 @@ void StandardOutput::OpenTeeFile(
     m_fileTee->Open(path, disposition, ec);
 }
 
-void StandardOutput::EnableFileTee()
+void StandardOutput::EnableTeeRedirection()
 {
     m_hasTeeRedirection = true;
     m_fileTee->Enable();
 }
 
-void StandardOutput::DisableFileTee()
+void StandardOutput::DisableTeeRedirection()
 {
     m_hasTeeRedirection = false;
     m_fileTee->Disable();
