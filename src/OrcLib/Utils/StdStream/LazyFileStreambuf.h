@@ -63,6 +63,28 @@ public:
             m_ofstream.flush();
             m_ofstream.close();
         }
+
+    void Flush(std::error_code& ec)
+    {
+        if (!m_ofstream.is_open())
+        {
+            return;
+        }
+
+        try
+        {
+            m_ofstream.flush();
+        }
+        catch (const std::system_error& e)
+        {
+            ec = e.code();
+            return;
+        }
+        catch (...)
+        {
+            ec = std::make_error_code(std::errc::interrupted);
+            return;
+        }
     }
 
     const std::optional<std::filesystem::path>& Path() const { return m_path; }

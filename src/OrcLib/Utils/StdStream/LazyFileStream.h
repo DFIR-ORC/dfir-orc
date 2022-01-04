@@ -10,6 +10,7 @@
 #include <ostream>
 
 #include <filesystem>
+#include <system_error>
 
 #include "Utils/StdStream/LazyFileStreambuf.h"
 #include "FileDisposition.h"
@@ -32,6 +33,7 @@ public:
     }
 
     void Close() { m_streambuf.Close(); }
+    void Flush(std::error_code& ec) { m_streambuf.Flush(ec); }
 
     const std::optional<std::filesystem::path>& Path() const { return m_streambuf.Path(); }
 
