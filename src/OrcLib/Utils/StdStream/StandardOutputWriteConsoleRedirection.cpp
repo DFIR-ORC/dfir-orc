@@ -119,4 +119,23 @@ void StandardOutputWriteConsoleRedirection::Disable()
     m_wredirector.Reset();
 }
 
+void StandardOutputWriteConsoleRedirection::Flush(std::error_code& ec)
+{
+    try
+    {
+        m_cout.flush();
+        m_wcout.flush();
+    }
+    catch (const std::system_error& e)
+    {
+        ec = e.code();
+        return;
+    }
+    catch (...)
+    {
+        ec = std::make_error_code(std::errc::interrupted);
+        return;
+    }
+}
+
 }  // namespace Orc

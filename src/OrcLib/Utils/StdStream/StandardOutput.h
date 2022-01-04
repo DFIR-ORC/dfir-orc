@@ -29,6 +29,8 @@ public:
     void EnableTeeRedirection();
     void DisableTeeRedirection();
 
+    void Flush(std::error_code& ec);
+
     void OpenTeeFile(const std::filesystem::path& path, Orc::FileDisposition disposition, std::error_code& ec);
 
     const StandardOutputFileTee& FileTee() const;

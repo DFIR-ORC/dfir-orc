@@ -78,6 +78,12 @@ void StandardOutput::OpenTeeFile(
     m_fileTee->Open(path, disposition, ec);
 }
 
+void StandardOutput::Flush(std::error_code& ec)
+{
+    m_fileTee->Flush(ec);  // flush m_fileTee so m_writeConsoleRedirection would be filled first
+    m_writeConsoleRedirection.Flush(ec);
+}
+
 void StandardOutput::EnableTeeRedirection()
 {
     m_hasTeeRedirection = true;
