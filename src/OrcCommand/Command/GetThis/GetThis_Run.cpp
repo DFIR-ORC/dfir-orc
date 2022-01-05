@@ -52,6 +52,7 @@ using namespace Orc::Command::GetThis;
 namespace {
 
 const std::wstring_view kGetThisCsv = L"GetThis.csv";
+const std::wstring_view kGetThisStatistics = L"Statistics.json";
 
 enum class CompressorFlags : uint32_t
 {
@@ -246,6 +247,59 @@ Orc::Result<void> WriteStatistics(
     return WriteStatistics(searchTerms, output);
 }
 
+Orc::Result<void> CompressStatistics(
+    const std::unique_ptr<Archive::Appender<Archive::Archive7z>>& compressor,
+    const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
+{
+    OutputSpec output;
+    output.OutputEncoding = OutputSpec::Encoding::UTF8;
+    output.Configure(OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON, std::wstring(kGetThisStatistics));
+
+    auto stream = std::make_shared<TemporaryStream>();
+    HRESULT hr = stream->Open(output.Path, 5 * 1024 * 1024, false);
+    if (FAILED(hr))
+    {
+        const auto error = SystemError(hr);
+        Log::Error(L"Failed to create temporary stream for statistics [{}]", error);
+        return error;
+    }
+
+    auto options = std::make_unique<StructuredOutput::JSON::Options>();
+    options->Encoding = output.OutputEncoding;
+    options->bPrettyPrint = true;
+
+    auto writer = StructuredOutputWriter::GetWriter(stream, output.Type, std::move(options));
+    if (writer == nullptr)
+    {
+        Log::Error("Failed to create writer for statistics");
+        return SystemError(E_FAIL);
+    }
+
+    auto rv = WriteStatistics(searchTerms, writer);
+    if (rv.has_error())
+    {
+        return rv;
+    }
+
+    hr = writer->Close();
+    if (FAILED(hr))
+    {
+        const auto error = SystemError(hr);
+        Log::Error(L"Failed to close statistics writer [{}]", error);
+        return error;
+    }
+
+    hr = stream->SetFilePointer(0, FILE_BEGIN, nullptr);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to rewind statistics stream [{}]", SystemError(hr));
+    }
+
+    auto item = std::make_unique<Archive::Item>(stream, kGetThisStatistics);
+    compressor->Add(std::move(item));
+    return Orc::Success<void>();
+}
+
 std::unique_ptr<Archive::Appender<Archive::Archive7z>> CreateCompressor(const OutputSpec& outputSpec)
 {
     using namespace Archive;
@@ -308,8 +362,6 @@ void CompressTable(
     const std::unique_ptr<Archive::Appender<Archive::Archive7z>>& compressor,
     const std::shared_ptr<TableOutput::IStreamWriter>& tableWriter)
 {
-    std::error_code ec;
-
     HRESULT hr = tableWriter->Flush();
     if (FAILED(hr))
     {
@@ -330,10 +382,6 @@ void CompressTable(
 
     auto item = std::make_unique<Archive::Item>(tableStream, kGetThisCsv);
     compressor->Add(std::move(item));
-    if (ec)
-    {
-        Log::Error(L"Failed to add GetThis.csv [{}]", ec.value());
-    }
 }
 
 Result<void>
@@ -1121,6 +1169,12 @@ HRESULT Main::CloseArchiveOutput()
 
     ::CompressTable(m_compressor, m_tableWriter);
 
+    auto rv = ::CompressStatistics(m_compressor, FileFinder.AllSearchTerms());
+    if (rv.has_error())
+    {
+        Log::Error(L"Failed to write statistics file [{}]", rv);
+    }
+
     m_compressor->Close(ec);
     if (ec)
     {
@@ -1164,7 +1218,12 @@ HRESULT Main::CloseDirectoryOutput()
         return ToHRESULT(rv.error());
     }
 
+    const auto statisticsPath = std::filesystem::path(config.Output.Path) / kGetThisStatistics;
+    rv = ::WriteStatistics(FileFinder.AllSearchTerms(), statisticsPath);
+    if (rv.has_error())
     {
+        Log::Error(L"Failed to write: '{}' [{}]", statisticsPath, rv.error());
+        // return ToHRESULT(rv.error());
     }
 
     return S_OK;
@@ -1354,12 +1413,6 @@ HRESULT Main::FindMatchingSamples()
 
     m_console.PrintNewLine();
     ::PrintStatistics(m_console.OutputTree(), FileFinder.AllSearchTerms());
-
-    auto rv = ::WriteStatistics(FileFinder.AllSearchTerms(), config.m_statisticsOutput);
-    if (rv.has_error())
-    {
-        Log::Error(L"Failed to write statistics file [{}]", rv);
-    }
 
     return S_OK;
 }
