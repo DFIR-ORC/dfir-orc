@@ -1143,8 +1143,12 @@ HRESULT Main::InitArchiveOutput()
         return hr;
     }
 
-    m_tableWriter =
-        ::CreateCsvWriter(tempDir / L"GetThisCsvStream", config.Output.Schema, config.Output.OutputEncoding, hr);
+    OutputSpec output;
+    output.Schema = config.Output.Schema;
+    output.OutputEncoding = config.Output.OutputEncoding;
+    output.Configure(L"GetThisTemporaryStream.csv", tempDir);
+
+    m_tableWriter = ::CreateCsvWriter(output.Path, config.Output.Schema, config.Output.OutputEncoding, hr);
     if (m_tableWriter == nullptr)
     {
         Log::Error(L"Failed to create csv stream [{}]", SystemError(hr));
