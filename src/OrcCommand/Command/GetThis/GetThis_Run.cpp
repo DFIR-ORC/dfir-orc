@@ -51,6 +51,8 @@ using namespace Orc::Command::GetThis;
 
 namespace {
 
+const std::wstring_view kGetThisCsv = L"GetThis.csv";
+
 enum class CompressorFlags : uint32_t
 {
     kNone = 0,
@@ -326,12 +328,51 @@ void CompressTable(
         Log::Error(L"Failed to rewind csv stream [{}]", SystemError(hr));
     }
 
-    auto item = std::make_unique<Archive::Item>(tableStream, L"GetThis.csv");
+    auto item = std::make_unique<Archive::Item>(tableStream, kGetThisCsv);
     compressor->Add(std::move(item));
     if (ec)
     {
         Log::Error(L"Failed to add GetThis.csv [{}]", ec.value());
     }
+}
+
+Result<void>
+WriteTable(const std::shared_ptr<TableOutput::IStreamWriter>& tableWriter, const std::filesystem::path& output)
+{
+    HRESULT hr = tableWriter->Flush();
+    if (FAILED(hr))
+    {
+        auto e = SystemError(hr);
+        Log::Error("Failed to flush table stream [{}]", e);
+        return e;
+    }
+
+    auto temporaryStream = tableWriter->GetStream();
+    if (!temporaryStream)
+    {
+        Log::Error("Failed to retrieve temporary stream from csv writer");
+        return std::errc::bad_address;
+    }
+
+    auto stream = std::make_unique<FileStream>();
+    hr = stream->OpenFile(
+        output, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (FAILED(hr))
+    {
+        auto e = SystemError(hr);
+        Log::Error(L"Failed to open output file: '{}' [{}]", output, e);
+        return e;
+    }
+
+    hr = temporaryStream->CopyTo(*stream, nullptr);
+    if (FAILED(hr))
+    {
+        auto e = SystemError(hr);
+        Log::Error(L"Failed to write file: '{}' [{}]", output, e);
+        return e;
+    }
+
+    return Orc::Success<void>();
 }
 
 std::wstring RetrieveComputerName(const std::wstring& defaultName)
@@ -1103,8 +1144,7 @@ HRESULT Main::InitDirectoryOutput()
         return hr;
     }
 
-    m_tableWriter =
-        ::CreateCsvWriter(outputDir / L"GetThis.csv", config.Output.Schema, config.Output.OutputEncoding, hr);
+    m_tableWriter = ::CreateCsvWriter(outputDir / kGetThisCsv, config.Output.Schema, config.Output.OutputEncoding, hr);
     if (m_tableWriter == nullptr)
     {
         Log::Error(L"Failed to create csv stream [{}]", SystemError(hr));
@@ -1116,18 +1156,15 @@ HRESULT Main::InitDirectoryOutput()
 
 HRESULT Main::CloseDirectoryOutput()
 {
-    HRESULT hr = m_tableWriter->Flush();
-    if (FAILED(hr))
+    const auto tablePath = std::filesystem::path(config.Output.Path) / kGetThisCsv;
+    auto rv = ::WriteTable(m_tableWriter, tablePath);
+    if (rv.has_error())
     {
-        Log::Error(L"Failed to flush table stream [{}]", SystemError(hr));
-        return hr;
+        Log::Critical(L"Failed to write: '{}' [{}]", tablePath, rv.error());
+        return ToHRESULT(rv.error());
     }
 
-    hr = m_tableWriter->Close();
-    if (FAILED(hr))
     {
-        Log::Error(L"Failed to close table stream [{}]", SystemError(hr));
-        return hr;
     }
 
     return S_OK;
