@@ -1,5 +1,26 @@
 # ChangeLog
 
+## [10.1.0-rc9] - 2022-01-07 - Release Candidate 9
+### Added
+- WolfLauncher: expand environment variables for `<Argument>` xml configuration element.
+- NTFSInfo: add 'DataSize' column to 'I30Info' output for $I30's file size
+- NTFSInfo: add 'MountPoint' column to 'volstats.csv' with assigned drive letter
+- FATInfo: add 'MountPoint' column to 'volstats.csv' with assigned drive letter
+- Add security descriptor binary dump
+
+### Changed
+- vcpkg: update dependencies to 2021.12.01
+- Continue execution if one of the specified location is not resolved
+- GetThis: move Statistics.json into GetThis archive
+
+### Fixed
+- 7z archives: empty file handling for compatibility
+- WolfLauncher: missing stdout log file upload for a configurated Orc
+- WolfLauncher: fix possible path issue when using '/out'
+- GetThis: fix missing csv when using directory as output
+- GetThis: fix possible missing sample when having multiple matches
+- Fix configuration when using '{UserProfiles}' with a path appended
+
 ## [10.1.0-rc8] - 2021-12-02 - Release Candidate 8
 ### Added
 - Location: add options for shadow copy volumes specification (ex: '/shadows=<newest|mid|oldest|{GUID}>')
@@ -213,20 +234,15 @@
 - Remove dead code
 
 
-## [10.0.22] - 2021-11-26
-### changed
-- yara: update to 4.1.3
-- allow extracted resources to be executed
-
+## [10.0.23] - 2021-12-16
 ### Fixed
-- fix missing upload for pre-existing archive
-- fastfind, getthis: fix registry match false positive
-- log: fix log option parsing for compatibility with 10.1.x usage
-- log: fix log flushing on unexpected exit
+- 7z archives: empty file handling for compatibility
 
 ### Added
-- fastfind, getthis: print ADS name on match
-- fastfind, getthis: print yara rule name on match
+- WolfLauncher: expand environment variables for `<Argument>` xml configuration element.
+- NTFSInfo: add 'DataSize' column to 'I30Info' output for $I30's file size
+- NTFSInfo: add 'MountPoint' column to 'volstats.csv' with assigned drive letter
+- FATInfo: add 'MountPoint' column to 'volstats.csv' with assigned drive letter
 
 
 ## [10.0.22] - 2021-12-01
