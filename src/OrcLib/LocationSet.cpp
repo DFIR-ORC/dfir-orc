@@ -77,7 +77,7 @@ std::vector<std::wstring> ExpandOrcStringsLocation(const std::wstring& rawLocati
     std::vector<std::wstring> out;
     for (const auto& [key, convertor] : convertors)
     {
-        if (boost::icontains(key, rawLocation))
+        if (boost::icontains(rawLocation, key))
         {
             auto values = convertor();
             if (!values)
