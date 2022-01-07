@@ -263,6 +263,16 @@ public:
         {
         }
 
+        explicit SampleId(const Orc::FileFind::Match& match, uint64_t attributeIndex)
+            : FRN(match.FRN)
+            , AttributeIndex(attributeIndex)
+            , VolumeSerial(match.VolumeReader->VolumeSerialNumber())
+            , SnapshotId(GetSnapshotId(*match.VolumeReader))
+        {
+        }
+
+        static GUID GetSnapshotId(VolumeReader& volumeReader);
+
         const MFT_SEGMENT_REFERENCE FRN;
         const size_t AttributeIndex;
         const LONGLONG VolumeSerial;

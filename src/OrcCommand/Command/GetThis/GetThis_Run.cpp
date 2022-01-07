@@ -766,6 +766,13 @@ PFILE_NAME GetLastFileName(const std::vector<Orc::FileFind::Match::NameMatch>& n
 
 }  // namespace
 
+GUID Main::SampleId::GetSnapshotId(VolumeReader& volumeReader)
+{
+    VolumeReaderInfo volumeInfo;
+    volumeReader.Accept(volumeInfo);
+    return volumeInfo.Guid();
+}
+
 Main::Main()
     : UtilitiesMain()
     , config()
@@ -1358,15 +1365,14 @@ void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool
 
     for (size_t i = 0; i < aMatch->MatchingAttributes.size(); ++i)
     {
-        const auto& attribute = aMatch->MatchingAttributes[i];
 
-        auto sample = CreateSample(aMatch, i, sampleSpec);
-        if (m_sampleIds.find(SampleId(*sample)) != std::cend(m_sampleIds))
+        if (m_sampleIds.find(SampleId(*aMatch, i)) != std::cend(m_sampleIds))
         {
             Log::Info(L"Not adding duplicate sample '{}' to archive", aMatch->MatchingNames.front().FullPathName);
             continue;
         }
 
+        auto sample = CreateSample(aMatch, i, sampleSpec);
         UpdateSamplesLimits(sampleSpec, *sample);
 
         // TODO: memory optimization: check that sampleIds is resetted when volume changes
