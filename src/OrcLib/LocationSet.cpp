@@ -739,7 +739,8 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
             hr = AddLocations(subLocation.c_str(), addedLocs, bToParse);
             if (FAILED(hr))
             {
-                return hr;
+                Log::Error(L"Failed to process location '{}' [{}]", subLocation, SystemError(hr));
+                continue;
             }
         }
 
