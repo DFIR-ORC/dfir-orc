@@ -542,10 +542,10 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                 case CommandParameter::Argument: {
                     std::error_code ec;
                     auto arguments =
-                        ExpandEnvironmentStringsApi(parameter.Keyword.c_str(), parameter.Keyword.size() + 512, ec);
+                        ExpandEnvironmentStringsApi(parameter.Keyword.c_str(), parameter.Keyword.size() + 4096, ec);
                     if (ec)
                     {
-                        Log::Error(L"Failed to expand environment arguments string [{}]", ec);
+                        Log::Error(L"Failed to expand environment arguments string for '{}' [{}]", parameter.Keyword, ec);
                         arguments = parameter.Keyword;
                         ec.clear();
                     }
