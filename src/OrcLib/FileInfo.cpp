@@ -47,6 +47,51 @@
 #define IMAGE_FILE_MACHINE_OSX 0xC020
 #define IMAGE_FILE_MACHINE_LINUX 0xFD1D  // TODO: be more specific (linux-x64, ...)
 
+namespace {
+
+// Directory can have some of those attribute but usually they don't
+bool IsFailureAcceptedForDirectories(const Orc::Intentions& intention)
+{
+    using namespace Orc;
+
+    switch (intention)
+    {
+        case Intentions::FILEINFO_FILESIZE:
+        case Intentions::FILEINFO_MD5:
+        case Intentions::FILEINFO_SHA1:
+        case Intentions::FILEINFO_FIRST_BYTES:
+        case Intentions::FILEINFO_VERSION:
+        case Intentions::FILEINFO_COMPANY:
+        case Intentions::FILEINFO_PRODUCT:
+        case Intentions::FILEINFO_ORIGINALNAME:
+        case Intentions::FILEINFO_PLATFORM:
+        case Intentions::FILEINFO_TIMESTAMP:
+        case Intentions::FILEINFO_SUBSYSTEM:
+        case Intentions::FILEINFO_FILETYPE:
+        case Intentions::FILEINFO_FILEOS:
+        case Intentions::FILEINFO_SHA256:
+        case Intentions::FILEINFO_PE_MD5:
+        case Intentions::FILEINFO_PE_SHA1:
+        case Intentions::FILEINFO_PE_SHA256:
+        case Intentions::FILEINFO_SECURITY_DIRECTORY:
+        case Intentions::FILEINFO_AUTHENTICODE_STATUS:
+        case Intentions::FILEINFO_AUTHENTICODE_SIGNER:
+        case Intentions::FILEINFO_AUTHENTICODE_SIGNER_THUMBPRINT:
+        case Intentions::FILEINFO_AUTHENTICODE_CA:
+        case Intentions::FILEINFO_AUTHENTICODE_CA_THUMBPRINT:
+        case Intentions::FILEINFO_SSDEEP:
+        case Intentions::FILEINFO_TLSH:
+        case Intentions::FILEINFO_SIGNED_HASH:
+        case Intentions::FILEINFO_SECURITY_DIRECTORY_SIZE:
+        case Intentions::FILEINFO_SECURITY_DIRECTORY_SIGNATURE_SIZE:
+            return true;
+    }
+
+    return false;
+}
+
+}  // namespace
+
 using namespace Orc;
 
 const WCHAR* FileInfo::g_pszExecutableFileExtensions[] = {
@@ -249,7 +294,7 @@ HRESULT FileInfo::HandleIntentions(const Intentions& intention, ITableOutput& ou
             break;
 
         case Intentions::FILEINFO_TLSH:
-            hr = WriteTLSH(output);
+            hr = output.WriteNothing();
             break;
 
         case Intentions::FILEINFO_SIGNED_HASH:
@@ -263,6 +308,11 @@ HRESULT FileInfo::HandleIntentions(const Intentions& intention, ITableOutput& ou
         case Intentions::FILEINFO_SECURITY_DIRECTORY_SIGNATURE_SIZE:
             hr = WriteSecurityDirectorySignatureSize(output);
             break;
+
+        case Intentions::FILEINFO_OWNER:
+        case Intentions::FILEINFO_OWNERID:
+        case Intentions::FILEINFO_OWNERSID:
+            return output.WriteNothing();
 
         default:
             return E_FAIL;
@@ -292,13 +342,22 @@ HRESULT FileInfo::WriteFileInformation(
             {
                 if (FAILED(hr = HandleIntentions(pCurCol->dwIntention, output)))
                 {
-                    Log::Debug(
-                        L"Failed to write column '{}' for '{}' [{}]",
-                        pCurCol->szColumnName,
-                        m_szFullName,
-                        SystemError(hr));
-                    if (output.GetCurrentColumnID() == ColId)
-                        hr = output.AbandonColumn();
+                    if (IsDirectory() && ::IsFailureAcceptedForDirectories(pCurCol->dwIntention))
+                    {
+                        if (output.GetCurrentColumnID() == ColId)
+                            hr = output.WriteNothing();
+                    }
+                    else
+                    {
+                        Log::Debug(
+                            L"Failed to write column '{}' for '{}' [{}]",
+                            pCurCol->szColumnName,
+                            m_szFullName,
+                            SystemError(hr));
+
+                        if (output.GetCurrentColumnID() == ColId)
+                            hr = output.AbandonColumn();
+                    }
                 }
             }
             else
@@ -581,7 +640,7 @@ HRESULT FileInfo::OpenHash()
     if (HasAnyFlag(
             localIntentions,
             Intentions::FILEINFO_MD5 | Intentions::FILEINFO_SHA1 | Intentions::FILEINFO_SHA256
-                | Intentions::FILEINFO_SSDEEP | Intentions::FILEINFO_TLSH))
+                | Intentions::FILEINFO_SSDEEP))
     {
         if (HasAnyFlag(
                 localIntentions,
@@ -679,8 +738,6 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
     FuzzyHashStream::Algorithm algs = FuzzyHashStream::Algorithm::Undefined;
     if (HasFlag(localIntentions, Intentions::FILEINFO_SSDEEP))
         algs |= FuzzyHashStream::Algorithm::SSDeep;
-    if (HasFlag(localIntentions, Intentions::FILEINFO_TLSH))
-        algs |= FuzzyHashStream::Algorithm::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
 
@@ -710,15 +767,6 @@ HRESULT FileInfo::OpenFuzzyHash(Intentions localIntentions)
                 return hr;
             }
         }
-
-        if (HasFlag(algs, FuzzyHashStream::Algorithm::TLSH))
-        {
-            hr = hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH());
-            if (FAILED(hr) && hr != MK_E_UNAVAILABLE)
-            {
-                return hr;
-            }
-        }
     }
 
     return S_OK;
@@ -742,8 +790,6 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
     FuzzyHashStream::Algorithm fuzzy_algs = FuzzyHashStream::Algorithm::Undefined;
     if (HasFlag(localIntentions, Intentions::FILEINFO_SSDEEP))
         fuzzy_algs |= FuzzyHashStream::Algorithm::SSDeep;
-    if (HasFlag(localIntentions, Intentions::FILEINFO_TLSH))
-        fuzzy_algs |= FuzzyHashStream::Algorithm::TLSH;
 
     auto stream = GetDetails()->GetDataStream();
 
@@ -812,12 +858,6 @@ HRESULT FileInfo::OpenCryptoAndFuzzyHash(Intentions localIntentions)
                 return hr;
         }
 #endif
-        if (HasFlag(fuzzy_algs, FuzzyHashStream::Algorithm::TLSH)
-            && FAILED(hr = fuzzy_hashstream->GetHash(FuzzyHashStream::Algorithm::TLSH, GetDetails()->TLSH())))
-        {
-            if (hr != MK_E_UNAVAILABLE)
-                return hr;
-        }
     }
 
     return S_OK;
@@ -1385,18 +1425,6 @@ HRESULT FileInfo::WriteSSDeep(ITableOutput& output)
 #endif
 }
 
-HRESULT FileInfo::WriteTLSH(ITableOutput& output)
-{
-    HRESULT hr = E_FAIL;
-    if (FAILED(hr = CheckHash()))
-    {
-        if (hr == HRESULT_FROM_WIN32(ERROR_INVALID_FUNCTION) || hr == HRESULT_FROM_WIN32(ERROR_DIRECTORY))
-            return output.WriteNothing();
-        return hr;
-    }
-    return output.WriteString(GetDetails()->TLSH());
-}
-
 HRESULT FileInfo::WriteSignedHash(ITableOutput& output)
 {
     HRESULT hr = E_FAIL;
@@ -1600,7 +1628,7 @@ HRESULT FileInfo::WriteAuthenticodeSignerThumbprint(ITableOutput& output)
         DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
         if (!CertGetCertificateContextProperty(signer, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
         {
-            Log::Debug(L"Failed to extract certificate thumbprint");
+            Log::Debug("Failed to extract certificate thumbprint");
         }
         else
         {
@@ -1684,7 +1712,7 @@ HRESULT FileInfo::WriteAuthenticodeCAThumbprint(ITableOutput& output)
         DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
         if (!CertGetCertificateContextProperty(ca, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
         {
-            Log::Debug(L"Failed to extract certificate thumbprint");
+            Log::Debug("Failed to extract certificate thumbprint");
         }
         else
         {

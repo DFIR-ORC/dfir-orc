@@ -87,7 +87,7 @@ Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, 
             status != ERROR_SUCCESS)
         {
             const auto ec = Win32Error(status);
-            Log::Error(L"Failed to open registry key {} [{}]", szKeyName, ec);
+            Log::Debug(L"Failed to open registry key {} [{}]", szKeyName, ec);
             return ec;
         }
     }
@@ -208,7 +208,7 @@ Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR s
             status != ERROR_SUCCESS)
         {
             const auto result = Win32Error(status);
-            Log::Error(L"Failed to open registry key '{}' [{}]", szKeyName, result);
+            Log::Debug(L"Failed to open registry key '{}' [{}]", szKeyName, result);
             return result;
         }
     }

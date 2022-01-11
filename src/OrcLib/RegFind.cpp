@@ -89,6 +89,31 @@ void LogError(const std::wstring& configItemName, const std::regex_error& e)
 
 }  // namespace
 
+void RegFind::PrintSpecs(Orc::Text::Tree& root) const
+{
+    auto node = root.AddNode(L"Registry search details:");
+
+    for (const auto& e : m_ExactKeyNameSpecs)
+    {
+        node.Add(L"{}", e.second->GetDescription());
+    }
+
+    for (const auto& e : m_ExactKeyPathSpecs)
+    {
+        node.Add(L"{}", e.second->GetDescription());
+    }
+
+    for (const auto& e : m_ExactValueNameSpecs)
+    {
+        node.Add(L"{}", e.second->GetDescription());
+    }
+
+    for (const auto& e : m_Specs)
+    {
+        node.Add(L"{}", e->GetDescription());
+    }
+}
+
 RegFind::Match::KeyNameMatch::KeyNameMatch(const RegistryKey* const MatchingRegistryKey)
 {
     if (MatchingRegistryKey != nullptr)
@@ -889,7 +914,8 @@ std::string RegFind::SearchTerm::GetDescription() const
         stream << "Data contains ";
 
         std::string hexlify;
-        std::string_view view(reinterpret_cast<const char*>(m_DataContentContains.GetData()), m_DataContentContains.GetCount());
+        std::string_view view(
+            reinterpret_cast<const char*>(m_DataContentContains.GetData()), m_DataContentContains.GetCount());
         Text::ToHex(view.cbegin(), view.cend(), std::back_inserter(hexlify));
         stream << hexlify;
 

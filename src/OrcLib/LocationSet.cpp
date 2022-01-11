@@ -81,7 +81,7 @@ std::vector<std::wstring> ExpandOrcStringsLocation(const std::wstring& rawLocati
     std::vector<std::wstring> out;
     for (const auto& [key, convertor] : convertors)
     {
-        if (boost::icontains(key, rawLocation))
+        if (boost::icontains(rawLocation, key))
         {
             auto values = convertor();
             if (!values)
@@ -217,7 +217,7 @@ void GetExcludedVolumeLocations(
         {
             std::copy(
                 std::cbegin(volume.Locations), std::cend(volume.Locations), std::back_inserter(excludedLocations));
-            Log::Info("Exclude: '{}'", path);
+            Log::Info(L"Exclude: '{}'", path);
             break;
         }
     }
@@ -739,7 +739,8 @@ LocationSet::AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<L
             hr = AddLocations(subLocation.c_str(), addedLocs, bToParse);
             if (FAILED(hr))
             {
-                return hr;
+                Log::Error(L"Failed to process location '{}' [{}]", subLocation, SystemError(hr));
+                continue;
             }
         }
 

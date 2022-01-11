@@ -141,7 +141,14 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                         L"Failed to rename extension library name {} to {} [{}]", extracted_path, desired_path, ec);
                     m_libFile = extracted_path;
                 }
-                else if (desired_path.filename() == m_strDesiredName)
+                else if (m_strDesiredName)
+                {
+                    if (desired_path.filename() == *m_strDesiredName)
+                    {
+                        m_libFile = desired_path;
+                    }
+                }
+                else
                 {
                     m_libFile = desired_path;
                 }
@@ -228,7 +235,7 @@ std::pair<HRESULT, HINSTANCE> Orc::ExtensionLibrary::LoadThisLibrary(const std::
             return std::make_pair(hr, hInst);
         else
         {
-            Log::Debug(L"LoadLibraryEx failed without setting GetLastError()");
+            Log::Debug("LoadLibraryEx failed without setting GetLastError()");
             return std::make_pair(hr, hInst);
         }
     }

@@ -66,16 +66,16 @@ void Main::PrintParameters()
 
     PrintCommonParameters(node);
 
-    PrintValue(node, "Disk name", config.diskName);
-    PrintValue(node, "LegacyBootCode", config.dumpLegacyBootCode);
-    PrintValue(node, "UefiFull", config.dumpUefiFull);
-    PrintValue(node, "UefiFullMaxSize", Traits::ByteQuantity(config.uefiFullMaxSize));
-    PrintValue(node, "SlackSpace", config.dumpSlackSpace);
-    PrintValue(node, "SlackSpaceSize", Traits::ByteQuantity(config.slackSpaceDumpSize));
-    PrintValue(node, "Custom", config.customSample);
-    PrintValue(node, "CustomOffset", config.customSampleOffset);
-    PrintValue(node, "CustomSize", Traits::ByteQuantity(config.customSampleSize));
-    PrintValue(node, "NotLowInterface", !config.lowInterface);
+    PrintValue(node, L"Disk name", config.diskName);
+    PrintValue(node, L"LegacyBootCode", config.dumpLegacyBootCode);
+    PrintValue(node, L"UefiFull", config.dumpUefiFull);
+    PrintValue(node, L"UefiFullMaxSize", Traits::ByteQuantity(config.uefiFullMaxSize));
+    PrintValue(node, L"SlackSpace", config.dumpSlackSpace);
+    PrintValue(node, L"SlackSpaceSize", Traits::ByteQuantity(config.slackSpaceDumpSize));
+    PrintValue(node, L"Custom", config.customSample);
+    PrintValue(node, L"CustomOffset", config.customSampleOffset);
+    PrintValue(node, L"CustomSize", Traits::ByteQuantity(config.customSampleSize));
+    PrintValue(node, L"NotLowInterface", !config.lowInterface);
 
     m_console.PrintNewLine();
 }

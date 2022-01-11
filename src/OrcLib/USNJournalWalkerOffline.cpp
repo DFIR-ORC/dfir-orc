@@ -157,11 +157,11 @@ HRESULT USNJournalWalkerOffline::EnumJournal(const IUSNJournalWalker::Callbacks&
     {
         if (hr == HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
         {
-            Log::Debug(L"Enumeration is stopping");
+            Log::Debug("Enumeration is stopping");
         }
         else
         {
-            Log::Error(L"Failed during MFT walk [{}]", SystemError(hr));
+            Log::Error("Failed during MFT walk [{}]", SystemError(hr));
         }
         return hr;
     }

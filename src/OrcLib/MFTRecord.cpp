@@ -5,17 +5,15 @@
 //
 // Author(s): Jean Gautier (ANSSI)
 //
+#include "stdafx.h"
 
-#include "StdAfx.h"
+#include <vector>
+#include <algorithm>
 
 #include "MFTRecord.h"
 #include "MftRecordAttribute.h"
 #include "AttributeList.h"
-
 #include "VolumeReader.h"
-
-#include <vector>
-#include <algorithm>
 
 #include "Log/Log.h"
 
@@ -207,7 +205,7 @@ HRESULT MFTRecord::ParseRecord(
         pCurAttr = (PATTRIBUTE_RECORD_HEADER)((LPBYTE)pCurAttr + pCurAttr->RecordLength);  // ready for next record
         if ((LPBYTE)pCurAttr > ((LPBYTE)pFirstAttr + dwAllAttrLength))
         {
-            Log::Debug(L"Invalid MFT attribute length. Skipped");
+            Log::Debug("Invalid MFT attribute length. Skipped");
             break;
         }
 
@@ -216,7 +214,7 @@ HRESULT MFTRecord::ParseRecord(
 
         if (pCurAttr->RecordLength == 0)
         {
-            Log::Debug(L"Invalid null MFT attribute length. Skipped");
+            Log::Debug("Invalid null MFT attribute length. Skipped");
             break;
         }
 
@@ -271,15 +269,15 @@ HRESULT MFTRecord::ParseAttribute(
     switch (pAttribute->TypeCode)
     {
         case $STANDARD_INFORMATION: {
-            Log::Debug(L"Add $STANDARD_INFORMATION");
+            Log::Trace(L"Add $STANDARD_INFORMATION");
             if (m_pStandardInformation != NULL)
             {
-                Log::Error(L"More than 1 Standard Information attribute! Unexpected");
+                Log::Error("Failed to parse $STANDARD_INFORMATION: more than one $StandardInformation attribute");
                 return E_FAIL;
             }
             if (pAttribute->FormCode != RESIDENT_FORM)
             {
-                Log::Error(L"Standard Information attribute is not resident! Unexpected");
+                Log::Error("Failed to parse $STANDARD_INFORMATION, attribute must be resident");
                 return E_FAIL;
             }
             m_pStandardInformation =
@@ -290,7 +288,7 @@ HRESULT MFTRecord::ParseAttribute(
         break;
         case $ATTRIBUTE_LIST: {
             // Attribute List
-            Log::Debug(L"Add $ATTRIBUTE_LIST");
+            Log::Trace(L"Add $ATTRIBUTE_LIST");
             std::shared_ptr<AttributeList> NewAttributeList = make_shared<AttributeList>(pAttribute, this);
 
             if (SUCCEEDED(hr = NewAttributeList->ParseAttributeList(VolReader, m_FileReferenceNumber, this)))
@@ -337,13 +335,17 @@ HRESULT MFTRecord::ParseAttribute(
                 m_ChildRecords.shrink_to_fit();
                 pNewAttr = std::make_shared<AttributeListAttribute>(pAttribute, this);
             }
+            else
+            {
+                Log::Error("Failed to parse $ATTRIBUTE_LIST [{}]", SystemError(hr));
+            }
         }
         break;
 
         case $FILE_NAME: {
             if (pAttribute->FormCode != RESIDENT_FORM)
             {
-                Log::Error(L"FileName attribute is not resident! Unexpected");
+                Log::Error("Failed to parse $FILE_NAME, attribute must be resident");
                 return E_FAIL;
             }
             if (m_pBaseFileRecord != NULL)
@@ -352,6 +354,7 @@ HRESULT MFTRecord::ParseAttribute(
                     (PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset));
             }
             m_FileNames.push_back((PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset));
+
             Log::Debug(
                 L"FileName: '{}', frn: {:#x}, parent: {:#x}, flags: {:#x}",
                 std::wstring_view(m_FileNames.back()->FileName, m_FileNames.back()->FileNameLength),
@@ -363,27 +366,27 @@ HRESULT MFTRecord::ParseAttribute(
         }
         break;
         case $OBJECT_ID: {
-            Log::Debug(L"Add $OBJECT_ID");
+            Log::Trace(L"Add $OBJECT_ID");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $SECURITY_DESCRIPTOR: {
-            Log::Debug(L"Add $SECURITY_DESCRIPTOR");
+            Log::Trace(L"Add $SECURITY_DESCRIPTOR");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $VOLUME_NAME: {
-            Log::Debug(L"Add $VOLUME_NAME");
+            Log::Trace(L"Add $VOLUME_NAME");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $VOLUME_INFORMATION: {
-            Log::Debug(L"Add $VOLUME_INFORMATION");
+            Log::Trace(L"Add $VOLUME_INFORMATION");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $DATA: {
-            Log::Debug(
+            Log::Trace(
                 L"Add '$DATA:{}'",
                 pAttribute->NameLength
                     ? std::wstring_view((WCHAR*)((BYTE*)pAttribute + pAttribute->NameOffset), pAttribute->NameLength)
@@ -423,23 +426,25 @@ HRESULT MFTRecord::ParseAttribute(
                     }
                     m_bIsDirectory = true;
 
-                    Log::Debug(L"Add directory");
+                    Log::Trace(L"Add directory");
                     pNewAttr = make_shared<IndexRootAttribute>(pAttribute, this);
                 }
                 else
                 {
-                    Log::Debug(L"Add $INDEX_ROOT (whose name is NOT $I30)");
+                    Log::Trace(L"Add $INDEX_ROOT (whose name is NOT $I30)");
                     pNewAttr = make_shared<IndexRootAttribute>(pAttribute, this);
                 }
             }
             else
             {
-                Log::Debug(L"Add $INDEX_ROOT (no name)");
+                Log::Trace(L"Add $INDEX_ROOT (no name)");
                 pNewAttr = make_shared<IndexRootAttribute>(pAttribute, this);
             }
 
             break;
         case $INDEX_ALLOCATION: {
+            Log::Trace(L"Add $INDEX_ALLOCATION");
+
             if (0 == wcsncmp((PWSTR)((LPBYTE)pAttribute + pAttribute->NameOffset), L"$I30", 4))
             {
                 // we need to add the file names as directories since this record is
@@ -454,15 +459,15 @@ HRESULT MFTRecord::ParseAttribute(
             }
             else
             {
-                Log::Debug(L"Add $INDEX_ROOT (whose name is NOT $I30)");
+                Log::Debug("Add $INDEX_ROOT (whose name is NOT $I30)");
                 pNewAttr = make_shared<IndexAllocationAttribute>(pAttribute, this);
             }
-            Log::Debug(L"Add $INDEX_ALLOCATION");
+
             pNewAttr = make_shared<IndexAllocationAttribute>(pAttribute, this);
         }
         break;
         case $BITMAP: {
-            Log::Debug(L"Add $BITMAP");
+            Log::Trace(L"Add $BITMAP");
             pNewAttr = make_shared<BitmapAttribute>(pAttribute, this);
         }
         break;
@@ -473,19 +478,19 @@ HRESULT MFTRecord::ParseAttribute(
 
             if (ReparsePointAttribute::IsJunction(flags))
             {
-                Log::Debug(L"Add $REPARSE_POINT (junction)");
+                Log::Trace(L"Add $REPARSE_POINT (junction)");
                 m_bIsJunction = true;
                 pNewAttr = make_shared<JunctionReparseAttribute>(pAttribute, this);
             }
             else if (ReparsePointAttribute::IsSymbolicLink(flags))
             {
-                Log::Debug(L"Add $REPARSE_POINT (symlink)");
+                Log::Trace(L"Add $REPARSE_POINT (symlink)");
                 m_bIsSymLink = true;
                 pNewAttr = make_shared<SymlinkReparseAttribute>(pAttribute, this);
             }
             else if (ReparsePointAttribute::IsWindowsOverlayFile(flags))
             {
-                Log::Debug(L"Add $REPARSE_POINT (overlay)");
+                Log::Trace(L"Add $REPARSE_POINT (overlay)");
 
                 std::error_code ec;
                 pNewAttr = make_shared<WOFReparseAttribute>(pAttribute, this, ec);
@@ -499,13 +504,13 @@ HRESULT MFTRecord::ParseAttribute(
             }
             else
             {
-                Log::Debug(L"Add $REPARSE_POINT (generic)");
+                Log::Trace(L"Add $REPARSE_POINT (generic)");
                 pNewAttr = make_shared<ReparsePointAttribute>(pAttribute, this);
             }
         }
         break;
         case $EA_INFORMATION: {
-            Log::Debug(L"Add $EA_INFORMATION");
+            Log::Trace(L"Add $EA_INFORMATION");
             EA_INFORMATION* pEAInfo = NULL;
             if (pAttribute->FormCode == RESIDENT_FORM)
             {
@@ -515,19 +520,19 @@ HRESULT MFTRecord::ParseAttribute(
         }
         break;
         case $EA: {
-            Log::Debug(L"Add $EA");
+            Log::Trace(L"Add $EA");
 
             pNewAttr = make_shared<ExtendedAttribute>(pAttribute, this);
             m_bHasExtendedAttr = true;
         }
         break;
         case $LOGGED_UTILITY_STREAM: {
-            Log::Debug(L"Add $LOGGED_UTILITY_STREAM");
+            Log::Trace(L"Add $LOGGED_UTILITY_STREAM");
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;
         case $END: {
-            Log::Debug(L"Add $END");
+            Log::Trace(L"Add $END");
             pNewAttr = nullptr;
         }
         break;

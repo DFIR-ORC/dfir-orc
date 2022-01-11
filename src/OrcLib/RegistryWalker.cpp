@@ -464,19 +464,19 @@ HRESULT RegistryHive::CheckNkHeader(
         // Don't throw error because this field is never used to build keys. (Parent key is always known)
         if (!IsOffsetValid(pHeader->OffsetToParent))
         {
-            Log::Debug(L"Nk header: ParentKey offset is invalid");
+            Log::Debug("Nk header: ParentKey offset is invalid");
         }
 
         // check parent key signature
 
         if (_strnicmp(((KeyHeader*)FixOffset(pHeader->OffsetToParent))->Signature, "nk", 2))
         {
-            Log::Debug(L"Nk header: ParentKey signature mismatch");
+            Log::Debug("Nk header: ParentKey signature mismatch");
         }
     }
     else if ((pHeader->Type != KeyType::rootkey) && (pHeader->Type != KeyType::rootkeyAlternate))
     {
-        Log::Debug(L"Key type is unknown");
+        Log::Debug("Key type is unknown");
     }
 
     if (!IsOffsetValid(pHeader->OffsetToSKHeader))

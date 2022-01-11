@@ -316,17 +316,11 @@ HRESULT WolfExecution::CreateArchiveAgent()
     }
     else
     {
-        auto pOutputStream = std::make_shared<FileStream>();
 
-        if (FAILED(hr = pOutputStream->WriteTo(m_strOutputFullPath.c_str())))
-        {
-            Log::Error(L"Failed open file '{}' to write [{}]", m_strOutputFullPath, SystemError(hr));
-            return hr;
-        }
 
         ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
-        auto request = ArchiveMessage::MakeOpenRequest(m_strArchiveFileName, fmt, pOutputStream, m_strCompressionLevel);
+        auto request = ArchiveMessage::MakeOpenRequest(m_strOutputFullPath, fmt, nullptr, m_strCompressionLevel);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
 
@@ -682,7 +676,7 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     auto request = ArchiveMessage::MakeCompleteRequest();
     Concurrency::send(m_ArchiveMessageBuffer, request);
 
-    Log::Debug(L"WAITING FOR ARCHIVE to COMPLETE");
+    Log::Debug("WAITING FOR ARCHIVE to COMPLETE");
 
     try
     {

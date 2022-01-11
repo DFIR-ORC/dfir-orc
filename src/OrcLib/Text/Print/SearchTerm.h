@@ -10,20 +10,12 @@
 
 #include "Text/Print.h"
 
-#include "FileFind.h"
+#include <FileFind.h>
 
 namespace Orc {
 namespace Text {
 
-template <>
-struct Printer<FileFind::SearchTerm>
-{
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const FileFind::SearchTerm& term)
-    {
-        Print(root, term.GetDescription());
-    }
-};
+void Print(Tree& node, const FileFind::SearchTerm& term);
 
 }  // namespace Text
 }  // namespace Orc

@@ -21,6 +21,7 @@ public:
 
     void Enable();
     void Disable();
+    void Flush(std::error_code& ec);
 
 private:
     std::unique_ptr<std::streambuf> m_streambuf;

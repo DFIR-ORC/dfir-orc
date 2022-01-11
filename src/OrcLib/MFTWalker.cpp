@@ -885,7 +885,7 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
 
                             if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
                             {
-                                Log::Debug(L"Failed to fixup carved $INDEX_ALLOCATION [{}]", SystemError(hr));
+                                Log::Debug("Failed to fixup carved $INDEX_ALLOCATION [{}]", SystemError(hr));
                                 return S_OK;
                             }
                             else

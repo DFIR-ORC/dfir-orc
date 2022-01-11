@@ -112,18 +112,18 @@ HRESULT CryptoHashStream::ResetHash(bool bContinue)
         if (HasFlag(m_Algorithms, Algorithm::MD5) && !CryptCreateHash(g_hProv, CALG_MD5, 0, 0, &m_MD5))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug(L"Failed to initialise MD5 hash [{}]", SystemError(hr));
+            Log::Debug("Failed to initialise MD5 hash [{}]", SystemError(hr));
         }
 
         if (HasFlag(m_Algorithms, Algorithm::SHA1) && !CryptCreateHash(g_hProv, CALG_SHA1, 0, 0, &m_Sha1))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug(L"Failed to initialise SHA1 hash [{}]", SystemError(hr));
+            Log::Debug("Failed to initialise SHA1 hash [{}]", SystemError(hr));
         }
         if (HasFlag(m_Algorithms, Algorithm::SHA256) && !CryptCreateHash(g_hProv, CALG_SHA_256, 0, 0, &m_Sha256))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug(L"Failed to initialise SHA256 hash [{}]", SystemError(hr));
+            Log::Debug("Failed to initialise SHA256 hash [{}]", SystemError(hr));
         }
     }
     return S_OK;

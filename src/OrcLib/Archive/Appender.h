@@ -128,7 +128,7 @@ public:
         Flush(ec);
         if (ec)
         {
-            Log::Error("Failed to flush stream [{}]", ec);
+            Log::Error("Failed to flush compression stream [{}]", ec);
             return;
         }
 
@@ -137,8 +137,14 @@ public:
         if (FAILED(hr))
         {
             ec.assign(hr, std::system_category());
-            Log::Error(L"Failed to move stream to {} [{}]", m_output, ec);
+            Log::Error(L"Failed to move compression stream to {} [{}]", m_output, ec);
             return;
+        }
+
+        hr = tempStream->Close();
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to close compression stream [{}]", SystemError(hr));
         }
     }
 

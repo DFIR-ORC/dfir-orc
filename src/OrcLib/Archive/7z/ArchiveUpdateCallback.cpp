@@ -191,11 +191,6 @@ STDMETHODIMP ArchiveUpdateCallback::GetProperty(UInt32 index, PROPID propID, PRO
 
         case kpidSize:
             prop = item->Size();
-            if (prop.ulVal == 0L)
-            {
-                prop.ulVal = static_cast<ULONG>(-1);
-            }
-
             break;
 
         case kpidAttrib:
@@ -208,6 +203,9 @@ STDMETHODIMP ArchiveUpdateCallback::GetProperty(UInt32 index, PROPID propID, PRO
             prop = ::NowTimestamp();
             break;
         }
+        default:
+            Log::Trace("7z: unhandled property id: {}", propID);
+            break;
     }
 
     prop.Detach(value);

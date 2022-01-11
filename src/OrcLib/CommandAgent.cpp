@@ -29,6 +29,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "Log/Log.h"
+#include "Utils/WinApi.h"
 
 using namespace std;
 
@@ -417,7 +418,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     if (FAILED(hr = ApplyPattern(parameter.Keyword, L"", L"", strFileName)))
                     {
                         Log::Error(
-                            L"Failed to apply parttern on output name '{}' [{}]", parameter.Name, SystemError(hr));
+                            L"Failed to apply pattern on output name '{}' [{}]", parameter.Name, SystemError(hr));
                         return;
                     }
 
@@ -539,9 +540,19 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                 }
                 break;
                 case CommandParameter::Argument: {
+                    std::error_code ec;
+                    auto arguments =
+                        ExpandEnvironmentStringsApi(parameter.Keyword.c_str(), parameter.Keyword.size() + 512, ec);
+                    if (ec)
+                    {
+                        Log::Error(L"Failed to expand environment arguments string [{}]", ec);
+                        arguments = parameter.Keyword;
+                        ec.clear();
+                    }
+
                     // Embed configuration that has been specified with '/config'
                     std::wstring value;
-                    if (ParseCommandLineArgumentValue(parameter.Keyword, L"config", value))
+                    if (ParseCommandLineArgumentValue(arguments, L"config", value))
                     {
                         auto cliConfig = ::OpenCliConfig(value);
                         if (cliConfig)
@@ -563,7 +574,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                         }
                     }
 
-                    if (FAILED(hr = retval->AddArgument(parameter.Keyword, parameter.OrderId)))
+                    if (FAILED(hr = retval->AddArgument(arguments, parameter.OrderId)))
                         return;
                     break;
                 }

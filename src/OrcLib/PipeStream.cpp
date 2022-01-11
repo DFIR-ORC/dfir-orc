@@ -90,7 +90,7 @@ PipeStream::Write_(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBy
         Log::Error("Failed WriteFile [{}]", SystemError(hr));
         return hr;
     }
-    Log::Debug("WriteFile {} bytes succeeded (hFile=0x{:p})", cbBytesWritten, m_hWritePipe);
+    Log::Trace("WriteFile {} bytes succeeded (hFile=0x{:p})", cbBytesWritten, m_hWritePipe);
     *pcbBytesWritten = cbBytesWritten;
     return S_OK;
 }
@@ -163,7 +163,7 @@ HRESULT PipeStream::Close()
         DWORD dwBytesWritten = 0L;
         WriteFile(hWritePipe, &EmptyBuffer, 0L, &dwBytesWritten, NULL);  // Signal to the other end we're closing...
         CloseHandle(hWritePipe);
-        Log::Debug("CloseHandle (hFile: {:p})", hWritePipe);
+        Log::Trace("CloseHandle (hFile: {:p})", hWritePipe);
         hWritePipe = INVALID_HANDLE_VALUE;
     }
     return S_OK;
@@ -179,7 +179,7 @@ PipeStream::~PipeStream()
             std::swap(hReadPipe, m_hReadPipe);
         }
         CloseHandle(hReadPipe);
-        Log::Debug("CloseHandle (hFile: {:p})", hReadPipe);
+        Log::Trace("CloseHandle (hFile: {:p})", hReadPipe);
         hReadPipe = INVALID_HANDLE_VALUE;
     }
     if (m_hWritePipe != INVALID_HANDLE_VALUE)
@@ -191,7 +191,7 @@ PipeStream::~PipeStream()
         }
 
         CloseHandle(hWritePipe);
-        Log::Debug("CloseHandle (hFile: {:p})", hWritePipe);
+        Log::Trace("CloseHandle (hFile: {:p})", hWritePipe);
         hWritePipe = INVALID_HANDLE_VALUE;
     }
 }

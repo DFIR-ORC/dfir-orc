@@ -330,20 +330,20 @@ HRESULT DecodeMessageStream::SetFilePointer(
     DBG_UNREFERENCED_PARAMETER(lDistanceToMove);
     DBG_UNREFERENCED_PARAMETER(dwMoveMethod);
     DBG_UNREFERENCED_PARAMETER(pqwCurrPointer);
-    Log::Debug(L"DecodeMessageStream: SetFilePointer is not implemented");
+    Log::Debug("DecodeMessageStream: SetFilePointer is not implemented");
     return S_OK;
 }
 
 ULONG64 DecodeMessageStream::GetSize()
 {
-    Log::Debug(L"DecodeMessageStream: GetSize is not implemented");
+    Log::Debug("DecodeMessageStream: GetSize is not implemented");
     return (ULONG64)-1;
 }
 
 HRESULT DecodeMessageStream::SetSize(ULONG64 ullNewSize)
 {
     DBG_UNREFERENCED_PARAMETER(ullNewSize);
-    Log::Debug(L"DecodeMessageStream: SetSize is not implemented");
+    Log::Debug("DecodeMessageStream: SetSize is not implemented");
     return S_OK;
 }
 

@@ -39,7 +39,7 @@ std::string ValidateOptionTypeOrName( const std::string& type )
         }
 
         try {
-            std::stoi( x );
+            std::ignore = std::stoi( x );
         }
         catch( const std::exception& e ) {
             return e.what();
@@ -56,7 +56,7 @@ std::string ValidateOptionLang( const std::string& lang )
     }
 
     try {
-        std::stoi( lang );
+        std::ignore = std::stoi( lang );
     }
     catch( const std::exception& e ) {
         return e.what();

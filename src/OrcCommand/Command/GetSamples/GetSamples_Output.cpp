@@ -92,7 +92,7 @@ void Main::PrintParameters()
     PrintValue(node, L"Timeline information", config.timelineOutput);
     PrintValue(node, L"Temporary output", config.tmpdirOutput);
 
-    PrintValue(node, "Ignore signatures", config.bNoSigCheck);
+    PrintValue(node, L"Ignore signatures", config.bNoSigCheck);
 
     m_console.PrintNewLine();
 }

@@ -70,7 +70,7 @@ HRESULT RunningCode::EnumerateProcessesModules()
         HRESULT hr2 = E_FAIL;
         if (FAILED(hr2 = EnumerateModules(pProcesses[i])))
         {
-            Log::Debug(L"Could not load modules for process: {} [{}]", pProcesses[i], SystemError(hr2));
+            Log::Debug("Could not load modules for process: {} [{}]", pProcesses[i], SystemError(hr2));
         }
     }
     return hr;
@@ -86,14 +86,14 @@ HRESULT RunningCode::EnumerateModules(DWORD dwPID)
     const auto psapi = ExtensionLibrary::GetLibrary<PSAPIExtension>();
     if (!psapi)
     {
-        Log::Debug(L"EnumModules: Failed to load PSAPI");
+        Log::Debug("EnumModules: Failed to load PSAPI");
         return E_FAIL;
     }
 
     if ((hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, dwPID)) == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug(L"EnumModules: OpenProcess failed for pid {} [{}]", dwPID, SystemError(hr));
+        Log::Debug("EnumModules: OpenProcess failed for pid {} [{}]", dwPID, SystemError(hr));
         return hr;
     }
 

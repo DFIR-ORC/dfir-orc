@@ -16,6 +16,7 @@
 #include "Text/Print/OutputSpec.h"
 #include "Text/Print/LocationSet.h"
 #include "Text/Print/Bool.h"
+#include "Text/Print/Tribool.h"
 #include "Text/Print/Recipient.h"
 
 using namespace Orc::Command::Wolf;

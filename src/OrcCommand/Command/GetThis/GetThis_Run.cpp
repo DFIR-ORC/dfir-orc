@@ -51,6 +51,9 @@ using namespace Orc::Command::GetThis;
 
 namespace {
 
+const std::wstring_view kGetThisCsv = L"GetThis.csv";
+const std::wstring_view kGetThisStatistics = L"Statistics.json";
+
 enum class CompressorFlags : uint32_t
 {
     kNone = 0,
@@ -74,8 +77,7 @@ std::wstring ToString(const GUID& guid)
     return s;
 }
 
-template <typename T>
-void PrintStatistics(Orc::Text::Tree<T>& root, const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
+void PrintStatistics(Orc::Text::Tree& root, const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
 {
     auto statsNode = root.AddNode(L"Statistics for 'ntfs_find' rules:");
     statsNode.AddEmptyLine();
@@ -245,6 +247,59 @@ Orc::Result<void> WriteStatistics(
     return WriteStatistics(searchTerms, output);
 }
 
+Orc::Result<void> CompressStatistics(
+    const std::unique_ptr<Archive::Appender<Archive::Archive7z>>& compressor,
+    const std::vector<std::shared_ptr<FileFind::SearchTerm>>& searchTerms)
+{
+    OutputSpec output;
+    output.OutputEncoding = OutputSpec::Encoding::UTF8;
+    output.Configure(OutputSpec::Kind::StructuredFile | OutputSpec::Kind::JSON, std::wstring(kGetThisStatistics));
+
+    auto stream = std::make_shared<TemporaryStream>();
+    HRESULT hr = stream->Open(output.Path, 5 * 1024 * 1024, false);
+    if (FAILED(hr))
+    {
+        const auto error = SystemError(hr);
+        Log::Error(L"Failed to create temporary stream for statistics [{}]", error);
+        return error;
+    }
+
+    auto options = std::make_unique<StructuredOutput::JSON::Options>();
+    options->Encoding = output.OutputEncoding;
+    options->bPrettyPrint = true;
+
+    auto writer = StructuredOutputWriter::GetWriter(stream, output.Type, std::move(options));
+    if (writer == nullptr)
+    {
+        Log::Error("Failed to create writer for statistics");
+        return SystemError(E_FAIL);
+    }
+
+    auto rv = WriteStatistics(searchTerms, writer);
+    if (rv.has_error())
+    {
+        return rv;
+    }
+
+    hr = writer->Close();
+    if (FAILED(hr))
+    {
+        const auto error = SystemError(hr);
+        Log::Error(L"Failed to close statistics writer [{}]", error);
+        return error;
+    }
+
+    hr = stream->SetFilePointer(0, FILE_BEGIN, nullptr);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to rewind statistics stream [{}]", SystemError(hr));
+    }
+
+    auto item = std::make_unique<Archive::Item>(stream, kGetThisStatistics);
+    compressor->Add(std::move(item));
+    return Orc::Success<void>();
+}
+
 std::unique_ptr<Archive::Appender<Archive::Archive7z>> CreateCompressor(const OutputSpec& outputSpec)
 {
     using namespace Archive;
@@ -307,8 +362,6 @@ void CompressTable(
     const std::unique_ptr<Archive::Appender<Archive::Archive7z>>& compressor,
     const std::shared_ptr<TableOutput::IStreamWriter>& tableWriter)
 {
-    std::error_code ec;
-
     HRESULT hr = tableWriter->Flush();
     if (FAILED(hr))
     {
@@ -327,12 +380,47 @@ void CompressTable(
         Log::Error(L"Failed to rewind csv stream [{}]", SystemError(hr));
     }
 
-    auto item = std::make_unique<Archive::Item>(tableStream, L"GetThis.csv");
+    auto item = std::make_unique<Archive::Item>(tableStream, kGetThisCsv);
     compressor->Add(std::move(item));
-    if (ec)
+}
+
+Result<void>
+WriteTable(const std::shared_ptr<TableOutput::IStreamWriter>& tableWriter, const std::filesystem::path& output)
+{
+    HRESULT hr = tableWriter->Flush();
+    if (FAILED(hr))
     {
-        Log::Error(L"Failed to add GetThis.csv [{}]", ec.value());
+        auto e = SystemError(hr);
+        Log::Error("Failed to flush table stream [{}]", e);
+        return e;
     }
+
+    auto temporaryStream = tableWriter->GetStream();
+    if (!temporaryStream)
+    {
+        Log::Error("Failed to retrieve temporary stream from csv writer");
+        return std::errc::bad_address;
+    }
+
+    auto stream = std::make_unique<FileStream>();
+    hr = stream->OpenFile(
+        output, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (FAILED(hr))
+    {
+        auto e = SystemError(hr);
+        Log::Error(L"Failed to open output file: '{}' [{}]", output, e);
+        return e;
+    }
+
+    hr = temporaryStream->CopyTo(*stream, nullptr);
+    if (FAILED(hr))
+    {
+        auto e = SystemError(hr);
+        Log::Error(L"Failed to write file: '{}' [{}]", output, e);
+        return e;
+    }
+
+    return Orc::Success<void>();
 }
 
 std::wstring RetrieveComputerName(const std::wstring& defaultName)
@@ -613,14 +701,14 @@ HRESULT RegFlushKeys()
     bool bSuccess = true;
     DWORD dwGLE = 0L;
 
-    Log::Debug(L"Flushing HKEY_LOCAL_MACHINE");
+    Log::Debug("Flushing HKEY_LOCAL_MACHINE");
     dwGLE = RegFlushKey(HKEY_LOCAL_MACHINE);
     if (dwGLE != ERROR_SUCCESS)
     {
         bSuccess = false;
     }
 
-    Log::Debug(L"Flushing HKEY_USERS");
+    Log::Debug("Flushing HKEY_USERS");
     dwGLE = RegFlushKey(HKEY_USERS);
     if (dwGLE != ERROR_SUCCESS)
     {
@@ -677,6 +765,13 @@ PFILE_NAME GetLastFileName(const std::vector<Orc::FileFind::Match::NameMatch>& n
 }
 
 }  // namespace
+
+GUID Main::SampleId::GetSnapshotId(VolumeReader& volumeReader)
+{
+    VolumeReaderInfo volumeInfo;
+    volumeReader.Accept(volumeInfo);
+    return volumeInfo.Guid();
+}
 
 Main::Main()
     : UtilitiesMain()
@@ -889,7 +984,7 @@ Main::AddSampleRefToCSV(ITableOutput& output, const Main::SampleRef& sample) con
 
             output.WriteBytes(sample.SSDeep);
 
-            output.WriteBytes(sample.TLSH);
+            output.WriteNothing();
 
             const auto& rules = match->MatchingAttributes[sample.AttributeIndex].YaraRules;
             if (rules.has_value())
@@ -1029,7 +1124,6 @@ void Main::FinalizeHashes(const Main::SampleRef& sample) const
     if (sample.FuzzyHashStream)
     {
         sample.FuzzyHashStream->GetSSDeep(const_cast<CBinaryBuffer&>(sample.SSDeep));
-        sample.FuzzyHashStream->GetTLSH(const_cast<CBinaryBuffer&>(sample.TLSH));
     }
 }
 
@@ -1056,8 +1150,12 @@ HRESULT Main::InitArchiveOutput()
         return hr;
     }
 
-    m_tableWriter =
-        ::CreateCsvWriter(tempDir / L"GetThisCsvStream", config.Output.Schema, config.Output.OutputEncoding, hr);
+    OutputSpec output;
+    output.Schema = config.Output.Schema;
+    output.OutputEncoding = config.Output.OutputEncoding;
+    output.Configure(L"GetThisTemporaryStream.csv", tempDir);
+
+    m_tableWriter = ::CreateCsvWriter(output.Path, config.Output.Schema, config.Output.OutputEncoding, hr);
     if (m_tableWriter == nullptr)
     {
         Log::Error(L"Failed to create csv stream [{}]", SystemError(hr));
@@ -1082,6 +1180,12 @@ HRESULT Main::CloseArchiveOutput()
 
     ::CompressTable(m_compressor, m_tableWriter);
 
+    auto rv = ::CompressStatistics(m_compressor, FileFinder.AllSearchTerms());
+    if (rv.has_error())
+    {
+        Log::Error(L"Failed to write statistics file [{}]", rv);
+    }
+
     m_compressor->Close(ec);
     if (ec)
     {
@@ -1105,8 +1209,7 @@ HRESULT Main::InitDirectoryOutput()
         return hr;
     }
 
-    m_tableWriter =
-        ::CreateCsvWriter(outputDir / L"GetThis.csv", config.Output.Schema, config.Output.OutputEncoding, hr);
+    m_tableWriter = ::CreateCsvWriter(outputDir / kGetThisCsv, config.Output.Schema, config.Output.OutputEncoding, hr);
     if (m_tableWriter == nullptr)
     {
         Log::Error(L"Failed to create csv stream [{}]", SystemError(hr));
@@ -1118,18 +1221,20 @@ HRESULT Main::InitDirectoryOutput()
 
 HRESULT Main::CloseDirectoryOutput()
 {
-    HRESULT hr = m_tableWriter->Flush();
-    if (FAILED(hr))
+    const auto tablePath = std::filesystem::path(config.Output.Path) / kGetThisCsv;
+    auto rv = ::WriteTable(m_tableWriter, tablePath);
+    if (rv.has_error())
     {
-        Log::Error(L"Failed to flush table stream [{}]", SystemError(hr));
-        return hr;
+        Log::Critical(L"Failed to write: '{}' [{}]", tablePath, rv.error());
+        return ToHRESULT(rv.error());
     }
 
-    hr = m_tableWriter->Close();
-    if (FAILED(hr))
+    const auto statisticsPath = std::filesystem::path(config.Output.Path) / kGetThisStatistics;
+    rv = ::WriteStatistics(FileFinder.AllSearchTerms(), statisticsPath);
+    if (rv.has_error())
     {
-        Log::Error(L"Failed to close table stream [{}]", SystemError(hr));
-        return hr;
+        Log::Error(L"Failed to write: '{}' [{}]", statisticsPath, rv.error());
+        // return ToHRESULT(rv.error());
     }
 
     return S_OK;
@@ -1260,15 +1365,14 @@ void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool
 
     for (size_t i = 0; i < aMatch->MatchingAttributes.size(); ++i)
     {
-        const auto& attribute = aMatch->MatchingAttributes[i];
 
-        auto sample = CreateSample(aMatch, i, sampleSpec);
-        if (m_sampleIds.find(SampleId(*sample)) != std::cend(m_sampleIds))
+        if (m_sampleIds.find(SampleId(*aMatch, i)) != std::cend(m_sampleIds))
         {
             Log::Info(L"Not adding duplicate sample '{}' to archive", aMatch->MatchingNames.front().FullPathName);
             continue;
         }
 
+        auto sample = CreateSample(aMatch, i, sampleSpec);
         UpdateSamplesLimits(sampleSpec, *sample);
 
         // TODO: memory optimization: check that sampleIds is resetted when volume changes
@@ -1319,12 +1423,6 @@ HRESULT Main::FindMatchingSamples()
 
     m_console.PrintNewLine();
     ::PrintStatistics(m_console.OutputTree(), FileFinder.AllSearchTerms());
-
-    auto rv = ::WriteStatistics(FileFinder.AllSearchTerms(), config.m_statisticsOutput);
-    if (rv.has_error())
-    {
-        Log::Error(L"Failed to write statistics file [{}]", rv);
-    }
 
     return S_OK;
 }

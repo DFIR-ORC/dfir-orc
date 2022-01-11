@@ -149,6 +149,7 @@
         <timestamp name="FileNameLastAccessDate" />
         <timestamp name="FileNameLastAttrModificationDate" />
         <guid   name="SnapshotID" allows_null="no" />
+        <uint64 name="DataSize" />
     </table>
 
     <table key="timeline">
@@ -181,6 +182,7 @@
         <uint32 name="NormalisedSize" />
         <uint32 name="DataSize" />
         <guid name="SnapshotID" allows_null="no" />
+        <utf8 name="SecurityDescriptor" maxlen="8000" fmt="{:02X}" />
     </table>
 
     <table key="volstats">
@@ -199,6 +201,7 @@
             <value index="0xFFFFFFF">ALL</value>
         </enum>
         <bool name="Parse" />
+        <utf16  name="MountPoint" maxlen="256" />
     </table>
 </sqlschema>
 

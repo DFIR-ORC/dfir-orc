@@ -18,6 +18,11 @@ namespace Archive {
 
 CompressionLevel ToCompressionLevel(const std::wstring& compressionLevel, std::error_code& ec)
 {
+    if (compressionLevel.empty())
+    {
+        return CompressionLevel::kDefault;
+    }
+
     std::wstring level;
     std::transform(
         std::cbegin(compressionLevel), std::cend(compressionLevel), std::back_inserter(level), [](wchar_t c) {

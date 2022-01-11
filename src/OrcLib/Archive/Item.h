@@ -23,7 +23,7 @@ class Item
 public:
     using CompressedCallback = std::function<void(const std::error_code&)>;
 
-    Item(std::shared_ptr<ByteStream> stream, std::wstring nameInArchive, CompressedCallback cb = {});
+    Item(std::shared_ptr<ByteStream> stream, std::wstring_view nameInArchive, CompressedCallback cb = {});
 
     const std::wstring& NameInArchive() const;
     std::shared_ptr<ByteStream>& Stream();

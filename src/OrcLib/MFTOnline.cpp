@@ -258,7 +258,7 @@ ULONG MFTOnline::GetMFTRecordCount() const
 
     if (ullMFTSize % ulBytesPerFRS)
     {
-        Log::Debug(L"Weird, MFT size is not a multiple of records...");
+        Log::Debug("Weird, MFT size is not a multiple of records...");
     }
 
     LARGE_INTEGER li;
@@ -362,7 +362,7 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
 
                 if (ullCurrentIndex != ullCurrentFRNIndex)
                 {
-                    Log::Debug(L"Current index does not match current FRN index");
+                    Log::Debug("Current index does not match current FRN index");
                 }
                 ullCurrentFRNIndex++;
                 ullCurrentIndex++;

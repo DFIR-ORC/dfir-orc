@@ -10,40 +10,13 @@
 
 #include "Text/Print.h"
 
-#include <Partition.h>
-
 namespace Orc {
+
+class Partition;
+
 namespace Text {
 
-template <>
-struct Printer<Partition>
-{
-    template <typename T>
-    static void Output(Orc::Text::Tree<T>& root, const Partition& partition)
-    {
-        if (partition.IsValid())
-        {
-            auto flags = Partition::ToString(partition.PartitionFlags);
-            if (flags.size())
-            {
-                flags = fmt::format(L", flags: {}", flags);
-            }
-
-            root.Add(
-                "Partition: #{}, type: {}, offsets: {:#x}-{:#x}, size: {}{}",
-                partition.PartitionNumber,
-                partition.PartitionType,
-                partition.Start,
-                partition.End,
-                partition.Size,
-                flags);
-        }
-        else
-        {
-            root.Add("Partition type: {}{}", partition.PartitionType);
-        }
-    }
-};
+void Print(Tree& root, const Partition& partition);
 
 }  // namespace Text
 }  // namespace Orc

@@ -197,6 +197,36 @@ public:
     }
 };
 
+class ServiceHandle final : public DescriptorGuard<SC_HANDLE>
+{
+public:
+    ServiceHandle(SC_HANDLE handle = NULL)
+        : DescriptorGuard(handle, NULL)
+    {
+    }
+
+    ServiceHandle(ServiceHandle&& handle) noexcept
+        : DescriptorGuard<SC_HANDLE>(std::move(handle))
+    {
+    }
+
+    ServiceHandle& operator=(ServiceHandle&& o) = default;
+
+    ~ServiceHandle()
+    {
+        if (m_data == m_invalidValue)
+        {
+            return;
+        }
+
+        if (CloseServiceHandle(m_data) == FALSE)
+        {
+            Log::Warn("Failed CloseServiceHandle [{}]", LastWin32Error());
+            return;
+        }
+    }
+};
+
 class Handle final : public DescriptorGuard<HANDLE>
 {
 public:

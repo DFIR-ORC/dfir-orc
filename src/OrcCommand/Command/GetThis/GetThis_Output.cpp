@@ -49,9 +49,8 @@ struct fmt::formatter<Orc::Command::GetThis::ContentSpec, wchar_t> : public fmt:
 
 namespace {
 
-template <typename T>
 void PrintValues(
-    Orc::Text::Tree<T> root,
+    Orc::Text::Tree root,
     const std::wstring description,
     const Orc::Command::GetThis::ListOfSampleSpecs& samples)
 {

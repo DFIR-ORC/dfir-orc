@@ -88,6 +88,9 @@ public:
 };
 
 std::wostream& operator<<(std::wostream& o, const Location& l);
+
+std::vector<std::wstring> GetMountPointList(const Orc::Location& location);
+
 }  // namespace Orc
 
 #pragma managed(pop)

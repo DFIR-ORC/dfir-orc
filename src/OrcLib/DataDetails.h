@@ -37,7 +37,6 @@ private:
     CBinaryBuffer m_MD5;
 
     std::wstring m_ssdeep;
-    std::wstring m_tlsh;
 
     Authenticode::PE_Hashs m_PEHashs;
     Authenticode::AuthenticodeData m_AuthData;
@@ -117,13 +116,6 @@ public:
         return S_OK;
     }
     std::wstring& SSDeep() { return m_ssdeep; }
-
-    HRESULT SetTLSH(std::wstring&& tlsh)
-    {
-        std::swap(m_tlsh, tlsh);
-        return S_OK;
-    }
-    std::wstring& TLSH() { return m_tlsh; }
 
     bool HashAvailable() const
     {

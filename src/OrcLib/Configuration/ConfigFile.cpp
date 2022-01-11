@@ -123,7 +123,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                         LPCWSTR pEquals = wcschr(argv[i], L'=');
                         if (!pEquals)
                         {
-                            Log::Error(
+                            Log::Critical(
                                 L"Option /{} should be like: /{}=c:\\temp\\config.xml or /{}=res:#myconfig",
                                 szConfigOpt,
                                 szConfigOpt,

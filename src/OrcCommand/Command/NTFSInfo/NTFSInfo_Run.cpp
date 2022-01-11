@@ -29,6 +29,7 @@
 #include "Privilege.h"
 #include "EmbeddedResource.h"
 #include "Text/Print/Location.h"
+#include "Text/Print/LocationSet.h"
 
 using namespace std;
 
@@ -179,6 +180,7 @@ void Main::DisplayProgress(const ULONG dwProgress)
         if (m_dwProgress % 2 == 0)
         {
             m_console.Write(L".");
+            m_console.Flush();
         }
 
         m_dwProgress = dwProgress;
@@ -413,6 +415,9 @@ void Main::SecurityDescriptorInformation(
     else
         output.WriteGUID(GUID_NULL);
 
+    DWORD dwSecDescrLength = GetSecurityDescriptorLength(&pEntry->SecurityDescriptor);
+    output.WriteBytes((BYTE*)&pEntry->SecurityDescriptor, dwSecDescrLength);
+
     output.WriteEndOfLine();
     return;
 }
@@ -522,6 +527,7 @@ void Main::I30Information(
     else
         output.WriteGUID(GUID_NULL);
 
+    output.WriteInteger(pFileName->Info.Reserved18.DataSize);
     output.WriteEndOfLine();
 }
 

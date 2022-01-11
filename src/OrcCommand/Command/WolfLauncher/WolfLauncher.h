@@ -154,7 +154,7 @@ public:
         , m_journal(m_console)
         , m_outcome()
     {
-        m_standardOutput.EnableFileTee();
+        m_standardOutput.EnableTeeRedirection();
     }
 
     void PrintUsage();

@@ -45,9 +45,11 @@ public:
     uint64_t errorCount() const;
     uint64_t criticalCount() const;
 
-    template <typename FacilityIt, typename Timepoint, typename... Args>
-    inline void Log(FacilityIt first, FacilityIt last, const Timepoint& timepoint, Level level, Args&&... args)
+    template <typename FacilityIt, typename Timepoint, typename Arg0, typename... Args>
+    inline void Log(FacilityIt first, FacilityIt last, const Timepoint& timepoint, Level level, Arg0&& arg0, Args&&... args)
     {
+        using CharT = Traits::underlying_char_type_t<Arg0>;
+
         ++m_logCounters[static_cast<std::underlying_type_t<Level>>(level)];
 
         if (first == last)
@@ -55,12 +57,12 @@ public:
             return;
         }
 
-        fmt::memory_buffer msg;
-        Text::FormatToWithoutEOL(std::back_inserter(msg), std::forward<Args>(args)...);
+        fmt::basic_memory_buffer<CharT> msg;
+        fmt::format_to(std::back_inserter(msg), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         for (auto it = first; it != last; ++it)
         {
             const SpdlogLogger::Ptr& logger = *it;
-            logger->Log(timepoint, level, std::string_view(msg.data(), msg.size()));
+            logger->Log(timepoint, level, std::basic_string_view<CharT>(msg.data(), msg.size()));
         }
     }
 

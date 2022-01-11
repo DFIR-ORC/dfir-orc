@@ -533,7 +533,7 @@ HRESULT Main::LaunchRun()
         } while (!bDeleted);
     }
 
-    Log::Debug(L"Done");
+    Log::Debug("Done");
 
     CloseHandle(m_pi.hThread);
     CloseHandle(m_pi.hProcess);

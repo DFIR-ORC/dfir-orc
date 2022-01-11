@@ -36,4 +36,23 @@ void StandardOutputFileTee::Disable()
     m_wideRedirection.Reset();
 }
 
+void StandardOutputFileTee::Flush(std::error_code& ec)
+{
+    try
+    {
+        m_wideConversionStream.flush();
+        LazyFileStream::Flush(ec);
+    }
+    catch (const std::system_error& e)
+    {
+        ec = e.code();
+        return;
+    }
+    catch (...)
+    {
+        ec = std::make_error_code(std::errc::interrupted);
+        return;
+    }
+}
+
 }  // namespace Orc

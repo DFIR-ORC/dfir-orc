@@ -37,7 +37,7 @@ HRESULT WMI::Initialize()
         }
     }
 
-    Log::Debug(L"Connected to ROOT\\CIMV2 WMI namespace");
+    Log::Debug("Connected to ROOT\\CIMV2 WMI namespace");
 
     hr = CoSetProxyBlanket(
         m_pServices,  // Indicates the proxy to set

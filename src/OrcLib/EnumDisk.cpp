@@ -121,12 +121,12 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
     {
         if (GetLastError() == ERROR_NO_MORE_ITEMS)
         {
-            Log::Debug(L"No more interfaces");
+            Log::Debug("No more interfaces");
         }
         else
         {
             hr = GetLastError();
-            Log::Error(L"Failed SetupDiEnumDeviceInterfaces [{}]", SystemError(hr));
+            Log::Error("Failed SetupDiEnumDeviceInterfaces [{}]", SystemError(hr));
             return hr;
         }
         return S_FALSE;

@@ -11,6 +11,7 @@
 #include <array>
 #include <string_view>
 
+#include "Text/StdoutContainerAdapter.h"
 #include "Text/Format.h"
 
 namespace Orc {
@@ -68,8 +69,13 @@ constexpr std::array kIndentLevelsW = {
 template <typename T>
 const std::basic_string_view<T>& GetIndent(uint16_t level);
 
+template <typename T>
+class BasicTree;
+
+using Tree = BasicTree<StdoutContainerAdapter<wchar_t>>;
+
 template <typename B>
-class Tree
+class BasicTree
 {
 public:
     using value_type = typename B::value_type;
@@ -97,7 +103,7 @@ public:
      *   FmtArgs: forward parameters to fmt to construct root's name
      */
     template <typename... FmtArgs>
-    Tree(B& buffer, uint16_t offset, uint16_t indentLevelIndex, FmtArgs&&... args)
+    BasicTree(B& buffer, uint16_t offset, uint16_t indentLevelIndex, FmtArgs&&... args)
         : m_offset(offset)
         , m_indentLevel(indentLevelIndex + 1)
         , m_header(CreateHeader(offset, indentLevelIndex + 1))
@@ -114,7 +120,7 @@ public:
      *   offset: number of spaces from the line start
      *   indentLevelIndex: initial indentation level
      */
-    Tree(B& buffer, uint16_t offset, uint16_t indentLevelIndex)
+    BasicTree(B& buffer, uint16_t offset, uint16_t indentLevelIndex)
         : m_offset(offset)
         , m_indentLevel(indentLevelIndex + 1)
         , m_header(CreateHeader(offset, indentLevelIndex))
@@ -199,6 +205,8 @@ private:
     B& m_buffer;
     bool m_indentationIsDone;
 };
+
+extern template class BasicTree<StdoutContainerAdapter<wchar_t>>;
 
 }  // namespace Text
 }  // namespace Orc

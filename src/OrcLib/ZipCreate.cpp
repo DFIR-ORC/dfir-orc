@@ -194,7 +194,7 @@ HRESULT ZipCreate::SetCompressionLevel(__in const std::wstring& level)
 {
     if (level.empty())
     {
-        Log::Debug(L"Specified compression level is empty");
+        Log::Debug("Specified compression level is empty");
         return S_OK;
     }
 
@@ -315,6 +315,20 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
             // returning S_FALSE also indicates error
             Log::Error(L"Failed to update '{}' [{}]", m_ArchiveName, SystemError(hr));
             return hr;
+        }
+    }
+
+    // Fix index for empty files which is not updated as "SetOperationResult" is not called by 7z as for non-empty
+    // files.
+    for (size_t i = 0; i < m_Items.size(); ++i)
+    {
+        auto& item = m_Items[i];
+        if (item.currentStatus == OrcArchive::ArchiveItem::Selected && item.Size == 0)
+        {
+            assert(m_Indexes.size() <= m_Items.size());
+            item.currentStatus = OrcArchive::ArchiveItem::Done;
+            item.Index = m_Indexes.size();
+            m_Indexes[item.Index] = i;
         }
     }
 

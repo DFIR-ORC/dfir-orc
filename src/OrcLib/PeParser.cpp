@@ -69,7 +69,7 @@ void ParseImageDosHeader(ByteStream& stream, IMAGE_DOS_HEADER& header, std::erro
     ReadItemAt(stream, 0, header, ec);
     if (ec)
     {
-        Log::Debug(L"Failed to read IMAGE_DOS_HEADER [{}]", ec);
+        Log::Debug("Failed to read IMAGE_DOS_HEADER [{}]", ec);
         return;
     }
 
@@ -97,7 +97,7 @@ void ParseImageNtHeader(
     ReadItemAt(stream, imageDosHeader.e_lfanew, imageNtHeader, ec);
     if (ec)
     {
-        Log::Debug(L"Failed to read IMAGE_NT_HEADER [{}]", ec);
+        Log::Debug("Failed to read IMAGE_NT_HEADER [{}]", ec);
         return;
     }
 
@@ -115,7 +115,7 @@ void ParseImageNtHeader(
             ReadItem(stream, optionalHeaders32.value(), ec);
             if (ec)
             {
-                Log::Debug(L"Failed to read IMAGE_OPTIONAL_HEADER32 [{}]", ec);
+                Log::Debug("Failed to read IMAGE_OPTIONAL_HEADER32 [{}]", ec);
                 return;
             }
 
@@ -132,7 +132,7 @@ void ParseImageNtHeader(
             ReadItem(stream, optionalHeaders64.value(), ec);
             if (ec)
             {
-                Log::Debug(L"Failed to read IMAGE_OPTIONAL_HEADER64 [{}]", ec);
+                Log::Debug("Failed to read IMAGE_OPTIONAL_HEADER64 [{}]", ec);
                 return;
             }
 
@@ -144,7 +144,7 @@ void ParseImageNtHeader(
 
             break;
         default:
-            Log::Debug(L"Unsupported machine (value: {})", imageNtHeader.FileHeader.Machine);
+            Log::Debug("Unsupported machine (value: {})", imageNtHeader.FileHeader.Machine);
             ec = std::make_error_code(std::errc::function_not_supported);
             return;
     }

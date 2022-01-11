@@ -24,7 +24,11 @@ public:
 
     LazyFileStreambuf(size_t bufferSize) { m_buffer.reserve(bufferSize); }
 
-    ~LazyFileStreambuf() override { Close(); }
+    ~LazyFileStreambuf() override
+    {
+        std::error_code ec;
+        Close(ec);
+    }
 
     void Open(const std::filesystem::path& path, FileDisposition disposition, std::error_code& ec)
     {
@@ -56,12 +60,50 @@ public:
         }
     }
 
-    void Close()
+    void Close(std::error_code& ec)
     {
-        if (m_ofstream.is_open())
+        if (!m_ofstream.is_open())
+        {
+            return;
+        }
+
+        try
         {
             m_ofstream.flush();
             m_ofstream.close();
+        }
+        catch (const std::system_error& e)
+        {
+            ec = e.code();
+            return;
+        }
+        catch (...)
+        {
+            ec = std::make_error_code(std::errc::interrupted);
+            return;
+        }
+    }
+
+    void Flush(std::error_code& ec)
+    {
+        if (!m_ofstream.is_open())
+        {
+            return;
+        }
+
+        try
+        {
+            m_ofstream.flush();
+        }
+        catch (const std::system_error& e)
+        {
+            ec = e.code();
+            return;
+        }
+        catch (...)
+        {
+            ec = std::make_error_code(std::errc::interrupted);
+            return;
         }
     }
 

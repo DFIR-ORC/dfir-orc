@@ -15,7 +15,7 @@
 using namespace Orc::Archive;
 using namespace Orc;
 
-Item::Item(std::shared_ptr<ByteStream> stream, std::wstring nameInArchive, CompressedCallback cb)
+Item::Item(std::shared_ptr<ByteStream> stream, std::wstring_view nameInArchive, CompressedCallback cb)
     : m_stream(std::move(stream))
     , m_nameInArchive(std::move(nameInArchive))
     , m_compressedCb(std::move(cb))

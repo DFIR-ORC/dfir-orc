@@ -594,6 +594,7 @@ set(SRC_TEXT
     "Text/Iconv.cpp"
     "Text/Format.h"
     "Text/HexDump.h"
+    "Text/StdoutContainerAdapter.h"
     "Text/Tree.h"
     "Text/Tree.cpp"
     "Text/Fwd/Iconv.h"
@@ -652,19 +653,32 @@ source_group(Text\\Fmt\\Fwd FILES ${SRC_TEXT_FMT_FWD})
 set(SRC_TEXT_PRINT
     "Text/Print.h"
     "Text/Print/Bool.h"
+    "Text/Print/Bool.cpp"
     "Text/Print/EmbedSpec.h"
+    "Text/Print/EmbedSpec.cpp"
     "Text/Print/FILE_NAME.h"
+    "Text/Print/FILE_NAME.cpp"
     "Text/Print/Filter.h"
+    "Text/Print/Filter.cpp"
     "Text/Print/Intentions.h"
+    "Text/Print/Intentions.cpp"
     "Text/Print/Location.h"
     "Text/Print/Location.cpp"
     "Text/Print/LocationSet.h"
+    "Text/Print/LocationSet.cpp"
     "Text/Print/Ntfs.h"
     "Text/Print/OutputSpec.h"
+    "Text/Print/OutputSpec.cpp"
     "Text/Print/Partition.h"
+    "Text/Print/Partition.cpp"
     "Text/Print/SearchTerm.h"
+    "Text/Print/SearchTerm.cpp"
     "Text/Print/Tribool.h"
+    "Text/Print/Tribool.cpp"
+    "Text/Print/Ntfs/AttributeListEntry.h"
+    "Text/Print/Ntfs/AttributeListEntry.cpp"
     "Text/Print/Ntfs/NonResidentAttributeExtent.h"
+    "Text/Print/Ntfs/NonResidentAttributeExtent.cpp"
     "Text/Print/Ntfs/MFTRecord.h"
     "Text/Print/Ntfs/MFTRecord.cpp"
 )
@@ -972,11 +986,6 @@ target_link_libraries(OrcLib
 
 find_package(RapidJSON CONFIG REQUIRED)
 target_include_directories(OrcLib PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
-
-if(ORC_BUILD_TLSH)
-    find_package(tlsh CONFIG REQUIRED)
-    target_link_libraries(OrcLib PUBLIC tlsh::tlsh)
-endif()
 
 if(ORC_BUILD_SSDEEP)
     find_package(ssdeep CONFIG REQUIRED)

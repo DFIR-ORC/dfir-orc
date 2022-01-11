@@ -23,7 +23,7 @@ StandardOutput::StandardOutput()
 StandardOutput::~StandardOutput()
 {
     DisableWriteConsoleRedirection();
-    DisableFileTee();
+    DisableTeeRedirection();
 
     Reset();
 }
@@ -78,16 +78,22 @@ void StandardOutput::OpenTeeFile(
     m_fileTee->Open(path, disposition, ec);
 }
 
-void StandardOutput::EnableFileTee()
+void StandardOutput::Flush(std::error_code& ec)
+{
+    m_fileTee->Flush(ec);  // flush m_fileTee so m_writeConsoleRedirection would be filled first
+    m_writeConsoleRedirection.Flush(ec);
+}
+
+void StandardOutput::EnableTeeRedirection()
 {
     m_hasTeeRedirection = true;
     m_fileTee->Enable();
 }
 
-void StandardOutput::DisableFileTee()
+void StandardOutput::DisableTeeRedirection()
 {
-    m_fileTee->Close();
     m_hasTeeRedirection = false;
+    m_fileTee->Disable();
 }
 
 }  // namespace Orc

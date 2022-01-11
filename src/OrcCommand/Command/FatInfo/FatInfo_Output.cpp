@@ -63,11 +63,11 @@ void Main::PrintParameters()
 
     PrintCommonParameters(node);
 
-    PrintValues(node, "Parsed locations", m_Config.locs.GetParsedLocations());
+    PrintValues(node, L"Parsed locations", m_Config.locs.GetParsedLocations());
 
-    PrintValue(node, "Output columns", m_Config.ColumnIntentions, FatFileInfo::g_FatColumnNames);
-    PrintValue(node, "Default columns", m_Config.DefaultIntentions, FatFileInfo::g_FatColumnNames);
-    PrintValue(node, "Filters", m_Config.Filters, FatFileInfo::g_FatColumnNames);
+    PrintValue(node, L"Output columns", m_Config.ColumnIntentions, FatFileInfo::g_FatColumnNames);
+    PrintValue(node, L"Default columns", m_Config.DefaultIntentions, FatFileInfo::g_FatColumnNames);
+    PrintValue(node, L"Filters", m_Config.Filters, FatFileInfo::g_FatColumnNames);
 
     m_console.PrintNewLine();
 }

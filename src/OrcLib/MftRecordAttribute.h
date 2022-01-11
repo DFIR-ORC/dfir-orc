@@ -163,7 +163,7 @@ public:
     virtual ~MftRecordAttribute() { m_pNonResidentInfo.reset(); };
 
 private:
-    void MftRecordAttribute::LogStreamRequest(const MFTRecord* baseRecord) const;
+    void LogStreamRequest(const MFTRecord* baseRecord) const;
 };
 
 class AttributeListAttribute : public MftRecordAttribute
@@ -311,7 +311,7 @@ public:
 
     static bool IsJunction(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == IO_REPARSE_TAG_MOUNT_POINT; }
     static bool IsSymbolicLink(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == IO_REPARSE_TAG_SYMLINK; }
-    static bool IsWindowsOverlayFile(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == IO_REPARSE_TAG_WOF; }
+    static bool IsWindowsOverlayFile(REPARSE_POINT_TYPE_AND_FLAGS flags) { return flags == 0x80000017; }
 
     REPARSE_POINT_TYPE_AND_FLAGS Flags() const { return m_Flags; }
 

@@ -10,11 +10,12 @@
 
 #include "OrcLib.h"
 
-#include "NtfsDataStructures.h"
-
-#include "VolumeReader.h"
-
 #include <vector>
+
+#include "NtfsDataStructures.h"
+#include "MFTUtils.h"
+#include "VolumeReader.h"
+#include "MftRecordAttribute.h"
 
 #pragma managed(push, off)
 

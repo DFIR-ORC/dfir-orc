@@ -10,36 +10,69 @@
 
 #include "stdafx.h"
 
+#ifdef ORC_COMMAND_FASTFIND
 #include "Command/FastFind/FastFind.h"
+#endif
+#ifdef ORC_COMMAND_GETSAMPLES
 #include "Command/GetSamples/GetSamples.h"
+#endif
+#ifdef ORC_COMMAND_GETSECTORS
 #include "Command/GetSectors/GetSectors.h"
+#endif
+#ifdef ORC_COMMAND_GETTHIS
 #include "Command/GetThis/GetThis.h"
+#endif
+#ifdef ORC_COMMAND_NTFSINFO
 #include "Command/NTFSInfo/NTFSInfo.h"
+#endif
+#ifdef ORC_COMMAND_REGINFO
 #include "Command/RegInfo/RegInfo.h"
+#endif
+#ifdef ORC_COMMAND_NTFSUTIL
 #include "Command/NTFSUtil/NTFSUtil.h"
+#endif
+#ifdef ORC_COMMAND_TOOLEMBED
 #include "Command/ToolEmbed/ToolEmbed.h"
+#endif
+#ifdef ORC_COMMAND_USNINFO
 #include "Command/USNInfo/USNInfo.h"
+#endif
+#ifdef ORC_COMMAND_WOLFLAUNCHER
 #include "Command/WolfLauncher/WolfLauncher.h"
+#endif
+#ifdef ORC_COMMAND_OBJINFO
 #include "Command/ObjInfo/ObjInfo.h"
+#endif
+#ifdef ORC_COMMAND_FATINFO
 #include "Command/FatInfo/FatInfo.h"
+#endif
+#ifdef ORC_COMMAND_DD
 #include "Command/DD/DD.h"
+#endif
+
 #include "Mothership.h"
 #include "Console.h"
 #include "Text/Tree.h"
 #include "ToolVersion.h"
 #include "Usage.h"
+#include "EmbeddedResource.h"
 
+using WinMainPtr = std::function<int(int argc, const WCHAR* argv[])>;
 struct ToolDescription
 {
-    template <typename CommandType>
-    static ToolDescription Get()
+    ToolDescription(LPCWSTR toolName, LPCWSTR toolDescr, WinMainPtr main) :
+        szName(toolName), szDescr(toolDescr), WinMain(main)
     {
-        return ToolDescription {
-            CommandType::ToolName(), CommandType::ToolDescription(), UtilitiesMain::WMain<CommandType>};
-    };
+    }
+
+    template <typename CommandType>
+    static ToolDescription Get() {
+        return ToolDescription(CommandType::ToolName(), CommandType::ToolDescription(), UtilitiesMain::WMain<CommandType>);
+    }
+
     LPCWSTR szName;
     LPCWSTR szDescr;
-    std::function<int(int argc, const WCHAR* argv[])> WinMain;
+    WinMainPtr WinMain;
 };
 
 using namespace Orc::Command;
@@ -47,20 +80,47 @@ using namespace Orc::Text;
 using namespace Orc;
 
 ToolDescription g_Tools[] = {
+#ifdef ORC_COMMAND_GETTHIS
     ToolDescription::Get<GetThis::Main>(),
+#endif
+#ifdef ORC_COMMAND_NTFSINFO
     ToolDescription::Get<NTFSInfo::Main>(),
+#endif
+#ifdef ORC_COMMAND_USNINFO
     ToolDescription::Get<USNInfo::Main>(),
+#endif
+#ifdef ORC_COMMAND_WOLFLAUNCHER
     ToolDescription::Get<Wolf::Main>(),
+#endif
+#ifdef ORC_COMMAND_FASTFIND
     ToolDescription::Get<FastFind::Main>(),
+#endif
+#ifdef ORC_COMMAND_OBJINFO
     ToolDescription::Get<ObjInfo::Main>(),
+#endif
+#ifdef ORC_COMMAND_GETSAMPLES
     ToolDescription::Get<GetSamples::Main>(),
+#endif
+#ifdef ORC_COMMAND_GETSECTORS
     ToolDescription::Get<GetSectors::Main>(),
+#endif
+#ifdef ORC_COMMAND_FATINFO
     ToolDescription::Get<FatInfo::Main>(),
+#endif
+#ifdef ORC_COMMAND_TOOLEMBED
     ToolDescription::Get<ToolEmbed::Main>(),
+#endif
+#ifdef ORC_COMMAND_NTFSUTIL
     ToolDescription::Get<NTFSUtil::Main>(),
+#endif
+#ifdef ORC_COMMAND_REGINFO
     ToolDescription::Get<RegInfo::Main>(),
+#endif
+#ifdef ORC_COMMAND_DD
     ToolDescription::Get<DD::Main>(),
-    {nullptr, nullptr}};
+#endif
+    {nullptr, nullptr, nullptr}
+};
 
 int PrintUsage()
 {

@@ -132,7 +132,6 @@ protected:
     HRESULT WriteSHA256(ITableOutput& output);
 
     HRESULT WriteSSDeep(ITableOutput& output);
-    HRESULT WriteTLSH(ITableOutput& output);
 
     HRESULT WriteSignedHash(ITableOutput& output);
 
