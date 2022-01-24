@@ -29,7 +29,7 @@
 
 #include <boost/scope_exit.hpp>
 
-#include "PeParser.h"
+#include "FileFormat/PeParser.h"
 
 using namespace Orc;
 

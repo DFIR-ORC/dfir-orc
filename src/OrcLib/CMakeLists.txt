@@ -255,8 +255,8 @@ set(SRC_EXTENSIONLIBRARIES_YARA
 source_group(ExtensionLibraries\\Yara FILES ${SRC_EXTENSIONLIBRARIES_YARA})
 
 set(SRC_FILE_FORMAT
-    "PeParser.h"
-    "PeParser.cpp"
+    "FileFormat/PeParser.h"
+    "FileFormat/PeParser.cpp"
 )
 
 source_group(FileFormat
