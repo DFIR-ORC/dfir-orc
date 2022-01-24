@@ -30,10 +30,151 @@
 #include <boost/scope_exit.hpp>
 
 #include "FileFormat/PeParser.h"
+#include "Utils/Guard.h"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 
 namespace {
+
+template <typename ContainerT>
+Orc::Result<void> MapFile(const std::wstring& path, ContainerT& output)
+{
+    using namespace Orc;
+
+    Guard::FileHandle hFile = CreateFileW(
+        path.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL);
+
+    if (!hFile.IsValid())
+    {
+        return LastWin32Error();
+    }
+
+    LARGE_INTEGER fileSize;
+    if (!GetFileSizeEx(*hFile, &fileSize))
+    {
+        return LastWin32Error();
+    }
+
+    try
+    {
+        output.resize(fileSize.QuadPart);
+    }
+    catch (...)
+    {
+        return std::errc::not_enough_memory;
+    }
+
+    DWORD dwBytesRead;
+    if (!ReadFile(*hFile, output.data(), output.size(), &dwBytesRead, NULL))
+    {
+        return LastWin32Error();
+    }
+
+    return Success<void>();
+}
+
+Orc::Result<std::wstring> ParseCatalogHintFilename(std::string_view catalogHint)
+{
+    using namespace Orc;
+
+    struct CatalogHintAttribute
+    {
+        uint16_t unknownShort;
+        uint16_t nameLength;
+    };
+
+    if (sizeof(CatalogHintAttribute) > catalogHint.size())
+    {
+        Log::Debug("Invalid EA $CI.CATALOGHINT item size");
+        return std::errc::bad_message;
+    }
+
+    auto hint = reinterpret_cast<const CatalogHintAttribute*>(catalogHint.data());
+
+    if (hint->nameLength + sizeof(CatalogHintAttribute) > catalogHint.size())
+    {
+        Log::Debug("Invalid EA $CI.CATALOGHINT size");
+        return std::errc::bad_message;
+    }
+
+    std::error_code ec;
+    std::string_view utf8(catalogHint.data() + sizeof(CatalogHintAttribute), hint->nameLength);
+    const auto name = Utf8ToUtf16(utf8, ec);
+    if (ec)
+    {
+        return ec;
+    }
+
+    return name;
+}
+
+Orc::Result<void> CheckCatalogSignature(std::string_view catalog)
+{
+    using namespace Orc;
+
+    CRYPT_VERIFY_MESSAGE_PARA verifyParameters = {};
+    verifyParameters.cbSize = sizeof(verifyParameters);
+    verifyParameters.dwMsgAndCertEncodingType = PKCS_7_ASN_ENCODING | X509_ASN_ENCODING;
+    verifyParameters.hCryptProv = NULL;
+    verifyParameters.pfnGetSignerCertificate = NULL;
+    verifyParameters.pvGetArg = NULL;
+
+    // If 'signer' is not provided the catalog signature will not be checked
+    PCCERT_CONTEXT signer = NULL;
+
+    DWORD decodedMessageLength = 0;
+    BOOL result = CryptVerifyMessageSignature(
+        &verifyParameters,
+        0,
+        reinterpret_cast<unsigned char*>(const_cast<char*>(catalog.data())),
+        catalog.size(),
+        NULL,
+        &decodedMessageLength,
+        &signer);
+    if (!result)
+    {
+        auto ec = LastWin32Error();
+        Log::Debug("Failed CryptVerifyMessageSignature [{}]", ec);
+        return ec;
+    }
+
+    if (signer)
+    {
+        if (!CertFreeCertificateContext(signer))
+        {
+            Log::Debug(L"Failed CertFreeCertificateContext [{}]", LastWin32Error());
+        }
+    }
+
+    return Success<void>();
+}
+
+bool FindPeHash(std::string_view buffer, const Orc::Authenticode::PE_Hashs& peHashes)
+{
+    std::array<std::string_view, 2> hashes = {peHashes.sha1, peHashes.sha256};
+
+    for (const auto& hash : hashes)
+    {
+        if (hash.size() == 0)
+        {
+            continue;
+        }
+
+        if (buffer.find(hash) != std::string_view::npos)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 Authenticode::PE_Hashs To_PE_Hashs(const PeParser::PeHash& hashes)
 {
@@ -411,8 +552,7 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
         PeParser::PeHash hashes;
 
         // Exclude 'CryptoHashStream::Algorithm::MD5' as algorithm is untrusted
-        pe.GetAuthenticodeHash(
-            CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256, hashes, ec);
+        pe.GetAuthenticodeHash(CryptoHashStream::Algorithm::SHA1 | CryptoHashStream::Algorithm::SHA256, hashes, ec);
         if (ec)
         {
             Log::Debug("Failed to compute pe hashes [{}]", ec);
@@ -1024,7 +1164,7 @@ HRESULT Authenticode::ExtractSignatureSigners(
 }
 
 HRESULT Authenticode::ExtractCatalogSigners(
-    LPCWSTR szCatalogFile,
+    std::string_view catalog,
     std::vector<PCCERT_CONTEXT>& pSigners,
     std::vector<PCCERT_CONTEXT>& pCAs,
     std::vector<HCERTSTORE>& certStores)
@@ -1035,23 +1175,29 @@ HRESULT Authenticode::ExtractCatalogSigners(
     HCERTSTORE hCertStore = NULL;
     HCRYPTMSG hMsg = NULL;
 
-    if (!CryptQueryObject(
-            CERT_QUERY_OBJECT_FILE,
-            szCatalogFile,
-            CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED,
-            CERT_QUERY_FORMAT_FLAG_BINARY,
-            0,
-            &dwEncoding,
-            &dwContentType,
-            &dwFormatType,
-            &hCertStore,
-            &hMsg,
-            NULL))
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to extract signature information from catalog '{}' [{}]", szCatalogFile, SystemError(hr));
-        return hr;
+        CRYPT_DATA_BLOB blob;
+        blob.cbData = catalog.size();
+        blob.pbData = reinterpret_cast<BYTE*>(const_cast<char*>(catalog.data()));
+
+        if (!CryptQueryObject(
+                CERT_QUERY_OBJECT_BLOB,
+                &blob,
+                CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED,
+                CERT_QUERY_FORMAT_FLAG_BINARY,
+                0,
+                &dwEncoding,
+                &dwContentType,
+                &dwFormatType,
+                &hCertStore,
+                &hMsg,
+                NULL))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            return hr;
+        }
     }
+
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
     BOOST_SCOPE_EXIT_END;
 
@@ -1069,7 +1215,6 @@ HRESULT Authenticode::ExtractCatalogSigners(
     if (GetLastError() != CRYPT_E_INVALID_INDEX)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to extract signer information from catalog '{}' [{}]", szCatalogFile, SystemError(hr));
         return hr;
     }
 
@@ -1110,6 +1255,23 @@ HRESULT Authenticode::ExtractCatalogSigners(
     }
 
     return S_OK;
+}
+
+HRESULT Authenticode::ExtractCatalogSigners(
+    LPCWSTR szCatalogFile,
+    std::vector<PCCERT_CONTEXT>& pSigners,
+    std::vector<PCCERT_CONTEXT>& pCAs,
+    std::vector<HCERTSTORE>& certStores)
+{
+    fmt::basic_memory_buffer<char, 65536> catalog;
+    auto rv = ::MapFile(szCatalogFile, catalog);
+    if (rv.has_error())
+    {
+        Log::Error(L"Failed to extract signature information from catalog '{}' [{}]", szCatalogFile, rv.error());
+        return ToHRESULT(rv.error());
+    }
+
+    return ExtractCatalogSigners(std::string_view(catalog.data(), catalog.size()), pSigners, pCAs, certStores);
 }
 
 HRESULT
@@ -1292,4 +1454,74 @@ Authenticode::~Authenticode()
         m_wintrust.CryptCATAdminReleaseContext(m_hContext, 0);
     if (m_hMachineStore != INVALID_HANDLE_VALUE)
         CertCloseStore(m_hMachineStore, 0L);
+}
+
+Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
+    std::string_view catalogHint,
+    const Orc::Authenticode::PE_Hashs& peHashes,
+    Authenticode::AuthenticodeData& data)
+{
+    using namespace Orc;
+    using namespace std::literals;
+
+    data.bSignatureVerifies = false;
+
+    auto filename = ParseCatalogHintFilename(catalogHint);
+    if (filename.has_error())
+    {
+        Log::Debug("Failed to parse catalog hint filename [{}]", filename.error());
+        return filename.error();
+    }
+
+    fmt::basic_memory_buffer<char, 65536> catalog;
+
+    constexpr std::array catrootDirectories = {
+        L"%WINDIR%\\system32\\CatRoot\\{{F750E6C3-38EE-11D1-85E5-00C04FC295EE}}\\{}"sv,
+        L"%WINDIR%\\system32\\CatRoot\\{}"sv};
+
+    for (auto& catroot : catrootDirectories)
+    {
+        std::error_code ec;
+        auto catalogPath = ExpandEnvironmentStringsApi(fmt::format(catroot.data(), *filename).c_str(), ec);
+        if (ec)
+        {
+            return ec;
+        }
+
+        auto rv = ::MapFile(catalogPath, catalog);
+        if (rv.has_error())
+        {
+            Log::Error(L"Failed to map catalog '{}' [{}]", catalogPath, rv.error());
+            return rv.error();
+        }
+
+        HRESULT hr = Authenticode::ExtractCatalogSigners(
+            std::string_view(catalog.data(), catalog.size()), data.Signers, data.SignersCAs, data.CertStores);
+        if (FAILED(hr))
+        {
+            return SystemError(hr);
+        }
+
+        break;
+    }
+
+    // TODO: eventually rely on this high level MS api wrapper instead of 'Authenticode::ExtractCatalogSigners'
+    // auto signature = CheckCatalogSignature(std::string_view(catalog.data(), catalog.size()));
+    // if (!signature)
+    //{
+    //    Log::Error("Failed catalog signature verification [{}]", signature.error());
+    //    return signature.error();
+    //}
+
+    bool found = ::FindPeHash(std::string_view(catalog.data(), catalog.size()), peHashes);
+    if (!found)
+    {
+        return std::errc::no_such_file_or_directory;
+    }
+
+    data.bSignatureVerifies = true;
+    data.isSigned = true;
+    data.AuthStatus = AUTHENTICODE_CATALOG_SIGNED_VERIFIED;
+
+    return Success<void>();
 }

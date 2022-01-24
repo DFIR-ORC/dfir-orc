@@ -177,6 +177,11 @@ private:
         WCHAR** ppValue);
     HRESULT WriteVersionQueryValue(WCHAR* szValueName, ITableOutput& output);
 
+    HRESULT VerifyAnySignatureWithCatalogs(
+        const std::wstring_view path,
+        const Authenticode::PE_Hashs& peHahs,
+        Authenticode::AuthenticodeData& data);
+
     static const WCHAR* g_pszExecutableFileExtensions[];
     static const WCHAR* g_pszScriptFileExtensions[];
     static const WCHAR* g_pszArchiveFileExtensions[];

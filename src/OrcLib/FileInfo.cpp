@@ -13,7 +13,7 @@
 #include "CryptoHashStream.h"
 #include "FuzzyHashStream.h"
 #include "MemoryStream.h"
-
+#include "MFTRecordFileInfo.h"
 #include "VolumeReader.h"
 
 #include "TableOutput.h"
@@ -48,6 +48,47 @@
 #define IMAGE_FILE_MACHINE_LINUX 0xFD1D  // TODO: be more specific (linux-x64, ...)
 
 namespace {
+
+Orc::Result<Orc::CBinaryBuffer> ReadExtendedAttribute(
+    const std::shared_ptr<Orc::VolumeReader>& volume,
+    const Orc::MFTRecord& mftRecord,
+    std::wstring_view name)
+{
+    using namespace Orc;
+
+    for (const auto& attributeInfo : mftRecord.GetAttributeList())
+    {
+        if (attributeInfo.TypeCode() != $EA)
+        {
+            continue;
+        }
+
+        auto ea = std::dynamic_pointer_cast<ExtendedAttribute, MftRecordAttribute>(attributeInfo.Attribute());
+        if (!ea)
+        {
+            continue;
+        }
+
+        HRESULT hr = ea->Parse(volume);
+        if (FAILED(hr))
+        {
+            Log::Debug("Failed to parse extended attribute [{}]", SystemError(hr));
+            continue;
+        }
+
+        for (const auto& [itemName, itemData] : ea->Items())
+        {
+            if (itemName != name)
+            {
+                continue;
+            }
+
+            return itemData;
+        }
+    }
+
+    return std::errc::no_such_file_or_directory;
+}
 
 // Directory can have some of those attribute but usually they don't
 bool IsFailureAcceptedForDirectories(const Orc::Intentions& intention)
@@ -901,13 +942,48 @@ HRESULT FileInfo::OpenAuthenticode()
     }
     else
     {
-        if (FAILED(
-                hr = m_codeVerifyTrust.VerifyAnySignatureWithCatalogs(m_szFullName, GetDetails()->GetPEHashs(), data)))
+        hr = VerifyAnySignatureWithCatalogs(m_szFullName, GetDetails()->GetPEHashs(), data);
+        if (FAILED(hr))
         {
             Log::Warn(L"WinVerifyTrust failed for file '{}' [{}]", m_szFullName, SystemError(hr));
         }
     }
     GetDetails()->SetAuthenticodeData(std::move(data));
+    return S_OK;
+}
+
+HRESULT FileInfo::VerifyAnySignatureWithCatalogs(
+    const std::wstring_view path,
+    const Authenticode::PE_Hashs& peHashes,
+    Authenticode::AuthenticodeData& data)
+{
+    HRESULT hr = m_codeVerifyTrust.VerifyAnySignatureWithCatalogs(m_szFullName, peHashes, data);
+    if (SUCCEEDED(hr))
+    {
+        return S_OK;
+    }
+
+    Log::Debug(L"Failed to verify signature with WinVerifyTrust [{}]", hr);
+
+    auto mftRecordInfo = dynamic_cast<MFTRecordFileInfo*>(this);
+    if (!mftRecordInfo || mftRecordInfo->MftRecord() == nullptr)
+    {
+        return E_FAIL;
+    }
+
+    auto catalogHint = ::ReadExtendedAttribute(m_pVolReader, *mftRecordInfo->MftRecord(), L"$CI.CATALOGHINT");
+    if (!catalogHint)
+    {
+        return E_FAIL;
+    }
+
+    auto rv = Authenticode::VerifySignatureWithCatalogHint(*catalogHint, peHashes, data);
+    if (rv.has_error())
+    {
+        Log::Debug(L"Failed to verify signature with CI.CATALOGHINT [{}]", rv.error());
+        return ToHRESULT(rv.error());
+    }
+
     return S_OK;
 }
 

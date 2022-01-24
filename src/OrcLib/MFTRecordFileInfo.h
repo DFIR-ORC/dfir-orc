@@ -89,6 +89,8 @@ public:
         Authenticode& verifytrust);
     virtual ~MFTRecordFileInfo(void);
 
+    const MFTRecord* MftRecord() const { return m_pMFTRecord; }
+
 private:
     MFTRecord* m_pMFTRecord = nullptr;
     PFILE_NAME m_pFileName = nullptr;

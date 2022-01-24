@@ -118,7 +118,7 @@ private:
     HRESULT ExtractSignatureHash(const CBinaryBuffer& signature, AuthenticodeData& data);
     HRESULT ExtractSignatureTimeStamp(const CBinaryBuffer& signature, AuthenticodeData& data);
 
-    HRESULT ExtractNestedSignature(
+    static HRESULT ExtractNestedSignature(
         HCRYPTMSG hMsg,
         DWORD dwSignerIndex,
         std::vector<PCCERT_CONTEXT>& pSigner,
@@ -131,19 +131,30 @@ private:
         std::vector<PCCERT_CONTEXT>& pCA,
         std::vector<HCERTSTORE>& certStores);
 
-    HRESULT ExtractCatalogSigners(
-        LPCWSTR szCatalogFile,
-        std::vector<PCCERT_CONTEXT>& pSigners,
-        std::vector<PCCERT_CONTEXT>& pCAs,
-        std::vector<HCERTSTORE>& certStores);
-
 public:
     Authenticode();
 
     static DWORD ExpectedHashSize();
 
-    // Catalog based verifications
-    HRESULT Verify(LPCWSTR szFileName, AuthenticodeData& data);
+    static HRESULT ExtractCatalogSigners(
+        LPCWSTR szCatalogFile,
+        std::vector<PCCERT_CONTEXT>& pSigners,
+        std::vector<PCCERT_CONTEXT>& pCAs,
+        std::vector<HCERTSTORE>& certStores);
+
+    static HRESULT ExtractCatalogSigners(
+        std::string_view catalog,
+        std::vector<PCCERT_CONTEXT>& pSigners,
+        std::vector<PCCERT_CONTEXT>& pCAs,
+        std::vector<HCERTSTORE>& certStores);
+
+    static Orc::Result<void> VerifySignatureWithCatalogHint(
+        std::string_view catalogHint,
+        const Orc::Authenticode::PE_Hashs& peHashes,
+        Authenticode::AuthenticodeData& data);
+
+        // Catalog based verifications
+        HRESULT Verify(LPCWSTR szFileName, AuthenticodeData& data);
     HRESULT Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStream>& pStream, AuthenticodeData& data);
     HRESULT VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data);
 
