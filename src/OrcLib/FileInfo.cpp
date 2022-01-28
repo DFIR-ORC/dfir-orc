@@ -879,8 +879,6 @@ HRESULT FileInfo::OpenAuthenticode()
     HRESULT hr = E_FAIL;
     if (FAILED(hr = CheckHash()))
         return hr;
-    if (FAILED(hr = m_PEInfo.CheckSecurityDirectory()))
-        return hr;
 
     Authenticode::AuthenticodeData data;
     if (IsDirectory() || !m_PEInfo.HasPEHeader())
@@ -888,6 +886,9 @@ HRESULT FileInfo::OpenAuthenticode()
         GetDetails()->SetAuthenticodeData(std::move(data));  // Setting empty Authenticode data
         return S_OK;
     }
+
+    if (FAILED(hr = m_PEInfo.CheckSecurityDirectory()))
+        return hr;
 
     if (GetDetails()->SecurityDirectoryAvailable())
     {
