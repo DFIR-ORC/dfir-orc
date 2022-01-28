@@ -1,5 +1,34 @@
 # ChangeLog
 
+## [10.1.0-rc10] - 2022-02-22 - Release Candidate 10
+### Added
+- test: add functional test helper test.psd1 and test.psm1 (see tools/ci/README.md)
+- Authenticode: support for $CI.CatalogHint
+- Outcome: add log, console and outline file names
+- Outcome: add archive SHA1
+- Outcome: add recipients and public keys
+- Outcome: add 'input_type' which specify if orc was in 'offline' mode
+- Outcome: add to 'Command' expected output files with their origin (file, stderr, ...)
+- Outcome: add 'Origin' to 'Command' to specify information about where it comes from
+- Outcome: add to 'Command' its SHA1
+- Outcome: add to 'Command' the DFIR-Orc tool name if appropriate
+
+### Changed
+- Continue on a failed "Location" resolution
+- Increase maximum command arguments length
+- Only check SecurityDirectory for files with PE header
+
+### Fixed
+- Fix p7b encryption support
+- Fix network password handling with BITS
+- Fix network password handling with CopyFileAgent
+- Fix log file upload
+- Fix "Location" match expression
+- Fix warning due to unhandled legacy columns OWNERID, OWNDERSID
+- WolfLauncher: Fix option parsing for '/console'
+- ToolEmbed: fix possible race condition with system while updating resource
+
+
 ## [10.1.0-rc9] - 2022-01-07 - Release Candidate 9
 ### Added
 - WolfLauncher: expand environment variables for `<Argument>` xml configuration element.
@@ -20,6 +49,7 @@
 - GetThis: fix missing csv when using directory as output
 - GetThis: fix possible missing sample when having multiple matches
 - Fix configuration when using '{UserProfiles}' with a path appended
+
 
 ## [10.1.0-rc8] - 2021-12-02 - Release Candidate 8
 ### Added
@@ -234,6 +264,17 @@
 - Remove dead code
 
 
+## [10.0.24] - 2022-02-22
+### Changed
+- Continue on a failed "Location" resolution
+
+### Fixed
+- Fix "Location" match expression
+- Fix warning due to unhandled legacy columns OWNERID, OWNDERSID
+- Fix network password handling with BITS
+- Fix network password handling with CopyFileAgent
+
+
 ## [10.0.23] - 2021-12-16
 ### Fixed
 - 7z archives: empty file handling for compatibility
@@ -246,7 +287,7 @@
 
 
 ## [10.0.22] - 2021-12-01
-### changed
+### Changed
 - Yara: Update to 4.1.3
 - Allow extracted resources to be executed
 
