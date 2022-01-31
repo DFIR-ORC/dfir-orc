@@ -16,7 +16,7 @@ namespace Orc {
 template <typename T>
 using Result = boost::outcome_v2::std_result<T>;
 
-template <typename T>
+template <typename T = void>
 using Success = boost::outcome_v2::success_type<T>;
 
 template <typename T>
