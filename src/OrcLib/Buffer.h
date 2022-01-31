@@ -21,6 +21,9 @@ namespace Detail {
 
 using namespace std::string_view_literals;
 
+template <typename _T, size_t _DeclElts>
+class Buffer;
+
 template <typename _T>
 class BufferSpan
 {
@@ -29,6 +32,9 @@ class BufferSpan
     friend class Buffer;
 
 public:
+    template <size_t _DeclElts>
+    explicit BufferSpan(const Buffer<_T, _DeclElts>& buffer);
+
     BufferSpan(_T* ptr, ULONG Elts)
     {
         m_Ptr = ptr;
@@ -42,12 +48,36 @@ public:
         if (newSize < m_Elts)
             m_Elts = newSize;
     }
-    _T* get() const { return m_Ptr; }
+
+    _T* get(ULONG idx = 0) const
+    {
+        if (idx >= m_Elts)
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index acces into BufferExView"sv);
+        return &m_Ptr[idx];
+    }
     const _T& operator[](ULONG idx) const
     {
         if (idx >= m_Elts)
             throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index acces into BufferExView"sv);
         return m_Ptr[idx];
+    }
+
+    template <typename _T_as>
+    _T_as* const get_as(USHORT nth = 0) const
+    {
+        auto ptr = get();
+        if (!ptr)
+        {
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Buffer NULL reference"sv);
+        }
+        if (((nth + 1) * sizeof(_T_as)) > (m_Elts * sizeof(_T)))
+            throw Exception(
+                Severity::Fatal,
+                E_INVALIDARG,
+                L"get_as<_T_as>({}) insufficient data to satisfy reinterpret_cast (size={})"sv,
+                m_Elts * sizeof(_T));
+
+        return reinterpret_cast<_T_as*>(ptr) + nth;
     }
 
 private:
@@ -651,18 +681,21 @@ public:
     }
 
     template <typename _T_as>
-    const _T_as* const get_as(ULONG index = 0) const
+    const _T_as* const get_as(ULONG nth = 0) const
     {
-        if (index && index >= m_EltsUsed)
-            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index get_as({}) (size={})"sv, index, m_EltsUsed);
-
-        auto ptr = get_raw(index);
-
+        auto ptr = get();
         if (!ptr)
         {
             throw Exception(Severity::Fatal, E_INVALIDARG, L"Buffer NULL reference"sv);
         }
-        return reinterpret_cast<const _T_as* const>(ptr);
+        if (((nth + 1) * sizeof(_T_as)) > (m_EltsUsed * sizeof(_T)))
+            throw Exception(
+                Severity::Fatal,
+                E_INVALIDARG,
+                L"get_as<_T_as>({}) insufficient data to satisfy reinterpret_cast (size={})"sv,
+                m_EltsUsed * sizeof(_T));
+
+        return reinterpret_cast<_T_as*>(ptr) + nth;
     }
 
     _T* get_raw(ULONG index = 0) const
@@ -760,7 +793,7 @@ public:
         return len;
     }
 
-    std::wstring AsHexString(bool b0xPrefix = false, ULONG dwMaxBytes = std::numeric_limits<ULONG>::max())
+    std::wstring AsHexString(bool b0xPrefix = false, ULONG dwMaxBytes = std::numeric_limits<ULONG>::max()) const
     {
         using namespace std::string_literals;
 
@@ -873,7 +906,6 @@ public:
     class const_iterator
     {
     public:
-
         const_iterator(const _T* ptr) { m_current = const_cast<_T*>(ptr); }
         const_iterator(const_iterator&& other) noexcept { std::swap(m_current, other.m_current); };
         const_iterator(const const_iterator& other) noexcept { m_current = other.m_current; };
@@ -898,7 +930,6 @@ public:
     class iterator
     {
     public:
-
         iterator(const _T* ptr) { m_current = const_cast<_T*>(ptr); }
         iterator(iterator&& other) noexcept { std::swap(m_current, other.m_current); };
         iterator(const iterator& other) noexcept { m_current = other.m_current; };
@@ -930,6 +961,13 @@ private:
     Store m_store;
     ULONG m_EltsUsed = 0;
 };
+
+template <typename _T>
+template <size_t _DeclElts>
+BufferSpan<_T>::BufferSpan(const Buffer<_T, _DeclElts>& buffer)
+    : BufferSpan(buffer.get(), buffer.size())
+{
+}
 
 }  // namespace Detail
 
