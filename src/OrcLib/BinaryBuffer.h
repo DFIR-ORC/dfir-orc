@@ -99,7 +99,7 @@ public:
     }
 
     // Move assignment operator.
-    CBinaryBuffer& operator=(CBinaryBuffer&& other)
+    CBinaryBuffer& operator=(CBinaryBuffer&& other) noexcept
     {
         if (this != &other)
         {
@@ -141,7 +141,10 @@ public:
     bool SetCount(size_t NewSize);
     BYTE* GetData() const { return m_pData; }
 
-    inline operator std::string_view() const { return std::string_view(reinterpret_cast<char*>(GetData()), GetCount()); }
+    inline operator std::string_view() const
+    {
+        return std::string_view(reinterpret_cast<char*>(GetData()), GetCount());
+    }
 
     HRESULT SetData(LPCBYTE pBuffer, size_t cbSize);
     HRESULT CopyTo(LPBYTE pBuffer, size_t cbSize);
