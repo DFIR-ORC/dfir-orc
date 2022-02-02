@@ -72,7 +72,7 @@ constexpr static const unsigned int ROBUSTNESS_STOP_PROCESSING = 1
 constexpr static const unsigned int ROBUSTNESS_CSV = 1 << 5;  // Flush CSV File writer
 constexpr static const unsigned int ROBUSTNESS_LOG = 1 << 4;  // Flush the log file
 constexpr static const unsigned int ROBUSTNESS_STATS = 1 << 3;  // Add the latest data about execution
-constexpr static const unsigned int ROBUSTNESS_ARCHIVE = 1 << 2;  // Cab the files
+constexpr static const unsigned int ROBUSTNESS_ARCHIVE = 1 << 2;  // Archive the files
 constexpr static const unsigned int ROBUSTNESS_TEMPFILE = 1 << 1;  // Delete temp files
 constexpr static const unsigned int ROBUSTNESS_UNLOAD_DLLS = 1 << 0;  // Unload extension DLLs
 

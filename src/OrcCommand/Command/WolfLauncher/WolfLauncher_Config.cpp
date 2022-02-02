@@ -366,7 +366,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         hr = exec->SetArchiveName((const std::wstring&)archiveitem[WOLFLAUNCHER_ARCHIVE_NAME]);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to set '{}' as cab name [{}]", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], SystemError(hr));
+            Log::Error(L"Failed to set '{}' as archive name [{}]", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], SystemError(hr));
             return hr;
         }
 

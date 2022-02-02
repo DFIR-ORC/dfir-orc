@@ -144,7 +144,7 @@ HRESULT Main::GetAddArchiveFromConfigItem(const ConfigItem& item, EmbeddedResour
             if (FAILED(subhr = ExpandFilePath(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(), strInputFile)))
             {
                 Log::Error(
-                    L"Error in specified file '{}' to add to cab file [{}]",
+                    L"Error in specified file '{}' to add to archive [{}]",
                     item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(),
                     SystemError(subhr));
                 hr = subhr;

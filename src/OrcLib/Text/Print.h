@@ -93,7 +93,6 @@ void PrintValues(Tree& node, const N& name, const V& values)
 
     // TODO: use FormatKey
     auto valuesNode = node.AddNode(34, L"{}:", name);
-    node.AddEmptyLine();
     for (const auto& value : values)
     {
         Print(valuesNode, value);

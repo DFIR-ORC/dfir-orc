@@ -745,7 +745,7 @@ HRESULT WolfExecution::SetJobConfigFromConfig(const ConfigItem& item)
 
     if (_wcsicmp(item.strName.c_str(), L"archive"))
     {
-        Log::Debug("item passed is not a cab item");
+        Log::Debug("item is not an archive item");
         return E_INVALIDARG;
     }
 

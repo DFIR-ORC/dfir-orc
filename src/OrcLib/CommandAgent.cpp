@@ -612,7 +612,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                                     extracted)))
                         {
                             Log::Error(
-                                L"Failed to extract ressource '{}' from cab [{}]", parameter.Name, SystemError(hr));
+                                L"Failed to extract ressource '{}' from archive [{}]", parameter.Name, SystemError(hr));
                             return;
                         }
                         wstring Arg;
