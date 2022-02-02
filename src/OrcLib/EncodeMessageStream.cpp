@@ -194,7 +194,7 @@ HRESULT EncodeMessageStream::Write_(
         return hr;
     }
     *pcbBytesWritten = cbBytes;
-    Log::Debug("CryptMsgUpdate {} bytes succeeded (hMsg={:#x})", cbBytes, m_hMsg);
+    Log::Trace("CryptMsgUpdate {} bytes succeeded (hMsg={:p})", cbBytes, m_hMsg);
     return S_OK;
 }
 
