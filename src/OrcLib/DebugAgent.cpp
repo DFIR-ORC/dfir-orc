@@ -37,7 +37,7 @@ DWORD WINAPI DebugAgent::StaticDebugLoopProc(__in LPVOID lpParameter)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error(
-            "Failed to attach debugger to running process (pid: {}, [{}])", pThis->m_dwProcessID, SystemError(hr));
+            "Failed to attach debugger to running process (pid: {}) [{}]", pThis->m_dwProcessID, SystemError(hr));
         return hr;
     }
     else
@@ -79,8 +79,7 @@ HRESULT DebugAgent::CreateMinidump(DEBUG_EVENT& debug_event)
     if (hThread == NULL)
     {
         const auto ec = LastWin32Error();
-        Log::Error(L"Failed OpenThread (tid: {}, [{}])", debug_event.dwThreadId, ec
-        );
+        Log::Error(L"Failed OpenThread (tid: {}, [{}])", debug_event.dwThreadId, ec);
         return ToHRESULT(ec);
     }
 

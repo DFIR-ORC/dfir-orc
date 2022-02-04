@@ -109,7 +109,7 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
     {
         if (FAILED(hr = CryptoUtilities::AcquireContext(m_hProv)))
         {
-            Log::Error(L"Failed to acquire suitable Crypto Service Provider [{}]", SystemError(hr));
+            Log::Error("Failed to acquire suitable Crypto Service Provider [{}]", SystemError(hr));
             return hr;
         }
         EncodeInfo.ContentEncryptionAlgorithm.pszObjId = szOID_RSA_DES_EDE3_CBC;
@@ -234,7 +234,7 @@ HRESULT EncodeMessageStream::Close()
         if (!CryptMsgUpdate(m_hMsg, NULL, 0L, TRUE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed CryptMsgUpdate (on final call, [{}])", SystemError(hr));
+            Log::Error("Failed CryptMsgUpdate (on final call, [{}])", SystemError(hr));
             return hr;
         }
         if (!CryptMsgClose(m_hMsg))
