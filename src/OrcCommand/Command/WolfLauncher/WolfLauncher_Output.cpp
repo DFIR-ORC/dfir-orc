@@ -115,8 +115,8 @@ void Main::PrintUsage()
             "archives are created."},
         Usage::Parameter {
             "/Key=<KeyWords>",
-            "Comma separated list of commands to be executed or archive to be created (ex: 'GetYara,NTFSInfo) based on "
-            "embedded configuration'"},
+            "Comma separated list of commands to be executed or archive to be created (ex: 'GetYara,NTFSInfo') based "
+            "on embedded configuration"},
         Usage::Parameter {"/+Key=<KeyWord>", "Enables one or multiple archive generation or command execution"},
         Usage::Parameter {"/-Key=<KeyWord>", "Disable one or multiple archive generation or command execution"}};
 
@@ -181,7 +181,7 @@ void Main::PrintParameters()
     PrintValue(node, L"Priority", config.Priority);
     PrintValue(node, L"Power State", ToString(config.PowerState));
     auto keySelection = boost::join(config.OnlyTheseKeywords, L", ");
-    PrintValue(node, L"Key selection", keySelection.empty() ? Text::kNoneW : keySelection);
+    PrintValue(node, L"Explicit key selection", keySelection.empty() ? Text::kNoneW : keySelection);
     PrintValues(node, L"Enable keys", config.EnableKeywords);
     PrintValues(node, L"Disable keys", config.DisableKeywords);
 
