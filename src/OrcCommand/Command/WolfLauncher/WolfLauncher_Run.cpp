@@ -945,9 +945,9 @@ HRESULT Main::Run_Execute()
     const auto& fileSink = m_logging.fileSink();
     if (fileSink->IsOpen())
     {
+        const auto localPath = fileSink->OutputPath();  // must be done before calling 'Close'
         fileSink->Close();
 
-        const auto localPath = fileSink->OutputPath();
         if (localPath)
         {
             if (auto hr = UploadSingleFile(localPath->filename(), *localPath); FAILED(hr))
