@@ -176,7 +176,8 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
     {
         case ArchiveNotification::ArchiveStarted: {
             m_journal.Print(m_commandSet, operation, L"Started");
-            outcomeArchive.SetName(notification->GetFileName());
+            auto output = std::filesystem::path(notification->GetFileName());
+            outcomeArchive.SetName(output.filename());
             break;
         }
         case ArchiveNotification::FileAddition: {
@@ -311,13 +312,11 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
         ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
-        auto request = ArchiveMessage::MakeOpenRequest(m_strArchiveFileName, fmt, pFinalStream, m_strCompressionLevel);
+        auto request = ArchiveMessage::MakeOpenRequest(m_strOutputFileName, fmt, pFinalStream, m_strCompressionLevel);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
     else
     {
-
-
         ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
         auto request = ArchiveMessage::MakeOpenRequest(m_strOutputFullPath, fmt, nullptr, m_strCompressionLevel);
