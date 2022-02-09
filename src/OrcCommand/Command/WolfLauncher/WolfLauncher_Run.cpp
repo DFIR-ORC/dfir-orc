@@ -243,6 +243,19 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
     wolfLauncher.SetCommandLineValue(GetCommandLineW());
 }
 
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, UtilitiesLogger& logging)
+{
+    const auto& fileSink = logging.fileSink();
+    if (fileSink)
+    {
+        auto logPath = fileSink->OutputPath();
+        if (logPath)
+        {
+            outcome.SetLogFileName(logPath->filename());
+        }
+    }
+}
+
 Result<uint64_t> GetFileSize(const std::filesystem::path& path)
 {
     FileStream fs;
@@ -652,11 +665,12 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
 {
     if (config.Outcome.Type == OutputSpec::Kind::None)
     {
-        Log::Debug(L"No outcome file specified");
+        Log::Debug("No outcome file specified");
         return Success<void>();
     }
 
     ::UpdateOutcome(m_outcome);
+    ::UpdateOutcome(m_outcome, m_logging);
 
     auto rv = ::DumpOutcome(m_outcome, config.Outcome);
     if (rv.has_error())

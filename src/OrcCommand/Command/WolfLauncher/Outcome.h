@@ -252,10 +252,14 @@ public:
     Mothership& GetMothership() { return m_mothership; }
     const Mothership& GetMothership() const { return m_mothership; }
 
+    const std::wstring& LogFileName() const { return m_logFileName; }
+    void SetLogFileName(std::wstring path) { m_logFileName = std::move(path); }
+
 private:
     mutable std::mutex m_mutex;
     std::wstring m_computerName;
     Mothership m_mothership;
+    std::wstring m_logFileName;
     WolfLauncher m_wolfLauncher;
     std::wstring m_timestamp;
     std::chrono::time_point<std::chrono::system_clock> m_startingTime;
