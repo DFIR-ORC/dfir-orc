@@ -234,7 +234,7 @@ public:
     }
 
     const std::wstring& GetComputerNameValue() const { return m_computerName; }
-    void SetComputerNameValue(const std::wstring& name) { m_computerName = name; }
+    void SetComputerNameValue(std::wstring name) { m_computerName = std::move(name); }
 
     // Timestamp is used as a unique identifier between orc execution and multiple files
     std::wstring GetTimestampKey() const { return m_timestamp; }

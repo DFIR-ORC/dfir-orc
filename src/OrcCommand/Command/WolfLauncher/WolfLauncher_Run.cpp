@@ -184,7 +184,7 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
 
     {
         std::wstring computerName;
-        SystemDetails::GetComputerName_(computerName);
+        SystemDetails::GetFullComputerName(computerName);
         outcome.SetComputerNameValue(computerName);
     }
 
