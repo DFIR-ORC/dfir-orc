@@ -104,9 +104,37 @@ public:
     const std::optional<IO_COUNTERS>& GetIOCounters() const { return m_ioCounters; }
     void SetIOCounters(const IO_COUNTERS& counters) { m_ioCounters = counters; }
 
+    class Output
+    {
+    public:
+        enum class Type
+        {
+            Undefined = 0,
+            StdOut,
+            StdErr,
+            StdOutErr,
+            File,
+            Directory
+        };
+
+        const std::wstring& GetName() const { return m_name; }
+        void SetName(const std::wstring& name) { m_name = name; }
+
+        Type GetType() const { return m_type; }
+        void SetType(Type type) { m_type = type; }
+
+    private:
+        std::wstring m_name;
+        Type m_type;
+    };
+
+    const std::vector<Output>& GetOutput() const { return m_output; }
+    std::vector<Output>& GetOutput() { return m_output; }
+
 private:
     std::wstring m_keyword;
     std::wstring m_commandLine;
+    std::vector<Output> m_output;
     Timestamp m_creationTime;
     Timestamp m_exitTime;
     std::optional<std::chrono::seconds> m_userTime;

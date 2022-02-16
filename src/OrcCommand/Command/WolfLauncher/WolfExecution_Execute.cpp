@@ -48,6 +48,47 @@ using namespace Orc::Command::Wolf;
 
 namespace {
 
+Outcome::Command::Output::Type ToOutputFileType(CommandParameter::ParamKind kind)
+{
+    using Type = Outcome::Command::Output::Type;
+    using ParamKind = CommandParameter::ParamKind;
+
+    switch (kind)
+    {
+        case ParamKind::StdOut:
+            return Type::StdOut;
+        case ParamKind::StdErr:
+            return Type::StdErr;
+        case ParamKind::StdOutErr:
+            return Type::StdOutErr;
+        case ParamKind::OutFile:
+            return Type::File;
+        case ParamKind::OutDirectory:
+            return Type::Directory;
+        default:
+            return Type::Undefined;
+    }
+}
+
+bool HasFileOutput(Orc::CommandParameter::ParamKind kind)
+{
+    using namespace Orc;
+
+    switch (kind)
+    {
+        case Orc::CommandParameter::ParamKind::StdOut:
+        case Orc::CommandParameter::ParamKind::StdErr:
+        case Orc::CommandParameter::ParamKind::StdOutErr:
+        case Orc::CommandParameter::ParamKind::OutFile:
+        case Orc::CommandParameter::ParamKind::OutDirectory:
+            return true;
+        default:
+            break;
+    }
+
+    return false;
+}
+
 Outcome::Archive::InputType GetArchiveInputType()
 {
     const auto kOfflineLocation = L"%OFFLINELOCATION%";
@@ -649,7 +690,24 @@ HRESULT WolfExecution::EnqueueCommands()
                 std::make_shared<WolfTask>(GetKeyword(), command->Keyword(), m_journal);
         }
         if (!command->IsOptional())
+        {
+            {
+                auto&& lock = m_outcome.Lock();
+                auto& outcomeCommand = m_outcome.GetCommandSet(m_commandSet).GetCommand(command->Keyword());
+                for (const auto& parameter : command->GetParameters())
+                {
+                    if (::HasFileOutput(parameter.Kind))
+                    {
+                        Outcome::Command::Output outputFile;
+                        outputFile.SetName(parameter.Name);
+                        outputFile.SetType(::ToOutputFileType(parameter.Kind));
+                        outcomeCommand.GetOutput().emplace_back(std::move(outputFile));
+                    }
+                }
+            }
+
             Concurrency::send(m_cmdAgentBuffer, command);
+        }
     }
 
     return S_OK;

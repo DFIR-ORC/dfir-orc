@@ -17,6 +17,45 @@ using namespace Orc;
 
 namespace {
 
+std::string ToString(Outcome::Command::Output::Type type)
+{
+    using Type = Outcome::Command::Output::Type;
+
+    switch (type)
+    {
+        case Type::StdOut:
+            return "stdout";
+        case Type::StdErr:
+            return "stderr";
+        case Type::StdOutErr:
+            return "stdout_stderr";
+        case Type::File:
+            return "file";
+        case Type::Directory:
+            return "directory";
+        case Type::Undefined:
+            return "undefined";
+        default:
+            return "unknown";
+    }
+}
+
+void Write(StructuredOutputWriter::IWriter::Ptr& writer, const std::vector<Outcome::Command::Output>& output)
+{
+    const auto kNodeOutput = L"output";
+    writer->BeginCollection(kNodeOutput);
+    Guard::Scope onOutputExit([&]() { writer->EndCollection(kNodeOutput); });
+
+    for (const auto& item : output)
+    {
+        writer->BeginElement(nullptr);
+        Guard::Scope onExit([&]() { writer->EndElement(nullptr); });
+
+        writer->WriteNamed(L"name", item.GetName());
+        writer->WriteNamed(L"type", ToString(item.GetType()));
+    }
+};
+
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const std::optional<IO_COUNTERS>& counters)
 {
     if (!counters)
@@ -160,6 +199,8 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command&
     }
 
     ::Write(writer, command.GetIOCounters());
+
+    ::Write(writer, command.GetOutput());
 }
 
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::CommandSet& commandSet)
