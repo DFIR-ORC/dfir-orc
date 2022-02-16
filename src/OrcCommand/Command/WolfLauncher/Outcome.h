@@ -53,8 +53,12 @@ public:
     void SetSize(const uint64_t size) { m_size = size; }
     void SetSize(const std::optional<FileSize>& size) { m_size = size; }
 
+    const std::optional<std::string>& GetSha1() const { return m_sha1; }
+    void SetSha1(std::string_view sha1) { m_sha1 = sha1; }
+
 private:
     std::wstring m_name;
+    std::optional<std::string> m_sha1;
     std::optional<FileSize> m_size;
     std::vector<Item> m_items;
 };

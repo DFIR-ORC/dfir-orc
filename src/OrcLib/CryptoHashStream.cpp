@@ -15,6 +15,8 @@
 #include "CryptoUtilities.h"
 #include "CaseInsensitive.h"
 #include "BinaryBuffer.h"
+#include "DevNullStream.h"
+#include "FileStream.h"
 
 #include <sstream>
 #include <iomanip>
@@ -28,9 +30,49 @@
 
 using namespace std;
 
-using namespace Orc;
+namespace Orc {
 
 HCRYPTPROV CryptoHashStream::g_hProv = NULL;
+
+Result<std::wstring> Hash(const std::filesystem::path& path, CryptoHashStream::Algorithm algorithm)
+{
+    auto fileStream = std::make_shared<FileStream>();
+
+    HRESULT hr = fileStream->OpenFile(
+        path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to open: '{}' [{}]", path, SystemError(hr));
+        return SystemError(hr);
+    }
+
+    CryptoHashStream hashStream;
+    hr = hashStream.OpenToRead(algorithm, fileStream);
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to open hashstream: '{}' [{}]", path, SystemError(hr));
+        return SystemError(hr);
+    }
+
+    ULONGLONG ullBytesWritten;
+    hr = hashStream.CopyTo(DevNullStream(), &ullBytesWritten);
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to consume stream: '{}' [{}]", path, SystemError(hr));
+        return SystemError(hr);
+    }
+
+    std::wstring hash;
+    hr = hashStream.GetHash(algorithm, hash);
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to get {}: '{}' [{}]", algorithm, path, SystemError(hr));
+        return SystemError(hr);
+    }
+
+    Log::Debug(L"Hash for '{}': {}:{}", path, algorithm, hash);
+    return hash;
+}
 
 CryptoHashStream::~CryptoHashStream(void)
 {
@@ -255,3 +297,5 @@ std::wstring CryptoHashStream::GetSupportedAlgorithm(Algorithm algs)
 
     return retval;
 }
+
+}  // namespace Orc

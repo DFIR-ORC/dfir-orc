@@ -40,6 +40,7 @@
 #include "WolfTask.h"
 #include "Convert.h"
 #include "Utils/Time.h"
+#include "Text/HexDump.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -208,6 +209,36 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
                 m_commandSet, operation, L"Completed: {} ({})", notification->Keyword(), notification->FileSize());
 
             outcomeArchive.SetSize(notification->FileSize());
+
+            if (m_archiveHashStream)
+            {
+                CBinaryBuffer buffer;
+                hr = m_archiveHashStream->GetSHA1(buffer);
+                if (FAILED(hr))
+                {
+                    Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", SystemError(hr));
+                    hr = S_OK;
+                }
+                else if (!buffer.empty())
+                {
+                    std::string sha1;
+                    std::string_view bufferView(buffer);
+                    Text::ToHex(std::cbegin(bufferView), std::cend(bufferView), std::back_inserter(sha1));
+                    outcomeArchive.SetSha1(sha1);
+                }
+            }
+            else
+            {
+                auto sha1 = Hash(m_strOutputFullPath, CryptoHashStreamAlgorithm::SHA1);
+                if (!sha1)
+                {
+                    Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", sha1.error());
+                }
+
+                outcomeArchive.SetSha1(Utf16ToUtf8(*sha1, "<encoding_error>"));
+            }
+
+            outcomeArchive.SetInputType(::GetArchiveInputType());
             break;
         }
     }
@@ -237,10 +268,17 @@ HRESULT WolfExecution::CreateArchiveAgent()
         }
 
         auto pOutputStream = std::make_shared<FileStream>();
-
         if (FAILED(hr = pOutputStream->WriteTo(m_strOutputFullPath.c_str())))
         {
             Log::Error(L"Failed to open file for write: '{}' [{}]", m_strOutputFullPath, SystemError(hr));
+            return hr;
+        }
+
+        m_archiveHashStream = std::make_shared<CryptoHashStream>();
+        hr = m_archiveHashStream->OpenToWrite(CryptoHashStream::Algorithm::SHA1, pOutputStream);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to open hash stream for write [{}]", SystemError(hr));
             return hr;
         }
 
@@ -254,7 +292,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
                 return hr;
             }
         }
-        if (FAILED(hr = pEncodingStream->Initialize(pOutputStream)))
+        if (FAILED(hr = pEncodingStream->Initialize(m_archiveHashStream)))
         {
             Log::Error(L"Failed initialize encoding stream for '{}' [{}]", m_strOutputFullPath, SystemError(hr));
             return hr;

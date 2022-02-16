@@ -11,10 +11,12 @@
 #include "HashStream.h"
 
 #include <memory>
+#include <filesystem>
 
 #include "CryptoUtilities.h"
 #include "CryptoHashStreamAlgorithm.h"
 #include "Text/Fmt/CryptoHashStreamAlgorithm.h"
+#include "Utils/Result.h"
 
 #pragma managed(push, off)
 
@@ -61,6 +63,8 @@ protected:
     STDMETHOD(ResetHash(bool bContinue = false));
     STDMETHOD(HashData(LPBYTE pBuffer, DWORD dwBytesToHash));
 };
+
+Result<std::wstring> Hash(const std::filesystem::path& path, CryptoHashStream::Algorithm algorithm);
 
 }  // namespace Orc
 

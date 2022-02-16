@@ -81,6 +81,12 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive&
 
     writer->WriteNamed(L"name", archive.GetName());
 
+    const auto& sha1 = archive.GetSha1();
+    if (sha1.has_value())
+    {
+        writer->WriteNamed(L"sha1", *sha1);
+    }
+
     const auto& size = archive.GetSize();
     if (size.has_value())
     {
