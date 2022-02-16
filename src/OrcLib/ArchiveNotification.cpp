@@ -55,6 +55,11 @@ Orc::ArchiveNotification::Notification Orc::ArchiveNotification::MakeArchiveStar
     return retval;
 }
 
+void Orc::ArchiveNotification::SetCommand(const std::wstring& command)
+{
+    m_command = command;
+}
+
 void Orc::ArchiveNotification::SetFileSize(const std::filesystem::path& path)
 {
     std::error_code ec;

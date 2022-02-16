@@ -539,6 +539,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                                     action->MatchPattern(),
                                     true,
                                     action->DeleteWhenDone());
+                                archiveRequest->SetCommand(m_Keyword);
                                 Concurrency::send(action->ArchiveTarget(), archiveRequest);
                             }
                             else
@@ -584,6 +585,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             {
                                 auto archiveRequest = ArchiveMessage::MakeAddFileRequest(
                                     action->Name(), action->Fullpath(), true, action->DeleteWhenDone());
+                                archiveRequest->SetCommand(m_Keyword);
                                 Concurrency::send(action->ArchiveTarget(), archiveRequest);
                             }
                             else
@@ -625,6 +627,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             }
                             auto archiveRequest =
                                 ArchiveMessage::MakeAddStreamRequest(action->Name(), action->GetStream(), true);
+                            archiveRequest->SetCommand(m_Keyword);
                             Concurrency::send(action->ArchiveTarget(), archiveRequest);
                         }
                         else
