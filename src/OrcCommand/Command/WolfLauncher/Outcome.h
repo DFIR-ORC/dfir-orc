@@ -215,6 +215,26 @@ private:
     std::wstring m_commandLine;
 };
 
+class Recipient
+{
+public:
+    Recipient(std::string name, std::string publicKey)
+        : m_name(std::move(name))
+        , m_publicKey(std::move(publicKey))
+    {
+    }
+
+    void SetName(const std::string& name) { m_name = name; }
+    const std::string& Name() const { return m_name; }
+
+    void SetPublicKey(const std::string& publicKey) { m_publicKey = publicKey; }
+    const std::string& PublicKey() const { return m_publicKey; }
+
+private:
+    std::string m_name;
+    std::string m_publicKey;
+};
+
 class Outcome
 {
 public:
@@ -265,6 +285,9 @@ public:
     const std::wstring& OutlineFileName() const { return m_outlineFileName; }
     void SetOutlineFileName(std::wstring path) { m_outlineFileName = std::move(path); }
 
+    const std::vector<Recipient>& Recipients() const { return m_recipients; }
+    std::vector<Recipient>& Recipients() { return m_recipients; }
+
 private:
     mutable std::mutex m_mutex;
     std::wstring m_computerName;
@@ -272,6 +295,7 @@ private:
     std::wstring m_consoleFileName;
     std::wstring m_logFileName;
     std::wstring m_outlineFileName;
+    std::vector<Recipient> m_recipients;
     WolfLauncher m_wolfLauncher;
     std::wstring m_timestamp;
     std::chrono::time_point<std::chrono::system_clock> m_startingTime;

@@ -15,6 +15,8 @@
 #include <boost/logic/tribool.hpp>
 #include <boost/scope_exit.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/range/algorithm/remove_if.hpp>
 
 #include "Robustness.h"
 #include "EmbeddedResource.h"
@@ -81,6 +83,59 @@ GetLocalOutputFileInformations(const Orc::Command::Wolf::WolfExecution& exec, Fi
     fileInformations.size = (static_cast<uint64_t>(data.nFileSizeHigh) << 32) | data.nFileSizeLow;
 
     return S_OK;
+}
+
+Orc::Result<std::string> WincryptBinaryToString(std::string_view buffer)
+{
+    std::string publicKey;
+    DWORD publicKeySize = 0;
+    if (!CryptBinaryToStringA(
+            reinterpret_cast<const unsigned char*>(buffer.data()),
+            buffer.size(),
+            CRYPT_STRING_BASE64HEADER,
+            NULL,
+            &publicKeySize))
+
+    {
+        std::error_code ec = LastWin32Error();
+        Log::Debug("Failed CryptBinaryToStringA while calculating output length [{}]", ec);
+        return nullptr;
+    }
+
+    publicKey.resize(publicKeySize);
+    if (!CryptBinaryToStringA(
+            reinterpret_cast<const unsigned char*>(buffer.data()),
+            buffer.size(),
+            CRYPT_STRING_BASE64HEADER,
+            publicKey.data(),
+            &publicKeySize))
+
+    {
+        std::error_code ec = LastWin32Error();
+        Log::Debug("Failed CryptBinaryToStringA while converting binary blob [{}]", ec);
+        return nullptr;
+    }
+
+    publicKey.erase(boost::remove_if(publicKey, boost::is_any_of("\r\n")), publicKey.end());
+    return publicKey;
+}
+
+void UpdateOutcome(
+    Command::Wolf::Outcome::Outcome& outcome,
+    const std::vector<std::shared_ptr<Command::Wolf::WolfExecution::Recipient>>& recipients)
+
+{
+    for (auto& item : recipients)
+    {
+        auto certificate = WincryptBinaryToString(item->Certificate);
+        if (!certificate)
+
+        {
+            Log::Error(L"Failed to convert Wincrypt binary blob for '{}' [{}]", item->Name, certificate.error());
+            continue;
+        }
+        outcome.Recipients().emplace_back(Utf16ToUtf8(item->Name, "<encoding_error>"), *certificate);
+    }
 }
 
 HRESULT GetRemoteOutputFileInformations(
@@ -202,7 +257,6 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
     wolfLauncher.SetVersion(kOrcFileVerString);
     wolfLauncher.SetCommandLineValue(GetCommandLineW());
 }
-
 void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, StandardOutput& standardOutput)
 {
     auto consolePath = standardOutput.FileTee().Path();
@@ -650,6 +704,7 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
     }
 
     ::UpdateOutcome(m_outcome);
+    ::UpdateOutcome(m_outcome, config.m_Recipients);
     ::UpdateOutcome(m_outcome, m_standardOutput);
     ::UpdateOutcome(m_outcome, m_logging);
     ::UpdateOutcomeWithOutline(m_outcome, config.Outline);

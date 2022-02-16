@@ -282,6 +282,22 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             }
 
             {
+                const auto kNodeRecipients = L"recipients";
+                writer->BeginCollection(kNodeRecipients);
+
+                Guard::Scope onRecipientsExit([&]() { writer->EndCollection(kNodeRecipients); });
+
+                for (const auto& recipient : outcome.Recipients())
+                {
+                    writer->BeginElement(nullptr);
+                    Guard::Scope onRecipientItem([&]() { writer->EndElement(nullptr); });
+
+                    writer->WriteNamed(L"name", recipient.Name());
+                    writer->WriteNamed(L"public_key", recipient.PublicKey());
+                }
+            }
+
+            {
                 const auto kNodeCommandSet = L"command_set";
                 writer->BeginCollection(kNodeCommandSet);
                 Guard::Scope onExit([&]() { writer->EndCollection(kNodeCommandSet); });
