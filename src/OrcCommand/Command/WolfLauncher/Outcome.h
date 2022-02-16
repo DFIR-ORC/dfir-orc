@@ -28,6 +28,13 @@ class Archive
 public:
     using FileSize = Traits::ByteQuantity<uint64_t>;
 
+    enum class InputType
+    {
+        kUndefined = 0,
+        kOffline,
+        kRunningSystem
+    };
+
     class Item
     {
     public:
@@ -56,11 +63,15 @@ public:
     const std::optional<std::string>& GetSha1() const { return m_sha1; }
     void SetSha1(std::string_view sha1) { m_sha1 = sha1; }
 
+    void SetInputType(InputType inputType) { m_inputType = inputType; }
+    InputType InputTypeValue() const { return m_inputType; }
+
 private:
     std::wstring m_name;
     std::optional<std::string> m_sha1;
     std::optional<FileSize> m_size;
     std::vector<Item> m_items;
+    InputType m_inputType;
 };
 
 class Command

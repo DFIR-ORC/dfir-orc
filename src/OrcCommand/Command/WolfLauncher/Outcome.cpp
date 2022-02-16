@@ -68,6 +68,21 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive:
     }
 }
 
+std::string ToString(Outcome::Archive::InputType inputType)
+{
+    switch (inputType)
+    {
+        case Outcome::Archive::InputType::kUndefined:
+            return "undefined";
+        case Outcome::Archive::InputType::kOffline:
+            return "offline";
+        case Outcome::Archive::InputType::kRunningSystem:
+            return "running_system";
+    }
+
+    return "<unknown>";
+}
+
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive& archive)
 {
     if (archive.GetName().empty())
@@ -92,6 +107,8 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive&
     {
         writer->WriteNamed(L"size", *size);
     }
+
+    writer->WriteNamed(L"input_type", ToString(archive.InputTypeValue()));
 
     {
         writer->BeginCollection(L"files");

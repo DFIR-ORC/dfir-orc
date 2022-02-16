@@ -40,10 +40,35 @@
 #include "WolfTask.h"
 #include "Convert.h"
 #include "Utils/Time.h"
+#include "Utils/WinApi.h"
 #include "Text/HexDump.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
+
+namespace {
+
+Outcome::Archive::InputType GetArchiveInputType()
+{
+    const auto kOfflineLocation = L"%OFFLINELOCATION%";
+
+    std::error_code ec;
+    auto offlineLocation = Orc::ExpandEnvironmentStringsApi(kOfflineLocation, 512, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed to expand environment variable {} [{}]", kOfflineLocation, ec);
+        return Outcome::Archive::InputType::kUndefined;
+    }
+
+    if (offlineLocation.empty() || offlineLocation == kOfflineLocation)
+    {
+        return Outcome::Archive::InputType::kRunningSystem;
+    }
+
+    return Outcome::Archive::InputType::kOffline;
+}
+
+}
 
 std::wstring WolfExecution::ToString(WolfExecution::Repeat value)
 {
@@ -193,6 +218,7 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
         }
         case ArchiveNotification::DirectoryAddition: {
             m_journal.Print(m_commandSet, operation, L"Add directory: {}", notification->Keyword());
+            // Do not update Outcome as there will be 'ArchiveNotification::FileAddition' for them
             break;
         }
         case ArchiveNotification::StreamAddition: {
