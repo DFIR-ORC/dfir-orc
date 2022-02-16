@@ -228,16 +228,6 @@ void ArchiveAgent::run()
                             {
                                 m_cabName = request->Name();
 
-                                m_compressor->SetCallback([this, request](const OrcArchive::ArchiveItem& item) {
-                                    auto notification = ArchiveNotification::MakeSuccessNotification(
-                                        request, ArchiveNotification::FileAddition, item.NameInArchive);
-                                    if (notification)
-                                    {
-                                        SetFileSize(item, *notification);
-                                        SendResult(notification);
-                                    }
-                                });
-
                                 notification = ArchiveNotification::MakeArchiveStartedSuccessNotification(
                                     request, request->Name(), request->Name(), request->GetCompressionLevel());
                             }
@@ -271,16 +261,6 @@ void ArchiveAgent::run()
                         {
                             m_cabName = request->Name();
 
-                            m_compressor->SetCallback([this, request](const OrcArchive::ArchiveItem& item) {
-                                auto notification = ArchiveNotification::MakeSuccessNotification(
-                                    request, ArchiveNotification::FileAddition, item.NameInArchive);
-                                if (notification)
-                                {
-                                    SetFileSize(item, *notification);
-                                    SendResult(notification);
-                                }
-                            });
-
                             notification = ArchiveNotification::MakeArchiveStartedSuccessNotification(
                                 request, request->Name(), request->Name(), request->GetCompressionLevel());
                         }
@@ -296,18 +276,30 @@ void ArchiveAgent::run()
             }
             break;
             case ArchiveMessage::AddFile: {
-                ArchiveNotification::Notification notification;
+                auto callback = [this, request](const OrcArchive::ArchiveItem& item, const HRESULT hr) {
+                    auto notification = ArchiveNotification::MakeSuccessNotification(
+                        request, ArchiveNotification::FileAddition, item.NameInArchive);
+                    if (notification)
+                    {
+                        SetFileSize(item, *notification);
+                        SendResult(notification);
+                    }
+                };
 
                 hr = m_compressor->AddFile(
-                    request->NameInArchive().c_str(), request->SourcePath().c_str(), request->GetDeleteWhenDone());
+                    request->NameInArchive().c_str(),
+                    request->SourcePath().c_str(),
+                    request->GetDeleteWhenDone(),
+                    std::move(callback));
                 if (FAILED(hr))
                 {
+                    ArchiveNotification::Notification notification;
+
                     notification = ArchiveNotification::MakeFailureNotification(
                         request, ArchiveNotification::FileAddition, hr, request->Name(), L"AddFileToCab failed");
-                }
 
-                if (notification)
                     SendResult(notification);
+                }
             }
             break;
             case ArchiveMessage::AddDirectory: {
@@ -354,22 +346,31 @@ void ArchiveAgent::run()
                             strCabbedName.assign(request->NameInArchive());
                             strCabbedName.append(L"\\");
                             strCabbedName.append(ffd.cFileName);
-                            ArchiveNotification::Notification notification;
+
+                            auto callback = [this, request](const OrcArchive::ArchiveItem& item, const HRESULT hr) {
+                                auto notification = ArchiveNotification::MakeSuccessNotification(
+                                    request, ArchiveNotification::FileAddition, item.NameInArchive);
+                                if (notification)
+                                {
+                                    SetFileSize(item, *notification);
+                                    SendResult(notification);
+                                }
+                            };
 
                             hr = m_compressor->AddFile(
-                                strCabbedName.c_str(), strFileName.c_str(), request->GetDeleteWhenDone());
+                                strCabbedName.c_str(),
+                                strFileName.c_str(),
+                                request->GetDeleteWhenDone(),
+                                std::move(callback));
                             if (FAILED(hr))
                             {
+                                ArchiveNotification::Notification notification;
                                 notification = ArchiveNotification::MakeFailureNotification(
                                     request,
                                     ArchiveNotification::FileAddition,
                                     hr,
                                     strFileName,
                                     L"AddFileToCab failed");
-                            }
-
-                            if (notification)
-                            {
                                 SendResult(notification);
                             }
                         }
@@ -391,18 +392,24 @@ void ArchiveAgent::run()
             }
             break;
             case ArchiveMessage::AddStream: {
-                ArchiveNotification::Notification notification;
+
+                auto callback = [this, request](const OrcArchive::ArchiveItem& item, const HRESULT hr) {
+                    auto notification = ArchiveNotification::MakeSuccessNotification(
+                        request, ArchiveNotification::FileAddition, item.NameInArchive);
+                    if (notification)
+                    {
+                        SetFileSize(item, *notification);
+                        SendResult(notification);
+                    }
+                };
 
                 hr = m_compressor->AddStream(
-                    request->NameInArchive().c_str(), request->SourcePath().c_str(), request->GetStream());
+                    request->NameInArchive().c_str(), request->SourcePath().c_str(), request->GetStream(), callback);
                 if (FAILED(hr))
                 {
+                    ArchiveNotification::Notification notification;
                     notification = ArchiveNotification::MakeFailureNotification(
                         request, ArchiveNotification::StreamAddition, hr, request->Name(), L"AddStream failed");
-                }
-
-                if (notification)
-                {
                     SendResult(notification);
                 }
             }

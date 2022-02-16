@@ -33,7 +33,7 @@ public:
     class ArchiveItem
     {
     public:
-        using ArchivedCallback = std::function<void(HRESULT)>;
+        using ArchivedCallback = std::function<void(const ArchiveItem&, HRESULT)>;
 
         enum Status
         {
@@ -96,6 +96,7 @@ protected:
     ArchiveCallback m_Callback;
 
 public:
+    // TODO: remove references to 'bComputeHash', not supported anymore with 7z
     OrcArchive(bool bComputeHash)
         : m_bComputeHash(bComputeHash)
         , m_Callback(nullptr) {};

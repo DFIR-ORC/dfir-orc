@@ -379,7 +379,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
         Log::Error(L"Failed operation on: '{}' (result: {:#x})", m_Items[m_curIndex].NameInArchive, operationResult);
         if (item.m_archivedCallback)
         {
-            item.m_archivedCallback(hr);
+            item.m_archivedCallback(item, hr);
             return hr;
         }
     }
@@ -394,7 +394,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
 
     if (item.m_archivedCallback)
     {
-        item.m_archivedCallback(S_OK);
+        item.m_archivedCallback(item, S_OK);
     }
 
     if (m_Callback)

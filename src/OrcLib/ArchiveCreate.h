@@ -47,9 +47,18 @@ public:
     STDMETHOD(SetCompressionLevel)(__in const std::wstring& strLevel) PURE;
 
     STDMETHOD(AddFile)(__in PCWSTR pwzNameInArchive, __in PCWSTR pwzFileName, bool bDeleteWhenDone);
+
+    STDMETHOD(AddFile)
+    (__in PCWSTR pwzNameInArchive,
+     __in PCWSTR pwzFileName,
+     bool bDeleteWhenDone,
+     ArchiveItem::ArchivedCallback itemArchivedCallback);
+
     STDMETHOD(AddBuffer)(__in_opt PCWSTR pwzNameInArchive, __in PVOID pData, __in DWORD cbData);
+
     STDMETHOD(AddStream)
     (__in_opt PCWSTR pwzNameInArchive, __in_opt PCWSTR pwzPath, __in_opt const std::shared_ptr<ByteStream>& pStream);
+
     STDMETHODIMP AddStream(
         __in_opt PCWSTR pwzNameInArchive,
         __in_opt PCWSTR pwzPath,
