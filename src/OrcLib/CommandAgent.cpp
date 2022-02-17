@@ -545,7 +545,8 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                         ExpandEnvironmentStringsApi(parameter.Keyword.c_str(), parameter.Keyword.size() + 4096, ec);
                     if (ec)
                     {
-                        Log::Error(L"Failed to expand environment arguments string for '{}' [{}]", parameter.Keyword, ec);
+                        Log::Error(
+                            L"Failed to expand environment arguments string for '{}' [{}]", parameter.Keyword, ec);
                         arguments = parameter.Keyword;
                         ec.clear();
                     }
@@ -597,6 +598,8 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                         if (FAILED(hr = retval->AddExecutableToRun(parameter.Name)))
                             return;
                     }
+
+                    retval->SetIsSelfOrcExecutable(message->IsSelfOrcExecutable());
                 }
                 break;
                 case CommandParameter::InFile: {
@@ -764,6 +767,8 @@ HRESULT CommandAgent::ExecuteNextCommand()
 
             auto notification = CommandNotification::NotifyStarted(
                 command->ProcessID(), command->GetKeyword(), command->m_pi.hProcess, command->m_commandLine);
+            notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
+
             SendResult(notification);
         }
         else

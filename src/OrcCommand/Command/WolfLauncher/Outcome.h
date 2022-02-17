@@ -83,6 +83,9 @@ public:
     const std::wstring& GetCommandLineValue() const { return m_commandLine; }
     void SetCommandLineValue(const std::wstring& commandLine) { m_commandLine = commandLine; }
 
+    bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
+    void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
+
     Timestamp GetCreationTime() const { return m_creationTime; }
     void SetCreationTime(const Timestamp& creationTime) { m_creationTime = creationTime; }
 
@@ -134,6 +137,7 @@ public:
 private:
     std::wstring m_keyword;
     std::wstring m_commandLine;
+    bool m_isSelfOrcExecutable = false;
     std::vector<Output> m_output;
     Timestamp m_creationTime;
     Timestamp m_exitTime;

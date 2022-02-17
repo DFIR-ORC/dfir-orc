@@ -38,6 +38,7 @@ public:
         : m_journal(journal)
         , m_commandSet(commandSet)
         , m_command(command)
+        , m_isSelfOrcExecutable(false)
         , m_dwPID(0)
         , m_dwExitCode(-1)
         , m_dwLastReportedHang(30)
@@ -66,6 +67,7 @@ public:
     std::optional<std::chrono::microseconds> KernelTime() const { return m_kernelTime; }
     std::optional<IO_COUNTERS> IoCounters() const { return m_ioCounters; }
 
+    bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
     HRESULT ApplyNotification(
         const std::shared_ptr<CommandNotification>& notification,
         std::vector<std::shared_ptr<CommandMessage>>& actions);
@@ -76,6 +78,7 @@ private:
     std::wstring m_commandSet;
     std::wstring m_command;
     std::wstring m_commandLine;
+    bool m_isSelfOrcExecutable;
 
     DWORD m_dwPID;
     DWORD m_dwExitCode;

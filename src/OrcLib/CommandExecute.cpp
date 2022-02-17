@@ -156,6 +156,7 @@ void OnComplete::CancelTerminationHandler()
 CommandExecute::CommandExecute(const std::wstring& Keyword)
     : m_Keyword(Keyword)
     , m_RedirectStatus(ProcessRedirect::Initialized)
+    , m_isSelfOrcExecutable(false)
 {
     m_dwExitCode = 0L;
     ZeroMemory(&m_si, sizeof(m_si));

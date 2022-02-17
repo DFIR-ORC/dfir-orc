@@ -95,6 +95,7 @@ private:
     PJOB_STATISTICS m_pJobStats;
 
     std::wstring m_commandLine;
+    bool m_isSelfOrcExecutable;
 
 protected:
     CommandNotification(Event result);
@@ -102,6 +103,9 @@ protected:
 public:
     static Notification
     NotifyStarted(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess, const std::wstring& commandLine);
+    bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
+    void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
+
     static Notification NotifyProcessTerminated(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess);
 
     // Job Notifictions

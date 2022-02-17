@@ -81,7 +81,8 @@ public:
 private:
     void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notification& notfication);
     CommandMessage::Message SetCommandFromConfigItem(const ConfigItem& item);
-    HRESULT GetExecutableToRun(const ConfigItem& item, std::wstring& strExeToRun, std::wstring& strArgToAdd);
+    HRESULT
+    GetExecutableToRun(const ConfigItem& item, std::wstring& strExeToRun, std::wstring& strArgToAdd, bool& isSelf);
     HRESULT NotifyTask(const CommandNotification::Ptr& item);
 
 private:

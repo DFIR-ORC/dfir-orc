@@ -187,6 +187,9 @@ public:
     void SetMandatory() { m_bOptional = false; }
     bool IsOptional() { return m_bOptional; }
 
+    void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
+    bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
+
     const Parameters& GetParameters() { return m_Parameters; };
 
     CmdRequest Request() const { return m_Request; };
@@ -211,6 +214,8 @@ private:
     QueueBehavior m_QueueAction;
 
     bool m_bOptional = false;
+
+    bool m_isSelfOrcExecutable = false;
 
     DWORD m_dwPid;
 };

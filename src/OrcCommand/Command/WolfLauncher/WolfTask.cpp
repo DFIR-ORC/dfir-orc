@@ -46,6 +46,7 @@ HRESULT WolfTask::ApplyNotification(
             m_dwPID = static_cast<DWORD>(notification->GetProcessID());
             m_startTime = notification->GetStartTime();
             m_status = Running;
+            m_isSelfOrcExecutable = notification->IsSelfOrcExecutable();
 
             break;
         case CommandNotification::Terminated: {

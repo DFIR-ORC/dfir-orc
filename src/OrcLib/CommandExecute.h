@@ -197,6 +197,9 @@ public:
     };
     const std::vector<std::shared_ptr<OnComplete>>& GetOnCompleteActions() { return m_OnCompleteActions; }
 
+    bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
+    void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
+
     ~CommandExecute(void);
 
 private:
@@ -205,6 +208,7 @@ private:
     std::wstring m_commandLine;
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
+    bool m_isSelfOrcExecutable;
 
     std::vector<std::shared_ptr<OnComplete>> m_OnCompleteActions;
 

@@ -36,6 +36,7 @@ CommandNotification::CommandNotification(CommandNotification::Event anevent)
     , m_pIoCounters(nullptr)
     , m_pProcessTimes(nullptr)
     , m_pJobStats(nullptr)
+    , m_isSelfOrcExecutable(false)
 {
 }
 
