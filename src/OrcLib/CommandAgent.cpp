@@ -30,6 +30,7 @@
 
 #include "Log/Log.h"
 #include "Utils/WinApi.h"
+#include "CryptoHashStream.h"
 
 using namespace std;
 
@@ -602,6 +603,8 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                         if (FAILED(hr = retval->AddExecutableToRun(extracted)))
                             return;
+
+                        executable = extracted;
                     }
                     else
                     {
@@ -616,6 +619,24 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                         {
                             std::filesystem::path path(parameter.Name);
                             retval->SetOriginFriendlyName(path.filename());
+                        }
+
+                        executable = parameter.Name;
+                    }
+
+                    // Calculate the hash here, not ideal but hard to ensure file existency after
+                    // PrepareCommandExecute() and having a way to store it for outcome...
+                    if (executable)
+                    {
+                        auto sha1 = Hash(*executable, CryptoHashStream::Algorithm::SHA1);
+                        if (sha1.has_error())
+                        {
+                            Log::Error(
+                                L"Failed to compute sha1 for command '{}' [{}]", message->Keyword(), sha1.error());
+                        }
+                        else
+                        {
+                            retval->SetExecutableSha1(*sha1);
                         }
                     }
 
@@ -787,8 +808,10 @@ HRESULT CommandAgent::ExecuteNextCommand()
 
             auto notification = CommandNotification::NotifyStarted(
                 command->ProcessID(), command->GetKeyword(), command->m_pi.hProcess, command->m_commandLine);
+
             notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
             notification->SetOriginResourceName(command->GetOriginResourceName());
+            notification->SetExecutableSha1(command->GetExecutableSha1());
             notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
 
             SendResult(notification);

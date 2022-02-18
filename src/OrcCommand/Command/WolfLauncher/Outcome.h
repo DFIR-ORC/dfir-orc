@@ -120,6 +120,19 @@ public:
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
     void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
 
+    const std::optional<std::wstring> GetSha1() const { return m_sha1; }
+    void SetSha1(const std::optional<std::wstring>& sha1) { m_sha1 = sha1; }
+    void SetSha1(const std::wstring& sha1)
+    {
+        if (sha1.empty())
+        {
+            m_sha1.reset();
+            return;
+        }
+
+        m_sha1 = sha1;
+    }
+
     Timestamp GetCreationTime() const { return m_creationTime; }
     void SetCreationTime(const Timestamp& creationTime) { m_creationTime = creationTime; }
 
@@ -175,6 +188,7 @@ private:
     std::wstring m_keyword;
     std::wstring m_commandLine;
     bool m_isSelfOrcExecutable = false;
+    std::optional<std::wstring> m_sha1;
     Origin m_origin;
     std::vector<Output> m_output;
     Timestamp m_creationTime;

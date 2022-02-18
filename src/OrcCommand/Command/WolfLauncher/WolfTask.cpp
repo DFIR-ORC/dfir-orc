@@ -48,6 +48,7 @@ HRESULT WolfTask::ApplyNotification(
             m_status = Running;
             m_originResourceName = notification->GetOriginResourceName();
             m_originFriendlyName = notification->GetOriginFriendlyName();
+            m_executableSha1 = notification->GetExecutableSha1();
             m_isSelfOrcExecutable = notification->IsSelfOrcExecutable();
 
             break;

@@ -203,6 +203,9 @@ public:
     const std::optional<std::wstring>& GetOriginFriendlyName() const { return m_originFriendlyName; }
     void SetOriginFriendlyName(const std::wstring& name) { m_originFriendlyName = name; }
 
+    const std::optional<std::wstring>& GetExecutableSha1() const { return m_executableSha1; }
+    void SetExecutableSha1(const std::wstring& sha1) { m_executableSha1 = sha1; }
+
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
     void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
 
@@ -216,6 +219,7 @@ private:
     PROCESS_INFORMATION m_pi;
     std::optional<std::wstring> m_originResourceName;
     std::optional<std::wstring> m_originFriendlyName;
+    std::optional<std::wstring> m_executableSha1;
     bool m_isSelfOrcExecutable;
 
     std::vector<std::shared_ptr<OnComplete>> m_OnCompleteActions;

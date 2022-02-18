@@ -213,6 +213,11 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command&
     writer->WriteNamed(L"exit_code", command.GetExitCode());
     writer->WriteNamed(L"pid", command.GetPid());
 
+    if (command.GetSha1())
+    {
+        writer->WriteNamed(L"sha1", *command.GetSha1());
+    }
+
     ::Write(writer, command.GetOrigin());
 
     const auto& userTime = command.GetUserTime();
