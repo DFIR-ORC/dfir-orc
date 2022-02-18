@@ -117,6 +117,18 @@ public:
     const std::wstring& GetCommandLineValue() const { return m_commandLine; }
     void SetCommandLineValue(const std::wstring& commandLine) { m_commandLine = commandLine; }
 
+    const std::optional<std::wstring>& GetOrcTool() const { return m_orcTool; }
+    void SetOrcTool(const std::optional<std::wstring>& orcTool) { m_orcTool = orcTool; }
+    void SetOrcTool(const std::wstring& orcTool)
+    {
+        if (orcTool.empty())
+        {
+            m_orcTool.reset();
+        }
+
+        m_orcTool = orcTool;
+    }
+
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
     void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
 
@@ -188,6 +200,7 @@ private:
     std::wstring m_keyword;
     std::wstring m_commandLine;
     bool m_isSelfOrcExecutable = false;
+    std::optional<std::wstring> m_orcTool;
     std::optional<std::wstring> m_sha1;
     Origin m_origin;
     std::vector<Output> m_output;

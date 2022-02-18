@@ -198,6 +198,11 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command&
     writer->WriteNamed(L"name", command.GetKeyword());
     writer->WriteNamed(L"command_line", command.GetCommandLineValue());
 
+    if (command.IsSelfOrcExecutable() && command.GetOrcTool())
+    {
+        writer->WriteNamed(L"tool", *command.GetOrcTool());
+    }
+
     const auto start = ToStringIso8601(command.GetCreationTime());
     if (start.has_value())
     {

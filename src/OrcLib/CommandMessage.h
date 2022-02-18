@@ -190,6 +190,9 @@ public:
     void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
 
+    const std::optional<std::wstring>& OrcTool() const { return m_orcTool; }
+    void SetOrcTool(const std::wstring& tool) { m_orcTool = tool; }
+
     const Parameters& GetParameters() { return m_Parameters; };
 
     CmdRequest Request() const { return m_Request; };
@@ -216,6 +219,7 @@ private:
     bool m_bOptional = false;
 
     bool m_isSelfOrcExecutable = false;
+    std::optional<std::wstring> m_orcTool;
 
     DWORD m_dwPid;
 };

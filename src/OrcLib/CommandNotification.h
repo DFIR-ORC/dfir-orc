@@ -98,6 +98,7 @@ private:
     std::optional<std::wstring> m_originResourceName;
     std::optional<std::wstring> m_originFriendlyName;
     std::optional<std::wstring> m_executableSha1;
+    std::optional<std::wstring> m_orcTool;
     bool m_isSelfOrcExecutable;
 
 protected:
@@ -115,6 +116,9 @@ public:
 
     std::optional<std::wstring> GetExecutableSha1() const { return m_executableSha1; }
     void SetExecutableSha1(const std::optional<std::wstring>& sha1) { m_executableSha1 = sha1; }
+
+    std::optional<std::wstring> GetOrcTool() const { return m_orcTool; }
+    void SetOrcTool(const std::optional<std::wstring>& tool) { m_orcTool = tool; }
 
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
     void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }

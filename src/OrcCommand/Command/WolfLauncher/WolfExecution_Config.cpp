@@ -307,6 +307,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         if (isSelf)
         {
             command->SetIsSelfOrcExecutable(isSelf);
+            command->SetOrcTool(strArgToAdd);
         }
 
         command->PushExecutable(item[WOLFLAUNCHER_COMMAND_EXECUTE].dwOrderIndex, strExeToRun, ExeName);

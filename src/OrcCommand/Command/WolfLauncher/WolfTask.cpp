@@ -50,6 +50,7 @@ HRESULT WolfTask::ApplyNotification(
             m_originFriendlyName = notification->GetOriginFriendlyName();
             m_executableSha1 = notification->GetExecutableSha1();
             m_isSelfOrcExecutable = notification->IsSelfOrcExecutable();
+            m_orcTool = notification->GetOrcTool();
 
             break;
         case CommandNotification::Terminated: {

@@ -70,6 +70,7 @@ public:
     std::optional<std::wstring> OriginResourceName() const { return m_originResourceName; }
     std::optional<std::wstring> OriginFriendlyName() const { return m_originFriendlyName; }
     std::optional<std::wstring> ExecutableSha1() const { return m_executableSha1; }
+    std::optional<std::wstring> OrcTool() const { return m_orcTool; }
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
 
     HRESULT ApplyNotification(
@@ -85,6 +86,7 @@ private:
     std::optional<std::wstring> m_originResourceName;
     std::optional<std::wstring> m_originFriendlyName;
     std::optional<std::wstring> m_executableSha1;
+    std::optional<std::wstring> m_orcTool;
     bool m_isSelfOrcExecutable;
 
     DWORD m_dwPID;

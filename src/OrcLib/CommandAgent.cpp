@@ -641,6 +641,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     }
 
                     retval->SetIsSelfOrcExecutable(message->IsSelfOrcExecutable());
+                    retval->SetOrcTool(message->OrcTool());
                 }
                 break;
                 case CommandParameter::InFile: {
@@ -812,6 +813,7 @@ HRESULT CommandAgent::ExecuteNextCommand()
             notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
             notification->SetOriginResourceName(command->GetOriginResourceName());
             notification->SetExecutableSha1(command->GetExecutableSha1());
+            notification->SetOrcTool(command->GetOrcTool());
             notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
 
             SendResult(notification);

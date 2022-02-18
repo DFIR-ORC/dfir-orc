@@ -209,6 +209,9 @@ public:
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
     void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
 
+    const std::optional<std::wstring>& GetOrcTool() const { return m_orcTool; }
+    void SetOrcTool(const std::optional<std::wstring>& tool) { m_orcTool = tool; }
+
     ~CommandExecute(void);
 
 private:
@@ -220,6 +223,7 @@ private:
     std::optional<std::wstring> m_originResourceName;
     std::optional<std::wstring> m_originFriendlyName;
     std::optional<std::wstring> m_executableSha1;
+    std::optional<std::wstring> m_orcTool;
     bool m_isSelfOrcExecutable;
 
     std::vector<std::shared_ptr<OnComplete>> m_OnCompleteActions;
