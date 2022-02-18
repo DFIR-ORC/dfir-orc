@@ -574,6 +574,8 @@ HRESULT WolfExecution::CreateCommandAgent(
                                 auto& commandOutcome = commandSetOutcome.GetCommand(task->Command());
                                 commandOutcome.SetCommandLineValue(task->CommandLine());
                                 commandOutcome.SetIsSelfOrcExecutable(task->IsSelfOrcExecutable());
+                                commandOutcome.GetOrigin().SetResourceName(task->OriginResourceName());
+                                commandOutcome.GetOrigin().SetFriendlyName(task->OriginFriendlyName());
                                 commandOutcome.SetCreationTime(FromFileTime(task->CreationTime()));
                                 commandOutcome.SetExitTime(FromFileTime(task->ExitTime()));
 

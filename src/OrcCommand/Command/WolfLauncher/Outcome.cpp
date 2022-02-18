@@ -163,6 +163,33 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive&
     }
 }
 
+void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command::Origin& origin)
+{
+    const auto kNodeOrigin = L"origin";
+    writer->BeginElement(kNodeOrigin);
+    Guard::Scope onExit([&]() { writer->EndElement(kNodeOrigin); });
+
+    if (origin.GetFriendlyName())
+    {
+        writer->WriteNamed(L"friendly_name", *origin.GetFriendlyName());
+    }
+
+    if (origin.GetResourceName())
+    {
+        writer->WriteNamed(L"type", L"resource");
+
+        const auto kNodeLocation = L"location";
+        writer->BeginElement(kNodeLocation);
+        Guard::Scope onLocationExit([&]() { writer->EndElement(kNodeLocation); });
+
+        writer->WriteNamed(L"name", *origin.GetResourceName());
+    }
+    else
+    {
+        writer->WriteNamed(L"type", L"file");
+    }
+}
+
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command& command)
 {
     writer->BeginElement(nullptr);
@@ -185,6 +212,8 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command&
 
     writer->WriteNamed(L"exit_code", command.GetExitCode());
     writer->WriteNamed(L"pid", command.GetPid());
+
+    ::Write(writer, command.GetOrigin());
 
     const auto& userTime = command.GetUserTime();
     if (userTime)

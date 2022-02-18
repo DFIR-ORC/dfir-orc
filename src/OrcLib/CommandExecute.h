@@ -197,6 +197,12 @@ public:
     };
     const std::vector<std::shared_ptr<OnComplete>>& GetOnCompleteActions() { return m_OnCompleteActions; }
 
+    const std::optional<std::wstring>& GetOriginResourceName() const { return m_originResourceName; }
+    void SetOriginResourceName(const std::wstring& name) { m_originResourceName = name; }
+
+    const std::optional<std::wstring>& GetOriginFriendlyName() const { return m_originFriendlyName; }
+    void SetOriginFriendlyName(const std::wstring& name) { m_originFriendlyName = name; }
+
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
     void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
 
@@ -208,6 +214,8 @@ private:
     std::wstring m_commandLine;
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
+    std::optional<std::wstring> m_originResourceName;
+    std::optional<std::wstring> m_originFriendlyName;
     bool m_isSelfOrcExecutable;
 
     std::vector<std::shared_ptr<OnComplete>> m_OnCompleteActions;

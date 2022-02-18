@@ -580,6 +580,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     break;
                 }
                 case CommandParameter::Executable: {
+                    std::optional<std::wstring> executable;
 
                     if (EmbeddedResource::IsResourceBased(parameter.Name))
                     {
@@ -590,6 +591,15 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                             Log::Error(L"Failed to extract ressource '{}' [{}]", parameter.Name, SystemError(hr));
                             return;
                         }
+
+                        retval->SetOriginResourceName(parameter.Name);
+
+                        auto separator = parameter.Name.find(L'|');
+                        if (separator != parameter.Name.npos)
+                        {
+                            retval->SetOriginFriendlyName(parameter.Name.substr(separator + 1));
+                        }
+
                         if (FAILED(hr = retval->AddExecutableToRun(extracted)))
                             return;
                     }
@@ -597,6 +607,16 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     {
                         if (FAILED(hr = retval->AddExecutableToRun(parameter.Name)))
                             return;
+
+                        if (message->IsSelfOrcExecutable())
+                        {
+                            retval->SetOriginFriendlyName(L"<self>");
+                        }
+                        else
+                        {
+                            std::filesystem::path path(parameter.Name);
+                            retval->SetOriginFriendlyName(path.filename());
+                        }
                     }
 
                     retval->SetIsSelfOrcExecutable(message->IsSelfOrcExecutable());
@@ -767,6 +787,8 @@ HRESULT CommandAgent::ExecuteNextCommand()
 
             auto notification = CommandNotification::NotifyStarted(
                 command->ProcessID(), command->GetKeyword(), command->m_pi.hProcess, command->m_commandLine);
+            notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
+            notification->SetOriginResourceName(command->GetOriginResourceName());
             notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
 
             SendResult(notification);

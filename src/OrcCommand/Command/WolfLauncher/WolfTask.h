@@ -67,6 +67,8 @@ public:
     std::optional<std::chrono::microseconds> KernelTime() const { return m_kernelTime; }
     std::optional<IO_COUNTERS> IoCounters() const { return m_ioCounters; }
 
+    std::optional<std::wstring> OriginResourceName() const { return m_originResourceName; }
+    std::optional<std::wstring> OriginFriendlyName() const { return m_originFriendlyName; }
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
     HRESULT ApplyNotification(
         const std::shared_ptr<CommandNotification>& notification,
@@ -78,6 +80,8 @@ private:
     std::wstring m_commandSet;
     std::wstring m_command;
     std::wstring m_commandLine;
+    std::optional<std::wstring> m_originResourceName;
+    std::optional<std::wstring> m_originFriendlyName;
     bool m_isSelfOrcExecutable;
 
     DWORD m_dwPID;

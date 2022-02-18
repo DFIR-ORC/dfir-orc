@@ -77,6 +77,40 @@ private:
 class Command
 {
 public:
+    class Origin
+    {
+    public:
+        const std::optional<std::wstring>& GetResourceName() const { return m_resourceName; }
+        void SetResourceName(const std::optional<std::wstring>& resourceName) { m_resourceName = resourceName; }
+        void SetResourceName(const std::wstring& resourceName)
+        {
+            if (resourceName.empty())
+            {
+                m_resourceName.reset();
+                return;
+            }
+
+            m_resourceName = resourceName;
+        }
+
+        const std::optional<std::wstring>& GetFriendlyName() const { return m_friendlyName; }
+        void SetFriendlyName(const std::optional<std::wstring>& friendlyName) { m_friendlyName = friendlyName; }
+        void SetFriendlyName(const std::wstring& friendlyName)
+        {
+            if (friendlyName.empty())
+            {
+                m_friendlyName.reset();
+                return;
+            }
+
+            m_friendlyName = friendlyName;
+        }
+
+    private:
+        std::optional<std::wstring> m_resourceName;
+        std::optional<std::wstring> m_friendlyName;
+    };
+
     const std::wstring& GetKeyword() const { return m_keyword; }
     void SetKeyword(const std::wstring& keyword) { m_keyword = keyword; }
 
@@ -106,6 +140,9 @@ public:
 
     const std::optional<IO_COUNTERS>& GetIOCounters() const { return m_ioCounters; }
     void SetIOCounters(const IO_COUNTERS& counters) { m_ioCounters = counters; }
+
+    const Origin& GetOrigin() const { return m_origin; }
+    Origin& GetOrigin() { return m_origin; }
 
     class Output
     {
@@ -138,6 +175,7 @@ private:
     std::wstring m_keyword;
     std::wstring m_commandLine;
     bool m_isSelfOrcExecutable = false;
+    Origin m_origin;
     std::vector<Output> m_output;
     Timestamp m_creationTime;
     Timestamp m_exitTime;

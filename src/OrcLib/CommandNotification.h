@@ -95,6 +95,8 @@ private:
     PJOB_STATISTICS m_pJobStats;
 
     std::wstring m_commandLine;
+    std::optional<std::wstring> m_originResourceName;
+    std::optional<std::wstring> m_originFriendlyName;
     bool m_isSelfOrcExecutable;
 
 protected:
@@ -103,6 +105,13 @@ protected:
 public:
     static Notification
     NotifyStarted(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess, const std::wstring& commandLine);
+
+    std::optional<std::wstring> GetOriginFriendlyName() const { return m_originFriendlyName; }
+    void SetOriginFriendlyName(const std::optional<std::wstring>& name) { m_originFriendlyName = name; }
+
+    std::optional<std::wstring> GetOriginResourceName() const { return m_originResourceName; }
+    void SetOriginResourceName(const std::optional<std::wstring>& name) { m_originResourceName = name; }
+
     bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
     void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
 
