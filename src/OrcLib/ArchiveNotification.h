@@ -54,7 +54,6 @@ private:
     Status m_status;
     Type m_type;
     std::wstring m_keyword;
-    std::optional<std::wstring> m_command;
     std::wstring m_fileName;
     std::wstring m_description;
     std::wstring m_compressionLevel;
@@ -109,9 +108,6 @@ public:
     void SetFileSize(const std::filesystem::path& path);
     void SetFileSize(uint64_t size) { m_fileSize = size; }
     std::optional<Traits::ByteQuantity<uint64_t>> FileSize() const { return m_fileSize; }
-
-    void SetCommand(const std::wstring& command);
-    const std::optional<std::wstring>& Command() { return m_command; };
 
     const CBinaryBuffer& MD5() const { return m_md5; };
     const CBinaryBuffer& SHA1() const { return m_sha1; };

@@ -282,7 +282,6 @@ void ArchiveAgent::run()
                     if (notification)
                     {
                         SetFileSize(item, *notification);
-                        notification->SetCommand(request->Command());
                         SendResult(notification);
                     }
                 };
@@ -354,7 +353,6 @@ void ArchiveAgent::run()
                                 if (notification)
                                 {
                                     SetFileSize(item, *notification);
-                                    notification->SetCommand(request->Command());
                                     SendResult(notification);
                                 }
                             };
@@ -401,7 +399,6 @@ void ArchiveAgent::run()
                     if (notification)
                     {
                         SetFileSize(item, *notification);
-                        notification->SetCommand(request->Command());
                         SendResult(notification);
                     }
                 };
