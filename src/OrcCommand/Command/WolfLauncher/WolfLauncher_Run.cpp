@@ -243,6 +243,15 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
     wolfLauncher.SetCommandLineValue(GetCommandLineW());
 }
 
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, StandardOutput& standardOutput)
+{
+    auto consolePath = standardOutput.FileTee().Path();
+    if (consolePath)
+    {
+        outcome.SetConsoleFileName(consolePath->filename());
+    }
+}
+
 void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, UtilitiesLogger& logging)
 {
     const auto& fileSink = logging.fileSink();
@@ -670,6 +679,7 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
     }
 
     ::UpdateOutcome(m_outcome);
+    ::UpdateOutcome(m_outcome, m_standardOutput);
     ::UpdateOutcome(m_outcome, m_logging);
 
     auto rv = ::DumpOutcome(m_outcome, config.Outcome);

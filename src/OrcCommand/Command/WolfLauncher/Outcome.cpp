@@ -234,6 +234,20 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             ::Write(writer, outcome.GetWolfLauncher());
 
             {
+                const auto kNodeConsole = L"console";
+                writer->BeginElement(kNodeConsole);
+                Guard::Scope onLogExit([&]() { writer->EndElement(kNodeConsole); });
+
+                {
+                    const auto kNodeConsoleFile = L"file";
+                    writer->BeginElement(kNodeConsoleFile);
+                    Guard::Scope onConsoleFileExit([&]() { writer->EndElement(kNodeConsoleFile); });
+
+                    writer->WriteNamed(L"name", outcome.ConsoleFileName());
+                }
+            }
+
+            {
                 const auto kNodeLog = L"log";
                 writer->BeginElement(kNodeLog);
                 Guard::Scope onLogExit([&]() { writer->EndElement(kNodeLog); });

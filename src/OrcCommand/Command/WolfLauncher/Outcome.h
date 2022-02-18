@@ -252,6 +252,9 @@ public:
     Mothership& GetMothership() { return m_mothership; }
     const Mothership& GetMothership() const { return m_mothership; }
 
+    const std::wstring& ConsoleFileName() const { return m_consoleFileName; }
+    void SetConsoleFileName(std::wstring path) { m_consoleFileName = std::move(path); }
+
     const std::wstring& LogFileName() const { return m_logFileName; }
     void SetLogFileName(std::wstring path) { m_logFileName = std::move(path); }
 
@@ -259,6 +262,7 @@ private:
     mutable std::mutex m_mutex;
     std::wstring m_computerName;
     Mothership m_mothership;
+    std::wstring m_consoleFileName;
     std::wstring m_logFileName;
     WolfLauncher m_wolfLauncher;
     std::wstring m_timestamp;
