@@ -74,15 +74,6 @@ std::shared_ptr<ByteStream> ArchiveCreate::GetStreamToAdd(const std::shared_ptr<
 
 STDMETHODIMP ArchiveCreate::AddFile(__in PCWSTR pwzNameInArchive, __in PCWSTR pwzFileName, bool bDeleteWhenDone)
 {
-    return AddFile(pwzNameInArchive, pwzFileName, bDeleteWhenDone, {});
-}
-
-STDMETHODIMP ArchiveCreate::AddFile(
-    __in PCWSTR pwzNameInArchive,
-    __in PCWSTR pwzFileName,
-    bool bDeleteWhenDone,
-    ArchiveItem::ArchivedCallback itemArchivedCallback)
-{
     HRESULT hr = E_FAIL;
 
     ArchiveItem item;
@@ -109,7 +100,6 @@ STDMETHODIMP ArchiveCreate::AddFile(
         item.Path = pwzFileName;
         item.NameInArchive = pwzNameInArchive;
         item.Stream = GetStreamToAdd(stream);
-        item.m_archivedCallback = std::move(itemArchivedCallback);
     }
 
     if (item.Stream)
@@ -169,11 +159,11 @@ STDMETHODIMP ArchiveCreate::AddStream(
     item.Stream = GetStreamToAdd(pStream);
     item.Size = pStream->GetSize();
     item.Path = pwzPath;
-    item.m_archivedCallback = std::move(itemArchivedCallback);
+    item.m_archivedCallback = itemArchivedCallback;
 
     if (item.Stream == nullptr)
     {
-        itemArchivedCallback(item, E_FAIL);
+        itemArchivedCallback(E_FAIL);
         return E_FAIL;
     }
 
