@@ -258,12 +258,16 @@ public:
     const std::wstring& LogFileName() const { return m_logFileName; }
     void SetLogFileName(std::wstring path) { m_logFileName = std::move(path); }
 
+    const std::wstring& OutlineFileName() const { return m_outlineFileName; }
+    void SetOutlineFileName(std::wstring path) { m_outlineFileName = std::move(path); }
+
 private:
     mutable std::mutex m_mutex;
     std::wstring m_computerName;
     Mothership m_mothership;
     std::wstring m_consoleFileName;
     std::wstring m_logFileName;
+    std::wstring m_outlineFileName;
     WolfLauncher m_wolfLauncher;
     std::wstring m_timestamp;
     std::chrono::time_point<std::chrono::system_clock> m_startingTime;

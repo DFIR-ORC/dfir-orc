@@ -262,6 +262,20 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             }
 
             {
+                const auto kNodeOutline = L"outline";
+                writer->BeginElement(kNodeOutline);
+                Guard::Scope onLogExit([&]() { writer->EndElement(kNodeOutline); });
+
+                {
+                    const auto kNodeOulineFile = L"file";
+                    writer->BeginElement(kNodeOulineFile);
+                    Guard::Scope onLogFileExit([&]() { writer->EndElement(kNodeOulineFile); });
+
+                    writer->WriteNamed(L"name", outcome.OutlineFileName());
+                }
+            }
+
+            {
                 const auto kNodeCommandSet = L"command_set";
                 writer->BeginCollection(kNodeCommandSet);
                 Guard::Scope onExit([&]() { writer->EndCollection(kNodeCommandSet); });

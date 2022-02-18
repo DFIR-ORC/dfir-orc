@@ -265,6 +265,17 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, UtilitiesLogger& lo
     }
 }
 
+void UpdateOutcomeWithOutline(Command::Wolf::Outcome::Outcome& outcome, OutputSpec& outline)
+{
+    if (outline.Type == OutputSpec::Kind::None)
+    {
+        return;
+    }
+
+    std::filesystem::path path(outline.Path);
+    outcome.SetOutlineFileName(path.filename());
+}
+
 Result<uint64_t> GetFileSize(const std::filesystem::path& path)
 {
     FileStream fs;
@@ -681,6 +692,7 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
     ::UpdateOutcome(m_outcome);
     ::UpdateOutcome(m_outcome, m_standardOutput);
     ::UpdateOutcome(m_outcome, m_logging);
+    ::UpdateOutcomeWithOutline(m_outcome, config.Outline);
 
     auto rv = ::DumpOutcome(m_outcome, config.Outcome);
     if (rv.has_error())
