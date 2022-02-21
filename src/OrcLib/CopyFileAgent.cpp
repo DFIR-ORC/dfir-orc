@@ -59,7 +59,7 @@ HRESULT CopyFileAgent::Initialize()
         m_config.UserName._Copy_s(szUser, MAX_PATH, MAX_PATH);
         szUser[m_config.UserName.size()] = L'\0';
         m_config.Password._Copy_s(szPass, MAX_PATH, MAX_PATH);
-        szPass[m_config.UserName.size()] = L'\0';
+        szPass[m_config.Password.size()] = L'\0';
 
         DWORD dwRet = 0;
 
