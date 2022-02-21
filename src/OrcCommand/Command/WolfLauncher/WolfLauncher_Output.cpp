@@ -152,7 +152,14 @@ void Main::PrintUsage()
 
     Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
 
-    Usage::PrintLoggingParameters(usageNode);
+    constexpr std::array kUsageConsole = {Usage::Parameter(
+        "/Console:{option1,option2=value,...}",
+        "Specify one or multiple option between 'output=<path>', encoding=<utf-8|utf-16> (default: utf-8).\n"
+        "Example: /Console:output=foo.log,encoding=utf-16\n"
+        "\n"
+        "REMARK: The console's log level is set using the '/log' switch")};
+
+    Usage::PrintLoggingParameters(usageNode, kUsageConsole);
 }
 
 void Main::PrintParameters()
