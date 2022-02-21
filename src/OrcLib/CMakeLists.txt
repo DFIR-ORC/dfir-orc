@@ -380,8 +380,6 @@ source_group(In&Out\\ByteStream\\FSStream\\NTFSStream
 )
 
 set(SRC_INOUT_BYTESTREAM_MESSAGESTREAM
-    "DecodeMessageStream.cpp"
-    "DecodeMessageStream.h"
     "EncodeMessageStream.cpp"
     "EncodeMessageStream.h"
     "MessageStream.cpp"
