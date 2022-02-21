@@ -85,7 +85,7 @@ bool ParseConsoleArgument(std::wstring_view input, ConsoleConfiguration& configu
 
     ParseConsoleOptions(options, configuration);
 
-    if (std::all_of(std::cbegin(options), std::cend(options), [](auto& option) { return option.isParsed; }))
+    if (!std::all_of(std::cbegin(options), std::cend(options), [](auto& option) { return option.isParsed; }))
     {
         Log::Error(L"Failed to parse some console options in: '{}'", input);
         return false;
