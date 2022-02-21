@@ -1511,25 +1511,26 @@ function ConvertTo-OrcDiffableResults {
     .PARAMETER Include
         Specifies additional files to be included for copy to 'Destination'.
 
-    .PARAMETER Offline
-        Specify that input results come from an 'Offline' DFIR-Orc.
+    .PARAMETER NotOffline
+        Specify that input results does NOT come from an 'Offline' DFIR-Orc.
 
     .PARAMETER Force
         Overwrite any existing file.
 
     .EXAMPLE
-        ConvertTo-OrcDiffableResults c:\output\v10.1 `
-            -Destination c:\output\v10.1_diffable `
+        ConvertTo-OrcDiffableResults `
+            -Path w10_enterprise_offline\10.1.0-rc10\out\ `
+            -Destination w10_enterprise_offline\10.1.0-rc10\diffable\ `
+            -Offline `
             -Exclude `
-                "*.json", `
                 "*.log", `
+                "config.xml", `
+                "volstats.csv", `
                 "JobStatistics.csv", `
                 "ProcessStatistics.csv", `
-                "volstats.csv", `
-                "UefiFull", `
-                "config.xml", `
-                "FuzzyHash" `
-            -ErrorAction Stop
+                "*_Outline.json", `
+                "*_Outcome.json", `
+                "GetSectors.csv"
     #>
     Param(
         [Parameter(Mandatory)]
@@ -1546,7 +1547,7 @@ function ConvertTo-OrcDiffableResults {
         $Include,
         [Parameter()]
         [switch]
-        $Offline,
+        $NotOffline,
         [Parameter()]
         [Switch]
         $Force
@@ -1576,7 +1577,7 @@ function ConvertTo-OrcDiffableResults {
         "SampleCollectionDate"
     )
 
-    if (-Not $Offline)
+    if ($NotOffline)
     {
         # Must be removed as their content differ a lot
         $ExcludedColumns += (
@@ -1606,7 +1607,7 @@ function ConvertTo-OrcDiffableResults {
             New-Item -ItemType Directory $Out.Directory.FullName | Out-Null
         }
 
-        if (-Not $Offline)
+        if ($NotOffline)
         {
             # The autoruns.csv file is utf-16 encoded without any bom. Recent autoruns versions accept '-o' option
             # to write utf-8 file instead of capturing stdout.
@@ -1758,9 +1759,17 @@ function Compare-OrcDiffableResults {
 
     .EXAMPLE
         Compare-OrcDiffableResults `
-            c:\orc_10.2 `
-            -Reference c:\orc_10.1 `
-            -Exclude GetSectors.csv, BootCode.7z, FuzzyHash.7z
+            -Path w10_enterprise_offline\10.1.0-rc10\diffable\ `
+            -Reference w10_enterprise_offline\10.1.0-rc9\diffable\ `
+            -Exclude `
+                "*.log", `
+                "config.xml", `
+                "volstats.csv", `
+                "JobStatistics.csv", `
+                "ProcessStatistics.csv", `
+                "*_Outline.json", `
+                "*_Outcome.json", `
+                "GetSectors.csv"
 
     .LINK
         Expand-OrcResults
