@@ -1,5 +1,16 @@
 # ChangeLog
 
+## [10.0.24] - 2022-02-22
+### Changed
+- Continue on a failed "Location" resolution
+
+### Fixed
+- Fix "Location" match expression
+- Fix warning due to unhandled legacy columns OWNERID, OWNDERSID
+- Fix network password handling with BITS
+- Fix network password handling with CopyFileAgent
+
+
 ## [10.0.23] - 2021-12-16
 ### Fixed
 - 7z archives: empty file handling for compatibility
@@ -12,7 +23,7 @@
 
 
 ## [10.0.22] - 2021-12-01
-### changed
+### Changed
 - Yara: Update to 4.1.3
 - Allow extracted resources to be executed
 
