@@ -9,6 +9,9 @@ This directory contains resources to help build and test DFIR-Orc with continuou
 |:-------------------|:------------------------------------------------------------------------------------------|
 | build.ps1          | Script file to be sourced. Facilitate DFIR-Orc builds with 'Build-Orc' function.          |
 | test.psm1          | Module with multiple functions to help building functional tests and check their results. |
+| contoso.com.pem    | Public key for testing encryption (.p7b)                                                  |
+| contoso.com.key    | Public key for testing decryption (.p7b)                                                  |
+
 
 
 ## The functional test module
@@ -18,7 +21,6 @@ The `test.psm1` module contains multiple functions to help building functional t
 ### Minimal requirements
 - Powershell Core - https://github.com/PowerShell/PowerShell/releases
 - 7zip - https://www.7-zip.org/download.html
-
 
 ### Invoke-OrcVM
 
