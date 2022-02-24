@@ -273,7 +273,7 @@ public:
 
 private:
     static HRESULT _UpdateResource(
-        HANDLE hOutput,
+        HANDLE& hOutput,
         const WCHAR* szModule,
         const WCHAR* szType,
         const WCHAR* szName,

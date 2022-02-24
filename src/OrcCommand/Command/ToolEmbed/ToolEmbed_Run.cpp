@@ -105,9 +105,8 @@ HRESULT Main::Run_Embed()
 
         if (!DeleteFile(config.Output.Path.c_str()))
         {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to delete failed output file '{}' [{}]", config.Output.Path, SystemError(hr));
-            return hr;
+            HRESULT deleteHR = HRESULT_FROM_WIN32(GetLastError());
+            Log::Error(L"Failed to delete failed output file '{}' [{}]", config.Output.Path, SystemError(deleteHR));
         }
 
         return hr;

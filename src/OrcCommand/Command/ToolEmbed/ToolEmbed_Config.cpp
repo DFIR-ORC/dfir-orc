@@ -436,6 +436,11 @@ HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
 
+    if (!m_utilitiesConfig.log.level && !m_utilitiesConfig.log.console.level)
+    {
+        m_utilitiesConfig.log.console.level = Log::Level::Info;
+    }
+
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     DWORD dwMajor = 0, dwMinor = 0;

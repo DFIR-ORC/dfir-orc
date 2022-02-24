@@ -26,7 +26,7 @@ using namespace std;
 using namespace Orc;
 
 HRESULT EmbeddedResource::_UpdateResource(
-    HANDLE hOutput,
+    HANDLE& hOutput,
     const WCHAR* szModule,
     const WCHAR* szType,
     const WCHAR* szName,
@@ -42,7 +42,7 @@ HRESULT EmbeddedResource::_UpdateResource(
         if (hOut == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to update ressource in '{}' [{}]", szModule, SystemError(hr));
+            Log::Debug(L"Failed to update ressource in '{}' (BeginUpdateResource) [{}]", szModule, SystemError(hr));
             return hr;
         }
     }
@@ -50,16 +50,19 @@ HRESULT EmbeddedResource::_UpdateResource(
     if (!UpdateResource(hOut, szType, szName, MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL), pData, cbSize))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to add ressource '{}' [{}]", szName, SystemError(hr));
+        Log::Debug(L"Failed to add ressource '{}' (UpdateResource) [{}]", szName, SystemError(hr));
         return hr;
     }
 
     if (hOutput == INVALID_HANDLE_VALUE)
     {
+        // Calling EndUpdateResource will make the handle invalid for success AND failure
+        hOutput = INVALID_HANDLE_VALUE;
+
         if (!EndUpdateResource(hOut, FALSE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to update ressource in '{}' [{}]", szModule, SystemError(hr));
+            Log::Debug(L"Failed to update ressource in '{}' (EndUpdateResource) [{}]", szModule, SystemError(hr));
             return hr;
         }
     }
@@ -85,7 +88,8 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
         if (hOutput == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to update ressource in '{}' [{}]", strPEToUpdate, SystemError(hr));
+            Log::Error(
+                L"Failed to update ressources in '{}' (BeginUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
             return hr;
         }
     }
@@ -107,7 +111,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                             (LPVOID)item.Value.c_str(),
                             (DWORD)item.Value.size() * sizeof(WCHAR))))
                 {
-                    Log::Debug(L"Successfully added {}={}", item.Name, item.Value);
+                    Log::Info(L"Successfully added {}={}", item.Name, item.Value);
                 }
                 break;
             case EmbeddedResource::EmbedSpec::EmbedType::ValuesDeletion:
@@ -115,7 +119,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                         hr = _UpdateResource(
                             hOutput, strPEToUpdate.c_str(), EmbeddedResource::VALUES(), item.Name.c_str(), NULL, 0L)))
                 {
-                    Log::Debug(L"Successfully delete resource at position '{}' [{}]", item.Name, SystemError(hr));
+                    Log::Info(L"Successfully delete resource at position '{}' [{}]", item.Name, SystemError(hr));
                 }
                 break;
             case EmbeddedResource::EmbedSpec::EmbedType::BinaryDeletion:
@@ -123,19 +127,26 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                         hr = _UpdateResource(
                             hOutput, strPEToUpdate.c_str(), EmbeddedResource::BINARY(), item.Name.c_str(), NULL, 0L)))
                 {
-                    Log::Debug(L"Successfully delete resource at position '{}' [{}]", item.Name, SystemError(hr));
+                    Log::Info(L"Successfully delete resource at position '{}' [{}]", item.Name, SystemError(hr));
                 }
                 break;
             default:
+                hr = S_OK;
                 break;
         }
     }
+
+    if (hr != S_OK)
+    {
+        return hr;
+    }
+
     if (!bAtomicUpdate)
     {
         if (!EndUpdateResource(hOutput, FALSE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to update ressource in '{}' [{}]", strPEToUpdate, SystemError(hr));
+            Log::Error(L"Failed to update ressources in '{}' (EndUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
             return hr;
         }
     }
@@ -151,7 +162,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
 
                 if (FAILED(hr = filestream->ReadFrom(item.Value.c_str())))
                 {
-                    Log::Error(L"Failed to update ressource in '{}' [{}]", item.Value, SystemError(hr));
+                    Log::Error(L"Failed to update ressources in '{}' (read failure) [{}]", item.Value, SystemError(hr));
                     return hr;
                 }
 
@@ -189,7 +200,11 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                             data.GetData(),
                             (DWORD)data.GetCount())))
                 {
-                    Log::Debug(L"Successfully added '{}' at position '{}'", item.Value, item.Name);
+                    Log::Info(L"Successfully added '{}' at position '{}'", item.Value, item.Name);
+                }
+                else
+                {
+                    return hr;
                 }
             }
             break;
@@ -235,14 +250,15 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
 
                 for (auto arch_item : item.ArchiveItems)
                 {
-                    if (FAILED(creator->AddFile(arch_item.Name.c_str(), arch_item.Path.c_str(), false)))
+                    hr = creator->AddFile(arch_item.Name.c_str(), arch_item.Path.c_str(), false);
+                    if (FAILED(hr))
                     {
                         Log::Error(L"Failed to add file '{}' to archive", arch_item.Path);
                         return hr;
                     }
                     else
                     {
-                        Log::Debug(L"Successfully added '{}' to archive", arch_item.Path);
+                        Log::Info(L"Successfully added '{}' to archive", arch_item.Path);
                     }
                 }
 
@@ -264,10 +280,12 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                             data.GetData(),
                             (DWORD)data.GetCount())))
                 {
-                    Log::Debug(L"Successfully added archive '{}'", item.Name);
+                    Log::Info(L"Successfully added archive '{}'", item.Name);
                 }
                 else
+                {
                     return hr;
+                }
             }
             break;
             default:
