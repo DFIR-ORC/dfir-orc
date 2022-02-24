@@ -69,9 +69,40 @@ HRESULT EmbeddedResource::_UpdateResource(
     return S_OK;
 }
 
+// There is sometimes a race condition with Windows after modifying the module.
+// This function will retry multiple time to access a file for updating its resource.
+HRESULT EmbeddedResource::TryUpdateResource(
+    HANDLE hOutput,
+    const WCHAR* szModule,
+    const WCHAR* szType,
+    const WCHAR* szName,
+    LPVOID pData,
+    DWORD cbSize,
+    uint8_t maxAttempt)
+{
+
+    HRESULT hr = E_FAIL;
+
+    for (size_t i = 1; i <= maxAttempt; ++i)
+    {
+        hr = EmbeddedResource::_UpdateResource(hOutput, szModule, szType, szName, pData, cbSize);
+        if (SUCCEEDED(hr))
+        {
+            return S_OK;
+        }
+
+        Log::Debug(L"Failed to update resource '{}' (attempt: {}) [{}]", szName, i, SystemError(hr));
+        Sleep(1000);
+    }
+
+    Log::Error(L"Failed to update resource '{}' [{}]", szName, SystemError(hr));
+    return hr;
+}
+
 HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, const std::vector<EmbedSpec>& ToEmbed)
 {
     HRESULT hr = S_OK;
+    const auto kMaxAttempt = 8;
 
     DWORD dwMajor = 0L, dwMinor = 0L;
     SystemDetails::GetOSVersion(dwMajor, dwMinor);
@@ -101,31 +132,43 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
         switch (item.Type)
         {
             case EmbeddedResource::EmbedSpec::EmbedType::NameValuePair:
-
                 if (SUCCEEDED(
-                        hr = _UpdateResource(
+                        hr = TryUpdateResource(
                             hOutput,
                             strPEToUpdate.c_str(),
                             EmbeddedResource::VALUES(),
                             item.Name.c_str(),
                             (LPVOID)item.Value.c_str(),
-                            (DWORD)item.Value.size() * sizeof(WCHAR))))
+                            (DWORD)item.Value.size() * sizeof(WCHAR),
+                            kMaxAttempt)))
                 {
                     Log::Info(L"Successfully added {}={}", item.Name, item.Value);
                 }
                 break;
             case EmbeddedResource::EmbedSpec::EmbedType::ValuesDeletion:
                 if (SUCCEEDED(
-                        hr = _UpdateResource(
-                            hOutput, strPEToUpdate.c_str(), EmbeddedResource::VALUES(), item.Name.c_str(), NULL, 0L)))
+                        hr = TryUpdateResource(
+                            hOutput,
+                            strPEToUpdate.c_str(),
+                            EmbeddedResource::VALUES(),
+                            item.Name.c_str(),
+                            NULL,
+                            0L,
+                            kMaxAttempt)))
                 {
                     Log::Info(L"Successfully delete resource at position '{}' [{}]", item.Name, SystemError(hr));
                 }
                 break;
             case EmbeddedResource::EmbedSpec::EmbedType::BinaryDeletion:
                 if (SUCCEEDED(
-                        hr = _UpdateResource(
-                            hOutput, strPEToUpdate.c_str(), EmbeddedResource::BINARY(), item.Name.c_str(), NULL, 0L)))
+                        hr = TryUpdateResource(
+                            hOutput,
+                            strPEToUpdate.c_str(),
+                            EmbeddedResource::BINARY(),
+                            item.Name.c_str(),
+                            NULL,
+                            0L,
+                            kMaxAttempt)))
                 {
                     Log::Info(L"Successfully delete resource at position '{}' [{}]", item.Name, SystemError(hr));
                 }
@@ -192,13 +235,14 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                 memstream->GrabBuffer(data);
 
                 if (SUCCEEDED(
-                        hr = _UpdateResource(
+                        hr = TryUpdateResource(
                             INVALID_HANDLE_VALUE,
                             strPEToUpdate.c_str(),
                             EmbeddedResource::BINARY(),
                             item.Name.c_str(),
                             data.GetData(),
-                            (DWORD)data.GetCount())))
+                            (DWORD)data.GetCount(),
+                            kMaxAttempt)))
                 {
                     Log::Info(L"Successfully added '{}' at position '{}'", item.Value, item.Name);
                 }
@@ -272,13 +316,14 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                 memstream->GrabBuffer(data);
 
                 if (SUCCEEDED(
-                        hr = _UpdateResource(
+                        hr = TryUpdateResource(
                             INVALID_HANDLE_VALUE,
                             strPEToUpdate.c_str(),
                             EmbeddedResource::BINARY(),
                             item.Name.c_str(),
                             data.GetData(),
-                            (DWORD)data.GetCount())))
+                            (DWORD)data.GetCount(),
+                            kMaxAttempt)))
                 {
                     Log::Info(L"Successfully added archive '{}'", item.Name);
                 }
