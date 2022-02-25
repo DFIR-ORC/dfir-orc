@@ -255,8 +255,8 @@ set(SRC_EXTENSIONLIBRARIES_YARA
 source_group(ExtensionLibraries\\Yara FILES ${SRC_EXTENSIONLIBRARIES_YARA})
 
 set(SRC_FILE_FORMAT
-    "PeParser.h"
-    "PeParser.cpp"
+    "FileFormat/PeParser.h"
+    "FileFormat/PeParser.cpp"
 )
 
 source_group(FileFormat
@@ -380,8 +380,6 @@ source_group(In&Out\\ByteStream\\FSStream\\NTFSStream
 )
 
 set(SRC_INOUT_BYTESTREAM_MESSAGESTREAM
-    "DecodeMessageStream.cpp"
-    "DecodeMessageStream.h"
     "EncodeMessageStream.cpp"
     "EncodeMessageStream.h"
     "MessageStream.cpp"

@@ -40,9 +40,76 @@
 #include "WolfTask.h"
 #include "Convert.h"
 #include "Utils/Time.h"
+#include "Utils/WinApi.h"
+#include "Text/HexDump.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
+
+namespace {
+
+Outcome::Command::Output::Type ToOutputFileType(CommandParameter::ParamKind kind)
+{
+    using Type = Outcome::Command::Output::Type;
+    using ParamKind = CommandParameter::ParamKind;
+
+    switch (kind)
+    {
+        case ParamKind::StdOut:
+            return Type::StdOut;
+        case ParamKind::StdErr:
+            return Type::StdErr;
+        case ParamKind::StdOutErr:
+            return Type::StdOutErr;
+        case ParamKind::OutFile:
+            return Type::File;
+        case ParamKind::OutDirectory:
+            return Type::Directory;
+        default:
+            return Type::Undefined;
+    }
+}
+
+bool HasFileOutput(Orc::CommandParameter::ParamKind kind)
+{
+    using namespace Orc;
+
+    switch (kind)
+    {
+        case Orc::CommandParameter::ParamKind::StdOut:
+        case Orc::CommandParameter::ParamKind::StdErr:
+        case Orc::CommandParameter::ParamKind::StdOutErr:
+        case Orc::CommandParameter::ParamKind::OutFile:
+        case Orc::CommandParameter::ParamKind::OutDirectory:
+            return true;
+        default:
+            break;
+    }
+
+    return false;
+}
+
+Outcome::Archive::InputType GetArchiveInputType()
+{
+    const auto kOfflineLocation = L"%OFFLINELOCATION%";
+
+    std::error_code ec;
+    auto offlineLocation = Orc::ExpandEnvironmentStringsApi(kOfflineLocation, 512, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed to expand environment variable {} [{}]", kOfflineLocation, ec);
+        return Outcome::Archive::InputType::kUndefined;
+    }
+
+    if (offlineLocation.empty() || offlineLocation == kOfflineLocation)
+    {
+        return Outcome::Archive::InputType::kRunningSystem;
+    }
+
+    return Outcome::Archive::InputType::kOffline;
+}
+
+}
 
 std::wstring WolfExecution::ToString(WolfExecution::Repeat value)
 {
@@ -176,7 +243,8 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
     {
         case ArchiveNotification::ArchiveStarted: {
             m_journal.Print(m_commandSet, operation, L"Started");
-            outcomeArchive.SetName(notification->GetFileName());
+            auto output = std::filesystem::path(notification->GetFileName());
+            outcomeArchive.SetName(output.filename());
             break;
         }
         case ArchiveNotification::FileAddition: {
@@ -191,6 +259,7 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
         }
         case ArchiveNotification::DirectoryAddition: {
             m_journal.Print(m_commandSet, operation, L"Add directory: {}", notification->Keyword());
+            // Do not update Outcome as there will be 'ArchiveNotification::FileAddition' for them
             break;
         }
         case ArchiveNotification::StreamAddition: {
@@ -207,6 +276,36 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
                 m_commandSet, operation, L"Completed: {} ({})", notification->Keyword(), notification->FileSize());
 
             outcomeArchive.SetSize(notification->FileSize());
+
+            if (m_archiveHashStream)
+            {
+                CBinaryBuffer buffer;
+                hr = m_archiveHashStream->GetSHA1(buffer);
+                if (FAILED(hr))
+                {
+                    Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", SystemError(hr));
+                    hr = S_OK;
+                }
+                else if (!buffer.empty())
+                {
+                    std::string sha1;
+                    std::string_view bufferView(buffer);
+                    Text::ToHex(std::cbegin(bufferView), std::cend(bufferView), std::back_inserter(sha1));
+                    outcomeArchive.SetSha1(sha1);
+                }
+            }
+            else
+            {
+                auto sha1 = Hash(m_strOutputFullPath, CryptoHashStreamAlgorithm::SHA1);
+                if (!sha1)
+                {
+                    Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", sha1.error());
+                }
+
+                outcomeArchive.SetSha1(Utf16ToUtf8(*sha1, "<encoding_error>"));
+            }
+
+            outcomeArchive.SetInputType(::GetArchiveInputType());
             break;
         }
     }
@@ -236,10 +335,17 @@ HRESULT WolfExecution::CreateArchiveAgent()
         }
 
         auto pOutputStream = std::make_shared<FileStream>();
-
         if (FAILED(hr = pOutputStream->WriteTo(m_strOutputFullPath.c_str())))
         {
             Log::Error(L"Failed to open file for write: '{}' [{}]", m_strOutputFullPath, SystemError(hr));
+            return hr;
+        }
+
+        m_archiveHashStream = std::make_shared<CryptoHashStream>();
+        hr = m_archiveHashStream->OpenToWrite(CryptoHashStream::Algorithm::SHA1, pOutputStream);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to open hash stream for write [{}]", SystemError(hr));
             return hr;
         }
 
@@ -253,7 +359,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
                 return hr;
             }
         }
-        if (FAILED(hr = pEncodingStream->Initialize(pOutputStream)))
+        if (FAILED(hr = pEncodingStream->Initialize(m_archiveHashStream)))
         {
             Log::Error(L"Failed initialize encoding stream for '{}' [{}]", m_strOutputFullPath, SystemError(hr));
             return hr;
@@ -311,13 +417,11 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
         ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
-        auto request = ArchiveMessage::MakeOpenRequest(m_strArchiveFileName, fmt, pFinalStream, m_strCompressionLevel);
+        auto request = ArchiveMessage::MakeOpenRequest(m_strOutputFileName, fmt, pFinalStream, m_strCompressionLevel);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
     else
     {
-
-
         ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
         auto request = ArchiveMessage::MakeOpenRequest(m_strOutputFullPath, fmt, nullptr, m_strCompressionLevel);
@@ -469,6 +573,11 @@ HRESULT WolfExecution::CreateCommandAgent(
                             {
                                 auto& commandOutcome = commandSetOutcome.GetCommand(task->Command());
                                 commandOutcome.SetCommandLineValue(task->CommandLine());
+                                commandOutcome.SetIsSelfOrcExecutable(task->IsSelfOrcExecutable());
+                                commandOutcome.SetOrcTool(task->OrcTool());
+                                commandOutcome.GetOrigin().SetResourceName(task->OriginResourceName());
+                                commandOutcome.GetOrigin().SetFriendlyName(task->OriginFriendlyName());
+                                commandOutcome.SetSha1(task->ExecutableSha1());
                                 commandOutcome.SetCreationTime(FromFileTime(task->CreationTime()));
                                 commandOutcome.SetExitTime(FromFileTime(task->ExitTime()));
 
@@ -586,7 +695,24 @@ HRESULT WolfExecution::EnqueueCommands()
                 std::make_shared<WolfTask>(GetKeyword(), command->Keyword(), m_journal);
         }
         if (!command->IsOptional())
+        {
+            {
+                auto&& lock = m_outcome.Lock();
+                auto& outcomeCommand = m_outcome.GetCommandSet(m_commandSet).GetCommand(command->Keyword());
+                for (const auto& parameter : command->GetParameters())
+                {
+                    if (::HasFileOutput(parameter.Kind))
+                    {
+                        Outcome::Command::Output outputFile;
+                        outputFile.SetName(parameter.Name);
+                        outputFile.SetType(::ToOutputFileType(parameter.Kind));
+                        outcomeCommand.GetOutput().emplace_back(std::move(outputFile));
+                    }
+                }
+            }
+
             Concurrency::send(m_cmdAgentBuffer, command);
+        }
     }
 
     return S_OK;

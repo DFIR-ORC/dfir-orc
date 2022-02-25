@@ -81,7 +81,8 @@ public:
 private:
     void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notification& notfication);
     CommandMessage::Message SetCommandFromConfigItem(const ConfigItem& item);
-    HRESULT GetExecutableToRun(const ConfigItem& item, std::wstring& strExeToRun, std::wstring& strArgToAdd);
+    HRESULT
+    GetExecutableToRun(const ConfigItem& item, std::wstring& strExeToRun, std::wstring& strArgToAdd, bool& isSelf);
     HRESULT NotifyTask(const CommandNotification::Ptr& item);
 
 private:
@@ -108,6 +109,7 @@ private:
     std::unique_ptr<Concurrency::call<ArchiveNotification::Notification>> m_archiveNotification;
     std::unique_ptr<ArchiveAgent> m_archiveAgent;
     std::wstring m_strArchiveName;
+    std::shared_ptr<CryptoHashStream> m_archiveHashStream;
     OutputSpec m_Output;
 
     std::wstring m_strOutputFullPath;

@@ -17,6 +17,45 @@ using namespace Orc;
 
 namespace {
 
+std::string ToString(Outcome::Command::Output::Type type)
+{
+    using Type = Outcome::Command::Output::Type;
+
+    switch (type)
+    {
+        case Type::StdOut:
+            return "stdout";
+        case Type::StdErr:
+            return "stderr";
+        case Type::StdOutErr:
+            return "stdout_stderr";
+        case Type::File:
+            return "file";
+        case Type::Directory:
+            return "directory";
+        case Type::Undefined:
+            return "undefined";
+        default:
+            return "unknown";
+    }
+}
+
+void Write(StructuredOutputWriter::IWriter::Ptr& writer, const std::vector<Outcome::Command::Output>& output)
+{
+    const auto kNodeOutput = L"output";
+    writer->BeginCollection(kNodeOutput);
+    Guard::Scope onOutputExit([&]() { writer->EndCollection(kNodeOutput); });
+
+    for (const auto& item : output)
+    {
+        writer->BeginElement(nullptr);
+        Guard::Scope onExit([&]() { writer->EndElement(nullptr); });
+
+        writer->WriteNamed(L"name", item.GetName());
+        writer->WriteNamed(L"type", ToString(item.GetType()));
+    }
+};
+
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const std::optional<IO_COUNTERS>& counters)
 {
     if (!counters)
@@ -68,6 +107,21 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive:
     }
 }
 
+std::string ToString(Outcome::Archive::InputType inputType)
+{
+    switch (inputType)
+    {
+        case Outcome::Archive::InputType::kUndefined:
+            return "undefined";
+        case Outcome::Archive::InputType::kOffline:
+            return "offline";
+        case Outcome::Archive::InputType::kRunningSystem:
+            return "running_system";
+    }
+
+    return "<unknown>";
+}
+
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive& archive)
 {
     if (archive.GetName().empty())
@@ -81,11 +135,19 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive&
 
     writer->WriteNamed(L"name", archive.GetName());
 
+    const auto& sha1 = archive.GetSha1();
+    if (sha1.has_value())
+    {
+        writer->WriteNamed(L"sha1", *sha1);
+    }
+
     const auto& size = archive.GetSize();
     if (size.has_value())
     {
         writer->WriteNamed(L"size", *size);
     }
+
+    writer->WriteNamed(L"input_type", ToString(archive.InputTypeValue()));
 
     {
         writer->BeginCollection(L"files");
@@ -101,6 +163,33 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive&
     }
 }
 
+void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command::Origin& origin)
+{
+    const auto kNodeOrigin = L"origin";
+    writer->BeginElement(kNodeOrigin);
+    Guard::Scope onExit([&]() { writer->EndElement(kNodeOrigin); });
+
+    if (origin.GetFriendlyName())
+    {
+        writer->WriteNamed(L"friendly_name", *origin.GetFriendlyName());
+    }
+
+    if (origin.GetResourceName())
+    {
+        writer->WriteNamed(L"type", L"resource");
+
+        const auto kNodeLocation = L"location";
+        writer->BeginElement(kNodeLocation);
+        Guard::Scope onLocationExit([&]() { writer->EndElement(kNodeLocation); });
+
+        writer->WriteNamed(L"name", *origin.GetResourceName());
+    }
+    else
+    {
+        writer->WriteNamed(L"type", L"file");
+    }
+}
+
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command& command)
 {
     writer->BeginElement(nullptr);
@@ -108,6 +197,11 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command&
 
     writer->WriteNamed(L"name", command.GetKeyword());
     writer->WriteNamed(L"command_line", command.GetCommandLineValue());
+
+    if (command.IsSelfOrcExecutable() && command.GetOrcTool())
+    {
+        writer->WriteNamed(L"tool", *command.GetOrcTool());
+    }
 
     const auto start = ToStringIso8601(command.GetCreationTime());
     if (start.has_value())
@@ -124,6 +218,13 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command&
     writer->WriteNamed(L"exit_code", command.GetExitCode());
     writer->WriteNamed(L"pid", command.GetPid());
 
+    if (command.GetSha1())
+    {
+        writer->WriteNamed(L"sha1", *command.GetSha1());
+    }
+
+    ::Write(writer, command.GetOrigin());
+
     const auto& userTime = command.GetUserTime();
     if (userTime)
     {
@@ -137,6 +238,8 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command&
     }
 
     ::Write(writer, command.GetIOCounters());
+
+    ::Write(writer, command.GetOutput());
 }
 
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::CommandSet& commandSet)
@@ -232,6 +335,64 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             ::Write(writer, outcome.GetMothership());
 
             ::Write(writer, outcome.GetWolfLauncher());
+
+            {
+                const auto kNodeConsole = L"console";
+                writer->BeginElement(kNodeConsole);
+                Guard::Scope onLogExit([&]() { writer->EndElement(kNodeConsole); });
+
+                {
+                    const auto kNodeConsoleFile = L"file";
+                    writer->BeginElement(kNodeConsoleFile);
+                    Guard::Scope onConsoleFileExit([&]() { writer->EndElement(kNodeConsoleFile); });
+
+                    writer->WriteNamed(L"name", outcome.ConsoleFileName());
+                }
+            }
+
+            {
+                const auto kNodeLog = L"log";
+                writer->BeginElement(kNodeLog);
+                Guard::Scope onLogExit([&]() { writer->EndElement(kNodeLog); });
+
+                {
+                    const auto kNodeLogFile = L"file";
+                    writer->BeginElement(kNodeLogFile);
+                    Guard::Scope onLogFileExit([&]() { writer->EndElement(kNodeLogFile); });
+
+                    writer->WriteNamed(L"name", outcome.LogFileName());
+                }
+            }
+
+            {
+                const auto kNodeOutline = L"outline";
+                writer->BeginElement(kNodeOutline);
+                Guard::Scope onLogExit([&]() { writer->EndElement(kNodeOutline); });
+
+                {
+                    const auto kNodeOulineFile = L"file";
+                    writer->BeginElement(kNodeOulineFile);
+                    Guard::Scope onLogFileExit([&]() { writer->EndElement(kNodeOulineFile); });
+
+                    writer->WriteNamed(L"name", outcome.OutlineFileName());
+                }
+            }
+
+            {
+                const auto kNodeRecipients = L"recipients";
+                writer->BeginCollection(kNodeRecipients);
+
+                Guard::Scope onRecipientsExit([&]() { writer->EndCollection(kNodeRecipients); });
+
+                for (const auto& recipient : outcome.Recipients())
+                {
+                    writer->BeginElement(nullptr);
+                    Guard::Scope onRecipientItem([&]() { writer->EndElement(nullptr); });
+
+                    writer->WriteNamed(L"name", recipient.Name());
+                    writer->WriteNamed(L"public_key", recipient.PublicKey());
+                }
+            }
 
             {
                 const auto kNodeCommandSet = L"command_set";

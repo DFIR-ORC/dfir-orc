@@ -115,8 +115,8 @@ void Main::PrintUsage()
             "archives are created."},
         Usage::Parameter {
             "/Key=<KeyWords>",
-            "Comma separated list of commands to be executed or archive to be created (ex: 'GetYara,NTFSInfo) based on "
-            "embedded configuration'"},
+            "Comma separated list of commands to be executed or archive to be created (ex: 'GetYara,NTFSInfo') based "
+            "on embedded configuration"},
         Usage::Parameter {"/+Key=<KeyWord>", "Enables one or multiple archive generation or command execution"},
         Usage::Parameter {"/-Key=<KeyWord>", "Disable one or multiple archive generation or command execution"}};
 
@@ -152,7 +152,14 @@ void Main::PrintUsage()
 
     Usage::PrintMiscellaneousParameters(usageNode, kCustomMiscParameters);
 
-    Usage::PrintLoggingParameters(usageNode);
+    constexpr std::array kUsageConsole = {Usage::Parameter(
+        "/Console:{option1,option2=value,...}",
+        "Specify one or multiple option between 'output=<path>', encoding=<utf-8|utf-16> (default: utf-8).\n"
+        "Example: /Console:output=foo.log,encoding=utf-16\n"
+        "\n"
+        "REMARK: The console's log level is set using the '/log' switch")};
+
+    Usage::PrintLoggingParameters(usageNode, kUsageConsole);
 }
 
 void Main::PrintParameters()
@@ -181,7 +188,7 @@ void Main::PrintParameters()
     PrintValue(node, L"Priority", config.Priority);
     PrintValue(node, L"Power State", ToString(config.PowerState));
     auto keySelection = boost::join(config.OnlyTheseKeywords, L", ");
-    PrintValue(node, L"Key selection", keySelection.empty() ? Text::kNoneW : keySelection);
+    PrintValue(node, L"Explicit key selection", keySelection.empty() ? Text::kNoneW : keySelection);
     PrintValues(node, L"Enable keys", config.EnableKeywords);
     PrintValues(node, L"Disable keys", config.DisableKeywords);
 

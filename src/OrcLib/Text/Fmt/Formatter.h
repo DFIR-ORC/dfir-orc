@@ -9,6 +9,7 @@
 #pragma once
 
 #include "Text/Fmt/std_optional.h"
+#include "Text/Fmt/std_error_code.h"
 #include "Text/Fmt/GUID.h"
 #include "Text/Fmt/Fwd/ByteQuantity.h"
 #include "Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"

@@ -95,6 +95,11 @@ private:
     PJOB_STATISTICS m_pJobStats;
 
     std::wstring m_commandLine;
+    std::optional<std::wstring> m_originResourceName;
+    std::optional<std::wstring> m_originFriendlyName;
+    std::optional<std::wstring> m_executableSha1;
+    std::optional<std::wstring> m_orcTool;
+    bool m_isSelfOrcExecutable;
 
 protected:
     CommandNotification(Event result);
@@ -102,6 +107,22 @@ protected:
 public:
     static Notification
     NotifyStarted(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess, const std::wstring& commandLine);
+
+    std::optional<std::wstring> GetOriginFriendlyName() const { return m_originFriendlyName; }
+    void SetOriginFriendlyName(const std::optional<std::wstring>& name) { m_originFriendlyName = name; }
+
+    std::optional<std::wstring> GetOriginResourceName() const { return m_originResourceName; }
+    void SetOriginResourceName(const std::optional<std::wstring>& name) { m_originResourceName = name; }
+
+    std::optional<std::wstring> GetExecutableSha1() const { return m_executableSha1; }
+    void SetExecutableSha1(const std::optional<std::wstring>& sha1) { m_executableSha1 = sha1; }
+
+    std::optional<std::wstring> GetOrcTool() const { return m_orcTool; }
+    void SetOrcTool(const std::optional<std::wstring>& tool) { m_orcTool = tool; }
+
+    bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
+    void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
+
     static Notification NotifyProcessTerminated(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess);
 
     // Job Notifictions

@@ -40,7 +40,8 @@ constexpr auto WINVER_MINOR = 2;
 constexpr auto WINVER_PLUS = 4;
 constexpr auto WINVER_MINUS = 5;
 
-HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strExeToRun, wstring& strArgToAdd)
+HRESULT
+WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strExeToRun, wstring& strArgToAdd, bool& isSelf)
 {
     HRESULT hr = E_FAIL;
     WORD wArch = 0;
@@ -86,6 +87,8 @@ HRESULT WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strEx
 
             if (FAILED(EmbeddedResource::GetSelfArgument(strExeRef, strArgToAdd)))
                 return hr;
+
+            isSelf = true;
         }
         else
         {
@@ -296,9 +299,16 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
     {
         const wstring& ExeName = item[WOLFLAUNCHER_COMMAND_EXECUTE][WOLFLAUNCHER_EXENAME];
 
-        wstring strExeToRun, strArgToAdd;
-        if (FAILED(GetExecutableToRun(item[WOLFLAUNCHER_COMMAND_EXECUTE], strExeToRun, strArgToAdd)))
+        bool isSelf = false;
+        std::wstring strExeToRun, strArgToAdd;
+        if (FAILED(GetExecutableToRun(item[WOLFLAUNCHER_COMMAND_EXECUTE], strExeToRun, strArgToAdd, isSelf)))
             return nullptr;
+
+        if (isSelf)
+        {
+            command->SetIsSelfOrcExecutable(isSelf);
+            command->SetOrcTool(strArgToAdd);
+        }
 
         command->PushExecutable(item[WOLFLAUNCHER_COMMAND_EXECUTE].dwOrderIndex, strExeToRun, ExeName);
 
@@ -745,7 +755,7 @@ HRESULT WolfExecution::SetJobConfigFromConfig(const ConfigItem& item)
 
     if (_wcsicmp(item.strName.c_str(), L"archive"))
     {
-        Log::Debug("item passed is not a cab item");
+        Log::Debug("item is not an archive item");
         return E_INVALIDARG;
     }
 

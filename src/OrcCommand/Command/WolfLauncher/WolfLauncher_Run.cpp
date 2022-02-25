@@ -15,6 +15,8 @@
 #include <boost/logic/tribool.hpp>
 #include <boost/scope_exit.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/classification.hpp>
+#include <boost/range/algorithm/remove_if.hpp>
 
 #include "Robustness.h"
 #include "EmbeddedResource.h"
@@ -24,7 +26,7 @@
 #include "Convert.h"
 #include "FileStream.h"
 #include "SystemIdentity.h"
-#include "DevNullStream.h"
+#include "CryptoHashStream.h"
 
 #include "Utils/Guard.h"
 #include "Utils/TypeTraits.h"
@@ -83,6 +85,59 @@ GetLocalOutputFileInformations(const Orc::Command::Wolf::WolfExecution& exec, Fi
     return S_OK;
 }
 
+Orc::Result<std::string> WincryptBinaryToString(std::string_view buffer)
+{
+    std::string publicKey;
+    DWORD publicKeySize = 0;
+    if (!CryptBinaryToStringA(
+            reinterpret_cast<const unsigned char*>(buffer.data()),
+            buffer.size(),
+            CRYPT_STRING_BASE64HEADER,
+            NULL,
+            &publicKeySize))
+
+    {
+        std::error_code ec = LastWin32Error();
+        Log::Debug("Failed CryptBinaryToStringA while calculating output length [{}]", ec);
+        return nullptr;
+    }
+
+    publicKey.resize(publicKeySize);
+    if (!CryptBinaryToStringA(
+            reinterpret_cast<const unsigned char*>(buffer.data()),
+            buffer.size(),
+            CRYPT_STRING_BASE64HEADER,
+            publicKey.data(),
+            &publicKeySize))
+
+    {
+        std::error_code ec = LastWin32Error();
+        Log::Debug("Failed CryptBinaryToStringA while converting binary blob [{}]", ec);
+        return nullptr;
+    }
+
+    publicKey.erase(boost::remove_if(publicKey, boost::is_any_of("\r\n")), publicKey.end());
+    return publicKey;
+}
+
+void UpdateOutcome(
+    Command::Wolf::Outcome::Outcome& outcome,
+    const std::vector<std::shared_ptr<Command::Wolf::WolfExecution::Recipient>>& recipients)
+
+{
+    for (auto& item : recipients)
+    {
+        auto certificate = WincryptBinaryToString(item->Certificate);
+        if (!certificate)
+
+        {
+            Log::Error(L"Failed to convert Wincrypt binary blob for '{}' [{}]", item->Name, certificate.error());
+            continue;
+        }
+        outcome.Recipients().emplace_back(Utf16ToUtf8(item->Name, "<encoding_error>"), *certificate);
+    }
+}
+
 HRESULT GetRemoteOutputFileInformations(
     const Orc::Command::Wolf::WolfExecution& exec,
     Orc::UploadAgent& uploadAgent,
@@ -108,46 +163,6 @@ HRESULT GetRemoteOutputFileInformations(
     }
 
     return S_OK;
-}
-
-Result<std::wstring> Hash(const std::filesystem::path& path, CryptoHashStream::Algorithm algorithm)
-{
-    auto fileStream = std::make_shared<FileStream>();
-
-    HRESULT hr = fileStream->OpenFile(
-        path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-    if (FAILED(hr))
-    {
-        Log::Debug(L"Failed to open: '{}' [{}]", path, SystemError(hr));
-        return SystemError(hr);
-    }
-
-    CryptoHashStream hashStream;
-    hr = hashStream.OpenToRead(algorithm, fileStream);
-    if (FAILED(hr))
-    {
-        Log::Debug(L"Failed to open hashstream: '{}' [{}]", path, SystemError(hr));
-        return SystemError(hr);
-    }
-
-    ULONGLONG ullBytesWritten;
-    hr = hashStream.CopyTo(DevNullStream(), &ullBytesWritten);
-    if (FAILED(hr))
-    {
-        Log::Debug(L"Failed to consume stream: '{}' [{}]", path, SystemError(hr));
-        return SystemError(hr);
-    }
-
-    std::wstring hash;
-    hr = hashStream.GetHash(algorithm, hash);
-    if (FAILED(hr))
-    {
-        Log::Debug(L"Failed to get {}: '{}' [{}]", algorithm, path, SystemError(hr));
-        return SystemError(hr);
-    }
-
-    Log::Debug(L"Hash for '{}': {}:{}", path, algorithm, hash);
-    return hash;
 }
 
 Result<std::wstring> GetCurrentExecutableHash(CryptoHashStream::Algorithm algorithm)
@@ -184,7 +199,7 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
 
     {
         std::wstring computerName;
-        SystemDetails::GetComputerName_(computerName);
+        SystemDetails::GetFullComputerName(computerName);
         outcome.SetComputerNameValue(computerName);
     }
 
@@ -241,6 +256,38 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
 
     wolfLauncher.SetVersion(kOrcFileVerString);
     wolfLauncher.SetCommandLineValue(GetCommandLineW());
+}
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, StandardOutput& standardOutput)
+{
+    auto consolePath = standardOutput.FileTee().Path();
+    if (consolePath)
+    {
+        outcome.SetConsoleFileName(consolePath->filename());
+    }
+}
+
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, UtilitiesLogger& logging)
+{
+    const auto& fileSink = logging.fileSink();
+    if (fileSink)
+    {
+        auto logPath = fileSink->OutputPath();
+        if (logPath)
+        {
+            outcome.SetLogFileName(logPath->filename());
+        }
+    }
+}
+
+void UpdateOutcomeWithOutline(Command::Wolf::Outcome::Outcome& outcome, OutputSpec& outline)
+{
+    if (outline.Type == OutputSpec::Kind::None)
+    {
+        return;
+    }
+
+    std::filesystem::path path(outline.Path);
+    outcome.SetOutlineFileName(path.filename());
 }
 
 Result<uint64_t> GetFileSize(const std::filesystem::path& path)
@@ -652,11 +699,15 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
 {
     if (config.Outcome.Type == OutputSpec::Kind::None)
     {
-        Log::Debug(L"No outcome file specified");
+        Log::Debug("No outcome file specified");
         return Success<void>();
     }
 
     ::UpdateOutcome(m_outcome);
+    ::UpdateOutcome(m_outcome, config.m_Recipients);
+    ::UpdateOutcome(m_outcome, m_standardOutput);
+    ::UpdateOutcome(m_outcome, m_logging);
+    ::UpdateOutcomeWithOutline(m_outcome, config.Outline);
 
     auto rv = ::DumpOutcome(m_outcome, config.Outcome);
     if (rv.has_error())
@@ -945,9 +996,9 @@ HRESULT Main::Run_Execute()
     const auto& fileSink = m_logging.fileSink();
     if (fileSink->IsOpen())
     {
+        const auto localPath = fileSink->OutputPath();  // must be done before calling 'Close'
         fileSink->Close();
 
-        const auto localPath = fileSink->OutputPath();
         if (localPath)
         {
             if (auto hr = UploadSingleFile(localPath->filename(), *localPath); FAILED(hr))

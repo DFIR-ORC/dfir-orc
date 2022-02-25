@@ -1,10 +1,6 @@
 trigger:
   - release/*
 
-variables:
-- name: VCPKG_BINARY_SOURCES
-  value: 'clear;nuget,https://pkgs.dev.azure.com/jeangautier/dfir-orc/_packaging/vcpkg/nuget/v3/index.json,readwrite;clear;nuget,https://pkgs.dev.azure.com/fabienfl-orc/_packaging/fabienfl-orc/nuget/v3/index.json,readwrite'
-
 stages:
   - stage: Build
     jobs:
@@ -42,7 +38,7 @@ stages:
 
       - task: GitHubRelease@1
         inputs:
-          gitHubConnection: 'github.com_jgautier-anssi'
+          gitHubConnection: 'github.com_dfir-orc'
           repositoryName: '$(Build.Repository.Name)'
           action: 'create'
           target: '$(Build.SourceVersion)'
@@ -63,7 +59,7 @@ stages:
 
       - task: GitHubRelease@1
         inputs:
-          gitHubConnection: 'github.com_jgautier-anssi'
+          gitHubConnection: 'github.com_dfir-orc'
           repositoryName: '$(Build.Repository.Name)'
           action: 'create'
           target: '$(Build.SourceVersion)'

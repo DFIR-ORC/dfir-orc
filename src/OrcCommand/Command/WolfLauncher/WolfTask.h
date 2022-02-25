@@ -38,6 +38,7 @@ public:
         : m_journal(journal)
         , m_commandSet(commandSet)
         , m_command(command)
+        , m_isSelfOrcExecutable(false)
         , m_dwPID(0)
         , m_dwExitCode(-1)
         , m_dwLastReportedHang(30)
@@ -66,6 +67,12 @@ public:
     std::optional<std::chrono::microseconds> KernelTime() const { return m_kernelTime; }
     std::optional<IO_COUNTERS> IoCounters() const { return m_ioCounters; }
 
+    std::optional<std::wstring> OriginResourceName() const { return m_originResourceName; }
+    std::optional<std::wstring> OriginFriendlyName() const { return m_originFriendlyName; }
+    std::optional<std::wstring> ExecutableSha1() const { return m_executableSha1; }
+    std::optional<std::wstring> OrcTool() const { return m_orcTool; }
+    bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
+
     HRESULT ApplyNotification(
         const std::shared_ptr<CommandNotification>& notification,
         std::vector<std::shared_ptr<CommandMessage>>& actions);
@@ -76,6 +83,11 @@ private:
     std::wstring m_commandSet;
     std::wstring m_command;
     std::wstring m_commandLine;
+    std::optional<std::wstring> m_originResourceName;
+    std::optional<std::wstring> m_originFriendlyName;
+    std::optional<std::wstring> m_executableSha1;
+    std::optional<std::wstring> m_orcTool;
+    bool m_isSelfOrcExecutable;
 
     DWORD m_dwPID;
     DWORD m_dwExitCode;

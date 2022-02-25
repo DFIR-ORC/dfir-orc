@@ -28,6 +28,13 @@ class Archive
 public:
     using FileSize = Traits::ByteQuantity<uint64_t>;
 
+    enum class InputType
+    {
+        kUndefined = 0,
+        kOffline,
+        kRunningSystem
+    };
+
     class Item
     {
     public:
@@ -53,20 +60,90 @@ public:
     void SetSize(const uint64_t size) { m_size = size; }
     void SetSize(const std::optional<FileSize>& size) { m_size = size; }
 
+    const std::optional<std::string>& GetSha1() const { return m_sha1; }
+    void SetSha1(std::string_view sha1) { m_sha1 = sha1; }
+
+    void SetInputType(InputType inputType) { m_inputType = inputType; }
+    InputType InputTypeValue() const { return m_inputType; }
+
 private:
     std::wstring m_name;
+    std::optional<std::string> m_sha1;
     std::optional<FileSize> m_size;
     std::vector<Item> m_items;
+    InputType m_inputType;
 };
 
 class Command
 {
 public:
+    class Origin
+    {
+    public:
+        const std::optional<std::wstring>& GetResourceName() const { return m_resourceName; }
+        void SetResourceName(const std::optional<std::wstring>& resourceName) { m_resourceName = resourceName; }
+        void SetResourceName(const std::wstring& resourceName)
+        {
+            if (resourceName.empty())
+            {
+                m_resourceName.reset();
+                return;
+            }
+
+            m_resourceName = resourceName;
+        }
+
+        const std::optional<std::wstring>& GetFriendlyName() const { return m_friendlyName; }
+        void SetFriendlyName(const std::optional<std::wstring>& friendlyName) { m_friendlyName = friendlyName; }
+        void SetFriendlyName(const std::wstring& friendlyName)
+        {
+            if (friendlyName.empty())
+            {
+                m_friendlyName.reset();
+                return;
+            }
+
+            m_friendlyName = friendlyName;
+        }
+
+    private:
+        std::optional<std::wstring> m_resourceName;
+        std::optional<std::wstring> m_friendlyName;
+    };
+
     const std::wstring& GetKeyword() const { return m_keyword; }
     void SetKeyword(const std::wstring& keyword) { m_keyword = keyword; }
 
     const std::wstring& GetCommandLineValue() const { return m_commandLine; }
     void SetCommandLineValue(const std::wstring& commandLine) { m_commandLine = commandLine; }
+
+    const std::optional<std::wstring>& GetOrcTool() const { return m_orcTool; }
+    void SetOrcTool(const std::optional<std::wstring>& orcTool) { m_orcTool = orcTool; }
+    void SetOrcTool(const std::wstring& orcTool)
+    {
+        if (orcTool.empty())
+        {
+            m_orcTool.reset();
+        }
+
+        m_orcTool = orcTool;
+    }
+
+    bool IsSelfOrcExecutable() const { return m_isSelfOrcExecutable; }
+    void SetIsSelfOrcExecutable(bool value) { m_isSelfOrcExecutable = value; }
+
+    const std::optional<std::wstring> GetSha1() const { return m_sha1; }
+    void SetSha1(const std::optional<std::wstring>& sha1) { m_sha1 = sha1; }
+    void SetSha1(const std::wstring& sha1)
+    {
+        if (sha1.empty())
+        {
+            m_sha1.reset();
+            return;
+        }
+
+        m_sha1 = sha1;
+    }
 
     Timestamp GetCreationTime() const { return m_creationTime; }
     void SetCreationTime(const Timestamp& creationTime) { m_creationTime = creationTime; }
@@ -89,9 +166,44 @@ public:
     const std::optional<IO_COUNTERS>& GetIOCounters() const { return m_ioCounters; }
     void SetIOCounters(const IO_COUNTERS& counters) { m_ioCounters = counters; }
 
+    const Origin& GetOrigin() const { return m_origin; }
+    Origin& GetOrigin() { return m_origin; }
+
+    class Output
+    {
+    public:
+        enum class Type
+        {
+            Undefined = 0,
+            StdOut,
+            StdErr,
+            StdOutErr,
+            File,
+            Directory
+        };
+
+        const std::wstring& GetName() const { return m_name; }
+        void SetName(const std::wstring& name) { m_name = name; }
+
+        Type GetType() const { return m_type; }
+        void SetType(Type type) { m_type = type; }
+
+    private:
+        std::wstring m_name;
+        Type m_type;
+    };
+
+    const std::vector<Output>& GetOutput() const { return m_output; }
+    std::vector<Output>& GetOutput() { return m_output; }
+
 private:
     std::wstring m_keyword;
     std::wstring m_commandLine;
+    bool m_isSelfOrcExecutable = false;
+    std::optional<std::wstring> m_orcTool;
+    std::optional<std::wstring> m_sha1;
+    Origin m_origin;
+    std::vector<Output> m_output;
     Timestamp m_creationTime;
     Timestamp m_exitTime;
     std::optional<std::chrono::seconds> m_userTime;
@@ -211,13 +323,33 @@ private:
     std::wstring m_commandLine;
 };
 
+class Recipient
+{
+public:
+    Recipient(std::string name, std::string publicKey)
+        : m_name(std::move(name))
+        , m_publicKey(std::move(publicKey))
+    {
+    }
+
+    void SetName(const std::string& name) { m_name = name; }
+    const std::string& Name() const { return m_name; }
+
+    void SetPublicKey(const std::string& publicKey) { m_publicKey = publicKey; }
+    const std::string& PublicKey() const { return m_publicKey; }
+
+private:
+    std::string m_name;
+    std::string m_publicKey;
+};
+
 class Outcome
 {
 public:
     std::lock_guard<std::mutex> Lock() const
     {
         m_mutex.lock();
-        return {m_mutex, std::adopt_lock};
+        return {std::move(m_mutex), std::adopt_lock};
     }
 
     CommandSet& GetCommandSet(const std::wstring& keyword) { return m_commandSets[keyword]; }
@@ -234,7 +366,7 @@ public:
     }
 
     const std::wstring& GetComputerNameValue() const { return m_computerName; }
-    void SetComputerNameValue(const std::wstring& name) { m_computerName = name; }
+    void SetComputerNameValue(std::wstring name) { m_computerName = std::move(name); }
 
     // Timestamp is used as a unique identifier between orc execution and multiple files
     std::wstring GetTimestampKey() const { return m_timestamp; }
@@ -252,10 +384,26 @@ public:
     Mothership& GetMothership() { return m_mothership; }
     const Mothership& GetMothership() const { return m_mothership; }
 
+    const std::wstring& ConsoleFileName() const { return m_consoleFileName; }
+    void SetConsoleFileName(std::wstring path) { m_consoleFileName = std::move(path); }
+
+    const std::wstring& LogFileName() const { return m_logFileName; }
+    void SetLogFileName(std::wstring path) { m_logFileName = std::move(path); }
+
+    const std::wstring& OutlineFileName() const { return m_outlineFileName; }
+    void SetOutlineFileName(std::wstring path) { m_outlineFileName = std::move(path); }
+
+    const std::vector<Recipient>& Recipients() const { return m_recipients; }
+    std::vector<Recipient>& Recipients() { return m_recipients; }
+
 private:
     mutable std::mutex m_mutex;
     std::wstring m_computerName;
     Mothership m_mothership;
+    std::wstring m_consoleFileName;
+    std::wstring m_logFileName;
+    std::wstring m_outlineFileName;
+    std::vector<Recipient> m_recipients;
     WolfLauncher m_wolfLauncher;
     std::wstring m_timestamp;
     std::chrono::time_point<std::chrono::system_clock> m_startingTime;

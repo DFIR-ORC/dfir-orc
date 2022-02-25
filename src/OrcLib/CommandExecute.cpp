@@ -156,6 +156,7 @@ void OnComplete::CancelTerminationHandler()
 CommandExecute::CommandExecute(const std::wstring& Keyword)
     : m_Keyword(Keyword)
     , m_RedirectStatus(ProcessRedirect::Initialized)
+    , m_isSelfOrcExecutable(false)
 {
     m_dwExitCode = 0L;
     ZeroMemory(&m_si, sizeof(m_si));
@@ -544,7 +545,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             {
                                 HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
                                 Log::Error(
-                                    L"no directory to cab for path '{}', ignored [{}]",
+                                    L"no directory to archive for path '{}', ignored [{}]",
                                     action->Fullpath(),
                                     SystemError(hr));
                             }
@@ -587,7 +588,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             }
                             else
                             {
-                                Log::Error(L"no file to cab for path '{}', ignored", action->Fullpath());
+                                Log::Error(L"no file to archive for path '{}', ignored", action->Fullpath());
                             }
                         }
                         break;
@@ -620,7 +621,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                             HRESULT hr = E_FAIL;
                             if (FAILED(hr = action->GetStream()->SetFilePointer(0L, FILE_BEGIN, NULL)))
                             {
-                                Log::Error(L"Failed to reset stream before adding it to cab! [{}]", SystemError(hr));
+                                Log::Error(L"Failed to reset stream before adding it to archive [{}]", SystemError(hr));
                             }
                             auto archiveRequest =
                                 ArchiveMessage::MakeAddStreamRequest(action->Name(), action->GetStream(), true);
@@ -629,7 +630,7 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
                         else
                         {
                             Log::Error(
-                                L"Archive action planned and no archive agent available, no cab addition for file '{}'",
+                                L"Archive action planned and no archive agent available, no archive addition for file '{}'",
                                 action->Fullpath());
                         }
                         break;

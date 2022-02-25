@@ -43,7 +43,7 @@ void Main::PrintUsage()
     constexpr std::array kSpecificParameters = {
         Usage::Parameter {
             "/Input=<Path>", "Path to the binary which ToolEmbed uses as a 'Mothership' or main executable"},
-        Usage::Parameter {"/Output=<Path>", "Output file. Copy of the input file with the specified resources added"},
+        Usage::Parameter {"/Out=<Path>", "Output file. Copy of the input file with the specified resources added"},
         Usage::Parameter {"/Run=<Resource>", "Specify which binary should be run by 'Mothership' or /Input binary"},
         Usage::Parameter {
             "/Run32=<Resource>",

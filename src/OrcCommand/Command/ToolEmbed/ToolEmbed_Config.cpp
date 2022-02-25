@@ -144,7 +144,7 @@ HRESULT Main::GetAddArchiveFromConfigItem(const ConfigItem& item, EmbeddedResour
             if (FAILED(subhr = ExpandFilePath(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(), strInputFile)))
             {
                 Log::Error(
-                    L"Error in specified file '{}' to add to cab file [{}]",
+                    L"Error in specified file '{}' to add to archive [{}]",
                     item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(),
                     SystemError(subhr));
                 hr = subhr;
@@ -435,6 +435,11 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    if (!m_utilitiesConfig.log.level && !m_utilitiesConfig.log.console.level)
+    {
+        m_utilitiesConfig.log.console.level = Log::Level::Info;
+    }
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 

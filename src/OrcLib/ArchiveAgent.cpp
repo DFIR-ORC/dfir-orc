@@ -382,7 +382,7 @@ void ArchiveAgent::run()
                     if (!FindClose(hFind))
                     {
                         HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-                        Log::Warn("Failed to close FindFile while adding directory to CAB [{}]", SystemError(hr));
+                        Log::Warn("Failed to close FindFile while adding directory to archive [{}]", SystemError(hr));
                     }
                 }
 

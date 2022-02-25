@@ -18,7 +18,7 @@
 #include "MemoryStream.h"
 #include "CacheStream.h"
 
-#include "PeParser.h"
+#include "FileFormat/PeParser.h"
 
 #pragma comment(lib, "Crypt32.lib")
 

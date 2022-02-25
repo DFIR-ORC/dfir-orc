@@ -851,7 +851,7 @@ void Orc::YaraScanner::compiler_message(int error_level, const char* file_name, 
             m_ErrorCount++;
             break;
         case YARA_ERROR_LEVEL_WARNING:
-            Log::Error("Warning in yara rule: {} (line: {})", message, line_number);
+            Log::Warn("Warning in yara rule: {} (line: {})", message, line_number);
             m_WarningCount++;
             break;
         default:

@@ -46,7 +46,8 @@ public:
     uint64_t criticalCount() const;
 
     template <typename FacilityIt, typename Timepoint, typename Arg0, typename... Args>
-    inline void Log(FacilityIt first, FacilityIt last, const Timepoint& timepoint, Level level, Arg0&& arg0, Args&&... args)
+    inline void
+    Log(FacilityIt first, FacilityIt last, const Timepoint& timepoint, Level level, Arg0&& arg0, Args&&... args)
     {
         using CharT = Traits::underlying_char_type_t<Arg0>;
 
@@ -58,10 +59,24 @@ public:
         }
 
         fmt::basic_memory_buffer<CharT> msg;
-        fmt::format_to(std::back_inserter(msg), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
         for (auto it = first; it != last; ++it)
         {
             const SpdlogLogger::Ptr& logger = *it;
+            if (msg.size() == 0)
+            {
+                try
+                {
+                    fmt::format_to(std::back_inserter(msg), arg0, std::forward<Args>(args)...);
+                }
+                catch (const fmt::format_error& e)
+                {
+                    assert(0 && "Failed to format log message");
+                    logger->Log(timepoint, level, "Failed to format log message");
+                    logger->Log(timepoint, level, arg0);
+                    continue;
+                }
+            }
+
             logger->Log(timepoint, level, std::basic_string_view<CharT>(msg.data(), msg.size()));
         }
     }

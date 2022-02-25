@@ -36,6 +36,22 @@ namespace fs = std::filesystem;
 
 namespace {
 
+bool IgnoreOptions(LPCWSTR szArg)
+{
+    const auto kConsole = "console";
+
+    std::wstring_view arg(szArg);
+    auto pos = arg.find_first_of(L':');
+    if (pos != arg.npos)
+    {
+        return boost::iequals(kConsole, arg.substr(0, pos));
+    }
+    else
+    {
+        return boost::iequals(kConsole, arg);
+    }
+}
+
 bool ParseNoLimitsArgument(std::wstring_view input, Main::Configuration& configuration)
 {
     const auto kNoLimits = L"nolimits";
@@ -366,7 +382,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         hr = exec->SetArchiveName((const std::wstring&)archiveitem[WOLFLAUNCHER_ARCHIVE_NAME]);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to set '{}' as cab name [{}]", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], SystemError(hr));
+            Log::Error(L"Failed to set '{}' as archive name [{}]", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], SystemError(hr));
             return hr;
         }
 
@@ -625,6 +641,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     else if (UsageOption(argv[i] + 1))
                         ;
                     else if (IgnoreCommonOptions(argv[i] + 1))
+                        ;
+                    else if (::IgnoreOptions(argv[i] + 1))
                         ;
                     else
                     {

@@ -30,6 +30,7 @@
 
 #include "Log/Log.h"
 #include "Utils/WinApi.h"
+#include "CryptoHashStream.h"
 
 using namespace std;
 
@@ -542,10 +543,11 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                 case CommandParameter::Argument: {
                     std::error_code ec;
                     auto arguments =
-                        ExpandEnvironmentStringsApi(parameter.Keyword.c_str(), parameter.Keyword.size() + 512, ec);
+                        ExpandEnvironmentStringsApi(parameter.Keyword.c_str(), parameter.Keyword.size() + 4096, ec);
                     if (ec)
                     {
-                        Log::Error(L"Failed to expand environment arguments string [{}]", ec);
+                        Log::Error(
+                            L"Failed to expand environment arguments string for '{}' [{}]", parameter.Keyword, ec);
                         arguments = parameter.Keyword;
                         ec.clear();
                     }
@@ -579,6 +581,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     break;
                 }
                 case CommandParameter::Executable: {
+                    std::optional<std::wstring> executable;
 
                     if (EmbeddedResource::IsResourceBased(parameter.Name))
                     {
@@ -589,14 +592,56 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                             Log::Error(L"Failed to extract ressource '{}' [{}]", parameter.Name, SystemError(hr));
                             return;
                         }
+
+                        retval->SetOriginResourceName(parameter.Name);
+
+                        auto separator = parameter.Name.find(L'|');
+                        if (separator != parameter.Name.npos)
+                        {
+                            retval->SetOriginFriendlyName(parameter.Name.substr(separator + 1));
+                        }
+
                         if (FAILED(hr = retval->AddExecutableToRun(extracted)))
                             return;
+
+                        executable = extracted;
                     }
                     else
                     {
                         if (FAILED(hr = retval->AddExecutableToRun(parameter.Name)))
                             return;
+
+                        if (message->IsSelfOrcExecutable())
+                        {
+                            retval->SetOriginFriendlyName(L"<self>");
+                        }
+                        else
+                        {
+                            std::filesystem::path path(parameter.Name);
+                            retval->SetOriginFriendlyName(path.filename());
+                        }
+
+                        executable = parameter.Name;
                     }
+
+                    // Calculate the hash here, not ideal but hard to ensure file existency after
+                    // PrepareCommandExecute() and having a way to store it for outcome...
+                    if (executable)
+                    {
+                        auto sha1 = Hash(*executable, CryptoHashStream::Algorithm::SHA1);
+                        if (sha1.has_error())
+                        {
+                            Log::Error(
+                                L"Failed to compute sha1 for command '{}' [{}]", message->Keyword(), sha1.error());
+                        }
+                        else
+                        {
+                            retval->SetExecutableSha1(*sha1);
+                        }
+                    }
+
+                    retval->SetIsSelfOrcExecutable(message->IsSelfOrcExecutable());
+                    retval->SetOrcTool(message->OrcTool());
                 }
                 break;
                 case CommandParameter::InFile: {
@@ -612,7 +657,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                                     extracted)))
                         {
                             Log::Error(
-                                L"Failed to extract ressource '{}' from cab [{}]", parameter.Name, SystemError(hr));
+                                L"Failed to extract ressource '{}' from archive [{}]", parameter.Name, SystemError(hr));
                             return;
                         }
                         wstring Arg;
@@ -764,6 +809,13 @@ HRESULT CommandAgent::ExecuteNextCommand()
 
             auto notification = CommandNotification::NotifyStarted(
                 command->ProcessID(), command->GetKeyword(), command->m_pi.hProcess, command->m_commandLine);
+
+            notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
+            notification->SetOriginResourceName(command->GetOriginResourceName());
+            notification->SetExecutableSha1(command->GetExecutableSha1());
+            notification->SetOrcTool(command->GetOrcTool());
+            notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
+
             SendResult(notification);
         }
         else
