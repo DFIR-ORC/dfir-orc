@@ -38,7 +38,7 @@ stages:
 
       - task: GitHubRelease@1
         inputs:
-          gitHubConnection: 'github.com_jgautier-anssi'
+          gitHubConnection: 'github.com_dfir-orc'
           repositoryName: '$(Build.Repository.Name)'
           action: 'create'
           target: '$(Build.SourceVersion)'
@@ -59,7 +59,7 @@ stages:
 
       - task: GitHubRelease@1
         inputs:
-          gitHubConnection: 'github.com_jgautier-anssi'
+          gitHubConnection: 'github.com_dfir-orc'
           repositoryName: '$(Build.Repository.Name)'
           action: 'create'
           target: '$(Build.SourceVersion)'
