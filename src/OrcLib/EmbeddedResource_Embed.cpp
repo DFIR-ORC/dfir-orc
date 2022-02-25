@@ -26,7 +26,7 @@ using namespace std;
 using namespace Orc;
 
 HRESULT EmbeddedResource::_UpdateResource(
-    HANDLE& hOutput,
+    HANDLE hOutput,
     const WCHAR* szModule,
     const WCHAR* szType,
     const WCHAR* szName,
@@ -56,9 +56,6 @@ HRESULT EmbeddedResource::_UpdateResource(
 
     if (hOutput == INVALID_HANDLE_VALUE)
     {
-        // Calling EndUpdateResource will make the handle invalid for success AND failure
-        hOutput = INVALID_HANDLE_VALUE;
-
         if (!EndUpdateResource(hOut, FALSE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
