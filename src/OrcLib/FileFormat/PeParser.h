@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "CryptoHashStreamAlgorithm.h"
+
 #include <filesystem>
 #include <vector>
 #include <system_error>
