@@ -338,14 +338,21 @@ HRESULT MFTUtils::MultiSectorFixup(PFILE_RECORD_SEGMENT_HEADER pFRS, const std::
     //
     // get the first fixup entry
     //
-    fixuparray = (WORD*)((BYTE*)pHeader + pHeader->UpdateSequenceArrayOffset) + 1;
-    fixupsig = fixuparray[-1];
     dest = (BYTE*)pHeader + lBytesPerSector - 2;
     numfix = (WORD)(pVolReader->GetBytesPerFRS() / lBytesPerSector);
+
+    if (pHeader->UpdateSequenceArrayOffset + numfix * 2 > 510)
+    {
+        Log::Error("Update sequence array is out of bounds");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
 
     //
     // go through the fixups
     //
+    fixuparray = (WORD*)((BYTE*)pHeader + pHeader->UpdateSequenceArrayOffset) + 1;
+    fixupsig = fixuparray[-1];
+
     for (i = 0; i < numfix; i++)
     {
 
