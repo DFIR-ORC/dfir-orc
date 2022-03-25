@@ -1,5 +1,32 @@
 # ChangeLog
 
+## [10.1.0] - 2022-03-25
+Summary of changes since the 10.0.24. For more details look at rc versions.
+From 10.1.0 the semantic versioning will be applied.
+
+### Added
+- Outcome: detailed execution report json output file
+- Log: syslog output for very high level logs
+- Log: multiple/parellel logs output (execution/investigation/debug)
+- Log: add log backtrace option to dump detailed logs (debug...) on error
+- Ntfs: add transparent support for WolfCompressedData
+- Ntfs: add transparent support for CI.CATALOGHINT
+- Ntfs: VolumeShadowCopy: add newest/mid/oldest targetting options
+- Add option to exclude volume
+- Add option `/nolimit:[<keyword>]` for configurated DFIR-Orc (mothership)
+- Test: add tools/ci/test.psm1 to facilitate test automation
+
+### Changed
+- Yara: use newest api for better results
+- FastFind/GetThis: add statistics for rule profiling
+- FastFind/GetThis: add more detailed output on match
+- Improve 7z archive compatibility
+- Update command line documentation and interface
+
+### Fixed
+- Many fixes
+
+
 ## [10.1.0-rc10] - 2022-02-22 - Release Candidate 10
 ### Added
 - test: add functional test helper test.psd1 and test.psm1 (see tools/ci/README.md)
