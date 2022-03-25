@@ -25,7 +25,7 @@ void Print(Tree& node, const FILE_NAME& file_name)
     const auto flags = file_name.Flags < fileFlags.size() ? fileFlags[file_name.Flags] : L"N/A";
 
     PrintValue(node, L"Name", std::wstring_view(file_name.FileName, file_name.FileNameLength));
-    PrintValue(node, L"Parent FRN", fmt::format("L{:#016x}", parentFRN));
+    PrintValue(node, L"Parent FRN", fmt::format("{:#016x}", parentFRN));
     PrintValue(node, L"Creation", creation);
     PrintValue(node, L"Last modification", lastModification);
     PrintValue(node, L"Last access", lastAccess);
