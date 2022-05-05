@@ -785,6 +785,8 @@ set(SRC_UTILITIES
     "Utils/Guard.h"
     "Utils/Guard/Winsock.h"
     "Utils/Guard/Winsock.cpp"
+    "Utils/Guid.h"
+    "Utils/Guid.cpp"
     "Utils/MakeArray.h"
     "Utils/Result.h"
     "Utils/String.cpp"
