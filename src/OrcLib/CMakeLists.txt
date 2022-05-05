@@ -785,6 +785,7 @@ set(SRC_UTILITIES
     "Utils/AnyPtr.h"
     "Utils/BufferView.h"
     "Utils/BufferSpan.h"
+    "Utils/Dump.h"
     "Utils/EnumFlags.h"
     "Utils/Guard.h"
     "Utils/Guard/Winsock.h"
