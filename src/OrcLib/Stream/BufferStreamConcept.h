@@ -11,8 +11,10 @@
 #include <cstdint>
 #include <system_error>
 
-#include "StreamConcept.h"
-#include "Utils/AnyPtr.h"
+#include "Stream/Stream.h"
+#include "Stream/SeekDirection.h"
+#include "Utils/BufferView.h"
+#include "Utils/MetaPtr.h"
 
 namespace Orc {
 
@@ -20,7 +22,7 @@ template <typename ContainerT>
 class BufferStreamConcept
 {
 public:
-    using value_type = typename ContainerT::value_type;
+    using value_type = ContainerT;
 
     BufferStreamConcept()
         : m_buffer()
@@ -108,7 +110,7 @@ public:
     ContainerT& Buffer() { return *m_buffer; }
 
 private:
-    AnyPtr<ContainerT> m_buffer;
+    MetaPtr<ContainerT> m_buffer;
     uint64_t m_pos;
 };
 

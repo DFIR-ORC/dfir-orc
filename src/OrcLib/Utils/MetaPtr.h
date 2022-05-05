@@ -10,12 +10,14 @@
 
 #include <memory>
 
-#include <boost/smart_ptr/local_shared_ptr.hpp>
+#if __has_include("boost/smart_ptr/local_shared_ptr.hpp")
+#    include <boost/smart_ptr/local_shared_ptr.hpp>
+#endif
 
 //
-// AnyPtr is an abstraction layer providing the same generic pointer interface to stack or heap allocated resource.
+// MetaPtr is an abstraction layer providing the same generic pointer interface to stack or heap allocated resource.
 //
-// A template with an 'AnyType' attribute will grant the instanciator the choice of how the resource will be held:
+// A template with an 'MetaPtr' attribute will grant the instanciator the choice of how the resource will be held:
 // stack, reference or any smart pointer. The templated code will always refer to the allocated resource using
 // a generic pointer interface like '->Foo()' instead of '.Foo()' for a stack allocation.
 //
@@ -37,41 +39,39 @@
 //    }
 //
 // private:
-//   Any::Ptr<BufferT> m_buffer;
+//   MetaPtr::Ptr<BufferT> m_buffer;
 // }
 //
 // void FooInstanciator() {
-//   // Keep ownership: using copy
+//   // Keep ownership using copy
+//   {
+//     std::vector<uint8_t> buffer;
+//     BufferStreamWrapper wrapper(buffer);
+//   }
+//
+//   // Give ownership using move
 //   {
 //     std::vector<uint8_t> buffer;
 //     BufferStreamWrapper wrapper(std::move(buffer));
 //   }
 //
-//   // Give ownership: using move
-//   {
-//     std::vector<uint8_t> buffer;
-//     BufferStreamWrapper wrapper(std::move(buffer));
-//   }
-//
-//   // Keep ownership: using reference
+//   // Keep ownership using reference
 //   {
 //     std::vector<uint8_t> buffer;
 //     BufferStreamWrapper wrapper(std::reference_wrapper(buffer));
 //   }
 //
-//   // Give ownership: using move on unique_ptr
+//   // Give ownership using move on unique_ptr
 //   {
 //      auto buffer = std::make_unique<std::vector<uint8_t>>();
 //      BufferStreamWrapper wrapper(std::move(buffer));
 //   }
 //
-//   // Share ownership: using a shared_ptr
+//   // Share ownership using a shared_ptr
 //   {
 //      auto buffer = std::make_shared<std::vector<uint8_t>>();
 //      BufferStreamWrapper wrapper(buffer);
 //   }
-//
-//   ...
 // }
 //
 
@@ -135,21 +135,27 @@ public:
 };
 
 template <typename T>
-struct AnyPtr
+struct MetaPtr
 {
     using Type = typename Stack<T>::PtrAdapter;
+    using value_type = Type;
+    using element_type = T;
 };
 
 template <typename T>
-struct AnyPtr<std::reference_wrapper<T>>
+struct MetaPtr<std::reference_wrapper<T>>
 {
     using Type = typename Reference<T>::PtrAdapter;
+    using value_type = Type;
+    using element_type = T;
 };
 
 template <typename T>
-struct AnyPtr<std::shared_ptr<T>>
+struct MetaPtr<std::shared_ptr<T>>
 {
     using Type = std::shared_ptr<T>;
+    using value_type = Type;
+    using element_type = T;
 
     template <typename... Args>
     static Type Make(Args&&... args)
@@ -159,9 +165,11 @@ struct AnyPtr<std::shared_ptr<T>>
 };
 
 template <typename T>
-struct AnyPtr<std::unique_ptr<T>>
+struct MetaPtr<std::unique_ptr<T>>
 {
     using Type = std::unique_ptr<T>;
+    using value_type = Type;
+    using element_type = T;
 
     template <typename... Args>
     static Type Make(Args&&... args)
@@ -170,10 +178,13 @@ struct AnyPtr<std::unique_ptr<T>>
     }
 };
 
+#if __has_include("boost/smart_ptr/local_shared_ptr.hpp")
 template <typename T>
-struct AnyPtr<boost::local_shared_ptr<T>>
+struct MetaPtr<boost::local_shared_ptr<T>>
 {
     using Type = boost::local_shared_ptr<T>;
+    using value_type = Type;
+    using element_type = T;
 
     template <typename... Args>
     static Type Make(Args&&... args)
@@ -181,10 +192,11 @@ struct AnyPtr<boost::local_shared_ptr<T>>
         return boost::make_local_shared<T>(std::forward<Args>(args)...);
     }
 };
+#endif
 
 }  // namespace details
 
 template <typename T>
-using AnyPtr = typename details::AnyPtr<T>::Type;
+using MetaPtr = typename details::MetaPtr<T>::Type;
 
 }  // namespace Orc

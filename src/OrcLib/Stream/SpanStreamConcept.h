@@ -14,9 +14,8 @@
 #include <gsl/span>
 
 #include "Stream/SeekDirection.h"
-
 #include "Utils/BufferView.h"
-#include "Utils/AnyPtr.h"
+#include "Utils/MetaPtr.h"
 
 namespace Orc {
 
@@ -123,7 +122,7 @@ public:
     const StreamT& UnderlyingStream() const { return m_stream; }
 
 private:
-    AnyPtr<StreamT> m_stream;
+    MetaPtr<StreamT> m_stream;
     uint64_t m_startOffset;
     uint64_t m_size;
     uint64_t m_offset;

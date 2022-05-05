@@ -14,7 +14,7 @@
 
 #include "Filesystem/Ntfs/Compression/WofChunks.h"
 #include "Stream/SeekDirection.h"
-#include "Utils/AnyPtr.h"
+#include "Utils/MetaPtr.h"
 
 namespace Orc {
 namespace Ntfs {
@@ -323,8 +323,8 @@ private:
     }
 
 private:
-    AnyPtr<DecompressorT> m_decompressor;
-    AnyPtr<InputStreamT> m_stream;
+    MetaPtr<DecompressorT> m_decompressor;
+    MetaPtr<InputStreamT> m_stream;
     WofChunks m_chunks;
     uint64_t m_startOffset;
     uint64_t m_offset;

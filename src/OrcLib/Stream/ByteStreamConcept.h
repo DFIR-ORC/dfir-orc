@@ -9,7 +9,7 @@
 #pragma once
 
 #include "Stream/StreamConcept.h"
-#include "Utils/AnyPtr.h"
+#include "Utils/MetaPtr.h"
 
 namespace Orc {
 
@@ -70,7 +70,7 @@ public:
     }
 
 private:
-    AnyPtr<ByteStreamT> m_stream;
+    MetaPtr<ByteStreamT> m_stream;
 };
 
 }  // namespace Orc
