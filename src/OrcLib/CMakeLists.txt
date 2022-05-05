@@ -584,6 +584,7 @@ set(SRC_STREAM
     "Stream/SpanStreamConcept.h"
     "Stream/Stream.h"
     "Stream/StreamConcept.h"
+    "Stream/StreamUtils.h"
 )
 
 source_group(Stream

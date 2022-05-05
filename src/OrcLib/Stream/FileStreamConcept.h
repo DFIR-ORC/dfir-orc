@@ -10,7 +10,8 @@
 
 #include <system_error>
 
-#include "Stream/StreamConcept.h"
+#include "Stream/SeekDirection.h"
+#include "Utils/BufferView.h"
 #include "Utils/Guard.h"
 
 namespace Orc {

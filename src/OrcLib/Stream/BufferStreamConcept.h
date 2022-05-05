@@ -11,7 +11,6 @@
 #include <cstdint>
 #include <system_error>
 
-#include "Stream/Stream.h"
 #include "Stream/SeekDirection.h"
 #include "Utils/BufferView.h"
 #include "Utils/MetaPtr.h"

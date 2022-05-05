@@ -14,6 +14,7 @@
 
 #include "Filesystem/Ntfs/Compression/WofChunks.h"
 #include "Stream/SeekDirection.h"
+#include "Stream/StreamUtils.h"
 #include "Utils/MetaPtr.h"
 
 namespace Orc {
@@ -199,7 +200,7 @@ private:
         fmt::basic_memory_buffer<uint8_t, 8192> buffer;
         buffer.resize(m_chunks.GetChunkTableSize());
 
-        Orc::ReadChunkAt(*m_stream, m_startOffset, buffer, ec);
+        Orc::Stream::ReadChunkAt(*m_stream, m_startOffset, buffer, ec);
         if (ec)
         {
             Log::Debug("Failed to read chunk table [{}]", ec);
@@ -237,7 +238,7 @@ private:
         // Use 'ReadChunk' to do as many 'Read()' on the stream as necessary to fill the 'chunk' buffer.
         const auto& chunk = m_locations[chunkIndex];
         output.resize(chunk.size);
-        return Orc::ReadChunkAt(*m_stream, chunk.offset, output, ec);
+        return Orc::Stream::ReadChunkAt(*m_stream, chunk.offset, output, ec);
     }
 
     // Decompress a chunk and shift the output to 'uncompressedOffset'. Uses an internal buffer if needed.
