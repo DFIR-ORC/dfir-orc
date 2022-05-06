@@ -1537,10 +1537,9 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                 if (pAttributeList)
                 {
                     // This record has child records (or is a child record), parsing them.
-
-                    for (auto iter = pAttributeList->m_AttList.begin(); iter != pAttributeList->m_AttList.end(); iter++)
+                    for (size_t i = 0; i < pAttributeList->m_AttList.size(); ++i)
                     {
-                        AttributeListEntry& attr = *iter;
+                        AttributeListEntry& attr = pAttributeList->m_AttList[i];
 
                         if (attr.m_Attribute == NULL
                             && NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber)
