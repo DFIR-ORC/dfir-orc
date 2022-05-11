@@ -151,7 +151,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::SetSchema(const Schema& schema)
     }
     catch (Orc::Exception& e)
     {
-        return e.GetHRESULT();
+        return e.ErrorCode().value();
     }
     return S_OK;
 }
