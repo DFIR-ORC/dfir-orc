@@ -414,7 +414,6 @@ Orc::Result<DriverStatus> Orc::Driver::GetStatus()
         return SystemError(hr);
 
     return status;
-
 }
 
 std::shared_ptr<Driver> Orc::DriverMgmt::GetDriver(const std::wstring& strServiceName)
