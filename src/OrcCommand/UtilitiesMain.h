@@ -850,7 +850,7 @@ public:
         catch (...)
         {
             std::cerr << "Exception during during command execution" << std::endl;
-            Log::Critical("Exception during configuration evaluation.");
+            Log::Critical("Exception during during command execution.");
 
 #ifdef ORC_BUILD_BOOST_STACKTRACE
             boost::stacktrace::stacktrace();
