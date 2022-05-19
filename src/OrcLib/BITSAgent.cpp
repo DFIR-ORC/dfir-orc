@@ -757,6 +757,7 @@ HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdw
                 Log::Debug("Failed to check file status over http [{}]", SystemError(hr));
                 return hr;
             }
+            break;
         case OutputSpec::BITSMode::SMB:
             hr = CheckFileUploadOverSMB(strRemoteName, pdwFileSize);
             if (FAILED(hr))
@@ -764,6 +765,10 @@ HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdw
                 Log::Debug("Failed to check file status over smb [{}]", SystemError(hr));
                 return hr;
             }
+            break;
+        default:
+            Log::Debug(L"Invalid BITS Mode {}", m_config.bitsMode);
+            break;
     }
 
     return S_OK;
