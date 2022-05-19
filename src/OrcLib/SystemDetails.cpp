@@ -266,7 +266,16 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
         WCHAR release_id[MAX_PATH];
         DWORD valueType = 0L;
         DWORD cbData = MAX_PATH * sizeof(WCHAR);
-        if (RegQueryValueExW(current_version, L"ReleaseId", NULL, &valueType, (LPBYTE)release_id, &cbData)
+        if (RegQueryValueExW(current_version, L"DisplayVersion", NULL, &valueType, (LPBYTE)release_id, &cbData)
+            == ERROR_SUCCESS)
+        {
+            if (valueType == REG_SZ)
+            {
+                tags.insert(fmt::format(L"Release#{}", release_id));
+            }
+        }
+        else if (
+            RegQueryValueExW(current_version, L"ReleaseId", NULL, &valueType, (LPBYTE)release_id, &cbData)
             == ERROR_SUCCESS)
         {
             if (valueType == REG_SZ)
