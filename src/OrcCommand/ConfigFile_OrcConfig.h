@@ -25,6 +25,7 @@ constexpr auto ORC_LOGGING = 8L;
 constexpr auto ORC_PRIORITY = 9L;
 constexpr auto ORC_POWERSTATE = 10L;
 constexpr auto ORC_ALTITUDE = 11L;
+constexpr auto ORC_CONSOLE = 12L;
 
 constexpr auto ORC_ORC = 0L;
 

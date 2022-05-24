@@ -196,6 +196,8 @@ private:
     HRESULT ExecuteKeyword(WolfExecution& execution);
     HRESULT Run_Keywords();
 
+    void ReadLogConfiguration(const ConfigItem& configItem, bool hasConsoleConfigItem);
+
 private:
     ConsoleConfiguration m_consoleConfiguration;
 

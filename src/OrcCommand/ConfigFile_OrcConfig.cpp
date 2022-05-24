@@ -12,6 +12,8 @@
 
 #include "ConfigFile_OrcConfig.h"
 #include "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
+#include "Command/WolfLauncher/ConsoleConfiguration.h"
+#include "Log/UtilitiesLoggerConfiguration.h"
 
 HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
 {
@@ -38,13 +40,15 @@ HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(Orc::Config::Wolf::recipient, ORC_RECIPIENT)))
         return hr;
-    if (FAILED(hr = item.AddChild(Orc::Config::Common::logging, ORC_LOGGING)))
+    if (FAILED(hr = item.AddChild(Orc::Command::UtilitiesLoggerConfiguration::Register, ORC_LOGGING)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"priority", ORC_PRIORITY, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"powerstate", ORC_POWERSTATE, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"altitude", ORC_ALTITUDE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddChild(Orc::Command::ConsoleConfiguration::Register, ORC_CONSOLE)))
         return hr;
     return S_OK;
 }
