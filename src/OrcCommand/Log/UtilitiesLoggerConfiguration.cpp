@@ -591,7 +591,7 @@ ApplyJournalConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLogge
         return ec;
     }
 
-    std::string port = "514";
+    auto port = std::string(UtilitiesLoggerConfiguration::kDefaultSyslogPort);
     if (config.syslog.port)
     {
         port = Utf16ToUtf8(*config.syslog.port, ec);

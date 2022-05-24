@@ -23,6 +23,9 @@ namespace Command {
 
 struct UtilitiesLoggerConfiguration
 {
+    static constexpr auto kDefaultSyslogPort = std::string_view("514");
+    static constexpr auto kDefaultSyslogPortW = std::wstring_view(L"514");
+
     static void Parse(int argc, const wchar_t* argv[], UtilitiesLoggerConfiguration& config);
 
     static HRESULT Register(ConfigItem& parent, DWORD dwIndex);
