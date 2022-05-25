@@ -16,6 +16,7 @@
 
 #include "BITSAgent.h"
 #include "ParameterCheck.h"
+#include "Text/Fmt/GUID.h"
 
 using namespace Orc;
 
@@ -335,8 +336,10 @@ BITSAgent::UploadFile(
     return S_OK;
 }
 
-HRESULT BITSAgent::IsComplete(bool bReadyToExit)
+HRESULT BITSAgent::IsComplete(bool bReadyToExit, bool& hasFailure)
 {
+    hasFailure = false;
+
     if (m_config.Mode == OutputSpec::UploadMode::Asynchronous && bReadyToExit)
         return S_OK;  // If the agent is ready to exit, let it be!!
 
@@ -357,7 +360,10 @@ HRESULT BITSAgent::IsComplete(bool bReadyToExit)
                     case BG_JOB_STATE_TRANSIENT_ERROR:
                         // Those status indicate a job "in progress"
                         return S_FALSE;
-                    case BG_JOB_STATE_ERROR:
+                    case BG_JOB_STATE_ERROR: {
+                        hasFailure = true;
+                    }
+                    break;
                     case BG_JOB_STATE_TRANSFERRED:
                     case BG_JOB_STATE_ACKNOWLEDGED:
                     case BG_JOB_STATE_CANCELLED:
@@ -366,6 +372,45 @@ HRESULT BITSAgent::IsComplete(bool bReadyToExit)
                         break;
                 }
             }
+        }
+    }
+
+    // Only getting there if all jobs are done
+    if (hasFailure)
+    {
+        for (auto job : m_jobs)
+        {
+            if (!job.m_job)
+            {
+                continue;
+            }
+
+            BG_JOB_STATE progress = BG_JOB_STATE_QUEUED;
+            if (FAILED(job.m_job->GetState(&progress)) || progress != BG_JOB_STATE_ERROR)
+            {
+                continue;
+            }
+
+            GUID guid = {0};
+            job.m_job->GetId(&guid);
+
+            CComPtr<IBackgroundCopyError> error;
+            HRESULT hr = job.m_job->GetError(&error);
+            if (FAILED(hr))
+            {
+                Log::Error(L"Failed to retrieve BITS job error (guid: {}) [{}]", guid, SystemError(hr));
+                continue;
+            }
+
+            LPWSTR description;
+            hr = error->GetErrorDescription(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), &description);
+            if (FAILED(hr))
+            {
+                Log::Error(L"Failed to retrieve BITS job error string (guid: {}) [{}]", guid, SystemError(hr));
+                continue;
+            }
+
+            Log::Error(L"Failed BITS job: {} (guid: {})", description, guid);
         }
     }
 
@@ -396,8 +441,8 @@ HRESULT BITSAgent::Cancel()
                     case BG_JOB_STATE_TRANSFERRED:
                     case BG_JOB_STATE_ACKNOWLEDGED:
                     case BG_JOB_STATE_CANCELLED:
-                        // Thos status indicate a job "complete": either on error or transfered --> nothing to cancel
-                        // here...
+                        // Thos status indicate a job "complete": either on error or transfered --> nothing to
+                        // cancel here...
                     default:
                         break;
                 }

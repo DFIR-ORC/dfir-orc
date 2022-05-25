@@ -56,7 +56,7 @@ public:
         bool bDeleteWhenCopied,
         const std::shared_ptr<const UploadMessage>& request) override;
 
-    HRESULT IsComplete(bool bReadyToExit) override;
+    HRESULT IsComplete(bool bReadyToExit, bool& hasFailure) override;
 
     HRESULT Cancel() override;
 

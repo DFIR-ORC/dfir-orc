@@ -83,7 +83,7 @@ protected:
         bool bDeleteWhenCopied,
         const std::shared_ptr<const UploadMessage>& request) PURE;
 
-    virtual HRESULT IsComplete(bool bReadyToExit = false) PURE;
+    virtual HRESULT IsComplete(bool bReadyToExit, bool& hasFailure) PURE;
 
     virtual HRESULT Cancel() PURE;
 

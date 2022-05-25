@@ -146,9 +146,10 @@ CopyFileAgent::UploadFile(
     return S_OK;
 }
 
-HRESULT CopyFileAgent::IsComplete(bool bReadyToExit)
+HRESULT CopyFileAgent::IsComplete(bool bReadyToExit, bool& hasFailure)
 {
     DBG_UNREFERENCED_PARAMETER(bReadyToExit);
+    hasFailure = false;
     return S_OK;
 }
 
