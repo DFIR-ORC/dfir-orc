@@ -139,7 +139,7 @@ protected:
 
     std::streamsize xsputn(const CharT* s, std::streamsize count) override
     {
-        std::basic_string_view<CharT> data(s, count);
+        std::basic_string_view<CharT> data(s, static_cast<std::basic_string_view<CharT>::size_type>(count));
 
         try
         {
