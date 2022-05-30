@@ -1156,6 +1156,9 @@ Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails::GetN
             {
                 return SystemError(HRESULT_FROM_WIN32(ret));
             }
+
+            buffer.resize(cbRequiredSize);
+
         }
         else if (ret != ERROR_SUCCESS)
         {
