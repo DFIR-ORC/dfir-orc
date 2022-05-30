@@ -686,14 +686,24 @@ public:
         auto ptr = get();
         if (!ptr)
         {
+            Log::Critical("Failed get_as<{}>: buffer is uninitialized", typeid(_T_as).name());
             throw Exception(Severity::Fatal, E_INVALIDARG, L"Buffer NULL reference"sv);
         }
+
         if (((nth + 1) * sizeof(_T_as)) > (m_EltsUsed * sizeof(_T)))
+        {
+            Log::Critical(
+                "Failed get_as<{}>: buffer is too small (required: {}, size: {})",
+                typeid(_T_as).name(),
+                (nth + 1) * sizeof(_T_as),
+                m_EltsUsed * sizeof(_T));
+
             throw Exception(
                 Severity::Fatal,
                 E_INVALIDARG,
                 L"get_as<_T_as>({}) insufficient data to satisfy reinterpret_cast (size={})"sv,
                 m_EltsUsed * sizeof(_T));
+        }
 
         return reinterpret_cast<_T_as*>(ptr) + nth;
     }
