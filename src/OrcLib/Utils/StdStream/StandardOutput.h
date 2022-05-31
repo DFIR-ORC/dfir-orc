@@ -34,6 +34,7 @@ public:
     void OpenTeeFile(const std::filesystem::path& path, Orc::FileDisposition disposition, std::error_code& ec);
 
     const StandardOutputFileTee& FileTee() const;
+    StandardOutputFileTee& FileTee();
 
     std::shared_ptr<StandardOutputFileTee>& FileTeePtr();
 

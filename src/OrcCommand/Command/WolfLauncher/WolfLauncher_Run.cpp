@@ -997,6 +997,8 @@ HRESULT Main::Run_Execute()
             Log::Error("Failed to flush standard output [{}]", ec);
         }
 
+        m_standardOutput.FileTee().Close(ec);
+
         const std::filesystem::path localPath = *m_standardOutput.FileTee().Path();
         hr = UploadSingleFile(localPath.filename(), localPath);
         if (FAILED(hr))
