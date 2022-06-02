@@ -407,7 +407,7 @@ public:
                 }
                 catch (concurrency::operation_timed_out&)
                 {
-                    Log::Error("Complete archive operation has timed out");
+                    Log::Critical("Complete archive operation has timed out");
                     return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
                 }
             }
