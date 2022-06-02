@@ -214,7 +214,8 @@ void UploadAgent::run()
             break;
             case UploadMessage::Cancel: {
                 UploadNotification::Notification notification;
-                if (FAILED(Cancel()))
+                hr = Cancel();
+                if (FAILED(hr))
                 {
                     notification = UploadNotification::MakeFailureNotification(
                         request,
@@ -285,7 +286,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
             {
                 if (FAILED(hr = retval->SetConfiguration(uploadSpec)))
                 {
-                    Log::Error("Failed to configure CopyFileAgent");
+                    Log::Error("Failed to configure CopyFileAgent [{}]", SystemError(hr));
                     return nullptr;
                 }
             }

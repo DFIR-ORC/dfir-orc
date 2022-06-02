@@ -106,7 +106,7 @@ HRESULT BITSAgent::Initialize()
             }
             else
             {
-                Log::Error(L"BITSAgent failed to create instance of background copy manager 2.5");
+                Log::Error(L"BITSAgent failed to create instance of background copy manager 2.5 [{}]", SystemError(hr));
                 return hr;
             }
         }
@@ -272,7 +272,7 @@ BITSAgent::UploadFile(
     }
     else
     {
-        Log::Error("Failed to SetNotifyInterface to delete uploaded files");
+        Log::Error("Failed to SetNotifyInterface to delete uploaded files [{}]", SystemError(hr));
     }
 
     if (job2 == nullptr)
@@ -330,7 +330,7 @@ BITSAgent::UploadFile(
 
     if (FAILED(hr = job->Resume()))
     {
-        Log::Error(L"Failed to start upload transfer");
+        Log::Error(L"Failed to start upload transfer [{}]", SystemError(hr));
     }
 
     return S_OK;
@@ -349,7 +349,8 @@ HRESULT BITSAgent::IsComplete(bool bReadyToExit, bool& hasFailure)
         {
             BG_JOB_STATE progress = BG_JOB_STATE_QUEUED;
 
-            if (SUCCEEDED(job.m_job->GetState(&progress)))
+            HRESULT hr = job.m_job->GetState(&progress);
+            if (SUCCEEDED(hr))
             {
                 switch (progress)
                 {
@@ -371,6 +372,10 @@ HRESULT BITSAgent::IsComplete(bool bReadyToExit, bool& hasFailure)
                     default:
                         break;
                 }
+            }
+            else
+            {
+                Log::Debug("Failed to retrieve BITS job state [{}]", SystemError(hr));
             }
         }
     }
@@ -650,7 +655,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     else
     {
         // TODO: add support for generic code (5xx, 4xx, 2xx...)
-        Log::Debug("Unexpected bits http status code: {}", dwStatusCode);
+        Log::Debug("Failed to check remote file using BITS http client (code: {})", dwStatusCode);
         return E_FAIL;
     }
 
@@ -882,6 +887,12 @@ HRESULT CNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackgroundCopyErro
     // upload file failed.
 
     hr = pError->GetError(&Context, &ErrorCode);
+    if (FAILED(hr))
+    {
+        Log::Debug("Failed to retrieve BITS job error [{}]", SystemError(hr));
+
+    }
+
 
     // If the proxy or server does not support the Content-Range header or if
     // antivirus software removes the range requests, BITS returns BG_E_INSUFFICIENT_RANGE_SUPPORT.
@@ -933,6 +944,10 @@ HRESULT CNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackgroundCopyErro
     {
         hr = pJob->GetDisplayName(&pszJobName);
         hr = pError->GetErrorDescription(LANGIDFROMLCID(GetThreadLocale()), &pszErrorDescription);
+        if (FAILED(hr))
+        {
+            Log::Debug("Failed to retrieve error description [{}]", hr);
+        }
 
         if (pszJobName && pszErrorDescription)
         {
@@ -1009,6 +1024,10 @@ HRESULT CNotifyInterface::FileTransferred(IBackgroundCopyJob* pJob, IBackgroundC
         {
             // Handle error
         }
+    }
+    else
+    {
+        Log::Debug("Failed handling FileTransferred notification [{}]", SystemError(hr));
     }
 
     return S_OK;
