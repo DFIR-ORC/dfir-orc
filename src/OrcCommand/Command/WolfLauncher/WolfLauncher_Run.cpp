@@ -149,8 +149,8 @@ HRESULT GetRemoteOutputFileInformations(
 
     if (exec.ShouldUpload())
     {
-        DWORD dwFileSize;
-        hr = uploadAgent.CheckFileUpload(exec.GetOutputFileName(), &dwFileSize);
+        std::optional<DWORD> fileSize;
+        hr = uploadAgent.CheckFileUpload(exec.GetOutputFileName(), fileSize);
         if (FAILED(hr))
         {
             return hr;
@@ -158,7 +158,7 @@ HRESULT GetRemoteOutputFileInformations(
 
         fileInformations.exist = true;
         fileInformations.path = uploadAgent.GetRemoteFullPath(exec.GetOutputFileName());
-        fileInformations.size = dwFileSize;
+        fileInformations.size = fileSize;
         return S_OK;
     }
 

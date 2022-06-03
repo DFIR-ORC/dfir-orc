@@ -40,7 +40,7 @@ public:
 
     HRESULT UnInitialize() override;
 
-    HRESULT CheckFileUpload(const std::wstring& szRemoteName, PDWORD pdwFileSize = nullptr) override;
+    HRESULT CheckFileUpload(const std::wstring& szRemoteName, std::optional<DWORD>&) override;
     std::wstring GetRemoteFullPath(const std::wstring& strRemoteName) override;
     std::wstring GetRemotePath(const std::wstring& strRemoteName) override;
 };

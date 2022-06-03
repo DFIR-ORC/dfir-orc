@@ -473,12 +473,9 @@ HRESULT BITSAgent::UnInitialize()
 
 #pragma comment(lib, "winhttp.lib")
 
-HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PDWORD pdwFileSize)
+HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
 {
     HRESULT hr = E_FAIL;
-
-    if (pdwFileSize)
-        *pdwFileSize = MAXDWORD;
 
     // Warning!!! to ensure DFIR-Orc does not execute again when upload server is unavailable,
     // we return S_OK in all cases (except HTTP Status 404, in that case, we return S_FALSE)
@@ -628,28 +625,27 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
 
     if (dwStatusCode == 200)
     {
-        if (pdwFileSize)
+        DWORD dwFileSize = 0;
+
+        dwHeaderSize = sizeof(DWORD);
+        if (!WinHttpQueryHeaders(
+                hRequest,
+                WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
+                WINHTTP_HEADER_NAME_BY_INDEX,
+                &dwFileSize,
+                &dwHeaderSize,
+                WINHTTP_NO_HEADER_INDEX))
         {
-            dwHeaderSize = sizeof(DWORD);
-            if (!WinHttpQueryHeaders(
-                    hRequest,
-                    WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
-                    WINHTTP_HEADER_NAME_BY_INDEX,
-                    pdwFileSize,
-                    &dwHeaderSize,
-                    WINHTTP_NO_HEADER_INDEX))
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Debug(
-                    L"Failed to query content length {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
-                return hr;
-            }
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Debug(
+                L"Failed to query content length {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
+            return hr;
         }
+
+        fileSize = dwFileSize;
     }
     else if (dwStatusCode == 404)
     {
-        if (pdwFileSize)
-            *pdwFileSize = 0L;
         return S_FALSE;
     }
     else
@@ -662,42 +658,27 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
     return S_OK;
 }
 
-HRESULT BITSAgent::CheckFileUploadOverSMB(const std::wstring& strRemoteName, PDWORD pdwFileSize)
+HRESULT BITSAgent::CheckFileUploadOverSMB(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
 {
-    if (pdwFileSize)
-        *pdwFileSize = 0L;
-
     std::wstring strFullPath = GetRemoteFullPath(strRemoteName);
 
-    if (pdwFileSize)
+    WIN32_FILE_ATTRIBUTE_DATA fileData;
+    if (!GetFileAttributesEx(strFullPath.c_str(), GetFileExInfoStandard, &fileData))
     {
-        *pdwFileSize = 0L;
-        WIN32_FILE_ATTRIBUTE_DATA fileData;
-        if (!GetFileAttributesEx(strFullPath.c_str(), GetFileExInfoStandard, &fileData))
-        {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
-                return S_FALSE;
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+            return S_FALSE;
 
-            return HRESULT_FROM_WIN32(GetLastError());
-        }
-        else
-        {
-            if (fileData.nFileSizeHigh > 0)
-            {
-                *pdwFileSize = MAXDWORD;
-            }
-            else
-            {
-                *pdwFileSize = fileData.nFileSizeLow;
-            }
-        }
+        return HRESULT_FROM_WIN32(GetLastError());
     }
     else
     {
-        if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(strFullPath.c_str()))
+        if (fileData.nFileSizeHigh > 0)
         {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
-                return S_FALSE;
+            fileSize = MAXDWORD;
+        }
+        else
+        {
+            fileSize = fileData.nFileSizeLow;
         }
     }
 
@@ -755,7 +736,7 @@ std::wstring BITSAgent::GetRemotePath(const std::wstring& strRemoteName)
     return stream.str();
 }
 
-HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdwFileSize)
+HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
 {
     HRESULT hr = E_FAIL;
 
@@ -763,7 +744,7 @@ HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdw
     {
         case OutputSpec::BITSMode::HTTP:
         case OutputSpec::BITSMode::HTTPS:
-            hr = CheckFileUploadOverHttp(strRemoteName, pdwFileSize);
+            hr = CheckFileUploadOverHttp(strRemoteName, fileSize);
             if (FAILED(hr))
             {
                 Log::Debug("Failed to check file status over http [{}]", SystemError(hr));
@@ -771,7 +752,7 @@ HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdw
             }
             break;
         case OutputSpec::BITSMode::SMB:
-            hr = CheckFileUploadOverSMB(strRemoteName, pdwFileSize);
+            hr = CheckFileUploadOverSMB(strRemoteName, fileSize);
             if (FAILED(hr))
             {
                 Log::Debug("Failed to check file status over smb [{}]", SystemError(hr));

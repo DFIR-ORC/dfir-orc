@@ -36,7 +36,7 @@ public:
 
     virtual void run();
 
-    virtual HRESULT CheckFileUpload(const std::wstring& szRemoteName, PDWORD pdwFileSize = nullptr) PURE;
+    virtual HRESULT CheckFileUpload(const std::wstring& szRemoteName, std::optional<DWORD>& fileSize) PURE;
     virtual std::wstring GetRemoteFullPath(const std::wstring& strRemoteName) PURE;
     virtual std::wstring GetRemotePath(const std::wstring& strRemoteName) PURE;
 
