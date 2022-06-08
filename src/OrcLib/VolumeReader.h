@@ -37,7 +37,16 @@ public:
     FSVBR::FSType GetFSType() const { return m_fsType; }
 
     ULONGLONG VolumeSerialNumber() const { return m_llVolumeSerialNumber; }
-    DWORD MaxComponentLength() const { return m_dwMaxComponentLength > 0 ? m_dwMaxComponentLength : 255; }
+    DWORD MaxComponentLength() const
+    {
+        DWORD length = m_dwMaxComponentLength > 0 ? m_dwMaxComponentLength : 255;
+        if (length < 32768)
+        {
+            length = 32768;
+        }
+
+        return length;
+    }
 
     virtual HRESULT LoadDiskProperties() PURE;
     virtual HANDLE GetDevice() PURE;
