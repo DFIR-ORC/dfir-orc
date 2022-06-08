@@ -578,7 +578,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 m_config.ServerName,
                 strRemotePath,
                 SystemError(hr));
-            return hr;
+            return E_FAIL;
         }
 
         if (!WinHttpSetCredentials(
@@ -647,6 +647,13 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
             *pdwFileSize = 0L;
         return S_FALSE;
     }
+    else
+    {
+        // TODO: add support for generic code (5xx, 4xx, 2xx...)
+        Log::Debug("Unexpected bits http status code: {}", dwStatusCode);
+        return E_FAIL;
+    }
+
     return S_OK;
 }
 
