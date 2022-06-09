@@ -22,6 +22,7 @@
 #include <boost/scope_exit.hpp>
 
 #include "Log/Log.h"
+#include "Utils/Guard.h"
 
 using namespace std;
 using namespace std::string_view_literals;
@@ -284,143 +285,60 @@ const WCHAR* MFTWalker::GetFullNameAndIfInLocation(
     DWORD* pdwLen,
     bool* pbInSpecificLocation)
 {
-    WCHAR* pCurrent = NULL;
+    m_currentFileName.clear();
+    m_currentFileNameElements.clear();
+
+    // This clear the container which stores std::wstring_view which would be unsafe to use outside this scope
+    auto onScopeExit = Guard::CreateScopeGuard([this]() { m_currentFileNameElements.clear(); });
 
     if (m_Locations.empty() && pbInSpecificLocation != nullptr)
+    {
         *pbInSpecificLocation = true;
-
-    if (m_pFullNameBuffer == NULL)
-    {
-        m_dwFullNameBufferLen = msl::utilities::SafeInt(m_pVolReader->MaxComponentLength()) * 2;
-        m_pFullNameBuffer = (WCHAR*)HeapAlloc(GetProcessHeap(), 0L, m_dwFullNameBufferLen);
-        if (!m_pFullNameBuffer)
-            return NULL;
-    }
-#ifdef DEBUG
-    wmemset(m_pFullNameBuffer, L'_', m_dwFullNameBufferLen / sizeof(WCHAR));
-    m_pFullNameBuffer[(m_pVolReader->MaxComponentLength() / sizeof(WCHAR)) - 1] = 0;
-#endif
-
-    DWORD dwCount = 0;
-    DWORD dwBaseNameCount = 0;
-
-    // Doing trailing \0
-    if (dwCount > m_dwFullNameBufferLen)
-    {
-        if (FAILED(ExtendNameBuffer(&pCurrent)))
-            return NULL;
-    }
-    _ASSERT(dwCount < m_dwFullNameBufferLen);
-    {
-        dwCount += sizeof(WCHAR);
-
-        if (dwCount > m_dwFullNameBufferLen)
-        {
-            if (FAILED(ExtendNameBuffer(&pCurrent)))
-                return NULL;
-        }
-        _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-        pCurrent = m_pFullNameBuffer + (m_dwFullNameBufferLen / sizeof(WCHAR)) - 1;
-        _ASSERT(pCurrent >= m_pFullNameBuffer);
-        *pCurrent = 0;
     }
 
     // Doing Stream name
-    if (pDataAttr != NULL)
+    std::optional<std::wstring_view> streamName;
+    if (pDataAttr != NULL && pDataAttr->Header()->NameLength)
     {
         PATTRIBUTE_RECORD_HEADER pHeader = pDataAttr->Header();
-
-        if (pHeader->NameLength)
-        {
-            // Stream has a name, we have to add it
-            {
-                dwCount += pHeader->NameLength * sizeof(WCHAR);
-                dwBaseNameCount += pHeader->NameLength;
-
-                if (dwCount > m_dwFullNameBufferLen)
-                {
-                    if (FAILED(ExtendNameBuffer(&pCurrent)))
-                        return NULL;
-                }
-                _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-                pCurrent -= pHeader->NameLength;
-                _ASSERT(pCurrent >= m_pFullNameBuffer);
-
-                memcpy_s(
-                    pCurrent, dwCount, ((BYTE*)pHeader) + pHeader->NameOffset, pHeader->NameLength * sizeof(WCHAR));
-            }
-
-            // adding colon
-            {
-                dwCount += 1 * sizeof(WCHAR);
-                dwBaseNameCount += 1;
-
-                if (dwCount > m_dwFullNameBufferLen)
-                {
-                    if (FAILED(ExtendNameBuffer(&pCurrent)))
-                        return NULL;
-                }
-                _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-                pCurrent -= 1;
-                _ASSERT(pCurrent >= m_pFullNameBuffer);
-
-                *pCurrent = L':';
-            }
-        }
+        streamName = std::wstring_view(
+            reinterpret_cast<wchar_t*>(reinterpret_cast<uint8_t*>(pHeader) + pHeader->NameOffset), pHeader->NameLength);
     }
 
     // Doing base file name
-    PFILE_NAME pCurFileName = pFileName;
-    if (pCurFileName != nullptr)
+    std::wstring_view fileName;
+    if (pFileName)
     {
-        dwCount += pCurFileName->FileNameLength * sizeof(WCHAR);
-        dwBaseNameCount += pCurFileName->FileNameLength;
-
-        if (dwCount > m_dwFullNameBufferLen)
-        {
-            if (FAILED(ExtendNameBuffer(&pCurrent)))
-                return NULL;
-        }
-        _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-        pCurrent -= pCurFileName->FileNameLength;
-        _ASSERT(pCurrent >= m_pFullNameBuffer);
-        memcpy_s(pCurrent, dwCount, pCurFileName->FileName, pCurFileName->FileNameLength * sizeof(WCHAR));
+        fileName = std::wstring_view(pFileName->FileName, pFileName->FileNameLength);
     }
     else
     {
-        const WCHAR szNullFileName[] = L"<NoName>";
-        const DWORD dwNullFileName = (DWORD)wcslen(szNullFileName);
-
-        dwCount += dwNullFileName * sizeof(WCHAR);
-        dwBaseNameCount += dwNullFileName;
-
-        if (dwCount > m_dwFullNameBufferLen)
+        if (streamName)
         {
-            if (FAILED(ExtendNameBuffer(&pCurrent)))
-                return NULL;
+            fmt::format_to(std::back_inserter(m_currentFileName), L"<NoName>:{}", *streamName);
         }
-        _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-        pCurrent -= dwNullFileName;
-        _ASSERT(pCurrent >= m_pFullNameBuffer);
-        memcpy_s(pCurrent, dwCount, szNullFileName, dwNullFileName * sizeof(WCHAR));
+        else
+        {
+            m_currentFileName = L"<NoName>";
+        }
 
         // Entries with lost parents are
         if (pbInSpecificLocation != nullptr)
+        {
             *pbInSpecificLocation = m_Locations.empty() ? true : false;
+        }
 
         if (pdwLen)
-            *pdwLen = dwCount;
-        return pCurrent;
+        {
+            *pdwLen = m_currentFileName.size() * sizeof(wchar_t);
+        }
+
+        return m_currentFileName.data();
     }
 
-    MFTUtils::SafeMFTSegmentNumber ulLastSegmentNumber = NtfsFullSegmentNumber(&(pCurFileName->ParentDirectory));
+    MFTUtils::SafeMFTSegmentNumber ulLastSegmentNumber = NtfsFullSegmentNumber(&(pFileName->ParentDirectory));
 
-    auto pParentPair = m_DirectoryNames.find(NtfsFullSegmentNumber(&(pCurFileName->ParentDirectory)));
+    auto pParentPair = m_DirectoryNames.find(NtfsFullSegmentNumber(&(pFileName->ParentDirectory)));
     auto pDirectParent = pParentPair;
 
     while (pParentPair != end(m_DirectoryNames))
@@ -429,155 +347,93 @@ const WCHAR* MFTWalker::GetFullNameAndIfInLocation(
 
         if (pParentName == NULL)
         {
-            std::wstring_view fileName(pCurFileName->FileName, pCurFileName->FileNameLength);
-            Log::Debug(L"Could not determine main parent file name for '{}'", fileName);
+            Log::Debug(
+                L"Could not determine main parent file name for '{}'",
+                std::wstring_view(pFileName->FileName, pFileName->FileNameLength));
             break;
         }
 
         if (!(pParentName->FileNameLength == 1 && *pParentName->FileName == L'.'))
         {
-            // Adding \\ (i.e. one backslash)
-            {
-                dwCount += sizeof(WCHAR);
-                if (dwCount > m_dwFullNameBufferLen)
-                {
-                    if (FAILED(ExtendNameBuffer(&pCurrent)))
-                        return NULL;
-                }
-                _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-                pCurrent--;
-                _ASSERT(pCurrent >= m_pFullNameBuffer);
-
-                *pCurrent = L'\\';
-            }
-
-            // Adding parent file name
-            {
-                dwCount += pParentName->FileNameLength * sizeof(WCHAR);
-                if (dwCount > m_dwFullNameBufferLen)
-                {
-                    if (FAILED(ExtendNameBuffer(&pCurrent)))
-                        return NULL;
-                }
-                _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-                pCurrent -= pParentName->FileNameLength;
-                _ASSERT(pCurrent >= m_pFullNameBuffer);
-
-                memcpy_s(pCurrent, dwCount, pParentName->FileName, pParentName->FileNameLength * sizeof(WCHAR));
-            }
+            m_currentFileNameElements.emplace_back(pParentName->FileName, pParentName->FileNameLength);
         }
+
         ulLastSegmentNumber = NtfsFullSegmentNumber(&(pParentName->ParentDirectory));
         pParentPair = m_DirectoryNames.find(NtfsFullSegmentNumber(&(pParentName->ParentDirectory)));
 
         if (ulLastSegmentNumber == m_pMFT->GetUSNRoot())
+        {
             break;
+        }
     }
 
-    if (ulLastSegmentNumber == m_pMFT->GetUSNRoot())
+    std::optional<std::wstring> unknownParentDirectory;  // ensure lifetime to be able to store as wstring_view
+    if (ulLastSegmentNumber != m_pMFT->GetUSNRoot())
     {
-        // Adding \\ (i.e. one backslash)
+        // Parent folder was _not_ found, inserting "place holder"
+        unknownParentDirectory = std::wstring();
+        fmt::format_to(std::back_inserter(*unknownParentDirectory), L"__{:016X}__", ulLastSegmentNumber);
+        m_currentFileNameElements.emplace_back(*unknownParentDirectory);
+    }
+
+    m_currentFileName.push_back(L'\\');
+
+    for (auto it = std::rbegin(m_currentFileNameElements); it != std::rend(m_currentFileNameElements); ++it)
+    {
+        m_currentFileName.append(*it);
+        m_currentFileName.push_back(L'\\');
+    }
+
+    m_currentFileName.append(fileName);
+
+    if (streamName)
+    {
+        m_currentFileName.push_back(L':');
+        m_currentFileName.append(*streamName);
+    }
+
+    if (ulLastSegmentNumber == m_pMFT->GetUSNRoot() && pDirectParent != end(m_DirectoryNames))
+    {
+        // Check if path is in user's location of interest
+        if (!m_Locations.empty() && boost::logic::indeterminate(pDirectParent->second.m_InLocation))
         {
-            dwCount += sizeof(WCHAR);
-            if (dwCount > m_dwFullNameBufferLen)
-            {
-                if (FAILED(ExtendNameBuffer(&pCurrent)))
-                    return NULL;
-            }
-            _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-            pCurrent--;
-            _ASSERT(pCurrent >= m_pFullNameBuffer);
-
-            *pCurrent = L'\\';
+            pDirectParent->second.m_InLocation =
+                std::any_of(begin(m_Locations), end(m_Locations), [this](const wstring& item) {
+                    return !_wcsnicmp(m_currentFileName.c_str(), item.c_str(), item.size());
+                });
         }
 
-        if (pDirectParent != end(m_DirectoryNames))
+        if (pbInSpecificLocation != nullptr)
         {
-            // Looking for presence in specific locations
-            if (!m_Locations.empty() && boost::logic::indeterminate(pDirectParent->second.m_InLocation))
+            if (m_Locations.empty())
             {
-                pDirectParent->second.m_InLocation = std::any_of(
-                    begin(m_Locations), end(m_Locations), [pCurrent, pbInSpecificLocation](const wstring& item) {
-                        return !_wcsnicmp(pCurrent, item.c_str(), item.size());
-                    });
+                *pbInSpecificLocation = true;
             }
-            if (pbInSpecificLocation != nullptr)
+            else
             {
-                if (m_Locations.empty())
+                if (pDirectParent->second.m_InLocation)
+                {
                     *pbInSpecificLocation = true;
+                }
+                else if (!pDirectParent->second.m_InLocation)
+                {
+                    *pbInSpecificLocation = false;
+                }
                 else
                 {
-                    if (pDirectParent->second.m_InLocation)
-                        *pbInSpecificLocation = true;
-                    else if (!pDirectParent->second.m_InLocation)
-                        *pbInSpecificLocation = false;
-                    else
-                    {
-                        Log::Error(L"Failed to determine if in location for '{}'", pCurrent);
-                        *pbInSpecificLocation = false;
-                    }
+                    Log::Error(L"Failed to determine if in location for '{}'", m_currentFileName);
+                    *pbInSpecificLocation = false;
                 }
             }
         }
-
-        // And we're done :-)
-        if (pdwLen)
-            *pdwLen = dwCount;
-        return pCurrent;
     }
-    else
+
+    if (pdwLen)
     {
-        // Parent folder was _not_ found, inserting "place holder"
-        // Adding \\ (i.e. one backslash)
-
-        {
-            dwCount += sizeof(WCHAR);
-            if (dwCount > m_dwFullNameBufferLen)
-            {
-                if (FAILED(ExtendNameBuffer(&pCurrent)))
-                    return NULL;
-            }
-            _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-            pCurrent--;
-            _ASSERT(pCurrent >= m_pFullNameBuffer);
-            *pCurrent = L'\\';
-        }
-
-        {
-            dwCount += sizeof(WCHAR) * 20;
-            if (dwCount > m_dwFullNameBufferLen)
-            {
-                if (FAILED(ExtendNameBuffer(&pCurrent)))
-                    return NULL;
-            }
-            _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-            pCurrent -= 20;
-            swprintf_s(pCurrent, 21, L"__%.16I64X__", ulLastSegmentNumber);
-            pCurrent[20] = L'\\';
-        }
-
-        {
-            dwCount += sizeof(WCHAR);
-            if (dwCount > m_dwFullNameBufferLen)
-            {
-                if (FAILED(ExtendNameBuffer(&pCurrent)))
-                    return NULL;
-            }
-            _ASSERT(dwCount <= m_dwFullNameBufferLen);
-
-            pCurrent--;
-            _ASSERT(pCurrent >= m_pFullNameBuffer);
-            *pCurrent = L'\\';
-        }
-
-        if (pdwLen)
-            *pdwLen = dwCount;
-        return pCurrent;
+        *pdwLen = m_currentFileName.size() * sizeof(wchar_t);
     }
+
+    return m_currentFileName.data();
 }
 
 bool MFTWalker::AreAttributesComplete(const MFTRecord* pBaseRecord, std::vector<MFT_SEGMENT_REFERENCE>& missingRecords)
@@ -1606,7 +1462,8 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
         }
         else
         {
-            Log::Trace(L"MFT record {:#x} not in use and ignored", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
+            Log::Trace(
+                L"MFT record {:#x} not in use and ignored", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
             DeleteRecord(pRecord);
         }
     }

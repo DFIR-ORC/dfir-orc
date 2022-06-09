@@ -102,6 +102,7 @@ public:
     MFTWalker()
         : m_SegmentStore(L"MFTSegmentStore")
     {
+        m_currentFileNameElements.reserve(64);
     }
 
     HRESULT Initialize(const std::shared_ptr<Location>& loc, bool bIncludeNoInUse = true);
@@ -184,6 +185,9 @@ private:
 
     WCHAR* m_pFullNameBuffer = nullptr;
     DWORD m_dwFullNameBufferLen = 0LU;
+
+    std::vector<std::wstring_view> m_currentFileNameElements;
+    std::wstring m_currentFileName;
 
     HRESULT ExtendNameBuffer(WCHAR** pCurrent);
 
