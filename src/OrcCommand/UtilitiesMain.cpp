@@ -163,6 +163,7 @@ void UtilitiesMain::PrintCommonFooter(Orc::Text::Tree& root)
 UtilitiesMain::UtilitiesMain()
     : theStartTime()
     , theFinishTime()
+    , m_hMothership(NULL)
 {
     theStartTickCount = 0L;
     theFinishTickCount = 0L;

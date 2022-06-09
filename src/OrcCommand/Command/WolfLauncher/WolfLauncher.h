@@ -94,6 +94,7 @@ public:
         OutputSpec Outcome;
 
         std::wstring strCompressionLevel;
+        std::wstring strMothershipHandle;
 
         OutputSpec TempWorkingDir;
 

@@ -28,6 +28,7 @@
 #include "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
 #include "Command/WolfLauncher/ConsoleConfiguration.h"
 #include "Configuration/Option.h"
+#include "Text/Hex.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -387,8 +388,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         hr = exec->SetArchiveName((const std::wstring&)archiveitem[WOLFLAUNCHER_ARCHIVE_NAME]);
         if (FAILED(hr))
         {
-            Log::Error(
-                L"Failed to set '{}' as archive name [{}]", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], SystemError(hr));
+            Log::Error(L"Failed to set '{}' as archive name [{}]", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], SystemError(hr));
             return hr;
         }
 
@@ -607,6 +607,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Compression", config.strCompressionLevel))
                         ;
+                    else if (ParameterOption(argv[i] + 1, L"MothershipHandle", config.strMothershipHandle))
+                        ;
                     else if (ParameterOption(argv[i] + 1, L"archive_timeout", config.msArchiveTimeOut))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"command_timeout", config.msCommandTerminationTimeOut))
@@ -729,6 +731,23 @@ HRESULT Main::CheckConfiguration()
         // Apply the output directory path to the log file
         logPath = fs::path(config.Output.Path) / fs::path(*m_utilitiesConfig.log.logFile).filename();
         m_utilitiesConfig.log.logFile = logPath;
+    }
+
+    if (!config.strMothershipHandle.empty())
+    {
+        auto handle = Text::FromHexToLittleEndian<HANDLE>(std::wstring_view(config.strMothershipHandle));
+        if (handle)
+        {
+            m_hMothership = *handle;
+        }
+        else
+        {
+            Log::Error("Failed to parse mothership handle [{}]", handle.error());
+        }
+    }
+    else
+    {
+        Log::Warn("Missing mothership handle");
     }
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);

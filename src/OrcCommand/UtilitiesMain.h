@@ -426,6 +426,7 @@ protected:
     DWORD theStartTickCount;
     DWORD theFinishTickCount;
     UtilitiesConfiguration m_utilitiesConfig;
+    HANDLE m_hMothership;
 
     std::vector<std::shared_ptr<ExtensionLibrary>> m_extensions;
     HRESULT LoadCommonExtensions();
