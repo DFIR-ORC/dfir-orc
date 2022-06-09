@@ -891,6 +891,12 @@ HRESULT CNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackgroundCopyErro
     {
         Log::Debug("Failed to retrieve BITS job error [{}]", SystemError(hr));
 
+        // BEWARE: this was a missing code and return statement. Before it continued to last 'return S_OK' without
+        // any notification.
+        auto notify = UploadNotification::MakeFailureNotification(
+            m_request, UploadNotification::Type::UploadComplete, m_source, m_destination, E_FAIL, L"Unknown job error");
+        Concurrency::send(m_pNotificationTarget, notify);
+        return S_OK;
     }
 
 
@@ -942,28 +948,26 @@ HRESULT CNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackgroundCopyErro
 
     if (TRUE == IsError)
     {
-        hr = pJob->GetDisplayName(&pszJobName);
         hr = pError->GetErrorDescription(LANGIDFROMLCID(GetThreadLocale()), &pszErrorDescription);
         if (FAILED(hr))
         {
             Log::Debug("Failed to retrieve error description [{}]", hr);
         }
 
-        if (pszJobName && pszErrorDescription)
-        {
-            // Do something with the job name and description.
-            auto notify = UploadNotification::MakeFailureNotification(
-                m_request,
-                UploadNotification::Type::UploadComplete,
-                m_source,
-                m_destination,
-                HRESULT_FROM_WIN32(GetLastError()),
-                pszErrorDescription);
-            Concurrency::send(m_pNotificationTarget, notify);
-        }
+        // Do something with the job name and description.
+        auto notify = UploadNotification::MakeFailureNotification(
+            m_request,
+            UploadNotification::Type::UploadComplete,
+            m_source,
+            m_destination,
+            ErrorCode,
+            pszErrorDescription ? pszErrorDescription : L"Unknown error");
+        Concurrency::send(m_pNotificationTarget, notify);
 
-        CoTaskMemFree(pszJobName);
-        CoTaskMemFree(pszErrorDescription);
+        if (pszErrorDescription)
+        {
+            CoTaskMemFree(pszErrorDescription);
+        }
     }
 
     // If you do not return S_OK, BITS continues to call this callback.
