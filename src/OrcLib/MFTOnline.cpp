@@ -12,6 +12,7 @@
 #include "VolumeReader.h"
 
 #include "Log/Log.h"
+#include "MFTRecord.h"
 
 using namespace Orc;
 
@@ -127,6 +128,13 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
         Log::Error(L"Failed to read MFT record!");
         return hr;
     }
+
+    // Fixup the record buffer
+    MFTRecord mftRecord;
+    mftRecord.ParseRecord(
+        m_pVolReader,
+        reinterpret_cast<FILE_RECORD_SEGMENT_HEADER*>(record.GetData()), record.GetCount(),
+        NULL);
 
     PFILE_RECORD_SEGMENT_HEADER pData = (PFILE_RECORD_SEGMENT_HEADER)record.GetData();
 

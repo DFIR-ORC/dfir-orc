@@ -34,6 +34,7 @@ class MFTRecord
     friend class MFTWalker;
     friend class MFTRecordFileInfo;
     friend class AttributeList;
+    friend class MFTOnline;
 
 public:
     const std::vector<std::pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>>& GetChildRecords() const
