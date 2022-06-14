@@ -68,11 +68,22 @@ HRESULT MFTUtils::GetAttributeNRExtents(
         ULONG countLCN = (pPairs[0] >> 4) & 0x0f;
         ULONG countRecord = countVCN + countLCN + 1;
 
+        if (countVCN > 8)
+        {
+            Log::Error("Invalid DataRun entry (vcn size byte count: {})", countVCN);
+            return E_FAIL;
+        }
+
+        if (countLCN > 8)
+        {
+            Log::Error("Invalid DataRun entry (lcn size byte count: {})", countLCN);
+            return E_FAIL;
+        }
+
         if (countRecord > PairDataLen)
         {
-            HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Got a bad VCN/LCN record [{}]", SystemError(hr));
-            break;
+            Log::Error("Invalid DataRun entry record");
+            return E_FAIL;
         }
 
         LONGLONG NextVcn = 0;
