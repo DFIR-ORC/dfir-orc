@@ -59,7 +59,7 @@ CreateFacilities(SpdlogSink::Ptr consoleSink, SpdlogSink::Ptr fileSink)
         std::make_unique<spdlog::pattern_formatter>(Log::kDefaultLogPattern, spdlog::pattern_time_type::utc));
     console->EnableBacktrace(64);
     console->SetBacktraceTrigger(Level::Critical);
-    console->SetBacktraceLevel(Level::Info);
+    console->SetBacktraceLevel(Level::Debug);
 
     auto file = UtilitiesLogger::CreateSpdlogLogger("file");
     file->Add(fileSink);
