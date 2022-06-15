@@ -487,7 +487,7 @@ std::wstring Orc::FileFind::Match::GetMatchDescription() const
         return description;
     }
 
-    if (Term->YaraRulesSpec != L"*" || MatchingAttributes.empty())
+    if (Term->YaraRulesSpec.find(L"*") == std::wstring::npos || MatchingAttributes.empty())
     {
         // If not wildcard would output something like 'Content matches yara rule(s): the_rule_name'
         return description;
