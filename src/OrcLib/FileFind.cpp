@@ -547,7 +547,7 @@ HRESULT Orc::FileFind::CheckYara()
                     if (term_rule == rule)
                     {
                         auto [hr, termRule] = AnsiToWide(term_rule);
-                        Log::Warn(
+                        Log::Critical(
                             L"Term '{}' rule spec '{}' does not match any rule in yara",
                             term->GetDescription(),
                             termRule);
