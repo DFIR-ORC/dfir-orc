@@ -14,4 +14,7 @@ namespace Orc {
 bool StartsWith(std::string_view string, std::string_view substring);
 bool StartsWith(std::wstring_view string, std::wstring_view substring);
 
+bool EndsWith(std::string_view string, std::string_view substring);
+bool EndsWith(std::wstring_view string, std::wstring_view substring);
+
 }  // namespace Orc
