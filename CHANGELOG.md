@@ -1,5 +1,30 @@
 # ChangeLog
 
+## [10.1.1] - 2022-06-20
+### Added
+- Toolembed: display a message for missing/broken resource because of bad configuration
+- Syslog: display configuration on startup
+
+### Changed
+- GetThis: replace from output filenames the possible leading '__' with '_'
+- Bits: do not create bits job on 'once' mode if server is unreachable
+- Log: set default backtrace log level to debug for commands
+
+### Fixed
+- Ntfs: fix parsing for very long paths
+- Ntfs: fix parsing for very fragmented mfts
+- Ntfs: fix possible crash with nested record resolution
+- FastFind: fix matching yara rule display when wildcard is used for rule selection
+- Configuration: fix missing log option processing for local configuration
+- Fix version string for recents windows releases
+- Fix possible crash with GetNetworkAdapters
+- Fix possible locking issue when uploading console's log
+- Bits: add more detail to failure logs
+- Bits: fix some missing error handling
+- Outcome: fix possible failure when calculating mothership's hash
+- Vcpkg: removed uneeded/broken dependency to libwinpthread
+
+
 ## [10.1.0] - 2022-03-25
 Summary of changes since the 10.0.24. For more details look at rc versions.
 From 10.1.0 the semantic versioning will be applied.

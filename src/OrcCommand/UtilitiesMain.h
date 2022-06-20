@@ -407,7 +407,7 @@ public:
                 }
                 catch (concurrency::operation_timed_out&)
                 {
-                    Log::Error("Complete archive operation has timed out");
+                    Log::Critical("Complete archive operation has timed out");
                     return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
                 }
             }
@@ -426,6 +426,7 @@ protected:
     DWORD theStartTickCount;
     DWORD theFinishTickCount;
     UtilitiesConfiguration m_utilitiesConfig;
+    HANDLE m_hMothership;
 
     std::vector<std::shared_ptr<ExtensionLibrary>> m_extensions;
     HRESULT LoadCommonExtensions();
@@ -850,7 +851,7 @@ public:
         catch (...)
         {
             std::cerr << "Exception during during command execution" << std::endl;
-            Log::Critical("Exception during configuration evaluation.");
+            Log::Critical("Exception during during command execution.");
 
 #ifdef ORC_BUILD_BOOST_STACKTRACE
             boost::stacktrace::stacktrace();

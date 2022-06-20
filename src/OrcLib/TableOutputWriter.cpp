@@ -458,7 +458,7 @@ TableOutput::Schema Orc::TableOutput::GetColumnsFromConfig(const LPCWSTR szTable
                 if (e.IsCritical())
                     throw;
 
-                Log::Error(L"{} [{}]", e.Description, SystemError(e.GetHRESULT()));
+                Log::Error(L"{} [{}]", e.Description, e.ErrorCode());
             }
             catch (...)
             {

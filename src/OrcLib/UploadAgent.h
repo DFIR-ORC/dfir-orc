@@ -36,7 +36,7 @@ public:
 
     virtual void run();
 
-    virtual HRESULT CheckFileUpload(const std::wstring& szRemoteName, PDWORD pdwFileSize = nullptr) PURE;
+    virtual HRESULT CheckFileUpload(const std::wstring& szRemoteName, std::optional<DWORD>& fileSize) PURE;
     virtual std::wstring GetRemoteFullPath(const std::wstring& strRemoteName) PURE;
     virtual std::wstring GetRemotePath(const std::wstring& strRemoteName) PURE;
 
@@ -83,7 +83,7 @@ protected:
         bool bDeleteWhenCopied,
         const std::shared_ptr<const UploadMessage>& request) PURE;
 
-    virtual HRESULT IsComplete(bool bReadyToExit = false) PURE;
+    virtual HRESULT IsComplete(bool bReadyToExit, bool& hasFailure) PURE;
 
     virtual HRESULT Cancel() PURE;
 

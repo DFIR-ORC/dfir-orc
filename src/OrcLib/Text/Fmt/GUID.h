@@ -14,14 +14,17 @@
 
 #include <fmt/format.h>
 
+#include "Utils/Guid.h"
+
 template <>
 struct fmt::formatter<GUID> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
     auto format(const GUID& guid, FormatContext& ctx)
     {
-        const auto s = fmt::format("{}-{}-{}-{}", guid.Data1, guid.Data2, guid.Data3, guid.Data4);
-        return formatter<std::string_view>::format(s, ctx);
+        fmt::basic_memory_buffer<char, Orc::kGuidStringLength> s;
+        Orc::ToString(guid, std::back_inserter(s));
+        return formatter<std::string_view>::format(std::string_view(s.data(), s.size()), ctx);
     }
 };
 
@@ -31,7 +34,8 @@ struct fmt::formatter<GUID, wchar_t> : public fmt::formatter<std::wstring_view, 
     template <typename FormatContext>
     auto format(const GUID& guid, FormatContext& ctx)
     {
-        const auto s = fmt::format(L"{}-{}-{}-{}", guid.Data1, guid.Data2, guid.Data3, guid.Data4);
-        return formatter<std::wstring_view, wchar_t>::format(s, ctx);
+        fmt::basic_memory_buffer<wchar_t, Orc::kGuidStringLength> s;
+        Orc::ToString(guid, std::back_inserter(s));
+        return formatter<std::wstring_view, wchar_t>::format(std::wstring_view(s.data(), s.size()), ctx);
     }
 };

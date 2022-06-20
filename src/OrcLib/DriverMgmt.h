@@ -76,11 +76,9 @@ public:
         _Out_opt_ LPDWORD lpBytesReturned,
         _Inout_opt_ LPOVERLAPPED lpOverlapped);
 
-    template <typename _Tout, size_t _ToutElements, typename _Tin, size_t _TinElements>
-    HRESULT DeviceIoControl(
-        DWORD dwIoControlCode,
-        const Orc::Buffer<_Tin, _TinElements>& input,
-        Orc::Buffer<_Tout, _ToutElements>& output)
+    template <typename _Tout, typename _Tin>
+    Orc::Result<size_t>
+    DeviceIoControl(DWORD dwIoControlCode, const Orc::Span<_Tin>& input, const Orc::Span<_Tout>& output)
     {
         using namespace msl::utilities;
 
@@ -90,11 +88,11 @@ public:
                 static_cast<LPVOID>(input.get()),
                 SafeInt<DWORD>(input.size() * sizeof(_Tin)),
                 static_cast<LPVOID>(output.get()),
-                SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
+                SafeInt<DWORD>(output.size() * sizeof(_Tout)),
                 &dwBytesReturned,
                 NULL);
             FAILED(hr))
-            return hr;
+            return SystemError(hr);
 
         if (dwBytesReturned % sizeof(_Tout))
         {
@@ -105,18 +103,15 @@ public:
                 dwIoControlCode,
                 dwBytesReturned,
                 sizeof(_Tout));
-            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+            return Win32Error(ERROR_INVALID_DATA);
         }
 
-        output.use(dwBytesReturned / sizeof(_Tout));
-        return S_OK;
+        return dwBytesReturned / sizeof(_Tout);
     }
 
-    template <typename _Tout, typename _Tin, size_t _TinElements>
-    Orc::Result<Orc::Buffer<_Tout>> DeviceIoControl(
-        DWORD dwIoControlCode,
-        const Orc::Buffer<_Tin, _TinElements>& input,
-        DWORD dwExpectedOutputElements = 1)
+    template <typename _Tout, typename _Tin>
+    Orc::Result<Orc::Buffer<_Tout>>
+    DeviceIoControl(DWORD dwIoControlCode, const Orc::Span<_Tin>& input, DWORD dwExpectedOutputElements = 1)
     {
         using namespace msl::utilities;
 
@@ -149,8 +144,8 @@ public:
         return output;
     }
 
-    template <typename _Tin, size_t _TinElements>
-    HRESULT DeviceIoControl(DWORD dwIoControlCode, const Orc::Buffer<_Tin, _TinElements>& input)
+    template <typename _Tin>
+    Result<void> DeviceIoControl(DWORD dwIoControlCode, const Orc::Span<_Tin>& input)
     {
         using namespace msl::utilities;
 
@@ -164,8 +159,8 @@ public:
                 &dwBytesReturned,
                 NULL);
             FAILED(hr))
-            return hr;
-        return S_OK;
+            return SystemError(hr);
+        return Success {};
     }
 
     template <typename _Tout>

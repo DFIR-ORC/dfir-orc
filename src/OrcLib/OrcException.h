@@ -42,7 +42,15 @@ public:
     template <typename... Args>
     Exception(Severity status, _In_ HRESULT hr, std::wstring_view fmt, Args&&... args)
         : m_severity(status)
-        , m_HRESULT(hr)
+        , m_ec(SystemError(hr))
+    {
+        Description = fmt::format(fmt, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    Exception(Severity status, _In_ std::error_code ec, std::wstring_view fmt, Args&&... args)
+        : m_severity(status)
+        , m_ec(ec)
     {
         Description = fmt::format(fmt, std::forward<Args>(args)...);
     }
@@ -60,9 +68,15 @@ public:
     {
     }
     Exception(std::wstring descr);
+
     Exception(Severity status, _In_ HRESULT hr)
         : m_severity(status)
-        , m_HRESULT(hr)
+        , m_ec(SystemError(hr))
+    {
+    }
+    Exception(Severity status, _In_ std::error_code ec)
+        : m_severity(status)
+        , m_ec(std::move(ec))
     {
     }
 
@@ -71,10 +85,12 @@ public:
     Exception& operator=(Exception&& other) noexcept = default;
     Exception& operator=(const Exception& other) = default;
 
-    HRESULT GetHRESULT(void) const { return m_HRESULT; }
+    void SetErrorCode(_In_ std::error_code ec) { std::swap(m_ec, ec); }
+    const std::error_code& ErrorCode() const { return m_ec; }
+
     HRESULT SetHRESULT(_In_ HRESULT Status)
     {
-        m_HRESULT = Status;
+        m_ec = SystemError(Status);
         return Status;
     }
 
@@ -82,7 +98,7 @@ public:
 
     Severity m_severity = Severity::Unset;
     std::wstring Description;
-    HRESULT m_HRESULT = E_FAIL;
+    std::error_code m_ec;
 
     HRESULT PrintMessage() const;
 

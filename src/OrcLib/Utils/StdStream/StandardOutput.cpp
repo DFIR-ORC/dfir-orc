@@ -39,6 +39,11 @@ const StandardOutputFileTee& StandardOutput::FileTee() const
     return *m_fileTee;
 }
 
+StandardOutputFileTee& StandardOutput::FileTee()
+{
+    return *m_fileTee;
+}
+
 std::shared_ptr<StandardOutputFileTee>& StandardOutput::FileTeePtr()
 {
     return m_fileTee;

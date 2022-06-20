@@ -28,6 +28,7 @@
 #include "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
 #include "Command/WolfLauncher/ConsoleConfiguration.h"
 #include "Configuration/Option.h"
+#include "Text/Hex.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -173,6 +174,48 @@ std::shared_ptr<WolfExecution::Recipient> Main::GetRecipientFromItem(const Confi
     return retval;
 }
 
+void Main::ReadLogConfiguration(const ConfigItem& configItem, bool hasConsoleConfigItem)
+{
+    if (!configItem.empty())
+    {
+        //
+        // DEPRECATED: compatibility with 10.0.x log configuration
+        //
+        // Usually configuration is close to '<log ...>ORC_{SystemType}_{FullComputerName}_{TimeStamp}.log</log>'
+        // instead of '<log><file><output>...</output></file></log>'.
+        //
+        // Silently convert any old configuration into new structures.
+        //
+
+        OutputSpec output;
+        auto hr = output.Configure(configItem);
+        if (FAILED(hr))
+        {
+            Log::Warn(L"Failed to configure DFIR-Orc log file [{}]", SystemError(hr));
+        }
+        else if (!hasConsoleConfigItem)
+        {
+            m_consoleConfiguration.output.path = output.Path;
+            m_consoleConfiguration.output.encoding = ToEncoding(output.OutputEncoding);
+            m_consoleConfiguration.output.disposition = ToFileDisposition(output.disposition);
+
+            if (!m_utilitiesConfig.log.level)
+            {
+                m_utilitiesConfig.log.level = Log::Level::Info;
+                UtilitiesLoggerConfiguration::ApplyLogLevel(m_logging, m_utilitiesConfig.log);
+            }
+
+            Log::Warn(
+                L"This use of the configuration element '<log>' is DEPRECATED, you should use '<console> to capture "
+                L"console output or keep using 'log' for detailed logging.");
+        }
+    }
+    else if (configItem)
+    {
+        UtilitiesLoggerConfiguration::Parse(configItem, m_utilitiesConfig.log);
+    }
+}
+
 HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 {
     using namespace std::string_view_literals;
@@ -227,44 +270,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
-    if (configitem[WOLFLAUNCHER_LOG] && !configitem[WOLFLAUNCHER_LOG].empty())
-    {
-        //
-        // DEPRECATED: compatibility with 10.0.x log configuration
-        //
-        // Usually configuration is close to '<log ...>ORC_{SystemType}_{FullComputerName}_{TimeStamp}.log</log>'
-        // instead of '<log><file><output>...</output></file></log>'.
-        //
-        // Silently convert any old configuration into new structures.
-        //
-
-        OutputSpec output;
-        auto hr = output.Configure(configitem[WOLFLAUNCHER_LOG]);
-        if (FAILED(hr))
-        {
-            Log::Warn(L"Failed to configure DFIR-Orc log file [{}]", SystemError(hr));
-        }
-        else if (!configitem[WOLFLAUNCHER_CONSOLE])
-        {
-            m_consoleConfiguration.output.path = output.Path;
-            m_consoleConfiguration.output.encoding = ToEncoding(output.OutputEncoding);
-            m_consoleConfiguration.output.disposition = ToFileDisposition(output.disposition);
-
-            if (!m_utilitiesConfig.log.level)
-            {
-                m_utilitiesConfig.log.level = Log::Level::Info;
-                UtilitiesLoggerConfiguration::ApplyLogLevel(m_logging, m_utilitiesConfig.log);
-            }
-
-            Log::Warn(
-                L"This use of the configuration element '<log>' is DEPRECATED, you should use '<console> to capture "
-                L"console output or keep using 'log' for detailed logging.");
-        }
-    }
-    else if (configitem[WOLFLAUNCHER_LOG])
-    {
-        UtilitiesLoggerConfiguration::Parse(configitem[WOLFLAUNCHER_LOG], m_utilitiesConfig.log);
-    }
+    ReadLogConfiguration(configitem[WOLFLAUNCHER_LOG], configitem[WOLFLAUNCHER_CONSOLE].Status == ConfigItem::PRESENT);
 
     if (configitem[WOLFLAUNCHER_CONSOLE])
     {
@@ -533,6 +539,16 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
+    if (configitem[ORC_LOGGING])
+    {
+        ReadLogConfiguration(configitem[ORC_LOGGING], configitem[ORC_CONSOLE].Status == ConfigItem::PRESENT);
+    }
+
+    if (configitem[ORC_CONSOLE])
+    {
+        ConsoleConfiguration::Parse(configitem[ORC_CONSOLE], m_consoleConfiguration);
+    }
+
     return S_OK;
 }
 
@@ -590,6 +606,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     else if (BooleanOption(argv[i] + 1, L"CreateNew", config.bRepeatCreateNew))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Compression", config.strCompressionLevel))
+                        ;
+                    else if (ParameterOption(argv[i] + 1, L"MothershipHandle", config.strMothershipHandle))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"archive_timeout", config.msArchiveTimeOut))
                         ;
@@ -713,6 +731,23 @@ HRESULT Main::CheckConfiguration()
         // Apply the output directory path to the log file
         logPath = fs::path(config.Output.Path) / fs::path(*m_utilitiesConfig.log.logFile).filename();
         m_utilitiesConfig.log.logFile = logPath;
+    }
+
+    if (!config.strMothershipHandle.empty())
+    {
+        auto handle = Text::FromHexToLittleEndian<HANDLE>(std::wstring_view(config.strMothershipHandle));
+        if (handle)
+        {
+            m_hMothership = *handle;
+        }
+        else
+        {
+            Log::Error("Failed to parse mothership handle [{}]", handle.error());
+        }
+    }
+    else
+    {
+        Log::Warn("Missing mothership handle");
     }
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);

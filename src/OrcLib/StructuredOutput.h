@@ -11,10 +11,14 @@
 
 #include "OutputWriter.h"
 
+#include "Flags.h"
+
+#include "Text/Fmt/std_error_code.h"
+
+#include <fmt/format.h>
+
 #include <In6addr.h>
 #include <inaddr.h>
-
-#include "Flags.h"
 
 #pragma managed(push, off)
 
@@ -120,7 +124,43 @@ public:
 
     virtual HRESULT WriteComment(LPCWSTR szComment) PURE;
 
-#ifndef __cplusplus_cli
+    template <typename _T>
+    HRESULT Write(Result<_T> arg, std::wstring_view message = {})
+    {
+        using namespace std::string_view_literals;
+        if (arg.has_value())
+            return Write(arg.value());
+        else if (!message.empty())
+            Log::Warn("{}: {}"sv, message, arg.error());
+        else
+            Log::Warn("Result in error: {}"sv, arg.error());
+        return S_OK;
+    }
+
+    template <typename _T>
+    HRESULT WriteNamed(LPCWSTR szName, Result<_T> arg, std::wstring_view message = {})
+    {
+        using namespace std::string_view_literals;
+        if (arg.has_value())
+            return WriteNamed(szName, arg.value());
+        else if (!message.empty())
+            Log::Warn(L"{}: {}"sv, message, arg.error());
+        else
+            Log::Warn(L"Result in error: {}"sv, arg.error());
+        return S_OK;
+    }
+
+    HRESULT WriteNamedFileTime(LPCWSTR szName, Result<ULONGLONG> filetime, std::wstring_view message = {})
+    {
+        using namespace std::string_view_literals;
+        if (filetime.has_value())
+            return WriteNamedFileTime(szName, filetime.value());
+        else if (!message.empty())
+            Log::Warn(L"{}: {}"sv, message, filetime.error());
+        else
+            Log::Warn(L"Result in error: {}"sv, filetime.error());
+        return S_OK;
+    }
 
     template <typename... Args>
     HRESULT WriteFormated(const std::wstring_view& szFormat, Args&&... args)
@@ -147,12 +187,10 @@ public:
     }
 
 protected:
-    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args) PURE;
     virtual HRESULT WriteFormated_(const std::string_view& szFormat, fmt::format_args args) PURE;
-    virtual HRESULT WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, fmt::wformat_args args) PURE;
+    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args) PURE;
     virtual HRESULT WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, fmt::format_args args) PURE;
-
-#endif
+    virtual HRESULT WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, fmt::wformat_args args) PURE;
 };
 
 class IWriter : public IOutput

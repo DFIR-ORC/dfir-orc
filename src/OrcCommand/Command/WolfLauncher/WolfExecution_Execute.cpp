@@ -732,7 +732,7 @@ HRESULT WolfExecution::CompleteExecution()
     }
     catch (Concurrency::operation_timed_out e)
     {
-        Log::Error("Command agent completion timeout: {} msecs reached", m_CmdTimeOut.count());
+        Log::Critical("Command agent completion timeout: {} msecs reached", m_CmdTimeOut.count());
         return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
     }
     if (m_pTermination)
@@ -768,7 +768,7 @@ HRESULT WolfExecution::TerminateAllAndComplete()
     }
     catch (Concurrency::operation_timed_out e)
     {
-        Log::Error(L"Command agent completion timeout: {} msecs reached", m_CmdTimeOut.count());
+        Log::Critical(L"Command agent completion timeout: {} msecs reached", m_CmdTimeOut.count());
         return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
     }
 
@@ -813,7 +813,7 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
     }
     catch (Concurrency::operation_timed_out e)
     {
-        Log::Error(
+        Log::Critical(
             "Command archive completion timeout: {} secs reached",
             std::chrono::duration_cast<std::chrono::seconds>(m_ArchiveTimeOut).count());
         return HRESULT_FROM_WIN32(ERROR_TIMEOUT);

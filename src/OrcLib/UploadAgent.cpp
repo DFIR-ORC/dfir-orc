@@ -136,7 +136,6 @@ void UploadAgent::run()
                             {
                                 SendResult(notification);
                             }
-
                         }
                         else
                         {
@@ -167,7 +166,8 @@ void UploadAgent::run()
             }
             break;
             case UploadMessage::RefreshJobStatus: {
-                if (IsComplete(bIsReadyToBeDone) == S_OK)
+                bool hasFailure = false;
+                if (IsComplete(bIsReadyToBeDone, hasFailure) == S_OK)
                 {
                     UploadNotification::Notification notification;
                     hr = UnInitialize();
@@ -183,8 +183,23 @@ void UploadAgent::run()
                     }
                     else
                     {
-                        notification = UploadNotification::MakeSuccessNotification(
-                            request, UploadNotification::JobComplete, request->LocalName(), request->RemoteName());
+                        if (hasFailure)
+                        {
+                            Log::Critical("Failed to upload some file(s)");
+
+                            notification = UploadNotification::MakeFailureNotification(
+                                request,
+                                UploadNotification::JobComplete,
+                                request->LocalName(),
+                                request->RemoteName(),
+                                E_FAIL,
+                                L"Failed some uploading");
+                        }
+                        else
+                        {
+                            notification = UploadNotification::MakeSuccessNotification(
+                                request, UploadNotification::JobComplete, request->LocalName(), request->RemoteName());
+                        }
                     }
 
                     if (notification)
@@ -199,7 +214,8 @@ void UploadAgent::run()
             break;
             case UploadMessage::Cancel: {
                 UploadNotification::Notification notification;
-                if (FAILED(Cancel()))
+                hr = Cancel();
+                if (FAILED(hr))
                 {
                     notification = UploadNotification::MakeFailureNotification(
                         request,
@@ -270,7 +286,7 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
             {
                 if (FAILED(hr = retval->SetConfiguration(uploadSpec)))
                 {
-                    Log::Error(L"Failed to configure CopyFileAgent");
+                    Log::Error("Failed to configure CopyFileAgent [{}]", SystemError(hr));
                     return nullptr;
                 }
             }

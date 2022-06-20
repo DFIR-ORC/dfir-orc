@@ -95,6 +95,18 @@ void UtilitiesMain::PrintCommonParameters(Orc::Text::Tree& root)
     }
 
     PrintValue(root, L"Log file", logFileName);
+
+    if (m_utilitiesConfig.log.syslog.host)
+    {
+        const auto port =
+            m_utilitiesConfig.log.syslog.port.value_or(std::wstring(UtilitiesLoggerConfiguration::kDefaultSyslogPortW));
+
+        PrintValue(root, L"Syslog", fmt::format(L"{}:{}", m_utilitiesConfig.log.syslog.host, port));
+    }
+    else
+    {
+        PrintValue(root, L"Syslog", Text::kEmptyW);
+    }
 }
 
 void UtilitiesMain::PrintCommonFooter(Orc::Text::Tree& root)
@@ -151,6 +163,7 @@ void UtilitiesMain::PrintCommonFooter(Orc::Text::Tree& root)
 UtilitiesMain::UtilitiesMain()
     : theStartTime()
     , theFinishTime()
+    , m_hMothership(NULL)
 {
     theStartTickCount = 0L;
     theFinishTickCount = 0L;

@@ -487,7 +487,7 @@ std::wstring Orc::FileFind::Match::GetMatchDescription() const
         return description;
     }
 
-    if (Term->YaraRulesSpec != L"*" || MatchingAttributes.empty())
+    if (Term->YaraRulesSpec.find(L"*") == std::wstring::npos || MatchingAttributes.empty())
     {
         // If not wildcard would output something like 'Content matches yara rule(s): the_rule_name'
         return description;
@@ -547,7 +547,7 @@ HRESULT Orc::FileFind::CheckYara()
                     if (term_rule == rule)
                     {
                         auto [hr, termRule] = AnsiToWide(term_rule);
-                        Log::Warn(
+                        Log::Critical(
                             L"Term '{}' rule spec '{}' does not match any rule in yara",
                             term->GetDescription(),
                             termRule);

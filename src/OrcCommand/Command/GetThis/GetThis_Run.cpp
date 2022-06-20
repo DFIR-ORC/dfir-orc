@@ -539,7 +539,7 @@ CreateSampleFileName(const Main::SampleRef& sample, const PFILE_NAME pFileName, 
         len = swprintf_s(
             name.data(),
             name.size(),
-            L"%llX_%llX_%llX_%x__%.*s_%.*s_%s.%s",
+            L"%llX_%llX_%llX_%x_%.*s_%.*s_%s.%s",
             sample.VolumeSerial,
             parentFRN,
             FRN,

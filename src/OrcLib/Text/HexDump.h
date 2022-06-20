@@ -67,8 +67,6 @@ OutputIt Hex(OutputIt out, T value)
     return std::copy(std::cbegin(hex), std::cend(hex), out);
 }
 
-}  // namespace Detail
-
 template <typename InputIt, typename OutputIt>
 OutputIt ToHex(InputIt first, InputIt last, OutputIt out)
 {
@@ -86,6 +84,8 @@ OutputIt ToHex(InputIt first, InputIt last, OutputIt out)
 
     return out;
 }
+
+}  // namespace Detail
 
 //
 // Push back into 'out' of type U the hex dump of 'in' with indentation 'indent'
@@ -119,7 +119,7 @@ void HexDump(const T& indent, InputIt first, InputIt last, OutputIt out)
         out++ = Traits::space_v<value_type>;
 
         const auto value = *in;
-        Hex(out, value);
+        Text::Detail::Hex(out, value);
         printable.push_back(Traits::isprintable(value) ? value : Traits::dot_v<value_type>);
     }
 

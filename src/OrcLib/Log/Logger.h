@@ -68,7 +68,7 @@ public:
                 {
                     fmt::format_to(std::back_inserter(msg), arg0, std::forward<Args>(args)...);
                 }
-                catch (const fmt::format_error& e)
+                catch (const fmt::format_error&)
                 {
                     assert(0 && "Failed to format log message");
                     logger->Log(timepoint, level, "Failed to format log message");

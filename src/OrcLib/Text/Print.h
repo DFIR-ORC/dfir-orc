@@ -45,7 +45,7 @@ inline void PrintKey(Tree& node, const std::wstring& key)
     node.AddWithoutEOL(FormatKey(key));
 }
 
-template<typename T>
+template <typename T>
 inline void PrintValue(Tree& node, const std::wstring& key, const T& value)
 {
     PrintKey(node, key);
@@ -67,13 +67,13 @@ inline void Print(Tree& node, const std::shared_ptr<T>& value)
 template <typename T>
 void Print(Tree& node, const std::optional<T>& value)
 {
-    if (!item.has_value())
+    if (!value.has_value())
     {
         Print(node, kNoneAvailableW);
         return;
     }
 
-    Print(node, *item);
+    Print(node, *value);
 }
 
 template <typename T>

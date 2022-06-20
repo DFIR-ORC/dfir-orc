@@ -185,6 +185,17 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
 
     std::vector<WCHAR> szCommandLine(MAX_CMDLINE);
     std::wstring strCommandLine = cmdLineBuilder.str();
+
+    HANDLE hMothership = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, GetCurrentProcessId());
+    if (hMothership)
+    {
+        strCommandLine.append(fmt::format(L" /MothershipHandle={:#x}", reinterpret_cast<size_t>(hMothership)));
+    }
+    else
+    {
+        Log::Error("Failed to append mothership handle on the cli [{}]", LastWin32Error());
+    }
+
     wcsncpy_s(szCommandLine.data(), MAX_CMDLINE, strCommandLine.c_str(), strCommandLine.size());
 
     DWORD dwMajor = 0, dwMinor = 0;

@@ -149,8 +149,8 @@ HRESULT GetRemoteOutputFileInformations(
 
     if (exec.ShouldUpload())
     {
-        DWORD dwFileSize;
-        hr = uploadAgent.CheckFileUpload(exec.GetOutputFileName(), &dwFileSize);
+        std::optional<DWORD> fileSize;
+        hr = uploadAgent.CheckFileUpload(exec.GetOutputFileName(), fileSize);
         if (FAILED(hr))
         {
             return hr;
@@ -158,7 +158,7 @@ HRESULT GetRemoteOutputFileInformations(
 
         fileInformations.exist = true;
         fileInformations.path = uploadAgent.GetRemoteFullPath(exec.GetOutputFileName());
-        fileInformations.size = dwFileSize;
+        fileInformations.size = fileSize;
         return S_OK;
     }
 
@@ -178,22 +178,32 @@ Result<std::wstring> GetCurrentExecutableHash(CryptoHashStream::Algorithm algori
     return Hash(path, algorithm);
 }
 
+Result<std::wstring> GetProcessExecutableHash(HANDLE hProcess, CryptoHashStream::Algorithm algorithm)
+{
+    std::error_code ec;
+    const auto path = GetModuleFileNameExApi(hProcess, NULL, ec);
+    if (ec)
+    {
+        return ec;
+    }
+
+    return Hash(path, algorithm);
+}
+
 Result<std::wstring> GetProcessExecutableHash(DWORD dwProcessId, CryptoHashStream::Algorithm algorithm)
 {
     Guard::Handle hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
     if (!hProcess)
     {
-        const auto error = LastWin32Error();
-        Log::Debug(L"Failed OpenProcess: {} [{}]", dwProcessId, error);
-        return error;
+        const auto ec = LastWin32Error();
+        Log::Debug(L"Failed OpenProcess: {} [{}]", dwProcessId, ec);
+        return ec;
     }
 
-    std::error_code ec;
-    const auto path = GetModuleFileNameExApi(hProcess.value(), NULL, ec);
-    return Hash(path, algorithm);
+    return GetProcessExecutableHash(*hProcess, algorithm);
 }
 
-void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, HANDLE hMothership)
 {
     auto&& lock = outcome.Lock();
 
@@ -235,10 +245,13 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome)
             mothership.SetCommandLineValue(commandLine.value());
         }
 
-        auto sha1 = GetProcessExecutableHash(mothershipPID.value(), CryptoHashStream::Algorithm::SHA1);
-        if (sha1)
+        if (hMothership)
         {
-            mothership.SetSha1(sha1.value());
+            auto sha1 = GetProcessExecutableHash(hMothership, CryptoHashStream::Algorithm::SHA1);
+            if (sha1)
+            {
+                mothership.SetSha1(sha1.value());
+            }
         }
     }
 
@@ -703,7 +716,7 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
         return Success<void>();
     }
 
-    ::UpdateOutcome(m_outcome);
+    ::UpdateOutcome(m_outcome, m_hMothership);
     ::UpdateOutcome(m_outcome, config.m_Recipients);
     ::UpdateOutcome(m_outcome, m_standardOutput);
     ::UpdateOutcome(m_outcome, m_logging);
@@ -930,7 +943,7 @@ HRESULT Main::Run_Execute()
                     else if (!info.size || *info.size != 0)
                     {
                         commandSetNode.Add(
-                            "Skipping set because non-empty remote output file already exists: '{}' ({})",
+                            "Skipping set because non-empty remote output file already exists: '{}' (size: {})",
                             info.path,
                             info.size);
                         commandSetNode.AddEmptyLine();
@@ -983,6 +996,8 @@ HRESULT Main::Run_Execute()
         {
             Log::Error("Failed to flush standard output [{}]", ec);
         }
+
+        m_standardOutput.FileTee().Close(ec);
 
         const std::filesystem::path localPath = *m_standardOutput.FileTee().Path();
         hr = UploadSingleFile(localPath.filename(), localPath);

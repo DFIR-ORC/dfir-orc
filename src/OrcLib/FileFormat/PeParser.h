@@ -12,6 +12,8 @@
 #include <vector>
 #include <system_error>
 
+#include "CryptoHashStreamAlgorithm.h"
+
 namespace Orc {
 
 class PeParser
@@ -43,6 +45,9 @@ public:
     using SectionHeaders = fmt::basic_memory_buffer<IMAGE_SECTION_HEADER, 16>;
 
     PeParser(std::shared_ptr<ByteStream> stream, std::error_code& ec);
+
+    bool HasDebugDirectory() const;
+    void ReadDebugDirectory(std::vector<uint8_t>& buffer, std::error_code& ec) const;
 
     bool HasSecurityDirectory() const;
     void ReadSecurityDirectory(std::vector<uint8_t>& buffer, std::error_code& ec) const;

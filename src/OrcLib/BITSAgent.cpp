@@ -16,6 +16,7 @@
 
 #include "BITSAgent.h"
 #include "ParameterCheck.h"
+#include "Text/Fmt/GUID.h"
 
 using namespace Orc;
 
@@ -105,7 +106,7 @@ HRESULT BITSAgent::Initialize()
             }
             else
             {
-                Log::Error(L"BITSAgent failed to create instance of background copy manager 2.5");
+                Log::Error(L"BITSAgent failed to create instance of background copy manager 2.5 [{}]", SystemError(hr));
                 return hr;
             }
         }
@@ -271,7 +272,7 @@ BITSAgent::UploadFile(
     }
     else
     {
-        Log::Error("Failed to SetNotifyInterface to delete uploaded files");
+        Log::Error("Failed to SetNotifyInterface to delete uploaded files [{}]", SystemError(hr));
     }
 
     if (job2 == nullptr)
@@ -329,14 +330,16 @@ BITSAgent::UploadFile(
 
     if (FAILED(hr = job->Resume()))
     {
-        Log::Error(L"Failed to start upload transfer");
+        Log::Error(L"Failed to start upload transfer [{}]", SystemError(hr));
     }
 
     return S_OK;
 }
 
-HRESULT BITSAgent::IsComplete(bool bReadyToExit)
+HRESULT BITSAgent::IsComplete(bool bReadyToExit, bool& hasFailure)
 {
+    hasFailure = false;
+
     if (m_config.Mode == OutputSpec::UploadMode::Asynchronous && bReadyToExit)
         return S_OK;  // If the agent is ready to exit, let it be!!
 
@@ -346,7 +349,8 @@ HRESULT BITSAgent::IsComplete(bool bReadyToExit)
         {
             BG_JOB_STATE progress = BG_JOB_STATE_QUEUED;
 
-            if (SUCCEEDED(job.m_job->GetState(&progress)))
+            HRESULT hr = job.m_job->GetState(&progress);
+            if (SUCCEEDED(hr))
             {
                 switch (progress)
                 {
@@ -357,7 +361,10 @@ HRESULT BITSAgent::IsComplete(bool bReadyToExit)
                     case BG_JOB_STATE_TRANSIENT_ERROR:
                         // Those status indicate a job "in progress"
                         return S_FALSE;
-                    case BG_JOB_STATE_ERROR:
+                    case BG_JOB_STATE_ERROR: {
+                        hasFailure = true;
+                    }
+                    break;
                     case BG_JOB_STATE_TRANSFERRED:
                     case BG_JOB_STATE_ACKNOWLEDGED:
                     case BG_JOB_STATE_CANCELLED:
@@ -366,6 +373,49 @@ HRESULT BITSAgent::IsComplete(bool bReadyToExit)
                         break;
                 }
             }
+            else
+            {
+                Log::Debug("Failed to retrieve BITS job state [{}]", SystemError(hr));
+            }
+        }
+    }
+
+    // Only getting there if all jobs are done
+    if (hasFailure)
+    {
+        for (auto job : m_jobs)
+        {
+            if (!job.m_job)
+            {
+                continue;
+            }
+
+            BG_JOB_STATE progress = BG_JOB_STATE_QUEUED;
+            if (FAILED(job.m_job->GetState(&progress)) || progress != BG_JOB_STATE_ERROR)
+            {
+                continue;
+            }
+
+            GUID guid = {0};
+            job.m_job->GetId(&guid);
+
+            CComPtr<IBackgroundCopyError> error;
+            HRESULT hr = job.m_job->GetError(&error);
+            if (FAILED(hr))
+            {
+                Log::Error(L"Failed to retrieve BITS job error (guid: {}) [{}]", guid, SystemError(hr));
+                continue;
+            }
+
+            LPWSTR description;
+            hr = error->GetErrorDescription(MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US), &description);
+            if (FAILED(hr))
+            {
+                Log::Error(L"Failed to retrieve BITS job error string (guid: {}) [{}]", guid, SystemError(hr));
+                continue;
+            }
+
+            Log::Error(L"Failed BITS job: {} (guid: {})", description, guid);
         }
     }
 
@@ -396,8 +446,8 @@ HRESULT BITSAgent::Cancel()
                     case BG_JOB_STATE_TRANSFERRED:
                     case BG_JOB_STATE_ACKNOWLEDGED:
                     case BG_JOB_STATE_CANCELLED:
-                        // Thos status indicate a job "complete": either on error or transfered --> nothing to cancel
-                        // here...
+                        // Thos status indicate a job "complete": either on error or transfered --> nothing to
+                        // cancel here...
                     default:
                         break;
                 }
@@ -423,12 +473,9 @@ HRESULT BITSAgent::UnInitialize()
 
 #pragma comment(lib, "winhttp.lib")
 
-HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PDWORD pdwFileSize)
+HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
 {
     HRESULT hr = E_FAIL;
-
-    if (pdwFileSize)
-        *pdwFileSize = MAXDWORD;
 
     // Warning!!! to ensure DFIR-Orc does not execute again when upload server is unavailable,
     // we return S_OK in all cases (except HTTP Status 404, in that case, we return S_FALSE)
@@ -533,7 +580,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
                 m_config.ServerName,
                 strRemotePath,
                 SystemError(hr));
-            return hr;
+            return E_FAIL;
         }
 
         if (!WinHttpSetCredentials(
@@ -578,69 +625,60 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, PD
 
     if (dwStatusCode == 200)
     {
-        if (pdwFileSize)
+        DWORD dwFileSize = 0;
+
+        dwHeaderSize = sizeof(DWORD);
+        if (!WinHttpQueryHeaders(
+                hRequest,
+                WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
+                WINHTTP_HEADER_NAME_BY_INDEX,
+                &dwFileSize,
+                &dwHeaderSize,
+                WINHTTP_NO_HEADER_INDEX))
         {
-            dwHeaderSize = sizeof(DWORD);
-            if (!WinHttpQueryHeaders(
-                    hRequest,
-                    WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
-                    WINHTTP_HEADER_NAME_BY_INDEX,
-                    pdwFileSize,
-                    &dwHeaderSize,
-                    WINHTTP_NO_HEADER_INDEX))
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Debug(
-                    L"Failed to query content length {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
-                return hr;
-            }
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Debug(
+                L"Failed to query content length {}/{} [{}]", m_config.ServerName, strRemotePath, SystemError(hr));
+            return hr;
         }
+
+        fileSize = dwFileSize;
     }
     else if (dwStatusCode == 404)
     {
-        if (pdwFileSize)
-            *pdwFileSize = 0L;
         return S_FALSE;
-    }
-    return S_OK;
-}
-
-HRESULT BITSAgent::CheckFileUploadOverSMB(const std::wstring& strRemoteName, PDWORD pdwFileSize)
-{
-    if (pdwFileSize)
-        *pdwFileSize = 0L;
-
-    std::wstring strFullPath = GetRemoteFullPath(strRemoteName);
-
-    if (pdwFileSize)
-    {
-        *pdwFileSize = 0L;
-        WIN32_FILE_ATTRIBUTE_DATA fileData;
-        if (!GetFileAttributesEx(strFullPath.c_str(), GetFileExInfoStandard, &fileData))
-        {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
-                return S_FALSE;
-
-            return HRESULT_FROM_WIN32(GetLastError());
-        }
-        else
-        {
-            if (fileData.nFileSizeHigh > 0)
-            {
-                *pdwFileSize = MAXDWORD;
-            }
-            else
-            {
-                *pdwFileSize = fileData.nFileSizeLow;
-            }
-        }
     }
     else
     {
-        if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(strFullPath.c_str()))
+        // TODO: add support for generic code (5xx, 4xx, 2xx...)
+        Log::Debug("Failed to check remote file using BITS http client (code: {})", dwStatusCode);
+        return E_FAIL;
+    }
+
+    return S_OK;
+}
+
+HRESULT BITSAgent::CheckFileUploadOverSMB(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
+{
+    std::wstring strFullPath = GetRemoteFullPath(strRemoteName);
+
+    WIN32_FILE_ATTRIBUTE_DATA fileData;
+    if (!GetFileAttributesEx(strFullPath.c_str(), GetFileExInfoStandard, &fileData))
+    {
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+            return S_FALSE;
+
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+    else
+    {
+        if (fileData.nFileSizeHigh > 0)
         {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
-                return S_FALSE;
+            fileSize = MAXDWORD;
+        }
+        else
+        {
+            fileSize = fileData.nFileSizeLow;
         }
     }
 
@@ -698,7 +736,7 @@ std::wstring BITSAgent::GetRemotePath(const std::wstring& strRemoteName)
     return stream.str();
 }
 
-HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdwFileSize)
+HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
 {
     HRESULT hr = E_FAIL;
 
@@ -706,19 +744,24 @@ HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdw
     {
         case OutputSpec::BITSMode::HTTP:
         case OutputSpec::BITSMode::HTTPS:
-            hr = CheckFileUploadOverHttp(strRemoteName, pdwFileSize);
+            hr = CheckFileUploadOverHttp(strRemoteName, fileSize);
             if (FAILED(hr))
             {
                 Log::Debug("Failed to check file status over http [{}]", SystemError(hr));
                 return hr;
             }
+            break;
         case OutputSpec::BITSMode::SMB:
-            hr = CheckFileUploadOverSMB(strRemoteName, pdwFileSize);
+            hr = CheckFileUploadOverSMB(strRemoteName, fileSize);
             if (FAILED(hr))
             {
                 Log::Debug("Failed to check file status over smb [{}]", SystemError(hr));
                 return hr;
             }
+            break;
+        default:
+            Log::Debug(L"Invalid BITS Mode {}", m_config.bitsMode);
+            break;
     }
 
     return S_OK;
@@ -825,6 +868,18 @@ HRESULT CNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackgroundCopyErro
     // upload file failed.
 
     hr = pError->GetError(&Context, &ErrorCode);
+    if (FAILED(hr))
+    {
+        Log::Debug("Failed to retrieve BITS job error [{}]", SystemError(hr));
+
+        // BEWARE: this was a missing code and return statement. Before it continued to last 'return S_OK' without
+        // any notification.
+        auto notify = UploadNotification::MakeFailureNotification(
+            m_request, UploadNotification::Type::UploadComplete, m_source, m_destination, E_FAIL, L"Unknown job error");
+        Concurrency::send(m_pNotificationTarget, notify);
+        return S_OK;
+    }
+
 
     // If the proxy or server does not support the Content-Range header or if
     // antivirus software removes the range requests, BITS returns BG_E_INSUFFICIENT_RANGE_SUPPORT.
@@ -874,24 +929,26 @@ HRESULT CNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackgroundCopyErro
 
     if (TRUE == IsError)
     {
-        hr = pJob->GetDisplayName(&pszJobName);
         hr = pError->GetErrorDescription(LANGIDFROMLCID(GetThreadLocale()), &pszErrorDescription);
-
-        if (pszJobName && pszErrorDescription)
+        if (FAILED(hr))
         {
-            // Do something with the job name and description.
-            auto notify = UploadNotification::MakeFailureNotification(
-                m_request,
-                UploadNotification::Type::UploadComplete,
-                m_source,
-                m_destination,
-                HRESULT_FROM_WIN32(GetLastError()),
-                pszErrorDescription);
-            Concurrency::send(m_pNotificationTarget, notify);
+            Log::Debug("Failed to retrieve error description [{}]", hr);
         }
 
-        CoTaskMemFree(pszJobName);
-        CoTaskMemFree(pszErrorDescription);
+        // Do something with the job name and description.
+        auto notify = UploadNotification::MakeFailureNotification(
+            m_request,
+            UploadNotification::Type::UploadComplete,
+            m_source,
+            m_destination,
+            ErrorCode,
+            pszErrorDescription ? pszErrorDescription : L"Unknown error");
+        Concurrency::send(m_pNotificationTarget, notify);
+
+        if (pszErrorDescription)
+        {
+            CoTaskMemFree(pszErrorDescription);
+        }
     }
 
     // If you do not return S_OK, BITS continues to call this callback.
@@ -952,6 +1009,10 @@ HRESULT CNotifyInterface::FileTransferred(IBackgroundCopyJob* pJob, IBackgroundC
         {
             // Handle error
         }
+    }
+    else
+    {
+        Log::Debug("Failed handling FileTransferred notification [{}]", SystemError(hr));
     }
 
     return S_OK;

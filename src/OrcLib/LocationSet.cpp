@@ -103,24 +103,12 @@ std::vector<std::wstring> ExpandOrcStringsLocation(const std::wstring& rawLocati
 
 Result<GUID> ShadowFilterToGuid(const std::wstring& filter)
 {
-    const auto kGuidMinSize = 32;
-    if (filter.size() < kGuidMinSize)
+    std::error_code ec;
+    GUID guid;
+    ToGuid(std::wstring_view(filter), guid, ec);
+    if (ec)
     {
-        return std::errc::invalid_argument;
-    }
-
-    auto guidFilter = filter;
-    if (guidFilter[0] != L'{' && guidFilter[guidFilter.size() - 1] != L'}')
-    {
-        guidFilter.insert(0, 1, L'{');
-        guidFilter.push_back(L'}');
-    }
-
-    CLSID guid;
-    HRESULT hr = CLSIDFromString(guidFilter.c_str(), &guid);
-    if (FAILED(hr))
-    {
-        return std::error_code(hr, std::system_category());
+        return ec;
     }
 
     return guid;

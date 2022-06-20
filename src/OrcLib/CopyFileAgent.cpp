@@ -146,9 +146,10 @@ CopyFileAgent::UploadFile(
     return S_OK;
 }
 
-HRESULT CopyFileAgent::IsComplete(bool bReadyToExit)
+HRESULT CopyFileAgent::IsComplete(bool bReadyToExit, bool& hasFailure)
 {
     DBG_UNREFERENCED_PARAMETER(bReadyToExit);
+    hasFailure = false;
     return S_OK;
 }
 
@@ -170,41 +171,27 @@ HRESULT CopyFileAgent::UnInitialize()
     return S_OK;
 }
 
-HRESULT CopyFileAgent::CheckFileUpload(const std::wstring& strRemoteName, PDWORD pdwFileSize)
+HRESULT CopyFileAgent::CheckFileUpload(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
 {
-    if (pdwFileSize)
-        *pdwFileSize = 0L;
+    std::wstring strFullPath = GetRemoteFullPath(strRemoteName);
 
-    wstring strFullPath = GetRemoteFullPath(strRemoteName);
-
-    if (pdwFileSize)
+    WIN32_FILE_ATTRIBUTE_DATA fileData;
+    if (!GetFileAttributesEx(strFullPath.c_str(), GetFileExInfoStandard, &fileData))
     {
-        *pdwFileSize = 0L;
-        WIN32_FILE_ATTRIBUTE_DATA fileData;
-        if (!GetFileAttributesEx(strFullPath.c_str(), GetFileExInfoStandard, &fileData))
+        if (GetLastError() == ERROR_FILE_NOT_FOUND)
         {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
-                return S_FALSE;
-            *pdwFileSize = MAXDWORD;
-        }
-        else
-        {
-            if (fileData.nFileSizeHigh > 0)
-            {
-                *pdwFileSize = MAXDWORD;
-            }
-            else
-            {
-                *pdwFileSize = fileData.nFileSizeLow;
-            }
+            return S_FALSE;
         }
     }
     else
     {
-        if (INVALID_FILE_ATTRIBUTES == GetFileAttributes(strFullPath.c_str()))
+        if (fileData.nFileSizeHigh > 0)
         {
-            if (GetLastError() == ERROR_FILE_NOT_FOUND)
-                return S_FALSE;
+            fileSize = MAXDWORD;
+        }
+        else
+        {
+            fileSize = fileData.nFileSizeLow;
         }
     }
 

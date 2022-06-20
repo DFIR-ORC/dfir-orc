@@ -94,6 +94,7 @@ public:
         OutputSpec Outcome;
 
         std::wstring strCompressionLevel;
+        std::wstring strMothershipHandle;
 
         OutputSpec TempWorkingDir;
 
@@ -195,6 +196,8 @@ private:
     HRESULT Run_Execute();
     HRESULT ExecuteKeyword(WolfExecution& execution);
     HRESULT Run_Keywords();
+
+    void ReadLogConfiguration(const ConfigItem& configItem, bool hasConsoleConfigItem);
 
 private:
     ConsoleConfiguration m_consoleConfiguration;

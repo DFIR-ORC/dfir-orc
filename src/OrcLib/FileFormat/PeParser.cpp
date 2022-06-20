@@ -208,6 +208,11 @@ bool PeParser::HasSecurityDirectory() const
     return HasImageDataDirectory(IMAGE_DIRECTORY_ENTRY_SECURITY);
 }
 
+bool PeParser::HasDebugDirectory() const
+{
+    return HasImageDataDirectory(IMAGE_DIRECTORY_ENTRY_DEBUG);
+}
+
 bool PeParser::HasImageDataDirectory(uint8_t index) const
 {
     const auto kMaxDirectoryIndex = 14;  // 'IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR'
@@ -309,6 +314,16 @@ void PeParser::ReadSecurityDirectory(std::vector<uint8_t>& buffer, std::error_co
     if (ec)
     {
         Log::Debug("Failed to read IMAGE_DIRECTORY_ENTRY_SECURITY [{}]", ec);
+        return;
+    }
+}
+
+void PeParser::ReadDebugDirectory(std::vector<uint8_t>& buffer, std::error_code& ec) const
+{
+    ReadDirectory(IMAGE_DIRECTORY_ENTRY_DEBUG, buffer, ec);
+    if (ec)
+    {
+        Log::Debug("Failed to read IMAGE_DIRECTORY_ENTRY_DEBUG [{}]", ec);
         return;
     }
 }

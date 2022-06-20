@@ -6,6 +6,8 @@
 // Author(s): fabienfl (ANSSI)
 //
 
+#include "Text/Fmt/FILETIME.h"
+
 #include "FILE_NAME.h"
 
 namespace Orc {

@@ -168,7 +168,7 @@ void Archive7z::Compress(
     }
 
     CComPtr<IOutArchive> archiver;
-    const auto formatGuid = ToGuid(m_format);
+    const auto formatGuid = ::ToGuid(m_format);
     HRESULT hr = ::CreateObject(&formatGuid, &IID_IOutArchive, reinterpret_cast<void**>(&archiver));
     if (FAILED(hr))
     {
