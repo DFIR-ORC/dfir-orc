@@ -47,10 +47,11 @@ WofAlgorithm ToWofAlgorithmXpress(uint64_t chunkSize, std::error_code& ec)
 }  // namespace
 
 namespace Orc {
-namespace Ntfs {
 
-std::string_view ToString(WofAlgorithm algorithm)
+std::string_view ToString(Ntfs::WofAlgorithm algorithm)
 {
+    using namespace Orc::Ntfs;
+
     switch (algorithm)
     {
         case WofAlgorithm::kUnknown:
@@ -67,6 +68,7 @@ std::string_view ToString(WofAlgorithm algorithm)
 
     return kUnknown;
 }
+namespace Ntfs {
 
 WofAlgorithm ToWofAlgorithm(const std::string& algorithm, std::error_code& ec)
 {
