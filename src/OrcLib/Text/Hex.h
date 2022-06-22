@@ -168,5 +168,13 @@ OutputIt ToHex(InputIt first, InputIt last, OutputIt out)
     return out;
 }
 
+template <typename OutputCharT = char>
+std::basic_string<OutputCharT> ToHexString(std::string_view buffer)
+{
+    std::basic_string<OutputCharT> output;
+    ToHex(std::cbegin(buffer), std::cend(buffer), std::back_inserter(output));
+    return output;
+}
+
 }  // namespace Text
 }  // namespace Orc
