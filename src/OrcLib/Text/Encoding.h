@@ -25,7 +25,9 @@ enum class Encoding
 
 }  // namespace Text
 
-std::wstring_view ToString(Text::Encoding encoding);
+std::string_view ToString(Text::Encoding encoding);
+std::wstring_view ToWString(Text::Encoding encoding);
+
 Result<Text::Encoding> ToEncoding(const std::wstring& encoding);
 
 }  // namespace Orc

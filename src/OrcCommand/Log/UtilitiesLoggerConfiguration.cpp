@@ -682,7 +682,7 @@ void FileConfigurationToOptions(const UtilitiesLoggerConfiguration::FileOutput& 
 
     if (output.encoding)
     {
-        options.emplace_back(kEncoding, ToString(*output.encoding));
+        options.emplace_back(kEncoding, ToWString(*output.encoding));
     }
 
     if (output.disposition)

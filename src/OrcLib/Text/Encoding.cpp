@@ -12,11 +12,15 @@
 
 namespace Orc {
 
-constexpr std::wstring_view kUtf8 = L"utf-8";
-constexpr std::wstring_view kUtf16 = L"utf-16";
-constexpr std::wstring_view kUnknown = L"unknown";
+constexpr std::string_view kUtf8 = "utf-8";
+constexpr std::string_view kUtf16 = "utf-16";
+constexpr std::string_view kUnknown = "unknown";
 
-std::wstring_view ToString(Text::Encoding encoding)
+constexpr std::wstring_view kUtf8W = L"utf-8";
+constexpr std::wstring_view kUtf16W = L"utf-16";
+constexpr std::wstring_view kUnknownW = L"unknown";
+
+std::string_view ToString(Text::Encoding encoding)
 {
     switch (encoding)
     {
@@ -29,10 +33,23 @@ std::wstring_view ToString(Text::Encoding encoding)
     }
 }
 
+std::wstring_view ToWString(Text::Encoding encoding)
+{
+    switch (encoding)
+    {
+        case Text::Encoding::Utf8:
+            return kUtf8W;
+        case Text::Encoding::Utf16:
+            return kUtf16W;
+        default:
+            return kUnknownW;
+    }
+}
+
 Result<Text::Encoding> ToEncoding(const std::wstring& disposition)
 {
     const std::map<std::wstring_view, Text::Encoding> map = {
-        {kUtf8, Text::Encoding::Utf8}, {kUtf16, Text::Encoding::Utf16}};
+        {kUtf8W, Text::Encoding::Utf8}, {kUtf16W, Text::Encoding::Utf16}};
 
     auto it = map.find(disposition);
     if (it == std::cend(map))
