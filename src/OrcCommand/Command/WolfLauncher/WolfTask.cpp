@@ -10,6 +10,7 @@
 
 #include "WolfTask.h"
 #include "Utils/Result.h"
+#include "Text/Fmt/std_error_code.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;

@@ -13,6 +13,10 @@
 #include <Partition.h>
 #include <PartitionFlags.h>
 
+#include "Text/Fmt/Partition.h"
+#include "Text/Fmt/PartitionType.h"
+#include "Text/Fmt/PartitionFlags.h"
+
 namespace Orc {
 namespace Text {
 

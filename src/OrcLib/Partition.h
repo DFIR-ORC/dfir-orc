@@ -11,9 +11,6 @@
 
 #include "PartitionFlags.h"
 #include "PartitionType.h"
-#include "Text/Fmt/Partition.h"
-#include "Text/Fmt/PartitionFlags.h"
-#include "Text/Fmt/PartitionType.h"
 
 #pragma managed(push, off)
 

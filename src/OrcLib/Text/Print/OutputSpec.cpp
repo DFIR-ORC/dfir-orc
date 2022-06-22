@@ -9,8 +9,6 @@
 #include "OutputSpec.h"
 
 #include "Text/Fmt/OutputSpecTypes.h"
-#include "Text/Print/Bool.h"
-#include "Text/Print/Tribool.h"
 
 #include <boost/algorithm/string/join.hpp>
 

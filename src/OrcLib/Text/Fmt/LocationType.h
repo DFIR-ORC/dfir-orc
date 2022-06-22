@@ -8,29 +8,34 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/LocationType.h"
-
 #include <windows.h>
 
 #include "Text/Format.h"
 #include <LocationType.h>
 
-template <typename FormatContext>
-auto fmt::formatter<Orc::LocationType>::format(const Orc::LocationType& type, FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<Orc::LocationType> : public fmt::formatter<std::string_view>
 {
-    std::error_code ec;
-    const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(type), ec);
-    if (ec)
+    template <typename FormatContext>
+    auto format(const Orc::LocationType& type, FormatContext& ctx) -> decltype(ctx.out())
     {
-        return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
+        std::error_code ec;
+        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(type), ec);
+        if (ec)
+        {
+            return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
+        }
+
+        return formatter<std::string_view>::format(utf8, ctx);
     }
+};
 
-    return formatter<std::string_view>::format(utf8, ctx);
-}
-
-template <typename FormatContext>
-auto fmt::formatter<Orc::LocationType, wchar_t>::format(const Orc::LocationType& type, FormatContext& ctx)
-    -> decltype(ctx.out())
+template <>
+struct fmt::formatter<Orc::LocationType, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
-    return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(type), ctx);
-}
+    template <typename FormatContext>
+    auto format(const Orc::LocationType& type, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(type), ctx);
+    }
+};

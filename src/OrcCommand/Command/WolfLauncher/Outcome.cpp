@@ -11,6 +11,8 @@
 #include "Command/WolfLauncher/Outcome.h"
 #include "Utils/Time.h"
 #include "Utils/Guard.h"
+#include "Utils/TypeTraits.h"
+#include "Text/Fmt/GUID.h"
 
 using namespace Orc::Command::Wolf;
 using namespace Orc;
@@ -134,7 +136,7 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive:
     const auto& size = item.GetSize();
     if (size.has_value())
     {
-        writer->WriteNamed(L"size", *size);
+        writer->WriteNamed(L"size", size.value().value);
     }
 }
 
@@ -175,7 +177,7 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive&
     const auto& size = archive.GetSize();
     if (size.has_value())
     {
-        writer->WriteNamed(L"size", *size);
+        writer->WriteNamed(L"size", static_cast<uint64_t>(size.value()));
     }
 
     writer->WriteNamed(L"input_type", ToString(archive.InputTypeValue()));

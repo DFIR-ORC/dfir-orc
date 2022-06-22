@@ -16,9 +16,8 @@
 #include "FileFind.h"
 #include "ToolVersion.h"
 
+#include "Text/Fmt/Boolean.h"
 #include "Text/Print.h"
-#include "Text/Fmt/formatter.h"
-#include "Text/Print/Bool.h"
 #include "Text/Print/LocationSet.h"
 #include "Text/Print/OutputSpec.h"
 #include "Text/Print/SearchTerm.h"
@@ -174,10 +173,10 @@ void Main::PrintParameters()
 
     PrintValue(node, L"Output", config.Output);
     PrintValue(node, L"Statistics", config.m_statisticsOutput);
-    PrintValue(node, L"ReportAll", config.bReportAll);
+    PrintValue(node, L"ReportAll", Traits::Boolean(config.bReportAll));
     PrintValue(node, L"Hash", config.CryptoHashAlgs);
     PrintValue(node, L"FuzzyHash", config.FuzzyHashAlgs);
-    PrintValue(node, L"NoLimits", config.limits.bIgnoreLimits);
+    PrintValue(node, L"NoLimits", Traits::Boolean(config.limits.bIgnoreLimits));
     PrintValue(node, L"MaxBytesPerSample", config.limits.dwlMaxBytesPerSample);
     PrintValue(node, L"MaxTotalBytes", config.limits.dwlMaxTotalBytes);
     PrintValue(node, L"MaxSampleCount", config.limits.dwMaxSampleCount);

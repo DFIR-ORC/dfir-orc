@@ -29,12 +29,17 @@
 
 #include "Utils/TypeTraits.h"
 #include "Text/Fmt/Limit.h"
-#include "Text/Fmt/formatter.h"
+#include "Text/Fmt/Partition.h"
+#include "Text/Fmt/PartitionFlags.h"
+#include "Text/Fmt/PartitionType.h"
 #include "Text/Format.h"
 #include "Text/Print/LocationSet.h"
 #include "Text/Print/Ntfs.h"
 #include "Text/HexDump.h"
+#include "Text/Hex.h"
 #include "Utils/Guard.h"
+#include "Utils/Guid.h"
+#include "Text/Fmt/GUID.h"
 
 using namespace std;
 
@@ -813,9 +818,14 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
                 Log::Warn("Invalid metadata version: '{}', only version 2 is supported", pInfoHeader->Header.Version);
                 continue;
             }
-            if (strncmp((char*)pInfoHeader->Header.Signature, "-FVE-FS-", 8))
+
+            const auto kSignatureSize = 8;
+            if (strncmp((char*)pInfoHeader->Header.Signature, "-FVE-FS-", kSignatureSize))
             {
-                Log::Warn("Invalid metadata signature '{}', only -FVE-FS- is supported", pInfoHeader->Header.Signature);
+                Log::Warn(
+                    "Invalid metadata signature '{}', only -FVE-FS- is supported",
+                    ToHexString(
+                        std::string_view(reinterpret_cast<char*>(pInfoHeader->Header.Signature), kSignatureSize)));
                 continue;
             }
 
@@ -842,7 +852,7 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
                 continue;
             }
 
-            const Traits::ByteQuantity size = RoundUp(infoSize + pValidation->Size, pHeader->SectorSize);
+            const Traits::ByteQuantity size(RoundUp(infoSize + pValidation->Size, pHeader->SectorSize));
             PrintValue(metadataNode, L"Size", size);
         }
     }

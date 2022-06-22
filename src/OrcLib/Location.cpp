@@ -21,6 +21,9 @@
 #include "ImageReader.h"
 #include "MountedVolumeReader.h"
 #include "OfflineMFTReader.h"
+#include "Text/Fmt/GUID.h"
+#include "Text/Fmt/FSVBR.h"
+#include "Utils/Guard.h"
 
 using namespace std;
 

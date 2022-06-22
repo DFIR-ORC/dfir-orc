@@ -9,6 +9,8 @@
 #include "NonResidentAttributeExtent.h"
 
 #include "Utils/TypeTraits.h"
+#include "Text/Fmt/ByteQuantity.h"
+#include "Text/Fmt/Offset.h"
 
 namespace Orc {
 namespace Text {

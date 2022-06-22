@@ -8,27 +8,33 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/FILE_NAME.h"
-
 #include "NtfsDataStructures.h"
 
-template <typename FormatContext>
-auto fmt::formatter<::FILE_NAME>::format(const ::FILE_NAME& fileName, FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<FILE_NAME> : public fmt::formatter<std::string_view>
 {
-    std::error_code ec;
-
-    const auto name = Orc::Utf16ToUtf8(std::wstring_view(fileName.FileName, fileName.FileNameLength), ec);
-    if (ec)
+    template <typename FormatContext>
+    auto format(const FILE_NAME& fileName, FormatContext& ctx) -> decltype(ctx.out())
     {
-        return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
+        std::error_code ec;
+
+        const auto name = Orc::Utf16ToUtf8(std::wstring_view(fileName.FileName, fileName.FileNameLength), ec);
+        if (ec)
+        {
+            return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
+        }
+
+        return formatter<std::string_view>::format(name, ctx);
     }
+};
 
-    return formatter<std::string_view>::format(name, ctx);
-}
-
-template <typename FormatContext>
-auto fmt::formatter<FILE_NAME, wchar_t>::format(const FILE_NAME& fileName, FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<FILE_NAME, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
-    const auto name = std::wstring_view(fileName.FileName, fileName.FileNameLength);
-    return formatter<std::wstring_view, wchar_t>::format(name, ctx);
-}
+    template <typename FormatContext>
+    auto format(const FILE_NAME& fileName, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        const auto name = std::wstring_view(fileName.FileName, fileName.FileNameLength);
+        return formatter<std::wstring_view, wchar_t>::format(name, ctx);
+    }
+};

@@ -7,142 +7,22 @@
 //
 #pragma once
 
-#include "Text/Fwd/Iconv.h"
-
 #include <string>
 #include <system_error>
 #include <type_traits>
-
-#include <Windows.h>
-#include <assert.h>
 
 #include "Utils/TypeTraits.h"
 
 namespace Orc {
 
-std::string Utf16ToUtf8(LPCWSTR utf16, std::error_code& ec);
-std::string Utf16ToUtf8(LPWSTR utf16, std::error_code& ec);
+constexpr auto kFailedConversion = std::string_view("<encoding_error>");
+constexpr auto kFailedConversionW = std::wstring_view(L"<encoding_error>");
 
-std::wstring Utf8ToUtf16(LPCSTR utf16, std::error_code& ec);
-std::wstring Utf8ToUtf16(LPSTR utf16, std::error_code& ec);
+std::string Utf16ToUtf8(std::wstring_view utf16, std::error_code& ec);
+std::wstring Utf8ToUtf16(std::string_view utf8, std::error_code& ec);
 
-template <typename T>
-std::string Utf16ToUtf8(const T& utf16, const std::string& onError)
-{
-    std::error_code ec;
-    const auto utf8 = Orc::Utf16ToUtf8(utf16, ec);
-    if (ec)
-    {
-        return onError;
-    }
-
-    return utf8;
-}
-
-template <typename T>
-std::string Utf16ToUtf8(const T& utf16, std::error_code& ec)
-{
-    static_assert(std::is_same_v<typename T::value_type, wchar_t>, "Utf16ToUtf8 expected input value_type: 'wchar_t'");
-
-    if (utf16.size() == 0)
-    {
-        return {};
-    }
-
-    //
-    // From MSDN:
-    //
-    // If this parameter is -1, the function processes the entire input string,
-    // including the terminating null character. Therefore, the resulting
-    // character string has a terminating null character, and the length
-    // returned by the function includes this character.
-    //
-    const auto requiredSize =
-        WideCharToMultiByte(CP_UTF8, 0, utf16.data(), static_cast<int>(utf16.size()), NULL, 0, NULL, NULL);
-
-    if (requiredSize == 0)
-    {
-        ec.assign(GetLastError(), std::system_category());
-        return {};
-    }
-
-    std::string utf8;
-    utf8.resize(requiredSize);
-
-    const auto converted = WideCharToMultiByte(
-        CP_UTF8,
-        0,
-        utf16.data(),
-        static_cast<int>(utf16.size()),
-        utf8.data(),
-        static_cast<int>(utf8.size()),
-        NULL,
-        NULL);
-
-    if (converted == 0)
-    {
-        ec.assign(GetLastError(), std::system_category());
-        return {};
-    }
-
-    assert(converted == requiredSize);
-    return utf8;
-}
-
-template <typename T>
-std::wstring Utf8ToUtf16(const T& utf8, std::error_code& ec)
-{
-    static_assert(std::is_same_v<typename T::value_type, char>, "Utf8ToUtf16 expected input value_type: 'char'");
-
-    if (utf8.size() == 0)
-    {
-        return {};
-    }
-
-    //
-    // From MSDN:
-    //
-    // If this parameter is -1, the function processes the entire input string,
-    // including the terminating null character. Therefore, the resulting
-    // character string has a terminating null character, and the length
-    // returned by the function includes this character.
-    //
-    const auto requiredSize = MultiByteToWideChar(CP_UTF8, 0, utf8.data(), static_cast<int>(utf8.size()), NULL, 0);
-
-    if (requiredSize == 0)
-    {
-        ec.assign(GetLastError(), std::system_category());
-        return {};
-    }
-
-    std::wstring utf16;
-    utf16.resize(requiredSize);
-
-    const auto converted = MultiByteToWideChar(
-        CP_UTF8, 0, utf8.data(), static_cast<int>(utf8.size()), utf16.data(), static_cast<int>(utf16.size()));
-
-    if (converted == 0)
-    {
-        ec.assign(GetLastError(), std::system_category());
-        return {};
-    }
-
-    assert(converted == requiredSize);
-    return utf16;
-}
-
-template <typename T>
-std::wstring Utf8ToUtf16(const T& utf8, const std::wstring& onError)
-{
-    std::error_code ec;
-    const auto utf16 = Orc::Utf8ToUtf16(utf8, ec);
-    if (ec)
-    {
-        return onError;
-    }
-
-    return utf16;
-}
+std::wstring Utf8ToUtf16(std::string_view utf8);
+std::string Utf16ToUtf8(std::wstring_view utf16);
 
 template <typename OutputCharType, typename Input>
 decltype(auto) EncodeTo(Input&& input)

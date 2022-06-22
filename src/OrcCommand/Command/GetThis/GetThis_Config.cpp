@@ -515,7 +515,8 @@ HRESULT Main::CheckConfiguration()
                 if (FAILED(hr))
                 {
                     hasFailed = true;
-                    Log::Error(L"Failed to parse search term (item: {}) [{}]", filespec->YaraRulesSpec, SystemError(hr));
+                    Log::Error(
+                        L"Failed to parse search term (item: {}) [{}]", filespec->YaraRulesSpec, SystemError(hr));
                 }
             });
     });

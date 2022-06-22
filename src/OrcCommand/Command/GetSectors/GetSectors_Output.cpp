@@ -14,7 +14,7 @@
 
 #include "Utils/TypeTraits.h"
 #include "Text/Fmt/Limit.h"
-#include "Text/Print/Bool.h"
+#include "Text/Fmt/BoolOnOff.h"
 
 using namespace Orc::Command::GetSectors;
 using namespace Orc::Text;
@@ -67,15 +67,15 @@ void Main::PrintParameters()
     PrintCommonParameters(node);
 
     PrintValue(node, L"Disk name", config.diskName);
-    PrintValue(node, L"LegacyBootCode", config.dumpLegacyBootCode);
-    PrintValue(node, L"UefiFull", config.dumpUefiFull);
+    PrintValue(node, L"LegacyBootCode", Traits::BoolOnOff(config.dumpLegacyBootCode));
+    PrintValue(node, L"UefiFull", Traits::BoolOnOff(config.dumpUefiFull));
     PrintValue(node, L"UefiFullMaxSize", Traits::ByteQuantity(config.uefiFullMaxSize));
-    PrintValue(node, L"SlackSpace", config.dumpSlackSpace);
+    PrintValue(node, L"SlackSpace", Traits::BoolOnOff(config.dumpSlackSpace));
     PrintValue(node, L"SlackSpaceSize", Traits::ByteQuantity(config.slackSpaceDumpSize));
-    PrintValue(node, L"Custom", config.customSample);
+    PrintValue(node, L"Custom", Traits::BoolOnOff(config.customSample));
     PrintValue(node, L"CustomOffset", config.customSampleOffset);
     PrintValue(node, L"CustomSize", Traits::ByteQuantity(config.customSampleSize));
-    PrintValue(node, L"NotLowInterface", !config.lowInterface);
+    PrintValue(node, L"NotLowInterface", Traits::BoolOnOff(!config.lowInterface));
 
     m_console.PrintNewLine();
 }

@@ -8,26 +8,31 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/FILETIME.h"
-
 #include "Text/Fmt/SYSTEMTIME.h"
 
 // All time displayed are UTC so a FILETIME must converted to UTC (SYSTEMTIME)
-
-template <typename FormatContext>
-auto fmt::formatter<FILETIME>::format(const FILETIME& ft, FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<FILETIME> : public fmt::formatter<std::string_view>
 {
-    SYSTEMTIME stUTC {0};
-    if (FileTimeToSystemTime(&ft, &stUTC))
-        return formatter<std::string_view>::format(Orc::Text::FormatSystemTimeA(stUTC), ctx);
-    return ctx.out();
-}
+    template <typename FormatContext>
+    auto format(const FILETIME& ft, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        SYSTEMTIME stUTC {0};
+        if (FileTimeToSystemTime(&ft, &stUTC))
+            return formatter<std::string_view>::format(Orc::Text::FormatSystemTimeA(stUTC), ctx);
+        return ctx.out();
+    }
+};
 
-template <typename FormatContext>
-auto fmt::formatter<FILETIME, wchar_t>::format(const FILETIME& ft, FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<FILETIME, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
-    SYSTEMTIME stUTC {0};
-    if (FileTimeToSystemTime(&ft, &stUTC))
-        return formatter<std::wstring_view, wchar_t>::format(Orc::Text::FormatSystemTimeW(stUTC), ctx);
-    return ctx.out();
-}
+    template <typename FormatContext>
+    auto format(const FILETIME& ft, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        SYSTEMTIME stUTC {0};
+        if (FileTimeToSystemTime(&ft, &stUTC))
+            return formatter<std::wstring_view, wchar_t>::format(Orc::Text::FormatSystemTimeW(stUTC), ctx);
+        return ctx.out();
+    }
+};

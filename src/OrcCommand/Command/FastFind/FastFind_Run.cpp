@@ -31,6 +31,7 @@
 
 #include <boost/scope_exit.hpp>
 #include <fmt/chrono.h>
+#include "Text/Fmt/Result.h"
 
 using namespace std;
 

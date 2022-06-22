@@ -164,4 +164,3 @@ SnapshotVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& buffer, ULONGLONG ul
 
     return S_OK;
 }
-

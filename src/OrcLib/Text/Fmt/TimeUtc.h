@@ -8,15 +8,13 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/TimeUtc.h"
-
 #include <array>
 #include <string>
 
 #include <windows.h>
 
 #include "Utils/TypeTraits.h"
-#include "Text/Fmt/Fwd/SYSTEMTIME.h"
+#include "Text/Fmt/SYSTEMTIME.h"
 
 namespace Orc {
 namespace Text {
@@ -51,19 +49,23 @@ inline auto FormatSystemTimeUtcW(const SYSTEMTIME& st)
 }  // namespace Orc
 
 template <typename T>
-template <typename FormatContext>
-auto fmt::formatter<Orc::Traits::TimeUtc<T>>::format(const Orc::Traits::TimeUtc<T>& time, FormatContext& ctx)
-    -> decltype(ctx.out())
+struct fmt::formatter<Orc::Traits::TimeUtc<T>> : public fmt::formatter<std::string_view>
 {
-    std::string s = Orc::Text::FormatSystemTimeUtcA(time);
-    return formatter<std::string_view>::format(s, ctx);
-}
+    template <typename FormatContext>
+    auto format(const Orc::Traits::TimeUtc<T>& time, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        std::string s = Orc::Text::FormatSystemTimeUtcA(time);
+        return formatter<std::string_view>::format(s, ctx);
+    }
+};
 
 template <typename T>
-template <typename FormatContext>
-auto fmt::formatter<Orc::Traits::TimeUtc<T>, wchar_t>::format(const Orc::Traits::TimeUtc<T>& time, FormatContext& ctx)
-    -> decltype(ctx.out())
+struct fmt::formatter<Orc::Traits::TimeUtc<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
-    std::wstring s = Orc::Text::FormatSystemTimeUtcW(time);
-    return formatter<std::wstring_view, wchar_t>::format(s, ctx);
-}
+    template <typename FormatContext>
+    auto format(const Orc::Traits::TimeUtc<T>& time, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        std::wstring s = Orc::Text::FormatSystemTimeUtcW(time);
+        return formatter<std::wstring_view, wchar_t>::format(s, ctx);
+    }
+};

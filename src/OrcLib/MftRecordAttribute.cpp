@@ -895,8 +895,8 @@ HRESULT WOFReparseAttribute::GetStreams(
 
     // Nonresident: checked in '::GetWofDataAttribute()'
     Log::Debug(
-        L"Open WOF stream (algorithm: {}, compressed size: {} uncompressed size: {})",
-        m_algorithm,
+        "Open WOF stream (algorithm: {}, compressed size: {} uncompressed size: {})",
+        ToString(m_algorithm),
         ntfsStream->GetSize(),
         dataAttribute->Header()->Form.Nonresident.FileSize);
 

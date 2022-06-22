@@ -14,8 +14,7 @@
 #include <string>
 
 #include "Usage.h"
-#include "Text/Fmt/formatter.h"
-#include "Text/Print/Bool.h"
+#include "Text/Fmt/Boolean.h"
 #include "Text/Print/OutputSpec.h"
 
 using namespace Orc::Command::GetSamples;
@@ -68,7 +67,7 @@ void Main::PrintParameters()
 
     PrintCommonParameters(node);
 
-    PrintValue(node, L"Embedded autorun", config.bRunAutoruns);
+    PrintValue(node, L"Embedded autorun", Traits::Boolean(config.bRunAutoruns));
 
     if (config.autorunsOutput.Type != OutputSpec::Kind::None)
     {
@@ -92,7 +91,7 @@ void Main::PrintParameters()
     PrintValue(node, L"Timeline information", config.timelineOutput);
     PrintValue(node, L"Temporary output", config.tmpdirOutput);
 
-    PrintValue(node, L"Ignore signatures", config.bNoSigCheck);
+    PrintValue(node, L"Ignore signatures", Traits::Boolean(config.bNoSigCheck));
 
     m_console.PrintNewLine();
 }

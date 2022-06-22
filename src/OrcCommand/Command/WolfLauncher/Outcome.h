@@ -42,7 +42,7 @@ public:
         void SetName(const std::wstring& name) { m_name = name; }
 
         const std::optional<FileSize>& GetSize() const { return m_size; }
-        void SetSize(const uint64_t size) { m_size = size; }
+        void SetSize(const uint64_t size) { m_size = Traits::ByteQuantity(size); }
         void SetSize(const std::optional<FileSize>& size) { m_size = size; }
 
     private:
@@ -57,7 +57,7 @@ public:
     void SetName(const std::wstring& name) { m_name = name; }
 
     const std::optional<FileSize>& GetSize() const { return m_size; }
-    void SetSize(const uint64_t size) { m_size = size; }
+    void SetSize(const uint64_t size) { m_size = Traits::ByteQuantity(size); }
     void SetSize(const std::optional<FileSize>& size) { m_size = size; }
 
     const std::optional<std::string>& GetSha1() const { return m_sha1; }

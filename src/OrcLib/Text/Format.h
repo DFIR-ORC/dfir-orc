@@ -18,6 +18,7 @@
 
 #include "Text/Iconv.h"
 #include "Utils/TypeTraits.h"
+#include "Utils/BufferView.h"
 
 namespace Orc {
 namespace Text {
@@ -31,7 +32,7 @@ template <typename T, typename OutputIt>
 void Utf8ToUtf16(const T& utf8, OutputIt out)
 {
     std::error_code ec;
-    auto utf16 = Orc::Utf8ToUtf16(utf8, ec);
+    auto utf16 = Orc::Utf8ToUtf16(ToStringView(utf8), ec);
     if (ec)
     {
         using namespace std::literals;
@@ -48,7 +49,7 @@ template <typename T, typename OutputIt>
 void Utf16ToUtf8(const T& utf16, OutputIt out)
 {
     std::error_code ec;
-    auto utf8 = Orc::Utf16ToUtf8(utf16, ec);
+    auto utf8 = Orc::Utf16ToUtf8(ToWStringView(utf16), ec);
     if (ec)
     {
         using namespace std::literals;

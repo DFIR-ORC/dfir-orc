@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/SYSTEMTIME.h"
-
 #include <windows.h>
 
 namespace Orc {
@@ -44,14 +42,22 @@ inline auto FormatSystemTimeW(const SYSTEMTIME& st)
 }  // namespace Text
 }  // namespace Orc
 
-template <typename FormatContext>
-auto fmt::formatter<SYSTEMTIME>::format(const SYSTEMTIME& st, FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<SYSTEMTIME> : public fmt::formatter<std::string_view>
 {
-    return formatter<std::string_view>::format(Orc::Text::FormatSystemTimeA(st), ctx);
-}
+    template <typename FormatContext>
+    auto format(const SYSTEMTIME& st, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        return formatter<std::string_view>::format(Orc::Text::FormatSystemTimeA(st), ctx);
+    }
+};
 
-template <typename FormatContext>
-auto fmt::formatter<SYSTEMTIME, wchar_t>::format(const SYSTEMTIME& st, FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<SYSTEMTIME, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
-    return formatter<std::wstring_view, wchar_t>::format(Orc::Text::FormatSystemTimeW(st), ctx);
-}
+    template <typename FormatContext>
+    auto format(const SYSTEMTIME& st, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        return formatter<std::wstring_view, wchar_t>::format(Orc::Text::FormatSystemTimeW(st), ctx);
+    }
+};

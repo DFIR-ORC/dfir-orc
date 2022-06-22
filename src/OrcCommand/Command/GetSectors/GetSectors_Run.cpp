@@ -21,6 +21,10 @@
 #include <filesystem>
 #include <array>
 
+#include "Text/Fmt/Partition.h"
+#include "Text/Fmt/PartitionType.h"
+#include "Text/Fmt/PartitionFlags.h"
+
 namespace fs = std::filesystem;
 
 using namespace Orc;

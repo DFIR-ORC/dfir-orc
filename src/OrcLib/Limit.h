@@ -11,8 +11,6 @@
 
 #include "Utils/TypeTraits.h"
 
-#include "Text/Fmt/Limit.h"
-
 namespace Orc {
 
 template <typename T>

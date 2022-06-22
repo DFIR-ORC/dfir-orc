@@ -110,7 +110,7 @@ Lib7zCompressionLevel ToLib7zLevel(CompressionLevel level)
 
 void SetCompressionLevel(const CComPtr<IOutArchive>& archiver, CompressionLevel level, std::error_code& ec)
 {
-    Log::Debug("Archive7z: SetCompressionLevel to {}", level);
+    Log::Debug("Archive7z: SetCompressionLevel to {}", static_cast<std::underlying_type_t<CompressionLevel>>(level));
 
     CMyComPtr<ISetProperties> setProperties;
     HRESULT hr = archiver->QueryInterface(IID_ISetProperties, (void**)&setProperties);
@@ -180,7 +180,10 @@ void Archive7z::Compress(
     ::SetCompressionLevel(archiver, m_compressionLevel, ec);
     if (ec)
     {
-        Log::Error(L"Failed to update compression level to {} [{}]", m_compressionLevel, ec);
+        Log::Error(
+            L"Failed to update compression level to {} [{}]",
+            static_cast<std::underlying_type_t<Archive::CompressionLevel>>(m_compressionLevel),
+            ec);
         return;
     }
 

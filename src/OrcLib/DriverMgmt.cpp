@@ -948,7 +948,10 @@ Orc::DriverMgmt::SetStartupMode(__in SC_HANDLE SchSCManager, __in LPCTSTR Driver
             dwServiceStart = SERVICE_SYSTEM_START;
             break;
         default:
-            throw Exception(Severity::Fatal, L"Invalid driver startup mode: {}", mode);
+            throw Exception(
+                Severity::Fatal,
+                L"Invalid driver startup mode: {}",
+                static_cast<std::underlying_type_t<DriverStartupMode>>(mode));
     }
 
     if (!ChangeServiceConfigW(

@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include <iostream>
 #include <type_traits>
 #include <iterator>
 
@@ -347,7 +346,7 @@ struct ByteQuantity
 {
     using value_type = T;
 
-    ByteQuantity(T quantity)
+    explicit ByteQuantity(T quantity)
         : value(quantity)
     {
         if constexpr (!std::is_integral_v<T>)
@@ -358,6 +357,13 @@ struct ByteQuantity
 
     operator T&() { return value; }
     operator T() const { return value; }
+
+    template <typename U>
+    operator U() const
+    {
+        return static_cast<U>(value);
+    }
+
     T value;
 };
 
@@ -369,7 +375,7 @@ struct Offset
 {
     using value_type = T;
 
-    Offset(T offset)
+    explicit Offset(T offset)
     {
         if constexpr (std::is_integral_v<T>)
         {
@@ -379,6 +385,12 @@ struct Offset
         {
             static_assert(always_false<T>, "Only integral type are supported");
         }
+    }
+
+    template <typename U>
+    operator U() const
+    {
+        return static_cast<U>(value);
     }
 
     operator T&() { return value; }
@@ -401,8 +413,39 @@ struct TimeUtc
     }
 
     operator T&() { return value; }
+    // operator const T&() const { return value; }
     operator T() const { return value; }
     T value;
+};
+
+struct Boolean
+{
+    using value_type = bool;
+
+    explicit Boolean(bool boolean)
+        : value(boolean)
+    {
+    }
+
+    operator bool() { return value; }
+    operator bool() const { return value; }
+
+    bool value;
+};
+
+struct BoolOnOff
+{
+    using value_type = bool;
+
+    explicit BoolOnOff(bool on)
+        : value(on)
+    {
+    }
+
+    operator bool() { return value; }
+    operator bool() const { return value; }
+
+    bool value;
 };
 
 }  // namespace Traits

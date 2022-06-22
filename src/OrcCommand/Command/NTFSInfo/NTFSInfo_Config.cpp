@@ -428,13 +428,6 @@ HRESULT Main::CheckConfiguration()
         config.m_excludes.value_or(LocationSet::PathExcludes()),
         FSVBR::FSType::NTFS);
 
-    if (config.locs.IsEmpty() != S_OK)
-    {
-        Log::Critical(
-            L"No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
-            L"want parsed");
-        return E_INVALIDARG;
-    }
 
     if (config.outFileInfo.Type == OutputSpec::Kind::None && config.outAttrInfo.Type == OutputSpec::Kind::None
         && config.outTimeLine.Type == OutputSpec::Kind::None)

@@ -11,43 +11,43 @@
 #include "stdafx.h"
 
 #ifdef ORC_COMMAND_FASTFIND
-#include "Command/FastFind/FastFind.h"
+#    include "Command/FastFind/FastFind.h"
 #endif
 #ifdef ORC_COMMAND_GETSAMPLES
-#include "Command/GetSamples/GetSamples.h"
+#    include "Command/GetSamples/GetSamples.h"
 #endif
 #ifdef ORC_COMMAND_GETSECTORS
-#include "Command/GetSectors/GetSectors.h"
+#    include "Command/GetSectors/GetSectors.h"
 #endif
 #ifdef ORC_COMMAND_GETTHIS
-#include "Command/GetThis/GetThis.h"
+#    include "Command/GetThis/GetThis.h"
 #endif
 #ifdef ORC_COMMAND_NTFSINFO
-#include "Command/NTFSInfo/NTFSInfo.h"
+#    include "Command/NTFSInfo/NTFSInfo.h"
 #endif
 #ifdef ORC_COMMAND_REGINFO
-#include "Command/RegInfo/RegInfo.h"
+#    include "Command/RegInfo/RegInfo.h"
 #endif
 #ifdef ORC_COMMAND_NTFSUTIL
-#include "Command/NTFSUtil/NTFSUtil.h"
+#    include "Command/NTFSUtil/NTFSUtil.h"
 #endif
 #ifdef ORC_COMMAND_TOOLEMBED
-#include "Command/ToolEmbed/ToolEmbed.h"
+#    include "Command/ToolEmbed/ToolEmbed.h"
 #endif
 #ifdef ORC_COMMAND_USNINFO
-#include "Command/USNInfo/USNInfo.h"
+#    include "Command/USNInfo/USNInfo.h"
 #endif
 #ifdef ORC_COMMAND_WOLFLAUNCHER
-#include "Command/WolfLauncher/WolfLauncher.h"
+#    include "Command/WolfLauncher/WolfLauncher.h"
 #endif
 #ifdef ORC_COMMAND_OBJINFO
-#include "Command/ObjInfo/ObjInfo.h"
+#    include "Command/ObjInfo/ObjInfo.h"
 #endif
 #ifdef ORC_COMMAND_FATINFO
-#include "Command/FatInfo/FatInfo.h"
+#    include "Command/FatInfo/FatInfo.h"
 #endif
 #ifdef ORC_COMMAND_DD
-#include "Command/DD/DD.h"
+#    include "Command/DD/DD.h"
 #endif
 
 #include "Mothership.h"
@@ -60,14 +60,18 @@
 using WinMainPtr = std::function<int(int argc, const WCHAR* argv[])>;
 struct ToolDescription
 {
-    ToolDescription(LPCWSTR toolName, LPCWSTR toolDescr, WinMainPtr main) :
-        szName(toolName), szDescr(toolDescr), WinMain(main)
+    ToolDescription(LPCWSTR toolName, LPCWSTR toolDescr, WinMainPtr main)
+        : szName(toolName)
+        , szDescr(toolDescr)
+        , WinMain(main)
     {
     }
 
     template <typename CommandType>
-    static ToolDescription Get() {
-        return ToolDescription(CommandType::ToolName(), CommandType::ToolDescription(), UtilitiesMain::WMain<CommandType>);
+    static ToolDescription Get()
+    {
+        return ToolDescription(
+            CommandType::ToolName(), CommandType::ToolDescription(), UtilitiesMain::WMain<CommandType>);
     }
 
     LPCWSTR szName;

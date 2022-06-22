@@ -8,28 +8,33 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/Partition.h"
-
-#include "Text/Format.h"
+#include <fmt/format.h>
 #include "Text/Iconv.h"
 #include <Partition.h>
 
-template <typename FormatContext>
-auto fmt::formatter<Orc::Partition>::format(const Orc::Partition& partition, FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<Orc::Partition> : public fmt::formatter<std::string_view>
 {
-    std::error_code ec;
-    const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(partition), ec);
-    if (ec)
+    template <typename FormatContext>
+    auto format(const Orc::Partition& partition, FormatContext& ctx) -> decltype(ctx.out())
     {
-        return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
+        std::error_code ec;
+        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(partition), ec);
+        if (ec)
+        {
+            return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
+        }
+
+        return formatter<std::string_view>::format(utf8, ctx);
     }
+};
 
-    return formatter<std::string_view>::format(utf8, ctx);
-}
-
-template <typename FormatContext>
-auto fmt::formatter<Orc::Partition, wchar_t>::format(const Orc::Partition& partition, FormatContext& ctx)
-    -> decltype(ctx.out())
+template <>
+struct fmt::formatter<Orc::Partition, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
-    return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(partition), ctx);
-}
+    template <typename FormatContext>
+    auto format(const Orc::Partition& partition, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(partition), ctx);
+    }
+};

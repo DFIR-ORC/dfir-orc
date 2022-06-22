@@ -16,8 +16,8 @@
 
 #include "ToolVersion.h"
 
+#include "Text/Fmt/Boolean.h"
 #include "Text/Print/OutputSpec.h"
-#include "Text/Print/Bool.h"
 #include "Text/Print/LocationSet.h"
 
 #include "Usage.h"
@@ -62,7 +62,7 @@ void Main::PrintParameters()
     PrintValue(node, L"Output", config.output);
 
     PrintValues(node, L"Parsed locations", config.locs.GetParsedLocations());
-    PrintValue(node, L"Compact", config.bCompactForm);
+    PrintValue(node, L"Compact", Traits::Boolean(config.bCompactForm));
 
     m_console.PrintNewLine();
 }

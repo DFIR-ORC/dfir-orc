@@ -43,6 +43,8 @@
 #include "Console.h"
 #include "Log/Log.h"
 #include "Text/Print.h"
+#include "Text/Fmt/Offset.h"
+#include "Text/Fmt/ByteQuantity.h"
 #include "Text/Fmt/FILE_NAME.h"
 #include "Text/Fmt/FILETIME.h"
 #include "Text/Fmt/std_optional.h"

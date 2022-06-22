@@ -288,7 +288,7 @@ private:
                 "Failed to read chunk {}/{} (algorithm: {}, chunk size: {}) [{}]",
                 chunkIndex,
                 m_chunks.ChunkCount(),
-                m_chunks.Algorithm(),
+                ToString(m_chunks.Algorithm()),
                 m_chunks.ChunkSize(),
                 ec);
             return 0;
@@ -311,7 +311,7 @@ private:
                 "Failed to decompress chunk {}/{} (algorithm: {}, chunk size: {}, input size: {}, output size: {}) [{}]",
                 chunkIndex,
                 m_chunks.ChunkCount(),
-                m_chunks.Algorithm(),
+                ToString(m_chunks.Algorithm()),
                 m_chunks.ChunkSize(),
                 m_inputBuffer.size(),
                 outputSize,

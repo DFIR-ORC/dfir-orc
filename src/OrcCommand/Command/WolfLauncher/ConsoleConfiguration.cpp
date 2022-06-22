@@ -18,6 +18,8 @@
 #include "Configuration/Option.h"
 #include "Utils/Result.h"
 #include "Utils/StdStream/StandardOutput.h"
+#include "Text/Fmt/std_optional.h"
+#include "Text/Fmt/OutputSpecTypes.h"
 
 using namespace Orc::Command;
 using namespace Orc;
@@ -204,7 +206,9 @@ void ConsoleConfiguration::Apply(StandardOutput& standardOutput, const ConsoleCo
 
     if (config.output.encoding && config.output.encoding != Text::Encoding::Utf8)
     {
-        Log::Warn(L"Unupported encoding for console output file: {}", config.output.encoding);
+        Log::Warn(
+            "Unupported encoding for console output file: {}",
+            ToString(config.output.encoding.value_or(Text::Encoding::Unknown)));
     }
 
     OutputSpec output = OutputSpec();

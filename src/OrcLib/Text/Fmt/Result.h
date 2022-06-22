@@ -8,33 +8,38 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/Result.h"
-
+#include <fmt/format.h>
+#include <boost/outcome/outcome.hpp>
 #include "Utils/Result.h"
 
 template <typename T>
-template <typename FormatContext>
-auto fmt::formatter<Orc::Result<T>>::format(const Orc::Result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
+struct fmt::formatter<boost::outcome_v2::std_result<T>> : public fmt::formatter<std::string_view>
 {
-    if (result.has_error())
+    template <typename FormatContext>
+    auto format(const boost::outcome_v2::std_result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
     {
-        const auto msg = fmt::format("{}", result.error());
-        return fmt::formatter<std::string_view>::format(msg, ctx);
-    }
+        if (result.has_error())
+        {
+            const auto msg = fmt::format("{}", result.error());
+            return fmt::formatter<std::string_view>::format(msg, ctx);
+        }
 
-    return formatter<std::string_view>::format("Success", ctx);
-}
+        return formatter<std::string_view>::format("Success", ctx);
+    }
+};
 
 template <typename T>
-template <typename FormatContext>
-auto fmt::formatter<Orc::Result<T>, wchar_t>::format(const Orc::Result<T>& result, FormatContext& ctx)
-    -> decltype(ctx.out())
+struct fmt::formatter<boost::outcome_v2::std_result<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
-    if (result.has_error())
+    template <typename FormatContext>
+    auto format(const boost::outcome_v2::std_result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
     {
-        const auto msg = fmt::format(L"{}", result.error());
-        return fmt::formatter<std::wstring_view, wchar_t>::format(msg, ctx);
-    }
+        if (result.has_error())
+        {
+            const auto msg = fmt::format(L"{}", result.error());
+            return fmt::formatter<std::wstring_view, wchar_t>::format(msg, ctx);
+        }
 
-    return formatter<std::wstring_view, wchar_t>::format(L"Success", ctx);
-}
+        return formatter<std::wstring_view, wchar_t>::format(L"Success", ctx);
+    }
+};

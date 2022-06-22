@@ -8,42 +8,44 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/FuzzyHashStreamAlgorithm.h"
-
 #include <FuzzyHashStreamAlgorithm.h>
 
 #include "Text/Iconv.h"
 
-template <typename FormatContext>
-auto fmt::formatter<Orc::FuzzyHashStreamAlgorithm>::format(
-    const Orc::FuzzyHashStreamAlgorithm& algs,
-    FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<Orc::FuzzyHashStreamAlgorithm> : public fmt::formatter<std::string_view>
 {
-    if (algs == Orc::FuzzyHashStreamAlgorithm::Undefined)
+    template <typename FormatContext>
+    auto format(const Orc::FuzzyHashStreamAlgorithm& algs, FormatContext& ctx) -> decltype(ctx.out())
     {
-        return formatter<std::string_view>::format("None", ctx);
+        if (algs == Orc::FuzzyHashStreamAlgorithm::Undefined)
+        {
+            return formatter<std::string_view>::format("None", ctx);
+        }
+
+        std::error_code ec;
+        const auto algorithm = Orc::Utf16ToUtf8(Orc::FuzzyHashStream::GetSupportedAlgorithm(algs), ec);
+        if (ec)
+        {
+            return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
+        }
+
+        return formatter<std::string_view>::format(algorithm, ctx);
     }
+};
 
-    std::error_code ec;
-    const auto algorithm = Orc::Utf16ToUtf8(Orc::FuzzyHashStream::GetSupportedAlgorithm(algs), ec);
-    if (ec)
-    {
-        return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
-    }
-
-    return formatter<std::string_view>::format(algorithm, ctx);
-}
-
-template <typename FormatContext>
-auto fmt::formatter<Orc::FuzzyHashStreamAlgorithm, wchar_t>::format(
-    const Orc::FuzzyHashStreamAlgorithm& algs,
-    FormatContext& ctx) -> decltype(ctx.out())
+template <>
+struct fmt::formatter<Orc::FuzzyHashStreamAlgorithm, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
-    if (algs == Orc::FuzzyHashStreamAlgorithm::Undefined)
+    template <typename FormatContext>
+    auto format(const Orc::FuzzyHashStreamAlgorithm& algs, FormatContext& ctx) -> decltype(ctx.out())
     {
-        return formatter<std::wstring_view, wchar_t>::format(L"None", ctx);
-    }
+        if (algs == Orc::FuzzyHashStreamAlgorithm::Undefined)
+        {
+            return formatter<std::wstring_view, wchar_t>::format(L"None", ctx);
+        }
 
-    const auto algorithm = Orc::FuzzyHashStream::GetSupportedAlgorithm(algs);
-    return formatter<std::wstring_view, wchar_t>::format(algorithm, ctx);
-}
+        const auto algorithm = Orc::FuzzyHashStream::GetSupportedAlgorithm(algs);
+        return formatter<std::wstring_view, wchar_t>::format(algorithm, ctx);
+    }
+};

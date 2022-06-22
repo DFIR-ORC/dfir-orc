@@ -42,6 +42,9 @@
 #include "Utils/Time.h"
 #include "Utils/WinApi.h"
 #include "Text/HexDump.h"
+#include "Text/Fmt/std_optional.h"
+#include "Text/Fmt/ByteQuantity.h"
+#include "Text/Hex.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -124,7 +127,7 @@ std::wstring WolfExecution::ToString(WolfExecution::Repeat value)
         case WolfExecution::Repeat::NotSet:
             return L"<default>";
         default:
-            return Orc::kFailedConversionW;
+            return L"<failed_conversion>";
     }
 }
 
@@ -319,7 +322,7 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
                     Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", sha1.error());
                 }
 
-                outcomeArchive.SetSha1(Utf16ToUtf8(*sha1, "<encoding_error>"));
+                outcomeArchive.SetSha1(Utf16ToUtf8(*sha1));
             }
 
             outcomeArchive.SetInputType(::GetArchiveInputType());

@@ -106,7 +106,7 @@ public:
     const std::wstring& GetCompressionLevel() const { return m_compressionLevel; }
 
     void SetFileSize(const std::filesystem::path& path);
-    void SetFileSize(uint64_t size) { m_fileSize = size; }
+    void SetFileSize(uint64_t size) { m_fileSize = Traits::ByteQuantity(size); }
     std::optional<Traits::ByteQuantity<uint64_t>> FileSize() const { return m_fileSize; }
 
     const CBinaryBuffer& MD5() const { return m_md5; };

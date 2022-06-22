@@ -61,11 +61,5 @@
 
 #include <eh.h>
 
-// Do not declare fmt ostream/printf before any fmt specialization.
-// Could be a regression from https://github.com/fmtlib/fmt/issues/952
-#include "Text/Fmt/Formatter.h"
-#include <fmt/ostream.h>
-#include <fmt/printf.h>
-
 #include "Log/Log.h"
 #include "Utils/Result.h"

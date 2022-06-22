@@ -10,7 +10,9 @@
 
 #include "Partition.h"
 
-#include <fmt/format.h>
+#include "Text/Fmt/Partition.h"
+#include "Text/Fmt/PartitionFlags.h"
+#include "Text/Fmt/PartitionType.h"
 
 namespace Orc {
 

@@ -14,6 +14,7 @@
 
 #include "WideAnsi.h"
 #include "Buffer.h"
+#include "Text/Fmt/std_error_code.h"
 
 using namespace std;
 

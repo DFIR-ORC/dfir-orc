@@ -24,6 +24,7 @@
 #include "Text/Print/Ntfs/NonResidentAttributeExtent.h"
 #include "Text/Print/FILE_NAME.h"
 #include "Text/Fmt/ByteQuantity.h"
+#include "Text/Fmt/Offset.h"
 #include "Text/Fmt/FILETIME.h"
 
 namespace Orc {

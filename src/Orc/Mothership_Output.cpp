@@ -10,9 +10,9 @@
 
 #include "Mothership.h"
 
-#include "Text/Print/Bool.h"
 #include "ToolVersion.h"
 #include "Usage.h"
+#include "Text/Fmt/Boolean.h"
 
 using namespace Orc::Command::Mothership;
 using namespace Orc::Text;
@@ -31,8 +31,8 @@ void Main::PrintParameters()
     auto node = root.AddNode("Parameters");
 
     PrintCommonParameters(node);
-    PrintValue(node, L"No wait", config.bNoWait);
-    PrintValue(node, L"Preserve job", config.bPreserveJob);
+    PrintValue(node, L"No wait", Traits::Boolean(config.bNoWait));
+    PrintValue(node, L"Preserve job", Traits::Boolean(config.bPreserveJob));
 
     m_console.PrintNewLine();
 }

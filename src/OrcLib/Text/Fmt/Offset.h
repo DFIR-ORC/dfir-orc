@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include "Text/Fmt/Fwd/Offset.h"
-
 #include "Utils/TypeTraits.h"
 
 // TODO: have on FormatOffsetTo function instead of two
@@ -49,21 +47,25 @@ void FormatOffsetToW(OutputIt out, const Orc::Traits::Offset<T>& offset)
 }
 
 template <typename T>
-template <typename FormatContext>
-auto fmt::formatter<Orc::Traits::Offset<T>>::format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx)
-    -> decltype(ctx.out())
+struct fmt::formatter<Orc::Traits::Offset<T>> : public fmt::formatter<std::string_view>
 {
-    std::string s;
-    FormatOffsetTo(std::back_inserter(s), offset);
-    return formatter<std::string_view>::format(s, ctx);
-}
+    template <typename FormatContext>
+    auto format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        std::string s;
+        FormatOffsetTo(std::back_inserter(s), offset);
+        return formatter<std::string_view>::format(s, ctx);
+    }
+};
 
 template <typename T>
-template <typename FormatContext>
-auto fmt::formatter<Orc::Traits::Offset<T>, wchar_t>::format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx)
-    -> decltype(ctx.out())
+struct fmt::formatter<Orc::Traits::Offset<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
-    std::wstring s;
-    FormatOffsetToW(std::back_inserter(s), offset);
-    return formatter<std::wstring_view, wchar_t>::format(s, ctx);
-}
+    template <typename FormatContext>
+    auto format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx) -> decltype(ctx.out())
+    {
+        std::wstring s;
+        FormatOffsetToW(std::back_inserter(s), offset);
+        return formatter<std::wstring_view, wchar_t>::format(s, ctx);
+    }
+};

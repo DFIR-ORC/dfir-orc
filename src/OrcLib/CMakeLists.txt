@@ -600,17 +600,17 @@ set(SRC_TEXT
     "Text/StdoutContainerAdapter.h"
     "Text/Tree.h"
     "Text/Tree.cpp"
-    "Text/Fwd/Iconv.h"
 )
 
 source_group(Text FILES ${SRC_TEXT})
 
 set(SRC_TEXT_FMT
+    "Text/Fmt/Boolean.h"
+    "Text/Fmt/BoolOnOff.h"
     "Text/Fmt/ByteQuantity.h"
     "Text/Fmt/CryptoHashStreamAlgorithm.h"
     "Text/Fmt/FILE_NAME.h"
     "Text/Fmt/FILETIME.h"
-    "Text/Fmt/Formatter.h"
     "Text/Fmt/FSVBR.h"
     "Text/Fmt/FuzzyHashStreamAlgorithm.h"
     "Text/Fmt/GUID.h"
@@ -631,32 +631,8 @@ set(SRC_TEXT_FMT
 
 source_group(Text\\Fmt FILES ${SRC_TEXT_FMT})
 
-set(SRC_TEXT_FMT_FWD
-    "Text/Fmt/Fwd/ByteQuantity.h"
-    "Text/Fmt/Fwd/CryptoHashStreamAlgorithm.h"
-    "Text/Fmt/Fwd/FILE_NAME.h"
-    "Text/Fmt/Fwd/FILETIME.h"
-    "Text/Fmt/Fwd/FSVBR.h"
-    "Text/Fmt/Fwd/FuzzyHashStreamAlgorithm.h"
-    "Text/Fmt/Fwd/Limit.h"
-    "Text/Fmt/Fwd/LocationType.h"
-    "Text/Fmt/Fwd/Offset.h"
-    "Text/Fmt/Fwd/OutputSpecTypes.h"
-    "Text/Fmt/Fwd/Partition.h"
-    "Text/Fmt/Fwd/PartitionFlags.h"
-    "Text/Fmt/Fwd/PartitionType.h"
-    "Text/Fmt/Fwd/SYSTEMTIME.h"
-    "Text/Fmt/Fwd/std_error_code.h"
-    "Text/Fmt/Fwd/Result.h"
-    "Text/Fmt/Fwd/TimeUtc.h")
-
-source_group(Text\\Fmt\\Fwd FILES ${SRC_TEXT_FMT_FWD})
-
-
 set(SRC_TEXT_PRINT
     "Text/Print.h"
-    "Text/Print/Bool.h"
-    "Text/Print/Bool.cpp"
     "Text/Print/EmbedSpec.h"
     "Text/Print/EmbedSpec.cpp"
     "Text/Print/FILE_NAME.h"

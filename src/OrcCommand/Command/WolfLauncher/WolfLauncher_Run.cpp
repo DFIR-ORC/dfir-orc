@@ -34,7 +34,9 @@
 #include "Utils/Time.h"
 #include "Utils/WinApi.h"
 #include "Text/Fmt/Result.h"
-#include "Text/Print/Bool.h"
+#include "Text/Fmt/ByteQuantity.h"
+#include "Text/Fmt/Offset.h"
+#include "Text/Fmt/Result.h"
 #include "Log/Syslog/Syslog.h"
 #include "Log/Syslog/SyslogSink.h"
 
@@ -82,7 +84,7 @@ GetLocalOutputFileInformations(const Orc::Command::Wolf::WolfExecution& exec, Fi
         return S_OK;
     }
 
-    fileInformations.size = (static_cast<uint64_t>(data.nFileSizeHigh) << 32) | data.nFileSizeLow;
+    fileInformations.size = Traits::ByteQuantity((static_cast<uint64_t>(data.nFileSizeHigh) << 32) | data.nFileSizeLow);
 
     return S_OK;
 }
@@ -136,7 +138,7 @@ void UpdateOutcome(
             Log::Error(L"Failed to convert Wincrypt binary blob for '{}' [{}]", item->Name, certificate.error());
             continue;
         }
-        outcome.Recipients().emplace_back(Utf16ToUtf8(item->Name, "<encoding_error>"), *certificate);
+        outcome.Recipients().emplace_back(Utf16ToUtf8(item->Name), *certificate);
     }
 }
 
@@ -166,7 +168,11 @@ HRESULT GetRemoteOutputFileInformations(
 
         fileInformations.file_exists = true;
         fileInformations.path = uploadAgent.GetRemoteFullPath(exec.GetOutputFileName());
-        fileInformations.size = fileSize;
+        if (fileSize)
+        {
+            fileInformations.size = Traits::ByteQuantity<uint64_t>(*fileSize);
+        }
+
         return S_OK;
     }
 

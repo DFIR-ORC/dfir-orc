@@ -12,10 +12,10 @@
 #include "SystemDetails.h"
 #include "ToolVersion.h"
 #include "Usage.h"
+#include "Text/Fmt/Boolean.h"
 #include "Text/Fmt/WolfPriority.h"
 #include "Text/Print/OutputSpec.h"
 #include "Text/Print/LocationSet.h"
-#include "Text/Print/Bool.h"
 #include "Text/Print/Tribool.h"
 #include "Text/Print/Recipient.h"
 
@@ -178,9 +178,9 @@ void Main::PrintParameters()
     PrintValue(node, L"Output", config.Output);
     PrintValue(node, L"TempDir", config.TempWorkingDir);
     PrintValue(node, L"Child debug", config.bChildDebug);
-    PrintValue(node, L"CreateNew", config.bRepeatCreateNew);
-    PrintValue(node, L"Once", config.bRepeatOnce);
-    PrintValue(node, L"Overwrite", config.bRepeatOverwrite);
+    PrintValue(node, L"CreateNew", Traits::Boolean(config.bRepeatCreateNew));
+    PrintValue(node, L"Once", Traits::Boolean(config.bRepeatOnce));
+    PrintValue(node, L"Overwrite", Traits::Boolean(config.bRepeatOverwrite));
     PrintValue(node, L"Repeat behavior", WolfExecution::ToString(config.RepeatBehavior));
     PrintValue(node, L"Offline", config.strOfflineLocation.value_or(L"<empty>"));
     PrintValue(node, L"Outline file", config.Outline.Path);
@@ -198,7 +198,7 @@ void Main::PrintParameters()
     const auto kNoLimits = L"No limits";
     if (config.NoLimitsKeywords.empty())
     {
-        PrintValue(node, kNoLimits, config.bNoLimits);
+        PrintValue(node, kNoLimits, Traits::Boolean(config.bNoLimits));
     }
     else
     {
