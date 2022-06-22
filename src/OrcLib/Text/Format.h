@@ -128,7 +128,7 @@ void FormatToWithoutEOL(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
         using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
         details::FormatWithEncodingTo(out, std::forward<FmtArg0>(arg0), TryEncodeTo<FmtCharT>(args)...);
     }
-    catch (const fmt::v8::format_error& e)
+    catch (const fmt::format_error& e)
     {
         assert(nullptr && "Formatting error");
         std::cerr << "Failed to format: " << e.what() << std::endl;

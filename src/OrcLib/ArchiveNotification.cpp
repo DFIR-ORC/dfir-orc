@@ -9,6 +9,8 @@
 
 #include "ArchiveNotification.h"
 
+#include "Text/Fmt/std_filesystem.h"
+
 namespace {
 
 // Enable the use of std::make_shared with UploadNotification protected constructor

@@ -155,7 +155,9 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
                 }
                 else
                 {
-                    Log::Warn("Unexpected object type '{}' returned by the IVssEnumObject", Snaps[i].Type);
+                    Log::Warn(
+                        "Unexpected object type '{}' returned by the IVssEnumObject",
+                        static_cast<size_t>(Snaps[i].Type));
                 }
             }
             if (ulSnapReturned < ulSnapCount)

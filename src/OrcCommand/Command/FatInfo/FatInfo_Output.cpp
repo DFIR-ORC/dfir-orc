@@ -16,6 +16,7 @@
 #include "Text/Print/OutputSpec.h"
 #include "Text/Print/Intentions.h"
 #include "Text/Print/Filter.h"
+#include "Text/Print/Location.h"
 
 #include "Usage.h"
 

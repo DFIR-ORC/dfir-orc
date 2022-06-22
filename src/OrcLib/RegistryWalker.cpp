@@ -751,7 +751,7 @@ HRESULT RegistryHive::ParseLfLh(
                 Log::Debug(
                     "Key '{}': subkey with invalid key type (0x%x)",
                     CurrentKey->GetKeyName(),
-                    pCurrentSubKeyHeader->Type);
+                    static_cast<size_t>(pCurrentSubKeyHeader->Type));
             }
 
             RegistryKey* const RegistrySubKey = new RegistryKey(

@@ -45,8 +45,7 @@ class Lib7z
         NCompress::NDeflate::RegisterCodecDeflate();
         NCompress::NDeflate::RegisterCodecDeflate64();
 
-        NCrypto::N7z::RegisterCodec7zAES();
-        NCrypto::RegisterCodecAES256CBC();
+        NCrypto::N7z::RegisterCodec_7zAES();
     }
 
 public:

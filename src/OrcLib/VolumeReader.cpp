@@ -12,6 +12,7 @@
 #include "FatDataStructures.h"
 #include "NtfsDataStructures.h"
 #include "RefsDataStructures.h"
+#include "Text/Fmt/GUID.h"
 
 using namespace Orc;
 

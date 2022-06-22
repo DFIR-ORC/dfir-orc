@@ -48,7 +48,7 @@ void StoreFileHashes(OrcArchive::ArchiveItems& items, bool releaseInputStreams)
     {
         if (item.currentStatus != OrcArchive::ArchiveItem::Status::Done)
         {
-            Log::Warn("Unexpected archive status: {}", item.currentStatus);
+            Log::Warn("Unexpected archive status: {}", static_cast<size_t>(item.currentStatus));
             continue;
         }
 
@@ -110,7 +110,7 @@ HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, Co
 {
     HRESULT hr = E_FAIL;
 
-    Log::Debug(L"ZipCreate: {}: set compression level to {}", m_ArchiveName, level);
+    Log::Debug(L"ZipCreate: {}: set compression level to {}", m_ArchiveName, static_cast<size_t>(level));
 
     if (!pArchiver)
     {
@@ -227,7 +227,10 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
 
         if (FAILED(hr = SetCompressionLevel(pArchiver, m_CompressionLevel)))
         {
-            Log::Error(L"Failed to set compression level to {} [{}]", m_CompressionLevel, SystemError(hr));
+            Log::Error(
+                L"Failed to set compression level to {} [{}]",
+                static_cast<size_t>(m_CompressionLevel),
+                SystemError(hr));
             return hr;
         }
 

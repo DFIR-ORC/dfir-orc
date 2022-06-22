@@ -191,7 +191,7 @@ public:
         void SetType(Type type) { m_type = type; }
 
         const std::optional<FileSize>& GetSize() const { return m_size; }
-        void SetSize(const uint64_t size) { m_size = size; }
+        void SetSize(const uint64_t size) { m_size = FileSize(size); }
         void SetSize(const std::optional<FileSize>& size) { m_size = size; }
 
     private:

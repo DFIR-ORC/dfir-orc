@@ -61,7 +61,7 @@ void Write(
         const auto& size = item.GetSize();
         if (size.has_value())
         {
-            writer->WriteNamed(L"size", *size);
+            writer->WriteNamed(L"size", static_cast<uint64_t>(*size));
         }
     }
 };

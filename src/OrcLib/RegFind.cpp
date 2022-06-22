@@ -32,6 +32,7 @@
 
 #include "Log/Log.h"
 #include "Text/HexDump.h"
+#include "Text/Hex.h"
 
 using namespace std;
 using namespace Orc;
@@ -43,46 +44,51 @@ void LogError(const std::wstring& configItemName, const std::regex_error& e)
     switch (e.code())
     {
         case std::regex_constants::error_collate:
-            Log::Error(L"Error 'error_collate' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(
+                L"Error 'error_collate' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_ctype:
-            Log::Error(L"Error 'error_ctype' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_ctype' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_escape:
-            Log::Error(L"Error 'error_escape' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_escape' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_backref:
-            Log::Error(L"Error 'error_backref' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(
+                L"Error 'error_backref' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_brack:
-            Log::Error(L"Error 'error_brack' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_brack' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_paren:
-            Log::Error(L"Error 'error_paren' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_paren' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_brace:
-            Log::Error(L"Error 'error_brace' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_brace' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_badbrace:
-            Log::Error(L"Error 'error_badbrace' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(
+                L"Error 'error_badbrace' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_range:
-            Log::Error(L"Error 'error_range' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_range' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_space:
-            Log::Error(L"Error 'error_space' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_space' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_badrepeat:
-            Log::Error(L"Error 'error_badrepeat' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(
+                L"Error 'error_badrepeat' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_complexity:
-            Log::Error(L"Error 'error_complexity' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(
+                L"Error 'error_complexity' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         case std::regex_constants::error_stack:
-            Log::Error(L"Error 'error_stack' with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error 'error_stack' with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
         default:
-            Log::Error(L"Error with regex {} (code: {})", configItemName, e.code());
+            Log::Error(L"Error with regex {} (code: {})", configItemName, static_cast<size_t>(e.code()));
             break;
     }
 }

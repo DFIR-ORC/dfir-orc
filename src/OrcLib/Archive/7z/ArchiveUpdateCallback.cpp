@@ -178,7 +178,7 @@ STDMETHODIMP ArchiveUpdateCallback::GetProperty(UInt32 index, PROPID propID, PRO
             break;
 
         case kpidTimeType:
-            prop = NFileTimeType::kWindows;
+            prop = static_cast<UInt32>(NFileTimeType::kWindows);
             break;
 
         case kpidPath:
@@ -243,6 +243,7 @@ STDMETHODIMP ArchiveUpdateCallback::SetOperationResult(Int32 operationResult)
     // I guess it is unsafe to make the assumption that index will match last 'GetStream' index value. Particularly with
     // multiple threads.
     //
+    // TODO: check IArchiveUpdateCallbackArcProp that has been introduced
 
     if (operationResult != NArchive::NUpdate::NOperationResult::kOK)
     {

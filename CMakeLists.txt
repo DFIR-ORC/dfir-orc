@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
+message(WARNING "BEWARE: VCPKG is currently compatible ONLY with ENGLISH version of Visual Studio.")
+
 # CMake user options
 option(ORC_USE_STATIC_CRT "Use static runtime" ON)
 option(ORC_BUILD_VCPKG "Build vcpkg dependencies" ON)
@@ -36,24 +38,22 @@ else()
     option(ORC_COMMAND_WOLFLAUNCHER "Add WolfLauncher subcommand" ON)
 endif()
 
-set(ORC_VCPKG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/vcpkg"
-    CACHE FILEPATH "VCPKG root directory"
-)
-
-set(ORC_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/DFIR-Orc.ico"
-    CACHE STRING "Application icon"
-)
-
+set(ORC_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/DFIR-Orc.ico" CACHE STRING "Application icon")
 set(ORC_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
+set(ORC_VCPKG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/external/vcpkg" CACHE FILEPATH "VCPKG root directory")
+
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
+include(cmake/architecture.cmake)
+get_target_architecture(RESULT_VARIABLE "TARGET_ARCH")
 
 if(ORC_USE_STATIC_CRT)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    set(VCPKG_TARGET_TRIPLET "${TARGET_ARCH}-windows-static")
 else()
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    set(VCPKG_TARGET_TRIPLET "${TARGET_ARCH}-windows")
 endif()
-
-# Insert custom cmake directories for script lookup
-list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Default target is 'Windows Seven' unless xp toolset is used
 if(NOT CMAKE_SYSTEM_VERSION)
@@ -63,6 +63,17 @@ if(NOT CMAKE_SYSTEM_VERSION)
         set(CMAKE_SYSTEM_VERSION 6.1)
     endif()
 endif()
+
+if(NOT CMAKE_TOOLCHAIN_FILE)
+    set(CMAKE_TOOLCHAIN_FILE "${ORC_VCPKG_ROOT}\\scripts\\buildsystems\\vcpkg.cmake")
+endif()
+
+project(dfir-orc LANGUAGES C CXX ASM_MASM)
+
+# Configure triplet dynamically with options chosen from CMake
+set(OVERLAY_TRIPLETS ${CMAKE_BINARY_DIR}/vcpkg/triplets)
+include(cmake/vcpkg_configure_triplets.cmake)
+vcpkg_configure_triplets(OUTPUT_TRIPLETS_DIR ${OVERLAY_TRIPLETS})
 
 # Setup repository related variables and force refresh on new commits
 include(cmake/GitInfo.cmake)
@@ -74,18 +85,6 @@ git_info(
     COMMIT ORC_COMMIT
 )
 
-message(WARNING "BEWARE: VCPKG is currently compatible ONLY with ENGLISH version of Visual Studio.")
-
-# Configure triplet dynamically with options chosen from CMake
-set(OVERLAY_TRIPLETS ${CMAKE_BINARY_DIR}/vcpkg/triplets)
-include(cmake/vcpkg_configure_triplets.cmake)
-vcpkg_configure_triplets(OUTPUT_TRIPLETS_DIR ${OVERLAY_TRIPLETS})
-
-include(cmake/architecture.cmake)
-get_target_architecture(RESULT_VARIABLE "TARGET_ARCH")
-if(${TARGET_ARCH} STREQUAL "x86")
-    set(ORC_BUILD_PARQUET OFF)
-endif()
 
 # Build the required package dependency list
 if(ORC_VCPKG_ROOT)
@@ -101,7 +100,7 @@ if(ORC_VCPKG_ROOT)
         boost-tokenizer
         fmt
         ms-gsl
-        spdlog
+        spdlog[wchar]
         yara[dotnet]
         rapidjson
     )
@@ -130,11 +129,15 @@ if(ORC_VCPKG_ROOT)
     endif()
 
     if(ORC_BUILD_PARQUET)
+        if(${TARGET_ARCH} STREQUAL "x86")
+            set(ORC_BUILD_PARQUET OFF)
+        endif()
+
         # Could be compatible with some workarounds within tz.cpp
         if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
             message(FATAL_ERROR "Parquet requires Seven or later")
         endif()
-        list(APPEND _PACKAGES arrow libressl)
+        list(APPEND _PACKAGES arrow libressl double-conversion)
     endif()
 
     if(ORC_BUILD_SSDEEP)
@@ -162,9 +165,6 @@ endif()
 if(ORC_DOWNLOADS_ONLY)
     return()
 endif()
-
-# Must be set AFTER 'VCPKG_TARGET_TRIPLET' is defined
-project(dfir-orc LANGUAGES C CXX ASM_MASM)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

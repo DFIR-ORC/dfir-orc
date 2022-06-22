@@ -20,6 +20,7 @@
 #include "CSVFileWriter.h"
 #include <filesystem>
 #include <array>
+#include "Text/Fmt/LocationType.h"
 
 #include "Text/Fmt/Partition.h"
 #include "Text/Fmt/PartitionType.h"
@@ -440,7 +441,7 @@ Main::readAtVolumeLevel(const std::wstring& diskName, ULONGLONG offset, DWORD si
         // TODO fabienfl: I do not trust this loop, found is set for a location immediately changed
         for (const auto& location : volumeLocations.Locations)
         {
-            Log::Debug(L"Accessing location: '{}', type: {}", location, location->GetType());
+            Log::Debug(L"Accessing location: '{}', type: {}", location->GetLocation(), location->GetType());
 
             if (found)
             {
