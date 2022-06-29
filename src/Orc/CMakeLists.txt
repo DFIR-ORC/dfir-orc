@@ -58,7 +58,6 @@ target_link_libraries(Orc
         OrcCommand
         OrcLib
         setupapi.lib
-        VisualStudio::atls
 )
 
 if(${ORC_SWAPRUN_NET})

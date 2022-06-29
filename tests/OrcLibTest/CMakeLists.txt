@@ -179,6 +179,7 @@ target_include_directories(OrcLibTest PRIVATE ${Boost_INCLUDE_DIRS})
 target_link_libraries(OrcLibTest
     PRIVATE
         VisualStudio::atls
+        VisualStudio::CppUnitTest
         OrcLib
 )
 
