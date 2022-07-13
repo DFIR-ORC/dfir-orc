@@ -929,8 +929,15 @@ HRESULT FileFind::AddTermsFromConfig(const ConfigItem& item)
 {
     for (const auto& item : item.NodeList)
     {
+        // shared ptr is always returned
         auto fs = GetSearchTermFromConfig(item);
-        AddTerm(fs);
+
+        HRESULT hr = AddTerm(fs);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to add search term from configuration (item: {}) [{}]", item.c_str(), SystemError(hr));
+            return hr;
+        }
     }
 
     return S_OK;
@@ -940,8 +947,15 @@ HRESULT FileFind::AddExcludeTermsFromConfig(const ConfigItem& item)
 {
     for (const auto& item : item.NodeList)
     {
+        // shared ptr is always returned
         auto fs = GetSearchTermFromConfig(item);
-        AddExcludeTerm(fs);
+        HRESULT hr = AddExcludeTerm(fs);
+        if (FAILED(hr))
+        {
+            Log::Error(
+                L"Failed to exclude search term from configuration (item: {}) [{}]", item.c_str(), SystemError(hr));
+            return hr;
+        }
     }
 
     return S_OK;
@@ -1537,7 +1551,8 @@ HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
     {
         if (FAILED(hr = m_YaraScan->AddRules(yara)))
         {
-            Log::Error(L"Failed to load yara rules from source: {}", yara);
+            Log::Error(L"Failed to load yara rules from source: {} [{}]", yara, SystemError(hr));
+            return hr;
         }
     }
 
@@ -1546,13 +1561,25 @@ HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
         auto new_end = std::unique(begin(yara_rules), end(yara_rules));
         yara_rules.erase(new_end, end(yara_rules));
     }
+
+    // Disable all rules then enable only the ones referenced in the xml configuration
     if (!yara_rules.empty())
     {
-        m_YaraScan->DisableRule("*");  // we first disable all rules
+        hr = m_YaraScan->DisableRule("*");
+        if (FAILED(hr))
+        {
+            Log::Error("Failed to disable yara rule [{}]", SystemError(hr));
+            return hr;
+        }
 
         for (const auto& rule : yara_rules)
         {
-            m_YaraScan->EnableRule(rule.c_str());
+            hr = m_YaraScan->EnableRule(rule.c_str());
+            if (FAILED(hr))
+            {
+                Log::Error("Failed to enable Yara rule [{}]", SystemError(hr));
+                return hr;
+            }
         }
     }
 
