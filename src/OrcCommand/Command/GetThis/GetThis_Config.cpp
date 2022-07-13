@@ -487,16 +487,29 @@ HRESULT Main::CheckConfiguration()
         config.content.Type = ContentType::DATA;
     }
 
-    std::for_each(begin(config.listofSpecs), end(config.listofSpecs), [this](SampleSpec& aSpec) {
+    bool hasFailed = false;
+    std::for_each(begin(config.listofSpecs), end(config.listofSpecs), [this, &hasFailed](SampleSpec& aSpec) {
         if (aSpec.Content.Type == ContentType::INVALID)
         {
             aSpec.Content = config.content;
         }
 
-        std::for_each(begin(aSpec.Terms), end(aSpec.Terms), [this](const shared_ptr<FileFind::SearchTerm>& filespec) {
-            FileFinder.AddTerm(filespec);
-        });
+        std::for_each(
+            begin(aSpec.Terms), end(aSpec.Terms), [this, &hasFailed](const shared_ptr<FileFind::SearchTerm>& filespec) {
+                HRESULT hr = FileFinder.AddTerm(filespec);
+                if (FAILED(hr))
+                {
+                    hasFailed = true;
+                    Log::Error(L"Failed to parse search term (item: {}) [{}]", filespec->YaraRulesSpec, SystemError(hr));
+                }
+            });
     });
+
+    if (hasFailed)
+    {
+        Log::Error("Failed to parse search term");
+        return E_FAIL;
+    }
 
     std::for_each(
         begin(config.listOfExclusions),

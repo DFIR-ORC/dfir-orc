@@ -1408,7 +1408,8 @@ HRESULT Main::FindMatchingSamples()
     hr = FileFinder.InitializeYara(config.Yara);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to initialize Yara scan");
+        Log::Error(L"Failed to initialize Yara [{}]", SystemError(hr));
+        return hr;
     }
 
     hr = FileFinder.Find(
