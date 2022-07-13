@@ -328,7 +328,14 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     }
     if (configitem[GETTHIS_YARA])
     {
-        config.Yara = std::make_unique<YaraConfig>(YaraConfig::Get(configitem[GETTHIS_YARA]));
+        auto yaraConfig = YaraConfig::Get(configitem[GETTHIS_YARA]);
+        if (!yaraConfig)
+        {
+            Log::Error(L"Failed to parse Yara configuration [{}]", yaraConfig.error());
+            return ToHRESULT(yaraConfig.error());
+        }
+
+        config.Yara = std::make_unique<YaraConfig>(*yaraConfig);
     }
     return S_OK;
 }

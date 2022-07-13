@@ -166,7 +166,14 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
         if (filesystem[FASTFIND_FILESYSTEM_YARA])
         {
-            config.Yara = std::make_unique<YaraConfig>(YaraConfig::Get(filesystem[FASTFIND_FILESYSTEM_YARA]));
+            auto yaraConfig = YaraConfig::Get(filesystem[FASTFIND_FILESYSTEM_YARA]);
+            if (!yaraConfig)
+            {
+                Log::Error(L"Failed to parse Yara configuration [{}]", yaraConfig.error());
+                return ToHRESULT(yaraConfig.error());
+            }
+
+            config.Yara = std::make_unique<YaraConfig>(std::move(*yaraConfig));
         }
     }
 

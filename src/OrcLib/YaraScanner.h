@@ -44,7 +44,7 @@ public:
 
     YaraConfig& operator=(const YaraConfig& other) = default;
 
-    static YaraConfig Get(const ConfigItem& item);
+    static Result<YaraConfig> Get(const ConfigItem& item);
 
     HRESULT SetBlockSize(ULONG Size)
     {
