@@ -243,7 +243,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
             if (FAILED(hr = memstream->OpenForReadOnly(buffer.GetData(), buffer.GetCount())))
             {
                 Log::Error(
-                    L"Failed to create stream for config ressource '{}' [{}]", strConfigResource, SystemError(hr));
+                    L"Failed to create stream for config resource '{}' [{}]", strConfigResource, SystemError(hr));
                 return hr;
             }
 
@@ -281,7 +281,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
 
             if (FAILED(hr = memstream->OpenForReadOnly(buffer.GetData(), buffer.GetCount())))
             {
-                Log::Error(L"Failed to create stream for config ressource '{}' [{}]", strConfigRef, SystemError(hr));
+                Log::Error(L"Failed to create stream for config resource '{}' [{}]", strConfigRef, SystemError(hr));
                 return hr;
             }
 

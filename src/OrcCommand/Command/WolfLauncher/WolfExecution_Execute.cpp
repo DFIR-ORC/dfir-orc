@@ -109,7 +109,7 @@ Outcome::Archive::InputType GetArchiveInputType()
     return Outcome::Archive::InputType::kOffline;
 }
 
-}
+}  // namespace
 
 std::wstring WolfExecution::ToString(WolfExecution::Repeat value)
 {

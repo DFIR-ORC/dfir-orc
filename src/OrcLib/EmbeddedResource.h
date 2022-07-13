@@ -289,8 +289,8 @@ private:
         DWORD cbSize,
         uint8_t maxAttempt);
 
-    static std::wregex& ArchRessourceRegEx();
-    static std::wregex& ResRessourceRegEx();
+    static std::wregex& ArchResourceRegEx();
+    static std::wregex& ResResourceRegEx();
     static std::wregex& SelfReferenceRegEx();
 
     static HINSTANCE GetDefaultHINSTANCE();
@@ -305,9 +305,9 @@ public:
 
     static bool IsResourceBasedArchiveFile(const WCHAR* szCabFileName);
 
-    static bool IsResourceBased(const std::wstring& szImageFileRessourceID);
+    static bool IsResourceBased(const std::wstring& szImageFileResourceID);
 
-    static bool IsSelf(const std::wstring& szImageFileRessourceID);
+    static bool IsSelf(const std::wstring& szImageFileResourceID);
 
     static HRESULT GetSelfArgument(const std::wstring& strRef, std::wstring& strArg);
 
@@ -360,38 +360,38 @@ public:
     static HRESULT GetSelf(std::wstring& outputFile);
 
     static HRESULT ExtractToFile(
-        const std::wstring& szImageFileRessourceID,
+        const std::wstring& szImageFileResourceID,
         const std::wstring& Keyword,
         LPCWSTR szSDDLFormat,
         LPCWSTR szSID,
         const std::wstring& strTempDir,
         std::wstring& outputFile);
     static HRESULT ExtractToFile(
-        const std::wstring& szImageFileRessourceID,
+        const std::wstring& szImageFileResourceID,
         const std::wstring& Keyword,
         LPCWSTR szSDDL,
         const std::wstring& strTempDir,
         std::wstring& outputFile);
 
     static HRESULT ExtractToDirectory(
-        const std::wstring& szImageFileRessourceID,
+        const std::wstring& szImageFileResourceID,
         const std::wstring& Keyword,
         LPCWSTR szSDDL,
         const std::wstring& strTempDir,
         std::vector<std::pair<std::wstring, std::wstring>>& outputFiles);
 
     static HRESULT ExtractToDirectory(
-        const std::wstring& szImageFileRessourceID,
+        const std::wstring& szImageFileResourceID,
         const std::wstring& Keyword,
         LPCWSTR szSDDLFormat,
         LPCWSTR szSID,
         const std::wstring& strTempDir,
         std::vector<std::pair<std::wstring, std::wstring>>& outputFiles);
 
-    static HRESULT ExtractToBuffer(const std::wstring& szImageFileRessourceID, CBinaryBuffer& Buffer);
+    static HRESULT ExtractToBuffer(const std::wstring& szImageFileResourceID, CBinaryBuffer& Buffer);
 
     template <typename _T, size_t _DeclElts>
-    static HRESULT ExtractToBuffer(const std::wstring& szImageFileRessourceID, Buffer<_T, _DeclElts>& Buffer);
+    static HRESULT ExtractToBuffer(const std::wstring& szImageFileResourceID, Buffer<_T, _DeclElts>& Buffer);
 
     static HRESULT ExtractValue(const std::wstring& Module, const std::wstring& Name, std::wstring& Value);
     static HRESULT ExtractBuffer(const std::wstring& Module, const std::wstring& Name, CBinaryBuffer& Value);
@@ -433,7 +433,7 @@ public:
 
     static HRESULT ExpandArchivesAndBinaries(const std::wstring& outDir, std::vector<EmbedSpec>& values);
 
-    static HRESULT DeleteEmbeddedRessources(
+    static HRESULT DeleteEmbeddedResources(
         const std::wstring& inModule,
         const std::wstring& outModule,
         std::vector<EmbedSpec>& values);
@@ -457,8 +457,7 @@ static constexpr LPCWSTR RESSOURCE_GENERIC_READ_BA = L"D:PAI(A;;FR;;;BA)";
 #include "ResourceStream.h"
 
 template <typename _T, size_t _DeclElts>
-HRESULT
-Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceID, Buffer<_T, _DeclElts>& Buffer)
+HRESULT Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, Buffer<_T, _DeclElts>& Buffer)
 {
     using namespace std;
     using namespace msl::utilities;
@@ -467,7 +466,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
 
     std::wstring MotherShip, ResName, NameInArchive, FormatName;
 
-    if (SUCCEEDED(hr = SplitResourceReference(szImageFileRessourceID, MotherShip, ResName, NameInArchive, FormatName)))
+    if (SUCCEEDED(hr = SplitResourceReference(szImageFileResourceID, MotherShip, ResName, NameInArchive, FormatName)))
     {
         if (NameInArchive.empty())
         {
@@ -481,7 +480,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             std::wstring strBinaryPath;
             if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
-                Log::Warn(L"Could not locate resource {} [{}]", szImageFileRessourceID, SystemError(hr));
+                Log::Warn(L"Could not locate resource {} [{}]", szImageFileResourceID, SystemError(hr));
                 return hr;
             }
 
@@ -490,7 +489,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             if ((hFileResource = LoadResource(hModule, hRes)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Warn(L"Could not load ressource [{}]", SystemError(hr));
+                Log::Warn(L"Could not load resource [{}]", SystemError(hr));
                 return hr;
             }
 
@@ -499,7 +498,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             if ((lpData = LockResource(hFileResource)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Warn(L"Could not lock ressource [{}]", SystemError(hr));
+                Log::Warn(L"Could not lock resource [{}]", SystemError(hr));
                 return hr;
             }
 
@@ -507,7 +506,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             if ((dwSize = SizeofResource(hModule, hRes)) == 0)
             {
                 auto hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error(L"Could not compute ressource size [{}]", SystemError(hr));
+                Log::Error(L"Could not compute resource size [{}]", SystemError(hr));
                 return hr;
             }
 
@@ -530,7 +529,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
             auto extract = ArchiveExtract::MakeExtractor(fmt);
 
             auto MakeArchiveStream =
-                [&MotherShip, &ResName, &szImageFileRessourceID](std::shared_ptr<ByteStream>& stream) -> HRESULT {
+                [&MotherShip, &ResName, &szImageFileResourceID](std::shared_ptr<ByteStream>& stream) -> HRESULT {
                 HRESULT hr = E_FAIL;
 
                 shared_ptr<ResourceStream> res = make_shared<ResourceStream>();
@@ -540,7 +539,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
                 std::wstring strBinaryPath;
                 if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
-                    Log::Warn(L"Could not locate resource [{}]", szImageFileRessourceID, SystemError(hr));
+                    Log::Warn(L"Could not locate resource [{}]", szImageFileResourceID, SystemError(hr));
                     return hr;
                 }
 
@@ -618,7 +617,7 @@ Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRessourceI
     }
     else if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
     {
-        Log::Error(L"'{}' does not match a typical embedded ressource pattern", szImageFileRessourceID);
+        Log::Error(L"'{}' does not match a typical embedded resource pattern", szImageFileResourceID);
         return E_INVALIDARG;
     }
 

@@ -172,7 +172,7 @@ HRESULT CommandAgent::Initialize(
     m_Keyword = keyword;
     m_TempDir = szTempDir;
 
-    m_Ressources.SetTempDirectory(m_TempDir);
+    m_Resources.SetTempDirectory(m_TempDir);
 
     m_bChildDebug = bChildDebug;
 
@@ -587,9 +587,9 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     {
                         wstring extracted;
 
-                        if (FAILED(hr = m_Ressources.GetResource(parameter.Name, parameter.Keyword, extracted)))
+                        if (FAILED(hr = m_Resources.GetResource(parameter.Name, parameter.Keyword, extracted)))
                         {
-                            Log::Error(L"Failed to extract ressource '{}' [{}]", parameter.Name, SystemError(hr));
+                            Log::Error(L"Failed to extract resource '{}' [{}]", parameter.Name, SystemError(hr));
                             return;
                         }
 
@@ -657,7 +657,7 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                                     extracted)))
                         {
                             Log::Error(
-                                L"Failed to extract ressource '{}' from archive [{}]", parameter.Name, SystemError(hr));
+                                L"Failed to extract resource '{}' from archive [{}]", parameter.Name, SystemError(hr));
                             return;
                         }
                         wstring Arg;
@@ -1324,8 +1324,8 @@ void CommandAgent::run()
 
         if (m_bStopping && m_RunningCommands.size() == 0 && m_CommandQueue.empty())
         {
-            // delete temporary ressources
-            m_Ressources.DeleteTemporaryRessources();
+            // delete temporary resources
+            m_Resources.DeleteTemporaryResources();
             SendResult(CommandNotification::NotifyDone(m_Keyword, m_Job.GetHandle()));
             done();
 

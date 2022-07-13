@@ -51,9 +51,7 @@ public:
     STDMETHOD(Open)(const std::shared_ptr<ByteStream>& pChainedStream);
 
     STDMETHOD(Open)
-    (const std::shared_ptr<NTFSStream>& ntfsStream,
-     Ntfs::WofAlgorithm algorithm,
-     uint64_t uncompressedSize);
+    (const std::shared_ptr<NTFSStream>& ntfsStream, Ntfs::WofAlgorithm algorithm, uint64_t uncompressedSize);
 
     STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,

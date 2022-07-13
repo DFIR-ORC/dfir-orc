@@ -302,7 +302,6 @@ public:
 
 #ifndef __cplusplus_cli
 
-
     template <typename... Args>
     HRESULT WriteFormated(const std::wstring_view& szFormat, Args&&... args)
     {

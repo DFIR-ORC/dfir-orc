@@ -47,7 +47,7 @@ template <typename _T, size_t _DeclElts = 1>
 class Buffer;
 template <typename _T>
 class BufferSpan;
-}
+}  // namespace Detail
 template <typename _T, size_t _DeclElts = 1>
 using Buffer = Detail::Buffer<_T, _DeclElts>;
 
@@ -67,7 +67,7 @@ class ObjectStorage;
 // Utilities/Parameters
 class OutputSpec;
 
-// Utilities/Ressources
+// Utilities/Resources
 class EmbeddedResource;
 
 // Utilites/Strings

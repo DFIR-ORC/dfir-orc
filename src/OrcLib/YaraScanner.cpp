@@ -204,13 +204,13 @@ HRESULT Orc::YaraScanner::AddRules(const std::wstring& yara_content_spec)
 
         if (FAILED(hr = EmbeddedResource::ExtractToBuffer(yara_content_spec, buffer)))
         {
-            Log::Error(L"Failed to find and extract ressource '{}' [{}]", yara_content_spec, SystemError(hr));
+            Log::Error(L"Failed to find and extract resource '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
 
         if (FAILED(hr = AddRules(buffer)))
         {
-            Log::Error(L"Failed to add rules from ressource '{}' [{}]", yara_content_spec, SystemError(hr));
+            Log::Error(L"Failed to add rules from resource '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
     }
@@ -228,7 +228,7 @@ HRESULT Orc::YaraScanner::AddRules(const std::wstring& yara_content_spec)
 
         if (FAILED(hr = AddRules(fstream)))
         {
-            Log::Error(L"Failed to add rules from ressource '{}' [{}]", yara_content_spec, SystemError(hr));
+            Log::Error(L"Failed to add rules from resource '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
     }

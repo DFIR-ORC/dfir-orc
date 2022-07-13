@@ -311,9 +311,7 @@ public:
 
     Main()
         : UtilitiesMain()
-        , config() {
-
-          };
+        , config() {};
 
     HRESULT GetConfigurationFromConfig(const ConfigItem& configitem);
     HRESULT GetLocalConfigurationFromConfig(const ConfigItem& configitem)

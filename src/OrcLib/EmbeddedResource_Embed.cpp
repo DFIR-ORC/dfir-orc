@@ -468,7 +468,7 @@ HRESULT EmbeddedResource::_UpdateResource(
         if (hOut == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug(L"Failed to update ressource in '{}' (BeginUpdateResource) [{}]", szModule, SystemError(hr));
+            Log::Debug(L"Failed to update resource in '{}' (BeginUpdateResource) [{}]", szModule, SystemError(hr));
             return hr;
         }
     }
@@ -476,7 +476,7 @@ HRESULT EmbeddedResource::_UpdateResource(
     if (!UpdateResource(hOut, szType, szName, MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL), pData, cbSize))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug(L"Failed to add ressource '{}' (UpdateResource) [{}]", szName, SystemError(hr));
+        Log::Debug(L"Failed to add resource '{}' (UpdateResource) [{}]", szName, SystemError(hr));
         return hr;
     }
 
@@ -485,7 +485,7 @@ HRESULT EmbeddedResource::_UpdateResource(
         if (!EndUpdateResource(hOut, FALSE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug(L"Failed to update ressource in '{}' (EndUpdateResource) [{}]", szModule, SystemError(hr));
+            Log::Debug(L"Failed to update resource in '{}' (EndUpdateResource) [{}]", szModule, SystemError(hr));
             return hr;
         }
     }
@@ -546,7 +546,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
             Log::Error(
-                L"Failed to update ressources in '{}' (BeginUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
+                L"Failed to update resources in '{}' (BeginUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
             return hr;
         }
     }
@@ -622,7 +622,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
         if (!EndUpdateResource(hOutput, FALSE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to update ressources in '{}' (EndUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
+            Log::Error(L"Failed to update resources in '{}' (EndUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
             return hr;
         }
     }
@@ -638,7 +638,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
 
                 if (FAILED(hr = filestream->ReadFrom(item.Value.c_str())))
                 {
-                    Log::Error(L"Failed to update ressources in '{}' (read failed) [{}]", item.Value, SystemError(hr));
+                    Log::Error(L"Failed to update resources in '{}' (read failed) [{}]", item.Value, SystemError(hr));
                     return hr;
                 }
 

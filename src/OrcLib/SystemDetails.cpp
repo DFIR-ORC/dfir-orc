@@ -1158,7 +1158,6 @@ Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails::GetN
             }
 
             buffer.resize(cbRequiredSize);
-
         }
         else if (ret != ERROR_SUCCESS)
         {
