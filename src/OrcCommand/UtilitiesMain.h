@@ -614,6 +614,14 @@ protected:
 
     bool ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
 
+    template <typename _EnumT>
+    bool EnumOption(LPCWSTR szArg, LPCWSTR szOption, _EnumT& eOption, _EnumT eValue) {
+        if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+            return false;
+        eOption = eValue;
+        return true;
+    }
+
     bool ShadowsOption(
         LPCWSTR szArg,
         LPCWSTR szOption,
