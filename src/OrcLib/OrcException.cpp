@@ -18,11 +18,6 @@
 
 using namespace Orc;
 
-Orc::Exception::Exception(std::wstring descr)
-    : Description(std::move(descr))
-{
-}
-
 HRESULT Exception::PrintMessage() const
 {
     Log::Error(L"Exception Occured: {}", Description);
@@ -44,6 +39,12 @@ char const* Exception::what() const
             What.emplace(std::move(str));
             return What.value().c_str();
         }
+    }
+
+    if (auto code = ErrorCode())
+    {
+        What.emplace(code.message());
+        return What.value().c_str();
     }
 
     return "Exception raised without further description";
