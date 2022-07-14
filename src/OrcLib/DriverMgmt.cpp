@@ -69,20 +69,27 @@ HRESULT DriverTermination::operator()()
             }
             BOOST_SCOPE_EXIT_END;
 
-            if (FAILED(hr = Orc::DriverMgmt::StopDriver(SchSCManager, driver->Name().c_str())))
+            if (driver->m_bAutoStop || driver->m_bAutoUninstall)
             {
-                Log::Error("Failed StopDriver in termination handler [{}]", SystemError(hr));
+                if (FAILED(hr = Orc::DriverMgmt::StopDriver(SchSCManager, driver->Name().c_str())))
+                {
+                    Log::Error("Failed StopDriver in termination handler [{}]", SystemError(hr));
+                }
+                else
+                {
+                    Log::Debug(L"Successfully stopped driver {} in termination handler", driver->Name());
+                }
             }
-            else
+
+            if (driver->m_bAutoUninstall)
             {
-                Log::Debug(L"Successfully stopped driver {}", driver->Name());
                 if (FAILED(hr = Orc::DriverMgmt::RemoveDriver(SchSCManager, driver->Name().c_str())))
                 {
                     Log::Error("Failed RemoveDriver in termination handler [{}]", SystemError(hr));
                 }
                 else
                 {
-                    Log::Debug(L"Successfully removed driver '{}'", driver->Name());
+                    Log::Debug(L"Successfully removed driver '{}' in termination handler", driver->Name());
                 }
             }
         }
@@ -150,7 +157,25 @@ HRESULT DriverMgmt::SetTemporaryDirectory(const std::wstring& strTempDir)
     return S_OK;
 }
 
-HRESULT Orc::Driver::Install(const std::wstring& strX86DriverRef, const std::wstring& strX64DriverRef)
+Driver::~Driver()
+{
+    if (m_bAutoStop || m_bAutoUninstall)
+    {
+        if (auto hr = Stop(); FAILED(hr))
+        {
+            Log::Error(L"Failed to stop driver '{}' {}", m_strServiceName, SystemError(hr));
+        }
+    }
+    if (m_bAutoUninstall)
+    {
+        if (auto hr = UnInstall(); FAILED(hr))
+        {
+            Log::Error(L"Failed to uninstall driver '{}' {}", m_strServiceName, SystemError(hr));
+        }
+    }
+}
+
+HRESULT Driver::Install(const std::wstring& strX86DriverRef, const std::wstring& strX64DriverRef)
 {
     HRESULT hr = E_FAIL;
 
@@ -905,6 +930,7 @@ HRESULT Orc::DriverMgmt::GetDriverBinaryPathName(
 HRESULT
 Orc::DriverMgmt::SetStartupMode(__in SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in DriverStartupMode mode)
 {
+    using namespace std::string_view_literals;
     HRESULT hr = E_FAIL;
     SC_HANDLE schService;
 
@@ -948,10 +974,7 @@ Orc::DriverMgmt::SetStartupMode(__in SC_HANDLE SchSCManager, __in LPCTSTR Driver
             dwServiceStart = SERVICE_SYSTEM_START;
             break;
         default:
-            throw Exception(
-                Severity::Fatal,
-                L"Invalid driver startup mode: {}",
-                static_cast<std::underlying_type_t<DriverStartupMode>>(mode));
+            throw Exception(Severity::Fatal, L"Invalid driver startup mode: {}"sv, (DWORD)mode);
     }
 
     if (!ChangeServiceConfigW(

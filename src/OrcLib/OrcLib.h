@@ -82,6 +82,8 @@ class ScopedLock;
 class CriticalSection;
 
 class DriverMgmt;
+class Driver;
+using PDriver = std::shared_ptr<Driver>;
 
 struct SYSTEM_HANDLE_INFORMATON;
 struct SystemHandleInformationData;
