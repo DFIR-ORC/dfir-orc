@@ -17,54 +17,34 @@
 namespace Orc {
 namespace Text {
 
+using namespace std::string_view_literals;
+
 constexpr auto kNodeHeader = std::string_view("[+] ");
 constexpr auto kNodeHeaderW = std::wstring_view(L"[+] ");
 
-constexpr auto kIndentLevel0 = std::string_view("");
-constexpr auto kIndentLevel1 = std::string_view("    ");
-constexpr auto kIndentLevel2 = std::string_view("        ");
-constexpr auto kIndentLevel3 = std::string_view("            ");
-constexpr auto kIndentLevel4 = std::string_view("                ");
-constexpr auto kIndentLevel5 = std::string_view("                    ");
-constexpr auto kIndentLevel6 = std::string_view("                        ");
-constexpr auto kIndentLevel7 = std::string_view("                            ");
-constexpr auto kIndentLevel8 = std::string_view("                                ");
-constexpr auto kIndentLevel9 = std::string_view("                                    ");
-
 constexpr std::array kIndentLevels = {
-    kIndentLevel0,
-    kIndentLevel1,
-    kIndentLevel2,
-    kIndentLevel3,
-    kIndentLevel4,
-    kIndentLevel5,
-    kIndentLevel6,
-    kIndentLevel7,
-    kIndentLevel8,
-    kIndentLevel9};
-
-constexpr auto kIndentLevel0W = std::wstring_view(L"");
-constexpr auto kIndentLevel1W = std::wstring_view(L"    ");
-constexpr auto kIndentLevel2W = std::wstring_view(L"        ");
-constexpr auto kIndentLevel3W = std::wstring_view(L"            ");
-constexpr auto kIndentLevel4W = std::wstring_view(L"                ");
-constexpr auto kIndentLevel5W = std::wstring_view(L"                    ");
-constexpr auto kIndentLevel6W = std::wstring_view(L"                        ");
-constexpr auto kIndentLevel7W = std::wstring_view(L"                            ");
-constexpr auto kIndentLevel8W = std::wstring_view(L"                                ");
-constexpr auto kIndentLevel9W = std::wstring_view(L"                                    ");
+    ""sv,
+    "    "sv,
+    "        "sv,
+    "            "sv,
+    "                "sv,
+    "                    "sv,
+    "                        "sv,
+    "                            "sv,
+    "                                "sv,
+    "                                    "sv};
 
 constexpr std::array kIndentLevelsW = {
-    kIndentLevel0W,
-    kIndentLevel1W,
-    kIndentLevel2W,
-    kIndentLevel3W,
-    kIndentLevel4W,
-    kIndentLevel5W,
-    kIndentLevel6W,
-    kIndentLevel7W,
-    kIndentLevel8W,
-    kIndentLevel9W};
+    L""sv,
+    L"    "sv,
+    L"        "sv,
+    L"            "sv,
+    L"                "sv,
+    L"                    "sv,
+    L"                        "sv,
+    L"                            "sv,
+    L"                                "sv,
+    L"                                    "sv};
 
 template <typename T>
 const std::basic_string_view<T>& GetIndent(uint16_t level);
