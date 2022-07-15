@@ -59,13 +59,13 @@ EmbeddedResource::EmbeddedResource(void) {}
 wregex& Orc::EmbeddedResource::ArchResourceRegEx()
 {
     static wregex g_ArchResourceRegEx(
-        L"((7z|zip):([a-zA-Z0-9_\\-\\.]*))#([a-zA-Z0-9_\\-\\.]+)\\|([a-zA-Z0-9\\-_\\*\\.\\\\/]+)");
+        L"((7z|zip):([a-zA-Z0-9_\\-\\.\\/\\\\]*))#([a-zA-Z0-9_\\-\\.]+)\\|([a-zA-Z0-9\\-_\\*\\.\\/\\\\]+)");
     return g_ArchResourceRegEx;
 }
 
 std::wregex& Orc::EmbeddedResource::ResResourceRegEx()
 {
-    static wregex g_ResResourceRegEx(L"(res:([a-zA-Z0-9\\-_\\.]*))#([a-zA-Z0-9\\-_\\.\\\\/]+)");
+    static wregex g_ResResourceRegEx(L"(res:([a-zA-Z0-9\\-_\\.\\/\\\\]*))#([a-zA-Z0-9\\-_\\.\\/\\\\]+)");
     return g_ResResourceRegEx;
 }
 
