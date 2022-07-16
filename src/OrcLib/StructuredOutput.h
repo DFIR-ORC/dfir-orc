@@ -201,6 +201,45 @@ public:
     virtual HRESULT Close() PURE;
 };
 
+class ScopedRootElement : private resource_scope<IWriter>
+{
+public:
+    ScopedRootElement(IWriter& writer, LPCWSTR szName)
+        : resource_scope(
+            writer,
+            [&](IWriter& writer) { writer.BeginElement(szName); },
+            [&](IWriter& writer) {
+                writer.EndElement(szName);
+                writer.Close();
+            })
+    {
+    }
+};
+
+class ScopedElement : private resource_scope<IOutput>
+{
+public:
+    ScopedElement(IOutput& writer, LPCWSTR szName)
+        : resource_scope(
+            writer,
+            [&](IOutput& writer) { writer.BeginElement(szName); },
+            [&](IOutput& writer) { writer.EndElement(szName); })
+    {
+    }
+};
+
+class ScopedCollection : private resource_scope<IOutput>
+{
+public:
+    ScopedCollection(IOutput& writer, LPCWSTR szName)
+        : resource_scope(
+            writer,
+            [&](IOutput& writer) { writer.BeginCollection(szName); },
+            [&](IOutput& writer) { writer.EndCollection(szName); })
+    {
+    }
+};
+
 }  // namespace StructuredOutput
 
 using IStructuredOutput = StructuredOutput::IOutput;
