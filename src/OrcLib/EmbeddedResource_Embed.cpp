@@ -33,6 +33,8 @@ using namespace Orc;
 
 namespace {
 
+const auto kEncodingHint = L"utf-8";
+
 void SplitResourceLink(
     const std::wstring& resourceLink,
     std::wstring& resourceName,
@@ -252,10 +254,8 @@ GetXmlAttributeValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view a
 }
 
 // Look into the current xml file for all attributes name which match the provided regex
-Result<std::vector<XmlString>> GetXmlAttributeValuesMatch(
-    const std::shared_ptr<ByteStream>& xmlStream,
-    LPCWSTR szEncodingHint,
-    std::wstring_view attributeValueRegex)
+Result<std::vector<XmlString>>
+GetXmlAttributeValuesMatch(const std::shared_ptr<ByteStream>& xmlStream, std::wstring_view attributeValueRegex)
 {
     std::vector<XmlString> values;
 
@@ -288,32 +288,20 @@ Result<std::vector<XmlString>> GetXmlAttributeValuesMatch(
         return SystemError(hr);
     }
 
-    if (szEncodingHint == NULL)
+    CComPtr<IXmlReaderInput> pInput;
+    hr = m_xmllite->CreateXmlReaderInputWithEncodingName(stream, nullptr, kEncodingHint, FALSE, L"", &pInput);
+    if (FAILED(hr))
     {
-        if (FAILED(hr = pReader->SetInput(stream)))
-        {
-            XmlLiteExtension::LogError(hr, pReader);
-            Log::Debug("Failed to set input stream [{}]", SystemError(hr));
-            return SystemError(hr);
-        }
+        XmlLiteExtension::LogError(hr, pReader);
+        Log::Debug("Failed to set output stream [{}]", SystemError(hr));
+        return SystemError(hr);
     }
-    else
-    {
-        CComPtr<IXmlReaderInput> pInput;
-        hr = m_xmllite->CreateXmlReaderInputWithEncodingName(stream, nullptr, szEncodingHint, FALSE, L"", &pInput);
-        if (FAILED(hr))
-        {
-            XmlLiteExtension::LogError(hr, pReader);
-            Log::Debug("Failed to set output stream [{}]", SystemError(hr));
-            return SystemError(hr);
-        }
 
-        if (FAILED(hr = pReader->SetInput(pInput)))
-        {
-            XmlLiteExtension::LogError(hr, pReader);
-            Log::Debug("Failed to set input stream [{}]", SystemError(hr));
-            return SystemError(hr);
-        }
+    if (FAILED(hr = pReader->SetInput(pInput)))
+    {
+        XmlLiteExtension::LogError(hr, pReader);
+        Log::Debug("Failed to set input stream [{}]", SystemError(hr));
+        return SystemError(hr);
     }
 
     XmlNodeType nodeType = XmlNodeType_None;
@@ -367,7 +355,7 @@ Result<std::vector<XmlString>> GetResourceLinks(std::wstring_view path)
     }
 
     // parse all resource links from xml files and register them to check later if they have been embedded
-    auto result = GetXmlAttributeValuesMatch(filestream, L"utf-8", L"(7z|res):#.*");
+    auto result = GetXmlAttributeValuesMatch(filestream, L"(7z|res):#.*");
     if (result.has_error())
     {
         Log::Debug(L"Failed to retrieve links attribute values [{}]", result.error());
