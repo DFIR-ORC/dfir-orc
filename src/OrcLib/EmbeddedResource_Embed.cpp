@@ -305,7 +305,7 @@ GetXmlAttributeValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view a
 
 // Look into the current xml file for all attributes name which match the provided regex
 Result<std::vector<XmlString>>
-GetXmlAttributeValuesMatch(const std::shared_ptr<ByteStream>& xmlStream, std::wstring_view attributeValueRegex)
+GetXmlAttributesValueMatch(const std::shared_ptr<ByteStream>& xmlStream, std::wstring_view attributeValueRegex)
 {
     HRESULT hr = E_FAIL;
     std::vector<XmlString> values;
@@ -356,6 +356,104 @@ GetXmlAttributeValuesMatch(const std::shared_ptr<ByteStream>& xmlStream, std::ws
     return values;
 }
 
+// Look into the current xml element for an attribute's name which match the provided regex
+Result<std::optional<XmlString>>
+GetXmlElementValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view elementValueRegex)
+{
+    std::vector<std::wstring> values;
+
+    const WCHAR* pValue;
+    UINT cchValue = 0;
+    HRESULT hr = reader->GetValue(&pValue, &cchValue);
+    if (FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        return SystemError(hr);
+    }
+
+    if (pValue == NULL || cchValue == 0L)
+    {
+        return std::optional<XmlString> {};
+    }
+
+    std::wstring value(pValue);
+    std::wsmatch matches;
+    std::wregex regex(elementValueRegex.data(), std::regex_constants::icase);
+    if (!std::regex_search(value, matches, regex))
+    {
+        return std::optional<XmlString> {};
+    }
+
+    if (matches.size() > 1)
+    {
+        value = matches[1];
+    }
+
+    UINT lineNumber = 0;
+    hr = reader->GetLineNumber(&lineNumber);
+    if (FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        // return;
+    }
+
+    return XmlString {{}, lineNumber, value};
+}
+
+// Look into the current xml file for all attributes name which match the provided regex
+Result<std::vector<XmlString>>
+GetXmlElementsValueMatch(const std::shared_ptr<ByteStream>& xmlStream, std::wstring_view valueRegex)
+{
+    HRESULT hr = E_FAIL;
+    std::vector<XmlString> values;
+
+    auto xmlReader = CreateXmlReader(xmlStream);
+    if (!xmlReader)
+    {
+        return xmlReader.error();
+    }
+
+    auto& reader = xmlReader.value();
+
+    XmlNodeType nodeType = XmlNodeType_None;
+    while (S_OK == (hr = reader->Read(&nodeType)))
+    {
+        if (nodeType != XmlNodeType_Text)
+        {
+            continue;
+        }
+
+        const WCHAR* pName = NULL;
+        if (FAILED(hr = reader->GetLocalName(&pName, NULL)))
+        {
+            XmlLiteExtension::LogError(hr, reader);
+            return SystemError(hr);
+        }
+
+        auto result = GetXmlElementValueMatch(reader, valueRegex);
+        if (result.has_error())
+        {
+            Log::Error("Failed to retrieve element value [{}]", result.error());
+            Log::Error("The embedding of some resource will not be checked");
+            continue;
+        }
+
+        if ((*result).has_value())
+        {
+            values.emplace_back(std::move(**result));
+        }
+    }
+
+    if (FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        return SystemError(hr);
+    }
+
+    return values;
+}
+
+// parse all resource links from xml files and register them to check later if they have been embedded
 Result<std::vector<XmlString>> GetResourceLinks(std::wstring_view path)
 {
     std::vector<XmlString> links;
@@ -368,16 +466,30 @@ Result<std::vector<XmlString>> GetResourceLinks(std::wstring_view path)
         return SystemError(hr);
     }
 
-    // parse all resource links from xml files and register them to check later if they have been embedded
-    auto result = GetXmlAttributeValuesMatch(filestream, L"(7z|res):#.*");
-    if (result.has_error())
+    auto attributesValues = GetXmlAttributesValueMatch(filestream, L"(7z|res):#.*");
+    if (attributesValues.has_error())
     {
-        Log::Debug(L"Failed to retrieve links attribute values [{}]", result.error());
-        return result.error();
+        Log::Debug(L"Failed to retrieve links attribute values [{}]", attributesValues.error());
+        return attributesValues.error();
     }
     else
     {
-        for (auto& link : *result)
+        for (auto& link : *attributesValues)
+        {
+            link.xmlPath = path;
+            links.emplace_back(link);
+        }
+    }
+
+    auto elementsValues = GetXmlElementsValueMatch(filestream, L"((?:7z|res):#[^\\s\\\"\\']+)");
+    if (elementsValues.has_error())
+    {
+        Log::Debug(L"Failed to retrieve links attribute values [{}]", elementsValues.error());
+        return elementsValues.error();
+    }
+    else
+    {
+        for (auto& link : *elementsValues)
         {
             link.xmlPath = path;
             links.emplace_back(link);
