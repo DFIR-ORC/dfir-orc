@@ -58,6 +58,56 @@ void SplitResourceLink(
     }
 }
 
+Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& xmlStream)
+{
+    HRESULT hr = xmlStream->SetFilePointer(0, FILE_BEGIN, NULL);
+    if (FAILED(hr))
+    {
+        Log::Debug("Failed to seek for parsing xml [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    CComPtr<IStream> stream;
+    if (FAILED(hr = ByteStream::Get_IStream(xmlStream, &stream)))
+    {
+        return SystemError(hr);
+    }
+
+    auto m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
+    if (m_xmllite == nullptr)
+    {
+        Log::Debug("Failed to load xmllite extension library");
+        return SystemError(E_FAIL);
+    }
+
+    CComPtr<IXmlReader> reader;
+
+    if (FAILED(hr = m_xmllite->CreateXmlReader(IID_IXmlReader, (PVOID*)&reader, nullptr)))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        Log::Debug("Failed to instantiate Xml reader [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    CComPtr<IXmlReaderInput> pInput;
+    hr = m_xmllite->CreateXmlReaderInputWithEncodingName(stream, nullptr, kEncodingHint, FALSE, L"", &pInput);
+    if (FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        Log::Debug("Failed to set output stream [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    if (FAILED(hr = reader->SetInput(pInput)))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        Log::Debug("Failed to set input stream [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    return reader;
+}
+
 struct XmlString
 {
     std::optional<std::filesystem::path> xmlPath;
@@ -257,52 +307,16 @@ GetXmlAttributeValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view a
 Result<std::vector<XmlString>>
 GetXmlAttributeValuesMatch(const std::shared_ptr<ByteStream>& xmlStream, std::wstring_view attributeValueRegex)
 {
+    HRESULT hr = E_FAIL;
     std::vector<XmlString> values;
 
-    HRESULT hr = xmlStream->SetFilePointer(0, FILE_BEGIN, NULL);
-    if (FAILED(hr))
+    auto xmlReader = CreateXmlReader(xmlStream);
+    if (!xmlReader)
     {
-        Log::Debug("Failed to seek for parsing xml [{}]", SystemError(hr));
-        return SystemError(hr);
+        return xmlReader.error();
     }
 
-    CComPtr<IStream> stream;
-    if (FAILED(hr = ByteStream::Get_IStream(xmlStream, &stream)))
-    {
-        return SystemError(hr);
-    }
-
-    auto m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
-    if (m_xmllite == nullptr)
-    {
-        Log::Debug("Failed to load xmllite extension library");
-        return SystemError(E_FAIL);
-    }
-
-    CComPtr<IXmlReader> pReader;
-
-    if (FAILED(hr = m_xmllite->CreateXmlReader(IID_IXmlReader, (PVOID*)&pReader, nullptr)))
-    {
-        XmlLiteExtension::LogError(hr, pReader);
-        Log::Debug("Failed to instantiate Xml reader [{}]", SystemError(hr));
-        return SystemError(hr);
-    }
-
-    CComPtr<IXmlReaderInput> pInput;
-    hr = m_xmllite->CreateXmlReaderInputWithEncodingName(stream, nullptr, kEncodingHint, FALSE, L"", &pInput);
-    if (FAILED(hr))
-    {
-        XmlLiteExtension::LogError(hr, pReader);
-        Log::Debug("Failed to set output stream [{}]", SystemError(hr));
-        return SystemError(hr);
-    }
-
-    if (FAILED(hr = pReader->SetInput(pInput)))
-    {
-        XmlLiteExtension::LogError(hr, pReader);
-        Log::Debug("Failed to set input stream [{}]", SystemError(hr));
-        return SystemError(hr);
-    }
+    auto& pReader = xmlReader.value();
 
     XmlNodeType nodeType = XmlNodeType_None;
     while (S_OK == (hr = pReader->Read(&nodeType)))
