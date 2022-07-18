@@ -186,6 +186,8 @@ public:
         const std::wstring& resourceFormat,
         const std::wstring& resourceArchiveItemName)
     {
+        bool found = false;
+
         for (auto& item : m_items)
         {
             if (!boost::iequals(item.ResourceName(), resourceName)
@@ -201,11 +203,23 @@ public:
             }
 
             item.SetHasBeenEmbedded(true);
+            found = true;
+        }
+
+        if (!found)
+        {
+            Log::Warn(
+                L"Cannot find any reference to embedded resource '{}:#{}|{}'",
+                resourceFormat,
+                resourceName,
+                resourceArchiveItemName);
         }
     }
 
     void MarkAsEmbedded(const std::wstring& resourceName, const std::wstring& resourceFormat)
     {
+        bool found = false;
+
         for (auto& item : m_items)
         {
             if (!boost::iequals(item.ResourceName(), resourceName)
@@ -215,6 +229,12 @@ public:
             }
 
             item.SetHasBeenEmbedded(true);
+            found = true;
+        }
+
+        if (!found)
+        {
+            Log::Warn(L"Cannot find any reference to embedded resource '{}'", resourceName);
         }
     }
 
@@ -499,7 +519,7 @@ Result<std::vector<XmlString>> GetResourceLinks(std::wstring_view path)
     return links;
 }
 
-// Register all resource link (ex: '7z:#TOOLS|Foo.exe') so later they can be marked as embedded or not
+// Register resource link from attributes and elements (ex: '7z:#TOOLS|Foo.exe') so later they can be marked as embedded
 void RegisterResourceLinks(const std::vector<EmbeddedResource::EmbedSpec>& ToEmbed, ResourceRegistry& resourceRegistry)
 {
     for (auto iter = ToEmbed.begin(); iter != ToEmbed.end(); ++iter)
@@ -519,6 +539,13 @@ void RegisterResourceLinks(const std::vector<EmbeddedResource::EmbedSpec>& ToEmb
                 break;
             }
             case EmbeddedResource::EmbedSpec::EmbedType::File: {
+                if (boost::iequals(item.Name, L"WOLFLAUNCHER_CONFIG"))
+                {
+                    XmlString resourceLink;
+                    resourceLink.value = std::wstring(L"res:#") + item.Name;
+                    resourceRegistry.Items().emplace_back(resourceLink);
+                }
+
                 if (!EndsWith(item.Value, L".xml"))
                 {
                     break;
@@ -682,8 +709,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                             (DWORD)item.Value.size() * sizeof(WCHAR),
                             kMaxAttempt)))
                 {
-                    Log::Info(L"Successfully added {}={}", item.Name, item.Value);
-                    resourceRegistry.MarkAsEmbedded(item.Name, L"res");
+                    Log::Info(L"Successfully added resource link {} -> {}", item.Name, item.Value);
                 }
 
                 break;
