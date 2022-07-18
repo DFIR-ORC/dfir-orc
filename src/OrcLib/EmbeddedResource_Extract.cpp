@@ -169,11 +169,6 @@ HRESULT EmbeddedResource::SplitResourceReference(
             NameInArchive,
             FormatName);
     }
-    if (!HostBinary.empty())
-    {
-        Log::Error(L"Host binary '{}' specified in resource '{}' is no longer implemented", HostBinary, Ref);
-        return E_NOTIMPL;
-    }
     return S_OK;
 }
 
