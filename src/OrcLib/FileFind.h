@@ -478,6 +478,7 @@ public:
         CryptoHashStream::Algorithm matchHash = CryptoHashStream::Algorithm::Undefined,
         bool storeMatches = true)
         : m_FullNameBuilder(nullptr)
+        , m_yaraMatchCache()
         , m_bProvideStream(bProvideStream)
         , m_MatchHash(matchHash)
         , m_storeMatches(storeMatches)
@@ -553,6 +554,24 @@ private:
     std::unique_ptr<YaraScanner> m_YaraScan;
 
     std::vector<std::shared_ptr<Match>> m_Matches;
+
+    // For each file record FileFind will iterate over terms. For each term it will iterate over data attributes and
+    // eventually run Yara match. Cache must persists while iterating over terms. FRN and dataAttribute index are used
+    // as key to resolve cache entry.
+    class YaraMatchCache
+    {
+    public:
+        YaraMatchCache();
+
+        std::optional<MatchingRuleCollection> Get(const Orc::MFTRecord& record, size_t dataAttributeIndex) const;
+        void Set(const Orc::MFTRecord& record, size_t dataAttributeIndex, MatchingRuleCollection match);
+
+    private:
+        FILE_REFERENCE m_frn;
+        std::vector<std::optional<MatchingRuleCollection>> m_match;  // index map to Data's attribute index
+    };
+
+    mutable YaraMatchCache m_yaraMatchCache;
 
     bool m_bProvideStream = false;
     CryptoHashStream::Algorithm m_MatchHash = CryptoHashStream::Algorithm::Undefined;
@@ -646,12 +665,17 @@ private:
     MatchHash(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_ptr<DataAttribute>& pDataAttr) const;
     SearchTerm::Criteria
     MatchContains(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_ptr<DataAttribute>& pDataAttr) const;
-    std::pair<SearchTerm::Criteria, std::optional<MatchingRuleCollection>>
 
-    MatchYara(
+    std::pair<SearchTerm::Criteria, std::optional<MatchingRuleCollection>> MatchYara(
         const std::shared_ptr<SearchTerm>& aTerm,
         const Orc::MFTRecord& record,
         const std::shared_ptr<DataAttribute>& pDataAttr) const;
+
+    std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollection>>
+    MatchYara(const std::shared_ptr<SearchTerm>& aTerm, const Orc::MFTRecord& record, size_t dataAttributeIndex) const;
+
+    Result<MatchingRuleCollection>
+    FileFindMatchAllYaraRules(const Orc::MFTRecord& record, size_t dataAttributeIndex) const;
 
     SearchTerm::Criteria AddMatchingData(
         const std::shared_ptr<SearchTerm>& aTerm,

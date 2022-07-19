@@ -61,6 +61,26 @@ std::wstring GetFileName(const Orc::MFTRecord& record, const Orc::DataAttribute&
     return fmt::format(L"{}:{}", filename.empty() ? kUnknown : filename, attributeName);
 }
 
+std::wstring GetFileName(const Orc::MFTRecord& record, size_t dataAttributeIndex)
+{
+    const auto kUnknown = L"<Unknown>"sv;
+
+    if (dataAttributeIndex >= record.GetDataAttributes().size())
+    {
+        Log::Error("{}: unexpected data attribute index", __FUNCTION__);
+        return std::wstring(kUnknown);
+    }
+
+    const auto dataAttribute = record.GetDataAttributes()[dataAttributeIndex];
+    if (!dataAttribute)
+    {
+        Log::Error("{}: unexpected nullptr data attribute", __FUNCTION__);
+        return std::wstring(kUnknown);
+    }
+
+    return GetFileName(record, *dataAttribute);
+}
+
 uint64_t SumStreamsReadLength(const MFTRecord& record, const std::shared_ptr<VolumeReader>& volumeReader)
 {
     uint64_t sum = 0;
@@ -130,6 +150,12 @@ std::shared_ptr<ByteStream> GetOptimalStream(const std::shared_ptr<ByteStream> s
     }
 
     return memstream;
+}
+
+inline bool IsEqual(const FILE_REFERENCE& ref1, const FILE_REFERENCE& ref2)
+{
+    return ref1.SegmentNumberHighPart == ref2.SegmentNumberHighPart
+        && ref1.SegmentNumberLowPart == ref2.SegmentNumberLowPart && ref1.SequenceNumber == ref2.SequenceNumber;
 }
 
 }  // namespace
@@ -3029,6 +3055,112 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
     return matchedSpec;
 }
 
+Result<MatchingRuleCollection>
+FileFind::FileFindMatchAllYaraRules(const Orc::MFTRecord& record, size_t dataAttributeIndex) const
+{
+    const auto matchingRulesCache = m_yaraMatchCache.Get(record, dataAttributeIndex);
+    if (matchingRulesCache)
+    {
+        return *matchingRulesCache;
+    }
+
+    if (!m_YaraScan)
+    {
+        Log::Error("Yara not initialized");
+        return std::errc::resource_unavailable_try_again;
+    }
+
+    if (dataAttributeIndex >= record.GetDataAttributes().size())
+    {
+        Log::Error("{}: unexpected data attribute index", __FUNCTION__);
+        return std::errc::invalid_argument;
+    }
+
+    const auto& dataAttribute = record.GetDataAttributes()[dataAttributeIndex];
+    auto dataStream = dataAttribute->GetDataStream(m_pVolReader);
+    if (dataStream == nullptr)
+    {
+        return std::errc::io_error;
+    }
+
+    HRESULT hr = dataStream->SetFilePointer(0LL, SEEK_SET, nullptr);
+    if (FAILED(hr = dataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
+    {
+        auto ec = SystemError(hr);
+        Log::Error(L"Failed Yara scan while seeking on '{}' [{}]", ::GetFileName(record, *dataAttribute), ec);
+        return ec;
+    }
+
+    auto stream = ::GetOptimalStream(dataStream, 1024 * 1024 * 32);
+
+    auto [hrScan, matchingRules] = m_YaraScan->Scan(stream);
+    if (FAILED(hrScan))
+    {
+        auto ec = SystemError(hrScan);
+        Log::Error(
+            L"Failed Yara scan on '{}' (frn: {:#x}) [{}]",
+            ::GetFileName(record, *dataAttribute),
+            NtfsFullSegmentNumber(&record.GetFileReferenceNumber()),
+            ec);
+        return ec;
+    }
+
+    m_yaraMatchCache.Set(record, dataAttributeIndex, matchingRules);
+
+    return matchingRules;
+}
+
+std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollection>> Orc::FileFind::MatchYara(
+    const std::shared_ptr<SearchTerm>& aTerm,
+    const Orc::MFTRecord& record,
+    size_t dataAttributeIndex) const
+{
+    if (!(aTerm->Required & SearchTerm::Criteria::YARA))
+    {
+        Log::Debug("{}: Unexpected call as term does not evaluate Yara", __FUNCTION__);
+        return {SearchTerm::Criteria::NONE, std::nullopt};
+    }
+
+    auto rv = FileFind::FileFindMatchAllYaraRules(record, dataAttributeIndex);
+    if (!rv)
+    {
+        Log::Critical(
+            L"Failed Yara on '{}' (frn: {:#x})",
+            ::GetFileName(record, dataAttributeIndex),
+            NtfsFullSegmentNumber(&record.GetFileReferenceNumber()));
+        return {SearchTerm::Criteria::NONE, std::nullopt};
+    }
+
+    auto& matchingRules = *rv;
+
+    if (matchingRules.empty())
+    {
+        Log::Debug("No matching Yara rule");
+        return {SearchTerm::Criteria::NONE, std::nullopt};
+    }
+
+    if (aTerm->YaraRules.empty())
+    {
+        Log::Critical("Unexpected empty Yara rule in aTerm");
+        return {SearchTerm::Criteria::YARA, std::nullopt};
+    }
+
+    for (const auto& termRule : aTerm->YaraRules)
+    {
+        for (const auto& matchingRule : matchingRules)
+        {
+            if (PathMatchSpecA(matchingRule.c_str(), termRule.c_str()))
+            {
+                // Legacy: return all matching rules as one of requested is matching
+                return {SearchTerm::Criteria::YARA, std::move(matchingRules)};
+            }
+        }
+    }
+
+    return {SearchTerm::Criteria::NONE, std::nullopt};
+}
+
+// TODO: remove this legacy function
 std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollection>> Orc::FileFind::MatchYara(
     const std::shared_ptr<SearchTerm>& aTerm,
     const Orc::MFTRecord& record,
@@ -3233,8 +3365,12 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingData(
     SearchTerm::Criteria requiredDataSpecs =
         static_cast<SearchTerm::Criteria>(aTerm->Required & SearchTerm::DataMask());
     SearchTerm::Criteria retval = SearchTerm::Criteria::NONE;
-    for (const auto& data_attr : pElt->GetDataAttributes())
+
+    const auto& dataAttributes = pElt->GetDataAttributes();
+    for (size_t dataAttributeIndex = 0; dataAttributeIndex < dataAttributes.size(); ++dataAttributeIndex)
     {
+        const auto& data_attr = dataAttributes[dataAttributeIndex];
+
         if (::IsExcludedDataAttribute(*pElt, *data_attr))
         {
             continue;
@@ -3285,7 +3421,7 @@ FileFind::SearchTerm::Criteria FileFind::AddMatchingData(
         }
         if (requiredDataSpecs & SearchTerm::Criteria::YARA)
         {
-            auto [aSpec, matched] = MatchYara(aTerm, *pElt, data_attr);
+            auto [aSpec, matched] = MatchYara(aTerm, *pElt, dataAttributeIndex);
             if (matched.has_value())
                 std::swap(matchedRules, matched.value());
             if (aSpec == SearchTerm::Criteria::NONE)
@@ -4309,4 +4445,49 @@ FileFind::~FileFind(void) {}
 const std::vector<FileFind::SearchTerm::Ptr>& FileFind::AllSearchTerms() const
 {
     return m_AllTerms;
+}
+
+FileFind::YaraMatchCache::YaraMatchCache()
+    : m_frn({0})
+    , m_match()
+{
+}
+
+std::optional<MatchingRuleCollection>
+FileFind::YaraMatchCache::Get(const MFTRecord& record, size_t dataAttributeIndex) const
+{
+    if (!::IsEqual(record.GetFileReferenceNumber(), m_frn))
+    {
+        Log::Debug("Yara match cache miss: invalid frn");
+        return {};
+    }
+
+    if (dataAttributeIndex >= m_match.size())
+    {
+        Log::Debug("Yara match cache miss: invalid index");
+        return {};
+    }
+
+    Log::Debug("Yara match cache hit");
+    return m_match[dataAttributeIndex];
+}
+
+void FileFind::YaraMatchCache::Set(const MFTRecord& record, size_t dataAttributeIndex, MatchingRuleCollection match)
+{
+    if (!::IsEqual(record.GetFileReferenceNumber(), m_frn))
+    {
+        Log::Debug("Yara match cache clear");
+        m_match.clear();
+        m_match.resize(record.GetDataAttributes().size());
+    }
+
+    if (dataAttributeIndex >= m_match.size())
+    {
+        Log::Error("Yara match cache miss: unexpected and invalid index");
+        return;
+    }
+
+    Log::Debug("Yara match cache update");
+    m_frn = record.GetFileReferenceNumber();
+    m_match[dataAttributeIndex] = std::move(match);
 }
