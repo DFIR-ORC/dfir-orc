@@ -34,6 +34,7 @@
 #include "Configuration/ConfigFile_Common.h"
 #include "SystemDetails.h"
 #include "Log/Log.h"
+#include "MemoryStream.h"
 
 constexpr const unsigned int FILESPEC_FILENAME_INDEX = 1;
 constexpr const unsigned int FILESPEC_SPEC_INDEX = 3;
@@ -103,6 +104,32 @@ bool IsExcludedDataAttribute(const Orc::MFTRecord& record, const Orc::DataAttrib
     }
 
     return false;
+}
+
+std::shared_ptr<ByteStream> GetOptimalStream(const std::shared_ptr<ByteStream> stream, uint64_t maxMemoryUse)
+{
+    if (stream->GetSize() > maxMemoryUse)
+    {
+        return stream;
+    }
+
+    auto memstream = std::make_shared<MemoryStream>();
+    HRESULT hr = memstream->SetSize(stream->GetSize());
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to retrieve file size [{}]", SystemError(hr));
+        return stream;
+    }
+
+    ULONGLONG dwWritten = 0;
+    hr = stream->CopyTo(memstream, &dwWritten);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to map [{}]", SystemError(hr));
+        return stream;
+    }
+
+    return memstream;
 }
 
 }  // namespace
@@ -3029,7 +3056,10 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
 
-        auto [hr, matchingRules] = m_YaraScan->Scan(pDataStream);
+        // Yara seeks a lot, mapping to memory makes execution x3 faster (Yara v4.2.0 and comparison done with NVMe)
+        auto stream = GetOptimalStream(pDataStream, 1024 * 1024 * 32);
+
+        auto [hr, matchingRules] = m_YaraScan->Scan(stream);
         if (FAILED(hr))
         {
             Log::Critical(
@@ -3039,6 +3069,7 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
                 SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
+
         if (!matchingRules.empty())
         {
             if (!aTerm->YaraRules.empty())
