@@ -1004,6 +1004,15 @@ void CommandAgent::run()
         return;
     }
 
+    {
+        JOBOBJECT_EXTENDED_LIMIT_INFORMATION info = {};
+        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        if (!SetInformationJobObject(m_Job.GetHandle(), JobObjectExtendedLimitInformation, &info, sizeof(info)))
+        {
+            Log::Error("Failed SetInformationJobObject with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE [{}]", LastWin32Error());
+        }
+    }
+
     if (m_jobRestrictions.UiRestrictions)
     {
         if (!SetInformationJobObject(
