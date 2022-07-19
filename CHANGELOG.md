@@ -1,5 +1,16 @@
 # ChangeLog
 
+## [10.1.2] - 2022-07-20
+### Added
+- ToolEmbed: add multiple checks to detect bad configurations before deployment
+
+### Changed
+- FastFind/GetThis: improve peformance when using multiple Yara rules
+
+### Fixed
+- FastFind/GetThis: fix missing error handling (ntfs_find, Yara...)
+- Terminate any child processes on WolfLauncher unexpected exit using jobs
+
 ## [10.1.1] - 2022-06-20
 ### Added
 - Toolembed: display a message for missing/broken resource because of bad configuration
