@@ -23,7 +23,7 @@ struct EnumFlagsOperator : std::false_type
 
 #define ENABLE_BITMASK_OPERATORS(x)                                                                                    \
     template <>                                                                                                        \
-    struct EnumFlagsOperator<x> : public std::true_type                                                                \
+    struct Orc::EnumFlagsOperator<x> : public std::true_type                                                           \
     {                                                                                                                  \
     };
 
