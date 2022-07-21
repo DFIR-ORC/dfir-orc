@@ -1430,7 +1430,7 @@ function Get-OrcStatistics {
 function New-TemporaryDirectory {
     $Parent = [System.IO.Path]::GetTempPath()
     [string] $Name = [System.Guid]::NewGuid()
-    New-Item -ItemType Directory -Path (Join-Path $Parent $Name)
+    New-Item -ItemType Directory -Path (Join-Path $Parent $Name) -ErrorAction Stop
 }
 
 function ListContainsAllOf {
