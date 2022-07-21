@@ -1,6 +1,6 @@
 function Find-7z {
     # https://www.7-zip.org/
-    return Find-Command "7z.exe" @("C:\Program Files\7-Zip\7z.exe")
+    return Find-CommandPath "7z.exe" @("C:\Program Files\7-Zip\7z.exe")
 }
 
 function Find-Openssl {
@@ -13,7 +13,7 @@ function Find-Openssl {
         "c:\msys64\usr\bin\openssl.exe"
     )
 
-    return Find-Command "openssl.exe" $Locations
+    return Find-CommandPath "openssl.exe" $Locations
 }
 
 function Find-Unstream {
@@ -23,15 +23,15 @@ function Find-Unstream {
         "$PSScriptRoot\unstream.exe"
     )
 
-    return Find-Command "unstream.exe" $Locations
+    return Find-CommandPath "unstream.exe" $Locations
 }
 
 function Find-NuShell {
     # https://github.com/nushell/nushell/releases/tag/0.35.0
-    return Find-Command "nu.exe" @("c:\Program Files\nu\bin\nu.exe")
+    return Find-CommandPath "nu.exe" @("c:\Program Files\nu\bin\nu.exe")
 }
 
-function Find-Command {
+function Find-CommandPath {
     <#
     .SYNOPSIS
         Return the file path to the provided command (executable, ...).
