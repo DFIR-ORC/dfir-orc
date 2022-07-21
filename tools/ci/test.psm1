@@ -27,8 +27,13 @@ function Find-Unstream {
 }
 
 function Find-NuShell {
+    $Locations = @(
+        "c:\Program Files\nu\nu.exe"
+        "c:\Program Files\nu\bin\nu.exe"
+    )
+
     # https://github.com/nushell/nushell/releases/tag/0.35.0
-    return Find-CommandPath "nu.exe" @("c:\Program Files\nu\bin\nu.exe")
+    return Find-CommandPath "nu.exe" $Locations
 }
 
 function Find-CommandPath {
