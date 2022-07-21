@@ -248,7 +248,7 @@ function Invoke-NativeCommand()
     # Workaround on 'Start-Process -Wait ...' which hangs sometimes (psh 7.0.3)
     $Child | Wait-Process
 
-    if ($Child.ExitCode -ne 0)
+    if ($Child.ExitCode)
     {
         $ExitCode = [String]::Format("0x{0:X}", $Child.ExitCode)
         throw "'${Command} ${Parameters}' exited with code ${ExitCode}"
