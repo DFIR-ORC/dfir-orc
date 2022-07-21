@@ -61,7 +61,7 @@ HRESULT Main::LoadAutoRuns(TaskTracker& tk, LPCWSTR szTempDir)
     hr = EmbeddedResource::ExtractValue(L"", L"AUTORUNS", strAutorunsRef);
     if (FAILED(hr))
     {
-        Log::Error("Could not find ressource reference to AutoRuns [{}]", SystemError(hr));
+        Log::Error("Could not find resource reference to AutoRuns [{}]", SystemError(hr));
         return hr;
     }
 

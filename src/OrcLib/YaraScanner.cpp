@@ -44,9 +44,11 @@ const uint8_t* YaraFetchDataCallback(YR_MEMORY_BLOCK* block)
     HRESULT hr = context->stream.Read(context->buffer.data(), context->block.size, &bytesRead);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to read within 'fetch_data' callback [{}]", SystemError(hr));
-        context->iterator.last_error =
-            ERROR_CALLBACK_ERROR;  // Not sure setting this error is approriate, there is no documentation
+        Log::Error("Failed to read within Yara's 'fetch_data' callback [{}]", SystemError(hr));
+
+        // Not sure setting this error is approriate, there is no documentation
+        context->iterator.last_error = ERROR_CALLBACK_ERROR;
+
         return nullptr;
     }
 
@@ -56,14 +58,14 @@ const uint8_t* YaraFetchDataCallback(YR_MEMORY_BLOCK* block)
 
 }  // namespace
 
-Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
+Result<Orc::YaraConfig> Orc::YaraConfig::Get(const ConfigItem& item)
 {
     HRESULT hr = E_FAIL;
-    YaraConfig retval;
+    YaraConfig config;
 
     if (item[CONFIG_YARA_SOURCE])
     {
-        boost::split(retval.Sources(), (std::wstring_view)item[CONFIG_YARA_SOURCE], boost::is_any_of(L",;"));
+        boost::split(config.Sources(), (std::wstring_view)item[CONFIG_YARA_SOURCE], boost::is_any_of(L",;"));
     }
 
     if (item[CONFIG_YARA_BLOCK])
@@ -73,17 +75,19 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
         {
             if (blockSize.QuadPart > MAXDWORD)
             {
-                Log::Error(L"Configured block size too big ({})", blockSize.QuadPart);
-                return retval;
+                Log::Error("Configured block size too big (size: {})", blockSize.QuadPart);
+                return std::errc::invalid_argument;
             }
-            if (FAILED(hr = retval.SetBlockSize(blockSize.LowPart)))
+
+            if (FAILED(hr = config.SetBlockSize(blockSize.LowPart)))
             {
-                Log::Error(
-                    L"Failed to configure block size with '{}' [{}]", item[CONFIG_YARA_BLOCK].c_str(), SystemError(hr));
-                return retval;
+                auto ec = SystemError(hr);
+                Log::Error(L"Failed to configure block size (size: {}) [{}]", item[CONFIG_YARA_BLOCK].c_str(), ec);
+                return ec;
             }
         }
     }
+
     if (item[CONFIG_YARA_OVERLAP])
     {
         LARGE_INTEGER overlapSize = {0L};
@@ -91,41 +95,46 @@ Orc::YaraConfig Orc::YaraConfig::Get(const ConfigItem& item)
         {
             if (overlapSize.QuadPart > MAXDWORD)
             {
-                Log::Error(L"Configured overlap size too big ({})", overlapSize.QuadPart);
-                return retval;
+                Log::Error("Configured overlap size too big (size: {})", overlapSize.QuadPart);
+                return std::errc::invalid_argument;
             }
-            if (FAILED(hr = retval.SetOverlapSize(overlapSize.LowPart)))
+
+            if (FAILED(hr = config.SetOverlapSize(overlapSize.LowPart)))
             {
-                Log::Error(
-                    L"Failed to configure overlap size with '{}' [{}]",
-                    item[CONFIG_YARA_OVERLAP].c_str(),
-                    SystemError(hr));
-                return retval;
+                auto ec = SystemError(hr);
+                Log::Error(L"Failed to configure overlap size (size: {}) [{}]", item[CONFIG_YARA_OVERLAP].c_str(), ec);
+                return ec;
             }
-        }
-    }
-    if (item[CONFIG_YARA_TIMEOUT])
-    {
-        DWORD timeout = 0L;
-        if (SUCCEEDED(GetIntegerFromArg(item[CONFIG_YARA_TIMEOUT].c_str(), timeout)))
-        {
-            retval.SetTimeOut(std::chrono::seconds(timeout));
-        }
-    }
-    if (item[CONFIG_YARA_SCAN_METHOD])
-    {
-        if (FAILED(retval.SetScanMethod((std::wstring)item[CONFIG_YARA_SCAN_METHOD])))
-        {
-            Log::Error(
-                L"Failed to configure scan method with '{}' [{}]",
-                item[CONFIG_YARA_SCAN_METHOD].c_str(),
-                SystemError(hr));
-            return retval;
         }
     }
 
-    retval._isValid = true;
-    return retval;
+    if (item[CONFIG_YARA_TIMEOUT])
+    {
+        DWORD timeout = 0L;
+        if (FAILED(hr = GetIntegerFromArg(item[CONFIG_YARA_TIMEOUT].c_str(), timeout)))
+        {
+            auto ec = SystemError(hr);
+            Log::Error(L"Failed to configure timeout (size: {}) [{}]", item[CONFIG_YARA_TIMEOUT].c_str(), ec);
+            return ec;
+        }
+        else
+        {
+            config.SetTimeOut(std::chrono::seconds(timeout));
+        }
+    }
+
+    if (item[CONFIG_YARA_SCAN_METHOD])
+    {
+        if (FAILED(config.SetScanMethod((std::wstring)item[CONFIG_YARA_SCAN_METHOD])))
+        {
+            auto ec = SystemError(hr);
+            Log::Error(L"Failed to configure scan method (method: {}) [{}]", item[CONFIG_YARA_SCAN_METHOD].c_str(), ec);
+            return ec;
+        }
+    }
+
+    config._isValid = true;
+    return config;
 }
 
 HRESULT Orc::YaraConfig::SetScanMethod(const std::wstring& strMethod)
@@ -138,6 +147,7 @@ HRESULT Orc::YaraConfig::SetScanMethod(const std::wstring& strMethod)
         _scanMethod = YaraScanMethod::FileMapping;
     else
         return E_INVALIDARG;
+
     return S_OK;
 }
 
@@ -146,23 +156,24 @@ HRESULT Orc::YaraScanner::Initialize(bool bWithCompiler)
     if (!m_yara)
     {
         m_yara = std::make_shared<YaraStaticExtension>();
-        if (!m_yara)
+
+        auto ret = m_yara->yr_initialize();
+        if (ret != ERROR_SUCCESS)
         {
-            Log::Error(L"Failed to load yara library");
+            Log::Error("Failed yr_initialize (code: {})", ret);
             return E_FAIL;
         }
-
-        m_yara->yr_initialize();
     }
 
     if (bWithCompiler && !m_pCompiler)
     {
-        m_yara->yr_compiler_create(&m_pCompiler);
+        auto ret = m_yara->yr_compiler_create(&m_pCompiler);
         if (!m_pCompiler)
         {
-            Log::Error(L"Failed to create yara rules compiler");
+            Log::Error("Failed yr_compiler_create (code: {}) ", ret);
             return E_FAIL;
         }
+
         m_yara->yr_compiler_set_callback(m_pCompiler, compiler_callback, this);
     }
 
@@ -187,7 +198,7 @@ HRESULT Orc::YaraScanner::Configure(std::unique_ptr<YaraConfig>& config)
     else
     {
         m_config = YaraConfig();
-        Log::Debug(L"Invalid or missing yara configuration, using default");
+        Log::Critical(L"Invalid or missing yara configuration, using default");
     }
 
     return S_OK;
@@ -201,16 +212,15 @@ HRESULT Orc::YaraScanner::AddRules(const std::wstring& yara_content_spec)
 
     if (EmbeddedResource::IsResourceBased(yara_content_spec))
     {
-
         if (FAILED(hr = EmbeddedResource::ExtractToBuffer(yara_content_spec, buffer)))
         {
-            Log::Error(L"Failed to find and extract ressource '{}' [{}]", yara_content_spec, SystemError(hr));
+            Log::Error(L"Failed to find and extract resource '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
 
         if (FAILED(hr = AddRules(buffer)))
         {
-            Log::Error(L"Failed to add rules from ressource '{}' [{}]", yara_content_spec, SystemError(hr));
+            Log::Error(L"Failed to add rules from resource '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
     }
@@ -228,7 +238,7 @@ HRESULT Orc::YaraScanner::AddRules(const std::wstring& yara_content_spec)
 
         if (FAILED(hr = AddRules(fstream)))
         {
-            Log::Error(L"Failed to add rules from ressource '{}' [{}]", yara_content_spec, SystemError(hr));
+            Log::Error(L"Failed to add rules from file '{}' [{}]", yara_content_spec, SystemError(hr));
             return hr;
         }
     }
@@ -284,7 +294,7 @@ HRESULT Orc::YaraScanner::AddRules(CBinaryBuffer& buffer)
 
     if (errnum > 0)
     {
-        Log::Error("Errors occured while compiling YARA rules");
+        Log::Error("Failed Yara rule compilation (error(s): {})", errnum);
         return E_INVALIDARG;
     }
 
@@ -302,6 +312,7 @@ std::vector<std::string> Orc::YaraScanner::GetRulesSpec(LPCSTR szRules)
     {
         Log::Error("Empty rules list to enable");
     }
+
     return rules;
 }
 
@@ -321,6 +332,7 @@ std::vector<std::string> Orc::YaraScanner::GetRulesSpec(LPCWSTR szRules)
     {
         Log::Error("Empty rules list to enable");
     }
+
     return rules;
 }
 
@@ -441,13 +453,13 @@ HRESULT Orc::YaraScanner::Scan(const LPCWSTR& szFileName, MatchingRuleCollection
 
     if (FAILED(hr = fileStream->ReadFrom(szFileName)))
     {
-        Log::Error(L"Failed to open '{}' for yara scan [{}]", szFileName, SystemError(hr));
+        Log::Error(L"Failed read for '{}' [{}]", szFileName, SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = Scan(fileStream, matchingRules)))
     {
-        Log::Error(L"Failed to scan '{}' for yara scan [{}]", szFileName, SystemError(hr));
+        Log::Error(L"Failed Yara scan for '{}' [{}]", szFileName, SystemError(hr));
         return hr;
     }
 
@@ -571,16 +583,16 @@ HRESULT YaraScanner::ScanBlocks(const std::shared_ptr<ByteStream>& stream, Match
         case ERROR_INSUFFICIENT_MEMORY:
             return E_OUTOFMEMORY;
         case ERROR_TOO_MANY_SCAN_THREADS:
-            Log::Debug("Too many scan threads");
+            Log::Error("Too many scan threads");
             return E_FAIL;
         case ERROR_SCAN_TIMEOUT:
-            Log::Debug("Yara scan timeout");
+            Log::Error("Yara scan timeout");
             return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
         case ERROR_CALLBACK_ERROR:
-            Log::Debug("Yara callback return an error");
+            Log::Error("Yara callback return an error");
             return E_FAIL;
         case ERROR_TOO_MANY_MATCHES:
-            Log::Debug("Too many matches in yara scan");
+            Log::Error("Too many matches in yara scan");
             return S_OK;
         default:
             Log::Error("Unsupported yara error code [{}]", rv);

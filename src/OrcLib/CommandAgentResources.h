@@ -22,9 +22,9 @@ class CommandAgentResources
 {
 private:
     std::wstring m_strTempDirectory;
-    std::map<std::wstring, std::wstring, CaseInsensitive> m_TempRessources;
+    std::map<std::wstring, std::wstring, CaseInsensitive> m_TempResources;
 
-    HRESULT ExtractRessource(const std::wstring& strRef, const std::wstring& strKeyword, std::wstring& strExtracted);
+    HRESULT ExtractResource(const std::wstring& strRef, const std::wstring& strKeyword, std::wstring& strExtracted);
 
 public:
     CommandAgentResources() {}
@@ -35,10 +35,10 @@ public:
         return S_OK;
     }
 
-    boost::logic::tribool IsRessourceAvailable(const std::wstring& strResourceRef)
+    boost::logic::tribool IsResourceAvailable(const std::wstring& strResourceRef)
     {
-        auto it = m_TempRessources.find(strResourceRef);
-        if (it != end(m_TempRessources))
+        auto it = m_TempResources.find(strResourceRef);
+        if (it != end(m_TempResources))
         {
             if (it->second.empty())
                 return false;
@@ -52,8 +52,8 @@ public:
 
     HRESULT GetResource(const std::wstring& strResourceRef, const std::wstring& strKeyword, std::wstring& strResource);
 
-    HRESULT DeleteTemporaryRessource(const std::wstring& strResourceRef);
-    HRESULT DeleteTemporaryRessources();
+    HRESULT DeleteTemporaryResource(const std::wstring& strResourceRef);
+    HRESULT DeleteTemporaryResources();
 
     ~CommandAgentResources();
 };

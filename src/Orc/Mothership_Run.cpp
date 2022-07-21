@@ -463,13 +463,13 @@ HRESULT Main::LaunchRun()
     HRESULT hr = EmbeddedResource::ExtractRunWithArgs(L"", strToExecuteRef, strRunArgs);
     if (FAILED(hr))
     {
-        Log::Error("Not RUN ressource found to execute [{}]", SystemError(hr));
+        Log::Error("Not RUN resource found to execute [{}]", SystemError(hr));
         return hr;
     }
 
     if (strToExecuteRef.empty())
     {
-        Log::Error("RUN ressource is invalid (empty)");
+        Log::Error("RUN resource is invalid (empty)");
         return E_FAIL;
     }
 

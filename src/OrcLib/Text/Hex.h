@@ -47,7 +47,7 @@ struct NibbleTable
     constexpr uint8_t operator[](const uint8_t idx) const { return table[idx]; }
 };
 
-}
+}  // namespace Details
 
 template <typename Output, typename CharT>
 Result<Output> FromHexToLittleEndian(std::basic_string_view<CharT> input)

@@ -166,7 +166,14 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
         if (filesystem[FASTFIND_FILESYSTEM_YARA])
         {
-            config.Yara = std::make_unique<YaraConfig>(YaraConfig::Get(filesystem[FASTFIND_FILESYSTEM_YARA]));
+            auto yaraConfig = YaraConfig::Get(filesystem[FASTFIND_FILESYSTEM_YARA]);
+            if (!yaraConfig)
+            {
+                Log::Error(L"Failed to parse Yara configuration [{}]", yaraConfig.error());
+                return ToHRESULT(yaraConfig.error());
+            }
+
+            config.Yara = std::make_unique<YaraConfig>(std::move(*yaraConfig));
         }
     }
 
@@ -288,6 +295,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             }
         }
     }
+
     return S_OK;
 }
 
@@ -333,12 +341,24 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         std::wsregex_token_iterator iter(begin(strNames), end(strNames), re, -1);
                         std::wsregex_token_iterator last;
 
-                        std::for_each(iter, last, [this](const wstring& item) {
+                        bool hasFailed = false;
+                        std::for_each(iter, last, [this, &hasFailed](const wstring& item) {
                             shared_ptr<FileFind::SearchTerm> fs = make_shared<FileFind::SearchTerm>();
                             fs->Name = item;
                             fs->Required = FileFind::SearchTerm::NAME;
-                            config.FileSystem.Files.AddTerm(fs);
+                            HRESULT hr = config.FileSystem.Files.AddTerm(fs);
+                            if (FAILED(hr))
+                            {
+                                hasFailed = true;
+                                Log::Error(L"Failed to parse cli search term (item: {}) [{}]", item, SystemError(hr));
+                            }
                         });
+
+                        if (hasFailed)
+                        {
+                            Log::Error("Failed to parse 'Names' cli option");
+                            return E_FAIL;
+                        }
                     }
                 }
                 else if (ParameterOption(argv[i] + 1, L"Version", config.strVersion))
@@ -425,12 +445,14 @@ HRESULT Main::CheckConfiguration()
 
     if (FAILED(hr = config.FileSystem.Files.InitializeYara(config.Yara)))
     {
-        Log::Error(L"Failed to initialize yara scanner");
+        Log::Error(L"Failed to initialize Yara [{}]", SystemError(hr));
         return hr;
     }
 
     if (FAILED(hr = config.FileSystem.Files.CheckYara()))
+    {
         return hr;
+    }
 
     if (!bSomeThingToParse)
     {

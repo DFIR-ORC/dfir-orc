@@ -74,9 +74,7 @@ HRESULT ConfigFileWriter::WriteConfigNode(const CComPtr<IXmlWriter>& pWriter, co
                     // sub nodes
                     bool bHasChild = false;
                     std::for_each(
-                        begin(config.SubItems),
-                        end(config.SubItems),
-                        [&pWriter, &bHasChild](const ConfigItem& item) {
+                        begin(config.SubItems), end(config.SubItems), [&pWriter, &bHasChild](const ConfigItem& item) {
                             if (item && (item.Type == ConfigItem::NODE) || (item.Type == ConfigItem::NODELIST))
                             {
                                 WriteConfigNode(pWriter, item);

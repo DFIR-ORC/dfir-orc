@@ -27,11 +27,15 @@
 #include "Temporary.h"
 #include "Utils/String.h"
 #include "XmlLiteExtension.h"
+#include "YaraStaticExtension.h"
+#include "Utils/Guard.h"
 
 using namespace std;
 using namespace Orc;
 
 namespace {
+
+const auto kEncodingHint = L"utf-8";
 
 void SplitResourceLink(
     const std::wstring& resourceLink,
@@ -56,11 +60,66 @@ void SplitResourceLink(
     }
 }
 
+Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& xmlStream)
+{
+    HRESULT hr = xmlStream->SetFilePointer(0, FILE_BEGIN, NULL);
+    if (FAILED(hr))
+    {
+        Log::Debug("Failed to seek for parsing xml [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    CComPtr<IStream> stream;
+    if (FAILED(hr = ByteStream::Get_IStream(xmlStream, &stream)))
+    {
+        return SystemError(hr);
+    }
+
+    auto m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
+    if (m_xmllite == nullptr)
+    {
+        Log::Debug("Failed to load xmllite extension library");
+        return SystemError(E_FAIL);
+    }
+
+    CComPtr<IXmlReader> reader;
+
+    if (FAILED(hr = m_xmllite->CreateXmlReader(IID_IXmlReader, (PVOID*)&reader, nullptr)))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        Log::Debug("Failed to instantiate Xml reader [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    CComPtr<IXmlReaderInput> pInput;
+    hr = m_xmllite->CreateXmlReaderInputWithEncodingName(stream, nullptr, kEncodingHint, FALSE, L"", &pInput);
+    if (FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        Log::Debug("Failed to set output stream [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    if (FAILED(hr = reader->SetInput(pInput)))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        Log::Debug("Failed to set input stream [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    return reader;
+}
+
 struct XmlString
 {
     std::optional<std::filesystem::path> xmlPath;
     std::optional<size_t> xmlLine;
     std::wstring value;
+};
+
+struct XmlStringCompare
+{
+    bool operator()(const XmlString& lhs, const XmlString& rhs) const { return (lhs.value < rhs.value); }
 };
 
 class ResourceRegistryItem
@@ -134,6 +193,8 @@ public:
         const std::wstring& resourceFormat,
         const std::wstring& resourceArchiveItemName)
     {
+        bool found = false;
+
         for (auto& item : m_items)
         {
             if (!boost::iequals(item.ResourceName(), resourceName)
@@ -149,11 +210,23 @@ public:
             }
 
             item.SetHasBeenEmbedded(true);
+            found = true;
+        }
+
+        if (!found)
+        {
+            Log::Warn(
+                L"Cannot find any reference to embedded resource '{}:#{}|{}'",
+                resourceFormat,
+                resourceName,
+                resourceArchiveItemName);
         }
     }
 
     void MarkAsEmbedded(const std::wstring& resourceName, const std::wstring& resourceFormat)
     {
+        bool found = false;
+
         for (auto& item : m_items)
         {
             if (!boost::iequals(item.ResourceName(), resourceName)
@@ -163,6 +236,12 @@ public:
             }
 
             item.SetHasBeenEmbedded(true);
+            found = true;
+        }
+
+        if (!found)
+        {
+            Log::Warn(L"Cannot find any reference to embedded resource '{}'", resourceName);
         }
     }
 
@@ -252,69 +331,19 @@ GetXmlAttributeValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view a
 }
 
 // Look into the current xml file for all attributes name which match the provided regex
-Result<std::vector<XmlString>> GetXmlAttributeValuesMatch(
-    const std::shared_ptr<ByteStream>& xmlStream,
-    LPCWSTR szEncodingHint,
-    std::wstring_view attributeValueRegex)
+Result<std::vector<XmlString>>
+GetXmlAttributesValueMatch(const std::shared_ptr<ByteStream>& xmlStream, std::wstring_view attributeValueRegex)
 {
+    HRESULT hr = E_FAIL;
     std::vector<XmlString> values;
 
-    HRESULT hr = xmlStream->SetFilePointer(0, FILE_BEGIN, NULL);
-    if (FAILED(hr))
+    auto xmlReader = CreateXmlReader(xmlStream);
+    if (!xmlReader)
     {
-        Log::Debug("Failed to seek for parsing xml [{}]", SystemError(hr));
-        return SystemError(hr);
+        return xmlReader.error();
     }
 
-    CComPtr<IStream> stream;
-    if (FAILED(hr = ByteStream::Get_IStream(xmlStream, &stream)))
-    {
-        return SystemError(hr);
-    }
-
-    auto m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
-    if (m_xmllite == nullptr)
-    {
-        Log::Debug("Failed to load xmllite extension library");
-        return SystemError(E_FAIL);
-    }
-
-    CComPtr<IXmlReader> pReader;
-
-    if (FAILED(hr = m_xmllite->CreateXmlReader(IID_IXmlReader, (PVOID*)&pReader, nullptr)))
-    {
-        XmlLiteExtension::LogError(hr, pReader);
-        Log::Debug("Failed to instantiate Xml reader [{}]", SystemError(hr));
-        return SystemError(hr);
-    }
-
-    if (szEncodingHint == NULL)
-    {
-        if (FAILED(hr = pReader->SetInput(stream)))
-        {
-            XmlLiteExtension::LogError(hr, pReader);
-            Log::Debug("Failed to set input stream [{}]", SystemError(hr));
-            return SystemError(hr);
-        }
-    }
-    else
-    {
-        CComPtr<IXmlReaderInput> pInput;
-        hr = m_xmllite->CreateXmlReaderInputWithEncodingName(stream, nullptr, szEncodingHint, FALSE, L"", &pInput);
-        if (FAILED(hr))
-        {
-            XmlLiteExtension::LogError(hr, pReader);
-            Log::Debug("Failed to set output stream [{}]", SystemError(hr));
-            return SystemError(hr);
-        }
-
-        if (FAILED(hr = pReader->SetInput(pInput)))
-        {
-            XmlLiteExtension::LogError(hr, pReader);
-            Log::Debug("Failed to set input stream [{}]", SystemError(hr));
-            return SystemError(hr);
-        }
-    }
+    auto& pReader = xmlReader.value();
 
     XmlNodeType nodeType = XmlNodeType_None;
     while (S_OK == (hr = pReader->Read(&nodeType)))
@@ -354,6 +383,104 @@ Result<std::vector<XmlString>> GetXmlAttributeValuesMatch(
     return values;
 }
 
+// Look into the current xml element for an attribute's name which match the provided regex
+Result<std::optional<XmlString>>
+GetXmlElementValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view elementValueRegex)
+{
+    std::vector<std::wstring> values;
+
+    const WCHAR* pValue;
+    UINT cchValue = 0;
+    HRESULT hr = reader->GetValue(&pValue, &cchValue);
+    if (FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        return SystemError(hr);
+    }
+
+    if (pValue == NULL || cchValue == 0L)
+    {
+        return std::optional<XmlString> {};
+    }
+
+    std::wstring value(pValue);
+    std::wsmatch matches;
+    std::wregex regex(elementValueRegex.data(), std::regex_constants::icase);
+    if (!std::regex_search(value, matches, regex))
+    {
+        return std::optional<XmlString> {};
+    }
+
+    if (matches.size() > 1)
+    {
+        value = matches[1];
+    }
+
+    UINT lineNumber = 0;
+    hr = reader->GetLineNumber(&lineNumber);
+    if (FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        // return;
+    }
+
+    return XmlString {{}, lineNumber, value};
+}
+
+// Look into the current xml file for all attributes name which match the provided regex
+Result<std::vector<XmlString>>
+GetXmlElementsValueMatch(const std::shared_ptr<ByteStream>& xmlStream, std::wstring_view valueRegex)
+{
+    HRESULT hr = E_FAIL;
+    std::vector<XmlString> values;
+
+    auto xmlReader = CreateXmlReader(xmlStream);
+    if (!xmlReader)
+    {
+        return xmlReader.error();
+    }
+
+    auto& reader = xmlReader.value();
+
+    XmlNodeType nodeType = XmlNodeType_None;
+    while (S_OK == (hr = reader->Read(&nodeType)))
+    {
+        if (nodeType != XmlNodeType_Text)
+        {
+            continue;
+        }
+
+        const WCHAR* pName = NULL;
+        if (FAILED(hr = reader->GetLocalName(&pName, NULL)))
+        {
+            XmlLiteExtension::LogError(hr, reader);
+            return SystemError(hr);
+        }
+
+        auto result = GetXmlElementValueMatch(reader, valueRegex);
+        if (result.has_error())
+        {
+            Log::Error("Failed to retrieve element value [{}]", result.error());
+            Log::Error("The embedding of some resource will not be checked");
+            continue;
+        }
+
+        if ((*result).has_value())
+        {
+            values.emplace_back(std::move(**result));
+        }
+    }
+
+    if (FAILED(hr))
+    {
+        XmlLiteExtension::LogError(hr, reader);
+        return SystemError(hr);
+    }
+
+    return values;
+}
+
+// parse all resource links from xml files and register them to check later if they have been embedded
 Result<std::vector<XmlString>> GetResourceLinks(std::wstring_view path)
 {
     std::vector<XmlString> links;
@@ -366,16 +493,30 @@ Result<std::vector<XmlString>> GetResourceLinks(std::wstring_view path)
         return SystemError(hr);
     }
 
-    // parse all resource links from xml files and register them to check later if they have been embedded
-    auto result = GetXmlAttributeValuesMatch(filestream, L"utf-8", L"(7z|res):#.*");
-    if (result.has_error())
+    auto attributesValues = GetXmlAttributesValueMatch(filestream, L"(7z|res):#.*");
+    if (attributesValues.has_error())
     {
-        Log::Debug(L"Failed to retrieve links attribute values [{}]", result.error());
-        return result.error();
+        Log::Debug(L"Failed to retrieve links attribute values [{}]", attributesValues.error());
+        return attributesValues.error();
     }
     else
     {
-        for (auto& link : *result)
+        for (auto& link : *attributesValues)
+        {
+            link.xmlPath = path;
+            links.emplace_back(link);
+        }
+    }
+
+    auto elementsValues = GetXmlElementsValueMatch(filestream, L"((?:7z|res):#[^\\s\\\"\\']+)");
+    if (elementsValues.has_error())
+    {
+        Log::Debug(L"Failed to retrieve links attribute values [{}]", elementsValues.error());
+        return elementsValues.error();
+    }
+    else
+    {
+        for (auto& link : *elementsValues)
         {
             link.xmlPath = path;
             links.emplace_back(link);
@@ -385,7 +526,7 @@ Result<std::vector<XmlString>> GetResourceLinks(std::wstring_view path)
     return links;
 }
 
-// Register all resource link (ex: '7z:#TOOLS|Foo.exe') so later they can be marked as embedded or not
+// Register resource link from attributes and elements (ex: '7z:#TOOLS|Foo.exe') so later they can be marked as embedded
 void RegisterResourceLinks(const std::vector<EmbeddedResource::EmbedSpec>& ToEmbed, ResourceRegistry& resourceRegistry)
 {
     for (auto iter = ToEmbed.begin(); iter != ToEmbed.end(); ++iter)
@@ -405,6 +546,13 @@ void RegisterResourceLinks(const std::vector<EmbeddedResource::EmbedSpec>& ToEmb
                 break;
             }
             case EmbeddedResource::EmbedSpec::EmbedType::File: {
+                if (boost::iequals(item.Name, L"WOLFLAUNCHER_CONFIG"))
+                {
+                    XmlString resourceLink;
+                    resourceLink.value = std::wstring(L"res:#") + item.Name;
+                    resourceRegistry.Items().emplace_back(resourceLink);
+                }
+
                 if (!EndsWith(item.Value, L".xml"))
                 {
                     break;
@@ -430,6 +578,194 @@ void RegisterResourceLinks(const std::vector<EmbeddedResource::EmbedSpec>& ToEmb
     }
 }
 
+Result<std::vector<XmlString>> GetXmlAttributesValue(
+    const std::shared_ptr<ByteStream>& xmlStream,
+    std::wstring_view element,
+    std::wstring_view attribute)
+{
+    HRESULT hr = E_FAIL;
+    std::vector<XmlString> values;
+
+    auto xmlReader = CreateXmlReader(xmlStream);
+    if (!xmlReader)
+    {
+        return xmlReader.error();
+    }
+
+    auto& reader = xmlReader.value();
+
+    XmlNodeType nodeType = XmlNodeType_None;
+    while (S_OK == (hr = reader->Read(&nodeType)))
+    {
+        if (nodeType != XmlNodeType_Element)
+        {
+            continue;
+        }
+
+        const WCHAR* pName = NULL;
+        if (FAILED(hr = reader->GetLocalName(&pName, NULL)))
+        {
+            XmlLiteExtension::LogError(hr, reader);
+            return SystemError(hr);
+        }
+
+        if (pName == nullptr)
+        {
+            continue;
+        }
+
+        if (!boost::iequals(pName, element))
+        {
+            continue;
+        }
+
+        UINT uiAttrCount = 0;
+        HRESULT hr = reader->GetAttributeCount(&uiAttrCount);
+        if (FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr, reader);
+            return SystemError(hr);
+        }
+
+        if (uiAttrCount == 0L)
+        {
+            continue;
+        }
+
+        hr = reader->MoveToFirstAttribute();
+        if (FAILED(hr))
+        {
+            XmlLiteExtension::LogError(hr, reader);
+            return SystemError(hr);
+        }
+
+        while (hr == S_OK)
+        {
+            const WCHAR* pName = NULL;
+            hr = reader->GetLocalName(&pName, NULL);
+            if (FAILED(hr))
+            {
+                XmlLiteExtension::LogError(hr, reader);
+                return SystemError(hr);
+            }
+
+            if (pName == nullptr)
+            {
+                return SystemError(E_FAIL);
+            }
+
+            if (!boost::iequals(pName, attribute))
+            {
+                hr = reader->MoveToNextAttribute();
+                if (FAILED(hr))
+                {
+                    XmlLiteExtension::LogError(hr, reader);
+                    return SystemError(hr);
+                }
+
+                continue;
+            }
+
+            const WCHAR* pValue = NULL;
+            hr = reader->GetValue(&pValue, NULL);
+            if (FAILED(hr))
+            {
+                XmlLiteExtension::LogError(hr, reader);
+                return SystemError(hr);
+            }
+
+            if (pValue == nullptr)
+            {
+                return SystemError(E_FAIL);
+            }
+
+            UINT lineNumber = 0;
+            hr = reader->GetLineNumber(&lineNumber);
+            if (FAILED(hr))
+            {
+                XmlLiteExtension::LogError(hr, reader);
+                // return;
+            }
+
+            values.emplace_back(XmlString {{}, lineNumber, pValue});
+
+            hr = reader->MoveToNextAttribute();
+            if (FAILED(hr))
+            {
+                XmlLiteExtension::LogError(hr, reader);
+                return SystemError(hr);
+            }
+        }
+    }
+
+    return values;
+}
+
+Result<std::vector<XmlString>> FindYaraRules(std::wstring_view path)
+{
+    std::vector<XmlString> yaraRules;
+
+    auto stream = make_shared<FileStream>();
+
+    HRESULT hr = stream->ReadFrom(path.data());
+    if (FAILED(hr))
+    {
+        auto ec = SystemError(hr);
+        Log::Debug(L"Failed to read file '{}' [{}]", path, ec);
+        return ec;
+    }
+
+    auto result = GetXmlAttributesValue(stream, L"yara", L"source");
+    if (!result)
+    {
+        return result.error();
+    }
+
+    for (auto& attribute : result.value())
+    {
+        attribute.xmlPath = path;
+        yaraRules.emplace_back(std::move(attribute));
+    }
+
+    return yaraRules;
+}
+
+void RegisterYaraRules(const std::vector<EmbeddedResource::EmbedSpec>& ToEmbed, std::vector<XmlString>& yaraRules)
+{
+    for (auto iter = ToEmbed.begin(); iter != ToEmbed.end(); ++iter)
+    {
+        const EmbeddedResource::EmbedSpec& item = *iter;
+
+        switch (item.Type)
+        {
+            case EmbeddedResource::EmbedSpec::EmbedType::NameValuePair:
+            case EmbeddedResource::EmbedSpec::EmbedType::File:
+                break;
+
+            default:
+                continue;
+        }
+
+        if (!EndsWith(item.Value, L".xml"))
+        {
+            continue;
+        }
+
+        auto result = FindYaraRules(item.Value);
+        if (!result)
+        {
+            Log::Error(
+                L"Failed to parse configuration while looking for Yara rules '{}' [{}]", item.Value, result.error());
+            continue;
+        }
+
+        for (const auto& rule : result.value())
+        {
+            yaraRules.emplace_back(std::move(rule));
+        }
+    }
+}
+
 void PrintMissingResources(ResourceRegistry resourceRegistry)
 {
     for (const auto& item : resourceRegistry.Items())
@@ -445,6 +781,184 @@ void PrintMissingResources(ResourceRegistry resourceRegistry)
             {
                 Log::Error(L"Unresolved resource reference: '{}'", item.ResourceLink());
             }
+        }
+    }
+}
+
+inline void compiler_callback(
+    int errorLevel,
+    const char* filename,
+    int lineNumber,
+    const YR_RULE* rule,
+    const char* message,
+    void* userData)
+{
+    XmlString yaraSource;
+    if (userData)
+    {
+        yaraSource = *(reinterpret_cast<XmlString*>(userData));
+    }
+
+    std::error_code ec;
+    switch (errorLevel)
+    {
+        case YARA_ERROR_LEVEL_ERROR:
+            Log::Error(
+                "Yara compiler: {} (line: {}, source: {})", message, lineNumber, Utf16ToUtf8(yaraSource.value, ec));
+            break;
+        case YARA_ERROR_LEVEL_WARNING:
+            Log::Warn(
+                "Yara compiler: {} (line: {}, source: {})", message, lineNumber, Utf16ToUtf8(yaraSource.value, ec));
+            break;
+        default:
+            Log::Info(
+                "Yara compiler: {} (level: {}, line: {}, source: {})",
+                message,
+                errorLevel,
+                lineNumber,
+                Utf16ToUtf8(yaraSource.value, ec));
+            break;
+    }
+}
+
+void CompileYaraRule(YaraStaticExtension& yara, CBinaryBuffer& buffer, const XmlString& yaraSource)
+{
+    if (buffer.GetCount() == 0)
+    {
+        Log::Error(L"Failed Yara rule compilation for '{}' as rule is empty)", yaraSource.value);
+        return;
+    }
+
+    YR_COMPILER* compiler = nullptr;
+
+    auto ret = yara.yr_compiler_create(&compiler);
+    if (!compiler)
+    {
+        Log::Error(
+            L"Failed Yara compiler initialization for '{}' (yr_compiler_create exit: {})", yaraSource.value, ret);
+        return;
+    }
+
+    auto onScopeExit = Guard::CreateScopeGuard([&] { yara.yr_compiler_destroy(compiler); });
+    yara.yr_compiler_set_callback(
+        compiler, compiler_callback, const_cast<void*>(reinterpret_cast<const void*>(&yaraSource)));
+
+    // we need to make sure that buffer is null terminated because libyara heavily relies on this
+    if (buffer.Get<UCHAR>(buffer.GetCount<UCHAR>() - sizeof(UCHAR)) != '\0')
+    {
+        buffer.SetCount(buffer.GetCount<UCHAR>() + sizeof(UCHAR));
+        buffer.Get<UCHAR>(buffer.GetCount<UCHAR>() - sizeof(UCHAR)) = '\0';
+    }
+
+    auto errnum = yara.yr_compiler_add_string(compiler, buffer.GetP<const char>(), nullptr);
+
+    if (errnum > 0)
+    {
+        Log::Error(L"Failed Yara rule compilation for '{}' (error(s): {})", yaraSource.value, errnum);
+    }
+}
+
+void CompileYaraRuleFromPlainResource(
+    YaraStaticExtension& yara,
+    std::filesystem::path peFile,
+    std::wstring_view resourceName,
+    const XmlString& yaraSource)
+{
+    CBinaryBuffer buffer;
+
+    // BEWARE: use c_str() to avoid any fmt specialization which would do fancy stuff (add quotes...)
+    HRESULT hr = EmbeddedResource::ExtractBuffer(peFile.c_str(), std::wstring(resourceName), buffer);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to extract Yara rule from resource '{}'", yaraSource.value);
+        return;
+    }
+
+    CompileYaraRule(yara, buffer, yaraSource);
+}
+
+void CompileYaraRuleFromArchiveResource(
+    YaraStaticExtension& yara,
+    std::filesystem::path peFile,
+    std::wstring_view resourceName,
+    std::wstring_view archiveItemName,
+    const XmlString& yaraSource)
+{
+    // BEWARE: use c_str() to avoid any fmt specialization which would do fancy stuff (add quotes...)
+    std::wstring imageFileResourceId = fmt::format(L"7z:{}#{}|{}", peFile.c_str(), resourceName, archiveItemName);
+
+    CBinaryBuffer buffer;
+
+    HRESULT hr = EmbeddedResource::ExtractToBuffer(imageFileResourceId, buffer);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to extract Yara rule from resource '{}'", yaraSource.value);
+        return;
+    }
+
+    CompileYaraRule(yara, buffer, yaraSource);
+}
+
+void CheckYaraRules(const std::filesystem::path& peFile, const std::vector<XmlString>& yaraSources)
+{
+    std::set<XmlString, XmlStringCompare> yaraSourcesSet(std::cbegin(yaraSources), std::cend(yaraSources));
+
+    auto yara = std::make_shared<YaraStaticExtension>();
+
+    auto ret = yara->yr_initialize();
+    if (ret != ERROR_SUCCESS)
+    {
+        Log::Error("Failed Yara initialization (yr_initialize exit: {})", ret);
+        Log::Error("Cannot check any Yara rule", ret);
+        return;
+    }
+
+    for (auto& yaraSource : yaraSourcesSet)
+    {
+        {
+            std::wregex resRegex(L"^res:#(.*)", std::regex_constants::icase);
+            std::wsmatch resMatches;
+            if (std::regex_search(yaraSource.value, resMatches, resRegex))
+            {
+                Log::Info(L"Compiling Yara rules '{}' ({})", yaraSource.value, peFile);
+
+                auto resourceName = resMatches[1];
+                CompileYaraRuleFromPlainResource(*yara, peFile, resourceName.str(), yaraSource);
+                continue;
+            }
+        }
+
+        {
+            std::wregex archiveRegex(L"^7z:#(.*)\\|(.*)", std::regex_constants::icase);
+            std::wsmatch archiveMatches;
+            if (std::regex_search(yaraSource.value, archiveMatches, archiveRegex))
+            {
+                Log::Info(L"Compiling Yara rules '{}' ({})", yaraSource.value, peFile);
+
+                auto resourceName = archiveMatches[1];
+                auto archiveItemName = archiveMatches[2];
+                CompileYaraRuleFromArchiveResource(
+                    *yara, peFile, resourceName.str(), archiveItemName.str(), yaraSource);
+                continue;
+            }
+        }
+
+        std::wregex badRegex(L"(#|\\|)");
+        if (std::regex_search(yaraSource.value, badRegex))
+        {
+            Log::Error(
+                L"Suspicious yara rule source attribute '{}' ({}:{})",
+                yaraSource.value,
+                yaraSource.xmlPath.value_or(L""),
+                yaraSource.xmlLine.value_or(0));
+        }
+        else
+        {
+            Log::Warn(
+                L"Cannot check yara rule '{}' ({}:{})",
+                yaraSource.value,
+                yaraSource.xmlPath.value_or(L""),
+                yaraSource.xmlLine.value_or(0));
         }
     }
 }
@@ -468,7 +982,7 @@ HRESULT EmbeddedResource::_UpdateResource(
         if (hOut == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug(L"Failed to update ressource in '{}' (BeginUpdateResource) [{}]", szModule, SystemError(hr));
+            Log::Debug(L"Failed to update resource in '{}' (BeginUpdateResource) [{}]", szModule, SystemError(hr));
             return hr;
         }
     }
@@ -476,7 +990,7 @@ HRESULT EmbeddedResource::_UpdateResource(
     if (!UpdateResource(hOut, szType, szName, MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL), pData, cbSize))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug(L"Failed to add ressource '{}' (UpdateResource) [{}]", szName, SystemError(hr));
+        Log::Debug(L"Failed to add resource '{}' (UpdateResource) [{}]", szName, SystemError(hr));
         return hr;
     }
 
@@ -485,10 +999,11 @@ HRESULT EmbeddedResource::_UpdateResource(
         if (!EndUpdateResource(hOut, FALSE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug(L"Failed to update ressource in '{}' (EndUpdateResource) [{}]", szModule, SystemError(hr));
+            Log::Debug(L"Failed to update resource in '{}' (EndUpdateResource) [{}]", szModule, SystemError(hr));
             return hr;
         }
     }
+
     return S_OK;
 }
 
@@ -533,6 +1048,9 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
     ::ResourceRegistry resourceRegistry;
     ::RegisterResourceLinks(ToEmbed, resourceRegistry);
 
+    std::vector<XmlString> yaraRules;
+    ::RegisterYaraRules(ToEmbed, yaraRules);
+
     HANDLE hOutput = INVALID_HANDLE_VALUE;
 
     bool bAtomicUpdate = false;
@@ -546,7 +1064,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
             Log::Error(
-                L"Failed to update ressources in '{}' (BeginUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
+                L"Failed to update resources in '{}' (BeginUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
             return hr;
         }
     }
@@ -568,8 +1086,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                             (DWORD)item.Value.size() * sizeof(WCHAR),
                             kMaxAttempt)))
                 {
-                    Log::Info(L"Successfully added {}={}", item.Name, item.Value);
-                    resourceRegistry.MarkAsEmbedded(item.Name, L"res");
+                    Log::Info(L"Successfully added resource link {} -> {}", item.Name, item.Value);
                 }
 
                 break;
@@ -622,7 +1139,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
         if (!EndUpdateResource(hOutput, FALSE))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to update ressources in '{}' (EndUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
+            Log::Error(L"Failed to update resources in '{}' (EndUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
             return hr;
         }
     }
@@ -638,7 +1155,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
 
                 if (FAILED(hr = filestream->ReadFrom(item.Value.c_str())))
                 {
-                    Log::Error(L"Failed to update ressources in '{}' (read failed) [{}]", item.Value, SystemError(hr));
+                    Log::Error(L"Failed to update resources in '{}' (read failed) [{}]", item.Value, SystemError(hr));
                     return hr;
                 }
 
@@ -776,6 +1293,9 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
     }
 
     PrintMissingResources(resourceRegistry);
+
+    Sleep(3000);  // Wait for the UpdateResource delay
+    CheckYaraRules(strPEToUpdate, yaraRules);
 
     return hr;
 }

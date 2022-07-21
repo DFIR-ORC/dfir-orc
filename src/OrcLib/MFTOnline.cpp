@@ -132,9 +132,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
     // Fixup the record buffer
     MFTRecord mftRecord;
     mftRecord.ParseRecord(
-        m_pVolReader,
-        reinterpret_cast<FILE_RECORD_SEGMENT_HEADER*>(record.GetData()), record.GetCount(),
-        NULL);
+        m_pVolReader, reinterpret_cast<FILE_RECORD_SEGMENT_HEADER*>(record.GetData()), record.GetCount(), NULL);
 
     PFILE_RECORD_SEGMENT_HEADER pData = (PFILE_RECORD_SEGMENT_HEADER)record.GetData();
 

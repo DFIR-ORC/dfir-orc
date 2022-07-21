@@ -48,7 +48,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     boost::logic::tribool bAddShadows;
     for (auto& item : configitem[USNINFO_LOCATIONS].NodeList)
     {
-        if (item.SubItems[CONFIG_VOLUME_SHADOWS]  && !config.m_shadows.has_value())
+        if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.m_shadows.has_value())
         {
             ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
         }

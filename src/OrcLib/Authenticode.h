@@ -153,8 +153,8 @@ public:
         const Orc::Authenticode::PE_Hashs& peHashes,
         Authenticode::AuthenticodeData& data);
 
-        // Catalog based verifications
-        HRESULT Verify(LPCWSTR szFileName, AuthenticodeData& data);
+    // Catalog based verifications
+    HRESULT Verify(LPCWSTR szFileName, AuthenticodeData& data);
     HRESULT Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStream>& pStream, AuthenticodeData& data);
     HRESULT VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data);
 

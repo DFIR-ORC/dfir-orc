@@ -34,6 +34,7 @@
 #include "Configuration/ConfigFile_Common.h"
 #include "SystemDetails.h"
 #include "Log/Log.h"
+#include "MemoryStream.h"
 
 constexpr const unsigned int FILESPEC_FILENAME_INDEX = 1;
 constexpr const unsigned int FILESPEC_SPEC_INDEX = 3;
@@ -103,6 +104,32 @@ bool IsExcludedDataAttribute(const Orc::MFTRecord& record, const Orc::DataAttrib
     }
 
     return false;
+}
+
+std::shared_ptr<ByteStream> GetOptimalStream(const std::shared_ptr<ByteStream> stream, uint64_t maxMemoryUse)
+{
+    if (stream->GetSize() > maxMemoryUse)
+    {
+        return stream;
+    }
+
+    auto memstream = std::make_shared<MemoryStream>();
+    HRESULT hr = memstream->SetSize(stream->GetSize());
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to retrieve file size [{}]", SystemError(hr));
+        return stream;
+    }
+
+    ULONGLONG dwWritten = 0;
+    hr = stream->CopyTo(memstream, &dwWritten);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to map [{}]", SystemError(hr));
+        return stream;
+    }
+
+    return memstream;
 }
 
 }  // namespace
@@ -929,8 +956,15 @@ HRESULT FileFind::AddTermsFromConfig(const ConfigItem& item)
 {
     for (const auto& item : item.NodeList)
     {
+        // shared ptr is always returned
         auto fs = GetSearchTermFromConfig(item);
-        AddTerm(fs);
+
+        HRESULT hr = AddTerm(fs);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to add search term from configuration (item: {}) [{}]", item.c_str(), SystemError(hr));
+            return hr;
+        }
     }
 
     return S_OK;
@@ -940,8 +974,15 @@ HRESULT FileFind::AddExcludeTermsFromConfig(const ConfigItem& item)
 {
     for (const auto& item : item.NodeList)
     {
+        // shared ptr is always returned
         auto fs = GetSearchTermFromConfig(item);
-        AddExcludeTerm(fs);
+        HRESULT hr = AddExcludeTerm(fs);
+        if (FAILED(hr))
+        {
+            Log::Error(
+                L"Failed to exclude search term from configuration (item: {}) [{}]", item.c_str(), SystemError(hr));
+            return hr;
+        }
     }
 
     return S_OK;
@@ -1484,7 +1525,9 @@ HRESULT FileFind::SearchTerm::AddTermToConfig(ConfigItem& item)
 HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
 {
     if (m_YaraScan)
+    {
         return S_OK;
+    }
 
     std::vector<wstring> yara_content;
     std::vector<string> yara_rules;
@@ -1509,15 +1552,21 @@ HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
     }
 
     if (yara_content.empty() && yara_rules.empty())
+    {
         return S_OK;
+    }
 
     m_YaraScan = std::make_unique<YaraScanner>();
     if (!m_YaraScan)
+    {
         return E_OUTOFMEMORY;
+    }
 
     HRESULT hr = E_FAIL;
     if (FAILED(hr = m_YaraScan->Initialize()))
+    {
         return hr;
+    }
 
     if (FAILED(hr = m_YaraScan->Configure(config)))
     {
@@ -1529,7 +1578,8 @@ HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
     {
         if (FAILED(hr = m_YaraScan->AddRules(yara)))
         {
-            Log::Error(L"Failed to load yara rules from source: {}", yara);
+            Log::Error(L"Failed to load yara rules from source: {} [{}]", yara, SystemError(hr));
+            return hr;
         }
     }
 
@@ -1538,13 +1588,25 @@ HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
         auto new_end = std::unique(begin(yara_rules), end(yara_rules));
         yara_rules.erase(new_end, end(yara_rules));
     }
+
+    // Disable all rules then enable only the ones referenced in the xml configuration
     if (!yara_rules.empty())
     {
-        m_YaraScan->DisableRule("*");  // we first disable all rules
+        hr = m_YaraScan->DisableRule("*");
+        if (FAILED(hr))
+        {
+            Log::Error("Failed to disable yara rule [{}]", SystemError(hr));
+            return hr;
+        }
 
         for (const auto& rule : yara_rules)
         {
-            m_YaraScan->EnableRule(rule.c_str());
+            hr = m_YaraScan->EnableRule(rule.c_str());
+            if (FAILED(hr))
+            {
+                Log::Error("Failed to enable Yara rule [{}]", SystemError(hr));
+                return hr;
+            }
         }
     }
 
@@ -2977,7 +3039,7 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
     if (!m_YaraScan)
     {
-        Log::Error("Yara not initialized & yara rules selected");
+        Log::Critical("Yara not initialized and yara rules not selected");
         return {SearchTerm::Criteria::NONE, std::nullopt};
     }
 
@@ -2989,21 +3051,25 @@ std::pair<Orc::FileFind::SearchTerm::Criteria, std::optional<MatchingRuleCollect
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Error(
+            Log::Critical(
                 L"Failed Yara scan while seeking on '{}' [{}]", ::GetFileName(record, *pDataAttr), SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
 
-        auto [hr, matchingRules] = m_YaraScan->Scan(pDataStream);
+        // Yara seeks a lot, mapping to memory makes execution x3 faster (Yara v4.2.0 and comparison done with NVMe)
+        auto stream = GetOptimalStream(pDataStream, 1024 * 1024 * 32);
+
+        auto [hr, matchingRules] = m_YaraScan->Scan(stream);
         if (FAILED(hr))
         {
-            Log::Error(
+            Log::Critical(
                 L"Failed Yara scan on '{}' (frn: {:#x}) [{}]",
                 ::GetFileName(record, *pDataAttr),
                 NtfsFullSegmentNumber(&record.GetFileReferenceNumber()),
                 SystemError(hr));
             return {SearchTerm::Criteria::NONE, std::nullopt};
         }
+
         if (!matchingRules.empty())
         {
             if (!aTerm->YaraRules.empty())
@@ -3046,7 +3112,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchHeader(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Critical("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
 
@@ -3060,7 +3126,7 @@ FileFind::SearchTerm::Criteria FileFind::MatchHeader(
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Critical("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
 
@@ -3087,7 +3153,7 @@ FileFind::RegExHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::share
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Critical("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
 
@@ -3108,7 +3174,7 @@ FileFind::RegExHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::share
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Critical("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
     }
@@ -3130,7 +3196,7 @@ FileFind::HexHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Critical("Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
 
@@ -3151,7 +3217,7 @@ FileFind::HexHeader(const std::shared_ptr<SearchTerm>& aTerm, const std::shared_
 
         if (FAILED(hr = pDataStream->SetFilePointer(0LL, SEEK_SET, nullptr)))
         {
-            Log::Debug(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
+            Log::Critical(L"Failed to seek pointer to 0 for data attribute [{}]", SystemError(hr));
             return SearchTerm::Criteria::NONE;
         }
     }
@@ -3455,7 +3521,7 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
             if (pFileName == nullptr)
             {
                 LARGE_INTEGER* pLI = (LARGE_INTEGER*)&pElt->GetFileReferenceNumber();
-                Log::Error(
+                Log::Critical(
                     L"Failed to find a default file name for record '{}' matching '{}'",
                     pLI->QuadPart,
                     aTerm->GetDescription());
@@ -3742,7 +3808,7 @@ HRESULT FileFind::EvaluateMatchCallCallback(
     {
         if (FAILED(hr = ComputeMatchHashes(aMatch)))
         {
-            Log::Warn(
+            Log::Error(
                 L"Failed to compute hashes for match '{}' [{}]",
                 aMatch->MatchingNames.front().FullPathName,
                 SystemError(hr));

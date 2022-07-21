@@ -127,7 +127,7 @@ HRESULT Orc::ResourceStream::OpenForReadOnly(const std::wstring& strResourceSpec
 
     if (!EmbeddedResource::IsResourceBased(strResourceSpec.c_str()))
     {
-        Log::Error(L"Invalid ressource reference '{}'", strResourceSpec);
+        Log::Error(L"Invalid resource reference '{}'", strResourceSpec);
         return E_FAIL;
     }
 
@@ -138,7 +138,7 @@ HRESULT Orc::ResourceStream::OpenForReadOnly(const std::wstring& strResourceSpec
 
     if (Format != L"res"sv)
     {
-        Log::Error(L"Invalid ressource format '{}'. Only the res:# format is currently supported", Format);
+        Log::Error(L"Invalid resource format '{}'. Only the res:# format is currently supported", Format);
         return E_FAIL;
     }
 

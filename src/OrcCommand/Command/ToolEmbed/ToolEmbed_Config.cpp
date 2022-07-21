@@ -331,7 +331,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX86(std::move(strParameter)));
                     else
                     {
-                        Log::Error(L"Invalid ressource pattern specified: {}", strParameter);
+                        Log::Error(L"Invalid resource pattern specified: {}", strParameter);
                         return E_INVALIDARG;
                     }
                 }
@@ -341,7 +341,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX64(std::move(strParameter)));
                     else
                     {
-                        Log::Error(L"Invalid ressource pattern specified: '{}'", strParameter);
+                        Log::Error(L"Invalid resource pattern specified: '{}'", strParameter);
                         return E_INVALIDARG;
                     }
                 }
@@ -351,7 +351,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun(std::move(strParameter)));
                     else
                     {
-                        Log::Error(L"Invalid ressource pattern specified: '{}'", strParameter);
+                        Log::Error(L"Invalid resource pattern specified: '{}'", strParameter);
                         return E_INVALIDARG;
                     }
                 }

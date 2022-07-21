@@ -45,7 +45,10 @@ HRESULT TeeStream::Read_(
 }
 
 HRESULT
-TeeStream::Write_(__in_bcount(cbBytes) const PVOID pBuffer, __in ULONGLONG cbBytes, __out_opt PULONGLONG pcbBytesWritten)
+TeeStream::Write_(
+    __in_bcount(cbBytes) const PVOID pBuffer,
+    __in ULONGLONG cbBytes,
+    __out_opt PULONGLONG pcbBytesWritten)
 {
     if (cbBytes > MAXDWORD)
         return E_INVALIDARG;

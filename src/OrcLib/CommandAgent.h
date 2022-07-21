@@ -85,7 +85,7 @@ public:
         , m_target(target)
         , m_archive(archive)
         , m_MaximumRunningSemaphore(max_running_tasks)
-        , m_Ressources()
+        , m_Resources()
     {
     }
 
@@ -127,7 +127,7 @@ protected:
     std::wstring m_TempDir;
     std::wstring m_Keyword;
 
-    CommandAgentResources m_Ressources;
+    CommandAgentResources m_Resources;
 
     bool m_bChildDebug = false;
 

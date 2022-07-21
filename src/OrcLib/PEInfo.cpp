@@ -303,7 +303,7 @@ HRESULT PEInfo::OpenVersionInformation()
     ULONGLONG ullBytesRead;
     size_t rsrc_rsrc_offset = 0;
 
-    // search for the VERSION ressource
+    // search for the VERSION resource
     ullBytesRead = 0;
     if (FAILED(hr = stream->SetFilePointer(rsrc_pe_offset + rsrc_rsrc_offset, FILE_BEGIN, NULL)))
         return hr;

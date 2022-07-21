@@ -25,9 +25,7 @@ namespace Usage {
 
 namespace detail {
 
-inline void PrintParameters(Orc::Text::Tree& root)
-{
-}
+inline void PrintParameters(Orc::Text::Tree& root) {}
 
 template <typename ParameterList0, typename... ParameterLists>
 void PrintParameters(Orc::Text::Tree& root, ParameterList0&& parameterList0, ParameterLists&&... parameterLists)

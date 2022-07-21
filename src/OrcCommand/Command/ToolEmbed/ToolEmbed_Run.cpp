@@ -155,10 +155,10 @@ HRESULT Main::Run_Dump()
         return hr;
     }
 
-    hr = EmbeddedResource::DeleteEmbeddedRessources(config.strInputFile, L".\\Mothership.exe", values);
+    hr = EmbeddedResource::DeleteEmbeddedResources(config.strInputFile, L".\\Mothership.exe", values);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to delete ressources from '{}' [{}]", config.strInputFile, SystemError(hr));
+        Log::Error(L"Failed to delete resources from '{}' [{}]", config.strInputFile, SystemError(hr));
         return hr;
     }
 

@@ -135,7 +135,7 @@ public:  // METHODS
     }
 
     operator std::wstring_view() const { return std::wstring_view(strData); }
-    operator const std::wstring &() const { return strData; }
+    operator const std::wstring&() const { return strData; }
 
     ConfigItem& Item(LPCWSTR szIndex);
     const ConfigItem& Item(LPCWSTR szIndex) const;

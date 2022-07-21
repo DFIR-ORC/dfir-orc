@@ -46,7 +46,7 @@ std::optional<std::wstring> ToOptional(const std::wssub_match& submatch)
     return {};
 }
 
-}
+}  // namespace
 
 namespace Orc {
 

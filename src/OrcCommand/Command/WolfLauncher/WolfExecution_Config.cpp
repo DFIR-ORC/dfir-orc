@@ -96,7 +96,7 @@ WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strExeToRun, 
                     hr = EmbeddedResource::SplitResourceReference(
                         strExeRef, strModule, strResource, strCabbedName, strFormat)))
             {
-                Log::Error(L"The ressource specified '{}' could not be split [{}]", strExeRef, SystemError(hr));
+                Log::Error(L"The resource specified '{}' could not be split [{}]", strExeRef, SystemError(hr));
                 return E_FAIL;
             }
 
@@ -107,7 +107,7 @@ WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strExeToRun, 
                     hr = EmbeddedResource::LocateResource(
                         strModule, strResource, EmbeddedResource::BINARY(), hModule, hRes, strBinaryPath)))
             {
-                Log::Error(L"The ressource specified '{}' could not be located [{}]", strExeRef, SystemError(hr));
+                Log::Error(L"The resource specified '{}' could not be located [{}]", strExeRef, SystemError(hr));
                 return E_FAIL;
             }
             else
@@ -367,8 +367,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                         szResName, strModule, strResource, strCabbedName, strFormat);
                     if (FAILED(hr1))
                     {
-                        Log::Error(
-                            L"The ressource specified '{}' could not be split [{}]", szResName, SystemError(hr1));
+                        Log::Error(L"The resource specified '{}' could not be split [{}]", szResName, SystemError(hr1));
                         hr = hr1;
                         return;
                     }
@@ -381,7 +380,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                     if (FAILED(hr1))
                     {
                         Log::Error(
-                            L"The ressource specified '{}' could not be located [{}]", szResName, SystemError(hr1));
+                            L"The resource specified '{}' could not be located [{}]", szResName, SystemError(hr1));
                         hr = hr1;
                         return;
                     }

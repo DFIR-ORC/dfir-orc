@@ -18,7 +18,7 @@
 using namespace std;
 using namespace Orc;
 
-HRESULT CommandAgentResources::ExtractRessource(
+HRESULT CommandAgentResources::ExtractResource(
     const std::wstring& strRef,
     const std::wstring& strKeyword,
     std::wstring& strExtracted)
@@ -31,7 +31,7 @@ HRESULT CommandAgentResources::ExtractRessource(
             strRef, strKeyword, RESSOURCE_READ_EXECUTE_BA, m_strTempDirectory, strExtracted);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to extract ressource '{}' [{}]", strRef, SystemError(hr));
+            Log::Error(L"Failed to extract resource '{}' [{}]", strRef, SystemError(hr));
             return hr;
         }
     }
@@ -45,18 +45,18 @@ HRESULT CommandAgentResources::GetResource(
 {
     HRESULT hr = E_FAIL;
 
-    auto it = m_TempRessources.find(strRef);
-    if (it == end(m_TempRessources))
+    auto it = m_TempResources.find(strRef);
+    if (it == end(m_TempResources))
     {
-        if (FAILED(hr = ExtractRessource(strRef, strKeyword, strExtracted)))
+        if (FAILED(hr = ExtractResource(strRef, strKeyword, strExtracted)))
         {
-            // We failed to extract this ressource, save this information as an empty extracted path
-            m_TempRessources[strRef] = L"";
+            // We failed to extract this resource, save this information as an empty extracted path
+            m_TempResources[strRef] = L"";
             return hr;
         }
         else
         {
-            m_TempRessources[strRef] = strExtracted;
+            m_TempResources[strRef] = strExtracted;
             return S_OK;
         }
     }
@@ -70,13 +70,13 @@ HRESULT CommandAgentResources::GetResource(
     }
 }
 
-HRESULT CommandAgentResources::DeleteTemporaryRessource(const std::wstring& strRef)
+HRESULT CommandAgentResources::DeleteTemporaryResource(const std::wstring& strRef)
 {
-    auto it = m_TempRessources.find(strRef);
+    auto it = m_TempResources.find(strRef);
 
-    if (it == end(m_TempRessources))
+    if (it == end(m_TempResources))
     {
-        Log::Debug(L"Ressource '{}' not found in temporary extracted ressources", strRef);
+        Log::Debug(L"Resource '{}' not found in temporary extracted resources", strRef);
         return S_OK;  // Nothing to delete here
     }
 
@@ -89,23 +89,22 @@ HRESULT CommandAgentResources::DeleteTemporaryRessource(const std::wstring& strR
     HRESULT hr = E_FAIL;
     if (FAILED(hr = UtilDeleteTemporaryFile(it->second.c_str())))
     {
-        Log::Error(
-            L"Failed to delete temporary ressource '{}' (temp: '{}', [{}])", strRef, it->second, SystemError(hr));
+        Log::Error(L"Failed to delete temporary resource '{}' (temp: '{}', [{}])", strRef, it->second, SystemError(hr));
         return hr;
     }
     return S_OK;
 }
 
-HRESULT CommandAgentResources::DeleteTemporaryRessources()
+HRESULT CommandAgentResources::DeleteTemporaryResources()
 {
     std::for_each(
-        begin(m_TempRessources), end(m_TempRessources), [this](const std::pair<std::wstring, std::wstring>& item) {
+        begin(m_TempResources), end(m_TempResources), [this](const std::pair<std::wstring, std::wstring>& item) {
             HRESULT hr = E_FAIL;
 
             if (FAILED(hr = UtilDeleteTemporaryFile(item.second.c_str())))
             {
                 Log::Error(
-                    L"Failed to delete temporary ressource {} (temp: {}, [{}])",
+                    L"Failed to delete temporary resource {} (temp: {}, [{}])",
                     item.first,
                     item.second,
                     SystemError(hr));
@@ -118,8 +117,8 @@ HRESULT CommandAgentResources::DeleteTemporaryRessources()
 CommandAgentResources::~CommandAgentResources()
 {
     HRESULT hr = E_FAIL;
-    if (FAILED(hr = DeleteTemporaryRessources()))
+    if (FAILED(hr = DeleteTemporaryResources()))
     {
-        Log::Error(L"~CommandAgentResources: failed to delete all extrated temporary ressources [{}]", SystemError(hr));
+        Log::Error(L"~CommandAgentResources: failed to delete all extrated temporary resources [{}]", SystemError(hr));
     }
 }
