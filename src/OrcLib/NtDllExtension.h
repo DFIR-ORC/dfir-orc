@@ -89,6 +89,14 @@ public:
         return NtCall(m_NtQuerySymbolicLinkObject, std::forward<Args>(args)...);
     }
 
+    bool HasNtSystemDebugControl() const { return m_NtSystemDebugControl != nullptr; }
+
+    template <typename... Args>
+    auto NtSystemDebugControl(Args&&... args)
+    {
+        return NtCall(m_NtSystemDebugControl, std::forward<Args>(args)...);
+    }
+
     HRESULT RtlInitUnicodeString(PUNICODE_STRING DestinationString, PCWSTR SourceString)
     {
         DestinationString->Buffer = (PWSTR)SourceString;
@@ -104,30 +112,37 @@ private:
      PIO_STATUS_BLOCK pio,
      ULONG ShareAccess,
      ULONG OpenOptions) = nullptr;
+
     NTSTATUS(NTAPI* m_NtOpenDirectoryObject)
     (_Out_ PHANDLE DirectoryHandle, _In_ ACCESS_MASK DesiredAccess, _In_ POBJECT_ATTRIBUTES ObjectAttributes) = nullptr;
+
     NTSTATUS(NTAPI* m_NtQueryInformationFile)
     (HANDLE, PIO_STATUS_BLOCK, PVOID, ULONG, FILE_INFORMATION_CLASS) = nullptr;
+
     NTSTATUS(NTAPI* m_NtQueryDirectoryFile)
     (HANDLE, HANDLE, PIO_APC_ROUTINE, PVOID, PIO_STATUS_BLOCK, PVOID, ULONG, DWORD, BOOLEAN, PUNICODE_STRING, BOOLEAN) =
         nullptr;
+
     NTSTATUS(NTAPI* m_NtQueryInformationProcess)
     (IN HANDLE ProcessHandle,
      IN PROCESSINFOCLASS ProcessInformationClass,
      OUT PVOID ProcessInformation,
      IN ULONG ProcessInformationLength,
      OUT PULONG ReturnLength OPTIONAL) = nullptr;
+
     NTSTATUS(NTAPI* m_NtQuerySystemInformation)
     (__in SYSTEM_INFORMATION_CLASS SystemInformationClass,
      __inout PVOID SystemInformation,
      __in ULONG SystemInformationLength,
      __out_opt PULONG ReturnLength) = nullptr;
+
     NTSTATUS(NTAPI* m_NtQueryObject)
     (__in_opt HANDLE Handle,
      __in OBJECT_INFORMATION_CLASS ObjectInformationClass,
      __out_opt PVOID ObjectInformation,
      __in ULONG ObjectInformationLength,
      __out_opt PULONG ReturnLength) = nullptr;
+
     NTSTATUS(NTAPI* m_NtQueryDirectoryObject)
     (_In_ HANDLE DirectoryHandle,
      _Out_opt_ PVOID Buffer,
@@ -136,10 +151,20 @@ private:
      _In_ BOOLEAN RestartScan,
      _Inout_ PULONG Context,
      _Out_opt_ PULONG ReturnLength) = nullptr;
+
     NTSTATUS(NTAPI* m_NtOpenSymbolicLinkObject)
     (_Out_ PHANDLE LinkHandle, _In_ ACCESS_MASK DesiredAccess, _In_ POBJECT_ATTRIBUTES ObjectAttributes) = nullptr;
+
     NTSTATUS(NTAPI* m_NtQuerySymbolicLinkObject)
     (_In_ HANDLE LinkHandle, _Inout_ PUNICODE_STRING LinkTarget, _Out_opt_ PULONG ReturnedLength) = nullptr;
+
+    NTSTATUS(NTAPI* m_NtSystemDebugControl)
+    (ULONG ControlCode,
+     PVOID InputBuffer,
+     ULONG InputBufferLength,
+     PVOID OutputBuffer,
+     ULONG OutputBufferLength,
+     PULONG ReturnLength) = nullptr;
 };
 
 }  // namespace Orc
