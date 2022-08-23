@@ -14,7 +14,7 @@
 
 using namespace Orc;
 
-HRESULT Orc::SetPrivilege(WCHAR* szPrivilege, BOOL bEnablePrivilege)
+HRESULT Orc::SetPrivilege(const WCHAR* szPrivilege, BOOL bEnablePrivilege)
 {
     TOKEN_PRIVILEGES tp;
     LUID luid;
