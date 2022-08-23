@@ -84,22 +84,34 @@ STDMETHODIMP TemporaryStream::Open(
     std::replace(begin(m_strIdentifier), end(m_strIdentifier), L'\"', L'_');
     std::replace(begin(m_strIdentifier), end(m_strIdentifier), L':', L'_');
 
-    m_dwMemThreshold = dwMemThreshold;
-
-    m_pMemStream = make_shared<MemoryStream>();
-
-    if (FAILED(hr = m_pMemStream->SetSize(dwMemThreshold)))
+    // if dwMemThreshold > 0 we initialise a memory stream, otherwise we start a file stream
+    if (dwMemThreshold > 0)
     {
-        Log::Error("Failed to resize memory buffer [{}]", SystemError(hr));
-        return hr;
-    }
+        m_dwMemThreshold = dwMemThreshold;
 
-    if (FAILED(hr = m_pMemStream->OpenForReadWrite(dwMemThreshold)))
-    {
-        Log::Debug("Failed to open memstream for {} bytes, using file stream", dwMemThreshold);
-        if (FAILED(hr = MoveToFileStream(nullptr)))
+        m_pMemStream = make_shared<MemoryStream>();
+
+        if (FAILED(hr = m_pMemStream->SetSize(dwMemThreshold)))
         {
-            Log::Error("Failed to Open temporary stream into a file stream [{}]", SystemError(hr));
+            Log::Error("Failed to resize memory buffer [{}]", SystemError(hr));
+            return hr;
+        }
+
+        if (FAILED(hr = m_pMemStream->OpenForReadWrite(dwMemThreshold)))
+        {
+            Log::Debug("Failed to open memstream for {} bytes, using file stream", dwMemThreshold);
+            if (FAILED(hr = MoveToFileStream(nullptr)))
+            {
+                Log::Error("Failed to Open temporary stream into a file stream [{}]", SystemError(hr));
+                return hr;
+            }
+        }
+    }
+    else
+    {
+        if (auto hr = MoveToFileStream(nullptr); FAILED(hr))  // nothing to "carry over" to the file stream
+        {
+            Log::Error("Failed to initialise temporary stream as a file stream [{}]", SystemError(hr));
             return hr;
         }
     }
