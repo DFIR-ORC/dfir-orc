@@ -589,7 +589,11 @@ bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, boost::logi
     return true;
 }
 
-bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strParameter)
+bool UtilitiesMain::OptionalParameterOption(
+    LPCWSTR szArg,
+    LPCWSTR szOption,
+    std::optional<std::wstring>& strParameter,
+    const std::optional<std::wstring> defaultValue)
 {
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
         return false;
@@ -597,7 +601,7 @@ bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, std
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        strParameter.clear();
+        strParameter = defaultValue;
     }
     else
     {
@@ -606,7 +610,11 @@ bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, std
     return true;
 }
 
-bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULONGLONG& ullParameter)
+bool UtilitiesMain::OptionalParameterOption(
+    LPCWSTR szArg,
+    LPCWSTR szOption,
+    std::optional<ULONGLONG>& ullParameter,
+    const std::optional<ULONGLONG> defaultValue)
 {
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
         return false;
@@ -614,7 +622,7 @@ bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULO
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        ullParameter = 0LL;
+        ullParameter = defaultValue;
     }
     else
     {
@@ -632,14 +640,18 @@ bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULO
     return true;
 }
 
-bool UtilitiesMain::OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWORD& dwParameter)
+bool UtilitiesMain::OptionalParameterOption(
+    LPCWSTR szArg,
+    LPCWSTR szOption,
+    std::optional<DWORD>& dwParameter,
+    const std::optional<DWORD> defaultValue)
 {
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
         return false;
     LPCWSTR pEquals = wcschr(szArg, L'=');
     if (!pEquals)
     {
-        dwParameter = 0L;
+        dwParameter = defaultValue;
     }
     else
     {

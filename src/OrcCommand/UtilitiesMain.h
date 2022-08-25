@@ -552,9 +552,21 @@ protected:
         return false;
     }
 
-    bool OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strParameter);
-    bool OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULONGLONG& ullParameter);
-    bool OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWORD& dwParameter);
+    bool OptionalParameterOption(
+        LPCWSTR szArg,
+        LPCWSTR szOption,
+        std::optional<std::wstring>& strParameter,
+        const std::optional<std::wstring> defaultValue = std::nullopt);
+    bool OptionalParameterOption(
+        LPCWSTR szArg,
+        LPCWSTR szOption,
+        std::optional<ULONGLONG>& ullParameter,
+        const std::optional<ULONGLONG> defaultValue = std::nullopt);
+    bool OptionalParameterOption(
+        LPCWSTR szArg,
+        LPCWSTR szOption,
+        std::optional<DWORD>& dwParameter,
+        const std::optional<DWORD> defaultValue = std::nullopt);
 
     template <class ListContainerT>
     void
