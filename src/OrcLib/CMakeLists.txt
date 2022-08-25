@@ -582,6 +582,7 @@ set(SRC_STREAM
     "Stream/FileStreamConcept.cpp"
     "Stream/SeekDirection.h"
     "Stream/SpanStreamConcept.h"
+    "Stream/Stream.h"
     "Stream/StreamConcept.h"
 )
 
