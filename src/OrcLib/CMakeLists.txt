@@ -576,6 +576,7 @@ source_group(Filesystem
 )
 
 set(SRC_STREAM
+    "Stream/BasicStreamReader.h"
     "Stream/BufferStreamConcept.h"
     "Stream/ByteStreamConcept.h"
     "Stream/FileStreamConcept.h"
@@ -584,6 +585,7 @@ set(SRC_STREAM
     "Stream/SpanStreamConcept.h"
     "Stream/Stream.h"
     "Stream/StreamConcept.h"
+    "Stream/StreamReader.h"
     "Stream/StreamUtils.h"
 )
 
