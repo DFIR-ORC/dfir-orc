@@ -85,7 +85,7 @@ void WofChunks::ParseLocations(BufferView buffer, gsl::span<ChunkLocation> table
     {
         ec = std::make_error_code(std::errc::message_size);
         Log::Debug(
-            "Failed to parse chunk offset table: input buffer is too small (expected: {}, actual: {})",
+            "Failed to parse chunk offset table: input buffer is too small (expected: {}, got: {})",
             expectedBufferSize,
             buffer.size());
         return;
@@ -95,7 +95,7 @@ void WofChunks::ParseLocations(BufferView buffer, gsl::span<ChunkLocation> table
     {
         ec = std::make_error_code(std::errc::message_size);
         Log::Debug(
-            "Failed to parse chunk offset table: output table is too small (expected: {}, actual: {})",
+            "Failed to parse chunk offset table: output table is too small (expected: {}, got: {})",
             m_chunkCount,
             table.size());
         return;

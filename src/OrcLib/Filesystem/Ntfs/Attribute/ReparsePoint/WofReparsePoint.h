@@ -37,7 +37,7 @@ public:
 #pragma pack(pop)
 
     static Result<WofReparsePoint> Parse(BufferView buffer);
-    static Result<WofReparsePoint> Parse(WofReparsePoint::Layout& layout);
+    static Result<WofReparsePoint> Parse(const WofReparsePoint::Layout& layout);
 
     WofReparsePoint(const WofReparsePoint::Layout& header);
 

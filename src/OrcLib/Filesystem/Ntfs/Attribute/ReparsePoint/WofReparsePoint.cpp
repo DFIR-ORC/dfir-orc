@@ -21,10 +21,10 @@ Result<WofReparsePoint> WofReparsePoint::Parse(BufferView buffer)
         return std::make_error_code(std::errc::message_size);
     }
 
-    return WofReparsePoint(*reinterpret_cast<const WofReparsePoint::Layout*>(buffer.data()));
+    return WofReparsePoint::Parse(*reinterpret_cast<const WofReparsePoint::Layout*>(buffer.data()));
 }
 
-Result<WofReparsePoint> WofReparsePoint::Parse(WofReparsePoint::Layout& layout)
+Result<WofReparsePoint> WofReparsePoint::Parse(const WofReparsePoint::Layout& layout)
 {
     if (layout.version != 1)
     {

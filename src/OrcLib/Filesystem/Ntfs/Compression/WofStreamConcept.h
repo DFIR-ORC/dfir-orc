@@ -309,7 +309,7 @@ private:
         if (ec)
         {
             Log::Debug(
-                "Failed to decompress chunk {}/{} (algorithm: {}, chunk size: {}, input size: {}, output size: {}) [{}]",
+                "Failed to decompress chunk {}/{} (algorithm: {}, size: {}, buffer size: {}, output size: {}) [{}]",
                 chunkIndex,
                 m_chunks.ChunkCount(),
                 ToString(m_chunks.Algorithm()),
