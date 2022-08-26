@@ -587,6 +587,8 @@ set(SRC_STREAM
     "Stream/StreamConcept.h"
     "Stream/StreamReader.h"
     "Stream/StreamUtils.h"
+    "Stream/VolumeStreamReader.h"
+    "Stream/VolumeStreamReader.cpp"
 )
 
 source_group(Stream
