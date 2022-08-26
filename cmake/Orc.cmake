@@ -108,6 +108,9 @@ endif()
 # Fix warning with 'cl' about overriding existing value
 string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
+#
+# Compile options
+#
 # TODO: Qspectre disable option is not supported until cmake 3.15.2
 add_compile_options(
     /EHa      # Enable C++ exception with SEH (required by Robustness.cpp: _set_se_translator)
@@ -119,6 +122,7 @@ add_compile_options(
     /sdl      # Enable additional security checks
   # /Zi       # Program database for edit and continue (debug only)
     /bigobj
+    /WX
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -142,5 +146,13 @@ foreach(OPTION IN ITEMS ${COMPILE_OPTIONS_RELEASE})
     add_compile_options($<$<CONFIG:MINSIZEREL>:${OPTION}>)
     add_compile_options($<$<CONFIG:RELWITHDEBINFO>:${OPTION}>)
 endforeach()
+
+
+#
+# Link options
+#
+add_link_options(
+    /WX
+)
 
 endmacro()
