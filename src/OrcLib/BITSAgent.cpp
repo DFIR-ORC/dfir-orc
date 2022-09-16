@@ -760,7 +760,7 @@ HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, std::optio
             }
             break;
         default:
-            Log::Debug(L"Invalid BITS Mode {}", m_config.bitsMode);
+            Log::Critical(L"Invalid BITS Mode {}", m_config.bitsMode);
             break;
     }
 
