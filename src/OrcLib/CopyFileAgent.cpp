@@ -178,7 +178,9 @@ HRESULT CopyFileAgent::CheckFileUpload(const std::wstring& strRemoteName, std::o
     WIN32_FILE_ATTRIBUTE_DATA fileData;
     if (!GetFileAttributesEx(strFullPath.c_str(), GetFileExInfoStandard, &fileData))
     {
-        if (GetLastError() == ERROR_FILE_NOT_FOUND)
+        DWORD lastError = GetLastError();
+        Log::Error("Failed GetFileAttributesEx in CheckFileUpload [{}]", SystemError(lastError));
+        if (lastError == ERROR_FILE_NOT_FOUND)
         {
             return S_FALSE;
         }

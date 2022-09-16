@@ -764,7 +764,7 @@ HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, std::optio
             break;
     }
 
-    return S_OK;
+    return hr;
 }
 
 BITSAgent::~BITSAgent()

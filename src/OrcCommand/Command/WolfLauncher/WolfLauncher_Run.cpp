@@ -47,9 +47,10 @@ namespace {
 
 constexpr std::wstring_view kInfo = L"Info";
 
-struct FileInformations
+class FileInformations
 {
-    bool exist;
+public:
+    bool file_exists = false;
     std::wstring path;
     std::optional<Orc::Traits::ByteQuantity<uint64_t>> size;
 };
@@ -70,7 +71,7 @@ GetLocalOutputFileInformations(const Orc::Command::Wolf::WolfExecution& exec, Fi
     }
 
     fileInformations.path = exec.GetOutputFullPath();
-    fileInformations.exist = true;
+    fileInformations.file_exists = true;
 
     WIN32_FILE_ATTRIBUTE_DATA data;
     ZeroMemory(&data, sizeof(WIN32_FILE_ATTRIBUTE_DATA));
@@ -156,7 +157,13 @@ HRESULT GetRemoteOutputFileInformations(
             return hr;
         }
 
-        fileInformations.exist = true;
+        if (hr == S_FALSE)
+        {
+            fileInformations.file_exists = false;
+            return S_OK;
+        }
+
+        fileInformations.file_exists = true;
         fileInformations.path = uploadAgent.GetRemoteFullPath(exec.GetOutputFileName());
         fileInformations.size = fileSize;
         return S_OK;
@@ -940,7 +947,7 @@ HRESULT Main::Run_Execute()
                         const auto path = m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName());
                         Log::Error(L"Failed to check remote file status: '{}' [{}]", path, SystemError(hr));
                     }
-                    else if (!info.size || *info.size != 0)
+                    else if (info.file_exists && (!info.size.has_value() || info.size.value() > 0))
                     {
                         commandSetNode.Add(
                             "Skipping set because non-empty remote output file already exists: '{}' (size: {})",
