@@ -211,9 +211,11 @@ Result<std::wstring> GetProcessExecutableHash(DWORD dwProcessId, CryptoHashStrea
     return GetProcessExecutableHash(*hProcess, algorithm);
 }
 
-void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, HANDLE hMothership)
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HANDLE hMothership)
 {
     auto&& lock = outcome.Lock();
+
+    outcome.SetId(id);
 
     {
         std::wstring computerName;
@@ -734,7 +736,7 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
         return Success<void>();
     }
 
-    ::UpdateOutcome(m_outcome, m_hMothership);
+    ::UpdateOutcome(m_outcome, m_guid, m_hMothership);
     ::UpdateOutcome(m_outcome, config.m_Recipients);
     ::UpdateOutcome(m_outcome, m_standardOutput);
     ::UpdateOutcome(m_outcome, m_logging);

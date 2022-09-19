@@ -365,6 +365,9 @@ public:
         return values;
     }
 
+    const GUID& GetId() const { return m_id; }
+    void SetId(const GUID& id) { m_id = id; }
+
     const std::wstring& GetComputerNameValue() const { return m_computerName; }
     void SetComputerNameValue(std::wstring name) { m_computerName = std::move(name); }
 
@@ -398,6 +401,7 @@ public:
 
 private:
     mutable std::mutex m_mutex;
+    GUID m_id;
     std::wstring m_computerName;
     Mothership m_mothership;
     std::wstring m_consoleFileName;
