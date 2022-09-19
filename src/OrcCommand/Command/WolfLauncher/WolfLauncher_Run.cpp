@@ -29,6 +29,7 @@
 #include "CryptoHashStream.h"
 
 #include "Utils/Guard.h"
+#include "Utils/Guid.h"
 #include "Utils/TypeTraits.h"
 #include "Utils/Time.h"
 #include "Utils/WinApi.h"
@@ -572,6 +573,10 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         writer->BeginElement(L"dfir-orc");
         writer->BeginElement(L"outline");
         {
+            std::wstring id;
+            Orc::ToString(m_guid, std::back_inserter(id));
+            writer->WriteNamed(L"id", id);
+
             writer->WriteNamed(L"version", kOrcFileVerStringW);
 
             std::wstring start;
