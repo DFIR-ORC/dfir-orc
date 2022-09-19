@@ -585,10 +585,14 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             auto mothership_id = SystemDetails::GetParentProcessId();
             if (mothership_id)
             {
+                const wchar_t kMothership[] = L"mothership";
+
+                writer->BeginElement(kMothership);
+
                 auto mothership_cmdline = SystemDetails::GetCmdLine(mothership_id.value());
                 if (mothership_cmdline)
                 {
-                    writer->WriteNamed(L"command", mothership_cmdline.value().c_str());
+                    writer->WriteNamed(L"command_line", mothership_cmdline.value().c_str());
                 }
 
                 const auto sha1 = GetProcessExecutableHash(mothership_id.value(), CryptoHashStream::Algorithm::SHA1);
@@ -596,6 +600,8 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                 {
                     writer->WriteNamed(L"sha1", sha1.value());
                 }
+
+                writer->EndElement(kMothership);
             }
             writer->WriteNamed(L"output", config.Output.Path.c_str());
             writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());
