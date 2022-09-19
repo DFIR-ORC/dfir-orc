@@ -136,12 +136,29 @@ int Robustness::handle_program_memory_depletion(size_t attempted)
     if (!g_termination.Block()->_bSilent)
     {
         if (g_termination.block->_szProcessDescr)
-            wprintf(
-                L"\n%s: ERROR: Memory attrition, failed to allocate %zu bytes\n",
-                g_termination.Block()->_szProcessDescr,
-                attempted);
+        {
+            wprintf(L"\n%s: ERROR: failed to allocate %zu bytes\n", g_termination.Block()->_szProcessDescr, attempted);
+        }
         else
-            wprintf(L"\nERROR: Memory attrition, failed to allocate %zu bytes\n", attempted);
+        {
+            wprintf(L"\nERROR: failed to allocate %zu bytes\n", attempted);
+        }
+
+        MEMORYSTATUSEX memory;
+        memory.dwLength = sizeof(memory);
+        if (GlobalMemoryStatusEx(&memory))
+        {
+            const auto div = 1048576;
+
+            wprintf(
+                L"Memory: physical: %I64/%I64 MB, paged: %I64/%I64 MB, virtual: %I64/%I64 MB\n",
+                memory.ullTotalPhys / div,
+                memory.ullAvailPhys / div,
+                memory.ullTotalPageFile / div,
+                memory.ullAvailPageFile / div,
+                memory.ullTotalVirtual / div,
+                memory.ullAvailVirtual / div);
+        }
     }
     throw MemoryException(attempted);
 }
