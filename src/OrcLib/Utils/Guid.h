@@ -122,9 +122,9 @@ void ToString(const GUID& guid, OutputIt out)
     using value_type = typename Traits::underlying_char_type_t<OutputIt>;
 
     const auto data4leftLength = 2;
-    std::basic_string_view<value_type> data4Left(reinterpret_cast<const value_type*>(&guid.Data4[0]), data4leftLength);
-    std::basic_string_view<value_type> data4right(
-        reinterpret_cast<const value_type*>(&guid.Data4[data4leftLength]), sizeof(guid.Data4) - data4leftLength);
+    std::basic_string_view<char> data4Left(reinterpret_cast<const char*>(&guid.Data4[0]), data4leftLength);
+    std::basic_string_view<char> data4right(
+        reinterpret_cast<const char*>(&guid.Data4[data4leftLength]), sizeof(guid.Data4) - data4leftLength);
 
     if constexpr (std::is_same_v<value_type, char>)
     {
