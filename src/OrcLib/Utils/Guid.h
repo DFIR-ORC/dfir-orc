@@ -121,33 +121,32 @@ void ToString(const GUID& guid, OutputIt out)
     using namespace Orc::Text;
     using value_type = typename Traits::underlying_char_type_t<OutputIt>;
 
-    const auto data4leftLength = 2;
-    std::basic_string_view<char> data4Left(reinterpret_cast<const char*>(&guid.Data4[0]), data4leftLength);
-    std::basic_string_view<char> data4right(
-        reinterpret_cast<const char*>(&guid.Data4[data4leftLength]), sizeof(guid.Data4) - data4leftLength);
+    *out++ = '{';
 
     if constexpr (std::is_same_v<value_type, char>)
     {
-        *out++ = '{';
         fmt::format_to(out, "{:X}-{:X}-{:X}-", guid.Data1, guid.Data2, guid.Data3);
-        ToHex(std::cbegin(data4Left), std::cend(data4Left), out);
-        *out++ = '-';
-        ToHex(std::cbegin(data4right), std::cend(data4right), out);
-        *out++ = '}';
     }
     else if constexpr (std::is_same_v<value_type, wchar_t>)
     {
-        *out++ = '{';
         fmt::format_to(out, L"{:X}-{:X}-{:X}-", guid.Data1, guid.Data2, guid.Data3);
-        ToHex(std::cbegin(data4Left), std::cend(data4Left), out);
-        *out++ = L'-';
-        ToHex(std::cbegin(data4right), std::cend(data4right), out);
-        *out++ = '}';
     }
     else
     {
         static_assert("Invalid CharT");
     }
+
+    const auto data4leftLength = 2;
+    std::string_view data4Left(reinterpret_cast<const char*>(&guid.Data4[0]), data4leftLength);
+    ToHex(std::cbegin(data4Left), std::cend(data4Left), out);
+
+    *out++ = '-';
+
+    std::string_view data4right(
+        reinterpret_cast<const char*>(&guid.Data4[data4leftLength]), sizeof(guid.Data4) - data4leftLength);
+    ToHex(std::cbegin(data4right), std::cend(data4right), out);
+
+    *out++ = '}';
 }
 
 }  // namespace Orc
