@@ -36,9 +36,10 @@ protected:
     CDiskExtentVector m_Extents;
 
     HRESULT ParseBootSector();
-    HRESULT Read(CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead);
 
 private:
+    HRESULT Read(CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead) override;
+
     concurrency::critical_section m_cs;
 };
 
