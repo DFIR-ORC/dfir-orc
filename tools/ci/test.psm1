@@ -170,6 +170,10 @@ function New-OrcLocalConfig() {
     .SYNOPSIS
         Output a "local.xml" Orc configuration file.
 
+    .PARAMETER Output
+        Defines output directory after being processed in 'WorkingTemp'
+        and before being uploaded.
+
     .PARAMETER Upload
         Network URI to upload output files.
         Accepted schemes: 'http', 'https', 'file' (or <empty>)
@@ -194,6 +198,9 @@ function New-OrcLocalConfig() {
     #>
     Param(
         [Parameter()]
+        [String]
+        $Output,
+        [Parameter()]
         [System.Uri]
         $Upload,
         [Parameter()]
@@ -212,6 +219,11 @@ function New-OrcLocalConfig() {
         [String]
         $PublicKey
     )
+
+    if ($Output)
+    {
+        $Output="<output>${Output}</output>`n"
+    }
 
     if ($Upload -or $ForceUri)
     {
@@ -266,7 +278,7 @@ function New-OrcLocalConfig() {
         $DisableKeyXml += "<disable_key>$Keyword</disable_key>`n"
     }
 
-    return "<dfir-orc>`n${PublicKeyXml}${UploadXml}${EnableKeyXml}${DisableKeyXml}</dfir-orc>"
+    return "<dfir-orc>`n${PublicKeyXml}${UploadXml}${EnableKeyXml}${DisableKeyXml}${Output}</dfir-orc>"
 }
 
 function Invoke-OrcOffline {
