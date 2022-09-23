@@ -223,7 +223,7 @@ function New-OrcLocalConfig() {
 
         $UploadMethod = $BitsTransfer ? "bits" : "filecopy"
         $UploadMode = $BitsTransfer ? "async" : "sync"
-        $UploadOperation = $BitsTransfer ? "move" : "copy"
+        $UploadOperation = "move"
 
         if (-not $AllowInvalidUri)
         {
