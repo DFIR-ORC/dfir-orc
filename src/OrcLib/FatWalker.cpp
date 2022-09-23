@@ -108,29 +108,17 @@ HRESULT FatWalker::Init(const std::shared_ptr<Location>& loc, bool bResurrectRec
     ULONGLONG ullBytesToRead = fatTableSize;
     ULONGLONG ullTotalBytesRead = 0;
     ULONGLONG ullBytesRead;
-    boolean shouldSeek = false;
 
     // read fat table
     while (ullTotalBytesRead < fatTableSize)
     {
-        // force seek of reader if needed
-        if (shouldSeek && FAILED(hr = reader->Seek(ullFatTableOffset)))
-        {
-            Log::Error(
-                L"Failed to seek when reading the Fat table from location {} [{}]",
-                m_Location->GetLocation(),
-                SystemError(hr));
-            return hr;
-        }
-
-        if (FAILED(hr = reader->Read(buffer, ullBytesToRead, ullBytesRead)))
+        if (FAILED(hr = reader->Read(ullFatTableOffset, buffer, ullBytesToRead, ullBytesRead)))
         {
             Log::Error(
                 L"Failed to read the Fat table from location {} [{}]", m_Location->GetLocation(), SystemError(hr));
             return hr;
         }
 
-        shouldSeek = true;
         ullFatTableOffset += ullBytesRead;
         ullTotalBytesRead += ullBytesRead;
         ullBytesToRead -= ullBytesRead;
@@ -298,22 +286,13 @@ HRESULT FatWalker::ReadRootDirectory(CBinaryBuffer& buffer, DWORD size)
     buffer.SetCount(size);
     buffer.ZeroMe();
 
-    if (S_OK != (hr = reader->Seek(m_ullRootDirectoryOffset)))
-    {
-        Log::Error(
-            L"Failed to seek to root directory from location {} [{}]", m_Location->GetLocation(), SystemError(hr));
-        return hr;
-    }
-    else
-    {
-        ULONGLONG ullBytesRead;
+    ULONGLONG ullBytesRead;
 
-        if (S_OK != (hr = reader->Read(buffer, size, ullBytesRead) && size == ullBytesRead))
-        {
-            Log::Error(
-                L"Failed to read root directory from location {} [{}]", m_Location->GetLocation(), SystemError(hr));
-            return hr;
-        }
+    hr = reader->Read(m_ullRootDirectoryOffset, buffer, size, ullBytesRead);
+    if (S_OK != hr && size == ullBytesRead)
+    {
+        Log::Error(L"Failed to read root directory from location {} [{}]", m_Location->GetLocation(), SystemError(hr));
+        return hr;
     }
 
     return S_OK;
@@ -356,31 +335,19 @@ HRESULT FatWalker::ReadClusterChain(const FatTable::ClusterChain& clusterChain, 
                 ULONGLONG seekOffset =
                     m_ullRootDirectoryOffset + ((ULONGLONG)(clusterNumber - 2) * (ULONGLONG)ulClusterSize);
 
-                if (S_OK != (hr = reader->Seek(seekOffset)))
+                hr = reader->Read(seekOffset, localBuffer, ulClusterSize, ullBytesRead);
+                if (S_OK == hr && ulClusterSize == ullBytesRead)
                 {
-                    Log::Error(
-                        L"Failed to seek to cluster number {} from location {} [{}]",
-                        clusterNumber,
-                        m_Location->GetLocation(),
-                        SystemError(hr));
+                    memcpy(buffer.GetData() + offset, localBuffer.GetData(), ulClusterSize);
+                    offset += ulClusterSize;
                 }
                 else
                 {
-                    if (S_OK
-                        == (hr = reader->Read(localBuffer, ulClusterSize, ullBytesRead)
-                                && ulClusterSize == ullBytesRead))
-                    {
-                        memcpy(buffer.GetData() + offset, localBuffer.GetData(), ulClusterSize);
-                        offset += ulClusterSize;
-                    }
-                    else
-                    {
-                        Log::Error(
-                            L"Failed to read cluster number {} from location {} [{}]",
-                            clusterNumber,
-                            m_Location->GetLocation(),
-                            SystemError(hr));
-                    }
+                    Log::Error(
+                        L"Failed to read cluster number {} from location {} [{}]",
+                        clusterNumber,
+                        m_Location->GetLocation(),
+                        SystemError(hr));
                 }
             }
         });
