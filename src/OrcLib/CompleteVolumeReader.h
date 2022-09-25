@@ -39,6 +39,7 @@ protected:
 
 private:
     HRESULT Read(CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead) override;
+    HRESULT ReadUnaligned(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead);
 
     concurrency::critical_section m_cs;
 };

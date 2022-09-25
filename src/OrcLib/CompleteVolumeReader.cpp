@@ -45,24 +45,67 @@ HRESULT CompleteVolumeReader::Seek(ULONGLONG offset)
 }
 
 HRESULT
-CompleteVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG bytesToRead, ULONGLONG& ullBytesRead)
+CompleteVolumeReader::ReadUnaligned(
+    ULONGLONG offset,
+    CBinaryBuffer& data,
+    ULONGLONG bytesToRead,
+    ULONGLONG& ullBytesRead)
 {
-    concurrency::critical_section::scoped_lock sl(m_cs);
+    // Unaligned read
+    if (m_BytesPerSector != 0)
+    {
+        Log::Error("Cannot call this function with aligned volume reader");
+        return E_FAIL;
+    }
 
-    HRESULT hr = Seek(offset);
+    HRESULT hr = E_FAIL;
+    if (data.OwnsBuffer() && !data.SetCount(static_cast<size_t>(bytesToRead)))
+    {
+        return E_OUTOFMEMORY;
+    }
+
+    hr = Seek(offset);
     if (FAILED(hr))
     {
         return hr;
     }
 
+    assert(m_LocalPositionOffset == 0 && "CompleteVolumeReader: unexpected internal offset");
+
+    DWORD dwBytesRead = 0;
+    hr = m_Extents[0].Read(data.GetData(), data.GetCount(), &dwBytesRead);
+    ullBytesRead = dwBytesRead;
+    return hr;
+}
+
+HRESULT
+CompleteVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG bytesToRead, ULONGLONG& ullBytesRead)
+{
+    HRESULT hr = E_FAIL;
+
+    concurrency::critical_section::scoped_lock sl(m_cs);
+
+    // Unaligned read
+    if (m_BytesPerSector == 0)
+    {
+        return ReadUnaligned(offset, data, bytesToRead, ullBytesRead);
+    }
+
+    hr = Seek(offset);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    const auto initialOffset = m_Extents[0].GetSeekOffset() + m_LocalPositionOffset;
+
     ULONGLONG alignedBytesToRead;
-    if (m_BytesPerSector && (bytesToRead % m_BytesPerSector || m_LocalPositionOffset > 0))
+    if (bytesToRead % m_BytesPerSector || m_LocalPositionOffset > 0)
     {
         alignedBytesToRead = (((bytesToRead + m_LocalPositionOffset) / m_BytesPerSector) + 1) * m_BytesPerSector;
     }
     else
     {
-        // TODO: could probably do the read here
         alignedBytesToRead = bytesToRead;
     }
 
@@ -79,26 +122,28 @@ CompleteVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG byte
         return hr;
     }
 
-    if (dwBytesRead > m_LocalPositionOffset)
+    if (dwBytesRead <= m_LocalPositionOffset)
     {
-        dwBytesRead = dwBytesRead - m_LocalPositionOffset;
-    }
-    else
-    {
-        dwBytesRead = 0LL;
+        Log::Warn("Unexpected! Read was done completely for alignement and must be called another time");
+        m_LocalPositionOffset = m_LocalPositionOffset - dwBytesRead;
+
+        hr = Read(initialOffset + dwBytesRead, data, bytesToRead, ullBytesRead);
+        // TODO: think about it
+        return hr;
     }
 
-    ullBytesRead = std::min(static_cast<ULONGLONG>(dwBytesRead), bytesToRead);
-    if (ullBytesRead == 0)  // TODO: CANNOT RETURN 0 BECAUSE FOR CALL IT CAN MEAN NO MORE DATA
-    {
-        m_LocalPositionOffset = 0;
-        return S_OK;
-    }
+    ullBytesRead = std::min(static_cast<ULONGLONG>(dwBytesRead - m_LocalPositionOffset), bytesToRead);
 
     // TODO: this trigger a reallocation even if smaller
     data.SetCount(ullBytesRead);
 
     CopyMemory(data.GetData(), localReadBuffer.GetData() + m_LocalPositionOffset, static_cast<size_t>(ullBytesRead));
+
+    hr = Seek(initialOffset + ullBytesRead);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
     localReadBuffer.RemoveAll();
     m_LocalPositionOffset = 0;
