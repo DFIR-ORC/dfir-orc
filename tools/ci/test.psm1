@@ -292,6 +292,67 @@ function New-OrcLocalConfig() {
     return "<dfir-orc>`n${PublicKeyXml}${UploadXml}${EnableKeyXml}${DisableKeyXml}${Output}${Temporary}</dfir-orc>"
 }
 
+function Invoke-OrcOfflineTest {
+    Param(
+        [Parameter(Mandatory)]
+        [System.IO.FileInfo]
+        $Path,
+        [Parameter(Mandatory)]
+        [System.IO.FileInfo]
+        $Disk,
+        [Parameter(Mandatory)]
+        [System.IO.DirectoryInfo]
+        $Destination,
+        [Parameter()]
+        [String]
+        $PublicKey,
+        [Parameter()]
+        [String]
+        $PrivateKey,
+        [Parameter()]
+        [String]
+        $Argument,
+        [Parameter()]
+        [Switch]
+        $Force
+    )
+
+    $ErrorActionPreference = "Stop"
+
+    [System.IO.DirectoryInfo]$TempDirectory = Join-Path $Destination "Temp"
+    [System.IO.DirectoryInfo]$ArchiveDirectory = Join-Path $Destination "Archive"
+    [System.IO.DirectoryInfo]$ExpandedResultsDirectory = Join-Path $Destination "Results"
+    [System.IO.DirectoryInfo]$DiffableDirectory = Join-Path $Destination "Diffable"
+
+    New-Item -ItemType Directory $Destination -ErrorAction Ignore | Out-Null
+    Copy-Item $Path "$Destination\orc.exe"
+
+    New-Item -ItemType Directory $TempDirectory -ErrorAction Ignore | Out-Null
+
+    $Argument = "$Argument /TempDir=$TempDirectory"
+
+    New-Item -ItemType Directory $ArchiveDirectory -ErrorAction Ignore | Out-Null
+    Invoke-OrcOffline `
+        -Path:$Path `
+        -Disk:$Disk `
+        -Destination "$ArchiveDirectory\" `
+        -Temporary $TempDirectory `
+        -PublicKey:$PublicKey `
+        -Argument $Argument `
+        -Force:$Force
+
+    New-Item -ItemType Directory $ExpandedResultsDirectory -ErrorAction Ignore | Out-Null
+    Expand-OrcResults `
+        -Path $ArchiveDirectory `
+        -Destination $ExpandedResultsDirectory `
+        -PrivateKey:$PrivateKey `
+        -Force:$Force
+
+    New-Item -ItemType Directory $DiffableDirectory -ErrorAction Ignore | Out-Null
+    ConvertTo-OrcDiffableResults `
+        -Path $ExpandedResultsDirectory `
+        -Destination $DiffableDirectory `
+        -Force:$Force
 }
 
 function Invoke-OrcOffline {
