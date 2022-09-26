@@ -308,6 +308,9 @@ function Invoke-OrcOffline {
     .PARAMETER Destination
         Output directory.
 
+    .PARAMETER Destination
+        Temporary directory.
+
     .PARAMETER PublicKey
         Enable encrypted output to p7b archive file (cms format).
 
@@ -330,6 +333,9 @@ function Invoke-OrcOffline {
         [Parameter(Mandatory)]
         [System.IO.DirectoryInfo]
         $Destination,
+        [Parameter()]
+        [String]
+        $Temporary,
         [Parameter()]
         [String]
         $PublicKey,
@@ -356,12 +362,10 @@ function Invoke-OrcOffline {
             $Disk = $DiskMountPoint.Mount()
         }
 
-        if ($PublicKey)
-        {
-            $LocalXmlPath = "$(New-TemporaryFile).xml"
-            New-OrcLocalConfig -PublicKey $PublicKey | Out-File $LocalXmlPath
-            $LocalXml = "/local=$LocalXmlPath"
-        }
+
+        $LocalXmlPath = "$(New-TemporaryFile).xml"
+        New-OrcLocalConfig -PublicKey:$PublicKey -Temporary:$Temporary | Out-File $LocalXmlPath
+        $LocalXml = "/local=$LocalXmlPath"
 
         Write-HostLog "Executing '$Path' on '$Disk' to '$Destination'"
         OrcExe $Argument $Overwrite /Offline=$Disk /Out=$Destination $LocalXml
