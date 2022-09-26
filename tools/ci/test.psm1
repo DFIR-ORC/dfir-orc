@@ -195,6 +195,9 @@ function New-OrcLocalConfig() {
 
     .PARAMETER PublicKey
         Enable encrypted output to p7b archive file (cms format).
+
+    .PARAMETER Temporary
+        Defines Temporary directory.
     #>
     Param(
         [Parameter()]
@@ -217,12 +220,20 @@ function New-OrcLocalConfig() {
         $DisableKeyword,
         [Parameter()]
         [String]
-        $PublicKey
+        $PublicKey,
+        [Parameter()]
+        [String]
+        $Temporary
     )
 
     if ($Output)
     {
         $Output="<output>${Output}</output>`n"
+    }
+
+    if ($Temporary)
+    {
+        $Temporary="<temporary>${Temp}</temporary>`n"
     }
 
     if ($Upload -or $ForceUri)
@@ -278,7 +289,9 @@ function New-OrcLocalConfig() {
         $DisableKeyXml += "<disable_key>$Keyword</disable_key>`n"
     }
 
-    return "<dfir-orc>`n${PublicKeyXml}${UploadXml}${EnableKeyXml}${DisableKeyXml}${Output}</dfir-orc>"
+    return "<dfir-orc>`n${PublicKeyXml}${UploadXml}${EnableKeyXml}${DisableKeyXml}${Output}${Temporary}</dfir-orc>"
+}
+
 }
 
 function Invoke-OrcOffline {
