@@ -711,6 +711,14 @@ HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
 
+    hr = CoCreateGuid(&m_guid);
+    if (FAILED(hr))
+    {
+        Log::Error("Failed to initialize execution guid [{}]", SystemError(hr));
+        SecureZeroMemory(&m_guid, sizeof(m_guid));
+        hr = S_OK;  // keep going
+    }
+
     if (m_consoleConfiguration.output.path)
     {
         m_consoleConfiguration.output.path =

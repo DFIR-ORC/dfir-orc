@@ -3828,11 +3828,6 @@ HRESULT FileFind::EvaluateMatchCallCallback(
 
     auto finalReadLength = ::SumStreamsReadLength(aMatch->MatchingAttributes);
 
-    if (finalReadLength < initialReadLength)
-    {
-        int debug = 0;
-    }
-
     profiler.AddReadLength(finalReadLength - initialReadLength);
     return S_OK;
 }

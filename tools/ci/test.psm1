@@ -170,6 +170,10 @@ function New-OrcLocalConfig() {
     .SYNOPSIS
         Output a "local.xml" Orc configuration file.
 
+    .PARAMETER Output
+        Defines output directory after being processed in 'WorkingTemp'
+        and before being uploaded.
+
     .PARAMETER Upload
         Network URI to upload output files.
         Accepted schemes: 'http', 'https', 'file' (or <empty>)
@@ -191,8 +195,14 @@ function New-OrcLocalConfig() {
 
     .PARAMETER PublicKey
         Enable encrypted output to p7b archive file (cms format).
+
+    .PARAMETER Temporary
+        Defines Temporary directory.
     #>
     Param(
+        [Parameter()]
+        [String]
+        $Output,
         [Parameter()]
         [System.Uri]
         $Upload,
@@ -210,8 +220,21 @@ function New-OrcLocalConfig() {
         $DisableKeyword,
         [Parameter()]
         [String]
-        $PublicKey
+        $PublicKey,
+        [Parameter()]
+        [String]
+        $Temporary
     )
+
+    if ($Output)
+    {
+        $Output="<output>${Output}</output>`n"
+    }
+
+    if ($Temporary)
+    {
+        $Temporary="<temporary>${Temp}</temporary>`n"
+    }
 
     if ($Upload -or $ForceUri)
     {
@@ -223,7 +246,7 @@ function New-OrcLocalConfig() {
 
         $UploadMethod = $BitsTransfer ? "bits" : "filecopy"
         $UploadMode = $BitsTransfer ? "async" : "sync"
-        $UploadOperation = $BitsTransfer ? "move" : "copy"
+        $UploadOperation = "move"
 
         if (-not $AllowInvalidUri)
         {
@@ -266,7 +289,70 @@ function New-OrcLocalConfig() {
         $DisableKeyXml += "<disable_key>$Keyword</disable_key>`n"
     }
 
-    return "<dfir-orc>`n${PublicKeyXml}${UploadXml}${EnableKeyXml}${DisableKeyXml}</dfir-orc>"
+    return "<dfir-orc>`n${PublicKeyXml}${UploadXml}${EnableKeyXml}${DisableKeyXml}${Output}${Temporary}</dfir-orc>"
+}
+
+function Invoke-OrcOfflineTest {
+    Param(
+        [Parameter(Mandatory)]
+        [System.IO.FileInfo]
+        $Path,
+        [Parameter(Mandatory)]
+        [System.IO.FileInfo]
+        $Disk,
+        [Parameter(Mandatory)]
+        [System.IO.DirectoryInfo]
+        $Destination,
+        [Parameter()]
+        [String]
+        $PublicKey,
+        [Parameter()]
+        [String]
+        $PrivateKey,
+        [Parameter()]
+        [String]
+        $Argument,
+        [Parameter()]
+        [Switch]
+        $Force
+    )
+
+    $ErrorActionPreference = "Stop"
+
+    [System.IO.DirectoryInfo]$TempDirectory = Join-Path $Destination "Temp"
+    [System.IO.DirectoryInfo]$ArchiveDirectory = Join-Path $Destination "Archive"
+    [System.IO.DirectoryInfo]$ExpandedResultsDirectory = Join-Path $Destination "Results"
+    [System.IO.DirectoryInfo]$DiffableDirectory = Join-Path $Destination "Diffable"
+
+    New-Item -ItemType Directory $Destination -ErrorAction Ignore | Out-Null
+    Copy-Item $Path "$Destination\orc.exe"
+
+    New-Item -ItemType Directory $TempDirectory -ErrorAction Ignore | Out-Null
+
+    $Argument = "$Argument /TempDir=$TempDirectory"
+
+    New-Item -ItemType Directory $ArchiveDirectory -ErrorAction Ignore | Out-Null
+    Invoke-OrcOffline `
+        -Path:$Path `
+        -Disk:$Disk `
+        -Destination "$ArchiveDirectory\" `
+        -Temporary $TempDirectory `
+        -PublicKey:$PublicKey `
+        -Argument $Argument `
+        -Force:$Force
+
+    New-Item -ItemType Directory $ExpandedResultsDirectory -ErrorAction Ignore | Out-Null
+    Expand-OrcResults `
+        -Path $ArchiveDirectory `
+        -Destination $ExpandedResultsDirectory `
+        -PrivateKey:$PrivateKey `
+        -Force:$Force
+
+    New-Item -ItemType Directory $DiffableDirectory -ErrorAction Ignore | Out-Null
+    ConvertTo-OrcDiffableResults `
+        -Path $ExpandedResultsDirectory `
+        -Destination $DiffableDirectory `
+        -Force:$Force
 }
 
 function Invoke-OrcOffline {
@@ -282,6 +368,9 @@ function Invoke-OrcOffline {
 
     .PARAMETER Destination
         Output directory.
+
+    .PARAMETER Destination
+        Temporary directory.
 
     .PARAMETER PublicKey
         Enable encrypted output to p7b archive file (cms format).
@@ -305,6 +394,9 @@ function Invoke-OrcOffline {
         [Parameter(Mandatory)]
         [System.IO.DirectoryInfo]
         $Destination,
+        [Parameter()]
+        [String]
+        $Temporary,
         [Parameter()]
         [String]
         $PublicKey,
@@ -331,12 +423,10 @@ function Invoke-OrcOffline {
             $Disk = $DiskMountPoint.Mount()
         }
 
-        if ($PublicKey)
-        {
-            $LocalXmlPath = "$(New-TemporaryFile).xml"
-            New-OrcLocalConfig -PublicKey $PublicKey | Out-File $LocalXmlPath
-            $LocalXml = "/local=$LocalXmlPath"
-        }
+
+        $LocalXmlPath = "$(New-TemporaryFile).xml"
+        New-OrcLocalConfig -PublicKey:$PublicKey -Temporary:$Temporary | Out-File $LocalXmlPath
+        $LocalXml = "/local=$LocalXmlPath"
 
         Write-HostLog "Executing '$Path' on '$Disk' to '$Destination'"
         OrcExe $Argument $Overwrite /Offline=$Disk /Out=$Destination $LocalXml
@@ -1430,7 +1520,7 @@ function Get-OrcStatistics {
 function New-TemporaryDirectory {
     $Parent = [System.IO.Path]::GetTempPath()
     [string] $Name = [System.Guid]::NewGuid()
-    New-Item -ItemType Directory -Path (Join-Path $Parent $Name)
+    New-Item -ItemType Directory -Path (Join-Path $Parent $Name) -ErrorAction Stop
 }
 
 function ListContainsAllOf {

@@ -45,107 +45,108 @@ HRESULT CompleteVolumeReader::Seek(ULONGLONG offset)
 }
 
 HRESULT
-CompleteVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead)
+CompleteVolumeReader::ReadUnaligned(
+    ULONGLONG offset,
+    CBinaryBuffer& data,
+    ULONGLONG bytesToRead,
+    ULONGLONG& ullBytesRead)
+{
+    // Unaligned read
+    if (m_BytesPerSector != 0)
+    {
+        Log::Error("Cannot call this function with aligned volume reader");
+        return E_FAIL;
+    }
+
+    HRESULT hr = E_FAIL;
+    if (data.OwnsBuffer() && !data.SetCount(static_cast<size_t>(bytesToRead)))
+    {
+        return E_OUTOFMEMORY;
+    }
+
+    hr = Seek(offset);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    assert(m_LocalPositionOffset == 0 && "CompleteVolumeReader: unexpected internal offset");
+
+    DWORD dwBytesRead = 0;
+    hr = m_Extents[0].Read(data.GetData(), data.GetCount(), &dwBytesRead);
+    ullBytesRead = dwBytesRead;
+    return hr;
+}
+
+HRESULT
+CompleteVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG bytesToRead, ULONGLONG& ullBytesRead)
 {
     HRESULT hr = E_FAIL;
 
     concurrency::critical_section::scoped_lock sl(m_cs);
 
-    if (FAILED(hr = Seek(offset)))
-        return hr;
-
-    if (m_LocalPositionOffset > 0)
+    // Unaligned read
+    if (m_BytesPerSector == 0)
     {
-        CBinaryBuffer localReadBuffer(true);
-        ULONGLONG ullBytesToReadWithOffset =
-            (((ullBytesToRead + m_LocalPositionOffset) / m_BytesPerSector) + 1) * m_BytesPerSector;
+        return ReadUnaligned(offset, data, bytesToRead, ullBytesRead);
+    }
 
-        if (data.GetCount() < ullBytesToReadWithOffset)
-        {
-            if (data.OwnsBuffer())
-            {
-                if (!localReadBuffer.CheckCount(static_cast<size_t>(ullBytesToReadWithOffset)))
-                    return E_OUTOFMEMORY;
-                ULONGLONG ullBytesReadWithOffset = 0LL;
+    hr = Seek(offset);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
 
-                if (FAILED(hr = Read(localReadBuffer, ullBytesToReadWithOffset, ullBytesReadWithOffset)))
-                    return hr;
+    const auto initialOffset = m_Extents[0].GetSeekOffset() + m_LocalPositionOffset;
 
-                if (ullBytesReadWithOffset > m_LocalPositionOffset)
-                    ullBytesRead = ullBytesReadWithOffset - m_LocalPositionOffset;
-                else
-                    ullBytesRead = 0LL;
-
-                if (ullBytesRead > ullBytesToRead)
-                    ullBytesRead = ullBytesToRead;
-                if (ullBytesRead > 0)
-                {
-                    if (!data.SetCount(static_cast<size_t>(ullBytesRead)))
-                    {
-                        ullBytesRead = 0LL;
-                        return E_OUTOFMEMORY;
-                    }
-                    CopyMemory(
-                        data.GetData(),
-                        localReadBuffer.GetData() + m_LocalPositionOffset,
-                        static_cast<size_t>(ullBytesRead));
-                    localReadBuffer.RemoveAll();
-                }
-                m_LocalPositionOffset = 0;
-            }
-            else
-            {
-                if (!localReadBuffer.CheckCount(static_cast<size_t>(ullBytesToReadWithOffset)))
-                    return E_OUTOFMEMORY;
-
-                ULONGLONG ullBytesReadWithOffset = 0LL;
-                if (FAILED(hr = Read(localReadBuffer, ullBytesToReadWithOffset, ullBytesReadWithOffset)))
-                    return hr;
-
-                if (ullBytesReadWithOffset > m_LocalPositionOffset)
-                    ullBytesRead = ullBytesReadWithOffset - m_LocalPositionOffset;
-                else
-                    ullBytesRead = 0LL;
-
-                if (ullBytesRead > ullBytesToRead)
-                    ullBytesRead = ullBytesToRead;
-                if (ullBytesRead > 0)
-                {
-                    CopyMemory(
-                        data.GetData(),
-                        localReadBuffer.GetData() + m_LocalPositionOffset,
-                        static_cast<size_t>(ullBytesRead));
-                    localReadBuffer.RemoveAll();
-                }
-                m_LocalPositionOffset = 0L;
-            }
-        }
-        else
-        {
-            ULONGLONG ullBytesReadWithOffset = 0LL;
-            if (FAILED(hr = Read(data, ullBytesToReadWithOffset, ullBytesReadWithOffset)))
-                return hr;
-
-            if (ullBytesReadWithOffset > m_LocalPositionOffset)
-                ullBytesRead = ullBytesReadWithOffset - m_LocalPositionOffset;
-            else
-                ullBytesRead = 0LL;
-
-            if (ullBytesRead > ullBytesToRead)
-                ullBytesRead = ullBytesToRead;
-            if (ullBytesRead > 0)
-            {
-                MoveMemory(data.GetData(), data.GetData() + m_LocalPositionOffset, static_cast<size_t>(ullBytesRead));
-                localReadBuffer.RemoveAll();
-            }
-            m_LocalPositionOffset = 0L;
-        }
+    ULONGLONG alignedBytesToRead;
+    if (bytesToRead % m_BytesPerSector || m_LocalPositionOffset > 0)
+    {
+        alignedBytesToRead = (((bytesToRead + m_LocalPositionOffset) / m_BytesPerSector) + 1) * m_BytesPerSector;
     }
     else
     {
-        if (FAILED(hr = Read(data, ullBytesToRead, ullBytesRead)))
-            return hr;
+        alignedBytesToRead = bytesToRead;
     }
+
+    CBinaryBuffer localReadBuffer(true);
+    if (!localReadBuffer.CheckCount(static_cast<size_t>(alignedBytesToRead)))
+    {
+        return E_OUTOFMEMORY;
+    }
+
+    DWORD dwBytesRead = 0;
+    hr = m_Extents[0].Read(localReadBuffer.GetData(), alignedBytesToRead, &dwBytesRead);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (dwBytesRead <= m_LocalPositionOffset)
+    {
+        Log::Warn("Unexpected! Read was done completely for alignement and must be called another time");
+        m_LocalPositionOffset = m_LocalPositionOffset - dwBytesRead;
+
+        hr = Read(initialOffset + dwBytesRead, data, bytesToRead, ullBytesRead);
+        // TODO: think about it
+        return hr;
+    }
+
+    ullBytesRead = std::min(static_cast<ULONGLONG>(dwBytesRead - m_LocalPositionOffset), bytesToRead);
+
+    // TODO: this trigger a reallocation even if smaller
+    data.SetCount(ullBytesRead);
+
+    CopyMemory(data.GetData(), localReadBuffer.GetData() + m_LocalPositionOffset, static_cast<size_t>(ullBytesRead));
+
+    hr = Seek(initialOffset + ullBytesRead);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    localReadBuffer.RemoveAll();
+    m_LocalPositionOffset = 0;
     return S_OK;
 }
 
@@ -166,118 +167,8 @@ std::shared_ptr<VolumeReader> CompleteVolumeReader::ReOpen(DWORD dwDesiredAccess
 // Read from disk.
 HRESULT CompleteVolumeReader::Read(CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead)
 {
-    HRESULT hr = E_FAIL;
-
-    ullBytesRead = 0LL;
-    CDiskExtent& Extent = m_Extents[0];
-
-    //
-    // how big do we want the read to be?
-    //
-    DWORD chunk = (DWORD)std::min((ULONGLONG)DEFAULT_READ_SIZE, ullBytesToRead);
-
-    if (m_BytesPerSector && chunk % m_BytesPerSector)
-    {
-        // we round to the upper sector
-        chunk = ((chunk / m_BytesPerSector) + 1) * m_BytesPerSector;
-    }
-
-    if (data.OwnsBuffer())
-    {
-        // reserve space in the
-        if (!data.SetCount(chunk))
-            return E_OUTOFMEMORY;
-
-        CBinaryBuffer localReadBuffer(true);
-
-        if (m_BytesPerSector && ((INT_PTR)data.GetData() % m_BytesPerSector))
-        {
-            if (!localReadBuffer.CheckCount(chunk))
-                return E_OUTOFMEMORY;
-
-            //
-            // now read
-            //
-            DWORD dwBytesRead = 0;
-            if (FAILED(hr = Extent.Read(localReadBuffer.GetData(), chunk, &dwBytesRead)))
-            {
-                return hr;
-            }
-
-            CopyMemory(data.GetData(), localReadBuffer.GetData(), dwBytesRead);
-            localReadBuffer.RemoveAll();
-
-            if (dwBytesRead >= ullBytesToRead)
-                ullBytesRead = ullBytesToRead;
-            else
-                ullBytesRead = dwBytesRead;
-        }
-        else
-        {
-            //
-            // now read
-            //
-            DWORD dwBytesRead = 0;
-            if (FAILED(hr = Extent.Read(data.GetData(), chunk, &dwBytesRead)))
-            {
-                return hr;
-            }
-
-            if (dwBytesRead >= ullBytesToRead)
-                ullBytesRead = ullBytesToRead;
-            else
-                ullBytesRead = dwBytesRead;
-        }
-    }
-    else
-    {
-        // we round down to the lower sector boundary
-        if (chunk <= m_BytesPerSector)
-            chunk = m_BytesPerSector;
-        else if (chunk > data.GetCount())
-            chunk = (static_cast<DWORD>(data.GetCount()) / m_BytesPerSector) * m_BytesPerSector;
-
-        CBinaryBuffer localReadBuffer(true);
-
-        if (chunk > data.GetCount())
-        {
-            if (!localReadBuffer.CheckCount(chunk))
-                return E_OUTOFMEMORY;
-
-            //
-            // now read
-            //
-            DWORD dwBytesRead = 0;
-            if (FAILED(hr = Extent.Read(localReadBuffer.GetData(), chunk, &dwBytesRead)))
-            {
-                return hr;
-            }
-            MoveMemory(data.GetData(), localReadBuffer.GetData(), data.GetCount());
-            localReadBuffer.RemoveAll();
-            ullBytesRead = data.GetCount();
-        }
-        else
-        {
-            if (!localReadBuffer.CheckCount(chunk))
-                return E_OUTOFMEMORY;
-            //
-            // now read
-            //
-            DWORD dwBytesRead = 0;
-            if (FAILED(hr = Extent.Read(localReadBuffer.GetData(), chunk, &dwBytesRead)))
-            {
-                return hr;
-            }
-            if (dwBytesRead >= ullBytesToRead)
-                ullBytesRead = ullBytesToRead;
-            else
-                ullBytesRead = dwBytesRead;
-
-            CopyMemory(data.GetData(), localReadBuffer.GetData(), dwBytesRead);
-            localReadBuffer.RemoveAll();
-        }
-    }
-    return S_OK;
+    Log::Critical("Not implemented: CompleteVolumeReader::Read");
+    return E_NOTIMPL;
 }
 
 HRESULT CompleteVolumeReader::ParseBootSector()

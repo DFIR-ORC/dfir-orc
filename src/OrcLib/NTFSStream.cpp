@@ -213,7 +213,7 @@ NTFSStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod
             }
             else if (DistanceToMove < 0)
             {
-                for (int32_t i = static_cast<int32_t>(m_CurrentSegmentIndex); i > 0; i--)
+                for (int32_t i = static_cast<int32_t>(m_CurrentSegmentIndex); i >= 0; i--)
                 {
                     if (ullNewFilePointer >= m_DataSegments[i].ullFileBasedOffset
                         && ullNewFilePointer < (m_DataSegments[i].ullFileBasedOffset + m_DataSegments[i].ullSize))

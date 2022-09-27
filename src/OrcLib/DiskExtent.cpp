@@ -180,6 +180,10 @@ HRESULT CDiskExtent::Read(__in_bcount(dwCount) PVOID lpBuf, DWORD dwCount, PDWOR
     _ASSERT(INVALID_HANDLE_VALUE != m_hFile);
     _ASSERT(pdwBytesRead != nullptr);
 
+    // This is needed because volsnap.sys (shadow copy) can return sucessfully without modifying the buffer when trying
+    // to read unused/free blocks. With <= v10.1.2 the buffer was always zeroed.
+    SecureZeroMemory(lpBuf, dwCount);
+
     DWORD dwBytesRead = 0;
     Log::Trace(L"CDiskExtent: Reading {} bytes", dwCount);
     if (!ReadFile(m_hFile, lpBuf, dwCount, &dwBytesRead, NULL))

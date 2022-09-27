@@ -315,6 +315,10 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             writer->BeginElement(kNodeOutcome);
             Guard::Scope onExit([&]() { writer->EndElement(kNodeOutcome); });
 
+            std::wstring id;
+            Orc::ToString(outcome.GetId(), std::back_inserter(id));
+            writer->WriteNamed(L"id", id);
+
             auto timestamp = outcome.GetTimestampKey();
             writer->WriteNamed(L"timestamp", timestamp);
 

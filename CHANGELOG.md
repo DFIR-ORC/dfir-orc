@@ -1,5 +1,22 @@
 # ChangeLog
 
+## [10.1.3] - 2022-09-26
+### Added
+- Outline, Outcome: add execution id
+- Print OS memory statistics on allocation exception
+- Test: add helpers
+
+### Changed
+- Outline: fix sha1 location to 'dfir-orc.outline.mothership.sha1'
+- Display information about memory use on OOM exception
+- 7zip: use single thread implementation with no performance hit
+
+### Fixed
+- Ntfs: fix rare read issue
+- Ntfs: fix read issue on some sparse file
+- Bits: upload when on 'single' mode (only 'overwrite' was working)
+- Guid: wide string conversion of Guid
+
 ## [10.1.2] - 2022-07-20
 ### Added
 - ToolEmbed: add multiple checks to detect bad configurations before deployment

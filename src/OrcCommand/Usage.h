@@ -86,7 +86,7 @@ void PrintParameter(Orc::Text::Tree& root, const T& parameterSwitch, const T& de
     auto node = root.AddNode(parameterSwitch);
     if (!description.empty())
     {
-        parameterNode.Add(description);
+        node.Add(description);
     }
 }
 
