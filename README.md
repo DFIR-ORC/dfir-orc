@@ -10,15 +10,16 @@ https://dfir-orc.github.io
 | Branch       | Status                                                                                                                                                                                                                          |
 |:-------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | main         | [![Build Status](https://dev.azure.com/dfir-orc/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=main)](https://dev.azure.com/dfir-orc/dfir-orc/_build/latest?definitionId=1&branchName=main)                     |
-| release/10.0 | [![Build Status](https://dev.azure.com/dfir-orc/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=release/10.0.x)](https://dev.azure.com/dfir-orc/dfir-orc/_build/latest?definitionId=1&branchName=release/10.0.x) |
 | release/10.1 | [![Build Status](https://dev.azure.com/dfir-orc/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=release/10.1.x)](https://dev.azure.com/dfir-orc/dfir-orc/_build/latest?definitionId=1&branchName=release/10.1.x) |
+| release/10.2 | [![Build Status](https://dev.azure.com/dfir-orc/dfir-orc/_apis/build/status/DFIR-ORC.dfir-orc?branchName=release/10.2.x)](https://dev.azure.com/dfir-orc/dfir-orc/_build/latest?definitionId=1&branchName=release/10.2.x) |
 
 ### Requirements
-- Visual Studio >=2017 with this [configuration](.vsconfig) or alternatively use [vstools](docs/vstools/vstools.md)
-- Kitware's CMake >= 3.12 or Visual Studio 2017 integrated version
-- LLVM's Clang Format >= 8.0.0 or Visual Studio 2019 integrated version
-
-NB: Visual Studio 2019 16.3 (and 16.4 preview 1) can now compile DFIR ORC.
+- Visual Studio
+  - From 2017 to 2022
+  - English only (vcpkg limitation)
+  - Use this installer [configuration](.vsconfig) or alternatively use [vstools](docs/vstools/vstools.md)
+  - Check also "Desktop development with C++"
+- Kitware's CMake >= 3.25 or Visual Studio integrated version
 
 Build environment can be setup quickly using [Microsoft's developer virtual machines](https://developer.microsoft.com/en-us/windows/downloads/virtual-machines). Import this [.vsconfig](.vsconfig) from **Visual Studio Installer**.
 
@@ -34,11 +35,11 @@ cd dfir-orc
 mkdir build-x86 build-x64
 
 cd build-x86
-cmake -G "Visual Studio 16 2019" -A Win32 -T v141_xp ..
+cmake -G "Visual Studio 17 2022" -A Win32 -T v141_xp ..
 cmake --build . --config MinSizeRel -- -maxcpucount
 
 cd ../build-x64
-cmake -G "Visual Studio 16 2019" -A x64 -T v141_xp ..
+cmake -G "Visual Studio 17 2022" -A x64 -T v141_xp ..
 cmake --build . --config MinSizeRel -- -maxcpucount
 ```
 
@@ -65,7 +66,6 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 | ORC_USE_STATIC_CRT   | ON                    | Use static runtime               |
 | ORC_VCPKG_ROOT       | ${ORC}/external/vcpkg | VCPKG root directory             |
 | ORC_XMLLITE_PATH     |                       | XmlLite.dll path (xp sp2)        |
-| ORC_SWAPRUN_NET      | ON                    | Enable PE flag for network use   |
 | VCPKG_TARGET_TRIPLET | Autodetect            | VCPKG triplet to use             |
 | CMAKE_TOOLCHAIN_FILE | Autodetect            | VCPKG's toolchain file           |
 
@@ -73,15 +73,6 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 
 **Note:** Some combinations may be irrelevant.
 
-
-### Build vcpkg dependencies manually
-See top **CMakeLists.txt** for a complete list of the dependencies to install. Building mainstream vcpkg may not work as some packages have custom patches. The **VERSION.txt** contains the reference commit from official vcpkg repository.
-
-```bash
-cd external/vcpkg
-bootstrap-vcpkg.bat
-vcpkg --vcpkg-root . install fmt:x64-windows-static ...
-```
 
 ## License
 
