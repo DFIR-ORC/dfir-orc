@@ -162,6 +162,18 @@ public:
         return S_OK;
     }
 
+    HRESULT WriteNamedFileTime(LPCWSTR szName, Result<FILETIME> filetime, std::wstring_view message = {})
+    {
+        using namespace std::string_view_literals;
+        if (filetime.has_value())
+            return WriteNamedFileTime(szName, filetime.value());
+        else if (!message.empty())
+            Log::Warn(L"{}: {}"sv, message, filetime.error());
+        else
+            Log::Warn(L"Result in error: {}"sv, filetime.error());
+        return S_OK;
+    }
+
     template <typename... Args>
     HRESULT WriteFormated(const std::wstring_view& szFormat, Args&&... args)
     {
