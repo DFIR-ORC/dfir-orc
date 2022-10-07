@@ -60,7 +60,7 @@ void SplitResourceLink(
     }
 }
 
-Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& xmlStream)
+Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& xmlStream, bool printErrorMessage = true)
 {
     HRESULT hr = xmlStream->SetFilePointer(0, FILE_BEGIN, NULL);
     if (FAILED(hr))
@@ -86,7 +86,11 @@ Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& x
 
     if (FAILED(hr = m_xmllite->CreateXmlReader(IID_IXmlReader, (PVOID*)&reader, nullptr)))
     {
-        XmlLiteExtension::LogError(hr, reader);
+        if (printErrorMessage)
+        {
+            XmlLiteExtension::LogError(hr, reader);
+        }
+
         Log::Debug("Failed to instantiate Xml reader [{}]", SystemError(hr));
         return SystemError(hr);
     }
@@ -95,14 +99,22 @@ Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& x
     hr = m_xmllite->CreateXmlReaderInputWithEncodingName(stream, nullptr, kEncodingHint, FALSE, L"", &pInput);
     if (FAILED(hr))
     {
-        XmlLiteExtension::LogError(hr, reader);
+        if (printErrorMessage)
+        {
+            XmlLiteExtension::LogError(hr, reader);
+        }
+
         Log::Debug("Failed to set output stream [{}]", SystemError(hr));
         return SystemError(hr);
     }
 
     if (FAILED(hr = reader->SetInput(pInput)))
     {
-        XmlLiteExtension::LogError(hr, reader);
+        if (printErrorMessage)
+        {
+            XmlLiteExtension::LogError(hr, reader);
+        }
+
         Log::Debug("Failed to set input stream [{}]", SystemError(hr));
         return SystemError(hr);
     }
@@ -1088,6 +1100,10 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                 {
                     Log::Info(L"Successfully added resource link {} -> {}", item.Name, item.Value);
                 }
+                else
+                {
+                    Log::Error(L"Failed to add resource {} -> {}", item.Name, item.Value);
+                }
 
                 break;
             }
@@ -1102,7 +1118,11 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                             0L,
                             kMaxAttempt)))
                 {
-                    Log::Info(L"Successfully delete resource at position '{}' [{}]", item.Name, SystemError(hr));
+                    Log::Info(L"Successfully delete resource '{}'", item.Name);
+                }
+                else
+                {
+                    Log::Error(L"Failed to delete resource {} [{}]", item.Name, SystemError(hr));
                 }
 
                 break;
@@ -1118,7 +1138,11 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                             0L,
                             kMaxAttempt)))
                 {
-                    Log::Info(L"Successfully delete resource at position '{}' [{}]", item.Name, SystemError(hr));
+                    Log::Info(L"Successfully delete resource '{}'", item.Name);
+                }
+                else
+                {
+                    Log::Error(L"Failed to delete resource {} [{}]", item.Name, SystemError(hr));
                 }
 
                 break;
@@ -1194,7 +1218,7 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
                             (DWORD)data.GetCount(),
                             kMaxAttempt)))
                 {
-                    Log::Info(L"Successfully added '{}' at position '{}'", item.Value, item.Name);
+                    Log::Info(L"Successfully added '{}' as resource '{}'", item.Value, item.Name);
                     resourceRegistry.MarkAsEmbedded(item.Name, L"res");
                 }
                 else
