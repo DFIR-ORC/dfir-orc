@@ -492,6 +492,44 @@ GetXmlElementsValueMatch(const std::shared_ptr<ByteStream>& xmlStream, std::wstr
     return values;
 }
 
+bool IsXmlFile(const std::filesystem::path& path)
+{
+    // Check if this is a resource path
+    if (path.filename().string().find_last_of(":#") != std::string::npos)
+    {
+        return false;
+    }
+
+    // No extension: default toolembed configuration dump some XML files without extension
+    if (path.has_extension() && !boost::iequals(path.extension().c_str(), ".xml"))
+    {
+        return false;
+    }
+
+    std::error_code ec;
+    if (!std::filesystem::exists(path, ec) || ec)
+    {
+        return false;
+    }
+
+    auto filestream = make_shared<FileStream>();
+    HRESULT hr = filestream->ReadFrom(path.c_str());
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to open file '{}', cannot check if it looks like XML [{}]", path, SystemError(hr));
+        return false;
+    }
+
+    auto xmlReader = CreateXmlReader(filestream, false);
+    if (xmlReader.has_error())
+    {
+        return false;
+    }
+
+    XmlNodeType nodeType = XmlNodeType_None;
+    return SUCCEEDED(xmlReader.value()->Read(&nodeType));
+}
+
 // parse all resource links from xml files and register them to check later if they have been embedded
 Result<std::vector<XmlString>> GetResourceLinks(std::wstring_view path)
 {
@@ -538,7 +576,28 @@ Result<std::vector<XmlString>> GetResourceLinks(std::wstring_view path)
     return links;
 }
 
-// Register resource link from attributes and elements (ex: '7z:#TOOLS|Foo.exe') so later they can be marked as embedded
+void RegisterResourceLinksFromFile(const std::filesystem::path& path, ResourceRegistry& resourceRegistry)
+{
+    if (!IsXmlFile(path))
+    {
+        return;
+    }
+
+    auto links = GetResourceLinks(path.wstring());
+    if (links.has_error())
+    {
+        Log::Error(L"Resource embedding check disabled for '{}' [{}]", path, links.error());
+    }
+    else
+    {
+        for (auto& link : *links)
+        {
+            resourceRegistry.Items().emplace_back(std::move(link));
+        }
+    }
+}
+
+// Register resource link from attributes and elements like '7z:#TOOLS|Foo.exe' so later they can be marked as embedded
 void RegisterResourceLinks(const std::vector<EmbeddedResource::EmbedSpec>& ToEmbed, ResourceRegistry& resourceRegistry)
 {
     for (auto iter = ToEmbed.begin(); iter != ToEmbed.end(); ++iter)
@@ -557,31 +616,32 @@ void RegisterResourceLinks(const std::vector<EmbeddedResource::EmbedSpec>& ToEmb
                 }
                 break;
             }
+            case EmbeddedResource::EmbedSpec::EmbedType::Archive: {
+                for (auto& archiveItem : item.ArchiveItems)
+                {
+                    RegisterResourceLinksFromFile(archiveItem.Path, resourceRegistry);
+                }
+                break;
+            }
             case EmbeddedResource::EmbedSpec::EmbedType::File: {
                 if (boost::iequals(item.Name, L"WOLFLAUNCHER_CONFIG"))
                 {
+                    // Register to pass the referenced check before exit
                     XmlString resourceLink;
                     resourceLink.value = std::wstring(L"res:#") + item.Name;
                     resourceRegistry.Items().emplace_back(resourceLink);
                 }
+                else if (boost::iends_with(item.Value, L"_SQLSCHEMA"))
+                {
+                    // Register to pass the referenced check before exit
+                    XmlString resourceLink;
+                    resourceLink.value = std::wstring(L"res:#") + item.Name;
+                    resourceRegistry.Items().emplace_back(resourceLink);
 
-                if (!EndsWith(item.Value, L".xml"))
-                {
-                    break;
+                    continue;  // nothing else to register
                 }
 
-                auto links = GetResourceLinks(item.Value);
-                if (links.has_error())
-                {
-                    Log::Error(L"Resource embedding check disabled for '{}' [{}]", item.Value, links.error());
-                }
-                else
-                {
-                    for (auto& link : *links)
-                    {
-                        resourceRegistry.Items().emplace_back(std::move(link));
-                    }
-                }
+                RegisterResourceLinksFromFile(item.Value, resourceRegistry);
                 break;
             }
             default:
@@ -742,6 +802,26 @@ Result<std::vector<XmlString>> FindYaraRules(std::wstring_view path)
     return yaraRules;
 }
 
+void RegisterYaraRules(const std::filesystem::path& path, std::vector<XmlString>& yaraRules)
+{
+    if (!IsXmlFile(path))
+    {
+        return;
+    }
+
+    auto result = FindYaraRules(path.wstring());
+    if (!result)
+    {
+        Log::Error(L"Failed to parse configuration while looking for Yara rules '{}' [{}]", path, result.error());
+        return;
+    }
+
+    for (const auto& rule : result.value())
+    {
+        yaraRules.emplace_back(rule);
+    }
+}
+
 void RegisterYaraRules(const std::vector<EmbeddedResource::EmbedSpec>& ToEmbed, std::vector<XmlString>& yaraRules)
 {
     for (auto iter = ToEmbed.begin(); iter != ToEmbed.end(); ++iter)
@@ -751,29 +831,20 @@ void RegisterYaraRules(const std::vector<EmbeddedResource::EmbedSpec>& ToEmbed, 
         switch (item.Type)
         {
             case EmbeddedResource::EmbedSpec::EmbedType::NameValuePair:
-            case EmbeddedResource::EmbedSpec::EmbedType::File:
+            case EmbeddedResource::EmbedSpec::EmbedType::File: {
+                RegisterYaraRules(item.Value, yaraRules);
                 break;
+            }
+            case EmbeddedResource::EmbedSpec::EmbedType::Archive: {
+                for (const auto& archiveItem : item.ArchiveItems)
+                {
+                    RegisterYaraRules(archiveItem.Path, yaraRules);
+                }
+                break;
+            }
 
             default:
                 continue;
-        }
-
-        if (!EndsWith(item.Value, L".xml"))
-        {
-            continue;
-        }
-
-        auto result = FindYaraRules(item.Value);
-        if (!result)
-        {
-            Log::Error(
-                L"Failed to parse configuration while looking for Yara rules '{}' [{}]", item.Value, result.error());
-            continue;
-        }
-
-        for (const auto& rule : result.value())
-        {
-            yaraRules.emplace_back(std::move(rule));
         }
     }
 }
