@@ -224,14 +224,14 @@ Authenticode::Authenticode()
     {
         if (FAILED(hr = m_wintrust.Load()))
         {
-            Log::Warn("Failed to load WinTrust [{}]", SystemError(hr));
+            Log::Error("Failed to load WinTrust [{}]", SystemError(hr));
             return;
         }
     }
 
     if (FAILED(hr = m_wintrust.CryptCATAdminAcquireContext(&m_hContext)))
     {
-        Log::Warn("Failed to acquired context [{}]", SystemError(hr));
+        Log::Error("Failed to CryptCATAdminAcquireContext [{}]", SystemError(hr));
         return;
     }
 
@@ -243,7 +243,7 @@ Authenticode::Authenticode()
         L"MY");
     if (m_hMachineStore == NULL)
     {
-        Log::Warn("Failed to open cert store [{}]", LastWin32Error());
+        Log::Error("Failed CertOpenStore [{}]", LastWin32Error());
         return;
     }
 }
@@ -307,7 +307,12 @@ HRESULT Authenticode::FindCatalogForHash(const CBinaryBuffer& hash, bool& isCata
         // If we couldn't get information
         if (!m_wintrust.CryptCATCatalogInfoFromContext(CatalogContext, &InfoStruct, 0))
         {
-            m_wintrust.CryptCATAdminReleaseCatalogContext(m_hContext, CatalogContext, 0);
+            BOOL ret = m_wintrust.CryptCATAdminReleaseCatalogContext(m_hContext, CatalogContext, 0);
+            if (ret == FALSE)
+            {
+                Log::Error("Failed CryptCATAdminReleaseCatalogContext [{}]", LastWin32Error());
+            }
+
             CatalogContext = NULL;
         }
         else
@@ -603,7 +608,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
 
             if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
             {
-                Log::Warn("Failed CryptCATAdminReleaseCatalogContext [{}]", LastWin32Error());
+                Log::Error("Failed CryptCATAdminReleaseCatalogContext [{}]", LastWin32Error());
             }
 
             return hr;
@@ -623,7 +628,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
 
             if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
             {
-                Log::Warn("Failed CryptCATAdminReleaseCatalogContext [{}]", LastWin32Error());
+                Log::Error("Failed CryptCATAdminReleaseCatalogContext [{}]", LastWin32Error());
             }
 
             return hr;
@@ -643,7 +648,7 @@ HRESULT Authenticode::VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const P
 
             if (!CryptCATAdminReleaseCatalogContext(m_hContext, hCatalog, 0))
             {
-                Log::Warn("Failed CryptCATAdminReleaseCatalogContext [{}]", LastWin32Error());
+                Log::Error("Failed CryptCATAdminReleaseCatalogContext [{}]", LastWin32Error());
             }
 
             return hr;
@@ -1281,7 +1286,6 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
     {
         if (pWin->wCertificateType == WIN_CERT_TYPE_PKCS_SIGNED_DATA && pWin->wRevision == WIN_CERT_REVISION_2_0)
         {
-
             CBinaryBuffer signature(pWin->bCertificate, pWin->dwLength);
 
             data.isSigned = true;
@@ -1334,7 +1338,7 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
             }
             else
             {
-                Log::Warn("Signature could not be verified");
+                Log::Warn(L"Signature could not be verified '{}'", szFileName);
                 data.bSignatureVerifies = false;
             }
 
@@ -1412,9 +1416,22 @@ HRESULT Orc::Authenticode::SignatureSize(LPCWSTR szFileName, const CBinaryBuffer
 Authenticode::~Authenticode()
 {
     if (m_hContext != INVALID_HANDLE_VALUE)
-        m_wintrust.CryptCATAdminReleaseContext(m_hContext, 0);
+    {
+        BOOL ret = m_wintrust.CryptCATAdminReleaseContext(m_hContext, 0);
+        if (ret == FALSE)
+        {
+            Log::Error("Failed CryptCATAdminReleaseContext [{}]", LastWin32Error());
+        }
+    }
+
     if (m_hMachineStore != INVALID_HANDLE_VALUE)
-        CertCloseStore(m_hMachineStore, 0L);
+    {
+        BOOL ret = CertCloseStore(m_hMachineStore, 0L);
+        if (ret == FALSE)
+        {
+            Log::Error("Failed CertCloseStore [{}]", LastWin32Error());
+        }
+    }
 }
 
 Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
