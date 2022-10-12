@@ -47,6 +47,10 @@ target_link_libraries(FastFind
         VisualStudio::atls
 )
 
+if(${ORC_SWAPRUN_NET})
+    target_link_options(FastFind PRIVATE "/SWAPRUN:NET")
+endif()
+
 set_target_properties(FastFind
     PROPERTIES
         OUTPUT_NAME "FastFind_${TARGET_ARCH}"
@@ -82,14 +86,6 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
                     $<TARGET_FILE:FastFind>
         )
     endif()
-endif()
-
-if(${ORC_SWAPRUN_NET})
-    add_custom_command(
-            TARGET FastFind
-            POST_BUILD
-            COMMAND editbin /swaprun:net $<TARGET_FILE:Orc>
-    )
 endif()
 
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)

@@ -61,6 +61,10 @@ target_link_libraries(Orc
         VisualStudio::atls
 )
 
+if(${ORC_SWAPRUN_NET})
+    target_link_options(Orc PRIVATE "/SWAPRUN:NET")
+endif()
+
 target_precompile_headers(Orc PRIVATE stdafx.h)
 
 if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
@@ -89,14 +93,6 @@ if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
                     $<TARGET_FILE:Orc>
         )
     endif()
-endif()
-
-if(${ORC_SWAPRUN_NET})
-    add_custom_command(
-            TARGET Orc
-            POST_BUILD
-            COMMAND editbin /swaprun:net $<TARGET_FILE:Orc>
-    )
 endif()
 
 if(${ORC_BUILD_PARQUET})
