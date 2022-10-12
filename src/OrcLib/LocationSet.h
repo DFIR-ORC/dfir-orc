@@ -61,13 +61,12 @@ private:
     std::unordered_map<ULONGLONG, VolumeLocations> m_Volumes;
     std::vector<std::shared_ptr<Location>> m_UniqueLocations;
     std::vector<std::shared_ptr<Location>> m_AltitudeLocations;
-    std::vector<VolumeShadowCopies::Shadow> m_Shadows;
+    Ntfs::ShadowCopy::ParserType m_shadowCopyParserType;
 
     Altitude m_Altitude = GetDefaultAltitude();
 
     bool m_bMountedVolumesPopulated = false;
     bool m_bPhysicalDrivesPopulated = false;
-    bool m_bShadowsPopulated = false;
     bool m_bSystemObjectsPopulated =
         true;  // by default we don't want system objects to be populated -> way too dangerous
     bool m_bInterfacesPopulated = false;
@@ -76,7 +75,6 @@ private:
 
     HRESULT PopulateMountedVolumes();
     HRESULT PopulatePhysicalDrives();
-    HRESULT PopulateShadows();
     HRESULT PopulateSystemObjects(bool bInterfacesOnly);
 
     HRESULT AddLocation(
@@ -110,14 +108,16 @@ private:
     HRESULT Reset();
 
 public:
-    LocationSet() {}
+    LocationSet()
+        : m_shadowCopyParserType(Ntfs::ShadowCopy::ParserType::kInternal)
+    {
+    }
 
     LocationSet(LocationSet&& anOther)
     {
         std::swap(m_Locations, anOther.m_Locations);
         m_bMountedVolumesPopulated = anOther.m_bMountedVolumesPopulated;
         m_bPhysicalDrivesPopulated = anOther.m_bPhysicalDrivesPopulated;
-        m_bShadowsPopulated = anOther.m_bShadowsPopulated;
         m_bSystemObjectsPopulated = anOther.m_bSystemObjectsPopulated;
     };
 
@@ -133,6 +133,16 @@ public:
 
     const std::unordered_map<ULONGLONG, VolumeLocations>& GetVolumes() const { return m_Volumes; }
 
+    void SetShadowCopyParser(Ntfs::ShadowCopy::ParserType value)
+    {
+        m_shadowCopyParserType = value;
+
+        for (auto& location : m_Locations)
+        {
+            location.second->SetShadowCopyParser(m_shadowCopyParserType);
+        }
+    }
+
     Altitude& GetAltitude() { return m_Altitude; }
 
     // enumerate / add location	methods
@@ -141,13 +151,13 @@ public:
         std::wstring& canonicalLocation,
         Location::Type& locType,
         std::wstring& subpath);
+
     HRESULT EnumerateLocations();
 
     // configure enumeration
     void SetPopulateMountedVolumes(bool bPopulate) { m_bMountedVolumesPopulated = !bPopulate; }
     void SetPopulatePhysicalDrives(bool bPopulate) { m_bPhysicalDrivesPopulated = !bPopulate; }
     void SetPopulateSystemObjects(bool bPopulate) { m_bSystemObjectsPopulated = !bPopulate; }
-    void SetPopulateShadows(bool bPopulate) { m_bShadowsPopulated = !bPopulate; }
 
     HRESULT
     AddLocation(const std::shared_ptr<Location>& loc, std::shared_ptr<Location>& addedLoc, bool bToParse = true);
@@ -165,23 +175,7 @@ public:
         bool bParseShadows,
         const ShadowFilters& shadows,
         const PathExcludes& excludes,
-        FSVBR::FSType filterFSTypes)
-    {
-        Reset();
-
-        // remove duplicate and useless locations (for example if we are dealing with an image disk then keep only the
-        // location of the image disk)
-        EliminateDuplicateLocations();
-        EliminateUselessLocations(m_Locations);
-
-        // try to valid all locations and remove invalid locations
-        ValidateLocations(m_Locations);
-        EliminateInvalidLocations(m_Locations);
-
-        AltitudeLocations(m_Altitude, bParseShadows, shadows, excludes, filterFSTypes);
-
-        return S_OK;
-    }
+        FSVBR::FSType filterFSTypes);
 
     HRESULT Consolidate(bool bParseShadows, FSVBR::FSType filterFSTypes)
     {

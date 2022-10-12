@@ -43,6 +43,9 @@
 #include "ProfileList.h"
 #include "Utils/Guid.h"
 
+#include "Utils/Guid.h"
+#include "Stream/VolumeStreamReader.h"
+
 using namespace std;
 
 using namespace Orc;
@@ -159,6 +162,16 @@ void FilterLocations(
     const LocationSet::ShadowFilters& filters,
     std::set<Location::Ptr>& output)
 {
+    if (filters.empty())
+    {
+        for (const auto& loc : locations)
+        {
+            output.insert(loc);
+        }
+
+        return;
+    }
+
     ShadowCopyLocations shadows;
     GetShadowCopyLocations(locations, shadows);
     if (shadows.guids.empty())
@@ -196,7 +209,7 @@ void FilterLocations(
 }
 
 void GetExcludedVolumeLocations(
-    LocationSet::VolumeLocations& volume,
+    const LocationSet::VolumeLocations& volume,
     const LocationSet::PathExcludes& excludedPaths,
     std::vector<Location::Ptr>& excludedLocations)
 {
@@ -708,11 +721,6 @@ HRESULT LocationSet::EnumerateLocations()
     if (!m_bSystemObjectsPopulated && FAILED(hr = PopulateSystemObjects(false)))
     {
         Log::Warn("Failed to parse system objects [{}]", SystemError(hr));
-    }
-
-    if (!m_bShadowsPopulated && FAILED(hr = PopulateShadows()))
-    {
-        Log::Warn("Failed to add VSS shadow Copies [{}]", SystemError(hr));
     }
 
     if (FAILED(hr = EliminateDuplicateLocations()))
@@ -1426,6 +1434,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
                     loc->m_Type = Location::Type::MountedVolume;
                     loc->m_Extents = std::move(diskextents);
                     loc->SetParse(false);
+                    loc->SetShadowCopyParser(m_shadowCopyParserType);
 
                     std::shared_ptr<Location> addedLoc;
                     if (FAILED(hr = AddLocation(loc, addedLoc, false)))
@@ -1461,6 +1470,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
                     dev_loc->m_Paths = loc->m_Paths;
                     dev_loc->m_Type = Location::Type::MountedVolume;
                     dev_loc->m_Extents = loc->m_Extents;
+                    dev_loc->SetShadowCopyParser(loc->m_shadowCopyParserType);
 
                     if (FAILED(hr = AddLocation(dev_loc, addedLoc, false)))
                     {
@@ -1529,50 +1539,6 @@ HRESULT LocationSet::PopulatePhysicalDrives()
     }
 
     m_bPhysicalDrivesPopulated = true;
-    return S_OK;
-}
-
-HRESULT LocationSet::PopulateShadows()
-{
-    if (m_bShadowsPopulated)
-        return S_OK;
-
-    Log::Trace(L"Populating shadow volumes");
-    HRESULT hr = E_FAIL;
-    VolumeShadowCopies vss;
-
-    if (FAILED(hr = vss.EnumerateShadows(m_Shadows)))
-    {
-        Log::Warn("VSS functionatility is not available [{}]", SystemError(hr));
-    }
-    else
-    {
-        for (auto& shadow : m_Shadows)
-        {
-            std::vector<std::shared_ptr<Location>> addedLocs;
-
-            if (FAILED(hr = AddLocations(shadow.DeviceInstance.c_str(), addedLocs, false)))
-            {
-                Log::Error(L"Failed to add volume shadow copy '{}' [{}]", shadow.DeviceInstance, SystemError(hr));
-            }
-            else
-            {
-                for (auto& added : addedLocs)
-                {
-                    if (added->GetType() != Location::Type::Snapshot)
-                    {
-                        Log::Warn(L"Added location '{}' is not a snapshot", added->GetLocation());
-                    }
-                    else
-                    {
-                        added->SetShadow(shadow);
-                        Log::Debug(L"Added VSS snapshot '{}'", added->GetLocation());
-                    }
-                }
-            }
-        }
-    }
-    m_bShadowsPopulated = true;
     return S_OK;
 }
 
@@ -1829,6 +1795,7 @@ HRESULT LocationSet::AddLocation(
         auto pair = std::make_pair<wstring, shared_ptr<Location>>(
             wstring(strLocation), make_shared<Location>(strLocation, locType));
         pair.second->SetParse(bToParse);
+        pair.second->SetShadowCopyParser(m_shadowCopyParserType);
         addedLoc = pair.second;
 
         if (!subdir.empty())
@@ -2125,6 +2092,29 @@ HRESULT LocationSet::UniqueLocations(FSVBR::FSType filterFSTypes)
     return S_OK;
 }
 
+HRESULT
+LocationSet::Consolidate(
+    bool bParseShadows,
+    const ShadowFilters& shadows,
+    const PathExcludes& excludes,
+    FSVBR::FSType filterFSTypes)
+{
+    Reset();
+
+    // remove duplicate and useless locations (for example if we are dealing with an image disk then keep only the
+    // location of the image disk)
+    EliminateDuplicateLocations();
+    EliminateUselessLocations(m_Locations);
+
+    // try to valid all locations and remove invalid locations
+    ValidateLocations(m_Locations);
+    EliminateInvalidLocations(m_Locations);
+
+    AltitudeLocations(m_Altitude, bParseShadows, shadows, excludes, filterFSTypes);
+
+    return S_OK;
+}
+
 HRESULT LocationSet::AltitudeLocations(
     LocationSet::Altitude alt,
     bool bParseShadows,
@@ -2144,6 +2134,7 @@ HRESULT LocationSet::AltitudeLocations(
 
     m_Volumes.reserve(m_UniqueLocations.size());
 
+    // Fill or update m_Volumes with serial number, locations, ...
     for (const auto& loc : m_UniqueLocations)
     {
         if (loc->IsValid())
@@ -2201,6 +2192,7 @@ HRESULT LocationSet::AltitudeLocations(
         std::vector<Location::Ptr> excludedLocations;
         ::GetExcludedVolumeLocations(aPair.second, excludedPaths, excludedLocations);
 
+        // Sort volumes according to altitude
         std::sort(
             begin(aPair.second.Locations),
             end(aPair.second.Locations),
@@ -2217,72 +2209,106 @@ HRESULT LocationSet::AltitudeLocations(
                 return ((DWORD)left->GetType()) < ((DWORD)right->GetType());
             });
 
+        // Remove duplicates
         {
             auto& vec = aPair.second.Paths;
             sort(begin(vec), end(vec));
             vec.erase(unique(vec.begin(), vec.end()), vec.end());
         }
+
+        // Remove duplicates
         {
             auto& vec = aPair.second.SubDirs;
             sort(begin(vec), end(vec));
             vec.erase(unique(vec.begin(), vec.end()), vec.end());
         }
 
+        // Clear all sub path/subdirs stored into locations
         for (const auto& loc : aPair.second.Locations)
         {
             loc->m_Paths.clear();
             loc->m_SubDirs.clear();
         }
 
-        // case Altitude::Lowest|Altitude::Highest
-        std::set<Location::Ptr> shadowsSelection;
-        if (bParseShadows && !shadowFilters.empty())
+        Location::Ptr location;
+        for (const auto& loc : aPair.second.Locations)
         {
-            ::FilterLocations(aPair.second.Locations, shadowFilters, shadowsSelection);
+            if (loc->GetType() == LocationType::Snapshot)
+            {
+                continue;
+            }
+
+            location = loc;
+            break;
+        }
+
+        if (location == nullptr)
+        {
+            continue;
         }
 
         switch (alt)
         {
+            // TODO: @Jean: Why altitude lowest and highest are processed with same 'case' ?
             case Altitude::Lowest:
             case Altitude::Highest: {
-                bool bActualData = false;
-                for (const auto& loc : aPair.second.Locations)
-                {
-                    if (loc->GetType() == Location::Type::Snapshot)
-                    {
-                        if (bParseShadows)
-                        {
-                            if (shadowFilters.empty() || shadowsSelection.find(loc) != std::cend(shadowsSelection))
-                            {
-                                loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
-                                loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
-                                loc->m_bParse = aPair.second.Parse;
-                                retval.push_back(loc);
-                            }
-                        }
-                    }
-                    else if (bActualData == false)
-                    {
-                        loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
-                        loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
-                        loc->m_bParse = aPair.second.Parse && ::NotContain(loc, excludedLocations);
-                        retval.push_back(loc);
-                        bActualData = true;
-                    }
-                }
+                location->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
+                location->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
+                location->m_bParse = aPair.second.Parse && ::NotContain(location, excludedLocations);
+                retval.push_back(location);
             }
             break;
             case Altitude::Exact:
-                for (const auto& loc : aPair.second.Locations)
-                {
-                    loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
-                    loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
-                    loc->m_bParse = aPair.second.Parse && ::NotContain(loc, excludedLocations);
-                    retval.push_back(loc);
-                }
+                Log::Error("Unexpected code path");
+                assert(0 && "Unexpected code path");  // The 'Exact' altitude will make return before getting there
                 break;
         }
+
+        if (bParseShadows && aPair.second.Parse)
+        {
+            auto reader = location->GetReader();
+            if (!reader)
+            {
+                continue;
+            }
+
+            std::error_code ec;
+            std::vector<VolumeShadowCopies::Shadow> shadows;
+            location->EnumerateShadowCopies(shadows, ec);
+            if (ec)
+            {
+                Log::Error("Failed to enumerate shadow copies [{}]", ec);
+                continue;
+            }
+
+            if (shadows.empty())
+            {
+                continue;
+            }
+
+            std::vector<Location::Ptr> shadowCopiesLocations;
+            for (auto& shadow : shadows)
+            {
+                auto vssLoc = std::make_shared<Location>(L"", Location::Type::Snapshot);
+                vssLoc->SetShadow(std::move(shadow));
+                vssLoc->SetShadowCopyParser(m_shadowCopyParserType);
+                shadowCopiesLocations.push_back(std::move(vssLoc));
+            }
+
+            std::set<Location::Ptr> shadowsSelection;
+            ::FilterLocations(shadowCopiesLocations, shadowFilters, shadowsSelection);
+
+            for (const auto& loc : shadowsSelection)
+            {
+                loc->m_Paths.assign(begin(aPair.second.Paths), end(aPair.second.Paths));
+                loc->m_SubDirs.assign(begin(aPair.second.SubDirs), end(aPair.second.SubDirs));
+                loc->m_bParse = aPair.second.Parse;
+                loc->m_bIsValid = location->IsValid();
+                retval.push_back(loc);
+            }
+        }
     }
+
     std::swap(m_AltitudeLocations, retval);
     return S_OK;
 }
@@ -2306,7 +2332,6 @@ HRESULT LocationSet::EliminateUselessLocations(Locations& locations)
             if (aPair.second->GetType() == Location::Type::ImageFileDisk
                 || aPair.second->GetType() == Location::Type::ImageFileVolume)
             {
-
                 hasOfflineLocations = true;
             }
         });

@@ -37,7 +37,6 @@ public:
 
         LocationSet locSet;
         locSet.SetPopulatePhysicalDrives(false);
-        locSet.SetPopulateShadows(false);
         locSet.SetPopulateSystemObjects(false);
         Assert::IsTrue(S_OK == locSet.EnumerateLocations());
         Assert::IsTrue(S_OK == locSet.Consolidate(false, FSVBR::FSType::NTFS));

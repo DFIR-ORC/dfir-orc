@@ -25,9 +25,9 @@ std::shared_ptr<VolumeReader> SnapshotVolumeReader::DuplicateReader()
     return retval;
 }
 
-SnapshotVolumeReader::SnapshotVolumeReader(const VolumeShadowCopies::Shadow& Snapshot)
-    : CompleteVolumeReader(Snapshot.DeviceInstance.c_str())
-    , m_Shadow(Snapshot)
+SnapshotVolumeReader::SnapshotVolumeReader(const VolumeShadowCopies::Shadow& shadow)
+    : CompleteVolumeReader(shadow.DeviceInstance.c_str())
+    , m_Shadow(shadow)
 {
 }
 

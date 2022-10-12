@@ -163,14 +163,6 @@ HRESULT Main::CheckConfiguration()
         config.m_excludes.value_or(LocationSet::PathExcludes()),
         FSVBR::FSType::NTFS);
 
-    if (config.locs.IsEmpty() != S_OK)
-    {
-        Log::Critical(
-            "No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
-            "want parsed");
-        return E_INVALIDARG;
-    }
-
     if (config.output.Type == OutputSpec::Kind::None)
     {
         config.output.Type = static_cast<OutputSpec::Kind>(OutputSpec::Kind::TableFile | OutputSpec::Kind::CSV);

@@ -16,6 +16,7 @@
 #include "DiskExtent.h"
 #include "FSVBR.h"
 #include "Text/Fmt/LocationType.h"
+#include "Filesystem/Ntfs/ShadowCopy/ParserType.h"
 
 #pragma managed(push, off)
 
@@ -44,21 +45,23 @@ private:
     std::vector<std::wstring> m_SubDirs;
 
     std::shared_ptr<VolumeShadowCopies::Shadow> m_Shadow;
+    Ntfs::ShadowCopy::ParserType m_shadowCopyParserType;
 
     bool m_bParse = false;
     bool m_bIsValid = false;
 
     void MakeIdentifier();
 
+public:
+    Location(const std::wstring& Location, Type type);
+
     void SetShadow(const VolumeShadowCopies::Shadow& shadow)
     {
         m_Shadow = std::make_shared<VolumeShadowCopies::Shadow>(shadow);
     }
 
-public:
-    Location(const std::wstring& Location, Type type);
+    const std::wstring GetLocation() const;
 
-    const std::wstring& GetLocation() const { return m_Location; }
     const std::wstring& GetIdentifier()
     {
         if (m_Identifier.empty())
@@ -83,8 +86,18 @@ public:
     bool IsFAT16() const { return GetFSType() == FSVBR::FSType::FAT16; }
     bool IsFAT32() const { return GetFSType() == FSVBR::FSType::FAT32; }
 
+    void EnumerateShadowCopies(std::vector<VolumeShadowCopies::Shadow>& shadows, std::error_code& ec);
+
+    void SetShadowCopyParser(Ntfs::ShadowCopy::ParserType value) { m_shadowCopyParserType = value; };
+
     // reader object
     std::shared_ptr<VolumeReader> GetReader();
+
+protected:
+    void EnumerateShadowCopiesWithInternalParser(std::vector<VolumeShadowCopies::Shadow>& shadows, std::error_code& ec);
+
+    void
+    EnumerateShadowCopiesWithMicrosoftParser(std::vector<VolumeShadowCopies::Shadow>& shadows, std::error_code& ec);
 };
 
 std::wostream& operator<<(std::wostream& o, const Location& l);

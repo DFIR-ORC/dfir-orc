@@ -644,6 +644,14 @@ HRESULT Main::RunThroughMFT()
         return (loc->GetParse() && loc->IsNTFS());
     });
 
+    if (locations.empty())
+    {
+        Log::Critical(
+            L"No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
+            L"want parsed");
+        return E_INVALIDARG;
+    }
+
     std::copy_if(begin(locs), end(locs), back_inserter(allLocations), [](const std::shared_ptr<Location>& loc) {
         if (loc == nullptr)
             return false;

@@ -213,6 +213,8 @@ set(SRC_DISK_VOLUME
     "OfflineMFTReader.h"
     "PhysicalDiskReader.cpp"
     "PhysicalDiskReader.h"
+    "ShadowCopyVolumeReader.cpp"
+    "ShadowCopyVolumeReader.h"
     "SnapshotVolumeReader.cpp"
     "SnapshotVolumeReader.h"
     "SystemStorageReader.cpp"

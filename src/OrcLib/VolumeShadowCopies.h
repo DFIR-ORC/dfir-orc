@@ -20,6 +20,7 @@
 namespace Orc {
 
 class Location;
+class VolumeReader;
 
 class VolumeShadowCopies
 {
@@ -34,6 +35,7 @@ public:
         VSS_VOLUME_SNAPSHOT_ATTRIBUTES Attributes;
         VSS_TIMESTAMP CreationTime;
         GUID guid;
+        std::shared_ptr<VolumeReader> parentVolume;
 
         Shadow(
             LPCWSTR szVolume,
@@ -45,7 +47,8 @@ public:
             , DeviceInstance(szDevice)
             , Attributes(attrs)
             , CreationTime(time)
-            , guid(id) {};
+            , guid(id)
+            , parentVolume() {};
     };
 
 private:

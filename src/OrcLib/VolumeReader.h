@@ -17,7 +17,7 @@
 
 namespace Orc {
 
-class VolumeReader
+class VolumeReader : public std::enable_shared_from_this<VolumeReader>
 {
 public:
     using CDiskExtentVector = std::vector<CDiskExtent>;

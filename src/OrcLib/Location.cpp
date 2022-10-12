@@ -14,10 +14,12 @@
 
 #include "Configuration/ConfigFileReader.h"
 
+#include "Stream/VolumeStreamReader.h"
+
 #include "PhysicalDiskReader.h"
 #include "InterfaceReader.h"
 #include "SystemStorageReader.h"
-#include "SnapshotVolumeReader.h"
+#include "ShadowCopyVolumeReader.h"
 #include "ImageReader.h"
 #include "MountedVolumeReader.h"
 #include "OfflineMFTReader.h"
@@ -33,6 +35,150 @@ Location::Location(const std::wstring& Location, Location::Type type)
     : m_Location(Location)
     , m_Type(type)
 {
+}
+
+const std::wstring Location::GetLocation() const
+{
+    if (m_Shadow)
+    {
+        if (m_shadowCopyParserType == Ntfs::ShadowCopy::ParserType::kMicrosoft)
+        {
+            return fmt::format(L"Shadow Copy {} ({})", m_Shadow->guid, m_Shadow->DeviceInstance);
+        }
+        else
+        {
+            return fmt::format(L"Shadow Copy {}", m_Shadow->guid);
+        }
+    }
+
+    return m_Location;
+}
+
+void Location::EnumerateShadowCopies(std::vector<VolumeShadowCopies::Shadow>& shadows, std::error_code& ec)
+{
+    Log::Debug("Set volume shadow copy parser to '{}'", ToString(m_shadowCopyParserType));
+
+    switch (m_shadowCopyParserType)
+    {
+        case Ntfs::ShadowCopy::ParserType::kMicrosoft: {
+            return EnumerateShadowCopiesWithMicrosoftParser(shadows, ec);
+        }
+        case Ntfs::ShadowCopy::ParserType::kInternal: {
+            return EnumerateShadowCopiesWithInternalParser(shadows, ec);
+        }
+        default:
+            break;
+    }
+
+    ec = std::make_error_code(std::errc::not_supported);
+}
+
+void Location::EnumerateShadowCopiesWithMicrosoftParser(
+    std::vector<VolumeShadowCopies::Shadow>& shadows,
+    std::error_code& ec)
+{
+    std::vector<VolumeShadowCopies::Shadow> everyShadows;
+
+    VolumeShadowCopies vss;
+    HRESULT hr = vss.EnumerateShadows(everyShadows);
+    if (FAILED(hr))
+    {
+        ec = SystemError(hr);
+        Log::Debug("Failed to enumerate shadow copies [{}]", ec);
+        return;
+    }
+
+    for (auto& shadow : everyShadows)
+    {
+        auto loc = std::make_shared<Location>(L"", Location::Type::Snapshot);
+        loc->SetShadowCopyParser(m_shadowCopyParserType);
+        loc->SetShadow(shadow);
+        auto reader = loc->GetReader();
+        if (!reader)
+        {
+            Log::Debug("Failed to get reader for shadow copy {}", shadow.guid);
+            continue;
+        }
+
+        hr = reader->LoadDiskProperties();
+        if (FAILED(hr))
+        {
+            continue;
+        }
+
+        if (SerialNumber() == 0 || SerialNumber() != reader->VolumeSerialNumber())
+        {
+            continue;
+        }
+
+        shadow.parentVolume = reader;
+        shadows.push_back(std::move(shadow));
+    }
+
+    std::sort(
+        std::begin(shadows),
+        std::end(shadows),
+        [](const VolumeShadowCopies::Shadow& lhs, const VolumeShadowCopies::Shadow& rhs) {
+            return lhs.CreationTime < rhs.CreationTime;
+        });
+}
+
+void Location::EnumerateShadowCopiesWithInternalParser(
+    std::vector<VolumeShadowCopies::Shadow>& shadows,
+    std::error_code& ec)
+{
+    using namespace Ntfs::ShadowCopy;
+
+    auto reader = GetReader();
+    if (!reader)
+    {
+        Log::Debug("Failed to get reader");
+        ec = std::make_error_code(std::errc::no_stream_resources);
+        return;
+    }
+
+    if (reader->GetFSType() != FSVBR_FSType::NTFS)
+    {
+        Log::Debug("Ignore shadow copy for stream type: {}", reader->GetFSType());
+        return;
+    }
+
+    auto dataStream = VolumeStreamReader(reader);
+
+    Log::Debug(L"Enumerate shadow copies (location: {})", GetLocation());
+
+    if (!HasSnapshotsIndex(dataStream, ec))
+    {
+        if (ec)
+        {
+            Log::Debug(L"Failed when looking for shadow copies {} [{}]", GetLocation(), ec);
+        }
+
+        return;
+    }
+
+    std::vector<Orc::Ntfs::ShadowCopy::ShadowCopyInformation> shadowCopies;
+    GetShadowCopiesInformation(dataStream, shadowCopies, ec);
+    if (ec)
+    {
+        Log::Error(L"Failed to parse shadow copies for {} [{}]", GetLocation(), ec);
+        ec.clear();
+        return;
+    }
+
+    for (const auto& shadowCopy : shadowCopies)
+    {
+        auto shadow = VolumeShadowCopies::Shadow(
+            L"",
+            GetLocation().c_str(),
+            static_cast<VSS_VOLUME_SNAPSHOT_ATTRIBUTES>(shadowCopy.VolumeSnapshotAttributes()),
+            *(reinterpret_cast<const VSS_TIMESTAMP*>(&shadowCopy.CreationTime())),
+            shadowCopy.ShadowCopyId());
+
+        shadow.parentVolume = GetReader();
+
+        shadows.push_back(std::move(shadow));
+    }
 }
 
 std::shared_ptr<VolumeReader> Location::GetReader()
@@ -55,7 +201,17 @@ std::shared_ptr<VolumeReader> Location::GetReader()
         case Type::Snapshot:
             if (m_Shadow != nullptr)
             {
-                m_Reader = make_shared<SnapshotVolumeReader>(*m_Shadow);
+                switch (m_shadowCopyParserType)
+                {
+                    case Ntfs::ShadowCopy::ParserType::kMicrosoft:
+                        m_Reader = std::make_shared<SnapshotVolumeReader>(*m_Shadow);
+                        break;
+                    case Ntfs::ShadowCopy::ParserType::kInternal:
+                        m_Reader = std::make_shared<ShadowCopyVolumeReader>(*m_Shadow);
+                        break;
+                    default:
+                        Log::Error("Unsupported shadow copy parser");
+                }
             }
             break;
         case Type::PhysicalDrive:
@@ -80,6 +236,7 @@ std::shared_ptr<VolumeReader> Location::GetReader()
         default:
             break;
     }
+
     return m_Reader;
 }
 
@@ -346,6 +503,11 @@ ULONGLONG Location::SerialNumber() const
         return m_Reader->VolumeSerialNumber();
     }
 
+    if (m_Type == LocationType::Snapshot && m_Shadow && m_Shadow->parentVolume)
+    {
+        return m_Shadow->parentVolume->VolumeSerialNumber();
+    }
+
     return 0LL;
 }
 
@@ -355,6 +517,12 @@ FSVBR::FSType Location::GetFSType() const
     {
         return m_Reader->GetFSType();
     }
+
+    if (m_Type == LocationType::Snapshot && m_Shadow && m_Shadow->parentVolume)
+    {
+        return m_Shadow->parentVolume->GetFSType();
+    }
+
     return FSVBR::FSType::UNKNOWN;
 }
 

@@ -17,9 +17,6 @@ namespace Orc {
 
 class SnapshotVolumeReader : public CompleteVolumeReader
 {
-private:
-    VolumeShadowCopies::Shadow m_Shadow;
-
 protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();
 
@@ -38,6 +35,9 @@ public:
     ~SnapshotVolumeReader(void);
 
     HRESULT Read(ULONGLONG offset, CBinaryBuffer& buffer, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead) override;
+
+protected:
+    VolumeShadowCopies::Shadow m_Shadow;
 };
 
 }  // namespace Orc
