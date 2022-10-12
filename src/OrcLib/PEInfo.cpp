@@ -502,7 +502,7 @@ HRESULT PEInfo::OpenSecurityDirectory()
 
     if (secdir_pe_offset > stream->GetSize())
     {
-        Log::Warn(L"'{}' contains an invalid security directory", m_FileInfo.GetFullName());
+        Log::Warn(L"Invalid security directory '{}'", m_FileInfo.GetFullName());
         return S_OK;
     }
 
@@ -651,7 +651,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         PeParser pe(memstream, ec);
         if (ec)
         {
-            Log::Error(L"Failed to parse pe hash {} [{}]", m_FileInfo.m_szFullName, ec);
+            Log::Debug(L"Failed to parse pe hash '{}' [{}]", m_FileInfo.m_szFullName, ec);
             return ec.value();
         }
 
@@ -659,7 +659,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
         pe.GetAuthenticodeHash(pe_algs, hashes, ec);
         if (ec)
         {
-            Log::Error(L"Failed to compute pe hash [{}]", m_FileInfo.m_szFullName, ec);
+            Log::Error(L"Failed to compute pe hash '{}' [{}]", m_FileInfo.m_szFullName, ec);
             return ec.value();
         }
 
@@ -726,7 +726,7 @@ HRESULT PEInfo::OpenPeHash(Intentions localIntentions)
     PeParser pe(std::make_shared<CacheStream>(std::move(stream)), ec);
     if (ec)
     {
-        Log::Error(L"Failed to parse PE (path: {}) [{}]", m_FileInfo.m_szFullName, ec);
+        Log::Error(L"Failed to parse PE '{}' [{}]", m_FileInfo.m_szFullName, ec);
         return ec.value();
     }
 
@@ -734,7 +734,7 @@ HRESULT PEInfo::OpenPeHash(Intentions localIntentions)
     pe.GetAuthenticodeHash(algs, hashes, ec);
     if (ec)
     {
-        Log::Error(L"Failed to compute PE hashes (path: {}) [{}]", m_FileInfo.m_szFullName, ec);
+        Log::Error(L"Failed to compute PE hashes '{}' [{}]", m_FileInfo.m_szFullName, ec);
         return ec.value();
     }
 
