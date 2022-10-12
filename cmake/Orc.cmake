@@ -155,4 +155,14 @@ add_link_options(
     /WX
 )
 
+list(APPEND LINK_OPTIONS_RELEASE
+    /OPT:REF
+)
+
+foreach(OPTION IN ITEMS ${LINK_OPTIONS_RELEASE})
+    add_link_options($<$<CONFIG:RELEASE>:${OPTION}>)
+    add_link_options($<$<CONFIG:MINSIZEREL>:${OPTION}>)
+    add_link_options($<$<CONFIG:RELWITHDEBINFO>:${OPTION}>)
+endforeach()
+
 endmacro()
