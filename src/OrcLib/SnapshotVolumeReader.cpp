@@ -79,3 +79,82 @@ HRESULT SnapshotVolumeReader::LoadDiskProperties(void)
 }
 
 SnapshotVolumeReader::~SnapshotVolumeReader(void) {}
+
+HRESULT
+SnapshotVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& buffer, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead)
+{
+    HRESULT hr = E_FAIL;
+    const size_t bytesPerCowBlock = 16384;
+
+    ullBytesRead = 0;
+
+    Log::Trace("VSS: read (offset: {:#016x}, length: {})", offset, ullBytesToRead);
+
+    if (!buffer.CheckCount(ullBytesToRead))
+    {
+        return E_OUTOFMEMORY;
+    }
+
+    CBinaryBuffer localBuffer(true);
+    localBuffer.SetCount(bytesPerCowBlock);
+
+    //
+    // Workaround: process the request as multiple block of 16384 bytes.
+    // See https://github.com/DFIR-ORC/readshadow for more details.
+    //
+    if (offset % bytesPerCowBlock != 0)
+    {
+        const auto firstReadLength = std::min(ullBytesToRead, bytesPerCowBlock - (offset % bytesPerCowBlock));
+
+        hr = CompleteVolumeReader::Read(offset, localBuffer, firstReadLength, ullBytesRead);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        hr = localBuffer.CopyTo(buffer.GetData(), ullBytesRead);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+
+    while (ullBytesRead < ullBytesToRead)
+    {
+        ULONGLONG processed;
+
+        //
+        // Workaround: ensure the buffer is initialized because underlying ReadFile may be successful without modifying
+        // the buffer. See https://github.com/DFIR-ORC/readshadow for more details.
+        //
+        localBuffer.ZeroMe();
+
+        // BEWARE: the Read can change the size of the buffer...
+        hr = CompleteVolumeReader::Read(
+            offset + ullBytesRead,
+            localBuffer,
+            std::min(ullBytesToRead - ullBytesRead, static_cast<ULONGLONG>(bytesPerCowBlock)),
+            processed);
+
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        if (processed == 0)
+        {
+            break;
+        }
+
+        hr = localBuffer.CopyTo(buffer.GetData() + ullBytesRead, std::min(buffer.GetCount() - ullBytesRead, processed));
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        ullBytesRead += processed;
+    }
+
+    return S_OK;
+}
+
