@@ -1,5 +1,19 @@
 # ChangeLog
 
+## [10.1.4] - 2022-10-24
+### Added
+- ToolEmbed: add configurations checks for compressed xml settings
+
+### Changed
+- Yara: update to version 4.2.3
+- Reduce binaries size
+- WolfLauncher: update some log level to Critical
+
+### Fixed
+- ToolEmbed: fix configurations checks for toolembed import from previous dump
+- Volume Shadow Copy: workaround for MS behavior https://github.com/DFIR-ORC/readshadow (expect slower performances with VSS)
+- Outcome: fix missing command name when job was interrupted
+
 ## [10.1.3] - 2022-09-26
 ### Added
 - Outline, Outcome: add execution id
