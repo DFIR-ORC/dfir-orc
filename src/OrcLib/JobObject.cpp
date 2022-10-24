@@ -536,7 +536,11 @@ HRESULT Orc::JobObject::Close()
 {
     if (m_hJob != INVALID_HANDLE_VALUE)
     {
-        CloseHandle(m_hJob);
+        if (!CloseHandle(m_hJob))
+        {
+            Log::Error("Failed CloseHandle for job [{}]", LastWin32Error());
+        }
+
         m_hJob = INVALID_HANDLE_VALUE;
     }
     return S_OK;

@@ -1368,7 +1368,9 @@ void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool
 
         if (m_sampleIds.find(SampleId(*aMatch, i)) != std::cend(m_sampleIds))
         {
-            Log::Info(L"Not adding duplicate sample '{}' to archive", aMatch->MatchingNames.front().FullPathName);
+            Log::Warn(
+                L"FRN already processed, sample '{}' will not be added to the archive",
+                aMatch->MatchingNames.front().FullPathName);
             continue;
         }
 

@@ -992,14 +992,14 @@ void CommandAgent::run()
 
     if (!m_Job.IsValid())
     {
-        Log::Error(L"Failed to create '{}' job object [{}]", m_Keyword, LastWin32Error());
+        Log::Critical(L"Failed to create '{}' job object [{}]", m_Keyword, LastWin32Error());
         done();
         return;
     }
 
     if (FAILED(hr = m_Job.AssociateCompletionPort(m_hCompletionPort, this)))
     {
-        Log::Error(L"Failed to associate job object with completion port '{}' [{}]", m_Keyword, SystemError(hr));
+        Log::Critical(L"Failed to associate job object with completion port '{}' [{}]", m_Keyword, SystemError(hr));
         done();
         return;
     }
@@ -1024,7 +1024,7 @@ void CommandAgent::run()
             if (m_bLimitsMUSTApply)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError()),
-                Log::Error("Failed to set basic UI restrictions on job object [{}]", SystemError(hr));
+                Log::Critical("Failed to set basic UI restrictions on job object [{}]", SystemError(hr));
                 done();
                 return;
             }
@@ -1046,7 +1046,7 @@ void CommandAgent::run()
                 sizeof(JOBOBJECT_END_OF_JOB_TIME_INFORMATION),
                 NULL))
         {
-            Log::Error("Failed to retrieve end of job behavior on job object [{}]", LastWin32Error());
+            Log::Critical("Failed to retrieve end of job behavior on job object [{}]", LastWin32Error());
             done();
             return;
         }
@@ -1087,7 +1087,7 @@ void CommandAgent::run()
                 if (m_bLimitsMUSTApply)
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError()),
-                    Log::Error("Failed to set CPU Rate limits on job object [{}]", SystemError(hr));
+                    Log::Critical("Failed to set CPU Rate limits on job object [{}]", SystemError(hr));
                     done();
                     return;
                 }
@@ -1121,7 +1121,7 @@ void CommandAgent::run()
             if (m_bLimitsMUSTApply)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error(L"Failed to set extended limits on job object [{}]", SystemError(hr));
+                Log::Critical(L"Failed to set extended limits on job object [{}]", SystemError(hr));
                 done();
                 return;
             }
@@ -1147,7 +1147,7 @@ void CommandAgent::run()
             &returnedLength))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to obtain extended limits on job object [{}]", SystemError(hr));
+        Log::Critical(L"Failed to obtain extended limits on job object [{}]", SystemError(hr));
         done();
         return;
     }
@@ -1176,7 +1176,7 @@ void CommandAgent::run()
                 sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to set extended limits on job object [{}]", SystemError(hr));
+            Log::Critical(L"Failed to set extended limits on job object [{}]", SystemError(hr));
             done();
             return;
         }
@@ -1186,7 +1186,7 @@ void CommandAgent::run()
     if (!QueueUserWorkItem(JobObjectNotificationRoutine, m_hCompletionPort, WT_EXECUTEDEFAULT))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to queue user work item for completion port [{}]", m_Keyword, SystemError(hr));
+        Log::Critical(L"Failed to queue user work item for completion port [{}]", m_Keyword, SystemError(hr));
         done();
         return;
     }
@@ -1205,7 +1205,7 @@ void CommandAgent::run()
                 }
                 else
                 {
-                    Log::Error(L"Command '{}' rejected, command agent is stopping", request->Keyword());
+                    Log::Critical(L"Command '{}' rejected, command agent is stopping", request->Keyword());
                 }
             }
             break;
