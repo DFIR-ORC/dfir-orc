@@ -114,7 +114,7 @@ public:
     const std::wstring& GetKeyword() const { return m_keyword; }
     void SetKeyword(const std::wstring& keyword) { m_keyword = keyword; }
 
-    const std::wstring& GetCommandLineValue() const { return m_commandLine; }
+    const std::optional<std::wstring>& GetCommandLineValue() const { return m_commandLine; }
     void SetCommandLineValue(const std::wstring& commandLine) { m_commandLine = commandLine; }
 
     const std::optional<std::wstring>& GetOrcTool() const { return m_orcTool; }
@@ -145,10 +145,10 @@ public:
         m_sha1 = sha1;
     }
 
-    Timestamp GetCreationTime() const { return m_creationTime; }
+    std::optional<Timestamp> GetCreationTime() const { return m_creationTime; }
     void SetCreationTime(const Timestamp& creationTime) { m_creationTime = creationTime; }
 
-    Timestamp GetExitTime() const { return m_exitTime; }
+    std::optional<Timestamp> GetExitTime() const { return m_exitTime; }
     void SetExitTime(const Timestamp& exitTime) { m_exitTime = exitTime; }
 
     std::optional<std::chrono::seconds> GetUserTime() const { return m_userTime; }
@@ -157,10 +157,10 @@ public:
     std::optional<std::chrono::seconds> GetKernelTime() const { return m_kernelTime; }
     void SetKernelTime(const std::chrono::seconds& kernelTime) { m_kernelTime = kernelTime; }
 
-    int32_t GetExitCode() const { return m_exitCode; }
+    std::optional<int32_t> GetExitCode() const { return m_exitCode; }
     void SetExitCode(int32_t code) { m_exitCode = code; }
 
-    uint32_t GetPid() const { return m_pid; }
+    std::optional<uint32_t> GetPid() const { return m_pid; }
     void SetPid(uint32_t pid) { m_pid = pid; }
 
     const std::optional<IO_COUNTERS>& GetIOCounters() const { return m_ioCounters; }
@@ -198,19 +198,19 @@ public:
 
 private:
     std::wstring m_keyword;
-    std::wstring m_commandLine;
+    std::optional<std::wstring> m_commandLine;
     bool m_isSelfOrcExecutable = false;
     std::optional<std::wstring> m_orcTool;
     std::optional<std::wstring> m_sha1;
     Origin m_origin;
     std::vector<Output> m_output;
-    Timestamp m_creationTime;
-    Timestamp m_exitTime;
+    std::optional<Timestamp> m_creationTime;
+    std::optional<Timestamp> m_exitTime;
     std::optional<std::chrono::seconds> m_userTime;
     std::optional<std::chrono::seconds> m_kernelTime;
     std::optional<IO_COUNTERS> m_ioCounters;
-    int32_t m_exitCode;
-    uint32_t m_pid;
+    std::optional<int32_t> m_exitCode;
+    std::optional<uint32_t> m_pid;
 };
 
 class JobStatistics

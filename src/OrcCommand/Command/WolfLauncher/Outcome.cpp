@@ -40,11 +40,13 @@ std::string ToString(Outcome::Command::Output::Type type)
     }
 }
 
-void Write(StructuredOutputWriter::IWriter::Ptr& writer, const std::vector<Outcome::Command::Output>& output)
+void Write(
+    StructuredOutputWriter::IWriter::Ptr& writer,
+    std::wstring_view key,
+    const std::vector<Outcome::Command::Output>& output)
 {
-    const auto kNodeOutput = L"output";
-    writer->BeginCollection(kNodeOutput);
-    Guard::Scope onOutputExit([&]() { writer->EndCollection(kNodeOutput); });
+    writer->BeginCollection(key.data());
+    Guard::Scope onOutputExit([&]() { writer->EndCollection(key.data()); });
 
     for (const auto& item : output)
     {
@@ -56,16 +58,37 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const std::vector<Outco
     }
 };
 
-void Write(StructuredOutputWriter::IWriter::Ptr& writer, const std::optional<IO_COUNTERS>& counters)
+void Write(
+    StructuredOutputWriter::IWriter::Ptr& writer,
+    std::wstring_view key,
+    const std::optional<std::chrono::system_clock::time_point>& tp)
+{
+    if (!tp.has_value())
+    {
+        return;
+    }
+
+    auto rv = ToStringIso8601(*tp);
+    if (rv.has_error())
+    {
+        return;
+    }
+
+    writer->WriteNamed(key.data(), rv.value());
+}
+
+void Write(
+    StructuredOutputWriter::IWriter::Ptr& writer,
+    std::wstring_view key,
+    const std::optional<IO_COUNTERS>& counters)
 {
     if (!counters)
     {
         return;
     }
 
-    const auto kRoot = L"io_counters";
-    writer->BeginElement(kRoot);
-    Guard::Scope onExit([&]() { writer->EndElement(kRoot); });
+    writer->BeginElement(key.data());
+    Guard::Scope onExit([&]() { writer->EndElement(key.data()); });
 
     writer->WriteNamed(L"read_operation", counters->ReadOperationCount);
     writer->WriteNamed(L"read_transfer", counters->ReadTransferCount);
@@ -75,18 +98,20 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const std::optional<IO_
     writer->WriteNamed(L"other_transfer", counters->OtherTransferCount);
 }
 
-void Write(StructuredOutputWriter::IWriter::Ptr& writer, const std::optional<Outcome::JobStatistics>& statistics)
+void Write(
+    StructuredOutputWriter::IWriter::Ptr& writer,
+    std::wstring_view key,
+    const std::optional<Outcome::JobStatistics>& statistics)
 {
     if (!statistics)
     {
         return;
     }
 
-    const auto kRoot = L"statistics";
-    writer->BeginElement(kRoot);
-    Guard::Scope onExit([&]() { writer->EndElement(kRoot); });
+    writer->BeginElement(key.data());
+    Guard::Scope onExit([&]() { writer->EndElement(key.data()); });
 
-    Write(writer, statistics->GetIOCounters());
+    Write(writer, L"io_counters", statistics->GetIOCounters());
 
     writer->WriteNamed(L"process", statistics->GetProcessCount());
     writer->WriteNamed(L"process_memory_peak", statistics->GetPeakProcessMemory());
@@ -163,11 +188,10 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Archive&
     }
 }
 
-void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command::Origin& origin)
+void Write(StructuredOutputWriter::IWriter::Ptr& writer, std::wstring_view key, const Outcome::Command::Origin& origin)
 {
-    const auto kNodeOrigin = L"origin";
-    writer->BeginElement(kNodeOrigin);
-    Guard::Scope onExit([&]() { writer->EndElement(kNodeOrigin); });
+    writer->BeginElement(key.data());
+    Guard::Scope onExit([&]() { writer->EndElement(key.data()); });
 
     if (origin.GetFriendlyName())
     {
@@ -190,56 +214,65 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command:
     }
 }
 
+void Write(StructuredOutputWriter::IWriter::Ptr& writer, std::wstring_view key, std::optional<uint32_t> value)
+{
+    if (!value)
+    {
+        return;
+    }
+
+    writer->WriteNamed(key.data(), *value);
+}
+
+void Write(
+    StructuredOutputWriter::IWriter::Ptr& writer,
+    std::wstring_view key,
+    const std::optional<std::wstring>& value)
+{
+    if (!value)
+    {
+        return;
+    }
+
+    writer->WriteNamed(key.data(), *value);
+}
+
+void Write(
+    StructuredOutputWriter::IWriter::Ptr& writer,
+    std::wstring_view key,
+    const std::optional<std::chrono::seconds>& value)
+{
+    if (!value)
+    {
+        return;
+    }
+
+    writer->WriteNamed(key.data(), value->count());
+}
+
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Command& command)
 {
     writer->BeginElement(nullptr);
     Guard::Scope onExit([&]() { writer->EndElement(nullptr); });
 
     writer->WriteNamed(L"name", command.GetKeyword());
-    writer->WriteNamed(L"command_line", command.GetCommandLineValue());
+    ::Write(writer, L"command_line", command.GetCommandLineValue());
 
     if (command.IsSelfOrcExecutable() && command.GetOrcTool())
     {
         writer->WriteNamed(L"tool", *command.GetOrcTool());
     }
 
-    const auto start = ToStringIso8601(command.GetCreationTime());
-    if (start.has_value())
-    {
-        writer->WriteNamed(L"start", *start);
-    }
-
-    const auto end = ToStringIso8601(command.GetExitTime());
-    if (end.has_value())
-    {
-        writer->WriteNamed(L"end", *end);
-    }
-
-    writer->WriteNamed(L"exit_code", command.GetExitCode());
-    writer->WriteNamed(L"pid", command.GetPid());
-
-    if (command.GetSha1())
-    {
-        writer->WriteNamed(L"sha1", *command.GetSha1());
-    }
-
-    ::Write(writer, command.GetOrigin());
-
-    const auto& userTime = command.GetUserTime();
-    if (userTime)
-    {
-        writer->WriteNamed(L"user_time", userTime->count());
-    }
-
-    const auto& kernelTime = command.GetUserTime();
-    if (kernelTime)
-    {
-        writer->WriteNamed(L"kernel_time", kernelTime->count());
-    }
-
-    ::Write(writer, command.GetIOCounters());
-
-    ::Write(writer, command.GetOutput());
+    ::Write(writer, L"start", command.GetCreationTime());
+    ::Write(writer, L"end", command.GetExitTime());
+    ::Write(writer, L"exit_code", command.GetExitCode());
+    ::Write(writer, L"pid", command.GetPid());
+    ::Write(writer, L"sha1", command.GetSha1());
+    ::Write(writer, L"origin", command.GetOrigin());
+    ::Write(writer, L"user_time", command.GetUserTime());
+    ::Write(writer, L"kernel_time", command.GetKernelTime());
+    ::Write(writer, L"io_counters", command.GetIOCounters());
+    ::Write(writer, L"output", command.GetOutput());
 }
 
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::CommandSet& commandSet)
@@ -261,7 +294,7 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::CommandS
         writer->WriteNamed(L"end", *end);
     }
 
-    ::Write(writer, commandSet.GetJobStatistics());
+    ::Write(writer, L"statistics", commandSet.GetJobStatistics());
 
     ::Write(writer, commandSet.GetArchive());
 
