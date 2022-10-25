@@ -250,7 +250,18 @@ private:
 class CommandSet
 {
 public:
-    Command& GetCommand(const std::wstring& keyword) { return m_commands[keyword]; }
+    Command& GetCommand(const std::wstring& keyword)
+    {
+        auto it = m_commands.find(keyword);
+        if (it == std::cend(m_commands))
+        {
+            auto& command = m_commands[keyword];
+            command.SetKeyword(keyword);
+            return command;
+        }
+
+        return it->second;
+    }
 
     Archive& GetArchive() { return m_archive; }
     const Archive& GetArchive() const { return m_archive; }
