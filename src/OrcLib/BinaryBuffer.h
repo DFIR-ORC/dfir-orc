@@ -241,21 +241,37 @@ public:
 
     void ZeroMe();
 
+    bool empty() const { return m_size == 0; };
+
     const BYTE* cbegin() const { return m_pData; };
     const BYTE* cend() const { return m_pData + m_size; };
 
     BYTE* begin() { return m_pData; };
     BYTE* end() { return m_pData + m_size; };
 
-    bool empty() const { return m_size == 0; };
+    const BYTE* begin() const { return m_pData; };
+    const BYTE* end() const { return m_pData + m_size; };
 
     template <class T>
     const T* cbegin() const
     {
         return (T*)m_pData;
     };
+
     template <class T>
     const T* cend() const
+    {
+        return (T*)((BYTE*)m_pData + m_size);
+    };
+
+    template <class T>
+    const T* begin() const
+    {
+        return (T*)m_pData;
+    };
+
+    template <class T>
+    const T* end() const
     {
         return (T*)((BYTE*)m_pData + m_size);
     };
@@ -265,6 +281,7 @@ public:
     {
         return (T*)m_pData;
     };
+
     template <class T>
     T* end()
     {
@@ -277,8 +294,6 @@ public:
             return false;
         return !memcmp(m_pData, other.m_pData, m_size);
     };
-
-    HRESULT PrintHex(LPCWSTR szIndent = L"") const;
 
     ~CBinaryBuffer(void) { RemoveAll(); }
 };

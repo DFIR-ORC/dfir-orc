@@ -36,6 +36,8 @@ public:
     const GUID& GetSnapshotID() const { return m_Shadow.guid; }
 
     ~SnapshotVolumeReader(void);
+
+    HRESULT Read(ULONGLONG offset, CBinaryBuffer& buffer, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead) override;
 };
 
 }  // namespace Orc

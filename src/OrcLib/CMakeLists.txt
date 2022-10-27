@@ -979,7 +979,6 @@ target_link_libraries(OrcLib
         Wintrust.lib
         Crypt32.lib
         fmt::fmt-header-only
-        VisualStudio::CppUnitTest
         yara::yara
         ws2_32.lib
         Iphlpapi.lib
