@@ -844,7 +844,7 @@ public:
             Log::Critical("Exception during execution. Type: {}, Reason: {}", typeid(e).name(), e.what());
 
 #ifdef ORC_BUILD_BOOST_STACKTRACE
-            boost::stacktrace::stacktrace();
+            std::cerr << boost::stacktrace::stacktrace();
 #endif
             return E_ABORT;
         }
@@ -854,7 +854,7 @@ public:
             Log::Critical("Exception during during command execution.");
 
 #ifdef ORC_BUILD_BOOST_STACKTRACE
-            boost::stacktrace::stacktrace();
+            std::cerr << boost::stacktrace::stacktrace();
 #endif
             return E_ABORT;
         }
