@@ -328,8 +328,8 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
             {
                 Log::Error(
                     L"Failed to read {} bytes from at position {} [{}]",
-                    extent_position,
                     ulBytesPerFRS * ullFRSToRead,
+                    extent_position,
                     SystemError(hr));
                 return hr;
             }
