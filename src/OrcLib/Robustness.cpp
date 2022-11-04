@@ -151,13 +151,13 @@ int Robustness::handle_program_memory_depletion(size_t attempted)
             const auto div = 1048576;
 
             wprintf(
-                L"Memory: physical: %I64/%I64 MB, paged: %I64/%I64 MB, virtual: %I64/%I64 MB\n",
-                memory.ullTotalPhys / div,
+                L"Memory: physical: %I64u/%I64u MB, paged: %I64u/%I64u MB, virtual: %I64u/%I64u MB\n",
                 memory.ullAvailPhys / div,
-                memory.ullTotalPageFile / div,
+                memory.ullTotalPhys / div,
                 memory.ullAvailPageFile / div,
-                memory.ullTotalVirtual / div,
-                memory.ullAvailVirtual / div);
+                memory.ullTotalPageFile / div,
+                memory.ullAvailVirtual / div,
+                memory.ullTotalVirtual / div);
         }
     }
     throw MemoryException(attempted);
