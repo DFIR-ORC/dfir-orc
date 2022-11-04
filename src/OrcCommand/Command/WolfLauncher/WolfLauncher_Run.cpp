@@ -973,6 +973,14 @@ HRESULT Main::Run_Execute()
                     {
                         const auto path = m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName());
                         Log::Error(L"Failed to check remote file status: '{}' [{}]", path, SystemError(hr));
+
+                        m_journal.Print(
+                            ToolName(),
+                            exec->GetKeyword(),
+                            Log::Level::Error,
+                            L"Failed to check remote file status: '{}' [{}]",
+                            path,
+                            SystemError(hr));
                     }
                 }
 
@@ -993,6 +1001,14 @@ HRESULT Main::Run_Execute()
                     {
                         const auto path = m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName());
                         Log::Error(L"Failed to check remote file status: '{}' [{}]", path, SystemError(hr));
+
+                        m_journal.Print(
+                            ToolName(),
+                            exec->GetKeyword(),
+                            Log::Level::Error,
+                            L"Failed to check remote file status: '{}' [{}]",
+                            path,
+                            SystemError(hr));
                     }
                     else if (info.file_exists && (!info.size.has_value() || info.size.value() > 0))
                     {
@@ -1019,6 +1035,14 @@ HRESULT Main::Run_Execute()
                     if (FAILED(hr))
                     {
                         Log::Error(L"Failed to upload archive '{}' [{}]", exec->GetOutputFullPath(), SystemError(hr));
+
+                        m_journal.Print(
+                            ToolName(),
+                            exec->GetKeyword(),
+                            Log::Level::Error,
+                            L"Failed to upload archive '{}' [{}]",
+                            exec->GetOutputFullPath(),
+                            SystemError(hr));
                     }
 
                     continue;
