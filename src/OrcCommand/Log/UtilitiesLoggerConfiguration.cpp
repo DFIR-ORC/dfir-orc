@@ -556,12 +556,11 @@ Orc::Result<void> ApplyFileConfiguration(UtilitiesLogger& logger, const Utilitie
     return Success<void>();
 }
 
-Orc::Result<void>
-ApplyJournalConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLoggerConfiguration& config)
+Orc::Result<void> ApplySyslogConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLoggerConfiguration& config)
 {
     ApplySyslogSinkLevel(utilitiesLogger, config);
 
-    auto& syslog = utilitiesLogger.logger().Get(Logger::Facility::kJournal);
+    auto& syslog = utilitiesLogger.logger().Get(Logger::Facility::kSyslog);
     if (!syslog)
     {
         Log::Debug("Failed to retrieve journal facility");
@@ -926,7 +925,7 @@ void UtilitiesLoggerConfiguration::Apply(UtilitiesLogger& logger, const Utilitie
         return;
     }
 
-    result = ::ApplyJournalConfiguration(logger, config);
+    result = ::ApplySyslogConfiguration(logger, config);
     if (!result)
     {
         Log::Debug("Failed to apply syslog sink configuration [{}]", result.error());

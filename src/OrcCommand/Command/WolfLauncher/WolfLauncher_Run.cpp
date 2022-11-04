@@ -372,7 +372,7 @@ void Main::Configure(int argc, const wchar_t* argv[])
     // Forward console sink output to StandardOutput tee file.
     m_logging.consoleSink()->AddOutput(m_standardOutput.FileTeePtr());
 
-    auto& journal = m_logging.logger().Get(Logger::Facility::kJournal);
+    auto& journal = m_logging.logger().Get(Logger::Facility::kSyslog);
     journal->SetLevel(Log::Level::Info);
     journal->Add(m_logging.syslogSink());
 

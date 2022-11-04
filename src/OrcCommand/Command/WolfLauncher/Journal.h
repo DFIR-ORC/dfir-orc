@@ -40,17 +40,17 @@ public:
         Text::FormatToWithoutEOL(std::back_inserter(message), "{:<16} {:<26} ", commandSet, agent);
         Text::FormatToWithoutEOL(std::back_inserter(message), std::forward<FmtArgs>(status)...);
 
-        // TODO: instead of using console directly the journal facility could have a custom console sink
+        // TODO: instead of using console directly the syslog facility could have a custom console sink
         std::time_t now = std::chrono::system_clock::to_time_t(timepoint);
         {
             std::lock_guard lock(m_mutex);
             m_console.Print(L"{:%Y-%m-%dT%H:%M:%SZ}   {}", fmt::gmtime(now), message);
         }
 
-        const auto& journal = Orc::Log::DefaultLogger()->Get(Log::Facility::kJournal);
-        if (journal)
+        const auto& syslog = Orc::Log::DefaultLogger()->Get(Log::Facility::kSyslog);
+        if (syslog)
         {
-            journal->Log(timepoint, Log::Level::Info, Utf16ToUtf8(message, "<unicode conversion failed>"));
+            syslog->Log(timepoint, Log::Level::Info, Utf16ToUtf8(message, "<unicode conversion failed>"));
         }
     }
 

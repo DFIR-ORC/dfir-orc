@@ -34,7 +34,7 @@ public:
     {
         kConsole = 0,
         kLogFile,
-        kJournal,
+        kSyslog,
         kUnitTest,
         kFacilityCount
     };

@@ -133,7 +133,7 @@ UtilitiesLogger::UtilitiesLogger()
     auto loggers = {
         std::make_pair(Log::Facility::kConsole, console),
         std::make_pair(Log::Facility::kLogFile, file),
-        std::make_pair(Log::Facility::kJournal, journal)};
+        std::make_pair(Log::Facility::kSyslog, journal)};
 
     m_logger = std::make_shared<Logger>(loggers);
     m_logger->AddToDefaultFacilities(Log::Facility::kConsole);
