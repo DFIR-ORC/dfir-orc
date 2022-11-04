@@ -193,6 +193,7 @@ void Main::PrintParameters()
     PrintValues(node, L"Disable keys", config.DisableKeywords);
     PrintValue(
         node, L"Command timeout", std::chrono::duration_cast<std::chrono::minutes>(config.msCommandTerminationTimeOut));
+    PrintValue(node, L"Archive timeout", std::chrono::duration_cast<std::chrono::minutes>(config.msArchiveTimeOut));
 
     const auto kNoLimits = L"No limits";
     if (config.NoLimitsKeywords.empty())
