@@ -32,7 +32,9 @@ public:
     }
 
     template <typename... FmtArgs>
-    void Print(const std::wstring_view& commandSet, const std::wstring_view& agent, FmtArgs&&... status) const
+    void
+    Print(const std::wstring_view& commandSet, const std::wstring_view& agent, Log::Level level, FmtArgs&&... status)
+        const
     {
         const auto timepoint = std::chrono::system_clock::now();
 
@@ -50,8 +52,14 @@ public:
         const auto& syslog = Orc::Log::DefaultLogger()->Get(Log::Facility::kSyslog);
         if (syslog)
         {
-            syslog->Log(timepoint, Log::Level::Info, Utf16ToUtf8(message, "<unicode conversion failed>"));
+            syslog->Log(timepoint, level, Utf16ToUtf8(message, "<unicode conversion failed>"));
         }
+    }
+
+    template <typename... FmtArgs>
+    void Print(const std::wstring_view& commandSet, const std::wstring_view& agent, FmtArgs&&... status) const
+    {
+        Print(commandSet, agent, Log::Level::Info, std::forward<FmtArgs>(status)...);
     }
 
     auto Console() { return std::pair<std::lock_guard<std::mutex>, Command::Console&> {m_mutex, m_console}; }
