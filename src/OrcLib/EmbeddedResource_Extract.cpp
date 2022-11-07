@@ -624,7 +624,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
             std::wstring strBinaryPath;
             if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
-                Log::Debug(L"Failed to locate resource: '{}' [{}]", szImageFileResourceID, SystemError(hr));
+                Log::Debug(L"Failed to locate resource (id: {}) [{}]", szImageFileResourceID, SystemError(hr));
                 return hr;
             }
 
@@ -633,7 +633,11 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
             if ((hFileResource = LoadResource(hModule, hRes)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Debug(L"Failed to load resource: '{}' [{}]", szImageFileResourceID, SystemError(hr));
+                Log::Debug(
+                    L"Failed to load resource (id: {}, path: {}) [{}]",
+                    szImageFileResourceID,
+                    strBinaryPath,
+                    SystemError(hr));
                 return hr;
             }
 
@@ -642,7 +646,11 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
             if ((lpData = LockResource(hFileResource)) == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Debug(L"Failed to lock resource: '{}' [{}]", szImageFileResourceID, SystemError(hr));
+                Log::Debug(
+                    L"Failed to lock resource (id: {}, path: {}) [{}]",
+                    szImageFileResourceID,
+                    strBinaryPath,
+                    SystemError(hr));
                 return hr;
             }
 
@@ -650,13 +658,21 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
             if ((dwSize = SizeofResource(hModule, hRes)) == 0)
             {
                 HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Debug(L"Failed to compute resource size: '{}' [{}]", szImageFileResourceID, SystemError(hr));
+                Log::Debug(
+                    L"Failed to compute resource size (id: {}, path: {}) [{}]",
+                    szImageFileResourceID,
+                    strBinaryPath,
+                    SystemError(hr));
                 return hr;
             }
 
             if (auto hr = Buffer.SetData((LPBYTE)lpData, dwSize); FAILED(hr))
             {
-                Log::Debug("Failed to setup resource buffer [{}]", SystemError(hr));
+                Log::Debug(
+                    L"Failed to setup resource buffer (id: {}, path: {}) [{}]",
+                    szImageFileResourceID,
+                    strBinaryPath,
+                    SystemError(hr));
                 return hr;
             }
         }
@@ -680,7 +696,11 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
                 std::wstring strBinaryPath;
                 if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
-                    Log::Debug(L"Could not locate resource: '{}' [{}]", szImageFileResourceID, SystemError(hr));
+                    Log::Debug(
+                        L"Could not locate resource (id: {}, path: {}) [{}]",
+                        szImageFileResourceID,
+                        strBinaryPath,
+                        SystemError(hr));
                     return hr;
                 }
 

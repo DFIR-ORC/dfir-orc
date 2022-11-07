@@ -24,8 +24,8 @@ class TemporaryStream : public ByteStream
 {
 private:
     std::shared_ptr<MemoryStream> m_pMemStream;
-
     std::shared_ptr<FileStream> m_pFileStream;
+
     std::wstring m_strFileName;
 
     DWORD m_dwMemThreshold;
@@ -51,9 +51,15 @@ public:
     STDMETHOD(CanSeek)();
 
     STDMETHOD(Open)
-    (const std::wstring& strTempDir, const std::wstring& strID, DWORD dwMemThreshold, bool bReleaseOnClose = true);
+    (const std::wstring& strTempDir,
+     const std::wstring& strID,
+     DWORD dwMemThreshold = 0LU,
+     bool bReleaseOnClose = true);  // if dwMemThreshold is null, directly use a FileStream
 
-    STDMETHODIMP Open(const std::filesystem::path& output, DWORD dwMemThreshold, bool bReleaseOnClose = true);
+    STDMETHODIMP Open(
+        const std::filesystem::path& output,
+        DWORD dwMemThreshold = 0LU,
+        bool bReleaseOnClose = true);  // if dwMemThreshold is null, directly use a FileStream
 
     STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,
@@ -76,6 +82,9 @@ public:
 
     STDMETHOD(IsMemoryStream)();
     STDMETHOD(IsFileStream)();
+
+    const auto& GetFileStream() const { return m_pFileStream; }
+    const auto& GetMemoryStream() const { return m_pMemStream; }
 
     ~TemporaryStream(void);
 };

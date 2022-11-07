@@ -41,6 +41,7 @@
 
 #include "NtfsDataStructures.h"
 #include "ProfileList.h"
+#include "Utils/Guid.h"
 
 using namespace std;
 

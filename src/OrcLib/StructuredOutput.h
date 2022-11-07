@@ -162,6 +162,18 @@ public:
         return S_OK;
     }
 
+    HRESULT WriteNamedFileTime(LPCWSTR szName, Result<FILETIME> filetime, std::wstring_view message = {})
+    {
+        using namespace std::string_view_literals;
+        if (filetime.has_value())
+            return WriteNamedFileTime(szName, filetime.value());
+        else if (!message.empty())
+            Log::Warn(L"{}: {}"sv, message, filetime.error());
+        else
+            Log::Warn(L"Result in error: {}"sv, filetime.error());
+        return S_OK;
+    }
+
     template <typename... Args>
     HRESULT WriteFormated(const std::wstring_view& szFormat, Args&&... args)
     {
@@ -199,6 +211,45 @@ public:
     using Ptr = std::shared_ptr<IWriter>;
 
     virtual HRESULT Close() PURE;
+};
+
+class ScopedRootElement : private resource_scope<IWriter>
+{
+public:
+    ScopedRootElement(IWriter& writer, LPCWSTR szName)
+        : resource_scope(
+            writer,
+            [&](IWriter& writer) { writer.BeginElement(szName); },
+            [&](IWriter& writer) {
+                writer.EndElement(szName);
+                writer.Close();
+            })
+    {
+    }
+};
+
+class ScopedElement : private resource_scope<IOutput>
+{
+public:
+    ScopedElement(IOutput& writer, LPCWSTR szName)
+        : resource_scope(
+            writer,
+            [&](IOutput& writer) { writer.BeginElement(szName); },
+            [&](IOutput& writer) { writer.EndElement(szName); })
+    {
+    }
+};
+
+class ScopedCollection : private resource_scope<IOutput>
+{
+public:
+    ScopedCollection(IOutput& writer, LPCWSTR szName)
+        : resource_scope(
+            writer,
+            [&](IOutput& writer) { writer.BeginCollection(szName); },
+            [&](IOutput& writer) { writer.EndCollection(szName); })
+    {
+    }
 };
 
 }  // namespace StructuredOutput

@@ -9,22 +9,6 @@
 
 #include "OrcLib.h"
 
-#include <conio.h>
-#include <iostream>
-#include <chrono>
-#include <filesystem>
-
-#include <concrt.h>
-
-#include <boost/logic/tribool.hpp>
-#include <boost/algorithm/string/join.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/classification.hpp>
-
-#ifdef ORC_BUILD_BOOST_STACKTRACE
-#    include <boost/stacktrace.hpp>
-#endif
-
 #include "Configuration/ConfigFile.h"
 #include "Archive.h"
 #include "ParameterCheck.h"
@@ -56,6 +40,24 @@
 #include "Log/LogTerminationHandler.h"
 #include "Utils/StdStream/StandardOutput.h"
 #include "VolumeReader.h"
+
+#include "Utils/EnumFlags.h"
+
+#include <conio.h>
+#include <iostream>
+#include <chrono>
+#include <filesystem>
+
+#include <concrt.h>
+
+#include <boost/logic/tribool.hpp>
+#include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
+
+#ifdef ORC_BUILD_BOOST_STACKTRACE
+#    include <boost/stacktrace.hpp>
+#endif
 
 #pragma managed(push, off)
 
@@ -550,9 +552,21 @@ protected:
         return false;
     }
 
-    bool OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strParameter);
-    bool OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULONGLONG& ullParameter);
-    bool OptionalParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWORD& dwParameter);
+    bool OptionalParameterOption(
+        LPCWSTR szArg,
+        LPCWSTR szOption,
+        std::optional<std::wstring>& strParameter,
+        const std::optional<std::wstring> defaultValue = std::nullopt);
+    bool OptionalParameterOption(
+        LPCWSTR szArg,
+        LPCWSTR szOption,
+        std::optional<ULONGLONG>& ullParameter,
+        const std::optional<ULONGLONG> defaultValue = std::nullopt);
+    bool OptionalParameterOption(
+        LPCWSTR szArg,
+        LPCWSTR szOption,
+        std::optional<DWORD>& dwParameter,
+        const std::optional<DWORD> defaultValue = std::nullopt);
 
     template <class ListContainerT>
     void
@@ -613,6 +627,34 @@ protected:
     bool BooleanExactOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bPresent);
 
     bool ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
+
+    template <typename _EnumT>
+    bool EnumOption(LPCWSTR szArg, LPCWSTR szOption, _EnumT& eOption, _EnumT eValue)
+    {
+        if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+            return false;
+        eOption = eValue;
+        return true;
+    }
+
+    template <typename _FlagT, typename = std::enable_if_t<EnumFlagsOperator<_FlagT>::value>>
+    bool FlagOption(LPCWSTR szArg, LPCWSTR szOption, _FlagT& eOption, _FlagT eValue)
+    {
+        if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+            return false;
+        eOption |= eValue;
+        return true;
+    }
+    template <typename _FlagT, typename = std::enable_if_t<EnumFlagsOperator<_FlagT>::value>>
+    bool FlagOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<_FlagT>& fOption, _FlagT eValue)
+    {
+        if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
+            return false;
+        if (!fOption)
+            fOption.emplace();
+        fOption.value() |= eValue;
+        return true;
+    }
 
     bool ShadowsOption(
         LPCWSTR szArg,

@@ -82,6 +82,8 @@ class ScopedLock;
 class CriticalSection;
 
 class DriverMgmt;
+class Driver;
+using PDriver = std::shared_ptr<Driver>;
 
 struct SYSTEM_HANDLE_INFORMATON;
 struct SystemHandleInformationData;
@@ -322,6 +324,70 @@ std::unique_ptr<Derived> static_unique_ptr_cast(std::unique_ptr<Base>&& p)
     auto d = static_cast<Derived*>(p.release());
     return std::unique_ptr<Derived>(d);
 }
+
+struct scope_enter
+{
+    scope_enter(std::function<void(void)> f) { f(); }
+};
+
+struct scope_exit
+{
+    scope_exit(std::function<void(void)> f)
+        : f_(f)
+    {
+    }
+    ~scope_exit(void) { f_(); }
+
+private:
+    std::function<void(void)> f_;
+};
+
+struct scope
+{
+    scope(std::function<void(void)> enter, std::function<void(void)> exit)
+        : enter_(enter)
+        , exit_(exit)
+    {
+    }
+
+private:
+    scope_enter enter_;
+    scope_exit exit_;
+};
+
+template <typename _resourceT>
+struct resource_scope
+{
+
+    using _lambdaT = std::function<void(_resourceT&)>;
+
+    resource_scope(_resourceT& r, _lambdaT enter, _lambdaT exit)
+        : enter_(r, enter)
+        , exit_(r, exit)
+    {
+    }
+
+private:
+    struct _enter
+    {
+        _enter(_resourceT& r, _lambdaT f) { f(r); }
+    };
+    struct _exit
+    {
+        _exit(_resourceT& r, _lambdaT f)
+            : r_(r)
+            , f_(f)
+        {
+        }
+        ~_exit(void) { f_(r_); }
+
+    private:
+        _lambdaT f_;
+        _resourceT& r_;
+    };
+    _enter enter_;
+    _exit exit_;
+};
 
 }  // namespace Orc
 

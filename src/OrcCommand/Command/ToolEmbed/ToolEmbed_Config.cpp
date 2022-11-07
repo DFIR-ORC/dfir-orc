@@ -305,13 +305,13 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         {
             case L'/':
             case L'-':
-                if (OptionalParameterOption(argv[i] + 1, L"Dump", strParameter))
+                if (OptionalParameterOption(argv[i] + 1, L"Dump", std::optional<std::wstring>(strParameter)))
                 {
                     config.Todo = Main::Dump;
                     if (!strParameter.empty())
                         config.strInputFile = strParameter;
                 }
-                if (OptionalParameterOption(argv[i] + 1, L"FromDump", strParameter))
+                if (OptionalParameterOption(argv[i] + 1, L"FromDump", std::optional<std::wstring>(strParameter)))
                 {
                     config.Todo = Main::FromDump;
                     if (!strParameter.empty())

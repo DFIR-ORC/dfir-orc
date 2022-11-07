@@ -231,7 +231,7 @@ protected:
         }
 
         return shared;
-    };
+    }
 
     FARPROC GetEntryPoint(LPCSTR szFunctionName, bool bMandatory = false);
 
@@ -239,8 +239,26 @@ protected:
     T GetExtension(LPCSTR szFunctionName, bool bMandatory = false)
     {
         return (T)GetEntryPoint(szFunctionName, bMandatory);
-    };
-};  // namespace Orc
+    }
+};
+
+template <class _Extension>
+class ExtensionInScope : private resource_scope<std::shared_ptr<_Extension>>
+{
+private:
+    std::shared_ptr<_Extension> m_pExtension;
+
+public:
+    ExtensionInScope()
+        : resource_scope<std::shared_ptr<_Extension>>(
+            m_pExtension,
+            [](std::shared_ptr<_Extension>& pLib) { pLib = ExtensionLibrary::GetLibrary<_Extension>(); },
+            [](std::shared_ptr<_Extension>& pLib) { pLib.reset(); })
+    {
+    }
+
+    const auto& operator->() const { return m_pExtension.operator->(); }
+};
 
 template <class Ext>
 HRESULT ExtensionLibraryHandler<Ext>::operator()()
@@ -261,6 +279,7 @@ public:
     virtual ~TemplateExtension() {}
     STDMETHOD(Initialize)() { return S_OK; }
 };
+
 }  // namespace Orc
 
 #pragma managed(pop)

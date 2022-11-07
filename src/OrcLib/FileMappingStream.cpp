@@ -8,6 +8,8 @@
 #include "stdafx.h"
 #include "FileMappingStream.h"
 
+#include "Text/Fmt/std_error_code.h"
+
 using namespace Orc;
 
 STDMETHODIMP
@@ -104,14 +106,12 @@ HRESULT FileMappingStream::CommitSize(ULONGLONG ullNewSize)
     if (!VirtualQuery(m_pMapped, &mbi, sizeof(MEMORY_BASIC_INFORMATION)))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed VirtualQuery on {:#x} [{}]", reinterpret_cast<size_t>(m_pMapped), SystemError(hr));
+        Log::Error("Failed VirtualQuery on 0x{:p} [{}]", static_cast<void*>(m_pMapped), SystemError(hr));
 
         if (!VirtualFree(m_pMapped, static_cast<size_t>(ullNewSize), MEM_DECOMMIT))
         {
             Log::Error(
-                "Failed VirtualFree: cannot decommit {:#x} [{}]",
-                reinterpret_cast<size_t>(m_pMapped),
-                LastWin32Error());
+                "Failed VirtualFree: cannot decommit 0x{:p} [{}]", static_cast<void*>(m_pMapped), LastWin32Error());
         }
 
         return hr;

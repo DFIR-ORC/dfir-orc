@@ -221,10 +221,6 @@ public:
             {
                 logger->Flush();
             }
-            else
-            {
-                assert(false && "Unexpected null logger");
-            }
         }
     }
 

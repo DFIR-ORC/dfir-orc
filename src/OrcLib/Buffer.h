@@ -52,13 +52,13 @@ public:
     _T* get(ULONG idx = 0) const
     {
         if (idx >= m_Elts)
-            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index acces into BufferExView"sv);
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index access into BufferExView"sv);
         return &m_Ptr[idx];
     }
     const _T& operator[](ULONG idx) const
     {
         if (idx >= m_Elts)
-            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index acces into BufferExView"sv);
+            throw Exception(Severity::Fatal, E_INVALIDARG, L"Invalid index access into BufferExView"sv);
         return m_Ptr[idx];
     }
 
@@ -78,6 +78,16 @@ public:
                 m_Elts * sizeof(_T));
 
         return reinterpret_cast<_T_as*>(ptr) + nth;
+    }
+
+    void zero(_In_ const std::optional<ULONG> pos = std::nullopt, _In_ std::optional<ULONG> Elts = std::nullopt)
+    {
+        auto size_ = size();
+        auto position = pos.value_or(0LU);
+        if (position >= size_)
+            return;
+        auto elements = Elts.value_or(size_ - position);
+        ZeroMemory(get(position), std::min(size_ - position, elements) * sizeof(_T));
     }
 
 private:
@@ -567,9 +577,9 @@ public:
     {
         auto size_ = size();
         auto position = pos.value_or(0LU);
-        auto elements = Elts.value_or(size_ - position);
-        if (pos >= size_)
+        if (position >= size_)
             return;
+        auto elements = Elts.value_or(size_ - position);
         ZeroMemory(get(position), std::min(size_ - position, elements) * sizeof(_T));
     }
 
@@ -711,7 +721,7 @@ public:
     _T* get_raw(ULONG index = 0) const
     {
         return std::visit(
-            [index](auto&& arg) -> auto { return arg.get(index); }, m_store);
+            [index](auto&& arg) -> auto{ return arg.get(index); }, m_store);
     }
 
     explicit operator _T*(void) const { return get(); }
@@ -719,7 +729,7 @@ public:
     bool owns(void) const
     {
         return std::visit(
-            [](auto&& arg) -> auto { return arg.owns(); }, m_store);
+            [](auto&& arg) -> auto{ return arg.owns(); }, m_store);
     }
 
     template <typename _TT>

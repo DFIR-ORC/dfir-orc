@@ -11,6 +11,8 @@
 
 #include <boost/outcome/outcome.hpp>
 
+#include <winternl.h>
+
 namespace Orc {
 
 template <typename T>
@@ -83,6 +85,11 @@ inline std::error_code SystemError(HRESULT hr)
 inline std::error_code Win32Error(DWORD win32Error)
 {
     return {HRESULT_FROM_WIN32(win32Error), std::system_category()};
+}
+
+inline std::error_code NtError(NTSTATUS ntStatus)
+{
+    return {HRESULT_FROM_NT(ntStatus), std::system_category()};
 }
 
 // Return std::error_code from GetLastError() value

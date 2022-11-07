@@ -10,9 +10,11 @@
 
 #pragma managed(push, off)
 
+#include <accctrl.h>
+
 namespace Orc {
 
-HRESULT SetPrivilege(WCHAR* szPrivilege, BOOL bEnablePrivilege);
+HRESULT SetPrivilege(const WCHAR* szPrivilege, BOOL bEnablePrivilege);
 
 HRESULT GetMyCurrentSID(PSID& pSid);
 

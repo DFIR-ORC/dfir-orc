@@ -31,6 +31,7 @@ HRESULT NtDllExtension::Initialize()
         Get(m_NtQueryDirectoryObject, "NtQueryDirectoryObject");
         Get(m_NtOpenSymbolicLinkObject, "NtOpenSymbolicLinkObject");
         Get(m_NtQuerySymbolicLinkObject, "NtQuerySymbolicLinkObject");
+        Try(m_NtSystemDebugControl, "NtSystemDebugControl");
         m_bInitialized = true;
     }
     return S_OK;

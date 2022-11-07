@@ -897,8 +897,10 @@ HRESULT RegistryHive::ParseLiRi(
         else
         {
             Log::Debug(
-                "Key '{}': Unknown signature for subkeys list! Should be 'nk','lf','lh,'ri' or 'li'",
-                CurrentKey->GetKeyName());
+                "Key '{}': Unknown signature for subkeys list! Should be 'nk','lf','lh,'ri' or 'li' and is '{}{}'",
+                CurrentKey->GetKeyName(),
+                (char)pHeader->Data[0],
+                (char)pHeader->Data[1]);
             continue;
         }
     }

@@ -40,9 +40,25 @@ class Exception : public std::exception
 {
 public:
     template <typename... Args>
+    Exception(_In_ HRESULT hr, std::wstring_view fmt, Args&&... args)
+        : m_severity(Severity::Unset)
+        , m_ec(SystemError(hr))
+    {
+        Description = fmt::format(fmt, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
     Exception(Severity status, _In_ HRESULT hr, std::wstring_view fmt, Args&&... args)
         : m_severity(status)
         , m_ec(SystemError(hr))
+    {
+        Description = fmt::format(fmt, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    Exception(_In_ std::error_code ec, std::wstring_view fmt, Args&&... args)
+        : m_severity(Severity::Unset)
+        , m_ec(ec)
     {
         Description = fmt::format(fmt, std::forward<Args>(args)...);
     }
@@ -62,12 +78,27 @@ public:
         Description = fmt::format(fmt, std::forward<Args>(args)...);
     }
 
-    Exception() = default;
-    Exception(Severity status)
+    template <typename... Args>
+    Exception(std::wstring_view fmt, Args&&... args)
+        : m_severity(Severity::Unset)
+    {
+        Description = fmt::format(fmt, std::forward<Args>(args)...);
+    }
+
+    explicit Exception(Severity status)
         : m_severity(status)
     {
     }
-    Exception(std::wstring descr);
+
+    explicit Exception(_In_ HRESULT hr)
+        : m_ec(SystemError(hr))
+    {
+    }
+
+    explicit Exception(_In_ std::error_code ec)
+        : m_ec(std::move(ec))
+    {
+    }
 
     Exception(Severity status, _In_ HRESULT hr)
         : m_severity(status)
@@ -79,6 +110,8 @@ public:
         , m_ec(std::move(ec))
     {
     }
+
+    Exception() = default;
 
     Exception(Exception&& other) noexcept = default;
     Exception(const Exception& other) = default;
@@ -102,7 +135,7 @@ public:
 
     HRESULT PrintMessage() const;
 
-    virtual const char* what() const override;
+    const char* what() const override;
 
     virtual ~Exception();
 

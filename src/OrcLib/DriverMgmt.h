@@ -56,13 +56,20 @@ public:
         , m_manager(std::move(manager))
     {
     }
+    virtual ~Driver();
 
     const std::wstring& Name() const { return m_strServiceName; }
 
     HRESULT UnInstall();
+    void EnableAutoUnInstall() { m_bAutoUninstall = true; }
+    void DisableAutoUnInstall() { m_bAutoUninstall = false; }
 
     HRESULT Start();
     HRESULT Stop();
+
+    void EnableAutoStop() { m_bAutoStop = true; }
+    void DisableAutoStop() { m_bAutoStop = false; }
+
     HRESULT DisableStart();
 
     HRESULT OpenDevicePath(std::wstring strDevicePath, DWORD dwRequiredAccess);
@@ -77,8 +84,7 @@ public:
         _Inout_opt_ LPOVERLAPPED lpOverlapped);
 
     template <typename _Tout, typename _Tin>
-    Orc::Result<size_t>
-    DeviceIoControl(DWORD dwIoControlCode, const Orc::Span<_Tin>& input, const Orc::Span<_Tout>& output)
+    Result<size_t> DeviceIoControl(DWORD dwIoControlCode, const Span<_Tin>& input, const Span<_Tout>& output)
     {
         using namespace msl::utilities;
 
@@ -96,7 +102,7 @@ public:
 
         if (dwBytesReturned % sizeof(_Tout))
         {
-            Orc::Log::Error(
+            Log::Error(
                 L"{}::DeviceIoControl({}) returned incomplete/invalid data ({} bytes returned when exepected element "
                 L"size is {}",
                 m_strServiceName,
@@ -110,12 +116,12 @@ public:
     }
 
     template <typename _Tout, typename _Tin>
-    Orc::Result<Orc::Buffer<_Tout>>
-    DeviceIoControl(DWORD dwIoControlCode, const Orc::Span<_Tin>& input, DWORD dwExpectedOutputElements = 1)
+    Result<Buffer<_Tout>>
+    DeviceIoControl(DWORD dwIoControlCode, const Span<_Tin>& input, DWORD dwExpectedOutputElements = 1)
     {
         using namespace msl::utilities;
 
-        Orc::Buffer<_Tout> output;
+        Buffer<_Tout> output;
         DWORD dwBytesReturned = 0LU;
         output.reserve(dwExpectedOutputElements);
         if (auto hr = DeviceIoControl(
@@ -127,25 +133,25 @@ public:
                 &dwBytesReturned,
                 NULL);
             FAILED(hr))
-            return Orc::SystemError(hr);
+            return SystemError(hr);
 
         if (dwBytesReturned % sizeof(_Tout))
         {
-            Orc::Log::Error(
+            Log::Error(
                 L"{}::DeviceIoControl({}) returned incomplete/invalid data ({} bytes returned when exepected element "
                 L"size is {}",
                 m_strServiceName,
                 dwIoControlCode,
                 dwBytesReturned,
                 sizeof(_Tout));
-            return Orc::SystemError(HRESULT_FROM_WIN32(ERROR_INVALID_DATA));
+            return SystemError(HRESULT_FROM_WIN32(ERROR_INVALID_DATA));
         }
         output.use(dwBytesReturned / sizeof(_Tout));
         return output;
     }
 
     template <typename _Tin>
-    Result<void> DeviceIoControl(DWORD dwIoControlCode, const Orc::Span<_Tin>& input)
+    Result<void> DeviceIoControl(DWORD dwIoControlCode, const Span<_Tin>& input)
     {
         using namespace msl::utilities;
 
@@ -164,11 +170,11 @@ public:
     }
 
     template <typename _Tout>
-    Orc::Result<Orc::Buffer<_Tout>> DeviceIoControl(DWORD dwIoControlCode, DWORD dwExpectedOutputElements = 1)
+    Result<Buffer<_Tout>> DeviceIoControl(DWORD dwIoControlCode, DWORD dwExpectedOutputElements = 1)
     {
         using namespace msl::utilities;
 
-        Orc::Buffer<_Tout> output;
+        Buffer<_Tout> output;
         output.reserve(dwExpectedOutputElements);
 
         DWORD dwBytesReturned = 0LU;
@@ -181,7 +187,7 @@ public:
                 &dwBytesReturned,
                 NULL);
             FAILED(hr))
-            return Orc::SystemError(hr);
+            return SystemError(hr);
 
         if (dwBytesReturned % sizeof(_Tout))
         {
@@ -192,7 +198,7 @@ public:
                 dwIoControlCode,
                 dwBytesReturned,
                 sizeof(_Tout));
-            return Orc::SystemError(HRESULT_FROM_WIN32(ERROR_INVALID_DATA));
+            return SystemError(HRESULT_FROM_WIN32(ERROR_INVALID_DATA));
         }
 
         output.resize(dwBytesReturned / sizeof(_Tout), false);
@@ -209,6 +215,8 @@ private:
     std::wstring m_strDriverFileName;
     std::wstring m_strDevicePath;
     bool m_bDeleteDriverOnClose = false;
+    bool m_bAutoStop = false;
+    bool m_bAutoUninstall = false;
 
     HANDLE m_hDevice = INVALID_HANDLE_VALUE;
 
