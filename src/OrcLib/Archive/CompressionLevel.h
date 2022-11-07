@@ -25,7 +25,10 @@ enum class CompressionLevel
     kUltra
 };
 
-CompressionLevel ToCompressionLevel(const std::wstring& compressionLevel, std::error_code& ec);
+CompressionLevel ToCompressionLevel(std::wstring_view compressionLevel, std::error_code& ec);
+
+std::string_view ToString(CompressionLevel);
+std::wstring_view ToWString(CompressionLevel);
 
 }  // namespace Archive
 }  // namespace Orc
