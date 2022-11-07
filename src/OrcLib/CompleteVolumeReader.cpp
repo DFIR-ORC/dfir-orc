@@ -165,8 +165,8 @@ std::shared_ptr<VolumeReader> CompleteVolumeReader::ReOpen(DWORD dwDesiredAccess
 // Read from disk.
 HRESULT CompleteVolumeReader::Read(CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead)
 {
-    Log::Critical("Not implemented: CompleteVolumeReader::Read");
-    return E_NOTIMPL;
+    const auto offset = m_Extents[0].GetSeekOffset() + m_LocalPositionOffset;
+    return Read(offset, data, ullBytesToRead, ullBytesRead);
 }
 
 HRESULT CompleteVolumeReader::ParseBootSector()
