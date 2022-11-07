@@ -59,7 +59,7 @@ public:
 
     virtual const std::wstring& GetName() const { return m_Name; }
     virtual ULONGLONG GetStartOffset() const { return m_Start; }
-    virtual ULONGLONG GetSeekOffset() const { return m_liCurrentPos.QuadPart; }
+    virtual ULONGLONG GetSeekOffset() const { return m_liCurrentPos.QuadPart - m_Start; }
     virtual ULONGLONG GetLength() const { return m_Length; }
     virtual ULONG GetLogicalSectorSize() const { return m_LogicalSectorSize; }
     virtual HANDLE GetHandle() const { return m_hFile; };
