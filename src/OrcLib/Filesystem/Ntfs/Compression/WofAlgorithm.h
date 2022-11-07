@@ -30,6 +30,9 @@ enum class WofAlgorithm
     kXpress16k = 3
 };
 
+std::string_view ToString(WofAlgorithm algorithm);
+std::wstring_view ToWString(WofAlgorithm algorithm);
+
 WofAlgorithm ToWofAlgorithm(const std::string& algorithm, std::error_code& ec);
 
 NtAlgorithm ToNtAlgorithm(WofAlgorithm algorithm);
@@ -41,7 +44,5 @@ WofAlgorithm ToWofAlgorithm(NtAlgorithm algorithm, uint64_t chunkSize, std::erro
 WofAlgorithm ToWofAlgorithm(WimlibAlgorithm algorithm, uint64_t chunkSize, std::error_code& ec);
 
 }  // namespace Ntfs
-
-std::string_view ToString(Ntfs::WofAlgorithm algorithm);
 
 }  // namespace Orc

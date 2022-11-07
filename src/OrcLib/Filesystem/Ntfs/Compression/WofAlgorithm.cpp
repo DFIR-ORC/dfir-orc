@@ -17,11 +17,19 @@ using namespace Orc;
 
 namespace {
 
-constexpr std::string_view kUnknown = "<Unknown>";
-constexpr std::string_view kXpress4k = "xpress4k";
-constexpr std::string_view kXpress8k = "xpress8k";
-constexpr std::string_view kXpress16k = "xpress16k";
-constexpr std::string_view kLzx = "lzx";
+using namespace std::string_view_literals;
+
+constexpr auto kUnknown = "<Unknown>"sv;
+constexpr auto kXpress4k = "xpress4k"sv;
+constexpr auto kXpress8k = "xpress8k"sv;
+constexpr auto kXpress16k = "xpress16k"sv;
+constexpr auto kLzx = "lzx"sv;
+
+constexpr auto kUnknownW = L"<Unknown>"sv;
+constexpr auto kXpress4kW = L"xpress4k"sv;
+constexpr auto kXpress8kW = L"xpress8k"sv;
+constexpr auto kXpress16kW = L"xpress16k"sv;
+constexpr auto kLzxW = L"lzx"sv;
 
 WofAlgorithm ToWofAlgorithmXpress(uint64_t chunkSize, std::error_code& ec)
 {
@@ -47,6 +55,7 @@ WofAlgorithm ToWofAlgorithmXpress(uint64_t chunkSize, std::error_code& ec)
 }  // namespace
 
 namespace Orc {
+namespace Ntfs {
 
 std::string_view ToString(Ntfs::WofAlgorithm algorithm)
 {
@@ -68,7 +77,25 @@ std::string_view ToString(Ntfs::WofAlgorithm algorithm)
 
     return kUnknown;
 }
-namespace Ntfs {
+
+std::wstring_view ToWString(WofAlgorithm algorithm)
+{
+    switch (algorithm)
+    {
+        case WofAlgorithm::kUnknown:
+            return kUnknownW;
+        case WofAlgorithm::kXpress4k:
+            return kXpress4kW;
+        case WofAlgorithm::kXpress8k:
+            return kXpress8kW;
+        case WofAlgorithm::kXpress16k:
+            return kXpress16kW;
+        case WofAlgorithm::kLzx:
+            return kLzxW;
+    }
+
+    return kUnknownW;
+}
 
 WofAlgorithm ToWofAlgorithm(const std::string& algorithm, std::error_code& ec)
 {
