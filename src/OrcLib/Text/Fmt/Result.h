@@ -20,8 +20,9 @@ struct fmt::formatter<boost::outcome_v2::std_result<T>> : public fmt::formatter<
     {
         if (result.has_error())
         {
-            const auto msg = fmt::format("{}", result.error());
-            return fmt::formatter<std::string_view>::format(msg, ctx);
+            fmt::memory_buffer msg;
+            fmt::format_to(std::back_inserter(msg), "{}", result.error());
+            return fmt::formatter<std::string_view>::format(std::begin(msg), ctx);
         }
 
         return formatter<std::string_view>::format("Success", ctx);
@@ -36,8 +37,9 @@ struct fmt::formatter<boost::outcome_v2::std_result<T>, wchar_t> : public fmt::f
     {
         if (result.has_error())
         {
-            const auto msg = fmt::format(L"{}", result.error());
-            return fmt::formatter<std::wstring_view, wchar_t>::format(msg, ctx);
+            fmt::wmemory_buffer msg;
+            fmt::format_to(std::back_inserter(msg), L"{}", result.error());
+            return fmt::formatter<std::wstring_view, wchar_t>::format(std::begin(msg), ctx);
         }
 
         return formatter<std::wstring_view, wchar_t>::format(L"Success", ctx);
