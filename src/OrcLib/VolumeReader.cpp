@@ -123,3 +123,9 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
 
     return S_OK;
 }
+
+HRESULT VolumeReader::Read(const LPBYTE data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead)
+{
+    CBinaryBuffer buffer(data, ullBytesToRead);
+    return Read(buffer, ullBytesToRead, ullBytesRead);
+}

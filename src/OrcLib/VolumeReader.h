@@ -57,6 +57,8 @@ public:
     virtual HRESULT Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead) = 0;
     virtual HRESULT Read(CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead) = 0;
 
+    HRESULT Read(const LPBYTE data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead);
+
     const CBinaryBuffer& GetBootSector() const { return m_BoostSector; }
 
     virtual std::shared_ptr<VolumeReader> ReOpen(DWORD dwDesiredAccess, DWORD dwShareMode, DWORD dwFlags) PURE;
