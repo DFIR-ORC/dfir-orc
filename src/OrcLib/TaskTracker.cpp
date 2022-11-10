@@ -932,7 +932,6 @@ HRESULT TaskTracker::CheckSamplesSignature()
         AuthenticodeStatus status;
         CheckSampleSignatureStatus(item.second, status);
     });
-    m_authenticode.CloseCatalogState();
     return S_OK;
 }
 

@@ -377,7 +377,6 @@ Authenticode::VerifySignatureWithCatalogs(
     WintrustCatalogStructure.pbCalculatedFileHash = hash.GetData();
     WintrustCatalogStructure.pcwszMemberTag = MemberTag.c_str();
     WintrustCatalogStructure.pcwszMemberFilePath = nullptr;
-    WintrustCatalogStructure.hMemberFile = 0L;
 
     // If we get here, we have catalog info!  Verify it.
     WINTRUST_DATA WintrustStructure;
@@ -387,22 +386,13 @@ Authenticode::VerifySignatureWithCatalogs(
     WintrustStructure.fdwRevocationChecks = WTD_REVOKE_NONE;
     WintrustStructure.dwUnionChoice = WTD_CHOICE_CATALOG;
     WintrustStructure.pCatalog = &WintrustCatalogStructure;
-    WintrustStructure.dwStateAction = WTD_STATEACTION_VERIFY;
+    WintrustStructure.dwStateAction = WTD_STATEACTION_IGNORE;  // Ignore hWVTStateData
     WintrustStructure.dwProvFlags = WTD_REVOCATION_CHECK_NONE;
     WintrustStructure.dwUIContext = 0L;
-
-    std::wstring strCatalog(InfoStruct.wszCatalogFile);
-    auto iter = m_StateMap.find(strCatalog);
-    if (iter != m_StateMap.end())
-        WintrustStructure.hWVTStateData = iter->second;
-    else
-        WintrustStructure.hWVTStateData = NULL;
 
     // WinVerifyTrust verifies signatures as specified by the GUID
     // and Wintrust_Data.
     LONG lStatus = m_wintrust.WinVerifyTrust((HWND)INVALID_HANDLE_VALUE, &WVTPolicyGUID, &WintrustStructure);
-
-    m_StateMap[std::move(strCatalog)] = WintrustStructure.hWVTStateData;
 
     if (FAILED(ExtractCatalogSigners(InfoStruct.wszCatalogFile, data.Signers, data.SignersCAs, data.CertStores)))
     {
@@ -1419,37 +1409,8 @@ HRESULT Orc::Authenticode::SignatureSize(LPCWSTR szFileName, const CBinaryBuffer
     return S_OK;
 }
 
-HRESULT Authenticode::CloseCatalogState()
-{
-    WINTRUST_DATA sWTD;
-    WINTRUST_CATALOG_INFO sWTCI;
-
-    memset(&sWTD, 0x00, sizeof(WINTRUST_DATA));
-    sWTD.cbStruct = sizeof(WINTRUST_DATA);
-    sWTD.dwUIChoice = WTD_UI_NONE;
-    sWTD.dwUnionChoice = WTD_CHOICE_CATALOG;
-    sWTD.pCatalog = &sWTCI;
-    sWTD.dwStateAction = WTD_STATEACTION_CLOSE;
-
-    memset(&sWTCI, 0x00, sizeof(WINTRUST_CATALOG_INFO));
-    sWTCI.cbStruct = sizeof(WINTRUST_CATALOG_INFO);
-
-    std::for_each(
-        m_StateMap.begin(), m_StateMap.end(), [&sWTD, this](const std::pair<const std::wstring&, const HANDLE> pair) {
-            if (pair.second)
-            {
-                sWTD.hWVTStateData = pair.second;
-
-                m_wintrust.WinVerifyTrust((HWND)INVALID_HANDLE_VALUE, &WVTPolicyGUID, &sWTD);
-            }
-        });
-    m_StateMap.clear();
-    return S_OK;
-}
-
 Authenticode::~Authenticode()
 {
-    CloseCatalogState();
     if (m_hContext != INVALID_HANDLE_VALUE)
         m_wintrust.CryptCATAdminReleaseContext(m_hContext, 0);
     if (m_hMachineStore != INVALID_HANDLE_VALUE)
