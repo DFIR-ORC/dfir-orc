@@ -685,7 +685,7 @@ protected:
     bool IgnoreCommonOptions(LPCWSTR szArg);
     bool IgnoreEarlyOptions(LPCWSTR szArg);
 
-    static void ParseShadowOption(
+    static void ParseShadowsOption(
         const std::wstring& shadows,
         boost::logic::tribool& bAddShadows,
         std::optional<LocationSet::ShadowFilters>& filters);

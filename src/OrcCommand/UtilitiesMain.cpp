@@ -766,11 +766,11 @@ bool UtilitiesMain::ShadowsOption(
         return false;
     }
 
-    ParseShadowOption(shadows, bAddShadows, filters);
+    ParseShadowsOption(shadows, bAddShadows, filters);
     return true;
 }
 
-void UtilitiesMain::ParseShadowOption(
+void UtilitiesMain::ParseShadowsOption(
     const std::wstring& shadows,
     boost::logic::tribool& bAddShadows,
     std::optional<LocationSet::ShadowFilters>& filters)

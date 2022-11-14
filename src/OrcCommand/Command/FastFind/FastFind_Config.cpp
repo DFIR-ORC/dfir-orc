@@ -134,7 +134,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         {
             if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.FileSystem.m_shadows.has_value())
             {
-                ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.FileSystem.m_shadows);
+                ParseShadowsOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.FileSystem.m_shadows);
             }
 
             if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.FileSystem.m_excludes.has_value())
@@ -192,7 +192,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         {
             if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.Registry.m_shadows.has_value())
             {
-                ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.Registry.m_shadows);
+                ParseShadowsOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.Registry.m_shadows);
             }
 
             if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.Registry.m_excludes.has_value())

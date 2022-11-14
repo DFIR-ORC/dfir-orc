@@ -147,7 +147,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     {
         if (item.SubItems[CONFIG_VOLUME_SHADOWS] && !config.m_shadows.has_value())
         {
-            ParseShadowOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
+            ParseShadowsOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
         }
 
         if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.m_excludes.has_value())
