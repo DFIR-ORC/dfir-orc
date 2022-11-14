@@ -781,7 +781,6 @@ set(SRC_UTILITIES
     "OrcException.h"
     "Flags.cpp"
     "Flags.h"
-    "Utils/AllocationPolicy.h"
     "Utils/BufferView.h"
     "Utils/BufferSpan.h"
     "Utils/Dump.h"
