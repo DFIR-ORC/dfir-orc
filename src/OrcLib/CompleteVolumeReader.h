@@ -28,6 +28,8 @@ public:
     HRESULT Seek(ULONGLONG offset);
     HRESULT Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead);
 
+    uint64_t Position() const override;
+
     virtual std::shared_ptr<VolumeReader> ReOpen(DWORD dwDesiredAccess, DWORD dwShareMode, DWORD dwFlags);
 
     virtual ~CompleteVolumeReader();

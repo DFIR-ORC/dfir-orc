@@ -74,6 +74,11 @@ HRESULT OfflineMFTReader::Seek(ULONGLONG offset)
     return HRESULT_FROM_WIN32(ERROR_INVALID_OPERATION);
 }
 
+uint64_t OfflineMFTReader::Position() const
+{
+    return -1;
+}
+
 HRESULT OfflineMFTReader::Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead)
 {
     DBG_UNREFERENCED_PARAMETER(offset);

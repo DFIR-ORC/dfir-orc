@@ -42,6 +42,11 @@ HRESULT CompleteVolumeReader::Seek(ULONGLONG offset)
     return m_Extents[0].Seek(liPosition, NULL, FILE_BEGIN);
 }
 
+uint64_t CompleteVolumeReader::Position() const
+{
+    return m_Extents[0].GetSeekOffset() + m_LocalPositionOffset;
+}
+
 HRESULT
 CompleteVolumeReader::ReadUnaligned(
     ULONGLONG offset,

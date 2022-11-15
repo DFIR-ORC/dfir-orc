@@ -59,6 +59,8 @@ public:
 
     HRESULT Read(const LPBYTE data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead);
 
+    virtual uint64_t Position() const = 0;
+
     const CBinaryBuffer& GetBootSector() const { return m_BoostSector; }
 
     virtual std::shared_ptr<VolumeReader> ReOpen(DWORD dwDesiredAccess, DWORD dwShareMode, DWORD dwFlags) PURE;

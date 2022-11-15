@@ -29,6 +29,11 @@ HRESULT VolumeReaderTest::Seek(ULONGLONG offset)
     return S_OK;
 }
 
+uint64_t VolumeReaderTest::Position() const
+{
+    return -1;
+}
+
 HRESULT VolumeReaderTest::Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead)
 {
     data.SetCount(static_cast<size_t>(ullBytesToRead));

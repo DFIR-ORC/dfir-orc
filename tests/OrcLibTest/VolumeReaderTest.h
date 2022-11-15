@@ -34,6 +34,8 @@ public:
     virtual HANDLE GetDevice() { return INVALID_HANDLE_VALUE; }
 
     virtual HRESULT Seek(ULONGLONG offset);
+    uint64_t Position() const;
+
     virtual HRESULT Read(ULONGLONG offset, Orc::CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead);
     virtual HRESULT Read(CBinaryBuffer& data, ULONGLONG ullBytesToRead, ULONGLONG& ullBytesRead);
 
