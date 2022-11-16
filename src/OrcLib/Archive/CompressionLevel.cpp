@@ -6,15 +6,14 @@
 // Author(s): fabienfl (ANSSI)
 //
 
-#include "stdafx.h"
-
 #include "Archive/CompressionLevel.h"
 
-#include <map>
 #include <cctype>
 
 namespace {
+
 using namespace std::string_view_literals;
+
 constexpr auto kDefault = "default"sv;
 constexpr auto kNone = "none"sv;
 constexpr auto kFastest = "fastest"sv;
@@ -23,13 +22,13 @@ constexpr auto kNormal = "normal"sv;
 constexpr auto kMaximum = "maximum"sv;
 constexpr auto kUltra = "ultra"sv;
 
-constexpr auto wkDefault = L"default"sv;
-constexpr auto wkNone = L"none"sv;
-constexpr auto wkFastest = L"fastest"sv;
-constexpr auto wkFast = L"fast"sv;
-constexpr auto wkNormal = L"normal"sv;
-constexpr auto wkMaximum = L"maximum"sv;
-constexpr auto wkUltra = L"ultra"sv;
+constexpr auto kDefaultW = L"default"sv;
+constexpr auto kNoneW = L"none"sv;
+constexpr auto kFastestW = L"fastest"sv;
+constexpr auto kFastW = L"fast"sv;
+constexpr auto kNormalW = L"normal"sv;
+constexpr auto kMaximumW = L"maximum"sv;
+constexpr auto kUltraW = L"ultra"sv;
 
 }  // namespace
 
@@ -50,28 +49,28 @@ CompressionLevel ToCompressionLevel(std::wstring_view compressionLevel, std::err
         });
 
     constexpr std::array levels = {
-        std::pair(wkDefault, CompressionLevel::kDefault),
-        std::pair(wkNone, CompressionLevel::kNone),
-        std::pair(wkFastest, CompressionLevel::kFastest),
-        std::pair(wkFast, CompressionLevel::kFast),
-        std::pair(wkNormal, CompressionLevel::kNormal),
-        std::pair(wkMaximum, CompressionLevel::kMaximum),
-        std::pair(wkUltra, CompressionLevel::kUltra)};
+        std::pair(kDefaultW, CompressionLevel::kDefault),
+        std::pair(kNoneW, CompressionLevel::kNone),
+        std::pair(kFastestW, CompressionLevel::kFastest),
+        std::pair(kFastW, CompressionLevel::kFast),
+        std::pair(kNormalW, CompressionLevel::kNormal),
+        std::pair(kMaximumW, CompressionLevel::kMaximum),
+        std::pair(kUltraW, CompressionLevel::kUltra)};
 
-    if (auto it = std::find_if(
-            std::begin(levels), std::end(levels), [level](const auto& aLevel) { return level == aLevel.first; });
-        it == std::cend(levels))
+    auto it = std::find_if(std::cbegin(levels), std::cend(levels), [level](const auto& l) { return level == l.first; });
+    if (it == std::cend(levels))
     {
         ec = std::make_error_code(std::errc::invalid_argument);
         return CompressionLevel::kDefault;
     }
-    else
-        return it->second;
+
+    return it->second;
 }
 
 std::string_view ToString(CompressionLevel level)
 {
     using namespace std::string_view_literals;
+
     switch (level)
     {
         case CompressionLevel::kDefault:
@@ -95,22 +94,23 @@ std::string_view ToString(CompressionLevel level)
 std::wstring_view ToWString(CompressionLevel level)
 {
     using namespace std::string_view_literals;
+
     switch (level)
     {
         case CompressionLevel::kDefault:
-            return wkDefault;
+            return kDefaultW;
         case CompressionLevel::kNone:
-            return wkNone;
+            return kNoneW;
         case CompressionLevel::kFastest:
-            return wkFastest;
+            return kFastestW;
         case CompressionLevel::kFast:
-            return wkFast;
+            return kFastW;
         case CompressionLevel::kNormal:
-            return wkNormal;
+            return kNormalW;
         case CompressionLevel::kMaximum:
-            return wkMaximum;
+            return kMaximumW;
         case CompressionLevel::kUltra:
-            return wkUltra;
+            return kUltraW;
         default:
             return L"<invalid>"sv;
     }
