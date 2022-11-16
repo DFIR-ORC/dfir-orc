@@ -44,6 +44,8 @@ set(SRC_COMMON
     "${GENERATED_SRC_DIR}/ToolVersionRes.h"
     "Usage.h"
     "Usage.cpp"
+    "Configuration/ShadowsParserOption.h"
+    "Configuration/ShadowsParserOption.cpp"
 )
 
 source_group(Common FILES ${SRC_COMMON})

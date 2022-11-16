@@ -34,6 +34,7 @@
 #include "FuzzyHashStream.h"
 #include "Archive/Appender.h"
 #include "Archive/7z/Archive7z.h"
+#include "Configuration/ShadowsParserOption.h"
 
 #pragma managed(push, off)
 
@@ -127,6 +128,7 @@ public:
         bool bReportAll = false;
         boost::logic::tribool bAddShadows;
         std::optional<LocationSet::ShadowFilters> m_shadows;
+        std::optional<Ntfs::ShadowCopy::ParserType> m_shadowsParser;
         std::optional<LocationSet::PathExcludes> m_excludes;
 
         OutputSpec Output;

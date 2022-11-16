@@ -19,6 +19,7 @@
 #include "Configuration/ConfigFile.h"
 #include "Location.h"
 #include "ParameterCheck.h"
+#include "Configuration/ShadowsParserOption.h"
 
 #pragma managed(push, off)
 
@@ -47,6 +48,7 @@ public:
         bool bCompactForm = false;
         boost::logic::tribool bAddShadows;
         std::optional<LocationSet::ShadowFilters> m_shadows;
+        std::optional<Ntfs::ShadowCopy::ParserType> m_shadowsParser;
         std::optional<LocationSet::PathExcludes> m_excludes;
     };
 

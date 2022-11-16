@@ -20,6 +20,7 @@
 #include "MFTWalker.h"
 #include "NtfsFileInfo.h"
 #include "Authenticode.h"
+#include "Configuration/ShadowsParserOption.h"
 
 #pragma managed(push, off)
 
@@ -92,6 +93,7 @@ public:
         boost::logic::tribool bResurrectRecords;
         boost::logic::tribool bAddShadows;
         std::optional<LocationSet::ShadowFilters> m_shadows;
+        std::optional<Ntfs::ShadowCopy::ParserType> m_shadowsParser;
         boost::logic::tribool bPopSystemObjects;
         std::optional<LocationSet::PathExcludes> m_excludes;
 

@@ -150,6 +150,12 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             ParseShadowsOption(item.SubItems[CONFIG_VOLUME_SHADOWS], bAddShadows, config.m_shadows);
         }
 
+        if (item.SubItems[CONFIG_VOLUME_SHADOWS_PARSER] && !config.m_shadowsParser.has_value())
+        {
+            std::error_code ec;
+            ParseShadowsParserOption(item.SubItems[CONFIG_VOLUME_SHADOWS_PARSER], config.m_shadowsParser, ec);
+        }
+
         if (item.SubItems[CONFIG_VOLUME_EXCLUDE] && !config.m_excludes.has_value())
         {
             ParseLocationExcludes(item.SubItems[CONFIG_VOLUME_EXCLUDE], config.m_excludes);
@@ -470,6 +476,8 @@ HRESULT Main::CheckConfiguration()
     HRESULT hr = E_FAIL;
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
+    config.Locations.SetShadowCopyParser(config.m_shadowsParser.value_or(Ntfs::ShadowCopy::ParserType::kInternal));
 
     ::InitializeStatisticsOutput(config);
 

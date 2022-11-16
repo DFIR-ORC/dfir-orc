@@ -24,6 +24,7 @@
 #include "FileDirectory.h"
 #include "OutputSpec.h"
 #include "CryptoHashStream.h"
+#include "Configuration/ShadowsParserOption.h"
 
 #pragma managed(push, off)
 
@@ -48,6 +49,7 @@ public:
     FileFind Files;
     boost::logic::tribool bAddShadows = boost::logic::indeterminate;
     std::optional<LocationSet::ShadowFilters> m_shadows;
+    std::optional<Ntfs::ShadowCopy::ParserType> m_shadowsParser;
     std::optional<LocationSet::PathExcludes> m_excludes;
 };
 

@@ -300,8 +300,9 @@ constexpr auto CONFIG_BYTESPERFRS = 3U;
 constexpr auto CONFIG_VOLUME_OFFSET = 4U;
 constexpr auto CONFIG_VOLUME_SIZE = 5U;
 constexpr auto CONFIG_VOLUME_SHADOWS = 6U;
-constexpr auto CONFIG_VOLUME_ALTITUDE = 7U;
-constexpr auto CONFIG_VOLUME_EXCLUDE = 8U;
+constexpr auto CONFIG_VOLUME_SHADOWS_PARSER = 7U;
+constexpr auto CONFIG_VOLUME_ALTITUDE = 8U;
+constexpr auto CONFIG_VOLUME_EXCLUDE = 9U;
 
 constexpr auto CONFIG_SQL_TABLEKEY = 0U;
 
