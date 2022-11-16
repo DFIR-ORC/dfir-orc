@@ -446,10 +446,10 @@ protected:
     //
     // Option handling
     //
-    bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Kind supportedTypes, OutputSpec& anOutput);
+    static bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Kind supportedTypes, OutputSpec& anOutput);
 
     template <typename OptionType>
-    bool
+    static bool
     OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec::Kind supportedTypes, std::optional<OptionType>& parameter)
     {
         OptionType result;
@@ -461,13 +461,13 @@ protected:
         return false;
     }
 
-    bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec& anOutput)
+    static bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, OutputSpec& anOutput)
     {
         return OutputOption(szArg, szOption, anOutput.supportedTypes, anOutput);
     };
 
     template <typename OptionType>
-    bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType> parameter)
+    static bool OutputOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType> parameter)
     {
         OptionType result;
         if (OutputOption(szArg, szOption, result))
@@ -478,9 +478,10 @@ protected:
         return false;
     }
 
-    bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
+    static bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
+
     template <typename OptionType>
-    bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType> parameter)
+    static bool OutputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType> parameter)
     {
         OptionType result;
         if (OutputFileOption(szArg, szOption, result))
@@ -491,9 +492,10 @@ protected:
         return false;
     }
 
-    bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
+    static bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strOutputFile);
+
     template <typename OptionType>
-    bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
+    static bool OutputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
     {
         OptionType result;
         if (OutputDirOption(szArg, szOption, result))
@@ -507,7 +509,7 @@ protected:
     bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile);
 
     template <typename OptionType>
-    bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
+    static bool InputFileOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
     {
         OptionType result;
         if (InputFileOption(szArg, szOption, result))
@@ -518,10 +520,10 @@ protected:
         return false;
     }
 
-    bool InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile);
+    static bool InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strInputFile);
 
     template <typename OptionType>
-    bool InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
+    static bool InputDirOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
     {
         OptionType result;
         if (InputDirOption(szArg, szOption, result))
@@ -532,16 +534,16 @@ protected:
         return false;
     }
 
-    bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strParameter);
-    bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULONGLONG& ullParameter);
-    bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWORD& dwParameter);
-    bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono::minutes& dwParameter);
-    bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono::seconds& dwParameter);
-    bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono::milliseconds& dwParameter);
-    bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bParameter);
+    static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::wstring& strParameter);
+    static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, ULONGLONG& ullParameter);
+    static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, DWORD& dwParameter);
+    static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono::minutes& dwParameter);
+    static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono::seconds& dwParameter);
+    static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono::milliseconds& dwParameter);
+    static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bParameter);
 
     template <typename OptionType>
-    bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
+    static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
     {
         OptionType result;
         if (ParameterOption(szArg, szOption, result))
@@ -552,24 +554,25 @@ protected:
         return false;
     }
 
-    bool OptionalParameterOption(
+    static bool OptionalParameterOption(
         LPCWSTR szArg,
         LPCWSTR szOption,
         std::optional<std::wstring>& strParameter,
         const std::optional<std::wstring> defaultValue = std::nullopt);
-    bool OptionalParameterOption(
+
+    static bool OptionalParameterOption(
         LPCWSTR szArg,
         LPCWSTR szOption,
         std::optional<ULONGLONG>& ullParameter,
         const std::optional<ULONGLONG> defaultValue = std::nullopt);
-    bool OptionalParameterOption(
+    static bool OptionalParameterOption(
         LPCWSTR szArg,
         LPCWSTR szOption,
         std::optional<DWORD>& dwParameter,
         const std::optional<DWORD> defaultValue = std::nullopt);
 
     template <class ListContainerT>
-    void
+    static void
     CSVListToContainer(const std::wstring& strKeywords, ListContainerT& parameterList, const LPCWSTR szSeparator = L",")
     {
         ListContainerT keys;
@@ -594,7 +597,7 @@ protected:
     };
 
     template <class ListContainerT>
-    bool ParameterListOption(
+    static bool ParameterListOption(
         LPCWSTR szArg,
         LPCWSTR szOption,
         ListContainerT& parameterList,
@@ -618,18 +621,18 @@ protected:
         return false;
     }
 
-    bool FileSizeOption(LPCWSTR szArg, LPCWSTR szOption, DWORDLONG& dwlFileSize);
+    static bool FileSizeOption(LPCWSTR szArg, LPCWSTR szOption, DWORDLONG& dwlFileSize);
 
-    bool AltitudeOption(LPCWSTR szArg, LPCWSTR szOption, LocationSet::Altitude& altitude);
+    static bool AltitudeOption(LPCWSTR szArg, LPCWSTR szOption, LocationSet::Altitude& altitude);
 
-    bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
-    bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bOption);
-    bool BooleanExactOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bPresent);
+    static bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
+    static bool BooleanOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bOption);
+    static bool BooleanExactOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bPresent);
 
-    bool ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
+    static bool ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& bOption);
 
     template <typename _EnumT>
-    bool EnumOption(LPCWSTR szArg, LPCWSTR szOption, _EnumT& eOption, _EnumT eValue)
+    static bool EnumOption(LPCWSTR szArg, LPCWSTR szOption, _EnumT& eOption, _EnumT eValue)
     {
         if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
             return false;
@@ -638,7 +641,7 @@ protected:
     }
 
     template <typename _FlagT, typename = std::enable_if_t<EnumFlagsOperator<_FlagT>::value>>
-    bool FlagOption(LPCWSTR szArg, LPCWSTR szOption, _FlagT& eOption, _FlagT eValue)
+    static bool FlagOption(LPCWSTR szArg, LPCWSTR szOption, _FlagT& eOption, _FlagT eValue)
     {
         if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
             return false;
@@ -646,7 +649,7 @@ protected:
         return true;
     }
     template <typename _FlagT, typename = std::enable_if_t<EnumFlagsOperator<_FlagT>::value>>
-    bool FlagOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<_FlagT>& fOption, _FlagT eValue)
+    static bool FlagOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<_FlagT>& fOption, _FlagT eValue)
     {
         if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
             return false;
@@ -656,19 +659,21 @@ protected:
         return true;
     }
 
-    bool ShadowsOption(
+    static bool ShadowsOption(
         LPCWSTR szArg,
         LPCWSTR szOption,
         boost::logic::tribool& bAddShadows,
         std::optional<LocationSet::ShadowFilters>& filters);
 
-    bool LocationExcludeOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<LocationSet::PathExcludes>& excludes);
+    static bool
+    LocationExcludeOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<LocationSet::PathExcludes>& excludes);
 
-    bool CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, CryptoHashStream::Algorithm& algo);
-    bool FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, FuzzyHashStream::Algorithm& algo);
+    static bool CryptoHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, CryptoHashStream::Algorithm& algo);
+    static bool FuzzyHashAlgorithmOption(LPCWSTR szArg, LPCWSTR szOption, FuzzyHashStream::Algorithm& algo);
 
-    bool ProcessPriorityOption(LPCWSTR szArg, LPCWSTR szOption = L"Low");
-    bool EncodingOption(LPCWSTR szArg, OutputSpec::Encoding& anEncoding);
+    static bool ProcessPriorityOption(LPCWSTR szArg, LPCWSTR szOption = L"Low");
+    static bool EncodingOption(LPCWSTR szArg, OutputSpec::Encoding& anEncoding);
+
     bool UsageOption(LPCWSTR szArg);
 
     bool WaitForDebugger(int argc, const WCHAR* argv[]);
