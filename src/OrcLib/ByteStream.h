@@ -43,7 +43,9 @@ protected:
 
 public:
     ByteStream()
-        : m_totalRead(0)
+        : m_readCount(0)
+        , m_totalRead(0)
+        , m_writeCount(0)
         , m_totalWritten(0)
     {
     }
@@ -69,6 +71,7 @@ public:
             *pcbBytesRead = read;
         }
 
+        m_readCount++;
         m_totalRead += read;
         return hr;
     }
@@ -86,6 +89,7 @@ public:
             *pcbBytesWritten = write;
         }
 
+        m_writeCount++;
         m_totalWritten += write;
         return hr;
     }
@@ -121,7 +125,9 @@ public:
     Get_ISequentialStream(const std::shared_ptr<ByteStream>& aStream, ::ISequentialStream** pSequentialStream);
 
 private:
+    uint64_t m_readCount;
     uint64_t m_totalRead;
+    uint64_t m_writeCount;
     uint64_t m_totalWritten;
 };
 
