@@ -694,7 +694,7 @@ HRESULT Orc::Authenticode::ExtractSignatureSize(const CBinaryBuffer& signature, 
             NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed CryptQueryObject [{}]", SystemError(hr));
+        Log::Debug("Failed CryptQueryObject [{}]", SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
@@ -707,7 +707,7 @@ HRESULT Orc::Authenticode::ExtractSignatureSize(const CBinaryBuffer& signature, 
         if (!CryptMsgGetParam(hMsg, CMSG_CONTENT_PARAM, 0, NULL, &dwBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to query authenticode content info [{}]", SystemError(hr));
+            Log::Debug(L"Failed to query authenticode content info [{}]", SystemError(hr));
             return hr;
         }
         cbSize = dwBytes;
@@ -742,7 +742,7 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
             NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CryptQueryObject [{}]", SystemError(hr));
+        Log::Debug("Failed CryptQueryObject [{}]", SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
@@ -755,7 +755,7 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
         if (!CryptMsgGetParam(hMsg, CMSG_CONTENT_PARAM, 0, NULL, &dwBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to query authenticode content info [{}]", SystemError(hr));
+            Log::Debug("Failed to query authenticode content info [{}]", SystemError(hr));
             return hr;
         }
         CBinaryBuffer msgContent;
@@ -764,7 +764,7 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
         if (!CryptMsgGetParam(hMsg, CMSG_CONTENT_PARAM, 0, msgContent.GetData(), &dwBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to get authenticode content info [{}]", SystemError(hr));
+            Log::Debug("Failed to get authenticode content info [{}]", SystemError(hr));
             return hr;
         }
 
@@ -772,7 +772,7 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
         if (!CryptMsgGetParam(hMsg, CMSG_INNER_CONTENT_TYPE_PARAM, 0, NULL, &dwBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to query authenticode content type info [{}]", SystemError(hr));
+            Log::Debug("Failed to query authenticode content type info [{}]", SystemError(hr));
             return hr;
         }
 
@@ -787,7 +787,7 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
                 &dwBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to decode authenticode SPC_INDIRECT_DATA info length [{}]", SystemError(hr));
+            Log::Debug("Failed to decode authenticode SPC_INDIRECT_DATA info length [{}]", SystemError(hr));
             return hr;
         }
 
@@ -805,7 +805,7 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
                 &dwBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to decode authenticode SPC_INDIRECT_DATA info [{}]", SystemError(hr));
+            Log::Debug("Failed to decode authenticode SPC_INDIRECT_DATA info [{}]", SystemError(hr));
             return hr;
         }
         PSPC_INDIRECT_DATA_CONTENT pIndirectData = (PSPC_INDIRECT_DATA_CONTENT)decodedIndirectData.GetData();
@@ -853,7 +853,7 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
             NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CryptQueryObject [{}]", SystemError(hr));
+        Log::Debug("Failed CryptQueryObject [{}]", SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
@@ -866,7 +866,7 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
         if (!CryptMsgGetParam(hMsg, CMSG_SIGNER_INFO_PARAM, 0, NULL, &dwBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to query authenticode content info [{}]", SystemError(hr));
+            Log::Debug("Failed to query authenticode content info [{}]", SystemError(hr));
             return hr;
         }
         CBinaryBuffer msgContent;
@@ -875,7 +875,7 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
         if (!CryptMsgGetParam(hMsg, CMSG_SIGNER_INFO_PARAM, 0, msgContent.GetData(), &dwBytes))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to get authenticode content info [{}]", SystemError(hr));
+            Log::Debug("Failed to get authenticode content info [{}]", SystemError(hr));
             return hr;
         }
 
@@ -943,7 +943,7 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
                                 &dwData))
                         {
                             hr = HRESULT_FROM_WIN32(GetLastError());
-                            Log::Error("Failed CryptDecodeObject [{}]", SystemError(hr));
+                            Log::Debug("Failed CryptDecodeObject [{}]", SystemError(hr));
                             break;
                         }
                         break;  // Break from for loop.
@@ -1088,7 +1088,7 @@ HRESULT Authenticode::ExtractSignatureSigners(
             NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CryptDecodeObject [{}]", SystemError(hr));
+        Log::Debug("Failed CryptDecodeObject [{}]", SystemError(hr));
         return hr;
     }
 
@@ -1113,7 +1113,7 @@ HRESULT Authenticode::ExtractSignatureSigners(
     if (GetLastError() != CRYPT_E_INVALID_INDEX)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed to extract signer information from blob [{}]", SystemError(hr));
+        Log::Debug("Failed to extract signer information from blob [{}]", SystemError(hr));
         return hr;
     }
 
@@ -1143,7 +1143,7 @@ HRESULT Authenticode::ExtractSignatureSigners(
                 &pChain))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed to obtain certificate chain [{}]", SystemError(hr));
+            Log::Debug("Failed to obtain certificate chain [{}]", SystemError(hr));
             break;
         }
         BOOST_SCOPE_EXIT(pChain) { CertFreeCertificateChain(pChain); }
@@ -1399,7 +1399,7 @@ HRESULT Orc::Authenticode::SignatureSize(LPCWSTR szFileName, const CBinaryBuffer
             DWORD dwSignatureSize = 0L;
             if (FAILED(hr = ExtractSignatureSize(signature, dwSignatureSize)))
             {
-                spdlog::error(
+                Log::Error(
                     L"Failed to extract hash from signature in the security directory of '{}' [{}]",
                     szFileName,
                     SystemError(hr));
