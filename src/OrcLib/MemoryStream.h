@@ -54,7 +54,7 @@ public:
     //
     // CByteStream implementation
     //
-    STDMETHOD(OpenForReadWrite)(DWORD dwReservedBytes = kDefaultReservedBytes);
+    STDMETHOD(OpenForReadWrite)(DWORD dwSize = 4096, DWORD dwReservedBytes = kDefaultReservedBytes);
 
     STDMETHOD(OpenForReadOnly)(__in PVOID pBuffer, __in size_t cbBuffer);
 

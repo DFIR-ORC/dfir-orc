@@ -330,8 +330,8 @@ HRESULT PEInfo::OpenVersionInformation()
     rsrc_rsrc_offset = (size_t)-1;
     for (size_t i = 0; i < rsrc_entry_count; i++)
     {
-        PIMAGE_RESOURCE_DIRECTORY_ENTRY pde = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(
-            (LPBYTE)rsrc_dir + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
+        PIMAGE_RESOURCE_DIRECTORY_ENTRY pde =
+            (PIMAGE_RESOURCE_DIRECTORY_ENTRY)((LPBYTE)rsrc_dir + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
         if ((!pde->NameIsString) && (pde->Id == RESOURCE_ID_VERSION) && (pde->DataIsDirectory))
         {
             rsrc_rsrc_offset = pde->OffsetToDirectory;
@@ -361,8 +361,8 @@ HRESULT PEInfo::OpenVersionInformation()
     rsrc_rsrc_offset = (size_t)-1;
     for (size_t i = 0; i < rsrc_entry_count; i++)
     {
-        PIMAGE_RESOURCE_DIRECTORY_ENTRY pde = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(
-            (LPBYTE)rsrc_dir + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
+        PIMAGE_RESOURCE_DIRECTORY_ENTRY pde =
+            (PIMAGE_RESOURCE_DIRECTORY_ENTRY)((LPBYTE)rsrc_dir + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
         if (pde->DataIsDirectory)
         {
             rsrc_rsrc_offset = pde->OffsetToDirectory;  // take any available children
@@ -391,8 +391,8 @@ HRESULT PEInfo::OpenVersionInformation()
     rsrc_rsrc_offset = static_cast<size_t>(-1);
     for (size_t i = 0; i < rsrc_entry_count; i++)
     {
-        PIMAGE_RESOURCE_DIRECTORY_ENTRY pde = (PIMAGE_RESOURCE_DIRECTORY_ENTRY)(
-            (LPBYTE)rsrc_dir + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
+        PIMAGE_RESOURCE_DIRECTORY_ENTRY pde =
+            (PIMAGE_RESOURCE_DIRECTORY_ENTRY)((LPBYTE)rsrc_dir + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
         if ((!pde->NameIsString) && (!pde->DataIsDirectory))
         {
             // TODO check LANG (pde->Id)
@@ -581,11 +581,9 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
     if (memstream == nullptr)
         return E_OUTOFMEMORY;
 
-    if (FAILED(hr = memstream->OpenForReadWrite()))
+    if (FAILED(hr = memstream->OpenForReadWrite(stream->GetSize())))
         return hr;
 
-    if (FAILED(hr = memstream->SetSize(stream->GetSize())))
-        return hr;
     ULONGLONG ullWritten = 0LL;
     if (FAILED(hr = stream->CopyTo(*memstream, &ullWritten)))
         return hr;

@@ -91,12 +91,6 @@ STDMETHODIMP TemporaryStream::Open(
 
         m_pMemStream = make_shared<MemoryStream>();
 
-        if (FAILED(hr = m_pMemStream->SetSize(dwMemThreshold)))
-        {
-            Log::Error("Failed to resize memory buffer [{}]", SystemError(hr));
-            return hr;
-        }
-
         if (FAILED(hr = m_pMemStream->OpenForReadWrite(dwMemThreshold)))
         {
             Log::Debug("Failed to open memstream for {} bytes, using file stream", dwMemThreshold);

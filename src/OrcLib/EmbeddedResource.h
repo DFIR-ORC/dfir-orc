@@ -559,7 +559,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRe
                 if (item.Size > 0)
                 {
                     using namespace msl::utilities;
-                    if (FAILED(hr = stream->OpenForReadWrite(SafeInt<DWORD>(item.Size))))
+                    if (FAILED(hr = stream->OpenForReadWrite(4096, SafeInt<DWORD>(item.Size))))
                         return nullptr;
                     pOutput = stream;
                     return stream;

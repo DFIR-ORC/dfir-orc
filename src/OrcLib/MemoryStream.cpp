@@ -93,15 +93,12 @@ MemoryStream::OpenForReadWrite
 Creates an empty stream which can be written to. All writes to the  stream will
 be kept in a growable memory buffer
 */
-HRESULT MemoryStream::OpenForReadWrite(DWORD dwReservedBytes)
+HRESULT MemoryStream::OpenForReadWrite(DWORD dwSize, DWORD dwReservedBytes)
 {
     HRESULT hr = E_FAIL;
     Close();
 
-    DWORD dwPageSize = 0L;
-    SystemDetails::GetPageSize(dwPageSize);
-
-    if (FAILED(hr = SetBufferSize(dwPageSize, dwReservedBytes)))
+    if (FAILED(hr = SetBufferSize(dwSize, dwReservedBytes)))
         return hr;
 
     m_bReadOnly = false;
