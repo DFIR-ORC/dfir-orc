@@ -115,6 +115,7 @@ private:
     DWORD dwTotalFileTreated;
     DWORD m_dwProgress;
 
+    std::shared_ptr<AuthenticodeCache> m_authenticodeCache;
     Authenticode m_codeVerifier;
 
     HRESULT Prepare();
@@ -213,7 +214,11 @@ public:
         , m_TimeLineOutput()
         , m_AttrOutput()
         , m_I30Output()
-        , m_SecDescrOutput() {};
+        , m_SecDescrOutput()
+        , m_authenticodeCache(std::make_shared<AuthenticodeCache>())
+    {
+        m_codeVerifier.SetCache(m_authenticodeCache);
+    }
 
     // implemented in NTFSInfo_Output.cpp
     void PrintUsage();

@@ -201,6 +201,115 @@ Authenticode::PE_Hashs To_PE_Hashs(const PeParser::PeHash& hashes)
     return h;
 }
 
+void GetSignersName(const std::vector<PCCERT_CONTEXT>& signers, std::vector<std::wstring>& names)
+{
+    for (const auto& signer : signers)
+    {
+        std::wstring name;
+        const auto requiredLength = CertGetNameStringW(signer, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, NULL, 0);
+        name.resize(requiredLength);
+
+        CertGetNameStringW(signer, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, name.data(), name.size());
+        name.resize(requiredLength - 1);  // remove trailing '\0'
+
+        names.push_back(std::move(name));
+    }
+}
+
+void GetSignersCertificateAuthoritiesName(
+    const std::vector<PCCERT_CONTEXT>& certificateAuthorities,
+    std::vector<std::wstring>& names)
+{
+    for (const auto& ca : certificateAuthorities)
+    {
+        std::wstring name;
+        const auto requiredLength = CertGetNameStringW(ca, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, NULL, 0);
+        name.resize(requiredLength);
+
+        CertGetNameStringW(ca, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, name.data(), name.size());
+        name.resize(requiredLength - 1);  // remove trailing '\0'
+
+        names.push_back(std::move(name));
+    }
+}
+
+HRESULT
+GetSignersThumbprint(const std::vector<PCCERT_CONTEXT>& signers, std::vector<Authenticode::Thumbprint>& thumbprints)
+{
+    for (const auto& signer : signers)
+    {
+        std::vector<uint8_t> thumbprint;
+        thumbprint.resize(BYTES_IN_SHA256_HASH);
+
+        DWORD thumbprintSize = thumbprint.size();
+        if (!CertGetCertificateContextProperty(signer, CERT_HASH_PROP_ID, thumbprint.data(), &thumbprintSize))
+        {
+            auto lastError = GetLastError();
+            Log::Debug("Failed to extract signer thumbprint [{}]", Win32Error(lastError));
+            return HRESULT_FROM_WIN32(lastError);
+        }
+
+        thumbprint.resize(thumbprintSize);
+        thumbprints.push_back(std::move(thumbprint));
+    }
+
+    return S_OK;
+}
+
+HRESULT GetSignersCertificateAuthoritiesThumbprint(
+    const std::vector<PCCERT_CONTEXT>& signers,
+    std::vector<Authenticode::Thumbprint>& thumbprints)
+{
+    for (const auto& signer : signers)
+    {
+        std::vector<uint8_t> thumbprint;
+        thumbprint.resize(BYTES_IN_SHA256_HASH);
+
+        DWORD thumbprintSize = thumbprint.size();
+        if (!CertGetCertificateContextProperty(signer, CERT_HASH_PROP_ID, thumbprint.data(), &thumbprintSize))
+        {
+            auto lastError = GetLastError();
+            Log::Debug("Failed to extract signers certificate authorities thumbprint [{}]", Win32Error(lastError));
+            return HRESULT_FROM_WIN32(lastError);
+        }
+
+        thumbprint.resize(thumbprintSize);
+        thumbprints.push_back(std::move(thumbprint));
+    }
+
+    return S_OK;
+}
+
+const std::shared_ptr<AuthenticodeCache::SignersInfo>& UpdateSignersCache(
+    AuthenticodeCache& cache,
+    std::wstring_view catalogPath,
+    std::vector<PCCERT_CONTEXT>& signers,
+    std::vector<PCCERT_CONTEXT>& signersCertificateAuthorities)
+{
+    auto info = std::make_shared<AuthenticodeCache::SignersInfo>();
+    info->catalogPath = catalogPath;
+
+    GetSignersName(signers, info->names);
+    GetSignersCertificateAuthoritiesName(signersCertificateAuthorities, info->certificateAuthoritiesName);
+
+    HRESULT hr = GetSignersThumbprint(signers, info->thumbprints);
+    if (FAILED(hr))
+    {
+        Log::Error("Failed to extract signers thumprint [{}]", SystemError(hr));
+    }
+
+    hr = GetSignersCertificateAuthoritiesThumbprint(
+        signersCertificateAuthorities, info->certificateAuthoritiesThumbprint);
+    if (FAILED(hr))
+    {
+        Log::Error("Failed to extract signers certificate authorities thumprint [{}]", SystemError(hr));
+    }
+
+    auto signersInfo = std::make_shared<AuthenticodeCache::SignersInfo>();
+
+    return cache.Update(catalogPath, std::move(info));
+}
+
 }  // namespace
 
 static GUID WVTPolicyGUID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
@@ -263,7 +372,10 @@ DWORD Authenticode::ExpectedHashSize()
         szPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0L, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
         return (DWORD)-1;
-    BOOST_SCOPE_EXIT(hFile) { CloseHandle(hFile); }
+    BOOST_SCOPE_EXIT(hFile)
+    {
+        CloseHandle(hFile);
+    }
     BOOST_SCOPE_EXIT_END;
 
     HCATADMIN hContext = NULL;
@@ -272,7 +384,10 @@ DWORD Authenticode::ExpectedHashSize()
     {
         return (DWORD)-1;
     }
-    BOOST_SCOPE_EXIT(hContext) { CryptCATAdminReleaseContext(hContext, 0); }
+    BOOST_SCOPE_EXIT(hContext)
+    {
+        CryptCATAdminReleaseContext(hContext, 0);
+    }
     BOOST_SCOPE_EXIT_END;
 
     DWORD cbHash = 0L;
@@ -395,13 +510,28 @@ Authenticode::VerifySignatureWithCatalogs(
     WintrustStructure.dwProvFlags = WTD_REVOCATION_CHECK_NONE;
     WintrustStructure.dwUIContext = 0L;
 
-    // WinVerifyTrust verifies signatures as specified by the GUID
-    // and Wintrust_Data.
+    // WinVerifyTrust verifies signatures as specified by the GUID and Wintrust_Data.
     LONG lStatus = m_wintrust.WinVerifyTrust((HWND)INVALID_HANDLE_VALUE, &WVTPolicyGUID, &WintrustStructure);
 
-    if (FAILED(ExtractCatalogSigners(InfoStruct.wszCatalogFile, data.Signers, data.SignersCAs, data.CertStores)))
+    // TODO: why here ? why not lazy ? CertStores ?
     {
-        Log::Debug(L"Failed to extract signer information from catalog '{}'", InfoStruct.wszCatalogFile);
+        fmt::basic_memory_buffer<char, 65536> catalogData;
+        auto rv = ::MapFile(InfoStruct.wszCatalogFile, catalogData);
+        if (rv.has_error())
+        {
+            Log::Error(
+                L"Failed to extract signature information from catalog '{}' [{}]",
+                InfoStruct.wszCatalogFile,
+                rv.error());
+            return ToHRESULT(rv.error());
+        }
+
+        HRESULT hr = ExtractCatalogSigners(
+            InfoStruct.wszCatalogFile, std::string_view(catalogData.data(), catalogData.size()), data);
+        if (FAILED(hr))
+        {
+            Log::Debug(L"Failed to extract signer information from catalog '{}'", InfoStruct.wszCatalogFile);
+        }
     }
 
     if (FAILED(EvaluateCheck(lStatus, data)))
@@ -692,7 +822,10 @@ HRESULT Orc::Authenticode::ExtractSignatureSize(const CBinaryBuffer& signature, 
         Log::Debug("Failed CryptQueryObject [{}]", SystemError(hr));
         return hr;
     }
-    BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
+    BOOST_SCOPE_EXIT((&hMsg))
+    {
+        CryptMsgClose(hMsg);
+    }
     BOOST_SCOPE_EXIT_END;
 
     if (dwContentType == CERT_QUERY_CONTENT_PKCS7_SIGNED && dwFormatType == CERT_QUERY_FORMAT_BINARY)
@@ -740,7 +873,10 @@ HRESULT Authenticode::ExtractSignatureHash(const CBinaryBuffer& signature, Authe
         Log::Debug("Failed CryptQueryObject [{}]", SystemError(hr));
         return hr;
     }
-    BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
+    BOOST_SCOPE_EXIT((&hMsg))
+    {
+        CryptMsgClose(hMsg);
+    }
     BOOST_SCOPE_EXIT_END;
 
     if (dwContentType == CERT_QUERY_CONTENT_PKCS7_SIGNED && dwFormatType == CERT_QUERY_FORMAT_BINARY)
@@ -851,7 +987,10 @@ HRESULT Authenticode::ExtractSignatureTimeStamp(const CBinaryBuffer& signature, 
         Log::Debug("Failed CryptQueryObject [{}]", SystemError(hr));
         return hr;
     }
-    BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
+    BOOST_SCOPE_EXIT((&hMsg))
+    {
+        CryptMsgClose(hMsg);
+    }
     BOOST_SCOPE_EXIT_END;
 
     if (dwContentType == CERT_QUERY_CONTENT_PKCS7_SIGNED && dwFormatType == CERT_QUERY_FORMAT_BINARY)
@@ -1022,7 +1161,10 @@ HRESULT Authenticode::ExtractNestedSignature(
                 Log::Error("Failed CryptDecodeObject [{}]", SystemError(hr));
                 return hr;
             }
-            BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
+            BOOST_SCOPE_EXIT((&hMsg))
+            {
+                CryptMsgClose(hMsg);
+            }
             BOOST_SCOPE_EXIT_END;
 
             certStores.push_back(hCertStore);
@@ -1089,7 +1231,10 @@ HRESULT Authenticode::ExtractSignatureSigners(
 
     certStores.push_back(hCertStore);
 
-    BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
+    BOOST_SCOPE_EXIT((&hMsg))
+    {
+        CryptMsgClose(hMsg);
+    }
     BOOST_SCOPE_EXIT_END;
 
     PCCERT_CONTEXT pSigner = NULL;
@@ -1141,7 +1286,10 @@ HRESULT Authenticode::ExtractSignatureSigners(
             Log::Debug("Failed to obtain certificate chain [{}]", SystemError(hr));
             break;
         }
-        BOOST_SCOPE_EXIT(pChain) { CertFreeCertificateChain(pChain); }
+        BOOST_SCOPE_EXIT(pChain)
+        {
+            CertFreeCertificateChain(pChain);
+        }
         BOOST_SCOPE_EXIT_END;
 
         // Go through each simple chain to obtain all root CAs
@@ -1158,8 +1306,43 @@ HRESULT Authenticode::ExtractSignatureSigners(
     return S_OK;
 }
 
+HRESULT
+Authenticode::ExtractCatalogSigners(std::wstring_view catalogPath, std::string_view catalogData, AuthenticodeData& data)
+{
+    if (data.SignersInfo())
+    {
+        return S_OK;
+    }
+
+    if (data.AuthenticodeCache())
+    {
+        auto info = data.AuthenticodeCache()->Find(catalogPath);
+        if (info)
+        {
+            data.SetSignerInfo(std::move(info));
+            return S_OK;
+        }
+    }
+
+    HRESULT hr = ExtractCatalogSigners(catalogData, data.Signers(), data.SignersCAs(), data.CertStores);
+    if (FAILED(hr))
+    {
+        Log::Debug(L"Failed to extract signer information from catalog '{}'", catalogPath);
+        return hr;
+    }
+
+    if (data.AuthenticodeCache())
+    {
+        auto signersInfo =
+            ::UpdateSignersCache(*data.AuthenticodeCache(), catalogPath, data.Signers(), data.SignersCAs());
+        data.SetSignerInfo(std::move(signersInfo));
+    }
+
+    return S_OK;
+}
+
 HRESULT Authenticode::ExtractCatalogSigners(
-    std::string_view catalog,
+    std::string_view catalogData,
     std::vector<PCCERT_CONTEXT>& pSigners,
     std::vector<PCCERT_CONTEXT>& pCAs,
     std::vector<HCERTSTORE>& certStores)
@@ -1172,8 +1355,8 @@ HRESULT Authenticode::ExtractCatalogSigners(
 
     {
         CRYPT_DATA_BLOB blob;
-        blob.cbData = catalog.size();
-        blob.pbData = reinterpret_cast<BYTE*>(const_cast<char*>(catalog.data()));
+        blob.cbData = catalogData.size();
+        blob.pbData = reinterpret_cast<BYTE*>(const_cast<char*>(catalogData.data()));
 
         if (!CryptQueryObject(
                 CERT_QUERY_OBJECT_BLOB,
@@ -1193,7 +1376,10 @@ HRESULT Authenticode::ExtractCatalogSigners(
         }
     }
 
-    BOOST_SCOPE_EXIT((&hMsg)) { CryptMsgClose(hMsg); }
+    BOOST_SCOPE_EXIT((&hMsg))
+    {
+        CryptMsgClose(hMsg);
+    }
     BOOST_SCOPE_EXIT_END;
 
     certStores.push_back(hCertStore);
@@ -1234,7 +1420,10 @@ HRESULT Authenticode::ExtractCatalogSigners(
             Log::Error("Failed to obtain certificate chain [{}]", SystemError(hr));
             return hr;
         }
-        BOOST_SCOPE_EXIT(pChain) { CertFreeCertificateChain(pChain); }
+        BOOST_SCOPE_EXIT(pChain)
+        {
+            CertFreeCertificateChain(pChain);
+        }
         BOOST_SCOPE_EXIT_END;
 
         // Go through each simple chain to obtain all root CAs
@@ -1250,23 +1439,6 @@ HRESULT Authenticode::ExtractCatalogSigners(
     }
 
     return S_OK;
-}
-
-HRESULT Authenticode::ExtractCatalogSigners(
-    LPCWSTR szCatalogFile,
-    std::vector<PCCERT_CONTEXT>& pSigners,
-    std::vector<PCCERT_CONTEXT>& pCAs,
-    std::vector<HCERTSTORE>& certStores)
-{
-    fmt::basic_memory_buffer<char, 65536> catalog;
-    auto rv = ::MapFile(szCatalogFile, catalog);
-    if (rv.has_error())
-    {
-        Log::Error(L"Failed to extract signature information from catalog '{}' [{}]", szCatalogFile, rv.error());
-        return ToHRESULT(rv.error());
-    }
-
-    return ExtractCatalogSigners(std::string_view(catalog.data(), catalog.size()), pSigners, pCAs, certStores);
 }
 
 HRESULT
@@ -1352,7 +1524,7 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
                     SystemError(hr));
             }
 
-            hr = ExtractSignatureSigners(signature, data.Timestamp, data.Signers, data.SignersCAs, data.CertStores);
+            hr = ExtractSignatureSigners(signature, data.Timestamp, data.Signers(), data.SignersCAs(), data.CertStores);
             if (FAILED(hr))
             {
                 Log::Error(
@@ -1434,6 +1606,74 @@ Authenticode::~Authenticode()
     }
 }
 
+const std::vector<std::wstring>& Authenticode::AuthenticodeData::SignersName()
+{
+    if (m_signersInfo)
+    {
+        return m_signersInfo->names;
+    }
+
+    if (!m_signersName)
+    {
+        std::vector<std::wstring> names;
+        GetSignersName(m_signers, names);
+        m_signersName = std::move(names);
+    }
+
+    return *m_signersName;
+}
+
+const std::vector<Authenticode::Thumbprint>& Authenticode::AuthenticodeData::SignersThumbprint()
+{
+    if (m_signersInfo)
+    {
+        return m_signersInfo->thumbprints;
+    }
+
+    if (!m_signersThumbprint)
+    {
+        std::vector<Thumbprint> thumbprint;
+        GetSignersThumbprint(m_signers, thumbprint);
+        m_signersThumbprint = std::move(thumbprint);
+    }
+
+    return *m_signersThumbprint;
+}
+
+const std::vector<std::wstring>& Authenticode::AuthenticodeData::SignersCertificateAuthoritiesName()
+{
+    if (m_signersInfo)
+    {
+        return m_signersInfo->certificateAuthoritiesName;
+    }
+
+    if (!m_signersCertificateAuthoritiesName)
+    {
+        std::vector<std::wstring> names;
+        GetSignersName(m_signersCertificateAuthorities, names);
+        m_signersCertificateAuthoritiesName = std::move(names);
+    }
+
+    return *m_signersCertificateAuthoritiesName;
+}
+
+const std::vector<Authenticode::Thumbprint>& Authenticode::AuthenticodeData::SignersCertificateAuthoritiesThumbprint()
+{
+    if (m_signersInfo)
+    {
+        return m_signersInfo->certificateAuthoritiesThumbprint;
+    }
+
+    if (!m_signersCertificateAuthoritiesThumbprint)
+    {
+        std::vector<Thumbprint> thumbprints;
+        GetSignersThumbprint(m_signersCertificateAuthorities, thumbprints);
+        m_signersCertificateAuthoritiesThumbprint = std::move(thumbprints);
+    }
+
+    return *m_signersCertificateAuthoritiesThumbprint;
+}
+
 Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
     std::string_view catalogHint,
     const Orc::Authenticode::PE_Hashs& peHashes,
@@ -1457,6 +1697,7 @@ Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
         L"%WINDIR%\\system32\\CatRoot\\{{F750E6C3-38EE-11D1-85E5-00C04FC295EE}}\\{}"sv,
         L"%WINDIR%\\system32\\CatRoot\\{}"sv};
 
+    auto& cache = data.AuthenticodeCache();
     for (auto& catroot : catrootDirectories)
     {
         std::error_code ec;
@@ -1473,8 +1714,7 @@ Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
             return rv.error();
         }
 
-        HRESULT hr = Authenticode::ExtractCatalogSigners(
-            std::string_view(catalog.data(), catalog.size()), data.Signers, data.SignersCAs, data.CertStores);
+        HRESULT hr = ExtractCatalogSigners(catalogPath, std::string_view(catalog.data(), catalog.size()), data);
         if (FAILED(hr))
         {
             return SystemError(hr);

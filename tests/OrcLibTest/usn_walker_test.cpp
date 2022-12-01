@@ -63,7 +63,14 @@ public:
                     std::vector<Filter> filters;
                     Authenticode authenticode;
 
-                    USNRecordFileInfo fi(L"Test", volreader, Intentions::FILEINFO_FILESIZE, filters, szFullName, pElt, authenticode);
+                    USNRecordFileInfo fi(
+                        L"Test",
+                        volreader,
+                        Intentions::FILEINFO_FILESIZE,
+                        filters,
+                        szFullName,
+                        pElt,
+                        authenticode);
 
                     if (fi.IsDirectory())
                     {

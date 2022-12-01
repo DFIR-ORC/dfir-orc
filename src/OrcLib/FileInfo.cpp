@@ -921,7 +921,7 @@ HRESULT FileInfo::OpenAuthenticode()
     if (FAILED(hr = CheckHash()))
         return hr;
 
-    Authenticode::AuthenticodeData data;
+    Authenticode::AuthenticodeData data(m_codeVerifyTrust.Cache());
     if (IsDirectory() || !m_PEInfo.HasPEHeader())
     {
         GetDetails()->SetAuthenticodeData(std::move(data));  // Setting empty Authenticode data
@@ -1074,7 +1074,10 @@ HRESULT FileInfo::WriteOwnerSid(ITableOutput& output)
     if (ERROR_SUCCESS != dwStatus)
         return HRESULT_FROM_WIN32(dwStatus);
 
-    BOOST_SCOPE_EXIT(&pSD) { ::LocalFree(pSD); }
+    BOOST_SCOPE_EXIT(&pSD)
+    {
+        ::LocalFree(pSD);
+    }
     BOOST_SCOPE_EXIT_END
 
     WCHAR* StringSid = NULL;
@@ -1100,7 +1103,10 @@ HRESULT FileInfo::WriteOwner(ITableOutput& output)
     if (ERROR_SUCCESS != dwStatus)
         return HRESULT_FROM_WIN32(dwStatus);
 
-    BOOST_SCOPE_EXIT(&pSD) { ::LocalFree(pSD); }
+    BOOST_SCOPE_EXIT(&pSD)
+    {
+        ::LocalFree(pSD);
+    }
     BOOST_SCOPE_EXIT_END
 
 #define MAX_NAME 512
@@ -1546,7 +1552,10 @@ HRESULT FileInfo::WriteSecurityDirectory(ITableOutput& output)
         if (szWstr == nullptr)
             return E_OUTOFMEMORY;
 
-        BOOST_SCOPE_EXIT(&szWstr) { ::free(szWstr); }
+        BOOST_SCOPE_EXIT(&szWstr)
+        {
+            ::free(szWstr);
+        }
         BOOST_SCOPE_EXIT_END
 
         CryptBinaryToStringW(
@@ -1646,32 +1655,31 @@ HRESULT FileInfo::WriteAuthenticodeSigner(ITableOutput& output)
     if (FAILED(hr = CheckAuthenticodeData()))
     {
         if (hr == HRESULT_FROM_WIN32(ERROR_DIRECTORY) || hr == HRESULT_FROM_WIN32(ERROR_NO_DATA))
+        {
             return output.WriteNothing();
+        }
+
         return hr;
     }
 
-    auto& signers = GetDetails()->GetAuthenticodeData().Signers;
+    const auto& signers = GetDetails()->GetAuthenticodeData().SignersName();
 
     if (signers.empty())
+    {
         return output.WriteNothing();
+    }
 
     bool bIsFirst = true;
-
     std::wstringstream signerstream;
-
-    for (auto signer : signers)
+    for (const auto& name : signers)
     {
-        WCHAR szNameString[ORC_MAX_PATH];
-        ZeroMemory(szNameString, ORC_MAX_PATH * sizeof(WCHAR));
-
-        CertGetNameString(signer, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, szNameString, ORC_MAX_PATH);
         if (!bIsFirst)
         {
-            signerstream << L";" << szNameString;
+            signerstream << L";" << name;
         }
         else
         {
-            signerstream << szNameString;
+            signerstream << name;
             bIsFirst = false;
         }
     }
@@ -1686,39 +1694,35 @@ HRESULT FileInfo::WriteAuthenticodeSignerThumbprint(ITableOutput& output)
     if (FAILED(hr = CheckAuthenticodeData()))
     {
         if (hr == HRESULT_FROM_WIN32(ERROR_DIRECTORY) || hr == HRESULT_FROM_WIN32(ERROR_NO_DATA))
+        {
             return output.WriteNothing();
+        }
+
         return hr;
     }
 
-    auto& signers = GetDetails()->GetAuthenticodeData().Signers;
+    const auto& thumbprints = GetDetails()->GetAuthenticodeData().SignersThumbprint();
 
-    if (signers.empty())
+    if (thumbprints.empty())
+    {
         return output.WriteNothing();
+    }
 
     bool bIsFirst = true;
-
     std::wstringstream signerstream;
-
-    for (auto signer : signers)
+    for (const auto& thumbprint : thumbprints)
     {
-        BYTE Thumbprint[BYTES_IN_SHA256_HASH];
-        DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
-        if (!CertGetCertificateContextProperty(signer, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
+        if (!bIsFirst)
         {
-            Log::Debug("Failed to extract certificate thumbprint");
+            signerstream << L";";
         }
-        else
+
+        for (UINT i = 0; i < thumbprint.size(); i++)
         {
-            if (!bIsFirst)
-            {
-                signerstream << L";";
-            }
-            for (UINT i = 0; i < cbThumbprint; i++)
-            {
-                signerstream << std::setfill(L'0') << std::setw(2) << std::hex << Thumbprint[i];
-            }
-            bIsFirst = false;
+            signerstream << std::setfill(L'0') << std::setw(2) << std::hex << thumbprint[i];
         }
+
+        bIsFirst = false;
     }
 
     return output.WriteString(signerstream.str());
@@ -1731,35 +1735,35 @@ HRESULT FileInfo::WriteAuthenticodeCA(ITableOutput& output)
     if (FAILED(hr = CheckAuthenticodeData()))
     {
         if (hr == HRESULT_FROM_WIN32(ERROR_DIRECTORY) || hr == HRESULT_FROM_WIN32(ERROR_NO_DATA))
+        {
             return output.WriteNothing();
+        }
+
         return hr;
     }
 
-    auto& signersCAs = GetDetails()->GetAuthenticodeData().SignersCAs;
+    const auto& signersCAs = GetDetails()->GetAuthenticodeData().SignersCertificateAuthoritiesName();
 
     if (signersCAs.empty())
+    {
         return output.WriteNothing();
+    }
 
     bool bIsFirst = true;
-
     std::wstringstream castream;
-
-    for (auto CA : signersCAs)
+    for (const auto& name : signersCAs)
     {
-        WCHAR szNameString[ORC_MAX_PATH];
-        ZeroMemory(szNameString, ORC_MAX_PATH * sizeof(WCHAR));
-
-        CertGetNameString(CA, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, szNameString, ORC_MAX_PATH);
         if (!bIsFirst)
         {
-            castream << L";" << szNameString;
+            castream << L";" << name;
         }
         else
         {
-            castream << szNameString;
+            castream << name;
             bIsFirst = false;
         }
     }
+
     return output.WriteString(castream.str());
 }
 
@@ -1770,39 +1774,34 @@ HRESULT FileInfo::WriteAuthenticodeCAThumbprint(ITableOutput& output)
     if (FAILED(hr = CheckAuthenticodeData()))
     {
         if (hr == HRESULT_FROM_WIN32(ERROR_DIRECTORY) || hr == HRESULT_FROM_WIN32(ERROR_NO_DATA))
+        {
             return output.WriteNothing();
+        }
+
         return hr;
     }
 
-    auto& signersCAs = GetDetails()->GetAuthenticodeData().SignersCAs;
-
-    if (signersCAs.empty())
+    const auto& thumbprints = GetDetails()->GetAuthenticodeData().SignersCertificateAuthoritiesThumbprint();
+    if (thumbprints.empty())
+    {
         return output.WriteNothing();
+    }
 
     bool bIsFirst = true;
-
     std::wstringstream castream;
-
-    for (auto ca : signersCAs)
+    for (auto thumbprint : thumbprints)
     {
-        BYTE Thumbprint[BYTES_IN_SHA256_HASH];
-        DWORD cbThumbprint = BYTES_IN_SHA256_HASH;
-        if (!CertGetCertificateContextProperty(ca, CERT_HASH_PROP_ID, Thumbprint, &cbThumbprint))
+        if (!bIsFirst)
         {
-            Log::Debug("Failed to extract certificate thumbprint");
+            castream << L";";
         }
-        else
+
+        for (UINT i = 0; i < thumbprint.size(); i++)
         {
-            if (!bIsFirst)
-            {
-                castream << L";";
-            }
-            for (UINT i = 0; i < cbThumbprint; i++)
-            {
-                castream << std::setfill(L'0') << std::setw(2) << std::hex << Thumbprint[i];
-            }
-            bIsFirst = false;
+            castream << std::setfill(L'0') << std::setw(2) << std::hex << thumbprint[i];
         }
+
+        bIsFirst = false;
     }
 
     return output.WriteString(castream.str());

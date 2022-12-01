@@ -21,6 +21,7 @@
 #include "BinaryBuffer.h"
 
 #include <mscat.h>
+#include <algorithm>
 
 #pragma managed(push, off)
 
@@ -29,9 +30,56 @@ namespace Orc {
 class CBinaryBuffer;
 class ByteStream;
 
+class AuthenticodeCache
+{
+public:
+    struct SignersInfo
+    {
+        using Thumbprint = std::vector<uint8_t>;
+
+        std::wstring_view catalogPath;
+        std::vector<std::wstring> names;
+        std::vector<Thumbprint> thumbprints;
+        std::vector<std::wstring> certificateAuthoritiesName;
+        std::vector<Thumbprint> certificateAuthoritiesThumbprint;
+    };
+
+    using CatalogPath = std::wstring_view;
+    using SignersCache = std::unordered_map<CatalogPath, std::shared_ptr<SignersInfo>>;
+
+    std::shared_ptr<SignersInfo> Find(std::wstring_view catalogPath)
+    {
+        auto it = m_signers.find(catalogPath);
+        if (it != std::end(m_signers))
+        {
+            return it->second;
+        }
+
+        return nullptr;
+    }
+
+    const std::shared_ptr<SignersInfo>& Update(std::wstring_view catalogPath, std::shared_ptr<SignersInfo> signersInfo)
+    {
+        // Required workaround for lifetime until until heterogeneous lookup in unordered map are available (using
+        // std::string_view key for a std::string key map)
+        m_catalogsPath.emplace_back(catalogPath);
+
+        return m_signers[m_catalogsPath.back()] = std::move(signersInfo);
+    }
+
+    SignersCache& Signers() { return m_signers; }
+    const SignersCache& Signers() const { return m_signers; }
+
+private:
+    std::vector<std::wstring> m_catalogsPath;
+    SignersCache m_signers;
+};
+
 class Authenticode
 {
 public:
+    using Thumbprint = AuthenticodeCache::SignersInfo::Thumbprint;
+
     typedef enum
     {
         AUTHENTICODE_UNKNOWN = 0,
@@ -54,36 +102,34 @@ public:
     class AuthenticodeData
     {
     public:
-        bool isSigned = false;
-        bool bSignatureVerifies = false;
-
         Authenticode::Status AuthStatus = AUTHENTICODE_UNKNOWN;
 
-        std::vector<PCCERT_CONTEXT> Signers;
-        std::vector<PCCERT_CONTEXT> SignersCAs;
-        std::vector<HCERTSTORE> CertStores;
-        PE_Hashs SignedHashs;
-        FILETIME Timestamp {0};
-
-        AuthenticodeData() = default;
+        AuthenticodeData() {}
+        AuthenticodeData(std::shared_ptr<AuthenticodeCache> cache)
+            : m_authenticodeCache(std::move(cache)) {};
         AuthenticodeData(const AuthenticodeData& other) = default;
         AuthenticodeData(AuthenticodeData&& other)
         {
             std::swap(isSigned, other.isSigned);
             std::swap(bSignatureVerifies, other.bSignatureVerifies);
-            std::swap(Signers, other.Signers);
-            std::swap(SignersCAs, other.SignersCAs);
+            std::swap(m_signers, other.m_signers);
+            std::swap(m_signersName, other.m_signersName);
+            std::swap(m_signersCertificateAuthoritiesThumbprint, other.m_signersCertificateAuthoritiesThumbprint);
+            std::swap(m_signersCertificateAuthorities, other.m_signersCertificateAuthorities);
+            std::swap(m_signersCertificateAuthoritiesName, other.m_signersCertificateAuthoritiesName);
+            std::swap(m_signersCertificateAuthoritiesThumbprint, other.m_signersCertificateAuthoritiesThumbprint);
+            std::swap(m_signersInfo, other.m_signersInfo);
         }
 
         ~AuthenticodeData()
         {
             isSigned = false;
             bSignatureVerifies = false;
-            for (auto signer : Signers)
+            for (auto signer : m_signers)
             {
                 CertFreeCertificateContext(signer);
             }
-            for (auto CA : SignersCAs)
+            for (auto CA : m_signersCertificateAuthorities)
             {
                 CertFreeCertificateContext(CA);
             }
@@ -93,20 +139,86 @@ public:
             }
         }
 
+        const std::vector<std::wstring>& SignersName();
+        const std::vector<Authenticode::Thumbprint>& SignersThumbprint();
+
+        const std::vector<std::wstring>& SignersCertificateAuthoritiesName();
+        const std::vector<Authenticode::Thumbprint>& SignersCertificateAuthoritiesThumbprint();
+
+        const std::shared_ptr<Orc::AuthenticodeCache>& AuthenticodeCache() const { return m_authenticodeCache; }
+        std::shared_ptr<Orc::AuthenticodeCache>& AuthenticodeCache() { return m_authenticodeCache; }
+
         AuthenticodeData& operator=(const AuthenticodeData& other) = default;
+
+        void SetSignerInfo(std::shared_ptr<AuthenticodeCache::SignersInfo> signersInfo) { m_signersInfo = signersInfo; }
+        const std::shared_ptr<AuthenticodeCache::SignersInfo>& SignersInfo() const { return m_signersInfo; }
+
+        // private:
+        std::vector<PCCERT_CONTEXT>& Signers() { return m_signers; }
+        const std::vector<PCCERT_CONTEXT>& Signers() const { return m_signers; }
+
+        std::vector<PCCERT_CONTEXT>& SignersCAs() { return m_signersCertificateAuthorities; }
+        const std::vector<PCCERT_CONTEXT>& SignersCAs() const { return m_signersCertificateAuthorities; }
+
+    public:
+        std::vector<HCERTSTORE> CertStores;
+        bool isSigned = false;
+        bool bSignatureVerifies = false;
+        PE_Hashs SignedHashs;
+        FILETIME Timestamp {0};
+
+    private:
+        mutable std::shared_ptr<Orc::AuthenticodeCache> m_authenticodeCache;
+        std::shared_ptr<Orc::AuthenticodeCache::SignersInfo> m_signersInfo;
+
+        std::optional<std::vector<std::wstring>> m_signersName;
+        std::optional<std::vector<Thumbprint>> m_signersThumbprint;
+        std::optional<std::vector<std::wstring>> m_signersCertificateAuthoritiesName;
+        std::optional<std::vector<Thumbprint>> m_signersCertificateAuthoritiesThumbprint;
+
+        std::vector<PCCERT_CONTEXT> m_signers;
+        std::vector<PCCERT_CONTEXT> m_signersCertificateAuthorities;
     };
 
-private:
-    HCERTSTORE m_hMachineStore = INVALID_HANDLE_VALUE;
-    HANDLE m_hContext = INVALID_HANDLE_VALUE;
+public:
+    Authenticode();
+    ~Authenticode();
 
-    WinTrustExtension m_wintrust;
+    static DWORD ExpectedHashSize();
+
+    static HRESULT
+    ExtractCatalogSigners(std::wstring_view catalogPath, std::string_view catalogData, AuthenticodeData& data);
+
+    static Orc::Result<void> VerifySignatureWithCatalogHint(
+        std::string_view catalogHint,
+        const Orc::Authenticode::PE_Hashs& peHashes,
+        Authenticode::AuthenticodeData& data);
+
+    // Catalog based verifications
+    HRESULT Verify(LPCWSTR szFileName, AuthenticodeData& data);
+    HRESULT Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStream>& pStream, AuthenticodeData& data);
+    HRESULT VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data);
+
+    // Security directory verification
+    HRESULT Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_Hashs& hashs, AuthenticodeData& data);
+    HRESULT SignatureSize(LPCWSTR szFileName, const CBinaryBuffer& secdir, DWORD& cbSize);
+
+    std::shared_ptr<AuthenticodeCache>& Cache() { return m_authenticodeCache; }
+    void SetCache(std::shared_ptr<AuthenticodeCache> cache) { m_authenticodeCache = std::move(cache); }
+
+private:
+    static HRESULT ExtractCatalogSigners(
+        std::string_view catalog,
+        std::vector<PCCERT_CONTEXT>& pSigners,
+        std::vector<PCCERT_CONTEXT>& pCAs,
+        std::vector<HCERTSTORE>& certStores);
 
     HRESULT FindCatalogForHash(const CBinaryBuffer& hash, bool& isCatalogSigned, HCATINFO& hCatalog);
 
     HRESULT EvaluateCheck(LONG lStatus, AuthenticodeData& data);
 
     HRESULT VerifyEmbeddedSignature(LPCWSTR szFileName, HANDLE hFile, AuthenticodeData& data);
+
     HRESULT VerifySignatureWithCatalogs(
         LPCWSTR szFileName,
         const CBinaryBuffer& hash,
@@ -130,38 +242,11 @@ private:
         std::vector<PCCERT_CONTEXT>& pCA,
         std::vector<HCERTSTORE>& certStores);
 
-public:
-    Authenticode();
-
-    static DWORD ExpectedHashSize();
-
-    static HRESULT ExtractCatalogSigners(
-        LPCWSTR szCatalogFile,
-        std::vector<PCCERT_CONTEXT>& pSigners,
-        std::vector<PCCERT_CONTEXT>& pCAs,
-        std::vector<HCERTSTORE>& certStores);
-
-    static HRESULT ExtractCatalogSigners(
-        std::string_view catalog,
-        std::vector<PCCERT_CONTEXT>& pSigners,
-        std::vector<PCCERT_CONTEXT>& pCAs,
-        std::vector<HCERTSTORE>& certStores);
-
-    static Orc::Result<void> VerifySignatureWithCatalogHint(
-        std::string_view catalogHint,
-        const Orc::Authenticode::PE_Hashs& peHashes,
-        Authenticode::AuthenticodeData& data);
-
-    // Catalog based verifications
-    HRESULT Verify(LPCWSTR szFileName, AuthenticodeData& data);
-    HRESULT Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStream>& pStream, AuthenticodeData& data);
-    HRESULT VerifyAnySignatureWithCatalogs(LPCWSTR szFileName, const PE_Hashs& hashs, AuthenticodeData& data);
-
-    // Security directory verification
-    HRESULT Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_Hashs& hashs, AuthenticodeData& data);
-    HRESULT SignatureSize(LPCWSTR szFileName, const CBinaryBuffer& secdir, DWORD& cbSize);
-
-    ~Authenticode();
+private:
+    HCERTSTORE m_hMachineStore = INVALID_HANDLE_VALUE;
+    HANDLE m_hContext = INVALID_HANDLE_VALUE;
+    WinTrustExtension m_wintrust;
+    std::shared_ptr<AuthenticodeCache> m_authenticodeCache;
 };
 
 }  // namespace Orc

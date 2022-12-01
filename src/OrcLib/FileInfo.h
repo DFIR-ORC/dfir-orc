@@ -73,7 +73,6 @@ public:
     HRESULT CheckFirstBytes();
     HRESULT CheckFileHandle();
     HRESULT CheckHash();
-    HRESULT CheckFuzzyHash();
     HRESULT CheckAuthenticodeData();
 
 protected:

@@ -180,6 +180,8 @@ public:
     };
 
     const Authenticode::AuthenticodeData& GetAuthenticodeData() const { return m_AuthData; };
+    Authenticode::AuthenticodeData& GetAuthenticodeData() { return m_AuthData; };
+
     bool HasAuthenticodeData() const { return m_bHasAuthData; };
 
     HRESULT SetVersionInfoBlock(CBinaryBuffer&& buffer)
