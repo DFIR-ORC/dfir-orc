@@ -95,6 +95,13 @@ SnapshotVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& buffer, ULONGLONG ul
         return E_OUTOFMEMORY;
     }
 
+    //
+    // BEWARE
+    //
+    // Always zero the buffer ! As VirtualAlloc is being use it is not required here. But because volsnap.sys (shadow
+    // copy) can return sucessfully without modifying the provided buffer when trying to read unused/free cow blocks, it
+    // must be zeroed.
+    //
     CBinaryBuffer localBuffer(true);
     localBuffer.SetCount(bytesPerCowBlock);
 
