@@ -31,6 +31,7 @@ class UncompressWofStream : public ChainingStream
 {
 public:
     using ByteStreamT = ByteStreamConcept<std::shared_ptr<NTFSStream>>;
+    using WofStreamT = Ntfs::WofStreamConcept<ByteStreamT, std::unique_ptr<NtDecompressorConcept>>;
 
     UncompressWofStream();
     virtual ~UncompressWofStream();
@@ -71,9 +72,13 @@ public:
 
     STDMETHOD(Close)();
 
+    HRESULT ShrinkContext();
+
 private:
-    Ntfs::WofStreamConcept<ByteStreamT, NtDecompressorConcept> m_wofStream;
     BufferStreamConcept<std::vector<uint8_t>> m_buffer;
+    std::unique_ptr<WofStreamT> m_wofStream;
+    std::shared_ptr<NTFSStream> m_ntfsStream;
+    Ntfs::WofAlgorithm m_algorithm;
     uint64_t m_uncompressedSize;
 };
 

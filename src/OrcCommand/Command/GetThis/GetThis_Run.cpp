@@ -885,6 +885,14 @@ HRESULT Main::ConfigureSampleStreams(SampleRef& sample) const
         stream = sample.FuzzyHashStream;
     }
 
+    // WORKAROUND: some stream like wof can use a very large context for fast I/O. By design it is difficult to
+    // close/reopen streams. When 'ShrinkContext' is implemented it allows to free resources until next use.
+    hr = dataStream->ShrinkContext();
+    if (FAILED(hr))
+    {
+        Log::Error("Failed to shrink stream context [{}]", SystemError(hr));
+    }
+
     sample.CopyStream = stream;
     sample.SampleSize = sample.CopyStream->GetSize();
     return S_OK;
@@ -1019,7 +1027,7 @@ HRESULT Main::WriteSample(
 {
     auto sample = std::shared_ptr<SampleRef>(std::move(pSample));
 
-    const auto onItemArchivedCb = [this, sample, writtenCb](const std::error_code& ec) {
+    auto onItemArchivedCb = [this, sample, writtenCb](const std::error_code& ec) {
         FinalizeHashes(*sample);
 
         HRESULT hrTable = AddSampleRefToCSV(*m_tableWriter, *sample);
