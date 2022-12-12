@@ -24,7 +24,7 @@ uint32_t GetWofLastChunkSize(uint64_t uncompressedSize, uint32_t chunkSize);
 class WofChunks
 {
 public:
-    static constexpr uint16_t kDefaultChunkSize = 4096;
+    static constexpr uint16_t kDefaultChunkSize = 16384;
 
     struct ChunkLocation
     {
