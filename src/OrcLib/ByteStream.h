@@ -124,6 +124,11 @@ public:
     static HRESULT
     Get_ISequentialStream(const std::shared_ptr<ByteStream>& aStream, ::ISequentialStream** pSequentialStream);
 
+    // This is a workaround over the size being use by some streams which could get huge while the stream is queue
+    // for later use. A better way to handle this would be to easily Close then Open the stream back. Unfortunately the
+    // design does not allow this currently.
+    virtual HRESULT ShrinkContext() { return S_OK; }
+
 private:
     uint64_t m_readCount;
     uint64_t m_totalRead;
