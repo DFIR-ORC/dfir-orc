@@ -366,10 +366,6 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
                     Log::Warn("Add Record Callback failed [{}]", SystemError(hr));
                 }
 
-                if (ullCurrentIndex != ullCurrentFRNIndex)
-                {
-                    Log::Debug("Current index does not match current FRN index");
-                }
                 ullCurrentFRNIndex++;
                 ullCurrentIndex++;
             }
@@ -498,7 +494,8 @@ HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUt
                     return hr;
                 }
 
-                Log::Warn("Add Record Callback failed [{}]", SystemError(hr));
+                Log::Error("Add Record Callback failed [{}]", SystemError(hr));
+                return hr;
             }
             frnIdx++;
             if (frnIdx >= frn.size())
