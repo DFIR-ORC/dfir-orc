@@ -237,7 +237,8 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
     }
 
     auto&& lock = m_outcome.Lock();
-    auto& outcomeArchive = m_outcome.GetCommandSet(m_commandSet).GetArchive();
+    auto& commandSet = m_outcome.GetCommandSet(m_commandSet);
+    auto& outcomeArchive = commandSet.GetArchive();
 
     switch (notification->GetType())
     {
@@ -251,10 +252,26 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
             m_journal.Print(
                 m_commandSet, operation, L"Add file: {} ({})", notification->Keyword(), notification->FileSize());
 
+            const auto& fileName = notification->Keyword();
+            const auto& fileSize = notification->FileSize();
+
             Outcome::Archive::Item item;
-            item.SetName(notification->Keyword());
-            item.SetSize(notification->FileSize());
+            item.SetName(fileName);
+            item.SetSize(fileSize);
             outcomeArchive.Add(item);
+
+            // BEWARE: this should not be set in archive notifications but there is no other places
+            auto command = commandSet.GetCommandByOutputFileName(fileName);
+            if (command)
+            {
+                for (auto& item : command->GetOutput())
+                {
+                    if (item.GetName() == fileName)
+                    {
+                        item.SetSize(fileSize);
+                    }
+                }
+            }
             break;
         }
         case ArchiveNotification::DirectoryAddition: {

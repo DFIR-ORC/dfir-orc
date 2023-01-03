@@ -55,6 +55,12 @@ void Write(
 
         writer->WriteNamed(L"name", item.GetName());
         writer->WriteNamed(L"type", ToString(item.GetType()));
+
+        const auto& size = item.GetSize();
+        if (size.has_value())
+        {
+            writer->WriteNamed(L"size", *size);
+        }
     }
 };
 

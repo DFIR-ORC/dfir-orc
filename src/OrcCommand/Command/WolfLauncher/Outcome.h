@@ -77,6 +77,8 @@ private:
 class Command
 {
 public:
+    using FileSize = Traits::ByteQuantity<uint64_t>;
+
     class Origin
     {
     public:
@@ -188,9 +190,14 @@ public:
         Type GetType() const { return m_type; }
         void SetType(Type type) { m_type = type; }
 
+        const std::optional<FileSize>& GetSize() const { return m_size; }
+        void SetSize(const uint64_t size) { m_size = size; }
+        void SetSize(const std::optional<FileSize>& size) { m_size = size; }
+
     private:
         std::wstring m_name;
         Type m_type;
+        std::optional<FileSize> m_size;
     };
 
     const std::vector<Output>& GetOutput() const { return m_output; }
@@ -261,6 +268,28 @@ public:
         }
 
         return it->second;
+    }
+
+    Command* GetCommandByOutputFileName(const std::wstring& name)
+    {
+        auto commandIt = std::find_if(std::begin(m_commands), std::end(m_commands), [&name](const auto& item) {
+            const auto& command = item.second;
+            const auto& output = command.GetOutput();
+
+            auto outputIt =
+                std::find_if(std::cbegin(output), std::cend(output), [&name](const Command::Output& output) {
+                    return name == output.GetName();
+                });
+
+            return outputIt != std::cend(output);
+        });
+
+        if (commandIt == std::cend(m_commands))
+        {
+            return nullptr;
+        }
+
+        return &commandIt->second;
     }
 
     Archive& GetArchive() { return m_archive; }
