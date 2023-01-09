@@ -162,6 +162,17 @@ public:
         return S_OK;
     }
 
+    HRESULT WriteNamedFileTime(LPCWSTR szName, FILETIME filetime, std::wstring_view message = {})
+    {
+        using namespace std::string_view_literals;
+
+        ULARGE_INTEGER uli {0};
+        uli.LowPart = filetime.dwLowDateTime;
+        uli.HighPart = filetime.dwHighDateTime;
+
+        return WriteNamedFileTime(szName, uli.QuadPart);
+    }
+
     HRESULT WriteNamedFileTime(LPCWSTR szName, Result<FILETIME> filetime, std::wstring_view message = {})
     {
         using namespace std::string_view_literals;
