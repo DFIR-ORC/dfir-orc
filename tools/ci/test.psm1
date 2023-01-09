@@ -423,7 +423,6 @@ function Invoke-OrcOffline {
             $Disk = $DiskMountPoint.Mount()
         }
 
-
         $LocalXmlPath = "$(New-TemporaryFile).xml"
         New-OrcLocalConfig -PublicKey:$PublicKey -Temporary:$Temporary | Out-File $LocalXmlPath
         $LocalXml = "/local=$LocalXmlPath"
@@ -1119,7 +1118,7 @@ function Get-OrcOutcome {
                 }
 
                 $Start = $Command.start | Get-Date -DisplayHint Time
-                $Duration = New-TimeSpan –Start $Command.start –End $Command.end
+                $Duration = New-TimeSpan -Start $Command.start -End $Command.end
 
                 [void]$Failures.Add(
                     @{
@@ -1135,7 +1134,7 @@ function Get-OrcOutcome {
 
         $Start = $Outcome."dfir-orc"."outcome"."start"
         $End = $Outcome."dfir-orc"."outcome"."end"
-        $Duration = New-TimeSpan –Start $Start –End $End
+        $Duration = New-TimeSpan -Start $Start -End $End
 
         $OutcomeList += (
             @{
