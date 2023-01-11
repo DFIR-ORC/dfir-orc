@@ -455,6 +455,47 @@ void PrintStandardInformation(Orc::Text::Tree& root, const Orc::MFTRecord& recor
     root.AddEmptyLine();
 }
 
+void PrintAttributeList(
+    Orc::Text::Tree& root,
+    const Orc::MFTRecord& record,
+    const std::shared_ptr<VolumeReader>& volume)
+{
+    for (const auto& attribute : record.GetAttributeList())
+    {
+        if (attribute.TypeCode() != $ATTRIBUTE_LIST)
+        {
+            continue;
+        }
+
+        auto attributeList =
+            std::dynamic_pointer_cast<AttributeListAttribute, MftRecordAttribute>(attribute.Attribute());
+        if (!attributeList)
+        {
+            Log::Error("Failed dynamic_cast on AttributeListAttribute expected to work");
+            continue;
+        }
+
+        auto node = root.AddNode("$ATTRIBUTE_LIST");
+
+        std::wstring_view name(attributeList->NamePtr(), attributeList->Header()->NameLength);
+        PrintValue(node, L"Name", name.empty() ? std::wstring_view(L"<empty>") : name);
+        PrintValue(node, L"Resident", attributeList->Header()->FormCode == RESIDENT_FORM);
+        PrintValue(node, L"Instance", attributeList->Header()->Instance);
+        PrintValue(node, L"Flags", attributeList->Header()->Flags);
+        PrintValue(node, L"Continuation", attributeList->IsContinuation());
+
+        if (attributeList->IsNonResident())
+        {
+            auto info = attributeList->GetNonResidentInformation(volume);
+            PrintValue(node, L"Data size", info->DataSize);
+            PrintValue(node, L"Valid data size", info->ValidDataSize);
+            PrintValue(node, L"Extent size", info->ExtentsSize);
+        }
+
+        node.AddEOL();
+    }
+}
+
 void PrintIndexAttributes(
     Orc::Text::Tree& root,
     const Orc::MFTRecord& record,
@@ -685,6 +726,7 @@ void Print(Orc::Text::Tree& root, const MFTRecord& record, const std::shared_ptr
     PrintIndexAttributes(recordNode, record, volume);
     PrintExtendedAttributes(recordNode, record, volume);
     PrintReparsePointAttribute(recordNode, record);
+    PrintAttributeList(recordNode, record, volume);
     PrintDataAttribute(recordNode, record, volume);
 }
 
