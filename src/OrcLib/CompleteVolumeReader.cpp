@@ -24,8 +24,6 @@ CompleteVolumeReader::CompleteVolumeReader(const WCHAR* szLocation)
 
 HRESULT CompleteVolumeReader::Seek(ULONGLONG offset)
 {
-    if (offset > m_Extents[0].GetLength())
-        return E_INVALIDARG;
 
     if (m_BytesPerSector && offset % m_BytesPerSector)
     {
