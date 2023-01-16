@@ -15,6 +15,8 @@
 
 namespace Orc {
 
+class MFTRecord;
+
 class MFTOnline : public IMFT
 {
 public:
@@ -38,6 +40,14 @@ private:
     std::shared_ptr<VolumeReader> m_pFetchReader;
 
     HRESULT GetMFTExtents(const CBinaryBuffer& buffer);
+
+    HRESULT GetMFTChildsRecordExtents(
+        const std::shared_ptr<VolumeReader>& volume,
+        MFTRecord& mftRecord,
+        MFTUtils::NonResidentDataAttrInfo& extentsInfo);
+
+    HRESULT
+    FetchMFTRecord(MFT_SEGMENT_REFERENCE& frn, MFTUtils::EnumMFTRecordCall pCallBack, bool& hasFoundRecord);
 
     ULONG64 m_MftOffset;
     MFTUtils::NonResidentDataAttrInfo m_MFT0Info;

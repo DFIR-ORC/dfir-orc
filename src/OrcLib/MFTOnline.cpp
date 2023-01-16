@@ -9,6 +9,8 @@
 
 #include "MFTOnline.h"
 
+#include <boost/algorithm/string/join.hpp>
+
 #include "VolumeReader.h"
 
 #include "Log/Log.h"
@@ -39,20 +41,117 @@ HRESULT MFTOnline::Initialize()
             if (FAILED(hr = m_pVolReader->LoadDiskProperties()))
                 return hr;
 
-            // Get all the extents (runs) associated with the MFT itself.
-            if (FAILED(hr = GetMFTExtents(m_pVolReader->GetBootSector())))
-                break;
-
             m_pFetchReader = m_pVolReader->ReOpen(
                 FILE_READ_DATA,
                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                 FILE_FLAG_NO_BUFFERING | FILE_FLAG_RANDOM_ACCESS);
 
+            // Get all the extents (runs) associated with the MFT itself.
+            if (FAILED(hr = GetMFTExtents(m_pVolReader->GetBootSector())))
+                break;
         } while (false);
     }
     catch (...)
     {
         Log::Info(L"Exception thrown when processing MFT");
+    }
+
+    return S_OK;
+}
+
+HRESULT MFTOnline::GetMFTChildsRecordExtents(
+    const std::shared_ptr<VolumeReader>& volume,
+    MFTRecord& mftRecord,
+    MFTUtils::NonResidentDataAttrInfo& extentsInfo)
+{
+    struct Child
+    {
+        MFTUtils::SafeMFTSegmentNumber segment;
+        VCN lowerVCN;
+    };
+
+    std::vector<Child> childs;
+    for (const auto& attributeListEntry : mftRecord.GetAttributeList())
+    {
+        if (attributeListEntry.TypeCode() != $DATA)
+        {
+            continue;
+        }
+
+        if (attributeListEntry.LowestVCN() == 0)
+        {
+            continue;
+        }
+
+        childs.emplace_back(Child {attributeListEntry.HostRecordSegmentNumber(), attributeListEntry.LowestVCN()});
+    }
+
+    std::sort(std::begin(childs), std::end(childs), [](const auto& lhs, const auto& rhs) {
+        return lhs.lowerVCN < rhs.lowerVCN;
+    });
+
+    for (auto it = std::cbegin(childs); it != std::cend(childs); ++it)
+    {
+        bool hasFetchedRecord = false;
+
+        MFT_SEGMENT_REFERENCE frn;
+        frn.SegmentNumberLowPart = it->segment & 0xFFFFFFFF;
+        frn.SegmentNumberHighPart = (it->segment >> 32) & 0x0000FFFF;
+        frn.SequenceNumber = (it->segment >> 48);
+
+        HRESULT hr = FetchMFTRecord(
+            frn,
+            [&](MFTUtils::SafeMFTSegmentNumber& ulRecordIndex, CBinaryBuffer& childRecordBuffer) -> HRESULT {
+                MFTRecord childRecord;
+                HRESULT hr = childRecord.ParseRecord(
+                    volume,
+                    reinterpret_cast<FILE_RECORD_SEGMENT_HEADER*>(childRecordBuffer.GetData()),
+                    childRecordBuffer.GetCount(),
+                    &mftRecord);
+
+                bool hasFoundDataAttribute = false;
+                for (auto& attribute : childRecord.GetAttributeList())
+                {
+                    if (attribute.TypeCode() != $DATA)
+                    {
+                        continue;
+                    }
+
+                    if (hasFoundDataAttribute)
+                    {
+                        Log::Error("Found $MFT child record with multiple attributes $DATA");
+                    }
+
+                    hasFoundDataAttribute = true;
+
+                    hr = MFTUtils::GetAttributeNRExtents(attribute.Attribute()->Header(), extentsInfo, volume);
+                    if (FAILED(hr))
+                    {
+                        Log::Error(L"Failed to parse extent from $MFT child record [{}]", SystemError(hr));
+                        return hr;
+                    }
+                }
+
+                if (!hasFoundDataAttribute)
+                {
+                    Log::Error("$MFT child record has no $DATA attribute ({:#x})", it->segment);
+                }
+
+                return S_OK;
+            },
+            hasFetchedRecord);
+
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to parse $MFT child record (frn: {:#x}) [{}]", it->segment, SystemError(hr));
+            continue;  // Get as many extent as possible
+        }
+
+        if (!hasFetchedRecord)
+        {
+            Log::Error(L"Failed to fetch $MFT child record (frn: {:#x}) [{}]", it->segment, SystemError(hr));
+            continue;
+        }
     }
 
     return S_OK;
@@ -125,7 +224,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
 
     if (FAILED(hr = m_pVolReader->Read(m_MftOffset, record, ulBytesPerFRS, ullBytesRead)))
     {
-        Log::Error(L"Failed to read MFT record!");
+        Log::Error(L"Failed to read $MFT record!");
         return hr;
     }
 
@@ -134,89 +233,32 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
     mftRecord.ParseRecord(
         m_pVolReader, reinterpret_cast<FILE_RECORD_SEGMENT_HEADER*>(record.GetData()), record.GetCount(), NULL);
 
-    PFILE_RECORD_SEGMENT_HEADER pData = (PFILE_RECORD_SEGMENT_HEADER)record.GetData();
-
-    if (!(pData->Flags & FILE_RECORD_SEGMENT_IN_USE))
+    auto dataAttribute = mftRecord.GetDataAttribute(L"");
+    if (!dataAttribute)
     {
-        Log::Error("MFT record marked as 'not in use'");
-        return E_UNEXPECTED;
+        Log::Error(L"Failed to read $MFT:$DATA");
+        return E_FAIL;
     }
 
-    realLength = (ULONG)record.GetCount();
-
-    if (pData->FirstAttributeOffset > realLength)
-    {
-        hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-        Log::Error(
-            L"MFT Record length is smaller than First attribute Offset ({}/{})",
-            realLength,
-            pData->FirstAttributeOffset);
-        return hr;
-    }
-
-    PATTRIBUTE_RECORD_HEADER pAttrData = (PATTRIBUTE_RECORD_HEADER)((LPBYTE)pData + pData->FirstAttributeOffset);
-    ULONG nAttrLength = realLength - pData->FirstAttributeOffset;
-
-    //
-    // Go through each attribute and locate the one we are interested in.
-    //
-    hr = E_FAIL;
-    while (nAttrLength >= sizeof(ATTRIBUTE_RECORD_HEADER))
-    {
-        if (pAttrData->TypeCode == $END)
-        {
-            break;
-        }
-        if (pAttrData->RecordLength == 0)
-        {
-            hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            Log::Error(L"MFT - an attribute's (Attribute TypeCode: {:#x}) Record length is zero", pAttrData->TypeCode);
-        }
-
-        if ($DATA == pAttrData->TypeCode)
-        {
-            if (pAttrData->FormCode == RESIDENT_FORM)
-            {
-                hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-                Log::Error(L"MFT - not expecting data attribute to be in resident form");
-                break;
-            }
-            else  // non-resident form
-            {
-                m_MFT0Info.DataSize = pAttrData->Form.Nonresident.ValidDataLength;
-                if (FAILED(hr = MFTUtils::GetAttributeNRExtents(pAttrData, m_MFT0Info, m_pVolReader)))
-                {
-                    hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-                    Log::Error("MFT - failed to get non resident extents");
-                    break;
-                }
-                hr = S_OK;
-                break;
-            }
-        }
-
-        if (pAttrData->RecordLength > nAttrLength)
-        {
-            hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA),
-            Log::Error(
-                L"MFT - an attribute's (Attribute TypeCode = {:#x}) Record length ({}) is greater than the attribute "
-                L"length ({}).",
-                pAttrData->TypeCode,
-                pAttrData->RecordLength,
-                nAttrLength);
-            break;
-        }
-        else
-        {
-            PATTRIBUTE_RECORD_HEADER pNextAttrData =
-                (PATTRIBUTE_RECORD_HEADER)((LPBYTE)pAttrData + pAttrData->RecordLength);  // ready for next record
-            nAttrLength -= pAttrData->RecordLength;
-            pAttrData = pNextAttrData;
-        }
-    }
-
+    hr = MFTUtils::GetAttributeNRExtents(dataAttribute->Header(), m_MFT0Info, m_pVolReader);
     if (FAILED(hr))
+    {
+        hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        Log::Error("Failed to read extents from $MFT base record");
         return hr;
+    }
+
+    m_MFT0Info.DataSize = dataAttribute->GetNonResidentInformation(m_pVolReader)->ValidDataSize;
+
+    if (!mftRecord.GetChildRecords().empty())
+    {
+        hr = GetMFTChildsRecordExtents(m_pVolReader, mftRecord, m_MFT0Info);
+        if (FAILED(hr))
+        {
+            Log::Error("Failed to read some $MFT child records [{}]", SystemError(hr));
+            hr = S_OK;  // continue: get as many data as possible
+        }
+    }
 
     {
         ULONGLONG Offset = m_MftOffset + (5 * ulBytesPerFRS);
@@ -239,6 +281,7 @@ HRESULT MFTOnline::GetMFTExtents(const CBinaryBuffer& buffer)
 
         m_RootUSN = NtfsFullSegmentNumber(&RootReference);
     }
+
     return hr;
 }
 
@@ -295,9 +338,8 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
 
     ULONGLONG position = 0LL;
 
-    for (auto iter = m_MFT0Info.ExtentsVector.begin(); iter != m_MFT0Info.ExtentsVector.end(); ++iter)
+    for (auto& NRAE : m_MFT0Info.ExtentsVector)
     {
-        MFTUtils::NonResidentAttributeExtent& NRAE = *iter;
 
         if (NRAE.bZero)
             continue;
@@ -375,6 +417,19 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
     }
 
     return S_OK;
+}
+
+HRESULT
+MFTOnline::FetchMFTRecord(MFT_SEGMENT_REFERENCE& frn, MFTUtils::EnumMFTRecordCall pCallBack, bool& hasFoundRecord)
+{
+    hasFoundRecord = false;
+
+    auto callback = [&](MFTUtils::SafeMFTSegmentNumber& ulRecordIndex, CBinaryBuffer& data) -> HRESULT {
+        hasFoundRecord = true;
+        return pCallBack(ulRecordIndex, data);
+    };
+
+    return FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE> {frn}, callback);
 }
 
 HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUtils::EnumMFTRecordCall pCallBack)
