@@ -109,6 +109,8 @@ HRESULT Main::RunThroughUSNJournal()
         }
     };
 
+    bool hasSomeFailure = false;
+
     for (const auto& loc : locations)
     {
         if (loc->GetType() != Location::Type::MountedVolume)
@@ -142,14 +144,16 @@ HRESULT Main::RunThroughUSNJournal()
             }
             else
             {
-                Log::Warn(L"Failed to init walk for '{}' [{}]", loc->GetLocation(), SystemError(hr));
+                Log::Critical(L"Failed to init walk for '{}' [{}]", loc->GetLocation(), SystemError(hr));
+                hasSomeFailure = true;
             }
         }
         else
         {
             if (FAILED(hr = walk.EnumJournal(callbacks)))
             {
-                Log::Error(L"Failed to walk volume '{}' [{}]", loc->GetLocation(), SystemError(hr));
+                Log::Critical(L"Failed to walk volume '{}' [{}]", loc->GetLocation(), SystemError(hr));
+                hasSomeFailure = true;
             }
             else
             {
@@ -162,6 +166,11 @@ HRESULT Main::RunThroughUSNJournal()
             pFileInfoWriter->Close();
             pFileInfoWriter.reset();
         }
+    }
+
+    if (hasSomeFailure)
+    {
+        return E_FAIL;
     }
 
     return S_OK;
@@ -675,6 +684,8 @@ HRESULT Main::RunThroughMFT()
     auto timelineIterator = begin(m_TimeLineOutput.Outputs());
     auto secdescrIterator = begin(m_SecDescrOutput.Outputs());
 
+    bool hasSomeFailure = false;
+
     for (auto& loc : locations)
     {
         BOOST_SCOPE_EXIT(
@@ -784,7 +795,8 @@ HRESULT Main::RunThroughMFT()
             }
             else
             {
-                Log::Error(L"Failed to init walk for '{}' [{}]", loc->GetLocation(), SystemError(hr));
+                hasSomeFailure = true;
+                Log::Critical(L"Failed to init walk for '{}' [{}]", loc->GetLocation(), SystemError(hr));
             }
         }
         else
@@ -792,7 +804,8 @@ HRESULT Main::RunThroughMFT()
             m_FullNameBuilder = walker.GetFullNameBuilder();
             if (FAILED(hr = walker.Walk(callBacks)))
             {
-                Log::Error(L"Failed to walk volume '{}' [{}]", loc->GetLocation(), SystemError(hr));
+                hasSomeFailure = true;
+                Log::Critical(L"Failed to walk volume '{}' [{}]", loc->GetLocation(), SystemError(hr));
             }
             else
             {
@@ -800,6 +813,11 @@ HRESULT Main::RunThroughMFT()
                 walker.Statistics(L"");
             }
         }
+    }
+
+    if (hasSomeFailure)
+    {
+        return E_FAIL;
     }
 
     return S_OK;

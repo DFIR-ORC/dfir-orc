@@ -774,8 +774,14 @@ HRESULT ExtendedAttribute::Parse(const std::shared_ptr<VolumeReader>& VolReader)
             wstring(szName),
             CBinaryBuffer(((BYTE*)pEAInfo->EaName) + pEAInfo->EaNameLength + 1, pEAInfo->EaValueLength)));
 
+        if (pEAInfo->NextEntryOffset == 0)
+        {
+            break;
+        }
+
         pEAInfo = (PFILE_FULL_EA_INFORMATION)((BYTE*)pEAInfo + pEAInfo->NextEntryOffset);
     }
+
     m_bParsed = true;
     return S_OK;
 }

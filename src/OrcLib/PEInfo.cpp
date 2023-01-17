@@ -299,7 +299,14 @@ HRESULT PEInfo::OpenVersionInformation()
     CBinaryBuffer rsrcBuf;
     if (!rsrcBuf.SetCount(1024))
         return E_OUTOFMEMORY;
-    std::shared_ptr<ByteStream> stream = m_FileInfo.GetDetails()->GetDataStream();
+    std::shared_ptr<ByteStream> directStream = m_FileInfo.GetDetails()->GetDataStream();
+    if (!directStream)
+    {
+        return E_POINTER;
+    }
+
+    auto stream = std::make_shared<CacheStream>(directStream, 4096);
+
     ULONGLONG ullBytesRead;
     size_t rsrc_rsrc_offset = 0;
 

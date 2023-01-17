@@ -42,6 +42,8 @@ public:
         return m_ChildRecords;
     };
 
+    std::vector<std::pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>>& GetChildRecords() { return m_ChildRecords; };
+
     bool IsDirectory() const { return m_bIsDirectory; };
     bool HasReparsePoint() const { return m_bHasReparsePoint; };
     bool IsJunction() const { return m_bIsJunction; }

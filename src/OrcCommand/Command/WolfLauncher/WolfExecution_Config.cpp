@@ -27,6 +27,7 @@
 #include <string>
 
 #include <boost/tokenizer.hpp>
+#include "Utils/WinApi.h"
 
 using namespace std;
 
@@ -120,20 +121,23 @@ WolfExecution::GetExecutableToRun(const ConfigItem& item, wstring& strExeToRun, 
     }
     else
     {
-        wstring strExeFile;
-        hr = ExpandFilePath(strExeRef.c_str(), strExeFile);
-        if (FAILED(hr))
+        std::error_code ec;
+        std::wstring strExeFile = ExpandEnvironmentStringsApi(strExeRef.c_str(), ec);
+        if (ec)
         {
-            Log::Error(L"Executable file '{}' does not exist or is not a file [{}]", strExeRef, SystemError(hr));
-            return E_FAIL;
+            Log::Error("Failed to expand environment variables in uri [{}]", ec);
+            return ToHRESULT(ec);
         }
 
-        hr = VerifyFileIsBinary(strExeFile.c_str());
-        if (FAILED(hr))
+        if (std::filesystem::exists(strExeFile, ec))
         {
+            hr = VerifyFileIsBinary(strExeFile.c_str());
+            if (FAILED(hr))
+            {
 
-            Log::Error(L"Executable file '{}' is not a compatible binary [{}]", strExeFile, SystemError(hr));
-            return E_FAIL;
+                Log::Error(L"Executable file '{}' is not a compatible binary [{}]", strExeFile, SystemError(hr));
+                return E_FAIL;
+            }
         }
 
         strExeToRun = strExeFile;

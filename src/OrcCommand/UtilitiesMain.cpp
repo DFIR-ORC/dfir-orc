@@ -813,7 +813,7 @@ void UtilitiesMain::ParseLocationExcludes(
     }
 
     std::vector<std::wstring> splits;
-    boost::split(splits, rawExcludes, boost::is_any_of(L",;|"));
+    boost::split(splits, rawExcludes, boost::is_any_of(L";|"));
 
     for (auto& exclude : splits)
     {

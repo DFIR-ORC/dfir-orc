@@ -165,4 +165,7 @@ foreach(OPTION IN ITEMS ${LINK_OPTIONS_RELEASE})
     add_link_options($<$<CONFIG:RELWITHDEBINFO>:${OPTION}>)
 endforeach()
 
+set(OPTION "/INCREMENTAL:NO")
+add_link_options($<$<CONFIG:RELWITHDEBINFO>:${OPTION}>)
+
 endmacro()

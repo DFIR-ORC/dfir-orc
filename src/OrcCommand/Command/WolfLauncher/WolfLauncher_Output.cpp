@@ -191,6 +191,9 @@ void Main::PrintParameters()
     PrintValue(node, L"Explicit key selection", keySelection.empty() ? Text::kNoneW : keySelection);
     PrintValues(node, L"Enable keys", config.EnableKeywords);
     PrintValues(node, L"Disable keys", config.DisableKeywords);
+    PrintValue(
+        node, L"Command timeout", std::chrono::duration_cast<std::chrono::minutes>(config.msCommandTerminationTimeOut));
+    PrintValue(node, L"Archive timeout", std::chrono::duration_cast<std::chrono::minutes>(config.msArchiveTimeOut));
 
     const auto kNoLimits = L"No limits";
     if (config.NoLimitsKeywords.empty())

@@ -1170,7 +1170,7 @@ function Test-OrcOutcome {
         $PassThru
     )
 
-    $OutcomeList = Get-OrcOutcome $Path
+    $OutcomeList = Get-OrcOutcome -Exclude:$Exclude $Path
     foreach ($Outcome in $OutcomeList)
     {
         foreach ($Failure in $Outcome["Failures"])

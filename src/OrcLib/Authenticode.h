@@ -99,7 +99,6 @@ public:
 private:
     HCERTSTORE m_hMachineStore = INVALID_HANDLE_VALUE;
     HANDLE m_hContext = INVALID_HANDLE_VALUE;
-    std::map<std::wstring, HANDLE, CaseInsensitive> m_StateMap;
 
     WinTrustExtension m_wintrust;
 
@@ -161,8 +160,6 @@ public:
     // Security directory verification
     HRESULT Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_Hashs& hashs, AuthenticodeData& data);
     HRESULT SignatureSize(LPCWSTR szFileName, const CBinaryBuffer& secdir, DWORD& cbSize);
-
-    HRESULT CloseCatalogState();
 
     ~Authenticode();
 };

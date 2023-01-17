@@ -21,9 +21,7 @@ class CBinaryBuffer;
 class CacheStream : public ByteStream
 {
 public:
-    using CacheBuffer = std::array<uint8_t, 512000>;
-
-    CacheStream(std::shared_ptr<ByteStream> stream);
+    CacheStream(std::shared_ptr<ByteStream> stream, size_t cacheSize = 1048576);
     ~CacheStream();
     HRESULT Open();
 
@@ -62,10 +60,11 @@ public:
 private:
     std::shared_ptr<ByteStream> m_stream;
     uint64_t m_streamOffset;
-    CacheBuffer m_cache;
-    size_t m_cacheSize;
     uint64_t m_offset;
-    uint64_t m_cacheLoadOffset;
+    std::vector<uint8_t> m_cache;
+    size_t m_cacheUse;
+    size_t m_cacheSize;
+    uint64_t m_cacheOffset;
 };
 
 }  // namespace Orc

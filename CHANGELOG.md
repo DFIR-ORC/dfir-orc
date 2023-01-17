@@ -1,5 +1,22 @@
 # ChangeLog
 
+## [10.1.5] - 2023-01-17
+### Added
+- Print configured archive and command timeouts in parameters summary
+- Outcome: add output file size in command_set.command.output.size
+
+### Changed
+- Improve location exclusion to support path such as 'c:\vss.dd'
+- Location exclusion option does not support anymore ',' as separator
+
+### Fixed
+- Ntfs: fix parsing for very fragmented volumes
+- Authenticode: fix possible incorrect AuthenticodeStatus (thanks Roger)
+- Ntfs: add check to avoid infinite loop for corrupted MFT
+- Ntfs: fix error handling for nested records possiblity leading to an handled exception
+- NtfsInfo: improve performances by reducing IO
+
+
 ## [10.1.4] - 2022-10-24
 ### Added
 - ToolEmbed: add configurations checks for compressed xml settings
@@ -13,6 +30,7 @@
 - ToolEmbed: fix configurations checks for toolembed import from previous dump
 - Volume Shadow Copy: workaround for MS behavior https://github.com/DFIR-ORC/readshadow (expect slower performances with VSS)
 - Outcome: fix missing command name when job was interrupted
+
 
 ## [10.1.3] - 2022-09-26
 ### Added
@@ -31,6 +49,7 @@
 - Bits: upload when on 'single' mode (only 'overwrite' was working)
 - Guid: wide string conversion of Guid
 
+
 ## [10.1.2] - 2022-07-20
 ### Added
 - ToolEmbed: add multiple checks to detect bad configurations before deployment
@@ -41,6 +60,7 @@
 ### Fixed
 - FastFind/GetThis: fix missing error handling (ntfs_find, Yara...)
 - Terminate any child processes on WolfLauncher unexpected exit using jobs
+
 
 ## [10.1.1] - 2022-06-20
 ### Added

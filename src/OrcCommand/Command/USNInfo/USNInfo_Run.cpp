@@ -196,7 +196,7 @@ HRESULT Main::Run()
                     return S_OK;
                 }
 
-                Log::Error(
+                Log::Critical(
                     L"Failed to init walk for volume '{}' [{}]", dir.first.m_pLoc->GetLocation(), SystemError(hr));
                 return hr;
             }

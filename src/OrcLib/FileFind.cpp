@@ -4171,6 +4171,8 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
     if (FAILED(hr = InitializeYara()))
         return hr;
 
+    bool hasSomeFailure = false;
+
     for (const auto& aLoc : locs)
     {
         HRESULT hr = E_FAIL;
@@ -4189,7 +4191,8 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
             }
             else
             {
-                Log::Debug(L"Failed to init walk for volume '{}' [{}]", aLoc->GetLocation(), SystemError(hr));
+                Log::Critical(L"Failed to init walk for volume '{}' [{}]", aLoc->GetLocation(), SystemError(hr));
+                hasSomeFailure = true;
             }
         }
         else
@@ -4268,6 +4271,11 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
                 walk.Statistics(L"Done");
             }
         }
+    }
+
+    if (hasSomeFailure)
+    {
+        return E_FAIL;
     }
 
     return S_OK;

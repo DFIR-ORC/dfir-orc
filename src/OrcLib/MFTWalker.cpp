@@ -163,7 +163,8 @@ HRESULT MFTWalker::ExtendNameBuffer(WCHAR** pCurrent)
 HRESULT MFTWalker::UpdateAttributeList(MFTRecord* pRecord)
 {
     HRESULT hr = E_FAIL;
-    if (pRecord->m_pAttributeList->IsPresent())
+
+    if (pRecord->m_pAttributeList && pRecord->m_pAttributeList->IsPresent())
     {
         for (auto& attr : pRecord->m_pAttributeList->m_AttList)
         {
@@ -1457,7 +1458,11 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                         NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber),
                         SystemError(hr));
                 }
+
                 DeleteRecord(pRecord);
+
+                // BEWARE: was returning S_OK but it is dangerous as pRecord is deleted and all childs record
+                return hr;
             }
         }
         else
@@ -1571,7 +1576,7 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
                             if (FAILED(hr) || pRecord == nullptr)
                             {
                                 Log::Debug("Fetched record {} is incomplete", ullRecordIndex);
-                                return S_OK;
+                                return hr;
                             }
 
                             if (hr != S_FALSE)
