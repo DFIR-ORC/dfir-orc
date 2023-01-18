@@ -567,7 +567,16 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         std::wstring strTags;
 
         ConsoleConfiguration::Parse(argc, argv, m_consoleConfiguration);
+
+        UtilitiesLoggerConfiguration logConfiguration;
         UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
+        // The cli log level option ('/debug', ...) supersede the console sink's level
+        UtilitiesLoggerConfiguration::Parse(argc, argv, logConfiguration);
+        if (logConfiguration.level)
+        {
+            m_utilitiesConfig.log.console.level.reset();
+        }
 
         for (int i = 0; i < argc; i++)
         {
