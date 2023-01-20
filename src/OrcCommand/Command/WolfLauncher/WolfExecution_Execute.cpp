@@ -579,7 +579,7 @@ HRESULT WolfExecution::CreateCommandAgent(
                             commandSetOutcome.SetJobStatistics(statistics);
                         }
 
-                        for (const auto& [keyword, task] : m_TasksByPID)
+                        for (const auto& [keyword, task] : m_TasksByKeyword)
                         {
                             if (task == nullptr)
                             {
