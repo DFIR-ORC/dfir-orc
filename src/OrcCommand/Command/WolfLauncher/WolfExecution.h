@@ -127,7 +127,6 @@ private:
     std::vector<CommandMessage::Message> m_Commands;
 
     std::map<std::wstring, std::shared_ptr<WolfTask>> m_TasksByKeyword;
-    std::map<DWORD, std::shared_ptr<WolfTask>> m_TasksByPID;
     DWORD m_dwLongerTaskKeyword = 0L;
 
     CommandMessage::PriorityMessageBuffer m_cmdAgentBuffer;

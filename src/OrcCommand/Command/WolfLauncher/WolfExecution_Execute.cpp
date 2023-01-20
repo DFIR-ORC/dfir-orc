@@ -450,39 +450,27 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
 HRESULT WolfExecution::NotifyTask(const CommandNotification::Ptr& item)
 {
-    HRESULT hr = E_FAIL;
-
-    std::shared_ptr<WolfTask> task;
-
+    auto taskiter = m_TasksByKeyword.find(item->GetKeyword());
+    if (taskiter == m_TasksByKeyword.end())
     {
-        auto taskiter = m_TasksByPID.find(static_cast<DWORD>(item->GetProcessID()));
-
-        if (taskiter != m_TasksByPID.end())
-        {
-            task = taskiter->second;
-        }
+        Log::Error(L"Cannot find task by keyword: {}", item->GetKeyword());
+        return E_FAIL;
     }
 
+    auto task = taskiter->second;
     if (task == nullptr)
     {
-        auto taskiter = m_TasksByKeyword.find(item->GetKeyword());
-
-        if (taskiter != m_TasksByKeyword.end())
-        {
-            task = taskiter->second;
-        }
+        Log::Error(L"Failed to retrieve task: {}", item->GetKeyword());
+        return E_FAIL;
     }
 
-    if (task != nullptr)
+    std::vector<CommandMessage::Message> actions;
+    task->ApplyNotification(item, actions);
+    for (const auto& item : actions)
     {
-        std::vector<CommandMessage::Message> actions;
-        task->ApplyNotification(item, actions);
-
-        for (const auto& item : actions)
-        {
-            Concurrency::send(m_cmdAgentBuffer, item);
-        }
+        Concurrency::send(m_cmdAgentBuffer, item);
     }
+
     return S_OK;
 }
 
@@ -506,16 +494,8 @@ HRESULT WolfExecution::CreateCommandAgent(
             {
                 switch (item->GetEvent())
                 {
-                    case CommandNotification::Started: {
-                        auto taskiter = m_TasksByKeyword.find(item->GetKeyword());
-                        if (taskiter != m_TasksByKeyword.end())
-                            m_TasksByPID[static_cast<DWORD>(item->GetProcessID())] = taskiter->second;
-                        else
-                        {
-                            Log::Error(L"New task '{}' could not be found", item->GetKeyword());
-                        }
-                    }
-                    break;
+                    case CommandNotification::Started:
+                        break;
                     case CommandNotification::Terminated:
                         break;
                     case CommandNotification::Running:
