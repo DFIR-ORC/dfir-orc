@@ -1584,10 +1584,16 @@ HRESULT LocationSet::PopulateSystemObjects(bool bInterfacesOnly)
         std::regex_constants::icase);
     static std::wregex Interfaces(REGEX_INTERFACE, std::regex_constants::icase);
 
+    static std::wregex vssRegex(L"\\\\Device\\\\HarddiskVolumeShadowCopy[0-9]+");
+
     for (const auto& obj : objects)
     {
-        wstring re = std::regex_replace(obj.Path, global, L"\\\\.\\");
+        if (std::regex_match(obj.LinkTarget, vssRegex))
+        {
+            m_harddiskShadowCopyVolumes.push_back(fmt::format(L"\\\\?\\GLOBALROOT{}", obj.LinkTarget));
+        }
 
+        wstring re = std::regex_replace(obj.Path, global, L"\\\\.\\");
         if (bInterfacesOnly && !std::regex_match(re, Interfaces))
         {
             Log::Debug(L"Skipping !interface object '{}'", re);
@@ -2274,7 +2280,7 @@ HRESULT LocationSet::AltitudeLocations(
 
             std::error_code ec;
             std::vector<VolumeShadowCopies::Shadow> shadows;
-            location->EnumerateShadowCopies(shadows, ec);
+            location->EnumerateShadowCopies(shadows, m_harddiskShadowCopyVolumes, ec);
             if (ec)
             {
                 Log::Error("Failed to enumerate shadow copies [{}]", ec);

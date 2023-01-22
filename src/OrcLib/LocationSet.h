@@ -196,6 +196,8 @@ public:
     HRESULT PrintLocation(const std::shared_ptr<Location>& loc, bool logAsDebug, LPCWSTR szIndent = L"") const;
     HRESULT PrintLocations(bool bOnlyParsedOnes, LPCWSTR szIndent = L"") const;
     HRESULT PrintLocationsByVolume(bool bOnlyParsedOnes, LPCWSTR szIndent = L"") const;
+
+    std::vector<std::wstring> m_harddiskShadowCopyVolumes;
 };
 
 }  // namespace Orc

@@ -86,7 +86,11 @@ public:
     bool IsFAT16() const { return GetFSType() == FSVBR::FSType::FAT16; }
     bool IsFAT32() const { return GetFSType() == FSVBR::FSType::FAT32; }
 
-    void EnumerateShadowCopies(std::vector<VolumeShadowCopies::Shadow>& shadows, std::error_code& ec);
+    void EnumerateShadowCopies(
+        std::vector<VolumeShadowCopies::Shadow>& shadows,
+        std::optional<std::vector<std::wstring>>
+            harddiskShadowCopyVolumeHints,  // volsnap enumeration method requires this
+        std::error_code& ec);
 
     void SetShadowCopyParser(Ntfs::ShadowCopy::ParserType value) { m_shadowCopyParserType = value; };
 
@@ -98,6 +102,11 @@ protected:
 
     void
     EnumerateShadowCopiesWithMicrosoftParser(std::vector<VolumeShadowCopies::Shadow>& shadows, std::error_code& ec);
+
+    void EnumerateShadowCopiesWithVolsnapDriver(
+        const std::vector<std::wstring>& harddiskShadowCopyVolumeHints,
+        std::vector<VolumeShadowCopies::Shadow>& shadows,
+        std::error_code& ec);
 };
 
 std::wostream& operator<<(std::wostream& o, const Location& l);

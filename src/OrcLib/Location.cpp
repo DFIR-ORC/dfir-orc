@@ -29,6 +29,314 @@
 
 using namespace std;
 
+namespace {
+
+void GetShadowCopyInformation(
+    const std::wstring& shadowCopyVolumePath,
+    GUID& shadowCopyId,
+    VSS_TIMESTAMP& creationTime,
+    VSS_VOLUME_SNAPSHOT_ATTRIBUTES& attributes,
+    std::error_code& ec)
+{
+    using namespace Orc;
+
+    const auto IOCTL_VOLSNAP_QUERY_APPLICATION_INFO = 0x53419C;
+    const auto IOCTL_VOLSNAP_QUERY_CONFIG_INFO = 0x534194;
+
+#pragma pack(push, 1)
+    struct ConfigInfo
+    {
+        uint8_t unknown1[8];
+        LARGE_INTEGER CreationTime;
+    };
+
+    struct ApplicationInformation
+    {
+        uint8_t length[4];
+        GUID guid;
+        GUID shadowCopyGuid;
+        GUID shadowCopySetGuid;
+        uint8_t snapshotContext[4];
+        uint8_t unknown1[4];
+        VSS_VOLUME_SNAPSHOT_ATTRIBUTES attributes;
+        uint8_t unknown2[4];
+    };
+#pragma pack(pop)
+
+    DWORD processed = 0;
+    std::vector<std::byte> buffer;
+    buffer.resize(1048576);
+
+    Guard::FileHandle hShadowCopyVolume = CreateFileW(
+        shadowCopyVolumePath.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS,
+        NULL);
+    if (hShadowCopyVolume == INVALID_HANDLE_VALUE)
+    {
+        ec = LastWin32Error();
+        Log::Error(L"Failed CreateFileW on '{}' [{}]", shadowCopyVolumePath, ec);
+        return;
+    }
+
+    // Get shadow copy guids...
+    BOOL rv = DeviceIoControl(
+        hShadowCopyVolume.value(),
+        IOCTL_VOLSNAP_QUERY_APPLICATION_INFO,
+        NULL,
+        0,
+        buffer.data(),
+        static_cast<DWORD>(buffer.size()),
+        &processed,
+        NULL);
+    if (!rv)
+    {
+        ec = LastWin32Error();
+        Log::Debug("Failed IOCTL_VOLSNAP_QUERY_APPLICATION_FLAGS [{}]", ec);
+        return;
+    }
+
+    if (processed < sizeof(ApplicationInformation))
+    {
+        ec = std::make_error_code(std::errc::message_size);
+        Log::Debug("Failed IOCTL_VOLSNAP_QUERY_APPLICATION_FLAGS: unexpected output size");
+        return;
+    }
+
+    auto appinfo = reinterpret_cast<ApplicationInformation*>(buffer.data());
+    shadowCopyId = appinfo->shadowCopyGuid;
+    attributes = appinfo->attributes;
+
+    // Get shadow copy timestamps
+    rv = DeviceIoControl(
+        hShadowCopyVolume.value(),
+        IOCTL_VOLSNAP_QUERY_CONFIG_INFO,
+        NULL,
+        0,
+        buffer.data(),
+        static_cast<DWORD>(buffer.size()),
+        &processed,
+        NULL);
+    if (!rv)
+    {
+        ec = LastWin32Error();
+        Log::Debug("Failed IOCTL_VOLSNAP_QUERY_CONFIG_INFO [{}]", ec);
+        return;
+    }
+
+    if (processed < sizeof(ConfigInfo))
+    {
+        ec = std::make_error_code(std::errc::message_size);
+        Log::Debug("Failed IOCTL_VOLSNAP_QUERY_CONFIG_INFO: unexpected output size");
+        return;
+    }
+
+    auto configInfo = reinterpret_cast<ConfigInfo*>(buffer.data());
+    creationTime = *reinterpret_cast<const VSS_TIMESTAMP*>(&configInfo->CreationTime);
+}
+
+void ParseVolumeSerial32(
+    const std::wstring& path,
+    const std::optional<uint64_t>& volumeOffset,
+    uint32_t& volumeSerial32,
+    std::error_code& ec)
+{
+    using namespace Orc;
+
+    Guard::FileHandle hVolume = CreateFileW(
+        path.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_NO_BUFFERING,
+        NULL);
+
+    if (hVolume == INVALID_HANDLE_VALUE)
+    {
+        ec = LastWin32Error();
+        Log::Debug(L"Failed CreateFileW '{}' [{}]", path, ec);
+        return;
+    }
+
+    const size_t kBlockSize = 4096;
+    if (volumeOffset)
+    {
+        LARGE_INTEGER liVolumeOffset, newOffset;
+        liVolumeOffset.QuadPart = volumeOffset.value();
+
+        if (!SetFilePointerEx(hVolume.value(), liVolumeOffset, &newOffset, FILE_BEGIN))
+        {
+            ec = LastWin32Error();
+            Log::Debug(L"Failed SetFilePointerEx '{}' [{}]", path, ec);
+            return;
+        }
+    }
+
+    std::vector<uint8_t> biosParameterBlock;
+    biosParameterBlock.resize(kBlockSize * 2);
+
+    DWORD processed = 0;
+    if (!ReadFile(hVolume.value(), (LPVOID)biosParameterBlock.data(), biosParameterBlock.size(), &processed, NULL))
+    {
+        ec = LastWin32Error();
+        Log::Debug(L"Failed ReadFile '{}' [{}]", path, ec);
+        return;
+    }
+
+    std::string_view signature(reinterpret_cast<const char*>(biosParameterBlock.data() + 3), 8);
+    std::optional<uint64_t> serialOffset;
+    if (signature.substr(0, NTFS_VBR_SIGNATURE.size()) == NTFS_VBR_SIGNATURE)
+    {
+        serialOffset = 0x48;
+    }
+    else if (
+        signature.substr(0, NTFS_VBR_SIGNATURE.size()) == FAT12_VBR_SIGNATURE
+        || signature.substr(0, NTFS_VBR_SIGNATURE.size()) == FAT16_VBR_SIGNATURE
+        || signature.substr(0, NTFS_VBR_SIGNATURE.size()) == FAT32_VBR_SIGNATURE)
+    {
+        serialOffset = 0x43;
+    }
+
+    if (!serialOffset)
+    {
+        ec = std::make_error_code(std::errc::function_not_supported);
+        Log::Debug("Unknown volume signature", ec);
+        return;
+    }
+
+    volumeSerial32 = *reinterpret_cast<uint32_t*>(biosParameterBlock.data() + *serialOffset);
+}
+
+void GetVolumeSerialUsingFileHandle(const std::wstring& path, uint32_t& volumeSerial32, std::error_code& ec)
+{
+    using namespace Orc;
+
+    Guard::FileHandle hVolume = CreateFileW(
+        path.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_FLAG_BACKUP_SEMANTICS,
+        NULL);
+
+    if (hVolume == INVALID_HANDLE_VALUE)
+    {
+        ec = LastWin32Error();
+        Log::Debug(L"Failed CreateFileW '{}' [{}]", path, ec);
+        return;
+    }
+
+    BY_HANDLE_FILE_INFORMATION info;
+    if (!GetFileInformationByHandle(hVolume.value(), &info))
+    {
+        ec = LastWin32Error();
+        Log::Debug(L"Failed GetFileInformationByHandle '{}' [{}]", path, ec);
+        return;
+    }
+
+    volumeSerial32 = info.dwVolumeSerialNumber;
+}
+
+void GetVolumeSerial32(std::wstring path, uint32_t& volumeSerial32, std::error_code& ec)
+{
+    using namespace Orc;
+
+    std::optional<uint64_t> startOffset;
+    std::wregex device(L"(.*),offset=([0-9]+),size=([0-9]+),sector=([0-9]+)");
+
+    // parse 'path' to extract api compatible expression and offset
+    std::wsmatch matches;
+    auto match = std::regex_search(path, matches, device);
+    if (match)
+    {
+        path = matches[1].str().c_str();
+        startOffset = wcstoull(matches[2].str().c_str(), nullptr, 0);
+        ParseVolumeSerial32(path, startOffset, volumeSerial32, ec);
+        return;
+    }
+
+    const std::wregex globalRoot(L"\\\\\\\\\\?\\\\GLOBALROOT\\\\Device\\\\HarddiskVolume.*");
+    const std::wregex harddiskVolume(L"\\\\\\\\.\\\\HarddiskVolume[0-9]+");
+    const std::wregex volumeRoot(L"\\\\\\\\\\?\\\\Volume\\{.*\\}");
+
+    if ((std::regex_match(path, globalRoot) || std::regex_match(path, harddiskVolume)
+         || std::regex_match(path, volumeRoot))
+        && path[path.size() - 1] != L'\\')
+    {
+        path.push_back(L'\\');
+    }
+
+    GetVolumeSerialUsingFileHandle(path, volumeSerial32, ec);
+    if (ec)
+    {
+        ec.clear();
+        ParseVolumeSerial32(path, 0, volumeSerial32, ec);
+    }
+}
+
+void EnumerateShadows(
+    const std::wstring& volume,
+    const std::vector<std::wstring>& harddiskShadowCopyVolumeHints,
+    std::vector<Orc::VolumeShadowCopies::Shadow>& shadows,
+    std::error_code& ec)
+{
+    using namespace Orc;
+
+    std::vector<uint8_t> buffer;
+    buffer.resize(1048576);
+
+    // Get volume serial to compare with each shadow copy volume serial
+    uint32_t volumeSerial;
+    GetVolumeSerial32(volume, volumeSerial, ec);
+    if (ec)
+    {
+        Log::Error(L"Failed to read volume serial: {} [{}]", volume, ec);
+        return;
+    }
+
+    for (auto hint : harddiskShadowCopyVolumeHints)
+    {
+        uint32_t shadowSerial;
+        GetVolumeSerial32(hint, shadowSerial, ec);
+        if (ec)
+        {
+            Log::Debug(L"Failed to read volume serial: {} [{}]", hint, ec);
+            ec.clear();
+            continue;
+        }
+
+        if (shadowSerial != volumeSerial)
+        {
+            Log::Debug(
+                L"Shadow copy serials do not match (volume: {}, serial: {:#018x}, vss: {}, vss serial: {:#010x})",
+                volume,
+                volumeSerial,
+                hint,
+                shadowSerial);
+            continue;
+        }
+
+        GUID shadowCopyId {};
+        VSS_TIMESTAMP creationTime;
+        VSS_VOLUME_SNAPSHOT_ATTRIBUTES attributes {};
+        GetShadowCopyInformation(hint, shadowCopyId, creationTime, attributes, ec);
+        if (ec)
+        {
+            Log::Error(L"Failed GetShadowCopyInformation (volume: {}, vss: {}) [{}]", volume, hint, ec);
+            continue;
+        }
+
+        shadows.emplace_back(volume.c_str(), hint.c_str(), attributes, creationTime, shadowCopyId);
+    }
+}
+
+}  // namespace
+
 namespace Orc {
 
 Location::Location(const std::wstring& Location, Location::Type type)
@@ -54,14 +362,23 @@ const std::wstring Location::GetLocation() const
     return m_Location;
 }
 
-void Location::EnumerateShadowCopies(std::vector<VolumeShadowCopies::Shadow>& shadows, std::error_code& ec)
+void Location::EnumerateShadowCopies(
+    std::vector<VolumeShadowCopies::Shadow>& shadows,
+    std::optional<std::vector<std::wstring>> harddiskShadowCopyVolumeHints,
+    std::error_code& ec)
 {
     Log::Debug("Set volume shadow copy parser to '{}'", ToString(m_shadowCopyParserType));
 
     switch (m_shadowCopyParserType)
     {
         case Ntfs::ShadowCopy::ParserType::kMicrosoft: {
-            return EnumerateShadowCopiesWithMicrosoftParser(shadows, ec);
+            EnumerateShadowCopiesWithMicrosoftParser(shadows, ec);
+            if (ec && harddiskShadowCopyVolumeHints)
+            {
+                ec.clear();
+                EnumerateShadowCopiesWithVolsnapDriver(*harddiskShadowCopyVolumeHints, shadows, ec);
+            }
+            return;
         }
         case Ntfs::ShadowCopy::ParserType::kInternal: {
             return EnumerateShadowCopiesWithInternalParser(shadows, ec);
@@ -71,6 +388,61 @@ void Location::EnumerateShadowCopies(std::vector<VolumeShadowCopies::Shadow>& sh
     }
 
     ec = std::make_error_code(std::errc::not_supported);
+}
+
+void Location::EnumerateShadowCopiesWithVolsnapDriver(
+    const std::vector<std::wstring>& harddiskShadowCopyVolumeHints,
+    std::vector<VolumeShadowCopies::Shadow>& shadows,
+    std::error_code& ec)
+{
+    std::vector<VolumeShadowCopies::Shadow> shadowsEnumeration;
+    ::EnumerateShadows(GetLocation(), harddiskShadowCopyVolumeHints, shadowsEnumeration, ec);
+    if (ec)
+    {
+        Log::Error(L"Failed to enumerate shadow copy volumes from '{}' [{}]", GetLocation(), ec);
+        return;
+    }
+
+    for (auto& shadow : shadowsEnumeration)
+    {
+        auto loc = std::make_shared<Location>(L"", Location::Type::Snapshot);
+        loc->SetShadowCopyParser(m_shadowCopyParserType);
+        loc->SetShadow(shadow);
+        auto reader = loc->GetReader();
+        if (!reader)
+        {
+            Log::Error("Failed to get reader for shadow copy {}", shadow.guid);
+            continue;
+        }
+
+        HRESULT hr = reader->LoadDiskProperties();
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to load disk properties (path: {}) [{}]", GetLocation(), SystemError(hr));
+            continue;
+        }
+
+        if (SerialNumber() == 0 || SerialNumber() != reader->VolumeSerialNumber())
+        {
+            Log::Debug(
+                L"Shadow copy serials do not match (volume: {}, serial: {:#010x}, vss: {}, vss serial: {:#010x})",
+                GetLocation(),
+                reader->VolumeSerialNumber(),
+                shadow.guid,
+                SerialNumber());
+            continue;
+        }
+
+        shadow.parentVolume = reader;
+        shadows.push_back(std::move(shadow));
+    }
+
+    std::sort(
+        std::begin(shadows),
+        std::end(shadows),
+        [](const VolumeShadowCopies::Shadow& lhs, const VolumeShadowCopies::Shadow& rhs) {
+            return lhs.CreationTime < rhs.CreationTime;
+        });
 }
 
 void Location::EnumerateShadowCopiesWithMicrosoftParser(
@@ -210,7 +582,7 @@ std::shared_ptr<VolumeReader> Location::GetReader()
                         m_Reader = std::make_shared<ShadowCopyVolumeReader>(*m_Shadow);
                         break;
                     default:
-                        Log::Error("Unsupported shadow copy parser");
+                        Log::Debug("Unsupported shadow copy parser");
                 }
             }
             break;
