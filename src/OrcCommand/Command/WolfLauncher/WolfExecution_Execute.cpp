@@ -519,7 +519,7 @@ HRESULT WolfExecution::CreateCommandAgent(
                         Log::Critical(L"JOB: CPU Time limit");
                         break;
                     case CommandNotification::AllTerminated:
-                        Log::Debug("JOB: Job was authoritatively terminated");
+                        Log::Critical(L"Job was authoritatively terminated: {}", m_commandSet);
                         break;
                     case CommandNotification::Done: {
                         GetSystemTimeAsFileTime(&m_FinishTime);
