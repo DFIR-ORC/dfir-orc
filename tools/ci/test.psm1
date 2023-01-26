@@ -1100,6 +1100,10 @@ function Get-OrcOutcome {
                     continue
                 }
 
+                # On current powershell version the value was an UInt32 that could not be easily converted to Int32
+                # when being 0xFFFFFFFF
+                $Command.exit_code = [Convert]::ToInt32($Command.exit_code.ToString("x"), 16)
+
                 if ($Command.exit_code -eq 0)
                 {
                     continue
@@ -1180,12 +1184,10 @@ function Test-OrcOutcome {
                 continue
             }
 
-            $ExitCode = ([int32]($Failure.Code)).ToString("x")
-
             Write-Warning ("$($Outcome["ComputerName"]): Failed " `
                 + "$($Failure.Set)/" `
                 + "$($Failure.Command) " `
-                + "(code: 0x$ExitCode, " `
+                + "(code: $($Failure.Code), " `
                 + "duration: $($Failure.Duration), " `
                 + "start: $($Failure.Start))")
         }
