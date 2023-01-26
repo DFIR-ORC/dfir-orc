@@ -1401,6 +1401,10 @@ function Test-OrcResults {
     $Path = Resolve-Path $Path
     if (-Not $Path)
     {
+        if ($PassThru)
+        {
+            return @()
+        }
         return
     }
 
