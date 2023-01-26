@@ -1074,6 +1074,7 @@ function Get-OrcOutcome {
     $OutcomeList = @()
     foreach ($OutcomePath in $OutcomeFiles)
     {
+        Write-Verbose "Parsing: $OutcomePath"
         $Outcome = Get-Content $OutcomePath | ConvertFrom-Json
 
         $MaxMemoryPeak = 0
@@ -1401,6 +1402,7 @@ function Test-OrcResults {
     $Path = Resolve-Path $Path
     if (-Not $Path)
     {
+        Write-Verbose "Path not found: $Path"
         if ($PassThru)
         {
             return @()
