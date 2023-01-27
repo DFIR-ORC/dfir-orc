@@ -501,7 +501,7 @@ function Invoke-OrcVM {
         [Parameter()]
         [String]
         $Checkpoint,
-        [Parameter(Mandatory)]
+        [Parameter()]
         [System.Uri]
         $Upload,
         [Parameter()]
@@ -571,7 +571,15 @@ function Invoke-OrcVM {
             $Argument = "$Argument /local=$using:ConfigRemotePath"
         }
 
-        Start-Process $using:OrcRemotePath -ArgumentList "$Argument" -WorkingDirectory "C:\Windows\Temp"
+        if ($Argument)
+        {
+            Start-Process $using:OrcRemotePath -ArgumentList "$Argument" -WorkingDirectory "C:\Windows\Temp"
+        }
+        else
+        {
+            Start-Process $using:OrcRemotePath -WorkingDirectory "C:\Windows\Temp"
+        }
+
         Start-Sleep 5
         Write-Host "Waiting for 'Orc' to end"
         Wait-Process "Orc"
