@@ -681,6 +681,10 @@ HRESULT WolfExecution::EnqueueCommands()
 
     for (const auto& command : m_Commands)
     {
+        if (command->IsOptional())
+        {
+            continue;
+        }
 
         if (m_TasksByKeyword.find(command->Keyword()) != m_TasksByKeyword.end())
         {
@@ -691,25 +695,23 @@ HRESULT WolfExecution::EnqueueCommands()
             m_TasksByKeyword[command->Keyword()] =
                 std::make_shared<WolfTask>(GetKeyword(), command->Keyword(), m_journal);
         }
-        if (!command->IsOptional())
+
         {
+            auto&& lock = m_outcome.Lock();
+            auto& outcomeCommand = m_outcome.GetCommandSet(m_commandSet).GetCommand(command->Keyword());
+            for (const auto& parameter : command->GetParameters())
             {
-                auto&& lock = m_outcome.Lock();
-                auto& outcomeCommand = m_outcome.GetCommandSet(m_commandSet).GetCommand(command->Keyword());
-                for (const auto& parameter : command->GetParameters())
+                if (::HasFileOutput(parameter.Kind))
                 {
-                    if (::HasFileOutput(parameter.Kind))
-                    {
-                        Outcome::Command::Output outputFile;
-                        outputFile.SetName(parameter.Name);
-                        outputFile.SetType(::ToOutputFileType(parameter.Kind));
-                        outcomeCommand.GetOutput().emplace_back(std::move(outputFile));
-                    }
+                    Outcome::Command::Output outputFile;
+                    outputFile.SetName(parameter.Name);
+                    outputFile.SetType(::ToOutputFileType(parameter.Kind));
+                    outcomeCommand.GetOutput().emplace_back(std::move(outputFile));
                 }
             }
-
-            Concurrency::send(m_cmdAgentBuffer, command);
         }
+
+        Concurrency::send(m_cmdAgentBuffer, command);
     }
 
     return S_OK;
