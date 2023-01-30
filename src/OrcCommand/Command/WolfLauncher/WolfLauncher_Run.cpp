@@ -622,6 +622,13 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                     {
                         writer->WriteNamed(L"keyword", exec->GetKeyword().c_str());
                         writer->WriteNamed(L"file", exec->GetArchiveFileName().c_str());
+                        writer->WriteNamed(
+                            L"archive_timeout",
+                            std::chrono::duration_cast<std::chrono::seconds>(exec->ArchiveTimeOut()).count());
+                        writer->WriteNamed(
+                            L"command_timeout",
+                            std::chrono::duration_cast<std::chrono::seconds>(exec->CmdTimeOut()).count());
+
                         writer->BeginCollection(L"commands");
                         for (const auto& command : exec->GetCommands())
                         {

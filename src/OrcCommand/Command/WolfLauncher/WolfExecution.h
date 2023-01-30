@@ -78,6 +78,9 @@ public:
         CBinaryBuffer Certificate;
     };
 
+    std::chrono::milliseconds CmdTimeOut() const { return m_CmdTimeOut; }
+    std::chrono::milliseconds ArchiveTimeOut() const { return m_ArchiveTimeOut; }
+
 private:
     void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notification& notfication);
     CommandMessage::Message SetCommandFromConfigItem(const ConfigItem& item);
