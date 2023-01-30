@@ -80,6 +80,7 @@ public:
 
     std::chrono::milliseconds CmdTimeOut() const { return m_CmdTimeOut; }
     std::chrono::milliseconds ArchiveTimeOut() const { return m_ArchiveTimeOut; }
+    const JobRestrictions& GetJobRestrictions() const { return m_Restrictions; }
 
 private:
     void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notification& notfication);
