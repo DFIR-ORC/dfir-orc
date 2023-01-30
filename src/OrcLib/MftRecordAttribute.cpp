@@ -494,7 +494,7 @@ HRESULT MftRecordAttribute::GetStreams(
     }
     else if (m_pHeader->FormCode == RESIDENT_FORM)
     {
-        auto stream = make_shared<BufferStream<MAX_PATH>>();
+        auto stream = make_shared<BufferStream<ORC_MAX_PATH>>();
 
         if (FAILED(hr = stream->Open()))
             return hr;
@@ -765,9 +765,9 @@ HRESULT ExtendedAttribute::Parse(const std::shared_ptr<VolumeReader>& VolReader)
 
     while (pEAInfo < (PFILE_FULL_EA_INFORMATION)((BYTE*)pBase + EASize()))
     {
-        WCHAR szName[MAX_PATH];
+        WCHAR szName[ORC_MAX_PATH];
 
-        if (FAILED(hr = AnsiToWide(pEAInfo->EaName, pEAInfo->EaNameLength, szName, MAX_PATH)))
+        if (FAILED(hr = AnsiToWide(pEAInfo->EaName, pEAInfo->EaNameLength, szName, ORC_MAX_PATH)))
             return hr;
 
         m_Items.push_back(pair<wstring, CBinaryBuffer>(

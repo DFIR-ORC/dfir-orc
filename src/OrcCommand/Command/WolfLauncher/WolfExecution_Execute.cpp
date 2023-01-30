@@ -196,9 +196,9 @@ HRESULT WolfExecution::BuildFullArchiveName()
     {
         // A full path was specified, using it
         m_strArchiveFullPath = m_strArchiveName;
-        WCHAR szFileName[MAX_PATH];
+        WCHAR szFileName[ORC_MAX_PATH];
 
-        if (FAILED(hr = GetFileNameForFile(m_strArchiveFullPath.c_str(), szFileName, MAX_PATH)))
+        if (FAILED(hr = GetFileNameForFile(m_strArchiveFullPath.c_str(), szFileName, ORC_MAX_PATH)))
         {
             Log::Error("Unable to extract archive file name [{}]", SystemError(hr));
             return hr;

@@ -162,8 +162,8 @@ HRESULT OutputSpec::Configure(
     else
         outPath = strInputString;
 
-    WCHAR szExpanded[MAX_PATH] = {0};
-    ExpandEnvironmentStrings(outPath.c_str(), szExpanded, MAX_PATH);
+    WCHAR szExpanded[ORC_MAX_PATH] = {0};
+    ExpandEnvironmentStrings(outPath.c_str(), szExpanded, ORC_MAX_PATH);
     if (wcscmp(outPath.c_str(), szExpanded) != 0)
         outPath.assign(szExpanded);
 

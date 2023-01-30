@@ -263,9 +263,9 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
     if (RegOpenKeyW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", &current_version)
         == ERROR_SUCCESS)
     {
-        WCHAR release_id[MAX_PATH];
+        WCHAR release_id[ORC_MAX_PATH];
         DWORD valueType = 0L;
-        DWORD cbData = MAX_PATH * sizeof(WCHAR);
+        DWORD cbData = ORC_MAX_PATH * sizeof(WCHAR);
         if (RegQueryValueExW(current_version, L"DisplayVersion", NULL, &valueType, (LPBYTE)release_id, &cbData)
             == ERROR_SUCCESS)
         {
@@ -784,14 +784,14 @@ Result<std::wstring> Orc::SystemDetails::GetCmdLine(DWORD dwPid)
 
 HRESULT Orc::SystemDetails::GetSystemLocale(std::wstring& strLocale)
 {
-    wchar_t szName[MAX_PATH];
-    if (GetLocaleInfo(GetSystemDefaultLCID(), LOCALE_SISO639LANGNAME, szName, MAX_PATH) == 0)
+    wchar_t szName[ORC_MAX_PATH];
+    if (GetLocaleInfo(GetSystemDefaultLCID(), LOCALE_SISO639LANGNAME, szName, ORC_MAX_PATH) == 0)
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
 
-    wchar_t szCountry[MAX_PATH];
-    if (GetLocaleInfo(GetSystemDefaultLCID(), LOCALE_SISO3166CTRYNAME, szCountry, MAX_PATH) == 0)
+    wchar_t szCountry[ORC_MAX_PATH];
+    if (GetLocaleInfo(GetSystemDefaultLCID(), LOCALE_SISO3166CTRYNAME, szCountry, ORC_MAX_PATH) == 0)
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
@@ -802,14 +802,14 @@ HRESULT Orc::SystemDetails::GetSystemLocale(std::wstring& strLocale)
 
 HRESULT Orc::SystemDetails::GetUserLocale(std::wstring& strLocale)
 {
-    wchar_t szName[MAX_PATH];
-    if (GetLocaleInfo(GetUserDefaultLCID(), LOCALE_SISO639LANGNAME, szName, MAX_PATH) == 0)
+    wchar_t szName[ORC_MAX_PATH];
+    if (GetLocaleInfo(GetUserDefaultLCID(), LOCALE_SISO639LANGNAME, szName, ORC_MAX_PATH) == 0)
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
 
-    wchar_t szCountry[MAX_PATH];
-    if (GetLocaleInfo(GetUserDefaultLCID(), LOCALE_SISO3166CTRYNAME, szCountry, MAX_PATH) == 0)
+    wchar_t szCountry[ORC_MAX_PATH];
+    if (GetLocaleInfo(GetUserDefaultLCID(), LOCALE_SISO3166CTRYNAME, szCountry, ORC_MAX_PATH) == 0)
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
@@ -820,8 +820,8 @@ HRESULT Orc::SystemDetails::GetUserLocale(std::wstring& strLocale)
 
 HRESULT Orc::SystemDetails::GetSystemLanguage(std::wstring& strLanguage)
 {
-    wchar_t szName[MAX_PATH];
-    if (GetLocaleInfo(GetSystemDefaultUILanguage(), LOCALE_SLANGUAGE, szName, MAX_PATH) == 0)
+    wchar_t szName[ORC_MAX_PATH];
+    if (GetLocaleInfo(GetSystemDefaultUILanguage(), LOCALE_SLANGUAGE, szName, ORC_MAX_PATH) == 0)
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
@@ -831,8 +831,8 @@ HRESULT Orc::SystemDetails::GetSystemLanguage(std::wstring& strLanguage)
 
 HRESULT Orc::SystemDetails::GetUserLanguage(std::wstring& strLanguage)
 {
-    wchar_t szName[MAX_PATH];
-    if (GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SLANGUAGE, szName, MAX_PATH) == 0)
+    wchar_t szName[ORC_MAX_PATH];
+    if (GetLocaleInfo(GetUserDefaultUILanguage(), LOCALE_SLANGUAGE, szName, ORC_MAX_PATH) == 0)
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
@@ -842,8 +842,8 @@ HRESULT Orc::SystemDetails::GetUserLanguage(std::wstring& strLanguage)
 
 SystemDetails::DriveType SystemDetails::GetPathLocation(const std::wstring& strAnyPath)
 {
-    WCHAR szVolume[MAX_PATH];
-    if (!GetVolumePathName(strAnyPath.c_str(), szVolume, MAX_PATH))
+    WCHAR szVolume[ORC_MAX_PATH];
+    if (!GetVolumePathName(strAnyPath.c_str(), szVolume, ORC_MAX_PATH))
     {
         return Drive_Unknown;
     }
@@ -1249,7 +1249,7 @@ Result<std::vector<Orc::SystemDetails::NetworkAdapter>> Orc::SystemDetails::GetN
 
             if (pCurrAddresses->PhysicalAddressLength != 0)
             {
-                Buffer<WCHAR, MAX_PATH> PhysAddress;
+                Buffer<WCHAR, ORC_MAX_PATH> PhysAddress;
 
                 for (auto i = 0; i < (int)pCurrAddresses->PhysicalAddressLength; i++)
                 {
@@ -1290,9 +1290,9 @@ Result<Orc::SystemDetails::NetworkAddress> Orc::SystemDetails::GetNetworkAddress
             break;
     }
 
-    Buffer<WCHAR, MAX_PATH> ip;
-    DWORD dwLength = MAX_PATH;
-    ip.reserve(MAX_PATH);
+    Buffer<WCHAR, ORC_MAX_PATH> ip;
+    DWORD dwLength = ORC_MAX_PATH;
+    ip.reserve(ORC_MAX_PATH);
 
     if (WSAAddressToStringW(address.lpSockaddr, address.iSockaddrLength, NULL, ip.get(), &dwLength) == SOCKET_ERROR)
         return SystemError(HRESULT_FROM_WIN32(WSAGetLastError()));
@@ -1594,16 +1594,16 @@ HRESULT SystemDetails::LoadSystemDetails()
     }
     g_pDetailsBlock->strComputerName.assign(szComputerName, dwBufLen);
 
-    WCHAR szFullComputerName[MAX_PATH];
-    DWORD dwFullBufLen = MAX_PATH;
+    WCHAR szFullComputerName[ORC_MAX_PATH];
+    DWORD dwFullBufLen = ORC_MAX_PATH;
     if (!::GetComputerNameExW(ComputerNamePhysicalDnsFullyQualified, szFullComputerName, &dwFullBufLen))
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
     g_pDetailsBlock->strFullComputerName.assign(szFullComputerName, dwFullBufLen);
 
-    WCHAR szOrcComputerName[MAX_PATH + 1];
-    DWORD dwOrcBufLen = MAX_PATH + 1;
+    WCHAR szOrcComputerName[ORC_MAX_PATH + 1];
+    DWORD dwOrcBufLen = ORC_MAX_PATH + 1;
 
     auto dwOrcComputerName = GetEnvironmentVariableW(OrcComputerName, szOrcComputerName, dwOrcBufLen);
     if (dwOrcComputerName > 0)
@@ -1611,8 +1611,8 @@ HRESULT SystemDetails::LoadSystemDetails()
     else
         g_pDetailsBlock->strOrcComputerName = g_pDetailsBlock->strComputerName;
 
-    WCHAR szOrcFullComputerName[MAX_PATH];
-    DWORD dwOrcFullBufLen = MAX_PATH;
+    WCHAR szOrcFullComputerName[ORC_MAX_PATH];
+    DWORD dwOrcFullBufLen = ORC_MAX_PATH;
 
     auto dwOrcFullComputerName = GetEnvironmentVariableW(OrcFullComputerName, szOrcFullComputerName, dwOrcFullBufLen);
     if (dwOrcFullComputerName > 0)
@@ -1708,13 +1708,13 @@ HRESULT SystemDetails::LoadSystemDetails()
 
 HRESULT SystemDetails::GetCurrentWorkingDirectory(std::filesystem::path& cwd)
 {
-    WCHAR path[MAX_PATH];
+    WCHAR path[ORC_MAX_PATH];
     DWORD retval = 0L;
-    if (!(retval = GetCurrentDirectory(MAX_PATH, path)))
+    if (!(retval = GetCurrentDirectory(ORC_MAX_PATH, path)))
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
-    if (retval > MAX_PATH)
+    if (retval > ORC_MAX_PATH)
     {
         Buffer<WCHAR> buffer;
         buffer.resize(retval);
@@ -1733,8 +1733,8 @@ HRESULT SystemDetails::GetCurrentWorkingDirectory(std::filesystem::path& cwd)
 
 HRESULT SystemDetails::GetProcessBinary(std::wstring& strFullPath)
 {
-    WCHAR szPath[MAX_PATH];
-    if (!GetModuleFileName(NULL, szPath, MAX_PATH))
+    WCHAR szPath[ORC_MAX_PATH];
+    if (!GetModuleFileName(NULL, szPath, ORC_MAX_PATH))
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }

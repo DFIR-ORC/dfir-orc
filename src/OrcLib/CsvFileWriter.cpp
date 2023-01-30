@@ -396,7 +396,7 @@ Orc::TableOutput::CSV::Writer::WriteFormated_(const std::wstring_view& szFormat,
 {
     using namespace std::string_view_literals;
 
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
     std::wstring_view result_string = buffer.size() > 0 ? std::wstring_view(buffer.get(), buffer.size()) : L""sv;
@@ -412,7 +412,7 @@ Orc::TableOutput::CSV::Writer::WriteFormated_(const std::wstring_view& szFormat,
 
 HRESULT Orc::TableOutput::CSV::Writer::WriteFormated_(const std::string_view& szFormat, fmt::format_args args)
 {
-    Buffer<CHAR, MAX_PATH> buffer;
+    Buffer<CHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
     std::string_view result_string((LPCSTR)buffer, buffer.size());
@@ -660,7 +660,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteFlags(DWORD dwFlags)
     const auto& values = pCol->FlagsValues.value();
 
     bool bFirst = true;
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     for (const auto& value : values)
     {
         if (dwFlags & value.dwFlag)
@@ -704,7 +704,7 @@ Orc::TableOutput::CSV::Writer::WriteFlags(DWORD dwFlags, const FlagsDefinition F
     bool bFirst = true;
     int idx = 0;
 
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     while (FlagValues[idx].dwFlag != 0xFFFFFFFF)
     {
         if (dwFlags & FlagValues[idx].dwFlag)
@@ -750,7 +750,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteExactFlags(DWORD dwFlags)
     const auto& values = pCol->FlagsValues.value();
 
     bool bFound = false;
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     for (const auto& value : values)
     {
         if (dwFlags == value.dwFlag)
@@ -787,7 +787,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteExactFlags(DWORD dwFlags, const
     int idx = 0;
     bool found = false;
 
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     while (FlagValues[idx].dwFlag != 0xFFFFFFFF)
     {
         if (dwFlags == FlagValues[idx].dwFlag)

@@ -23,8 +23,8 @@ private:
     ULONGLONG m_ullLength = (ULONGLONG)-1;
     UINT m_uiSectorSize = 512;
 
-    WCHAR m_szPhysDrive[MAX_PATH];
-    WCHAR m_szDiskGUID[MAX_PATH];
+    WCHAR m_szPhysDrive[ORC_MAX_PATH];
+    WCHAR m_szDiskGUID[ORC_MAX_PATH];
 
 protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();

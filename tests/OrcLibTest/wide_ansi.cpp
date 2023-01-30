@@ -44,14 +44,14 @@ public:
             Assert::AreEqual(result.c_str(), "Testing string");
         }
         {
-            Buffer<CHAR, MAX_PATH> result;
+            Buffer<CHAR, ORC_MAX_PATH> result;
 
             auto hr = Orc::WideToAnsi(L"Testing string", result);
             Assert::IsTrue(SUCCEEDED(hr));
             Assert::AreEqual(result.get(), "Testing string");
         }
         {
-            Buffer<WCHAR, MAX_PATH> result;
+            Buffer<WCHAR, ORC_MAX_PATH> result;
 
             auto hr = Orc::AnsiToWide("Testing string", result);
 

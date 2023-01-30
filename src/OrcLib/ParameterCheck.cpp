@@ -45,7 +45,7 @@ HRESULT GetOutputDir_Internal(
 
                 if (dwRecursionsLeft > 0)
                 {
-                    WCHAR path_buffer[_MAX_PATH];
+                    WCHAR path_buffer[ORC_MAX_PATH];
                     WCHAR drive[_MAX_DRIVE];
                     WCHAR dir[_MAX_DIR];
                     WCHAR fname[_MAX_FNAME];
@@ -53,7 +53,7 @@ HRESULT GetOutputDir_Internal(
                     errno_t err;
 
                     size_t dwLen = wcslen(szOutputDir);
-                    if (dwLen > MAX_PATH)
+                    if (dwLen > ORC_MAX_PATH)
                         return E_INVALIDARG;
                     if (dwLen < 1)
                         return E_INVALIDARG;
@@ -66,11 +66,11 @@ HRESULT GetOutputDir_Internal(
                     if (err != 0)
                         return E_INVALIDARG;
 
-                    err = _wmakepath_s(path_buffer, _MAX_PATH, drive, dir, NULL, NULL);
+                    err = _wmakepath_s(path_buffer, ORC_MAX_PATH, drive, dir, NULL, NULL);
                     if (err != 0)
                         return E_INVALIDARG;
 
-                    if (FAILED(hr = GetOutputDir_Internal(path_buffer, _MAX_PATH, true, --dwRecursionsLeft)))
+                    if (FAILED(hr = GetOutputDir_Internal(path_buffer, ORC_MAX_PATH, true, --dwRecursionsLeft)))
                         return hr;
 
                     // We did not fail to create parent, now retry creating child
@@ -115,9 +115,9 @@ HRESULT Orc::GetOutputDir(const WCHAR* szInputString, std::wstring& strOutputDir
 {
     HRESULT hr = E_FAIL;
 
-    WCHAR szOutputDir[MAX_PATH];
-    ZeroMemory(szOutputDir, sizeof(WCHAR) * MAX_PATH);
-    if (FAILED(hr = GetOutputDir(szInputString, szOutputDir, MAX_PATH, bCreateParentAsNeeded)))
+    WCHAR szOutputDir[ORC_MAX_PATH];
+    ZeroMemory(szOutputDir, sizeof(WCHAR) * ORC_MAX_PATH);
+    if (FAILED(hr = GetOutputDir(szInputString, szOutputDir, ORC_MAX_PATH, bCreateParentAsNeeded)))
         return hr;
     strOutputDir.assign(szOutputDir);
     return S_OK;
@@ -139,7 +139,7 @@ HRESULT Orc::GetOutputFile(
 
     if (bCreateParentAsNeeded)
     {
-        WCHAR path_buffer[_MAX_PATH];
+        WCHAR path_buffer[ORC_MAX_PATH];
         WCHAR drive[_MAX_DRIVE];
         WCHAR dir[_MAX_DIR];
         WCHAR fname[_MAX_FNAME];
@@ -147,7 +147,7 @@ HRESULT Orc::GetOutputFile(
         errno_t err;
 
         size_t dwLen = wcslen(szOutputFile);
-        if (dwLen > MAX_PATH)
+        if (dwLen > ORC_MAX_PATH)
             return E_INVALIDARG;
         if (dwLen < 1)
             return E_INVALIDARG;
@@ -159,14 +159,14 @@ HRESULT Orc::GetOutputFile(
         if (err != 0)
             return E_INVALIDARG;
 
-        err = _wmakepath_s(path_buffer, _MAX_PATH, drive, dir, NULL, NULL);
+        err = _wmakepath_s(path_buffer, ORC_MAX_PATH, drive, dir, NULL, NULL);
         if (err != 0)
             return E_INVALIDARG;
 
         if (wcslen(path_buffer) == 0L)
             return S_OK;  // this is a relative path (only a filename)
 
-        return GetOutputDir_Internal(path_buffer, _MAX_PATH, true, MAX_CREATEDIR_RECURSIONS);
+        return GetOutputDir_Internal(path_buffer, ORC_MAX_PATH, true, MAX_CREATEDIR_RECURSIONS);
     }
 
     return S_OK;
@@ -177,9 +177,9 @@ Orc::GetOutputFile(const WCHAR* szInputString, std::wstring& strOutputFile, bool
 {
     HRESULT hr = E_FAIL;
 
-    WCHAR szOutputFile[MAX_PATH];
-    ZeroMemory(szOutputFile, sizeof(WCHAR) * MAX_PATH);
-    if (FAILED(hr = GetOutputFile(szInputString, szOutputFile, MAX_PATH, bCreateParentAsNeeded)))
+    WCHAR szOutputFile[ORC_MAX_PATH];
+    ZeroMemory(szOutputFile, sizeof(WCHAR) * ORC_MAX_PATH);
+    if (FAILED(hr = GetOutputFile(szInputString, szOutputFile, ORC_MAX_PATH, bCreateParentAsNeeded)))
         return hr;
     strOutputFile.assign(szOutputFile);
     return S_OK;
@@ -246,9 +246,9 @@ HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFi
 {
     HRESULT hr = E_FAIL;
 
-    WCHAR szInputFile[MAX_PATH];
-    ZeroMemory(szInputFile, sizeof(WCHAR) * MAX_PATH);
-    if (FAILED(hr = ExpandFilePath(szInputString, szInputFile, MAX_PATH)))
+    WCHAR szInputFile[ORC_MAX_PATH];
+    ZeroMemory(szInputFile, sizeof(WCHAR) * ORC_MAX_PATH);
+    if (FAILED(hr = ExpandFilePath(szInputString, szInputFile, ORC_MAX_PATH)))
         return hr;
     strInputFile.assign(szInputFile);
     return S_OK;
@@ -279,9 +279,9 @@ HRESULT Orc::ExpandDirectoryPath(const WCHAR* szInput, std::wstring& inputDir)
 {
     HRESULT hr = E_FAIL;
 
-    WCHAR szInputDir[MAX_PATH];
+    WCHAR szInputDir[ORC_MAX_PATH];
     ZeroMemory(szInputDir, sizeof(szInputDir));
-    hr = ExpandDirectoryPath(szInput, szInputDir, MAX_PATH);
+    hr = ExpandDirectoryPath(szInput, szInputDir, ORC_MAX_PATH);
     if (FAILED(hr))
     {
         return hr;
@@ -349,9 +349,9 @@ HRESULT Orc::VerifyFileIsBinary(const WCHAR* szInputFile)
 
 HRESULT Orc::GetProcessModuleDirectory(WCHAR* szDirectory, DWORD cchDirectoryLengthInWCHARS)
 {
-    WCHAR szProcessFileName[MAX_PATH];
+    WCHAR szProcessFileName[ORC_MAX_PATH];
 
-    if (!GetModuleFileName(NULL, szProcessFileName, MAX_PATH))
+    if (!GetModuleFileName(NULL, szProcessFileName, ORC_MAX_PATH))
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
@@ -360,9 +360,9 @@ HRESULT Orc::GetProcessModuleDirectory(WCHAR* szDirectory, DWORD cchDirectoryLen
 
 HRESULT Orc::GetProcessModuleFileName(WCHAR* szFileName, DWORD cchFileNameLengthInWCHARS)
 {
-    WCHAR szProcessFileName[MAX_PATH];
+    WCHAR szProcessFileName[ORC_MAX_PATH];
 
-    if (!GetModuleFileName(NULL, szProcessFileName, MAX_PATH))
+    if (!GetModuleFileName(NULL, szProcessFileName, ORC_MAX_PATH))
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
@@ -381,7 +381,7 @@ HRESULT Orc::GetProcessModuleFullPath(WCHAR* szFullPath, DWORD cchFullPathLength
 HRESULT
 Orc::GetDirectoryForFile(const WCHAR* szInputString, WCHAR* szDirectory, DWORD cchDirectoryLengthInWCHARS)
 {
-    WCHAR path_buffer[_MAX_PATH];
+    WCHAR path_buffer[ORC_MAX_PATH];
     WCHAR drive[_MAX_DRIVE];
     WCHAR dir[_MAX_DIR];
     WCHAR fname[_MAX_FNAME];
@@ -390,7 +390,7 @@ Orc::GetDirectoryForFile(const WCHAR* szInputString, WCHAR* szDirectory, DWORD c
 
     size_t dwLen = wcslen(szInputString);
 
-    if (dwLen > MAX_PATH)
+    if (dwLen > ORC_MAX_PATH)
         return E_INVALIDARG;
     if (dwLen < 1)
         return E_INVALIDARG;
@@ -402,7 +402,7 @@ Orc::GetDirectoryForFile(const WCHAR* szInputString, WCHAR* szDirectory, DWORD c
     err = _wsplitpath_s(path_buffer, drive, _MAX_DRIVE, dir, _MAX_DIR, fname, _MAX_FNAME, ext, _MAX_EXT);
     if (err != 0)
         return E_INVALIDARG;
-    ZeroMemory(path_buffer, MAX_PATH * sizeof(WCHAR));
+    ZeroMemory(path_buffer, ORC_MAX_PATH * sizeof(WCHAR));
 
     err = _wmakepath_s(szDirectory, cchDirectoryLengthInWCHARS, drive, dir, NULL, NULL);
 
@@ -412,7 +412,7 @@ Orc::GetDirectoryForFile(const WCHAR* szInputString, WCHAR* szDirectory, DWORD c
 HRESULT
 Orc::GetFileNameForFile(const WCHAR* szInputString, WCHAR* szFileName, DWORD cchFileNameLengthInWCHARS)
 {
-    WCHAR path_buffer[_MAX_PATH];
+    WCHAR path_buffer[ORC_MAX_PATH];
     WCHAR drive[_MAX_DRIVE];
     WCHAR dir[_MAX_DIR];
     WCHAR fname[_MAX_FNAME];
@@ -423,7 +423,7 @@ Orc::GetFileNameForFile(const WCHAR* szInputString, WCHAR* szFileName, DWORD cch
     if (dwLen < 1)
         return E_INVALIDARG;
 
-    if (dwLen > MAX_PATH)
+    if (dwLen > ORC_MAX_PATH)
         return E_INVALIDARG;
 
     wcscpy_s(path_buffer, szInputString);
@@ -433,7 +433,7 @@ Orc::GetFileNameForFile(const WCHAR* szInputString, WCHAR* szFileName, DWORD cch
     err = _wsplitpath_s(path_buffer, drive, _MAX_DRIVE, dir, _MAX_DIR, fname, _MAX_FNAME, ext, _MAX_EXT);
     if (err != 0)
         return E_INVALIDARG;
-    ZeroMemory(path_buffer, MAX_PATH * sizeof(WCHAR));
+    ZeroMemory(path_buffer, ORC_MAX_PATH * sizeof(WCHAR));
 
     err = _wmakepath_s(szFileName, cchFileNameLengthInWCHARS, NULL, NULL, fname, ext);
     if (err != 0)
@@ -444,12 +444,12 @@ Orc::GetFileNameForFile(const WCHAR* szInputString, WCHAR* szFileName, DWORD cch
 HRESULT
 Orc::GetExtensionForFile(const WCHAR* szInputString, WCHAR* szExtension, DWORD cchExtensionLengthInWCHARS)
 {
-    WCHAR path_buffer[_MAX_PATH];
+    WCHAR path_buffer[ORC_MAX_PATH];
 
     errno_t err;
 
     size_t dwLen = wcslen(szInputString);
-    if (dwLen > MAX_PATH)
+    if (dwLen > ORC_MAX_PATH)
         return E_INVALIDARG;
     if (dwLen < 1)
         return E_INVALIDARG;
@@ -467,12 +467,12 @@ Orc::GetExtensionForFile(const WCHAR* szInputString, WCHAR* szExtension, DWORD c
 HRESULT
 Orc::GetBaseNameForFile(const WCHAR* szInputString, WCHAR* szBaseName, DWORD cchBaseNameLengthInWCHARS)
 {
-    WCHAR path_buffer[_MAX_PATH];
+    WCHAR path_buffer[ORC_MAX_PATH];
 
     errno_t err;
 
     size_t dwLen = wcslen(szInputString);
-    if (dwLen > MAX_PATH)
+    if (dwLen > ORC_MAX_PATH)
         return E_INVALIDARG;
     if (dwLen < 1)
         return E_INVALIDARG;
@@ -494,7 +494,7 @@ HRESULT Orc::GetFileNameAndDirectoryForFile(
     WCHAR* szFileName,
     DWORD cchFileNameLengthInWCHARS)
 {
-    WCHAR path_buffer[_MAX_PATH];
+    WCHAR path_buffer[ORC_MAX_PATH];
     WCHAR drive[_MAX_DRIVE];
     WCHAR dir[_MAX_DIR];
     WCHAR fname[_MAX_FNAME];
@@ -503,7 +503,7 @@ HRESULT Orc::GetFileNameAndDirectoryForFile(
 
     size_t dwLen = wcslen(szInputString);
 
-    if (dwLen > MAX_PATH)
+    if (dwLen > ORC_MAX_PATH)
         return E_INVALIDARG;
     if (dwLen < 1)
         return E_INVALIDARG;
@@ -515,7 +515,7 @@ HRESULT Orc::GetFileNameAndDirectoryForFile(
     err = _wsplitpath_s(path_buffer, drive, _MAX_DRIVE, dir, _MAX_DIR, fname, _MAX_FNAME, ext, _MAX_EXT);
     if (err != 0)
         return E_INVALIDARG;
-    ZeroMemory(path_buffer, MAX_PATH * sizeof(WCHAR));
+    ZeroMemory(path_buffer, ORC_MAX_PATH * sizeof(WCHAR));
 
     err = _wmakepath_s(szFileName, cchFileNameLengthInWCHARS, NULL, NULL, fname, ext);
     if (err != 0)
@@ -547,7 +547,7 @@ HRESULT Orc::GetOutputCab(
     {
         if (bAllowRecursiveFolderCreation)
         {
-            WCHAR path_buffer[_MAX_PATH];
+            WCHAR path_buffer[ORC_MAX_PATH];
             WCHAR drive[_MAX_DRIVE];
             WCHAR dir[_MAX_DIR];
             WCHAR fname[_MAX_FNAME];
@@ -555,7 +555,7 @@ HRESULT Orc::GetOutputCab(
             errno_t err;
 
             size_t dwLen = wcslen(szOutputCab);
-            if (dwLen > MAX_PATH)
+            if (dwLen > ORC_MAX_PATH)
                 return E_INVALIDARG;
             if (dwLen < 1)
                 return E_INVALIDARG;
@@ -567,11 +567,11 @@ HRESULT Orc::GetOutputCab(
             if (err != 0)
                 return E_INVALIDARG;
 
-            err = _wmakepath_s(path_buffer, _MAX_PATH, drive, dir, NULL, NULL);
+            err = _wmakepath_s(path_buffer, ORC_MAX_PATH, drive, dir, NULL, NULL);
             if (err != 0)
                 return E_INVALIDARG;
 
-            return GetOutputDir_Internal(path_buffer, _MAX_PATH, true, MAX_CREATEDIR_RECURSIONS);
+            return GetOutputDir_Internal(path_buffer, ORC_MAX_PATH, true, MAX_CREATEDIR_RECURSIONS);
         }
         return S_OK;
     }
@@ -584,9 +584,9 @@ HRESULT Orc::GetOutputCab(const WCHAR* szInputString, std::wstring& strOutputCab
 {
     HRESULT hr = E_FAIL;
 
-    WCHAR szOutputCab[MAX_PATH];
-    ZeroMemory(szOutputCab, sizeof(WCHAR) * MAX_PATH);
-    if (FAILED(hr = GetOutputCab(szInputString, szOutputCab, MAX_PATH, bCreateParentAsNeeded)))
+    WCHAR szOutputCab[ORC_MAX_PATH];
+    ZeroMemory(szOutputCab, sizeof(WCHAR) * ORC_MAX_PATH);
+    if (FAILED(hr = GetOutputCab(szInputString, szOutputCab, ORC_MAX_PATH, bCreateParentAsNeeded)))
         return hr;
     strOutputCab.assign(szOutputCab);
     return S_OK;
@@ -606,12 +606,12 @@ HRESULT Orc::GetFileSizeFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
         {
             dwLen--;
         }
-    if (dwLen > MAX_PATH)
+    if (dwLen > ORC_MAX_PATH)
     {
         return E_INVALIDARG;
     }
 
-    WCHAR szTemp[MAX_PATH];
+    WCHAR szTemp[ORC_MAX_PATH];
     wcscpy_s(szTemp, pSize);
 
     DWORD dwMultiplier = 1;

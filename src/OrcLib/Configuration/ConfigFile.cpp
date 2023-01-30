@@ -203,8 +203,8 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
         else
         {
             // Companion configuration
-            WCHAR szEXEPath[MAX_PATH];
-            if (GetModuleFileName(NULL, szEXEPath, MAX_PATH))
+            WCHAR szEXEPath[ORC_MAX_PATH];
+            if (GetModuleFileName(NULL, szEXEPath, ORC_MAX_PATH))
             {
                 fs::path config_path(szEXEPath);
 

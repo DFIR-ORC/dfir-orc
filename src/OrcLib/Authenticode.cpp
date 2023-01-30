@@ -252,9 +252,9 @@ DWORD Authenticode::ExpectedHashSize()
 {
     const auto wintrust = ExtensionLibrary::GetLibrary<WinTrustExtension>();
 
-    WCHAR szPath[MAX_PATH];
+    WCHAR szPath[ORC_MAX_PATH];
 
-    if (!ExpandEnvironmentStrings(L"%windir%\\System32\\kernel32.dll", szPath, MAX_PATH))
+    if (!ExpandEnvironmentStrings(L"%windir%\\System32\\kernel32.dll", szPath, ORC_MAX_PATH))
     {
         return (DWORD)-1;
     }

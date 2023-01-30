@@ -46,20 +46,20 @@ HRESULT CopyFileAgent::Initialize()
         nr.lpProvider = NULL;
 
         wstringstream stream;
-        WCHAR szUNC[MAX_PATH];
-        ZeroMemory(szUNC, MAX_PATH * sizeof(WCHAR));
+        WCHAR szUNC[ORC_MAX_PATH];
+        ZeroMemory(szUNC, ORC_MAX_PATH * sizeof(WCHAR));
 
         stream << L"\\\\" << m_config.ServerName << m_config.RootPath;
-        stream.str()._Copy_s(szUNC, MAX_PATH, MAX_PATH);
+        stream.str()._Copy_s(szUNC, ORC_MAX_PATH, ORC_MAX_PATH);
         nr.lpRemoteName = szUNC;
 
-        WCHAR szUser[MAX_PATH];
-        WCHAR szPass[MAX_PATH];
-        ZeroMemory(szUser, MAX_PATH * sizeof(WCHAR));
-        ZeroMemory(szPass, MAX_PATH * sizeof(WCHAR));
-        m_config.UserName._Copy_s(szUser, MAX_PATH, MAX_PATH);
+        WCHAR szUser[ORC_MAX_PATH];
+        WCHAR szPass[ORC_MAX_PATH];
+        ZeroMemory(szUser, ORC_MAX_PATH * sizeof(WCHAR));
+        ZeroMemory(szPass, ORC_MAX_PATH * sizeof(WCHAR));
+        m_config.UserName._Copy_s(szUser, ORC_MAX_PATH, ORC_MAX_PATH);
         szUser[m_config.UserName.size()] = L'\0';
-        m_config.Password._Copy_s(szPass, MAX_PATH, MAX_PATH);
+        m_config.Password._Copy_s(szPass, ORC_MAX_PATH, ORC_MAX_PATH);
         szPass[m_config.Password.size()] = L'\0';
 
         DWORD dwRet = 0;
@@ -72,8 +72,8 @@ HRESULT CopyFileAgent::Initialize()
         {
             bAddedConnection = true;
         }
-        SecureZeroMemory(szUser, MAX_PATH * sizeof(WCHAR));
-        SecureZeroMemory(szPass, MAX_PATH * sizeof(WCHAR));
+        SecureZeroMemory(szUser, ORC_MAX_PATH * sizeof(WCHAR));
+        SecureZeroMemory(szPass, ORC_MAX_PATH * sizeof(WCHAR));
     }
 
     return S_OK;

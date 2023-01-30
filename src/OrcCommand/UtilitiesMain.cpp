@@ -265,8 +265,8 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
     }
     BOOST_SCOPE_EXIT_END;
 
-    WCHAR szImageFileName[MAX_PATH];
-    if (!GetProcessImageFileName(hParent, szImageFileName, MAX_PATH))
+    WCHAR szImageFileName[ORC_MAX_PATH];
+    if (!GetProcessImageFileName(hParent, szImageFileName, ORC_MAX_PATH))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error("Failed GetProcessImageFileName [{}]", SystemError(hr));
@@ -275,8 +275,8 @@ bool UtilitiesMain::IsProcessParent(LPCWSTR szImageName)
 
     Log::Debug(L"Parent process file name is '{}'", szImageFileName);
 
-    WCHAR szImageBaseName[MAX_PATH];
-    if (FAILED(hr = GetFileNameForFile(szImageFileName, szImageBaseName, MAX_PATH)))
+    WCHAR szImageBaseName[ORC_MAX_PATH];
+    if (FAILED(hr = GetFileNameForFile(szImageFileName, szImageBaseName, ORC_MAX_PATH)))
     {
         Log::Error(L"Failed to build filename for '{}'", szImageFileName);
         return false;

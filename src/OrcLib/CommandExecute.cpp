@@ -196,8 +196,8 @@ HRESULT CommandExecute::AddExecutableToRun(const std::wstring& szImageFilePath)
         return E_INVALIDARG;
     }
 
-    WCHAR inputfile[MAX_PATH] = {0};
-    if (FAILED(ExpandFilePath(szImageFilePath.c_str(), inputfile, MAX_PATH)))
+    WCHAR inputfile[ORC_MAX_PATH] = {0};
+    if (FAILED(ExpandFilePath(szImageFilePath.c_str(), inputfile, ORC_MAX_PATH)))
     {
         Log::Error(L"{} is not a valid file to use", szImageFilePath);
         return E_INVALIDARG;
@@ -506,9 +506,9 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
         std::for_each(
             m_pDebugger->GetDumpList().cbegin(), m_pDebugger->GetDumpList().cend(), [this, pCab](const wstring& dump) {
                 HRESULT hr = E_FAIL;
-                WCHAR szDumpFileName[MAX_PATH];
+                WCHAR szDumpFileName[ORC_MAX_PATH];
 
-                if (FAILED(hr = GetFileNameForFile(dump.c_str(), szDumpFileName, MAX_PATH)))
+                if (FAILED(hr = GetFileNameForFile(dump.c_str(), szDumpFileName, ORC_MAX_PATH)))
                 {
                     Log::Error(L"Could not deduce file name from path '{}' [{}]", dump, SystemError(hr));
                 }

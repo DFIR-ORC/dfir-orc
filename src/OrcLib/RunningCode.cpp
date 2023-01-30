@@ -140,8 +140,8 @@ HRESULT RunningCode::EnumerateModules(DWORD dwPID)
         ModuleInfo modinfo;
         modinfo.type = MODULETYPE_DLL;
 
-        WCHAR szFileNameEx[MAX_PATH];
-        GetModuleFileNameEx(hProcess, phModules[i], szFileNameEx, MAX_PATH);
+        WCHAR szFileNameEx[ORC_MAX_PATH];
+        GetModuleFileNameEx(hProcess, phModules[i], szFileNameEx, ORC_MAX_PATH);
 
         modinfo.strModule = szFileNameEx;
 
@@ -204,15 +204,15 @@ HRESULT RunningCode::EnumerateDeviceDrivers()
         ModuleInfo modinfo;
         modinfo.type = MODULETYPE_SYS;
 
-        WCHAR szDriverFileName[MAX_PATH];
-        DWORD dwLen = GetDeviceDriverFileName(phDeviceDrivers[i], szDriverFileName, MAX_PATH);
+        WCHAR szDriverFileName[ORC_MAX_PATH];
+        DWORD dwLen = GetDeviceDriverFileName(phDeviceDrivers[i], szDriverFileName, ORC_MAX_PATH);
         modinfo.strModule = szDriverFileName;
         if (dwLen == 0L)
         {
             return HRESULT_FROM_WIN32(GetLastError());
         }
 
-        if (dwLen < MAX_PATH - 1)
+        if (dwLen < ORC_MAX_PATH - 1)
         {
             auto item = m_ModMap.find(modinfo.strModule);
 

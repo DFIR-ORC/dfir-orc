@@ -93,11 +93,11 @@ HRESULT Main::Run()
 std::wstring Main::getBootDiskName()
 {
     DWORD ret = 0;
-    WCHAR systemDirectory[MAX_PATH];
+    WCHAR systemDirectory[ORC_MAX_PATH];
 
     // We assume the windows directory is on the boot disk
-    ret = GetWindowsDirectoryW(systemDirectory, MAX_PATH);
-    if (ret == 0 || ret >= MAX_PATH)
+    ret = GetWindowsDirectoryW(systemDirectory, ORC_MAX_PATH);
+    if (ret == 0 || ret >= ORC_MAX_PATH)
     {
         Log::Error("Failed GetWindowsDirectory [{}]", LastWin32Error());
         return {};

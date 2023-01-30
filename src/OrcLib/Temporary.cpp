@@ -63,7 +63,7 @@ BOOL Orc::UtilPathIsDirectory(__in PCWSTR pwszPath)
 */
 HRESULT Orc::UtilGetTempDirPath(__out_ecount(cchPathSize) PWSTR pwszTempDir, __in DWORD cchPathSize)
 {
-    WCHAR wszTempDir[MAX_PATH];
+    WCHAR wszTempDir[ORC_MAX_PATH];
     HRESULT hr = E_FAIL;
 
     wszTempDir[0] = 0;
@@ -106,7 +106,7 @@ HRESULT Orc::UtilGetTempDirPath(__out_ecount(cchPathSize) PWSTR pwszTempDir, __i
     Opens a handle to a temporary file in the specified dir w/ the specified
     extension, returing TRUE if success and updating the handle and providing
     the temproary file name.  wzFileName should be a pointer to a buffer of
-    at least MAX_PATH.
+    at least ORC_MAX_PATH.
 
     Parameters:
         phFile              -   This will store the file handle
@@ -134,16 +134,16 @@ HRESULT Orc::UtilGetTempFile(
     __in_opt DWORD dwFlags)
 {
     DWORD dwRetries = 0;
-    WCHAR wszDirPath[MAX_PATH];
-    WCHAR wszTempFilePath[MAX_PATH];
+    WCHAR wszDirPath[ORC_MAX_PATH];
+    WCHAR wszTempFilePath[ORC_MAX_PATH];
     HRESULT hr = E_FAIL;
     HANDLE hFile = INVALID_HANDLE_VALUE;
 
     _ASSERT(pwszFilePath != NULL);
     _ASSERT(pwszExt != NULL);
-    _ASSERT(cchFileName >= MAX_PATH);
+    _ASSERT(cchFileName >= ORC_MAX_PATH);
 
-    if (pwszFilePath == NULL || cchFileName < MAX_PATH)
+    if (pwszFilePath == NULL || cchFileName < ORC_MAX_PATH)
         return E_INVALIDARG;
 
     wszTempFilePath[0] = wszDirPath[0] = 0;
@@ -243,9 +243,9 @@ HRESULT Orc::UtilGetTempFile(
     __in_opt DWORD dwShareMode,
     /* FILE_SHARE_READ */ __in_opt DWORD dwFlags)
 {
-    WCHAR szTempFilePath[MAX_PATH];
-    ZeroMemory(szTempFilePath, MAX_PATH * sizeof(WCHAR));
-    HRESULT hr = UtilGetTempFile(phFile, pwszDir, pwszExt, szTempFilePath, MAX_PATH, psa, dwShareMode, dwFlags);
+    WCHAR szTempFilePath[ORC_MAX_PATH];
+    ZeroMemory(szTempFilePath, ORC_MAX_PATH * sizeof(WCHAR));
+    HRESULT hr = UtilGetTempFile(phFile, pwszDir, pwszExt, szTempFilePath, ORC_MAX_PATH, psa, dwShareMode, dwFlags);
     if (FAILED(hr))
         return hr;
     strFilePath.assign(szTempFilePath);

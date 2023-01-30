@@ -274,8 +274,8 @@ std::shared_ptr<StructuredOutput::IWriter> StructuredOutput::Writer::GetWriter(
     std::wstring strFile;
     OutputSpec::ApplyPattern(strPattern, strName, strFile);
 
-    WCHAR szOutputFile[MAX_PATH];
-    StringCchPrintf(szOutputFile, MAX_PATH, L"%s\\%s", outFile.Path.c_str(), strFile.c_str());
+    WCHAR szOutputFile[ORC_MAX_PATH];
+    StringCchPrintf(szOutputFile, ORC_MAX_PATH, L"%s\\%s", outFile.Path.c_str(), strFile.c_str());
 
     OutputSpec fileSpec;
     auto hr = fileSpec.Configure(OutputSpec::Kind::StructuredFile, szOutputFile);

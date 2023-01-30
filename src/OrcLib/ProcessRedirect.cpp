@@ -173,8 +173,8 @@ void ProcessRedirect::SetStatus(RedirectStatus status)
 
 HRESULT ProcessRedirect::CreatePipe(const WCHAR* szUniqueSuffix)
 {
-    WCHAR szPipeName[MAX_PATH];
-    ZeroMemory(szPipeName, MAX_PATH * sizeof(WCHAR));
+    WCHAR szPipeName[ORC_MAX_PATH];
+    ZeroMemory(szPipeName, ORC_MAX_PATH * sizeof(WCHAR));
 
     if (m_Select & StdInput && (m_Select & StdOutput || m_Select & StdError))
         return E_INVALIDARG;

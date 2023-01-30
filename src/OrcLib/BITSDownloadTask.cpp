@@ -76,7 +76,7 @@ std::wstring BITSDownloadTask::GetCompletionCommandLine(const GUID& JobId)
 {
     HRESULT hr = E_FAIL;
 
-    WCHAR szJobGUID[MAX_PATH];
+    WCHAR szJobGUID[ORC_MAX_PATH];
     wstringstream cmdLine;
 
     std::wstring strCmdSpec;
@@ -85,7 +85,7 @@ std::wstring BITSDownloadTask::GetCompletionCommandLine(const GUID& JobId)
         Log::Error(L"Failed to determine command");
     }
 
-    if (!StringFromGUID2(JobId, szJobGUID, MAX_PATH))
+    if (!StringFromGUID2(JobId, szJobGUID, ORC_MAX_PATH))
     {
         Log::Error(L"Failed to copy GUID to a string");
         return std::wstring();

@@ -15,10 +15,6 @@
 
 #pragma managed(push, off)
 
-#ifndef MAX_PATH_LEN
-constexpr auto MAX_PATH_LEN = 256;
-#endif
-
 namespace Orc {
 
 class VolumeReader
@@ -81,7 +77,7 @@ protected:
 
     // Represents the "Volume" being read.
     // this could be either a mounted volume, a dd image, an offline MFT, a snapshot, etc...
-    WCHAR m_szLocation[MAX_PATH];
+    WCHAR m_szLocation[ORC_MAX_PATH];
 
     HRESULT ParseBootSector(const CBinaryBuffer& buffer);
     CBinaryBuffer m_BoostSector;

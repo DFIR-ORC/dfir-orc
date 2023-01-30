@@ -453,10 +453,10 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
 
                     wstring strFilePath;
 
-                    WCHAR szTempDir[MAX_PATH];
+                    WCHAR szTempDir[ORC_MAX_PATH];
                     if (!m_TempDir.empty())
                         wcsncpy_s(szTempDir, m_TempDir.c_str(), m_TempDir.size());
-                    else if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
+                    else if (FAILED(hr = UtilGetTempDirPath(szTempDir, ORC_MAX_PATH)))
                         return;
 
                     if (FAILED(hr = UtilGetUniquePath(szTempDir, strFileName.c_str(), strFilePath)))
@@ -492,10 +492,10 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                         return;
                     }
 
-                    WCHAR szTempDir[MAX_PATH];
+                    WCHAR szTempDir[ORC_MAX_PATH];
                     if (!m_TempDir.empty())
                         wcsncpy_s(szTempDir, m_TempDir.c_str(), m_TempDir.size());
-                    else if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
+                    else if (FAILED(hr = UtilGetTempDirPath(szTempDir, ORC_MAX_PATH)))
                         return;
 
                     wstring strDirName;
@@ -673,8 +673,8 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     }
                     else
                     {
-                        WCHAR inputfile[MAX_PATH];
-                        if (FAILED(hr = ExpandFilePath(parameter.Name.c_str(), inputfile, MAX_PATH)))
+                        WCHAR inputfile[ORC_MAX_PATH];
+                        if (FAILED(hr = ExpandFilePath(parameter.Name.c_str(), inputfile, ORC_MAX_PATH)))
                             return;
 
                         wstring Arg;

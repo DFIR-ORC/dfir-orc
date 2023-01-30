@@ -40,8 +40,8 @@ HRESULT MessageStream::CertSerialNumberToString(_In_ PCRYPT_INTEGER_BLOB pSerial
         j++;
     }
 
-    WCHAR szSerialNumber[MAX_PATH];
-    DWORD dwCharCount = MAX_PATH;
+    WCHAR szSerialNumber[ORC_MAX_PATH];
+    DWORD dwCharCount = ORC_MAX_PATH;
     CryptBinaryToString(
         buffer.GetData(),
         (DWORD)buffer.GetCount(),

@@ -217,7 +217,7 @@ protected:
 
     std::shared_ptr<WriterTermination> m_pTermination;
 
-    WCHAR m_szFileName[MAX_PATH] = {0};
+    WCHAR m_szFileName[ORC_MAX_PATH] = {0};
 
     std::vector<char> m_bufferUtf8;
 

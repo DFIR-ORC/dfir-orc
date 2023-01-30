@@ -17,7 +17,7 @@ using namespace Orc;
 
 VolumeReader::VolumeReader(const WCHAR* szSnapshotName)
 {
-    wcscpy_s(m_szLocation, MAX_PATH, szSnapshotName);
+    wcscpy_s(m_szLocation, ORC_MAX_PATH, szSnapshotName);
 }
 
 HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)

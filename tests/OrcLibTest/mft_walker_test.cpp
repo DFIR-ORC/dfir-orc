@@ -144,8 +144,8 @@ private:
         auto MakeWriteStream = [this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
             HRESULT hr = E_FAIL;
 
-            WCHAR szTempDir[MAX_PATH];
-            if (FAILED(UtilGetTempDirPath(szTempDir, MAX_PATH)))
+            WCHAR szTempDir[ORC_MAX_PATH];
+            if (FAILED(UtilGetTempDirPath(szTempDir, ORC_MAX_PATH)))
                 return nullptr;
 
             if (FAILED(UtilGetUniquePath(szTempDir, item.NameInArchive.c_str(), item.Path)))

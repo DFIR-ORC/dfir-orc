@@ -767,8 +767,8 @@ void UtilitiesLoggerConfiguration::Parse(int argc, const wchar_t* argv[], Utilit
                     else
                     {
                         HRESULT hr;
-                        WCHAR szLogFile[MAX_PATH] = {};
-                        if (FAILED(hr = GetOutputFile(pEquals + 1, szLogFile, MAX_PATH)))
+                        WCHAR szLogFile[ORC_MAX_PATH] = {};
+                        if (FAILED(hr = GetOutputFile(pEquals + 1, szLogFile, ORC_MAX_PATH)))
                         {
                             Log::Error(L"Invalid logging file specified: {} [{}]", pEquals + 1, SystemError(hr));
                             continue;

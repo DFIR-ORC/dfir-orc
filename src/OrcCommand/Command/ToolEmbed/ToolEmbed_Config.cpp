@@ -362,9 +362,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
                     if (std::regex_match(strParameter, s, r))
                     {
-                        WCHAR szFile[MAX_PATH];
+                        WCHAR szFile[ORC_MAX_PATH];
 
-                        if (FAILED(hr = ExpandFilePath(s[1].str().c_str(), szFile, MAX_PATH)))
+                        if (FAILED(hr = ExpandFilePath(s[1].str().c_str(), szFile, ORC_MAX_PATH)))
                         {
                             Log::Error(L"Invalid file to embed specified: {}", strParameter);
                             return E_INVALIDARG;
@@ -477,8 +477,8 @@ HRESULT Main::CheckConfiguration()
             if (!config.strInputFile.empty())
             {
                 // /dump= requires the use of absolute paths
-                WCHAR szFullPath[MAX_PATH] = {0};
-                if (!GetFullPathName(config.strInputFile.c_str(), MAX_PATH, szFullPath, NULL))
+                WCHAR szFullPath[ORC_MAX_PATH] = {0};
+                if (!GetFullPathName(config.strInputFile.c_str(), ORC_MAX_PATH, szFullPath, NULL))
                 {
                     Log::Error(L"Failed to compute full path name for: '{}'", config.strInputFile);
                     return E_INVALIDARG;

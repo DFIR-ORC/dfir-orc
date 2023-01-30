@@ -240,7 +240,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::wstring_vi
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
     buffer.append(L"\0");
 
@@ -274,7 +274,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteFormated_(const std::string_vie
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<CHAR, MAX_PATH> buffer;
+    Buffer<CHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
     buffer.append("\0");
 
@@ -317,7 +317,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated_(
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
     buffer.append(L"\0");
 
@@ -339,7 +339,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamedFormated_(
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<CHAR, MAX_PATH> buffer;
+    Buffer<CHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
     std::string_view result_string = buffer.size() > 0 ? std::string_view(buffer.get(), buffer.size()) : ""sv;
@@ -363,7 +363,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::Write(const std::wstring_view str)
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     buffer.set(str.data(), str.size() + 1, str.size());
     buffer.append(L'\0');
 
@@ -427,7 +427,7 @@ HRESULT Orc::StructuredOutput::XML::Writer::WriteNamed(LPCWSTR szName, const std
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     buffer.set(str.data(), str.size() + 1, str.size());
     buffer.append(L'\0');
 

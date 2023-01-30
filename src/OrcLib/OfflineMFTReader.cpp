@@ -18,7 +18,7 @@ OfflineMFTReader::OfflineMFTReader(const WCHAR* szMFTFileName)
     : VolumeReader(szMFTFileName)
 {
     m_hMFT = INVALID_HANDLE_VALUE;
-    wcsncpy_s(m_szMFTFileName, szMFTFileName, MAX_PATH);
+    wcsncpy_s(m_szMFTFileName, szMFTFileName, ORC_MAX_PATH);
     m_cOriginalName = L'C';
     m_BytesPerCluster = 0x1000;
     m_BytesPerSector = 0x200;

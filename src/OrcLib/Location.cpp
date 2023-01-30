@@ -259,8 +259,8 @@ void Location::MakeIdentifier()
             if (regex_match(m_Location, s, r))
             {
 
-                WCHAR szImageName[MAX_PATH];
-                if (FAILED(GetFileNameForFile(s[REGEX_IMAGE_SPEC].str().c_str(), szImageName, MAX_PATH)))
+                WCHAR szImageName[ORC_MAX_PATH];
+                if (FAILED(GetFileNameForFile(s[REGEX_IMAGE_SPEC].str().c_str(), szImageName, ORC_MAX_PATH)))
                     return;
 
                 m_Identifier = wstring(L"VolumeImage_") + szImageName;
@@ -298,8 +298,8 @@ void Location::MakeIdentifier()
             if (regex_match(m_Location, s, r))
             {
 
-                WCHAR szImageName[MAX_PATH];
-                if (FAILED(GetFileNameForFile(s[REGEX_IMAGE_SPEC].str().c_str(), szImageName, MAX_PATH)))
+                WCHAR szImageName[ORC_MAX_PATH];
+                if (FAILED(GetFileNameForFile(s[REGEX_IMAGE_SPEC].str().c_str(), szImageName, ORC_MAX_PATH)))
                 {
                     return;
                 }
@@ -320,8 +320,8 @@ void Location::MakeIdentifier()
         }
         break;
         case Type::OfflineMFT: {
-            WCHAR szImageName[MAX_PATH];
-            if (SUCCEEDED(GetFileNameForFile(m_Location.c_str(), szImageName, MAX_PATH)))
+            WCHAR szImageName[ORC_MAX_PATH];
+            if (SUCCEEDED(GetFileNameForFile(m_Location.c_str(), szImageName, ORC_MAX_PATH)))
             {
                 m_Identifier = wstring(L"OfflineMFT_") + szImageName;
             }

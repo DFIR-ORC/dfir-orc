@@ -81,7 +81,7 @@ HRESULT MFTWalker::Initialize(const shared_ptr<Location>& loc, bool bIncludeNoIn
         auto& SpecificLocations = loc->GetSubDirs();
         std::for_each(begin(SpecificLocations), end(SpecificLocations), [this](const std::wstring& location) {
             DWORD dwLen = ExpandEnvironmentStringsW(location.c_str(), NULL, 0L);
-            if (dwLen > MAX_PATH || dwLen <= 0)
+            if (dwLen > ORC_MAX_PATH || dwLen <= 0)
                 return;
 
             WCHAR* szExpandedLocation = (WCHAR*)calloc(dwLen + 1, sizeof(WCHAR));

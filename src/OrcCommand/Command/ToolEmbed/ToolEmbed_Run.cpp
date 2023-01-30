@@ -120,9 +120,9 @@ HRESULT Main::Run_Embed()
 HRESULT Main::Run_Dump()
 {
     HRESULT hr = E_FAIL;
-    WCHAR szPreviousCurDir[MAX_PATH];
+    WCHAR szPreviousCurDir[ORC_MAX_PATH];
 
-    GetCurrentDirectory(MAX_PATH, szPreviousCurDir);
+    GetCurrentDirectory(ORC_MAX_PATH, szPreviousCurDir);
     BOOST_SCOPE_EXIT((&szPreviousCurDir)) { SetCurrentDirectory(szPreviousCurDir); }
     BOOST_SCOPE_EXIT_END;
 
@@ -176,9 +176,9 @@ HRESULT Main::Run_FromDump()
 {
     HRESULT hr = E_FAIL;
 
-    WCHAR szPreviousCurDir[MAX_PATH];
+    WCHAR szPreviousCurDir[ORC_MAX_PATH];
 
-    GetCurrentDirectory(MAX_PATH, szPreviousCurDir);
+    GetCurrentDirectory(ORC_MAX_PATH, szPreviousCurDir);
     BOOST_SCOPE_EXIT((&szPreviousCurDir)) { SetCurrentDirectory(szPreviousCurDir); }
     BOOST_SCOPE_EXIT_END;
 

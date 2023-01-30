@@ -69,7 +69,7 @@ HRESULT RobustStructuredWriter::WriteFormated_(const std::wstring_view& szFormat
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
     std::wstring_view result_string = buffer.size() > 0 ? std::wstring_view(buffer.get(), buffer.size()) : L""sv;
@@ -84,7 +84,7 @@ HRESULT RobustStructuredWriter::WriteFormated_(const std::string_view& szFormat,
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<CHAR, MAX_PATH> buffer;
+    Buffer<CHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
     std::string_view result_string = buffer.size() > 0 ? std::string_view(buffer.get(), buffer.size()) : ""sv;
@@ -100,7 +100,7 @@ RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::wstring_v
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
     std::wstring_view result_string = buffer.size() > 0 ? std::wstring_view(buffer.get(), buffer.size()) : L""sv;
@@ -116,7 +116,7 @@ RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::string_vi
     if (m_pWriter == nullptr)
         return E_POINTER;
 
-    Buffer<CHAR, MAX_PATH> buffer;
+    Buffer<CHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
     std::string_view result_string = buffer.size() > 0 ? std::string_view(buffer.get(), buffer.size()) : ""sv;

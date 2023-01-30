@@ -362,12 +362,12 @@ HRESULT TaskTracker::InitializeMappings()
     {
         if (dwDrives & 1 << i)
         {
-            WCHAR szPath[MAX_PATH];
+            WCHAR szPath[ORC_MAX_PATH];
 
             wstring szDevice(L"A:");
             szDevice[0] = L'A' + i;
 
-            QueryDosDevice(szDevice.c_str(), szPath, MAX_PATH);
+            QueryDosDevice(szDevice.c_str(), szPath, ORC_MAX_PATH);
 
             m_PathMappings.push_back(pair<wstring, wstring>(szDevice, wstring(szPath)));
         }

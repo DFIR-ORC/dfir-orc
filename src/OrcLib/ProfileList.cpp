@@ -94,11 +94,11 @@ ProfileResult ProfileList::GetProfiles()
                 LocalFree(pSID);
             }
 
-            Buffer<WCHAR, MAX_PATH> accountName;
+            Buffer<WCHAR, ORC_MAX_PATH> accountName;
             accountName.reserve(accountName.inner_elts());
             DWORD cchAcountName = accountName.capacity();
 
-            Buffer<WCHAR, MAX_PATH> domainName;
+            Buffer<WCHAR, ORC_MAX_PATH> domainName;
             domainName.reserve(domainName.inner_elts());
             DWORD cchDomainName = domainName.capacity();
 

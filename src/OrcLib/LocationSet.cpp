@@ -602,11 +602,11 @@ HRESULT LocationSet::CanonicalizeLocation(
     canonicalLocation.clear();
     subpath.clear();
 
-    WCHAR szTemp[MAX_PATH] = {0};
+    WCHAR szTemp[ORC_MAX_PATH] = {0};
     DWORD dwLen = ExpandEnvironmentStrings(szLocation, NULL, 0L);
-    if (dwLen > MAX_PATH)
+    if (dwLen > ORC_MAX_PATH)
         return E_INVALIDARG;
-    dwLen = ExpandEnvironmentStrings(szLocation, (LPWSTR)szTemp, MAX_PATH);
+    dwLen = ExpandEnvironmentStrings(szLocation, (LPWSTR)szTemp, ORC_MAX_PATH);
 
     location.assign(szTemp);
 
@@ -1193,7 +1193,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
 
     //
     //  Enumerate all volumes in the system.
-    WCHAR szVolumeName[MAX_PATH];
+    WCHAR szVolumeName[ORC_MAX_PATH];
     HANDLE hFindHandle = FindFirstVolume(szVolumeName, ARRAYSIZE(szVolumeName));
 
     if (hFindHandle == INVALID_HANDLE_VALUE)
@@ -1221,7 +1221,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
             //
             //  QueryDosDeviceW does not allow a trailing backslash,
             //  so temporarily remove it.
-            WCHAR szDeviceName[MAX_PATH];
+            WCHAR szDeviceName[ORC_MAX_PATH];
             DWORD CharCount = 0L;
             if (szVolumeName[Index] == L'\\')
             {
@@ -1401,7 +1401,7 @@ HRESULT LocationSet::PopulateMountedVolumes()
 
                     for (UINT i = 0; i < pExtents->NumberOfDiskExtents; i++)
                     {
-                        WCHAR szPhysDrive[MAX_PATH];
+                        WCHAR szPhysDrive[ORC_MAX_PATH];
                         swprintf_s(szPhysDrive, L"\\\\.\\PhysicalDrive%d", pExtents->Extents[i].DiskNumber);
 
                         CDiskExtent ext(szPhysDrive);
@@ -1970,7 +1970,7 @@ std::wstring LocationSet::KnownFolder(DWORD dwCSIDL)
         {
             if (pCur->dwCSIDL == dwCSIDL)
             {
-                WCHAR Str[MAX_PATH];
+                WCHAR Str[ORC_MAX_PATH];
 
                 if (SUCCEEDED(SHGetFolderPath(NULL, pCur->dwCSIDL, NULL, SHGFP_TYPE_CURRENT, Str)))
                     return wstring(Str);
@@ -1991,7 +1991,7 @@ std::wstring LocationSet::KnownFolder(WCHAR* szCSIDL)
         {
             if (!_wcsicmp(pCur->szCSIDL, szCSIDL))
             {
-                WCHAR Str[MAX_PATH];
+                WCHAR Str[ORC_MAX_PATH];
 
                 if (SUCCEEDED(SHGetFolderPath(NULL, pCur->dwCSIDL, NULL, SHGFP_TYPE_CURRENT, Str)))
                     return std::wstring(Str);

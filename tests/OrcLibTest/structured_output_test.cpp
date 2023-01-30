@@ -387,7 +387,7 @@ public:
 
         Assert::IsNotNull(writer.get());
 
-        WCHAR szTestValue[MAX_PATH];
+        WCHAR szTestValue[ORC_MAX_PATH];
         wcscpy_s(szTestValue, L"TXT");
 
         szTestValue[1] = wGarbageCode;
@@ -422,7 +422,7 @@ public:
 
         Assert::IsNotNull(writer.get());
 
-        WCHAR szTestValue[MAX_PATH];
+        WCHAR szTestValue[ORC_MAX_PATH];
         wcscpy_s(szTestValue, L"TXT");
 
         szTestValue[1] = wGarbageCode;
@@ -457,7 +457,7 @@ public:
 
         Assert::IsNotNull(writer.get());
 
-        WCHAR szTestValue[MAX_PATH];
+        WCHAR szTestValue[ORC_MAX_PATH];
         wcscpy_s(szTestValue, L"TXT");
 
         szTestValue[1] = wGarbageCode;
@@ -492,7 +492,7 @@ public:
 
         Assert::IsNotNull(writer.get());
 
-        WCHAR szTestValue[MAX_PATH];
+        WCHAR szTestValue[ORC_MAX_PATH];
         wcscpy_s(szTestValue, L"TXT");
 
         szTestValue[1] = wGarbageCode;
@@ -529,7 +529,7 @@ public:
 
         Assert::IsNotNull(writer.get());
 
-        WCHAR szTestValue[MAX_PATH];
+        WCHAR szTestValue[ORC_MAX_PATH];
         wcscpy_s(szTestValue, L"TXT");
 
         if (FAILED(hr = writer->BeginElement(L"sanitized")))
