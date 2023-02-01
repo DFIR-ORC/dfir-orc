@@ -34,12 +34,10 @@ void Print(Tree& node, const AttributeListEntry& entry)
 
     if (entry.LowestVCN() > 0)
     {
-        node.Append(", LowestVCN={:#018x}\n", entry.LowestVCN());
+        node.Append(", LowestVCN={:#018x}", entry.LowestVCN());
     }
-    else
-    {
-        node.AddEOL();
-    }
+
+    node.AddEOL();
 }
 
 }  // namespace Text
