@@ -372,11 +372,26 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         }
                         else
                         {
-                            SampleSpec aSpec;
-                            auto filespec = make_shared<FileFind::SearchTerm>(wstring(pEquals + 1));
-                            aSpec.Terms.push_back(filespec);
-                            aSpec.Content.Type = ContentType::INVALID;
-                            config.listofSpecs.push_back(aSpec);
+                            std::wstring_view match(pEquals + 1);
+                            if (match.size() > 1 && match[0] == L'\\')
+                            {
+                                auto spec = make_shared<FileFind::SearchTerm>();
+                                spec->Required = FileFind::SearchTerm::Criteria::PATH_MATCH;
+                                spec->Path = match;
+
+                                SampleSpec aSpec;
+                                aSpec.Terms.push_back(spec);
+                                aSpec.Content.Type = ContentType::INVALID;
+                                config.listofSpecs.push_back(aSpec);
+                            }
+                            else
+                            {
+                                SampleSpec aSpec;
+                                auto filespec = make_shared<FileFind::SearchTerm>(std::wstring(pEquals + 1));
+                                aSpec.Terms.push_back(filespec);
+                                aSpec.Content.Type = ContentType::INVALID;
+                                config.listofSpecs.push_back(aSpec);
+                            }
                         }
                     }
                     else if (BooleanOption(argv[i] + 1, L"FlushRegistry", config.bFlushRegistry))
