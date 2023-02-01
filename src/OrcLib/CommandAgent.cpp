@@ -1272,7 +1272,8 @@ void CommandAgent::run()
             }
             break;
             case CommandMessage::TerminateAll: {
-                Log::Debug("CommandAgent: Terminate (kill) all running tasks");
+                Log::Critical(L"Kill all running tasks: {}", m_Keyword);
+
                 m_bStopping = true;
                 {
                     Concurrency::critical_section::scoped_lock lock(m_cs);

@@ -510,16 +510,16 @@ HRESULT WolfExecution::CreateCommandAgent(
                         Log::Debug("No tasks are currently running");
                         break;
                     case CommandNotification::JobProcessLimit:
-                        Log::Warn("JOB: Process number limit");
+                        Log::Critical("JOB: Process number limit");
                         break;
                     case CommandNotification::JobMemoryLimit:
-                        Log::Warn(L"JOB: Memory limit");
+                        Log::Critical(L"JOB: Memory limit");
                         break;
                     case CommandNotification::JobTimeLimit:
-                        Log::Warn(L"JOB: CPU Time limit");
+                        Log::Critical(L"JOB: CPU Time limit");
                         break;
                     case CommandNotification::AllTerminated:
-                        Log::Warn("JOB: Job was autoritatively terminated");
+                        Log::Debug("JOB: Job was authoritatively terminated");
                         break;
                     case CommandNotification::Done: {
                         GetSystemTimeAsFileTime(&m_FinishTime);
