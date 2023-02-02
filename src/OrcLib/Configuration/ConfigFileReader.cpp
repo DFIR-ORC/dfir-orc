@@ -29,6 +29,12 @@ HRESULT SkipToElementEnd(const CComPtr<IXmlReader>& pReader)
 {
     XmlNodeType type = XmlNodeType_None;
 
+    // Elements such as '<foo/>' does not need to be skipped as next call will do
+    if (pReader->IsEmptyElement())
+    {
+        return S_OK;
+    }
+
     UINT depth;
     HRESULT hr = pReader->GetDepth(&depth);
     if (FAILED(hr))
@@ -54,7 +60,7 @@ HRESULT SkipToElementEnd(const CComPtr<IXmlReader>& pReader)
             return hr;
         }
 
-    } while (type != XmlNodeType_EndElement || currentDepth != depth + 1);
+    } while ((type != XmlNodeType_EndElement && type != XmlNodeType_None) && currentDepth >= depth);
 
     return S_OK;
 }
