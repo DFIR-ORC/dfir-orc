@@ -658,6 +658,8 @@ set(SRC_TEXT
     "Text/Guid.cpp"
     "Text/Hex.h"
     "Text/HexDump.h"
+    "Text/in_addr.h"
+    "Text/in_addr.cpp"
     "Text/StdoutContainerAdapter.h"
     "Text/Tree.h"
     "Text/Tree.cpp"
