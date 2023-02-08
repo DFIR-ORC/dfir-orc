@@ -125,11 +125,11 @@ void ToString(const GUID& guid, OutputIt out)
 
     if constexpr (std::is_same_v<value_type, char>)
     {
-        fmt::format_to(out, "{:X}-{:X}-{:X}-", guid.Data1, guid.Data2, guid.Data3);
+        fmt::format_to(out, "{:08X}-{:04X}-{:04X}-", guid.Data1, guid.Data2, guid.Data3);
     }
     else if constexpr (std::is_same_v<value_type, wchar_t>)
     {
-        fmt::format_to(out, L"{:X}-{:X}-{:X}-", guid.Data1, guid.Data2, guid.Data3);
+        fmt::format_to(out, L"{:08X}-{:04X}-{:04X}-", guid.Data1, guid.Data2, guid.Data3);
     }
     else
     {
