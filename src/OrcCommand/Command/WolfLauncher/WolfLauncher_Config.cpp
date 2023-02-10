@@ -359,6 +359,19 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
+    if (configitem[WOLFLAUNCHER_UPLOAD])
+    {
+        auto upload = std::make_shared<OutputSpec::Upload>();
+
+        if (auto hr = upload->Configure(configitem[WOLFLAUNCHER_UPLOAD]); FAILED(hr))
+        {
+            Log::Error("Error in specified upload section in config file, ignored [{}]", SystemError(hr));
+            return hr;
+        }
+
+        config.Output.UploadOutput = upload;
+    }
+
     for (const ConfigItem& archiveitem : configitem[WOLFLAUNCHER_ARCHIVE].NodeList)
     {
         auto exec = std::make_unique<WolfExecution>(m_journal, m_outcome);
