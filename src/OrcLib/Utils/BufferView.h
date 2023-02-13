@@ -60,6 +60,51 @@ inline BufferView ToBufferView(const T& buffer)
     return BufferView(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size() * sizeof(T::value_type));
 }
 
+//
+// std::string_view
+//
+
+using StringView = std::string_view;
+
+inline StringView ToStringView(const char* buffer)
+{
+    return StringView(reinterpret_cast<const char*>(buffer), strlen(buffer));
+}
+
+inline StringView ToStringView(const wchar_t* buffer)
+{
+    return StringView(reinterpret_cast<const char*>(buffer), wcslen(buffer) * sizeof(wchar_t));
+}
+
+template <typename T>
+inline StringView ToStringView(const T& buffer)
+{
+    return StringView(reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(T::value_type));
+}
+
+//
+// std::wstring_view
+//
+
+using WStringView = std::wstring_view;
+
+inline WStringView ToWStringView(const char* buffer)
+{
+    return WStringView(reinterpret_cast<const wchar_t*>(buffer), strlen(buffer) / sizeof(wchar_t));
+}
+
+inline WStringView ToWStringView(const wchar_t* buffer)
+{
+    return WStringView(reinterpret_cast<const wchar_t*>(buffer), wcslen(buffer));
+}
+
+template <typename T>
+inline WStringView ToWStringView(const T& buffer)
+{
+    return WStringView(
+        reinterpret_cast<const wchar_t*>(buffer.data()), buffer.size() * sizeof(T::value_type) / sizeof(wchar_t));
+}
+
 template <typename T = uint8_t, typename ContainerT>
 inline BasicBufferView<T> MakeSubView(const ContainerT& container, uint64_t offset, std::error_code& ec)
 {
