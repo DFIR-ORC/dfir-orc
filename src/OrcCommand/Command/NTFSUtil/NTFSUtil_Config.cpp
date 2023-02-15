@@ -115,6 +115,11 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
 HRESULT Main::CheckConfiguration()
 {
+    if (!m_hMothership && !m_utilitiesConfig.log.level && !m_utilitiesConfig.log.console.level)
+    {
+        m_utilitiesConfig.log.console.level = Log::Level::Error;
+    }
+
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
     if (config.bConfigure && config.bPrintDetails)
