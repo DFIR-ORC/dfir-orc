@@ -345,7 +345,7 @@ void CmdSet::Execute( std::error_code& ec )
 
     ::UpdateFileResource( outPath, o.type, o.name, o.lang, value, ec );
     if( ec ) {
-        spdlog::error( "Failed to update resource" );
+        spdlog::error( "Failed to update resource: {}", outPath.string() );
         return;
     }
 
