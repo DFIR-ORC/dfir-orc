@@ -50,19 +50,6 @@ struct NibbleTable
 }  // namespace Details
 
 template <typename Output, typename CharT>
-Result<Output> FromHexToLittleEndian(std::basic_string_view<CharT> input)
-{
-    std::error_code ec;
-    auto output = FromHexToLittleEndian<Output>(input, ec);
-    if (ec)
-    {
-        return ec;
-    }
-
-    return output;
-}
-
-template <typename Output, typename CharT>
 Output FromHexToLittleEndian(std::basic_string_view<CharT> input, std::error_code& ec)
 {
     Output out = {0};
@@ -129,6 +116,19 @@ Output FromHexToLittleEndian(std::basic_string_view<CharT> input, std::error_cod
     }
 
     return out;
+}
+
+template <typename Output, typename CharT>
+Result<Output> FromHexToLittleEndian(std::basic_string_view<CharT> input)
+{
+    std::error_code ec;
+    auto output = FromHexToLittleEndian<Output>(input, ec);
+    if (ec)
+    {
+        return ec;
+    }
+
+    return output;
 }
 
 template <typename InputIt, typename OutputIt>

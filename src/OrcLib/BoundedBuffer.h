@@ -49,7 +49,9 @@ public:
         : _M_capacity(capacity)
         , _M_currentSize(0)
     {
-        initialize_source_and_target();
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target();
     }
 
     /// <summary>
@@ -63,7 +65,9 @@ public:
         : _M_capacity(capacity)
         , _M_currentSize(0)
     {
-        initialize_source_and_target();
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target();
         register_filter(_Filter);
     }
 
@@ -78,7 +82,9 @@ public:
         : _M_capacity(capacity)
         , _M_currentSize(0)
     {
-        initialize_source_and_target(&_PScheduler);
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target(&_PScheduler);
     }
 
     /// <summary>
@@ -95,7 +101,9 @@ public:
         : _M_capacity(capacity)
         , _M_currentSize(0)
     {
-        initialize_source_and_target(&_PScheduler);
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target(&_PScheduler);
         register_filter(_Filter);
     }
 
@@ -110,7 +118,9 @@ public:
         : _M_capacity(capacity)
         , _M_currentSize(0)
     {
-        initialize_source_and_target(NULL, &_PScheduleGroup);
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target(NULL, &_PScheduleGroup);
     }
 
     /// <summary>
@@ -127,7 +137,9 @@ public:
         : _M_capacity(capacity)
         , _M_currentSize(0)
     {
-        initialize_source_and_target(NULL, &_PScheduleGroup);
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target(NULL, &_PScheduleGroup);
         register_filter(_Filter);
     }
 
@@ -137,7 +149,9 @@ public:
     ~BoundedBuffer()
     {
         // Remove all links
-        remove_network_links();
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::remove_network_links();
     }
 
     /// <summary>
@@ -182,14 +196,18 @@ protected:
     virtual Concurrency::message_status
     propagate_message(Concurrency::message<_Type>* _PMessage, Concurrency::ISource<_Type>* _PSource)
     {
-        Concurrency::message_status _Result = accepted;
+        Concurrency::message_status _Result = Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::accepted;
 
         // Check current capacity.
         if ((size_t)_InterlockedIncrement(&_M_currentSize) > _M_capacity)
         {
             // Postpone the message, buffer is full.
             _InterlockedDecrement(&_M_currentSize);
-            _Result = postponed;
+            _Result = Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::postponed;
 
             // Save off the message id from this source to later try
             // and reserve/consume when more space is free.
@@ -198,7 +216,9 @@ protected:
                 _M_savedSourceMsgIds[_PSource] = _PMessage->msg_id();
             }
 
-            async_send(NULL);
+            Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::async_send(NULL);
         }
         else
         {
@@ -218,8 +238,12 @@ protected:
             {
                 // Didn't get a message so need to decrement.
                 _InterlockedDecrement(&_M_currentSize);
-                _Result = missed;
-                async_send(NULL);
+                _Result = Concurrency::propagator_block<
+                    Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                    Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::missed;
+                Concurrency::propagator_block<
+                    Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                    Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::async_send(NULL);
             }
         }
 
@@ -242,14 +266,18 @@ protected:
     virtual Concurrency::message_status
     send_message(Concurrency::message<_Type>* _PMessage, Concurrency::ISource<_Type>* _PSource)
     {
-        Concurrency::message_status _Result = accepted;
+        Concurrency::message_status _Result = Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::accepted;
 
         // Check current capacity.
         if ((size_t)_InterlockedIncrement(&_M_currentSize) > _M_capacity)
         {
             // Postpone the message, buffer is full.
             _InterlockedDecrement(&_M_currentSize);
-            _Result = postponed;
+            _Result = Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::postponed;
 
             // Save off the message id from this source to later try
             // and reserve/consume when more space is free.
@@ -258,7 +286,9 @@ protected:
                 _M_savedSourceMsgIds[_PSource] = _PMessage->msg_id();
             }
 
-            async_send(NULL);
+            Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::async_send(NULL);
         }
         else
         {
@@ -272,14 +302,20 @@ protected:
 
             if (_PMessage != NULL)
             {
-                async_send(_PMessage);
+                Concurrency::propagator_block<
+                    Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                    Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::async_send(_PMessage);
             }
             else
             {
                 // Didn't get a message so need to decrement.
                 _InterlockedDecrement(&_M_currentSize);
-                _Result = missed;
-                async_send(NULL);
+                _Result = Concurrency::propagator_block<
+                    Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                    Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::missed;
+                Concurrency::propagator_block<
+                    Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                    Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::async_send(NULL);
             }
         }
 
@@ -333,14 +369,15 @@ protected:
         bool _ConsumedMsg = true;
         while (_ConsumedMsg)
         {
-            source_iterator _Iter = _M_connectedSources.begin();
+            auto _Iter = Concurrency::ISource<_Type>::_M_connectedSources.begin();
             {
-                critical_section::scoped_lock scopedLock(_M_savedIdsLock);
+                concurrency::critical_section::scoped_lock scopedLock(_M_savedIdsLock);
                 for (; *_Iter != NULL; ++_Iter)
                 {
                     _PSource = *_Iter;
-                    std::map<ISource<_Type>*, runtime_object_identity>::iterator _MapIter;
-                    if ((_MapIter = _M_savedSourceMsgIds.find(_PSource)) != _M_savedSourceMsgIds.end())
+                    //std::map<Concurrency::ISource<_Type>*, concurrency::runtime_object_identity>::iterator _MapIter;
+                    auto _MapIter = _M_savedSourceMsgIds.find(_PSource);
+                    if (_MapIter != _M_savedSourceMsgIds.end())
                     {
                         _ReservedId = _MapIter->second;
                         _M_savedSourceMsgIds.erase(_MapIter);
@@ -432,7 +469,9 @@ protected:
         // If there are any messages in the buffer, propagate them out
         if (_M_messageBuffer.count() > 0)
         {
-            async_send(NULL);
+            Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::async_send(NULL);
         }
     }
 
@@ -446,7 +485,10 @@ protected:
     {
         // If the message queue is blocked due to reservation
         // there is no need to do any message propagation
-        if (_M_pReservedFor != NULL)
+        if (Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::_M_pReservedFor
+            != NULL)
         {
             return;
         }
@@ -458,7 +500,10 @@ protected:
             // Propagate the head message to the new target
             Concurrency::message_status _Status = _PTarget->propagate(_Msg, this);
 
-            if (_Status == accepted)
+            if (_Status
+                == Concurrency::propagator_block<
+                    Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                    Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::accepted)
             {
                 // The target accepted the message, restart propagation.
                 propagate_to_any_targets(NULL);
@@ -523,22 +568,31 @@ private:
     /// </summary>
     void _Propagate_priority_order()
     {
-        message<_Target_type>* _Msg = _M_messageBuffer.peek();
+        using namespace Concurrency;
+
+        Concurrency::message<Concurrency::ITarget<_Type>>* _Msg = _M_messageBuffer.peek();
 
         // If someone has reserved the _Head message, don't propagate anymore
-        if (_M_pReservedFor != NULL)
+        if (Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::_M_pReservedFor
+            != NULL)
         {
             return;
         }
 
         while (_Msg != NULL)
         {
-            message_status _Status = declined;
+            Concurrency::message_status _Status = Concurrency::declined;
 
             // Always start from the first target that linked.
-            for (target_iterator _Iter = _M_connectedTargets.begin(); *_Iter != NULL; ++_Iter)
+            for (auto _Iter = Concurrency::propagator_block<
+                                  Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                                  Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::_M_connectedTargets.begin();
+                 *_Iter != NULL;
+                 ++_Iter)
             {
-                ITarget<_Target_type>* _PTarget = *_Iter;
+                Concurrency::message<Concurrency::ITarget<_Type>::_Target_type>* _PTarget = *_Iter;
                 _Status = _PTarget->propagate(_Msg, this);
 
                 // Ownership of message changed. Do not propagate this
@@ -550,7 +604,10 @@ private:
 
                 // If the target just propagated to reserved this message, stop
                 // propagating it to others.
-                if (_M_pReservedFor != NULL)
+                if (Concurrency::propagator_block<
+                        Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                        Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::_M_pReservedFor
+                    != NULL)
                 {
                     break;
                 }

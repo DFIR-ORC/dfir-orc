@@ -55,8 +55,8 @@ public:
     virtual HRESULT Write(const std::wstring& str) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, const std::wstring& str) override final;
 
-    virtual HRESULT Write(const std::string_view str) override final;
-    virtual HRESULT WriteNamed(LPCWSTR szName, const std::string_view str) override final;
+    virtual HRESULT Write(std::string_view str) override final;
+    virtual HRESULT WriteNamed(LPCWSTR szName, std::string_view str) override final;
 
     virtual HRESULT Write(bool bBoolean) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, bool bBoolean) override final;
@@ -168,12 +168,12 @@ public:
     ~Writer();
 
 protected:
-    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args) override final;
-    virtual HRESULT WriteFormated_(const std::string_view& szFormat, fmt::format_args args) override final;
+    virtual HRESULT WriteFormated_(std::wstring_view szFormat, fmt::wformat_args args) override final;
+    virtual HRESULT WriteFormated_(std::string_view szFormat, fmt::format_args args) override final;
     virtual HRESULT
-    WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, fmt::wformat_args args) override final;
+    WriteNamedFormated_(LPCWSTR szName, std::wstring_view szFormat, fmt::wformat_args args) override final;
     virtual HRESULT
-    WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, fmt::format_args args) override final;
+    WriteNamedFormated_(LPCWSTR szName, std::string_view szFormat, fmt::format_args args) override final;
 
 private:
     template <typename... Args>

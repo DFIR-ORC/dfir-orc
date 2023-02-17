@@ -10,6 +10,7 @@
 
 #include <type_traits>
 #include <iterator>
+#include <iostream>
 
 namespace Orc {
 namespace Traits {

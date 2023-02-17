@@ -13,6 +13,7 @@
 
 #include "Text/StdoutContainerAdapter.h"
 #include "Text/Format.h"
+#include "Text/HexDump.h"
 
 namespace Orc {
 namespace Text {
@@ -160,7 +161,7 @@ public:
     }
 
     template <typename T>
-    void AddHexDump(T&& description, const std::string_view& data)
+    void AddHexDump(T&& description, std::string_view data)
     {
         m_indentationIsDone = false;
 

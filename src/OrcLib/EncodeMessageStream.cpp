@@ -112,13 +112,13 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
             Log::Error("Failed to acquire suitable Crypto Service Provider [{}]", SystemError(hr));
             return hr;
         }
-        EncodeInfo.ContentEncryptionAlgorithm.pszObjId = szOID_RSA_DES_EDE3_CBC;
+        EncodeInfo.ContentEncryptionAlgorithm.pszObjId = const_cast<LPSTR>(szOID_RSA_DES_EDE3_CBC);
         EncodeInfo.ContentEncryptionAlgorithm.Parameters.cbData = 0L;
         EncodeInfo.ContentEncryptionAlgorithm.Parameters.pbData = NULL;
     }
     else
     {
-        EncodeInfo.ContentEncryptionAlgorithm.pszObjId = szOID_NIST_AES128_CBC;
+        EncodeInfo.ContentEncryptionAlgorithm.pszObjId = const_cast<LPSTR>(szOID_NIST_AES128_CBC);
         EncodeInfo.ContentEncryptionAlgorithm.Parameters.cbData = 0L;
         EncodeInfo.ContentEncryptionAlgorithm.Parameters.pbData = NULL;
         EncodeInfo.pvEncryptionAuxInfo = NULL;

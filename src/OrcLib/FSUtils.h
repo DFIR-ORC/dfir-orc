@@ -160,8 +160,8 @@ struct Filter
 struct ColumnNameDef
 {
     Intentions dwIntention;
-    WCHAR* szColumnName;
-    WCHAR* szColumnDesc;
+    const WCHAR* szColumnName;
+    const WCHAR* szColumnDesc;
     DWORD dwRequiredAccess;
 };
 }  // namespace Orc

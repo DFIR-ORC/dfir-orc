@@ -168,13 +168,13 @@ private:
     bool FilterApplies(const Filter& filter);
 
     size_t FindVersionQueryValueRec(
-        WCHAR* szValueName,
+        const WCHAR* szValueName,
         size_t dwValueCchLength,
         LPBYTE ptr,
         LPBYTE ptr_end,
         int state,
         WCHAR** ppValue);
-    HRESULT WriteVersionQueryValue(WCHAR* szValueName, ITableOutput& output);
+    HRESULT WriteVersionQueryValue(const WCHAR* szValueName, ITableOutput& output);
 
     HRESULT VerifyAnySignatureWithCatalogs(
         const std::wstring_view path,

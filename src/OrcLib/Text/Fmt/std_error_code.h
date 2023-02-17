@@ -11,6 +11,7 @@
 #include <system_error>
 
 #include <fmt/format.h>
+#include <fmt/xchar.h>
 
 #include "Text/Iconv.h"
 
@@ -53,16 +54,15 @@ struct fmt::formatter<std::error_code, wchar_t> : public fmt::formatter<std::wst
     template <typename FormatContext>
     auto format(const std::error_code& ec, FormatContext& ctx) -> decltype(ctx.out())
     {
-        using namespace std::string_view_literals;
         std::wstring s;
 
         if (ec.category() == std::system_category())
         {
-            fmt::format_to(std::back_inserter(s), L"{:#x}"sv, static_cast<uint32_t>(ec.value()));
+            fmt::format_to(std::back_inserter(s), L"{:#x}", static_cast<uint32_t>(ec.value()));
         }
         else
         {
-            fmt::format_to(std::back_inserter(s), L"{}"sv, ec.value());
+            fmt::format_to(std::back_inserter(s), L"{}", ec.value());
         }
 
         auto message = ec.message();
@@ -75,7 +75,7 @@ struct fmt::formatter<std::error_code, wchar_t> : public fmt::formatter<std::wst
             }
 
             const auto utf16 = Orc::ToUtf16(message);
-            fmt::format_to(std::back_inserter(s), L": {}"sv, utf16);
+            fmt::format_to(std::back_inserter(s), L": {}", utf16);
         }
 
         return formatter<std::wstring_view, wchar_t>::format(s, ctx);

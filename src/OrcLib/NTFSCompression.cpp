@@ -301,6 +301,7 @@ HRESULT Orc::ntfs_decompress(uint8_t* dest, const size_t dest_size, uint8_t* con
     uint8_t* cb_end = cb_start + cb_size; /* End of cb. */
     uint8_t* cb = cb_start; /* Current position in cb. */
     uint8_t* cb_sb_start = cb; /* Beginning of the current sb in the cb. */
+    uint8_t* cb_sb_end = 0;
 
     /* Variables for uncompressed data / destination. */
     uint8_t* dest_end = dest + dest_size; /* End of dest buffer. */
@@ -335,7 +336,7 @@ do_next_sb:
         goto return_overflow;
     /* Setup the current sub-block source pointers and validate range. */
     cb_sb_start = cb;
-    uint8_t* cb_sb_end = cb_sb_start + (le16_to_cpup((uint16_t*)cb) & NTFS_SB_SIZE_MASK)
+    cb_sb_end = cb_sb_start + (le16_to_cpup((uint16_t*)cb) & NTFS_SB_SIZE_MASK)
         + 3; /* End of current sb / beginning of next sb. */
     if (cb_sb_end > cb_end)
         goto return_overflow;

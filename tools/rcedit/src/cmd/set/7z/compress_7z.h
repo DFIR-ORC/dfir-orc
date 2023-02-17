@@ -20,7 +20,7 @@ void Compress7z(
     std::error_code& ec );
 
 void Compress7z(
-    const std::string_view& content,
+    std::string_view content,
     const std::wstring& fileNameInArchive,
     std::vector< uint8_t >& out,
     std::error_code& ec );

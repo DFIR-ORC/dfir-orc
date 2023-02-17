@@ -104,7 +104,7 @@ public:
 
     const ArchiveItem& operator[](const std::wstring& aCabbedName);
 
-    static ArchiveFormat GetArchiveFormat(const std::wstring_view& filepath);
+    static ArchiveFormat GetArchiveFormat(std::wstring_view filepath);
     static std::wstring_view GetArchiveFormatString(const ArchiveFormat format);
 
     HRESULT SetCallback(ArchiveCallback aCallback);

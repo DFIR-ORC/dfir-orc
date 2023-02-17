@@ -11,7 +11,7 @@
 
 namespace rcedit {
 
-InMemStream::InMemStream( const std::string_view& buffer )
+InMemStream::InMemStream( std::string_view buffer )
     : m_buffer( buffer )
     , m_pos( 0 )
 {

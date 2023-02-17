@@ -144,11 +144,5 @@ void HexDump(const T& indent, InputIt first, InputIt last, OutputIt out)
     out++ = Traits::newline_v<value_type>;
 }
 
-template <typename InputIt, typename OutputIt>
-void HexDump(InputIt first, InputIt last, OutputIt out)
-{
-    HexDump(GetIndent<typename U::value_type>(0), in, out);
-}
-
 }  // namespace Text
 }  // namespace Orc

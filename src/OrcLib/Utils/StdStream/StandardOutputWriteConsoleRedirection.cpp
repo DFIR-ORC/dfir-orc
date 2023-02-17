@@ -7,6 +7,7 @@
 //
 #include "StandardOutputWriteConsoleRedirection.h"
 
+#include <streambuf>
 #include <Windows.h>
 
 #include "Utils/TypeTraits.h"
@@ -73,7 +74,7 @@ protected:
     BOOL Flush()
     {
         // Call xsputn overrided method
-        const auto count = sputn(m_buffer.data(), m_buffer.size());
+        const auto count = std::basic_streambuf<CharT>::sputn(m_buffer.data(), m_buffer.size());
         BOOL ret = (count == m_buffer.size());
         m_buffer.clear();
         return ret;

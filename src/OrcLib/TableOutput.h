@@ -89,7 +89,7 @@ class Column
 public:
     Column(
         ColumnType type,
-        const std::wstring_view& strName,
+        std::wstring_view strName,
         const std::optional<std::wstring_view>& strDescr = std::nullopt,
         const std::optional<std::wstring_view>& strFormat = std::nullopt,
         const std::optional<std::wstring_view>& strArtifact = std::nullopt)
@@ -158,7 +158,7 @@ public:
         }
     }
 
-    const Column& operator[](const std::wstring_view& strName) const
+    const Column& operator[](std::wstring_view strName) const
     {
         auto it = std::find_if(std::begin(*m_Columns), std::end(*m_Columns), [&strName](const auto& col) -> bool {
             if (col)
@@ -166,10 +166,13 @@ public:
             return false;
         });
         if (it == std::end(*m_Columns))
-            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"No column named \"{}\" in schema"sv, strName);
+        {
+            auto e = Orc::Exception(Severity::Fatal, E_INVALIDARG, L"No column named \"{}\" in schema", strName);
+            throw e;
+        }
         return *(*it);
     };
-    Column& operator[](const std::wstring_view& strName)
+    Column& operator[](std::wstring_view strName)
     {
         auto it = std::find_if(std::begin(*m_Columns), std::end(*m_Columns), [&strName](const auto& col) -> bool {
             if (col)
@@ -177,31 +180,46 @@ public:
             return false;
         });
         if (it == std::end(*m_Columns))
-            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"No column named \"{}\" in schema"sv, strName);
+        {
+            auto e = Orc::Exception(Severity::Fatal, E_INVALIDARG, L"No column named \"{}\" in schema", strName);
+            throw e;
+        }
         return *(*it);
     };
     const Column& operator[](const size_t colId) const
     {
         if (!m_Columns)
-            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Schema not initialized"sv);
+            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Schema not initialized");
         if (colId >= m_Columns->size())
-            throw Orc::Exception(
-                Severity::Fatal, E_INVALIDARG, L"No column at index {} (max is {})"sv, colId, m_Columns->size() - 1);
+        {
+            auto e = Orc::Exception(
+                Severity::Fatal, E_INVALIDARG, L"No column at index {} (max is {})", colId, m_Columns->size() - 1);
+            throw e;
+        }
         const auto& pCol = (*m_Columns)[colId];
         if (!pCol)
-            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Column at index {} is not initialized"sv, colId);
+            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Column at index {} is not initialized", colId);
         return *((*m_Columns)[colId]);
     };
     Column& operator[](const size_t colId)
     {
         if (!m_Columns)
-            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Schema not initialized"sv);
+        {
+            auto e = Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Schema not initialized");
+            throw e;
+        }
         if (colId >= m_Columns->size())
-            throw Orc::Exception(
-                Severity::Fatal, E_INVALIDARG, L"No column at index {} (max is {})"sv, colId, m_Columns->size() - 1);
+        {
+            auto e = Orc::Exception(
+                Severity::Fatal, E_INVALIDARG, L"No column at index {} (max is {})", colId, m_Columns->size() - 1);
+            throw e;
+        }
         const auto& pCol = (*m_Columns)[colId];
         if (!pCol)
-            throw Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Column at index {} is not initialized"sv, colId);
+        {
+            auto e = Orc::Exception(Severity::Fatal, E_INVALIDARG, L"Column at index {} is not initialized", colId);
+            throw e;
+        }
         return *((*m_Columns)[colId]);
     };
 
@@ -250,12 +268,12 @@ public:
     STDMETHOD(WriteNothing)() PURE;
 
     STDMETHOD(WriteString)(const std::wstring& strString) PURE;
-    STDMETHOD(WriteString)(const std::wstring_view& strString) PURE;
+    STDMETHOD(WriteString)(std::wstring_view strString) PURE;
     STDMETHOD(WriteString)(const WCHAR* szString) PURE;
     STDMETHOD(WriteCharArray)(const WCHAR* szArray, DWORD dwCharCount) PURE;
 
     STDMETHOD(WriteString)(const std::string& strString) PURE;
-    STDMETHOD(WriteString)(const std::string_view& strString) PURE;
+    STDMETHOD(WriteString)(std::string_view strString) PURE;
     STDMETHOD(WriteString)(const CHAR* szString) PURE;
     STDMETHOD(WriteCharArray)(const CHAR* szArray, DWORD dwCharCount) PURE;
 
@@ -303,20 +321,20 @@ public:
 #ifndef __cplusplus_cli
 
     template <typename... Args>
-    HRESULT WriteFormated(const std::wstring_view& szFormat, Args&&... args)
+    HRESULT WriteFormated(std::wstring_view szFormat, Args&&... args)
     {
         return WriteFormated_(szFormat, fmt::make_format_args<fmt::wformat_context>(args...));
     }
 
     template <typename... Args>
-    HRESULT WriteFormated(const std::string_view& szFormat, Args&&... args)
+    HRESULT WriteFormated(std::string_view szFormat, Args&&... args)
     {
         return WriteFormated_(szFormat, fmt::make_format_args(args...));
     }
 
 protected:
-    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args) PURE;
-    virtual HRESULT WriteFormated_(const std::string_view& szFormat, fmt::format_args args) PURE;
+    virtual HRESULT WriteFormated_(std::wstring_view szFormat, fmt::wformat_args args) PURE;
+    virtual HRESULT WriteFormated_(std::string_view szFormat, fmt::format_args args) PURE;
 
 #endif
 };

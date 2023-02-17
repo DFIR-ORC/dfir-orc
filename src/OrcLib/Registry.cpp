@@ -15,7 +15,7 @@ using namespace std::string_view_literals;
 namespace Orc {
 
 template <>
-Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
+Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName)
 {
     HKEY hKey = nullptr;
 
@@ -77,7 +77,7 @@ Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, 
 }
 
 template <>
-Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
+Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName)
 {
     HKEY hKey = nullptr;
 
@@ -137,7 +137,7 @@ Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, 
 }
 
 template <>
-Result<Orc::ByteBuffer> Orc::Registry::Read<Orc::ByteBuffer>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
+Result<Orc::ByteBuffer> Orc::Registry::Read<Orc::ByteBuffer>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName)
 {
     HKEY hKey = nullptr;
 
@@ -198,7 +198,7 @@ Result<Orc::ByteBuffer> Orc::Registry::Read<Orc::ByteBuffer>(HKEY hParentKey, LP
 }
 
 template <>
-Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
+Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName)
 {
     HKEY hKey = nullptr;
 
@@ -298,7 +298,7 @@ Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR s
 
 template <>
 Result<std::filesystem::path>
-Orc::Registry::Read<std::filesystem::path>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
+Orc::Registry::Read<std::filesystem::path>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName)
 {
     auto result = Read<std::wstring>(hParentKey, szKeyName, szValueName);
     if (result.has_error())

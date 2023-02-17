@@ -52,7 +52,7 @@ HRESULT Orc::WinTrustExtension::CryptCATAdminAcquireContext(HCATADMIN* phCatAdmi
         params.cbSize = sizeof(CERT_STRONG_SIGN_PARA);
 
         params.dwInfoChoice = CERT_STRONG_SIGN_OID_INFO_CHOICE;
-        params.pszOID = szOID_CERT_STRONG_KEY_OS_CURRENT;
+        params.pszOID = const_cast<LPSTR>(szOID_CERT_STRONG_KEY_OS_CURRENT);
         if (!m_CryptCATAdminAcquireContext2(phCatAdmin, NULL, NULL, &params, 0L))
             return HRESULT_FROM_WIN32(GetLastError());
         else

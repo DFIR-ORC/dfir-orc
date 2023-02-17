@@ -239,8 +239,8 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
         return;
     }
 
-    auto&& lock = m_outcome.Lock();
-    auto& commandSet = m_outcome.GetCommandSet(m_commandSet);
+    auto [outcome, lock] = m_outcome.Get();
+    auto& commandSet = outcome.GetCommandSet(m_commandSet);
     auto& outcomeArchive = commandSet.GetArchive();
 
     switch (notification->GetType())
@@ -556,9 +556,9 @@ HRESULT WolfExecution::CreateCommandAgent(
 
                         Log::Info("JOB: Complete");
 
-                        auto&& lock = m_outcome.Lock();
+                        auto [outcome, lock] = m_outcome.Get();
 
-                        auto& commandSetOutcome = m_outcome.GetCommandSet(item->GetKeyword());
+                        auto& commandSetOutcome = outcome.GetCommandSet(item->GetKeyword());
                         commandSetOutcome.SetKeyword(item->GetKeyword());
                         commandSetOutcome.SetStart(FromFileTime(m_StartTime));
                         commandSetOutcome.SetEnd(FromFileTime(m_FinishTime));
@@ -721,8 +721,8 @@ HRESULT WolfExecution::EnqueueCommands()
         }
 
         {
-            auto&& lock = m_outcome.Lock();
-            auto& outcomeCommand = m_outcome.GetCommandSet(m_commandSet).GetCommand(command->Keyword());
+            auto [outcome, lock] = m_outcome.Get();
+            auto& outcomeCommand = outcome.GetCommandSet(m_commandSet).GetCommand(command->Keyword());
             for (const auto& parameter : command->GetParameters())
             {
                 if (::HasFileOutput(parameter.Kind))

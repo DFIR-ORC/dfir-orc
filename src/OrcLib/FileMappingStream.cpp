@@ -13,7 +13,7 @@
 using namespace Orc;
 
 STDMETHODIMP
-FileMappingStream::Open(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG ullMaximumSize, _In_opt_ LPWSTR lpName)
+FileMappingStream::Open(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG ullMaximumSize, _In_opt_ LPCWSTR lpName)
 {
     HRESULT hr = E_FAIL;
     LARGE_INTEGER liMaxSize;

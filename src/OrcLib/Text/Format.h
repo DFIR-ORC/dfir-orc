@@ -14,7 +14,8 @@
 
 #include <type_traits>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/xchar.h>
 
 #include "Text/Iconv.h"
 #include "Utils/TypeTraits.h"
@@ -75,13 +76,15 @@ inline void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args
     else if constexpr (std::is_same_v<FmtCharT, char>)
     {
         fmt::basic_memory_buffer<char, 32768> utf8;
-        fmt::format_to(std::back_inserter(utf8), std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
+        fmt::vformat_to(
+            std::back_inserter(utf8), fmt::string_view(arg0), fmt::make_format_args(std::forward<FmtArgs>(args)...));
         details::ToUtf16(utf8, out);
     }
     else if constexpr (std::is_same_v<FmtCharT, wchar_t>)
     {
         fmt::basic_memory_buffer<wchar_t, 32768> utf16;
-        fmt::format_to(std::back_inserter(utf16), std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
+        fmt::vformat_to(
+            std::back_inserter(utf16), fmt::wstring_view(arg0), fmt::make_wformat_args(std::forward<FmtArgs>(args)...));
         details::ToUtf8(utf16, out);
     }
     else

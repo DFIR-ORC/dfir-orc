@@ -25,12 +25,12 @@ public:
 
     MY_UNKNOWN_IMP2( ISequentialInStream, IInStream )
 
-    explicit InMemStream( const std::string_view& buffer );
+    explicit InMemStream( std::string_view buffer );
     STDMETHOD( Read )( void* data, UInt32 size, UInt32* processedSize );
     STDMETHOD( Seek )( Int64 offset, UInt32 seekOrigin, UInt64* newPosition );
 
 private:
-    const std::string_view& m_buffer;
+    std::string_view m_buffer;
     size_t m_pos;
 };
 

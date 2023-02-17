@@ -248,8 +248,8 @@ static const auto CSIDL_NONE = ((DWORD)-1);
 struct SpecialFolder
 {
     DWORD dwCSIDL;
-    WCHAR* szCSIDL;
-    WCHAR* swDescription;
+    LPCWSTR szCSIDL;
+    LPCWSTR swDescription;
 };
 
 SpecialFolder g_specialFolders[] = {
@@ -321,7 +321,7 @@ DWORD g_dwKnownLocationsCSIDL[] = {CSIDL_DESKTOPDIRECTORY,  CSIDL_PROGRAMS,     
                                    CSIDL_WINDOWS,           CSIDL_PROGRAM_FILES,    CSIDL_PROFILE,
                                    CSIDL_PROGRAM_FILESX86,  CSIDL_ADMINTOOLS,       CSIDL_NONE};
 
-WCHAR* g_szKnownEnvPaths[] = {L"%PATH%", L"%ALLUSERSPROFILE%", L"%temp%", L"%tmp%", L"%APPDATA%", NULL};
+LPCWSTR g_szKnownEnvPaths[] = {L"%PATH%", L"%ALLUSERSPROFILE%", L"%temp%", L"%tmp%", L"%APPDATA%", NULL};
 
 LocationSet::Altitude LocationSet::GetAltitudeFromString(std::wstring_view svAltitude)
 {

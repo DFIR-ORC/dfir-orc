@@ -16,6 +16,9 @@
 
 #include "Text/Fmt/std_optional.h"
 
+#include <fmt/format.h>
+#include <fmt/xchar.h>
+
 //
 // E_BOUNDS is not defined in SDK 7.1A
 // C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include\WinError.h
@@ -44,7 +47,7 @@ public:
         : m_severity(Severity::Unset)
         , m_ec(SystemError(hr))
     {
-        Description = fmt::format(fmt, std::forward<Args>(args)...);
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
     }
 
     template <typename... Args>
@@ -52,7 +55,7 @@ public:
         : m_severity(status)
         , m_ec(SystemError(hr))
     {
-        Description = fmt::format(fmt, std::forward<Args>(args)...);
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
     }
 
     template <typename... Args>
@@ -60,7 +63,7 @@ public:
         : m_severity(Severity::Unset)
         , m_ec(ec)
     {
-        Description = fmt::format(fmt, std::forward<Args>(args)...);
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
     }
 
     template <typename... Args>
@@ -68,21 +71,21 @@ public:
         : m_severity(status)
         , m_ec(ec)
     {
-        Description = fmt::format(fmt, std::forward<Args>(args)...);
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
     }
 
     template <typename... Args>
     Exception(Severity status, std::wstring_view fmt, Args&&... args)
         : m_severity(status)
     {
-        Description = fmt::format(fmt, std::forward<Args>(args)...);
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
     }
 
     template <typename... Args>
     Exception(std::wstring_view fmt, Args&&... args)
         : m_severity(Severity::Unset)
     {
-        Description = fmt::format(fmt, std::forward<Args>(args)...);
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
     }
 
     explicit Exception(Severity status)

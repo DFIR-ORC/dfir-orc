@@ -825,6 +825,7 @@ set(SRC_UTILITIES
     "Utils/Guard/Winsock.cpp"
     "Utils/Guid.h"
     "Utils/Guid.cpp"
+    "Utils/Locker.h"
     "Utils/MakeArray.h"
     "Utils/MetaPtr.h"
     "Utils/Result.h"
@@ -1017,7 +1018,7 @@ target_link_libraries(OrcLib
         psapi.lib
         Wintrust.lib
         Crypt32.lib
-        fmt::fmt-header-only
+        fmt::fmt
         yara::yara
         ws2_32.lib
         Iphlpapi.lib

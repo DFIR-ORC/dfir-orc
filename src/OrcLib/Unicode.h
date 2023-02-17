@@ -74,7 +74,7 @@ inline HRESULT SanitizeString(const IsUnicodeValidTable table[], const std::wstr
 {
     return SanitizeString(table, str.c_str(), (DWORD)str.size(), dst);
 }
-inline HRESULT SanitizeString(const IsUnicodeValidTable table[], const std::wstring_view& str, std::wstring& dst)
+inline HRESULT SanitizeString(const IsUnicodeValidTable table[], std::wstring_view str, std::wstring& dst)
 {
     return SanitizeString(table, str.data(), (DWORD)str.size(), dst);
 }

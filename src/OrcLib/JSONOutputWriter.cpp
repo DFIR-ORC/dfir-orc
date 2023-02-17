@@ -114,7 +114,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::EndCollection(LP
 
 template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
-    const std::wstring_view& szFormat,
+    std::wstring_view szFormat,
     fmt::wformat_args args)
 {
     Buffer<WCHAR, ORC_MAX_PATH> buffer;
@@ -127,9 +127,8 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
-    const std::string_view& szFormat,
-    fmt::format_args args)
+HRESULT
+Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(std::string_view szFormat, fmt::format_args args)
 {
     Buffer<CHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
@@ -146,7 +145,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
 template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated_(
     LPCWSTR szName,
-    const std::wstring_view& szFormat,
+    std::wstring_view szFormat,
     fmt::wformat_args args)
 {
     rapidWriter.Key(szName);
@@ -157,7 +156,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormat
 template <class _RapidWriter, typename _Ch>
 HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteNamedFormated_(
     LPCWSTR szName,
-    const std::string_view& szFormat,
+    std::string_view szFormat,
     fmt::format_args args)
 {
     rapidWriter.Key(szName);
@@ -205,7 +204,7 @@ HRESULT Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, const std::wstring
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Writer<_RapidWriter, _Ch>::Write(const std::string_view str)
+HRESULT Writer<_RapidWriter, _Ch>::Write(std::string_view str)
 {
     if (auto [hr, wstr] = Orc::AnsiToWide(str); FAILED(hr))
         return hr;
@@ -215,7 +214,7 @@ HRESULT Writer<_RapidWriter, _Ch>::Write(const std::string_view str)
 }
 
 template <class _RapidWriter, typename _Ch>
-HRESULT Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, const std::string_view str)
+HRESULT Writer<_RapidWriter, _Ch>::WriteNamed(LPCWSTR szName, std::string_view str)
 {
     if (auto [hr, wstr] = Orc::AnsiToWide(str); FAILED(hr))
         return hr;

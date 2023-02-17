@@ -47,7 +47,7 @@ public:
         std::error_code& ec );
 
     static guard::ComPtr< ArchiveUpdateCallback > Create(
-        const std::string_view& content,
+        std::string_view content,
         const std::wstring& filename,
         std::error_code& ec );
 
@@ -59,7 +59,7 @@ private:
     void Init( const std::filesystem::path& inputPath, std::error_code& ec );
 
     void Init(
-        const std::string_view& content,
+        std::string_view content,
         const std::wstring& filename,
         std::error_code& ec );
 

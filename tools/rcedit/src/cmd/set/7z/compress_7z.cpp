@@ -137,7 +137,7 @@ void Compress7z(
 }
 
 void Compress7z(
-    const std::string_view& input,
+    std::string_view input,
     const std::wstring& filename,
     std::vector< uint8_t >& out,
     std::error_code& ec )

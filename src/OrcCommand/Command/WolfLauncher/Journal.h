@@ -25,16 +25,14 @@ namespace Orc::Command::Wolf {
 class Journal
 {
 public:
-    Journal::Journal(Console& console)
+    Journal(Console& console)
         : m_mutex()
         , m_console(console)
     {
     }
 
     template <typename... FmtArgs>
-    void
-    Print(const std::wstring_view& commandSet, const std::wstring_view& agent, Log::Level level, FmtArgs&&... status)
-        const
+    void Print(std::wstring_view commandSet, std::wstring_view agent, Log::Level level, FmtArgs&&... status) const
     {
         const auto timepoint = std::chrono::system_clock::now();
 
@@ -57,7 +55,7 @@ public:
     }
 
     template <typename... FmtArgs>
-    void Print(const std::wstring_view& commandSet, const std::wstring_view& agent, FmtArgs&&... status) const
+    void Print(std::wstring_view commandSet, std::wstring_view agent, FmtArgs&&... status) const
     {
         Print(commandSet, agent, Log::Level::Info, std::forward<FmtArgs>(status)...);
     }

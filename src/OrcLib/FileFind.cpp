@@ -3561,7 +3561,7 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInRecordAddMatching(
     std::shared_ptr<Match>& aFileMatch,
     MFTRecord* pElt) const
 {
-    auto& profiler = aTerm->GetScopedMatchProfiler();
+    auto profiler = aTerm->GetScopedMatchProfiler();
 
     const SearchTerm::Criteria requiredSpecs = aTerm->Required;
     SearchTerm::Criteria matchedSpecs = matched;
@@ -3725,7 +3725,7 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermIn$I30AddMatching(
     std::shared_ptr<Match>& aFileMatch,
     const PFILE_NAME pFileName) const
 {
-    auto& profiler = aTerm->GetScopedMatchProfiler();
+    auto profiler = aTerm->GetScopedMatchProfiler();
 
     SearchTerm::Criteria requiredSpecs = aTerm->Required;
     SearchTerm::Criteria matchedSpecs = matched;
@@ -3783,7 +3783,7 @@ FileFind::SearchTerm::Criteria FileFind::LookupTermInMatchExcludeMatching(
     const SearchTerm::Criteria matched,
     const std::shared_ptr<Match>& aFileMatch) const
 {
-    auto& profiler = aTerm->GetScopedMatchProfiler();
+    auto profiler = aTerm->GetScopedMatchProfiler();
 
     SearchTerm::Criteria requiredSpecs = aTerm->Required;
     SearchTerm::Criteria matchedSpecs = matched;
@@ -3937,7 +3937,7 @@ HRESULT FileFind::EvaluateMatchCallCallback(
 
     assert(hr == S_FALSE);
 
-    auto& profiler = aMatch->Term->GetScopedCollectionProfiler();
+    auto profiler = aMatch->Term->GetScopedCollectionProfiler();
     auto initialReadLength = ::SumStreamsReadLength(aMatch->MatchingAttributes);
 
     if (m_MatchHash != CryptoHashStream::Algorithm::Undefined)

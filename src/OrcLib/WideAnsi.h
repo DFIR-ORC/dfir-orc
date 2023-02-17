@@ -29,7 +29,7 @@ HRESULT WideToAnsi(
     __in DWORD cchDest);
 HRESULT WideToAnsi(__in PCWSTR pwszSrc, __out_ecount(cchDest) PSTR pszDest, __in DWORD cchDest);
 HRESULT WideToAnsi(__in const std::wstring& src, std::string& dest);
-HRESULT WideToAnsi(__in const std::wstring_view& src, std::string& dest);
+HRESULT WideToAnsi(__in std::wstring_view src, std::string& dest);
 HRESULT WideToAnsi(__in_ecount(cchSrc) PCWSTR pwszSrc, __in DWORD cchSrc, CBinaryBuffer& dest);
 HRESULT WideToAnsi(__in PCWSTR pwszSrc, CBinaryBuffer& dest);
 HRESULT WideToAnsi(__in PCWSTR pszSrc, std::string& dest);
@@ -177,7 +177,7 @@ HRESULT WideToAnsi(PCWSTR pwszSrc, Buffer<CHAR, _DeclElts>& dest)
 
 std::pair<HRESULT, std::string> WideToAnsi(__in PCWSTR pwszSrc);
 std::pair<HRESULT, std::string> WideToAnsi(__in const std::wstring& strSrc);
-std::pair<HRESULT, std::string> WideToAnsi(__in const std::wstring_view& strSrc);
+std::pair<HRESULT, std::string> WideToAnsi(__in std::wstring_view strSrc);
 
 HRESULT AnsiToWide(
     __in_ecount(cchSrc) PCSTR pszSrc,
@@ -186,7 +186,7 @@ HRESULT AnsiToWide(
     __in DWORD cchDest);
 HRESULT AnsiToWide(__in PCSTR pszSrc, __out_ecount(cchDest) PWSTR pwzDest, __in DWORD cchDest);
 HRESULT AnsiToWide(__in const std::string& src, std::wstring& dest);
-HRESULT AnsiToWide(__in const std::string_view& src, std::wstring& dest);
+HRESULT AnsiToWide(__in std::string_view src, std::wstring& dest);
 HRESULT AnsiToWide(__in_ecount(cchSrc) PCSTR pszSrc, __in DWORD cchSrc, CBinaryBuffer& dest);
 HRESULT AnsiToWide(__in PCSTR pszSrc, CBinaryBuffer& dest);
 
@@ -194,7 +194,7 @@ HRESULT AnsiToWide(__in PCSTR pszSrc, __in DWORD cchSrc, std::wstring& dest);
 HRESULT AnsiToWide(__in PCSTR pszSrc, std::wstring& dest);
 
 template <size_t _DeclElts>
-HRESULT AnsiToWide(__in const std::string_view src, Buffer<WCHAR, _DeclElts>& dest)
+HRESULT AnsiToWide(__in std::string_view src, Buffer<WCHAR, _DeclElts>& dest)
 {
     HRESULT hr = E_FAIL;
     DWORD cchSize = 0;
@@ -318,7 +318,7 @@ HRESULT AnsiToWide(PCSTR pwszSrc, Buffer<WCHAR, _DeclElts>& dest)
 
 std::pair<HRESULT, std::wstring> AnsiToWide(__in PCSTR pwszSrc);
 std::pair<HRESULT, std::wstring> AnsiToWide(__in const std::string& strSrc);
-std::pair<HRESULT, std::wstring> AnsiToWide(__in const std::string_view& strSrc);
+std::pair<HRESULT, std::wstring> AnsiToWide(__in std::string_view strSrc);
 
 }  // namespace Orc
 

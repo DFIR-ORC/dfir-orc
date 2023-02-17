@@ -202,7 +202,7 @@ void Snapshot::ResolveForwarders(gsl::span<Snapshot> snapshots)
     for (size_t i = 0; i < snapshots.size() - 1; ++i)
     {
         auto& activeSnapshot = snapshots[i];
-        auto& newerSnapshots = snapshots.subspan(i + 1);
+        auto newerSnapshots = snapshots.subspan(i + 1);
 
         ResolveForwarders(newerSnapshots, activeSnapshot);
     }

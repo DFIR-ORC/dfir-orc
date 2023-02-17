@@ -1848,7 +1848,7 @@ Intentions FileInfo::FilterIntentions(const std::vector<Filter>& filters)
 }
 
 size_t FileInfo::FindVersionQueryValueRec(
-    WCHAR* szValueName,
+    const WCHAR* szValueName,
     size_t dwValueCchLength,
     LPBYTE ptr,
     LPBYTE ptr_end,
@@ -1952,7 +1952,7 @@ size_t FileInfo::FindVersionQueryValueRec(
     return ptr_off;
 }
 
-HRESULT FileInfo::WriteVersionQueryValue(WCHAR* szValueName, ITableOutput& output)
+HRESULT FileInfo::WriteVersionQueryValue(const WCHAR* szValueName, ITableOutput& output)
 {
     HRESULT hr = E_FAIL;
 

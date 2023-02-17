@@ -27,31 +27,31 @@ class Registry
 {
 public:
     template <typename _T>
-    static Result<_T> Read(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName)
+    static Result<_T> Read(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName)
     {
-        static_assert(false, "Registry read for your type must be a specialised version");
+        static_assert(!std::is_same_v<_T, _T>, "Registry read for your type must be a specialised version");
     }
 };
 
 template <>
-Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Result<ULONG32> Orc::Registry::Read<ULONG32>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName);
 
 template <>
-Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Result<ULONG64> Orc::Registry::Read<ULONG64>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName);
 
 template <>
-Result<ByteBuffer> Orc::Registry::Read<ByteBuffer>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Result<ByteBuffer> Orc::Registry::Read<ByteBuffer>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName);
 
 template <>
-Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName);
 
 template <>
 Result<std::vector<std::wstring>>
-Orc::Registry::Read<std::vector<std::wstring>>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Orc::Registry::Read<std::vector<std::wstring>>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName);
 
 template <>
 Result<std::filesystem::path>
-Orc::Registry::Read<std::filesystem::path>(HKEY hParentKey, LPWSTR szKeyName, LPWSTR szValueName);
+Orc::Registry::Read<std::filesystem::path>(HKEY hParentKey, LPCWSTR szKeyName, LPCWSTR szValueName);
 
 }  // namespace Orc
 

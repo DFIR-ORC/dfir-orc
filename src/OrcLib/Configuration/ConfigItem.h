@@ -68,7 +68,7 @@ public:  // METHODS
         dwOrderIndex = 0;
     }
 
-    ConfigItem(LPWSTR name, DWORD index, ConfigItemType type, ConfigItemFlags flags)
+    ConfigItem(LPCWSTR name, DWORD index, ConfigItemType type, ConfigItemFlags flags)
         : Type(type)
         , Flags(flags)
         , Status(MISSING)

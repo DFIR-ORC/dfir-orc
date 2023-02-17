@@ -47,8 +47,8 @@ public:
     virtual HRESULT Write(const std::wstring& str) PURE;
     virtual HRESULT WriteNamed(LPCWSTR szName, const std::wstring& str) PURE;
 
-    virtual HRESULT Write(const std::string_view str) PURE;
-    virtual HRESULT WriteNamed(LPCWSTR szName, const std::string_view str) PURE;
+    virtual HRESULT Write(std::string_view str) PURE;
+    virtual HRESULT WriteNamed(LPCWSTR szName, std::string_view str) PURE;
 
     virtual HRESULT Write(bool bBoolean) PURE;
     virtual HRESULT WriteNamed(LPCWSTR szName, bool bBoolean) PURE;
@@ -175,34 +175,34 @@ public:
     }
 
     template <typename... Args>
-    HRESULT WriteFormated(const std::wstring_view& szFormat, Args&&... args)
+    HRESULT WriteFormated(std::wstring_view szFormat, Args&&... args)
     {
         return WriteFormated_(szFormat, fmt::make_format_args<fmt::wformat_context>(args...));
     }
 
     template <typename... Args>
-    HRESULT WriteNamedFormated(LPCWSTR szName, const std::wstring_view& szFormat, Args&&... args)
+    HRESULT WriteNamedFormated(LPCWSTR szName, std::wstring_view szFormat, Args&&... args)
     {
         return WriteNamedFormated_(szName, szFormat, fmt::make_format_args<fmt::wformat_context>(args...));
     }
 
     template <typename... Args>
-    HRESULT WriteFormated(const std::string_view& szFormat, Args&&... args)
+    HRESULT WriteFormated(std::string_view szFormat, Args&&... args)
     {
         return WriteFormated_(szFormat, fmt::make_format_args(args...));
     }
 
     template <typename... Args>
-    HRESULT WriteNamedFormated(LPCWSTR szName, const std::string_view& szFormat, Args&&... args)
+    HRESULT WriteNamedFormated(LPCWSTR szName, std::string_view szFormat, Args&&... args)
     {
         return WriteNamedFormated_(szName, szFormat, fmt::make_format_args(args...));
     }
 
 protected:
-    virtual HRESULT WriteFormated_(const std::string_view& szFormat, fmt::format_args args) PURE;
-    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args) PURE;
-    virtual HRESULT WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, fmt::format_args args) PURE;
-    virtual HRESULT WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, fmt::wformat_args args) PURE;
+    virtual HRESULT WriteFormated_(std::string_view szFormat, fmt::format_args args) PURE;
+    virtual HRESULT WriteFormated_(std::wstring_view szFormat, fmt::wformat_args args) PURE;
+    virtual HRESULT WriteNamedFormated_(LPCWSTR szName, std::string_view szFormat, fmt::format_args args) PURE;
+    virtual HRESULT WriteNamedFormated_(LPCWSTR szName, std::wstring_view szFormat, fmt::wformat_args args) PURE;
 };
 
 class IWriter : public IOutput

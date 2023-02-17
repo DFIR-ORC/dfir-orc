@@ -13,6 +13,9 @@
 
 #include <variant>
 
+#include "Log/Log.h"
+#include <fmt/xchar.h>
+
 #pragma managed(push, off)
 
 namespace Orc {
@@ -1028,8 +1031,21 @@ struct formatter<Orc::Buffer<_T, _DeclElts>, Char>
     {
         for (const auto& item : buffer)
         {
-            format_to(ctx.out(), &elt_format[0], item);
+            if constexpr (std::is_same_v<Char, char>)
+            {
+                vformat_to(ctx.out(), &elt_format[0], fmt::make_format_args(item));
+            }
+            else if (std::is_same_v<Char, wchar_t>)
+            {
+                wchar_t c = item;
+                vformat_to(ctx.out(), &elt_format[0], fmt::make_wformat_args(c));
+            }
+            else
+            {
+                static_assert(true, "Unexpected 'Char' type");
+            }
         }
+
         return ctx.out();
     }
     basic_memory_buffer<Char> elt_format;

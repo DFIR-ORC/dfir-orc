@@ -62,7 +62,7 @@ HRESULT RobustStructuredWriter::EndCollection(LPCWSTR szCollection)
     return m_pWriter->EndCollection(strElt.c_str());
 }
 
-HRESULT RobustStructuredWriter::WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args)
+HRESULT RobustStructuredWriter::WriteFormated_(std::wstring_view szFormat, fmt::wformat_args args)
 {
     using namespace std::string_view_literals;
 
@@ -77,7 +77,7 @@ HRESULT RobustStructuredWriter::WriteFormated_(const std::wstring_view& szFormat
     return Write(result_string);
 }
 
-HRESULT RobustStructuredWriter::WriteFormated_(const std::string_view& szFormat, fmt::format_args args)
+HRESULT RobustStructuredWriter::WriteFormated_(std::string_view szFormat, fmt::format_args args)
 {
     using namespace std::string_view_literals;
 
@@ -93,7 +93,7 @@ HRESULT RobustStructuredWriter::WriteFormated_(const std::string_view& szFormat,
 }
 
 HRESULT
-RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, fmt::wformat_args args)
+RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, std::wstring_view szFormat, fmt::wformat_args args)
 {
     using namespace std::string_view_literals;
 
@@ -109,7 +109,7 @@ RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::wstring_v
 }
 
 HRESULT
-RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, fmt::format_args args)
+RobustStructuredWriter::WriteNamedFormated_(LPCWSTR szName, std::string_view szFormat, fmt::format_args args)
 {
     using namespace std::string_view_literals;
 
@@ -196,7 +196,7 @@ HRESULT RobustStructuredWriter::WriteNamed(LPCWSTR szName, const std::wstring& s
     return m_pWriter->WriteNamed(strName.c_str(), strValue.c_str());
 }
 
-HRESULT RobustStructuredWriter::Write(const std::string_view str)
+HRESULT RobustStructuredWriter::Write(std::string_view str)
 {
     HRESULT hr = E_FAIL;
     std::wstring wstr, strValue;
@@ -210,7 +210,7 @@ HRESULT RobustStructuredWriter::Write(const std::string_view str)
     return m_pWriter->Write(strValue);
 }
 
-HRESULT RobustStructuredWriter::WriteNamed(LPCWSTR szName, const std::string_view str)
+HRESULT RobustStructuredWriter::WriteNamed(LPCWSTR szName, std::string_view str)
 {
     HRESULT hr = E_FAIL;
     std::wstring strName, wstr, strValue;

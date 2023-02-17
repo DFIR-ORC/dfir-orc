@@ -59,26 +59,6 @@ public:
         BuildChunkTable(loc, ec);
     }
 
-    WofStreamConcept(
-        DecompressorT decompressor,
-        InputStreamT stream,
-        uint64_t offset,
-        WofChunks chunks,
-        std::error_code& ec)
-        : m_decompressor(std::move(decompressor))
-        , m_stream(std::move(stream))
-        , m_chunks(std::move(chunks))
-        , m_startOffset(offset)
-        , m_offset(0)
-        , m_chunkIndex(0)
-        , m_locations()
-    {
-        m_inputBuffer.resize(chunks.ChunkSize());
-        m_outputBuffer.resize(chunks.ChunkSize());
-
-        BuildChunkTable(table, ec);
-    }
-
     WofStreamConcept(WofStreamConcept&&) = default;
     WofStreamConcept& operator=(WofStreamConcept&&) = default;
 

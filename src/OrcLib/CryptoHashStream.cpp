@@ -55,7 +55,8 @@ Result<std::wstring> Hash(const std::filesystem::path& path, CryptoHashStream::A
     }
 
     ULONGLONG ullBytesWritten;
-    hr = hashStream.CopyTo(DevNullStream(), &ullBytesWritten);
+    DevNullStream devNull;
+    hr = hashStream.CopyTo(devNull, &ullBytesWritten);
     if (FAILED(hr))
     {
         Log::Debug(L"Failed to consume stream: '{}' [{}]", path, SystemError(hr));

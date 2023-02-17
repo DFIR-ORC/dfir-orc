@@ -304,14 +304,15 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         switch (argv[i][0])
         {
             case L'/':
-            case L'-':
-                if (OptionalParameterOption(argv[i] + 1, L"Dump", std::optional<std::wstring>(strParameter)))
+            case L'-': {
+                std::optional<std::wstring> optionalParameter(strParameter);
+                if (OptionalParameterOption(argv[i] + 1, L"Dump", optionalParameter))
                 {
                     config.Todo = Main::Dump;
                     if (!strParameter.empty())
                         config.strInputFile = strParameter;
                 }
-                if (OptionalParameterOption(argv[i] + 1, L"FromDump", std::optional<std::wstring>(strParameter)))
+                if (OptionalParameterOption(argv[i] + 1, L"FromDump", optionalParameter))
                 {
                     config.Todo = Main::FromDump;
                     if (!strParameter.empty())
@@ -425,6 +426,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     }
                 }
                 break;
+            }
             default:
                 break;
         }

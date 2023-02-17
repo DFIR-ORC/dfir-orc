@@ -167,7 +167,7 @@ HRESULT BoundColumn::PrintToBuffer(const CHAR* szFormat, va_list argList)
     return S_OK;
 }
 
-HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::wstring_view& svString)
+HRESULT Orc::TableOutput::BoundColumn::WriteString(std::wstring_view svString)
 {
     using namespace msl::utilities;
     HRESULT hr = E_FAIL;
@@ -203,7 +203,7 @@ HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::wstring_view& svSt
     return S_OK;
 }
 
-HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::string_view& svString)
+HRESULT Orc::TableOutput::BoundColumn::WriteString(std::string_view svString)
 {
     using namespace msl::utilities;
 
@@ -239,7 +239,7 @@ HRESULT Orc::TableOutput::BoundColumn::WriteString(const std::string_view& svStr
     return S_OK;
 }
 
-HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::wstring_view& szFormat, fmt::wformat_args args)
+HRESULT Orc::TableOutput::BoundColumn::WriteFormated(std::wstring_view szFormat, fmt::wformat_args args)
 {
     HRESULT hr = E_FAIL;
 
@@ -281,7 +281,7 @@ HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::wstring_view& sz
     return S_OK;
 }
 
-HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::string_view& szFormat, fmt::format_args args)
+HRESULT Orc::TableOutput::BoundColumn::WriteFormated(std::string_view szFormat, fmt::format_args args)
 {
     HRESULT hr = E_FAIL;
 

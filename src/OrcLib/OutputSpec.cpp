@@ -18,6 +18,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/tokenizer.hpp>
 #include <fmt/format.h>
+#include <fmt/xchar.h>
 
 #include "Configuration/ConfigItem.h"
 #include "ParameterCheck.h"
@@ -87,15 +88,16 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
     wstring strSystemType;
     SystemDetails::GetSystemType(strSystemType);
 
-    strFileName = fmt::format(
-        strPattern,
-        fmt::arg(L"Name", strName),
-        fmt::arg(L"FileName", strName),
-        fmt::arg(L"DirectoryName", strName),
-        fmt::arg(L"ComputerName", strComputerName),
-        fmt::arg(L"FullComputerName", strFullComputerName),
-        fmt::arg(L"TimeStamp", strTimeStamp),
-        fmt::arg(L"SystemType", strSystemType));
+    strFileName = fmt::vformat(
+        fmt::wstring_view(strPattern),
+        fmt::make_wformat_args(
+            fmt::arg(L"Name", strName),
+            fmt::arg(L"FileName", strName),
+            fmt::arg(L"DirectoryName", strName),
+            fmt::arg(L"ComputerName", strComputerName),
+            fmt::arg(L"FullComputerName", strFullComputerName),
+            fmt::arg(L"TimeStamp", strTimeStamp),
+            fmt::arg(L"SystemType", strSystemType)));
 
     return S_OK;
 }

@@ -44,7 +44,7 @@ public:
     template <typename _T>
     static Result<_T> GetProperty(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
     {
-        static_assert(false, "Property read for your type must be via a specialised version");
+        static_assert(!std::is_same_v<_T, _T>, "Property read for your type must be via a specialised version");
     }
 
     ~WMI();
@@ -52,8 +52,10 @@ public:
 
 template <>
 Result<bool> Orc::WMI::GetProperty<bool>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+
 template <>
 Result<USHORT> Orc::WMI::GetProperty<USHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+
 template <>
 Result<SHORT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 
@@ -65,6 +67,7 @@ Result<LONG32> Orc::WMI::GetProperty<LONG32>(const CComPtr<IWbemClassObject>& ob
 
 template <>
 Result<ULONG64> Orc::WMI::GetProperty<ULONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
+
 template <>
 Result<LONG64> Orc::WMI::GetProperty<LONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty);
 

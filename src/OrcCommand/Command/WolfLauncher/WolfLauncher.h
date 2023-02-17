@@ -29,6 +29,7 @@
 #include "Command/WolfLauncher/ConsoleConfiguration.h"
 #include "Utils/StdStream/StandardOutput.h"
 #include "Utils/EnumFlags.h"
+#include "Utils/Locker.h"
 
 #pragma managed(push, off)
 
@@ -183,7 +184,7 @@ private:
     HRESULT SetWERDontShowUI(DWORD dwNewValue, DWORD& dwOldValue);
 
     HRESULT CreateAndUploadOutline();
-    Orc::Result<void> Main::CreateAndUploadOutcome();
+    Orc::Result<void> CreateAndUploadOutcome();
 
     HRESULT SetLauncherPriority(WolfPriority priority);
 
@@ -204,7 +205,7 @@ private:
     ConsoleConfiguration m_consoleConfiguration;
 
     Journal m_journal;
-    Wolf::Outcome::Outcome m_outcome;
+    Locker<Wolf::Outcome::Outcome> m_outcome;
 
     Configuration config;
 

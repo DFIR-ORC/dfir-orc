@@ -10,8 +10,10 @@
 
 #include <memory>
 
-#if __has_include("boost/smart_ptr/local_shared_ptr.hpp")
-#    include <boost/smart_ptr/local_shared_ptr.hpp>
+#ifdef __has_include
+#    if __has_include("boost/smart_ptr/make_local_shared.hpp")
+#        include <boost/smart_ptr/make_local_shared.hpp>
+#    endif
 #endif
 
 //
@@ -178,7 +180,8 @@ struct MetaPtr<std::unique_ptr<T>>
     }
 };
 
-#if __has_include("boost/smart_ptr/local_shared_ptr.hpp")
+#ifdef __has_include
+#    if __has_include("boost/smart_ptr/make_local_shared.hpp")
 template <typename T>
 struct MetaPtr<boost::local_shared_ptr<T>>
 {
@@ -189,9 +192,10 @@ struct MetaPtr<boost::local_shared_ptr<T>>
     template <typename... Args>
     static Type Make(Args&&... args)
     {
-        return boost::make_local_shared<T>(std::forward<Args>(args)...);
+        return boost::make_local_shared<T>(new T(std::forward<Args>(args)...));
     }
 };
+#    endif
 #endif
 
 }  // namespace details

@@ -137,7 +137,7 @@ HRESULT Orc::WideToAnsi(__in const std::wstring& src, std::string& dest)
     return S_OK;
 }
 
-HRESULT Orc::WideToAnsi(__in const std::wstring_view& src, std::string& dest)
+HRESULT Orc::WideToAnsi(__in std::wstring_view src, std::string& dest)
 {
     boost::io::ios_flags_saver fs(std::cerr);
     if (src.empty())
@@ -320,7 +320,7 @@ std::pair<HRESULT, std::string> Orc::WideToAnsi(const std::wstring& strSrc)
         return {S_OK, std::move(retval)};
 }
 
-std::pair<HRESULT, std::string> Orc::WideToAnsi(const std::wstring_view& strSrc)
+std::pair<HRESULT, std::string> Orc::WideToAnsi(std::wstring_view strSrc)
 {
     HRESULT hr = E_FAIL;
     std::string retval;
@@ -437,7 +437,7 @@ HRESULT Orc::AnsiToWide(__in const std::string& src, std::wstring& dest)
     return S_OK;
 }
 
-HRESULT Orc::AnsiToWide(__in const std::string_view& src, std::wstring& dest)
+HRESULT Orc::AnsiToWide(__in std::string_view src, std::wstring& dest)
 {
     boost::io::ios_flags_saver fs(std::cerr);
     HRESULT hr = E_FAIL;
@@ -533,7 +533,7 @@ HRESULT Orc::AnsiToWide(LPCSTR pszSrc, CBinaryBuffer& dest)
     if (pszSrc == nullptr)
         return E_INVALIDARG;
 
-    if (pszSrc == '\0')
+    if (pszSrc[0] == '\0')
     {
         dest.RemoveAll();
         return S_OK;
@@ -627,7 +627,7 @@ std::pair<HRESULT, std::wstring> Orc::AnsiToWide(const std::string& pszSrc)
         return std::make_pair(S_OK, std::move(retval));
 }
 
-std::pair<HRESULT, std::wstring> Orc::AnsiToWide(const std::string_view& pszSrc)
+std::pair<HRESULT, std::wstring> Orc::AnsiToWide(std::string_view pszSrc)
 {
     HRESULT hr = E_FAIL;
     std::wstring retval;

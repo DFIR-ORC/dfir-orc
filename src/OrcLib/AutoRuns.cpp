@@ -18,6 +18,7 @@
 #include "MemoryStream.h"
 
 #include "AutoRuns.h"
+#include "Configuration/ConfigItem.h"
 
 #include "Log/Log.h"
 

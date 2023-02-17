@@ -93,7 +93,7 @@ static Orc::ByteBuffer ConvertBase64(const std::wstring_view strBase64, DWORD dw
     return retval;
 }
 
-static Orc::ByteBuffer ConvertBase64(const std::string_view strBase64, DWORD dwFlags = CRYPT_STRING_BASE64)
+static Orc::ByteBuffer ConvertBase64(std::string_view strBase64, DWORD dwFlags = CRYPT_STRING_BASE64)
 {
     Orc::ByteBuffer retval;
     DWORD dwRequiredSize = 0L;

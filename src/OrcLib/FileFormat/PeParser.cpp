@@ -11,6 +11,7 @@
 #include "ByteStreamHelpers.h"
 #include "CryptoHashStream.h"
 #include "BinaryBuffer.h"
+#include "Stream/StreamUtils.h"
 
 using namespace Orc;
 
@@ -24,11 +25,9 @@ uint64_t CopyChunk(ByteStream& input, const PeParser::PeChunk& chunk, ByteStream
 
     while (processed < chunk.length)
     {
-        const auto lastReadLength = ReadChunkAt(
-            input,
-            chunk.offset + processed,
-            BufferSpan(buffer.data(), std::min(buffer.size(), chunk.length - processed)),
-            ec);
+        auto span = BufferSpan(buffer.data(), std::min(buffer.size(), chunk.length - processed));
+
+        const auto lastReadLength = ReadChunkAt(input, chunk.offset + processed, span, ec);
         if (ec)
         {
             return processed;

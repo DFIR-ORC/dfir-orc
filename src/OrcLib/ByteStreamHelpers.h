@@ -269,7 +269,7 @@ size_t Write(ByteStream& stream, const ContainerT& input, std::error_code& ec)
         return processed;
     }
 
-    stream.resize(processed / sizeof(ContainerT::value_type));
+    input.resize(processed / sizeof(ContainerT::value_type));
     return processed;
 }
 
@@ -315,7 +315,7 @@ size_t WriteChunkAt(ByteStream& stream, uint64_t offset, const ContainerT& input
 }
 
 /*!
- * \brief Write at specified position in 'stream' until 'output' is completely filled.
+ * \brief Write at specified position in 'stream' until 'input' is completely filled.
  *
  * TODO: C++20: use std::is_contiguous_iterator
  */
@@ -332,10 +332,7 @@ WriteChunkAt(ByteStream& stream, uint64_t offset, size_t chunkSizeCb, BasicBuffe
         return 0;
     }
 
-    assert(chunkSizeCb < output.size() * sizeof(CharT) && "Buffer 'output' overflow");
-
-    BufferSpan span(reinterpret_cast<uint8_t*>(input.data()), chunkSizeCb);
-    return WriteChunk(stream, span, ec);
+    return WriteChunk(stream, BasicBufferView(input.data(), chunkSizeCb), ec);
 }
 
 /*!
@@ -344,13 +341,13 @@ WriteChunkAt(ByteStream& stream, uint64_t offset, size_t chunkSizeCb, BasicBuffe
 template <typename ItemT>
 void WriteItem(ByteStream& stream, const ItemT& input, std::error_code& ec)
 {
-    uint64_t processed = Write(stream, BufferView(reinterpret_cast<const uint8_t*>(&output), sizeof(output)), ec);
+    uint64_t processed = Write(stream, BufferView(reinterpret_cast<const uint8_t*>(&input), sizeof(input)), ec);
     if (ec)
     {
         return;
     }
 
-    if (processed != sizeof(output))
+    if (processed != sizeof(input))
     {
         ec = std::make_error_code(std::errc::interrupted);
         Log::Debug("Failed to write expected size ({}/{})", processed, sizeof(ItemT));

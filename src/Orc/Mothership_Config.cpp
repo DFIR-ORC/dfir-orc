@@ -26,7 +26,7 @@ using namespace Orc;
 using namespace Orc::Command::Mothership;
 
 namespace {
-void WriteArgument(std::wstringstream& stream, std::wstring_view& arg)
+void WriteArgument(std::wstringstream& stream, std::wstring_view arg)
 {
     if (arg.find(' ') != std::wstring::npos)
     {

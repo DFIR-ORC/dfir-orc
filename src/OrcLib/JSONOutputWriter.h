@@ -39,7 +39,8 @@ public:
         {
             Flush();
             if (!m_buffer.empty())
-                throw Orc::Exception(Severity::Continue, E_OUTOFMEMORY, L"Failed to flush JSON's stream buffer"sv);
+                throw Orc::Exception(
+                    Severity::Continue, E_OUTOFMEMORY, std::wstring_view(L"Failed to flush JSON's stream buffer"));
         }
         m_buffer.push_back(c);
     }
@@ -52,10 +53,12 @@ public:
 
         auto BytesWritten = 0ULL;
         if (auto hr = m_stream->Write(m_buffer.get(), m_buffer.elt_size() * m_buffer.size(), &BytesWritten); FAILED(hr))
-            throw Orc::Exception(Severity::Continue, hr, L"Failed to write JSON's buffer to stream"sv);
+            throw Orc::Exception(Severity::Continue, hr, std::wstring_view(L"Failed to write JSON's buffer to stream"));
         if (BytesWritten != m_buffer.elt_size() * m_buffer.size())
             throw Orc::Exception(
-                Severity::Continue, E_NOT_VALID_STATE, L"Failed to write JSON's entire buffer to stream"sv);
+                Severity::Continue,
+                E_NOT_VALID_STATE,
+                std::wstring_view(L"Failed to write JSON's entire buffer to stream"));
 
         m_buffer.clear();
     }
@@ -101,8 +104,8 @@ public:
     virtual HRESULT Write(const std::wstring& str) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, const std::wstring& str) override final;
 
-    virtual HRESULT Write(const std::string_view str) override final;
-    virtual HRESULT WriteNamed(LPCWSTR szName, const std::string_view str) override final;
+    virtual HRESULT Write(std::string_view str) override final;
+    virtual HRESULT WriteNamed(LPCWSTR szName, std::string_view str) override final;
 
     virtual HRESULT Write(bool bBoolean) override final;
     virtual HRESULT WriteNamed(LPCWSTR szName, bool bBoolean) override final;
@@ -174,12 +177,12 @@ private:
     HRESULT WriteNamed_(LPCWSTR szName, Args&&... args);
 
 protected:
-    virtual HRESULT WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args) override final;
-    virtual HRESULT WriteFormated_(const std::string_view& szFormat, fmt::format_args args) override final;
+    virtual HRESULT WriteFormated_(std::wstring_view szFormat, fmt::wformat_args args) override final;
+    virtual HRESULT WriteFormated_(std::string_view szFormat, fmt::format_args args) override final;
     virtual HRESULT
-    WriteNamedFormated_(LPCWSTR szName, const std::wstring_view& szFormat, fmt::wformat_args args) override final;
+    WriteNamedFormated_(LPCWSTR szName, std::wstring_view szFormat, fmt::wformat_args args) override final;
     virtual HRESULT
-    WriteNamedFormated_(LPCWSTR szName, const std::string_view& szFormat, fmt::format_args args) override final;
+    WriteNamedFormated_(LPCWSTR szName, std::string_view szFormat, fmt::format_args args) override final;
 };
 
 std::shared_ptr<StructuredOutput::IWriter>

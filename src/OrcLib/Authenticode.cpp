@@ -1697,11 +1697,12 @@ Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
         L"%WINDIR%\\system32\\CatRoot\\{{F750E6C3-38EE-11D1-85E5-00C04FC295EE}}\\{}"sv,
         L"%WINDIR%\\system32\\CatRoot\\{}"sv};
 
-    auto& cache = data.AuthenticodeCache();
-    for (auto& catroot : catrootDirectories)
+    for (auto catroot : catrootDirectories)
     {
         std::error_code ec;
-        auto catalogPath = ExpandEnvironmentStringsApi(fmt::format(catroot.data(), *filename).c_str(), ec);
+        std::wstring path;
+        fmt::format_to(std::back_inserter(path), catroot, filename.value());
+        auto catalogPath = ExpandEnvironmentStringsApi(path.c_str(), ec);
         if (ec)
         {
             return ec;

@@ -47,7 +47,7 @@ public:
     STDMETHOD(CanWrite)() { return m_dwProtect == PAGE_READWRITE ? S_OK : S_FALSE; };
     STDMETHOD(CanSeek)() { return S_OK; };
 
-    STDMETHOD(Open)(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG ullMaximumSize, _In_opt_ LPWSTR lpName);
+    STDMETHOD(Open)(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG ullMaximumSize, _In_opt_ LPCWSTR lpName);
 
     STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pBuffer,

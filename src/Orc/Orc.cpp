@@ -58,6 +58,7 @@
 #include "EmbeddedResource.h"
 
 using WinMainPtr = std::function<int(int argc, const WCHAR* argv[])>;
+
 struct ToolDescription
 {
     ToolDescription(LPCWSTR toolName, LPCWSTR toolDescr, WinMainPtr main)
@@ -71,7 +72,7 @@ struct ToolDescription
     static ToolDescription Get()
     {
         return ToolDescription(
-            CommandType::ToolName(), CommandType::ToolDescription(), UtilitiesMain::WMain<CommandType>);
+            CommandType::ToolName(), CommandType::ToolDescription(), Orc::Command::UtilitiesMain::WMain<CommandType>);
     }
 
     LPCWSTR szName;

@@ -330,7 +330,7 @@ void FileInfoCommon::FreeFilters(Filter* pFilters)
     delete[] pFilters;
 }
 
-HRESULT FileInfoCommon::ConfigItem_fileinfo_filter(ConfigItem& parent, LPWSTR szName, DWORD dwIndex)
+HRESULT FileInfoCommon::ConfigItem_fileinfo_filter(ConfigItem& parent, LPCWSTR szName, DWORD dwIndex)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = parent.AddChildNodeList(szName, dwIndex, ConfigItem::OPTION)))

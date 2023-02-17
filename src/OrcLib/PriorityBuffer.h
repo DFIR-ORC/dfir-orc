@@ -210,7 +210,12 @@ public:
     ///     Creates an PriorityBuffer within the default scheduler, and places it any schedule
     ///     group of the scheduler's choosing.
     /// </summary>
-    PriorityBuffer() { initialize_source_and_target(); }
+    PriorityBuffer()
+    {
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target();
+    }
     /// <summary>
     ///     Creates an PriorityBuffer within the default scheduler, and places it any schedule
     ///     group of the scheduler's choosing.
@@ -220,7 +225,9 @@ public:
     /// </param>
     PriorityBuffer(filter_method const& _Filter)
     {
-        initialize_source_and_target();
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target();
         register_filter(_Filter);
     }
     /// <summary>
@@ -230,7 +237,12 @@ public:
     /// <param name="_PScheduler">
     ///     A reference to a scheduler instance.
     /// </param>
-    PriorityBuffer(Concurrency::Scheduler& _PScheduler) { initialize_source_and_target(&_PScheduler); }
+    PriorityBuffer(Concurrency::Scheduler& _PScheduler)
+    {
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target(&_PScheduler);
+    }
 
     /// <summary>
     ///     Creates an PriorityBuffer within the specified scheduler, and places it any schedule
@@ -244,7 +256,9 @@ public:
     /// </param>
     PriorityBuffer(Concurrency::Scheduler& _PScheduler, filter_method const& _Filter)
     {
-        initialize_source_and_target(&_PScheduler);
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::initialize_source_and_target(&_PScheduler);
         register_filter(_Filter);
     }
 
@@ -257,7 +271,10 @@ public:
     /// </param>
     PriorityBuffer(Concurrency::ScheduleGroup& _PScheduleGroup)
     {
-        initialize_source_and_target(NULL, &_PScheduleGroup);
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::
+            initialize_source_and_target(NULL, &_PScheduleGroup);
     }
 
     /// <summary>
@@ -272,7 +289,10 @@ public:
     /// </param>
     PriorityBuffer(Concurrency::ScheduleGroup& _PScheduleGroup, filter_method const& _Filter)
     {
-        initialize_source_and_target(NULL, &_PScheduleGroup);
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::
+            initialize_source_and_target(NULL, &_PScheduleGroup);
         register_filter(_Filter);
     }
 
@@ -282,7 +302,9 @@ public:
     ~PriorityBuffer()
     {
         // Remove all links
-        remove_network_links();
+        Concurrency::propagator_block<
+            Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+            Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::remove_network_links();
     }
 
     /// <summary>
@@ -338,7 +360,9 @@ protected:
 
         if (_PMessage != NULL)
         {
-            async_send(_PMessage);
+            Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::async_send(_PMessage);
         }
         else
         {
@@ -368,7 +392,9 @@ protected:
 
         if (_PMessage != NULL)
         {
-            sync_send(_PMessage);
+            Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::sync_send(_PMessage);
         }
         else
         {
@@ -462,7 +488,9 @@ protected:
         // If there are any messages in the buffer, propagate them out
         if (_M_messageBuffer.count() > 0)
         {
-            async_send(NULL);
+            Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::async_send(NULL);
         }
     }
 
@@ -476,7 +504,10 @@ protected:
     {
         // If the message queue is blocked due to reservation
         // there is no need to do any message propagation
-        if (_M_pReservedFor != NULL)
+        if (Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::_M_pReservedFor
+            != NULL)
         {
             return;
         }
@@ -517,7 +548,10 @@ protected:
 
             // If a reservation is held make sure to not insert this new
             // message before it.
-            if (_M_pReservedFor != NULL)
+            if (Concurrency::propagator_block<
+                    Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                    Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::_M_pReservedFor
+                != NULL)
             {
                 _M_messageBuffer.enqueue(_PMessage, false);
             }
@@ -545,10 +579,13 @@ private:
     /// </summary>
     void _Propagate_priority_order()
     {
-        Concurrency::message<_Target_type>* _Msg = _M_messageBuffer.peek();
+        auto* _Msg = _M_messageBuffer.peek();
 
         // If someone has reserved the _Head message, don't propagate anymore
-        if (_M_pReservedFor != NULL)
+        if (Concurrency::propagator_block<
+                Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::_M_pReservedFor
+            != NULL)
         {
             return;
         }
@@ -558,9 +595,14 @@ private:
             Concurrency::message_status _Status = Concurrency::declined;
 
             // Always start from the first target that linked.
-            for (target_iterator _Iter = _M_connectedTargets.begin(); *_Iter != NULL; ++_Iter)
+            for (auto _Iter =
+                     Concurrency::propagator_block<
+                         Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                         Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::_M_connectedTargets.begin();
+                 *_Iter != NULL;
+                 ++_Iter)
             {
-                Concurrency::ITarget<_Target_type>* _PTarget = *_Iter;
+                auto* _PTarget = *_Iter;
                 _Status = _PTarget->propagate(_Msg, this);
 
                 // Ownership of message changed. Do not propagate this
@@ -572,7 +614,10 @@ private:
 
                 // If the target just propagated to reserved this message, stop
                 // propagating it to others.
-                if (_M_pReservedFor != NULL)
+                if (Concurrency::propagator_block<
+                        Concurrency::multi_link_registry<Concurrency::ITarget<_Type>>,
+                        Concurrency::multi_link_registry<Concurrency::ISource<_Type>>>::_M_pReservedFor
+                    != NULL)
                 {
                     break;
                 }

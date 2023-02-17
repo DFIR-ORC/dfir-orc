@@ -67,7 +67,7 @@ inline bool equalCaseInsensitive(const std::wstring_view s1, const std::wstring_
     return true;
 }
 
-inline bool equalCaseInsensitive(const std::string_view s1, const std::string_view& s2)
+inline bool equalCaseInsensitive(std::string_view s1, std::string_view s2)
 {
     if (s1.size() != s2.size())
         return false;
@@ -85,7 +85,7 @@ inline bool equalCaseInsensitive(const std::string_view s1, const std::string_vi
     return true;
 }
 
-inline bool equalCaseInsensitive(const std::string_view s1, const std::string_view s2, size_t cchCount)
+inline bool equalCaseInsensitive(std::string_view s1, std::string_view s2, size_t cchCount)
 {
     if (s1.size() < cchCount || s2.size() < cchCount)
         return false;
@@ -115,7 +115,7 @@ inline size_t hashCaseInsensitive(const std::wstring_view s)
     return hash;
 }
 
-inline size_t hashCaseInsensitive(const std::string_view s)
+inline size_t hashCaseInsensitive(std::string_view s)
 {
     ULONG hash = 0;
 
@@ -169,10 +169,7 @@ struct CaseInsensitiveUnorderedAnsi
     {
         return equalCaseInsensitive(*s1, *s2);
     };
-    inline bool operator()(const std::string_view s1, const std::string_view s2) const
-    {
-        return equalCaseInsensitive(s1, s2);
-    };
+    inline bool operator()(std::string_view s1, std::string_view s2) const { return equalCaseInsensitive(s1, s2); };
     inline size_t operator()(const std::string& s) const { return hashCaseInsensitive(s); }
 };
 }  // namespace Orc

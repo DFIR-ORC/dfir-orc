@@ -66,7 +66,14 @@ public:
             {
                 try
                 {
-                    fmt::format_to(std::back_inserter(msg), arg0, std::forward<Args>(args)...);
+                    if constexpr (std::is_same_v<CharT, char>)
+                    {
+                        fmt::vformat_to(std::back_inserter(msg), arg0, fmt::make_format_args(args...));
+                    }
+                    else
+                    {
+                        fmt::vformat_to(std::back_inserter(msg), arg0, fmt::make_wformat_args(args...));
+                    }
                 }
                 catch (const fmt::format_error&)
                 {

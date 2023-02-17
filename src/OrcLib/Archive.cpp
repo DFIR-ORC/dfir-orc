@@ -19,7 +19,7 @@
 namespace fs = std::filesystem;
 using namespace Orc;
 
-Orc::ArchiveFormat OrcArchive::GetArchiveFormat(const std::wstring_view& filepath)
+Orc::ArchiveFormat OrcArchive::GetArchiveFormat(std::wstring_view filepath)
 {
     auto path = fs::path(std::wstring(filepath));
 

@@ -26,6 +26,7 @@
 
 #include "Command/WolfLauncher/Journal.h"
 #include "Command/WolfLauncher/Outcome.h"
+#include "Utils/Locker.h"
 
 #pragma managed(push, off)
 
@@ -83,7 +84,7 @@ public:
     const JobRestrictions& GetJobRestrictions() const { return m_Restrictions; }
 
 private:
-    void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notification& notfication);
+    void ArchiveNotificationHandler(const ArchiveNotification::Notification& notfication);
     CommandMessage::Message SetCommandFromConfigItem(const ConfigItem& item);
     HRESULT
     GetExecutableToRun(const ConfigItem& item, std::wstring& strExeToRun, std::wstring& strArgToAdd, bool& isSelf);
@@ -91,7 +92,7 @@ private:
 
 private:
     Command::Wolf::Journal& m_journal;
-    Command::Wolf::Outcome::Outcome& m_outcome;
+    Locker<Command::Wolf::Outcome::Outcome>& m_outcome;
 
     std::wstring m_commandSet;
     std::wstring m_strCompressionLevel;
@@ -259,7 +260,7 @@ public:
 
     HRESULT CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue);
 
-    WolfExecution(Journal& journal, Wolf::Outcome::Outcome& outcome)
+    WolfExecution(Journal& journal, Locker<Wolf::Outcome::Outcome>& outcome)
         : m_journal(journal)
         , m_outcome(outcome)
     {

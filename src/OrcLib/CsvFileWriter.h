@@ -98,7 +98,7 @@ public:
 
         return WriteColumn(wstr);
     }
-    STDMETHOD(WriteString)(const std::string_view& strString) override final
+    STDMETHOD(WriteString)(std::string_view strString) override final
     {
         if (strString.empty())
         {
@@ -146,7 +146,7 @@ public:
         return WriteColumn(strString);
     }
 
-    STDMETHOD(WriteString)(const std::wstring_view& strString) override final
+    STDMETHOD(WriteString)(std::wstring_view strString) override final
     {
         if (strString.empty())
         {
@@ -164,8 +164,8 @@ public:
     }
 
 protected:
-    HRESULT WriteFormated_(const std::string_view& szFormat, fmt::format_args args) override final;
-    HRESULT WriteFormated_(const std::wstring_view& szFormat, fmt::wformat_args args) override final;
+    HRESULT WriteFormated_(std::string_view szFormat, fmt::format_args args) override final;
+    HRESULT WriteFormated_(std::wstring_view szFormat, fmt::wformat_args args) override final;
 
 public:
     STDMETHOD(WriteAttributes)(DWORD dwAttibutes) override final;
@@ -290,7 +290,7 @@ protected:
     };
 
     template <typename... Args>
-    HRESULT FormatToBuffer(const std::wstring_view& strFormat, Args&&... args)
+    HRESULT FormatToBuffer(std::wstring_view strFormat, Args&&... args)
     {
         try
         {

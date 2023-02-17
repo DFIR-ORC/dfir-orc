@@ -33,7 +33,7 @@ guard::ComPtr< ArchiveUpdateCallback > ArchiveUpdateCallback::Create(
 }
 
 guard::ComPtr< ArchiveUpdateCallback > ArchiveUpdateCallback::Create(
-    const std::string_view& content,
+    std::string_view content,
     const std::wstring& filename,
     std::error_code& ec )
 {
@@ -78,7 +78,7 @@ void ArchiveUpdateCallback::Init(
 }
 
 void ArchiveUpdateCallback::Init(
-    const std::string_view& content,
+    std::string_view content,
     const std::wstring& filename,
     std::error_code& ec )
 {

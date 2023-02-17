@@ -52,7 +52,7 @@ public:
     static void FreeFilters(Filter* pFilters);
 
     // file info config related static methods
-    static HRESULT ConfigItem_fileinfo_filter(ConfigItem& parent, LPWSTR szName, DWORD dwIndex);
+    static HRESULT ConfigItem_fileinfo_filter(ConfigItem& parent, LPCWSTR szName, DWORD dwIndex);
     static HRESULT ConfigItem_fileinfo_add_filter(ConfigItem& parent, DWORD dwIndex);
     static HRESULT ConfigItem_fileinfo_omit_filter(ConfigItem& parent, DWORD dwIndex);
     static HRESULT ConfigItem_fileinfo_column(ConfigItem& parent, DWORD dwIndex);

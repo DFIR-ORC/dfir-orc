@@ -16,7 +16,7 @@
 #include <variant>
 
 #include <fmt/format.h>
-//#include <fmt/time.h>
+#include <fmt/xchar.h>
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
@@ -395,11 +395,11 @@ TEST_METHOD(Format)
     Buffer<BYTE, 16> heap = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
                              13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
 
-    auto result = fmt::format("{0:02X}", heap);
+    auto result = fmt::vformat("{0:02X}", fmt::make_format_args(heap));
 
     Assert::AreEqual(result, fmt::to_string("000102030405060708090A0B0C0D0E0F10111213141516171819"));
 
-    auto wresult = fmt::format(L"{0:02X}", heap);
+    auto wresult = fmt::vformat(fmt::wstring_view(L"{0:02X}"), fmt::make_wformat_args(heap));
 
     Assert::AreEqual(wresult, fmt::to_wstring(L"000102030405060708090A0B0C0D0E0F10111213141516171819"));
 

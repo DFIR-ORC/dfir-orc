@@ -62,7 +62,7 @@ std::string ToUtf8(std::wstring_view utf16, std::error_code& ec)
     return utf8;
 }
 
-std::wstring ToUtf16(const std::string_view utf8, std::error_code& ec)
+std::wstring ToUtf16(std::string_view utf8, std::error_code& ec)
 {
     if (utf8.size() == 0)
     {

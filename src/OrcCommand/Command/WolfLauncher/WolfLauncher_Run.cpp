@@ -103,7 +103,7 @@ Orc::Result<std::string> WincryptBinaryToString(std::string_view buffer)
     {
         std::error_code ec = LastWin32Error();
         Log::Debug("Failed CryptBinaryToStringA while calculating output length [{}]", ec);
-        return nullptr;
+        return ec;
     }
 
     publicKey.resize(publicKeySize);
@@ -117,7 +117,7 @@ Orc::Result<std::string> WincryptBinaryToString(std::string_view buffer)
     {
         std::error_code ec = LastWin32Error();
         Log::Debug("Failed CryptBinaryToStringA while converting binary blob [{}]", ec);
-        return nullptr;
+        return ec;
     }
 
     publicKey.erase(boost::remove_if(publicKey, boost::is_any_of("\r\n")), publicKey.end());
@@ -219,8 +219,6 @@ Result<std::wstring> GetProcessExecutableHash(DWORD dwProcessId, CryptoHashStrea
 
 void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HANDLE hMothership)
 {
-    auto&& lock = outcome.Lock();
-
     outcome.SetId(id);
 
     {
@@ -776,13 +774,15 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
         return Success<void>();
     }
 
-    ::UpdateOutcome(m_outcome, m_guid, m_hMothership);
-    ::UpdateOutcome(m_outcome, config.m_Recipients);
-    ::UpdateOutcome(m_outcome, m_standardOutput);
-    ::UpdateOutcome(m_outcome, m_logging);
-    ::UpdateOutcomeWithOutline(m_outcome, config.Outline);
+    auto [outcome, lock] = m_outcome.Get();
 
-    auto rv = ::DumpOutcome(m_outcome, config.Outcome);
+    ::UpdateOutcome(outcome, m_guid, m_hMothership);
+    ::UpdateOutcome(outcome, config.m_Recipients);
+    ::UpdateOutcome(outcome, m_standardOutput);
+    ::UpdateOutcome(outcome, m_logging);
+    ::UpdateOutcomeWithOutline(outcome, config.Outline);
+
+    auto rv = ::DumpOutcome(outcome, config.Outcome);
     if (rv.has_error())
     {
 

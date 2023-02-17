@@ -429,7 +429,8 @@ MFTOnline::FetchMFTRecord(MFT_SEGMENT_REFERENCE& frn, MFTUtils::EnumMFTRecordCal
         return pCallBack(ulRecordIndex, data);
     };
 
-    return FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE> {frn}, callback);
+    std::vector<MFT_SEGMENT_REFERENCE> refs{frn};
+    return FetchMFTRecord(refs, callback);
 }
 
 HRESULT MFTOnline::FetchMFTRecord(std::vector<MFT_SEGMENT_REFERENCE>& frn, MFTUtils::EnumMFTRecordCall pCallBack)

@@ -79,10 +79,10 @@ private:
 public:
     BoundColumn(
         ColumnType type,
-        const std::wstring_view& strName,
-        const std::wstring_view& strDescr = L""sv,
-        const std::wstring_view& strFormat = L""sv,
-        const std::wstring_view& strArtifact = L""sv)
+        std::wstring_view strName,
+        std::wstring_view strDescr = L""sv,
+        std::wstring_view strFormat = L""sv,
+        std::wstring_view strArtifact = L""sv)
         : Column(type, strName, strDescr, strFormat, strArtifact)
     {
         ZeroMemory(&boundData, sizeof(boundData));
@@ -104,7 +104,7 @@ public:
     HRESULT PrintToBuffer(const CHAR* szFormat, va_list argList);
 
     HRESULT WriteString(const std::wstring& strString) { return WriteString(std::wstring_view(strString)); }
-    HRESULT WriteString(const std::wstring_view& szString);
+    HRESULT WriteString(std::wstring_view szString);
     HRESULT WriteString(const WCHAR* szString)
     {
         return WriteCharArray(szString, msl::utilities::SafeInt<DWORD>(wcslen(szString)));
@@ -116,7 +116,7 @@ public:
     HRESULT WriteFormatedString(const WCHAR* szFormat, ...);
 
     HRESULT WriteString(const std::string& strString) { return WriteString(std::string_view(strString)); }
-    HRESULT WriteString(const std::string_view& strString);
+    HRESULT WriteString(std::string_view strString);
     HRESULT WriteString(const CHAR* szString) { return WriteString(std::string_view(szString, strlen(szString))); }
     HRESULT WriteCharArray(const CHAR* szArray, DWORD dwCharCount)
     {
@@ -124,8 +124,8 @@ public:
     }
     HRESULT WriteFormatedString(const CHAR* szFormat, ...);
 
-    HRESULT WriteFormated(const std::wstring_view& szFormat, fmt::wformat_args args);
-    HRESULT WriteFormated(const std::string_view& szFormat, fmt::format_args args);
+    HRESULT WriteFormated(std::wstring_view szFormat, fmt::wformat_args args);
+    HRESULT WriteFormated(std::string_view szFormat, fmt::format_args args);
 
     HRESULT WriteAttributes(DWORD dwAttibutes);
     HRESULT WriteFileTime(FILETIME fileTime);
