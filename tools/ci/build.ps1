@@ -67,7 +67,11 @@ function Build-Orc
         [Parameter()]
         [ValidateSet('vs2017', 'vs2019', 'vs2022')]
         [String]
-        $Toolchain = 'vs2019',
+        $ToolChain = 'vs2019',
+        [Parameter()]
+        [ValidateSet('v141', 'v141_xp', 'v142', 'v143')]
+        [String]
+        $PlatformToolSet = "v141_xp",
         [Parameter(Mandatory)]
         [ValidateSet('Debug', 'MinSizeRel', 'RelWithDebInfo', IgnoreCase=$false)]
         [String[]]
@@ -133,7 +137,7 @@ function Build-Orc
 
     $CMakeGenerationOptions = @(
         "-S `"${OrcPath}`""
-        "-T v141_xp"
+        "-T ${PlatformToolSet}"
         "-DORC_BUILD_VCPKG=ON"
         "-DORC_VCPKG_ROOT=`"${Vcpkg}`""
         "-DCMAKE_TOOLCHAIN_FILE=`"${Vcpkg}\scripts\buildsystems\vcpkg.cmake`""
@@ -178,7 +182,7 @@ function Build-Orc
             New-Item -Force -ItemType Directory -Path $BuildDir | Out-Null
         }
 
-        $Generator = $Generators[$Toolchain + "_" + $Arch]
+        $Generator = $Generators[$ToolChain + "_" + $Arch]
 
         foreach($Config in $Configuration)
         {
