@@ -1,5 +1,21 @@
 # ChangeLog
 
+## [10.1.6] - 2023-02-20
+### Added
+- Add check for unknown '/key' option value
+- Outline: add job limits, archive timeout values
+- GetThis: add support to '/sample' for path matching expressions
+
+### Changed
+- Increase supported maximum path length
+- WolfLauncher: Add critical log when task are killed
+
+### Fixed
+- WolfLauncher: fix missing 'upload' configuration element
+- USNInfo: fix shadow copy volume selection
+- Outcome: fix sometimes missing command metadata
+- Configuration: fix unexpected xml elements handling
+
 ## [10.1.5] - 2023-01-17
 ### Added
 - Print configured archive and command timeouts in parameters summary
