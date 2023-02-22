@@ -655,7 +655,10 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
             }
 
             if (auto hr = Buffer.SetData((LPBYTE)lpData, dwSize); FAILED(hr))
+            {
+                Log::Debug("Failed to setup resource buffer [{}]", SystemError(hr));
                 return hr;
+            }
         }
         else
         {
@@ -748,12 +751,15 @@ HRESULT EmbeddedResource::ExtractValue(const std::wstring& Module, const std::ws
 
     if (FAILED(hr = LocateResource(Module, Name, VALUES(), hModule, hRes, strBinaryPath)))
     {
+        Log::Error(L"Failed LocateResource '{}' in module '{}' [{}]", Name, Module, SystemError(hr));
         return hr;
     }
     else if (hModule == NULL && hRes == NULL)
     {
+        Log::Error(L"Failed to find '{}' in module '{}'", Name, Module);
         return HRESULT_FROM_WIN32(ERROR_RESOURCE_NAME_NOT_FOUND);
     }
+
     HGLOBAL hFileResource = LoadResource(hModule, hRes);
     if (hFileResource == NULL)
     {
