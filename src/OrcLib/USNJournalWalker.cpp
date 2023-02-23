@@ -80,13 +80,13 @@ HRESULT USNJournalWalker::Initialize(const std::shared_ptr<Location>& loc)
     // open a handle to the root of the drive.
     m_cchMaxComponentLength = 0;
 
-    WCHAR szFSName[MAX_PATH];
-    WCHAR szVolName[MAX_PATH];
+    WCHAR szFSName[ORC_MAX_PATH];
+    WCHAR szVolName[ORC_MAX_PATH];
 
     wcscpy_s(szVolName, mountedVolReader->ShortVolumeName());
     wcscat_s(szVolName, L"\\");
 
-    if (GetVolumeInformation(szVolName, NULL, NULL, NULL, &m_cchMaxComponentLength, NULL, szFSName, MAX_PATH))
+    if (GetVolumeInformation(szVolName, NULL, NULL, NULL, &m_cchMaxComponentLength, NULL, szFSName, ORC_MAX_PATH))
     {
         m_dwRecordMaxSize = (m_cchMaxComponentLength * sizeof(WCHAR) + sizeof(USN_RECORD) - sizeof(WCHAR))
             + sizeof(DWORD);  // We are adding 4 bytes because of testing results contradicting

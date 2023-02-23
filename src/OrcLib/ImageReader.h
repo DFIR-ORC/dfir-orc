@@ -16,7 +16,7 @@ namespace Orc {
 class ImageReader : public CompleteVolumeReader
 {
 private:
-    WCHAR m_szImageReader[MAX_PATH];
+    WCHAR m_szImageReader[ORC_MAX_PATH];
 
 protected:
     virtual std::shared_ptr<VolumeReader> DuplicateReader();

@@ -117,7 +117,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
     const std::wstring_view& szFormat,
     fmt::wformat_args args)
 {
-    Buffer<WCHAR, MAX_PATH> buffer;
+    Buffer<WCHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
     std::wstring_view result_string = buffer.empty() ? L""sv : std::wstring_view(buffer.get(), buffer.size());
@@ -131,7 +131,7 @@ HRESULT Orc::StructuredOutput::JSON::Writer<_RapidWriter, _Ch>::WriteFormated_(
     const std::string_view& szFormat,
     fmt::format_args args)
 {
-    Buffer<CHAR, MAX_PATH> buffer;
+    Buffer<CHAR, ORC_MAX_PATH> buffer;
     auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
 
     std::string_view result_string = buffer.empty() ? ""sv : std::string_view(buffer.get(), buffer.size());

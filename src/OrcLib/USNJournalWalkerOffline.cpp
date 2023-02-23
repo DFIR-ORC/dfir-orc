@@ -63,7 +63,7 @@ HRESULT USNJournalWalkerOffline::Initialize(const std::shared_ptr<Location>& loc
 
     std::shared_ptr<Location> added;
     m_Locations.AddLocation(loc, added, true);
-    m_Locations.Consolidate(false, FSVBR::FSType::NTFS);
+    m_Locations.Consolidate(true, FSVBR::FSType::NTFS);
 
     if (FAILED(
             hr = fileFind.Find(

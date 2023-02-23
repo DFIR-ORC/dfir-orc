@@ -185,8 +185,8 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         }
         m_bDeleteOnClose = false;
 
-        WCHAR szFullPath[MAX_PATH];
-        if (!GetModuleFileName(m_hModule, szFullPath, MAX_PATH))
+        WCHAR szFullPath[ORC_MAX_PATH];
+        if (!GetModuleFileName(m_hModule, szFullPath, ORC_MAX_PATH))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
             Log::Debug(L"Failed to get file path for extension lib '{}' [{}]", strNewLibRef, SystemError(hr));
@@ -212,8 +212,8 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
         }
         m_bDeleteOnClose = false;
     }
-    WCHAR szFullPath[MAX_PATH];
-    if (!GetModuleFileName(m_hModule, szFullPath, MAX_PATH))
+    WCHAR szFullPath[ORC_MAX_PATH];
+    if (!GetModuleFileName(m_hModule, szFullPath, ORC_MAX_PATH))
     {
         auto hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Debug(L"Failed to get file path for extension lib '{}' [{}]", strFileRef, SystemError(hr));
@@ -499,8 +499,8 @@ Orc::ExtensionLibrary::DefaultExtensionDirectory(std::optional<std::filesystem::
 
     if (defaultDir.empty())
     {
-        WCHAR szTempDir[MAX_PATH];
-        if (auto hr = UtilGetTempDirPath(szTempDir, MAX_PATH); SUCCEEDED(hr))
+        WCHAR szTempDir[ORC_MAX_PATH];
+        if (auto hr = UtilGetTempDirPath(szTempDir, ORC_MAX_PATH); SUCCEEDED(hr))
             defaultDir = szTempDir;
     }
 

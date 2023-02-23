@@ -463,11 +463,11 @@ Intentions
 FileInfo::GetIntentions(const WCHAR* Params, const ColumnNameDef aliasNames[], const ColumnNameDef columnNames[])
 {
     Intentions dwIntentions = Intentions::FILEINFO_NONE;
-    WCHAR szParams[MAX_PATH];
+    WCHAR szParams[ORC_MAX_PATH];
     WCHAR* pCur = szParams;
 
-    StringCchCopy(szParams, MAX_PATH, Params);
-    StringCchCat(szParams, MAX_PATH, L",");
+    StringCchCopy(szParams, ORC_MAX_PATH, Params);
+    StringCchCat(szParams, ORC_MAX_PATH, L",");
     DWORD dwParamLen = (DWORD)wcslen(szParams);
 
     for (DWORD i = 0; i < dwParamLen; i++)
@@ -1661,10 +1661,10 @@ HRESULT FileInfo::WriteAuthenticodeSigner(ITableOutput& output)
 
     for (auto signer : signers)
     {
-        WCHAR szNameString[MAX_PATH];
-        ZeroMemory(szNameString, MAX_PATH * sizeof(WCHAR));
+        WCHAR szNameString[ORC_MAX_PATH];
+        ZeroMemory(szNameString, ORC_MAX_PATH * sizeof(WCHAR));
 
-        CertGetNameString(signer, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, szNameString, MAX_PATH);
+        CertGetNameString(signer, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, szNameString, ORC_MAX_PATH);
         if (!bIsFirst)
         {
             signerstream << L";" << szNameString;
@@ -1746,10 +1746,10 @@ HRESULT FileInfo::WriteAuthenticodeCA(ITableOutput& output)
 
     for (auto CA : signersCAs)
     {
-        WCHAR szNameString[MAX_PATH];
-        ZeroMemory(szNameString, MAX_PATH * sizeof(WCHAR));
+        WCHAR szNameString[ORC_MAX_PATH];
+        ZeroMemory(szNameString, ORC_MAX_PATH * sizeof(WCHAR));
 
-        CertGetNameString(CA, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, szNameString, MAX_PATH);
+        CertGetNameString(CA, CERT_NAME_SIMPLE_DISPLAY_TYPE, 0L, NULL, szNameString, ORC_MAX_PATH);
         if (!bIsFirst)
         {
             castream << L";" << szNameString;

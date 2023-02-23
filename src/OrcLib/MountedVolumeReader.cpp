@@ -219,7 +219,7 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
     else if (std::regex_match(s, m, r2))
     {
         DWORD dwPathLen = 0;
-        WCHAR szVolumePath[MAX_PATH];
+        WCHAR szVolumePath[ORC_MAX_PATH];
 
         wcscpy_s(szVolumePath, m_VolumePath);
         wcscat_s(szVolumePath, L"\\");
@@ -262,9 +262,10 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
         wcscat_s(m_szShortVolumeName, MAX_VOLUME_NAME, L"\\");
     }
 
-    WCHAR szFSName[MAX_PATH];
+    WCHAR szFSName[ORC_MAX_PATH];
 
-    if (!GetVolumeInformation(m_szShortVolumeName, NULL, NULL, NULL, &m_dwMaxComponentLength, NULL, szFSName, MAX_PATH))
+    if (!GetVolumeInformation(
+            m_szShortVolumeName, NULL, NULL, NULL, &m_dwMaxComponentLength, NULL, szFSName, ORC_MAX_PATH))
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }

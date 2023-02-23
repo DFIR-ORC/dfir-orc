@@ -68,7 +68,7 @@ HRESULT FileStream::CreateNew(
     __in DWORD dwFlags,
     __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes)
 {
-    WCHAR wszFilePath[MAX_PATH];
+    WCHAR wszFilePath[ORC_MAX_PATH];
     HRESULT hr = E_FAIL;
 
     wszFilePath[0] = 0;

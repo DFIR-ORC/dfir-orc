@@ -105,6 +105,18 @@ void ApplyOptionNoLimits(const Main::Configuration& configuration, Orc::CommandM
     }
 }
 
+struct CaseInsensitiveComparator
+{
+    bool operator()(const std::wstring& lhs, const std::wstring& rhs) const
+    {
+        // complies with strict weak ordering comparator requirement
+        return std::lexicographical_compare(
+            std::cbegin(lhs), std::cend(lhs), std::cbegin(rhs), std::cend(rhs), [](wchar_t l, wchar_t r) {
+                return std::toupper(l) < std::toupper(r);
+            });
+    }
+};
+
 }  // namespace
 
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
@@ -347,6 +359,19 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
+    if (configitem[WOLFLAUNCHER_UPLOAD])
+    {
+        auto upload = std::make_shared<OutputSpec::Upload>();
+
+        if (auto hr = upload->Configure(configitem[WOLFLAUNCHER_UPLOAD]); FAILED(hr))
+        {
+            Log::Error("Error in specified upload section in config file, ignored [{}]", SystemError(hr));
+            return hr;
+        }
+
+        config.Output.UploadOutput = upload;
+    }
+
     for (const ConfigItem& archiveitem : configitem[WOLFLAUNCHER_ARCHIVE].NodeList)
     {
         auto exec = std::make_unique<WolfExecution>(m_journal, m_outcome);
@@ -567,7 +592,16 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         std::wstring strTags;
 
         ConsoleConfiguration::Parse(argc, argv, m_consoleConfiguration);
+
+        UtilitiesLoggerConfiguration logConfiguration;
         UtilitiesLoggerConfiguration::Parse(argc, argv, m_utilitiesConfig.log);
+
+        // The cli log level option ('/debug', ...) supersede the console sink's level
+        UtilitiesLoggerConfiguration::Parse(argc, argv, logConfiguration);
+        if (logConfiguration.level)
+        {
+            m_utilitiesConfig.log.console.level.reset();
+        }
 
         for (int i = 0; i < argc; i++)
         {
@@ -933,6 +967,12 @@ HRESULT Main::CheckConfiguration()
         SetEnvironmentVariable(L"OfflineLocation", config.strOfflineLocation.value().c_str());
     }
 
+    std::map<std::wstring, bool, CaseInsensitiveComparator> processedKeys;
+    for (const auto& key : config.OnlyTheseKeywords)
+    {
+        processedKeys[key] = false;
+    }
+
     if (!config.OnlyTheseKeywords.empty())
     {
         for (const auto& exec : m_wolfexecs)
@@ -941,6 +981,7 @@ HRESULT Main::CheckConfiguration()
 
             if (found != end(config.OnlyTheseKeywords))
             {
+                processedKeys[exec->GetKeyword()] = true;
                 exec->SetMandatory();
             }
             else
@@ -954,6 +995,7 @@ HRESULT Main::CheckConfiguration()
                     {
                         exec->SetMandatory();
                         command->SetMandatory();
+                        processedKeys[command->Keyword()] = true;
                     }
                     else
                     {
@@ -961,6 +1003,14 @@ HRESULT Main::CheckConfiguration()
                     }
                 }
             }
+        }
+    }
+
+    for (const auto& [key, status] : processedKeys)
+    {
+        if (status == false)
+        {
+            Log::Critical(L"Key not found: {}", key);
         }
     }
 

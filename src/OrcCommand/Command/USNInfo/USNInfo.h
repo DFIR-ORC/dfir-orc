@@ -35,6 +35,8 @@ public:
         {
             output.supportedTypes = static_cast<OutputSpec::Kind>(
                 OutputSpec::Kind::TableFile | OutputSpec::Kind::Directory | OutputSpec::Kind::Archive);
+
+            bAddShadows = boost::logic::indeterminate;
         };
 
         OutputSpec output;

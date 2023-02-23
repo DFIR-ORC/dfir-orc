@@ -157,7 +157,7 @@ void Main::PrintUsage()
         "Specify one or multiple option between 'output=<path>', encoding=<utf-8|utf-16> (default: utf-8).\n"
         "Example: /Console:output=foo.log,encoding=utf-16\n"
         "\n"
-        "REMARK: The console's log level is set using the '/log' switch")};
+        "REMARK: The console's log level is set using '/log:console,level=<value>'")};
 
     Usage::PrintLoggingParameters(usageNode, kUsageConsole);
 }

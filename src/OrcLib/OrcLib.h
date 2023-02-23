@@ -35,6 +35,8 @@
 
 namespace Orc {
 
+constexpr uint16_t ORC_MAX_PATH = 2048;
+
 // Utilities
 class Exception;
 enum class Severity : short;

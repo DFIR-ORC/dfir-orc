@@ -622,6 +622,40 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                     {
                         writer->WriteNamed(L"keyword", exec->GetKeyword().c_str());
                         writer->WriteNamed(L"file", exec->GetArchiveFileName().c_str());
+                        writer->WriteNamed(
+                            L"archive_timeout",
+                            std::chrono::duration_cast<std::chrono::seconds>(exec->ArchiveTimeOut()).count());
+                        writer->WriteNamed(
+                            L"command_timeout",
+                            std::chrono::duration_cast<std::chrono::seconds>(exec->CmdTimeOut()).count());
+
+                        if (exec->GetJobRestrictions().ExtendedLimits || exec->GetJobRestrictions().CpuRateControl)
+                        {
+                            writer->BeginCollection(L"job");
+                            writer->BeginCollection(L"limit");
+
+                            const auto& restrictions = exec->GetJobRestrictions();
+                            if (restrictions.ExtendedLimits)
+                            {
+                                auto& limits = restrictions.ExtendedLimits.value();
+
+                                writer->WriteNamed(L"memory", limits.JobMemoryLimit);
+                                writer->WriteNamed(L"usertime", limits.BasicLimitInformation.PerJobUserTimeLimit);
+                                writer->WriteNamed(L"process_memory", limits.ProcessMemoryLimit);
+                                writer->WriteNamed(
+                                    L"process_usertime", limits.BasicLimitInformation.PerProcessUserTimeLimit);
+                            }
+
+                            if (restrictions.CpuRateControl)
+                            {
+                                writer->WriteNamed(L"cpu_rate", restrictions.CpuRateControl.value().CpuRate);
+                                writer->WriteNamed(L"cpu_weight", restrictions.CpuRateControl.value().Weight);
+                            }
+
+                            writer->EndCollection(L"limit");
+                            writer->EndCollection(L"job");
+                        }
+
                         writer->BeginCollection(L"commands");
                         for (const auto& command : exec->GetCommands())
                         {

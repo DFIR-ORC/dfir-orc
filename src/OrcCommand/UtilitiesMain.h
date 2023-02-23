@@ -227,9 +227,9 @@ public:
                     {
                         std::shared_ptr<::Orc::TableOutput::IWriter> pW;
 
-                        WCHAR szOutputFile[MAX_PATH];
+                        WCHAR szOutputFile[ORC_MAX_PATH];
                         StringCchPrintf(
-                            szOutputFile, MAX_PATH, L"%s_%s.csv", szPrefix, out.first.GetIdentifier().c_str());
+                            szOutputFile, ORC_MAX_PATH, L"%s_%s.csv", szPrefix, out.first.GetIdentifier().c_str());
                         if (nullptr == (pW = ::Orc::TableOutput::GetWriter(szOutputFile, output)))
                         {
                             Log::Error("Failed to create output file information");
@@ -247,10 +247,10 @@ public:
 
                         std::shared_ptr<::Orc::TableOutput::IWriter> pW;
 
-                        WCHAR szOutputFile[MAX_PATH];
+                        WCHAR szOutputFile[ORC_MAX_PATH];
                         StringCchPrintf(
                             szOutputFile,
-                            MAX_PATH,
+                            ORC_MAX_PATH,
                             L"%s_%.8d_%s_.csv",
                             szPrefix,
                             idx++,

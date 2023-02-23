@@ -78,6 +78,10 @@ public:
         CBinaryBuffer Certificate;
     };
 
+    std::chrono::milliseconds CmdTimeOut() const { return m_CmdTimeOut; }
+    std::chrono::milliseconds ArchiveTimeOut() const { return m_ArchiveTimeOut; }
+    const JobRestrictions& GetJobRestrictions() const { return m_Restrictions; }
+
 private:
     void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notification& notfication);
     CommandMessage::Message SetCommandFromConfigItem(const ConfigItem& item);
@@ -127,7 +131,6 @@ private:
     std::vector<CommandMessage::Message> m_Commands;
 
     std::map<std::wstring, std::shared_ptr<WolfTask>> m_TasksByKeyword;
-    std::map<DWORD, std::shared_ptr<WolfTask>> m_TasksByPID;
     DWORD m_dwLongerTaskKeyword = 0L;
 
     CommandMessage::PriorityMessageBuffer m_cmdAgentBuffer;

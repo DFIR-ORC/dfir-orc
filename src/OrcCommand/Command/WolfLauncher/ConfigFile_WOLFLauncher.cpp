@@ -193,5 +193,8 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddAttribute(L"werdontshowui", WOLFLAUNCHER_WERDONTSHOWUI, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(hr = item.AddChild(L"upload", Orc::Config::Common::upload, WOLFLAUNCHER_UPLOAD)))
+        return hr;
+
     return S_OK;
 }

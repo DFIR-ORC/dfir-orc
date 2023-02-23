@@ -2001,7 +2001,7 @@ FileFind::MatchName(const std::shared_ptr<FileFind::SearchTerm>& aTerm, const PF
     {
         if (pFileName == nullptr)
             return SearchTerm::Criteria::NONE;
-        WCHAR szName[MAX_PATH];
+        WCHAR szName[ORC_MAX_PATH];
         szName[0] = L'\0';  // avoid false positive warning C6054
         wcsncpy_s(szName, pFileName->FileName, pFileName->FileNameLength);
         if (aTerm->FileName.empty())
@@ -2475,7 +2475,7 @@ FileFind::MatchAttr(const std::shared_ptr<SearchTerm>& aTerm, LPCWSTR szAttrName
 {
     SearchTerm::Criteria matchedSpec = SearchTerm::Criteria::NONE;
 
-    WCHAR szLocalAttrName[MAX_PATH];
+    WCHAR szLocalAttrName[ORC_MAX_PATH];
     szLocalAttrName[0] = L'\0';  // avoid false positive warning C6054
     wcsncpy_s(szLocalAttrName, szAttrName, AttrNameLen);
 
@@ -2489,7 +2489,7 @@ FileFind::RegExAttr(const std::shared_ptr<SearchTerm>& aTerm, LPCWSTR szAttrName
 {
     SearchTerm::Criteria matchedSpec = SearchTerm::Criteria::NONE;
 
-    WCHAR szLocalAttrName[MAX_PATH];
+    WCHAR szLocalAttrName[ORC_MAX_PATH];
     szLocalAttrName[0] = L'\0';  // avoid false positive warning C6054
     wcsncpy_s(szLocalAttrName, szAttrName, AttrNameLen);
 
@@ -2688,7 +2688,7 @@ FileFind::MatchADS(const std::shared_ptr<FileFind::SearchTerm>& aTerm, LPCWSTR s
 {
     if (aTerm->Required & SearchTerm::Criteria::ADS_MATCH)
     {
-        WCHAR szADSName[MAX_PATH];
+        WCHAR szADSName[ORC_MAX_PATH];
         szADSName[0] = L'\0';  // avoid false positive warning C6054
         wcsncpy_s(szADSName, szAttrName, AttrNameLen);
         if (PathMatchSpec(szADSName, aTerm->ADSName.c_str()))

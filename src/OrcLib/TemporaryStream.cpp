@@ -65,8 +65,8 @@ STDMETHODIMP TemporaryStream::Open(
 
     if (strTempDir.empty())
     {
-        WCHAR szTempDir[MAX_PATH] = {0};
-        if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
+        WCHAR szTempDir[ORC_MAX_PATH] = {0};
+        if (FAILED(hr = UtilGetTempDirPath(szTempDir, ORC_MAX_PATH)))
         {
             Log::Warn("Failed to create temporary path [{}]", SystemError(hr));
             return hr;

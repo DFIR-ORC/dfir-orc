@@ -202,8 +202,8 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[NTFSINFO_COMPUTER])
     {
-        WCHAR szComputerName[MAX_PATH];
-        DWORD dwComputerLen = MAX_PATH;
+        WCHAR szComputerName[ORC_MAX_PATH];
+        DWORD dwComputerLen = ORC_MAX_PATH;
 
         if (auto actualLen =
                 ExpandEnvironmentStringsW(configitem[NTFSINFO_COMPUTER].c_str(), szComputerName, dwComputerLen);

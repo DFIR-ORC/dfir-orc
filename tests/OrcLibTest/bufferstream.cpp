@@ -31,7 +31,7 @@ public:
 
     TEST_METHOD(Basic)
     {
-        auto buf_stream = std::make_shared<BufferStream<MAX_PATH>>();
+        auto buf_stream = std::make_shared<BufferStream<ORC_MAX_PATH>>();
 
         std::vector<BYTE> bytes(1024);
 

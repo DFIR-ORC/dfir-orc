@@ -322,8 +322,8 @@ HRESULT Main::CheckConfiguration()
 
     if (config.tmpdirOutput.Path.empty())
     {
-        WCHAR szTempDir[MAX_PATH];
-        if (FAILED(hr = UtilGetTempDirPath(szTempDir, MAX_PATH)))
+        WCHAR szTempDir[ORC_MAX_PATH];
+        if (FAILED(hr = UtilGetTempDirPath(szTempDir, ORC_MAX_PATH)))
         {
             Log::Error("Failed to determine default temp folder [{}]", SystemError(hr));
             return hr;

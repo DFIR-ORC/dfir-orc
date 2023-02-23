@@ -13,9 +13,10 @@
 
 #pragma managed(push, off)
 
-constexpr auto MAX_VOLUME_NAME = MAX_PATH;
-
 namespace Orc {
+
+constexpr auto MAX_VOLUME_NAME = ORC_MAX_PATH;
+
 // CNtfs
 class MountedVolumeReader : public CompleteVolumeReader
 {
@@ -52,7 +53,7 @@ private:
     WCHAR m_Name;
     WCHAR m_szVolumeName[MAX_VOLUME_NAME];
     WCHAR m_szShortVolumeName[MAX_VOLUME_NAME];
-    WCHAR m_VolumePath[MAX_PATH];
+    WCHAR m_VolumePath[ORC_MAX_PATH];
 
     HRESULT GetDiskExtents();
 };

@@ -1672,8 +1672,6 @@ const std::vector<std::shared_ptr<RegFind::Match>> RegFind::FindMatch(const Regi
             it++;
         }
     }
-    else if (retval != nullptr)
-        retval->Reset();
 
     for (auto term_it = begin(m_Specs); term_it != end(m_Specs); ++term_it)
     {

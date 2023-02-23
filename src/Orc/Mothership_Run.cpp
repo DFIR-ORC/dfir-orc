@@ -298,8 +298,8 @@ HRESULT Main::LaunchWMI()
 {
     HRESULT hr = E_FAIL;
 
-    WCHAR szMyselfName[MAX_PATH];
-    hr = GetProcessModuleFullPath(szMyselfName, MAX_PATH);
+    WCHAR szMyselfName[ORC_MAX_PATH];
+    hr = GetProcessModuleFullPath(szMyselfName, ORC_MAX_PATH);
     if (FAILED(hr))
     {
         Log::Error("Failed to obtain own process full path [{}]", SystemError(hr));
@@ -428,8 +428,8 @@ HRESULT Main::LaunchSelf()
         }
     }
 
-    WCHAR szMyselfName[MAX_PATH];
-    hr = GetProcessModuleFullPath(szMyselfName, MAX_PATH);
+    WCHAR szMyselfName[ORC_MAX_PATH];
+    hr = GetProcessModuleFullPath(szMyselfName, ORC_MAX_PATH);
     if (FAILED(hr))
     {
         Log::Error("Failed to obtain own process full path [{}]", SystemError(hr));

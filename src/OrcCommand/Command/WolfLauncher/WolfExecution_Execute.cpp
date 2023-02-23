@@ -196,9 +196,9 @@ HRESULT WolfExecution::BuildFullArchiveName()
     {
         // A full path was specified, using it
         m_strArchiveFullPath = m_strArchiveName;
-        WCHAR szFileName[MAX_PATH];
+        WCHAR szFileName[ORC_MAX_PATH];
 
-        if (FAILED(hr = GetFileNameForFile(m_strArchiveFullPath.c_str(), szFileName, MAX_PATH)))
+        if (FAILED(hr = GetFileNameForFile(m_strArchiveFullPath.c_str(), szFileName, ORC_MAX_PATH)))
         {
             Log::Error("Unable to extract archive file name [{}]", SystemError(hr));
             return hr;
@@ -450,39 +450,27 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
 HRESULT WolfExecution::NotifyTask(const CommandNotification::Ptr& item)
 {
-    HRESULT hr = E_FAIL;
-
-    std::shared_ptr<WolfTask> task;
-
+    auto taskiter = m_TasksByKeyword.find(item->GetKeyword());
+    if (taskiter == m_TasksByKeyword.end())
     {
-        auto taskiter = m_TasksByPID.find(static_cast<DWORD>(item->GetProcessID()));
-
-        if (taskiter != m_TasksByPID.end())
-        {
-            task = taskiter->second;
-        }
+        Log::Error(L"Cannot find task by keyword: {}", item->GetKeyword());
+        return E_FAIL;
     }
 
+    auto task = taskiter->second;
     if (task == nullptr)
     {
-        auto taskiter = m_TasksByKeyword.find(item->GetKeyword());
-
-        if (taskiter != m_TasksByKeyword.end())
-        {
-            task = taskiter->second;
-        }
+        Log::Error(L"Failed to retrieve task: {}", item->GetKeyword());
+        return E_FAIL;
     }
 
-    if (task != nullptr)
+    std::vector<CommandMessage::Message> actions;
+    task->ApplyNotification(item, actions);
+    for (const auto& item : actions)
     {
-        std::vector<CommandMessage::Message> actions;
-        task->ApplyNotification(item, actions);
-
-        for (const auto& item : actions)
-        {
-            Concurrency::send(m_cmdAgentBuffer, item);
-        }
+        Concurrency::send(m_cmdAgentBuffer, item);
     }
+
     return S_OK;
 }
 
@@ -506,16 +494,8 @@ HRESULT WolfExecution::CreateCommandAgent(
             {
                 switch (item->GetEvent())
                 {
-                    case CommandNotification::Started: {
-                        auto taskiter = m_TasksByKeyword.find(item->GetKeyword());
-                        if (taskiter != m_TasksByKeyword.end())
-                            m_TasksByPID[static_cast<DWORD>(item->GetProcessID())] = taskiter->second;
-                        else
-                        {
-                            Log::Error(L"New task '{}' could not be found", item->GetKeyword());
-                        }
-                    }
-                    break;
+                    case CommandNotification::Started:
+                        break;
                     case CommandNotification::Terminated:
                         break;
                     case CommandNotification::Running:
@@ -530,16 +510,16 @@ HRESULT WolfExecution::CreateCommandAgent(
                         Log::Debug("No tasks are currently running");
                         break;
                     case CommandNotification::JobProcessLimit:
-                        Log::Warn("JOB: Process number limit");
+                        Log::Critical("JOB: Process number limit");
                         break;
                     case CommandNotification::JobMemoryLimit:
-                        Log::Warn(L"JOB: Memory limit");
+                        Log::Critical(L"JOB: Memory limit");
                         break;
                     case CommandNotification::JobTimeLimit:
-                        Log::Warn(L"JOB: CPU Time limit");
+                        Log::Critical(L"JOB: CPU Time limit");
                         break;
                     case CommandNotification::AllTerminated:
-                        Log::Warn("JOB: Job was autoritatively terminated");
+                        Log::Debug("JOB: Job was authoritatively terminated");
                         break;
                     case CommandNotification::Done: {
                         GetSystemTimeAsFileTime(&m_FinishTime);
@@ -579,7 +559,7 @@ HRESULT WolfExecution::CreateCommandAgent(
                             commandSetOutcome.SetJobStatistics(statistics);
                         }
 
-                        for (const auto& [keyword, task] : m_TasksByPID)
+                        for (const auto& [keyword, task] : m_TasksByKeyword)
                         {
                             if (task == nullptr)
                             {
@@ -701,6 +681,10 @@ HRESULT WolfExecution::EnqueueCommands()
 
     for (const auto& command : m_Commands)
     {
+        if (command->IsOptional())
+        {
+            continue;
+        }
 
         if (m_TasksByKeyword.find(command->Keyword()) != m_TasksByKeyword.end())
         {
@@ -711,25 +695,23 @@ HRESULT WolfExecution::EnqueueCommands()
             m_TasksByKeyword[command->Keyword()] =
                 std::make_shared<WolfTask>(GetKeyword(), command->Keyword(), m_journal);
         }
-        if (!command->IsOptional())
+
         {
+            auto&& lock = m_outcome.Lock();
+            auto& outcomeCommand = m_outcome.GetCommandSet(m_commandSet).GetCommand(command->Keyword());
+            for (const auto& parameter : command->GetParameters())
             {
-                auto&& lock = m_outcome.Lock();
-                auto& outcomeCommand = m_outcome.GetCommandSet(m_commandSet).GetCommand(command->Keyword());
-                for (const auto& parameter : command->GetParameters())
+                if (::HasFileOutput(parameter.Kind))
                 {
-                    if (::HasFileOutput(parameter.Kind))
-                    {
-                        Outcome::Command::Output outputFile;
-                        outputFile.SetName(parameter.Name);
-                        outputFile.SetType(::ToOutputFileType(parameter.Kind));
-                        outcomeCommand.GetOutput().emplace_back(std::move(outputFile));
-                    }
+                    Outcome::Command::Output outputFile;
+                    outputFile.SetName(parameter.Name);
+                    outputFile.SetType(::ToOutputFileType(parameter.Kind));
+                    outcomeCommand.GetOutput().emplace_back(std::move(outputFile));
                 }
             }
-
-            Concurrency::send(m_cmdAgentBuffer, command);
         }
+
+        Concurrency::send(m_cmdAgentBuffer, command);
     }
 
     return S_OK;

@@ -68,7 +68,7 @@ std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, size_t cbMa
 
 std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, std::error_code& ec) noexcept
 {
-    return ExpandEnvironmentStringsApi(szEnvString, MAX_PATH * sizeof(wchar_t), ec);
+    return ExpandEnvironmentStringsApi(szEnvString, ORC_MAX_PATH * sizeof(wchar_t), ec);
 }
 
 std::wstring GetWorkingDirectoryApi(size_t cbMaxOutput, std::error_code& ec) noexcept
@@ -109,7 +109,7 @@ std::wstring GetWorkingDirectoryApi(size_t cbMaxOutput, std::error_code& ec) noe
 
 std::wstring GetWorkingDirectoryApi(std::error_code& ec) noexcept
 {
-    return GetWorkingDirectoryApi(MAX_PATH * sizeof(wchar_t), ec);
+    return GetWorkingDirectoryApi(ORC_MAX_PATH * sizeof(wchar_t), ec);
 }
 
 std::wstring GetTempPathApi(size_t cbMaxOutput, std::error_code& ec) noexcept
@@ -150,13 +150,13 @@ std::wstring GetTempPathApi(size_t cbMaxOutput, std::error_code& ec) noexcept
 
 std::wstring GetTempPathApi(std::error_code& ec) noexcept
 {
-    return GetTempPathApi(MAX_PATH * sizeof(wchar_t), ec);
+    return GetTempPathApi(ORC_MAX_PATH * sizeof(wchar_t), ec);
 }
 
 std::wstring
 GetTempFileNameApi(const wchar_t* lpPathName, const wchar_t* lpPrefixString, UINT uUnique, std::error_code& ec) noexcept
 {
-    const DWORD cchMaxOutput = MAX_PATH;
+    const DWORD cchMaxOutput = ORC_MAX_PATH;
     const DWORD cbMaxOutput = cchMaxOutput * sizeof(wchar_t);
 
     std::wstring path;

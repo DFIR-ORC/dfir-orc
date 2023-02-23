@@ -595,7 +595,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
-            Log::Warn(
+            Log::Critical(
                 L"Specified size is too big for elapsed time restriction '{}'", item[WOLFLAUNCHER_ELAPSEDTIME].c_str());
         }
         // Elapsed time is expressed in minutes

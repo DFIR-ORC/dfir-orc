@@ -469,7 +469,7 @@ HRESULT MFTRecordFileInfo::WriteADS(ITableOutput& output)
     if (dataattrs.size())
     {
         bool bIsFirst = true;
-        Buffer<WCHAR, MAX_PATH> ADSs;
+        Buffer<WCHAR, ORC_MAX_PATH> ADSs;
 
         for (auto iter = dataattrs.begin(); iter != dataattrs.end(); ++iter)
         {

@@ -25,7 +25,7 @@ using namespace Orc;
 ImageReader::ImageReader(const WCHAR* szImageFile)
     : CompleteVolumeReader(szImageFile)
 {
-    wcscpy_s(m_szImageReader, MAX_PATH, szImageFile);
+    wcscpy_s(m_szImageReader, ORC_MAX_PATH, szImageFile);
 }
 
 HRESULT ImageReader::LoadDiskProperties(void)

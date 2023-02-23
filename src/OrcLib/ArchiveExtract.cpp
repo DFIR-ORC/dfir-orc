@@ -171,9 +171,9 @@ STDMETHODIMP ArchiveExtract::Extract(
         }
         BOOST_SCOPE_EXIT_END;
 
-        WCHAR szDirectory[MAX_PATH];
+        WCHAR szDirectory[ORC_MAX_PATH];
 
-        if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, MAX_PATH)))
+        if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, ORC_MAX_PATH)))
         {
             Log::Error(L"Failed to get directory for file '{}' [{}]", item.Path, SystemError(hr));
             return nullptr;
@@ -285,9 +285,9 @@ STDMETHODIMP ArchiveExtract::Extract(
             return nullptr;
         }
 
-        WCHAR szDirectory[MAX_PATH];
+        WCHAR szDirectory[ORC_MAX_PATH];
 
-        if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, MAX_PATH)))
+        if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, ORC_MAX_PATH)))
         {
             Log::Error(L"Failed to get directory for file '{}' [{}]", item.Path, SystemError(hr));
             return nullptr;
@@ -351,9 +351,9 @@ STDMETHODIMP ArchiveExtract::Extract(
             return nullptr;
         }
 
-        WCHAR szDirectory[MAX_PATH];
+        WCHAR szDirectory[ORC_MAX_PATH];
 
-        if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, MAX_PATH)))
+        if (FAILED(hr = GetDirectoryForFile(item.Path.c_str(), szDirectory, ORC_MAX_PATH)))
         {
             Log::Error(L"Failed to get directory for file '{}' [{}]", item.Path, SystemError(hr));
             return nullptr;

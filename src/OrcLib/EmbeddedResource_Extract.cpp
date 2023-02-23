@@ -245,9 +245,9 @@ HRESULT EmbeddedResource::LocateResource(
                 }
                 BOOST_SCOPE_EXIT_END;
 
-                WCHAR szParentFileName[MAX_PATH];
-                ZeroMemory(szParentFileName, MAX_PATH * sizeof(WCHAR));
-                if (!GetModuleFileNameEx(hParent, NULL, szParentFileName, MAX_PATH))
+                WCHAR szParentFileName[ORC_MAX_PATH];
+                ZeroMemory(szParentFileName, ORC_MAX_PATH * sizeof(WCHAR));
+                if (!GetModuleFileNameEx(hParent, NULL, szParentFileName, ORC_MAX_PATH))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
                     Log::Debug(L"Failed to get module file name for processID: {} [{}]", dwParents[i], SystemError(hr));
@@ -281,9 +281,9 @@ HRESULT EmbeddedResource::LocateResource(
     }
     else
     {
-        WCHAR szFileName[MAX_PATH];
-        ZeroMemory(szFileName, MAX_PATH * sizeof(WCHAR));
-        if (!GetModuleFileName(hInstance, szFileName, MAX_PATH))
+        WCHAR szFileName[ORC_MAX_PATH];
+        ZeroMemory(szFileName, ORC_MAX_PATH * sizeof(WCHAR));
+        if (!GetModuleFileName(hInstance, szFileName, ORC_MAX_PATH))
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
             Log::Debug("Failed to get module file name for current process [{}]", SystemError(hr));
@@ -391,8 +391,8 @@ HRESULT EmbeddedResource::ExtractRunWithArgs(
 
 HRESULT EmbeddedResource::GetSelf(std::wstring& outputFile)
 {
-    WCHAR szModuleName[MAX_PATH];
-    if (!GetModuleFileName(NULL, szModuleName, MAX_PATH))
+    WCHAR szModuleName[ORC_MAX_PATH];
+    if (!GetModuleFileName(NULL, szModuleName, ORC_MAX_PATH))
     {
         return HRESULT_FROM_WIN32(GetLastError());
     }
@@ -408,9 +408,9 @@ HRESULT Orc::EmbeddedResource::ExtractToFile(
     const std::wstring& strTempDir,
     std::wstring& outputFile)
 {
-    WCHAR szSDDL[MAX_PATH] = {0};
+    WCHAR szSDDL[ORC_MAX_PATH] = {0};
 
-    swprintf_s(szSDDL, MAX_PATH, szSDDLFormat, szSID);
+    swprintf_s(szSDDL, ORC_MAX_PATH, szSDDLFormat, szSID);
 
     return ExtractToFile(szImageFileResourceID, Keyword, szSDDL, strTempDir, outputFile);
 }
@@ -449,9 +449,9 @@ HRESULT Orc::EmbeddedResource::ExtractToDirectory(
     const std::wstring& strTempDir,
     std::vector<std::pair<std::wstring, std::wstring>>& outputFiles)
 {
-    WCHAR szSDDL[MAX_PATH] = {0};
+    WCHAR szSDDL[ORC_MAX_PATH] = {0};
 
-    swprintf_s(szSDDL, MAX_PATH, szSDDLFormat, szSID);
+    swprintf_s(szSDDL, ORC_MAX_PATH, szSDDLFormat, szSID);
 
     return ExtractToDirectory(szImageFileResourceID, Keyword, szSDDL, strTempDir, outputFiles);
 }
@@ -463,7 +463,7 @@ HRESULT EmbeddedResource::ExtractToDirectory(
     const std::wstring& strOutputDir,
     std::vector<std::pair<std::wstring, std::wstring>>& outputFiles)
 {
-    WCHAR szTempDir[MAX_PATH];
+    WCHAR szTempDir[ORC_MAX_PATH];
 
     if (!strOutputDir.empty())
     {
@@ -471,7 +471,7 @@ HRESULT EmbeddedResource::ExtractToDirectory(
     }
     else
     {
-        if (auto hr = UtilGetTempDirPath(szTempDir, MAX_PATH); FAILED(hr))
+        if (auto hr = UtilGetTempDirPath(szTempDir, ORC_MAX_PATH); FAILED(hr))
             return hr;
     }
 
@@ -655,7 +655,10 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
             }
 
             if (auto hr = Buffer.SetData((LPBYTE)lpData, dwSize); FAILED(hr))
+            {
+                Log::Debug("Failed to setup resource buffer [{}]", SystemError(hr));
                 return hr;
+            }
         }
         else
         {
@@ -748,12 +751,15 @@ HRESULT EmbeddedResource::ExtractValue(const std::wstring& Module, const std::ws
 
     if (FAILED(hr = LocateResource(Module, Name, VALUES(), hModule, hRes, strBinaryPath)))
     {
+        Log::Error(L"Failed LocateResource '{}' in module '{}' [{}]", Name, Module, SystemError(hr));
         return hr;
     }
     else if (hModule == NULL && hRes == NULL)
     {
+        Log::Error(L"Failed to find '{}' in module '{}'", Name, Module);
         return HRESULT_FROM_WIN32(ERROR_RESOURCE_NAME_NOT_FOUND);
     }
+
     HGLOBAL hFileResource = LoadResource(hModule, hRes);
     if (hFileResource == NULL)
     {

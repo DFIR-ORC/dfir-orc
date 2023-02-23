@@ -224,9 +224,9 @@ Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR s
     }
     BOOST_SCOPE_EXIT_END;
 
-    Buffer<WCHAR, MAX_PATH> valueBuffer;
-    DWORD cbBytes = MAX_PATH * sizeof(WCHAR);
-    valueBuffer.reserve(MAX_PATH);
+    Buffer<WCHAR, ORC_MAX_PATH> valueBuffer;
+    DWORD cbBytes = ORC_MAX_PATH * sizeof(WCHAR);
+    valueBuffer.reserve(ORC_MAX_PATH);
     DWORD dwValueType = 0;
     if (auto status = RegQueryValueExW(hKey, szValueName, NULL, &dwValueType, (LPBYTE)valueBuffer.get(), &cbBytes);
         status != ERROR_SUCCESS)
@@ -266,10 +266,11 @@ Result<std::wstring> Orc::Registry::Read<std::wstring>(HKEY hParentKey, LPWSTR s
     }
     else if (dwValueType == REG_EXPAND_SZ)
     {
-        Buffer<WCHAR, MAX_PATH> expandBuffer;
-        expandBuffer.reserve(MAX_PATH);
+        Buffer<WCHAR, ORC_MAX_PATH> expandBuffer;
+        expandBuffer.reserve(ORC_MAX_PATH);
 
-        if (auto cbSize = ExpandEnvironmentStringsW(valueBuffer.get(), expandBuffer.get(), MAX_PATH); cbSize > MAX_PATH)
+        if (auto cbSize = ExpandEnvironmentStringsW(valueBuffer.get(), expandBuffer.get(), ORC_MAX_PATH);
+            cbSize > ORC_MAX_PATH)
         {
             expandBuffer.reserve(cbSize);
             if (auto cbSizeReTry = ExpandEnvironmentStringsW(valueBuffer.get(), expandBuffer.get(), cbSize);

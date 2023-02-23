@@ -249,14 +249,14 @@ HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::wstring_view& sz
     {
         case UTF16Type:
         case XMLType: {
-            Buffer<WCHAR, MAX_PATH> buffer;
+            Buffer<WCHAR, ORC_MAX_PATH> buffer;
             buffer.view_of(boundData.WString->Data, dwMaxLen.value_or(DBMAXCHAR), 0L);
             auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
             boundData.WString->iIndicator = buffer.size() * sizeof(WCHAR);
         }
         break;
         case UTF8Type: {
-            Buffer<WCHAR, MAX_PATH> buffer;
+            Buffer<WCHAR, ORC_MAX_PATH> buffer;
             auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
             if (buffer.size() > dwMaxLen.value_or(DBMAXCHAR))
                 return E_NOT_SUFFICIENT_BUFFER;
@@ -266,7 +266,7 @@ HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::wstring_view& sz
         }
         break;
         case BinaryType: {
-            Buffer<WCHAR, MAX_PATH> buffer;
+            Buffer<WCHAR, ORC_MAX_PATH> buffer;
             buffer.view_of((WCHAR*)boundData.Binary->Data, dwMaxLen.value_or(DBMAXCHAR), 0L);
             auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
             boundData.Binary->iIndicator = buffer.size() * sizeof(WCHAR);
@@ -291,7 +291,7 @@ HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::string_view& szF
     {
         case UTF16Type:
         case XMLType: {
-            Buffer<CHAR, MAX_PATH> buffer;
+            Buffer<CHAR, ORC_MAX_PATH> buffer;
             auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
             if (buffer.size() > dwStrMaxLen)
                 return E_NOT_SUFFICIENT_BUFFER;
@@ -301,14 +301,14 @@ HRESULT Orc::TableOutput::BoundColumn::WriteFormated(const std::string_view& szF
         }
         break;
         case UTF8Type: {
-            Buffer<CHAR, MAX_PATH> buffer;
+            Buffer<CHAR, ORC_MAX_PATH> buffer;
             buffer.view_of(boundData.AString->Data, dwStrMaxLen, 0L);
             auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
             boundData.AString->iIndicator = buffer.size();
         }
         break;
         case BinaryType: {
-            Buffer<CHAR, MAX_PATH> buffer;
+            Buffer<CHAR, ORC_MAX_PATH> buffer;
             buffer.view_of((CHAR*)boundData.Binary->Data, dwStrMaxLen, 0L);
             auto result = fmt::vformat_to(std::back_inserter(buffer), szFormat, args);
             boundData.Binary->iIndicator = buffer.size();
@@ -1142,7 +1142,7 @@ HRESULT BoundColumn::WriteFlags(DWORD dwFlags, const FlagsDefinition FlagValues[
             int idx = 0;
             LPSTR pCur = boundData.AString->Data;
             size_t dwBytesLeft = dwMaxLen.value();
-            CHAR szBuf[MAX_PATH];
+            CHAR szBuf[ORC_MAX_PATH];
 
             WCHAR wszSep[2] = {cSeparator, '\0'};
             CHAR szSep[2];
@@ -1153,7 +1153,7 @@ HRESULT BoundColumn::WriteFlags(DWORD dwFlags, const FlagsDefinition FlagValues[
             {
                 if (dwFlags & FlagValues[idx].dwFlag)
                 {
-                    if (FAILED(WideToAnsi(FlagValues[idx].szShortDescr, szBuf, MAX_PATH)))
+                    if (FAILED(WideToAnsi(FlagValues[idx].szShortDescr, szBuf, ORC_MAX_PATH)))
                         return hr;
                     if (bFirst)
                     {
@@ -1245,15 +1245,15 @@ HRESULT BoundColumn::WriteExactFlags(DWORD dwFlags, const FlagsDefinition FlagVa
             LPSTR pCur = boundData.AString->Data;
             size_t dwBytesLeft = dwMaxLen.value() * sizeof(CHAR);
 
-            CHAR szBuf[MAX_PATH];
+            CHAR szBuf[ORC_MAX_PATH];
 
             while (FlagValues[idx].dwFlag != 0xFFFFFFFF)
             {
-                if (FAILED(WideToAnsi(FlagValues[idx].szShortDescr, szBuf, MAX_PATH)))
+                if (FAILED(WideToAnsi(FlagValues[idx].szShortDescr, szBuf, ORC_MAX_PATH)))
                     return hr;
                 if (dwFlags == FlagValues[idx].dwFlag)
                 {
-                    if (FAILED(WideToAnsi(FlagValues[idx].szShortDescr, szBuf, MAX_PATH)))
+                    if (FAILED(WideToAnsi(FlagValues[idx].szShortDescr, szBuf, ORC_MAX_PATH)))
                         return hr;
                     if (dwFlags == FlagValues[idx].dwFlag)
                     {

@@ -16,7 +16,7 @@ namespace Orc {
 class OfflineMFTReader : public VolumeReader
 {
 private:
-    WCHAR m_szMFTFileName[MAX_PATH];
+    WCHAR m_szMFTFileName[ORC_MAX_PATH];
     WCHAR m_cOriginalName;
     HANDLE m_hMFT;
 

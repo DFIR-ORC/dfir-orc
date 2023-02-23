@@ -138,6 +138,7 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                                 if (EmbeddedResource::IsResourceBased(strConfigResource))
                                 {
                                     // Config is in a resource
+                                    Log::Debug(L"Specified configuration is a resource");
                                     hr = S_OK;
                                 }
                                 else
@@ -163,6 +164,8 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
 
     if (szCompanionExtension != nullptr && strConfigFile.empty())
     {
+        Log::Debug(L"Try to locate configuration from companion extension '{}'", szCompanionExtension);
+
         if (szReferenceConfigResource != NULL)
         {
             HMODULE hMod = NULL;
@@ -203,8 +206,8 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
         else
         {
             // Companion configuration
-            WCHAR szEXEPath[MAX_PATH];
-            if (GetModuleFileName(NULL, szEXEPath, MAX_PATH))
+            WCHAR szEXEPath[ORC_MAX_PATH];
+            if (GetModuleFileName(NULL, szEXEPath, ORC_MAX_PATH))
             {
                 fs::path config_path(szEXEPath);
 
@@ -220,6 +223,8 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
 
     if (!strConfigFile.empty())
     {
+        Log::Debug(L"Load configuration from file: '{}'", strConfigResource);
+
         // Config file is used, let's read it
         if (FAILED(hr = r.ReadConfig(strConfigFile.c_str(), Config)))
         {
@@ -232,9 +237,13 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
             Log::Error(L"Config file '{}' is incorrect and cannot be used [{}]", strConfigFile, SystemError(hr));
             return hr;
         }
+
+        Log::Debug(L"Configuration loaded from file: '{}'", strConfigResource);
     }
     else if (!strConfigResource.empty())
     {
+        Log::Debug(L"Load configuration from resource: '{}'", strConfigResource);
+
         CBinaryBuffer buffer;
         if (SUCCEEDED(hr = EmbeddedResource::ExtractToBuffer(strConfigResource, buffer)))
         {
@@ -260,10 +269,12 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                     L"Config resource '{}' is incorrect and cannot be used [{}]", strConfigResource, SystemError(hr));
                 return hr;
             }
+
+            Log::Debug(L"Default configuration loaded from resource: '{}'", strConfigResource);
         }
         else
         {
-            Log::Debug(
+            Log::Error(
                 L"WARNING: Configuration could not be loaded from resource '{}' [{}]",
                 strConfigResource,
                 SystemError(hr));
@@ -272,6 +283,8 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
     else if (szDefaultConfigResource != nullptr)
     {
         wstring strConfigRef(szDefaultConfigResource);
+
+        Log::Debug(L"Try to load default configuration from: '{}'", strConfigRef);
 
         CBinaryBuffer buffer;
         if (SUCCEEDED(hr = EmbeddedResource::ExtractToBuffer(strConfigRef, buffer)))
@@ -296,6 +309,8 @@ HRESULT ConfigFile::LookupAndReadConfiguration(
                 Log::Error(L"Config resource '{}' is incorrect and cannot be used [{}]", strConfigRef, SystemError(hr));
                 return hr;
             }
+
+            Log::Debug(L"Default configuration loaded from: '{}'", strConfigRef);
         }
         else
         {

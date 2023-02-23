@@ -24,8 +24,8 @@ static const auto MAX_PARTITION_TABLE = 16;
 PhysicalDiskReader::PhysicalDiskReader(const WCHAR* szLocation)
     : CompleteVolumeReader(szLocation)
 {
-    ZeroMemory(m_szPhysDrive, MAX_PATH * sizeof(WCHAR));
-    ZeroMemory(m_szDiskGUID, MAX_PATH * sizeof(WCHAR));
+    ZeroMemory(m_szPhysDrive, ORC_MAX_PATH * sizeof(WCHAR));
+    ZeroMemory(m_szDiskGUID, ORC_MAX_PATH * sizeof(WCHAR));
 }
 
 HRESULT PhysicalDiskReader::LoadDiskProperties(void)
