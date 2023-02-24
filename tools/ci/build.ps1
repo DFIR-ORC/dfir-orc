@@ -72,6 +72,9 @@ function Build-Orc
         [ValidateSet('v141', 'v141_xp', 'v142', 'v143')]
         [String]
         $PlatformToolSet = "v141_xp",
+        [Parameter()]
+        [String]
+        $SystemVersion,
         [Parameter(Mandatory)]
         [ValidateSet('Debug', 'MinSizeRel', 'RelWithDebInfo', IgnoreCase=$false)]
         [String[]]
@@ -142,6 +145,11 @@ function Build-Orc
         "-DORC_VCPKG_ROOT=`"${Vcpkg}`""
         "-DCMAKE_TOOLCHAIN_FILE=`"${Vcpkg}\scripts\buildsystems\vcpkg.cmake`""
     )
+
+    if($SystemVersion)
+    {
+        $CMakeGenerationOptions += "-DCMAKE_SYSTEM_VERSION=$SystemVersion"
+    }
 
     if($ApacheOrc)
     {
