@@ -149,4 +149,7 @@ void ToString(const GUID& guid, OutputIt out)
     *out++ = '}';
 }
 
+std::string ToString(const GUID& guid);
+std::wstring ToStringW(const GUID& guid);
+
 }  // namespace Orc
