@@ -29,10 +29,10 @@ template <class...>
 constexpr std::false_type always_false {};
 
 template <typename T, typename OutputIt>
-void Utf8ToUtf16(const T& utf8, OutputIt out)
+void ToUtf16(const T& utf8, OutputIt out)
 {
     std::error_code ec;
-    auto utf16 = Orc::Utf8ToUtf16(ToStringView(utf8), ec);
+    auto utf16 = Orc::ToUtf16(ToStringView(utf8), ec);
     if (ec)
     {
         using namespace std::literals;
@@ -46,10 +46,10 @@ void Utf8ToUtf16(const T& utf8, OutputIt out)
 }
 
 template <typename T, typename OutputIt>
-void Utf16ToUtf8(const T& utf16, OutputIt out)
+void ToUtf8(const T& utf16, OutputIt out)
 {
     std::error_code ec;
-    auto utf8 = Orc::Utf16ToUtf8(ToWStringView(utf16), ec);
+    auto utf8 = Orc::ToUtf8(ToWStringView(utf16), ec);
     if (ec)
     {
         using namespace std::literals;
@@ -76,13 +76,13 @@ inline void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args
     {
         fmt::basic_memory_buffer<char, 32768> utf8;
         fmt::format_to(std::back_inserter(utf8), std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
-        details::Utf8ToUtf16(utf8, out);
+        details::ToUtf16(utf8, out);
     }
     else if constexpr (std::is_same_v<FmtCharT, wchar_t>)
     {
         fmt::basic_memory_buffer<wchar_t, 32768> utf16;
         fmt::format_to(std::back_inserter(utf16), std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
-        details::Utf16ToUtf8(utf16, out);
+        details::ToUtf8(utf16, out);
     }
     else
     {
@@ -102,11 +102,11 @@ inline void FormatWithEncodingTo(OutputIt out, RawArg&& arg)
     }
     else if constexpr (std::is_same_v<RawCharT, char>)
     {
-        details::Utf8ToUtf16(arg, out);
+        details::ToUtf16(arg, out);
     }
     else if constexpr (std::is_same_v<RawCharT, wchar_t>)
     {
-        details::Utf16ToUtf8(arg, out);
+        details::ToUtf8(arg, out);
     }
     else
     {

@@ -24,7 +24,7 @@ struct fmt::formatter<Orc::CryptoHashStreamAlgorithm> : public fmt::formatter<st
         }
 
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::CryptoHashStream::GetSupportedAlgorithm(algs), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::CryptoHashStream::GetSupportedAlgorithm(algs), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);

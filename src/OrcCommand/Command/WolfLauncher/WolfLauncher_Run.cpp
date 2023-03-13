@@ -138,7 +138,7 @@ void UpdateOutcome(
             Log::Error(L"Failed to convert Wincrypt binary blob for '{}' [{}]", item->Name, certificate.error());
             continue;
         }
-        outcome.Recipients().emplace_back(Utf16ToUtf8(item->Name), *certificate);
+        outcome.Recipients().emplace_back(ToUtf8(item->Name), *certificate);
     }
 }
 

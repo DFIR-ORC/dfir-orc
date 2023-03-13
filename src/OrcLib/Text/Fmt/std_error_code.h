@@ -74,7 +74,7 @@ struct fmt::formatter<std::error_code, wchar_t> : public fmt::formatter<std::wst
                 message = message.substr(0, pos);
             }
 
-            const auto utf16 = Orc::Utf8ToUtf16(message);
+            const auto utf16 = Orc::ToUtf16(message);
             fmt::format_to(std::back_inserter(s), L": {}"sv, utf16);
         }
 

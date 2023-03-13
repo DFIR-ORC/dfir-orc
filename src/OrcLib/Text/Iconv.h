@@ -18,11 +18,11 @@ namespace Orc {
 constexpr auto kFailedConversion = std::string_view("<encoding_error>");
 constexpr auto kFailedConversionW = std::wstring_view(L"<encoding_error>");
 
-std::string Utf16ToUtf8(std::wstring_view utf16, std::error_code& ec);
-std::wstring Utf8ToUtf16(std::string_view utf8, std::error_code& ec);
+std::string ToUtf8(std::wstring_view utf16, std::error_code& ec);
+std::wstring ToUtf16(std::string_view utf8, std::error_code& ec);
 
-std::wstring Utf8ToUtf16(std::string_view utf8);
-std::string Utf16ToUtf8(std::wstring_view utf16);
+std::wstring ToUtf16(std::string_view utf8);
+std::string ToUtf8(std::wstring_view utf16);
 
 template <typename OutputCharType, typename Input>
 decltype(auto) EncodeTo(Input&& input)
@@ -37,12 +37,12 @@ decltype(auto) EncodeTo(Input&& input)
     else if constexpr (std::is_same_v<InputCharT, char>)
     {
         std::error_code ec;
-        return Utf8ToUtf16(input, ec);
+        return ToUtf16(input, ec);
     }
     else if constexpr (std::is_same_v<InputCharT, wchar_t>)
     {
         std::error_code ec;
-        return Utf16ToUtf8(input, ec);
+        return ToUtf8(input, ec);
     }
     else
     {

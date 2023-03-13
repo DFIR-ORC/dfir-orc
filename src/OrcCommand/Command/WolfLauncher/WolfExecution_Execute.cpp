@@ -322,7 +322,7 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
                     Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", sha1.error());
                 }
 
-                outcomeArchive.SetSha1(Utf16ToUtf8(*sha1));
+                outcomeArchive.SetSha1(ToUtf8(*sha1));
             }
 
             outcomeArchive.SetInputType(::GetArchiveInputType());

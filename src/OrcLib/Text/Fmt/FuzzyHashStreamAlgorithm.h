@@ -24,7 +24,7 @@ struct fmt::formatter<Orc::FuzzyHashStreamAlgorithm> : public fmt::formatter<std
         }
 
         std::error_code ec;
-        const auto algorithm = Orc::Utf16ToUtf8(Orc::FuzzyHashStream::GetSupportedAlgorithm(algs), ec);
+        const auto algorithm = Orc::ToUtf8(Orc::FuzzyHashStream::GetSupportedAlgorithm(algs), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);

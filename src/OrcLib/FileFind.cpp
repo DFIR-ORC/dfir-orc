@@ -539,7 +539,7 @@ std::wstring Orc::FileFind::Match::GetMatchDescription() const
         // Content matches yara rule(s): * [is_pe, pe_rule_foobar])
         std::string yaraMatches = "[" + boost::join(rules, ", ") + "]";
         std::error_code ec;
-        description += L" " + ::Utf8ToUtf16(yaraMatches, ec);
+        description += L" " + ::ToUtf16(yaraMatches, ec);
     }
 
     return description;

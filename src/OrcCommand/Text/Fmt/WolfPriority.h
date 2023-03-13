@@ -22,7 +22,7 @@ struct fmt::formatter<Orc::Command::Wolf::Main::WolfPriority> : public fmt::form
     auto format(const Orc::Command::Wolf::Main::WolfPriority& priority, FormatContext& ctx) -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::Command::Wolf::WolfLauncher::ToString(priority), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::Command::Wolf::WolfLauncher::ToString(priority), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);

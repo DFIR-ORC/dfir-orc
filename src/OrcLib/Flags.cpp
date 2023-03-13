@@ -27,7 +27,7 @@ std::string FlagsToString(DWORD flags, const FlagsDefinition flagValues[], CHAR 
         if (flags & flagValues[index].dwFlag)
         {
             std::error_code ec;
-            const auto description = Utf16ToUtf8(flagValues[index].szShortDescr, ec);
+            const auto description = ToUtf8(flagValues[index].szShortDescr, ec);
             if (ec)
             {
                 fmt::format_to(std::back_inserter(out), Orc::kFailedConversion);

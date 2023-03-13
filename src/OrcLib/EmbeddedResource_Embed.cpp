@@ -886,12 +886,10 @@ inline void compiler_callback(
     switch (errorLevel)
     {
         case YARA_ERROR_LEVEL_ERROR:
-            Log::Error(
-                "Yara compiler: {} (line: {}, source: {})", message, lineNumber, Utf16ToUtf8(yaraSource.value, ec));
+            Log::Error("Yara compiler: {} (line: {}, source: {})", message, lineNumber, ToUtf8(yaraSource.value, ec));
             break;
         case YARA_ERROR_LEVEL_WARNING:
-            Log::Warn(
-                "Yara compiler: {} (line: {}, source: {})", message, lineNumber, Utf16ToUtf8(yaraSource.value, ec));
+            Log::Warn("Yara compiler: {} (line: {}, source: {})", message, lineNumber, ToUtf8(yaraSource.value, ec));
             break;
         default:
             Log::Info(
@@ -899,7 +897,7 @@ inline void compiler_callback(
                 message,
                 errorLevel,
                 lineNumber,
-                Utf16ToUtf8(yaraSource.value, ec));
+                ToUtf8(yaraSource.value, ec));
             break;
     }
 }

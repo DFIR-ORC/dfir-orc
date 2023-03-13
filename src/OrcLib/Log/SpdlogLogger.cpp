@@ -127,7 +127,7 @@ const std::vector<SpdlogSink::Ptr>& SpdlogLogger::Sinks()
 
 void SpdlogLogger::Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, std::wstring_view msg)
 {
-    const auto utf8 = Utf16ToUtf8(msg);
+    const auto utf8 = ToUtf8(msg);
     Log(timepoint, level, utf8);
 }
 

@@ -106,7 +106,7 @@ Orc::Result<std::wstring> ParseCatalogHintFilename(std::string_view catalogHint)
 
     std::error_code ec;
     std::string_view utf8(catalogHint.data() + sizeof(CatalogHintAttribute), hint->nameLength);
-    const auto name = Utf8ToUtf16(utf8, ec);
+    const auto name = ToUtf16(utf8, ec);
     if (ec)
     {
         return ec;

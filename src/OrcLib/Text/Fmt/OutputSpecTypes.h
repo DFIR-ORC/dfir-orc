@@ -21,7 +21,7 @@ struct fmt::formatter<Orc::OutputSpecTypes::UploadAuthScheme> : public fmt::form
     auto format(const Orc::OutputSpecTypes::UploadAuthScheme& scheme, FormatContext& ctx) -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(scheme), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::ToString(scheme), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
@@ -49,7 +49,7 @@ struct fmt::formatter<Orc::OutputSpecTypes::UploadMethod> : public fmt::formatte
     auto format(const Orc::OutputSpecTypes::UploadMethod& method, FormatContext& ctx) -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(method), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::ToString(method), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
@@ -76,7 +76,7 @@ struct fmt::formatter<Orc::OutputSpecTypes::UploadOperation> : public fmt::forma
     auto format(const Orc::OutputSpecTypes::UploadOperation& operation, FormatContext& ctx) -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(operation), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::ToString(operation), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
@@ -104,7 +104,7 @@ struct fmt::formatter<Orc::OutputSpecTypes::UploadMode> : public fmt::formatter<
     auto format(const Orc::OutputSpecTypes::UploadMode& mode, FormatContext& ctx) -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(mode), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::ToString(mode), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
@@ -131,7 +131,7 @@ struct fmt::formatter<Orc::OutputSpecTypes::Encoding> : public fmt::formatter<st
     auto format(const Orc::OutputSpecTypes::Encoding& encoding, FormatContext& ctx) -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(encoding), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::ToString(encoding), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
@@ -158,7 +158,7 @@ struct fmt::formatter<Orc::OutputSpecTypes::Kind> : public fmt::formatter<std::s
     auto format(const Orc::OutputSpecTypes::Kind& kind, FormatContext& ctx) -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(kind), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::ToString(kind), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);

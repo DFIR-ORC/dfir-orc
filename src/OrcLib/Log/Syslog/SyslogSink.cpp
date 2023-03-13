@@ -26,7 +26,7 @@ std::optional<std::string> GetHostName()
     }
 
     std::error_code ec;
-    const auto hostname = Orc::Utf16ToUtf8(hostnameW, ec);
+    const auto hostname = Orc::ToUtf8(hostnameW, ec);
     if (ec)
     {
         return {};

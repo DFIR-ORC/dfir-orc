@@ -22,7 +22,7 @@ struct fmt::formatter<Orc::FSVBR_FSType> : public fmt::formatter<std::string_vie
         const auto utf16 = Orc::ToString(FSType);
 
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(utf16, ec);
+        const auto utf8 = Orc::ToUtf8(utf16, ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);

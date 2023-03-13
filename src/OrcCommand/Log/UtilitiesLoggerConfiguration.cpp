@@ -583,7 +583,7 @@ Orc::Result<void> ApplySyslogConfiguration(UtilitiesLogger& utilitiesLogger, con
     }
 
     std::error_code ec;
-    const auto host = Utf16ToUtf8(*config.syslog.host, ec);
+    const auto host = ToUtf8(*config.syslog.host, ec);
     if (ec)
     {
         Log::Error(L"Failed to configure syslog host [{}]", ec);
@@ -593,7 +593,7 @@ Orc::Result<void> ApplySyslogConfiguration(UtilitiesLogger& utilitiesLogger, con
     auto port = std::string(UtilitiesLoggerConfiguration::kDefaultSyslogPort);
     if (config.syslog.port)
     {
-        port = Utf16ToUtf8(*config.syslog.port, ec);
+        port = ToUtf8(*config.syslog.port, ec);
         if (ec)
         {
             Log::Error(L"Failed configure syslog port [{}]", ec);

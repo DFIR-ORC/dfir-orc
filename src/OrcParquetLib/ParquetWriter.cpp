@@ -223,7 +223,7 @@ Orc::TableOutput::Parquet::Writer::Builders Orc::TableOutput::Parquet::Writer::G
                     Severity::Fatal,
                     E_INVALIDARG,
                     L"Failed to create builder for type {}",
-                    Orc::Utf8ToUtf16(column->type()->ToString(), ec));
+                    Orc::ToUtf16(column->type()->ToString(), ec));
             }
         }
     }

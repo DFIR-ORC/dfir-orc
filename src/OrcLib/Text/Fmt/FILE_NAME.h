@@ -18,7 +18,7 @@ struct fmt::formatter<FILE_NAME> : public fmt::formatter<std::string_view>
     {
         std::error_code ec;
 
-        const auto name = Orc::Utf16ToUtf8(std::wstring_view(fileName.FileName, fileName.FileNameLength), ec);
+        const auto name = Orc::ToUtf8(std::wstring_view(fileName.FileName, fileName.FileNameLength), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);

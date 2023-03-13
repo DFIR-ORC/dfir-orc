@@ -19,10 +19,10 @@ void Print(Tree& node, const AttributeListEntry& entry)
 {
     std::error_code ec;
 
-    const auto attributeName = Utf16ToUtf8(std::wstring_view(entry.AttributeName(), entry.AttributeNameLength()), ec);
+    const auto attributeName = ToUtf8(std::wstring_view(entry.AttributeName(), entry.AttributeNameLength()), ec);
     assert(!ec);
 
-    const auto attributeType = Utf16ToUtf8(std::wstring_view(entry.TypeStr()), ec);
+    const auto attributeType = ToUtf8(std::wstring_view(entry.TypeStr()), ec);
     assert(!ec);
 
     node.AddWithoutEOL(

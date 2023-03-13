@@ -20,7 +20,7 @@ struct fmt::formatter<Orc::LocationType> : public fmt::formatter<std::string_vie
     auto format(const Orc::LocationType& type, FormatContext& ctx) -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(type), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::ToString(type), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);

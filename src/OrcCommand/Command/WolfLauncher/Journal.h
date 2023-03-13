@@ -52,7 +52,7 @@ public:
         const auto& syslog = Orc::Log::DefaultLogger()->Get(Log::Facility::kSyslog);
         if (syslog)
         {
-            syslog->Log(timepoint, level, Utf16ToUtf8(message));
+            syslog->Log(timepoint, level, ToUtf8(message));
         }
     }
 

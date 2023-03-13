@@ -19,7 +19,7 @@ struct fmt::formatter<Orc::PartitionFlags> : public fmt::formatter<std::string_v
     auto format(const Orc::PartitionFlags& flags, FormatContext& ctx) -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::Utf16ToUtf8(Orc::ToString(flags), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::ToString(flags), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);

@@ -57,7 +57,7 @@ std::string wimlib_error_category_t::message(int ev) const noexcept
         return kDefault;
     }
 
-    const auto utf8 = Utf16ToUtf8(utf16, ec);
+    const auto utf8 = ToUtf8(utf16, ec);
     if (ec)
     {
         return kDefault;

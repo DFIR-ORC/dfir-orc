@@ -15,7 +15,7 @@
 
 namespace Orc {
 
-std::string Utf16ToUtf8(std::wstring_view utf16, std::error_code& ec)
+std::string ToUtf8(std::wstring_view utf16, std::error_code& ec)
 {
     if (utf16.size() == 0)
     {
@@ -62,7 +62,7 @@ std::string Utf16ToUtf8(std::wstring_view utf16, std::error_code& ec)
     return utf8;
 }
 
-std::wstring Utf8ToUtf16(const std::string_view utf8, std::error_code& ec)
+std::wstring ToUtf16(const std::string_view utf8, std::error_code& ec)
 {
     if (utf8.size() == 0)
     {
@@ -101,10 +101,10 @@ std::wstring Utf8ToUtf16(const std::string_view utf8, std::error_code& ec)
     return utf16;
 }
 
-std::wstring Utf8ToUtf16(std::string_view utf8)
+std::wstring ToUtf16(std::string_view utf8)
 {
     std::error_code ec;
-    const auto utf16 = Orc::Utf8ToUtf16(utf8, ec);
+    const auto utf16 = Orc::ToUtf16(utf8, ec);
     if (ec)
     {
         return std::wstring {Orc::kFailedConversionW};
@@ -113,10 +113,10 @@ std::wstring Utf8ToUtf16(std::string_view utf8)
     return utf16;
 }
 
-std::string Utf16ToUtf8(std::wstring_view utf16)
+std::string ToUtf8(std::wstring_view utf16)
 {
     std::error_code ec;
-    const auto utf8 = Orc::Utf16ToUtf8(utf16, ec);
+    const auto utf8 = Orc::ToUtf8(utf16, ec);
     if (ec)
     {
         return std::string {Orc::kFailedConversion};
