@@ -75,6 +75,8 @@ public:
     STDMETHOD_(ULONG64, GetSize)();
     STDMETHOD(SetSize)(ULONG64);
 
+    STDMETHOD(Clone)(std::shared_ptr<ByteStream>& clone);
+
     STDMETHOD(Close)();
 
     STDMETHOD(MoveTo)(LPCWSTR lpszNewFileName);
