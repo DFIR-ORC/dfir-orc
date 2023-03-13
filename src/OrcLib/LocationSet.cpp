@@ -41,9 +41,7 @@
 
 #include "NtfsDataStructures.h"
 #include "ProfileList.h"
-#include "Utils/Guid.h"
-
-#include "Utils/Guid.h"
+#include "Text/Guid.h"
 #include "Stream/VolumeStreamReader.h"
 
 using namespace std;

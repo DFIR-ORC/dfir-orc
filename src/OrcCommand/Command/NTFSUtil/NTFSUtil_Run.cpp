@@ -35,10 +35,10 @@
 #include "Text/Format.h"
 #include "Text/Print/LocationSet.h"
 #include "Text/Print/Ntfs.h"
+#include "Text/Guid.h"
 #include "Text/HexDump.h"
 #include "Text/Hex.h"
 #include "Utils/Guard.h"
-#include "Utils/Guid.h"
 #include "Text/Fmt/GUID.h"
 
 using namespace std;

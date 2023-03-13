@@ -9,8 +9,8 @@
 
 #include "Filesystem/Ntfs/ShadowCopy/Snapshot.h"
 #include "Filesystem/Ntfs/ShadowCopy/ShadowCopy.h"
+#include "Text/Guid.h"
 #include "Text/Hex.h"
-#include "Utils/Guid.h"
 
 namespace Orc {
 namespace Ntfs {

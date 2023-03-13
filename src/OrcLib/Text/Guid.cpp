@@ -5,25 +5,10 @@
 //
 // Author(s): fabienfl (ANSSI)
 //
-#pragma once
 
-#include <windows.h>
+#include "Text/Guid.h"
 
-#include <system_error>
-#include <string_view>
-#include <type_traits>
-#include <algorithm>
-
-#include <fmt/format.h>
-
-#include "Text/Hex.h"
-#include "Utils/Result.h"
-#include "Utils/TypeTraits.h"
-
-namespace Orc {
-
-// Example: 3808876B-C176-4E48-B7AE-04046E6CC752
-const auto kGuidStringLength = sizeof(GUID) * 2 + 4;
+namespace {
 
 template <typename CharT>
 void ToGuid(std::basic_string_view<CharT> input, GUID& guid, std::error_code& ec)
@@ -112,44 +97,34 @@ void ToGuid(std::basic_string_view<CharT> input, GUID& guid, std::error_code& ec
     std::copy(std::cbegin(view), std::cend(view), guid.Data4);
 }
 
-extern template void ToGuid(std::basic_string_view<char> input, GUID& guid, std::error_code& ec);
-extern template void ToGuid(std::basic_string_view<wchar_t> input, GUID& guid, std::error_code& ec);
+}  // namespace
 
-template <typename OutputIt>
-void ToString(const GUID& guid, OutputIt out)
+namespace Orc {
+
+//const int kGuidStringLength = sizeof(GUID) * 2 + 4;
+
+void ToGuid(std::string_view input, GUID& guid, std::error_code& ec)
 {
-    using namespace Orc::Text;
-    using value_type = typename Traits::underlying_char_type_t<OutputIt>;
-
-    *out++ = '{';
-
-    if constexpr (std::is_same_v<value_type, char>)
-    {
-        fmt::format_to(out, "{:08X}-{:04X}-{:04X}-", guid.Data1, guid.Data2, guid.Data3);
-    }
-    else if constexpr (std::is_same_v<value_type, wchar_t>)
-    {
-        fmt::format_to(out, L"{:08X}-{:04X}-{:04X}-", guid.Data1, guid.Data2, guid.Data3);
-    }
-    else
-    {
-        static_assert("Invalid CharT");
-    }
-
-    const auto data4leftLength = 2;
-    std::string_view data4Left(reinterpret_cast<const char*>(&guid.Data4[0]), data4leftLength);
-    ToHex(std::cbegin(data4Left), std::cend(data4Left), out);
-
-    *out++ = '-';
-
-    std::string_view data4right(
-        reinterpret_cast<const char*>(&guid.Data4[data4leftLength]), sizeof(guid.Data4) - data4leftLength);
-    ToHex(std::cbegin(data4right), std::cend(data4right), out);
-
-    *out++ = '}';
+    ::ToGuid(input, guid, ec);
 }
 
-std::string ToString(const GUID& guid);
-std::wstring ToStringW(const GUID& guid);
+void ToGuid(std::wstring_view input, GUID& guid, std::error_code& ec)
+{
+    ::ToGuid(input, guid, ec);
+}
+
+std::string ToString(const GUID& guid)
+{
+    std::string s;
+    ToString(guid, std::back_inserter(s));
+    return s;
+}
+
+std::wstring ToStringW(const GUID& guid)
+{
+    std::wstring s;
+    ToString(guid, std::back_inserter(s));
+    return s;
+}
 
 }  // namespace Orc

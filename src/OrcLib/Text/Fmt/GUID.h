@@ -14,7 +14,7 @@
 
 #include <fmt/format.h>
 
-#include "Utils/Guid.h"
+#include "Text/Guid.h"
 
 template <>
 struct fmt::formatter<GUID> : public fmt::formatter<std::string_view>
