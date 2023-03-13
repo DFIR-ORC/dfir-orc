@@ -69,6 +69,8 @@ public:
         DWORDLONG dwlOffset;
         DWORDLONG dwlSize;
 
+        bool bDump;
+
         bool bPrintDetails;
 
         // output for vss

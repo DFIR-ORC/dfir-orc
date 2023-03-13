@@ -65,6 +65,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                 {
                     config.cmd = Main::Command::HexDump;
                 }
+                else if (BooleanOption(argv[i] + 1, L"Dump", config.bDump))
+                    ;
                 else if (ParameterOption(argv[i] + 1, L"Offset", config.dwlOffset))
                     ;
                 else if (ParameterOption(argv[i] + 1, L"Size", config.dwlSize))

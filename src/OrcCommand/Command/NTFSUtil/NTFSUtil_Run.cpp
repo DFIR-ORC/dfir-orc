@@ -28,6 +28,7 @@
 #include "OfflineMFTReader.h"
 
 #include "Utils/TypeTraits.h"
+#include "Text/Fmt/Boolean.h"
 #include "Text/Fmt/Limit.h"
 #include "Text/Fmt/Partition.h"
 #include "Text/Fmt/PartitionFlags.h"
@@ -39,7 +40,17 @@
 #include "Text/HexDump.h"
 #include "Text/Hex.h"
 #include "Utils/Guard.h"
+#include "Utils/WinApi.h"
 #include "Text/Fmt/GUID.h"
+#include "Text/Fmt/FILETIME.h"
+#include "Filesystem/Ntfs/ShadowCopy/Dump.h"
+#include "Filesystem/Ntfs/ShadowCopy/ShadowCopy.h"
+#include "Filesystem/Ntfs/ShadowCopy/ShadowCopyStream.h"
+#include "Filesystem/Ntfs/ShadowCopy/Snapshot.h"
+#include "Filesystem/Ntfs/ShadowCopy/SnapshotsIndex.h"
+#include "Filesystem/Ntfs/ShadowCopy/SnapshotsIndexHeader.h"
+#include "ShadowCopyVolumeReader.h"
+#include "Stream/VolumeStreamReader.h"
 
 using namespace std;
 
@@ -159,6 +170,24 @@ HRESULT ConfigureUSNJournal(HANDLE hVolume, DWORDLONG dwlMinSize, DWORDLONG dwlM
     return S_OK;
 }
 
+std::string ToApplicationInfoIdString(const GUID& guid)
+{
+    using namespace Orc::Ntfs::ShadowCopy;
+
+    if (guid == ApplicationInformation::VssLocalInfo::kMicrosoftGuid)
+    {
+        return ToString(guid) + " [Microsoft]";
+    }
+    else if (guid == ApplicationInformation::VssLocalInfo::kMicrosoftHiddenGuid)
+    {
+        return ToString(guid) + " [Microsoft hidden]";
+    }
+    else
+    {
+        return ToString(guid) + " [Unusual guid]";
+    }
+}
+
 }  // namespace
 
 HRESULT Main::CommandUSN()
@@ -184,12 +213,6 @@ HRESULT Main::CommandUSN()
                 L"Failed to obtain USN configuration values for volume: '{}' [{}]", config.strVolume, SystemError(hr));
             return hr;
         }
-
-        struct Foo
-        {
-            using value_type = char;
-            using char_type = char;
-        };
 
         auto usnNode = output.AddNode("USN configuration:");
         PrintValue(usnNode, L"MaxSize", maxSize);
@@ -234,11 +257,23 @@ HRESULT Main::CommandEnum()
     auto output = m_console.OutputTree();
 
     LocationSet locations;
+
     HRESULT hr = locations.EnumerateLocations();
     if (FAILED(hr))
     {
         Log::Error("Failed to enumerate locations [{}]", SystemError(hr));
         return hr;
+    }
+
+    if (!config.strVolume.empty())
+    {
+        std::vector<std::shared_ptr<Location>> addedLocs;
+        HRESULT hr = locations.AddLocations(config.strVolume.c_str(), addedLocs);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to add locations from '{}' [{}]", config.strVolume, SystemError(hr));
+            return hr;
+        }
     }
 
     locations.Consolidate(true, FSVBR::FSType::ALL);
@@ -662,23 +697,41 @@ HRESULT Main::CommandHexDump(DWORDLONG dwlOffset, DWORDLONG dwlSize)
     return S_OK;
 }
 
-// Print volume shadow copies
 HRESULT Main::CommandVss()
 {
-    auto output = m_console.OutputTree();
+    using namespace Ntfs::ShadowCopy;
 
-    VolumeShadowCopies vss;
-    std::vector<VolumeShadowCopies::Shadow> shadows;
+    auto rootNode = m_console.OutputTree();
 
-    HRESULT hr = vss.EnumerateShadows(shadows);
+    LocationSet locations;
+    locations.SetShadowCopyParser(Ntfs::ShadowCopy::ParserType::kInternal);
+
+    HRESULT hr = locations.EnumerateLocations();
     if (FAILED(hr))
     {
-        Log::Critical("Failed to list volume shadow copies [{}]", SystemError(hr));
+        Log::Error("Failed to enumerate locations [{}]", SystemError(hr));
+        return hr;
+    }
+
+    if (!config.strVolume.empty())
+    {
+        std::vector<std::shared_ptr<Location>> addedLocs;
+        hr = locations.AddLocations(config.strVolume.c_str(), addedLocs);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to add locations from '{}' [{}]", config.strVolume, SystemError(hr));
+            return hr;
+        }
+    }
+
+    hr = locations.Consolidate(false, FSVBR::FSType::ALL);
+    if (FAILED(hr))
+    {
+        Log::Error("Failed to analyze locations [{}]", SystemError(hr));
         return hr;
     }
 
     std::shared_ptr<TableOutput::IWriter> pVssWriter;
-
     if (config.output.Type != OutputSpec::Kind::None)
     {
         pVssWriter = TableOutput::GetWriter(config.output);
@@ -689,48 +742,264 @@ HRESULT Main::CommandVss()
         }
     }
 
-    BOOST_SCOPE_EXIT(&pVssWriter)
-    {
-        if (nullptr != pVssWriter)
-        {
-            pVssWriter->Close();
-        }
-    }
-    BOOST_SCOPE_EXIT_END;
-
     if (pVssWriter != nullptr)
     {
-        auto& output = *pVssWriter;
+        Guard::Scope onScopeExit([&] {
+            if (pVssWriter != nullptr)
+            {
+                pVssWriter->Close();
+            }
+        });
 
-        for (const auto& shadow : shadows)
+        for (const auto& [path, location] : locations.GetLocations())
         {
-            output.WriteGUID(shadow.guid);
-            output.WriteString(shadow.DeviceInstance.c_str());
-            output.WriteString(shadow.VolumeName.c_str());
-            output.WriteFileTime(shadow.CreationTime);
-            output.WriteFlags(shadow.Attributes, VolumeShadowCopies::g_VssFlags, L'|');
-            output.WriteEndOfLine();
+            std::error_code ec;
+
+            std::vector<VolumeShadowCopies::Shadow> shadows;
+            location->EnumerateShadowCopies(shadows, {}, ec);
+            if (ec)
+            {
+                Log::Error(L"Failed to enumerate shadow copy: {} [{}]", location->GetLocation(), ec);
+                continue;
+            }
+
+            auto& output = *pVssWriter;
+            for (const auto& shadow : shadows)
+            {
+                output.WriteGUID(shadow.guid);
+                output.WriteString(shadow.DeviceInstance.c_str());
+                output.WriteString(shadow.VolumeName.c_str());
+                output.WriteFileTime(shadow.CreationTime);
+                output.WriteFlags(shadow.Attributes, VolumeShadowCopies::g_VssFlags, L'|');
+                output.WriteEndOfLine();
+            }
         }
     }
     else
     {
-        for (int i = 0; i < shadows.size(); ++i)
+        for (const auto& location : locations.GetAltitudeLocations())
         {
-            const auto& shadow = shadows[i];
+            Log::Debug(L"Check location: '{}'", location->GetLocation());
 
-            WCHAR szCLSID[MAX_GUID_STRLEN];
-            if (!StringFromGUID2(shadow.guid, szCLSID, MAX_GUID_STRLEN))
+            std::error_code ec;
+
+            auto reader = location->GetReader();
+            if (!reader)
             {
-                szCLSID[0] = L'\0';
+                Log::Error(L"Failed to get stream reader for {}", location->GetLocation());
+                ec.clear();
+                continue;
             }
 
-            auto vssNode = output.AddNode("VSS Snapshot #{}", i);
-            PrintValue(vssNode, L"Guid", szCLSID);
-            PrintValue(vssNode, L"Device instance", shadow.DeviceInstance);
-            PrintValue(vssNode, L"Volume name", shadow.VolumeName);
-            PrintValue(vssNode, L"Creation time", *reinterpret_cast<const FILETIME*>(&shadow.CreationTime));
-            PrintValue(vssNode, L"Attributes", FlagsToString(shadow.Attributes, VolumeShadowCopies::g_VssFlags));
-            output.AddEmptyLine();
+            hr = reader->LoadDiskProperties();
+            if (FAILED(hr))
+            {
+                Log::Error(L"Failed to load volume reader properties for {}", location->GetLocation());
+                ec.clear();
+                continue;
+            }
+
+            if (reader->GetFSType() != FSVBR_FSType::NTFS)
+            {
+                Log::Debug("Volume is not NTFS so shadow copy support is disabled");
+                continue;
+            }
+
+            auto stream = std::make_shared<VolumeStreamReader>(reader);
+            if (!Ntfs::ShadowCopy::HasSnapshotsIndex(*stream, ec))
+            {
+                if (ec)
+                {
+                    Log::Error(L"Failed to check if volume has shadow copies: '{}' [{}]", location->GetLocation(), ec);
+                    ec.clear();
+                    continue;
+                }
+
+                continue;
+            }
+
+            SnapshotsIndexHeader snapshotsIndexHeader;
+            SnapshotsIndexHeader::Parse(*stream, snapshotsIndexHeader, ec);
+            if (ec)
+            {
+                Log::Error(L"Failed to parse snapshots index header: {} [{}]", location->GetLocation(), ec);
+                ec.clear();
+                continue;
+            }
+
+            Ntfs::ShadowCopy::SnapshotsIndex snapshotsIndex;
+            Ntfs::ShadowCopy::SnapshotsIndex::Parse(*stream, snapshotsIndex, ec);
+            if (ec)
+            {
+                Log::Error(L"Failed to enumerate snapshots: {} [{}]", location->GetLocation(), ec);
+                ec.clear();
+                continue;
+            }
+
+            auto vssNode = rootNode.AddNode(L"Volume shadow copy information");
+            PrintValue(vssNode, L"Device instance", location->GetLocation());
+            // PrintValue(vssNode, L"Mount point", boost::join(location->GetPaths(), L", "));
+            PrintValue(vssNode, L"Volume serial", fmt::format("{:#x}", reader->VolumeSerialNumber()));
+            PrintValue(vssNode, L"Volume id", snapshotsIndexHeader.VolumeGuid());
+            PrintValue(vssNode, L"Storage id", snapshotsIndexHeader.StorageGuid());
+            PrintValue(vssNode, L"Snapshots version", snapshotsIndexHeader.Version());
+            PrintValue(vssNode, L"Locally stored", Traits::Boolean(snapshotsIndexHeader.IsLocalStorage()));
+            PrintValue(vssNode, L"Has catalog", Traits::Boolean(snapshotsIndexHeader.HasCatalog()));
+            PrintValue(vssNode, L"Catalog offset", Traits::Offset(snapshotsIndexHeader.FirstCatalogOffset()));
+            PrintValue(vssNode, L"Maximum size", Traits::ByteQuantity(snapshotsIndexHeader.MaximumSize()));
+            PrintValue(vssNode, L"Flags", fmt::format("{:#x}", snapshotsIndexHeader.Flags()));
+            PrintValue(vssNode, L"Protection flags", fmt::format("{:#x}", snapshotsIndexHeader.ProtectionFlags()));
+
+            if (snapshotsIndex.Items().empty())
+            {
+                Log::Debug(L"No snapshot found for '{}'", location->GetLocation());
+
+                PrintValue(vssNode, L"Snapshot", L"<None>");
+                continue;
+            }
+
+            std::set<Ntfs::ShadowCopy::VolumeSnapshotAttributes> attributes;
+            auto snapshotNode = vssNode.AddNode(L"Snapshots summary:");
+            for (const auto& snapshot : snapshotsIndex.Items())
+            {
+                Print(
+                    snapshotNode,
+                    fmt::format(
+                        "Id: {}, Creation: {}, Flags: {}, Attributes: {}",
+                        snapshot.ShadowCopyId(),
+                        snapshot.CreationTime(),
+                        fmt::format("{:#x}", snapshot.Flags()),
+                        fmt::format("{:#x}", static_cast<uint32_t>(snapshot.VolumeSnapshotAttributes()))));
+            }
+
+            vssNode.AddEmptyLine();
+            vssNode.AddEmptyLine();
+
+            for (size_t i = 0; i < snapshotsIndex.Items().size(); ++i)
+            {
+                const auto& snapshot = snapshotsIndex.Items()[i];
+
+                Log::Debug("Check snapshot: '{}'", snapshot.ShadowCopyId());
+
+                auto node = vssNode.AddNode(L"Snapshot {}", snapshot.ShadowCopyId());
+                node.AddEmptyLine();
+
+                PrintValue(node, L"Creation", snapshot.CreationTime());
+                PrintValue(node, L"Shadow copy set id", snapshot.ShadowCopySetId());
+                PrintValue(node, L"Shadow copy id", snapshot.ShadowCopyId());
+                PrintValue(node, L"Diff area id", snapshot.Guid());
+
+                PrintValue(
+                    node,
+                    L"Application info id",
+                    ::ToApplicationInfoIdString(snapshot.ApplicationInformation().Guid()));
+
+                PrintValue(node, L"Original snapshots count", snapshot.ApplicationInformation().SnapshotsCount());
+                PrintValue(node, L"Machine", snapshot.MachineString());
+                PrintValue(node, L"Service", snapshot.ServiceString());
+
+                PrintValue(
+                    node,
+                    L"Attributes",
+                    fmt::format(L"{:#x}", static_cast<uint32_t>(snapshot.VolumeSnapshotAttributes())));
+
+                PrintValue(node, L"Position", snapshot.LayerPosition());
+                PrintValue(node, L"Flags", fmt::format("{:#x}", snapshot.Flags()));
+                PrintValue(node, L"Context", ToString(snapshot.SnapshotContext()));
+
+                PrintValue(
+                    node,
+                    L"Size",
+                    fmt::format(L"{} ({} bytes)", Traits::ByteQuantity(snapshot.Size()), snapshot.Size()));
+
+                const auto& area = snapshot.DiffAreaInfo();
+                PrintValue(node, L"Frn", fmt::format("{:#018x}", area.Frn()));
+                PrintValue(node, L"Application info offset", Traits::Offset(area.ApplicationInfoOffset()));
+                PrintValue(node, L"Bitmap offset", Traits::Offset(area.FirstBitmapOffset()));
+                PrintValue(node, L"Previous bitmap offset", Traits::Offset(area.PreviousBitmapOffset()));
+                PrintValue(node, L"Diff area table offset", Traits::Offset(area.FirstDiffAreaTableOffset()));
+                PrintValue(node, L"Diff location table offset", Traits::Offset(area.FirstDiffLocationTableOffset()));
+
+                PrintValue(
+                    node,
+                    L"Allocated size",
+                    fmt::format(L"{} ({} bytes)", Traits::ByteQuantity(area.AllocatedSize()), area.AllocatedSize()));
+
+                Snapshot s;
+                Snapshot::Parse(*stream, snapshot, s, ec);
+                PrintValue(node, L"Parsing", ec ? L"Failed" : L"Ok");
+                if (!ec)
+                {
+                    PrintValue(node, L"Overlay", s.Overlays().size());
+                    PrintValue(node, L"Copy on write", s.CopyOnWrites().size());
+                    PrintValue(node, L"Forwarder", s.Forwarders().size());
+                    PrintValue(node, L"Bitmap size", s.Bitmap().size());
+                    PrintValue(node, L"Previous bitmap size", s.PreviousBitmap().size());
+                }
+                else
+                {
+                    ec.clear();
+                }
+
+                attributes.insert(snapshot.VolumeSnapshotAttributes());
+
+                node.AddEmptyLine();
+                node.AddEmptyLine();
+            }
+
+            if (attributes.size())
+            {
+                auto attributeNode = vssNode.AddNode("Attribute values reference:");
+                for (const auto attribute : attributes)
+                {
+                    Print(
+                        attributeNode,
+                        fmt::format(
+                            "{:#x} = {}",
+                            static_cast<DWORD>(attribute),
+                            FlagsToString(static_cast<DWORD>(attribute), VolumeShadowCopies::g_VssFlags)));
+                }
+
+                vssNode.AddEmptyLine();
+                vssNode.AddEmptyLine();
+            }
+
+            {
+                std::vector<Ntfs::ShadowCopy::ShadowCopy> shadowCopies;
+                Ntfs::ShadowCopy::ShadowCopy::Parse(*stream, shadowCopies, ec);
+                if (ec)
+                {
+                    Log::Debug("Failed to parse shadow copies");
+                    ec.clear();
+                }
+
+                for (const auto& shadowCopy : shadowCopies)
+                {
+                    auto node = vssNode.AddNode("ShadowCopy {}", shadowCopy.Information().ShadowCopyId());
+                    node.AddEmptyLine();
+
+                    const auto& info = shadowCopy.Information();
+                    PrintValue(node, L"Creation time", info.CreationTime());
+                    PrintValue(node, L"Shadow copy set id", info.ShadowCopySetId());
+                    PrintValue(node, L"Shadow copy id", info.ShadowCopyId());
+                    PrintValue(node, L"Machine", info.MachineString());
+                    PrintValue(node, L"Service", info.ServiceString());
+                    PrintValue(node, L"Overlay", info.OverlayCount());
+                    PrintValue(node, L"Copy on write", info.CopyOnWriteCount());
+
+                    node.AddEmptyLine();
+
+                    if (config.bDump)
+                    {
+                        Dump(
+                            fmt::format(
+                                "{}\\vss_shadow_copy_{}.json",
+                                ToUtf8(GetWorkingDirectoryApi(ec)),
+                                shadowCopy.Information().ShadowCopyId()),
+                            shadowCopy);
+                    }
+                }
+            }
         }
     }
 
