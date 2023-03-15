@@ -16,7 +16,53 @@
 namespace Orc {
 
 template <typename T>
-using Result = boost::outcome_v2::std_result<T>;
+struct Result : boost::outcome_v2::std_result<T>
+{
+    template <typename... Args>
+    Result(Args&&... args)
+        : boost::outcome_v2::std_result<T>(std::forward<Args>(args)...)
+    {
+    }
+
+    template <class U>
+    constexpr auto value_or(U&& defaultValue) const&
+    {
+        if (boost::outcome_v2::std_result<T>::has_error())
+        {
+            return T {defaultValue};
+        }
+
+        return boost::outcome_v2::std_result<T>::value();
+    }
+
+    template <class U>
+    constexpr auto value_or(U&& defaultValue) &&
+    {
+        if (boost::outcome_v2::std_result<T>::has_error())
+        {
+            return T {defaultValue};
+        }
+
+        return boost::outcome_v2::std_result<T>::value();
+    }
+
+    constexpr const T* operator->() const { return &boost::outcome_v2::std_result<T>::value(); }
+    constexpr T* operator->() { return &boost::outcome_v2::std_result<T>::value(); }
+    constexpr const T& operator*() const& { return boost::outcome_v2::std_result<T>::value(); }
+    constexpr T& operator*() & { return boost::outcome_v2::std_result<T>::value(); }
+    constexpr const T&& operator*() const&& { return std::forward<T>(boost::outcome_v2::std_result<T>::value()); }
+    constexpr T&& operator*() && { return std::forward<T>(boost::outcome_v2::std_result<T>::value()); }
+};
+
+template <>
+struct Result<void> : boost::outcome_v2::std_result<void>
+{
+    template <typename... Args>
+    Result(Args&&... args)
+        : boost::outcome_v2::std_result<void>(std::forward<Args>(args)...)
+    {
+    }
+};
 
 template <typename T = void>
 using Success = boost::outcome_v2::success_type<T>;
