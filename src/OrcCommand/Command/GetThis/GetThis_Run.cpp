@@ -810,6 +810,8 @@ std::unique_ptr<Main::SampleRef> Main::CreateSample(
     sample->InstanceID = attribute.InstanceID;
     sample->SourcePath = ::GetMatchFullName(match->MatchingNames.front(), attribute);
 
+    sample->isRecordInUse = !match->DeletedRecord;
+
     // Keep 10.0 behavior for compatibility, eventually use ::GetLongestFileName when compatibility can be broken and
     // remove parentFRN to only keep FRN in the filename
     const auto lastFileName = ::GetLastFileName(match->MatchingNames);
@@ -1012,6 +1014,8 @@ Main::AddSampleRefToCSV(ITableOutput& output, const Main::SampleRef& sample) con
             {
                 output.WriteNothing();
             }
+
+            output.WriteBool(sample.isRecordInUse);
 
             output.WriteEndOfLine();
         }

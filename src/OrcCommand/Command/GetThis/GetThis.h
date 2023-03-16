@@ -182,6 +182,8 @@ public:
 
         std::vector<std::shared_ptr<FileFind::Match>> Matches;
 
+        bool isRecordInUse;
+
         SampleRef()
         {
             CollectionDate.dwHighDateTime = 0L;

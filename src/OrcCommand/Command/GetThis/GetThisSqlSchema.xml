@@ -41,6 +41,7 @@
         <utf8   name="TLSH" maxlen="256" />
 
         <utf8 name="YaraRules" maxlen="256" />
+        <bool name="RecordInUse" allows_null="no"/>
 
     </table>
 

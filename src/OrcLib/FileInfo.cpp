@@ -125,6 +125,7 @@ bool IsFailureAcceptedForDirectories(const Orc::Intentions& intention)
         case Intentions::FILEINFO_SIGNED_HASH:
         case Intentions::FILEINFO_SECURITY_DIRECTORY_SIZE:
         case Intentions::FILEINFO_SECURITY_DIRECTORY_SIGNATURE_SIZE:
+        case Intentions::FILEINFO_RECORDINUSE:
             return true;
     }
 
