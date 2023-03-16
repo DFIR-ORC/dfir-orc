@@ -10,6 +10,8 @@
 
 #include <string>
 
+#include <boost/algorithm/string.hpp>
+
 #include "FastFind.h"
 
 #include "SystemDetails.h"
@@ -182,6 +184,11 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
             config.Yara = std::make_unique<YaraConfig>(std::move(*yaraConfig));
         }
+
+        if (filesystem[FASTFIND_FILESYSTEM_RESURRECT])
+        {
+            config.bResurrect = boost::iequals(filesystem[FASTFIND_FILESYSTEM_RESURRECT].c_str(), L"yes");
+        }
     }
 
     if (configitem[FASTFIND_REGISTRY])
@@ -314,13 +321,18 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
     for (int i = 0; i < argc; i++)
     {
+        bool bSkipDeleted = false;
         switch (argv[i][0])
         {
             case L'/':
             case L'-':
                 if (ProcessPriorityOption(argv[i]))
                     ;
-                else if (BooleanOption(argv[i] + 1, L"SkipDeleted", config.bSkipDeleted))
+                else if (BooleanOption(argv[i] + 1, L"SkipDeleted", bSkipDeleted))
+                {
+                    config.bResurrect = !bSkipDeleted;
+                }
+                else if (BooleanOption(argv[i] + 1, L"ResurrectRecords", config.bResurrect))
                     ;
                 else if (ShadowsOption(
                              argv[i] + 1, L"Shadows", config.FileSystem.bAddShadows, config.FileSystem.m_shadows))

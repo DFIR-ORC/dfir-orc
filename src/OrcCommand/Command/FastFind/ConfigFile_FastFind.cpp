@@ -99,6 +99,8 @@ HRESULT Orc::Config::FastFind::filesystem(ConfigItem& parent, DWORD dwIndex)
         return hr;
     if (FAILED(hr = parent[dwIndex].AddChild(yara, FASTFIND_FILESYSTEM_YARA)))
         return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"resurrect", FASTFIND_FILESYSTEM_RESURRECT, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }
 

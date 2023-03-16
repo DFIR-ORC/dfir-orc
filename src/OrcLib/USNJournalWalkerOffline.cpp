@@ -85,6 +85,7 @@ HRESULT USNJournalWalkerOffline::Initialize(const std::shared_ptr<Location>& loc
                         Log::Error("Failed to find USN journal data attribute");
                     }
                 },
+                false,
                 false)))
     {
         Log::Error("Failed to parse location while searching for USN journal");
@@ -180,7 +181,10 @@ HRESULT USNJournalWalkerOffline::ReadJournal(const IUSNJournalWalker::Callbacks&
         if (pChunk == nullptr)
             return E_OUTOFMEMORY;
 
-        BOOST_SCOPE_EXIT(&pChunk) { HeapFree(GetProcessHeap(), 0, pChunk); }
+        BOOST_SCOPE_EXIT(&pChunk)
+        {
+            HeapFree(GetProcessHeap(), 0, pChunk);
+        }
         BOOST_SCOPE_EXIT_END;
 
         if (S_OK == m_USNJournal->CanRead())

@@ -382,6 +382,8 @@ HRESULT FileFind::Match::Write(ITableOutput& output)
 
             output.WriteGUID(SnapshotID);
 
+            output.WriteBool(!DeletedRecord);
+
             output.WriteEndOfLine();
         }
     }
@@ -424,6 +426,8 @@ HRESULT FileFind::Match::Write(ITableOutput& output)
 
                 output.WriteGUID(SnapshotID);
 
+                output.WriteBool(!DeletedRecord);
+
                 output.WriteEndOfLine();
             }
         }
@@ -443,6 +447,7 @@ HRESULT FileFind::Match::Write(IStructuredOutput& pWriter, LPCWSTR szElement)
     {
         LARGE_INTEGER* pLI = (LARGE_INTEGER*)&FRN;
         pWriter.WriteNamed(L"frn", (ULONGLONG)pLI->QuadPart, true);
+        pWriter.WriteNamed(L"record_in_use", DeletedRecord ? "N" : "Y", true);
 
         pWriter.WriteNamed(L"volume_id", VolumeReader->VolumeSerialNumber(), true);
 
@@ -4285,7 +4290,11 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
     return S_FALSE;
 }
 
-HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallback aCallback, bool bParseI30Data)
+HRESULT FileFind::Find(
+    const LocationSet& locations,
+    FileFind::FoundMatchCallback aCallback,
+    bool bParseI30Data,
+    bool bResurrectRecords)
 {
     HRESULT hr = E_FAIL;
 
@@ -4319,7 +4328,7 @@ HRESULT FileFind::Find(const LocationSet& locations, FileFind::FoundMatchCallbac
 
         m_pVolReader = aLoc->GetReader();
 
-        if (FAILED(hr = walk.Initialize(aLoc, false)))
+        if (FAILED(hr = walk.Initialize(aLoc, bResurrectRecords)))
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
             {

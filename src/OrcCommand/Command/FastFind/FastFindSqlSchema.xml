@@ -4,7 +4,7 @@
 
     <table key="FastFindFileSystem">
 
-        <utf8  name="ComputerName" maxlen="50" />
+        <utf8 name="ComputerName" maxlen="50" />
         <uint64 name="VolumeID"     allows_null="no" fmt="0x{:016X}" />
         <utf16 name="FullName"     maxlen="32k" />
         <uint64 name="FRN" fmt="0x{:016X}" allows_null="no" />
@@ -27,7 +27,8 @@
         <binary name="SHA1" len="20" />
         <binary name="SHA256" len="32" fmt="{:02X}"/>
 
-        <guid   name="SnapshotID" allows_null="no" />
+        <guid name="SnapshotID" allows_null="no" />
+        <bool name="RecordInUse" allows_null="no" />
 
     </table>
 

@@ -46,6 +46,7 @@ HRESULT HiveQuery::BuildStreamList()
                 }
             }
         },
+        false,
         false);
 
     if (FAILED(hr))

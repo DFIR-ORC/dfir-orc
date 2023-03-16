@@ -252,7 +252,7 @@ public:
         bool bAll = false;
         WCHAR Volume = 0;
 
-        bool bSkipDeleted = true;
+        bool bResurrect = false;
 
         FileSystemSpec FileSystem;
         RegistrySpec Registry;

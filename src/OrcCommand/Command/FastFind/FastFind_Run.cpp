@@ -271,7 +271,8 @@ HRESULT Main::RunFileSystem()
 
             return;
         },
-        true);
+        true,
+        config.bResurrect);
 
     if (FAILED(hr))
     {
@@ -308,6 +309,7 @@ HRESULT Main::RunRegistry()
                 aFileMatch->MatchingNames.front().FullPathName,
                 aFileMatch->Term->GetDescription());
         },
+        false,
         false);
 
     if (FAILED(hr))
