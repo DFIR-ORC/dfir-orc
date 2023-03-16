@@ -30,6 +30,7 @@
 #include <type_traits>
 
 #include <Windows.h>
+#include <winsock.h>
 
 #include <Utils/Result.h>
 

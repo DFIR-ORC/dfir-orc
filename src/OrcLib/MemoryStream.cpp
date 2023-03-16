@@ -84,6 +84,21 @@ HRESULT MemoryStream::Duplicate(const MemoryStream& other)
         m_cbBufferCommitSize = other.m_cbBufferCommitSize;
         m_dwCurrFilePointer = 0LL;
     }
+
+    ULONG64 ullCurPos = 0LLU;
+    auto hr = const_cast<MemoryStream*>(&other)->SetFilePointer(0LL, FILE_CURRENT, &ullCurPos);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    ULONG64 ullDupCurPos = 0LLU;
+    hr = SetFilePointer(ullCurPos, FILE_BEGIN, &ullDupCurPos);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
     return S_OK;
 }
 

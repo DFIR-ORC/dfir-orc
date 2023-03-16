@@ -238,6 +238,38 @@ STDMETHODIMP TemporaryStream::SetSize(ULONG64 ullSize)
     return S_OK;
 }
 
+STDMETHODIMP Orc::TemporaryStream::Clone(std::shared_ptr<ByteStream>& clone)
+{
+    HRESULT hr = E_FAIL;
+
+    auto new_stream = std::make_shared<TemporaryStream>();
+
+    if (m_pMemStream)
+    {
+        std::shared_ptr<ByteStream> new_mem_stream;
+        if (FAILED(hr = m_pMemStream->Clone(new_mem_stream)))
+            return hr;
+        new_stream->m_pMemStream = std::dynamic_pointer_cast<MemoryStream>(new_mem_stream);
+    }
+
+    if (m_pFileStream)
+    {
+        std::shared_ptr<ByteStream> new_file_stream;
+        if (FAILED(hr = m_pFileStream->Clone(new_file_stream)))
+            return hr;
+        new_stream->m_pFileStream = std::dynamic_pointer_cast<FileStream>(new_file_stream);
+    }
+
+    new_stream->m_bReleaseOnClose = m_bReleaseOnClose;
+    new_stream->m_dwMemThreshold = m_dwMemThreshold;
+    new_stream->m_strFileName = m_strFileName;
+    new_stream->m_strIdentifier = m_strIdentifier;
+    new_stream->m_strTemp = m_strTemp;
+
+    clone = new_stream;
+    return S_OK;
+}
+
 STDMETHODIMP TemporaryStream::Close()
 {
     HRESULT hr = E_FAIL;

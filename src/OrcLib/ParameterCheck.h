@@ -20,6 +20,7 @@ HRESULT ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile);
 
 HRESULT
 ExpandDirectoryPath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS);
+
 HRESULT ExpandDirectoryPath(const WCHAR* szInputString, std::wstring& strInputFile);
 
 HRESULT VerifyFileExists(const WCHAR* szInputFile);
@@ -35,6 +36,7 @@ HRESULT GetProcessModuleFullPath(WCHAR* szDirectory, DWORD cchDirectoryLengthInW
 
 HRESULT
 GetDirectoryForFile(const WCHAR* szInputString, WCHAR* szDirectory, DWORD cchDirectoryLengthInWCHARS);
+
 HRESULT GetFileNameForFile(const WCHAR* szInputString, WCHAR* szFileName, DWORD cchFileNameLengthInWCHARS);
 HRESULT GetExtensionForFile(const WCHAR* szInputString, WCHAR* szExtension, DWORD cchFileNameLengthInWCHARS);
 HRESULT GetBaseNameForFile(const WCHAR* szInputString, WCHAR* szBaseName, DWORD cchBaseNameLengthInWCHARS);
@@ -51,6 +53,7 @@ HRESULT GetOutputFile(
     WCHAR* szOutputFile,
     DWORD cchOutputFileLengthInWCHARS,
     bool bCreateParentAsNeeded = false);
+
 HRESULT
 GetOutputFile(const WCHAR* szInputString, std::wstring& strOutputFile, bool bCreateParentAsNeeded = false);
 
@@ -59,6 +62,7 @@ HRESULT GetOutputDir(
     WCHAR* szOutputDir,
     DWORD cchOutputFileLengthInWCHARS,
     bool bAllowRecursiveFolderCreation = false);
+
 HRESULT
 GetOutputDir(const WCHAR* szInputString, std::wstring& strOutputDir, bool bAllowRecursiveFolderCreation = false);
 
@@ -67,6 +71,7 @@ HRESULT GetOutputCab(
     WCHAR* szOutputCab,
     DWORD cchOutputCabLengthInWCHARS,
     bool bAllowRecursiveFolderCreation = false);
+
 HRESULT
 GetOutputCab(const WCHAR* szInputString, std::wstring& strOutputCab, bool bCreateParentAsNeeded = false);
 
@@ -87,15 +92,22 @@ HRESULT GetBytesFromHexaString(
     DWORD dwStrLen,
     BYTE* pBytes,
     DWORD dwMaxBytesLen,
-    DWORD* pdwBytesLen = nullptr);
-HRESULT GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer);
+    DWORD* pdwBytesLen = nullptr,
+    bool bMustBe0xPrefixed = false);
+
+HRESULT
+GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer, bool bMustBe0xPrefixed = false);
+
 HRESULT GetBytesFromHexaString(
     const CHAR* pszStr,
     DWORD dwStrLen,
     BYTE* pBytes,
     DWORD dwMaxBytesLen,
-    DWORD* pdwBytesLen = nullptr);
-HRESULT GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer);
+    DWORD* pdwBytesLen = nullptr,
+    bool bMustBe0xPrefixed = false);
+
+HRESULT
+GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer, bool bMustBe0xPrefixed = false);
 
 HRESULT GetDateFromString(const WCHAR* szFormat, const WCHAR* szString, FILETIME& result);
 

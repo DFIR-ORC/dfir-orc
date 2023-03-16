@@ -355,10 +355,14 @@ private:
         constexpr ULONG capacity() const { return 0; }
         void reserve(ULONG Elts)
         {
+            if (Elts == 0LU)  // Nothing to reserve
+                return;
             throw Orc::Exception(Severity::Continue, L"Cannot reserve {} elements in empty store"sv, Elts);
         }
         void assign(const _T* Ptr, ULONG Elts)
         {
+            if (Elts == 0LU)  // Nothing to assign
+                return;
             throw Orc::Exception(Severity::Continue, L"Cannot assign {} elements to empty store"sv, Elts);
         }
 

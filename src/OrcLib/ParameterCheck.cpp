@@ -880,7 +880,13 @@ HRESULT Orc::GetIntegerFromHexaString(const CHAR* pszStr, LARGE_INTEGER& result)
 }
 
 HRESULT
-Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, BYTE* pBytes, DWORD dwBytesLen, DWORD* pdwBytesLen)
+Orc::GetBytesFromHexaString(
+    const WCHAR* pszStr,
+    DWORD dwStrLen,
+    BYTE* pBytes,
+    DWORD dwBytesLen,
+    DWORD* pdwBytesLen,
+    bool bMustBe0xPrefixed)
 {
     if (pszStr == NULL)
         return E_POINTER;
@@ -900,8 +906,13 @@ Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, BYTE* pBytes, D
         if (dwBytesLen < (dwStrLen - 2) / 2)
             return E_INVALIDARG;
     }
-    else if (dwBytesLen < dwStrLen / 2)
-        return E_INVALIDARG;
+    else
+    {
+        if (bMustBe0xPrefixed)
+            return E_INVALIDARG;
+        if (dwBytesLen < dwStrLen / 2)
+            return E_INVALIDARG;
+    }
 
     for (DWORD i = dwStartAt; i < dwStrLen; i++)
     {
@@ -941,7 +952,13 @@ Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, BYTE* pBytes, D
 }
 
 HRESULT
-Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, BYTE* pBytes, DWORD dwBytesLen, DWORD* pdwBytesLen)
+Orc::GetBytesFromHexaString(
+    const CHAR* pszStr,
+    DWORD dwStrLen,
+    BYTE* pBytes,
+    DWORD dwBytesLen,
+    DWORD* pdwBytesLen,
+    bool bMustBe0xPrefixed)
 {
     if (pszStr == NULL)
         return E_POINTER;
@@ -961,8 +978,13 @@ Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, BYTE* pBytes, DW
         if (dwBytesLen < (dwStrLen - 2) / 2)
             return E_INVALIDARG;
     }
-    else if (dwBytesLen < dwStrLen / 2)
-        return E_INVALIDARG;
+    else
+    {
+        if (bMustBe0xPrefixed)
+            return E_INVALIDARG;
+        if (dwBytesLen < dwStrLen / 2)
+            return E_INVALIDARG;
+    }
 
     for (DWORD i = dwStartAt; i < dwStrLen; i++)
     {
@@ -1001,7 +1023,7 @@ Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, BYTE* pBytes, DW
     return S_OK;
 }
 
-HRESULT Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer)
+HRESULT Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer, bool bMustBe0xPrefixed)
 {
     if (pszStr == NULL)
         return E_POINTER;
@@ -1016,7 +1038,12 @@ HRESULT Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, CBinary
         buffer.SetCount((dwStrLen - 2) / 2);
     }
     else
+    {
+        if (bMustBe0xPrefixed)
+            return E_INVALIDARG;
+
         buffer.SetCount(dwStrLen / 2);
+    }
 
     for (DWORD i = dwStartAt; i < dwStrLen; i++)
     {
@@ -1053,7 +1080,7 @@ HRESULT Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, CBinary
     return S_OK;
 }
 
-HRESULT Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer)
+HRESULT Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer, bool bMustBe0xPrefixed)
 {
     if (pszStr == NULL)
         return E_POINTER;
@@ -1068,7 +1095,12 @@ HRESULT Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryB
         buffer.SetCount((dwStrLen - 2) / 2);
     }
     else
+    {
+        if (bMustBe0xPrefixed)
+            return E_INVALIDARG;
+
         buffer.SetCount(dwStrLen / 2);
+    }
 
     for (DWORD i = dwStartAt; i < dwStrLen; i++)
     {
