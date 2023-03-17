@@ -149,6 +149,8 @@ set(SRC_DISK_FILESYSTEM_NTFS_MFT
     "MFTUtils.h"
     "MFTWalker.cpp"
     "MFTWalker.h"
+    "ResurrectRecordsMode.h"
+    "ResurrectRecordsMode.cpp"
 )
 
 source_group(Disk\\FileSystem\\NTFS\\MFT FILES ${SRC_DISK_FILESYSTEM_NTFS_MFT})
