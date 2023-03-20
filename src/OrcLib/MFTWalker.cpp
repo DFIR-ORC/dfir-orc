@@ -28,6 +28,52 @@ using namespace std;
 using namespace std::string_view_literals;
 using namespace Orc;
 
+namespace {
+
+// Check if an unused record can be considered as "resident" which means that most of its data is stored in only one
+// record. An unused "resident" record should be still worth analysis.
+bool IsRecordInUseOrResident(const MFTRecord& record)
+{
+    if (record.IsRecordInUse())
+    {
+        return true;
+    }
+
+    if (record.GetFileBaseRecord() != nullptr)
+    {
+        Log::Debug("Record is not resident: is not a base record");
+        return false;
+    }
+
+    if (record.GetChildRecords().size() > 1)
+    {
+        Log::Debug("Record is not resident: has multiple child records");
+        return false;
+    }
+
+    for (const auto& dataAttribute : record.GetDataAttributes())
+    {
+        if (dataAttribute && dataAttribute->IsNonResident())
+        {
+            Log::Debug("Record is not resident: has non resident data attribute");
+            return false;
+        }
+    }
+
+    for (const auto& attributes : record.GetAttributeList())
+    {
+        if (attributes.FormCode() == NONRESIDENT_FORM)
+        {
+            Log::Debug("Record is not resident: has non resident attribute");
+            return false;
+        }
+    }
+
+    return true;
+}
+
+}  // namespace
+
 // Number of items in the VirtualStore
 constexpr auto SEGMENT_MAX_NUMBER = (0x10000);
 
@@ -1332,6 +1378,7 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
         }
 
         if (m_resurrectRecordMode == ResurrectRecordsMode::kYes
+            || m_resurrectRecordMode == ResurrectRecordsMode::kResident
             || (pRecord->m_pRecord->Flags & FILE_RECORD_SEGMENT_IN_USE))
         {
             MFTRecord* pBaseRecord = NULL;
@@ -1365,9 +1412,6 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
             else if (hr == S_OK)
             {
                 Log::Trace(L"MFT record parsed (frn: {:#x})", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
-
-                m_MFTMap.insert(pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>(
-                    NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), pRecord));
 
                 if (FAILED(hr = AddDirectoryName(pRecord)))
                 {
@@ -1438,6 +1482,19 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                         }
                     }
                 }
+
+                if (m_resurrectRecordMode == ResurrectRecordsMode::kResident && !::IsRecordInUseOrResident(*pRecord))
+                {
+                    Log::Debug(
+                        "Ignored non resident record (frn: {:#x})",
+                        NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
+                    DeleteRecord(pRecord);
+                    return S_OK;
+                }
+
+                m_MFTMap.insert(pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>(
+                    NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), pRecord));
+
                 pAddedRecord = pRecord;
             }
             else
@@ -1630,6 +1687,15 @@ HRESULT MFTWalker::AddRecordCallback(MFTUtils::SafeMFTSegmentNumber& ullRecordIn
             Log::Trace(
                 L"Record {} is complete, calling callback", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
 
+            if (m_resurrectRecordMode == ResurrectRecordsMode::kResident && !::IsRecordInUseOrResident(*pRecord))
+            {
+                Log::Debug(
+                    "Ignored non resident record (frn: {:#x})", NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber));
+
+                DeleteRecord(pRecord);
+                return S_OK;
+            }
+
             if (m_Callbacks.SecDescCallback != nullptr
                 && NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()) == $SECURE_FILE_REFERENCE_NUMBER)
             {
@@ -1752,8 +1818,7 @@ HRESULT MFTWalker::Statistics(const WCHAR* szMsg)
             }
         }
     });
-
-    if (m_resurrectRecordMode == ResurrectRecordsMode::kYes)
+    if (m_resurrectRecordMode == ResurrectRecordsMode::kYes || m_resurrectRecordMode == ResurrectRecordsMode::kResident)
     {
         Log::Trace(
             L"Deleted -> Available: {}, Directories: {}, Not parsed: {}, Incomplete: {}",
