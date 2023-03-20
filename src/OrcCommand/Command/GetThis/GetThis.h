@@ -35,6 +35,7 @@
 #include "Archive/Appender.h"
 #include "Archive/7z/Archive7z.h"
 #include "Configuration/ShadowsParserOption.h"
+#include "ResurrectRecordsMode.h"
 
 #pragma managed(push, off)
 
@@ -121,13 +122,13 @@ public:
     public:
         Configuration()
             : Locations()
-            , resurrectRecords(false)
+            , resurrectRecordsMode(ResurrectRecordsMode::kNo)
         {
             bAddShadows = boost::indeterminate;
         }
         bool bFlushRegistry = false;
         bool bReportAll = false;
-        bool resurrectRecords;
+        ResurrectRecordsMode resurrectRecordsMode;
         boost::logic::tribool bAddShadows;
         std::optional<LocationSet::ShadowFilters> m_shadows;
         std::optional<Ntfs::ShadowCopy::ParserType> m_shadowsParser;

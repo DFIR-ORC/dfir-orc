@@ -44,11 +44,11 @@ MFTWalker::MFTFileNameWrapper::MFTFileNameWrapper(const PFILE_NAME pFileName)
     m_InLocation = boost::indeterminate;
 }
 
-HRESULT MFTWalker::Initialize(const shared_ptr<Location>& loc, bool bIncludeNoInUse)
+HRESULT MFTWalker::Initialize(const shared_ptr<Location>& loc, ResurrectRecordsMode resurrectRecordsMode)
 {
     HRESULT hr = E_FAIL;
 
-    m_bIncludeNotInUse = bIncludeNoInUse;
+    m_resurrectRecordMode = resurrectRecordsMode;
     m_pVolReader = loc->GetReader();
 
     if (m_pVolReader == nullptr)
@@ -1331,7 +1331,8 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
             ullRecordIndex = pRecord->m_FileReferenceNumber.SegmentNumberLowPart;
         }
 
-        if (m_bIncludeNotInUse || (pRecord->m_pRecord->Flags & FILE_RECORD_SEGMENT_IN_USE))
+        if (m_resurrectRecordMode == ResurrectRecordsMode::kYes
+            || (pRecord->m_pRecord->Flags & FILE_RECORD_SEGMENT_IN_USE))
         {
             MFTRecord* pBaseRecord = NULL;
 
@@ -1751,7 +1752,8 @@ HRESULT MFTWalker::Statistics(const WCHAR* szMsg)
             }
         }
     });
-    if (m_bIncludeNotInUse)
+
+    if (m_resurrectRecordMode == ResurrectRecordsMode::kYes)
     {
         Log::Trace(
             L"Deleted -> Available: {}, Directories: {}, Not parsed: {}, Incomplete: {}",
@@ -1760,6 +1762,7 @@ HRESULT MFTWalker::Statistics(const WCHAR* szMsg)
             dwDeletedNotParsedCount,
             dwDeletedIncompleteCount);
     }
+
     Log::Trace(
         L"Total   -> Available: {}, Directories: {}, Not parsed: {}, Incomplete: {}",
         dwAvailableEntries,

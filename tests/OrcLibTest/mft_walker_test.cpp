@@ -117,7 +117,7 @@ private:
                                           const PFILE_NAME pFileName,
                                           const std::shared_ptr<IndexAllocationAttribute>& pAttr) { m_NbFolders++; };
 
-        Assert::IsTrue(S_OK == walker.Initialize(loc, false));
+        Assert::IsTrue(S_OK == walker.Initialize(loc, ResurrectRecordsMode::kNo));
         Assert::IsTrue(S_OK == walker.Walk(callBacks));
 
         ntfsImageStream->Close();

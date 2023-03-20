@@ -55,7 +55,7 @@ public:
             : locs()
         {
             bGetKnownLocations = false;
-            bResurrectRecords = boost::logic::indeterminate;
+            resurrectRecordsMode = ResurrectRecordsMode::kNo;
             bAddShadows = boost::logic::indeterminate;
             bPopSystemObjects = boost::logic::indeterminate;
             ColumnIntentions = Intentions::FILEINFO_NONE;
@@ -90,7 +90,7 @@ public:
 
         LocationSet locs;
 
-        boost::logic::tribool bResurrectRecords;
+        ResurrectRecordsMode resurrectRecordsMode;
         boost::logic::tribool bAddShadows;
         std::optional<LocationSet::ShadowFilters> m_shadows;
         std::optional<Ntfs::ShadowCopy::ParserType> m_shadowsParser;
@@ -139,7 +139,6 @@ private:
         FILETIME time);
 
     std::wstring GetWalkerFromConfig(const ConfigItem& config);
-    boost::logic::tribool GetResurrectFromConfig(const ConfigItem& config);
     boost::logic::tribool GetPopulateSystemObjectsFromConfig(const ConfigItem& config);
 
     bool GetKnownLocationFromConfig(const ConfigItem& config);

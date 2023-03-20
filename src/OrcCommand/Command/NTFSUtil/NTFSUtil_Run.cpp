@@ -386,7 +386,7 @@ HRESULT Main::CommandRecord(ULONGLONG ullRecord)
     }
 
     MFTWalker walk;
-    hr = walk.Initialize(addedLocs[0], true);
+    hr = walk.Initialize(addedLocs[0], ResurrectRecordsMode::kYes);
     if (FAILED(hr))
     {
         Log::Error(L"Failed during MFT walk initialisation on volume: '{}'", config.strVolume);

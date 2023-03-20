@@ -20,6 +20,7 @@
 #include "IMFT.h"
 
 #include "CaseInsensitive.h"
+#include "ResurrectRecordsMode.h"
 
 #include <unordered_set>
 #include <set>
@@ -105,7 +106,7 @@ public:
         m_currentFileNameElements.reserve(64);
     }
 
-    HRESULT Initialize(const std::shared_ptr<Location>& loc, bool bIncludeNoInUse = true);
+    HRESULT Initialize(const std::shared_ptr<Location>& loc, ResurrectRecordsMode mode = ResurrectRecordsMode::kYes);
 
     FullNameBuilder GetFullNameBuilder()
     {
@@ -161,7 +162,7 @@ private:
     std::unordered_map<MFTUtils::SafeMFTSegmentNumber, MFTFileNameWrapper> m_DirectoryNames;
     std::unordered_set<std::wstring, CaseInsensitiveUnordered> m_Locations;
 
-    bool m_bIncludeNotInUse = false;
+    ResurrectRecordsMode m_resurrectRecordMode = ResurrectRecordsMode::kNo;
 
     ULONG m_ulMFTRecordCount = 0LU;
 

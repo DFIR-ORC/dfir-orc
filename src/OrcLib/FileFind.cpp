@@ -4294,7 +4294,7 @@ HRESULT FileFind::Find(
     const LocationSet& locations,
     FileFind::FoundMatchCallback aCallback,
     bool bParseI30Data,
-    bool bResurrectRecords)
+    ResurrectRecordsMode resurrectRecordsMode)
 {
     HRESULT hr = E_FAIL;
 
@@ -4328,7 +4328,7 @@ HRESULT FileFind::Find(
 
         m_pVolReader = aLoc->GetReader();
 
-        if (FAILED(hr = walk.Initialize(aLoc, bResurrectRecords)))
+        if (FAILED(hr = walk.Initialize(aLoc, resurrectRecordsMode)))
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
             {

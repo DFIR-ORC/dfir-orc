@@ -272,7 +272,7 @@ HRESULT Main::RunFileSystem()
             return;
         },
         true,
-        config.bResurrect);
+        config.resurrectRecordsMode);
 
     if (FAILED(hr))
     {
@@ -310,7 +310,7 @@ HRESULT Main::RunRegistry()
                 aFileMatch->Term->GetDescription());
         },
         false,
-        false);
+        ResurrectRecordsMode::kNo);
 
     if (FAILED(hr))
     {

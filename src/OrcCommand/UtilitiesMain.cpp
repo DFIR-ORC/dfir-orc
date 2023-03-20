@@ -749,6 +749,44 @@ bool UtilitiesMain::ToggleBooleanOption(LPCWSTR szArg, LPCWSTR szOption, bool& b
     return true;
 }
 
+bool UtilitiesMain::ResurrectRecordsOption(LPCWSTR szArg, LPCWSTR szOption, ResurrectRecordsMode& mode)
+{
+    boost::tribool resurrectAllRecords = false;
+
+    if (BooleanExactOption(szArg, szOption, resurrectAllRecords))
+    {
+        if (resurrectAllRecords.true_value)
+        {
+            mode = ResurrectRecordsMode::kYes;
+        }
+        else if (resurrectAllRecords.false_value)
+        {
+            mode = ResurrectRecordsMode::kNo;
+        }
+        else
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    std::wstring modeString;
+    if (!ParameterOption(szArg, szOption, modeString))
+    {
+        return false;
+    }
+
+    auto rv = ToResurrectRecordsMode(modeString);
+    if (!rv)
+    {
+        return false;
+    }
+
+    mode = *rv;
+    return true;
+}
+
 bool UtilitiesMain::ShadowsOption(
     LPCWSTR szArg,
     LPCWSTR szOption,

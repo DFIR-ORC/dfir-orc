@@ -27,6 +27,7 @@
 #include "YaraScanner.h"
 
 #include "Configuration/ConfigFileReader.h"
+#include "ResurrectRecordsMode.h"
 
 #include "FileFind.h"
 
@@ -187,7 +188,18 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
         if (filesystem[FASTFIND_FILESYSTEM_RESURRECT])
         {
-            config.bResurrect = boost::iequals(filesystem[FASTFIND_FILESYSTEM_RESURRECT].c_str(), L"yes");
+            auto rv = ToResurrectRecordsMode(filesystem[FASTFIND_FILESYSTEM_RESURRECT].c_str());
+            if (!rv)
+            {
+                Log::Error(
+                    L"Failed to parse 'Resurrect' attribute (value: {}) [{}]",
+                    filesystem[FASTFIND_FILESYSTEM_RESURRECT],
+                    rv.error());
+            }
+            else
+            {
+                config.resurrectRecordsMode = *rv;
+            }
         }
     }
 
@@ -330,9 +342,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (BooleanOption(argv[i] + 1, L"SkipDeleted", bSkipDeleted))
                 {
-                    config.bResurrect = !bSkipDeleted;
+                    config.resurrectRecordsMode = ResurrectRecordsMode::kNo;
                 }
-                else if (BooleanOption(argv[i] + 1, L"ResurrectRecords", config.bResurrect))
+                else if (ResurrectRecordsOption(argv[i] + 1, L"ResurrectRecords", config.resurrectRecordsMode))
                     ;
                 else if (ShadowsOption(
                              argv[i] + 1, L"Shadows", config.FileSystem.bAddShadows, config.FileSystem.m_shadows))

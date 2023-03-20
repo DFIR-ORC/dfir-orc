@@ -25,6 +25,7 @@
 #include "TableOutputWriter.h"
 #include "ExtensionLibrary.h"
 #include "Console.h"
+#include "ResurrectRecordsMode.h"
 #include "Log/Log.h"
 #include "Text/Print.h"
 #include "Text/Fmt/Offset.h"
@@ -660,6 +661,8 @@ protected:
         fOption.value() |= eValue;
         return true;
     }
+
+    static bool ResurrectRecordsOption(LPCWSTR szArg, LPCWSTR szOption, ResurrectRecordsMode& mode);
 
     static bool ShadowsOption(
         LPCWSTR szArg,

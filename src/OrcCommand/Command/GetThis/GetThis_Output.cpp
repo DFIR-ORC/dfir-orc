@@ -176,7 +176,7 @@ void Main::PrintParameters()
     PrintValue(node, L"ReportAll", Traits::Boolean(config.bReportAll));
     PrintValue(node, L"Hash", config.CryptoHashAlgs);
     PrintValue(node, L"FuzzyHash", config.FuzzyHashAlgs);
-    PrintValue(node, L"Search deleted records", config.resurrectRecords);
+    PrintValue(node, L"Search deleted records", ToString(config.resurrectRecordsMode).value_or("N/A"));
     PrintValue(node, L"NoLimits", Traits::Boolean(config.limits.bIgnoreLimits));
     PrintValue(node, L"MaxBytesPerSample", config.limits.dwlMaxBytesPerSample);
     PrintValue(node, L"MaxTotalBytes", config.limits.dwlMaxTotalBytes);

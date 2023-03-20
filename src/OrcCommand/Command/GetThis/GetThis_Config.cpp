@@ -347,7 +347,17 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[GETTHIS_RESURRECT])
     {
-        config.resurrectRecords = boost::iequals(configitem[GETTHIS_RESURRECT].c_str(), L"yes");
+        auto rv = ToResurrectRecordsMode(configitem[GETTHIS_RESURRECT].c_str());
+        if (!rv)
+
+        {
+            Log::Error(
+                L"Failed to parse 'Resurrect' attribute (value: {}) [{}]", configitem[GETTHIS_RESURRECT], rv.error());
+        }
+        else
+        {
+            config.resurrectRecordsMode = *rv;
+        }
     }
 
     return S_OK;
@@ -376,7 +386,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             static_cast<OutputSpec::Kind>(OutputSpec::Kind::Archive | OutputSpec::Kind::Directory),
                             config.Output))
                         ;
-                    else if (BooleanOption(argv[i] + 1, L"ResurrectRecords", config.resurrectRecords))
+                    else if (ResurrectRecordsOption(argv[i] + 1, L"ResurrectRecords", config.resurrectRecordsMode))
                         ;
                     else if (!_wcsnicmp(argv[i] + 1, L"Sample", wcslen(L"Sample")))
                     {

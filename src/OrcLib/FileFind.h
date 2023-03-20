@@ -506,8 +506,11 @@ public:
     HRESULT AddExcludeTermsFromConfig(const ConfigItem& items);
     HRESULT AddExcludeTerm(const std::shared_ptr<SearchTerm>& FindSpec);
 
-    HRESULT
-    Find(const LocationSet& locations, FoundMatchCallback aCallback, bool bParseI30Data, bool bResurrectRecords);
+    HRESULT Find(
+        const LocationSet& locations,
+        FoundMatchCallback aCallback,
+        bool bParseI30Data,
+        ResurrectRecordsMode resurrectRecordsMode);
 
     const std::vector<std::shared_ptr<Match>>& Matches() const { return m_Matches; }
 

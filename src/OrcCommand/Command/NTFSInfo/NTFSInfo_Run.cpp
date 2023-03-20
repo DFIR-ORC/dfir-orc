@@ -795,7 +795,7 @@ HRESULT Main::RunThroughMFT()
         MFTWalker walker;
         HRESULT hr = E_FAIL;
 
-        if (FAILED(hr = walker.Initialize(loc, (bool)config.bResurrectRecords)))
+        if (FAILED(hr = walker.Initialize(loc, config.resurrectRecordsMode)))
         {
             if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
             {

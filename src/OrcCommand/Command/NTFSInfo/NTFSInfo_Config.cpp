@@ -15,6 +15,7 @@
 #include "ConfigFile_NTFSInfo.h"
 #include "FileInfoCommon.h"
 #include "Log/UtilitiesLoggerConfiguration.h"
+#include "ResurrectRecordsMode.h"
 
 #include <vector>
 #include <algorithm>
@@ -121,21 +122,6 @@ std::wstring Main::GetWalkerFromConfig(const ConfigItem& config)
     return L""s;
 }
 
-boost::logic::tribool Main::GetResurrectFromConfig(const ConfigItem& config)
-{
-    if (config[NTFSINFO_RESURRECT])
-    {
-        using namespace std::string_view_literals;
-        const auto NO = L"no"sv;
-
-        if (equalCaseInsensitive((const std::wstring&)config[NTFSINFO_RESURRECT], NO, NO.size()))
-            return false;
-        else
-            return true;
-    }
-    return boost::logic::indeterminate;
-}
-
 boost::logic::tribool Main::GetPopulateSystemObjectsFromConfig(const ConfigItem& config)
 {
     if (config[NTFSINFO_POP_SYS_OBJ])
@@ -213,7 +199,20 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         }
     }
 
-    config.bResurrectRecords = GetResurrectFromConfig(configitem);
+    if (configitem[NTFSINFO_RESURRECT])
+    {
+        auto mode = ToResurrectRecordsMode(configitem[NTFSINFO_RESURRECT]);
+        if (!mode)
+        {
+            Log::Error(
+                L"Failed to parse 'Resurrect' attribute (value: {}) [{}]", configitem[NTFSINFO_RESURRECT].c_str(), mode.error());
+        }
+        else
+        {
+            config.resurrectRecordsMode = mode.value();
+        }
+    }
+
     config.bGetKnownLocations = GetKnownLocationFromConfig(configitem);
     config.bPopSystemObjects = GetPopulateSystemObjectsFromConfig(configitem);
 
@@ -323,7 +322,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (LocationExcludeOption(argv[i] + 1, L"Exclude", config.m_excludes))
                         ;
-                    else if (ParameterOption(argv[i] + 1, L"ResurrectRecords", config.bResurrectRecords))
+                    else if (ResurrectRecordsOption(argv[i] + 1, L"ResurrectRecords", config.resurrectRecordsMode))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"PopSysObj", config.bPopSystemObjects))
                         ;
@@ -455,11 +454,6 @@ HRESULT Main::CheckConfiguration()
     {
         config.DefaultIntentions =
             NtfsFileInfo::GetIntentions(L"Default", NtfsFileInfo::g_NtfsAliasNames, NtfsFileInfo::g_NtfsColumnNames);
-    }
-
-    if (boost::logic::indeterminate(config.bResurrectRecords))
-    {
-        config.bResurrectRecords = false;
     }
 
     // Default Parser is MFT;

@@ -86,7 +86,7 @@ HRESULT USNJournalWalkerOffline::Initialize(const std::shared_ptr<Location>& loc
                     }
                 },
                 false,
-                false)))
+                ResurrectRecordsMode::kNo)))
     {
         Log::Error("Failed to parse location while searching for USN journal");
     }
@@ -110,7 +110,7 @@ HRESULT USNJournalWalkerOffline::EnumJournal(const IUSNJournalWalker::Callbacks&
 
     MFTWalker walk;
 
-    if (FAILED(hr = walk.Initialize(locations.begin()->second, true)))
+    if (FAILED(hr = walk.Initialize(locations.begin()->second, ResurrectRecordsMode::kYes)))
     {
         Log::Error(L"Failed during MFT walk initialisation [{}]", SystemError(hr));
         return hr;

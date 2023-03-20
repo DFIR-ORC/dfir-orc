@@ -252,7 +252,7 @@ public:
         bool bAll = false;
         WCHAR Volume = 0;
 
-        bool bResurrect = false;
+        ResurrectRecordsMode resurrectRecordsMode = ResurrectRecordsMode::kNo;
 
         FileSystemSpec FileSystem;
         RegistrySpec Registry;

@@ -47,7 +47,7 @@ HRESULT HiveQuery::BuildStreamList()
             }
         },
         false,
-        false);
+        ResurrectRecordsMode::kNo);
 
     if (FAILED(hr))
     {
