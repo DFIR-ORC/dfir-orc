@@ -17,6 +17,7 @@
 #include "ConfigFile_GetThis.h"
 
 #include <boost/tokenizer.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <regex>
 #include <filesystem>
@@ -343,6 +344,12 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
         config.Yara = std::make_unique<YaraConfig>(*yaraConfig);
     }
+
+    if (configitem[GETTHIS_RESURRECT])
+    {
+        config.resurrectRecords = boost::iequals(configitem[GETTHIS_RESURRECT].c_str(), L"yes");
+    }
+
     return S_OK;
 }
 
@@ -357,6 +364,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 
         for (int i = 0; i < argc; i++)
         {
+            bool bSkipDeleted = false;
             switch (argv[i][0])
             {
                 case L'/':
@@ -367,6 +375,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                             L"Out",
                             static_cast<OutputSpec::Kind>(OutputSpec::Kind::Archive | OutputSpec::Kind::Directory),
                             config.Output))
+                        ;
+                    else if (BooleanOption(argv[i] + 1, L"ResurrectRecords", config.resurrectRecords))
                         ;
                     else if (!_wcsnicmp(argv[i] + 1, L"Sample", wcslen(L"Sample")))
                     {

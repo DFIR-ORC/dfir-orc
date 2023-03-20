@@ -26,6 +26,7 @@ constexpr auto GETTHIS_REPORTALL = 8L;
 constexpr auto GETTHIS_HASH = 9L;
 constexpr auto GETTHIS_FUZZYHASH = 10L;
 constexpr auto GETTHIS_YARA = 11L;
+constexpr auto GETTHIS_RESURRECT = 12L;
 
 constexpr auto GETTHIS_GETTHIS = 0L;
 

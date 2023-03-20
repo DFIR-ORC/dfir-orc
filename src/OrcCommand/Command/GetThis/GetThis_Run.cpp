@@ -1430,8 +1430,8 @@ HRESULT Main::FindMatchingSamples()
     hr = FileFinder.Find(
         config.Locations,
         std::bind(&Main::OnMatchingSample, this, std::placeholders::_1, std::placeholders::_2),
-        false,
-        false);
+        config.resurrectRecords,
+        config.resurrectRecords);
 
     if (FAILED(hr))
     {

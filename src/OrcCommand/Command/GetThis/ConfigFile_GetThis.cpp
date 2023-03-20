@@ -49,5 +49,7 @@ HRESULT Orc::Config::GetThis::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(yara, GETTHIS_YARA)))
         return hr;
+    if (FAILED(hr = item.AddAttribute(L"resurrect", GETTHIS_RESURRECT, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }

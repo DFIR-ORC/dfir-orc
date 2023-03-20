@@ -121,11 +121,13 @@ public:
     public:
         Configuration()
             : Locations()
+            , resurrectRecords(false)
         {
             bAddShadows = boost::indeterminate;
         }
         bool bFlushRegistry = false;
         bool bReportAll = false;
+        bool resurrectRecords;
         boost::logic::tribool bAddShadows;
         std::optional<LocationSet::ShadowFilters> m_shadows;
         std::optional<Ntfs::ShadowCopy::ParserType> m_shadowsParser;
