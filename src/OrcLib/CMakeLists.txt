@@ -43,6 +43,10 @@ set(SRC_COMMON
     "OrcLimits.h"
     "Limit.h"
     "targetver.h"
+    "CpuId.h"
+    "CpuId.cpp"
+    "CpuInfo.h"
+    "CpuInfo.cpp"
 )
 
 # stdafx.[cpp|h] must be included first, don't include them in SRC_COMMON
