@@ -39,38 +39,52 @@ HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IOutp
         if (areas & IdentityArea::OperatingSystem)
         {
             if (auto hr = OperatingSystem(writer); FAILED(hr))
-                return hr;
+            {
+                Log::Error("Failed method OperatingSystem [{}]", SystemError(hr));
+            }
         }
         if (areas & IdentityArea::PhysicalDrives)
         {
             if (auto hr = PhysicalDrives(writer); FAILED(hr))
-                return hr;
+            {
+                Log::Error("Failed method PhysicalDrives [{}]", SystemError(hr));
+            }
         }
         if (areas & IdentityArea::MountedVolumes)
         {
             if (auto hr = MountedVolumes(writer); FAILED(hr))
-                return hr;
+            {
+                Log::Error("Failed method MountedVolumes [{}]", SystemError(hr));
+            }
         }
         if (areas & IdentityArea::PhysicalMemory)
         {
             if (auto hr = PhysicalMemory(writer); FAILED(hr))
-                return hr;
+            {
+                Log::Error("Failed method PhysicalMemory [{}]", SystemError(hr));
+            }
         }
         if (areas & IdentityArea::CPU)
         {
             if (auto hr = CPU(writer); FAILED(hr))
-                return hr;
+            {
+                Log::Error("Failed method CPU [{}]", SystemError(hr));
+            }
         }
         if (areas & IdentityArea::Network)
         {
             if (auto hr = Network(writer); FAILED(hr))
-                return hr;
+            {
+                Log::Error("Failed method Network [{}]", SystemError(hr));
+            }
         }
     }
     if (areas & IdentityArea::ProfileList)
     {
         if (auto hr = Profiles(writer); FAILED(hr))
-            return hr;
+        {
+            Log::Error("Failed method Profiles [{}]", SystemError(hr));
+        }
     }
     return S_OK;
 }
