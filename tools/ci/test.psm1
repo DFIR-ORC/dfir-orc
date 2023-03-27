@@ -1042,7 +1042,7 @@ function Get-OrcOutcome {
         Test-OrcOutcome
     #>
     Param(
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
         [String]
         $Path,
         [Parameter()]
