@@ -143,7 +143,7 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
                 }
                 else if (m_strDesiredName)
                 {
-                    if (desired_path.filename() == *m_strDesiredName)
+                    if (boost::iequals(desired_path.filename().c_str(), *m_strDesiredName))
                     {
                         m_libFile = desired_path;
                     }
