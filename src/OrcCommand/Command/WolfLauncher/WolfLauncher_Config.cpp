@@ -806,7 +806,16 @@ HRESULT Main::CheckConfiguration()
     {
         config.Output.OutputEncoding = OutputSpec::Encoding::UTF8;
         config.Output.Type = OutputSpec::Kind::Directory;
-        config.Output.Path = L".";
+
+        std::error_code ec;
+        config.Output.Path = GetWorkingDirectoryApi(ec);
+        if (ec)
+        {
+            Log::Error("Failed GetWorkingDirectoryApi [{}]", ec);
+            ec.clear();
+
+            config.Output.Path = L".";
+        }
     }
 
     if (config.Output.Type == OutputSpec::Kind::Directory)
