@@ -1,7 +1,28 @@
 # ChangeLog
 
-## [10.1.7] - 2023-04-17
+## [10.2.0] - 2023-04-20
+### Added
+- Volume Shadow Copy: add fallback mode when 'vss' service is stopped using directly 'volsnap.sys'
+- Volume Shadow Copy: add fully internal parser (no more use of 'volsnap.sys)'
+- Volume Shadow Copy: add support for unmounted volumes ("offline" mode)
+- Relocate configured DFIR-Orc executable if run from network to avoid issues on disconnections
+- NtfsInfo, GetThis, FastFind: add option 'Resurrect=Resident' to process deleted records that are resident in the MFT
+- NtfsUtil: enhance '/vss' with more output about shadow copies
+- NtfsUtil: add '/vss /dump' mode which will dump copy-on-write tables into json files
 
+### Changed
+- GetThis: minimize memory use with WofCompressedData files
+- Authenticode: add cache for parsed catalogs
+- vcpkg: update dependencies to vcpkg 2023.04.15
+- Yara: add cache to improve performance
+- WolfLauncher: syslog any upload error
+
+### Fixed
+- Fix compatibility with msvc v143 and cpp23
+- FastFind: add missing handling of 'Resurrect' and '/ResurrectRecords'
+
+
+## [10.1.7] - 2023-04-17
 ### Added
 - Add more log in case of memory starvation
 - ci: add Compare-OrcOutcome to compare mutiple runs of different versions
