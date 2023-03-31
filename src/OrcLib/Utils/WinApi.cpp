@@ -17,6 +17,46 @@
 
 namespace Orc {
 
+std::wstring GetFullPathNameApi(const std::wstring& path, std::error_code& ec) noexcept
+{
+    try
+    {
+        DWORD dwLenRequired = GetFullPathNameW(path.c_str(), 0L, NULL, NULL);
+        if (dwLenRequired == 0L)
+        {
+            ec = LastWin32Error();
+            Log::Debug(L"Failed GetFullPathNameW buffer length request (path: {}) [{}]", path, ec);
+            return {};
+        }
+
+        std::wstring fullPath;
+        fullPath.resize(dwLenRequired);
+
+        dwLenRequired = GetFullPathNameW(path.c_str(), fullPath.size(), fullPath.data(), NULL);
+        if (dwLenRequired == 0)
+        {
+            ec = LastWin32Error();
+            Log::Debug(L"Failed GetFullPathNameW buffer length request (path: {}) [{}]", path, ec);
+            return {};
+        }
+
+        fullPath.resize(dwLenRequired);
+        return fullPath;
+    }
+    catch (const std::length_error& e)
+    {
+        Log::Debug("Failed GetFullPathNameApi '{}' [exception: {}]", e.what());
+        ec = std::make_error_code(std::errc::not_enough_memory);
+        return {};
+    }
+    catch (...)
+    {
+        std::cerr << "GetFullPathNameApi had unexpected recoverable exception" << std::endl;
+        ec = std::make_error_code(std::errc::resource_unavailable_try_again);
+        return {};
+    }
+}
+
 std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, size_t cbMaxOutput, std::error_code& ec) noexcept
 {
     const DWORD cchMaxOutput = static_cast<DWORD>(cbMaxOutput / sizeof(wchar_t));

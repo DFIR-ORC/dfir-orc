@@ -81,6 +81,8 @@ std::wstring GetComputerNameExApi(ComputerNameFormat format, size_t cbMaxOutput,
 // GetComputerNameExW wrapper with default maximum buffer size of 256
 std::wstring GetComputerNameExApi(ComputerNameFormat format, std::error_code& ec) noexcept;
 
+std::wstring GetFullPathNameApi(const std::wstring& path, std::error_code& ec) noexcept;
+
 }  // namespace Orc
 
 #pragma managed(pop)
