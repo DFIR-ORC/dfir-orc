@@ -29,6 +29,7 @@
 #include "Command/WolfLauncher/ConsoleConfiguration.h"
 #include "Configuration/Option.h"
 #include "Text/Hex.h"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -810,23 +811,13 @@ HRESULT Main::CheckConfiguration()
 
     if (config.Output.Type == OutputSpec::Kind::Directory)
     {
-        DWORD dwLenRequired = GetFullPathName(config.Output.Path.c_str(), 0L, NULL, NULL);
-        if (dwLenRequired == 0L)
+        std::error_code ec;
+        config.Output.Path = GetFullPathNameApi(config.Output.Path, ec);
+        if (ec)
         {
-            Log::Error(L"Output path '{}' was not convertible to an absolute path", config.Output.Path);
-            return E_INVALIDARG;
+            Log::Error("Failed GetFullPathNameApi: cannot resolve output directory [{}]", ec);
+            ec.clear();
         }
-
-        CBinaryBuffer buffer;
-        buffer.SetCount(dwLenRequired * sizeof(WCHAR));
-
-        if (GetFullPathName(config.Output.Path.c_str(), dwLenRequired, buffer.GetP<WCHAR>(0), NULL) == 0)
-        {
-            Log::Error(L"Failed to convert '{}' to an absolute path", config.Output.Path);
-            return E_INVALIDARG;
-        }
-
-        config.Output.Path.assign(buffer.GetP<WCHAR>(0), dwLenRequired - 1);  // remove trailing \0
     }
 
     if (config.Output.Type != OutputSpec::Kind::Directory)
