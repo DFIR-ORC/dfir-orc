@@ -204,7 +204,15 @@ std::wstring CopyFileAgent::GetRemoteFullPath(const std::wstring& strRemoteName)
 {
     wstringstream stream;
 
-    stream << L"\\\\" << m_config.ServerName << m_config.RootPath << L"\\" << strRemoteName;
+    stream << L"\\\\" << m_config.ServerName << m_config.RootPath;
+    if (m_config.RootPath.empty()
+        || (m_config.RootPath[m_config.RootPath.size() - 1] != L'\\'
+            && m_config.RootPath[m_config.RootPath.size() - 1] != L'/'))
+    {
+        stream << L"\\";
+    }
+
+    stream << strRemoteName;
 
     return stream.str();
 }
