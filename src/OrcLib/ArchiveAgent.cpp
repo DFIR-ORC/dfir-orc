@@ -173,6 +173,13 @@ void ArchiveAgent::run()
 
     while (request)
     {
+        Log::Debug(
+            L"ArchiveAgent new request: {} (name: {}, stream: {}, archive name: {})",
+            static_cast<size_t>(request->GetRequest()),
+            request->Name(),
+            request->GetStream() != nullptr,
+            m_cabName);
+
         switch (request->GetRequest())
         {
             case ArchiveMessage::OpenArchive: {
