@@ -200,7 +200,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
                 NULL, std::min(MEMORY_STREAM_RESERVE_MAX, dwReserveSize), MEM_RESERVE, PAGE_READWRITE);
             if (!m_pBuffer)
             {
-                Log::Warn("Could not reserve {} bytes", dwReserveSize);
+                Log::Debug("Could not reserve {} bytes", dwReserveSize);
             }
             else
                 m_cbReservedBytes = dwReserveSize;
@@ -221,7 +221,7 @@ HRESULT MemoryStream::SetBufferSize(size_t dwCommitSize, size_t dwReserveSize)
 
         if (!pNewBuffer)
         {
-            Log::Error("Could not allocate {} bytes", dwCommitSize);
+            Log::Debug("Could not allocate {} bytes", dwCommitSize);
             return E_OUTOFMEMORY;
         }
     }
