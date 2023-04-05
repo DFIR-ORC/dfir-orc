@@ -456,7 +456,23 @@ HRESULT WolfExecution::NotifyTask(const CommandNotification::Ptr& item)
     auto taskiter = m_TasksByKeyword.find(item->GetKeyword());
     if (taskiter == m_TasksByKeyword.end())
     {
-        Log::Error(L"Cannot find task by keyword: {}", item->GetKeyword());
+        if (item->GetEvent() == CommandNotification::Terminated)
+        {
+            Log::Error(
+                L"Cannot find terminated task by keyword: {} (notification: {}, pid: {})",
+                item->GetKeyword(),
+                static_cast<size_t>(item->GetEvent()),
+                item->GetProcessID());
+        }
+        else
+        {
+            Log::Debug(
+                L"Cannot find task by keyword: {} (notification: {}, pid: {})",
+                item->GetKeyword(),
+                static_cast<size_t>(item->GetEvent()),
+                item->GetProcessID());
+        }
+
         return E_FAIL;
     }
 
@@ -498,6 +514,7 @@ HRESULT WolfExecution::CreateCommandAgent(
                 switch (item->GetEvent())
                 {
                     case CommandNotification::Started:
+                        Log::Debug(L"{}: Started", item->GetKeyword());
                         break;
                     case CommandNotification::Terminated:
                         break;
@@ -621,8 +638,12 @@ HRESULT WolfExecution::CreateCommandAgent(
     if (bChildDebug)
     {
         WORD wArch;
-        if (hr = FAILED(SystemDetails::GetArchitecture(wArch)))
+        hr = SystemDetails::GetArchitecture(wArch);
+        if (FAILED(hr))
+        {
+            Log::Error("Failed SystemDetails::GetArchitecture [{}]", SystemError(hr));
             return hr;
+        }
 
         switch (wArch)
         {

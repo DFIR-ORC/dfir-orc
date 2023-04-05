@@ -9,13 +9,12 @@
 #include "WofAlgorithm.h"
 
 #include <map>
-
 #include <windows.h>
+
+namespace {
 
 using namespace Orc::Ntfs;
 using namespace Orc;
-
-namespace {
 
 using namespace std::string_view_literals;
 

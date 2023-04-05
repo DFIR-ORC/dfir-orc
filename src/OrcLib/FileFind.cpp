@@ -137,7 +137,7 @@ std::shared_ptr<ByteStream> GetOptimalStream(const std::shared_ptr<ByteStream> s
     HRESULT hr = memstream->SetSize(stream->GetSize());
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to retrieve file size [{}]", SystemError(hr));
+        Log::Error(L"Failed to allocate file size [{}]", SystemError(hr));
         return stream;
     }
 
