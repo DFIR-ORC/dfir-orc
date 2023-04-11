@@ -110,6 +110,8 @@ public:
 
     static void RemoveTerminationHandler(const std::shared_ptr<TerminationHandler>& pHandler);
 
+    static void EnableMinidumpFromCurrentProcess(BOOL value);
+
     static HRESULT UnInitialize(DWORD dwTimeout);
 };
 }  // namespace Orc

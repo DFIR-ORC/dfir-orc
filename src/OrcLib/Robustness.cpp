@@ -14,6 +14,63 @@
 
 using namespace Orc;
 
+namespace {
+
+BOOL MiniDumpWriteDumpApi(
+    HANDLE hProcess,
+    DWORD dwPid,
+    HANDLE hFile,
+    MINIDUMP_TYPE DumpType,
+    PMINIDUMP_EXCEPTION_INFORMATION ExceptionParam,
+    PMINIDUMP_USER_STREAM_INFORMATION UserStreamParam,
+    PMINIDUMP_CALLBACK_INFORMATION CallbackParam,
+    std::error_code& ec)
+{
+    using FnMiniDumpWriteDump = BOOL(__stdcall*)(
+        HANDLE hProcess,
+        DWORD dwPid,
+        HANDLE hFile,
+        MINIDUMP_TYPE DumpType,
+        PMINIDUMP_EXCEPTION_INFORMATION ExceptionParam,
+        PMINIDUMP_USER_STREAM_INFORMATION UserStreamParam,
+        PMINIDUMP_CALLBACK_INFORMATION CallbackParam);
+
+    static FnMiniDumpWriteDump fn = nullptr;
+
+    if (fn == nullptr)
+    {
+        static HMODULE module = NULL;
+
+        if (!module)
+        {
+            module = GetModuleHandleA("Dbghelp.dll");
+            if (module == NULL)
+            {
+                ec.assign(::GetLastError(), std::system_category());
+                return FALSE;
+            }
+        }
+
+        fn = reinterpret_cast<FnMiniDumpWriteDump>(::GetProcAddress(module, "MiniDumpWriteDump"));
+        if (!fn)
+        {
+            ec.assign(::GetLastError(), std::system_category());
+            return FALSE;
+        }
+    }
+
+    BOOL ret = fn(hProcess, dwPid, hFile, DumpType, ExceptionParam, UserStreamParam, CallbackParam);
+    if (!ret)
+    {
+        ec.assign(::GetLastError(), std::system_category());
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+}  // namespace
+
 struct TerminationBlock
 {
     std::vector<std::shared_ptr<TerminationHandler>> _Handlers;
@@ -22,6 +79,7 @@ struct TerminationBlock
     const WCHAR* _szProcessDescr = nullptr;
     bool _bSilent = false;
     bool _TerminateCalled = false;
+    bool _bWriteMinidumpFromCurrentProcess = false;
     HANDLE _hTerminationHandlers = INVALID_HANDLE_VALUE;
 
     void Terminate();
@@ -234,13 +292,67 @@ LONG WINAPI Robustness::UnhandledExceptionFilter(__in struct _EXCEPTION_POINTERS
     if (!g_termination.Block()->_bSilent)
     {
         if (g_termination.Block()->_szProcessDescr)
+        {
             wprintf(
-                L"\n%s: ERROR: UnHandled Exception: ExceptionCode=0x%lx\n",
+                L"\n%s: ERROR: UnHandled Exception (code: 0x%lx, address: 0x%llx)\n",
                 g_termination.Block()->_szProcessDescr,
-                ExceptionInfo->ExceptionRecord->ExceptionCode);
+                ExceptionInfo->ExceptionRecord->ExceptionCode,
+                (ULONGLONG)ExceptionInfo->ExceptionRecord->ExceptionAddress);
+        }
         else
+        {
             wprintf(
-                L"\nERROR:UnHandled Exception: ExceptionCode=0x%lx\n", ExceptionInfo->ExceptionRecord->ExceptionCode);
+                L"\nERROR:UnHandled Exception (code: 0x%lx, address: 0x%llx)\n",
+                ExceptionInfo->ExceptionRecord->ExceptionCode,
+                (ULONGLONG)ExceptionInfo->ExceptionRecord->ExceptionAddress);
+        }
+    }
+
+    if (g_termination.Block()->_bWriteMinidumpFromCurrentProcess)
+    {
+        const char filename[] = "dfir-orc.dmp";
+
+        HANDLE hFile = ::CreateFileA(
+            filename,
+            GENERIC_WRITE,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL,
+            NULL);
+
+        if (hFile != INVALID_HANDLE_VALUE)
+        {
+            std::error_code ec;
+
+            MINIDUMP_EXCEPTION_INFORMATION exceptionInfo;
+            exceptionInfo.ThreadId = GetCurrentThreadId();
+            exceptionInfo.ExceptionPointers = ExceptionInfo;
+            exceptionInfo.ClientPointers = TRUE;
+
+            ::MiniDumpWriteDumpApi(
+                GetCurrentProcess(),
+                GetCurrentProcessId(),
+                hFile,
+                MINIDUMP_TYPE::MiniDumpNormal,
+                &exceptionInfo,
+                NULL,
+                NULL,
+                ec);
+            if (ec)
+            {
+                printf("Failed MiniDumpWriteDumpApi (code: %x)\n", ec.value());
+            }
+            else
+            {
+                wchar_t currentDirectory[MAX_PATH+1];
+                currentDirectory[sizeof(currentDirectory) - 1] = L'\0';
+                GetCurrentDirectoryW(MAX_PATH, currentDirectory);
+                printf("MiniDumpWriteDump: write %S%s\n", currentDirectory, filename);
+            }
+
+            CloseHandle(hFile);
+        }
     }
 
     Terminate();
@@ -329,6 +441,14 @@ void Robustness::RemoveTerminationHandler(const std::shared_ptr<TerminationHandl
     if (newend != end(g_termination.Block()->_Handlers))
         g_termination.Block()->_Handlers.erase(newend, end(g_termination.Block()->_Handlers));
     return;
+}
+
+void Robustness::EnableMinidumpFromCurrentProcess(BOOL value)
+{
+    if (!g_termination)
+        return;
+
+    g_termination.Block()->_bWriteMinidumpFromCurrentProcess = value;
 }
 
 HRESULT Robustness::Initialize(const WCHAR* szProcessDescr, bool bSilent, bool bOverrideGobalHandlers)
