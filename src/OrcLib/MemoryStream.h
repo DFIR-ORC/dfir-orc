@@ -20,6 +20,7 @@ class CBinaryBuffer;
 
 class MemoryStream : public ByteStream
 {
+    static const size_t kDefaultReservedBytes = sizeof(size_t) == 8 ? 1024 * 1024 * 100 : 1024 * 1024 * 5;
 
 protected:
     __field_ecount_part(m_cbBufferCommitSize, m_cbBuffer) PBYTE m_pBuffer;
@@ -53,7 +54,7 @@ public:
     //
     // CByteStream implementation
     //
-    STDMETHOD(OpenForReadWrite)(DWORD dwReservedBytes = 1024 * 1024 * 100);
+    STDMETHOD(OpenForReadWrite)(DWORD dwReservedBytes = kDefaultReservedBytes);
 
     STDMETHOD(OpenForReadOnly)(__in PVOID pBuffer, __in size_t cbBuffer);
 
