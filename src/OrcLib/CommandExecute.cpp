@@ -659,6 +659,8 @@ HRESULT CommandExecute::CompleteExecution(ArchiveMessage::ITarget* pCab)
         action->CancelTerminationHandler();
     });
 
+    m_OnCompleteActions.clear();
+
     CloseHandle(m_pi.hProcess);
     m_pi.hProcess = INVALID_HANDLE_VALUE;
     CloseHandle(m_pi.hThread);
