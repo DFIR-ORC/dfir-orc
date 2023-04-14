@@ -239,8 +239,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
 
         if (!m_Items.empty())
         {
-
-            if ((hr = m_TempStream->CanRead()) != S_OK)
+            if (!m_TempStream || (hr = m_TempStream->CanRead()) != S_OK)
             {
                 Log::Error(L"Temp archive stream cannot be read");
                 return E_UNEXPECTED;
