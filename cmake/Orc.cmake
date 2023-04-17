@@ -41,14 +41,16 @@ if(${TARGET_ARCH} STREQUAL "x64")
     )
 endif()
 
-# BEWARE: Option order matters
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # C4995: Function that was marked with pragma deprecated.
-    # This is currently required by fmt 7.0.0
-    add_compile_options(/wd4995)
-endif()
 
+#
+# Compile options
+#
+
+# C4995: Function that was marked with pragma deprecated.
 # BEWARE: Option order matters
+# This is currently required by fmt 7.0.0
+add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:/wd4995>)
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # C4995: Function that was marked with pragma deprecated.
     #
@@ -65,8 +67,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     #
     # Found compiler error(s).
     #
-    add_compile_options(/wd4995)
-
     add_compile_options(
         -Wpointer-to-int-cast
         -Wno-deprecated-declarations
@@ -105,41 +105,29 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     )
 endif()
 
+
 # Fix warning with 'cl' about overriding existing value
 string(REPLACE "/EHsc" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
-#
-# Compile options
-#
-# TODO: Qspectre disable option is not supported until cmake 3.15.2
-add_compile_options(
-    /EHa      # Enable C++ exception with SEH (required by Robustness.cpp: _set_se_translator)
-  # /Gy       # Enable function level linking
-  # /JMC      # Debug only Just My Code
-    /Oy-      # Omit frame pointer
-   # /Qpar     # Enable Parallel Code Generation
-   # /Qspectre-  # No need of mitigation as MS disable theirs when as administrator
-    /sdl      # Enable additional security checks
-  # /Zi       # Program database for edit and continue (debug only)
+list(APPEND COMPILE_OPTIONS_C_CXX
+    /EHa  # Enable C++ exception with SEH (required by Robustness.cpp: _set_se_translator)
+    /Oy-  # Omit frame pointer
+    /sdl  # Enable additional security checks
     /bigobj
     /WX
 )
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    # Multi processor compilation
-    add_compile_options("/MP")
-else()
-    # TODO: enable SAFESEH when clang add support
-    add_link_options("/SAFESEH:NO")
+    list(APPEND COMPILE_OPTIONS_C_CXX /MP)  # Multi processor compilation
 endif()
 
-list(APPEND COMPILE_OPTIONS_RELEASE
-    /guard:cf  # Enable control flow guard
-)
-
-foreach(OPTION IN ITEMS ${COMPILE_OPTIONS_DEBUG})
-    add_compile_options($<$<CONFIG:DEBUG>:${OPTION}>)
+foreach(OPTION IN ITEMS ${COMPILE_OPTIONS_C_CXX})
+    add_compile_options($<$<COMPILE_LANGUAGE:C,CXX>:${OPTION}>)
 endforeach()
+
+list(APPEND COMPILE_OPTIONS_RELEASE
+    $<$<COMPILE_LANGUAGE:C,CXX>:/guard:cf>
+)
 
 foreach(OPTION IN ITEMS ${COMPILE_OPTIONS_RELEASE})
     add_compile_options($<$<CONFIG:RELEASE>:${OPTION}>)
@@ -151,19 +139,17 @@ endforeach()
 #
 # Link options
 #
+if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    # TODO: enable SAFESEH when clang add support
+    add_link_options("/SAFESEH:NO")
+endif()
+
 add_link_options(
     /WX
 )
 
-list(APPEND LINK_OPTIONS_RELEASE
-    /OPT:REF
-)
-
-foreach(OPTION IN ITEMS ${LINK_OPTIONS_RELEASE})
-    add_link_options($<$<CONFIG:RELEASE>:${OPTION}>)
-    add_link_options($<$<CONFIG:MINSIZEREL>:${OPTION}>)
-    add_link_options($<$<CONFIG:RELWITHDEBINFO>:${OPTION}>)
-endforeach()
+set(OPTION "/OPT:REF")
+add_link_options($<$<CONFIG:MINSIZEREL>:${OPTION}>)
 
 set(OPTION "/INCREMENTAL:NO")
 add_link_options($<$<CONFIG:RELWITHDEBINFO>:${OPTION}>)
