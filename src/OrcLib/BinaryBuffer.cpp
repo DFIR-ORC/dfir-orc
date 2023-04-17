@@ -48,6 +48,7 @@ CBinaryBuffer::CBinaryBuffer(const CBinaryBuffer& other)
     , m_size(0L)
     , m_bOwnMemory(true)
     , m_bVirtualAlloc(other.m_bVirtualAlloc)
+    , m_bJunk(true)
 {
     if (other.m_size > 0)
     {
@@ -160,6 +161,7 @@ HRESULT CBinaryBuffer::SetData(LPCBYTE pBuffer, size_t cbSize)
 {
     if (!SetCount(cbSize))
         return E_OUTOFMEMORY;
+
     CopyMemory(m_pData, pBuffer, cbSize);
     m_bJunk = false;
     return S_OK;
@@ -167,6 +169,11 @@ HRESULT CBinaryBuffer::SetData(LPCBYTE pBuffer, size_t cbSize)
 
 HRESULT CBinaryBuffer::CopyTo(LPBYTE pBuffer, size_t cbSize)
 {
+    if (m_pData == nullptr)
+    {
+        return S_OK;
+    }
+
     size_t to_copy = min(m_size, cbSize);
     CopyMemory(pBuffer, m_pData, to_copy);
     return S_OK;
@@ -212,7 +219,7 @@ void CBinaryBuffer::ZeroMe()
 
 void CBinaryBuffer::RemoveAll()
 {
-    if (m_bOwnMemory)
+    if (m_bOwnMemory && m_pData)
     {
         if (m_bVirtualAlloc)
         {
@@ -220,10 +227,10 @@ void CBinaryBuffer::RemoveAll()
         }
         else
         {
-            if (m_pData != nullptr)
-                HeapFree(GetBinaryBufferHeap(), 0L, m_pData);
+            HeapFree(GetBinaryBufferHeap(), 0L, m_pData);
         }
     }
+
     m_pData = nullptr;
     m_size = 0L;
     m_bOwnMemory = true;
@@ -232,6 +239,11 @@ void CBinaryBuffer::RemoveAll()
 
 HRESULT CBinaryBuffer::GetSHA1(CBinaryBuffer& SHA1)
 {
+    if (m_pData == nullptr)
+    {
+        return S_OK;
+    }
+
     if (g_hProv == NULL)
         if (!CryptAcquireContext(&g_hProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
             return HRESULT_FROM_WIN32(GetLastError());
@@ -262,6 +274,11 @@ HRESULT CBinaryBuffer::GetSHA1(CBinaryBuffer& SHA1)
 
 HRESULT CBinaryBuffer::GetMD5(CBinaryBuffer& MD5)
 {
+    if (m_pData == nullptr)
+    {
+        return S_OK;
+    }
+
     if (g_hProv == NULL)
         if (!CryptAcquireContext(&g_hProv, NULL, NULL, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT))
             return HRESULT_FROM_WIN32(GetLastError());
