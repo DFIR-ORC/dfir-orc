@@ -378,16 +378,26 @@ void Location::EnumerateShadowCopies(
                 ec.clear();
                 EnumerateShadowCopiesWithVolsnapDriver(*harddiskShadowCopyVolumeHints, shadows, ec);
             }
-            return;
+            break;
         }
         case Ntfs::ShadowCopy::ParserType::kInternal: {
-            return EnumerateShadowCopiesWithInternalParser(shadows, ec);
+            EnumerateShadowCopiesWithInternalParser(shadows, ec);
+            break;
         }
         default:
             break;
     }
 
-    ec = std::make_error_code(std::errc::not_supported);
+    if (ec)
+    {
+        ec = std::make_error_code(std::errc::not_supported);
+        return;
+    }
+
+    // Most recent snapshot first
+    std::sort(std::begin(shadows), std::end(shadows), [](const auto& lhs, const auto& rhs) {
+        return lhs.CreationTime > rhs.CreationTime;
+    });
 }
 
 void Location::EnumerateShadowCopiesWithVolsnapDriver(
