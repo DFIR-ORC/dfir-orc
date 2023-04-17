@@ -155,16 +155,28 @@ void GetShadowCopyLocations(const std::vector<Location::Ptr>& locations, ShadowC
     }
 }
 
+// Use this function and a vector instead of std::set to keep original ordering
+void UniquePushBack(const Orc::Location::Ptr& location, std::vector<Orc::Location::Ptr>& items)
+{
+    auto it = std::find_if(
+        std::cbegin(items), std::cend(items), [&location](const auto& item) { return item.get() == location.get(); });
+
+    if (it == std::cend(items))
+    {
+        items.push_back(location);
+    }
+};
+
 void FilterLocations(
     const std::vector<Location::Ptr>& locations,
     const LocationSet::ShadowFilters& filters,
-    std::set<Location::Ptr>& output)
+    std::vector<Location::Ptr>& output)
 {
     if (filters.empty())
     {
         for (const auto& loc : locations)
         {
-            output.insert(loc);
+            UniquePushBack(loc, output);
         }
 
         return;
@@ -179,17 +191,17 @@ void FilterLocations(
 
     if (shadows.newest && filters.find(L"newest") != std::cend(filters))
     {
-        output.insert(shadows.newest);
+        UniquePushBack(shadows.newest, output);
     }
 
     if (shadows.mid && filters.find(L"mid") != std::cend(filters))
     {
-        output.insert(shadows.mid);
+        UniquePushBack(shadows.mid, output);
     }
 
     if (shadows.oldest && filters.find(L"oldest") != std::cend(filters))
     {
-        output.insert(shadows.oldest);
+        UniquePushBack(shadows.oldest, output);
     }
 
     for (const auto& filter : filters)
@@ -200,7 +212,7 @@ void FilterLocations(
             auto it = shadows.guids.find(*guid);
             if (it != std::cend(shadows.guids))
             {
-                output.insert(it->second);
+                UniquePushBack(it->second, output);
             }
         }
     }
@@ -2299,7 +2311,7 @@ HRESULT LocationSet::AltitudeLocations(
                 shadowCopiesLocations.push_back(std::move(vssLoc));
             }
 
-            std::set<Location::Ptr> shadowsSelection;
+            std::vector<Location::Ptr> shadowsSelection;
             ::FilterLocations(shadowCopiesLocations, shadowFilters, shadowsSelection);
 
             for (const auto& loc : shadowsSelection)
