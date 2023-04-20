@@ -159,6 +159,8 @@ HRESULT TemporaryStream::MoveToFileStream(const std::shared_ptr<ByteStream>& aSt
     if (FAILED(hr = m_pFileStream->SetFilePointer(ullCurPos, FILE_BEGIN, NULL)))
         return hr;
 
+    m_pMemStream.reset();
+
     return S_OK;
 }
 

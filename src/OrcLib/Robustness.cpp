@@ -135,14 +135,25 @@ int Robustness::handle_program_memory_depletion(size_t attempted)
 
     if (!g_termination.Block()->_bSilent)
     {
+        char buffer[1024];
+
         if (g_termination.block->_szProcessDescr)
         {
-            wprintf(L"\n%s: ERROR: failed to allocate %zu bytes\n", g_termination.Block()->_szProcessDescr, attempted);
+            snprintf(
+                buffer,
+                sizeof(buffer) - 1,
+                "%S: ERROR: failed to allocate %zu bytes",
+                g_termination.Block()->_szProcessDescr,
+                attempted);
         }
         else
         {
-            wprintf(L"\nERROR: failed to allocate %zu bytes\n", attempted);
+            snprintf(buffer, sizeof(buffer) - 1, "ERROR: failed to allocate %zu bytes", attempted);
         }
+
+        buffer[sizeof(buffer) - 1] = '\0';
+        std::cerr << buffer << std::endl;
+        Log::Critical(buffer);
 
         MEMORYSTATUSEX memory;
         memory.dwLength = sizeof(memory);
@@ -150,8 +161,10 @@ int Robustness::handle_program_memory_depletion(size_t attempted)
         {
             const auto div = 1048576;
 
-            wprintf(
-                L"Memory: physical: %I64u/%I64u MB, paged: %I64u/%I64u MB, virtual: %I64u/%I64u MB\n",
+            snprintf(
+                buffer,
+                sizeof(buffer) - 1,
+                "Memory: physical: %I64u/%I64u MB, paged: %I64u/%I64u MB, virtual: %I64u/%I64u MB\n",
                 memory.ullAvailPhys / div,
                 memory.ullTotalPhys / div,
                 memory.ullAvailPageFile / div,
@@ -159,7 +172,17 @@ int Robustness::handle_program_memory_depletion(size_t attempted)
                 memory.ullAvailVirtual / div,
                 memory.ullTotalVirtual / div);
         }
+
+        std::cerr << buffer << std::endl;
+
+        auto logger = Log::DefaultLogger();
+        if (logger)
+        {
+            logger->Critical("Failed to allocate buffer");
+            logger->Critical(buffer);
+        }
     }
+
     throw MemoryException(attempted);
 }
 

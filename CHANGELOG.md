@@ -1,5 +1,23 @@
 # ChangeLog
 
+## [10.1.7] - 2023-04-17
+
+### Added
+- Add more log in case of memory starvation
+- ci: add Compare-OrcOutcome to compare mutiple runs of different versions
+
+### Changed
+- Yara: update to version 4.3.0
+- Extension library use is now case insensitive (fix XmlLite.dll vs xmllite.dll naming issue)
+
+### Fixed
+- Fix compatibility with cmake 3.26.x
+- Output path type deduction could be wrong when directory name has '.'
+- WolfLauncher: output filename could be split from path with '\0'
+- Outline: CpuInfo: compatibility issue with Windows <= W7
+- WolfLauncher: x86: virtual memory starvation due to aggressive reservation
+
+
 ## [10.1.6] - 2023-02-20
 ### Added
 - Add check for unknown '/key' option value
@@ -15,6 +33,7 @@
 - USNInfo: fix shadow copy volume selection
 - Outcome: fix sometimes missing command metadata
 - Configuration: fix unexpected xml elements handling
+
 
 ## [10.1.5] - 2023-01-17
 ### Added

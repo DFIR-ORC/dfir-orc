@@ -15,6 +15,8 @@
 #include "ProfileList.h"
 #include "SystemDetails.h"
 
+#include "CpuInfo.h"
+
 HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IOutput>& writer, IdentityArea areas)
 {
     if (areas & IdentityArea::Process)
@@ -484,26 +486,17 @@ HRESULT Orc::SystemIdentity::CPU(const std::shared_ptr<StructuredOutput::IOutput
     BOOST_SCOPE_EXIT(&writer, &elt) { writer->EndCollection(elt); }
     BOOST_SCOPE_EXIT_END;
 
-    auto result = SystemDetails::GetCPUInfo();
-    if (!result)
-    {
-        assert(result.error().category() == std::system_category());
-        return result.error().value();
-    }
+    writer->BeginElement(nullptr);
+    BOOST_SCOPE_EXIT(&writer) { writer->EndElement(nullptr); }
+    BOOST_SCOPE_EXIT_END;
 
-    const auto& cpus = result.value();
-    for (const auto& cpu : cpus)
-    {
-        writer->BeginElement(nullptr);
-        BOOST_SCOPE_EXIT(&writer) { writer->EndElement(nullptr); }
-        BOOST_SCOPE_EXIT_END;
+    CpuInfo cpuInfo;
+    writer->WriteNamed(L"manufacturer", cpuInfo.Manufacturer());
+    writer->WriteNamed(L"name", cpuInfo.Name());
+    writer->WriteNamed(L"physical_processors", cpuInfo.PhysicalCores());
+    writer->WriteNamed(L"logical_processors", cpuInfo.LogicalCores());
+    writer->WriteNamed(L"hyperthreading", cpuInfo.IsHyperThreadingEnabled());
 
-        writer->WriteNamed(L"name", cpu.Name.c_str());
-        writer->WriteNamed(L"description", cpu.Description.c_str());
-        writer->WriteNamed(L"cores", (ULONG32)cpu.Cores);
-        writer->WriteNamed(L"enabled_cores", (ULONG32)cpu.EnabledCores);
-        writer->WriteNamed(L"logical_processors", (ULONG32)cpu.LogicalProcessors);
-    }
     return S_OK;
 }
 

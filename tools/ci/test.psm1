@@ -1042,7 +1042,7 @@ function Get-OrcOutcome {
         Test-OrcOutcome
     #>
     Param(
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory,ValueFromPipeline,ValueFromPipelineByPropertyName)]
         [String]
         $Path,
         [Parameter()]
@@ -1195,6 +1195,24 @@ function Test-OrcOutcome {
     {
         return $OutcomeList
     }
+}
+
+function Compare-OrcOutcome {
+    Param(
+        [Parameter(Mandatory)]
+        [String[]]
+        $PathList
+    )
+
+    $PathList `
+        | ForEach-Object { Get-OrcOutcome $_ | Add-Member -MemberType NoteProperty -Name Path -Value $_ -PassThru } `
+        | Sort-Object -Property ComputerName, Path `
+        | Select-Object -Property `
+            ComputerName, `
+            Path, `
+            Duration, `
+            @{Name="MemoryPeak"; Expression={$_.MemoryPeak.Value / 1048576}} `
+        | Format-Table -GroupBy ComputerName
 }
 
 function Test-OrcExpandedResults {

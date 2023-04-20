@@ -102,7 +102,7 @@ if(ORC_VCPKG_ROOT)
         fmt
         ms-gsl
         spdlog
-        yara
+        yara[dotnet]
         rapidjson
     )
 

@@ -239,21 +239,27 @@ HRESULT OutputSpec::Configure(
         }
     }
 
-    if (HasFlag(supported, OutputSpec::Kind::Directory) && wcslen(extension.c_str()) == 0L && !outPath.empty())
+    if (HasFlag(supported, OutputSpec::Kind::Directory) && !outPath.empty())
     {
-        // Output without extension could very well be a dir
-        if (SUCCEEDED(VerifyDirectoryExists(outPath.c_str())))
+        // Guess this is a directory path if either there is no extension or no file output is supported
+        if (wcslen(extension.c_str()) == 0
+            || (!HasFlag(supported, OutputSpec::Kind::File) && !HasFlag(supported, OutputSpec::Kind::StructuredFile)
+                && !HasFlag(supported, OutputSpec::Kind::TableFile)))
         {
-            Type = OutputSpec::Kind::Directory;
-            Path = outPath.wstring();
-            creationStatus = Status::Existing;
-            return S_OK;
-        }
-        else
-        {
-            Type = OutputSpec::Kind::Directory;
-            creationStatus = Status::CreatedNew;
-            return Orc::GetOutputDir(outPath.c_str(), Path, true);
+            // Output without extension could very well be a dir
+            if (SUCCEEDED(VerifyDirectoryExists(outPath.c_str())))
+            {
+                Type = OutputSpec::Kind::Directory;
+                Path = outPath.wstring();
+                creationStatus = Status::Existing;
+                return S_OK;
+            }
+            else
+            {
+                Type = OutputSpec::Kind::Directory;
+                creationStatus = Status::CreatedNew;
+                return Orc::GetOutputDir(outPath.c_str(), Path, true);
+            }
         }
     }
 
