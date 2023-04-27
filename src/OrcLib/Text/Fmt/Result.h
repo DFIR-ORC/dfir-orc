@@ -13,10 +13,10 @@
 #include "Utils/Result.h"
 
 template <typename T>
-struct fmt::formatter<boost::outcome_v2::std_result<T>> : public fmt::formatter<std::string_view>
+struct fmt::formatter<Orc::Result<T>> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const boost::outcome_v2::std_result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
     {
         if (result.has_error())
         {
@@ -30,10 +30,10 @@ struct fmt::formatter<boost::outcome_v2::std_result<T>> : public fmt::formatter<
 };
 
 template <typename T>
-struct fmt::formatter<boost::outcome_v2::std_result<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
+struct fmt::formatter<Orc::Result<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const boost::outcome_v2::std_result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
     {
         if (result.has_error())
         {
