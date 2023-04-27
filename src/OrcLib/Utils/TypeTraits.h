@@ -90,66 +90,46 @@ struct has_char_type_member<T, std::void_t<typename remove_all_t<T>::char_type>>
 template <typename T>
 constexpr auto has_char_type_member_v = has_char_type_member<T>::value;
 
-//
-// Check if type is instance of std::back_insert_iterator
-//
-template <typename T>
-struct is_back_insert_iterator : std::false_type
-{
-};
-
-template <typename T>
-struct is_back_insert_iterator<std::back_insert_iterator<T>> : std::true_type
-{
-};
-
-template <typename T>
-constexpr bool is_back_insert_iterator_v = is_back_insert_iterator<T>::value;
-
-//
-// Extract underlying value_type
-//
-template <typename T>
-struct extract_value_type
-{
-};
-
-template <typename T>
-struct extract_value_type<std::back_insert_iterator<T>>
-{
-    using type = T;
-};
-
-template <typename T>
-using extract_value_type_t = typename extract_value_type<T>::type;
 
 //
 // Provide underlying char type for the given type or 'void'
 //
-template <typename T, typename Enable = void>
+
+namespace detail {
+
+template <typename... Ts>
+struct underlying_char_type;
+
+template <>
+struct underlying_char_type<char>
+{
+    using type = char;
+};
+
+template <>
+struct underlying_char_type<wchar_t>
+{
+    using type = wchar_t;
+};
+
+template <typename T>
+struct underlying_char_type<T>
+{
+    using type = remove_all_t<typename T::value_type>;
+};
+
+template <template <typename, typename...> class X, typename T, typename... Args>
+struct underlying_char_type<X<T, Args...>>
+{
+    using type = remove_all_t<typename underlying_char_type<T>::type>;
+};
+
+}  // namespace detail
+
+template <typename T>
 struct underlying_char_type
 {
-};
-
-template <typename T>
-struct underlying_char_type<T, std::enable_if_t<is_back_insert_iterator_v<T>>>
-{
-    // Extract a container type as std::string and check underlying char/wchar_t type
-    using type = typename underlying_char_type<extract_value_type_t<T>>::type;
-};
-
-template <typename T>
-struct underlying_char_type<T, std::enable_if_t<!std::is_class_v<remove_all_t<T>>>>
-{
-    using type = remove_all_t<T>;
-};
-
-template <typename T>
-struct underlying_char_type<T, std::enable_if_t<std::is_class_v<remove_all_t<T>> && !is_back_insert_iterator_v<T>>>
-{
-    using ClassT = remove_all_t<T>;
-    using CharT = typename ClassT::value_type;
-    using type = remove_all_t<CharT>;
+    using type = typename detail::underlying_char_type<remove_all_t<T>>::type;
 };
 
 template <typename T>
