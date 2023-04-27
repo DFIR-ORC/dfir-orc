@@ -53,7 +53,7 @@ public:
 
     const std::vector<SpdlogSink::Ptr>& Sinks();
 
-    inline void Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, std::string_view msg)
+    inline void Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, fmt::string_view msg)
     {
         if (level >= m_backtraceTrigger && m_backtraceTrigger != Level::Off)
         {
@@ -63,7 +63,7 @@ public:
         m_logger->log(timepoint, spdlog::source_loc {}, static_cast<spdlog::level::level_enum>(level), msg);
     }
 
-    void Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, std::wstring_view msg);
+    void Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, fmt::wstring_view msg);
 
     template <typename... Args>
     inline void Trace(Args&&... args)
