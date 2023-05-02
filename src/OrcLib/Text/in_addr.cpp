@@ -1,27 +1,130 @@
+//
+// SPDX-License-Identifier: LGPL-2.1-or-later
+//
+// Copyright © 2022 ANSSI. All Rights Reserved.
+//
+// Author(s): jeanga (ANSSI), fabienfl (ANSSI)
+//
+
 #include "in_addr.h"
-
-#ifdef __has_include
-#    if __has_include("ip2string.h")
-#        define ENABLE_IP2STRING
-#    endif
-#endif
-
-#ifdef ENABLE_IP2STRING
-#include <ip2string.h>
-#include <Mstcpip.h>
-
-#include "Log/Log.h"
-#include "Text/Fmt/in_addr.h"
-
-#ifndef STATUS_SUCCESS
-#    define STATUS_SUCCESS 0
-#endif
 
 namespace {
 
 const static size_t kDefaultStringSize = 256;
 
+Orc::Result<void>
+RtlIpv4AddressToStringExAApi(const in_addr* Address, USHORT Port, PSTR AddressString, PULONG AddressStringLength)
+{
+    using FnRtlIpv4AddressToStringExA = NTSTATUS(__stdcall*)(const in_addr*, USHORT, PSTR, PULONG);
+
+    static FnRtlIpv4AddressToStringExA fn = nullptr;
+    if (fn == nullptr)
+    {
+        fn = reinterpret_cast<FnRtlIpv4AddressToStringExA>(
+            ::GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlIpv4AddressToStringExA"));
+
+        if (!fn)
+        {
+            return Orc::LastWin32Error();
+        }
+    }
+
+    auto status = fn(Address, Port, AddressString, AddressStringLength);
+    if (!NT_SUCCESS(status))
+    {
+        return std::error_code(HRESULT_FROM_NT(status), std::system_category());
+    }
+
+    return Orc::Success<void>();
 }
+
+Orc::Result<void>
+RtlIpv4AddressToStringExWApi(const in_addr* Address, USHORT Port, PWSTR AddressString, PULONG AddressStringLength)
+{
+    using FnRtlIpv4AddressToStringExW = NTSTATUS(__stdcall*)(const in_addr*, USHORT, PWSTR, PULONG);
+
+    static FnRtlIpv4AddressToStringExW fn = nullptr;
+    if (fn == nullptr)
+    {
+        fn = reinterpret_cast<FnRtlIpv4AddressToStringExW>(
+            ::GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlIpv4AddressToStringExW"));
+
+        if (!fn)
+        {
+            return Orc::LastWin32Error();
+        }
+    }
+
+    auto status = fn(Address, Port, AddressString, AddressStringLength);
+    if (!NT_SUCCESS(status))
+    {
+        return std::error_code(HRESULT_FROM_NT(status), std::system_category());
+    }
+
+    return Orc::Success<void>();
+}
+
+Orc::Result<void> RtlIpv6AddressToStringExAApi(
+    const in6_addr* Address,
+    ULONG ScopeId,
+    USHORT Port,
+    PSTR AddressString,
+    PULONG AddressStringLength)
+{
+    using FnRtlIpv6AddressToStringExA = NTSTATUS(__stdcall*)(const in6_addr*, ULONG, USHORT, PSTR, PULONG);
+
+    static FnRtlIpv6AddressToStringExA fn = nullptr;
+    if (fn == nullptr)
+    {
+        fn = reinterpret_cast<FnRtlIpv6AddressToStringExA>(
+            ::GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlIpv6AddressToStringExA"));
+
+        if (!fn)
+        {
+            return Orc::LastWin32Error();
+        }
+    }
+
+    auto status = fn(Address, ScopeId, Port, AddressString, AddressStringLength);
+    if (!NT_SUCCESS(status))
+    {
+        return std::error_code(HRESULT_FROM_NT(status), std::system_category());
+    }
+
+    return Orc::Success<void>();
+}
+
+Orc::Result<void> RtlIpv6AddressToStringExWApi(
+    const in6_addr* Address,
+    ULONG ScopeId,
+    USHORT Port,
+    PWSTR AddressString,
+    PULONG AddressStringLength)
+{
+    using FnRtlIpv6AddressToStringExW = NTSTATUS(__stdcall*)(const in6_addr*, ULONG, USHORT, PWSTR, PULONG);
+
+    static FnRtlIpv6AddressToStringExW fn = nullptr;
+    if (fn == nullptr)
+    {
+        fn = reinterpret_cast<FnRtlIpv6AddressToStringExW>(
+            ::GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlIpv6AddressToStringExW"));
+
+        if (!fn)
+        {
+            return Orc::LastWin32Error();
+        }
+    }
+
+    auto status = fn(Address, ScopeId, Port, AddressString, AddressStringLength);
+    if (!NT_SUCCESS(status))
+    {
+        return std::error_code(HRESULT_FROM_NT(status), std::system_category());
+    }
+
+    return Orc::Success<void>();
+}
+
+}  // namespace
 
 namespace Orc {
 
@@ -31,12 +134,11 @@ Result<std::string> ToString(const in_addr& ip)
     s.reserve(kDefaultStringSize);
 
     ULONG size = s.size();
-    auto status = RtlIpv4AddressToStringExA(&ip, 0, s.data(), &size);
-    if (status != STATUS_SUCCESS)
+    auto rv = ::RtlIpv4AddressToStringExAApi(&ip, 0, s.data(), &size);
+    if (rv.has_error())
     {
-        std::error_code ec = SystemError(HRESULT_FROM_NT(status));
-        Log::Error("Failed RtlIpv4AddressToStringExA [{}]", ec);
-        return ec;
+        Log::Error("Failed RtlIpv4AddressToStringExA [{}]", rv.error().value());
+        return rv.error();
     }
 
     s.resize(size);
@@ -49,12 +151,11 @@ Result<std::wstring> ToWString(const in_addr& ip)
     s.reserve(kDefaultStringSize);
 
     ULONG size = s.size();
-    auto status = RtlIpv4AddressToStringExW(&ip, 0, s.data(), &size);
-    if (status != STATUS_SUCCESS)
+    auto rv = ::RtlIpv4AddressToStringExWApi(&ip, 0, s.data(), &size);
+    if (rv.has_error())
     {
-        std::error_code ec = SystemError(HRESULT_FROM_NT(status));
-        Log::Error("Failed RtlIpv4AddressToStringExW [{}]", ec);
-        return ec;
+        Log::Error("Failed RtlIpv4AddressToStringExW [{}]", rv.error().value());
+        return rv.error();
     }
 
     s.resize(size);
@@ -67,12 +168,11 @@ Result<std::string> ToString(const in6_addr& ip)
     s.reserve(kDefaultStringSize);
 
     ULONG size = s.size();
-    auto status = RtlIpv6AddressToStringExA(&ip, 0, 0, s.data(), &size);
-    if (status != STATUS_SUCCESS)
+    auto rv = ::RtlIpv6AddressToStringExAApi(&ip, 0, 0, s.data(), &size);
+    if (rv.has_error())
     {
-        std::error_code ec = SystemError(HRESULT_FROM_NT(status));
-        Log::Error("Failed RtlIpv6AddressToStringExA [{}]", ec);
-        return ec;
+        Log::Error("Failed RtlIpv6AddressToStringExA [{}]", rv.error().value());
+        return rv.error();
     }
 
     s.resize(size);
@@ -85,12 +185,11 @@ Result<std::wstring> ToWString(const in6_addr& ip)
     s.reserve(kDefaultStringSize);
 
     ULONG size = s.size();
-    auto status = RtlIpv6AddressToStringExW(&ip, 0, 0, s.data(), &size);
-    if (status != STATUS_SUCCESS)
+    auto rv = ::RtlIpv6AddressToStringExWApi(&ip, 0, 0, s.data(), &size);
+    if (rv.has_error())
     {
-        std::error_code ec = SystemError(HRESULT_FROM_NT(status));
-        Log::Error("Failed RtlIpv6AddressToStringExW [{}]", ec);
-        return ec;
+        Log::Error("Failed RtlIpv6AddressToStringExW [{}]", rv.error().value());
+        return rv.error();
     }
 
     s.resize(size);
@@ -98,5 +197,3 @@ Result<std::wstring> ToWString(const in6_addr& ip)
 }
 
 }  // namespace Orc
-
-#endif  // ENABLE_IP2STRING
