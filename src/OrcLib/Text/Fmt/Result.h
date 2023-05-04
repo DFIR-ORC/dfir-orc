@@ -13,35 +13,31 @@
 #include "Utils/Result.h"
 
 template <typename T>
-struct fmt::formatter<Orc::Result<T>> : public fmt::formatter<std::string_view>
+struct fmt::formatter<Orc::Result<T>> : public fmt::formatter<T>
 {
     template <typename FormatContext>
     auto format(const Orc::Result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
     {
         if (result.has_error())
         {
-            fmt::memory_buffer msg;
-            fmt::format_to(std::back_inserter(msg), "{}", result.error());
-            return fmt::formatter<std::string_view>::format(std::begin(msg), ctx);
+            fmt::format_to(ctx.out(), "{}", result.error());
+            return ctx.out();
         }
-
-        return formatter<std::string_view>::format("Success", ctx);
+        return formatter<T>::format(result.value(), ctx);
     }
 };
 
 template <typename T>
-struct fmt::formatter<Orc::Result<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
+struct fmt::formatter<Orc::Result<T>, wchar_t> : public fmt::formatter<T, wchar_t>
 {
     template <typename FormatContext>
     auto format(const Orc::Result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
     {
         if (result.has_error())
         {
-            fmt::wmemory_buffer msg;
-            fmt::format_to(std::back_inserter(msg), L"{}", result.error());
-            return fmt::formatter<std::wstring_view, wchar_t>::format(std::begin(msg), ctx);
+            fmt::format_to(ctx.out(), L"{}", result.error());
+            return ctx.out();
         }
-
-        return formatter<std::wstring_view, wchar_t>::format(L"Success", ctx);
+        return formatter<T, wchar_t>::format(result.value(), ctx);
     }
 };
