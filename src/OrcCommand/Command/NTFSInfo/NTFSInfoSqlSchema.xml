@@ -202,6 +202,7 @@
         </enum>
         <bool name="Parse" />
         <utf16  name="MountPoint" maxlen="256" />
+        <utf16  name="ShadowCopyId" maxlen="256" />
     </table>
 </sqlschema>
 

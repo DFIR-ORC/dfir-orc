@@ -533,7 +533,7 @@ CreateSampleFileName(const Main::SampleRef& sample, const PFILE_NAME pFileName, 
     const auto FRN = reinterpret_cast<const LARGE_INTEGER*>(&sample.FRN)->QuadPart;
     const auto parentFRN = reinterpret_cast<const LARGE_INTEGER*>(&pFileName->ParentDirectory)->QuadPart;
     const auto contentType = Command::GetThis::ToString(sample.Content.Type);
-    const auto snapshotId = ::ToString(sample.SnapshotID);
+    const auto snapshotId = ToString(sample.SnapshotID);
 
     if (dataName.size())
     {

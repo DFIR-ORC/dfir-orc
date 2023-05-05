@@ -39,6 +39,7 @@
 #include "Log/UtilitiesLoggerConfiguration.h"
 #include "Log/LogTerminationHandler.h"
 #include "Utils/StdStream/StandardOutput.h"
+#include "Text/Guid.h"
 #include "VolumeReader.h"
 
 #include "Utils/EnumFlags.h"
@@ -122,6 +123,7 @@ public:
                         volStatOutput.WriteString(FSVBR::GetFSName(reader->GetFSType()).c_str());
                         volStatOutput.WriteBool(loc->GetParse());
                         volStatOutput.WriteString(fmt::format(L"{}", fmt::join(loc->GetPaths(), L";")));
+                        volStatOutput.WriteString(loc->GetShadow() ? ToStringW(loc->GetShadow()->guid).c_str() : L"");
                         volStatOutput.WriteEndOfLine();
                     }
                     else
