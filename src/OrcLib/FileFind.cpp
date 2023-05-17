@@ -4406,7 +4406,7 @@ HRESULT FileFind::Find(
                 };
             }
 
-            if (FAILED(hr = walk.Walk(cbs)))
+            if (FAILED(hr = walk.Walk(cbs)) && hr != HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
             {
                 Log::Debug(L"Failed to walk volume '{}' [{}]", aLoc->GetLocation(), SystemError(hr));
             }
