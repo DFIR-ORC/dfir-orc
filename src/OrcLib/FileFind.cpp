@@ -4292,7 +4292,7 @@ HRESULT FileFind::ExcludeMatch(const std::shared_ptr<Match>& aMatch)
 
 HRESULT FileFind::Find(
     const LocationSet& locations,
-    FileFind::FoundMatchCallback aCallback,
+    FileFind::FoundMatchCallback foundMatchCallback,
     bool bParseI30Data,
     ResurrectRecordsMode resurrectRecordsMode)
 {
@@ -4318,103 +4318,14 @@ HRESULT FileFind::Find(
 
     bool hasSomeFailure = false;
 
-    for (const auto& aLoc : locs)
+    for (const auto& location : locs)
     {
-        HRESULT hr = E_FAIL;
-        MFTWalker walk;
-
-        m_FullNameBuilder = walk.GetFullNameBuilder();
-        m_InLocationBuilder = walk.GetInLocationBuilder();
-
-        m_pVolReader = aLoc->GetReader();
-
-        if (FAILED(hr = walk.Initialize(aLoc, resurrectRecordsMode)))
+        hr = Find(location, foundMatchCallback, bParseI30Data, resurrectRecordsMode);
+        if (FAILED(hr))
         {
-            if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
-            {
-                Log::Debug(L"File system not eligible for volume '{}' [{}]", aLoc->GetLocation(), SystemError(hr));
-            }
-            else
-            {
-                Log::Critical(L"Failed to init walk for volume '{}' [{}]", aLoc->GetLocation(), SystemError(hr));
-                hasSomeFailure = true;
-            }
-        }
-        else
-        {
-            MFTWalker::Callbacks cbs;
-            auto pCB = aCallback;
-
-            bool bStop = false;
-
-            cbs.ElementCallback =
-                [this, aCallback, &bStop, &hr](const std::shared_ptr<VolumeReader>& volreader, MFTRecord* pElt) {
-                    DBG_UNREFERENCED_PARAMETER(volreader);
-                    try
-                    {
-                        if (pElt)
-                        {
-                            if (FAILED(hr = FindMatch(pElt, bStop, aCallback)))
-                            {
-                                Log::Error(L"FindMatch failed");
-                                pElt->CleanCachedData();
-                                return;
-                            }
-                            pElt->CleanCachedData();
-                        }
-                    }
-                    catch (WCHAR* e)
-                    {
-                        Log::Error(L"Could not parse record: '{}'", e);
-                    }
-                    return;
-                };
-
-            cbs.ProgressCallback = [&bStop](ULONG ulProgress) -> HRESULT {
-                if (bStop)
-                {
-                    return HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES);
-                }
-                return S_OK;
-            };
-
-            if (bParseI30Data && (!m_I30ExactNameTerms.empty() || !m_I30ExactPathTerms.empty() || !m_I30Terms.empty()))
-            {
-                cbs.I30Callback = [this, aCallback, &bStop, &hr](
-                                      const std::shared_ptr<VolumeReader>& volreader,
-                                      MFTRecord* pElt,
-                                      const PINDEX_ENTRY pEntry,
-                                      const PFILE_NAME pFileName,
-                                      bool bCarvedEntry) {
-                    DBG_UNREFERENCED_PARAMETER(volreader);
-                    DBG_UNREFERENCED_PARAMETER(bCarvedEntry);
-                    DBG_UNREFERENCED_PARAMETER(pEntry);
-                    DBG_UNREFERENCED_PARAMETER(pElt);
-                    try
-                    {
-                        if (FAILED(hr = FindI30Match(pFileName, bStop, aCallback)))
-                        {
-                            Log::Error(L"FindI30Match failed");
-                            return;
-                        }
-                    }
-                    catch (WCHAR* e)
-                    {
-                        Log::Error(L"Could not parse record: '{}'", e);
-                    }
-                    return;
-                };
-            }
-
-            if (FAILED(hr = walk.Walk(cbs)) && hr != HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
-            {
-                Log::Debug(L"Failed to walk volume '{}' [{}]", aLoc->GetLocation(), SystemError(hr));
-            }
-            else
-            {
-                Log::Debug("Done");
-                walk.Statistics(L"Done");
-            }
+            Log::Error(L"Failed FileFind::Find on '{}'", location->GetLocation());
+            hasSomeFailure = true;
+            continue;
         }
     }
 
@@ -4424,6 +4335,125 @@ HRESULT FileFind::Find(
     }
 
     return S_OK;
+}
+
+HRESULT FileFind::Find(
+    const std::shared_ptr<Location>& location,
+    FileFind::FoundMatchCallback aCallback,
+    bool bParseI30Data,
+    ResurrectRecordsMode resurrectRecordsMode)
+{
+    HRESULT hr = E_FAIL;
+
+    if (m_ExactNameTerms.empty() && m_ExactPathTerms.empty() && m_Terms.empty() && m_SizeTerms.empty()
+        && m_I30ExactNameTerms.empty() && m_I30ExactPathTerms.empty() && m_I30Terms.empty())
+        return S_OK;
+
+    m_NeededHash = GetNeededHashAlgorithms();
+
+    hr = InitializeYara();
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    MFTWalker walk;
+
+    m_FullNameBuilder = walk.GetFullNameBuilder();
+    m_InLocationBuilder = walk.GetInLocationBuilder();
+
+    m_pVolReader = location->GetReader();
+
+    if (FAILED(hr = walk.Initialize(location, resurrectRecordsMode)))
+    {
+        if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
+        {
+            Log::Debug(L"File system not eligible for volume '{}' [{}]", location->GetLocation(), SystemError(hr));
+        }
+        else
+        {
+            Log::Critical(L"Failed to init walk for volume '{}' [{}]", location->GetLocation(), SystemError(hr));
+            return hr;
+        }
+    }
+    else
+    {
+        MFTWalker::Callbacks cbs;
+        auto pCB = aCallback;
+
+        bool bStop = false;
+
+        cbs.ElementCallback =
+            [this, aCallback, &bStop, &hr](const std::shared_ptr<VolumeReader>& volreader, MFTRecord* pElt) {
+                DBG_UNREFERENCED_PARAMETER(volreader);
+                try
+                {
+                    if (pElt)
+                    {
+                        if (FAILED(hr = FindMatch(pElt, bStop, aCallback)))
+                        {
+                            Log::Error(L"FindMatch failed");
+                            pElt->CleanCachedData();
+                            return;
+                        }
+                        pElt->CleanCachedData();
+                    }
+                }
+                catch (WCHAR* e)
+                {
+                    Log::Error(L"Could not parse record: '{}'", e);
+                }
+                return;
+            };
+
+        cbs.ProgressCallback = [&bStop](ULONG ulProgress) -> HRESULT {
+            if (bStop)
+            {
+                return HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES);
+            }
+            return S_OK;
+        };
+
+        if (bParseI30Data && (!m_I30ExactNameTerms.empty() || !m_I30ExactPathTerms.empty() || !m_I30Terms.empty()))
+        {
+            cbs.I30Callback = [this, aCallback, &bStop, &hr](
+                                  const std::shared_ptr<VolumeReader>& volreader,
+                                  MFTRecord* pElt,
+                                  const PINDEX_ENTRY pEntry,
+                                  const PFILE_NAME pFileName,
+                                  bool bCarvedEntry) {
+                DBG_UNREFERENCED_PARAMETER(volreader);
+                DBG_UNREFERENCED_PARAMETER(bCarvedEntry);
+                DBG_UNREFERENCED_PARAMETER(pEntry);
+                DBG_UNREFERENCED_PARAMETER(pElt);
+                try
+                {
+                    if (FAILED(hr = FindI30Match(pFileName, bStop, aCallback)))
+                    {
+                        Log::Error(L"FindI30Match failed");
+                        return;
+                    }
+                }
+                catch (WCHAR* e)
+                {
+                    Log::Error(L"Could not parse record: '{}'", e);
+                }
+                return;
+            };
+        }
+
+        if (FAILED(hr = walk.Walk(cbs)) && hr != HRESULT_FROM_WIN32(ERROR_NO_MORE_FILES))
+        {
+            Log::Debug(L"Failed to walk volume '{}' [{}]", location->GetLocation(), SystemError(hr));
+        }
+        else
+        {
+            Log::Debug("Done");
+            walk.Statistics(L"Done");
+        }
+    }
+
+    return hr;
 }
 
 void FileFind::PrintSpecs() const

@@ -512,7 +512,16 @@ public:
         bool bParseI30Data,
         ResurrectRecordsMode resurrectRecordsMode);
 
-    const std::vector<std::shared_ptr<Match>>& Matches() const { return m_Matches; }
+    HRESULT Find(
+        const std::shared_ptr<Location>& location,
+        FileFind::FoundMatchCallback aCallback,
+        bool bParseI30Data,
+        ResurrectRecordsMode resurrectRecordsMode);
+
+        const std::vector<std::shared_ptr<Match>>& Matches() const
+    {
+        return m_Matches;
+    }
 
     void PrintSpecs() const;
 
