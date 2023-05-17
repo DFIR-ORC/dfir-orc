@@ -52,8 +52,7 @@ public:
     static void SetBufferSize(DWORD size);
 
 private:
-    LocationSet m_Locations;
-
+    std::shared_ptr<Location> m_location;
     std::shared_ptr<ByteStream> m_USNJournal;
 
     static DWORD m_BufferSize;

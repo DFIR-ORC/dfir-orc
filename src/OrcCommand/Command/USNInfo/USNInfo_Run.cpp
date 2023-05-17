@@ -152,15 +152,24 @@ HRESULT Main::Run()
         return hr;
     }
 
-    const auto& unique_locs = config.locs.GetAltitudeLocations();
+    const auto& locs = config.locs.GetAltitudeLocations();
     std::vector<std::shared_ptr<Location>> locations;
+    std::vector<std::shared_ptr<Location>> allLocations;
 
-    // keep only the locations we're parsing
-    std::copy_if(
-        std::cbegin(unique_locs),
-        std::cend(unique_locs),
-        std::back_inserter(locations),
-        [](const std::shared_ptr<Location>& item) -> bool { return item->GetParse(); });
+    std::copy_if(begin(locs), end(locs), back_inserter(locations), [](const std::shared_ptr<Location>& loc) {
+        if (loc == nullptr)
+            return false;
+
+        return (loc->GetParse() && loc->IsNTFS());
+    });
+
+    if (locations.empty())
+    {
+        Log::Critical(
+            L"No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
+            L"want parsed");
+        return E_INVALIDARG;
+    }
 
     if (config.output.Type == OutputSpec::Kind::Archive)
     {
@@ -172,8 +181,9 @@ HRESULT Main::Run()
         }
     }
 
-    BOOST_SCOPE_EXIT(&config, &m_outputs) { m_outputs.CloseAll(config.output); }
-    BOOST_SCOPE_EXIT_END;
+    Guard::Scope closeOnExit([&]() {
+        m_outputs.CloseAll(config.output);
+    });
 
     hr = m_outputs.GetWriters(config.output, L"USNInfo", locations);
     if (FAILED(hr))
@@ -182,57 +192,59 @@ HRESULT Main::Run()
         return hr;
     }
 
-    hr = m_outputs.ForEachOutput(
-        config.output, [this](const MultipleOutput<LocationOutput>::OutputPair& dir) -> HRESULT {
-            m_console.Print(L"Parsing volume '{}'", dir.first.m_pLoc->GetLocation());
-            USNJournalWalkerOffline walker;
-
-            HRESULT hr = walker.Initialize(dir.first.m_pLoc);
-            if (FAILED(hr))
-            {
-                if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
-                {
-                    Log::Warn(L"File system not eligible for volume '{}'", dir.first.m_pLoc->GetLocation());
-                    return S_OK;
-                }
-
-                Log::Critical(
-                    L"Failed to init walk for volume '{}' [{}]", dir.first.m_pLoc->GetLocation(), SystemError(hr));
-                return hr;
-            }
-
-            if (!walker.GetUsnJournal())
-            {
-                Log::Warn(L"Did not find a USN journal on following volume '{}'", dir.first.m_pLoc->GetLocation());
-                return S_OK;
-            }
-
-            IUSNJournalWalker::Callbacks callbacks;
-            callbacks.RecordCallback =
-                [](const std::shared_ptr<VolumeReader>& volreader, WCHAR* szFullName, USN_RECORD* pElt) {};
-
-            hr = walker.EnumJournal(callbacks);
-            if (FAILED(hr))
-            {
-                Log::Error(L"Failed to enum MFT records '{}' [{}]", dir.first.m_pLoc->GetLocation(), SystemError(hr));
-                return S_OK;
-            }
-
-            callbacks.RecordCallback =
-                [this, dir](const std::shared_ptr<VolumeReader>& volreader, WCHAR* szFullName, USN_RECORD* pElt) {
-                    USNRecordInformation(*dir.second, volreader, szFullName, pElt);
-                };
-
-            hr = walker.ReadJournal(callbacks);
-            if (FAILED(hr))
-            {
-                Log::Error(L"Failed to walk volume '{}' [{}]", dir.first.m_pLoc->GetLocation(), SystemError(hr));
-                return S_OK;
-            }
-
-            Log::Info(L"Done");
-            return S_OK;
+    auto outputIt = std::begin(m_outputs.Outputs());
+    for (const auto& loc : locations)
+    {
+        Guard::Scope onExit([this, &outputIt]() {
+            m_outputs.CloseOne(config.output, *outputIt);
+            outputIt++;
         });
+
+        m_console.Print(L"Parsing: {} [{}]", loc->GetLocation(), boost::join(loc->GetPaths(), L", "));
+        USNJournalWalkerOffline walker;
+
+        HRESULT hr = walker.Initialize(loc);
+        if (FAILED(hr))
+        {
+            if (hr == HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION))
+            {
+                Log::Warn(L"File system not eligible for volume '{}'", loc->GetLocation());
+                continue;
+            }
+
+            Log::Critical(L"Failed to init walk for volume '{}' [{}]", loc->GetLocation(), SystemError(hr));
+            continue;
+        }
+
+        if (!walker.GetUsnJournal())
+        {
+            Log::Warn(L"Did not find a USN journal on following volume '{}'", loc->GetLocation());
+            continue;
+        }
+
+        IUSNJournalWalker::Callbacks callbacks;
+        callbacks.RecordCallback =
+            [](const std::shared_ptr<VolumeReader>& volreader, WCHAR* szFullName, USN_RECORD* pElt) {};
+
+        hr = walker.EnumJournal(callbacks);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to enum MFT records '{}' [{}]", loc->GetLocation(), SystemError(hr));
+            continue;
+        }
+
+        callbacks.RecordCallback =
+            [this, &outputIt](const std::shared_ptr<VolumeReader>& volreader, WCHAR* szFullName, USN_RECORD* pElt) {
+                USNRecordInformation(*outputIt->second, volreader, szFullName, pElt);
+            };
+
+        hr = walker.ReadJournal(callbacks);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to walk volume '{}' [{}]", loc->GetLocation(), SystemError(hr));
+            continue;
+        }
+    }
 
     if (FAILED(hr))
     {
