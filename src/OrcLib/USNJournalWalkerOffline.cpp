@@ -110,7 +110,7 @@ HRESULT USNJournalWalkerOffline::EnumJournal(const IUSNJournalWalker::Callbacks&
 
     MFTWalker walk;
 
-    if (FAILED(hr = walk.Initialize(locations.begin()->second, ResurrectRecordsMode::kYes)))
+    if (FAILED(hr = walk.Initialize(locations.begin()->second, ResurrectRecordsMode::kNo)))
     {
         Log::Error(L"Failed during MFT walk initialisation [{}]", SystemError(hr));
         return hr;
