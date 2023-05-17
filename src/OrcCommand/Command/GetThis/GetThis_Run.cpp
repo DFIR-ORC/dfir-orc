@@ -1431,7 +1431,7 @@ HRESULT Main::FindMatchingSamples()
         config.Locations,
         std::bind(&Main::OnMatchingSample, this, std::placeholders::_1, std::placeholders::_2),
         false,
-        ResurrectRecordsMode::kNo);
+        config.resurrectRecordsMode);
 
     if (FAILED(hr))
     {
