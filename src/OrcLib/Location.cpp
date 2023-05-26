@@ -397,6 +397,10 @@ void Location::EnumerateShadowCopies(
     for (auto& shadow : shadows)
     {
         shadow.parentIdentifier = GetIdentifier();
+        if (shadow.parentVolume->ShortVolumeName())
+        {
+            shadow.VolumeName = shadow.parentVolume->ShortVolumeName();
+        }
     }
 
     // Most recent snapshot first
