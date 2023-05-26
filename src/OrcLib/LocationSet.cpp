@@ -223,9 +223,11 @@ void GetExcludedVolumeLocations(
     const LocationSet::PathExcludes& excludedPaths,
     std::vector<Location::Ptr>& excludedLocations)
 {
+    const bool excludeAll = excludedPaths.find(L"*") != std::cend(excludedPaths);
+
     for (const auto& path : volume.Paths)
     {
-        if (excludedPaths.find(path) != std::cend(excludedPaths))
+        if (excludeAll || excludedPaths.find(path) != std::cend(excludedPaths))
         {
             std::copy(
                 std::cbegin(volume.Locations), std::cend(volume.Locations), std::back_inserter(excludedLocations));
@@ -236,7 +238,7 @@ void GetExcludedVolumeLocations(
 
     for (const auto& location : volume.Locations)
     {
-        if (excludedPaths.find(location->GetLocation()) != std::cend(excludedPaths))
+        if (excludeAll || excludedPaths.find(location->GetLocation()) != std::cend(excludedPaths))
         {
             std::copy(
                 std::cbegin(volume.Locations), std::cend(volume.Locations), std::back_inserter(excludedLocations));
