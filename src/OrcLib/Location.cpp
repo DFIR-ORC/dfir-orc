@@ -394,6 +394,11 @@ void Location::EnumerateShadowCopies(
         return;
     }
 
+    for (auto& shadow : shadows)
+    {
+        shadow.parentIdentifier = GetIdentifier();
+    }
+
     // Most recent snapshot first
     std::sort(std::begin(shadows), std::end(shadows), [](const auto& lhs, const auto& rhs) {
         return lhs.CreationTime > rhs.CreationTime;
@@ -715,13 +720,21 @@ void Location::MakeIdentifier()
         }
         break;
         case Type::Snapshot: {
-            wregex r(REGEX_SNAPSHOT, regex_constants::icase);
-            wsmatch s;
-
-            if (regex_match(m_Location, s, r))
+            if (m_Shadow)
             {
+                m_Identifier = fmt::format(L"{}_{}", m_Shadow->parentIdentifier, m_Shadow->guid);
+            }
+            else
+            {
+                Log::Error(L"Location::MakeIdentifier: unexpected code path");
+                wregex r(REGEX_SNAPSHOT, regex_constants::icase);
+                wsmatch s;
 
-                m_Identifier = L"Snapshot_" + s[REGEX_SNAPSHOT_NUM].str();
+                if (regex_match(m_Location, s, r))
+                {
+
+                    m_Identifier = L"Snapshot_" + s[REGEX_SNAPSHOT_NUM].str();
+                }
             }
         }
         break;
