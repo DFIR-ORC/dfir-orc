@@ -116,10 +116,15 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         m_Config.bPopSystemObjects = false;
     m_Config.locs.SetPopulateSystemObjects((bool)m_Config.bPopSystemObjects);
 
-    if (FAILED(hr = m_Config.locs.AddLocationsFromConfigItem(configitem[FATINFO_LOCATIONS])))
+    if (configitem[FATINFO_LOCATIONS])
     {
-        Log::Error("Failed to get locations definition from config [{}]", SystemError(hr));
-        return hr;
+        if (FAILED(hr = m_Config.locs.AddLocationsFromConfigItem(configitem[FATINFO_LOCATIONS])))
+        {
+            Log::Error("Failed to get locations definition from config [{}]", SystemError(hr));
+            return hr;
+        }
+
+        LocationSet::ParseLocationsFromConfigItem(configitem[FATINFO_LOCATIONS], m_Config.InputLocations);
     }
 
     if (configitem[FATINFO_LOGGING])
@@ -235,6 +240,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         m_Config.bPopSystemObjects = false;
     m_Config.locs.SetPopulateSystemObjects((bool)m_Config.bPopSystemObjects);
 
+    LocationSet::ParseLocationsFromArgcArgv(argc, argv, m_Config.InputLocations);
+
     if (FAILED(hr = m_Config.locs.AddLocationsFromArgcArgv(argc, argv)))
         return hr;
 
@@ -259,6 +266,11 @@ HRESULT Main::CheckConfiguration()
     else
     {
         SystemDetails::SetOrcComputerName(m_utilitiesConfig.strComputerName);
+    }
+
+    if (m_Config.InputLocations.empty())
+    {
+        Log::Critical("Missing location parameter");
     }
 
     m_Config.locs.Consolidate(false, FSVBR::FSType::FAT);

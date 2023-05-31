@@ -86,7 +86,7 @@ HRESULT USNJournalWalkerOffline::Initialize(const std::shared_ptr<Location>& loc
                 false,
                 ResurrectRecordsMode::kNo)))
     {
-        Log::Error("Failed to parse location while searching for USN journal");
+        Log::Error("Failed to parse location while searching for USN journal [{}]", SystemError(hr));
     }
 
     if (FAILED(hr = m_RecordStore.InitializeStore(USN_MAX_NUMBER, m_dwRecordMaxSize)))

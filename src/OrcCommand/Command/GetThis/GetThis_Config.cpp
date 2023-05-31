@@ -168,16 +168,26 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.bAddShadows = bAddShadows;
     }
 
-    if (FAILED(hr = config.Locations.AddLocationsFromConfigItem(configitem[GETTHIS_LOCATION])))
+    if (configitem[GETTHIS_LOCATION])
     {
-        Log::Error(L"Syntax error in specific locations parsing in config file");
-        return hr;
+        if (FAILED(hr = config.Locations.AddLocationsFromConfigItem(configitem[GETTHIS_LOCATION])))
+        {
+            Log::Error(L"Syntax error in specific locations parsing in config file");
+            return hr;
+        }
+
+        LocationSet::ParseLocationsFromConfigItem(configitem[GETTHIS_LOCATION], config.inputLocations);
     }
 
-    if (FAILED(hr = config.Locations.AddKnownLocations(configitem[GETTHIS_KNOWNLOCATIONS])))
+    if (configitem[GETTHIS_KNOWNLOCATIONS])
     {
-        Log::Error(L"Syntax error in known locations parsing in config file");
-        return hr;
+        if (FAILED(hr = config.Locations.AddKnownLocations(configitem[GETTHIS_KNOWNLOCATIONS])))
+        {
+            Log::Error(L"Syntax error in known locations parsing in config file");
+            return hr;
+        }
+
+        LocationSet::ParseLocationsFromConfigItem(configitem[GETTHIS_KNOWNLOCATIONS], config.inputLocations);
     }
 
     if (configitem[GETTHIS_SAMPLES][CONFIG_MAXBYTESPERSAMPLE])
@@ -477,6 +487,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
             }
         }
 
+        LocationSet::ParseLocationsFromArgcArgv(argc, argv, config.inputLocations);
+
         if (FAILED(hr = config.Locations.AddLocationsFromArgcArgv(argc, argv)))
         {
             Log::Error("Error in specific locations parsing");
@@ -504,6 +516,11 @@ HRESULT Main::CheckConfiguration()
     if (boost::logic::indeterminate(config.bAddShadows))
     {
         config.bAddShadows = false;
+    }
+
+    if (config.inputLocations.empty())
+    {
+        Log::Critical("Missing location parameter");
     }
 
     config.Locations.Consolidate(

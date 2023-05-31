@@ -1094,24 +1094,60 @@ HRESULT LocationSet::AddLocationsFromConfigItem(const ConfigItem& config)
     return hr;
 }
 
+HRESULT LocationSet::ParseLocationsFromConfigItem(const ConfigItem& config, std::vector<std::wstring>& locations)
+{
+    if (!config)
+    {
+        return S_OK;
+    }
+
+    if (config.Type != ConfigItem::NODELIST)
+    {
+        return E_INVALIDARG;
+    }
+
+    if (config.strName != L"location")
+    {
+        return E_INVALIDARG;
+    }
+
+    HRESULT hr = S_OK;
+    for (auto& item : config.NodeList)
+    {
+        locations.emplace_back(item.c_str());
+    }
+
+    return S_OK;
+}
+
+void LocationSet::ParseLocationsFromArgcArgv(int argc, LPCWSTR argv[], std::vector<std::wstring>& locations)
+{
+    for (int i = 1; i < argc; i++)
+    {
+        if (argv[i][0] != L'/' && argv[i][0] != L'+' && argv[i][0] != L'-')
+        {
+            if (argv[i][0] == L'*')
+            {
+                Log::Debug(L"Enable all locations");
+            }
+
+            locations.emplace_back(argv[i]);
+        }
+    }
+}
+
 HRESULT LocationSet::AddLocationsFromArgcArgv(int argc, LPCWSTR argv[])
 {
     HRESULT hr = E_FAIL;
 
     if (FAILED(hr = EnumerateLocations()))
-        return hr;
-
-    bool hasLocation = false;
-    for (int i = 1; i < argc; i++)
     {
-        if (argv[i][0] != L'/' && argv[i][0] != L'+' && argv[i][0] != L'-')
-        {
-            hasLocation = true;
-            break;
-        }
+        return hr;
     }
 
-    if (!hasLocation)
+    std::vector<std::wstring> locationsFromCli;
+    ParseLocationsFromArgcArgv(argc, argv, locationsFromCli);
+    if (locationsFromCli.empty())
     {
         return S_OK;
     }
@@ -1122,21 +1158,18 @@ HRESULT LocationSet::AddLocationsFromArgcArgv(int argc, LPCWSTR argv[])
         location.second->SetParse(false);
     }
 
-    for (int i = 1; i < argc; i++)
+    for (const auto& location : locationsFromCli)
     {
-        if (argv[i][0] != L'/' && argv[i][0] != L'+' && argv[i][0] != L'-')
+        if (location == L"*")
         {
-            if (argv[i][0] == L'*')
+            return ParseAllVolumes();
+        }
+        else
+        {
+            std::vector<std::shared_ptr<Location>> addedLocs;
+            if (FAILED(hr = AddLocations(location.c_str(), addedLocs)))
             {
-                if (FAILED(hr = ParseAllVolumes()))
-                    return hr;
-                return S_OK;
-            }
-            else
-            {
-                std::vector<std::shared_ptr<Location>> addedLocs;
-                if (FAILED(hr = AddLocations(argv[i], addedLocs)))
-                    return hr;
+                return hr;
             }
         }
     }

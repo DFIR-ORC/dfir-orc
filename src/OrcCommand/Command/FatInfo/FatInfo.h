@@ -59,6 +59,7 @@ public:
         Intentions ColumnIntentions;
         Intentions DefaultIntentions;
         std::vector<Filter> Filters;
+        std::vector<std::wstring> InputLocations;
     };
 
     static LPCWSTR ToolName() { return L"FatInfo"; }

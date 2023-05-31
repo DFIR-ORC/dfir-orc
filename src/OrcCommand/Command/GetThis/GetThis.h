@@ -153,6 +153,8 @@ public:
 
         ContentSpec GetContentSpecFromString(const std::wstring& str);
 
+        std::vector<std::wstring> inputLocations;
+
     private:
         static std::wregex g_ContentRegEx;
     };
