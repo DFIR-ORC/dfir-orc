@@ -23,14 +23,14 @@ public:
 
     bool bIgnoreLimits = false;
 
-    Limit<typename Traits::ByteQuantity<DWORDLONG>> dwlMaxTotalBytes = INFINITE;
+    std::optional<Limit<typename Traits::ByteQuantity<DWORDLONG>>> dwlMaxTotalBytes;
     DWORDLONG dwlAccumulatedBytesTotal = 0LL;
     bool bMaxTotalBytesReached = false;
 
-    Limit<Traits::ByteQuantity<DWORDLONG>> dwlMaxBytesPerSample = INFINITE;
+    std::optional<Limit<Traits::ByteQuantity<DWORDLONG>>> dwlMaxBytesPerSample;
     bool bMaxBytesPerSampleReached = false;
 
-    Limit<DWORD> dwMaxSampleCount = INFINITE;
+    std::optional<Limit<DWORD>> dwMaxSampleCount;
     DWORD dwAccumulatedSampleCount = 0LL;
     bool bMaxSampleCountReached = false;
 };

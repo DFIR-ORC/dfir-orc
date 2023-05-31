@@ -41,6 +41,7 @@
 #include "Log/LogTerminationHandler.h"
 #include "Utils/StdStream/StandardOutput.h"
 #include "Text/Guid.h"
+#include "Limit.h"
 #include "VolumeReader.h"
 
 #include "Utils/EnumFlags.h"
@@ -557,6 +558,18 @@ protected:
         return false;
     }
 
+    template <typename OptionType>
+    static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<Limit<OptionType>>& parameter)
+    {
+        OptionType result;
+        if (ParameterOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
+            return true;
+        }
+        return false;
+    }
+
     static bool OptionalParameterOption(
         LPCWSTR szArg,
         LPCWSTR szOption,
@@ -619,6 +632,18 @@ protected:
                 std::wstring strKeywords = pEquals + 1;
                 CSVListToContainer(strKeywords, parameterList, szSeparator);
             }
+            return true;
+        }
+        return false;
+    }
+
+    template <typename OptionType>
+    static bool FileSizeOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
+    {
+        OptionType result(0);
+        if (FileSizeOption(szArg, szOption, result))
+        {
+            parameter.emplace(std::move(result));
             return true;
         }
         return false;

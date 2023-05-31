@@ -283,24 +283,24 @@ HRESULT Main::WriteGetThisConfig(
 
     getthisconfig[GETTHIS_SAMPLES].Status = ConfigItem::PRESENT;
 
-    if (config.limits.dwlMaxTotalBytes != INFINITE)
+    if (config.limits.dwlMaxTotalBytes.has_value())
     {
         getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXTOTALBYTES].strData =
-            std::to_wstring(config.limits.dwlMaxTotalBytes);
+            std::to_wstring(config.limits.dwlMaxTotalBytes.value());
         getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXTOTALBYTES].Status = ConfigItem::PRESENT;
     }
 
-    if (config.limits.dwlMaxBytesPerSample != INFINITE)
+    if (config.limits.dwlMaxBytesPerSample.has_value())
     {
         getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXBYTESPERSAMPLE].strData =
-            std::to_wstring(config.limits.dwlMaxBytesPerSample);
+            std::to_wstring(config.limits.dwlMaxBytesPerSample.value());
         getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXBYTESPERSAMPLE].Status = ConfigItem::PRESENT;
     }
 
-    if (config.limits.dwMaxSampleCount != INFINITE)
+    if (config.limits.dwMaxSampleCount.has_value())
     {
         getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXSAMPLECOUNT].strData =
-            std::to_wstring(config.limits.dwMaxSampleCount);
+            std::to_wstring(config.limits.dwMaxSampleCount.value());
         getthisconfig[GETTHIS_SAMPLES].SubItems[CONFIG_MAXSAMPLECOUNT].Status = ConfigItem::PRESENT;
     }
 

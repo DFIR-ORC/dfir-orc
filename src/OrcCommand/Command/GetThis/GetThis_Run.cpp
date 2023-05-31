@@ -593,49 +593,49 @@ LimitStatus SampleLimitStatus(const Limits& globalLimits, const Limits& localLim
         return LimitStatus::NoLimits;
     }
 
-    if (globalLimits.dwMaxSampleCount != INFINITE)
+    if (globalLimits.dwMaxSampleCount.has_value())
     {
-        if (globalLimits.dwAccumulatedSampleCount >= globalLimits.dwMaxSampleCount)
+        if (globalLimits.dwAccumulatedSampleCount >= globalLimits.dwMaxSampleCount.value())
         {
             return GlobalSampleCountLimitReached;
         }
     }
 
-    if (localLimits.dwMaxSampleCount != INFINITE)
+    if (localLimits.dwMaxSampleCount.has_value())
     {
-        if (localLimits.dwAccumulatedSampleCount >= localLimits.dwMaxSampleCount)
+        if (localLimits.dwAccumulatedSampleCount >= localLimits.dwMaxSampleCount.value())
         {
             return LocalSampleCountLimitReached;
         }
     }
 
-    if (globalLimits.dwlMaxBytesPerSample != INFINITE)
+    if (globalLimits.dwlMaxBytesPerSample.has_value())
     {
-        if (dataSize > globalLimits.dwlMaxBytesPerSample)
+        if (dataSize > globalLimits.dwlMaxBytesPerSample.value())
         {
             return GlobalMaxBytesPerSample;
         }
     }
 
-    if (globalLimits.dwlMaxTotalBytes != INFINITE)
+    if (globalLimits.dwlMaxTotalBytes.has_value())
     {
-        if (dataSize + globalLimits.dwlAccumulatedBytesTotal > globalLimits.dwlMaxTotalBytes)
+        if (dataSize + globalLimits.dwlAccumulatedBytesTotal > globalLimits.dwlMaxTotalBytes.value())
         {
             return GlobalMaxTotalBytes;
         }
     }
 
-    if (localLimits.dwlMaxBytesPerSample != INFINITE)
+    if (localLimits.dwlMaxBytesPerSample.has_value())
     {
-        if (dataSize > localLimits.dwlMaxBytesPerSample)
+        if (dataSize > localLimits.dwlMaxBytesPerSample.value())
         {
             return LocalMaxBytesPerSample;
         }
     }
 
-    if (localLimits.dwlMaxTotalBytes != INFINITE)
+    if (localLimits.dwlMaxTotalBytes.has_value())
     {
-        if (dataSize + localLimits.dwlAccumulatedBytesTotal > localLimits.dwlMaxTotalBytes)
+        if (dataSize + localLimits.dwlAccumulatedBytesTotal > localLimits.dwlMaxTotalBytes.value())
         {
             return LocalMaxTotalBytes;
         }
