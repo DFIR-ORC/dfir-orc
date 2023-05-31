@@ -1101,6 +1101,27 @@ HRESULT LocationSet::AddLocationsFromArgcArgv(int argc, LPCWSTR argv[])
     if (FAILED(hr = EnumerateLocations()))
         return hr;
 
+    bool hasLocation = false;
+    for (int i = 1; i < argc; i++)
+    {
+        if (argv[i][0] != L'/' && argv[i][0] != L'+' && argv[i][0] != L'-')
+        {
+            hasLocation = true;
+            break;
+        }
+    }
+
+    if (!hasLocation)
+    {
+        return S_OK;
+    }
+
+    Log::Debug("Disable location set previously as a cli option overrides the value");
+    for (auto& location : m_Locations)
+    {
+        location.second->SetParse(false);
+    }
+
     for (int i = 1; i < argc; i++)
     {
         if (argv[i][0] != L'/' && argv[i][0] != L'+' && argv[i][0] != L'-')
