@@ -24,7 +24,7 @@ static const auto ROOT_USN = 0x0005000000000005LL;
 DWORD USNJournalWalkerOffline::m_BufferSize = 0x10000;
 
 USNJournalWalkerOffline::USNJournalWalkerOffline()
-    : m_Locations()
+    : m_location()
 {
     m_dwlRootUSN = ROOT_USN;
     m_cchMaxComponentLength = 255;
@@ -61,13 +61,11 @@ HRESULT USNJournalWalkerOffline::Initialize(const std::shared_ptr<Location>& loc
 
     fileFind.AddTerm(fs);
 
-    std::shared_ptr<Location> added;
-    m_Locations.AddLocation(loc, added, true);
-    m_Locations.Consolidate(true, FSVBR::FSType::NTFS);
+    m_location = loc;
 
     if (FAILED(
             hr = fileFind.Find(
-                m_Locations,
+                m_location,
                 [this, hr](const std::shared_ptr<FileFind::Match>& aFileMatch, bool& bStop) {
                     Log::Info(
                         L"Found USN journal {}: {}",
@@ -88,7 +86,7 @@ HRESULT USNJournalWalkerOffline::Initialize(const std::shared_ptr<Location>& loc
                 false,
                 ResurrectRecordsMode::kNo)))
     {
-        Log::Error("Failed to parse location while searching for USN journal");
+        Log::Error("Failed to parse location while searching for USN journal [{}]", SystemError(hr));
     }
 
     if (FAILED(hr = m_RecordStore.InitializeStore(USN_MAX_NUMBER, m_dwRecordMaxSize)))
@@ -103,14 +101,12 @@ HRESULT USNJournalWalkerOffline::EnumJournal(const IUSNJournalWalker::Callbacks&
 {
     HRESULT hr = E_FAIL;
 
-    const LocationSet::Locations& locations(m_Locations.GetLocations());
-
-    if (locations.size() == 0)
+    if (m_location == nullptr)
         return hr;
 
     MFTWalker walk;
 
-    if (FAILED(hr = walk.Initialize(locations.begin()->second, ResurrectRecordsMode::kYes)))
+    if (FAILED(hr = walk.Initialize(m_location, ResurrectRecordsMode::kNo)))
     {
         Log::Error(L"Failed during MFT walk initialisation [{}]", SystemError(hr));
         return hr;

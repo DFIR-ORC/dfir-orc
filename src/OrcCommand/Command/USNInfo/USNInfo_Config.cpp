@@ -45,6 +45,8 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         return hr;
     }
 
+    LocationSet::ParseLocationsFromConfigItem(configitem[USNINFO_LOCATIONS], config.m_inputLocations);
+
     boost::logic::tribool bAddShadows;
     for (auto& item : configitem[USNINFO_LOCATIONS].NodeList)
     {
@@ -141,6 +143,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         }
     }
 
+    LocationSet::ParseLocationsFromArgcArgv(argc, argv, config.m_inputLocations);
+
     if (FAILED(hr = config.locs.AddLocationsFromArgcArgv(argc, argv)))
         return hr;
 
@@ -163,6 +167,11 @@ HRESULT Main::CheckConfiguration()
     if (boost::logic::indeterminate(config.bAddShadows))
     {
         config.bAddShadows = false;
+    }
+
+    if (config.m_inputLocations.empty())
+    {
+        Log::Critical("Missing location parameter");
     }
 
     config.locs.Consolidate(

@@ -260,6 +260,7 @@ public:
 
         std::wstring YaraSource;
         std::unique_ptr<YaraConfig> Yara;
+        std::vector<std::wstring> inputFilesystemLocations;
 
         Configuration()
             : FileSystem()

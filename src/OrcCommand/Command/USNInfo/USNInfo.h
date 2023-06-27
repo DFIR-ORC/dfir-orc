@@ -50,6 +50,7 @@ public:
         std::optional<LocationSet::ShadowFilters> m_shadows;
         std::optional<Ntfs::ShadowCopy::ParserType> m_shadowsParser;
         std::optional<LocationSet::PathExcludes> m_excludes;
+        std::vector<std::wstring> m_inputLocations;
     };
 
 private:

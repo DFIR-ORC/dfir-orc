@@ -646,6 +646,14 @@ HRESULT Main::RunThroughMFT()
 
     if (locations.empty())
     {
+        if (config.m_excludes.has_value() && config.m_excludes->find(L"*") != std::cend(*config.m_excludes))
+        {
+            // TODO: BEWARE: this is not complete, it should handle cases where specific drive is targetted and excluded
+            // and ShadowFilters.
+            Log::Info(L"No volume found");
+            return S_OK;
+        }
+
         Log::Critical(
             L"No NTFS volumes configured for parsing. Use \"*\" to parse all mounted volumes or list the volumes you "
             L"want parsed");

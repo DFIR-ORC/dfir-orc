@@ -1,5 +1,19 @@
 # ChangeLog
 
+## [10.2.1] - 2023-06-20
+### Changed
+- Configuration: accept wildcard as exclusion path
+- Output filename for shadow copies will be also based on volume identifier
+- Limits accept UINT_MAX instead of handling it as "no limits"
+
+### Fixed
+- Location is now overridable with cli like others options
+- GetThis: fix option 'ResurrectRecord' always set to 'no'
+- USNInfo: fix option 'ResurrectRecord' always set to 'yes'
+- USNInfo: fix location resolution on some situations with vss
+- Fix log file option
+
+
 ## [10.2.0] - 2023-04-20
 ### Added
 - Volume Shadow Copy: add fallback mode when 'vss' service is stopped using directly 'volsnap.sys'

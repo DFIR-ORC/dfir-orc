@@ -304,7 +304,7 @@ HRESULT Main::CheckConfiguration()
 
     // TODO: make a function to use also in GetThis_config.cpp
     if (!config.limits.bIgnoreLimits
-        && (config.limits.dwlMaxTotalBytes == INFINITE && config.limits.dwMaxSampleCount == INFINITE))
+        && (!config.limits.dwlMaxTotalBytes.has_value() && !config.limits.dwMaxSampleCount.has_value()))
     {
         Log::Critical(
             "No global (at samples level, MaxTotalBytes or MaxSampleCount) has been set: set limits in configuration "

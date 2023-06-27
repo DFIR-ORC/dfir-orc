@@ -835,7 +835,7 @@ void UtilitiesLoggerConfiguration::Parse(const ConfigItem& item, UtilitiesLogger
         configuration.file.level = ::ParseLogLevel(item[CONFIGITEM_LOG_LOGFILE_NODE]);
         configuration.file.backtraceTrigger = ::ParseBacktraceLevel(item[CONFIGITEM_LOG_LOGFILE_NODE]);
 
-        if (item[CONFIGITEM_LOG_LOGFILE_OUTPUT])
+        if (item[CONFIGITEM_LOG_LOGFILE_NODE][CONFIGITEM_LOG_LOGFILE_OUTPUT])
         {
             const auto& outputItem = item[CONFIGITEM_LOG_LOGFILE_NODE][CONFIGITEM_LOG_LOGFILE_OUTPUT];
 

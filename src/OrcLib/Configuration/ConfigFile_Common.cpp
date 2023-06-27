@@ -399,7 +399,7 @@ HRESULT Orc::Config::Common::location(ConfigItem& parent, DWORD dwIndex, ConfigI
 // LOCATION item
 HRESULT Orc::Config::Common::location(ConfigItem& parent, DWORD dwIndex)
 {
-    return location(parent, dwIndex, ConfigItem::MANDATORY);
+    return location(parent, dwIndex, ConfigItem::OPTION);
 }
 
 HRESULT Orc::Config::Common::optional_location(ConfigItem& parent, DWORD dwIndex)

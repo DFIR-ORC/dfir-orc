@@ -165,6 +165,9 @@ public:
     HRESULT
     AddLocations(const WCHAR* szLocation, std::vector<std::shared_ptr<Location>>& addedLocs, bool bToParse = true);
 
+    static HRESULT ParseLocationsFromConfigItem(const ConfigItem& config, std::vector<std::wstring>& locations);
+    static void ParseLocationsFromArgcArgv(int argc, LPCWSTR argv[], std::vector<std::wstring>& locations);
+
     HRESULT AddLocationsFromConfigItem(const ConfigItem& config);
     HRESULT AddLocationsFromArgcArgv(int argc, LPCWSTR argv[]);
     HRESULT AddKnownLocations(const ConfigItem& item);

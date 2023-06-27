@@ -36,6 +36,7 @@ public:
         VSS_TIMESTAMP CreationTime;
         GUID guid;
         std::shared_ptr<VolumeReader> parentVolume;
+        std::wstring parentIdentifier;
 
         Shadow(
             LPCWSTR szVolume,

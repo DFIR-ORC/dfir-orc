@@ -205,7 +205,9 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         if (!mode)
         {
             Log::Error(
-                L"Failed to parse 'Resurrect' attribute (value: {}) [{}]", configitem[NTFSINFO_RESURRECT].c_str(), mode.error());
+                L"Failed to parse 'Resurrect' attribute (value: {}) [{}]",
+                configitem[NTFSINFO_RESURRECT].c_str(),
+                mode.error());
         }
         else
         {
@@ -252,6 +254,8 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         Log::Error(L"Failed to get locations definition from config [{}]", SystemError(hr));
         return hr;
     }
+
+    LocationSet::ParseLocationsFromConfigItem(configitem[NTFSINFO_LOCATIONS], config.InputLocations);
 
     if (FAILED(hr = GetColumnsAndFiltersFromConfig(configitem)))
     {
@@ -381,6 +385,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
     }
 
     // argc/argv parameters only
+    LocationSet::ParseLocationsFromArgcArgv(argc, argv, config.InputLocations);
+
     if (boost::logic::indeterminate(config.bAddShadows))
         config.bAddShadows = false;
     if (boost::logic::indeterminate(config.bPopSystemObjects))
@@ -427,6 +433,11 @@ HRESULT Main::CheckConfiguration()
     if (boost::logic::indeterminate(config.bAddShadows))
     {
         config.bAddShadows = false;
+    }
+
+    if (config.InputLocations.empty())
+    {
+        Log::Critical("Missing location parameter");
     }
 
     config.locs.Consolidate(
