@@ -1,4 +1,3 @@
-//
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
 // Copyright © 2011-2021 ANSSI. All Rights Reserved.
@@ -159,12 +158,15 @@ HRESULT PEInfo::OpenPEInformation()
         return hr;
     buf.SetCount(static_cast<size_t>(ullBytesRead));
 
-    if (buf.GetCount() >= BYTES_IN_FIRSTBYTES)
+    if (!buf.empty())
     {
         CBinaryBuffer fb;
-        if (!fb.SetCount(BYTES_IN_FIRSTBYTES))
+        if (!fb.SetCount(std::min(static_cast<size_t>(BYTES_IN_FIRSTBYTES), buf.GetCount())))
+        {
             return E_OUTOFMEMORY;
-        CopyMemory(fb.GetData(), buf.GetData(), BYTES_IN_FIRSTBYTES);
+        }
+
+        CopyMemory(fb.GetData(), buf.GetData(), fb.GetCount());
         m_FileInfo.GetDetails()->SetFirstBytes(std::move(fb));
     }
 
