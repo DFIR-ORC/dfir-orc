@@ -645,6 +645,7 @@ HRESULT FileInfo::OpenFirstBytes()
     if (FAILED(hr = stream->Read(FBBuffer.GetData(), BYTES_IN_FIRSTBYTES, &ullBytesRead)))
         return hr;
 
+    FBBuffer.SetCount(ullBytesRead);
     GetDetails()->SetFirstBytes(std::move(FBBuffer));
 
     return S_OK;
