@@ -102,6 +102,9 @@ public:
         constexpr T& operator*() { return value; }
         constexpr const T& operator*() const { return value; }
 
+        constexpr T* get() { return &value; }
+        constexpr const T* get() const { return &value; }
+
     private:
         T value;
     };
@@ -132,6 +135,9 @@ public:
 
         constexpr T& operator*() { return value; }
         constexpr const T& operator*() const { return value; }
+
+        constexpr T* get() { return &value; }
+        constexpr const T* get() const { return &value; }
 
     private:
         T& value;
