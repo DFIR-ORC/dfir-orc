@@ -95,7 +95,7 @@ public:
         }
 
         constexpr T* operator->() { return &value; }
-        constexpr T* operator->() const { return &value; }
+        constexpr const T* operator->() const { return &value; }
 
         constexpr T& operator*() { return value; }
         constexpr const T& operator*() const { return value; }
