@@ -88,6 +88,8 @@ public:
     class PtrAdapter final
     {
     public:
+        using element_type = T;
+
         template <typename... Args>
         PtrAdapter(Args&&... args)
             : value(std::forward<Args>(args)...)
@@ -118,6 +120,8 @@ public:
     class PtrAdapter final
     {
     public:
+        using element_type = T;
+
         PtrAdapter(T& ref)
             : value(ref)
         {
