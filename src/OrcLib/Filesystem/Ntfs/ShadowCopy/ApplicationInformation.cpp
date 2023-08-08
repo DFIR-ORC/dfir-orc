@@ -12,7 +12,7 @@
 namespace {
 
 template <typename LengthT, typename CharT = char>
-static std::basic_string_view<CharT> DecodeLengthValue(Orc::BufferView& buffer, std::error_code& ec)
+static std::basic_string_view<CharT> DecodeLengthValue(Orc::BufferView buffer, std::error_code& ec)
 {
     auto input = buffer;
 
