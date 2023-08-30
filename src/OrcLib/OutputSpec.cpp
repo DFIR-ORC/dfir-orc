@@ -308,7 +308,7 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
     {
         if (FAILED(hr = Configure(supported, item.c_str())))
         {
-            Log::Error(L"An error occured when evaluating output item {}", item);
+            Log::Error(L"An error occured when evaluating output item {}", item.c_str());
             return hr;
         }
         if (::HasValue(item, CONFIG_OUTPUT_FORMAT))
@@ -330,7 +330,8 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
         }
         else
         {
-            Log::Error(L"Invalid encoding for outputdir in config file: {}", item.SubItems[CONFIG_OUTPUT_ENCODING]);
+            Log::Error(
+                L"Invalid encoding for outputdir in config file: {}", item.SubItems[CONFIG_OUTPUT_ENCODING].c_str());
             return E_INVALIDARG;
         }
     }
@@ -415,7 +416,7 @@ HRESULT OutputSpec::Upload::Configure(const ConfigItem& item)
             Uri uri(configUploadUri, ec);
             if (ec)
             {
-                Log::Error(L"Failed to parse uri '{}' [{}]", item.SubItems[CONFIG_UPLOAD_URI], ec);
+                Log::Error(L"Failed to parse uri '{}' [{}]", item.SubItems[CONFIG_UPLOAD_URI].c_str(), ec);
                 return E_INVALIDARG;
             }
 

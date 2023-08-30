@@ -376,7 +376,7 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent)
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
                 config ? L"Present" : L"Absent");
             if (!config.empty())
-                Log::Info(L"{}\tDATA: \"{}\" ", szIndent, config);
+                Log::Info(L"{}\tDATA: \"{}\" ", szIndent, config.c_str());
 
             std::for_each(begin(config.SubItems), end(config.SubItems), [dwIndent](const ConfigItem& item) {
                 PrintConfig(item, dwIndent + 1);
@@ -388,7 +388,7 @@ HRESULT ConfigFile::PrintConfig(const ConfigItem& config, DWORD dwIndent)
                 L"{}ATTRIBUTE: \"{}={}\" {} {}",
                 szIndent,
                 config.strName,
-                config,
+                config.c_str(),
                 (config.Flags & ConfigItem::MANDATORY) ? L"Mandatory" : L"Optional",
                 config ? L"Present" : L"Absent");
             break;
@@ -456,7 +456,7 @@ HRESULT ConfigFile::GetOutputDir(const ConfigItem& item, std::wstring& outputDir
     {
         if (FAILED(hr = ::GetOutputDir(item.c_str(), outputDir)))
         {
-            Log::Error(L"Error in specified outputdir '{}' in config file [{}]", item, SystemError(hr));
+            Log::Error(L"Error in specified outputdir '{}' in config file [{}]", item.c_str(), SystemError(hr));
             return hr;
         }
 
@@ -477,7 +477,7 @@ HRESULT ConfigFile::GetOutputDir(const ConfigItem& item, std::wstring& outputDir
                 {
                     Log::Error(
                         L"Invalid encoding for outputdir in config file: '{}' [{}]",
-                        item.SubItems[CONFIG_CSVENCODING],
+                        item.SubItems[CONFIG_CSVENCODING].c_str(),
                         SystemError(hr));
                     return hr;
                 }
@@ -578,7 +578,7 @@ HRESULT ConfigFile::GetInputFile(const ConfigItem& item, std::wstring& inputFile
     {
         if (FAILED(hr = ::ExpandFilePath(item.c_str(), inputFile)))
         {
-            Log::Error(L"Error in specified inputfile in config file '{}' [{}]", item, SystemError(hr));
+            Log::Error(L"Error in specified inputfile in config file '{}' [{}]", item.c_str(), SystemError(hr));
             return hr;
         }
     }

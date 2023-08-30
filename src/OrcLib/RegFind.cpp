@@ -375,7 +375,7 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
 
         if (FAILED(hr = GetBytesFromHexaString(Data.c_str(), static_cast<DWORD>(Data.size()), retval->m_DataContent)))
         {
-            Log::Error(L"Invalid bytes for content '{}' [{}]", item[CONFIG_REGFIND_DATA_HEX], SystemError(hr));
+            Log::Error(L"Invalid bytes for content '{}' [{}]", item[CONFIG_REGFIND_DATA_HEX].c_str(), SystemError(hr));
             return nullptr;
         }
         // Also initiate unicode version of pattern (in case pattern tested against SZ values)
@@ -390,7 +390,8 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         LARGE_INTEGER li = {0};
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE].c_str(), li)))
         {
-            Log::Error(L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE], SystemError(hr));
+            Log::Error(
+                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE].c_str(), SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
@@ -412,14 +413,16 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_LT].c_str(), li)))
         {
             Log::Error(
-                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE_LT], SystemError(hr));
+                L"Invalid file size specification: '{}' [{}]",
+                item[CONFIG_REGFIND_DATA_SIZE_LT].c_str(),
+                SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
             Log::Error(
                 L"Invalid negative file size specification: '{}' [{}]",
-                item[CONFIG_REGFIND_DATA_SIZE],
+                item[CONFIG_REGFIND_DATA_SIZE].c_str(),
                 SystemError(hr));
             return nullptr;
         }
@@ -439,12 +442,14 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_GT].c_str(), li)))
         {
             Log::Error(
-                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE_GT], SystemError(hr));
+                L"Invalid file size specification: '{}' [{}]",
+                item[CONFIG_REGFIND_DATA_SIZE_GT].c_str(),
+                SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
-            Log::Error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE]);
+            Log::Error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE].c_str());
             return nullptr;
         }
 
@@ -459,12 +464,12 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_LE].c_str(), li)))
         {
             Log::Error(
-                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE_LE], SystemError(hr));
+                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE_LE].c_str(), SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
-            Log::Error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE]);
+            Log::Error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE].c_str());
             return nullptr;
         }
 
@@ -479,12 +484,14 @@ std::shared_ptr<RegFind::SearchTerm> RegFind::GetSearchTermFromConfig(const Conf
         if (FAILED(hr = GetFileSizeFromArg(item[CONFIG_REGFIND_DATA_SIZE_GE].c_str(), li)))
         {
             Log::Error(
-                L"Invalid file size specification: '{}' [{}]", item[CONFIG_REGFIND_DATA_SIZE_GE], SystemError(hr));
+                L"Invalid file size specification: '{}' [{}]",
+                item[CONFIG_REGFIND_DATA_SIZE_GE].c_str(),
+                SystemError(hr));
             return nullptr;
         }
         if (li.QuadPart < 0)
         {
-            Log::Error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE]);
+            Log::Error(L"Invalid negative file size specification: '{}'", item[CONFIG_REGFIND_DATA_SIZE].c_str());
             return nullptr;
         }
 

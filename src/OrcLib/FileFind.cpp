@@ -765,7 +765,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->dwAttrType = _wtoi(item[CONFIG_FILEFIND_ATTR_TYPE].c_str());
             if (fs->dwAttrType == 0)
             {
-                Log::Warn(L"Invalid attribute type passed: {}", item[CONFIG_FILEFIND_ATTR_TYPE]);
+                Log::Warn(L"Invalid attribute type passed: {}", item[CONFIG_FILEFIND_ATTR_TYPE].c_str());
                 fs->Required =
                     static_cast<FileFind::SearchTerm::Criteria>(fs->Required & ~FileFind::SearchTerm::ATTR_TYPE);
             }
@@ -781,7 +781,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         catch (Orc::Exception& e)
         {
             auto [hr, msg] = AnsiToWide(e.what());
-            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE], msg);
+            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE].c_str(), msg);
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_GT])
@@ -794,7 +794,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         catch (Orc::Exception& e)
         {
             auto [hr, msg] = AnsiToWide(e.what());
-            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_GT], msg);
+            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_GT].c_str(), msg);
         }
     }
     if (item[CONFIG_FILEFIND_SIZE_GE])
@@ -833,7 +833,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         catch (Orc::Exception& e)
         {
             auto [hr, msg] = AnsiToWide(e.what());
-            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_LE], msg);
+            Log::Warn(L"Exception while processing '{}': {}", item[CONFIG_FILEFIND_SIZE_LE].c_str(), msg);
         }
     }
     if (item[CONFIG_FILEFIND_MD5])
@@ -848,7 +848,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->Required |= FileFind::SearchTerm::DATA_MD5;
         else
         {
-            Log::Warn(L"Invalid hex string passed as md5: {}", item[CONFIG_FILEFIND_MD5]);
+            Log::Warn(L"Invalid hex string passed as md5: {}", item[CONFIG_FILEFIND_MD5].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_SHA1])
@@ -863,7 +863,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->Required |= FileFind::SearchTerm::DATA_SHA1;
         else
         {
-            Log::Warn(L"Invalid hex string passed as sha1: {}", item[CONFIG_FILEFIND_SHA1]);
+            Log::Warn(L"Invalid hex string passed as sha1: {}", item[CONFIG_FILEFIND_SHA1].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_SHA256])
@@ -878,7 +878,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->Required |= FileFind::SearchTerm::DATA_SHA256;
         else
         {
-            Log::Warn(L"Invalid hex string passed as sha256: {}", item[CONFIG_FILEFIND_SHA256]);
+            Log::Warn(L"Invalid hex string passed as sha256: {}", item[CONFIG_FILEFIND_SHA256].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_CONTAINS])
@@ -895,7 +895,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         {
             Log::Warn(
                 L"string '{}' passed as binstring could not be converted to ANSI [{}]",
-                item[CONFIG_FILEFIND_CONTAINS],
+                item[CONFIG_FILEFIND_CONTAINS].c_str(),
                 SystemError(hr));
         }
     }
@@ -912,7 +912,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         }
         else
         {
-            Log::Warn(L"Invalid hex string passed as binstring '{}'", item[CONFIG_FILEFIND_CONTAINS_HEX]);
+            Log::Warn(L"Invalid hex string passed as binstring '{}'", item[CONFIG_FILEFIND_CONTAINS_HEX].c_str());
         }
     }
     if (item[CONFIG_FILEFIND_HEADER])
@@ -928,7 +928,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         {
             Log::Warn(
                 L"String '{}' passed as header string could not be converted to ANSI [{}]",
-                item[CONFIG_FILEFIND_HEADER],
+                item[CONFIG_FILEFIND_HEADER].c_str(),
                 SystemError(hr));
         }
     }
@@ -946,7 +946,9 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         else
         {
             Log::Warn(
-                L"Invalid hex string passed as header: {} [{}]", item[CONFIG_FILEFIND_HEADER_HEX], SystemError(hr));
+                L"Invalid hex string passed as header: {} [{}]",
+                item[CONFIG_FILEFIND_HEADER_HEX].c_str(),
+                SystemError(hr));
         }
     }
     if (item[CONFIG_FILEFIND_HEADER_REGEX])
@@ -955,7 +957,9 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
         if (FAILED(hr = WideToAnsi((std::wstring_view)item[CONFIG_FILEFIND_HEADER_REGEX], ansiRegEx)))
         {
             Log::Warn(
-                L"Invalid hex string passed as header: {} [{}]", item[CONFIG_FILEFIND_HEADER_HEX], SystemError(hr));
+                L"Invalid hex string passed as header: {} [{}]",
+                item[CONFIG_FILEFIND_HEADER_HEX].c_str(),
+                SystemError(hr));
         }
         else
         {

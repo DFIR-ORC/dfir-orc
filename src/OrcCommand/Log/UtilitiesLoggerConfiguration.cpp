@@ -196,7 +196,7 @@ std::optional<Log::Level> ParseLogLevel(const ConfigItem& item)
     const auto level = Log::ToLevel(item[CONFIGITEM_LOG_COMMON_LEVEL]);
     if (!level)
     {
-        Log::Error(L"Failed to parse log level: {} [{}]", item[CONFIGITEM_LOG_COMMON_LEVEL], level.error());
+        Log::Error(L"Failed to parse log level: {} [{}]", item[CONFIGITEM_LOG_COMMON_LEVEL].c_str(), level.error());
         return {};
     }
 
@@ -214,7 +214,7 @@ std::optional<Log::Level> ParseBacktraceLevel(const ConfigItem& item)
     if (!level)
     {
         Log::Error(
-            L"Failed to parse backtrace trigger level: {} [{}]", item[CONFIGITEM_LOG_COMMON_BACKTRACE], level.error());
+            L"Failed to parse backtrace trigger level: {} [{}]", item[CONFIGITEM_LOG_COMMON_BACKTRACE].c_str(), level.error());
         return {};
     }
 
