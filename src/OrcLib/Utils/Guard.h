@@ -166,6 +166,7 @@ public:
     T& value() { return m_data; }
 
     const T& operator*() const { return m_data; }
+    T& operator*() { return m_data; }
 
     T* data() { return &m_data; }
     const T* data() const { return &m_data; }
