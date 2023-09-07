@@ -104,6 +104,265 @@ HRESULT SystemDetails::GetSystemType(std::wstring& strProductType)
     return S_OK;
 }
 
+
+bool SystemDetails::IsKnownWindowsBuild(uint32_t build)
+{
+    switch (build)
+    {
+        case 22621:
+        case 22000:
+        case 20348:
+        case 19045:
+        case 19044:
+        case 19043:
+        case 19042:
+        case 19041:
+        case 18363:
+        case 18362:
+        case 17763:
+        case 17134:
+        case 16299:
+        case 15063:
+        case 14393:
+        case 10586:
+        case 10240:
+        case 9600:
+        case 9200:
+        case 7601:
+        case 7600:
+        case 6003:
+        case 6002:
+        case 6001:
+        case 6000:
+        case 4500:
+        case 3790:
+        case 2600:
+            return true;
+        default:
+            Log::Warn(L"Build number {} is not associated with any known Windows release", build);
+            return false;
+    }
+}
+
+void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, SystemTags& tags)
+{
+    tags.insert(fmt::format(L"OSBuild#{}", build));
+
+    if (ProductType != VER_NT_WORKSTATION && ProductType != VER_NT_SERVER && ProductType != VER_NT_DOMAIN_CONTROLLER)
+    {
+        Log::Warn(
+            L"ProductType {} is out of valid values range, we \"reset\" it to VER_NT_WORKSTATION", ProductType);
+        ProductType = VER_NT_WORKSTATION;
+    }
+
+    // reference: https://en.wikipedia.org/wiki/List_of_Microsoft_Windows_versions
+
+    switch (build)
+    {
+        case 22621:
+            tags.insert(L"Windows11");
+            tags.insert(L"Release#22H2");
+            break;
+        case 22000:
+            tags.insert(L"Windows11");
+            tags.insert(L"Release#21H2");
+            break;
+        case 20348:
+            tags.insert(L"WindowsServer2022");
+            tags.insert(L"Release#RTM");
+            break;
+        case 19045:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#22H2");
+            break;
+        case 19044:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#21H2");
+            break;
+        case 19043:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#21H1");
+            break;
+        case 19042:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#20H2");
+            break;
+        case 19041:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#2004");
+            break;
+        case 18363:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#1909");
+            break;
+        case 18362:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#1903");
+            break;
+        case 17763:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows10");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2019");
+                    break;
+            }
+            tags.insert(L"Release#1809");
+            break;
+        case 17134:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#1803");
+            break;
+        case 16299:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows10");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2016");
+                    break;
+            }
+            tags.insert(L"Release#1709");
+            break;
+        case 15063:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#1703");
+            break;
+        case 14393:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows10");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2016");
+                    break;
+            }
+            tags.insert(L"Release#1607");
+            break;
+        case 10586:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#1511");
+            break;
+        case 10240:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#1507");
+            tags.insert(L"Release#RTM");
+            break;
+        case 9600:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows8.1");
+                    tags.insert(L"Release#Update1");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2012R2");
+                    tags.insert(L"Release#RTM");
+                    break;
+            }
+
+            break;
+        case 9200:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows8");
+                    tags.insert(L"Release#RTM");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2012");
+                    tags.insert(L"Release#RTM");
+                    break;
+            }
+            break;
+        case 7601:
+            tags.insert(L"Windows7");
+            tags.insert(L"Release#SP1");
+            break;
+        case 8400:
+            tags.insert(L"WindowsHomeServer2011");
+            tags.insert(L"Release#RTM");
+            break;
+        case 7600:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows7");
+                    tags.insert(L"Release#RTM");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2008R2");
+                    tags.insert(L"Release#RTM");
+                    break;
+            }
+            break;
+        case 6003:
+            tags.insert(L"WindowsServer2008");
+            tags.insert(L"Release#RTM");
+            break;
+        case 6002:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"WindowsVista");
+                    tags.insert(L"Release#SP2");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2008");
+                    tags.insert(L"Release#SP2");
+                    break;
+            }
+            break;
+            tags.insert(L"WindowsVista");
+            tags.insert(L"Release#SP2");
+            break;
+        case 6001:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"WindowsVista");
+                    tags.insert(L"Release#SP1");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2008");
+                    tags.insert(L"Release#RTM");
+                    break;
+            }
+            break;
+        case 6000:
+            tags.insert(L"WindowsVista");
+            tags.insert(L"Release#RTM");
+            break;
+        case 3790:
+            tags.insert(L"WindowsServer2003");
+            tags.insert(L"Release#RTM");
+            break;
+        case 4500:
+            tags.insert(L"WindowsHomeServer");
+            tags.insert(L"Release#RTM");
+            break;
+        case 2600:
+            tags.insert(L"WindowsXP");
+            tags.insert(L"Release#SP2");
+            break;
+        default:
+            Log::Warn(L"Build number {} is not associated with any known Windows release", build);
+            break;
+    }
+}
+
 HRESULT Orc::SystemDetails::GetSystemType(BYTE& systemType)
 {
     HRESULT hr = E_FAIL;
@@ -148,97 +407,7 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
     if (auto hr = Orc::SystemDetails::GetSystemType(systemType); FAILED(hr))
         throw Exception(Severity::Fatal, hr, L"System type not available"sv);
 
-    switch (major)
-    {
-        case 5:
-            switch (minor)
-            {
-                case 1:
-                case 2:
-                    switch (systemType)
-                    {
-                        case VER_NT_WORKSTATION:
-                            tags.insert(L"WindowsXP"s);
-                            break;
-                        case VER_NT_SERVER:
-                        case VER_NT_DOMAIN_CONTROLLER:
-                            tags.insert(L"WindowsServer2003"s);
-                            break;
-                    }
-                    break;
-                default:
-                    break;
-            }
-            break;
-        case 6:
-            switch (minor)
-            {
-                case 0:
-                    switch (systemType)
-                    {
-                        case VER_NT_WORKSTATION:
-                            tags.insert(L"WindowsVista"s);
-                            break;
-                        case VER_NT_SERVER:
-                        case VER_NT_DOMAIN_CONTROLLER:
-                            tags.insert(L"WindowsServer2008"s);
-                            break;
-                    }
-                    break;
-                case 1:
-                    switch (systemType)
-                    {
-                        case VER_NT_WORKSTATION:
-                            tags.insert(L"Windows7"s);
-                            break;
-                        case VER_NT_SERVER:
-                        case VER_NT_DOMAIN_CONTROLLER:
-                            tags.insert(L"WindowsServer2008R2"s);
-                            break;
-                    }
-                    break;
-                case 2:
-                    switch (systemType)
-                    {
-                        case VER_NT_WORKSTATION:
-                            tags.insert(L"Windows8"s);
-                            break;
-                        case VER_NT_SERVER:
-                        case VER_NT_DOMAIN_CONTROLLER:
-                            tags.insert(L"WindowsServer2012"s);
-                            break;
-                    }
-                    break;
-                case 3:
-                    switch (systemType)
-                    {
-                        case VER_NT_WORKSTATION:
-                            tags.insert(L"Windows8.1"s);
-                            break;
-                        case VER_NT_SERVER:
-                        case VER_NT_DOMAIN_CONTROLLER:
-                            tags.insert(L"WindowsServer2012R2"s);
-                            break;
-                    }
-                    break;
-            }
-            break;
-        case 10:
-            switch (systemType)
-            {
-                case VER_NT_WORKSTATION:
-                    tags.insert(L"Windows10"s);
-                    break;
-                case VER_NT_SERVER:
-                case VER_NT_DOMAIN_CONTROLLER:
-                    tags.insert(L"WindowsServer2016"s);
-                    break;
-            }
-            break;
-            break;
-        default:
-            break;
-    }
+    GetTagsFromBuildId(systemType, g_pDetailsBlock->osvi.dwBuildNumber, tags);
 
     switch (g_pDetailsBlock->osvi.wServicePackMajor)
     {
@@ -256,8 +425,6 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
     if (auto hr = GetSystemType(strProductType); FAILED(hr))
         throw Exception(Severity::Fatal, hr, L"System type not available"sv);
     tags.insert(strProductType);
-
-    tags.insert(fmt::format(L"OSBuild#{}", g_pDetailsBlock->osvi.dwBuildNumber));
 
     HKEY current_version;
     if (RegOpenKeyW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", &current_version)

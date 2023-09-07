@@ -45,6 +45,9 @@ public:
     static HRESULT GetSystemType(std::wstring& strSystemType);
     static HRESULT GetSystemType(BYTE& systemType);
 
+    static bool IsKnownWindowsBuild(uint32_t build);
+    static void GetTagsFromBuildId(uint32_t ProductType, uint32_t build, SystemTags& tags);
+
     static const SystemTags& GetSystemTags();
     static HRESULT SetSystemTags(SystemTags tags);
 
