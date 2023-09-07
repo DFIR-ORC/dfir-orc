@@ -262,13 +262,18 @@ HRESULT Orc::TableOutput::CSV::Writer::WriteToFile(const WCHAR* szFileName)
         return E_POINTER;
 
     auto pFileStream = std::make_shared<FileStream>();
-
     if (pFileStream == nullptr)
+    {
         return E_OUTOFMEMORY;
+    }
 
-    // ... create it
-    if (auto hr = pFileStream->WriteTo(szFileName); FAILED(hr))
+    HRESULT hr = pFileStream->OpenFile(
+        szFileName, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Could not create output file: '{} [{}]'", szFileName, SystemError(hr));
         return hr;
+    }
 
     return WriteToStream(pFileStream, true);
 }
