@@ -543,7 +543,9 @@ HRESULT YaraScanner::ScanBlocks(const std::shared_ptr<ByteStream>& stream, Match
         }
 
         // On first fetch only read 1MB as it will be often enough for header matching
-        context->block.size = std::min(context->buffer.size(), static_cast<size_t>(1048576));
+        context->block.size = std::min(
+            static_cast<uint64_t>(context->buffer.size()),
+            std::min(static_cast<uint64_t>(1048576), context->streamSize));
         context->block.base = 0;
         return &context->block;
     };
@@ -562,7 +564,14 @@ HRESULT YaraScanner::ScanBlocks(const std::shared_ptr<ByteStream>& stream, Match
             return nullptr;
         }
 
-        context->block.size = context->buffer.size();  // TODO: std::min with stream size ?
+        if (context->block.base > context->streamSize)
+        {
+            Log::Warn(L"Unexpected file offset in Yara callback but rule evaluation should consistent");
+            return nullptr;
+        }
+
+        context->block.size =
+            std::min(context->streamSize - context->block.base, static_cast<uint64_t>(context->buffer.size()));
         return &context->block;
     };
 
