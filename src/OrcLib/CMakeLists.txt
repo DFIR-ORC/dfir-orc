@@ -553,6 +553,8 @@ source_group(In&Out\\TableOutput\\ApacheOrc
 )
 
 set(SRC_FILESYSTEM
+    "Filesystem/FileAttribute.h"
+    "Filesystem/FileAttribute.cpp"
     "Filesystem/Ntfs/Attribute/ReparsePoint/WofReparsePoint.h"
     "Filesystem/Ntfs/Attribute/ReparsePoint/WofReparsePoint.cpp"
     "Filesystem/Ntfs/Compression/WofChunks.h"
