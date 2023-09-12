@@ -29,6 +29,8 @@
 
 #include "Log/Log.h"
 
+#include "Filesystem/FileAttribute.h"
+
 using namespace Orc;
 namespace fs = std::filesystem;
 
@@ -436,21 +438,7 @@ HRESULT Orc::TableOutput::CSV::Writer::WriteFormated_(std::string_view szFormat,
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteAttributes(DWORD dwFileAttributes)
 {
-    if (auto hr = WriteFormated(
-            L"{}{}{}{}{}{}{}{}{}{}{}{}{}",
-            dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE ? L'A' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_COMPRESSED ? L'C' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ? L'D' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_ENCRYPTED ? L'E' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_HIDDEN ? L'H' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_NORMAL ? L'N' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_OFFLINE ? L'O' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_READONLY ? L'R' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? L'L' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? L'P' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_SYSTEM ? L'S' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY ? L'T' : L'.',
-            dwFileAttributes & FILE_ATTRIBUTE_VIRTUAL ? L'V' : L'.');
+    if (auto hr = WriteFormated(ToIdentifiersW(static_cast<FileAttribute>(dwFileAttributes)));
         FAILED(hr))
     {
         AbandonColumn();

@@ -28,6 +28,8 @@
 #include "Text/Fmt/Offset.h"
 #include "Text/Fmt/FILETIME.h"
 
+#include "Filesystem/FileAttribute.h"
+
 namespace Orc {
 namespace Text {
 
@@ -133,22 +135,7 @@ Orc::Result<std::wstring_view> AttributeTypeToString(ATTRIBUTE_TYPE_CODE code)
 
 void PrintValueFileAttributes(Orc::Text::Tree& root, const std::wstring& name, ULONG fileAttributes)
 {
-    const auto attributes = fmt::format(
-        L"{}{}{}{}{}{}{}{}{}{}{}{}{}",
-        fileAttributes & FILE_ATTRIBUTE_ARCHIVE ? L'A' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_COMPRESSED ? L'C' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_DIRECTORY ? L'D' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_ENCRYPTED ? L'E' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_HIDDEN ? L'H' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_NORMAL ? L'N' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_OFFLINE ? L'O' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_READONLY ? L'R' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? L'L' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? L'P' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_SYSTEM ? L'S' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_TEMPORARY ? L'T' : L'.',
-        fileAttributes & FILE_ATTRIBUTE_VIRTUAL ? L'V' : L'.');
-
+    const auto attributes = ToIdentifiersW(static_cast<FileAttribute>(fileAttributes));
     PrintValue(root, name, attributes);
 }
 

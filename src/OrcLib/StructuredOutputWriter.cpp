@@ -13,6 +13,7 @@
 #include "OutputSpec.h"
 #include "FileStream.h"
 #include "BinaryBuffer.h"
+#include "Filesystem/FileAttribute.h"
 
 using namespace std::string_view_literals;
 using namespace Orc;
@@ -53,22 +54,8 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, LARGE_INTEGE
 
 HRESULT Orc::StructuredOutput::Writer::WriteAttributesBuffer(_Buffer& buffer, DWORD dwFileAttributes)
 {
-    fmt::format_to(
-        std::back_inserter(buffer),
-        L"{}{}{}{}{}{}{}{}{}{}{}{}{}",
-        dwFileAttributes & FILE_ATTRIBUTE_ARCHIVE ? L'A' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_COMPRESSED ? L'C' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY ? L'D' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_ENCRYPTED ? L'E' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_HIDDEN ? L'H' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_NORMAL ? L'N' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_OFFLINE ? L'O' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_READONLY ? L'R' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? L'L' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? L'P' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_SYSTEM ? L'S' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_TEMPORARY ? L'T' : L'.',
-        dwFileAttributes & FILE_ATTRIBUTE_VIRTUAL ? L'V' : L'.');
+    const auto s = ToIdentifiersW(static_cast<FileAttribute>(dwFileAttributes));
+    std::copy(std::cbegin(s), std::cend(s), std::back_inserter(buffer));
     return S_OK;
 }
 

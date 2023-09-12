@@ -324,7 +324,7 @@ public:
         auto writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3038DD6F8A0B50BF69E193ABBA94183212763A4B")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"A8B673BC51F644F5D5DE69B66137F72C0142BA02")));
 
         writer.reset();
 
@@ -336,7 +336,7 @@ public:
         writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"0632A91DC98CBF17428082C12F759AD98D951AAF")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"6D5F96BB45D8A64AD2F4BE2D5F638887A14FA0D3")));
     }
 
     TEST_METHOD(RobustStructuredOutputTest)
@@ -357,7 +357,7 @@ public:
             std::make_shared<RobustStructuredWriter>(std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"3038DD6F8A0B50BF69E193ABBA94183212763A4B")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"A8B673BC51F644F5D5DE69B66137F72C0142BA02")));
 
         robust_writer.reset();
 
@@ -372,7 +372,7 @@ public:
             std::make_shared<RobustStructuredWriter>(std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"0632A91DC98CBF17428082C12F759AD98D951AAF")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"6D5F96BB45D8A64AD2F4BE2D5F638887A14FA0D3")));
     }
 
     HRESULT WriteGargabeElementTest(const std::shared_ptr<ByteStream>& stream, WCHAR wGarbageCode)
