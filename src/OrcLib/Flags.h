@@ -23,4 +23,8 @@ struct FlagsDefinition
 
 std::string FlagsToString(DWORD flags, const FlagsDefinition flagValues[], CHAR separator = '|');
 
+// There are FlagsDefinition structure which are used without being flags. Multiple
+// functions where doing this conversion without using any mask but raw value.
+std::optional<std::wstring> ExactFlagToString(DWORD dwFlags, const FlagsDefinition FlagValues[]);
+
 };  // namespace Orc

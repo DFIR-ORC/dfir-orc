@@ -48,4 +48,29 @@ std::string FlagsToString(DWORD flags, const FlagsDefinition flagValues[], CHAR 
     return out;
 }
 
+std::optional<std::wstring> ExactFlagToString(DWORD dwFlags, const FlagsDefinition FlagValues[])
+{
+    int idx = 0;
+    bool found = false;
+
+    std::wstring buffer;
+    while (FlagValues[idx].dwFlag != 0xFFFFFFFF)
+    {
+        if (dwFlags == FlagValues[idx].dwFlag)
+        {
+            fmt::format_to(std::back_inserter(buffer), L"{}", FlagValues[idx].szShortDescr);
+            found = true;
+            break;
+        }
+        idx++;
+    }
+
+    if (!found)
+    {
+        return {};
+    }
+
+    return buffer;
+}
+
 }  // namespace Orc
