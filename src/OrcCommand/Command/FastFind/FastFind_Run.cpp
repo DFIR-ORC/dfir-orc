@@ -249,7 +249,10 @@ HRESULT Main::RunFileSystem()
     HRESULT hr = E_FAIL;
 
     if (pStructuredOutput)
+    {
         pStructuredOutput->BeginCollection(L"filesystem");
+        pStructuredOutput->BeginElement(nullptr);
+    }
 
     hr = config.FileSystem.Files.Find(
         config.FileSystem.Locations,
@@ -267,7 +270,11 @@ HRESULT Main::RunFileSystem()
             if (pFileSystemTableOutput)
                 aMatch->Write(*pFileSystemTableOutput);
             if (pStructuredOutput)
+            {
+                pStructuredOutput->BeginCollection(L"filefind_match");
                 aMatch->Write(*pStructuredOutput, nullptr);
+                pStructuredOutput->EndCollection(L"filefind_match");
+            }
 
             return;
         },
@@ -281,7 +288,10 @@ HRESULT Main::RunFileSystem()
     }
 
     if (pStructuredOutput)
+    {
+        pStructuredOutput->EndElement(nullptr);
         pStructuredOutput->EndCollection(L"filesystem");
+    }
 
     m_console.PrintNewLine();
     ::PrintStatistics(m_console.OutputTree(), config.FileSystem.Files.AllSearchTerms());
@@ -311,7 +321,6 @@ HRESULT Main::RunRegistry()
         },
         false,
         ResurrectRecordsMode::kNo);
-
     if (FAILED(hr))
     {
         Log::Error(L"Failed to parse location while searching for registry hives");
@@ -320,6 +329,7 @@ HRESULT Main::RunRegistry()
     if (pStructuredOutput)
     {
         pStructuredOutput->BeginCollection(L"registry");
+        pStructuredOutput->BeginElement(nullptr);
     }
 
     for (const auto& aFileMatch : config.Registry.Files.Matches())
@@ -328,6 +338,7 @@ HRESULT Main::RunRegistry()
 
         if (pStructuredOutput)
         {
+            pStructuredOutput->BeginCollection(L"hive");
             pStructuredOutput->BeginElement(nullptr);
             pStructuredOutput->WriteNamed(L"volume_id", aFileMatch->VolumeReader->VolumeSerialNumber(), true);
 
@@ -385,11 +396,15 @@ HRESULT Main::RunRegistry()
         }
 
         if (pStructuredOutput)
+        {
             pStructuredOutput->EndElement(nullptr);
+            pStructuredOutput->EndCollection(L"hive");
+        }
     }
 
     if (pStructuredOutput)
     {
+        pStructuredOutput->EndElement(nullptr);
         pStructuredOutput->EndCollection(L"registry");
     }
 
@@ -403,10 +418,11 @@ Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const ObjectDirectory::
 
     if (pStructuredOutput)
     {
-        pStructuredOutput->BeginElement(szElement);
+        pStructuredOutput->BeginElement(L"object_match");
+
         pStructuredOutput->WriteNamed(L"description", spec.Description().c_str());
         obj.Write(*pStructuredOutput);
-        pStructuredOutput->EndElement(szElement);
+        pStructuredOutput->EndElement(L"object_match");
     }
     if (pObjectTableOutput)
     {
@@ -423,10 +439,11 @@ Main::LogObjectMatch(const ObjectSpec::ObjectItem& spec, const FileDirectory::Fi
 
     if (pStructuredOutput)
     {
-        pStructuredOutput->BeginElement(szElement);
+        pStructuredOutput->BeginElement(L"object_match");
+
         pStructuredOutput->WriteNamed(L"description", spec.Description().c_str());
         file.Write(*pStructuredOutput);
-        pStructuredOutput->EndElement(szElement);
+        pStructuredOutput->EndElement(L"object_match");
     }
 
     if (pObjectTableOutput)
@@ -442,7 +459,10 @@ HRESULT Main::RunObject()
     HRESULT hr = E_FAIL;
 
     if (pStructuredOutput)
-        pStructuredOutput->BeginCollection(L"object_directory");
+    {
+        pStructuredOutput->BeginCollection(L"object");
+        pStructuredOutput->BeginElement(nullptr);
+    }
 
     for (const auto& objdir : ObjectDirs)
     {
@@ -600,7 +620,10 @@ HRESULT Main::RunObject()
     }
 
     if (pStructuredOutput)
-        pStructuredOutput->EndCollection(L"object_directory");
+    {
+        pStructuredOutput->EndElement(nullptr);
+        pStructuredOutput->EndCollection(L"object");
+    }
 
     return S_OK;
 }
