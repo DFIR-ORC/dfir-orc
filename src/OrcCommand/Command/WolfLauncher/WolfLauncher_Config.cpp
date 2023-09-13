@@ -38,6 +38,31 @@ namespace fs = std::filesystem;
 
 namespace {
 
+// Very close to std::filesystem::create_directories but keep tracks or created directories
+void CreateDirectories(std::filesystem::path path, std::vector<std::wstring>& newDirectories, std::error_code& ec)
+{
+    if (std::filesystem::exists(path))
+    {
+        return;
+    }
+
+    auto parent = path.parent_path();
+    if (!parent.empty())
+    {
+        CreateDirectories(parent, newDirectories, ec);
+        if (ec)
+        {
+            Log::Debug(L"Failed to create directory: {} [{}]", parent, ec);
+            return;
+        }
+    }
+
+    if (std::filesystem::create_directory(path, ec))
+    {
+        newDirectories.push_back(path);
+    }
+}
+
 bool IgnoreOptions(LPCWSTR szArg)
 {
     const auto kConsole = "console";
@@ -837,7 +862,26 @@ HRESULT Main::CheckConfiguration()
 
     if (config.TempWorkingDir.Type == OutputSpec::Kind::None)
     {
-        if (FAILED(hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, L"%TEMP%\\WorkingTemp")))
+        const std::wstring workingTemp(L"%TEMP%\\WorkingTemp");
+
+        // Prevent 'Configure' to create directories so they can be tracked for removal
+        {
+            std::error_code ec;
+
+            auto temp = OutputSpec::Resolve(workingTemp);
+            ::CreateDirectories(temp, m_emptyDirectoriesToRemove, ec);
+            if (ec)
+            {
+                Log::Error(
+                    L"Failed to pre-create working directory (initial value: {}, value: {}) [{}]",
+                    workingTemp,
+                    temp,
+                    ec);
+                ec.clear();
+            }
+        }
+
+        if (FAILED(hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, workingTemp)))
         {
             Log::Error(L"Failed to use default temporary directory from %TEMP%");
             return hr;

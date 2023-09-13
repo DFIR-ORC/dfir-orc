@@ -159,6 +159,20 @@ public:
         m_standardOutput.EnableTeeRedirection();
     }
 
+    ~Main()
+    {
+        std::sort(
+            std::begin(m_emptyDirectoriesToRemove),
+            std::end(m_emptyDirectoriesToRemove),
+            [](const auto& lhs, const auto& rhs) { return lhs.size() > rhs.size(); });
+
+        for (const auto& directory : m_emptyDirectoriesToRemove)
+        {
+            std::error_code ec;
+            std::filesystem::remove(directory, ec);
+        }
+    }
+
     void PrintUsage();
     void PrintFooter();
     void PrintParameters();
@@ -217,6 +231,7 @@ private:
     std::shared_ptr<UploadAgent> m_pUploadAgent;
     std::unique_ptr<UploadMessage::UnboundedMessageBuffer> m_pUploadMessageQueue;
     std::unique_ptr<Concurrency::call<UploadNotification::Notification>> m_pUploadNotification;
+    std::vector<std::wstring> m_emptyDirectoriesToRemove;
 };
 
 }  // namespace Command::Wolf
