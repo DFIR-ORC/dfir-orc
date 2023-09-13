@@ -114,6 +114,8 @@ public:
 
     static OutputSpec::Encoding ToEncoding(Text::Encoding);
 
+    static std::filesystem::path Resolve(const std::wstring& path);
+
     HRESULT Configure(
         OutputSpec::Kind supportedTypes,
         const std::wstring& inputString,
