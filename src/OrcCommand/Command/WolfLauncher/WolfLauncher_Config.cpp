@@ -38,6 +38,33 @@ namespace fs = std::filesystem;
 
 namespace {
 
+constexpr std::wstring_view kOrcOffline(L"ORC_Offline");
+
+// Very close to std::filesystem::create_directories but keep tracks or created directories
+void CreateDirectories(std::filesystem::path path, std::vector<std::wstring>& newDirectories, std::error_code& ec)
+{
+    if (std::filesystem::exists(path))
+    {
+        return;
+    }
+
+    auto parent = path.parent_path();
+    if (!parent.empty())
+    {
+        CreateDirectories(parent, newDirectories, ec);
+        if (ec)
+        {
+            Log::Debug(L"Failed to create directory: {} [{}]", parent, ec);
+            return;
+        }
+    }
+
+    if (std::filesystem::create_directory(path, ec))
+    {
+        newDirectories.push_back(path);
+    }
+}
+
 bool IgnoreOptions(LPCWSTR szArg)
 {
     const auto kConsole = "console";
@@ -951,8 +978,10 @@ HRESULT Main::CheckConfiguration()
         }
 
         // Then, we set ORC_Offline as a "OnlyThis" keyword
-        config.OnlyTheseKeywords.clear();
-        config.OnlyTheseKeywords.insert(L"ORC_Offline");
+        if (config.OnlyTheseKeywords.empty())
+        {
+            config.OnlyTheseKeywords.insert(std::wstring(kOrcOffline));
+        }
 
         // Finally, we set the %OfflineLocation env var so the location is known to chikdren
         SetEnvironmentVariable(L"OfflineLocation", config.strOfflineLocation.value().c_str());
@@ -1055,6 +1084,21 @@ HRESULT Main::CheckConfiguration()
                     {
                         command->SetOptional();
                     }
+                }
+            }
+        }
+    }
+
+    if (config.strOfflineLocation.has_value())
+    {
+        for (const auto& exec : m_wolfexecs)
+        {
+            for (const auto& command : exec->GetCommands())
+            {
+                if (!command->IsOptional() && !boost::iequals(exec->GetKeyword(), kOrcOffline))
+                {
+                    command->SetOptional();
+                    m_journal.Print(exec->GetKeyword(), command->Keyword(), L"Error: incompatible with 'offline' mode");
                 }
             }
         }
