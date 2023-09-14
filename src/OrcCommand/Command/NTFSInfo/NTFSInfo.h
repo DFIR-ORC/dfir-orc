@@ -48,6 +48,15 @@ enum KindOfTime : DWORD
 class ORCUTILS_API Main : public UtilitiesMain
 {
 public:
+    struct OutputPaths
+    {
+        std::optional<std::wstring> fileInfo;
+        std::optional<std::wstring> i30Info;
+        std::optional<std::wstring> attrInfo;
+        std::optional<std::wstring> ntfsTimeline;
+        std::optional<std::wstring> secDescr;
+    };
+
     class Configuration : public UtilitiesMain::Configuration
     {
     public:
@@ -123,6 +132,16 @@ private:
 
     HRESULT Prepare();
     HRESULT GetWriters(std::vector<std::shared_ptr<Location>>& locs);
+
+    void GetOutputPathsByLocation(
+        const std::vector<std::shared_ptr<Location>>& locations,
+        std::unordered_map<std::wstring, OutputPaths>& outputPathsByLocation) const;
+
+    HRESULT WriteVolStats(
+        const OutputSpec& volStatsSpec,
+        const std::vector<std::shared_ptr<Location>>& locations,
+        std::shared_ptr<TableOutput::IWriter>& newWriter);
+
     HRESULT WriteTimeLineEntry(
         ITableOutput& pTimelineOutput,
         const std::shared_ptr<VolumeReader>& volreader,

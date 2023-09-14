@@ -203,6 +203,11 @@
         <bool name="Parse" />
         <utf16  name="MountPoint" maxlen="256" />
         <utf16  name="ShadowCopyId" maxlen="256" />
+        <utf16  name="FileInfo" maxlen="256" />
+        <utf16  name="i30Info" maxlen="256" />
+        <utf16  name="AttrInfo" maxlen="256" />
+        <utf16  name="Timeline" maxlen="256" />
+        <utf16  name="SecDescr" maxlen="256" />
     </table>
 </sqlschema>
 

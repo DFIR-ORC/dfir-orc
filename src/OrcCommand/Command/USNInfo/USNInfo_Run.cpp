@@ -181,11 +181,9 @@ HRESULT Main::Run()
         }
     }
 
-    Guard::Scope closeOnExit([&]() {
-        m_outputs.CloseAll(config.output);
-    });
+    Guard::Scope closeOnExit([&]() { m_outputs.CloseAll(config.output); });
 
-    hr = m_outputs.GetWriters(config.output, L"USNInfo", locations);
+    hr = m_outputs.GetWriters(config.output, L"USNInfo", locations, OutputInfo::DataType::kUsnInfo);
     if (FAILED(hr))
     {
         Log::Error(L"Failed to get writers for locations [{}]", SystemError(hr));
@@ -235,7 +233,7 @@ HRESULT Main::Run()
 
         callbacks.RecordCallback =
             [this, &outputIt](const std::shared_ptr<VolumeReader>& volreader, WCHAR* szFullName, USN_RECORD* pElt) {
-                USNRecordInformation(*outputIt->second, volreader, szFullName, pElt);
+                USNRecordInformation(*outputIt->second.Writer(), volreader, szFullName, pElt);
             };
 
         hr = walker.ReadJournal(callbacks);
