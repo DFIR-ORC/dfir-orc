@@ -1,7 +1,20 @@
 # ChangeLog
 
-## [10.1.7] - 2023-04-17
+## [10.1.8] - 2023-09-18
+### Added
+- Allow user to specify any 'key' from 'ORC_Offline' special command set
 
+### Changed
+- Yara: update to 4.3.2
+
+### Fixed
+- Yara: possible execution loop issue depending on the rule
+- FastFind: in the XML results file the 'Type' values for a registry match was always set to 'Type'
+- NTFSInfo/FATInfo: unexpected FirstBytes column zero padding
+- Fix log file output suboptions
+
+
+## [10.1.7] - 2023-04-17
 ### Added
 - Add more log in case of memory starvation
 - ci: add Compare-OrcOutcome to compare mutiple runs of different versions
