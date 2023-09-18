@@ -1108,10 +1108,15 @@ function Get-OrcOutcome {
                     continue
                 }
 
+                if (-Not $Command.exit_code)
+                {
+                    Write-Warning "$OutcomePath, $($Set.name)/$($Command.name): Missing 'exit_code'"
+                    continue
+                }
+
                 # On current powershell version the value was an UInt32 that could not be easily converted to Int32
                 # when being 0xFFFFFFFF
                 $Command.exit_code = [Convert]::ToInt32($Command.exit_code.ToString("x"), 16)
-
                 if ($Command.exit_code -eq 0)
                 {
                     continue
