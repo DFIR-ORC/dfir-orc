@@ -139,6 +139,37 @@ bool OutputSpec::IsArchive() const
     return HasFlag(Type, Kind::Archive);
 }
 
+std::filesystem::path OutputSpec::Resolve(const std::wstring& path)
+{
+    fs::path output;
+
+    if (IsPattern(path))
+    {
+        wstring patternApplied;
+        if (auto hr = ApplyPattern(path, L""s, patternApplied); SUCCEEDED(hr))
+        {
+            output = patternApplied;
+        }
+        else
+        {
+            output = path;
+        }
+    }
+    else
+    {
+        output = path;
+    }
+
+    WCHAR szExpanded[ORC_MAX_PATH] = {0};
+    ExpandEnvironmentStrings(output.c_str(), szExpanded, ORC_MAX_PATH);
+    if (wcscmp(output.c_str(), szExpanded) != 0)
+    {
+        output.assign(szExpanded);
+    }
+
+    return output;
+}
+
 HRESULT OutputSpec::Configure(
     OutputSpec::Kind supported,
     const std::wstring& strInputString,
@@ -148,26 +179,13 @@ HRESULT OutputSpec::Configure(
 
     Type = OutputSpec::Kind::None;
 
-    // Now on with regular file paths
-    fs::path outPath;
-
     if (IsPattern(strInputString))
     {
         Pattern = strInputString;
-
-        wstring patternApplied;
-        if (auto hr = ApplyPattern(strInputString, L""s, patternApplied); SUCCEEDED(hr))
-            outPath = patternApplied;
-        else
-            outPath = strInputString;
     }
-    else
-        outPath = strInputString;
 
-    WCHAR szExpanded[ORC_MAX_PATH] = {0};
-    ExpandEnvironmentStrings(outPath.c_str(), szExpanded, ORC_MAX_PATH);
-    if (wcscmp(outPath.c_str(), szExpanded) != 0)
-        outPath.assign(szExpanded);
+    // Now on with regular file paths
+    fs::path outPath = Resolve(strInputString);
 
     if (parent.has_value())
     {
@@ -175,7 +193,9 @@ HRESULT OutputSpec::Configure(
         Path = outPath;
     }
     else
+    {
         Path = outPath;
+    }
 
     FileName = outPath.filename().wstring();
 

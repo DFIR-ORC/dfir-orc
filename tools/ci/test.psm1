@@ -790,28 +790,41 @@ function Expand-OrcArchive {
 
         Write-Verbose "Decrypting archive: '$Archive'"
         $DecryptOutput = Join-Path $Destination ($Archive.BaseName + ".7zs")
-        Remove-Item $DecryptOutput -ErrorAction SilentlyContinue
+        if (-Not (Test-Path $DecryptOutput) -Or $Force)
+        {
+            Remove-Item $DecryptOutput -ErrorAction SilentlyContinue
 
-        # FIX: Calling 'OpensslExe' break color output so it is done with 'Start-Process'
-        #OpensslExe cms -decrypt -in $Archive -out $DecryptOutput -inkey $PrivateKey -inform DER -binary
-        Start-Process `
-            -WindowStyle Hidden `
-            -Wait `
-            -FilePath $OpensslExePath `
-            -ArgumentList `
-                "cms",
-                "-decrypt",
-                "-in","`"$Archive`"",
-                "-out","`"$DecryptOutput`"",
-                "-inkey","`"$PrivateKey`"",
-                "-inform","DER",
-                "-binary"
+            # FIX: Calling 'OpensslExe' break color output so it is done with 'Start-Process'
+            #OpensslExe cms -decrypt -in $Archive -out $DecryptOutput -inkey $PrivateKey -inform DER -binary
+            Start-Process `
+                -WindowStyle Hidden `
+                -Wait `
+                -FilePath $OpensslExePath `
+                -ArgumentList `
+                    "cms",
+                    "-decrypt",
+                    "-in","`"$Archive`"",
+                    "-out","`"$DecryptOutput`"",
+                    "-inkey","`"$PrivateKey`"",
+                    "-inform","DER",
+                    "-binary"
+        }
+        else
+        {
+            Write-Verbose "Using existing file: '$DecryptOutput'"
+        }
 
         Write-Verbose "Unstreaming archive journal: '$DecryptOutput'"
         $UnstreamOutput = Join-Path $Destination $Archive.BaseName
-        Remove-Item $UnstreamOutput -ErrorAction SilentlyContinue
-        UnstreamExe $DecryptOutput $UnstreamOutput
-        Remove-Item $DecryptOutput
+        if (-Not (Test-Path $UnstreamOutput) -Or $Force)
+        {
+            Remove-Item $UnstreamOutput -ErrorAction SilentlyContinue
+            UnstreamExe $DecryptOutput $UnstreamOutput
+        }
+        else
+        {
+            Write-Verbose "Using existing file: '$UnstreamOutput'"
+        }
 
         $Archive = Get-Item $UnstreamOutput
     }
@@ -838,11 +851,6 @@ function Expand-OrcArchive {
         Write-Error "Failed to unpack '$Path' into '$ExpandDirectory'"
     }
 
-    if ($UnstreamOutput)
-    {
-        Remove-Item $UnstreamOutput
-    }
-
     $Archives = Get-ChildItem -Recurse -File -Path $ExpandDirectory -Filter *.7z
     foreach ($SubArchive in $Archives)
     {
@@ -866,8 +874,6 @@ function Expand-OrcArchive {
         {
             Write-Error "Failed to unpack '$SubArchive' into '$SubDir'"
         }
-
-        Remove-Item $SubArchive
     }
 
     return $ExpandDirectory
@@ -1108,10 +1114,15 @@ function Get-OrcOutcome {
                     continue
                 }
 
+                if (-Not $Command.exit_code)
+                {
+                    Write-Warning "$OutcomePath, $($Set.name)/$($Command.name): Missing 'exit_code'"
+                    continue
+                }
+
                 # On current powershell version the value was an UInt32 that could not be easily converted to Int32
                 # when being 0xFFFFFFFF
                 $Command.exit_code = [Convert]::ToInt32($Command.exit_code.ToString("x"), 16)
-
                 if ($Command.exit_code -eq 0)
                 {
                     continue

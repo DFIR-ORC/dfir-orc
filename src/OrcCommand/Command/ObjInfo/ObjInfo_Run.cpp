@@ -65,7 +65,7 @@ HRESULT Main::Run()
     BOOST_SCOPE_EXIT(&config, &m_outputs) { m_outputs.CloseAll(config.output); }
     BOOST_SCOPE_EXIT_END;
 
-    hr = m_outputs.GetWriters(config.output, L"ObjInfo");
+    hr = m_outputs.GetWriters(config.output, L"ObjInfo", OutputInfo::DataType::kObjInfo);
     if (FAILED(hr))
     {
         Log::Error("Failed to create objinfo output writers [{}]", SystemError(hr));
@@ -95,7 +95,7 @@ HRESULT Main::Run()
             case DirectoryType::ObjectDir:
                 if (SUCCEEDED(hr = objectdir.ParseObjectDirectory(dir.first.m_Directory, objects)))
                 {
-                    if (dir.second == nullptr)
+                    if (dir.second.Writer() == nullptr)
                     {
                         Log::Error(L"No output writer configured for '{}' directory, skipped", dir.first.m_Directory);
                         return hr;
@@ -103,7 +103,7 @@ HRESULT Main::Run()
 
                     for (auto& obj : objects)
                     {
-                        obj.Write(*dir.second, L""s);
+                        obj.Write(*dir.second.Writer(), L""s);
                     }
                 }
                 else
@@ -120,7 +120,7 @@ HRESULT Main::Run()
                 {
                     for (auto& file : files)
                     {
-                        file.Write(*dir.second, L""s);
+                        file.Write(*dir.second.Writer(), L""s);
                     }
                 }
                 else

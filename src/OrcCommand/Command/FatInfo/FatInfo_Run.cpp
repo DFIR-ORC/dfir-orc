@@ -62,7 +62,7 @@ HRESULT Main::Run()
             return loc->GetParse() && (loc->IsFAT12() || loc->IsFAT16() || loc->IsFAT32());
         });
 
-    hr = m_FileInfoOutput.GetWriters(m_Config.output, L"FatInfo", locations);
+    hr = m_FileInfoOutput.GetWriters(m_Config.output, L"FatInfo", locations, OutputInfo::DataType::kFatInfo);
     if (FAILED(hr))
     {
         Log::Error(L"Failed to create file information writers [{}]", SystemError(hr));
@@ -91,7 +91,8 @@ HRESULT Main::Run()
                         fileEntry,
                         m_CodeVerifier);
 
-                    HRESULT hr = fi.WriteFileInformation(FatFileInfo::g_FatColumnNames, *dir.second, m_Config.Filters);
+                    HRESULT hr =
+                        fi.WriteFileInformation(FatFileInfo::g_FatColumnNames, *dir.second.Writer(), m_Config.Filters);
                     if (FAILED(hr))
                     {
                         Log::Error(L"Could not WriteFileInformation for '{}' [{}]", szFullName, SystemError(hr));

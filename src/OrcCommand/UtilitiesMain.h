@@ -84,11 +84,55 @@ public:
         UtilitiesLoggerConfiguration log;
     };
 
+    class OutputInfo
+    {
+    public:
+        enum class DataType
+        {
+            kFileInfo = 1,
+            kAttrInfo,
+            ki30Info,
+            kNtfsTimeline,
+            kSecDescrInfo,
+            kFatInfo,
+            kObjInfo,
+            kUsnInfo
+        };
+
+        OutputInfo(std::shared_ptr<Orc::TableOutput::IWriter> writer)
+            : m_writer(std::move(writer))
+            , m_path()
+            , m_type()
+        {
+        }
+
+        OutputInfo(std::shared_ptr<Orc::TableOutput::IWriter> writer, const std::wstring& path, DataType type)
+            : m_writer(std::move(writer))
+            , m_path(path)
+            , m_type(type)
+        {
+        }
+
+        std::shared_ptr<Orc::TableOutput::IWriter>& Writer() { return m_writer; }
+        const std::shared_ptr<Orc::TableOutput::IWriter>& Writer() const { return m_writer; }
+
+        void SetPath(const std::wstring& path) { m_path = path; }
+        const std::optional<std::wstring>& Path() const { return m_path; }
+
+        void SetType(DataType type) { m_type = type; }
+        std::optional<DataType> Type() const { return m_type; }
+
+    public:
+        std::shared_ptr<Orc::TableOutput::IWriter> m_writer;
+        std::optional<std::wstring> m_path;
+        DataType m_type;
+    };
+
     template <class T>
     class MultipleOutput
     {
     public:
-        using OutputPair = std::pair<T, std::shared_ptr<::Orc::TableOutput::IWriter>>;
+        using OutputPair = std::pair<T, OutputInfo>;
 
     private:
         std::vector<OutputPair> m_outputs;
@@ -99,6 +143,7 @@ public:
 
     public:
         std::vector<OutputPair>& Outputs() { return m_outputs; };
+        const std::vector<OutputPair>& Outputs() const { return m_outputs; };
 
         HRESULT WriteVolStats(const OutputSpec& volStatsSpec, const std::vector<std::shared_ptr<Location>>& locations)
         {
@@ -126,6 +171,7 @@ public:
                         volStatOutput.WriteBool(loc->GetParse());
                         volStatOutput.WriteString(fmt::format(L"{}", fmt::join(loc->GetPaths(), L";")));
                         volStatOutput.WriteString(loc->GetShadow() ? ToStringW(loc->GetShadow()->guid).c_str() : L"");
+
                         volStatOutput.WriteEndOfLine();
                     }
                     else
@@ -200,7 +246,7 @@ public:
             return S_OK;
         }
 
-        HRESULT GetWriters(const OutputSpec& output, LPCWSTR szPrefix)
+        HRESULT GetWriters(const OutputSpec& output, LPCWSTR szPrefix, OutputInfo::DataType dataType)
         {
             HRESULT hr = E_FAIL;
 
@@ -226,7 +272,7 @@ public:
                     }
                     for (auto& out : m_outputs)
                     {
-                        out.second = pWriter;
+                        out.second = {pWriter, output.Path, dataType};
                     }
                 }
                 break;
@@ -243,7 +289,8 @@ public:
                             Log::Error("Failed to create output file information");
                             return E_FAIL;
                         }
-                        out.second = pW;
+
+                        out.second = {pW, szOutputFile, dataType};
                     }
                 }
                 break;
@@ -252,7 +299,6 @@ public:
 
                     for (auto& out : m_outputs)
                     {
-
                         std::shared_ptr<::Orc::TableOutput::IWriter> pW;
 
                         WCHAR szOutputFile[ORC_MAX_PATH];
@@ -277,7 +323,8 @@ public:
                                 m_messageBuf,
                                 ArchiveMessage::MakeAddStreamRequest(szOutputFile, pStreamWriter->GetStream(), true));
                         }
-                        out.second = pW;
+
+                        out.second = {pW, szOutputFile, dataType};
                     }
                     Concurrency::send(m_messageBuf, ArchiveMessage::MakeFlushQueueRequest());
                 }
@@ -288,15 +335,20 @@ public:
         };
 
         template <class InputContainer>
-        HRESULT GetWriters(const OutputSpec& output, LPCWSTR szPrefix, const InputContainer& container)
+        HRESULT GetWriters(
+            const OutputSpec& output,
+            LPCWSTR szPrefix,
+            const InputContainer& container,
+            OutputInfo::DataType dataType)
         {
-
             m_outputs.reserve(container.size());
+
             for (const auto& item : container)
             {
                 m_outputs.emplace_back(item, nullptr);
             }
-            return GetWriters(output, szPrefix);
+
+            return GetWriters(output, szPrefix, dataType);
         };
 
         HRESULT ForEachOutput(const OutputSpec& output, std::function<HRESULT(const OutputPair& out)> aCallback)
@@ -373,8 +425,8 @@ public:
             {
                 case OutputSpec::Kind::Directory:
                 case OutputSpec::Kind::Archive:
-                    item.second->Close();
-                    item.second.reset();
+                    item.second.Writer()->Close();
+                    item.second.Writer().reset();
                     break;
                 default:
                     break;
@@ -395,10 +447,10 @@ public:
                 case OutputSpec::Kind::TableFile | OutputSpec::Kind::Parquet:
                 case OutputSpec::Kind::ORC:
                 case OutputSpec::Kind::TableFile | OutputSpec::Kind::ORC:
-                    if (!m_outputs.empty() && m_outputs.front().second != nullptr)
+                    if (!m_outputs.empty() && m_outputs.front().second.Writer() != nullptr)
                     {
-                        m_outputs.front().second->Close();
-                        m_outputs.front().second.reset();
+                        m_outputs.front().second.Writer()->Close();
+                        m_outputs.front().second.Writer().reset();
                     }
                     break;
                 default:

@@ -1,5 +1,20 @@
 # ChangeLog
 
+## [10.2.2] - 2023-09-20
+### Added
+- Allow user to specify any 'key' from 'ORC_Offline' special command set
+- NTFSInfo: add columns to volstats.csv for output file name
+- WolfLauncher: remove working directory on exit when it was created and empty
+
+### Changed
+- Yara: update to 4.3.2
+
+### Fixed
+- Yara: possible execution loop issue depending on the rule
+- FastFind: in the XML results file the 'Type' values for a registry match was always set to 'Type'
+- FastFind: XML output style
+- NTFSInfo/FATInfo: unexpected FirstBytes column zero padding
+
 ## [10.2.1] - 2023-06-20
 ### Changed
 - Configuration: accept wildcard as exclusion path

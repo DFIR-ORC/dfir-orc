@@ -596,35 +596,140 @@ HRESULT Main::GetWriters(std::vector<std::shared_ptr<Location>>& locations)
 {
     HRESULT hr = E_FAIL;
 
-    if (FAILED(hr = m_FileInfoOutput.GetWriters(config.outFileInfo, L"NTFSInfo", locations)))
+    if (FAILED(
+            hr = m_FileInfoOutput.GetWriters(
+                config.outFileInfo, L"NTFSInfo", locations, OutputInfo::DataType::kFileInfo)))
     {
         Log::Error("Failed to create file information writers [{}]", SystemError(hr));
         return hr;
     }
 
-    if (FAILED(hr = m_AttrOutput.GetWriters(config.outAttrInfo, L"AttrInfo", locations)))
+    if (FAILED(
+            hr = m_AttrOutput.GetWriters(config.outAttrInfo, L"AttrInfo", locations, OutputInfo::DataType::kAttrInfo)))
     {
         Log::Error("Failed to create attribute information writers [{}]", SystemError(hr));
         return hr;
     }
 
-    if (FAILED(hr = m_I30Output.GetWriters(config.outI30Info, L"I30Info", locations)))
+    if (FAILED(hr = m_I30Output.GetWriters(config.outI30Info, L"I30Info", locations, OutputInfo::DataType::ki30Info)))
     {
         Log::Error("Failed to create I30 information writers [{}]", SystemError(hr));
         return hr;
     }
 
-    if (FAILED(hr = m_TimeLineOutput.GetWriters(config.outTimeLine, L"NTFSTimeLine", locations)))
+    if (FAILED(
+            hr = m_TimeLineOutput.GetWriters(
+                config.outTimeLine, L"NTFSTimeLine", locations, OutputInfo::DataType::kNtfsTimeline)))
     {
         Log::Error("Failed to create timeline information writers [{}]", SystemError(hr));
         return hr;
     }
 
-    if (FAILED(hr = m_SecDescrOutput.GetWriters(config.outSecDescrInfo, L"SecDescr", locations)))
+    if (FAILED(
+            hr = m_SecDescrOutput.GetWriters(
+                config.outSecDescrInfo, L"SecDescr", locations, OutputInfo::DataType::kSecDescrInfo)))
     {
         Log::Error("Failed to create security descriptors information writers [{}]", SystemError(hr));
         return hr;
     }
+    return S_OK;
+}
+
+void Main::GetOutputPathsByLocation(
+    const std::vector<std::shared_ptr<Location>>& locations,
+    std::unordered_map<std::wstring, OutputPaths>& outputPathsByLocation) const
+{
+    auto GetOutputPath = [&](const auto& location, const auto& outputs) -> std::optional<std::wstring> {
+        for (const auto& [outputLocation, info] : outputs)
+        {
+            if (outputLocation.GetIdentifier() == location->GetIdentifier())
+            {
+                return info.Path();
+            }
+        }
+
+        return {};
+    };
+
+    for (const auto& location : locations)
+    {
+        auto it = outputPathsByLocation.find(location->GetLocation());
+        if (it == std::cend(outputPathsByLocation))
+        {
+            it = outputPathsByLocation.emplace(location->GetLocation(), OutputPaths {}).first;
+        }
+
+        it->second.fileInfo = GetOutputPath(location, m_FileInfoOutput.Outputs());
+        it->second.i30Info = GetOutputPath(location, m_I30Output.Outputs());
+        it->second.attrInfo = GetOutputPath(location, m_AttrOutput.Outputs());
+        it->second.ntfsTimeline = GetOutputPath(location, m_TimeLineOutput.Outputs());
+        it->second.secDescr = GetOutputPath(location, m_SecDescrOutput.Outputs());
+    }
+}
+
+HRESULT Main::WriteVolStats(
+    const OutputSpec& volStatsSpec,
+    const std::vector<std::shared_ptr<Location>>& locations,
+    std::shared_ptr<TableOutput::IWriter>& newWriter)
+{
+    if (volStatsSpec.Type == OutputSpec::Kind::Archive || volStatsSpec.Type == OutputSpec::Kind::Directory)
+        newWriter = Orc::TableOutput::GetWriter(L"volstats.csv", volStatsSpec);
+    else
+        return S_OK;
+
+    if (newWriter == nullptr)
+    {
+        return E_FAIL;
+    }
+
+    std::unordered_map<std::wstring, OutputPaths> outputPathsByLocation;
+    GetOutputPathsByLocation(locations, outputPathsByLocation);
+
+    auto& volStatOutput = *newWriter;
+    for (auto& loc : locations)
+    {
+        std::optional<OutputPaths> outputPaths;
+        auto it = outputPathsByLocation.find(loc->GetLocation());
+        if (it != std::cend(outputPathsByLocation))
+        {
+            outputPaths = it->second;
+        }
+
+        auto reader = loc->GetReader();
+
+        if (reader == nullptr)
+        {
+            return E_FAIL;
+        }
+
+        SystemDetails::WriteComputerName(volStatOutput);
+        volStatOutput.WriteInteger(reader->VolumeSerialNumber());
+        volStatOutput.WriteString(reader->GetLocation());
+        volStatOutput.WriteString(FSVBR::GetFSName(reader->GetFSType()).c_str());
+        volStatOutput.WriteBool(loc->GetParse());
+        volStatOutput.WriteString(fmt::format(L"{}", fmt::join(loc->GetPaths(), L";")));
+        volStatOutput.WriteString(loc->GetShadow() ? ToStringW(loc->GetShadow()->guid).c_str() : L"");
+
+        if (!outputPaths)
+        {
+            volStatOutput.WriteNothing();
+            volStatOutput.WriteNothing();
+            volStatOutput.WriteNothing();
+            volStatOutput.WriteNothing();
+            volStatOutput.WriteNothing();
+        }
+        else
+        {
+            volStatOutput.WriteString(outputPaths->fileInfo.value_or(L""));
+            volStatOutput.WriteString(outputPaths->i30Info.value_or(L""));
+            volStatOutput.WriteString(outputPaths->attrInfo.value_or(L""));
+            volStatOutput.WriteString(outputPaths->ntfsTimeline.value_or(L""));
+            volStatOutput.WriteString(outputPaths->secDescr.value_or(L""));
+        }
+
+        volStatOutput.WriteEndOfLine();
+    }
+
     return S_OK;
 }
 
@@ -685,13 +790,40 @@ HRESULT Main::RunThroughMFT()
             return hr;
         }
 
-        m_FileInfoOutput.WriteVolStats(config.volumesStatsOutput, allLocations);
-    }
+        if (FAILED(hr = GetWriters(locations)))
+        {
+            Log::Error("Failed to create writers for NTFSInfo [{}]", SystemError(hr));
+            return hr;
+        }
 
-    if (FAILED(hr = GetWriters(locations)))
+        std::shared_ptr<TableOutput::IWriter> volStatWriter;
+        hr = WriteVolStats(config.volumesStatsOutput, allLocations, volStatWriter);
+        if (FAILED(hr))
+        {
+            Log::Error("Failed to write volstats [{}]", SystemError(hr));
+        }
+        else
+        {
+            volStatWriter->Close();
+
+            auto pStreamWriter = std::dynamic_pointer_cast<TableOutput::IStreamWriter>(volStatWriter);
+            if (config.volumesStatsOutput.Type == OutputSpec::Kind::Archive && pStreamWriter
+                && pStreamWriter->GetStream())
+            {
+                // Need to attach the stream to one of "MultipleOutput"
+                m_FileInfoOutput.AddStream(
+                    config.volumesStatsOutput, L"volstats.csv", pStreamWriter->GetStream(), false, true);
+            }
+        }
+    }
+    else
     {
-        Log::Error("Failed to create writers for NTFSInfo [{}]", SystemError(hr));
-        return hr;
+        if (FAILED(hr = GetWriters(locations)))
+        {
+            Log::Error("Failed to create writers for NTFSInfo [{}]", SystemError(hr));
+            return hr;
+        }
+
     }
 
     auto fileinfoIterator = begin(m_FileInfoOutput.Outputs());
@@ -734,47 +866,47 @@ HRESULT Main::RunThroughMFT()
 
         MFTWalker::Callbacks callBacks;
 
-        if (fileinfoIterator->second != nullptr)
+        if (fileinfoIterator->second.Writer() != nullptr)
         {
             callBacks.FileNameAndDataCallback = [this, fileinfoIterator](
                                                     const std::shared_ptr<VolumeReader>& volreader,
                                                     MFTRecord* pElt,
                                                     const PFILE_NAME pFileName,
                                                     const std::shared_ptr<DataAttribute>& pDataAttr) {
-                FileAndDataInformation(*fileinfoIterator->second, volreader, pElt, pFileName, pDataAttr);
+                FileAndDataInformation(*fileinfoIterator->second.Writer(), volreader, pElt, pFileName, pDataAttr);
             };
             callBacks.DirectoryCallback = [this, fileinfoIterator](
                                               const std::shared_ptr<VolumeReader>& volreader,
                                               MFTRecord* pElt,
                                               const PFILE_NAME pFileName,
                                               const std::shared_ptr<IndexAllocationAttribute>& pAttr) {
-                DirectoryInformation(*fileinfoIterator->second, volreader, pElt, pFileName, pAttr);
+                DirectoryInformation(*fileinfoIterator->second.Writer(), volreader, pElt, pFileName, pAttr);
             };
         }
-        if (timelineIterator->second != nullptr)
+        if (timelineIterator->second.Writer() != nullptr)
         {
             callBacks.ElementCallback =
                 [this, timelineIterator](const std::shared_ptr<VolumeReader>& volreader, MFTRecord* pElt) {
-                    ElementInformation(*timelineIterator->second, volreader, pElt);
+                    ElementInformation(*timelineIterator->second.Writer(), volreader, pElt);
                 };
             callBacks.FileNameCallback =
                 [this, timelineIterator](
                     const std::shared_ptr<VolumeReader>& volreader, MFTRecord* pElt, const PFILE_NAME pFileName) {
-                    TimelineInformation(*timelineIterator->second, volreader, pElt, pFileName);
+                    TimelineInformation(*timelineIterator->second.Writer(), volreader, pElt, pFileName);
                 };
         }
 
-        if (attrIterator->second != nullptr)
+        if (attrIterator->second.Writer() != nullptr)
         {
             callBacks.AttributeCallback = [this, attrIterator](
                                               const std::shared_ptr<VolumeReader>& volreader,
                                               MFTRecord* pElt,
                                               const AttributeListEntry& AttrEntry) {
-                AttrInformation(*attrIterator->second, volreader, pElt, AttrEntry);
+                AttrInformation(*attrIterator->second.Writer(), volreader, pElt, AttrEntry);
             };
         }
 
-        if (i30Iterator->second != nullptr)
+        if (i30Iterator->second.Writer() != nullptr)
         {
             callBacks.I30Callback = [this, i30Iterator](
                                         const std::shared_ptr<VolumeReader>& volreader,
@@ -782,16 +914,16 @@ HRESULT Main::RunThroughMFT()
                                         const PINDEX_ENTRY& pEntry,
                                         const PFILE_NAME pFileName,
                                         bool bCarvedEntry) {
-                I30Information(*i30Iterator->second, volreader, pElt, pEntry, pFileName, bCarvedEntry);
+                I30Information(*i30Iterator->second.Writer(), volreader, pElt, pEntry, pFileName, bCarvedEntry);
             };
         }
 
-        if (secdescrIterator->second != nullptr)
+        if (secdescrIterator->second.Writer() != nullptr)
         {
             callBacks.SecDescCallback = [this, secdescrIterator](
                                             const std::shared_ptr<VolumeReader>& volreader,
                                             const PSECURITY_DESCRIPTOR_ENTRY pEntry) {
-                SecurityDescriptorInformation(*secdescrIterator->second, volreader, pEntry);
+                SecurityDescriptorInformation(*secdescrIterator->second.Writer(), volreader, pEntry);
             };
         }
 

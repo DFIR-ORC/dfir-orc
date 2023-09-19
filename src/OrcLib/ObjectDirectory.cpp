@@ -6,6 +6,9 @@
 // Author(s): Jean Gautier (ANSSI)
 //
 #include "stdafx.h"
+
+#include <optional>
+
 #include "ObjectDirectory.h"
 
 #include "NtDllExtension.h"
@@ -17,6 +20,7 @@
 #include "TableOutputWriter.h"
 
 #include "boost\scope_exit.hpp"
+#include "Flags.h"
 
 using namespace Orc;
 
@@ -144,14 +148,11 @@ HRESULT ObjectDirectory::ObjectInstance::Write(ITableOutput& output, const std::
     return S_OK;
 }
 
-HRESULT ObjectDirectory::ObjectInstance::Write(
-
-    IStructuredOutput& pWriter,
-    LPCWSTR szElement) const
+HRESULT ObjectDirectory::ObjectInstance::Write(IStructuredOutput& pWriter, LPCWSTR szElement) const
 {
     pWriter.BeginElement(szElement);
 
-    pWriter.WriteNamed(L"type", (DWORD)Type, ObjectDirectory::g_ObjectTypeDefinition);
+    pWriter.WriteNamed(L"type", ExactFlagToString(Type, ObjectDirectory::g_ObjectTypeDefinition).value_or(L""));
     pWriter.WriteNamed(L"name", Name.c_str());
 
     if (!Path.empty())

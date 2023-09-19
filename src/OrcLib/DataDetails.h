@@ -88,7 +88,7 @@ public:
         std::swap(m_FirstBytes, buffer);
         return S_OK;
     }
-    bool FirstBytesAvailable() const { return m_FirstBytes.GetCount() == BYTES_IN_FIRSTBYTES; }
+    bool FirstBytesAvailable() const { return !m_FirstBytes.empty(); }
     CBinaryBuffer& FirstBytes() { return m_FirstBytes; }
 
     HRESULT SetMD5(CBinaryBuffer&& buffer)
