@@ -21,7 +21,7 @@
 
 namespace Orc {
 
-class ORCLIB_API YaraExtension : public ExtensionLibrary
+class YaraExtension : public ExtensionLibrary
 {
     friend class ExtensionLibrary;
 
