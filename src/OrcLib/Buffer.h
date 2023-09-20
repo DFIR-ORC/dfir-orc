@@ -16,6 +16,8 @@
 #include "Log/Log.h"
 #include <fmt/xchar.h>
 
+#include <gsl/span>
+
 #pragma managed(push, off)
 
 namespace Orc {
@@ -93,6 +95,106 @@ public:
         ZeroMemory(get(position), std::min(size_ - position, elements) * sizeof(_T));
     }
 
+    bool operator==(const BufferSpan& rhs) const
+    {
+        if (rhs.size() != size())
+            return false;
+        return get() == rhs.get();
+    }
+
+    using value_type = typename _T;
+    using reference = typename value_type&;
+    using const_reference = const typename value_type&;
+    using pointer = typename value_type*;
+    using const_pointer = const typename value_type*;
+
+    class const_iterator
+    {
+        template <typename _T>
+        friend class BufferSpan;
+    public:
+        const_iterator(const_iterator&& other) noexcept = default;
+        const_iterator(const const_iterator& other) noexcept = default;
+
+        ~const_iterator() {};
+
+        bool operator==(const const_iterator& other) const
+        {
+            return m_span == other.m_span && m_current == other.m_current;
+        }
+        bool operator!=(const const_iterator& other) const { return !operator==(other); }
+
+        const_iterator& operator++()
+        {
+            assert(m_current != nullptr && "Iterator is NULL");
+            if (m_current >= m_span.get() + m_span.size())
+                throw Orc::Exception(Severity::Fatal, E_BOUNDS);
+
+            m_current++;
+            return *this;
+        }
+        const_reference operator*() const { return *m_current; }
+        const_pointer operator->() const { return m_current; }
+
+    private:
+
+        const_iterator(const BufferSpan& _span, const _T* pos)
+            : m_span(_span)
+        {
+            assert(pos != nullptr && "Iterator is NULL");
+            assert(pos >= m_span.get() && pos <= m_span.get() + m_span.size());
+            m_current = const_cast<_T*>(pos);
+        }
+        const BufferSpan m_span;
+        mutable _T* m_current;
+    };
+
+    class iterator
+    {
+        template <typename _T>
+        friend class BufferSpan;
+    public:
+        iterator(iterator&& other) noexcept = default;
+        iterator(const iterator& other) noexcept = default;
+
+        ~iterator() {};
+
+        bool operator==(const iterator& other) const
+        {
+            return m_span == other.m_span && m_current == other.m_current;
+        }
+        bool operator!=(const iterator& other) const {return !operator==(other);}
+
+        iterator& operator++()
+        {
+            assert(m_current != nullptr && "Iterator is NULL");
+            if (m_current >= m_span.get() + m_span.size())
+                throw Orc::Exception(Severity::Fatal, E_BOUNDS);
+
+            m_current++;
+            return *this;
+        }
+        reference operator*() const { return *m_current; }
+        pointer operator->() const { return m_current; }
+
+    private:
+        iterator(const BufferSpan& _span, const _T* pos)
+            : m_span(_span)
+        {
+            assert(pos != nullptr && "Iterator is NULL");
+            assert(pos >= m_span.get() && pos <= m_span.get() + m_span.size());
+            m_current = const_cast<_T*>(pos);
+        }
+        const BufferSpan m_span;
+        mutable _T* m_current;
+    };
+
+public:
+    iterator begin() const { return iterator(*this, get()); }
+    const_iterator cbegin() const { return const_iterator(*this, get()); }
+    iterator end() const { return iterator(*this, get() + size()); }
+    const_iterator cend() const { return const_iterator(*this, get() + size()); }
+
 private:
     _T* m_Ptr;
     ULONG m_Elts;
@@ -146,7 +248,8 @@ private:
             {
                 reserve(Elts);
             }
-            std::copy(Ptr, Ptr + Elts, stdext::checked_array_iterator(m_Ptr, m_EltsAlloc));
+            gsl::span span(m_Ptr, m_EltsAlloc);
+            std::copy(Ptr, Ptr + Elts, std::begin(span));
             return;
         }
 
@@ -175,7 +278,8 @@ private:
 
             m_Ptr = new _T[Elts];
             m_EltsAlloc = Elts;
-            std::copy(OldPtr, OldPtr + OldEltsAlloc, stdext::checked_array_iterator(m_Ptr, m_EltsAlloc));
+            gsl::span span(m_Ptr, m_EltsAlloc);
+            std::copy(OldPtr, OldPtr + OldEltsAlloc, std::begin(span));
 
             delete[] OldPtr;
         }
@@ -237,8 +341,8 @@ private:
         {
             if (Elts > m_EltsInView)
                 throw Orc::Exception(Severity::Fatal, E_OUTOFMEMORY);
-
-            std::copy(Ptr, Ptr + Elts, stdext::checked_array_iterator(m_Ptr, m_EltsInView));
+            gsl::span span(m_Ptr, m_EltsInView);
+            std::copy(Ptr, Ptr + Elts, std::begin(span));
             return;
         }
 
@@ -266,7 +370,8 @@ private:
         _T* relinquish()
         {
             auto ptr = new _T[m_EltsInView];
-            std::copy(m_Ptr, m_Ptr + m_EltsInView, stdext::checked_array_iterator(ptr, m_EltsInView));
+            gsl::span span(ptr, m_EltsInView);
+            std::copy(m_Ptr, m_Ptr + m_EltsInView, std::begin(span));
             m_Ptr = nullptr;
             return ptr;
         }
@@ -279,17 +384,10 @@ private:
     {
         friend void swap(InnerStore& left, InnerStore& right) noexcept
         {
-            _T temp[_DeclElts];
-            std::copy(
-                std::begin(left.m_Elts),
-                std::end(left.m_Elts),
-                stdext::checked_array_iterator(std::begin(temp), _DeclElts));
-            std::copy(
-                std::begin(right.m_Elts),
-                std::end(right.m_Elts),
-                stdext::checked_array_iterator(std::begin(left.m_Elts), _DeclElts));
-            std::copy(
-                std::begin(temp), std::end(temp), stdext::checked_array_iterator(std::begin(right.m_Elts), _DeclElts));
+            std::array<_T, _DeclElts> temp;
+            std::copy(std::begin(left.m_Elts), std::end(left.m_Elts), std::begin(temp));
+            std::copy(std::begin(right.m_Elts), std::end(right.m_Elts), std::begin(temp));
+            std::copy(std::begin(temp), std::end(temp), std::begin(temp));
         }
 
         constexpr InnerStore() = default;
@@ -302,7 +400,8 @@ private:
         template <typename Iterator>
         InnerStore(Iterator begin, Iterator end)
         {
-            std::copy(begin, end, stdext::checked_array_iterator(m_Elts, _DeclElts));
+            gsl::span span(m_Elts, _DeclElts);
+            std::copy(begin, end, std::begin(span));
         }
 
         constexpr ULONG capacity() const { return _DeclElts; }
@@ -319,7 +418,8 @@ private:
                 throw Orc::Exception(
                     Severity::Fatal, L"Cannot assign %d elements to a {} inner store"sv, Elts, _DeclElts);
             }
-            std::copy(Ptr, Ptr + Elts, stdext::checked_array_iterator(m_Elts, _DeclElts));
+            gsl::span span(m_Elts, _DeclElts);
+            std::copy(Ptr, Ptr + Elts, std::begin(span));
             return;
         }
 
@@ -333,7 +433,8 @@ private:
         _T* relinquish()
         {
             auto ptr = new _T[_DeclElts];
-            std::copy(m_Elts, m_Elts + _DeclElts, stdext::checked_array_iterator(ptr, _DeclElts));
+            gsl::span span(ptr, _DeclElts);
+            std::copy(m_Elts, m_Elts + _DeclElts, std::begin(span));
             return ptr;
         }
 
@@ -386,9 +487,8 @@ public:
 
     Buffer(const std::initializer_list<_T>& list)
     {
-        resize((ULONG)list.size());
-        std::copy(std::begin(list), std::end(list), stdext::checked_array_iterator(get(), capacity()));
-        m_EltsUsed = (ULONG)list.size();
+        reserve((ULONG)list.size());
+        std::copy(std::begin(list), std::end(list), std::back_inserter(*this));
     }
 
     Buffer(const BufferSpan<_T> span)
@@ -523,7 +623,8 @@ public:
             }
         }
 
-        std::copy(&Src, &Src + 1, stdext::checked_array_iterator(get() + size_, capacity_ - size_));
+        gsl::span span(get() + size_, capacity_ - size_);
+        std::copy(&Src, &Src + 1, std::begin(span));
         m_EltsUsed = new_size;
     }
 
@@ -573,8 +674,8 @@ public:
                 capacity_ = new_capacity;
             }
         }
-
-        std::copy(Src, Src + Elts, stdext::checked_array_iterator(get() + size_, capacity_ - size_));
+        gsl::span span(get() + size_, capacity_ - size_);
+        std::copy(Src, Src + Elts, std::begin(span));
         m_EltsUsed = new_size;
     }
     void append(_In_ const Buffer& Other) { append(Other.get_raw(), Other.size()); }
@@ -644,7 +745,9 @@ public:
             auto new_store = HeapStore(Elts);
             if (const auto current = get_raw())
             {
-                std::copy(current, current + size(), stdext::checked_array_iterator(new_store.get(), Elts));
+                gsl::span new_store_span(new_store.get(), new_store.capacity());
+
+                std::copy(current, current + size(), std::begin(new_store_span));
             }
 
             m_store = std::move(new_store);
@@ -727,16 +830,14 @@ public:
 
     _T* get_raw(ULONG index = 0) const
     {
-        return std::visit(
-            [index](auto&& arg) -> auto{ return arg.get(index); }, m_store);
+        return std::visit([index](auto&& arg) -> auto { return arg.get(index); }, m_store);
     }
 
     explicit operator _T*(void) const { return get(); }
 
     bool owns(void) const
     {
-        return std::visit(
-            [](auto&& arg) -> auto{ return arg.owns(); }, m_store);
+        return std::visit([](auto&& arg) -> auto { return arg.owns(); }, m_store);
     }
 
     template <typename _TT>
@@ -948,9 +1049,14 @@ public:
     class const_iterator
     {
     public:
-        const_iterator(const _T* ptr) { m_current = const_cast<_T*>(ptr); }
-        const_iterator(const_iterator&& other) noexcept { std::swap(m_current, other.m_current); };
-        const_iterator(const const_iterator& other) noexcept { m_current = other.m_current; };
+        const_iterator(const _T* ptr, const ULONG size)
+            : m_current(const_cast<_T*>(ptr))
+            , m_end(ptr + size)
+        {
+        }
+
+        const_iterator(const_iterator&& other) noexcept = default;
+        const_iterator(const const_iterator& other) noexcept = default;
 
         ~const_iterator() {};
 
@@ -959,6 +1065,10 @@ public:
 
         const_iterator& operator++()
         {
+            assert(m_current != nullptr && "Iterator is NULL");
+            if (m_current >= m_end)
+                throw Orc::Exception(Severity::Fatal, E_BOUNDS);
+
             m_current++;
             return *this;
         }
@@ -967,14 +1077,19 @@ public:
 
     private:
         mutable _T* m_current;
+        const _T* m_end;
     };
 
     class iterator
     {
     public:
-        iterator(const _T* ptr) { m_current = const_cast<_T*>(ptr); }
-        iterator(iterator&& other) noexcept { std::swap(m_current, other.m_current); };
-        iterator(const iterator& other) noexcept { m_current = other.m_current; };
+        iterator(const _T* ptr, const ULONG size)
+            : m_current(const_cast<_T*>(ptr))
+            , m_end(ptr + size)
+        {
+        }
+        iterator(iterator&& other) noexcept = default;
+        iterator(const iterator& other) noexcept = default;
 
         ~iterator() {};
 
@@ -983,6 +1098,10 @@ public:
 
         iterator& operator++()
         {
+            assert(m_current != nullptr && "Iterator is NULL");
+            if (m_current >= m_end)
+                throw Orc::Exception(Severity::Fatal, E_BOUNDS);
+
             m_current++;
             return *this;
         }
@@ -991,13 +1110,20 @@ public:
 
     private:
         mutable _T* m_current;
+        const _T* m_end;
     };
 
 public:
-    iterator begin() const { return iterator(get_raw()); }
-    const_iterator cbegin() const { return const_iterator(get_raw()); }
-    iterator end() const { return iterator(get_raw() + size()); }
-    const_iterator cend() const { return const_iterator(get_raw() + size()); }
+    iterator begin() const { return empty() ? iterator(nullptr, 0) : iterator(get(), size()); }
+    const_iterator cbegin() const { return empty() ? const_iterator(nullptr, 0) : const_iterator(get(), size()); }
+    iterator end() const
+    {
+        return empty() ? iterator(nullptr, 0) : iterator(get() + size(), 0);
+    }
+    const_iterator cend() const
+    {
+        return empty() ? iterator(nullptr, 0) : const_iterator(get() + size(), 0);
+    }
 
 private:
     Store m_store;
