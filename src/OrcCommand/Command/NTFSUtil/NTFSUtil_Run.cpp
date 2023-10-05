@@ -27,6 +27,7 @@
 #include "MFTOffline.h"
 #include "OfflineMFTReader.h"
 
+#include "Utils/Round.h"
 #include "Utils/TypeTraits.h"
 #include "Text/Fmt/Boolean.h"
 #include "Text/Fmt/Limit.h"
@@ -1006,11 +1007,6 @@ HRESULT Main::CommandVss()
     return S_OK;
 }
 
-constexpr uint64_t RoundUp(uint64_t offset, uint64_t pageSize)
-{
-    return (((offset)) + pageSize - 1) & (~(pageSize - 1));
-}
-
 HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
 {
     using namespace BitLocker;
@@ -1109,7 +1105,7 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
             // Reset pointer to start of info data
             reader->Seek(pHeader->InfoOffsets[i]);
 
-            auto toRead = RoundUp(infoSize + sizeof(ValidationHeader), pHeader->SectorSize);
+            auto toRead = RoundUpPow2(infoSize + sizeof(ValidationHeader), pHeader->SectorSize);
             info_buffer.SetCount(toRead);
             reader->Read(info_buffer, toRead, ullBytesRead);
 
@@ -1121,7 +1117,7 @@ HRESULT Orc::Command::NTFSUtil::Main::CommandBitLocker()
                 continue;
             }
 
-            const Traits::ByteQuantity size(RoundUp(infoSize + pValidation->Size, pHeader->SectorSize));
+            const Traits::ByteQuantity size(RoundUpPow2(infoSize + pValidation->Size, pHeader->SectorSize));
             PrintValue(metadataNode, L"Size", size);
         }
     }
