@@ -456,7 +456,7 @@ HRESULT MftRecordAttribute::GetStreams(
                 }
 
                 auto datastream = make_shared<UncompressNTFSStream>();
-                if (FAILED(hr = datastream->Open(rawdata, 16 * pVolReader->GetBytesPerCluster())))
+                if (FAILED(hr = datastream->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
                     Log::Error("Failed to open UncompressNTFSStream [{}]", SystemError(hr));
                     return hr;

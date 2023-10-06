@@ -1,15 +1,16 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2023 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl (ANSSI)
 //
 #pragma once
 
 #include "OrcLib.h"
 
-#include "ChainingStream.h"
+#include "NTFSStream.h"
 
 #include "boost/logic/tribool.hpp"
 
@@ -17,51 +18,33 @@
 
 namespace Orc {
 
-class NTFSStream;
+namespace Stream {
+class VolumeStreamReader;
+}
 
-class UncompressNTFSStream : public ChainingStream
+class UncompressNTFSStream : public NTFSStream
 {
 
 public:
     UncompressNTFSStream();
-    virtual ~UncompressNTFSStream(void);
 
-    STDMETHOD(IsOpen)()
-    {
-        if (m_pChainedStream == NULL)
-            return S_FALSE;
-        return m_pChainedStream->IsOpen();
-    };
-    STDMETHOD(CanRead)() { return S_OK; };
-    STDMETHOD(CanWrite)() { return S_FALSE; };
-    STDMETHOD(CanSeek)() { return S_OK; };
-
-    //
-    // ByteStream implementation
-    //
-    STDMETHOD(Open)(const std::shared_ptr<ByteStream>& pChainedStream, DWORD dwCompressionUnit);
-
-    STDMETHOD(Open)(const std::shared_ptr<NTFSStream>& pChainedStream, DWORD dwCompressionUnit);
+    STDMETHOD(OpenAllocatedDataStream)
+    (__in_opt const std::shared_ptr<VolumeReader>& pVolReader,
+     __in_opt const std::shared_ptr<MftRecordAttribute>& pDataAttr);
 
     STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
      __in ULONGLONG cbBytes,
      __out_opt PULONGLONG pcbBytesRead);
 
-    STDMETHOD(Write_)
-    (__in_bcount(cbBytesToWrite) const PVOID pWriteBuffer,
-     __in ULONGLONG cbBytesToWrite,
-     __out_opt PULONGLONG pcbBytesWritten);
-
     STDMETHOD(SetFilePointer)
     (__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod, __out_opt PULONG64 pCurrPointer);
 
-    STDMETHOD_(ULONG64, GetSize)();
-    STDMETHOD(SetSize)(ULONG64 ullSize);
-
-    STDMETHOD(Close)();
+private:
+    HRESULT ReadRaw(CBinaryBuffer& buffer, size_t length);
 
 private:
+    std::unique_ptr<Stream::VolumeStreamReader> m_volume;
     DWORD m_dwCompressionUnit;
     DWORD m_dwMaxCompressionUnit;
     ULONGLONG m_ullPosition;

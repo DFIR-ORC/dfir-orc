@@ -1,9 +1,10 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright © 2011-2023 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
+//            fabienfl (ANSSI)
 //
 
 #include "stdafx.h"
@@ -11,45 +12,38 @@
 #include "UncompressNTFSStream.h"
 
 #include "NTFSCompression.h"
-
-#include "NTFSStream.h"
 #include "VolumeReader.h"
+#include "Utils/Round.h"
+#include "Utils/BufferSpan.h"
+#include "Stream/StreamUtils.h"
+#include "Stream/VolumeStreamReader.h"
 
 using namespace Orc;
 
 UncompressNTFSStream::UncompressNTFSStream()
-    : ChainingStream()
+    : NTFSStream()
+    , m_volume(nullptr)
     , m_ullPosition(0L)
+    , m_dwCompressionUnit(0)
+    , m_dwMaxCompressionUnit(0)
 {
-    m_dwCompressionUnit = 0L;
-    m_dwMaxCompressionUnit = 0L;
 }
 
-UncompressNTFSStream::~UncompressNTFSStream(void) {}
-
-HRESULT UncompressNTFSStream::Close()
+HRESULT UncompressNTFSStream::OpenAllocatedDataStream(
+    const std::shared_ptr<VolumeReader>& pReader,
+    const std::shared_ptr<MftRecordAttribute>& pDataAttr)
 {
-    if (m_pChainedStream == nullptr)
-        return S_OK;
-    return m_pChainedStream->Close();
-}
-
-HRESULT UncompressNTFSStream::Open(const std::shared_ptr<ByteStream>& pChained, DWORD dwCompressionUnit)
-{
-    if (pChained == NULL)
-        return E_POINTER;
-
-    if (pChained->IsOpen() != S_OK)
+    HRESULT hr = NTFSStream::OpenAllocatedDataStream(pReader, pDataAttr);
+    if (FAILED(hr))
     {
-        Log::Error(L"Chained stream must be opened");
-        return E_FAIL;
+        return hr;
     }
 
-    m_pChainedStream = pChained;
+    m_volume = std::make_unique<VolumeStreamReader>(m_pVolReader);
 
+    DWORD dwCompressionUnit = 16 * m_pVolReader->GetBytesPerCluster();
     switch (dwCompressionUnit)
     {
-            // Valid CU values are:
         case 0x2000:
         case 0x4000:
         case 0x8000:
@@ -63,26 +57,12 @@ HRESULT UncompressNTFSStream::Open(const std::shared_ptr<ByteStream>& pChained, 
             return E_INVALIDARG;
     }
 
-    m_dwMaxCompressionUnit =
-        (DWORD)(pChained->GetSize() / m_dwCompressionUnit) + ((pChained->GetSize() % m_dwCompressionUnit) ? 1 : 0);
+    m_dwCompressionUnit = dwCompressionUnit;
+    m_dwMaxCompressionUnit = (DWORD)(GetSize() / m_dwCompressionUnit) + ((GetSize() % m_dwCompressionUnit) ? 1 : 0);
 
-    m_ullPosition = 0LL;
-    return S_OK;
-}
-
-HRESULT UncompressNTFSStream::Open(const std::shared_ptr<NTFSStream>& pChained, DWORD dwCompressionUnit)
-{
-    HRESULT hr = E_FAIL;
-
-    const std::shared_ptr<ByteStream>& pByteStream = pChained;
-
-    if (FAILED(hr = Open(pByteStream, dwCompressionUnit)))
-        return hr;
-
-    const auto segments = pChained->DataSegments();
+    const auto segments = DataSegments();
 
     std::vector<boost::logic::tribool> CUMethod;
-
     CUMethod.resize(m_dwMaxCompressionUnit);
 
     std::for_each(begin(CUMethod), end(CUMethod), [](boost::logic::tribool& aTriBool) {
@@ -174,10 +154,8 @@ HRESULT UncompressNTFSStream::Open(const std::shared_ptr<NTFSStream>& pChained, 
             m_IsBlockCompressed.size());
         return S_FALSE;
     }
-    else
-    {
-        return S_OK;
-    }
+
+    return hr;
 }
 
 HRESULT UncompressNTFSStream::ReadCompressionUnit(
@@ -185,6 +163,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
     CBinaryBuffer& uncompressedData,
     __out_opt PULONGLONG pcbBytesRead)
 {
+    std::error_code ec;
     HRESULT hr = E_FAIL;
 
     if (pcbBytesRead)
@@ -197,102 +176,42 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
         return hr;
     }
 
-    ULONGLONG ullRead = 0LL;
-    ULONGLONG ullToRead = static_cast<ULONGLONG>(dwNbCU) * m_dwCompressionUnit;
-
-    CBinaryBuffer buffer(true);
-    if (!buffer.SetCount(static_cast<size_t>(ullToRead)))
-        return E_OUTOFMEMORY;
-
-    while (ullRead < (m_dwCompressionUnit * static_cast<ULONGLONG>(dwNbCU)) && ullRead < ullToRead)
-    {
-        ULONGLONG ullThisRead = 0LL;
-        if (FAILED(hr = m_pChainedStream->Read(buffer.GetData() + ullRead, buffer.GetCount() - ullRead, &ullThisRead)))
-        {
-            Log::Error(
-                L"Failed to read {} bytes from chained stream [{}]", buffer.GetCount() - ullRead, SystemError(hr));
-            return hr;
-        }
-        if (ullThisRead == 0LL)
-            break;
-        ullRead += ullThisRead;
-    }
-
-    if (ullRead == 0LL)
-    {
-        buffer.RemoveAll();
-        return S_OK;
-    }
-
     size_t uncomp_processed = 0;
 
-    for (unsigned int i = 0; i < dwNbCU; i++)
+    CBinaryBuffer buffer(true);
+    for (size_t i = 0; i < dwNbCU; ++i)
     {
+        hr = ReadRaw(buffer, m_dwCompressionUnit);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to read {} bytes from chained stream [{}]", buffer.GetCount(), SystemError(hr));
+            return hr;
+        }
+
+        ULONGLONG ullRead = buffer.GetCount();
+
         size_t unitIndex = ((size_t)m_ullPosition / m_dwCompressionUnit) + i;
 
-        if (ullRead - uncomp_processed >= m_dwCompressionUnit)
+        if (!m_IsBlockCompressed.empty())
         {
-            if (!m_IsBlockCompressed.empty())
-            {
-                if (m_IsBlockCompressed[unitIndex])
-                {
-                    // compression unit is compressed: proceed with decompression
-                    NTFS_COMP_INFO info;
-                    info.buf_size_b = m_dwCompressionUnit;
-                    info.comp_buf = (char*)buffer.GetData() + uncomp_processed;
-                    info.comp_len = m_dwCompressionUnit;
-                    info.uncomp_buf = (char*)uncompressedData.GetData() + uncomp_processed;
-                    info.uncomp_idx = 0L;
-
-                    if (FAILED(hr = ntfs_uncompress_compunit(&info)))
-                    {
-                        Log::Warn(
-                            L"Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data "
-                            L"[{}]",
-                            info.comp_len,
-                            SystemError(hr));
-                        CopyMemory(
-                            (LPBYTE)uncompressedData.GetData() + uncomp_processed,
-                            (char*)buffer.GetData() + uncomp_processed,
-                            m_dwCompressionUnit);
-                        uncomp_processed += m_dwCompressionUnit;
-                    }
-                    else
-                    {
-                        uncomp_processed += info.comp_len;
-                    }
-                }
-                else
-                {
-                    CopyMemory(
-                        (LPBYTE)uncompressedData.GetData() + uncomp_processed,
-                        (char*)buffer.GetData() + uncomp_processed,
-                        m_dwCompressionUnit);
-                    uncomp_processed += m_dwCompressionUnit;
-                }
-            }
-            else
+            if (m_IsBlockCompressed[unitIndex])
             {
                 // compression unit is compressed: proceed with decompression
                 NTFS_COMP_INFO info;
                 info.buf_size_b = m_dwCompressionUnit;
-                info.comp_buf = (char*)buffer.GetData() + uncomp_processed;
+                info.comp_buf = (char*)buffer.GetData();
                 info.comp_len = m_dwCompressionUnit;
-                info.uncomp_buf = (char*)uncompressedData.GetCount() + uncomp_processed;
+                info.uncomp_buf = (char*)uncompressedData.GetData() + uncomp_processed;
                 info.uncomp_idx = 0L;
 
                 if (FAILED(hr = ntfs_uncompress_compunit(&info)))
                 {
-                    // If decompression failed and CUs not compressed information is not available, we assume the CU was
-                    // not compressed
                     Log::Warn(
-                        "Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data [{}]",
+                        L"Failed to uncompress {} bytes from compressed unit, copying as raw data [{}]",
                         info.comp_len,
                         SystemError(hr));
                     CopyMemory(
-                        (LPBYTE)uncompressedData.GetData() + uncomp_processed,
-                        (char*)buffer.GetData() + uncomp_processed,
-                        m_dwCompressionUnit);
+                        (LPBYTE)uncompressedData.GetData() + uncomp_processed, buffer.GetData(), m_dwCompressionUnit);
                     uncomp_processed += m_dwCompressionUnit;
                 }
                 else
@@ -300,90 +219,137 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
                     uncomp_processed += info.comp_len;
                 }
             }
+            else
+            {
+                CopyMemory(
+                    (LPBYTE)uncompressedData.GetData() + uncomp_processed, buffer.GetData(), m_dwCompressionUnit);
+                uncomp_processed += m_dwCompressionUnit;
+            }
         }
         else
         {
-            if (!m_IsBlockCompressed.empty())
+            // compression unit is compressed: proceed with decompression
+            NTFS_COMP_INFO info;
+            info.buf_size_b = m_dwCompressionUnit;
+            info.comp_buf = (char*)buffer.GetData();
+            info.comp_len = m_dwCompressionUnit;
+            info.uncomp_buf = (char*)uncompressedData.GetCount() + uncomp_processed;
+            info.uncomp_idx = 0L;
+
+            if (FAILED(hr = ntfs_uncompress_compunit(&info)))
             {
-                // the last uncompression has to take place in a buffer of at least CU size
-                if (m_IsBlockCompressed[unitIndex])
-                {
-                    CBinaryBuffer uncomp(true);
-                    uncomp.SetCount(m_dwCompressionUnit);
-
-                    NTFS_COMP_INFO info;
-                    info.buf_size_b = m_dwCompressionUnit;
-                    info.comp_buf = (char*)buffer.GetData() + uncomp_processed;
-                    info.comp_len = m_dwCompressionUnit;
-                    info.uncomp_buf = (char*)uncomp.GetData();
-                    info.uncomp_idx = 0L;
-
-                    if (FAILED(hr = ntfs_uncompress_compunit(&info)))
-                    {
-                        Log::Warn(
-                            L"Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data "
-                            L"[{}]",
-                            info.comp_len,
-                            SystemError(hr));
-                        CopyMemory(
-                            (LPBYTE)uncompressedData.GetData() + uncomp_processed,
-                            (char*)buffer.GetData() + uncomp_processed,
-                            m_dwCompressionUnit);
-                        uncomp_processed += m_dwCompressionUnit;
-                    }
-                    else
-                    {
-                        CopyMemory(
-                            uncompressedData.GetData() + uncomp_processed,
-                            uncomp.GetData(),
-                            static_cast<size_t>(ullRead - uncomp_processed));
-                        uncomp_processed += static_cast<size_t>(ullRead - uncomp_processed);
-                    }
-                }
-                else
-                {
-                    CopyMemory(
-                        uncompressedData.GetData() + uncomp_processed,
-                        (char*)buffer.GetData() + uncomp_processed,
-                        static_cast<size_t>(ullRead - uncomp_processed));
-                    uncomp_processed += static_cast<size_t>(ullRead - uncomp_processed);
-                }
+                // If decompression failed and CUs not compressed information is not available, we assume the CU was
+                // not compressed
+                Log::Warn(
+                    "Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data [{}]",
+                    info.comp_len,
+                    SystemError(hr));
+                CopyMemory(
+                    (LPBYTE)uncompressedData.GetData() + uncomp_processed, buffer.GetData(), m_dwCompressionUnit);
+                uncomp_processed += m_dwCompressionUnit;
             }
             else
             {
-                CBinaryBuffer uncomp(true);
-                uncomp.SetCount(m_dwCompressionUnit);
-
-                NTFS_COMP_INFO info;
-                info.buf_size_b = m_dwCompressionUnit;
-                info.comp_buf = (char*)buffer.GetData() + uncomp_processed;
-                info.comp_len = m_dwCompressionUnit;
-                info.uncomp_buf = (char*)uncomp.GetData();
-                info.uncomp_idx = 0L;
-
-                if (FAILED(hr = ntfs_uncompress_compunit(&info)))
-                {
-                    // If decompression failed and CUs not compressed information is not available, we assume the CU was
-                    // not compressed
-                    CopyMemory(
-                        (LPBYTE)uncompressedData.GetData() + uncomp_processed,
-                        (char*)buffer.GetData() + uncomp_processed,
-                        static_cast<size_t>(ullRead - uncomp_processed));
-                    uncomp_processed += m_dwCompressionUnit;
-                }
-                else
-                {
-                    CopyMemory(
-                        uncompressedData.GetData() + uncomp_processed,
-                        uncomp.GetData(),
-                        static_cast<size_t>(ullRead - uncomp_processed));
-                    uncomp_processed += static_cast<size_t>(ullRead - uncomp_processed);
-                }
+                uncomp_processed += info.comp_len;
             }
         }
     }
+
     if (pcbBytesRead)
         *pcbBytesRead = uncomp_processed;
+    return S_OK;
+}
+
+HRESULT UncompressNTFSStream::ReadRaw(CBinaryBuffer& buffer, size_t length)
+{
+    if (length == 0LL)
+    {
+        return S_OK;
+    }
+
+    buffer.SetCount(RoundUp(length, 65536));
+
+    size_t totalRead = 0;
+    while (totalRead < length)
+    {
+        if (m_CurrentSegmentIndex >= m_DataSegments.size())
+        {
+            break;
+        }
+
+        if (m_CurrentSegmentOffset
+            >= (m_bAllocatedData ? m_DataSegments[m_CurrentSegmentIndex].ullAllocatedSize
+                                 : m_DataSegments[m_CurrentSegmentIndex].ullSize))
+        {
+            m_CurrentSegmentIndex++;  // We have reached the end of the segment, moving to the next
+            m_CurrentSegmentOffset = 0LL;
+        }
+
+        if (m_CurrentSegmentIndex >= m_DataSegments.size())
+        {
+            break;
+        }
+
+        auto dataSize = (m_bAllocatedData ? m_DataSegments[m_CurrentSegmentIndex].ullAllocatedSize
+                                          : m_DataSegments[m_CurrentSegmentIndex].ullSize)
+            - m_CurrentSegmentOffset;
+
+        dataSize = RoundUpPow2(dataSize, 4096);
+
+        size_t remaining = length - totalRead;
+        size_t processed;
+        if (dataSize < remaining)
+        {
+            remaining = dataSize;
+        }
+
+        if (m_DataSegments[m_CurrentSegmentIndex].bUnallocated || !m_DataSegments[m_CurrentSegmentIndex].bValidData)
+        {
+            auto output = BufferSpan(buffer.GetData() + totalRead, remaining);
+            std::fill(std::begin(output), std::end(output), 0);
+            processed = remaining;
+        }
+        else if (totalRead == 0)
+        {
+            std::error_code ec;
+            BufferSpan output(buffer.GetData(), remaining);
+            processed = Stream::ReadAt(
+                *m_volume,
+                m_DataSegments[m_CurrentSegmentIndex].ullDiskBasedOffset + m_CurrentSegmentOffset,
+                output,
+                ec);
+            if (ec)
+            {
+                return ToHRESULT(ec);
+            }
+        }
+        else
+        {
+            std::error_code ec;
+
+            auto output = BufferSpan(buffer.GetData() + totalRead, buffer.GetCount() - totalRead);
+            processed = Stream::ReadAt(
+                *m_volume,
+                m_DataSegments[m_CurrentSegmentIndex].ullDiskBasedOffset + m_CurrentSegmentOffset,
+                output,
+                ec);
+            if (ec)
+            {
+                return ToHRESULT(ec);
+            }
+        }
+
+        m_CurrentSegmentOffset += processed;
+        m_CurrentPosition += processed;
+        totalRead += std::min(remaining, processed);
+    }
+
+    if (totalRead > length)
+    {
+        Log::Warn(L"Unexpected NTFSStream::Read return value (expected: {}, current: {})", length, totalRead);
+    }
+
+    buffer.SetCount(totalRead);
     return S_OK;
 }
 
@@ -394,46 +360,59 @@ HRESULT UncompressNTFSStream::Read_(
 {
     HRESULT hr = E_FAIL;
     if (cbBytesToRead > MAXDWORD)
+    {
         return E_INVALIDARG;
+    }
+
     if (pcbBytesRead != nullptr)
+    {
         *pcbBytesRead = 0;
+    }
 
-    ULONGLONG ullDataSize = m_pChainedStream->GetSize();
-
-    if ((cbBytesToRead + m_ullPosition) > ullDataSize)
-        cbBytesToRead = ullDataSize - m_ullPosition;
+    const uint64_t allocatedSize = GetSize();
+    if ((cbBytesToRead + m_ullPosition) > allocatedSize)
+    {
+        cbBytesToRead = allocatedSize - m_ullPosition;
+    }
 
     if (cbBytesToRead == 0)
     {
-        if (pcbBytesRead != NULL)
-            *pcbBytesRead = 0LL;
         return S_OK;
     }
 
-    ULONGLONG ullBytesToRead = (m_ullPosition % m_dwCompressionUnit) + cbBytesToRead;
+    ULONGLONG ullBytesToRead =
+        RoundUpPow2((m_ullPosition % m_dwCompressionUnit) + cbBytesToRead, static_cast<ULONGLONG>(m_dwCompressionUnit));
     DWORD dwCUsToRead =
         static_cast<DWORD>(ullBytesToRead / m_dwCompressionUnit + (ullBytesToRead % m_dwCompressionUnit > 0 ? 1 : 0));
-    ULONGLONG ullToRead = 0LLU;
 
+    ULONGLONG ullToRead = 0LLU;
     if (!msl::utilities::SafeMultiply((ULONGLONG)dwCUsToRead, m_dwCompressionUnit, ullToRead))
+    {
         return HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW);
+    }
 
     ULONGLONG ullRead = 0LL;
-
     if (m_ullPosition % m_dwCompressionUnit == 0)
     {
         if (cbBytesToRead >= ullToRead)
         {
             CBinaryBuffer buffer((LPBYTE)pBuffer, (size_t)cbBytesToRead);
-            if (FAILED(hr = ReadCompressionUnit(dwCUsToRead, buffer, &ullRead)))
+            hr = ReadCompressionUnit(dwCUsToRead, buffer, &ullRead);
+            if (FAILED(hr))
+            {
                 return hr;
+            }
         }
         else
         {
             CBinaryBuffer buffer;
             buffer.SetCount((size_t)ullToRead);
-            if (FAILED(hr = ReadCompressionUnit(dwCUsToRead, buffer, &ullRead)))
+            hr = ReadCompressionUnit(dwCUsToRead, buffer, &ullRead);
+            if (FAILED(hr))
+            {
                 return hr;
+            }
+
             CopyMemory(pBuffer, buffer.GetData(), static_cast<size_t>(std::min(cbBytesToRead, ullRead)));
             ullRead = std::min<ULONGLONG>(cbBytesToRead, buffer.GetCount());
         }
@@ -445,8 +424,12 @@ HRESULT UncompressNTFSStream::Read_(
 
         CBinaryBuffer buffer;
         buffer.SetCount((size_t)ullToRead);
-        if (FAILED(hr = ReadCompressionUnit(dwCUsToRead, buffer, &ullRead)))
+        hr = ReadCompressionUnit(dwCUsToRead, buffer, &ullRead);
+        if (FAILED(hr))
+        {
             return hr;
+        }
+
         CopyMemory(
             pBuffer,
             buffer.GetData() + offset,
@@ -455,27 +438,19 @@ HRESULT UncompressNTFSStream::Read_(
     }
 
     if (pcbBytesRead != nullptr)
+    {
         *pcbBytesRead = ullRead;
+    }
+
     m_ullPosition += ullRead;
 
-    if (m_ullPosition % m_dwCompressionUnit && m_ullPosition < m_pChainedStream->GetSize())
+    if (m_ullPosition % m_dwCompressionUnit && m_ullPosition < GetSize())
     {
         // We end up in the middle of a CU, we need to rewind the underlying (compressed) stream by 1 CU...
-        m_pChainedStream->SetFilePointer(-static_cast<LONGLONG>(m_dwCompressionUnit), FILE_CURRENT, NULL);
+        SetFilePointer(-static_cast<LONGLONG>(m_dwCompressionUnit), FILE_CURRENT, NULL);
     }
+
     return S_OK;
-}
-
-HRESULT UncompressNTFSStream::Write_(
-    __in_bcount(cbBytes) const PVOID pBuffer,
-    __in ULONGLONG cbBytes,
-    __out_opt PULONGLONG pcbBytesWritten)
-{
-    DBG_UNREFERENCED_PARAMETER(pBuffer);
-    DBG_UNREFERENCED_PARAMETER(cbBytes);
-    DBG_UNREFERENCED_PARAMETER(pcbBytesWritten);
-
-    return E_NOTIMPL;
 }
 
 HRESULT UncompressNTFSStream::SetFilePointer(
@@ -483,10 +458,8 @@ HRESULT UncompressNTFSStream::SetFilePointer(
     __in DWORD dwMoveMethod,
     __out_opt PULONG64 pqwCurrPointer)
 {
-    if (!m_pChainedStream)
-        return E_FAIL;
-
     LONGLONG llCUAlignedPosition = 0L;
+
     switch (dwMoveMethod)
     {
         case FILE_BEGIN:
@@ -496,33 +469,21 @@ HRESULT UncompressNTFSStream::SetFilePointer(
             m_ullPosition += lDistanceToMove;
             break;
         case FILE_END:
-            m_ullPosition = m_pChainedStream->GetSize() + lDistanceToMove;
+            m_ullPosition = GetSize() + lDistanceToMove;
             break;
     }
 
-    if (m_ullPosition > m_pChainedStream->GetSize())
-        m_ullPosition = m_pChainedStream->GetSize();
+    if (m_ullPosition > GetSize())
+    {
+        m_ullPosition = GetSize();
+    }
 
     if (pqwCurrPointer != nullptr)
+    {
         *pqwCurrPointer = m_ullPosition;
+    }
 
     ULONG64 ullChainedPosition = 0LL;
     llCUAlignedPosition = (m_ullPosition / m_dwCompressionUnit) * m_dwCompressionUnit;
-    return m_pChainedStream->SetFilePointer(llCUAlignedPosition, FILE_BEGIN, &ullChainedPosition);
-}
-
-ULONG64 UncompressNTFSStream::GetSize()
-{
-    // The ntfs stream will have the uncompressed size
-    if (m_pChainedStream != nullptr)
-        return m_pChainedStream->GetSize();
-    LARGE_INTEGER Size = {0};
-    return Size.QuadPart;
-}
-
-HRESULT UncompressNTFSStream::SetSize(ULONG64 ullNewSize)
-{
-    DBG_UNREFERENCED_PARAMETER(ullNewSize);
-
-    return S_OK;
+    return NTFSStream::SetFilePointer(llCUAlignedPosition, FILE_BEGIN, &ullChainedPosition);
 }
