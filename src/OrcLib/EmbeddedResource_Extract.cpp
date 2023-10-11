@@ -771,12 +771,12 @@ HRESULT EmbeddedResource::ExtractValue(const std::wstring& Module, const std::ws
 
     if (FAILED(hr = LocateResource(Module, Name, VALUES(), hModule, hRes, strBinaryPath)))
     {
-        Log::Error(L"Failed LocateResource '{}' in module '{}' [{}]", Name, Module, SystemError(hr));
+        Log::Debug(L"Failed LocateResource '{}' in module '{}' [{}]", Name, Module, SystemError(hr));
         return hr;
     }
     else if (hModule == NULL && hRes == NULL)
     {
-        Log::Error(L"Failed to find '{}' in module '{}'", Name, Module);
+        Log::Debug(L"Failed to find '{}' in module '{}'", Name, Module);
         return HRESULT_FROM_WIN32(ERROR_RESOURCE_NAME_NOT_FOUND);
     }
 
