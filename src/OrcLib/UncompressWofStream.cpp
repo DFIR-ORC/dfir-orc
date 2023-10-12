@@ -13,9 +13,9 @@
 
 #include "ByteStream.h"
 #include "NTFSCompression.h"
-#include "NTFSStream.h"
 #include "Stream/StreamConcept.h"
 #include "Stream/ByteStreamConcept.h"
+#include "ByteStream.h"
 #include "Utils/BufferView.h"
 #include "VolumeReader.h"
 
@@ -25,7 +25,7 @@ using namespace Orc;
 namespace {
 
 std::unique_ptr<UncompressWofStream::WofStreamT>
-CreateWofStream(const std::shared_ptr<NTFSStream>& ntfsStream, WofAlgorithm algorithm, uint64_t uncompressedSize)
+CreateWofStream(const std::shared_ptr<ByteStream>& rawStream, WofAlgorithm algorithm, uint64_t uncompressedSize)
 {
     std::error_code ec;
 
@@ -38,10 +38,10 @@ CreateWofStream(const std::shared_ptr<NTFSStream>& ntfsStream, WofAlgorithm algo
 
     auto wofStream = std::make_unique<UncompressWofStream::WofStreamT>(
         std::move(decompressor),
-        ByteStreamConcept(ntfsStream),
+        ByteStreamConcept(rawStream),
         0,
         algorithm,
-        ntfsStream->GetSize(),
+        rawStream->GetSize(),
         uncompressedSize,
         ec);
     if (ec)
@@ -61,7 +61,7 @@ UncompressWofStream::UncompressWofStream()
     : ChainingStream()
     , m_buffer()
     , m_wofStream()
-    , m_ntfsStream()
+    , m_rawStream()
     , m_uncompressedSize(0)
     , m_algorithm(WofAlgorithm::kUnknown)
 {
@@ -108,23 +108,23 @@ HRESULT UncompressWofStream::Open(const std::shared_ptr<ByteStream>& pChained)
 }
 
 HRESULT UncompressWofStream::Open(
-    const std::shared_ptr<NTFSStream>& ntfsStream,
+    const std::shared_ptr<ByteStream>& rawStream,
     WofAlgorithm algorithm,
     uint64_t uncompressedSize)
 {
-    HRESULT hr = Open(ntfsStream);
+    HRESULT hr = Open(rawStream);
     if (FAILED(hr))
     {
         return hr;
     }
 
-    m_wofStream = CreateWofStream(ntfsStream, algorithm, uncompressedSize);
+    m_wofStream = CreateWofStream(rawStream, algorithm, uncompressedSize);
     if (!m_wofStream)
     {
         return E_FAIL;
     }
 
-    m_ntfsStream = ntfsStream;
+    m_rawStream = rawStream;
     m_algorithm = algorithm;
     m_uncompressedSize = uncompressedSize;
     return S_OK;
@@ -143,7 +143,7 @@ HRESULT UncompressWofStream::Read_(
 
     if (!m_wofStream)
     {
-        m_wofStream = CreateWofStream(m_ntfsStream, m_algorithm, m_uncompressedSize);
+        m_wofStream = CreateWofStream(m_rawStream, m_algorithm, m_uncompressedSize);
         if (!m_wofStream)
         {
             return E_FAIL;
@@ -189,7 +189,7 @@ HRESULT UncompressWofStream::SetFilePointer(
 
     if (!m_wofStream)
     {
-        m_wofStream = CreateWofStream(m_ntfsStream, m_algorithm, m_uncompressedSize);
+        m_wofStream = CreateWofStream(m_rawStream, m_algorithm, m_uncompressedSize);
         if (!m_wofStream)
         {
             return E_FAIL;
