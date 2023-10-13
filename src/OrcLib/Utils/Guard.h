@@ -100,9 +100,11 @@ public:
     T** data() { return &m_data; }
     const T** data() const { return &m_data; }
 
-    explicit operator bool() const { return m_data != nullptr; }
+    explicit operator bool() const noexcept { return m_data != nullptr; }
     bool operator==(const T& value) const { return m_data == value; }
     bool operator==(const PointerGuard<T>& o) const { return m_data == o.m_pointer; }
+
+    T* operator->() const noexcept { return m_data; }
 
 protected:
     T* m_data;
