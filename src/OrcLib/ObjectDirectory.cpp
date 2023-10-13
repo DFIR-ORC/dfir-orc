@@ -188,7 +188,7 @@ HRESULT ObjectDirectory::ParseObjectDirectory(
 
     if (FAILED(hr = pNtDll->NtOpenDirectoryObject(&hRoot, GENERIC_READ, &ObjAttr)))
     {
-        Log::Error(L"Failed to open object directory '{}' [{}]", aObjDir, SystemError(hr));
+        Log::Debug(L"Failed to open object directory '{}' [{}]", aObjDir, SystemError(hr));
         return hr;
     }
     BOOST_SCOPE_EXIT((&hRoot)) { CloseHandle(hRoot); }
