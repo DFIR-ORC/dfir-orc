@@ -1620,26 +1620,30 @@ HRESULT FileFind::InitializeYara(std::unique_ptr<YaraConfig>& config)
         yara_rules.erase(new_end, end(yara_rules));
     }
 
+    //
+    // COMMENT: Do not do this because if a rule 'abcdef' references another rule 'foo' but only 'abcdef' is specified
+    // in the xml configuration then 'abcdef' will not work because 'foo' has been disabled. This is a silent failure.
+    //
     // Disable all rules then enable only the ones referenced in the xml configuration
-    if (!yara_rules.empty())
-    {
-        hr = m_YaraScan->DisableRule("*");
-        if (FAILED(hr))
-        {
-            Log::Error("Failed to disable yara rule [{}]", SystemError(hr));
-            return hr;
-        }
+    // if (!yara_rules.empty())
+    //{
+    //    hr = m_YaraScan->DisableRule("*");
+    //    if (FAILED(hr))
+    //    {
+    //        Log::Error("Failed to disable yara rule [{}]", SystemError(hr));
+    //        return hr;
+    //    }
 
-        for (const auto& rule : yara_rules)
-        {
-            hr = m_YaraScan->EnableRule(rule.c_str());
-            if (FAILED(hr))
-            {
-                Log::Error("Failed to enable Yara rule [{}]", SystemError(hr));
-                return hr;
-            }
-        }
-    }
+    //    for (const auto& rule : yara_rules)
+    //    {
+    //        hr = m_YaraScan->EnableRule(rule.c_str());
+    //        if (FAILED(hr))
+    //        {
+    //            Log::Error("Failed to enable Yara rule [{}]", SystemError(hr));
+    //            return hr;
+    //        }
+    //    }
+    //}
 
     m_YaraScan->PrintConfiguration();
 
