@@ -158,7 +158,7 @@ HRESULT Orc::UtilGetTempFile(
 
     while (dwRetries < CREATION_RETRIES)
     {
-        if (GetTempFileName(pwszDir, L"NTRACK", 0, wszTempFilePath))
+        if (GetTempFileName(pwszDir, L"DFIR-ORC", 0, wszTempFilePath))
         {
             if (pwszExt)
             {
