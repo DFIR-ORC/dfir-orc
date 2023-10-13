@@ -157,8 +157,8 @@ OutputIt ToHex(InputIt first, InputIt last, OutputIt out)
 
     for (auto it = first; it != last; ++it)
     {
-        std::string_view input(reinterpret_cast<const char*>(&(*it)), sizeof(typename InputIt::value_type));
-        for (int i = input.size() - 1; i >= 0; --i)
+        BufferView input(reinterpret_cast<const uint8_t*>(&(*it)), sizeof(typename InputIt::value_type));
+        for (int i = static_cast<int>(input.size()) - 1; i >= 0; --i)
         {
             *out++ = hex[(input[i] >> 4) & 0x0F];
             *out++ = hex[input[i] & 0x0F];
