@@ -17,6 +17,7 @@
 #include <fmt/format.h>
 
 #include "Text/Hex.h"
+#include "Utils/BufferView.h"
 #include "Utils/Result.h"
 #include "Utils/TypeTraits.h"
 
@@ -54,13 +55,13 @@ void ToString(const GUID& guid, OutputIt out)
     }
 
     const auto data4leftLength = 2;
-    std::string_view data4Left(reinterpret_cast<const char*>(&guid.Data4[0]), data4leftLength);
+    BufferView data4Left(reinterpret_cast<const uint8_t*>(&guid.Data4[0]), data4leftLength);
     ToHex(std::cbegin(data4Left), std::cend(data4Left), out);
 
     *out++ = '-';
 
-    std::string_view data4right(
-        reinterpret_cast<const char*>(&guid.Data4[data4leftLength]), sizeof(guid.Data4) - data4leftLength);
+    BufferView data4right(
+        reinterpret_cast<const uint8_t*>(&guid.Data4[data4leftLength]), sizeof(guid.Data4) - data4leftLength);
     ToHex(std::cbegin(data4right), std::cend(data4right), out);
 
     *out++ = '}';
