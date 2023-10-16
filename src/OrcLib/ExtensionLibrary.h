@@ -24,7 +24,6 @@ namespace Orc {
 template <class Ext>
 class ExtensionLibraryHandler : public TerminationHandler
 {
-
 public:
     ExtensionLibraryHandler(const std::wstring& strDescr)
         : TerminationHandler(strDescr, ROBUSTNESS_UNLOAD_DLLS) {};
@@ -32,17 +31,19 @@ public:
     HRESULT operator()();
 };
 
+class DependencyLibrary;
+
 class ExtensionLibrary
 {
-
     template <class Ext>
     friend class ExtensionLibraryHandler;
 
 public:
-    ExtensionLibrary(
-        const std::wstring& strKeyword,
-        const std::wstring& strX86LibRef,
-        const std::wstring& strX64LibRef);
+    ExtensionLibrary(const std::wstring& strKeyword,
+                     const std::wstring& strX86LibRef,
+                     const std::wstring& strX64LibRef,
+                     std::vector<std::shared_ptr<DependencyLibrary>> dependencies = {}
+    );
 
     ExtensionLibrary(ExtensionLibrary&&) noexcept = default;
 
@@ -56,8 +57,12 @@ public:
             return L"(invalid library name)"s;
     }
 
+    const auto& Keyword() const {
+        return m_strKeyword;
+    }
+
     template <class Library>
-    static const std::shared_ptr<Library>
+    static std::shared_ptr<Library>
     GetLibrary(std::optional<std::filesystem::path> tempDir = std::nullopt, bool bShared = true)
     {
         try
@@ -122,8 +127,10 @@ public:
 
 protected:
     bool m_bInitialized = false;
-
     CriticalSection m_cs;
+
+    HRESULT
+    LoadDependencies(std::optional<std::filesystem::path> tempDir = std::nullopt);
 
     HRESULT TryLoad(const std::wstring& strFileRef);
 
@@ -212,6 +219,8 @@ protected:
     bool m_bDeleteOnClose = false;
     std::shared_ptr<TerminationHandler> m_UnLoadHandler;
 
+    std::vector<std::shared_ptr<DependencyLibrary>> m_Dependencies;
+
     HRESULT ToDesiredName(const std::wstring& libName);
 
     template <class Library>
@@ -239,6 +248,17 @@ protected:
     T GetExtension(LPCSTR szFunctionName, bool bMandatory = false)
     {
         return (T)GetEntryPoint(szFunctionName, bMandatory);
+    }
+};
+
+class DependencyLibrary : public ExtensionLibrary
+{
+public:
+    using Orc::ExtensionLibrary::ExtensionLibrary;
+    virtual std::pair<HRESULT, HINSTANCE> LoadThisLibrary(const std::filesystem::path& libFile)
+    {
+        // dependency libraries are not loaded
+        return {S_OK, (HINSTANCE)NULL};
     }
 };
 
