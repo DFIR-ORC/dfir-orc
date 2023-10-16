@@ -193,6 +193,9 @@ public:
     const std::optional<std::wstring>& OrcTool() const { return m_orcTool; }
     void SetOrcTool(const std::wstring& tool) { m_orcTool = tool; }
 
+    void SetTimeout(std::chrono::milliseconds timeout) { m_timeout = timeout; }
+    const std::optional<std::chrono::milliseconds>& GetTimeout() const { return m_timeout; }
+
     const Parameters& GetParameters() { return m_Parameters; };
 
     CmdRequest Request() const { return m_Request; };
@@ -222,6 +225,7 @@ private:
     std::optional<std::wstring> m_orcTool;
 
     DWORD m_dwPid;
+    std::optional<std::chrono::milliseconds> m_timeout;
 };
 
 }  // namespace Orc
