@@ -212,6 +212,10 @@ public:
     const std::optional<std::wstring>& GetOrcTool() const { return m_orcTool; }
     void SetOrcTool(const std::optional<std::wstring>& tool) { m_orcTool = tool; }
 
+    const std::optional<std::chrono::milliseconds>& GetTimeout() const { return m_timeout; }
+
+    void SetTimeoutTimer(std::shared_ptr<void> timer) { m_timeoutTimer = std::move(timer); }
+
     ~CommandExecute(void);
 
 private:
@@ -220,6 +224,8 @@ private:
     std::wstring m_commandLine;
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
+    std::optional<std::chrono::milliseconds> m_timeout;
+    std::shared_ptr<void> m_timeoutTimer;
     std::optional<std::wstring> m_originResourceName;
     std::optional<std::wstring> m_originFriendlyName;
     std::optional<std::wstring> m_executableSha1;

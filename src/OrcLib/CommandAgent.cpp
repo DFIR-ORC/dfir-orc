@@ -697,6 +697,11 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
             break;
     }
 
+    if (message->GetTimeout().has_value())
+    {
+        retval->m_timeout = *message->GetTimeout();
+    }
+
     if (m_bChildDebug)
     {
         Log::Debug(L"CommandAgent: Configured dump file path '{}'", m_TempDir);
@@ -780,6 +785,17 @@ HRESULT CommandAgent::ExecuteNextCommand()
 
         if (SUCCEEDED(hr))
         {
+            if (command->GetTimeout().has_value() && command->GetTimeout()->count() != 0)
+            {
+                auto timer = std::make_shared<Concurrency::timer<CommandMessage::Message>>(
+                    (unsigned int)command->GetTimeout()->count(),
+                    CommandMessage::MakeAbortMessage(command->GetProcessHandle()),
+                    static_cast<CommandMessage::ITarget*>(&m_cmdAgentBuffer));
+
+                command->SetTimeoutTimer(timer);
+                timer->start();
+            }
+
             {
                 Concurrency::critical_section::scoped_lock s(m_cs);
                 m_RunningCommands.push_back(command);
@@ -1268,6 +1284,15 @@ void CommandAgent::run()
                             request->Keyword()));
                     }
                     CloseHandle(hProcess);
+                }
+            }
+            break;
+            case CommandMessage::Abort: {
+                Log::Info("Abort process");
+
+                if (!TerminateProcess(request->ProcessHandle(), E_ABORT))
+                {
+                    Log::Error(L"Failed to terminate process [{}]", LastWin32Error());
                 }
             }
             break;
