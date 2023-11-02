@@ -134,6 +134,8 @@ public:
         o.m_data = m_invalidValue;
     }
 
+    virtual ~DescriptorGuard() { m_data = m_invalidValue; }
+
     DescriptorGuard& operator=(DescriptorGuard&& o) noexcept
     {
         if (this != &o)
@@ -145,8 +147,6 @@ public:
 
         return *this;
     }
-
-    virtual ~DescriptorGuard() { m_data = m_invalidValue; }
 
     const T& value() const { return m_data; }
     T& value() { return m_data; }
@@ -175,11 +175,7 @@ public:
     {
     }
 
-    FileHandle(FileHandle&& handle) noexcept
-        : DescriptorGuard<HANDLE>(std::move(handle))
-    {
-    }
-
+    FileHandle(FileHandle&& handle) noexcept = default;
     FileHandle& operator=(FileHandle&& o) = default;
 
     ~FileHandle()
@@ -205,11 +201,7 @@ public:
     {
     }
 
-    ServiceHandle(ServiceHandle&& handle) noexcept
-        : DescriptorGuard<SC_HANDLE>(std::move(handle))
-    {
-    }
-
+    ServiceHandle(ServiceHandle&& handle) noexcept = default;
     ServiceHandle& operator=(ServiceHandle&& o) = default;
 
     ~ServiceHandle()
@@ -235,11 +227,7 @@ public:
     {
     }
 
-    Handle(Handle&& o) noexcept
-        : DescriptorGuard<HANDLE>(std::move(o))
-    {
-    }
-
+    Handle(Handle&& o) noexcept = default;
     Handle& operator=(Handle&& o) = default;
 
     ~Handle()
@@ -265,11 +253,7 @@ public:
     {
     }
 
-    Module(Module&& o) noexcept
-        : DescriptorGuard<HMODULE>(std::move(o))
-    {
-    }
-
+    Module(Module&& o) noexcept = default;
     Module& operator=(Module&& o) = default;
 
     ~Module()
