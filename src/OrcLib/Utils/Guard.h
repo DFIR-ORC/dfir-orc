@@ -83,7 +83,7 @@ public:
     PointerGuard& operator=(const PointerGuard&) = delete;
     PointerGuard(const PointerGuard&) = delete;
 
-    PointerGuard(PointerGuard&& o)
+    PointerGuard(PointerGuard&& o) noexcept
     {
         m_data = o.m_data;
         o.m_data = nullptr;
@@ -105,6 +105,17 @@ public:
     bool operator==(const PointerGuard<T>& o) const { return m_data == o.m_pointer; }
 
     T* operator->() const noexcept { return m_data; }
+
+    PointerGuard& operator=(PointerGuard&& o) noexcept
+    {
+        if (this != &o)
+        {
+            m_data = o.m_data;
+            o.m_data = nullptr;
+        }
+
+        return *this;
+    }
 
 protected:
     T* m_data;
