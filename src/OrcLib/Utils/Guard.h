@@ -156,6 +156,13 @@ public:
     T* data() { return &m_data; }
     const T* data() const { return &m_data; }
 
+    T release()
+    {
+        auto descriptor = std::move(m_data);
+        m_data = m_invalidValue;
+        return descriptor;
+    }
+
     bool IsValid() const { return m_data != m_invalidValue; }
 
     explicit operator bool() const { return m_data != m_invalidValue; }
