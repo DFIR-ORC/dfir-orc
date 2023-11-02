@@ -290,5 +290,33 @@ public:
     }
 };
 
+class Lock final
+{
+public:
+    Lock(HANDLE mutex, std::error_code& ec)
+        : m_mutex(mutex)
+    {
+        auto ret = WaitForSingleObject(mutex, INFINITE);
+        if (ret != WAIT_OBJECT_0)
+        {
+            ec = LastWin32Error();
+            Log::Warn("Failed to acquire mutex [{}]", ec);
+            return;
+        }
+    }
+
+    ~Lock()
+    {
+        if (m_mutex && !ReleaseMutex(m_mutex))
+        {
+            // This could fail if mutex is not owned by the current thread
+            Log::Warn("Failed ReleaseMutex [{}]", LastWin32Error());
+        }
+    }
+
+private:
+    HANDLE m_mutex;
+};
+
 }  // namespace Guard
 }  // namespace Orc
