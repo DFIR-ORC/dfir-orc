@@ -518,6 +518,10 @@ HRESULT WolfExecution::CreateCommandAgent(
                         break;
                     case CommandNotification::Terminated:
                         break;
+                    case CommandNotification::Aborted: {
+                        Log::Debug(L"{}: Aborted", item->GetKeyword());
+                    }
+                    break;
                     case CommandNotification::Running:
                         break;
                     case CommandNotification::ProcessAbnormalTermination:
@@ -669,7 +673,7 @@ HRESULT WolfExecution::CreateCommandAgent(
     if (FAILED(hr))
     {
         Log::Error(
-            L"WolfLauncher cmd agent failed during initialisation (output directory: '{}', [{}])",
+            L"WolfLauncher cmd agent failed during initialisation (output directory: '{}') [{}]",
             m_Temporary.Path,
             SystemError(hr));
         return hr;

@@ -201,6 +201,16 @@ CommandNotification::Notification CommandNotification::NotifyCanceled()
     return retval;
 }
 
+CommandNotification::Notification
+CommandNotification::NotifyAborted(const std::wstring& keyword, DWORD processId, HANDLE hProcess)
+{
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Aborted);
+    retval->m_Keyword = keyword;
+    retval->m_dwPid = processId;
+    retval->m_hProcess = hProcess;
+    return retval;
+}
+
 CommandNotification::Notification CommandNotification::NotifyTerminateAll()
 {
     auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::AllTerminated);

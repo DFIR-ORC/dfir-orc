@@ -111,7 +111,7 @@ public:
     };
 
     static Message MakeCancelMessage();
-    static Message MakeAbortMessage(HANDLE hProcess);
+    static Message MakeAbortMessage(const std::wstring& keyword, DWORD processId, HANDLE hProcess);
     static Message MakeTerminateMessage(DWORD dwProcessID);
     static Message MakeCancelAnyPendingAndStopMessage();
     static Message MakeTerminateAllMessage();

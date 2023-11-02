@@ -176,7 +176,7 @@ public:
 
     HRESULT Execute(const JobObject& job, bool bBreakAway = true);
 
-    HANDLE GetProcessHandle() { return m_pi.hProcess; };
+    HANDLE ProcessHandle() { return m_pi.hProcess; };
 
     virtual HRESULT WaitCompletion(DWORD dwTimeOut = INFINITE);
     virtual bool HasCompleted();

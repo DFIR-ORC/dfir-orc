@@ -47,10 +47,12 @@ CommandMessage::Message CommandMessage::MakeTerminateMessage(DWORD dwProcessID)
     return retval;
 }
 
-CommandMessage::Message CommandMessage::MakeAbortMessage(HANDLE hProcess)
+CommandMessage::Message CommandMessage::MakeAbortMessage(const std::wstring& keyword, DWORD processId, HANDLE hProcess)
 {
     auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Abort);
+    retval->m_Keyword = keyword;
     retval->m_hProcess = hProcess;
+    retval->m_dwPid = processId;
     return retval;
 }
 

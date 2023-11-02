@@ -789,7 +789,8 @@ HRESULT CommandAgent::ExecuteNextCommand()
             {
                 auto timer = std::make_shared<Concurrency::timer<CommandMessage::Message>>(
                     (unsigned int)command->GetTimeout()->count(),
-                    CommandMessage::MakeAbortMessage(command->GetProcessHandle()),
+                    CommandMessage::MakeAbortMessage(
+                        command->GetKeyword(), command->ProcessID(), command->ProcessHandle()),
                     static_cast<CommandMessage::ITarget*>(&m_cmdAgentBuffer));
 
                 command->SetTimeoutTimer(timer);
@@ -811,7 +812,7 @@ HRESULT CommandAgent::ExecuteNextCommand()
 
             if (!RegisterWaitForSingleObject(
                     &hWaitObject,
-                    command->GetProcessHandle(),
+                    command->ProcessHandle(),
                     WaitOrTimerCallbackFunction,
                     pBlock,
                     INFINITE,
@@ -1288,7 +1289,10 @@ void CommandAgent::run()
             }
             break;
             case CommandMessage::Abort: {
-                Log::Info("Abort process");
+                Log::Info("Abort process PID: {}", request->ProcessID());
+
+                SendResult(CommandNotification::NotifyAborted(
+                    request->Keyword(), request->ProcessID(), request->ProcessHandle()));
 
                 if (!TerminateProcess(request->ProcessHandle(), E_ABORT))
                 {
