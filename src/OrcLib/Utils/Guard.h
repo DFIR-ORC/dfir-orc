@@ -12,6 +12,7 @@
 #include <windows.h>
 
 #include "Log/Log.h"
+#include "Text/Fmt/std_error_code.h"
 
 namespace Orc {
 namespace Guard {
@@ -316,6 +317,32 @@ public:
 
 private:
     HANDLE m_mutex;
+};
+
+template <typename T = void>
+class ViewOfFile final : public PointerGuard<T>
+{
+public:
+    ViewOfFile(T* data = nullptr)
+        : PointerGuard<T>(data)
+    {
+    }
+
+    ViewOfFile(ViewOfFile&& o) noexcept = default;
+    ViewOfFile& operator=(ViewOfFile&& o) = default;
+
+    ~ViewOfFile()
+    {
+        if (m_data == nullptr)
+        {
+            return;
+        }
+
+        if (::UnmapViewOfFile(m_data) == FALSE)
+        {
+            Log::Warn("Failed UnmapViewOfFile [{}]", LastWin32Error());
+        }
+    }
 };
 
 }  // namespace Guard
