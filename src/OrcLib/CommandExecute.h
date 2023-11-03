@@ -152,6 +152,7 @@ public:
     typedef enum _ProcessStatus
     {
         Initialized,
+        Created,
         Started,
         Complete,
         Closed
@@ -175,6 +176,8 @@ public:
     HRESULT AddDumpFileDirectory(const std::wstring& strDirectory);
 
     HRESULT Execute(const JobObject& job, bool bBreakAway = true);
+    HRESULT CreateChildProcess(const JobObject& job, bool bBreakAway = true);
+    HRESULT ResumeChildProcess();
 
     HANDLE ProcessHandle() { return m_pi.hProcess; };
 

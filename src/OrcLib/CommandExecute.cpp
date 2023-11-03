@@ -261,6 +261,23 @@ HRESULT CommandExecute::AddDumpFileDirectory(const std::wstring& strDirectory)
 
 HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
 {
+    HRESULT hr = CreateChildProcess(job, bBreakAway);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    hr = ResumeChildProcess();
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    return S_OK;
+}
+
+HRESULT CommandExecute::CreateChildProcess(const JobObject& job, bool bBreakAway)
+{
     HRESULT hr = E_FAIL;
     wstring cmdLineBuilder;
 
@@ -396,9 +413,17 @@ HRESULT CommandExecute::Execute(const JobObject& job, bool bBreakAway)
     // Command as 'GetSamples' will create a child process 'GetThis' with the current log file path for appending
     Log::Flush();
 
+    SetStatus(Created);
+    return S_OK;
+}
+
+HRESULT CommandExecute::ResumeChildProcess()
+{
+    assert(GetStatus() == Created);
+
     if (ResumeThread(m_pi.hThread) == -1)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
+        HRESULT hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error(L"Failed to resume process '{}' [{}]", m_Keyword, SystemError(hr));
         TerminateProcess(m_pi.hProcess, (UINT)-1);
         return hr;

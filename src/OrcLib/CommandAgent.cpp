@@ -777,14 +777,17 @@ HRESULT CommandAgent::ExecuteNextCommand()
             m_MaximumRunningSemaphore.Release();
         }
     }
+
     if (command)
     {
-        // there is something to execute in the queue
-
-        hr = command->Execute(m_Job, m_bWillRequireBreakAway);
-
+        hr = command->CreateChildProcess(m_Job, m_bWillRequireBreakAway);
         if (SUCCEEDED(hr))
         {
+            {
+                Concurrency::critical_section::scoped_lock s(m_cs);
+                m_RunningCommands.push_back(command);
+            }
+
             if (command->GetTimeout().has_value() && command->GetTimeout()->count() != 0)
             {
                 auto timer = std::make_shared<Concurrency::timer<CommandMessage::Message>>(
@@ -797,15 +800,8 @@ HRESULT CommandAgent::ExecuteNextCommand()
                 timer->start();
             }
 
-            {
-                Concurrency::critical_section::scoped_lock s(m_cs);
-                m_RunningCommands.push_back(command);
-            }
-
             HANDLE hWaitObject = INVALID_HANDLE_VALUE;
-
             CompletionBlock* pBlockPtr = (CompletionBlock*)Concurrency::Alloc(sizeof(CompletionBlock));
-
             CompletionBlock* pBlock = new (pBlockPtr) CompletionBlock;
             pBlock->pAgent = this;
             pBlock->command = command;
@@ -824,6 +820,14 @@ HRESULT CommandAgent::ExecuteNextCommand()
                 return hr;
             }
 
+            hr = command->ResumeChildProcess();
+            if (FAILED(hr))
+            {
+                m_MaximumRunningSemaphore.Release();
+                command->CompleteExecution();
+                return S_OK;
+            }
+
             auto notification = CommandNotification::NotifyStarted(
                 command->ProcessID(), command->GetKeyword(), command->m_pi.hProcess, command->m_commandLine);
 
@@ -837,7 +841,6 @@ HRESULT CommandAgent::ExecuteNextCommand()
         }
         else
         {
-            // Process execution failed to start, releasing semaphone
             m_MaximumRunningSemaphore.Release();
             command->CompleteExecution();
         }
