@@ -781,73 +781,70 @@ HRESULT CommandAgent::ExecuteNextCommand()
     if (command)
     {
         hr = command->CreateChildProcess(m_Job, m_bWillRequireBreakAway);
-        if (SUCCEEDED(hr))
-        {
-            {
-                Concurrency::critical_section::scoped_lock s(m_cs);
-                m_RunningCommands.push_back(command);
-            }
-
-            if (command->GetTimeout().has_value() && command->GetTimeout()->count() != 0)
-            {
-                auto timer = std::make_shared<Concurrency::timer<CommandMessage::Message>>(
-                    (unsigned int)command->GetTimeout()->count(),
-                    CommandMessage::MakeAbortMessage(
-                        command->GetKeyword(), command->ProcessID(), command->ProcessHandle()),
-                    static_cast<CommandMessage::ITarget*>(&m_cmdAgentBuffer));
-
-                command->SetTimeoutTimer(timer);
-                timer->start();
-            }
-
-            HANDLE hWaitObject = INVALID_HANDLE_VALUE;
-            CompletionBlock* pBlockPtr = (CompletionBlock*)Concurrency::Alloc(sizeof(CompletionBlock));
-            CompletionBlock* pBlock = new (pBlockPtr) CompletionBlock;
-            pBlock->pAgent = this;
-            pBlock->command = command;
-
-            if (!RegisterWaitForSingleObject(
-                    &hWaitObject,
-                    command->ProcessHandle(),
-                    WaitOrTimerCallbackFunction,
-                    pBlock,
-                    INFINITE,
-                    WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE))
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error(
-                    L"Could not register for process '{}' termination [{}]", command->GetKeyword(), SystemError(hr));
-                return hr;
-            }
-
-            auto notification = CommandNotification::NotifyCreated(command->GetKeyword(), command->ProcessID());
-
-            notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
-            notification->SetOriginResourceName(command->GetOriginResourceName());
-            notification->SetExecutableSha1(command->GetExecutableSha1());
-            notification->SetOrcTool(command->GetOrcTool());
-            notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
-            notification->SetProcessHandle(command->ProcessHandle());
-            notification->SetProcessCommandLine(command->m_commandLine);
-
-            SendResult(notification);
-
-            hr = command->ResumeChildProcess();
-            if (FAILED(hr))
-            {
-                m_MaximumRunningSemaphore.Release();
-                command->CompleteExecution();
-                return S_OK;
-            }
-
-            Concurrency::send<CommandNotification::Notification>(
-                m_target, CommandNotification::NotifyStarted(command->GetKeyword(), command->ProcessID()));
-        }
-        else
+        if (FAILED(hr))
         {
             m_MaximumRunningSemaphore.Release();
             command->CompleteExecution();
+            return S_OK;
         }
+
+        {
+            Concurrency::critical_section::scoped_lock s(m_cs);
+            m_RunningCommands.push_back(command);
+        }
+
+        if (command->GetTimeout().has_value() && command->GetTimeout()->count() != 0)
+        {
+            auto timer = std::make_shared<Concurrency::timer<CommandMessage::Message>>(
+                (unsigned int)command->GetTimeout()->count(),
+                CommandMessage::MakeAbortMessage(command->GetKeyword(), command->ProcessID(), command->ProcessHandle()),
+                static_cast<CommandMessage::ITarget*>(&m_cmdAgentBuffer));
+
+            command->SetTimeoutTimer(timer);
+            timer->start();
+        }
+
+        HANDLE hWaitObject = INVALID_HANDLE_VALUE;
+        CompletionBlock* pBlockPtr = (CompletionBlock*)Concurrency::Alloc(sizeof(CompletionBlock));
+        CompletionBlock* pBlock = new (pBlockPtr) CompletionBlock;
+        pBlock->pAgent = this;
+        pBlock->command = command;
+
+        if (!RegisterWaitForSingleObject(
+                &hWaitObject,
+                command->ProcessHandle(),
+                WaitOrTimerCallbackFunction,
+                pBlock,
+                INFINITE,
+                WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Error(L"Could not register for process '{}' termination [{}]", command->GetKeyword(), SystemError(hr));
+            return hr;
+        }
+
+        auto notification = CommandNotification::NotifyCreated(command->GetKeyword(), command->ProcessID());
+
+        notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
+        notification->SetOriginResourceName(command->GetOriginResourceName());
+        notification->SetExecutableSha1(command->GetExecutableSha1());
+        notification->SetOrcTool(command->GetOrcTool());
+        notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
+        notification->SetProcessHandle(command->ProcessHandle());
+        notification->SetProcessCommandLine(command->m_commandLine);
+
+        SendResult(notification);
+
+        hr = command->ResumeChildProcess();
+        if (FAILED(hr))
+        {
+            m_MaximumRunningSemaphore.Release();
+            command->CompleteExecution();
+            return S_OK;
+        }
+
+        Concurrency::send<CommandNotification::Notification>(
+            m_target, CommandNotification::NotifyStarted(command->GetKeyword(), command->ProcessID()));
     }
 
     return S_OK;
