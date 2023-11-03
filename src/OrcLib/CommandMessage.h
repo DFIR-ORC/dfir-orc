@@ -75,6 +75,7 @@ public:
     typedef enum _Request
     {
         Execute = 0,
+        Start,
         Abort,
         Terminate,
         QueryRunningList,
@@ -112,6 +113,7 @@ public:
 
     static Message MakeCancelMessage();
     static Message MakeAbortMessage(const std::wstring& keyword, DWORD processId, HANDLE hProcess);
+    static Message MakeStartMessage(const std::wstring& keyword, DWORD dwProcessID);
     static Message MakeTerminateMessage(DWORD dwProcessID);
     static Message MakeCancelAnyPendingAndStopMessage();
     static Message MakeTerminateAllMessage();

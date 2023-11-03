@@ -40,6 +40,14 @@ CommandMessage::Message CommandMessage::MakeCancelAnyPendingAndStopMessage()
     return retval;
 }
 
+CommandMessage::Message CommandMessage::MakeStartMessage(const std::wstring& keyword, DWORD dwProcessID)
+{
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Start);
+    retval->m_dwPid = dwProcessID;
+    retval->m_Keyword = keyword;
+    return retval;
+}
+
 CommandMessage::Message CommandMessage::MakeTerminateMessage(DWORD dwProcessID)
 {
     auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Terminate);

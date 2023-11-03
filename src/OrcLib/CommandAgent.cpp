@@ -714,6 +714,42 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
     return retval;
 }
 
+void CommandAgent::StartCommandExecute(const std::shared_ptr<CommandMessage>& message)
+{
+    Concurrency::critical_section::scoped_lock s(m_cs);
+
+    std::shared_ptr<CommandExecute> command = nullptr;
+    for (const auto& runningCommand : m_RunningCommands)
+    {
+        if (runningCommand == nullptr)
+        {
+            continue;
+        }
+
+        if (runningCommand->ProcessID() == message->ProcessID())
+        {
+            command = runningCommand;
+        }
+    }
+
+    if (command == nullptr)
+    {
+        Log::Critical(L"Command '{}' resume rejected, command not found", message->Keyword());
+        return;
+    }
+
+    HRESULT hr = command->ResumeChildProcess();
+    if (FAILED(hr))
+    {
+        Log::Critical(L"Command '{}' resume failed [{}]", message->Keyword(), SystemError(hr));
+        TerminateProcess(command->ProcessHandle(), -1);
+        return;
+    }
+
+    Concurrency::send<CommandNotification::Notification>(
+        m_target, CommandNotification::NotifyStarted(command->GetKeyword(), command->ProcessID()));
+}
+
 typedef struct _CompletionBlock
 {
     CommandAgent* pAgent;
@@ -804,6 +840,7 @@ HRESULT CommandAgent::ExecuteNextCommand()
             timer->start();
         }
 
+        // Register a callback that will handle process termination (release semaphore, notify, etc...)
         HANDLE hWaitObject = INVALID_HANDLE_VALUE;
         CompletionBlock* pBlockPtr = (CompletionBlock*)Concurrency::Alloc(sizeof(CompletionBlock));
         CompletionBlock* pBlock = new (pBlockPtr) CompletionBlock;
@@ -834,17 +871,6 @@ HRESULT CommandAgent::ExecuteNextCommand()
         notification->SetProcessCommandLine(command->m_commandLine);
 
         SendResult(notification);
-
-        hr = command->ResumeChildProcess();
-        if (FAILED(hr))
-        {
-            m_MaximumRunningSemaphore.Release();
-            command->CompleteExecution();
-            return S_OK;
-        }
-
-        Concurrency::send<CommandNotification::Notification>(
-            m_target, CommandNotification::NotifyStarted(command->GetKeyword(), command->ProcessID()));
     }
 
     return S_OK;
@@ -1228,6 +1254,11 @@ void CommandAgent::run()
                 {
                     Log::Critical(L"Command '{}' rejected, command agent is stopping", request->Keyword());
                 }
+            }
+            break;
+            case CommandMessage::Start: {
+                Log::Debug(L"CommandAgent: Start command '{}'", request->Keyword());
+                StartCommandExecute(request);
             }
             break;
             case CommandMessage::RefreshRunningList: {

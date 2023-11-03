@@ -49,6 +49,9 @@ HRESULT WolfTask::ApplyNotification(
             m_executableSha1 = notification->GetExecutableSha1();
             m_isSelfOrcExecutable = notification->IsSelfOrcExecutable();
             m_orcTool = notification->GetOrcTool();
+
+            actions.push_back(CommandMessage::MakeStartMessage(
+                notification->GetKeyword(), static_cast<DWORD>(static_cast<DWORD64>(notification->GetProcessID()))));
         }
         break;
         case CommandNotification::Started:

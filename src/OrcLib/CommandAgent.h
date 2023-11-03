@@ -156,6 +156,7 @@ protected:
     std::shared_ptr<ProcessRedirect>
     PrepareRedirection(const std::shared_ptr<CommandExecute>& cmd, const CommandParameter& output);
     std::shared_ptr<CommandExecute> PrepareCommandExecute(const std::shared_ptr<CommandMessage>& message);
+    void StartCommandExecute(const std::shared_ptr<CommandMessage>& message);
 
     HRESULT ExecuteNextCommand();
 
