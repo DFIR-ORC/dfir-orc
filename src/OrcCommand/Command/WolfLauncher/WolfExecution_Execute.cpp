@@ -513,6 +513,10 @@ HRESULT WolfExecution::CreateCommandAgent(
             {
                 switch (item->GetEvent())
                 {
+                    case CommandNotification::Created: {
+                        Log::Debug(L"{}: Created", item->GetKeyword());
+                    }
+                    break;
                     case CommandNotification::Started:
                         Log::Debug(L"{}: Started", item->GetKeyword());
                         break;

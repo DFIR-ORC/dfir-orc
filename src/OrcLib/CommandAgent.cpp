@@ -820,6 +820,18 @@ HRESULT CommandAgent::ExecuteNextCommand()
                 return hr;
             }
 
+            auto notification = CommandNotification::NotifyCreated(command->GetKeyword(), command->ProcessID());
+
+            notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
+            notification->SetOriginResourceName(command->GetOriginResourceName());
+            notification->SetExecutableSha1(command->GetExecutableSha1());
+            notification->SetOrcTool(command->GetOrcTool());
+            notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
+            notification->SetProcessHandle(command->ProcessHandle());
+            notification->SetProcessCommandLine(command->m_commandLine);
+
+            SendResult(notification);
+
             hr = command->ResumeChildProcess();
             if (FAILED(hr))
             {
@@ -828,16 +840,8 @@ HRESULT CommandAgent::ExecuteNextCommand()
                 return S_OK;
             }
 
-            auto notification = CommandNotification::NotifyStarted(
-                command->ProcessID(), command->GetKeyword(), command->m_pi.hProcess, command->m_commandLine);
-
-            notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
-            notification->SetOriginResourceName(command->GetOriginResourceName());
-            notification->SetExecutableSha1(command->GetExecutableSha1());
-            notification->SetOrcTool(command->GetOrcTool());
-            notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
-
-            SendResult(notification);
+            Concurrency::send<CommandNotification::Notification>(
+                m_target, CommandNotification::NotifyStarted(command->GetKeyword(), command->ProcessID()));
         }
         else
         {

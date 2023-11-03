@@ -40,26 +40,21 @@ CommandNotification::CommandNotification(CommandNotification::Event anevent)
 {
 }
 
-CommandNotification::Notification CommandNotification::NotifyStarted(
-    DWORD dwPid,
-    const std::wstring& Keyword,
-    HANDLE hProcess,
-    const std::wstring& commandLine)
+CommandNotification::Notification CommandNotification::NotifyCreated(const std::wstring& Keyword, DWORD processId)
+{
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Created);
+    retval->m_Keyword = Keyword;
+    retval->m_dwPid = processId;
+    return retval;
+}
+
+CommandNotification::Notification CommandNotification::NotifyStarted(const std::wstring& Keyword, DWORD processId)
 {
     auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Started);
 
     retval->m_Result = CommandNotification::Success;
-    retval->m_dwPid = dwPid;
     retval->m_Keyword = Keyword;
-    retval->m_commandLine = commandLine;
-
-    if (hProcess != INVALID_HANDLE_VALUE)
-    {
-        FILETIME ExitTime, KernelTime, UserTime;
-        if (!::GetProcessTimes(hProcess, &retval->m_ProcessStartTime, &ExitTime, &UserTime, &KernelTime))
-            retval->m_ProcessStartTime = FILETIME();
-    }
-
+    retval->m_dwPid = processId;
     return retval;
 }
 
@@ -286,6 +281,18 @@ CommandNotification::Notification CommandNotification::NotifyFailure(
     retval->m_Keyword = Keyword;
 
     return retval;
+}
+
+void Orc::CommandNotification::SetProcessHandle(HANDLE hProcess)
+{
+    if (hProcess != INVALID_HANDLE_VALUE)
+    {
+        FILETIME ExitTime, KernelTime, UserTime;
+        if (!::GetProcessTimes(hProcess, &m_ProcessStartTime, &ExitTime, &UserTime, &KernelTime))
+        {
+            m_ProcessStartTime = FILETIME();
+        }
+    }
 }
 
 CommandNotification::~CommandNotification(void)
