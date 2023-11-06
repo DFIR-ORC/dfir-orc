@@ -75,5 +75,5 @@ STDMETHODIMP ArchiveOpenCallback::SetCompleted(const UInt64*, const UInt64*)
 STDMETHODIMP ArchiveOpenCallback::CryptoGetTextPassword(BSTR*)
 {
     // TODO: support passwords
-    return E_ABORT;
+    return E_NOTIMPL;
 }

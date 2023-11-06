@@ -1527,7 +1527,7 @@ HRESULT Main::Run()
     catch (...)
     {
         Log::Error(L"GetThis failed during sample collection, terminating archive");
-        return E_ABORT;
+        return E_UNEXPECTED;
     }
 
     return S_OK;

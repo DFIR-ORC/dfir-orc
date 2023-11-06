@@ -381,7 +381,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
     catch (...)
     {
         Log::Error("NTFSInfo failed during argument parsing, exiting");
-        return E_ABORT;
+        return E_UNEXPECTED;
     }
 
     // argc/argv parameters only

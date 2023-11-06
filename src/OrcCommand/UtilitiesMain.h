@@ -941,12 +941,12 @@ public:
         {
             Log::Critical(
                 "Exception during configuration evaluation. Type: {}, Reason: {}", typeid(e).name(), e.what());
-            return E_ABORT;
+            return E_UNEXPECTED;
         }
         catch (...)
         {
             Log::Critical("Exception during configuration evaluation");
-            return E_ABORT;
+            return E_UNEXPECTED;
         }
 
         // save the start time
@@ -977,7 +977,7 @@ public:
 #ifdef ORC_BUILD_BOOST_STACKTRACE
             std::cerr << boost::stacktrace::stacktrace();
 #endif
-            return E_ABORT;
+            return E_UNEXPECTED;
         }
         catch (...)
         {
@@ -987,7 +987,7 @@ public:
 #ifdef ORC_BUILD_BOOST_STACKTRACE
             std::cerr << boost::stacktrace::stacktrace();
 #endif
-            return E_ABORT;
+            return E_UNEXPECTED;
         }
 
         GetSystemTime(&Cmd.theFinishTime.value);

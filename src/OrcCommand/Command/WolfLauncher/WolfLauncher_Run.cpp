@@ -687,12 +687,12 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         std::cerr << "std::exception during outline creation" << std::endl;
         std::cerr << "Caught " << e.what() << std::endl;
         std::cerr << "Type " << typeid(e).name() << std::endl;
-        return E_ABORT;
+        return E_UNEXPECTED;
     }
     catch (...)
     {
         std::cerr << "Exception during outline creation" << std::endl;
-        return E_ABORT;
+        return E_UNEXPECTED;
     }
 
     auto outlineSize = [&]() {
