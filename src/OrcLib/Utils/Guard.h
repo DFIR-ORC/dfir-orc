@@ -151,7 +151,7 @@ public:
     const T& value() const { return m_data; }
     T& value() { return m_data; }
 
-    const T operator*() const { return m_data; }
+    const T& operator*() const { return m_data; }
 
     T* data() { return &m_data; }
     const T* data() const { return &m_data; }
