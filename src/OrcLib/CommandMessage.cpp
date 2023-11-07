@@ -30,6 +30,7 @@ CommandMessage::CommandMessage(CommandMessage::CmdRequest request)
     : m_Request(request)
     , m_dwPid(0L)
     , m_QueueAction(Enqueue)
+    , m_hProcess(NULL)
 {
 }
 
@@ -43,6 +44,13 @@ CommandMessage::Message CommandMessage::MakeTerminateMessage(DWORD dwProcessID)
 {
     auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Terminate);
     retval->m_dwPid = dwProcessID;
+    return retval;
+}
+
+CommandMessage::Message CommandMessage::MakeAbortMessage(HANDLE hProcess)
+{
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Abort);
+    retval->m_hProcess = hProcess;
     return retval;
 }
 

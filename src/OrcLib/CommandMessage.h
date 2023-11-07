@@ -75,6 +75,7 @@ public:
     typedef enum _Request
     {
         Execute = 0,
+        Abort,
         Terminate,
         QueryRunningList,
         RefreshRunningList,
@@ -110,6 +111,7 @@ public:
     };
 
     static Message MakeCancelMessage();
+    static Message MakeAbortMessage(HANDLE hProcess);
     static Message MakeTerminateMessage(DWORD dwProcessID);
     static Message MakeCancelAnyPendingAndStopMessage();
     static Message MakeTerminateAllMessage();
@@ -202,6 +204,7 @@ public:
     const std::wstring& Keyword() const { return m_Keyword; };
 
     DWORD ProcessID() { return m_dwPid; };
+    HANDLE ProcessHandle() const { return m_hProcess; }
 
     bool operator<(const CommandMessage& message) { return m_Request < message.m_Request; }
 
@@ -225,6 +228,7 @@ private:
     std::optional<std::wstring> m_orcTool;
 
     DWORD m_dwPid;
+    HANDLE m_hProcess;
     std::optional<std::chrono::milliseconds> m_timeout;
 };
 
