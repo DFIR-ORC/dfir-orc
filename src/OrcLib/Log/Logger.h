@@ -86,6 +86,23 @@ public:
 
             logger->Log(timepoint, level, std::basic_string_view<CharT>(msg.data(), msg.size()));
         }
+
+#ifdef _DEBUG
+        msg.push_back('\n');
+        msg.push_back('\0');
+
+        if (level >= Level::Info)
+        {
+            if constexpr (std::is_same_v<CharT, char>)
+            {
+                ::OutputDebugStringA(msg.data());
+            }
+            else
+            {
+                ::OutputDebugStringW(msg.data());
+            }
+        }
+#endif
     }
 
     template <typename FacilityIt, typename... Args>
