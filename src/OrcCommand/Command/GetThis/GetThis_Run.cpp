@@ -1346,7 +1346,7 @@ void Main::OnSampleWritten(const SampleRef& sample, const SampleSpec& sampleSpec
     }
 }
 
-void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool bStop)
+void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool& bStop)
 {
     HRESULT hr = E_FAIL;
 
@@ -1390,7 +1390,7 @@ void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool
         auto sample = CreateSample(aMatch, i, sampleSpec);
         UpdateSamplesLimits(sampleSpec, *sample);
 
-        // TODO: memory optimization: check that sampleIds is resetted when volume changes
+        // TODO: memory optimization: check that sampleIds is reset when volume changes
         m_sampleIds.insert(SampleId(*sample));
 
         if (config.Output.Type == OutputSpec::Kind::Archive)
