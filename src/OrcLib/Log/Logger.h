@@ -39,7 +39,7 @@ public:
         kFacilityCount
     };
 
-    Logger(std::initializer_list<std::pair<Facility, SpdlogLogger::Ptr>> loggers);
+    Logger(std::initializer_list<std::pair<Facility, SpdlogLogger::Ptr>> loggers = {});
 
     uint64_t warningCount() const;
     uint64_t errorCount() const;
