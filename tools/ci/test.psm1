@@ -1114,7 +1114,7 @@ function Get-OrcOutcome {
                     continue
                 }
 
-                if (-Not $Command.exit_code)
+                if (-Not "exit_code" -in $Command.PSobject.Properties.Name)
                 {
                     Write-Warning "$OutcomePath, $($Set.name)/$($Command.name): Missing 'exit_code'"
                     continue
