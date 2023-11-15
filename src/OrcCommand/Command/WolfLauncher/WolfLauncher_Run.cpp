@@ -1018,11 +1018,13 @@ HRESULT Main::Run_Execute()
                     }
                     else if (info.file_exists && (!info.size.has_value() || info.size.value() > 0))
                     {
-                        commandSetNode.Add(
+                        m_journal.Print(
+                            ToolName(),
+                            exec->GetKeyword(),
+                            Log::Level::Info,
                             "Skipping set because non-empty remote output file already exists: '{}' (size: {})",
                             info.path,
                             info.size);
-                        commandSetNode.AddEmptyLine();
                         continue;
                     }
                 }
@@ -1030,11 +1032,13 @@ HRESULT Main::Run_Execute()
                 hr = ::GetLocalOutputFileInformations(*exec, info);
                 if (SUCCEEDED(hr) && (!info.size || *info.size != 0))
                 {
-                    commandSetNode.Add(
-                        "Skipping set because non-empty local output file already exists: '{}' ({})",
+                    m_journal.Print(
+                        ToolName(),
+                        exec->GetKeyword(),
+                        Log::Level::Info,
+                        "Skipping set because non-empty local output file already exists: '{}' (size: {})",
                         info.path,
                         info.size);
-                    commandSetNode.AddEmptyLine();
 
                     // Archive is ready but was not uploaded
                     hr = UploadSingleFile(exec->GetOutputFileName(), exec->GetOutputFullPath());
