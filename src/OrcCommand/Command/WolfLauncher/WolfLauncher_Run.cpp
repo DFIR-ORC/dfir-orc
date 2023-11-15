@@ -931,10 +931,10 @@ HRESULT Main::Run_Execute()
     const std::wstring_view metaVersion(kOrcMetaVersionW);
     if (!metaName.empty() && !metaVersion.empty())
     {
-        m_journal.Print(ToolName(), kInfo, L"{} ({})", metaName, metaVersion);
+        m_journal.Print(ToolName(), {}, L"{} ({})", metaName, metaVersion);
     }
 
-    m_journal.Print(ToolName(), kInfo, L"Version: {}", kOrcVersionStringW);
+    m_journal.Print(ToolName(), {}, L"Version: {}", kOrcVersionStringW);
 
     for (const auto& exec : m_wolfexecs)
     {
@@ -1133,11 +1133,11 @@ HRESULT Main::Run_Execute()
     if (start.has_error())
     {
         Log::Debug(L"Failed to convert start time to time point [{}]", start.error());
-        m_journal.Print(ToolName(), kInfo, L"Done");
+        m_journal.Print(ToolName(), {}, L"Done");
     }
     else
     {
-        m_journal.Print(ToolName(), kInfo, L"Done (elapsed: {:%T})", std::chrono::system_clock::now() - *start);
+        m_journal.Print(ToolName(), {}, L"Done (elapsed: {:%T})", std::chrono::system_clock::now() - *start);
     }
 
     if (config.bBeepWhenDone)

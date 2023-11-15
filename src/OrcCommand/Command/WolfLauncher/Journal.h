@@ -37,7 +37,8 @@ public:
         const auto timepoint = std::chrono::system_clock::now();
 
         std::wstring message;
-        Text::FormatToWithoutEOL(std::back_inserter(message), "{:<16} {:<26} ", commandSet, agent);
+        Text::FormatToWithoutEOL(
+            std::back_inserter(message), "{:<16} {:<26} ", commandSet, agent.empty() ? L"Info" : agent);
         Text::FormatToWithoutEOL(std::back_inserter(message), std::forward<FmtArgs>(status)...);
 
         // TODO: instead of using console directly the syslog facility could have a custom console sink
