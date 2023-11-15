@@ -60,14 +60,14 @@ public:
         Print(commandSet, agent, Log::Level::Info, std::forward<FmtArgs>(status)...);
     }
 
-    auto Console() { return std::pair<std::lock_guard<std::mutex>, Command::Console&> {m_mutex, m_console}; }
+    auto Console() { return std::pair<std::lock_guard<std::recursive_mutex>, Command::Console&> {m_mutex, m_console}; }
     auto Console() const
     {
-        return std::pair<std::lock_guard<std::mutex>, const Command::Console&> {m_mutex, m_console};
+        return std::pair<std::lock_guard<std::recursive_mutex>, const Command::Console&> {m_mutex, m_console};
     }
 
 private:
-    mutable std::mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
     Command::Console& m_console;
 };
 
