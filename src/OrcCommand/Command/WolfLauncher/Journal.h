@@ -51,7 +51,18 @@ public:
         const auto& syslog = Orc::Log::DefaultLogger()->Get(Log::Facility::kSyslog);
         if (syslog)
         {
-            syslog->Log(timepoint, level, ToUtf8(message));
+            std::wstring syslogMessage;
+            if (agent.empty())
+            {
+                Text::FormatToWithoutEOL(std::back_inserter(syslogMessage), "[{}] ", commandSet);
+            }
+            else
+            {
+                Text::FormatToWithoutEOL(std::back_inserter(syslogMessage), "[{}] [{}] ", commandSet, agent);
+            }
+
+            Text::FormatToWithoutEOL(std::back_inserter(syslogMessage), std::forward<FmtArgs>(status)...);
+            syslog->Log(timepoint, level, ToUtf8(syslogMessage));
         }
     }
 
