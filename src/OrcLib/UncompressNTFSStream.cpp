@@ -444,10 +444,12 @@ HRESULT UncompressNTFSStream::Read_(
 
     m_ullPosition += ullRead;
 
-    if (m_ullPosition % m_dwCompressionUnit && m_ullPosition < GetSize())
+    // As it could be required to read more bytes than caller specified because of block compression the file offset
+    // must be updated for any following read.
+    hr = SetFilePointer(m_ullPosition, FILE_BEGIN, NULL);
+    if (FAILED(hr))
     {
-        // We end up in the middle of a CU, we need to rewind the underlying (compressed) stream by 1 CU...
-        SetFilePointer(-static_cast<LONGLONG>(m_dwCompressionUnit), FILE_CURRENT, NULL);
+        Log::Error("Failed SetFilePointer [{}]", SystemError(hr));
     }
 
     return S_OK;
