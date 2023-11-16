@@ -456,7 +456,7 @@ HRESULT MftRecordAttribute::GetStreams(
                 }
 
                 auto datastream = make_shared<UncompressNTFSStream>();
-                if (FAILED(hr = datastream->Open(rawdata, 16 * pVolReader->GetBytesPerCluster())))
+                if (FAILED(hr = datastream->OpenAllocatedDataStream(pVolReader, shared_from_this())))
                 {
                     Log::Error("Failed to open UncompressNTFSStream [{}]", SystemError(hr));
                     return hr;
@@ -885,30 +885,60 @@ HRESULT WOFReparseAttribute::GetStreams(
         return E_FAIL;
     }
 
-    auto ntfsStream = make_shared<NTFSStream>();
-    HRESULT hr = ntfsStream->OpenAllocatedDataStream(pVolReader, wofAttribute);
-    if (FAILED(hr))
+    if (wofAttribute->IsResident())
     {
-        Log::Error(L"Failed to open NTFSStream [{}]", SystemError(hr));
-        return hr;
+        auto bufferStream = make_shared<BufferStream<2048>>();
+        HRESULT hr = bufferStream->Open();
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        ULONGLONG ullBytesWritten = 0LL;
+        hr = bufferStream->Write(
+            ((PBYTE)wofAttribute->Header()) + wofAttribute->Header()->Form.Resident.ValueOffset,
+            wofAttribute->Header()->Form.Resident.ValueLength,
+            &ullBytesWritten);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        if (ullBytesWritten != wofAttribute->Header()->Form.Resident.ValueLength)
+        {
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        }
+
+        rawStream = bufferStream;
+    }
+    else
+    {
+        auto stream = make_shared<NTFSStream>();
+        HRESULT hr = stream->OpenAllocatedDataStream(pVolReader, wofAttribute);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to open NTFSStream [{}]", SystemError(hr));
+            return hr;
+        }
+
+        // Nonresident: checked in '::GetWofDataAttribute()'
+        Log::Debug(
+            "Open WOF stream (algorithm: {}, compressed size: {} uncompressed size: {})",
+            ToString(m_algorithm),
+            stream->GetSize(),
+            dataAttribute->Header()->Form.Nonresident.FileSize);
+
+        rawStream = stream;
     }
 
-    // Nonresident: checked in '::GetWofDataAttribute()'
-    Log::Debug(
-        "Open WOF stream (algorithm: {}, compressed size: {} uncompressed size: {})",
-        ToString(m_algorithm),
-        ntfsStream->GetSize(),
-        dataAttribute->Header()->Form.Nonresident.FileSize);
-
     auto wofStream = make_shared<UncompressWofStream>();
-    hr = wofStream->Open(ntfsStream, m_algorithm, dataAttribute->Header()->Form.Nonresident.FileSize);
+    HRESULT hr = wofStream->Open(rawStream, m_algorithm, dataAttribute->Header()->Form.Nonresident.FileSize);
     if (FAILED(hr))
     {
         Log::Debug("Failed to open wof stream [{}]", SystemError(hr));
         return hr;
     }
 
-    rawStream = ntfsStream;
     dataStream = wofStream;
     return S_OK;
 }

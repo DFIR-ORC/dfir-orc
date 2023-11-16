@@ -13,6 +13,18 @@
 #include "BinaryBuffer.h"
 #include "Stream/StreamUtils.h"
 
+#ifndef IMAGE_FILE_MACHINE_TARGET_HOST
+#    define IMAGE_FILE_MACHINE_TARGET_HOST 0x0001
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_ARM64
+#    define IMAGE_FILE_MACHINE_ARM64 0xAA64
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_ARMNT
+#    define IMAGE_FILE_MACHINE_ARMNT 0x01C4
+#endif
+
 using namespace Orc;
 
 namespace {
@@ -110,6 +122,7 @@ void ParseImageNtHeader(
     switch (imageNtHeader.FileHeader.Machine)
     {
         case IMAGE_FILE_MACHINE_I386:
+        case IMAGE_FILE_MACHINE_ARMNT:
             optionalHeaders32 = IMAGE_OPTIONAL_HEADER32 {0};
             ReadItem(stream, optionalHeaders32.value(), ec);
             if (ec)
@@ -127,6 +140,7 @@ void ParseImageNtHeader(
             break;
         case IMAGE_FILE_MACHINE_AMD64:
         case IMAGE_FILE_MACHINE_IA64:
+        case IMAGE_FILE_MACHINE_ARM64:
             optionalHeaders64 = IMAGE_OPTIONAL_HEADER64 {0};
             ReadItem(stream, optionalHeaders64.value(), ec);
             if (ec)

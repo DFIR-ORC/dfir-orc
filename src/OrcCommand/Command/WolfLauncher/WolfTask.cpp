@@ -39,10 +39,7 @@ HRESULT WolfTask::ApplyNotification(
 
     switch (notification->GetEvent())
     {
-        case CommandNotification::Started:
-            m_journal.Print(
-                m_commandSet, m_command, L"Started (pid: {})", m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
-
+        case CommandNotification::Created: {
             m_commandLine = notification->GetProcessCommandLine();
             m_dwPID = static_cast<DWORD>(notification->GetProcessID());
             m_startTime = notification->GetStartTime();
@@ -53,6 +50,13 @@ HRESULT WolfTask::ApplyNotification(
             m_isSelfOrcExecutable = notification->IsSelfOrcExecutable();
             m_orcTool = notification->GetOrcTool();
 
+            actions.push_back(CommandMessage::MakeStartMessage(
+                notification->GetKeyword(), static_cast<DWORD>(static_cast<DWORD64>(notification->GetProcessID()))));
+        }
+        break;
+        case CommandNotification::Started:
+            m_journal.Print(
+                m_commandSet, m_command, L"Started (pid: {})", m_dwPID == 0 ? notification->GetProcessID() : m_dwPID);
             break;
         case CommandNotification::Terminated: {
             if (notification->GetExitCode() == 0)

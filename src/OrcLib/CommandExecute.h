@@ -152,6 +152,7 @@ public:
     typedef enum _ProcessStatus
     {
         Initialized,
+        Created,
         Started,
         Complete,
         Closed
@@ -175,8 +176,10 @@ public:
     HRESULT AddDumpFileDirectory(const std::wstring& strDirectory);
 
     HRESULT Execute(const JobObject& job, bool bBreakAway = true);
+    HRESULT CreateChildProcess(const JobObject& job, bool bBreakAway = true);
+    HRESULT ResumeChildProcess();
 
-    HANDLE GetProcessHandle() { return m_pi.hProcess; };
+    HANDLE ProcessHandle() { return m_pi.hProcess; };
 
     virtual HRESULT WaitCompletion(DWORD dwTimeOut = INFINITE);
     virtual bool HasCompleted();
@@ -212,6 +215,10 @@ public:
     const std::optional<std::wstring>& GetOrcTool() const { return m_orcTool; }
     void SetOrcTool(const std::optional<std::wstring>& tool) { m_orcTool = tool; }
 
+    const std::optional<std::chrono::milliseconds>& GetTimeout() const { return m_timeout; }
+
+    void SetTimeoutTimer(std::shared_ptr<void> timer) { m_timeoutTimer = std::move(timer); }
+
     ~CommandExecute(void);
 
 private:
@@ -220,6 +227,8 @@ private:
     std::wstring m_commandLine;
     STARTUPINFO m_si;
     PROCESS_INFORMATION m_pi;
+    std::optional<std::chrono::milliseconds> m_timeout;
+    std::shared_ptr<void> m_timeoutTimer;
     std::optional<std::wstring> m_originResourceName;
     std::optional<std::wstring> m_originFriendlyName;
     std::optional<std::wstring> m_executableSha1;

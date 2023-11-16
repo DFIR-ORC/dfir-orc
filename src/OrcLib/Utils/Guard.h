@@ -12,6 +12,7 @@
 #include <windows.h>
 
 #include "Log/Log.h"
+#include "Text/Fmt/std_error_code.h"
 
 namespace Orc {
 namespace Guard {
@@ -83,7 +84,7 @@ public:
     PointerGuard& operator=(const PointerGuard&) = delete;
     PointerGuard(const PointerGuard&) = delete;
 
-    PointerGuard(PointerGuard&& o)
+    PointerGuard(PointerGuard&& o) noexcept
     {
         m_data = o.m_data;
         o.m_data = nullptr;
@@ -100,9 +101,22 @@ public:
     T** data() { return &m_data; }
     const T** data() const { return &m_data; }
 
-    explicit operator bool() const { return m_data != nullptr; }
+    explicit operator bool() const noexcept { return m_data != nullptr; }
     bool operator==(const T& value) const { return m_data == value; }
     bool operator==(const PointerGuard<T>& o) const { return m_data == o.m_pointer; }
+
+    T* operator->() const noexcept { return m_data; }
+
+    PointerGuard& operator=(PointerGuard&& o) noexcept
+    {
+        if (this != &o)
+        {
+            m_data = o.m_data;
+            o.m_data = nullptr;
+        }
+
+        return *this;
+    }
 
 protected:
     T* m_data;
@@ -134,6 +148,8 @@ public:
         o.m_data = m_invalidValue;
     }
 
+    virtual ~DescriptorGuard() { m_data = m_invalidValue; }
+
     DescriptorGuard& operator=(DescriptorGuard&& o) noexcept
     {
         if (this != &o)
@@ -146,15 +162,20 @@ public:
         return *this;
     }
 
-    virtual ~DescriptorGuard() { m_data = m_invalidValue; }
-
     const T& value() const { return m_data; }
     T& value() { return m_data; }
 
-    const T operator*() const { return m_data; }
+    const T& operator*() const { return m_data; }
 
     T* data() { return &m_data; }
     const T* data() const { return &m_data; }
+
+    T release()
+    {
+        auto descriptor = std::move(m_data);
+        m_data = m_invalidValue;
+        return descriptor;
+    }
 
     bool IsValid() const { return m_data != m_invalidValue; }
 
@@ -175,11 +196,7 @@ public:
     {
     }
 
-    FileHandle(FileHandle&& handle) noexcept
-        : DescriptorGuard<HANDLE>(std::move(handle))
-    {
-    }
-
+    FileHandle(FileHandle&& handle) noexcept = default;
     FileHandle& operator=(FileHandle&& o) = default;
 
     ~FileHandle()
@@ -205,11 +222,7 @@ public:
     {
     }
 
-    ServiceHandle(ServiceHandle&& handle) noexcept
-        : DescriptorGuard<SC_HANDLE>(std::move(handle))
-    {
-    }
-
+    ServiceHandle(ServiceHandle&& handle) noexcept = default;
     ServiceHandle& operator=(ServiceHandle&& o) = default;
 
     ~ServiceHandle()
@@ -235,11 +248,7 @@ public:
     {
     }
 
-    Handle(Handle&& o) noexcept
-        : DescriptorGuard<HANDLE>(std::move(o))
-    {
-    }
-
+    Handle(Handle&& o) noexcept = default;
     Handle& operator=(Handle&& o) = default;
 
     ~Handle()
@@ -265,11 +274,7 @@ public:
     {
     }
 
-    Module(Module&& o) noexcept
-        : DescriptorGuard<HMODULE>(std::move(o))
-    {
-    }
-
+    Module(Module&& o) noexcept = default;
     Module& operator=(Module&& o) = default;
 
     ~Module()
@@ -282,6 +287,60 @@ public:
         if (::FreeLibrary(m_data) == FALSE)
         {
             Log::Warn("Failed FreeLibrary [{}]", LastWin32Error());
+        }
+    }
+};
+
+class Lock final
+{
+public:
+    Lock(HANDLE mutex, std::error_code& ec)
+        : m_mutex(mutex)
+    {
+        auto ret = WaitForSingleObject(mutex, INFINITE);
+        if (ret != WAIT_OBJECT_0)
+        {
+            ec = LastWin32Error();
+            Log::Warn("Failed to acquire mutex [{}]", ec);
+            return;
+        }
+    }
+
+    ~Lock()
+    {
+        if (m_mutex && !ReleaseMutex(m_mutex))
+        {
+            // This could fail if mutex is not owned by the current thread
+            Log::Warn("Failed ReleaseMutex [{}]", LastWin32Error());
+        }
+    }
+
+private:
+    HANDLE m_mutex;
+};
+
+template <typename T = void>
+class ViewOfFile final : public PointerGuard<T>
+{
+public:
+    ViewOfFile(T* data = nullptr)
+        : PointerGuard<T>(data)
+    {
+    }
+
+    ViewOfFile(ViewOfFile&& o) noexcept = default;
+    ViewOfFile& operator=(ViewOfFile&& o) = default;
+
+    ~ViewOfFile()
+    {
+        if (m_data == nullptr)
+        {
+            return;
+        }
+
+        if (::UnmapViewOfFile(m_data) == FALSE)
+        {
+            Log::Warn("Failed UnmapViewOfFile [{}]", LastWin32Error());
         }
     }
 };

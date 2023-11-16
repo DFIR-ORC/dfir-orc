@@ -37,7 +37,8 @@ public:
         const auto timepoint = std::chrono::system_clock::now();
 
         std::wstring message;
-        Text::FormatToWithoutEOL(std::back_inserter(message), "{:<16} {:<26} ", commandSet, agent);
+        Text::FormatToWithoutEOL(
+            std::back_inserter(message), "{:<16} {:<26} ", commandSet, agent.empty() ? L"Info" : agent);
         Text::FormatToWithoutEOL(std::back_inserter(message), std::forward<FmtArgs>(status)...);
 
         // TODO: instead of using console directly the syslog facility could have a custom console sink
@@ -50,7 +51,18 @@ public:
         const auto& syslog = Orc::Log::DefaultLogger()->Get(Log::Facility::kSyslog);
         if (syslog)
         {
-            syslog->Log(timepoint, level, ToUtf8(message));
+            std::wstring syslogMessage;
+            if (agent.empty())
+            {
+                Text::FormatToWithoutEOL(std::back_inserter(syslogMessage), "[{}] ", commandSet);
+            }
+            else
+            {
+                Text::FormatToWithoutEOL(std::back_inserter(syslogMessage), "[{}] [{}] ", commandSet, agent);
+            }
+
+            Text::FormatToWithoutEOL(std::back_inserter(syslogMessage), std::forward<FmtArgs>(status)...);
+            syslog->Log(timepoint, level, ToUtf8(syslogMessage));
         }
     }
 
@@ -60,14 +72,14 @@ public:
         Print(commandSet, agent, Log::Level::Info, std::forward<FmtArgs>(status)...);
     }
 
-    auto Console() { return std::pair<std::lock_guard<std::mutex>, Command::Console&> {m_mutex, m_console}; }
+    auto Console() { return std::pair<std::lock_guard<std::recursive_mutex>, Command::Console&> {m_mutex, m_console}; }
     auto Console() const
     {
-        return std::pair<std::lock_guard<std::mutex>, const Command::Console&> {m_mutex, m_console};
+        return std::pair<std::lock_guard<std::recursive_mutex>, const Command::Console&> {m_mutex, m_console};
     }
 
 private:
-    mutable std::mutex m_mutex;
+    mutable std::recursive_mutex m_mutex;
     Command::Console& m_console;
 };
 

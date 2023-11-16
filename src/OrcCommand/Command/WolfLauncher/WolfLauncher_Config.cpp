@@ -670,7 +670,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Compression", config.strCompressionLevel))
                         ;
-                    else if (ParameterOption(argv[i] + 1, L"MothershipHandle", config.strMothershipHandle))
+                    else if (ParameterOption(argv[i] + 1, L"Mothership", config.strMothershipHandle))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"archive_timeout", config.msArchiveTimeOut))
                         ;
@@ -727,6 +727,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else
                     {
+                        Log::Error(L"Failed to parse command line item: '{}'", argv[i] + 1);
                         PrintUsage();
                         return E_INVALIDARG;
                     }

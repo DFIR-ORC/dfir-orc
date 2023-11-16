@@ -55,9 +55,11 @@ public:
 
     enum Event
     {
+        Created,
         Started,
         Terminated,
         Canceled,
+        Aborted,
         AllTerminated,
         Running,
         JobTimeLimit,
@@ -81,6 +83,7 @@ private:
     Result m_Result;
     Event m_Event;
     DWORD_PTR m_dwPid;
+    HANDLE m_hProcess;
     std::wstring m_Keyword;
     HRESULT m_hr;
 
@@ -105,8 +108,9 @@ protected:
     CommandNotification(Event result);
 
 public:
-    static Notification
-    NotifyStarted(DWORD dwPid, const std::wstring& Keyword, const HANDLE hProcess, const std::wstring& commandLine);
+    static Notification NotifyCreated(const std::wstring& Keyword, DWORD processId);
+
+    static Notification NotifyStarted(const std::wstring& Keyword, DWORD processId);
 
     std::optional<std::wstring> GetOriginFriendlyName() const { return m_originFriendlyName; }
     void SetOriginFriendlyName(const std::optional<std::wstring>& name) { m_originFriendlyName = name; }
@@ -141,6 +145,7 @@ public:
     static Notification NotifyRunningProcess(std::wstring&& keyword, DWORD dwPid);
 
     // Agent notifications
+    static Notification NotifyAborted(const std::wstring& keyword, DWORD processId, HANDLE hProcess);
     static Notification NotifyCanceled();
     static Notification NotifyTerminateAll();
     static Notification NotifyDone(const std::wstring& keyword, const HANDLE hJob);
@@ -149,6 +154,10 @@ public:
 
     // General notification properties
     DWORD_PTR GetProcessID() const { return m_dwPid; };
+
+    void SetProcessHandle(HANDLE hProcess);
+    HANDLE GetProcessHandle() const { return m_hProcess; }
+
     Event GetEvent() const { return m_Event; };
     const std::wstring& GetKeyword() const { return m_Keyword; };
     HRESULT GetHResult() const { return m_hr; };
@@ -192,6 +201,7 @@ public:
     };
 
     const std::wstring& GetProcessCommandLine() const { return m_commandLine; }
+    void SetProcessCommandLine(const std::wstring& commandLine) { m_commandLine = commandLine; }
 
     ~CommandNotification(void);
 };

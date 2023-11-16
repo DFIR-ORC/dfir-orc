@@ -345,8 +345,8 @@ LONG WINAPI Robustness::UnhandledExceptionFilter(__in struct _EXCEPTION_POINTERS
             }
             else
             {
-                wchar_t currentDirectory[MAX_PATH+1];
-                currentDirectory[sizeof(currentDirectory) - 1] = L'\0';
+                wchar_t currentDirectory[MAX_PATH + 1];
+                currentDirectory[MAX_PATH] = L'\0';
                 GetCurrentDirectoryW(MAX_PATH, currentDirectory);
                 printf("MiniDumpWriteDump: write %S%s\n", currentDirectory, filename);
             }

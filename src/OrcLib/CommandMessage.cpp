@@ -30,6 +30,7 @@ CommandMessage::CommandMessage(CommandMessage::CmdRequest request)
     : m_Request(request)
     , m_dwPid(0L)
     , m_QueueAction(Enqueue)
+    , m_hProcess(NULL)
 {
 }
 
@@ -39,10 +40,27 @@ CommandMessage::Message CommandMessage::MakeCancelAnyPendingAndStopMessage()
     return retval;
 }
 
+CommandMessage::Message CommandMessage::MakeStartMessage(const std::wstring& keyword, DWORD dwProcessID)
+{
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Start);
+    retval->m_dwPid = dwProcessID;
+    retval->m_Keyword = keyword;
+    return retval;
+}
+
 CommandMessage::Message CommandMessage::MakeTerminateMessage(DWORD dwProcessID)
 {
     auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Terminate);
     retval->m_dwPid = dwProcessID;
+    return retval;
+}
+
+CommandMessage::Message CommandMessage::MakeAbortMessage(const std::wstring& keyword, DWORD processId, HANDLE hProcess)
+{
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Abort);
+    retval->m_Keyword = keyword;
+    retval->m_hProcess = hProcess;
+    retval->m_dwPid = processId;
     return retval;
 }
 

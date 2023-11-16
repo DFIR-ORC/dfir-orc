@@ -153,6 +153,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, const WCHAR* argv[])
                     ;
                 else
                 {
+                    Log::Error(L"Failed to parse command line item: '{}'", argv[i] + 1);
                     PrintUsage();
                     return E_INVALIDARG;
                 }

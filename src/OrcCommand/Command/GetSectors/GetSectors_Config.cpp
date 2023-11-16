@@ -70,9 +70,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else
                 {
-                    Log::Error(L"[!] Unknown option : \"{}\".", argv[i]);
-                    Log::Error(L"Use /help to list the available options.");
-                    exit(-1);
+                    Log::Error(L"Failed to parse command line item: '{}'", argv[i] + 1);
+                    PrintUsage();
+                    return E_INVALIDARG;
                 }
                 break;
             default:

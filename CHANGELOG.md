@@ -1,5 +1,24 @@
 # ChangeLog
 
+## [10.2.3] - 2023-11-15
+### Added
+- Ntfs: Windows overlay file compression support with resident files
+- WolfLauncher: add to element 'command' attribute 'timeout'
+- WolfLauncher: Syslog: add some more logs
+
+### Changed
+- Yara: do not disable Yara's rule when not referenced in config
+- Authenticode: enable ARM PE authenticode check
+- Display command line invalid parameter in case of parsing issue
+
+### Fixed
+- Ntfs: fix last block decompression
+- Ntfs: fix last read position after some decompression
+- Ntfs: fix Windows overlay file decompression for some ending block
+- Outcome: fix empty process informations for very short lifetime processes
+- ci: fix Get-OrcOutcome exit_code existence check
+
+
 ## [10.2.2] - 2023-09-20
 ### Added
 - Allow user to specify any 'key' from 'ORC_Offline' special command set
@@ -14,6 +33,7 @@
 - FastFind: in the XML results file the 'Type' values for a registry match was always set to 'Type'
 - FastFind: XML output style
 - NTFSInfo/FATInfo: unexpected FirstBytes column zero padding
+
 
 ## [10.2.1] - 2023-06-20
 ### Changed
@@ -49,6 +69,20 @@
 ### Fixed
 - Fix compatibility with msvc v143 and cpp23
 - FastFind: add missing handling of 'Resurrect' and '/ResurrectRecords'
+
+
+## [10.1.8] - 2023-09-18
+### Added
+- Allow user to specify any 'key' from 'ORC_Offline' special command set
+
+### Changed
+- Yara: update to 4.3.2
+
+### Fixed
+- Yara: possible execution loop issue depending on the rule
+- FastFind: in the XML results file the 'Type' values for a registry match was always set to 'Type'
+- NTFSInfo/FATInfo: unexpected FirstBytes column zero padding
+- Fix log file output suboptions
 
 
 ## [10.1.7] - 2023-04-17

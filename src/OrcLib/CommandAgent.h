@@ -77,11 +77,12 @@ class CommandAgent : public Concurrency::agent
 {
 public:
     CommandAgent(
-        CommandMessage::ISource& source,
+        CommandMessage::PriorityMessageBuffer& source,
         ArchiveMessage::ITarget& archive,
         CommandNotification::ITarget& target,
         unsigned int max_running_tasks = DEFAULT_MAX_RUNNING_PROCESSES)
-        : m_source(source)
+        : m_cmdAgentBuffer(source)
+        , m_source(source)
         , m_target(target)
         , m_archive(archive)
         , m_MaximumRunningSemaphore(max_running_tasks)
@@ -133,6 +134,7 @@ protected:
 
     CommandNotification::ITarget& m_target;
     CommandMessage::ISource& m_source;
+    CommandMessage::PriorityMessageBuffer& m_cmdAgentBuffer;
 
     ArchiveMessage::ITarget& m_archive;
 
@@ -154,6 +156,7 @@ protected:
     std::shared_ptr<ProcessRedirect>
     PrepareRedirection(const std::shared_ptr<CommandExecute>& cmd, const CommandParameter& output);
     std::shared_ptr<CommandExecute> PrepareCommandExecute(const std::shared_ptr<CommandMessage>& message);
+    void StartCommandExecute(const std::shared_ptr<CommandMessage>& message);
 
     HRESULT ExecuteNextCommand();
 

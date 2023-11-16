@@ -75,6 +75,8 @@ public:
     typedef enum _Request
     {
         Execute = 0,
+        Start,
+        Abort,
         Terminate,
         QueryRunningList,
         RefreshRunningList,
@@ -110,6 +112,8 @@ public:
     };
 
     static Message MakeCancelMessage();
+    static Message MakeAbortMessage(const std::wstring& keyword, DWORD processId, HANDLE hProcess);
+    static Message MakeStartMessage(const std::wstring& keyword, DWORD dwProcessID);
     static Message MakeTerminateMessage(DWORD dwProcessID);
     static Message MakeCancelAnyPendingAndStopMessage();
     static Message MakeTerminateAllMessage();
@@ -193,12 +197,16 @@ public:
     const std::optional<std::wstring>& OrcTool() const { return m_orcTool; }
     void SetOrcTool(const std::wstring& tool) { m_orcTool = tool; }
 
+    void SetTimeout(std::chrono::milliseconds timeout) { m_timeout = timeout; }
+    const std::optional<std::chrono::milliseconds>& GetTimeout() const { return m_timeout; }
+
     const Parameters& GetParameters() { return m_Parameters; };
 
     CmdRequest Request() const { return m_Request; };
     const std::wstring& Keyword() const { return m_Keyword; };
 
     DWORD ProcessID() { return m_dwPid; };
+    HANDLE ProcessHandle() const { return m_hProcess; }
 
     bool operator<(const CommandMessage& message) { return m_Request < message.m_Request; }
 
@@ -222,6 +230,8 @@ private:
     std::optional<std::wstring> m_orcTool;
 
     DWORD m_dwPid;
+    HANDLE m_hProcess;
+    std::optional<std::chrono::milliseconds> m_timeout;
 };
 
 }  // namespace Orc

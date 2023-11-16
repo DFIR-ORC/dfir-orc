@@ -520,6 +520,20 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         }
     }
 
+    if (item[WOLFLAUNCHER_COMMAND_TIMEOUT])
+    {
+        LARGE_INTEGER li;
+        hr = GetIntegerFromArg(item[WOLFLAUNCHER_COMMAND_TIMEOUT].c_str(), li);
+        if (FAILED(hr))
+        {
+            Log::Debug(L"Failed to initialize command timeout [{}]", SystemError(hr));
+            return nullptr;
+        }
+
+        std::chrono::minutes timeout(li.QuadPart);
+        command->SetTimeout(timeout);
+    }
+
     return command;
 }
 

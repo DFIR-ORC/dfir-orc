@@ -92,7 +92,7 @@ public:
         }
 
         // Decompress every other chunks but the last one for which the remaining buffer size could be too small
-        auto endIndex = startIndex + output.size() / m_chunks.ChunkSize() + (output.size() % m_chunks.Size() ? 0 : 1);
+        auto endIndex = (m_offset + output.size()) / m_chunks.ChunkSize();
         if (endIndex >= m_chunks.ChunkCount())
         {
             endIndex = m_chunks.ChunkCount() - 1;

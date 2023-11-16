@@ -451,7 +451,7 @@ HRESULT Main::CheckConfiguration()
     if (dwMajor < 6 && dwMinor < 2)
     {
         Log::Error("ToolEmbed cannot be used on downlevel platform, please run ToolEmbed on Windows 7+ systems");
-        return E_ABORT;
+        return E_NOTIMPL;
     }
 
     switch (config.Todo)

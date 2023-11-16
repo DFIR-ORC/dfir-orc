@@ -37,7 +37,7 @@
 #endif
 
 #ifndef IMAGE_FILE_MACHINE_ARMNT
-#    define IMAGE_FILE_MACHINE_ARMNT 0x014C
+#    define IMAGE_FILE_MACHINE_ARMNT 0x01C4
 #endif
 
 //

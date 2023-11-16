@@ -372,7 +372,7 @@ private:
 
     HRESULT FindMatchingSamples();
 
-    void OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool bStop);
+    void OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool& bStop);
     void OnSampleWritten(const SampleRef& sample, const SampleSpec& sampleSpec, HRESULT hrWrite) const;
 
 public:

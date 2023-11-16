@@ -189,7 +189,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
     HANDLE hMothership = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, GetCurrentProcessId());
     if (hMothership)
     {
-        strCommandLine.append(fmt::format(L" /MothershipHandle={:#x}", reinterpret_cast<size_t>(hMothership)));
+        strCommandLine.append(fmt::format(L" /Mothership={:#x}", reinterpret_cast<size_t>(hMothership)));
     }
     else
     {

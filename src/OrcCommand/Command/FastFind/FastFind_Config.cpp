@@ -434,6 +434,12 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                 else if (UsageOption(argv[i] + 1))
                 {
                 }
+                else
+                {
+                    Log::Error(L"Failed to parse command line item: '{}'", argv[i] + 1);
+                    PrintUsage();
+                    return E_INVALIDARG;
+                }
                 break;
             default:
                 break;

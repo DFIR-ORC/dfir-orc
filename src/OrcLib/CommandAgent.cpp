@@ -697,6 +697,11 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
             break;
     }
 
+    if (message->GetTimeout().has_value())
+    {
+        retval->m_timeout = *message->GetTimeout();
+    }
+
     if (m_bChildDebug)
     {
         Log::Debug(L"CommandAgent: Configured dump file path '{}'", m_TempDir);
@@ -707,6 +712,42 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
         return nullptr;
 
     return retval;
+}
+
+void CommandAgent::StartCommandExecute(const std::shared_ptr<CommandMessage>& message)
+{
+    Concurrency::critical_section::scoped_lock s(m_cs);
+
+    std::shared_ptr<CommandExecute> command = nullptr;
+    for (const auto& runningCommand : m_RunningCommands)
+    {
+        if (runningCommand == nullptr)
+        {
+            continue;
+        }
+
+        if (runningCommand->ProcessID() == message->ProcessID())
+        {
+            command = runningCommand;
+        }
+    }
+
+    if (command == nullptr)
+    {
+        Log::Critical(L"Command '{}' resume rejected, command not found", message->Keyword());
+        return;
+    }
+
+    HRESULT hr = command->ResumeChildProcess();
+    if (FAILED(hr))
+    {
+        Log::Critical(L"Command '{}' resume failed [{}]", message->Keyword(), SystemError(hr));
+        TerminateProcess(command->ProcessHandle(), -1);
+        return;
+    }
+
+    Concurrency::send<CommandNotification::Notification>(
+        m_target, CommandNotification::NotifyStarted(command->GetKeyword(), command->ProcessID()));
 }
 
 typedef struct _CompletionBlock
@@ -772,58 +813,64 @@ HRESULT CommandAgent::ExecuteNextCommand()
             m_MaximumRunningSemaphore.Release();
         }
     }
+
     if (command)
     {
-        // there is something to execute in the queue
-
-        hr = command->Execute(m_Job, m_bWillRequireBreakAway);
-
-        if (SUCCEEDED(hr))
+        hr = command->CreateChildProcess(m_Job, m_bWillRequireBreakAway);
+        if (FAILED(hr))
         {
-            {
-                Concurrency::critical_section::scoped_lock s(m_cs);
-                m_RunningCommands.push_back(command);
-            }
-
-            HANDLE hWaitObject = INVALID_HANDLE_VALUE;
-
-            CompletionBlock* pBlockPtr = (CompletionBlock*)Concurrency::Alloc(sizeof(CompletionBlock));
-
-            CompletionBlock* pBlock = new (pBlockPtr) CompletionBlock;
-            pBlock->pAgent = this;
-            pBlock->command = command;
-
-            if (!RegisterWaitForSingleObject(
-                    &hWaitObject,
-                    command->GetProcessHandle(),
-                    WaitOrTimerCallbackFunction,
-                    pBlock,
-                    INFINITE,
-                    WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE))
-            {
-                hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error(
-                    L"Could not register for process '{}' termination [{}]", command->GetKeyword(), SystemError(hr));
-                return hr;
-            }
-
-            auto notification = CommandNotification::NotifyStarted(
-                command->ProcessID(), command->GetKeyword(), command->m_pi.hProcess, command->m_commandLine);
-
-            notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
-            notification->SetOriginResourceName(command->GetOriginResourceName());
-            notification->SetExecutableSha1(command->GetExecutableSha1());
-            notification->SetOrcTool(command->GetOrcTool());
-            notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
-
-            SendResult(notification);
-        }
-        else
-        {
-            // Process execution failed to start, releasing semaphone
             m_MaximumRunningSemaphore.Release();
             command->CompleteExecution();
+            return S_OK;
         }
+
+        {
+            Concurrency::critical_section::scoped_lock s(m_cs);
+            m_RunningCommands.push_back(command);
+        }
+
+        if (command->GetTimeout().has_value() && command->GetTimeout()->count() != 0)
+        {
+            auto timer = std::make_shared<Concurrency::timer<CommandMessage::Message>>(
+                (unsigned int)command->GetTimeout()->count(),
+                CommandMessage::MakeAbortMessage(command->GetKeyword(), command->ProcessID(), command->ProcessHandle()),
+                static_cast<CommandMessage::ITarget*>(&m_cmdAgentBuffer));
+
+            command->SetTimeoutTimer(timer);
+            timer->start();
+        }
+
+        // Register a callback that will handle process termination (release semaphore, notify, etc...)
+        HANDLE hWaitObject = INVALID_HANDLE_VALUE;
+        CompletionBlock* pBlockPtr = (CompletionBlock*)Concurrency::Alloc(sizeof(CompletionBlock));
+        CompletionBlock* pBlock = new (pBlockPtr) CompletionBlock;
+        pBlock->pAgent = this;
+        pBlock->command = command;
+
+        if (!RegisterWaitForSingleObject(
+                &hWaitObject,
+                command->ProcessHandle(),
+                WaitOrTimerCallbackFunction,
+                pBlock,
+                INFINITE,
+                WT_EXECUTEDEFAULT | WT_EXECUTEONLYONCE))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Error(L"Could not register for process '{}' termination [{}]", command->GetKeyword(), SystemError(hr));
+            return hr;
+        }
+
+        auto notification = CommandNotification::NotifyCreated(command->GetKeyword(), command->ProcessID());
+
+        notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
+        notification->SetOriginResourceName(command->GetOriginResourceName());
+        notification->SetExecutableSha1(command->GetExecutableSha1());
+        notification->SetOrcTool(command->GetOrcTool());
+        notification->SetIsSelfOrcExecutable(command->IsSelfOrcExecutable());
+        notification->SetProcessHandle(command->ProcessHandle());
+        notification->SetProcessCommandLine(command->m_commandLine);
+
+        SendResult(notification);
     }
 
     return S_OK;
@@ -1209,6 +1256,11 @@ void CommandAgent::run()
                 }
             }
             break;
+            case CommandMessage::Start: {
+                Log::Debug(L"CommandAgent: Start command '{}'", request->Keyword());
+                StartCommandExecute(request);
+            }
+            break;
             case CommandMessage::RefreshRunningList: {
                 Concurrency::critical_section::scoped_lock s(m_cs);
                 auto new_end = std::remove_if(
@@ -1268,6 +1320,18 @@ void CommandAgent::run()
                             request->Keyword()));
                     }
                     CloseHandle(hProcess);
+                }
+            }
+            break;
+            case CommandMessage::Abort: {
+                Log::Info("Abort process PID: {}", request->ProcessID());
+
+                SendResult(CommandNotification::NotifyAborted(
+                    request->Keyword(), request->ProcessID(), request->ProcessHandle()));
+
+                if (!TerminateProcess(request->ProcessHandle(), E_ABORT))
+                {
+                    Log::Error(L"Failed to terminate process [{}]", LastWin32Error());
                 }
             }
             break;

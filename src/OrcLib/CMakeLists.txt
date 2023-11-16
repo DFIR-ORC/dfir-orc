@@ -833,6 +833,7 @@ set(SRC_UTILITIES
     "Utils/MakeArray.h"
     "Utils/MetaPtr.h"
     "Utils/Result.h"
+    "Utils/Round.h"
     "Utils/String.cpp"
     "Utils/String.h"
     "Utils/Time.cpp"

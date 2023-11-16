@@ -687,12 +687,12 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         std::cerr << "std::exception during outline creation" << std::endl;
         std::cerr << "Caught " << e.what() << std::endl;
         std::cerr << "Type " << typeid(e).name() << std::endl;
-        return E_ABORT;
+        return E_UNEXPECTED;
     }
     catch (...)
     {
         std::cerr << "Exception during outline creation" << std::endl;
-        return E_ABORT;
+        return E_UNEXPECTED;
     }
 
     auto outlineSize = [&]() {
@@ -931,10 +931,10 @@ HRESULT Main::Run_Execute()
     const std::wstring_view metaVersion(kOrcMetaVersionW);
     if (!metaName.empty() && !metaVersion.empty())
     {
-        m_journal.Print(ToolName(), kInfo, L"{} ({})", metaName, metaVersion);
+        m_journal.Print(ToolName(), {}, L"{} ({})", metaName, metaVersion);
     }
 
-    m_journal.Print(ToolName(), kInfo, L"Version: {}", kOrcVersionStringW);
+    m_journal.Print(ToolName(), {}, L"Version: {}", kOrcVersionStringW);
 
     for (const auto& exec : m_wolfexecs)
     {
@@ -1018,11 +1018,13 @@ HRESULT Main::Run_Execute()
                     }
                     else if (info.file_exists && (!info.size.has_value() || info.size.value() > 0))
                     {
-                        commandSetNode.Add(
+                        m_journal.Print(
+                            ToolName(),
+                            exec->GetKeyword(),
+                            Log::Level::Info,
                             "Skipping set because non-empty remote output file already exists: '{}' (size: {})",
                             info.path,
                             info.size);
-                        commandSetNode.AddEmptyLine();
                         continue;
                     }
                 }
@@ -1030,11 +1032,13 @@ HRESULT Main::Run_Execute()
                 hr = ::GetLocalOutputFileInformations(*exec, info);
                 if (SUCCEEDED(hr) && (!info.size || *info.size != 0))
                 {
-                    commandSetNode.Add(
-                        "Skipping set because non-empty local output file already exists: '{}' ({})",
+                    m_journal.Print(
+                        ToolName(),
+                        exec->GetKeyword(),
+                        Log::Level::Info,
+                        "Skipping set because non-empty local output file already exists: '{}' (size: {})",
                         info.path,
                         info.size);
-                    commandSetNode.AddEmptyLine();
 
                     // Archive is ready but was not uploaded
                     hr = UploadSingleFile(exec->GetOutputFileName(), exec->GetOutputFullPath());
@@ -1133,11 +1137,11 @@ HRESULT Main::Run_Execute()
     if (start.has_error())
     {
         Log::Debug(L"Failed to convert start time to time point [{}]", start.error());
-        m_journal.Print(ToolName(), kInfo, L"Done");
+        m_journal.Print(ToolName(), {}, L"Done");
     }
     else
     {
-        m_journal.Print(ToolName(), kInfo, L"Done (elapsed: {:%T})", std::chrono::system_clock::now() - *start);
+        m_journal.Print(ToolName(), {}, L"Done (elapsed: {:%T})", std::chrono::system_clock::now() - *start);
     }
 
     if (config.bBeepWhenDone)

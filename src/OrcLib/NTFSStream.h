@@ -68,7 +68,7 @@ public:
     STDMETHOD(SetSize)(ULONG64) { return E_NOTIMPL; }
     STDMETHOD(Close)();
 
-private:
+protected:
     std::shared_ptr<VolumeReader> m_pVolReader;
     std::vector<MFTUtils::DataSegment> m_DataSegments;
 

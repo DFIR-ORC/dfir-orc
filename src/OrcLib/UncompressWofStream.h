@@ -14,7 +14,6 @@
 
 #include <boost/logic/tribool.hpp>
 
-#include "NTFSStream.h"
 #include "Stream/BufferStreamConcept.h"
 #include "Stream/ByteStreamConcept.h"
 #include "Filesystem/Ntfs/Compression/WofAlgorithm.h"
@@ -25,12 +24,10 @@
 
 namespace Orc {
 
-class NTFSStream;
-
 class UncompressWofStream : public ChainingStream
 {
 public:
-    using ByteStreamT = ByteStreamConcept<std::shared_ptr<NTFSStream>>;
+    using ByteStreamT = ByteStreamConcept<std::shared_ptr<ByteStream>>;
     using WofStreamT = Ntfs::WofStreamConcept<ByteStreamT, std::unique_ptr<NtDecompressorConcept>>;
 
     UncompressWofStream();
@@ -52,7 +49,7 @@ public:
     STDMETHOD(Open)(const std::shared_ptr<ByteStream>& pChainedStream);
 
     STDMETHOD(Open)
-    (const std::shared_ptr<NTFSStream>& ntfsStream, Ntfs::WofAlgorithm algorithm, uint64_t uncompressedSize);
+    (const std::shared_ptr<ByteStream>& rawStream, Ntfs::WofAlgorithm algorithm, uint64_t uncompressedSize);
 
     STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
@@ -77,7 +74,7 @@ public:
 private:
     BufferStreamConcept<std::vector<uint8_t>> m_buffer;
     std::unique_ptr<WofStreamT> m_wofStream;
-    std::shared_ptr<NTFSStream> m_ntfsStream;
+    std::shared_ptr<ByteStream> m_rawStream;
     Ntfs::WofAlgorithm m_algorithm;
     uint64_t m_uncompressedSize;
 };
