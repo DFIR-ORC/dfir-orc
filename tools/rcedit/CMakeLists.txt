@@ -77,6 +77,7 @@ target_compile_definitions(rcedit
     PRIVATE
         UNICODE
         NOMINMAX
+        _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING
 )
 
 target_include_directories(rcedit PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
