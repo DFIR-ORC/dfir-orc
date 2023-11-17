@@ -360,12 +360,12 @@ public:
 
     ~ViewOfFile()
     {
-        if (m_data == nullptr)
+        if (this->m_data == nullptr)
         {
             return;
         }
 
-        if (::UnmapViewOfFile(m_data) == FALSE)
+        if (::UnmapViewOfFile(this->m_data) == FALSE)
         {
             Log::Warn("Failed UnmapViewOfFile [{}]", LastWin32Error());
         }
