@@ -227,7 +227,7 @@ private:
             return *this;
         };
 
-        // explicitely deleting copy operators
+        // explicitly deleting copy operators
         ViewStore(const ViewStore& other) = delete;
         ViewStore& operator=(const ViewStore& other) = delete;
 
@@ -339,7 +339,7 @@ private:
 
         constexpr bool owns() const { return true; }
 
-        _T m_Elts[_DeclElts];
+        _T m_Elts[_DeclElts] {};
     };
 
     struct EmptyStore
