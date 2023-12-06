@@ -177,6 +177,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
     }
 
     size_t uncomp_processed = 0;
+    uncompressedData.ZeroMe();
 
     CBinaryBuffer buffer(true);
     for (size_t i = 0; i < dwNbCU; ++i)
