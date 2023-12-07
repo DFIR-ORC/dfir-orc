@@ -261,11 +261,11 @@ private:
     std::vector<ResourceRegistryItem> m_items;
 };
 
-// Look into the current xml element for an attribute's name which match the provided regex
-Result<std::optional<XmlString>>
+// Look into the current xml element for an attributes name which match the provided regex
+Result<std::vector<XmlString>>
 GetXmlAttributeValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view attributeValueRegex)
 {
-    std::vector<std::wstring> values;
+    std::vector<XmlString> values;
 
     UINT uiAttrCount = 0;
     HRESULT hr = reader->GetAttributeCount(&uiAttrCount);
@@ -277,7 +277,7 @@ GetXmlAttributeValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view a
 
     if (uiAttrCount == 0L)
     {
-        return std::optional<XmlString> {};
+        return std::vector<XmlString>();
     }
 
     hr = reader->MoveToFirstAttribute();
@@ -316,30 +316,28 @@ GetXmlAttributeValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view a
         }
 
         std::wregex regex(attributeValueRegex.data(), std::regex_constants::icase);
-        if (!std::regex_search(pValue, regex))
+        if (std::regex_search(pValue, regex))
         {
-            hr = reader->MoveToNextAttribute();
+            UINT lineNumber = 0;
+            hr = reader->GetLineNumber(&lineNumber);
             if (FAILED(hr))
             {
                 XmlLiteExtension::LogError(hr, reader);
-                return SystemError(hr);
+                // return;
             }
 
-            continue;
+            values.emplace_back(XmlString {{}, lineNumber, pValue});
         }
 
-        UINT lineNumber = 0;
-        hr = reader->GetLineNumber(&lineNumber);
+        hr = reader->MoveToNextAttribute();
         if (FAILED(hr))
         {
             XmlLiteExtension::LogError(hr, reader);
-            // return;
+            return SystemError(hr);
         }
-
-        return XmlString {{}, lineNumber, pValue};
     }
 
-    return std::optional<XmlString> {};
+    return values;
 }
 
 // Look into the current xml file for all attributes name which match the provided regex
@@ -380,9 +378,10 @@ GetXmlAttributesValueMatch(const std::shared_ptr<ByteStream>& xmlStream, std::ws
             continue;
         }
 
-        if ((*result).has_value())
+        if (!result->empty())
         {
-            values.emplace_back(std::move(**result));
+            std::move(std::begin(*result), std::end(*result), std::back_inserter(values));
+            result->clear();
         }
     }
 
