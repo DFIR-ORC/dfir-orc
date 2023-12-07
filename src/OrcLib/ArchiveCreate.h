@@ -31,7 +31,7 @@ protected:
     ArchiveFormat m_Format;
     ArchiveItems m_Queue;
 
-    std::shared_ptr<ByteStream> GetStreamToAdd(const std::shared_ptr<ByteStream>& astream);
+    std::shared_ptr<ByteStream> GetStreamToAdd(const std::shared_ptr<ByteStream>& astream) const;
 
     ArchiveCreate(bool bComputeHash);
 
