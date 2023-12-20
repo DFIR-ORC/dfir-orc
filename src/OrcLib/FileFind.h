@@ -492,7 +492,7 @@ public:
     HRESULT InitializeYara(std::unique_ptr<YaraConfig>& config);
     HRESULT InitializeYara()
     {
-        std::unique_ptr<YaraConfig> config;
+        auto config = std::make_unique<YaraConfig>();
         return InitializeYara(config);
     }
 
