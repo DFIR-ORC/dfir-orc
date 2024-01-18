@@ -30,7 +30,20 @@ STDMETHODIMP InStreamAdapter::Read(void* data, UInt32 size, UInt32* processedSiz
     }
 
     // Transform S_FALSE to S_OK
-    return SUCCEEDED(hr) ? S_OK : hr;
+    if (SUCCEEDED(hr))
+    {
+        return S_OK;
+    }
+
+    // Shadow copy volume Read can silently fail with some blocks and it will produce an error with ntfs compressed
+    // files. That error should be ignored so the archive is not aborted.
+    if (m_readErrorIsNotFailure)
+    {
+        Log::Error("Failed to read a stream to compress (archived item size: {}) [{}]", read, SystemError(hr));
+        return S_OK;
+    }
+
+    return hr;
 }
 
 STDMETHODIMP InStreamAdapter::Seek(Int64 offset, UInt32 seekOrigin, UInt64* newPosition)

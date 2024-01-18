@@ -227,7 +227,7 @@ STDMETHODIMP ArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream*
         return S_OK;
     }
 
-    CComQIPtr<ISequentialInStream, &IID_ISequentialInStream> stream(new InStreamAdapter(item));
+    CComQIPtr<ISequentialInStream, &IID_ISequentialInStream> stream(new InStreamAdapter(item, true));
     *pInStream = stream.Detach();
 
     return S_OK;
