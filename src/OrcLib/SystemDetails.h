@@ -116,6 +116,8 @@ public:
 
     static Result<std::chrono::system_clock::time_point> GetShutdownTimeFromRegistry();
     static Result<std::chrono::system_clock::time_point> GetInstallTimeFromRegistry();
+    static Result<std::chrono::system_clock::time_point> GetInstallDateFromRegistry();
+
     static HRESULT GetCurrentWorkingDirectory(std::filesystem::path& cwd);
 
     static HRESULT GetProcessBinary(std::wstring& strFullPath);
