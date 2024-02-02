@@ -26,6 +26,7 @@
 #include "BinaryBuffer.h"
 #include "Utils/Time.h"
 #include "Utils/TypeTraits.h"
+#include "Utils/Guard.h"
 
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
@@ -1005,6 +1006,34 @@ HRESULT Orc::SystemDetails::GetUserLanguage(std::wstring& strLanguage)
     }
     strLanguage.assign(szName);
     return S_OK;
+}
+
+Result<std::chrono::system_clock::time_point> Orc::SystemDetails::GetShutdownTimeFromRegistry()
+{
+    const wchar_t key[] = L"SYSTEM\\CurrentControlSet\\Control\\Windows";
+
+    Guard::RegistryHandle hKey;
+    auto status = RegOpenKeyW(HKEY_LOCAL_MACHINE, key, &hKey.value());
+    if (status != ERROR_SUCCESS)
+    {
+        auto ec = Win32Error(status);
+        Log::Debug(L"Failed RegOpenKeyW (key: {}) [{}]", key, ec);
+        return ec;
+    }
+
+    FILETIME shutdownTime;
+    const wchar_t value[] = L"ShutdownTime";
+    DWORD valueType = 0L;
+    DWORD cbData = sizeof(shutdownTime);
+    status = RegQueryValueExW(hKey.value(), value, NULL, &valueType, (LPBYTE)&shutdownTime, &cbData);
+    if (status != ERROR_SUCCESS)
+    {
+        auto ec = Win32Error(status);
+        Log::Debug(L"Failed RegQueryValueExW (key: {}, value: {}) [{}]", key, value, ec);
+        return ec;
+    }
+
+    return FromFileTime(shutdownTime);
 }
 
 SystemDetails::DriveType SystemDetails::GetPathLocation(const std::wstring& strAnyPath)
