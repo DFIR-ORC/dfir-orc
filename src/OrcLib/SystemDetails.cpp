@@ -1036,6 +1036,34 @@ Result<std::chrono::system_clock::time_point> Orc::SystemDetails::GetShutdownTim
     return FromFileTime(shutdownTime);
 }
 
+Result<std::chrono::system_clock::time_point> Orc::SystemDetails::GetInstallTimeFromRegistry()
+{
+    const wchar_t key[] = L"SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion";
+
+    Guard::RegistryHandle hKey;
+    auto status = RegOpenKeyW(HKEY_LOCAL_MACHINE, key, &hKey.value());
+    if (status != ERROR_SUCCESS)
+    {
+        auto ec = Win32Error(status);
+        Log::Debug(L"Failed RegOpenKeyW (key: {}) [{}]", key, ec);
+        return ec;
+    }
+
+    FILETIME installTime;
+    const wchar_t value[] = L"InstallTime";
+    DWORD valueType = 0L;
+    DWORD cbData = sizeof(installTime);
+    status = RegQueryValueExW(hKey.value(), value, NULL, &valueType, (LPBYTE)&installTime, &cbData);
+    if (status != ERROR_SUCCESS)
+    {
+        auto ec = Win32Error(status);
+        Log::Debug(L"Failed RegQueryValueExW (key: {}, value: {}) [{}]", key, value, ec);
+        return ec;
+    }
+
+    return FromFileTime(installTime);
+}
+
 SystemDetails::DriveType SystemDetails::GetPathLocation(const std::wstring& strAnyPath)
 {
     WCHAR szVolume[ORC_MAX_PATH];

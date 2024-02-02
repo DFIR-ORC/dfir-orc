@@ -115,6 +115,7 @@ public:
     static HRESULT GetUserLanguage(std::wstring& strLocale);
 
     static Result<std::chrono::system_clock::time_point> GetShutdownTimeFromRegistry();
+    static Result<std::chrono::system_clock::time_point> GetInstallTimeFromRegistry();
     static HRESULT GetCurrentWorkingDirectory(std::filesystem::path& cwd);
 
     static HRESULT GetProcessBinary(std::wstring& strFullPath);
