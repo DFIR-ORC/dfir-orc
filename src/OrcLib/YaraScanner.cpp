@@ -849,7 +849,8 @@ HRESULT Orc::YaraScanner::PrintConfiguration()
     YR_RULE* yr_rule = nullptr;
     yr_rules_foreach(yr_rules, yr_rule)
     {
-        Log::Info("Rule: {} ({})", yr_rule->identifier, RULE_IS_DISABLED(yr_rule) ? "disabled" : "enabled");
+        const auto rule = RULE_IS_DISABLED(yr_rule) ? "disabled" : "enabled";
+        Log::Info("Rule: {} ({})", yr_rule->identifier, rule);
     }
     return S_OK;
 }
