@@ -593,6 +593,12 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
             SystemDetails::GetTimeStamp(strTimeStamp);
             writer->WriteNamed(L"timestamp", strTimeStamp);
 
+            {
+                std::wstring computerName;
+                SystemDetails::GetFullComputerName(computerName);
+                writer->WriteNamed(L"computer_name", computerName);
+            }
+
             auto mothership_id = SystemDetails::GetParentProcessId();
             if (mothership_id)
             {
