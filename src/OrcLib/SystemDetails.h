@@ -45,6 +45,9 @@ public:
     static HRESULT GetSystemType(std::wstring& strSystemType);
     static HRESULT GetSystemType(BYTE& systemType);
 
+    static bool IsKnownWindowsBuild(uint32_t build);
+    static void GetTagsFromBuildId(uint32_t ProductType, uint32_t build, SystemTags& tags);
+
     static const SystemTags& GetSystemTags();
     static HRESULT SetSystemTags(SystemTags tags);
 
@@ -110,6 +113,10 @@ public:
     static HRESULT GetUserLocale(std::wstring& strLocale);
     static HRESULT GetSystemLanguage(std::wstring& strLocale);
     static HRESULT GetUserLanguage(std::wstring& strLocale);
+
+    static Result<std::chrono::system_clock::time_point> GetShutdownTimeFromRegistry();
+    static Result<std::chrono::system_clock::time_point> GetInstallTimeFromRegistry();
+    static Result<std::chrono::system_clock::time_point> GetInstallDateFromRegistry();
 
     static HRESULT GetCurrentWorkingDirectory(std::filesystem::path& cwd);
 

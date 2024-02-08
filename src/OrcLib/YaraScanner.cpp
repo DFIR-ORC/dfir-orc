@@ -542,10 +542,18 @@ HRESULT YaraScanner::ScanBlocks(const std::shared_ptr<ByteStream>& stream, Match
             return nullptr;
         }
 
+        //
+        // COMMENT: Unfortunately the block API does not seem to work at least for some modules like 'pe'. It silently
+        // fails to parse security directory and rule does not match. The yara.exe binary does map the file completely
+        // aswell.
+        //
         // On first fetch only read 1MB as it will be often enough for header matching
-        context->block.size = std::min(
-            static_cast<uint64_t>(context->buffer.size()),
-            std::min(static_cast<uint64_t>(1048576), context->streamSize));
+        // context->block.size = std::min(
+        //    static_cast<uint64_t>(context->buffer.size()),
+        //    std::min(static_cast<uint64_t>(1048576), context->streamSize));
+        context->buffer.resize(context->streamSize);
+        context->block.size = context->buffer.size();
+
         context->block.base = 0;
         return &context->block;
     };
@@ -849,7 +857,8 @@ HRESULT Orc::YaraScanner::PrintConfiguration()
     YR_RULE* yr_rule = nullptr;
     yr_rules_foreach(yr_rules, yr_rule)
     {
-        Log::Info("Rule: {} ({})", yr_rule->identifier, RULE_IS_DISABLED(yr_rule) ? "disabled" : "enabled");
+        const auto rule = RULE_IS_DISABLED(yr_rule) ? "disabled" : "enabled";
+        Log::Info("Rule: {} ({})", yr_rule->identifier, rule);
     }
     return S_OK;
 }

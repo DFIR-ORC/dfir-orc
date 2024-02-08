@@ -1,5 +1,22 @@
 # ChangeLog
 
+## [10.2.4] - 2024-02-02
+### Added
+- Outline: add install_date, install_time and shutdown_time filled from registry
+- Outline: add computer_name to match outcome's
+
+### Changed
+- Ntfs: improve behavior for compressed buffers when shadow copy block is lost
+- GetThis: go to next file in case of errors like unrecoverable deleted file
+- Yara: update to v4.4.0
+- Yara: replace Windows library with LibreSSL to benefit some features
+
+### Fixed
+- ToolEmbed: remove unwanted warning message for run32 and run64 attributes
+- Fix breaking stdout redirection on unicode character
+- Yara: use yara.exe's workaround for block api (files are now entirely mapped)
+
+
 ## [10.2.3] - 2023-11-15
 ### Added
 - Ntfs: Windows overlay file compression support with resident files

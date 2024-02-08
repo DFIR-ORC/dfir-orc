@@ -266,6 +266,33 @@ public:
     }
 };
 
+class RegistryHandle final : public DescriptorGuard<HKEY>
+{
+public:
+    RegistryHandle(HKEY handle = static_cast<HKEY>(INVALID_HANDLE_VALUE))
+        : DescriptorGuard(handle, static_cast<HKEY>(INVALID_HANDLE_VALUE))
+    {
+    }
+
+    RegistryHandle(RegistryHandle&& handle) noexcept = default;
+    RegistryHandle& operator=(RegistryHandle&& o) = default;
+
+    ~RegistryHandle()
+    {
+        if (m_data == m_invalidValue)
+        {
+            return;
+        }
+
+        LSTATUS status = RegCloseKey(m_data);
+        if (status != ERROR_SUCCESS)
+        {
+            Log::Debug("Failed RegCloseKey [{}]", Win32Error(status));
+            return;
+        }
+    }
+};
+
 class Module final : public DescriptorGuard<HMODULE>
 {
 public:

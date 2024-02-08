@@ -9,6 +9,8 @@
 
 #include <string>
 
+#include "Text/Iconv.h"
+
 namespace Orc {
 
 // Adapter for a container interface to be usable with Text::Tree and fmt.
@@ -19,11 +21,21 @@ struct StdoutContainerAdapter
 public:
     using value_type = T;
 
+    StdoutContainerAdapter()
+        : m_hStdout(GetStdHandle(STD_OUTPUT_HANDLE))
+    {
+    }
+
     void flush()
     {
-        Traits::get_std_out<T>() << m_buffer;
-        m_buffer.clear();
-        Traits::get_std_out<T>().flush();
+        if (m_buffer.size())
+        {
+            DWORD written = 0;
+            auto buffer = ToUtf8(m_buffer);
+            WriteFile(m_hStdout, (void*)buffer.data(), buffer.size(), &written, NULL);
+        }
+
+        FlushFileBuffers(m_hStdout);
     }
 
     void push_back(T c)
@@ -33,7 +45,10 @@ public:
             Log::Info(Log::Facility::kLogFile, m_buffer);
 
             m_buffer.push_back(c);
-            Traits::get_std_out<T>() << m_buffer;
+
+            DWORD written = 0;
+            auto buffer = ToUtf8(m_buffer);
+            WriteFile(m_hStdout, (void*)buffer.data(), buffer.size(), &written, NULL);
             m_buffer.clear();
         }
         else if (c)
@@ -43,6 +58,7 @@ public:
     }
 
 private:
+    HANDLE m_hStdout;
     std::basic_string<T> m_buffer;
 };
 

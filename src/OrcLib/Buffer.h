@@ -811,7 +811,22 @@ public:
             return 0;
 
         ULONG len = 0;
-        auto pCur = get();
+        auto pCur = get_as<CHAR>();
+        while (len < size() && *pCur != 0)
+        {
+            pCur++;
+            len++;
+        }
+        return len;
+    }
+
+    ULONG WStrNLen() const
+    {
+        if (empty())
+            return 0;
+
+        ULONG len = 0;
+        auto pCur = get_as<WCHAR>();
         while (len < size() && *pCur != 0)
         {
             pCur++;
@@ -902,7 +917,7 @@ public:
             if (_size == 0)
                 return std::wstring();
 
-            auto stringLength = StrNLen();
+            auto stringLength = WStrNLen();
 
             if (stringLength == 0)
                 return std::wstring();

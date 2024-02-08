@@ -44,6 +44,7 @@
 #include "Archive/Appender.h"
 #include "Archive/7z/Archive7z.h"
 #include "Text/Fmt/Result.h"
+#include "Text/Fmt/Limit.h"
 
 namespace fs = std::filesystem;
 

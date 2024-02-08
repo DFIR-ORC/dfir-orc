@@ -25,8 +25,9 @@ class InStreamAdapter
     , public CMyUnknownImp
 {
 public:
-    InStreamAdapter(std::shared_ptr<ByteStream> outByteStream)
+    InStreamAdapter(std::shared_ptr<ByteStream> outByteStream, bool readErrorIsNotFailure)
         : m_stream(std::move(outByteStream))
+        , m_readErrorIsNotFailure(readErrorIsNotFailure)
     {
     }
 
@@ -43,6 +44,7 @@ public:
 
 private:
     std::shared_ptr<ByteStream> m_stream;
+    bool m_readErrorIsNotFailure;
 };
 
 }  // namespace Archive

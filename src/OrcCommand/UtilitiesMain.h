@@ -798,6 +798,14 @@ public:
     virtual HRESULT CheckConfiguration() = 0;
 
     //
+    // Tool Description
+    //
+    static LPCWSTR ToolName() { return kOrcMetaNameW; }
+    static LPCWSTR ToolDescription() { return L"DFIR-ORC Windows artefact collection tool"; }
+    static LPCWSTR ToolVersion() { return kOrcVersionStringW; }
+
+
+    //
     // Output handling
     //
     virtual void PrintUsage() = 0;
@@ -850,7 +858,7 @@ public:
         // TODO: FIXME
 
         Cmd.LoadCommonExtensions();
-        Cmd.PrintHeader(UtilityT::ToolName(), UtilityT::ToolDescription(), kOrcFileVerStringW);
+        Cmd.PrintHeader(UtilityT::ToolName(), UtilityT::ToolDescription(), UtilityT::ToolVersion());
 
         try
         {

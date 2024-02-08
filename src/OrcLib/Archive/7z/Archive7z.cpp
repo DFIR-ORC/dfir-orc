@@ -207,7 +207,7 @@ void Archive7z::Compress(
         }
 
         CComQIPtr<IInArchive, &IID_IInArchive> archiverIn(archiver);
-        CComPtr<InStreamAdapter> inStream = new InStreamAdapter(inputArchive);
+        CComPtr<InStreamAdapter> inStream = new InStreamAdapter(inputArchive, true);
         CComPtr<ArchiveOpenCallback> archiveOpenCallback(new ArchiveOpenCallback());
         hr = archiverIn->Open(inStream, nullptr, archiveOpenCallback);
         if (FAILED(hr))

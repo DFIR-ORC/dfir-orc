@@ -7,20 +7,6 @@
 //
 #pragma once
 
-// The following ifdef block is the standard way of creating macros which make exporting
-// from a DLL simpler. All files within this DLL are compiled with the TASKAGENT_EXPORTS
-// symbol defined on the command line. this symbol should not be defined on any project
-// that uses this DLL. This way any other project whose source files include this file see
-// TASKAGENT_API functions as being imported from a DLL, whereas this DLL sees symbols
-// defined with this macro as being exported.
-#ifdef ORCLIB_EXPORTS
-#    define __declspec(dllexport)
-#elif ORCLIB_IMPORTS
-#    define __declspec(dllimport)
-#else  // STATIC linking
-#    define ORCLIB_API
-#endif
-
 #pragma managed(push, off)
 
 #include <map>

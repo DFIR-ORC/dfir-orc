@@ -10,10 +10,32 @@
 #include "OrcLib.h"
 
 #include "ExtensionLibrary.h"
+#include "Flags.h"
 
 #include <windows.h>
 #include <functional>
 #include <winternl.h>
+
+//
+// C:\Program Files (x86)\Windows Kits\10\Include\10.0.22000.0\um\winternl.h
+//
+#ifndef CODEINTEGRITY_OPTION_ENABLED
+// bitmask values for CodeIntegrityOptions
+#    define CODEINTEGRITY_OPTION_ENABLED 0x01
+#    define CODEINTEGRITY_OPTION_TESTSIGN 0x02
+#    define CODEINTEGRITY_OPTION_UMCI_ENABLED 0x04
+#    define CODEINTEGRITY_OPTION_UMCI_AUDITMODE_ENABLED 0x08
+#    define CODEINTEGRITY_OPTION_UMCI_EXCLUSIONPATHS_ENABLED 0x10
+#    define CODEINTEGRITY_OPTION_TEST_BUILD 0x20
+#    define CODEINTEGRITY_OPTION_PREPRODUCTION_BUILD 0x40
+#    define CODEINTEGRITY_OPTION_DEBUGMODE_ENABLED 0x80
+#    define CODEINTEGRITY_OPTION_FLIGHT_BUILD 0x100
+#    define CODEINTEGRITY_OPTION_FLIGHTING_ENABLED 0x200
+#    define CODEINTEGRITY_OPTION_HVCI_KMCI_ENABLED 0x400
+#    define CODEINTEGRITY_OPTION_HVCI_KMCI_AUDITMODE_ENABLED 0x800
+#    define CODEINTEGRITY_OPTION_HVCI_KMCI_STRICTMODE_ENABLED 0x1000
+#    define CODEINTEGRITY_OPTION_HVCI_IUM_ENABLED 0x2000
+#endif
 
 #pragma managed(push, off)
 
@@ -165,6 +187,23 @@ private:
      PVOID OutputBuffer,
      ULONG OutputBufferLength,
      PULONG ReturnLength) = nullptr;
+};
+
+static constexpr FlagsDefinition CodeIntegrityOptions[] = {
+    {CODEINTEGRITY_OPTION_ENABLED, L"CODEINTEGRITY_OPTION_ENABLED", L"Enforcement of kernel mode Code Integrity is enabled"},
+    {CODEINTEGRITY_OPTION_TESTSIGN, L"CODEINTEGRITY_OPTION_TESTSIGN", L"Test signing of kernel mode binaries is enabled"},
+    {CODEINTEGRITY_OPTION_UMCI_ENABLED, L"CODEINTEGRITY_OPTION_UMCI_ENABLED", L"Enforcement of user mode Code Integrity is enabled"},
+    {CODEINTEGRITY_OPTION_UMCI_AUDITMODE_ENABLED, L"CODEINTEGRITY_OPTION_UMCI_AUDITMODE_ENABLED", L"Audit mode of user mode Code Integrity is enabled"},
+    {CODEINTEGRITY_OPTION_UMCI_EXCLUSIONPATHS_ENABLED, L"CODEINTEGRITY_OPTION_UMCI_EXCLUSIONPATHS_ENABLED", L"Exclusion paths of user mode Code Integrity are enabled"},
+    {CODEINTEGRITY_OPTION_TEST_BUILD, L"CODEINTEGRITY_OPTION_TEST_BUILD", L"Test build of kernel mode binaries is enabled"},
+    {CODEINTEGRITY_OPTION_PREPRODUCTION_BUILD, L"CODEINTEGRITY_OPTION_PREPRODUCTION_BUILD", L"Preproduction build of kernel mode binaries is enabled"},
+    {CODEINTEGRITY_OPTION_DEBUGMODE_ENABLED, L"CODEINTEGRITY_OPTION_DEBUGMODE_ENABLED", L"Debug mode of kernel mode binaries is enabled"},
+    {CODEINTEGRITY_OPTION_FLIGHT_BUILD, L"CODEINTEGRITY_OPTION_FLIGHT_BUILD", L"Flight build of kernel mode binaries is enabled"},
+    {CODEINTEGRITY_OPTION_FLIGHTING_ENABLED, L"CODEINTEGRITY_OPTION_FLIGHTING_ENABLED", L"Flighting of kernel mode binaries is enabled"},
+    {CODEINTEGRITY_OPTION_HVCI_KMCI_ENABLED, L"CODEINTEGRITY_OPTION_HVCI_KMCI_ENABLED", L"Hypervisor enforced Code Integrity is enabled"},
+    {CODEINTEGRITY_OPTION_HVCI_KMCI_AUDITMODE_ENABLED, L"CODEINTEGRITY_OPTION_HVCI_KMCI_AUDITMODE_ENABLED", L"Audit mode of hypervisor enforced Code Integrity is enabled"},
+    {CODEINTEGRITY_OPTION_HVCI_KMCI_STRICTMODE_ENABLED, L"CODEINTEGRITY_OPTION_HVCI_KMCI_STRICTMODE_ENABLED", L"Strict mode of hypervisor enforced Code Integrity is enabled"},
+    {CODEINTEGRITY_OPTION_HVCI_KMCI_AUDITMODE_ENABLED, L"CODEINTEGRITY_OPTION_HVCI_KMCI_AUDITMODE_ENABLED", L"Audit mode of hypervisor enforced Code Integrity is enabled"}
 };
 
 }  // namespace Orc

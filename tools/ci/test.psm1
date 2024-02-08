@@ -1695,7 +1695,7 @@ function ConvertTo-OrcDiffableResults {
     $NuExePath = Find-NuShell
     if (-not $NuExePath)
     {
-        Write-Error "'ConvertTo-OrcDiffableResults' requires nu.exe 0.35.0 to be installed, see https://github.com/nushell/nushell"
+        Write-Error "'ConvertTo-OrcDiffableResults' requires nu.exe >=0.87.1 to be installed, see https://github.com/nushell/nushell"
         return
     }
 
@@ -1773,7 +1773,7 @@ function ConvertTo-OrcDiffableResults {
 
         # Retrieve all columns and remove those excluded
         $Columns = NuExe -c `
-            "dataframe open $CSV | dataframe first 1 | dataframe show | pivot | get Column0 | to json" | ConvertFrom-Json
+            "open $CSV | first 1 | transpose | get Column0 | to json" | ConvertFrom-Json
         $Columns = $Columns | Where-Object { $_ -NotIn $ExcludedColumns } | ForEach-Object { "'$_'" }
 
         # Results output files are not described by any metadata. To be able to sort using the correct columns, schema
@@ -1813,10 +1813,8 @@ function ConvertTo-OrcDiffableResults {
         }
 
         $Selection = $Columns | Join-String -Separator " "
-        Write-Verbose "Calling nu with: dataframe open $CSV | dataframe select $Selection | dataframe sort $SortSelection | dataframe to-csv $Out"
-        NuExe -c `
-            "dataframe open $CSV | dataframe select $Selection | dataframe sort $SortSelection | dataframe to-csv $Out"
-
+        Write-Verbose "Calling nu with: open $CSV | select $Selection | sort $SortSelection | to-csv $Out"
+        NuExe -c "open $CSV | select $Selection | sort-by $SortSelection | to csv | save -f $Out"
         Write-Output ""
     }
 

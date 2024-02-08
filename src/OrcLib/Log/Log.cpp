@@ -25,5 +25,18 @@ void SetDefaultLogger(std::shared_ptr<Logger> instance)
     pInstance = std::move(instance);
 }
 
+const SpdlogLogger::Ptr& Get(Facility id)
+{
+    static SpdlogLogger::Ptr null_ptr;
+
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        return instance->Get(id);
+    }
+
+    return null_ptr;
+}
+
 }  // namespace Log
 }  // namespace Orc

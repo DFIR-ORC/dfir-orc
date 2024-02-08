@@ -93,7 +93,7 @@ WARNING: WIN-UEP1AAROS8L: Empty file: processes2.log
 
 ### ConvertTo-OrcDiffableResults
 
->**Requirements:** Nushell v0.35 - https://github.com/nushell/nushell/releases/tag/0.35.0
+>**Requirements:** Nushell (tested with v0.87) - https://github.com/nushell/nushell/releases/tag/0.87.0
 
 Convert DFIR-Orc offline results so they can be compared between multiple execution.
 

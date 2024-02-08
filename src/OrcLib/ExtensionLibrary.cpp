@@ -37,11 +37,32 @@ namespace Orc {
 ExtensionLibrary::ExtensionLibrary(
     const std::wstring& strKeyword,
     const std::wstring& strX86LibRef,
-    const std::wstring& strX64LibRef)
+    const std::wstring& strX64LibRef,
+    std::vector<std::shared_ptr<DependencyLibrary>> dependencies)
     : m_strKeyword(strKeyword)
     , m_strX86LibRef(strX86LibRef)
     , m_strX64LibRef(strX64LibRef)
+    , m_Dependencies(std::move(dependencies))
 {
+}
+
+HRESULT Orc::ExtensionLibrary::LoadDependencies(std::optional<std::filesystem::path> tempDir)
+{
+    for (const auto& dependency : m_Dependencies)
+    {
+        if (dependency->IsLoaded())
+            continue;
+        if (auto hr = dependency->Load(tempDir); FAILED(hr))
+        {
+            Log::Error(L"Failed to load dependency library '{}'", dependency->Keyword());
+            return hr;
+        }
+        else
+        {
+            Log::Debug(L"Loaded dependency library '{}'", dependency->Keyword());
+        }
+    }
+    return S_OK;
 }
 
 HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
@@ -300,6 +321,13 @@ HRESULT ExtensionLibrary::Load(std::optional<std::filesystem::path> tempDir)
     if (m_hModule != NULL)
         return S_OK;
 
+    if (auto hr = LoadDependencies(tempDir); FAILED(hr))
+    {
+        Log::Error(L"Failed to load dependencies for extension library '{}'", m_strKeyword);
+        return hr;
+    }
+
+
     WORD wArch = 0;
     if (auto hr = SystemDetails::GetArchitecture(wArch); FAILED(hr))
         return hr;
@@ -383,12 +411,14 @@ HRESULT ExtensionLibrary::Load(std::optional<std::filesystem::path> tempDir)
 
 HRESULT ExtensionLibrary::UnLoad()
 {
+    // Remove the termination handler
     if (m_UnLoadHandler)
     {
         Robustness::RemoveTerminationHandler(m_UnLoadHandler);
         m_UnLoadHandler = nullptr;
     }
 
+    // Unload the library
     if (m_hModule != NULL)
     {
         ScopedLock lock(m_cs);
@@ -396,6 +426,9 @@ HRESULT ExtensionLibrary::UnLoad()
         m_hModule = NULL;
         FreeThisLibrary(hmod);
     }
+
+    // Unload dependencies (at least decrement ref count)
+    m_Dependencies.clear();
     return S_OK;
 }
 
@@ -435,22 +468,31 @@ HRESULT Orc::ExtensionLibrary::UnloadAndCleanup()
         m_hModule = NULL;
 
         FreeThisLibrary(hmod);
+    }
 
-        if (!m_libFile.empty() && m_bDeleteOnClose)
+    if (!m_libFile.empty() && m_bDeleteOnClose)
+    {
+        DWORD dwRetries = 0L;
+        while (dwRetries < Orc::DELETION_RETRIES)
         {
-            DWORD dwRetries = 0L;
-            while (dwRetries < Orc::DELETION_RETRIES)
+            HRESULT hr = E_FAIL;
+            if (SUCCEEDED(hr = UtilDeleteTemporaryFile(m_libFile.c_str(), 1)))
             {
-                HRESULT hr = E_FAIL;
-                if (SUCCEEDED(hr = UtilDeleteTemporaryFile(m_libFile.c_str(), 1)))
-                {
-                    return S_OK;
-                }
-                dwRetries++;
+                return S_OK;
+            }
+            dwRetries++;
+
+            if (m_hModule != NULL) // retry FreeLibrary
+            {
+                ScopedLock lock(m_cs);
+                HMODULE hmod = m_hModule;
+                m_hModule = NULL;
+
                 FreeThisLibrary(hmod);
             }
         }
     }
+
     return S_OK;
 }
 

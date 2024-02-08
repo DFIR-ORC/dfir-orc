@@ -17,6 +17,8 @@
 #include "ToolVersion.h"
 
 #include "Text/Fmt/Boolean.h"
+#include "Text/Fmt/ByteQuantity.h"
+#include "Text/Fmt/Limit.h"
 #include "Text/Print.h"
 #include "Text/Print/LocationSet.h"
 #include "Text/Print/OutputSpec.h"

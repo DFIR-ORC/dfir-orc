@@ -16,6 +16,7 @@
 #include "SystemDetails.h"
 
 #include "CpuInfo.h"
+#include "Utils/Time.h"
 
 HRESULT Orc::SystemIdentity::Write(const std::shared_ptr<StructuredOutput::IOutput>& writer, IdentityArea areas)
 {
@@ -235,6 +236,28 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
         std::wstring language;
         if (auto hr = SystemDetails::GetUserLanguage(language); SUCCEEDED(hr))
             writer->WriteNamed(L"language", language.c_str());
+    }
+    {
+        auto installDate = SystemDetails::GetInstallDateFromRegistry();
+        if (installDate)
+        {
+            writer->WriteNamed(L"install_date", ToStringIso8601(*installDate));
+        }
+    }
+    {
+        auto installTime = SystemDetails::GetInstallTimeFromRegistry();
+        if (installTime)
+        {
+            writer->WriteNamed(L"install_time", ToStringIso8601(*installTime));
+        }
+    }
+    {
+        auto shutdownTime = SystemDetails::GetShutdownTimeFromRegistry();
+        if (shutdownTime)
+        {
+            ToStringIso8601(*shutdownTime);
+            writer->WriteNamed(L"shutdown_time", ToStringIso8601(*shutdownTime));
+        }
     }
     {
         auto tags = SystemDetails::GetSystemTags();

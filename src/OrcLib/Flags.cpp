@@ -48,6 +48,29 @@ std::string FlagsToString(DWORD flags, const FlagsDefinition flagValues[], CHAR 
     return out;
 }
 
+std::wstring FlagsToStringW(DWORD flags, const FlagsDefinition flagValues[], WCHAR separator)
+{
+    std::wstring out;
+
+    bool bFirst = true;
+    for (size_t index = 0; flagValues[index].dwFlag != 0xFFFFFFFF; ++index)
+    {
+        if (flags & flagValues[index].dwFlag)
+        {
+            if (bFirst)
+            {
+                bFirst = false;
+                fmt::format_to(std::back_inserter(out), L"{}", flagValues[index].szShortDescr);
+                continue;
+            }
+
+            fmt::format_to(std::back_inserter(out), L"{}{}", separator, flagValues[index].szShortDescr);
+        }
+    }
+
+    return out;
+}
+
 std::optional<std::wstring> ExactFlagToString(DWORD dwFlags, const FlagsDefinition FlagValues[])
 {
     int idx = 0;

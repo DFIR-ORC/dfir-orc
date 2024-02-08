@@ -59,13 +59,29 @@ public:
         __in DWORD dwFlagsAndAttributes,
         __in_opt HANDLE hTemplate);
 
-    HRESULT ReadFrom(__in PCWSTR pwzPath)
+    HRESULT ReadFrom(__in PCWSTR pwzPath, bool bDeleteOnClose = false)
     {
-        return OpenFile(pwzPath, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        return OpenFile(
+            pwzPath,
+            GENERIC_READ,
+            FILE_SHARE_READ | (bDeleteOnClose ? FILE_SHARE_DELETE : 0LU),
+            NULL,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL
+                | (bDeleteOnClose
+                   ? FILE_FLAG_DELETE_ON_CLOSE : 0LU),
+            NULL);
     }
-    HRESULT WriteTo(__in PCWSTR pwzPath)
+    HRESULT WriteTo(__in PCWSTR pwzPath, bool bDeleteOnClose = false)
     {
-        return OpenFile(pwzPath, GENERIC_WRITE, 0L, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        return OpenFile(
+            pwzPath,
+            GENERIC_WRITE,
+            bDeleteOnClose ? FILE_SHARE_DELETE : 0LU,
+            NULL,
+            CREATE_ALWAYS,
+            FILE_ATTRIBUTE_NORMAL | (bDeleteOnClose ? FILE_FLAG_DELETE_ON_CLOSE : 0LU),
+            NULL);
     }
 
     HRESULT CopyHandle(HANDLE hFile);

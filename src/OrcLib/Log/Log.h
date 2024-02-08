@@ -19,6 +19,8 @@ std::shared_ptr<Logger>& DefaultLogger();
 
 void SetDefaultLogger(std::shared_ptr<Logger> instance);
 
+const SpdlogLogger::Ptr& Get(Facility id);
+
 template <typename... Args>
 void Trace(Args&&... args)
 {
