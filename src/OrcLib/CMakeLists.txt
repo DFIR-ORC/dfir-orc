@@ -831,6 +831,8 @@ set(SRC_UTILITIES
     "Utils/Guard/Winsock.cpp"
     "Utils/Locker.h"
     "Utils/MakeArray.h"
+    "Utils/MapFile.h"
+    "Utils/MapFile.cpp"
     "Utils/MetaPtr.h"
     "Utils/Result.h"
     "Utils/Round.h"
