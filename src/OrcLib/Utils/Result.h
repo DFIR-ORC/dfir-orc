@@ -146,7 +146,11 @@ inline std::error_code LastWin32Error()
 
 inline HRESULT ToHRESULT(const std::error_code& ec)
 {
-    assert(ec.category() == std::system_category());
+    if (ec.category() != std::system_category())
+    {
+        return ec ? E_FAIL : S_OK;
+    }
+
     auto hr = ec.value();
     if ((hr & 0xF0000000) == 0x80000000)
     {
