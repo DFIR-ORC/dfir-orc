@@ -68,6 +68,24 @@ private:
     uint64_t m_cacheOffset;
 };
 
+namespace Guard {
+
+template <typename StreamT>
+class CacheStream final : public Orc::CacheStream
+{
+public:
+    CacheStream(StreamT stream, size_t cache_size)
+        : CacheStream(*MetaPtr<StreamT>(stream).get(), cache_size)
+        , m_stream(std::move(stream))
+    {
+    }
+
+private:
+    MetaPtr<StreamT> m_stream;
+};
+
+}  // namespace Guard
+
 }  // namespace Orc
 
 #pragma managed(pop)
