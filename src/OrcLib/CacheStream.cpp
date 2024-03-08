@@ -149,6 +149,18 @@ CacheStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMetho
         pCurrPointer = &newOffset;
     }
 
+    if (dwMoveMethod == FILE_CURRENT)
+    {
+        if (DistanceToMove == 0)
+        {
+            *pCurrPointer = m_offset;
+            return S_OK;
+        }
+
+        dwMoveMethod = FILE_BEGIN;
+        DistanceToMove = m_offset + DistanceToMove;
+    }
+
     HRESULT hr = m_stream.SetFilePointer(DistanceToMove, dwMoveMethod, pCurrPointer);
     if (FAILED(hr))
     {
