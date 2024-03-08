@@ -665,7 +665,8 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
     HRESULT hr = E_FAIL;
     std::error_code ec;
 
-    PeParser pe(std::make_shared<CacheStream>(pStream), ec);
+    CacheStream cache(*pStream, 1048576);
+    PeParser pe(cache, ec);
     if (ec)
     {
         Log::Debug(L"Failed to parse pe file (filename: {}) [{}]", szFileName, ec);

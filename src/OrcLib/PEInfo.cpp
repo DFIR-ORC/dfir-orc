@@ -307,7 +307,7 @@ HRESULT PEInfo::OpenVersionInformation()
         return E_POINTER;
     }
 
-    auto stream = std::make_shared<CacheStream>(directStream, 4096);
+    auto stream = std::make_shared<CacheStream>(*directStream, 4096);
 
     ULONGLONG ullBytesRead;
     size_t rsrc_rsrc_offset = 0;
@@ -648,7 +648,7 @@ HRESULT PEInfo::OpenAllHash(Intentions localIntentions)
     // Pe Hash
     {
         std::error_code ec;
-        PeParser pe(memstream, ec);
+        PeParser pe(*memstream, ec);
         if (ec)
         {
             Log::Debug(L"Failed to parse pe hash '{}' [{}]", m_FileInfo.m_szFullName, ec);
@@ -723,7 +723,8 @@ HRESULT PEInfo::OpenPeHash(Intentions localIntentions)
         return E_POINTER;
 
     std::error_code ec;
-    PeParser pe(std::make_shared<CacheStream>(std::move(stream)), ec);
+    CacheStream cache(*stream, 1048576);
+    PeParser pe(cache, ec);
     if (ec)
     {
         Log::Error(L"Failed to parse PE '{}' [{}]", m_FileInfo.m_szFullName, ec);

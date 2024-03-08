@@ -44,7 +44,7 @@ public:
     using PeChunks = std::array<PeChunk, 4>;
     using SectionHeaders = fmt::basic_memory_buffer<IMAGE_SECTION_HEADER, 16>;
 
-    PeParser(std::shared_ptr<ByteStream> stream, std::error_code& ec);
+    PeParser(ByteStream& stream, std::error_code& ec);
 
     bool HasDebugDirectory() const;
     void ReadDebugDirectory(std::vector<uint8_t>& buffer, std::error_code& ec) const;
@@ -66,7 +66,7 @@ private:
     void Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks, PeHash& output, std::error_code& ec) const;
 
 private:
-    mutable std::shared_ptr<ByteStream> m_stream;
+    ByteStream& m_stream;
     IMAGE_DOS_HEADER m_imageDosHeader;
     ImageNtHeader m_imageNtHeader;
     std::optional<IMAGE_OPTIONAL_HEADER32> m_imageOptionalHeaders32;

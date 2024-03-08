@@ -14,9 +14,9 @@ using namespace std::string_view_literals;
 
 namespace Orc {
 
-CacheStream::CacheStream(std::shared_ptr<ByteStream> stream, size_t cacheSize)
+CacheStream::CacheStream(ByteStream& stream, size_t cacheSize)
     : ByteStream()
-    , m_stream(std::move(stream))
+    , m_stream(stream)
     , m_streamOffset(0)
     , m_offset(0)
     , m_cache()
@@ -27,14 +27,14 @@ CacheStream::CacheStream(std::shared_ptr<ByteStream> stream, size_t cacheSize)
     m_cache.resize(cacheSize);
 }
 
-STDMETHODIMP Orc::CacheStream::Clone(std::shared_ptr<ByteStream>& clone)
+STDMETHODIMP Orc::CacheStream::Clone(ByteStream& clone)
 {
     return E_NOTIMPL;
 }
 
 HRESULT CacheStream::Close()
 {
-    HRESULT hr = m_stream->Close();
+    HRESULT hr = m_stream.Close();
     if (FAILED(hr))
     {
         Log::Debug("Failed to close underlying cached stream [{}]", SystemError(hr));
@@ -59,7 +59,7 @@ HRESULT CacheStream::Duplicate(const CacheStream& other)
 
 HRESULT CacheStream::Open()
 {
-    HRESULT hr = m_stream->IsOpen();
+    HRESULT hr = m_stream.IsOpen();
     if (hr != S_OK)
     {
         Log::Debug("Failed to open CacheStream: underlying stream is closed [{}]", SystemError(hr));
@@ -107,7 +107,7 @@ HRESULT CacheStream::Read_(
         else
         {
             ULONGLONG streamRead = 0;
-            hr = m_stream->Read(m_cache.data(), m_cache.size(), &streamRead);
+            hr = m_stream.Read(m_cache.data(), m_cache.size(), &streamRead);
             if (FAILED(hr))
             {
                 return hr;
@@ -149,7 +149,7 @@ CacheStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMetho
         pCurrPointer = &newOffset;
     }
 
-    HRESULT hr = m_stream->SetFilePointer(DistanceToMove, dwMoveMethod, pCurrPointer);
+    HRESULT hr = m_stream.SetFilePointer(DistanceToMove, dwMoveMethod, pCurrPointer);
     if (FAILED(hr))
     {
         return hr;
@@ -162,7 +162,7 @@ CacheStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMetho
 
 ULONG64 CacheStream::GetSize()
 {
-    return m_stream->GetSize();
+    return m_stream.GetSize();
 }
 
 HRESULT CacheStream::SetSize(ULONG64 ullNewSize)
