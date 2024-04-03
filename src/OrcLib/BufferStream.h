@@ -78,8 +78,7 @@ private:
 };
 
 template <size_t _DeclElts>
-inline STDMETHODIMP_(HRESULT __stdcall)
-    BufferStream<_DeclElts>::Read_(PVOID pBuffer, ULONGLONG cbBytes, PULONGLONG pcbBytesRead)
+inline STDMETHODIMP BufferStream<_DeclElts>::Read_(PVOID pBuffer, ULONGLONG cbBytes, PULONGLONG pcbBytesRead)
 {
     using namespace msl::utilities;
 
@@ -104,7 +103,7 @@ inline STDMETHODIMP_(HRESULT __stdcall)
 }
 
 template <size_t _DeclElts>
-inline STDMETHODIMP_(HRESULT __stdcall)
+inline STDMETHODIMP 
     BufferStream<_DeclElts>::Write_(const PVOID pBuffer, ULONGLONG cbBytesToWrite, PULONGLONG pcbBytesWritten)
 {
     using namespace msl::utilities;
@@ -159,7 +158,7 @@ inline STDMETHODIMP_(HRESULT __stdcall)
 }
 
 template <size_t _DeclElts>
-inline STDMETHODIMP_(HRESULT __stdcall)
+inline STDMETHODIMP
     BufferStream<_DeclElts>::SetFilePointer(LONGLONG DistanceToMove, DWORD dwMoveMethod, PULONG64 pCurrPointer)
 {
     HRESULT hr = E_FAIL;
