@@ -1287,7 +1287,7 @@ Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::GetMo
         L"Name,FileSystem,Label,DeviceID,DriveType,Capacity,FreeSpace,SerialNumber,BootVolume,SystemVolume,"
         L"LastErrorCode,ErrorDescription FROM Win32_Volume");
     if (result.has_error())
-        result.error();
+        return result.error();
 
     const auto& pEnum = result.value();
 
