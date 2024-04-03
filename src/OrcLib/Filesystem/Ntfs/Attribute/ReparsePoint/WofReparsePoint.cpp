@@ -18,7 +18,7 @@ Result<WofReparsePoint> WofReparsePoint::Parse(BufferView buffer)
     if (buffer.size() < sizeof(WofReparsePoint::Layout))
     {
         Log::Debug("Failed to parse wof reparse point: invalid size");
-        return std::make_error_code(std::errc::message_size);
+        return std::errc::message_size;
     }
 
     return WofReparsePoint::Parse(*reinterpret_cast<const WofReparsePoint::Layout*>(buffer.data()));
@@ -29,20 +29,20 @@ Result<WofReparsePoint> WofReparsePoint::Parse(const WofReparsePoint::Layout& la
     if (layout.version != 1)
     {
         Log::Debug("Failed to parse wof reparse point: unsupported version (version: {})", layout.version);
-        return std::make_error_code(std::errc::bad_message);
+        return std::errc::bad_message;
     }
 
     if (layout.providerVersion != 1)
     {
         Log::Debug(
             "Failed to parse wof reparse point: unsupported provider version (version: {})", layout.providerVersion);
-        return std::make_error_code(std::errc::bad_message);
+        return std::errc::bad_message;
     }
 
     if (layout.provider != std::underlying_type_t<WofProviderType>(WofProviderType::kFile))
     {
         Log::Debug("Failed to parse wof reparse point: unsupported provider (version: {})", layout.provider);
-        return std::make_error_code(std::errc::bad_message);
+        return std::errc::bad_message;
     }
 
     std::error_code ec;
