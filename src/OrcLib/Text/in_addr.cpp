@@ -32,7 +32,7 @@ RtlIpv4AddressToStringExAApi(const in_addr* Address, USHORT Port, PSTR AddressSt
     auto status = fn(Address, Port, AddressString, AddressStringLength);
     if (!NT_SUCCESS(status))
     {
-        return std::error_code(HRESULT_FROM_NT(status), std::system_category());
+        return Orc::NtError(status);
     }
 
     return Orc::Success<void>();
@@ -58,7 +58,7 @@ RtlIpv4AddressToStringExWApi(const in_addr* Address, USHORT Port, PWSTR AddressS
     auto status = fn(Address, Port, AddressString, AddressStringLength);
     if (!NT_SUCCESS(status))
     {
-        return std::error_code(HRESULT_FROM_NT(status), std::system_category());
+        return Orc::NtError(status);
     }
 
     return Orc::Success<void>();
@@ -88,7 +88,7 @@ Orc::Result<void> RtlIpv6AddressToStringExAApi(
     auto status = fn(Address, ScopeId, Port, AddressString, AddressStringLength);
     if (!NT_SUCCESS(status))
     {
-        return std::error_code(HRESULT_FROM_NT(status), std::system_category());
+        return Orc::NtError(status);
     }
 
     return Orc::Success<void>();
@@ -118,7 +118,7 @@ Orc::Result<void> RtlIpv6AddressToStringExWApi(
     auto status = fn(Address, ScopeId, Port, AddressString, AddressStringLength);
     if (!NT_SUCCESS(status))
     {
-        return std::error_code(HRESULT_FROM_NT(status), std::system_category());
+        return Orc::NtError(status);
     }
 
     return Orc::Success<void>();
