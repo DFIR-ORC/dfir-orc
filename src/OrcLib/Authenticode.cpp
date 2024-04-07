@@ -153,7 +153,7 @@ Orc::Result<void> CheckCatalogSignature(std::string_view catalog)
         }
     }
 
-    return Success<void>();
+    return Orc::Success<void>();
 }
 
 bool FindPeHash(std::string_view buffer, const Orc::Authenticode::PE_Hashs& peHashes)

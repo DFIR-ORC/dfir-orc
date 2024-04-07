@@ -50,7 +50,7 @@ Result<void> Dump(const T& container, const std::filesystem::path& output)
         return std::make_error_code(std::errc::message_size);
     }
 
-    return Orc::Success<>();
+    return {};
 }
 
 }  // namespace Orc

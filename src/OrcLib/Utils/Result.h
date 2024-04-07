@@ -8,10 +8,133 @@
 #pragma once
 
 #include <optional>
-
-#include <boost/outcome/outcome.hpp>
-
 #include <winternl.h>
+#include <system_error>
+#include <cassert>
+
+#ifdef __cpp_lib_expected
+#    include <expected>
+
+namespace Orc {
+
+template <typename T>
+concept not_void = !std::is_same_v<T, void>;
+
+template <typename T = void>
+struct Result : std::expected<T, std::error_code>
+{
+    constexpr Result(Result<T>&& value) noexcept = default;
+    constexpr Result(const Result<T>& value) noexcept = delete;
+
+    constexpr Result& operator=(Result<T>&& value) noexcept = default;
+    constexpr Result& operator=(const Result<T>& value) noexcept = default;
+
+    constexpr Result& operator=(const std::errc& ec)
+    {
+        return *this = std::unexpected(std::make_error_code(ec));
+    }
+
+    constexpr Result& operator=(const std::error_code& ec)
+    {
+        return *this = std::unexpected(ec);
+    }
+
+    template <typename U = T>
+    constexpr Result(U&& value) noexcept
+        requires(!std::is_same_v<U, void> && std::is_convertible_v<U, T>)
+        : std::expected<T, std::error_code>(std::forward<U>(value)) {};
+
+    constexpr Result(std::errc ec)
+        : std::expected<T, std::error_code>(std::unexpected(std::make_error_code(ec))) {};
+
+    constexpr Result(std::error_code ec)
+        : std::expected<T, std::error_code>(std::unexpected(ec)) {};
+
+    constexpr Result(std::unexpected<std::error_code> unexpected)
+        : std::expected<T, std::error_code>(std::move(unexpected)) {};
+
+    template <typename... Args>
+    constexpr Result(Args&&... args) noexcept
+        requires std::constructible_from<T, Args...>
+        : std::expected<T, std::error_code>(std::in_place, args...)
+    {
+    }
+
+    constexpr inline bool has_error() const { return !this->has_value(); }
+};
+
+
+template <>
+struct Result<void> : std::expected<void, std::error_code>
+{
+
+    constexpr Result(std::errc ec)
+        : std::expected<void, std::error_code>(std::unexpected(std::make_error_code(ec))) {};
+
+    Result(std::error_code ec) noexcept
+        : std::expected<void, std::error_code>(std::unexpected(ec)) {};
+
+    Result(std::unexpected<std::error_code> unexpected)
+        : std::expected<void, std::error_code>(std::move(unexpected)) {};
+
+    template <typename... Args>
+    constexpr Result(Args&&... args)
+        : std::expected<void, std::error_code>()
+    {
+    }
+
+    constexpr inline bool has_error() const { return !this->has_value(); }
+};
+
+template <typename T>
+inline Result<T> Success(auto... args)
+    requires not_void<T> && std::constructible_from<T, decltype(args)...>
+{
+    return {std::in_place, args...};
+}
+
+template <>
+inline Result<void> Success()
+{
+    return {std::in_place};
+}
+
+using Fail = std::unexpected<std::error_code>;
+
+
+inline std::error_code SystemError(HRESULT hr)
+{
+    return {hr, std::system_category()};
+}
+
+inline std::error_code Win32Error(DWORD win32Error)
+{
+    return {HRESULT_FROM_WIN32(win32Error), std::system_category()};
+}
+
+inline std::error_code NtError(NTSTATUS ntStatus)
+{
+    return std::error_code {HRESULT_FROM_NT(ntStatus), std::system_category()};
+}
+
+// Return std::error_code from GetLastError() value
+inline std::error_code LastWin32Error()
+{
+    return std::error_code {HRESULT_FROM_WIN32(::GetLastError()), std::system_category()};
+}
+
+}  // namespace Orc
+
+#    define ORC_TRY(value, expr)                                                                                        \
+        auto&& _result = expr;                                                                                         \
+        if (!_result.has_value())                                                                                      \
+            return std::unexpected(_result.error());                                                              \
+        auto value = *_result;
+
+#else
+
+#    include <boost/outcome/outcome.hpp>
+
 
 namespace Orc {
 
@@ -64,8 +187,38 @@ struct Result<void> : boost::outcome_v2::std_result<void>
     }
 };
 
-template <typename T = void>
-using Success = boost::outcome_v2::success_type<T>;
+template <typename T, typename... Args>
+inline Result<T> Success(Args&&... args)
+{
+    return {boost::outcome_v2::in_place_type<void>, args...};
+}
+
+inline std::error_code SystemError(HRESULT hr)
+{
+    return {hr, std::system_category()};
+}
+
+inline std::error_code Win32Error(DWORD win32Error)
+{
+    return {HRESULT_FROM_WIN32(win32Error), std::system_category()};
+}
+
+inline std::error_code NtError(NTSTATUS ntStatus)
+{
+    return {HRESULT_FROM_NT(ntStatus), std::system_category()};
+}
+
+// Return std::error_code from GetLastError() value
+inline std::error_code LastWin32Error()
+{
+    return {HRESULT_FROM_WIN32(::GetLastError()), std::system_category()};
+}
+
+} // namespace Orc
+
+#endif
+
+namespace Orc {
 
 template <typename T>
 T& operator*(Result<T>& result)
@@ -121,27 +274,6 @@ T ValueOr(Orc::Result<T>&& result, T&& fallback_value)
     }
 
     return std::move(fallback_value);
-}
-
-inline std::error_code SystemError(HRESULT hr)
-{
-    return {hr, std::system_category()};
-}
-
-inline std::error_code Win32Error(DWORD win32Error)
-{
-    return {HRESULT_FROM_WIN32(win32Error), std::system_category()};
-}
-
-inline std::error_code NtError(NTSTATUS ntStatus)
-{
-    return {HRESULT_FROM_NT(ntStatus), std::system_category()};
-}
-
-// Return std::error_code from GetLastError() value
-inline std::error_code LastWin32Error()
-{
-    return {HRESULT_FROM_WIN32(::GetLastError()), std::system_category()};
 }
 
 inline HRESULT ToHRESULT(const std::error_code& ec)

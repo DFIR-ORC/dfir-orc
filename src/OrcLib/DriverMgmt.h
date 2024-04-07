@@ -166,7 +166,7 @@ public:
                 NULL);
             FAILED(hr))
             return SystemError(hr);
-        return Success {};
+        return {};
     }
 
     template <typename _Tout>
