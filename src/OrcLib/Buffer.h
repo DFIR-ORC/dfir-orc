@@ -761,7 +761,7 @@ public:
         assign(Ptr);
         return *this;
     }
-    Buffer<_T, _DeclElts>& operator=(_In_ Buffer<_T, _DeclElts>&& Ptr)
+    Buffer<_T, _DeclElts>& operator=(_In_ Buffer<_T, _DeclElts>&& Ptr) noexcept
     {
         std::swap(m_store, Ptr.m_store);
         std::swap(m_EltsUsed, Ptr.m_EltsUsed);
