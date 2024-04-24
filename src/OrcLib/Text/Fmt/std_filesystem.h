@@ -17,7 +17,7 @@ template <>
 struct fmt::formatter<std::filesystem::path> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const std::filesystem::path& path, FormatContext& ctx)
+    auto format(const std::filesystem::path& path, FormatContext& ctx) const
     {
         return fmt::formatter<std::string_view>::format(path.string(), ctx);
     }
@@ -27,7 +27,7 @@ template <>
 struct fmt::formatter<std::filesystem::path, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const std::filesystem::path& path, FormatContext& ctx)
+    auto format(const std::filesystem::path& path, FormatContext& ctx) const
     {
         return fmt::formatter<std::wstring_view, wchar_t>::format(path.wstring(), ctx);
     }
