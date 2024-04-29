@@ -166,12 +166,12 @@ HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IOut
 
     {
         std::wstring strComputerName;
-        SystemDetails::GetOrcComputerName(strComputerName);
+        SystemDetails::GetComputerName_(strComputerName);
         writer->WriteNamed(L"name", strComputerName.c_str());
     }
     {
         std::wstring strFullComputerName;
-        SystemDetails::GetOrcFullComputerName(strFullComputerName);
+        SystemDetails::GetFullComputerName(strFullComputerName);
         writer->WriteNamed(L"fullname", strFullComputerName.c_str());
     }
     {
