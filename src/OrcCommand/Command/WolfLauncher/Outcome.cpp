@@ -149,7 +149,7 @@ std::string ToString(Outcome::Archive::InputType inputType)
         case Outcome::Archive::InputType::kOffline:
             return "offline";
         case Outcome::Archive::InputType::kRunningSystem:
-            return "running_system";
+            return "live";
     }
 
     return "<unknown>";
