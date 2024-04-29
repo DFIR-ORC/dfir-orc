@@ -376,9 +376,9 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             }
 
             writer->WriteNamed(L"computer_name", outcome.GetOrcComputerNameValue());
+            writer->WriteNamed(L"system_type", outcome.GetOrcSystemTypeValue());
 
             ::Write(writer, outcome.GetMothership());
-
             ::Write(writer, outcome.GetWolfLauncher());
 
             {

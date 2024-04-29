@@ -234,6 +234,12 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HAN
     }
 
     {
+        std::wstring orcSystemType;
+        SystemDetails::GetOrcSystemType(orcSystemType);
+        outcome.SetOrcSystemTypeValue(orcSystemType);
+    }
+
+    {
         std::wstring timestampKey;
         HRESULT hr = SystemDetails::GetTimeStamp(timestampKey);
         if (SUCCEEDED(hr))
