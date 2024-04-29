@@ -179,6 +179,21 @@ HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IOut
         SystemDetails::GetSystemType(strSystemType);
         writer->WriteNamed(L"type", strSystemType.c_str());
     }
+
+    {
+        auto codepage = SystemDetails::GetCodePage();
+        if (codepage)
+        {
+            writer->WriteNamed(L"codepage", *codepage);
+        }
+
+        auto codepage_name = SystemDetails::GetCodePageName();
+        if (codepage_name)
+        {
+            writer->WriteNamed(L"codepage_name", *codepage_name);
+        }
+    }
+
     {
         WORD wArch = 0;
         SystemDetails::GetArchitecture(wArch);
