@@ -266,7 +266,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         const wstring& requiredSystemTypes = item[WOLFLAUNCHER_COMMAND_SYSTEMTYPE];
         wstring strProductType;
 
-        if (FAILED(hr = SystemDetails::GetSystemType(strProductType)))
+        if (FAILED(hr = SystemDetails::GetOrcSystemType(strProductType)))
         {
             Log::Error("Failed to retrieve system product type [{}]", SystemError(hr));
             return nullptr;

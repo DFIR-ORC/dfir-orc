@@ -45,6 +45,9 @@ public:
     static HRESULT GetSystemType(std::wstring& strSystemType);
     static HRESULT GetSystemType(BYTE& systemType);
 
+    static HRESULT SetOrcSystemType(std::wstring strSystemType);
+    static HRESULT GetOrcSystemType(std::wstring& strSystemType);
+
     static bool IsKnownWindowsBuild(uint32_t build);
     static void GetTagsFromBuildId(uint32_t ProductType, uint32_t build, SystemTags& tags);
 

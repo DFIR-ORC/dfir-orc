@@ -46,6 +46,7 @@ struct SystemDetailsBlock
     std::optional<std::wstring> strOrcComputerName;
     std::optional<std::wstring> strOrcFullComputerName;
     std::optional<std::wstring> strProductType;
+    std::optional<std::wstring> strOrcProductType;
     std::optional<BYTE> wProductType;
     std::wstring strUserName;
     std::wstring strUserSID;
@@ -105,6 +106,32 @@ HRESULT SystemDetails::GetSystemType(std::wstring& strProductType)
     return S_OK;
 }
 
+HRESULT Orc::SystemDetails::SetOrcSystemType(std::wstring strProductType)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = LoadSystemDetails()))
+        return hr;
+
+    if (!strProductType.empty())
+        g_pDetailsBlock->strOrcProductType.emplace(std::move(strProductType));
+
+    return S_OK;
+}
+
+HRESULT SystemDetails::GetOrcSystemType(std::wstring& strProductType)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = LoadSystemDetails()))
+        return hr;
+
+    if (g_pDetailsBlock->strOrcProductType.has_value())
+    {
+        strProductType = g_pDetailsBlock->strOrcProductType.value();
+        return S_OK;
+    }
+
+    return GetSystemType(strProductType);
+}
 
 bool SystemDetails::IsKnownWindowsBuild(uint32_t build)
 {

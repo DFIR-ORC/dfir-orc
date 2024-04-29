@@ -81,6 +81,10 @@ void UtilitiesMain::PrintCommonParameters(Orc::Text::Tree& root)
     SystemDetails::GetSystemType(systemType);
     PrintValue(root, L"System type", systemType);
 
+    std::wstring orcSystemType;
+    SystemDetails::GetOrcSystemType(orcSystemType);
+    PrintValue(root, L"DFIR-Orc system type", orcSystemType);
+
     PrintValue(root, L"System tags", boost::join(SystemDetails::GetSystemTags(), ", "));
 
     std::wstring logFileName(Text::kEmptyW);
@@ -223,7 +227,7 @@ void UtilitiesMain::Configure(int argc, const wchar_t* argv[])
 
     if (!systemType.empty())
     {
-        SystemDetails::SetSystemType(systemType);
+        SystemDetails::SetOrcSystemType(systemType);
     }
 }
 

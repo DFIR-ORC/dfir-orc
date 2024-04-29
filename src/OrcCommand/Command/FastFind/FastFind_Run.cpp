@@ -671,7 +671,7 @@ HRESULT Main::Run()
             pStructuredOutput->WriteNamed(L"os", strSystemDescr.c_str());
 
         std::wstring strSystemRole;
-        if (SUCCEEDED(SystemDetails::GetSystemType(strSystemRole)))
+        if (SUCCEEDED(SystemDetails::GetOrcSystemType(strSystemRole)))
             pStructuredOutput->WriteNamed(L"role", strSystemRole.c_str());
     }
 

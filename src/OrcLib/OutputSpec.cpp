@@ -86,7 +86,7 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
     SystemDetails::GetTimeStamp(strTimeStamp);
 
     wstring strSystemType;
-    SystemDetails::GetSystemType(strSystemType);
+    SystemDetails::GetOrcSystemType(strSystemType);
 
     strFileName = fmt::vformat(
         fmt::wstring_view(strPattern),

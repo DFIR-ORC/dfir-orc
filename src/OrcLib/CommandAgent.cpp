@@ -273,7 +273,7 @@ HRESULT CommandAgent::ApplyPattern(
     auto s6 = std::regex_replace(s5, r_TimeStamp, strTimeStamp);
 
     wstring strSystemType;
-    SystemDetails::GetSystemType(strSystemType);
+    SystemDetails::GetOrcSystemType(strSystemType);
     auto s7 = std::regex_replace(s6, r_SystemType, strSystemType);
 
     std::swap(s7, output);
