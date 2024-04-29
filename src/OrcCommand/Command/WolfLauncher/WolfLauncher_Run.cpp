@@ -605,6 +605,12 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                 writer->WriteNamed(L"computer_name", computerName);
             }
 
+            {
+                std::wstring systemType;
+                SystemDetails::GetOrcSystemType(systemType);
+                writer->WriteNamed(L"system_type", systemType);
+            }
+
             auto mothership_id = SystemDetails::GetParentProcessId();
             if (mothership_id)
             {
