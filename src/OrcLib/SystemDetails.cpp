@@ -19,6 +19,7 @@
 #include <iphlpapi.h>
 
 #include <boost/scope_exit.hpp>
+#include <boost/algorithm/algorithm.hpp>
 
 #include "TableOutput.h"
 #include "WideAnsi.h"
@@ -31,6 +32,19 @@
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
 using namespace Orc;
+
+namespace {
+
+template <class _InIt, class _OutIt, class _Pr>
+inline void CopyUntil(_InIt _First, _InIt _Last, _OutIt _Dest, _Pr _Pred)
+{
+    while ((_First != _Last) && _Pred(*_First))
+    {
+        *_Dest++ = *_First++;
+    }
+}
+
+}  // namespace
 
 namespace Orc {
 struct SystemDetailsBlock
@@ -178,8 +192,7 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
 
     if (ProductType != VER_NT_WORKSTATION && ProductType != VER_NT_SERVER && ProductType != VER_NT_DOMAIN_CONTROLLER)
     {
-        Log::Warn(
-            L"ProductType {} is out of valid values range, we \"reset\" it to VER_NT_WORKSTATION", ProductType);
+        Log::Warn(L"ProductType {} is out of valid values range, we \"reset\" it to VER_NT_WORKSTATION", ProductType);
         ProductType = VER_NT_WORKSTATION;
     }
 
@@ -1033,6 +1046,37 @@ HRESULT Orc::SystemDetails::GetUserLanguage(std::wstring& strLanguage)
     }
     strLanguage.assign(szName);
     return S_OK;
+}
+
+Result<std::wstring> Orc::SystemDetails::GetCodePageName()
+{
+    CPINFOEXW info = {0};
+    BOOL rv = GetCPInfoExW(GetConsoleOutputCP(), 0, &info);
+    if (!rv)
+    {
+        auto ec = LastWin32Error();
+        Log::Debug("Failed GetCPInfoExW [{}]", ec);
+        return ec;
+    }
+
+    std::wstring_view buffer {info.CodePageName, sizeof(info.CodePageName) / sizeof(wchar_t)};
+    std::wstring name;
+    CopyUntil(std::cbegin(buffer), std::cend(buffer), std::back_inserter(name), [](auto c) { return std::isprint(c); });
+    return name;
+}
+
+Result<UINT> Orc::SystemDetails::GetCodePage()
+{
+    CPINFOEXW info = {0};
+    BOOL rv = GetCPInfoExW(GetConsoleOutputCP(), 0, &info);
+    if (!rv)
+    {
+        auto ec = LastWin32Error();
+        Log::Debug("Failed GetCPInfoExW [{}]", ec);
+        return ec;
+    }
+
+    return info.CodePage;
 }
 
 Result<std::chrono::system_clock::time_point> Orc::SystemDetails::GetShutdownTimeFromRegistry()

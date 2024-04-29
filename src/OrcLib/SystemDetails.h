@@ -117,6 +117,9 @@ public:
     static HRESULT GetSystemLanguage(std::wstring& strLocale);
     static HRESULT GetUserLanguage(std::wstring& strLocale);
 
+    static Result<std::wstring> GetCodePageName();
+    static Result<UINT> GetCodePage();
+
     static Result<std::chrono::system_clock::time_point> GetShutdownTimeFromRegistry();
     static Result<std::chrono::system_clock::time_point> GetInstallTimeFromRegistry();
     static Result<std::chrono::system_clock::time_point> GetInstallDateFromRegistry();
