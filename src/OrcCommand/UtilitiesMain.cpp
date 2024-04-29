@@ -64,7 +64,7 @@ void UtilitiesMain::PrintCommonParameters(Orc::Text::Tree& root)
     SystemDetails::GetOrcFullComputerName(orcFullComputerName);
     if (orcFullComputerName != fullComputerName && orcFullComputerName != orcComputerName)
     {
-        PrintValue(root, L"DFIR-Orc computer", orcFullComputerName);
+        PrintValue(root, L"DFIR-Orc full computer name", orcFullComputerName);
     }
 
     std::wstring description;
