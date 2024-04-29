@@ -595,7 +595,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 
             {
                 std::wstring computerName;
-                SystemDetails::GetFullComputerName(computerName);
+                SystemDetails::GetOrcFullComputerName(computerName);
                 writer->WriteNamed(L"computer_name", computerName);
             }
 
