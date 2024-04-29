@@ -228,6 +228,12 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HAN
     }
 
     {
+        std::wstring orcComputerName;
+        SystemDetails::GetOrcFullComputerName(orcComputerName);
+        outcome.SetOrcComputerNameValue(orcComputerName);
+    }
+
+    {
         std::wstring timestampKey;
         HRESULT hr = SystemDetails::GetTimeStamp(timestampKey);
         if (SUCCEEDED(hr))

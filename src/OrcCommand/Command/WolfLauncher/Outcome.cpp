@@ -375,7 +375,7 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
                 writer->WriteNamed(L"end", *endingTime);
             }
 
-            writer->WriteNamed(L"computer_name", outcome.GetComputerNameValue());
+            writer->WriteNamed(L"computer_name", outcome.GetOrcComputerNameValue());
 
             ::Write(writer, outcome.GetMothership());
 
