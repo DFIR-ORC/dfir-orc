@@ -689,7 +689,17 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                         {
                             if (!command->IsOptional())
                             {
-                                writer->Write(command->Keyword().c_str());
+                                writer->BeginElement(nullptr);
+                                writer->WriteNamed(L"name", command->Keyword().c_str());
+
+                                if (command->GetTimeout())
+                                {
+                                    std::chrono::milliseconds timeout = command->GetTimeout().value();
+                                    writer->WriteNamed(
+                                        L"timeout", std::chrono::duration_cast<std::chrono::seconds>(timeout).count());
+                                }
+
+                                writer->EndElement(nullptr);
                             }
                         }
                         writer->EndCollection(L"commands");
