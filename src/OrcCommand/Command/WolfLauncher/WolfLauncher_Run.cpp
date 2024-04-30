@@ -374,6 +374,25 @@ Orc::Result<void> DumpOutcome(Command::Wolf::Outcome::Outcome& outcome, const Ou
     return Orc::Success<void>();
 }
 
+std::wstring ToSourceString(CommandParameter::ParamKind kind)
+{
+    switch (kind)
+    {
+        case CommandParameter::ParamKind::OutFile:
+            return L"file";
+        case CommandParameter::ParamKind::OutDirectory:
+            return L"directory";
+        case CommandParameter::ParamKind::StdErr:
+            return L"stderr";
+        case CommandParameter::ParamKind::StdOut:
+            return L"stderr";
+        case CommandParameter::ParamKind::StdOutErr:
+            return L"stdouterr";
+        default:
+            return L"<unknown>";
+    }
+}
+
 }  // namespace
 
 namespace Orc {
@@ -697,6 +716,25 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                                     std::chrono::milliseconds timeout = command->GetTimeout().value();
                                     writer->WriteNamed(
                                         L"timeout", std::chrono::duration_cast<std::chrono::seconds>(timeout).count());
+
+                                    writer->BeginCollection(L"output");
+
+                                    for (const auto& parameter : command->GetParameters())
+                                    {
+                                        if (parameter.Kind == CommandParameter::OutFile
+                                            || parameter.Kind == CommandParameter::OutDirectory
+                                            || parameter.Kind == CommandParameter::StdOut
+                                            || parameter.Kind == CommandParameter::StdErr
+                                            || parameter.Kind == CommandParameter::StdOutErr)
+                                        {
+                                            writer->BeginElement(nullptr);
+                                            writer->WriteNamed(L"name", parameter.Name);
+                                            writer->WriteNamed(L"source", ToSourceString(parameter.Kind));
+                                            writer->EndElement(nullptr);
+                                        }
+                                    }
+
+                                    writer->EndCollection(L"output");
                                 }
 
                                 writer->EndElement(nullptr);
