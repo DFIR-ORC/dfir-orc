@@ -57,6 +57,7 @@ struct SystemDetailsBlock
     std::wstring strFullComputerName;
     std::wstring strTimeStamp;
     Traits::TimeUtc<SYSTEMTIME> timestamp;
+    GUID orcRunId;
     std::optional<std::wstring> strOrcComputerName;
     std::optional<std::wstring> strOrcFullComputerName;
     std::optional<std::wstring> strProductType;
@@ -876,6 +877,16 @@ Result<Traits::TimeUtc<SYSTEMTIME>> SystemDetails::GetTimeStamp()
     }
 
     return g_pDetailsBlock->timestamp;
+}
+
+void SystemDetails::SetOrcRunId(const GUID& guid)
+{
+    g_pDetailsBlock->orcRunId = guid;
+}
+
+const GUID& SystemDetails::GetOrcRunId()
+{
+    return g_pDetailsBlock->orcRunId;
 }
 
 HRESULT SystemDetails::WhoAmI(std::wstring& strMe)

@@ -215,7 +215,6 @@ private:
     void ReadLogConfiguration(const ConfigItem& configItem, bool hasConsoleConfigItem);
 
 private:
-    GUID m_guid;
     ConsoleConfiguration m_consoleConfiguration;
 
     Journal m_journal;

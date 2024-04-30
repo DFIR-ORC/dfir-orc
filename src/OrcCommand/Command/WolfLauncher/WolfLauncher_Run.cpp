@@ -610,9 +610,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         writer->BeginElement(L"dfir-orc");
         writer->BeginElement(L"outline");
         {
-            std::wstring id;
-            Orc::ToString(m_guid, std::back_inserter(id));
-            writer->WriteNamed(L"id", id);
+            writer->WriteNamed(L"id", ToStringW(SystemDetails::GetOrcRunId()));
 
             writer->WriteNamed(L"version", kOrcFileVerStringW);
 
@@ -848,7 +846,7 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
 
     auto [outcome, lock] = m_outcome.Get();
 
-    ::UpdateOutcome(outcome, m_guid, m_hMothership);
+    ::UpdateOutcome(outcome, SystemDetails::GetOrcRunId(), m_hMothership);
     ::UpdateOutcome(outcome, config.m_Recipients);
     ::UpdateOutcome(outcome, m_standardOutput);
     ::UpdateOutcome(outcome, m_logging);

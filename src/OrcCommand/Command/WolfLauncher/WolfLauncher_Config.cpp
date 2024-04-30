@@ -774,13 +774,17 @@ HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
 
-    hr = CoCreateGuid(&m_guid);
+    GUID guid;
+    hr = CoCreateGuid(&guid);
     if (FAILED(hr))
     {
         Log::Error("Failed to initialize execution guid [{}]", SystemError(hr));
-        SecureZeroMemory(&m_guid, sizeof(m_guid));
+        SecureZeroMemory(&guid, sizeof(guid));
         hr = S_OK;  // keep going
     }
+
+    SystemDetails::SetOrcRunId(guid);
+    Log::Debug(L"Starting DFIR-Orc (run id: {})", ToStringW(guid));
 
     if (m_consoleConfiguration.output.path)
     {
@@ -799,7 +803,7 @@ HRESULT Main::CheckConfiguration()
 
     if (m_utilitiesConfig.log.logFile)
     {
-        // Deprecated: 10.0.x compatilbility options
+        // Deprecated: 10.0.x compatibility options
         // Apply the output directory path to the log file
         logPath = fs::path(config.Output.Path) / fs::path(*m_utilitiesConfig.log.logFile).filename();
         m_utilitiesConfig.log.logFile = logPath;

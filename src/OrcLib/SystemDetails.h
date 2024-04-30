@@ -120,6 +120,9 @@ public:
     static Result<std::wstring> GetCodePageName();
     static Result<UINT> GetCodePage();
 
+    static void SetOrcRunId(const GUID& guid);
+    static const GUID& GetOrcRunId();
+
     static Result<std::chrono::system_clock::time_point> GetShutdownTimeFromRegistry();
     static Result<std::chrono::system_clock::time_point> GetInstallTimeFromRegistry();
     static Result<std::chrono::system_clock::time_point> GetInstallDateFromRegistry();
