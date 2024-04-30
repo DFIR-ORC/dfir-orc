@@ -27,6 +27,7 @@
 #include "Archive.h"
 #include "Utils/WinApi.h"
 #include "Utils/Uri.h"
+#include "Text/Guid.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -88,6 +89,8 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
     wstring strSystemType;
     SystemDetails::GetOrcSystemType(strSystemType);
 
+    wstring strRunId(Orc::ToStringW(SystemDetails::GetOrcRunId()));
+
     strFileName = fmt::vformat(
         fmt::wstring_view(strPattern),
         fmt::make_wformat_args(
@@ -97,7 +100,8 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
             fmt::arg(L"ComputerName", strComputerName),
             fmt::arg(L"FullComputerName", strFullComputerName),
             fmt::arg(L"TimeStamp", strTimeStamp),
-            fmt::arg(L"SystemType", strSystemType)));
+            fmt::arg(L"SystemType", strSystemType),
+            fmt::arg(L"RunId", strRunId)));
 
     return S_OK;
 }
