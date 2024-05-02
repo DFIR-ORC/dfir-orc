@@ -12,6 +12,7 @@
 #include "Utils/Result.h"
 #include "Utils/TypeTraits.h"
 #include "OutputWriter.h"
+#include "HypervisorType.h"
 
 #include <optional>
 #include <string>
@@ -130,6 +131,8 @@ public:
     static HRESULT GetCurrentWorkingDirectory(std::filesystem::path& cwd);
 
     static HRESULT GetProcessBinary(std::wstring& strFullPath);
+
+    static Result<HypervisorType> GetHypervisor();
 
     enum DriveType
     {

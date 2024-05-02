@@ -44,6 +44,86 @@ inline void CopyUntil(_InIt _First, _InIt _Last, _OutIt _Dest, _Pr _Pred)
     }
 }
 
+bool IsRunningInHyperV()
+{
+    Guard::RegistryHandle hKey;
+    return RegOpenKeyExA(
+               HKEY_LOCAL_MACHINE,
+               "SOFTWARE\\Microsoft\\Virtual Machine\\Guest\\Parameters",
+               0,
+               KEY_READ,
+               &hKey.value())
+        == ERROR_SUCCESS;
+}
+
+bool IsRunningInVMware()
+{
+    Guard::ServiceHandle hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!hSCManager)
+    {
+        return false;
+    }
+
+    Guard::ServiceHandle hService = OpenService(hSCManager.value(), L"vmci", SERVICE_QUERY_STATUS);
+    if (!hService)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool IsRunningInVirtualBox()
+{
+    Guard::ServiceHandle hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!hSCManager)
+    {
+        return false;
+    }
+
+    Guard::ServiceHandle hService = OpenService(hSCManager.value(), L"VBoxGuest", SERVICE_QUERY_STATUS);
+    if (!hService)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool IsRunningInQEMU()
+{
+    Guard::ServiceHandle hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!hSCManager)
+    {
+        return false;
+    }
+
+    Guard::ServiceHandle hService = OpenService(hSCManager.value(), L"QEMU", SERVICE_QUERY_STATUS);
+    if (!hService)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool IsRunningInXen()
+{
+    Guard::ServiceHandle hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!hSCManager)
+    {
+        return false;
+    }
+
+    Guard::ServiceHandle hService = OpenService(hSCManager.value(), L"xenevtchn", SERVICE_QUERY_STATUS);
+    if (!hService)
+    {
+        return false;
+    }
+
+    return true;
+}
+
 }  // namespace
 
 namespace Orc {
@@ -2074,4 +2154,34 @@ HRESULT SystemDetails::GetProcessBinary(std::wstring& strFullPath)
     }
     strFullPath.assign(szPath);
     return S_OK;
+}
+
+Result<HypervisorType> Orc::SystemDetails::GetHypervisor()
+{
+    if (::IsRunningInHyperV())
+    {
+        return HypervisorType::HyperV;
+    }
+
+    if (::IsRunningInVMware())
+    {
+        return HypervisorType::VMware;
+    }
+
+    if (::IsRunningInVirtualBox())
+    {
+        return HypervisorType::VirtualBox;
+    }
+
+    if (::IsRunningInQEMU())
+    {
+        return HypervisorType::QEMU;
+    }
+
+    if (::IsRunningInXen())
+    {
+        return HypervisorType::Xen;
+    }
+
+    return HypervisorType::None;
 }
