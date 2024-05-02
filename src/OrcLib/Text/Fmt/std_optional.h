@@ -13,10 +13,10 @@
 #include <fmt/format.h>
 
 template <typename T>
-struct fmt::formatter<std::optional<T>> : public fmt::formatter<T>
+struct fmt::formatter<std::optional<T>> : public fmt::formatter<std::decay_t<T>>
 {
     template <typename FormatContext>
-    auto format(const std::optional<T>& optional, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const std::optional<T>& optional, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (!optional.has_value())
         {
@@ -24,15 +24,15 @@ struct fmt::formatter<std::optional<T>> : public fmt::formatter<T>
             return na.format("N/A", ctx);
         }
 
-        return formatter<T>::format(optional.value(), ctx);
+        return formatter<std::decay_t<T>>::format(optional.value(), ctx);
     }
 };
 
 template <typename T>
-struct fmt::formatter<std::optional<T>, wchar_t> : public fmt::formatter<T, wchar_t>
+struct fmt::formatter<std::optional<T>, wchar_t> : public fmt::formatter<std::decay_t<T>, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const std::optional<T>& optional, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const std::optional<T>& optional, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (!optional.has_value())
         {
@@ -40,6 +40,6 @@ struct fmt::formatter<std::optional<T>, wchar_t> : public fmt::formatter<T, wcha
             return na.format(L"N/A", ctx);
         }
 
-        return formatter<T, wchar_t>::format(optional.value(), ctx);
+        return formatter<std::decay_t<T>, wchar_t>::format(optional.value(), ctx);
     }
 };
