@@ -195,6 +195,14 @@ HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IOut
     }
 
     {
+        auto hv = SystemDetails::GetHypervisor();
+        if (hv)
+        {
+            writer->WriteNamed(L"hypervisor", ToStringW(*hv));
+        }
+    }
+
+    {
         WORD wArch = 0;
         SystemDetails::GetArchitecture(wArch);
         switch (wArch)
