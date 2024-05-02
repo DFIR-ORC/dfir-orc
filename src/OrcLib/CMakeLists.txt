@@ -919,6 +919,8 @@ set(SRC_UTILITIES_SYSTEM
     "CryptoUtilities.h"
     "DriverMgmt.cpp"
     "DriverMgmt.h"
+    "HypervisorType.h"
+    "HypervisorType.cpp"
     "JobObject.cpp"
     "JobObject.h"
     "Privilege.cpp"
