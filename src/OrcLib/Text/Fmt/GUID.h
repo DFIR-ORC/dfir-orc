@@ -20,7 +20,7 @@ template <>
 struct fmt::formatter<GUID> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const GUID& guid, FormatContext& ctx)
+    auto format(const GUID& guid, FormatContext& ctx) const
     {
         fmt::basic_memory_buffer<char, Orc::kGuidStringLength> s;
         Orc::ToString(guid, std::back_inserter(s));
@@ -32,7 +32,7 @@ template <>
 struct fmt::formatter<GUID, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const GUID& guid, FormatContext& ctx)
+    auto format(const GUID& guid, FormatContext& ctx) const
     {
         fmt::basic_memory_buffer<wchar_t, Orc::kGuidStringLength> s;
         Orc::ToString(guid, std::back_inserter(s));
