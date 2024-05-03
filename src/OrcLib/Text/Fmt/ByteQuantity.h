@@ -59,7 +59,7 @@ template <typename T>
 struct fmt::formatter<Orc::Traits::ByteQuantity<T>> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::Traits::ByteQuantity<T>& quantity, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Traits::ByteQuantity<T>& quantity, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::string s;
         FormatByteQuantityTo(std::back_inserter(s), quantity);
@@ -71,7 +71,7 @@ template <typename T>
 struct fmt::formatter<Orc::Traits::ByteQuantity<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::Traits::ByteQuantity<T>& quantity, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Traits::ByteQuantity<T>& quantity, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::wstring s;
         FormatByteQuantityToW(std::back_inserter(s), quantity);

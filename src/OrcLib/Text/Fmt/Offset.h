@@ -50,7 +50,7 @@ template <typename T>
 struct fmt::formatter<Orc::Traits::Offset<T>> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::string s;
         FormatOffsetTo(std::back_inserter(s), offset);
@@ -62,7 +62,7 @@ template <typename T>
 struct fmt::formatter<Orc::Traits::Offset<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::wstring s;
         FormatOffsetToW(std::back_inserter(s), offset);

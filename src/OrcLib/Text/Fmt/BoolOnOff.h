@@ -17,7 +17,7 @@ template <>
 struct fmt::formatter<Orc::Traits::BoolOnOff> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::Traits::BoolOnOff& value, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Traits::BoolOnOff& value, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::string_view>::format(value ? "On" : "Off", ctx);
     }
@@ -27,7 +27,7 @@ template <>
 struct fmt::formatter<Orc::Traits::BoolOnOff, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::Traits::BoolOnOff& value, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Traits::BoolOnOff& value, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::wstring_view, wchar_t>::format(value ? L"On" : L"Off", ctx);
     }

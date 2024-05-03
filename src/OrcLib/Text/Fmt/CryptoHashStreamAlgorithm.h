@@ -16,7 +16,7 @@ template <>
 struct fmt::formatter<Orc::CryptoHashStreamAlgorithm> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::CryptoHashStreamAlgorithm& algs, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::CryptoHashStreamAlgorithm& algs, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (algs == Orc::CryptoHashStream::Algorithm::Undefined)
         {
@@ -38,7 +38,7 @@ template <>
 struct fmt::formatter<Orc::CryptoHashStreamAlgorithm, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::CryptoHashStreamAlgorithm& algs, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::CryptoHashStreamAlgorithm& algs, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (algs == Orc::CryptoHashStream::Algorithm::Undefined)
         {

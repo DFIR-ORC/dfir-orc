@@ -16,7 +16,7 @@ template <typename T>
 struct fmt::formatter<std::optional<T>> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const std::optional<T>& optional, FormatContext& ctx)
+    auto format(const std::optional<T>& optional, FormatContext& ctx) const
     {
         if (!optional.has_value())
         {
@@ -31,7 +31,7 @@ template <typename T>
 struct fmt::formatter<std::optional<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const std::optional<T>& optional, FormatContext& ctx)
+    auto format(const std::optional<T>& optional, FormatContext& ctx) const
     {
         if (!optional.has_value())
         {

@@ -15,7 +15,7 @@ template <>
 struct fmt::formatter<FILETIME> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const FILETIME& ft, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const FILETIME& ft, FormatContext& ctx) const -> decltype(ctx.out())
     {
         SYSTEMTIME stUTC {0};
         if (FileTimeToSystemTime(&ft, &stUTC))
@@ -28,7 +28,7 @@ template <>
 struct fmt::formatter<FILETIME, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const FILETIME& ft, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const FILETIME& ft, FormatContext& ctx) const -> decltype(ctx.out())
     {
         SYSTEMTIME stUTC {0};
         if (FileTimeToSystemTime(&ft, &stUTC))

@@ -16,7 +16,7 @@ template <typename T>
 struct fmt::formatter<Orc::Limit<T>> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::Limit<T>& limit, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Limit<T>& limit, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (limit.IsUnlimited())
         {
@@ -32,7 +32,7 @@ template <typename T>
 struct fmt::formatter<Orc::Limit<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::Limit<T>& limit, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Limit<T>& limit, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (limit.IsUnlimited())
         {

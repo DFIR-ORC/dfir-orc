@@ -18,7 +18,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::UploadAuthScheme> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::UploadAuthScheme& scheme, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::UploadAuthScheme& scheme, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
         const auto utf8 = Orc::ToUtf8(Orc::ToString(scheme), ec);
@@ -36,7 +36,7 @@ struct fmt::formatter<Orc::OutputSpecTypes::UploadAuthScheme, wchar_t>
     : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::UploadAuthScheme& scheme, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::UploadAuthScheme& scheme, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(scheme), ctx);
     }
@@ -46,7 +46,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::UploadMethod> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::UploadMethod& method, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::UploadMethod& method, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
         const auto utf8 = Orc::ToUtf8(Orc::ToString(method), ec);
@@ -63,7 +63,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::UploadMethod, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::UploadMethod& method, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::UploadMethod& method, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(method), ctx);
     }
@@ -73,7 +73,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::UploadOperation> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::UploadOperation& operation, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::UploadOperation& operation, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
         const auto utf8 = Orc::ToUtf8(Orc::ToString(operation), ec);
@@ -91,7 +91,7 @@ struct fmt::formatter<Orc::OutputSpecTypes::UploadOperation, wchar_t>
     : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::UploadOperation& operation, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::UploadOperation& operation, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(operation), ctx);
     }
@@ -101,7 +101,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::UploadMode> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::UploadMode& mode, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::UploadMode& mode, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
         const auto utf8 = Orc::ToUtf8(Orc::ToString(mode), ec);
@@ -118,7 +118,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::UploadMode, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::UploadMode& mode, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::UploadMode& mode, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(mode), ctx);
     }
@@ -128,7 +128,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::Encoding> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::Encoding& encoding, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::Encoding& encoding, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
         const auto utf8 = Orc::ToUtf8(Orc::ToString(encoding), ec);
@@ -145,7 +145,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::Encoding, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::Encoding& encoding, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::Encoding& encoding, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(encoding), ctx);
     }
@@ -155,7 +155,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::Kind> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::Kind& kind, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::Kind& kind, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
         const auto utf8 = Orc::ToUtf8(Orc::ToString(kind), ec);
@@ -172,7 +172,7 @@ template <>
 struct fmt::formatter<Orc::OutputSpecTypes::Kind, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::OutputSpecTypes::Kind& kind, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::OutputSpecTypes::Kind& kind, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(kind), ctx);
     }
