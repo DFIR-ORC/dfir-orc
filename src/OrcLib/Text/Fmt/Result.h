@@ -10,6 +10,7 @@
 
 #include <fmt/format.h>
 #include <boost/outcome/outcome.hpp>
+#include "std_error_code.h"
 #include "Utils/Result.h"
 
 template <typename T>
