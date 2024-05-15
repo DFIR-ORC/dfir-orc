@@ -809,7 +809,9 @@ HRESULT Orc::SystemDetails::SetOrcComputerName(const std::wstring& strComputerNa
     if (FAILED(hr = LoadSystemDetails()))
         return hr;
 
-    g_pDetailsBlock->strOrcComputerName = strComputerName;
+    std::wstring name = strComputerName;
+    std::replace(std::begin(name), std::end(name), L' ', L'_');
+    g_pDetailsBlock->strOrcComputerName = std::move(name);
 
     if (!SetEnvironmentVariableW(OrcComputerName, g_pDetailsBlock->strOrcComputerName.value().c_str()))
         return HRESULT_FROM_WIN32(GetLastError());
