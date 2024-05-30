@@ -686,7 +686,7 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     else if (item[WOLFLAUNCHER_CPU_WEIGHT])
     {
         DWORD weight = 0;
-        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_CPU_RATE].c_str(), weight)))
+        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_CPU_WEIGHT].c_str(), weight)))
             return hr;
 
         if (!m_Restrictions.CpuRateControl)
