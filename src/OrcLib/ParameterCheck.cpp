@@ -608,6 +608,7 @@ HRESULT Orc::GetFileSizeFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
         }
     if (dwLen > ORC_MAX_PATH)
     {
+        Log::Debug("GetFileSizeFromArg: unexpected argument value (expected: <={}, actual: {})", ORC_MAX_PATH, dwLen);
         return E_INVALIDARG;
     }
 
@@ -641,7 +642,10 @@ HRESULT Orc::GetFileSizeFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
 
     size.QuadPart = _wtoi64(szTemp) * dwMultiplier;
     if (errno == ERANGE)
+    {
+        Log::Debug(L"GetFileSizeFromArg: failed _wtoi64 (input: {})", szTemp);
         return E_INVALIDARG;
+    }
 
     return S_OK;
 }
@@ -649,7 +653,10 @@ HRESULT Orc::GetFileSizeFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
 HRESULT Orc::GetPercentageFromArg(const WCHAR* pStr, DWORD& value)
 {
     if (pStr == nullptr)
+    {
+        Log::Debug(L"GetPercentageFromArg: invalid nullptr");
         return E_POINTER;
+    }
 
     std::wstring_view str(pStr);
 
@@ -663,7 +670,17 @@ HRESULT Orc::GetPercentageFromArg(const WCHAR* pStr, DWORD& value)
         return E_INVALIDARG;
 
     if (errno == ERANGE || value == 0)
+    {
+        if (errno == ERANGE)
+        {
+            Log::Debug(L"GetPercentageFromArg: failed _wtoi64 (input: {})", pStr);
+        }
+        else
+        {
+            Log::Debug(L"GetPercentageFromArg: failed because _size=0");
+        }
         return E_INVALIDARG;
+    }
 
     try
     {
@@ -671,6 +688,7 @@ HRESULT Orc::GetPercentageFromArg(const WCHAR* pStr, DWORD& value)
     }
     catch (const std::overflow_error&)
     {
+        Log::Debug(L"GetPercentageFromArg: failed because overflow error (input: {})", _value);
         return E_INVALIDARG;
     }
     return S_OK;
@@ -682,7 +700,10 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
     size.LowPart = 0L;
 
     if (pSize == nullptr)
+    {
+        Log::Debug(L"GetIntegerFromArg (LARGE_INTEGER): invalid nullptr");
         return E_POINTER;
+    }
 
     size.QuadPart = _wtoi64(pSize);
 
@@ -692,13 +713,19 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
         while (*pCur)
         {
             if (*pCur != L'0')
+            {
+                Log::Debug(L"GetIntegerFromArg (LARGE_INTEGER): check '0' loop failed (intput: {})", pSize);
                 return E_INVALIDARG;
+            }
             pCur++;
         }
     }
 
     if (errno == ERANGE || errno == EINVAL)
+    {
+        Log::Debug(L"GetIntegerFromArg (LARGE_INTEGER): failed _wtoi64 (input: {})", pSize);
         return E_INVALIDARG;
+    }
 
     return S_OK;
 }
@@ -706,18 +733,33 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
 HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, size_t& size)
 {
     if (pStr == nullptr)
+    {
+        Log::Debug(L"GetIntegerFromArg (size_t): invalid nullptr");
         return E_POINTER;
+    }
 
     auto _size = _wtoi(pStr);
 
     if (errno == ERANGE || _size == 0)
+    {
+        if (errno == ERANGE)
+        {
+            Log::Debug(L"GetIntegerFromArg (size_t): failed _wtoi64 (input: {})", pStr);
+        }
+        else
+        {
+            Log::Debug(L"GetIntegerFromArg (size_t): failed because _size=0");
+        }
         return E_INVALIDARG;
+    }
+
     try
     {
         size = ConvertTo<size_t>(_size);
     }
     catch (const std::overflow_error&)
     {
+        Log::Debug(L"GetIntegerFromArg (size_t): failed because overflow error (input: {})", _size);
         return E_INVALIDARG;
     }
     return S_OK;
@@ -726,12 +768,25 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, size_t& size)
 HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, DWORD& value)
 {
     if (pStr == nullptr)
+    {
+        Log::Debug(L"GetIntegerFromArg (DWORD): invalid nullptr");
         return E_POINTER;
+    }
 
     auto _value = _wtoi(pStr);
 
     if (errno == ERANGE || _value == 0)
+    {
+        if (errno == ERANGE)
+        {
+            Log::Debug(L"GetIntegerFromArg (DWORD): failed _wtoi64 (input: {})", pStr);
+        }
+        else
+        {
+            Log::Debug(L"GetIntegerFromArg (DWORD): failed because _size=0");
+        }
         return E_INVALIDARG;
+    }
 
     try
     {
@@ -739,6 +794,7 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, DWORD& value)
     }
     catch (const std::overflow_error&)
     {
+        Log::Debug(L"GetIntegerFromArg (DWORD): failed because overflow error (input: {})", _value);
         return E_INVALIDARG;
     }
 
