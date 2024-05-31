@@ -232,6 +232,7 @@ bool SystemDetails::IsKnownWindowsBuild(uint32_t build)
 {
     switch (build)
     {
+        case 22631:
         case 22621:
         case 22000:
         case 20348:
@@ -281,6 +282,10 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
 
     switch (build)
     {
+        case 22631:
+            tags.insert(L"Windows11");
+            tags.insert(L"Release#23H2");
+            break;
         case 22621:
             tags.insert(L"Windows11");
             tags.insert(L"Release#22H2");
