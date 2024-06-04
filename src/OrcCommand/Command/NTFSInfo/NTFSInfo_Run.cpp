@@ -695,11 +695,27 @@ HRESULT Main::WriteVolStats(
             outputPaths = it->second;
         }
 
-        auto reader = loc->GetReader();
+        auto ntfsReader = loc->GetReader();
 
-        if (reader == nullptr)
+        if (ntfsReader == nullptr)
         {
             return E_FAIL;
+        }
+
+        if (ntfsReader->VolumeSerialNumber() == 0)
+        {
+            int debug = 0;
+        }
+
+        std::shared_ptr<VolumeReader> reader;
+        auto shadow = loc->GetShadow();
+        if (shadow && shadow->parentVolume)
+        {
+            reader = shadow->parentVolume;
+        }
+        else
+        {
+            reader = ntfsReader;
         }
 
         SystemDetails::WriteComputerName(volStatOutput);
@@ -708,7 +724,7 @@ HRESULT Main::WriteVolStats(
         volStatOutput.WriteString(FSVBR::GetFSName(reader->GetFSType()).c_str());
         volStatOutput.WriteBool(loc->GetParse());
         volStatOutput.WriteString(fmt::format(L"{}", fmt::join(loc->GetPaths(), L";")));
-        volStatOutput.WriteString(loc->GetShadow() ? ToStringW(loc->GetShadow()->guid).c_str() : L"");
+        volStatOutput.WriteString(shadow ? ToStringW(shadow->guid).c_str() : L"{00000000-0000-0000-0000-000000000000}");
 
         if (!outputPaths)
         {
@@ -823,7 +839,6 @@ HRESULT Main::RunThroughMFT()
             Log::Error("Failed to create writers for NTFSInfo [{}]", SystemError(hr));
             return hr;
         }
-
     }
 
     auto fileinfoIterator = begin(m_FileInfoOutput.Outputs());
