@@ -13,6 +13,7 @@
 #include <Bits.h>
 #include <Winhttp.h>
 #include <boost/scope_exit.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "BITSAgent.h"
 #include "ParameterCheck.h"
@@ -306,6 +307,29 @@ BITSAgent::UploadFile(
                 else
                 {
                     cmdLine << L"\"" << strCmdSpec << L"\" /E:OFF /D /C bitsadmin /COMPLETE " << szJobGUID;
+                }
+            }
+
+            if (m_config.bitsMode == OutputSpec::BITSMode::SMB && m_config.bitsDeleteSmbShare.has_value()
+                && *m_config.bitsDeleteSmbShare == true)
+            {
+                Log::Debug(L"Configure NotifyCmd to delete share: {}{}", m_config.ServerName, m_config.RootPath);
+
+                constexpr std::wstring_view forbidden(L";&|()<>*?\"");
+                if (boost::algorithm::contains(m_config.ServerName, forbidden)
+                    || boost::algorithm::contains(m_config.RootPath, forbidden))
+                {
+                    Log::Warn("Invalid characters in server name or network path");
+                }
+                else
+                {
+                    if (!cmdLine.str().empty())
+                    {
+                        cmdLine << L" & ";
+                    }
+
+                    cmdLine << L"net use /del \"\\\\" << m_config.ServerName << m_config.RootPath << L"\"";
+
                 }
             }
 

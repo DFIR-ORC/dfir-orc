@@ -565,6 +565,19 @@ HRESULT OutputSpec::Upload::Configure(const ConfigItem& item)
             }
         }
 
+        if (::HasValue(item, CONFIG_UPLOAD_BITS_SMB_DELETE_SHARE))
+        {
+            if (bitsMode != BITSMode::SMB)
+            {
+                Log::Warn(L"Option 'delete_smb_share' is only supported with BITS SMB mode");
+            }
+            else
+            {
+                const auto str = item.SubItems[CONFIG_UPLOAD_BITS_SMB_DELETE_SHARE].c_str();
+                bitsDeleteSmbShare = boost::iequals(str, L"true") || boost::iequals(str, L"yes");
+            }
+        }
+
         if (::HasValue(item, CONFIG_UPLOAD_FILTER_INC))
         {
             boost::split(
