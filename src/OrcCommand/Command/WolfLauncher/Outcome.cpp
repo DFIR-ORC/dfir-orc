@@ -149,7 +149,7 @@ std::string ToString(Outcome::Archive::InputType inputType)
         case Outcome::Archive::InputType::kOffline:
             return "offline";
         case Outcome::Archive::InputType::kRunningSystem:
-            return "running_system";
+            return "live";
     }
 
     return "<unknown>";
@@ -375,10 +375,10 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
                 writer->WriteNamed(L"end", *endingTime);
             }
 
-            writer->WriteNamed(L"computer_name", outcome.GetComputerNameValue());
+            writer->WriteNamed(L"computer_name", outcome.GetOrcComputerNameValue());
+            writer->WriteNamed(L"system_type", outcome.GetOrcSystemTypeValue());
 
             ::Write(writer, outcome.GetMothership());
-
             ::Write(writer, outcome.GetWolfLauncher());
 
             {

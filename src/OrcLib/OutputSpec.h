@@ -54,12 +54,17 @@ public:
         std::wstring Password;
         std::wstring JobName;
 
+        std::optional<bool> bitsDeleteSmbShare;
+
         std::vector<std::wstring> FilterInclude;
         std::vector<std::wstring> FilterExclude;
 
         Upload()
             : Method(UploadMethod::NoUpload)
-            , Operation(UploadOperation::NoOp) {};
+            , Operation(UploadOperation::NoOp)
+            , bitsDeleteSmbShare(false)
+        {
+        }
 
         HRESULT Configure(const ConfigItem& item);
 

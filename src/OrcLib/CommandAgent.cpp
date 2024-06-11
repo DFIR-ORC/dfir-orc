@@ -30,6 +30,7 @@
 
 #include "Log/Log.h"
 #include "Utils/WinApi.h"
+#include "Text/Guid.h"
 #include "CryptoHashStream.h"
 
 using namespace std;
@@ -250,6 +251,7 @@ HRESULT CommandAgent::ApplyPattern(
     static const std::wregex r_ComputerName(L"\\{ComputerName\\}");
     static const std::wregex r_TimeStamp(L"\\{TimeStamp\\}");
     static const std::wregex r_SystemType(L"\\{SystemType\\}");
+    static const std::wregex r_OrcRunId(L"\\{RunId\\}");
 
     auto s0 = Pattern;
 
@@ -273,10 +275,13 @@ HRESULT CommandAgent::ApplyPattern(
     auto s6 = std::regex_replace(s5, r_TimeStamp, strTimeStamp);
 
     wstring strSystemType;
-    SystemDetails::GetSystemType(strSystemType);
+    SystemDetails::GetOrcSystemType(strSystemType);
     auto s7 = std::regex_replace(s6, r_SystemType, strSystemType);
 
-    std::swap(s7, output);
+    wstring strRunID(ToStringW(SystemDetails::GetOrcRunId()));
+    auto s8 = std::regex_replace(s7, r_OrcRunId, strRunID);
+
+    std::swap(s8, output);
     return S_OK;
 }
 

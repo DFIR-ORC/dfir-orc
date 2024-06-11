@@ -16,7 +16,7 @@ template <>
 struct fmt::formatter<Orc::PartitionType> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::PartitionType& type, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::PartitionType& type, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
         const auto utf8 = Orc::ToUtf8(Orc::ToString(type), ec);
@@ -33,7 +33,7 @@ template <>
 struct fmt::formatter<Orc::PartitionType, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::PartitionType& type, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::PartitionType& type, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(type), ctx);
     }

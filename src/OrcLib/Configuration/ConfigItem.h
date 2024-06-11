@@ -202,6 +202,7 @@ constexpr auto CONFIG_UPLOAD_AUTHSCHEME = 8U;
 constexpr auto CONFIG_UPLOAD_FILTER_EXC = 9U;
 constexpr auto CONFIG_UPLOAD_FILTER_INC = 10U;
 constexpr auto CONFIG_UPLOAD_URI = 11U;
+constexpr auto CONFIG_UPLOAD_BITS_SMB_DELETE_SHARE = 12U;
 
 // DOWNLOAD
 constexpr auto CONFIG_DOWNLOAD_METHOD = 0U;

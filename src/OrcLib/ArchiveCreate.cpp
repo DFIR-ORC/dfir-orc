@@ -47,23 +47,23 @@ ArchiveCreate::ArchiveCreate(bool bComputeHash)
 
 ArchiveCreate::~ArchiveCreate(void) {}
 
-std::shared_ptr<ByteStream> ArchiveCreate::GetStreamToAdd(const std::shared_ptr<ByteStream>& astream)
+std::shared_ptr<ByteStream> ArchiveCreate::GetStreamToAdd(const std::shared_ptr<ByteStream>& stream) const
 {
     HRESULT hr = E_FAIL;
 
-    if (astream == nullptr)
+    if (stream == nullptr)
         return nullptr;
 
-    // Move back to the begining of the stream
-    astream->SetFilePointer(0LL, FILE_BEGIN, nullptr);
+    // Move back to the beginning of the stream
+    stream->SetFilePointer(0LL, FILE_BEGIN, nullptr);
 
     if (!m_bComputeHash)
     {
-        return astream;
+        return stream;
     }
 
     auto pHashStream = make_shared<CryptoHashStream>();
-    hr = pHashStream->OpenToRead(CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, astream);
+    hr = pHashStream->OpenToRead(CryptoHashStream::Algorithm::MD5 | CryptoHashStream::Algorithm::SHA1, stream);
     if (FAILED(hr))
     {
         return nullptr;

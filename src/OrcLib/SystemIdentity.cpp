@@ -166,12 +166,12 @@ HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IOut
 
     {
         std::wstring strComputerName;
-        SystemDetails::GetOrcComputerName(strComputerName);
+        SystemDetails::GetComputerName_(strComputerName);
         writer->WriteNamed(L"name", strComputerName.c_str());
     }
     {
         std::wstring strFullComputerName;
-        SystemDetails::GetOrcFullComputerName(strFullComputerName);
+        SystemDetails::GetFullComputerName(strFullComputerName);
         writer->WriteNamed(L"fullname", strFullComputerName.c_str());
     }
     {
@@ -179,6 +179,29 @@ HRESULT Orc::SystemIdentity::System(const std::shared_ptr<StructuredOutput::IOut
         SystemDetails::GetSystemType(strSystemType);
         writer->WriteNamed(L"type", strSystemType.c_str());
     }
+
+    {
+        auto codepage = SystemDetails::GetCodePage();
+        if (codepage)
+        {
+            writer->WriteNamed(L"codepage", *codepage);
+        }
+
+        auto codepage_name = SystemDetails::GetCodePageName();
+        if (codepage_name)
+        {
+            writer->WriteNamed(L"codepage_name", *codepage_name);
+        }
+    }
+
+    {
+        auto hv = SystemDetails::GetHypervisor();
+        if (hv)
+        {
+            writer->WriteNamed(L"hypervisor", ToStringW(*hv));
+        }
+    }
+
     {
         WORD wArch = 0;
         SystemDetails::GetArchitecture(wArch);

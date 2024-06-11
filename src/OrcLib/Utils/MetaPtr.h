@@ -88,6 +88,8 @@ public:
     class PtrAdapter final
     {
     public:
+        using element_type = T;
+
         template <typename... Args>
         PtrAdapter(Args&&... args)
             : value(std::forward<Args>(args)...)
@@ -95,10 +97,13 @@ public:
         }
 
         constexpr T* operator->() { return &value; }
-        constexpr T* operator->() const { return &value; }
+        constexpr const T* operator->() const { return &value; }
 
         constexpr T& operator*() { return value; }
         constexpr const T& operator*() const { return value; }
+
+        constexpr T* get() { return &value; }
+        constexpr const T* get() const { return &value; }
 
     private:
         T value;
@@ -118,6 +123,8 @@ public:
     class PtrAdapter final
     {
     public:
+        using element_type = T;
+
         PtrAdapter(T& ref)
             : value(ref)
         {
@@ -128,6 +135,9 @@ public:
 
         constexpr T& operator*() { return value; }
         constexpr const T& operator*() const { return value; }
+
+        constexpr T* get() { return &value; }
+        constexpr const T* get() const { return &value; }
 
     private:
         T& value;

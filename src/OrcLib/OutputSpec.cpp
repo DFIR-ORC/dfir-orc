@@ -27,6 +27,7 @@
 #include "Archive.h"
 #include "Utils/WinApi.h"
 #include "Utils/Uri.h"
+#include "Text/Guid.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -86,7 +87,9 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
     SystemDetails::GetTimeStamp(strTimeStamp);
 
     wstring strSystemType;
-    SystemDetails::GetSystemType(strSystemType);
+    SystemDetails::GetOrcSystemType(strSystemType);
+
+    wstring strRunId(Orc::ToStringW(SystemDetails::GetOrcRunId()));
 
     strFileName = fmt::vformat(
         fmt::wstring_view(strPattern),
@@ -97,7 +100,8 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
             fmt::arg(L"ComputerName", strComputerName),
             fmt::arg(L"FullComputerName", strFullComputerName),
             fmt::arg(L"TimeStamp", strTimeStamp),
-            fmt::arg(L"SystemType", strSystemType)));
+            fmt::arg(L"SystemType", strSystemType),
+            fmt::arg(L"RunId", strRunId)));
 
     return S_OK;
 }
@@ -558,6 +562,19 @@ HRESULT OutputSpec::Upload::Configure(const ConfigItem& item)
             else if (equalCaseInsensitive(item.SubItems[CONFIG_UPLOAD_AUTHSCHEME], L"Negotiate"sv))
             {
                 AuthScheme = OutputSpec::UploadAuthScheme::Negotiate;
+            }
+        }
+
+        if (::HasValue(item, CONFIG_UPLOAD_BITS_SMB_DELETE_SHARE))
+        {
+            if (bitsMode != BITSMode::SMB)
+            {
+                Log::Warn(L"Option 'delete_smb_share' is only supported with BITS SMB mode");
+            }
+            else
+            {
+                const auto str = item.SubItems[CONFIG_UPLOAD_BITS_SMB_DELETE_SHARE].c_str();
+                bitsDeleteSmbShare = boost::iequals(str, L"true") || boost::iequals(str, L"yes");
             }
         }
 

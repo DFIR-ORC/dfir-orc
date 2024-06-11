@@ -169,6 +169,8 @@ void Main::PrintParameters()
 
     PrintCommonParameters(node);
 
+    PrintValue(node, L"Run ID", ToStringW(SystemDetails::GetOrcRunId()));
+
     PrintValue(
         node,
         L"Console file",

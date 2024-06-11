@@ -13,33 +13,31 @@
 #include <fmt/format.h>
 
 template <typename T>
-struct fmt::formatter<std::optional<T>> : public fmt::formatter<T>
+struct fmt::formatter<std::optional<T>> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const std::optional<T>& optional, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const std::optional<T>& optional, FormatContext& ctx) const
     {
         if (!optional.has_value())
         {
-            formatter<std::string_view> na;
-            return na.format("N/A", ctx);
+            return fmt::formatter<std::string_view>::format("N/A", ctx);
         }
 
-        return formatter<T>::format(optional.value(), ctx);
+        return fmt::format_to(ctx.out(), "{}", *optional);
     }
 };
 
 template <typename T>
-struct fmt::formatter<std::optional<T>, wchar_t> : public fmt::formatter<T, wchar_t>
+struct fmt::formatter<std::optional<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const std::optional<T>& optional, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const std::optional<T>& optional, FormatContext& ctx) const
     {
         if (!optional.has_value())
         {
-            formatter<std::wstring_view, wchar_t> na;
-            return na.format(L"N/A", ctx);
+            return fmt::formatter<std::wstring_view, wchar_t>::format(L"N/A", ctx);
         }
 
-        return formatter<T, wchar_t>::format(optional.value(), ctx);
+        return fmt::format_to(ctx.out(), L"{}", *optional);
     }
 };

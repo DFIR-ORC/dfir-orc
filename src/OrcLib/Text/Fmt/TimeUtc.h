@@ -52,7 +52,7 @@ template <typename T>
 struct fmt::formatter<Orc::Traits::TimeUtc<T>> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::Traits::TimeUtc<T>& time, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Traits::TimeUtc<T>& time, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::string s = Orc::Text::FormatSystemTimeUtcA(time);
         return formatter<std::string_view>::format(s, ctx);
@@ -63,7 +63,7 @@ template <typename T>
 struct fmt::formatter<Orc::Traits::TimeUtc<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::Traits::TimeUtc<T>& time, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Traits::TimeUtc<T>& time, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::wstring s = Orc::Text::FormatSystemTimeUtcW(time);
         return formatter<std::wstring_view, wchar_t>::format(s, ctx);

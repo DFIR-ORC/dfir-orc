@@ -16,7 +16,7 @@ template <>
 struct fmt::formatter<Orc::FuzzyHashStreamAlgorithm> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::FuzzyHashStreamAlgorithm& algs, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::FuzzyHashStreamAlgorithm& algs, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (algs == Orc::FuzzyHashStreamAlgorithm::Undefined)
         {
@@ -38,7 +38,7 @@ template <>
 struct fmt::formatter<Orc::FuzzyHashStreamAlgorithm, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::FuzzyHashStreamAlgorithm& algs, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::FuzzyHashStreamAlgorithm& algs, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (algs == Orc::FuzzyHashStreamAlgorithm::Undefined)
         {

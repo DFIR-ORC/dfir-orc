@@ -266,7 +266,7 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
         const wstring& requiredSystemTypes = item[WOLFLAUNCHER_COMMAND_SYSTEMTYPE];
         wstring strProductType;
 
-        if (FAILED(hr = SystemDetails::GetSystemType(strProductType)))
+        if (FAILED(hr = SystemDetails::GetOrcSystemType(strProductType)))
         {
             Log::Error("Failed to retrieve system product type [{}]", SystemError(hr));
             return nullptr;
@@ -558,7 +558,12 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     {
         LARGE_INTEGER li;
         if (FAILED(hr = GetFileSizeFromArg(item[WOLFLAUNCHER_JOBMEMORY].c_str(), li)))
+        {
+            Log::Debug(
+                L"Failed GetFileSizeFromArg on WOLFLAUNCHER_JOBMEMORY (value: {})",
+                item[WOLFLAUNCHER_JOBMEMORY].c_str());
             return hr;
+        }
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
@@ -581,7 +586,12 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     {
         LARGE_INTEGER li;
         if (FAILED(hr = GetFileSizeFromArg(item[WOLFLAUNCHER_PROCESSMEMORY].c_str(), li)))
+        {
+            Log::Debug(
+                L"Failed GetFileSizeFromArg on WOLFLAUNCHER_PROCESSMEMORY (value: {})",
+                item[WOLFLAUNCHER_PROCESSMEMORY].c_str());
             return hr;
+        }
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
@@ -605,7 +615,12 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     {
         LARGE_INTEGER li;
         if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_ELAPSEDTIME].c_str(), li)))
+        {
+            Log::Debug(
+                L"Failed GetIntegerFromArg on WOLFLAUNCHER_ELAPSEDTIME (value: {})",
+                item[WOLFLAUNCHER_ELAPSEDTIME].c_str());
             return hr;
+        }
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
@@ -620,7 +635,12 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     {
         LARGE_INTEGER li;
         if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_JOBUSERTIME].c_str(), li)))
+        {
+            Log::Debug(
+                L"Failed GetIntegerFromArg on WOLFLAUNCHER_JOBUSERTIME (value: {})",
+                item[WOLFLAUNCHER_JOBUSERTIME].c_str());
             return hr;
+        }
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
@@ -643,7 +663,12 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     {
         LARGE_INTEGER li;
         if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_PERPROCESSUSERTIME].c_str(), li)))
+        {
+            Log::Debug(
+                L"Failed GetIntegerFromArg on WOLFLAUNCHER_PERPROCESSUSERTIME (value: {})",
+                item[WOLFLAUNCHER_PERPROCESSUSERTIME].c_str());
             return hr;
+        }
 
         if (arch == PROCESSOR_ARCHITECTURE_INTEL && li.QuadPart > MAXDWORD)
         {
@@ -671,7 +696,12 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     {
         DWORD percentage = 0;
         if (FAILED(hr = GetPercentageFromArg(item[WOLFLAUNCHER_CPU_RATE].c_str(), percentage)))
+        {
+            Log::Debug(
+                L"Failed GetPercentageFromArg on WOLFLAUNCHER_CPU_RATE (value: {})",
+                item[WOLFLAUNCHER_CPU_RATE].c_str());
             return hr;
+        }
 
         if (!m_Restrictions.CpuRateControl)
         {
@@ -686,8 +716,13 @@ HRESULT WolfExecution::SetRestrictionsFromConfig(const ConfigItem& item)
     else if (item[WOLFLAUNCHER_CPU_WEIGHT])
     {
         DWORD weight = 0;
-        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_CPU_RATE].c_str(), weight)))
+        if (FAILED(hr = GetIntegerFromArg(item[WOLFLAUNCHER_CPU_WEIGHT].c_str(), weight)))
+        {
+            Log::Debug(
+                L"Failed GetIntegerFromArg on WOLFLAUNCHER_CPU_WEIGHT (value: {})",
+                item[WOLFLAUNCHER_CPU_WEIGHT].c_str());
             return hr;
+        }
 
         if (!m_Restrictions.CpuRateControl)
         {

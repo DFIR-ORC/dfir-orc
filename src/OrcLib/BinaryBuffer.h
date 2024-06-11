@@ -288,7 +288,7 @@ public:
         return (T*)((BYTE*)m_pData + m_size);
     };
 
-    bool operator==(const CBinaryBuffer& other)
+    bool operator==(const CBinaryBuffer& other) const
     {
         if (GetCount() != other.GetCount())
             return false;

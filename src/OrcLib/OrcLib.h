@@ -11,6 +11,7 @@
 
 #include <map>
 #include <memory>
+#include <functional>
 #include <string>
 #include <vector>
 #include <type_traits>

@@ -19,7 +19,7 @@ template <>
 struct fmt::formatter<std::error_code> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const std::error_code& ec, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const std::error_code& ec, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::string s;
 
@@ -52,7 +52,7 @@ template <>
 struct fmt::formatter<std::error_code, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const std::error_code& ec, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const std::error_code& ec, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::wstring s;
 

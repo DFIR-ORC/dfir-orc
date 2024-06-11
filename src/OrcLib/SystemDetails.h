@@ -12,6 +12,7 @@
 #include "Utils/Result.h"
 #include "Utils/TypeTraits.h"
 #include "OutputWriter.h"
+#include "HypervisorType.h"
 
 #include <optional>
 #include <string>
@@ -44,6 +45,9 @@ public:
     static HRESULT SetSystemType(std::wstring strSystemType);
     static HRESULT GetSystemType(std::wstring& strSystemType);
     static HRESULT GetSystemType(BYTE& systemType);
+
+    static HRESULT SetOrcSystemType(std::wstring strSystemType);
+    static HRESULT GetOrcSystemType(std::wstring& strSystemType);
 
     static bool IsKnownWindowsBuild(uint32_t build);
     static void GetTagsFromBuildId(uint32_t ProductType, uint32_t build, SystemTags& tags);
@@ -114,6 +118,12 @@ public:
     static HRESULT GetSystemLanguage(std::wstring& strLocale);
     static HRESULT GetUserLanguage(std::wstring& strLocale);
 
+    static Result<std::wstring> GetCodePageName();
+    static Result<UINT> GetCodePage();
+
+    static void SetOrcRunId(const GUID& guid);
+    static const GUID& GetOrcRunId();
+
     static Result<std::chrono::system_clock::time_point> GetShutdownTimeFromRegistry();
     static Result<std::chrono::system_clock::time_point> GetInstallTimeFromRegistry();
     static Result<std::chrono::system_clock::time_point> GetInstallDateFromRegistry();
@@ -121,6 +131,8 @@ public:
     static HRESULT GetCurrentWorkingDirectory(std::filesystem::path& cwd);
 
     static HRESULT GetProcessBinary(std::wstring& strFullPath);
+
+    static Result<HypervisorType> GetHypervisor();
 
     enum DriveType
     {

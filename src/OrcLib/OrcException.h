@@ -94,7 +94,7 @@ public:
     }
 
     explicit Exception(_In_ HRESULT hr)
-        : m_ec(SystemError(hr))
+        : m_ec({hr, std::system_category()})
     {
     }
 
@@ -105,7 +105,7 @@ public:
 
     Exception(Severity status, _In_ HRESULT hr)
         : m_severity(status)
-        , m_ec(SystemError(hr))
+        , m_ec({hr, std::system_category()})
     {
     }
     Exception(Severity status, _In_ std::error_code ec)
@@ -126,7 +126,7 @@ public:
 
     HRESULT SetHRESULT(_In_ HRESULT Status)
     {
-        m_ec = SystemError(Status);
+        m_ec.assign(Status, std::system_category());
         return Status;
     }
 

@@ -106,6 +106,10 @@ HRESULT Orc::Config::Common::upload(ConfigItem& parent, DWORD dwIndex, std::wstr
         return hr;
     if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"uri", CONFIG_UPLOAD_URI, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(
+            hr = parent.SubItems[dwIndex].AddAttribute(
+                L"delete_smb_share", CONFIG_UPLOAD_BITS_SMB_DELETE_SHARE, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }
 

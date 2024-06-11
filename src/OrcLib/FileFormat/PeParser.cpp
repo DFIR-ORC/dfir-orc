@@ -193,23 +193,23 @@ void ParseImageSections(
 
 namespace Orc {
 
-PeParser::PeParser(std::shared_ptr<ByteStream> stream, std::error_code& ec)
-    : m_stream(std::move(stream))
+PeParser::PeParser(ByteStream& stream, std::error_code& ec)
+    : m_stream(stream)
 {
-    ::ParseImageDosHeader(*m_stream, m_imageDosHeader, ec);
+    ::ParseImageDosHeader(m_stream, m_imageDosHeader, ec);
     if (ec)
     {
         return;
     }
 
     ::ParseImageNtHeader(
-        *m_stream, m_imageDosHeader, m_imageNtHeader, m_imageOptionalHeaders32, m_imageOptionalHeaders64, ec);
+        m_stream, m_imageDosHeader, m_imageNtHeader, m_imageOptionalHeaders32, m_imageOptionalHeaders64, ec);
     if (ec)
     {
         return;
     }
 
-    ::ParseImageSections(*m_stream, m_imageNtHeader, m_imageSectionsHeaders, ec);
+    ::ParseImageSections(m_stream, m_imageNtHeader, m_imageSectionsHeaders, ec);
     if (ec)
     {
         return;
@@ -313,7 +313,7 @@ void PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::e
     }
 
     buffer.resize(directory.Size);
-    ReadChunkAt(*m_stream, directory.VirtualAddress, buffer, ec);
+    ReadChunkAt(m_stream, directory.VirtualAddress, buffer, ec);
     if (ec)
     {
         Log::Debug("Failed to read directory (index: {}) [{}]", index, ec);
@@ -403,7 +403,7 @@ void PeParser::GetHashedChunks(PeChunks& chunks, std::error_code& ec) const
     }
 
     chunks[3].offset = GetSizeOfOptionalHeaders();
-    chunks[3].length = m_stream->GetSize() - chunks[3].offset - secdir.Size;
+    chunks[3].length = m_stream.GetSize() - chunks[3].offset - secdir.Size;
 }
 
 void PeParser::Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks, PeHash& output, std::error_code& ec)
@@ -418,7 +418,7 @@ void PeParser::Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks
         return;
     }
 
-    const auto written = ::CopyChunks(chunks, *m_stream, *hashstream, ec);
+    const auto written = ::CopyChunks(chunks, m_stream, *hashstream, ec);
     if (ec)
     {
         Log::Debug("Failed to hash chunks [{}]", ec);
@@ -427,7 +427,7 @@ void PeParser::Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks
 
     // MS does zero padding for PEs that are not 8 modulo (often with catalogs)
     const uint8_t padding[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    const auto alignment = m_stream->GetSize() % sizeof(padding);
+    const auto alignment = m_stream.GetSize() % sizeof(padding);
     if (alignment != 0)
     {
         const auto paddingLength = sizeof(padding) - alignment;

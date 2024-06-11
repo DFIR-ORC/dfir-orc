@@ -553,6 +553,8 @@ source_group(In&Out\\TableOutput\\ApacheOrc
 )
 
 set(SRC_FILESYSTEM
+    "Filesystem/FileAttribute.h"
+    "Filesystem/FileAttribute.cpp"
     "Filesystem/Ntfs/Attribute/ReparsePoint/WofReparsePoint.h"
     "Filesystem/Ntfs/Attribute/ReparsePoint/WofReparsePoint.cpp"
     "Filesystem/Ntfs/Compression/WofChunks.h"
@@ -831,9 +833,12 @@ set(SRC_UTILITIES
     "Utils/Guard/Winsock.cpp"
     "Utils/Locker.h"
     "Utils/MakeArray.h"
+    "Utils/MapFile.h"
+    "Utils/MapFile.cpp"
     "Utils/MetaPtr.h"
     "Utils/Result.h"
     "Utils/Round.h"
+    "Utils/StackStash.h"
     "Utils/String.cpp"
     "Utils/String.h"
     "Utils/Time.cpp"
@@ -916,6 +921,8 @@ set(SRC_UTILITIES_SYSTEM
     "CryptoUtilities.h"
     "DriverMgmt.cpp"
     "DriverMgmt.h"
+    "HypervisorType.h"
+    "HypervisorType.cpp"
     "JobObject.cpp"
     "JobObject.h"
     "Privilege.cpp"

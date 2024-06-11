@@ -19,7 +19,7 @@ template <>
 struct fmt::formatter<Orc::Command::Wolf::Main::WolfPriority> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::Command::Wolf::Main::WolfPriority& priority, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Command::Wolf::Main::WolfPriority& priority, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
         const auto utf8 = Orc::ToUtf8(Orc::Command::Wolf::Main::ToString(priority), ec);
@@ -37,7 +37,7 @@ struct fmt::formatter<Orc::Command::Wolf::Main::WolfPriority, wchar_t>
     : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(Orc::Command::Wolf::Main::WolfPriority priority, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(Orc::Command::Wolf::Main::WolfPriority priority, FormatContext& ctx) const -> decltype(ctx.out())
     {
         return formatter<std::wstring_view, wchar_t>::format(Orc::Command::Wolf::Main::ToString(priority), ctx);
     }

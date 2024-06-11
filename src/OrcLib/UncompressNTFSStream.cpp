@@ -490,3 +490,6 @@ HRESULT UncompressNTFSStream::SetFilePointer(
     llCUAlignedPosition = (m_ullPosition / m_dwCompressionUnit) * m_dwCompressionUnit;
     return NTFSStream::SetFilePointer(llCUAlignedPosition, FILE_BEGIN, &ullChainedPosition);
 }
+
+Orc::UncompressNTFSStream::~UncompressNTFSStream()
+{}

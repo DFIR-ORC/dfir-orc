@@ -13,6 +13,7 @@
 #include "WideAnsi.h"
 
 #include <safeint.h>
+#include "Filesystem/FileAttribute.h"
 
 using namespace Orc;
 using namespace Orc::TableOutput;
@@ -333,43 +334,13 @@ HRESULT BoundColumn::WriteAttributes(DWORD dwAttributes)
             boundData.Dword = dwAttributes;
             break;
         case UTF16Type:
-            if (FAILED(
-                    hr = PrintToBuffer(
-                        L"%c%c%c%c%c%c%c%c%c%c%c%c%c",
-                        dwAttributes & FILE_ATTRIBUTE_ARCHIVE ? L'A' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_COMPRESSED ? L'C' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_DIRECTORY ? L'D' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_ENCRYPTED ? L'E' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_HIDDEN ? L'H' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_NORMAL ? L'N' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_OFFLINE ? L'O' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_READONLY ? L'R' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? L'L' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? L'P' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_SYSTEM ? L'S' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_TEMPORARY ? L'T' : L'.',
-                        dwAttributes & FILE_ATTRIBUTE_VIRTUAL ? L'V' : L'.')))
+            if (FAILED(hr = PrintToBuffer(ToIdentifiersW(static_cast<FileAttribute>(dwAttributes)).c_str())))
             {
                 return hr;
             }
             break;
         case UTF8Type:
-            if (FAILED(
-                    hr = PrintToBuffer(
-                        "%c%c%c%c%c%c%c%c%c%c%c%c%c",
-                        dwAttributes & FILE_ATTRIBUTE_ARCHIVE ? 'A' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_COMPRESSED ? 'C' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_DIRECTORY ? 'D' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_ENCRYPTED ? 'E' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_HIDDEN ? 'H' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_NORMAL ? 'N' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_OFFLINE ? 'O' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_READONLY ? 'R' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_REPARSE_POINT ? 'L' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_SPARSE_FILE ? 'P' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_SYSTEM ? 'S' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_TEMPORARY ? 'T' : '.',
-                        dwAttributes & FILE_ATTRIBUTE_VIRTUAL ? 'V' : '.')))
+            if (FAILED(hr = PrintToBuffer(ToIdentifiers(static_cast<FileAttribute>(dwAttributes)).c_str())))
             {
                 return hr;
             }

@@ -40,6 +40,8 @@ public:
     STDMETHOD(SetFilePointer)
     (__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod, __out_opt PULONG64 pCurrPointer);
 
+    ~UncompressNTFSStream();
+
 private:
     HRESULT ReadRaw(CBinaryBuffer& buffer, size_t length);
 

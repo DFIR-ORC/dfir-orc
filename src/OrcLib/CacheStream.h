@@ -10,7 +10,8 @@
 
 #include "OrcLib.h"
 
-#include "MemoryStream.h"
+#include "ByteStream.h"
+#include "Utils/MetaPtr.h"
 
 #pragma managed(push, off)
 
@@ -21,17 +22,17 @@ class CBinaryBuffer;
 class CacheStream : public ByteStream
 {
 public:
-    CacheStream(std::shared_ptr<ByteStream> stream, size_t cacheSize = 1048576);
+    CacheStream(ByteStream& stream, size_t cacheSize);
     ~CacheStream();
     HRESULT Open();
 
     void Accept(ByteStreamVisitor& visitor) override { return visitor.Visit(*this); };
 
-    STDMETHOD(IsOpen)() { return m_stream->IsOpen(); };
+    STDMETHOD(IsOpen)() { return m_stream.IsOpen(); };
 
-    STDMETHOD(CanRead)() { return m_stream->CanRead(); };
+    STDMETHOD(CanRead)() { return m_stream.CanRead(); };
     STDMETHOD(CanWrite)() { return S_FALSE; };
-    STDMETHOD(CanSeek)() { return m_stream->CanSeek(); };
+    STDMETHOD(CanSeek)() { return m_stream.CanSeek(); };
 
     //
     // CByteStream implementation
@@ -52,13 +53,13 @@ public:
     STDMETHOD_(ULONG64, GetSize)();
     STDMETHOD(SetSize)(ULONG64 ullSize);
 
-    STDMETHOD(Clone)(std::shared_ptr<ByteStream>& clone);
+    STDMETHOD(Clone)(ByteStream& clone);
     STDMETHOD(Close)();
 
     HRESULT Duplicate(const CacheStream& other);
 
 private:
-    std::shared_ptr<ByteStream> m_stream;
+    ByteStream& m_stream;
     uint64_t m_streamOffset;
     uint64_t m_offset;
     std::vector<uint8_t> m_cache;
@@ -66,6 +67,24 @@ private:
     size_t m_cacheSize;
     uint64_t m_cacheOffset;
 };
+
+namespace Guard {
+
+template <typename StreamT>
+class CacheStream final : public Orc::CacheStream
+{
+public:
+    CacheStream(StreamT stream, size_t cache_size)
+        : CacheStream(*MetaPtr<StreamT>(stream).get(), cache_size)
+        , m_stream(std::move(stream))
+    {
+    }
+
+private:
+    MetaPtr<StreamT> m_stream;
+};
+
+}  // namespace Guard
 
 }  // namespace Orc
 

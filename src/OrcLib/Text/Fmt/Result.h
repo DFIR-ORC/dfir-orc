@@ -10,13 +10,14 @@
 
 #include <fmt/format.h>
 #include <boost/outcome/outcome.hpp>
+#include "std_error_code.h"
 #include "Utils/Result.h"
 
 template <typename T>
 struct fmt::formatter<Orc::Result<T>> : public fmt::formatter<T>
 {
     template <typename FormatContext>
-    auto format(const Orc::Result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Result<T>& result, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (result.has_error())
         {
@@ -32,7 +33,7 @@ template <>
 struct fmt::formatter<Orc::Result<void>> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::Result<void>& result, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Result<void>& result, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (result.has_error())
         {
@@ -48,7 +49,7 @@ template <typename T>
 struct fmt::formatter<Orc::Result<T>, wchar_t> : public fmt::formatter<T, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::Result<T>& result, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Result<T>& result, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (result.has_error())
         {
@@ -64,7 +65,7 @@ template <>
 struct fmt::formatter<Orc::Result<void>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::Result<void>& result, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const Orc::Result<void>& result, FormatContext& ctx) const -> decltype(ctx.out())
     {
         if (result.has_error())
         {

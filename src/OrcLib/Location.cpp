@@ -524,7 +524,7 @@ void Location::EnumerateShadowCopiesWithInternalParser(
     if (!reader)
     {
         Log::Debug("Failed to get reader");
-        ec = std::make_error_code(std::errc::no_stream_resources);
+        ec = std::make_error_code(std::errc::not_enough_memory);
         return;
     }
 

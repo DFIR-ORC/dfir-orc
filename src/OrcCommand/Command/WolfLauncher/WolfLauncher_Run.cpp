@@ -228,6 +228,18 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HAN
     }
 
     {
+        std::wstring orcComputerName;
+        SystemDetails::GetOrcFullComputerName(orcComputerName);
+        outcome.SetOrcComputerNameValue(orcComputerName);
+    }
+
+    {
+        std::wstring orcSystemType;
+        SystemDetails::GetOrcSystemType(orcSystemType);
+        outcome.SetOrcSystemTypeValue(orcSystemType);
+    }
+
+    {
         std::wstring timestampKey;
         HRESULT hr = SystemDetails::GetTimeStamp(timestampKey);
         if (SUCCEEDED(hr))
@@ -360,6 +372,25 @@ Orc::Result<void> DumpOutcome(Command::Wolf::Outcome::Outcome& outcome, const Ou
 
     Log::Debug(L"Written outcome file: '{}' (size: {})", output.Path, ToOptional(GetFileSize(output.Path)));
     return Orc::Success<void>();
+}
+
+std::wstring ToSourceString(CommandParameter::ParamKind kind)
+{
+    switch (kind)
+    {
+        case CommandParameter::ParamKind::OutFile:
+            return L"file";
+        case CommandParameter::ParamKind::OutDirectory:
+            return L"directory";
+        case CommandParameter::ParamKind::StdErr:
+            return L"stderr";
+        case CommandParameter::ParamKind::StdOut:
+            return L"stderr";
+        case CommandParameter::ParamKind::StdOutErr:
+            return L"stdouterr";
+        default:
+            return L"<unknown>";
+    }
 }
 
 }  // namespace
@@ -579,9 +610,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         writer->BeginElement(L"dfir-orc");
         writer->BeginElement(L"outline");
         {
-            std::wstring id;
-            Orc::ToString(m_guid, std::back_inserter(id));
-            writer->WriteNamed(L"id", id);
+            writer->WriteNamed(L"id", ToStringW(SystemDetails::GetOrcRunId()));
 
             writer->WriteNamed(L"version", kOrcFileVerStringW);
 
@@ -595,8 +624,14 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 
             {
                 std::wstring computerName;
-                SystemDetails::GetFullComputerName(computerName);
+                SystemDetails::GetOrcFullComputerName(computerName);
                 writer->WriteNamed(L"computer_name", computerName);
+            }
+
+            {
+                std::wstring systemType;
+                SystemDetails::GetOrcSystemType(systemType);
+                writer->WriteNamed(L"system_type", systemType);
             }
 
             auto mothership_id = SystemDetails::GetParentProcessId();
@@ -671,7 +706,36 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                         {
                             if (!command->IsOptional())
                             {
-                                writer->Write(command->Keyword().c_str());
+                                writer->BeginElement(nullptr);
+                                writer->WriteNamed(L"name", command->Keyword().c_str());
+
+                                if (command->GetTimeout())
+                                {
+                                    std::chrono::milliseconds timeout = command->GetTimeout().value();
+                                    writer->WriteNamed(
+                                        L"timeout", std::chrono::duration_cast<std::chrono::seconds>(timeout).count());
+
+                                    writer->BeginCollection(L"output");
+
+                                    for (const auto& parameter : command->GetParameters())
+                                    {
+                                        if (parameter.Kind == CommandParameter::OutFile
+                                            || parameter.Kind == CommandParameter::OutDirectory
+                                            || parameter.Kind == CommandParameter::StdOut
+                                            || parameter.Kind == CommandParameter::StdErr
+                                            || parameter.Kind == CommandParameter::StdOutErr)
+                                        {
+                                            writer->BeginElement(nullptr);
+                                            writer->WriteNamed(L"name", parameter.Name);
+                                            writer->WriteNamed(L"source", ToSourceString(parameter.Kind));
+                                            writer->EndElement(nullptr);
+                                        }
+                                    }
+
+                                    writer->EndCollection(L"output");
+                                }
+
+                                writer->EndElement(nullptr);
                             }
                         }
                         writer->EndCollection(L"commands");
@@ -782,7 +846,7 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
 
     auto [outcome, lock] = m_outcome.Get();
 
-    ::UpdateOutcome(outcome, m_guid, m_hMothership);
+    ::UpdateOutcome(outcome, SystemDetails::GetOrcRunId(), m_hMothership);
     ::UpdateOutcome(outcome, config.m_Recipients);
     ::UpdateOutcome(outcome, m_standardOutput);
     ::UpdateOutcome(outcome, m_logging);

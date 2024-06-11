@@ -1,5 +1,27 @@
 # ChangeLog
 
+## [10.2.5] - 2024-06-07
+### Added
+- Outcome: add outcome.system_type (Workstation...)
+- Outline: add outline.system_type (Workstation...)
+- Outline: add outline.system.hypervisor
+- Outline: add system.codepage and codepage_name
+- Outline: add command's timeout configuration
+- Outline: add command's expected output files
+- WolfLauncher: add pattern {RunId} to use within configuration files
+- WolfLauncher: BITS: add option 'delete_smb_share' to delete smb share after upload
+
+### Changed
+- Outline: set outline.computer_name with /FullComputer
+- Outline: set outline.system[.name|.fullname] with host's name
+- Outcome: set outcome.computer_name with /FullComputer
+- Outcome: replace status 'running_command' with 'live'
+
+### Fixed
+- WolfLauncher: fix cpu weight configuration
+- Ntfsinfo: volstat output
+
+
 ## [10.2.4] - 2024-02-02
 ### Added
 - Outline: add install_date, install_time and shutdown_time filled from registry

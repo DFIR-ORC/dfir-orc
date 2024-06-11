@@ -14,7 +14,7 @@ template <>
 struct fmt::formatter<FILE_NAME> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const FILE_NAME& fileName, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const FILE_NAME& fileName, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
 
@@ -32,7 +32,7 @@ template <>
 struct fmt::formatter<FILE_NAME, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const FILE_NAME& fileName, FormatContext& ctx) -> decltype(ctx.out())
+    auto format(const FILE_NAME& fileName, FormatContext& ctx) const -> decltype(ctx.out())
     {
         const auto name = std::wstring_view(fileName.FileName, fileName.FileNameLength);
         return formatter<std::wstring_view, wchar_t>::format(name, ctx);

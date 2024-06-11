@@ -407,6 +407,12 @@ public:
     const std::wstring& GetComputerNameValue() const { return m_computerName; }
     void SetComputerNameValue(std::wstring name) { m_computerName = std::move(name); }
 
+    const std::wstring& GetOrcComputerNameValue() const { return m_orcComputerName; }
+    void SetOrcComputerNameValue(std::wstring name) { m_orcComputerName = std::move(name); }
+
+    const std::wstring& GetOrcSystemTypeValue() const { return m_orcSystemType; }
+    void SetOrcSystemTypeValue(std::wstring type) { m_orcSystemType = std::move(type); }
+
     // Timestamp is used as a unique identifier between orc execution and multiple files
     std::wstring GetTimestampKey() const { return m_timestamp; }
     void SetTimestampKey(const std::wstring& timestamp) { m_timestamp = timestamp; }
@@ -439,6 +445,8 @@ private:
     mutable std::mutex m_mutex;
     GUID m_id;
     std::wstring m_computerName;
+    std::wstring m_orcComputerName;
+    std::wstring m_orcSystemType;
     Mothership m_mothership;
     std::wstring m_consoleFileName;
     std::wstring m_logFileName;

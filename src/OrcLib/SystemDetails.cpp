@@ -19,6 +19,7 @@
 #include <iphlpapi.h>
 
 #include <boost/scope_exit.hpp>
+#include <boost/algorithm/algorithm.hpp>
 
 #include "TableOutput.h"
 #include "WideAnsi.h"
@@ -32,6 +33,99 @@ namespace fs = std::filesystem;
 using namespace std::string_view_literals;
 using namespace Orc;
 
+namespace {
+
+template <class _InIt, class _OutIt, class _Pr>
+inline void CopyUntil(_InIt _First, _InIt _Last, _OutIt _Dest, _Pr _Pred)
+{
+    while ((_First != _Last) && _Pred(*_First))
+    {
+        *_Dest++ = *_First++;
+    }
+}
+
+bool IsRunningInHyperV()
+{
+    Guard::RegistryHandle hKey;
+    return RegOpenKeyExA(
+               HKEY_LOCAL_MACHINE,
+               "SOFTWARE\\Microsoft\\Virtual Machine\\Guest\\Parameters",
+               0,
+               KEY_READ,
+               &hKey.value())
+        == ERROR_SUCCESS;
+}
+
+bool IsRunningInVMware()
+{
+    Guard::ServiceHandle hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!hSCManager)
+    {
+        return false;
+    }
+
+    Guard::ServiceHandle hService = OpenService(hSCManager.value(), L"vmci", SERVICE_QUERY_STATUS);
+    if (!hService)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool IsRunningInVirtualBox()
+{
+    Guard::ServiceHandle hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!hSCManager)
+    {
+        return false;
+    }
+
+    Guard::ServiceHandle hService = OpenService(hSCManager.value(), L"VBoxGuest", SERVICE_QUERY_STATUS);
+    if (!hService)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool IsRunningInQEMU()
+{
+    Guard::ServiceHandle hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!hSCManager)
+    {
+        return false;
+    }
+
+    Guard::ServiceHandle hService = OpenService(hSCManager.value(), L"QEMU", SERVICE_QUERY_STATUS);
+    if (!hService)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool IsRunningInXen()
+{
+    Guard::ServiceHandle hSCManager = OpenSCManager(NULL, NULL, SC_MANAGER_CONNECT);
+    if (!hSCManager)
+    {
+        return false;
+    }
+
+    Guard::ServiceHandle hService = OpenService(hSCManager.value(), L"xenevtchn", SERVICE_QUERY_STATUS);
+    if (!hService)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+}  // namespace
+
 namespace Orc {
 struct SystemDetailsBlock
 {
@@ -43,9 +137,11 @@ struct SystemDetailsBlock
     std::wstring strFullComputerName;
     std::wstring strTimeStamp;
     Traits::TimeUtc<SYSTEMTIME> timestamp;
+    GUID orcRunId;
     std::optional<std::wstring> strOrcComputerName;
     std::optional<std::wstring> strOrcFullComputerName;
     std::optional<std::wstring> strProductType;
+    std::optional<std::wstring> strOrcProductType;
     std::optional<BYTE> wProductType;
     std::wstring strUserName;
     std::wstring strUserSID;
@@ -105,11 +201,38 @@ HRESULT SystemDetails::GetSystemType(std::wstring& strProductType)
     return S_OK;
 }
 
+HRESULT Orc::SystemDetails::SetOrcSystemType(std::wstring strProductType)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = LoadSystemDetails()))
+        return hr;
+
+    if (!strProductType.empty())
+        g_pDetailsBlock->strOrcProductType.emplace(std::move(strProductType));
+
+    return S_OK;
+}
+
+HRESULT SystemDetails::GetOrcSystemType(std::wstring& strProductType)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = LoadSystemDetails()))
+        return hr;
+
+    if (g_pDetailsBlock->strOrcProductType.has_value())
+    {
+        strProductType = g_pDetailsBlock->strOrcProductType.value();
+        return S_OK;
+    }
+
+    return GetSystemType(strProductType);
+}
 
 bool SystemDetails::IsKnownWindowsBuild(uint32_t build)
 {
     switch (build)
     {
+        case 22631:
         case 22621:
         case 22000:
         case 20348:
@@ -151,8 +274,7 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
 
     if (ProductType != VER_NT_WORKSTATION && ProductType != VER_NT_SERVER && ProductType != VER_NT_DOMAIN_CONTROLLER)
     {
-        Log::Warn(
-            L"ProductType {} is out of valid values range, we \"reset\" it to VER_NT_WORKSTATION", ProductType);
+        Log::Warn(L"ProductType {} is out of valid values range, we \"reset\" it to VER_NT_WORKSTATION", ProductType);
         ProductType = VER_NT_WORKSTATION;
     }
 
@@ -160,6 +282,10 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
 
     switch (build)
     {
+        case 22631:
+            tags.insert(L"Windows11");
+            tags.insert(L"Release#23H2");
+            break;
         case 22621:
             tags.insert(L"Windows11");
             tags.insert(L"Release#22H2");
@@ -688,7 +814,9 @@ HRESULT Orc::SystemDetails::SetOrcComputerName(const std::wstring& strComputerNa
     if (FAILED(hr = LoadSystemDetails()))
         return hr;
 
-    g_pDetailsBlock->strOrcComputerName = strComputerName;
+    std::wstring name = strComputerName;
+    std::replace(std::begin(name), std::end(name), L' ', L'_');
+    g_pDetailsBlock->strOrcComputerName = std::move(name);
 
     if (!SetEnvironmentVariableW(OrcComputerName, g_pDetailsBlock->strOrcComputerName.value().c_str()))
         return HRESULT_FROM_WIN32(GetLastError());
@@ -836,6 +964,16 @@ Result<Traits::TimeUtc<SYSTEMTIME>> SystemDetails::GetTimeStamp()
     }
 
     return g_pDetailsBlock->timestamp;
+}
+
+void SystemDetails::SetOrcRunId(const GUID& guid)
+{
+    g_pDetailsBlock->orcRunId = guid;
+}
+
+const GUID& SystemDetails::GetOrcRunId()
+{
+    return g_pDetailsBlock->orcRunId;
 }
 
 HRESULT SystemDetails::WhoAmI(std::wstring& strMe)
@@ -1006,6 +1144,37 @@ HRESULT Orc::SystemDetails::GetUserLanguage(std::wstring& strLanguage)
     }
     strLanguage.assign(szName);
     return S_OK;
+}
+
+Result<std::wstring> Orc::SystemDetails::GetCodePageName()
+{
+    CPINFOEXW info = {0};
+    BOOL rv = GetCPInfoExW(GetConsoleOutputCP(), 0, &info);
+    if (!rv)
+    {
+        auto ec = LastWin32Error();
+        Log::Debug("Failed GetCPInfoExW [{}]", ec);
+        return ec;
+    }
+
+    std::wstring_view buffer {info.CodePageName, sizeof(info.CodePageName) / sizeof(wchar_t)};
+    std::wstring name;
+    CopyUntil(std::cbegin(buffer), std::cend(buffer), std::back_inserter(name), [](auto c) { return std::isprint(c); });
+    return name;
+}
+
+Result<UINT> Orc::SystemDetails::GetCodePage()
+{
+    CPINFOEXW info = {0};
+    BOOL rv = GetCPInfoExW(GetConsoleOutputCP(), 0, &info);
+    if (!rv)
+    {
+        auto ec = LastWin32Error();
+        Log::Debug("Failed GetCPInfoExW [{}]", ec);
+        return ec;
+    }
+
+    return info.CodePage;
 }
 
 Result<std::chrono::system_clock::time_point> Orc::SystemDetails::GetShutdownTimeFromRegistry()
@@ -1205,7 +1374,7 @@ Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::GetMo
         L"Name,FileSystem,Label,DeviceID,DriveType,Capacity,FreeSpace,SerialNumber,BootVolume,SystemVolume,"
         L"LastErrorCode,ErrorDescription FROM Win32_Volume");
     if (result.has_error())
-        result.error();
+        return result.error();
 
     const auto& pEnum = result.value();
 
@@ -1992,4 +2161,34 @@ HRESULT SystemDetails::GetProcessBinary(std::wstring& strFullPath)
     }
     strFullPath.assign(szPath);
     return S_OK;
+}
+
+Result<HypervisorType> Orc::SystemDetails::GetHypervisor()
+{
+    if (::IsRunningInHyperV())
+    {
+        return HypervisorType::HyperV;
+    }
+
+    if (::IsRunningInVMware())
+    {
+        return HypervisorType::VMware;
+    }
+
+    if (::IsRunningInVirtualBox())
+    {
+        return HypervisorType::VirtualBox;
+    }
+
+    if (::IsRunningInQEMU())
+    {
+        return HypervisorType::QEMU;
+    }
+
+    if (::IsRunningInXen())
+    {
+        return HypervisorType::Xen;
+    }
+
+    return HypervisorType::None;
 }

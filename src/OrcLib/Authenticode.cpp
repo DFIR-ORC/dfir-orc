@@ -153,7 +153,7 @@ Orc::Result<void> CheckCatalogSignature(std::string_view catalog)
         }
     }
 
-    return Success<void>();
+    return Orc::Success<void>();
 }
 
 bool FindPeHash(std::string_view buffer, const Orc::Authenticode::PE_Hashs& peHashes)
@@ -665,7 +665,8 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
     HRESULT hr = E_FAIL;
     std::error_code ec;
 
-    PeParser pe(std::make_shared<CacheStream>(pStream), ec);
+    CacheStream cache(*pStream, 1048576);
+    PeParser pe(cache, ec);
     if (ec)
     {
         Log::Debug(L"Failed to parse pe file (filename: {}) [{}]", szFileName, ec);

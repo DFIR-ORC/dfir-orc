@@ -71,20 +71,20 @@ inline void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args
 
     if constexpr (std::is_same_v<FmtCharT, BufferCharT>)
     {
-        fmt::format_to(out, std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
+        fmt::format_to(out, std::forward<FmtArg0>(arg0), args...);
     }
     else if constexpr (std::is_same_v<FmtCharT, char>)
     {
         fmt::basic_memory_buffer<char, 32768> utf8;
         fmt::vformat_to(
-            std::back_inserter(utf8), fmt::string_view(arg0), fmt::make_format_args(std::forward<FmtArgs>(args)...));
+            std::back_inserter(utf8), fmt::string_view(arg0), fmt::make_format_args(args...));
         details::ToUtf16(utf8, out);
     }
     else if constexpr (std::is_same_v<FmtCharT, wchar_t>)
     {
         fmt::basic_memory_buffer<wchar_t, 32768> utf16;
         fmt::vformat_to(
-            std::back_inserter(utf16), fmt::wstring_view(arg0), fmt::make_wformat_args(std::forward<FmtArgs>(args)...));
+            std::back_inserter(utf16), fmt::wstring_view(arg0), fmt::make_wformat_args(args...));
         details::ToUtf8(utf16, out);
     }
     else

@@ -32,7 +32,7 @@ public:
         {
             DWORD written = 0;
             auto buffer = ToUtf8(m_buffer);
-            WriteFile(m_hStdout, (void*)buffer.data(), buffer.size(), &written, NULL);
+            WriteFile(m_hStdout, (void*)buffer.data(), static_cast<DWORD>(buffer.size()), &written, NULL);
         }
 
         FlushFileBuffers(m_hStdout);
@@ -48,7 +48,7 @@ public:
 
             DWORD written = 0;
             auto buffer = ToUtf8(m_buffer);
-            WriteFile(m_hStdout, (void*)buffer.data(), buffer.size(), &written, NULL);
+            WriteFile(m_hStdout, (void*)buffer.data(), static_cast<DWORD>(buffer.size()), &written, NULL);
             m_buffer.clear();
         }
         else if (c)
