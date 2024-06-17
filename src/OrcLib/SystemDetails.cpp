@@ -508,7 +508,6 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
             break;
         case 2600:
             tags.insert(L"WindowsXP");
-            tags.insert(L"Release#SP2");
             break;
         default:
             Log::Warn(L"Build number {} is not associated with any known Windows release", build);
