@@ -437,7 +437,7 @@ HRESULT WolfExecution::CreateArchiveAgent()
 
         ArchiveFormat fmt = OrcArchive::GetArchiveFormat(m_strArchiveFileName);
 
-        auto request = ArchiveMessage::MakeOpenRequest(m_strOutputFileName, fmt, pFinalStream, m_strCompressionLevel);
+        auto request = ArchiveMessage::MakeOpenRequest(m_strOutputFullPath, fmt, pFinalStream, m_strCompressionLevel);
         Concurrency::send(m_ArchiveMessageBuffer, request);
     }
     else
