@@ -262,6 +262,7 @@ bool SystemDetails::IsKnownWindowsBuild(uint32_t build)
         case 22621:
         case 22000:
         case 20348:
+        case 19046:
         case 19045:
         case 19044:
         case 19043:
@@ -315,6 +316,7 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
         case 22621:
             tags.insert(L"Windows11");
             tags.insert(L"Release#22H2");
+            tags.insert(L"Release#23H2");
             break;
         case 22000:
             tags.insert(L"Windows11");
@@ -323,6 +325,10 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
         case 20348:
             tags.insert(L"WindowsServer2022");
             tags.insert(L"Release#RTM");
+            break;
+        case 19046:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#23H2");
             break;
         case 19045:
             tags.insert(L"Windows10");
