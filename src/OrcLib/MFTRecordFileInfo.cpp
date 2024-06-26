@@ -75,7 +75,6 @@ HRESULT MFTRecordFileInfo::Open()
 #define FILE_SYNCHRONOUS_IO_ALERT 0x00000010
 #define FILE_OPEN_FOR_BACKUP_INTENT 0x00004000
 #define OBJ_CASE_INSENSITIVE 0x00000040L
-#define STATUS_SUCCESS 0x0
 
 #ifndef InitializeObjectAttributes
 #    define InitializeObjectAttributes(p, n, a, r, s)                                                                  \

@@ -19,7 +19,6 @@
 
 #include "Log/Log.h"
 
-auto constexpr STATUS_SUCCESS = (0);
 
 using namespace std;
 

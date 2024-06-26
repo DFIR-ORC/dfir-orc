@@ -9,7 +9,6 @@
 
 #include "OrcLib.h"
 
-#include <winnt.h>
 #include <memory>
 #include <functional>
 

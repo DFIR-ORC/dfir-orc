@@ -24,8 +24,6 @@
 
 using namespace Orc;
 
-static const NTSTATUS STATUS_NO_MORE_FILES = 0x80000006L;
-static const NTSTATUS STATUS_BUFFER_TOO_SMALL = 0xC0000023L;
 
 typedef struct _OBJECT_DIRECTORY_INFORMATION
 {
@@ -79,7 +77,6 @@ const FlagsDefinition ObjectDirectory::g_ObjectTypeDefinition[] = {
 // constexpr auto FILE_SYNCHRONOUS_IO_ALERT               = 0x00000010L;
 // constexpr auto FILE_OPEN_FOR_BACKUP_INTENT             = 0x00004000L;
 // constexpr auto OBJ_CASE_INSENSITIVE                    = 0x00000040L;
-constexpr auto STATUS_SUCCESS = 0x0;
 
 #ifndef InitializeObjectAttributes
 #    define InitializeObjectAttributes(p, n, a, r, s)                                                                  \

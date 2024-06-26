@@ -30,7 +30,6 @@ using namespace Orc;
 // {No More Files}
 // No more files were found which match the file specification.
 //
-static const auto STATUS_NO_MORE_FILES = ((NTSTATUS)0x80000006L);
 
 HRESULT FileDirectory::FileInstance::Write(ITableOutput& output, const std::wstring& strDescription) const
 {

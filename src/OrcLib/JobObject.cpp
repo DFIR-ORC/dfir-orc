@@ -15,7 +15,6 @@
 
 #include "safeint.h"
 
-static const auto STATUS_INFO_LENGTH_MISMATCH = ((NTSTATUS)0xC0000004L);
 
 #include <boost/scope_exit.hpp>
 

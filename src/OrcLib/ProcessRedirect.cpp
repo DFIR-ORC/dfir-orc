@@ -24,7 +24,6 @@ using namespace Concurrency;
 
 using namespace Orc;
 
-static const NTSTATUS STATUS_PIPE_BROKEN = 0xC000014BL;
 
 ProcessRedirect::ProcessRedirect(ProcessInOut selection)
     : m_Status(Initialized)

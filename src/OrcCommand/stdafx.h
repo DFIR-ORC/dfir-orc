@@ -37,10 +37,15 @@
 
 // Windows Header Files
 #include <intrin.h>
+
+#define WIN32_NO_STATUS
 #include <windows.h>
-#include <atlbase.h>
 #include <winnt.h>
+#undef WIN32_NO_STATUS
+#include <ntstatus.h>
 #include <winternl.h>
+
+#include <atlbase.h>
 #include <strsafe.h>
 #include <safeint.h>
 #include <wincrypt.h>
