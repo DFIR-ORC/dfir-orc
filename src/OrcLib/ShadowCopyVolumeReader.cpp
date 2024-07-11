@@ -77,11 +77,6 @@ ShadowCopyVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& buffer, ULONGLONG 
 {
     Log::Trace("VSS: read (offset: {:#016x}, length: {})", offset, ullBytesToRead);
 
-    if (offset == 0)
-    {
-        int debug = 0;
-    }
-
     HRESULT hr = Seek(offset);
     if (FAILED(hr))
     {
