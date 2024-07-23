@@ -19,7 +19,7 @@ class ParquetOutputWriter : public TableOutputExtension
 {
 public:
     ParquetOutputWriter()
-        : TableOutputExtension(L"orcparquet.dll"s, L"ORCPARQUET_X86DLL"s, L"ORCPARQUET_X64DLL"s) {};
+        : TableOutputExtension(L"orcparquet.dll"s, L"ORCPARQUET_X86DLL"s, L"ORCPARQUET_X64DLL"s, L"ORCPARQUET_ARM64DLL"s) {};
     ~ParquetOutputWriter() {};
 };
 

@@ -28,7 +28,7 @@ private:
 
 public:
     VssAPIExtension()
-        : ExtensionLibrary(L"vssapi", L"vssapi.dll", L"vssapi.dll") {};
+        : ExtensionLibrary(L"vssapi", L"vssapi.dll") {};
 
     STDMETHOD(Initialize)();
 

@@ -39,9 +39,16 @@ class ExtensionLibrary
     friend class ExtensionLibraryHandler;
 
 public:
+
+    ExtensionLibrary(const std::wstring& strKeyword,
+                     const std::wstring& strLibRef,
+                     std::vector<std::shared_ptr<DependencyLibrary>> dependencies = {}
+    ) : ExtensionLibrary(strKeyword, strLibRef, strLibRef, strLibRef, std::move(dependencies)) {};
+
     ExtensionLibrary(const std::wstring& strKeyword,
                      const std::wstring& strX86LibRef,
                      const std::wstring& strX64LibRef,
+                     const std::wstring& strARM64LibRef,
                      std::vector<std::shared_ptr<DependencyLibrary>> dependencies = {}
     );
 
@@ -207,6 +214,7 @@ protected:
     // There are the default Library refs
     std::wstring m_strX86LibRef;
     std::wstring m_strX64LibRef;
+    std::wstring m_strARM64LibRef;
 
     std::wstring m_strLibRef;  // Effective, contextual ref used to locate extension lib
 
@@ -295,7 +303,7 @@ class TemplateExtension : public ExtensionLibrary
 
 public:
     TemplateExtension()
-        : ExtensionLibrary(L"template", L"template.dll", L"template.dll") {};
+        : ExtensionLibrary(L"template", L"template.dll", L"template.dll", L"template.dll") {};
     virtual ~TemplateExtension() {}
     STDMETHOD(Initialize)() { return S_OK; }
 };

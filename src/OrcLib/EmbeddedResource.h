@@ -23,9 +23,27 @@
 
 namespace Orc {
 
+using namespace std::string_view_literals;
+
 class EmbeddedResource
 {
 public:
+    static constexpr auto RUN_FMT = L"RUN{}"sv;
+    static constexpr auto RUN_ARGS_FMT = L"RUN{}_ARGS"sv;
+    static constexpr auto _32 = L"32"sv;
+    static constexpr auto _64 = L"64"sv;
+    static constexpr auto _ARM64 = L"_ARM64"sv;
+
+    static auto RUN() { return fmt::format(RUN_FMT, L""sv); }
+    static auto RUN_32() { return fmt::format(RUN_FMT, _32); }
+    static auto RUN_64() { return fmt::format(RUN_FMT, _64); }
+    static auto RUN_ARM64() { return fmt::format(RUN_FMT, _ARM64); }
+
+    static auto RUN_ARGS() { return fmt::format(RUN_ARGS_FMT, L""sv); }
+    static auto RUN_32_ARGS() { return fmt::format(RUN_ARGS_FMT, _32); }
+    static auto RUN_64_ARGS() { return fmt::format(RUN_ARGS_FMT, _64); }
+    static auto RUN_ARM64_ARGS() { return fmt::format(RUN_ARGS_FMT, _ARM64); }
+
     class EmbedSpec
     {
 
@@ -158,47 +176,31 @@ public:
         {
             EmbedSpec retval;
             retval.Type = EmbedType::NameValuePair;
-            retval.Name = L"RUN";
+            retval.Name = RUN();
             retval.Value = Value;
-            return retval;
-        };
-        static EmbedSpec AddRun(std::wstring&& Value)
-        {
-            EmbedSpec retval;
-            retval.Type = EmbedType::NameValuePair;
-            retval.Name = L"RUN";
-            std::swap(retval.Value, Value);
             return retval;
         };
         static EmbedSpec AddRunX86(const std::wstring& Value)
         {
             EmbedSpec retval;
             retval.Type = EmbedType::NameValuePair;
-            retval.Name = L"RUN32";
+            retval.Name = RUN_32();
             retval.Value = Value;
-            return retval;
-        };
-        static EmbedSpec AddRunX86(std::wstring&& Value)
-        {
-            EmbedSpec retval;
-            retval.Type = EmbedType::NameValuePair;
-            retval.Name = L"RUN32";
-            std::swap(retval.Value, Value);
-            return retval;
-        };
-        static EmbedSpec AddRunX64(std::wstring&& Value)
-        {
-            EmbedSpec retval;
-            retval.Type = EmbedType::NameValuePair;
-            retval.Name = L"RUN64";
-            std::swap(retval.Value, Value);
             return retval;
         };
         static EmbedSpec AddRunX64(const std::wstring& Value)
         {
             EmbedSpec retval;
             retval.Type = EmbedType::NameValuePair;
-            retval.Name = L"RUN64";
+            retval.Name = RUN_64();
+            retval.Value = Value;
+            return retval;
+        };
+        static EmbedSpec AddRun_ARM64(const std::wstring& Value)
+        {
+            EmbedSpec retval;
+            retval.Type = EmbedType::NameValuePair;
+            retval.Name = RUN_ARM64();
             retval.Value = Value;
             return retval;
         };
@@ -206,7 +208,7 @@ public:
         {
             EmbedSpec retval;
             retval.Type = EmbedType::NameValuePair;
-            retval.Name = L"RUN_ARGS";
+            retval.Name = RUN_ARGS();
             retval.Value = Value;
             return retval;
         };
@@ -214,7 +216,7 @@ public:
         {
             EmbedSpec retval;
             retval.Type = EmbedType::NameValuePair;
-            retval.Name = L"RUN32_ARGS";
+            retval.Name = RUN_32_ARGS();
             retval.Value = Value;
             return retval;
         };
@@ -222,7 +224,15 @@ public:
         {
             EmbedSpec retval;
             retval.Type = EmbedType::NameValuePair;
-            retval.Name = L"RUN64_ARGS";
+            retval.Name = RUN_64_ARGS();
+            retval.Value = Value;
+            return retval;
+        };
+        static EmbedSpec AddRun_ARM64_Args(const std::wstring& Value)
+        {
+            EmbedSpec retval;
+            retval.Type = EmbedType::NameValuePair;
+            retval.Name = RUN_ARM64_ARGS();
             retval.Value = Value;
             return retval;
         };
@@ -389,15 +399,19 @@ public:
 
     static HRESULT ExtractRun(const std::wstring& Module, std::wstring& Value)
     {
-        return ExtractValue(Module, std::wstring(L"RUN"), Value);
+        return ExtractValue(Module, fmt::format(RUN_FMT, L""), Value);
     }
     static HRESULT ExtractRun32(const std::wstring& Module, std::wstring& Value)
     {
-        return ExtractValue(Module, std::wstring(L"RUN32"), Value);
+        return ExtractValue(Module, fmt::format(RUN_FMT, _32), Value);
     }
     static HRESULT ExtractRun64(const std::wstring& Module, std::wstring& Value)
     {
-        return ExtractValue(Module, std::wstring(L"RUN64"), Value);
+        return ExtractValue(Module, fmt::format(RUN_FMT, _64), Value);
+    }
+    static HRESULT ExtractRunARM64(const std::wstring& Module, std::wstring& Value)
+    {
+        return ExtractValue(Module, fmt::format(RUN_FMT, _ARM64), Value);
     }
 
     static HRESULT
@@ -406,17 +420,22 @@ public:
 
     static HRESULT ExtractRunArgs(const std::wstring& Module, std::wstring& Value)
     {
-        return ExtractValue(Module, std::wstring(L"RUN_ARGS"), Value);
+        return ExtractValue(Module, RUN_ARGS(), Value);
     }
 
     static HRESULT ExtractRun32Args(const std::wstring& Module, std::wstring& Value)
     {
-        return ExtractValue(Module, std::wstring(L"RUN32_ARGS"), Value);
+        return ExtractValue(Module, RUN_32_ARGS(), Value);
     }
 
     static HRESULT ExtractRun64Args(const std::wstring& Module, std::wstring& Value)
     {
-        return ExtractValue(Module, std::wstring(L"RUN64_ARGS"), Value);
+        return ExtractValue(Module, RUN_64_ARGS(), Value);
+    }
+
+    static HRESULT ExtractRunARM64Args(const std::wstring& Module, std::wstring& Value)
+    {
+        return ExtractValue(Module, RUN_ARM64_ARGS(), Value);
     }
 
     static HRESULT EnumValues(const std::wstring& Module, std::vector<EmbedSpec>& values);

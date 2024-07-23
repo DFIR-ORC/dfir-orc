@@ -47,7 +47,7 @@ class NtDllExtension : public ExtensionLibrary
 
 public:
     NtDllExtension()
-        : ExtensionLibrary(L"ntdll", L"ntdll.dll", L"ntdll.dll") {};
+        : ExtensionLibrary(L"ntdll", L"ntdll.dll") {};
     virtual ~NtDllExtension() {}
     STDMETHOD(Initialize)();
 

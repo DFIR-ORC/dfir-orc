@@ -173,7 +173,7 @@ class EvtLibrary : public ExtensionLibrary
 
 public:
     EvtLibrary()
-        : ExtensionLibrary(L"wevtapi", L"Wevtapi.dll", L"Wevtapi.dll") {};
+        : ExtensionLibrary(L"wevtapi", L"Wevtapi.dll") {};
 
     STDMETHOD(Initialize)();
 

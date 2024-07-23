@@ -19,7 +19,7 @@ class ApacheOrcOutputWriter : public TableOutputExtension
 {
 public:
     ApacheOrcOutputWriter()
-        : TableOutputExtension(L"orcapacheorc.dll"s, L"APACHEORC_X86DLL"s, L"APACHEORC_X64DLL"s) {};
+        : TableOutputExtension(L"orcapacheorc.dll"s, L"APACHEORC_X86DLL"s, L"APACHEORC_X64DLL"s, L"APACHEORC_ARM64DLL"s) {};
     ~ApacheOrcOutputWriter() {};
 };
 

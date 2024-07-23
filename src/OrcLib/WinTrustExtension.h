@@ -64,7 +64,7 @@ class WinTrustExtension : public ExtensionLibrary
 
 public:
     WinTrustExtension()
-        : ExtensionLibrary(L"wintrust"s, L"wintrust.dll"s, L"wintrust.dll"s) {};
+        : ExtensionLibrary(L"wintrust"s, L"wintrust.dll"s) {};
     ~WinTrustExtension();
 
     STDMETHOD(Initialize)();

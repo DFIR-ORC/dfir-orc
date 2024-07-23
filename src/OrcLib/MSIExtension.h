@@ -25,7 +25,7 @@ private:
 
 public:
     MSIExtension()
-        : ExtensionLibrary(L"msi.dll", L"msi.dll", L"msi.dll") {};
+        : ExtensionLibrary(L"msi", L"msi.dll") {};
 
     STDMETHOD(Initialize)();
 

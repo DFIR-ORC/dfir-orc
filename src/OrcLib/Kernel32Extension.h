@@ -26,7 +26,7 @@ class Kernel32Extension : public ExtensionLibrary
 
 public:
     Kernel32Extension()
-        : ExtensionLibrary(L"kernel32"s, L"kernel32.dll"s, L"kernel32.dll"s) {};
+        : ExtensionLibrary(L"kernel32"s, L"kernel32.dll"s) {};
 
     template <typename... Args>
     auto InitializeProcThreadAttributeList(Args&&... args)
