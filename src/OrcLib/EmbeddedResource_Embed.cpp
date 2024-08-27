@@ -1046,6 +1046,51 @@ void CheckYaraRules(const std::filesystem::path& peFile, const std::vector<XmlSt
     }
 }
 
+HANDLE TryBeginUpdateResource(
+    LPCWSTR pFileName,
+    BOOL bDeleteExistingResources,
+    uint8_t maxAttempt = kDefaultAttemptLimit,
+    uint32_t delayms = kDefaultAttemptDelay)
+{
+    for (size_t i = 1; i <= maxAttempt; ++i)
+    {
+        HANDLE hResource = BeginUpdateResourceW(pFileName, bDeleteExistingResources);
+        if (hResource != NULL)
+        {
+            return hResource;
+        }
+
+        Log::Debug(L"Failed BeginUpdateResourceW (path: {}, attempt: #{}) [{}]", pFileName, i, LastWin32Error());
+        Sleep(delayms);
+    }
+
+    return NULL;
+}
+
+BOOL TryUpdateResource(
+    HANDLE hUpdate,
+    LPCWSTR lpType,
+    LPCWSTR lpName,
+    WORD wLanguage,
+    LPVOID lpData,
+    DWORD cb,
+    uint8_t maxAttempt = kDefaultAttemptLimit,
+    uint32_t delayms = kDefaultAttemptDelay)
+{
+    for (size_t i = 1; i <= maxAttempt; ++i)
+    {
+        if (UpdateResourceW(hUpdate, lpType, lpName, wLanguage, lpData, cb))
+        {
+            return TRUE;
+        }
+
+        Log::Debug(L"Failed EndUpdateResource (handle: {}, attempt: {}) [{}]", hUpdate, i, LastWin32Error());
+        Sleep(delayms);
+    }
+
+    return FALSE;
+}
+
 // There is sometimes a race condition with Windows after modifying the module. I guess it is only EndUpdateResource
 // which has some issue but I wrapped other api aswell.
 BOOL TryEndUpdateResource(
@@ -1061,7 +1106,7 @@ BOOL TryEndUpdateResource(
             return TRUE;
         }
 
-        Log::Debug(L"Failed EndUpdateResource (handle: {:#x}, attempt: {}) [{}]", hUpdate, i, LastWin32Error());
+        Log::Debug(L"Failed EndUpdateResource (handle: {}, attempt: {}) [{}]", hUpdate, i, LastWin32Error());
         Sleep(delayms);
     }
 
