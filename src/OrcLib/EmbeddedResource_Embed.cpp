@@ -37,6 +37,9 @@ namespace {
 
 const auto kEncodingHint = L"utf-8";
 
+const uint8_t kDefaultAttemptLimit = 20;
+const uint32_t kDefaultAttemptDelay = 200;
+
 void SplitResourceLink(
     const std::wstring& resourceLink,
     std::wstring& resourceName,
@@ -1043,6 +1046,28 @@ void CheckYaraRules(const std::filesystem::path& peFile, const std::vector<XmlSt
     }
 }
 
+// There is sometimes a race condition with Windows after modifying the module. I guess it is only EndUpdateResource
+// which has some issue but I wrapped other api aswell.
+BOOL TryEndUpdateResource(
+    HANDLE hUpdate,
+    BOOL fDiscard,
+    uint8_t maxAttempt = kDefaultAttemptLimit,
+    uint32_t delayms = kDefaultAttemptDelay)
+{
+    for (size_t i = 1; i <= maxAttempt; ++i)
+    {
+        if (EndUpdateResourceW(hUpdate, fDiscard))
+        {
+            return TRUE;
+        }
+
+        Log::Debug(L"Failed EndUpdateResource (handle: {:#x}, attempt: {}) [{}]", hUpdate, i, LastWin32Error());
+        Sleep(delayms);
+    }
+
+    return FALSE;
+}
+
 }  // namespace
 
 HRESULT EmbeddedResource::_UpdateResource(
@@ -1228,11 +1253,10 @@ HRESULT EmbeddedResource::UpdateResources(const std::wstring& strPEToUpdate, con
 
     if (!bAtomicUpdate)
     {
-        if (!EndUpdateResource(hOutput, FALSE))
+        if (!TryEndUpdateResource(hOutput, FALSE))
         {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to update resources in '{}' (EndUpdateResource) [{}]", strPEToUpdate, SystemError(hr));
-            return hr;
+            Log::Error(L"Failed to update resources in '{}'", strPEToUpdate);
+            return E_FAIL;
         }
     }
 
