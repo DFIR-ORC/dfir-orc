@@ -1,5 +1,11 @@
 # ChangeLog
 
+## [10.2.6] - 2024-08-28
+### Fixed
+- Fix local configuration relocating when executed from network path
+- ToolEmbed: fix possible issue on resource removal
+- Outcome: fix reported p7b archive file size
+
 ## [10.2.5] - 2024-06-07
 ### Added
 - Outcome: add outcome.system_type (Workstation...)

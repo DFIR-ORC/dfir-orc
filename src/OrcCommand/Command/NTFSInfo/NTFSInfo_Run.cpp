@@ -702,11 +702,6 @@ HRESULT Main::WriteVolStats(
             return E_FAIL;
         }
 
-        if (ntfsReader->VolumeSerialNumber() == 0)
-        {
-            int debug = 0;
-        }
-
         std::shared_ptr<VolumeReader> reader;
         auto shadow = loc->GetShadow();
         if (shadow && shadow->parentVolume)
