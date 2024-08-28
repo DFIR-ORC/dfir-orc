@@ -148,7 +148,7 @@ HRESULT Main::Run_Dump()
     if (FAILED(hr))
     {
         Log::Error(
-            L"Failed to expand files and archivesfrom '{}' into '{}' [{}]",
+            L"Failed to expand files and archives from '{}' into '{}' [{}]",
             config.strInputFile,
             config.Output.Path,
             SystemError(hr));

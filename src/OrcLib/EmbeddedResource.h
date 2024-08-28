@@ -280,15 +280,6 @@ private:
         LPVOID pData,
         DWORD cbSize);
 
-    static HRESULT TryUpdateResource(
-        HANDLE hOutput,
-        const WCHAR* szModule,
-        const WCHAR* szType,
-        const WCHAR* szName,
-        LPVOID pData,
-        DWORD cbSize,
-        uint8_t maxAttempt);
-
     static std::wregex& ArchResourceRegEx();
     static std::wregex& ResResourceRegEx();
     static std::wregex& SelfReferenceRegEx();
