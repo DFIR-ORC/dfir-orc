@@ -1126,6 +1126,11 @@ HRESULT EmbeddedResource::_UpdateResource(
     HRESULT hr = E_FAIL;
     HANDLE hOut = hOutput;
 
+    if (hOutput == NULL)
+    {
+        hOutput = INVALID_HANDLE_VALUE;
+    }
+
     if (hOutput == INVALID_HANDLE_VALUE)
     {
         hOut = BeginUpdateResource(szModule, FALSE);
