@@ -168,21 +168,53 @@ int PrintUsage()
     return -1;
 }
 
+void RelocateFile(const std::filesystem::path& source, const std::filesystem::path& destination, std::error_code& ec)
+{
+    auto exists = std::filesystem::exists(source, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed to check existance for {}", source, ec);
+        return;
+    }
+
+    if (exists == false)
+    {
+        return;
+    }
+
+    Log::Debug("Relocate {} to {}", source, destination);
+
+    if (!MoveFileExW(destination.c_str(), NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
+    {
+        ec = LastWin32Error();
+        Log::Debug("Failed MoveFileExW [{}]", ec);
+        return;
+    }
+
+    if (!CopyFileW(source.c_str(), destination.c_str(), FALSE))
+    {
+        ec = LastWin32Error();
+        Log::Debug("Failed CopyFileW [{}]", ec);
+        return;
+    }
+}
+
 void RelocateOnLocalDrive(std::error_code& ec)
 {
-    const std::filesystem::path source = GetModuleFileNameApi(NULL, ec);
+    const std::filesystem::path mothership = GetModuleFileNameApi(NULL, ec);
     if (ec)
     {
         Log::Debug("Failed GetModuleFileNameApi [{}]", ec);
         return;
     }
 
-    if (!PathIsNetworkPathW(source.c_str()))
+    if (!PathIsNetworkPathW(mothership.c_str()))
     {
         return;
     }
 
-    Log::Warn("DFIR-Orc should not be executed from network network. It will be relocated into %TEMP%");
+    Log::Warn(
+        "ORC is executing from a network drive, relocate to local drive to prevent connectivity issues during collect");
 
     const std::filesystem::path temp = GetTempPathApi(ec);
     if (ec)
@@ -198,20 +230,19 @@ void RelocateOnLocalDrive(std::error_code& ec)
         return;
     }
 
-    const std::filesystem::path destination = temp / source.filename();
-    Log::Debug("Copy main executable {} to {}", source, destination);
-
-    if (!MoveFileExW(destination.c_str(), NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
+    std::filesystem::path localConfiguration = mothership;
+    localConfiguration.replace_extension(L"xml");
+    const std::filesystem::path newLocalConfiguration = temp / localConfiguration.filename();
+    RelocateFile(localConfiguration, newLocalConfiguration, ec);
+    if (ec)
     {
-        ec = LastWin32Error();
-        Log::Debug("Failed MoveFileExW [{}]", ec);
         return;
     }
 
-    if (!CopyFileW(source.c_str(), destination.c_str(), FALSE))
+    const std::filesystem::path newMothership = temp / mothership.filename();
+    RelocateFile(mothership, newMothership, ec);
+    if (ec)
     {
-        ec = LastWin32Error();
-        Log::Debug("Failed CopyFileW [{}]", ec);
         return;
     }
 
@@ -223,14 +254,14 @@ void RelocateOnLocalDrive(std::error_code& ec)
     si.StartupInfo.cb = sizeof(si);
 
     std::vector<std::wstring> arguments;
-    for(size_t i = 1; i < __argc; ++i)
+    for (size_t i = 1; i < __argc; ++i)
     {
         arguments.emplace_back(__wargv[i]);
     }
 
     const auto commandLine = boost::join(arguments, " ");
     if (!CreateProcessW(
-            destination.c_str(),
+            newMothership.c_str(),
             const_cast<LPWSTR>(commandLine.c_str()),
             NULL,
             NULL,
