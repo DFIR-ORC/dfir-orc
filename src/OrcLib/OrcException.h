@@ -47,7 +47,7 @@ public:
         : m_severity(Severity::Unset)
         , m_ec(SystemError(hr))
     {
-        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(args...));
     }
 
     template <typename... Args>
@@ -55,7 +55,7 @@ public:
         : m_severity(status)
         , m_ec(SystemError(hr))
     {
-        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(args...));
     }
 
     template <typename... Args>
@@ -63,7 +63,7 @@ public:
         : m_severity(Severity::Unset)
         , m_ec(ec)
     {
-        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(args...));
     }
 
     template <typename... Args>
@@ -71,21 +71,21 @@ public:
         : m_severity(status)
         , m_ec(ec)
     {
-        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(args...));
     }
 
     template <typename... Args>
     Exception(Severity status, std::wstring_view fmt, Args&&... args)
         : m_severity(status)
     {
-        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(args...));
     }
 
     template <typename... Args>
     Exception(std::wstring_view fmt, Args&&... args)
         : m_severity(Severity::Unset)
     {
-        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(std::forward<Args>(args)...));
+        Description = fmt::vformat(fmt::wstring_view(fmt), fmt::make_wformat_args(args...));
     }
 
     explicit Exception(Severity status)

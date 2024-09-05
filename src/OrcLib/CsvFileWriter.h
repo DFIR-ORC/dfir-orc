@@ -258,7 +258,11 @@ protected:
     template <typename T>
     struct EscapeQuoteInserter
     {
-        using value_type = typename T::value_type;
+        using value_type = wchar_t;
+        using iterator_category = std::output_iterator_tag;
+        using difference_type = std::ptrdiff_t;
+        using pointer = void;
+        using reference = void;
 
         EscapeQuoteInserter(T& wrapped)
             : m_wrapped(wrapped)
@@ -267,53 +271,36 @@ protected:
         {
         }
 
-        void push_back(const wchar_t& u)
+        inline EscapeQuoteInserter& operator=(wchar_t u)
         {
             if (previousWasQuote)
             {
-                quoteCount++;
-
-                if (quoteCount > 1)
+                if (++quoteCount > 1)
                 {
                     m_wrapped.push_back(L'"');
                 }
             }
-
             previousWasQuote = (u == L'"');
-
             m_wrapped.push_back(u);
+            return *this;
         }
+
+        inline EscapeQuoteInserter& operator*() { return *this; }
+        inline EscapeQuoteInserter& operator++() { return *this; }
+        inline EscapeQuoteInserter& operator++(int) { return *this; }
 
         T& m_wrapped;
         bool previousWasQuote;
         size_t quoteCount;
     };
 
-    template <typename... Args>
-    HRESULT FormatToBuffer(std::wstring_view strFormat, Args&&... args)
+    inline HRESULT CheckAndFlushBuffer()
     {
-        try
-        {
-            if (strFormat.find(L"\"{}\"") != std::wstring::npos)
-            {
-                auto escapedBuffer = EscapeQuoteInserter(m_buffer);
-                fmt::format_to(std::back_inserter(escapedBuffer), strFormat, std::forward<Args>(args)...);
-            }
-            else
-            {
-                fmt::format_to(std::back_inserter(m_buffer), strFormat, std::forward<Args>(args)...);
-            }
-        }
-        catch (const fmt::format_error& error)
-        {
-            Log::Error("fmt::format_error: {}", error.what());
-            return E_INVALIDARG;
-        }
+        const size_t threshold = (m_buffer.capacity() * 8) / 10;
 
-        // Flush when buffer is over 80% of its capacity
-        if (m_buffer.size() > (80 * m_buffer.capacity() / 100))
+        if (m_buffer.size() > threshold)
         {
-            if (auto hr = Flush(); FAILED(hr))
+            if (HRESULT hr = Flush(); FAILED(hr))
             {
                 return hr;
             }
@@ -323,7 +310,31 @@ protected:
     }
 
     template <typename... Args>
-    HRESULT FormatColumn(Args&&... args)
+    HRESULT FormatToBuffer(std::wstring_view strFormat, Args&&... args)
+    {
+        try
+        {
+            if (strFormat.find(L"\"{}\"") != std::wstring::npos)
+            {
+                EscapeQuoteInserter escapedBuffer(m_buffer);
+                fmt::format_to(escapedBuffer, fmt::runtime(strFormat), std::forward<Args>(args)...);
+            }
+            else
+            {
+                fmt::format_to(std::back_inserter(m_buffer), fmt::runtime(strFormat), std::forward<Args>(args)...);
+            }
+        }
+        catch (const fmt::format_error& error)
+        {
+            Log::Error("fmt::format_error: {}", error.what());
+            return E_INVALIDARG;
+        }
+
+        return CheckAndFlushBuffer();
+    }
+
+    template <typename... Args>
+    inline HRESULT FormatColumn(Args&&... args)
     {
 
         auto pCol = static_cast<const Column*>(&m_Schema[m_dwColumnCounter]);

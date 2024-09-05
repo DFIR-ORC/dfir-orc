@@ -28,6 +28,7 @@
 
 #include "Configuration/ConfigFileReader.h"
 #include "ResurrectRecordsMode.h"
+#include "Text/Fmt/ConfigItem.h"
 
 #include "FileFind.h"
 

@@ -19,8 +19,7 @@ void Print(Tree& root, const MFTUtils::NonResidentAttributeExtent& extent)
 {
     if (!extent.bZero)
     {
-        root.Add(
-            L"LowestVCN: {:#018x}, Offset: {}, Size: {}, Allocated: {}",
+        root.Add(fmt::runtime(L"LowestVCN: {:#018x}, Offset: {}, Size: {}, Allocated: {}"),
             extent.LowestVCN,
             Traits::Offset(extent.DiskOffset),
             extent.DataSize,
@@ -29,7 +28,7 @@ void Print(Tree& root, const MFTUtils::NonResidentAttributeExtent& extent)
     else
     {
         // Segment is SPARSE, only unallocated zeroes
-        root.Add(L"Sparse entry, Size: {}", extent.DataSize);
+        root.Add(fmt::runtime(L"Sparse entry, Size: {}"), extent.DataSize);
     }
 }
 

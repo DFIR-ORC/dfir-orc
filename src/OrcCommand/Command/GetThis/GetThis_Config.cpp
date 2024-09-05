@@ -22,6 +22,8 @@
 #include <regex>
 #include <filesystem>
 
+#include "Text/Fmt/ConfigItem.h"
+
 using namespace std;
 namespace fs = std::filesystem;
 

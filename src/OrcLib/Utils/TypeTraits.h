@@ -112,6 +112,19 @@ struct underlying_char_type<wchar_t>
     using type = wchar_t;
 };
 
+template <>
+struct underlying_char_type<fmt::runtime_format_string<char>>
+{
+    using type = char;
+};
+
+template <>
+struct underlying_char_type<fmt::runtime_format_string<wchar_t>>
+{
+    using type = wchar_t;
+};
+
+
 template <typename T>
 struct underlying_char_type<T>
 {

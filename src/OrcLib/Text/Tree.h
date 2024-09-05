@@ -92,7 +92,7 @@ public:
         , m_indentationIsDone(false)
     {
         FormatTo(std::back_inserter(m_buffer), CreateHeader(offset, indentLevelIndex));
-        FormatTo(std::back_inserter(m_buffer), std::forward<FmtArgs>(args)...);
+        FormatTo(std::back_inserter(m_buffer), args...);
     }
 
     /*!
@@ -119,14 +119,14 @@ public:
     template <typename T, typename... FmtArgs>
     std::enable_if_t<std::is_integral_v<T>, Tree> AddNode(T offset, FmtArgs&&... args)
     {
-        Add(std::forward<FmtArgs>(args)...);
+        Add(args...);
         return Tree(m_buffer, m_offset + offset, m_indentLevel - 1);
     }
 
     template <typename... FmtArgs>
     Tree AddNode(FmtArgs&&... args)
     {
-        Add(std::forward<FmtArgs>(args)...);
+        Add(args...);
         return Tree(m_buffer, m_offset, m_indentLevel);
     }
 
@@ -138,7 +138,7 @@ public:
             FormatToWithoutEOL(std::back_inserter(m_buffer), m_header);
         }
 
-        FormatTo(std::back_inserter(m_buffer), std::forward<FmtArgs>(args)...);
+        FormatTo(std::back_inserter(m_buffer), args...);
         m_indentationIsDone = false;
     }
 
@@ -151,13 +151,13 @@ public:
             m_indentationIsDone = true;
         }
 
-        FormatToWithoutEOL(std::back_inserter(m_buffer), std::forward<FmtArgs>(args)...);
+        FormatToWithoutEOL(std::back_inserter(m_buffer), args...);
     }
 
     template <typename... FmtArgs>
     void Append(FmtArgs&&... args)
     {
-        FormatToWithoutEOL(std::back_inserter(m_buffer), std::forward<FmtArgs>(args)...);
+        FormatToWithoutEOL(std::back_inserter(m_buffer), args...);
     }
 
     template <typename T>

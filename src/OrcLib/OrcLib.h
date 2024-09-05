@@ -19,6 +19,9 @@
 #include <Windows.h>
 #include <winsock.h>
 
+#include <fmt/core.h>
+#include <fmt/compile.h>
+
 #include <Utils/Result.h>
 
 namespace Orc {

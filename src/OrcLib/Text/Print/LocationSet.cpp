@@ -97,7 +97,7 @@ void Print(Tree& root, const LocationSet& locationSet)
             }
 
             serialNode.Add(
-                L"{:<34}  {}{}", fmt::format(L"{}:", location->GetType()), location->GetLocation(), mountPoints);
+                fmt::runtime(L"{:<34}  {}{}"), fmt::format(L"{}:", location->GetType()), location->GetLocation(), mountPoints);
 
             // TODO: Having access to FormatTo would be good. A version without header, conversion to FmtArg0
             // encoding, conversion to container's encoding auto value = FormatTo(L"{:<34}  {}{}",

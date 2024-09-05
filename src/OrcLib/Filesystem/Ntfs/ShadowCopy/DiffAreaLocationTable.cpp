@@ -42,7 +42,7 @@ void DiffAreaLocationTable::Parse(
 
         if (offset == nextOffset)
         {
-            Log::Error("Failed to parse next block from VSS DiffAreaLocationTable (offset: {:#x})");
+            Log::Error("Failed to parse next block from VSS DiffAreaLocationTable (offset: {:#x})", offset);
             break;
         }
 

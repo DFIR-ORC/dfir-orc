@@ -252,7 +252,7 @@ int Robustness::handle_program_memory_depletion(size_t attempted)
 
         buffer[sizeof(buffer) - 1] = '\0';
         std::cerr << buffer << std::endl;
-        Log::Critical(buffer);
+        Log::Critical("{}", buffer);
 
         MEMORYSTATUSEX memory;
         memory.dwLength = sizeof(memory);
@@ -278,7 +278,7 @@ int Robustness::handle_program_memory_depletion(size_t attempted)
         if (logger)
         {
             logger->Critical("Failed to allocate buffer");
-            logger->Critical(buffer);
+            logger->Critical("{}", buffer);
         }
     }
 

@@ -42,7 +42,16 @@ public:
     {
         if (c == Traits::newline_v<T>)
         {
-            Log::Info(Log::Facility::kLogFile, m_buffer);
+            using CharT = Traits::newline_t<T>;
+            if constexpr (std::is_same_v<CharT, char>)
+            {
+                Log::Info(Log::Facility::kLogFile, "{}", m_buffer);
+            }
+            else if constexpr (std::is_same_v<CharT, wchar_t>)
+            {
+                Log::Info(Log::Facility::kLogFile, L"{}", m_buffer);
+            }
+            
 
             m_buffer.push_back(c);
 

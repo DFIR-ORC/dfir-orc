@@ -29,6 +29,7 @@
 #include <boost/tokenizer.hpp>
 #include "Utils/WinApi.h"
 #include "Text/ByteQuantity.h"
+#include "Text/Fmt/ConfigItem.h"
 
 using namespace std;
 

@@ -33,6 +33,7 @@
 #include "Utils/Time.h"
 #include "Utils/WinApi.h"
 #include "Text/Guid.h"
+#include "Text/Fmt/ConfigItem.h"
 #include "Text/Fmt/Result.h"
 #include "Text/Fmt/ByteQuantity.h"
 #include "Text/Fmt/Offset.h"

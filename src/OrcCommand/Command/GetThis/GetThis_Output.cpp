@@ -18,6 +18,7 @@
 
 #include "Text/Fmt/Boolean.h"
 #include "Text/Fmt/ByteQuantity.h"
+#include "Text/Fmt/ConfigItem.h"
 #include "Text/Fmt/Limit.h"
 #include "Text/Print.h"
 #include "Text/Print/LocationSet.h"
@@ -33,7 +34,7 @@ template <>
 struct fmt::formatter<Orc::Command::GetThis::ContentSpec, wchar_t> : public fmt::formatter<fmt::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(const Orc::Command::GetThis::ContentSpec& content, FormatContext& ctx)
+    auto format(const Orc::Command::GetThis::ContentSpec& content, FormatContext& ctx) const
     {
         switch (content.Type)
         {

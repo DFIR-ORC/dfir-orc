@@ -526,7 +526,7 @@ std::wstring GetFullPathNameApi(const std::wstring& path, std::error_code& ec) n
     }
     catch (const std::length_error& e)
     {
-        Log::Debug("Failed GetFullPathNameApi '{}' [exception: {}]", e.what());
+        Log::Debug("Failed GetFullPathNameApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }
@@ -724,7 +724,7 @@ std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, size_t cbMa
     }
     catch (const std::length_error& e)
     {
-        Log::Debug("Failed ExpandEnvironmentStringsApi '{}' [exception: {}]", e.what());
+        Log::Debug("Failed ExpandEnvironmentStringsApi [exception: {}]", e.what());
         ec = std::make_error_code(std::errc::not_enough_memory);
         return {};
     }

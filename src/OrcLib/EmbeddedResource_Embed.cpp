@@ -30,6 +30,8 @@
 #include "YaraStaticExtension.h"
 #include "Utils/Guard.h"
 
+#include "Text/Fmt/std_error_code.h"
+
 using namespace std;
 using namespace Orc;
 
@@ -1106,7 +1108,11 @@ BOOL TryEndUpdateResource(
             return TRUE;
         }
 
-        Log::Debug(L"Failed EndUpdateResource (handle: {}, attempt: {}) [{}]", hUpdate, i, LastWin32Error());
+        Log::Debug(
+            L"Failed EndUpdateResource (handle: {:#x}, attempt: {}) [{}]"sv,
+            reinterpret_cast<uint64_t>(hUpdate),
+            i,
+            LastWin32Error());
         Sleep(delayms);
     }
 

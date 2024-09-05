@@ -910,10 +910,8 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBytes(const BYTE pBytes[], DWOR
         return WriteNothing();
     }
 
-    Buffer<BYTE> buffer;
-    buffer.view_of((BYTE*)pBytes, dwLen, dwLen);
-
-    HRESULT hr = FormatColumn(buffer);
+    auto hex_view = fmt::join(gsl::make_span(pBytes, dwLen), L"");
+    HRESULT hr = FormatColumn(hex_view);
     if (FAILED(hr))
     {
         AbandonColumn();

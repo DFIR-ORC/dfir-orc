@@ -668,9 +668,8 @@ void Print(Orc::Text::Tree& root, const MFTRecord& record, const std::shared_ptr
     {
         return;
     }
-
     auto recordNode = root.AddNode(
-        L"MFT record {:#018x} {}{}{}{}{}{}{}{}{}",
+        fmt::runtime(L"MFT record {:#018x} {}{}{}{}{}{}{}{}{}"),
         record.GetSafeMFTSegmentNumber(),
         record.IsRecordInUse() ? L"[in_use]" : L"[deleted]",
         record.IsDirectory() ? L"[directory]" : L"",

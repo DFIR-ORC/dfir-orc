@@ -22,62 +22,140 @@ void SetDefaultLogger(std::shared_ptr<Logger> instance);
 const SpdlogLogger::Ptr& Get(Facility id);
 
 template <typename... Args>
-void Trace(Args&&... args)
+void Trace(fmt::format_string<Args...>&& fmt, Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Trace(std::forward<Args>(args)...);
+        instance->Trace(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+    }
+}
+template <typename... Args>
+void Trace(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Trace(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Debug(Args&&... args)
+void Debug(fmt::format_string<Args...>&& fmt, Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Debug(std::forward<Args>(args)...);
+        instance->Debug(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+    }
+}
+template <typename... Args>
+void Debug(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Debug(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Info(Args&&... args)
+void Info(fmt::format_string<Args...> && fmt, Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Info(std::forward<Args>(args)...);
+        instance->Info(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Warn(Args&&... args)
+void Info(Log::Facility facility, fmt::format_string<Args...>&& fmt, Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Warn(std::forward<Args>(args)...);
+        instance->Info(facility, std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Error(Args&&... args)
+void Info(fmt::wformat_string<Args...>&& fmt, Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Error(std::forward<Args>(args)...);
+        instance->Info(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
+    }
+}
+
+
+template <typename... Args>
+void Info(Log::Facility facility, fmt::wformat_string<Args...>&& fmt, Args&&... args)
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Info(facility, std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
     }
 }
 
 template <typename... Args>
-void Critical(Args&&... args)
+void Warn(fmt::format_string<Args...>&& fmt, Args&&... args)
 {
     auto& instance = DefaultLogger();
     if (instance)
     {
-        instance->Critical(std::forward<Args>(args)...);
+        instance->Warn(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+    }
+}
+template <typename... Args>
+void Warn(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Warn(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
+    }
+}
+
+template <typename... Args>
+void Error(fmt::format_string<Args...>&& fmt, Args&&... args)
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Error(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+    }
+}
+
+template <typename... Args>
+void Error(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Error(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
+    }
+}
+
+template <typename... Args>
+void Critical(fmt::format_string<Args...>&& fmt, Args&&... args)
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Critical(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+    }
+}
+
+template <typename... Args>
+void Critical(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+{
+    auto& instance = DefaultLogger();
+    if (instance)
+    {
+        instance->Critical(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
     }
 }
 

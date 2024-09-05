@@ -30,7 +30,7 @@ constexpr auto kNoneW = std::wstring_view(L"None");
 template <typename T>
 inline void Print(Tree& node, const T& value)
 {
-    node.Add(L"{}", value);
+    node.Add(fmt::runtime(L"{}"), value);
 }
 
 inline std::wstring FormatKey(const std::wstring& key)
@@ -92,7 +92,7 @@ void PrintValues(Tree& node, const N& name, const V& values)
     }
 
     // TODO: use FormatKey
-    auto valuesNode = node.AddNode(34, L"{}:", name);
+    auto valuesNode = node.AddNode(34, fmt::runtime(L"{}:"), name);
     for (const auto& value : values)
     {
         Print(valuesNode, value);

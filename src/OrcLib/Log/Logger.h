@@ -14,6 +14,7 @@
 #include <set>
 
 #include <spdlog/spdlog.h>
+#include <fmt/xchar.h>
 
 #include "SpdlogLogger.h"
 #include "Text/Format.h"
@@ -66,14 +67,7 @@ public:
             {
                 try
                 {
-                    if constexpr (std::is_same_v<CharT, char>)
-                    {
-                        fmt::vformat_to(std::back_inserter(msg), arg0, fmt::make_format_args(args...));
-                    }
-                    else
-                    {
-                        fmt::vformat_to(std::back_inserter(msg), arg0, fmt::make_wformat_args(args...));
-                    }
+                    fmt::format_to(std::back_inserter(msg), std::forward<Arg0>(arg0), std::forward<Args>(args)...);
                 }
                 catch (const fmt::format_error&)
                 {
@@ -105,25 +99,53 @@ public:
     }
 
     template <typename FacilityIt, typename... Args>
-    inline void Log(FacilityIt first, FacilityIt last, Log::Level level, Args&&... args)
+    inline void
+    Log(FacilityIt first, FacilityIt last, Log::Level level, fmt::format_string<Args...>&& fmt, Args&&... args)
     {
-        Log(first, last, std::chrono::system_clock::now(), level, std::forward<Args>(args)...);
+        Log(first,
+            last,
+            std::chrono::system_clock::now(),
+            level,
+            std::forward<fmt::format_string<Args...>>(fmt),
+            std::forward<Args>(args)...);
+    }
+    template <typename FacilityIt, typename... Args>
+    inline void
+    Log(FacilityIt first, FacilityIt last, Log::Level level, fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        Log(first,
+            last,
+            std::chrono::system_clock::now(),
+            level,
+            std::forward<fmt::wformat_string<Args...>>(fmt),
+            std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Trace(Facility id, Args&&... args)
+    void Trace(Facility id, fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Trace)];
 
         auto& logger = Get(id);
         if (logger)
         {
-            logger->Trace(std::forward<Args>(args)...);
+            logger->Trace(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+        }
+    }
+    template <typename... Args>
+    void Trace(Facility id, fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Trace)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Trace(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
         }
     }
 
     template <typename... Args>
-    void Trace(Args&&... args)
+    void Trace(fmt::format_string<Args...> fmt, Args&&... args)
     {
         // FIXME: find a way to only enable trace when requested to limit cpu usage
         return;
@@ -131,108 +153,231 @@ public:
         Log(std::cbegin(m_defaultFacilities),
             std::cend(m_defaultFacilities),
             Level::Trace,
+            std::forward<fmt::format_string<Args...>>(fmt),
             std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Debug(Facility id, Args&&... args)
+    void Trace(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        // FIXME: find a way to only enable trace when requested to limit cpu usage
+        return;
+
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Trace,
+            std::forward<fmt::wformat_string<Args...>>(fmt),
+            std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    void Debug(Facility id, fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Debug)];
 
         auto& logger = Get(id);
         if (logger)
         {
-            logger->Debug(std::forward<Args>(args)...);
+            logger->Debug(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+        }
+    }
+    template <typename... Args>
+    void Debug(Facility id, fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Debug)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Debug(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
         }
     }
 
     template <typename... Args>
-    void Debug(Args&&... args)
+    void Debug(fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         Log(std::cbegin(m_defaultFacilities),
             std::cend(m_defaultFacilities),
             Level::Debug,
+            std::forward<fmt::format_string<Args...>>(fmt),
+            std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    void Debug(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Debug,
+            std::forward<fmt::wformat_string<Args...>>(fmt),
             std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Info(Facility id, Args&&... args)
+    void Info(Facility id, fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Info)];
 
         auto& logger = Get(id);
         if (logger)
         {
-            logger->Info(std::forward<Args>(args)...);
+            logger->Info(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+        }
+    }
+    template <typename... Args>
+    void Info(Facility id, fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Info)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Info(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
         }
     }
 
     template <typename... Args>
-    void Info(Args&&... args)
+    void Info(fmt::format_string<Args...>&& fmt, Args&&... args)
     {
-        Log(std::cbegin(m_defaultFacilities), std::cend(m_defaultFacilities), Level::Info, std::forward<Args>(args)...);
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Info,
+            std::forward<fmt::format_string<Args...>>(fmt),
+            std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    void Info(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Info,
+            std::forward<fmt::wformat_string<Args...>>(fmt),
+            std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Warn(Facility id, Args&&... args)
+    void Warn(Facility id, fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Warning)];
 
         auto& logger = Get(id);
         if (logger)
         {
-            logger->Warn(std::forward<Args>(args)...);
+            logger->Warn(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+        }
+    }
+    template <typename... Args>
+    void Warn(Facility id, fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Warning)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Warn(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
         }
     }
 
     template <typename... Args>
-    void Warn(Args&&... args)
+    void Warn(fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         Log(std::cbegin(m_defaultFacilities),
             std::cend(m_defaultFacilities),
             Level::Warning,
+            std::forward<fmt::format_string<Args...>>(fmt),
+            std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    void Warn(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Warning,
+            std::forward<fmt::wformat_string<Args...>>(fmt),
             std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Error(Facility id, Args&&... args)
+    void Error(Facility id, fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Error)];
 
         auto& logger = Get(id);
         if (logger)
         {
-            logger->Error(std::forward<Args>(args)...);
+            logger->Error(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+        }
+    }
+    template <typename... Args>
+    void Error(Facility id, fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Error)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Error(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
         }
     }
 
     template <typename... Args>
-    void Error(Args&&... args)
+    void Error(fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         Log(std::cbegin(m_defaultFacilities),
             std::cend(m_defaultFacilities),
             Level::Error,
+            std::forward<fmt::format_string<Args...>>(fmt),
             std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    void Critical(Facility id, Args&&... args)
+    void Error(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Error,
+            std::forward<fmt::wformat_string<Args...>>(fmt),
+            std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    void Critical(Facility id, fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Critical)];
 
         auto& logger = Get(id);
         if (logger)
         {
-            logger->Critical(std::forward<Args>(args)...);
+            logger->Critical(std::forward<fmt::format_string<Args...>>(fmt), std::forward<Args>(args)...);
+        }
+    }
+    template <typename... Args>
+    void Critical(Facility id, fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        ++m_logCounters[static_cast<std::underlying_type_t<Level>>(Level::Critical)];
+
+        auto& logger = Get(id);
+        if (logger)
+        {
+            logger->Critical(std::forward<fmt::wformat_string<Args...>>(fmt), std::forward<Args>(args)...);
         }
     }
 
     template <typename... Args>
-    void Critical(Args&&... args)
+    void Critical(fmt::format_string<Args...>&& fmt, Args&&... args)
     {
         Log(std::cbegin(m_defaultFacilities),
             std::cend(m_defaultFacilities),
             Level::Critical,
+            std::forward<fmt::format_string<Args...>>(fmt),
+            std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    void Critical(fmt::wformat_string<Args...>&& fmt, Args&&... args)
+    {
+        Log(std::cbegin(m_defaultFacilities),
+            std::cend(m_defaultFacilities),
+            Level::Critical,
+            std::forward<fmt::wformat_string<Args...>>(fmt),
             std::forward<Args>(args)...);
     }
 

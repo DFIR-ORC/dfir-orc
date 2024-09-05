@@ -113,7 +113,7 @@ void HexDump(const T& indent, InputIt first, InputIt last, OutputIt out)
                 out++ = Traits::newline_v<value_type>;
             }
 
-            fmt::format_to(out, OffsetFmt<value_type>(), indent, offset);
+            fmt::format_to(out, fmt::runtime(OffsetFmt<value_type>()), indent, offset);
         }
 
         out++ = Traits::space_v<value_type>;

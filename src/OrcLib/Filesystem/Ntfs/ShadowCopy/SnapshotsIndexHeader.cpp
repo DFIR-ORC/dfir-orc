@@ -57,7 +57,7 @@ void SnapshotsIndexHeader::Parse(BufferView buffer, SnapshotsIndexHeader& header
     if (header.m_node.Type() != NodeType::kVolumeHeader)
     {
         Log::Debug(
-            "VSS root header is corrupted: unexpected node type (expected: 0x1, value: {:#x})",
+            "VSS root header is corrupted: unexpected node type (expected: 0x1, value: {})",
             ToString(header.m_node.Type()));
         return;
     }

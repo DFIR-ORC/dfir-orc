@@ -63,28 +63,65 @@ void ToUtf8(const T& utf16, OutputIt out)
     std::copy(std::cbegin(utf8), std::cend(utf8), out);
 }
 
+template <typename CharT>
+constexpr fmt::basic_string_view<CharT> ToFormatView(fmt::basic_string_view<CharT> sv) noexcept
+{
+    return sv;
+}
+
+template <typename CharT>
+constexpr fmt::basic_string_view<CharT> ToFormatView(const fmt::runtime_format_string<CharT>& rs) noexcept
+{
+    return rs.str;
+}
+
+template <typename CharT, typename... Args>
+constexpr fmt::basic_string_view<CharT> ToFormatView(const fmt::basic_format_string<CharT, Args...>& fs) noexcept
+{
+    return static_cast<fmt::basic_string_view<CharT>>(fs);
+}
+
+template <typename CharT>
+constexpr fmt::basic_string_view<CharT> ToFormatView(const std::basic_string<CharT>& s) noexcept
+{
+    return s;
+}
+
+template <typename CharT>
+constexpr fmt::basic_string_view<CharT> ToFormatView(const CharT* s) noexcept
+{
+    return s;
+}
+
 template <typename OutputIt, typename FmtArg0, typename... FmtArgs>
 inline void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 {
     using BufferCharT = Traits::underlying_char_type_t<OutputIt>;
-    using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
+
+    const auto fmtView = details::ToFormatView(arg0);
+    using FmtCharT = typename decltype(fmtView)::value_type;
 
     if constexpr (std::is_same_v<FmtCharT, BufferCharT>)
     {
-        fmt::format_to(out, std::forward<FmtArg0>(arg0), args...);
+        if constexpr (std::is_same_v<FmtCharT, char>)
+        {
+            fmt::vformat_to(out, fmtView, fmt::make_format_args(args...));
+        }
+        else
+        {
+            fmt::vformat_to(out, fmtView, fmt::make_wformat_args(args...));
+        }
     }
     else if constexpr (std::is_same_v<FmtCharT, char>)
     {
         fmt::basic_memory_buffer<char, 32768> utf8;
-        fmt::vformat_to(
-            std::back_inserter(utf8), fmt::string_view(arg0), fmt::make_format_args(args...));
+        fmt::vformat_to(std::back_inserter(utf8), fmtView, fmt::make_format_args(args...));
         details::ToUtf16(utf8, out);
     }
     else if constexpr (std::is_same_v<FmtCharT, wchar_t>)
     {
         fmt::basic_memory_buffer<wchar_t, 32768> utf16;
-        fmt::vformat_to(
-            std::back_inserter(utf16), fmt::wstring_view(arg0), fmt::make_wformat_args(args...));
+        fmt::vformat_to(std::back_inserter(utf16), fmtView, fmt::make_wformat_args(args...));
         details::ToUtf8(utf16, out);
     }
     else
@@ -129,7 +166,7 @@ void FormatToWithoutEOL(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
     {
         // Use TryConvertToEncoding to process char/wchar_t conversion to FmtArg0's value_type
         using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
-        details::FormatWithEncodingTo(out, std::forward<FmtArg0>(arg0), TryEncodeTo<FmtCharT>(args)...);
+        details::FormatWithEncodingTo(out, arg0, TryEncodeTo<FmtCharT>(args)...);
     }
     catch (const fmt::format_error& e)
     {
@@ -150,7 +187,7 @@ template <typename OutputIt, typename FmtArg0, typename... FmtArgs>
 void FormatTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 {
     using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
-    FormatToWithoutEOL(out, std::forward<FmtArg0>(arg0), std::forward<FmtArgs>(args)...);
+    FormatToWithoutEOL(out, arg0, std::forward<FmtArgs>(args)...);
     out++ = Traits::newline_v<Traits::underlying_char_type_t<OutputIt>>;
 }
 

@@ -66,7 +66,7 @@ public:
     void Log(const std::chrono::system_clock::time_point& timepoint, Log::Level level, fmt::wstring_view msg);
 
     template <typename... Args>
-    inline void Trace(Args&&... args)
+    inline void Trace(fmt::format_string<Args...> fmt, Args&&... args)
     {
         // Never forward trace level calls to avoid any spdlog's backtrace processing
         if (m_logger->level() > spdlog::level::trace)
@@ -74,52 +74,103 @@ public:
             return;
         }
 
-        m_logger->trace(std::forward<Args>(args)...);
+        m_logger->trace(fmt, std::forward<Args>(args)...);
     }
-
     template <typename... Args>
-    inline void Debug(Args&&... args)
+    inline void Trace(fmt::wformat_string<Args...> fmt, Args&&... args)
     {
-        m_logger->debug(std::forward<Args>(args)...);
+        // Never forward trace level calls to avoid any spdlog's backtrace processing
+        if (m_logger->level() > spdlog::level::trace)
+        {
+            return;
+        }
+
+        m_logger->trace(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    inline void Info(Args&&... args)
+    inline void Debug(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        m_logger->info(std::forward<Args>(args)...);
+        m_logger->debug(fmt, std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    inline void Debug(fmt::wformat_string<Args...> fmt, Args&&... args)
+    {
+        m_logger->debug(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    inline void Warn(Args&&... args)
+    inline void Info(fmt::format_string<Args...> fmt, Args&&... args)
+    {
+        m_logger->info(fmt, std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    inline void Info(fmt::wformat_string<Args...> fmt, Args&&... args)
+    {
+        m_logger->info(fmt, std::forward<Args>(args)...);
+    }
+
+    template <typename... Args>
+    inline void Warn(fmt::format_string<Args...> fmt, Args&&... args)
     {
         if (m_backtraceTrigger != Level::Off && m_backtraceTrigger >= Level::Warning)
         {
             DumpBacktrace();
         }
 
-        m_logger->warn(std::forward<Args>(args)...);
+        m_logger->warn(fmt, std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    inline void Warn(fmt::wformat_string<Args...> fmt, Args&&... args)
+    {
+        if (m_backtraceTrigger != Level::Off && m_backtraceTrigger >= Level::Warning)
+        {
+            DumpBacktrace();
+        }
+
+        m_logger->warn(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    inline void Error(Args&&... args)
+    inline void Error(fmt::format_string<Args...> fmt, Args&&... args)
     {
         if (m_backtraceTrigger != Level::Off && m_backtraceTrigger >= Level::Error)
         {
             DumpBacktrace();
         }
 
-        m_logger->error(std::forward<Args>(args)...);
+        m_logger->error(fmt, std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    inline void Error(fmt::wformat_string<Args...> fmt, Args&&... args)
+    {
+        if (m_backtraceTrigger != Level::Off && m_backtraceTrigger >= Level::Error)
+        {
+            DumpBacktrace();
+        }
+
+        m_logger->error(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
-    inline void Critical(Args&&... args)
+    inline void Critical(fmt::format_string<Args...> fmt, Args&&... args)
     {
         if (m_backtraceTrigger == Level::Critical)
         {
             DumpBacktrace();
         }
 
-        m_logger->critical(std::forward<Args>(args)...);
+        m_logger->critical(fmt, std::forward<Args>(args)...);
+    }
+    template <typename... Args>
+    inline void Critical(fmt::wformat_string<Args...> fmt, Args&&... args)
+    {
+        if (m_backtraceTrigger == Level::Critical)
+        {
+            DumpBacktrace();
+        }
+
+        m_logger->critical(fmt, std::forward<Args>(args)...);
     }
 
     void Flush() { m_logger->flush(); }

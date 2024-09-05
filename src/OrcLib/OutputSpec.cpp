@@ -27,7 +27,6 @@
 #include "Archive.h"
 #include "Utils/WinApi.h"
 #include "Utils/Uri.h"
-#include "Text/Guid.h"
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -87,21 +86,19 @@ OutputSpec::ApplyPattern(const std::wstring& strPattern, const std::wstring& str
     SystemDetails::GetTimeStamp(strTimeStamp);
 
     wstring strSystemType;
-    SystemDetails::GetOrcSystemType(strSystemType);
+    SystemDetails::GetSystemType(strSystemType);
 
-    wstring strRunId(Orc::ToStringW(SystemDetails::GetOrcRunId()));
+    using namespace fmt::literals;
 
-    strFileName = fmt::vformat(
-        fmt::wstring_view(strPattern),
-        fmt::make_wformat_args(
-            fmt::arg(L"Name", strName),
-            fmt::arg(L"FileName", strName),
-            fmt::arg(L"DirectoryName", strName),
-            fmt::arg(L"ComputerName", strComputerName),
-            fmt::arg(L"FullComputerName", strFullComputerName),
-            fmt::arg(L"TimeStamp", strTimeStamp),
-            fmt::arg(L"SystemType", strSystemType),
-            fmt::arg(L"RunId", strRunId)));
+    strFileName = fmt::format(
+        fmt::runtime(strPattern),
+        L"Name"_a = strName,
+        L"FileName"_a = strName,
+        L"DirectoryName"_a = strName,
+        L"ComputerName"_a = strComputerName,
+        L"FullComputerName"_a = strFullComputerName,
+        L"TimeStamp"_a = strTimeStamp,
+        L"SystemType"_a = strSystemType);
 
     return S_OK;
 }

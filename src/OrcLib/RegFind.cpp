@@ -101,22 +101,23 @@ void RegFind::PrintSpecs(Orc::Text::Tree& root) const
 
     for (const auto& e : m_ExactKeyNameSpecs)
     {
-        node.Add(L"{}", e.second->GetDescription());
+        node.Add(fmt::runtime(L"{}"), e.second->GetDescription());
     }
 
     for (const auto& e : m_ExactKeyPathSpecs)
     {
-        node.Add(L"{}", e.second->GetDescription());
+        node.Add(fmt::runtime(L"{}"), e.second->GetDescription());
     }
 
     for (const auto& e : m_ExactValueNameSpecs)
     {
-        node.Add(L"{}", e.second->GetDescription());
+        node.Add(fmt::runtime(L"{}"), e.second->GetDescription());
     }
 
     for (const auto& e : m_Specs)
     {
-        node.Add(L"{}", e->GetDescription());
+        auto [hr, wstr] = Orc::AnsiToWide(e->GetDescription());
+        node.Add(fmt::runtime(L"{}"), wstr);
     }
 }
 

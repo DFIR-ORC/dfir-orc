@@ -682,6 +682,7 @@ set(SRC_TEXT_FMT
     "Text/Fmt/Boolean.h"
     "Text/Fmt/BoolOnOff.h"
     "Text/Fmt/ByteQuantity.h"
+    "Text/Fmt/ConfigItem.h"
     "Text/Fmt/CryptoHashStreamAlgorithm.h"
     "Text/Fmt/FILE_NAME.h"
     "Text/Fmt/FILETIME.h"

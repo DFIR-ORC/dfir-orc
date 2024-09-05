@@ -20,35 +20,33 @@ using namespace Orc;
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, ULONG32 dwValue, bool bInHex)
 {
-
-    fmt::format_to(std::back_inserter(buffer), bInHex ? L"0x{:08X}"sv : L"{}"sv, dwValue);
-
+    fmt::format_to(std::back_inserter(buffer), fmt::runtime(bInHex ? L"0x{:08X}"sv : L"{}"sv), dwValue);
     return S_OK;
 }
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, ULONG64 ullValue, bool bInHex)
 {
-    fmt::format_to(std::back_inserter(buffer), bInHex ? L"0x{:016X}"sv : L"{}"sv, ullValue);
+    fmt::format_to(std::back_inserter(buffer), fmt::runtime(bInHex ? L"0x{:016X}"sv : L"{}"sv), ullValue);
     return S_OK;
 }
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, LONG32 uiValue, bool bInHex)
 {
 
-    fmt::format_to(std::back_inserter(buffer), bInHex ? L"0x{:08X}"sv : L"{}"sv, uiValue);
+    fmt::format_to(std::back_inserter(buffer), fmt::runtime(bInHex ? L"0x{:08X}"sv : L"{}"sv), uiValue);
 
     return S_OK;
 }
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, LONG64 llValue, bool bInHex)
 {
-    fmt::format_to(std::back_inserter(buffer), bInHex ? L"0x{:016X}"sv : L"{}"sv, llValue);
+    fmt::format_to(std::back_inserter(buffer), fmt::runtime(bInHex ? L"0x{:016X}"sv : L"{}"sv), llValue);
     return S_OK;
 }
 
 HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, LARGE_INTEGER ullValue, bool bInHex)
 {
-    fmt::format_to(std::back_inserter(buffer), bInHex ? L"0x{:016X}"sv : L"{}"sv, ullValue.QuadPart);
+    fmt::format_to(std::back_inserter(buffer), fmt::runtime(bInHex ? L"0x{:016X}"sv : L"{}"sv), ullValue.QuadPart);
     return S_OK;
 }
 
@@ -104,10 +102,9 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, const BYTE p
         return S_OK;
     }
 
-    Buffer<BYTE> bytes;
-    bytes.view_of((BYTE*)pBytes, dwLen);
-    bytes.use(dwLen);
-    fmt::format_to(std::back_inserter(buffer), b0xPrefix ? L"0x{:02X}"sv : L"{:02X}"sv, bytes);
+    auto formatStr = b0xPrefix ? L"0x{:02X}"sv : L"{:02X}"sv;
+    auto data = gsl::span<const unsigned char>(pBytes, dwLen);
+    fmt::format_to(std::back_inserter(buffer), fmt::runtime(formatStr), fmt::join(data, L""));
     return S_OK;
 }
 
@@ -119,10 +116,9 @@ HRESULT Orc::StructuredOutput::Writer::WriteBuffer(_Buffer& buffer, const CBinar
         return S_OK;
     }
 
-    Orc::Buffer<BYTE> bytes;
-    bytes.view_of((BYTE*)Buffer.GetData(), Buffer.GetCount());
-    bytes.use(Buffer.GetCount());
-    fmt::format_to(std::back_inserter(buffer), b0xPrefix ? L"0x{:02X}"sv : L"{:02X}"sv, bytes);
+    auto formatStr = b0xPrefix ? L"0x{:02X}"sv : L"{:02X}"sv;
+    auto data = gsl::span(Buffer.GetData(), Buffer.GetCount());
+    fmt::format_to(std::back_inserter(buffer), fmt::runtime(formatStr), fmt::join(data, L""));
     return S_OK;
 }
 

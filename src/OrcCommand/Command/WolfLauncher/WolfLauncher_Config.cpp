@@ -491,14 +491,17 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         if (FAILED(hr))
         {
             Log::Error(
-                L"Failed to set '{}' as archive name [{}]", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], SystemError(hr));
+                L"Failed to set '{}' as archive name [{}]",
+                archiveitem[WOLFLAUNCHER_ARCHIVE_NAME].c_str(),
+                SystemError(hr));
             return hr;
         }
 
         hr = exec->SetConfigStreams(m_pConfigStream, m_pLocalConfigStream);
         if (FAILED(hr))
         {
-            Log::Error(L"Failed to set config stream [{}]", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME], SystemError(hr));
+            Log::Error(
+                L"Failed to set config stream [{}]", archiveitem[WOLFLAUNCHER_ARCHIVE_NAME].c_str(), SystemError(hr));
             return hr;
         }
 

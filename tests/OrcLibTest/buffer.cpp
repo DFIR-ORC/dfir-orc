@@ -395,13 +395,17 @@ TEST_METHOD(Format)
     Buffer<BYTE, 16> heap = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
                              13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
 
-    auto result = fmt::vformat("{0:02X}", fmt::make_format_args(heap));
+    {
+        auto span = gsl::span(heap.get(), heap.size());
+        auto result = fmt::format("{0:02X}", fmt::join(span, ""));
+        Assert::AreEqual(result, fmt::to_string("000102030405060708090A0B0C0D0E0F10111213141516171819"));
+    }
 
-    Assert::AreEqual(result, fmt::to_string("000102030405060708090A0B0C0D0E0F10111213141516171819"));
-
-    auto wresult = fmt::vformat(fmt::wstring_view(L"{0:02X}"), fmt::make_wformat_args(heap));
-
-    Assert::AreEqual(wresult, fmt::to_wstring(L"000102030405060708090A0B0C0D0E0F10111213141516171819"));
+    {
+        auto span = gsl::span(heap.get(), heap.size());
+        auto result = fmt::format(L"{0:02X}", fmt::join(span, L""));
+        Assert::AreEqual(result, fmt::to_wstring(L"000102030405060708090A0B0C0D0E0F10111213141516171819"));
+    }
 
     Buffer<DWORD, 16> dwords = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12,
                                 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25};
@@ -410,9 +414,10 @@ TEST_METHOD(Format)
 
     Assert::AreEqual(
         result_hex,
-        fmt::to_wstring(L"000000000100000002000000030000000400000005000000060000000700000008000000090000000A0000000B00"
-                        L"00000C0000000D0000000E0000000F00000010000000110000001200000013000000140000001500000016000000"
-                        L"170000001800000019000000"));
+        fmt::to_wstring(
+            L"000000000100000002000000030000000400000005000000060000000700000008000000090000000A0000000B00"
+            L"00000C0000000D0000000E0000000F00000010000000110000001200000013000000140000001500000016000000"
+            L"170000001800000019000000"));
 
     auto result_hex_limit = dwords.AsHexString(true, 8);
 

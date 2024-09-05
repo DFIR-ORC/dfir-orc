@@ -1172,7 +1172,7 @@ struct formatter<Orc::Buffer<_T, _DeclElts>, Char>
     }
 
     template <typename FormatContext>
-    auto format(const Orc::Buffer<_T, _DeclElts>& buffer, FormatContext& ctx)
+    auto format(const Orc::Buffer<_T, _DeclElts>& buffer, FormatContext& ctx) const
     {
         for (const auto& item : buffer)
         {
@@ -1219,7 +1219,7 @@ struct formatter<Orc::Detail::BufferSpan<_T>, Char>
     }
 
     template <typename FormatContext>
-    auto format(const Orc::Detail::BufferSpan<_T>& buffer, FormatContext& ctx)
+    auto format(const Orc::Detail::BufferSpan<_T>& buffer, FormatContext& ctx) const
     {
         for (const auto& item : buffer)
         {

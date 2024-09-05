@@ -1690,9 +1690,9 @@ Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
 
     fmt::basic_memory_buffer<char, 65536> catalog;
 
-    constexpr std::array catrootDirectories = {
-        L"%WINDIR%\\system32\\CatRoot\\{{F750E6C3-38EE-11D1-85E5-00C04FC295EE}}\\{}"sv,
-        L"%WINDIR%\\system32\\CatRoot\\{}"sv};
+    std::array catrootDirectories = {
+        fmt::runtime(L"%WINDIR%\\system32\\CatRoot\\{{F750E6C3-38EE-11D1-85E5-00C04FC295EE}}\\{}"sv),
+        fmt::runtime(L"%WINDIR%\\system32\\CatRoot\\{}"sv)};
 
     for (auto catroot : catrootDirectories)
     {
