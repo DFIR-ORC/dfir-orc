@@ -1,4 +1,4 @@
-// Copyright © 2022 ANSSI. All Rights Reserved.
+// Copyright 2022 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl (ANSSI)
 //
