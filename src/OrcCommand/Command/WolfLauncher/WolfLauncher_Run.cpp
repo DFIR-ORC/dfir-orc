@@ -714,27 +714,26 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                                     std::chrono::milliseconds timeout = command->GetTimeout().value();
                                     writer->WriteNamed(
                                         L"timeout", std::chrono::duration_cast<std::chrono::seconds>(timeout).count());
-
-                                    writer->BeginCollection(L"output");
-
-                                    for (const auto& parameter : command->GetParameters())
-                                    {
-                                        if (parameter.Kind == CommandParameter::OutFile
-                                            || parameter.Kind == CommandParameter::OutDirectory
-                                            || parameter.Kind == CommandParameter::StdOut
-                                            || parameter.Kind == CommandParameter::StdErr
-                                            || parameter.Kind == CommandParameter::StdOutErr)
-                                        {
-                                            writer->BeginElement(nullptr);
-                                            writer->WriteNamed(L"name", parameter.Name);
-                                            writer->WriteNamed(L"source", ToSourceString(parameter.Kind));
-                                            writer->EndElement(nullptr);
-                                        }
-                                    }
-
-                                    writer->EndCollection(L"output");
                                 }
 
+                                writer->BeginCollection(L"output");
+
+                                for (const auto& parameter : command->GetParameters())
+                                {
+                                    if (parameter.Kind == CommandParameter::OutFile
+                                        || parameter.Kind == CommandParameter::OutDirectory
+                                        || parameter.Kind == CommandParameter::StdOut
+                                        || parameter.Kind == CommandParameter::StdErr
+                                        || parameter.Kind == CommandParameter::StdOutErr)
+                                    {
+                                        writer->BeginElement(nullptr);
+                                        writer->WriteNamed(L"name", parameter.Name);
+                                        writer->WriteNamed(L"source", ToSourceString(parameter.Kind));
+                                        writer->EndElement(nullptr);
+                                    }
+                                }
+
+                                writer->EndCollection(L"output");
                                 writer->EndElement(nullptr);
                             }
                         }
@@ -916,7 +915,10 @@ HRESULT Main::Run_Execute()
             SetThreadExecutionState(static_cast<EXECUTION_STATE>(config.PowerState) | ES_CONTINUOUS);
     }
 
-    BOOST_SCOPE_EXIT(hr) { SetThreadExecutionState(ES_CONTINUOUS); }
+    BOOST_SCOPE_EXIT(hr)
+    {
+        SetThreadExecutionState(ES_CONTINUOUS);
+    }
     BOOST_SCOPE_EXIT_END;
 
     if (config.Outline.IsStructuredFile())
