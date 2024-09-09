@@ -56,7 +56,7 @@ void Write(
         Guard::Scope onExit([&]() { writer->EndElement(nullptr); });
 
         writer->WriteNamed(L"name", item.GetName());
-        writer->WriteNamed(L"type", ToString(item.GetType()));
+        writer->WriteNamed(L"source", ToString(item.GetType()));
 
         const auto& size = item.GetSize();
         if (size.has_value())
