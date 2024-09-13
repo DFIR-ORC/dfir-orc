@@ -33,7 +33,7 @@ public:
 
     // static methods
     static HRESULT GuessPartitionType(const CBinaryBuffer& buffer, Partition& p);
-    static void ParseDiskPartition(DiskPartition* diskPartition, UINT sectorSize, Partition& p, UINT64 partitionOffset);
+    static void ParseDiskPartition(DiskPartition* diskPartition, UINT sectorSize, Partition& p, ULONG64 partitionOffset);
     static void
     ParseDiskPartition(IDiskExtent& diskExtend, GPTPartitionEntry* gptPartitionEntry, UINT sectorSize, Partition& p);
     static UINT GetSectorSize(IDiskExtent& extent);
@@ -47,14 +47,14 @@ private:
         IDiskExtent& diskExtend,
         const Partition& p,
         ExtendedBootRecord* pExtendedRecord,
-        UINT64 u64ExtendedPartitionStart);
+        ULONG64 u64ExtendedPartitionStart);
 
     void AddPartition(const Partition& p);
     UINT8 GetPartitionNumber();
 
     // internal methods
     HRESULT OpenDiskExtend(IDiskExtent& diskExtend);
-    HRESULT SeekDiskExtend(IDiskExtent& diskExtend, UINT64 offset);
+    HRESULT SeekDiskExtend(IDiskExtent& diskExtend, ULONG64 offset);
     HRESULT ReadDiskExtend(IDiskExtent& diskExtend, CBinaryBuffer& buffer);
 
     DWORD Crc32(const CBinaryBuffer& buffer);

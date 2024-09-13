@@ -56,9 +56,9 @@ public:
     Flags PartitionFlags;
     UINT PartitionNumber;
     UINT SectorSize;
-    UINT64 Start;
-    UINT64 End;
-    UINT64 Size;
+    ULONG64 Start;
+    ULONG64 End;
+    ULONG64 Size;
 
     ~Partition(void) {};
 };
