@@ -385,9 +385,9 @@ private:
         friend void swap(InnerStore& left, InnerStore& right) noexcept
         {
             std::array<_T, _DeclElts> temp;
-            std::copy(std::begin(left.m_Elts), std::end(left.m_Elts), std::begin(temp));
-            std::copy(std::begin(right.m_Elts), std::end(right.m_Elts), std::begin(temp));
-            std::copy(std::begin(temp), std::end(temp), std::begin(temp));
+            std::copy(std::cbegin(left.m_Elts), std::cend(left.m_Elts), std::begin(temp));
+            std::copy(std::cbegin(right.m_Elts), std::cend(right.m_Elts), std::begin(left.m_Elts));
+            std::copy(std::cbegin(temp), std::cend(temp), std::begin(right.m_Elts));
         }
 
         constexpr InnerStore() = default;
