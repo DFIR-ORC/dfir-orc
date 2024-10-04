@@ -997,6 +997,7 @@ bool UtilitiesMain::WaitForDebugger(int argc, const WCHAR* argv[])
 
 bool UtilitiesMain::WaitForDebuggerOption(LPCWSTR szArg)
 {
+#ifdef _DEBUG
     using namespace std::chrono_literals;
     if (_wcsnicmp(szArg, L"WaitForDebugger", wcslen(L"WaitForDebugger")))
         return false;
@@ -1011,6 +1012,10 @@ bool UtilitiesMain::WaitForDebuggerOption(LPCWSTR szArg)
         Log::Info("Debugger connected!");
     else
         Log::Info("No debugger connected... let's continue");
+#else
+    Log::Info("WaitForDebuggerOption is only enabled for debug builds");
+#endif
+
     return true;
 }
 

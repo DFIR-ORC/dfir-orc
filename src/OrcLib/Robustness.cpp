@@ -356,20 +356,30 @@ LONG WINAPI Robustness::UnhandledExceptionFilter(__in struct _EXCEPTION_POINTERS
     }
 
     Terminate();
-    if (!IsDebuggerPresent())
-        exit(-1);
-    else
+
+#ifdef _DEBUG
+    if (IsDebuggerPresent())
+    {
         throw SystemException(ExceptionInfo->ExceptionRecord->ExceptionCode, ExceptionInfo);
+        return 0;
+    }
+#endif
+
+    exit(-1);
 }
 
 BOOL WINAPI Robustness::ConsoleEventHandlerRoutine(__in DWORD dwCtrlType)
 {
     if (!g_termination)
     {
-        if (!IsDebuggerPresent())
-            ExitProcess((UINT)-1);
-        else
+#ifdef _DEBUG
+        if (IsDebuggerPresent())
             throw ConsoleException(dwCtrlType);
+        else
+            ExitProcess((UINT)-1);
+#else
+        ExitProcess((UINT)-1);
+#endif
     }
 
     const WCHAR* szEvent = nullptr;
@@ -404,10 +414,15 @@ BOOL WINAPI Robustness::ConsoleEventHandlerRoutine(__in DWORD dwCtrlType)
     }
 
     Robustness::Terminate();
-    if (!IsDebuggerPresent())
-        ExitProcess((UINT)-1);
-    else
+
+#ifdef _DEBUG
+    if (IsDebuggerPresent())
         throw ConsoleException(dwCtrlType);
+    else
+        ExitProcess((UINT)-1);
+#else
+    ExitProcess((UINT)-1);
+#endif
 }
 
 void Robustness::AddTerminationHandler(const std::shared_ptr<TerminationHandler>& pHandler)
