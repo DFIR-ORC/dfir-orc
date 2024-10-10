@@ -42,6 +42,7 @@ constexpr std::string_view kFileAttributePinned = "FILE_ATTRIBUTE_PINNED";
 constexpr std::string_view kFileAttributeUnpinned = "FILE_ATTRIBUTE_UNPINNED";
 constexpr std::string_view kFileAttributeRecallOnOpen = "FILE_ATTRIBUTE_RECALL_ON_OPEN";
 constexpr std::string_view kFileAttributeRecallOnDataAccess = "FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS";
+constexpr std::string_view kFileAttributeStrictlySequential = "FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL";
 
 constexpr std::array kFileAttributes = {
     std::tuple {FileAttribute::kFileAttributeReadOnly, kFileAttributeReadOnly, 'R'},
@@ -66,6 +67,7 @@ constexpr std::array kFileAttributes = {
     std::tuple {FileAttribute::kFileAttributeUnpinned, kFileAttributeUnpinned, 'u'},
     std::tuple {FileAttribute::kFileAttributeRecallOnOpen, kFileAttributeRecallOnOpen, 'o'},
     std::tuple {FileAttribute::kFileAttributeRecallOnDataAccess, kFileAttributeRecallOnDataAccess, 'a'},
+    std::tuple {FileAttribute::kFileAttributeStrictlySequential, kFileAttributeStrictlySequential, 'l'}
 };
 
 bool HasInvalidFlag(uint32_t flags)
@@ -102,10 +104,6 @@ std::string ToString(FileAttribute flags)
 
     if (::HasInvalidFlag(std::underlying_type_t<FileAttribute>(flags)))
     {
-        Log::Debug(
-            "Failed to convert some FileAttribute flags to string (value: {})",
-            std::underlying_type_t<FileAttribute>(flags));
-
         return fmt::format("{:#x}", std::underlying_type_t<FileAttribute>(flags));
     }
 
@@ -141,10 +139,6 @@ char ToIdentifier(FileAttribute flags)
 
     if (::HasInvalidFlag(std::underlying_type_t<FileAttribute>(flags)))
     {
-        Log::Debug(
-            "Failed to convert some FileAttribute flags to identifier (value: {})",
-            std::underlying_type_t<FileAttribute>(flags));
-
         return '?';
     }
 
@@ -154,9 +148,6 @@ char ToIdentifier(FileAttribute flags)
         {
             if (flags != f)
             {
-                Log::Debug(
-                    "Failed to convert some FileAttribute flags to unique identifier (value: {})",
-                    std::underlying_type_t<FileAttribute>(flags));
                 return '?';
             }
 
@@ -181,10 +172,6 @@ std::string ToIdentifiers(FileAttribute flags)
 
     if (::HasInvalidFlag(std::underlying_type_t<FileAttribute>(flags)))
     {
-        Log::Debug(
-            "Failed to convert some FileAttribute flags to string (value: {})",
-            std::underlying_type_t<FileAttribute>(flags));
-
         return fmt::format("{:#x}", std::underlying_type_t<FileAttribute>(flags));
     }
 

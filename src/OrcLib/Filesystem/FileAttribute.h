@@ -34,7 +34,10 @@ namespace Orc {
 #define ORC_FILE_ATTRIBUTE_RECALL_ON_OPEN 0x00040000
 #define ORC_FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS 0x00400000
 
-enum class FileAttribute
+//#define ORC_FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL 0x00200000  // 10.0.16267.0
+#define ORC_FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL 0x20000000  // >= 10.0.17134.0
+
+enum class FileAttribute : uint32_t
 {
     kFileAttributeReadOnly = ORC_FILE_ATTRIBUTE_READONLY,
     kFileAttributeHidden = ORC_FILE_ATTRIBUTE_HIDDEN,
@@ -57,7 +60,8 @@ enum class FileAttribute
     kFileAttributePinned = ORC_FILE_ATTRIBUTE_PINNED,
     kFileAttributeUnpinned = ORC_FILE_ATTRIBUTE_UNPINNED,
     kFileAttributeRecallOnOpen = ORC_FILE_ATTRIBUTE_RECALL_ON_OPEN,
-    kFileAttributeRecallOnDataAccess = ORC_FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
+    kFileAttributeRecallOnDataAccess = ORC_FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS,
+    kFileAttributeStrictlySequential = ORC_FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL
 };
 
 ENABLE_BITMASK_OPERATORS(FileAttribute)
