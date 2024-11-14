@@ -1,0 +1,87 @@
+# This repository adheres to the publiccode.yml standard by including this
+# metadata file that makes public software easily discoverable.
+# More info at https://github.com/italia/publiccode.yml
+
+publiccodeYmlVersion: '0.2'
+categories:
+  - it-security
+  - data-collection
+description:
+  en:
+    documentation: 'https://dfir-orc.github.io/'
+    features:
+      - |-
+        FatInfo: Collects FAT metadata from the file system (file names, hashes,
+        authenticode data, etc.)
+      - 'FastFind: Locate and report on Indicators of Compromise'
+      - 'GetSamples: Automated sample collection (started processes, ...)'
+      - |-
+        GetThis: Collects sample data from the file system (files, ADS, Extended
+        Attributes, etc.)
+      - 'GetSectors: Collects MBR, VBR and partition slack space'
+      - |-
+        NTFSInfo: Collects NTFS metadata (file entries, timestamps, file hashes,
+        authenticode data, etc.)
+      - 'NTFSUtil: NTFS Master File Table inspector'
+      - 'ObjInfo: Collects the named object list (named pipes, mutexes, etc.)'
+      - 'RegInfo: Collects registry related information (without mounting hives)'
+      - 'USNInfo: Collects USN journal'
+      - 'ToolEmbed: Configure for an automated deployment'
+    genericName: Forensics artefact collection tool
+    longDescription: |
+      DFIR ORC, where ORC stands for “Outil de Recherche de Compromission” in
+      French, is a collection of specialized tools dedicated to reliably parse
+      and collect critical artefacts such as the MFT, registry hives or event
+      logs. It can also embed external tools and their configurations.
+
+
+      DFIR ORC collects data, but does not analyze it: it is not meant to triage
+      machines. It cannot spy on an attacker either, as an EDR or HIDS/HIPS
+      would. It rather provides a forensically relevant snapshot of machines
+      running Microsoft Windows.
+
+
+      Along the years, it has evolved to become stable and reliable software to
+      faithfully collect unaltered data. Meant to scale up for use on large
+      installed bases, it supports fine-tuning to have low impact on production
+      environments.
+
+
+      DFIR-ORC incorporates the entire tool collection within a single
+      executable. The tools can be executed manually or configured for automated
+      deployment with ToolEmbed, allowing for background execution to conserve
+      CPU and I/O resources, as well as encryption of the results and their
+      transmission, along with many other features.
+    shortDescription: Forensics artefact collection tool for systems running Microsoft Windows
+developmentStatus: stable
+it:
+  conforme:
+    gdpr: false
+    lineeGuidaDesign: false
+    misureMinimeSicurezza: false
+    modelloInteroperabilita: false
+  countryExtensionVersion: '0.2'
+  piattaforme:
+    anpr: false
+    cie: false
+    pagopa: false
+    spid: false
+legal:
+  license: LGPL-2.1-only
+  mainCopyrightOwner: Répulique Française - ANSSI
+  repoOwner: Répulique Française - ANSSI
+localisation:
+  availableLanguages:
+    - en
+  localisationReady: false
+maintenance:
+  contacts:
+    - name: Jean Gautier
+  type: internal
+name: DFIR-ORC
+platforms:
+  - windows
+releaseDate: '2024-08-29'
+softwareType: standalone/desktop
+softwareVersion: v10.2.6
+url: 'https://github.com/DFIR-ORC/dfir-orc'
