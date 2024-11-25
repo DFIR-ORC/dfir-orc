@@ -124,16 +124,33 @@ public:
         Buffer<_Tout> output;
         DWORD dwBytesReturned = 0LU;
         output.reserve(dwExpectedOutputElements);
-        if (auto hr = DeviceIoControl(
-                dwIoControlCode,
-                static_cast<LPVOID>(input.get()),
-                SafeInt<DWORD>(input.size() * sizeof(_Tin)),
-                static_cast<LPVOID>(output.get()),
-                SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
-                &dwBytesReturned,
-                NULL);
-            FAILED(hr))
-            return SystemError(hr);
+
+        if (input.empty())
+        {
+            if (auto hr = DeviceIoControl(
+                    dwIoControlCode,
+                    NULL,
+                    0LU,
+                    static_cast<LPVOID>(output.get()),
+                    SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
+                    &dwBytesReturned,
+                    NULL);
+                FAILED(hr))
+                return SystemError(hr);
+        }
+        else
+        {
+            if (auto hr = DeviceIoControl(
+                    dwIoControlCode,
+                    static_cast<LPVOID>(input.get()),
+                    SafeInt<DWORD>(input.size() * sizeof(_Tin)),
+                    static_cast<LPVOID>(output.get()),
+                    SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
+                    &dwBytesReturned,
+                    NULL);
+                FAILED(hr))
+                return SystemError(hr);
+        }
 
         if (dwBytesReturned % sizeof(_Tout))
         {
