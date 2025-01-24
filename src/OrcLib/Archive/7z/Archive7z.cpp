@@ -117,7 +117,7 @@ void SetCompressionLevel(const CComPtr<IOutArchive>& archiver, CompressionLevel 
     if (setProperties == nullptr)
     {
         ec.assign(hr, std::system_category());
-        Log::Error("Failed to set compresion level on IID_ISetProperties [{}]", ec);
+        Log::Error("Failed to set compression level on IID_ISetProperties [{}]", ec);
         return;
     }
 
@@ -129,7 +129,7 @@ void SetCompressionLevel(const CComPtr<IOutArchive>& archiver, CompressionLevel 
     if (FAILED(hr))
     {
         ec.assign(hr, std::system_category());
-        Log::Error("Failed to change compresion level while setting property [{}]", ec);
+        Log::Error("Failed to change compression level while setting property [{}]", ec);
         return;
     }
 }
