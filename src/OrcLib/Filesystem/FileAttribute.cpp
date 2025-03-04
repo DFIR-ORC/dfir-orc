@@ -43,32 +43,34 @@ constexpr std::string_view kFileAttributeUnpinned = "FILE_ATTRIBUTE_UNPINNED";
 constexpr std::string_view kFileAttributeRecallOnOpen = "FILE_ATTRIBUTE_RECALL_ON_OPEN";
 constexpr std::string_view kFileAttributeRecallOnDataAccess = "FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS";
 constexpr std::string_view kFileAttributeStrictlySequential = "FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL";
+constexpr std::string_view kFileAttributeCascadesRemote = "FILE_ATTRIBUTE_CASCADES_REMOTE";
 
+// Letters are from 'attrib' then 'propsys.dll' or guessed
 constexpr std::array kFileAttributes = {
     std::tuple {FileAttribute::kFileAttributeReadOnly, kFileAttributeReadOnly, 'R'},
     std::tuple {FileAttribute::kFileAttributeHidden, kFileAttributeHidden, 'H'},
     std::tuple {FileAttribute::kFileAttributeSystem, kFileAttributeSystem, 'S'},
-    std::tuple {FileAttribute::kFileAttributeDirectory, kFileAttributeDirectory, 'D'},
+    std::tuple {FileAttribute::kFileAttributeDirectory, kFileAttributeDirectory, 'D'},  // propsys
     std::tuple {FileAttribute::kFileAttributeArchive, kFileAttributeArchive, 'A'},
-    std::tuple {FileAttribute::kFileAttributeDevice, kFileAttributeDevice, 'd'},
-    std::tuple {FileAttribute::kFileAttributeNormal, kFileAttributeNormal, 'N'},
-    std::tuple {FileAttribute::kFileAttributeTemporary, kFileAttributeTemporary, 'T'},
-    std::tuple {FileAttribute::kFileAttributeSparseFile, kFileAttributeSparseFile, 'P'},
-    std::tuple {FileAttribute::kFileAttributeReparsePoint, kFileAttributeReparsePoint, 'L'},
-    std::tuple {FileAttribute::kFileAttributeCompressed, kFileAttributeCompressed, 'C'},
+    std::tuple {FileAttribute::kFileAttributeDevice, kFileAttributeDevice, 'd'},  // 'X' (propsys)
+    std::tuple {FileAttribute::kFileAttributeNormal, kFileAttributeNormal, 'N'},  // propsys
+    std::tuple {FileAttribute::kFileAttributeTemporary, kFileAttributeTemporary, 'T'},  // propsys
+    std::tuple {FileAttribute::kFileAttributeSparseFile, kFileAttributeSparseFile, 'p'},  // 'P' (propsys)
+    std::tuple {FileAttribute::kFileAttributeReparsePoint, kFileAttributeReparsePoint, 'L'},  // propsys
+    std::tuple {FileAttribute::kFileAttributeCompressed, kFileAttributeCompressed, 'C'},  // propsys
     std::tuple {FileAttribute::kFileAttributeOffline, kFileAttributeOffline, 'O'},
     std::tuple {FileAttribute::kFileAttributeNotContentIndexed, kFileAttributeNotContentIndexed, 'I'},
-    std::tuple {FileAttribute::kFileAttributeEncrypted, kFileAttributeEncrypted, 'E'},
+    std::tuple {FileAttribute::kFileAttributeEncrypted, kFileAttributeEncrypted, 'E'},  // propsys
     std::tuple {FileAttribute::kFileAttributeIntegrityStream, kFileAttributeIntegrityStream, 's'},
     std::tuple {FileAttribute::kFileAttributeVirtual, kFileAttributeVirtual, 'V'},
     std::tuple {FileAttribute::kFileAttributeNoScrubData, kFileAttributeNoScrubData, 'B'},
     std::tuple {FileAttribute::kFileAttributeEA, kFileAttributeEA, 'e'},
     std::tuple {FileAttribute::kFileAttributePinned, kFileAttributePinned, 'p'},
     std::tuple {FileAttribute::kFileAttributeUnpinned, kFileAttributeUnpinned, 'u'},
-    std::tuple {FileAttribute::kFileAttributeRecallOnOpen, kFileAttributeRecallOnOpen, 'o'},
-    std::tuple {FileAttribute::kFileAttributeRecallOnDataAccess, kFileAttributeRecallOnDataAccess, 'a'},
-    std::tuple {FileAttribute::kFileAttributeStrictlySequential, kFileAttributeStrictlySequential, 'l'}
-};
+    // std::tuple {FileAttribute::kFileAttributeRecallOnOpen, kFileAttributeRecallOnOpen, 'o'},
+    std::tuple {FileAttribute::kFileAttributeRecallOnDataAccess, kFileAttributeRecallOnDataAccess, 'M'},  // propsys
+    std::tuple {FileAttribute::kFileAttributeStrictlySequential, kFileAttributeStrictlySequential, 'B'},
+    std::tuple {FileAttribute::kFileAttributeCascadesRemote, kFileAttributeCascadesRemote, 'c'}};
 
 bool HasInvalidFlag(uint32_t flags)
 {
