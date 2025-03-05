@@ -653,6 +653,8 @@ source_group(Stream
 )
 
 set(SRC_TEXT
+    "Text/ByteQuantity.h"
+    "Text/ByteQuantity.cpp"
     "Text/Encoding.h"
     "Text/Encoding.cpp"
     "Text/Iconv.h"
