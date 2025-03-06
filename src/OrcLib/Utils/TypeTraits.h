@@ -322,7 +322,7 @@ auto& get_std_out()
 //
 // Strong type for integral type used as byte quantity
 //
-template <class T>
+template <typename T>
 struct ByteQuantity
 {
     using value_type = T;
@@ -338,12 +338,6 @@ struct ByteQuantity
 
     operator T&() { return value; }
     operator T() const { return value; }
-
-    template <typename U>
-    operator U() const
-    {
-        return static_cast<U>(value);
-    }
 
     T value;
 };
