@@ -29,15 +29,9 @@ struct Result : std::expected<T, std::error_code>
     constexpr Result& operator=(Result<T>&& value) noexcept = default;
     constexpr Result& operator=(const Result<T>& value) noexcept = default;
 
-    constexpr Result& operator=(const std::errc& ec)
-    {
-        return *this = std::unexpected(std::make_error_code(ec));
-    }
+    constexpr Result& operator=(const std::errc& ec) { return *this = std::unexpected(std::make_error_code(ec)); }
 
-    constexpr Result& operator=(const std::error_code& ec)
-    {
-        return *this = std::unexpected(ec);
-    }
+    constexpr Result& operator=(const std::error_code& ec) { return *this = std::unexpected(ec); }
 
     template <typename U = T>
     constexpr Result(U&& value) noexcept
@@ -62,7 +56,6 @@ struct Result : std::expected<T, std::error_code>
 
     constexpr inline bool has_error() const { return !this->has_value(); }
 };
-
 
 template <>
 struct Result<void> : std::expected<void, std::error_code>
@@ -100,7 +93,6 @@ inline Result<void> Success()
 }
 
 using Fail = std::unexpected<std::error_code>;
-
 
 inline std::error_code SystemError(HRESULT hr)
 {
@@ -190,7 +182,7 @@ struct Result<void> : boost::outcome_v2::std_result<void>
 template <typename T, typename... Args>
 inline Result<T> Success(Args&&... args)
 {
-    return {boost::outcome_v2::in_place_type<void>, args...};
+    return {boost::outcome_v2::in_place_type<T>, args...};
 }
 
 inline std::error_code SystemError(HRESULT hr)
@@ -214,7 +206,7 @@ inline std::error_code LastWin32Error()
     return {HRESULT_FROM_WIN32(::GetLastError()), std::system_category()};
 }
 
-} // namespace Orc
+}  // namespace Orc
 
 #endif
 
