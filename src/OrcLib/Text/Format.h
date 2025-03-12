@@ -33,7 +33,7 @@ template <typename T, typename OutputIt>
 void ToUtf16(const T& utf8, OutputIt out)
 {
     std::error_code ec;
-    auto utf16 = Orc::ToUtf16(ToStringView(utf8), ec);
+    auto utf16 = Orc::ToUtf16(MakeStringView(utf8), ec);
     if (ec)
     {
         using namespace std::literals;
@@ -50,7 +50,7 @@ template <typename T, typename OutputIt>
 void ToUtf8(const T& utf16, OutputIt out)
 {
     std::error_code ec;
-    auto utf8 = Orc::ToUtf8(ToWStringView(utf16), ec);
+    auto utf8 = Orc::ToUtf8(MakeWStringView(utf16), ec);
     if (ec)
     {
         using namespace std::literals;

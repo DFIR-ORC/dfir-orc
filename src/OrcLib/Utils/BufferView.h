@@ -24,18 +24,18 @@ using BasicBufferView = gsl::span<const T>;
 
 using BufferView = BasicBufferView<uint8_t>;
 
-inline BasicBufferView<char> ToBasicBufferView(const char* szBuffer)
+inline BasicBufferView<char> MakeBasicBufferView(const char* szBuffer)
 {
     return BasicBufferView<char>(szBuffer, strlen(szBuffer));
 }
 
-inline BasicBufferView<wchar_t> ToBasicBufferView(const wchar_t* szBuffer)
+inline BasicBufferView<wchar_t> MakeBasicBufferView(const wchar_t* szBuffer)
 {
     return BasicBufferView<wchar_t>(szBuffer, wcslen(szBuffer));
 }
 
 template <typename T>
-inline BasicBufferView<typename T::value_type> ToBasicBufferView(const T& buffer)
+inline BasicBufferView<typename T::value_type> MakeBasicBufferView(const T& buffer)
 {
     return BasicBufferView<typename T::value_type>(buffer.data(), buffer.size());
 }
@@ -44,18 +44,18 @@ inline BasicBufferView<typename T::value_type> ToBasicBufferView(const T& buffer
 // BufferView
 //
 
-inline BufferView ToBufferView(const char* buffer)
+inline BufferView MakeBufferView(const char* buffer)
 {
     return BufferView(reinterpret_cast<const uint8_t*>(buffer), strlen(buffer));
 }
 
-inline BufferView ToBufferView(const wchar_t* buffer)
+inline BufferView MakeBufferView(const wchar_t* buffer)
 {
     return BufferView(reinterpret_cast<const uint8_t*>(buffer), wcslen(buffer) * sizeof(wchar_t));
 }
 
 template <typename T>
-inline BufferView ToBufferView(const T& buffer)
+inline BufferView MakeBufferView(const T& buffer)
 {
     return BufferView(reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size() * sizeof(T::value_type));
 }
@@ -66,18 +66,18 @@ inline BufferView ToBufferView(const T& buffer)
 
 using StringView = std::string_view;
 
-inline StringView ToStringView(const char* buffer)
+inline StringView MakeStringView(const char* buffer)
 {
     return StringView(reinterpret_cast<const char*>(buffer), strlen(buffer));
 }
 
-inline StringView ToStringView(const wchar_t* buffer)
+inline StringView MakeStringView(const wchar_t* buffer)
 {
     return StringView(reinterpret_cast<const char*>(buffer), wcslen(buffer) * sizeof(wchar_t));
 }
 
 template <typename T>
-inline StringView ToStringView(const T& buffer)
+inline StringView MakeStringView(const T& buffer)
 {
     return StringView(reinterpret_cast<const char*>(buffer.data()), buffer.size() * sizeof(T::value_type));
 }
@@ -88,18 +88,18 @@ inline StringView ToStringView(const T& buffer)
 
 using WStringView = std::wstring_view;
 
-inline WStringView ToWStringView(const char* buffer)
+inline WStringView MakeWStringView(const char* buffer)
 {
     return WStringView(reinterpret_cast<const wchar_t*>(buffer), strlen(buffer) / sizeof(wchar_t));
 }
 
-inline WStringView ToWStringView(const wchar_t* buffer)
+inline WStringView MakeWStringView(const wchar_t* buffer)
 {
     return WStringView(reinterpret_cast<const wchar_t*>(buffer), wcslen(buffer));
 }
 
 template <typename T>
-inline WStringView ToWStringView(const T& buffer)
+inline WStringView MakeWStringView(const T& buffer)
 {
     return WStringView(
         reinterpret_cast<const wchar_t*>(buffer.data()), buffer.size() * sizeof(T::value_type) / sizeof(wchar_t));
