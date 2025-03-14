@@ -339,6 +339,12 @@ struct ByteQuantity
     operator T&() { return value; }
     operator T() const { return value; }
 
+    ByteQuantity& operator=(const T& v)
+    {
+        value = v;
+        return *this;
+    }
+
     T value;
 };
 
