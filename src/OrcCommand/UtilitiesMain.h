@@ -598,6 +598,12 @@ protected:
     static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono::milliseconds& dwParameter);
     static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bParameter);
 
+    static bool ByteQuantityOption(
+        LPCWSTR szArg,
+        LPCWSTR szOption,
+        std::optional<uint64_t>& parameter,
+        ByteQuantityBase base = ByteQuantityBase::Base10);
+
     template <typename OptionType>
     static bool ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::optional<OptionType>& parameter)
     {

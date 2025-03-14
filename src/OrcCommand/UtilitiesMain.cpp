@@ -32,6 +32,7 @@
 #include "PSAPIExtension.h"
 #include "CaseInsensitive.h"
 #include "Utils/WinApi.h"
+#include "Text/ByteQuantity.h"
 
 using namespace std;
 
@@ -566,6 +567,29 @@ bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono
         return true;
     }
     return false;
+}
+
+bool UtilitiesMain::ByteQuantityOption(
+    LPCWSTR szArg,
+    LPCWSTR szOption,
+    std::optional<uint64_t>& parameter,
+    ByteQuantityBase base)
+{
+    std::wstring quantity;
+    if (!ParameterOption(szArg, szOption, quantity))
+    {
+        return false;
+    }
+
+    auto value = Text::ByteQuantityFromString(quantity, base);
+    if (!value)
+    {
+        Log::Error(L"Invalid size (actual: {}, expected like: 30G)", szOption);
+        return false;
+    }
+
+    parameter = *value;
+    return true;
 }
 
 bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bParameter)
