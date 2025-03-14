@@ -77,6 +77,7 @@ public:
 
     static Result<MEMORYSTATUSEX> GetPhysicalMemory();
     static Result<uint64_t> GetPhysicalMemoryAdjustedSize();
+    static Result<uint64_t> GetPhysicalMemoryInstalledSize();
 
     static HRESULT GetPageSize(DWORD& dwPageSize);
     static HRESULT GetLargePageSize(DWORD& dwPageSize);

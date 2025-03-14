@@ -125,6 +125,31 @@ bool IsRunningInXen()
     return true;
 }
 
+Result<uint64_t> GetPhysicallyInstalledSystemMemoryApi()
+{
+    using FnGetPhysicallyInstalledSystemMemory = BOOL(__stdcall*)(PULONGLONG);
+
+    static FnGetPhysicallyInstalledSystemMemory fn = nullptr;
+    if (fn == nullptr)
+    {
+        fn = reinterpret_cast<FnGetPhysicallyInstalledSystemMemory>(
+            ::GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetPhysicallyInstalledSystemMemory"));
+        if (!fn)
+        {
+            return LastWin32Error();
+        }
+    }
+
+    uint64_t installed = 0;
+    BOOL ret = fn(&installed);
+    if (!ret)
+    {
+        return LastWin32Error();
+    }
+
+    return installed;
+}
+
 }  // namespace
 
 namespace Orc {
@@ -722,6 +747,26 @@ Result<uint64_t> SystemDetails::GetPhysicalMemoryAdjustedSize()
     constexpr uint64_t GB = 1024ULL * 1024ULL * 1024ULL;
     uint64_t roundedToGB = (memory->ullTotalPhys / GB + (memory->ullTotalPhys % GB ? 1 : 0)) * GB;
     return roundedToGB;
+}
+
+// Attempt to get the real installed memory size (GlobalMemoryStatusEx exclude some bytes)
+Result<uint64_t> SystemDetails::GetPhysicalMemoryInstalledSize()
+{
+    auto memory = ::GetPhysicallyInstalledSystemMemoryApi();
+    if (memory)
+    {
+        return *memory * 1024;
+    }
+
+    Log::Debug("Failed GetPhysicallyInstalledSystemMemory [{}]", memory);
+
+    memory = SystemDetails::GetPhysicalMemoryAdjustedSize();
+    if (memory)
+    {
+        return *memory;
+    }
+
+    return memory.error();
 }
 
 HRESULT SystemDetails::GetPageSize(DWORD& dwPageSize)
