@@ -655,6 +655,8 @@ source_group(Stream
 set(SRC_TEXT
     "Text/ByteQuantity.h"
     "Text/ByteQuantity.cpp"
+    "Text/ComparisonOperator.h"
+    "Text/ComparisonOperator.cpp"
     "Text/Encoding.h"
     "Text/Encoding.cpp"
     "Text/Iconv.h"
@@ -828,6 +830,7 @@ set(SRC_UTILITIES
     "Flags.h"
     "Utils/BufferView.h"
     "Utils/BufferSpan.h"
+    "Utils/ComparisonOperator.h"
     "Utils/Dump.h"
     "Utils/EnumFlags.h"
     "Utils/Guard.h"
