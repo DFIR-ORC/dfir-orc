@@ -76,6 +76,7 @@ public:
     static Result<std::vector<CPUInformation>> GetCPUInfo();
 
     static Result<MEMORYSTATUSEX> GetPhysicalMemory();
+    static Result<uint64_t> GetPhysicalMemoryAdjustedSize();
 
     static HRESULT GetPageSize(DWORD& dwPageSize);
     static HRESULT GetLargePageSize(DWORD& dwPageSize);

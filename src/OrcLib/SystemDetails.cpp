@@ -28,6 +28,7 @@
 #include "Utils/Time.h"
 #include "Utils/TypeTraits.h"
 #include "Utils/Guard.h"
+#include "Text/Fmt/Result.h"
 
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
@@ -708,6 +709,19 @@ Result<MEMORYSTATUSEX> Orc::SystemDetails::GetPhysicalMemory()
         return SystemError(HRESULT_FROM_WIN32(GetLastError()));
 
     return statex;
+}
+
+Result<uint64_t> SystemDetails::GetPhysicalMemoryAdjustedSize()
+{
+    auto memory = SystemDetails::GetPhysicalMemory();
+    if (!memory)
+    {
+        return memory.error();
+    }
+
+    constexpr uint64_t GB = 1024ULL * 1024ULL * 1024ULL;
+    uint64_t roundedToGB = (memory->ullTotalPhys / GB + (memory->ullTotalPhys % GB ? 1 : 0)) * GB;
+    return roundedToGB;
 }
 
 HRESULT SystemDetails::GetPageSize(DWORD& dwPageSize)
