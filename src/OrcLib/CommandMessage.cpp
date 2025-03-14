@@ -76,6 +76,12 @@ CommandMessage::Message CommandMessage::MakeRefreshRunningList()
     return retval;
 }
 
+CommandMessage::Message CommandMessage::MakeCheckDiskFreeSpaceMessage()
+{
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::CheckDiskFreeSpace);
+    return retval;
+}
+
 CommandMessage::Message CommandMessage::MakeDoneMessage()
 {
     auto retval = std::make_shared<::CommandMessageT>(CommandMessage::Done);
@@ -285,6 +291,18 @@ CommandMessage::PushStdOutErr(const LONG OrderID, const std::wstring& Keyword, b
     output.bCabWhenComplete = bCabWhenComplete;
     m_Parameters.push_back(std::move(output));
     return S_OK;
+}
+
+void CommandMessage::SetDiskFreeSpaceRequirement(uint64_t requirement)
+{
+    if (requirement == 0)
+    {
+        m_diskFreeSpaceRequirement.reset();
+    }
+    else
+    {
+        m_diskFreeSpaceRequirement = requirement;
+    }
 }
 
 CommandMessage::~CommandMessage() {}

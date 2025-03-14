@@ -219,6 +219,9 @@ public:
 
     void SetTimeoutTimer(std::shared_ptr<void> timer) { m_timeoutTimer = std::move(timer); }
 
+    const std::optional<uint64_t>& DiskFreeSpaceRequirement() const { return m_diskFreeSpaceRequirement; }
+    void SetDiskFreeSpaceRequirement(uint64_t value) { m_diskFreeSpaceRequirement = value; }
+
     ~CommandExecute(void);
 
 private:
@@ -247,6 +250,7 @@ private:
     std::vector<std::pair<std::wstring, LONG>> m_Arguments;
     std::wstring m_ImageFilePath;
     std::wstring m_DumpFilePath;
+    std::optional<uint64_t> m_diskFreeSpaceRequirement;
 
     Concurrency::critical_section m_cs;
 

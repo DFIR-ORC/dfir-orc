@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -90,6 +90,17 @@ bool HasFileOutput(Orc::CommandParameter::ParamKind kind)
     }
 
     return false;
+}
+
+bool CheckPathIsRelative(const std::wstring& output)
+{
+    if (output.size() > 2 && output[1] == L':')
+    {
+        assert(0);
+        return false;
+    }
+
+    return true;
 }
 
 Outcome::Archive::InputType GetArchiveInputType()
@@ -702,6 +713,31 @@ HRESULT WolfExecution::CreateCommandAgent(
             (unsigned int)m_ElapsedTime.count(), CommandMessage::MakeTerminateAllMessage(), &m_cmdAgentBuffer, false);
         m_KillerTimer->start();
     }
+
+    bool hasSomeFreeDiskSpaceRequirement = false;
+    for (const auto& command : m_Commands)
+    {
+        if (command->DiskFreeSpaceRequirement())
+        {
+            hasSomeFreeDiskSpaceRequirement = true;
+            break;
+        }
+    }
+
+    if (hasSomeFreeDiskSpaceRequirement)
+    {
+        m_DiskFreeSpaceRequirementTimer = std::make_unique<Concurrency::timer<CommandMessage::Message>>(
+            (unsigned int)(std::chrono::milliseconds(30s).count()),
+            CommandMessage::MakeCheckDiskFreeSpaceMessage(),
+            &m_cmdAgentBuffer,
+            true);
+
+        auto message = CommandMessage::MakeCheckDiskFreeSpaceMessage();
+        Concurrency::send(m_cmdAgentBuffer, message);
+
+        m_DiskFreeSpaceRequirementTimer->start();
+    }
+
     return S_OK;
 }
 
@@ -726,6 +762,17 @@ HRESULT WolfExecution::EnqueueCommands()
         {
             m_TasksByKeyword[command->Keyword()] =
                 std::make_shared<WolfTask>(GetKeyword(), command->Keyword(), m_journal);
+        }
+
+        {
+            for (const auto& parameter : command->GetParameters())
+            {
+                if (::HasFileOutput(parameter.Kind) && ::CheckPathIsRelative(parameter.Name) == false)
+                {
+                    // There is an assumption that the disk to check for free space is the WORKING_TEMP
+                    Log::Warn("Cannot handle free disk space requirement because of unexpected absolute output path");
+                }
+            }
         }
 
         {

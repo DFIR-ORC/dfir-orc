@@ -397,6 +397,11 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
     auto retval = std::make_shared<CommandExecute>(message->Keyword());
     HRESULT hr = S_OK;
 
+    if (message->DiskFreeSpaceRequirement())
+    {
+        retval->SetDiskFreeSpaceRequirement(*message->DiskFreeSpaceRequirement());
+    }
+
     std::optional<std::wstring> outArgument;
     for (const auto& parameter : message->GetParameters())
     {
@@ -1266,6 +1271,9 @@ void CommandAgent::run()
                 StartCommandExecute(request);
             }
             break;
+            case CommandMessage::CheckDiskFreeSpace: {
+                CheckFreeDiskSpaceRequirement(m_TempDir);
+            }
             case CommandMessage::RefreshRunningList: {
                 Concurrency::critical_section::scoped_lock s(m_cs);
                 auto new_end = std::remove_if(
@@ -1429,4 +1437,63 @@ CommandAgent::~CommandAgent(void)
     if (m_hCompletionPort != INVALID_HANDLE_VALUE)
         CloseHandle(m_hCompletionPort);
     m_hCompletionPort = INVALID_HANDLE_VALUE;
+}
+
+void CommandAgent::CheckFreeDiskSpaceRequirement(const std::wstring& temp)
+{
+    if (temp.empty())
+    {
+        Log::Critical("Cannot handle free disk space requirement because of unhandled empty 'Temp' directory");
+        assert(0);
+        return;
+    }
+
+    if (temp.size() < 2)
+    {
+        Log::Critical("Cannot handle free disk space requirement because of invalid 'Temp' directory");
+        assert(0);
+        return;
+    }
+
+    if (temp[1] != L':')
+    {
+        Log::Critical(
+            L"Cannot handle free disk space requirement because of relative 'Temp' directory (path: {})", temp);
+        assert(0);
+        return;
+    }
+
+    ULARGE_INTEGER diskFreeSpace;
+    BOOL ret = GetDiskFreeSpaceExW(temp.c_str(), NULL, NULL, &diskFreeSpace);
+    if (!ret)
+    {
+        Log::Error(
+            L"Failed GetDiskFreeSpaceExW, cannot handle free disk space requirement (path: {}) [{}]",
+            temp,
+            LastWin32Error());
+        return;
+    }
+
+    for (const auto command : m_RunningCommands)
+    {
+        if (command == nullptr)
+        {
+            // Not sure this is possible when taking ownership
+            assert(0);
+        }
+
+        if (command->DiskFreeSpaceRequirement() && command->DiskFreeSpaceRequirement().value() > diskFreeSpace.QuadPart)
+        {
+            auto status = SendResult(CommandNotification::NotifyDiskFreeSpaceRequirement(
+                command->GetKeyword(),
+                command->ProcessID(),
+                command->ProcessHandle(),
+                *command->DiskFreeSpaceRequirement(),
+                diskFreeSpace.QuadPart));
+            if (!status)
+            {
+                Log::Error(L"Failed to send notification: NotifyDiskFreeSpaceRequirement");
+            }
+        }
+    }
 }

@@ -164,6 +164,7 @@ protected:
     static VOID CALLBACK WaitOrTimerCallbackFunction(__in PVOID lpParameter, __in BOOLEAN TimerOrWaitFired);
 
     HRESULT MoveCompletedCommand(const std::shared_ptr<CommandExecute>& command);
+    void CheckFreeDiskSpaceRequirement(const std::wstring& directory);
 
     virtual void run();
 };

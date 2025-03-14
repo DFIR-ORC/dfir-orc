@@ -214,6 +214,18 @@ CommandNotification::Notification CommandNotification::NotifyTerminateAll()
     return retval;
 }
 
+CommandNotification::Notification
+CommandNotification::NotifyDiskFreeSpaceRequirement(const std::wstring& keyword, DWORD processId, HANDLE hProcess, uint64_t requiredSize, uint64_t freeSize)
+{
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::ExceededDiskFreeSpaceRequirement);
+    retval->m_Keyword = keyword;
+    retval->m_dwPid = processId;
+    retval->m_hProcess = hProcess;
+    retval->m_diskRequiredFreeSize = requiredSize;
+    retval->m_diskFreeSize = freeSize;
+    return retval;
+}
+
 CommandNotification::Notification CommandNotification::NotifyDone(const std::wstring& keyword, const HANDLE hJob)
 {
     auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::Done);

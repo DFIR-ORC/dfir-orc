@@ -11,6 +11,7 @@
 #include "WolfTask.h"
 #include "Utils/Result.h"
 #include "Text/Fmt/std_error_code.h"
+#include "Text/Fmt/ByteQuantity.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -179,6 +180,23 @@ HRESULT WolfTask::ApplyNotification(
                 }
             }
             break;
+        case CommandNotification::ExceededDiskFreeSpaceRequirement: {
+            Log::Error(
+                L"{} (pid: {}): disk free space requirement exceeded, it will now be terminated", m_command, m_dwPID);
+
+            m_journal.Print(
+                m_commandSet,
+                m_command,
+                L"Disk free space requirement exceeded, terminating pid: {} (required: {}, available: {})",
+                m_dwPID,
+                Traits::ByteQuantity<uint64_t>(notification->DiskFreeRequirement()),
+                Traits::ByteQuantity<uint64_t>(notification->DiskFree()));
+
+            actions.push_back(CommandMessage::MakeTerminateMessage(
+                static_cast<DWORD>(static_cast<DWORD64>(notification->GetProcessID()))));
+            m_status = Failed;
+            break;
+        }
         case CommandNotification::ProcessTimeLimit:
             // Process has reached its time limit, kill it!
             Log::Error(

@@ -143,6 +143,7 @@ private:
 
     std::unique_ptr<Concurrency::timer<CommandMessage::Message>> m_RefreshTimer;
     std::unique_ptr<Concurrency::timer<CommandMessage::Message>> m_KillerTimer;
+    std::unique_ptr<Concurrency::timer<CommandMessage::Message>> m_DiskFreeSpaceRequirementTimer;
 
     std::vector<std::shared_ptr<Recipient>> m_Recipients;
 

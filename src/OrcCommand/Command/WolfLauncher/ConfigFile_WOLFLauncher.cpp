@@ -94,6 +94,9 @@ HRESULT wolf_command(ConfigItem& parent, DWORD dwIndex)
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"timeout", WOLFLAUNCHER_COMMAND_TIMEOUT, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(
+            hr = parent[dwIndex].AddAttribute(L"diskfree", WOLFLAUNCHER_COMMAND_DISKFREE, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }
 
