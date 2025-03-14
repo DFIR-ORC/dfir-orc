@@ -319,6 +319,12 @@ auto& get_std_out()
     }
 }
 
+enum class ByteQuantityBase : uint8_t
+{
+    Base2 = 0,  // 1024
+    Base10  // 1000
+};
+
 //
 // Strong type for integral type used as byte quantity
 //
