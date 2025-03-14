@@ -147,6 +147,8 @@ private:
 
     std::vector<std::shared_ptr<Recipient>> m_Recipients;
 
+    std::optional<uint64_t> m_diskFreeSpaceRequirement;
+
     static std::wregex g_WinVerRegEx;
 
     std::shared_ptr<ByteStream> m_configStream;
@@ -160,6 +162,19 @@ public:
         m_strArchiveName = strArchiveName;
         return S_OK;
     };
+
+    std::optional<uint64_t> DiskFreeSpaceRequirement() const { return m_diskFreeSpaceRequirement; }
+    void SetDiskFreeSpaceRequirement(uint64_t value)
+    {
+        if (value == 0)
+        {
+            m_diskFreeSpaceRequirement.reset();
+        }
+        else
+        {
+            m_diskFreeSpaceRequirement = value;
+        }
+    }
 
     HRESULT SetOutput(const OutputSpec& output, const OutputSpec& temporary)
     {

@@ -1032,9 +1032,15 @@ HRESULT Main::Run_Execute()
             auto commandSetNode = console.OutputTree().AddNode("Command set '{}'", exec->GetKeyword());
             auto parametersNode = commandSetNode.AddNode("Parameters");
             PrintValue(
-                parametersNode, L"UseEncryptionJournal", exec->IsChildDebugActive(config.bUseJournalWhenEncrypting));
+                parametersNode, L"Use encryption journal", exec->IsChildDebugActive(config.bUseJournalWhenEncrypting));
             PrintValue(parametersNode, L"Debug", exec->IsChildDebugActive(config.bChildDebug));
-            PrintValue(parametersNode, L"RepeatBehavior", WolfExecution::ToString(exec->RepeatBehaviour()));
+            PrintValue(parametersNode, L"Repeat behavior", WolfExecution::ToString(exec->RepeatBehaviour()));
+
+            if (exec->DiskFreeSpaceRequirement())
+            {
+                PrintValue(parametersNode, L"Free disk space", exec->DiskFreeSpaceRequirement());
+            }
+
 
             if (exec->RepeatBehaviour() == WolfExecution::Repeat::Overwrite)
             {

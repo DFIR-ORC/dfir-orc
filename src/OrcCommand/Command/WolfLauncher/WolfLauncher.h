@@ -105,6 +105,8 @@ public:
         std::chrono::milliseconds msArchiveTimeOut = 10min;
         std::chrono::milliseconds msCommandTerminationTimeOut = 3h;
 
+        std::optional<uint64_t> diskFreeSpaceRequirement;
+
         std::wstring strDbgHelp;
 
         boost::tribool bChildDebug = boost::indeterminate;

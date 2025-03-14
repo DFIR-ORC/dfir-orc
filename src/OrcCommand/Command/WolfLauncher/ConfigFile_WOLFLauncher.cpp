@@ -154,6 +154,8 @@ HRESULT wolf_archive(ConfigItem& parent, DWORD dwIndex)
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"childdebug", WOLFLAUNCHER_ARCHIVE_CHILDDEBUG, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"diskfree", WOLFLAUNCHER_ARCHIVE_DISKFREE, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }
 
