@@ -28,8 +28,10 @@
 #include "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
 #include "Command/WolfLauncher/ConsoleConfiguration.h"
 #include "Configuration/Option.h"
+#include "Text/ComparisonOperator.h"
 #include "Text/Hex.h"
 #include "Utils/WinApi.h"
+#include "Utils/Threshold.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -490,6 +492,31 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             }
 
             exec->SetDiskFreeSpaceRequirement(*diskFree);
+        }
+
+        if (archiveitem[WOLFLAUNCHER_ARCHIVE_PHYSICALMEMORY])
+        {
+            auto expression = std::wstring_view(archiveitem[WOLFLAUNCHER_ARCHIVE_PHYSICALMEMORY]);
+            auto rv = Text::ComparisonOperatorFromString(expression, ComparisonOperator::LessThanOrEqual);
+            if (!rv)
+            {
+                Log::Debug(
+                    L"Failed to parse archive's physical memory requirement (value: {}) [{}]", expression, rv.error());
+                return E_FAIL;
+            }
+
+            auto [op, value] = rv.value();
+            auto physicalMemory = Text::ByteQuantityFromString(value, ByteQuantityBase::Base2);
+            if (!physicalMemory)
+            {
+                Log::Debug(
+                    L"Failed to parse archive's physical memory requirement (value: {}) [{}]",
+                    value,
+                    physicalMemory.error());
+                return E_FAIL;
+            }
+
+            exec->SetPhysicalMemoryRequirement(Threshold(op, *physicalMemory));
         }
 
         m_wolfexecs.push_back(std::move(exec));

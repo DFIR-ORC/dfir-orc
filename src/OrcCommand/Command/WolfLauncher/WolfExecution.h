@@ -27,6 +27,8 @@
 #include "Command/WolfLauncher/Journal.h"
 #include "Command/WolfLauncher/Outcome.h"
 #include "Utils/Locker.h"
+#include "Utils/Threshold.h"
+#include "Utils/TypeTraits.h"
 
 #pragma managed(push, off)
 
@@ -148,6 +150,7 @@ private:
     std::vector<std::shared_ptr<Recipient>> m_Recipients;
 
     std::optional<uint64_t> m_diskFreeSpaceRequirement;
+    std::optional<Threshold<ByteQuantity<uint64_t>>> m_physicalMemoryRequirement;
 
     static std::wregex g_WinVerRegEx;
 
@@ -175,6 +178,9 @@ public:
             m_diskFreeSpaceRequirement = value;
         }
     }
+
+    const std::optional<Threshold<ByteQuantity<uint64_t>>>& PhysicalMemoryRequirement() const { return m_physicalMemoryRequirement; }
+    void SetPhysicalMemoryRequirement(const Threshold<ByteQuantity<uint64_t>>& threshold) { m_physicalMemoryRequirement = threshold; }
 
     HRESULT SetOutput(const OutputSpec& output, const OutputSpec& temporary)
     {

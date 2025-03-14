@@ -37,6 +37,7 @@
 #include "Text/Fmt/ByteQuantity.h"
 #include "Text/Fmt/Offset.h"
 #include "Text/Fmt/Result.h"
+#include "Text/Fmt/Threshold.h"
 #include "Log/Syslog/Syslog.h"
 #include "Log/Syslog/SyslogSink.h"
 
@@ -391,6 +392,40 @@ std::wstring ToSourceString(CommandParameter::ParamKind kind)
         default:
             return L"<unknown>";
     }
+}
+
+template <typename ThresholdT>
+bool CheckPhysicalMemoryRequirement(const std::optional<ThresholdT>& threshold)
+{
+    if (!threshold)
+    {
+        return true;
+    }
+
+    static ByteQuantity<uint64_t> physicalMemorySize(0);
+
+    if (physicalMemorySize == 0)
+    {
+        auto rv = SystemDetails::GetPhysicalMemoryInstalledSize();
+        if (!rv)
+        {
+            Log::Error("Failed to retrieve physical memory [{}]", rv.error());
+            return false;
+        }
+        else
+        {
+            physicalMemorySize = *rv;
+        }
+    }
+
+    auto rv = threshold->Check(physicalMemorySize);
+    if (!rv)
+    {
+        Log::Error("Failed to check threshold [{}]", rv.error());
+        return false;
+    }
+
+    return *rv;
 }
 
 }  // namespace
@@ -1008,6 +1043,7 @@ HRESULT Main::Run_Execute()
 
     m_journal.Print(ToolName(), {}, L"Version: {}", kOrcVersionStringW);
 
+    uint64_t physicalMemorySize = 0;
     for (const auto& exec : m_wolfexecs)
     {
         if (exec->IsOptional())
@@ -1041,6 +1077,10 @@ HRESULT Main::Run_Execute()
                 PrintValue(parametersNode, L"Free disk space", exec->DiskFreeSpaceRequirement());
             }
 
+            if (exec->PhysicalMemoryRequirement())
+            {
+                PrintValue(parametersNode, L"Physical memory criteria", exec->PhysicalMemoryRequirement());
+            }
 
             if (exec->RepeatBehaviour() == WolfExecution::Repeat::Overwrite)
             {
@@ -1138,6 +1178,17 @@ HRESULT Main::Run_Execute()
             }
 
             commandSetNode.AddEmptyLine();
+        }
+
+        if (!CheckPhysicalMemoryRequirement(exec->PhysicalMemoryRequirement()))
+        {
+            m_journal.Print(
+                ToolName(),
+                exec->GetKeyword(),
+                Log::Level::Info,
+                "Skipping set because of unmet physical memory requirement (requires: {})",
+                exec->PhysicalMemoryRequirement()->ToString());
+            continue;
         }
 
         hr = ExecuteKeyword(*exec);

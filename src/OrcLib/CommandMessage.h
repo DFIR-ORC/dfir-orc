@@ -205,6 +205,9 @@ public:
     const std::optional<uint64_t> DiskFreeSpaceRequirement() const { return m_diskFreeSpaceRequirement; };
     void SetDiskFreeSpaceRequirement(uint64_t requirement);
 
+    const std::optional<std::wstring> PhysicalMemoryRequirement() { return m_physicalMemoryRequirement; }
+    void SetPhysicalMemoryRequirement(const std::wstring& requirement) { m_physicalMemoryRequirement = requirement; }
+
     const Parameters& GetParameters() { return m_Parameters; };
 
     CmdRequest Request() const { return m_Request; };
@@ -238,6 +241,7 @@ private:
     HANDLE m_hProcess;
     std::optional<std::chrono::milliseconds> m_timeout;
     std::optional<uint64_t> m_diskFreeSpaceRequirement;
+    std::optional<std::wstring> m_physicalMemoryRequirement;
 };
 
 }  // namespace Orc
