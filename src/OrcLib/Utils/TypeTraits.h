@@ -430,4 +430,10 @@ struct BoolOnOff
 };
 
 }  // namespace Traits
+
+using ByteQuantityBase = Traits::ByteQuantityBase;
+
+template <typename T>
+using ByteQuantity = Traits::ByteQuantity<T>;
+
 }  // namespace Orc
