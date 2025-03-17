@@ -61,12 +61,12 @@ constexpr std::array kFileAttributes = {
     std::tuple {FileAttribute::kFileAttributeOffline, kFileAttributeOffline, 'O'},
     std::tuple {FileAttribute::kFileAttributeNotContentIndexed, kFileAttributeNotContentIndexed, 'I'},
     std::tuple {FileAttribute::kFileAttributeEncrypted, kFileAttributeEncrypted, 'E'},  // propsys
-    std::tuple {FileAttribute::kFileAttributeIntegrityStream, kFileAttributeIntegrityStream, 'V'},
-    std::tuple {FileAttribute::kFileAttributeVirtual, kFileAttributeVirtual, 'v'},  // 'V' (propsys)
-    std::tuple {FileAttribute::kFileAttributeNoScrubData, kFileAttributeNoScrubData, 'X'},
+    std::tuple {FileAttribute::kFileAttributeIntegrityStream, kFileAttributeIntegrityStream, 's'},
+    std::tuple {FileAttribute::kFileAttributeVirtual, kFileAttributeVirtual, 'V'},
+    std::tuple {FileAttribute::kFileAttributeNoScrubData, kFileAttributeNoScrubData, 'B'},
     std::tuple {FileAttribute::kFileAttributeEA, kFileAttributeEA, 'e'},
-    std::tuple {FileAttribute::kFileAttributePinned, kFileAttributePinned, 'P'},
-    std::tuple {FileAttribute::kFileAttributeUnpinned, kFileAttributeUnpinned, 'U'},
+    std::tuple {FileAttribute::kFileAttributePinned, kFileAttributePinned, 'p'},
+    std::tuple {FileAttribute::kFileAttributeUnpinned, kFileAttributeUnpinned, 'u'},
     // std::tuple {FileAttribute::kFileAttributeRecallOnOpen, kFileAttributeRecallOnOpen, 'o'},
     std::tuple {FileAttribute::kFileAttributeRecallOnDataAccess, kFileAttributeRecallOnDataAccess, 'M'},  // propsys
     std::tuple {FileAttribute::kFileAttributeStrictlySequential, kFileAttributeStrictlySequential, 'B'},
