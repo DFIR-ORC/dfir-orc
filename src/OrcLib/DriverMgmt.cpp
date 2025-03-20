@@ -19,9 +19,9 @@
 #include "boost\scope_exit.hpp"
 #include "Utils/WinApi.h"
 
-using namespace Orc;
+namespace Orc {
 
-class Orc::DriverTermination : public TerminationHandler
+class DriverTermination : public TerminationHandler
 {
 
     friend class DriverMgmt;
@@ -59,7 +59,7 @@ HRESULT DriverTermination::operator()()
         if (SchSCManager == NULL)
         {
             hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error("Failed OpenSCManager in termination handler [{}]", SystemError(hr));
+            Log::Error(L"Failed OpenSCManager in termination handler [{}]", SystemError(hr));
         }
         else
         {
@@ -74,7 +74,7 @@ HRESULT DriverTermination::operator()()
             {
                 if (FAILED(hr = Orc::DriverMgmt::StopDriver(SchSCManager, driver->Name().c_str())))
                 {
-                    Log::Error("Failed StopDriver in termination handler [{}]", SystemError(hr));
+                    Log::Error(L"Failed StopDriver in termination handler [{}]", SystemError(hr));
                 }
                 else
                 {
@@ -86,7 +86,7 @@ HRESULT DriverTermination::operator()()
             {
                 if (FAILED(hr = Orc::DriverMgmt::RemoveDriver(SchSCManager, driver->Name().c_str())))
                 {
-                    Log::Error("Failed RemoveDriver in termination handler [{}]", SystemError(hr));
+                    Log::Error(L"Failed RemoveDriver in termination handler [{}]", SystemError(hr));
                 }
                 else
                 {
@@ -116,7 +116,7 @@ HRESULT DriverMgmt::ConnectToSCM()
     if (m_SchSCManager != NULL)
         return S_OK;
 
-    m_SchSCManager = OpenSCManager(
+    m_SchSCManager = OpenSCManagerW(
         m_strComputerName.empty() ? NULL : m_strComputerName.c_str(),
         SERVICES_ACTIVE_DATABASE,
         SC_MANAGER_CONNECT | SC_MANAGER_CREATE_SERVICE);
@@ -124,7 +124,7 @@ HRESULT DriverMgmt::ConnectToSCM()
     if (m_SchSCManager == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed to connect to Service Control Manager [{}]", SystemError(hr));
+        Log::Error(L"Failed to connect to Service Control Manager [{}]", SystemError(hr));
         return hr;
     }
     return S_OK;
@@ -160,7 +160,21 @@ HRESULT DriverMgmt::SetTemporaryDirectory(const std::wstring& strTempDir)
 
 Driver::~Driver()
 {
-    if (m_bAutoStop || m_bAutoUninstall)
+    auto r_status = GetStatus();
+    switch (r_status.value_or(DriverStatus::Unknown))
+    {
+        case DriverStatus::Inexistent:
+            Log::Debug(L"Driver '{}' is not present", m_strServiceName);
+            return;
+        case DriverStatus::Stopped:
+            Log::Debug(L"Driver '{}' is stopped", m_strServiceName);
+            break;
+        case DriverStatus::Unknown:
+            Log::Warn(L"Driver '{}' status is unknown", m_strServiceName);
+            break;
+    }
+
+    if (r_status.value_or(DriverStatus::Unknown) != DriverStatus::Stopped && (m_bAutoStop || m_bAutoUninstall))
     {
         if (auto hr = Stop(); FAILED(hr))
         {
@@ -367,6 +381,14 @@ HRESULT Driver::Start()
 HRESULT Driver::Stop()
 {
     HRESULT hr = E_FAIL;
+
+    // If we are to stop the driver, we first need to close the device
+    if (FAILED(hr = CloseDevice()))
+    {
+        Log::Error(L"Failed to close the associated device with driver '{}' [{}]", m_strServiceName, SystemError(hr));
+        // we still proceed with attempting to stop the driver
+    }
+
     if (FAILED(hr = m_manager->ConnectToSCM()))
         return hr;
 
@@ -381,12 +403,12 @@ HRESULT Driver::Stop()
     return S_OK;
 }
 
-HRESULT Orc::Driver::DisableStart()
+HRESULT Driver::DisableStart()
 {
     return DriverMgmt::SetStartupMode(m_manager->m_SchSCManager, m_strServiceName.c_str(), DriverStartupMode::Disabled);
 }
 
-HRESULT Orc::Driver::OpenDevicePath(std::wstring strDevicePath, DWORD dwRequiredAccess)
+HRESULT Driver::OpenDevicePath(std::wstring strDevicePath, DWORD dwRequiredAccess)
 {
     if (m_hDevice != INVALID_HANDLE_VALUE)
         CloseHandle(m_hDevice);
@@ -404,7 +426,23 @@ HRESULT Orc::Driver::OpenDevicePath(std::wstring strDevicePath, DWORD dwRequired
     return S_OK;
 }
 
-HRESULT Orc::Driver::DeviceIoControl(
+HRESULT Driver::CloseDevice()
+{
+    if (m_hDevice != INVALID_HANDLE_VALUE)
+    {
+        if (!CloseHandle(m_hDevice))
+        {
+            auto code = Orc::LastWin32Error();
+            Log::Error(L"Failed to close {} device for driver {} (hr:{})", m_strDevicePath, m_strServiceName, code);
+            return code.value();
+        }
+        m_hDevice = INVALID_HANDLE_VALUE;
+    }
+    m_strDevicePath.clear();
+    return S_OK;
+}
+
+HRESULT Driver::DeviceIoControl(
     DWORD dwIoControlCode,
     LPVOID lpInBuffer,
     DWORD nInBufferSize,
@@ -431,7 +469,7 @@ HRESULT Orc::Driver::DeviceIoControl(
     return S_OK;
 }
 
-Orc::Result<DriverStatus> Orc::Driver::GetStatus()
+Orc::Result<DriverStatus> Driver::GetStatus()
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = m_manager->ConnectToSCM()))
@@ -444,7 +482,7 @@ Orc::Result<DriverStatus> Orc::Driver::GetStatus()
     return status;
 }
 
-std::shared_ptr<Driver> Orc::DriverMgmt::GetDriver(const std::wstring& strServiceName)
+std::shared_ptr<Driver> DriverMgmt::GetDriver(const std::wstring& strServiceName)
 {
     auto retval = std::make_shared<Driver>(shared_from_this(), strServiceName);
 
@@ -458,7 +496,7 @@ std::shared_ptr<Driver> Orc::DriverMgmt::GetDriver(const std::wstring& strServic
     return nullptr;
 }
 
-HRESULT Orc::DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in LPCTSTR ServiceExe)
+HRESULT DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCWSTR DriverName, __in LPCWSTR ServiceExe)
 
 {
     SC_HANDLE schService = NULL;
@@ -513,7 +551,7 @@ HRESULT Orc::DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCTSTR
             if (schService == NULL)
             {
                 hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error("Failed OpenService [{}]", SystemError(hr));
+                Log::Error(L"Failed OpenService [{}]", SystemError(hr));
                 return hr;
             }
             else
@@ -532,7 +570,7 @@ HRESULT Orc::DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCTSTR
                         NULL))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
-                    Log::Error("Failed ChangeServiceConfig [{}]", SystemError(hr));
+                    Log::Error(L"Failed ChangeServiceConfig [{}]", SystemError(hr));
                     return hr;
                 }
             }
@@ -549,7 +587,7 @@ HRESULT Orc::DriverMgmt::InstallDriver(__in SC_HANDLE SchSCManager, __in LPCTSTR
     return S_OK;
 }
 
-HRESULT Orc::DriverMgmt::ManageDriver(__in LPCTSTR DriverName, __in LPCTSTR ServiceName, __in USHORT Function)
+HRESULT DriverMgmt::ManageDriver(__in LPCWSTR DriverName, __in LPCWSTR ServiceName, __in USHORT Function)
 {
     HRESULT hr = E_FAIL;
     SC_HANDLE schSCManager;
@@ -618,7 +656,7 @@ HRESULT Orc::DriverMgmt::ManageDriver(__in LPCTSTR DriverName, __in LPCTSTR Serv
     return hr;
 }  // ManageDriver
 
-HRESULT Orc::DriverMgmt::RemoveDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName)
+HRESULT DriverMgmt::RemoveDriver(SC_HANDLE SchSCManager, __in LPCWSTR DriverName)
 {
     HRESULT hr = E_FAIL;
     SC_HANDLE schService;
@@ -642,7 +680,8 @@ HRESULT Orc::DriverMgmt::RemoveDriver(SC_HANDLE SchSCManager, __in LPCTSTR Drive
     if (schService == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed OpenService [{}]", SystemError(hr));
+        if (hr != HRESULT_FROM_WIN32(ERROR_SERVICE_DOES_NOT_EXIST))
+            Log::Error(L"Failed OpenService [{}]", SystemError(hr));
         return hr;
     }
 
@@ -658,7 +697,7 @@ HRESULT Orc::DriverMgmt::RemoveDriver(SC_HANDLE SchSCManager, __in LPCTSTR Drive
     return S_OK;
 }  // RemoveDriver
 
-HRESULT Orc::DriverMgmt::StartDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName)
+HRESULT DriverMgmt::StartDriver(SC_HANDLE SchSCManager, __in LPCWSTR DriverName)
 {
     HRESULT hr = E_FAIL;
 
@@ -668,7 +707,7 @@ HRESULT Orc::DriverMgmt::StartDriver(SC_HANDLE SchSCManager, __in LPCTSTR Driver
     // Open the handle to the existing service.
     //
 
-    schService = OpenService(SchSCManager, DriverName, SERVICE_START);
+    schService = OpenServiceW(SchSCManager, DriverName, SERVICE_START);
     BOOST_SCOPE_EXIT(&schService)
     {
         // Close the service object.
@@ -684,13 +723,13 @@ HRESULT Orc::DriverMgmt::StartDriver(SC_HANDLE SchSCManager, __in LPCTSTR Driver
     if (schService == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed OpenService [{}]", SystemError(hr));
+        Log::Error(L"Failed OpenService {} [{}]", DriverName, SystemError(hr));
         return hr;
     }
 
     //
     // Start the execution of the service (i.e. start the driver).
-    if (!StartService(schService, 0, NULL))
+    if (!StartServiceW(schService, 0, NULL))
     {
         DWORD err = GetLastError();
 
@@ -702,14 +741,14 @@ HRESULT Orc::DriverMgmt::StartDriver(SC_HANDLE SchSCManager, __in LPCTSTR Driver
         else
         {
             hr = HRESULT_FROM_WIN32(err);
-            Log::Error("Failed StartService [{}]", SystemError(hr));
+            Log::Error(L"Failed StartService [{}]", SystemError(hr));
             return hr;
         }
     }
     return S_OK;
 }
 
-HRESULT Orc::DriverMgmt::StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName)
+HRESULT DriverMgmt::StopDriver(SC_HANDLE SchSCManager, __in LPCWSTR DriverName)
 {
     HRESULT hr = E_FAIL;
     SC_HANDLE schService;
@@ -717,7 +756,7 @@ HRESULT Orc::DriverMgmt::StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverN
 
     //
     // Open the handle to the existing service.
-    schService = OpenService(SchSCManager, DriverName, SERVICE_STOP);
+    schService = OpenServiceW(SchSCManager, DriverName, SERVICE_STOP);
     BOOST_SCOPE_EXIT(&schService)
     {
         // Close the service object.
@@ -733,7 +772,8 @@ HRESULT Orc::DriverMgmt::StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverN
     if (schService == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed OpenService [{}]", SystemError(hr));
+        if (hr != HRESULT_FROM_WIN32(ERROR_SERVICE_DOES_NOT_EXIST))
+            Log::Error(L"Failed OpenService {} [{}]", DriverName, SystemError(hr));
         return hr;
     }
 
@@ -742,20 +782,22 @@ HRESULT Orc::DriverMgmt::StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverN
     if (!ControlService(schService, SERVICE_CONTROL_STOP, &serviceStatus))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed ControlService [{}]", SystemError(hr));
+        Log::Error(L"Failed ControlService {} [{}]", DriverName, SystemError(hr));
         return hr;
     }
 
     return S_OK;
 }  //  StopDriver
 
-HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverName, DriverStatus& status)
+HRESULT DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCWSTR DriverName, DriverStatus& status)
 {
     SC_HANDLE schService;
 
+    status = DriverStatus::Unknown;
+
     //
     // Open the handle to the existing service.
-    schService = OpenService(SchSCManager, DriverName, SERVICE_QUERY_STATUS);
+    schService = OpenServiceW(SchSCManager, DriverName, SERVICE_QUERY_STATUS);
     BOOST_SCOPE_EXIT(&schService)
     {
         // Close the service object.
@@ -771,8 +813,17 @@ HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverN
     if (schService == NULL)
     {
         auto hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed OpenService [{}]", SystemError(hr));
-        return hr;
+        if (hr != HRESULT_FROM_WIN32(ERROR_SERVICE_DOES_NOT_EXIST))
+        {
+            Log::Error(L"Failed OpenService [{}]", SystemError(hr));
+            return hr;
+        }
+        else
+        {
+            // Service does not exist, this is a successfull driver status
+            status = DriverStatus::Inexistent;
+            return S_OK;
+        }
     }
 
     //
@@ -789,7 +840,7 @@ HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverN
                     schService, SC_STATUS_PROCESS_INFO, serviceStatus.get(), serviceStatus.size(), &cbNeeded))
             {
                 auto hr = HRESULT_FROM_WIN32(GetLastError());
-                Log::Error("Failed QueryServiceStatusEx [{}]", SystemError(hr));
+                Log::Error(L"Failed QueryServiceStatusEx [{}]", SystemError(hr));
                 return hr;
             }
         }
@@ -808,27 +859,34 @@ HRESULT Orc::DriverMgmt::GetDriverStatus(SC_HANDLE SchSCManager, LPCTSTR DriverN
     {
         case SERVICE_CONTINUE_PENDING:
             status = DriverStatus::PendingContinue;
+            break;
         case SERVICE_PAUSE_PENDING:
             status = DriverStatus::PendingPause;
+            break;
         case SERVICE_PAUSED:
             status = DriverStatus::Paused;
+            break;
         case SERVICE_RUNNING:
             status = DriverStatus::Started;
+            break;
         case SERVICE_START_PENDING:
             status = DriverStatus::PendingStart;
+            break;
         case SERVICE_STOP_PENDING:
             status = DriverStatus::PendingStop;
+            break;
         case SERVICE_STOPPED:
             status = DriverStatus::Stopped;
+            break;
         default:
-            status = DriverStatus::Inexistent;
+            status = DriverStatus::Unknown;
     }
 
     return S_OK;
 }
 
 HRESULT
-Orc::DriverMgmt::SetupDriverName(WCHAR* DriverLocation, WCHAR* szDriverFileName, ULONG BufferLength)
+DriverMgmt::SetupDriverName(WCHAR* DriverLocation, WCHAR* szDriverFileName, ULONG BufferLength)
 {
     HRESULT hr = E_FAIL;
     //
@@ -871,7 +929,7 @@ Orc::DriverMgmt::SetupDriverName(WCHAR* DriverLocation, WCHAR* szDriverFileName,
     return S_OK;
 }  // SetupDriverName
 
-HRESULT Orc::DriverMgmt::GetDriverBinaryPathName(
+HRESULT DriverMgmt::GetDriverBinaryPathName(
     __in SC_HANDLE SchSCManager,
     const WCHAR* DriverName,
     WCHAR* szDriverFileName,
@@ -931,7 +989,7 @@ HRESULT Orc::DriverMgmt::GetDriverBinaryPathName(
 }
 
 HRESULT
-Orc::DriverMgmt::SetStartupMode(__in SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in DriverStartupMode mode)
+DriverMgmt::SetStartupMode(__in SC_HANDLE SchSCManager, __in LPCWSTR DriverName, __in DriverStartupMode mode)
 {
     using namespace std::string_view_literals;
     HRESULT hr = E_FAIL;
@@ -988,4 +1046,6 @@ Orc::DriverMgmt::SetStartupMode(__in SC_HANDLE SchSCManager, __in LPCTSTR Driver
         return hr;
     }
     return S_OK;
+}
+
 }

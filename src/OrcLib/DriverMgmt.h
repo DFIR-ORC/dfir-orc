@@ -21,6 +21,7 @@ namespace Orc {
 
 enum class DriverStatus
 {
+    Unknown,
     Inexistent,
     Installed,
     PendingStart,
@@ -73,6 +74,7 @@ public:
     HRESULT DisableStart();
 
     HRESULT OpenDevicePath(std::wstring strDevicePath, DWORD dwRequiredAccess);
+    HRESULT CloseDevice();
 
     HRESULT DeviceIoControl(
         _In_ DWORD dwIoControlCode,
@@ -84,143 +86,17 @@ public:
         _Inout_opt_ LPOVERLAPPED lpOverlapped);
 
     template <typename _Tout, typename _Tin>
-    Result<size_t> DeviceIoControl(DWORD dwIoControlCode, const Span<_Tin>& input, const Span<_Tout>& output)
-    {
-        using namespace msl::utilities;
-
-        DWORD dwBytesReturned = 0LU;
-        if (auto hr = DeviceIoControl(
-                dwIoControlCode,
-                static_cast<LPVOID>(input.get()),
-                SafeInt<DWORD>(input.size() * sizeof(_Tin)),
-                static_cast<LPVOID>(output.get()),
-                SafeInt<DWORD>(output.size() * sizeof(_Tout)),
-                &dwBytesReturned,
-                NULL);
-            FAILED(hr))
-            return SystemError(hr);
-
-        if (dwBytesReturned % sizeof(_Tout))
-        {
-            Log::Error(
-                L"{}::DeviceIoControl({}) returned incomplete/invalid data ({} bytes returned when exepected element "
-                L"size is {}",
-                m_strServiceName,
-                dwIoControlCode,
-                dwBytesReturned,
-                sizeof(_Tout));
-            return Win32Error(ERROR_INVALID_DATA);
-        }
-
-        return dwBytesReturned / sizeof(_Tout);
-    }
+    Result<size_t> DeviceIoControl(DWORD dwIoControlCode, const Span<_Tin>& input, const Span<_Tout>& output);
 
     template <typename _Tout, typename _Tin>
     Result<Buffer<_Tout>>
-    DeviceIoControl(DWORD dwIoControlCode, const Span<_Tin>& input, DWORD dwExpectedOutputElements = 1)
-    {
-        using namespace msl::utilities;
-
-        Buffer<_Tout> output;
-        DWORD dwBytesReturned = 0LU;
-        output.reserve(dwExpectedOutputElements);
-
-        if (input.empty())
-        {
-            if (auto hr = DeviceIoControl(
-                    dwIoControlCode,
-                    NULL,
-                    0LU,
-                    static_cast<LPVOID>(output.get()),
-                    SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
-                    &dwBytesReturned,
-                    NULL);
-                FAILED(hr))
-                return SystemError(hr);
-        }
-        else
-        {
-            if (auto hr = DeviceIoControl(
-                    dwIoControlCode,
-                    static_cast<LPVOID>(input.get()),
-                    SafeInt<DWORD>(input.size() * sizeof(_Tin)),
-                    static_cast<LPVOID>(output.get()),
-                    SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
-                    &dwBytesReturned,
-                    NULL);
-                FAILED(hr))
-                return SystemError(hr);
-        }
-
-        if (dwBytesReturned % sizeof(_Tout))
-        {
-            Log::Error(
-                L"{}::DeviceIoControl({}) returned incomplete/invalid data ({} bytes returned when exepected element "
-                L"size is {}",
-                m_strServiceName,
-                dwIoControlCode,
-                dwBytesReturned,
-                sizeof(_Tout));
-            return SystemError(HRESULT_FROM_WIN32(ERROR_INVALID_DATA));
-        }
-        output.use(dwBytesReturned / sizeof(_Tout));
-        return output;
-    }
+    DeviceIoControl(DWORD dwIoControlCode, const Span<_Tin>& input, DWORD dwExpectedOutputElements = 1);
 
     template <typename _Tin>
-    Result<void> DeviceIoControl(DWORD dwIoControlCode, const Span<_Tin>& input)
-    {
-        using namespace msl::utilities;
-
-        DWORD dwBytesReturned = 0LU;
-        if (auto hr = DeviceIoControl(
-                dwIoControlCode,
-                static_cast<LPVOID>(input.get()),
-                SafeInt<DWORD>(input.size() * sizeof(_Tin)),
-                NULL,
-                0LU,
-                &dwBytesReturned,
-                NULL);
-            FAILED(hr))
-            return SystemError(hr);
-        return {};
-    }
+    Result<void> DeviceIoControl(DWORD dwIoControlCode, const Span<_Tin>& input);
 
     template <typename _Tout>
-    Result<Buffer<_Tout>> DeviceIoControl(DWORD dwIoControlCode, DWORD dwExpectedOutputElements = 1)
-    {
-        using namespace msl::utilities;
-
-        Buffer<_Tout> output;
-        output.reserve(dwExpectedOutputElements);
-
-        DWORD dwBytesReturned = 0LU;
-        if (auto hr = DeviceIoControl(
-                dwIoControlCode,
-                NULL,
-                0LU,
-                static_cast<LPVOID>(output.get()),
-                SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
-                &dwBytesReturned,
-                NULL);
-            FAILED(hr))
-            return SystemError(hr);
-
-        if (dwBytesReturned % sizeof(_Tout))
-        {
-            Log::Error(
-                L"{}::DeviceIoControl({}) returned incomplete/invalid data ({} bytes returned when exepected element "
-                L"size is {}",
-                m_strServiceName,
-                dwIoControlCode,
-                dwBytesReturned,
-                sizeof(_Tout));
-            return SystemError(HRESULT_FROM_WIN32(ERROR_INVALID_DATA));
-        }
-
-        output.resize(dwBytesReturned / sizeof(_Tout), false);
-        return output;
-    }
+    Result<Buffer<_Tout>> DeviceIoControl(DWORD dwIoControlCode, DWORD dwExpectedOutputElements = 1);
 
     Result<DriverStatus> GetStatus();
 
@@ -263,19 +139,19 @@ public:
     ~DriverMgmt() { Disconnect(); }
 
 private:
-    static HRESULT InstallDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in LPCTSTR ServiceExe);
-    static HRESULT RemoveDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
-    static HRESULT StartDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
-    static HRESULT StopDriver(SC_HANDLE SchSCManager, __in LPCTSTR DriverName);
-    static HRESULT GetDriverStatus(SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __out DriverStatus& status);
-    static HRESULT ManageDriver(LPCTSTR DriverName, __in LPCTSTR ServiceName, __in USHORT Function);
+    static HRESULT InstallDriver(__in SC_HANDLE SchSCManager, __in LPCWSTR DriverName, __in LPCWSTR ServiceExe);
+    static HRESULT RemoveDriver(SC_HANDLE SchSCManager, __in LPCWSTR DriverName);
+    static HRESULT StartDriver(SC_HANDLE SchSCManager, __in LPCWSTR DriverName);
+    static HRESULT StopDriver(SC_HANDLE SchSCManager, __in LPCWSTR DriverName);
+    static HRESULT GetDriverStatus(SC_HANDLE SchSCManager, __in LPCWSTR DriverName, __out DriverStatus& status);
+    static HRESULT ManageDriver(__in LPCWSTR DriverName, __in LPCWSTR ServiceName, __in USHORT Function);
     static HRESULT SetupDriverName(WCHAR* DriverLocation, WCHAR* szDriverFileName, ULONG BufferLength);
     static HRESULT GetDriverBinaryPathName(
         __in SC_HANDLE SchSCManager,
         const WCHAR* DriverName,
         WCHAR* szDriverFileName,
         ULONG BufferLength);
-    static HRESULT SetStartupMode(SC_HANDLE SchSCManager, __in LPCTSTR DriverName, __in DriverStartupMode mode);
+    static HRESULT SetStartupMode(SC_HANDLE SchSCManager, __in LPCWSTR DriverName, __in DriverStartupMode mode);
 
     SC_HANDLE m_SchSCManager = NULL;
     SC_HANDLE m_SchService = NULL;
