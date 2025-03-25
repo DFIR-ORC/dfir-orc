@@ -19,6 +19,7 @@ using namespace std::string_literals;
 DbgHelpLibrary::DbgHelpLibrary()
     : ExtensionLibrary(
           L"DbgHelp.dll"s,
+          L"%SystemRoot%\\System32\\DbgHelp.dll;DBGHELP_XPDLL"s,
           L"%SystemRoot%\\System32\\DbgHelp.dll;DBGHELP_X86DLL"s,
           L"%SystemRoot%\\System32\\DbgHelp.dll;DBGHELP_X64DLL"s,
           L"%SystemRoot%\\System32\\DbgHelp.dll;DBGHELP_ARM64DLL"s)

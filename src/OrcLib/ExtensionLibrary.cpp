@@ -37,11 +37,13 @@ using namespace Orc;
 
 ExtensionLibrary::ExtensionLibrary(
     const std::wstring& strKeyword,
+    const std::wstring& strXPLibRef,
     const std::wstring& strX86LibRef,
     const std::wstring& strX64LibRef,
     const std::wstring& strARM64LibRef,
     std::vector<std::shared_ptr<DependencyLibrary>> dependencies)
     : m_strKeyword(strKeyword)
+    , m_strXPLibRef(strXPLibRef)
     , m_strX86LibRef(strX86LibRef)
     , m_strX64LibRef(strX64LibRef)
     , m_strARM64LibRef(strARM64LibRef)
@@ -352,6 +354,8 @@ HRESULT ExtensionLibrary::Load(std::optional<std::filesystem::path> tempDir)
     WORD wArch = 0;
     if (auto hr = SystemDetails::GetArchitecture(wArch); FAILED(hr))
         return hr;
+
+    auto [dwMajor, dwMinor] = SystemDetails::GetOSVersion();
 
     if (tempDir.has_value())
     {

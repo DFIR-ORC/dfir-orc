@@ -43,9 +43,10 @@ public:
     ExtensionLibrary(const std::wstring& strKeyword,
                      const std::wstring& strLibRef,
                      std::vector<std::shared_ptr<DependencyLibrary>> dependencies = {}
-    ) : ExtensionLibrary(strKeyword, strLibRef, strLibRef, strLibRef, std::move(dependencies)) {};
+    ) : ExtensionLibrary(strKeyword, strLibRef, strLibRef, strLibRef, strLibRef, std::move(dependencies)) {};
 
     ExtensionLibrary(const std::wstring& strKeyword,
+                     const std::wstring& strXPLibRef,
                      const std::wstring& strX86LibRef,
                      const std::wstring& strX64LibRef,
                      const std::wstring& strARM64LibRef,
@@ -212,6 +213,7 @@ protected:
     std::wstring m_strKeyword;
 
     // There are the default Library refs
+    std::wstring m_strXPLibRef;
     std::wstring m_strX86LibRef;
     std::wstring m_strX64LibRef;
     std::wstring m_strARM64LibRef;
@@ -303,7 +305,7 @@ class TemplateExtension : public ExtensionLibrary
 
 public:
     TemplateExtension()
-        : ExtensionLibrary(L"template", L"template.dll", L"template.dll", L"template.dll") {};
+        : ExtensionLibrary(L"template", L"template.dll", L"template.dll", L"template.dll", L"template.dll") {};
     virtual ~TemplateExtension() {}
     STDMETHOD(Initialize)() { return S_OK; }
 };

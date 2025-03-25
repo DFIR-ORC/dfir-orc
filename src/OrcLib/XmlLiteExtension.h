@@ -41,6 +41,7 @@ public:
     XmlLiteExtension()
         : ExtensionLibrary(
               L"xmllite.dll"s,
+              L"%SystemRoot%\\System32\\xmllite.dll;XMLLITE_XPDLL"s,
               L"%SystemRoot%\\System32\\xmllite.dll;XMLLITE_X86DLL"s,
               L"%SystemRoot%\\System32\\xmllite.dll"s,
               L"%SystemRoot%\\System32\\xmllite.dll"s)

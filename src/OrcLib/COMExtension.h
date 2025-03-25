@@ -19,10 +19,10 @@ class COMExtension : public ExtensionLibrary
 {
 public:
     COMExtension(const std::wstring& strKeyword, const std::wstring& strLibRef)
-        : ExtensionLibrary(strKeyword, strLibRef, strLibRef, strLibRef) {};
+        : ExtensionLibrary(strKeyword, strLibRef, strLibRef, strLibRef, strLibRef) {};
 
-    COMExtension(const std::wstring& strKeyword, const std::wstring& strX86LibRef, const std::wstring& strX64LibRef, const std::wstring& strARM64LibRef)
-        : ExtensionLibrary(strKeyword, strX86LibRef, strX64LibRef, strARM64LibRef) {};
+    COMExtension(const std::wstring& strKeyword, const std::wstring& strXPLibRef, const std::wstring& strX86LibRef, const std::wstring& strX64LibRef, const std::wstring& strARM64LibRef)
+        : ExtensionLibrary(strKeyword, strXPLibRef, strX86LibRef, strX64LibRef, strARM64LibRef) {};
 
     virtual std::pair<HRESULT, HINSTANCE> LoadThisLibrary(const std::wstring& strLibFile);
 
