@@ -312,14 +312,32 @@ bool EmbeddedResource::IsConfiguredToRun()
         return false;
     }
 
+    auto [dwMajor, dwMinor] = SystemDetails::GetOSVersion();
+
     switch (Arch)
     {
         case PROCESSOR_ARCHITECTURE_INTEL:
-            if (FAILED(hr = EmbeddedResource::ExtractRun32(L"", strToExecuteRef)))
+            if (dwMajor == 5)
             {
-                if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
+                if (FAILED(hr = EmbeddedResource::ExtractRunXP(L"", strToExecuteRef)))
                 {
-                    return false;
+                    if (FAILED(hr = EmbeddedResource::ExtractRun32(L"", strToExecuteRef)))
+                    {
+                        if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
+                        {
+                            return false;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (FAILED(hr = EmbeddedResource::ExtractRun32(L"", strToExecuteRef)))
+                {
+                    if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
+                    {
+                        return false;
+                    }
                 }
             }
             break;

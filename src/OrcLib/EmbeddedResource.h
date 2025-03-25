@@ -31,16 +31,19 @@ class EmbeddedResource
 public:
     static constexpr auto RUN_FMT = L"RUN{}"sv;
     static constexpr auto RUN_ARGS_FMT = L"RUN{}_ARGS"sv;
+    static constexpr auto _XP = L"_XP"sv;
     static constexpr auto _32 = L"32"sv;
     static constexpr auto _64 = L"64"sv;
     static constexpr auto _ARM64 = L"_ARM64"sv;
 
     static auto RUN() { return fmt::format(RUN_FMT, L""sv); }
+    static auto RUN_XP() { return fmt::format(RUN_FMT, _XP); }
     static auto RUN_32() { return fmt::format(RUN_FMT, _32); }
     static auto RUN_64() { return fmt::format(RUN_FMT, _64); }
     static auto RUN_ARM64() { return fmt::format(RUN_FMT, _ARM64); }
 
     static auto RUN_ARGS() { return fmt::format(RUN_ARGS_FMT, L""sv); }
+    static auto RUN_XP_ARGS() { return fmt::format(RUN_ARGS_FMT, _XP); }
     static auto RUN_32_ARGS() { return fmt::format(RUN_ARGS_FMT, _32); }
     static auto RUN_64_ARGS() { return fmt::format(RUN_ARGS_FMT, _64); }
     static auto RUN_ARM64_ARGS() { return fmt::format(RUN_ARGS_FMT, _ARM64); }
@@ -181,6 +184,14 @@ public:
             retval.Value = Value;
             return retval;
         };
+        static EmbedSpec AddRun_XP(const std::wstring& Value)
+        {
+            EmbedSpec retval;
+            retval.Type = EmbedType::NameValuePair;
+            retval.Name = RUN_XP();
+            retval.Value = Value;
+            return retval;
+        };
         static EmbedSpec AddRunX86(const std::wstring& Value)
         {
             EmbedSpec retval;
@@ -210,6 +221,14 @@ public:
             EmbedSpec retval;
             retval.Type = EmbedType::NameValuePair;
             retval.Name = RUN_ARGS();
+            retval.Value = Value;
+            return retval;
+        };
+        static EmbedSpec AddRun_XP_Args(const std::wstring& Value)
+        {
+            EmbedSpec retval;
+            retval.Type = EmbedType::NameValuePair;
+            retval.Name = RUN_XP_ARGS();
             retval.Value = Value;
             return retval;
         };
@@ -402,6 +421,10 @@ public:
     {
         return ExtractValue(Module, fmt::format(RUN_FMT, L""), Value);
     }
+    static HRESULT ExtractRunXP(const std::wstring& Module, std::wstring& Value)
+    {
+        return ExtractValue(Module, fmt::format(RUN_FMT, _XP), Value);
+    }
     static HRESULT ExtractRun32(const std::wstring& Module, std::wstring& Value)
     {
         return ExtractValue(Module, fmt::format(RUN_FMT, _32), Value);
@@ -422,6 +445,11 @@ public:
     static HRESULT ExtractRunArgs(const std::wstring& Module, std::wstring& Value)
     {
         return ExtractValue(Module, RUN_ARGS(), Value);
+    }
+
+    static HRESULT ExtractRunXPArgs(const std::wstring& Module, std::wstring& Value)
+    {
+        return ExtractValue(Module, RUN_XP_ARGS(), Value);
     }
 
     static HRESULT ExtractRun32Args(const std::wstring& Module, std::wstring& Value)
