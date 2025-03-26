@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2021 ANSSI. All Rights Reserved.
+// Copyright 2011-2021 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //            fabienfl (ANSSI)

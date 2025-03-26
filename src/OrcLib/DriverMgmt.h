@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -124,16 +124,33 @@ public:
         Buffer<_Tout> output;
         DWORD dwBytesReturned = 0LU;
         output.reserve(dwExpectedOutputElements);
-        if (auto hr = DeviceIoControl(
-                dwIoControlCode,
-                static_cast<LPVOID>(input.get()),
-                SafeInt<DWORD>(input.size() * sizeof(_Tin)),
-                static_cast<LPVOID>(output.get()),
-                SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
-                &dwBytesReturned,
-                NULL);
-            FAILED(hr))
-            return SystemError(hr);
+
+        if (input.empty())
+        {
+            if (auto hr = DeviceIoControl(
+                    dwIoControlCode,
+                    NULL,
+                    0LU,
+                    static_cast<LPVOID>(output.get()),
+                    SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
+                    &dwBytesReturned,
+                    NULL);
+                FAILED(hr))
+                return SystemError(hr);
+        }
+        else
+        {
+            if (auto hr = DeviceIoControl(
+                    dwIoControlCode,
+                    static_cast<LPVOID>(input.get()),
+                    SafeInt<DWORD>(input.size() * sizeof(_Tin)),
+                    static_cast<LPVOID>(output.get()),
+                    SafeInt<DWORD>(output.capacity() * sizeof(_Tout)),
+                    &dwBytesReturned,
+                    NULL);
+                FAILED(hr))
+                return SystemError(hr);
+        }
 
         if (dwBytesReturned % sizeof(_Tout))
         {

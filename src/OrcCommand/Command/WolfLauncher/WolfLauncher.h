@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -104,6 +104,8 @@ public:
         std::chrono::milliseconds msRefreshTimer = 1s;
         std::chrono::milliseconds msArchiveTimeOut = 10min;
         std::chrono::milliseconds msCommandTerminationTimeOut = 3h;
+
+        std::optional<uint64_t> diskFreeSpaceRequirement;
 
         std::wstring strDbgHelp;
 

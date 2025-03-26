@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -79,7 +79,6 @@ HRESULT USNRecordFileInfo::Open()
 #define FILE_SYNCHRONOUS_IO_ALERT 0x00000010
 #define FILE_OPEN_FOR_BACKUP_INTENT 0x00004000
 #define OBJ_CASE_INSENSITIVE 0x00000040L
-#define STATUS_SUCCESS 0x0
 
 #ifndef InitializeObjectAttributes
 #    define InitializeObjectAttributes(p, n, a, r, s)                                                                  \
@@ -140,7 +139,6 @@ HRESULT USNRecordFileInfo::Open()
 #undef FILE_OPEN_BY_FILE_ID
 #undef OBJ_CASE_INSENSITIVE
 #undef OBJ_KERNEL_HANDLE
-#undef STATUS_SUCCESS
 #undef FILE_SEQUENTIAL_ONLY
 #undef InitializeObjectAttributes
     }
@@ -272,10 +270,6 @@ HRESULT USNRecordFileInfo::OpenStreamInformation()
 
     DWORD dwMultiplier = 1L;
 
-    constexpr auto STATUS_SUCCESS = ((NTSTATUS)0x00000000L);
-    constexpr auto STATUS_BUFFER_OVERFLOW = ((NTSTATUS)0x80000005L);
-    constexpr auto STATUS_BUFFER_TOO_SMALL = ((NTSTATUS)0xC0000023L);
-
     do
     {
         m_pFileStreamInformation =
@@ -295,7 +289,7 @@ HRESULT USNRecordFileInfo::OpenStreamInformation()
 
         switch (hr)
         {
-            case HRESULT_FROM_NT(STATUS_SUCCESS):
+            case HRESULT_FROM_NT( 0L ):
                 m_bStreamInformationAvailable = true;
                 break;
             case HRESULT_FROM_NT(STATUS_BUFFER_OVERFLOW):
@@ -308,9 +302,6 @@ HRESULT USNRecordFileInfo::OpenStreamInformation()
                 return hr;
         }
     } while (m_pFileStreamInformation == NULL);
-#undef STATUS_SUCCESS
-#undef STATUS_BUFFER_OVERFLOW
-#undef STATUS_BUFFER_TOO_SMALL
 
     return S_OK;
 }

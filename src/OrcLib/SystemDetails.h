@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -76,6 +76,8 @@ public:
     static Result<std::vector<CPUInformation>> GetCPUInfo();
 
     static Result<MEMORYSTATUSEX> GetPhysicalMemory();
+    static Result<uint64_t> GetPhysicalMemoryAdjustedSize();
+    static Result<uint64_t> GetPhysicalMemoryInstalledSize();
 
     static HRESULT GetPageSize(DWORD& dwPageSize);
     static HRESULT GetLargePageSize(DWORD& dwPageSize);

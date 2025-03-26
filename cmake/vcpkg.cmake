@@ -98,7 +98,7 @@ function(vcpkg_install_packages)
             " --vcpkg-root \"${VCPKG_PATH}\" "
             "${OVERLAY_PORTS_STR}"
             "${OVERLAY_TRIPLETS_STR}"
-            "install ${PACKAGES_STR}\n"
+            "install --recurse ${PACKAGES_STR}\n"
     )
 
     if(VCPKG_ONLY_DOWNLOADS)
@@ -106,7 +106,7 @@ function(vcpkg_install_packages)
     endif()
 
     execute_process(
-        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} ${OVERLAY_TRIPLETS_STR} install ${ONLY_DOWNLOADS} ${PACKAGES}
+        COMMAND "vcpkg.exe" --vcpkg-root ${VCPKG_PATH} ${OVERLAY_PORTS_STR} ${OVERLAY_TRIPLETS_STR} install --recurse ${ONLY_DOWNLOADS} ${PACKAGES}
         WORKING_DIRECTORY ${VCPKG_PATH}
         RESULT_VARIABLE RESULT
     )

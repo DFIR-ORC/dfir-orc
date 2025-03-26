@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -30,7 +30,6 @@ using namespace Orc;
 // {No More Files}
 // No more files were found which match the file specification.
 //
-static const auto STATUS_NO_MORE_FILES = ((NTSTATUS)0x80000006L);
 
 HRESULT FileDirectory::FileInstance::Write(ITableOutput& output, const std::wstring& strDescription) const
 {

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -17,7 +17,7 @@ using namespace Orc;
 using namespace std::string_literals;
 
 DbgHelpLibrary::DbgHelpLibrary()
-    : ExtensionLibrary(L"DbgHelp.dll"s, L"DBGHELP_X86DLL"s, L"DBGHELP_X64DLL"s)
+    : ExtensionLibrary(L"DbgHelp.dll"s, L"DBGHELP_X86DLL"s, L"DBGHELP_X64DLL"s, L"DBGHELP_ARM64DLL"s)
 {
     m_strDesiredName = L"DbgHelp.dll"s;
 }

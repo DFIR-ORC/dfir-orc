@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -31,6 +31,10 @@
 #include "CaseInsensitive.h"
 
 #include "Log/Log.h"
+
+#ifndef PROCESSOR_ARCHITECTURE_ARM64
+#    define PROCESSOR_ARCHITECTURE_ARM64 12
+#endif
 
 using namespace std;
 namespace fs = std::filesystem;
@@ -328,6 +332,14 @@ bool EmbeddedResource::IsConfiguredToRun()
                 }
             }
             break;
+        case PROCESSOR_ARCHITECTURE_ARM64:
+            if (FAILED(hr = EmbeddedResource::ExtractRunARM64(L"", strToExecuteRef)))
+            {
+                if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
+                {
+                    return false;
+                }
+            }
         default:
             return false;
     }
@@ -379,8 +391,20 @@ HRESULT EmbeddedResource::ExtractRunWithArgs(
             }
             else
                 EmbeddedResource::ExtractRun64Args(L"", strRunArgs);
-
             break;
+        case PROCESSOR_ARCHITECTURE_ARM64:
+            if (FAILED(hr = EmbeddedResource::ExtractRunARM64(L"", strToExecuteRef)))
+            {
+                if (FAILED(hr = EmbeddedResource::ExtractRun(L"", strToExecuteRef)))
+                {
+                    Log::Error(L"Not RUN resource found to execute [{}]", SystemError(hr));
+                    return hr;
+                }
+                else
+                    EmbeddedResource::ExtractRunArgs(L"", strRunArgs);
+            }
+            else
+                EmbeddedResource::ExtractRunARM64Args(L"", strRunArgs);
         default:
             Log::Error("Architecture '{}' is not supported", Arch);
             return E_FAIL;

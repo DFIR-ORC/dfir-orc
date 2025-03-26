@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -211,6 +211,18 @@ CommandNotification::Notification CommandNotification::NotifyTerminateAll()
     auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::AllTerminated);
 
     retval->m_Result = CommandNotification::Success;
+    return retval;
+}
+
+CommandNotification::Notification
+CommandNotification::NotifyDiskFreeSpaceRequirement(const std::wstring& keyword, DWORD processId, HANDLE hProcess, uint64_t requiredSize, uint64_t freeSize)
+{
+    auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::ExceededDiskFreeSpaceRequirement);
+    retval->m_Keyword = keyword;
+    retval->m_dwPid = processId;
+    retval->m_hProcess = hProcess;
+    retval->m_diskRequiredFreeSize = requiredSize;
+    retval->m_diskFreeSize = freeSize;
     return retval;
 }
 

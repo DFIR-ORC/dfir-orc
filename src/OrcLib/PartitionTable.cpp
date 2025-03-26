@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -130,13 +130,13 @@ void PartitionTable::ParseDiskPartition(
     DiskPartition* diskPartition,
     UINT sectorSize,
     Partition& p,
-    UINT64 partitionOffset)
+    ULONG64 partitionOffset)
 {
     p.SectorSize = sectorSize;
 
     // partition start offset & size
-    p.Start = ((UINT64)diskPartition->SectorAddress) * sectorSize + partitionOffset;
-    p.Size = ((UINT64)diskPartition->NumberOfSector) * sectorSize;
+    p.Start = ((ULONG64)diskPartition->SectorAddress) * sectorSize + partitionOffset;
+    p.Size = ((ULONG64)diskPartition->NumberOfSector) * sectorSize;
     p.End = p.Start + p.Size;
 
     // field flag
@@ -213,8 +213,8 @@ void PartitionTable::ParseDiskPartition(
 
     p.SectorSize = sectorSize;
 
-    UINT64 start = gptPartitionEntry->FirstLba * sectorSize;
-    UINT64 end = gptPartitionEntry->LastLba * sectorSize;
+    ULONG64 start = gptPartitionEntry->FirstLba * sectorSize;
+    ULONG64 end = gptPartitionEntry->LastLba * sectorSize;
 
     p.Start = start;
     p.End = end;
@@ -493,7 +493,7 @@ HRESULT PartitionTable::ParseExtendedPartition(
     IDiskExtent& diskExtend,
     const Partition& p,
     ExtendedBootRecord* pExtendedRecord,
-    UINT64 u64ExtendedPartitionStart)
+    ULONG64 u64ExtendedPartitionStart)
 {
     HRESULT hr = E_FAIL;
 
@@ -572,7 +572,7 @@ HRESULT PartitionTable::OpenDiskExtend(IDiskExtent& diskExtend)
     return S_OK;
 }
 
-HRESULT PartitionTable::SeekDiskExtend(IDiskExtent& diskExtend, UINT64 offset)
+HRESULT PartitionTable::SeekDiskExtend(IDiskExtent& diskExtend, ULONG64 offset)
 {
     HRESULT hr = E_FAIL;
     LARGE_INTEGER off;

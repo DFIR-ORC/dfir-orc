@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -21,8 +21,10 @@ class TableOutputExtension : public ExtensionLibrary
     friend class ExtensionLibrary;
 
 public:
-    TableOutputExtension(std::wstring strFormat, std::wstring strX86Lib, std::wstring strX64Lib)
-        : ExtensionLibrary(std::move(strFormat), std::move(strX86Lib), std::move(strX64Lib)) {};
+    TableOutputExtension(std::wstring strFormat, std::wstring strLib)
+        : ExtensionLibrary(std::move(strFormat), std::move(strLib)) {};
+    TableOutputExtension(std::wstring strFormat, std::wstring strX86Lib, std::wstring strX64Lib, std::wstring strARM64Lib)
+        : ExtensionLibrary(std::move(strFormat), std::move(strX86Lib), std::move(strX64Lib), std::move(strARM64Lib)) {};
 
     bool IsStreamTableOutput() { return m_StreamTableFactory != nullptr; }
     bool IsConnectionTableOutput() { return m_ConnectTableFactory != nullptr; }

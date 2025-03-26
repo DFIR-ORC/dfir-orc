@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -32,6 +32,7 @@
 #include "PSAPIExtension.h"
 #include "CaseInsensitive.h"
 #include "Utils/WinApi.h"
+#include "Text/ByteQuantity.h"
 
 using namespace std;
 
@@ -568,6 +569,29 @@ bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, std::chrono
     return false;
 }
 
+bool UtilitiesMain::ByteQuantityOption(
+    LPCWSTR szArg,
+    LPCWSTR szOption,
+    std::optional<uint64_t>& parameter,
+    ByteQuantityBase base)
+{
+    std::wstring quantity;
+    if (!ParameterOption(szArg, szOption, quantity))
+    {
+        return false;
+    }
+
+    auto value = Text::ByteQuantityFromString(quantity, base);
+    if (!value)
+    {
+        Log::Error(L"Invalid size (actual: {}, expected like: 30G)", szOption);
+        return false;
+    }
+
+    parameter = *value;
+    return true;
+}
+
 bool UtilitiesMain::ParameterOption(LPCWSTR szArg, LPCWSTR szOption, boost::logic::tribool& bParameter)
 {
     if (_wcsnicmp(szArg, szOption, wcslen(szOption)))
@@ -997,6 +1021,7 @@ bool UtilitiesMain::WaitForDebugger(int argc, const WCHAR* argv[])
 
 bool UtilitiesMain::WaitForDebuggerOption(LPCWSTR szArg)
 {
+#ifdef _DEBUG
     using namespace std::chrono_literals;
     if (_wcsnicmp(szArg, L"WaitForDebugger", wcslen(L"WaitForDebugger")))
         return false;
@@ -1011,6 +1036,10 @@ bool UtilitiesMain::WaitForDebuggerOption(LPCWSTR szArg)
         Log::Info("Debugger connected!");
     else
         Log::Info("No debugger connected... let's continue");
+#else
+    Log::Info("WaitForDebuggerOption is only enabled for debug builds");
+#endif
+
     return true;
 }
 

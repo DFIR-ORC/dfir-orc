@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -28,6 +28,7 @@
 #include "Utils/Time.h"
 #include "Utils/TypeTraits.h"
 #include "Utils/Guard.h"
+#include "Text/Fmt/Result.h"
 
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
@@ -122,6 +123,31 @@ bool IsRunningInXen()
     }
 
     return true;
+}
+
+Result<uint64_t> GetPhysicallyInstalledSystemMemoryApi()
+{
+    using FnGetPhysicallyInstalledSystemMemory = BOOL(__stdcall*)(PULONGLONG);
+
+    static FnGetPhysicallyInstalledSystemMemory fn = nullptr;
+    if (fn == nullptr)
+    {
+        fn = reinterpret_cast<FnGetPhysicallyInstalledSystemMemory>(
+            ::GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetPhysicallyInstalledSystemMemory"));
+        if (!fn)
+        {
+            return LastWin32Error();
+        }
+    }
+
+    uint64_t installed = 0;
+    BOOL ret = fn(&installed);
+    if (!ret)
+    {
+        return LastWin32Error();
+    }
+
+    return installed;
 }
 
 }  // namespace
@@ -232,10 +258,12 @@ bool SystemDetails::IsKnownWindowsBuild(uint32_t build)
 {
     switch (build)
     {
+        case 26100:
         case 22631:
         case 22621:
         case 22000:
         case 20348:
+        case 19046:
         case 19045:
         case 19044:
         case 19043:
@@ -282,6 +310,10 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
 
     switch (build)
     {
+        case 26100:
+            tags.insert(L"Windows11");
+            tags.insert(L"Release#24H2");
+            break;
         case 22631:
             tags.insert(L"Windows11");
             tags.insert(L"Release#23H2");
@@ -289,6 +321,7 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
         case 22621:
             tags.insert(L"Windows11");
             tags.insert(L"Release#22H2");
+            tags.insert(L"Release#23H2");
             break;
         case 22000:
             tags.insert(L"Windows11");
@@ -297,6 +330,10 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
         case 20348:
             tags.insert(L"WindowsServer2022");
             tags.insert(L"Release#RTM");
+            break;
+        case 19046:
+            tags.insert(L"Windows10");
+            tags.insert(L"Release#23H2");
             break;
         case 19045:
             tags.insert(L"Windows10");
@@ -482,7 +519,6 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
             break;
         case 2600:
             tags.insert(L"WindowsXP");
-            tags.insert(L"Release#SP2");
             break;
         default:
             Log::Warn(L"Build number {} is not associated with any known Windows release", build);
@@ -708,6 +744,39 @@ Result<MEMORYSTATUSEX> Orc::SystemDetails::GetPhysicalMemory()
         return SystemError(HRESULT_FROM_WIN32(GetLastError()));
 
     return statex;
+}
+
+Result<uint64_t> SystemDetails::GetPhysicalMemoryAdjustedSize()
+{
+    auto memory = SystemDetails::GetPhysicalMemory();
+    if (!memory)
+    {
+        return memory.error();
+    }
+
+    constexpr uint64_t GB = 1024ULL * 1024ULL * 1024ULL;
+    uint64_t roundedToGB = (memory->ullTotalPhys / GB + (memory->ullTotalPhys % GB ? 1 : 0)) * GB;
+    return roundedToGB;
+}
+
+// Attempt to get the real installed memory size (GlobalMemoryStatusEx exclude some bytes)
+Result<uint64_t> SystemDetails::GetPhysicalMemoryInstalledSize()
+{
+    auto memory = ::GetPhysicallyInstalledSystemMemoryApi();
+    if (memory)
+    {
+        return *memory * 1024;
+    }
+
+    Log::Debug("Failed GetPhysicallyInstalledSystemMemory [{}]", memory);
+
+    memory = SystemDetails::GetPhysicalMemoryAdjustedSize();
+    if (memory)
+    {
+        return *memory;
+    }
+
+    return memory.error();
 }
 
 HRESULT SystemDetails::GetPageSize(DWORD& dwPageSize)

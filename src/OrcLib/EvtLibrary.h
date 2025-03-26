@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -69,7 +69,7 @@ typedef struct _EVT_VARIANT
         UINT8 ByteVal;
         UINT16 UInt16Val;
         UINT32 UInt32Val;
-        UINT64 UInt64Val;
+        ULONG64 UInt64Val;
         float SingleVal;
         double DoubleVal;
         ULONGLONG FileTimeVal;
@@ -90,7 +90,7 @@ typedef struct _EVT_VARIANT
         UINT8* ByteArr;
         UINT16* UInt16Arr;
         UINT32* UInt32Arr;
-        UINT64* UInt64Arr;
+        ULONG64* UInt64Arr;
         float* SingleArr;
         double* DoubleArr;
         FILETIME* FileTimeArr;
@@ -173,7 +173,7 @@ class EvtLibrary : public ExtensionLibrary
 
 public:
     EvtLibrary()
-        : ExtensionLibrary(L"wevtapi", L"Wevtapi.dll", L"Wevtapi.dll") {};
+        : ExtensionLibrary(L"wevtapi", L"Wevtapi.dll") {};
 
     STDMETHOD(Initialize)();
 

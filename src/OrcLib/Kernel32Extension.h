@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -26,7 +26,7 @@ class Kernel32Extension : public ExtensionLibrary
 
 public:
     Kernel32Extension()
-        : ExtensionLibrary(L"kernel32"s, L"kernel32.dll"s, L"kernel32.dll"s) {};
+        : ExtensionLibrary(L"kernel32"s, L"kernel32.dll"s) {};
 
     template <typename... Args>
     auto InitializeProcThreadAttributeList(Args&&... args)

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -80,6 +80,7 @@ public:
         Terminate,
         QueryRunningList,
         RefreshRunningList,
+        CheckDiskFreeSpace,
         TerminateAll,
         CancelAnyPendingAndStop,
         Done
@@ -118,6 +119,7 @@ public:
     static Message MakeCancelAnyPendingAndStopMessage();
     static Message MakeTerminateAllMessage();
     static Message MakeRefreshRunningList();
+    static Message MakeCheckDiskFreeSpaceMessage();
     static Message MakeDoneMessage();
     static Message MakeQueryRunningListMessage();
 
@@ -200,6 +202,12 @@ public:
     void SetTimeout(std::chrono::milliseconds timeout) { m_timeout = timeout; }
     const std::optional<std::chrono::milliseconds>& GetTimeout() const { return m_timeout; }
 
+    const std::optional<uint64_t> DiskFreeSpaceRequirement() const { return m_diskFreeSpaceRequirement; };
+    void SetDiskFreeSpaceRequirement(uint64_t requirement);
+
+    const std::optional<std::wstring> PhysicalMemoryRequirement() { return m_physicalMemoryRequirement; }
+    void SetPhysicalMemoryRequirement(const std::wstring& requirement) { m_physicalMemoryRequirement = requirement; }
+
     const Parameters& GetParameters() { return m_Parameters; };
 
     CmdRequest Request() const { return m_Request; };
@@ -232,6 +240,8 @@ private:
     DWORD m_dwPid;
     HANDLE m_hProcess;
     std::optional<std::chrono::milliseconds> m_timeout;
+    std::optional<uint64_t> m_diskFreeSpaceRequirement;
+    std::optional<std::wstring> m_physicalMemoryRequirement;
 };
 
 }  // namespace Orc

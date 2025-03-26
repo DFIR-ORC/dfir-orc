@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -28,7 +28,7 @@ private:
 
 public:
     VssAPIExtension()
-        : ExtensionLibrary(L"vssapi", L"vssapi.dll", L"vssapi.dll") {};
+        : ExtensionLibrary(L"vssapi", L"vssapi.dll") {};
 
     STDMETHOD(Initialize)();
 

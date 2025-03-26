@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -38,10 +38,15 @@
 
 // Windows Header Files
 #include <intrin.h>
+
+#define WIN32_NO_STATUS
 #include <windows.h>
-#include <atlbase.h>
 #include <winnt.h>
+#undef WIN32_NO_STATUS
+#include <ntstatus.h>
 #include <winternl.h>
+
+#include <atlbase.h>
 #include <strsafe.h>
 #include <safeint.h>
 #include <wincrypt.h>

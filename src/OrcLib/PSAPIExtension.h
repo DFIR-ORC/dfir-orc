@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -25,7 +25,7 @@ class PSAPIExtension : public ExtensionLibrary
 
 public:
     PSAPIExtension()
-        : ExtensionLibrary(L"psapi", L"psapi.dll", L"psapi.dll") {};
+        : ExtensionLibrary(L"psapi", L"psapi.dll") {};
 
     STDMETHOD(Initialize)();
 

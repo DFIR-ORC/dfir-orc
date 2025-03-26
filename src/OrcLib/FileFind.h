@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -492,7 +492,7 @@ public:
     HRESULT InitializeYara(std::unique_ptr<YaraConfig>& config);
     HRESULT InitializeYara()
     {
-        std::unique_ptr<YaraConfig> config;
+        auto config = std::make_unique<YaraConfig>();
         return InitializeYara(config);
     }
 

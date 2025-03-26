@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -73,6 +73,12 @@ CommandMessage::Message CommandMessage::MakeTerminateAllMessage()
 CommandMessage::Message CommandMessage::MakeRefreshRunningList()
 {
     auto retval = std::make_shared<::CommandMessageT>(CommandMessage::RefreshRunningList);
+    return retval;
+}
+
+CommandMessage::Message CommandMessage::MakeCheckDiskFreeSpaceMessage()
+{
+    auto retval = std::make_shared<::CommandMessageT>(CommandMessage::CheckDiskFreeSpace);
     return retval;
 }
 
@@ -285,6 +291,18 @@ CommandMessage::PushStdOutErr(const LONG OrderID, const std::wstring& Keyword, b
     output.bCabWhenComplete = bCabWhenComplete;
     m_Parameters.push_back(std::move(output));
     return S_OK;
+}
+
+void CommandMessage::SetDiskFreeSpaceRequirement(uint64_t requirement)
+{
+    if (requirement == 0)
+    {
+        m_diskFreeSpaceRequirement.reset();
+    }
+    else
+    {
+        m_diskFreeSpaceRequirement = requirement;
+    }
 }
 
 CommandMessage::~CommandMessage() {}

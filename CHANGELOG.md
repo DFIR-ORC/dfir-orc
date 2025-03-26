@@ -1,10 +1,32 @@
 # ChangeLog
 
+## [10.2.7] - 2025-03-17
+### Added
+- add publiccode.yml
+- WolfLauncher: add requirement attribute 'diskfree' for 'archive' element
+- WolfLauncher: add requirement attribute 'diskfree' for 'command' element
+- WolfLauncher: add condition attribute 'physicalmemory' for 'archive' element
+
+### Changed
+- Yara: update to v4.5.2 (libressl 3.9.2)
+- ToolEmbed: improve resource embedding speed
+- Outcome: rename "type" to "source"
+- Update FILE_ATTRIBUTE with new values
+- Only call IsDebuggerPresent in debug builds
+- test.psm1: add parameter 'keyword' to New-OrcLocalConfig
+- Add minimal support for ARM64
+
+### Fixed
+- Outline: fix commands output files
+- Fix build compatibility with recent SDKs
+
+
 ## [10.2.6] - 2024-08-28
 ### Fixed
 - Fix local configuration relocating when executed from network path
 - ToolEmbed: fix possible issue on resource removal
 - Outcome: fix reported p7b archive file size
+
 
 ## [10.2.5] - 2024-06-07
 ### Added

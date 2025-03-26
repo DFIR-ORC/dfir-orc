@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2020 ANSSI. All Rights Reserved.
+// Copyright 2011-2020 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -28,8 +28,10 @@
 #include "Command/WolfLauncher/ConfigFile_WOLFLauncher.h"
 #include "Command/WolfLauncher/ConsoleConfiguration.h"
 #include "Configuration/Option.h"
+#include "Text/ComparisonOperator.h"
 #include "Text/Hex.h"
 #include "Utils/WinApi.h"
+#include "Utils/Threshold.h"
 
 using namespace Orc;
 using namespace Orc::Command::Wolf;
@@ -477,6 +479,46 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
             }
         }
 
+        if (archiveitem[WOLFLAUNCHER_ARCHIVE_DISKFREE])
+        {
+            auto value = std::wstring_view(archiveitem[WOLFLAUNCHER_ARCHIVE_DISKFREE]);
+
+            auto diskFree = Text::ByteQuantityFromString(value);
+            if (!diskFree)
+            {
+                Log::Debug(
+                    L"Failed to parse archive's free disk space requirement (value: {}) [{}]", value, diskFree.error());
+                return E_FAIL;
+            }
+
+            exec->SetDiskFreeSpaceRequirement(*diskFree);
+        }
+
+        if (archiveitem[WOLFLAUNCHER_ARCHIVE_PHYSICALMEMORY])
+        {
+            auto expression = std::wstring_view(archiveitem[WOLFLAUNCHER_ARCHIVE_PHYSICALMEMORY]);
+            auto rv = Text::ComparisonOperatorFromString(expression, ComparisonOperator::LessThanOrEqual);
+            if (!rv)
+            {
+                Log::Debug(
+                    L"Failed to parse archive's physical memory requirement (value: {}) [{}]", expression, rv.error());
+                return E_FAIL;
+            }
+
+            auto [op, value] = rv.value();
+            auto physicalMemory = Text::ByteQuantityFromString(value, ByteQuantityBase::Base2);
+            if (!physicalMemory)
+            {
+                Log::Debug(
+                    L"Failed to parse archive's physical memory requirement (value: {}) [{}]",
+                    value,
+                    physicalMemory.error());
+                return E_FAIL;
+            }
+
+            exec->SetPhysicalMemoryRequirement(Threshold(op, *physicalMemory));
+        }
+
         m_wolfexecs.push_back(std::move(exec));
     }
 
@@ -676,6 +718,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (ParameterOption(argv[i] + 1, L"command_timeout", config.msCommandTerminationTimeOut))
                         ;
+                    else if (ByteQuantityOption(argv[i] + 1, L"diskfree", config.diskFreeSpaceRequirement))
+                        ;
                     else if (ParameterListOption(argv[i] + 1, L"key-", config.DisableKeywords, L","))
                         ;
                     else if (ParameterListOption(argv[i] + 1, L"-key", config.DisableKeywords, L","))
@@ -807,6 +851,39 @@ HRESULT Main::CheckConfiguration()
         // Apply the output directory path to the log file
         logPath = fs::path(config.Output.Path) / fs::path(*m_utilitiesConfig.log.logFile).filename();
         m_utilitiesConfig.log.logFile = logPath;
+    }
+
+    // Merge options for disk free space requirement
+    if (config.diskFreeSpaceRequirement)
+    {
+        for (auto& exec : m_wolfexecs)
+        {
+            exec->SetDiskFreeSpaceRequirement(*config.diskFreeSpaceRequirement);
+
+            for (auto command : exec->GetCommands())
+            {
+                command->SetDiskFreeSpaceRequirement(*config.diskFreeSpaceRequirement);
+            }
+        }
+    }
+    else
+    {
+        for (auto& exec : m_wolfexecs)
+        {
+            if (!exec->DiskFreeSpaceRequirement())
+            {
+                continue;  // commands are handling the requirement and their limit is already set
+            }
+
+            for (auto command : exec->GetCommands())
+            {
+                if (!command->DiskFreeSpaceRequirement() || *exec->DiskFreeSpaceRequirement() == 0
+                    || *command->DiskFreeSpaceRequirement() < *exec->DiskFreeSpaceRequirement())
+                {
+                    command->SetDiskFreeSpaceRequirement(*exec->DiskFreeSpaceRequirement());
+                }
+            }
+        }
     }
 
     if (!config.strMothershipHandle.empty())

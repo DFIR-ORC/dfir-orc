@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -148,7 +148,7 @@ HRESULT Main::Run_Dump()
     if (FAILED(hr))
     {
         Log::Error(
-            L"Failed to expand files and archivesfrom '{}' into '{}' [{}]",
+            L"Failed to expand files and archives from '{}' into '{}' [{}]",
             config.strInputFile,
             config.Output.Path,
             SystemError(hr));

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -30,18 +30,20 @@
 using namespace std;
 using namespace Orc;
 
-namespace Orc {
-
-}
+#ifndef PROCESSOR_ARCHITECTURE_ARM64
+#    define PROCESSOR_ARCHITECTURE_ARM64 12
+#endif
 
 ExtensionLibrary::ExtensionLibrary(
     const std::wstring& strKeyword,
     const std::wstring& strX86LibRef,
     const std::wstring& strX64LibRef,
+    const std::wstring& strARM64LibRef,
     std::vector<std::shared_ptr<DependencyLibrary>> dependencies)
     : m_strKeyword(strKeyword)
     , m_strX86LibRef(strX86LibRef)
     , m_strX64LibRef(strX64LibRef)
+    , m_strARM64LibRef(strARM64LibRef)
     , m_Dependencies(std::move(dependencies))
 {
 }
@@ -50,6 +52,11 @@ HRESULT Orc::ExtensionLibrary::LoadDependencies(std::optional<std::filesystem::p
 {
     for (const auto& dependency : m_Dependencies)
     {
+        if( !dependency)
+        {
+            Log::Error(L"Failed to load dependency for library '{}'", m_strKeyword);
+            continue;
+        }
         if (dependency->IsLoaded())
             continue;
         if (auto hr = dependency->Load(tempDir); FAILED(hr))
@@ -379,6 +386,9 @@ HRESULT ExtensionLibrary::Load(std::optional<std::filesystem::path> tempDir)
                 m_strLibRef = m_strX86LibRef;
             else
                 m_strLibRef = m_strX64LibRef;
+            break;
+        case PROCESSOR_ARCHITECTURE_ARM64:
+            m_strLibRef = m_strARM64LibRef;
             break;
         default:
             Log::Error(L"Unsupported architecture: {}", wArch);

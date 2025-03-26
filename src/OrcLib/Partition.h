@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -56,9 +56,9 @@ public:
     Flags PartitionFlags;
     UINT PartitionNumber;
     UINT SectorSize;
-    UINT64 Start;
-    UINT64 End;
-    UINT64 Size;
+    ULONG64 Start;
+    ULONG64 End;
+    ULONG64 Size;
 
     ~Partition(void) {};
 };

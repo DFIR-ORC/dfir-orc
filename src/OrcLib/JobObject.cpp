@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -15,7 +15,6 @@
 
 #include "safeint.h"
 
-static const auto STATUS_INFO_LENGTH_MISMATCH = ((NTSTATUS)0xC0000004L);
 
 #include <boost/scope_exit.hpp>
 

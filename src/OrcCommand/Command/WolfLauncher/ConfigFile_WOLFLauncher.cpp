@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -94,6 +94,9 @@ HRESULT wolf_command(ConfigItem& parent, DWORD dwIndex)
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"timeout", WOLFLAUNCHER_COMMAND_TIMEOUT, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(
+            hr = parent[dwIndex].AddAttribute(L"diskfree", WOLFLAUNCHER_COMMAND_DISKFREE, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }
 
@@ -150,6 +153,10 @@ HRESULT wolf_archive(ConfigItem& parent, DWORD dwIndex)
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"optional", WOLFLAUNCHER_ARCHIVE_OPTIONAL, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"childdebug", WOLFLAUNCHER_ARCHIVE_CHILDDEBUG, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"diskfree", WOLFLAUNCHER_ARCHIVE_DISKFREE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"physicalmemory", WOLFLAUNCHER_ARCHIVE_PHYSICALMEMORY, ConfigItem::OPTION)))
         return hr;
     return S_OK;
 }

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -27,6 +27,8 @@
 #include "Command/WolfLauncher/Journal.h"
 #include "Command/WolfLauncher/Outcome.h"
 #include "Utils/Locker.h"
+#include "Utils/Threshold.h"
+#include "Utils/TypeTraits.h"
 
 #pragma managed(push, off)
 
@@ -143,8 +145,12 @@ private:
 
     std::unique_ptr<Concurrency::timer<CommandMessage::Message>> m_RefreshTimer;
     std::unique_ptr<Concurrency::timer<CommandMessage::Message>> m_KillerTimer;
+    std::unique_ptr<Concurrency::timer<CommandMessage::Message>> m_DiskFreeSpaceRequirementTimer;
 
     std::vector<std::shared_ptr<Recipient>> m_Recipients;
+
+    std::optional<uint64_t> m_diskFreeSpaceRequirement;
+    std::optional<Threshold<ByteQuantity<uint64_t>>> m_physicalMemoryRequirement;
 
     static std::wregex g_WinVerRegEx;
 
@@ -159,6 +165,22 @@ public:
         m_strArchiveName = strArchiveName;
         return S_OK;
     };
+
+    std::optional<uint64_t> DiskFreeSpaceRequirement() const { return m_diskFreeSpaceRequirement; }
+    void SetDiskFreeSpaceRequirement(uint64_t value)
+    {
+        if (value == 0)
+        {
+            m_diskFreeSpaceRequirement.reset();
+        }
+        else
+        {
+            m_diskFreeSpaceRequirement = value;
+        }
+    }
+
+    const std::optional<Threshold<ByteQuantity<uint64_t>>>& PhysicalMemoryRequirement() const { return m_physicalMemoryRequirement; }
+    void SetPhysicalMemoryRequirement(const Threshold<ByteQuantity<uint64_t>>& threshold) { m_physicalMemoryRequirement = threshold; }
 
     HRESULT SetOutput(const OutputSpec& output, const OutputSpec& temporary)
     {

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2020 ANSSI. All Rights Reserved.
+// Copyright 2011-2020 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -37,6 +37,7 @@
 #include "Text/Fmt/ByteQuantity.h"
 #include "Text/Fmt/Offset.h"
 #include "Text/Fmt/Result.h"
+#include "Text/Fmt/Threshold.h"
 #include "Log/Syslog/Syslog.h"
 #include "Log/Syslog/SyslogSink.h"
 
@@ -393,6 +394,40 @@ std::wstring ToSourceString(CommandParameter::ParamKind kind)
     }
 }
 
+template <typename ThresholdT>
+bool CheckPhysicalMemoryRequirement(const std::optional<ThresholdT>& threshold)
+{
+    if (!threshold)
+    {
+        return true;
+    }
+
+    static ByteQuantity<uint64_t> physicalMemorySize(0);
+
+    if (physicalMemorySize == 0)
+    {
+        auto rv = SystemDetails::GetPhysicalMemoryInstalledSize();
+        if (!rv)
+        {
+            Log::Error("Failed to retrieve physical memory [{}]", rv.error());
+            return false;
+        }
+        else
+        {
+            physicalMemorySize = *rv;
+        }
+    }
+
+    auto rv = threshold->Check(physicalMemorySize);
+    if (!rv)
+    {
+        Log::Error("Failed to check threshold [{}]", rv.error());
+        return false;
+    }
+
+    return *rv;
+}
+
 }  // namespace
 
 namespace Orc {
@@ -714,27 +749,26 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                                     std::chrono::milliseconds timeout = command->GetTimeout().value();
                                     writer->WriteNamed(
                                         L"timeout", std::chrono::duration_cast<std::chrono::seconds>(timeout).count());
-
-                                    writer->BeginCollection(L"output");
-
-                                    for (const auto& parameter : command->GetParameters())
-                                    {
-                                        if (parameter.Kind == CommandParameter::OutFile
-                                            || parameter.Kind == CommandParameter::OutDirectory
-                                            || parameter.Kind == CommandParameter::StdOut
-                                            || parameter.Kind == CommandParameter::StdErr
-                                            || parameter.Kind == CommandParameter::StdOutErr)
-                                        {
-                                            writer->BeginElement(nullptr);
-                                            writer->WriteNamed(L"name", parameter.Name);
-                                            writer->WriteNamed(L"source", ToSourceString(parameter.Kind));
-                                            writer->EndElement(nullptr);
-                                        }
-                                    }
-
-                                    writer->EndCollection(L"output");
                                 }
 
+                                writer->BeginCollection(L"output");
+
+                                for (const auto& parameter : command->GetParameters())
+                                {
+                                    if (parameter.Kind == CommandParameter::OutFile
+                                        || parameter.Kind == CommandParameter::OutDirectory
+                                        || parameter.Kind == CommandParameter::StdOut
+                                        || parameter.Kind == CommandParameter::StdErr
+                                        || parameter.Kind == CommandParameter::StdOutErr)
+                                    {
+                                        writer->BeginElement(nullptr);
+                                        writer->WriteNamed(L"name", parameter.Name);
+                                        writer->WriteNamed(L"source", ToSourceString(parameter.Kind));
+                                        writer->EndElement(nullptr);
+                                    }
+                                }
+
+                                writer->EndCollection(L"output");
                                 writer->EndElement(nullptr);
                             }
                         }
@@ -916,7 +950,10 @@ HRESULT Main::Run_Execute()
             SetThreadExecutionState(static_cast<EXECUTION_STATE>(config.PowerState) | ES_CONTINUOUS);
     }
 
-    BOOST_SCOPE_EXIT(hr) { SetThreadExecutionState(ES_CONTINUOUS); }
+    BOOST_SCOPE_EXIT(hr)
+    {
+        SetThreadExecutionState(ES_CONTINUOUS);
+    }
     BOOST_SCOPE_EXIT_END;
 
     if (config.Outline.IsStructuredFile())
@@ -1006,6 +1043,7 @@ HRESULT Main::Run_Execute()
 
     m_journal.Print(ToolName(), {}, L"Version: {}", kOrcVersionStringW);
 
+    uint64_t physicalMemorySize = 0;
     for (const auto& exec : m_wolfexecs)
     {
         if (exec->IsOptional())
@@ -1030,9 +1068,19 @@ HRESULT Main::Run_Execute()
             auto commandSetNode = console.OutputTree().AddNode("Command set '{}'", exec->GetKeyword());
             auto parametersNode = commandSetNode.AddNode("Parameters");
             PrintValue(
-                parametersNode, L"UseEncryptionJournal", exec->IsChildDebugActive(config.bUseJournalWhenEncrypting));
+                parametersNode, L"Use encryption journal", exec->IsChildDebugActive(config.bUseJournalWhenEncrypting));
             PrintValue(parametersNode, L"Debug", exec->IsChildDebugActive(config.bChildDebug));
-            PrintValue(parametersNode, L"RepeatBehavior", WolfExecution::ToString(exec->RepeatBehaviour()));
+            PrintValue(parametersNode, L"Repeat behavior", WolfExecution::ToString(exec->RepeatBehaviour()));
+
+            if (exec->DiskFreeSpaceRequirement())
+            {
+                PrintValue(parametersNode, L"Free disk space", exec->DiskFreeSpaceRequirement());
+            }
+
+            if (exec->PhysicalMemoryRequirement())
+            {
+                PrintValue(parametersNode, L"Physical memory criteria", exec->PhysicalMemoryRequirement());
+            }
 
             if (exec->RepeatBehaviour() == WolfExecution::Repeat::Overwrite)
             {
@@ -1130,6 +1178,17 @@ HRESULT Main::Run_Execute()
             }
 
             commandSetNode.AddEmptyLine();
+        }
+
+        if (!CheckPhysicalMemoryRequirement(exec->PhysicalMemoryRequirement()))
+        {
+            m_journal.Print(
+                ToolName(),
+                exec->GetKeyword(),
+                Log::Level::Info,
+                "Skipping set because of unmet physical memory requirement (requires: {})",
+                exec->PhysicalMemoryRequirement()->ToString());
+            continue;
         }
 
         hr = ExecuteKeyword(*exec);

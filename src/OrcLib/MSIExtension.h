@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -25,7 +25,7 @@ private:
 
 public:
     MSIExtension()
-        : ExtensionLibrary(L"msi.dll", L"msi.dll", L"msi.dll") {};
+        : ExtensionLibrary(L"msi", L"msi.dll") {};
 
     STDMETHOD(Initialize)();
 

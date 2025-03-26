@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2023 ANSSI. All Rights Reserved.
+// Copyright 2021 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl (ANSSI)
 //
@@ -15,6 +15,11 @@
 #include "CpuId.h"
 
 namespace Orc {
+
+
+#if defined(_M_IX86) || defined(_M_X64) || defined(_M_AMD64)
+// Intel x86 or x86_64 specific code
+
 
 CpuId::CpuId()
     : m_lastFunctionId {0}
@@ -369,5 +374,16 @@ bool CpuId::Has3DNOW() const
 {
     return m_isAMD && m_function81_edx[31];
 }
+
+#elif defined(_M_ARM)
+// ARM 32-bit specific code
+#error "Unsupported ARM32 architecture"
+#elif defined(_M_ARM64)
+// ARM 64-bit specific code
+
+
+#else
+#error "Unsupported architecture"
+#endif
 
 }  // namespace Orc

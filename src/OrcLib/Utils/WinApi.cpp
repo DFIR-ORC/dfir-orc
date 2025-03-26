@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2019 ANSSI. All Rights Reserved.
+// Copyright 2019 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl
 //

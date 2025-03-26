@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2022 ANSSI. All Rights Reserved.
+// Copyright 2022 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl
 //
@@ -134,7 +134,7 @@ Result<Output> FromHexToLittleEndian(std::basic_string_view<CharT> input)
 template <typename InputIt, typename OutputIt>
 OutputIt FromHex(InputIt first, InputIt last, OutputIt out)
 {
-    constexpr struct NibbleTable::NibbleTable table;
+    constexpr struct Details::NibbleTable table;
 
     auto it = first;
     if (std::distance(first, last) % 2 != 0)

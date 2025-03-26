@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -324,7 +324,7 @@ public:
         auto writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"A8B673BC51F644F5D5DE69B66137F72C0142BA02")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"6FCDFDE69DD34569479CBD3F9D24DF4BBDDC1B1D")));
 
         writer.reset();
 
@@ -336,7 +336,7 @@ public:
         writer = StructuredOutputWriter::GetWriter(result_stream, OutputSpec::Kind::XML, std::move(options));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"6D5F96BB45D8A64AD2F4BE2D5F638887A14FA0D3")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"315BC592071F1FCB2AA44C491793E30C29F86B06")));
     }
 
     TEST_METHOD(RobustStructuredOutputTest)
@@ -357,7 +357,7 @@ public:
             std::make_shared<RobustStructuredWriter>(std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"A8B673BC51F644F5D5DE69B66137F72C0142BA02")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"6FCDFDE69DD34569479CBD3F9D24DF4BBDDC1B1D")));
 
         robust_writer.reset();
 
@@ -372,7 +372,7 @@ public:
             std::make_shared<RobustStructuredWriter>(std::dynamic_pointer_cast<StructuredOutputWriter>(writer));
 
         Assert::IsTrue(SUCCEEDED(WriterSingleTest(robust_writer)));
-        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"6D5F96BB45D8A64AD2F4BE2D5F638887A14FA0D3")));
+        Assert::IsTrue(SUCCEEDED(CompareTestResult(result_stream, L"315BC592071F1FCB2AA44C491793E30C29F86B06")));
     }
 
     HRESULT WriteGargabeElementTest(const std::shared_ptr<ByteStream>& stream, WCHAR wGarbageCode)

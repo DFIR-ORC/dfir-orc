@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -69,6 +69,7 @@ public:
         ProcessTimeLimit,
         ProcessAbnormalTermination,
         ProcessMemoryLimit,
+        ExceededDiskFreeSpaceRequirement,
         Done
     };
 
@@ -103,6 +104,9 @@ private:
     std::optional<std::wstring> m_executableSha1;
     std::optional<std::wstring> m_orcTool;
     bool m_isSelfOrcExecutable;
+
+    uint64_t m_diskRequiredFreeSize;
+    uint64_t m_diskFreeSize;
 
 protected:
     CommandNotification(Event result);
@@ -149,8 +153,17 @@ public:
     static Notification NotifyCanceled();
     static Notification NotifyTerminateAll();
     static Notification NotifyDone(const std::wstring& keyword, const HANDLE hJob);
+    static Notification NotifyDiskFreeSpaceRequirement(
+        const std::wstring& keyword,
+        DWORD processId,
+        HANDLE hProcess,
+        uint64_t requiredSize,
+        uint64_t freeSize);
 
     static Notification NotifyFailure(Event anevent, HRESULT hr, DWORD dwPid, const std::wstring& Keyword);
+
+    uint64_t DiskFreeRequirement() const { return m_diskRequiredFreeSize; }
+    uint64_t DiskFree() const { return m_diskFreeSize; }
 
     // General notification properties
     DWORD_PTR GetProcessID() const { return m_dwPid; };

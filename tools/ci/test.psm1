@@ -219,6 +219,9 @@ function New-OrcLocalConfig() {
         [String[]]
         $DisableKeyword,
         [Parameter()]
+        [String[]]
+        $Keywords,
+        [Parameter()]
         [String]
         $PublicKey,
         [Parameter()]
@@ -283,13 +286,17 @@ function New-OrcLocalConfig() {
         $EnableKeyXml += "<enable_key>$Keyword</enable_key>`n"
     }
 
-
     foreach ($Keyword in $DisableKeyword)
     {
         $DisableKeyXml += "<disable_key>$Keyword</disable_key>`n"
     }
 
-    return "<dfir-orc>`n${PublicKeyXml}${UploadXml}${EnableKeyXml}${DisableKeyXml}${Output}${Temporary}</dfir-orc>"
+    foreach ($Keyword in $Keywords)
+    {
+        $KeywordsXml += "<key>$Keyword</key>`n"
+    }
+
+    return "<dfir-orc>`n${PublicKeyXml}${UploadXml}${EnableKeyXml}${DisableKeyXml}${KeywordsXml}${Output}${Temporary}</dfir-orc>"
 }
 
 function Invoke-OrcOfflineTest {

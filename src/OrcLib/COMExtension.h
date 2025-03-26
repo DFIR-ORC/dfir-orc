@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -18,8 +18,11 @@ namespace Orc {
 class COMExtension : public ExtensionLibrary
 {
 public:
-    COMExtension(const std::wstring& strKeyword, const std::wstring& strX86LibRef, const std::wstring& strX64LibRef)
-        : ExtensionLibrary(strKeyword, strX86LibRef, strX64LibRef) {};
+    COMExtension(const std::wstring& strKeyword, const std::wstring& strLibRef)
+        : ExtensionLibrary(strKeyword, strLibRef, strLibRef, strLibRef) {};
+
+    COMExtension(const std::wstring& strKeyword, const std::wstring& strX86LibRef, const std::wstring& strX64LibRef, const std::wstring& strARM64LibRef)
+        : ExtensionLibrary(strKeyword, strX86LibRef, strX64LibRef, strARM64LibRef) {};
 
     virtual std::pair<HRESULT, HINSTANCE> LoadThisLibrary(const std::wstring& strLibFile);
 

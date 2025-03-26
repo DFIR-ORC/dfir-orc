@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2020 ANSSI. All Rights Reserved.
+// Copyright 2020 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl
 //
@@ -63,7 +63,7 @@ public:
             std::filesystem::remove(path, ec);
             if (ec)
             {
-                Log::Warn(L"Failed to remove '{}' [{}]", path, ec);
+                std::wcerr << fmt::format(L"Failed to remove '{}' [{}]", path, ec);
                 ec.clear();
             }
 

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2020 ANSSI. All Rights Reserved.
+// Copyright 2020 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl (ANSSI)
 //
@@ -12,8 +12,6 @@
 
 #include <fmt/format.h>
 #include <fmt/xchar.h>
-
-#include "Text/Iconv.h"
 
 template <>
 struct fmt::formatter<std::error_code> : public fmt::formatter<std::string_view>
@@ -74,7 +72,9 @@ struct fmt::formatter<std::error_code, wchar_t> : public fmt::formatter<std::wst
                 message = message.substr(0, pos);
             }
 
-            const auto utf16 = Orc::ToUtf16(message);
+            // It is expected that ec.message() only return ansi character set
+            std::wstring utf16;
+            std::copy(std::cbegin(message), std::cend(message), std::back_inserter(utf16));
             fmt::format_to(std::back_inserter(s), L": {}", utf16);
         }
 

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2022 ANSSI. All Rights Reserved.
+// Copyright 2022 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl (ANSSI)
 //
@@ -12,7 +12,7 @@
 namespace {
 
 template <typename LengthT, typename CharT = char>
-static std::basic_string_view<CharT> DecodeLengthValue(Orc::BufferView& buffer, std::error_code& ec)
+static std::basic_string_view<CharT> DecodeLengthValue(Orc::BufferView buffer, std::error_code& ec)
 {
     auto input = buffer;
 

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -28,6 +28,7 @@
 
 #include <boost/tokenizer.hpp>
 #include "Utils/WinApi.h"
+#include "Text/ByteQuantity.h"
 
 using namespace std;
 
@@ -532,6 +533,21 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
 
         std::chrono::minutes timeout(li.QuadPart);
         command->SetTimeout(timeout);
+    }
+
+    if (item[WOLFLAUNCHER_COMMAND_DISKFREE])
+    {
+        auto diskFree = std::wstring_view(item[WOLFLAUNCHER_COMMAND_DISKFREE]);
+
+        auto freeSpace = Text::ByteQuantityFromString(diskFree);
+        if (!freeSpace)
+        {
+            Log::Debug(
+                L"Failed to parse command's free disk space requirement (value: {}) [{}]", diskFree, freeSpace.error());
+            return nullptr;
+        }
+
+        command->SetDiskFreeSpaceRequirement(*freeSpace);
     }
 
     return command;

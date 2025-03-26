@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2020 ANSSI. All Rights Reserved.
+// Copyright 2020 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl (ANSSI)
 //
@@ -166,6 +166,7 @@ public:
     T& value() { return m_data; }
 
     const T& operator*() const { return m_data; }
+    T& operator*() { return m_data; }
 
     T* data() { return &m_data; }
     const T* data() const { return &m_data; }

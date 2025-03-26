@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2020 ANSSI. All Rights Reserved.
+// Copyright 2020 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl (ANSSI)
 //
@@ -319,10 +319,16 @@ auto& get_std_out()
     }
 }
 
+enum class ByteQuantityBase : uint8_t
+{
+    Base2 = 0,  // 1024
+    Base10  // 1000
+};
+
 //
 // Strong type for integral type used as byte quantity
 //
-template <class T>
+template <typename T>
 struct ByteQuantity
 {
     using value_type = T;
@@ -339,10 +345,10 @@ struct ByteQuantity
     operator T&() { return value; }
     operator T() const { return value; }
 
-    template <typename U>
-    operator U() const
+    ByteQuantity& operator=(const T& v)
     {
-        return static_cast<U>(value);
+        value = v;
+        return *this;
     }
 
     T value;
@@ -430,4 +436,10 @@ struct BoolOnOff
 };
 
 }  // namespace Traits
+
+using ByteQuantityBase = Traits::ByteQuantityBase;
+
+template <typename T>
+using ByteQuantity = Traits::ByteQuantity<T>;
+
 }  // namespace Orc

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -24,7 +24,6 @@ using namespace Concurrency;
 
 using namespace Orc;
 
-static const NTSTATUS STATUS_PIPE_BROKEN = 0xC000014BL;
 
 ProcessRedirect::ProcessRedirect(ProcessInOut selection)
     : m_Status(Initialized)

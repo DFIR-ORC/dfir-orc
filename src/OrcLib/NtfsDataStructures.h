@@ -384,7 +384,7 @@ struct SECURITY_DESCRIPTOR_ENTRY
 {
     UINT32 Hash;
     UINT32 SecID;
-    UINT64 OffsetEntry;
+    ULONG64 OffsetEntry;
     UINT32 SizeEntry;
     SECURITY_DESCRIPTOR_RELATIVE SecurityDescriptor;
 };

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -38,6 +38,7 @@ constexpr auto WOLFLAUNCHER_COMMAND_SYSTEMTYPE = 6L;
 constexpr auto WOLFLAUNCHER_COMMAND_QUEUE = 7L;
 constexpr auto WOLFLAUNCHER_COMMAND_OPTIONAL = 8L;
 constexpr auto WOLFLAUNCHER_COMMAND_TIMEOUT = 9L;
+constexpr auto WOLFLAUNCHER_COMMAND_DISKFREE = 10L;
 
 constexpr auto WOLFLAUNCHER_DESTINATION = 0L;
 constexpr auto WOLFLAUNCHER_METHOD = 1L;
@@ -61,6 +62,8 @@ constexpr auto WOLFLAUNCHER_ARCHIVE_CMD_TIMEOUT = 7L;
 constexpr auto WOLFLAUNCHER_ARCHIVE_TIMEOUT = 8L;
 constexpr auto WOLFLAUNCHER_ARCHIVE_OPTIONAL = 9L;
 constexpr auto WOLFLAUNCHER_ARCHIVE_CHILDDEBUG = 10L;
+constexpr auto WOLFLAUNCHER_ARCHIVE_DISKFREE = 11L;
+constexpr auto WOLFLAUNCHER_ARCHIVE_PHYSICALMEMORY = 12L;
 
 constexpr auto WOLFLAUNCHER_RECIPIENT_NAME = 0L;
 constexpr auto WOLFLAUNCHER_RECIPIENT_ARCHIVE = 1L;

@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -39,7 +39,7 @@ private:
 
 public:
     XmlLiteExtension()
-        : ExtensionLibrary(L"xmllite.dll"s, L"xmllite.dll;XMLLITE_X86DLL"s, L"xmllite.dll"s)
+        : ExtensionLibrary(L"xmllite.dll"s, L"xmllite.dll;XMLLITE_X86DLL"s, L"xmllite.dll"s, L"xmllite.dll"s)
     {
         m_strDesiredName = L"XmlLite.dll"s;
     };

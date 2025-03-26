@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -164,6 +164,7 @@ protected:
     static VOID CALLBACK WaitOrTimerCallbackFunction(__in PVOID lpParameter, __in BOOLEAN TimerOrWaitFired);
 
     HRESULT MoveCompletedCommand(const std::shared_ptr<CommandExecute>& command);
+    void CheckFreeDiskSpaceRequirement(const std::wstring& directory);
 
     virtual void run();
 };

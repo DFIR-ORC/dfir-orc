@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2023 ANSSI. All Rights Reserved.
+// Copyright 2023 ANSSI. All Rights Reserved.
 //
 // Author(s): fabienfl (ANSSI)
 //
@@ -31,10 +31,14 @@ namespace Orc {
 #define ORC_FILE_ATTRIBUTE_EA 0x00040000
 #define ORC_FILE_ATTRIBUTE_PINNED 0x00080000
 #define ORC_FILE_ATTRIBUTE_UNPINNED 0x00100000
-#define ORC_FILE_ATTRIBUTE_RECALL_ON_OPEN 0x00040000
+//#define ORC_FILE_ATTRIBUTE_RECALL_ON_OPEN 0x00040000  // ReFS only ? Conflict with FILE_ATTRIBUTE_EA
 #define ORC_FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS 0x00400000
 
-enum class FileAttribute
+//#define ORC_FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL 0x00200000  // 10.0.16267.0
+#define ORC_FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL 0x20000000  // >= 10.0.17134.0
+#define ORC_FILE_ATTRIBUTE_CASCADES_REMOTE 0x40000000
+
+enum class FileAttribute : uint32_t
 {
     kFileAttributeReadOnly = ORC_FILE_ATTRIBUTE_READONLY,
     kFileAttributeHidden = ORC_FILE_ATTRIBUTE_HIDDEN,
@@ -56,8 +60,10 @@ enum class FileAttribute
     kFileAttributeEA = ORC_FILE_ATTRIBUTE_EA,
     kFileAttributePinned = ORC_FILE_ATTRIBUTE_PINNED,
     kFileAttributeUnpinned = ORC_FILE_ATTRIBUTE_UNPINNED,
-    kFileAttributeRecallOnOpen = ORC_FILE_ATTRIBUTE_RECALL_ON_OPEN,
-    kFileAttributeRecallOnDataAccess = ORC_FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
+    //kFileAttributeRecallOnOpen = ORC_FILE_ATTRIBUTE_RECALL_ON_OPEN,
+    kFileAttributeRecallOnDataAccess = ORC_FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS,
+    kFileAttributeStrictlySequential = ORC_FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL,
+    kFileAttributeCascadesRemote = ORC_FILE_ATTRIBUTE_CASCADES_REMOTE
 };
 
 ENABLE_BITMASK_OPERATORS(FileAttribute)

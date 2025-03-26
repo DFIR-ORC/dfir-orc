@@ -1,7 +1,7 @@
 //
 // SPDX-License-Identifier: LGPL-2.1-or-later
 //
-// Copyright © 2011-2019 ANSSI. All Rights Reserved.
+// Copyright 2011-2019 ANSSI. All Rights Reserved.
 //
 // Author(s): Jean Gautier (ANSSI)
 //
@@ -302,7 +302,7 @@ int wmain(int argc, const WCHAR* argv[])
             {
                 HRESULT hr = g_Tools[index].WinMain(--argc, ++argv);
 
-                // if parent is 'explorer' or debugger attached press any key to continue
+#ifdef _DEBUG
                 if (IsDebuggerPresent())
                 {
                     DebugBreak();
@@ -312,6 +312,13 @@ int wmain(int argc, const WCHAR* argv[])
                     std::wcerr << L"Press any key to continue..." << std::endl;
                     _getch();
                 }
+#else
+                if (UtilitiesMain::IsProcessParent(L"explorer.exe"))
+                {
+                    std::wcerr << L"Press any key to continue..." << std::endl;
+                    _getch();
+                }
+#endif
 
                 return hr;
             }
