@@ -772,13 +772,13 @@ HRESULT SystemDetails::GetPageSize(DWORD& dwPageSize)
     return S_OK;
 }
 
-HRESULT SystemDetails::GetLargePageSize(DWORD& dwPageSize)
+HRESULT SystemDetails::GetLargePageSize(DWORD& dwLargePageSize)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = LoadSystemDetails()))
         return hr;
 
-    dwPageSize = 0L;
+    dwLargePageSize = g_pDetailsBlock->dwLargePageSize;
     return S_OK;
 }
 
