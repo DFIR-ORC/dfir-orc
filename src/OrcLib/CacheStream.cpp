@@ -88,6 +88,18 @@ HRESULT CacheStream::Read_(
         }
     }
 
+    if (m_cacheUse == 0)
+    {
+        // Align the cache stream with underlying stream
+        hr = m_stream.SetFilePointer(0, FILE_CURRENT, &m_streamOffset);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        m_cacheOffset = m_streamOffset;
+    }
+
     ULONGLONG totalRead = 0;
     while (totalRead != cbBytes)
     {
@@ -119,6 +131,7 @@ HRESULT CacheStream::Read_(
             }
 
             m_cacheOffset = m_streamOffset;
+            m_offset = m_streamOffset;
             m_cacheUse = streamRead;
             m_streamOffset += streamRead;
         }
@@ -151,6 +164,11 @@ CacheStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMetho
 
     if (dwMoveMethod == FILE_CURRENT)
     {
+        if (m_cacheUse == 0)
+        {
+            return m_stream.SetFilePointer(0, FILE_CURRENT, pCurrPointer);
+        }
+
         if (DistanceToMove == 0)
         {
             *pCurrPointer = m_offset;
