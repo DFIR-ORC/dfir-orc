@@ -226,20 +226,22 @@ size_t ReadChunkAt(ByteStream& stream, uint64_t offset, BasicBufferSpan<CharT> o
  * \brief Fill an item of type 'T' and fail if there is not enough data to read.
  */
 template <typename ItemT>
-void ReadItem(ByteStream& stream, ItemT& output, std::error_code& ec)
+size_t ReadItem(ByteStream& stream, ItemT& output, std::error_code& ec)
 {
     uint64_t processed = Read(stream, BufferSpan(reinterpret_cast<uint8_t*>(&output), sizeof(output)), ec);
     if (ec)
     {
-        return;
+        return processed;
     }
 
     if (processed != sizeof(output))
     {
         ec = std::make_error_code(std::errc::message_size);
         Log::Trace("Failed to read expected size ({}/{})", processed, sizeof(ItemT));
-        return;
+        return processed;
     }
+
+    return processed;
 }
 
 /*!
