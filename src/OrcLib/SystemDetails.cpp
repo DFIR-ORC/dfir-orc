@@ -254,47 +254,6 @@ HRESULT SystemDetails::GetOrcSystemType(std::wstring& strProductType)
     return GetSystemType(strProductType);
 }
 
-bool SystemDetails::IsKnownWindowsBuild(uint32_t build)
-{
-    switch (build)
-    {
-        case 26100:
-        case 22631:
-        case 22621:
-        case 22000:
-        case 20348:
-        case 19046:
-        case 19045:
-        case 19044:
-        case 19043:
-        case 19042:
-        case 19041:
-        case 18363:
-        case 18362:
-        case 17763:
-        case 17134:
-        case 16299:
-        case 15063:
-        case 14393:
-        case 10586:
-        case 10240:
-        case 9600:
-        case 9200:
-        case 7601:
-        case 7600:
-        case 6003:
-        case 6002:
-        case 6001:
-        case 6000:
-        case 4500:
-        case 3790:
-        case 2600:
-            return true;
-        default:
-            Log::Warn(L"Build number {} is not associated with any known Windows release", build);
-            return false;
-    }
-}
 
 void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, SystemTags& tags)
 {
@@ -310,9 +269,35 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
 
     switch (build)
     {
+        case 26200:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows11");
+                    tags.insert(L"Release#25H2");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    Log::Warn(L"Product type does not match build number (no server release for build 26200");
+                    tags.insert(L"Windows11");
+                    tags.insert(L"Release#25H2");
+                    break;
+            }
+            break;
+        case 26120:
         case 26100:
-            tags.insert(L"Windows11");
-            tags.insert(L"Release#24H2");
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows11");
+                    tags.insert(L"Release#24H2");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2025");
+                    tags.insert(L"Release#RTM");
+                    break;
+            }
             break;
         case 22631:
             tags.insert(L"Windows11");
@@ -321,7 +306,7 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
         case 22621:
             tags.insert(L"Windows11");
             tags.insert(L"Release#22H2");
-            tags.insert(L"Release#23H2");
+            //tags.insert(L"Release#23H2");
             break;
         case 22000:
             tags.insert(L"Windows11");
@@ -417,7 +402,6 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
         case 10240:
             tags.insert(L"Windows10");
             tags.insert(L"Release#1507");
-            tags.insert(L"Release#RTM");
             break;
         case 9600:
             switch (ProductType)
@@ -432,7 +416,6 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
                     tags.insert(L"Release#RTM");
                     break;
             }
-
             break;
         case 9200:
             switch (ProductType)
@@ -472,7 +455,7 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
             break;
         case 6003:
             tags.insert(L"WindowsServer2008");
-            tags.insert(L"Release#RTM");
+            tags.insert(L"Release#SP2");
             break;
         case 6002:
             switch (ProductType)
