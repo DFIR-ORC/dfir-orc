@@ -17,7 +17,6 @@ namespace Orc {
 CacheStream::CacheStream(ByteStream& stream, size_t cacheSize)
     : ByteStream()
     , m_stream(stream)
-    , m_streamOffset(0)
     , m_offset(0)
     , m_cache()
     , m_cacheUse(0)
@@ -49,7 +48,7 @@ HRESULT CacheStream::Close()
 HRESULT CacheStream::Duplicate(const CacheStream& other)
 {
     m_stream = other.m_stream;
-    m_streamOffset = other.m_streamOffset;
+    m_offset = other.m_offset;
     m_cacheOffset = other.m_cacheOffset;
     m_cacheUse = other.m_cacheUse;
     m_cacheSize = other.m_cacheSize;
@@ -78,26 +77,14 @@ HRESULT CacheStream::Read_(
 {
     HRESULT hr = E_FAIL;
 
-    // Lazy allocation
-    if (m_cache.size() == 0)
-    {
-        hr = Open();
-        if (FAILED(hr))
-        {
-            return hr;
-        }
-    }
-
     if (m_cacheUse == 0)
     {
         // Align the cache stream with underlying stream
-        hr = m_stream.SetFilePointer(0, FILE_CURRENT, &m_streamOffset);
+        hr = m_stream.SetFilePointer(0, FILE_CURRENT, &m_offset);
         if (FAILED(hr))
         {
             return hr;
         }
-
-        m_cacheOffset = m_streamOffset;
     }
 
     ULONGLONG totalRead = 0;
@@ -130,10 +117,8 @@ HRESULT CacheStream::Read_(
                 break;
             }
 
-            m_cacheOffset = m_streamOffset;
-            m_offset = m_streamOffset;
+            m_cacheOffset = m_offset;
             m_cacheUse = streamRead;
-            m_streamOffset += streamRead;
         }
     }
 
@@ -162,30 +147,41 @@ CacheStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMetho
         pCurrPointer = &newOffset;
     }
 
-    if (dwMoveMethod == FILE_CURRENT)
+    if (dwMoveMethod == FILE_CURRENT && DistanceToMove == 0)
     {
-        if (m_cacheUse == 0)
-        {
-            return m_stream.SetFilePointer(0, FILE_CURRENT, pCurrPointer);
-        }
-
-        if (DistanceToMove == 0)
-        {
-            *pCurrPointer = m_offset;
-            return S_OK;
-        }
-
-        dwMoveMethod = FILE_BEGIN;
-        DistanceToMove = m_offset + DistanceToMove;
+        *pCurrPointer = m_offset;
+        return S_OK;
     }
 
-    HRESULT hr = m_stream.SetFilePointer(DistanceToMove, dwMoveMethod, pCurrPointer);
+    uint64_t offset = 0;
+    switch (dwMoveMethod)
+    {
+        case FILE_BEGIN:
+            offset = DistanceToMove;
+            break;
+        case FILE_CURRENT:
+            offset = m_offset + DistanceToMove;
+            break;
+        case FILE_END:
+            offset = m_stream.GetSize() + DistanceToMove;
+            break;
+        default:
+            return E_INVALIDARG;
+    }
+
+    if (offset >= m_cacheOffset && offset < m_cacheOffset + m_cacheUse)
+    {
+        m_offset = offset;
+        *pCurrPointer = offset;
+        return S_OK;
+    }
+
+    auto hr = m_stream.SetFilePointer(offset, FILE_BEGIN, pCurrPointer);
     if (FAILED(hr))
     {
         return hr;
     }
 
-    m_streamOffset = *pCurrPointer;
     m_offset = *pCurrPointer;
     return S_OK;
 }

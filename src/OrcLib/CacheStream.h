@@ -60,7 +60,6 @@ public:
 
 private:
     ByteStream& m_stream;
-    uint64_t m_streamOffset;
     uint64_t m_offset;
     std::vector<uint8_t> m_cache;
     size_t m_cacheUse;
