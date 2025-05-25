@@ -23,47 +23,168 @@ concept not_void = !std::is_same_v<T, void>;
 template <typename T = void>
 struct Result : std::expected<T, std::error_code>
 {
-    using unexpected_type = std::unexpected<std::error_code>;
+    using value_t = T;
+    using expected_t = std::expected<T, std::error_code>;
+    using unexpected_t = std::unexpected<std::error_code>;
 
-    using std::expected<T, std::error_code>::expected;
+    using expected_t::expected;
 
     constexpr Result(Result<T>&& value) noexcept = default;
 
     template <typename U = T>
     constexpr Result(U&& value) noexcept
         requires(!std::is_same_v<U, void> && std::is_convertible_v<U, T>)
-        : std::expected<T, std::error_code>(std::forward<U>(value)) {};
+        : expected_t(std::forward<U>(value)) {};
 
     template <typename... Args>
     constexpr Result(Args&&... args) noexcept
         requires std::constructible_from<T, Args...>
-        : std::expected<T, std::error_code>(std::in_place, std::forward<Args>(args)...)
+        : expected_t(std::in_place, std::forward<Args>(args)...)
     {
     }
 
     constexpr Result(std::errc ec)
-        : std::expected<T, std::error_code>(unexpected_type(std::make_error_code(ec))) {};
+        : expected_t(unexpected_t(std::make_error_code(ec))) {};
 
     constexpr Result(std::error_code ec)
-        : std::expected<T, std::error_code>(unexpected_type(ec)) {};
-    constexpr Result(unexpected_type unexpected)
+        : expected_t(unexpected_t(ec)) {};
+    constexpr Result(unexpected_t unexpected)
         : std::expected<T, std::error_code>(std::move(unexpected)) {};
 
     constexpr Result& operator=(Result<T>&& value) noexcept = default;
 
     constexpr Result& operator=(const std::errc& ec) noexcept
     {
-        this->std::expected<T, std::error_code>::operator=(unexpected_type(ec));
+        this->expected_t::operator=(unexpected_t(ec));
         return *this;
     }
 
     constexpr Result& operator=(const std::error_code& ec) noexcept
     {
-        this->std::expected<T, std::error_code>::operator=(unexpected_type(ec));
+        this->expected_t::operator=(unexpected_t(ec));
         return *this;
     }
 
     constexpr inline bool has_error() const { return !this->has_value(); }
+
+    // [expected.object.monadic]
+    template <class _Fn>
+    constexpr auto and_then(_Fn&& _Func) &
+    {
+        using _Uty = std::remove_cvref_t<std::invoke_result_t<_Fn, value_t>>;
+
+        if constexpr (std::_Is_specialization_v<_Uty, Result>)
+        {
+            if (this->has_value())
+            {
+                return std::invoke(std::forward<_Fn>(_Func), std::move(this->value()));
+            }
+            else
+            {
+                return _Uty {std::unexpected<std::error_code>(this->error())};
+            }
+        }
+        else
+        {
+            if (this->has_value())
+            {
+                return Result<_Uty> {std::invoke(std::forward<_Fn>(_Func), std::move(this->value()))};
+            }
+            else
+            {
+                return Result<_Uty> {std::unexpected<std::error_code>(this->error())};
+            }
+        }
+    }
+
+    template <class _Fn>
+    constexpr auto and_then(_Fn&& _Func) const&
+    {
+        using _Uty = std::remove_cvref_t<std::invoke_result_t<_Fn, value_t>>;
+
+        if constexpr (std::_Is_specialization_v<_Uty, Result>)
+        {
+            if (this->has_value())
+            {
+                return std::invoke(std::forward<_Fn>(_Func), std::move(this->value()));
+            }
+            else
+            {
+                return _Uty {std::unexpected<std::error_code>(this->error())};
+            }
+        }
+        else
+        {
+            if (this->has_value())
+            {
+                return Result<_Uty> {std::invoke(std::forward<_Fn>(_Func), std::move(this->value()))};
+            }
+            else
+            {
+                return Result<_Uty> {std::unexpected<std::error_code>(this->error())};
+            }
+        }
+    }
+
+    template <class _Fn>
+    constexpr auto and_then(_Fn&& _Func) &&
+    {
+        using _Uty = std::remove_cvref_t<std::invoke_result_t<_Fn, value_t>>;
+
+        if constexpr (std::_Is_specialization_v<_Uty, Result>)
+        {
+            if (this->has_value())
+            {
+                return std::invoke(std::forward<_Fn>(_Func), std::move(this->value()));
+            }
+            else
+            {
+                return _Uty {std::unexpected<std::error_code>(this->error())};
+            }
+        }
+        else
+        {
+            if (this->has_value())
+            {
+                return Result<_Uty> {std::invoke(std::forward<_Fn>(_Func), std::move(this->value()))};
+            }
+            else
+            {
+                return Result<_Uty> {std::unexpected<std::error_code>(this->error())};
+            }
+        }
+    }
+
+    template <class _Fn>
+    constexpr auto and_then(_Fn&& _Func) const&&
+    {
+        using _Uty = std::remove_cvref_t<std::invoke_result_t<_Fn, value_t>>;
+
+        if constexpr (std::_Is_specialization_v<_Uty, Result>)
+        {
+            if (this->has_value())
+            {
+                return std::invoke(std::forward<_Fn>(_Func), std::move(this->value()));
+            }
+            else
+            {
+                return _Uty {std::unexpected<std::error_code>(this->error())};
+            }
+        }
+        else
+        {
+            if (this->has_value())
+            {
+                return Result<_Uty> {std::invoke(std::forward<_Fn>(_Func), std::move(this->value()))};
+            }
+            else
+            {
+                return Result<_Uty> {std::unexpected<std::error_code>(this->error())};
+            }
+        }
+    }
+
+
 };
 
 template <>
