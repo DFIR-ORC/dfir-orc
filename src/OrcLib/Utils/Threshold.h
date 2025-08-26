@@ -29,7 +29,7 @@ class Threshold
 
 public:
     Threshold()
-        : m_operator(GreaterThan)
+        : m_operator(ComparisonOperator::GreaterThan)
         , m_value()
     {
     }
