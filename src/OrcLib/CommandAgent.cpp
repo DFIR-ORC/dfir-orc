@@ -116,7 +116,7 @@ std::shared_ptr<ByteStream> OpenCliConfig(std::wstring_view configLocation)
             GENERIC_READ,
             FILE_SHARE_READ | FILE_SHARE_WRITE,
             NULL,
-            CREATE_ALWAYS,
+            OPEN_EXISTING,
             FILE_ATTRIBUTE_NORMAL,
             0);
         if (FAILED(hr))
