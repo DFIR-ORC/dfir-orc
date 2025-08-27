@@ -402,7 +402,8 @@ CommandMessage::Message WolfExecution::SetCommandFromConfigItem(const ConfigItem
                 else
                 {
                     wstring strInputFile;
-                    if (SUCCEEDED(hr1 = ExpandFilePath(input[WOLFLAUNCHER_INSOURCE].c_str(), strInputFile)))
+                    // set parameter 'exists' to false because WolfLauncher would discard the command otherwise
+                    if (SUCCEEDED(hr1 = ExpandFilePath(input[WOLFLAUNCHER_INSOURCE].c_str(), strInputFile, false)))
                     {
                         if (szPattern != NULL)
                             command->PushInputFile(input.dwOrderIndex, strInputFile, strName, szPattern);
