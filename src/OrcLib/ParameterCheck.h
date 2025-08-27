@@ -15,8 +15,9 @@
 
 namespace Orc {
 
-HRESULT ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS);
-HRESULT ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile);
+HRESULT
+ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS, bool exists = true);
+HRESULT ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile, bool exists = true);
 
 HRESULT
 ExpandDirectoryPath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS);

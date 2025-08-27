@@ -221,7 +221,8 @@ HRESULT Orc::IsFileName(const WCHAR* szInputFile)
     return S_FALSE;
 }
 
-HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS)
+HRESULT
+Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS, bool exists)
 {
     DWORD dwRequiredLen = ExpandEnvironmentStrings(szInputString, NULL, 0L);
 
@@ -235,20 +236,29 @@ HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWOR
 
     // Checking if file exists and is not a directory
     if (INVALID_FILE_ATTRIBUTES == dwAttr)
+    {
+        auto lastError = GetLastError();
+        if (exists == false && lastError == ERROR_FILE_NOT_FOUND)
+        {
+            return S_OK;
+        }
+
         return HRESULT_FROM_WIN32(GetLastError());
+    }
+
     if (FILE_ATTRIBUTE_DIRECTORY & dwAttr)
         return HRESULT_FROM_WIN32(ERROR_INVALID_NAME);
 
     return S_OK;
 }
 
-HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile)
+HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile, bool exists)
 {
     HRESULT hr = E_FAIL;
 
     WCHAR szInputFile[ORC_MAX_PATH];
     ZeroMemory(szInputFile, sizeof(WCHAR) * ORC_MAX_PATH);
-    if (FAILED(hr = ExpandFilePath(szInputString, szInputFile, ORC_MAX_PATH)))
+    if (FAILED(hr = ExpandFilePath(szInputString, szInputFile, ORC_MAX_PATH, exists)))
         return hr;
     strInputFile.assign(szInputFile);
     return S_OK;
