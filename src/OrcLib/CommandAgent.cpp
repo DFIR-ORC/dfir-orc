@@ -684,7 +684,8 @@ std::shared_ptr<CommandExecute> CommandAgent::PrepareCommandExecute(const std::s
                     else
                     {
                         WCHAR inputfile[ORC_MAX_PATH];
-                        if (FAILED(hr = ExpandFilePath(parameter.Name.c_str(), inputfile, ORC_MAX_PATH)))
+                        // set parameter 'exists' to false because WolfLauncher would discard the command otherwise
+                        if (FAILED(hr = ExpandFilePath(parameter.Name.c_str(), inputfile, ORC_MAX_PATH, false)))
                             return;
 
                         wstring Arg;
