@@ -1021,10 +1021,11 @@ bool UtilitiesMain::WaitForDebugger(int argc, const WCHAR* argv[])
 
 bool UtilitiesMain::WaitForDebuggerOption(LPCWSTR szArg)
 {
-#ifdef _DEBUG
     using namespace std::chrono_literals;
     if (_wcsnicmp(szArg, L"WaitForDebugger", wcslen(L"WaitForDebugger")))
         return false;
+
+#ifdef _DEBUG
     Log::Info("Waiting 30 seconds for a debugger to attach...");
     auto counter = 0LU;
     while (!IsDebuggerPresent() && counter < 60)
