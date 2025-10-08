@@ -209,7 +209,6 @@ inline Result<T> Success(auto... args)
     return {std::in_place, args...};
 }
 
-template <>
 inline Result<void> Success()
 {
     return Result<void> {std::in_place};
