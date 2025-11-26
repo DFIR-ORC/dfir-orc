@@ -81,6 +81,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                          config.Temporary))
             {
             }
+            if (BooleanOption(argv[i] + 1, L"NoRelocate", config.bNoRelocate))
+            {
+            }
         }
         else if (firstLetter == L'-')
         {
@@ -119,6 +122,11 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
+
+    if (configitem[ORC_NORELOCATE])
+    {
+        config.bNoRelocate = true;
+    }
 
     if (configitem[ORC_DOWNLOAD])
     {

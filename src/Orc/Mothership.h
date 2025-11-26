@@ -90,6 +90,7 @@ public:
         bool bPreserveJob = false;
         bool bUseWMI = false;
         bool bUseLocalCopy = false;
+        bool bNoRelocate = false;
         DWORD dwCreationFlags = 0L;
         std::wstring strCmdLineArgs;
         std::wstring strParentName;

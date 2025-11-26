@@ -117,16 +117,15 @@ void RelocateOnLocalDrive(std::error_code& ec)
     ZeroMemory(&si, sizeof(si));
     si.StartupInfo.cb = sizeof(si);
 
-    std::vector<std::wstring> arguments;
-    for (size_t i = 1; i < __argc; ++i)
-    {
-        arguments.emplace_back(__wargv[i]);
-    }
+    std::wstring commandLine = GetCommandLineW();
+    commandLine += L" /norelocate";
 
-    const auto commandLine = boost::join(arguments, " ");
+    std::vector<wchar_t> commandLineBuffer(std::cbegin(commandLine), std::cend(commandLine));
+    commandLineBuffer.push_back(L'\0');
+
     if (!CreateProcessW(
             newMothership.c_str(),
-            const_cast<LPWSTR>(commandLine.c_str()),
+            commandLineBuffer.data(),
             NULL,
             NULL,
             TRUE,
@@ -230,6 +229,17 @@ HRESULT Main::ChangeTemporaryEnvironment()
     return S_OK;
 }
 
+std::wstring RemoveString(std::wstring string, std::wstring toremove)
+{
+    size_t pos = string.find(toremove);
+    if (pos != std::wstring::npos)
+    {
+        string.erase(pos, toremove.length());
+    }
+
+    return string;
+}
+
 HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArgs)
 {
     HRESULT hr = E_FAIL;
@@ -303,6 +313,8 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
 
     std::vector<WCHAR> szCommandLine(MAX_CMDLINE);
     std::wstring strCommandLine = cmdLineBuilder.str();
+
+    RemoveString(strCommandLine, L" /norelocate");
 
     HANDLE hMothership = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, GetCurrentProcessId());
     if (hMothership)
@@ -722,11 +734,14 @@ HRESULT Main::Run()
     HRESULT hr = E_FAIL;
 
     std::error_code ec;
-    RelocateOnLocalDrive(ec);
-    if (ec)
+    if (config.bNoRelocate == false)
     {
-        Log::Error("Failed to relocate on local drive [{}]", ec);
-        ec.clear();
+        RelocateOnLocalDrive(ec);
+        if (ec)
+        {
+            Log::Error("Failed to relocate on local drive [{}]", ec);
+            ec.clear();
+        }
     }
 
     hr = ChangeTemporaryEnvironment();
