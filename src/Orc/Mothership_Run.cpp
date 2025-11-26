@@ -63,51 +63,39 @@ void RelocateFile(const std::filesystem::path& source, const std::filesystem::pa
     }
 }
 
-void RelocateOnLocalDrive(std::error_code& ec)
+Result<void> RelocateOnLocalDrive(const std::filesystem::path& path)
 {
+    std::error_code ec;
+
     const std::filesystem::path mothership = GetModuleFileNameApi(NULL, ec);
     if (ec)
     {
         Log::Debug("Failed GetModuleFileNameApi [{}]", ec);
-        return;
+        return ec;
     }
 
     if (!PathIsNetworkPathW(mothership.c_str()))
     {
-        return;
+        return Orc::Success<void>();
     }
 
     Log::Warn(
         "ORC is executing from a network drive, relocate to local drive to prevent connectivity issues during collect");
 
-    const std::filesystem::path temp = GetTempPathApi(ec);
-    if (ec)
-    {
-        Log::Debug("Failed GetTempPathApi [{}]", ec);
-        return;
-    }
-
-    if (PathIsNetworkPathW(temp.c_str()))
-    {
-        ec = std::make_error_code(std::errc::invalid_argument);
-        Log::Debug("Temporary directory is a network path");
-        return;
-    }
-
     std::filesystem::path localConfiguration = mothership;
     localConfiguration.replace_extension(L"xml");
-    const std::filesystem::path newLocalConfiguration = temp / localConfiguration.filename();
+    const std::filesystem::path newLocalConfiguration = path / localConfiguration.filename();
     RelocateFile(localConfiguration, newLocalConfiguration, ec);
     if (ec)
     {
-        return;
+        return ec;
     }
 
-    const std::filesystem::path newMothership = temp / mothership.filename();
+    const std::filesystem::path newMothership = path / mothership.filename();
     RelocateFile(mothership, newMothership, ec);
     if (ec)
     {
-        return;
+        return ec;
     }
 
     PROCESS_INFORMATION pi;
@@ -137,7 +125,7 @@ void RelocateOnLocalDrive(std::error_code& ec)
     {
         ec = LastWin32Error();
         Log::Debug("Failed CreateProcessW [{}]", ec);
-        return;
+        return ec;
     }
 
     WaitForSingleObject(pi.hProcess, INFINITE);
@@ -736,11 +724,17 @@ HRESULT Main::Run()
     std::error_code ec;
     if (config.bNoRelocate == false)
     {
-        RelocateOnLocalDrive(ec);
+        const std::filesystem::path temp = GetTempPathApi(ec);
         if (ec)
         {
-            Log::Error("Failed to relocate on local drive [{}]", ec);
-            ec.clear();
+            Log::Debug("Failed GetTempPathApi [{}]", ec);
+            return HRESULT_FROM_WIN32(ec.value());
+        }
+
+        auto rv = RelocateOnLocalDrive(temp);
+        if (!rv)
+        {
+            Log::Error("Failed to relocate on local drive [{}]", rv.error());
         }
     }
 

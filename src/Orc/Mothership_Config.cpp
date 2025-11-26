@@ -20,6 +20,8 @@
 #include <sstream>
 #include <algorithm>
 
+#include "Utils/Result.h"
+
 using namespace std;
 
 using namespace Orc;
