@@ -270,8 +270,8 @@ public:
 class RegistryHandle final : public DescriptorGuard<HKEY>
 {
 public:
-    RegistryHandle(HKEY handle = static_cast<HKEY>(INVALID_HANDLE_VALUE))
-        : DescriptorGuard(handle, static_cast<HKEY>(INVALID_HANDLE_VALUE))
+    RegistryHandle(HKEY handle = static_cast<HKEY>(0))
+        : DescriptorGuard(handle, static_cast<HKEY>(0))
     {
     }
 
