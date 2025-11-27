@@ -650,6 +650,7 @@ HRESULT Orc::GetFileSizeFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
             break;
     }
 
+    _set_errno(0);
     size.QuadPart = _wtoi64(szTemp) * dwMultiplier;
     if (errno == ERANGE)
     {
@@ -674,6 +675,8 @@ HRESULT Orc::GetPercentageFromArg(const WCHAR* pStr, DWORD& value)
     {
         str.remove_suffix(1);
     }
+
+    _set_errno(0);
     auto _value = _wtoi(pStr);
 
     if (_value > 100)
@@ -715,6 +718,7 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
         return E_POINTER;
     }
 
+    _set_errno(0);
     size.QuadPart = _wtoi64(pSize);
 
     if (size.QuadPart == 0LL)
@@ -748,6 +752,7 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, size_t& size)
         return E_POINTER;
     }
 
+    _set_errno(0);
     auto _size = _wtoi(pStr);
 
     if (errno == ERANGE || _size == 0)
@@ -783,6 +788,7 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, DWORD& value)
         return E_POINTER;
     }
 
+    _set_errno(0);
     auto _value = _wtoi(pStr);
 
     if (errno == ERANGE || _value == 0)
@@ -1230,6 +1236,7 @@ HRESULT GetSubFormat(
 
     try
     {
+        _set_errno(0);
         result = Orc::ConvertTo<unsigned short>(_wtoi(String));
     }
     catch (const std::overflow_error&)
