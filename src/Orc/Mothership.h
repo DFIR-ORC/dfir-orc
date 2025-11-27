@@ -111,8 +111,6 @@ private:
 
     std::shared_ptr<DownloadTask> m_DownloadTask;
 
-    HRESULT ChangeTemporaryEnvironment();
-
     HRESULT Launch(const std::wstring& strToExecute, const std::wstring& strArgs);
 
     HRESULT LaunchSelf();

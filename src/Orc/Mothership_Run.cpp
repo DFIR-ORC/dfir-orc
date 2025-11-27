@@ -194,29 +194,6 @@ void Main::Configure(int argc, const wchar_t* argv[])
     UtilitiesMain::Configure(argc, argv);
 }
 
-HRESULT Main::ChangeTemporaryEnvironment()
-{
-    HRESULT hr = E_FAIL;
-
-    if (config.Temporary.Path.empty())
-        return S_OK;
-
-    if (!SetEnvironmentVariableW(L"TEMP", config.Temporary.Path.c_str()))
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to set %TEMP% to '{}' [{}]", config.Temporary.Path, SystemError(hr));
-        return E_INVALIDARG;
-    }
-    if (!SetEnvironmentVariableW(L"TMP", config.Temporary.Path.c_str()))
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to set %TMP% to '{}' [{}]", config.Temporary.Path, SystemError(hr));
-        return E_INVALIDARG;
-    }
-
-    return S_OK;
-}
-
 std::wstring RemoveString(std::wstring string, std::wstring toremove)
 {
     size_t pos = string.find(toremove);
@@ -302,7 +279,7 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
     std::vector<WCHAR> szCommandLine(MAX_CMDLINE);
     std::wstring strCommandLine = cmdLineBuilder.str();
 
-    RemoveString(strCommandLine, L" /norelocate");
+    strCommandLine = RemoveString(strCommandLine, L" /norelocate");
 
     HANDLE hMothership = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, GetCurrentProcessId());
     if (hMothership)
@@ -721,27 +698,13 @@ HRESULT Main::Run()
 {
     HRESULT hr = E_FAIL;
 
-    std::error_code ec;
     if (config.bNoRelocate == false)
     {
-        const std::filesystem::path temp = GetTempPathApi(ec);
-        if (ec)
-        {
-            Log::Debug("Failed GetTempPathApi [{}]", ec);
-            return HRESULT_FROM_WIN32(ec.value());
-        }
-
-        auto rv = RelocateOnLocalDrive(temp);
+        auto rv = RelocateOnLocalDrive(config.Temporary.Path);
         if (!rv)
         {
             Log::Error("Failed to relocate on local drive [{}]", rv.error());
         }
-    }
-
-    hr = ChangeTemporaryEnvironment();
-    if (FAILED(hr))
-    {
-        Log::Warn("Failed to modify temp directory [{}]", SystemError(hr));
     }
 
     if (config.bUseLocalCopy && m_DownloadTask)

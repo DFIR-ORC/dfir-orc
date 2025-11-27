@@ -33,6 +33,8 @@
 #include "Utils/WinApi.h"
 #include "Utils/Threshold.h"
 
+#include "WorkingTemp.h"
+
 using namespace Orc;
 using namespace Orc::Command::Wolf;
 
@@ -944,33 +946,34 @@ HRESULT Main::CheckConfiguration()
         return E_INVALIDARG;
     }
 
-    if (config.TempWorkingDir.Type == OutputSpec::Kind::None)
+    if (config.TempWorkingDir.Type == OutputSpec::Kind::None
+        || config.TempWorkingDir.Type == OutputSpec::Kind::Directory)
     {
-        const std::wstring workingTemp(L"%TEMP%\\WorkingTemp");
-
-        // Prevent 'Configure' to create directories so they can be tracked for removal
+        auto workingTemp = CreateWorkingTemp(config.TempWorkingDir.Path);
+        if (!workingTemp)
         {
-            std::error_code ec;
-
-            auto temp = OutputSpec::Resolve(workingTemp);
-            ::CreateDirectories(temp, m_emptyDirectoriesToRemove, ec);
-            if (ec)
-            {
-                Log::Error(
-                    L"Failed to pre-create working directory (initial value: {}, value: {}) [{}]",
-                    workingTemp,
-                    temp,
-                    ec);
-                ec.clear();
-            }
+            Log::Debug("Failed to create temporary directory [{}]", workingTemp.error());
+            return E_FAIL;
         }
 
-        if (FAILED(hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, workingTemp)))
+        m_emptyDirectoriesToRemove.push_back(*workingTemp);
+
+        auto restrictedTemp = CreateRestrictedDirectory(*workingTemp);
+        if (!restrictedTemp)
+        {
+            Log::Debug("Failed to create restricted temporary directory [{}]", restrictedTemp.error());
+            return E_FAIL;
+        }
+
+        m_emptyDirectoriesToRemove.push_back(*restrictedTemp);
+
+        if (FAILED(hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, *restrictedTemp)))
         {
             Log::Error(L"Failed to use default temporary directory from %TEMP%");
             return hr;
         }
     }
+
     if (config.TempWorkingDir.Type != OutputSpec::Kind::Directory)
     {
         Log::Error("Invalid temporary location specification");
