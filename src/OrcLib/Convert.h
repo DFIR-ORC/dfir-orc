@@ -60,6 +60,9 @@ static std::chrono::system_clock::time_point ConvertTo(const FILETIME& ft)
     uli.HighPart = ft.dwHighDateTime;
     uli.LowPart = ft.dwLowDateTime;
 
+    if (nt_to_unix_epoch > windows_duration(uli.QuadPart))
+        return std::chrono::system_clock::time_point();
+
     return std::chrono::system_clock::time_point(windows_duration(uli.QuadPart - nt_to_unix_epoch.count()));
 }
 
