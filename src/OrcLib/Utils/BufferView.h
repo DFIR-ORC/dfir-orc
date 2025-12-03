@@ -40,6 +40,11 @@ inline BasicBufferView<typename T::value_type> MakeBasicBufferView(const T& buff
     return BasicBufferView<typename T::value_type>(buffer.data(), buffer.size());
 }
 
+inline bool IsValidOffset(const Orc::BufferView& buffer, size_t offset, size_t size)
+{
+    return offset <= buffer.size() && size <= buffer.size() - offset;
+}
+
 //
 // BufferView
 //
