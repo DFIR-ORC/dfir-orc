@@ -313,6 +313,16 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
                         writer->WriteNamed(L"current", L"daylight");
                         break;
                 }
+
+                auto timeZoneKeyName = SystemDetails::GetTimeZoneKeyNameFromRegistry();
+                if (!timeZoneKeyName)
+                {
+                    Log::Error("Failed to read time zone key name [{}]", timeZoneKeyName.error());
+                }
+                else
+                {
+                    writer->WriteNamed(L"time_zone_key_name", *timeZoneKeyName);
+                }
             }
             writer->EndElement(L"time_zone");
         }

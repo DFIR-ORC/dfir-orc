@@ -50,5 +50,7 @@ HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(Orc::Command::ConsoleConfiguration::Register, ORC_CONSOLE)))
         return hr;
+    if (FAILED(hr = item.AddAttribute(L"norelocate", ORC_NORELOCATE, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }

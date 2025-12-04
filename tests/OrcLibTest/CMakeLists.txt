@@ -52,6 +52,7 @@ set(SRC_UTILITIES
 	"embedded_resource.cpp"
     "exceptions.cpp"
     "libraries_test.cpp"
+    "parameter_check.cpp"
     "profile_list.cpp"
     "registry.cpp"
     "temporary.cpp"

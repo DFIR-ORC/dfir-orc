@@ -15,8 +15,9 @@
 
 namespace Orc {
 
-HRESULT ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS);
-HRESULT ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile);
+HRESULT
+ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS, bool exists = true);
+HRESULT ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile, bool exists = true);
 
 HRESULT
 ExpandDirectoryPath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS);
@@ -75,12 +76,16 @@ HRESULT GetOutputCab(
 HRESULT
 GetOutputCab(const WCHAR* szInputString, std::wstring& strOutputCab, bool bCreateParentAsNeeded = false);
 
-HRESULT GetFileSizeFromArg(const WCHAR* pSize, LARGE_INTEGER& size);
+HRESULT GetFileSizeFromArg(const WCHAR* pSize, LARGE_INTEGER& size, int radix = 0);
 HRESULT GetPercentageFromArg(const WCHAR* pStr, DWORD& value);
 
-HRESULT GetIntegerFromArg(const WCHAR* pStr, LARGE_INTEGER& size);
-HRESULT GetIntegerFromArg(const WCHAR* pStr, size_t& size);
-HRESULT GetIntegerFromArg(const WCHAR* pStr, DWORD& value);
+HRESULT GetIntegerFromArg(const WCHAR* pStr, LARGE_INTEGER& size, int radix = 0);
+HRESULT GetIntegerFromArg(const CHAR* pStr, LARGE_INTEGER& size, int radix = 0);
+HRESULT GetIntegerFromArg(const WCHAR* pStr, ULARGE_INTEGER& size, int radix = 0);
+HRESULT GetIntegerFromArg(const CHAR* pStr, ULARGE_INTEGER& size, int radix = 0);
+HRESULT GetIntegerFromArg(const WCHAR* pStr, size_t& size, int radix = 0);
+HRESULT GetIntegerFromArg(const WCHAR* pStr, DWORD& value, int radix = 0);
+HRESULT GetIntegerFromArg(const CHAR* pStr, DWORD& value, int radix = 0);
 
 HRESULT GetIntegerFromHexaString(const WCHAR* pszStr, DWORD& result);
 HRESULT GetIntegerFromHexaString(const WCHAR* pszStr, LARGE_INTEGER& result);

@@ -24,7 +24,7 @@ Orc::Guard::Module& LoadWimlib(std::error_code& ec)
 
     if (!dll)
     {
-        Module module(::LoadLibraryW(L"libwim-15.dll"));
+        Module module(::LoadLibraryExW(L"libwim-15.dll", NULL, LOAD_WITH_ALTERED_SEARCH_PATH));
         if (!module)
         {
             ec.assign(::GetLastError(), std::system_category());

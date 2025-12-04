@@ -1035,6 +1035,51 @@ Result<Traits::TimeUtc<SYSTEMTIME>> SystemDetails::GetTimeStamp()
     return g_pDetailsBlock->timestamp;
 }
 
+Result<std::wstring> Orc::SystemDetails::GetTimeZoneKeyNameFromRegistry()
+{
+    const wchar_t key[] = L"SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation";
+
+    Guard::RegistryHandle hKey;
+    auto status = RegOpenKeyW(HKEY_LOCAL_MACHINE, key, &hKey.value());
+    if (status != ERROR_SUCCESS)
+    {
+        auto ec = Win32Error(status);
+        Log::Debug(L"Failed RegOpenKeyW (key: {}) [{}]", key, ec);
+        return ec;
+    }
+
+    std::wstring timeZoneKeyName;
+    timeZoneKeyName.resize(512);
+    DWORD valueType = 0L;
+    DWORD cbData = timeZoneKeyName.size() * sizeof(timeZoneKeyName[0]);
+    const wchar_t valueName[] = L"TimeZoneKeyName";
+    status = RegQueryValueExW(
+        hKey.value(), valueName, NULL, &valueType, reinterpret_cast<LPBYTE>(timeZoneKeyName.data()), &cbData);
+    if (status != ERROR_SUCCESS)
+    {
+        auto ec = Win32Error(status);
+        Log::Debug(L"Failed RegQueryValueExW (key: {}, value: {}) [{}]", key, valueName, ec);
+        return ec;
+    }
+
+    if (valueType != REG_SZ)
+    {
+        auto ec = std::make_error_code(std::errc::invalid_argument);
+        Log::Debug(L"Failed RegQueryValueExW with unexpected type (key: {}, value: {}) [{}]", key, valueName, ec);
+        return ec;
+    }
+
+    timeZoneKeyName.resize(cbData / sizeof(timeZoneKeyName[0]));
+
+    size_t eol = timeZoneKeyName.find(L'\0');
+    if (eol != std::string::npos)
+    {
+        timeZoneKeyName.resize(eol);
+    }
+
+    return timeZoneKeyName;
+}
+
 void SystemDetails::SetOrcRunId(const GUID& guid)
 {
     g_pDetailsBlock->orcRunId = guid;

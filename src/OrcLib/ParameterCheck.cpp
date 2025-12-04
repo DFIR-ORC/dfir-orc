@@ -10,6 +10,7 @@
 #include "ParameterCheck.h"
 #include "SystemDetails.h"
 #include "BinaryBuffer.h"
+#include "WideAnsi.h"
 
 #include "CaseInsensitive.h"
 
@@ -17,6 +18,10 @@
 
 #include <filesystem>
 #include <regex>
+#include <limits>
+#include <cerrno>
+#include <cwchar>
+#include <errno.h>
 
 using namespace Orc;
 
@@ -221,7 +226,8 @@ HRESULT Orc::IsFileName(const WCHAR* szInputFile)
     return S_FALSE;
 }
 
-HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS)
+HRESULT
+Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS, bool exists)
 {
     DWORD dwRequiredLen = ExpandEnvironmentStrings(szInputString, NULL, 0L);
 
@@ -235,20 +241,29 @@ HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWOR
 
     // Checking if file exists and is not a directory
     if (INVALID_FILE_ATTRIBUTES == dwAttr)
+    {
+        auto lastError = GetLastError();
+        if (exists == false && lastError == ERROR_FILE_NOT_FOUND)
+        {
+            return S_OK;
+        }
+
         return HRESULT_FROM_WIN32(GetLastError());
+    }
+
     if (FILE_ATTRIBUTE_DIRECTORY & dwAttr)
         return HRESULT_FROM_WIN32(ERROR_INVALID_NAME);
 
     return S_OK;
 }
 
-HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile)
+HRESULT Orc::ExpandFilePath(const WCHAR* szInputString, std::wstring& strInputFile, bool exists)
 {
     HRESULT hr = E_FAIL;
 
     WCHAR szInputFile[ORC_MAX_PATH];
     ZeroMemory(szInputFile, sizeof(WCHAR) * ORC_MAX_PATH);
-    if (FAILED(hr = ExpandFilePath(szInputString, szInputFile, ORC_MAX_PATH)))
+    if (FAILED(hr = ExpandFilePath(szInputString, szInputFile, ORC_MAX_PATH, exists)))
         return hr;
     strInputFile.assign(szInputFile);
     return S_OK;
@@ -592,61 +607,127 @@ HRESULT Orc::GetOutputCab(const WCHAR* szInputString, std::wstring& strOutputCab
     return S_OK;
 }
 
-HRESULT Orc::GetFileSizeFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
+HRESULT Orc::GetFileSizeFromArg(const WCHAR* pSize, LARGE_INTEGER& size, int radix)
 {
     size.HighPart = 0L;
     size.LowPart = 0L;
 
-    DWORD dwLen = (DWORD)wcslen(pSize);
+    if (pSize == nullptr)
+    {
+        Log::Debug(L"GetFileSizeFromArg: invalid nullptr");
+        return E_POINTER;
+    }
 
-    if (dwLen > 2)
-        if ((pSize[dwLen - 1] == L'B' || pSize[dwLen - 1] == L'b')
-            && (pSize[dwLen - 2] == L'G' || pSize[dwLen - 2] == L'g' || pSize[dwLen - 2] == L'M'
-                || pSize[dwLen - 2] == L'm' || pSize[dwLen - 2] == L'K' || pSize[dwLen - 2] == L'k'))
+    // Build a view to trim and parse suffixes (KB/MB/GB or single-letter K/M/G/B)
+    std::wstring_view sv(pSize);
+    // Trim trailing spaces
+    while (!sv.empty() && iswspace(static_cast<unsigned short>(sv.back())))
+        sv.remove_suffix(1);
+
+    if (sv.empty())
+        return E_INVALIDARG;
+
+    unsigned long long multiplier = 1ULL;
+    size_t removeChars = 0;
+
+    if (sv.size() >= 2 && (sv.back() == L'B' || sv.back() == L'b'))
+    {
+        wchar_t prev = sv[sv.size() - 2];
+        if (prev == L'K' || prev == L'k')
         {
-            dwLen--;
+            multiplier = 1024ULL;
+            removeChars = 2;
         }
-    if (dwLen > ORC_MAX_PATH)
+        else if (prev == L'M' || prev == L'm')
+        {
+            multiplier = 1024ULL * 1024ULL;
+            removeChars = 2;
+        }
+        else if (prev == L'G' || prev == L'g')
+        {
+            multiplier = 1024ULL * 1024ULL * 1024ULL;
+            removeChars = 2;
+        }
+        else
+        {
+            // Just a trailing B/b means bytes
+            multiplier = 1ULL;
+            removeChars = 1;
+        }
+    }
+    else if (!sv.empty())
     {
-        Log::Debug("GetFileSizeFromArg: unexpected argument value (expected: <={}, actual: {})", ORC_MAX_PATH, dwLen);
+        wchar_t last = sv.back();
+        if (last == L'K' || last == L'k')
+        {
+            multiplier = 1024ULL;
+            removeChars = 1;
+        }
+        else if (last == L'M' || last == L'm')
+        {
+            multiplier = 1024ULL * 1024ULL;
+            removeChars = 1;
+        }
+        else if (last == L'G' || last == L'g')
+        {
+            multiplier = 1024ULL * 1024ULL * 1024ULL;
+            removeChars = 1;
+        }
+    }
+
+    std::wstring numberPart(sv.substr(0, sv.size() - removeChars));
+
+    // Trim spaces on numberPart end
+    while (!numberPart.empty() && iswspace(static_cast<unsigned short>(numberPart.back())))
+        numberPart.pop_back();
+
+    if (numberPart.empty())
+        return E_INVALIDARG;
+
+    wchar_t* endptr = nullptr;
+    _set_errno(0);
+    unsigned long long base = std::wcstoull(numberPart.c_str(), &endptr, radix);
+
+    int errsv = 0;
+    _get_errno(&errsv);
+
+    if (endptr == numberPart.c_str())
+    {
+        Log::Debug(L"GetFileSizeFromArg: no digits found (input: {})", numberPart);
         return E_INVALIDARG;
     }
 
-    WCHAR szTemp[ORC_MAX_PATH];
-    wcscpy_s(szTemp, pSize);
-
-    DWORD dwMultiplier = 1;
-    switch (szTemp[dwLen - 1])
+    if (errsv == ERANGE)
     {
-        case L'B':
-        case L'b':
-            dwMultiplier = 1;
-            szTemp[dwLen - 1] = L'\0';
-            break;
-        case L'K':
-        case L'k':
-            dwMultiplier = 1024;
-            szTemp[dwLen - 1] = L'\0';
-            break;
-        case L'M':
-        case L'm':
-            dwMultiplier = 1024 * 1024;
-            szTemp[dwLen - 1] = L'\0';
-            break;
-        case L'G':
-        case L'g':
-            dwMultiplier = 1024 * 1024 * 1024;
-            szTemp[dwLen - 1] = L'\0';
-            break;
-    }
-
-    size.QuadPart = _wtoi64(szTemp) * dwMultiplier;
-    if (errno == ERANGE)
-    {
-        Log::Debug(L"GetFileSizeFromArg: failed _wtoi64 (input: {})", szTemp);
+        Log::Debug(L"GetFileSizeFromArg: overflow in conversion (input: {})", numberPart);
         return E_INVALIDARG;
     }
 
+    // Skip any trailing spaces
+    while (endptr && *endptr && iswspace(static_cast<unsigned short>(*endptr)))
+        ++endptr;
+
+    if (endptr && *endptr != L'\0')
+    {
+        Log::Debug(L"GetFileSizeFromArg: trailing non-numeric characters (input: {})", numberPart);
+        return E_INVALIDARG;
+    }
+
+    // Check multiplication overflow and fit in signed64-bit
+    if (base > (std::numeric_limits<unsigned long long>::max)() / multiplier)
+    {
+        Log::Debug(L"GetFileSizeFromArg: multiplication overflow");
+        return E_INVALIDARG;
+    }
+
+    unsigned long long total = base * multiplier;
+    if (total > static_cast<unsigned long long>((std::numeric_limits<LONGLONG>::max)()))
+    {
+        Log::Debug(L"GetFileSizeFromArg: exceeds64-bit signed range");
+        return E_INVALIDARG;
+    }
+
+    size.QuadPart = static_cast<LONGLONG>(total);
     return S_OK;
 }
 
@@ -658,43 +739,72 @@ HRESULT Orc::GetPercentageFromArg(const WCHAR* pStr, DWORD& value)
         return E_POINTER;
     }
 
-    std::wstring_view str(pStr);
+    // Trim leading/trailing spaces
+    std::wstring_view sv(pStr);
+    while (!sv.empty() && iswspace(static_cast<unsigned short>(sv.front())))
+        sv.remove_prefix(1);
 
-    if (str.back() == L'%')
+    while (!sv.empty() && iswspace(static_cast<unsigned short>(sv.back())))
+        sv.remove_suffix(1);
+
+    if (!sv.empty() && sv.back() == L'%')
     {
-        str.remove_suffix(1);
+        sv.remove_suffix(1);
     }
-    auto _value = _wtoi(pStr);
 
-    if (_value > 100)
+    std::wstring tmp(sv);
+    if (tmp.empty())
         return E_INVALIDARG;
 
-    if (errno == ERANGE || value == 0)
+    wchar_t* end = nullptr;
+    _set_errno(0);
+    unsigned long parsed = std::wcstoul(tmp.c_str(), &end, 10);
+
+    int errsv = 0;
+    _get_errno(&errsv);
+
+    if (end == tmp.c_str())
     {
-        if (errno == ERANGE)
-        {
-            Log::Debug(L"GetPercentageFromArg: failed _wtoi64 (input: {})", pStr);
-        }
-        else
-        {
-            Log::Debug(L"GetPercentageFromArg: failed because _size=0");
-        }
+        Log::Debug(L"GetPercentageFromArg: no digits found (input: {})", tmp);
+        return E_INVALIDARG;
+    }
+
+    if (errsv == ERANGE)
+    {
+        Log::Debug(L"GetPercentageFromArg: overflow in conversion (input: {})", tmp);
+        return E_INVALIDARG;
+    }
+
+    while (end && *end && iswspace(static_cast<unsigned short>(*end)))
+        ++end;
+
+    if (end && *end != L'\0')
+        return E_INVALIDARG;
+
+    if (parsed > 100)
+        return E_INVALIDARG;
+
+    // Preserve original semantics:0 is considered invalid
+    if (parsed == 0)
+    {
+        Log::Debug(L"GetPercentageFromArg: failed because parsed==0");
         return E_INVALIDARG;
     }
 
     try
     {
-        value = ConvertTo<DWORD>(_value);
+        value = ConvertTo<DWORD>(parsed);
     }
     catch (const std::overflow_error&)
     {
-        Log::Debug(L"GetPercentageFromArg: failed because overflow error (input: {})", _value);
+        Log::Debug(L"GetPercentageFromArg: failed because overflow error (input: {})", parsed);
         return E_INVALIDARG;
     }
+
     return S_OK;
 }
 
-HRESULT Orc::GetIntegerFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
+HRESULT Orc::GetIntegerFromArg(const WCHAR* pSize, LARGE_INTEGER& size, int radix)
 {
     size.HighPart = 0L;
     size.LowPart = 0L;
@@ -705,32 +815,168 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pSize, LARGE_INTEGER& size)
         return E_POINTER;
     }
 
-    size.QuadPart = _wtoi64(pSize);
+    _set_errno(0);
+    wchar_t* end = nullptr;
+    long long parsed = std::wcstoll(pSize, &end, radix);
 
-    if (size.QuadPart == 0LL)
-    {
-        const WCHAR* pCur = pSize;
-        while (*pCur)
-        {
-            if (*pCur != L'0')
-            {
-                Log::Debug(L"GetIntegerFromArg (LARGE_INTEGER): check '0' loop failed (intput: {})", pSize);
-                return E_INVALIDARG;
-            }
-            pCur++;
-        }
-    }
+    int errsv = 0;
+    _get_errno(&errsv);
 
-    if (errno == ERANGE || errno == EINVAL)
+    if (end == pSize)
     {
-        Log::Debug(L"GetIntegerFromArg (LARGE_INTEGER): failed _wtoi64 (input: {})", pSize);
+        Log::Debug(L"GetIntegerFromArg (LARGE_INTEGER): no digits found (input: {})", pSize);
         return E_INVALIDARG;
     }
 
+    if (errsv == ERANGE)
+    {
+        Log::Debug(L"GetIntegerFromArg (LARGE_INTEGER): overflow in conversion (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    while (end && *end && iswspace(static_cast<unsigned short>(*end)))
+        ++end;
+
+    if (end && *end != L'\0')
+    {
+        Log::Debug(L"GetIntegerFromArg (LARGE_INTEGER): trailing non-numeric (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    size.QuadPart = parsed;
     return S_OK;
 }
 
-HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, size_t& size)
+HRESULT Orc::GetIntegerFromArg(const CHAR* pSize, LARGE_INTEGER& size, int radix)
+{
+    size.HighPart = 0L;
+    size.LowPart = 0L;
+
+    if (pSize == nullptr)
+    {
+        Log::Debug(L"GetIntegerFromArg (LARGE_INTEGER): invalid nullptr");
+        return E_POINTER;
+    }
+
+    char* end = nullptr;
+    _set_errno(0);
+    long long parsed = std::strtoll(pSize, &end, radix);
+
+    int errsv = 0;
+    _get_errno(&errsv);
+
+    if (end == pSize)
+    {
+        Log::Debug("GetIntegerFromArg (LARGE_INTEGER): no digits found (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    if (errsv == ERANGE)
+    {
+        Log::Debug("GetIntegerFromArg (LARGE_INTEGER): overflow in conversion (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    while (end && *end && isspace(*end))
+        ++end;
+
+    if (end && *end != '\0')
+    {
+        Log::Debug("GetIntegerFromArg (LARGE_INTEGER): trailing non-numeric (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    size.QuadPart = parsed;
+    return S_OK;
+}
+
+HRESULT Orc::GetIntegerFromArg(const WCHAR* pSize, ULARGE_INTEGER& size, int radix)
+{
+    size.HighPart = 0L;
+    size.LowPart = 0L;
+
+    if (pSize == nullptr)
+    {
+        Log::Debug(L"GetIntegerFromArg (ULARGE_INTEGER): invalid nullptr");
+        return E_POINTER;
+    }
+
+    wchar_t* end = nullptr;
+    _set_errno(0);
+    unsigned long long parsed = std::wcstoull(pSize, &end, radix);
+
+    int errsv = 0;
+    _get_errno(&errsv);
+
+    if (end == pSize)
+    {
+        Log::Debug(L"GetIntegerFromArg (ULARGE_INTEGER): no digits found (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    if (errsv == ERANGE)
+    {
+        Log::Debug(L"GetIntegerFromArg (ULARGE_INTEGER): overflow in conversion (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    while (end && *end && iswspace(static_cast<unsigned short>(*end)))
+        ++end;
+
+    if (end && *end != L'\0')
+    {
+        Log::Debug(L"GetIntegerFromArg (ULARGE_INTEGER): trailing non-numeric (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    size.QuadPart = parsed;
+    return S_OK;
+}
+
+HRESULT Orc::GetIntegerFromArg(const CHAR* pSize, ULARGE_INTEGER& size, int radix)
+{
+    size.HighPart = 0L;
+    size.LowPart = 0L;
+
+    if (pSize == nullptr)
+    {
+        Log::Debug(L"GetIntegerFromArg (ULARGE_INTEGER): invalid nullptr");
+        return E_POINTER;
+    }
+
+    char* end = nullptr;
+    _set_errno(0);
+    unsigned long long parsed = std::strtoull(pSize, &end, radix);
+
+    int errsv = 0;
+    _get_errno(&errsv);
+
+    if (end == pSize)
+    {
+        Log::Debug("GetIntegerFromArg (ULARGE_INTEGER): no digits found (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    if (errsv == ERANGE)
+    {
+        Log::Debug("GetIntegerFromArg (ULARGE_INTEGER): overflow in conversion (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    while (end && *end && isspace(static_cast<unsigned char>(*end)))
+        ++end;
+
+    if (end && *end != '\0')
+    {
+        Log::Debug("GetIntegerFromArg (ULARGE_INTEGER): trailing non-numeric (input: {})", pSize);
+        return E_INVALIDARG;
+    }
+
+    size.QuadPart = parsed;
+    return S_OK;
+}
+
+HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, size_t& size, int radix)
 {
     if (pStr == nullptr)
     {
@@ -738,34 +984,53 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, size_t& size)
         return E_POINTER;
     }
 
-    auto _size = _wtoi(pStr);
+    wchar_t* end = nullptr;
+    _set_errno(0);
+    unsigned long long parsed = std::wcstoull(pStr, &end, radix);
 
-    if (errno == ERANGE || _size == 0)
+    int errsv = 0;
+    _get_errno(&errsv);
+
+    if (end == pStr)
     {
-        if (errno == ERANGE)
-        {
-            Log::Debug(L"GetIntegerFromArg (size_t): failed _wtoi64 (input: {})", pStr);
-        }
-        else
-        {
-            Log::Debug(L"GetIntegerFromArg (size_t): failed because _size=0");
-        }
+        Log::Debug(L"GetIntegerFromArg (size_t): no digits found (input: {})", pStr);
+        return E_INVALIDARG;
+    }
+
+    if (errsv == ERANGE)
+    {
+        Log::Debug(L"GetIntegerFromArg (size_t): overflow in conversion (input: {})", pStr);
+        return E_INVALIDARG;
+    }
+
+    while (end && *end && iswspace(static_cast<unsigned short>(*end)))
+        ++end;
+
+    if (end && *end != L'\0')
+        return E_INVALIDARG;
+
+    if (parsed == 0)
+    {
+        Log::Debug(L"GetIntegerFromArg (size_t): failed because parsed==0");
         return E_INVALIDARG;
     }
 
     try
     {
-        size = ConvertTo<size_t>(_size);
+        if (parsed > static_cast<unsigned long long>((std::numeric_limits<size_t>::max)()))
+            throw std::overflow_error("size_t overflow");
+        size = ConvertTo<size_t>(parsed);
     }
     catch (const std::overflow_error&)
     {
-        Log::Debug(L"GetIntegerFromArg (size_t): failed because overflow error (input: {})", _size);
+        Log::Debug(L"GetIntegerFromArg (size_t): failed because overflow error (input: {})", parsed);
         return E_INVALIDARG;
     }
+
     return S_OK;
 }
 
-HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, DWORD& value)
+HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, DWORD& value, int radix)
 {
     if (pStr == nullptr)
     {
@@ -773,28 +1038,96 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, DWORD& value)
         return E_POINTER;
     }
 
-    auto _value = _wtoi(pStr);
+    wchar_t* end = nullptr;
+    _set_errno(0);
+    unsigned long parsed = std::wcstoul(pStr, &end, radix);
 
-    if (errno == ERANGE || _value == 0)
+    int errsv = 0;
+    _get_errno(&errsv);
+
+    if (end == pStr)
     {
-        if (errno == ERANGE)
-        {
-            Log::Debug(L"GetIntegerFromArg (DWORD): failed _wtoi64 (input: {})", pStr);
-        }
-        else
-        {
-            Log::Debug(L"GetIntegerFromArg (DWORD): failed because _size=0");
-        }
+        Log::Debug(L"GetIntegerFromArg (DWORD): no digits found (input: {})", pStr);
+        return E_INVALIDARG;
+    }
+
+    if (errsv == ERANGE)
+    {
+        Log::Debug(L"GetIntegerFromArg (DWORD): overflow in conversion (input: {})", pStr);
+        return E_INVALIDARG;
+    }
+
+    while (end && *end && iswspace(static_cast<unsigned short>(*end)))
+        ++end;
+
+    if (end && *end != L'\0')
+        return E_INVALIDARG;
+
+    if (parsed == 0)
+    {
+        Log::Debug(L"GetIntegerFromArg (DWORD): failed because parsed==0");
         return E_INVALIDARG;
     }
 
     try
     {
-        value = ConvertTo<DWORD>(_value);
+        value = ConvertTo<DWORD>(parsed);
     }
     catch (const std::overflow_error&)
     {
-        Log::Debug(L"GetIntegerFromArg (DWORD): failed because overflow error (input: {})", _value);
+        Log::Debug(L"GetIntegerFromArg (DWORD): failed because overflow error (input: {})", parsed);
+        return E_INVALIDARG;
+    }
+
+    return S_OK;
+}
+
+HRESULT Orc::GetIntegerFromArg(const CHAR* pStr, DWORD& value, int radix)
+{
+    if (pStr == nullptr)
+    {
+        Log::Debug(L"GetIntegerFromArg (DWORD): invalid nullptr");
+        return E_POINTER;
+    }
+
+    char* end = nullptr;
+    _set_errno(0);
+    unsigned long parsed = std::strtoul(pStr, &end, radix);
+
+    int errsv = 0;
+    _get_errno(&errsv);
+
+    if (end == pStr)
+    {
+        Log::Debug("GetIntegerFromArg (DWORD): no digits found (input: {})", pStr);
+        return E_INVALIDARG;
+    }
+
+    if (errsv == ERANGE)
+    {
+        Log::Debug("GetIntegerFromArg (DWORD): overflow in conversion (input: {})", pStr);
+        return E_INVALIDARG;
+    }
+
+    while (end && *end && isspace(static_cast<unsigned char>(*end)))
+        ++end;
+
+    if (end && *end != '\0')
+        return E_INVALIDARG;
+
+    if (parsed == 0)
+    {
+        Log::Debug("GetIntegerFromArg (DWORD): failed because parsed==0");
+        return E_INVALIDARG;
+    }
+
+    try
+    {
+        value = ConvertTo<DWORD>(parsed);
+    }
+    catch (const std::overflow_error&)
+    {
+        Log::Debug(L"GetIntegerFromArg (DWORD): failed because overflow error (input: {})", parsed);
         return E_INVALIDARG;
     }
 
@@ -803,136 +1136,22 @@ HRESULT Orc::GetIntegerFromArg(const WCHAR* pStr, DWORD& value)
 
 HRESULT Orc::GetIntegerFromHexaString(const WCHAR* pszStr, DWORD& result)
 {
-    result = 0L;
-    if (pszStr == NULL)
-        return E_POINTER;
-    if (pszStr[0] != L'0' && (pszStr[1] != 'X' || pszStr[1] != 'x'))
-        return E_INVALIDARG;
-
-    DWORD dwLen = (DWORD)wcslen(pszStr);
-
-    if (dwLen > 10)
-        return HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW);
-
-    for (unsigned int i = 2; i < dwLen; i++)
-    {
-        if (pszStr[i] >= L'0' && pszStr[i] <= L'9')
-            continue;
-        if (pszStr[i] >= L'A' && pszStr[i] <= L'F')
-            continue;
-        if (pszStr[i] >= L'a' && pszStr[i] <= L'f')
-            continue;
-        return E_INVALIDARG;
-    }
-
-    DWORD mult = 1;
-    for (int j = dwLen - 1; j > 1; j--)
-    {
-        if (pszStr[j] >= L'0' && pszStr[j] <= L'9')
-            result += (pszStr[j] - L'0') * mult;
-        else if (pszStr[j] >= L'A' && pszStr[j] <= L'F')
-            result += (pszStr[j] - L'A' + 10) * mult;
-        else if (pszStr[j] >= L'a' && pszStr[j] <= L'f')
-            result += (pszStr[j] - L'a' + 10) * mult;
-        mult *= 16;
-    }
-    return S_OK;
+    return GetIntegerFromArg(pszStr, result, 16);
 }
 
 HRESULT Orc::GetIntegerFromHexaString(const CHAR* pszStr, DWORD& result)
 {
-    result = 0L;
-    if (pszStr == NULL)
-        return E_POINTER;
-    if (pszStr[0] != '0' && (pszStr[1] != 'X' || pszStr[1] != 'x'))
-        return E_INVALIDARG;
-
-    DWORD dwLen = (DWORD)strlen(pszStr);
-
-    if (dwLen > 10)
-        return HRESULT_FROM_WIN32(ERROR_BUFFER_OVERFLOW);
-
-    for (unsigned int i = 2; i < dwLen; i++)
-    {
-        if (pszStr[i] >= '0' && pszStr[i] <= '9')
-            continue;
-        if (pszStr[i] >= 'A' && pszStr[i] <= 'F')
-            continue;
-        if (pszStr[i] >= 'a' && pszStr[i] <= 'f')
-            continue;
-        return E_INVALIDARG;
-    }
-
-    DWORD mult = 1;
-    for (int j = dwLen - 1; j > 1; j--)
-    {
-        if (pszStr[j] >= '0' && pszStr[j] <= '9')
-            result += (pszStr[j] - '0') * mult;
-        else if (pszStr[j] >= 'A' && pszStr[j] <= 'F')
-            result += (pszStr[j] - 'A' + 10) * mult;
-        else if (pszStr[j] >= 'a' && pszStr[j] <= 'f')
-            result += (pszStr[j] - 'a' + 10) * mult;
-        mult *= 16;
-    }
-    return S_OK;
+    return GetIntegerFromArg(pszStr, result, 16);
 }
 
 HRESULT Orc::GetIntegerFromHexaString(const WCHAR* pszStr, LARGE_INTEGER& result)
 {
-    result.QuadPart = 0L;
-
-    if (pszStr == NULL)
-        return E_POINTER;
-    if (pszStr[0] != L'0' || (pszStr[1] != L'X' && pszStr[1] != L'x'))
-        return E_INVALIDARG;
-
-    try
-    {
-        result.QuadPart = std::stoull(pszStr, nullptr, 16);
-    }
-    catch (std::exception& e)
-    {
-        Log::Error("Invalid argument for hex conversion: {}", e.what());
-        return E_INVALIDARG;
-    }
-    return S_OK;
+    return GetIntegerFromArg(pszStr, result, 16);
 }
 
 HRESULT Orc::GetIntegerFromHexaString(const CHAR* pszStr, LARGE_INTEGER& result)
 {
-    result.HighPart = 0L;
-    result.LowPart = 0L;
-
-    if (pszStr == NULL)
-        return E_POINTER;
-    if (pszStr[0] != '0' && (pszStr[1] != 'X' || pszStr[1] != 'x'))
-        return E_INVALIDARG;
-    if (strlen(pszStr) != 18)
-        return E_INVALIDARG;
-
-    for (int i = 2; i < 18; i++)
-    {
-        if (pszStr[i] >= '0' && pszStr[i] <= '9')
-            continue;
-        if (pszStr[i] >= 'A' && pszStr[i] <= 'F')
-            continue;
-        if (pszStr[i] >= 'a' && pszStr[i] <= 'f')
-            continue;
-        return E_INVALIDARG;
-    }
-
-    DWORDLONG mult = 1;
-    for (int j = 17; j > 1; j--)
-    {
-        if (pszStr[j] >= '0' && pszStr[j] <= '9')
-            result.QuadPart += (pszStr[j] - '0') * mult;
-        else if (pszStr[j] >= 'A' && pszStr[j] <= 'F')
-            result.QuadPart += (pszStr[j] - 'A' + 10) * mult;
-        else if (pszStr[j] >= 'a' && pszStr[j] <= 'f')
-            result.QuadPart += (pszStr[j] - 'a' + 10) * mult;
-        mult *= 16;
-    }
-    return S_OK;
+    return GetIntegerFromArg(pszStr, result, 16);
 }
 
 HRESULT
@@ -944,7 +1163,7 @@ Orc::GetBytesFromHexaString(
     DWORD* pdwBytesLen,
     bool bMustBe0xPrefixed)
 {
-    if (pszStr == NULL)
+    if (pszStr == NULL || pBytes == NULL)
         return E_POINTER;
     if (dwStrLen % 2)
         return E_INVALIDARG;
@@ -953,8 +1172,11 @@ Orc::GetBytesFromHexaString(
     {
         if (pdwBytesLen)
             *pdwBytesLen = 0L;
+
         ZeroMemory(pBytes, dwBytesLen);
+        return S_OK;
     }
+
     DWORD dwStartAt = 0L;
     if (pszStr[0] == L'0' && (pszStr[1] == L'x' || pszStr[1] == L'X'))
     {
@@ -1016,7 +1238,7 @@ Orc::GetBytesFromHexaString(
     DWORD* pdwBytesLen,
     bool bMustBe0xPrefixed)
 {
-    if (pszStr == NULL)
+    if (pszStr == NULL || pBytes == NULL)
         return E_POINTER;
     if (dwStrLen % 2)
         return E_INVALIDARG;
@@ -1026,7 +1248,9 @@ Orc::GetBytesFromHexaString(
         if (pdwBytesLen)
             *pdwBytesLen = 0L;
         ZeroMemory(pBytes, dwBytesLen);
+        return S_OK;
     }
+
     DWORD dwStartAt = 0L;
     if (pszStr[0] == '0' && (pszStr[1] == 'x' || pszStr[1] == 'X'))
     {
@@ -1074,8 +1298,10 @@ Orc::GetBytesFromHexaString(
 
         dwArrayIndex++;
     }
+
     if (pdwBytesLen != nullptr)
         *pdwBytesLen = dwArrayIndex;
+
     return S_OK;
 }
 
@@ -1133,6 +1359,7 @@ HRESULT Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, CBinary
 
         dwArrayIndex++;
     }
+
     return S_OK;
 }
 
@@ -1166,6 +1393,7 @@ HRESULT Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryB
             continue;
         if (pszStr[i] >= 'a' && pszStr[i] <= 'f')
             continue;
+
         return E_INVALIDARG;
     }
 
@@ -1190,6 +1418,7 @@ HRESULT Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryB
 
         dwArrayIndex++;
     }
+
     return S_OK;
 }
 
@@ -1220,12 +1449,14 @@ HRESULT GetSubFormat(
 
     try
     {
+        _set_errno(0);
         result = Orc::ConvertTo<unsigned short>(_wtoi(String));
     }
     catch (const std::overflow_error&)
     {
         return E_INVALIDARG;
     }
+
     return S_OK;
 }
 

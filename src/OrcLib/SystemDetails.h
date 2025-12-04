@@ -105,6 +105,7 @@ public:
     static HRESULT GetTimeStamp(std::wstring& strTimeStamp);
     static HRESULT GetTimeStampISO8601(std::wstring& strTimeStamp);
     static Result<Traits::TimeUtc<SYSTEMTIME>> GetTimeStamp();
+    static Result<std::wstring> GetTimeZoneKeyNameFromRegistry();
 
     static HRESULT WhoAmI(std::wstring& strMe);
     static HRESULT AmIElevated(bool& bIsElevated);

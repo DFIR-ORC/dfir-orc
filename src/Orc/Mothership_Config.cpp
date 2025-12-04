@@ -17,8 +17,12 @@
 
 #include "DownloadTask.h"
 
+#include "WorkingTemp.h"
+
 #include <sstream>
 #include <algorithm>
+
+#include "Utils/Result.h"
 
 using namespace std;
 
@@ -46,6 +50,33 @@ void WriteArgument(std::wstringstream& stream, std::wstring_view arg)
 
     stream << " " << arg;
 }
+
+HRESULT ChangeTemporaryEnvironment(const std::wstring& temp)
+{
+    HRESULT hr = E_FAIL;
+
+    if (temp.empty())
+    {
+        return S_OK;
+    }
+
+    if (!SetEnvironmentVariableW(L"TEMP", temp.c_str()))
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Error(L"Failed to set %TEMP% to '{}' [{}]", temp, SystemError(hr));
+        return E_INVALIDARG;
+    }
+
+    if (!SetEnvironmentVariableW(L"TMP", temp.c_str()))
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Error(L"Failed to set %TMP% to '{}' [{}]", temp, SystemError(hr));
+        return E_INVALIDARG;
+    }
+
+    return S_OK;
+}
+
 }  // namespace
 
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
@@ -79,6 +110,9 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                          L"TempDir",
                          static_cast<OutputSpec::Kind>(OutputSpec::Kind::Directory),
                          config.Temporary))
+            {
+            }
+            if (BooleanOption(argv[i] + 1, L"NoRelocate", config.bNoRelocate))
             {
             }
         }
@@ -120,6 +154,11 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 {
     HRESULT hr = E_FAIL;
 
+    if (configitem[ORC_NORELOCATE])
+    {
+        config.bNoRelocate = true;
+    }
+
     if (configitem[ORC_DOWNLOAD])
     {
         m_DownloadTask = DownloadTask::GetTaskFromConfig(configitem[ORC_DOWNLOAD]);
@@ -150,6 +189,29 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+
+    auto workingTemp = CreateWorkingTemp(config.Temporary.Path);
+    if (!workingTemp)
+    {
+        Log::Error(L"Failed to create working directory [{}]", workingTemp.error());
+        return E_FAIL;
+    }
+
+    ::ChangeTemporaryEnvironment(*workingTemp);
+
+    auto restrictedTemp = CreateRestrictedDirectory(*workingTemp);
+    if (!restrictedTemp)
+    {
+        Log::Error(L"Failed to create restricted temporary directory [{}]", restrictedTemp.error());
+        return E_FAIL;
+    }
+
+    hr = config.Temporary.Configure(OutputSpec::Kind::Directory, *restrictedTemp);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to configure temporary directory '{}' [{}]", *workingTemp, SystemError(hr));
+        return hr;
+    }
 
     if (config.bNoWait)
     {

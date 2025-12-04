@@ -58,7 +58,6 @@
 #include "ToolVersion.h"
 #include "Usage.h"
 #include "EmbeddedResource.h"
-#include "Utils/WinApi.h"
 #include "Utils/String.h"
 
 using WinMainPtr = std::function<int(int argc, const WCHAR* argv[])>;
@@ -168,124 +167,21 @@ int PrintUsage()
     return -1;
 }
 
-void RelocateFile(const std::filesystem::path& source, const std::filesystem::path& destination, std::error_code& ec)
-{
-    auto exists = std::filesystem::exists(source, ec);
-    if (ec)
-    {
-        Log::Debug(L"Failed to check existance for {}", source, ec);
-        return;
-    }
-
-    if (exists == false)
-    {
-        return;
-    }
-
-    Log::Debug("Relocate {} to {}", source, destination);
-
-    if (!MoveFileExW(destination.c_str(), NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
-    {
-        ec = LastWin32Error();
-        Log::Debug("Failed MoveFileExW [{}]", ec);
-        return;
-    }
-
-    if (!CopyFileW(source.c_str(), destination.c_str(), FALSE))
-    {
-        ec = LastWin32Error();
-        Log::Debug("Failed CopyFileW [{}]", ec);
-        return;
-    }
-}
-
-void RelocateOnLocalDrive(std::error_code& ec)
-{
-    const std::filesystem::path mothership = GetModuleFileNameApi(NULL, ec);
-    if (ec)
-    {
-        Log::Debug("Failed GetModuleFileNameApi [{}]", ec);
-        return;
-    }
-
-    if (!PathIsNetworkPathW(mothership.c_str()))
-    {
-        return;
-    }
-
-    Log::Warn(
-        "ORC is executing from a network drive, relocate to local drive to prevent connectivity issues during collect");
-
-    const std::filesystem::path temp = GetTempPathApi(ec);
-    if (ec)
-    {
-        Log::Debug("Failed GetTempPathApi [{}]", ec);
-        return;
-    }
-
-    if (PathIsNetworkPathW(temp.c_str()))
-    {
-        ec = std::make_error_code(std::errc::invalid_argument);
-        Log::Debug("Temporary directory is a network path");
-        return;
-    }
-
-    std::filesystem::path localConfiguration = mothership;
-    localConfiguration.replace_extension(L"xml");
-    const std::filesystem::path newLocalConfiguration = temp / localConfiguration.filename();
-    RelocateFile(localConfiguration, newLocalConfiguration, ec);
-    if (ec)
-    {
-        return;
-    }
-
-    const std::filesystem::path newMothership = temp / mothership.filename();
-    RelocateFile(mothership, newMothership, ec);
-    if (ec)
-    {
-        return;
-    }
-
-    PROCESS_INFORMATION pi;
-    ZeroMemory(&pi, sizeof(pi));
-
-    STARTUPINFOEXW si;
-    ZeroMemory(&si, sizeof(si));
-    si.StartupInfo.cb = sizeof(si);
-
-    std::vector<std::wstring> arguments;
-    for (size_t i = 1; i < __argc; ++i)
-    {
-        arguments.emplace_back(__wargv[i]);
-    }
-
-    const auto commandLine = boost::join(arguments, " ");
-    if (!CreateProcessW(
-            newMothership.c_str(),
-            const_cast<LPWSTR>(commandLine.c_str()),
-            NULL,
-            NULL,
-            TRUE,
-            CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT,
-            NULL,
-            NULL,
-            reinterpret_cast<STARTUPINFOW*>(&si),
-            &pi))
-    {
-        ec = LastWin32Error();
-        Log::Debug("Failed CreateProcessW [{}]", ec);
-        return;
-    }
-
-    WaitForSingleObject(pi.hProcess, INFINITE);
-
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
-    ExitProcess(0);
-}
-
 int wmain(int argc, const WCHAR* argv[])
 {
+    using FnSetDllDirectoryA = BOOL(__stdcall*)(LPCSTR lpPathName);
+
+    FnSetDllDirectoryA fnSetDllDirectory = reinterpret_cast<FnSetDllDirectoryA>(GetProcAddress(GetModuleHandleA("kernel32.dll"), "SetDllDirectoryW"));
+    if (fnSetDllDirectory == nullptr)
+    {
+        Log::Debug("Missing SetDllDirectoryW");
+    }
+    else if (fnSetDllDirectory("") == FALSE)
+    {
+        Log::Critical("Failed SetDllDirectoryW [{}]", LastWin32Error());
+        return -1;
+    }
+
     concurrency::Scheduler::SetDefaultSchedulerPolicy(concurrency::SchedulerPolicy(1, concurrency::MaxConcurrency, 16));
 
     if (argc > 1)
@@ -329,14 +225,6 @@ int wmain(int argc, const WCHAR* argv[])
 
     if (EmbeddedResource::IsConfiguredToRun())
     {
-        std::error_code ec;
-        RelocateOnLocalDrive(ec);
-        if (ec)
-        {
-            Log::Error("Failed to relocate on local drive [{}]", ec);
-            ec.clear();
-        }
-
         return UtilitiesMain::WMain<Mothership::Main>(argc, argv);
     }
     else

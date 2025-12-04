@@ -762,6 +762,7 @@ std::shared_ptr<FileFind::SearchTerm> FileFind::GetSearchTermFromConfig(const Co
             fs->dwAttrType = $FIRST_USER_DEFINED_ATTRIBUTE;
         else
         {
+            _set_errno(0);
             fs->dwAttrType = _wtoi(item[CONFIG_FILEFIND_ATTR_TYPE].c_str());
             if (fs->dwAttrType == 0)
             {

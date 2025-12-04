@@ -90,6 +90,7 @@ public:
         bool bPreserveJob = false;
         bool bUseWMI = false;
         bool bUseLocalCopy = false;
+        bool bNoRelocate = false;
         DWORD dwCreationFlags = 0L;
         std::wstring strCmdLineArgs;
         std::wstring strParentName;
@@ -109,8 +110,6 @@ private:
     HANDLE m_hParentProcess;
 
     std::shared_ptr<DownloadTask> m_DownloadTask;
-
-    HRESULT ChangeTemporaryEnvironment();
 
     HRESULT Launch(const std::wstring& strToExecute, const std::wstring& strArgs);
 

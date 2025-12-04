@@ -25,10 +25,115 @@
 
 #include <sstream>
 
+#include "Utils/WinApi.h"
+
 using namespace Orc;
 using namespace Orc::Command::Mothership;
 
 constexpr auto MAX_CMDLINE = 32768;
+
+void RelocateFile(const std::filesystem::path& source, const std::filesystem::path& destination, std::error_code& ec)
+{
+    auto exists = std::filesystem::exists(source, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed to check existance for {}", source, ec);
+        return;
+    }
+
+    if (exists == false)
+    {
+        return;
+    }
+
+    Log::Debug("Relocate {} to {}", source, destination);
+
+    if (!MoveFileExW(destination.c_str(), NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
+    {
+        ec = LastWin32Error();
+        Log::Debug("Failed MoveFileExW [{}]", ec);
+        return;
+    }
+
+    if (!CopyFileW(source.c_str(), destination.c_str(), FALSE))
+    {
+        ec = LastWin32Error();
+        Log::Debug("Failed CopyFileW [{}]", ec);
+        return;
+    }
+}
+
+Result<void> RelocateOnLocalDrive(const std::filesystem::path& path)
+{
+    std::error_code ec;
+
+    const std::filesystem::path mothership = GetModuleFileNameApi(NULL, ec);
+    if (ec)
+    {
+        Log::Debug("Failed GetModuleFileNameApi [{}]", ec);
+        return ec;
+    }
+
+    if (!PathIsNetworkPathW(mothership.c_str()))
+    {
+        return Orc::Success<void>();
+    }
+
+    Log::Warn(
+        "ORC is executing from a network drive, relocate to local drive to prevent connectivity issues during collect");
+
+    std::filesystem::path localConfiguration = mothership;
+    localConfiguration.replace_extension(L"xml");
+    const std::filesystem::path newLocalConfiguration = path / localConfiguration.filename();
+    RelocateFile(localConfiguration, newLocalConfiguration, ec);
+    if (ec)
+    {
+        return ec;
+    }
+
+    const std::filesystem::path newMothership = path / mothership.filename();
+    RelocateFile(mothership, newMothership, ec);
+    if (ec)
+    {
+        return ec;
+    }
+
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(pi));
+
+    STARTUPINFOEXW si;
+    ZeroMemory(&si, sizeof(si));
+    si.StartupInfo.cb = sizeof(si);
+
+    std::wstring commandLine = GetCommandLineW();
+    commandLine += L" /norelocate";
+
+    std::vector<wchar_t> commandLineBuffer(std::cbegin(commandLine), std::cend(commandLine));
+    commandLineBuffer.push_back(L'\0');
+
+    if (!CreateProcessW(
+            newMothership.c_str(),
+            commandLineBuffer.data(),
+            NULL,
+            NULL,
+            TRUE,
+            CREATE_UNICODE_ENVIRONMENT | EXTENDED_STARTUPINFO_PRESENT,
+            NULL,
+            NULL,
+            reinterpret_cast<STARTUPINFOW*>(&si),
+            &pi))
+    {
+        ec = LastWin32Error();
+        Log::Debug("Failed CreateProcessW [{}]", ec);
+        return ec;
+    }
+
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+    ExitProcess(0);
+}
 
 class MotherShipTerminate : public TerminationHandler
 {
@@ -89,27 +194,15 @@ void Main::Configure(int argc, const wchar_t* argv[])
     UtilitiesMain::Configure(argc, argv);
 }
 
-HRESULT Main::ChangeTemporaryEnvironment()
+std::wstring RemoveString(std::wstring string, std::wstring toremove)
 {
-    HRESULT hr = E_FAIL;
-
-    if (config.Temporary.Path.empty())
-        return S_OK;
-
-    if (!SetEnvironmentVariableW(L"TEMP", config.Temporary.Path.c_str()))
+    size_t pos = string.find(toremove);
+    if (pos != std::wstring::npos)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to set %TEMP% to '{}' [{}]", config.Temporary.Path, SystemError(hr));
-        return E_INVALIDARG;
-    }
-    if (!SetEnvironmentVariableW(L"TMP", config.Temporary.Path.c_str()))
-    {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to set %TMP% to '{}' [{}]", config.Temporary.Path, SystemError(hr));
-        return E_INVALIDARG;
+        string.erase(pos, toremove.length());
     }
 
-    return S_OK;
+    return string;
 }
 
 HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArgs)
@@ -185,6 +278,8 @@ HRESULT Main::Launch(const std::wstring& command, const std::wstring& commandArg
 
     std::vector<WCHAR> szCommandLine(MAX_CMDLINE);
     std::wstring strCommandLine = cmdLineBuilder.str();
+
+    strCommandLine = RemoveString(strCommandLine, L" /norelocate");
 
     HANDLE hMothership = OpenProcess(PROCESS_QUERY_INFORMATION, TRUE, GetCurrentProcessId());
     if (hMothership)
@@ -603,10 +698,13 @@ HRESULT Main::Run()
 {
     HRESULT hr = E_FAIL;
 
-    hr = ChangeTemporaryEnvironment();
-    if (FAILED(hr))
+    if (config.bNoRelocate == false)
     {
-        Log::Warn("Failed to modify temp directory [{}]", SystemError(hr));
+        auto rv = RelocateOnLocalDrive(config.Temporary.Path);
+        if (!rv)
+        {
+            Log::Error("Failed to relocate on local drive [{}]", rv.error());
+        }
     }
 
     if (config.bUseLocalCopy && m_DownloadTask)
