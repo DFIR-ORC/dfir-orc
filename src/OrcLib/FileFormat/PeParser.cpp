@@ -194,6 +194,13 @@ namespace Orc {
 PeParser::PeParser(ByteStream& stream, std::error_code& ec)
     : m_stream(stream)
 {
+    HRESULT hr = stream.SetFilePointer(0, FILE_BEGIN, NULL);
+    if (FAILED(hr))
+    {
+        ec = SystemError(hr);
+        return;
+    }
+
     ::ParseImageDosHeader(m_stream, m_imageDosHeader, ec);
     if (ec)
     {
