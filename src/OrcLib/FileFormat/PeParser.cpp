@@ -338,13 +338,15 @@ IMAGE_DATA_DIRECTORY PeParser::GetImageDataDirectory(uint8_t index, std::error_c
     return data;
 }
 
-void PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::error_code& ec) const
+Result<void> PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::optional<size_t> maxSize) const
 {
+    std::error_code ec;
+
     const auto directory = GetImageDataDirectory(index, ec);
     if (ec)
     {
         Log::Debug("Failed to retrieve directory (index: {}) [{}]", index, ec);
-        return;
+        return SystemError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
     }
 
     uint64_t fileOffset = 0;
@@ -355,7 +357,7 @@ void PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::e
         {
             Log::Debug("Invalid directory virtual address");
             ec = directoryOffset.error();
-            return;
+            return ec;
         }
 
         fileOffset = *directoryOffset;
@@ -365,17 +367,14 @@ void PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::e
         fileOffset = directory.VirtualAddress;
     }
 
-    const auto kMaxSecurityDirectorySize = 16 << 20;  // '<< 20' <=> MB
-    if (directory.Size > kMaxSecurityDirectorySize)
+    if (maxSize && directory.Size > *maxSize)
     {
         Log::Debug(
-            "Invalid directory size (index: {}, value: {}, expected: >{}",
+            "Directory size exceeds maximum allowed (index: {}, size: {}, maxSize: {})",
             index,
             directory.Size,
-            kMaxSecurityDirectorySize);
-
-        ec = std::make_error_code(std::errc::message_size);
-        return;
+            *maxSize);
+        return SystemError(HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
     }
 
     buffer.resize(directory.Size);
@@ -383,28 +382,34 @@ void PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::e
     if (ec)
     {
         Log::Debug("Failed to read directory (index: {}) [{}]", index, ec);
-        return;
+        return ec;
     }
+
+    return Orc::Success<void>();
 }
 
-void PeParser::ReadSecurityDirectory(std::vector<uint8_t>& buffer, std::error_code& ec) const
+Result<void> PeParser::ReadSecurityDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxSize) const
 {
-    ReadDirectory(IMAGE_DIRECTORY_ENTRY_SECURITY, buffer, ec);
-    if (ec)
+    auto rv = ReadDirectory(IMAGE_DIRECTORY_ENTRY_SECURITY, buffer, maxSize);
+    if (!rv)
     {
-        Log::Debug("Failed to read IMAGE_DIRECTORY_ENTRY_SECURITY [{}]", ec);
-        return;
+        Log::Debug("Failed to read IMAGE_DIRECTORY_ENTRY_SECURITY [{}]", rv.error());
+        return rv.error();
     }
+
+    return Success<void>();
 }
 
-void PeParser::ReadDebugDirectory(std::vector<uint8_t>& buffer, std::error_code& ec) const
+Result<void> PeParser::ReadDebugDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxSize) const
 {
-    ReadDirectory(IMAGE_DIRECTORY_ENTRY_DEBUG, buffer, ec);
-    if (ec)
+    auto rv = ReadDirectory(IMAGE_DIRECTORY_ENTRY_DEBUG, buffer, maxSize);
+    if (!rv)
     {
-        Log::Debug("Failed to read IMAGE_DIRECTORY_ENTRY_DEBUG [{}]", ec);
-        return;
+        Log::Debug("Failed to read IMAGE_DIRECTORY_ENTRY_DEBUG [{}]", rv.error());
+        return rv.error();
     }
+
+    return Success<void>();
 }
 
 uint64_t PeParser::GetChecksumOffset() const

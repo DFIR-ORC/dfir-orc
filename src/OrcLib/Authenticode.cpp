@@ -686,11 +686,11 @@ HRESULT Authenticode::Verify(LPCWSTR szFileName, const std::shared_ptr<ByteStrea
         }
 
         std::vector<uint8_t> securityDirectory;
-        pe.ReadSecurityDirectory(securityDirectory, ec);
-        if (ec)
+        auto rv = pe.ReadSecurityDirectory(securityDirectory);
+        if (!rv)
         {
-            Log::Debug("Failed to read security directory [{}]", ec);
-            return ec.value();
+            Log::Debug("Failed to read security directory [{}]", rv.error());
+            return ToHRESULT(rv.error());
         }
 
         CBinaryBuffer bb;
