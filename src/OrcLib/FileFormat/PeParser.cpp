@@ -222,6 +222,11 @@ PeParser::PeParser(ByteStream& stream, std::error_code& ec)
     }
 }
 
+const IMAGE_DOS_HEADER& PeParser::ImageDosHeader() const
+{
+    return m_imageDosHeader;
+}
+
 Result<uint64_t> PeParser::ImageRvaToFileOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation) const
 {
     for (const auto& section : m_imageSectionsHeaders)

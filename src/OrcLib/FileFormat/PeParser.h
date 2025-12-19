@@ -46,6 +46,7 @@ public:
 
     PeParser(ByteStream& stream, std::error_code& ec);
 
+    const IMAGE_DOS_HEADER& ImageDosHeader() const;
     bool HasDebugDirectory() const;
     void ReadDebugDirectory(std::vector<uint8_t>& buffer, std::error_code& ec) const;
 
