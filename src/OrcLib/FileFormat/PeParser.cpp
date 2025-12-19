@@ -222,6 +222,45 @@ PeParser::PeParser(ByteStream& stream, std::error_code& ec)
     }
 }
 
+Result<uint64_t> PeParser::ImageRvaToFileOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation) const
+{
+    for (const auto& section : m_imageSectionsHeaders)
+    {
+        const auto sectionEndRva =
+            static_cast<uint64_t>(section.VirtualAddress) + static_cast<uint64_t>(section.Misc.VirtualSize);
+        const auto sectionStartRva = static_cast<uint64_t>(section.VirtualAddress);
+
+        if (rva >= sectionStartRva && rva < sectionEndRva)
+        {
+            const uint32_t offsetInSection = rva - sectionStartRva;
+            if (offsetInSection >= section.SizeOfRawData)
+            {
+                Log::Debug("RVA {:#x} maps beyond section's raw data", rva);
+                return std::make_error_code(std::errc::bad_message);
+            }
+
+            if (chunkSizeForValidation)
+            {
+                const auto remainingSectionSize = section.SizeOfRawData - offsetInSection;
+                if (*chunkSizeForValidation > remainingSectionSize)
+                {
+                    Log::Debug(
+                        "RVA {:#x} with chunk size {} exceeds section's raw data (remaining size: {})",
+                        rva,
+                        *chunkSizeForValidation,
+                        remainingSectionSize);
+                    return std::make_error_code(std::errc::bad_message);
+                }
+            }
+
+            return static_cast<uint64_t>(section.PointerToRawData) + offsetInSection;
+        }
+    }
+
+    Log::Debug("RVA {:#x} not found in any section", rva);
+    return std::make_error_code(std::errc::bad_address);
+}
+
 bool PeParser::HasSecurityDirectory() const
 {
     return HasImageDataDirectory(IMAGE_DIRECTORY_ENTRY_SECURITY);

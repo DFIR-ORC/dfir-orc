@@ -57,6 +57,7 @@ private:
     bool HasImageDataDirectory(uint8_t index) const;
     IMAGE_DATA_DIRECTORY GetImageDataDirectory(uint8_t index, std::error_code& ec) const;
     void ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::error_code& ec) const;
+    Result<uint64_t> ImageRvaToFileOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation = {}) const;
 
     uint64_t GetSizeOfOptionalHeaders() const;
     uint64_t GetSecurityDirectoryOffset() const;
