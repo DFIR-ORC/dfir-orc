@@ -278,8 +278,7 @@ bool PeParser::HasDebugDirectory() const
 
 bool PeParser::HasImageDataDirectory(uint8_t index) const
 {
-    const auto kMaxDirectoryIndex = 14;  // 'IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR'
-    if (index > kMaxDirectoryIndex)
+    if (index >= IMAGE_NUMBEROF_DIRECTORY_ENTRIES)
     {
         return false;
     }
@@ -308,11 +307,10 @@ bool PeParser::HasImageDataDirectory(uint8_t index) const
 
 IMAGE_DATA_DIRECTORY PeParser::GetImageDataDirectory(uint8_t index, std::error_code& ec) const
 {
-    const auto kMaxDirectoryIndex = 14;  // 'IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR'
-    if (index > kMaxDirectoryIndex)
+    if (index >= IMAGE_NUMBEROF_DIRECTORY_ENTRIES)
     {
         ec = std::make_error_code(std::errc::invalid_argument);
-        Log::Debug("Invalid directory (index: {}, expected: >{})", index, kMaxDirectoryIndex);
+        Log::Debug("Invalid directory (index: {}, expected: <{})", index, IMAGE_NUMBEROF_DIRECTORY_ENTRIES);
         return {};
     }
 
