@@ -457,7 +457,7 @@ void PeParser::Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks
 
     if (HasFlag(algorithms, CryptoHashStreamAlgorithm::SHA1))
     {
-        hashstream->GetSHA1(hash);
+        hr = hashstream->GetSHA1(hash);
         if (FAILED(hr))
         {
             Log::Debug("Failed to get sha1 [{}]", SystemError(hr));
@@ -470,7 +470,7 @@ void PeParser::Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks
 
     if (HasFlag(algorithms, CryptoHashStreamAlgorithm::SHA256))
     {
-        hashstream->GetSHA256(hash);
+        hr = hashstream->GetSHA256(hash);
         if (FAILED(hr))
         {
             Log::Debug("Failed to get sha256 [{}]", SystemError(hr));
