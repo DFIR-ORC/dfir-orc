@@ -67,6 +67,7 @@ private:
 
 private:
     ByteStream& m_stream;
+    uint64_t m_streamSize;  // Cached stream size because underlying stream may SetFilePointer to get it
     IMAGE_DOS_HEADER m_imageDosHeader;
     ImageNtHeader m_imageNtHeader;
     std::optional<IMAGE_OPTIONAL_HEADER32> m_imageOptionalHeaders32;

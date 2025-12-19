@@ -193,6 +193,7 @@ namespace Orc {
 
 PeParser::PeParser(ByteStream& stream, std::error_code& ec)
     : m_stream(stream)
+    , m_streamSize(m_stream.GetSize())
 {
     HRESULT hr = stream.SetFilePointer(0, FILE_BEGIN, NULL);
     if (FAILED(hr))
@@ -408,7 +409,7 @@ void PeParser::GetHashedChunks(PeChunks& chunks, std::error_code& ec) const
     }
 
     chunks[3].offset = GetSizeOfOptionalHeaders();
-    chunks[3].length = m_stream.GetSize() - chunks[3].offset - secdir.Size;
+    chunks[3].length = m_streamSize - chunks[3].offset - secdir.Size;
 }
 
 void PeParser::Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks, PeHash& output, std::error_code& ec)
@@ -431,7 +432,7 @@ void PeParser::Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks
 
     // MS does zero padding for PEs that are not 8 modulo (often with catalogs)
     const uint8_t padding[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-    const auto alignment = m_stream.GetSize() % sizeof(padding);
+    const auto alignment = m_streamSize % sizeof(padding);
     if (alignment != 0)
     {
         const auto paddingLength = sizeof(padding) - alignment;
