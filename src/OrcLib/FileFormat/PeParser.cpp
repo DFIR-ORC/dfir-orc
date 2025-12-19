@@ -344,6 +344,24 @@ void PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::e
         return;
     }
 
+    uint64_t fileOffset = 0;
+    if (index != IMAGE_DIRECTORY_ENTRY_SECURITY)
+    {
+        auto directoryOffset = ImageRvaToFileOffset(directory.VirtualAddress);
+        if (!directoryOffset)
+        {
+            Log::Debug("Invalid directory virtual address");
+            ec = directoryOffset.error();
+            return;
+        }
+
+        fileOffset = *directoryOffset;
+    }
+    else
+    {
+        fileOffset = directory.VirtualAddress;
+    }
+
     const auto kMaxSecurityDirectorySize = 16 << 20;  // '<< 20' <=> MB
     if (directory.Size > kMaxSecurityDirectorySize)
     {
@@ -358,7 +376,7 @@ void PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::e
     }
 
     buffer.resize(directory.Size);
-    ReadChunkAt(m_stream, directory.VirtualAddress, buffer, ec);
+    ReadChunkAt(m_stream, fileOffset, buffer, ec);
     if (ec)
     {
         Log::Debug("Failed to read directory (index: {}) [{}]", index, ec);
