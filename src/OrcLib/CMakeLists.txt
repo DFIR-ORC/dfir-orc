@@ -436,6 +436,8 @@ set(SRC_INOUT_BYTESTREAM_UTILITYSTREAM
     "MultiMemoryStream.h"
     "StringsStream.cpp"
     "StringsStream.h"
+    "SubStream.cpp"
+    "SubStream.h"
     "TeeStream.cpp"
     "TeeStream.h"
     "TemporaryStream.cpp"
