@@ -79,10 +79,12 @@ size_t Read(ByteStream& stream, ContainerT& output, std::error_code& ec)
 {
     BufferSpan span(reinterpret_cast<uint8_t*>(output.data()), output.size() * sizeof(ContainerT::value_type));
 
-    size_t processed = stream.Read(span, ec);
-    if (ec)
+    ULONGLONG processed = 0;
+    HRESULT hr = stream.Read(span.data(), span.size(), &processed);
+    if (FAILED(hr))
     {
-        return processed;
+        ec = SystemError(hr);
+        return 0;
     }
 
     output.resize(processed / sizeof(ContainerT::value_type));
