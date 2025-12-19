@@ -120,6 +120,19 @@ size_t ReadAt(ByteStream& stream, uint64_t offset, ContainerT& output, std::erro
         return 0;
     }
 
+    // The usual behavior when seeking past a file is to successfuly update file position then read length will be 0
+    // bytes. Some stream implentations may successfully seek but with wrong position.
+    // TODO: check all underlying streams and ensure there is no side effect.
+    if (currPointer != offset)
+    {
+        ec = SystemError(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+        Log::Debug(
+            "Failed to seek to position: {} (current position: {})",
+            Traits::Offset(offset),
+            Traits::Offset(currPointer));
+        return 0;
+    }
+
     return Read(stream, output, ec);
 }
 
@@ -137,6 +150,18 @@ size_t ReadChunkAt(ByteStream& stream, uint64_t offset, ContainerT& output, std:
     {
         ec = SystemError(hr);
         Log::Debug("Failed to seek to position: {} [{}]", Traits::Offset(offset), ec);
+        return 0;
+    }
+
+    // The usual behavior when seeking past a file is to successfuly update file position then read length will be 0
+    // bytes. Some stream implentations may successfully seek but with wrong position.
+    if (currPointer != offset)
+    {
+        ec = SystemError(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+        Log::Debug(
+            "Failed to seek to position: {} (current position: {})",
+            Traits::Offset(offset),
+            Traits::Offset(currPointer));
         return 0;
     }
 
@@ -159,6 +184,18 @@ ReadChunkAt(ByteStream& stream, uint64_t offset, size_t chunkSizeCb, BasicBuffer
     {
         ec = SystemError(hr);
         Log::Debug("Failed to seek to position: {} [{}]", Traits::Offset(offset), ec);
+        return 0;
+    }
+
+    // The usual behavior when seeking past a file is to successfuly update file position then read length will be 0
+    // bytes. Some stream implentations may successfully seek but with wrong position.
+    if (currPointer != offset)
+    {
+        ec = SystemError(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+        Log::Debug(
+            "Failed to seek to position: {} (current position: {})",
+            Traits::Offset(offset),
+            Traits::Offset(currPointer));
         return 0;
     }
 
@@ -200,6 +237,18 @@ void ReadItemAt(ByteStream& stream, uint64_t offset, ItemT& output, std::error_c
     {
         ec = SystemError(hr);
         Log::Debug("Failed to seek to position: {} [{}]", Traits::Offset(offset), ec);
+        return;
+    }
+
+    // The usual behavior when seeking past a file is to successfuly update file position then read length will be 0
+    // bytes. Some stream implentations may successfully seek but with wrong position.
+    if (currPointer != offset)
+    {
+        ec = SystemError(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+        Log::Debug(
+            "Failed to seek to position: {} (current position: {})",
+            Traits::Offset(offset),
+            Traits::Offset(currPointer));
         return;
     }
 
@@ -247,7 +296,7 @@ size_t WriteChunk(ByteStream& stream, BasicBufferView<CharT> input, std::error_c
 
         if (lastWriteSize == 0)
         {
-            ec = std::make_error_code(std::errc::io_error);
+            ec = SystemError(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
             return processed;
         }
 
@@ -292,6 +341,18 @@ size_t WriteAt(ByteStream& stream, uint64_t offset, const ContainerT& input, std
         return 0;
     }
 
+    // The usual behavior when seeking past a file is to successfuly update file position then read length will be 0
+    // bytes. Some stream implentations may successfully seek but with wrong position.
+    if (currPointer != offset)
+    {
+        ec = SystemError(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+        Log::Debug(
+            "Failed to seek to position: {} (current position: {})",
+            Traits::Offset(offset),
+            Traits::Offset(currPointer));
+        return 0;
+    }
+
     return Write(stream, input, ec);
 }
 
@@ -309,6 +370,18 @@ size_t WriteChunkAt(ByteStream& stream, uint64_t offset, const ContainerT& input
     {
         ec = SystemError(hr);
         Log::Debug("Failed to seek to position: {} [{}]", Traits::Offset(offset), ec);
+        return 0;
+    }
+
+    // The usual behavior when seeking past a file is to successfuly update file position then read length will be 0
+    // bytes. Some stream implentations may successfully seek but with wrong position.
+    if (currPointer != offset)
+    {
+        ec = SystemError(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+        Log::Debug(
+            "Failed to seek to position: {} (current position: {})",
+            Traits::Offset(offset),
+            Traits::Offset(currPointer));
         return 0;
     }
 
@@ -331,6 +404,18 @@ WriteChunkAt(ByteStream& stream, uint64_t offset, size_t chunkSizeCb, BasicBuffe
     {
         ec = SystemError(hr);
         Log::Debug("Failed to seek to position: {} [{}]", Traits::Offset(offset), ec);
+        return 0;
+    }
+
+    // The usual behavior when seeking past a file is to successfuly update file position then read length will be 0
+    // bytes. Some stream implentations may successfully seek but with wrong position.
+    if (currPointer != offset)
+    {
+        ec = SystemError(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+        Log::Debug(
+            "Failed to seek to position: {} (current position: {})",
+            Traits::Offset(offset),
+            Traits::Offset(currPointer));
         return 0;
     }
 
@@ -370,6 +455,18 @@ void WriteItemAt(ByteStream& stream, uint64_t offset, ItemT& output, std::error_
         ec = SystemError(hr);
         Log::Debug("Failed to seek to position: {} [{}]", Traits::Offset(offset), ec);
         return;
+    }
+
+    // The usual behavior when seeking past a file is to successfuly update file position then read length will be 0
+    // bytes. Some stream implentations may successfully seek but with wrong position.
+    if (currPointer != offset)
+    {
+        ec = SystemError(HRESULT_FROM_WIN32(ERROR_HANDLE_EOF));
+        Log::Debug(
+            "Failed to seek to position: {} (current position: {})",
+            Traits::Offset(offset),
+            Traits::Offset(currPointer));
+        return 0;
     }
 
     WriteItem(stream, output, ec);
