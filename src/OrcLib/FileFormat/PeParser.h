@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <vector>
 #include <system_error>
+#include <variant>
 
 #include "CryptoHashStreamAlgorithm.h"
 
@@ -19,15 +20,6 @@ namespace Orc {
 class PeParser
 {
 public:
-#pragma pack(push, 1)
-    // Like IMAGE_NT_HEADERS32/IMAGE_NT_HEADERS64 but keeps only fixed fields size
-    struct ImageNtHeader
-    {
-        DWORD Signature;
-        IMAGE_FILE_HEADER FileHeader;
-    };
-#pragma pack(pop)
-
     struct PeChunk
     {
         uint64_t offset;
@@ -42,11 +34,14 @@ public:
     };
 
     using PeChunks = std::array<PeChunk, 4>;
+    using OptionalHeader = std::variant<IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64>;
     using SectionHeaders = fmt::basic_memory_buffer<IMAGE_SECTION_HEADER, 16>;
 
     PeParser(ByteStream& stream, std::error_code& ec);
 
     const IMAGE_DOS_HEADER& ImageDosHeader() const;
+    const std::optional<IMAGE_FILE_HEADER>& ImageFileHeader() const;
+    const OptionalHeader& ImageOptionalHeader() const;
 
     bool HasSecurityDirectory() const;
     Result<void> ReadSecurityDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxLen = 1048576 * 32) const;
@@ -73,9 +68,8 @@ private:
     ByteStream& m_stream;
     uint64_t m_streamSize;  // Cached stream size because underlying stream may SetFilePointer to get it
     IMAGE_DOS_HEADER m_imageDosHeader;
-    ImageNtHeader m_imageNtHeader;
-    std::optional<IMAGE_OPTIONAL_HEADER32> m_imageOptionalHeader32;
-    std::optional<IMAGE_OPTIONAL_HEADER64> m_imageOptionalHeader64;
+    std::optional<IMAGE_FILE_HEADER> m_imageFileHeader;
+    OptionalHeader m_imageOptionalHeader;
     SectionHeaders m_imageSectionsHeaders;
 };
 

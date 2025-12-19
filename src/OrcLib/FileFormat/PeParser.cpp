@@ -29,6 +29,15 @@ using namespace Orc;
 
 namespace {
 
+#pragma pack(push, 1)
+// Like IMAGE_NT_HEADERS32/IMAGE_NT_HEADERS64 but keeps only fixed fields size
+struct ImageNtHeaderFixedSize
+{
+    DWORD Signature;
+    IMAGE_FILE_HEADER FileHeader;
+};
+#pragma pack(pop)
+
 uint64_t CopyChunk(ByteStream& input, const PeParser::PeChunk& chunk, ByteStream& output, std::error_code& ec)
 {
     size_t processed = 0;
@@ -98,11 +107,12 @@ void ParseImageDosHeader(ByteStream& stream, IMAGE_DOS_HEADER& header, std::erro
 void ParseImageNtHeaders(
     ByteStream& stream,
     const IMAGE_DOS_HEADER& imageDosHeader,
-    PeParser::ImageNtHeader& imageNtHeader,
-    std::optional<IMAGE_OPTIONAL_HEADER32>& optionalHeader32,
-    std::optional<IMAGE_OPTIONAL_HEADER64>& optionalHeader64,
+    std::optional<IMAGE_FILE_HEADER>& imageFileHeader,
+    PeParser::OptionalHeader& imageOptionalHeader,
     std::error_code& ec)
 {
+    ImageNtHeaderFixedSize imageNtHeader;
+
     ReadItemAt(stream, imageDosHeader.e_lfanew, imageNtHeader, ec);
     if (ec)
     {
@@ -112,50 +122,89 @@ void ParseImageNtHeaders(
 
     if (imageNtHeader.Signature != IMAGE_NT_SIGNATURE)
     {
+        const uint16_t signature = LOWORD(imageNtHeader.Signature);
+        if (signature == IMAGE_DOS_SIGNATURE || signature == IMAGE_OS2_SIGNATURE || signature == IMAGE_OS2_SIGNATURE_LE
+            || signature == IMAGE_VXD_SIGNATURE)
+        {
+            return;
+        }
+
         ec = std::make_error_code(std::errc::bad_message);
         Log::Debug("Invalid IMAGE_NT_SIGNATURE (value: {:#x})", imageNtHeader.Signature);
         return;
     }
 
-    switch (imageNtHeader.FileHeader.Machine)
+    imageFileHeader = imageNtHeader.FileHeader;
+
+    switch (imageFileHeader->Machine)
     {
         case IMAGE_FILE_MACHINE_I386:
+        case IMAGE_FILE_MACHINE_ARM:
         case IMAGE_FILE_MACHINE_ARMNT:
-            optionalHeader32 = IMAGE_OPTIONAL_HEADER32 {0};
-            ReadItem(stream, optionalHeader32.value(), ec);
+        case IMAGE_FILE_MACHINE_THUMB:
+        case IMAGE_FILE_MACHINE_POWERPC:
+        case IMAGE_FILE_MACHINE_POWERPCFP:
+        case IMAGE_FILE_MACHINE_MIPSFPU:
+        case IMAGE_FILE_MACHINE_MIPSFPU16:
+        case IMAGE_FILE_MACHINE_R3000:
+        case IMAGE_FILE_MACHINE_R4000:
+        case IMAGE_FILE_MACHINE_R10000:
+        case IMAGE_FILE_MACHINE_WCEMIPSV2:
+        case IMAGE_FILE_MACHINE_SH3:
+        case IMAGE_FILE_MACHINE_SH3DSP:
+        case IMAGE_FILE_MACHINE_SH3E:
+        case IMAGE_FILE_MACHINE_SH4:
+        case IMAGE_FILE_MACHINE_SH5:
+        case IMAGE_FILE_MACHINE_M32R:
+        case IMAGE_FILE_MACHINE_AM33:
+        case IMAGE_FILE_MACHINE_TRICORE:
+        case IMAGE_FILE_MACHINE_CEF:
+        case IMAGE_FILE_MACHINE_CEE:
+        case IMAGE_FILE_MACHINE_MIPS16:
+        case IMAGE_FILE_MACHINE_UNKNOWN:
+        case IMAGE_FILE_MACHINE_TARGET_HOST:
+        case IMAGE_FILE_MACHINE_EBC:
+        case IMAGE_FILE_MACHINE_ALPHA: {
+            IMAGE_OPTIONAL_HEADER32 optionalHeader32 = {0};
+            ReadItem(stream, optionalHeader32, ec);
             if (ec)
             {
                 Log::Debug("Failed to read IMAGE_OPTIONAL_HEADER32 [{}]", ec);
                 return;
             }
 
-            if (optionalHeader32->Magic != IMAGE_NT_OPTIONAL_HDR32_MAGIC)
+            if (optionalHeader32.Magic != IMAGE_NT_OPTIONAL_HDR32_MAGIC)
             {
-                Log::Debug("Invalid IMAGE_NT_OPTIONAL_HDR32_MAGIC (value: {})", optionalHeader32->Magic);
+                Log::Debug("Invalid IMAGE_NT_OPTIONAL_HDR32_MAGIC (value: {})", optionalHeader32.Magic);
                 return;
             }
 
+            imageOptionalHeader = optionalHeader32;
             break;
+        }
         case IMAGE_FILE_MACHINE_AMD64:
         case IMAGE_FILE_MACHINE_IA64:
         case IMAGE_FILE_MACHINE_ARM64:
-            optionalHeader64 = IMAGE_OPTIONAL_HEADER64 {0};
-            ReadItem(stream, optionalHeader64.value(), ec);
+        case IMAGE_FILE_MACHINE_ALPHA64: {
+            IMAGE_OPTIONAL_HEADER64 optionalHeader64 = {0};
+            ReadItem(stream, optionalHeader64, ec);
             if (ec)
             {
                 Log::Debug("Failed to read IMAGE_OPTIONAL_HEADER64 [{}]", ec);
                 return;
             }
 
-            if (optionalHeader64->Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+            if (optionalHeader64.Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
             {
-                Log::Debug("Invalid IMAGE_NT_OPTIONAL_HDR64_MAGIC (value: {})", optionalHeader64->Magic);
+                Log::Debug("Invalid IMAGE_NT_OPTIONAL_HDR64_MAGIC (value: {})", optionalHeader64.Magic);
                 return;
             }
 
+            imageOptionalHeader = optionalHeader64;
             break;
+        }
         default:
-            Log::Debug("Unsupported machine (value: {})", imageNtHeader.FileHeader.Machine);
+            Log::Debug("Unsupported machine (value: {})", imageFileHeader->Machine);
             ec = std::make_error_code(std::errc::function_not_supported);
             return;
     }
@@ -164,21 +213,21 @@ void ParseImageNtHeaders(
 // BEWARE: this function expects the stream to be at the right file position (just after optional headers)
 void ParseImageSections(
     ByteStream& stream,
-    const PeParser::ImageNtHeader& imageNtHeaders,
+    const IMAGE_FILE_HEADER& imageFileHeader,
     PeParser::SectionHeaders& imageSectionHeader,
     std::error_code& ec)
 {
     const auto kMaxSectionCount = 96;
 
-    if (imageNtHeaders.FileHeader.NumberOfSections >= kMaxSectionCount)
+    if (imageFileHeader.NumberOfSections > kMaxSectionCount)
     {
         // Log as error as this could be malicious behavior
-        Log::Error("Invalid PE with too many section (value: {})", imageNtHeaders.FileHeader.NumberOfSections);
+        Log::Error("Invalid PE with too many section (value: {})", imageFileHeader.NumberOfSections);
         ec = std::make_error_code(std::errc::bad_message);
         return;
     }
 
-    imageSectionHeader.resize(imageNtHeaders.FileHeader.NumberOfSections);
+    imageSectionHeader.resize(imageFileHeader.NumberOfSections);
     ReadChunk(stream, imageSectionHeader, ec);
     if (ec)
     {
@@ -208,23 +257,37 @@ PeParser::PeParser(ByteStream& stream, std::error_code& ec)
         return;
     }
 
-    ::ParseImageNtHeaders(
-        m_stream, m_imageDosHeader, m_imageNtHeader, m_imageOptionalHeader32, m_imageOptionalHeader64, ec);
+    ::ParseImageNtHeaders(m_stream, m_imageDosHeader, m_imageFileHeader, m_imageOptionalHeader, ec);
     if (ec)
     {
         return;
     }
 
-    ::ParseImageSections(m_stream, m_imageNtHeader, m_imageSectionsHeaders, ec);
-    if (ec)
+    if (m_imageFileHeader)
     {
-        return;
+        ::ParseImageSections(m_stream, *m_imageFileHeader, m_imageSectionsHeaders, ec);
+        if (ec)
+        {
+            m_imageSectionsHeaders.clear();
+            ec.clear();
+            return;
+        }
     }
 }
 
 const IMAGE_DOS_HEADER& PeParser::ImageDosHeader() const
 {
     return m_imageDosHeader;
+}
+
+const std::optional<IMAGE_FILE_HEADER>& PeParser::ImageFileHeader() const
+{
+    return m_imageFileHeader;
+}
+
+const PeParser::OptionalHeader& PeParser::ImageOptionalHeader() const
+{
+    return m_imageOptionalHeader;
 }
 
 Result<uint64_t> PeParser::ImageRvaToFileOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation) const
@@ -284,18 +347,7 @@ bool PeParser::HasImageDataDirectory(uint8_t index) const
     }
 
     IMAGE_DATA_DIRECTORY data;
-    if (m_imageOptionalHeader32)
-    {
-        data = m_imageOptionalHeader32->DataDirectory[index];
-    }
-    else if (m_imageOptionalHeader64)
-    {
-        data = m_imageOptionalHeader64->DataDirectory[index];
-    }
-    else
-    {
-        return false;
-    }
+    std::visit([&](const auto& optionalHeader) { data = optionalHeader.DataDirectory[index]; }, m_imageOptionalHeader);
 
     if (data.Size == 0)
     {
@@ -315,19 +367,7 @@ IMAGE_DATA_DIRECTORY PeParser::GetImageDataDirectory(uint8_t index, std::error_c
     }
 
     IMAGE_DATA_DIRECTORY data;
-    if (m_imageOptionalHeader32)
-    {
-        data = m_imageOptionalHeader32->DataDirectory[index];
-    }
-    else if (m_imageOptionalHeader64)
-    {
-        data = m_imageOptionalHeader64->DataDirectory[index];
-    }
-    else
-    {
-        ec = std::make_error_code(std::errc::bad_message);
-        return {};
-    }
+    std::visit([&](const auto& optionalHeader) { data = optionalHeader.DataDirectory[index]; }, m_imageOptionalHeader);
 
     if (data.Size == 0)
     {
@@ -414,41 +454,36 @@ Result<void> PeParser::ReadDebugDirectory(std::vector<uint8_t>& buffer, std::opt
 
 uint64_t PeParser::GetChecksumOffset() const
 {
-    // The value of the checksum offset is the same for 32/64 bits but it is kind of "more true
-    if (m_imageOptionalHeader32)
+    // The value of the checksum offset is the same for 32/64 bits but it is kind of "more true"
+    if (std::holds_alternative<IMAGE_OPTIONAL_HEADER32>(m_imageOptionalHeader))
     {
-        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeader) + offsetof(struct IMAGE_OPTIONAL_HEADER32, CheckSum);
+        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize)
+            + offsetof(IMAGE_OPTIONAL_HEADER32, CheckSum);
     }
     else
     {
-        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeader) + offsetof(struct IMAGE_OPTIONAL_HEADER64, CheckSum);
+        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize)
+            + offsetof(IMAGE_OPTIONAL_HEADER64, CheckSum);
     }
 }
 
 uint64_t PeParser::GetSecurityDirectoryOffset() const
 {
-    if (m_imageOptionalHeader32)
+    if (std::holds_alternative<IMAGE_OPTIONAL_HEADER32>(m_imageOptionalHeader))
     {
-        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeader)
-            + offsetof(struct IMAGE_OPTIONAL_HEADER32, DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY]);
+        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize)
+            + offsetof(IMAGE_OPTIONAL_HEADER32, DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY]);
     }
     else
     {
-        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeader)
-            + offsetof(struct IMAGE_OPTIONAL_HEADER64, DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY]);
+        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize)
+            + offsetof(IMAGE_OPTIONAL_HEADER64, DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY]);
     }
 }
 
 uint64_t PeParser::GetSizeOfOptionalHeader() const
 {
-    if (m_imageOptionalHeader32)
-    {
-        return m_imageOptionalHeader32->SizeOfHeaders;
-    }
-    else
-    {
-        return m_imageOptionalHeader64->SizeOfHeaders;
-    }
+    return std::visit([&](const auto& optionalHeader) { return optionalHeader.SizeOfHeaders; }, m_imageOptionalHeader);
 }
 
 void PeParser::GetHashedChunks(PeChunks& chunks, std::error_code& ec) const
