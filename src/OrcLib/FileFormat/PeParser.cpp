@@ -507,7 +507,20 @@ void PeParser::GetHashedChunks(PeChunks& chunks, std::error_code& ec) const
         }
     }
 
-    chunks[3].offset = GetSizeOfOptionalHeader();
+    const auto fileSize = m_streamSize;
+    const auto offsetChunk3 = GetSizeOfOptionalHeader();
+    const uint64_t availableSize = (fileSize > offsetChunk3) ? (fileSize - offsetChunk3) : 0;
+    if (secdir.Size > availableSize)
+    {
+        Log::Debug(
+            "Security directory size exceeds available space (secdir.Size: {}, available: {})",
+            secdir.Size,
+            availableSize);
+        ec = std::make_error_code(std::errc::bad_message);
+        return;
+    }
+
+    chunks[3].offset = offsetChunk3;
     chunks[3].length = m_streamSize - chunks[3].offset - secdir.Size;
 }
 
