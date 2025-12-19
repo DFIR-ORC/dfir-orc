@@ -63,7 +63,7 @@ uint64_t CopyChunks(const PeParser::PeChunks& chunks, ByteStream& input, ByteStr
 
     for (const auto& chunk : chunks)
     {
-        processed += ::CopyChunk(input, chunk, output, ec);
+        processed += CopyChunk(input, chunk, output, ec);
         if (ec)
         {
             Log::Debug(
@@ -80,7 +80,6 @@ void ParseImageDosHeader(ByteStream& stream, IMAGE_DOS_HEADER& header, std::erro
     ReadItemAt(stream, 0, header, ec);
     if (ec)
     {
-        Log::Debug("Failed to read IMAGE_DOS_HEADER [{}]", ec);
         return;
     }
 
@@ -92,7 +91,6 @@ void ParseImageDosHeader(ByteStream& stream, IMAGE_DOS_HEADER& header, std::erro
         case IMAGE_OS2_SIGNATURE_LE:
         default:
             ec = std::make_error_code(std::errc::bad_message);
-            Log::Debug("Invalid IMAGE_DOS_HEADER magic code (value: {:#x})", header.e_magic);
             return;
     }
 }
@@ -170,7 +168,7 @@ void ParseImageSections(
     PeParser::SectionHeaders& imageSectionHeader,
     std::error_code& ec)
 {
-    const auto kMaxSectionCount = 64;
+    const auto kMaxSectionCount = 96;
 
     if (imageNtHeaders.FileHeader.NumberOfSections >= kMaxSectionCount)
     {
@@ -409,7 +407,6 @@ void PeParser::GetHashedChunks(PeChunks& chunks, std::error_code& ec) const
 void PeParser::Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks, PeHash& output, std::error_code& ec)
     const
 {
-    // TODO: only process the expected algorithm
     auto hashstream = std::make_shared<CryptoHashStream>();
     HRESULT hr = hashstream->OpenToWrite(algorithms, nullptr);
     if (FAILED(hr))
