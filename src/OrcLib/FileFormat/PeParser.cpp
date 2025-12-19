@@ -95,12 +95,12 @@ void ParseImageDosHeader(ByteStream& stream, IMAGE_DOS_HEADER& header, std::erro
     }
 }
 
-void ParseImageNtHeader(
+void ParseImageNtHeaders(
     ByteStream& stream,
     const IMAGE_DOS_HEADER& imageDosHeader,
     PeParser::ImageNtHeader& imageNtHeader,
-    std::optional<IMAGE_OPTIONAL_HEADER32>& optionalHeaders32,
-    std::optional<IMAGE_OPTIONAL_HEADER64>& optionalHeaders64,
+    std::optional<IMAGE_OPTIONAL_HEADER32>& optionalHeader32,
+    std::optional<IMAGE_OPTIONAL_HEADER64>& optionalHeader64,
     std::error_code& ec)
 {
     ReadItemAt(stream, imageDosHeader.e_lfanew, imageNtHeader, ec);
@@ -121,17 +121,17 @@ void ParseImageNtHeader(
     {
         case IMAGE_FILE_MACHINE_I386:
         case IMAGE_FILE_MACHINE_ARMNT:
-            optionalHeaders32 = IMAGE_OPTIONAL_HEADER32 {0};
-            ReadItem(stream, optionalHeaders32.value(), ec);
+            optionalHeader32 = IMAGE_OPTIONAL_HEADER32 {0};
+            ReadItem(stream, optionalHeader32.value(), ec);
             if (ec)
             {
                 Log::Debug("Failed to read IMAGE_OPTIONAL_HEADER32 [{}]", ec);
                 return;
             }
 
-            if (optionalHeaders32->Magic != IMAGE_NT_OPTIONAL_HDR32_MAGIC)
+            if (optionalHeader32->Magic != IMAGE_NT_OPTIONAL_HDR32_MAGIC)
             {
-                Log::Debug("Invalid IMAGE_NT_OPTIONAL_HDR32_MAGIC (value: {})", optionalHeaders32->Magic);
+                Log::Debug("Invalid IMAGE_NT_OPTIONAL_HDR32_MAGIC (value: {})", optionalHeader32->Magic);
                 return;
             }
 
@@ -139,17 +139,17 @@ void ParseImageNtHeader(
         case IMAGE_FILE_MACHINE_AMD64:
         case IMAGE_FILE_MACHINE_IA64:
         case IMAGE_FILE_MACHINE_ARM64:
-            optionalHeaders64 = IMAGE_OPTIONAL_HEADER64 {0};
-            ReadItem(stream, optionalHeaders64.value(), ec);
+            optionalHeader64 = IMAGE_OPTIONAL_HEADER64 {0};
+            ReadItem(stream, optionalHeader64.value(), ec);
             if (ec)
             {
                 Log::Debug("Failed to read IMAGE_OPTIONAL_HEADER64 [{}]", ec);
                 return;
             }
 
-            if (optionalHeaders64->Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+            if (optionalHeader64->Magic != IMAGE_NT_OPTIONAL_HDR64_MAGIC)
             {
-                Log::Debug("Invalid IMAGE_NT_OPTIONAL_HDR64_MAGIC (value: {})", optionalHeaders64->Magic);
+                Log::Debug("Invalid IMAGE_NT_OPTIONAL_HDR64_MAGIC (value: {})", optionalHeader64->Magic);
                 return;
             }
 
@@ -208,8 +208,8 @@ PeParser::PeParser(ByteStream& stream, std::error_code& ec)
         return;
     }
 
-    ::ParseImageNtHeader(
-        m_stream, m_imageDosHeader, m_imageNtHeader, m_imageOptionalHeaders32, m_imageOptionalHeaders64, ec);
+    ::ParseImageNtHeaders(
+        m_stream, m_imageDosHeader, m_imageNtHeader, m_imageOptionalHeader32, m_imageOptionalHeader64, ec);
     if (ec)
     {
         return;
@@ -285,13 +285,13 @@ bool PeParser::HasImageDataDirectory(uint8_t index) const
     }
 
     IMAGE_DATA_DIRECTORY data;
-    if (m_imageOptionalHeaders32)
+    if (m_imageOptionalHeader32)
     {
-        data = m_imageOptionalHeaders32->DataDirectory[index];
+        data = m_imageOptionalHeader32->DataDirectory[index];
     }
-    else if (m_imageOptionalHeaders64)
+    else if (m_imageOptionalHeader64)
     {
-        data = m_imageOptionalHeaders64->DataDirectory[index];
+        data = m_imageOptionalHeader64->DataDirectory[index];
     }
     else
     {
@@ -317,13 +317,13 @@ IMAGE_DATA_DIRECTORY PeParser::GetImageDataDirectory(uint8_t index, std::error_c
     }
 
     IMAGE_DATA_DIRECTORY data;
-    if (m_imageOptionalHeaders32)
+    if (m_imageOptionalHeader32)
     {
-        data = m_imageOptionalHeaders32->DataDirectory[index];
+        data = m_imageOptionalHeader32->DataDirectory[index];
     }
-    else if (m_imageOptionalHeaders64)
+    else if (m_imageOptionalHeader64)
     {
-        data = m_imageOptionalHeaders64->DataDirectory[index];
+        data = m_imageOptionalHeader64->DataDirectory[index];
     }
     else
     {
@@ -412,7 +412,7 @@ void PeParser::ReadDebugDirectory(std::vector<uint8_t>& buffer, std::error_code&
 uint64_t PeParser::GetChecksumOffset() const
 {
     // The value of the checksum offset is the same for 32/64 bits but it is kind of "more true
-    if (m_imageOptionalHeaders32)
+    if (m_imageOptionalHeader32)
     {
         return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeader) + offsetof(struct IMAGE_OPTIONAL_HEADER32, CheckSum);
     }
@@ -424,7 +424,7 @@ uint64_t PeParser::GetChecksumOffset() const
 
 uint64_t PeParser::GetSecurityDirectoryOffset() const
 {
-    if (m_imageOptionalHeaders32)
+    if (m_imageOptionalHeader32)
     {
         return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeader)
             + offsetof(struct IMAGE_OPTIONAL_HEADER32, DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY]);
@@ -436,15 +436,15 @@ uint64_t PeParser::GetSecurityDirectoryOffset() const
     }
 }
 
-uint64_t PeParser::GetSizeOfOptionalHeaders() const
+uint64_t PeParser::GetSizeOfOptionalHeader() const
 {
-    if (m_imageOptionalHeaders32)
+    if (m_imageOptionalHeader32)
     {
-        return m_imageOptionalHeaders32->SizeOfHeaders;
+        return m_imageOptionalHeader32->SizeOfHeaders;
     }
     else
     {
-        return m_imageOptionalHeaders64->SizeOfHeaders;
+        return m_imageOptionalHeader64->SizeOfHeaders;
     }
 }
 
@@ -457,7 +457,7 @@ void PeParser::GetHashedChunks(PeChunks& chunks, std::error_code& ec) const
     chunks[1].length = GetSecurityDirectoryOffset() - chunks[1].offset;
 
     chunks[2].offset = GetSecurityDirectoryOffset() + sizeof(IMAGE_DATA_DIRECTORY);
-    chunks[2].length = GetSizeOfOptionalHeaders() - chunks[2].offset;
+    chunks[2].length = GetSizeOfOptionalHeader() - chunks[2].offset;
 
     IMAGE_DATA_DIRECTORY secdir = {0};
     if (HasSecurityDirectory())
@@ -470,7 +470,7 @@ void PeParser::GetHashedChunks(PeChunks& chunks, std::error_code& ec) const
         }
     }
 
-    chunks[3].offset = GetSizeOfOptionalHeaders();
+    chunks[3].offset = GetSizeOfOptionalHeader();
     chunks[3].length = m_streamSize - chunks[3].offset - secdir.Size;
 }
 

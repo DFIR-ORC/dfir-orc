@@ -60,7 +60,7 @@ private:
     void ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::error_code& ec) const;
     Result<uint64_t> ImageRvaToFileOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation = {}) const;
 
-    uint64_t GetSizeOfOptionalHeaders() const;
+    uint64_t GetSizeOfOptionalHeader() const;
     uint64_t GetSecurityDirectoryOffset() const;
     uint64_t GetChecksumOffset() const;
 
@@ -72,8 +72,8 @@ private:
     uint64_t m_streamSize;  // Cached stream size because underlying stream may SetFilePointer to get it
     IMAGE_DOS_HEADER m_imageDosHeader;
     ImageNtHeader m_imageNtHeader;
-    std::optional<IMAGE_OPTIONAL_HEADER32> m_imageOptionalHeaders32;
-    std::optional<IMAGE_OPTIONAL_HEADER64> m_imageOptionalHeaders64;
+    std::optional<IMAGE_OPTIONAL_HEADER32> m_imageOptionalHeader32;
+    std::optional<IMAGE_OPTIONAL_HEADER64> m_imageOptionalHeader64;
     SectionHeaders m_imageSectionsHeaders;
 };
 
