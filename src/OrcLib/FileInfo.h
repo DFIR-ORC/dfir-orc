@@ -167,13 +167,6 @@ private:
     Intentions FilterIntentions(const std::vector<Filter>& Filters);
     bool FilterApplies(const Filter& filter);
 
-    size_t FindVersionQueryValueRec(
-        const WCHAR* szValueName,
-        size_t dwValueCchLength,
-        LPBYTE ptr,
-        LPBYTE ptr_end,
-        int state,
-        WCHAR** ppValue);
     HRESULT WriteVersionQueryValue(const WCHAR* szValueName, ITableOutput& output);
 
     HRESULT VerifyAnySignatureWithCatalogs(

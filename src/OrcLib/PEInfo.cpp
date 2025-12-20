@@ -18,6 +18,7 @@
 #include "CacheStream.h"
 
 #include "FileFormat/PeParser.h"
+#include "ByteStreamHelpers.h"
 
 #pragma comment(lib, "Crypt32.lib")
 
@@ -47,18 +48,24 @@ bool PEInfo::HasExeHeader()
 {
     if (m_FileInfo.IsDirectory())
         return false;
+
     if (FAILED(CheckPEInformation()))
         return false;
-    CBinaryBuffer& dosBuf = m_FileInfo.GetDetails()->GetDosHeader();
-    if (dosBuf.GetCount() >= 2)
+
+    auto& imageDosHeader = m_FileInfo.GetDetails()->GetImageDosHeader();
+    if (!imageDosHeader)
     {
-        PIMAGE_DOS_HEADER dosHdr = (PIMAGE_DOS_HEADER)dosBuf.GetData();
-        // XXX is IMAGE_OS2_SIGNATURE in dosHdr->e_magic or ntHdr->signature ? (if it's the latter, only check for
-        // DOS_SIG here)
-        if ((dosHdr->e_magic == IMAGE_DOS_SIGNATURE) || (dosHdr->e_magic == IMAGE_OS2_SIGNATURE)
-            || (dosHdr->e_magic == IMAGE_OS2_SIGNATURE_LE))
-            return true;
+        return false;
     }
+
+    // XXX is IMAGE_OS2_SIGNATURE in dosHdr->e_magic or ntHdr->signature ? (if it's the latter, only check for
+    // DOS_SIG here)
+    if ((imageDosHeader->e_magic == IMAGE_DOS_SIGNATURE) || (imageDosHeader->e_magic == IMAGE_OS2_SIGNATURE)
+        || (imageDosHeader->e_magic == IMAGE_OS2_SIGNATURE_LE))
+    {
+        return true;
+    }
+
     return false;
 }
 
@@ -68,57 +75,54 @@ bool PEInfo::HasPEHeader()
         return false;
     if (FAILED(CheckPEInformation()))
         return false;
-    CBinaryBuffer& peBuf = m_FileInfo.GetDetails()->GetPEHeader();
-    if ((peBuf.GetCount() >= 4) && !memcmp(peBuf.GetData(), "PE\0\0", 4))
-        return true;
-    return false;
+
+    return m_FileInfo.GetDetails()->GetImageFileHeader().has_value();
 }
 
-PIMAGE_NT_HEADERS32 PEInfo::GetPe32Header() const
+const IMAGE_DOS_HEADER* Orc::PEInfo::GetImageDosHeader() const
 {
     if (m_FileInfo.GetDetails() == nullptr)
         return NULL;
-    if (m_FileInfo.GetDetails()->GetPEHeader().GetCount() < sizeof(IMAGE_NT_HEADERS32))
-        return NULL;
-    return (PIMAGE_NT_HEADERS32)m_FileInfo.GetDetails()->GetPEHeader().GetData();
-}
-
-PIMAGE_NT_HEADERS64 PEInfo::GetPe64Header() const
-{
-    if (m_FileInfo.GetDetails() == nullptr)
-        return NULL;
-    if (m_FileInfo.GetDetails()->GetPEHeader().GetCount() < sizeof(IMAGE_NT_HEADERS64))
-        return NULL;
-    return (PIMAGE_NT_HEADERS64)m_FileInfo.GetDetails()->GetPEHeader().GetData();
-}
-
-PIMAGE_SECTION_HEADER PEInfo::GetPeSections() const
-{
-    if (m_FileInfo.GetDetails() == nullptr)
-        return NULL;
-    if (m_FileInfo.GetDetails()->GetPEHeader().GetCount() < sizeof(IMAGE_NT_HEADERS32))
-        return NULL;
-    PIMAGE_NT_HEADERS32 pehdr = (PIMAGE_NT_HEADERS32)(m_FileInfo.GetDetails()->GetPEHeader().GetData());
-    DWORD dwSectionOffset = 4 + sizeof(IMAGE_FILE_HEADER) + pehdr->FileHeader.SizeOfOptionalHeader;
-    if (m_FileInfo.GetDetails()->GetPEHeader().GetCount()
-        < (dwSectionOffset + pehdr->FileHeader.NumberOfSections * sizeof(IMAGE_SECTION_HEADER)))
-        return NULL;
-    return (PIMAGE_SECTION_HEADER)((LPBYTE)pehdr + dwSectionOffset);
-}
-
-size_t PEInfo::PeRvaToFileOffset(size_t RvaStart, size_t Length, PIMAGE_SECTION_HEADER Sections, size_t SectionCount)
-{
-    size_t i;
-    for (i = 0; i < SectionCount; i++)
+    if (!m_FileInfo.GetDetails()->GetImageDosHeader().has_value())
     {
-        if ((RvaStart >= Sections[i].VirtualAddress)
-            && (RvaStart + Length <= static_cast<size_t>(Sections[i].VirtualAddress + Sections[i].Misc.VirtualSize)))
-        {
-            return Sections[i].PointerToRawData + RvaStart - Sections[i].VirtualAddress;
-        }
+        return NULL;
     }
 
-    return (size_t)-1;
+    return &m_FileInfo.GetDetails()->GetImageDosHeader().value();
+}
+
+const IMAGE_FILE_HEADER* Orc::PEInfo::GetImageFileHeader() const
+{
+    if (m_FileInfo.GetDetails() == nullptr)
+        return NULL;
+    if (!m_FileInfo.GetDetails()->GetImageFileHeader().has_value())
+    {
+        return NULL;
+    }
+
+    return &m_FileInfo.GetDetails()->GetImageFileHeader().value();
+}
+
+const IMAGE_OPTIONAL_HEADER32* Orc::PEInfo::GetPe32OptionalHeader() const
+{
+    auto header = m_FileInfo.GetDetails()->GetOptionalImageHeader();
+    if (!header)
+    {
+        return NULL;
+    }
+
+    return std::get_if<IMAGE_OPTIONAL_HEADER32>(&header.value());
+}
+
+const IMAGE_OPTIONAL_HEADER64* Orc::PEInfo::GetPe64OptionalHeader() const
+{
+    auto header = m_FileInfo.GetDetails()->GetOptionalImageHeader();
+    if (!header)
+    {
+        return NULL;
+    }
+
+    return std::get_if<IMAGE_OPTIONAL_HEADER64>(&header.value());
 }
 
 HRESULT PEInfo::CheckPEInformation()
@@ -151,98 +155,66 @@ HRESULT PEInfo::OpenPEInformation()
 
     ULONGLONG ullBytesRead = 0L;
 
-    std::shared_ptr<ByteStream> stream = m_FileInfo.GetDetails()->GetDataStream();
-    if (FAILED(hr = stream->SetFilePointer(0LL, FILE_BEGIN, NULL)))
-        return hr;
-    if (FAILED(hr = stream->Read(buf.GetData(), buf.GetCount(), &ullBytesRead)))
-        return hr;
-    buf.SetCount(static_cast<size_t>(ullBytesRead));
+    std::shared_ptr<ByteStream> directStream = m_FileInfo.GetDetails()->GetDataStream();
 
-    if (!buf.empty())
+    CacheStream stream(*directStream, 2048);  // 2048 bytes cache is the sweet spot when measuring I/O
+
+    // > Store first bytes in m_FirstBytes
     {
-        CBinaryBuffer fb;
-        if (!fb.SetCount(std::min(static_cast<size_t>(BYTES_IN_FIRSTBYTES), buf.GetCount())))
-        {
-            return E_OUTOFMEMORY;
-        }
+        if (FAILED(hr = stream.SetFilePointer(0LL, FILE_BEGIN, NULL)))
+            return hr;
 
-        CopyMemory(fb.GetData(), buf.GetData(), fb.GetCount());
-        m_FileInfo.GetDetails()->SetFirstBytes(std::move(fb));
+        if (FAILED(hr = stream.Read(buf.GetData(), buf.GetCount(), &ullBytesRead)))
+            return hr;
+
+        buf.SetCount(static_cast<size_t>(ullBytesRead));
+
+        if (!buf.empty())
+        {
+            CBinaryBuffer fb;
+            if (!fb.SetCount(std::min(static_cast<size_t>(BYTES_IN_FIRSTBYTES), buf.GetCount())))
+            {
+                return E_OUTOFMEMORY;
+            }
+
+            CopyMemory(fb.GetData(), buf.GetData(), fb.GetCount());
+            m_FileInfo.GetDetails()->SetFirstBytes(std::move(fb));
+        }
     }
 
-    if (buf.GetCount() < sizeof(IMAGE_DOS_HEADER))
+    std::error_code ec;
+    PeParser parser(stream, ec);
+    if (ec)
     {
+        // BEWARE: Don't log that could be very verbose
+        // Log::Debug("Failed to parse PE file [{}]", ec);
         buf.RemoveAll();
         return S_OK;
     }
 
-    PIMAGE_DOS_HEADER pDos = (PIMAGE_DOS_HEADER)buf.GetData();
-
-    if ((IMAGE_DOS_SIGNATURE == pDos->e_magic) || (IMAGE_OS2_SIGNATURE == pDos->e_magic)
-        || (IMAGE_OS2_SIGNATURE_LE == pDos->e_magic))
+    m_FileInfo.GetDetails()->SetImageDosHeader(parser.ImageDosHeader());
+    if (parser.ImageFileHeader())
     {
-        CBinaryBuffer dosbuf;
-        if (!dosbuf.SetCount(sizeof(IMAGE_DOS_HEADER)))
-            return E_OUTOFMEMORY;
-        CopyMemory(dosbuf.GetData(), buf.GetData(), sizeof(IMAGE_DOS_HEADER));
-        m_FileInfo.GetDetails()->SetDosHeader(std::move(dosbuf));
+        m_FileInfo.GetDetails()->SetImageFileHeader(*parser.ImageFileHeader());
     }
 
-    if (pDos->e_lfanew + sizeof(IMAGE_NT_HEADERS64) >= stream->GetSize())
+    if (parser.ImageOptionalHeader())
     {
-        return S_OK;
+        m_FileInfo.GetDetails()->SetOptionalImageHeader(*parser.ImageOptionalHeader());
     }
 
-    if (IMAGE_DOS_SIGNATURE == pDos->e_magic)
+    auto securityDirectoryChunk = parser.GetSecurityDirectoryChunk();
+    if (securityDirectoryChunk)
     {
-        /* retrieve PE headers + section table */
-        CBinaryBuffer pebuf;
-        if (buf.GetCount() >= pDos->e_lfanew + sizeof(IMAGE_NT_HEADERS64))
-        {
-            /* pe header is already in buf */
-            if (!pebuf.SetCount(buf.GetCount() - pDos->e_lfanew))
-                return E_OUTOFMEMORY;
-            CopyMemory(pebuf.GetData(), buf.GetData() + pDos->e_lfanew, buf.GetCount() - pDos->e_lfanew);
-        }
-        else
-        {
-            /* read pe header from stream */
-            if (!pebuf.SetCount(0x400))
-                return E_OUTOFMEMORY;
-            ullBytesRead = 0;
-            if (FAILED(hr = stream->SetFilePointer(pDos->e_lfanew, FILE_BEGIN, NULL)))
-                return hr;
-            if (FAILED(hr = stream->Read(pebuf.GetData(), pebuf.GetCount(), &ullBytesRead)))
-                return hr;
-            pebuf.SetCount(static_cast<size_t>(ullBytesRead));
-        }
+        m_FileInfo.GetDetails()->SetSecurityDirectoryChunk(*securityDirectoryChunk);
+    }
 
-        if (pebuf.GetCount() >= sizeof(IMAGE_NT_HEADERS64))
-        {
-            PIMAGE_NT_HEADERS64 pehdr = (PIMAGE_NT_HEADERS64)pebuf.GetData();
-            if (pehdr->Signature == IMAGE_NT_SIGNATURE)
-            {
-                size_t dwSectionEndOffset = 4 + sizeof(IMAGE_FILE_HEADER) + pehdr->FileHeader.SizeOfOptionalHeader
-                    + pehdr->FileHeader.NumberOfSections * sizeof(IMAGE_SECTION_HEADER);
-                if (dwSectionEndOffset <= pebuf.GetCount())
-                {
-                    pebuf.SetCount(dwSectionEndOffset);
-                }
-                else
-                {
-                    /* try to retrieve full section table */
-                    if ((pehdr->FileHeader.NumberOfSections < 0x100) && pebuf.SetCount(dwSectionEndOffset))
-                    {
-                        ullBytesRead = 0;
-                        if (FAILED(hr = stream->SetFilePointer(pDos->e_lfanew, FILE_BEGIN, NULL)))
-                            return hr;
-                        if (FAILED(hr = stream->Read(pebuf.GetData(), dwSectionEndOffset, &ullBytesRead)))
-                            return hr;
-                    }
-                }
-                m_FileInfo.GetDetails()->SetPEHeader(std::move(pebuf));
-            }
-        }
+    // IDEA: could look firstly for lang #0 (neutral) or lang #1033 (en-US) instead of blindly taking the first
+    auto versionInfoChunk =
+        parser.GetResourceDataChunk(reinterpret_cast<WORD>(RT_VERSION), static_cast<WORD>(VS_VERSION_INFO));
+    if (versionInfoChunk)
+    {
+        m_FileInfo.GetDetails()->SetVersionInfoChunk(*versionInfoChunk);
     }
 
     return S_OK;
@@ -271,179 +243,27 @@ HRESULT PEInfo::OpenVersionInformation()
     if (!HasPEHeader())
         return S_OK;
 
-    PIMAGE_NT_HEADERS32 pe32 = GetPe32Header();
-    PIMAGE_NT_HEADERS64 pe64 = GetPe64Header();
-    PIMAGE_SECTION_HEADER sections = GetPeSections();
-    if (sections == NULL)
+    if (!m_FileInfo.GetDetails()->GetVersionInfoChunk().has_value())
+    {
         return S_OK;
-
-    size_t rsrc_pe_offset = 0;
-    PIMAGE_DATA_DIRECTORY rsrc_datadir = NULL;
-
-    if (pe32->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
-    {
-        if (pe64->OptionalHeader.NumberOfRvaAndSizes < IMAGE_DIRECTORY_ENTRY_RESOURCE)
-            return S_OK;
-        rsrc_datadir = &pe64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE];
-    }
-    else
-    {
-        if (pe32->OptionalHeader.NumberOfRvaAndSizes < IMAGE_DIRECTORY_ENTRY_RESOURCE)
-            return S_OK;
-        rsrc_datadir = &pe32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE];
     }
 
-    rsrc_pe_offset = PeRvaToFileOffset(
-        rsrc_datadir->VirtualAddress, rsrc_datadir->Size, sections, pe32->FileHeader.NumberOfSections);
-    if (rsrc_pe_offset == -1)
-        return S_OK;
-
-    CBinaryBuffer rsrcBuf;
-    if (!rsrcBuf.SetCount(1024))
-        return E_OUTOFMEMORY;
     std::shared_ptr<ByteStream> directStream = m_FileInfo.GetDetails()->GetDataStream();
     if (!directStream)
     {
         return E_POINTER;
     }
 
-    auto stream = std::make_shared<CacheStream>(*directStream, 4096);
+    auto stream = std::make_shared<CacheStream>(*directStream, 4096);  // sweet spot for version info
 
-    ULONGLONG ullBytesRead;
-    size_t rsrc_rsrc_offset = 0;
-
-    // search for the VERSION resource
-    ullBytesRead = 0;
-    if (FAILED(hr = stream->SetFilePointer(rsrc_pe_offset + rsrc_rsrc_offset, FILE_BEGIN, NULL)))
-        return hr;
-    if (FAILED(hr = stream->Read(rsrcBuf.GetData(), rsrcBuf.GetCount(), &ullBytesRead)))
-        return hr;
-
-    if (ullBytesRead < sizeof(IMAGE_RESOURCE_DIRECTORY))
-        return S_OK;
-    PIMAGE_RESOURCE_DIRECTORY rsrc_dir = (PIMAGE_RESOURCE_DIRECTORY)rsrcBuf.GetData();
-    size_t rsrc_entry_count = static_cast<size_t>(rsrc_dir->NumberOfIdEntries) + rsrc_dir->NumberOfNamedEntries;
-    rsrc_entry_count = std::min(
-        rsrc_entry_count,
-        ((static_cast<size_t>(ullBytesRead) - sizeof(IMAGE_RESOURCE_DIRECTORY))
-         / sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY)));
-
-    const auto RESOURCE_ID_VERSION = 16;
-    rsrc_rsrc_offset = (size_t)-1;
-    for (size_t i = 0; i < rsrc_entry_count; i++)
+    std::error_code ec;
+    PeVersionInfo versionInfo(*stream, *m_FileInfo.GetDetails()->GetVersionInfoChunk(), ec);
+    if (ec)
     {
-        PIMAGE_RESOURCE_DIRECTORY_ENTRY pde =
-            (PIMAGE_RESOURCE_DIRECTORY_ENTRY)((LPBYTE)rsrc_dir + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
-        if ((!pde->NameIsString) && (pde->Id == RESOURCE_ID_VERSION) && (pde->DataIsDirectory))
-        {
-            rsrc_rsrc_offset = pde->OffsetToDirectory;
-            break;
-        }
+        return ToHRESULT(ec);
     }
 
-    if (rsrc_rsrc_offset == -1)
-        return S_OK;
-
-    // VERSION[0]
-    ullBytesRead = 0;
-    if (FAILED(hr = stream->SetFilePointer(rsrc_pe_offset + rsrc_rsrc_offset, FILE_BEGIN, NULL)))
-        return hr;
-    if (FAILED(hr = stream->Read(rsrcBuf.GetData(), rsrcBuf.GetCount(), &ullBytesRead)))
-        return hr;
-
-    if (ullBytesRead < sizeof(IMAGE_RESOURCE_DIRECTORY))
-        return S_OK;
-    rsrc_dir = (PIMAGE_RESOURCE_DIRECTORY)rsrcBuf.GetData();
-    rsrc_entry_count = static_cast<size_t>(rsrc_dir->NumberOfIdEntries) + rsrc_dir->NumberOfNamedEntries;
-    rsrc_entry_count = std::min(
-        rsrc_entry_count,
-        ((static_cast<size_t>(ullBytesRead) - sizeof(IMAGE_RESOURCE_DIRECTORY))
-         / sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY)));
-
-    rsrc_rsrc_offset = (size_t)-1;
-    for (size_t i = 0; i < rsrc_entry_count; i++)
-    {
-        PIMAGE_RESOURCE_DIRECTORY_ENTRY pde =
-            (PIMAGE_RESOURCE_DIRECTORY_ENTRY)((LPBYTE)rsrc_dir + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
-        if (pde->DataIsDirectory)
-        {
-            rsrc_rsrc_offset = pde->OffsetToDirectory;  // take any available children
-            break;
-        }
-    }
-    if (rsrc_rsrc_offset == -1)
-        return S_OK;
-
-    // VERSION[0][LANG]
-    ullBytesRead = 0;
-    if (FAILED(hr = stream->SetFilePointer(rsrc_pe_offset + rsrc_rsrc_offset, FILE_BEGIN, NULL)))
-        return hr;
-    if (FAILED(hr = stream->Read(rsrcBuf.GetData(), rsrcBuf.GetCount(), &ullBytesRead)))
-        return hr;
-
-    if (ullBytesRead < sizeof(IMAGE_RESOURCE_DIRECTORY))
-        return S_OK;
-    rsrc_dir = (PIMAGE_RESOURCE_DIRECTORY)rsrcBuf.GetData();
-    rsrc_entry_count = rsrc_dir->NumberOfIdEntries + rsrc_dir->NumberOfNamedEntries;
-    rsrc_entry_count = std::min(
-        rsrc_entry_count,
-        ((static_cast<size_t>(ullBytesRead) - sizeof(IMAGE_RESOURCE_DIRECTORY))
-         / sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY)));
-
-    rsrc_rsrc_offset = static_cast<size_t>(-1);
-    for (size_t i = 0; i < rsrc_entry_count; i++)
-    {
-        PIMAGE_RESOURCE_DIRECTORY_ENTRY pde =
-            (PIMAGE_RESOURCE_DIRECTORY_ENTRY)((LPBYTE)rsrc_dir + sizeof(IMAGE_RESOURCE_DIRECTORY) + i * sizeof(IMAGE_RESOURCE_DIRECTORY_ENTRY));
-        if ((!pde->NameIsString) && (!pde->DataIsDirectory))
-        {
-            // TODO check LANG (pde->Id)
-            // for now, take any available children
-            rsrc_rsrc_offset = pde->OffsetToData;
-            break;
-        }
-    }
-    if (rsrc_rsrc_offset == -1)
-        return S_OK;
-
-    ullBytesRead = 0;
-    if (FAILED(hr = stream->SetFilePointer(rsrc_pe_offset + rsrc_rsrc_offset, FILE_BEGIN, NULL)))
-        return hr;
-    if (FAILED(hr = stream->Read(rsrcBuf.GetData(), rsrcBuf.GetCount(), &ullBytesRead)))
-        return hr;
-
-    if (ullBytesRead < sizeof(IMAGE_RESOURCE_DATA_ENTRY))
-        return S_OK;
-    PIMAGE_RESOURCE_DATA_ENTRY version_entry = (PIMAGE_RESOURCE_DATA_ENTRY)rsrcBuf.GetData();
-
-    size_t version_off = PeRvaToFileOffset(
-        version_entry->OffsetToData, version_entry->Size, sections, pe32->FileHeader.NumberOfSections);
-    if (version_off == -1)
-        return S_OK;
-
-    CBinaryBuffer versionBuf;
-    if (!versionBuf.SetCount(version_entry->Size))
-        return S_OK;
-
-    ullBytesRead = 0;
-    if (FAILED(hr = stream->SetFilePointer(version_off, FILE_BEGIN, NULL)))
-        return hr;
-    if (FAILED(hr = stream->Read(versionBuf.GetData(), versionBuf.GetCount(), &ullBytesRead)))
-        return hr;
-
-    // 40 = 6 + sizeof(L"VS_VERSION_INFO")
-    if ((ullBytesRead != versionBuf.GetCount()) || (ullBytesRead < (sizeof(VS_FIXEDFILEINFO) + 40)))
-        return S_OK;
-    if (memcmp(versionBuf.GetData() + 6, L"VS_VERSION_INFO", 32))
-        return S_OK;
-
-    m_FileInfo.GetDetails()->SetVersionInfoBlock(std::move(versionBuf));
-
-    // XXX pointer into CBinaryBuf.buffer...
-    VS_FIXEDFILEINFO* lpFFI =
-        (VS_FIXEDFILEINFO*)((LPBYTE)m_FileInfo.GetDetails()->GetVersionInfoBlock().GetData() + 40);
-    m_FileInfo.GetDetails()->SetFixedFileInfo(lpFFI);
-
+    m_FileInfo.GetDetails()->SetVersionInfo(std::move(versionInfo));
     return S_OK;
 }
 
@@ -458,6 +278,7 @@ HRESULT PEInfo::CheckSecurityDirectory()
 
 HRESULT PEInfo::OpenSecurityDirectory()
 {
+    std::error_code ec;
     HRESULT hr = E_FAIL;
 
     if (m_FileInfo.IsDirectory())
@@ -473,58 +294,24 @@ HRESULT PEInfo::OpenSecurityDirectory()
     if (!HasPEHeader())
         return S_OK;
 
-    PIMAGE_NT_HEADERS32 pe32 = GetPe32Header();
-    PIMAGE_NT_HEADERS64 pe64 = GetPe64Header();
-    PIMAGE_SECTION_HEADER sections = GetPeSections();
-    if (sections == NULL)
+    if (!m_FileInfo.GetDetails()->GetSecurityDirectoryChunk().has_value())
+    {
         return S_OK;
-
-    size_t secdir_pe_offset = 0;
-
-    CBinaryBuffer Buffer;
-
-    if (pe32->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
-    {
-        if (pe64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size == 0)
-            return S_OK;
-        secdir_pe_offset = pe64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress;
-        if (!Buffer.SetCount(pe64->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size))
-            return E_OUTOFMEMORY;
-    }
-    else
-    {
-        if (pe32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size == 0)
-            return S_OK;
-        secdir_pe_offset = pe32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].VirtualAddress;
-        if (!Buffer.SetCount(pe32->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY].Size))
-            return E_OUTOFMEMORY;
     }
 
     std::shared_ptr<ByteStream> stream = m_FileInfo.GetDetails()->GetDataStream();
 
-    if (secdir_pe_offset > stream->GetSize())
+    const auto& chunk = *m_FileInfo.GetDetails()->GetSecurityDirectoryChunk();
+    std::vector<uint8_t> buffer;
+    ReadChunkAt(*stream, chunk.offset, chunk.length, buffer, ec);
+    if (ec)
     {
-        Log::Warn(L"Invalid security directory '{}'", m_FileInfo.GetFullName());
-        return S_OK;
+        return ToHRESULT(ec);
     }
 
-    // search for the Security Directory
-    if (FAILED(hr = stream->SetFilePointer(secdir_pe_offset, FILE_BEGIN, NULL)))
-        return hr;
-
-    ULONGLONG ullRead = 0LL;
-    while (ullRead < Buffer.GetCount())
-    {
-        ULONGLONG ullThisRead = 0LL;
-        if (FAILED(hr = stream->Read(Buffer.GetData() + ullRead, Buffer.GetCount() - ullRead, &ullThisRead)))
-            return hr;
-
-        if (ullThisRead == 0LL)
-            break;
-        ullRead += ullThisRead;
-    }
-
-    m_FileInfo.GetDetails()->SetSecurityDirectory(std::move(Buffer));
+    CBinaryBuffer bb;
+    bb.SetData(buffer.data(), buffer.size());
+    m_FileInfo.GetDetails()->SetSecurityDirectory(std::move(bb));
 
     return S_OK;
 }

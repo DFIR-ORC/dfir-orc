@@ -10,6 +10,7 @@
 #include "BinaryBuffer.h"
 #include "Authenticode.h"
 #include "CryptoUtilities.h"
+#include "FileFormat/PeVersionInfo.h"
 
 #include <memory>
 
@@ -27,9 +28,6 @@ private:
     std::shared_ptr<ByteStream> m_RawStream;
 
     CBinaryBuffer m_FirstBytes;
-
-    CBinaryBuffer m_DosHeader; /* 0x40 first bytes */
-    CBinaryBuffer m_PEHeader; /* PE header + section table */
     bool m_bPEChecked = false;
 
     CBinaryBuffer m_Sha1;
@@ -44,12 +42,17 @@ private:
 
     bool m_bHashChecked = false;
 
-    CBinaryBuffer m_pVersionInfoBlock;
-    VS_FIXEDFILEINFO* m_pFFI;
     bool m_bFileVersionChecked = false;
 
     CBinaryBuffer m_pSecurityDirectory;
     bool m_bSecurityDirectoryChecked = false;
+
+    std::optional<IMAGE_DOS_HEADER> m_imageDosHeader;
+    std::optional<IMAGE_FILE_HEADER> m_imageFileHeader;
+    std::optional<std::variant<IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64>> m_imageOptionalHeader;
+    std::optional<PeParser::PeChunk> m_securityDirectoryChunk;
+    std::optional<PeParser::PeChunk> m_versionInfoChunk;
+    std::optional<PeVersionInfo> m_versionInfo;
 
 public:
     HRESULT SetDataStream(const std::shared_ptr<ByteStream>& dataStream)
@@ -66,19 +69,48 @@ public:
     }
     const std::shared_ptr<ByteStream>& GetRawStream() const { return m_RawStream; }
 
-    HRESULT SetDosHeader(CBinaryBuffer&& buffer)
+    HRESULT SetImageDosHeader(const IMAGE_DOS_HEADER& imageDosHeader)
     {
-        std::swap(m_DosHeader, buffer);
+        m_imageDosHeader = imageDosHeader;
         return S_OK;
     }
-    CBinaryBuffer& GetDosHeader() { return m_DosHeader; }
 
-    HRESULT SetPEHeader(CBinaryBuffer&& buffer)
+    const std::optional<IMAGE_DOS_HEADER>& GetImageDosHeader() const { return m_imageDosHeader; }
+
+    HRESULT SetImageFileHeader(const IMAGE_FILE_HEADER& imageFileHeader)
     {
-        std::swap(m_PEHeader, buffer);
+        m_imageFileHeader = imageFileHeader;
         return S_OK;
     }
-    CBinaryBuffer& GetPEHeader() { return m_PEHeader; }
+
+    std::optional<IMAGE_FILE_HEADER>& GetImageFileHeader() { return m_imageFileHeader; }
+
+    HRESULT SetOptionalImageHeader(std::variant<IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64> imageOptionalHeader)
+    {
+        std::visit([&](const auto& value) { m_imageOptionalHeader = value; }, imageOptionalHeader);
+        return S_OK;
+    }
+
+    std::optional<std::variant<IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64>>& GetOptionalImageHeader()
+    {
+        return m_imageOptionalHeader;
+    }
+
+    HRESULT SetSecurityDirectoryChunk(const PeParser::PeChunk& chunk)
+    {
+        m_securityDirectoryChunk = chunk;
+        return S_OK;
+    }
+
+    std::optional<PeParser::PeChunk>& GetSecurityDirectoryChunk() { return m_securityDirectoryChunk; }
+
+    HRESULT SetVersionInfoChunk(const PeParser::PeChunk& chunk)
+    {
+        m_versionInfoChunk = chunk;
+        return S_OK;
+    }
+
+    std::optional<PeParser::PeChunk>& GetVersionInfoChunk() { return m_versionInfoChunk; }
 
     void SetPEChecked(bool bChecked) { m_bPEChecked = bChecked; }
     bool PEChecked() const { return m_bPEChecked; }
@@ -184,22 +216,20 @@ public:
 
     bool HasAuthenticodeData() const { return m_bHasAuthData; };
 
-    HRESULT SetVersionInfoBlock(CBinaryBuffer&& buffer)
+    HRESULT SetVersionInfo(PeVersionInfo versionInfo)
     {
-        std::swap(m_pVersionInfoBlock, buffer);
+        m_versionInfo = std::move(versionInfo);
         return S_OK;
     }
-    CBinaryBuffer& GetVersionInfoBlock() { return m_pVersionInfoBlock; }
-    HRESULT SetFixedFileInfo(VS_FIXEDFILEINFO* newval)
-    {
-        m_pFFI = newval;
-        return S_OK;
-    }
-    VS_FIXEDFILEINFO* GetFixedFileInfo() { return m_pFFI; }
+    const std::optional<PeVersionInfo>& GetVersionInfo() { return m_versionInfo; }
 
     void SetFileVersionChecked(bool bChecked) { m_bFileVersionChecked = bChecked; }
     bool FileVersionChecked() { return m_bFileVersionChecked; }
-    bool FileVersionAvailable() { return m_bFileVersionChecked && (m_pFFI != NULL); }
+    bool FileVersionAvailable() { return m_bFileVersionChecked && m_versionInfo; }
+    bool FileFixedVersionInfoAvailable()
+    {
+        return m_bFileVersionChecked && m_versionInfo && m_versionInfo->FixedFileInfo().has_value();
+    }
 
     void SetSecurityDirectoryChecked(bool bChecked) { m_bSecurityDirectoryChecked = bChecked; }
     bool SecurityDirectoryChecked() { return m_bSecurityDirectoryChecked; }

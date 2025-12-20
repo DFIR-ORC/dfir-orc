@@ -931,7 +931,9 @@ HRESULT FileInfo::OpenAuthenticode()
     }
 
     if (FAILED(hr = m_PEInfo.CheckSecurityDirectory()))
-        return hr;
+    {
+        Log::Debug("Failed to check security directory [{}]", SystemError(hr));
+    }
 
     if (GetDetails()->SecurityDirectoryAvailable())
     {
@@ -1148,8 +1150,6 @@ HRESULT FileInfo::WritePlatform(ITableOutput& output)
 
     if (m_PEInfo.HasPEHeader())
     {
-        PIMAGE_NT_HEADERS32 pNTHeader = m_PEInfo.GetPe32Header();
-
         static const FlagsDefinition MachineDefs[] = {
             {IMAGE_FILE_MACHINE_UNKNOWN, L"MachineUnknown", L"MachineUnknown"},
             {IMAGE_FILE_MACHINE_TARGET_HOST, L"Target Host", L"Interacts with the host and not a WOW64 guest"},
@@ -1187,11 +1187,13 @@ HRESULT FileInfo::WritePlatform(ITableOutput& output)
             {IMAGE_FILE_MACHINE_LINUX, L"Linux", L"Linux Machine [undocumented]"},
             {(DWORD)-1, NULL, NULL}};
 
-        // @@Platform
-        if (pNTHeader != nullptr)
-            return output.WriteExactFlags(pNTHeader->FileHeader.Machine, MachineDefs);
-        else
+        auto pImageFileHeader = m_PEInfo.GetImageFileHeader();
+        if (pImageFileHeader == nullptr)
+        {
             return output.WriteNothing();
+        }
+
+        return output.WriteExactFlags(pImageFileHeader->Machine, MachineDefs);
     }
     else if (m_PEInfo.HasExeHeader())
     {
@@ -1213,14 +1215,15 @@ HRESULT FileInfo::WriteTimeStamp(ITableOutput& output)
 
     if (m_PEInfo.HasPEHeader())
     {
-        // same offset pe32/pe64
-        PIMAGE_NT_HEADERS32 pPE = m_PEInfo.GetPe32Header();
-
-        if (pPE != nullptr)
-            return output.WriteTimeStamp(pPE->FileHeader.TimeDateStamp);
-        else
+        auto pImageFileHeader = m_PEInfo.GetImageFileHeader();
+        if (pImageFileHeader == nullptr)
+        {
             return output.WriteNothing();
+        }
+
+        return output.WriteTimeStamp(pImageFileHeader->TimeDateStamp);
     }
+
     return output.WriteNothing();
 }
 
@@ -1253,12 +1256,18 @@ HRESULT FileInfo::WriteSubSystem(ITableOutput& output)
             {IMAGE_SUBSYSTEM_XBOX, L"XBOX App", L"XBOX App"},
             {IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION, L"Windows Boot", L"Windows Boot"},
             {(DWORD)-1, NULL, NULL}};
-        // same offset pe32/pe64
-        PIMAGE_NT_HEADERS32 pPE = m_PEInfo.GetPe32Header();
-        if (pPE != nullptr)
-            return output.WriteExactFlags(pPE->OptionalHeader.Subsystem, SubSystemDefs);
-        else
-            return output.WriteNothing();
+
+        const auto pImageOptionalHeader64 = m_PEInfo.GetPe64OptionalHeader();
+        if (pImageOptionalHeader64 != nullptr)
+        {
+            return output.WriteExactFlags(pImageOptionalHeader64->Subsystem, SubSystemDefs);
+        }
+
+        const auto pImageOptionalHeader32 = m_PEInfo.GetPe32OptionalHeader();
+        if (pImageOptionalHeader32 != nullptr)
+        {
+            return output.WriteExactFlags(pImageOptionalHeader32->Subsystem, SubSystemDefs);
+        }
     }
 
     return output.WriteNothing();
@@ -1275,7 +1284,7 @@ HRESULT FileInfo::WriteFileOS(ITableOutput& output)
         return hr;
     }
 
-    if (GetDetails()->FileVersionAvailable())
+    if (GetDetails()->FileFixedVersionInfoAvailable())
     {
         static const FlagsDefinition SubOSDefs[] = {
             {VOS__BASE, L"Unknown", L"Unknown"},
@@ -1295,8 +1304,8 @@ HRESULT FileInfo::WriteFileOS(ITableOutput& output)
             {VOS_NT_WINDOWS32, L"NT-Win32", L"NT-Win32"},
             {(DWORD)-1, NULL, NULL}};
 
-        VS_FIXEDFILEINFO* pFFI = GetDetails()->GetFixedFileInfo();
-        return output.WriteExactFlags(pFFI->dwFileOS, SubOSDefs);
+        auto& fixedFileInfo = *GetDetails()->GetVersionInfo()->FixedFileInfo();
+        return output.WriteExactFlags(fixedFileInfo.dwFileOS, SubOSDefs);
     }
     return output.WriteNothing();
 }
@@ -1312,10 +1321,10 @@ HRESULT FileInfo::WriteFileType(ITableOutput& output)
         return hr;
     }
 
-    if (GetDetails()->FileVersionAvailable())
+    if (GetDetails()->FileFixedVersionInfoAvailable())
     {
-        VS_FIXEDFILEINFO* m_pFFI = GetDetails()->GetFixedFileInfo();
-        switch (m_pFFI->dwFileType)
+        auto& fixedFileInfo = *GetDetails()->GetVersionInfo()->FixedFileInfo();
+        switch (fixedFileInfo.dwFileType)
         {
             case VFT_UNKNOWN:
                 return output.WriteString(L"Unknown");
@@ -1324,7 +1333,7 @@ HRESULT FileInfo::WriteFileType(ITableOutput& output)
             case VFT_DLL:
                 return output.WriteString(L"DLL");
             case VFT_DRV: {
-                switch (m_pFFI->dwFileSubtype)
+                switch (fixedFileInfo.dwFileSubtype)
                 {
                     case VFT2_UNKNOWN:
                         return output.WriteString(L"Driver Unknown");
@@ -1353,10 +1362,11 @@ HRESULT FileInfo::WriteFileType(ITableOutput& output)
                     case VFT2_DRV_VERSIONED_PRINTER:
                         return output.WriteString(L"Driver Printer Versioned");
                 }
-                return output.WriteFormated(L"Driver {:#x}-{:#x}", m_pFFI->dwFileType, m_pFFI->dwFileSubtype);
+                return output.WriteFormated(
+                    L"Driver {:#x}-{:#x}", fixedFileInfo.dwFileType, fixedFileInfo.dwFileSubtype);
             }
             case VFT_FONT: {
-                switch (m_pFFI->dwFileSubtype)
+                switch (fixedFileInfo.dwFileSubtype)
                 {
                     case VFT2_FONT_RASTER:
                         return output.WriteString(L"Font Raster");
@@ -1365,14 +1375,14 @@ HRESULT FileInfo::WriteFileType(ITableOutput& output)
                     case VFT2_FONT_TRUETYPE:
                         return output.WriteString(L"Font TrueType");
                 }
-                return output.WriteFormated(L"Font {:#x}-{:#x}", m_pFFI->dwFileType, m_pFFI->dwFileSubtype);
+                return output.WriteFormated(L"Font {:#x}-{:#x}", fixedFileInfo.dwFileType, fixedFileInfo.dwFileSubtype);
             }
             case VFT_VXD:
                 return output.WriteString(L"VXD");
             case VFT_STATIC_LIB:
                 return output.WriteString(L"Lib");
         }
-        return output.WriteFormated(L"{:#x}-{:#x}", m_pFFI->dwFileType, m_pFFI->dwFileSubtype);
+        return output.WriteFormated(L"{:#x}-{:#x}", fixedFileInfo.dwFileType, fixedFileInfo.dwFileSubtype);
     }
     return output.WriteNothing();
 }
@@ -1388,15 +1398,15 @@ HRESULT FileInfo::WriteVersion(ITableOutput& output)
         return hr;
     }
 
-    if (GetDetails()->FileVersionAvailable())
+    if (GetDetails()->FileFixedVersionInfoAvailable())
     {
-        VS_FIXEDFILEINFO* m_pFFI = GetDetails()->GetFixedFileInfo();
+        auto& fixedFileInfo = *GetDetails()->GetVersionInfo()->FixedFileInfo();
         return output.WriteFormated(
             L"{}.{}.{}.{}",
-            HIWORD(m_pFFI->dwFileVersionMS),
-            LOWORD(m_pFFI->dwFileVersionMS),
-            HIWORD(m_pFFI->dwFileVersionLS),
-            LOWORD(m_pFFI->dwFileVersionLS));
+            HIWORD(fixedFileInfo.dwFileVersionMS),
+            LOWORD(fixedFileInfo.dwFileVersionMS),
+            HIWORD(fixedFileInfo.dwFileVersionLS),
+            LOWORD(fixedFileInfo.dwFileVersionLS));
     }
     return output.WriteNothing();
 }
@@ -1849,111 +1859,6 @@ Intentions FileInfo::FilterIntentions(const std::vector<Filter>& filters)
     return intentions;
 }
 
-size_t FileInfo::FindVersionQueryValueRec(
-    const WCHAR* szValueName,
-    size_t dwValueCchLength,
-    LPBYTE ptr,
-    LPBYTE ptr_end,
-    int state,
-    WCHAR** ppValue)
-{
-    typedef struct _VERSION_CHUNK_HEADER
-    {
-        uint16_t len;
-        uint16_t vlen;
-        uint16_t type;
-    } VERSION_CHUNK_HEADER, *PVERSION_CHUNK_HEADER;
-
-    PVERSION_CHUNK_HEADER pHdr;
-    size_t ptr_off = 0;
-
-    if (ptr + ptr_off + sizeof(VERSION_CHUNK_HEADER) > ptr_end)
-        return static_cast<size_t>(-1);
-
-    pHdr = (PVERSION_CHUNK_HEADER)(ptr + ptr_off);
-    ptr_off += sizeof(VERSION_CHUNK_HEADER);
-
-    WCHAR* pChunkName = (WCHAR*)(ptr + ptr_off);
-    size_t dwChunkNameCchLength = 0;
-
-    if (FAILED(StringCchLengthW(pChunkName, ptr_end - (ptr + ptr_off), &dwChunkNameCchLength)))
-        return static_cast<size_t>(-1);
-
-    ptr_off += 2 * dwChunkNameCchLength + 2;
-    ptr_off = (ptr_off + 3) & -4;  // align to %4
-
-    int nstate = -1;
-
-    switch (state)
-    {
-        case 0:
-            // VS_VERSIONINFO
-            ptr_off += pHdr->vlen;
-            nstate = 1;
-            break;
-
-        case 1:
-            if ((dwChunkNameCchLength == 14) && (!memcmp(L"StringFileInfo", pChunkName, 28)))
-                nstate = 2;
-            else if ((dwChunkNameCchLength == 11) && (!memcmp(L"VarFileInfo", pChunkName, 24)))
-                nstate = 4;
-            break;
-
-        case 2:
-            // string table
-            nstate = 3;
-            break;
-
-        case 3:
-            // a string: check against target
-            if ((dwValueCchLength == dwChunkNameCchLength)
-                && (!memcmp(szValueName, pChunkName, dwValueCchLength * 2 + 2)))
-            {
-                size_t value_len;
-                if (FAILED(StringCchLengthW((WCHAR*)(ptr + ptr_off), ptr_end - (ptr + ptr_off), &value_len))
-                    || (ptr_off + 2 * value_len > pHdr->len))
-                {
-                    // not 0-terminated
-                    size_t hlen = pHdr->len & 0xfffffffe;
-                    if (ptr_off > hlen - 2)
-                        return static_cast<size_t>(-1);
-                    *(WCHAR*)(ptr + hlen - 2) = 0;
-                }
-                *ppValue = (WCHAR*)(ptr + ptr_off);
-            }
-
-            ptr_off += 2 * pHdr->vlen;
-            break;
-
-        case 4:
-            // var (translations, etc)
-            ptr_off += pHdr->vlen;
-            break;
-    }
-
-    if (nstate == -1)
-        ptr_off = pHdr->len;
-
-    while (1)
-    {
-        ptr_off = (ptr_off + 3) & -4;  // align to %4
-        if (ptr_off >= pHdr->len)
-            break;
-
-        size_t sub_off =
-            FindVersionQueryValueRec(szValueName, dwValueCchLength, ptr + ptr_off, ptr_end, nstate, ppValue);
-        if (sub_off == (size_t)-1)
-            return sub_off;
-
-        ptr_off += sub_off;
-
-        if ((sub_off == 0) && (ptr_off == ((ptr_off + 3) & -4)))
-            return (size_t)-1;
-    }
-
-    return ptr_off;
-}
-
 HRESULT FileInfo::WriteVersionQueryValue(const WCHAR* szValueName, ITableOutput& output)
 {
     HRESULT hr = E_FAIL;
@@ -1965,19 +1870,20 @@ HRESULT FileInfo::WriteVersionQueryValue(const WCHAR* szValueName, ITableOutput&
         return hr;
     }
 
-    LPBYTE ptr, ptr_end;
-    ptr = (LPBYTE)(GetDetails()->GetVersionInfoBlock().GetData());
-    ptr_end = (LPBYTE)ptr + GetDetails()->GetVersionInfoBlock().GetCount();
+    auto& versionInfo = GetDetails()->GetVersionInfo();
+    if (!versionInfo)
+    {
+        return output.WriteNothing();
+    }
 
-    WCHAR* pValue = NULL;
-    FindVersionQueryValueRec(szValueName, wcslen(szValueName), ptr, ptr_end, 0, &pValue);
-
-    if (pValue == NULL)
+    auto& stringFileInfo = versionInfo->StringFileInfo();
+    auto it = stringFileInfo.find(szValueName);
+    if (it == std::cend(stringFileInfo))
     {
         return output.WriteNothing();
     }
     else
     {
-        return output.WriteString(pValue);
+        return output.WriteString(it->second);
     }
 }

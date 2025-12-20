@@ -27,11 +27,10 @@ public:
     bool HasExeHeader();
     bool HasPEHeader();
 
-    PIMAGE_NT_HEADERS32 GetPe32Header() const;
-    PIMAGE_NT_HEADERS64 GetPe64Header() const;
-    PIMAGE_SECTION_HEADER GetPeSections() const;
-
-    size_t PeRvaToFileOffset(size_t RvaStart, size_t Length, PIMAGE_SECTION_HEADER Sections, size_t SectionCount);
+    const IMAGE_DOS_HEADER* GetImageDosHeader() const;
+    const IMAGE_FILE_HEADER* GetImageFileHeader() const;
+    const IMAGE_OPTIONAL_HEADER32* GetPe32OptionalHeader() const;
+    const IMAGE_OPTIONAL_HEADER64* GetPe64OptionalHeader() const;
 
     HRESULT CheckPEInformation();
     HRESULT OpenPEInformation();
