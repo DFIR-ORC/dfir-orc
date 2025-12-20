@@ -925,4 +925,38 @@ Result<PeParser::PeChunk> PeParser::GetResourceDataChunk(
 
     return chunk;
 }
+
+// TODO: not thoroughly tested but useful for Forge and ExtractResource
+Result<std::vector<uint8_t>> PeParser::GetResource(
+    std::variant<WORD, std::wstring_view> type,
+    std::variant<WORD, std::wstring_view> name,
+    std::optional<WORD> lang,
+    std::optional<size_t> maxSize) const
+{
+    auto chunk = GetResourceDataChunk(type, name, lang);
+    if (!chunk)
+    {
+        Log::Debug("Failed to get resource offset [{}]", chunk.error());
+        return chunk.error();
+    }
+
+    if (maxSize && chunk->length > *maxSize)
+    {
+        Log::Debug(
+            "Invalid resource data size: exceed hard limit (expected: >{}, actual: {})", *maxSize, chunk->length);
+        return std::errc::bad_message;
+    }
+
+    std::error_code ec;
+    std::vector<uint8_t> data;
+    ReadChunkAt(m_stream, chunk->offset, chunk->length, data, ec);
+    if (ec)
+    {
+        Log::Debug("Failed to read resource data [{}]", ec);
+        return ec;
+    }
+
+    return data;
+}
+
 }  // namespace Orc

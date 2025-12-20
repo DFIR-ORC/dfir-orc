@@ -52,6 +52,12 @@ public:
     bool HasDebugDirectory() const;
     Result<void> ReadDebugDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxLen = {}) const;
 
+    Result<std::vector<uint8_t>> GetResource(
+        std::variant<WORD, std::wstring_view> type,
+        std::variant<WORD, std::wstring_view> name,
+        std::optional<WORD> lang = {},
+        std::optional<size_t> maxSize = {}) const;
+
     Result<PeChunk> GetResourceDataChunk(
         std::variant<WORD, std::wstring_view> type,
         std::variant<WORD, std::wstring_view> name,
