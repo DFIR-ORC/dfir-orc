@@ -439,6 +439,64 @@ Result<IMAGE_RESOURCE_DATA_ENTRY> GetResourceDataEntry(
     return GetResourceDataEntry(stream, langEntry.OffsetToData);
 }
 
+inline Result<std::variant<WORD, std::wstring>>
+GetResourceEntryNameOrId(ByteStream& stream, const IMAGE_RESOURCE_DIRECTORY_ENTRY& entry)
+{
+    if (entry.NameIsString)
+    {
+        auto name = ParseEntryName(stream, entry);
+        if (!name)
+        {
+            return name.error();
+        }
+
+        return *name;
+    }
+    else
+    {
+        return entry.Id;
+    }
+}
+
+inline bool IsFiltered(
+    const std::variant<std::monostate, WORD, std::wstring_view>& filter,
+    const std::variant<WORD, std::wstring>& value)
+{
+    if (std::holds_alternative<std::monostate>(filter))
+    {
+        return false;
+    }
+
+    return std::visit(
+        [&](const auto& filterValue) {
+            using FilterType = std::decay_t<decltype(filterValue)>;
+
+            if constexpr (std::is_same_v<FilterType, std::monostate>)
+            {
+                return false;
+            }
+            else if constexpr (std::is_same_v<FilterType, WORD>)
+            {
+                const WORD* valuePtr = std::get_if<WORD>(&value);
+                if (valuePtr == nullptr)
+                {
+                    return true;
+                }
+                return filterValue != *valuePtr;
+            }
+            else if constexpr (std::is_same_v<FilterType, std::wstring_view>)
+            {
+                const std::wstring* valuePtr = std::get_if<std::wstring>(&value);
+                if (valuePtr == nullptr)
+                {
+                    return true;
+                }
+                return filterValue != *valuePtr;
+            }
+        },
+        filter);
+}
+
 }  // namespace
 
 namespace Orc {
@@ -957,6 +1015,131 @@ Result<std::vector<uint8_t>> PeParser::GetResource(
     }
 
     return data;
+}
+
+// TODO: not thoroughly tested but useful for Forge
+Result<PeParser::ResourceEntryTree> PeParser::FindResources(
+    std::variant<std::monostate, WORD, std::wstring_view> type,
+    std::variant<std::monostate, WORD, std::wstring_view> name,
+    std::variant<std::monostate, WORD> langId,
+    std::optional<size_t> maxItemCount) const
+{
+    auto resourceChunk = GetResourceDirectoryChunk();
+    if (!resourceChunk)
+    {
+        Log::Debug("Failed to retrieve resource directory chunk [{}]", resourceChunk.error());
+        return resourceChunk.error();
+    }
+
+    // Make a substream for resource directory parsing and bounds checking (resource data can be outside of it)
+    SubStream resourceDirStream(m_stream, resourceChunk->offset, resourceChunk->length);
+    HRESULT hr = resourceDirStream.Open();
+    if (FAILED(hr))
+    {
+        Log::Debug("Failed to open resource directory chunk stream [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    size_t itemCount = 0;
+    ResourceEntryTree resources;
+
+    auto typeDirectory = ParseResourceDirectory(resourceDirStream, 0);
+    if (!typeDirectory)
+    {
+        return typeDirectory.error();
+    }
+
+    for (const auto& typeEntry : typeDirectory->entries)
+    {
+        auto typeNameOrId = GetResourceEntryNameOrId(resourceDirStream, typeEntry);
+        if (!typeNameOrId)
+        {
+            Log::Debug("Failed to parse resource type name [{}]", typeNameOrId.error());
+            continue;
+        }
+
+        if (IsFiltered(type, *typeNameOrId))
+        {
+            continue;
+        }
+
+        auto& typeView = resources.types.emplace_back(TypeEntry {*typeNameOrId, typeEntry});
+
+        if (!typeEntry.DataIsDirectory)
+        {
+            Log::Debug("Type entry is not a directory");
+            continue;
+        }
+
+        auto nameDirectory = ParseResourceDirectory(resourceDirStream, typeEntry.OffsetToDirectory);
+        if (!nameDirectory)
+        {
+            Log::Debug("Failed to parse entries for resource [{}]", nameDirectory.error());
+            continue;
+        }
+
+        for (auto& nameEntry : nameDirectory->entries)
+        {
+            auto nameOrId = GetResourceEntryNameOrId(resourceDirStream, nameEntry);
+            if (!nameOrId)
+            {
+                Log::Debug("Failed to parse resource name [{}]", nameOrId.error());
+                continue;
+            }
+
+            if (IsFiltered(name, *nameOrId))
+            {
+                continue;
+            }
+
+            auto& nameView = typeView.names.emplace_back(NameEntry {*nameOrId, nameEntry});
+
+            if (!nameEntry.DataIsDirectory)
+            {
+                Log::Debug("Name entry is not a directory");
+                continue;
+            }
+
+            auto langDirectory = ParseResourceDirectory(resourceDirStream, nameEntry.OffsetToDirectory);
+            if (!langDirectory)
+            {
+                Log::Debug("Failed to parse entries for resource [{}]", langDirectory.error());
+                continue;
+            }
+
+            for (auto& langEntry : langDirectory->entries)
+            {
+                const auto id = std::get_if<WORD>(&langId);
+                if (id != nullptr && *id != langEntry.Id)
+                {
+                    continue;
+                }
+
+                if (langEntry.DataIsDirectory)
+                {
+                    Log::Debug("Lang entry is a directory, expected data");
+                    continue;
+                }
+
+                auto dataEntry = GetResourceDataEntry(resourceDirStream, langEntry.OffsetToData);
+                if (!dataEntry)
+                {
+                    Log::Debug("Failed to parse resource data entry [{}]", dataEntry.error());
+                    continue;
+                }
+
+                nameView.langs.emplace_back(LangEntry {langEntry.Id, langEntry, *dataEntry});
+
+                ++itemCount;
+                if (maxItemCount && itemCount >= *maxItemCount)
+                {
+                    return resources;
+                }
+            }
+        }
+    }
+
+    return resources;
 }
 
 }  // namespace Orc

@@ -34,6 +34,33 @@ public:
     };
 
     using PeChunks = std::array<PeChunk, 4>;
+
+    struct LangEntry
+    {
+        WORD lang;
+        IMAGE_RESOURCE_DIRECTORY_ENTRY langEntry;
+        IMAGE_RESOURCE_DATA_ENTRY dataEntry;
+    };
+
+    struct NameEntry
+    {
+        std::variant<WORD, std::wstring> name;
+        IMAGE_RESOURCE_DIRECTORY_ENTRY nameEntry;
+        std::vector<LangEntry> langs;
+    };
+
+    struct TypeEntry
+    {
+        std::variant<WORD, std::wstring> type;
+        IMAGE_RESOURCE_DIRECTORY_ENTRY typeEntry;
+        std::vector<NameEntry> names;
+    };
+
+    struct ResourceEntryTree
+    {
+        std::vector<TypeEntry> types;
+    };
+
     using OptionalHeader = std::variant<IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64>;
     using SectionHeaders = fmt::basic_memory_buffer<IMAGE_SECTION_HEADER, 16>;
 
@@ -62,6 +89,12 @@ public:
         std::variant<WORD, std::wstring_view> type,
         std::variant<WORD, std::wstring_view> name,
         std::optional<WORD> lang = {}) const;
+
+    Result<PeParser::ResourceEntryTree> FindResources(
+        std::variant<std::monostate, WORD, std::wstring_view> type = {},
+        std::variant<std::monostate, WORD, std::wstring_view> name = {},
+        std::variant<std::monostate, WORD> langId = {},
+        std::optional<size_t> maxItemCount = {}) const;
 
     void GetAuthenticodeHash(CryptoHashStreamAlgorithm algorithms, PeHash& output, std::error_code& ec) const;
 
