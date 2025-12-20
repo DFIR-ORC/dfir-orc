@@ -51,6 +51,12 @@ public:
 
     bool HasDebugDirectory() const;
     Result<void> ReadDebugDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxLen = {}) const;
+
+    Result<PeChunk> GetResourceDataChunk(
+        std::variant<WORD, std::wstring_view> type,
+        std::variant<WORD, std::wstring_view> name,
+        std::optional<WORD> lang = {}) const;
+
     void GetAuthenticodeHash(CryptoHashStreamAlgorithm algorithms, PeHash& output, std::error_code& ec) const;
 
 private:

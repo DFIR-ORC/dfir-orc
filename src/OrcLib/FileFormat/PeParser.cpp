@@ -11,6 +11,7 @@
 #include "ByteStreamHelpers.h"
 #include "CryptoHashStream.h"
 #include "BinaryBuffer.h"
+#include "SubStream.h"
 #include "Stream/StreamUtils.h"
 
 #ifndef IMAGE_FILE_MACHINE_TARGET_HOST
@@ -234,6 +235,208 @@ void ParseImageSections(
         Log::Debug("Failed to read sections [{}]", ec);
         return;
     }
+}
+
+struct ResourceDirectory
+{
+    IMAGE_RESOURCE_DIRECTORY header;
+    std::vector<IMAGE_RESOURCE_DIRECTORY_ENTRY> entries;
+};
+
+Result<ResourceDirectory> ParseResourceDirectory(ByteStream& stream, uint64_t offset)
+{
+    std::error_code ec;
+
+    IMAGE_RESOURCE_DIRECTORY directory;
+    ReadItemAt(stream, offset, directory, ec);
+    if (ec)
+    {
+        Log::Debug("Failed to read resource directory [{}]", ec);
+        return ec;
+    }
+
+    const size_t numberOfEntries =
+        static_cast<size_t>(directory.NumberOfIdEntries) + static_cast<size_t>(directory.NumberOfNamedEntries);
+
+    std::vector<IMAGE_RESOURCE_DIRECTORY_ENTRY> entries(numberOfEntries);
+    ReadChunk(stream, entries, ec);
+    if (ec)
+    {
+        Log::Debug("Failed to read resource directory entries [{}]", ec);
+        return ec;
+    }
+
+    return ResourceDirectory {directory, std::move(entries)};
+}
+
+Result<std::wstring> ParseEntryName(ByteStream& stream, const IMAGE_RESOURCE_DIRECTORY_ENTRY& entry)
+{
+    if (!entry.NameIsString)
+    {
+        return std::make_error_code(std::errc::invalid_argument);
+    }
+
+    std::error_code ec;
+
+    IMAGE_RESOURCE_DIR_STRING_U stringHeader;
+    ReadItemAt(stream, entry.NameOffset, stringHeader, ec);
+    if (ec)
+    {
+        Log::Debug("Failed to read resource name header [{}]", ec);
+        return ec;
+    }
+
+    const uint64_t nameOffset = entry.NameOffset + sizeof(IMAGE_RESOURCE_DIR_STRING_U::Length);
+    std::wstring name(stringHeader.Length, L'\0');
+    ReadChunkAt(
+        stream,
+        nameOffset,
+        BufferSpan(reinterpret_cast<uint8_t*>(name.data()), stringHeader.Length * sizeof(wchar_t)),
+        ec);
+    if (ec)
+    {
+        Log::Debug("Failed to read resource name string [{}]", ec);
+        return ec;
+    }
+
+    return name;
+}
+
+Result<IMAGE_RESOURCE_DIRECTORY_ENTRY> GetChildResourceDirectory(
+    ByteStream& stream,
+    std::optional<uint64_t> parentOffset,
+    const std::variant<WORD, std::wstring_view>& nameOrId)
+{
+    auto resourceDir = ParseResourceDirectory(stream, parentOffset.value_or(0));
+    if (!resourceDir)
+    {
+        return resourceDir.error();
+    }
+
+    for (const auto& entry : resourceDir->entries)
+    {
+        if (!entry.NameIsString)
+        {
+            auto id = std::get_if<WORD>(&nameOrId);
+            if (id == nullptr || entry.Id != *id)
+            {
+                continue;
+            }
+
+            return entry;
+        }
+        else
+        {
+            auto name = std::get_if<std::wstring_view>(&nameOrId);
+            if (name == nullptr)
+            {
+                continue;
+            }
+
+            auto entryName = ParseEntryName(stream, entry);
+            if (!entryName)
+            {
+                Log::Debug("Failed to parse entry name [{}]", entryName.error());
+                continue;
+            }
+
+            if (*entryName == *name)
+            {
+                return entry;
+            }
+        }
+    }
+
+    return std::errc::no_such_file_or_directory;
+}
+
+Result<IMAGE_RESOURCE_DATA_ENTRY> GetResourceDataEntry(ByteStream& stream, uint64_t offsetToData)
+{
+    std::error_code ec;
+
+    const uint64_t dataEntryOffset = offsetToData & 0x7FFFFFFF;
+
+    IMAGE_RESOURCE_DATA_ENTRY dataEntry;
+    ReadItemAt(stream, dataEntryOffset, dataEntry, ec);
+    if (ec)
+    {
+        Log::Debug("Failed to read resource data entry [{}]", ec);
+        return ec;
+    }
+
+    return dataEntry;
+}
+
+Result<IMAGE_RESOURCE_DATA_ENTRY> GetResourceDataEntry(
+    ByteStream& stream,
+    const std::variant<WORD, std::wstring_view>& type,
+    const std::variant<WORD, std::wstring_view>& name,
+    std::optional<WORD> lang)
+{
+    auto typeEntry = GetChildResourceDirectory(stream, {}, type);
+    if (!typeEntry)
+    {
+        Log::Debug("Failed to find resource type entry [{}]", typeEntry.error());
+        return typeEntry.error();
+    }
+
+    if (!typeEntry->DataIsDirectory)
+    {
+        Log::Debug("Type entry is not a directory");
+        return std::errc::bad_message;
+    }
+
+    auto nameEntry = GetChildResourceDirectory(stream, static_cast<size_t>(typeEntry->OffsetToDirectory), name);
+    if (!nameEntry)
+    {
+        Log::Debug("Failed to find name entry [{}]", nameEntry.error());
+        return nameEntry.error();
+    }
+
+    if (!nameEntry->DataIsDirectory)
+    {
+        Log::Debug("Name entry is not a directory");
+        return std::errc::bad_message;
+    }
+
+    IMAGE_RESOURCE_DIRECTORY_ENTRY langEntry;
+    if (lang)
+    {
+        auto langEntryResult =
+            GetChildResourceDirectory(stream, static_cast<size_t>(nameEntry->OffsetToDirectory), *lang);
+        if (!langEntryResult)
+        {
+            Log::Debug("Failed to find lang entry [{}]", langEntryResult.error());
+            return langEntryResult.error();
+        }
+
+        langEntry = *langEntryResult;
+    }
+    else
+    {
+        auto langDir = ParseResourceDirectory(stream, nameEntry->OffsetToDirectory);
+        if (!langDir)
+        {
+            Log::Debug("Failed to find lang directory [{}]", langDir.error());
+            return langDir.error();
+        }
+
+        if (langDir->entries.empty())
+        {
+            Log::Debug("Failed to find lang entry");
+            return std::errc::no_such_file_or_directory;
+        }
+
+        langEntry = langDir->entries[0];
+    }
+
+    if (langEntry.DataIsDirectory)
+    {
+        Log::Debug("Lang entry is a directory, expected data");
+        return std::errc::bad_message;
+    }
+
+    return GetResourceDataEntry(stream, langEntry.OffsetToData);
 }
 
 }  // namespace
@@ -671,4 +874,55 @@ void PeParser::GetAuthenticodeHash(CryptoHashStreamAlgorithm algorithms, PeHash&
     }
 }
 
+Result<PeParser::PeChunk> PeParser::GetResourceDataChunk(
+    std::variant<WORD, std::wstring_view> type,
+    std::variant<WORD, std::wstring_view> name,
+    std::optional<WORD> lang) const
+{
+    auto resourceDirChunk = GetResourceDirectoryChunk();
+    if (!resourceDirChunk)
+    {
+        Log::Debug("Failed to retrieve resource directory chunk [{}]", resourceDirChunk.error());
+        return resourceDirChunk.error();
+    }
+
+    // Make a substream for resource directory parsing and bounds checking (resource data can be outside of it)
+    SubStream resourceDirStream(m_stream, resourceDirChunk->offset, resourceDirChunk->length);
+    HRESULT hr = resourceDirStream.Open();
+    if (FAILED(hr))
+    {
+        Log::Debug("Failed to open resource directory chunk stream [{}]", SystemError(hr));
+        return SystemError(hr);
+    }
+
+    auto resourceEntry = ::GetResourceDataEntry(resourceDirStream, type, name, lang);
+    if (!resourceEntry)
+    {
+        Log::Debug("Failed to get resource data entry [{}]", resourceEntry.error());
+        return resourceEntry.error();
+    }
+
+    const auto fileOffsetToData = ImageRvaToFileOffset(resourceEntry->OffsetToData);
+    if (!fileOffsetToData)
+    {
+        Log::Debug("Failed to convert resource data RVA to file offset [{}]", fileOffsetToData.error());
+        return fileOffsetToData.error();
+    }
+
+    PeChunk chunk {*fileOffsetToData, resourceEntry->Size};
+    if (chunk.offset >= m_streamSize)
+    {
+        Log::Debug("Invalid resource data offset (value: {:#x}, stream size: {})", chunk.offset, m_streamSize);
+        return std::errc::bad_message;
+    }
+
+    if (chunk.offset + chunk.length > m_streamSize)
+    {
+        // In the wild some pe files have invalid resource size that overlap the file size but data is actually present
+        Log::Debug("Invalid resource data size (value: {}, stream size: {})", chunk.length, m_streamSize);
+        chunk.length = m_streamSize - chunk.offset;
+    }
+
+    return chunk;
+}
 }  // namespace Orc
