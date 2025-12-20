@@ -64,6 +64,7 @@ private:
     uint64_t GetSecurityDirectoryOffset() const;
     uint64_t GetChecksumOffset() const;
 
+    Result<PeChunk> GetResourceDirectoryChunk() const;
     void GetHashedChunks(PeChunks& chunks, std::error_code& ec) const;
     void Hash(CryptoHashStreamAlgorithm algorithms, const PeChunks& chunks, PeHash& output, std::error_code& ec) const;
 

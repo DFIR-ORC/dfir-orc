@@ -456,6 +456,43 @@ Result<void> PeParser::ReadResourceDirectory(std::vector<uint8_t>& buffer, std::
     return Success<void>();
 }
 
+Result<PeParser::PeChunk> PeParser::GetResourceDirectoryChunk() const
+{
+    std::error_code ec;
+    auto directory = GetImageDataDirectory(IMAGE_DIRECTORY_ENTRY_RESOURCE, ec);
+    if (ec)
+    {
+        Log::Debug("Failed to retrieve resource directory [{}]", ec);
+        return ec;
+    }
+
+    const auto directoryFileOffset = ImageRvaToFileOffset(directory.VirtualAddress, directory.Size);
+    if (!directoryFileOffset)
+    {
+        Log::Debug("Failed to convert resource directory RVA to file offset [{}]", directoryFileOffset.error());
+        return directoryFileOffset.error();
+    }
+
+    if (*directoryFileOffset >= m_streamSize)
+    {
+        Log::Debug(
+            "Invalid resource directory file offset (value: {:#x}, stream size: {:#x}",
+            *directoryFileOffset,
+            m_streamSize);
+        return std::make_error_code(std::errc::bad_message);
+    }
+
+    // In the wild some pe files have invalid resource size that overlap the file size but data is actually present
+    // like 'FileSyncShell.dll' from Microsoft
+    if (directory.Size > m_streamSize - *directoryFileOffset)
+    {
+        Log::Debug("Invalid resource directory file offset");
+        directory.Size = m_streamSize - *directoryFileOffset;
+    }
+
+    return PeChunk {*directoryFileOffset, directory.Size};
+}
+
 Result<void> PeParser::ReadDebugDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxSize) const
 {
     auto rv = ReadDirectory(IMAGE_DIRECTORY_ENTRY_DEBUG, buffer, maxSize);
