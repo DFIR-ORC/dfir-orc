@@ -43,6 +43,9 @@ public:
     const std::optional<IMAGE_FILE_HEADER>& ImageFileHeader() const;
     const OptionalHeader& ImageOptionalHeader() const;
 
+    bool HasResourceDirectory() const;
+    Result<void> ReadResourceDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxLen = {}) const;
+
     bool HasSecurityDirectory() const;
     Result<void> ReadSecurityDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxLen = 1048576 * 32) const;
 
