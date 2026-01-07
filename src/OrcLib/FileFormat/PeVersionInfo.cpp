@@ -352,13 +352,24 @@ void ExtractStringTable(const BlockViewTree* stringTable, std::map<std::wstring,
     for (const auto& item : stringTable->childNodes)
     {
         auto value = std::get_if<std::wstring_view>(&item.block.value);
-        if (!value)
+        if (value)
         {
-            Log::Debug(L"StringTable entry is not text: {}", item.block.key);
+            output.emplace(item.block.key, *value);
             continue;
         }
 
-        output.emplace(item.block.key, *value);
+        // Some malformed version info have binary values in string entries, try to interpret as UTF-16LE
+        auto buffer = std::get_if<BufferView>(&item.block.value);
+        if (!buffer)
+        {
+            continue;
+        }
+
+        const size_t charCount = buffer->size() / sizeof(wchar_t);
+        std::wstring_view textValue(reinterpret_cast<const wchar_t*>(buffer->data()), charCount);
+        auto nullPos = textValue.find_first_of(L'\0');
+        size_t length = (nullPos == std::wstring_view::npos) ? charCount : std::min(nullPos, textValue.size());
+        output.emplace(item.block.key, textValue.substr(0, length));
     }
 }
 
