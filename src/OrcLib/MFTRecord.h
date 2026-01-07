@@ -75,6 +75,12 @@ public:
     PSTANDARD_INFORMATION GetStandardInformation() const { return m_pStandardInformation; };
 
     const FILE_REFERENCE& GetFileReferenceNumber() const { return m_FileReferenceNumber; };
+
+    uint64_t GetFileReferenceNumberAsUInt64() const
+    {
+        return NtfsFullSegmentNumber(&m_FileReferenceNumber);
+    }
+
     MFTUtils::SafeMFTSegmentNumber GetSafeMFTSegmentNumber() const
     {
         return NtfsFullSegmentNumber(&m_FileReferenceNumber);
