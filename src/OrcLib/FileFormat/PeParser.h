@@ -75,6 +75,7 @@ public:
 
     bool HasSecurityDirectory() const;
     Result<void> ReadSecurityDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxLen = 1048576 * 32) const;
+    Result<PeParser::PeChunk> GetSecurityDirectoryChunk() const;
 
     bool HasDebugDirectory() const;
     Result<void> ReadDebugDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxLen = {}) const;
@@ -103,6 +104,7 @@ private:
     IMAGE_DATA_DIRECTORY GetImageDataDirectory(uint8_t index, std::error_code& ec) const;
 
     Result<void> ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::optional<size_t> maxSize = 0) const;
+    Result<PeParser::PeChunk> GetDirectoryChunk(uint8_t index, bool checkChunkBoundaries = true) const;
     Result<uint64_t> ImageRvaToFileOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation = {}) const;
 
     uint64_t GetSizeOfOptionalHeader() const;

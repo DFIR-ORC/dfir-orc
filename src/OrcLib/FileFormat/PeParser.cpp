@@ -693,6 +693,61 @@ Result<void> PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer
     return Orc::Success<void>();
 }
 
+Result<PeParser::PeChunk> PeParser::GetDirectoryChunk(uint8_t index, bool checkChunkBoundaries) const
+{
+    std::error_code ec;
+
+    auto directory = GetImageDataDirectory(index, ec);
+    if (ec)
+    {
+        Log::Debug("Failed to retrieve directory (index: {}) [{}]", index, ec);
+        return ec;
+    }
+
+    uint64_t fileOffset = 0;
+    if (index != IMAGE_DIRECTORY_ENTRY_SECURITY)
+    {
+        auto directoryOffset = ImageRvaToFileOffset(directory.VirtualAddress);
+        if (!directoryOffset)
+        {
+            Log::Debug("Invalid directory virtual address");
+            return directoryOffset.error();
+        }
+
+        fileOffset = *directoryOffset;
+    }
+    else
+    {
+        fileOffset = directory.VirtualAddress;
+    }
+
+    // BEWARE: In the wild some pe files have invalid resource size that overlap the file size but data is actually
+    // present like 'FileSyncShell.dll' from Microsoft. So we do not validate here that the size is within the file
+    // size.
+    if (!checkChunkBoundaries)
+    {
+        return PeChunk {fileOffset, directory.Size};
+    }
+
+    if (fileOffset >= m_streamSize)
+    {
+        Log::Debug("Invalid directory file offset (value: {:#x}, stream size: {:#x}", fileOffset, m_streamSize);
+        return std::make_error_code(std::errc::bad_message);
+    }
+
+    if (directory.Size > m_streamSize - fileOffset)
+    {
+        Log::Debug(
+            "Invalid directory file offset or length (offset: {:#x}, length: {:#x}, stream size: {:#x}",
+            fileOffset,
+            directory.Size,
+            m_streamSize);
+    }
+
+    return PeChunk {
+        fileOffset, std::min(static_cast<size_t>(directory.Size), static_cast<size_t>(m_streamSize - fileOffset))};
+}
+
 Result<void> PeParser::ReadSecurityDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxSize) const
 {
     auto rv = ReadDirectory(IMAGE_DIRECTORY_ENTRY_SECURITY, buffer, maxSize);
@@ -703,6 +758,11 @@ Result<void> PeParser::ReadSecurityDirectory(std::vector<uint8_t>& buffer, std::
     }
 
     return Success<void>();
+}
+
+Result<PeParser::PeChunk> PeParser::GetSecurityDirectoryChunk() const
+{
+    return GetDirectoryChunk(IMAGE_DIRECTORY_ENTRY_SECURITY);
 }
 
 Result<void> PeParser::ReadResourceDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxSize) const
@@ -719,39 +779,25 @@ Result<void> PeParser::ReadResourceDirectory(std::vector<uint8_t>& buffer, std::
 
 Result<PeParser::PeChunk> PeParser::GetResourceDirectoryChunk() const
 {
-    std::error_code ec;
-    auto directory = GetImageDataDirectory(IMAGE_DIRECTORY_ENTRY_RESOURCE, ec);
-    if (ec)
+    // Do not check chunk boundaries here: in the wild some pe files have invalid resource size that overlap the file
+    // size but data is actually present like 'FileSyncShell.dll' from Microsoft
+    auto chunk = GetDirectoryChunk(IMAGE_DIRECTORY_ENTRY_RESOURCE, false);
+    if (!chunk)
     {
-        Log::Debug("Failed to retrieve resource directory [{}]", ec);
-        return ec;
+        return chunk.error();
     }
 
-    const auto directoryFileOffset = ImageRvaToFileOffset(directory.VirtualAddress, directory.Size);
-    if (!directoryFileOffset)
+    if (chunk->offset > m_streamSize)
     {
-        Log::Debug("Failed to convert resource directory RVA to file offset [{}]", directoryFileOffset.error());
-        return directoryFileOffset.error();
+        return std::errc::bad_message;
     }
 
-    if (*directoryFileOffset >= m_streamSize)
+    if (chunk->length > m_streamSize - chunk->offset)
     {
-        Log::Debug(
-            "Invalid resource directory file offset (value: {:#x}, stream size: {:#x}",
-            *directoryFileOffset,
-            m_streamSize);
-        return std::make_error_code(std::errc::bad_message);
+        return PeChunk {chunk->offset, static_cast<size_t>(m_streamSize - chunk->offset)};
     }
 
-    // In the wild some pe files have invalid resource size that overlap the file size but data is actually present
-    // like 'FileSyncShell.dll' from Microsoft
-    if (directory.Size > m_streamSize - *directoryFileOffset)
-    {
-        Log::Debug("Invalid resource directory file offset");
-        directory.Size = m_streamSize - *directoryFileOffset;
-    }
-
-    return PeChunk {*directoryFileOffset, directory.Size};
+    return *chunk;
 }
 
 Result<void> PeParser::ReadDebugDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxSize) const
