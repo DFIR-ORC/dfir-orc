@@ -176,7 +176,7 @@ size_t ReadChunkAt(ByteStream& stream, uint64_t offset, ContainerT& output, std:
  */
 template <typename CharT>
 size_t
-ReadChunkAt(ByteStream& stream, uint64_t offset, size_t chunkSizeCb, BasicBufferSpan<CharT> output, std::error_code& ec)
+ReadChunkAt(ByteStream& stream, uint64_t offset, BasicBufferSpan<CharT> output, std::error_code& ec)
 {
     ULONG64 currPointer = 0;
     HRESULT hr = stream.SetFilePointer(offset, FILE_BEGIN, &currPointer);
@@ -199,10 +199,7 @@ ReadChunkAt(ByteStream& stream, uint64_t offset, size_t chunkSizeCb, BasicBuffer
         return 0;
     }
 
-    assert(chunkSizeCb < output.size() * sizeof(CharT) && "Buffer 'output' overflow");
-
-    BufferSpan span(reinterpret_cast<uint8_t*>(output.data()), chunkSizeCb);
-    return ReadChunk(stream, span, ec);
+    return ReadChunk(stream, output, ec);
 }
 
 /*!
