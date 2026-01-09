@@ -417,8 +417,7 @@ Result<void> PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer
         return SystemError(HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER));
     }
 
-    buffer.resize(directory.Size);
-    ReadChunkAt(m_stream, fileOffset, buffer, ec);
+    ReadChunkAt(m_stream, fileOffset, directory.Size, buffer, ec);
     if (ec)
     {
         Log::Debug("Failed to read directory (index: {}) [{}]", index, ec);
