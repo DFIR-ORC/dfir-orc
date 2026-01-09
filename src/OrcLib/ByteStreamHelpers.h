@@ -142,8 +142,18 @@ size_t ReadAt(ByteStream& stream, uint64_t offset, ContainerT& output, std::erro
  * TODO: C++20: use std::is_contiguous_iterator
  */
 template <typename ContainerT>
-size_t ReadChunkAt(ByteStream& stream, uint64_t offset, ContainerT& output, std::error_code& ec)
+size_t ReadChunkAt(ByteStream& stream, uint64_t offset, size_t count, ContainerT& output, std::error_code& ec)
 {
+    try
+    {
+        output.resize(count);
+    }
+    catch (...)
+    {
+        ec = std::make_error_code(std::errc::not_enough_memory);
+        return 0;
+    }
+
     ULONG64 currPointer = 0;
     HRESULT hr = stream.SetFilePointer(offset, FILE_BEGIN, &currPointer);
     if (FAILED(hr))
@@ -174,9 +184,19 @@ size_t ReadChunkAt(ByteStream& stream, uint64_t offset, ContainerT& output, std:
  *
  * TODO: C++20: use std::is_contiguous_iterator
  */
+template <typename ContainerT>
+size_t ReadChunkAt(ByteStream& stream, uint64_t offset, ContainerT& output, std::error_code& ec)
+{
+    return ReadChunkAt(stream, offset, output.size(), output, ec);
+}
+
+/*!
+ * \brief Read at specified position in 'stream' until 'output' is completely filled.
+ *
+ * TODO: C++20: use std::is_contiguous_iterator
+ */
 template <typename CharT>
-size_t
-ReadChunkAt(ByteStream& stream, uint64_t offset, BasicBufferSpan<CharT> output, std::error_code& ec)
+size_t ReadChunkAt(ByteStream& stream, uint64_t offset, BasicBufferSpan<CharT> output, std::error_code& ec)
 {
     ULONG64 currPointer = 0;
     HRESULT hr = stream.SetFilePointer(offset, FILE_BEGIN, &currPointer);
