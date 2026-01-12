@@ -227,6 +227,43 @@ HRESULT Orc::IsFileName(const WCHAR* szInputFile)
 }
 
 HRESULT
+Orc::ExpandPath(const WCHAR* szInputString, std::wstring& inputPath, bool checkExists)
+{
+    inputPath.resize(ORC_MAX_PATH);
+
+    DWORD dwRequiredLen = ExpandEnvironmentStringsW(szInputString, NULL, 0L);
+    if (dwRequiredLen > inputPath.size())
+    {
+        return HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
+    }
+
+    dwRequiredLen = ExpandEnvironmentStringsW(szInputString, inputPath.data(), inputPath.size());
+    if (dwRequiredLen == 0 || dwRequiredLen > inputPath.size())
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    if (dwRequiredLen > 0)
+    {
+        inputPath.resize(dwRequiredLen - 1);  // Remove null terminator
+    }
+
+    if (!checkExists)
+    {
+        return S_OK;
+    }
+
+    DWORD dwAttr = GetFileAttributesW(inputPath.c_str());
+
+    if (INVALID_FILE_ATTRIBUTES == dwAttr)
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
+    }
+
+    return S_OK;
+}
+
+HRESULT
 Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInputFileLengthInWCHARS, bool exists)
 {
     DWORD dwRequiredLen = ExpandEnvironmentStrings(szInputString, NULL, 0L);
@@ -243,7 +280,7 @@ Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInp
     if (INVALID_FILE_ATTRIBUTES == dwAttr)
     {
         auto lastError = GetLastError();
-        if (exists == false && lastError == ERROR_FILE_NOT_FOUND)
+        if (exists == false && lastError == ERROR_FILE_NOT_FOUND || lastError == ERROR_PATH_NOT_FOUND)
         {
             return S_OK;
         }

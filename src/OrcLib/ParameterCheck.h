@@ -24,6 +24,9 @@ ExpandDirectoryPath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInp
 
 HRESULT ExpandDirectoryPath(const WCHAR* szInputString, std::wstring& strInputFile);
 
+HRESULT
+ExpandPath(const WCHAR* szInputString, std::wstring& strInputPath, bool exists = true);
+
 HRESULT VerifyFileExists(const WCHAR* szInputFile);
 HRESULT VerifyDirectoryExists(const WCHAR* szInputDir);
 HRESULT VerifyFileIsBinary(const WCHAR* szInputFile);
