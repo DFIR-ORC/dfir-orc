@@ -1,0 +1,9 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+    "dependencies": [
+        "fmt",
+        "zstd"
+    ],
+    "name": "dfir-orc-capsule",
+    "version": "10.2.9"
+}
