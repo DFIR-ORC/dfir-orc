@@ -41,8 +41,10 @@ public:
         Action Todo = Embed;
 
         std::wstring strInputFile;
+        std::wstring strInputFileFromCli;
         OutputSpec Output;
         std::vector<EmbeddedResource::EmbedSpec> ToEmbed;
+        std::optional<std::wstring> m_embedPath;  // the config file or directory as specified with /config
         std::optional<std::wstring> m_strCapsule;  // raw value of the /capsule parameter
         std::optional<std::wstring> m_run;
         std::optional<std::wstring> m_runArgs;
@@ -50,6 +52,9 @@ public:
         std::optional<std::wstring> m_runArgs32;
         std::optional<std::wstring> m_run64;
         std::optional<std::wstring> m_runArgs64;
+        //std::optional<std::wstring> m_embedPath;  // the config file or directory as specified with /config
+        std::optional<std::wstring> m_embedFile;  // the absolute path to embed file
+        std::optional<std::wstring> m_embedDirectory;  // the absolute path to embed directory
     };
 
 private:
@@ -66,6 +71,7 @@ private:
         const std::vector<EmbeddedResource::EmbedSpec>& values);
 
     HRESULT Run_Embed();
+    HRESULT Run_EmbedCapsule();
     HRESULT Run_Dump();
 
 public:

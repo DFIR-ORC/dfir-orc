@@ -42,9 +42,12 @@ HRESULT Main::WriteEmbedConfig(
 
     writer->BeginElement(L"toolembed");
 
-    writer->BeginElement(L"input");
-    writer->Write(mothershipPath.c_str());
-    writer->EndElement(L"input");
+    if (!mothershipPath.empty())
+    {
+        writer->BeginElement(L"input");
+        writer->Write(mothershipPath.c_str());
+        writer->EndElement(L"input");
+    }
 
     for (const auto& item : values)
     {
@@ -120,27 +123,21 @@ HRESULT Main::Run_Embed()
 HRESULT Main::Run_Dump()
 {
     HRESULT hr = E_FAIL;
-    WCHAR szPreviousCurDir[ORC_MAX_PATH];
 
-    GetCurrentDirectory(ORC_MAX_PATH, szPreviousCurDir);
-    BOOST_SCOPE_EXIT((&szPreviousCurDir)) { SetCurrentDirectory(szPreviousCurDir); }
-    BOOST_SCOPE_EXIT_END;
-
-    SetCurrentDirectory(config.Output.Path.c_str());
+    std::wstring input = m_capsule.value_or(config.strInputFile);
 
     std::vector<EmbeddedResource::EmbedSpec> values;
-
-    hr = EmbeddedResource::EnumValues(config.strInputFile, values);
+    hr = EmbeddedResource::EnumValues(input, values);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to enumerate values from '{}' [{}]", config.strInputFile, SystemError(hr));
+        Log::Error(L"Failed to enumerate values from '{}' [{}]", input, SystemError(hr));
         return hr;
     }
 
-    hr = EmbeddedResource::EnumBinaries(config.strInputFile, values);
+    hr = EmbeddedResource::EnumBinaries(input, values);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to enumerate binaries from '{}' [{}]", config.strInputFile, SystemError(hr));
+        Log::Error(L"Failed to enumerate values from '{}' [{}]", input, SystemError(hr));
         return hr;
     }
 
@@ -149,20 +146,26 @@ HRESULT Main::Run_Dump()
     {
         Log::Error(
             L"Failed to expand files and archives from '{}' into '{}' [{}]",
-            config.strInputFile,
+            input,
             config.Output.Path,
             SystemError(hr));
         return hr;
     }
 
-    hr = EmbeddedResource::DeleteEmbeddedResources(config.strInputFile, L".\\Mothership.exe", values);
-    if (FAILED(hr))
+    std::wstring bootstrap;
+    if (!m_capsule)
     {
-        Log::Error(L"Failed to delete resources from '{}' [{}]", config.strInputFile, SystemError(hr));
-        return hr;
+        bootstrap = L".\\Mothership.exe";
+
+        hr = EmbeddedResource::DeleteEmbeddedResources(input, bootstrap, values);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to delete resources from '{}' [{}]", input, SystemError(hr));
+            return hr;
+        }
     }
 
-    hr = WriteEmbedConfig(L".\\Embed.xml", L".\\Mothership.exe", values);
+    hr = WriteEmbedConfig(L".\\Embed.xml", bootstrap, values);
     if (FAILED(hr))
     {
         Log::Error("Failed to write embedding configuration for dump [{}]", SystemError(hr));
@@ -172,15 +175,108 @@ HRESULT Main::Run_Dump()
     return S_OK;
 }
 
-HRESULT Main::Run()
+HRESULT Main::Run_EmbedCapsule()
 {
-    switch (config.Todo)
+    HRESULT hr = E_FAIL;
+
+    if (!m_capsule)
     {
-        case Main::Action::Embed:
-            return Run_Embed();
-        case Main::Action::Dump:
-            return Run_Dump();
+        Log::Error(L"Unknown Capsule path");
+        return E_INVALIDARG;
     }
 
+    const auto input = *m_capsule;
+    const auto output = config.Output.Path;
+
+    std::vector<EmbeddedResource::EmbedSpec> values;
+    hr = EmbeddedResource::ExpandArchivesAndBinaries(L".", values);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to expand files and archives from '{}' into '{}' [{}]", input, output, SystemError(hr));
+        return hr;
+    }
+
+    hr = EmbeddedResource::DeleteEmbeddedResources(input, output, values);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to delete resources from '{}' [{}]", output, SystemError(hr));
+        return hr;
+    }
+
+    m_console.Print(L"Updating resources in '{}'", output);
+
+    hr = EmbeddedResource::UpdateResources(output, config.ToEmbed);
+    if (FAILED(hr))
+    {
+        Log::Error(L"Failed to update resources in file '{}' [{}]", output, SystemError(hr));
+
+        if (!DeleteFileW(output.c_str()))
+        {
+            HRESULT deleteHR = HRESULT_FROM_WIN32(GetLastError());
+            Log::Error(L"Failed to delete failed output file '{}' [{}]", output, SystemError(deleteHR));
+        }
+
+        return hr;
+    }
+
+    Log::Info(L"Done updating resources in '{}'", output);
     return S_OK;
+}
+
+HRESULT Main::Run()
+{
+    WCHAR szPreviousCurDir[ORC_MAX_PATH];
+    GetCurrentDirectoryW(ORC_MAX_PATH, szPreviousCurDir);
+
+    switch (config.Todo)
+    {
+        case Main::Action::Dump: {
+            if (config.Output.Path == szPreviousCurDir)
+            {
+                return Run_Dump();
+            }
+
+            BOOST_SCOPE_EXIT((&szPreviousCurDir))
+            {
+                SetCurrentDirectoryW(szPreviousCurDir);
+            }
+            BOOST_SCOPE_EXIT_END;
+
+            SetCurrentDirectoryW(config.Output.Path.c_str());
+            return Run_Dump();
+        }
+        case Main::Action::Embed:
+        case Main::Action::FromDump: {
+            if (!config.m_embedDirectory || config.m_embedDirectory == szPreviousCurDir)
+            {
+                if (m_capsule)
+                {
+                    return Run_EmbedCapsule();
+                }
+                else
+                {
+                    return Run_Embed();
+                }
+            }
+            BOOST_SCOPE_EXIT((&szPreviousCurDir))
+            {
+                SetCurrentDirectoryW(szPreviousCurDir);
+            }
+            BOOST_SCOPE_EXIT_END;
+
+            SetCurrentDirectoryW(config.m_embedDirectory->c_str());
+
+            if (m_capsule)
+            {
+                return Run_EmbedCapsule();
+            }
+            else
+            {
+                return Run_Embed();
+            }
+        }
+
+        default:
+            return E_FAIL;
+    }
 }

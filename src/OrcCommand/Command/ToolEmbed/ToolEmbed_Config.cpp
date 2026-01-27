@@ -20,11 +20,110 @@
 #include "SystemDetails.h"
 
 #include "ConfigFile_ToolEmbed.h"
+#include "Configuration/ConfigFileReader.h"
 
 using namespace std;
 
 using namespace Orc;
 using namespace Orc::Command::ToolEmbed;
+
+namespace {
+
+Result<std::wstring> GetResourceString(HINSTANCE hInstance, UINT uID)
+{
+    wchar_t* pString = nullptr;
+
+    // Passing 0 as the third argument returns a pointer to the resource itself (read-only)
+    int length = LoadStringW(hInstance, uID, reinterpret_cast<LPWSTR>(&pString), 0);
+    DWORD lastError = GetLastError();
+    if (lastError != ERROR_SUCCESS)
+    {
+        auto ec = std::error_code(lastError, std::system_category());
+        Log::Debug(L"Failed LoadStringW (id: {}) [{}]", uID, ec);
+        return ec;
+    }
+
+    if (length == 0 || pString == nullptr)
+    {
+        Log::Debug(L"Failed LoadStringW (id: {})", uID);
+        return std::make_error_code(std::errc::no_such_file_or_directory);
+    }
+
+    return std::wstring(pString, length);
+}
+
+bool IsCapsuleExecutable(const std::wstring& path)
+{
+    std::error_code ec;
+
+    Guard::Module module =
+        LoadLibraryExW(path.c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE);
+    if (!module)
+    {
+        ec = LastWin32Error();
+        Log::Debug(L"Failed LoadLibraryExW (path: {}) [{}]", path, ec);
+        return false;
+    }
+
+    auto value = GetResourceString(module.value(), IDS_BOOTSTRAP);
+    if (!value)
+    {
+        Log::Debug(L"Failed to detect architecture from resources (path: {}) [{}]", path, value.error());
+        return false;
+    }
+
+    return *value == L"capsule";
+}
+
+Result<void> GetTopDirectoryAndFilename(
+    const std::filesystem::path& path,
+    std::optional<std::wstring>& topDirectory,
+    std::optional<std::wstring>& filename)
+{
+    std::error_code ec;
+
+    bool isExists = std::filesystem::exists(path, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed std::filesystem::exists (path: {}) [{}]", path, ec);
+        return ec;
+    }
+
+    if (!isExists)
+    {
+        Log::Debug(L"Path does not exists: {}", path);
+        return std::errc::no_such_file_or_directory;
+    }
+
+    bool isDirectory = std::filesystem::is_directory(path, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed std::filesystem::is_directory (path: {}) [{}]", path, ec);
+        return ec;
+    }
+
+    auto absolutePath = std::filesystem::absolute(path, ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", path, ec);
+        return ec;
+    }
+
+    if (isDirectory)
+    {
+        filename = absolutePath / L"embed.xml";
+        topDirectory = absolutePath;
+    }
+    else
+    {
+        filename = absolutePath;
+        topDirectory = absolutePath.parent_path();
+    }
+
+    return Orc::Success<void>();
+}
+
+}  // namespace
 
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
 {
@@ -346,16 +445,28 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                 if (OptionalParameterOption(argv[i] + 1, L"Dump", optionalParameter))
                 {
                     config.Todo = Main::Dump;
-                    if (!strParameter.empty())
-                        config.strInputFile = strParameter;
+                    if (optionalParameter && !optionalParameter->empty())
+                    {
+                        config.strInputFileFromCli = *optionalParameter;
+                    }
                 }
-                if (OptionalParameterOption(argv[i] + 1, L"FromDump", optionalParameter))
+                else if (OptionalParameterOption(argv[i] + 1, L"FromDump", optionalParameter))
                 {
                     config.Todo = Main::FromDump;
-                    if (!strParameter.empty())
-                        config.strInputFile = strParameter;
+                    if (optionalParameter && !optionalParameter->empty())
+                    {
+                        config.m_embedPath = *optionalParameter;
+                    }
                 }
-                else if (InputFileOption(argv[i] + 1, L"Input", config.strInputFile))
+                else if (OptionalParameterOption(argv[i] + 1, L"Embed", optionalParameter))
+                {
+                    config.Todo = Main::FromDump;
+                    if (optionalParameter && !optionalParameter->empty())
+                    {
+                        config.m_embedPath = *optionalParameter;
+                    }
+                }
+                else if (InputFileOption(argv[i] + 1, L"Input", config.strInputFileFromCli))
                     ;
                 else if (OutputOption(
                              argv[i] + 1,
@@ -414,10 +525,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (UsageOption(argv[i] + 1))
                     ;
-                else if (!_wcsnicmp(argv[i] + 1, L"Config", wcslen(L"Config")))
-                {
-                    // simply avoiding a config=config.xml name value pair in the output
-                }
+                else if (ParameterOption(argv[i] + 1, L"Config", config.strConfigFile))
+                    ;
                 else if (IgnoreCommonOptions(argv[i] + 1))
                     ;
                 else
@@ -487,6 +596,101 @@ HRESULT Main::CheckConfiguration()
         }
     }
 
+    // Resolve embed directory path and load embed.xml if it was not specified with '/config'
+    if (config.Todo == Main::Embed || config.Todo == Main::FromDump)
+    {
+        if (!config.strConfigFile.empty())
+        {
+            // The relative paths from 'config' are from the configuration directory which is also "embed directory
+            auto rv = GetTopDirectoryAndFilename(config.strConfigFile, config.m_embedDirectory, config.m_embedFile);
+            if (!rv)
+            {
+                Log::Debug(L"Invalid embed path: {} [{}]", config.strConfigFile, rv.error());
+                return E_INVALIDARG;
+            }
+        }
+        else if (config.ToEmbed.empty() || config.m_embedPath)  // ToEmbed is empty if no /AddFile has been specified
+        {
+            if (!config.m_embedPath)
+            {
+                std::error_code ec;
+                config.m_embedPath = std::filesystem::current_path();
+                if (ec)
+                {
+                    Log::Debug("Failed std::filesystem::current_path [{}]", ec);
+                    return E_INVALIDARG;
+                }
+            }
+
+            auto rv = GetTopDirectoryAndFilename(*config.m_embedPath, config.m_embedDirectory, config.m_embedFile);
+            if (!rv)
+            {
+                Log::Debug(L"Invalid embed path: {} [{}]", *config.m_embedPath, rv.error());
+                return E_INVALIDARG;
+            }
+
+            //
+            // Load the configuration from embed.xml, this will update some variable from 'config' like
+            // 'strInputFile'.
+            //
+            // Need to temporarily change current directory to the embed config path so GetConfigurationFromConfig
+            // works. A refactor is needed to handle correctly the path of the configuration items that are always
+            // relative (I guess to embed.xml directory).
+            //
+            WCHAR szPreviousCurDir[ORC_MAX_PATH];
+            GetCurrentDirectoryW(ORC_MAX_PATH, szPreviousCurDir);
+
+            auto scopeGuard = Orc::Guard::CreateScopeGuard([&]() { SetCurrentDirectoryW(szPreviousCurDir); });
+            SetCurrentDirectoryW(config.m_embedDirectory->c_str());
+
+            ConfigItem embed;
+            hr = Orc::Config::ToolEmbed::root(embed);
+            if (FAILED(hr))
+            {
+                Log::Error("Failed to create config item to embed [{}]", SystemError(hr));
+                return hr;
+            }
+
+            ConfigFileReader reader;
+            hr = reader.ReadConfig(config.m_embedFile->c_str(), embed);
+            if (FAILED(hr))
+            {
+                Log::Error(L"Failed to read embed config file '{}' [{}]", *config.m_embedFile, SystemError(hr));
+                return hr;
+            }
+
+            // BEWARE: this could ovewrite 'strInputFile' and some other configuration variables
+            hr = GetConfigurationFromConfig(embed);
+            if (FAILED(hr))
+            {
+                Log::Error(L"Failed to obtain embed configuration '{}' [{}]", *config.m_embedFile, SystemError(hr));
+                return hr;
+            }
+        }
+    }
+
+    //
+    // BEWARE: this should be useless code after removing 'Mothership'.
+    //
+    // CLI input file takes precedence over config file input, but their relative paths are
+    // resolved differently:
+    //  - CLI paths: relative to working directory
+    //  - Config paths: relative to config file directory
+    //
+    // This function resolves both paths and updates 'config.strInputFile' with the final
+    // resolved path. After this point, 'config.strInputFileFromCli' should not be accessed.
+    //
+    if (!config.strInputFileFromCli.empty())
+    {
+        // A relative path from cli should be relative to working directory so convert it to absolute path
+        std::error_code ec;
+        config.strInputFile = std::filesystem::absolute(config.strInputFileFromCli, ec);
+        if (ec)
+        {
+            Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", config.strInputFileFromCli, ec);
+            return E_INVALIDARG;
+        }
+    }
 
         if (!std::filesystem::exists(config.strInputFile, ec))
         {
@@ -680,6 +884,7 @@ HRESULT Main::CheckConfiguration()
 
     switch (config.Todo)
     {
+        case Main::FromDump:
         case Main::Embed:
             if (config.Output.Type != OutputSpec::Kind::File)
             {
