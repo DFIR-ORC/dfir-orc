@@ -750,6 +750,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Mothership", config.strMothershipHandle))
                         ;
+                    else if (OptionalParameterOption(argv[i] + 1, L"Capsule", config.strCapsule))
+                        ;
                     else if (ParameterOption(argv[i] + 1, L"archive_timeout", config.msArchiveTimeOut))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"command_timeout", config.msCommandTerminationTimeOut))
@@ -942,7 +944,24 @@ HRESULT Main::CheckConfiguration()
     }
     else
     {
-        Log::Warn("Missing mothership handle");
+        Log::Debug("No Mothership handle");
+    }
+
+    if (config.strCapsule)
+    {
+        auto handle = Text::FromHexToLittleEndian<HANDLE>(std::wstring_view(*config.strCapsule));
+        if (handle)
+        {
+            m_hCapsule = handle.value();
+        }
+        else
+        {
+            Log::Error("Failed to parse Capsule handle [{}]", handle.error());
+        }
+    }
+    else
+    {
+        Log::Warn("Missing Capsule handle");
     }
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);

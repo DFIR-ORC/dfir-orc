@@ -902,7 +902,15 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
 
     auto [outcome, lock] = m_outcome.Get();
 
-    ::UpdateOutcome(outcome, SystemDetails::GetOrcRunId(), m_hMothership);
+    if (m_hCapsule)
+    {
+        ::UpdateOutcome(outcome, SystemDetails::GetOrcRunId(), *m_hCapsule);
+    }
+    else if (m_hMothership)
+    {
+        ::UpdateOutcome(outcome, SystemDetails::GetOrcRunId(), *m_hMothership);
+    }
+
     ::UpdateOutcome(outcome, config.m_Recipients);
     ::UpdateOutcome(outcome, m_standardOutput);
     ::UpdateOutcome(outcome, m_logging);
