@@ -488,6 +488,57 @@ HRESULT Main::CheckConfiguration()
     }
 
 
+        if (!std::filesystem::exists(config.strInputFile, ec))
+        {
+            Log::Error(L"Input file does not exists: {}", config.strInputFile);
+            return E_INVALIDARG;
+        }
+
+        if (::IsCapsuleExecutable(config.strInputFile))
+        {
+            Log::Debug(L"Input file '{}' is a capsule executable", config.strInputFile);
+        }
+        else if (m_capsule)
+        {
+            Log::Warn(L"[DEPRECATED] Input file is not a capsule executable, using: '{}'", *m_capsule);
+            config.strInputFile = *m_capsule;
+        }
+        else
+        {
+    #ifdef _DEBUG
+            Log::Critical(
+                L"[DEPRECATED] Input file is a legacy Mothership executable vulnerable to DLL side-loading (path: {})",
+                config.strInputFile);
+    #else
+            Log::Warn(L"[DEPRECATED] Input file is not a capsule executable, using '{}'", *m_capsule);
+            config.strInputFile = *m_capsule;
+    #endif
+        }
+    */
+
+#ifndef _DEBUG
+    if (m_capsule)
+    {
+        if (!config.strInputFile.empty())
+        {
+            Log::Warn(L"[DEPRECATED] Ignored input file (path: {})", config.strInputFile);
+        }
+
+        if (!config.strInputFileFromCli.empty() && config.strInputFileFromCli != config.strInputFile)
+        {
+            Log::Warn(L"[DEPRECATED] Ignored input file (path: {})", config.strInputFileFromCli);
+        }
+
+        config.strInputFile.clear();
+        config.strInputFileFromCli.clear();
+    }
+    else
+    {
+        Log::Critical(L"[DEPRECATED] DFIR-Orc does not use Mothership anymore, call ToolEmbed from Capsule wrapper");
+        return E_FAIL;
+    }
+#endif
+
     if (m_capsule)
     {
         // HACK: Clear all deprecated items that were inserted on the "read configuration" phase.

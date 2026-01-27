@@ -1046,6 +1046,7 @@ target_link_libraries(OrcLib
         yara::yara
         ws2_32.lib
         Iphlpapi.lib
+        version.lib
 )
 
 find_package(RapidJSON CONFIG REQUIRED)
