@@ -743,11 +743,22 @@ HRESULT Main::CheckConfiguration()
             }
         }
     }
-    else
-    {
-        config.strInputFile = *m_capsule;
-    }
 
+    std::error_code ec;
+    //
+    // The code below is working and can be removed once we are sure that:
+    //
+    // 1. The "capsule" mode is accepted and the only one used
+    // 2. The new behavior on "input" from CLI and XML configuration is accepted, the 'input' option is now ignored and
+    // the capsule wrapping DFIR-Orc and toolembed is reused automatically.
+    //
+    // If the input option must be handled or legacy Mothership is still used then uncomment this.
+    //
+    /*
+        if (config.strInputFile.empty())
+        {
+            config.strInputFile = *m_capsule;
+        }
 
         if (!std::filesystem::exists(config.strInputFile, ec))
         {
