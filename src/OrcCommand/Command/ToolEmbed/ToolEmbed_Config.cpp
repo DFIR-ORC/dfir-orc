@@ -8,6 +8,8 @@
 
 #include "stdafx.h"
 
+#include <Psapi.h>
+
 #include <string>
 
 #include "ToolEmbed.h"
@@ -396,6 +398,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         return E_INVALIDARG;
                     }
                 }
+                else if (OptionalParameterOption(argv[i] + 1, L"Capsule", config.m_strCapsule))
+                    ;
                 else if (UsageOption(argv[i] + 1))
                     ;
                 else if (!_wcsnicmp(argv[i] + 1, L"Config", wcslen(L"Config")))
@@ -444,6 +448,32 @@ HRESULT Main::CheckConfiguration()
     }
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
+    if (config.m_strCapsule)
+    {
+        auto handle = Text::FromHexToLittleEndian<HANDLE>(std::wstring_view(*config.m_strCapsule));
+        if (handle)
+        {
+            m_hCapsule = handle.value();
+
+            std::wstring capsule;
+            capsule.resize(ORC_MAX_PATH);
+            DWORD length = GetModuleFileNameExW(static_cast<HMODULE>(*m_hCapsule), NULL, capsule.data(), ORC_MAX_PATH);
+            auto lastError = LastWin32Error();
+            if (length == 0 && lastError.value() != ERROR_SUCCESS)
+            {
+                Log::Error("Failed to get module file name from capsule handle [{}]", lastError);
+                return E_INVALIDARG;  // TODO: is this the best choice ?
+            }
+
+            capsule.resize(length);
+            m_capsule = std::move(capsule);
+        }
+        else
+        {
+            m_capsule = *config.m_strCapsule;
+        }
+    }
 
     DWORD dwMajor = 0, dwMinor = 0;
     SystemDetails::GetOSVersion(dwMajor, dwMinor);

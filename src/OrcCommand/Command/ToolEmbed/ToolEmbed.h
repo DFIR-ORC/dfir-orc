@@ -43,6 +43,7 @@ public:
         std::wstring strInputFile;
         OutputSpec Output;
         std::vector<EmbeddedResource::EmbedSpec> ToEmbed;
+        std::optional<std::wstring> m_strCapsule;  // raw value of the /capsule parameter
     };
 
 private:
