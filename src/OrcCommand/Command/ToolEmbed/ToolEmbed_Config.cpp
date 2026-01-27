@@ -691,6 +691,63 @@ HRESULT Main::CheckConfiguration()
             return E_INVALIDARG;
         }
     }
+    else if (!config.strInputFile.empty())
+    {
+        //
+        // Resolve strInputFile to an absolute path
+        //
+        auto strInputFile = config.strInputFile;
+
+        HRESULT hr = ExpandPath(strInputFile.c_str(), config.strInputFile, false);
+        if (FAILED(hr))
+        {
+            Log::Debug(L"Invalid input path (value: {}) [{}]", config.strInputFile, SystemError(hr));
+            return E_FAIL;
+        }
+
+        if (std::filesystem::path(strInputFile).is_relative())
+        {
+            std::error_code ec;
+
+            if (config.m_embedDirectory)
+            {
+                strInputFile = std::filesystem::path(*config.m_embedDirectory) / config.strInputFile;
+                config.strInputFile = std::filesystem::absolute(strInputFile, ec);
+                if (ec)
+                {
+                    Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", config.strInputFile, ec);
+                    return E_INVALIDARG;
+                }
+            }
+            else
+            {
+                // This case should not happen because m_embedDirectory is always set when strInputFile is from config
+                assert(0 && "Unexpected code path");
+
+                std::optional<std::wstring> configDirectory;
+                std::optional<std::wstring> configFilename;
+                auto rv = GetTopDirectoryAndFilename(config.strConfigFile, configDirectory, configFilename);
+                if (!rv || !configDirectory)
+                {
+                    Log::Debug(L"Invalid configuration path: '{}' [{}]", config.strConfigFile, rv.error());
+                    return E_INVALIDARG;
+                }
+
+                std::wstring inputFile = std::filesystem::path(*configDirectory) / config.strInputFile;
+                config.strInputFile = std::filesystem::absolute(inputFile, ec);
+                if (ec)
+                {
+                    Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", config.strInputFileFromCli, ec);
+                    return E_INVALIDARG;
+                }
+            }
+        }
+    }
+    else
+    {
+        config.strInputFile = *m_capsule;
+    }
+
 
         if (!std::filesystem::exists(config.strInputFile, ec))
         {
@@ -904,6 +961,7 @@ HRESULT Main::CheckConfiguration()
                 }
                 config.strInputFile.assign(szFullPath);
             }
+
             if (config.Output.Type != OutputSpec::Kind::Directory)
             {
                 Log::Error("ToolEmbed can only dump a configuration into a directory");
