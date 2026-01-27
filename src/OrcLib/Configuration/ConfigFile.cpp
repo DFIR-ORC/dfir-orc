@@ -570,13 +570,13 @@ HRESULT ConfigFile::SetOutputFile(ConfigItem& item, const std::wstring& outputFi
     return S_OK;
 }
 
-HRESULT ConfigFile::GetInputFile(const ConfigItem& item, std::wstring& inputFile)
+HRESULT ConfigFile::GetInputFile(const ConfigItem& item, std::wstring& inputFile, bool checkExists)
 {
     HRESULT hr = E_FAIL;
 
     if (item)
     {
-        if (FAILED(hr = ::ExpandFilePath(item.c_str(), inputFile)))
+        if (FAILED(hr = ::ExpandFilePath(item.c_str(), inputFile, checkExists)))
         {
             Log::Error(L"Error in specified inputfile in config file '{}' [{}]", item.c_str(), SystemError(hr));
             return hr;

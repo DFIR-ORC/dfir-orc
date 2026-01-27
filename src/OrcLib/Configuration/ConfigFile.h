@@ -73,7 +73,7 @@ public:
         const std::wstring& outputFile,
         OutputSpec::Encoding anEncoding = OutputSpec::Encoding::UTF8);
 
-    HRESULT GetInputFile(const ConfigItem& item, std::wstring& inputFile);
+    HRESULT GetInputFile(const ConfigItem& item, std::wstring& inputFile, bool checkExists = true);
     HRESULT SetInputFile(ConfigItem& item, const std::wstring& inputFile);
 
     HRESULT GetSQLConnectionString(const ConfigItem& item, std::wstring& strConnectionString);
