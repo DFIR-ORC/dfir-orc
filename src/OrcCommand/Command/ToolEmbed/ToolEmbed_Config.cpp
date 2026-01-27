@@ -494,18 +494,6 @@ HRESULT Main::CheckConfiguration()
                 return E_INVALIDARG;
             }
             break;
-        case Main::FromDump:
-            if (config.Output.Type != OutputSpec::Kind::File)
-            {
-                Log::Error("ToolEmbed can only embed from a dump into an output file");
-                return E_INVALIDARG;
-            }
-            if (!config.strConfigFile.empty())
-            {
-                Log::Error("ToolEmbed embedding from a dump cannot use a config file");
-                return E_INVALIDARG;
-            }
-            break;
         case Main::Dump:
             if (!config.strInputFile.empty())
             {

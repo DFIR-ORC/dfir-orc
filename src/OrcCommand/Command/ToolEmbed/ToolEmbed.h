@@ -61,7 +61,6 @@ private:
 
     HRESULT Run_Embed();
     HRESULT Run_Dump();
-    HRESULT Run_FromDump();
 
 public:
     static LPCWSTR ToolName() { return L"ToolEmbed"; }

@@ -172,47 +172,6 @@ HRESULT Main::Run_Dump()
     return S_OK;
 }
 
-HRESULT Main::Run_FromDump()
-{
-    HRESULT hr = E_FAIL;
-
-    WCHAR szPreviousCurDir[ORC_MAX_PATH];
-
-    GetCurrentDirectory(ORC_MAX_PATH, szPreviousCurDir);
-    BOOST_SCOPE_EXIT((&szPreviousCurDir)) { SetCurrentDirectory(szPreviousCurDir); }
-    BOOST_SCOPE_EXIT_END;
-
-    SetCurrentDirectory(config.strInputFile.c_str());
-
-    config.strConfigFile = L".\\Embed.xml";
-    config.strInputFile = L".\\Mothership.exe";
-
-    ConfigItem embed_config;
-    hr = Orc::Config::ToolEmbed::root(embed_config);
-    if (FAILED(hr))
-    {
-        Log::Error("Failed to create config item to embed [{}]", SystemError(hr));
-        return hr;
-    }
-
-    ConfigFileReader reader;
-    hr = reader.ReadConfig(config.strConfigFile.c_str(), embed_config);
-    if (FAILED(hr))
-    {
-        Log::Error(L"Failed to read embed config file '{}' [{}]", config.strConfigFile, SystemError(hr));
-        return hr;
-    }
-
-    hr = GetConfigurationFromConfig(embed_config);
-    if (FAILED(hr))
-    {
-        Log::Error(L"Failed to obtain embed configuration '{}' [{}]", config.strConfigFile, SystemError(hr));
-        return hr;
-    }
-
-    return Run_Embed();
-}
-
 HRESULT Main::Run()
 {
     switch (config.Todo)
@@ -221,8 +180,6 @@ HRESULT Main::Run()
             return Run_Embed();
         case Main::Action::Dump:
             return Run_Dump();
-        case Main::Action::FromDump:
-            return Run_FromDump();
     }
 
     return S_OK;
