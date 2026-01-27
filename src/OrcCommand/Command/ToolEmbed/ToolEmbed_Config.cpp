@@ -11,6 +11,7 @@
 #include <Psapi.h>
 
 #include <string>
+#include <boost/algorithm/string.hpp>
 
 #include "OrcResource.h"
 #include "ToolEmbed.h"
@@ -80,7 +81,7 @@ HRESULT Main::GetAddFileFromConfigItem(const ConfigItem& item, EmbeddedResource:
     if (item)
     {
         HRESULT hr = E_FAIL;
-        if (FAILED(hr = ExpandFilePath(((const std::wstring&)item[TOOLEMBED_FILEPATH]).c_str(), strInputFile)))
+        if (FAILED(hr = ExpandFilePath(((const std::wstring&)item[TOOLEMBED_FILEPATH]).c_str(), strInputFile, false)))
         {
             Log::Error(
                 L"Error in specified file '{}' to add in config file [{}]",
@@ -144,7 +145,7 @@ HRESULT Main::GetAddArchiveFromConfigItem(const ConfigItem& item, EmbeddedResour
             wstring strInputFile;
 
             HRESULT subhr = E_FAIL;
-            if (FAILED(subhr = ExpandFilePath(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(), strInputFile)))
+            if (FAILED(subhr = ExpandFilePath(item2cab[TOOLEMBED_FILE2ARCHIVE_PATH].c_str(), strInputFile, false)))
             {
                 Log::Error(
                     L"Error in specified file '{}' to add to archive [{}]",
@@ -175,7 +176,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     ConfigFile reader;
 
     {
-        if (FAILED(hr = reader.GetInputFile(configitem[TOOLEMBED_INPUT], config.strInputFile)))
+        if (FAILED(hr = reader.GetInputFile(configitem[TOOLEMBED_INPUT], config.strInputFile, false)))
             return hr;
     }
 
@@ -202,8 +203,36 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
                 if (SUCCEEDED(local_hr = GetNameValuePairFromConfigItem(item, spec)))
                 {
-                    if (spec.Type != EmbeddedResource::EmbedSpec::EmbedType::Void)
-                        config.ToEmbed.push_back(std::move(spec));
+                    // Postpone push_back for those in CheckConfiguration because it is deprecated when using capsule
+                    if (spec.Name == L"RUN")
+                    {
+                        config.m_run = spec.Value;
+                    }
+                    else if (spec.Name == L"RUN32")
+                    {
+                        config.m_run32 = spec.Value;
+                    }
+                    else if (spec.Name == L"RUN64")
+                    {
+                        config.m_run64 = spec.Value;
+                    }
+                    else if (spec.Name == L"RUN_ARGS")
+                    {
+                        config.m_runArgs = spec.Value;
+                    }
+                    else if (spec.Name == L"RUN32_ARGS")
+                    {
+                        config.m_runArgs32 = spec.Value;
+                    }
+                    else if (spec.Name == L"RUN64_ARGS")
+                    {
+                        config.m_runArgs64 = spec.Value;
+                    }
+                    else
+                    {
+                        if (spec.Type != EmbeddedResource::EmbedSpec::EmbedType::Void)
+                            config.ToEmbed.push_back(std::move(spec));
+                    }
                 }
                 else
                     hr = local_hr;
@@ -271,24 +300,29 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[TOOLEMBED_RUN])
     {
-        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun(configitem[TOOLEMBED_RUN]));
+        config.m_run = configitem[TOOLEMBED_RUN];
         if (configitem[TOOLEMBED_RUN][TOOLEMBED_RUN_ARGS])
-            config.ToEmbed.push_back(
-                EmbeddedResource::EmbedSpec::AddRunArgs(configitem[TOOLEMBED_RUN][TOOLEMBED_RUN_ARGS]));
+        {
+            config.m_runArgs = configitem[TOOLEMBED_RUN][TOOLEMBED_RUN_ARGS];
+        }
     }
+
     if (configitem[TOOLEMBED_RUN32])
     {
-        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX86(configitem[TOOLEMBED_RUN32]));
+        config.m_run32 = configitem[TOOLEMBED_RUN32];
         if (configitem[TOOLEMBED_RUN32][TOOLEMBED_RUN_ARGS])
-            config.ToEmbed.push_back(
-                EmbeddedResource::EmbedSpec::AddRun32Args(configitem[TOOLEMBED_RUN32][TOOLEMBED_RUN_ARGS]));
+        {
+            config.m_runArgs32 = configitem[TOOLEMBED_RUN32][TOOLEMBED_RUN_ARGS];
+        }
     }
+
     if (configitem[TOOLEMBED_RUN64])
     {
-        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX64(configitem[TOOLEMBED_RUN64]));
+        config.m_run64 = configitem[TOOLEMBED_RUN64];
         if (configitem[TOOLEMBED_RUN64][TOOLEMBED_RUN_ARGS])
-            config.ToEmbed.push_back(
-                EmbeddedResource::EmbedSpec::AddRun64Args(configitem[TOOLEMBED_RUN64][TOOLEMBED_RUN_ARGS]));
+        {
+            config.m_runArgs64 = configitem[TOOLEMBED_RUN64][TOOLEMBED_RUN_ARGS];
+        }
     }
 
     return S_OK;
@@ -329,36 +363,13 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                              static_cast<OutputSpec::Kind>(OutputSpec::Kind::File | OutputSpec::Kind::Directory),
                              config.Output))
                     ;
-                else if (ParameterOption(argv[i] + 1, L"Run32", strParameter))
+                else if (OptionalParameterOption(argv[i] + 1, L"Run32", config.m_run32))
                 {
-                    if (EmbeddedResource::IsResourceBased(strParameter))
-                        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX86(std::move(strParameter)));
-                    else
-                    {
-                        Log::Error(L"Invalid resource pattern specified: {}", strParameter);
-                        return E_INVALIDARG;
-                    }
                 }
-                else if (ParameterOption(argv[i] + 1, L"Run64", strParameter))
-                {
-                    if (EmbeddedResource::IsResourceBased(strParameter))
-                        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX64(std::move(strParameter)));
-                    else
-                    {
-                        Log::Error(L"Invalid resource pattern specified: '{}'", strParameter);
-                        return E_INVALIDARG;
-                    }
-                }
-                else if (ParameterOption(argv[i] + 1, L"Run", strParameter))
-                {
-                    if (EmbeddedResource::IsResourceBased(strParameter))
-                        config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun(std::move(strParameter)));
-                    else
-                    {
-                        Log::Error(L"Invalid resource pattern specified: '{}'", strParameter);
-                        return E_INVALIDARG;
-                    }
-                }
+                else if (OptionalParameterOption(argv[i] + 1, L"Run64", config.m_run64))
+                    ;
+                else if (OptionalParameterOption(argv[i] + 1, L"Run", config.m_run))
+                    ;
                 else if (ParameterOption(argv[i] + 1, L"AddFile", strParameter))
                 {
                     static std::wregex r(L"([a-zA-Z0-9\\\\ \\-_\\.:%]*),([a-zA-Z0-9\\-_\\.]+)");
@@ -473,6 +484,137 @@ HRESULT Main::CheckConfiguration()
         else
         {
             m_capsule = *config.m_strCapsule;
+        }
+    }
+
+
+    if (m_capsule)
+    {
+        // HACK: Clear all deprecated items that were inserted on the "read configuration" phase.
+        // Need a refactor because it is really hard to make this somewhere else.
+        std::vector<std::wstring> nameFilters;
+        std::wregex pattern(L"^(.*:#)(?:.*\\|)?([^|]+)$");
+
+        auto FilterAdd = [&pattern](const std::optional<std::wstring>& s, std::vector<std::wstring>& filter) {
+            std::wsmatch match;
+            if (s && !s->empty() && std::regex_match(*s, match, pattern))
+            {
+                filter.push_back(match[2].str());
+            }
+        };
+
+        FilterAdd(config.m_run, nameFilters);
+        FilterAdd(config.m_run32, nameFilters);
+        FilterAdd(config.m_run64, nameFilters);
+
+        for (auto& resource : config.ToEmbed)
+        {
+            resource.ArchiveItems.erase(
+                std::remove_if(
+                    std::begin(resource.ArchiveItems),
+                    std::end(resource.ArchiveItems),
+                    [&](EmbeddedResource::EmbedSpec::ArchiveItem& s) {
+                        for (const auto& name : nameFilters)
+                        {
+                            if (boost::iequals(s.Name, name))
+                            {
+                                Log::Warn(L"[DEPRECATED] Ignored archive item '{}'", s.Name);
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    }),
+                std::end(resource.ArchiveItems));
+        }
+
+        if (config.m_run32)
+        {
+            Log::Warn("[DEPRECATED] Ignored element 'Run32'");
+            config.m_run32.reset();
+        }
+
+        if (config.m_runArgs32)
+        {
+            Log::Warn("[DEPRECATED] Ignored element 'Run32Args'");
+            config.m_runArgs32.reset();
+        }
+
+        if (config.m_run64)
+        {
+            Log::Warn("[DEPRECATED] Ignored element 'Run64'");
+            config.m_run64.reset();
+        }
+
+        if (config.m_runArgs64)
+        {
+            Log::Warn("[DEPRECATED] Ignored element 'Run64Args'");
+            config.m_runArgs64.reset();
+        }
+
+        if (config.m_run)
+        {
+            Log::Warn("[DEPRECATED] Ignored element 'Run'");
+            config.m_run.reset();
+        }
+
+        if (config.m_runArgs)
+        {
+            Log::Warn("[DEPRECATED] Ignored element 'RunArgs'");
+            config.m_runArgs64.reset();
+        }
+    }
+    else
+    {
+        if (config.m_run32)
+        {
+            if (EmbeddedResource::IsResourceBased(*config.m_run32))
+            {
+                config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX86(*config.m_run32));
+                if (config.m_runArgs32)
+                {
+                    config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun32Args(*config.m_runArgs32));
+                }
+            }
+            else
+            {
+                Log::Error(L"Invalid resource pattern specified: {}", *config.m_run32);
+                return E_INVALIDARG;
+            }
+        }
+
+        if (config.m_run64)
+        {
+            if (EmbeddedResource::IsResourceBased(*config.m_run64))
+            {
+                config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunX64(*config.m_run64));
+                if (config.m_runArgs64)
+                {
+                    config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun64Args(*config.m_runArgs64));
+                }
+            }
+            else
+            {
+                Log::Error(L"Invalid resource pattern specified: {}", *config.m_run64);
+                return E_INVALIDARG;
+            }
+        }
+
+        if (config.m_run)
+        {
+            if (EmbeddedResource::IsResourceBased(*config.m_run))
+            {
+                config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRun(*config.m_run));
+                if (config.m_runArgs)
+                {
+                    config.ToEmbed.push_back(EmbeddedResource::EmbedSpec::AddRunArgs(*config.m_runArgs));
+                }
+            }
+            else
+            {
+                Log::Error(L"Invalid resource pattern specified: {}", *config.m_run);
+                return E_INVALIDARG;
+            }
         }
     }
 

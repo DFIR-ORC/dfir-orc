@@ -44,6 +44,12 @@ public:
         OutputSpec Output;
         std::vector<EmbeddedResource::EmbedSpec> ToEmbed;
         std::optional<std::wstring> m_strCapsule;  // raw value of the /capsule parameter
+        std::optional<std::wstring> m_run;
+        std::optional<std::wstring> m_runArgs;
+        std::optional<std::wstring> m_run32;
+        std::optional<std::wstring> m_runArgs32;
+        std::optional<std::wstring> m_run64;
+        std::optional<std::wstring> m_runArgs64;
     };
 
 private:

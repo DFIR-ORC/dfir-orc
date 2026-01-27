@@ -46,10 +46,10 @@ void Main::PrintUsage()
         Usage::Parameter {"/Out=<Path>", "Output file. Copy of the input file with the specified resources added"},
         Usage::Parameter {"/Run=<Resource>", "Specify which binary should be run by 'Mothership' or /Input binary"},
         Usage::Parameter {
-            "/Run32=<Resource>",
+            "[DEPRECATED] /Run32=<Resource>",
             "Specify which binary should be run by 'Mothership' or '/Input' binary on 32 bit platform"},
         Usage::Parameter {
-            "/Run64=<Resource>",
+            "[DEPRECATED] /Run64=<Resource>",
             "Specify which binary should be run by 'Mothership' or '/Input' binary on 64 bit platform"},
         Usage::Parameter {"/AddFile=<Path>,<Name>", "Add specified file <Path> as resource with name <Name>"},
         Usage::Parameter {"/Dump[=<Path>]", "Extract the resources from current or specified binary"}};
