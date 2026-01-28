@@ -12,6 +12,7 @@
 
 #include <string>
 
+#include "OrcResource.h"
 #include "ToolEmbed.h"
 #include "ParameterCheck.h"
 #include "EmbeddedResource.h"

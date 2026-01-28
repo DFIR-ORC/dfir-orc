@@ -14,6 +14,12 @@ find_package(Boost REQUIRED)
 
 set(GENERATED_SRC_DIR "${CMAKE_CURRENT_BINARY_DIR}/src")
 
+if(CMAKE_GENERATOR_TOOLSET STREQUAL "v141_xp")
+    set(ORC_COMPATIBILITY "${TARGET_ARCH}-xp")
+else()
+    set(ORC_COMPATIBILITY "${TARGET_ARCH}")
+endif()
+
 set(ORC_META_NAME "" CACHE STRING "Product meta name")
 set(ORC_META_VERSION "" CACHE STRING "Product meta version")
 

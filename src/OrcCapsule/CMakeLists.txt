@@ -36,7 +36,6 @@ find_package(zstd CONFIG REQUIRED)
 set(ORC_ICON "${ORC_ROOT}/res/DFIR-Orc.ico" CACHE STRING "Application icon")
 configure_file("${ORC_ROOT}/src/Orc/Icon.h.in" "${GENERATED_SRC_DIR}/Icon.h" @ONLY)
 
-set(ORC_BOOTSTRAP "capsule")
 configure_file("Version.h.in" "${GENERATED_SRC_DIR}/Version.h" @ONLY)
 
 set(SRC_CAPSULE

@@ -3,7 +3,7 @@
 #include "resource.h"
 
 #include "Icon.h"
-
+#include "OrcResource.h"
 #include "ToolVersionRes.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
@@ -43,6 +43,15 @@ BEGIN
 END
 
 #endif    // APSTUDIO_INVOKED
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Custom tag
+//
+STRINGTABLE
+BEGIN
+    IDS_COMPATIBILITY ORC_COMPATIBILITY_STRINGW
+END
 
 /////////////////////////////////////////////////////////////////////////////
 //

@@ -1,8 +1,9 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
-#include "icon.h"
 
+#include "icon.h"
+#include "OrcResource.h"
 #include "ToolVersionRes.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
@@ -30,6 +31,15 @@ LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 // remains consistent on all systems.
 MAINICON                ICON                    ORC_ICON
 
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Custom tag
+//
+STRINGTABLE
+BEGIN
+    IDS_COMPATIBILITY ORC_COMPATIBILITY_STRINGW
+END
 
 /////////////////////////////////////////////////////////////////////////////
 //

@@ -1,0 +1,2 @@
+#define IDS_BOOTSTRAP     7001
+#define IDS_COMPATIBILITY 7002

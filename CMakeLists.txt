@@ -71,6 +71,7 @@ if(NOT CMAKE_SYSTEM_VERSION)
     endif()
 endif()
 
+
 if(NOT CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "${ORC_VCPKG_ROOT}\\scripts\\buildsystems\\vcpkg.cmake")
 endif()
@@ -91,7 +92,6 @@ git_info(
     BRANCH ORC_BRANCH
     COMMIT ORC_COMMIT
 )
-
 
 # Build the required package dependency list
 if(ORC_VCPKG_ROOT)

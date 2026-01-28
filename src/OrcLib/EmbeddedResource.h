@@ -12,6 +12,7 @@
 #include "BinaryBuffer.h"
 #include "Archive.h"
 
+#include "OrcResource.h"
 #include "Log/Log.h"
 #include "Utils/Result.h"
 

@@ -8,6 +8,10 @@
 
 #pragma once
 
+extern const wchar_t* kOrcCompatibilityW;
+
+extern const wchar_t* kOrcBootstrapW;
+
 extern const int kVersion[4];
 extern const char* kOrcVersionString;
 extern const wchar_t* kOrcVersionStringW;
