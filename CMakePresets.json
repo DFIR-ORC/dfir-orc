@@ -1,50 +1,416 @@
 {
-    "version": 3,
-    "cmakeMinimumRequired": {
-        "major": 3,
-        "minor": 21,
-        "patch": 0
-    },
+    "version": 4,
     "configurePresets": [
         {
-            "name": "default",
-            "displayName": "Default Config",
-            "description": "Default build using Visual Studio generator",
-            "generator": "Visual Studio 17 2022",
+            "name": "dfir-orc-base",
+            "hidden": true,
             "toolset": "v143",
-            "architecture": "x64",
-            "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static",
-                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/external/vcpkg/scripts/buildsystems/vcpkg.cmake"
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/external/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports",
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/external/vcpkg_overlay_triplets",
+                "ORC_BUILD_APACHE_ORC": "OFF",
+                "ORC_BUILD_FASTFIND": "ON",
+                "ORC_BUILD_ORC": "ON",
+                "ORC_BUILD_PARQUET": "OFF",
+                "ORC_BUILD_SSDEEP": "OFF",
+                "ORC_BUILD_JSON": "ON",
+                "ORC_BUILD_BOOST_STACKTRACE": "OFF",
+                "ORC_BUILD_TEST": "OFF",
+                "ORC_BUILD_COMMAND": "ON",
+                "ORC_DOWNLOADS_ONLY": "OFF",
+                "ORC_DISABLE_PRECOMPILED_HEADERS": "OFF",
+                "ORC_SWAPRUN_NET": "ON",
+                "ORC_COMMAND_DD": "OFF",
+                "ORC_COMMAND_FASTFIND": "ON",
+                "ORC_COMMAND_FATINFO": "ON",
+                "ORC_COMMAND_GETSAMPLES": "ON",
+                "ORC_COMMAND_GETSECTORS": "ON",
+                "ORC_COMMAND_GETTHIS": "ON",
+                "ORC_COMMAND_NTFSINFO": "ON",
+                "ORC_COMMAND_NTFSUTIL": "ON",
+                "ORC_COMMAND_OBJINFO": "ON",
+                "ORC_COMMAND_REGINFO": "ON",
+                "ORC_COMMAND_TOOLEMBED": "ON",
+                "ORC_COMMAND_USNINFO": "ON",
+                "ORC_COMMAND_WOLFLAUNCHER": "ON"
+            },
+            "environment": {
+                "VCPKG_FEATURE_FLAGS": "manifests,versions"
             }
         },
         {
-            "name": "ninja",
-            "inherits": "default",
-            "displayName": "Ninja Config",
-            "description": "Default build using Ninja generator",
-            "generator": "Ninja"
+            "name": "dfir-orc-x64",
+            "inherits": "dfir-orc-base",
+            "binaryDir": "${sourceDir}/build/dfir-orc-x64",
+            "architecture": "x64",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static"
+            }
         },
         {
-            "name": "parquet",
-            "inherits": "default",
-            "displayName": "Parquet",
-            "description": "Parquet enabled configuration",
-            "generator": "Visual Studio 17 2022",
-            "binaryDir": "${sourceDir}/build_arrow",
+            "name": "dfir-orc-x86",
+            "inherits": "dfir-orc-base",
+            "binaryDir": "${sourceDir}/build/dfir-orc-x86",
+            "architecture": "Win32",
             "cacheVariables": {
-                "ORC_BUILD_PARQUET": {
-                    "type": "BOOL",
-                    "value": "ON"
-                  }
+                "VCPKG_TARGET_TRIPLET": "x86-windows-static"
+            }
+        },
+        {
+            "name": "dfir-orc-x86-xp",
+            "inherits": "dfir-orc-base",
+            "binaryDir": "${sourceDir}/build/dfir-orc-x86-xp",
+            "architecture": "Win32",
+            "toolset": "v141_xp",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x86-windows-static-xp",
+                "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0"
+            }
+        },
+        {
+            "name": "dfir-orc-x64-xp",
+            "inherits": "dfir-orc-base",
+            "binaryDir": "${sourceDir}/build/dfir-orc-x64-xp",
+            "architecture": "x64",
+            "toolset": "v141_xp",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static-xp",
+                "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0"
+            }
+        },
+        {
+            "name": "dfir-orc-arm64",
+            "inherits": "dfir-orc-base",
+            "binaryDir": "${sourceDir}/build/dfir-orc-arm64",
+            "architecture": "arm64",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "arm64-windows-static"
+            }
+        },
+        {
+            "name": "capsule-base",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/external/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/external/vcpkg_overlay_triplets",
+                "VCPKG_MANIFEST_DIR": "${sourceDir}/src/OrcCapsule",
+                "ORC_BUILD_CAPSULE_ONLY": "ON",
+                "CMAKE_CXX_FLAGS": "/DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION /DBOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES"
+            },
+            "environment": {
+                "VCPKG_FEATURE_FLAGS": "manifests,versions"
+            }
+        },
+        {
+            "name": "capsule-x86-xp",
+            "inherits": "capsule-base",
+            "binaryDir": "${sourceDir}/build/capsule-x86-xp",
+            "architecture": "Win32",
+            "cacheVariables": {
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports",
+                "VCPKG_TARGET_TRIPLET": "x86-windows-static-xp",
+                "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0 /DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION /DBOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES",
+                "CMAKE_GENERATOR_TOOLSET": "v141_xp",
+                "CMAKE_GENERATOR_PLATFORM": "Win32"
+            }
+        },
+        {
+            "name": "capsule-x64-xp",
+            "inherits": "capsule-base",
+            "binaryDir": "${sourceDir}/build/capsule-x64-xp",
+            "architecture": "x64",
+            "cacheVariables": {
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports",
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static-xp",
+                "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0 /DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION /DBOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES",
+                "CMAKE_GENERATOR_TOOLSET": "v141_xp",
+                "CMAKE_GENERATOR_PLATFORM": "x64"
+            }
+        },
+        {
+            "name": "capsule-arm64",
+            "inherits": "capsule-base",
+            "binaryDir": "${sourceDir}/build/capsule-arm64",
+            "architecture": "ARM64",
+            "toolset": "v143",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "arm64-windows-static"
             }
         }
     ],
     "buildPresets": [
         {
-            "name": "default",
-            "configurePreset": "default"
+            "name": "dfir-orc-x64-Debug",
+            "configurePreset": "dfir-orc-x64",
+            "configuration": "Debug",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x64-MinSizeRel",
+            "configurePreset": "dfir-orc-x64",
+            "configuration": "MinSizeRel",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x86-Debug",
+            "configurePreset": "dfir-orc-x86",
+            "configuration": "Debug",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x86-MinSizeRel",
+            "configurePreset": "dfir-orc-x86",
+            "configuration": "MinSizeRel",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x86-xp-Debug",
+            "configurePreset": "dfir-orc-x86-xp",
+            "configuration": "Debug",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x86-xp-MinSizeRel",
+            "configurePreset": "dfir-orc-x86-xp",
+            "configuration": "MinSizeRel",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x64-xp-Debug",
+            "configurePreset": "dfir-orc-x64-xp",
+            "configuration": "Debug",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x64-xp-MinSizeRel",
+            "configurePreset": "dfir-orc-x64-xp",
+            "configuration": "MinSizeRel",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-arm64-Debug",
+            "configurePreset": "dfir-orc-arm64",
+            "configuration": "Debug",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-arm64-MinSizeRel",
+            "configurePreset": "dfir-orc-arm64",
+            "configuration": "MinSizeRel",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "capsule-x86-xp-Debug",
+            "configurePreset": "capsule-x86-xp",
+            "configuration": "Debug",
+            "targets": ["OrcCapsule"]
+        },
+        {
+            "name": "capsule-x86-xp-MinSizeRel",
+            "configurePreset": "capsule-x86-xp",
+            "configuration": "MinSizeRel",
+            "targets": ["OrcCapsule"]
+        },
+        {
+            "name": "capsule-x64-xp-Debug",
+            "configurePreset": "capsule-x64-xp",
+            "configuration": "Debug",
+            "targets": ["OrcCapsule"]
+        },
+        {
+            "name": "capsule-x64-xp-MinSizeRel",
+            "configurePreset": "capsule-x64-xp",
+            "configuration": "MinSizeRel",
+            "targets": ["OrcCapsule"]
+        },
+        {
+            "name": "capsule-arm64-Debug",
+            "configurePreset": "capsule-arm64",
+            "configuration": "Debug",
+            "targets": ["OrcCapsule"]
+        },
+        {
+            "name": "capsule-arm64-MinSizeRel",
+            "configurePreset": "capsule-arm64",
+            "configuration": "MinSizeRel",
+            "targets": ["OrcCapsule"]
+        },
+        {
+            "name": "orclib-x64-Debug",
+            "configurePreset": "dfir-orc-x64",
+            "configuration": "Debug",
+            "targets": ["OrcLib"]
+        },
+        {
+            "name": "orclib-x64-MinSizeRel",
+            "configurePreset": "dfir-orc-x64",
+            "configuration": "MinSizeRel",
+            "targets": ["OrcLib"]
+        },
+        {
+            "name": "orclib-x86-Debug",
+            "configurePreset": "dfir-orc-x86",
+            "configuration": "Debug",
+            "targets": ["OrcLib"]
+        },
+        {
+            "name": "orclib-x86-MinSizeRel",
+            "configurePreset": "dfir-orc-x86",
+            "configuration": "MinSizeRel",
+            "targets": ["OrcLib"]
+        },
+        {
+            "name": "orclib-arm64-Debug",
+            "configurePreset": "dfir-orc-arm64",
+            "configuration": "Debug",
+            "targets": ["OrcLib"]
+        },
+        {
+            "name": "orclib-arm64-MinSizeRel",
+            "configurePreset": "dfir-orc-arm64",
+            "configuration": "MinSizeRel",
+            "targets": ["OrcLib"]
+        },
+        {
+            "name": "fastfind-x64-Debug",
+            "configurePreset": "dfir-orc-x64",
+            "configuration": "Debug",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "fastfind-x64-MinSizeRel",
+            "configurePreset": "dfir-orc-x64",
+            "configuration": "MinSizeRel",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "fastfind-x86-Debug",
+            "configurePreset": "dfir-orc-x86",
+            "configuration": "Debug",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "fastfind-x86-MinSizeRel",
+            "configurePreset": "dfir-orc-x86",
+            "configuration": "MinSizeRel",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "fastfind-x64-xp-Debug",
+            "configurePreset": "dfir-orc-x64-xp",
+            "configuration": "Debug",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "fastfind-x64-xp-MinSizeRel",
+            "configurePreset": "dfir-orc-x64-xp",
+            "configuration": "MinSizeRel",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "fastfind-x86-xp-Debug",
+            "configurePreset": "dfir-orc-x86-xp",
+            "configuration": "Debug",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "fastfind-x86-xp-MinSizeRel",
+            "configurePreset": "dfir-orc-x86-xp",
+            "configuration": "MinSizeRel",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "fastfind-arm64-Debug",
+            "configurePreset": "dfir-orc-arm64",
+            "configuration": "Debug",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "fastfind-arm64-MinSizeRel",
+            "configurePreset": "dfir-orc-arm64",
+            "configuration": "MinSizeRel",
+            "targets": ["FastFind"]
+        },
+        {
+            "name": "dfir-orc-x64-RelWithDebInfo",
+            "inherits": "dfir-orc-x64-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "dfir-orc-x86-RelWithDebInfo",
+            "inherits": "dfir-orc-x86-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "dfir-orc-x86-xp-RelWithDebInfo",
+            "inherits": "dfir-orc-x86-xp-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "dfir-orc-x64-xp-RelWithDebInfo",
+            "inherits": "dfir-orc-x64-xp-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "dfir-orc-arm64-RelWithDebInfo",
+            "inherits": "dfir-orc-arm64-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "capsule-x86-xp-RelWithDebInfo",
+            "inherits": "capsule-x86-xp-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "capsule-x64-xp-RelWithDebInfo",
+            "inherits": "capsule-x64-xp-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "capsule-arm64-RelWithDebInfo",
+            "inherits": "capsule-arm64-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "orclib-x64-RelWithDebInfo",
+            "inherits": "orclib-x64-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "orclib-x86-RelWithDebInfo",
+            "inherits": "orclib-x86-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "orclib-arm64-RelWithDebInfo",
+            "inherits": "orclib-arm64-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "fastfind-x64-RelWithDebInfo",
+            "inherits": "fastfind-x64-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "fastfind-x86-RelWithDebInfo",
+            "inherits": "fastfind-x86-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "fastfind-x64-xp-RelWithDebInfo",
+            "inherits": "fastfind-x64-xp-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "fastfind-x86-xp-RelWithDebInfo",
+            "inherits": "fastfind-x86-xp-MinSizeRel",
+            "configuration": "RelWithDebInfo"
+        },
+        {
+            "name": "fastfind-arm64-RelWithDebInfo",
+            "inherits": "fastfind-arm64-MinSizeRel",
+            "configuration": "RelWithDebInfo"
         }
     ]
 }

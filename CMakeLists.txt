@@ -1,7 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
 
-message(WARNING "BEWARE: VCPKG is currently compatible ONLY with ENGLISH version of Visual Studio.")
-
 # CMake user options
 option(ORC_USE_STATIC_CRT "Use static runtime" ON)
 option(ORC_BUILD_VCPKG "Build vcpkg dependencies" ON)
@@ -49,10 +47,8 @@ get_target_architecture(RESULT_VARIABLE "TARGET_ARCH")
 
 if(ORC_USE_STATIC_CRT)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    set(VCPKG_TARGET_TRIPLET "${TARGET_ARCH}-windows-static")
 else()
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-    set(VCPKG_TARGET_TRIPLET "${TARGET_ARCH}-windows")
 endif()
 
 # Default target is 'Windows Seven' unless xp toolset is used
@@ -79,9 +75,6 @@ endif()
 project(dfir-orc LANGUAGES C CXX ASM_MASM)
 
 # Configure triplet dynamically with options chosen from CMake
-set(OVERLAY_TRIPLETS ${CMAKE_BINARY_DIR}/vcpkg/triplets)
-include(cmake/vcpkg_configure_triplets.cmake)
-vcpkg_configure_triplets(OUTPUT_TRIPLETS_DIR ${OVERLAY_TRIPLETS})
 
 # Setup repository related variables and force refresh on new commits
 include(cmake/GitInfo.cmake)
@@ -93,85 +86,11 @@ git_info(
     COMMIT ORC_COMMIT
 )
 
-# Build the required package dependency list
-if(ORC_VCPKG_ROOT)
-    list(APPEND _PACKAGES
-        7zip
-        boost-algorithm
-        boost-dynamic-bitset
-        boost-logic
-        boost-multi-index
-        boost-outcome
-        boost-scope-exit
-        boost-system
-        boost-tokenizer
-        fmt
-        ms-gsl
-        spdlog[wchar]
-        yara[dotnet]
-        rapidjson
-    )
-
-    # Serialization pull a lot of deps and breaks XP SP2 because of boost-thread's "GetLogicalProcessorInformation"
-    add_compile_definitions(
-        BOOST_MULTI_INDEX_DISABLE_SERIALIZATION
-        BOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES
-    )
-
-    # Tools/rcedit specific dependencies
-    list(APPEND _PACKAGES
-        cli11
-    )
-
-    if(ORC_BUILD_BOOST_STACKTRACE)
-        add_compile_definitions(ORC_BUILD_BOOST_STACKTRACE)
-        list(APPEND _PACKAGES boost-stacktrace)
-    endif()
-
-    if(ORC_BUILD_APACHE_ORC)
-        if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
-            message(FATAL_ERROR "Apache Orc requires Seven or later")
-        endif()
-        list(APPEND _PACKAGES orc)
-    endif()
-
-    if(ORC_BUILD_PARQUET)
-        if(${TARGET_ARCH} STREQUAL "x86")
-            set(ORC_BUILD_PARQUET OFF)
-        endif()
-
-        # Could be compatible with some workarounds within tz.cpp
-        if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
-            message(FATAL_ERROR "Parquet requires Seven or later")
-        endif()
-        list(APPEND _PACKAGES arrow libressl double-conversion)
-    endif()
-
-    if(ORC_BUILD_SSDEEP)
-        add_definitions(-DORC_BUILD_SSDEEP)
-        list(APPEND _PACKAGES ssdeep)
-    endif()
-
-    if(ORC_DOWNLOADS_ONLY)
-        set(ONLY_DOWNLOADS "ONLY_DOWNLOADS")
-    endif()
-
-    include(cmake/vcpkg.cmake)
-    if(ORC_BUILD_VCPKG OR ORC_DOWNLOADS_ONLY)
-        vcpkg_install(
-            ${ONLY_DOWNLOADS}
-            PATH ${ORC_VCPKG_ROOT}
-            PACKAGES ${_PACKAGES}
-            ARCH ${TARGET_ARCH}
-            USE_STATIC_CRT ${ORC_USE_STATIC_CRT}
-            OVERLAY_TRIPLETS ${OVERLAY_TRIPLETS}
-        )
-    endif()
-endif()
-
-if(ORC_DOWNLOADS_ONLY)
-    return()
-endif()
+# Serialization pull a lot of deps and breaks XP SP2 because of boost-thread's "GetLogicalProcessorInformation"
+add_compile_definitions(
+    BOOST_MULTI_INDEX_DISABLE_SERIALIZATION
+    BOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES
+)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")

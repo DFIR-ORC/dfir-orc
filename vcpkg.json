@@ -1,0 +1,22 @@
+{
+    "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+    "dependencies": [
+        "cli11",
+        "7zip",
+        "boost-algorithm",
+        "boost-dynamic-bitset",
+        "boost-logic",
+        "boost-multi-index",
+        "boost-outcome",
+        "boost-scope-exit",
+        "boost-system",
+        "boost-tokenizer",
+        "fmt",
+        "ms-gsl",
+        {"name" : "spdlog", "features": ["wchar"]},
+        {"name" : "yara", "features": ["dotnet"]},
+        "rapidjson"
+    ],
+    "name": "dfir-orc",
+    "version": "10.3.0"
+}
