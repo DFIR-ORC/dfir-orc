@@ -562,6 +562,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
+    std::error_code ec;
 
     if (!m_utilitiesConfig.log.level && !m_utilitiesConfig.log.console.level)
     {
@@ -601,19 +602,111 @@ HRESULT Main::CheckConfiguration()
     {
         if (!config.strConfigFile.empty())
         {
-            // The relative paths from 'config' are from the configuration directory which is also "embed directory
             auto rv = GetTopDirectoryAndFilename(config.strConfigFile, config.m_embedDirectory, config.m_embedFile);
             if (!rv)
             {
                 Log::Debug(L"Invalid embed path: {} [{}]", config.strConfigFile, rv.error());
                 return E_INVALIDARG;
             }
+
+            //
+            // In previous versions, XML configuration elements were relative to the working directory,
+            // which was impractical and unexpected. Users could not execute 'toolembed' from any
+            // location and get the same result - it had to be executed with consideration for the
+            // relative paths of configuration elements like 'input'.
+            //
+            // For example, if the XML configuration 'input' was set to 'tools/app.exe', 'toolembed'
+            // would look for 'app.exe' relative to the current working directory. The new behavior
+            // treats 'tools/app.exe' as relative to the configuration file's directory.
+            //
+            // For backward compatibility: if the 'input' path matches exactly one file and is
+            // relative to the working directory, it will be accepted with a deprecation warning.
+            //
+            // Input paths specified via CLI have precedence over paths from the config file and
+            // are always relative to the working directory.
+            //
+            if (config.strInputFileFromCli.empty() && !config.strInputFile.empty()
+                && !std::filesystem::path(config.strInputFile).is_absolute())
+            {
+                std::optional<std::wstring> inputRelativeToConfig;
+                std::optional<std::wstring> inputRelativeToWorkingDirectory;
+
+                {
+                    std::wstring inputFile = std::filesystem::path(*config.m_embedDirectory) / config.strInputFile;
+                    bool found = std::filesystem::exists(inputFile, ec);
+                    if (ec)
+                    {
+                        Log::Debug(L"Failed std::filesystem::exists (path: {}) [{}]", inputFile, ec);
+                        ec.clear();
+                    }
+                    else if (found)
+                    {
+                        inputRelativeToConfig = std::filesystem::absolute(inputFile, ec);
+                        if (ec)
+                        {
+                            Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", inputFile, ec);
+                            return E_INVALIDARG;
+                        }
+                    }
+                }
+
+                {
+                    bool found = std::filesystem::exists(config.strInputFile, ec);
+                    if (ec)
+                    {
+                        Log::Debug(L"Failed std::filesystem::exists (path: {}) [{}]", config.strInputFile, ec);
+                        ec.clear();
+                    }
+
+                    if (found)
+                    {
+                        inputRelativeToWorkingDirectory = std::filesystem::absolute(config.strInputFile, ec);
+                        if (ec)
+                        {
+                            Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", config.strInputFile, ec);
+                            return E_INVALIDARG;
+                        }
+                    }
+                }
+
+                if (inputRelativeToConfig && inputRelativeToWorkingDirectory
+                    && inputRelativeToConfig != inputRelativeToWorkingDirectory)
+                {
+                    Log::Error(
+                        L"Found multiple possible 'input' file as relative path resolution has changed (new path: {}, "
+                        L"deprecated path: {}).\n"
+                        L"Relative paths from configuration are now expected to be from the configuration file "
+                        L"directory.\n"
+                        L"Specifying input relative to working directory is deprecated.\n",
+                        *inputRelativeToConfig,
+                        *inputRelativeToWorkingDirectory);
+                    return E_INVALIDARG;
+                }
+
+                if (inputRelativeToConfig)
+                {
+                    config.strInputFile = *inputRelativeToConfig;
+                }
+                else if (inputRelativeToWorkingDirectory)
+                {
+                    Log::Warn(
+                        L"[DEPRECATED] Configuration specify an 'input' file relative to working directory."
+                        L" Please update your configuration to be relative to the configuration file directory.");
+
+                    config.strInputFile = *inputRelativeToWorkingDirectory;
+                    config.m_embedDirectory = std::filesystem::current_path(ec);
+                    if (ec)
+                    {
+                        Log::Debug("Failed std::filesystem::current_path [{}]", ec);
+                        return E_INVALIDARG;
+                    }
+                }
+            }
         }
         else if (config.ToEmbed.empty() || config.m_embedPath)  // ToEmbed is empty if no /AddFile has been specified
         {
             if (!config.m_embedPath)
             {
-                std::error_code ec;
                 config.m_embedPath = std::filesystem::current_path();
                 if (ec)
                 {
@@ -659,7 +752,7 @@ HRESULT Main::CheckConfiguration()
                 return hr;
             }
 
-            // BEWARE: this could ovewrite 'strInputFile' and some other configuration variables
+            // BEWARE: this could overwrite 'strInputFile' and some other configuration variables
             hr = GetConfigurationFromConfig(embed);
             if (FAILED(hr))
             {
@@ -744,7 +837,6 @@ HRESULT Main::CheckConfiguration()
         }
     }
 
-    std::error_code ec;
     //
     // The code below is working and can be removed once we are sure that:
     //
