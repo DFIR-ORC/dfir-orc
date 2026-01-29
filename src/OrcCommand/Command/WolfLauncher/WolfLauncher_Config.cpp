@@ -748,10 +748,12 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Priority", strPriority))
                     {
-                        if (!_wcsicmp(L"Normal", strPriority.c_str()))
-                            config.Priority = WolfPriority::Normal;
+                        if (!_wcsicmp(L"Idle", strPriority.c_str()))
+                            config.Priority = WolfPriority::Idle;
                         else if (!_wcsicmp(L"Low", strPriority.c_str()))
                             config.Priority = WolfPriority::Low;
+                        else if (!_wcsicmp(L"Normal", strPriority.c_str()))
+                            config.Priority = WolfPriority::Normal;
                         else if (!_wcsicmp(L"High", strPriority.c_str()))
                             config.Priority = WolfPriority::High;
                     }

@@ -838,6 +838,14 @@ HRESULT Main::SetLauncherPriority(WolfPriority priority)
 {
     switch (priority)
     {
+        case WolfPriority::Idle: {
+            if (!SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS)
+                || !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_IDLE))
+            {
+                Log::Debug("Failed to set Idle priority, falling back to Low priority [{}]", LastWin32Error());
+                return SetLauncherPriority(WolfPriority::Low);
+            }
+        }
         case WolfPriority::Low:
             SetPriorityClass(GetCurrentProcess(), BELOW_NORMAL_PRIORITY_CLASS);
             SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);

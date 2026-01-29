@@ -51,6 +51,7 @@ public:
 
     enum class WolfPriority
     {
+        Idle,
         Low,
         Normal,
         High
