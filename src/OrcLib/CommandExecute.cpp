@@ -359,6 +359,17 @@ HRESULT CommandExecute::CreateChildProcess(const JobObject& job, bool bBreakAway
     }
 
     {
+        auto priority = GetPriorityClass(GetCurrentProcess());
+        if (priority == 0)
+        {
+            Log::Error("Failed GetPriorityClass [{}]", LastWin32Error());
+            priority = BELOW_NORMAL_PRIORITY_CLASS;
+        }
+
+        dwCreationFlags |= priority;
+    }
+
+    {
         // Use 'MAX_CMDLINE - 1' to ensure space for the null character inserted since C++11
         std::wstring commandLine(cmdLineBuilder);
         if (commandLine.size() > MAX_CMDLINE - 1)
