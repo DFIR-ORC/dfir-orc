@@ -1019,6 +1019,23 @@ HRESULT Main::CheckConfiguration()
         Log::Error("Invalid temporary location specification");
         return E_INVALIDARG;
     }
+    else
+    {
+        auto temp = config.TempWorkingDir.Path;
+        if (!SetEnvironmentVariableW(L"TEMP", temp.c_str()))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Error(L"Failed to set %TEMP% to '{}' [{}]", temp, SystemError(hr));
+            return E_INVALIDARG;
+        }
+
+        if (!SetEnvironmentVariableW(L"TMP", temp.c_str()))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Error(L"Failed to set %TMP% to '{}' [{}]", temp, SystemError(hr));
+            return E_INVALIDARG;
+        }
+    }
 
     if (config.Outline.Type != OutputSpec::Kind::None)
     {
