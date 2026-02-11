@@ -720,6 +720,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (ParameterOption(argv[i] + 1, L"command_timeout", config.msCommandTerminationTimeOut))
                         ;
+                    else if (ParameterOption(argv[i] + 1, L"ArchiveTimeout", config.msArchiveTimeOut))
+                        ;
                     else if (ByteQuantityOption(argv[i] + 1, L"diskfree", config.diskFreeSpaceRequirement))
                         ;
                     else if (ParameterListOption(argv[i] + 1, L"key-", config.DisableKeywords, L","))
