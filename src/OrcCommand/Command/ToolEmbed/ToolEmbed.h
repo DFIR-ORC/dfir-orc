@@ -30,6 +30,7 @@ class ORCUTILS_API Main : public UtilitiesMain
 public:
     enum Action
     {
+        Default,
         Embed,
         Dump,
         FromDump
@@ -40,6 +41,7 @@ public:
     public:
         Action Todo = Embed;
 
+        bool m_force;
         std::wstring strInputFile;
         std::wstring strInputFileFromCli;
         OutputSpec Output;

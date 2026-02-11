@@ -202,11 +202,33 @@ HRESULT Main::Run_EmbedCapsule()
         return hr;
     }
 
-    hr = EmbeddedResource::DeleteEmbeddedResources(input, output, values);
-    if (FAILED(hr))
+    if (config.m_force)
     {
-        Log::Error(L"Failed to delete resources from '{}' [{}]", output, SystemError(hr));
-        return hr;
+        std::error_code ec;
+        std::filesystem::remove(output, ec);
+        if (ec)
+        {
+            Log::Debug(L"Failed to remove file (path: {}) [{}]", output, ec);
+        }
+    }
+
+    if (config.m_embedPath)
+    {
+        // Cleanup existing resources to avoid conflicts with new ones and new configuration
+        hr = EmbeddedResource::DeleteEmbeddedResources(input, output, values);
+        if (FAILED(hr))
+        {
+            Log::Error(L"Failed to delete resources from '{}' [{}]", output, SystemError(hr));
+            return hr;
+        }
+    }
+    else
+    {
+        if (!CopyFileExW(input.c_str(), output.c_str(), nullptr, nullptr, nullptr, COPY_FILE_FAIL_IF_EXISTS))
+        {
+            Log::Error(L"Failed CopyFileExW (input: {}, output: {}) [{}]", input, output, SystemError(hr));
+            return hr;
+        }
     }
 
     m_console.Print(L"Updating resources in '{}'", output);

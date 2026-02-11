@@ -481,6 +481,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     ;
                 else if (OptionalParameterOption(argv[i] + 1, L"Run", config.m_run))
                     ;
+                else if (BooleanOption(argv[i] + 1, L"Force", config.m_force))
+                    ;
                 else if (ParameterOption(argv[i] + 1, L"AddFile", strParameter))
                 {
                     static std::wregex r(L"([a-zA-Z0-9\\\\ \\-_\\.:%]*),([a-zA-Z0-9\\-_\\.]+)");
