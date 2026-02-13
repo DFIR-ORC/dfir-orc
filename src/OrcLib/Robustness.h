@@ -114,6 +114,9 @@ public:
 
     static HRESULT UnInitialize(DWORD dwTimeout);
 };
+
+void SetupDllLookupDirectories();
+
 }  // namespace Orc
 
 #pragma managed(pop)

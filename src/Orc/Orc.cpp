@@ -58,6 +58,7 @@
 #include "ToolVersion.h"
 #include "Usage.h"
 #include "EmbeddedResource.h"
+#include "Robustness.h"
 #include "Utils/String.h"
 
 using WinMainPtr = std::function<int(int argc, const WCHAR* argv[])>;
@@ -169,18 +170,7 @@ int PrintUsage()
 
 int wmain(int argc, const WCHAR* argv[])
 {
-    using FnSetDllDirectoryA = BOOL(__stdcall*)(LPCSTR lpPathName);
-
-    FnSetDllDirectoryA fnSetDllDirectory = reinterpret_cast<FnSetDllDirectoryA>(GetProcAddress(GetModuleHandleA("kernel32.dll"), "SetDllDirectoryW"));
-    if (fnSetDllDirectory == nullptr)
-    {
-        Log::Debug("Missing SetDllDirectoryW");
-    }
-    else if (fnSetDllDirectory("") == FALSE)
-    {
-        Log::Critical("Failed SetDllDirectoryW [{}]", LastWin32Error());
-        return -1;
-    }
+    Orc::SetupDllLookupDirectories();
 
     concurrency::Scheduler::SetDefaultSchedulerPolicy(concurrency::SchedulerPolicy(1, concurrency::MaxConcurrency, 16));
 

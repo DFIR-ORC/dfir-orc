@@ -71,6 +71,46 @@ BOOL MiniDumpWriteDumpApi(
 
 }  // namespace
 
+namespace Orc {
+
+void SetupDllLookupDirectories()
+{
+    {
+        using FnSetDllDirectoryW = BOOL(__stdcall*)(LPCWSTR lpPathName);
+
+        FnSetDllDirectoryW fnSetDllDirectory =
+            reinterpret_cast<FnSetDllDirectoryW>(GetProcAddress(GetModuleHandleA("kernel32.dll"), "SetDllDirectoryW"));
+        if (fnSetDllDirectory == nullptr)
+        {
+            Log::Debug("Missing SetDllDirectoryW");
+        }
+        else if (fnSetDllDirectory(L"") == FALSE)
+        {
+            Log::Critical("Failed SetDllDirectoryW [{}]", LastWin32Error());
+        }
+    }
+
+    {
+        const auto kLOAD_LIBRARY_SEARCH_SYSTEM32 = 0x00000800;
+        const auto kLOAD_LIBRARY_SEARCH_USER_DIRS = 0x00000400;
+
+        using FnSetDefaultDllDirectories = BOOL(__stdcall*)(DWORD DirectoryFlags);
+
+        FnSetDefaultDllDirectories fnSetDefaultDllDirectories = reinterpret_cast<FnSetDefaultDllDirectories>(
+            GetProcAddress(GetModuleHandleA("kernel32.dll"), "SetDefaultDllDirectories"));
+        if (fnSetDefaultDllDirectories == nullptr)
+        {
+            Log::Debug("Missing SetDefaultDllDirectories");
+        }
+        else if (fnSetDefaultDllDirectories(kLOAD_LIBRARY_SEARCH_SYSTEM32) == FALSE)  // kLOAD_LIBRARY_SEARCH_SYSTEM32
+        {
+            Log::Critical("Failed SetDefaultDllDirectories [{}]", LastWin32Error());
+        }
+    }
+}
+
+}  // namespace Orc
+
 struct TerminationBlock
 {
     std::vector<std::shared_ptr<TerminationHandler>> _Handlers;
