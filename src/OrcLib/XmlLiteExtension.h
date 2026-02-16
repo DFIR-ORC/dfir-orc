@@ -39,7 +39,11 @@ private:
 
 public:
     XmlLiteExtension()
-        : ExtensionLibrary(L"xmllite.dll"s, L"xmllite.dll;XMLLITE_X86DLL"s, L"xmllite.dll"s, L"xmllite.dll"s)
+        : ExtensionLibrary(
+              L"xmllite.dll"s,
+              L"%SystemRoot%\\System32\\xmllite.dll;XMLLITE_X86DLL"s,
+              L"%SystemRoot%\\System32\\xmllite.dll"s,
+              L"%SystemRoot%\\System32\\xmllite.dll"s)
     {
         m_strDesiredName = L"XmlLite.dll"s;
     };

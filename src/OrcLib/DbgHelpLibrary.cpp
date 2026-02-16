@@ -17,7 +17,11 @@ using namespace Orc;
 using namespace std::string_literals;
 
 DbgHelpLibrary::DbgHelpLibrary()
-    : ExtensionLibrary(L"DbgHelp.dll"s, L"DBGHELP_X86DLL"s, L"DBGHELP_X64DLL"s, L"DBGHELP_ARM64DLL"s)
+    : ExtensionLibrary(
+          L"DbgHelp.dll"s,
+          L"%SystemRoot%\\System32\\DbgHelp.dll;DBGHELP_X86DLL"s,
+          L"%SystemRoot%\\System32\\DbgHelp.dll;DBGHELP_X64DLL"s,
+          L"%SystemRoot%\\System32\\DbgHelp.dll;DBGHELP_ARM64DLL"s)
 {
     m_strDesiredName = L"DbgHelp.dll"s;
 }

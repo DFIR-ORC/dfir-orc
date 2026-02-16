@@ -51,7 +51,7 @@ class CompressAPIExtension : public ExtensionLibrary
 {
 public:
     CompressAPIExtension()
-        : ExtensionLibrary(L"cabinet", L"cabinet.dll") {};
+        : ExtensionLibrary(L"cabinet", L"%SystemRoot%\\System32\\cabinet.dll") {};
 
     STDMETHOD(Initialize)();
 

@@ -25,7 +25,7 @@ class PSAPIExtension : public ExtensionLibrary
 
 public:
     PSAPIExtension()
-        : ExtensionLibrary(L"psapi", L"psapi.dll") {};
+        : ExtensionLibrary(L"psapi", L"%SystemRoot%\\System32\\psapi.dll") {};
 
     STDMETHOD(Initialize)();
 
