@@ -21,6 +21,7 @@
 #include "Log/Log.h"
 
 #include "WideAnsi.h"
+#include "Utils/WinApi.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -72,7 +73,7 @@ HRESULT Orc::ExtensionLibrary::LoadDependencies(std::optional<std::filesystem::p
     return S_OK;
 }
 
-HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
+HRESULT ExtensionLibrary::TryLoad(std::wstring strFileRef)
 {
     using namespace std::filesystem;
 
@@ -126,6 +127,19 @@ HRESULT ExtensionLibrary::TryLoad(const std::wstring& strFileRef)
     }
 
     Log::Debug(L"ExtensionLibrary: Loading value '{}'", strFileRef);
+
+    std::error_code ec;
+    auto strFileRefExpanded = ExpandEnvironmentStringsApi(strFileRef.c_str(), ec);
+    if (ec)
+    {
+        Log::Debug(L"Failed to expand environment variables in '{}' [{}]", strFileRef, ec);
+        ec.clear();
+    }
+    else
+    {
+        strFileRef = strFileRefExpanded;
+    }
+
     wstring strNewLibRef;
     if (auto hr = EmbeddedResource::ExtractValue(L"", strFileRef, strNewLibRef); SUCCEEDED(hr))
     {

@@ -139,7 +139,7 @@ protected:
     HRESULT
     LoadDependencies(std::optional<std::filesystem::path> tempDir = std::nullopt);
 
-    HRESULT TryLoad(const std::wstring& strFileRef);
+    HRESULT TryLoad(std::wstring strFileRef);
 
     template <typename FuncType>
     void Get(FuncType& func, LPCSTR szFuncName)
