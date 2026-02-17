@@ -182,7 +182,7 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
 
     HANDLE hDevice = CreateFile(
         interfaceDetailData->DevicePath,  // device interface name
-        GENERIC_READ | GENERIC_WRITE,  // dwDesiredAccess
+        GENERIC_READ,  // dwDesiredAccess
         FILE_SHARE_READ | FILE_SHARE_WRITE,  // dwShareMode
         NULL,  // lpSecurityAttributes
         OPEN_EXISTING,  // dwCreationDistribution
