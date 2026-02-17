@@ -17,6 +17,7 @@
 #include "Buffer.h"
 
 #include "boost\scope_exit.hpp"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 
@@ -390,13 +391,15 @@ HRESULT Orc::Driver::OpenDevicePath(std::wstring strDevicePath, DWORD dwRequired
     if (m_hDevice != INVALID_HANDLE_VALUE)
         CloseHandle(m_hDevice);
 
-    m_hDevice = CreateFileW(strDevicePath.c_str(), dwRequiredAccess, 0, NULL, OPEN_EXISTING, 0, NULL);
-    if (m_hDevice == INVALID_HANDLE_VALUE)
+    auto hDevice = CreateFileApi(strDevicePath.c_str(), dwRequiredAccess, 0, NULL, OPEN_EXISTING, 0, NULL);
+    if (!hDevice)
     {
         auto code = Orc::LastWin32Error();
-        Log::Error(L"Failed to open {} device for driver {} (hr:{})", strDevicePath, m_strServiceName, code);
+        Log::Error(L"Failed to open {} device for driver {} [{}]", strDevicePath, m_strServiceName, hDevice.error());
         return code.value();
     }
+
+    m_hDevice = hDevice->release();
     std::swap(m_strDevicePath, strDevicePath);
     return S_OK;
 }

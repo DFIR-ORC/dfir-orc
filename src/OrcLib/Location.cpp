@@ -26,6 +26,7 @@
 #include "Text/Fmt/GUID.h"
 #include "Text/Fmt/FSVBR.h"
 #include "Utils/Guard.h"
+#include "Utils/WinApi.h"
 
 using namespace std;
 
@@ -67,7 +68,7 @@ void GetShadowCopyInformation(
     std::vector<std::byte> buffer;
     buffer.resize(1048576);
 
-    Guard::FileHandle hShadowCopyVolume = CreateFileW(
+    auto hShadowCopyVolume = CreateFileApi(
         shadowCopyVolumePath.c_str(),
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -75,16 +76,15 @@ void GetShadowCopyInformation(
         OPEN_EXISTING,
         FILE_FLAG_BACKUP_SEMANTICS,
         NULL);
-    if (hShadowCopyVolume == INVALID_HANDLE_VALUE)
+    if (!hShadowCopyVolume)
     {
-        ec = LastWin32Error();
-        Log::Error(L"Failed CreateFileW on '{}' [{}]", shadowCopyVolumePath, ec);
+        Log::Error(L"Failed CreateFileW on '{}' [{}]", shadowCopyVolumePath, hShadowCopyVolume.error());
         return;
     }
 
     // Get shadow copy guids...
     BOOL rv = DeviceIoControl(
-        hShadowCopyVolume.value(),
+        hShadowCopyVolume->value(),
         IOCTL_VOLSNAP_QUERY_APPLICATION_INFO,
         NULL,
         0,
@@ -112,7 +112,7 @@ void GetShadowCopyInformation(
 
     // Get shadow copy timestamps
     rv = DeviceIoControl(
-        hShadowCopyVolume.value(),
+        hShadowCopyVolume->value(),
         IOCTL_VOLSNAP_QUERY_CONFIG_INFO,
         NULL,
         0,
@@ -146,7 +146,7 @@ void ParseVolumeSerial32(
 {
     using namespace Orc;
 
-    Guard::FileHandle hVolume = CreateFileW(
+    auto hVolume = CreateFileApi(
         path.c_str(),
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -155,10 +155,9 @@ void ParseVolumeSerial32(
         FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_NO_BUFFERING,
         NULL);
 
-    if (hVolume == INVALID_HANDLE_VALUE)
+    if (!hVolume)
     {
-        ec = LastWin32Error();
-        Log::Debug(L"Failed CreateFileW '{}' [{}]", path, ec);
+        Log::Debug(L"Failed CreateFileW '{}' [{}]", path, hVolume.error());
         return;
     }
 
@@ -168,7 +167,7 @@ void ParseVolumeSerial32(
         LARGE_INTEGER liVolumeOffset, newOffset;
         liVolumeOffset.QuadPart = volumeOffset.value();
 
-        if (!SetFilePointerEx(hVolume.value(), liVolumeOffset, &newOffset, FILE_BEGIN))
+        if (!SetFilePointerEx(hVolume->value(), liVolumeOffset, &newOffset, FILE_BEGIN))
         {
             ec = LastWin32Error();
             Log::Debug(L"Failed SetFilePointerEx '{}' [{}]", path, ec);
@@ -180,7 +179,7 @@ void ParseVolumeSerial32(
     biosParameterBlock.resize(kBlockSize * 2);
 
     DWORD processed = 0;
-    if (!ReadFile(hVolume.value(), (LPVOID)biosParameterBlock.data(), biosParameterBlock.size(), &processed, NULL))
+    if (!ReadFile(hVolume->value(), (LPVOID)biosParameterBlock.data(), biosParameterBlock.size(), &processed, NULL))
     {
         ec = LastWin32Error();
         Log::Debug(L"Failed ReadFile '{}' [{}]", path, ec);
@@ -215,7 +214,7 @@ void GetVolumeSerialUsingFileHandle(const std::wstring& path, uint32_t& volumeSe
 {
     using namespace Orc;
 
-    Guard::FileHandle hVolume = CreateFileW(
+    auto hVolume = CreateFileApi(
         path.c_str(),
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -224,15 +223,14 @@ void GetVolumeSerialUsingFileHandle(const std::wstring& path, uint32_t& volumeSe
         FILE_FLAG_BACKUP_SEMANTICS,
         NULL);
 
-    if (hVolume == INVALID_HANDLE_VALUE)
+    if (!hVolume)
     {
-        ec = LastWin32Error();
-        Log::Debug(L"Failed CreateFileW '{}' [{}]", path, ec);
+        Log::Debug(L"Failed CreateFileW '{}' [{}]", path, hVolume.error());
         return;
     }
 
     BY_HANDLE_FILE_INFORMATION info;
-    if (!GetFileInformationByHandle(hVolume.value(), &info))
+    if (!GetFileInformationByHandle(hVolume->value(), &info))
     {
         ec = LastWin32Error();
         Log::Debug(L"Failed GetFileInformationByHandle '{}' [{}]", path, ec);

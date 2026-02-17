@@ -11,6 +11,7 @@
 #include "Robustness.h"
 
 #include "CriticalSection.h"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 
@@ -350,9 +351,9 @@ LONG WINAPI Robustness::UnhandledExceptionFilter(__in struct _EXCEPTION_POINTERS
 
     if (g_termination.Block()->_bWriteMinidumpFromCurrentProcess)
     {
-        const char filename[] = "dfir-orc.dmp";
+        const wchar_t filename[] = L"dfir-orc.dmp";
 
-        HANDLE hFile = ::CreateFileA(
+        auto hFile = CreateFileApi(
             filename,
             GENERIC_WRITE,
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -361,37 +362,37 @@ LONG WINAPI Robustness::UnhandledExceptionFilter(__in struct _EXCEPTION_POINTERS
             FILE_ATTRIBUTE_NORMAL,
             NULL);
 
-        if (hFile != INVALID_HANDLE_VALUE)
+        if (!hFile)
         {
-            std::error_code ec;
+            return hFile.error().value();
+        }
 
-            MINIDUMP_EXCEPTION_INFORMATION exceptionInfo;
-            exceptionInfo.ThreadId = GetCurrentThreadId();
-            exceptionInfo.ExceptionPointers = ExceptionInfo;
-            exceptionInfo.ClientPointers = TRUE;
+        std::error_code ec;
 
-            ::MiniDumpWriteDumpApi(
-                GetCurrentProcess(),
-                GetCurrentProcessId(),
-                hFile,
-                MINIDUMP_TYPE::MiniDumpNormal,
-                &exceptionInfo,
-                NULL,
-                NULL,
-                ec);
-            if (ec)
-            {
-                printf("Failed MiniDumpWriteDumpApi (code: %x)\n", ec.value());
-            }
-            else
-            {
-                wchar_t currentDirectory[MAX_PATH + 1];
-                currentDirectory[MAX_PATH] = L'\0';
-                GetCurrentDirectoryW(MAX_PATH, currentDirectory);
-                printf("MiniDumpWriteDump: write %S%s\n", currentDirectory, filename);
-            }
+        MINIDUMP_EXCEPTION_INFORMATION exceptionInfo;
+        exceptionInfo.ThreadId = GetCurrentThreadId();
+        exceptionInfo.ExceptionPointers = ExceptionInfo;
+        exceptionInfo.ClientPointers = TRUE;
 
-            CloseHandle(hFile);
+        ::MiniDumpWriteDumpApi(
+            GetCurrentProcess(),
+            GetCurrentProcessId(),
+            hFile->value(),
+            MINIDUMP_TYPE::MiniDumpNormal,
+            &exceptionInfo,
+            NULL,
+            NULL,
+            ec);
+        if (ec)
+        {
+            printf("Failed MiniDumpWriteDumpApi (code: %x)\n", ec.value());
+        }
+        else
+        {
+            wchar_t currentDirectory[MAX_PATH + 1];
+            currentDirectory[MAX_PATH] = L'\0';
+            GetCurrentDirectoryW(MAX_PATH, currentDirectory);
+            printf("MiniDumpWriteDump: write %S%S\n", currentDirectory, filename);
         }
     }
 

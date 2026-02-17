@@ -12,6 +12,7 @@
 
 #include "Utils/Result.h"
 #include "Utils/Guard.h"
+#include "Utils/WinApi.h"
 
 namespace Orc {
 
@@ -21,7 +22,7 @@ Result<void> Dump(const T& container, const std::filesystem::path& output)
     using value_type = T::value_type;
     std::string_view buffer(reinterpret_cast<const char*>(container.data()), container.size() * sizeof(T::value_type));
 
-    Guard::FileHandle file = CreateFileW(
+    auto handle = CreateFileApi(
         output.c_str(),
         GENERIC_WRITE,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -29,15 +30,14 @@ Result<void> Dump(const T& container, const std::filesystem::path& output)
         CREATE_NEW,
         FILE_ATTRIBUTE_NORMAL,
         NULL);
-    if (!file.IsValid())
+    if (!handle)
     {
-        auto ec = LastWin32Error();
-        Log::Debug("Failed CreateFile [{}]", ec);
-        return ec;
+        Log::Debug("Failed CreateFile [{}]", handle.error());
+        return handle.error();
     }
 
     DWORD written = 0;
-    if (!WriteFile(file.value(), buffer.data(), static_cast<DWORD>(buffer.size()), &written, NULL))
+    if (!WriteFile(handle->value(), buffer.data(), static_cast<DWORD>(buffer.size()), &written, NULL))
     {
         auto ec = LastWin32Error();
         Log::Debug("Failed WriteFile [{}]", ec);

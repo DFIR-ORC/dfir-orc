@@ -48,7 +48,8 @@ public:
         __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes,
         __in DWORD dwCreationDisposition,
         __in DWORD dwFlagsAndAttributes,
-        __in_opt HANDLE hTemplate);
+        __in_opt HANDLE hTemplate,
+        BOOL ReplaceNullSecurityAttributes = TRUE);
 
     HRESULT OpenFile(
         __in const std::filesystem::path& path,
@@ -57,7 +58,8 @@ public:
         __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes,
         __in DWORD dwCreationDisposition,
         __in DWORD dwFlagsAndAttributes,
-        __in_opt HANDLE hTemplate);
+        __in_opt HANDLE hTemplate,
+        BOOL ReplaceNullSecurityAttributes = TRUE);
 
     HRESULT ReadFrom(__in PCWSTR pwzPath, bool bDeleteOnClose = false)
     {

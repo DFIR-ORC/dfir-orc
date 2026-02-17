@@ -43,6 +43,7 @@
 #include "ProfileList.h"
 #include "Text/Guid.h"
 #include "Stream/VolumeStreamReader.h"
+#include "Utils/WinApi.h"
 
 using namespace std;
 
@@ -1678,7 +1679,7 @@ HRESULT LocationSet::PopulateSystemObjects(bool bInterfacesOnly)
 
         Log::Debug(L"PopulateSystemObjects::CreateFile '{}'", re);
 
-        HANDLE hObj = CreateFile(
+        auto hObj = CreateFileApi(
             re.c_str(),
             GENERIC_READ,
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -1687,15 +1688,10 @@ HRESULT LocationSet::PopulateSystemObjects(bool bInterfacesOnly)
             FILE_FLAG_OVERLAPPED,
             NULL);
 
-        BOOST_SCOPE_EXIT(&hObj)
+        if (!hObj)
         {
-            if (hObj != INVALID_HANDLE_VALUE)
-                CloseHandle(hObj);
-        }
-        BOOST_SCOPE_EXIT_END;
-
-        if (hObj == INVALID_HANDLE_VALUE)
             continue;
+        }
 
         STORAGE_PROPERTY_QUERY query;
         ZeroMemory(&query, sizeof(query));
@@ -1713,7 +1709,7 @@ HRESULT LocationSet::PopulateSystemObjects(bool bInterfacesOnly)
 
         Log::Debug(L"PopulateSystemObjects::IOCTL_STORAGE_QUERY_PROPERTY '{}'", re);
         if (!DeviceIoControl(
-                hObj,
+                hObj->value(),
                 IOCTL_STORAGE_QUERY_PROPERTY,
                 &query,
                 sizeof(query),
@@ -1732,7 +1728,7 @@ HRESULT LocationSet::PopulateSystemObjects(bool bInterfacesOnly)
                     DWORD bytes = 0L;
 
                     Log::Debug(L"PopulateSystemObjects::GetOverlappedResult '{}'", re);
-                    if (GetOverlappedResult(hObj, &overlap, &bytes, FALSE) == FALSE)
+                    if (GetOverlappedResult(hObj->value(), &overlap, &bytes, FALSE) == FALSE)
                     {
                         if (GetLastError() != ERROR_IO_PENDING)
                         {
@@ -1752,13 +1748,13 @@ HRESULT LocationSet::PopulateSystemObjects(bool bInterfacesOnly)
                     if (pk32)
                     {
                         Log::Debug(L"PopulateSystemObjects::CancelIoEx '{}'", re);
-                        BOOL result2 = pk32->CancelIoEx(hObj, &overlap);
+                        BOOL result2 = pk32->CancelIoEx(hObj->value(), &overlap);
 
                         if (result2 == TRUE || GetLastError() != ERROR_NOT_FOUND)
                         {
                             DWORD bytesReturned2 = 0L;
                             Log::Debug(L"PopulateSystemObjects::GetOverlappedResult(CancelIoEx) '{}'", re);
-                            result2 = GetOverlappedResult(hObj, &overlap, &bytesReturned2, TRUE);
+                            result2 = GetOverlappedResult(hObj->value(), &overlap, &bytesReturned2, TRUE);
 
                             // ToDo: check result and log errors.
                         }

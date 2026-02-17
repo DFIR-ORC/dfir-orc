@@ -40,9 +40,7 @@ namespace {
 template <typename ContainerT>
 Orc::Result<void> MapFile(const std::wstring& path, ContainerT& output)
 {
-    using namespace Orc;
-
-    Guard::FileHandle hFile = CreateFileW(
+    auto hFile = CreateFileApi(
         path.c_str(),
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -51,13 +49,13 @@ Orc::Result<void> MapFile(const std::wstring& path, ContainerT& output)
         FILE_ATTRIBUTE_NORMAL,
         NULL);
 
-    if (!hFile.IsValid())
+    if (!hFile)
     {
-        return LastWin32Error();
+        return hFile.error();
     }
 
     LARGE_INTEGER fileSize;
-    if (!GetFileSizeEx(*hFile, &fileSize))
+    if (!GetFileSizeEx(hFile->value(), &fileSize))
     {
         return LastWin32Error();
     }
@@ -72,7 +70,7 @@ Orc::Result<void> MapFile(const std::wstring& path, ContainerT& output)
     }
 
     DWORD dwBytesRead;
-    if (!ReadFile(*hFile, output.data(), output.size(), &dwBytesRead, NULL))
+    if (!ReadFile(hFile->value(), output.data(), output.size(), &dwBytesRead, NULL))
     {
         return LastWin32Error();
     }
@@ -368,15 +366,13 @@ DWORD Authenticode::ExpectedHashSize()
         return (DWORD)-1;
     }
 
-    HANDLE hFile = CreateFile(
+    auto hFile = CreateFileApi(
         szPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0L, NULL);
-    if (hFile == INVALID_HANDLE_VALUE)
-        return (DWORD)-1;
-    BOOST_SCOPE_EXIT(hFile)
+    if (!hFile)
     {
-        CloseHandle(hFile);
+        Log::Debug(L"Failed CreateFileW for kernel32.dll [{}]", hFile.error());
+        return (DWORD)-1;
     }
-    BOOST_SCOPE_EXIT_END;
 
     HCATADMIN hContext = NULL;
 
@@ -391,7 +387,7 @@ DWORD Authenticode::ExpectedHashSize()
     BOOST_SCOPE_EXIT_END;
 
     DWORD cbHash = 0L;
-    if (auto hr = wintrust->CryptCATAdminCalcHashFromFileHandle(hFile, &cbHash, nullptr, 0); FAILED(hr))
+    if (auto hr = wintrust->CryptCATAdminCalcHashFromFileHandle(hFile->value(), &cbHash, nullptr, 0); FAILED(hr))
     {
         return (DWORD)-1;
     }

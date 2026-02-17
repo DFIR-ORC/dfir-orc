@@ -18,12 +18,12 @@
 #include "ByteStream.h"
 
 #include "Log/Log.h"
+#include "Utils/WinApi.h"
 
 using namespace std;
 using namespace Concurrency;
 
 using namespace Orc;
-
 
 ProcessRedirect::ProcessRedirect(ProcessInOut selection)
     : m_Status(Initialized)
@@ -172,37 +172,47 @@ void ProcessRedirect::SetStatus(RedirectStatus status)
 
 HRESULT ProcessRedirect::CreatePipe(const WCHAR* szUniqueSuffix)
 {
-    WCHAR szPipeName[ORC_MAX_PATH];
-    ZeroMemory(szPipeName, ORC_MAX_PATH * sizeof(WCHAR));
-
     if (m_Select & StdInput && (m_Select & StdOutput || m_Select & StdError))
         return E_INVALIDARG;
+
+    auto sd = GetSecurityDescriptor(DACL::OrcDefaultFullControl);
+    if (!sd)
+    {
+        Log::Debug(L"Failed to get security descriptor [{}]", sd.error());
+        return ToHRESULT(sd.error());
+    }
 
     // you need this for the client to inherit the handles	SECURITY_ATTRIBUTES sa;
     SECURITY_ATTRIBUTES sa;
     // Set up the security attributes struct.
     sa.nLength = sizeof(SECURITY_ATTRIBUTES);
     sa.bInheritHandle = TRUE;  // this is the critical bit
-    sa.lpSecurityDescriptor = NULL;
+    sa.lpSecurityDescriptor = sd.value();
+
     //
     // this creates a inheritable, one-way handle for the server to read
     //
     HANDLE hTmpHandle = INVALID_HANDLE_VALUE;
 
+    std::wstring pipeName;
     if ((m_Select & StdOutput) || (m_Select & StdError))
     {
         if ((m_Select & StdOutput) && (m_Select & StdError))
-            wcscpy_s(szPipeName, L"\\\\.\\pipe\\DFIR-ORC_out_err_");
+        {
+            pipeName = fmt::format(L"\\\\.\\pipe\\DFIR-ORC_{}_out_err_{}", GetCurrentProcessId(), szUniqueSuffix);
+        }
         else if (m_Select & StdOutput)
-            wcscpy_s(szPipeName, L"\\\\.\\pipe\\DFIR-ORC_output_");
+        {
+            pipeName = fmt::format(L"\\\\.\\pipe\\DFIR-ORC_{}_output_{}", GetCurrentProcessId(), szUniqueSuffix);
+        }
         else if (m_Select & StdError)
-            wcscpy_s(szPipeName, L"\\\\.\\pipe\\DFIR-ORC_error_");
-
-        wcscat_s(szPipeName, szUniqueSuffix);
+        {
+            pipeName = fmt::format(L"\\\\.\\pipe\\DFIR-ORC_{}_error_{}", GetCurrentProcessId(), szUniqueSuffix);
+        }
 
         if ((hTmpHandle = CreateNamedPipe(
-                 szPipeName,
-                 PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
+                 pipeName.c_str(),
+                 PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
                  PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
                  PIPE_UNLIMITED_INSTANCES,
                  BUFFER_SIZE,
@@ -219,15 +229,22 @@ HRESULT ProcessRedirect::CreatePipe(const WCHAR* szUniqueSuffix)
         //
         // use CreateFile to open a new handle to the existing pipe...
         //
-        m_WriteHandle = CreateFile(
-            szPipeName,
+        auto hWrite = CreateFileApi(
+            pipeName.c_str(),
             FILE_WRITE_DATA | SYNCHRONIZE,
             0,
             &sa,
             OPEN_EXISTING,  // very important flag!
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
+            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED | SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION,
             0  // no template file for OPEN_EXISTING
         );
+
+        if (!hWrite)
+        {
+            return ToHRESULT(hWrite.error());
+        }
+
+        m_WriteHandle = hWrite->release();
 
         // we're going to give the same pipe for stderr, so duplicate for that:
         // Create a duplicate of the output write handle for the std error
@@ -275,13 +292,12 @@ HRESULT ProcessRedirect::CreatePipe(const WCHAR* szUniqueSuffix)
     }
     else
     {
-        wcscpy_s(szPipeName, L"\\\\.\\pipe\\ORC_input_");
-        wcscat_s(szPipeName, szUniqueSuffix);
+        pipeName = fmt::format(L"\\\\.\\pipe\\DFIR-ORC_{}_ORC_input_{}", GetCurrentProcessId(), szUniqueSuffix);
 
         // exact same thing, reversed.
         if ((hTmpHandle = CreateNamedPipe(
-                 szPipeName,
-                 PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED,
+                 pipeName.c_str(),
+                 PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
                  PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
                  PIPE_UNLIMITED_INSTANCES,
                  BUFFER_SIZE,
@@ -291,15 +307,22 @@ HRESULT ProcessRedirect::CreatePipe(const WCHAR* szUniqueSuffix)
             == INVALID_HANDLE_VALUE)
             return HRESULT_FROM_WIN32(GetLastError());
 
-        m_ReadHandle = CreateFile(
-            szPipeName,
+        auto hRead = CreateFileApi(
+            pipeName.c_str(),
             FILE_READ_DATA | SYNCHRONIZE,
             0,
             &sa,
             OPEN_EXISTING,  // very important flag!
-            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
+            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED | SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION,
             0  // no template file for OPEN_EXISTING
         );
+
+        if (!hRead)
+        {
+            return ToHRESULT(hRead.error());
+        }
+
+        m_ReadHandle = hRead->release();
 
         if (!::DuplicateHandle(
                 GetCurrentProcess(),

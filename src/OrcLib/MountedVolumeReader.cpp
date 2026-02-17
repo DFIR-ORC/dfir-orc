@@ -19,6 +19,7 @@
 #include "winioctl.h"
 
 #include "Log/Log.h"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 
@@ -276,7 +277,7 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
     }
 
     // open a handle to the root of the drive.
-    HANDLE hRoot = CreateFile(
+    auto hRoot = CreateFileApi(
         m_szShortVolumeName,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -285,26 +286,23 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
         FILE_FLAG_BACKUP_SEMANTICS,
         NULL);
 
-    if (hRoot == INVALID_HANDLE_VALUE)
+    if (!hRoot)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to open volume root '{}' [{}]", m_szShortVolumeName, SystemError(hr));
+        Log::Error(L"Failed to open volume root '{}' [{}]", m_szShortVolumeName, hRoot.error());
         return hr;
     }
 
     BY_HANDLE_FILE_INFORMATION fiRootFile;
-    if (!GetFileInformationByHandle(hRoot, &fiRootFile))
+    if (!GetFileInformationByHandle(hRoot->value(), &fiRootFile))
     {
-        CloseHandle(hRoot);
         return HRESULT_FROM_WIN32(GetLastError());
     }
     else
     {
         m_llVolumeSerialNumber = fiRootFile.dwVolumeSerialNumber;
     }
-    CloseHandle(hRoot);
 
-    m_hDevice = CreateFile(
+    auto hDevice = CreateFileApi(
         m_szVolumeName,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -313,12 +311,13 @@ HRESULT MountedVolumeReader::LoadDiskProperties(void)
         FILE_FLAG_BACKUP_SEMANTICS,
         NULL);
 
-    if (m_hDevice == INVALID_HANDLE_VALUE)
+    if (!hDevice)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Failed to open volume '{}' [{}]", m_szVolumeName, SystemError(hr));
-        return hr;
+        Log::Error(L"Failed to open volume '{}' [{}]", m_szVolumeName, hDevice.error());
+        return ToHRESULT(hDevice.error());
     }
+
+    m_hDevice = hDevice->release();
 
     //
     // Load the disk parameters

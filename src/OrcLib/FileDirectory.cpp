@@ -20,6 +20,8 @@
 
 #include "ObjectDirectory.h"
 
+#include "Utils/WinApi.h"
+
 using namespace Orc;
 
 //
@@ -86,7 +88,7 @@ HRESULT FileDirectory::ParseFileDirectory(const std::wstring& aObjDir, FileDirec
     if (pNtDll == nullptr)
         return E_FAIL;
 
-    HANDLE hPipeRoot = CreateFile(
+    auto hPipeRoot = CreateFileApi(
         aObjDir.c_str(),
         GENERIC_READ,
         FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -95,16 +97,10 @@ HRESULT FileDirectory::ParseFileDirectory(const std::wstring& aObjDir, FileDirec
         0,
         NULL);
 
-    if (hPipeRoot == INVALID_HANDLE_VALUE)
-        return HRESULT_FROM_WIN32(GetLastError());
-
-    BOOST_SCOPE_EXIT(&hPipeRoot)
+    if (!hPipeRoot)
     {
-        if (hPipeRoot != INVALID_HANDLE_VALUE)
-            CloseHandle(hPipeRoot);
-        hPipeRoot = INVALID_HANDLE_VALUE;
+        return ToHRESULT(hPipeRoot.error());
     }
-    BOOST_SCOPE_EXIT_END;
 
     DWORD dwPageSize = 0L;
     if (FAILED(hr = SystemDetails::GetPageSize(dwPageSize)))
@@ -116,7 +112,7 @@ HRESULT FileDirectory::ParseFileDirectory(const std::wstring& aObjDir, FileDirec
     ZeroMemory(&IoStatusBlock, sizeof(IoStatusBlock));
 
     while ((hr = pNtDll->NtQueryDirectoryFile(
-                hPipeRoot,
+                hPipeRoot->value(),
                 nullptr,
                 nullptr,
                 nullptr,

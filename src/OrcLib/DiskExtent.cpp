@@ -15,6 +15,7 @@
 #include <crtdbg.h>
 
 #include "Log/Log.h"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 
@@ -103,7 +104,13 @@ HRESULT CDiskExtent::Open(DWORD dwShareMode, DWORD dwCreationDisposition, DWORD 
             break;
     }
 
-    m_hFile = CreateFile(m_Name.c_str(), GENERIC_READ, dwShareMode, NULL, dwCreationDisposition, dwFlags, NULL);
+    auto hFile = CreateFileApi(m_Name.c_str(), GENERIC_READ, dwShareMode, NULL, dwCreationDisposition, dwFlags, NULL);
+    if (!hFile)
+    {
+        return ToHRESULT(hFile.error());
+    }
+
+    m_hFile = hFile->release();
 
     if (INVALID_HANDLE_VALUE == m_hFile)
     {

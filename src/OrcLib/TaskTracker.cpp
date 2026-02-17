@@ -25,6 +25,7 @@
 #include "Authenticode.h"
 
 #include "CaseInsensitive.h"
+#include "Utils/WinApi.h"
 
 using namespace std;
 
@@ -156,45 +157,41 @@ HRESULT TaskTracker::LoadRunningTasksAndModules()
 HRESULT TaskTracker::LoadNTrackResults()
 {
     HRESULT hr = E_FAIL;
+
     //
     // open the device
     //
-
-    HANDLE hDevice =
-        CreateFile(DRIVE_SYMB_NAME, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-
-    if (hDevice == INVALID_HANDLE_VALUE)
+    auto hDevice = CreateFileApi(
+        DRIVE_SYMB_NAME, GENERIC_READ | GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (!hDevice)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Debug("NTrack is not installed or not started. Failed CreateFile [{}]", SystemError(hr));
-        return hr;
+        Log::Debug("NTrack is not installed or not started. Failed CreateFile [{}]", hDevice.error());
+        return ToHRESULT(hDevice.error());
     }
+
     //
     // Printing Input & Output buffer pointers and size
     //
-
     PTRACEDATA TkResults = (PTRACEDATA)VirtualAlloc(NULL, sizeof(TRACEDATA), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 
     if (!TkResults)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error("Failed VirtualAlloc [{}]", SystemError(hr));
-        CloseHandle(hDevice);
         return hr;
     }
 
     ZeroMemory(TkResults, sizeof(_TRACEDATA));
     ULONG bytesReturned = 0;
 
-    if (!DeviceIoControl(hDevice, (DWORD)IOCTL_GET_DATA, NULL, 0, TkResults, sizeof(TRACEDATA), &bytesReturned, NULL))
+    if (!DeviceIoControl(
+            hDevice->value(), (DWORD)IOCTL_GET_DATA, NULL, 0, TkResults, sizeof(TRACEDATA), &bytesReturned, NULL))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error("Failed DeviceIoControl [{}]", SystemError(hr));
         VirtualFree(TkResults, 0L, MEM_RELEASE);
-        CloseHandle(hDevice);
         return hr;
     }
-    CloseHandle(hDevice);
 
     Log::Debug("inBuffer ({})", sizeof(_TRACEDATA));
     Log::Debug("OutBuffer ({})", bytesReturned);

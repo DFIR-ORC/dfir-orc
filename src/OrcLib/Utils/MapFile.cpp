@@ -10,6 +10,7 @@
 
 #include "Utils/Result.h"
 #include "Utils/Guard.h"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 
@@ -32,7 +33,7 @@ namespace Orc {
 
 Result<std::vector<uint8_t>> MapFile(const std::filesystem::path& path)
 {
-    Guard::FileHandle file = CreateFileW(
+    auto file = CreateFileApi(
         path.c_str(),
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -40,14 +41,13 @@ Result<std::vector<uint8_t>> MapFile(const std::filesystem::path& path)
         OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL,
         NULL);
-    if (!file.IsValid())
+    if (!file)
     {
-        auto ec = LastWin32Error();
-        Log::Debug("Failed CreateFile [{}]", ec);
-        return ec;
+        Log::Debug("Failed CreateFile [{}]", file.error());
+        return file.error();
     }
 
-    auto bytesToRead = GetFileSize(file.value());
+    auto bytesToRead = GetFileSize(file->value());
     if (bytesToRead.has_error())
     {
         Log::Debug("Failed GetFileSizeEx [{}]", bytesToRead.error());
@@ -73,7 +73,7 @@ Result<std::vector<uint8_t>> MapFile(const std::filesystem::path& path)
     }
 
     DWORD bytesRead = 0;
-    if (!ReadFile(file.value(), buffer.data(), static_cast<DWORD>(buffer.size()), &bytesRead, NULL))
+    if (!ReadFile(file->value(), buffer.data(), static_cast<DWORD>(buffer.size()), &bytesRead, NULL))
     {
         auto ec = LastWin32Error();
         Log::Debug("Failed ReadFile [{}]", ec);

@@ -20,6 +20,7 @@
 #include <sstream>
 
 #include "Log/Log.h"
+#include "Utils/WinApi.h"
 
 using namespace std;
 
@@ -137,7 +138,7 @@ HRESULT Orc::UtilGetTempFile(
     WCHAR wszDirPath[ORC_MAX_PATH];
     WCHAR wszTempFilePath[ORC_MAX_PATH];
     HRESULT hr = E_FAIL;
-    HANDLE hFile = INVALID_HANDLE_VALUE;
+    Guard::Handle hFile;
 
     _ASSERT(pwszFilePath != NULL);
     _ASSERT(pwszExt != NULL);
@@ -172,7 +173,7 @@ HRESULT Orc::UtilGetTempFile(
                 }
             }
 
-            hFile = CreateFile(
+            auto handle = CreateFileApi(
                 wszTempFilePath,
                 GENERIC_WRITE | GENERIC_READ,
                 dwShareMode,
@@ -181,8 +182,9 @@ HRESULT Orc::UtilGetTempFile(
                 dwFlags | FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
                 NULL);
 
-            if (hFile != INVALID_HANDLE_VALUE)
+            if (handle)
             {
+                hFile = handle->release();
                 break;
             }
         }
@@ -192,7 +194,7 @@ HRESULT Orc::UtilGetTempFile(
         Sleep(WAIT_CREATE_TIME);
     }
 
-    if (hFile == INVALID_HANDLE_VALUE)
+    if (!hFile)
     {
         hr = E_FAIL;
         goto End;
@@ -207,30 +209,12 @@ HRESULT Orc::UtilGetTempFile(
 
     if (phFile)
     {
-        *phFile = hFile;
-    }
-    else
-    {
-        if (hFile != INVALID_HANDLE_VALUE)
-        {
-            CloseHandle(hFile);
-            hFile = INVALID_HANDLE_VALUE;
-        }
+        *phFile = hFile.release();
     }
 
     hr = S_OK;
 
 End:
-
-    if (FAILED(hr))
-    {
-        if (hFile != INVALID_HANDLE_VALUE)
-        {
-            CloseHandle(hFile);
-            hFile = INVALID_HANDLE_VALUE;
-        }
-    }
-
     return hr;
 }
 
@@ -308,7 +292,6 @@ HRESULT UtilExpandEnvVariable(__in PCWSTR pwszData, __out std::wstring& strData)
 BOOL UtilFileExists(__in PCWSTR pwszFilePath)
 {
     DWORD dwFileAttributes = 0;
-    HANDLE hFile = NULL;
     wstring strFilePath;
     HRESULT hr = E_FAIL;
 
@@ -323,18 +306,9 @@ BOOL UtilFileExists(__in PCWSTR pwszFilePath)
     if (dwFileAttributes == FILE_ATTRIBUTE_DIRECTORY || dwFileAttributes == INVALID_FILE_ATTRIBUTES)
         return FALSE;
 
-    hFile = CreateFile(
+    auto hFile = CreateFileApi(
         strFilePath.c_str(), FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-
-    if (hFile == INVALID_HANDLE_VALUE)
-        return FALSE;
-    else
-    {
-        CloseHandle(hFile);
-        hFile = NULL;
-    }
-
-    return TRUE;
+    return hFile.has_value();
 }
 
 /*
@@ -486,7 +460,7 @@ HRESULT Orc::UtilGetUniquePath(
             continue;
         }
 
-        hFile = CreateFile(
+        auto handle = CreateFileApi(
             pstrDestPath.c_str(),
             GENERIC_WRITE | GENERIC_READ,
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -495,8 +469,9 @@ HRESULT Orc::UtilGetUniquePath(
             dwFlags,
             NULL);
 
-        if (hFile != INVALID_HANDLE_VALUE)
+        if (handle)
         {
+            hFile = handle->release();
             break;
         }
     }

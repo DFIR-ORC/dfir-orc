@@ -20,6 +20,7 @@
 #include "MountedVolumeReader.h"
 
 #include <boost/scope_exit.hpp>
+#include "Utils/WinApi.h"
 
 using namespace std;
 using namespace Orc;
@@ -102,7 +103,7 @@ HRESULT USNJournalWalker::Initialize(const std::shared_ptr<Location>& loc)
         return HRESULT_FROM_WIN32(ERROR_FILE_SYSTEM_LIMITATION);
     }
 
-    HANDLE hRoot = CreateFile(
+    auto hRoot = CreateFileApi(
         szVolName,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -111,11 +112,14 @@ HRESULT USNJournalWalker::Initialize(const std::shared_ptr<Location>& loc)
         FILE_FLAG_BACKUP_SEMANTICS,
         NULL);
 
-    BY_HANDLE_FILE_INFORMATION fiRootFile;
-    if (!GetFileInformationByHandle(hRoot, &fiRootFile))
+    if (!hRoot)
     {
-        CloseHandle(hRoot);
-        hRoot = INVALID_HANDLE_VALUE;
+        return ToHRESULT(hRoot.error());
+    }
+
+    BY_HANDLE_FILE_INFORMATION fiRootFile;
+    if (!GetFileInformationByHandle(hRoot->value(), &fiRootFile))
+    {
         return HRESULT_FROM_WIN32(GetLastError());
     }
     else
@@ -123,7 +127,6 @@ HRESULT USNJournalWalker::Initialize(const std::shared_ptr<Location>& loc)
         m_dwlRootUSN = (((DWORDLONG)fiRootFile.nFileIndexHigh) << 32) | fiRootFile.nFileIndexLow;
         m_dwVolumeSerialNumber = fiRootFile.dwVolumeSerialNumber;
     }
-    CloseHandle(hRoot);
 
     auto& subdirs = loc->GetSubDirs();
 
@@ -143,7 +146,7 @@ HRESULT USNJournalWalker::Initialize(const std::shared_ptr<Location>& loc)
             if (!dwLen)
                 return;
 
-            HANDLE hLocation = CreateFile(
+            auto hLocation = CreateFileApi(
                 szExpandedLocation,
                 FILE_READ_EA | FILE_READ_ATTRIBUTES,
                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -152,16 +155,16 @@ HRESULT USNJournalWalker::Initialize(const std::shared_ptr<Location>& loc)
                 FILE_FLAG_BACKUP_SEMANTICS,
                 NULL);
 
-            if (hLocation != INVALID_HANDLE_VALUE)
+            if (!hLocation)
             {
-                BY_HANDLE_FILE_INFORMATION fiLocation;
-                if (GetFileInformationByHandle(hLocation, &fiLocation))
-                {
-                    if (m_dwVolumeSerialNumber == fiLocation.dwVolumeSerialNumber)
-                        m_LocationsRefNum.insert(
-                            (((DWORDLONG)fiLocation.nFileIndexHigh) << 32) | fiLocation.nFileIndexLow);
-                }
-                CloseHandle(hLocation);
+                return;
+            }
+
+            BY_HANDLE_FILE_INFORMATION fiLocation;
+            if (GetFileInformationByHandle(hLocation->value(), &fiLocation))
+            {
+                if (m_dwVolumeSerialNumber == fiLocation.dwVolumeSerialNumber)
+                    m_LocationsRefNum.insert((((DWORDLONG)fiLocation.nFileIndexHigh) << 32) | fiLocation.nFileIndexLow);
             }
         });
     }

@@ -13,7 +13,28 @@
 #include <string>
 #include <system_error>
 
+#include "Utils/Guard.h"
+
 namespace Orc {
+
+enum class DACL
+{
+    OrcDefaultFullControl,  // Full control for builtin Administrators or current user if not admin
+    CurrentUserFullControl,
+    AdministratorsFullControl
+};
+
+[[nodiscard]] Result<SECURITY_DESCRIPTOR*> GetSecurityDescriptor(DACL dacl) noexcept;
+
+Result<Guard::FileHandle> CreateFileApi(
+    const wchar_t* lpFileName,
+    DWORD dwDesiredAccess,
+    DWORD dwShareMode,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes,
+    DWORD dwCreationDisposition,
+    DWORD dwFlagsAndAttributes,
+    HANDLE hTemplateFile,
+    BOOL ReplaceNullSecurityAttributes = TRUE) noexcept;
 
 // ExpandEnvironmentStringsW wrapper with custom maximum buffer size
 std::wstring ExpandEnvironmentStringsApi(const wchar_t* szEnvString, size_t cbMaxOutput, std::error_code& ec) noexcept;

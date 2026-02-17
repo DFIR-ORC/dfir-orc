@@ -11,6 +11,7 @@
 #include "OfflineMFTReader.h"
 
 #include "Log/Log.h"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 
@@ -56,15 +57,15 @@ HRESULT OfflineMFTReader::LoadDiskProperties()
         return S_OK;
     }
 
-    if ((m_hMFT = CreateFile(
-             m_szMFTFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL))
-        == INVALID_HANDLE_VALUE)
+    auto hMFT = CreateFileApi(
+        m_szMFTFileName, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
+    if (!hMFT)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error(L"Could not open offline MFT file '{}' [{}]", m_szMFTFileName, SystemError(hr));
-        return hr;
+        Log::Error(L"Could not open offline MFT file '{}' [{}]", m_szMFTFileName, hMFT.error());
+        return ToHRESULT(hMFT.error());
     }
 
+    m_hMFT = hMFT->release();
     return S_OK;
 }
 

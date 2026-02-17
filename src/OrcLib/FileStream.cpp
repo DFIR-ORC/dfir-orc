@@ -12,7 +12,9 @@
 
 #include "Temporary.h"
 
+#include "SecurityDescriptor.h"
 #include "Kernel32Extension.h"
+#include "Utils/WinApi.h"
 
 using namespace Orc;
 
@@ -108,33 +110,36 @@ __data_entrypoint(File) HRESULT FileStream::OpenFile(
     __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes,
     __in DWORD dwCreationDisposition,
     __in DWORD dwFlagsAndAttributes,
-    __in_opt HANDLE hTemplate)
+    __in_opt HANDLE hTemplate,
+    BOOL ReplaceNullSecurityAttributes)
 {
     HRESULT hr = E_FAIL;
 
     if (m_hFile != INVALID_HANDLE_VALUE)
         Close();
 
-    HANDLE hFile = CreateFile(
+    auto hFile = CreateFileApi(
         pwszPath,
         dwDesiredAccess,
         dwSharedMode,
         pSecurityAttributes,
         dwCreationDisposition,
         dwFlagsAndAttributes,
-        hTemplate);
+        hTemplate,
+        ReplaceNullSecurityAttributes);
 
-    if (hFile == INVALID_HANDLE_VALUE)
+    if (!hFile)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error(L"Failed CreateFile for '{}' [{}]", pwszPath, SystemError(hr));
         return hr;
     }
 
-    Log::Trace(L"CreateFile({}) succeeded (hFile={:p})", pwszPath, hFile);
+    Log::Trace(L"CreateFile({}) succeeded (hFile={:p})", pwszPath, hFile->value());
     {
         ScopedLock sl(m_cs);
-        std::swap(m_hFile, hFile);
+        auto handle = hFile->release();
+        std::swap(m_hFile, handle);
         m_strPath.assign(pwszPath);
     }
 
@@ -148,7 +153,8 @@ __data_entrypoint(File) HRESULT FileStream::OpenFile(
     __in_opt PSECURITY_ATTRIBUTES pSecurityAttributes,
     __in DWORD dwCreationDisposition,
     __in DWORD dwFlagsAndAttributes,
-    __in_opt HANDLE hTemplate)
+    __in_opt HANDLE hTemplate,
+    BOOL ReplaceNullSecurityAttributes)
 {
     return OpenFile(
         path.c_str(),
@@ -157,7 +163,8 @@ __data_entrypoint(File) HRESULT FileStream::OpenFile(
         pSecurityAttributes,
         dwCreationDisposition,
         dwFlagsAndAttributes,
-        hTemplate);
+        hTemplate,
+        ReplaceNullSecurityAttributes);
 }
 
 HRESULT FileStream::CopyHandle(HANDLE hFile)

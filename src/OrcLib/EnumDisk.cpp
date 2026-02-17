@@ -17,6 +17,7 @@
 #include <devguid.h>
 
 #include <boost\scope_exit.hpp>
+#include "Utils/WinApi.h"
 
 #include "Log/Log.h"
 
@@ -180,7 +181,7 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
 
     aDisk.InterfacePath = interfaceDetailData->DevicePath;
 
-    HANDLE hDevice = CreateFile(
+    auto hDevice = CreateFileApi(
         interfaceDetailData->DevicePath,  // device interface name
         GENERIC_READ,  // dwDesiredAccess
         FILE_SHARE_READ | FILE_SHARE_WRITE,  // dwShareMode
@@ -189,19 +190,16 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
         0,  // dwFlagsAndAttributes
         NULL  // hTemplateFile
     );
-    BOOST_SCOPE_EXIT(&hDevice) { CloseHandle(hDevice); }
-    BOOST_SCOPE_EXIT_END;
 
     //
     // We have the handle to talk to the device.
     // So we can release the interfaceDetailData buffer
     //
 
-    if (hDevice == INVALID_HANDLE_VALUE)
+    if (!hDevice)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Failed CreateFile for disk interface [{}]", SystemError(hr));
-        return hr;
+        Log::Error("Failed CreateFile for disk interface [{}]", hDevice.error());
+        return ToHRESULT(hDevice.error());
     }
 
     STORAGE_PROPERTY_QUERY query;
@@ -212,7 +210,7 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
     CBinaryBuffer Buf;
     Buf.SetCount(512);
     if (!DeviceIoControl(
-            hDevice,
+            hDevice->value(),
             IOCTL_STORAGE_QUERY_PROPERTY,
             &query,
             sizeof(STORAGE_PROPERTY_QUERY),
@@ -234,7 +232,7 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
         outBuf.SetCount(512);
 
         if (!DeviceIoControl(
-                hDevice,
+                hDevice->value(),
                 IOCTL_STORAGE_QUERY_PROPERTY,
                 &query,
                 sizeof(STORAGE_PROPERTY_QUERY),
@@ -269,7 +267,14 @@ HRESULT EnumDisk::GetDevice(HDEVINFO hDevInfo, DWORD Index, PhysicalDisk& aDisk,
     DWORD length = offsetof(SCSI_PASS_THROUGH_WITH_BUFFERS, DataBuf) + sptwb.Spt.DataTransferLength;
     DWORD returned = 0L;
     if (!DeviceIoControl(
-            hDevice, IOCTL_SCSI_PASS_THROUGH, &sptwb, sizeof(SCSI_PASS_THROUGH), &sptwb, length, &returned, FALSE))
+            hDevice->value(),
+            IOCTL_SCSI_PASS_THROUGH,
+            &sptwb,
+            sizeof(SCSI_PASS_THROUGH),
+            &sptwb,
+            length,
+            &returned,
+            FALSE))
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error("Failed IOCTL_SCSI_PASS_THROUGH [{}]", SystemError(hr));

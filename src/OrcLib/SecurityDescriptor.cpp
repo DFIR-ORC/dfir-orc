@@ -9,8 +9,11 @@
 #include "SecurityDescriptor.h"
 
 #include "Log/Log.h"
+#include "Utils/Guard.h"
 
 using namespace Orc;
+
+namespace Orc {
 
 HRESULT SecurityDescriptor::ConvertFromSDDL(LPCWSTR szSDDL)
 {
@@ -30,3 +33,5 @@ HRESULT SecurityDescriptor::ConvertFromSDDL(LPCWSTR szSDDL)
 
     return S_OK;
 }
+
+}  // namespace Orc
