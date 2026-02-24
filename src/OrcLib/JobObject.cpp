@@ -228,8 +228,12 @@ HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
         Log::Debug("This process is part of a job");
     }
 
-    HANDLE hEmptyJob = CreateJobObject(NULL, L"OnlyToGetJobType");
-    BOOST_SCOPE_EXIT(&hEmptyJob) { CloseHandle(hEmptyJob); }
+    auto jobName = fmt::format(L"DFIR-ORC_{}_OnlyToGetJobType", GetCurrentProcessId());
+    HANDLE hEmptyJob = CreateJobObject(NULL, jobName.c_str());
+    BOOST_SCOPE_EXIT(&hEmptyJob)
+    {
+        CloseHandle(hEmptyJob);
+    }
     BOOST_SCOPE_EXIT_END;
 
     if (hEmptyJob == INVALID_HANDLE_VALUE)

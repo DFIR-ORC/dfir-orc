@@ -39,6 +39,11 @@ using namespace Orc;
 
 namespace {
 
+std::wstring GetJobName(const std::wstring& basename)
+{
+    return fmt::format(L"DFIR-ORC_{}_{}", GetCurrentProcessId(), basename);
+}
+
 bool GetKeyAndValue(std::wstring_view input, wchar_t separator, std::wstring_view& key, std::wstring_view& value)
 {
     const auto separatorPos = input.find_first_of(separator);
@@ -973,7 +978,7 @@ void CommandAgent::run()
             if (currentJob.IsBreakAwayAllowed())
             {
                 Log::Debug(L"Breakaway is allowed, we create our own job and use it!");
-                m_Job = JobObject(m_Keyword.c_str());
+                m_Job = JobObject(::GetJobName(m_Keyword).c_str());
                 m_bWillRequireBreakAway = true;
             }
             else
@@ -989,7 +994,7 @@ void CommandAgent::run()
                 if ((major >= 6 && minor >= 2) || major >= 10)
                 {
                     Log::Debug(L"Current Windows version allows nested jobs. We create our own job and use it!");
-                    m_Job = JobObject(m_Keyword.c_str());
+                    m_Job = JobObject(::GetJobName(m_Keyword).c_str());
                 }
                 else
                 {
@@ -1002,7 +1007,7 @@ void CommandAgent::run()
     else if (hr == S_OK && hJob == INVALID_HANDLE_VALUE)
     {
         Log::Debug(L"WolfLauncher is not running under any job!");
-        m_Job = JobObject(m_Keyword.c_str());
+        m_Job = JobObject(::GetJobName(m_Keyword).c_str());
     }
     else
     {
@@ -1014,7 +1019,7 @@ void CommandAgent::run()
             if (currentJob.IsBreakAwayAllowed())
             {
                 Log::Debug(L"Breakaway is allowed, we create our own job and use it!");
-                m_Job = JobObject(m_Keyword.c_str());
+                m_Job = JobObject(::GetJobName(m_Keyword).c_str());
                 if (!m_Job.IsValid())
                 {
                     Log::Error(L"Failed to create job");
@@ -1034,7 +1039,7 @@ void CommandAgent::run()
                 if ((major >= 6 && minor >= 2) || major >= 10)
                 {
                     Log::Debug(L"Current Windows version allows nested jobs. We create our own job and use it!");
-                    m_Job = JobObject(m_Keyword.c_str());
+                    m_Job = JobObject(::GetJobName(m_Keyword).c_str());
                 }
                 else
                 {
