@@ -52,5 +52,9 @@ HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddAttribute(L"norelocate", ORC_NORELOCATE, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(hr = item.AddAttribute(L"MultipleInstance", ORC_MULTIPLE_INSTANCE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"InstanceId", ORC_INSTANCE_ID, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }

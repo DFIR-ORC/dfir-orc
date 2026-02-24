@@ -196,6 +196,7 @@ void Main::PrintParameters()
     PrintValue(
         node, L"Command timeout", std::chrono::duration_cast<std::chrono::minutes>(config.msCommandTerminationTimeOut));
     PrintValue(node, L"Archive timeout", std::chrono::duration_cast<std::chrono::minutes>(config.msArchiveTimeOut));
+    PrintValue(node, L"Multiple instance mode", Traits::Boolean(config.bMultipleInstance.value_or(false)));
 
     const auto kNoLimits = L"No limits";
     if (config.NoLimitsKeywords.empty())

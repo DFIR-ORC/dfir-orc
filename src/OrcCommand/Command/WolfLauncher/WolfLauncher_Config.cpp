@@ -432,6 +432,23 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.Priority = *priority;
     }
 
+    if (configitem[WOLFLAUNCHER_MULTIPLE_INSTANCE])
+    {
+        if (boost::iequals(L"true", configitem[WOLFLAUNCHER_MULTIPLE_INSTANCE].c_str()))
+        {
+            config.bMultipleInstance = true;
+        }
+        else
+        {
+            config.bMultipleInstance = false;
+        }
+    }
+
+    if (configitem[WOLFLAUNCHER_INSTANCE_ID])
+    {
+        config.strInstanceId = configitem[WOLFLAUNCHER_INSTANCE_ID];
+    }
+
     for (const ConfigItem& archiveitem : configitem[WOLFLAUNCHER_ARCHIVE].NodeList)
     {
         auto exec = std::make_unique<WolfExecution>(m_journal, m_outcome);
@@ -631,6 +648,21 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
         config.Priority = *priority;
     }
 
+    if (configitem[ORC_MULTIPLE_INSTANCE])
+    {
+        if (boost::iequals(L"true", configitem[ORC_MULTIPLE_INSTANCE].c_str()))
+        {
+            config.bMultipleInstance = true;
+        }
+        else
+        {
+            config.bMultipleInstance = false;
+        }
+    }
+
+    if (configitem[ORC_INSTANCE_ID])
+    {
+        config.strInstanceId = configitem[ORC_INSTANCE_ID];
     }
 
     if (configitem[ORC_POWERSTATE])
@@ -692,6 +724,7 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
         bool bKeywords = false;
         bool bDump = false;
         bool bFromDump = false;
+        bool bMultipleInstance = false;
 
         std::wstring strTags;
 
@@ -779,6 +812,12 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     else if (ParameterOption(argv[i] + 1, L"Tags", strTags))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Offline", config.strOfflineLocation))
+                        ;
+                    else if (BooleanOption(argv[i] + 1, L"MultipleInstance", bMultipleInstance))
+                    {
+                        config.bMultipleInstance = bMultipleInstance;
+                    }
+                    else if (ParameterOption(argv[i] + 1, L"InstanceId", config.strInstanceId))
                         ;
                     else if (BooleanOption(argv[i] + 1, L"Beep", config.bBeepWhenDone))
                         ;
@@ -965,6 +1004,8 @@ HRESULT Main::CheckConfiguration()
     }
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
+    m_instanceId = config.strInstanceId.value_or(L"dfir-orc-instance");
 
     if ((config.bRepeatCreateNew ? 1 : 0) + (config.bRepeatOnce ? 1 : 0) + (config.bRepeatOverwrite ? 1 : 0) > 1)
     {

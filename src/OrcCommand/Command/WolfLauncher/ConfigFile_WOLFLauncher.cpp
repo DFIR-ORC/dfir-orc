@@ -206,6 +206,10 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddAttribute(L"priority", WOLFLAUNCHER_PRIORITY, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(hr = item.AddAttribute(L"MultipleInstance", WOLFLAUNCHER_MULTIPLE_INSTANCE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"InstanceId", WOLFLAUNCHER_INSTANCE_ID, ConfigItem::OPTION)))
+        return hr;
 
     return S_OK;
 }

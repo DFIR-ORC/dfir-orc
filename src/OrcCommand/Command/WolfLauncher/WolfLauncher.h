@@ -104,6 +104,9 @@ public:
 
         std::optional<std::wstring> strOfflineLocation;
 
+        std::optional<bool> bMultipleInstance;
+        std::optional<std::wstring> strInstanceId;
+
         std::chrono::milliseconds msRefreshTimer = 1s;
         std::chrono::milliseconds msArchiveTimeOut = 10min;
         std::chrono::milliseconds msCommandTerminationTimeOut = 3h;
@@ -236,6 +239,9 @@ private:
     std::unique_ptr<UploadMessage::UnboundedMessageBuffer> m_pUploadMessageQueue;
     std::unique_ptr<Concurrency::call<UploadNotification::Notification>> m_pUploadNotification;
     std::vector<std::wstring> m_emptyDirectoriesToRemove;
+
+    std::optional<Guard::Handle> m_hInstanceEvent;
+    std::wstring m_instanceId;
 };
 
 }  // namespace Command::Wolf

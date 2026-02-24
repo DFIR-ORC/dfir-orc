@@ -879,6 +879,34 @@ HRESULT Main::SetLauncherPriority(WolfPriority priority)
 
 HRESULT Main::Run()
 {
+    // Do not take any handle on offline mode but always take it otherwise
+    if (config.strOfflineLocation.has_value())
+    {
+        Log::Debug(L"Multiple instances allowed in offline mode");
+    }
+    else
+    {
+        m_hInstanceEvent = CreateEventW(nullptr, TRUE, FALSE, m_instanceId.c_str());
+        auto err = GetLastError();
+
+        if (!m_hInstanceEvent)
+        {
+            Log::Error(L"Failed CreateEventW for instance mode [{}]", Win32Error(err));
+            return E_FAIL;
+        }
+
+        if (err == ERROR_ALREADY_EXISTS)
+        {
+            Log::Debug(L"Multiple instances running (event name: {})", m_instanceId);
+
+            if (!config.bMultipleInstance.has_value() || *config.bMultipleInstance == false)
+            {
+                Log::Critical(L"Another DFIR-ORC instance is already running");
+                return E_FAIL;
+            }
+        }
+    }
+
     switch (config.SelectedAction)
     {
         case WolfLauncherAction::Execute:
