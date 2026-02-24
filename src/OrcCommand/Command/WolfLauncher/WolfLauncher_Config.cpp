@@ -44,6 +44,24 @@ namespace {
 
 constexpr std::wstring_view kOrcOffline(L"ORC_Offline");
 
+Result<Main::WolfPriority> ToWolfPriority(std::wstring_view priority)
+{
+    if (boost::iequals(priority, L"Normal"))
+    {
+        return Main::WolfPriority::Normal;
+    }
+    else if (boost::iequals(priority, L"Low"))
+    {
+        return Main::WolfPriority::Low;
+    }
+    else if (boost::iequals(priority, L"High"))
+    {
+        return Main::WolfPriority::High;
+    }
+
+    return std::errc::invalid_argument;
+}
+
 // Very close to std::filesystem::create_directories but keep tracks or created directories
 void CreateDirectories(std::filesystem::path path, std::vector<std::wstring>& newDirectories, std::error_code& ec)
 {
@@ -404,6 +422,18 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         config.Output.UploadOutput = upload;
     }
 
+    if (configitem[WOLFLAUNCHER_PRIORITY])
+    {
+        auto priority = ToWolfPriority(configitem[WOLFLAUNCHER_PRIORITY].c_str());
+        if (!priority)
+        {
+            Log::Error(L"Invalid priority");
+            return E_FAIL;
+        }
+
+        config.Priority = *priority;
+    }
+
     for (const ConfigItem& archiveitem : configitem[WOLFLAUNCHER_ARCHIVE].NodeList)
     {
         auto exec = std::make_unique<WolfExecution>(m_journal, m_outcome);
@@ -593,12 +623,16 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[ORC_PRIORITY])
     {
-        if (!_wcsicmp(L"Normal", configitem[ORC_PRIORITY].c_str()))
-            config.Priority = WolfPriority::Normal;
-        else if (!_wcsicmp(L"Low", configitem[ORC_PRIORITY].c_str()))
-            config.Priority = WolfPriority::Low;
-        else if (!_wcsicmp(L"High", configitem[ORC_PRIORITY].c_str()))
-            config.Priority = WolfPriority::High;
+        auto priority = ToWolfPriority(configitem[ORC_PRIORITY].c_str());
+        if (!priority)
+        {
+            Log::Error(L"Invalid priority");
+            return E_FAIL;
+        }
+
+        config.Priority = *priority;
+    }
+
     }
 
     if (configitem[ORC_POWERSTATE])

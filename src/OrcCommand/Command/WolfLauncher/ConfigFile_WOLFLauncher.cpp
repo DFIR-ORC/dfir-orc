@@ -204,6 +204,8 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(L"upload", Orc::Config::Common::upload, WOLFLAUNCHER_UPLOAD)))
         return hr;
+    if (FAILED(hr = item.AddAttribute(L"priority", WOLFLAUNCHER_PRIORITY, ConfigItem::OPTION)))
+        return hr;
 
     return S_OK;
 }
