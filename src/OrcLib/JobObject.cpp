@@ -90,6 +90,16 @@ JobObject::GetHandle(DWORD dwSourcePid, HANDLE hSourceHandle, DWORD dwDesiredAcc
     return S_OK;
 }
 
+Orc::JobObject::JobObject(LPCWSTR szJobName)
+    : m_hJob(INVALID_HANDLE_VALUE)
+{
+    m_hJob = CreateJobObject(NULL, szJobName);
+    if (m_hJob == NULL)
+        m_hJob = INVALID_HANDLE_VALUE;
+    else
+        m_bClose = true;
+};
+
 HRESULT JobObject::GetHandleTypeName(DWORD dwSourcePid, HANDLE hSourceHandle, wstring& strType)
 {
     HRESULT hr = E_FAIL;

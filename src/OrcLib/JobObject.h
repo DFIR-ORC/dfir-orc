@@ -53,16 +53,7 @@ public:
         : m_hJob(hJob)
     {
     }
-    JobObject(LPCWSTR szJobName)
-        : m_hJob(INVALID_HANDLE_VALUE)
-    {
-        m_hJob = CreateJobObject(NULL, L"OnlyToGetJobType");
-        if (m_hJob == NULL)
-            m_hJob = INVALID_HANDLE_VALUE;
-        else
-            m_bClose = true;
-    };
-
+    JobObject(LPCWSTR szJobName);
     JobObject(const JobObject& other) = delete;
     JobObject(JobObject&& other) noexcept
     {
