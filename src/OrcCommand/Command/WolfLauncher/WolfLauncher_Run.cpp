@@ -1225,6 +1225,17 @@ HRESULT Main::Run_Execute()
         }
     }
 
+    const auto start = FromSystemTime(theStartTime);
+    if (start.has_error())
+    {
+        Log::Debug(L"Failed to convert start time to time point [{}]", start.error());
+        m_journal.Print(ToolName(), {}, L"Done");
+    }
+    else
+    {
+        m_journal.Print(ToolName(), {}, L"Done (elapsed: {:%T})", std::chrono::system_clock::now() - *start);
+    }
+
     const auto& fileSink = m_logging.fileSink();
     if (fileSink->IsOpen())
     {
@@ -1260,17 +1271,6 @@ HRESULT Main::Run_Execute()
         {
             Log::Error(L"Job failed to be re-configured to block breakaway [{}]", SystemError(hr));
         }
-    }
-
-    const auto start = FromSystemTime(theStartTime);
-    if (start.has_error())
-    {
-        Log::Debug(L"Failed to convert start time to time point [{}]", start.error());
-        m_journal.Print(ToolName(), {}, L"Done");
-    }
-    else
-    {
-        m_journal.Print(ToolName(), {}, L"Done (elapsed: {:%T})", std::chrono::system_clock::now() - *start);
     }
 
     if (config.bBeepWhenDone)
