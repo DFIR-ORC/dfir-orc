@@ -65,6 +65,8 @@ public:
         SetFormatter(std::move(formatter));
     }
 
+    virtual ~SpdlogSink() = default;
+
 protected:
     std::shared_ptr<spdlog::sinks::sink> m_sink;
     std::unique_ptr<spdlog::formatter> m_formatter;
