@@ -255,7 +255,6 @@ public:
         assert(facilityNumber < m_loggers.size());
         auto& logger = m_loggers[facilityNumber];
 
-        assert(logger);
         return logger;
     }
 

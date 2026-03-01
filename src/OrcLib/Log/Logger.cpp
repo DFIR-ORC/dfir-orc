@@ -33,7 +33,7 @@ Logger::Logger(std::initializer_list<std::pair<Facility, SpdlogLogger::Ptr>> log
     std::fill(std::begin(m_logCounters), std::end(m_logCounters), 0);
 
     auto facility_count = std::underlying_type_t<Facility>(Facility::kFacilityCount);
-    m_loggers.resize(facility_count - 1);
+    m_loggers.resize(facility_count);
 
     for (auto&& [facility, logger] : loggers)
     {
