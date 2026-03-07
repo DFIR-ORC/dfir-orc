@@ -19,7 +19,7 @@ jobs:
           -Output $(Build.SourcesDirectory)/artifacts `
           -Toolchain vs2019 `
           -Architecture ${{ parameters.arch }} `
-          -Configuration Debug,MinSizeRel
+          -Configuration MinSizeRel
 
   - task: VSTest@2
     inputs:
