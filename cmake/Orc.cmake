@@ -9,10 +9,7 @@
 
 macro(orc_add_compile_options)
 
-if (NOT DEFINED CMAKE_CXX_STANDARD)
-    set(CMAKE_CXX_STANDARD 17)
-    set(CMAKE_CXX_STANDARD_REQUIRED ON)
-endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_definitions(
     UNICODE
@@ -25,17 +22,17 @@ add_compile_definitions(
 )
 
 if("${CMAKE_SYSTEM_VERSION}" STREQUAL "5.1")
-        add_compile_definitions(
-            _WIN32_WINNT=0x0501
-            WINVER=0x0501
-            NTDDI_VERSION=0x05010200
-        )
+    add_compile_definitions(
+        _WIN32_WINNT=0x0501
+        WINVER=0x0501
+        NTDDI_VERSION=0x05010200
+    )
 elseif("${CMAKE_SYSTEM_VERSION}" STREQUAL "6.1")
-        add_compile_definitions(
-            _WIN32_WINNT=0x0601
-            WINVER=0x0601
-            NTDDI_VERSION=0x06010000
-        )
+    add_compile_definitions(
+        _WIN32_WINNT=0x0601
+        WINVER=0x0601
+        NTDDI_VERSION=0x06010000
+    )
 endif()
 
 if(${TARGET_ARCH} STREQUAL "x64")

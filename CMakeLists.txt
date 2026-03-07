@@ -58,9 +58,16 @@ endif()
 # Default target is 'Windows Seven' unless xp toolset is used
 if(NOT CMAKE_SYSTEM_VERSION)
     if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
-        set(CMAKE_SYSTEM_VERSION 5.1)
+        if (TARGET_ARCH STREQUAL "x64")
+            set(CMAKE_SYSTEM_VERSION 5.2)
+        else()
+            set(CMAKE_SYSTEM_VERSION 5.1)
+        endif()
+
+        set(CMAKE_CXX_STANDARD 17)
     else()
         set(CMAKE_SYSTEM_VERSION 6.1)
+        set(CMAKE_CXX_STANDARD 23)
     endif()
 endif()
 
