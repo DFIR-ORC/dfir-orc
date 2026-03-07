@@ -17,6 +17,8 @@ option(ORC_DOWNLOADS_ONLY   "Do not build ORC but only download vcpkg third part
 option(ORC_DISABLE_PRECOMPILED_HEADERS "Disable precompiled headers" OFF)
 option(ORC_SWAPRUN_NET      "Enable PE option to for stable execution from network" ON)
 
+option(ORC_BUILD_ORCLIB_ONLY "Build OrcLib only" OFF)
+
 if(NOT ORC_BUILD_COMMAND)
     set(ORC_BUILD_FASTFIND OFF)
     set(ORC_BUILD_ORC      OFF)
@@ -108,7 +110,13 @@ endif()
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(src)
+
+if (ORC_BUILD_ORCLIB_ONLY)
+    return ()
+endif()
+
 add_subdirectory(tools)
+
 if(ORC_BUILD_TEST)
     add_subdirectory(tests)
 endif()

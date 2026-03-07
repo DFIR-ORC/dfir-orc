@@ -8,6 +8,9 @@
 #
 
 add_subdirectory(OrcLib)
+if (ORC_BUILD_ORCLIB_ONLY)
+    return()
+endif()
 
 if(ORC_BUILD_COMMAND OR ORC_BUILD_ORC OR ORC_BUILD_FASTFIND)
 
