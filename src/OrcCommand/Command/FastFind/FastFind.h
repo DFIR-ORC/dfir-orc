@@ -239,6 +239,7 @@ public:
         friend class Main;
 
     public:
+        std::optional<std::wstring> strCapsule;
         std::wstring strNames;
         std::wstring strVersion;
 

@@ -356,6 +356,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                 {
                     config.Registry.m_excludes = config.FileSystem.m_excludes;
                 }
+                else if (OptionalParameterOption(argv[i] + 1, L"Capsule", config.strCapsule))
+                    ;
                 else if (!_wcsnicmp(argv[i] + 1, L"Names", wcslen(L"Names")))
                 {
                     LPCWSTR pEquals = wcschr(argv[i], L'=');
@@ -454,6 +456,19 @@ HRESULT Main::CheckConfiguration()
     HRESULT hr = E_FAIL;
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
+
+    if (config.strCapsule)
+    {
+        auto handle = Text::FromHexToLittleEndian<HANDLE>(std::wstring_view(*config.strCapsule));
+        if (handle)
+        {
+            m_hCapsule = handle.value();
+        }
+        else
+        {
+            Log::Error("Failed to parse Capsule handle [{}]", handle.error());
+        }
+    }
 
     config.FileSystem.Locations.SetShadowCopyParser(
         config.FileSystem.m_shadowsParser.value_or(Ntfs::ShadowCopy::ParserType::kInternal));
