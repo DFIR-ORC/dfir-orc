@@ -78,7 +78,7 @@ public:
     std::wstring FileName;
     std::wstring Path;
 
-    Disposition disposition = Disposition::Append;
+    Disposition disposition = Disposition::CreateNew;
     Status creationStatus = Status::StatusUnknown;
 
     std::wstring ConnectionString;
