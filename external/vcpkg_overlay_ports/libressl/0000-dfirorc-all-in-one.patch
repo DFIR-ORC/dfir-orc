@@ -1,0 +1,239 @@
+diff --git a/include/openssl/opensslfeatures.h b/include/openssl/opensslfeatures.h
+--- a/include/openssl/opensslfeatures.h
++++ b/include/openssl/opensslfeatures.h
+@@ -15,6 +15,12 @@
+ #define __attribute__(a)
+ #endif
+
++#ifndef _SSIZE_T_DEFINED
++#define _SSIZE_T_DEFINED
++#include <BaseTsd.h>
++typedef SSIZE_T ssize_t;
++#endif
++
+ #define OPENSSL_THREADS
+
+ #define OPENSSL_NO_BUF_FREELISTS
+diff --git a/crypto/crypto_init.c b/crypto/crypto_init.c
+--- a/crypto/crypto_init.c
++++ b/crypto/crypto_init.c
+@@ -37,6 +37,8 @@
+ static pthread_t crypto_init_thread;
+ static int crypto_init_cleaned_up;
+
++const char* g_szCryptoInit_CompileTime = __TIME__;
++
+ void openssl_init_crypto_constructor(void)  __attribute__((constructor));
+
+ #ifndef HAVE_CRYPTO_CPU_CAPS_INIT
+diff --git a/crypto/crypto.sym b/crypto/crypto.sym
+--- a/crypto/crypto.sym
++++ b/crypto/crypto.sym
+@@ -3650,3 +3650,4 @@
+ v2i_GENERAL_NAME
+ v2i_GENERAL_NAMES
+ v2i_GENERAL_NAME_ex
++g_szCryptoInit_CompileTime
+diff --git a/crypto/CMakeLists.txt b/crypto/CMakeLists.txt
+--- a/crypto/CMakeLists.txt
++++ b/crypto/CMakeLists.txt
+@@ -601,7 +601,12 @@ set(COMPAT_SRC empty.c)
+ set(CRYPTO_UNEXPORT ${CRYPTO_UNEXPORT} BIO_s_log)
+
++if(WIN32)
++	set(COMPAT_SRC ${COMPAT_SRC} compat/bcrypt_gen_random.c)
++	set(COMPAT_SRC ${COMPAT_SRC} compat/inet_pton.c)
++endif()
++
+ if(UNIX)
+ 	set(CRYPTO_SRC ${CRYPTO_SRC} crypto_lock.c)
+ 	set(CRYPTO_SRC ${CRYPTO_SRC} bio/b_posix.c)
+ 	set(CRYPTO_SRC ${CRYPTO_SRC} ui/ui_openssl.c)
+ endif()
+diff --git a/crypto/compat/getentropy_win.c b/crypto/compat/getentropy_win.c
+--- a/crypto/compat/getentropy_win.c
++++ b/crypto/compat/getentropy_win.c
+@@ -41,7 +41,7 @@ getentropy(void *buf, size_t len)
+ 		return (-1);
+ 	}
+
+-	if (FAILED(BCryptGenRandom(NULL, buf, len, BCRYPT_USE_SYSTEM_PREFERRED_RNG))) {
++	if (FAILED(BCryptGenRandomWrapper(NULL, buf, len, BCRYPT_USE_SYSTEM_PREFERRED_RNG))) {
+ 		errno = EIO;
+ 		return (-1);
+ 	}
+diff --git a/crypto/x509/x509_constraints.c b/crypto/x509/x509_constraints.c
+--- a/crypto/x509/x509_constraints.c
++++ b/crypto/x509/x509_constraints.c
+@@ -49,8 +49,8 @@ cbs_is_ip_address(CBS *cbs, int *is_ip)
+ 		return 1;
+ 	if (!CBS_strdup(cbs, &name))
+ 		return 0;
+-	if (inet_pton(AF_INET, name, &sin4) == 1 ||
+-	    inet_pton(AF_INET6, name, &sin6) == 1)
++	if (inet_pton_wrapper(AF_INET, name, &sin4) == 1 ||
++	    inet_pton_wrapper(AF_INET6, name, &sin6) == 1)
+ 		*is_ip = 1;
+
+ 	free(name);
+diff --git a/ssl/ssl_lib.c b/ssl/ssl_lib.c
+--- a/ssl/ssl_lib.c
++++ b/ssl/ssl_lib.c
+@@ -470,8 +470,8 @@ SSL_set1_host(SSL *s, const char *hostname)
+ 	struct in6_addr in6a;
+
+ 	if (hostname != NULL && *hostname != '\0' &&
+-	    (inet_pton(AF_INET, hostname, &ina) == 1 ||
+-	    inet_pton(AF_INET6, hostname, &in6a) == 1))
++	    (inet_pton_wrapper(AF_INET, hostname, &ina) == 1 ||
++	    inet_pton_wrapper(AF_INET6, hostname, &in6a) == 1))
+ 		return X509_VERIFY_PARAM_set1_ip_asc(s->param, hostname);
+ 	else
+ 		return X509_VERIFY_PARAM_set1_host(s->param, hostname, 0);
+diff --git a/ssl/ssl_tlsext.c b/ssl/ssl_tlsext.c
+--- a/ssl/ssl_tlsext.c
++++ b/ssl/ssl_tlsext.c
+@@ -691,8 +691,8 @@ tlsext_sni_is_ip_literal(CBS *cbs, int *is_ip)
+ 	if (!CBS_strdup(cbs, &hostname))
+ 		return 0;
+
+-	if (inet_pton(AF_INET, hostname, &addrbuf) == 1 ||
+-	    inet_pton(AF_INET6, hostname, &addrbuf) == 1)
++	if (inet_pton_wrapper(AF_INET, hostname, &addrbuf) == 1 ||
++	    inet_pton_wrapper(AF_INET6, hostname, &addrbuf) == 1)
+ 		*is_ip = 1;
+
+ 	free(hostname);
+diff --git a/tls/tls_client.c b/tls/tls_client.c
+--- a/tls/tls_client.c
++++ b/tls/tls_client.c
+@@ -383,8 +383,8 @@ tls_connect_common(struct tls *ctx, const char *servername)
+ 	 * permitted in "HostName".
+ 	 */
+ 	if (ctx->servername != NULL &&
+-	    inet_pton(AF_INET, ctx->servername, &addrbuf) != 1 &&
+-	    inet_pton(AF_INET6, ctx->servername, &addrbuf) != 1) {
++	    inet_pton_wrapper(AF_INET, ctx->servername, &addrbuf) != 1 &&
++	    inet_pton_wrapper(AF_INET6, ctx->servername, &addrbuf) != 1) {
+ 		if (SSL_set_tlsext_host_name(ctx->ssl_conn,
+ 		    ctx->servername) == 0) {
+ 			tls_set_errorx(ctx, TLS_ERROR_UNKNOWN,
+diff --git a/tls/tls_server.c b/tls/tls_server.c
+--- a/tls/tls_server.c
++++ b/tls/tls_server.c
+@@ -107,8 +107,8 @@ tls_servername_cb(SSL *ssl, int *al, void *arg)
+ 	 * (Python, Ruby and Safari) are not RFC compliant. To avoid handshake
+ 	 * failures, pretend that we did not receive the extension.
+ 	 */
+-	if (inet_pton(AF_INET, name, &addrbuf) == 1 ||
+-            inet_pton(AF_INET6, name, &addrbuf) == 1)
++	if (inet_pton_wrapper(AF_INET, name, &addrbuf) == 1 ||
++            inet_pton_wrapper(AF_INET6, name, &addrbuf) == 1)
+ 		return (SSL_TLSEXT_ERR_NOACK);
+
+ 	free(conn_ctx->servername);
+diff --git a/tls/tls_verify.c b/tls/tls_verify.c
+--- a/tls/tls_verify.c
++++ b/tls/tls_verify.c
+@@ -109,10 +109,10 @@ tls_check_subject_altname(struct tls *ctx, X509 *cert, const char *name,
+ 		goto done;
+ 	}
+
+-	if (inet_pton(AF_INET, name, &addrbuf) == 1) {
++	if (inet_pton_wrapper(AF_INET, name, &addrbuf) == 1) {
+ 		type = GEN_IPADD;
+ 		addrlen = 4;
+-	} else if (inet_pton(AF_INET6, name, &addrbuf) == 1) {
++	} else if (inet_pton_wrapper(AF_INET6, name, &addrbuf) == 1) {
+ 		type = GEN_IPADD;
+ 		addrlen = 16;
+ 	} else {
+@@ -354,8 +354,8 @@ tls_check_common_name(struct tls *ctx, X509 *cert, const char *name,
+ 	 * We don't want to attempt wildcard matching against IP addresses,
+ 	 * so perform a simple comparison here.
+ 	 */
+-	if (inet_pton(AF_INET,  name, &addrbuf) == 1 ||
+-	    inet_pton(AF_INET6, name, &addrbuf) == 1) {
++	if (inet_pton_wrapper(AF_INET,  name, &addrbuf) == 1 ||
++	    inet_pton_wrapper(AF_INET6, name, &addrbuf) == 1) {
+ 		if (strcmp(common_name, name) == 0)
+ 			*cn_match = 1;
+ 		goto done;
+diff --git a/include/compat/pthread.h b/include/compat/pthread.h
+index 8211dda..a0bbc78 100644
+--- a/include/compat/pthread.h
++++ b/include/compat/pthread.h
+@@ -42,15 +42,68 @@ _pthread_once_win32_cb(PINIT_ONCE once, PVOID param, PVOID *context)
+ 	return TRUE;
+ }
+
++extern const char* g_szCryptoInit_CompileTime;
++typedef BOOL (WINAPI* FnInitOnceExecuteOnce)(PINIT_ONCE InitOnce, PINIT_ONCE_FN InitFn, PVOID Context, LPVOID* Parameter);
++
+ static inline int
+ pthread_once(pthread_once_t *once, void (*cb) (void))
+ {
+ 	struct _pthread_win32_cb_arg arg = { .cb = cb };
+-	BOOL rc = InitOnceExecuteOnce(&once->once, _pthread_once_win32_cb, &arg, NULL);
+-	if (rc == 0)
+-		return EINVAL;
+-	else
+-		return 0;
++	// Api 'InitOnceExecuteOnce' is only supported since Vista
++    HMODULE hKernel32 = GetModuleHandleA("kernel32.dll");
++    if (hKernel32)
++    {
++        FnInitOnceExecuteOnce fnInitOnceExecuteOnce =
++            (FnInitOnceExecuteOnce)GetProcAddress(hKernel32, "InitOnceExecuteOnce");
++        if (fnInitOnceExecuteOnce)
++        {
++            BOOL rc = fnInitOnceExecuteOnce(&once->once, _pthread_once_win32_cb, &arg, NULL);
++            if (rc == 0)
++                return EINVAL;
++            else
++                return 0;
++        }
++    }
++
++    // Simulate 'InitOnceExecuteOnce' with a mutex which name is hard to predict
++    char szName[128];
++    sprintf(szName, "%04d%s%08x", GetCurrentProcessId(), g_szCryptoInit_CompileTime, &once->once);
++    szName[sizeof(szName) - 1] = 0;
++
++    for (int i = 0; i < strlen(szName); ++i)
++    {
++        if (szName[i] == ':')
++        {
++            szName[i] = '0';
++        }
++    }
++
++    HANDLE hMutex = CreateMutexA(NULL, TRUE, szName);
++    if (hMutex == NULL)
++    {
++        return -1;
++    }
++
++    const DWORD dwLastError = GetLastError();
++    if(dwLastError != ERROR_SUCCESS)
++    {
++        if (dwLastError == ERROR_ALREADY_EXISTS)
++        {
++            if (WaitForSingleObject(hMutex, INFINITE) != WAIT_OBJECT_0)
++            {
++                return -1;
++            }
++
++            ReleaseMutex(hMutex);
++            return 0;
++        }
++
++        return -1;
++    }
++
++    _pthread_once_win32_cb(once, cb, NULL);
++    ReleaseMutex(hMutex);
++    return 0;
+ }
+
+ typedef DWORD pthread_t;

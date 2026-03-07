@@ -1,0 +1,19 @@
+diff --git a/libyara/crypto.h b/libyara/crypto.h
+index d79bea1..4e0ae37 100644
+--- a/libyara/crypto.h
++++ b/libyara/crypto.h
+@@ -60,6 +60,14 @@ typedef SHA256_CTX yr_sha256_ctx;
+ 
+ #include <wincrypt.h>
+ 
++#ifndef ALG_SID_SHA_256
++#define ALG_SID_SHA_256 12
++#endif
++
++#ifndef CALG_SHA_256
++#define CALG_SHA_256 (ALG_CLASS_HASH | ALG_TYPE_ANY | ALG_SID_SHA_256)
++#endif
++
+ extern HCRYPTPROV yr_cryptprov;
+ 
+ typedef HCRYPTHASH yr_md5_ctx;
