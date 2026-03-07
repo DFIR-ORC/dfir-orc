@@ -10,6 +10,7 @@
 
 #include "Utils/Result.h"
 #include "Utils/TypeTraits.h"
+#include "Text/ByteQuantity.h"
 #include "Text/ComparisonOperator.h"
 
 namespace Orc {
@@ -26,6 +27,10 @@ class Threshold
     struct IsByteQuantity<ByteQuantity<U>> : std::true_type
     {
     };
+
+    static constexpr bool kIsIntegral = std::is_integral<T>::value;
+    static constexpr bool kIsByteQuantity = IsByteQuantity<T>::value;
+    static constexpr bool kIsSupportedType = kIsIntegral || kIsByteQuantity;
 
 public:
     Threshold()
@@ -63,28 +68,32 @@ public:
 
     std::string ToString(ByteQuantityBase base = ByteQuantityBase::Base2) const
     {
-        if constexpr (std::is_integral<T>::value)
+        static_assert(kIsSupportedType, "Threshold<T>::ToString: T must be integral or ByteQuantity<U>");
+
+        if constexpr (kIsIntegral)
         {
-            return Text::ToStringView(m_operator) + std::to_wstring(m_value);
+            return std::string(Text::ToStringView(m_operator, false)) + std::to_string(m_value);
         }
-        else if constexpr (IsByteQuantity<T>::value)
+        else if constexpr (kIsByteQuantity)
         {
             std::string s(Text::ToStringView(m_operator, false));
-            Text::ToString(std::back_inserter(s), m_value, base);
+            Orc::Text::ToString(std::back_inserter(s), m_value, base);
             return s;
         }
     }
 
     std::wstring ToWString(ByteQuantityBase base = ByteQuantityBase::Base2) const
     {
-        if constexpr (std::is_integral<T>::value)
+        static_assert(kIsSupportedType, "Threshold<T>::ToWString: T must be integral or ByteQuantity<U>");
+
+        if constexpr (kIsIntegral)
         {
-            return Text::ToWStringView(m_operator) + std::to_wstring(m_value);
+            return std::wstring(Text::ToWStringView(m_operator, false)) + std::to_wstring(m_value);
         }
-        else if constexpr (IsByteQuantity<T>::value)
+        else if constexpr (kIsByteQuantity)
         {
             std::wstring s(Text::ToWStringView(m_operator, false));
-            Text::ToString(std::back_inserter(s), m_value, base);
+            Orc::Text::ToWString(std::back_inserter(s), m_value, base);
             return s;
         }
     }
