@@ -17,38 +17,34 @@ namespace Text {
 template <typename OutputIt, typename T>
 void ToString(OutputIt out, const Orc::ByteQuantity<T>& quantity, ByteQuantityBase base = ByteQuantityBase::Base2)
 {
-    constexpr std::array units = {
-        std::string_view("B"),
-        std::string_view("KB"),
-        std::string_view("MB"),
-        std::string_view("GB"),
-        std::string_view("TB")};
+    constexpr std::array<std::string_view, 5> kUnits = {"B", "KB", "MB", "GB", "TB"};
 
-    const size_t unitSize = (base == ByteQuantityBase::Base10 ? 1000 : 1024);
+    const auto unitSize = static_cast<T>(base == ByteQuantityBase::Base10 ? 1000 : 1024);
 
     T value = quantity.value;
-    size_t index = 0;
-    for (; index < units.size() - 1; ++index)
+    size_t unitIndex = 0;
+
+    // Advance to the largest unit keeping value >= 1.
+    // Stops at kUnits.size()-1 so "TB" is the ceiling.
+    // value==0 exits immediately at index 0 ("B"), which is correct.
+    for (; unitIndex < kUnits.size() - 1; ++unitIndex)
     {
         if (value < unitSize)
-        {
             break;
-        }
 
-        value = value / unitSize;
+        value /= unitSize;
     }
 
-    if constexpr (std::is_same_v<T, char>)
-    {
-        fmt::format_to(out, "{} ", value);
-    }
-    else
-    {
-        fmt::format_to(out, L"{} ", value);
-    }
+    fmt::format_to(out, "{} ", value);  // narrow literal: fmt deduces from OutputIt
 
-    const auto& unit = units[index];
+    const std::string_view unit = kUnits[unitIndex];
     std::copy(std::cbegin(unit), std::cend(unit), out);
+}
+
+template <typename OutputIt, typename T>
+void ToWString(OutputIt out, const Orc::ByteQuantity<T>& quantity, ByteQuantityBase base = ByteQuantityBase::Base2)
+{
+    ToString(out, quantity, base);
 }
 
 Orc::Result<Orc::ByteQuantity<uint64_t>>
