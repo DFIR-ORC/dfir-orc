@@ -18,6 +18,7 @@ option(ORC_DISABLE_PRECOMPILED_HEADERS "Disable precompiled headers" OFF)
 option(ORC_SWAPRUN_NET      "Enable PE option to for stable execution from network" ON)
 
 option(ORC_BUILD_ORCLIB_ONLY "Build OrcLib only" OFF)
+option(ORC_BUILD_CAPSULE_ONLY "Build OrcCapsule only" OFF)
 
 if(NOT ORC_BUILD_COMMAND)
     set(ORC_BUILD_FASTFIND OFF)
@@ -111,7 +112,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(src)
 
-if (ORC_BUILD_ORCLIB_ONLY)
+if (ORC_BUILD_ORCLIB_ONLY OR ORC_BUILD_CAPSULE_ONLY)
     return ()
 endif()
 

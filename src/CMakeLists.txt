@@ -7,6 +7,11 @@
 #            Jean Gautier
 #
 
+if(ORC_BUILD_CAPSULE_ONLY)
+    add_subdirectory(OrcCapsule)
+    return()
+endif()
+
 add_subdirectory(OrcLib)
 if (ORC_BUILD_ORCLIB_ONLY)
     return()
