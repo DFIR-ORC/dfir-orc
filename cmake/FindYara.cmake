@@ -32,11 +32,12 @@ find_library(YARA_LIB_RELEASE
 
 add_library(yara::yara INTERFACE IMPORTED)
 
-find_package(OpenSSL REQUIRED)
+find_package(LibreSSL CONFIG REQUIRED)
 
 # Add 'OpenSSL::Crypto' if yara is built with openssl or libressl
 target_link_libraries(yara::yara
     INTERFACE
         debug ${YARA_LIB_DEBUG} optimized ${YARA_LIB_RELEASE}
-        OpenSSL::Crypto
+        LibreSSL::Crypto
+        LibreSSL::SSL
 )
