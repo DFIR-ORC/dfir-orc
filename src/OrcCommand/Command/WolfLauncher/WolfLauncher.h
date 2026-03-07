@@ -100,6 +100,7 @@ public:
         std::optional<std::wstring> strCapsule;
 
         OutputSpec TempWorkingDir;
+        OutputSpec SafeTemp;
 
         std::optional<std::wstring> strOfflineLocation;
 

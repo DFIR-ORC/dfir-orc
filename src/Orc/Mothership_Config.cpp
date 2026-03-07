@@ -17,8 +17,6 @@
 
 #include "DownloadTask.h"
 
-#include "WorkingTemp.h"
-
 #include <sstream>
 #include <algorithm>
 
@@ -190,26 +188,10 @@ HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
 
-    auto workingTemp = CreateWorkingTemp(config.Temporary.Path);
-    if (!workingTemp)
-    {
-        Log::Error(L"Failed to create working directory [{}]", workingTemp.error());
-        return E_FAIL;
-    }
-
-    ::ChangeTemporaryEnvironment(*workingTemp);
-
-    auto restrictedTemp = CreateRestrictedDirectory(*workingTemp);
-    if (!restrictedTemp)
-    {
-        Log::Error(L"Failed to create restricted temporary directory [{}]", restrictedTemp.error());
-        return E_FAIL;
-    }
-
-    hr = config.Temporary.Configure(OutputSpec::Kind::Directory, *restrictedTemp);
+    hr = config.Temporary.Configure(OutputSpec::Kind::Directory, config.Temporary.Path);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to configure temporary directory '{}' [{}]", *workingTemp, SystemError(hr));
+        Log::Error(L"Failed to configure temporary directory '{}' [{}]", config.Temporary.Path, SystemError(hr));
         return hr;
     }
 

@@ -47,8 +47,6 @@ set(SRC_COMMON
     "CpuId.cpp"
     "CpuInfo.h"
     "CpuInfo.cpp"
-    "WorkingTemp.h"
-    "WorkingTemp.cpp"
 )
 
 # stdafx.[cpp|h] must be included first, don't include them in SRC_COMMON

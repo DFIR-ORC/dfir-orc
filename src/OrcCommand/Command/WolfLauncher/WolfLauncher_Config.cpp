@@ -33,8 +33,6 @@
 #include "Utils/WinApi.h"
 #include "Utils/Threshold.h"
 
-#include "WorkingTemp.h"
-
 using namespace Orc;
 using namespace Orc::Command::Wolf;
 
@@ -724,6 +722,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (OutputOption(argv[i] + 1, L"TempDir", OutputSpec::Kind::Directory, config.TempWorkingDir))
                         ;
+                    else if (OutputOption(argv[i] + 1, L"SafeTemp", OutputSpec::Kind::Directory, config.SafeTemp))
+                        ;
                     else if (OutputOption(argv[i] + 1, L"Outline", OutputSpec::Kind::StructuredFile, config.Outline))
                         ;
                     else if (OutputOption(argv[i] + 1, L"Outcome", OutputSpec::Kind::StructuredFile, config.Outcome))
@@ -1005,55 +1005,43 @@ HRESULT Main::CheckConfiguration()
         return E_INVALIDARG;
     }
 
-    if (config.TempWorkingDir.Type == OutputSpec::Kind::None
-        || config.TempWorkingDir.Type == OutputSpec::Kind::Directory)
+    // Reuse provided safe temp directory (internal command line parameter option) or create a new safe directory
+    std::optional<std::wstring> safeTemp;
+    if (config.SafeTemp.Type == OutputSpec::Kind::Directory)
     {
-        auto workingTemp = CreateWorkingTemp(config.TempWorkingDir.Path);
-        if (!workingTemp)
-        {
-            Log::Debug("Failed to create temporary directory [{}]", workingTemp.error());
-            return E_FAIL;
-        }
-
-        m_emptyDirectoriesToRemove.push_back(*workingTemp);
-
-        auto restrictedTemp = CreateRestrictedDirectory(*workingTemp);
-        if (!restrictedTemp)
-        {
-            Log::Debug("Failed to create restricted temporary directory [{}]", restrictedTemp.error());
-            return E_FAIL;
-        }
-
-        m_emptyDirectoriesToRemove.push_back(*restrictedTemp);
-
-        if (FAILED(hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, *restrictedTemp)))
-        {
-            Log::Error(L"Failed to use default temporary directory from %TEMP%");
-            return hr;
-        }
-    }
-
-    if (config.TempWorkingDir.Type != OutputSpec::Kind::Directory)
-    {
-        Log::Error("Invalid temporary location specification");
-        return E_INVALIDARG;
+        safeTemp = config.SafeTemp.Path;
     }
     else
     {
-        auto temp = config.TempWorkingDir.Path;
-        if (!SetEnvironmentVariableW(L"TEMP", temp.c_str()))
-        {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to set %TEMP% to '{}' [{}]", temp, SystemError(hr));
-            return E_INVALIDARG;
-        }
+        Log::Error(L"Invalid safe temporary directory");
+        return E_INVALIDARG;
+    }
 
-        if (!SetEnvironmentVariableW(L"TMP", temp.c_str()))
-        {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Error(L"Failed to set %TMP% to '{}' [{}]", temp, SystemError(hr));
-            return E_INVALIDARG;
-        }
+    if (FAILED(hr = config.SafeTemp.Configure(OutputSpec::Kind::Directory, *safeTemp)))
+    {
+        Log::Error(L"Failed to use default temporary directory from %TEMP%");
+        return hr;
+    }
+
+    // Overwrite temp directory with the safe temp directory
+    if (FAILED(hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, *safeTemp)))
+    {
+        Log::Error(L"Failed to use default temporary directory from %TEMP%");
+        return hr;
+    }
+
+    if (!SetEnvironmentVariableW(L"TEMP", config.TempWorkingDir.Path.c_str()))
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Error(L"Failed to set %TEMP% to '{}' [{}]", config.TempWorkingDir.Path, SystemError(hr));
+        return E_INVALIDARG;
+    }
+
+    if (!SetEnvironmentVariableW(L"TMP", config.TempWorkingDir.Path.c_str()))
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Error(L"Failed to set %TMP% to '{}' [{}]", config.TempWorkingDir.Path, SystemError(hr));
+        return E_INVALIDARG;
     }
 
     if (config.Outline.Type != OutputSpec::Kind::None)
