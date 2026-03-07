@@ -1,0 +1,161 @@
+name: Build DFIR-ORC
+
+on:
+  push:
+    branches:
+      - 'release/*'
+      - 'main'
+      - 'dev'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build DFIR-ORC
+    runs-on: windows-2022
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Detect Visual Studio install path
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vsPath = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -property installationPath
+          echo "VSINSTALLDIR=$vsPath" >> $env:GITHUB_ENV
+
+      - name: Install v141_xp toolset and other VS dependencies
+        shell: pwsh
+        timeout-minutes: 15
+        run: |
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe"
+
+          Write-Host "Using installer: $installer"
+          Write-Host "Install path: $env:VSINSTALLDIR"
+
+          $args = @(
+            "modify",
+            "--quiet",
+            "--norestart",
+            "--installPath", "`"$env:VSINSTALLDIR`"",
+            "--add", "Microsoft.VisualStudio.Component.VC.v141.x86.x64",
+            "--add", "Microsoft.VisualStudio.Component.VC.v141.ATL",
+            "--add", "Microsoft.VisualStudio.Component.WinXP",
+            "--add", "Microsoft.VisualStudio.Component.VC.TestAdapterForBoostTest",
+            "--add", "Microsoft.VisualStudio.Component.VC.TestAdapterForGoogleTest",
+            "--add", "Microsoft.VisualStudio.Component.VC.UnitTest"
+          )
+
+          Write-Host "Args: $($args -join ' ')"
+
+          $proc = Start-Process -FilePath $installer -ArgumentList $args -Wait -PassThru
+
+          Write-Host "Installer exit code: $($proc.ExitCode)"
+          if ($proc.ExitCode -ne 0 -and $proc.ExitCode -ne 3010) {
+            throw "VS installer failed with exit code $($proc.ExitCode)"
+          }
+
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          submodules: recursive
+          clean: true
+
+      - name: Build DFIR-ORC
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        env:
+          VCPKG_BUILD_TYPE: release
+          VCPKG_DEFAULT_BINARY_CACHE: ${{ runner.temp }}\vcpkg-archives
+          VCPKG_VISUAL_STUDIO_PATH: ${{ env.VSINSTALLDIR }}
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+          .\Build-Orc.ps1 -BuildConfig MinSizeRel -FastFind
+
+      - name: Collect intermediate artefacts into staging directory
+        shell: pwsh
+        run: |
+          $workspace   = "${{ github.workspace }}"
+          $buildDir    = Join-Path $workspace "build"
+          $buildConfig = "MinSizeRel"
+          $staging     = Join-Path $workspace "staging"
+
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
+
+          $intermediateDirs = @(
+            "capsule-x86-xp",
+            "dfir-orc-x86-xp",
+            "dfir-orc-x64-xp"
+          )
+
+          foreach ($dir in $intermediateDirs) {
+            $src = Join-Path $buildDir "$dir\$buildConfig"
+            if (-not (Test-Path $src)) {
+              Write-Warning "Directory not found, skipping: $src"
+              continue
+            }
+            Get-ChildItem -Path $src -Recurse -Include "*.exe", "*.pdb" | ForEach-Object {
+              $target = Join-Path $staging $_.Name
+              if (Test-Path $target) {
+                Write-Warning "Name collision, overwriting: $($_.Name) (from $dir)"
+              }
+              Copy-Item -Path $_.FullName -Destination $target -Force
+            }
+          }
+
+          Write-Host "Staging directory contents:"
+          Get-ChildItem -Path $staging | ForEach-Object { Write-Host "  $($_.Name)" }
+
+      - name: Publish DFIR-ORC.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: DFIR-ORC.exe
+          path: ${{ github.workspace }}\build\MinSizeRel\DFIR-ORC.exe
+          if-no-files-found: error
+
+      - name: Publish FastFind.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: FastFind.exe
+          path: ${{ github.workspace }}\build\MinSizeRel\FastFind.exe
+          if-no-files-found: error
+
+      - name: Publish intermediate artefacts archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: DFIR-ORC-binaries
+          path: ${{ github.workspace }}\staging\*
+          if-no-files-found: error
+
+      - name: Build DFIR-ORC-binaries.zip for release upload
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $zip = "${{ github.workspace }}\DFIR-ORC-binaries.zip"
+          Compress-Archive -Path "${{ github.workspace }}\staging\*" -DestinationPath $zip -Force
+          Write-Host "Archive created: $zip"
+
+      - name: Publish to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $isPrerelease = $tag -match '-(alpha|beta|rc)\d*$'
+
+          $ghArgs = @(
+            "release", "create", $tag,
+            "--title", $tag,
+            "--notes-file", "${{ github.workspace }}\release-notes.md",
+            "${{ github.workspace }}\build\MinSizeRel\DFIR-ORC.exe",
+            "${{ github.workspace }}\build\MinSizeRel\FastFind.exe",
+            "${{ github.workspace }}\DFIR-ORC-binaries.zip"
+          )
+
+          if ($isPrerelease) { $ghArgs += "--prerelease" }
+
+          gh @ghArgs
