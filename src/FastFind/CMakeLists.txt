@@ -44,7 +44,6 @@ target_link_libraries(FastFind
     PRIVATE
         OrcCommand
         crypt32.lib
-        VisualStudio::atls
 )
 
 if(${ORC_SWAPRUN_NET})
