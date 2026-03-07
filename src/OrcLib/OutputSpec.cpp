@@ -349,6 +349,29 @@ OutputSpec::Configure(OutputSpec::Kind supported, const ConfigItem& item, std::o
     {
         Password = item.SubItems[CONFIG_OUTPUT_PASSWORD];
     }
+
+    if (::HasValue(item, CONFIG_OUTPUT_DISPOSITION))
+    {
+        if (equalCaseInsensitive(item.SubItems[CONFIG_OUTPUT_DISPOSITION].c_str(), L"Truncate"sv))
+        {
+            disposition = OutputSpec::Disposition::Truncate;
+        }
+        else if (equalCaseInsensitive(item.SubItems[CONFIG_OUTPUT_DISPOSITION].c_str(), L"Append"sv))
+        {
+            disposition = OutputSpec::Disposition::Append;
+        }
+        else if (equalCaseInsensitive(item.SubItems[CONFIG_OUTPUT_DISPOSITION].c_str(), L"CreateNew"sv))
+        {
+            disposition = OutputSpec::Disposition::CreateNew;
+        }
+        else
+        {
+            Log::Error(
+                L"Invalid disposition for output in config file: {}", item.SubItems[CONFIG_OUTPUT_DISPOSITION].c_str());
+            return E_INVALIDARG;
+        }
+    }
+
     return S_OK;
 }
 
