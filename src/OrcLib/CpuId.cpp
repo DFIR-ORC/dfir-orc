@@ -381,6 +381,9 @@ bool CpuId::Has3DNOW() const
 #elif defined(_M_ARM64)
 // ARM 64-bit specific code
 
+CpuId::CpuId()
+{
+}
 
 #else
 #error "Unsupported architecture"

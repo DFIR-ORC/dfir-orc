@@ -30,6 +30,10 @@
 #include "Utils/Guard.h"
 #include "Text/Fmt/Result.h"
 
+#ifndef PROCESSOR_ARCHITECTURE_ARM64
+#    define PROCESSOR_ARCHITECTURE_ARM64 12
+#endif
+
 namespace fs = std::filesystem;
 using namespace std::string_view_literals;
 using namespace Orc;
@@ -542,6 +546,9 @@ const SystemTags& Orc::SystemDetails::GetSystemTags()
             break;
         case PROCESSOR_ARCHITECTURE_AMD64:
             tags.insert(L"x64"s);
+            break;
+        case PROCESSOR_ARCHITECTURE_ARM64:
+            tags.insert(L"arm64"s);
             break;
         default:
             throw Exception(Severity::Fatal, L"Unsupported architechture {}"sv, wArch);
