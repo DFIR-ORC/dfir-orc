@@ -130,15 +130,21 @@ HRESULT Main::Run_Dump()
     hr = EmbeddedResource::EnumValues(input, values);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to enumerate values from '{}' [{}]", input, SystemError(hr));
-        return hr;
+        if (hr != HRESULT_FROM_WIN32(ERROR_RESOURCE_TYPE_NOT_FOUND))
+        {
+            Log::Debug(L"Failed to enumerate values from '{}' [{}]", input, SystemError(hr));
+            return hr;
+        }
     }
 
     hr = EmbeddedResource::EnumBinaries(input, values);
     if (FAILED(hr))
     {
-        Log::Error(L"Failed to enumerate values from '{}' [{}]", input, SystemError(hr));
-        return hr;
+        if (hr != HRESULT_FROM_WIN32(ERROR_RESOURCE_TYPE_NOT_FOUND))
+        {
+            Log::Debug(L"Failed to enumerate binaries from '{}' [{}]", input, SystemError(hr));
+            return hr;
+        }
     }
 
     hr = EmbeddedResource::ExpandArchivesAndBinaries(L".", values);

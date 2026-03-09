@@ -966,7 +966,7 @@ HRESULT EmbeddedResource::EnumValues(const std::wstring& Module, std::vector<Emb
 
     if (FAILED(hr = pExt->EnumResourceNamesW(hInstance, VALUES(), V_EnumResourceNamesEx_Function, (ULONG_PTR)&param)))
     {
-        Log::Error(L"Failed to enumerate values resources [{}]", SystemError(hr));
+        Log::Debug(L"Failed to enumerate values resources [{}]", SystemError(hr));
         return hr;
     }
 
@@ -1040,7 +1040,7 @@ HRESULT EmbeddedResource::EnumBinaries(const std::wstring& Module, std::vector<E
 
     if (FAILED(hr = pExt->EnumResourceNamesW(hInstance, BINARY(), B_EnumResourceNamesEx_Function, (ULONG_PTR)&param)))
     {
-        Log::Error("Failed to enumerate values resources [{}]", SystemError(hr));
+        Log::Debug("Failed to enumerate values resources [{}]", SystemError(hr));
         return hr;
     }
 
@@ -1190,14 +1190,23 @@ HRESULT EmbeddedResource::DeleteEmbeddedResources(
     {
         if (FAILED(hr = EnumValues(inModule, to_delete)))
         {
-            Log::Error("Failed to enumerate resources to delete [{}]", SystemError(hr));
-            return hr;
+            if (hr != HRESULT_FROM_WIN32(ERROR_RESOURCE_TYPE_NOT_FOUND))
+            {
+                Log::Error("Failed to enumerate resources to delete [{}]", SystemError(hr));
+                return hr;
+            }
         }
+
         if (FAILED(hr = EnumBinaries(inModule, to_delete)))
         {
-            Log::Error("Failed to enumerate resources to delete [{}]", SystemError(hr));
-            return hr;
+            if (hr != HRESULT_FROM_WIN32(ERROR_RESOURCE_TYPE_NOT_FOUND))
+            {
+                Log::Error("Failed to enumerate resources to delete [{}]", SystemError(hr));
+                return hr;
+            }
         }
+
+        values = to_delete;
     }
     else
     {
