@@ -20,8 +20,10 @@
 #include "CSVFileWriter.h"
 #include <filesystem>
 #include <array>
-#include "Text/Fmt/LocationType.h"
 
+#include "Utils/WinApi.h"
+
+#include "Text/Fmt/LocationType.h"
 #include "Text/Fmt/Partition.h"
 #include "Text/Fmt/PartitionType.h"
 #include "Text/Fmt/PartitionFlags.h"
@@ -114,26 +116,25 @@ std::wstring Main::getBootDiskName()
     volume += volumeLetter;
     volume += L":";
 
-    HANDLE hVolume =
-        CreateFileW(volume.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL);
-    if (hVolume == INVALID_HANDLE_VALUE)
+    auto hVolume = CreateFileApi(
+        volume.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, NULL, NULL);
+    if (!hVolume)
     {
-        Log::Error(L"Failed CreateFileW to open volume '{}' [{}]", volume, LastWin32Error());
+        Log::Error(L"Failed CreateFileW to open volume '{}' [{}]", volume, hVolume.error());
         return {};
     }
-
-    Guard::Scope sg([&hVolume]() {
-        if (hVolume != INVALID_HANDLE_VALUE)
-        {
-            CloseHandle(hVolume);
-            hVolume = INVALID_HANDLE_VALUE;
-        }
-    });
 
     VOLUME_DISK_EXTENTS outBuffer;
     DWORD bytesReturned = 0, ioctlLastError = 0;
     BOOL ioctlBool = DeviceIoControl(
-        hVolume, IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS, NULL, 0, &outBuffer, sizeof(outBuffer), &bytesReturned, NULL);
+        hVolume->value(),
+        IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS,
+        NULL,
+        0,
+        &outBuffer,
+        sizeof(outBuffer),
+        &bytesReturned,
+        NULL);
     if (!ioctlBool)
     {
         const auto lastError = GetLastError();
@@ -534,8 +535,9 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
                     efiPartitionSizeToDump = (DWORD)partition.Size;
                 }
 
-                dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-                    diskName, partition.Start, efiPartitionSizeToDump, L"EFI-partition", diskInterfaceToRead));
+                dumpedChunks.push_back(
+                    std::make_shared<DiskChunkStream>(
+                        diskName, partition.Start, efiPartitionSizeToDump, L"EFI-partition", diskInterfaceToRead));
             }
         }
     }
@@ -675,8 +677,9 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
                     iplOffset = hiddenSectors * partition.SectorSize + partition.SectorSize;
 
                     description = L"IPL of " + partitionDesc;
-                    dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-                        diskName, iplOffset, iplSizeInBytes, description.c_str(), diskInterfaceToRead));
+                    dumpedChunks.push_back(
+                        std::make_shared<DiskChunkStream>(
+                            diskName, iplOffset, iplSizeInBytes, description.c_str(), diskInterfaceToRead));
 
                     if (iplOffset != (partition.Start + partition.SectorSize))
                     {
@@ -726,8 +729,9 @@ HRESULT Main::DumpBootCode(const std::wstring& diskName, const std::wstring& dis
                         iplOffset = hiddenSectorsVbrBackup * partition.SectorSize + partition.SectorSize;
 
                         description = L"IPL of " + partitionDesc + L" by following VBR backup";
-                        dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-                            diskName, iplOffset, iplSizeInBytes, description.c_str(), diskInterfaceToRead));
+                        dumpedChunks.push_back(
+                            std::make_shared<DiskChunkStream>(
+                                diskName, iplOffset, iplSizeInBytes, description.c_str(), diskInterfaceToRead));
                     }
                 }
                 else
@@ -806,12 +810,13 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
         }
 
         // Dump partition table entries
-        dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-            diskName,
-            gptHeader->PartitionEntryLba * sectorSize,
-            gptHeader->NumberOfPartitionEntries * gptHeader->SizeofPartitionEntry,
-            L"GPT-primary-partition-entries",
-            diskInterfaceToRead));
+        dumpedChunks.push_back(
+            std::make_shared<DiskChunkStream>(
+                diskName,
+                gptHeader->PartitionEntryLba * sectorSize,
+                gptHeader->NumberOfPartitionEntries * gptHeader->SizeofPartitionEntry,
+                L"GPT-primary-partition-entries",
+                diskInterfaceToRead));
 
         /*
         // Get the secondary GPT
@@ -849,12 +854,13 @@ HRESULT Main::DumpRawGPT(const std::wstring& diskName, const std::wstring& diskI
             }
 
             // Dump partition table entries
-            dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-                diskName,
-                gptHeader->PartitionEntryLba * sectorSize,
-                gptHeader->NumberOfPartitionEntries * gptHeader->SizeofPartitionEntry,
-                L"GPT-secondary-partition-entries",
-                diskInterfaceToRead));
+            dumpedChunks.push_back(
+                std::make_shared<DiskChunkStream>(
+                    diskName,
+                    gptHeader->PartitionEntryLba * sectorSize,
+                    gptHeader->NumberOfPartitionEntries * gptHeader->SizeofPartitionEntry,
+                    L"GPT-secondary-partition-entries",
+                    diskInterfaceToRead));
         }
     }
 
@@ -957,8 +963,9 @@ HRESULT Main::DumpSlackSpace(const std::wstring& diskName, const std::wstring& d
 
 HRESULT Main::DumpCustomSample(const std::wstring& diskName, const std::wstring& diskInterfaceToRead)
 {
-    dumpedChunks.push_back(std::make_shared<DiskChunkStream>(
-        diskName, config.customSampleOffset, config.customSampleSize, L"Custom sample", diskInterfaceToRead));
+    dumpedChunks.push_back(
+        std::make_shared<DiskChunkStream>(
+            diskName, config.customSampleOffset, config.customSampleSize, L"Custom sample", diskInterfaceToRead));
     return S_OK;
 }
 
