@@ -41,18 +41,18 @@ void Main::PrintUsage()
         "binary.");
 
     constexpr std::array kSpecificParameters = {
-        Usage::Parameter {
-            "/Input=<Path>", "Path to the binary which ToolEmbed uses as a 'Mothership' or main executable"},
         Usage::Parameter {"/Out=<Path>", "Output file. Copy of the input file with the specified resources added"},
         Usage::Parameter {"/Run=<Resource>", "Specify which binary should be run by 'Mothership' or /Input binary"},
+        Usage::Parameter {"/AddFile=<Path>,<Name>", "Add specified file <Path> as resource with name <Name>"},
+        Usage::Parameter {"/Dump[=<Path>]", "Extract the resources from current or specified binary"}};
+        Usage::Parameter {
+            "[DEPRECATED] /Input=<Path>", "Path to the binary which ToolEmbed uses as a 'Mothership' or main executable"},
         Usage::Parameter {
             "[DEPRECATED] /Run32=<Resource>",
             "Specify which binary should be run by 'Mothership' or '/Input' binary on 32 bit platform"},
         Usage::Parameter {
             "[DEPRECATED] /Run64=<Resource>",
             "Specify which binary should be run by 'Mothership' or '/Input' binary on 64 bit platform"},
-        Usage::Parameter {"/AddFile=<Path>,<Name>", "Add specified file <Path> as resource with name <Name>"},
-        Usage::Parameter {"/Dump[=<Path>]", "Extract the resources from current or specified binary"}};
 
     Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
 
@@ -69,7 +69,11 @@ void Main::PrintParameters()
 
     PrintCommonParameters(node);
 
-    PrintValue(node, L"Input", config.strInputFile);
+    if (!m_capsule)
+    {
+        PrintValue(node, L"Input", config.strInputFile);
+    }
+
     PrintValue(node, L"Output", config.Output);
 
     std::vector<std::reference_wrapper<const EmbeddedResource::EmbedSpec>> toEmbed;

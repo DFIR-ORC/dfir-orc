@@ -91,7 +91,7 @@ HRESULT Orc::Config::ToolEmbed::root(ConfigItem& item)
     item.dwIndex = 0L;
     item.Status = ConfigItem::MISSING;
 
-    if (FAILED(hr = item.AddChildNode(L"input", TOOLEMBED_INPUT, ConfigItem::MANDATORY)))
+    if (FAILED(hr = item.AddChildNode(L"input", TOOLEMBED_INPUT, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddChild(L"output", Orc::Config::Common::output, TOOLEMBED_OUTPUT)))
         return hr;
