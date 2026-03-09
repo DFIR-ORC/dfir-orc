@@ -63,9 +63,7 @@ namespace {
 
 HANDLE OpenVolume(const std::wstring& volume)
 {
-    HANDLE hVolume = INVALID_HANDLE_VALUE;
-
-    hVolume = CreateFile(
+    auto hVolume = CreateFileApi(
         volume.c_str(),
         GENERIC_READ,
         FILE_SHARE_DELETE | FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -74,13 +72,13 @@ HANDLE OpenVolume(const std::wstring& volume)
         0L,
         NULL);
 
-    if (hVolume == INVALID_HANDLE_VALUE)
+    if (!hVolume)
     {
         Log::Debug(L"Failed to open volume: '{}' [{}]", volume, LastWin32Error());
         return INVALID_HANDLE_VALUE;
     }
 
-    return hVolume;
+    return hVolume->release();
 }
 
 HRESULT GetUSNJournalConfiguration(HANDLE hVolume, DWORDLONG& maximumSize, DWORDLONG& allocationDelta)
