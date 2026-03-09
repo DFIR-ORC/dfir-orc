@@ -571,6 +571,63 @@ HRESULT Main::CheckConfiguration()
 
     UtilitiesLoggerConfiguration::Apply(m_logging, m_utilitiesConfig.log);
 
+    if ((config.Output.IsFile() || config.Output.IsDirectory()) && !config.Output.Path.empty()
+        && !std::filesystem::path(config.Output.Path).is_absolute())
+    {
+        auto output = std::filesystem::absolute(config.Output.Path, ec);
+        if (ec)
+        {
+            Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", config.Output.Path, ec);
+            ec.clear();
+        }
+        else
+        {
+            config.Output.Path = output;
+        }
+    }
+
+    // Convert /AddFile path to absolute path
+    for (auto& item : config.ToEmbed)
+    {
+        if (item.Value.find(L":#") != std::wstring::npos)
+        {
+            continue;
+        }
+
+        if (item.Type == EmbeddedResource::EmbedSpec::EmbedType::Archive)
+        {
+            for (auto& archiveItem : item.ArchiveItems)
+            {
+                auto absolutePath = std::filesystem::absolute(archiveItem.Path, ec);
+                if (ec)
+                {
+                    Log::Debug(
+                        L"Failed to convert to absolute path archive item (archive: {}, name: {}, value: {}) [{}]",
+                        item.Name,
+                        archiveItem.Name,
+                        archiveItem.Path,
+                        ec);
+                    return E_FAIL;
+                }
+
+                archiveItem.Path = absolutePath;
+            }
+        }
+
+        if (!std::filesystem::path(item.Value).is_absolute())
+        {
+            auto absolutePath = std::filesystem::absolute(item.Value, ec);
+            if (ec)
+            {
+                Log::Debug(
+                    L"Failed to convert to absolute path item (name: {}, value: {}) [{}]", item.Name, item.Value, ec);
+                return E_FAIL;
+            }
+
+            item.Value = absolutePath;
+        }
+    }
+
     if (config.m_strCapsule)
     {
         auto handle = Text::FromHexToLittleEndian<HANDLE>(std::wstring_view(*config.m_strCapsule));
