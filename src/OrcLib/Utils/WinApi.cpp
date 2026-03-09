@@ -791,7 +791,7 @@ std::wstring GetTempPathApi(size_t cbMaxOutput, std::error_code& ec) noexcept
     std::wstring path;
     try
     {
-        path.resize(cbMaxOutput);
+        path.resize(cchMaxOutput);
 
         size_t cch = ::GetTempPathW(cchMaxOutput, path.data());
         if (cch == 0)
