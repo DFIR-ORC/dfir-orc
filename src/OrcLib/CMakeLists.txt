@@ -957,12 +957,13 @@ set(SRC_UTILITIES_SYSTEM
 
 source_group(Utilities\\System FILES ${SRC_UTILITIES_SYSTEM})
 
-set(SRC_UTILITIES_TEST
-    "UnitTestHelper.cpp"
-    "UnitTestHelper.h"
-)
-
-source_group(Utilities\\Test FILES ${SRC_UTILITIES_TEST})
+if (ORC_BUILD_TEST)
+    set(SRC_UTILITIES_TEST
+        "UnitTestHelper.cpp"
+        "UnitTestHelper.h"
+    )
+    source_group(Utilities\\Test FILES ${SRC_UTILITIES_TEST})
+endif()
 
 add_library(OrcLib
     STATIC

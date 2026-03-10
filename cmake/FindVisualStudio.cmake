@@ -25,6 +25,10 @@ else()
 endif()
 get_filename_component(VS_INSTALL_DIR "${VS_INSTALL_DIR}" ABSOLUTE)
 
+if (NOT ORC_BUILD_TEST)
+    return()
+endif()
+
 #from architecture.cmake
 get_target_architecture(RESULT_VARIABLE "TARGET_ARCH")
 
