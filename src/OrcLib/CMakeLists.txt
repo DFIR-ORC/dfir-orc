@@ -329,7 +329,6 @@ set(SRC_INOUT_ARCHIVE_SEVENZIP
     "ArchiveOpenCallback.h"
     "ArchiveUpdateCallback.cpp"
     "ArchiveUpdateCallback.h"
-    "GUIDs.cpp"
     "PropVariant.cpp"
     "PropVariant.h"
     "ZipCreate.cpp"
