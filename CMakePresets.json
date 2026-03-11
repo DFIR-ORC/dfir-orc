@@ -7,7 +7,7 @@
             "toolset": "v143",
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/external/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports",
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp",
                 "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/external/vcpkg_overlay_triplets",
                 "ORC_BUILD_APACHE_ORC": "OFF",
                 "ORC_BUILD_FASTFIND": "ON",
@@ -65,6 +65,7 @@
             "toolset": "v141_xp",
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x86-windows-static-xp",
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp",
                 "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0"
             }
         },
@@ -76,6 +77,7 @@
             "toolset": "v141_xp",
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static-xp",
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp",
                 "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0"
             }
         },
@@ -91,12 +93,13 @@
         {
             "name": "capsule-base",
             "hidden": true,
+            "toolset": "v141_xp",
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/external/vcpkg/scripts/buildsystems/vcpkg.cmake",
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp",
                 "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/external/vcpkg_overlay_triplets",
                 "VCPKG_MANIFEST_DIR": "${sourceDir}/src/OrcCapsule",
-                "ORC_BUILD_CAPSULE_ONLY": "ON",
-                "CMAKE_CXX_FLAGS": "/DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION /DBOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES"
+                "ORC_BUILD_CAPSULE_ONLY": "ON"
             },
             "environment": {
                 "VCPKG_FEATURE_FLAGS": "manifests,versions"
@@ -108,11 +111,7 @@
             "binaryDir": "${sourceDir}/build/capsule-x86-xp",
             "architecture": "Win32",
             "cacheVariables": {
-                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports",
-                "VCPKG_TARGET_TRIPLET": "x86-windows-static-xp",
-                "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0 /DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION /DBOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES",
-                "CMAKE_GENERATOR_TOOLSET": "v141_xp",
-                "CMAKE_GENERATOR_PLATFORM": "Win32"
+                "VCPKG_TARGET_TRIPLET": "x86-windows-static-xp"
             }
         },
         {
@@ -121,11 +120,7 @@
             "binaryDir": "${sourceDir}/build/capsule-x64-xp",
             "architecture": "x64",
             "cacheVariables": {
-                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports",
-                "VCPKG_TARGET_TRIPLET": "x64-windows-static-xp",
-                "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0 /DBOOST_MULTI_INDEX_DISABLE_SERIALIZATION /DBOOST_MULTI_INDEX_DISABLE_COMPRESSED_ORDERED_INDEX_NODES",
-                "CMAKE_GENERATOR_TOOLSET": "v141_xp",
-                "CMAKE_GENERATOR_PLATFORM": "x64"
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static-xp"
             }
         },
         {
@@ -133,7 +128,6 @@
             "inherits": "capsule-base",
             "binaryDir": "${sourceDir}/build/capsule-arm64",
             "architecture": "ARM64",
-            "toolset": "v143",
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "arm64-windows-static"
             }
