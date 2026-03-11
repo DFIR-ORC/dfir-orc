@@ -10,6 +10,7 @@ endif()
 
 add_library(7zip)
 
+# Check makefile in srcdir/CPP/7zip/Archive/7z/makefile
 target_sources(7zip PRIVATE
     CPP/7zip/Compress/Bcj2Coder.cpp
     CPP/7zip/Compress/Bcj2Register.cpp
@@ -23,6 +24,7 @@ target_sources(7zip PRIVATE
     CPP/7zip/Compress/BZip2Decoder.cpp
     CPP/7zip/Compress/BZip2Encoder.cpp
     CPP/7zip/Compress/BZip2Register.cpp
+    CPP/7zip/Compress/CodecExports.cpp
     CPP/7zip/Compress/CopyCoder.cpp
     CPP/7zip/Compress/CopyRegister.cpp
     CPP/7zip/Compress/Deflate64Register.cpp
@@ -31,6 +33,7 @@ target_sources(7zip PRIVATE
     CPP/7zip/Compress/DeflateRegister.cpp
     CPP/7zip/Compress/DeltaFilter.cpp
     CPP/7zip/Compress/ImplodeDecoder.cpp
+    CPP/7zip/Compress/ImplodeHuffmanDecoder.cpp
     CPP/7zip/Compress/LzfseDecoder.cpp
     CPP/7zip/Compress/LzhDecoder.cpp
     CPP/7zip/Compress/Lzma2Decoder.cpp
@@ -57,9 +60,11 @@ target_sources(7zip PRIVATE
     CPP/7zip/Compress/XpressDecoder.cpp
     CPP/7zip/Compress/XzDecoder.cpp
     CPP/7zip/Compress/XzEncoder.cpp
+    CPP/7zip/Compress/ZDecoder.cpp
     CPP/7zip/Compress/ZlibDecoder.cpp
     CPP/7zip/Compress/ZlibEncoder.cpp
     CPP/7zip/Compress/ZDecoder.cpp
+    CPP/7zip/Compress/ZstdDecoder.cpp
     CPP/7zip/Compress/CodecExports.cpp
 
     CPP/7zip/Crypto/7zAes.cpp
@@ -109,6 +114,7 @@ target_sources(7zip PRIVATE
     C/Sha1.c
     C/Sha256.c
     C/Sort.c
+    C/SwapBytes.c
     C/Threads.c
     C/Xz.c
     C/XzDec.c
@@ -117,6 +123,8 @@ target_sources(7zip PRIVATE
     C/Aes.c
     C/7zCrc.c
     C/XzCrc64.c
+    C/Xxh64.c
+    C/ZstdDec.c
 
     CPP/Common/CRC.cpp
     CPP/Common/CrcReg.cpp
@@ -139,6 +147,7 @@ target_sources(7zip PRIVATE
     CPP/Common/Wildcard.cpp
     CPP/Common/XzCrc64Init.cpp
     CPP/Common/XzCrc64Reg.cpp
+    CPP/Common/Xxh64Reg.cpp
 
     CPP/Windows/FileDir.cpp
     CPP/Windows/FileFind.cpp
@@ -214,6 +223,7 @@ target_sources(7zip PRIVATE
     CPP/7zip/Archive/ZHandler.cpp
     CPP/7zip/Archive/ArchiveExports.cpp
     CPP/7zip/Archive/DllExports2.cpp
+    CPP/7zip/Archive/ZstdHandler.cpp
 
     CPP/7zip/Archive/Common/CoderMixer2.cpp
     CPP/7zip/Archive/Common/DummyOutStream.cpp
@@ -331,14 +341,14 @@ endif()
 # LzmaDecOpt
 target_sources(7zip PRIVATE C/LzmaDec.c)
 if((VCPKG_TARGET_IS_WINDOWS AND VCPKG_TARGET_ARCHITECTURE STREQUAL "x64") OR
-    (VCPKG_TARGET_IS_LINUX AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
+    (VCPKG_TARGET_IS_WINDOWS AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
     )
     if(VCPKG_TARGET_IS_WINDOWS AND VCPKG_TARGET_ARCHITECTURE STREQUAL "x64")
         target_sources(7zip PRIVATE Asm/x86/LzmaDecOpt.asm)
         set_source_files_properties(Asm/x86/LzmaDecOpt.asm PROPERTIES LANGUAGE ASM_MASM)
-    elseif(VCPKG_TARGET_IS_LINUX AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
+    elseif(VCPKG_TARGET_IS_WINDOWS AND VCPKG_TARGET_ARCHITECTURE STREQUAL "arm64")
         target_sources(7zip PRIVATE Asm/arm64/LzmaDecOpt.S)
-        set_source_files_properties(Asm/x86/LzmaDecOpt.asm PROPERTIES LANGUAGE ASM)
+        set_source_files_properties(Asm/arm64/LzmaDecOpt.S PROPERTIES LANGUAGE ASM)
     endif()
 
     get_source_file_property(defs C/LzmaDec.c COMPILE_DEFINITIONS)
@@ -391,7 +401,6 @@ target_compile_definitions(7zip
         -D_7ZIP_LARGE_PAGES
         -DUNICODE
         -D_UNICODE
-        -D_7ZIP_ST
 )
 
 target_include_directories(7zip

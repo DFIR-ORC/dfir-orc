@@ -6,5 +6,5 @@
 // Author(s): Jean Gautier (ANSSI)
 //
 #include "stdafx.h"
-#include <InitGuid.h>
-#include <7zip/guids.h>
+//#include <InitGuid.h>
+//#include <7zip/guids.h>

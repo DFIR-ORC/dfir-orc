@@ -23,7 +23,7 @@ class InMemStream
 public:
     const size_t kMaxBufferSize = -1;
 
-    MY_UNKNOWN_IMP2( ISequentialInStream, IInStream )
+    Z7_COM_UNKNOWN_IMP_2( ISequentialInStream, IInStream )
 
     explicit InMemStream( std::string_view buffer );
     STDMETHOD( Read )( void* data, UInt32 size, UInt32* processedSize );

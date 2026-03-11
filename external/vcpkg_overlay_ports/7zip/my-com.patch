@@ -1,0 +1,39 @@
+diff --git a/CPP/Common/MyCom.h b/CPP/Common/MyCom.h
+index a3cc3c8..5e17142 100644
+--- a/CPP/Common/MyCom.h
++++ b/CPP/Common/MyCom.h
+@@ -319,7 +319,7 @@ protected:
+ 
+ 
+ #define Z7_COM_QI_BEGIN \
+-  private: STDMETHOD(QueryInterface) (REFGUID iid, void **outObject) throw() Z7_override Z7_final \
++  STDMETHOD(QueryInterface) (REFGUID iid, void **outObject) throw() Z7_override \
+     { *outObject = NULL;
+ 
+ #define Z7_COM_QI_ENTRY(i) \
+@@ -343,10 +343,9 @@ protected:
+ 
+ 
+ #define Z7_COM_ADDREF_RELEASE_MT \
+-  private: \
+-  STDMETHOD_(ULONG, AddRef)() Z7_override Z7_final \
++  STDMETHOD_(ULONG, AddRef)() Z7_override  \
+     { return (ULONG)InterlockedIncrement((LONG *)&_m_RefCount); } \
+-  STDMETHOD_(ULONG, Release)() Z7_override Z7_final \
++  STDMETHOD_(ULONG, Release)() Z7_override  \
+     { const LONG v = InterlockedDecrement((LONG *)&_m_RefCount); \
+       if (v != 0) return (ULONG)v; \
+       delete this;  return 0; }
+@@ -378,10 +377,9 @@ EXTERN_C_END
+ #else // !Z7_COM_USE_ATOMIC
+ 
+ #define Z7_COM_ADDREF_RELEASE \
+-  private: \
+-  STDMETHOD_(ULONG, AddRef)() throw() Z7_override Z7_final \
++  STDMETHOD_(ULONG, AddRef)() throw() Z7_override  \
+     { return ++_m_RefCount; } \
+-  STDMETHOD_(ULONG, Release)() throw() Z7_override Z7_final \
++  STDMETHOD_(ULONG, Release)() throw() Z7_override  \
+     { if (--_m_RefCount != 0) return _m_RefCount; \
+       delete this;  return 0; }
+ 

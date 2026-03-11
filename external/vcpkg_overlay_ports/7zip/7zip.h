@@ -94,7 +94,7 @@
     namespace NArchive::NUefi::UEFIc { void* Register(); }
     namespace NArchive::NUefi::UEFIf { void* Register(); }
 
-    namespace NCrypto::N7z { void* RegisterCodec_7zAES(); }
+    namespace NCrypto::N7z { void* RegisterCodecSzAES(); }
     namespace NCrypto { void* RegisterCodecAES256CBC(); }
 
     namespace NCompress::NBcj { void* RegisterCodecBCJ(); }

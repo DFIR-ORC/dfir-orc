@@ -27,7 +27,7 @@ class ArchiveUpdateCallback
 public:
     using Items = std::vector<std::unique_ptr<Item>>;
 
-    MY_UNKNOWN_IMP2(IArchiveUpdateCallback, ICryptoGetTextPassword2)
+    Z7_IFACES_IMP_UNK_2(IArchiveUpdateCallback, ICryptoGetTextPassword2)
 
     ArchiveUpdateCallback(Items newItems, std::wstring password, uint64_t numberOfInputArchiveItems = 0);
     ~ArchiveUpdateCallback();
@@ -35,16 +35,6 @@ public:
     // IProgress
     STDMETHOD(SetTotal)(UInt64 size) override { return S_OK; }
     STDMETHOD(SetCompleted)(const UInt64* completeValue) override { return S_OK; }
-
-    // IUpdateCallback
-    STDMETHOD(GetUpdateItemInfo)
-    (UInt32 index, Int32* newData, Int32* newProperties, UInt32* indexInArchive) override;
-    STDMETHOD(GetProperty)(UInt32 index, PROPID propID, PROPVARIANT* value) override;
-    STDMETHOD(GetStream)(UInt32 index, ISequentialInStream** inStream) override;
-    STDMETHOD(SetOperationResult)(Int32 operationResult) override;
-
-    // ICryptoGetTextPassword2
-    STDMETHOD(CryptoGetTextPassword2)(Int32* passwordIsDefined, BSTR* password) override;
 
     const std::error_code& GetCallbackError() const { return m_ec; }
 

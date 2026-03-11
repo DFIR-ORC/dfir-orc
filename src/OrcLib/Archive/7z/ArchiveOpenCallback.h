@@ -24,15 +24,7 @@ class ArchiveOpenCallback
     , public CMyUnknownImp
 {
 public:
-    MY_UNKNOWN_IMP2(IArchiveOpenCallback, ICryptoGetTextPassword)
-
-public:
-    // IArchiveOpenCallback
-    STDMETHOD(SetTotal)(const UInt64* files, const UInt64* bytes);
-    STDMETHOD(SetCompleted)(const UInt64* files, const UInt64* bytes);
-
-    // ICryptoGetTextPassword
-    STDMETHOD(CryptoGetTextPassword)(BSTR* password);
+    Z7_IFACES_IMP_UNK_2(IArchiveOpenCallback, ICryptoGetTextPassword)
 };
 
 }  // namespace Archive

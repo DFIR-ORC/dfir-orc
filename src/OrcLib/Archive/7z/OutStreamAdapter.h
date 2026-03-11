@@ -29,14 +29,7 @@ public:
     {
     }
 
-    MY_UNKNOWN_IMP2(ISequentialOutStream, IOutStream)
-
-    // ISequentialOutStream
-    STDMETHOD(Write)(const void* data, UInt32 size, UInt32* processedSize) override;
-
-    // IOutStream
-    STDMETHOD(Seek)(Int64 offset, UInt32 seekOrigin, UInt64* newPosition) override;
-    STDMETHOD(SetSize)(UInt64 newSize) override;
+    Z7_IFACES_IMP_UNK_2(ISequentialOutStream, IOutStream)
 
 private:
     std::shared_ptr<ByteStream> m_stream;

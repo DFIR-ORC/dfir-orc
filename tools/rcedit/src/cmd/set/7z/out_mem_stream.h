@@ -23,9 +23,10 @@ class OutMemStream
 public:
     const size_t kMaxBufferSize = -1;
 
-    MY_UNKNOWN_IMP2( ISequentialOutStream, IOutStream )
+    Z7_COM_UNKNOWN_IMP_2( ISequentialOutStream, IOutStream )
 
     explicit OutMemStream( std::vector< uint8_t >& buffer );
+
     STDMETHOD( Write )( const void* data, UInt32 size, UInt32* processedSize );
     STDMETHOD( Seek )( Int64 offset, UInt32 seekOrigin, UInt64* newPosition );
     STDMETHOD( SetSize )( UInt64 newSize );

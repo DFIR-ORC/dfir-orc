@@ -31,16 +31,10 @@ public:
     {
     }
 
-    MY_UNKNOWN_IMP2(IInStream, IStreamGetSize)
+    Z7_IFACES_IMP_UNK_2(IInStream, IStreamGetSize)
 
     // ISequentialInStream
     STDMETHOD(Read)(void* data, UInt32 size, UInt32* processedSize) override;
-
-    // IInStream
-    STDMETHOD(Seek)(Int64 offset, UInt32 seekOrigin, UInt64* newPosition) override;
-
-    // IStreamGetSize
-    STDMETHOD(GetSize)(UInt64* size) override;
 
 private:
     std::shared_ptr<ByteStream> m_stream;
