@@ -1363,63 +1363,6 @@ HRESULT Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, CBinary
     return S_OK;
 }
 
-HRESULT Orc::GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, ByteBuffer& buffer, bool bMustBe0xPrefixed)
-{
-    if (pszStr == NULL)
-        return E_POINTER;
-    if (dwStrLen % 2)
-        return E_INVALIDARG;
-
-    DWORD dwStartAt = 0L;
-
-    if (pszStr[0] == L'0' && (pszStr[1] == L'x' || pszStr[1] == L'X'))
-    {
-        dwStartAt = 2;
-        buffer.resize((dwStrLen - 2) / 2);
-    }
-    else
-    {
-        if (bMustBe0xPrefixed)
-            return E_INVALIDARG;
-
-        buffer.resize(dwStrLen / 2);
-    }
-
-    for (DWORD i = dwStartAt; i < dwStrLen; i++)
-    {
-        if (pszStr[i] >= L'0' && pszStr[i] <= L'9')
-            continue;
-        if (pszStr[i] >= L'A' && pszStr[i] <= L'F')
-            continue;
-        if (pszStr[i] >= L'a' && pszStr[i] <= L'f')
-            continue;
-        return E_INVALIDARG;
-    }
-
-    std::ranges::fill(buffer.vector(), std::byte {0});
-
-    DWORD dwArrayIndex = 0L;
-    for (unsigned int i = dwStartAt; i < dwStrLen - 1; i += 2)
-    {
-        if (pszStr[i + 1] >= L'0' && pszStr[i + 1] <= L'9')
-            buffer[dwArrayIndex] = static_cast<std::byte>(pszStr[i + 1] - L'0');
-        else if (pszStr[i + 1] >= L'A' && pszStr[i + 1] <= L'F')
-            buffer[dwArrayIndex] = static_cast<std::byte>(pszStr[i + 1] - L'A' + 10);
-        else if (pszStr[i + 1] >= L'a' && pszStr[i + 1] <= L'f')
-            buffer[dwArrayIndex] = static_cast<std::byte>(pszStr[i + 1] - L'a' + 10);
-
-        if (pszStr[i] >= L'0' && pszStr[i] <= L'9')
-            buffer[dwArrayIndex] |= static_cast<std::byte>((pszStr[i] - L'0') << 4);
-        else if (pszStr[i] >= L'A' && pszStr[i] <= L'F')
-            buffer[dwArrayIndex] |= static_cast<std::byte>((pszStr[i] - L'A' + 10) << 4);
-        else if (pszStr[i] >= L'a' && pszStr[i] <= L'f')
-            buffer[dwArrayIndex] |= static_cast<std::byte>((pszStr[i] - L'a' + 10) << 4);
-
-        dwArrayIndex++;
-    }
-    return S_OK;
-}
-
 HRESULT Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer, bool bMustBe0xPrefixed)
 {
     if (pszStr == NULL)
@@ -1476,63 +1419,6 @@ HRESULT Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryB
         dwArrayIndex++;
     }
 
-    return S_OK;
-}
-
-HRESULT Orc::GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, ByteBuffer& buffer, bool bMustBe0xPrefixed)
-{
-    if (pszStr == NULL)
-        return E_POINTER;
-    if (dwStrLen % 2)
-        return E_INVALIDARG;
-
-    DWORD dwStartAt = 0L;
-
-    if (pszStr[0] == '0' && (pszStr[1] == 'x' || pszStr[1] == 'X'))
-    {
-        dwStartAt = 2;
-        buffer.resize((dwStrLen - 2) / 2);
-    }
-    else
-    {
-        if (bMustBe0xPrefixed)
-            return E_INVALIDARG;
-
-        buffer.resize(dwStrLen / 2);
-    }
-
-    for (DWORD i = dwStartAt; i < dwStrLen; i++)
-    {
-        if (pszStr[i] >= '0' && pszStr[i] <= '9')
-            continue;
-        if (pszStr[i] >= 'A' && pszStr[i] <= 'F')
-            continue;
-        if (pszStr[i] >= 'a' && pszStr[i] <= 'f')
-            continue;
-        return E_INVALIDARG;
-    }
-
-    std::ranges::fill(buffer.vector(), std::byte {0});
-
-    DWORD dwArrayIndex = 0L;
-    for (unsigned int i = dwStartAt; i < dwStrLen - 1; i += 2)
-    {
-        if (pszStr[i + 1] >= '0' && pszStr[i + 1] <= L'9')
-            buffer[dwArrayIndex] = static_cast<std::byte>(pszStr[i + 1] - '0');
-        else if (pszStr[i + 1] >= L'A' && pszStr[i + 1] <= L'F')
-            buffer[dwArrayIndex] = static_cast<std::byte>(pszStr[i + 1] - 'A' + 10);
-        else if (pszStr[i + 1] >= L'a' && pszStr[i + 1] <= L'f')
-            buffer[dwArrayIndex] = static_cast<std::byte>(pszStr[i + 1] - 'a' + 10);
-
-        if (pszStr[i] >= '0' && pszStr[i] <= '9')
-            buffer[dwArrayIndex] |= static_cast<std::byte>((pszStr[i] - '0') << 4);
-        else if (pszStr[i] >= 'A' && pszStr[i] <= 'F')
-            buffer[dwArrayIndex] |= static_cast<std::byte>((pszStr[i] - 'A' + 10) << 4);
-        else if (pszStr[i] >= 'a' && pszStr[i] <= 'f')
-            buffer[dwArrayIndex] |= static_cast<std::byte>((pszStr[i] - 'a' + 10) << 4);
-
-        dwArrayIndex++;
-    }
     return S_OK;
 }
 

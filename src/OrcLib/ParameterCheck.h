@@ -102,8 +102,6 @@ HRESULT GetBytesFromHexaString(
 
 HRESULT
 GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer, bool bMustBe0xPrefixed = false);
-HRESULT
-GetBytesFromHexaString(const WCHAR* pszStr, DWORD dwStrLen, ByteBuffer& buffer, bool bMustBe0xPrefixed = false);
 
 HRESULT GetBytesFromHexaString(
     const CHAR* pszStr,
@@ -115,8 +113,6 @@ HRESULT GetBytesFromHexaString(
 
 HRESULT
 GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, CBinaryBuffer& buffer, bool bMustBe0xPrefixed = false);
-HRESULT
-GetBytesFromHexaString(const CHAR* pszStr, DWORD dwStrLen, ByteBuffer& buffer, bool bMustBe0xPrefixed = false);
 
 HRESULT GetDateFromString(const WCHAR* szFormat, const WCHAR* szString, FILETIME& result);
 
