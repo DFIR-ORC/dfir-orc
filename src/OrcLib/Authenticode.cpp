@@ -77,7 +77,7 @@ Orc::Result<void> MapFile(const std::wstring& path, ContainerT& output)
         return LastWin32Error();
     }
 
-    return {};
+    return Success<void>();
 }
 
 Orc::Result<std::wstring> ParseCatalogHintFilename(std::string_view catalogHint)
@@ -153,7 +153,7 @@ Orc::Result<void> CheckCatalogSignature(std::string_view catalog)
         }
     }
 
-    return {};
+    return Orc::Success<void>();
 }
 
 bool FindPeHash(std::string_view buffer, const Orc::Authenticode::PE_Hashs& peHashes)
@@ -1743,5 +1743,5 @@ Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
     data.isSigned = true;
     data.AuthStatus = AUTHENTICODE_CATALOG_SIGNED_VERIFIED;
 
-    return {};
+    return Success<void>();
 }

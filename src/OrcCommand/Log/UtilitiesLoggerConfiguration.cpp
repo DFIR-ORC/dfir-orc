@@ -553,7 +553,7 @@ Orc::Result<void> ApplyFileConfiguration(UtilitiesLogger& logger, const Utilitie
         return ec;
     }
 
-    return {};
+    return Success<void>();
 }
 
 Orc::Result<void> ApplySyslogConfiguration(UtilitiesLogger& utilitiesLogger, const UtilitiesLoggerConfiguration& config)
@@ -607,7 +607,7 @@ Orc::Result<void> ApplySyslogConfiguration(UtilitiesLogger& utilitiesLogger, con
         return ec;
     }
 
-    return {};
+    return Success<void>();
 }
 
 void OutputConfigurationToOptions(const UtilitiesLoggerConfiguration::Output& output, std::vector<Option>& options)

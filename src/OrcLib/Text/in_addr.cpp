@@ -35,7 +35,7 @@ RtlIpv4AddressToStringExAApi(const in_addr* Address, USHORT Port, PSTR AddressSt
         return Orc::NtError(status);
     }
 
-    return {};
+    return Orc::Success<void>();
 }
 
 Orc::Result<void>
@@ -61,7 +61,7 @@ RtlIpv4AddressToStringExWApi(const in_addr* Address, USHORT Port, PWSTR AddressS
         return Orc::NtError(status);
     }
 
-    return {};
+    return Orc::Success<void>();
 }
 
 Orc::Result<void> RtlIpv6AddressToStringExAApi(
@@ -91,7 +91,7 @@ Orc::Result<void> RtlIpv6AddressToStringExAApi(
         return Orc::NtError(status);
     }
 
-    return {};
+    return Orc::Success<void>();
 }
 
 Orc::Result<void> RtlIpv6AddressToStringExWApi(
@@ -121,7 +121,7 @@ Orc::Result<void> RtlIpv6AddressToStringExWApi(
         return Orc::NtError(status);
     }
 
-    return {};
+    return Orc::Success<void>();
 }
 
 }  // namespace
