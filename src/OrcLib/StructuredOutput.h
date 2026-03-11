@@ -230,8 +230,8 @@ public:
     ScopedRootElement(IWriter& writer, LPCWSTR szName)
         : resource_scope(
             writer,
-            [&](IWriter& writer) { writer.BeginElement(szName); },
-            [&](IWriter& writer) {
+            [szName](IWriter& writer) { writer.BeginElement(szName); },
+            [szName](IWriter& writer) {
                 writer.EndElement(szName);
                 writer.Close();
             })
@@ -245,8 +245,8 @@ public:
     ScopedElement(IOutput& writer, LPCWSTR szName)
         : resource_scope(
             writer,
-            [&](IOutput& writer) { writer.BeginElement(szName); },
-            [&](IOutput& writer) { writer.EndElement(szName); })
+            [szName](IOutput& writer) { writer.BeginElement(szName); },
+            [szName](IOutput& writer) { writer.EndElement(szName); })
     {
     }
 };
@@ -257,8 +257,8 @@ public:
     ScopedCollection(IOutput& writer, LPCWSTR szName)
         : resource_scope(
             writer,
-            [&](IOutput& writer) { writer.BeginCollection(szName); },
-            [&](IOutput& writer) { writer.EndCollection(szName); })
+            [szName](IOutput& writer) { writer.BeginCollection(szName); },
+            [szName](IOutput& writer) { writer.EndCollection(szName); })
     {
     }
 };
