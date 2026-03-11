@@ -34,7 +34,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe ToolEmbed [/Config=<toolembed.xml> | /dump=<ConfiguredBinary.exe>] /out=dump-dir>",
+        "Usage: DFIR-ORC.exe ToolEmbed [/Config=<toolembed.xml> | /dump=<ConfiguredBinary.exe>] /out=dump-dir>",
         "ToolEmbed is used to add resources (binaries, configuration files) to a DFIR ORC binary. It takes an XML "
         "configuration file as input. ToolEmbed is also able to extract all the resources from a configured binary, "
         "thanks to the /dump option. This can be useful to quickly edit a configuration and obtain a new configured "

@@ -129,7 +129,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe GetThis [/Sample=<SampleFile>[:<Stream>|#<EAName>]] [/Content=<Data|Strings|Raw>] "
+        "Usage: DFIR-ORC.exe GetThis [/Sample=<SampleFile>[:<Stream>|#<EAName>]] [/Content=<Data|Strings|Raw>] "
         "[/Config=GetThisConfig.xml] [/Out=<Folder|File.csv|Archive.7z>] <Location>...<LocationN>",
         MakeArray<std::string_view>(
             R"raw(GetThis was originally developed to assist with malicious sample collection but quickly evolved into a general purpose file collection tool.)raw",

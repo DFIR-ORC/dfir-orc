@@ -29,7 +29,7 @@ Enter-VsDevShell -VsInstallPath "C:\Program Files (x86)\Microsoft Visual Studio\
 .\Build-Orc.ps1  # Powershell >=5.1
 ```
 
-The script builds the x86-xp, x64-xp versions of DFIR-Orc and then packages them into `DFIR-Orc.exe`.
+The script builds the x86-xp, x64-xp versions of DFIR-ORC and then packages them into `DFIR-ORC.exe`.
 
 To also embed a configuration at build time using ToolEmbed:
 
@@ -80,16 +80,16 @@ The script drives the full pipeline: configure > build > package with OrcCapsule
 
 | Parameter        | Default              | Description |
 |:-----------------|:---------------------|:------------|
-| `-Source`        | *(current dir)*      | Root of the DFIR-Orc source tree |
+| `-Source`        | *(current dir)*      | Root of the DFIR-ORC source tree |
 | `-BuildConfig`   | `MinSizeRel`         | One or more CMake build configurations: `Debug`, `MinSizeRel`, `RelWithDebInfo` |
 | `-Platform`      | `x64-xp`, `x86-xp`  | One or more target platforms; each must match a `dfir-orc-<platform>` CMake preset |
 | `-BuildDir`      | `.\build`            | Root directory for all CMake artifacts and packaged output |
 | `-ToolEmbed`     | *(none)*             | If set, runs a ToolEmbed step using this directory as configuration source |
 | `-ConfigureOnly` | *(off)*              | Run cmake configure for all presets then stop; skip build and packaging |
 | `-BuildOnly`     | *(off)*              | Run configure and build, but skip the packaging step |
-| `-FastFind`      | *(off)*              | Also build and package `FastFind.exe` in addition to `DFIR-Orc.exe` |
+| `-FastFind`      | *(off)*              | Also build and package `FastFind.exe` in addition to `DFIR-ORC.exe` |
 
-Packaged executables are written to `<BuildDir>\<config>\DFIR-Orc.exe` (and `FastFind.exe` when `-FastFind` is set). When `-ToolEmbed` is used the configuration-embedded output is written to `<BuildDir>\<config>\DFIR-Orc-ready.exe`.
+Packaged executables are written to `<BuildDir>\<config>\DFIR-ORC.exe` (and `FastFind.exe` when `-FastFind` is set). When `-ToolEmbed` is used the configuration-embedded output is written to `<BuildDir>\<config>\DFIR-ORC-ready.exe`.
 
 **Examples:**
 
@@ -109,7 +109,7 @@ Packaged executables are written to `<BuildDir>\<config>\DFIR-Orc.exe` (and `Fas
 # Release build with embedded configuration
 .\Build-Orc.ps1 -BuildConfig RelWithDebInfo -ToolEmbed .\config
 
-# Also produce a FastFind package alongside DFIR-Orc
+# Also produce a FastFind package alongside DFIR-ORC
 .\Build-Orc.ps1 -FastFind
 
 # Configure only (useful to pre-download vcpkg dependencies)
@@ -120,8 +120,8 @@ Packaged executables are written to `<BuildDir>\<config>\DFIR-Orc.exe` (and `Fas
 
 1. Configures the `capsule-x86-xp` preset plus one `dfir-orc-<platform>` preset per value in `-Platform`, placing each binary tree under `<BuildDir>\<preset-name>`.
 2. Builds every configured preset for each value in `-BuildConfig`.
-3. For each build configuration, runs **OrcCapsule** to bundle the per-platform `DFIR-Orc_<arch>.exe` artifacts into a single self-selecting `DFIR-Orc.exe`. When `-FastFind` is set the same bundling is done for `FastFind.exe`.
-4. *(Optional)* Runs **ToolEmbed** (via the newly packaged capsule) to inject the XML configuration and tools from `-ToolEmbed`, producing `DFIR-Orc-ready.exe`.
+3. For each build configuration, runs **OrcCapsule** to bundle the per-platform `DFIR-ORC_<arch>.exe` artifacts into a single self-selecting `DFIR-ORC.exe`. When `-FastFind` is set the same bundling is done for `FastFind.exe`.
+4. *(Optional)* Runs **ToolEmbed** (via the newly packaged capsule) to inject the XML configuration and tools from `-ToolEmbed`, producing `DFIR-ORC-ready.exe`.
 
 ---
 

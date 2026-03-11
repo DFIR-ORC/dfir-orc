@@ -27,7 +27,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe DD [/out=<Folder|Outfile.csv|Archive.7z>] /if=<InputLocation> /of=<OutputLocation> "
+        "Usage: DFIR-ORC.exe DD [/out=<Folder|Outfile.csv|Archive.7z>] /if=<InputLocation> /of=<OutputLocation> "
         "/bs=<BlockSize> /count=<BlockCount> [/skip=<BlockCount>] [/seek=<BlockCount>] [/hash=<Hashes>] [/noerror] "
         "[/notrunc]",
         "Dump tool inspired from linux 'dd' command");

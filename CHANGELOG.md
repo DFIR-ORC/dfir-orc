@@ -136,7 +136,7 @@
 - Volume Shadow Copy: add fallback mode when 'vss' service is stopped using directly 'volsnap.sys'
 - Volume Shadow Copy: add fully internal parser (no more use of 'volsnap.sys)'
 - Volume Shadow Copy: add support for unmounted volumes ("offline" mode)
-- Relocate configured DFIR-Orc executable if run from network to avoid issues on disconnections
+- Relocate configured DFIR-ORC executable if run from network to avoid issues on disconnections
 - NtfsInfo, GetThis, FastFind: add option 'Resurrect=Resident' to process deleted records that are resident in the MFT
 - NtfsUtil: enhance '/vss' with more output about shadow copies
 - NtfsUtil: add '/vss /dump' mode which will dump copy-on-write tables into json files
@@ -301,7 +301,7 @@ From 10.1.0 the semantic versioning will be applied.
 - Ntfs: add transparent support for CI.CATALOGHINT
 - Ntfs: VolumeShadowCopy: add newest/mid/oldest targetting options
 - Add option to exclude volume
-- Add option `/nolimit:[<keyword>]` for configurated DFIR-Orc (mothership)
+- Add option `/nolimit:[<keyword>]` for configurated DFIR-ORC (mothership)
 - Test: add tools/ci/test.psm1 to facilitate test automation
 
 ### Changed
@@ -326,7 +326,7 @@ From 10.1.0 the semantic versioning will be applied.
 - Outcome: add to 'Command' expected output files with their origin (file, stderr, ...)
 - Outcome: add 'Origin' to 'Command' to specify information about where it comes from
 - Outcome: add to 'Command' its SHA1
-- Outcome: add to 'Command' the DFIR-Orc tool name if appropriate
+- Outcome: add to 'Command' the DFIR-ORC tool name if appropriate
 
 ### Changed
 - Continue on a failed "Location" resolution
@@ -457,7 +457,7 @@ From 10.1.0 the semantic versioning will be applied.
 - Log: add syslog forwarding to WolfLauncher's timestamped output
 - Log: add new log options usage
 - Log: add start/end timestamp of WolfLauncher to journal
-- Log: add DFIR-Orc version of WolfLauncher's binary to journal
+- Log: add DFIR-ORC version of WolfLauncher's binary to journal
 
 ### Removed
 - yara: remove libressl dependency and rely on wincrypt api
@@ -498,7 +498,7 @@ From 10.1.0 the semantic versioning will be applied.
 - Log: enhance FileSink synchronisation
 
 ### Fixed
-- WolfLauncher: fix log file format for a configurated DFIR-Orc
+- WolfLauncher: fix log file format for a configurated DFIR-ORC
 - Log: add support for SPDLOG_LEVEL env variable
 - Values incorrectly displayed as addresses instead of readable strings
 - Outline: missing 'qfe', 'network', 'environment' sections
@@ -549,7 +549,7 @@ From 10.1.0 the semantic versioning will be applied.
 - Log: dump log backtrace on critical errors
 - Log: use new log levels
 - Log: add utc timestamps (ISO 8601)
-- Improve DFIR-Orc temporary directory removal
+- Improve DFIR-ORC temporary directory removal
 - OrcCommand: major refactor
 - README: add license section
 - vcpkg: update to 2020.11-1

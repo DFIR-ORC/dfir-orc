@@ -27,7 +27,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe GetSamples [/Config=GetSamplesConfig.xml] [/GetThisConfig=GetThisConfig.xml] "
+        "Usage: DFIR-ORC.exe GetSamples [/Config=GetSamplesConfig.xml] [/GetThisConfig=GetThisConfig.xml] "
         "[/Autoruns[=<AutoRuns.xml>] [/out=<Folder|File.csv|Archive.7z>] ...",
         "GetSamples was developed to add automatic sample collection. DFIR ORC collects multiple artefacts, which in "
         "turn allow the analyst to pivot and determine which files to examine. GetSamples was created to identify and "

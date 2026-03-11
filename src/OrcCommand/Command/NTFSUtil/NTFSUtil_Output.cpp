@@ -33,7 +33,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe NTFSUtil [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>] <SUBCOMMAND>",
+        "Usage: DFIR-ORC.exe NTFSUtil [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>] <SUBCOMMAND>",
         "NTFS Swiss Army knife with a collection of useful features to investigate NTFS.");
 
     auto subcommandsNode = usageNode.AddNode("SUBCOMMAND");

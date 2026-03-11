@@ -694,7 +694,7 @@ function Expand-OrcArchive {
         Extract one or multiple DFIR-ORc archive recursively.
 
     .PARAMETER Path
-        Path to a DFIR-Orc archive or a directory with multiples archives.
+        Path to a DFIR-ORC archive or a directory with multiples archives.
 
     .PARAMETER Destination
         Path to the destination directory.
@@ -868,7 +868,7 @@ function Expand-OrcArchive {
         }
 
         $SubDir = "$($SubArchive.Directory)\$($SubArchive.BaseName)"
-        Write-Verbose "DFIR-Orc archive 7z extraction: $SubArchive, Destination: $SubDir"
+        Write-Verbose "DFIR-ORC archive 7z extraction: $SubArchive, Destination: $SubDir"
         New-Item -Force:$Force -Type Directory $SubDir | Out-Null
 
         if (-Not $Password)
@@ -889,7 +889,7 @@ function Expand-OrcArchive {
 function Expand-OrcResults {
     <#
     .SYNOPSIS
-        Extract all DFIR-Orc archives referenced by Outcome file(s).
+        Extract all DFIR-ORC archives referenced by Outcome file(s).
 
     .PARAMETER Path
         Path to a directory with Outcome files or to an Outcome file.
@@ -1173,7 +1173,7 @@ function Get-OrcOutcome {
 function Test-OrcOutcome {
     <#
     .SYNOPSIS
-        Parse a DFIR-Orc Outcome file(s) and print a summary.
+        Parse a DFIR-ORC Outcome file(s) and print a summary.
 
     .PARAMETER Path
         Path to a specific Outcome file or a directory with multiple Outcome files.
@@ -1246,7 +1246,7 @@ function Compare-OrcOutcome {
 function Test-OrcExpandedResults {
     <#
     .SYNOPSIS
-        Check DFIR-Orc results using Outcome's commands exit code and do some basic integrity tests.
+        Check DFIR-ORC results using Outcome's commands exit code and do some basic integrity tests.
 
     .PARAMETER Path
         Directory with Orc's already expanded results (see 'Expand-OrcResults').
@@ -1340,14 +1340,14 @@ function Test-OrcExpandedResults {
 function Test-OrcResults {
      <#
     .SYNOPSIS
-        Check one or multiple DFIR-Orc results using Outcome's commands exit code and do some basic integrity tests.
+        Check one or multiple DFIR-ORC results using Outcome's commands exit code and do some basic integrity tests.
 
     .DESCRIPTION
         This command will look for all outcome json files in the specified 'Path'. It will expand all results in 'Destination' while
         checking for result integrity. It will alert user with warning messages and with structured output if '-PassThru' is on.
 
     .PARAMETER Path
-        Directory with DFIR-Orc Outcome and archives.
+        Directory with DFIR-ORC Outcome and archives.
 
     .PARAMETER Destination
         Path to output directory for expanded results.
@@ -1439,7 +1439,7 @@ function Test-OrcResults {
     $OutcomeFiles = Find-OrcOutcome -Recurse:$Recurse $Path
     foreach ($OutcomePath in $OutcomeFiles)
     {
-        Write-Verbose "Expand DFIR-Orc results from '$OutcomePath'"
+        Write-Verbose "Expand DFIR-ORC results from '$OutcomePath'"
         $ExpandedDirectories = Expand-OrcResults -Force:$Force -Path $OutcomePath -Destination $Destination -PrivateKey:$PrivateKey
         $ExpandedDirectories = `
             $ExpandedDirectories | ForEach-Object { ([System.IO.DirectoryInfo]$_).Parent } | Select-Object -Unique
@@ -1640,7 +1640,7 @@ function ConvertTo-OrcDiffableResults {
     .SYNOPSIS
         Convert Orc results so they can be compared between multiple execution.
 
-        Suits better for DFIR-Orc's 'offline' results.
+        Suits better for DFIR-ORC's 'offline' results.
 
     .DESCRIPTION
         Strip and sort data expected to change between two run on the same disk image.
@@ -1658,7 +1658,7 @@ function ConvertTo-OrcDiffableResults {
         Specifies additional files to be included for copy to 'Destination'.
 
     .PARAMETER NotOffline
-        Specify that input results does NOT come from an 'Offline' DFIR-Orc.
+        Specify that input results does NOT come from an 'Offline' DFIR-ORC.
 
     .PARAMETER Force
         Overwrite any existing file.

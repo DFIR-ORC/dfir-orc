@@ -29,7 +29,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe FATInfo [/config=<ConfigFile>] [/Out=<Folder|Outfile.csv|Archive.7z>] "
+        "Usage: DFIR-ORC.exe FATInfo [/config=<ConfigFile>] [/Out=<Folder|Outfile.csv|Archive.7z>] "
         "[/(+|-)<ColumnSelection,...>:<Filter>] [/<DefaultColumnSelection>,...] [/KnownLocations|/kl] <Location> "
         "<Location2> ... <LocationN>",
         "FATInfo is intended to collect details on data stored on FAT mounted volumes, raw disk images. Basically, the "

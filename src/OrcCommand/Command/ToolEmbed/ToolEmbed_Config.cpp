@@ -901,7 +901,7 @@ HRESULT Main::CheckConfiguration()
     //
     // 1. The "capsule" mode is accepted and the only one used
     // 2. The new behavior on "input" from CLI and XML configuration is accepted, the 'input' option is now ignored and
-    // the capsule wrapping DFIR-Orc and toolembed is reused automatically.
+    // the capsule wrapping DFIR-ORC and toolembed is reused automatically.
     //
     // If the input option must be handled or legacy Mothership is still used then uncomment this.
     //
@@ -957,7 +957,7 @@ HRESULT Main::CheckConfiguration()
     }
     else
     {
-        Log::Critical(L"[DEPRECATED] DFIR-Orc does not use Mothership anymore, call ToolEmbed from Capsule wrapper");
+        Log::Critical(L"[DEPRECATED] DFIR-ORC does not use Mothership anymore, call ToolEmbed from Capsule wrapper");
         return E_FAIL;
     }
 #endif

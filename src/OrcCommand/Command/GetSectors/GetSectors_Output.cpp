@@ -26,7 +26,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe GetSectors [/Config=<ConfigFile>] [/Out=<Folder|Outfile.csv|Archive.7z>] "
+        "Usage: DFIR-ORC.exe GetSectors [/Config=<ConfigFile>] [/Out=<Folder|Outfile.csv|Archive.7z>] "
         "[/LegacyBootCode] [/UefiFull] [/UefiFullMaxSize] [/SlackSpace] [/SlackSpaceDumpSize] [/Custom] "
         "[/CustomOffset=<offset>] [/CustomSize=<size>] [/Disk=<device>] [/NotLowInterface]",
         "GetSectors is designed to collect low-level disk data, i.e. data not related to the file system. As such, it "

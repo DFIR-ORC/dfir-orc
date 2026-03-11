@@ -24,7 +24,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe ObjInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>]",
+        "Usage: DFIR-ORC.exe ObjInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>]",
         "ObjInfo is a tool designed to list the set of Microsoft Windows named objects currently present on the "
         "analyzed system.");
 

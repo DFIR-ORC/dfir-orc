@@ -140,16 +140,16 @@ int PrintUsage()
 
     if (!metaName.empty() && !metaVersion.empty())
     {
-        console.Print(L"DFIR-Orc.exe {} ({} {})", kOrcFileVerStringW, metaName, metaVersion);
+        console.Print(L"DFIR-ORC.exe {} ({} {})", kOrcFileVerStringW, metaName, metaVersion);
     }
     else
     {
-        console.Print("DFIR-Orc.exe {}", kOrcFileVerString);
+        console.Print("DFIR-ORC.exe {}", kOrcFileVerString);
     }
 
     console.PrintNewLine();
 
-    console.Print("Usage: DFIR-Orc.exe <ToolName> <Tool Arguments>");
+    console.Print("Usage: DFIR-ORC.exe <ToolName> <Tool Arguments>");
 
     console.PrintNewLine();
 
@@ -162,7 +162,7 @@ int PrintUsage()
     }
 
     console.PrintNewLine();
-    console.Print(L"Display help on a specific tool with: 'DFIR-Orc.exe <ToolName> /?'");
+    console.Print(L"Display help on a specific tool with: 'DFIR-ORC.exe <ToolName> /?'");
     console.PrintNewLine();
 
     return -1;

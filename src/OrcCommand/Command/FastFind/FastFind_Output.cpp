@@ -29,7 +29,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe FastFind [/Config=<ConfigFile>] ...",
+        "Usage: DFIR-ORC.exe FastFind [/Config=<ConfigFile>] ...",
         "FastFind can leverage a collection of indicators to enable sophisticated indicator search. It can look up "
         "mounted file systems, registry or Windows objects directory using signature, patterns... Since FastFind aims "
         "to analyze thousands of systems, it requires minimal interaction. To achieve this goal, FastFind uses an XML "

@@ -29,7 +29,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe RegInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>]",
+        "Usage: DFIR-ORC.exe RegInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>]",
         "RegInfo is a registry parser which can analyze either online or offline registry files.");
 
     Usage::PrintOutputParameters(usageNode);

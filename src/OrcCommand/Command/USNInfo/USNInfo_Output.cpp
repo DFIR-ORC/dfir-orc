@@ -32,7 +32,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe USNInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>] "
+        "Usage: DFIR-ORC.exe USNInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>] "
         "<Location>...<LocationN>",
         "USNInfo collects information from the USN journal. It uses the same USN journal enumeration routines as "
         "NTFSInfo, but with FSCTL_READ_USN_JOURNAL. The USN journal is enumerated starting with the oldest entries and "

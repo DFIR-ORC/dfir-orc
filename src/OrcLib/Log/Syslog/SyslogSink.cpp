@@ -54,7 +54,7 @@ SyslogSink<T>::SyslogSink()
     // <14>1 2021-10-11T22:14:15.003Z 172.20.192.1 su - ID47 - BOM'su root' failed for lonvick on /dev/pts/8
     //
     const auto pattern =
-        fmt::format("<14>1 %Y-%m-%dT%T.%eZ {} DFIR-Orc %P {} {} \xef\xbb\xbf%v", GetHostName().value_or(nil), nil, nil);
+        fmt::format("<14>1 %Y-%m-%dT%T.%eZ {} DFIR-ORC %P {} {} \xef\xbb\xbf%v", GetHostName().value_or(nil), nil, nil);
 
     spdlog::sinks::base_sink<T>::set_formatter_(
         std::make_unique<spdlog::pattern_formatter>(pattern, spdlog::pattern_time_type::utc, eol));

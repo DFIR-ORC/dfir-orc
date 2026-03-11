@@ -1,13 +1,13 @@
 # Continous Integration
 
-This directory contains resources to help build and test DFIR-Orc with continuous integration. Currently those scripts are only used internally and Azure does not implement them.
+This directory contains resources to help build and test DFIR-ORC with continuous integration. Currently those scripts are only used internally and Azure does not implement them.
 
 
 ## Resources
 
 | File               | Description                                                                               |
 |:-------------------|:------------------------------------------------------------------------------------------|
-| build.ps1          | Script file to be sourced. Facilitate DFIR-Orc builds with 'Build-Orc' function.          |
+| build.ps1          | Script file to be sourced. Facilitate DFIR-ORC builds with 'Build-Orc' function.          |
 | test.psm1          | Module with multiple functions to help building functional tests and check their results. |
 | contoso.com.pem    | Public key for testing encryption (.p7b)                                                  |
 | contoso.com.key    | Private key for testing decryption (.p7b)                                                 |
@@ -26,7 +26,7 @@ The `test.psm1` module contains multiple functions to help building functional t
 
 >**Requirements:** an Hyper-V virtual machine with a checkpoint.
 
-Configure, drop, execute DFIR-Orc in a virtual machine.
+Configure, drop, execute DFIR-ORC in a virtual machine.
 
 Credentials to access the virtual machine using remote powershell are required and can be cached with Get-Credential.
 
@@ -62,7 +62,7 @@ Invoke-OrcOffline `
 >- Openssl (can use included version from https://gitforwindows.org)
 >- Compiled unstream in the script's directory - https://github.com/DFIR-ORC/orc-decrypt/blob/master/README.md#cmake-build-instructions-windowslinux
 
-Check one or multiple DFIR-Orc results using Outcome's exit codes and do some basic integrity tests.
+Check one or multiple DFIR-ORC results using Outcome's exit codes and do some basic integrity tests.
 
 This command expands and test results using `Expand-OrcResults` and `Test-OrcExpandedResults` which can be called directly.
 
@@ -95,10 +95,10 @@ WARNING: WIN-UEP1AAROS8L: Empty file: processes2.log
 
 >**Requirements:** Nushell (tested with v0.87) - https://github.com/nushell/nushell/releases/tag/0.87.0
 
-Convert DFIR-Orc offline results so they can be compared between multiple execution.
+Convert DFIR-ORC offline results so they can be compared between multiple execution.
 
-It will filter files, sort and strip csv so a comparison between two different DFIR-Orc version will be easier.
-It can be used with continuous integration for 'DFIR-Orc offline' mode but currently requires human analysis for 'live' results.
+It will filter files, sort and strip csv so a comparison between two different DFIR-ORC version will be easier.
+It can be used with continuous integration for 'DFIR-ORC offline' mode but currently requires human analysis for 'live' results.
 
 ```
 ConvertTo-OrcDiffableResults `
@@ -120,7 +120,7 @@ ConvertTo-OrcDiffableResults `
 
 >**Requirements:** NuShell v0.35 - https://github.com/nushell/nushell/releases/tag/0.35.0
 
-Compare two differents set of DFIR-Orc results that have already been prepared for the diff with `ConvertTo-OrcDiffableResults`.
+Compare two differents set of DFIR-ORC results that have already been prepared for the diff with `ConvertTo-OrcDiffableResults`.
 
 Archives made on a running system will still need some "human analysis", use `ConverTo-OrcDiffableResults`.
 
@@ -169,7 +169,7 @@ Differing file(s) count: 14
 >- Openssl (can use included version from https://gitforwindows.org)
 >- Compiled unstream in the script's directory - https://github.com/DFIR-ORC/orc-decrypt/blob/master/README.md#cmake-build-instructions-windowslinux
 
-Extract all DFIR-Orc archives referenced by Outcome file(s) recursively.
+Extract all DFIR-ORC archives referenced by Outcome file(s) recursively.
 
 ```
 Expand-OrcResults results -Destination out -PrivateKey dfir-orc\configuration\test.key
@@ -177,7 +177,7 @@ Expand-OrcResults results -Destination out -PrivateKey dfir-orc\configuration\te
 
 
 ### Expand-OrcArchive
-Extract one DFIR-Orc archive recursively (no Outcome needed).
+Extract one DFIR-ORC archive recursively (no Outcome needed).
 
 ```
 Expand-OrcArchive results\w10 -PrivateKey dfir-orc\configuration\test.key -Destination out\w10
@@ -185,7 +185,7 @@ Expand-OrcArchive results\w10 -PrivateKey dfir-orc\configuration\test.key -Desti
 
 
 ### Test-OrcExpandedResults
-Check DFIR-Orc results using Outcome's commands exit code and do some basic integrity tests.
+Check DFIR-ORC results using Outcome's commands exit code and do some basic integrity tests.
 
 ```
 Test-OrcExpandedResults results\w10
@@ -198,7 +198,7 @@ WARNING: DANDEV: Empty file: Browsers_complet.log
 
 
 ### Test-OrcOutcome
-Parse a DFIR-Orc Outcome file(s) and print a summary.
+Parse a DFIR-ORC Outcome file(s) and print a summary.
 
 ```
 Test-OrcOutcome .\out\w10\
@@ -215,7 +215,7 @@ WARNING: WIN-UEP1AAROS8L: Failed ORC_Powershell/Azure_Instance (code: 0x1, durat
 
 
 ### Get-OrcStatistics
-Get multiple statistics about DFIR-Orc expanded results.
+Get multiple statistics about DFIR-ORC expanded results.
 
 ```
 Get-OrcStatistics .\out\w10\
@@ -228,7 +228,7 @@ WIN-UEP1AAROS8L: Execution: 00.00:17:48, fails: 6, max memory: 1.3 GB (ORC_Littl
 
 
 ### New-OrcLocalConfig
-Generate "local configuration" XML output to be used with DFIR-Orc's `/local=<path>` option.
+Generate "local configuration" XML output to be used with DFIR-ORC's `/local=<path>` option.
 
 ```
 New-OrcLocalConfig -PublicKey contoso.com.pem -Upload smb:\\192.168.0.1

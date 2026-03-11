@@ -501,7 +501,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, st
 {
     HRESULT hr = E_FAIL;
 
-    // Warning!!! to ensure DFIR-Orc does not execute again when upload server is unavailable,
+    // Warning!!! to ensure DFIR-ORC does not execute again when upload server is unavailable,
     // we return S_OK in all cases (except HTTP Status 404, in that case, we return S_FALSE)
 
     std::wstring strRemotePath = GetRemotePath(strRemoteName);

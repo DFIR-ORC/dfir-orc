@@ -34,7 +34,7 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe NTFSInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>] "
+        "Usage: DFIR-ORC.exe NTFSInfo [/config=<ConfigFile>] [/out=<Folder|Outfile.csv|Archive.7z>] "
         "[/(+|-)<ColumnSelection,...>:<Filter>] [/<DefaultColumnSelection>,...] [/KnownLocations|/kl] "
         "<Location>...<LocationN>",
         "NTFSInfo is intended to collect details on data stored on NTFS mounted volumes, raw disk images or Volume "

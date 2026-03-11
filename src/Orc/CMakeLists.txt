@@ -156,7 +156,7 @@ if(${ORC_BUILD_APACHE_ORC})
 endif()
 
 set_property(TARGET Orc PROPERTY FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
-set_property(TARGET Orc PROPERTY OUTPUT_NAME "DFIR-Orc_${TARGET_ARCH}")
+set_property(TARGET Orc PROPERTY OUTPUT_NAME "DFIR-ORC_${TARGET_ARCH}")
 set_property(TARGET Orc APPEND PROPERTY LINK_FLAGS "/DEBUG /MANIFESTUAC:\"level='requireAdministrator'\"" )
 
 foreach(CONFIG Debug MinSizeRel Release RelWithDebInfo)

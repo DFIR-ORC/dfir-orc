@@ -22,7 +22,7 @@ void Main::PrintUsage()
 {
     auto usageNode = m_console.OutputTree();
 
-    Usage::PrintHeader(usageNode, "Usage: DFIR-Orc.exe help", "");
+    Usage::PrintHeader(usageNode, "Usage: DFIR-ORC.exe help", "");
 }
 
 void Main::PrintParameters()

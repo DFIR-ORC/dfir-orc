@@ -251,7 +251,7 @@ void Main::ReadLogConfiguration(const ConfigItem& configItem, bool hasConsoleCon
         auto hr = output.Configure(configItem);
         if (FAILED(hr))
         {
-            Log::Warn(L"Failed to configure DFIR-Orc log file [{}]", SystemError(hr));
+            Log::Warn(L"Failed to configure DFIR-ORC log file [{}]", SystemError(hr));
         }
         else if (!hasConsoleConfigItem)
         {
@@ -342,7 +342,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         auto hr = E_FAIL;
         if (FAILED(hr = config.Outline.Configure(configitem[WOLFLAUNCHER_OUTLINE])))
         {
-            Log::Warn(L"Failed to configure DFIR-Orc outline file [{}]", SystemError(hr));
+            Log::Warn(L"Failed to configure DFIR-ORC outline file [{}]", SystemError(hr));
         }
     }
 
@@ -351,7 +351,7 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         auto hr = E_FAIL;
         if (FAILED(hr = config.Outcome.Configure(configitem[WOLFLAUNCHER_OUTCOME])))
         {
-            Log::Warn(L"Failed to configure DFIR-Orc outcome file [{}]", SystemError(hr));
+            Log::Warn(L"Failed to configure DFIR-ORC outcome file [{}]", SystemError(hr));
         }
     }
 
@@ -615,7 +615,7 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     if (auto hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, configitem[ORC_TEMP]); FAILED(hr))
     {
         Log::Error("Error in specified tempdir in config file, defaulting to current directory [{}]", SystemError(hr));
-        config.TempWorkingDir.Path = L".\\DFIR-OrcTempDir";
+        config.TempWorkingDir.Path = L".\\DFIR-ORCTempDir";
         config.TempWorkingDir.Type = OutputSpec::Kind::Directory;
     }
 
@@ -911,7 +911,7 @@ HRESULT Main::CheckConfiguration()
     }
 
     SystemDetails::SetOrcRunId(guid);
-    Log::Debug(L"Starting DFIR-Orc (run id: {})", ToStringW(guid));
+    Log::Debug(L"Starting DFIR-ORC (run id: {})", ToStringW(guid));
 
     if (m_consoleConfiguration.output.path)
     {
@@ -1182,7 +1182,7 @@ HRESULT Main::CheckConfiguration()
 
     if (config.strOfflineLocation.has_value())
     {
-        // DFIR-Orc is now in Offline mode (to handle disk images)
+        // DFIR-ORC is now in Offline mode (to handle disk images)
 
         // First, we check that dfir-orc computer & system type have been set
         std::wstring strFullComputerName;
@@ -1192,7 +1192,7 @@ HRESULT Main::CheckConfiguration()
 
         if (strFullComputerName == strOrcFullComputerName)
         {
-            Log::Warn("DFIR-Orc in offline mode and no computer name set, defaulting to this machine's name");
+            Log::Warn("DFIR-ORC in offline mode and no computer name set, defaulting to this machine's name");
         }
 
         // Then, we set ORC_Offline as a "OnlyThis" keyword

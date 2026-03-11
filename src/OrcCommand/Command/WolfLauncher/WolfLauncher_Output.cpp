@@ -80,10 +80,10 @@ void Main::PrintUsage()
 
     Usage::PrintHeader(
         usageNode,
-        "Usage: DFIR-Orc.exe [/Config=<File>] [/Local=<File> [/Out=<Folder|File.csv|Archive.7z>] [/Outline=File.json] "
+        "Usage: DFIR-ORC.exe [/Config=<File>] [/Local=<File> [/Out=<Folder|File.csv|Archive.7z>] [/Outline=File.json] "
         "[/Once|/Overwrite|/CreateNew] [/Computer=<Name>] [/FullComputer=<Name>] [/PowerState=<Requirements>] "
         "[/ChildDebug|/NoChildDebug] [/Offline=<FilePath>] [/SystemType=<WorkStation|Server|DomainController>] [/keys]",
-        "When DFIR-Orc executable is 'configured' it will be run in multiple processes which parent(s) will watch and "
+        "When DFIR-ORC executable is 'configured' it will be run in multiple processes which parent(s) will watch and "
         "administer (see online documentation). The top-level options specified here can affect parent and childs "
         "processes.");
 
@@ -96,22 +96,22 @@ void Main::PrintUsage()
     constexpr std::array kSpecificParameters = {
         Usage::Parameter {
             "/CreateNew",
-            "A new archive is created each time DFIR-Orc.exe is run, with names suffixed by _1.7z, _2.7z, etc. An "
+            "A new archive is created each time DFIR-ORC.exe is run, with names suffixed by _1.7z, _2.7z, etc. An "
             "alternative is to use the {TimeStamp} pattern in the archive name"},
         Usage::Parameter {
             "/Once", "If the target file already exists (and is not empty), then this archive is skipped"},
-        Usage::Parameter {"/Overwrite", "Previous archives are overwritten by new executions of DFIR-Orc.exe"},
+        Usage::Parameter {"/Overwrite", "Previous archives are overwritten by new executions of DFIR-ORC.exe"},
         Usage::Parameter {
             "/PowerState=<Requirements>",
             "Require system to stay on with one or more value from: SystemRequired, DisplayRequired, UserPresent, "
             "AwayMode (recommended: 'SystemRequired,AwayMode')"},
         Usage::Parameter {
             "/Offline=<FilePath>",
-            "Sets the DFIR-Orc to work on a disk image. It will set %OfflineLocation% and explicitely select archive "
+            "Sets the DFIR-ORC to work on a disk image. It will set %OfflineLocation% and explicitely select archive "
             "DFIR-ORC_Offline"},
         Usage::Parameter {
             "/Keys",
-            "Display the archives and commands of a configured binary DFIR-Orc.exe. No command is executed, no "
+            "Display the archives and commands of a configured binary DFIR-ORC.exe. No command is executed, no "
             "archives are created."},
         Usage::Parameter {
             "/Key=<KeyWords>",
@@ -216,7 +216,7 @@ void Main::PrintFooter()
     m_console.PrintNewLine();
 
     auto root = m_console.OutputTree();
-    auto node = root.AddNode("DFIR-Orc WolfLauncher statistics");
+    auto node = root.AddNode("DFIR-ORC WolfLauncher statistics");
     PrintCommonFooter(node);
 
     m_console.PrintNewLine();

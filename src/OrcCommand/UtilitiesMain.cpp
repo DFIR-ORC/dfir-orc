@@ -58,14 +58,14 @@ void UtilitiesMain::PrintCommonParameters(Orc::Text::Tree& root)
     SystemDetails::GetOrcComputerName(orcComputerName);
     if (computerName != orcComputerName)
     {
-        PrintValue(root, L"DFIR-Orc computer name", orcComputerName);
+        PrintValue(root, L"DFIR-ORC computer name", orcComputerName);
     }
 
     std::wstring orcFullComputerName;
     SystemDetails::GetOrcFullComputerName(orcFullComputerName);
     if (orcFullComputerName != fullComputerName && orcFullComputerName != orcComputerName)
     {
-        PrintValue(root, L"DFIR-Orc full computer name", orcFullComputerName);
+        PrintValue(root, L"DFIR-ORC full computer name", orcFullComputerName);
     }
 
     std::wstring description;
@@ -84,7 +84,7 @@ void UtilitiesMain::PrintCommonParameters(Orc::Text::Tree& root)
 
     std::wstring orcSystemType;
     SystemDetails::GetOrcSystemType(orcSystemType);
-    PrintValue(root, L"DFIR-Orc system type", orcSystemType);
+    PrintValue(root, L"DFIR-ORC system type", orcSystemType);
 
     PrintValue(root, L"System tags", boost::join(SystemDetails::GetSystemTags(), ", "));
 
