@@ -20,31 +20,20 @@ configure_file(
     @ONLY
 )
 
-set(SRC_MOTHERSHIP
-    "Mothership.h"
-    "Mothership_Config.cpp"
-    "Mothership_Output.cpp"
-    "Mothership_Run.cpp"
-)
-
-source_group(MotherShip FILES ${SRC_MOTHERSHIP})
-
 set(SRC
+    "Orc.cpp"
+    "Orc.rc"
     "targetver.h"
     "resource.h"
-    "Orc.cpp"
-    "Compatibility.manifest"
-    "Orc.rc"
-    ${SRC_MOTHERSHIP}
     "${GENERATED_SRC_DIR}/Icon.h"
-    )
+    "Compatibility.manifest"
+)
 
 if(${TARGET_ARCH} STREQUAL "x86")
     list(APPEND SRC "xpcrtwrap.asm" "XPSP2Compatibility.cpp")
 endif()
 
 add_executable(Orc
-    "stdafx.h"
     ${SRC}
 )
 
@@ -59,12 +48,6 @@ target_link_libraries(Orc
         OrcLib
         setupapi.lib
 )
-
-if(${ORC_SWAPRUN_NET})
-    target_link_options(Orc PRIVATE "/SWAPRUN:NET")
-endif()
-
-target_precompile_headers(Orc PRIVATE stdafx.h)
 
 if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp"
     AND "${TARGET_ARCH}" STREQUAL "x86")

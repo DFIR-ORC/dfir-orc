@@ -331,7 +331,7 @@ private:
     std::optional<JobStatistics> m_jobStatistics;
 };
 
-class Mothership
+class Capsule
 {
 public:
     const std::wstring& GetCommandLineValue() const { return m_commandLine; }
@@ -435,8 +435,8 @@ public:
     WolfLauncher& GetWolfLauncher() { return m_wolfLauncher; }
     const WolfLauncher& GetWolfLauncher() const { return m_wolfLauncher; }
 
-    Mothership& GetMothership() { return m_mothership; }
-    const Mothership& GetMothership() const { return m_mothership; }
+    Capsule& GetCapsule() { return m_capsule; }
+    const Capsule& GetCapsule() const { return m_capsule; }
 
     const std::wstring& ConsoleFileName() const { return m_consoleFileName; }
     void SetConsoleFileName(std::wstring path) { m_consoleFileName = std::move(path); }
@@ -456,7 +456,7 @@ private:
     std::wstring m_computerName;
     std::wstring m_orcComputerName;
     std::wstring m_orcSystemType;
-    Mothership m_mothership;
+    Capsule m_capsule;
     std::wstring m_consoleFileName;
     std::wstring m_logFileName;
     std::wstring m_outlineFileName;

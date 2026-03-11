@@ -54,7 +54,7 @@ public:
         std::optional<std::wstring> m_runArgs32;
         std::optional<std::wstring> m_run64;
         std::optional<std::wstring> m_runArgs64;
-        //std::optional<std::wstring> m_embedPath;  // the config file or directory as specified with /config
+        // std::optional<std::wstring> m_embedPath;  // the config file or directory as specified with /config
         std::optional<std::wstring> m_embedFile;  // the absolute path to embed file
         std::optional<std::wstring> m_embedDirectory;  // the absolute path to embed directory
     };
@@ -67,10 +67,7 @@ private:
 
     Configuration config;
 
-    HRESULT WriteEmbedConfig(
-        const std::wstring& strOutputFile,
-        const std::wstring& strMothership,
-        const std::vector<EmbeddedResource::EmbedSpec>& values);
+    HRESULT WriteEmbedConfig(const std::wstring& strOutputFile, const std::vector<EmbeddedResource::EmbedSpec>& values);
 
     HRESULT Run_Embed();
     HRESULT Run_EmbedCapsule();

@@ -76,11 +76,11 @@ STDMETHODIMP ArchiveExtract::Extract(
             }
 
             wstring strFileName(pwzZipFilePath);
-            wstring ResName, MotherShip, NameInArchive, Format;
+            wstring ResName, HostBinary, NameInArchive, Format;
 
             if (FAILED(
                     hr = EmbeddedResource::SplitResourceReference(
-                        strFileName, MotherShip, ResName, NameInArchive, Format)))
+                        strFileName, HostBinary, ResName, NameInArchive, Format)))
                 return hr;
 
             HMODULE hMod = NULL;
@@ -89,7 +89,7 @@ STDMETHODIMP ArchiveExtract::Extract(
 
             if (FAILED(
                     hr = EmbeddedResource::LocateResource(
-                        MotherShip, ResName, EmbeddedResource::BINARY(), hMod, hRes, strBinaryPath)))
+                        HostBinary, ResName, EmbeddedResource::BINARY(), hMod, hRes, strBinaryPath)))
                 return hr;
 
             if (FAILED(hr = pResStream->OpenForReadOnly(hMod, hRes)))

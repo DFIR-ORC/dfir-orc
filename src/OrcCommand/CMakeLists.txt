@@ -292,7 +292,7 @@ if(ORC_COMMAND_WOLFLAUNCHER)
     add_compile_definitions(ORC_COMMAND_WOLFLAUNCHER)
 endif()
 
-if(ORC_BUILD_ORC OR ORC_COMMAND_WOLFLAUNCHER) # Building Orc.exe (i.e. Mothership) or WolfLauncher require those files
+if(ORC_BUILD_ORC OR ORC_COMMAND_WOLFLAUNCHER) # Building Orc.exe or WolfLauncher require those files
     set(SRC_ORC_CONFIG
         "ConfigFile_OrcConfig.cpp"
         "ConfigFile_OrcConfig.h"

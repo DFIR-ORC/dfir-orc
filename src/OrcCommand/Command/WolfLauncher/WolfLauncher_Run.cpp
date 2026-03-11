@@ -218,7 +218,7 @@ Result<std::wstring> GetProcessExecutableHash(DWORD dwProcessId, CryptoHashStrea
     return GetProcessExecutableHash(*hProcess, algorithm);
 }
 
-void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HANDLE hMothership)
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HANDLE hCapsule)
 {
     outcome.SetId(id);
 
@@ -261,23 +261,23 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HAN
 
     outcome.SetEndingTime(std::chrono::system_clock::now());
 
-    auto mothershipPID = SystemDetails::GetParentProcessId();
-    if (mothershipPID)
+    auto capsulePID = SystemDetails::GetParentProcessId();
+    if (capsulePID)
     {
-        auto& mothership = outcome.GetMothership();
+        auto& capsule = outcome.GetCapsule();
 
-        auto commandLine = SystemDetails::GetCmdLine(mothershipPID.value());
+        auto commandLine = SystemDetails::GetCmdLine(capsulePID.value());
         if (commandLine)
         {
-            mothership.SetCommandLineValue(commandLine.value());
+            capsule.SetCommandLineValue(commandLine.value());
         }
 
-        if (hMothership)
+        if (hCapsule)
         {
-            auto sha1 = GetProcessExecutableHash(hMothership, CryptoHashStream::Algorithm::SHA1);
+            auto sha1 = GetProcessExecutableHash(hCapsule, CryptoHashStream::Algorithm::SHA1);
             if (sha1)
             {
-                mothership.SetSha1(sha1.value());
+                capsule.SetSha1(sha1.value());
             }
         }
     }
@@ -683,26 +683,26 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
                 writer->WriteNamed(L"system_type", systemType);
             }
 
-            auto mothership_id = SystemDetails::GetParentProcessId();
-            if (mothership_id)
+            auto capsule_id = SystemDetails::GetParentProcessId();
+            if (capsule_id)
             {
-                const wchar_t kMothership[] = L"mothership";
+                const wchar_t kCapsule[] = L"capsule";
 
-                writer->BeginElement(kMothership);
+                writer->BeginElement(kCapsule);
 
-                auto mothership_cmdline = SystemDetails::GetCmdLine(mothership_id.value());
-                if (mothership_cmdline)
+                auto capsule_cmdline = SystemDetails::GetCmdLine(capsule_id.value());
+                if (capsule_cmdline)
                 {
-                    writer->WriteNamed(L"command_line", mothership_cmdline.value().c_str());
+                    writer->WriteNamed(L"command_line", capsule_cmdline.value().c_str());
                 }
 
-                const auto sha1 = GetProcessExecutableHash(mothership_id.value(), CryptoHashStream::Algorithm::SHA1);
+                const auto sha1 = GetProcessExecutableHash(capsule_id.value(), CryptoHashStream::Algorithm::SHA1);
                 if (sha1)
                 {
                     writer->WriteNamed(L"sha1", sha1.value());
                 }
 
-                writer->EndElement(kMothership);
+                writer->EndElement(kCapsule);
             }
             writer->WriteNamed(L"output", config.Output.Path.c_str());
             writer->WriteNamed(L"temp", config.TempWorkingDir.Path.c_str());
@@ -933,10 +933,6 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
     if (m_hCapsule)
     {
         ::UpdateOutcome(outcome, SystemDetails::GetOrcRunId(), *m_hCapsule);
-    }
-    else if (m_hMothership)
-    {
-        ::UpdateOutcome(outcome, SystemDetails::GetOrcRunId(), *m_hMothership);
     }
 
     ::UpdateOutcome(outcome, config.m_Recipients);

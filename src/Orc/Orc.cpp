@@ -8,9 +8,7 @@
 // OrcUtil::Main.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
-
-#include <boost/algorithm/string/join.hpp>
+#include <tchar.h>
 
 #ifdef ORC_COMMAND_FASTFIND
 #    include "Command/FastFind/FastFind.h"
@@ -52,14 +50,12 @@
 #    include "Command/DD/DD.h"
 #endif
 
-#include "Mothership.h"
 #include "Console.h"
 #include "Text/Tree.h"
 #include "ToolVersion.h"
 #include "Usage.h"
 #include "EmbeddedResource.h"
 #include "Robustness.h"
-#include "Utils/String.h"
 
 using WinMainPtr = std::function<int(int argc, const WCHAR* argv[])>;
 
@@ -128,8 +124,7 @@ ToolDescription g_Tools[] = {
 #ifdef ORC_COMMAND_DD
     ToolDescription::Get<DD::Main>(),
 #endif
-    {nullptr, nullptr, nullptr}
-};
+    {nullptr, nullptr, nullptr}};
 
 int PrintUsage()
 {
@@ -213,12 +208,5 @@ int wmain(int argc, const WCHAR* argv[])
         }
     }
 
-    if (EmbeddedResource::IsConfiguredToRun())
-    {
-        return UtilitiesMain::WMain<Mothership::Main>(argc, argv);
-    }
-    else
-    {
-        return PrintUsage();
-    }
+    return PrintUsage();
 }

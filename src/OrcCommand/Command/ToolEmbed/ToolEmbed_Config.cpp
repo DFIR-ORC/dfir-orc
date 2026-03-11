@@ -821,125 +821,6 @@ HRESULT Main::CheckConfiguration()
         }
     }
 
-    //
-    // BEWARE: this should be useless code after removing 'Mothership'.
-    //
-    // CLI input file takes precedence over config file input, but their relative paths are
-    // resolved differently:
-    //  - CLI paths: relative to working directory
-    //  - Config paths: relative to config file directory
-    //
-    // This function resolves both paths and updates 'config.strInputFile' with the final
-    // resolved path. After this point, 'config.strInputFileFromCli' should not be accessed.
-    //
-    if (!config.strInputFileFromCli.empty())
-    {
-        // A relative path from cli should be relative to working directory so convert it to absolute path
-        std::error_code ec;
-        config.strInputFile = std::filesystem::absolute(config.strInputFileFromCli, ec);
-        if (ec)
-        {
-            Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", config.strInputFileFromCli, ec);
-            return E_INVALIDARG;
-        }
-    }
-    else if (!config.strInputFile.empty())
-    {
-        //
-        // Resolve strInputFile to an absolute path
-        //
-        auto strInputFile = config.strInputFile;
-
-        HRESULT hr = ExpandPath(strInputFile.c_str(), config.strInputFile, false);
-        if (FAILED(hr))
-        {
-            Log::Debug(L"Invalid input path (value: {}) [{}]", config.strInputFile, SystemError(hr));
-            return E_FAIL;
-        }
-
-        if (std::filesystem::path(strInputFile).is_relative())
-        {
-            std::error_code ec;
-
-            if (config.m_embedDirectory)
-            {
-                strInputFile = std::filesystem::path(*config.m_embedDirectory) / config.strInputFile;
-                config.strInputFile = std::filesystem::absolute(strInputFile, ec);
-                if (ec)
-                {
-                    Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", config.strInputFile, ec);
-                    return E_INVALIDARG;
-                }
-            }
-            else
-            {
-                // This case should not happen because m_embedDirectory is always set when strInputFile is from config
-                assert(0 && "Unexpected code path");
-
-                std::optional<std::wstring> configDirectory;
-                std::optional<std::wstring> configFilename;
-                auto rv = GetTopDirectoryAndFilename(config.strConfigFile, configDirectory, configFilename);
-                if (!rv || !configDirectory)
-                {
-                    Log::Debug(L"Invalid configuration path: '{}' [{}]", config.strConfigFile, rv.error());
-                    return E_INVALIDARG;
-                }
-
-                std::wstring inputFile = std::filesystem::path(*configDirectory) / config.strInputFile;
-                config.strInputFile = std::filesystem::absolute(inputFile, ec);
-                if (ec)
-                {
-                    Log::Debug(L"Failed std::filesystem::absolute (path: {}) [{}]", config.strInputFileFromCli, ec);
-                    return E_INVALIDARG;
-                }
-            }
-        }
-    }
-
-    //
-    // The code below is working and can be removed once we are sure that:
-    //
-    // 1. The "capsule" mode is accepted and the only one used
-    // 2. The new behavior on "input" from CLI and XML configuration is accepted, the 'input' option is now ignored and
-    // the capsule wrapping DFIR-ORC and toolembed is reused automatically.
-    //
-    // If the input option must be handled or legacy Mothership is still used then uncomment this.
-    //
-    /*
-        if (config.strInputFile.empty())
-        {
-            config.strInputFile = *m_capsule;
-        }
-
-        if (!std::filesystem::exists(config.strInputFile, ec))
-        {
-            Log::Error(L"Input file does not exists: {}", config.strInputFile);
-            return E_INVALIDARG;
-        }
-
-        if (::IsCapsuleExecutable(config.strInputFile))
-        {
-            Log::Debug(L"Input file '{}' is a capsule executable", config.strInputFile);
-        }
-        else if (m_capsule)
-        {
-            Log::Warn(L"[DEPRECATED] Input file is not a capsule executable, using: '{}'", *m_capsule);
-            config.strInputFile = *m_capsule;
-        }
-        else
-        {
-    #ifdef _DEBUG
-            Log::Critical(
-                L"[DEPRECATED] Input file is a legacy Mothership executable vulnerable to DLL side-loading (path: {})",
-                config.strInputFile);
-    #else
-            Log::Warn(L"[DEPRECATED] Input file is not a capsule executable, using '{}'", *m_capsule);
-            config.strInputFile = *m_capsule;
-    #endif
-        }
-    */
-
-#ifndef _DEBUG
     if (m_capsule)
     {
         if (!config.strInputFile.empty())
@@ -960,7 +841,6 @@ HRESULT Main::CheckConfiguration()
         Log::Critical(L"[DEPRECATED] DFIR-ORC does not use Mothership anymore, call ToolEmbed from Capsule wrapper");
         return E_FAIL;
     }
-#endif
 
     if (m_capsule)
     {

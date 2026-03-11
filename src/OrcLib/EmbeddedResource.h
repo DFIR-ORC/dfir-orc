@@ -475,9 +475,9 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRe
 
     auto hr = E_FAIL;
 
-    std::wstring MotherShip, ResName, NameInArchive, FormatName;
+    std::wstring HostBinary, ResName, NameInArchive, FormatName;
 
-    if (SUCCEEDED(hr = SplitResourceReference(szImageFileResourceID, MotherShip, ResName, NameInArchive, FormatName)))
+    if (SUCCEEDED(hr = SplitResourceReference(szImageFileResourceID, HostBinary, ResName, NameInArchive, FormatName)))
     {
         if (NameInArchive.empty())
         {
@@ -489,7 +489,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRe
             HRSRC hRes = NULL;
             HMODULE hModule = NULL;
             std::wstring strBinaryPath;
-            if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+            if (FAILED(hr = LocateResource(HostBinary, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
                 Log::Warn(L"Could not locate resource {} [{}]", szImageFileResourceID, SystemError(hr));
                 return hr;
@@ -540,7 +540,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRe
             auto extract = ArchiveExtract::MakeExtractor(fmt);
 
             auto MakeArchiveStream =
-                [&MotherShip, &ResName, &szImageFileResourceID](std::shared_ptr<ByteStream>& stream) -> HRESULT {
+                [&HostBinary, &ResName, &szImageFileResourceID](std::shared_ptr<ByteStream>& stream) -> HRESULT {
                 HRESULT hr = E_FAIL;
 
                 shared_ptr<ResourceStream> res = make_shared<ResourceStream>();
@@ -548,7 +548,7 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRe
                 HRSRC hRes = NULL;
                 HMODULE hModule = NULL;
                 std::wstring strBinaryPath;
-                if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+                if (FAILED(hr = LocateResource(HostBinary, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
                     Log::Warn(L"Could not locate resource [{}]", szImageFileResourceID, SystemError(hr));
                     return hr;

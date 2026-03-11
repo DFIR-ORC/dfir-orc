@@ -509,9 +509,9 @@ HRESULT EmbeddedResource::ExtractToDirectory(
         return S_OK;
     }
 
-    wstring MotherShip, ResName, NameInArchive, FormatName;
+    wstring HostBinary, ResName, NameInArchive, FormatName;
 
-    if (auto hr = SplitResourceReference(szImageFileResourceID, MotherShip, ResName, NameInArchive, FormatName);
+    if (auto hr = SplitResourceReference(szImageFileResourceID, HostBinary, ResName, NameInArchive, FormatName);
         FAILED(hr))
     {
         if (hr == HRESULT_FROM_WIN32(ERROR_NO_MATCH))
@@ -539,7 +539,7 @@ HRESULT EmbeddedResource::ExtractToDirectory(
         HRSRC hRes = NULL;
         HMODULE hModule = NULL;
         std::wstring strBinaryPath;
-        if (auto hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath); FAILED(hr))
+        if (auto hr = LocateResource(HostBinary, ResName, BINARY(), hModule, hRes, strBinaryPath); FAILED(hr))
         {
             Log::Warn(L"Could not locate resource '{}' [{}]", szImageFileResourceID, SystemError(hr));
             return hr;
@@ -632,9 +632,9 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
 {
     HRESULT hr = E_FAIL;
 
-    wstring MotherShip, ResName, NameInArchive, FormatName;
+    wstring HostBinary, ResName, NameInArchive, FormatName;
 
-    if (SUCCEEDED(hr = SplitResourceReference(szImageFileResourceID, MotherShip, ResName, NameInArchive, FormatName)))
+    if (SUCCEEDED(hr = SplitResourceReference(szImageFileResourceID, HostBinary, ResName, NameInArchive, FormatName)))
     {
         if (NameInArchive.empty())
         {
@@ -646,7 +646,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
             HRSRC hRes = NULL;
             HMODULE hModule = NULL;
             std::wstring strBinaryPath;
-            if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+            if (FAILED(hr = LocateResource(HostBinary, ResName, BINARY(), hModule, hRes, strBinaryPath)))
             {
                 Log::Debug(L"Failed to locate resource (id: {}) [{}]", szImageFileResourceID, SystemError(hr));
                 return hr;
@@ -710,7 +710,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
             auto extract = ArchiveExtract::MakeExtractor(fmt);
 
             auto MakeArchiveStream =
-                [&MotherShip, &ResName, &szImageFileResourceID](std::shared_ptr<ByteStream>& stream) -> HRESULT {
+                [&HostBinary, &ResName, &szImageFileResourceID](std::shared_ptr<ByteStream>& stream) -> HRESULT {
                 HRESULT hr = E_FAIL;
 
                 shared_ptr<ResourceStream> res = make_shared<ResourceStream>();
@@ -718,7 +718,7 @@ EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileResourceID, CBi
                 HRSRC hRes = NULL;
                 HMODULE hModule = NULL;
                 std::wstring strBinaryPath;
-                if (FAILED(hr = LocateResource(MotherShip, ResName, BINARY(), hModule, hRes, strBinaryPath)))
+                if (FAILED(hr = LocateResource(HostBinary, ResName, BINARY(), hModule, hRes, strBinaryPath)))
                 {
                     Log::Debug(
                         L"Could not locate resource (id: {}, path: {}) [{}]",

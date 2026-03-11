@@ -781,8 +781,6 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                         ;
                     else if (ParameterOption(argv[i] + 1, L"Compression", config.strCompressionLevel))
                         ;
-                    else if (ParameterOption(argv[i] + 1, L"Mothership", config.strMothershipHandle))
-                        ;
                     else if (OptionalParameterOption(argv[i] + 1, L"Capsule", config.strCapsule))
                         ;
                     else if (ParameterOption(argv[i] + 1, L"archive_timeout", config.msArchiveTimeOut))
@@ -967,23 +965,6 @@ HRESULT Main::CheckConfiguration()
                 }
             }
         }
-    }
-
-    if (!config.strMothershipHandle.empty())
-    {
-        auto handle = Text::FromHexToLittleEndian<HANDLE>(std::wstring_view(config.strMothershipHandle));
-        if (handle)
-        {
-            m_hMothership = *handle;
-        }
-        else
-        {
-            Log::Error("Failed to parse mothership handle [{}]", handle.error());
-        }
-    }
-    else
-    {
-        Log::Debug("No Mothership handle");
     }
 
     if (config.strCapsule)

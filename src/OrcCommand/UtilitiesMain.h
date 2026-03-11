@@ -486,7 +486,6 @@ protected:
     DWORD theStartTickCount;
     DWORD theFinishTickCount;
     UtilitiesConfiguration m_utilitiesConfig;
-    std::optional<HANDLE> m_hMothership;
     std::optional<HANDLE> m_hCapsule;
     std::optional<std::wstring> m_capsule;
 

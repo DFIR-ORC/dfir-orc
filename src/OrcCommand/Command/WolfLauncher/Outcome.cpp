@@ -317,14 +317,14 @@ void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::CommandS
     }
 }
 
-void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Mothership& mothership)
+void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::Capsule& capsule)
 {
-    const auto kRoot = L"mothership";
+    const auto kRoot = L"capsule";
     writer->BeginElement(kRoot);
     Guard::Scope onExit([&]() { writer->EndElement(kRoot); });
 
-    writer->WriteNamed(L"sha1", mothership.GetSha1());
-    writer->WriteNamed(L"command_line", mothership.GetCommandLineValue());
+    writer->WriteNamed(L"sha1", capsule.GetSha1());
+    writer->WriteNamed(L"command_line", capsule.GetCommandLineValue());
 }
 
 void Write(StructuredOutputWriter::IWriter::Ptr& writer, const Outcome::WolfLauncher& wolfLauncher)
@@ -378,7 +378,6 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             writer->WriteNamed(L"computer_name", outcome.GetOrcComputerNameValue());
             writer->WriteNamed(L"system_type", outcome.GetOrcSystemTypeValue());
 
-            ::Write(writer, outcome.GetMothership());
 
             {
                 const auto kNodeConsole = L"time_zone";

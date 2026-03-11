@@ -21,10 +21,7 @@
 using namespace Orc::Command::ToolEmbed;
 using namespace Orc;
 
-HRESULT Main::WriteEmbedConfig(
-    const std::wstring& outputPath,
-    const std::wstring& mothershipPath,
-    const std::vector<EmbeddedResource::EmbedSpec>& values)
+HRESULT Main::WriteEmbedConfig(const std::wstring& outputPath, const std::vector<EmbeddedResource::EmbedSpec>& values)
 {
     OutputSpec outputEmbedFile;
 
@@ -41,13 +38,6 @@ HRESULT Main::WriteEmbedConfig(
     }
 
     writer->BeginElement(L"toolembed");
-
-    if (!mothershipPath.empty())
-    {
-        writer->BeginElement(L"input");
-        writer->Write(mothershipPath.c_str());
-        writer->EndElement(L"input");
-    }
 
     for (const auto& item : values)
     {
@@ -158,20 +148,7 @@ HRESULT Main::Run_Dump()
         return hr;
     }
 
-    std::wstring bootstrap;
-    if (!m_capsule)
-    {
-        bootstrap = L".\\Mothership.exe";
-
-        hr = EmbeddedResource::DeleteEmbeddedResources(input, bootstrap, values);
-        if (FAILED(hr))
-        {
-            Log::Error(L"Failed to delete resources from '{}' [{}]", input, SystemError(hr));
-            return hr;
-        }
-    }
-
-    hr = WriteEmbedConfig(L".\\Embed.xml", bootstrap, values);
+    hr = WriteEmbedConfig(L".\\Embed.xml", values);
     if (FAILED(hr))
     {
         Log::Error("Failed to write embedding configuration for dump [{}]", SystemError(hr));

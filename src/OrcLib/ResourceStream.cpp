@@ -131,8 +131,8 @@ HRESULT Orc::ResourceStream::OpenForReadOnly(const std::wstring& strResourceSpec
         return E_FAIL;
     }
 
-    std::wstring ResName, MotherShip, NameInArchive, Format;
-    if (auto hr = EmbeddedResource::SplitResourceReference(strResourceSpec, MotherShip, ResName, NameInArchive, Format);
+    std::wstring ResName, HostBinary, NameInArchive, Format;
+    if (auto hr = EmbeddedResource::SplitResourceReference(strResourceSpec, HostBinary, ResName, NameInArchive, Format);
         FAILED(hr))
         return hr;
 
@@ -147,7 +147,7 @@ HRESULT Orc::ResourceStream::OpenForReadOnly(const std::wstring& strResourceSpec
     std::wstring strBinaryPath;
 
     if (auto hr = EmbeddedResource::LocateResource(
-            MotherShip, ResName, EmbeddedResource::BINARY(), hMod, hRes, strBinaryPath);
+            HostBinary, ResName, EmbeddedResource::BINARY(), hMod, hRes, strBinaryPath);
         FAILED(hr))
         return hr;
 
