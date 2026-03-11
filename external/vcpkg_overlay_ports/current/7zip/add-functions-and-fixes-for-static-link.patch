@@ -1,0 +1,81 @@
+diff --git a/CPP/7zip/Archive/DllExports2.cpp b/CPP/7zip/Archive/DllExports2.cpp
+index ae8d8ac..4ab8b26 100644
+--- a/CPP/7zip/Archive/DllExports2.cpp
++++ b/CPP/7zip/Archive/DllExports2.cpp
+@@ -24,6 +24,8 @@
+ 
+ #ifdef _WIN32
+ 
++#ifndef _7ZIP_STATIC
++
+ #if defined(_UNICODE) && !defined(_WIN64) && !defined(UNDER_CE)
+ #define NT_CHECK_FAIL_ACTION return FALSE;
+ #endif
+@@ -64,6 +66,8 @@ BOOL WINAPI DllMain(
+   return TRUE;
+ }
+ 
++#endif  // _7ZIP_STATIC
++
+ #else //  _WIN32
+ 
+ #include "../../Common/StringConvert.h"
+diff --git a/CPP/7zip/Common/RegisterArc.h b/CPP/7zip/Common/RegisterArc.h
+index 55c1483..e32440e 100644
+--- a/CPP/7zip/Common/RegisterArc.h
++++ b/CPP/7zip/Common/RegisterArc.h
+@@ -47,8 +47,8 @@ void RegisterArc(const CArcInfo *arcInfo) throw();
+ #define REGISTER_ARC_R(n, e, ae, id, sigSize, sig, offs, flags, tf, crIn, crOut, isArc) \
+   REGISTER_ARC_V      (n, e, ae, id, sigSize, sig, offs, flags, tf, crIn, crOut, isArc) \
+   struct CRegisterArc { CRegisterArc() { RegisterArc(&g_ArcInfo); }}; \
+-  static CRegisterArc g_RegisterArc;
+-
++  static CRegisterArc g_RegisterArc; \
++  void* Register() { return &g_RegisterArc; }  // Registration for static linking
+ 
+ #define REGISTER_ARC_I_CLS(cls, n, e, ae, id, sig, offs, flags, isArc) \
+   IMP_CreateArcIn_2(cls) \
+@@ -75,6 +75,8 @@ void RegisterArc(const CArcInfo *arcInfo) throw();
+   IMP_CreateArcOut \
+   REGISTER_ARC_V(n, e, ae, id, Z7_ARRAY_SIZE(sig), sig, offs, flags, tf, CreateArc, CreateArcOut, isArc) \
+   struct CRegisterArcDecSig { CRegisterArcDecSig() { sig[0]--; RegisterArc(&g_ArcInfo); }}; \
+-  static CRegisterArcDecSig g_RegisterArc;
++  static CRegisterArcDecSig g_RegisterArc; \
++  void* Register() { return &g_RegisterArc; }  // Registration for static linking
++
+ 
+ #endif
+diff --git a/CPP/7zip/Common/RegisterCodec.h b/CPP/7zip/Common/RegisterCodec.h
+index cf94998..6f730c7 100644
+--- a/CPP/7zip/Common/RegisterCodec.h
++++ b/CPP/7zip/Common/RegisterCodec.h
+@@ -30,7 +30,8 @@ void RegisterCodec(const CCodecInfo *codecInfo) throw();
+ 
+ #define REGISTER_CODEC(x) struct REGISTER_CODEC_NAME(x) { \
+     REGISTER_CODEC_NAME(x)() { RegisterCodec(&g_CodecInfo_ ## x); }}; \
+-    static REGISTER_CODEC_NAME(x) g_RegisterCodec_ ## x;
++    static REGISTER_CODEC_NAME(x) g_RegisterCodec_ ## x; \
++    void* RegisterCodec##x() { return &g_RegisterCodec_ ## x; }  // Registration for static linking
+ 
+ 
+ #define REGISTER_CODECS_NAME(x) CRegisterCodecs ## x
+@@ -39,7 +40,8 @@ void RegisterCodec(const CCodecInfo *codecInfo) throw();
+ #define REGISTER_CODECS(x) struct REGISTER_CODECS_NAME(x) { \
+     REGISTER_CODECS_NAME(x)() { for (unsigned i = 0; i < Z7_ARRAY_SIZE(g_CodecsInfo); i++) \
+     RegisterCodec(&g_CodecsInfo[i]); }}; \
+-    static REGISTER_CODECS_NAME(x) g_RegisterCodecs;
++    static REGISTER_CODECS_NAME(x) g_RegisterCodecs; \
++    void* RegisterCodecs##x() { return &g_RegisterCodecs; }  // Registration for static linking
+ 
+ 
+ #define REGISTER_CODEC_2(x, crDec, crEnc, id, name) \
+diff --git a/CPP/Common/CRC.cpp b/CPP/Common/CRC.cpp
+index c6b7d5e..cd511da 100644
+--- a/CPP/Common/CRC.cpp
++++ b/CPP/Common/CRC.cpp
+@@ -5,3 +5,5 @@
+ #include "../../C/7zCrc.h"
+ 
+ static struct CCRCTableInit { CCRCTableInit() { CrcGenerateTable(); } } g_CRCTableInit;
++
++void* lib7zCrcTableInit() { return &g_CRCTableInit; }  // Registration for static linking

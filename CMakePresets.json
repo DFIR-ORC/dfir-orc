@@ -7,7 +7,7 @@
             "toolset": "v143",
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/external/vcpkg/scripts/buildsystems/vcpkg.cmake",
-                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp",
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/current",
                 "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/external/vcpkg_overlay_triplets",
                 "ORC_BUILD_APACHE_ORC": "OFF",
                 "ORC_BUILD_FASTFIND": "ON",
@@ -126,9 +126,11 @@
         {
             "name": "capsule-arm64",
             "inherits": "capsule-base",
+            "toolset": "v143",
             "binaryDir": "${sourceDir}/build/capsule-arm64",
             "architecture": "ARM64",
             "cacheVariables": {
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/current",
                 "VCPKG_TARGET_TRIPLET": "arm64-windows-static"
             }
         }

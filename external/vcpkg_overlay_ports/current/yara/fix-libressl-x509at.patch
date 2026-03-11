@@ -1,0 +1,47 @@
+diff --git a/libyara/modules/pe/authenticode-parser/authenticode.c b/libyara/modules/pe/authenticode-parser/authenticode.c
+index f385860..dd7dd93 100644
+--- a/libyara/modules/pe/authenticode-parser/authenticode.c
++++ b/libyara/modules/pe/authenticode-parser/authenticode.c
+@@ -42,6 +42,42 @@ SOFTWARE.
+ 
+ #define MAX_NESTED_COUNT 16
+ 
++#include <openssl/x509.h>
++#include <openssl/x509v3.h>
++
++/* X509at_get_attr and X509at_get_attr_by_NID are OpenSSL private API,
++   not exported by LibreSSL. Implement equivalents via the public stack API. */
++#if !defined(OPENSSL_VERSION_NUMBER) || defined(LIBRESSL_VERSION_NUMBER)
++static int local_X509at_get_attr_by_NID(
++    const STACK_OF(X509_ATTRIBUTE)* attrs, int nid, int lastpos)
++{
++    if (attrs == NULL)
++        return -1;
++    int count = sk_X509_ATTRIBUTE_num(attrs);
++    for (int i = lastpos + 1; i < count; ++i)
++    {
++        X509_ATTRIBUTE* attr = sk_X509_ATTRIBUTE_value(attrs, i);
++        if (attr == NULL)
++            continue;
++        ASN1_OBJECT* obj = X509_ATTRIBUTE_get0_object(attr);
++        if (obj != NULL && OBJ_obj2nid(obj) == nid)
++            return i;
++    }
++    return -1;
++}
++
++static X509_ATTRIBUTE* local_X509at_get_attr(
++    const STACK_OF(X509_ATTRIBUTE)* attrs, int idx)
++{
++    if (attrs == NULL || idx < 0 || idx >= sk_X509_ATTRIBUTE_num(attrs))
++        return NULL;
++    return sk_X509_ATTRIBUTE_value(attrs, idx);
++}
++
++#define X509at_get_attr_by_NID  local_X509at_get_attr_by_NID
++#define X509at_get_attr         local_X509at_get_attr
++#endif
++
+ /* Moves signatures from src to dst, returns 0 on success,
+  * else 1. If error occurs, arguments are unchanged */
+ static int authenticode_array_move(AuthenticodeArray* dst, AuthenticodeArray* src)
