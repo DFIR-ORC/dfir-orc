@@ -54,9 +54,6 @@ param(
     [string] $BuildDir = '.\build',
 
     [Parameter()]
-    [switch] $DownloadOnly,
-
-    [Parameter()]
     [switch] $ConfigureOnly,
 
     [Parameter()]
@@ -125,38 +122,8 @@ foreach ($p in $Platform) {
     $presets += [pscustomobject]@{Name = "dfir-orc"; Platform = $p ; BinaryDir = $null }
 }
 
-if ($DownloadOnly) {
-    $manifestRoots = @($SourceDir)
-    $manifestRoots += Get-ChildItem -Path "$SourceDir/src" -Recurse -Filter "vcpkg.json" |
-        Select-Object -ExpandProperty DirectoryName
-
-        $vcpkgDir = Join-Paths $SourceDir "external" "vcpkg"
-        $vcpkg = Join-Paths $vcpkgDir "vcpkg.exe"
-        $bootstrap = Join-Paths $vcpkgDir "bootstrap-vcpkg.bat"
-
-        if (-not (Test-Path $vcpkg))
-        {
-            & $bootstrap
-        }
-
-    $overlayPorts = Join-Paths $SourceDir "external" "vcpkg_overlay_ports" `
-        | Get-ChildItem -Directory `
-        | Select-Object -ExpandProperty FullName
-
-    foreach ($manifest in $manifestRoots) {
-        $cmdArgs = @("install", "--only-downloads")
-        $cmdArgs += $overlayPorts | ForEach-Object { "--overlay-ports=$_" }
-
-        Push-Location $manifest
-        & $vcpkg @cmdArgs
-    }
-
-    return
-}
-
 foreach ($preset in $presets) {
     $PresetName = "$($preset.Name)-$($preset.Platform)"
-
     $BinaryDir = Join-Path $BuildDir $PresetName
     Write-Host ">>> cmake configure: $PresetName, build: $BinaryDir"
     New-Item -ItemType Directory -Force -Path $BinaryDir | Out-Null
@@ -176,8 +143,6 @@ foreach ($preset in $presets) {
     if ($LASTEXITCODE -ne 0) { throw "cmake configure failed for '$PresetName' (exit $LASTEXITCODE)" }
     $preset.BinaryDir = $BinaryDir
 }
-
-if ($DownloadOnly) { return }
 
 # ---------------------------------------------------------------------------
 # Build
