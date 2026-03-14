@@ -42,6 +42,7 @@
 #include "Utils/Time.h"
 #include "Utils/WinApi.h"
 #include "Text/HexDump.h"
+#include "Text/Fmt/std_error_code.h"
 #include "Text/Fmt/std_optional.h"
 #include "Text/Fmt/ByteQuantity.h"
 #include "Text/Hex.h"
@@ -314,7 +315,7 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
                 hr = m_archiveHashStream->GetSHA1(buffer);
                 if (FAILED(hr))
                 {
-                    Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", SystemError(hr));
+                    Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", notification->Keyword(), SystemError(hr));
                     hr = S_OK;
                 }
                 else if (!buffer.empty())
@@ -330,7 +331,7 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
                 auto sha1 = Hash(m_strOutputFullPath, CryptoHashStreamAlgorithm::SHA1);
                 if (!sha1)
                 {
-                    Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", sha1.error());
+                    Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", notification->Keyword(), sha1.error());
                 }
 
                 outcomeArchive.SetSha1(ToUtf8(*sha1));

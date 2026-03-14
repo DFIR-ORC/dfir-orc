@@ -336,7 +336,7 @@ Result<uint64_t> GetFileSize(const std::filesystem::path& path)
     HRESULT hr = fs.ReadFrom(path.c_str());
     if (FAILED(hr))
     {
-        Log::Debug(L"Failed to read file '{}' [{}]", hr);
+        Log::Debug(L"Failed to read file '{}' [{}]", path, hr);
         return SystemError(hr);
     }
 
