@@ -10,62 +10,40 @@
 
 #include "Utils/TypeTraits.h"
 
-// TODO: have on FormatOffsetTo function instead of two
-
 template <typename OutputIt, typename T>
 void FormatOffsetTo(OutputIt out, const Orc::Traits::Offset<T>& offset)
 {
-    if constexpr (sizeof(T) == 4)
+    using Char = Orc::Traits::underlying_char_type_t<std::remove_cv_t<std::remove_reference_t<OutputIt>>>;
+
+    if constexpr (std::is_same_v<Char, wchar_t>)
     {
-        fmt::format_to(out, "{:#010x}", offset.value);
-    }
-    else if constexpr (sizeof(T) == 8)
-    {
-        fmt::format_to(out, "{:#018x}", offset.value);
+        if constexpr (sizeof(T) == 4)
+            fmt::format_to(out, L"{:#010x}", offset.value);
+        else if constexpr (sizeof(T) == 8)
+            fmt::format_to(out, L"{:#018x}", offset.value);
+        else
+            fmt::format_to(out, L"{:#x}", offset.value);
     }
     else
     {
-        fmt::format_to(out, "{:#x}", offset.value);
+        if constexpr (sizeof(T) == 4)
+            fmt::format_to(out, "{:#010x}", offset.value);
+        else if constexpr (sizeof(T) == 8)
+            fmt::format_to(out, "{:#018x}", offset.value);
+        else
+            fmt::format_to(out, "{:#x}", offset.value);
     }
 }
 
-template <typename OutputIt, typename T>
-void FormatOffsetToW(OutputIt out, const Orc::Traits::Offset<T>& offset)
+template <typename T, typename Char>
+struct fmt::formatter<Orc::Traits::Offset<T>, Char>
 {
-    if constexpr (sizeof(T) == 4)
-    {
-        fmt::format_to(out, L"{:#010x}", offset.value);
-    }
-    else if constexpr (sizeof(T) == 8)
-    {
-        fmt::format_to(out, L"{:#018x}", offset.value);
-    }
-    else
-    {
-        fmt::format_to(out, L"{:#x}", offset.value);
-    }
-}
+    constexpr auto parse(fmt::basic_format_parse_context<Char>& ctx) { return ctx.begin(); }
 
-template <typename T>
-struct fmt::formatter<Orc::Traits::Offset<T>> : public fmt::formatter<std::string_view>
-{
     template <typename FormatContext>
-    auto format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx) const -> decltype(ctx.out())
+    auto format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx) const
     {
-        std::string s;
-        FormatOffsetTo(std::back_inserter(s), offset);
-        return formatter<std::string_view>::format(s, ctx);
-    }
-};
-
-template <typename T>
-struct fmt::formatter<Orc::Traits::Offset<T>, wchar_t> : public fmt::formatter<std::wstring_view, wchar_t>
-{
-    template <typename FormatContext>
-    auto format(const Orc::Traits::Offset<T>& offset, FormatContext& ctx) const -> decltype(ctx.out())
-    {
-        std::wstring s;
-        FormatOffsetToW(std::back_inserter(s), offset);
-        return formatter<std::wstring_view, wchar_t>::format(s, ctx);
+        FormatOffsetTo(ctx.out(), offset);
+        return ctx.out();
     }
 };

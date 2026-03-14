@@ -17,32 +17,30 @@ namespace Text {
 template <typename OutputIt, typename T>
 void ToString(OutputIt out, const Orc::ByteQuantity<T>& quantity, ByteQuantityBase base = ByteQuantityBase::Base2)
 {
-    constexpr std::array<std::string_view, 5> kUnits = {"B", "KB", "MB", "GB", "TB"};
+    using Char = Orc::Traits::underlying_char_type_t<std::remove_cv_t<std::remove_reference_t<OutputIt>>>;
+
+    constexpr std::array<std::string_view, 5> kNarrow = {"B", "KB", "MB", "GB", "TB"};
+    constexpr std::array<std::wstring_view, 5> kWide = {L"B", L"KB", L"MB", L"GB", L"TB"};
 
     const auto unitSize = static_cast<T>(base == ByteQuantityBase::Base10 ? 1000 : 1024);
-
     T value = quantity.value;
     size_t unitIndex = 0;
 
-    // Advance to the largest unit keeping value >= 1.
-    // Stops at kUnits.size()-1 so "TB" is the ceiling.
-    // value==0 exits immediately at index 0 ("B"), which is correct.
-    for (; unitIndex < kUnits.size() - 1; ++unitIndex)
+    for (; unitIndex < kNarrow.size() - 1; ++unitIndex)
     {
         if (value < unitSize)
             break;
-
         value /= unitSize;
     }
 
-    fmt::format_to(out, "{} ", value);  // narrow literal: fmt deduces from OutputIt
-
-    const std::string_view unit = kUnits[unitIndex];
-    std::copy(std::cbegin(unit), std::cend(unit), out);
+    if constexpr (std::is_same_v<Char, wchar_t>)
+        fmt::format_to(out, L"{} {}", value, kWide[unitIndex]);
+    else
+        fmt::format_to(out, "{} {}", value, kNarrow[unitIndex]);
 }
 
 template <typename OutputIt, typename T>
-void ToWString(OutputIt out, const Orc::ByteQuantity<T>& quantity, ByteQuantityBase base = ByteQuantityBase::Base2)
+inline void ToWString(OutputIt out, const Orc::ByteQuantity<T>& quantity, ByteQuantityBase base = ByteQuantityBase::Base2)
 {
     ToString(out, quantity, base);
 }

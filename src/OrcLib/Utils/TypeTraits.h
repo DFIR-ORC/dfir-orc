@@ -124,6 +124,35 @@ struct underlying_char_type<fmt::runtime_format_string<wchar_t>>
     using type = wchar_t;
 };
 
+template <typename... Args>
+struct underlying_char_type<fmt::fstring<Args...>>
+{
+    using type = char;
+};
+
+template <typename... Args>
+struct underlying_char_type<fmt::basic_format_string<char, Args...>>
+{
+    using type = char;
+};
+
+template <typename... Args>
+struct underlying_char_type<fmt::basic_format_string<wchar_t, Args...>>
+{
+    using type = wchar_t;
+};
+
+template <typename Char>
+struct underlying_char_type<fmt::basic_appender<Char>>
+{
+    using type = Char;
+};
+
+template <typename Container>
+struct underlying_char_type<std::back_insert_iterator<Container>>
+{
+    using type = typename Container::value_type;
+};
 
 template <typename T>
 struct underlying_char_type<T>
@@ -370,7 +399,7 @@ struct ByteQuantity
 //
 // Strong type for integral type used as offset
 //
-template <class T>
+template <typename T>
 struct Offset
 {
     using value_type = T;
@@ -387,10 +416,10 @@ struct Offset
         }
     }
 
-    template <typename U>
-    operator U() const
+    Offset& operator=(const T& v)
     {
-        return static_cast<U>(value);
+        value = v;
+        return *this;
     }
 
     operator T&() { return value; }

@@ -96,7 +96,8 @@ constexpr fmt::basic_string_view<CharT> ToFormatView(const CharT* s) noexcept
 template <typename OutputIt, typename FmtArg0, typename... FmtArgs>
 inline void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 {
-    using BufferCharT = Traits::underlying_char_type_t<OutputIt>;
+    using BufferCharT =
+        typename Traits::underlying_char_type<std::remove_cv_t<std::remove_reference_t<OutputIt>>>::type;
 
     const auto fmtView = details::ToFormatView(arg0);
     using FmtCharT = typename decltype(fmtView)::value_type;
@@ -109,7 +110,7 @@ inline void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args
         }
         else
         {
-            fmt::vformat_to(out, fmtView, fmt::make_wformat_args(args...));
+            fmt::vformat_to(out, fmtView, fmt::make_format_args<fmt::wformat_context>(args...));
         }
     }
     else if constexpr (std::is_same_v<FmtCharT, char>)
@@ -121,7 +122,7 @@ inline void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args
     else if constexpr (std::is_same_v<FmtCharT, wchar_t>)
     {
         fmt::basic_memory_buffer<wchar_t, 32768> utf16;
-        fmt::vformat_to(std::back_inserter(utf16), fmtView, fmt::make_wformat_args(args...));
+        fmt::vformat_to(std::back_inserter(utf16), fmtView, fmt::make_format_args<fmt::wformat_context>(args...));
         details::ToUtf8(utf16, out);
     }
     else
@@ -133,8 +134,9 @@ inline void FormatWithEncodingTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args
 template <typename OutputIt, typename RawArg>
 inline void FormatWithEncodingTo(OutputIt out, RawArg&& arg)
 {
-    using BufferCharT = Traits::underlying_char_type_t<OutputIt>;
-    using RawCharT = Traits::underlying_char_type_t<RawArg>;
+    using BufferCharT =
+        typename Traits::underlying_char_type<std::remove_cv_t<std::remove_reference_t<OutputIt>>>::type;
+    using RawCharT = typename Traits::underlying_char_type<std::remove_cv_t<std::remove_reference_t<RawArg>>>::type;
 
     if constexpr (std::is_same_v<RawCharT, BufferCharT>)
     {
@@ -164,8 +166,8 @@ void FormatToWithoutEOL(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 {
     try
     {
-        // Use TryConvertToEncoding to process char/wchar_t conversion to FmtArg0's value_type
-        using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
+        using FmtCharT =
+            typename Traits::underlying_char_type<std::remove_cv_t<std::remove_reference_t<FmtArg0>>>::type;
         details::FormatWithEncodingTo(out, arg0, TryEncodeTo<FmtCharT>(args)...);
     }
     catch (const fmt::format_error& e)
@@ -186,9 +188,10 @@ void FormatToWithoutEOL(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 template <typename OutputIt, typename FmtArg0, typename... FmtArgs>
 void FormatTo(OutputIt out, FmtArg0&& arg0, FmtArgs&&... args)
 {
-    using FmtCharT = Traits::underlying_char_type_t<FmtArg0>;
+    // Use ::type directly to avoid MSVC rejecting _t alias in dependent template context
+    using OutCharT = typename Traits::underlying_char_type<std::remove_cv_t<std::remove_reference_t<OutputIt>>>::type;
     FormatToWithoutEOL(out, arg0, std::forward<FmtArgs>(args)...);
-    out++ = Traits::newline_v<Traits::underlying_char_type_t<OutputIt>>;
+    out++ = Traits::newline_v<OutCharT>;
 }
 
 }  // namespace Text

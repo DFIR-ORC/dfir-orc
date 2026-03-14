@@ -29,6 +29,7 @@
 
 #include "Utils/Round.h"
 #include "Utils/TypeTraits.h"
+#include "Text/Fmt/Offset.h"
 #include "Text/Fmt/Boolean.h"
 #include "Text/Fmt/Limit.h"
 #include "Text/Fmt/Partition.h"

@@ -14,7 +14,7 @@
 #include "MftRecordAttribute.h"
 #include "AttributeList.h"
 #include "VolumeReader.h"
-
+#include "Text/Fmt/Offset.h"
 #include "Log/Log.h"
 
 using namespace std;
