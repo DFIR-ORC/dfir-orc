@@ -17,8 +17,15 @@
 
 namespace Orc {
 
+namespace detail {
+
 template <typename T>
 concept not_void = !std::is_same_v<T, void>;
+
+template <typename T>
+concept error_input = std::is_same_v<T, std::errc> || std::is_same_v<T, std::error_code>;
+
+}
 
 template <typename T = void>
 struct Result : std::expected<T, std::error_code>
@@ -33,12 +40,14 @@ struct Result : std::expected<T, std::error_code>
 
     template <typename U = T>
     constexpr Result(U&& value) noexcept
-        requires(!std::is_same_v<U, void> && std::is_convertible_v<U, T>)
+        requires(
+            !std::is_same_v<U, void> && std::is_convertible_v<U, T> && !detail::error_input<std::remove_cvref_t<U>>)
         : expected_t(std::forward<U>(value)) {};
 
     template <typename... Args>
     constexpr Result(Args&&... args) noexcept
         requires std::constructible_from<T, Args...>
+        && !(sizeof...(Args) == 1 && (detail::error_input<std::remove_cvref_t<Args>> || ...))
         : expected_t(std::in_place, std::forward<Args>(args)...)
     {
     }
@@ -183,8 +192,6 @@ struct Result : std::expected<T, std::error_code>
             }
         }
     }
-
-
 };
 
 template <>
@@ -202,17 +209,23 @@ struct Result<void> : std::expected<void, std::error_code>
     constexpr inline bool has_error() const { return !this->has_value(); }
 };
 
-template <typename T>
-inline Result<T> Success(auto... args)
-    requires not_void<T> && std::constructible_from<T, decltype(args)...>
-{
-    return {std::in_place, args...};
-}
-
-template <>
 inline Result<void> Success()
 {
     return Result<void> {std::in_place};
+}
+
+template <typename T>
+inline Result<T> Success()
+    requires std::is_void_v<T>
+{
+    return Result<void> {std::in_place};
+}
+
+template <typename T>
+inline Result<T> Success(auto... args)
+    requires detail::not_void<T> && std::constructible_from<T, decltype(args)...>
+{
+    return {std::in_place, args...};
 }
 
 using Fail = std::unexpected<std::error_code>;
