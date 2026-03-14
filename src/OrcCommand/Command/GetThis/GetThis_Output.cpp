@@ -40,10 +40,11 @@ struct fmt::formatter<Orc::Command::GetThis::ContentSpec, wchar_t> : public fmt:
             case ContentType::STRINGS:
                 return fmt::format_to(
                     ctx.out(), L"{} (min: {}, max: {})", ToString(content.Type), content.MinChars, content.MaxChars);
+
             case ContentType::DATA:
             case ContentType::RAW:
             default:
-                return fmt::format_to(ctx.out(), ToString(content.Type));
+                return fmt::format_to(ctx.out(), L"{}", ToString(content.Type));
         }
     }
 };
