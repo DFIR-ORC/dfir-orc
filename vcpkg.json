@@ -1,7 +1,6 @@
 {
     "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
     "dependencies": [
-        "cli11",
         "7zip",
         "boost-algorithm",
         "boost-dynamic-bitset",

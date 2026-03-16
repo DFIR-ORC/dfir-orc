@@ -5,5 +5,3 @@
 #
 # Author(s): fabienfl
 #
-
-add_subdirectory(rcedit)

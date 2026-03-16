@@ -189,21 +189,3 @@ target_precompile_headers(OrcLibTest PRIVATE stdafx.h)
 set_target_properties(OrcLibTest PROPERTIES FOLDER "${ORC_ROOT_VIRTUAL_FOLDER}")
 
 # Embed the dll in itself for "SimpleValue" test
-add_custom_command(
-    TARGET OrcLibTest
-    POST_BUILD
-    DEPENDS rcedit
-
-    COMMAND $<TARGET_FILE:rcedit>
-        set --type "VALUES"
-            --name "TEST_7Z_DLL"
-            --value-utf16 "7z:#TEST_7Z_DLL_BIN^|OrcLibTest.dll"
-            $<TARGET_FILE:OrcLibTest>
-
-    COMMAND $<TARGET_FILE:rcedit>
-        set --type "BINARY"
-            --name "TEST_7Z_DLL_BIN"
-            --value-path $<TARGET_FILE:OrcLibTest>
-            --compress=7z
-            $<TARGET_FILE:OrcLibTest>
-)
