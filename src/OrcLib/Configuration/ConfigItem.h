@@ -293,6 +293,7 @@ constexpr auto CONFIG_SAMPLE_FILEFIND = 5U;
 constexpr auto CONFIG_SAMPLE_NAME = 6U;
 
 constexpr auto CONFIG_SAMPLE = 5U;
+constexpr auto CONFIG_SAMPLE_NAME_FORMAT = 6U;
 
 constexpr auto CONFIG_COMPUTERNAME = 0U;
 constexpr auto CONFIG_BYTESPERSECTOR = 1U;

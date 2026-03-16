@@ -369,6 +369,8 @@ HRESULT Orc::Config::Common::samples(ConfigItem& parent, DWORD dwIndex)
         return hr;
     if (FAILED(hr = parent[dwIndex].AddChild(sample, CONFIG_SAMPLE)))
         return hr;
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"SampleNameFormat", CONFIG_SAMPLE_NAME_FORMAT, ConfigItem::OPTION)))
+        return hr;
     return S_OK;
 }
 

@@ -51,6 +51,8 @@ namespace fs = std::filesystem;
 using namespace Orc;
 using namespace Orc::Command::GetThis;
 
+using SampleNameFormat = Orc::Command::GetThis::Main::Configuration::SampleNameFormat;
+
 namespace {
 
 const std::wstring_view kGetThisCsv = L"GetThis.csv";
@@ -673,7 +675,7 @@ std::unique_ptr<ByteStream> ConfigureStringStream(
     return stream;
 }
 
-std::wstring CreateUniqueSampleName(
+std::wstring CreateDefaultSampleName(
     const Main::SampleRef& sample,
     const std::wstring& qualifier,
     const PFILE_NAME pFileName,
@@ -696,6 +698,72 @@ std::wstring CreateUniqueSampleName(
     }
 
     return name;
+}
+
+Result<std::wstring> InsertUniqueName(std::unordered_set<std::wstring>& names, const std::wstring& base)
+{
+    static constexpr std::string_view kFilenameAlphabet =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    if (auto [it, ok] = names.insert(base); ok)
+    {
+        return base;
+    }
+
+    for (size_t counter = 0; counter < std::numeric_limits<size_t>::max(); ++counter)
+    {
+        std::wstring suffix;
+        for (size_t n = counter + 1; n > 0; n = (n - 1) / kFilenameAlphabet.size())
+        {
+            suffix += kFilenameAlphabet[(n - 1) % kFilenameAlphabet.size()];
+        }
+
+        if (auto [it, ok] = names.insert(fmt::format(L"{}_{}", base, suffix)); ok)
+        {
+            return *it;
+        }
+    }
+
+    return std::errc::not_enough_memory;
+}
+
+std::wstring CreateUniqueSampleName(
+    const Main::SampleRef& sample,
+    const std::wstring& qualifier,
+    const PFILE_NAME pFileName,
+    const std::wstring& dataName,
+    SampleNameFormat format,
+    std::unordered_set<std::wstring>& sampleNames)
+{
+    std::wstring base;
+
+    if (format == SampleNameFormat::kDefault)
+    {
+        // This format/behavior cannot be changed as it would break other tools
+        return CreateDefaultSampleName(sample, qualifier, pFileName, dataName);
+    }
+    else if (format == SampleNameFormat::kQualifierThenFrn)
+    {
+        const auto FRN = reinterpret_cast<const LARGE_INTEGER*>(&sample.FRN)->QuadPart;
+        base = fmt::format(L"{:016X}", FRN);
+    }
+
+    if (!qualifier.empty())
+    {
+        base.insert(0, L"\\");
+        base.insert(0, qualifier);
+    }
+
+    auto name = InsertUniqueName(sampleNames, base);
+    if (!name)
+    {
+        Log::Critical(L"Failed to find unique file name (base: {})", base);
+        return {};
+    }
+
+    return *name;
 }
 
 HRESULT RegFlushKeys()
@@ -787,7 +855,8 @@ Main::Main()
 std::unique_ptr<Main::SampleRef> Main::CreateSample(
     const std::shared_ptr<FileFind::Match>& match,
     const size_t attributeIndex,
-    const SampleSpec& sampleSpec) const
+    const SampleSpec& sampleSpec,
+    std::unordered_set<std::wstring>& sampleNames) const
 {
     const auto& attribute = match->MatchingAttributes[attributeIndex];
 
@@ -822,7 +891,8 @@ std::unique_ptr<Main::SampleRef> Main::CreateSample(
         return nullptr;
     }
 
-    sample->SampleName = ::CreateUniqueSampleName(*sample, sampleSpec.Name, lastFileName, attribute.AttrName);
+    sample->SampleName = ::CreateUniqueSampleName(
+        *sample, sampleSpec.Name, lastFileName, attribute.AttrName, config.sampleNameFormat, sampleNames);
 
     HRESULT hr = ConfigureSampleStreams(*sample);
     if (FAILED(hr))
@@ -1388,7 +1458,7 @@ void Main::OnMatchingSample(const std::shared_ptr<FileFind::Match>& aMatch, bool
             continue;
         }
 
-        auto sample = CreateSample(aMatch, i, sampleSpec);
+        auto sample = CreateSample(aMatch, i, sampleSpec, m_sampleNames);
         UpdateSamplesLimits(sampleSpec, *sample);
 
         // TODO: memory optimization: check that sampleIds is reset when volume changes

@@ -16,6 +16,7 @@
 #include <filesystem>
 #include <vector>
 #include <set>
+#include <unordered_set>
 #include <string>
 #include <optional>
 
@@ -120,6 +121,13 @@ public:
         friend class Main;
 
     public:
+        enum class SampleNameFormat
+        {
+            kDefault = 0,
+            kQualifierThenFrn
+        };
+
+    public:
         Configuration()
             : Locations()
             , resurrectRecordsMode(ResurrectRecordsMode::kNo)
@@ -143,6 +151,8 @@ public:
 
         Limits limits;
         ContentSpec content;
+        std::optional<std::wstring> strSampleNameFormat;
+        SampleNameFormat sampleNameFormat = SampleNameFormat::kDefault;
 
         std::wstring YaraSource;
         std::unique_ptr<YaraConfig> Yara;
@@ -344,6 +354,7 @@ private:
     Limits GlobalLimits;
     std::unique_ptr<Archive::Appender<Archive::Archive7z>> m_compressor;
     std::shared_ptr<Orc::TableOutput::IStreamWriter> m_tableWriter;
+    std::unordered_set<std::wstring> m_sampleNames;
 
     HRESULT ConfigureSampleStreams(SampleRef& sample) const;
 
@@ -352,7 +363,8 @@ private:
     std::unique_ptr<SampleRef> CreateSample(
         const std::shared_ptr<FileFind::Match>& match,
         const size_t attributeIndex,
-        const SampleSpec& sampleSpec) const;
+        const SampleSpec& sampleSpec,
+        std::unordered_set<std::wstring>& sampleNames) const;
 
     using SampleWrittenCb = std::function<void(const SampleRef&, HRESULT hrWrite)>;
 

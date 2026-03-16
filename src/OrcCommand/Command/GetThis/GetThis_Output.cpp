@@ -147,7 +147,9 @@ void Main::PrintUsage()
         Usage::Parameter {"/NoSigCheck", "Check only sample signatures from autoruns output"},
         Usage::Parameter {"/Hash=<MD5|SHA1|SHA256>", "Comma-separated list of hashes to compute"},
         Usage::Parameter {"/FuzzyHash=<SSDeep>", "Comma-separated list of 'FuzzyHash' hashes to compute"},
-        Usage::Parameter {"/Yara=<Rules.yara>", "List of Yara sources"}};
+        Usage::Parameter {"/Yara=<Rules.yara>", "List of Yara sources"},
+        Usage::Parameter {"/SampleNameFormat=<Default|QualifierThenFrn>", "Modify sample name format"}};
+
     Usage::PrintParameters(usageNode, "PARAMETERS", kSpecificParameters);
 
     Usage::PrintLimitsParameters(usageNode);

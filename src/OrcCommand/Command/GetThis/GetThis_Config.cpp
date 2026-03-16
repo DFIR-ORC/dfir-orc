@@ -30,6 +30,8 @@ namespace fs = std::filesystem;
 using namespace Orc;
 using namespace Orc::Command::GetThis;
 
+using SampleNameFormat = Command::GetThis::Main::Configuration::SampleNameFormat;
+
 std::wregex Main::Configuration::g_ContentRegEx(L"(strings|data|raw)(:(min=([0-9]+))?,?(max=([0-9]+)))?");
 
 constexpr auto REGEX_CONTENT_TYPE = 1;
@@ -206,9 +208,15 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
     {
         config.limits.dwMaxSampleCount = (DWORD)configitem[GETTHIS_SAMPLES][CONFIG_MAXSAMPLECOUNT];
     }
+
     if (configitem[GETTHIS_SAMPLES][CONFIG_SAMPLE_CONTENT])
     {
         config.content = config.GetContentSpecFromString(configitem[GETTHIS_SAMPLES][CONFIG_SAMPLE_CONTENT]);
+    }
+
+    if (configitem[GETTHIS_SAMPLES][CONFIG_SAMPLE_NAME_FORMAT])
+    {
+        config.strSampleNameFormat = configitem[GETTHIS_SAMPLES][CONFIG_SAMPLE_NAME_FORMAT].c_str();
     }
 
     std::for_each(
@@ -458,6 +466,8 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
                     {
                         config.content = config.GetContentSpecFromString(strContent);
                     }
+                    else if (ParameterOption(argv[i] + 1, L"SampleNameFormat", config.strSampleNameFormat))
+                        ;
                     else if (AltitudeOption(argv[i] + 1, L"Altitude", config.Locations.GetAltitude()))
                         ;
                     else if (CryptoHashAlgorithmOption(argv[i] + 1, L"Hash", config.CryptoHashAlgs))
@@ -506,6 +516,28 @@ HRESULT Main::GetConfigurationFromArgcArgv(int argc, LPCWSTR argv[])
     return S_OK;
 }
 
+Result<SampleNameFormat> ParseSampleNameFormat(const std::optional<std::wstring>& format)
+{
+    if (!format.has_value())
+    {
+        return SampleNameFormat::kDefault;
+    }
+
+    if (boost::iequals(*format, L"default"))
+    {
+        return SampleNameFormat::kDefault;
+    }
+    else if (boost::iequals(*format, L"qualifier_then_frn"))
+    {
+        return SampleNameFormat::kQualifierThenFrn;
+    }
+    else
+    {
+        Log::Debug(L"Unknown sample name format (actual: {}, expect: default|qualifier_then_frn", *format);
+        return make_error_code(std::errc::invalid_argument);
+    }
+}
+
 HRESULT Main::CheckConfiguration()
 {
     HRESULT hr = E_FAIL;
@@ -548,6 +580,18 @@ HRESULT Main::CheckConfiguration()
     if (config.content.Type == ContentType::INVALID)
     {
         config.content.Type = ContentType::DATA;
+    }
+
+    auto sampleNameFormat = ParseSampleNameFormat(config.strSampleNameFormat);
+    if (!sampleNameFormat)
+    {
+        Log::Error(
+            L"Unknown sample name format (actual: {}, expect: default|qualifier_then_frn", config.strSampleNameFormat);
+        return E_INVALIDARG;
+    }
+    else
+    {
+        config.sampleNameFormat = *sampleNameFormat;
     }
 
     bool hasFailed = false;
