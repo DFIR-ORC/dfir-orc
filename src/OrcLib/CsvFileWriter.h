@@ -26,10 +26,21 @@ class Column : public ::Orc::TableOutput::Column
 {
 public:
     Column(const ::Orc::TableOutput::Column& base)
-        : ::Orc::TableOutput::Column(base) {};
+        : ::Orc::TableOutput::Column(base)
+    {
+    }
+
+    // Used for non-string types (timestamps, integers, binary, ...)
     std::wstring FormatColumn;
 
-    virtual ~Column() override final {};
+    // Used for string/XML types: value is written as Prefix + escaped(value) + Suffix
+    // Prefix  = optional_delimiter + opening_string_delimiter  (e.g. L",\"")
+    // Suffix  = closing_string_delimiter                       (e.g. L"\"")
+    std::wstring Prefix;
+    std::wstring Suffix;
+    bool NeedsQuoting = false;
+
+    virtual ~Column() override final {}
 };
 
 class Writer
@@ -246,54 +257,6 @@ protected:
 
     Writer(std::unique_ptr<Options>&& options);
 
-    //
-    // Workaround: 'Unescaped double quote characters in csv files #13 (github)'
-    //
-    // Double all quotes for escaping with CSV format but ignore first and last
-    // ones.
-    //
-    // A more complete approach is possible by specializing fmt::formatter but
-    // it could be less cpu friendly.
-    //
-    template <typename T>
-    struct EscapeQuoteInserter
-    {
-        using value_type = wchar_t;
-        using iterator_category = std::output_iterator_tag;
-        using difference_type = std::ptrdiff_t;
-        using pointer = void;
-        using reference = void;
-
-        EscapeQuoteInserter(T& wrapped)
-            : m_wrapped(wrapped)
-            , previousWasQuote(false)
-            , quoteCount(0)
-        {
-        }
-
-        inline EscapeQuoteInserter& operator=(wchar_t u)
-        {
-            if (previousWasQuote)
-            {
-                if (++quoteCount > 1)
-                {
-                    m_wrapped.push_back(L'"');
-                }
-            }
-            previousWasQuote = (u == L'"');
-            m_wrapped.push_back(u);
-            return *this;
-        }
-
-        inline EscapeQuoteInserter& operator*() { return *this; }
-        inline EscapeQuoteInserter& operator++() { return *this; }
-        inline EscapeQuoteInserter& operator++(int) { return *this; }
-
-        T& m_wrapped;
-        bool previousWasQuote;
-        size_t quoteCount;
-    };
-
     inline HRESULT CheckAndFlushBuffer()
     {
         const size_t threshold = (m_buffer.capacity() * 8) / 10;
@@ -309,24 +272,40 @@ protected:
         return S_OK;
     }
 
+    template <typename T>
+    HRESULT WriteColumn(T&& value)
+    {
+        const auto* col = static_cast<const Column*>(&m_Schema[m_dwColumnCounter]);
+
+        if constexpr (std::is_convertible_v<std::decay_t<T>, std::wstring_view>)
+        {
+            // String types go through the escaping path
+            if (col->NeedsQuoting)
+                return WriteStringColumn(std::wstring_view(value));
+        }
+
+        // All other types go through fmt
+        if (auto hr = FormatToBuffer(col->FormatColumn, std::forward<T>(value)); FAILED(hr))
+        {
+            AbandonColumn();
+            return hr;
+        }
+        AddColumnAndCheckNumbers();
+        return S_OK;
+    }
+
+    HRESULT WriteStringColumn(std::wstring_view value);
+
     template <typename... Args>
-    HRESULT FormatToBuffer(std::wstring_view strFormat, Args&&... args)
+    HRESULT FormatToBuffer(std::wstring_view formatString, Args&&... args)
     {
         try
         {
-            if (strFormat.find(L"\"{}\"") != std::wstring::npos)
-            {
-                EscapeQuoteInserter escapedBuffer(m_buffer);
-                fmt::format_to(escapedBuffer, fmt::runtime(strFormat), std::forward<Args>(args)...);
-            }
-            else
-            {
-                fmt::format_to(std::back_inserter(m_buffer), fmt::runtime(strFormat), std::forward<Args>(args)...);
-            }
+            fmt::format_to(std::back_inserter(m_buffer), fmt::runtime(formatString), std::forward<Args>(args)...);
         }
-        catch (const fmt::format_error& error)
+        catch (const fmt::format_error& e)
         {
-            Log::Error("fmt::format_error: {}", error.what());
+            Log::Error("fmt::format_error: {}", e.what());
             return E_INVALIDARG;
         }
 
@@ -340,21 +319,6 @@ protected:
         auto pCol = static_cast<const Column*>(&m_Schema[m_dwColumnCounter]);
 
         return FormatToBuffer(pCol->FormatColumn, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    HRESULT WriteColumn(Args&&... args)
-    {
-
-        auto pCol = static_cast<const Column*>(&m_Schema[m_dwColumnCounter]);
-
-        if (auto hr = FormatToBuffer(pCol->FormatColumn, std::forward<Args>(args)...); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
-        AddColumnAndCheckNumbers();
-        return S_OK;
     }
 
     HRESULT AddColumnAndCheckNumbers();

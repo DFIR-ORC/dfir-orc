@@ -46,6 +46,51 @@ struct WriterT : public Orc::TableOutput::CSV::Writer
     }
 };
 
+// Returns the format string for a non-string column, e.g. L",{:02X}" or L",{}".
+// 'leadingDelimiter' is either the CSV delimiter or an empty string for the
+// first column.
+std::wstring
+BuildColumnFormat(std::wstring_view leadingDelimiter, std::wstring_view userFormat, std::wstring_view defaultFormat)
+{
+    const auto effectiveFormat = userFormat.empty() ? defaultFormat : userFormat;
+    return fmt::format(L"{}{}", leadingDelimiter, effectiveFormat);
+}
+
+// Fills the Prefix / Suffix fields of a string column.
+//   Prefix  = leadingDelimiter + openingStringDelimiter  (e.g. L",\"")
+//   Suffix  = closingStringDelimiter                     (e.g. L"\"")
+void BuildStringColumnDelimiters(
+    Orc::TableOutput::CSV::Column& col,
+    std::wstring_view leadingDelimiter,
+    std::wstring_view stringDelimiter)
+{
+    col.NeedsQuoting = true;
+    col.Prefix = fmt::format(L"{}{}", leadingDelimiter, stringDelimiter);
+    col.Suffix = std::wstring(stringDelimiter);
+    // FormatColumn is intentionally left empty for string types:
+    // writes go through WriteStringColumn, not FormatToBuffer.
+}
+
+// Appends 'value' to 'buf', doubling every '"' found inside it.
+// The surrounding delimiter/quote characters are NOT part of 'value' here,
+// so there is nothing to skip - every '"' in the input is a data quote.
+void AppendCsvEscaped(fmt::wmemory_buffer& buf, std::wstring_view value)
+{
+    buf.reserve(buf.size() + value.size());  // at minimum; avoids repeated reallocation
+
+    size_t chunkStart = 0;
+    for (size_t pos = value.find(L'"'); pos != std::wstring_view::npos; pos = value.find(L'"', chunkStart))
+    {
+        // Append everything up to and including the quote
+        buf.append(value.data() + chunkStart, value.data() + pos + 1);
+        buf.push_back(L'"');  // the doubled copy
+        chunkStart = pos + 1;
+    }
+
+    // Append the tail (or the entire string if no quotes were found)
+    buf.append(value.data() + chunkStart, value.data() + value.size());
+}
+
 }  // namespace
 
 class Orc::TableOutput::CSV::WriterTermination : public TerminationHandler
@@ -95,38 +140,37 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::SetSchema(const Schema& schema)
 
     bool bFirst = true;
 
-    std::wstring emptyStr;
-
     for (const auto& column : schema)
     {
         auto csv_col = std::make_unique<Column>(*column);
 
-        if (csv_col->Type == ColumnType::UTF16Type || csv_col->Type == ColumnType::UTF8Type
-            || csv_col->Type == ColumnType::XMLType)
+        const std::wstring_view leadingDelimiter =
+            bFirst ? std::wstring_view {} : std::wstring_view {m_Options->Delimiter};
+
+        const std::wstring_view userFormat =
+            csv_col->Format.has_value() ? std::wstring_view {csv_col->Format.value()} : std::wstring_view {};
+
+        switch (csv_col->Type)
         {
-            csv_col->FormatColumn = fmt::format(
-                L"{}{}{}{}",
-                bFirst ? emptyStr : m_Options->Delimiter,
-                m_Options->StringDelimiter,
-                csv_col->Format.value_or(L"{}"),
-                m_Options->StringDelimiter);
-        }
-        else if (csv_col->Type == ColumnType::BinaryType || csv_col->Type == ColumnType::FixedBinaryType)
-        {
-            csv_col->FormatColumn =
-                fmt::format(L"{}{}", bFirst ? emptyStr : m_Options->Delimiter, csv_col->Format.value_or(L"{:02X}"));
-        }
-        else if (csv_col->Type == ColumnType::TimeStampType)
-        {
-            csv_col->FormatColumn = fmt::format(
-                L"{}{}",
-                bFirst ? emptyStr : m_Options->Delimiter,
-                csv_col->Format.value_or(L"{YYYY:#04}-{MM:#02}-{DD:#02} {hh:#02}:{mm:#02}:{ss:#02}.{mmm:#03}"));
-        }
-        else
-        {
-            csv_col->FormatColumn =
-                fmt::format(L"{}{}", bFirst ? emptyStr : m_Options->Delimiter, csv_col->Format.value_or(L"{}"));
+            case ColumnType::UTF16Type:
+            case ColumnType::UTF8Type:
+            case ColumnType::XMLType:
+                BuildStringColumnDelimiters(*csv_col, leadingDelimiter, m_Options->StringDelimiter);
+                break;
+
+            case ColumnType::BinaryType:
+            case ColumnType::FixedBinaryType:
+                csv_col->FormatColumn = BuildColumnFormat(leadingDelimiter, userFormat, L"{:02X}");
+                break;
+
+            case ColumnType::TimeStampType:
+                csv_col->FormatColumn = BuildColumnFormat(
+                    leadingDelimiter, userFormat, L"{YYYY:#04}-{MM:#02}-{DD:#02} {hh:#02}:{mm:#02}:{ss:#02}.{mmm:#03}");
+                break;
+
+            default:
+                csv_col->FormatColumn = BuildColumnFormat(leadingDelimiter, userFormat, L"{}");
+                break;
         }
 
         m_Schema.AddColumn(std::move(csv_col));
@@ -136,25 +180,25 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::SetSchema(const Schema& schema)
     m_dwColumnNumber = static_cast<DWORD>(m_Schema.size());
     m_dwColumnCounter = 0L;
 
+    if (!m_pByteStream)
+        return S_OK;
+
     try
     {
-        if (m_pByteStream)
+        if (auto hr = WriteHeaders(m_Schema); FAILED(hr))
         {
-            auto hr = E_FAIL;
-            if (FAILED(hr = WriteHeaders(m_Schema)))
-            {
-                if (wcslen(m_szFileName))
-                    Log::Error(L"Could not write columns to specified file '{}'", m_szFileName);
-                else
-                    Log::Error(L"Could not write columns to specified stream '{}'", m_szFileName);
-                return hr;
-            }
+            if (wcslen(m_szFileName) > 0)
+                Log::Error(L"Could not write headers to file '{}'", m_szFileName);
+            else
+                Log::Error(L"Could not write headers to stream");
+            return hr;
         }
     }
     catch (Orc::Exception& e)
     {
         return e.ErrorCode().value();
     }
+
     return S_OK;
 }
 
@@ -339,6 +383,24 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::Close()
     return S_OK;
 }
 
+HRESULT Orc::TableOutput::CSV::Writer::WriteStringColumn(std::wstring_view value)
+{
+    const auto* col = static_cast<const Column*>(&m_Schema[m_dwColumnCounter]);
+
+    m_buffer.append(col->Prefix.data(), col->Prefix.data() + col->Prefix.size());
+    AppendCsvEscaped(m_buffer, value);
+    m_buffer.append(col->Suffix.data(), col->Suffix.data() + col->Suffix.size());
+
+    if (auto hr = CheckAndFlushBuffer(); FAILED(hr))
+    {
+        AbandonColumn();
+        return hr;
+    }
+
+    AddColumnAndCheckNumbers();
+    return S_OK;
+}
+
 HRESULT Orc::TableOutput::CSV::Writer::AddColumnAndCheckNumbers()
 {
     m_dwColumnCounter++;
@@ -403,13 +465,7 @@ Orc::TableOutput::CSV::Writer::WriteFormated_(std::wstring_view szFormat, fmt::w
 
     std::wstring_view result_string = buffer.size() > 0 ? std::wstring_view(buffer.get(), buffer.size()) : L""sv;
 
-    if (auto hr = FormatColumn(result_string); FAILED(hr))
-    {
-        AbandonColumn();
-        return hr;
-    }
-    AddColumnAndCheckNumbers();
-    return S_OK;
+    return WriteColumn(result_string);
 }
 
 HRESULT Orc::TableOutput::CSV::Writer::WriteFormated_(std::string_view szFormat, fmt::format_args args)
@@ -421,30 +477,18 @@ HRESULT Orc::TableOutput::CSV::Writer::WriteFormated_(std::string_view szFormat,
 
     if (auto [hr, wstr] = AnsiToWide(result_string); SUCCEEDED(hr))
     {
-        if (auto hr = FormatColumn(wstr); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
-        AddColumnAndCheckNumbers();
+        return WriteColumn(wstr);
     }
     else
     {
         AbandonColumn();
         return hr;
     }
-    return S_OK;
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteAttributes(DWORD dwFileAttributes)
 {
-    if (auto hr = WriteFormated(ToIdentifiersW(static_cast<FileAttribute>(dwFileAttributes)));
-        FAILED(hr))
-    {
-        AbandonColumn();
-        return hr;
-    }
-    return S_OK;
+    return WriteColumn(ToIdentifiersW(static_cast<FileAttribute>(dwFileAttributes)));
 }
 
 HRESULT Orc::TableOutput::CSV::Writer::WriteFileTime(FILETIME fileTime)
@@ -509,14 +553,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteTimeStamp(tm tmStamp)
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteFileSize(LARGE_INTEGER fileSize)
 {
-    // File	size calculation only required for Very	big	files.
-    if (auto hr = FormatColumn(fileSize.QuadPart); FAILED(hr))
-    {
-        AbandonColumn();
-        return hr;
-    }
-    AddColumnAndCheckNumbers();
-    return S_OK;
+    return WriteColumn(fileSize.QuadPart);
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteFileSize(DWORD nFileSizeHigh, DWORD nFileSizeLow)
@@ -558,13 +595,7 @@ HRESULT Orc::TableOutput::CSV::Writer::WriteEndOfLine()
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBool(bool bBoolean)
 {
-    if (auto hr = FormatColumn(bBoolean ? m_Options->BoolChars[0] : m_Options->BoolChars[1]); FAILED(hr))
-    {
-        AbandonColumn();
-        return hr;
-    }
-    AddColumnAndCheckNumbers();
-    return S_OK;
+    return WriteColumn(bBoolean ? m_Options->BoolChars[0] : m_Options->BoolChars[1]);
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteEnum(DWORD dwEnum)
@@ -582,22 +613,11 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteEnum(DWORD dwEnum)
             });
         if (it != std::end(pCol->EnumValues.value()))
         {
-            if (auto hr = FormatColumn(it->strValue); FAILED(hr))
-            {
-                AbandonColumn();
-                return hr;
-            }
-            AddColumnAndCheckNumbers();
-            return S_OK;
+            return WriteColumn(it->strValue);
         }
     }
-    if (auto hr = FormatColumn(dwEnum); FAILED(hr))
-    {
-        AbandonColumn();
-        return hr;
-    }
-    AddColumnAndCheckNumbers();
-    return S_OK;
+
+    return WriteColumn(dwEnum);
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteEnum(DWORD dwEnum, const WCHAR* EnumValues[])
@@ -620,13 +640,9 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteEnum(DWORD dwEnum, const WCHAR*
     }
     else
     {
-        if (auto hr = FormatColumn(szValue); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
-        AddColumnAndCheckNumbers();
+        return WriteColumn(szValue);
     }
+
     return S_OK;
 }
 
@@ -636,13 +652,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteFlags(DWORD dwFlags)
 
     if (!pCol->FlagsValues.has_value())
     {
-        if (auto hr = FormatColumn(dwFlags); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
-        AddColumnAndCheckNumbers();
-        return S_OK;
+        return WriteColumn(dwFlags);
     }
 
     const auto& values = pCol->FlagsValues.value();
@@ -672,18 +682,13 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteFlags(DWORD dwFlags)
             AbandonColumn();
             return hr;
         }
+
         return S_OK;
     }
     else
     {
-        if (auto hr = FormatColumn(std::wstring_view(buffer.get(), buffer.size())); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
+        return WriteColumn(std::wstring_view(buffer.get(), buffer.size()));
     }
-    AddColumnAndCheckNumbers();
-    return S_OK;
 }
 
 STDMETHODIMP
@@ -711,22 +716,12 @@ Orc::TableOutput::CSV::Writer::WriteFlags(DWORD dwFlags, const FlagsDefinition F
     }
     if (bFirst)
     {
-        if (auto hr = FormatColumn(dwFlags); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
+        return WriteColumn(dwFlags);
     }
     else
     {
-        if (auto hr = FormatColumn(std::wstring_view(buffer.get(), buffer.size())); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
+        return WriteColumn(std::wstring_view(buffer.get(), buffer.size()));
     }
-    AddColumnAndCheckNumbers();
-    return S_OK;
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteExactFlags(DWORD dwFlags)
@@ -751,23 +746,12 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteExactFlags(DWORD dwFlags)
 
     if (bFound)
     {
-        if (auto hr = FormatColumn(std::wstring_view(buffer.get(), buffer.size())))
-        {
-            AbandonColumn();
-            return hr;
-        }
+        return WriteColumn(std::wstring_view(buffer.get(), buffer.size()));
     }
     else
     {
-        if (auto hr = FormatColumn(dwFlags); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
+        return WriteColumn(dwFlags);
     }
-
-    AddColumnAndCheckNumbers();
-    return S_OK;
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteExactFlags(DWORD dwFlags, const FlagsDefinition FlagValues[])
@@ -789,23 +773,13 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteExactFlags(DWORD dwFlags, const
 
     if (found && !buffer.empty())
     {
-        if (auto hr = FormatColumn(std::wstring_view(buffer.get(), buffer.size())); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
+        return WriteColumn(std::wstring_view(buffer.get(), buffer.size()));
     }
     else
     {
-        if (auto hr = FormatColumn(dwFlags); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
+        // BEWARE: column type is string and cannot be integer
+        return WriteColumn(fmt::format(L"{:04x}", dwFlags));
     }
-
-    AddColumnAndCheckNumbers();
-    return S_OK;
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteGUID(const GUID& guid)
@@ -816,13 +790,8 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteGUID(const GUID& guid)
         AbandonColumn();
         return E_NOT_SUFFICIENT_BUFFER;
     }
-    if (auto hr = FormatColumn(szCLSID); FAILED(hr))
-    {
-        AbandonColumn();
-        return hr;
-    }
-    AddColumnAndCheckNumbers();
-    return S_OK;
+
+    return WriteColumn(szCLSID);
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const WCHAR* szString)
@@ -831,13 +800,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const WCHAR* szString)
     std::replace(begin(strXML), end(strXML), L'\r', L' ');
     std::replace(begin(strXML), end(strXML), L'\n', L' ');
 
-    if (auto hr = FormatColumn(strXML); FAILED(hr))
-    {
-        AbandonColumn();
-        return hr;
-    }
-    AddColumnAndCheckNumbers();
-    return S_OK;
+    return WriteColumn(strXML);
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const WCHAR* szString, DWORD dwCharCount)
@@ -847,13 +810,7 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const WCHAR* szString, DWOR
     std::replace(begin(strXML), end(strXML), L'\r', L' ');
     std::replace(begin(strXML), end(strXML), L'\n', L' ');
 
-    if (auto hr = FormatColumn(strXML); FAILED(hr))
-    {
-        AbandonColumn();
-        return hr;
-    }
-    AddColumnAndCheckNumbers();
-    return S_OK;
+    return WriteColumn(strXML);
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const CHAR* szString)
@@ -864,20 +821,13 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const CHAR* szString)
 
     if (auto [hr, wstr] = AnsiToWide(strXML); SUCCEEDED(hr))
     {
-        if (auto hr = FormatColumn(wstr); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
-        AddColumnAndCheckNumbers();
+        return WriteColumn(wstr);
     }
     else
     {
         AbandonColumn();
         return hr;
     }
-
-    return S_OK;
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const CHAR* szString, DWORD dwCharCount)
@@ -887,20 +837,13 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteXML(const CHAR* szString, DWORD
         std::replace(begin(wstr), end(wstr), L'\r', L' ');
         std::replace(begin(wstr), end(wstr), L'\n', L' ');
 
-        if (auto hr = FormatColumn(wstr); FAILED(hr))
-        {
-            AbandonColumn();
-            return hr;
-        }
-        AddColumnAndCheckNumbers();
+        return WriteColumn(wstr);
     }
     else
     {
         AbandonColumn();
         return hr;
     }
-
-    return S_OK;
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBytes(const BYTE pBytes[], DWORD dwLen)
@@ -910,17 +853,8 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBytes(const BYTE pBytes[], DWOR
         return WriteNothing();
     }
 
-    auto hex_view = fmt::join(gsl::make_span(pBytes, dwLen), L"");
-    HRESULT hr = FormatColumn(hex_view);
-    if (FAILED(hr))
-    {
-        AbandonColumn();
-        return hr;
-    }
-
-    AddColumnAndCheckNumbers();
-
-    return S_OK;
+    auto hexView = fmt::join(gsl::make_span(pBytes, dwLen), L"");
+    return WriteColumn(hexView);
 }
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::WriteBytes(const CBinaryBuffer& buffer)
