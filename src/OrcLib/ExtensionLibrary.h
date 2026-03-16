@@ -143,14 +143,30 @@ protected:
     HRESULT TryLoad(std::wstring strFileRef);
 
     template <typename FuncType>
-    void Get(FuncType& func, LPCSTR szFuncName)
+    HRESULT Get(FuncType& func, LPCSTR szFuncName)
     {
-        func = GetExtension<FuncType>(szFuncName, true);
+        if ((func = GetExtension<FuncType>(szFuncName, true)) != nullptr)
+        {
+            return S_OK;
+        }
+        else
+        {
+            Log::Error(L"Failed to get entry point {} from library {}", AnsiToWide(szFuncName).second, m_strKeyword);
+            return HRESULT_FROM_WIN32(ERROR_NOT_FOUND);
+        }
     };
     template <typename FuncType>
-    void Try(FuncType& func, LPCSTR szFuncName)
+    bool Try(FuncType& func, LPCSTR szFuncName)
     {
-        func = GetExtension<FuncType>(szFuncName, false);
+        if((func = GetExtension<FuncType>(szFuncName, false)) != nullptr)
+        {
+            return true;
+        }
+        else
+        {
+            Log::Warn(L"Entry point {} not found in library {}", AnsiToWide(szFuncName).second, m_strKeyword);
+            return false;
+        }
     };
 
     HRESULT Initialize()

@@ -43,7 +43,12 @@ HRESULT COMExtension::Initialize()
             return hr;
         }
     }
-    Get(m_DllGetClassObject, "DllGetClassObject");
+    if (auto hr = Get(m_DllGetClassObject, "DllGetClassObject"); FAILED(hr))
+    {
+        Log::Error(L"Failed to get DllGetClassObject from COM Extension {} [hr={}]", m_strKeyword, hr);
+        return hr;
+    }
+
     m_bInitialized = true;
     return S_OK;
 }
