@@ -376,7 +376,7 @@ function Invoke-OrcOffline {
     .PARAMETER Destination
         Output directory.
 
-    .PARAMETER Destination
+    .PARAMETER Temporary
         Temporary directory.
 
     .PARAMETER PublicKey
@@ -435,7 +435,7 @@ function Invoke-OrcOffline {
         $LocalXml = "/local=$LocalXmlPath"
 
         Write-HostLog "Executing '$Path' on '$Disk' to '$Destination'"
-        OrcExe $Argument $Overwrite /Offline=$Disk /Out=$Destination $LocalXml
+        OrcExe $Argument $Overwrite /Offline=$Disk /TempDir=$Temporary /Out=$Destination $LocalXml
 
         if ($LocalXmlPath)
         {
