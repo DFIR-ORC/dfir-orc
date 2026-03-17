@@ -1,7 +1,14 @@
 # DFIR ORC
 [![LGPL licensed][img-license]](./LICENSE.txt)
+[![badge_repo](https://img.shields.io/badge/DFIR--ORC-DFIR--ORC-white)](https://github.com/DFIR-ORC/dfir-orc)
+[![category_badge_external](https://img.shields.io/badge/category-external-%23b556b6)](https://anssi-fr.github.io/README.en.html#project-categories)
+[![openess_badge_A](https://img.shields.io/badge/code.gouv.fr-collaborative-blue)](https://documentation.ouvert.numerique.gouv.fr/les-parcours-de-documentation/ouvrir-un-projet-num%C3%A9rique/#niveau-ouverture)
 
+<img src="https://dfir-orc.github.io/_static/logo.jpg" alt="DFIR-ORC" height="128"><img src="https://www.sgdsn.gouv.fr/files/styles/ds_image_paragraphe/public/files/Notre_Organisation/logo_anssi.png" alt="ANSSI logo" height="128">
 
+## French Cybersecurity Agency (ANSSI)
+
+*This projet is managed by [ANSSI](https://cyber.gouv.fr/). To find out more, you can visit the [page](https://cyber.gouv.fr/enjeux-technologiques/open-source/) (in French) dedicated to ANSSI’s open-source strategy. You can also click on the badges above to learn more about their meaning.*
 ## Documentation
 https://dfir-orc.github.io
 
@@ -77,12 +84,12 @@ cmake --build . --config MinSizeRel -- -maxcpucount
 ## License
 
 The contents of this repository is available under [LGPL2.1+ license](LICENSE.txt).
-The name DFIR ORC and the associated logo belongs to ANSSI, no use is permitted without express approval.
+The name DFIR ORC, the associated logo and the ANSSI logo belong to ANSSI, no use is permitted without express approval.
 
 ---
 
 Le contenu de ce dépôt est disponible sous licence LGPL2.1+, tel qu'indiqué [ici](LICENSE.txt).
-Le nom DFIR ORC et le logo associé appartiennent à l'ANSSI, aucun usage n'est permis sans autorisation expresse.
+Le nom DFIR ORC, le logo associé et le logo de l'ANSSI appartiennent à l'ANSSI, aucun usage n'est permis sans autorisation expresse.
 
 
 ## Acknowledgments
