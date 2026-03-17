@@ -1,5 +1,14 @@
 # DFIR ORC
 [![LGPL licensed][img-license]](./LICENSE.txt)
+[![badge_repo](https://img.shields.io/badge/DFIR--ORC-DFIR--ORC-white)](https://github.com/DFIR-ORC/dfir-orc)
+[![category_badge_external](https://img.shields.io/badge/category-external-%23b556b6)](https://anssi-fr.github.io/README.en.html#project-categories)
+[![openess_badge_A](https://img.shields.io/badge/code.gouv.fr-collaborative-blue)](https://documentation.ouvert.numerique.gouv.fr/les-parcours-de-documentation/ouvrir-un-projet-num%C3%A9rique/#niveau-ouverture)
+
+<img src="res/dfir-orc-logo.png" alt="DFIR-ORC" height="128"><img src="res/anssi-logo.png" alt="ANSSI logo" height="128">
+
+## French Cybersecurity Agency (ANSSI)
+
+*This project is managed by [ANSSI](https://cyber.gouv.fr/). To find out more, you can visit the [page](https://cyber.gouv.fr/enjeux-technologiques/open-source/) (in French) dedicated to ANSSI’s open-source strategy. You can also click on the badges above to learn more about their meaning.*
 
 ## Documentation
 https://dfir-orc.github.io
@@ -130,7 +139,7 @@ Packaged executables are written to `<BuildDir>\<config>\DFIR-ORC.exe` (and `Fas
 Use a *Developer Command Prompt for VS 2022* (avoid plain `cmd.exe`).
 
 #### Build
-```bash
+```powershell
 git clone --recursive https://github.com/dfir-orc/dfir-orc.git
 cd dfir-orc
 
@@ -154,15 +163,16 @@ cmake --build --preset dfir-orc-x86-xp-MinSizeRel
 
 #### Configuration
 ```powershell
-.\build\DFIR-ORC.exe ToolEmbed /embed="...\config" /out=DFIR-ORC.exe
+$CONFIG_DIR = "C:\path\to\your\orc-config"
+.\build\DFIR-ORC.exe ToolEmbed /embed="$CONFIG_DIR\config" /out=DFIR-ORC.exe
 ```
 
-#### Configuration with DEPRECATED embed XML files
+#### [DEPRECATED] Configuration using old build.cmd
 ```powershell
-cp .\build\DFIR-ORC.exe ...\configs-orc\tools\DFIR-Orc_x64.exe
-cd ...\configs-orc
-./build.cmd
-#.\build\DFIR-ORC.exe ToolEmbed /embed=c:\dev\configs-orc\config
+$CONFIG_DIR = "C:\path\to\your\orc-config"
+cp .\build\DFIR-ORC.exe "$CONFIG_DIR\tools\DFIR-ORC_x64.exe"
+cd $CONFIG_DIR
+.\build.cmd
 ```
 
 Both 32-bit and 64-bit versions should be built for maximum compatibility before deployment. See https://dfir-orc.github.io for deployment and configuration details.
@@ -232,13 +242,13 @@ Copy-Item $ORC_MIRROR/vcpkg.exe "external/vcpkg/"
 
 ## License
 
-The contents of this repository are available under the [LGPL 2.1+ license](LICENSE.txt).
-The name **DFIR ORC** and the associated logo belong to **ANSSI**; no use is permitted without express approval.
+The contents of this repository are available under the [LGPL 2.1+ license](LICENSE.txt).  
+The name DFIR ORC, the associated logo and the ANSSI logo belong to ANSSI, no use is permitted without express approval.
 
 ---
 
-*Le contenu de ce dépôt est disponible sous licence LGPL 2.1+, tel qu'indiqué [ici](LICENSE.txt).
-Le nom DFIR ORC et le logo associé appartiennent à l'ANSSI, aucun usage n'est permis sans autorisation expresse.*
+Le contenu de ce dépôt est disponible sous licence LGPL 2.1+, tel qu'indiqué [ici](LICENSE.txt).  
+Le nom DFIR ORC, le logo associé et le logo de l'ANSSI appartiennent à l'ANSSI, aucun usage n'est permis sans autorisation expresse.
 
 ---
 
