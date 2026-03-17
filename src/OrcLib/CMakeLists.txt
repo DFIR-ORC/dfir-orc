@@ -755,6 +755,7 @@ set(SRC_INOUT_UPLOAD
 source_group(In&Out\\Upload FILES ${SRC_INOUT_UPLOAD})
 
 set(SRC_LOG
+    "Log/BackTraceSink.h"
     "Log/FileSink.h"
     "Log/FileSinkWin32.h"
     "Log/Level.h"

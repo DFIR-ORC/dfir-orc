@@ -44,7 +44,9 @@ void SpdlogLogger::SetLevel(Log::Level level)
 
 void SpdlogLogger::EnableBacktrace(size_t messageCount)
 {
-    m_logger->enable_backtrace(messageCount);
+    m_backtraceSink = std::make_shared<BacktraceSink<std::mutex>>(messageCount);
+    m_backtraceSink->set_level(spdlog::level::debug);
+    m_logger->sinks().push_back(m_backtraceSink);
 }
 
 void SpdlogLogger::DisableBacktrace()
@@ -54,39 +56,11 @@ void SpdlogLogger::DisableBacktrace()
 
 void SpdlogLogger::DumpBacktrace()
 {
-    // Backup log settings
-    const auto loggerLevel = static_cast<Log::Level>(m_logger->level());
-    m_logger->set_level(spdlog::level::trace);
-
-    struct SinkSettings
+    if (m_backtraceSink)
     {
-        Log::Level level = Level::Off;
-        std::unique_ptr<spdlog::formatter> formatter;
-    };
-
-    std::vector<SinkSettings> sinksSettings(m_sinks.size());
-    for (size_t i = 0; i < m_sinks.size(); ++i)
-    {
-        sinksSettings[i] = {m_sinks[i]->Level(), m_sinks[i]->CloneFormatter()};
-
-        if (m_sinks[i]->Level() != Log::Level::Off)
-        {
-            m_sinks[i]->SetLevel(m_backtraceLevel);
-        }
-
-        m_sinks[i]->SetFormatter(m_backtraceFormatter->clone());
+        // This is where the complete pattern formatting finally happens.
+        m_backtraceSink->dump_to(*m_logger);
     }
-
-    m_logger->dump_backtrace();
-
-    // Restore log settings
-    for (size_t i = 0; i < m_sinks.size(); ++i)
-    {
-        m_sinks[i]->SetLevel(sinksSettings[i].level);
-        m_sinks[i]->SetFormatter(std::move(sinksSettings[i].formatter));
-    }
-
-    SetLevel(loggerLevel);
 }
 
 void SpdlogLogger::SetErrorHandler(std::function<void(const std::string&)> handler)
@@ -98,11 +72,9 @@ void SpdlogLogger::SetFormatter(std::unique_ptr<spdlog::formatter> formatter)
 {
     if (formatter == nullptr)
     {
-        // spdlog sinks does not allow set_formatter with nullptr
         return;
     }
 
-    // see spldog implementation, spdlog::logger does not keep any formatter reference
     for (auto& sink : m_sinks)
     {
         sink->SetFormatter(formatter->clone());

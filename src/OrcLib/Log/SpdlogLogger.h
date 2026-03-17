@@ -13,6 +13,7 @@
 #include <spdlog/logger.h>
 
 #include "Log/SpdlogSink.h"
+#include "Log/BacktraceSink.h"
 
 namespace Orc {
 namespace Log {
@@ -181,6 +182,7 @@ private:
     std::unique_ptr<spdlog::formatter> m_backtraceFormatter;
     Log::Level m_backtraceTrigger;
     Log::Level m_backtraceLevel;
+    std::shared_ptr<BacktraceSink<std::mutex>> m_backtraceSink;
 };
 
 }  // namespace Log
