@@ -188,6 +188,14 @@ protected:
 std::shared_ptr<StructuredOutput::IWriter>
 GetWriter(std::shared_ptr<ByteStream> stream, std::unique_ptr<Options>&& pOptions);
 
+// Required by rapidjson's ADL-based EncodeUnsafe path.
+// PutUnsafe is the unchecked single-character write used during transcoding.
+template <typename Char>
+inline void PutUnsafe(Stream<Char>& stream, Char c)
+{
+    stream.Put(c);  // adjust to match Stream<Char>'s actual write method
+}
+
 }  // namespace StructuredOutput::JSON
 
 using JSONOutputOptions = StructuredOutput::JSON::Options;
