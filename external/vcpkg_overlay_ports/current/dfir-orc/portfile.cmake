@@ -1,0 +1,1 @@
+# This empty portfile.cmake is required to allow vcpkg to recognize this directory as a valid port. The actual build logic is handled in the CMakeLists.txt file at the root of the project, which includes this port as a subdirectory.
