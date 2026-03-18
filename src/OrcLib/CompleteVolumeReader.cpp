@@ -24,22 +24,30 @@ CompleteVolumeReader::CompleteVolumeReader(const WCHAR* szLocation)
 
 HRESULT CompleteVolumeReader::Seek(ULONGLONG offset)
 {
+    ULONGLONG localPositionOffset;
 
     if (m_BytesPerSector && offset % m_BytesPerSector)
     {
         // we round to the lower sector
-        m_LocalPositionOffset = offset % m_BytesPerSector;
+        localPositionOffset = offset % m_BytesPerSector;
         offset = (offset / m_BytesPerSector) * m_BytesPerSector;
     }
     else
     {
-        m_LocalPositionOffset = 0L;
+        localPositionOffset = 0L;
     }
 
     LARGE_INTEGER liPosition;
     liPosition.QuadPart = (LONGLONG)(offset);
 
-    return m_Extents[0].Seek(liPosition, NULL, FILE_BEGIN);
+    HRESULT hr = m_Extents[0].Seek(liPosition, NULL, FILE_BEGIN);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    m_LocalPositionOffset = localPositionOffset;
+    return S_OK;
 }
 
 uint64_t CompleteVolumeReader::Position() const

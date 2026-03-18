@@ -73,7 +73,7 @@ protected:
     ULONG m_BytesPerFRS = 0L;
     ULONG m_BytesPerSector = 0L;
     ULONG m_BytesPerCluster = 0L;
-    ULONG m_LocalPositionOffset = 0L;
+    ULONGLONG m_LocalPositionOffset = 0L;
     LONGLONG m_NumberOfSectors = 0LL;
     ULONGLONG m_llVolumeSerialNumber = 0LL;
     DWORD m_dwMaxComponentLength = 0L;
