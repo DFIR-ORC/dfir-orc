@@ -309,54 +309,59 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::Flush()
     }
 
     std::string_view writeBuffer;
-    DWORD dwBytesToWrite = 0L;
-
-    // TODO: fix this with a growable buffer
-    // utf8 buffer size must follow utf16 buffer with a margin for conversion
-    const auto kBufferElementCb = sizeof(decltype(m_buffer)::value_type);
-    const auto kExpectedUtf8Cb = (m_buffer.size() + 8192) * kBufferElementCb;
-    if (m_bufferUtf8.capacity() < kExpectedUtf8Cb)
-    {
-        m_bufferUtf8.reserve(kExpectedUtf8Cb);
-    }
+    ULONGLONG bytesToWrite = 0;
 
     switch (m_Options->Encoding)
     {
-        case OutputSpec::Encoding::UTF8:
-            dwBytesToWrite = WideCharToMultiByte(
-                CP_UTF8,
-                0L,
-                reinterpret_cast<LPCWCH>(m_buffer.data()),
-                m_buffer.size(),
-                reinterpret_cast<LPSTR>(m_bufferUtf8.data()),
-                m_bufferUtf8.capacity(),
-                NULL,
-                NULL);
+        case OutputSpec::Encoding::UTF8: {
+            // Worst case: 3 UTF-8 bytes per UTF-16 code unit (BMP ceiling)
+            // Surrogate pairs (4 UTF-16 bytes) also produce 4 UTF-8 bytes, so 3x is the safe multiplier
+            const size_t kMaxUtf8Cb = m_buffer.size() * 3 + 1;
 
-            if (!dwBytesToWrite)
+            m_bufferUtf8.resize(kMaxUtf8Cb);
+
+            constexpr DWORD kWcErrInvalidChars = 0x00000080;
+            const int written = WideCharToMultiByte(
+                CP_UTF8,
+                kWcErrInvalidChars,  // fail on invalid UTF-16, never silently corrupt
+                m_buffer.data(),
+                static_cast<int>(m_buffer.size()),
+                m_bufferUtf8.data(),
+                static_cast<int>(m_bufferUtf8.size()),
+                nullptr,
+                nullptr);
+
+            if (written == 0)
             {
+                Log::Debug("Flush: WideCharToMultiByte failed (error: {})", GetLastError());
                 return HRESULT_FROM_WIN32(GetLastError());
             }
 
-            writeBuffer = std::string_view(m_bufferUtf8.data(), dwBytesToWrite);
+            bytesToWrite = static_cast<ULONGLONG>(written);
+            writeBuffer = std::string_view(m_bufferUtf8.data(), bytesToWrite);
             break;
+        }
+
         case OutputSpec::Encoding::UTF16:
-            writeBuffer = std::string_view(reinterpret_cast<char*>(m_buffer.data()), m_buffer.size() * sizeof(wchar_t));
+            bytesToWrite = m_buffer.size() * sizeof(wchar_t);
+            writeBuffer = std::string_view(reinterpret_cast<const char*>(m_buffer.data()), bytesToWrite);
             break;
+
         default:
             return E_INVALIDARG;
     }
 
-    ULONGLONG ullBytesWritten;
-    // TODO: this const cast is safe but interface requires it
+    ULONGLONG ullBytesWritten = 0;
     auto hr = m_pByteStream->Write(const_cast<char*>(writeBuffer.data()), writeBuffer.size(), &ullBytesWritten);
     if (FAILED(hr))
     {
         return hr;
     }
 
-    if (ullBytesWritten < dwBytesToWrite)
+    // bytesToWrite is now correctly set for both paths
+    if (ullBytesWritten < bytesToWrite)
     {
+        Log::Debug("Flush: short write ({} of {} bytes)", ullBytesWritten, bytesToWrite);
         return HRESULT_FROM_WIN32(ERROR_WRITE_FAULT);
     }
 
