@@ -68,7 +68,7 @@ public:
 
     const IMAGE_DOS_HEADER& ImageDosHeader() const;
     const std::optional<IMAGE_FILE_HEADER>& ImageFileHeader() const;
-    const OptionalHeader& ImageOptionalHeader() const;
+    const std::optional<OptionalHeader>& ImageOptionalHeader() const;
 
     bool HasResourceDirectory() const;
     Result<void> ReadResourceDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxLen = {}) const;
@@ -120,7 +120,7 @@ private:
     uint64_t m_streamSize;  // Cached stream size because underlying stream may SetFilePointer to get it
     IMAGE_DOS_HEADER m_imageDosHeader;
     std::optional<IMAGE_FILE_HEADER> m_imageFileHeader;
-    OptionalHeader m_imageOptionalHeader;
+    std::optional<OptionalHeader> m_imageOptionalHeader;
     SectionHeaders m_imageSectionsHeaders;
 };
 

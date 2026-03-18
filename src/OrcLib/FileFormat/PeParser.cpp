@@ -109,7 +109,7 @@ void ParseImageNtHeaders(
     ByteStream& stream,
     const IMAGE_DOS_HEADER& imageDosHeader,
     std::optional<IMAGE_FILE_HEADER>& imageFileHeader,
-    PeParser::OptionalHeader& imageOptionalHeader,
+    std::optional<PeParser::OptionalHeader>& imageOptionalHeader,
     std::error_code& ec)
 {
     ImageNtHeaderFixedSize imageNtHeader;
@@ -497,6 +497,25 @@ inline bool IsFiltered(
         filter);
 }
 
+std::optional<IMAGE_DATA_DIRECTORY> ResolveDataDirectory(
+    const std::variant<IMAGE_OPTIONAL_HEADER32, IMAGE_OPTIONAL_HEADER64>& optionalHeader,
+    uint8_t index)
+{
+    return std::visit(
+        [index](const auto& header) -> std::optional<IMAGE_DATA_DIRECTORY> {
+            if (index >= header.NumberOfRvaAndSizes)
+            {
+                Log::Debug(
+                    "Directory index {} exceeds NumberOfRvaAndSizes {}, resolving anyway",
+                    index,
+                    header.NumberOfRvaAndSizes);
+            }
+
+            return header.DataDirectory[index];
+        },
+        optionalHeader);
+}
+
 }  // namespace
 
 namespace Orc {
@@ -546,7 +565,7 @@ const std::optional<IMAGE_FILE_HEADER>& PeParser::ImageFileHeader() const
     return m_imageFileHeader;
 }
 
-const PeParser::OptionalHeader& PeParser::ImageOptionalHeader() const
+const std::optional<PeParser::OptionalHeader>& PeParser::ImageOptionalHeader() const
 {
     return m_imageOptionalHeader;
 }
@@ -612,15 +631,13 @@ bool PeParser::HasImageDataDirectory(uint8_t index) const
         return false;
     }
 
-    IMAGE_DATA_DIRECTORY data;
-    std::visit([&](const auto& optionalHeader) { data = optionalHeader.DataDirectory[index]; }, m_imageOptionalHeader);
-
-    if (data.Size == 0)
+    if (!m_imageOptionalHeader.has_value())
     {
         return false;
     }
 
-    return true;
+    const auto data = ResolveDataDirectory(*m_imageOptionalHeader, index);
+    return data.has_value() && data->Size != 0;
 }
 
 IMAGE_DATA_DIRECTORY PeParser::GetImageDataDirectory(uint8_t index, std::error_code& ec) const
@@ -632,16 +649,22 @@ IMAGE_DATA_DIRECTORY PeParser::GetImageDataDirectory(uint8_t index, std::error_c
         return {};
     }
 
-    IMAGE_DATA_DIRECTORY data;
-    std::visit([&](const auto& optionalHeader) { data = optionalHeader.DataDirectory[index]; }, m_imageOptionalHeader);
+    if (!m_imageOptionalHeader.has_value())
+    {
+        ec = std::make_error_code(std::errc::no_such_file_or_directory);
+        Log::Debug("Optional header not populated, cannot read DataDirectory[{}]", index);
+        return {};
+    }
 
-    if (data.Size == 0)
+    const auto data = ResolveDataDirectory(*m_imageOptionalHeader, index);
+
+    if (!data.has_value() || data->Size == 0)
     {
         ec = std::make_error_code(std::errc::no_such_file_or_directory);
         return {};
     }
 
-    return data;
+    return *data;
 }
 
 Result<void> PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::optional<size_t> maxSize) const
@@ -651,7 +674,6 @@ Result<void> PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer
     const auto directory = GetImageDataDirectory(index, ec);
     if (ec)
     {
-        Log::Debug("Failed to retrieve directory (index: {}) [{}]", index, ec);
         return SystemError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
     }
 
@@ -814,8 +836,13 @@ Result<void> PeParser::ReadDebugDirectory(std::vector<uint8_t>& buffer, std::opt
 
 uint64_t PeParser::GetChecksumOffset() const
 {
+    if (!m_imageOptionalHeader)
+    {
+        return 0;
+    }
+
     // The value of the checksum offset is the same for 32/64 bits but it is kind of "more true"
-    if (std::holds_alternative<IMAGE_OPTIONAL_HEADER32>(m_imageOptionalHeader))
+    if (std::holds_alternative<IMAGE_OPTIONAL_HEADER32>(*m_imageOptionalHeader))
     {
         return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize)
             + offsetof(IMAGE_OPTIONAL_HEADER32, CheckSum);
@@ -829,7 +856,12 @@ uint64_t PeParser::GetChecksumOffset() const
 
 uint64_t PeParser::GetSecurityDirectoryOffset() const
 {
-    if (std::holds_alternative<IMAGE_OPTIONAL_HEADER32>(m_imageOptionalHeader))
+    if (!m_imageOptionalHeader)
+    {
+        return 0;
+    }
+
+    if (std::holds_alternative<IMAGE_OPTIONAL_HEADER32>(*m_imageOptionalHeader))
     {
         return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize)
             + offsetof(IMAGE_OPTIONAL_HEADER32, DataDirectory[IMAGE_DIRECTORY_ENTRY_SECURITY]);
@@ -843,7 +875,12 @@ uint64_t PeParser::GetSecurityDirectoryOffset() const
 
 uint64_t PeParser::GetSizeOfOptionalHeader() const
 {
-    return std::visit([&](const auto& optionalHeader) { return optionalHeader.SizeOfHeaders; }, m_imageOptionalHeader);
+    if (!m_imageOptionalHeader)
+    {
+        return 0;
+    }
+
+    return std::visit([&](const auto& optionalHeader) { return optionalHeader.SizeOfHeaders; }, *m_imageOptionalHeader);
 }
 
 void PeParser::GetHashedChunks(PeChunks& chunks, std::error_code& ec) const
