@@ -718,6 +718,12 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
 
     if (pIA != nullptr && m_Callbacks.I30Callback != nullptr)
     {
+        if (pBM == nullptr)
+        {
+            Log::Error(L"Missing $BITMAP attribute for $INDEX_ALLOCATION");
+            return E_UNEXPECTED;
+        }
+
         ULONGLONG ToRead = 0ULL;
         if (FAILED(hr = pIA->DataSize(m_pVolReader, ToRead)))
         {
@@ -725,14 +731,29 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
             return hr;
         }
 
-        UINT i = 0L;
-
-        auto callback =
-            [this, pBM, pIR, &hr, pRecord, &i](ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data) -> HRESULT {
-            DBG_UNREFERENCED_PARAMETER(ullBufferStartOffset);
+        auto callback = [this, pBM, pIR, &hr, pRecord](ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data) -> HRESULT {
             PINDEX_ALLOCATION_BUFFER pIABuff = (PINDEX_ALLOCATION_BUFFER)Data.GetData();
 
-            if ((*pBM)[i])
+            const UINT blockIndex = static_cast<UINT>(ullBufferStartOffset / pIR->SizePerIndex());
+
+            if (Data.GetCount() > pIR->SizePerIndex())
+            {
+                // If this happen then the callback should have a loop that process each SizePerIndex allocation and
+                // check against bitmap each time.
+                assert(L"Unexpected $I30 index segment size bigger than a cluster" && 0);
+                Log::Critical(
+                    L"Unexpected $I30 index segment size (actual: {}, expected max: {})",
+                    Data.GetCount(),
+                    pIR->SizePerIndex());
+            }
+
+            if (blockIndex >= pBM->Bits().size())
+            {
+                Log::Error(L"Block index {} exceeds bitmap size {}", blockIndex, pBM->Bits().size());
+                return S_OK;
+            }
+
+            if ((*pBM)[blockIndex])
             {
                 if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
                 {
@@ -774,8 +795,7 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
             else
             {
                 Log::Debug(
-                    L"Index {} of $INDEX_ALLOCATION is not in use (FRN: {:#x}) only carving...",
-                    i,
+                    L"Item in $INDEX_ALLOCATION is not in use (FRN: {:#x}) only carving...",
                     NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()));
 
                 if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
@@ -801,7 +821,7 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                     }
                 }
             }
-            i++;
+
             return S_OK;
         };
 

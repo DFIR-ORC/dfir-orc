@@ -759,8 +759,6 @@ HRESULT MFTRecord::EnumData(
                     VolReader, ullStartOffset, ullBytesToRead, DEFAULT_READ_SIZE, SegmentArray)))
             return hr;
 
-        ULONGLONG ullBufferBasedOffset = 0;
-
         for (auto iter = SegmentArray.begin(); iter != SegmentArray.end(); ++iter)
         {
             CBinaryBuffer buffer;
@@ -775,8 +773,14 @@ HRESULT MFTRecord::EnumData(
                 ULONGLONG ullBytesRead = 0LL;
                 if (FAILED(hr = VolReader->Read(iter->ullDiskBasedOffset, buffer, iter->ullSize, ullBytesRead)))
                     return hr;
+
+                if (ullBytesRead < iter->ullSize)
+                {
+                    buffer.SetCount(ullBytesRead);
+                }
             }
-            if (FAILED(hr = pCallBack(ullBufferBasedOffset, buffer)))
+
+            if (FAILED(hr = pCallBack(iter->ullFileBasedOffset, buffer)))
                 return hr;
         }
     }
@@ -826,8 +830,6 @@ HRESULT MFTRecord::EnumData(
                     VolReader, ullStartOffset, ullBytesToRead, ullBytesChunks, SegmentArray)))
             return hr;
 
-        ULONGLONG ullBufferBasedOffset = 0;
-
         for (auto iter = SegmentArray.begin(); iter != SegmentArray.end(); ++iter)
         {
             CBinaryBuffer buffer;
@@ -842,8 +844,14 @@ HRESULT MFTRecord::EnumData(
                 ULONGLONG ullBytesRead = 0LL;
                 if (FAILED(hr = VolReader->Read(iter->ullDiskBasedOffset, buffer, iter->ullSize, ullBytesRead)))
                     return hr;
+
+                if (ullBytesRead < iter->ullSize)
+                {
+                    buffer.SetCount(ullBytesRead);
+                }
             }
-            if (FAILED(hr = pCallBack(ullBufferBasedOffset, buffer)))
+
+            if (FAILED(hr = pCallBack(iter->ullFileBasedOffset, buffer)))
                 return hr;
         }
     }
