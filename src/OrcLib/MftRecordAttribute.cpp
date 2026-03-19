@@ -30,6 +30,45 @@ using namespace Orc;
 
 namespace {
 
+//
+// The boost::dynamic_bitset class is tricky to use. The method append will
+// pad the data if smaller than block_type (the T type its built on).
+//
+// BitmapAttribute::block_type was size_t while 'append' was called with
+// ULONG leading to corruption of the bitmap. Use now uint8_t as block_type
+// and added an helper to initialize byte to byte from a container. But be
+// careful to container inner type and endianness.
+//
+template <typename T, typename Container>
+boost::dynamic_bitset<T> BitsetFromContainer(const Container& data)
+{
+    const std::basic_string_view<uint8_t> bytes {
+        reinterpret_cast<const uint8_t*>(data.data()), data.size() * sizeof(typename Container::value_type)};
+
+    boost::dynamic_bitset<T> bitset;
+    bitset.resize(bytes.size() * 8);
+
+    for (size_t i = 0; i < bytes.size(); ++i)
+    {
+        uint8_t b = static_cast<uint8_t>(bytes[i]);
+        for (size_t bit = 0; bit < 8; ++bit)
+        {
+            if (b & (1 << bit))
+            {
+                bitset.set(i * 8 + bit);
+            }
+        }
+    }
+
+    return bitset;
+}
+
+template <typename T>
+inline boost::dynamic_bitset<T> BitsetFromContainer(const CBinaryBuffer& buffer)
+{
+    return BitsetFromContainer<T>(std::string_view(reinterpret_cast<const char*>(buffer.GetData()), buffer.GetCount()));
+}
+
 const std::shared_ptr<Orc::DataAttribute> GetWofDataAttribute(const Orc::MFTRecord& record)
 {
     const auto si = record.GetStandardInformation();
@@ -692,16 +731,11 @@ HRESULT BitmapAttribute::LoadBitField(const std::shared_ptr<VolumeReader>& volre
 
     if (m_pHeader->FormCode == RESIDENT_FORM)
     {
-        ULONG* pBlock = (PULONG)(((PBYTE)m_pHeader) + m_pHeader->Form.Resident.ValueOffset);
+        m_bitset = BitsetFromContainer<decltype(m_bitset)::block_type>(std::string_view(
+            reinterpret_cast<const char*>(
+                reinterpret_cast<const uint8_t*>(m_pHeader) + m_pHeader->Form.Resident.ValueOffset),
+            m_pHeader->Form.Resident.ValueLength));
 
-        size_t currentIndex = 0L;
-
-        while (currentIndex < m_pHeader->Form.Resident.ValueLength)
-        {
-            m_bitset.append(*pBlock);
-            pBlock++;
-            currentIndex += sizeof(ULONG);
-        }
         return S_OK;
     }
     else
@@ -727,10 +761,7 @@ HRESULT BitmapAttribute::LoadBitField(const std::shared_ptr<VolumeReader>& volre
         if (ullBytesToRead != ullBytesRead)
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
 
-        for (size_t currentIndex = 0L; currentIndex < ullBytesRead / sizeof(ULONG); currentIndex++)
-        {
-            m_bitset.append(pData.Get<ULONG>(currentIndex));
-        }
+        m_bitset = BitsetFromContainer<decltype(m_bitset)::block_type>(pData);
         return S_OK;
     }
 }

@@ -269,7 +269,8 @@ class BitmapAttribute : public MftRecordAttribute
     friend class MFTRecord;
 
 public:
-    using block_type = size_t;
+    // BEWARE: boost::dynamic_bitset<T>::append will complete the missing bytes if type is smaller
+    using block_type = uint8_t;
 
     BitmapAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord)
         : MftRecordAttribute(pHeader, pRecord) {
