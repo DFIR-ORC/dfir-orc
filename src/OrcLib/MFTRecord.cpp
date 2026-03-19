@@ -870,6 +870,9 @@ HRESULT MFTRecord::ReadData(
 
     ULONGLONG ullBytesRead = 0ULL;
 
+    // BEWARE: the lambda below will append data to the buffer so it must be 0
+    AllData.SetCount(0);
+
     hr = EnumData(
         VolReader,
         pAttr,
