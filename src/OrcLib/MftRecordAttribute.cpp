@@ -716,7 +716,11 @@ HRESULT BitmapAttribute::LoadBitField(const std::shared_ptr<VolumeReader>& volre
         std::shared_ptr<MftRecordAttribute> attr = shared_from_this();
 
         CBinaryBuffer pData;
-        pData.SetCount(static_cast<size_t>(ullBytesToRead));
+
+        // BEWARE: Do not reserve space because the ReadData function will append bytes to the buffer.
+        // To be sure there is no issue the ReadData function now set the buffer to 0 at the beginning.
+        // pData.SetCount(static_cast<size_t>(ullBytesToRead));
+
         if (FAILED(hr = m_pHostRecord->ReadData(volreader, attr, 0, ullBytesToRead, pData, &ullBytesRead)))
             return hr;
 
