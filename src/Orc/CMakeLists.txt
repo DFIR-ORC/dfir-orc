@@ -28,9 +28,10 @@ set(SRC
     "${GENERATED_SRC_DIR}/Icon.h"
     "Compatibility.manifest"
 )
-
-if(${TARGET_ARCH} STREQUAL "x86")
-    list(APPEND SRC "xpcrtwrap.asm" "XPSP2Compatibility.cpp")
+if("${CMAKE_GENERATOR_TOOLSET}" STREQUAL "v141_xp")
+    if(${TARGET_ARCH} STREQUAL "x86")
+        list(APPEND SRC "xpcrtwrap.asm" "XPSP2Compatibility.cpp")
+    endif()
 endif()
 
 add_executable(Orc
