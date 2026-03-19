@@ -20,7 +20,6 @@
                 "ORC_BUILD_COMMAND": "ON",
                 "ORC_DOWNLOADS_ONLY": "OFF",
                 "ORC_DISABLE_PRECOMPILED_HEADERS": "OFF",
-                "ORC_SWAPRUN_NET": "ON",
                 "ORC_COMMAND_DD": "OFF",
                 "ORC_COMMAND_FASTFIND": "ON",
                 "ORC_COMMAND_FATINFO": "ON",

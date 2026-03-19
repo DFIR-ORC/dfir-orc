@@ -46,10 +46,6 @@ target_link_libraries(FastFind
         crypt32.lib
 )
 
-if(${ORC_SWAPRUN_NET})
-    target_link_options(FastFind PRIVATE "/SWAPRUN:NET")
-endif()
-
 set_target_properties(FastFind
     PROPERTIES
         OUTPUT_NAME "FastFind_${TARGET_ARCH}"

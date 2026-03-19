@@ -15,7 +15,6 @@ option(ORC_BUILD_TEST       "Build tests" ON)
 option(ORC_BUILD_COMMAND    "Build any OrcCommand based command" ON)
 option(ORC_DOWNLOADS_ONLY   "Do not build ORC but only download vcpkg third parties" OFF)
 option(ORC_DISABLE_PRECOMPILED_HEADERS "Disable precompiled headers" OFF)
-option(ORC_SWAPRUN_NET      "Enable PE option to for stable execution from network" ON)
 
 option(ORC_BUILD_ORCLIB_ONLY "Build OrcLib only" OFF)
 option(ORC_BUILD_CAPSULE_ONLY "Build OrcCapsule only" OFF)
