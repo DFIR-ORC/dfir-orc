@@ -12,11 +12,14 @@
 
 #include "Command/FastFind/FastFind.h"
 
+#include "Robustness.h"
+
 using namespace std;
 
 int wmain(int argc, const WCHAR* argv[])
 {
-    concurrency::Scheduler::SetDefaultSchedulerPolicy(concurrency::SchedulerPolicy(1, concurrency::MaxConcurrency, 16));
+    Orc::SetupDllLookupDirectories();
 
+    concurrency::Scheduler::SetDefaultSchedulerPolicy(concurrency::SchedulerPolicy(1, concurrency::MaxConcurrency, 16));
     return Orc::Command::UtilitiesMain::WMain<Orc::Command::FastFind::Main>(argc, argv);
 }
