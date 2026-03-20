@@ -198,7 +198,27 @@ public:
     }
 
     FileHandle(FileHandle&& handle) noexcept = default;
-    FileHandle& operator=(FileHandle&& o) = default;
+
+    FileHandle& operator=(FileHandle&& o) noexcept
+    {
+        if (this == &o)
+        {
+            return *this;
+        }
+
+        if (m_data != m_invalidValue)
+        {
+            if (CloseHandle(m_data) == FALSE)
+            {
+                Log::Warn("Failed CloseHandle [{}]", LastWin32Error());
+            }
+        }
+
+        m_data = o.m_data;
+        m_invalidValue = o.m_invalidValue;
+        o.m_data = m_invalidValue;
+        return *this;
+    }
 
     ~FileHandle()
     {
@@ -224,7 +244,27 @@ public:
     }
 
     ServiceHandle(ServiceHandle&& handle) noexcept = default;
-    ServiceHandle& operator=(ServiceHandle&& o) = default;
+
+    ServiceHandle& operator=(ServiceHandle&& o) noexcept
+    {
+        if (this == &o)
+        {
+            return *this;
+        }
+
+        if (m_data != m_invalidValue)
+        {
+            if (CloseServiceHandle(m_data) == FALSE)
+            {
+                Log::Warn("Failed CloseServiceHandle [{}]", LastWin32Error());
+            }
+        }
+
+        m_data = o.m_data;
+        m_invalidValue = o.m_invalidValue;
+        o.m_data = m_invalidValue;
+        return *this;
+    }
 
     ~ServiceHandle()
     {
@@ -250,7 +290,27 @@ public:
     }
 
     Handle(Handle&& o) noexcept = default;
-    Handle& operator=(Handle&& o) = default;
+
+    Handle& operator=(Handle&& o) noexcept
+    {
+        if (this == &o)
+        {
+            return *this;
+        }
+
+        if (m_data != m_invalidValue)
+        {
+            if (::CloseHandle(m_data) == FALSE)
+            {
+                Log::Warn("Failed on CloseHandle [{}]", LastWin32Error());
+            }
+        }
+
+        m_data = o.m_data;
+        m_invalidValue = o.m_invalidValue;
+        o.m_data = m_invalidValue;
+        return *this;
+    }
 
     ~Handle()
     {
@@ -276,7 +336,28 @@ public:
     }
 
     RegistryHandle(RegistryHandle&& handle) noexcept = default;
-    RegistryHandle& operator=(RegistryHandle&& o) = default;
+
+    RegistryHandle& operator=(RegistryHandle&& o) noexcept
+    {
+        if (this == &o)
+        {
+            return *this;
+        }
+
+        if (m_data != m_invalidValue)
+        {
+            LSTATUS status = RegCloseKey(m_data);
+            if (status != ERROR_SUCCESS)
+            {
+                Log::Debug("Failed RegCloseKey [{}]", Win32Error(status));
+            }
+        }
+
+        m_data = o.m_data;
+        m_invalidValue = o.m_invalidValue;
+        o.m_data = m_invalidValue;
+        return *this;
+    }
 
     ~RegistryHandle()
     {
@@ -303,7 +384,27 @@ public:
     }
 
     Module(Module&& o) noexcept = default;
-    Module& operator=(Module&& o) = default;
+
+    Module& operator=(Module&& o) noexcept
+    {
+        if (this == &o)
+        {
+            return *this;
+        }
+
+        if (m_data != m_invalidValue)
+        {
+            if (::FreeLibrary(m_data) == FALSE)
+            {
+                Log::Warn("Failed FreeLibrary [{}]", LastWin32Error());
+            }
+        }
+
+        m_data = o.m_data;
+        m_invalidValue = o.m_invalidValue;
+        o.m_data = m_invalidValue;
+        return *this;
+    }
 
     ~Module()
     {
@@ -357,7 +458,26 @@ public:
     }
 
     ViewOfFile(ViewOfFile&& o) noexcept = default;
-    ViewOfFile& operator=(ViewOfFile&& o) = default;
+
+    ViewOfFile& operator=(ViewOfFile&& o) noexcept
+    {
+        if (this == &o)
+        {
+            return *this;
+        }
+
+        if (this->m_data != nullptr)
+        {
+            if (::UnmapViewOfFile(this->m_data) == FALSE)
+            {
+                Log::Warn("Failed UnmapViewOfFile [{}]", LastWin32Error());
+            }
+        }
+
+        this->m_data = o.m_data;
+        o.m_data = nullptr;
+        return *this;
+    }
 
     ~ViewOfFile()
     {
