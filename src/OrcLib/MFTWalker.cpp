@@ -767,6 +767,8 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                 {
                     PINDEX_HEADER pHeader = &(pIABuff->IndexHeader);
                     PINDEX_ENTRY pEntry = (PINDEX_ENTRY)NtfsFirstIndexEntry(pHeader);
+
+                    // Read valid data until last entry flag
                     while (!(pEntry->Flags & INDEX_ENTRY_END))
                     {
                         PFILE_NAME pFileName = (PFILE_NAME)((PBYTE)pEntry + sizeof(INDEX_ENTRY));
@@ -776,7 +778,8 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                         pEntry = NtfsNextIndexEntry(pEntry);
                     }
 
-                    LPBYTE pFirstFreeByte = (((LPBYTE)NtfsFirstIndexEntry(pHeader)) + pHeader->FirstFreeByte);
+                    // Read in the slack space the old entries
+                    LPBYTE pFirstFreeByte = reinterpret_cast<LPBYTE>(pEntry) + sizeof(INDEX_ENTRY);
 
                     while (pFirstFreeByte + sizeof(FILE_NAME) < Data.GetData() + Data.GetCount())
                     {
@@ -785,6 +788,18 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                         if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory)
                             == pRecord->GetSafeMFTSegmentNumber())
                         {
+                            if ((LPBYTE)pCarvedFileName - sizeof(INDEX_ENTRY) < Data.GetData())
+                            {
+                                pFirstFreeByte++;
+                                continue;
+                            }
+
+                            if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory) == 0)
+                            {
+                                pFirstFreeByte++;
+                                continue;
+                            }
+
                             PINDEX_ENTRY pEntry = (PINDEX_ENTRY)((LPBYTE)pCarvedFileName - sizeof(INDEX_ENTRY));
                             m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pCarvedFileName, true);
                         }
@@ -814,9 +829,22 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                         if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory)
                             == pRecord->GetSafeMFTSegmentNumber())
                         {
+                            if ((LPBYTE)pCarvedFileName - sizeof(INDEX_ENTRY) < Data.GetData())
+                            {
+                                pFirstFreeByte++;
+                                continue;
+                            }
+
+                            if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory) == 0)
+                            {
+                                pFirstFreeByte++;
+                                continue;
+                            }
+
                             PINDEX_ENTRY pEntry = (PINDEX_ENTRY)((LPBYTE)pCarvedFileName - sizeof(INDEX_ENTRY));
                             m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pCarvedFileName, true);
                         }
+
                         pFirstFreeByte++;
                     }
                 }
