@@ -379,6 +379,22 @@ Orc::Result<void> Write(const Outcome& outcome, StructuredOutputWriter::IWriter:
             writer->WriteNamed(L"system_type", outcome.GetOrcSystemTypeValue());
 
             ::Write(writer, outcome.GetMothership());
+
+            {
+                const auto kNodeConsole = L"time_zone";
+                writer->BeginElement(kNodeConsole);
+                Guard::Scope onLogExit([&]() { writer->EndElement(kNodeConsole); });
+
+                writer->WriteNamed(L"daylight", outcome.GetTimeZoneInformation().DaylightName);
+                writer->WriteNamed(L"daylight_bias", outcome.GetTimeZoneInformation().DaylightBias);
+                writer->WriteNamed(L"standard", outcome.GetTimeZoneInformation().StandardName);
+                writer->WriteNamed(L"standard_bias", outcome.GetTimeZoneInformation().StandardBias);
+                writer->WriteNamed(L"current_bias", outcome.GetTimeZoneInformation().Bias);
+                writer->WriteNamed(L"current", outcome.GetTimeZoneDaylight() ? L"daylight" : L"standard");
+                writer->WriteNamed(L"time_zone_key_name", outcome.GetTimeZoneKeyName());
+            }
+
+            ::Write(writer, outcome.GetCapsule());
             ::Write(writer, outcome.GetWolfLauncher());
 
             {

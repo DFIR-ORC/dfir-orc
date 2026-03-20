@@ -282,6 +282,20 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HAN
         }
     }
 
+    TIME_ZONE_INFORMATION tzi;
+    ZeroMemory(&tzi, sizeof(tzi));
+    if (auto active = GetTimeZoneInformation(&tzi); active != TIME_ZONE_ID_INVALID)
+    {
+        outcome.SetTimeZoneInformation(tzi);
+        outcome.SetTimeZoneDaylight(active == TIME_ZONE_ID_DAYLIGHT);
+    }
+
+    auto timeZoneKeyName = SystemDetails::GetTimeZoneKeyNameFromRegistry();
+    if (timeZoneKeyName)
+    {
+        outcome.SetTimeZoneKeyName(*timeZoneKeyName);
+    }
+
     auto& wolfLauncher = outcome.GetWolfLauncher();
 
     const auto sha1 = GetCurrentExecutableHash(CryptoHashStream::Algorithm::SHA1);

@@ -423,6 +423,15 @@ public:
     Timestamp GetEndingTime() const { return m_endingTime; }
     void SetEndingTime(const Timestamp& timestamp) { m_endingTime = timestamp; }
 
+    const TIME_ZONE_INFORMATION& GetTimeZoneInformation() const { return m_timeZoneInformation; }
+    void SetTimeZoneInformation(const TIME_ZONE_INFORMATION& tzi) { m_timeZoneInformation = tzi; }
+
+    bool GetTimeZoneDaylight() const { return m_timeZoneDaylight; }
+    void SetTimeZoneDaylight(bool daylight) { m_timeZoneDaylight = daylight; }
+
+    const std::wstring& GetTimeZoneKeyName() const { return m_timeZoneKeyName; }
+    void SetTimeZoneKeyName(const std::wstring& name) { m_timeZoneKeyName = name; }
+
     WolfLauncher& GetWolfLauncher() { return m_wolfLauncher; }
     const WolfLauncher& GetWolfLauncher() const { return m_wolfLauncher; }
 
@@ -454,6 +463,9 @@ private:
     std::vector<Recipient> m_recipients;
     WolfLauncher m_wolfLauncher;
     std::wstring m_timestamp;
+    TIME_ZONE_INFORMATION m_timeZoneInformation;
+    bool m_timeZoneDaylight;
+    std::wstring m_timeZoneKeyName;
     std::chrono::time_point<std::chrono::system_clock> m_startingTime;
     std::chrono::time_point<std::chrono::system_clock> m_endingTime;
     std::unordered_map<std::wstring, CommandSet> m_commandSets;
