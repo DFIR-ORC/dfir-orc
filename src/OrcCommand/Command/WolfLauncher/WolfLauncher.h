@@ -24,6 +24,7 @@
 #include "Configuration/ConfigFile.h"
 #include "WolfExecution.h"
 #include "TableOutput.h"
+#include "WolfPriority.h"
 
 #include "Command/WolfLauncher/Journal.h"
 #include "Command/WolfLauncher/ConsoleConfiguration.h"
@@ -49,18 +50,7 @@ public:
         FromDump
     };
 
-    enum class WolfPriority
-    {
-        Idle,
-        Low,
-        Normal,
-        High
-    };
-
-    static std::wstring ToString(WolfPriority value);
-
     enum class WolfPowerState
-
     {
         Unmodified = 0L,
         SystemRequired = ES_SYSTEM_REQUIRED,

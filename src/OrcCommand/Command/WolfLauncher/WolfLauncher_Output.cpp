@@ -27,20 +27,7 @@ namespace Orc {
 namespace Command {
 namespace Wolf {
 
-std::wstring Main::ToString(WolfPriority value)
-{
-    switch (value)
-    {
-        case WolfPriority::Low:
-            return L"Low";
-        case WolfPriority::Normal:
-            return L"Normal";
-        case WolfPriority::High:
-            return L"High";
-        default:
-            return L"<Unknown>";
-    }
-}
+
 
 std::wstring Main::ToString(Main::WolfPowerState value)
 {

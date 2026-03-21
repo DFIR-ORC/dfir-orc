@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "WolfLauncher.h"
+#include "WolfPriority.h"
 
 #include <system_error>
 
@@ -16,29 +16,28 @@
 #include "Text/Iconv.h"
 
 template <>
-struct fmt::formatter<Orc::Command::Wolf::Main::WolfPriority> : public fmt::formatter<std::string_view>
+struct fmt::formatter<Orc::WolfPriority> : public fmt::formatter<std::string_view>
 {
     template <typename FormatContext>
-    auto format(const Orc::Command::Wolf::Main::WolfPriority& priority, FormatContext& ctx) const -> decltype(ctx.out())
+    auto format(const Orc::WolfPriority& priority, FormatContext& ctx) const -> decltype(ctx.out())
     {
         std::error_code ec;
-        const auto utf8 = Orc::ToUtf8(Orc::Command::Wolf::Main::ToString(priority), ec);
+        const auto utf8 = Orc::ToUtf8(Orc::ToString(priority), ec);
         if (ec)
         {
             return formatter<std::string_view>::format(Orc::kFailedConversion, ctx);
         }
-
         return formatter<std::string_view>::format(utf8, ctx);
     }
 };
 
 template <>
-struct fmt::formatter<Orc::Command::Wolf::Main::WolfPriority, wchar_t>
+struct fmt::formatter<Orc::WolfPriority, wchar_t>
     : public fmt::formatter<std::wstring_view, wchar_t>
 {
     template <typename FormatContext>
-    auto format(Orc::Command::Wolf::Main::WolfPriority priority, FormatContext& ctx) const -> decltype(ctx.out())
+    auto format(Orc::WolfPriority priority, FormatContext& ctx) const -> decltype(ctx.out())
     {
-        return formatter<std::wstring_view, wchar_t>::format(Orc::Command::Wolf::Main::ToString(priority), ctx);
+        return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(priority), ctx);
     }
 };

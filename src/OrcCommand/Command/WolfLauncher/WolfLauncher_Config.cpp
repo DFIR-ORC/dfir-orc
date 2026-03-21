@@ -14,6 +14,7 @@
 #include <boost/tokenizer.hpp>
 
 #include "WolfLauncher.h"
+#include "WolfPriority.h"
 
 #include "Configuration/ConfigFileReader.h"
 #include "Configuration/ConfigFileWriter.h"
@@ -42,19 +43,19 @@ namespace {
 
 constexpr std::wstring_view kOrcOffline(L"ORC_Offline");
 
-Result<Main::WolfPriority> ToWolfPriority(std::wstring_view priority)
+Result<WolfPriority> ToWolfPriority(std::wstring_view priority)
 {
     if (boost::iequals(priority, L"Normal"))
     {
-        return Main::WolfPriority::Normal;
+        return WolfPriority::Normal;
     }
     else if (boost::iequals(priority, L"Low"))
     {
-        return Main::WolfPriority::Low;
+        return WolfPriority::Low;
     }
     else if (boost::iequals(priority, L"High"))
     {
-        return Main::WolfPriority::High;
+        return WolfPriority::High;
     }
 
     return std::errc::invalid_argument;
