@@ -221,6 +221,7 @@ protected:
     std::wstring m_strLibRef;  // Effective, contextual ref used to locate extension lib
 
     std::filesystem::path m_libFile;
+    std::vector<std::filesystem::path> m_extractedFiles;
     std::filesystem::path m_tempDir;
     bool m_bDeleteTemp = false;
 

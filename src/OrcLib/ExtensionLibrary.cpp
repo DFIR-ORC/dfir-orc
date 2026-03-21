@@ -167,6 +167,13 @@ HRESULT ExtensionLibrary::TryLoad(std::wstring strFileRef)
                 return hr;
             }
 
+            if (strExtractedFiles.size() > 1 && !m_strDesiredName)
+            {
+                Log::Error(
+                    L"Multiple files extracted but no desired file name specified for library '{}'", m_strKeyword);
+                return E_INVALIDARG;
+            }
+
             for (const auto& file : strExtractedFiles)
             {
                 path archive_path = file.first;
@@ -179,22 +186,27 @@ HRESULT ExtensionLibrary::TryLoad(std::wstring strFileRef)
 
                 std::error_code ec;
                 rename(extracted_path, desired_path, ec);
+                const path& actual_path = ec ? extracted_path : desired_path;
                 if (ec)
                 {
                     Log::Warn(
                         L"Failed to rename extension library name {} to {} [{}]", extracted_path, desired_path, ec);
-                    m_libFile = extracted_path;
                 }
-                else if (m_strDesiredName)
+
+                m_extractedFiles.push_back(actual_path);
+
+                if (m_strDesiredName)
                 {
-                    if (boost::iequals(desired_path.filename().c_str(), *m_strDesiredName))
+                    const auto filename = archive_path.filename().wstring();
+                    if (boost::iequals(filename, *m_strDesiredName)
+                        || boost::iends_with(filename, *m_strDesiredName))
                     {
-                        m_libFile = desired_path;
+                        m_libFile = actual_path;
                     }
                 }
                 else
                 {
-                    m_libFile = desired_path;
+                    m_libFile = actual_path;
                 }
             }
             if (m_libFile.empty())
@@ -463,12 +475,24 @@ HRESULT ExtensionLibrary::UnLoad()
 HRESULT ExtensionLibrary::Cleanup()
 {
     UnLoad();
-    if (!m_libFile.empty() && m_bDeleteOnClose)
+    if (m_bDeleteOnClose)
     {
         ScopedLock lock(m_cs);
 
-        if (auto hr = UtilDeleteTemporaryFile(m_libFile); FAILED(hr))
-            return hr;
+        if (!m_libFile.empty())
+        {
+            if (auto hr = UtilDeleteTemporaryFile(m_libFile); FAILED(hr))
+                return hr;
+        }
+
+        for (const auto& file : m_extractedFiles)
+        {
+            if (file != m_libFile)
+            {
+                UtilDeleteTemporaryFile(file);
+            }
+        }
+        m_extractedFiles.clear();
     }
 
     std::error_code ec;
@@ -498,27 +522,39 @@ HRESULT Orc::ExtensionLibrary::UnloadAndCleanup()
         FreeThisLibrary(hmod);
     }
 
-    if (!m_libFile.empty() && m_bDeleteOnClose)
+    if (m_bDeleteOnClose)
     {
-        DWORD dwRetries = 0L;
-        while (dwRetries < Orc::DELETION_RETRIES)
+        if (!m_libFile.empty())
         {
-            HRESULT hr = E_FAIL;
-            if (SUCCEEDED(hr = UtilDeleteTemporaryFile(m_libFile.c_str(), 1)))
+            DWORD dwRetries = 0L;
+            while (dwRetries < Orc::DELETION_RETRIES)
             {
-                return S_OK;
-            }
-            dwRetries++;
+                HRESULT hr = E_FAIL;
+                if (SUCCEEDED(hr = UtilDeleteTemporaryFile(m_libFile.c_str(), 1)))
+                {
+                    break;
+                }
+                dwRetries++;
 
-            if (m_hModule != NULL) // retry FreeLibrary
-            {
-                ScopedLock lock(m_cs);
-                HMODULE hmod = m_hModule;
-                m_hModule = NULL;
+                if (m_hModule != NULL) // retry FreeLibrary
+                {
+                    ScopedLock lock(m_cs);
+                    HMODULE hmod = m_hModule;
+                    m_hModule = NULL;
 
-                FreeThisLibrary(hmod);
+                    FreeThisLibrary(hmod);
+                }
             }
         }
+
+        for (const auto& file : m_extractedFiles)
+        {
+            if (file != m_libFile)
+            {
+                UtilDeleteTemporaryFile(file);
+            }
+        }
+        m_extractedFiles.clear();
     }
 
     return S_OK;
