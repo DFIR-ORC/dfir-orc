@@ -374,46 +374,49 @@ HRESULT FileInfo::WriteFileInformation(
     Intentions localIntentions = FilterIntentions(filters);
 
     const ColumnNameDef* pCurCol = columnNames;
-    while (pCurCol->dwIntention != Intentions::FILEINFO_NONE)
+    for (; pCurCol->dwIntention != Intentions::FILEINFO_NONE; pCurCol++)
     {
         DWORD ColId = output.GetCurrentColumnID();
 
         try
         {
-            if (HasFlag(localIntentions, pCurCol->dwIntention))
+            if (!HasFlag(localIntentions, pCurCol->dwIntention))
             {
-                if (FAILED(hr = HandleIntentions(pCurCol->dwIntention, output)))
-                {
-                    if (IsDirectory() && ::IsFailureAcceptedForDirectories(pCurCol->dwIntention))
-                    {
-                        if (output.GetCurrentColumnID() == ColId)
-                            hr = output.WriteNothing();
-                    }
-                    else
-                    {
-                        Log::Debug(
-                            L"Failed to write column '{}' for '{}' [{}]",
-                            pCurCol->szColumnName,
-                            m_szFullName,
-                            SystemError(hr));
+                output.WriteNothing();
+                continue;
+            }
 
-                        if (output.GetCurrentColumnID() == ColId)
-                            hr = output.AbandonColumn();
-                    }
+            if (FAILED(hr = HandleIntentions(pCurCol->dwIntention, output)))
+            {
+                if (!IsDirectory() || !::IsFailureAcceptedForDirectories(pCurCol->dwIntention))
+                {
+                    Log::Error(
+                        L"Failed to write column '{}' for '{}' [{}]",
+                        pCurCol->szColumnName,
+                        m_szFullName,
+                        SystemError(hr));
+                }
+
+                if (output.GetCurrentColumnID() == ColId)
+                {
+                    output.WriteNothing();
+                }
+                else
+                {
+                    assert(L"Unexpected column shifting" && 0);
                 }
             }
-            else
-                hr = output.WriteNothing();
         }
         catch (Orc::Exception& e)
         {
             Log::Error(L"Error while writing column '{}': {}", output.GetCurrentColumn().ColumnName, e.Description);
-            output.AbandonColumn();
+            if (output.GetCurrentColumnID() == ColId)
+            {
+                output.WriteNothing();
+            }
         }
 
         _ASSERT(output.GetCurrentColumnID() == ColId + 1);
-
-        pCurCol++;
     }
     output.WriteEndOfLine();
 
