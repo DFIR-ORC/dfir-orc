@@ -23,11 +23,31 @@
 
 #include "Robustness.h"
 
+#include "Utils/WinApi.h"
+#include "WolfPriority.h"
 #include "Log/Log.h"
 
 using namespace std;
 
 using namespace Orc;
+
+namespace {
+
+void SetProcessIoPriority(HANDLE hProcess)
+{
+    auto priority = Orc::WolfPriorityFromPriorityClass(GetPriorityClass(GetCurrentProcess()));
+
+    auto ioPriority = ToIoPriorityHint(priority);
+    auto ec =
+        NtSetInformationProcessApi(hProcess, WINAPI_PROCESS_INFORMATION_CLASS::ProcessIoPriority, &priority, sizeof(priority));
+    if (ec)
+    {
+        Log::Debug(L"Failed NtSetInformationProcess (ProcessIoPriority) [{}]", ec);
+        ec.clear();
+    }
+}
+
+}  // namespace
 
 static const auto MAX_CMDLINE = 32768;
 
@@ -420,6 +440,8 @@ HRESULT CommandExecute::CreateChildProcess(const JobObject& job, bool bBreakAway
             return hr;
         }
     }
+
+    SetProcessIoPriority(m_pi.hProcess);
 
     // Command as 'GetSamples' will create a child process 'GetThis' with the current log file path for appending
     Log::Flush();

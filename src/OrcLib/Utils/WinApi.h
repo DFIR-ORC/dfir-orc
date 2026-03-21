@@ -104,6 +104,18 @@ std::wstring GetComputerNameExApi(ComputerNameFormat format, std::error_code& ec
 
 std::wstring GetFullPathNameApi(const std::wstring& path, std::error_code& ec) noexcept;
 
+typedef enum _WINAPI_PROCESS_INFORMATION_CLASS
+{
+    ProcessIoPriority = 33,  // IO_PRIORITY_HINT
+    ProcessMemoryPriority = 39  // MEMORY_PRIORITY_INFORMATION
+} WINAPI_PROCESS_INFORMATION_CLASS;
+
+[[nodiscard]] std::error_code NtSetInformationProcessApi(
+    HANDLE ProcessHandle,
+    WINAPI_PROCESS_INFORMATION_CLASS ProcessInformationClass,
+    PVOID ProcessInformation,
+    ULONG ProcessInformationLength);
+
 }  // namespace Orc
 
 #pragma managed(pop)

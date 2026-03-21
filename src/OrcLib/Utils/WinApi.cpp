@@ -494,6 +494,23 @@ UpdateSecurityInfo(HANDLE hFile, LPSECURITY_ATTRIBUTES lpSecurityAttributes, PSI
     return ec;
 }
 
+HMODULE LoadNtdll(std::error_code& ec)
+{
+    static HMODULE module = NULL;
+
+    if (!module)
+    {
+        module = GetModuleHandleW(L"ntdll.dll");
+        if (module == NULL)
+        {
+            ec.assign(::GetLastError(), std::system_category());
+            return NULL;
+        }
+    }
+
+    return module;
+};
+
 }  // namespace
 
 namespace Orc {
@@ -536,6 +553,41 @@ std::wstring GetFullPathNameApi(const std::wstring& path, std::error_code& ec) n
         ec = std::make_error_code(std::errc::resource_unavailable_try_again);
         return {};
     }
+}
+
+[[nodiscard]] std::error_code NtSetInformationProcessApi(
+    HANDLE ProcessHandle,
+    WINAPI_PROCESS_INFORMATION_CLASS ProcessInformationClass,
+    PVOID ProcessInformation,
+    ULONG ProcessInformationLength)
+{
+    using NtSetInformationProcessFn = NTSTATUS(__stdcall*)(HANDLE, WINAPI_PROCESS_INFORMATION_CLASS, PVOID, ULONG);
+
+    static NtSetInformationProcessFn fn = nullptr;
+
+    if (fn == nullptr)
+    {
+        std::error_code ec;
+        const auto& dll = ::LoadNtdll(ec);
+        if (ec)
+        {
+            return ec;
+        }
+
+        fn = reinterpret_cast<NtSetInformationProcessFn>(::GetProcAddress(dll, "NtSetInformationProcess"));
+        if (!fn)
+        {
+            return LastWin32Error();
+        }
+    }
+
+    auto status = fn(ProcessHandle, ProcessInformationClass, ProcessInformation, ProcessInformationLength);
+    if (status != 0)
+    {
+        return {status, std::system_category()};
+    }
+
+    return {};
 }
 
 [[nodiscard]] Result<SECURITY_DESCRIPTOR*> GetSecurityDescriptor(DACL dacl) noexcept

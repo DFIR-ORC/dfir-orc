@@ -22,4 +22,9 @@ enum class WolfPriority {
 
 std::wstring ToString(WolfPriority value);
 
+WolfPriority WolfPriorityFromPriorityClass(uint32_t priorityClass);
+
+uint32_t ToIoPriorityHint(WolfPriority priority);
+uint32_t ToMemoryPriority(WolfPriority priority);
+
 } // namespace Orc
