@@ -579,7 +579,8 @@ STDMETHODIMP Orc::TableOutput::CSV::Writer::AbandonRow()
 
 STDMETHODIMP Orc::TableOutput::CSV::Writer::AbandonColumn()
 {
-    return WriteNothing();
+    // Let the caller handle the errors instead of writing anything
+    return S_OK;
 }
 
 HRESULT Orc::TableOutput::CSV::Writer::WriteEndOfLine()
