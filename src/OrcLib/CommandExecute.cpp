@@ -441,7 +441,8 @@ HRESULT CommandExecute::CreateChildProcess(const JobObject& job, bool bBreakAway
         }
     }
 
-    SetProcessIoPriority(m_pi.hProcess);
+    // TODO: consider making an option to setup IO priority
+    //SetProcessIoPriority(m_pi.hProcess);
 
     // Command as 'GetSamples' will create a child process 'GetThis' with the current log file path for appending
     Log::Flush();
