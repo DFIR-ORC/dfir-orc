@@ -1066,7 +1066,7 @@ bool UtilitiesMain::IgnoreLoggingOptions(LPCWSTR szArg)
 bool UtilitiesMain::IgnoreConfigOptions(LPCWSTR szArg)
 {
     if (!_wcsnicmp(szArg, L"Config", wcslen(L"Config")) || !_wcsnicmp(szArg, L"Schema", wcslen(L"Schema"))
-        || !_wcsnicmp(szArg, L"Local", wcslen(L"Local")))
+        || !_wcsnicmp(szArg, L"Local", wcslen(L"Local")) || !_wcsnicmp(szArg, L"capsule", wcslen(L"capsule")))
         return true;
     return false;
 }
