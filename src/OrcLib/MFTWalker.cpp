@@ -727,92 +727,86 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
 
         UINT i = 0L;
 
-        if (FAILED(
-                hr = pRecord->EnumData(
-                    m_pVolReader,
-                    pIA,
-                    0ULL,
-                    ToRead,
-                    pIR->SizePerIndex(),
-                    [this, pBM, pIR, &hr, pRecord, &i](ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data) -> HRESULT {
-                        DBG_UNREFERENCED_PARAMETER(ullBufferStartOffset);
-                        PINDEX_ALLOCATION_BUFFER pIABuff = (PINDEX_ALLOCATION_BUFFER)Data.GetData();
+        auto callback =
+            [this, pBM, pIR, &hr, pRecord, &i](ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data) -> HRESULT {
+            DBG_UNREFERENCED_PARAMETER(ullBufferStartOffset);
+            PINDEX_ALLOCATION_BUFFER pIABuff = (PINDEX_ALLOCATION_BUFFER)Data.GetData();
 
-                        if ((*pBM)[i])
+            if ((*pBM)[i])
+            {
+                if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
+                {
+                    if (HRESULT_FROM_NT(NTE_BAD_SIGNATURE) != hr)
+                    {
+                        Log::Error(L"Failed to fixup $INDEX_ALLOCATION header");
+                        return hr;
+                    }
+                }
+                else
+                {
+                    PINDEX_HEADER pHeader = &(pIABuff->IndexHeader);
+                    PINDEX_ENTRY pEntry = (PINDEX_ENTRY)NtfsFirstIndexEntry(pHeader);
+                    while (!(pEntry->Flags & INDEX_ENTRY_END))
+                    {
+                        PFILE_NAME pFileName = (PFILE_NAME)((PBYTE)pEntry + sizeof(INDEX_ENTRY));
+
+                        m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pFileName, false);
+
+                        pEntry = NtfsNextIndexEntry(pEntry);
+                    }
+
+                    LPBYTE pFirstFreeByte = (((LPBYTE)NtfsFirstIndexEntry(pHeader)) + pHeader->FirstFreeByte);
+
+                    while (pFirstFreeByte + sizeof(FILE_NAME) < Data.GetData() + Data.GetCount())
+                    {
+                        PFILE_NAME pCarvedFileName = (PFILE_NAME)pFirstFreeByte;
+
+                        if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory)
+                            == pRecord->GetSafeMFTSegmentNumber())
                         {
-                            if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
-                            {
-                                if (HRESULT_FROM_NT(NTE_BAD_SIGNATURE) != hr)
-                                {
-                                    Log::Error(L"Failed to fixup $INDEX_ALLOCATION header");
-                                    return hr;
-                                }
-                            }
-                            else
-                            {
-                                PINDEX_HEADER pHeader = &(pIABuff->IndexHeader);
-                                PINDEX_ENTRY pEntry = (PINDEX_ENTRY)NtfsFirstIndexEntry(pHeader);
-                                while (!(pEntry->Flags & INDEX_ENTRY_END))
-                                {
-                                    PFILE_NAME pFileName = (PFILE_NAME)((PBYTE)pEntry + sizeof(INDEX_ENTRY));
-
-                                    m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pFileName, false);
-
-                                    pEntry = NtfsNextIndexEntry(pEntry);
-                                }
-
-                                LPBYTE pFirstFreeByte =
-                                    (((LPBYTE)NtfsFirstIndexEntry(pHeader)) + pHeader->FirstFreeByte);
-
-                                while (pFirstFreeByte + sizeof(FILE_NAME) < Data.GetData() + Data.GetCount())
-                                {
-                                    PFILE_NAME pCarvedFileName = (PFILE_NAME)pFirstFreeByte;
-
-                                    if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory)
-                                        == pRecord->GetSafeMFTSegmentNumber())
-                                    {
-                                        PINDEX_ENTRY pEntry =
-                                            (PINDEX_ENTRY)((LPBYTE)pCarvedFileName - sizeof(INDEX_ENTRY));
-                                        m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pCarvedFileName, true);
-                                    }
-                                    pFirstFreeByte++;
-                                }
-                            }
+                            PINDEX_ENTRY pEntry = (PINDEX_ENTRY)((LPBYTE)pCarvedFileName - sizeof(INDEX_ENTRY));
+                            m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pCarvedFileName, true);
                         }
-                        else
+                        pFirstFreeByte++;
+                    }
+                }
+            }
+            else
+            {
+                Log::Debug(
+                    L"Index {} of $INDEX_ALLOCATION is not in use (FRN: {:#x}) only carving...",
+                    i,
+                    NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()));
+
+                if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
+                {
+                    Log::Debug("Failed to fixup carved $INDEX_ALLOCATION [{}]", SystemError(hr));
+                    return S_OK;
+                }
+                else
+                {
+                    LPBYTE pFirstFreeByte = (LPBYTE)pIABuff;
+
+                    while (pFirstFreeByte + sizeof(FILE_NAME) < Data.GetData() + Data.GetCount())
+                    {
+                        PFILE_NAME pCarvedFileName = (PFILE_NAME)pFirstFreeByte;
+
+                        if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory)
+                            == pRecord->GetSafeMFTSegmentNumber())
                         {
-                            Log::Debug(
-                                L"Index {} of $INDEX_ALLOCATION is not in use (FRN: {:#x}) only carving...",
-                                i,
-                                NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()));
-
-                            if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
-                            {
-                                Log::Debug("Failed to fixup carved $INDEX_ALLOCATION [{}]", SystemError(hr));
-                                return S_OK;
-                            }
-                            else
-                            {
-                                LPBYTE pFirstFreeByte = (LPBYTE)pIABuff;
-
-                                while (pFirstFreeByte + sizeof(FILE_NAME) < Data.GetData() + Data.GetCount())
-                                {
-                                    PFILE_NAME pCarvedFileName = (PFILE_NAME)pFirstFreeByte;
-
-                                    if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory)
-                                        == pRecord->GetSafeMFTSegmentNumber())
-                                    {
-                                        PINDEX_ENTRY pEntry =
-                                            (PINDEX_ENTRY)((LPBYTE)pCarvedFileName - sizeof(INDEX_ENTRY));
-                                        m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pCarvedFileName, true);
-                                    }
-                                    pFirstFreeByte++;
-                                }
-                            }
+                            PINDEX_ENTRY pEntry = (PINDEX_ENTRY)((LPBYTE)pCarvedFileName - sizeof(INDEX_ENTRY));
+                            m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pCarvedFileName, true);
                         }
-                        i++;
-                        return S_OK;
-                    })))
+                        pFirstFreeByte++;
+                    }
+                }
+            }
+            i++;
+            return S_OK;
+        };
+
+        hr = pRecord->EnumData(m_pVolReader, pIA, 0ULL, ToRead, pIR->SizePerIndex(), callback);
+        if (FAILED(hr))
         {
             Log::Error(L"Failed to read from $INDEX_ALLOCATION [{}]", SystemError(hr));
             return hr;
@@ -1236,8 +1230,9 @@ HRESULT MFTWalker::AddDirectoryName(MFTRecord* pRecord)
         // simple case, record is not a child and a directory... let's add it!
         PFILE_NAME pFileName = pRecord->GetMain_PFILE_NAME();
         if (pFileName != NULL)
-            m_DirectoryNames.insert(pair<MFTUtils::SafeMFTSegmentNumber, MFTFileNameWrapper>(
-                NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), MFTFileNameWrapper(pFileName)));
+            m_DirectoryNames.insert(
+                pair<MFTUtils::SafeMFTSegmentNumber, MFTFileNameWrapper>(
+                    NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), MFTFileNameWrapper(pFileName)));
         else
         {
             Log::Trace(
@@ -1255,9 +1250,10 @@ HRESULT MFTWalker::AddDirectoryName(MFTRecord* pRecord)
             // it's not... we need to add it!
             PFILE_NAME pFileName = pRecord->m_pBaseFileRecord->GetMain_PFILE_NAME();
             if (pFileName != NULL)
-                m_DirectoryNames.insert(pair<MFTUtils::SafeMFTSegmentNumber, MFTFileNameWrapper>(
-                    NtfsFullSegmentNumber(&pRecord->m_pBaseFileRecord->m_FileReferenceNumber),
-                    MFTFileNameWrapper(pFileName)));
+                m_DirectoryNames.insert(
+                    pair<MFTUtils::SafeMFTSegmentNumber, MFTFileNameWrapper>(
+                        NtfsFullSegmentNumber(&pRecord->m_pBaseFileRecord->m_FileReferenceNumber),
+                        MFTFileNameWrapper(pFileName)));
             else
             {
                 Log::Trace(
@@ -1492,8 +1488,9 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                     return S_OK;
                 }
 
-                m_MFTMap.insert(pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>(
-                    NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), pRecord));
+                m_MFTMap.insert(
+                    pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>(
+                        NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), pRecord));
 
                 pAddedRecord = pRecord;
             }
