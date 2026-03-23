@@ -12,7 +12,7 @@
 
 #include <fmt/format.h>
 
-#include <OutputSpec.h>
+#include <OutputSpecTypes.h>
 
 template <>
 struct fmt::formatter<Orc::OutputSpecTypes::UploadAuthScheme> : public fmt::formatter<std::string_view>

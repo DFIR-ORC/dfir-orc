@@ -43,11 +43,11 @@ void Print(Tree& node, const OutputSpec& output)
         return;
     }
 
-    std::vector<std::wstring> properties {ToString(output.Type)};
+    std::vector<std::wstring> properties {Orc::ToString(output.Type)};
 
     if (output.Type != OutputSpec::Kind::None)
     {
-        properties.push_back(ToString(output.OutputEncoding));
+        properties.push_back(Orc::ToString(output.OutputEncoding));
     }
 
     if (output.Type == OutputSpec::Kind::Archive)
