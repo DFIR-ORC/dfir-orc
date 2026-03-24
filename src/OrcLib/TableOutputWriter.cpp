@@ -168,12 +168,14 @@ std::shared_ptr<IWriter> Orc::TableOutput::GetWriter(LPCWSTR szFileName, const O
             std::wstring strFilePath = out.Path + L"\\" + szFileName;
 
             auto pFileStream = std::make_shared<FileStream>();
-
-            if (FAILED(hr = pFileStream->WriteTo(strFilePath.c_str())))
+            hr = pFileStream->OpenFile(
+                strFilePath, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+            if (FAILED(hr))
             {
                 Log::Error(L"Could not create output file: '{} [{}]'", strFilePath, SystemError(hr));
                 return nullptr;
             }
+
             pStream = pFileStream;
         }
         break;
