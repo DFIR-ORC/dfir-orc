@@ -79,7 +79,6 @@ public:
                 {
                     assert(0 && "Failed to format log message");
                     logger->Log(timepoint, level, "Failed to format log message");
-                    logger->Log(timepoint, level, arg0);
                     continue;
                 }
             }
