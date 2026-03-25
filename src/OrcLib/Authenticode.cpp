@@ -1275,7 +1275,7 @@ HRESULT Authenticode::ExtractSignatureSigners(
                 const_cast<PFILETIME>(&timestamp),
                 hCertStore,
                 &params,
-                CERT_CHAIN_REVOCATION_CHECK_CACHE_ONLY,
+                CERT_CHAIN_REVOCATION_CHECK_CACHE_ONLY | CERT_CHAIN_CACHE_ONLY_URL_RETRIEVAL,
                 NULL,
                 &pChain))
         {
