@@ -1358,7 +1358,7 @@ HRESULT Authenticode::ExtractCatalogSigners(
         if (!CryptQueryObject(
                 CERT_QUERY_OBJECT_BLOB,
                 &blob,
-                CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED,
+                CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED,
                 CERT_QUERY_FORMAT_FLAG_BINARY,
                 0,
                 &dwEncoding,
@@ -1721,7 +1721,7 @@ Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
         break;
     }
 
-    // TODO: eventually rely on this high level MS api wrapper instead of 'Authenticode::ExtractCatalogSigners'
+    // TODO: could rely on this high level MS api wrapper instead of 'Authenticode::ExtractCatalogSigners'
     // auto signature = CheckCatalogSignature(std::string_view(catalog.data(), catalog.size()));
     // if (!signature)
     //{
