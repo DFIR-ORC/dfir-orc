@@ -11,6 +11,7 @@
 
 #include "UncompressNTFSStream.h"
 
+#include "MftRecordAttribute.h"
 #include "NTFSCompression.h"
 #include "VolumeReader.h"
 #include "Utils/Round.h"
@@ -24,6 +25,7 @@ UncompressNTFSStream::UncompressNTFSStream()
     : NTFSStream()
     , m_volume(nullptr)
     , m_ullPosition(0L)
+    , m_uncompressedSize(0)
     , m_dwCompressionUnit(0)
     , m_dwMaxCompressionUnit(0)
 {
@@ -38,6 +40,14 @@ HRESULT UncompressNTFSStream::OpenAllocatedDataStream(
     {
         return hr;
     }
+
+    DWORDLONG uncompressedSize = 0;
+    hr = pDataAttr->DataSize(m_pVolReader, uncompressedSize);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    m_uncompressedSize = uncompressedSize;
 
     m_volume = std::make_unique<VolumeStreamReader>(m_pVolReader);
 

@@ -40,6 +40,8 @@ public:
     STDMETHOD(SetFilePointer)
     (__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod, __out_opt PULONG64 pCurrPointer);
 
+    STDMETHOD_(ULONG64, GetSize)() { return m_uncompressedSize; }
+
     ~UncompressNTFSStream();
 
 private:
@@ -50,6 +52,7 @@ private:
     DWORD m_dwCompressionUnit;
     DWORD m_dwMaxCompressionUnit;
     ULONGLONG m_ullPosition;
+    ULONGLONG m_uncompressedSize;
 
     std::vector<boost::logic::tribool> m_IsBlockCompressed;
 
