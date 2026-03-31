@@ -328,7 +328,7 @@ HRESULT UncompressNTFSStream::ReadRaw(CBinaryBuffer& buffer, size_t length)
         {
             std::error_code ec;
 
-            auto output = BufferSpan(buffer.GetData() + totalRead, buffer.GetCount() - totalRead);
+            auto output = BufferSpan(buffer.GetData() + totalRead, remaining);
             processed = Stream::ReadAt(
                 *m_volume,
                 m_DataSegments[m_CurrentSegmentIndex].ullDiskBasedOffset + m_CurrentSegmentOffset,
