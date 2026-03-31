@@ -264,6 +264,11 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
                 uncomp_processed += info.comp_len;
             }
         }
+
+        if (uncomp_processed == uncompressedData.GetCount())
+        {
+            break;
+        }
     }
 
     if (pcbBytesRead)
