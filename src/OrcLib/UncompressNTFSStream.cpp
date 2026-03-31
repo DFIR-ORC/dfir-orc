@@ -234,7 +234,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
             info.buf_size_b = m_dwCompressionUnit;
             info.comp_buf = (char*)buffer.GetData();
             info.comp_len = m_dwCompressionUnit;
-            info.uncomp_buf = (char*)uncompressedData.GetCount() + uncomp_processed;
+            info.uncomp_buf = (char*)uncompressedData.GetData() + uncomp_processed;
             info.uncomp_idx = 0L;
 
             if (FAILED(hr = ntfs_uncompress_compunit(&info)))
