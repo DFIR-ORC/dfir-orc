@@ -231,7 +231,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
                 }
                 else
                 {
-                    uncomp_processed += info.comp_len;
+                    uncomp_processed += info.uncomp_idx;
                 }
             }
             else
@@ -272,7 +272,7 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
             }
             else
             {
-                uncomp_processed += info.comp_len;
+                uncomp_processed += info.uncomp_idx;
             }
         }
 
