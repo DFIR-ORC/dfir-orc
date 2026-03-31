@@ -79,6 +79,12 @@ HRESULT NTFSStream::OpenAllocatedDataStream(
 
     m_bAllocatedData = true;
 
+    m_DataSize = 0;
+    for (const auto& segment : m_DataSegments)
+    {
+        m_DataSize += segment.ullAllocatedSize;
+    }
+
     return hr;
 }
 
@@ -199,29 +205,69 @@ NTFSStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod
 
             if (DistanceToMove > 0)
             {
-                for (size_t i = m_CurrentSegmentIndex; i < m_DataSegments.size(); i++)
+                if (m_bAllocatedData)
                 {
-                    if (ullNewFilePointer >= m_DataSegments[i].ullFileBasedOffset
-                        && ullNewFilePointer < (m_DataSegments[i].ullFileBasedOffset + m_DataSegments[i].ullSize))
+                    ULONGLONG ullSegStart = 0LL;
+                    for (size_t i = 0; i < m_DataSegments.size(); i++)
                     {
-                        m_CurrentSegmentIndex = i;
-                        m_CurrentPosition = ullNewFilePointer;
-                        m_CurrentSegmentOffset = ullNewFilePointer - m_DataSegments[i].ullFileBasedOffset;
-                        break;
+                        if (ullNewFilePointer >= ullSegStart
+                            && ullNewFilePointer < ullSegStart + m_DataSegments[i].ullAllocatedSize)
+                        {
+                            m_CurrentSegmentIndex = i;
+                            m_CurrentPosition = ullNewFilePointer;
+                            m_CurrentSegmentOffset = ullNewFilePointer - ullSegStart;
+                            break;
+                        }
+                        ullSegStart += m_DataSegments[i].ullAllocatedSize;
+                    }
+                }
+                else
+                {
+                    for (size_t i = m_CurrentSegmentIndex; i < m_DataSegments.size(); i++)
+                    {
+                        if (ullNewFilePointer >= m_DataSegments[i].ullFileBasedOffset
+                            && ullNewFilePointer
+                                < (m_DataSegments[i].ullFileBasedOffset + m_DataSegments[i].ullSize))
+                        {
+                            m_CurrentSegmentIndex = i;
+                            m_CurrentPosition = ullNewFilePointer;
+                            m_CurrentSegmentOffset = ullNewFilePointer - m_DataSegments[i].ullFileBasedOffset;
+                            break;
+                        }
                     }
                 }
             }
             else if (DistanceToMove < 0)
             {
-                for (int32_t i = static_cast<int32_t>(m_CurrentSegmentIndex); i >= 0; i--)
+                if (m_bAllocatedData)
                 {
-                    if (ullNewFilePointer >= m_DataSegments[i].ullFileBasedOffset
-                        && ullNewFilePointer < (m_DataSegments[i].ullFileBasedOffset + m_DataSegments[i].ullSize))
+                    ULONGLONG ullSegStart = 0LL;
+                    for (size_t i = 0; i < m_DataSegments.size(); i++)
                     {
-                        m_CurrentSegmentIndex = i;
-                        m_CurrentPosition = ullNewFilePointer;
-                        m_CurrentSegmentOffset = ullNewFilePointer - m_DataSegments[i].ullFileBasedOffset;
-                        break;
+                        if (ullNewFilePointer >= ullSegStart
+                            && ullNewFilePointer < ullSegStart + m_DataSegments[i].ullAllocatedSize)
+                        {
+                            m_CurrentSegmentIndex = i;
+                            m_CurrentPosition = ullNewFilePointer;
+                            m_CurrentSegmentOffset = ullNewFilePointer - ullSegStart;
+                            break;
+                        }
+                        ullSegStart += m_DataSegments[i].ullAllocatedSize;
+                    }
+                }
+                else
+                {
+                    for (int32_t i = static_cast<int32_t>(m_CurrentSegmentIndex); i >= 0; i--)
+                    {
+                        if (ullNewFilePointer >= m_DataSegments[i].ullFileBasedOffset
+                            && ullNewFilePointer
+                                < (m_DataSegments[i].ullFileBasedOffset + m_DataSegments[i].ullSize))
+                        {
+                            m_CurrentSegmentIndex = i;
+                            m_CurrentPosition = ullNewFilePointer;
+                            m_CurrentSegmentOffset = ullNewFilePointer - m_DataSegments[i].ullFileBasedOffset;
+                            break;
+                        }
                     }
                 }
             }
@@ -240,14 +286,15 @@ NTFSStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod
                 m_CurrentSegmentIndex = m_DataSegments.size() - 1;
                 for (auto iter = m_DataSegments.crbegin(); iter != m_DataSegments.crend(); ++iter)
                 {
+                    const auto ullSegSize = m_bAllocatedData ? iter->ullAllocatedSize : iter->ullSize;
                     if (ullNewFilePointer <= ullCurrentPosition
-                        && ullNewFilePointer >= ullCurrentPosition - iter->ullSize)
+                        && ullNewFilePointer >= ullCurrentPosition - ullSegSize)
                     {
                         // This is the one segment
                         m_CurrentSegmentOffset = ullCurrentPosition - ullNewFilePointer;
                         break;
                     }
-                    ullCurrentPosition -= m_DataSegments[m_CurrentSegmentIndex].ullSize;
+                    ullCurrentPosition -= ullSegSize;
                     m_CurrentSegmentIndex--;
                 }
             }
@@ -262,14 +309,15 @@ NTFSStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod
                 ULONGLONG ullCurrentPosition = 0LL;
                 for (auto iter = begin(m_DataSegments); iter != end(m_DataSegments); ++iter)
                 {
+                    const auto ullSegSize = m_bAllocatedData ? iter->ullAllocatedSize : iter->ullSize;
                     if (ullNewFilePointer >= ullCurrentPosition
-                        && ullNewFilePointer <= ullCurrentPosition + iter->ullSize)
+                        && ullNewFilePointer <= ullCurrentPosition + ullSegSize)
                     {
                         // This is the one segment
                         m_CurrentSegmentOffset = ullNewFilePointer - ullCurrentPosition;
                         break;
                     }
-                    ullCurrentPosition += m_DataSegments[m_CurrentSegmentIndex].ullSize;
+                    ullCurrentPosition += ullSegSize;
                     m_CurrentSegmentIndex++;
                 }
             }
