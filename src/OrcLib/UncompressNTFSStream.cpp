@@ -221,9 +221,13 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
                         L"Failed to uncompress {} bytes from compressed unit, copying as raw data [{}]",
                         info.comp_len,
                         SystemError(hr));
-                    CopyMemory(
-                        (LPBYTE)uncompressedData.GetData() + uncomp_processed, buffer.GetData(), m_dwCompressionUnit);
-                    uncomp_processed += m_dwCompressionUnit;
+
+                    uint64_t copyLength = std::min(
+                        static_cast<uint64_t>(m_dwCompressionUnit),
+                        static_cast<uint64_t>(uncompressedData.GetCount() - uncomp_processed));
+
+                    CopyMemory((LPBYTE)uncompressedData.GetData() + uncomp_processed, buffer.GetData(), copyLength);
+                    uncomp_processed += copyLength;
                 }
                 else
                 {
@@ -232,9 +236,12 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
             }
             else
             {
-                CopyMemory(
-                    (LPBYTE)uncompressedData.GetData() + uncomp_processed, buffer.GetData(), m_dwCompressionUnit);
-                uncomp_processed += m_dwCompressionUnit;
+                uint64_t copyLength = std::min(
+                    static_cast<uint64_t>(m_dwCompressionUnit),
+                    static_cast<uint64_t>(uncompressedData.GetCount() - uncomp_processed));
+
+                CopyMemory((LPBYTE)uncompressedData.GetData() + uncomp_processed, buffer.GetData(), copyLength);
+                uncomp_processed += copyLength;
             }
         }
         else
@@ -255,9 +262,13 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
                     "Failed to uncompress {} bytes from compressed unit, copying as raw/uncompressed data [{}]",
                     info.comp_len,
                     SystemError(hr));
-                CopyMemory(
-                    (LPBYTE)uncompressedData.GetData() + uncomp_processed, buffer.GetData(), m_dwCompressionUnit);
-                uncomp_processed += m_dwCompressionUnit;
+
+                uint64_t copyLength = std::min(
+                    static_cast<uint64_t>(m_dwCompressionUnit),
+                    static_cast<uint64_t>(uncompressedData.GetCount() - uncomp_processed));
+
+                CopyMemory((LPBYTE)uncompressedData.GetData() + uncomp_processed, buffer.GetData(), copyLength);
+                uncomp_processed += copyLength;
             }
             else
             {
