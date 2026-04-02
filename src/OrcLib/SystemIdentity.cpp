@@ -278,7 +278,6 @@ HRESULT Orc::SystemIdentity::OperatingSystem(const std::shared_ptr<StructuredOut
         auto shutdownTime = SystemDetails::GetShutdownTimeFromRegistry();
         if (shutdownTime)
         {
-            ToStringIso8601(*shutdownTime);
             writer->WriteNamed(L"shutdown_time", ToStringIso8601(*shutdownTime));
         }
     }
