@@ -28,7 +28,7 @@ concept error_input = std::is_same_v<T, std::errc> || std::is_same_v<T, std::err
 }
 
 template <typename T = void>
-struct Result : std::expected<T, std::error_code>
+struct [[nodiscard]] Result : std::expected<T, std::error_code>
 {
     using value_t = T;
     using expected_t = std::expected<T, std::error_code>;
@@ -195,7 +195,7 @@ struct Result : std::expected<T, std::error_code>
 };
 
 template <>
-struct Result<void> : std::expected<void, std::error_code>
+struct [[nodiscard]] Result<void> : std::expected<void, std::error_code>
 {
     using std::expected<void, std::error_code>::expected;
 
