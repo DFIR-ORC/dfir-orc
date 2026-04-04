@@ -516,14 +516,14 @@ HRESULT Orc::EmbeddedResource::ExtractToBuffer(const std::wstring& szImageFileRe
             DWORD dwSize = 0L;
             if ((dwSize = SizeofResource(hModule, hRes)) == 0)
             {
-                auto hr = HRESULT_FROM_WIN32(GetLastError());
+                hr = HRESULT_FROM_WIN32(GetLastError());
                 Log::Error(L"Could not compute resource size [{}]", SystemError(hr));
                 return hr;
             }
 
             if ((dwSize % sizeof(_T)) > 0)
             {
-                auto hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                hr = HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
                 Log::Error(L"Resource's size is not compatible with buffer's type [{}]", SystemError(hr));
                 return hr;
             }
