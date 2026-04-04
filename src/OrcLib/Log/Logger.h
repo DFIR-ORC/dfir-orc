@@ -30,6 +30,9 @@ namespace Log {
 
 class Logger
 {
+    // FIXME: flip to true once trace can be enabled on demand to limit cpu usage
+    static constexpr bool kEnableDefaultTrace = false;
+
 public:
     enum class Facility : size_t
     {
@@ -147,27 +150,27 @@ public:
     template <typename... Args>
     void Trace(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        // FIXME: find a way to only enable trace when requested to limit cpu usage
-        return;
-
-        Log(std::cbegin(m_defaultFacilities),
-            std::cend(m_defaultFacilities),
-            Level::Trace,
-            std::forward<fmt::format_string<Args...>>(fmt),
-            std::forward<Args>(args)...);
+        if constexpr (kEnableDefaultTrace)
+        {
+            Log(std::cbegin(m_defaultFacilities),
+                std::cend(m_defaultFacilities),
+                Level::Trace,
+                std::forward<fmt::format_string<Args...>>(fmt),
+                std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
     void Trace(fmt::wformat_string<Args...>&& fmt, Args&&... args)
     {
-        // FIXME: find a way to only enable trace when requested to limit cpu usage
-        return;
-
-        Log(std::cbegin(m_defaultFacilities),
-            std::cend(m_defaultFacilities),
-            Level::Trace,
-            std::forward<fmt::wformat_string<Args...>>(fmt),
-            std::forward<Args>(args)...);
+        if constexpr (kEnableDefaultTrace)
+        {
+            Log(std::cbegin(m_defaultFacilities),
+                std::cend(m_defaultFacilities),
+                Level::Trace,
+                std::forward<fmt::wformat_string<Args...>>(fmt),
+                std::forward<Args>(args)...);
+        }
     }
 
     template <typename... Args>
