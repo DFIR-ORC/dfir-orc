@@ -38,6 +38,6 @@ struct fmt::formatter<Orc::FSVBR_FSType, wchar_t> : public fmt::formatter<std::w
     template <typename FormatContext>
     auto format(const Orc::FSVBR_FSType& FSType, FormatContext& ctx) const -> decltype(ctx.out())
     {
-        return formatter<std::wstring, wchar_t>::format(Orc::ToString(FSType), ctx);
+        return formatter<std::wstring_view, wchar_t>::format(Orc::ToString(FSType), ctx);
     }
 };
