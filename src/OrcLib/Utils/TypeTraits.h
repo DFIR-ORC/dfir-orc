@@ -161,6 +161,9 @@ struct underlying_char_type<T>
 };
 
 template <template <typename, typename...> class X, typename T, typename... Args>
+#ifdef __cpp_concepts
+    requires (sizeof...(Args) > 0)
+#endif
 struct underlying_char_type<X<T, Args...>>
 {
     using type = remove_all_t<typename underlying_char_type<T>::type>;

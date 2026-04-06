@@ -657,7 +657,7 @@ void Location::MakeIdentifier()
             },
             L'_');
 
-        return move(retval);
+        return std::move(retval);
     };
 
     m_Identifier.clear();
@@ -923,7 +923,7 @@ FSVBR::FSType Location::GetFSType() const
     return FSVBR::FSType::UNKNOWN;
 }
 
-std::wostream& Orc::operator<<(std::wostream& o, const Location& l)
+std::wostream& operator<<(std::wostream& o, const Location& l)
 {
     std::wstringstream ss;
     bool isAMountedVolume = false;

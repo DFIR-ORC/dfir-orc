@@ -34,7 +34,7 @@ struct [[nodiscard]] Result : std::expected<T, std::error_code>
     using expected_t = std::expected<T, std::error_code>;
     using unexpected_t = std::unexpected<std::error_code>;
 
-    using expected_t::expected;
+    using std::expected<T, std::error_code>::expected;
 
     constexpr Result(Result<T>&& value) noexcept = default;
 
@@ -46,8 +46,8 @@ struct [[nodiscard]] Result : std::expected<T, std::error_code>
 
     template <typename... Args>
     constexpr Result(Args&&... args) noexcept
-        requires std::constructible_from<T, Args...>
-        && !(sizeof...(Args) == 1 && (detail::error_input<std::remove_cvref_t<Args>> || ...))
+        requires (std::constructible_from<T, Args...>
+        && !(sizeof...(Args) == 1 && (detail::error_input<std::remove_cvref_t<Args>> || ...)))
         : expected_t(std::in_place, std::forward<Args>(args)...)
     {
     }
@@ -64,7 +64,7 @@ struct [[nodiscard]] Result : std::expected<T, std::error_code>
 
     constexpr Result& operator=(const std::errc& ec) noexcept
     {
-        this->expected_t::operator=(unexpected_t(ec));
+        this->expected_t::operator=(unexpected_t(std::make_error_code(ec)));
         return *this;
     }
 
