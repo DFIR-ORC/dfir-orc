@@ -48,6 +48,7 @@ target_sources(7zip PRIVATE
     CPP/7zip/Compress/BZip2Decoder.cpp
     CPP/7zip/Compress/BZip2Encoder.cpp
     CPP/7zip/Compress/BZip2Register.cpp
+    CPP/7zip/Compress/CodecExports.cpp
     CPP/7zip/Compress/CopyCoder.cpp
     CPP/7zip/Compress/CopyRegister.cpp
     CPP/7zip/Compress/Deflate64Register.cpp
@@ -56,6 +57,7 @@ target_sources(7zip PRIVATE
     CPP/7zip/Compress/DeflateRegister.cpp
     CPP/7zip/Compress/DeltaFilter.cpp
     CPP/7zip/Compress/ImplodeDecoder.cpp
+    CPP/7zip/Compress/ImplodeHuffmanDecoder.cpp
     CPP/7zip/Compress/LzfseDecoder.cpp
     CPP/7zip/Compress/LzhDecoder.cpp
     CPP/7zip/Compress/Lzma2Decoder.cpp
@@ -85,7 +87,9 @@ target_sources(7zip PRIVATE
     CPP/7zip/Compress/ZDecoder.cpp
     CPP/7zip/Compress/ZlibDecoder.cpp
     CPP/7zip/Compress/ZlibEncoder.cpp
+    CPP/7zip/Compress/ZDecoder.cpp
     CPP/7zip/Compress/ZstdDecoder.cpp
+    CPP/7zip/Compress/CodecExports.cpp
 
     # CRYPTO_OBJS
     CPP/7zip/Crypto/7zAes.cpp
@@ -124,6 +128,7 @@ target_sources(7zip PRIVATE
     C/Lzma2Enc.c
     C/LzmaDec.c
     C/LzmaEnc.c
+    C/LzmaLib.c
     C/Md5.c
     C/MtCoder.c
     C/MtDec.c
@@ -134,6 +139,9 @@ target_sources(7zip PRIVATE
     C/Ppmd8.c
     C/Ppmd8Dec.c
     C/Ppmd8Enc.c
+    C/Sha1.c
+    C/Sha256.c
+    C/Sort.c
     C/Sha3.c
     C/Sha512.c
     C/Sha512Opt.c
@@ -144,6 +152,10 @@ target_sources(7zip PRIVATE
     C/XzDec.c
     C/XzEnc.c
     C/XzIn.c
+    C/Aes.c
+    C/7zCrc.c
+    C/XzCrc64.c
+    C/Xxh64.c
     C/ZstdDec.c
 
     # COMMON_OBJS
@@ -156,9 +168,12 @@ target_sources(7zip PRIVATE
     CPP/Common/MyMap.cpp
     CPP/Common/MyString.cpp
     CPP/Common/MyVector.cpp
+    CPP/Common/MyWindows.cpp
     CPP/Common/MyXml.cpp
     CPP/Common/NewHandler.cpp
+    CPP/Common/Sha1Prepare.cpp
     CPP/Common/Sha1Reg.cpp
+    CPP/Common/Sha256Prepare.cpp
     CPP/Common/Sha256Reg.cpp
     CPP/Common/Sha3Reg.cpp
     CPP/Common/Sha512Reg.cpp
@@ -170,6 +185,17 @@ target_sources(7zip PRIVATE
     CPP/Common/Xxh64Reg.cpp
     CPP/Common/XzCrc64Init.cpp
     CPP/Common/XzCrc64Reg.cpp
+    CPP/Common/Xxh64Reg.cpp
+
+    CPP/Windows/FileDir.cpp
+    CPP/Windows/FileFind.cpp
+    CPP/Windows/FileIO.cpp
+    CPP/Windows/FileName.cpp
+    CPP/Windows/PropVariant.cpp
+    CPP/Windows/PropVariantUtils.cpp
+    CPP/Windows/Synchronization.cpp
+    CPP/Windows/System.cpp
+    CPP/Windows/TimeUtils.cpp
 
     # 7ZIP_COMMON_OBJS
     CPP/7zip/Common/CreateCoder.cpp
@@ -250,6 +276,8 @@ target_sources(7zip PRIVATE
     CPP/7zip/Archive/XarHandler.cpp
     CPP/7zip/Archive/XzHandler.cpp
     CPP/7zip/Archive/ZHandler.cpp
+    CPP/7zip/Archive/ArchiveExports.cpp
+    CPP/7zip/Archive/DllExports2.cpp
     CPP/7zip/Archive/ZstdHandler.cpp
 
     # AR_COMMON_OBJS
@@ -335,8 +363,10 @@ target_sources(7zip PRIVATE
     CPP/7zip/Archive/Zip/ZipOut.cpp
     CPP/7zip/Archive/Zip/ZipUpdate.cpp
     CPP/7zip/Archive/Zip/ZipRegister.cpp
-)
 
+    CPP/7zip/Archive/Archive2.def
+    C/Util/LzmaLib/LzmaLib.def
+)
 # Included by CPP/7zip/Bundles/Format7zF/Arc[_gcc].mak
 
 # CPP/7zip/Aes.mak
@@ -459,6 +489,7 @@ add_library(extras
         CPP/Windows/PropVariant.cpp
         CPP/Windows/PropVariantConv.cpp
         CPP/Windows/PropVariantUtils.cpp
+        guids.cpp
 )
 
 target_link_libraries(extras PRIVATE 7zip)
