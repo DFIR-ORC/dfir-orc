@@ -105,11 +105,10 @@ void ParseImageDosHeader(ByteStream& stream, IMAGE_DOS_HEADER& header, std::erro
     }
 }
 
-void ParseImageNtHeaders(
+void ParseImageFileHeader(
     ByteStream& stream,
     const IMAGE_DOS_HEADER& imageDosHeader,
     std::optional<IMAGE_FILE_HEADER>& imageFileHeader,
-    std::optional<PeParser::OptionalHeader>& imageOptionalHeader,
     std::error_code& ec)
 {
     ImageNtHeaderFixedSize imageNtHeader;
@@ -136,8 +135,15 @@ void ParseImageNtHeaders(
     }
 
     imageFileHeader = imageNtHeader.FileHeader;
+}
 
-    switch (imageFileHeader->Machine)
+void ParseImageOptionalHeader(
+    ByteStream& stream,
+    const IMAGE_FILE_HEADER& imageFileHeader,
+    std::optional<PeParser::OptionalHeader>& imageOptionalHeader,
+    std::error_code& ec)
+{
+    switch (imageFileHeader.Machine)
     {
         case IMAGE_FILE_MACHINE_I386:
         case IMAGE_FILE_MACHINE_ARM:
@@ -205,7 +211,7 @@ void ParseImageNtHeaders(
             break;
         }
         default:
-            Log::Debug("Unsupported machine (value: {})", imageFileHeader->Machine);
+            Log::Debug("Unsupported machine (value: {})", imageFileHeader.Machine);
             ec = std::make_error_code(std::errc::function_not_supported);
             return;
     }
@@ -537,7 +543,7 @@ PeParser::PeParser(ByteStream& stream, std::error_code& ec)
         return;
     }
 
-    ::ParseImageNtHeaders(m_stream, m_imageDosHeader, m_imageFileHeader, m_imageOptionalHeader, ec);
+    ::ParseImageFileHeader(m_stream, m_imageDosHeader, m_imageFileHeader, ec);
     if (ec)
     {
         return;
@@ -545,12 +551,17 @@ PeParser::PeParser(ByteStream& stream, std::error_code& ec)
 
     if (m_imageFileHeader)
     {
+        ::ParseImageOptionalHeader(m_stream, *m_imageFileHeader, m_imageOptionalHeader, ec);
+        if (ec)
+        {
+            ec.clear();
+        }
+
         ::ParseImageSections(m_stream, *m_imageFileHeader, m_imageSectionsHeaders, ec);
         if (ec)
         {
             m_imageSectionsHeaders.clear();
             ec.clear();
-            return;
         }
     }
 }
@@ -844,13 +855,11 @@ uint64_t PeParser::GetChecksumOffset() const
     // The value of the checksum offset is the same for 32/64 bits but it is kind of "more true"
     if (std::holds_alternative<IMAGE_OPTIONAL_HEADER32>(*m_imageOptionalHeader))
     {
-        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize)
-            + offsetof(IMAGE_OPTIONAL_HEADER32, CheckSum);
+        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize) + offsetof(IMAGE_OPTIONAL_HEADER32, CheckSum);
     }
     else
     {
-        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize)
-            + offsetof(IMAGE_OPTIONAL_HEADER64, CheckSum);
+        return m_imageDosHeader.e_lfanew + sizeof(ImageNtHeaderFixedSize) + offsetof(IMAGE_OPTIONAL_HEADER64, CheckSum);
     }
 }
 
