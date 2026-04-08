@@ -56,7 +56,8 @@ CreateFacilities(SpdlogSink::Ptr consoleSink, SpdlogSink::Ptr fileSink)
     auto console = UtilitiesLogger::CreateSpdlogLogger("console");
     console->Add(consoleSink);
     console->SetFormatter(
-        std::make_unique<spdlog::pattern_formatter>(Log::kDefaultLogPattern, spdlog::pattern_time_type::utc));
+        std::make_unique<spdlog::pattern_formatter>(
+            std::string(Log::kDefaultLogPattern), spdlog::pattern_time_type::utc));
     console->EnableBacktrace(64);
     console->SetBacktraceTrigger(Level::Critical);
     console->SetBacktraceLevel(Level::Debug);
@@ -64,13 +65,15 @@ CreateFacilities(SpdlogSink::Ptr consoleSink, SpdlogSink::Ptr fileSink)
     auto file = UtilitiesLogger::CreateSpdlogLogger("file");
     file->Add(fileSink);
     file->SetFormatter(
-        std::make_unique<spdlog::pattern_formatter>(Log::kDefaultLogPattern, spdlog::pattern_time_type::utc));
+        std::make_unique<spdlog::pattern_formatter>(
+            std::string(Log::kDefaultLogPattern), spdlog::pattern_time_type::utc));
     file->EnableBacktrace(64);
     console->SetBacktraceTrigger(Level::Error);
 
     auto journal = UtilitiesLogger::CreateSpdlogLogger("journal");
     journal->SetFormatter(
-        std::make_unique<spdlog::pattern_formatter>(Log::kDefaultLogPattern, spdlog::pattern_time_type::utc));
+        std::make_unique<spdlog::pattern_formatter>(
+            std::string(Log::kDefaultLogPattern), spdlog::pattern_time_type::utc));
     journal->SetLevel(Level::Off);
     journal->DisableBacktrace();
 

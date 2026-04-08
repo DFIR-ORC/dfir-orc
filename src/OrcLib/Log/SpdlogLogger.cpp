@@ -19,7 +19,7 @@ SpdlogLogger::SpdlogLogger(const std::string& name)
     : m_logger(std::make_shared<spdlog::logger>(name))
     , m_sinks()
     , m_backtraceFormatter(
-          std::make_unique<spdlog::pattern_formatter>(kDefaultLogPattern, spdlog::pattern_time_type::utc))
+          std::make_unique<spdlog::pattern_formatter>(std::string(kDefaultLogPattern), spdlog::pattern_time_type::utc))
     , m_backtraceTrigger(Level::Off)
     , m_backtraceLevel(Level::Debug)
 {

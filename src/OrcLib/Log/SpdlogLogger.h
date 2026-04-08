@@ -20,7 +20,7 @@ namespace Log {
 // https://github.com/gabime/spdlog/wiki/3.-Custom-formatting
 // The following could output: '2020-09-30T13:43:41.256Z [I] this is a foobar log'
 // The %^...%$ options specify coloring range, only one is currently supported
-const std::string kDefaultLogPattern("%^%Y-%m-%dT%T.%eZ [%L] %v%$");
+inline constexpr std::string_view kDefaultLogPattern("%^%Y-%m-%dT%T.%eZ [%L] %v%$");
 
 class SpdlogLogger
 {
