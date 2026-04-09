@@ -26,7 +26,7 @@ enum class FSVBR_FSType : std::int32_t
 
 ENABLE_BITMASK_OPERATORS(FSVBR_FSType);
 
-static std::wstring ToString(FSVBR_FSType fsType)
+inline std::wstring ToString(FSVBR_FSType fsType)
 {
     using FSType = FSVBR_FSType;
 
