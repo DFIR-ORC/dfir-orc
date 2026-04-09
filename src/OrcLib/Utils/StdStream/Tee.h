@@ -28,16 +28,16 @@ protected:
     {
         using Traits = std::char_traits<CharT>;
 
-        if (c == Traits::to_int_type(Traits::eof()))
+        if (Traits::eq_int_type(c, Traits::eof()))
         {
             return c;
         }
 
-        const auto r1 = m_s1->sputc(c);
-        const auto r2 = m_s2->sputc(c);
-        if (r1 == Traits::to_int_type(Traits::eof()) || r2 == Traits::to_int_type(Traits::eof()))
+        const auto r1 = m_s1->sputc(Traits::to_char_type(c));
+        const auto r2 = m_s2->sputc(Traits::to_char_type(c));
+        if (Traits::eq_int_type(r1, Traits::eof()) || Traits::eq_int_type(r2, Traits::eof()))
         {
-            return Traits::to_int_type(Traits::eof());
+            return Traits::eof();
         }
 
         return c;

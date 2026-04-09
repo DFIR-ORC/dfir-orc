@@ -131,7 +131,7 @@ protected:
         catch (...)
         {
             assert(nullptr);
-            return Traits::to_int_type(Traits::eof());
+            return Traits::eof();
         }
 
         return c;
