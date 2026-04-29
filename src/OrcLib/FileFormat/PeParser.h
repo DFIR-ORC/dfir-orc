@@ -17,6 +17,28 @@
 
 namespace Orc {
 
+/**
+ * @brief Layout of a PE image stream.
+ *
+ * IMAGE_DEBUG_DIRECTORY (and other RVA-addressed structures) record two coordinates of
+ * the same data: AddressOfRawData (the RVA, used when the PE is mapped into memory) and
+ * PointerToRawData (the on-disk file offset). Whether a given byte stream is "addressed"
+ * by RVA or by file offset depends on what the stream represents — and the right RVA →
+ * stream-offset translation differs between the two.
+ *
+ *   On-disk:      stream-offset = section.PointerToRawData + (rva - section.VirtualAddress)
+ *   MemoryImage:  stream-offset = rva
+ *
+ * Note: section header values do NOT change between layouts — the linker writes them
+ * once at link time. This is why equality of section.VirtualAddress vs section.PointerToRawData
+ * is not a reliable signal: many memory-image dumps preserve the original headers verbatim.
+ */
+enum class PeLayout
+{
+    OnDisk,       ///< Stream is a literal PE file (use PointerToRawData for section data).
+    MemoryImage,  ///< Stream is a memory-mapped image (RVA == stream offset).
+};
+
 class PeParser
 {
 public:
@@ -65,10 +87,28 @@ public:
     using SectionHeaders = fmt::basic_memory_buffer<IMAGE_SECTION_HEADER, 16>;
 
     PeParser(ByteStream& stream, std::error_code& ec);
+    PeParser(ByteStream& stream, PeLayout layout, std::error_code& ec);
+
+    /**
+     * @brief Detects whether a PE stream is on-disk or memory-image.
+     *
+     * Compares the stream's size to SizeOfImage from the optional header:
+     * memory-image streams contain the full image (size >= SizeOfImage),
+     * on-disk files are smaller (sections are packed at FileAlignment vs
+     * SectionAlignment in memory).
+     *
+     * @return PeLayout::MemoryImage if streamSize >= SizeOfImage, otherwise
+     *         PeLayout::OnDisk. Returns an error if the headers cannot be parsed.
+     */
+    static Result<PeLayout> DetectLayout(ByteStream& stream);
+
+    PeLayout Layout() const noexcept;
 
     const IMAGE_DOS_HEADER& ImageDosHeader() const;
     const std::optional<IMAGE_FILE_HEADER>& ImageFileHeader() const;
     const std::optional<OptionalHeader>& ImageOptionalHeader() const;
+
+    Result<uint64_t> ImageRvaToOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation = {}) const;
 
     bool HasResourceDirectory() const;
     Result<void> ReadResourceDirectory(std::vector<uint8_t>& buffer, std::optional<size_t> maxLen = {}) const;
@@ -105,7 +145,6 @@ private:
 
     Result<void> ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer, std::optional<size_t> maxSize = 0) const;
     Result<PeParser::PeChunk> GetDirectoryChunk(uint8_t index, bool checkChunkBoundaries = true) const;
-    Result<uint64_t> ImageRvaToFileOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation = {}) const;
 
     uint64_t GetSizeOfOptionalHeader() const;
     uint64_t GetSecurityDirectoryOffset() const;
@@ -118,6 +157,7 @@ private:
 private:
     ByteStream& m_stream;
     uint64_t m_streamSize;  // Cached stream size because underlying stream may SetFilePointer to get it
+    PeLayout m_layout = PeLayout::OnDisk;
     IMAGE_DOS_HEADER m_imageDosHeader;
     std::optional<IMAGE_FILE_HEADER> m_imageFileHeader;
     std::optional<OptionalHeader> m_imageOptionalHeader;

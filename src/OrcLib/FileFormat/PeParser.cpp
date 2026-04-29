@@ -527,8 +527,14 @@ std::optional<IMAGE_DATA_DIRECTORY> ResolveDataDirectory(
 namespace Orc {
 
 PeParser::PeParser(ByteStream& stream, std::error_code& ec)
+    : PeParser(stream, PeLayout::OnDisk, ec)
+{
+}
+
+PeParser::PeParser(ByteStream& stream, PeLayout layout, std::error_code& ec)
     : m_stream(stream)
     , m_streamSize(m_stream.GetSize())
+    , m_layout(layout)
 {
     HRESULT hr = stream.SetFilePointer(0, FILE_BEGIN, NULL);
     if (FAILED(hr))
@@ -566,6 +572,11 @@ PeParser::PeParser(ByteStream& stream, std::error_code& ec)
     }
 }
 
+PeLayout PeParser::Layout() const noexcept
+{
+    return m_layout;
+}
+
 const IMAGE_DOS_HEADER& PeParser::ImageDosHeader() const
 {
     return m_imageDosHeader;
@@ -581,8 +592,36 @@ const std::optional<PeParser::OptionalHeader>& PeParser::ImageOptionalHeader() c
     return m_imageOptionalHeader;
 }
 
-Result<uint64_t> PeParser::ImageRvaToFileOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation) const
+Result<uint64_t> PeParser::ImageRvaToOffset(uint32_t rva, std::optional<size_t> chunkSizeForValidation) const
 {
+    // Memory-image streams: the bytes at offset X correspond to RVA X. No section
+    // translation needed — RVA is the stream offset directly. Bounds-check against
+    // the cached stream size (and against the chunk size if the caller provided one).
+    if (m_layout == PeLayout::MemoryImage)
+    {
+        if (rva >= m_streamSize)
+        {
+            Log::Debug("RVA {:#x} beyond memory-image stream size {:#x}", rva, m_streamSize);
+            return std::make_error_code(std::errc::bad_address);
+        }
+
+        if (chunkSizeForValidation)
+        {
+            const auto remaining = m_streamSize - rva;
+            if (*chunkSizeForValidation > remaining)
+            {
+                Log::Debug(
+                    "RVA {:#x} with chunk size {} exceeds memory-image stream (remaining: {})",
+                    rva,
+                    *chunkSizeForValidation,
+                    remaining);
+                return std::make_error_code(std::errc::bad_message);
+            }
+        }
+
+        return static_cast<uint64_t>(rva);
+    }
+
     for (const auto& section : m_imageSectionsHeaders)
     {
         const auto sectionEndRva =
@@ -618,6 +657,26 @@ Result<uint64_t> PeParser::ImageRvaToFileOffset(uint32_t rva, std::optional<size
 
     Log::Debug("RVA {:#x} not found in any section", rva);
     return std::make_error_code(std::errc::bad_address);
+}
+
+Result<PeLayout> PeParser::DetectLayout(ByteStream& stream)
+{
+    std::error_code ec;
+    PeParser probe(stream, PeLayout::OnDisk, ec);  // layout choice doesn't affect header parsing
+    if (ec)
+    {
+        return ec;
+    }
+
+    if (!probe.m_imageOptionalHeader)
+    {
+        return std::make_error_code(std::errc::bad_message);
+    }
+
+    const uint64_t sizeOfImage =
+        std::visit([](const auto& oh) -> uint64_t { return oh.SizeOfImage; }, *probe.m_imageOptionalHeader);
+
+    return (probe.m_streamSize >= sizeOfImage) ? PeLayout::MemoryImage : PeLayout::OnDisk;
 }
 
 bool PeParser::HasSecurityDirectory() const
@@ -691,7 +750,7 @@ Result<void> PeParser::ReadDirectory(uint8_t index, std::vector<uint8_t>& buffer
     uint64_t fileOffset = 0;
     if (index != IMAGE_DIRECTORY_ENTRY_SECURITY)
     {
-        auto directoryOffset = ImageRvaToFileOffset(directory.VirtualAddress);
+        auto directoryOffset = ImageRvaToOffset(directory.VirtualAddress);
         if (!directoryOffset)
         {
             Log::Debug("Invalid directory virtual address");
@@ -740,7 +799,7 @@ Result<PeParser::PeChunk> PeParser::GetDirectoryChunk(uint8_t index, bool checkC
     uint64_t fileOffset = 0;
     if (index != IMAGE_DIRECTORY_ENTRY_SECURITY)
     {
-        auto directoryOffset = ImageRvaToFileOffset(directory.VirtualAddress);
+        auto directoryOffset = ImageRvaToOffset(directory.VirtualAddress);
         if (!directoryOffset)
         {
             Log::Debug("Invalid directory virtual address");
@@ -1052,7 +1111,7 @@ Result<PeParser::PeChunk> PeParser::GetResourceDataChunk(
         return resourceEntry.error();
     }
 
-    const auto fileOffsetToData = ImageRvaToFileOffset(resourceEntry->OffsetToData);
+    const auto fileOffsetToData = ImageRvaToOffset(resourceEntry->OffsetToData);
     if (!fileOffsetToData)
     {
         Log::Debug("Failed to convert resource data RVA to file offset [{}]", fileOffsetToData.error());
