@@ -33,10 +33,11 @@ size_t Read(ByteStream& stream, BasicBufferSpan<CharT> output, std::error_code& 
     {
         ec = SystemError(hr);
         Log::Debug("Failed to read stream [{}]", ec);
-        return cbBytesRead;
+        assert(cbBytesRead <= std::numeric_limits<size_t>::max() && "Stream read more bytes than the buffer can hold");
+        return static_cast<size_t>(cbBytesRead);
     }
-
-    return cbBytesRead;
+    assert(cbBytesRead <= std::numeric_limits<size_t>::max() && "Stream read more bytes than the buffer can hold");
+    return static_cast<size_t>(cbBytesRead);
 }
 
 /*!
@@ -45,7 +46,7 @@ size_t Read(ByteStream& stream, BasicBufferSpan<CharT> output, std::error_code& 
 template <typename CharT>
 size_t ReadChunk(ByteStream& stream, BasicBufferSpan<CharT> output, std::error_code& ec)
 {
-    uint64_t processed = 0;
+    size_t processed = 0;
 
     while (processed != output.size())
     {
@@ -86,9 +87,9 @@ size_t Read(ByteStream& stream, ContainerT& output, std::error_code& ec)
         ec = SystemError(hr);
         return 0;
     }
-
-    output.resize(processed / sizeof(ContainerT::value_type));
-    return processed;
+    assert(processed <= std::numeric_limits<size_t>::max() && "Stream read more bytes than the container can hold");
+    output.resize(static_cast<size_t>(processed) / sizeof(ContainerT::value_type));
+    return static_cast<size_t>(processed);
 }
 
 /*!
@@ -228,7 +229,7 @@ size_t ReadChunkAt(ByteStream& stream, uint64_t offset, BasicBufferSpan<CharT> o
 template <typename ItemT>
 size_t ReadItem(ByteStream& stream, ItemT& output, std::error_code& ec)
 {
-    uint64_t processed = Read(stream, BufferSpan(reinterpret_cast<uint8_t*>(&output), sizeof(output)), ec);
+    size_t processed = Read(stream, BufferSpan(reinterpret_cast<uint8_t*>(&output), sizeof(output)), ec);
     if (ec)
     {
         return processed;
