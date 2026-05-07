@@ -5,14 +5,16 @@ This directory contains resources to help build and test DFIR-ORC with continuou
 
 ## Resources
 
-| File               | Description                                                                               |
-|:-------------------|:------------------------------------------------------------------------------------------|
-| build.ps1          | Script file to be sourced. Facilitate DFIR-ORC builds with 'Build-Orc' function.          |
-| test.psm1          | Module with multiple functions to help building functional tests and check their results. |
-| contoso.com.pem    | Public key for testing encryption (.p7b)                                                  |
-| contoso.com.key    | Private key for testing decryption (.p7b)                                                 |
+| File                 | Description                                                                               |
+|:-------------------  |:------------------------------------------------------------------------------------------|
+| Get-Toolchain.ps1    | Download DFIR-ORC toolchain for air-gapped hosts.                                         |
+| Get-VsBuildTools.ps1 | Generic script to download Visual Studio Build Tools for air-gapped hosts.                |
+| test.psm1            | Module with multiple functions to help building functional tests and check their results. |
+| contoso.com.pem      | Public key for testing encryption (.p7b)                                                  |
+| contoso.com.key      | Private key for testing decryption (.p7b)                                                 |
 
-
+## Air gapped install
+Use Get-Toolchain.ps1 script or follow [air-gap-guide.md](air-gap-guide.md).
 
 ## The functional test module
 The `test.psm1` module contains multiple functions to help building functional tests and check their results.
