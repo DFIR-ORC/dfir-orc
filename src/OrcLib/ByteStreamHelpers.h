@@ -332,16 +332,16 @@ size_t WriteChunk(ByteStream& stream, BasicBufferView<CharT> input, std::error_c
 template <typename ContainerT>
 size_t Write(ByteStream& stream, const ContainerT& input, std::error_code& ec)
 {
-    BufferView span(reinterpret_cast<const uint8_t*>(input.data()), input.size() * sizeof(ContainerT::value_type));
-
-    size_t processed = stream.Write(span, ec);
-    if (ec)
+    const auto byteSize = input.size() * sizeof(typename ContainerT::value_type);
+    ULONGLONG bytesWritten = 0;
+    const HRESULT hr = stream.Write(
+        const_cast<PVOID>(reinterpret_cast<const void*>(input.data())), byteSize, &bytesWritten);
+    if (FAILED(hr))
     {
-        return processed;
+        ec.assign(hr, std::system_category());
+        return 0;
     }
-
-    input.resize(processed / sizeof(ContainerT::value_type));
-    return processed;
+    return static_cast<size_t>(bytesWritten);
 }
 
 /*!
