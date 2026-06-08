@@ -90,6 +90,16 @@
             }
         },
         {
+            "name": "dfir-orc-x64-llm",
+            "inherits": "dfir-orc-x64",
+            "binaryDir": "${sourceDir}/build-llm/dfir-orc-x64"
+        },
+        {
+            "name": "dfir-orc-x86-llm",
+            "inherits": "dfir-orc-x86",
+            "binaryDir": "${sourceDir}/build-llm/dfir-orc-x86"
+        },
+        {
             "name": "capsule-base",
             "hidden": true,
             "toolset": "v141_xp",
@@ -156,6 +166,30 @@
         {
             "name": "dfir-orc-x86-MinSizeRel",
             "configurePreset": "dfir-orc-x86",
+            "configuration": "MinSizeRel",
+            "targets": ["Orc"]
+        },
+                {
+            "name": "dfir-orc-x64-llm-Debug",
+            "configurePreset": "dfir-orc-x64-llm",
+            "configuration": "Debug",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x64-llm-MinSizeRel",
+            "configurePreset": "dfir-orc-x64-llm",
+            "configuration": "MinSizeRel",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x86-llm-Debug",
+            "configurePreset": "dfir-orc-x86-llm",
+            "configuration": "Debug",
+            "targets": ["Orc"]
+        },
+        {
+            "name": "dfir-orc-x86-llm-MinSizeRel",
+            "configurePreset": "dfir-orc-x86-llm",
             "configuration": "MinSizeRel",
             "targets": ["Orc"]
         },
