@@ -331,10 +331,13 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
                 auto sha1 = Hash(m_strOutputFullPath, CryptoHashStreamAlgorithm::SHA1);
                 if (!sha1)
                 {
+                    // Do NOT dereference a failed Result below - that throws an uncaught exception.
                     Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", notification->Keyword(), sha1.error());
                 }
-
-                outcomeArchive.SetSha1(ToUtf8(*sha1));
+                else
+                {
+                    outcomeArchive.SetSha1(ToUtf8(*sha1));
+                }
             }
 
             outcomeArchive.SetInputType(::GetArchiveInputType());
