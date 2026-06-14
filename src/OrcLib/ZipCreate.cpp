@@ -42,6 +42,59 @@ using namespace Orc;
 
 namespace {
 
+// 7-Zip 24.09 raised the default LZMA/LZMA2 dictionary sizes (64-bit: Normal 16->32 MiB,
+// Maximum 32->128 MiB, Ultra 64->256 MiB). As the LZMA encoder needs roughly 10.5x the dictionary
+// per thread, this multiplied compression memory usage after the bundled library was upgraded from
+// 22.01. Pin the dictionary to the pre-24.09 sizes so the footprint no longer depends on the 7-Zip
+// version. Levels below 'Normal' were left unchanged by 24.09 and keep the library default.
+// Returns nullptr when no override is needed.
+const wchar_t* DictionarySizeForLevel(ZipCreate::CompressionLevel level)
+{
+    switch (level)
+    {
+        case ZipCreate::Normal:
+            return L"16m";
+        case ZipCreate::Maximum:
+            return L"32m";
+        case ZipCreate::Ultra:
+            return L"64m";
+        default:
+            return nullptr;
+    }
+}
+
+UInt32 ProcessorCount()
+{
+    SYSTEM_INFO si = {};
+    GetSystemInfo(&si);
+    return si.dwNumberOfProcessors > 0 ? si.dwNumberOfProcessors : 1;
+}
+
+// Cap the LZMA2 thread count so peak compression memory no longer scales with the host core count.
+// The encoder splits 'mt' as (block-threads x match-finder-threads); bt4 (Normal and above) uses 2
+// match-finder threads, so total mt = 2 x block-threads, and block-threads is what multiplies memory.
+// Allow up to 2 block-threads on 64-bit (mt=4) and a single solid block on 32-bit (mt=2) where the
+// address space cannot afford several large dictionaries. Bounded by the available processors.
+// Use a single solid block (mt=2) on all architectures: this matches the pre-2024 single-block
+// behaviour and keeps peak memory close to a single dictionary.
+// Returns 0 to keep the library default (one thread per processor).
+UInt32 ThreadCountForLevel(ZipCreate::CompressionLevel level)
+{
+    switch (level)
+    {
+        case ZipCreate::Normal:
+        case ZipCreate::Maximum:
+        case ZipCreate::Ultra:
+        {
+            const UInt32 cap = 2u;
+            const UInt32 cores = ProcessorCount();
+            return cores < cap ? cores : cap;
+        }
+        default:
+            return 0;
+    }
+}
+
 void StoreFileHashes(OrcArchive::ArchiveItems& items, bool releaseInputStreams)
 {
     for (auto& item : items)
@@ -118,9 +171,33 @@ HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, Co
         return E_POINTER;
     }
 
-    const size_t numProps = 1;
-    const wchar_t* names[numProps] = {L"x"};
-    CPropVariant values[numProps] = {static_cast<UInt32>(level)};  // test with
+    // The dictionary and thread overrides only apply to the LZMA2-based 7z format. The Zip format
+    // uses Deflate (fixed 32 KiB window) and would not benefit from (and could reject) the 'd' property.
+    const bool is7z = (m_Format == ArchiveFormat::SevenZip);
+    const wchar_t* dictionarySize = is7z ? DictionarySizeForLevel(level) : nullptr;
+    const UInt32 threadCount = is7z ? ThreadCountForLevel(level) : 0;
+
+    const wchar_t* names[3];
+    CPropVariant values[3];
+    UInt32 numProps = 0;
+
+    names[numProps] = L"x";
+    values[numProps] = static_cast<UInt32>(level);
+    ++numProps;
+
+    if (dictionarySize)
+    {
+        names[numProps] = L"d";
+        values[numProps] = dictionarySize;
+        ++numProps;
+    }
+
+    if (threadCount)
+    {
+        names[numProps] = L"mt";
+        values[numProps] = static_cast<UInt32>(threadCount);
+        ++numProps;
+    }
 
     CComPtr<ISetProperties> setter;
     if (FAILED(hr = pArchiver->QueryInterface(IID_ISetProperties, reinterpret_cast<void**>(&setter))))
