@@ -607,7 +607,7 @@ HRESULT OutputSpec::Upload::Configure(const ConfigItem& item)
         if (::HasValue(item, CONFIG_UPLOAD_FILTER_EXC))
         {
             boost::split(
-                FilterExclude, (const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_INC], boost::is_any_of(L",;"));
+                FilterExclude, (const std::wstring&)item.SubItems[CONFIG_UPLOAD_FILTER_EXC], boost::is_any_of(L",;"));
         }
     }
     return S_OK;
