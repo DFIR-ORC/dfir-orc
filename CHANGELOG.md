@@ -1,5 +1,10 @@
 # ChangeLog
 
+## [10.3.1] - 2026-06-17
+### Fixed
+- Memory usage since updating to 7-Zip >24.09, which modified dictionary size and thread count
+
+
 ## [10.3.0] - 2026-04-08
 ### Added
 - OrcCapsule: minimal binary loader that forward execution to proper DFIR-ORC embedded binary

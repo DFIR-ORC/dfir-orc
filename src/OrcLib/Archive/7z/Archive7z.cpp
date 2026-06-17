@@ -108,7 +108,62 @@ Lib7zCompressionLevel ToLib7zLevel(CompressionLevel level)
     }
 }
 
-void SetCompressionLevel(const CComPtr<IOutArchive>& archiver, CompressionLevel level, std::error_code& ec)
+// 7-Zip 24.09 raised the default LZMA/LZMA2 dictionary sizes (64-bit: Normal 16->32 MiB,
+// Maximum 32->128 MiB, Ultra 64->256 MiB). As the LZMA encoder needs roughly 10.5x the dictionary
+// per thread, this multiplied compression memory usage after the bundled library was upgraded from
+// 22.01. Pin the dictionary to the pre-24.09 sizes so the footprint no longer depends on the 7-Zip
+// version. Levels below 'Normal' were left unchanged by 24.09 and keep the library default.
+// Returns nullptr when no override is needed.
+const wchar_t* ToLib7zDictionarySize(Lib7zCompressionLevel level)
+{
+    switch (level)
+    {
+        case Lib7zCompressionLevel::Normal:
+            return L"16m";
+        case Lib7zCompressionLevel::Maximum:
+            return L"32m";
+        case Lib7zCompressionLevel::Ultra:
+            return L"64m";
+        default:
+            return nullptr;
+    }
+}
+
+UInt32 GetProcessorCount()
+{
+    SYSTEM_INFO si = {};
+    GetSystemInfo(&si);
+    return si.dwNumberOfProcessors > 0 ? si.dwNumberOfProcessors : 1;
+}
+
+// Cap the LZMA2 thread count so peak compression memory no longer scales with the host core count.
+// The encoder splits 'mt' as (block-threads x match-finder-threads); bt4 (Normal and above) uses 2
+// match-finder threads, so total mt = 2 x block-threads, and block-threads is what multiplies memory.
+// Use a single solid block (mt=2) on all architectures: this matches the pre-2024 GetThis behaviour
+// (one block, not cores/2) and keeps peak memory close to a single dictionary. Bounded by the
+// available processors. Returns 0 to keep the library default (one thread per processor).
+UInt32 ToLib7zThreadCount(Lib7zCompressionLevel level)
+{
+    switch (level)
+    {
+        case Lib7zCompressionLevel::Normal:
+        case Lib7zCompressionLevel::Maximum:
+        case Lib7zCompressionLevel::Ultra:
+        {
+            const UInt32 cap = 2u;
+            const UInt32 cores = GetProcessorCount();
+            return cores < cap ? cores : cap;
+        }
+        default:
+            return 0;
+    }
+}
+
+void SetCompressionLevel(
+    const CComPtr<IOutArchive>& archiver,
+    Archive::Format format,
+    CompressionLevel level,
+    std::error_code& ec)
 {
     Log::Debug("Archive7z: SetCompressionLevel to {}", ToString(level));
 
@@ -121,9 +176,35 @@ void SetCompressionLevel(const CComPtr<IOutArchive>& archiver, CompressionLevel 
         return;
     }
 
-    const uint8_t numProps = 1;
-    const wchar_t* names[numProps] = {L"x"};
-    NWindows::NCOM::CPropVariant values[numProps] = {static_cast<UINT32>(::ToLib7zLevel(level))};
+    const auto lib7zLevel = ::ToLib7zLevel(level);
+
+    // The dictionary and thread overrides only apply to the LZMA2-based 7z format. The Zip format
+    // uses Deflate (fixed 32 KiB window) and would not benefit from (and could reject) the 'd' property.
+    const bool is7z = (format == Archive::Format::k7z);
+    const wchar_t* dictionarySize = is7z ? ::ToLib7zDictionarySize(lib7zLevel) : nullptr;
+    const UInt32 threadCount = is7z ? ::ToLib7zThreadCount(lib7zLevel) : 0;
+
+    const wchar_t* names[3];
+    NWindows::NCOM::CPropVariant values[3];
+    UInt32 numProps = 0;
+
+    names[numProps] = L"x";
+    values[numProps] = static_cast<UINT32>(lib7zLevel);
+    ++numProps;
+
+    if (dictionarySize)
+    {
+        names[numProps] = L"d";
+        values[numProps] = dictionarySize;
+        ++numProps;
+    }
+
+    if (threadCount)
+    {
+        names[numProps] = L"mt";
+        values[numProps] = static_cast<UINT32>(threadCount);
+        ++numProps;
+    }
 
     hr = setProperties->SetProperties(names, values, numProps);
     if (FAILED(hr))
@@ -177,7 +258,7 @@ void Archive7z::Compress(
         return;
     }
 
-    ::SetCompressionLevel(archiver, m_compressionLevel, ec);
+    ::SetCompressionLevel(archiver, m_format, m_compressionLevel, ec);
     if (ec)
     {
         Log::Error(
