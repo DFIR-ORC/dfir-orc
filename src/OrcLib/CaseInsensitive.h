@@ -25,7 +25,7 @@ inline bool lessCaseInsensitive(const std::wstring_view s1, const std::wstring_v
         s1.end(),  // source range
         s2.begin(),
         s2.end(),  // dest range
-        [](const wchar_t c1, const wchar_t c2) { return towlower(c1) < towlower(c2); });
+        [](const wchar_t c1, const wchar_t c2) { return std::towlower(c1) < std::towlower(c2); });
 }
 
 inline bool equalCaseInsensitive(const std::wstring_view s1, const std::wstring_view s2)
@@ -38,7 +38,7 @@ inline bool equalCaseInsensitive(const std::wstring_view s1, const std::wstring_
 
     while (p1 != s1.end() && p2 != s2.end())
     {
-        if (towlower(*p1) != towlower(*p2))
+        if (std::towlower(*p1) != std::towlower(*p2))
             return false;
         ++p1;
         ++p2;
@@ -59,7 +59,7 @@ inline bool equalCaseInsensitive(const std::wstring_view s1, const std::wstring_
     {
         if (index == cchCount)
             return true;
-        if (towlower(*p1) != towlower(*p2))
+        if (std::towlower(*p1) != std::towlower(*p2))
             return false;
         ++p1;
         ++p2;
@@ -112,7 +112,7 @@ inline size_t hashCaseInsensitive(const std::wstring_view s)
     ULONG hash = 0;
 
     for (unsigned int i = 0; i < s.size(); i++)
-        hash = towlower(s[i]) + (hash << 6) + (hash << 16) - hash;
+        hash = std::towlower(s[i]) + (hash << 6) + (hash << 16) - hash;
     return hash;
 }
 
@@ -135,7 +135,7 @@ struct CaseInsensitive : std::function<bool(const std::shared_ptr<std::wstring>&
             s1->end(),  // source range
             s2->begin(),
             s2->end(),  // dest range
-            [](const wchar_t c1, const wchar_t c2) { return towlower(c1) < towlower(c2); });
+            [](const wchar_t c1, const wchar_t c2) { return std::towlower(c1) < std::towlower(c2); });
     };
     inline bool operator()(const std::wstring_view s1, const std::wstring_view s2) const
     {
@@ -144,7 +144,7 @@ struct CaseInsensitive : std::function<bool(const std::shared_ptr<std::wstring>&
             s1.end(),  // source range
             s2.begin(),
             s2.end(),  // dest range
-            [](const wchar_t c1, const wchar_t c2) { return towlower(c1) < towlower(c2); });
+            [](const wchar_t c1, const wchar_t c2) { return std::towlower(c1) < std::towlower(c2); });
     };
     inline size_t operator()(const std::wstring_view s) const { return hashCaseInsensitive(s); }
 };
