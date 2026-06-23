@@ -11,6 +11,7 @@
 
 #include "PSAPIExtension.h"
 #include "Privilege.h"
+#include "Utils/Guard.h"
 
 #include <psapi.h>
 
@@ -32,6 +33,12 @@ constexpr auto ENUM_PROCESS_BASE_INCR = 512;
 HRESULT RunningCode::EnumerateProcessesModules()
 {
     SetPrivilege(SE_DEBUG_NAME, TRUE);
+
+    // Restore SE_DEBUG on every return path so this privilege does not leak past enumeration.
+    auto debugPrivilegeGuard = Guard::CreateScopeGuard([]() {
+        if (FAILED(SetPrivilege(SE_DEBUG_NAME, FALSE)))
+            Log::Debug("Debug privilege is _not_ held");
+    });
 
     DWORD dwProcesses = ENUM_PROCESS_BASE_COUNT;
     DWORD* pProcesses = nullptr;
