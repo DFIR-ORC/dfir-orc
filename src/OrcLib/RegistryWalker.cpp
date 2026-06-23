@@ -392,8 +392,8 @@ HRESULT RegistryHive::CheckLfHeader(const LF_LH_Header* const pHeader) const
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    if ((sizeof(LF_LH_Header) + (pHeader->NumberOfKeys - 1) * sizeof(HashRecord))
-        > (size_t)((4 - (int)pHeader->Header.BlockSize)))
+    const size_t lfRecordCount = (pHeader->NumberOfKeys == 0) ? 0 : (size_t)(pHeader->NumberOfKeys - 1);
+    if ((sizeof(LF_LH_Header) + lfRecordCount * sizeof(HashRecord)) > (size_t)((4 - (int)pHeader->Header.BlockSize)))
     {
         Log::Error("Lf/Lh-block size and computed size does not match");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -539,7 +539,9 @@ HRESULT RegistryHive::CheckLiHeader(const LI_RI_Header* const pHeader) const
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    if ((pHeader->NumberOfKeys - 1) * 4 + sizeof(LI_RI_Header) > (size_t)(4 - (int)pHeader->Header.BlockSize))
+    // Same WORD underflow as CheckLfHeader: 'NumberOfKeys - 1' wraps when it is 0, bypassing the check.
+    const size_t liRecordCount = (pHeader->NumberOfKeys == 0) ? 0 : (size_t)(pHeader->NumberOfKeys - 1);
+    if (liRecordCount * 4 + sizeof(LI_RI_Header) > (size_t)(4 - (int)pHeader->Header.BlockSize))
     {
         Log::Error("Li/ri-block size and computed size does not match ");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
