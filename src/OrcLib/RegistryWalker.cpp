@@ -250,6 +250,13 @@ HRESULT RegistryHive::LoadHive(ByteStream& HiveStream)
         return E_FAIL;
     }
 
+    constexpr ULONG64 kMaxHiveSize = 4ULL * 1024 * 1024 * 1024;
+    if (ulSize > kMaxHiveSize || ulSize > (ULONG64)SIZE_MAX)
+    {
+        Log::Error("Hive size is too large ({} bytes)", ulSize);
+        return HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
+    }
+
     m_pHiveBuffer = (BYTE*)malloc((size_t)ulSize);
     if (m_pHiveBuffer == NULL)
     {
