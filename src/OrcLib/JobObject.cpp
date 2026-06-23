@@ -120,6 +120,10 @@ HRESULT JobObject::GetHandleTypeName(DWORD dwSourcePid, HANDLE hSourceHandle, ws
     if (hr == HRESULT_FROM_NT(STATUS_INFO_LENGTH_MISMATCH))
     {
         PUBLIC_OBJECT_TYPE_INFORMATION* pTypeInfo = (PUBLIC_OBJECT_TYPE_INFORMATION*)malloc(ulReturnedBytes);
+        if (pTypeInfo == nullptr)
+        {
+            return E_OUTOFMEMORY;
+        }
 
         BOOST_SCOPE_EXIT((pTypeInfo)) { free(pTypeInfo); }
         BOOST_SCOPE_EXIT_END;

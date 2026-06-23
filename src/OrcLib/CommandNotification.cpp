@@ -74,19 +74,29 @@ CommandNotification::NotifyProcessTerminated(DWORD dwPid, const std::wstring& Ke
             hr = HRESULT_FROM_WIN32(GetLastError());
 
         retval->m_pProcessTimes = (PPROCESS_TIMES)malloc(sizeof(PROCESS_TIMES));
-
-        if (!::GetProcessTimes(
-                hProcess,
-                &retval->m_pProcessTimes->CreationTime,
-                &retval->m_pProcessTimes->ExitTime,
-                &retval->m_pProcessTimes->KernelTime,
-                &retval->m_pProcessTimes->UserTime))
+        if (retval->m_pProcessTimes == nullptr)
+        {
+            retval->m_hr = E_OUTOFMEMORY;
+        }
+        else if (!::GetProcessTimes(
+                     hProcess,
+                     &retval->m_pProcessTimes->CreationTime,
+                     &retval->m_pProcessTimes->ExitTime,
+                     &retval->m_pProcessTimes->KernelTime,
+                     &retval->m_pProcessTimes->UserTime))
+        {
             retval->m_hr = HRESULT_FROM_WIN32(GetLastError());
+        }
 
         retval->m_pIoCounters = (PIO_COUNTERS)malloc(sizeof(IO_COUNTERS));
-
-        if (!::GetProcessIoCounters(hProcess, retval->m_pIoCounters))
+        if (retval->m_pIoCounters == nullptr)
+        {
+            retval->m_hr = E_OUTOFMEMORY;
+        }
+        else if (!::GetProcessIoCounters(hProcess, retval->m_pIoCounters))
+        {
             retval->m_hr = HRESULT_FROM_WIN32(GetLastError());
+        }
     }
 
     return retval;
@@ -214,8 +224,12 @@ CommandNotification::Notification CommandNotification::NotifyTerminateAll()
     return retval;
 }
 
-CommandNotification::Notification
-CommandNotification::NotifyDiskFreeSpaceRequirement(const std::wstring& keyword, DWORD processId, HANDLE hProcess, uint64_t requiredSize, uint64_t freeSize)
+CommandNotification::Notification CommandNotification::NotifyDiskFreeSpaceRequirement(
+    const std::wstring& keyword,
+    DWORD processId,
+    HANDLE hProcess,
+    uint64_t requiredSize,
+    uint64_t freeSize)
 {
     auto retval = std::make_shared<::CommandNotificationT>(CommandNotification::ExceededDiskFreeSpaceRequirement);
     retval->m_Keyword = keyword;
