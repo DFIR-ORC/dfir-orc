@@ -191,10 +191,17 @@ HRESULT Orc::ntfs_uncompress_compunit(NTFS_COMP_INFO* comp)
                          * location in the compression unit.  This identifies
                          * how many bits each has */
                         int shift = 0;
-                        for (size_t i = comp->uncomp_idx - blk_st_uncomp - 1; i >= 0x10; i >>= 1)
+                        size_t span = comp->uncomp_idx - blk_st_uncomp;
+                        for (size_t i = (span ? span - 1 : 0); i >= 0x10; i >>= 1)
                         {
                             shift++;
                         }
+
+                        if (shift < 0)
+                            shift = 0;
+
+                        if (shift > 12)
+                            shift = 12;
 
                         unsigned int offset = (pheader >> (12 - shift)) + 1;
                         unsigned int length = (pheader & (0xFFF >> shift)) + 2;
