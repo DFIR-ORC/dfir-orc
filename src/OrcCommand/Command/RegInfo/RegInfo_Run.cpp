@@ -382,7 +382,8 @@ HRESULT Main::WriteValueInformation(
                         }
                         else
                         {
-                            output.WriteString((LPWSTR)(match.Datas.get()));
+                            output.WriteCharArray(
+                                (LPCWSTR)(match.Datas.get()), (DWORD)(match.DatasLength / sizeof(WCHAR)));
                             output.WriteNothing();
                         }
                         break;
