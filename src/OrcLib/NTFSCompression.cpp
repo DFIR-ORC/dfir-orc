@@ -60,6 +60,8 @@ Orc::ntfs_uncompress_setup(unsigned int block_size, NTFS_COMP_INFO* comp, UINT c
     }
     if ((comp->comp_buf = (char*)malloc(comp->buf_size_b)) == NULL)
     {
+        free(comp->uncomp_buf);
+        comp->uncomp_buf = NULL;
         comp->buf_size_b = 0;
         return E_OUTOFMEMORY;
     }
