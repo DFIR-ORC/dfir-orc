@@ -62,7 +62,16 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
 
         if (pbs->ClustersPerFileRecordSegment < 0)
         {
-            m_BytesPerFRS = 1 << (-pbs->ClustersPerFileRecordSegment);
+            // Negative encodes the FRS size as a power of two. Reject a shift >= 32: the byte is
+            // attacker-controlled from the boot sector and 1 << (>=32) is undefined behavior.
+            const int shiftAmount = -pbs->ClustersPerFileRecordSegment;
+            if (shiftAmount >= 32)
+            {
+                Log::Error("NTFS: invalid ClustersPerFileRecordSegment {}", (int)pbs->ClustersPerFileRecordSegment);
+                return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+            }
+
+            m_BytesPerFRS = 1u << shiftAmount;
         }
         else
         {
