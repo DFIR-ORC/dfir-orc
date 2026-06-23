@@ -80,12 +80,13 @@ public:
 
         uint32_t ignoredSubBlockCount = (readOffset - m_firstBlockOffset) / kMinSectorSize;
 
-        // Each bit represents a 512 bytes 'sub-block' in a 16384 bytes 'block'
-        uint32_t firstBlockBitmap = ~((1 << ignoredSubBlockCount) - 1);
+        // Each bit represents a 512 bytes 'sub-block' in a 16384 bytes 'block'. Shift on unsigned to avoid
+        // signed-overflow UB at bit 31; a full last block (>= 32 sub-blocks) is the all-bits-set mask.
+        uint32_t firstBlockBitmap = ~((1u << ignoredSubBlockCount) - 1);
 
         const size_t residueSubBlockCount =
             lastBlockResidue / kMinSectorSize + ((lastBlockResidue % kMinSectorSize) != 0);
-        uint32_t lastBlockBitmap = (1 << residueSubBlockCount) - 1;
+        uint32_t lastBlockBitmap = (residueSubBlockCount >= 32) ? 0xFFFFFFFF : ((1u << residueSubBlockCount) - 1);
         if (lastBlockBitmap == 0)
         {
             lastBlockBitmap = 0xFFFFFFFF;
@@ -338,7 +339,8 @@ void ShadowCopy::Initialize(gsl::span<const Snapshot> snapshots, ShadowCopy& sha
 
     shadowCopy.Information() = ShadowCopyInformation(activeSnapshot.Information());
 
-    if (!activeSnapshot.PreviousBitmap().empty() && activeSnapshot.Bitmap().size() != activeSnapshot.PreviousBitmap().size())
+    if (!activeSnapshot.PreviousBitmap().empty()
+        && activeSnapshot.Bitmap().size() != activeSnapshot.PreviousBitmap().size())
     {
         // This should not be handled as an error. The bits over bitmap size should be seen as set.
         Log::Debug(
