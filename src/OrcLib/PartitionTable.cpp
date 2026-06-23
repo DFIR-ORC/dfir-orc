@@ -440,6 +440,15 @@ HRESULT PartitionTable::ParseGPTPartitionTable(IDiskExtent& diskExtend, UINT sec
         Log::Warn("Abnormally large number of GPT partition entries: {}", pGPTHeader->NumberOfPartitionEntries);
     }
 
+    if (pGPTHeader->SizeofPartitionEntry < sizeof(GPTPartitionEntry))
+    {
+        Log::Error(
+            "Invalid GPT SizeofPartitionEntry {} (minimum {})",
+            pGPTHeader->SizeofPartitionEntry,
+            sizeof(GPTPartitionEntry));
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
     CBinaryBuffer buffer;
     size_t buffer_size = 0;
 
