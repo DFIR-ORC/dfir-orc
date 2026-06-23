@@ -13,6 +13,8 @@
 #include "CriticalSection.h"
 #include "Utils/WinApi.h"
 
+#include <atomic>
+
 using namespace Orc;
 
 namespace {
@@ -119,7 +121,7 @@ struct TerminationBlock
 
     const WCHAR* _szProcessDescr = nullptr;
     bool _bSilent = false;
-    bool _TerminateCalled = false;
+    std::atomic<bool> _TerminateCalled {false};
     bool _bWriteMinidumpFromCurrentProcess = false;
     HANDLE _hTerminationHandlers = INVALID_HANDLE_VALUE;
 
@@ -130,7 +132,11 @@ struct TerminationBlock
 
 void TerminationBlock::Terminate()
 {
-    if (_TerminateCalled)
+    // Atomically claim the terminate path. A concurrent caller (notably the console Ctrl-handler, which
+    // Windows delivers on a separate thread) then observes this and bails, so the finalizer vector is
+    // drained on exactly one thread. The plain-bool check-then-set this replaces was a data race (UB).
+    bool expected = false;
+    if (!_TerminateCalled.compare_exchange_strong(expected, true))
         return;
 
     ResetEvent(_hTerminationHandlers);
@@ -197,7 +203,6 @@ void TerminationBlock::Terminate()
         wprintf(L"%s: All handlers have been called\n", _szProcessDescr);
 
     SetEvent(_hTerminationHandlers);
-    _TerminateCalled = true;
     return;
 }
 
