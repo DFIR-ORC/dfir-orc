@@ -342,12 +342,28 @@ AttributeList::ParseAttributeList(const std::shared_ptr<VolumeReader>& pVol, con
     if (FAILED(hr = pRecord->ReadData(pVol, attr, 0L, ullDataSize, m_RawAttrList, &ullBytesRead)))
         return hr;
 
-    ATTRIBUTE_LIST_ENTRY* pListEntry = (ATTRIBUTE_LIST_ENTRY*)(m_RawAttrList.GetData());
+    const BYTE* bufBegin = m_RawAttrList.GetData();
+    const size_t bufSize = m_RawAttrList.GetCount();
+    ATTRIBUTE_LIST_ENTRY* pListEntry = (ATTRIBUTE_LIST_ENTRY*)bufBegin;
 
     DWORD dwCurPos = 0;
 
-    do
+    // The fixed header (up to AttributeName) must be present before RecordLength/AttributeNameLength are read.
+    while (dwCurPos + FIELD_OFFSET(ATTRIBUTE_LIST_ENTRY, AttributeName) <= bufSize)
     {
+        const size_t remaining = bufSize - dwCurPos;
+
+        // Fail closed on a forged entry whose declared RecordLength or name would run past the buffer.
+        if (pListEntry->RecordLength < FIELD_OFFSET(ATTRIBUTE_LIST_ENTRY, AttributeName)
+            || pListEntry->RecordLength > remaining
+            || FIELD_OFFSET(ATTRIBUTE_LIST_ENTRY, AttributeName)
+                    + static_cast<size_t>(pListEntry->AttributeNameLength) * sizeof(WCHAR)
+                > remaining)
+        {
+            Log::Debug("Forged $ATTRIBUTE_LIST: entry out of bounds");
+            break;
+        }
+
         AttributeListEntry ale(pListEntry);
 
         if (ale.DataIsPlausible())
@@ -359,13 +375,10 @@ AttributeList::ParseAttributeList(const std::shared_ptr<VolumeReader>& pVol, con
 
             m_AttList.push_back(ale);
         }
-        if (pListEntry->RecordLength == 0)
-            break;
 
         dwCurPos += pListEntry->RecordLength;
-        pListEntry = (ATTRIBUTE_LIST_ENTRY*)(((BYTE*)pListEntry + pListEntry->RecordLength));
-
-    } while (dwCurPos < m_RawAttrList.GetCount());
+        pListEntry = (ATTRIBUTE_LIST_ENTRY*)(bufBegin + dwCurPos);
+    }
 
     return S_OK;
 }
