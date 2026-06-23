@@ -1415,7 +1415,13 @@ void CommandAgent::run()
             Log::Error(L"Failed to execute next command [{}]", SystemError(hr));
         }
 
-        if (m_bStopping && m_RunningCommands.size() == 0 && m_CommandQueue.empty())
+        bool bNoRunningCommands = false;
+        {
+            Concurrency::critical_section::scoped_lock lock(m_cs);
+            bNoRunningCommands = m_RunningCommands.empty();
+        }
+
+        if (m_bStopping && bNoRunningCommands && m_CommandQueue.empty())
         {
             // delete temporary resources
             m_Resources.DeleteTemporaryResources();
