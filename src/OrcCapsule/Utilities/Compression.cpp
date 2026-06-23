@@ -81,6 +81,11 @@ using ScopedDCtx = std::unique_ptr<ZSTD_DCtx, ZstdDCtxDeleter>;
 
 [[nodiscard]] bool Is7zArchive(std::basic_string_view<uint8_t> data)
 {
+    if (data.size() < k7zSignature.size())
+    {
+        return false;
+    }
+
     return std::equal(k7zSignature.begin(), k7zSignature.end(), data.begin());
 }
 
