@@ -493,3 +493,28 @@ void ArchiveAgent::run()
     }
     return;
 }
+
+void Orc::WaitForArchiveAgentCompletion(Concurrency::agent& archiveAgent, std::chrono::milliseconds warnInterval)
+{
+    // A non-positive interval would never make progress; fall back to a sane slice.
+    if (warnInterval <= std::chrono::milliseconds::zero())
+        warnInterval = std::chrono::milliseconds(120000);
+
+    std::chrono::milliseconds waited = warnInterval;
+    for (;;)
+    {
+        Log::Warn(
+            L"Archive completion is taking longer than {} s; still waiting for it to finish",
+            std::chrono::duration_cast<std::chrono::seconds>(waited).count());
+
+        try
+        {
+            Concurrency::agent::wait(&archiveAgent, static_cast<unsigned int>(warnInterval.count()));
+            return;  // reached a terminal state: teardown is now safe
+        }
+        catch (const Concurrency::operation_timed_out&)
+        {
+            waited += warnInterval;
+        }
+    }
+}

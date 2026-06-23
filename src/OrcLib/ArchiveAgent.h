@@ -17,6 +17,7 @@
 
 #include <memory>
 #include <string>
+#include <chrono>
 #include <agents.h>
 #include <concrt.h>
 
@@ -145,6 +146,8 @@ public:
 
     ~ArchiveAgent(void) {};
 };
+
+void WaitForArchiveAgentCompletion(Concurrency::agent& archiveAgent, std::chrono::milliseconds warnInterval);
 
 }  // namespace Orc
 
