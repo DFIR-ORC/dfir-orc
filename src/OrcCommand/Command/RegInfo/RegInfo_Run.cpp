@@ -344,7 +344,6 @@ HRESULT Main::WriteValueInformation(
             else
             {
                 CBinaryBuffer dataBuffer(match.Datas.get(), dwLen);
-                std::wstring* wstrTmp;
                 LPWSTR lpCurrent;
 
                 switch (match.ValueType)
@@ -402,15 +401,19 @@ HRESULT Main::WriteValueInformation(
                         {
                             std::wstring wstrData;
 
-                            dwLen = 0;
                             lpCurrent = (LPWSTR)match.Datas.get();
-                            while (dwLen < match.DatasLength)
+                            const DWORD dwTotalChars = match.DatasLength / sizeof(WCHAR);
+                            DWORD dwCharOffset = 0;
+                            while (dwCharOffset < dwTotalChars)
                             {
-                                wstrTmp = new std::wstring(lpCurrent);
-                                dwLen += (wcslen(lpCurrent) + 1) * sizeof(WCHAR);
-                                lpCurrent += wcslen(lpCurrent) + 1;
-                                wstrData += *wstrTmp + L" <> ";
-                                delete wstrTmp;
+                                const size_t cch = wcsnlen(lpCurrent, dwTotalChars - dwCharOffset);
+                                wstrData.append(lpCurrent, cch);
+                                wstrData += L" <> ";
+
+                                // Advance past the element, skipping its NUL only when one was present.
+                                const size_t consumed = (cch < (size_t)(dwTotalChars - dwCharOffset)) ? cch + 1 : cch;
+                                dwCharOffset += (DWORD)consumed;
+                                lpCurrent += consumed;
                             }
                             output.WriteString(wstrData);
                             output.WriteNothing();
