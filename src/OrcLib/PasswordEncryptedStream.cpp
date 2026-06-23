@@ -19,6 +19,22 @@ constexpr auto ENCRYPT_ALGORITHM = CALG_AES_256;
 
 HRESULT PasswordEncryptedStream::GetKeyMaterial(const std::wstring& pwd)
 {
+#ifndef ORC_ENABLE_INSECURE_PASSWORD_ENCRYPTION
+    // Compiled out by default (and the only path that opens this stream, so the whole class is inert).
+    // The derivation below turns the password into an AES-256 key with a single-pass, UNSALTED SHA-1
+    // (CryptCreateHash(CALG_SHA1) -> CryptDeriveKey): no salt and no work factor, so anyone who captures an
+    // output archive can brute-force the password offline at full GPU speed, and identical passwords yield
+    // identical keys across archives. The class currently has no callers; fail closed so it cannot be wired
+    // up as-is. To re-enable, define ORC_ENABLE_INSECURE_PASSWORD_ENCRYPTION - but first replace this with a
+    // real password KDF (BCryptDeriveKeyPBKDF2, random salt, >= 100k iterations) plus a versioned header.
+    // Prefer recipient-certificate (CMS) output encryption, which uses no password KDF at all.
+    UNREFERENCED_PARAMETER(pwd);
+    Log::Critical(
+        "PasswordEncryptedStream is disabled at build time: its password key derivation (unsalted single-pass "
+        "SHA-1 -> AES-256) is cryptographically weak. Use recipient-certificate (CMS) output encryption, or "
+        "rebuild with ORC_ENABLE_INSECURE_PASSWORD_ENCRYPTION after replacing the KDF with PBKDF2.");
+    return HRESULT_FROM_WIN32(ERROR_NOT_SUPPORTED);
+#else
     HRESULT hr = E_FAIL;
 
     if (FAILED(hr = CryptoUtilities::AcquireContext(m_hCryptProv)))
@@ -59,6 +75,7 @@ HRESULT PasswordEncryptedStream::GetKeyMaterial(const std::wstring& pwd)
         return hr;
     }
     return S_OK;
+#endif
 }
 
 HRESULT
