@@ -146,7 +146,7 @@ void BitmapToChunks(Chunk::Type type, uint32_t bitmap, uint64_t offset, Chunks& 
     {
         for (; i < 32; ++i)
         {
-            if ((1 << i) & bitmap)
+            if ((1u << i) & bitmap)
             {
                 break;
             }
@@ -160,7 +160,7 @@ void BitmapToChunks(Chunk::Type type, uint32_t bitmap, uint64_t offset, Chunks& 
         uint8_t j = i + 1;
         for (; j < 32; ++j)
         {
-            if (!((1 << j) & bitmap))
+            if (!((1u << j) & bitmap))
             {
                 break;
             }
