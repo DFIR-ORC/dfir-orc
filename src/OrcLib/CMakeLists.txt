@@ -641,8 +641,6 @@ set(SRC_STREAM
     "Stream/BasicStreamReader.h"
     "Stream/BufferStreamConcept.h"
     "Stream/ByteStreamConcept.h"
-    "Stream/FileStreamConcept.h"
-    "Stream/FileStreamConcept.cpp"
     "Stream/SeekDirection.h"
     "Stream/SpanStreamConcept.h"
     "Stream/Stream.h"
