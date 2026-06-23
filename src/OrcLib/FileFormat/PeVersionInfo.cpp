@@ -130,9 +130,9 @@ Result<std::wstring_view> ExtractTextValue(BufferView block, const VS_VERSION_HE
         return std::errc::bad_message;
     }
 
-    std::wstring_view valueView(reinterpret_cast<const WCHAR*>(block.data() + valueOffset), header->wValueLength);
+    std::wstring_view valueView(reinterpret_cast<const WCHAR*>(block.data() + valueOffset), cbValue / sizeof(wchar_t));
     auto nullPos = valueView.find_first_of(L'\0');
-    size_t length = (nullPos == std::wstring_view::npos) ? header->wValueLength : nullPos;
+    size_t length = (nullPos == std::wstring_view::npos) ? valueView.size() : nullPos;
     length = std::min(length, valueView.size());
     return valueView.substr(0, length);
 }
