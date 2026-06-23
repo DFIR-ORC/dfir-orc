@@ -161,6 +161,9 @@ HRESULT Orc::UtilGetTempFile(
     {
         if (GetTempFileName(pwszDir, L"DFIR-ORC", 0, wszTempFilePath))
         {
+            DWORD dwCreationDisposition = CREATE_ALWAYS;
+            DWORD dwExtraFlags = 0;
+
             if (pwszExt)
             {
                 // Delete the temp file earlier created
@@ -171,6 +174,9 @@ HRESULT Orc::UtilGetTempFile(
                     // LogError("StringCchCat failed with : 0x%x", hr);
                     return hr;
                 }
+
+                dwCreationDisposition = CREATE_NEW;
+                dwExtraFlags = FILE_FLAG_OPEN_REPARSE_POINT;
             }
 
             auto handle = CreateFileApi(
@@ -178,8 +184,8 @@ HRESULT Orc::UtilGetTempFile(
                 GENERIC_WRITE | GENERIC_READ,
                 dwShareMode,
                 psa,
-                CREATE_ALWAYS,
-                dwFlags | FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+                dwCreationDisposition,
+                dwFlags | dwExtraFlags | FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
                 NULL);
 
             if (handle)
