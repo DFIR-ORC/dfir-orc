@@ -8,6 +8,7 @@
 #include "stdafx.h"
 
 #include "RegistryWalker.h"
+#include "Utils/Guard.h"
 
 using namespace Orc;
 
@@ -653,12 +654,11 @@ HRESULT RegistryHive::ParseValues(
             wFlag = pCurrentValue->Flag;
             Type = pCurrentValue->Type;
 
-            const RegistryValue* const CurrentRegValue =
-                new RegistryValue(std::move(Name), pCurrentKey, Type, pData, dwDatasLen, wFlag, bIsDataResident);
+            // unique_ptr so the value is freed even if the user callback throws.
+            const std::unique_ptr<const RegistryValue> CurrentRegValue = std::make_unique<RegistryValue>(
+                std::move(Name), pCurrentKey, Type, pData, dwDatasLen, wFlag, bIsDataResident);
 
-            RegistryValueCallback(CurrentRegValue);
-
-            delete CurrentRegValue;
+            RegistryValueCallback(CurrentRegValue.get());
         }
         else
         {
@@ -1104,6 +1104,11 @@ HRESULT RegistryHive::Walk(
 
     std::vector<RegistryKey*> CurrentKeySet;
     CurrentKeySet.push_back(RootKeyRegistryKey);
+    auto keySetGuard = Guard::CreateScopeGuard([&CurrentKeySet]() {
+        for (RegistryKey* pKey : CurrentKeySet)
+            delete pKey;
+    });
+
     RegistryKey* CurrentKey;
     while (!CurrentKeySet.empty())
     {
