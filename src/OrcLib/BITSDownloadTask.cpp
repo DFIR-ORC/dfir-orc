@@ -448,7 +448,7 @@ HRESULT CDownloadNotifyInterface::JobModification(IBackgroundCopyJob* pJob, DWOR
         CoTaskMemFree(pszJobName);
     }
 
-    m_PendingJobModificationCount = 0;
+    InterlockedExchange(&m_PendingJobModificationCount, 0);
     return S_OK;
 }
 
