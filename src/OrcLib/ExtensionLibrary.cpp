@@ -312,9 +312,14 @@ HRESULT Orc::ExtensionLibrary::ToDesiredName(const std::wstring& libName)
         std::filesystem::rename(extractedFileName, finalName, ec);
 
         if (ec)
-            Log::Warn(L"Failed to rename file '{}' to '{}': {})", extractedFileName, finalName, ec);
-
-        m_libFile = finalName;
+        {
+            Log::Warn(L"Failed to rename file '{}' to '{}', using extracted file [{}]", extractedFileName, finalName, ec);
+            m_libFile = extractedFileName;
+        }
+        else
+        {
+            m_libFile = finalName;
+        }
     }
     else
         m_libFile = libName;
