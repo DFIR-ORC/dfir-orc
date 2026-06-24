@@ -453,6 +453,17 @@ HRESULT RegistryHive::CheckNkHeader(
         Log::Debug("Nk header: Class name offset is invalid");
         *bHasClassName = false;
     }
+    else
+    {
+        const BYTE* hiveBegin = m_pHiveBuffer;
+        const BYTE* hiveEnd = m_pHiveBuffer + m_ulHiveBufferSize;
+        const BYTE* pClassName = FixOffset(pHeader->OffsetToClassName);
+        if (pClassName < hiveBegin || pClassName > hiveEnd || (size_t)(hiveEnd - pClassName) < pHeader->ClassNameLength)
+        {
+            Log::Debug("Nk header: class name length is out of bounds");
+            *bHasClassName = false;
+        }
+    }
 
     *bSubkeyListIsResident = true;
     if ((pHeader->NumberOfSubKeys == 0) && (pHeader->OffsetToLFHeader != 0xFFFFFFFF))
