@@ -376,6 +376,12 @@ void ShadowCopy::Initialize(gsl::span<const Snapshot> snapshots, ShadowCopy& sha
             const auto bitmapIndex = blockIndex / 8;
             const auto bitIndex = 1 << blockIndex % 8;
 
+            if (bitmapIndex >= shadowCopy.m_bitmap.size())
+            {
+                Log::Debug("Skipping VSS forwarder with out-of-range bitmap index {}", bitmapIndex);
+                continue;
+            }
+
             shadowCopy.m_bitmap[bitmapIndex] = shadowCopy.m_bitmap[bitmapIndex] & ~bitIndex;
         }
     }
