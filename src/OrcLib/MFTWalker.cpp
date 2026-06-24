@@ -786,7 +786,9 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
 
             if ((*pBM)[blockIndex])
             {
-                if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
+                if (FAILED(
+                        hr = MFTUtils::MultiSectorFixup(
+                            pIABuff, pIR->SizePerIndex(), static_cast<DWORD>(Data.GetCount()), m_pVolReader)))
                 {
                     if (HRESULT_FROM_NT(NTE_BAD_SIGNATURE) != hr)
                     {
@@ -851,7 +853,9 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                     L"Item in $INDEX_ALLOCATION is not in use (FRN: {:#x}) only carving...",
                     NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()));
 
-                if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
+                if (FAILED(
+                        hr = MFTUtils::MultiSectorFixup(
+                            pIABuff, pIR->SizePerIndex(), static_cast<DWORD>(Data.GetCount()), m_pVolReader)))
                 {
                     Log::Debug("Failed to fixup carved $INDEX_ALLOCATION [{}]", SystemError(hr));
                     return S_OK;
@@ -985,7 +989,12 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
 
                         if ((*pBM)[i])
                         {
-                            if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
+                            if (FAILED(
+                                    hr = MFTUtils::MultiSectorFixup(
+                                        pIABuff,
+                                        pIR->SizePerIndex(),
+                                        static_cast<DWORD>(Data.GetCount()),
+                                        m_pVolReader)))
                             {
                                 Log::Error(L"Failed to fixup $INDEX_ALLOCATION header [{}]", SystemError(hr));
                                 return hr;
