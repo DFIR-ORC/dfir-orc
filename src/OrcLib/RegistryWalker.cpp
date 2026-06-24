@@ -635,14 +635,22 @@ HRESULT RegistryHive::ParseValues(
             std::string Name(pCurrentValue->Name, wNameLen);
 
             BYTE* pData = nullptr;
-            dwDatasLen = pCurrentValue->DataLength;
             if (bIsDataResident)
             {
                 // Check for in place datas
                 if (pCurrentValue->DataLength & 0x80000000)
                 {
+                    const DWORD dwInlineLen = pCurrentValue->DataLength ^ 0x80000000;
+
+                    // Inline data is stored in the 4-byte OffsetToData field; reject a forged larger length.
+                    if (dwInlineLen > sizeof(pCurrentValue->OffsetToData))
+                    {
+                        Log::Debug("Key '{}': inline value data length out of bounds", pCurrentKey->GetKeyName());
+                        continue;
+                    }
+
                     pData = (BYTE*)&(pCurrentValue->OffsetToData);
-                    dwDatasLen = pCurrentValue->DataLength ^ 0x80000000;
+                    dwDatasLen = dwInlineLen;
                 }
                 // Datas is too large to fit, using an offset
                 else
@@ -653,13 +661,30 @@ HRESULT RegistryHive::ParseValues(
                         Log::Debug("Key '{}': Value data header is invalid", pCurrentKey->GetKeyName());
                         continue;
                     }
-                    pData = (BYTE*)&(pDataHeader->Data);
-                    if (dwDatasLen != (DWORD)(-(int)pDataHeader->Header.BlockSize))
+
+                    // Clamp the declared length to the bytes actually available in the (in-buffer) data cell so a
+                    // forged DataLength cannot drive an out-of-bounds read in the value consumers.
+                    const size_t cellSize = (size_t)(-(int)pDataHeader->Header.BlockSize);
+                    const size_t avail =
+                        cellSize > offsetof(DataHeader, Data) ? cellSize - offsetof(DataHeader, Data) : 0;
+                    const DWORD dwCellDataLen =
+                        (pCurrentValue->DataLength > avail) ? (DWORD)avail : pCurrentValue->DataLength;
+                    if (dwCellDataLen != pCurrentValue->DataLength)
                     {
                         Log::Debug(
                             "Keys '{}': size mismatch for data inside value '{}'", pCurrentKey->GetKeyName(), Name);
                     }
+
+                    pData = (BYTE*)&(pDataHeader->Data);
+                    dwDatasLen = dwCellDataLen;
                 }
+            }
+
+            // Only carry a length when the data is actually resident in the hive buffer; otherwise the consumers
+            // would copy from a null/foreign pointer.
+            if (pData == nullptr)
+            {
+                dwDatasLen = 0;
             }
 
             wFlag = pCurrentValue->Flag;
