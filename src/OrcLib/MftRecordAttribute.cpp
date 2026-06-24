@@ -719,6 +719,13 @@ HRESULT IndexRootAttribute::Open()
     else if (m_pHeader->FormCode == RESIDENT_FORM)
     {
         m_pRoot = (PINDEX_ROOT)((PBYTE)m_pHeader) + m_pHeader->Form.Resident.ValueOffset;
+        if (m_pRoot->BytesPerIndexBuffer == 0)
+        {
+            Log::Debug("Invalid $INDEX_ROOT: BytesPerIndexBuffer is zero");
+            m_pRoot = nullptr;
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        }
+
         return S_OK;
     }
     return S_OK;
