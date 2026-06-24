@@ -351,6 +351,14 @@ HRESULT USNJournalWalkerOffline::FindNextUSNRecord(
         return E_FAIL;
     }
 
+    if (usnRecord->FileNameOffset < FIELD_OFFSET(USN_RECORD, FileName)
+        || (usnRecord->FileNameLength % sizeof(WCHAR)) != 0
+        || (DWORD)usnRecord->FileNameOffset + usnRecord->FileNameLength > usnRecord->RecordLength)
+    {
+        shouldStop = true;
+        return E_FAIL;
+    }
+
     *nextUSNRecord = (BYTE*)usnRecord;
 
     return S_OK;
