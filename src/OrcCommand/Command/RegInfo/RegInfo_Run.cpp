@@ -257,7 +257,7 @@ HRESULT Main::WriteValueInformation(
     if (config.Information & REGINFO_VALUETYPE)
     {
         DWORD i = 0;
-        while (g_ValueTypeDefinitions[i].Type != match.ValueType && i < _countof(g_ValueTypeDefinitions))
+        while (i < _countof(g_ValueTypeDefinitions) && g_ValueTypeDefinitions[i].Type != match.ValueType)
         {
             i++;
         }
