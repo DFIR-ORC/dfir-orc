@@ -306,7 +306,8 @@ void Print(
 
         if (bitmap[blockId])
         {
-            hr = MFTUtils::MultiSectorFixup(indexAllocationBuffer, indexRootAttributes.SizePerIndex(), volume);
+            hr = MFTUtils::MultiSectorFixup(
+                indexAllocationBuffer, indexRootAttributes.SizePerIndex(), static_cast<DWORD>(buffer.size()), volume);
             if (FAILED(hr))
             {
                 Log::Debug(L"Failed to fix $INDEX_ALLOCATION header [{}]", SystemError(hr));
@@ -368,7 +369,8 @@ void Print(
         }
         else
         {
-            hr = MFTUtils::MultiSectorFixup(indexAllocationBuffer, indexRootAttributes.SizePerIndex(), volume);
+            hr = MFTUtils::MultiSectorFixup(
+                indexAllocationBuffer, indexRootAttributes.SizePerIndex(), static_cast<DWORD>(buffer.size()), volume);
             if (FAILED(hr))
             {
                 Log::Debug(L"Failed to fix $INDEX_ALLOCATION carved header [{}]", SystemError(hr));

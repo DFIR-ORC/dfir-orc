@@ -10,6 +10,7 @@
 #include "JobObject.h"
 
 #include "Privilege.h"
+#include "Utils/Guard.h"
 
 #include "NtDllExtension.h"
 
@@ -120,6 +121,10 @@ HRESULT JobObject::GetHandleTypeName(DWORD dwSourcePid, HANDLE hSourceHandle, ws
     if (hr == HRESULT_FROM_NT(STATUS_INFO_LENGTH_MISMATCH))
     {
         PUBLIC_OBJECT_TYPE_INFORMATION* pTypeInfo = (PUBLIC_OBJECT_TYPE_INFORMATION*)malloc(ulReturnedBytes);
+        if (pTypeInfo == nullptr)
+        {
+            return E_OUTOFMEMORY;
+        }
 
         BOOST_SCOPE_EXIT((pTypeInfo)) { free(pTypeInfo); }
         BOOST_SCOPE_EXIT_END;
@@ -248,6 +253,11 @@ HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
         Log::Debug("Debug privilege is _not_ held [{}]", SystemError(hr));
     }
 
+    auto debugPrivilegeGuard = Guard::CreateScopeGuard([]() {
+        if (FAILED(SetPrivilege(SE_DEBUG_NAME, FALSE)))
+            Log::Debug("Debug privilege is _not_ held");
+    });
+
     ULONG ulNeededBytes = 0L;
     auto pHandleInfo = (SystemHandleInformationData*)::malloc(sizeof(SystemHandleInformationData));
     ULONG ulHandleInfoSize = (ULONG)sizeof(SystemHandleInformationData);
@@ -312,6 +322,11 @@ HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
         bPreserveJob = true;
     }
 
+    auto takeOwnershipPrivilegeGuard = Guard::CreateScopeGuard([]() {
+        if (FAILED(SetPrivilege(SE_TAKE_OWNERSHIP_NAME, FALSE)))
+            Log::Debug("Take-ownership privilege is _not_ held");
+    });
+
     ULONG ulTriedHandles = 0, ulFailedHandles = 0;
     for (unsigned int i = 0; i < pHandleInfo->ulCount; i++)
     {
@@ -342,11 +357,6 @@ HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
             else
                 ulFailedHandles++;
         }
-    }
-
-    if (FAILED(hr = SetPrivilege(SE_DEBUG_NAME, FALSE)))
-    {
-        Log::Debug("Debug privilege is _not_ held");
     }
 
     if (bIsProcessInJob)

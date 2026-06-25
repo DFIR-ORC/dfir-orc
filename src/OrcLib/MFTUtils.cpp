@@ -382,6 +382,7 @@ HRESULT MFTUtils::MultiSectorFixup(PFILE_RECORD_SEGMENT_HEADER pFRS, const std::
 HRESULT MFTUtils::MultiSectorFixup(
     PINDEX_ALLOCATION_BUFFER pFRS,
     DWORD dwSizeOfIndex,
+    DWORD dwBufferLength,
     const std::shared_ptr<VolumeReader>& pVolReader)
 {
     WORD fixupsig, i;
@@ -411,14 +412,32 @@ HRESULT MFTUtils::MultiSectorFixup(
     }
 
     LONG lBytesPerSector = pVolReader->GetBytesPerSector();
+    if (lBytesPerSector <= 0)
+    {
+        Log::Debug("Invalid bytes per sector ({}) in $INDEX_ALLOCATION fixup", lBytesPerSector);
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    if (dwSizeOfIndex > dwBufferLength)
+    {
+        Log::Debug("$INDEX_ALLOCATION fixup size ({}) exceeds buffer length ({})", dwSizeOfIndex, dwBufferLength);
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
 
     //
     // get the first fixup entry
     //
-    fixuparray = (WORD*)((BYTE*)pHeader + pHeader->UpdateSequenceArrayOffset) + 1;
-    fixupsig = fixuparray[-1];
     dest = (BYTE*)pHeader + lBytesPerSector - 2;
     numfix = (WORD)(dwSizeOfIndex / lBytesPerSector);
+
+    if (pHeader->UpdateSequenceArrayOffset + numfix * 2 > lBytesPerSector - 2)
+    {
+        Log::Debug("$INDEX_ALLOCATION update sequence array is out of bounds");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    fixuparray = (WORD*)((BYTE*)pHeader + pHeader->UpdateSequenceArrayOffset) + 1;
+    fixupsig = fixuparray[-1];
 
     //
     // go through the fixups

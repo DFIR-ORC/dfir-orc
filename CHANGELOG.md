@@ -1,5 +1,12 @@
 # ChangeLog
 
+## [10.3.2] - 2026-06-25
+
+Hottest week since 1947, when records began, so naturally the release is a hotfix.
+
+This release contains numerous bug fixes. While none of the fixed issues are known to be exploitable, some may have security relevance. As always, upgrading is recommended. See the commit history for details.
+
+
 ## [10.3.1] - 2026-06-17
 ### Fixed
 - Memory usage since updating to 7-Zip >24.09, which modified dictionary size and thread count

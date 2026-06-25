@@ -19,6 +19,7 @@
 
 #include "Log/Log.h"
 #include "Utils/WinApi.h"
+#include "SystemDetails.h"
 
 using namespace std;
 using namespace Concurrency;
@@ -195,6 +196,16 @@ HRESULT ProcessRedirect::CreatePipe(const WCHAR* szUniqueSuffix)
     HANDLE hTmpHandle = INVALID_HANDLE_VALUE;
 
     std::wstring pipeName;
+
+    DWORD osMajor = 0;
+    DWORD osMinor = 0;
+    DWORD pipeMode = PIPE_TYPE_BYTE | PIPE_READMODE_BYTE;
+    if (SUCCEEDED(SystemDetails::GetOSVersion(osMajor, osMinor)) && osMajor >= 6)
+    {
+        // PIPE_REJECT_REMOTE_CLIENTS is Vista+ (OS major >= 6); keeps these local stdio pipes off SMB, skip on XP.
+        pipeMode |= PIPE_REJECT_REMOTE_CLIENTS;
+    }
+
     if ((m_Select & StdOutput) || (m_Select & StdError))
     {
         if ((m_Select & StdOutput) && (m_Select & StdError))
@@ -213,7 +224,7 @@ HRESULT ProcessRedirect::CreatePipe(const WCHAR* szUniqueSuffix)
         if ((hTmpHandle = CreateNamedPipe(
                  pipeName.c_str(),
                  PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
-                 PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
+                 pipeMode,
                  PIPE_UNLIMITED_INSTANCES,
                  BUFFER_SIZE,
                  BUFFER_SIZE,
@@ -298,7 +309,7 @@ HRESULT ProcessRedirect::CreatePipe(const WCHAR* szUniqueSuffix)
         if ((hTmpHandle = CreateNamedPipe(
                  pipeName.c_str(),
                  PIPE_ACCESS_OUTBOUND | FILE_FLAG_OVERLAPPED | FILE_FLAG_FIRST_PIPE_INSTANCE,
-                 PIPE_TYPE_BYTE | PIPE_READMODE_BYTE,
+                 pipeMode,
                  PIPE_UNLIMITED_INSTANCES,
                  BUFFER_SIZE,
                  BUFFER_SIZE,

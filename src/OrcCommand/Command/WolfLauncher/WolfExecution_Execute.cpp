@@ -331,10 +331,13 @@ void WolfExecution::ArchiveNotificationHandler(const ArchiveNotification::Notifi
                 auto sha1 = Hash(m_strOutputFullPath, CryptoHashStreamAlgorithm::SHA1);
                 if (!sha1)
                 {
+                    // Do NOT dereference a failed Result below - that throws an uncaught exception.
                     Log::Error(L"Failed to retrieve SHA1 for '{}' [{}]", notification->Keyword(), sha1.error());
                 }
-
-                outcomeArchive.SetSha1(ToUtf8(*sha1));
+                else
+                {
+                    outcomeArchive.SetSha1(ToUtf8(*sha1));
+                }
             }
 
             outcomeArchive.SetInputType(::GetArchiveInputType());
@@ -890,11 +893,15 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
             Concurrency::agent::wait(m_archiveAgent.get(), (unsigned int)m_ArchiveTimeOut.count());
         }
     }
-    catch (Concurrency::operation_timed_out e)
+    catch (Concurrency::operation_timed_out&)
     {
-        Log::Critical(
-            "Command archive completion timeout: {} secs reached",
-            std::chrono::duration_cast<std::chrono::seconds>(m_ArchiveTimeOut).count());
+        // The agent is still compressing and references buffers we own; returning now would let teardown
+        // destroy them under it (use-after-free). Wait for it to finish, warning while it overruns.
+        if (m_archiveAgent != nullptr)
+        {
+            WaitForArchiveAgentCompletion(*m_archiveAgent, m_ArchiveTimeOut);
+        }
+
         return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
     }
 

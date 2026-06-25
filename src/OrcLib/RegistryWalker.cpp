@@ -8,6 +8,7 @@
 #include "stdafx.h"
 
 #include "RegistryWalker.h"
+#include "Utils/Guard.h"
 
 using namespace Orc;
 
@@ -250,6 +251,13 @@ HRESULT RegistryHive::LoadHive(ByteStream& HiveStream)
         return E_FAIL;
     }
 
+    constexpr ULONG64 kMaxHiveSize = 4ULL * 1024 * 1024 * 1024;
+    if (ulSize > kMaxHiveSize || ulSize > (ULONG64)SIZE_MAX)
+    {
+        Log::Error("Hive size is too large ({} bytes)", ulSize);
+        return HRESULT_FROM_WIN32(ERROR_FILE_TOO_LARGE);
+    }
+
     m_pHiveBuffer = (BYTE*)malloc((size_t)ulSize);
     if (m_pHiveBuffer == NULL)
     {
@@ -392,8 +400,8 @@ HRESULT RegistryHive::CheckLfHeader(const LF_LH_Header* const pHeader) const
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    if ((sizeof(LF_LH_Header) + (pHeader->NumberOfKeys - 1) * sizeof(HashRecord))
-        > (size_t)((4 - (int)pHeader->Header.BlockSize)))
+    const size_t lfRecordCount = (pHeader->NumberOfKeys == 0) ? 0 : (size_t)(pHeader->NumberOfKeys - 1);
+    if ((sizeof(LF_LH_Header) + lfRecordCount * sizeof(HashRecord)) > (size_t)((4 - (int)pHeader->Header.BlockSize)))
     {
         Log::Error("Lf/Lh-block size and computed size does not match");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -444,6 +452,17 @@ HRESULT RegistryHive::CheckNkHeader(
     {
         Log::Debug("Nk header: Class name offset is invalid");
         *bHasClassName = false;
+    }
+    else
+    {
+        const BYTE* hiveBegin = m_pHiveBuffer;
+        const BYTE* hiveEnd = m_pHiveBuffer + m_ulHiveBufferSize;
+        const BYTE* pClassName = FixOffset(pHeader->OffsetToClassName);
+        if (pClassName < hiveBegin || pClassName > hiveEnd || (size_t)(hiveEnd - pClassName) < pHeader->ClassNameLength)
+        {
+            Log::Debug("Nk header: class name length is out of bounds");
+            *bHasClassName = false;
+        }
     }
 
     *bSubkeyListIsResident = true;
@@ -539,7 +558,9 @@ HRESULT RegistryHive::CheckLiHeader(const LI_RI_Header* const pHeader) const
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    if ((pHeader->NumberOfKeys - 1) * 4 + sizeof(LI_RI_Header) > (size_t)(4 - (int)pHeader->Header.BlockSize))
+    // Same WORD underflow as CheckLfHeader: 'NumberOfKeys - 1' wraps when it is 0, bypassing the check.
+    const size_t liRecordCount = (pHeader->NumberOfKeys == 0) ? 0 : (size_t)(pHeader->NumberOfKeys - 1);
+    if (liRecordCount * 4 + sizeof(LI_RI_Header) > (size_t)(4 - (int)pHeader->Header.BlockSize))
     {
         Log::Error("Li/ri-block size and computed size does not match ");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -614,14 +635,22 @@ HRESULT RegistryHive::ParseValues(
             std::string Name(pCurrentValue->Name, wNameLen);
 
             BYTE* pData = nullptr;
-            dwDatasLen = pCurrentValue->DataLength;
             if (bIsDataResident)
             {
                 // Check for in place datas
                 if (pCurrentValue->DataLength & 0x80000000)
                 {
+                    const DWORD dwInlineLen = pCurrentValue->DataLength ^ 0x80000000;
+
+                    // Inline data is stored in the 4-byte OffsetToData field; reject a forged larger length.
+                    if (dwInlineLen > sizeof(pCurrentValue->OffsetToData))
+                    {
+                        Log::Debug("Key '{}': inline value data length out of bounds", pCurrentKey->GetKeyName());
+                        continue;
+                    }
+
                     pData = (BYTE*)&(pCurrentValue->OffsetToData);
-                    dwDatasLen = pCurrentValue->DataLength ^ 0x80000000;
+                    dwDatasLen = dwInlineLen;
                 }
                 // Datas is too large to fit, using an offset
                 else
@@ -632,24 +661,40 @@ HRESULT RegistryHive::ParseValues(
                         Log::Debug("Key '{}': Value data header is invalid", pCurrentKey->GetKeyName());
                         continue;
                     }
-                    pData = (BYTE*)&(pDataHeader->Data);
-                    if (dwDatasLen != (DWORD)(-(int)pDataHeader->Header.BlockSize))
+
+                    // Clamp the declared length to the bytes actually available in the (in-buffer) data cell so a
+                    // forged DataLength cannot drive an out-of-bounds read in the value consumers.
+                    const size_t cellSize = (size_t)(-(int)pDataHeader->Header.BlockSize);
+                    const size_t avail =
+                        cellSize > offsetof(DataHeader, Data) ? cellSize - offsetof(DataHeader, Data) : 0;
+                    const DWORD dwCellDataLen =
+                        (pCurrentValue->DataLength > avail) ? (DWORD)avail : pCurrentValue->DataLength;
+                    if (dwCellDataLen != pCurrentValue->DataLength)
                     {
                         Log::Debug(
                             "Keys '{}': size mismatch for data inside value '{}'", pCurrentKey->GetKeyName(), Name);
                     }
+
+                    pData = (BYTE*)&(pDataHeader->Data);
+                    dwDatasLen = dwCellDataLen;
                 }
+            }
+
+            // Only carry a length when the data is actually resident in the hive buffer; otherwise the consumers
+            // would copy from a null/foreign pointer.
+            if (pData == nullptr)
+            {
+                dwDatasLen = 0;
             }
 
             wFlag = pCurrentValue->Flag;
             Type = pCurrentValue->Type;
 
-            const RegistryValue* const CurrentRegValue =
-                new RegistryValue(std::move(Name), pCurrentKey, Type, pData, dwDatasLen, wFlag, bIsDataResident);
+            // unique_ptr so the value is freed even if the user callback throws.
+            const std::unique_ptr<const RegistryValue> CurrentRegValue = std::make_unique<RegistryValue>(
+                std::move(Name), pCurrentKey, Type, pData, dwDatasLen, wFlag, bIsDataResident);
 
-            RegistryValueCallback(CurrentRegValue);
-
-            delete CurrentRegValue;
+            RegistryValueCallback(CurrentRegValue.get());
         }
         else
         {
@@ -1095,6 +1140,11 @@ HRESULT RegistryHive::Walk(
 
     std::vector<RegistryKey*> CurrentKeySet;
     CurrentKeySet.push_back(RootKeyRegistryKey);
+    auto keySetGuard = Guard::CreateScopeGuard([&CurrentKeySet]() {
+        for (RegistryKey* pKey : CurrentKeySet)
+            delete pKey;
+    });
+
     RegistryKey* CurrentKey;
     while (!CurrentKeySet.empty())
     {

@@ -40,7 +40,16 @@ public:
     virtual std::wstring GetRemoteFullPath(const std::wstring& strRemoteName) PURE;
     virtual std::wstring GetRemotePath(const std::wstring& strRemoteName) PURE;
 
-    ~UploadAgent() {};
+    ~UploadAgent()
+    {
+        // Defensive teardown stop: ensure the repeating status timer cannot fire a tick into a
+        // partially-destroyed agent or a freed message buffer. stop() blocks until any in-flight tick
+        // completes and is idempotent with the stop() on the run() completion path.
+        if (m_RefreshTimer)
+        {
+            m_RefreshTimer->stop();
+        }
+    }
 
 protected:
     UploadNotification::ITarget& m_notificationTarget;

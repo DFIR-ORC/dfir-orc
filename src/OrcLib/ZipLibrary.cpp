@@ -94,7 +94,10 @@ std::unique_ptr<ZipLibrary> ZipLibrary::CreateZipLibrary()
 
 std::shared_ptr<ZipLibrary> ZipLibrary::GetZipLibrary()
 {
+    static std::mutex singletonMutex;
     static std::weak_ptr<ZipLibrary> singleton;
+
+    std::scoped_lock lock(singletonMutex);
 
     auto lib = singleton.lock();
     if (lib)

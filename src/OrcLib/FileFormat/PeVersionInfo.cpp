@@ -107,7 +107,25 @@ Result<VS_FIXEDFILEINFO> ParseFixedFileInfo(const BlockView& block)
 
 Result<std::wstring_view> ExtractKey(BufferView block, const VS_VERSION_HEADER* header)
 {
-    const size_t maxKeyChars = (header->wLength - offsetof(VS_VERSION_HEADER, szKey)) / sizeof(wchar_t);
+    // Guard against a forged wLength smaller than the fixed header (which would underflow the key length) and
+    // clamp the key scan to the block, so a forged length cannot drive an out-of-bounds read.
+    if (header->wLength <= offsetof(VS_VERSION_HEADER, szKey))
+    {
+        Log::Debug("Invalid version block: length smaller than header");
+        return std::errc::bad_message;
+    }
+
+    const BYTE* key = reinterpret_cast<const BYTE*>(header->szKey);
+    const BYTE* blockEnd = block.data() + block.size();
+    if (key < block.data() || key > blockEnd)
+    {
+        Log::Debug("Invalid version block: key out of bounds");
+        return std::errc::bad_message;
+    }
+
+    const size_t maxByBlock = static_cast<size_t>(blockEnd - key) / sizeof(wchar_t);
+    const size_t maxByLength = (header->wLength - offsetof(VS_VERSION_HEADER, szKey)) / sizeof(wchar_t);
+    const size_t maxKeyChars = std::min(maxByBlock, maxByLength);
     std::wstring_view headerEnd(header->szKey, maxKeyChars);
 
     auto keyEnd = headerEnd.find_first_of(L'\0');
@@ -130,9 +148,9 @@ Result<std::wstring_view> ExtractTextValue(BufferView block, const VS_VERSION_HE
         return std::errc::bad_message;
     }
 
-    std::wstring_view valueView(reinterpret_cast<const WCHAR*>(block.data() + valueOffset), header->wValueLength);
+    std::wstring_view valueView(reinterpret_cast<const WCHAR*>(block.data() + valueOffset), cbValue / sizeof(wchar_t));
     auto nullPos = valueView.find_first_of(L'\0');
-    size_t length = (nullPos == std::wstring_view::npos) ? header->wValueLength : nullPos;
+    size_t length = (nullPos == std::wstring_view::npos) ? valueView.size() : nullPos;
     length = std::min(length, valueView.size());
     return valueView.substr(0, length);
 }

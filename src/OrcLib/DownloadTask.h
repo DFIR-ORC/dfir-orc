@@ -42,8 +42,8 @@ public:
             , strLocalPath(strLocal)
             , bDelete(bDel) {};
         DownloadFile(std::wstring&& strRemote, std::wstring&& strLocal, bool bDel) noexcept
-            : strRemoteName(strRemote)
-            , strLocalPath(strLocal)
+            : strRemoteName(std::move(strRemote))
+            , strLocalPath(std::move(strLocal))
             , bDelete(bDel) {};
 
         std::wstring strRemoteName;

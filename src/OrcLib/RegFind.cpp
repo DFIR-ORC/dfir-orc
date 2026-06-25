@@ -1178,7 +1178,7 @@ RegFind::ExactDatas(const std::shared_ptr<SearchTerm>& aTerm, const RegistryValu
                 while (i < ulSize)
                 {
 
-                    dwCurrentStrSize = wcslen((WCHAR*)(pDatas + i)) * sizeof(WCHAR);
+                    dwCurrentStrSize = wcsnlen((WCHAR*)(pDatas + i), (ulSize - i) / sizeof(WCHAR)) * sizeof(WCHAR);
                     if (aTerm->m_WDataContent.GetCount() != dwCurrentStrSize)
                     {
                         i = i + 2 + dwCurrentStrSize;
@@ -1284,7 +1284,7 @@ RegFind::RegexDatas(const std::shared_ptr<SearchTerm>& aTerm, const RegistryValu
 
                 while (i < DatasSize)
                 {
-                    CurrentStrSize = wcslen((WCHAR*)(pDatas + i));
+                    CurrentStrSize = wcsnlen((WCHAR*)(pDatas + i), (DatasSize - i) / sizeof(WCHAR));
 
                     if (std::regex_match(
                             (WCHAR*)(pDatas + i),
@@ -1299,14 +1299,15 @@ RegFind::RegexDatas(const std::shared_ptr<SearchTerm>& aTerm, const RegistryValu
                 }
                 break;
             case ValueType::RegSZ:
-            case ValueType::ExpandSZ:
+            case ValueType::ExpandSZ: {
 
-                if (std::regex_match(
-                        (WCHAR*)pDatas, ((WCHAR*)pDatas) + wcslen((WCHAR*)pDatas), aTerm->m_wregexDataContentPattern))
+                const size_t cch = wcsnlen((WCHAR*)pDatas, DatasSize / sizeof(WCHAR));
+                if (std::regex_match((WCHAR*)pDatas, ((WCHAR*)pDatas) + cch, aTerm->m_wregexDataContentPattern))
                     matchedCriteria =
                         static_cast<SearchTerm::Criteria>(SearchTerm::Criteria::DATA_CONTENT_REGEX | matchedCriteria);
 
                 break;
+            }
             case ValueType::RegBin:
 
                 if (std::regex_match(pDatas, pDatas + DatasSize, aTerm->m_regexDataContentPattern))

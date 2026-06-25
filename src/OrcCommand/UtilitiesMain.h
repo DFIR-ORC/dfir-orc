@@ -467,7 +467,11 @@ public:
                 }
                 catch (concurrency::operation_timed_out&)
                 {
-                    Log::Critical("Complete archive operation has timed out");
+                    // The agent is still running and references m_messageBuf / m_notificationBuf; returning now
+                    // would let them be destroyed under it (use-after-free). Wait for it to finish, warning while
+                    // it overruns the 2 minute completion window.
+                    WaitForArchiveAgentCompletion(*m_pArchiveAgent, std::chrono::milliseconds(120000));
+
                     return HRESULT_FROM_WIN32(ERROR_TIMEOUT);
                 }
             }

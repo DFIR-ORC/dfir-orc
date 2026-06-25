@@ -207,6 +207,14 @@ void UploadAgent::run()
                         SendResult(notification);
                     }
 
+                    // Stop the repeating status timer before leaving run(): otherwise a later tick would post
+                    // into m_requestTarget after the agent and its message queue are torn down (use-after-free).
+                    // stop() blocks until any in-flight tick completes.
+                    if (m_RefreshTimer)
+                    {
+                        m_RefreshTimer->stop();
+                    }
+
                     done();
                     return;
                 }

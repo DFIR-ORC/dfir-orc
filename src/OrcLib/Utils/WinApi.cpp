@@ -462,6 +462,20 @@ UpdateSecurityInfo(HANDLE hFile, LPSECURITY_ATTRIBUTES lpSecurityAttributes, PSI
     return Orc::Success<void>();
 }
 
+// Network/removable drives reject a protected DACL of local SIDs (the share/device
+// governs access), which would orphan the file at creation. Skip hardening there.
+bool IsReducedHardeningDrive(const wchar_t* lpFileName) noexcept
+{
+    std::wstring volume(wcslen(lpFileName) + 1, L'\0');  // GetVolumePathNameW needs >= input length
+    if (!GetVolumePathNameW(lpFileName, volume.data(), static_cast<DWORD>(volume.size())))
+    {
+        return false;  // cannot determine drive type: keep hardening (fail-closed)
+    }
+
+    const UINT type = GetDriveTypeW(volume.data());
+    return type == DRIVE_REMOTE || type == DRIVE_REMOVABLE;
+}
+
 [[nodiscard]] std::error_code RemoveFileIfExists(const std::wstring& path) noexcept
 {
     if (DeleteFileW(path.c_str()))
@@ -708,8 +722,14 @@ Result<Guard::FileHandle> CreateFileApi(
     HANDLE hTemplate,
     BOOL ReplaceNullSecurityAttributes) noexcept
 {
-    const bool needsHardening = HasWriteAccess(dwDesiredAccess) && !HasExplicitSecurityDescriptor(lpSecurityAttributes)
+    bool needsHardening = HasWriteAccess(dwDesiredAccess) && !HasExplicitSecurityDescriptor(lpSecurityAttributes)
         && ReplaceNullSecurityAttributes;
+
+    if (needsHardening && IsReducedHardeningDrive(lpFileName))
+    {
+        Log::Warn(L"Skipping file hardening on network/removable drive (path: {})", lpFileName);
+        needsHardening = false;
+    }
 
     if (!needsHardening)
     {

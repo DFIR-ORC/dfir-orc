@@ -719,6 +719,13 @@ HRESULT IndexRootAttribute::Open()
     else if (m_pHeader->FormCode == RESIDENT_FORM)
     {
         m_pRoot = (PINDEX_ROOT)((PBYTE)m_pHeader) + m_pHeader->Form.Resident.ValueOffset;
+        if (m_pRoot->BytesPerIndexBuffer == 0)
+        {
+            Log::Debug("Invalid $INDEX_ROOT: BytesPerIndexBuffer is zero");
+            m_pRoot = nullptr;
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        }
+
         return S_OK;
     }
     return S_OK;
@@ -795,11 +802,30 @@ HRESULT ExtendedAttribute::Parse(const std::shared_ptr<VolumeReader>& VolReader)
 
     PFILE_FULL_EA_INFORMATION pEAInfo = EAInformation();
     PFILE_FULL_EA_INFORMATION pBase = pEAInfo;
+    const BYTE* bufEnd = reinterpret_cast<const BYTE*>(pBase) + EASize();
 
     wstringstream EANameStream;
 
-    while (pEAInfo < (PFILE_FULL_EA_INFORMATION)((BYTE*)pBase + EASize()))
+    while (true)
     {
+        const BYTE* pEntry = reinterpret_cast<const BYTE*>(pEAInfo);
+
+        // The fixed entry header must fit before any forged length field is read.
+        if (pEntry < reinterpret_cast<const BYTE*>(pBase) || pEntry > bufEnd
+            || static_cast<size_t>(bufEnd - pEntry) < FIELD_OFFSET(FILE_FULL_EA_INFORMATION, EaName))
+        {
+            break;
+        }
+
+        // The name, its separating NUL, and the value must all fit within the buffer.
+        const BYTE* pName = reinterpret_cast<const BYTE*>(pEAInfo->EaName);
+        if (static_cast<size_t>(bufEnd - pName)
+            < static_cast<size_t>(pEAInfo->EaNameLength) + 1 + pEAInfo->EaValueLength)
+        {
+            Log::Debug("Forged $EA: name/value length out of bounds");
+            break;
+        }
+
         WCHAR szName[ORC_MAX_PATH];
 
         if (FAILED(hr = AnsiToWide(pEAInfo->EaName, pEAInfo->EaNameLength, szName, ORC_MAX_PATH)))
@@ -814,7 +840,14 @@ HRESULT ExtendedAttribute::Parse(const std::shared_ptr<VolumeReader>& VolReader)
             break;
         }
 
-        pEAInfo = (PFILE_FULL_EA_INFORMATION)((BYTE*)pEAInfo + pEAInfo->NextEntryOffset);
+        // Advance strictly forward and stay within the buffer to avoid OOB / infinite loops on forged offsets.
+        const BYTE* pNext = pEntry + pEAInfo->NextEntryOffset;
+        if (pNext <= pEntry || pNext > bufEnd)
+        {
+            break;
+        }
+
+        pEAInfo = (PFILE_FULL_EA_INFORMATION)pNext;
     }
 
     m_bParsed = true;
@@ -835,6 +868,9 @@ REPARSE_POINT_TYPE_AND_FLAGS Orc::ReparsePointAttribute::GetReparsePointType(PAT
     if (pHeader->FormCode != RESIDENT_FORM)
         return (REPARSE_POINT_TYPE_AND_FLAGS)0L;
 
+    if ((size_t)pHeader->Form.Resident.ValueOffset + sizeof(DWORD) > pHeader->RecordLength)
+        return (REPARSE_POINT_TYPE_AND_FLAGS)0L;
+
     PREPARSE_POINT_ATTRIBUTE pReparse =
         (PREPARSE_POINT_ATTRIBUTE)(((BYTE*)pHeader) + pHeader->Form.Resident.ValueOffset);
 
@@ -848,14 +884,49 @@ HRESULT ReparsePointAttribute::Parse()
 
     m_Flags = GetReparsePointType(m_pHeader);
 
-    PREPARSE_POINT_ATTRIBUTE pReparse =
-        (PREPARSE_POINT_ATTRIBUTE)(((BYTE*)m_pHeader) + m_pHeader->Form.Resident.ValueOffset);
+    const BYTE* base = reinterpret_cast<const BYTE*>(m_pHeader);
+    const BYTE* recordEnd = base + m_pHeader->RecordLength;
+    const BYTE* pValue = base + m_pHeader->Form.Resident.ValueOffset;
 
-    PREPARSE_POINT_DATA pData = (PREPARSE_POINT_DATA)pReparse->Data;
+    if (pValue < base || pValue > recordEnd
+        || static_cast<size_t>(recordEnd - pValue) < FIELD_OFFSET(REPARSE_POINT_ATTRIBUTE, Data))
+    {
+        Log::Debug("Forged $REPARSE_POINT: header out of bounds");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    PREPARSE_POINT_ATTRIBUTE pReparse = (PREPARSE_POINT_ATTRIBUTE)pValue;
+    const BYTE* pReparseData = reinterpret_cast<const BYTE*>(pReparse->Data);
+
+    const BYTE* reparseEnd = pReparseData + pReparse->DataLength;
+    if (reparseEnd > recordEnd)
+        reparseEnd = recordEnd;
+
+    if (reparseEnd < pReparseData
+        || static_cast<size_t>(reparseEnd - pReparseData) < FIELD_OFFSET(REPARSE_POINT_DATA, Data))
+    {
+        Log::Debug("Forged $REPARSE_POINT: reparse data out of bounds");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    PREPARSE_POINT_DATA pData = (PREPARSE_POINT_DATA)pReparseData;
+    const BYTE* namesBase = reinterpret_cast<const BYTE*>(pData->Data);
+
+    auto nameInBounds = [namesBase, reparseEnd](USHORT offset, USHORT length) -> bool {
+        const BYTE* start = namesBase + offset;
+        return start >= namesBase && start <= reparseEnd && static_cast<size_t>(reparseEnd - start) >= length;
+    };
+
+    if (!nameInBounds(pData->SubstituteNameOffset, pData->SubstituteNameLength)
+        || !nameInBounds(pData->PrintNameOffset, pData->PrintNameLength))
+    {
+        Log::Debug("Forged $REPARSE_POINT: name offset/length out of bounds");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
 
     strSubstituteName.assign(
-        (WCHAR*)((BYTE*)pData->Data + pData->SubstituteNameOffset), pData->SubstituteNameLength / sizeof(WCHAR));
-    strPrintName.assign((WCHAR*)((BYTE*)pData->Data + pData->PrintNameOffset), pData->PrintNameLength / sizeof(WCHAR));
+        (WCHAR*)(namesBase + pData->SubstituteNameOffset), pData->SubstituteNameLength / sizeof(WCHAR));
+    strPrintName.assign((WCHAR*)(namesBase + pData->PrintNameOffset), pData->PrintNameLength / sizeof(WCHAR));
 
     return S_OK;
 }

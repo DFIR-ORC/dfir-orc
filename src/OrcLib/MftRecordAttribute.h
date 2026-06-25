@@ -242,6 +242,17 @@ public:
 
     PINDEX_ENTRY FirstIndexEntry() const { return (PINDEX_ENTRY)NtfsFirstIndexEntry(&m_pRoot->IndexHeader); }
 
+    LPBYTE IndexEntriesEnd() const
+    {
+        LPBYTE recordEnd = ((LPBYTE)m_pHeader) + m_pHeader->RecordLength;
+        if (m_pRoot == nullptr)
+            return recordEnd;
+
+        LPBYTE valueEnd =
+            ((LPBYTE)m_pHeader) + m_pHeader->Form.Resident.ValueOffset + m_pHeader->Form.Resident.ValueLength;
+        return valueEnd < recordEnd ? valueEnd : recordEnd;
+    }
+
     LPBYTE FirstFreeByte()
     {
         return ((LPBYTE)NtfsFirstIndexEntry(&m_pRoot->IndexHeader)) + m_pRoot->IndexHeader.FirstFreeByte;

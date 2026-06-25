@@ -98,7 +98,9 @@ public:
             ULONGLONG index = ulTargetOffset - ulCurrentOffset;
             const std::shared_ptr<CBinaryBuffer>& buffer(*chunkIter);
 
-            if (index >= buffer->GetCount())
+            const ULONGLONG readSize =
+                (IsFat12Table() || IsFat16Table()) ? sizeof(unsigned short) : sizeof(unsigned long);
+            if (index >= buffer->GetCount() || readSize > buffer->GetCount() - index)
                 return E_FAIL;
 
             if (IsFat12Table())

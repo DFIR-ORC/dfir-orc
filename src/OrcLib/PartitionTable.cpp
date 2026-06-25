@@ -422,6 +422,12 @@ HRESULT PartitionTable::ParseGPTPartitionTable(IDiskExtent& diskExtend, UINT sec
         return hr;
     }
 
+    if (pGPTHeader->Size < 92 || pGPTHeader->Size > sizeof(GPTHeader))
+    {
+        Log::Error(L"Invalid GPT header size: {}", pGPTHeader->Size);
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
     // header crc check
     DWORD headerCrc = pGPTHeader->Crc32;
     pGPTHeader->Crc32 = 0;  // this field must be set to 0 when computing crc
@@ -438,6 +444,15 @@ HRESULT PartitionTable::ParseGPTPartitionTable(IDiskExtent& diskExtend, UINT sec
     if (pGPTHeader->NumberOfPartitionEntries > 128)
     {
         Log::Warn("Abnormally large number of GPT partition entries: {}", pGPTHeader->NumberOfPartitionEntries);
+    }
+
+    if (pGPTHeader->SizeofPartitionEntry < sizeof(GPTPartitionEntry))
+    {
+        Log::Error(
+            "Invalid GPT SizeofPartitionEntry {} (minimum {})",
+            pGPTHeader->SizeofPartitionEntry,
+            sizeof(GPTPartitionEntry));
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     CBinaryBuffer buffer;

@@ -80,12 +80,13 @@ public:
 
         uint32_t ignoredSubBlockCount = (readOffset - m_firstBlockOffset) / kMinSectorSize;
 
-        // Each bit represents a 512 bytes 'sub-block' in a 16384 bytes 'block'
-        uint32_t firstBlockBitmap = ~((1 << ignoredSubBlockCount) - 1);
+        // Each bit represents a 512 bytes 'sub-block' in a 16384 bytes 'block'. Shift on unsigned to avoid
+        // signed-overflow UB at bit 31; a full last block (>= 32 sub-blocks) is the all-bits-set mask.
+        uint32_t firstBlockBitmap = ~((1u << ignoredSubBlockCount) - 1);
 
         const size_t residueSubBlockCount =
             lastBlockResidue / kMinSectorSize + ((lastBlockResidue % kMinSectorSize) != 0);
-        uint32_t lastBlockBitmap = (1 << residueSubBlockCount) - 1;
+        uint32_t lastBlockBitmap = (residueSubBlockCount >= 32) ? 0xFFFFFFFF : ((1u << residueSubBlockCount) - 1);
         if (lastBlockBitmap == 0)
         {
             lastBlockBitmap = 0xFFFFFFFF;
@@ -145,7 +146,7 @@ void BitmapToChunks(Chunk::Type type, uint32_t bitmap, uint64_t offset, Chunks& 
     {
         for (; i < 32; ++i)
         {
-            if ((1 << i) & bitmap)
+            if ((1u << i) & bitmap)
             {
                 break;
             }
@@ -159,7 +160,7 @@ void BitmapToChunks(Chunk::Type type, uint32_t bitmap, uint64_t offset, Chunks& 
         uint8_t j = i + 1;
         for (; j < 32; ++j)
         {
-            if (!((1 << j) & bitmap))
+            if (!((1u << j) & bitmap))
             {
                 break;
             }
@@ -338,7 +339,8 @@ void ShadowCopy::Initialize(gsl::span<const Snapshot> snapshots, ShadowCopy& sha
 
     shadowCopy.Information() = ShadowCopyInformation(activeSnapshot.Information());
 
-    if (!activeSnapshot.PreviousBitmap().empty() && activeSnapshot.Bitmap().size() != activeSnapshot.PreviousBitmap().size())
+    if (!activeSnapshot.PreviousBitmap().empty()
+        && activeSnapshot.Bitmap().size() != activeSnapshot.PreviousBitmap().size())
     {
         // This should not be handled as an error. The bits over bitmap size should be seen as set.
         Log::Debug(
@@ -373,6 +375,12 @@ void ShadowCopy::Initialize(gsl::span<const Snapshot> snapshots, ShadowCopy& sha
             const auto blockIndex = offset >> 14;
             const auto bitmapIndex = blockIndex / 8;
             const auto bitIndex = 1 << blockIndex % 8;
+
+            if (bitmapIndex >= shadowCopy.m_bitmap.size())
+            {
+                Log::Debug("Skipping VSS forwarder with out-of-range bitmap index {}", bitmapIndex);
+                continue;
+            }
 
             shadowCopy.m_bitmap[bitmapIndex] = shadowCopy.m_bitmap[bitmapIndex] & ~bitIndex;
         }

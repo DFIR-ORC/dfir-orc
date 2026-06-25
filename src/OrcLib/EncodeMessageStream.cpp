@@ -129,6 +129,11 @@ STDMETHODIMP EncodeMessageStream::Initialize(const std::shared_ptr<ByteStream>& 
 
     EncodeInfo.cRecipients = (DWORD)m_recipients.size();
     EncodeInfo.rgpRecipients = (PCERT_INFO*)malloc(m_recipients.size() * sizeof(PCERT_INFO));
+    if (EncodeInfo.rgpRecipients == nullptr)
+    {
+        Log::Error("Failed to allocate the recipient array for enveloped-message encoding");
+        return E_OUTOFMEMORY;
+    }
 
     DWORD dwIndex = 0L;
     for (auto item : m_recipients)

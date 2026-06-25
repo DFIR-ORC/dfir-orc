@@ -1350,7 +1350,7 @@ Result<std::chrono::system_clock::time_point> Orc::SystemDetails::GetInstallDate
         return ec;
     }
 
-    __time32_t installDate;
+    DWORD installDate = 0;
     const wchar_t value[] = L"InstallDate";
     DWORD valueType = 0L;
     DWORD cbData = sizeof(installDate);
@@ -1362,7 +1362,14 @@ Result<std::chrono::system_clock::time_point> Orc::SystemDetails::GetInstallDate
         return ec;
     }
 
-    return std::chrono::system_clock::from_time_t(installDate);
+    if (valueType != REG_DWORD)
+    {
+        auto ec = Win32Error(ERROR_INVALID_DATATYPE);
+        Log::Debug(L"Unexpected type for InstallDate (key: {}, type: {}) [{}]", key, valueType, ec);
+        return ec;
+    }
+
+    return std::chrono::system_clock::from_time_t(static_cast<time_t>(installDate));
 }
 
 SystemDetails::DriveType SystemDetails::GetPathLocation(const std::wstring& strAnyPath)

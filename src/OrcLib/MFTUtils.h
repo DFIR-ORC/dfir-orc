@@ -106,6 +106,7 @@ public:
     static HRESULT MultiSectorFixup(
         PINDEX_ALLOCATION_BUFFER pFRS,
         DWORD dwSizeOfIndex,
+        DWORD dwBufferLength,
         const std::shared_ptr<VolumeReader>& pVolReader);
 };
 

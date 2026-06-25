@@ -306,7 +306,10 @@ std::error_code PerformSelfUpdate(const fs::path& newExe)
         return ec;
     }
 
-    if (!MoveFileExW(newExe.c_str(), currentExe.c_str(), MOVEFILE_REPLACE_EXISTING))
+    // The staged image and the destination can resolve to different volumes (e.g. an exe on a network
+    // share, where Windows reports the move as ERROR_NOT_SAME_DEVICE). MOVEFILE_COPY_ALLOWED lets the
+    // move fall back to copy+delete across volumes instead of failing.
+    if (!MoveFileExW(newExe.c_str(), currentExe.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
     {
         ec = LastWin32Error();
         Log::Error(L"Failed MoveFileExW (input: {}, output: {}) [{}]", newExe, currentExe, ec);
@@ -317,10 +320,10 @@ std::error_code PerformSelfUpdate(const fs::path& newExe)
     fs::path tempDir = fs::temp_directory_path(ec);
     fs::path tempBackup = tempDir / backupPath.filename();
 
-    if (!MoveFileExW(backupPath.c_str(), tempBackup.c_str(), MOVEFILE_REPLACE_EXISTING))
+    if (!MoveFileExW(backupPath.c_str(), tempBackup.c_str(), MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED))
     {
         ec = LastWin32Error();
-        Log::Debug(L"Failed MoveFileExW (input: {}, output: {}) [{}]", newExe, currentExe, ec);
+        Log::Debug(L"Failed MoveFileExW (input: {}, output: {}) [{}]", backupPath, tempBackup, ec);
         ec.clear();  // let the file inplace and register it for removal
 
         if (!MoveFileExW(backupPath.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT))

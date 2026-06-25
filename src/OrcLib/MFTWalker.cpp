@@ -682,6 +682,35 @@ HRESULT MFTWalker::SetCallbacks(const Callbacks& pCallbacks)
     return S_OK;
 }
 
+namespace {
+
+// The fixed INDEX_ENTRY header must lie fully within [bufBegin, bufEnd) before any field (Flags/Length)
+// of a forged index entry is dereferenced.
+bool IsIndexEntryHeaderInBounds(const INDEX_ENTRY* entry, const BYTE* bufBegin, const BYTE* bufEnd)
+{
+    if (entry == nullptr)
+        return false;
+
+    const BYTE* p = reinterpret_cast<const BYTE*>(entry);
+    return p >= bufBegin && p <= bufEnd && static_cast<size_t>(bufEnd - p) >= sizeof(INDEX_ENTRY);
+}
+
+// Advance to the next index entry, rejecting a forged Length that is zero (would loop forever) or that
+// would carry the walk past the end of the buffer.
+PINDEX_ENTRY NextIndexEntryChecked(PINDEX_ENTRY entry, const BYTE* bufEnd)
+{
+    if (entry->Length < sizeof(INDEX_ENTRY))
+        return nullptr;
+
+    BYTE* next = reinterpret_cast<BYTE*>(entry) + entry->Length;
+    if (next > bufEnd)
+        return nullptr;
+
+    return reinterpret_cast<PINDEX_ENTRY>(next);
+}
+
+}  // namespace
+
 HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
 {
     HRESULT hr = E_FAIL;
@@ -704,15 +733,17 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
     if (pIR != nullptr)
     {
         PINDEX_ENTRY entry = pIR->FirstIndexEntry();
+        const BYTE* bufBegin = reinterpret_cast<const BYTE*>(entry);
+        const BYTE* bufEnd = pIR->IndexEntriesEnd();
 
-        while (!(entry->Flags & INDEX_ENTRY_END))
+        while (IsIndexEntryHeaderInBounds(entry, bufBegin, bufEnd) && !(entry->Flags & INDEX_ENTRY_END))
         {
             PFILE_NAME pFileName = (PFILE_NAME)((PBYTE)entry + sizeof(INDEX_ENTRY));
 
             if (m_Callbacks.I30Callback)
                 m_Callbacks.I30Callback(m_pVolReader, pRecord, entry, pFileName, false);
 
-            entry = NtfsNextIndexEntry(entry);
+            entry = NextIndexEntryChecked(entry, bufEnd);
         }
     }
 
@@ -755,7 +786,9 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
 
             if ((*pBM)[blockIndex])
             {
-                if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
+                if (FAILED(
+                        hr = MFTUtils::MultiSectorFixup(
+                            pIABuff, pIR->SizePerIndex(), static_cast<DWORD>(Data.GetCount()), m_pVolReader)))
                 {
                     if (HRESULT_FROM_NT(NTE_BAD_SIGNATURE) != hr)
                     {
@@ -767,15 +800,22 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                 {
                     PINDEX_HEADER pHeader = &(pIABuff->IndexHeader);
                     PINDEX_ENTRY pEntry = (PINDEX_ENTRY)NtfsFirstIndexEntry(pHeader);
+                    const BYTE* allocBegin = reinterpret_cast<const BYTE*>(pEntry);
+                    const BYTE* allocEnd = Data.GetData() + Data.GetCount();
 
                     // Read valid data until last entry flag
-                    while (!(pEntry->Flags & INDEX_ENTRY_END))
+                    while (IsIndexEntryHeaderInBounds(pEntry, allocBegin, allocEnd)
+                           && !(pEntry->Flags & INDEX_ENTRY_END))
                     {
                         PFILE_NAME pFileName = (PFILE_NAME)((PBYTE)pEntry + sizeof(INDEX_ENTRY));
 
                         m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pFileName, false);
 
-                        pEntry = NtfsNextIndexEntry(pEntry);
+                        PINDEX_ENTRY pNext = NextIndexEntryChecked(pEntry, allocEnd);
+                        if (pNext == nullptr)
+                            break;
+
+                        pEntry = pNext;
                     }
 
                     // Read in the slack space the old entries
@@ -813,7 +853,9 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                     L"Item in $INDEX_ALLOCATION is not in use (FRN: {:#x}) only carving...",
                     NtfsFullSegmentNumber(&pRecord->GetFileReferenceNumber()));
 
-                if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
+                if (FAILED(
+                        hr = MFTUtils::MultiSectorFixup(
+                            pIABuff, pIR->SizePerIndex(), static_cast<DWORD>(Data.GetCount()), m_pVolReader)))
                 {
                     Log::Debug("Failed to fixup carved $INDEX_ALLOCATION [{}]", SystemError(hr));
                     return S_OK;
@@ -947,7 +989,12 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
 
                         if ((*pBM)[i])
                         {
-                            if (FAILED(hr = MFTUtils::MultiSectorFixup(pIABuff, pIR->SizePerIndex(), m_pVolReader)))
+                            if (FAILED(
+                                    hr = MFTUtils::MultiSectorFixup(
+                                        pIABuff,
+                                        pIR->SizePerIndex(),
+                                        static_cast<DWORD>(Data.GetCount()),
+                                        m_pVolReader)))
                             {
                                 Log::Error(L"Failed to fixup $INDEX_ALLOCATION header [{}]", SystemError(hr));
                                 return hr;
@@ -1278,9 +1325,8 @@ HRESULT MFTWalker::AddDirectoryName(MFTRecord* pRecord)
         // simple case, record is not a child and a directory... let's add it!
         PFILE_NAME pFileName = pRecord->GetMain_PFILE_NAME();
         if (pFileName != NULL)
-            m_DirectoryNames.insert(
-                pair<MFTUtils::SafeMFTSegmentNumber, MFTFileNameWrapper>(
-                    NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), MFTFileNameWrapper(pFileName)));
+            m_DirectoryNames.insert(pair<MFTUtils::SafeMFTSegmentNumber, MFTFileNameWrapper>(
+                NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), MFTFileNameWrapper(pFileName)));
         else
         {
             Log::Trace(
@@ -1298,10 +1344,9 @@ HRESULT MFTWalker::AddDirectoryName(MFTRecord* pRecord)
             // it's not... we need to add it!
             PFILE_NAME pFileName = pRecord->m_pBaseFileRecord->GetMain_PFILE_NAME();
             if (pFileName != NULL)
-                m_DirectoryNames.insert(
-                    pair<MFTUtils::SafeMFTSegmentNumber, MFTFileNameWrapper>(
-                        NtfsFullSegmentNumber(&pRecord->m_pBaseFileRecord->m_FileReferenceNumber),
-                        MFTFileNameWrapper(pFileName)));
+                m_DirectoryNames.insert(pair<MFTUtils::SafeMFTSegmentNumber, MFTFileNameWrapper>(
+                    NtfsFullSegmentNumber(&pRecord->m_pBaseFileRecord->m_FileReferenceNumber),
+                    MFTFileNameWrapper(pFileName)));
             else
             {
                 Log::Trace(
@@ -1536,9 +1581,8 @@ MFTWalker::AddRecord(MFTUtils::SafeMFTSegmentNumber& ullRecordIndex, CBinaryBuff
                     return S_OK;
                 }
 
-                m_MFTMap.insert(
-                    pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>(
-                        NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), pRecord));
+                m_MFTMap.insert(pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>(
+                    NtfsFullSegmentNumber(&pRecord->m_FileReferenceNumber), pRecord));
 
                 pAddedRecord = pRecord;
             }
