@@ -12,6 +12,23 @@
 
 using namespace Orc;
 
+namespace {
+
+bool IsRangeValid(size_t bufferSize, uint32_t rangeOffset, size_t rangeSize)
+{
+    if (rangeOffset == 0xFFFFFFFF)
+        return false;
+
+    const int signedOffset = static_cast<int>(rangeOffset);
+    if (signedOffset < 0)
+        return false;
+
+    const uint64_t start = static_cast<uint64_t>(signedOffset) + 0x1000;
+    return start <= bufferSize && rangeSize <= bufferSize - start;
+};
+
+}  // namespace
+
 RegistryValue::RegistryValue(
     std::string&& ValueName,
     const RegistryKey* const ParentKey,
@@ -480,15 +497,11 @@ HRESULT RegistryHive::CheckNkHeader(
     // check for all keys execpt root key!
     if (pHeader->Type == KeyType::key)
     {
-        // Don't throw error because this field is never used to build keys. (Parent key is always known)
-        if (!IsOffsetValid(pHeader->OffsetToParent))
+        if (!::IsRangeValid(m_ulHiveBufferSize, pHeader->OffsetToParent, sizeof(KeyHeader)))
         {
             Log::Debug("Nk header: ParentKey offset is invalid");
         }
-
-        // check parent key signature
-
-        if (_strnicmp(((KeyHeader*)FixOffset(pHeader->OffsetToParent))->Signature, "nk", 2))
+        else if (_strnicmp(((KeyHeader*)FixOffset(pHeader->OffsetToParent))->Signature, "nk", 2))
         {
             Log::Debug("Nk header: ParentKey signature mismatch");
         }
@@ -610,6 +623,27 @@ HRESULT RegistryHive::ParseValues(
 
     const KeyHeader* const pCurrentKeyHeader = pCurrentKey->GetKeyHeader();
     ValuesArray* pValuesList = (ValuesArray*)FixOffset(pCurrentKeyHeader->OffsetToValueList);
+
+    if (!::IsRangeValid(m_ulHiveBufferSize, pCurrentKeyHeader->OffsetToValueList, sizeof(BlockHeader))
+        || CheckDataHeader(&pValuesList->Header) != S_OK)
+    {
+        Log::Debug("Key '{}': value list cell is out of bounds", pCurrentKey->GetKeyName());
+        return S_OK;
+    }
+
+    const size_t valueListCellSize = (size_t)(-(int)pValuesList->Header.BlockSize);
+    const size_t maxValueOffsets =
+        valueListCellSize > sizeof(BlockHeader) ? (valueListCellSize - sizeof(BlockHeader)) / sizeof(DWORD) : 0;
+    if (dwCount > maxValueOffsets)
+    {
+        Log::Debug(
+            "Key '{}': value count {} exceeds value-list cell capacity {}",
+            pCurrentKey->GetKeyName(),
+            dwCount,
+            maxValueOffsets);
+        dwCount = (DWORD)maxValueOffsets;
+    }
+
     DWORD i;
     const ValueHeader* pCurrentValue;
     for (i = 0; i < dwCount; i++)
@@ -1092,6 +1126,7 @@ HRESULT RegistryHive::Walk(
         Log::Error(L"Hive '{}': hive is not loaded", m_strHiveName);
         return E_UNEXPECTED;
     }
+
     // Get Root key
     KeyHeader* pRegKey;
     pRegKey = (KeyHeader*)FixOffset(m_dwRootKeyOffset);
