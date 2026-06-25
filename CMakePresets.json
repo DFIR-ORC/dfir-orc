@@ -97,6 +97,25 @@
             "binaryDir": "${sourceDir}/build-llm/dfir-orc-x86"
         },
         {
+            "name": "dfir-orc-x64-clangd",
+            "displayName": "clangd compile_commands (Ninja, x64)",
+            "description": "Standalone Ninja configure that emits compile_commands.json for the clangd LSP.",
+            "inherits": "dfir-orc-x64",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build-llm/dfir-orc-x64-clangd",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "toolset": {
+                "value": "v143",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
             "name": "capsule-base",
             "hidden": true,
             "toolset": { "value": "v141_xp", "strategy": "set" },

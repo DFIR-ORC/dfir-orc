@@ -1,0 +1,15 @@
+# clangd configuration for the DFIR-ORC source tree.
+#
+# Points clangd at the compile database emitted by the dedicated Ninja
+# configure (CMake preset "dfir-orc-x64-clangd"). The production builds use the
+# Visual Studio generator, which does not emit compile_commands.json, so this
+# separate build dir exists only to feed the LSP. Regenerate it with:
+#   cmake --preset dfir-orc-x64-clangd   (from a VS x64 developer prompt)
+CompileFlags:
+  CompilationDatabase: build-llm/dfir-orc-x64-clangd
+  # The compile DB uses MSVC binary PCH (/Yu + /Fp), which clang cannot read;
+  # /Yu also makes clang skip parsing the PCH headers, flooding files with
+  # spurious "unknown type" errors. Strip them but KEEP /FI so the PCH header
+  # is force-included normally. /WX is dropped too: clang emits warnings MSVC
+  # does not, and as errors they blow the limit and cascade into bogus verdicts.
+  Remove: [/Yu*, /Fp*, /WX]
