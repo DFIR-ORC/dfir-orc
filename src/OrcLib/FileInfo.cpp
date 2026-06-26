@@ -1556,12 +1556,17 @@ HRESULT FileInfo::WriteSecurityDirectory(ITableOutput& output)
     {
         DWORD cchString = 0L;
 
-        CryptBinaryToStringW(
-            GetDetails()->SecurityDirectory().GetData(),
-            (DWORD)GetDetails()->SecurityDirectory().GetCount(),
-            CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
-            NULL,
-            &cchString);
+        if (!CryptBinaryToStringW(
+                GetDetails()->SecurityDirectory().GetData(),
+                (DWORD)GetDetails()->SecurityDirectory().GetCount(),
+                CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
+                NULL,
+                &cchString))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Debug("Failed CryptBinaryToStringW size query [{}]", SystemError(hr));
+            return hr;
+        }
 
         LPWSTR szWstr = (LPWSTR)::malloc(msl::utilities::SafeInt<DWORD>(cchString) * sizeof(WCHAR));
         if (szWstr == nullptr)
@@ -1573,12 +1578,17 @@ HRESULT FileInfo::WriteSecurityDirectory(ITableOutput& output)
         }
         BOOST_SCOPE_EXIT_END
 
-        CryptBinaryToStringW(
-            GetDetails()->SecurityDirectory().GetData(),
-            (DWORD)GetDetails()->SecurityDirectory().GetCount(),
-            CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
-            szWstr,
-            &cchString);
+        if (!CryptBinaryToStringW(
+                GetDetails()->SecurityDirectory().GetData(),
+                (DWORD)GetDetails()->SecurityDirectory().GetCount(),
+                CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
+                szWstr,
+                &cchString))
+        {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            Log::Debug("Failed CryptBinaryToStringW conversion [{}]", SystemError(hr));
+            return hr;
+        }
 
         return output.WriteString(szWstr);
     }
