@@ -923,7 +923,11 @@ HRESULT RegistryHive::ParseLiRi(
         // Check if subkey list is of type LF/LH
         if (!_strnicmp((CHAR*)pHeader->Data, "lh", 2) || !_strnicmp((CHAR*)pHeader->Data, "lf", 2))
         {
-            ParseLfLh((LF_LH_Header* const)pHeader, CurrentKeySet, CurrentKey, pSubKeyCount);
+            if (FAILED(hr = ParseLfLh((LF_LH_Header* const)pHeader, CurrentKeySet, CurrentKey, pSubKeyCount)))
+            {
+                Log::Debug(
+                    "Key '{}': failed to parse lf/lh subkey list [{}]", CurrentKey->GetKeyName(), SystemError(hr));
+            }
         }
         // Check if subkey list is of type LI/RI
         else if (!_strnicmp((CHAR*)pHeader->Data, "li", 2) || !_strnicmp((CHAR*)pHeader->Data, "ri", 2))
