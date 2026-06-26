@@ -179,6 +179,8 @@ void CatalogEntry::DiffAreaInfo::Parse(BufferView buffer, DiffAreaInfo& snapshot
             ec = std::make_error_code(std::errc::bad_message);
             return;
         }
+
+        snapshot.m_diffLocationTableOffset = offset;
     }
 
     {
