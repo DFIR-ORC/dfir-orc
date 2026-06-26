@@ -13,7 +13,6 @@
 #include <Bits.h>
 #include <Winhttp.h>
 #include <boost/scope_exit.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include "BITSAgent.h"
 #include "ParameterCheck.h"
@@ -315,9 +314,9 @@ BITSAgent::UploadFile(
             {
                 Log::Debug(L"Configure NotifyCmd to delete share: {}{}", m_config.ServerName, m_config.RootPath);
 
-                constexpr std::wstring_view forbidden(L";&|()<>*?\"");
-                if (boost::algorithm::contains(m_config.ServerName, forbidden)
-                    || boost::algorithm::contains(m_config.RootPath, forbidden))
+                constexpr std::wstring_view forbidden(L";&|()<>*?\"%^");
+                if (m_config.ServerName.find_first_of(forbidden) != std::wstring::npos
+                    || m_config.RootPath.find_first_of(forbidden) != std::wstring::npos)
                 {
                     Log::Warn("Invalid characters in server name or network path");
                 }
@@ -329,7 +328,6 @@ BITSAgent::UploadFile(
                     }
 
                     cmdLine << L"net use /del \"\\\\" << m_config.ServerName << m_config.RootPath << L"\"";
-
                 }
             }
 
