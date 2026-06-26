@@ -37,6 +37,18 @@ namespace fs = std::filesystem;
 
 using namespace Orc;
 
+namespace {
+
+std::wstring SanitizeArchiveMemberName(const std::wstring& nameInArchive)
+{
+    std::wstring fileName;
+    std::replace_copy(begin(nameInArchive), end(nameInArchive), std::back_inserter(fileName), L'\\', L'_');
+    std::replace(begin(fileName), end(fileName), L'/', L'_');
+    return fileName;
+}
+
+}  // namespace
+
 std::shared_ptr<ArchiveExtract> ArchiveExtract::MakeExtractor(ArchiveFormat fmt, bool bComputeHash)
 {
     switch (fmt)
@@ -139,10 +151,7 @@ STDMETHODIMP ArchiveExtract::Extract(
         [pwzExtractRootDir, szSDDL, this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
-        std::wstring fileName;
-        std::replace_copy(
-            begin(item.NameInArchive), end(item.NameInArchive), std::back_insert_iterator(fileName), L'\\', L'_');
-        std::replace(begin(fileName), end(fileName), L'/', L'_');
+        std::wstring fileName = SanitizeArchiveMemberName(item.NameInArchive);
 
         HANDLE hFile = INVALID_HANDLE_VALUE;
         if (FAILED(
@@ -266,12 +275,14 @@ STDMETHODIMP ArchiveExtract::Extract(
         [pwzExtractRootDir, szSDDL, this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
+        std::wstring fileName = SanitizeArchiveMemberName(item.NameInArchive);
+
         HANDLE hFile = INVALID_HANDLE_VALUE;
 
         if (FAILED(
                 hr = UtilGetUniquePath(
                     pwzExtractRootDir,
-                    item.NameInArchive.c_str(),
+                    fileName.c_str(),
                     item.Path,
                     hFile,
                     FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
@@ -332,12 +343,14 @@ STDMETHODIMP ArchiveExtract::Extract(
         [pwzExtractRootDir, szSDDL, this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
+        std::wstring fileName = SanitizeArchiveMemberName(item.NameInArchive);
+
         HANDLE hFile = INVALID_HANDLE_VALUE;
 
         if (FAILED(
                 hr = UtilGetUniquePath(
                     pwzExtractRootDir,
-                    item.NameInArchive.c_str(),
+                    fileName.c_str(),
                     item.Path,
                     hFile,
                     FILE_ATTRIBUTE_NORMAL | FILE_ATTRIBUTE_TEMPORARY | FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
