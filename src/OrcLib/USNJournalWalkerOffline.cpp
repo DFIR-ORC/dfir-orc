@@ -327,7 +327,14 @@ HRESULT USNJournalWalkerOffline::FindNextUSNRecord(
         {
             if (*((WORD*)(pCurrentChunkPosition + offset + i)) == 0x2)  // TODO : handle version 3
             {
-                offset -= (4 - i);
+                const ULONG back = static_cast<ULONG>(4 - i);
+                if (back > offset)
+                {
+                    shouldStop = true;
+                    return E_FAIL;
+                }
+
+                offset -= back;
                 break;
             }
         }
