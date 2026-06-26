@@ -160,9 +160,20 @@ struct underlying_char_type<T>
     using type = remove_all_t<typename T::value_type>;
 };
 
+// fmt::fstring<...> is a pure variadic template, so clang cannot order the concrete
+// underlying_char_type<fmt::fstring<Args...>> specialization above against the generic
+// underlying_char_type<X<T, Args...>> recursion below: it reports them ambiguous where MSVC just
+// picks the concrete one. Excluding fstring from the recursion's constraint leaves the concrete
+// specialization as the sole match.
+template <typename T>
+inline constexpr bool is_fmt_fstring_v = false;
+
+template <typename... Ts>
+inline constexpr bool is_fmt_fstring_v<fmt::fstring<Ts...>> = true;
+
 template <template <typename, typename...> class X, typename T, typename... Args>
 #ifdef __cpp_concepts
-    requires (sizeof...(Args) > 0)
+    requires (sizeof...(Args) > 0 && !is_fmt_fstring_v<X<T, Args...>>)
 #endif
 struct underlying_char_type<X<T, Args...>>
 {
