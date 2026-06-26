@@ -27,6 +27,14 @@ bool IsRangeValid(size_t bufferSize, uint32_t rangeOffset, size_t rangeSize)
     return start <= bufferSize && rangeSize <= bufferSize - start;
 };
 
+// Byte size of an allocated registry cell. Cell sizes are stored as a negative int32 for
+// allocated cells (positive means free); the cell size is the magnitude. Computing it in the
+// unsigned domain avoids signed-overflow UB when a forged BlockSize is INT_MIN.
+size_t AllocatedCellSize(DWORD blockSize)
+{
+    return static_cast<size_t>(0u - blockSize);
+}
+
 }  // namespace
 
 RegistryValue::RegistryValue(
@@ -343,13 +351,13 @@ HRESULT RegistryHive::CheckBlockHeader(const BlockHeader* const pBlockHeader) co
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    if (-(int)(pBlockHeader->BlockSize) < 0)
+    if ((int)(pBlockHeader->BlockSize) > 0)
     {
         Log::Error("BlockSize is negative (should be positive)");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    if ((UINT_PTR)(pBlockHeader) + (size_t)(-(int)pBlockHeader->BlockSize)
+    if ((UINT_PTR)(pBlockHeader) + AllocatedCellSize(pBlockHeader->BlockSize)
         > m_ulHiveBufferSize + (UINT_PTR)m_pHiveBuffer)
     {
         Log::Error("Block end is outside of hive buffer boundary");
@@ -604,7 +612,7 @@ HRESULT RegistryHive::CheckDataHeader(const BlockHeader* const pHeader) const
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    if ((UINT_PTR)(pHeader) + (size_t)(-(int)pHeader->BlockSize) > (UINT_PTR)(m_pHiveBuffer) + m_ulHiveBufferSize)
+    if ((UINT_PTR)(pHeader) + AllocatedCellSize(pHeader->BlockSize) > (UINT_PTR)(m_pHiveBuffer) + m_ulHiveBufferSize)
     {
         Log::Error("Data block end is outside of hive buffer boundary");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -645,7 +653,7 @@ HRESULT RegistryHive::ParseValues(
         return S_OK;
     }
 
-    const size_t valueListCellSize = (size_t)(-(int)pValuesList->Header.BlockSize);
+    const size_t valueListCellSize = AllocatedCellSize(pValuesList->Header.BlockSize);
     const size_t maxValueOffsets =
         valueListCellSize > sizeof(BlockHeader) ? (valueListCellSize - sizeof(BlockHeader)) / sizeof(DWORD) : 0;
     if (dwCount > maxValueOffsets)
