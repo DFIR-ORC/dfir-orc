@@ -107,7 +107,14 @@ HRESULT MFTRecord::ParseRecord(
 
         shared_ptr<MftRecordAttribute> pNewAttr;
 
-        if (FAILED(hr = ParseAttribute(VolReader, pCurAttr, pCurAttr->RecordLength, pNewAttr)))
+        const DWORD dwBytesToRecordEnd = (DWORD)((LPBYTE)pFirstAttr + dwAllAttrLength - (LPBYTE)pCurAttr);
+        if (dwBytesToRecordEnd < FIELD_OFFSET(ATTRIBUTE_RECORD_HEADER, Form))
+        {
+            Log::Debug("Stopping attribute walk: remaining bytes smaller than an attribute header");
+            break;
+        }
+
+        if (FAILED(hr = ParseAttribute(VolReader, pCurAttr, dwBytesToRecordEnd, pNewAttr)))
             return hr;
 
         if (pNewAttr != nullptr)
@@ -186,7 +193,8 @@ HRESULT MFTRecord::ParseRecord(
                         if (attrEntry.m_Attribute->m_pHeader->TypeCode == pNewAttr->m_pHeader->TypeCode
                             && attrEntry.m_Attribute->m_pHeader->NameLength == pNewAttr->m_pHeader->NameLength
                             && !wcsncmp(
-                                (WCHAR*)((BYTE*)attrEntry.m_Attribute->m_pHeader + attrEntry.m_Attribute->m_pHeader->NameOffset),
+                                (WCHAR*)((BYTE*)attrEntry.m_Attribute->m_pHeader
+                                         + attrEntry.m_Attribute->m_pHeader->NameOffset),
                                 (WCHAR*)((BYTE*)pNewAttr->m_pHeader + pNewAttr->m_pHeader->NameOffset),
                                 pNewAttr->m_pHeader->NameLength)
                             && attrEntry.m_Attribute->m_pHeader->FormCode == NONRESIDENT_FORM
@@ -262,7 +270,6 @@ HRESULT MFTRecord::ParseAttribute(
     std::shared_ptr<MftRecordAttribute>& pNewAttr)
 {
     HRESULT hr = E_FAIL;
-    DBG_UNREFERENCED_PARAMETER(dwAttributeLen);
 
     pNewAttr = nullptr;
 
@@ -280,6 +287,14 @@ HRESULT MFTRecord::ParseAttribute(
                 Log::Error("Failed to parse $STANDARD_INFORMATION, attribute must be resident");
                 return E_FAIL;
             }
+            const ULONG valueOffset = pAttribute->Form.Resident.ValueOffset;
+            if (pAttribute->FormCode == RESIDENT_FORM
+                && (valueOffset > dwAttributeLen || sizeof(STANDARD_INFORMATION) > dwAttributeLen - valueOffset))
+            {
+                Log::Debug("Skipping $STANDARD_INFORMATION with out-of-record value offset");
+                break;
+            }
+
             m_pStandardInformation =
                 (PSTANDARD_INFORMATION)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset);
 
@@ -348,12 +363,31 @@ HRESULT MFTRecord::ParseAttribute(
                 Log::Error("Failed to parse $FILE_NAME, attribute must be resident");
                 return E_FAIL;
             }
+            const ULONG valueOffset = pAttribute->Form.Resident.ValueOffset;
+            if (pAttribute->FormCode == RESIDENT_FORM
+                && (valueOffset > dwAttributeLen || FIELD_OFFSET(FILE_NAME, FileName) > dwAttributeLen - valueOffset))
+            {
+                Log::Debug("Skipping $FILE_NAME with out-of-record value offset");
+                break;
+            }
+
+            PFILE_NAME pParsedFileName = (PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset);
+
+            if (pAttribute->FormCode == RESIDENT_FORM
+                && (valueOffset > dwAttributeLen
+                    || FIELD_OFFSET(FILE_NAME, FileName)
+                            + static_cast<size_t>(pParsedFileName->FileNameLength) * sizeof(WCHAR)
+                        > dwAttributeLen - valueOffset))
+            {
+                Log::Debug("Skipping $FILE_NAME whose name runs past the record");
+                break;
+            }
+
             if (m_pBaseFileRecord != NULL)
             {
-                m_pBaseFileRecord->m_FileNames.push_back(
-                    (PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset));
+                m_pBaseFileRecord->m_FileNames.push_back(pParsedFileName);
             }
-            m_FileNames.push_back((PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset));
+            m_FileNames.push_back(pParsedFileName);
 
             Log::Debug(
                 L"FileName: '{}', frn: {:#x}, parent: {:#x}, flags: {:#x}",
