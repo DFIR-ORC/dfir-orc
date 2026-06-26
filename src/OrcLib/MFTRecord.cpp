@@ -21,6 +21,40 @@ using namespace std;
 
 using namespace Orc;
 
+namespace {
+
+bool IsAttributeInBounds(const ATTRIBUTE_RECORD_HEADER* pAttribute, DWORD dwAttributeLen)
+{
+    const DWORD recordLength = pAttribute->RecordLength;
+    if (recordLength > dwAttributeLen)
+        return false;
+
+    if (pAttribute->NameLength != 0)
+    {
+        const DWORD nameOffset = pAttribute->NameOffset;
+        const DWORD nameBytes = static_cast<DWORD>(pAttribute->NameLength) * sizeof(WCHAR);
+        if (nameOffset > recordLength || nameBytes > recordLength - nameOffset)
+            return false;
+    }
+
+    if (pAttribute->FormCode == RESIDENT_FORM)
+    {
+        const DWORD valueOffset = pAttribute->Form.Resident.ValueOffset;
+        const DWORD valueLength = pAttribute->Form.Resident.ValueLength;
+        if (valueOffset > recordLength || valueLength > recordLength - valueOffset)
+            return false;
+    }
+    else if (pAttribute->FormCode == NONRESIDENT_FORM)
+    {
+        if (pAttribute->Form.Nonresident.MappingPairsOffset > recordLength)
+            return false;
+    }
+
+    return true;
+}
+
+}  // namespace
+
 HRESULT MFTRecord::ParseRecord(
     const std::shared_ptr<VolumeReader>& VolReader,
     PFILE_RECORD_SEGMENT_HEADER pRecord,
@@ -273,6 +307,12 @@ HRESULT MFTRecord::ParseAttribute(
 
     pNewAttr = nullptr;
 
+    if (!IsAttributeInBounds(pAttribute, dwAttributeLen))
+    {
+        Log::Debug(L"Skipping MFT attribute (type {:#x}) with out-of-record extents", pAttribute->TypeCode);
+        return S_OK;  // pNewAttr stays null: the walk continues with the next attribute
+    }
+
     switch (pAttribute->TypeCode)
     {
         case $STANDARD_INFORMATION: {
@@ -446,11 +486,8 @@ HRESULT MFTRecord::ParseAttribute(
             // check if this is a directory
             if (pAttribute->NameLength)
             {
-                if (0
-                    == wcsncmp(
-                        (PWSTR)((LPBYTE)pAttribute + pAttribute->NameOffset),
-                        L"$I30",
-                        std::max<UCHAR>(pAttribute->NameLength, 4)))
+                if (pAttribute->NameLength == 4
+                    && 0 == wcsncmp((PWSTR)((LPBYTE)pAttribute + pAttribute->NameOffset), L"$I30", 4))
                 {
                     // we need to add the file names as directories since this record is
                     // determined to be a directory.
@@ -479,7 +516,8 @@ HRESULT MFTRecord::ParseAttribute(
         case $INDEX_ALLOCATION: {
             Log::Trace(L"Add $INDEX_ALLOCATION");
 
-            if (0 == wcsncmp((PWSTR)((LPBYTE)pAttribute + pAttribute->NameOffset), L"$I30", 4))
+            if (pAttribute->NameLength == 4
+                && 0 == wcsncmp((PWSTR)((LPBYTE)pAttribute + pAttribute->NameOffset), L"$I30", 4))
             {
                 // we need to add the file names as directories since this record is
                 // determined to be a directory.
