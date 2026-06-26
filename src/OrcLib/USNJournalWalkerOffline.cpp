@@ -254,7 +254,15 @@ HRESULT USNJournalWalkerOffline::ReadJournal(const IUSNJournalWalker::Callbacks&
                     }
                 }
 
-                offset += (numBytesReturned - adjustmentOffset);
+                const ULONG64 advance =
+                    (adjustmentOffset <= numBytesReturned) ? (numBytesReturned - adjustmentOffset) : 0;
+                if (advance == 0)
+                {
+                    Log::Debug(L"USN offline walk made no progress at offset {:#x}, stopping", offset);
+                    break;
+                }
+
+                offset += advance;
             }
         }
 
