@@ -709,6 +709,29 @@ PINDEX_ENTRY NextIndexEntryChecked(PINDEX_ENTRY entry, const BYTE* bufEnd)
     return reinterpret_cast<PINDEX_ENTRY>(next);
 }
 
+bool IsSecDescIndexEntryInBounds(
+    const SECURITY_DESCRIPTOR_INDEX_ENTRY* entry, const BYTE* bufBegin, const BYTE* bufEnd)
+{
+    if (entry == nullptr)
+        return false;
+
+    const BYTE* p = reinterpret_cast<const BYTE*>(entry);
+    return p >= bufBegin && p <= bufEnd
+        && static_cast<size_t>(bufEnd - p) >= sizeof(SECURITY_DESCRIPTOR_INDEX_ENTRY);
+}
+
+PSECURITY_DESCRIPTOR_INDEX_ENTRY NextSecDescIndexEntryChecked(PSECURITY_DESCRIPTOR_INDEX_ENTRY entry, const BYTE* bufEnd)
+{
+    if (entry->IndexEntrySize < sizeof(SECURITY_DESCRIPTOR_INDEX_ENTRY))
+        return nullptr;
+
+    BYTE* next = reinterpret_cast<BYTE*>(entry) + entry->IndexEntrySize;
+    if (next > bufEnd)
+        return nullptr;
+
+    return reinterpret_cast<PSECURITY_DESCRIPTOR_INDEX_ENTRY>(next);
+}
+
 }  // namespace
 
 HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
@@ -956,12 +979,12 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
     if (pIR != nullptr)
     {
         PINDEX_ENTRY entry = pIR->FirstIndexEntry();
+        const BYTE* bufBegin = reinterpret_cast<const BYTE*>(entry);
+        const BYTE* bufEnd = pIR->IndexEntriesEnd();
 
-        while (!(entry->Flags & INDEX_ENTRY_END))
+        while (IsIndexEntryHeaderInBounds(entry, bufBegin, bufEnd) && !(entry->Flags & INDEX_ENTRY_END))
         {
-            // PBYTE pFileName = (PBYTE) ((PBYTE) entry + sizeof(INDEX_ENTRY));
-
-            entry = NtfsNextIndexEntry(entry);
+            entry = NextIndexEntryChecked(entry, bufEnd);
         }
     }
     if (pIA != nullptr)
@@ -1003,8 +1026,11 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
                             {
                                 PINDEX_HEADER pHeader = &(pIABuff->IndexHeader);
                                 PSECURITY_DESCRIPTOR_INDEX_ENTRY pEntry = NtfsFirstSecDescIndexEntry(pHeader);
+                                const BYTE* secBegin = reinterpret_cast<const BYTE*>(pEntry);
+                                const BYTE* secEnd = Data.GetData() + Data.GetCount();
 
-                                while (!(pEntry->Flags & INDEX_ENTRY_END))
+                                while (IsSecDescIndexEntryInBounds(pEntry, secBegin, secEnd)
+                                       && !(pEntry->Flags & INDEX_ENTRY_END))
                                 {
                                     PSECURITY_DESCRIPTOR_ENTRY pSDSEntry =
                                         (PSECURITY_DESCRIPTOR_ENTRY)&SDS.Get<BYTE>(pEntry->SecurityDescriptorOffset);
@@ -1012,7 +1038,7 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
                                     if (m_Callbacks.SecDescCallback != nullptr)
                                         m_Callbacks.SecDescCallback(m_pVolReader, pSDSEntry);
 
-                                    pEntry = NtfsNextSecDescIndexEntry(pEntry);
+                                    pEntry = NextSecDescIndexEntryChecked(pEntry, secEnd);
                                 }
                             }
                         }
