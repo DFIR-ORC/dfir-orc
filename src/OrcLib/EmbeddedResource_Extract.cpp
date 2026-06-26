@@ -947,6 +947,12 @@ BOOL CALLBACK V_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
 
     V_EnumResourceNamesEx_Param* param = (V_EnumResourceNamesEx_Param*)lParam;
 
+    if (IS_INTRESOURCE(lpszName))
+    {
+        Log::Debug(L"Skipping integer-id value resource #{}", (ULONG_PTR)lpszName);
+        return TRUE;
+    }
+
     wstring strName(lpszName);
     wstring strValue;
 
@@ -1020,6 +1026,12 @@ BOOL CALLBACK B_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
     HRESULT hr = E_FAIL;
 
     B_EnumResourceNamesEx_Param* param = (B_EnumResourceNamesEx_Param*)lParam;
+
+    if (IS_INTRESOURCE(lpszName))
+    {
+        Log::Debug(L"Skipping integer-id binary resource #{}", (ULONG_PTR)lpszName);
+        return TRUE;
+    }
 
     wstring strName(lpszName);
     CBinaryBuffer buffer;
