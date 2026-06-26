@@ -329,6 +329,20 @@ HRESULT RegistryHive::CheckBlockHeader(const BlockHeader* const pBlockHeader) co
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
+    const BYTE* const pHeaderBytes = reinterpret_cast<const BYTE*>(pBlockHeader);
+    if (pHeaderBytes < m_pHiveBuffer)
+    {
+        Log::Error("Block header is before hive buffer start");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    const size_t headerOffset = static_cast<size_t>(pHeaderBytes - m_pHiveBuffer);
+    if (headerOffset > m_ulHiveBufferSize || sizeof(BlockHeader) > m_ulHiveBufferSize - headerOffset)
+    {
+        Log::Error("Block header is outside of hive buffer boundary");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
     if (-(int)(pBlockHeader->BlockSize) < 0)
     {
         Log::Error("BlockSize is negative (should be positive)");
