@@ -9,8 +9,26 @@
 
 #include "USNJournalWalkerBase.h"
 #include "MountedVolumeReader.h"
+#include "Log/Log.h"
+
+#include <algorithm>
+#include <string_view>
 
 using namespace Orc;
+
+namespace {
+
+std::wstring_view ClampComponent(const WCHAR* fileName, WORD fileNameLength, DWORD maxComponentLength)
+{
+    const size_t chars = fileNameLength / sizeof(WCHAR);
+    if (chars <= maxComponentLength)
+        return {fileName, chars};
+
+    Log::Debug(L"USN filename component ({} chars) exceeds max {} chars, truncating", chars, maxComponentLength);
+    return {fileName, maxComponentLength};
+}
+
+}  // namespace
 
 USNJournalWalkerBase::USNJournalWalkerBase()
     : m_RecordStore(L"USNRecordStore")
@@ -127,14 +145,15 @@ WCHAR* USNJournalWalkerBase::GetFullNameAndIfInLocation(USN_RECORD* pElt, DWORD*
         *pCurrent = 0;
     }
     {
-        dwCount += pElt->FileNameLength;
+        const std::wstring_view name = ClampComponent(pElt->FileName, pElt->FileNameLength, m_cchMaxComponentLength);
+        dwCount += static_cast<DWORD>(name.size() * sizeof(WCHAR));
         if (dwCount > m_cbFullNameBufferLen)
         {
             if (FAILED(ExtendNameBuffer(&pCurrent)))
                 return NULL;
         }
-        pCurrent -= pElt->FileNameLength / sizeof(WCHAR);
-        memcpy_s(pCurrent, dwCount, pElt->FileName, pElt->FileNameLength);
+        pCurrent -= name.size();
+        std::copy(name.begin(), name.end(), pCurrent);
     }
 
     if (pbInSpecificLocation)
@@ -161,14 +180,16 @@ WCHAR* USNJournalWalkerBase::GetFullNameAndIfInLocation(USN_RECORD* pElt, DWORD*
             *pCurrent = L'\\';
         }
         {
-            dwCount += pParentPair->second->FileNameLength;
+            const std::wstring_view name =
+                ClampComponent(pParentPair->second->FileName, pParentPair->second->FileNameLength, m_cchMaxComponentLength);
+            dwCount += static_cast<DWORD>(name.size() * sizeof(WCHAR));
             if (dwCount > m_cbFullNameBufferLen)
             {
                 if (FAILED(ExtendNameBuffer(&pCurrent)))
                     return NULL;
             }
-            pCurrent -= pParentPair->second->FileNameLength / sizeof(WCHAR);
-            memcpy_s(pCurrent, dwCount, pParentPair->second->FileName, pParentPair->second->FileNameLength);
+            pCurrent -= name.size();
+            std::copy(name.begin(), name.end(), pCurrent);
         }
         dwlLastParentRefNumber = pParentPair->second->ParentFileReferenceNumber;
         pParentPair = m_USNMap.find(pParentPair->second->ParentFileReferenceNumber);
