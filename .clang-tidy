@@ -1,0 +1,53 @@
+# clang-tidy configuration for the DFIR-ORC source tree.
+#
+# Scoped to the bug classes that matter for this codebase: parsing
+# attacker-controlled on-disk structures (MFT/FAT/hive/PE). The static analyzer
+# plus bugprone/cert integer + memory checks carry the weight here.
+#
+# Deliberately NOT enabled:
+#   - modernize-*  : the v141_xp targets are pinned to C++17; these push newer
+#                    idioms and churn against that constraint and the style policy.
+#   - most readability-* / magic-numbers : noise against the existing style.
+#
+# Tuned against a real RegistryWalker.cpp run, these are off as codebase-idiom noise:
+#   bugprone-assignment-in-if-condition : the pervasive `if ((hr = X()) != S_OK)` form.
+#   bugprone-suspicious-string-compare  : intentional 2-char signature `if (_strnicmp(s,"vk",2))`.
+#   bugprone-reserved-identifier / cert-dcl37-c / cert-dcl51-cpp : the `_Method` underscore convention.
+#   misc-misplaced-const                : fires on the SAL `const PVOID` macro pattern.
+#   misc-const-correctness / misc-unused-parameters : high-volume style opinion.
+# Caveat: the compile DB is x64-only, so portability guards that only bite on x86/x86-xp
+# (e.g. a `> SIZE_MAX` check) get flagged misc-redundant-expression here. Don't act on those blindly.
+#
+# Never fatal (WarningsAsErrors empty): this is advisory, MSVC remains the build.
+# Run on-demand against a changed file, not inline in clangd for every keystroke:
+#   clang-tidy -p build-llm/dfir-orc-x64-clangd src/OrcLib/<file>.cpp
+
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*,
+  clang-analyzer-*,
+  portability-*,
+  misc-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -misc-include-cleaner,
+  -cert-dcl21-cpp,
+  -cert-err58-cpp,
+  -misc-const-correctness,
+  -misc-unused-parameters,
+  -misc-misplaced-const,
+  -bugprone-assignment-in-if-condition,
+  -bugprone-suspicious-string-compare,
+  -bugprone-reserved-identifier,
+  -cert-dcl37-c,
+  -cert-dcl51-cpp
+
+WarningsAsErrors: ''
+
+# Only diagnose our own headers, never vcpkg/system/CRT headers.
+HeaderFilterRegex: 'src[/\\]Orc.*'
+
+FormatStyle: file
