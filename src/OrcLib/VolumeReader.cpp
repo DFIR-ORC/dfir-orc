@@ -90,6 +90,13 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
 
+        constexpr ULONG kMaxBytesPerFRS = 64 * 1024;
+        if (m_BytesPerFRS == 0 || m_BytesPerFRS > kMaxBytesPerFRS)
+        {
+            Log::Error("NTFS: Bytes per File Record is out of range - {:#x}", m_BytesPerFRS);
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        }
+
         m_NumberOfSectors = pbs->NumberSectors;
         m_llVolumeSerialNumber = pbs->SerialNumber;
     }
