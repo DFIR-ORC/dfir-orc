@@ -260,6 +260,12 @@ HRESULT MFTUtils::GetDataSegmentsToRead(
     std::vector<DataSegment>& ListOfSegments,
     ULONGLONG ullBlockSize)
 {
+    if (ullBlockSize == 0)
+    {
+        Log::Debug(L"GetDataSegmentsToRead called with a zero block size");
+        return E_INVALIDARG;
+    }
+
     // This offset represent de file based offset of the current segment
     ULONGLONG ullSegmentFileOffset = 0;
     ULONGLONG ullCurrentPosition = 0;
