@@ -280,7 +280,7 @@ Orc::ExpandFilePath(const WCHAR* szInputString, WCHAR* szInputFile, DWORD cchInp
     if (INVALID_FILE_ATTRIBUTES == dwAttr)
     {
         auto lastError = GetLastError();
-        if (exists == false && lastError == ERROR_FILE_NOT_FOUND || lastError == ERROR_PATH_NOT_FOUND)
+        if (exists == false && (lastError == ERROR_FILE_NOT_FOUND || lastError == ERROR_PATH_NOT_FOUND))
         {
             return S_OK;
         }
