@@ -263,6 +263,11 @@ typedef enum _NT_FILE_INFORMATION_CLASS
 HRESULT USNRecordFileInfo::OpenStreamInformation()
 {
     const auto pNtDll = ExtensionLibrary::GetLibrary<NtDllExtension>();
+    if (pNtDll == nullptr)
+    {
+        Log::Debug("Could not load ntdll");
+        return E_FAIL;
+    }
 
     HRESULT hr = E_FAIL;
     if (FAILED(hr = CheckFileHandle()))
