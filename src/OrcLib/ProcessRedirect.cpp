@@ -160,15 +160,9 @@ VOID ProcessRedirect::FileIOCompletionRoutine(
 
 void ProcessRedirect::SetStatus(RedirectStatus status)
 {
-    ArchiveMessage::Message request;
-    {
-        if (m_Status >= status)
-            return;
-        else
-        {
-            m_Status = status;
-        }
-    }
+    Concurrency::critical_section::scoped_lock lock(m_cs);
+    if (status > m_Status)
+        m_Status = status;
 }
 
 HRESULT ProcessRedirect::CreatePipe(const WCHAR* szUniqueSuffix)
