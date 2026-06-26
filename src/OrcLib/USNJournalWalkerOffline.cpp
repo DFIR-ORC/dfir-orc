@@ -311,9 +311,19 @@ HRESULT USNJournalWalkerOffline::FindNextUSNRecord(
 
     // ensure we are not in a gap between 2 records
     ULONG offset = 0;
+
+    // Prove the 4-byte gap probe below stays in-bounds: the caller advances by RecordLength and can
+    // leave fewer than 4 bytes in the chunk. Defer to the next chunk rather than read past the end.
+    if ((uint64_t)pCurrentChunkPosition + sizeof(DWORD) > (uint64_t)pEndChunkPosition)
+    {
+        shouldReadAnotherChunk = true;
+        adjustmentOffset = (ULONG64)((uint64_t)pEndChunkPosition - (uint64_t)pCurrentChunkPosition);
+        return E_FAIL;
+    }
+
     if (*(DWORD*)(pCurrentChunkPosition) == 0)
     {
-        while ((__int64)pCurrentChunkPosition + offset < (__int64)pEndChunkPosition
+        while ((uint64_t)pCurrentChunkPosition + offset < (uint64_t)pEndChunkPosition
                && (*(pCurrentChunkPosition + offset) == 0))
         {
             ++offset;
