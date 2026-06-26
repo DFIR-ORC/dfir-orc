@@ -916,7 +916,7 @@ HRESULT RegistryHive::ParseLiRi(
     for (i = 0; i < dwCount; i++)
     {
 
-        if (!IsOffsetValid(pRiLiHeader->Records[i].OffsetToKeyHeader))
+        if (!::IsRangeValid(m_ulHiveBufferSize, pRiLiHeader->Records[i].OffsetToKeyHeader, sizeof(BlockHeader) + 2))
         {
             Log::Debug(
                 "Key '{}': Li/Ri record: offset to key is invalid. Either Li/Ri record is invalid or key is not "
@@ -1030,6 +1030,12 @@ HRESULT RegistryHive::ParseNks(RegistryKey* const CurrentKey, std::vector<Regist
         return S_OK;
     }
     DataHeader* pHeader;
+
+    if (!::IsRangeValid(m_ulHiveBufferSize, pCurrentKeyHeader->OffsetToLFHeader, sizeof(BlockHeader) + 2))
+    {
+        Log::Debug("Key '{}': subkey-list cell offset is out of bounds", CurrentKey->GetKeyName());
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
 
     pHeader = (DataHeader*)FixOffset(pCurrentKeyHeader->OffsetToLFHeader);
 
