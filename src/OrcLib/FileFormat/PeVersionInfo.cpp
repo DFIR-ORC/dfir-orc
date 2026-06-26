@@ -301,7 +301,7 @@ Result<void> BuildBlockViewTree(BlockViewTree& node, BufferView blockBuffer, std
     {
         if (*maxDepth == 0)
         {
-            Log::Debug("Maximum recursion depth reached");
+            Log::Critical("PeVersionInfo: BuildBlockViewTree: maximum recursion depth reached");
             return std::errc::bad_message;
         }
         else
@@ -398,8 +398,10 @@ Result<void> ParseVersionInfo(
 {
     std::error_code ec;
 
+    constexpr uint32_t kMaxVersionInfoDepth = 1000;
+
     BlockViewTree root;
-    auto rv = BuildBlockViewTree(root, versionInfo);
+    auto rv = BuildBlockViewTree(root, versionInfo, kMaxVersionInfoDepth);
     if (!rv)
     {
         return rv.error();
