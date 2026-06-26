@@ -27,6 +27,11 @@ void ParseLocations(
     ChunkOffsets offsets(
         reinterpret_cast<const ChunkOffsetType*>(buffer.data()), buffer.size() / sizeof(ChunkOffsetType));
 
+    if (chunkCount == 0 || offsets.empty() || table.empty())
+    {
+        return;
+    }
+
     auto shift = std::is_same_v<ChunkOffsetType, uint32_t> ? 2 : 3;
     const auto tableSize = (chunkCount - 1) << shift;
 
@@ -80,6 +85,13 @@ WofChunks::WofChunks(WofAlgorithm algorithm, uint64_t compressedSize, uint64_t u
 }
 void WofChunks::ParseLocations(BufferView buffer, gsl::span<ChunkLocation> table, std::error_code& ec) const
 {
+    if (m_chunkCount == 0)
+    {
+        ec = std::make_error_code(std::errc::message_size);
+        Log::Debug("Failed to parse chunk offset table: chunk count is zero");
+        return;
+    }
+
     const auto expectedBufferSize = m_chunkCount * GetChunkOffsetSize();
     if (buffer.size() < expectedBufferSize)
     {
@@ -147,7 +159,14 @@ uint64_t GetWofChunkCount(WofAlgorithm algorithm, uint64_t uncompressedSize)
     }
 
     const auto bit = std::underlying_type_t<WofBitOrder>(ToWofBitOrder(algorithm));
-    return (uncompressedSize + GetWofChunkSize(algorithm) - 1) >> bit;
+
+    const uint32_t chunkSize = GetWofChunkSize(algorithm);
+    if (chunkSize == 0 || uncompressedSize > UINT64_MAX - (chunkSize - 1))
+    {
+        return 0;
+    }
+
+    return (uncompressedSize + chunkSize - 1) >> bit;
 }
 
 uint8_t GetWofChunkOffsetSize(uint64_t uncompressedSize)
