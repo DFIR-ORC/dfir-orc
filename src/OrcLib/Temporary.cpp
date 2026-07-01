@@ -543,6 +543,12 @@ HRESULT Orc::UtilGetPath(__in PCWSTR pwszDir, __in PCWSTR pwszDesiredName, __out
     return S_OK;
 }
 
+static bool IsReparsePoint(LPCWSTR pszPath)
+{
+    const DWORD dwAttributes = GetFileAttributes(pszPath);
+    return dwAttributes != INVALID_FILE_ATTRIBUTES && (dwAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+}
+
 HRESULT Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
 {
     HRESULT hr = E_FAIL;
@@ -561,12 +567,19 @@ HRESULT Orc::UtilDeleteTemporaryFile(LPCWSTR pszPath)
             if (dwRetries > DELETION_RETRIES)
             {
                 Log::Debug(L"Could not delete file '{}', Delay deletion till next reboot", pszPath);
+                if (IsReparsePoint(pszPath))
+                {
+                    Log::Error(L"Refusing reboot-delete of reparse point '{}' (possible symlink redirection)", pszPath);
+                    return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                }
+
                 if (!MoveFileEx(pszPath, NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
                 {
                     hr = HRESULT_FROM_WIN32(GetLastError());
                     Log::Error(L"Failed to delay deletion until reboot for file '{}' [{}]", pszPath, SystemError(hr));
                     return hr;
                 }
+
                 return S_OK;
             }
             else
@@ -625,10 +638,17 @@ HRESULT Orc::UtilDeleteTemporaryFile(__in LPCWSTR pszPath, DWORD dwMaxRetries)
             }
             if (dwRetries > dwMaxRetries)
             {
+                if (IsReparsePoint(pszPath))
+                {
+                    Log::Error(L"Refusing reboot-delete of reparse point '{}' (possible symlink redirection)", pszPath);
+                    return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+                }
+
                 if (!MoveFileEx(pszPath, NULL, MOVEFILE_DELAY_UNTIL_REBOOT))
                 {
                     return HRESULT_FROM_WIN32(GetLastError());
                 }
+
                 return hr;
             }
             else
