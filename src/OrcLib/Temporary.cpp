@@ -162,7 +162,10 @@ HRESULT Orc::UtilGetTempFile(
         if (GetTempFileName(pwszDir, L"DFIR-ORC", 0, wszTempFilePath))
         {
             DWORD dwCreationDisposition = CREATE_ALWAYS;
-            DWORD dwExtraFlags = 0;
+            // Never follow a reparse point. GetTempFileName picks a predictable name in a possibly
+            // world-writable directory, so a local attacker could swap the just-created file for a
+            // symlink/junction before this open; opening the link itself (not its target) blocks the redirect.
+            DWORD dwExtraFlags = FILE_FLAG_OPEN_REPARSE_POINT;
 
             if (pwszExt)
             {
@@ -176,7 +179,6 @@ HRESULT Orc::UtilGetTempFile(
                 }
 
                 dwCreationDisposition = CREATE_NEW;
-                dwExtraFlags = FILE_FLAG_OPEN_REPARSE_POINT;
             }
 
             auto handle = CreateFileApi(
@@ -472,7 +474,9 @@ HRESULT Orc::UtilGetUniquePath(
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             &sa,
             CREATE_NEW,
-            dwFlags,
+            // Do not follow a reparse point: CREATE_NEW alone still creates through a planted dangling
+            // symlink, redirecting the write. Opening the link itself keeps the create inside the target dir.
+            dwFlags | FILE_FLAG_OPEN_REPARSE_POINT,
             NULL);
 
         if (handle)
