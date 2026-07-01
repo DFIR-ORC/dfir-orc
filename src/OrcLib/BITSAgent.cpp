@@ -161,8 +161,8 @@ HRESULT BITSAgent::Initialize()
             Log::Info(L"Added a connection to {}", szUNC);
             m_bAddedConnection = true;
         }
-        SecureZeroMemory(szUser, ORC_MAX_PATH * sizeof(WCHAR));
-        SecureZeroMemory(szPass, ORC_MAX_PATH * sizeof(WCHAR));
+        SecureZeroMemory(szUser, m_config.UserName.size() * sizeof(WCHAR));
+        SecureZeroMemory(szPass, m_config.Password.size() * sizeof(WCHAR));
     }
 
     return S_OK;
@@ -248,6 +248,8 @@ BITSAgent::UploadFile(
             {
                 Log::Debug("Successfully set the username and password on the BITS job");
             }
+            SecureZeroMemory(szUser, m_config.UserName.size() * sizeof(WCHAR));
+            SecureZeroMemory(szPass, m_config.Password.size() * sizeof(WCHAR));
         }
     }
 
