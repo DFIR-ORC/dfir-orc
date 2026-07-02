@@ -1508,19 +1508,34 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
 
     while (dwIndex < secdir.GetCount())
     {
+        if (dwIndex + FIELD_OFFSET(WIN_CERTIFICATE, bCertificate) > secdir.GetCount())
+        {
+            break;
+        }
+
+        if (pWin->dwLength < FIELD_OFFSET(WIN_CERTIFICATE, bCertificate))
+        {
+            Log::Debug(L"Authenticode: WIN_CERTIFICATE record too small (length {})", pWin->dwLength);
+            break;
+        }
+
         if (pWin->wCertificateType == WIN_CERT_TYPE_PKCS_SIGNED_DATA && pWin->wRevision == WIN_CERT_REVISION_2_0)
         {
-            CBinaryBuffer signature(pWin->bCertificate, pWin->dwLength);
+            const DWORD payloadOffset = dwIndex + FIELD_OFFSET(WIN_CERTIFICATE, bCertificate);
+            const DWORD available = static_cast<DWORD>(secdir.GetCount() - payloadOffset);
+            const DWORD claimed = pWin->dwLength - FIELD_OFFSET(WIN_CERTIFICATE, bCertificate);
+            CBinaryBuffer signature(pWin->bCertificate, std::min(claimed, available));
 
             data.isSigned = true;
 
             if (FAILED(hr = ExtractSignatureHash(signature, data)))
             {
-                Log::Error(
+                Log::Debug(
                     L"Failed to extract hash from signature in the security directory of '{}' [{}]",
                     szFileName,
                     SystemError(hr));
             }
+
             if (hashs.md5.GetCount() != 0 && hashs.md5.GetCount() == data.SignedHashs.md5.GetCount())
             {
                 if (!memcmp(hashs.md5.GetData(), data.SignedHashs.md5.GetData(), hashs.md5.GetCount()))
@@ -1562,7 +1577,6 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
             }
             else
             {
-                Log::Warn(L"Signature could not be verified '{}'", szFileName);
                 data.bSignatureVerifies = false;
             }
 
@@ -1570,7 +1584,7 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
 
             if (FAILED(hr = ExtractSignatureTimeStamp(signature, data)))
             {
-                Log::Error(
+                Log::Debug(
                     L"Failed to extract timestamp information from signature in the security directory of '{}' [{}]",
                     szFileName,
                     SystemError(hr));
@@ -1579,20 +1593,18 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
             hr = ExtractSignatureSigners(signature, data.Timestamp, data.Signers(), data.SignersCAs(), data.CertStores);
             if (FAILED(hr))
             {
-                Log::Error(
+                Log::Debug(
                     L"Failed to extract signer info from signature from security directory of '{}' [{}]",
                     szFileName,
                     SystemError(hr));
             }
         }
 
-        if (pWin->dwLength > 0)
-        {
-            dwIndex += pWin->dwLength;
-            pWin = (LPWIN_CERTIFICATE)(secdir.GetData() + dwIndex);
-        }
-        else
+        if (pWin->dwLength == 0 || pWin->dwLength > secdir.GetCount() - dwIndex)
             break;
+
+        dwIndex += pWin->dwLength;
+        pWin = (LPWIN_CERTIFICATE)(secdir.GetData() + dwIndex);
     }
     return S_OK;
 }
