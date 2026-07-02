@@ -534,8 +534,6 @@ source_group(In&Out\\TableOutput FILES ${SRC_INOUT_TABLEOUTPUT})
 set(SRC_INOUT_TABLEOUTPUT_CSV
     "CsvCruncher.cpp"
     "CsvCruncher.h"
-    "CsvFileReader.cpp"
-    "CsvFileReader.h"
     "CsvFileWriter.cpp"
     "CsvFileWriter.h"
     "CsvStream.cpp"
