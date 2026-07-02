@@ -1622,15 +1622,29 @@ HRESULT Orc::Authenticode::SignatureSize(LPCWSTR szFileName, const CBinaryBuffer
 
     while (dwIndex < secdir.GetCount())
     {
+        if (dwIndex + FIELD_OFFSET(WIN_CERTIFICATE, bCertificate) > secdir.GetCount())
+        {
+            break;
+        }
+
+        if (pWin->dwLength < FIELD_OFFSET(WIN_CERTIFICATE, bCertificate))
+        {
+            Log::Debug(L"Authenticode: WIN_CERTIFICATE record too small (length {})", pWin->dwLength);
+            break;
+        }
+
         if (pWin->wCertificateType == WIN_CERT_TYPE_PKCS_SIGNED_DATA && pWin->wRevision == WIN_CERT_REVISION_2_0)
         {
-            CBinaryBuffer signature(pWin->bCertificate, pWin->dwLength);
+            const DWORD payloadOffset = dwIndex + FIELD_OFFSET(WIN_CERTIFICATE, bCertificate);
+            const DWORD available = static_cast<DWORD>(secdir.GetCount() - payloadOffset);
+            const DWORD claimed = pWin->dwLength - FIELD_OFFSET(WIN_CERTIFICATE, bCertificate);
+            CBinaryBuffer signature(pWin->bCertificate, std::min(claimed, available));
 
             DWORD dwSignatureSize = 0L;
             if (FAILED(hr = ExtractSignatureSize(signature, dwSignatureSize)))
             {
-                Log::Error(
-                    L"Failed to extract hash from signature in the security directory of '{}' [{}]",
+                Log::Debug(
+                    L"Failed to extract signature size in the security directory of '{}' [{}]",
                     szFileName,
                     SystemError(hr));
             }
@@ -1638,13 +1652,11 @@ HRESULT Orc::Authenticode::SignatureSize(LPCWSTR szFileName, const CBinaryBuffer
                 cbSize += dwSignatureSize;
         }
 
-        if (pWin->dwLength > 0)
-        {
-            dwIndex += pWin->dwLength;
-            pWin = (LPWIN_CERTIFICATE)(secdir.GetData() + dwIndex);
-        }
-        else
+        if (pWin->dwLength == 0 || pWin->dwLength > secdir.GetCount() - dwIndex)
             break;
+
+        dwIndex += pWin->dwLength;
+        pWin = (LPWIN_CERTIFICATE)(secdir.GetData() + dwIndex);
     }
     return S_OK;
 }
