@@ -408,6 +408,11 @@ Authenticode::Authenticode()
 DWORD Authenticode::ExpectedHashSize()
 {
     const auto wintrust = ExtensionLibrary::GetLibrary<WinTrustExtension>();
+    if (!wintrust)
+    {
+        Log::Debug(L"Failed to load wintrust extension");
+        return (DWORD)-1;
+    }
 
     WCHAR szPath[ORC_MAX_PATH];
 
