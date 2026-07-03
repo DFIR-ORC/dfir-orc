@@ -40,6 +40,15 @@ HRESULT MFTUtils::GetAttributeNRExtents(
 
     //  2.  Initialize byte stream pointer to: (PCHAR)Attribute +
     //  Attribute->AttributeForm->Nonresident->MappingPairsOffset
+    if (pAttrRecordHeader->Form.Nonresident.MappingPairsOffset > pAttrRecordHeader->RecordLength)
+    {
+        Log::Debug(
+            L"Invalid non-resident attribute: MappingPairsOffset {} exceeds RecordLength {}",
+            pAttrRecordHeader->Form.Nonresident.MappingPairsOffset,
+            pAttrRecordHeader->RecordLength);
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
     LPBYTE pPairs = ((LPBYTE)pAttrRecordHeader + pAttrRecordHeader->Form.Nonresident.MappingPairsOffset);
     ULONG PairDataLen = pAttrRecordHeader->RecordLength - pAttrRecordHeader->Form.Nonresident.MappingPairsOffset;
     LONGLONG TotalBytes = 0;
@@ -251,6 +260,12 @@ HRESULT MFTUtils::GetDataSegmentsToRead(
     std::vector<DataSegment>& ListOfSegments,
     ULONGLONG ullBlockSize)
 {
+    if (ullBlockSize == 0)
+    {
+        Log::Debug(L"GetDataSegmentsToRead called with a zero block size");
+        return E_INVALIDARG;
+    }
+
     // This offset represent de file based offset of the current segment
     ULONGLONG ullSegmentFileOffset = 0;
     ULONGLONG ullCurrentPosition = 0;

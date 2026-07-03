@@ -59,6 +59,7 @@ void SnapshotsIndexHeader::Parse(BufferView buffer, SnapshotsIndexHeader& header
         Log::Debug(
             "VSS root header is corrupted: unexpected node type (expected: 0x1, value: {})",
             ToString(header.m_node.Type()));
+        ec = std::make_error_code(std::errc::bad_message);
         return;
     }
 

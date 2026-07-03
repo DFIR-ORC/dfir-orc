@@ -15,7 +15,6 @@
 
 #include "CryptoUtilities.h"
 #include "CryptoHashStreamAlgorithm.h"
-#include "Text/Fmt/CryptoHashStreamAlgorithm.h"
 #include "Utils/Result.h"
 
 #pragma managed(push, off)
@@ -69,3 +68,8 @@ Result<std::wstring> Hash(const std::filesystem::path& path, CryptoHashStream::A
 }  // namespace Orc
 
 #pragma managed(pop)
+
+// Included after the class definition: the fmt formatter references CryptoHashStream::Algorithm and
+// ::GetSupportedAlgorithm as non-dependent names, so clang's two-phase lookup needs the class complete
+// here (MSVC defers to instantiation and tolerates the forward declaration).
+#include "Text/Fmt/CryptoHashStreamAlgorithm.h"

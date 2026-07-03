@@ -578,7 +578,7 @@ CreateSampleFileName(const Main::SampleRef& sample, const PFILE_NAME pFileName, 
 
     std::wstring sampleFileName;
     std::transform(std::cbegin(name), std::cbegin(name) + len, std::back_inserter(sampleFileName), [](wchar_t letter) {
-        if (iswspace(letter) || letter == L':' || letter == L'#')
+        if (iswspace(letter) || letter == L':' || letter == L'#' || letter == L'\\' || letter == L'/')
         {
             return L'_';
         }

@@ -127,7 +127,11 @@ bool CBinaryBuffer::SetCount(size_t NewSize)
                     }
                     else
                     {
-                        m_pData = (BYTE*)HeapReAlloc(GetBinaryBufferHeap(), 0L, m_pData, NewSize);
+                        BYTE* NewData = (BYTE*)HeapReAlloc(GetBinaryBufferHeap(), 0L, m_pData, NewSize);
+                        if (NewData == nullptr)
+                            return false;
+
+                        m_pData = NewData;
                     }
                 }
                 else

@@ -13,7 +13,6 @@
 #include <Bits.h>
 #include <Winhttp.h>
 #include <boost/scope_exit.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include "BITSAgent.h"
 #include "ParameterCheck.h"
@@ -162,8 +161,8 @@ HRESULT BITSAgent::Initialize()
             Log::Info(L"Added a connection to {}", szUNC);
             m_bAddedConnection = true;
         }
-        SecureZeroMemory(szUser, ORC_MAX_PATH * sizeof(WCHAR));
-        SecureZeroMemory(szPass, ORC_MAX_PATH * sizeof(WCHAR));
+        SecureZeroMemory(szUser, m_config.UserName.size() * sizeof(WCHAR));
+        SecureZeroMemory(szPass, m_config.Password.size() * sizeof(WCHAR));
     }
 
     return S_OK;
@@ -249,6 +248,8 @@ BITSAgent::UploadFile(
             {
                 Log::Debug("Successfully set the username and password on the BITS job");
             }
+            SecureZeroMemory(szUser, m_config.UserName.size() * sizeof(WCHAR));
+            SecureZeroMemory(szPass, m_config.Password.size() * sizeof(WCHAR));
         }
     }
 
@@ -315,9 +316,9 @@ BITSAgent::UploadFile(
             {
                 Log::Debug(L"Configure NotifyCmd to delete share: {}{}", m_config.ServerName, m_config.RootPath);
 
-                constexpr std::wstring_view forbidden(L";&|()<>*?\"");
-                if (boost::algorithm::contains(m_config.ServerName, forbidden)
-                    || boost::algorithm::contains(m_config.RootPath, forbidden))
+                constexpr std::wstring_view forbidden(L";&|()<>*?\"%^");
+                if (m_config.ServerName.find_first_of(forbidden) != std::wstring::npos
+                    || m_config.RootPath.find_first_of(forbidden) != std::wstring::npos)
                 {
                     Log::Warn("Invalid characters in server name or network path");
                 }
@@ -329,7 +330,6 @@ BITSAgent::UploadFile(
                     }
 
                     cmdLine << L"net use /del \"\\\\" << m_config.ServerName << m_config.RootPath << L"\"";
-
                 }
             }
 

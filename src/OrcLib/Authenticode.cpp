@@ -33,6 +33,10 @@
 #include "Utils/Guard.h"
 #include "Utils/WinApi.h"
 
+#ifndef CERT_CHAIN_DISABLE_AIA
+#    define CERT_CHAIN_DISABLE_AIA 0x00002000
+#endif
+
 using namespace Orc;
 
 namespace {
@@ -113,6 +117,12 @@ Orc::Result<std::wstring> ParseCatalogHintFilename(std::string_view catalogHint)
     return name;
 }
 
+// Verify a security catalog held entirely in memory: confirm its PKCS#7 signature is intact AND that
+// the signing certificate chains to a trusted root under a code-signing policy. The in-memory buffer is
+// the source of truth (the catalog may come from a parsed/offline volume), so we deliberately avoid the
+// path-based OS API (WinVerifyTrust) and validate the bytes directly. CryptVerifyMessageSignature alone
+// only proves "signed by the embedded cert and not tampered"; without the chain check a self-signed or
+// attacker-forged catalog would pass. Both steps are required - fail closed.
 Orc::Result<void> CheckCatalogSignature(std::string_view catalog)
 {
     using namespace Orc;
@@ -124,31 +134,71 @@ Orc::Result<void> CheckCatalogSignature(std::string_view catalog)
     verifyParameters.pfnGetSignerCertificate = NULL;
     verifyParameters.pvGetArg = NULL;
 
-    // If 'signer' is not provided the catalog signature will not be checked
     PCCERT_CONTEXT signer = NULL;
-
     DWORD decodedMessageLength = 0;
-    BOOL result = CryptVerifyMessageSignature(
-        &verifyParameters,
-        0,
-        reinterpret_cast<unsigned char*>(const_cast<char*>(catalog.data())),
-        catalog.size(),
-        NULL,
-        &decodedMessageLength,
-        &signer);
-    if (!result)
+    if (!CryptVerifyMessageSignature(
+            &verifyParameters,
+            0,
+            reinterpret_cast<const BYTE*>(catalog.data()),
+            static_cast<DWORD>(catalog.size()),
+            NULL,
+            &decodedMessageLength,
+            &signer))
     {
         auto ec = LastWin32Error();
         Log::Debug("Failed CryptVerifyMessageSignature [{}]", ec);
         return ec;
     }
 
-    if (signer)
+    if (signer == NULL)
     {
-        if (!CertFreeCertificateContext(signer))
-        {
-            Log::Debug(L"Failed CertFreeCertificateContext [{}]", LastWin32Error());
-        }
+        Log::Debug("Catalog signature verified but exposed no signer certificate");
+        return std::errc::bad_message;
+    }
+
+    BOOST_SCOPE_EXIT(signer)
+    {
+        CertFreeCertificateContext(signer);
+    }
+    BOOST_SCOPE_EXIT_END;
+
+    CERT_CHAIN_PARA chainParameters = {};
+    chainParameters.cbSize = sizeof(chainParameters);
+
+    const DWORD chainFlags = CERT_CHAIN_CACHE_END_CERT | CERT_CHAIN_DISABLE_AIA;
+
+    PCCERT_CHAIN_CONTEXT chain = NULL;
+    if (!CertGetCertificateChain(NULL, signer, NULL, signer->hCertStore, &chainParameters, chainFlags, NULL, &chain))
+    {
+        auto ec = LastWin32Error();
+        Log::Debug("Failed CertGetCertificateChain [{}]", ec);
+        return ec;
+    }
+
+    BOOST_SCOPE_EXIT(chain)
+    {
+        CertFreeCertificateChain(chain);
+    }
+    BOOST_SCOPE_EXIT_END;
+
+    CERT_CHAIN_POLICY_PARA policyParameters = {};
+    policyParameters.cbSize = sizeof(policyParameters);
+
+    CERT_CHAIN_POLICY_STATUS policyStatus = {};
+    policyStatus.cbSize = sizeof(policyStatus);
+
+    if (!CertVerifyCertificateChainPolicy(CERT_CHAIN_POLICY_AUTHENTICODE, chain, &policyParameters, &policyStatus))
+    {
+        auto ec = LastWin32Error();
+        Log::Debug("Failed CertVerifyCertificateChainPolicy [{}]", ec);
+        return ec;
+    }
+
+    if (policyStatus.dwError != ERROR_SUCCESS)
+    {
+        auto ec = Win32Error(policyStatus.dwError);
+        Log::Debug("Catalog certificate chain is not trusted [{}]", ec);
+        return ec;
     }
 
     return Orc::Success<void>();
@@ -358,6 +408,11 @@ Authenticode::Authenticode()
 DWORD Authenticode::ExpectedHashSize()
 {
     const auto wintrust = ExtensionLibrary::GetLibrary<WinTrustExtension>();
+    if (!wintrust)
+    {
+        Log::Debug(L"Failed to load wintrust extension");
+        return (DWORD)-1;
+    }
 
     WCHAR szPath[ORC_MAX_PATH];
 
@@ -1453,19 +1508,34 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
 
     while (dwIndex < secdir.GetCount())
     {
+        if (dwIndex + FIELD_OFFSET(WIN_CERTIFICATE, bCertificate) > secdir.GetCount())
+        {
+            break;
+        }
+
+        if (pWin->dwLength < FIELD_OFFSET(WIN_CERTIFICATE, bCertificate))
+        {
+            Log::Debug(L"Authenticode: WIN_CERTIFICATE record too small (length {})", pWin->dwLength);
+            break;
+        }
+
         if (pWin->wCertificateType == WIN_CERT_TYPE_PKCS_SIGNED_DATA && pWin->wRevision == WIN_CERT_REVISION_2_0)
         {
-            CBinaryBuffer signature(pWin->bCertificate, pWin->dwLength);
+            const DWORD payloadOffset = dwIndex + FIELD_OFFSET(WIN_CERTIFICATE, bCertificate);
+            const DWORD available = static_cast<DWORD>(secdir.GetCount() - payloadOffset);
+            const DWORD claimed = pWin->dwLength - FIELD_OFFSET(WIN_CERTIFICATE, bCertificate);
+            CBinaryBuffer signature(pWin->bCertificate, std::min(claimed, available));
 
             data.isSigned = true;
 
             if (FAILED(hr = ExtractSignatureHash(signature, data)))
             {
-                Log::Error(
+                Log::Debug(
                     L"Failed to extract hash from signature in the security directory of '{}' [{}]",
                     szFileName,
                     SystemError(hr));
             }
+
             if (hashs.md5.GetCount() != 0 && hashs.md5.GetCount() == data.SignedHashs.md5.GetCount())
             {
                 if (!memcmp(hashs.md5.GetData(), data.SignedHashs.md5.GetData(), hashs.md5.GetCount()))
@@ -1507,7 +1577,6 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
             }
             else
             {
-                Log::Warn(L"Signature could not be verified '{}'", szFileName);
                 data.bSignatureVerifies = false;
             }
 
@@ -1515,7 +1584,7 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
 
             if (FAILED(hr = ExtractSignatureTimeStamp(signature, data)))
             {
-                Log::Error(
+                Log::Debug(
                     L"Failed to extract timestamp information from signature in the security directory of '{}' [{}]",
                     szFileName,
                     SystemError(hr));
@@ -1524,20 +1593,18 @@ Authenticode::Verify(LPCWSTR szFileName, const CBinaryBuffer& secdir, const PE_H
             hr = ExtractSignatureSigners(signature, data.Timestamp, data.Signers(), data.SignersCAs(), data.CertStores);
             if (FAILED(hr))
             {
-                Log::Error(
+                Log::Debug(
                     L"Failed to extract signer info from signature from security directory of '{}' [{}]",
                     szFileName,
                     SystemError(hr));
             }
         }
 
-        if (pWin->dwLength > 0)
-        {
-            dwIndex += pWin->dwLength;
-            pWin = (LPWIN_CERTIFICATE)(secdir.GetData() + dwIndex);
-        }
-        else
+        if (pWin->dwLength == 0 || pWin->dwLength > secdir.GetCount() - dwIndex)
             break;
+
+        dwIndex += pWin->dwLength;
+        pWin = (LPWIN_CERTIFICATE)(secdir.GetData() + dwIndex);
     }
     return S_OK;
 }
@@ -1555,15 +1622,29 @@ HRESULT Orc::Authenticode::SignatureSize(LPCWSTR szFileName, const CBinaryBuffer
 
     while (dwIndex < secdir.GetCount())
     {
+        if (dwIndex + FIELD_OFFSET(WIN_CERTIFICATE, bCertificate) > secdir.GetCount())
+        {
+            break;
+        }
+
+        if (pWin->dwLength < FIELD_OFFSET(WIN_CERTIFICATE, bCertificate))
+        {
+            Log::Debug(L"Authenticode: WIN_CERTIFICATE record too small (length {})", pWin->dwLength);
+            break;
+        }
+
         if (pWin->wCertificateType == WIN_CERT_TYPE_PKCS_SIGNED_DATA && pWin->wRevision == WIN_CERT_REVISION_2_0)
         {
-            CBinaryBuffer signature(pWin->bCertificate, pWin->dwLength);
+            const DWORD payloadOffset = dwIndex + FIELD_OFFSET(WIN_CERTIFICATE, bCertificate);
+            const DWORD available = static_cast<DWORD>(secdir.GetCount() - payloadOffset);
+            const DWORD claimed = pWin->dwLength - FIELD_OFFSET(WIN_CERTIFICATE, bCertificate);
+            CBinaryBuffer signature(pWin->bCertificate, std::min(claimed, available));
 
             DWORD dwSignatureSize = 0L;
             if (FAILED(hr = ExtractSignatureSize(signature, dwSignatureSize)))
             {
-                Log::Error(
-                    L"Failed to extract hash from signature in the security directory of '{}' [{}]",
+                Log::Debug(
+                    L"Failed to extract signature size in the security directory of '{}' [{}]",
                     szFileName,
                     SystemError(hr));
             }
@@ -1571,13 +1652,11 @@ HRESULT Orc::Authenticode::SignatureSize(LPCWSTR szFileName, const CBinaryBuffer
                 cbSize += dwSignatureSize;
         }
 
-        if (pWin->dwLength > 0)
-        {
-            dwIndex += pWin->dwLength;
-            pWin = (LPWIN_CERTIFICATE)(secdir.GetData() + dwIndex);
-        }
-        else
+        if (pWin->dwLength == 0 || pWin->dwLength > secdir.GetCount() - dwIndex)
             break;
+
+        dwIndex += pWin->dwLength;
+        pWin = (LPWIN_CERTIFICATE)(secdir.GetData() + dwIndex);
     }
     return S_OK;
 }
@@ -1721,13 +1800,12 @@ Orc::Result<void> Authenticode::VerifySignatureWithCatalogHint(
         break;
     }
 
-    // TODO: could rely on this high level MS api wrapper instead of 'Authenticode::ExtractCatalogSigners'
-    // auto signature = CheckCatalogSignature(std::string_view(catalog.data(), catalog.size()));
-    // if (!signature)
-    //{
-    //    Log::Error("Failed catalog signature verification [{}]", signature.error());
-    //    return signature.error();
-    //}
+    auto signature = CheckCatalogSignature(std::string_view(catalog.data(), catalog.size()));
+    if (signature.has_error())
+    {
+        Log::Debug("Failed catalog signature verification [{}]", signature.error());
+        return signature.error();
+    }
 
     bool found = ::FindPeHash(std::string_view(catalog.data(), catalog.size()), peHashes);
     if (!found)

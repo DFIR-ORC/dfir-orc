@@ -57,8 +57,17 @@ public:
 
     ProcessInOut Selection() { return m_Select; };
 
-    bool IsComplete() { return m_Status >= Complete; };
-    RedirectStatus Status() { return m_Status; };
+    bool IsComplete()
+    {
+        Concurrency::critical_section::scoped_lock lock(m_cs);
+        return m_Status >= Complete;
+    };
+
+    RedirectStatus Status()
+    {
+        Concurrency::critical_section::scoped_lock lock(m_cs);
+        return m_Status;
+    };
 
     HANDLE GetChildHandleFor(ProcessInOut selection);
     HANDLE GetParentHandleFor(ProcessInOut selection);

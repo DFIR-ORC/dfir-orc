@@ -59,8 +59,8 @@ public:
 
 private:
     Node m_node;
-    uint64_t m_firstCatalogOffset;
-    uint64_t m_maximumSize;
+    uint64_t m_firstCatalogOffset = 0;
+    uint64_t m_maximumSize = 0;
     GUID m_volumeGuid;
     GUID m_storageGuid;
     uint64_t m_flags;

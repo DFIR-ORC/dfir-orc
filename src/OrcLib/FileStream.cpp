@@ -87,7 +87,7 @@ HRESULT FileStream::CreateNew(
                 dwSharedMode,
                 pSecurityAttributes,
                 CREATE_ALWAYS,
-                FILE_ATTRIBUTE_NORMAL | dwFlags,
+                FILE_ATTRIBUTE_NORMAL | dwFlags | FILE_FLAG_OPEN_REPARSE_POINT,
                 NULL)))
         return hr;
 

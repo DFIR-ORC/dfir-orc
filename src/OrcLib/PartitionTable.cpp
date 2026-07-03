@@ -40,6 +40,8 @@ PartitionTable::~PartitionTable(void)
     if (m_pDiskExtent != NULL)
     {
         m_pDiskExtent->Close();
+        delete m_pDiskExtent;
+        m_pDiskExtent = NULL;
     }
 }
 
@@ -48,6 +50,8 @@ HRESULT PartitionTable::LoadPartitionTable(const WCHAR* szDeviceOrImage)
     if (m_pDiskExtent != NULL)
     {
         m_pDiskExtent->Close();
+        delete m_pDiskExtent;
+        m_pDiskExtent = NULL;
     }
 
     m_pDiskExtent = new CDiskExtent(szDeviceOrImage);

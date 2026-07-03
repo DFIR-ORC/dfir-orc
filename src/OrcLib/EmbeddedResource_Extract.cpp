@@ -41,6 +41,18 @@ namespace fs = std::filesystem;
 
 using namespace Orc;
 
+namespace {
+
+std::wstring SanitizeResourceName(const std::wstring& name)
+{
+    std::wstring sanitized;
+    std::replace_copy(begin(name), end(name), std::back_inserter(sanitized), L'\\', L'_');
+    std::replace(begin(sanitized), end(sanitized), L'/', L'_');
+    return sanitized;
+}
+
+}  // namespace
+
 constexpr const int REGEX_ARCHIVE_RESSOURCEREF = 1;
 constexpr const int REGEX_ARCHIVE_FORMATREF = 2;
 constexpr const int REGEX_ARCHIVE_MOTHERSHIP = 3;
@@ -935,6 +947,12 @@ BOOL CALLBACK V_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
 
     V_EnumResourceNamesEx_Param* param = (V_EnumResourceNamesEx_Param*)lParam;
 
+    if (IS_INTRESOURCE(lpszName))
+    {
+        Log::Debug(L"Skipping integer-id value resource #{}", (ULONG_PTR)lpszName);
+        return TRUE;
+    }
+
     wstring strName(lpszName);
     wstring strValue;
 
@@ -1008,6 +1026,12 @@ BOOL CALLBACK B_EnumResourceNamesEx_Function(HMODULE, LPCWSTR, LPWSTR lpszName, 
     HRESULT hr = E_FAIL;
 
     B_EnumResourceNamesEx_Param* param = (B_EnumResourceNamesEx_Param*)lParam;
+
+    if (IS_INTRESOURCE(lpszName))
+    {
+        Log::Debug(L"Skipping integer-id binary resource #{}", (ULONG_PTR)lpszName);
+        return TRUE;
+    }
 
     wstring strName(lpszName);
     CBinaryBuffer buffer;
@@ -1126,7 +1150,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
             continue;
         }
 
-        wstring out = outDir + L"\\" + item.Name;
+        wstring out = outDir + L"\\" + SanitizeResourceName(item.Name);
 
         auto outFile = std::make_shared<FileStream>();
 
@@ -1162,7 +1186,7 @@ HRESULT EmbeddedResource::ExpandArchivesAndBinaries(const std::wstring& outDir, 
             continue;
         }
 
-        wstring out = outDir + L"\\" + item.Name;
+        wstring out = outDir + L"\\" + SanitizeResourceName(item.Name);
 
         std::error_code ec;
         fs::create_directories(fs::path(out), ec);

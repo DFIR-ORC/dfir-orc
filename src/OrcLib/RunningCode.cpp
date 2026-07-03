@@ -167,7 +167,6 @@ HRESULT RunningCode::EnumerateModules(DWORD dwPID)
             Log::Trace(L"EnumModule: {}", modinfo.strModule);
         }
     }
-    phModules = nullptr;
     return S_OK;
 }
 

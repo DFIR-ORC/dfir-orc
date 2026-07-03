@@ -192,7 +192,7 @@ HRESULT JobObject::GrantAccess(PSID pSid, ACCESS_MASK mask)
     BOOST_SCOPE_EXIT(&hSettableHandle)
     {
         if (hSettableHandle != INVALID_HANDLE_VALUE)
-            LocalFree(hSettableHandle);
+            CloseHandle(hSettableHandle);
         hSettableHandle = INVALID_HANDLE_VALUE;
     }
     BOOST_SCOPE_EXIT_END;

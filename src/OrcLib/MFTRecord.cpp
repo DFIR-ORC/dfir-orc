@@ -21,6 +21,40 @@ using namespace std;
 
 using namespace Orc;
 
+namespace {
+
+bool IsAttributeInBounds(const ATTRIBUTE_RECORD_HEADER* pAttribute, DWORD dwAttributeLen)
+{
+    const DWORD recordLength = pAttribute->RecordLength;
+    if (recordLength > dwAttributeLen)
+        return false;
+
+    if (pAttribute->NameLength != 0)
+    {
+        const DWORD nameOffset = pAttribute->NameOffset;
+        const DWORD nameBytes = static_cast<DWORD>(pAttribute->NameLength) * sizeof(WCHAR);
+        if (nameOffset > recordLength || nameBytes > recordLength - nameOffset)
+            return false;
+    }
+
+    if (pAttribute->FormCode == RESIDENT_FORM)
+    {
+        const DWORD valueOffset = pAttribute->Form.Resident.ValueOffset;
+        const DWORD valueLength = pAttribute->Form.Resident.ValueLength;
+        if (valueOffset > recordLength || valueLength > recordLength - valueOffset)
+            return false;
+    }
+    else if (pAttribute->FormCode == NONRESIDENT_FORM)
+    {
+        if (pAttribute->Form.Nonresident.MappingPairsOffset > recordLength)
+            return false;
+    }
+
+    return true;
+}
+
+}  // namespace
+
 HRESULT MFTRecord::ParseRecord(
     const std::shared_ptr<VolumeReader>& VolReader,
     PFILE_RECORD_SEGMENT_HEADER pRecord,
@@ -107,7 +141,14 @@ HRESULT MFTRecord::ParseRecord(
 
         shared_ptr<MftRecordAttribute> pNewAttr;
 
-        if (FAILED(hr = ParseAttribute(VolReader, pCurAttr, pCurAttr->RecordLength, pNewAttr)))
+        const DWORD dwBytesToRecordEnd = (DWORD)((LPBYTE)pFirstAttr + dwAllAttrLength - (LPBYTE)pCurAttr);
+        if (dwBytesToRecordEnd < FIELD_OFFSET(ATTRIBUTE_RECORD_HEADER, Form))
+        {
+            Log::Debug("Stopping attribute walk: remaining bytes smaller than an attribute header");
+            break;
+        }
+
+        if (FAILED(hr = ParseAttribute(VolReader, pCurAttr, dwBytesToRecordEnd, pNewAttr)))
             return hr;
 
         if (pNewAttr != nullptr)
@@ -186,7 +227,8 @@ HRESULT MFTRecord::ParseRecord(
                         if (attrEntry.m_Attribute->m_pHeader->TypeCode == pNewAttr->m_pHeader->TypeCode
                             && attrEntry.m_Attribute->m_pHeader->NameLength == pNewAttr->m_pHeader->NameLength
                             && !wcsncmp(
-                                (WCHAR*)((BYTE*)attrEntry.m_Attribute->m_pHeader + attrEntry.m_Attribute->m_pHeader->NameOffset),
+                                (WCHAR*)((BYTE*)attrEntry.m_Attribute->m_pHeader
+                                         + attrEntry.m_Attribute->m_pHeader->NameOffset),
                                 (WCHAR*)((BYTE*)pNewAttr->m_pHeader + pNewAttr->m_pHeader->NameOffset),
                                 pNewAttr->m_pHeader->NameLength)
                             && attrEntry.m_Attribute->m_pHeader->FormCode == NONRESIDENT_FORM
@@ -262,9 +304,14 @@ HRESULT MFTRecord::ParseAttribute(
     std::shared_ptr<MftRecordAttribute>& pNewAttr)
 {
     HRESULT hr = E_FAIL;
-    DBG_UNREFERENCED_PARAMETER(dwAttributeLen);
 
     pNewAttr = nullptr;
+
+    if (!IsAttributeInBounds(pAttribute, dwAttributeLen))
+    {
+        Log::Debug(L"Skipping MFT attribute (type {:#x}) with out-of-record extents", pAttribute->TypeCode);
+        return S_OK;  // pNewAttr stays null: the walk continues with the next attribute
+    }
 
     switch (pAttribute->TypeCode)
     {
@@ -280,6 +327,14 @@ HRESULT MFTRecord::ParseAttribute(
                 Log::Error("Failed to parse $STANDARD_INFORMATION, attribute must be resident");
                 return E_FAIL;
             }
+            const ULONG valueOffset = pAttribute->Form.Resident.ValueOffset;
+            if (pAttribute->FormCode == RESIDENT_FORM
+                && (valueOffset > dwAttributeLen || sizeof(STANDARD_INFORMATION) > dwAttributeLen - valueOffset))
+            {
+                Log::Debug("Skipping $STANDARD_INFORMATION with out-of-record value offset");
+                break;
+            }
+
             m_pStandardInformation =
                 (PSTANDARD_INFORMATION)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset);
 
@@ -348,12 +403,31 @@ HRESULT MFTRecord::ParseAttribute(
                 Log::Error("Failed to parse $FILE_NAME, attribute must be resident");
                 return E_FAIL;
             }
+            const ULONG valueOffset = pAttribute->Form.Resident.ValueOffset;
+            if (pAttribute->FormCode == RESIDENT_FORM
+                && (valueOffset > dwAttributeLen || FIELD_OFFSET(FILE_NAME, FileName) > dwAttributeLen - valueOffset))
+            {
+                Log::Debug("Skipping $FILE_NAME with out-of-record value offset");
+                break;
+            }
+
+            PFILE_NAME pParsedFileName = (PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset);
+
+            if (pAttribute->FormCode == RESIDENT_FORM
+                && (valueOffset > dwAttributeLen
+                    || FIELD_OFFSET(FILE_NAME, FileName)
+                            + static_cast<size_t>(pParsedFileName->FileNameLength) * sizeof(WCHAR)
+                        > dwAttributeLen - valueOffset))
+            {
+                Log::Debug("Skipping $FILE_NAME whose name runs past the record");
+                break;
+            }
+
             if (m_pBaseFileRecord != NULL)
             {
-                m_pBaseFileRecord->m_FileNames.push_back(
-                    (PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset));
+                m_pBaseFileRecord->m_FileNames.push_back(pParsedFileName);
             }
-            m_FileNames.push_back((PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset));
+            m_FileNames.push_back(pParsedFileName);
 
             Log::Debug(
                 L"FileName: '{}', frn: {:#x}, parent: {:#x}, flags: {:#x}",
@@ -412,11 +486,8 @@ HRESULT MFTRecord::ParseAttribute(
             // check if this is a directory
             if (pAttribute->NameLength)
             {
-                if (0
-                    == wcsncmp(
-                        (PWSTR)((LPBYTE)pAttribute + pAttribute->NameOffset),
-                        L"$I30",
-                        std::max<UCHAR>(pAttribute->NameLength, 4)))
+                if (pAttribute->NameLength == 4
+                    && 0 == wcsncmp((PWSTR)((LPBYTE)pAttribute + pAttribute->NameOffset), L"$I30", 4))
                 {
                     // we need to add the file names as directories since this record is
                     // determined to be a directory.
@@ -445,7 +516,8 @@ HRESULT MFTRecord::ParseAttribute(
         case $INDEX_ALLOCATION: {
             Log::Trace(L"Add $INDEX_ALLOCATION");
 
-            if (0 == wcsncmp((PWSTR)((LPBYTE)pAttribute + pAttribute->NameOffset), L"$I30", 4))
+            if (pAttribute->NameLength == 4
+                && 0 == wcsncmp((PWSTR)((LPBYTE)pAttribute + pAttribute->NameOffset), L"$I30", 4))
             {
                 // we need to add the file names as directories since this record is
                 // determined to be a directory.

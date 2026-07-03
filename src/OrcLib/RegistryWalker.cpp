@@ -12,6 +12,31 @@
 
 using namespace Orc;
 
+namespace {
+
+bool IsRangeValid(size_t bufferSize, uint32_t rangeOffset, size_t rangeSize)
+{
+    if (rangeOffset == 0xFFFFFFFF)
+        return false;
+
+    const int signedOffset = static_cast<int>(rangeOffset);
+    if (signedOffset < 0)
+        return false;
+
+    const uint64_t start = static_cast<uint64_t>(signedOffset) + 0x1000;
+    return start <= bufferSize && rangeSize <= bufferSize - start;
+};
+
+// Byte size of an allocated registry cell. Cell sizes are stored as a negative int32 for
+// allocated cells (positive means free); the cell size is the magnitude. Computing it in the
+// unsigned domain avoids signed-overflow UB when a forged BlockSize is INT_MIN.
+size_t AllocatedCellSize(DWORD blockSize)
+{
+    return static_cast<size_t>(0u - blockSize);
+}
+
+}  // namespace
+
 RegistryValue::RegistryValue(
     std::string&& ValueName,
     const RegistryKey* const ParentKey,
@@ -312,13 +337,27 @@ HRESULT RegistryHive::CheckBlockHeader(const BlockHeader* const pBlockHeader) co
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    if (-(int)(pBlockHeader->BlockSize) < 0)
+    const BYTE* const pHeaderBytes = reinterpret_cast<const BYTE*>(pBlockHeader);
+    if (pHeaderBytes < m_pHiveBuffer)
+    {
+        Log::Error("Block header is before hive buffer start");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    const size_t headerOffset = static_cast<size_t>(pHeaderBytes - m_pHiveBuffer);
+    if (headerOffset > m_ulHiveBufferSize || sizeof(BlockHeader) > m_ulHiveBufferSize - headerOffset)
+    {
+        Log::Error("Block header is outside of hive buffer boundary");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    if ((int)(pBlockHeader->BlockSize) > 0)
     {
         Log::Error("BlockSize is negative (should be positive)");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    if ((UINT_PTR)(pBlockHeader) + (size_t)(-(int)pBlockHeader->BlockSize)
+    if ((UINT_PTR)(pBlockHeader) + AllocatedCellSize(pBlockHeader->BlockSize)
         > m_ulHiveBufferSize + (UINT_PTR)m_pHiveBuffer)
     {
         Log::Error("Block end is outside of hive buffer boundary");
@@ -480,15 +519,11 @@ HRESULT RegistryHive::CheckNkHeader(
     // check for all keys execpt root key!
     if (pHeader->Type == KeyType::key)
     {
-        // Don't throw error because this field is never used to build keys. (Parent key is always known)
-        if (!IsOffsetValid(pHeader->OffsetToParent))
+        if (!::IsRangeValid(m_ulHiveBufferSize, pHeader->OffsetToParent, sizeof(KeyHeader)))
         {
             Log::Debug("Nk header: ParentKey offset is invalid");
         }
-
-        // check parent key signature
-
-        if (_strnicmp(((KeyHeader*)FixOffset(pHeader->OffsetToParent))->Signature, "nk", 2))
+        else if (_strnicmp(((KeyHeader*)FixOffset(pHeader->OffsetToParent))->Signature, "nk", 2))
         {
             Log::Debug("Nk header: ParentKey signature mismatch");
         }
@@ -577,7 +612,7 @@ HRESULT RegistryHive::CheckDataHeader(const BlockHeader* const pHeader) const
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    if ((UINT_PTR)(pHeader) + (size_t)(-(int)pHeader->BlockSize) > (UINT_PTR)(m_pHiveBuffer) + m_ulHiveBufferSize)
+    if ((UINT_PTR)(pHeader) + AllocatedCellSize(pHeader->BlockSize) > (UINT_PTR)(m_pHiveBuffer) + m_ulHiveBufferSize)
     {
         Log::Error("Data block end is outside of hive buffer boundary");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -610,6 +645,27 @@ HRESULT RegistryHive::ParseValues(
 
     const KeyHeader* const pCurrentKeyHeader = pCurrentKey->GetKeyHeader();
     ValuesArray* pValuesList = (ValuesArray*)FixOffset(pCurrentKeyHeader->OffsetToValueList);
+
+    if (!::IsRangeValid(m_ulHiveBufferSize, pCurrentKeyHeader->OffsetToValueList, sizeof(BlockHeader))
+        || CheckDataHeader(&pValuesList->Header) != S_OK)
+    {
+        Log::Debug("Key '{}': value list cell is out of bounds", pCurrentKey->GetKeyName());
+        return S_OK;
+    }
+
+    const size_t valueListCellSize = AllocatedCellSize(pValuesList->Header.BlockSize);
+    const size_t maxValueOffsets =
+        valueListCellSize > sizeof(BlockHeader) ? (valueListCellSize - sizeof(BlockHeader)) / sizeof(DWORD) : 0;
+    if (dwCount > maxValueOffsets)
+    {
+        Log::Debug(
+            "Key '{}': value count {} exceeds value-list cell capacity {}",
+            pCurrentKey->GetKeyName(),
+            dwCount,
+            maxValueOffsets);
+        dwCount = (DWORD)maxValueOffsets;
+    }
+
     DWORD i;
     const ValueHeader* pCurrentValue;
     for (i = 0; i < dwCount; i++)
@@ -860,7 +916,7 @@ HRESULT RegistryHive::ParseLiRi(
     for (i = 0; i < dwCount; i++)
     {
 
-        if (!IsOffsetValid(pRiLiHeader->Records[i].OffsetToKeyHeader))
+        if (!::IsRangeValid(m_ulHiveBufferSize, pRiLiHeader->Records[i].OffsetToKeyHeader, sizeof(BlockHeader) + 2))
         {
             Log::Debug(
                 "Key '{}': Li/Ri record: offset to key is invalid. Either Li/Ri record is invalid or key is not "
@@ -875,7 +931,11 @@ HRESULT RegistryHive::ParseLiRi(
         // Check if subkey list is of type LF/LH
         if (!_strnicmp((CHAR*)pHeader->Data, "lh", 2) || !_strnicmp((CHAR*)pHeader->Data, "lf", 2))
         {
-            ParseLfLh((LF_LH_Header* const)pHeader, CurrentKeySet, CurrentKey, pSubKeyCount);
+            if (FAILED(hr = ParseLfLh((LF_LH_Header* const)pHeader, CurrentKeySet, CurrentKey, pSubKeyCount)))
+            {
+                Log::Debug(
+                    "Key '{}': failed to parse lf/lh subkey list [{}]", CurrentKey->GetKeyName(), SystemError(hr));
+            }
         }
         // Check if subkey list is of type LI/RI
         else if (!_strnicmp((CHAR*)pHeader->Data, "li", 2) || !_strnicmp((CHAR*)pHeader->Data, "ri", 2))
@@ -970,6 +1030,12 @@ HRESULT RegistryHive::ParseNks(RegistryKey* const CurrentKey, std::vector<Regist
         return S_OK;
     }
     DataHeader* pHeader;
+
+    if (!::IsRangeValid(m_ulHiveBufferSize, pCurrentKeyHeader->OffsetToLFHeader, sizeof(BlockHeader) + 2))
+    {
+        Log::Debug("Key '{}': subkey-list cell offset is out of bounds", CurrentKey->GetKeyName());
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
 
     pHeader = (DataHeader*)FixOffset(pCurrentKeyHeader->OffsetToLFHeader);
 
@@ -1092,6 +1158,7 @@ HRESULT RegistryHive::Walk(
         Log::Error(L"Hive '{}': hive is not loaded", m_strHiveName);
         return E_UNEXPECTED;
     }
+
     // Get Root key
     KeyHeader* pRegKey;
     pRegKey = (KeyHeader*)FixOffset(m_dwRootKeyOffset);

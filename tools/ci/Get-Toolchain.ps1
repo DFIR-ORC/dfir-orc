@@ -31,7 +31,10 @@ param (
 
     [Parameter(ParameterSetName = "Download",
                HelpMessage = "Suppress the final transfer instructions.")]
-    [switch] $NoFooter
+    [switch] $NoFooter,
+
+    [Parameter(HelpMessage = "Do not download or install Git for Windows.")]
+    [switch] $NoGit
 )
 
 Set-StrictMode -Version Latest
@@ -165,10 +168,15 @@ function Invoke-DownloadMode {
     $VCREDIST_URL  = "https://aka.ms/vc14/vc_redist.x86.exe"
     if (-not (Invoke-Download $VCREDIST_URL $vcRedistDest "VCRedist x86"))    { return $false }
 
-    $GIT_URL  = (Invoke-RestMethod https://api.github.com/repos/git-for-windows/git/releases/latest).assets `
-    | Where-Object { $_.browser_download_url -match '64-bit.exe$' } `
-    | ForEach-Object { $_.browser_download_url }
-    if (-not (Invoke-Download $GIT_URL      $gitDest      "Git for Windows")) { return $false }
+    if ($NoGit) {
+        Write-Host ""
+        Write-Host "Skipping Git for Windows download (-NoGit)."
+    } else {
+        $GIT_URL  = (Invoke-RestMethod https://api.github.com/repos/git-for-windows/git/releases/latest).assets `
+        | Where-Object { $_.browser_download_url -match '64-bit.exe$' } `
+        | ForEach-Object { $_.browser_download_url }
+        if (-not (Invoke-Download $GIT_URL      $gitDest      "Git for Windows")) { return $false }
+    }
 
     Copy-Item -LiteralPath $PSCommandPath -Destination $resolvedOutput -Force
 
@@ -240,8 +248,11 @@ function Invoke-InstallMode {
     if (-not (Test-Path -LiteralPath $vcRedist)) {
         Write-Error "VCRedist installer not found: $vcRedist"; return $false
     }
-    if (-not (Test-Path -LiteralPath $gitInstaller)) {
-        Write-Error "Git installer not found: $gitInstaller"; return $false
+
+    $installGit = -not $NoGit
+    if ($installGit -and -not (Test-Path -LiteralPath $gitInstaller)) {
+        Write-Warning "Git installer not found: $gitInstaller - skipping Git installation."
+        $installGit = $false
     }
 
     Write-Host "Step 1: Visual Studio Build Tools"
@@ -251,7 +262,13 @@ function Invoke-InstallMode {
     if ($exitCode -ne 0) { Write-Host "Exit code: $exitCode" }
 
     if (-not (Install-VCRedist $vcRedist))    { return $false }
-    if (-not (Install-Git      $gitInstaller)) { return $false }
+
+    if ($installGit) {
+        if (-not (Install-Git $gitInstaller)) { return $false }
+    } elseif ($NoGit) {
+        Write-Host ""
+        Write-Host "Skipping Git installation (-NoGit)."
+    }
 
     Write-Host ""
     Write-Host "Done."

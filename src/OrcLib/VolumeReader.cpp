@@ -58,6 +58,12 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
         m_BytesPerSector = pbs->PackedBpb.BytesPerSector;
+        if (m_BytesPerSector != 512 && m_BytesPerSector != 1024 && m_BytesPerSector != 2048 && m_BytesPerSector != 4096)
+        {
+            Log::Error("NTFS: BytesPerSector is not a supported value ({:#x})", m_BytesPerSector);
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        }
+
         m_BytesPerCluster = (ULONG)pbs->PackedBpb.SectorsPerCluster * m_BytesPerSector;
 
         if (pbs->ClustersPerFileRecordSegment < 0)
@@ -81,6 +87,13 @@ HRESULT VolumeReader::ParseBootSector(const CBinaryBuffer& buffer)
         if (m_BytesPerFRS % 1024 != 0)
         {
             Log::Error("NTFS: Bytes per File Record is not a multiple of 1024 - {:#x}", m_BytesPerFRS);
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        }
+
+        constexpr ULONG kMaxBytesPerFRS = 64 * 1024;
+        if (m_BytesPerFRS == 0 || m_BytesPerFRS > kMaxBytesPerFRS)
+        {
+            Log::Error("NTFS: Bytes per File Record is out of range - {:#x}", m_BytesPerFRS);
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
 

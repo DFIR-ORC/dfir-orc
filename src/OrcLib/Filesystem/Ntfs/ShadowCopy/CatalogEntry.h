@@ -127,14 +127,14 @@ public:
         uint64_t PreviousBitmapOffset() const { return m_previousBitmapOffset; }
 
     private:
-        uint64_t m_diffAreaTableOffset;
-        GUID m_guid;
-        uint64_t m_applicationInfoOffset;
-        uint64_t m_diffLocationTableOffset;
-        uint64_t m_bitmapOffset;
-        uint64_t m_frn;
-        uint64_t m_allocatedSize;
-        uint64_t m_previousBitmapOffset;
+        uint64_t m_diffAreaTableOffset = 0;
+        GUID m_guid = {};
+        uint64_t m_applicationInfoOffset = 0;
+        uint64_t m_diffLocationTableOffset = 0;
+        uint64_t m_bitmapOffset = 0;
+        uint64_t m_frn = 0;
+        uint64_t m_allocatedSize = 0;
+        uint64_t m_previousBitmapOffset = 0;
     };
 
     using EntryHolder = std::variant<std::monostate, EndOfCatalog, FreeEntry, SnapshotInfo, DiffAreaInfo>;
