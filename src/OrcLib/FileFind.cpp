@@ -3034,6 +3034,14 @@ FileFind::SearchTerm::Criteria FileFind::MatchContains(
             CBinaryBuffer readContent(buffer.GetData() + carry, buffer.GetCount() - carry);
             if (FAILED(hr = pDataStream->Read(readContent.GetData(), readContent.GetCount(), &ullBytesRead)))
                 break;
+
+            if (ullBytesRead == 0LL)
+            {
+                // ullBytesToRead is the attribute's declared size while progress is governed by the runlist:
+                // a successful zero-byte read is the real end of the data, otherwise the loop never exits
+                break;
+            }
+
             ullAccumulatedBytes += ullBytesRead;
 
             CBinaryBuffer searchContent(buffer.GetData(), (size_t)ullBytesRead + carry);
