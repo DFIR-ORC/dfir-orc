@@ -29,7 +29,7 @@ SubStream::SubStream(ByteStream& stream, uint64_t chunkOffset, uint64_t chunkSiz
     {
         Log::Debug(
             "Requested chunk size exceeds stream bounds (chunk size: {}, max size: {})", chunkSize, maxChunkSize);
-        chunkSize = maxChunkSize;
+        m_chunkSize = maxChunkSize;
     }
 
     auto hr = m_stream.SetFilePointer(m_chunkOffset, FILE_BEGIN, nullptr);
