@@ -57,7 +57,10 @@ public:
             bZero = false;
         };
 
-        NonResidentAttributeExtent(ULONGLONG DOf, ULONGLONG DEx, ULONGLONG DData, ULONGLONG Dvcn, bool bZ = false)
+        // bZ has no default on purpose: it selects whether NTFSStream zero-fills this extent or reads it
+        // from DiskOffset. With a default, a caller that passes 'true' in Dvcn's position still compiles
+        // (bool promotes to ULONGLONG) and silently gets bZ == false.
+        NonResidentAttributeExtent(ULONGLONG DOf, ULONGLONG DEx, ULONGLONG DData, ULONGLONG Dvcn, bool bZ)
         {
             DiskOffset = DOf;
             DiskAlloc = DEx;

@@ -274,11 +274,18 @@ MftRecordAttribute::GetNonResidentInformation(const std::shared_ptr<VolumeReader
     if (m_pNonResidentInfo->DataSize > m_pNonResidentInfo->ExtentsSize)
     {
         // pad zeros at the end of all continuation attributes
-        m_pNonResidentInfo->ExtentsVector.push_back(MFTUtils::NonResidentAttributeExtent(
-            0,
-            m_pNonResidentInfo->DataSize - m_pNonResidentInfo->ExtentsSize,
-            m_pNonResidentInfo->DataSize - m_pNonResidentInfo->ExtentsSize,
-            true));
+        //
+        // The trailing 'true' is the bZero flag: it must be passed as the fifth argument. Passing it
+        // fourth binds it to LowestVCN (as 1) and silently leaves bZero defaulted to false, which makes
+        // NTFSStream read this synthetic gap from disk offset 0 (the boot sector) instead of zero-filling
+        // it.
+        const auto ullGapSize = m_pNonResidentInfo->DataSize - m_pNonResidentInfo->ExtentsSize;
+        const auto ulBytesPerCluster = pVolReader->GetBytesPerCluster();
+        const ULONGLONG ullGapVcn =
+            ulBytesPerCluster ? m_pNonResidentInfo->ExtentsSize / ulBytesPerCluster : 0ULL;
+
+        m_pNonResidentInfo->ExtentsVector.push_back(
+            MFTUtils::NonResidentAttributeExtent(0, ullGapSize, ullGapSize, ullGapVcn, true));
         m_pNonResidentInfo->ExtentsSize += m_pNonResidentInfo->DataSize - m_pNonResidentInfo->ExtentsSize;
     }
     else if (m_pNonResidentInfo->DataSize < m_pNonResidentInfo->ExtentsSize)

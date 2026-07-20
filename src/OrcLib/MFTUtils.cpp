@@ -180,7 +180,8 @@ HRESULT MFTUtils::GetAttributeNRExtents(
                 (CurrentLcn * BytesPerCluster),
                 ClusterCount * BytesPerCluster,
                 ClusterCount * BytesPerCluster,
-                CurrentVcn));
+                CurrentVcn,
+                false));
         }
 
         //  3.  CurrentVcn = NextVcn;
