@@ -11,6 +11,7 @@
 
 #include "Privilege.h"
 #include "Utils/Guard.h"
+#include "Utils/WinApi.h"
 
 #include "NtDllExtension.h"
 
@@ -94,11 +95,40 @@ JobObject::GetHandle(DWORD dwSourcePid, HANDLE hSourceHandle, DWORD dwDesiredAcc
 Orc::JobObject::JobObject(LPCWSTR szJobName)
     : m_hJob(INVALID_HANDLE_VALUE)
 {
-    m_hJob = CreateJobObject(NULL, szJobName);
-    if (m_hJob == NULL)
-        m_hJob = INVALID_HANDLE_VALUE;
+    SECURITY_ATTRIBUTES sa;
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = FALSE;
+    sa.lpSecurityDescriptor = nullptr;
+
+    auto sd = GetSecurityDescriptor(DACL::OrcDefaultFullControl);
+    if (sd)
+    {
+        sa.lpSecurityDescriptor = sd.value();
+    }
     else
-        m_bClose = true;
+    {
+        // A default descriptor still leaves the ERROR_ALREADY_EXISTS check below as the real guard.
+        Log::Debug(L"Failed to get job object security descriptor, falling back on the default one");
+    }
+
+    HANDLE hJob = CreateJobObject(&sa, szJobName);
+    if (hJob == NULL)
+    {
+        Log::Debug(L"Failed to create job object [{}]", SystemError(HRESULT_FROM_WIN32(GetLastError())));
+        return;
+    }
+
+    // The name is predictable (the pid is enumerable and the keyword comes from shipped configurations):
+    // adopting a job another process created would hand it control over the collection's children.
+    if (szJobName != nullptr && GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        Log::Error(L"Refusing to use the pre-existing job object '{}'", szJobName);
+        CloseHandle(hJob);
+        return;
+    }
+
+    m_hJob = hJob;
+    m_bClose = true;
 };
 
 HRESULT JobObject::GetHandleTypeName(DWORD dwSourcePid, HANDLE hSourceHandle, wstring& strType)
@@ -235,17 +265,26 @@ HRESULT JobObject::GetJobObject(HANDLE hProcess, HANDLE& hJob)
 
     auto jobName = fmt::format(L"DFIR-ORC_{}_OnlyToGetJobType", GetCurrentProcessId());
     HANDLE hEmptyJob = CreateJobObject(NULL, jobName.c_str());
+
+    // CreateJobObject returns NULL on failure, never INVALID_HANDLE_VALUE.
+    if (hEmptyJob == NULL)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        Log::Error("Could not create empty job object [{}]", SystemError(hr));
+        return hr;
+    }
+
     BOOST_SCOPE_EXIT(&hEmptyJob)
     {
         CloseHandle(hEmptyJob);
     }
     BOOST_SCOPE_EXIT_END;
 
-    if (hEmptyJob == INVALID_HANDLE_VALUE)
+    // This job is only ever used as a type sample, but a pre-existing one is not ours to touch.
+    if (GetLastError() == ERROR_ALREADY_EXISTS)
     {
-        hr = HRESULT_FROM_WIN32(GetLastError());
-        Log::Error("Could not create empty job object [{}]", SystemError(hr));
-        return hr;
+        Log::Error(L"Refusing to use the pre-existing job object '{}'", jobName);
+        return E_FAIL;
     }
 
     if (FAILED(hr = SetPrivilege(SE_DEBUG_NAME, TRUE)))
