@@ -112,14 +112,14 @@ HRESULT MFTWalker::Initialize(const shared_ptr<Location>& loc, ResurrectRecordsM
         if (pOfflineReader)
             m_pMFT = std::make_unique<MFTOffline>(pOfflineReader);
         else
-            return hr;
+            return E_NOINTERFACE;
     }
     else
     {
         m_pMFT = std::make_unique<MFTOnline>(m_pVolReader);
     }
 
-    if (FAILED(m_pMFT->Initialize()))
+    if (FAILED(hr = m_pMFT->Initialize()))
         return hr;
 
     if (!loc->GetSubDirs().empty())

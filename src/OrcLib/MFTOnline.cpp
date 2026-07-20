@@ -54,9 +54,10 @@ HRESULT MFTOnline::Initialize()
     catch (...)
     {
         Log::Info(L"Exception thrown when processing MFT");
+        hr = E_UNEXPECTED;
     }
 
-    return S_OK;
+    return hr;
 }
 
 HRESULT MFTOnline::GetMFTChildsRecordExtents(
