@@ -460,18 +460,34 @@ UpdateSecurityInfo(HANDLE hFile, LPSECURITY_ATTRIBUTES lpSecurityAttributes, PSI
     return {};
 }
 
+[[nodiscard]] std::error_code IsReparsePoint(HANDLE hFile, bool& isReparsePoint) noexcept
+{
+    BY_HANDLE_FILE_INFORMATION info;
+
+    if (!GetFileInformationByHandle(hFile, &info))
+    {
+        Log::Debug(L"Failed GetFileInformationByHandle [{}]", LastWin32Error());
+        return LastWin32Error();
+    }
+
+    isReparsePoint = (info.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+    return {};
+}
+
 [[nodiscard]] std::error_code SetEffectiveUserSecurityInfo(
     const std::wstring& path,
     SECURITY_ATTRIBUTES& sa,
     bool useTakeOwnerShipPrivilege = false) noexcept
 {
+    bool isReparsePoint = false;
+
     ScopedFileHandle hFile(CreateFileW(
         path.c_str(),
         READ_CONTROL | WRITE_DAC | WRITE_OWNER,
         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         NULL,
         OPEN_EXISTING,
-        FILE_FLAG_BACKUP_SEMANTICS,
+        FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
         NULL));
 
     if (hFile.get() == INVALID_HANDLE_VALUE)
@@ -479,8 +495,20 @@ UpdateSecurityInfo(HANDLE hFile, LPSECURITY_ATTRIBUTES lpSecurityAttributes, PSI
         return LastWin32Error();
     }
 
+    auto ec = IsReparsePoint(hFile.get(), isReparsePoint);
+    if (ec)
+    {
+        return ec;
+    }
+
+    if (isReparsePoint)
+    {
+        Log::Debug(L"Failed SetEffectiveUserSecurityInfo: resparse point (path: {})", path);
+        return std::make_error_code(std::errc::operation_not_permitted);
+    }
+
     UserTokenInformation userTokenInfo;
-    auto ec = GetEffectiveUserTokenInformation(userTokenInfo);
+    ec = GetEffectiveUserTokenInformation(userTokenInfo);
     if (ec)
     {
         Log::Debug("Failed to get effective user token information [{}]", ec);
@@ -560,20 +588,18 @@ std::error_code CreateWorkingTemp(std::optional<std::wstring> basedir, std::wstr
     if (!CreateDirectoryW(temp.c_str(), &sa))
     {
         auto ec = LastWin32Error();
-        if (ec.value() == ERROR_ALREADY_EXISTS)
-        {
-            ec = SetEffectiveUserSecurityInfo(temp.c_str(), sa);
-            if (ec)
-            {
-                Log::Debug(
-                    L"Failed to set effective user security info on working temp directory (path: {}) [{}]", temp, ec);
-                ec.clear();  // what is critical is that the final restricted sub-directory has correct ACLs
-            }
-        }
-        else
+        if (ec.value() != ERROR_ALREADY_EXISTS)
         {
             Log::Debug(L"Failed CreateDirectoryW (path: {}) [{}]", temp, ec);
             return ec;
+        }
+
+        ec = SetEffectiveUserSecurityInfo(temp.c_str(), sa);
+        if (ec)
+        {
+            Log::Debug(
+                L"Failed to set effective user security info on working temp directory (path: {}) [{}]", temp, ec);
+            ec.clear();  // what is critical is that the final restricted sub-directory has correct ACLs
         }
     }
 
