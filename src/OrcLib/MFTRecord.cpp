@@ -53,6 +53,19 @@ bool IsAttributeInBounds(const ATTRIBUTE_RECORD_HEADER* pAttribute, DWORD dwAttr
     return true;
 }
 
+// IndexRootAttribute only maps m_pRoot for a resident form, and its accessors dereference it unconditionally.
+// IsAttributeInBounds() has already checked the resident value lies inside the record, so a value long enough
+// for an INDEX_ROOT is entirely dereferenceable.
+bool IsUsableIndexRoot(const ATTRIBUTE_RECORD_HEADER* pAttribute)
+{
+    if (pAttribute->FormCode != RESIDENT_FORM)
+    {
+        return false;
+    }
+
+    return pAttribute->Form.Resident.ValueLength >= sizeof(INDEX_ROOT);
+}
+
 }  // namespace
 
 HRESULT MFTRecord::ParseRecord(
@@ -483,6 +496,12 @@ HRESULT MFTRecord::ParseAttribute(
         }
         break;
         case $INDEX_ROOT:
+            if (!IsUsableIndexRoot(pAttribute))
+            {
+                Log::Debug(L"Skipping nonresident or truncated $INDEX_ROOT");
+                break;
+            }
+
             // check if this is a directory
             if (pAttribute->NameLength)
             {

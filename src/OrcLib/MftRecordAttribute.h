@@ -240,7 +240,16 @@ public:
         return 0L;
     }
 
-    PINDEX_ENTRY FirstIndexEntry() const { return (PINDEX_ENTRY)NtfsFirstIndexEntry(&m_pRoot->IndexHeader); }
+    // m_pRoot is null for a (malformed) nonresident $INDEX_ROOT
+    PINDEX_ENTRY FirstIndexEntry() const
+    {
+        if (m_pRoot == nullptr)
+        {
+            return nullptr;
+        }
+
+        return (PINDEX_ENTRY)NtfsFirstIndexEntry(&m_pRoot->IndexHeader);
+    }
 
     LPBYTE IndexEntriesEnd() const
     {
@@ -255,6 +264,11 @@ public:
 
     LPBYTE FirstFreeByte()
     {
+        if (m_pRoot == nullptr)
+        {
+            return nullptr;
+        }
+
         return ((LPBYTE)NtfsFirstIndexEntry(&m_pRoot->IndexHeader)) + m_pRoot->IndexHeader.FirstFreeByte;
     }
     virtual ~IndexRootAttribute() { CleanCachedData(); }
