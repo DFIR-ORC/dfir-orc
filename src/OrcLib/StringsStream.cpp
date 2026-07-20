@@ -714,8 +714,6 @@ HRESULT StringsStream::Write_(
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)
 {
-    HRESULT hr = E_FAIL;
-
     if (pWriteBuffer == NULL)
         return E_POINTER;
     if (pcbBytesWritten == NULL)
@@ -728,27 +726,9 @@ HRESULT StringsStream::Write_(
 
     *pcbBytesWritten = 0;
 
-    if (cbBytesToWrite > MAXDWORD)
-    {
-        Log::Error("Too many bytes");
-        return E_INVALIDARG;
-    }
-
-    CBinaryBuffer buffer;
-
-    if (!buffer.SetCount((DWORD)cbBytesToWrite))
-        return E_OUTOFMEMORY;
-
-    // Extract strings here...
-
-    ULONGLONG cbBytesWritten = 0;
-
-    if (FAILED(hr = m_pChainedStream->Write(buffer.GetData(), buffer.GetCount(), &cbBytesWritten)))
-        return hr;
-
-    *pcbBytesWritten = cbBytesWritten;
-
-    return S_OK;
+    // TODO: string extraction on write is not implemented. Fail closed rather than forwarding the payload
+    // unprocessed: this stream must never emit bytes it did not extract.
+    return E_NOTIMPL;
 }
 
 StringsStream::~StringsStream(void) {}
