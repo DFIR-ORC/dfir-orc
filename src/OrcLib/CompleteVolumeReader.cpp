@@ -133,6 +133,14 @@ CompleteVolumeReader::Read(ULONGLONG offset, CBinaryBuffer& data, ULONGLONG byte
         return hr;
     }
 
+    if (dwBytesRead == 0)
+    {
+        ullBytesRead = 0;
+        return S_OK;
+    }
+
+    // Only alignment bytes were read: retry from the new position with the remaining alignment offset. The recursion
+    // makes progress because 'dwBytesRead' is non-zero and strictly decreases 'm_LocalPositionOffset'.
     if (dwBytesRead <= m_LocalPositionOffset)
     {
         Log::Warn("Unexpected! Read was done completely for alignement and must be called another time");
