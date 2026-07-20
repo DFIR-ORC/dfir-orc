@@ -25,6 +25,10 @@ typedef NTSTATUS(__stdcall* pvfNtQueryInformationFile)(HANDLE, PIO_STATUS_BLOCK,
 static const auto FILEINFO_STREAMINFO_BUFLEN = (1024);
 static const auto FILEINFO_STREAMNAME_BUFLEN = (1024);
 
+// The stream information query is retried with a bigger buffer until it fits: bound the growth so a
+// file with an unreasonable number of streams fails instead of looping until memory is exhausted.
+static const DWORD FILEINFO_STREAMINFO_MAX_MULTIPLIER = 64;
+
 USNRecordFileInfo::USNRecordFileInfo(
     LPCWSTR szComputerName,
     const std::shared_ptr<VolumeReader>& pVolReader,
@@ -277,19 +281,20 @@ HRESULT USNRecordFileInfo::OpenStreamInformation()
 
     do
     {
-        m_pFileStreamInformation =
-            (FILE_STREAM_INFORMATION*)HeapAlloc(GetProcessHeap(), 0L, (FILEINFO_STREAMINFO_BUFLEN * dwMultiplier));
+        const DWORD dwBufferLength = FILEINFO_STREAMINFO_BUFLEN * dwMultiplier;
+
+        m_pFileStreamInformation = (FILE_STREAM_INFORMATION*)HeapAlloc(GetProcessHeap(), 0L, dwBufferLength);
         if (!m_pFileStreamInformation)
             return E_OUTOFMEMORY;
 
-        ZeroMemory(m_pFileStreamInformation, FILEINFO_STREAMINFO_BUFLEN * dwMultiplier);
+        ZeroMemory(m_pFileStreamInformation, dwBufferLength);
 
         IO_STATUS_BLOCK StatusBlock;
-        HRESULT hr = pNtDll->NtQueryInformationFile(
+        hr = pNtDll->NtQueryInformationFile(
             m_hFile,
             &StatusBlock,
             m_pFileStreamInformation,
-            FILEINFO_STREAMINFO_BUFLEN,
+            dwBufferLength,
             (FILE_INFORMATION_CLASS)FileStreamInformation);
 
         switch (hr)
@@ -302,6 +307,16 @@ HRESULT USNRecordFileInfo::OpenStreamInformation()
                 HeapFree(GetProcessHeap(), 0L, m_pFileStreamInformation);
                 m_pFileStreamInformation = NULL;
                 dwMultiplier++;
+                if (dwMultiplier > FILEINFO_STREAMINFO_MAX_MULTIPLIER)
+                {
+                    // This is likely adversarial streams so log as critical
+                    Log::Critical(
+                        L"Stream information of '{}' does not fit in {} bytes, giving up",
+                        m_szFullName,
+                        FILEINFO_STREAMINFO_BUFLEN * FILEINFO_STREAMINFO_MAX_MULTIPLIER);
+                    return hr;
+                }
+
                 break;
             default:
                 return hr;
