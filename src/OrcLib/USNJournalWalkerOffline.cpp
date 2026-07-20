@@ -188,6 +188,7 @@ HRESULT USNJournalWalkerOffline::ReadJournal(const IUSNJournalWalker::Callbacks&
             ULONG64 size = m_USNJournal->GetSize();
             ULONG64 offset = 0;
             bool shouldStop = false;
+            bool madeNoProgress = false;
 
             while (!shouldStop && offset < size)
             {
@@ -258,11 +259,22 @@ HRESULT USNJournalWalkerOffline::ReadJournal(const IUSNJournalWalker::Callbacks&
                     (adjustmentOffset <= numBytesReturned) ? (numBytesReturned - adjustmentOffset) : 0;
                 if (advance == 0)
                 {
-                    Log::Debug(L"USN offline walk made no progress at offset {:#x}, stopping", offset);
+                    madeNoProgress = true;
                     break;
                 }
 
                 offset += advance;
+            }
+
+            // Both exits abandon the rest of the journal: every record after 'offset' is dropped, so
+            // the read must not be reported as complete.
+            if (shouldStop || madeNoProgress)
+            {
+                Log::Error(
+                    L"USN journal is truncated: walk stopped at offset {:#x} of {:#x}, remaining records are lost",
+                    offset,
+                    size);
+                return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
             }
         }
 
