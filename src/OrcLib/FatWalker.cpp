@@ -318,7 +318,6 @@ HRESULT FatWalker::ReadClusterChain(const FatTable::ClusterChain& clusterChain, 
     }
 
     ULONG ulClusterSize = reader->GetBytesPerCluster();
-    ULONGLONG offset = 0;
 
     size_t buffer_size = 0;
     if (!msl::utilities::SafeMultiply(clusterChain.size(), ulClusterSize, buffer_size))
@@ -327,40 +326,55 @@ HRESULT FatWalker::ReadClusterChain(const FatTable::ClusterChain& clusterChain, 
     buffer.SetCount(buffer_size);
     buffer.ZeroMe();
 
-    hr = S_OK;
+    HRESULT hrResult = S_OK;
+    ULONGLONG offset = 0;
 
-    std::for_each(
-        std::begin(clusterChain),
-        std::end(clusterChain),
-        [this, &hr, ulClusterSize, &offset, &reader, &buffer](const FatTableEntry& entry) {
-            ULONG clusterNumber = 0;
+    for (const FatTableEntry& entry : clusterChain)
+    {
+        // Every entry owns its own cluster slot: the offset must advance even when the cluster is not read, so
+        // that an unreadable cluster leaves a zeroed hole at its own position instead of shifting the following
+        // clusters into it (a misassembled directory reattaches LFN sequences to the wrong entries)
+        const ULONGLONG clusterOffset = offset;
+        offset += ulClusterSize;
 
-            if (entry.IsUsed() && (clusterNumber = entry.GetValue()) >= 2)
+        ULONG clusterNumber = 0;
+        if (!entry.IsUsed() || (clusterNumber = entry.GetValue()) < 2)
+        {
+            continue;
+        }
+
+        CBinaryBuffer localBuffer;
+        if (!localBuffer.SetCount(ulClusterSize))
+        {
+            return E_OUTOFMEMORY;
+        }
+
+        ULONGLONG ullBytesRead = 0;
+        const ULONGLONG seekOffset =
+            m_ullRootDirectoryOffset + ((ULONGLONG)(clusterNumber - 2) * (ULONGLONG)ulClusterSize);
+
+        hr = reader->Read(seekOffset, localBuffer, ulClusterSize, ullBytesRead);
+        if (S_OK != hr || ulClusterSize != ullBytesRead)
+        {
+            Log::Error(
+                L"Failed to read cluster number {} from location {} [{}]",
+                clusterNumber,
+                m_Location->GetLocation(),
+                SystemError(hr));
+
+            // Keep the first failure: a later successful cluster must not erase it
+            if (SUCCEEDED(hrResult))
             {
-                CBinaryBuffer localBuffer;
-                localBuffer.SetCount(ulClusterSize);
-                ULONGLONG ullBytesRead;
-                ULONGLONG seekOffset =
-                    m_ullRootDirectoryOffset + ((ULONGLONG)(clusterNumber - 2) * (ULONGLONG)ulClusterSize);
-
-                hr = reader->Read(seekOffset, localBuffer, ulClusterSize, ullBytesRead);
-                if (S_OK == hr && ulClusterSize == ullBytesRead)
-                {
-                    memcpy(buffer.GetData() + offset, localBuffer.GetData(), ulClusterSize);
-                    offset += ulClusterSize;
-                }
-                else
-                {
-                    Log::Error(
-                        L"Failed to read cluster number {} from location {} [{}]",
-                        clusterNumber,
-                        m_Location->GetLocation(),
-                        SystemError(hr));
-                }
+                hrResult = FAILED(hr) ? hr : HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
             }
-        });
 
-    return hr;
+            continue;
+        }
+
+        memcpy(buffer.GetData() + clusterOffset, localBuffer.GetData(), ulClusterSize);
+    }
+
+    return hrResult;
 }
 
 HRESULT FatWalker::ParseFolder(
