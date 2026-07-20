@@ -3,6 +3,8 @@
 
 CMakeUserPresets.json
 
+.review
+
 # User-specific files
 *.suo
 *.user
