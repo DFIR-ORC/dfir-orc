@@ -41,7 +41,7 @@
             "name": "dfir-orc-x64",
             "inherits": "dfir-orc-base",
             "binaryDir": "${sourceDir}/build/dfir-orc-x64",
-            "architecture": "x64",
+            "architecture": { "value": "x64", "strategy": "set" },
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static"
             }
@@ -50,7 +50,7 @@
             "name": "dfir-orc-x86",
             "inherits": "dfir-orc-base",
             "binaryDir": "${sourceDir}/build/dfir-orc-x86",
-            "architecture": "Win32",
+            "architecture": { "value": "Win32", "strategy": "set" },
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x86-windows-static"
             }
@@ -59,8 +59,8 @@
             "name": "dfir-orc-x86-xp",
             "inherits": "dfir-orc-base",
             "binaryDir": "${sourceDir}/build/dfir-orc-x86-xp",
-            "architecture": "Win32",
-            "toolset": "v141_xp",
+            "architecture": { "value": "Win32", "strategy": "set" },
+            "toolset": { "value": "v141_xp", "strategy": "set" },
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x86-windows-static-xp",
                 "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp"
@@ -70,8 +70,8 @@
             "name": "dfir-orc-x64-xp",
             "inherits": "dfir-orc-base",
             "binaryDir": "${sourceDir}/build/dfir-orc-x64-xp",
-            "architecture": "x64",
-            "toolset": "v141_xp",
+            "architecture": { "value": "x64", "strategy": "set" },
+            "toolset": { "value": "v141_xp", "strategy": "set" },
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static-xp",
                 "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp"
@@ -81,7 +81,7 @@
             "name": "dfir-orc-arm64",
             "inherits": "dfir-orc-base",
             "binaryDir": "${sourceDir}/build/dfir-orc-arm64",
-            "architecture": "arm64",
+            "architecture": { "value": "arm64", "strategy": "set" },
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "arm64-windows-static"
             }
@@ -99,7 +99,7 @@
         {
             "name": "capsule-base",
             "hidden": true,
-            "toolset": "v141_xp",
+            "toolset": { "value": "v141_xp", "strategy": "set" },
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/external/vcpkg/scripts/buildsystems/vcpkg.cmake",
                 "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp",
@@ -115,7 +115,7 @@
             "name": "capsule-x86-xp",
             "inherits": "capsule-base",
             "binaryDir": "${sourceDir}/build/capsule-x86-xp",
-            "architecture": "Win32",
+            "architecture": { "value": "Win32", "strategy": "set" },
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x86-windows-static-xp"
             }
@@ -124,7 +124,7 @@
             "name": "capsule-x64-xp",
             "inherits": "capsule-base",
             "binaryDir": "${sourceDir}/build/capsule-x64-xp",
-            "architecture": "x64",
+            "architecture": { "value": "x64", "strategy": "set" },
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static-xp"
             }
@@ -132,9 +132,9 @@
         {
             "name": "capsule-arm64",
             "inherits": "capsule-base",
-            "toolset": "v143",
+            "toolset": { "value": "v143", "strategy": "set" },
             "binaryDir": "${sourceDir}/build/capsule-arm64",
-            "architecture": "ARM64",
+            "architecture": { "value": "arm64", "strategy": "set" },
             "cacheVariables": {
                 "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/current",
                 "VCPKG_TARGET_TRIPLET": "arm64-windows-static"
