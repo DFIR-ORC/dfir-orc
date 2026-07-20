@@ -544,7 +544,7 @@ bool CommandExecute::HasCompleted()
     {
         EvaluateRedirectionsStatus();
 
-        if (m_RedirectStatus > ProcessRedirect::Complete)
+        if (m_RedirectStatus >= ProcessRedirect::Complete)
             return true;
     }
     return false;
