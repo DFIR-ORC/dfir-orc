@@ -23,6 +23,7 @@
 #pragma comment(lib, "Crypt32.lib")
 
 #include "Log/Log.h"
+#include "Utils/Result.h"
 
 using namespace Orc;
 
@@ -310,7 +311,12 @@ HRESULT PEInfo::OpenSecurityDirectory()
     }
 
     CBinaryBuffer bb;
-    bb.SetData(buffer.data(), buffer.size());
+    if (FAILED(hr = bb.SetData(buffer.data(), buffer.size())))
+    {
+        Log::Error("Failed to store the security directory [{}]", SystemError(hr));
+        return hr;
+    }
+
     m_FileInfo.GetDetails()->SetSecurityDirectory(std::move(bb));
 
     return S_OK;
