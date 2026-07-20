@@ -361,19 +361,23 @@ HRESULT MFTRecord::ParseAttribute(
 
             if (SUCCEEDED(hr = NewAttributeList->ParseAttributeList(VolReader, m_FileReferenceNumber, this)))
             {
-                std::for_each(
-                    begin(m_pAttributeList->m_AttList),
-                    end(m_pAttributeList->m_AttList),
-                    [&NewAttributeList](const AttributeListEntry& entry) {
-                        if (entry.Attribute() != nullptr)
-                        {
+                // m_pAttributeList is still null when $ATTRIBUTE_LIST is the record's first attribute
+                if (m_pAttributeList != nullptr)
+                {
+                    std::for_each(
+                        begin(m_pAttributeList->m_AttList),
+                        end(m_pAttributeList->m_AttList),
+                        [&NewAttributeList](const AttributeListEntry& entry) {
+                            if (entry.Attribute() != nullptr)
+                            {
 
-                            AttributeListEntry* pEntry = NewAttributeList->FindEntryToContinue(entry.Attribute());
+                                AttributeListEntry* pEntry = NewAttributeList->FindEntryToContinue(entry.Attribute());
 
-                            if (pEntry && pEntry->m_Attribute == nullptr)
-                                pEntry->m_Attribute = entry.Attribute();
-                        }
-                    });
+                                if (pEntry && pEntry->m_Attribute == nullptr)
+                                    pEntry->m_Attribute = entry.Attribute();
+                            }
+                        });
+                }
 
                 m_pAttributeList = std::move(NewAttributeList);
 
