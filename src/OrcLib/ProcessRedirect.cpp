@@ -20,6 +20,7 @@
 #include "Log/Log.h"
 #include "Utils/WinApi.h"
 #include "SystemDetails.h"
+#include "Kernel32Extension.h"
 
 using namespace std;
 using namespace Concurrency;
@@ -37,6 +38,13 @@ ProcessRedirect::ProcessRedirect(ProcessInOut selection)
 {
     ZeroMemory(&m_ASyncIO, sizeof(PROCESS_REDIRECT));
     m_ASyncIO.pThis = this;
+
+    m_hIoDrained = CreateEvent(NULL, TRUE, TRUE, NULL);
+    if (m_hIoDrained == NULL)
+    {
+        // Teardown then cannot wait for an in flight completion: keep going, but say so.
+        Log::Warn(L"Failed to create redirection drain event [{}]", Win32Error(GetLastError()));
+    }
 }
 
 struct ProcessRedirect_make_shared_enabler : public Orc::ProcessRedirect
@@ -55,6 +63,131 @@ ProcessRedirect::MakeRedirect(ProcessInOut selection, std::shared_ptr<ByteStream
 
     return retval;
 }
+
+HRESULT ProcessRedirect::SubmitRead()
+{
+    DWORD dwLastError = ERROR_SUCCESS;
+
+    {
+        Concurrency::critical_section::scoped_lock lock(m_IoCs);
+
+        if (m_bClosing || m_ReadHandle == INVALID_HANDLE_VALUE)
+        {
+            return S_OK;
+        }
+
+        // Arming the read under the lock keeps DrainPendingIo() from cancelling a read that is not
+        // submitted yet, and keeps the count it observes final.
+        if (m_PendingIo == 0 && m_hIoDrained != NULL)
+        {
+            ResetEvent(m_hIoDrained);
+        }
+
+        m_PendingIo++;
+
+        DWORD dwBytesRead = 0L;
+        if (!ReadFile(m_ReadHandle, m_ASyncIO.Buffer, BUFFER_SIZE, &dwBytesRead, &m_ASyncIO.OL))
+        {
+            dwLastError = GetLastError();
+        }
+
+        // The handle is bound to the thread pool, so a completion is queued on synchronous success too. A
+        // synchronous failure queues nothing: that read never reaches OnIoCompleted().
+        if (dwLastError != ERROR_SUCCESS && dwLastError != ERROR_IO_PENDING && dwLastError != ERROR_MORE_DATA)
+        {
+            m_PendingIo--;
+            if (m_PendingIo == 0 && m_hIoDrained != NULL)
+            {
+                SetEvent(m_hIoDrained);
+            }
+        }
+    }
+
+    switch (dwLastError)
+    {
+        case ERROR_SUCCESS:
+        case ERROR_IO_PENDING:
+        case ERROR_MORE_DATA:
+            SetStatus(PendingIO);
+            return S_OK;
+        case ERROR_BROKEN_PIPE:
+            SetStatus(Complete);
+            Close();
+            return S_OK;
+        default:
+            Log::Error(L"ReadFile from child failed [{}]", Win32Error(dwLastError));
+            return HRESULT_FROM_WIN32(dwLastError);
+    }
+}
+
+void ProcessRedirect::DrainPendingIo()
+{
+    HANDLE hReadHandle = INVALID_HANDLE_VALUE;
+    bool bPending = false;
+
+    {
+        Concurrency::critical_section::scoped_lock lock(m_IoCs);
+
+        m_bClosing = true;
+        bPending = m_PendingIo > 0;
+
+        // Dropping the handle under the same lock SubmitRead() uses guarantees no read is armed past here.
+        hReadHandle = m_ReadHandle;
+        m_ReadHandle = INVALID_HANDLE_VALUE;
+    }
+
+    if (hReadHandle != INVALID_HANDLE_VALUE)
+    {
+        const auto pk32 = ExtensionLibrary::GetLibrary<Kernel32Extension>();
+        if (pk32)
+        {
+            pk32->CancelIoEx(hReadHandle, &m_ASyncIO.OL);
+        }
+
+        // Closing forces any read the cancel missed to complete with ERROR_OPERATION_ABORTED, so the wait
+        // below always ends: on XP the cancel degrades to CancelIo, which only cancels this thread's reads.
+        CloseHandle(hReadHandle);
+    }
+
+    // The completion callback cannot wait for itself. It re-arms nothing once m_bClosing is set, so the
+    // caller that owns this object drains it instead.
+    if (!bPending || m_hIoDrained == NULL || m_CallbackThreadId == GetCurrentThreadId())
+    {
+        return;
+    }
+
+    // The aborted completion runs on a thread pool thread and must not outlive this object.
+    WaitForSingleObject(m_hIoDrained, INFINITE);
+}
+
+void ProcessRedirect::OnIoCompleted(__in DWORD dwErrorCode, __in DWORD dwNumberOfBytesTransfered)
+{
+    m_CallbackThreadId = GetCurrentThreadId();
+
+    ProcessIncomingData(dwErrorCode, dwNumberOfBytesTransfered);
+
+    m_CallbackThreadId = 0;
+
+    bool bDrained = false;
+    {
+        Concurrency::critical_section::scoped_lock lock(m_IoCs);
+        m_PendingIo--;
+        bDrained = m_PendingIo == 0;
+    }
+
+    if (!bDrained)
+    {
+        return;
+    }
+
+    HANDLE hIoDrained = m_hIoDrained;
+    if (hIoDrained != NULL)
+    {
+        // Last touch on this object: DrainPendingIo() may return and its owner destroy us right after.
+        SetEvent(hIoDrained);
+    }
+}
+
 
 HANDLE ProcessRedirect::GetChildHandleFor(ProcessInOut selection)
 {
@@ -84,66 +217,17 @@ HANDLE ProcessRedirect::GetParentHandleFor(ProcessInOut selection)
 
 HRESULT ProcessRedirect::ProcessIncomingData(__in DWORD dwErrorCode, __in DWORD dwNumberOfBytesTransfered)
 {
-    HRESULT hr = E_FAIL;
+    if (ERROR_SUCCESS == dwErrorCode && m_pBS != NULL)
+    {
+        ULONGLONG ullBytesWritten = 0LL;
+        HRESULT hr = m_pBS->Write(m_ASyncIO.Buffer, dwNumberOfBytesTransfered, &ullBytesWritten);
+        if (FAILED(hr))
+        {
+            Log::Warn(L"Failed to write incoming data [{}]", SystemError(hr));
+        }
+    }
 
-    if (ERROR_SUCCESS == dwErrorCode)
-    {
-        if (m_pBS != NULL)
-        {
-            ULONGLONG ullBytesWritten = 0L;
-            if (FAILED(hr = m_pBS->Write(m_ASyncIO.Buffer, dwNumberOfBytesTransfered, &ullBytesWritten)))
-            {
-                Log::Warn(L"Failed to write incoming data [{}]", SystemError(hr));
-            }
-        }
-        if (m_ReadHandle != INVALID_HANDLE_VALUE)
-        {
-            DWORD dwBytesRead = 0L;
-            if (!ReadFile(m_ReadHandle, m_ASyncIO.Buffer, BUFFER_SIZE, &dwBytesRead, &m_ASyncIO.OL))
-            {
-                DWORD dwLastError = GetLastError();
-                switch (dwLastError)
-                {
-                    case ERROR_IO_PENDING:
-                    case ERROR_MORE_DATA:
-                        SetStatus(PendingIO);
-                        break;
-                    case ERROR_BROKEN_PIPE:
-                        SetStatus(Complete);
-                        Close();
-                        break;
-                    default:
-                        Log::Error(L"ReadFile from child failed [{}]", Win32Error(dwLastError));
-                        break;
-                }
-            }
-        }
-    }
-    else
-    {
-        if (m_ReadHandle != INVALID_HANDLE_VALUE)
-        {
-            DWORD dwBytesRead = 0L;
-            if (!ReadFile(m_ReadHandle, m_ASyncIO.Buffer, BUFFER_SIZE, &dwBytesRead, &m_ASyncIO.OL))
-            {
-                DWORD dwLastError = GetLastError();
-                switch (dwLastError)
-                {
-                    case ERROR_IO_PENDING:
-                    case ERROR_MORE_DATA:
-                        SetStatus(PendingIO);
-                        break;
-                    case ERROR_BROKEN_PIPE:
-                        SetStatus(Complete);
-                        Close();
-                        break;
-                    default:
-                        Log::Error("ReadFile from child failed [{}]", Win32Error(dwLastError));
-                        break;
-                }
-            }
-        }
-    }
+    SubmitRead();
     return S_OK;
 }
 
@@ -154,7 +238,7 @@ VOID ProcessRedirect::FileIOCompletionRoutine(
 {
     PROCESS_REDIRECT* pASyncIO = (PROCESS_REDIRECT*)lpOverlapped;
 
-    pASyncIO->pThis->ProcessIncomingData(dwErrorCode, dwNumberOfBytesTransfered);
+    pASyncIO->pThis->OnIoCompleted(dwErrorCode, dwNumberOfBytesTransfered);
     return;
 }
 
@@ -380,19 +464,8 @@ HRESULT ProcessRedirect::ChildConnected()
     // Child is connected, start reading
     if (!(m_Select & StdInput))
     {
-        DWORD dwBytesRead = 0L;
-        if (!ReadFile(m_ReadHandle, m_ASyncIO.Buffer, BUFFER_SIZE, &dwBytesRead, &m_ASyncIO.OL))
-        {
-            if (GetLastError() != ERROR_IO_PENDING)
-                return HRESULT_FROM_WIN32(GetLastError());
-            else
-                SetStatus(PendingIO);
-        }
-        else
-        {
-            if (FAILED(hr = ProcessIncomingData(ERROR_SUCCESS, dwBytesRead)))
-                return hr;
-        }
+        if (FAILED(hr = SubmitRead()))
+            return hr;
     }
     return S_OK;
 }
@@ -404,13 +477,12 @@ HRESULT ProcessRedirect::Close()
     if (status >= ProcessRedirect::Closed)
         return S_OK;
 
+    // Closes the read handle once no completion can be in flight: nothing below may run concurrently with
+    // the callback, which reads m_pBS.
+    DrainPendingIo();
+
     {
         Concurrency::critical_section::scoped_lock lock(m_cs);
-        if (m_ReadHandle != INVALID_HANDLE_VALUE)
-        {
-            CloseHandle(m_ReadHandle);
-            m_ReadHandle = INVALID_HANDLE_VALUE;
-        }
         if (m_WriteHandle != INVALID_HANDLE_VALUE)
         {
             CloseHandle(m_WriteHandle);
@@ -439,11 +511,10 @@ ProcessRedirect::~ProcessRedirect()
     if (Status() != Closed)
         Close();
 
-    if (m_ReadHandle != INVALID_HANDLE_VALUE)
-    {
-        CloseHandle(m_ReadHandle);
-        m_ReadHandle = INVALID_HANDLE_VALUE;
-    }
+    // Close() may have run on the completion callback itself (broken pipe), which cannot wait for its own
+    // completion: repeat the drain here, where that callback is guaranteed to be another thread.
+    DrainPendingIo();
+
     if (m_WriteHandle != INVALID_HANDLE_VALUE)
     {
         CloseHandle(m_WriteHandle);
@@ -453,5 +524,11 @@ ProcessRedirect::~ProcessRedirect()
     {
         CloseHandle(m_DuplicateHandle);
         m_DuplicateHandle = INVALID_HANDLE_VALUE;
+    }
+
+    if (m_hIoDrained != NULL)
+    {
+        CloseHandle(m_hIoDrained);
+        m_hIoDrained = NULL;
     }
 }
