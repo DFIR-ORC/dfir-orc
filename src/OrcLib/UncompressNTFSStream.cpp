@@ -21,6 +21,30 @@
 
 using namespace Orc;
 
+namespace {
+
+// ReadRaw shrinks the buffer to the bytes actually read, which falls short of a full unit once the runlist is
+// exhausted. Consumers read a whole unit, so pad the missing tail with zeroes (as ReadRaw itself does for
+// unallocated segments) to keep the whole unit initialized and in bounds.
+bool PadCompressionUnit(CBinaryBuffer& buffer, size_t unitSize)
+{
+    const size_t read = buffer.GetCount();
+    if (read >= unitSize)
+    {
+        return true;
+    }
+
+    if (!buffer.SetCount(unitSize))
+    {
+        return false;
+    }
+
+    ZeroMemory(buffer.GetData() + read, unitSize - read);
+    return true;
+}
+
+}  // namespace
+
 UncompressNTFSStream::UncompressNTFSStream()
     : NTFSStream()
     , m_volume(nullptr)
@@ -199,7 +223,17 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
             return hr;
         }
 
-        ULONGLONG ullRead = buffer.GetCount();
+        if (buffer.GetCount() == 0)
+        {
+            // the runlist is exhausted: this unit holds no data at all, do not fabricate one
+            break;
+        }
+
+        // establishes buffer.GetCount() >= m_dwCompressionUnit for every read of 'buffer' below
+        if (!PadCompressionUnit(buffer, m_dwCompressionUnit))
+        {
+            return E_OUTOFMEMORY;
+        }
 
         size_t unitIndex = ((size_t)m_ullPosition / m_dwCompressionUnit) + i;
 
