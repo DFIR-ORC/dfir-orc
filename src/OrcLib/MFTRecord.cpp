@@ -982,14 +982,14 @@ HRESULT MFTRecord::ReadData(
         [&AllData, &ullBytesRead](ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data) {
             DBG_UNREFERENCED_PARAMETER(ullBufferStartOffset);
             // The end of the buffer is past our area of interest, we still need data
-            ULONGLONG ullPrevBufSize = (DWORD)AllData.GetCount();
-            if (!AllData.SetCount(static_cast<DWORD>(ullPrevBufSize) + Data.GetCount()))
+            const size_t prevBufSize = AllData.GetCount();
+            if (!AllData.SetCount(prevBufSize + Data.GetCount()))
                 return E_OUTOFMEMORY;
 
-            const PBYTE pCur = AllData.GetData() + ullPrevBufSize;
+            const PBYTE pCur = AllData.GetData() + prevBufSize;
 
             CopyMemory(pCur, Data.GetData(), Data.GetCount());
-            ullBytesRead += (DWORD)Data.GetCount();
+            ullBytesRead += Data.GetCount();
 
             return S_OK;
         });
