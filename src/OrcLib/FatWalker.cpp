@@ -286,13 +286,21 @@ HRESULT FatWalker::ReadRootDirectory(CBinaryBuffer& buffer, DWORD size)
     buffer.SetCount(size);
     buffer.ZeroMe();
 
-    ULONGLONG ullBytesRead;
+    // The reader returns early without touching ullBytesRead on failure
+    ULONGLONG ullBytesRead = 0;
 
     hr = reader->Read(m_ullRootDirectoryOffset, buffer, size, ullBytesRead);
-    if (S_OK != hr && size == ullBytesRead)
+    if (S_OK != hr || size != ullBytesRead)
     {
-        Log::Error(L"Failed to read root directory from location {} [{}]", m_Location->GetLocation(), SystemError(hr));
-        return hr;
+        // A short read leaves the tail zeroed and ParseFolder stops at the first zero byte: reporting an empty
+        // root directory as a success would silently hide a truncated listing
+        Log::Error(
+            L"Failed to read root directory from location {} (read {} bytes out of {}) [{}]",
+            m_Location->GetLocation(),
+            ullBytesRead,
+            size,
+            SystemError(hr));
+        return FAILED(hr) ? hr : HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     return S_OK;
