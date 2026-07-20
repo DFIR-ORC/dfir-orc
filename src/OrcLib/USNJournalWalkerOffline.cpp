@@ -370,10 +370,29 @@ HRESULT USNJournalWalkerOffline::FindNextUSNRecord(
         }
     }
 
+    // The probe above proves 8 bytes only, but the fields read below live up to FileNameOffset at +58:
+    // the whole fixed prefix must be inside the chunk before any of it is dereferenced. RecordLength
+    // cannot be trusted for this, it is attacker-controlled and may be false-small.
+    if ((uint64_t)pCurrentChunkPosition + offset + FIELD_OFFSET(USN_RECORD, FileName)
+        > (uint64_t)pEndChunkPosition)
+    {
+        shouldReadAnotherChunk = true;
+        adjustmentOffset = (ULONG64)((uint64_t)pEndChunkPosition - (uint64_t)(pCurrentChunkPosition + offset));
+        return E_FAIL;
+    }
+
     USN_RECORD* usnRecord = reinterpret_cast<USN_RECORD*>(pCurrentChunkPosition + offset);
 
     // check we have a right version number
     if (usnRecord->MajorVersion != 2)  // TODO : handle version 3
+    {
+        shouldStop = true;
+        return E_FAIL;
+    }
+
+    // A record shorter than its own fixed part is corrupt: the caller advances by RecordLength and
+    // would never leave this record.
+    if (usnRecord->RecordLength < (DWORD)FIELD_OFFSET(USN_RECORD, FileName))
     {
         shouldStop = true;
         return E_FAIL;
