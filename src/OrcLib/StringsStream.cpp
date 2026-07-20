@@ -673,36 +673,38 @@ HRESULT StringsStream::Read_(
         Log::Error(L"Failed to extract strings from read buffer [{}]", SystemError(hr));
         return hr;
     }
-    if (m_cchExtracted * sizeof(UCHAR) > cbBytes)
-    {
-        // Extraction generates more bytes than input buffer size
-        Log::Warn("Failed to extract strings (input size: {}, output size: {})", cbBytes, m_cchExtracted);
-        Log::Info("Truncating {} bytes: ", m_cchExtracted * sizeof(UCHAR) - cbBytes);
+    const ULONGLONG cbExtracted = m_cchExtracted * sizeof(UCHAR);
 
-        // TODO: print hex buffer
-        //_L_->WriteBytesInHex(
-        //    ((BYTE*)m_Strings.GetData()) + cbBytes,
-        //    static_cast<DWORD>(m_cchExtracted * sizeof(UCHAR) - cbBytes),
-        //    false);
-        // Log::Info(L"");
+    if (cbExtracted > cbBytes)
+    {
+        // Extraction commonly expands the input (a CRLF is appended per extracted string). The excess does not
+        // fit the caller's buffer and is dropped here: it is not carried over to the next Read_.
+        Log::Warn(
+            "Truncating extracted strings, {} bytes dropped (input size: {}, output size: {})",
+            cbExtracted - cbBytes,
+            cbBytes,
+            cbExtracted);
     }
 
     if (m_cchExtracted == 0LL)
     {
+        if (cbBytes < 2)
+        {
+            *pcbBytesRead = 0;
+            return S_OK;
+        }
+
         ((LPBYTE)pReadBuffer)[0] = '\r';
-        ((LPBYTE)pReadBuffer)[0] = '\n';
+        ((LPBYTE)pReadBuffer)[1] = '\n';
         *pcbBytesRead = 2;
-    }
-    else
-    {
-        memcpy_s(
-            pReadBuffer,
-            static_cast<rsize_t>(cbBytes),
-            m_Strings.GetData(),
-            m_cchExtracted > cbBytes ? static_cast<rsize_t>(cbBytes) : m_cchExtracted);
+        return S_OK;
     }
 
-    *pcbBytesRead = m_cchExtracted;
+    const ULONGLONG cbCopied = std::min<ULONGLONG>(cbExtracted, cbBytes);
+
+    memcpy_s(pReadBuffer, static_cast<rsize_t>(cbBytes), m_Strings.GetData(), static_cast<rsize_t>(cbCopied));
+
+    *pcbBytesRead = cbCopied;
     m_cchExtracted = 0;
     return S_OK;
 }
