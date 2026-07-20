@@ -836,7 +836,9 @@ HRESULT MFTRecord::EnumData(
             ullBytesToRead = min(ullBytesToRead, pHeader->Form.Resident.ValueLength - ullStartOffset);
 
             CBinaryBuffer Data;
-            Data.SetCount(static_cast<rsize_t>(ullBytesToRead));
+            if (!Data.SetCount(static_cast<rsize_t>(ullBytesToRead)))
+                return E_OUTOFMEMORY;
+
             CopyMemory(
                 Data.GetData(),
                 ((BYTE*)pHeader) + pHeader->Form.Resident.ValueOffset,
@@ -858,7 +860,9 @@ HRESULT MFTRecord::EnumData(
         {
             CBinaryBuffer buffer;
 
-            buffer.SetCount(static_cast<size_t>(iter->ullSize));
+            if (!buffer.SetCount(static_cast<size_t>(iter->ullSize)))
+                return E_OUTOFMEMORY;
+
             if (iter->bUnallocated)
             {
                 ZeroMemory(buffer.GetData(), static_cast<size_t>(iter->ullSize));
@@ -869,10 +873,9 @@ HRESULT MFTRecord::EnumData(
                 if (FAILED(hr = VolReader->Read(iter->ullDiskBasedOffset, buffer, iter->ullSize, ullBytesRead)))
                     return hr;
 
-                if (ullBytesRead < iter->ullSize)
-                {
-                    buffer.SetCount(ullBytesRead);
-                }
+                // a failed shrink would leave the uninitialized tail exposed to the callback
+                if (ullBytesRead < iter->ullSize && !buffer.SetCount(static_cast<size_t>(ullBytesRead)))
+                    return E_OUTOFMEMORY;
             }
 
             if (FAILED(hr = pCallBack(iter->ullFileBasedOffset, buffer)))
@@ -907,7 +910,9 @@ HRESULT MFTRecord::EnumData(
             ullBytesToRead = min(ullBytesToRead, pHeader->Form.Resident.ValueLength - ullStartOffset);
 
             CBinaryBuffer Data;
-            Data.SetCount(static_cast<rsize_t>(ullBytesToRead));
+            if (!Data.SetCount(static_cast<rsize_t>(ullBytesToRead)))
+                return E_OUTOFMEMORY;
+
             CopyMemory(
                 Data.GetData(),
                 ((BYTE*)pHeader) + pHeader->Form.Resident.ValueOffset,
@@ -929,7 +934,9 @@ HRESULT MFTRecord::EnumData(
         {
             CBinaryBuffer buffer;
 
-            buffer.SetCount(static_cast<size_t>(iter->ullSize));
+            if (!buffer.SetCount(static_cast<size_t>(iter->ullSize)))
+                return E_OUTOFMEMORY;
+
             if (iter->bUnallocated)
             {
                 ZeroMemory(buffer.GetData(), static_cast<size_t>(iter->ullSize));
@@ -940,10 +947,9 @@ HRESULT MFTRecord::EnumData(
                 if (FAILED(hr = VolReader->Read(iter->ullDiskBasedOffset, buffer, iter->ullSize, ullBytesRead)))
                     return hr;
 
-                if (ullBytesRead < iter->ullSize)
-                {
-                    buffer.SetCount(ullBytesRead);
-                }
+                // a failed shrink would leave the uninitialized tail exposed to the callback
+                if (ullBytesRead < iter->ullSize && !buffer.SetCount(static_cast<size_t>(ullBytesRead)))
+                    return E_OUTOFMEMORY;
             }
 
             if (FAILED(hr = pCallBack(iter->ullFileBasedOffset, buffer)))
