@@ -295,6 +295,7 @@ class BitmapAttribute : public MftRecordAttribute
 
 public:
     // BEWARE: boost::dynamic_bitset<T>::append will complete the missing bytes if type is smaller
+    // BEWARE: this is the bitset's STORAGE unit, it must not be used to index the bitset
     using block_type = uint8_t;
 
     BitmapAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord)
@@ -304,7 +305,7 @@ public:
 
     HRESULT LoadBitField(const std::shared_ptr<VolumeReader>& volreader);
 
-    bool operator[](block_type index) const { return m_bitset[index]; }
+    bool operator[](size_t index) const { return m_bitset[index]; }
 
     const boost::dynamic_bitset<block_type>& Bits() const { return m_bitset; }
 
