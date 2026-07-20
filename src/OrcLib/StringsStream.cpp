@@ -313,7 +313,8 @@ size_t StringsStream::extractImmediate(const CBinaryBuffer& aBuffer, UTF16Type& 
             // Parse the immediate as ascii
             while (i < aBuffer.GetCount() && isAscii[aBuffer.Get<UCHAR>(i)])
             {
-                m_Strings.Get<UCHAR>((m_cchExtracted * sizeof(UCHAR)) + i) = aBuffer.Get<UCHAR>(i);
+                // m_cchExtracted is the destination index: 'i' walks the source independently
+                m_Strings.Get<UCHAR>(m_cchExtracted) = aBuffer.Get<UCHAR>(i);
                 i++;
                 m_cchExtracted++;
             }
@@ -323,7 +324,8 @@ size_t StringsStream::extractImmediate(const CBinaryBuffer& aBuffer, UTF16Type& 
             // Parse the immediate as unicode
             while (i + 1 < aBuffer.GetCount() && isAscii[aBuffer.Get<UCHAR>(i)] && aBuffer.Get<UCHAR>(i + 1) == 0)
             {
-                m_Strings.Get<UCHAR>(m_cchExtracted + i) = aBuffer.Get<UCHAR>(i);
+                // m_cchExtracted is the destination index: 'i' walks the source two bytes at a time
+                m_Strings.Get<UCHAR>(m_cchExtracted) = aBuffer.Get<UCHAR>(i);
                 i += 2;
                 m_cchExtracted++;
             }
