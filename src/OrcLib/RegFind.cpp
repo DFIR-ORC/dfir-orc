@@ -1308,17 +1308,25 @@ RegFind::RegexDatas(const std::shared_ptr<SearchTerm>& aTerm, const RegistryValu
 
                 break;
             }
-            case ValueType::RegBin:
+            case ValueType::RegBin: {
 
                 if (std::regex_match(pDatas, pDatas + DatasSize, aTerm->m_regexDataContentPattern))
                     matchedCriteria =
                         static_cast<SearchTerm::Criteria>(SearchTerm::Criteria::DATA_CONTENT_REGEX | matchedCriteria);
 
-                // also check with unicode pattern
-                if (std::regex_match((WCHAR*)pDatas, (WCHAR*)(pDatas + DatasSize), aTerm->m_wregexDataContentPattern))
+                // also check with unicode pattern. DatasSize is a byte count and binary values may
+                // have an odd length: the end iterator must be reachable from the start by whole
+                // WCHAR increments, or the matcher runs past the value and off the hive buffer.
+                const size_t cch = DatasSize / sizeof(WCHAR);
+                if (cch != 0
+                    && std::regex_match((WCHAR*)pDatas, ((WCHAR*)pDatas) + cch, aTerm->m_wregexDataContentPattern))
+                {
                     matchedCriteria =
                         static_cast<SearchTerm::Criteria>(SearchTerm::Criteria::DATA_CONTENT_REGEX | matchedCriteria);
+                }
+
                 break;
+            }
             case ValueType::RegDWORD:
             case ValueType::RegDWORDBE:
             case ValueType::RegQWORD:
