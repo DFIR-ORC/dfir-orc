@@ -890,7 +890,7 @@ HRESULT Main::Run()
         m_hInstanceEvent = CreateEventW(nullptr, TRUE, FALSE, m_instanceId.c_str());
         auto err = GetLastError();
 
-        if (!m_hInstanceEvent)
+        if (!m_hInstanceEvent->IsValid())
         {
             Log::Error(L"Failed CreateEventW for instance mode [{}]", Win32Error(err));
             return E_FAIL;
