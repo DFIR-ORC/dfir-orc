@@ -60,6 +60,12 @@ HRESULT MFTUtils::GetAttributeNRExtents(
 
     LONG BytesPerCluster = pVolReader->GetBytesPerCluster();
 
+    if (BytesPerCluster <= 0)
+    {
+        Log::Error("Invalid volume geometry (bytes per cluster: {})", BytesPerCluster);
+        return E_FAIL;
+    }
+
     //
     // now look at mapping table for the disk run's
     //
@@ -110,12 +116,31 @@ HRESULT MFTUtils::GetAttributeNRExtents(
         // NextVcn is never negative - For little-endian RtlCopy will work
         RtlCopyMemory(&ClusterCount, &pPairs[1], countVCN);
 
-        // DeltaLcn can be negative - check the last byte and set to 0xFF....
-        if (IsCharLtrZero(pPairs[countVCN + countLCN]))
+        // A run length is a positive quantity: countVCN up to 8 lets the on-disk bytes express a negative
+        // or overflowing count, which would otherwise become a huge unsigned extent size below.
+        if (ClusterCount <= 0
+            || static_cast<ULONGLONG>(ClusterCount)
+                > (std::numeric_limits<ULONGLONG>::max)() / static_cast<ULONGLONG>(BytesPerCluster))
         {
-            DeltaLcn = DeltaLcn - 1;
+            Log::Error("Invalid DataRun entry (cluster count: {})", ClusterCount);
+            return E_FAIL;
         }
-        RtlCopyMemory(&DeltaLcn, &pPairs[1 + countVCN], countLCN);
+
+        // A run with no LCN field is sparse and CurrentLcn must stay untouched. The sign check below reads
+        // the byte at 'countVCN + countLCN', which degenerates onto the last run-length byte when
+        // countLCN == 0 and fabricates a DeltaLcn of -1 for an ordinary sparse run.
+        const bool bSparseRun = (countLCN == 0);
+
+        if (!bSparseRun)
+        {
+            // DeltaLcn can be negative - check the last byte and set to 0xFF....
+            if (IsCharLtrZero(pPairs[countVCN + countLCN]))
+            {
+                DeltaLcn = DeltaLcn - 1;
+            }
+
+            RtlCopyMemory(&DeltaLcn, &pPairs[1 + countVCN], countLCN);
+        }
 
         //  6.  Interpret the next l bytes as a signed quantity,
         //      with the low-order byte coming first.  Unpack it
@@ -130,10 +155,11 @@ HRESULT MFTUtils::GetAttributeNRExtents(
         // If Current LCN becomes zero, it means that everything from CurrentVcn to NextVcn-1
         // is unallocated, so pad it up with zero's
         //
-        if (0 == CurrentLcn || DeltaLcn == 0)
+        if (bSparseRun || 0 == CurrentLcn || DeltaLcn == 0)
         {
-
-            TotalBytes += ClusterCount * pVolReader->GetBytesPerFRS();
+            // Account the hole in cluster units: the extent pushed below is sized with BytesPerCluster, so
+            // using BytesPerFRS here made TotalBytes/ExtentsSize disagree with the extents it describes.
+            TotalBytes += ClusterCount * BytesPerCluster;
 
             FSRAttribInfo.ExtentsVector.push_back(NonResidentAttributeExtent(
                 0, ClusterCount * BytesPerCluster, ClusterCount * BytesPerCluster, CurrentVcn, true));
