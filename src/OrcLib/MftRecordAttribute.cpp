@@ -991,6 +991,11 @@ HRESULT WOFReparseAttribute::GetStreams(
         return E_FAIL;
     }
 
+    // Valid data length of the WofCompressedData attribute (NOT the cluster-rounded allocated size).
+    // The last WOF chunk's size is derived from this; using the allocated size would append trailing
+    // padding to the last chunk and break its decompression.
+    uint64_t wofCompressedSize = 0;
+
     if (wofAttribute->IsResident())
     {
         auto bufferStream = make_shared<BufferStream<2048>>();
@@ -1015,6 +1020,7 @@ HRESULT WOFReparseAttribute::GetStreams(
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
 
+        wofCompressedSize = wofAttribute->Header()->Form.Resident.ValueLength;
         rawStream = bufferStream;
     }
     else
@@ -1034,11 +1040,13 @@ HRESULT WOFReparseAttribute::GetStreams(
             stream->GetSize(),
             dataAttribute->Header()->Form.Nonresident.FileSize);
 
+        wofCompressedSize = wofAttribute->Header()->Form.Nonresident.FileSize;
         rawStream = stream;
     }
 
     auto wofStream = make_shared<UncompressWofStream>();
-    HRESULT hr = wofStream->Open(rawStream, m_algorithm, dataAttribute->Header()->Form.Nonresident.FileSize);
+    HRESULT hr = wofStream->Open(
+        rawStream, m_algorithm, dataAttribute->Header()->Form.Nonresident.FileSize, wofCompressedSize);
     if (FAILED(hr))
     {
         Log::Debug("Failed to open wof stream [{}]", SystemError(hr));

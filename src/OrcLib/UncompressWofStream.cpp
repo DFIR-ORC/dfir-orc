@@ -24,8 +24,11 @@ using namespace Orc;
 
 namespace {
 
-std::unique_ptr<UncompressWofStream::WofStreamT>
-CreateWofStream(const std::shared_ptr<ByteStream>& rawStream, WofAlgorithm algorithm, uint64_t uncompressedSize)
+std::unique_ptr<UncompressWofStream::WofStreamT> CreateWofStream(
+    const std::shared_ptr<ByteStream>& rawStream,
+    WofAlgorithm algorithm,
+    uint64_t uncompressedSize,
+    uint64_t compressedSize)
 {
     std::error_code ec;
 
@@ -36,12 +39,16 @@ CreateWofStream(const std::shared_ptr<ByteStream>& rawStream, WofAlgorithm algor
         return nullptr;
     }
 
+    // BEWARE: 'compressedSize' must be the WofCompressedData attribute's valid data length, not the
+    // cluster-rounded allocated stream size. The last chunk's size is derived from it
+    // (compressedSize - lastChunkOffset); an inflated value appends trailing padding to the last
+    // chunk, breaking its decompression (STATUS_BAD_COMPRESSION_BUFFER).
     auto wofStream = std::make_unique<UncompressWofStream::WofStreamT>(
         std::move(decompressor),
         ByteStreamConcept(rawStream),
         0,
         algorithm,
-        rawStream->GetSize(),
+        compressedSize,
         uncompressedSize,
         ec);
     if (ec)
@@ -63,6 +70,7 @@ UncompressWofStream::UncompressWofStream()
     , m_wofStream()
     , m_rawStream()
     , m_uncompressedSize(0)
+    , m_compressedSize(0)
     , m_algorithm(WofAlgorithm::kUnknown)
 {
 }
@@ -110,7 +118,8 @@ HRESULT UncompressWofStream::Open(const std::shared_ptr<ByteStream>& pChained)
 HRESULT UncompressWofStream::Open(
     const std::shared_ptr<ByteStream>& rawStream,
     WofAlgorithm algorithm,
-    uint64_t uncompressedSize)
+    uint64_t uncompressedSize,
+    uint64_t compressedSize)
 {
     HRESULT hr = Open(rawStream);
     if (FAILED(hr))
@@ -118,7 +127,7 @@ HRESULT UncompressWofStream::Open(
         return hr;
     }
 
-    m_wofStream = CreateWofStream(rawStream, algorithm, uncompressedSize);
+    m_wofStream = CreateWofStream(rawStream, algorithm, uncompressedSize, compressedSize);
     if (!m_wofStream)
     {
         return E_FAIL;
@@ -127,6 +136,7 @@ HRESULT UncompressWofStream::Open(
     m_rawStream = rawStream;
     m_algorithm = algorithm;
     m_uncompressedSize = uncompressedSize;
+    m_compressedSize = compressedSize;
     return S_OK;
 }
 
@@ -143,7 +153,7 @@ HRESULT UncompressWofStream::Read_(
 
     if (!m_wofStream)
     {
-        m_wofStream = CreateWofStream(m_rawStream, m_algorithm, m_uncompressedSize);
+        m_wofStream = CreateWofStream(m_rawStream, m_algorithm, m_uncompressedSize, m_compressedSize);
         if (!m_wofStream)
         {
             return E_FAIL;
@@ -189,7 +199,7 @@ HRESULT UncompressWofStream::SetFilePointer(
 
     if (!m_wofStream)
     {
-        m_wofStream = CreateWofStream(m_rawStream, m_algorithm, m_uncompressedSize);
+        m_wofStream = CreateWofStream(m_rawStream, m_algorithm, m_uncompressedSize, m_compressedSize);
         if (!m_wofStream)
         {
             return E_FAIL;
