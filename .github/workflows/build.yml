@@ -86,9 +86,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path $staging | Out-Null
 
           $intermediateDirs = @(
-            "capsule-x86-xp",
-            "dfir-orc-x86-xp",
-            "dfir-orc-x64-xp"
+            "capsule-x86-xp-release",
+            "dfir-orc-x86-xp-release",
+            "dfir-orc-x64-xp-release"
           )
 
           foreach ($dir in $intermediateDirs) {
