@@ -1,5 +1,17 @@
 # ChangeLog
 
+## [10.3.4] - 2026-07-27
+
+### Changed
+- Dependencies
+    - Yara v4.5.8 with LibreSSL 4.2.1
+    - ms-gsl 4.2.2
+
+### Fixed
+This release contains numerous bug fixes. Among them:
+
+- Ntfs: WofCompressedData: fix handling of last block when unaligned and uncompressed
+- WolfLauncher: force drainning child process standard output redirection
 
 ## [10.3.3] - 2026-07-02
 
