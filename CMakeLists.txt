@@ -76,8 +76,6 @@ endif()
 
 project(dfir-orc LANGUAGES C CXX ASM_MASM)
 
-# Configure triplet dynamically with options chosen from CMake
-
 # Setup repository related variables and force refresh on new commits
 include(cmake/GitInfo.cmake)
 git_monitor_status()
