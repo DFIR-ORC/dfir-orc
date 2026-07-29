@@ -53,6 +53,19 @@ bool IsAttributeInBounds(const ATTRIBUTE_RECORD_HEADER* pAttribute, DWORD dwAttr
     return true;
 }
 
+// IndexRootAttribute only maps m_pRoot for a resident form, and its accessors dereference it unconditionally.
+// IsAttributeInBounds() has already checked the resident value lies inside the record, so a value long enough
+// for an INDEX_ROOT is entirely dereferenceable.
+bool IsUsableIndexRoot(const ATTRIBUTE_RECORD_HEADER* pAttribute)
+{
+    if (pAttribute->FormCode != RESIDENT_FORM)
+    {
+        return false;
+    }
+
+    return pAttribute->Form.Resident.ValueLength >= sizeof(INDEX_ROOT);
+}
+
 }  // namespace
 
 HRESULT MFTRecord::ParseRecord(
@@ -348,19 +361,23 @@ HRESULT MFTRecord::ParseAttribute(
 
             if (SUCCEEDED(hr = NewAttributeList->ParseAttributeList(VolReader, m_FileReferenceNumber, this)))
             {
-                std::for_each(
-                    begin(m_pAttributeList->m_AttList),
-                    end(m_pAttributeList->m_AttList),
-                    [&NewAttributeList](const AttributeListEntry& entry) {
-                        if (entry.Attribute() != nullptr)
-                        {
+                // m_pAttributeList is still null when $ATTRIBUTE_LIST is the record's first attribute
+                if (m_pAttributeList != nullptr)
+                {
+                    std::for_each(
+                        begin(m_pAttributeList->m_AttList),
+                        end(m_pAttributeList->m_AttList),
+                        [&NewAttributeList](const AttributeListEntry& entry) {
+                            if (entry.Attribute() != nullptr)
+                            {
 
-                            AttributeListEntry* pEntry = NewAttributeList->FindEntryToContinue(entry.Attribute());
+                                AttributeListEntry* pEntry = NewAttributeList->FindEntryToContinue(entry.Attribute());
 
-                            if (pEntry && pEntry->m_Attribute == nullptr)
-                                pEntry->m_Attribute = entry.Attribute();
-                        }
-                    });
+                                if (pEntry && pEntry->m_Attribute == nullptr)
+                                    pEntry->m_Attribute = entry.Attribute();
+                            }
+                        });
+                }
 
                 m_pAttributeList = std::move(NewAttributeList);
 
@@ -483,6 +500,12 @@ HRESULT MFTRecord::ParseAttribute(
         }
         break;
         case $INDEX_ROOT:
+            if (!IsUsableIndexRoot(pAttribute))
+            {
+                Log::Debug(L"Skipping nonresident or truncated $INDEX_ROOT");
+                break;
+            }
+
             // check if this is a directory
             if (pAttribute->NameLength)
             {
@@ -813,7 +836,9 @@ HRESULT MFTRecord::EnumData(
             ullBytesToRead = min(ullBytesToRead, pHeader->Form.Resident.ValueLength - ullStartOffset);
 
             CBinaryBuffer Data;
-            Data.SetCount(static_cast<rsize_t>(ullBytesToRead));
+            if (!Data.SetCount(static_cast<rsize_t>(ullBytesToRead)))
+                return E_OUTOFMEMORY;
+
             CopyMemory(
                 Data.GetData(),
                 ((BYTE*)pHeader) + pHeader->Form.Resident.ValueOffset,
@@ -835,7 +860,9 @@ HRESULT MFTRecord::EnumData(
         {
             CBinaryBuffer buffer;
 
-            buffer.SetCount(static_cast<size_t>(iter->ullSize));
+            if (!buffer.SetCount(static_cast<size_t>(iter->ullSize)))
+                return E_OUTOFMEMORY;
+
             if (iter->bUnallocated)
             {
                 ZeroMemory(buffer.GetData(), static_cast<size_t>(iter->ullSize));
@@ -846,10 +873,9 @@ HRESULT MFTRecord::EnumData(
                 if (FAILED(hr = VolReader->Read(iter->ullDiskBasedOffset, buffer, iter->ullSize, ullBytesRead)))
                     return hr;
 
-                if (ullBytesRead < iter->ullSize)
-                {
-                    buffer.SetCount(ullBytesRead);
-                }
+                // a failed shrink would leave the uninitialized tail exposed to the callback
+                if (ullBytesRead < iter->ullSize && !buffer.SetCount(static_cast<size_t>(ullBytesRead)))
+                    return E_OUTOFMEMORY;
             }
 
             if (FAILED(hr = pCallBack(iter->ullFileBasedOffset, buffer)))
@@ -884,7 +910,9 @@ HRESULT MFTRecord::EnumData(
             ullBytesToRead = min(ullBytesToRead, pHeader->Form.Resident.ValueLength - ullStartOffset);
 
             CBinaryBuffer Data;
-            Data.SetCount(static_cast<rsize_t>(ullBytesToRead));
+            if (!Data.SetCount(static_cast<rsize_t>(ullBytesToRead)))
+                return E_OUTOFMEMORY;
+
             CopyMemory(
                 Data.GetData(),
                 ((BYTE*)pHeader) + pHeader->Form.Resident.ValueOffset,
@@ -906,7 +934,9 @@ HRESULT MFTRecord::EnumData(
         {
             CBinaryBuffer buffer;
 
-            buffer.SetCount(static_cast<size_t>(iter->ullSize));
+            if (!buffer.SetCount(static_cast<size_t>(iter->ullSize)))
+                return E_OUTOFMEMORY;
+
             if (iter->bUnallocated)
             {
                 ZeroMemory(buffer.GetData(), static_cast<size_t>(iter->ullSize));
@@ -917,10 +947,9 @@ HRESULT MFTRecord::EnumData(
                 if (FAILED(hr = VolReader->Read(iter->ullDiskBasedOffset, buffer, iter->ullSize, ullBytesRead)))
                     return hr;
 
-                if (ullBytesRead < iter->ullSize)
-                {
-                    buffer.SetCount(ullBytesRead);
-                }
+                // a failed shrink would leave the uninitialized tail exposed to the callback
+                if (ullBytesRead < iter->ullSize && !buffer.SetCount(static_cast<size_t>(ullBytesRead)))
+                    return E_OUTOFMEMORY;
             }
 
             if (FAILED(hr = pCallBack(iter->ullFileBasedOffset, buffer)))
@@ -953,14 +982,14 @@ HRESULT MFTRecord::ReadData(
         [&AllData, &ullBytesRead](ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data) {
             DBG_UNREFERENCED_PARAMETER(ullBufferStartOffset);
             // The end of the buffer is past our area of interest, we still need data
-            ULONGLONG ullPrevBufSize = (DWORD)AllData.GetCount();
-            if (!AllData.SetCount(static_cast<DWORD>(ullPrevBufSize) + Data.GetCount()))
+            const size_t prevBufSize = AllData.GetCount();
+            if (!AllData.SetCount(prevBufSize + Data.GetCount()))
                 return E_OUTOFMEMORY;
 
-            const PBYTE pCur = AllData.GetData() + ullPrevBufSize;
+            const PBYTE pCur = AllData.GetData() + prevBufSize;
 
             CopyMemory(pCur, Data.GetData(), Data.GetCount());
-            ullBytesRead += (DWORD)Data.GetCount();
+            ullBytesRead += Data.GetCount();
 
             return S_OK;
         });

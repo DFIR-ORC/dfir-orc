@@ -54,9 +54,10 @@ HRESULT MFTOnline::Initialize()
     catch (...)
     {
         Log::Info(L"Exception thrown when processing MFT");
+        hr = E_UNEXPECTED;
     }
 
-    return S_OK;
+    return hr;
 }
 
 HRESULT MFTOnline::GetMFTChildsRecordExtents(
@@ -354,6 +355,15 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
         {
             ULONGLONG ullFRSToRead = std::min<ULONGLONG>(ullFRSLeftToRead, DEFAULT_FRS_PER_READ);
 
+            if (ullFRSToRead == 0)
+            {
+                Log::Warn(
+                    L"Extent at position {} holds no complete record (size {}), ignoring truncated trailing extent",
+                    NRAE.DiskOffset,
+                    NRAE.DataSize);
+                break;
+            }
+
             LARGE_INTEGER liBytesToRead;
             liBytesToRead.QuadPart = ulBytesPerFRS * ullFRSToRead;
 
@@ -374,6 +384,12 @@ HRESULT MFTOnline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
                     extent_position,
                     SystemError(hr));
                 return hr;
+            }
+
+            if (ullBytesRead == 0)
+            {
+                Log::Warn(L"Read returned no data at position {}, stopping extent enumeration", extent_position);
+                break;
             }
 
             if (ullBytesRead % ulBytesPerFRS > 0)

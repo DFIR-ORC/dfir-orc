@@ -109,8 +109,24 @@ HRESULT Main::Run()
             };
 
             FatWalker walker;
-            walker.Init(dir.first.m_pLoc, static_cast<bool>(m_Config.bResurrectRecords));
-            walker.Process(callBacks);
+
+            HRESULT hr = walker.Init(dir.first.m_pLoc, static_cast<bool>(m_Config.bResurrectRecords));
+            if (FAILED(hr))
+            {
+                Log::Error(
+                    L"Failed to initialize FAT walker for '{}' [{}]",
+                    dir.first.m_pLoc->GetLocation(),
+                    SystemError(hr));
+                return hr;
+            }
+
+            hr = walker.Process(callBacks);
+            if (FAILED(hr))
+            {
+                Log::Error(
+                    L"Failed to parse FAT volume '{}' [{}]", dir.first.m_pLoc->GetLocation(), SystemError(hr));
+                return hr;
+            }
 
             return S_OK;
         });

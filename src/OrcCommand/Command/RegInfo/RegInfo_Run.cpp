@@ -178,15 +178,45 @@ HRESULT DumpValue(const RegFind::Match::ValueNameMatch& match, std::wstring outp
     }
 
     ULONGLONG ulWritten = 0;
-    const size_t dwLen = match.DatasLength;
-    dataDumpFile.Write(match.Datas.get(), match.DatasLength, &ulWritten);
-    if (ulWritten != dwLen)
+    hr = dataDumpFile.Write(match.Datas.get(), match.DatasLength, &ulWritten);
+    if (FAILED(hr))
     {
-        Log::Error("Can't write content of value: '{}' with key: '{}'", match.ValueName, match.KeyName);
+        Log::Error(
+            "Can't write content of value: '{}' with key: '{}' [{}]",
+            match.ValueName,
+            match.KeyName,
+            SystemError(hr));
+        dataDumpFile.Close();
+        return hr;
     }
 
-    dataDumpFile.Close();
-    return hr;
+    // A short write leaves a dump file the CSV would still point at: it must not be reported as one.
+    if (ulWritten != match.DatasLength)
+    {
+        Log::Error(
+            "Truncated content of value: '{}' with key: '{}' ({} of {} bytes written)",
+            match.ValueName,
+            match.KeyName,
+            ulWritten,
+            match.DatasLength);
+        dataDumpFile.Close();
+        return HRESULT_FROM_WIN32(ERROR_WRITE_FAULT);
+    }
+
+    return dataDumpFile.Close();
+}
+
+// The dump path is only a usable reference once the dump has actually landed on disk: a row pointing
+// at a missing or truncated file is worse than a row saying the dump failed.
+void WriteDumpPath(ITableOutput& output, HRESULT hrDump, const std::wstring& dumpPath)
+{
+    if (FAILED(hrDump))
+    {
+        output.WriteString("DUMPFAILED");
+        return;
+    }
+
+    output.WriteString(dumpPath.c_str());
 }
 
 std::wstring GetFullPath(
@@ -334,7 +364,7 @@ HRESULT Main::WriteValueInformation(
                         GetFullPath(match.KeyName, match.ValueName, fileNamePrefix, config.Output.Path);
                     hr = DumpValue(match, wstrFullPath);
 
-                    output.WriteString(wstrFullPath.c_str());
+                    WriteDumpPath(output, hr, wstrFullPath);
                 }
                 else
                 {
@@ -377,7 +407,7 @@ HRESULT Main::WriteValueInformation(
                                 GetFullPath(match.KeyName, match.ValueName, fileNamePrefix, config.Output.Path);
                             hr = DumpValue(match, wstrFullPath);
                             output.WriteNothing();
-                            output.WriteString(wstrFullPath.c_str());
+                            WriteDumpPath(output, hr, wstrFullPath);
                         }
                         else
                         {
@@ -395,7 +425,7 @@ HRESULT Main::WriteValueInformation(
                             hr = DumpValue(match, wstrFullPath);
 
                             output.WriteNothing();
-                            output.WriteString(wstrFullPath.c_str());
+                            WriteDumpPath(output, hr, wstrFullPath);
                         }
                         else
                         {
@@ -536,7 +566,20 @@ HRESULT Main::Run()
                     WriteComputerName(output);
                     WriteTermName(output, searchTerm);
                     WriteSearchDescription(output, searchTerm);
-                    WriteValueInformation(output, value, hive.FileName, config.CsvValueLengthLimit);
+
+                    // The row is emitted either way, but a failure here means it is incomplete: the
+                    // operator must not have to diff the CSV against the dump directory to notice.
+                    const HRESULT hrValue =
+                        WriteValueInformation(output, value, hive.FileName, config.CsvValueLengthLimit);
+                    if (FAILED(hrValue))
+                    {
+                        Log::Error(
+                            "Failed to write information of value '{}' of key '{}' [{}]",
+                            value.ValueName,
+                            value.KeyName,
+                            SystemError(hrValue));
+                    }
+
                     output.WriteEndOfLine();
                 }
             }

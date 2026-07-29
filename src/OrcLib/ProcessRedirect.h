@@ -95,7 +95,23 @@ private:
 
     Concurrency::critical_section m_cs;
 
+    // Guards the submit/teardown handshake below, along with m_ReadHandle's transition to
+    // INVALID_HANDLE_VALUE. Never taken while m_cs is held.
+    Concurrency::critical_section m_IoCs;
+    // Once set, no further read is submitted, so the last completion can be drained.
+    bool m_bClosing = false;
+    // Submitted reads whose completion callback has not returned yet (at most one is ever outstanding).
+    ULONG m_PendingIo = 0;
+    // Manual reset event, signaled while m_PendingIo is zero.
+    HANDLE m_hIoDrained = NULL;
+    // Thread running the completion callback: teardown from there must not wait on its own completion.
+    volatile DWORD m_CallbackThreadId = 0;
+
     void SetStatus(RedirectStatus status);
+
+    HRESULT SubmitRead();
+    void DrainPendingIo();
+    void OnIoCompleted(__in DWORD dwErrorCode, __in DWORD dwNumberOfBytesTransfered);
 
     static VOID CALLBACK FileIOCompletionRoutine(
         __in DWORD dwErrorCode,

@@ -188,6 +188,7 @@ HRESULT USNJournalWalkerOffline::ReadJournal(const IUSNJournalWalker::Callbacks&
             ULONG64 size = m_USNJournal->GetSize();
             ULONG64 offset = 0;
             bool shouldStop = false;
+            bool madeNoProgress = false;
 
             while (!shouldStop && offset < size)
             {
@@ -258,11 +259,22 @@ HRESULT USNJournalWalkerOffline::ReadJournal(const IUSNJournalWalker::Callbacks&
                     (adjustmentOffset <= numBytesReturned) ? (numBytesReturned - adjustmentOffset) : 0;
                 if (advance == 0)
                 {
-                    Log::Debug(L"USN offline walk made no progress at offset {:#x}, stopping", offset);
+                    madeNoProgress = true;
                     break;
                 }
 
                 offset += advance;
+            }
+
+            // Both exits abandon the rest of the journal: every record after 'offset' is dropped, so
+            // the read must not be reported as complete.
+            if (shouldStop || madeNoProgress)
+            {
+                Log::Error(
+                    L"USN journal is truncated: walk stopped at offset {:#x} of {:#x}, remaining records are lost",
+                    offset,
+                    size);
+                return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
             }
         }
 
@@ -358,10 +370,29 @@ HRESULT USNJournalWalkerOffline::FindNextUSNRecord(
         }
     }
 
+    // The probe above proves 8 bytes only, but the fields read below live up to FileNameOffset at +58:
+    // the whole fixed prefix must be inside the chunk before any of it is dereferenced. RecordLength
+    // cannot be trusted for this, it is attacker-controlled and may be false-small.
+    if ((uint64_t)pCurrentChunkPosition + offset + FIELD_OFFSET(USN_RECORD, FileName)
+        > (uint64_t)pEndChunkPosition)
+    {
+        shouldReadAnotherChunk = true;
+        adjustmentOffset = (ULONG64)((uint64_t)pEndChunkPosition - (uint64_t)(pCurrentChunkPosition + offset));
+        return E_FAIL;
+    }
+
     USN_RECORD* usnRecord = reinterpret_cast<USN_RECORD*>(pCurrentChunkPosition + offset);
 
     // check we have a right version number
     if (usnRecord->MajorVersion != 2)  // TODO : handle version 3
+    {
+        shouldStop = true;
+        return E_FAIL;
+    }
+
+    // A record shorter than its own fixed part is corrupt: the caller advances by RecordLength and
+    // would never leave this record.
+    if (usnRecord->RecordLength < (DWORD)FIELD_OFFSET(USN_RECORD, FileName))
     {
         shouldStop = true;
         return E_FAIL;

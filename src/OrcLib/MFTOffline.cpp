@@ -89,6 +89,10 @@ HRESULT MFTOffline::EnumMFTRecord(MFTUtils::EnumMFTRecordCall pCallBack)
                 pHeader->MultiSectorHeader.Signature[1],
                 pHeader->MultiSectorHeader.Signature[2],
                 pHeader->MultiSectorHeader.Signature[3]);
+
+            // The file pointer has already moved to the next slot: keep the indexes tracking the physical record slot
+            ullCurrentIndex++;
+            ullCurrentMftIndex++;
             continue;
         }
 

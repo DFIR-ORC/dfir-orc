@@ -44,6 +44,40 @@ std::wstring GetJobName(const std::wstring& basename)
     return fmt::format(L"DFIR-ORC_{}_{}", GetCurrentProcessId(), basename);
 }
 
+// CompleteExecution() closes the redirections itself and is a no-op once a command is finalized, so this
+// stays correct for a command whose process exited while its redirections were still draining: without it
+// such a command's stdout/stderr and output files never reach the archive.
+void FinalizeCompletedCommands(
+    std::vector<std::shared_ptr<CommandExecute>>& commands,
+    ArchiveMessage::ITarget* archive)
+{
+    for (auto& item : commands)
+    {
+        if (!item)
+        {
+            continue;
+        }
+
+        item->CompleteExecution(archive);
+    }
+}
+
+// Must not be called while holding the agent's critical section: the callbacks being waited for take it.
+void UnregisterWaits(std::vector<HANDLE>& waitObjects)
+{
+    for (auto hWaitObject : waitObjects)
+    {
+        // INVALID_HANDLE_VALUE blocks until a callback in flight has returned, which is what keeps it from
+        // running against a destroyed agent.
+        if (!UnregisterWaitEx(hWaitObject, INVALID_HANDLE_VALUE))
+        {
+            Log::Debug(L"Failed to unregister process termination wait [{}]", LastWin32Error());
+        }
+    }
+
+    waitObjects.clear();
+}
+
 bool GetKeyAndValue(std::wstring_view input, wchar_t separator, std::wstring_view& key, std::wstring_view& value)
 {
     const auto separatorPos = input.find_first_of(separator);
@@ -876,6 +910,11 @@ HRESULT CommandAgent::ExecuteNextCommand()
             return hr;
         }
 
+        {
+            Concurrency::critical_section::scoped_lock s(m_cs);
+            m_WaitObjects.push_back(hWaitObject);
+        }
+
         auto notification = CommandNotification::NotifyCreated(command->GetKeyword(), command->ProcessID());
 
         notification->SetOriginFriendlyName(command->GetOriginFriendlyName());
@@ -1280,6 +1319,7 @@ void CommandAgent::run()
             case CommandMessage::CheckDiskFreeSpace: {
                 CheckFreeDiskSpaceRequirement(m_TempDir);
             }
+            break;
             case CommandMessage::RefreshRunningList: {
                 Concurrency::critical_section::scoped_lock s(m_cs);
                 auto new_end = std::remove_if(
@@ -1423,6 +1463,24 @@ void CommandAgent::run()
 
         if (m_bStopping && bNoRunningCommands && m_CommandQueue.empty())
         {
+            // Stop the termination callbacks first: they hold a raw pointer to this agent and would
+            // otherwise still be moving commands around while it finalizes and dies.
+            std::vector<HANDLE> waitObjects;
+            {
+                Concurrency::critical_section::scoped_lock lock(m_cs);
+                std::swap(waitObjects, m_WaitObjects);
+            }
+
+            UnregisterWaits(waitObjects);
+
+            // A command moved to the completed list is not necessarily finalized: an entry nulled in the
+            // running list is dropped by RefreshRunningList without finalizing, so the archive would be
+            // reported successful without that command's output.
+            {
+                Concurrency::critical_section::scoped_lock lock(m_cs);
+                FinalizeCompletedCommands(m_CompletedCommands, &m_archive);
+            }
+
             // delete temporary resources
             m_Resources.DeleteTemporaryResources();
             SendResult(CommandNotification::NotifyDone(m_Keyword, m_Job.GetHandle()));
@@ -1444,6 +1502,10 @@ void CommandAgent::run()
 
 CommandAgent::~CommandAgent(void)
 {
+    // Safety net: run() already unregisters before completing, but an agent torn down without reaching that
+    // point must not leave a callback holding a pointer to it. No lock: nothing else can reach us here.
+    UnregisterWaits(m_WaitObjects);
+
     if (m_Job.IsValid())
         CloseHandle(m_Job.GetHandle());
     if (m_hCompletionPort != INVALID_HANDLE_VALUE)

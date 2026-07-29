@@ -516,7 +516,9 @@ HRESULT PartitionTable::ParseExtendedPartition(
 {
     HRESULT hr = E_FAIL;
 
-    if (pExtendedRecord->MBRSignature[1] != 0xAA && pExtendedRecord->MBRSignature[0] != 0x55)
+    // Both bytes must match: negating "[0] == 0x55 && [1] == 0xAA" requires a disjunction, so an '&&'
+    // here only rejected a record whose two signature bytes were BOTH wrong (e.g. {0x55, 0x00} passed).
+    if (pExtendedRecord->MBRSignature[0] != MBR_SIGNATURE[0] || pExtendedRecord->MBRSignature[1] != MBR_SIGNATURE[1])
     {
         Log::Warn(
             "Extended partition's signature failed to verify ({:#x}{:#x}) --> Partition ignored",

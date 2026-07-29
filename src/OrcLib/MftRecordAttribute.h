@@ -240,7 +240,16 @@ public:
         return 0L;
     }
 
-    PINDEX_ENTRY FirstIndexEntry() const { return (PINDEX_ENTRY)NtfsFirstIndexEntry(&m_pRoot->IndexHeader); }
+    // m_pRoot is null for a (malformed) nonresident $INDEX_ROOT
+    PINDEX_ENTRY FirstIndexEntry() const
+    {
+        if (m_pRoot == nullptr)
+        {
+            return nullptr;
+        }
+
+        return (PINDEX_ENTRY)NtfsFirstIndexEntry(&m_pRoot->IndexHeader);
+    }
 
     LPBYTE IndexEntriesEnd() const
     {
@@ -255,6 +264,11 @@ public:
 
     LPBYTE FirstFreeByte()
     {
+        if (m_pRoot == nullptr)
+        {
+            return nullptr;
+        }
+
         return ((LPBYTE)NtfsFirstIndexEntry(&m_pRoot->IndexHeader)) + m_pRoot->IndexHeader.FirstFreeByte;
     }
     virtual ~IndexRootAttribute() { CleanCachedData(); }
@@ -281,6 +295,7 @@ class BitmapAttribute : public MftRecordAttribute
 
 public:
     // BEWARE: boost::dynamic_bitset<T>::append will complete the missing bytes if type is smaller
+    // BEWARE: this is the bitset's STORAGE unit, it must not be used to index the bitset
     using block_type = uint8_t;
 
     BitmapAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord)
@@ -290,7 +305,7 @@ public:
 
     HRESULT LoadBitField(const std::shared_ptr<VolumeReader>& volreader);
 
-    bool operator[](block_type index) const { return m_bitset[index]; }
+    bool operator[](size_t index) const { return m_bitset[index]; }
 
     const boost::dynamic_bitset<block_type>& Bits() const { return m_bitset; }
 

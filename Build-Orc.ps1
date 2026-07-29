@@ -112,9 +112,15 @@ Set-Location $SourceDir
 
 try {
 
+$env:__COMPAT_LAYER = "RunAsInvoker"
+
 # ---------------------------------------------------------------------------
 # Configure
 # ---------------------------------------------------------------------------
+
+# In release "only" builds a dedicated vcpkg triplet is used to avoid building
+# debug packages, so its cmake binary trees must live in a dedicated directory.
+$releaseSuffix = if ("Debug" -notin $BuildConfig) { "-release" } else { "" }
 
 $presets = @()
 $presets += [pscustomobject]@{ Name = "capsule"; Platform = "x86-xp" ; BinaryDir = $null }
@@ -124,7 +130,7 @@ foreach ($p in $Platform) {
 
 foreach ($preset in $presets) {
     $PresetName = "$($preset.Name)-$($preset.Platform)"
-    $BinaryDir = Join-Path $BuildDir $PresetName
+    $BinaryDir = (Join-Path $BuildDir $PresetName) + $releaseSuffix
     Write-Host ">>> cmake configure: $PresetName, build: $BinaryDir"
     New-Item -ItemType Directory -Force -Path $BinaryDir | Out-Null
 
@@ -192,14 +198,14 @@ param(
         foreach ($p in $Platform)
         {
             $arch = $p -replace '-xp$', ''
-            $cmdArgs += Join-Paths $BuildDir dfir-orc-$p $config "${Target}_$arch.exe"
+            $cmdArgs += Join-Paths $BuildDir "dfir-orc-$p$releaseSuffix" $config "${Target}_$arch.exe"
         }
 
         $cmdArgs += "--output"
         $cmdArgs += $PackageOutput
         $cmdArgs += '--force'
 
-        $capsule = Join-Paths $BuildDir "capsule-x86-xp" $config "OrcCapsule.exe"
+        $capsule = Join-Paths $BuildDir "capsule-x86-xp$releaseSuffix" $config "OrcCapsule.exe"
         Write-Host "Executing: $capsule $($cmdArgs -join ' ')"
         & $capsule @cmdArgs | Write-Host
         if ($LASTEXITCODE -ne 0) { throw "OrcCapsule packaging failed (exit $LASTEXITCODE)" }

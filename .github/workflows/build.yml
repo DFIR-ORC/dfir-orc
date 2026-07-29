@@ -58,7 +58,7 @@ jobs:
           }
 
       - name: Checkout repository (with submodules)
-        uses: actions/checkout@v4
+        uses: DFIR-ORC/actions-checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           ref: ${{ github.ref }}
           submodules: recursive
@@ -86,9 +86,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path $staging | Out-Null
 
           $intermediateDirs = @(
-            "capsule-x86-xp",
-            "dfir-orc-x86-xp",
-            "dfir-orc-x64-xp"
+            "capsule-x86-xp-release",
+            "dfir-orc-x86-xp-release",
+            "dfir-orc-x64-xp-release"
           )
 
           foreach ($dir in $intermediateDirs) {
@@ -110,21 +110,21 @@ jobs:
           Get-ChildItem -Path $staging | ForEach-Object { Write-Host "  $($_.Name)" }
 
       - name: Publish DFIR-ORC.exe
-        uses: actions/upload-artifact@v4
+        uses: DFIR-ORC/actions-upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: DFIR-ORC.exe
           path: ${{ github.workspace }}\build\MinSizeRel\DFIR-ORC.exe
           if-no-files-found: error
 
       - name: Publish FastFind.exe
-        uses: actions/upload-artifact@v4
+        uses: DFIR-ORC/actions-upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: FastFind.exe
           path: ${{ github.workspace }}\build\MinSizeRel\FastFind.exe
           if-no-files-found: error
 
       - name: Publish intermediate artefacts archive
-        uses: actions/upload-artifact@v4
+        uses: DFIR-ORC/actions-upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: DFIR-ORC-binaries
           path: ${{ github.workspace }}\staging\*

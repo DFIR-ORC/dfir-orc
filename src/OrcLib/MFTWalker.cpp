@@ -112,14 +112,14 @@ HRESULT MFTWalker::Initialize(const shared_ptr<Location>& loc, ResurrectRecordsM
         if (pOfflineReader)
             m_pMFT = std::make_unique<MFTOffline>(pOfflineReader);
         else
-            return hr;
+            return E_NOINTERFACE;
     }
     else
     {
         m_pMFT = std::make_unique<MFTOnline>(m_pVolReader);
     }
 
-    if (FAILED(m_pMFT->Initialize()))
+    if (FAILED(hr = m_pMFT->Initialize()))
         return hr;
 
     if (!loc->GetSubDirs().empty())
@@ -996,8 +996,6 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
             return hr;
         }
 
-        UINT i = 0L;
-
         if (FAILED(
                 hr = pRecord->EnumData(
                     m_pVolReader,
@@ -1005,12 +1003,25 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
                     0ULL,
                     ToRead,
                     pIR->SizePerIndex(),
-                    [this, pBM, pIR, &hr, pRecord, &i, &SDS](
+                    [this, pBM, pIR, &hr, pRecord, &SDS](
                         ULONGLONG ullBufferStartOffset, CBinaryBuffer& Data) -> HRESULT {
-                        DBG_UNREFERENCED_PARAMETER(ullBufferStartOffset);
                         PINDEX_ALLOCATION_BUFFER pIABuff = (PINDEX_ALLOCATION_BUFFER)Data.GetData();
 
-                        if ((*pBM)[i])
+                        if (pIR->SizePerIndex() == 0)
+                        {
+                            Log::Error(L"Invalid $SII index size of 0");
+                            return S_OK;
+                        }
+
+                        const UINT blockIndex = static_cast<UINT>(ullBufferStartOffset / pIR->SizePerIndex());
+
+                        if (blockIndex >= pBM->Bits().size())
+                        {
+                            Log::Error(L"Block index {} exceeds bitmap size {}", blockIndex, pBM->Bits().size());
+                            return S_OK;
+                        }
+
+                        if ((*pBM)[blockIndex])
                         {
                             if (FAILED(
                                     hr = MFTUtils::MultiSectorFixup(

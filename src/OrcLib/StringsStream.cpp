@@ -313,7 +313,8 @@ size_t StringsStream::extractImmediate(const CBinaryBuffer& aBuffer, UTF16Type& 
             // Parse the immediate as ascii
             while (i < aBuffer.GetCount() && isAscii[aBuffer.Get<UCHAR>(i)])
             {
-                m_Strings.Get<UCHAR>((m_cchExtracted * sizeof(UCHAR)) + i) = aBuffer.Get<UCHAR>(i);
+                // m_cchExtracted is the destination index: 'i' walks the source independently
+                m_Strings.Get<UCHAR>(m_cchExtracted) = aBuffer.Get<UCHAR>(i);
                 i++;
                 m_cchExtracted++;
             }
@@ -323,7 +324,8 @@ size_t StringsStream::extractImmediate(const CBinaryBuffer& aBuffer, UTF16Type& 
             // Parse the immediate as unicode
             while (i + 1 < aBuffer.GetCount() && isAscii[aBuffer.Get<UCHAR>(i)] && aBuffer.Get<UCHAR>(i + 1) == 0)
             {
-                m_Strings.Get<UCHAR>(m_cchExtracted + i) = aBuffer.Get<UCHAR>(i);
+                // m_cchExtracted is the destination index: 'i' walks the source two bytes at a time
+                m_Strings.Get<UCHAR>(m_cchExtracted) = aBuffer.Get<UCHAR>(i);
                 i += 2;
                 m_cchExtracted++;
             }
@@ -671,36 +673,38 @@ HRESULT StringsStream::Read_(
         Log::Error(L"Failed to extract strings from read buffer [{}]", SystemError(hr));
         return hr;
     }
-    if (m_cchExtracted * sizeof(UCHAR) > cbBytes)
-    {
-        // Extraction generates more bytes than input buffer size
-        Log::Warn("Failed to extract strings (input size: {}, output size: {})", cbBytes, m_cchExtracted);
-        Log::Info("Truncating {} bytes: ", m_cchExtracted * sizeof(UCHAR) - cbBytes);
+    const ULONGLONG cbExtracted = m_cchExtracted * sizeof(UCHAR);
 
-        // TODO: print hex buffer
-        //_L_->WriteBytesInHex(
-        //    ((BYTE*)m_Strings.GetData()) + cbBytes,
-        //    static_cast<DWORD>(m_cchExtracted * sizeof(UCHAR) - cbBytes),
-        //    false);
-        // Log::Info(L"");
+    if (cbExtracted > cbBytes)
+    {
+        // Extraction commonly expands the input (a CRLF is appended per extracted string). The excess does not
+        // fit the caller's buffer and is dropped here: it is not carried over to the next Read_.
+        Log::Warn(
+            "Truncating extracted strings, {} bytes dropped (input size: {}, output size: {})",
+            cbExtracted - cbBytes,
+            cbBytes,
+            cbExtracted);
     }
 
     if (m_cchExtracted == 0LL)
     {
+        if (cbBytes < 2)
+        {
+            *pcbBytesRead = 0;
+            return S_OK;
+        }
+
         ((LPBYTE)pReadBuffer)[0] = '\r';
-        ((LPBYTE)pReadBuffer)[0] = '\n';
+        ((LPBYTE)pReadBuffer)[1] = '\n';
         *pcbBytesRead = 2;
-    }
-    else
-    {
-        memcpy_s(
-            pReadBuffer,
-            static_cast<rsize_t>(cbBytes),
-            m_Strings.GetData(),
-            m_cchExtracted > cbBytes ? static_cast<rsize_t>(cbBytes) : m_cchExtracted);
+        return S_OK;
     }
 
-    *pcbBytesRead = m_cchExtracted;
+    const ULONGLONG cbCopied = std::min<ULONGLONG>(cbExtracted, cbBytes);
+
+    memcpy_s(pReadBuffer, static_cast<rsize_t>(cbBytes), m_Strings.GetData(), static_cast<rsize_t>(cbCopied));
+
+    *pcbBytesRead = cbCopied;
     m_cchExtracted = 0;
     return S_OK;
 }
@@ -710,8 +714,6 @@ HRESULT StringsStream::Write_(
     __in ULONGLONG cbBytesToWrite,
     __out_opt PULONGLONG pcbBytesWritten)
 {
-    HRESULT hr = E_FAIL;
-
     if (pWriteBuffer == NULL)
         return E_POINTER;
     if (pcbBytesWritten == NULL)
@@ -724,27 +726,9 @@ HRESULT StringsStream::Write_(
 
     *pcbBytesWritten = 0;
 
-    if (cbBytesToWrite > MAXDWORD)
-    {
-        Log::Error("Too many bytes");
-        return E_INVALIDARG;
-    }
-
-    CBinaryBuffer buffer;
-
-    if (!buffer.SetCount((DWORD)cbBytesToWrite))
-        return E_OUTOFMEMORY;
-
-    // Extract strings here...
-
-    ULONGLONG cbBytesWritten = 0;
-
-    if (FAILED(hr = m_pChainedStream->Write(buffer.GetData(), buffer.GetCount(), &cbBytesWritten)))
-        return hr;
-
-    *pcbBytesWritten = cbBytesWritten;
-
-    return S_OK;
+    // TODO: string extraction on write is not implemented. Fail closed rather than forwarding the payload
+    // unprocessed: this stream must never emit bytes it did not extract.
+    return E_NOTIMPL;
 }
 
 StringsStream::~StringsStream(void) {}

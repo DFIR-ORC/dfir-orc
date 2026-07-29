@@ -21,6 +21,30 @@
 
 using namespace Orc;
 
+namespace {
+
+// ReadRaw shrinks the buffer to the bytes actually read, which falls short of a full unit once the runlist is
+// exhausted. Consumers read a whole unit, so pad the missing tail with zeroes (as ReadRaw itself does for
+// unallocated segments) to keep the whole unit initialized and in bounds.
+bool PadCompressionUnit(CBinaryBuffer& buffer, size_t unitSize)
+{
+    const size_t read = buffer.GetCount();
+    if (read >= unitSize)
+    {
+        return true;
+    }
+
+    if (!buffer.SetCount(unitSize))
+    {
+        return false;
+    }
+
+    ZeroMemory(buffer.GetData() + read, unitSize - read);
+    return true;
+}
+
+}  // namespace
+
 UncompressNTFSStream::UncompressNTFSStream()
     : NTFSStream()
     , m_volume(nullptr)
@@ -80,26 +104,32 @@ HRESULT UncompressNTFSStream::OpenAllocatedDataStream(
     });
 
     {
-        DWORD dwCurrentSegment = 0;
-        DWORD dwInSegmentOffset = 0;
+        size_t curSegment = 0;
+        ULONGLONG ullInSegmentOffset = 0;
 
         for (unsigned int curCU = 0; curCU < m_dwMaxCompressionUnit; curCU++)
         {
             DWORD dwInCUOffset = 0;
             ULONGLONG ullSegmentSize = 0LL;
 
-            const auto& currentSegment = segments.at(dwCurrentSegment);
+            // the unit count derives from the declared FileSize, the segments from the runlist: they may disagree
+            if (curSegment >= segments.size())
+            {
+                break;
+            }
+
+            const auto& currentSegment = segments[curSegment];
 
             ullSegmentSize = currentSegment.ullAllocatedSize;
 
-            if ((ullSegmentSize - dwInSegmentOffset) >= m_dwCompressionUnit)
+            if ((ullSegmentSize - ullInSegmentOffset) >= m_dwCompressionUnit)
             {
                 CUMethod[curCU] = false;
-                dwInSegmentOffset += m_dwCompressionUnit;
-                if (dwInSegmentOffset >= ullSegmentSize)
+                ullInSegmentOffset += m_dwCompressionUnit;
+                if (ullInSegmentOffset >= ullSegmentSize)
                 {
-                    dwCurrentSegment++;
-                    dwInSegmentOffset = 0L;
+                    curSegment++;
+                    ullInSegmentOffset = 0LL;
                 }
             }
             else
@@ -109,38 +139,39 @@ HRESULT UncompressNTFSStream::OpenAllocatedDataStream(
 
                 DWORD dwThisCUInSegmentOffset = 0L;
 
-                while (dwInCUOffset < m_dwCompressionUnit && dwCurrentSegment < segments.size())
+                while (dwInCUOffset < m_dwCompressionUnit && curSegment < segments.size())
                 {
-                    if (segments[dwCurrentSegment].bUnallocated)
+                    if (segments[curSegment].bUnallocated)
                         bCUHasSparse = true;
                     else
                         bCUHasData = true;
 
-                    DWORD dwAvailableChunk = ((DWORD)ullSegmentSize - dwInSegmentOffset);
+                    const ULONGLONG ullAvailableChunk = ullSegmentSize - ullInSegmentOffset;
                     DWORD dwChunk = 0L;
 
-                    if (dwAvailableChunk > (m_dwCompressionUnit - dwInCUOffset))
+                    if (ullAvailableChunk > (m_dwCompressionUnit - dwInCUOffset))
                     {
                         dwChunk = m_dwCompressionUnit - dwInCUOffset;
                     }
                     else
                     {
-                        dwChunk = dwAvailableChunk;
+                        // bounded by the branch above: fits a DWORD
+                        dwChunk = static_cast<DWORD>(ullAvailableChunk);
                     }
 
                     dwInCUOffset += dwChunk % m_dwCompressionUnit;
                     dwThisCUInSegmentOffset += dwChunk % m_dwCompressionUnit;
 
-                    dwInSegmentOffset += dwThisCUInSegmentOffset;
+                    ullInSegmentOffset += dwThisCUInSegmentOffset;
 
-                    if (dwInSegmentOffset >= ullSegmentSize)
+                    if (ullInSegmentOffset >= ullSegmentSize)
                     {
-                        dwCurrentSegment++;
-                        dwInSegmentOffset = 0L;
+                        curSegment++;
+                        ullInSegmentOffset = 0LL;
                         dwThisCUInSegmentOffset = 0L;
 
-                        if (dwCurrentSegment < segments.size())
-                            ullSegmentSize = segments[dwCurrentSegment].ullAllocatedSize;
+                        if (curSegment < segments.size())
+                            ullSegmentSize = segments[curSegment].ullAllocatedSize;
                     }
                 }
                 if (bCUHasData && bCUHasSparse)
@@ -199,7 +230,17 @@ HRESULT UncompressNTFSStream::ReadCompressionUnit(
             return hr;
         }
 
-        ULONGLONG ullRead = buffer.GetCount();
+        if (buffer.GetCount() == 0)
+        {
+            // the runlist is exhausted: this unit holds no data at all, do not fabricate one
+            break;
+        }
+
+        // establishes buffer.GetCount() >= m_dwCompressionUnit for every read of 'buffer' below
+        if (!PadCompressionUnit(buffer, m_dwCompressionUnit))
+        {
+            return E_OUTOFMEMORY;
+        }
 
         size_t unitIndex = ((size_t)m_ullPosition / m_dwCompressionUnit) + i;
 

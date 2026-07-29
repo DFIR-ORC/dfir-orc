@@ -31,13 +31,26 @@ FileMappingStream::Open(_In_ HANDLE hFile, _In_ DWORD flProtect, _In_ ULONGLONG 
             return E_INVALIDARG;
     }
 
-    m_hMapping = CreateFileMapping(hFile, NULL, flProtect | SEC_RESERVE, liMaxSize.HighPart, liMaxSize.LowPart, lpName);
-    if (m_hMapping == INVALID_HANDLE_VALUE)
+    // CreateFileMapping returns NULL on failure, never INVALID_HANDLE_VALUE.
+    HANDLE hMapping =
+        CreateFileMapping(hFile, NULL, flProtect | SEC_RESERVE, liMaxSize.HighPart, liMaxSize.LowPart, lpName);
+    if (hMapping == NULL)
     {
         hr = HRESULT_FROM_WIN32(GetLastError());
         Log::Error("Failed CreateFileMapping (hFile: 0x{:p}, [{}])", hFile, SystemError(hr));
         return hr;
     }
+
+    // A caller asking for a named section must not silently adopt a section someone else created.
+    if (lpName != NULL && GetLastError() == ERROR_ALREADY_EXISTS)
+    {
+        CloseHandle(hMapping);
+        hr = HRESULT_FROM_WIN32(ERROR_ALREADY_EXISTS);
+        Log::Error(L"Refusing to open pre-existing file mapping '{}' [{}]", lpName, SystemError(hr));
+        return hr;
+    }
+
+    m_hMapping = hMapping;
 
     switch (m_dwProtect)
     {

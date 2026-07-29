@@ -710,7 +710,7 @@ HRESULT Orc::YaraScanner::ScanFileMapping(
     if (!fmstream)
         return E_POINTER;
 
-    HRESULT hr = fmstream->Open(INVALID_HANDLE_VALUE, PAGE_READWRITE, stream->GetSize(), L"YaraScan");
+    HRESULT hr = fmstream->Open(INVALID_HANDLE_VALUE, PAGE_READWRITE, stream->GetSize(), nullptr);
     if (FAILED(hr))
     {
         Log::Error(

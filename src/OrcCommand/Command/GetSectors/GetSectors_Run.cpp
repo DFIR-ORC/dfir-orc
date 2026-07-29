@@ -973,6 +973,9 @@ HRESULT Main::CollectDiskChunks(const OutputSpec& output)
 {
     HRESULT hr = E_FAIL;
 
+    // Keeps the last per chunk failure: collection carries on, but the command must not report a success
+    HRESULT hrCollect = S_OK;
+
     switch (output.Type)
     {
         case OutputSpec::Kind::Archive: {
@@ -992,10 +995,16 @@ HRESULT Main::CollectDiskChunks(const OutputSpec& output)
                 if (FAILED(hr))
                 {
                     Log::Error(L"Unable to archive result for '{}' [{}]", diskChunk->m_description, SystemError(hr));
+                    hrCollect = hr;
                 }
             }
 
-            FinalizeArchive(compressor, CSV);
+            hr = FinalizeArchive(compressor, CSV);
+            if (FAILED(hr))
+            {
+                Log::Error(L"Failed to finalize archive '{}' [{}]", config.Output.Path, SystemError(hr));
+                hrCollect = hr;
+            }
         }
         break;
         case OutputSpec::Kind::Directory: {
@@ -1013,6 +1022,7 @@ HRESULT Main::CollectDiskChunks(const OutputSpec& output)
                 if (FAILED(hr))
                 {
                     Log::Error(L"Unable to archive result for '{}' [{}]", diskChunk->m_description, SystemError(hr));
+                    hrCollect = hr;
                 }
             }
 
@@ -1023,7 +1033,7 @@ HRESULT Main::CollectDiskChunks(const OutputSpec& output)
             return E_NOTIMPL;
     }
 
-    return S_OK;
+    return hrCollect;
 }
 
 std::pair<HRESULT, std::shared_ptr<TableOutput::IWriter>>
@@ -1128,9 +1138,9 @@ HRESULT Main::CollectDiskChunk(
     HRESULT hr = compressor->AddStream(diskChunk->getSampleName().c_str(), L"dummy", diskChunk);
     if (FAILED(hr))
     {
-        // TODO: fabienfl: should return on failure ?
-        // note : pas d'erreur lorsqu'un sample avec un nom bizarre n'a pas été mis dans dans un zip
+        // Returning also keeps the CSV from describing a sample that is missing from the archive
         Log::Error(L"Failed to add a sample to the archive [{}]", SystemError(hr));
+        return hr;
     }
 
     std::wstring computerName;

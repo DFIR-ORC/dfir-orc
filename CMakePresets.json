@@ -4,7 +4,6 @@
         {
             "name": "dfir-orc-base",
             "hidden": true,
-            "toolset": "v143",
             "cacheVariables": {
                 "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/external/vcpkg/scripts/buildsystems/vcpkg.cmake",
                 "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/current",
@@ -64,8 +63,7 @@
             "toolset": "v141_xp",
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x86-windows-static-xp",
-                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp",
-                "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0"
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp"
             }
         },
         {
@@ -76,8 +74,7 @@
             "toolset": "v141_xp",
             "cacheVariables": {
                 "VCPKG_TARGET_TRIPLET": "x64-windows-static-xp",
-                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp",
-                "CMAKE_CXX_FLAGS": "/DGSL_USE_STD_BYTE=0"
+                "VCPKG_OVERLAY_PORTS": "${sourceDir}/external/vcpkg_overlay_ports/xp"
             }
         },
         {

@@ -144,6 +144,10 @@ protected:
     std::vector<std::shared_ptr<CommandExecute>> m_RunningCommands;
     std::vector<std::shared_ptr<CommandExecute>> m_CompletedCommands;
 
+    // RegisterWaitForSingleObject handles, guarded by m_cs. Each must be unregistered before this agent
+    // dies: its callback holds a raw pointer back to it.
+    std::vector<HANDLE> m_WaitObjects;
+
     bool m_bStopping = false;
     std::shared_ptr<CommandTerminationHandler> m_pTerminationHandler;
 

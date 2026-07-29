@@ -49,7 +49,10 @@ public:
     STDMETHOD(Open)(const std::shared_ptr<ByteStream>& pChainedStream);
 
     STDMETHOD(Open)
-    (const std::shared_ptr<ByteStream>& rawStream, Ntfs::WofAlgorithm algorithm, uint64_t uncompressedSize);
+    (const std::shared_ptr<ByteStream>& rawStream,
+     Ntfs::WofAlgorithm algorithm,
+     uint64_t uncompressedSize,
+     uint64_t compressedSize);
 
     STDMETHOD(Read_)
     (__out_bcount_part(cbBytes, *pcbBytesRead) PVOID pReadBuffer,
@@ -77,6 +80,7 @@ private:
     std::shared_ptr<ByteStream> m_rawStream;
     Ntfs::WofAlgorithm m_algorithm;
     uint64_t m_uncompressedSize;
+    uint64_t m_compressedSize;
 };
 
 }  // namespace Orc

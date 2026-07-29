@@ -274,11 +274,18 @@ MftRecordAttribute::GetNonResidentInformation(const std::shared_ptr<VolumeReader
     if (m_pNonResidentInfo->DataSize > m_pNonResidentInfo->ExtentsSize)
     {
         // pad zeros at the end of all continuation attributes
-        m_pNonResidentInfo->ExtentsVector.push_back(MFTUtils::NonResidentAttributeExtent(
-            0,
-            m_pNonResidentInfo->DataSize - m_pNonResidentInfo->ExtentsSize,
-            m_pNonResidentInfo->DataSize - m_pNonResidentInfo->ExtentsSize,
-            true));
+        //
+        // The trailing 'true' is the bZero flag: it must be passed as the fifth argument. Passing it
+        // fourth binds it to LowestVCN (as 1) and silently leaves bZero defaulted to false, which makes
+        // NTFSStream read this synthetic gap from disk offset 0 (the boot sector) instead of zero-filling
+        // it.
+        const auto ullGapSize = m_pNonResidentInfo->DataSize - m_pNonResidentInfo->ExtentsSize;
+        const auto ulBytesPerCluster = pVolReader->GetBytesPerCluster();
+        const ULONGLONG ullGapVcn =
+            ulBytesPerCluster ? m_pNonResidentInfo->ExtentsSize / ulBytesPerCluster : 0ULL;
+
+        m_pNonResidentInfo->ExtentsVector.push_back(
+            MFTUtils::NonResidentAttributeExtent(0, ullGapSize, ullGapSize, ullGapVcn, true));
         m_pNonResidentInfo->ExtentsSize += m_pNonResidentInfo->DataSize - m_pNonResidentInfo->ExtentsSize;
     }
     else if (m_pNonResidentInfo->DataSize < m_pNonResidentInfo->ExtentsSize)
@@ -991,6 +998,11 @@ HRESULT WOFReparseAttribute::GetStreams(
         return E_FAIL;
     }
 
+    // Valid data length of the WofCompressedData attribute (NOT the cluster-rounded allocated size).
+    // The last WOF chunk's size is derived from this; using the allocated size would append trailing
+    // padding to the last chunk and break its decompression.
+    uint64_t wofCompressedSize = 0;
+
     if (wofAttribute->IsResident())
     {
         auto bufferStream = make_shared<BufferStream<2048>>();
@@ -1015,6 +1027,7 @@ HRESULT WOFReparseAttribute::GetStreams(
             return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
         }
 
+        wofCompressedSize = wofAttribute->Header()->Form.Resident.ValueLength;
         rawStream = bufferStream;
     }
     else
@@ -1034,11 +1047,13 @@ HRESULT WOFReparseAttribute::GetStreams(
             stream->GetSize(),
             dataAttribute->Header()->Form.Nonresident.FileSize);
 
+        wofCompressedSize = wofAttribute->Header()->Form.Nonresident.FileSize;
         rawStream = stream;
     }
 
     auto wofStream = make_shared<UncompressWofStream>();
-    HRESULT hr = wofStream->Open(rawStream, m_algorithm, dataAttribute->Header()->Form.Nonresident.FileSize);
+    HRESULT hr = wofStream->Open(
+        rawStream, m_algorithm, dataAttribute->Header()->Form.Nonresident.FileSize, wofCompressedSize);
     if (FAILED(hr))
     {
         Log::Debug("Failed to open wof stream [{}]", SystemError(hr));

@@ -381,13 +381,24 @@ HRESULT RegistryHive::CheckVkHeader(const ValueHeader* const pHeader, bool* bVal
         return hr;
     }
 
+    // CheckBlockHeader only proves the BlockSize field and that the declared cell extent ends inside
+    // the hive buffer: no field past BlockSize may be read until the cell is known to cover it.
+    // FIELD_OFFSET, not sizeof: the trailing Name[1] and the tail padding are not part of the prefix.
+    const size_t prefixSize = static_cast<size_t>(FIELD_OFFSET(ValueHeader, Name));
+    const size_t cellSize = AllocatedCellSize(pHeader->Header.BlockSize);
+    if (cellSize < prefixSize)
+    {
+        Log::Error("Vk-block is too small to hold a value header");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
     if (_strnicmp(pHeader->Signature, "vk", 2))
     {
         Log::Error("Vk-block signature mismatch");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    if ((sizeof(ValueHeader) + pHeader->NameLength) > (size_t)(4 - (int)pHeader->Header.BlockSize))
+    if (static_cast<size_t>(pHeader->NameLength) > cellSize - prefixSize)
     {
         Log::Error("Vk-block size and computed size does not match");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -433,14 +444,23 @@ HRESULT RegistryHive::CheckLfHeader(const LF_LH_Header* const pHeader) const
         return hr;
     }
 
+    // See CheckVkHeader: the cell must cover the fixed prefix before NumberOfKeys can be read.
+    const size_t prefixSize = static_cast<size_t>(FIELD_OFFSET(LF_LH_Header, Records));
+    const size_t cellSize = AllocatedCellSize(pHeader->Header.BlockSize);
+    if (cellSize < prefixSize)
+    {
+        Log::Error("Lf/Lh-block is too small to hold a subkey list header");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
     if (_strnicmp(pHeader->Signature, "lf", 2) && _strnicmp(pHeader->Signature, "lh", 2))
     {
         Log::Error("Lf/Lh-block signature mismatch");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    const size_t lfRecordCount = (pHeader->NumberOfKeys == 0) ? 0 : (size_t)(pHeader->NumberOfKeys - 1);
-    if ((sizeof(LF_LH_Header) + lfRecordCount * sizeof(HashRecord)) > (size_t)((4 - (int)pHeader->Header.BlockSize)))
+    const size_t lfRecordsSize = static_cast<size_t>(pHeader->NumberOfKeys) * sizeof(HashRecord);
+    if (lfRecordsSize > cellSize - prefixSize)
     {
         Log::Error("Lf/Lh-block size and computed size does not match");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -469,13 +489,23 @@ HRESULT RegistryHive::CheckNkHeader(
         return hr;
     }
 
+    // See CheckVkHeader: NameLength lives at 0x4C, far past the range CheckBlockHeader proves, so the
+    // cell must be known to cover the whole fixed prefix before any field below is read.
+    const size_t prefixSize = static_cast<size_t>(FIELD_OFFSET(KeyHeader, Name));
+    const size_t cellSize = AllocatedCellSize(pHeader->Header.BlockSize);
+    if (cellSize < prefixSize)
+    {
+        Log::Error("Nk-block is too small to hold a key header");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
     if (_strnicmp(pHeader->Signature, "nk", 2))
     {
         Log::Error("Nk-block signature mismatch");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    if ((sizeof(KeyHeader) + pHeader->NameLength) > (size_t)(4 - (int)pHeader->Header.BlockSize))
+    if (static_cast<size_t>(pHeader->NameLength) > cellSize - prefixSize)
     {
         Log::Error("Nk-block size and computed size does not match");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -587,15 +617,23 @@ HRESULT RegistryHive::CheckLiHeader(const LI_RI_Header* const pHeader) const
         return hr;
     }
 
+    // See CheckVkHeader: the cell must cover the fixed prefix before NumberOfKeys can be read.
+    const size_t prefixSize = static_cast<size_t>(FIELD_OFFSET(LI_RI_Header, Records));
+    const size_t cellSize = AllocatedCellSize(pHeader->Header.BlockSize);
+    if (cellSize < prefixSize)
+    {
+        Log::Error("Li/ri-block is too small to hold a subkey list header");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
     if (_strnicmp(pHeader->Signature, "li", 2) && _strnicmp(pHeader->Signature, "ri", 2))
     {
         Log::Error("Li/ri-block signature mismatch");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    // Same WORD underflow as CheckLfHeader: 'NumberOfKeys - 1' wraps when it is 0, bypassing the check.
-    const size_t liRecordCount = (pHeader->NumberOfKeys == 0) ? 0 : (size_t)(pHeader->NumberOfKeys - 1);
-    if (liRecordCount * 4 + sizeof(LI_RI_Header) > (size_t)(4 - (int)pHeader->Header.BlockSize))
+    const size_t liRecordsSize = static_cast<size_t>(pHeader->NumberOfKeys) * sizeof(NoHashRecord);
+    if (liRecordsSize > cellSize - prefixSize)
     {
         Log::Error("Li/ri-block size and computed size does not match ");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
@@ -814,6 +852,12 @@ HRESULT RegistryHive::ParseLfLh(
         // Key is resident
         if (bSubkeyIsResident)
         {
+            if (!::IsRangeValid(m_ulHiveBufferSize, pCurrentHashRecord.OffsetToKeyHeader, sizeof(BlockHeader) + 2))
+            {
+                Log::Debug("Key '{}': lf/lh hash record points outside of the hive", CurrentKey->GetKeyName());
+                continue;
+            }
+
             KeyHeader* pCurrentSubKeyHeader = (KeyHeader*)FixOffset(pCurrentHashRecord.OffsetToKeyHeader);
 
             if ((hr = CheckNkHeader(
@@ -1157,6 +1201,12 @@ HRESULT RegistryHive::Walk(
     {
         Log::Error(L"Hive '{}': hive is not loaded", m_strHiveName);
         return E_UNEXPECTED;
+    }
+
+    if (!::IsRangeValid(m_ulHiveBufferSize, m_dwRootKeyOffset, sizeof(BlockHeader) + 2))
+    {
+        Log::Error(L"Hive '{}': root key cell offset is out of bounds", m_strHiveName);
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
     // Get Root key

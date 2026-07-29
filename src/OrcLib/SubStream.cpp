@@ -29,7 +29,7 @@ SubStream::SubStream(ByteStream& stream, uint64_t chunkOffset, uint64_t chunkSiz
     {
         Log::Debug(
             "Requested chunk size exceeds stream bounds (chunk size: {}, max size: {})", chunkSize, maxChunkSize);
-        chunkSize = maxChunkSize;
+        m_chunkSize = maxChunkSize;
     }
 
     auto hr = m_stream.SetFilePointer(m_chunkOffset, FILE_BEGIN, nullptr);
@@ -124,7 +124,11 @@ SubStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod,
         return E_FAIL;
     }
 
-    if (pos < m_chunkOffset && pos >= m_chunkOffset + m_chunkSize)
+    // The end position is a valid seek target: Read_ clamps there and returns zero bytes. Compare as
+    // unsigned only after rejecting a negative result, otherwise a negative 'pos' would convert to a
+    // huge value and defeat the lower bound.
+    if (pos < 0 || static_cast<uint64_t>(pos) < m_chunkOffset
+        || static_cast<uint64_t>(pos) > m_chunkOffset + m_chunkSize)
     {
         Log::Debug(
             "Failed SetFilePointer on chunk (offset: {:#x}, chunk offset: {:#x}, chunk size: {})",
@@ -134,7 +138,9 @@ SubStream::SetFilePointer(__in LONGLONG DistanceToMove, __in DWORD dwMoveMethod,
         return E_FAIL;
     }
 
-    hr = m_stream.SetFilePointer(pos, dwMoveMethod, &streamPos);
+    // 'pos' is absolute in every branch above, so it must be applied from the start of the stream
+    // rather than re-applying the caller's relative basis.
+    hr = m_stream.SetFilePointer(pos, FILE_BEGIN, &streamPos);
     if (FAILED(hr))
     {
         Log::Debug(

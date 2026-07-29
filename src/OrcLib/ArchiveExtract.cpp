@@ -32,22 +32,12 @@
 
 #include "WideAnsi.h"
 
+#include "Utils/SafeFileName.h"
+
 using namespace std;
 namespace fs = std::filesystem;
 
 using namespace Orc;
-
-namespace {
-
-std::wstring SanitizeArchiveMemberName(const std::wstring& nameInArchive)
-{
-    std::wstring fileName;
-    std::replace_copy(begin(nameInArchive), end(nameInArchive), std::back_inserter(fileName), L'\\', L'_');
-    std::replace(begin(fileName), end(fileName), L'/', L'_');
-    return fileName;
-}
-
-}  // namespace
 
 std::shared_ptr<ArchiveExtract> ArchiveExtract::MakeExtractor(ArchiveFormat fmt, bool bComputeHash)
 {
@@ -151,7 +141,12 @@ STDMETHODIMP ArchiveExtract::Extract(
         [pwzExtractRootDir, szSDDL, this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
-        std::wstring fileName = SanitizeArchiveMemberName(item.NameInArchive);
+        std::wstring fileName = SanitizeFileName(item.NameInArchive);
+        if (fileName.empty())
+        {
+            Log::Error(L"Failed to extract archive item with unusable name '{}'", item.NameInArchive);
+            return nullptr;
+        }
 
         HANDLE hFile = INVALID_HANDLE_VALUE;
         if (FAILED(
@@ -275,7 +270,12 @@ STDMETHODIMP ArchiveExtract::Extract(
         [pwzExtractRootDir, szSDDL, this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
-        std::wstring fileName = SanitizeArchiveMemberName(item.NameInArchive);
+        std::wstring fileName = SanitizeFileName(item.NameInArchive);
+        if (fileName.empty())
+        {
+            Log::Error(L"Failed to extract archive item with unusable name '{}'", item.NameInArchive);
+            return nullptr;
+        }
 
         HANDLE hFile = INVALID_HANDLE_VALUE;
 
@@ -343,7 +343,12 @@ STDMETHODIMP ArchiveExtract::Extract(
         [pwzExtractRootDir, szSDDL, this](OrcArchive::ArchiveItem& item) -> std::shared_ptr<ByteStream> {
         HRESULT hr = E_FAIL;
 
-        std::wstring fileName = SanitizeArchiveMemberName(item.NameInArchive);
+        std::wstring fileName = SanitizeFileName(item.NameInArchive);
+        if (fileName.empty())
+        {
+            Log::Error(L"Failed to extract archive item with unusable name '{}'", item.NameInArchive);
+            return nullptr;
+        }
 
         HANDLE hFile = INVALID_HANDLE_VALUE;
 

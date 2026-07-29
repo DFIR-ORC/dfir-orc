@@ -184,6 +184,9 @@ HRESULT CopyFileAgent::CheckFileUpload(const std::wstring& strRemoteName, std::o
         {
             return S_FALSE;
         }
+
+        // Any other error leaves 'fileSize' unset, which the caller would read as an existing file
+        return HRESULT_FROM_WIN32(lastError);
     }
     else
     {
