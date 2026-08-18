@@ -316,13 +316,13 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
             tags.insert(L"Windows11");
             tags.insert(L"Release#21H2");
             break;
+        case 25398:
+            tags.insert(L"WindowsServer");
+            tags.insert(L"Release#23H2");
+            break;
         case 20348:
             tags.insert(L"WindowsServer2022");
             tags.insert(L"Release#RTM");
-            break;
-        case 19046:
-            tags.insert(L"Windows10");
-            tags.insert(L"Release#23H2");
             break;
         case 19045:
             tags.insert(L"Windows10");
@@ -436,12 +436,17 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
             }
             break;
         case 7601:
-            tags.insert(L"Windows7");
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows7");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    tags.insert(L"WindowsServer2008R2");
+                    break;
+            }
             tags.insert(L"Release#SP1");
-            break;
-        case 8400:
-            tags.insert(L"WindowsHomeServer2011");
-            tags.insert(L"Release#RTM");
             break;
         case 7600:
             switch (ProductType)
