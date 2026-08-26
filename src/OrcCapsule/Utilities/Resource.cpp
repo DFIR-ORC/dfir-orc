@@ -528,12 +528,13 @@ LoadResourceData(const fs::path& path, const std::wstring& name, LPCWSTR type, s
     return {};
 }
 
-[[nodiscard]] std::error_code ExtractResource(const std::wstring& name, const std::wstring& outputPath, bool overwrite)
-{
-    std::error_code ec;
+namespace {
 
+// Load an RT_RCDATA resource and, if it is a zstd archive, decompress it into its runnable bytes.
+[[nodiscard]] std::error_code LoadAndDecompressResource(const std::wstring& name, std::vector<uint8_t>& output)
+{
     std::vector<uint8_t> data;
-    ec = LoadResourceData(NULL, name, RT_RCDATA, data);
+    auto ec = LoadResourceData(NULL, name, RT_RCDATA, data);
     if (ec)
     {
         Log::Debug(L"Failed LoadResourceData (name: {}) [{}]", name, ec);
@@ -543,9 +544,38 @@ LoadResourceData(const fs::path& path, const std::wstring& name, LPCWSTR type, s
     if (data.empty())
     {
         Log::Debug(L"Failed LoadResourceData: resource empty (name: {})", name);
-        ec.assign(ERROR_RESOURCE_NAME_NOT_FOUND, std::system_category());
-        return ec;
+        return std::error_code(ERROR_RESOURCE_NAME_NOT_FOUND, std::system_category());
     }
+
+    if (!IsZstdArchive(ToStringView(data)))
+    {
+        output = std::move(data);
+        return {};
+    }
+
+    std::vector<uint8_t> decompressedData;
+    ec = ZstdDecompressData(data, decompressedData);
+    if (ec)
+    {
+        Log::Debug(L"Failed to decompress data (resource: {}) [{}]", name, ec);
+        return std::make_error_code(std::errc::bad_message);
+    }
+
+    if (decompressedData.empty())
+    {
+        Log::Debug(L"Failed DecompressData: empty data (resource: {})", name);
+        return std::make_error_code(std::errc::bad_message);
+    }
+
+    output = std::move(decompressedData);
+    return {};
+}
+
+}  // namespace
+
+[[nodiscard]] std::error_code ExtractResource(const std::wstring& name, const std::wstring& outputPath, bool overwrite)
+{
+    std::error_code ec;
 
     bool exists = fs::exists(outputPath, ec);
     if (ec)
@@ -560,28 +590,14 @@ LoadResourceData(const fs::path& path, const std::wstring& name, LPCWSTR type, s
         return std::make_error_code(std::errc::file_exists);
     }
 
-    std::vector<uint8_t> decompressedData;
-    if (IsZstdArchive(ToStringView(data)))
+    std::vector<uint8_t> data;
+    ec = LoadAndDecompressResource(name, data);
+    if (ec)
     {
-        ec = ZstdDecompressData(data, decompressedData);
-        if (ec)
-        {
-            Log::Debug(L"Failed to decompress data (resource: {}, path: {}) [{}]", name, outputPath, ec);
-            return std::make_error_code(std::errc::bad_message);
-        }
-
-        if (decompressedData.empty())
-        {
-            Log::Debug(L"Failed DecompressData: empty data (resource: {}, path: {})", name, outputPath);
-            return std::make_error_code(std::errc::bad_message);
-        }
-    }
-    else
-    {
-        decompressedData = std::move(data);
+        return ec;
     }
 
-    ec = WriteFileContents(outputPath, decompressedData);
+    ec = WriteFileContents(outputPath, data);
     if (ec)
     {
         Log::Debug(L"Failed WriteFileContents (resource: {}, path: {}) [{}]", name, outputPath, ec);
