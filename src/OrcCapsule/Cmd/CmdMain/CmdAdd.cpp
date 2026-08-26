@@ -306,11 +306,20 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     executables.reserve(args.inputPaths.size());
     for (const auto& inputPath : args.inputPaths)
     {
-        PreparedRunner prepared;
-        ec = PrepareRunner(inputPath, args.architecture, prepared);
+        // Resolve against the working directory so every downstream step (read, LoadLibraryEx, branding)
+        // sees a rooted path independent of the process current directory.
+        fs::path absoluteInput = fs::absolute(inputPath, ec);
         if (ec)
         {
-            Log::Error(L"Failed to prepare executable (path: {}) [{}]", inputPath, ec);
+            Log::Error(L"Failed to resolve input path (path: {}) [{}]", inputPath, ec);
+            return ec;
+        }
+
+        PreparedRunner prepared;
+        ec = PrepareRunner(absoluteInput, args.architecture, prepared);
+        if (ec)
+        {
+            Log::Error(L"Failed to prepare executable (path: {}) [{}]", absoluteInput, ec);
             return ec;
         }
 
@@ -412,6 +421,13 @@ void PrintCapsuleSummary(
 
     fs::path updatedExe =
         args.outputPath.value_or(currentExe.parent_path() / (currentExe.filename().wstring() + L".new"));
+
+    updatedExe = fs::absolute(updatedExe, ec);
+    if (ec)
+    {
+        Log::Error(L"Failed to resolve output path (path: {}) [{}]", updatedExe, ec);
+        return ec;
+    }
 
     fs::copy_file(
         currentExe, updatedExe, args.force ? fs::copy_options::overwrite_existing : fs::copy_options::none, ec);
