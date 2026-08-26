@@ -217,6 +217,14 @@ bool TryParseGlobalOption(size_t& idx, const std::vector<std::wstring>& args, Ca
         return true;
     }
 
+    // --ignore-icon or /ignoreicon
+    if (IsFlag(arg, L"--ignore-icon") || IsFlag(arg, L"/ignoreicon"))
+    {
+        opts.ignoreIcon = true;
+        idx++;
+        return true;
+    }
+
     return false;
 }
 

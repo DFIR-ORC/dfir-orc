@@ -354,6 +354,29 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     return {};
 }
 
+// Brand the capsule from the last added binary: its icon. Best-effort, any failure is logged and never
+// fails the add (the runner embedding is the contract).
+void BrandCapsule(const CapsuleOptions& args, const fs::path& capsulePath, const fs::path& brandingSource)
+{
+    if (args.ignoreIcon)
+    {
+        return;
+    }
+
+    bool iconApplied = false;
+    auto ec = BrandCapsuleFromBinary(brandingSource, capsulePath, !args.ignoreIcon, iconApplied);
+    if (ec)
+    {
+        Log::Warn(L"Failed to brand capsule from '{}', keeping capsule defaults [{}]", brandingSource, ec);
+        return;
+    }
+
+    if (!args.ignoreIcon && !iconApplied)
+    {
+        Log::Debug(L"No icon in '{}', keeping capsule icon", brandingSource);
+    }
+}
+
 // Print the "Updated Capsule" summary: the capsule's size and hash, then one entry per added runner.
 void PrintCapsuleSummary(
     const fs::path& capsulePath,
@@ -445,6 +468,11 @@ void PrintCapsuleSummary(
         return ec;
     }
 
+    // executables preserves input order; its last entry is the last added binary, and its stored inputPath
+    // is already absolute (resolved above).
+    const fs::path& brandingSource = executables.back().inputPath;
+    BrandCapsule(args, updatedExe, brandingSource);
+
     std::optional<std::wstring> expectedSha256;
     if (!args.outputPath)
     {
@@ -503,7 +531,9 @@ CommandDescriptor GetAddCommandDescriptor()
         L"      :x86         Add as 32-bit binary (auto-detected if omitted)\n"
         L"      :x64-xp      Add as Windows XP 64-bit binary (auto-detected if omitted)\n"
         L"      :x86-xp      Add as Windows XP 32-bit binary (auto-detected if omitted)\n"
-        L"      :arm64       Add as Windows ARM 64-bit binary (auto-detected if omitted)\n",
+        L"      :arm64       Add as Windows ARM 64-bit binary (auto-detected if omitted)\n"
+        L"      By default the capsule adopts the last added binary's icon.\n"
+        L"      --ignore-icon   Keep the capsule's own icon\n",
         ParseAddCommand,
         ValidateAddOptions,
         HandleAddRunner,

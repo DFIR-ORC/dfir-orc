@@ -78,6 +78,9 @@ struct CapsuleOptions
     std::optional<fs::path> outputPath;
     bool force = false;
 
+    // 'add' command: by default the capsule adopts the last added binary's icon.
+    bool ignoreIcon = false;  // --ignore-icon: keep the capsule's own icon
+
     // Execution Configuration (global options)
     std::optional<bool> relocate;
     bool wait = true;  // Default: true (unless --no-wait)

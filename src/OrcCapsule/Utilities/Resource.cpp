@@ -8,7 +8,9 @@
 
 #include "Utilities/Resource.h"
 
+#include <algorithm>
 #include <cassert>
+#include <utility>
 
 #include "Utilities/Log.h"
 #include "Utilities/Error.h"
@@ -29,33 +31,97 @@ std::basic_string_view<uint8_t> ToStringView(const std::vector<uint8_t>& buffer)
     return {buffer.data(), buffer.size()};
 }
 
-}  // namespace
-
-std::error_code LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::vector<uint8_t>& output)
+// An icon resource (RT_ICON or RT_GROUP_ICON) is identified by a numeric id or, as some toolchains emit,
+// a string name. This carries the identity plus the language under which it was found, for precise deletion.
+struct IconRef
 {
-    std::error_code ec;
+    bool numeric = false;
+    WORD id = 0;
+    std::wstring name;
+    WORD lang = 0;
+};
 
-    HRSRC hResource = FindResourceW(hModule, name.c_str(), type);
+// An icon resource to transplant: its identity plus its bytes.
+struct SourceIconResource
+{
+    bool numeric = false;
+    WORD id = 0;
+    std::wstring name;
+    std::vector<uint8_t> data;
+};
+
+// EnumResourceNamesW target: the numeric ids and string names a resource type is present under.
+struct IconNameList
+{
+    std::vector<WORD> numeric;
+    std::vector<std::wstring> named;
+};
+
+// EnumResourceNamesW callback: collect both integer-id and string-named resource names.
+BOOL CALLBACK CollectIconNamesCallback(HMODULE, LPCWSTR, LPWSTR name, LONG_PTR param)
+{
+    auto* out = reinterpret_cast<IconNameList*>(param);
+    if (!out || !name)
+    {
+        return TRUE;
+    }
+
+    if (IS_INTRESOURCE(name))
+    {
+        out->numeric.push_back(static_cast<WORD>(reinterpret_cast<ULONG_PTR>(name)));
+    }
+    else
+    {
+        out->named.emplace_back(name);
+    }
+
+    return TRUE;
+}
+
+// EnumResourceLanguagesW callback: collect the languages a resource is present in.
+BOOL CALLBACK CollectLanguagesCallback(HMODULE, LPCWSTR, LPCWSTR, WORD lang, LONG_PTR param)
+{
+    auto* langs = reinterpret_cast<std::vector<WORD>*>(param);
+    if (langs)
+    {
+        langs->push_back(lang);
+    }
+
+    return TRUE;
+}
+
+// Load a resource's raw bytes by its FindResource name, which is either a string name or a
+// MAKEINTRESOURCE numeric id. Shared by the wstring LoadResourceData and the by-id LoadResourceById.
+std::error_code LoadResourceRaw(HMODULE module, LPCWSTR name, LPCWSTR type, std::vector<uint8_t>& output)
+{
+    HRSRC hResource = FindResourceW(module, name, type);
     if (!hResource)
     {
-        ec = LastWin32Error();
-        Log::Debug(L"Failed FindResourceW (name: {}) [{}]", name, ec);
+        auto ec = LastWin32Error();
+        if (IS_INTRESOURCE(name))
+        {
+            Log::Debug(L"Failed FindResourceW (id: {}) [{}]", reinterpret_cast<ULONG_PTR>(name), ec);
+        }
+        else
+        {
+            Log::Debug(L"Failed FindResourceW (name: {}) [{}]", std::wstring(name), ec);
+        }
         return ec;
     }
 
-    HGLOBAL hLoaded = LoadResource(hModule, hResource);
+    HGLOBAL hLoaded = LoadResource(module, hResource);
     if (!hLoaded)
     {
-        ec = LastWin32Error();
-        Log::Debug(L"Failed LoadResource (name: {}, type: {}) [{}]", name, type, ec);
+        auto ec = LastWin32Error();
+        Log::Debug(L"Failed LoadResource [{}]", ec);
         return ec;
     }
 
-    DWORD size = SizeofResource(hModule, hResource);
+    DWORD size = SizeofResource(module, hResource);
     if (size == 0)
     {
-        ec = LastWin32Error();
-        Log::Debug(L"Failed SizeofResource (name: {}) [{}]", name, type, ec);
+        auto ec = LastWin32Error();
+        Log::Debug(L"Failed SizeofResource [{}]", ec);
         return ec;
     }
 
@@ -68,6 +134,111 @@ std::error_code LoadResourceData(HMODULE hModule, const std::wstring& name, LPCW
     const auto* bytePtr = static_cast<const uint8_t*>(pData);
     output.assign(bytePtr, bytePtr + size);
     return {};
+}
+
+// Load a resource identified by a numeric id (the wstring LoadResourceData overloads only handle named ids).
+std::error_code LoadResourceById(HMODULE module, LPCWSTR type, WORD id, std::vector<uint8_t>& output)
+{
+    return LoadResourceRaw(module, MAKEINTRESOURCEW(id), type, output);
+}
+
+// Load every RT_ICON or RT_GROUP_ICON in a module verbatim (numeric and string-named ids), so a source's
+// whole icon set can be transplanted rather than just its primary group. The bytes are copied as-is, so the
+// group directories keep referencing their image ids unchanged. Returns an empty list when the module has
+// none of @p type.
+std::error_code ReadAllIcons(HMODULE module, LPCWSTR type, std::vector<SourceIconResource>& out)
+{
+    IconNameList names;
+    if (!EnumResourceNamesW(module, type, CollectIconNamesCallback, reinterpret_cast<LONG_PTR>(&names)))
+    {
+        // FALSE is also the normal "module has no resources of this type" case, so log at debug.
+        Log::Debug(
+            L"EnumResourceNamesW (type: {}) returned false [{}]", reinterpret_cast<ULONG_PTR>(type), LastWin32Error());
+    }
+
+    for (WORD id : names.numeric)
+    {
+        SourceIconResource res;
+        res.numeric = true;
+        res.id = id;
+        auto ec = LoadResourceById(module, type, id, res.data);
+        if (ec)
+        {
+            return ec;
+        }
+
+        out.push_back(std::move(res));
+    }
+
+    for (auto& name : names.named)
+    {
+        SourceIconResource res;
+        res.name = name;
+        auto ec = LoadResourceData(module, name, type, res.data);
+        if (ec)
+        {
+            return ec;
+        }
+
+        out.push_back(std::move(res));
+    }
+
+    return {};
+}
+
+// Collect every RT_GROUP_ICON / RT_ICON resource (numeric and string-named, with its languages) currently
+// in a module, so the capsule's own icons can be deleted precisely before the source's are written.
+std::error_code CollectExistingIconResources(HMODULE module, LPCWSTR type, std::vector<IconRef>& out)
+{
+    IconNameList names;
+    if (!EnumResourceNamesW(module, type, CollectIconNamesCallback, reinterpret_cast<LONG_PTR>(&names)))
+    {
+        // FALSE is also the normal "module has no resources of this type" case, so log at debug.
+        Log::Debug(
+            L"EnumResourceNamesW (type: {}) returned false [{}]", reinterpret_cast<ULONG_PTR>(type), LastWin32Error());
+    }
+
+    auto collectLangs = [&](bool numeric, WORD id, const std::wstring& name)
+    {
+        std::vector<WORD> langs;
+        LPCWSTR nameArg = numeric ? MAKEINTRESOURCEW(id) : name.c_str();
+        EnumResourceLanguagesW(module, type, nameArg, CollectLanguagesCallback, reinterpret_cast<LONG_PTR>(&langs));
+
+        // A resource with no explicitly enumerated language is treated as neutral.
+        if (langs.empty())
+        {
+            langs.push_back(MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL));
+        }
+
+        for (WORD lang : langs)
+        {
+            IconRef ref;
+            ref.numeric = numeric;
+            ref.id = id;
+            ref.name = name;
+            ref.lang = lang;
+            out.push_back(std::move(ref));
+        }
+    };
+
+    for (WORD id : names.numeric)
+    {
+        collectLangs(true, id, {});
+    }
+
+    for (auto& name : names.named)
+    {
+        collectLangs(false, 0, name);
+    }
+
+    return {};
+}
+
+}  // namespace
+
+std::error_code LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::vector<uint8_t>& output)
+{
+    return LoadResourceRaw(hModule, name.c_str(), type, output);
 }
 
 std::error_code
@@ -227,6 +398,136 @@ std::error_code RemoveResource(const fs::path& path, const std::wstring& name, L
     return {};
 }
 
+std::error_code BrandCapsuleFromBinary(
+    const fs::path& sourceBinary,
+    const fs::path& capsulePath,
+    bool copyIcon,
+    bool& iconApplied)
+{
+    iconApplied = false;
+
+    if (!copyIcon)
+    {
+        return {};
+    }
+
+    // Read what the source binary can offer. Loading as a datafile keeps this read-only and side-effect free.
+    ScopedModule source(LoadLibraryExW(
+        sourceBinary.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
+    if (!source)
+    {
+        auto ec = LastWin32Error();
+        Log::Debug(L"Failed LoadLibraryExW for branding source (path: {}) [{}]", sourceBinary, ec);
+        return ec;
+    }
+
+    // Read the source's whole icon set (every RT_GROUP_ICON and RT_ICON, numeric or named) so the capsule
+    // ends up with an exact copy rather than just the primary group.
+    std::vector<SourceIconResource> sourceGroups;
+    std::vector<SourceIconResource> sourceImages;
+    auto ec = ReadAllIcons(source.get(), RT_GROUP_ICON, sourceGroups);
+    if (!ec)
+    {
+        ec = ReadAllIcons(source.get(), RT_ICON, sourceImages);
+    }
+
+    if (ec)
+    {
+        Log::Debug(L"Failed to read icons from branding source (path: {}) [{}]", sourceBinary, ec);
+        return {};
+    }
+
+    if (sourceGroups.empty() || sourceImages.empty())
+    {
+        // Nothing to transplant: leave the capsule's own icon untouched.
+        Log::Debug(L"No icon in branding source (path: {})", sourceBinary);
+        return {};
+    }
+
+    // Enumerate the capsule's own icon resources up front, while no update handle is open on the file, so the
+    // datafile mapping and BeginUpdateResource never contend for it.
+    std::vector<IconRef> staleGroups;
+    std::vector<IconRef> staleIcons;
+    {
+        ScopedModule capsule(LoadLibraryExW(
+            capsulePath.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
+        if (!capsule)
+        {
+            ec = LastWin32Error();
+            Log::Debug(L"Failed LoadLibraryExW for capsule (path: {}) [{}]", capsulePath, ec);
+            return ec;
+        }
+
+        std::ignore = CollectExistingIconResources(capsule.get(), RT_GROUP_ICON, staleGroups);
+        std::ignore = CollectExistingIconResources(capsule.get(), RT_ICON, staleIcons);
+    }
+
+    std::unique_ptr<ResourceUpdater> updater;
+    ec = ResourceUpdater::Make(capsulePath, updater);
+    if (ec)
+    {
+        Log::Debug(L"Failed ResourceUpdater::Make (path: {}) [{}]", capsulePath, ec);
+        return ec;
+    }
+
+    constexpr WORD kNeutral = MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL);
+
+    // Delete every icon the capsule carries (numeric and named), then write the source's verbatim under its
+    // own ids and names. Done in one commit, the capsule's icons become an exact copy of the source's with
+    // nothing of its own left behind, and there is no window where the shell has no icon to show.
+    const std::vector<uint8_t> empty;
+
+    for (const auto& ref : staleGroups)
+    {
+        ec = ref.numeric ? updater->Update(RT_GROUP_ICON, ref.id, ref.lang, empty)
+                         : updater->Update(RT_GROUP_ICON, ref.name, ref.lang, empty);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
+    for (const auto& ref : staleIcons)
+    {
+        ec = ref.numeric ? updater->Update(RT_ICON, ref.id, ref.lang, empty)
+                         : updater->Update(RT_ICON, ref.name, ref.lang, empty);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
+    for (const auto& image : sourceImages)
+    {
+        ec = image.numeric ? updater->Update(RT_ICON, image.id, kNeutral, image.data)
+                           : updater->Update(RT_ICON, image.name, kNeutral, image.data);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
+    for (const auto& group : sourceGroups)
+    {
+        ec = group.numeric ? updater->Update(RT_GROUP_ICON, group.id, kNeutral, group.data)
+                           : updater->Update(RT_GROUP_ICON, group.name, kNeutral, group.data);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
+    ec = updater->Commit();
+    if (ec)
+    {
+        Log::Debug(L"Failed ResourceUpdater::Commit for branding (path: {}) [{}]", capsulePath, ec);
+        return ec;
+    }
+
+    iconApplied = true;
+    return {};
+}
+
 std::error_code ResourceUpdater::Make(std::filesystem::path path, std::unique_ptr<ResourceUpdater>& resourceUpdater)
 {
     HANDLE hUpdate = BeginUpdateResourceW(path.c_str(), FALSE);
@@ -302,6 +603,24 @@ ResourceUpdater::Update(LPCWSTR type, const std::wstring& name, WORD langId, con
     {
         auto ec = LastWin32Error();
         Log::Debug(L"Failed UpdateResourceW (path: {}) [{}]", m_path, ec);
+        return ec;
+    }
+
+    return {};
+}
+
+std::error_code ResourceUpdater::Update(LPCWSTR type, WORD nameId, WORD langId, const std::vector<uint8_t>& data)
+{
+    assert(isValid() && "Update called on an invalid ResourceUpdater");
+
+    // UpdateResourceW takes LPVOID but does not modify the buffer. An empty buffer deletes the resource.
+    auto* dataPtr = const_cast<uint8_t*>(data.empty() ? nullptr : data.data());
+    const auto dataSize = static_cast<DWORD>(data.size());
+
+    if (!UpdateResourceW(m_handle, type, MAKEINTRESOURCEW(nameId), langId, dataPtr, dataSize))
+    {
+        auto ec = LastWin32Error();
+        Log::Debug(L"Failed UpdateResourceW (path: {}, id: {}) [{}]", m_path, nameId, ec);
         return ec;
     }
 

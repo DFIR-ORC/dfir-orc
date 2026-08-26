@@ -36,6 +36,22 @@ LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::v
 
 [[nodiscard]] std::error_code RemoveResource(const std::filesystem::path& path, const std::wstring& name, LPCWSTR type);
 
+/// @brief Copy the application icon from a PE binary into a capsule executable.
+///
+/// The icon transplant is all-or-nothing and gated on the source: the capsule's own icon is deleted
+/// and replaced only when @p sourceBinary actually carries an icon group. A source lacking an icon
+/// leaves the capsule's own icon untouched.
+///
+/// @param sourceBinary PE file to read the icon from.
+/// @param capsulePath  Capsule executable to modify in place.
+/// @param copyIcon     When true, attempt to transplant the icon.
+/// @param iconApplied  Set to true when an icon was actually transplanted.
+[[nodiscard]] std::error_code BrandCapsuleFromBinary(
+    const std::filesystem::path& sourceBinary,
+    const std::filesystem::path& capsulePath,
+    bool copyIcon,
+    bool& iconApplied);
+
 class ResourceUpdater final
 {
 public:
@@ -53,6 +69,10 @@ public:
 
     [[nodiscard]] std::error_code
     Update(LPCWSTR type, const std::wstring& name, WORD langId, const std::vector<uint8_t>& data);
+
+    /// @brief Stage an update for a resource identified by a numeric id (e.g. an RT_ICON or RT_VERSION).
+    /// @note An empty @p data deletes the resource. Named-string ids must use the wstring overload.
+    [[nodiscard]] std::error_code Update(LPCWSTR type, WORD nameId, WORD langId, const std::vector<uint8_t>& data);
 
     [[nodiscard]] std::error_code Commit();
 
