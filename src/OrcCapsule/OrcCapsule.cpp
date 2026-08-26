@@ -7,7 +7,9 @@
 //
 
 #include <array>
+#include <cstdio>
 #include <optional>
+#include <tuple>
 
 #include <windows.h>
 
@@ -64,12 +66,57 @@ void SetupDllLookupDirectories()
     }
 }
 
+// A capsule that carries a GUI binary declares the GUI subsystem (see 'capsule add'), so Windows gives it
+// no console of its own: that is the point, no empty console window sitting behind the payload's windows.
+// Its own command line (--help, info, add, ...) still has to print when it is run from a command prompt,
+// so borrow the console of the process that started it, if there is one. A console capsule already has a
+// console and is left untouched.
+void AttachParentConsole()
+{
+    if (GetConsoleWindow() != nullptr)
+    {
+        return;
+    }
+
+    // Reopen only what is not already connected, so a redirection ('capsule info > out.txt', which hands
+    // down valid handles even to a GUI process) keeps its file instead of being rerouted to the console.
+    // Sample the handles BEFORE attaching: AttachConsole fills the empty ones with console handles, which
+    // would make everything look connected while the CRT streams, bound at startup, still have no handle.
+    auto isDetached = [](DWORD stdHandle) {
+        const HANDLE handle = GetStdHandle(stdHandle);
+        return handle == nullptr || handle == INVALID_HANDLE_VALUE;
+    };
+
+    const bool reopenStdout = isDetached(STD_OUTPUT_HANDLE);
+    const bool reopenStderr = isDetached(STD_ERROR_HANDLE);
+
+    if (!AttachConsole(ATTACH_PARENT_PROCESS))
+    {
+        // No parent console: launched from the shell, or the parent already exited. Output has nowhere to
+        // go, which is the expected outcome for a GUI capsule started from Explorer.
+        return;
+    }
+
+    FILE* stream = nullptr;
+
+    if (reopenStdout)
+    {
+        std::ignore = freopen_s(&stream, "CONOUT$", "w", stdout);
+    }
+
+    if (reopenStderr)
+    {
+        std::ignore = freopen_s(&stream, "CONOUT$", "w", stderr);
+    }
+}
+
 }  // namespace
 
 int wmain(int argc, const wchar_t* argv[])
 {
     std::error_code ec;
 
+    AttachParentConsole();
     SetupDllLookupDirectories();
 
     CapsuleOptions opts = ParseCommandLine(argc, argv);
