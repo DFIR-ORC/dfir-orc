@@ -32,11 +32,14 @@ CopyFileAndMarkForRebootRemoval(const std::filesystem::path& source, const std::
         return ec;
     }
 
+    // Scheduling the copy for deletion writes PendingFileRenameOperations under HKLM, so it needs
+    // administrator rights and always fails for a standard user. The caller asked for the copy, which
+    // succeeded: report success and leave the temporary file for the next %TEMP% cleanup.
     if (!MoveFileExW(destination.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT))
     {
-        ec = LastWin32Error();
-        Log::Debug(L"Failed MoveFileExW on register for removal (path: {}) [{}]", destination, ec);
-        return ec;
+        Log::Debug(
+            L"Failed MoveFileExW on register for removal (path: {}) [{}]", destination, LastWin32Error());
+        return {};
     }
 
     Log::Debug(L"Scheduled file for deletion on reboot (path: {})", destination);
@@ -326,16 +329,18 @@ std::error_code PerformSelfUpdate(const fs::path& newExe)
         Log::Debug(L"Failed MoveFileExW (input: {}, output: {}) [{}]", backupPath, tempBackup, ec);
         ec.clear();  // let the file inplace and register it for removal
 
+        // Best-effort, and administrator only: PendingFileRenameOperations lives under HKLM. The add has
+        // already succeeded at this point, so a standard user must not see an error for a leftover backup.
         if (!MoveFileExW(backupPath.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT))
         {
-            Log::Error(L"Failed to schedule backup for deletion (path: {}) [{}]", backupPath, LastWin32Error());
+            Log::Debug(L"Failed to schedule backup for deletion (path: {}) [{}]", backupPath, LastWin32Error());
         }
     }
     else
     {
         if (!MoveFileExW(tempBackup.c_str(), nullptr, MOVEFILE_DELAY_UNTIL_REBOOT))
         {
-            Log::Error(L"Failed to schedule temp backup for deletion (path: {}) [{}]", tempBackup, LastWin32Error());
+            Log::Debug(L"Failed to schedule temp backup for deletion (path: {}) [{}]", tempBackup, LastWin32Error());
         }
     }
 
