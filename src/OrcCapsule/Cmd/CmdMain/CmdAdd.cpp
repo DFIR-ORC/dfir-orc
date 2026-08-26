@@ -47,7 +47,7 @@ namespace {
         FILE_ATTRIBUTE_NORMAL,
         NULL));
 
-    if (!handle)
+    if (!handle || handle.get() == INVALID_HANDLE_VALUE)
     {
         ec = LastWin32Error();
         Log::Debug(L"Failed CreateFileW (path: {}) [{}]", path, ec);
@@ -143,7 +143,14 @@ namespace {
 {
     std::error_code ec;
 
+    // Prefer the compatibility string embedded by ORC tools.
     ec = GetTargetArchitectureFromResourceString(path, architecture);
+    if (!ec)
+    {
+        return {};
+    }
+
+    ec = GetTargetArchitectureFromPeFile(path, architecture);
     if (!ec)
     {
         return {};
@@ -152,12 +159,6 @@ namespace {
     if (ec == std::errc::no_such_file_or_directory)
     {
         return ec;
-    }
-
-    ec = GetTargetArchitectureFromPeFile(path, architecture);
-    if (!ec)
-    {
-        return {};
     }
 
     Log::Debug(L"Failed to detect architecture (path: {})", path);
