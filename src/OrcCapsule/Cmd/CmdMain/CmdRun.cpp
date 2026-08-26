@@ -858,21 +858,19 @@ LaunchRunnerProcess(const fs::path& exePath, std::vector<std::wstring> args, PRO
     }
 
     fs::path runnerPath;
-    ec = ExtractCompatibleRunner(safeTemp, true, runnerPath);
+
+    // The runner is extracted into a delete-on-close file whose handle we keep open for the child's whole
+    // lifetime. The capsule always outlives the child (HandleRun waits on it below, and in --no-wait mode it
+    // still waits on the cmd.exe wrapper that waits on the runner), so this handle closing on return is what
+    // removes the file: no reboot removal, no privilege, works from Windows XP onward. If the delete-on-close
+    // handle could not be armed, runnerHandle stays empty and the file is removed best-effort after the run.
+    ScopedFileHandle runnerHandle;
+    ec = ExtractCompatibleRunner(safeTemp, runnerPath, runnerHandle);
     if (ec)
     {
         Log::Error(L"Failed to extract runner (output directory: {}) [{}]", safeTemp, ec);
         return ec;
     }
-
-    auto cleanup = MakeScopeGuard([path = runnerPath]() noexcept {
-        auto err = RemoveFile(path);
-        if (err)
-        {
-            Log::Error(L"Failed to schedule file for deletion (path: {}) [{}]", path, err);
-            err.clear();
-        }
-    });
 
     Log::Debug(L"Execute '{}'", runnerPath);
 
@@ -889,6 +887,17 @@ LaunchRunnerProcess(const fs::path& exePath, std::vector<std::wstring> args, PRO
     {
         Log::Error(L"Failed WaitChildProcess (path: {}) [{}]", runnerPath, ec);
         ec.clear();  // best outcome is to continue
+    }
+
+    // Fallback cleanup: when delete-on-close was not armed, the runner is still on disk now that the child
+    // has exited. RemoveFile deletes it, or schedules reboot-time removal if it is somehow still in use.
+    if (!runnerHandle)
+    {
+        auto removeEc = RemoveFile(runnerPath);
+        if (removeEc)
+        {
+            Log::Debug(L"Failed to remove the leftover runner (path: {}) [{}]", runnerPath, removeEc);
+        }
     }
 
     return {};

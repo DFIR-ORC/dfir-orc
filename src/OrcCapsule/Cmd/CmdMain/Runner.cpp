@@ -5,8 +5,10 @@
 #include "Utilities/Log.h"
 #include "Utilities/Error.h"
 
+#include "Utilities/File.h"
 #include "Utilities/Process.h"
 #include "Utilities/Resource.h"
+#include "Utilities/Scope.h"
 
 #include "Fmt/std_error_code.h"
 #include "Fmt/std_filesystem.h"
@@ -93,62 +95,69 @@ const wchar_t* GetRunnerResourceName(Architecture arch)
     return {};
 }
 
+// Extract the runner for @p arch into a delete-on-close file. On success @p outputFile holds its path and
+// @p keepAlive holds the open handle that must stay open until the runner has exited (closing it removes
+// the file). On failure both are left untouched.
 [[nodiscard]] std::error_code ExtractRunner(
     const std::wstring& outputDirectory,
-    bool force,
+    Architecture arch,
     fs::path& outputFile,
-    std::optional<Architecture> arch = {})
+    ScopedFileHandle& keepAlive)
 {
-    std::error_code ec;
-
-    if (!arch)
-    {
-        Architecture detected;
-        ec = ResolveRunnerArchitectureFromHost(detected);
-        if (ec)
-        {
-            Log::Debug("Failed DetectHostArchitecture [{}]", ec);
-            return ec;
-        }
-        arch = detected;
-    }
-
-    const auto* resourceName = GetRunnerResourceName(*arch);
+    const auto* resourceName = GetRunnerResourceName(arch);
 
     std::wstring filename;
-    ec = GetRunnerFilename(*arch, filename);
+    auto ec = GetRunnerFilename(arch, filename);
     if (ec)
     {
-        Log::Debug(L"Failed GetExtractFilename [{}]", ec);
+        Log::Debug(L"Failed GetRunnerFilename [{}]", ec);
         return ec;
     }
 
     const auto tempPath = fs::path(outputDirectory) / filename;
-    ec = ExtractResource(resourceName, tempPath, force);
+
+    // Write the runner to disk with a short-lived handle, then hold a read/delete handle marked
+    // delete-on-close. The keep-alive handle must not carry write access: CreateProcessW's image loader
+    // opens the runner without FILE_SHARE_WRITE and a retained writable handle makes the launch fail with
+    // ERROR_SHARING_VIOLATION.
+    ec = ExtractResource(resourceName, tempPath.wstring(), /*overwrite=*/true);
     if (ec)
     {
         Log::Debug(L"Failed ExtractResource (resource: {}, output: {}) [{}]", resourceName, tempPath, ec);
         return ec;
     }
 
+    ScopedFileHandle handle;
+    ec = OpenDeleteOnCloseFile(tempPath, handle);
+    if (ec)
+    {
+        // The runner extracted correctly; only the delete-on-close guard could not be armed. Run it anyway
+        // instead of failing the launch: the sole cost is a file left on disk, which HandleRun removes
+        // best-effort once the child has exited. An empty keepAlive is the signal that no auto-delete is set.
+        Log::Warn(
+            L"Could not arm delete-on-close for the runner; it will be cleaned up after the run instead "
+            L"(output: {}) [{}]",
+            tempPath,
+            ec);
+    }
+
     outputFile = tempPath;
+    keepAlive = std::move(handle);
     return {};
 }
 
 [[nodiscard]] std::error_code
-ExtractCompatibleRunner(const std::wstring& outputDirectory, bool force, fs::path& outputFile)
+ExtractCompatibleRunner(const std::wstring& outputDirectory, fs::path& outputFile, ScopedFileHandle& keepAlive)
 {
-    std::error_code ec;
-
     Architecture arch;
-    ec = ResolveRunnerArchitectureFromHost(arch);
+    auto ec = ResolveRunnerArchitectureFromHost(arch);
     if (ec)
     {
-        Log::Debug("Failed DetectHostArchitecture [{}]", ec);
+        Log::Debug("Failed ResolveRunnerArchitectureFromHost [{}]", ec);
         return ec;
     }
 
-    ec = ExtractRunner(outputDirectory, force, outputFile, arch);
+    ec = ExtractRunner(outputDirectory, arch, outputFile, keepAlive);
     if (!ec)
     {
         return {};
@@ -168,12 +177,10 @@ ExtractCompatibleRunner(const std::wstring& outputDirectory, bool force, fs::pat
 
     for (size_t j = i + 1; j < architectures.size(); ++j)
     {
-        ec.clear();
-
         const auto current = architectures[j];
 
         Log::Debug(L"No runner binary found, fallback on architecture '{}'", GetArchitectureName(current));
-        ec = ExtractRunner(outputDirectory, force, outputFile, current);
+        ec = ExtractRunner(outputDirectory, current, outputFile, keepAlive);
         if (!ec)
         {
             Log::Debug(
