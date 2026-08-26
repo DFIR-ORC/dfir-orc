@@ -73,6 +73,8 @@ set(SRC_CAPSULE
     "Utilities/Format.cpp"
     "Utilities/Log.h"
     "Utilities/Log.cpp"
+    "Utilities/Manifest.h"
+    "Utilities/Manifest.cpp"
     "Utilities/Process.h"
     "Utilities/Process.cpp"
     "Utilities/Resource.h"
@@ -112,7 +114,7 @@ target_link_libraries(OrcCapsule
         zstd::libzstd_static
 )
 
-target_link_options(OrcCapsule PRIVATE "/MANIFESTUAC:level='requireAdministrator'")
+target_link_options(OrcCapsule PRIVATE "/MANIFESTUAC:level='asInvoker'")
 
 install(TARGETS OrcCapsule
     CONFIGURATIONS Debug MinSizeRel Release RelWithDebInfo

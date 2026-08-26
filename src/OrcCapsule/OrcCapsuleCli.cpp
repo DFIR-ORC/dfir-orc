@@ -233,6 +233,14 @@ bool TryParseGlobalOption(size_t& idx, const std::vector<std::wstring>& args, Ca
         return true;
     }
 
+    // --ignore-manifest or /ignoremanifest
+    if (IsFlag(arg, L"--ignore-manifest") || IsFlag(arg, L"/ignoremanifest"))
+    {
+        opts.ignoreManifest = true;
+        idx++;
+        return true;
+    }
+
     return false;
 }
 

@@ -32,6 +32,9 @@ std::basic_string_view<uint8_t> ToStringView(const std::vector<uint8_t>& buffer)
     return {buffer.data(), buffer.size()};
 }
 
+// An application manifest is embedded under RT_MANIFEST with this id for an executable image.
+constexpr WORD kCreateProcessManifestResourceId = 1;
+
 // An icon resource (RT_ICON or RT_GROUP_ICON) is identified by a numeric id or, as some toolchains emit,
 // a string name. This carries the identity plus the language under which it was found, for precise deletion.
 struct IconRef
@@ -235,6 +238,77 @@ std::error_code CollectExistingIconResources(HMODULE module, LPCWSTR type, std::
     return {};
 }
 
+// Read the capsule's own application manifest together with the language it is stored under, so the
+// patched blob can be written back over the same resource instead of adding a second one.
+// Returns errc::no_such_file_or_directory when the module carries no application manifest.
+std::error_code ReadApplicationManifest(HMODULE module, std::vector<uint8_t>& manifest, WORD& lang)
+{
+    std::vector<WORD> langs;
+    EnumResourceLanguagesW(
+        module,
+        RT_MANIFEST,
+        MAKEINTRESOURCEW(kCreateProcessManifestResourceId),
+        CollectLanguagesCallback,
+        reinterpret_cast<LONG_PTR>(&langs));
+
+    if (langs.empty())
+    {
+        return std::make_error_code(std::errc::no_such_file_or_directory);
+    }
+
+    if (langs.size() > 1)
+    {
+        // An image has a single application manifest; patch the first and leave the rest as they are
+        // rather than guess which one the loader would pick.
+        Log::Debug(L"Multiple application manifest languages (count: {})", langs.size());
+    }
+
+    lang = langs.front();
+    return LoadResourceById(module, RT_MANIFEST, kCreateProcessManifestResourceId, manifest);
+}
+
+// Resolve the capsule's manifest to the blob that should be written back for @p level.
+// Sets @p rewritten to false when the capsule already declares that level, which counts as satisfied but
+// needs no write.
+std::error_code PatchApplicationManifest(
+    HMODULE capsule,
+    const fs::path& capsulePath,
+    ExecutionLevel level,
+    std::vector<uint8_t>& manifest,
+    WORD& lang,
+    bool& rewritten)
+{
+    rewritten = false;
+
+    auto ec = ReadApplicationManifest(capsule, manifest, lang);
+    if (ec)
+    {
+        Log::Warn(L"Capsule carries no application manifest to set its UAC level in (path: {})", capsulePath);
+        return ec;
+    }
+
+    ExecutionLevel current = ExecutionLevel::None;
+    std::ignore = ReadRequestedExecutionLevel(manifest, current);
+    if (current == level)
+    {
+        Log::Debug(L"Capsule already requests '{}'", GetExecutionLevelName(level));
+        return {};
+    }
+
+    ec = SetRequestedExecutionLevel(manifest, level);
+    if (ec)
+    {
+        Log::Warn(
+            L"Capsule manifest has no rewritable requestedExecutionLevel (path: {}) [{}]",
+            capsulePath,
+            ec);
+        return ec;
+    }
+
+    rewritten = true;
+    return {};
+}
+
 }  // namespace
 
 std::error_code LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::vector<uint8_t>& output)
@@ -402,89 +476,90 @@ std::error_code RemoveResource(const fs::path& path, const std::wstring& name, L
 std::error_code BrandCapsuleFromBinary(
     const fs::path& sourceBinary,
     const fs::path& capsulePath,
-    bool copyIcon,
-    bool copyVersion,
-    bool& iconApplied,
-    bool& versionApplied)
+    const BrandingRequest& request,
+    BrandingResult& result)
 {
-    iconApplied = false;
-    versionApplied = false;
+    result = {};
 
-    if (!copyIcon && !copyVersion)
+    if (!request.icon && !request.version && !request.manifestLevel)
     {
         return {};
-    }
-
-    // Read what the source binary can offer. Loading as a datafile keeps this read-only and side-effect free.
-    ScopedModule source(LoadLibraryExW(
-        sourceBinary.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
-    if (!source)
-    {
-        auto ec = LastWin32Error();
-        Log::Debug(L"Failed LoadLibraryExW for branding source (path: {}) [{}]", sourceBinary, ec);
-        return ec;
     }
 
     std::vector<SourceIconResource> sourceGroups;
     std::vector<SourceIconResource> sourceImages;
     bool haveIcon = false;
-    if (copyIcon)
-    {
-        // Read the source's whole icon set (every RT_GROUP_ICON and RT_ICON, numeric or named) so the
-        // capsule ends up with an exact copy rather than just the primary group.
-        auto ec = ReadAllIcons(source.get(), RT_GROUP_ICON, sourceGroups);
-        if (!ec)
-        {
-            ec = ReadAllIcons(source.get(), RT_ICON, sourceImages);
-        }
-
-        if (ec)
-        {
-            Log::Debug(L"Failed to read icons from branding source (path: {}) [{}]", sourceBinary, ec);
-            sourceGroups.clear();
-            sourceImages.clear();
-        }
-        else if (sourceGroups.empty() || sourceImages.empty())
-        {
-            Log::Debug(L"No icon in branding source (path: {})", sourceBinary);
-        }
-        else
-        {
-            haveIcon = true;
-        }
-    }
-
     std::vector<uint8_t> sourceVersion;
     bool haveVersion = false;
-    if (copyVersion)
+
+    if (request.icon || request.version)
     {
-        // RT_VERSION resources are conventionally stored under id VS_VERSION_INFO (1).
-        auto ec = LoadResourceById(source.get(), RT_VERSION, static_cast<WORD>(VS_VERSION_INFO), sourceVersion);
-        if (ec)
+        // Read what the source binary can offer. Loading as a datafile keeps this read-only and side-effect
+        // free. The UAC level does not come from here: the caller resolved it already.
+        ScopedModule source(LoadLibraryExW(
+            sourceBinary.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
+        if (!source)
         {
-            Log::Debug(L"No version resource in branding source (path: {}) [{}]", sourceBinary, ec);
+            auto ec = LastWin32Error();
+            Log::Debug(L"Failed LoadLibraryExW for branding source (path: {}) [{}]", sourceBinary, ec);
+            return ec;
         }
-        else if (sourceVersion.empty())
+
+        if (request.icon)
         {
-            Log::Debug(L"Empty version resource in branding source (path: {})", sourceBinary);
+            // Read the source's whole icon set (every RT_GROUP_ICON and RT_ICON, numeric or named) so the
+            // capsule ends up with an exact copy rather than just the primary group.
+            auto ec = ReadAllIcons(source.get(), RT_GROUP_ICON, sourceGroups);
+            if (!ec)
+            {
+                ec = ReadAllIcons(source.get(), RT_ICON, sourceImages);
+            }
+
+            if (ec)
+            {
+                Log::Debug(L"Failed to read icons from branding source (path: {}) [{}]", sourceBinary, ec);
+                sourceGroups.clear();
+                sourceImages.clear();
+            }
+            else if (sourceGroups.empty() || sourceImages.empty())
+            {
+                Log::Debug(L"No icon in branding source (path: {})", sourceBinary);
+            }
+            else
+            {
+                haveIcon = true;
+            }
         }
-        else
+
+        if (request.version)
         {
-            haveVersion = true;
+            // RT_VERSION resources are conventionally stored under id VS_VERSION_INFO (1).
+            auto ec = LoadResourceById(source.get(), RT_VERSION, static_cast<WORD>(VS_VERSION_INFO), sourceVersion);
+            if (ec)
+            {
+                Log::Debug(L"No version resource in branding source (path: {}) [{}]", sourceBinary, ec);
+            }
+            else if (sourceVersion.empty())
+            {
+                Log::Debug(L"Empty version resource in branding source (path: {})", sourceBinary);
+            }
+            else
+            {
+                haveVersion = true;
+            }
         }
     }
 
-    if (!haveIcon && !haveVersion)
-    {
-        // Nothing to transplant: leave the capsule's own icon and version untouched.
-        return {};
-    }
-
-    // Enumerate the capsule's own icon resources up front, while no update handle is open on the file, so the
-    // datafile mapping and BeginUpdateResource never contend for it. Only needed when replacing the icon.
+    // Read the capsule's own resources up front, while no update handle is open on the file, so the datafile
+    // mapping and BeginUpdateResource never contend for it.
     std::vector<IconRef> staleGroups;
     std::vector<IconRef> staleIcons;
-    if (haveIcon)
+    std::vector<uint8_t> patchedManifest;
+    WORD manifestLang = 0;
+    bool haveManifest = false;
+    bool manifestSatisfied = false;
+
+    if (haveIcon || request.manifestLevel)
     {
         ScopedModule capsule(LoadLibraryExW(
             capsulePath.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
@@ -495,8 +570,32 @@ std::error_code BrandCapsuleFromBinary(
             return ec;
         }
 
-        std::ignore = CollectExistingIconResources(capsule.get(), RT_GROUP_ICON, staleGroups);
-        std::ignore = CollectExistingIconResources(capsule.get(), RT_ICON, staleIcons);
+        if (haveIcon)
+        {
+            std::ignore = CollectExistingIconResources(capsule.get(), RT_GROUP_ICON, staleGroups);
+            std::ignore = CollectExistingIconResources(capsule.get(), RT_ICON, staleIcons);
+        }
+
+        if (request.manifestLevel)
+        {
+            // A capsule whose manifest cannot be patched is not an error here: PatchApplicationManifest reports
+            // why, and manifestSatisfied tells the caller, which decides (the 'add' command refuses the capsule).
+            auto ec = PatchApplicationManifest(
+                capsule.get(), capsulePath, *request.manifestLevel, patchedManifest, manifestLang, haveManifest);
+
+            manifestSatisfied = !ec;
+            if (!haveManifest)
+            {
+                patchedManifest.clear();
+            }
+        }
+    }
+
+    if (!haveIcon && !haveVersion && !haveManifest)
+    {
+        // Nothing to write: leave the capsule's own resources untouched.
+        result.manifestApplied = manifestSatisfied;
+        return {};
     }
 
     std::unique_ptr<ResourceUpdater> updater;
@@ -575,6 +674,17 @@ std::error_code BrandCapsuleFromBinary(
         }
     }
 
+    if (haveManifest)
+    {
+        // Written back under the language it was found in, so the loader keeps resolving the same resource
+        // instead of finding a second manifest next to the original.
+        ec = updater->Update(RT_MANIFEST, kCreateProcessManifestResourceId, manifestLang, patchedManifest);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
     ec = updater->Commit();
     if (ec)
     {
@@ -582,8 +692,9 @@ std::error_code BrandCapsuleFromBinary(
         return ec;
     }
 
-    iconApplied = haveIcon;
-    versionApplied = haveVersion;
+    result.iconApplied = haveIcon;
+    result.versionApplied = haveVersion;
+    result.manifestApplied = manifestSatisfied;
     return {};
 }
 

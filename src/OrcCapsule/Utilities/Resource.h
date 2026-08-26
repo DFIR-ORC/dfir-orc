@@ -9,11 +9,14 @@
 #pragma once
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>
 
 #include <windows.h>
+
+#include "Utilities/Manifest.h"
 
 [[nodiscard]] std::error_code
 LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::vector<uint8_t>& output);
@@ -36,26 +39,45 @@ LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::v
 
 [[nodiscard]] std::error_code RemoveResource(const std::filesystem::path& path, const std::wstring& name, LPCWSTR type);
 
-/// @brief Copy the application icon and/or version resource from a PE binary into a capsule executable.
+/// @brief What BrandCapsuleFromBinary should transplant.
+struct BrandingRequest
+{
+    bool icon = true;
+    bool version = true;
+
+    /// UAC level to write into the capsule's own manifest. Empty leaves the capsule's level alone, which
+    /// is what a payload that declares no requestedExecutionLevel gets.
+    std::optional<ExecutionLevel> manifestLevel;
+};
+
+/// @brief What BrandCapsuleFromBinary actually transplanted.
+struct BrandingResult
+{
+    bool iconApplied = false;
+    bool versionApplied = false;
+    bool manifestApplied = false;
+};
+
+/// @brief Copy the application icon, version resource and/or UAC level from a PE binary into a capsule.
 ///
-/// The icon transplant is all-or-nothing and gated on the source: the capsule's own icon is deleted
-/// and replaced only when @p sourceBinary actually carries an icon group; likewise the capsule's
-/// RT_VERSION is overwritten only when the source has one. A source lacking either resource leaves the
-/// capsule's corresponding resource untouched. Icon and version are handled independently.
+/// Each transplant is independent and gated on the source: the capsule's own icon is deleted and replaced
+/// only when @p sourceBinary actually carries an icon group, and its RT_VERSION is overwritten only when
+/// the source has one. A source lacking a resource leaves the capsule's corresponding resource untouched.
+/// The UAC level is handled differently since it is an attribute rather than a whole resource: the
+/// caller resolves it (see BrandingRequest::manifestLevel) and only that attribute of the capsule's
+/// existing manifest is rewritten, so the capsule keeps its own assembly identity and supportedOS list.
 ///
-/// @param sourceBinary   PE file to read the icon/version from.
-/// @param capsulePath    Capsule executable to modify in place.
-/// @param copyIcon       When true, attempt to transplant the icon.
-/// @param copyVersion    When true, attempt to transplant the version resource.
-/// @param iconApplied    Set to true when an icon was actually transplanted.
-/// @param versionApplied Set to true when a version resource was actually transplanted.
+/// Everything is staged in a single resource update, so the capsule file is rewritten once.
+///
+/// @param sourceBinary PE file to read the icon/version from.
+/// @param capsulePath  Capsule executable to modify in place.
+/// @param request      Which resources to transplant.
+/// @param result       Receives what was transplanted.
 [[nodiscard]] std::error_code BrandCapsuleFromBinary(
     const std::filesystem::path& sourceBinary,
     const std::filesystem::path& capsulePath,
-    bool copyIcon,
-    bool copyVersion,
-    bool& iconApplied,
-    bool& versionApplied);
+    const BrandingRequest& request,
+    BrandingResult& result);
 
 class ResourceUpdater final
 {

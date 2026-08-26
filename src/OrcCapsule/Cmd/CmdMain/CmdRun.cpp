@@ -770,6 +770,19 @@ LaunchRunnerProcess(const fs::path& exePath, std::vector<std::wstring> args, PRO
     {
         ec = LastWin32Error();
         Log::Debug(L"Failed CreateProcessW (path: {}) [{}]", exePath, ec);
+
+        // The runner's manifest asks for administrator rights this process does not hold. CreateProcessW never
+        // prompts for elevation: the capsule itself must have been started elevated, which it requests only
+        // when 'add' branded it with the runner's UAC level.
+        if (ec == std::error_code(ERROR_ELEVATION_REQUIRED, std::system_category()))
+        {
+            Log::Error(
+                L"The runner requires administrator rights and the capsule is not running elevated: start it from an "
+                L"elevated prompt, or build the capsule with 'capsule add' without --ignore-manifest so that it "
+                L"requests elevation itself (path: {})",
+                exePath);
+        }
+
         return ec;
     }
 

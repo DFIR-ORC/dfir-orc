@@ -8,6 +8,7 @@
 #include "Utilities/Compression.h"
 #include "Utilities/Crypto.h"
 #include "Utilities/File.h"
+#include "Utilities/Manifest.h"
 #include "Utilities/Process.h"
 #include "Utilities/Resource.h"
 #include "Utilities/Format.h"
@@ -174,6 +175,7 @@ struct PreparedRunner
     std::vector<uint8_t> compressedData;
     std::wstring rawDataSha256;
     std::wstring extractedFilename;
+    ExecutionLevel requestedExecutionLevel = ExecutionLevel::None;
 };
 
 [[nodiscard]] std::error_code
@@ -231,6 +233,17 @@ PrepareRunner(const fs::path& inputPath, Architecture architectureHint, Prepared
         ec.clear();
     }
 
+    // Best-effort: a binary whose manifest cannot be read is treated as declaring nothing, which leaves the
+    // capsule's own UAC level in place.
+    ExecutionLevel requestedExecutionLevel = ExecutionLevel::None;
+    ec = ReadRequestedExecutionLevel(inputPath, requestedExecutionLevel);
+    if (ec)
+    {
+        Log::Debug(L"Failed to read requested execution level (path: {}) [{}]", inputPath, ec);
+        requestedExecutionLevel = ExecutionLevel::None;
+        ec.clear();
+    }
+
     out.inputPath = inputPath;
     out.architecture = architecture;
     out.resourceName = GetRunnerResourceName(architecture);
@@ -238,8 +251,45 @@ PrepareRunner(const fs::path& inputPath, Architecture architectureHint, Prepared
     out.compressedData = std::move(compressedData);
     out.rawDataSha256 = std::move(rawDataSha256);
     out.extractedFilename = std::move(extractedFilename);
+    out.requestedExecutionLevel = requestedExecutionLevel;
 
     return {};
+}
+
+// Resolve the UAC level the capsule should request. The branding source (the last added binary) decides,
+// like it does for the icon and the version resource, but warn first when the slots disagree: the capsule
+// has a single manifest, so a level that is right for one architecture may be wrong for another.
+std::optional<ExecutionLevel> ResolveExecutionLevel(const std::vector<PreparedRunner>& executables)
+{
+    const ExecutionLevel level = executables.back().requestedExecutionLevel;
+
+    for (const auto& exe : executables)
+    {
+        if (exe.requestedExecutionLevel == level)
+        {
+            continue;
+        }
+
+        Log::Warn(
+            L"Added binaries request different UAC levels, using '{}' from '{}'",
+            GetExecutionLevelName(level),
+            executables.back().inputPath);
+
+        for (const auto& reported : executables)
+        {
+            Log::Warn(L"    {}: {}", reported.inputPath, GetExecutionLevelName(reported.requestedExecutionLevel));
+        }
+
+        break;
+    }
+
+    if (level == ExecutionLevel::None)
+    {
+        // The payload declares nothing: keep the capsule's own level rather than guess one for it.
+        return std::nullopt;
+    }
+
+    return level;
 }
 
 [[nodiscard]] std::error_code
@@ -354,34 +404,66 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     return {};
 }
 
-// Brand the capsule from the last added binary: its icon and version resource. Best-effort, any failure is
-// logged and never fails the add (the runner embedding is the contract).
-void BrandCapsule(const CapsuleOptions& args, const fs::path& capsulePath, const fs::path& brandingSource)
+// Brand the capsule from the last added binary: its icon, version resource and UAC level. What the source does
+// not carry is not branded, and the capsule keeps its own. A branding that fails is an error: the capsule runs
+// asInvoker, so keeping its own UAC level where the source requests another would ship a capsule that does
+// not ask for the rights its payload needs.
+[[nodiscard]] std::error_code BrandCapsule(
+    const CapsuleOptions& args,
+    const fs::path& capsulePath,
+    const fs::path& brandingSource,
+    const std::vector<PreparedRunner>& executables)
 {
-    if (args.ignoreIcon && args.ignoreVersionInfo)
+    if (args.ignoreIcon && args.ignoreVersionInfo && args.ignoreManifest)
     {
-        return;
+        return {};
     }
 
-    bool iconApplied = false;
-    bool versionApplied = false;
-    auto ec = BrandCapsuleFromBinary(
-        brandingSource, capsulePath, !args.ignoreIcon, !args.ignoreVersionInfo, iconApplied, versionApplied);
+    BrandingRequest request;
+    request.icon = !args.ignoreIcon;
+    request.version = !args.ignoreVersionInfo;
+    if (!args.ignoreManifest)
+    {
+        request.manifestLevel = ResolveExecutionLevel(executables);
+    }
+
+    BrandingResult applied;
+    auto ec = BrandCapsuleFromBinary(brandingSource, capsulePath, request, applied);
     if (ec)
     {
-        Log::Warn(L"Failed to brand capsule from '{}', keeping capsule defaults [{}]", brandingSource, ec);
-        return;
+        Log::Error(L"Failed to brand capsule from '{}' [{}]", brandingSource, ec);
+        return ec;
     }
 
-    if (!args.ignoreIcon && !iconApplied)
+    if (request.icon && !applied.iconApplied)
     {
         Log::Debug(L"No icon in '{}', keeping capsule icon", brandingSource);
     }
 
-    if (!args.ignoreVersionInfo && !versionApplied)
+    if (request.version && !applied.versionApplied)
     {
         Log::Debug(L"No version info in '{}', keeping capsule version info", brandingSource);
     }
+
+    if (!args.ignoreManifest && !request.manifestLevel)
+    {
+        Log::Debug(L"No requested execution level in '{}', keeping capsule UAC level", brandingSource);
+    }
+    else if (request.manifestLevel && !applied.manifestApplied)
+    {
+        Log::Error(
+            L"Failed to brand the capsule with the '{}' UAC level of '{}' (use --ignore-manifest to keep the "
+            L"capsule's own level)",
+            GetExecutionLevelName(*request.manifestLevel),
+            brandingSource);
+        return std::make_error_code(std::errc::operation_not_supported);
+    }
+    else if (applied.manifestApplied)
+    {
+        Log::Debug(L"Capsule requests '{}'", GetExecutionLevelName(*request.manifestLevel));
+    }
+
+    return {};
 }
 
 // Print the "Updated Capsule" summary: the capsule's size and hash, then one entry per added runner.
@@ -478,7 +560,19 @@ void PrintCapsuleSummary(
     // executables preserves input order; its last entry is the last added binary, and its stored inputPath
     // is already absolute (resolved above).
     const fs::path& brandingSource = executables.back().inputPath;
-    BrandCapsule(args, updatedExe, brandingSource);
+    ec = BrandCapsule(args, updatedExe, brandingSource, executables);
+    if (ec)
+    {
+        // Nobody may pick up a capsule that failed branding: it holds the runners but not the UAC level they
+        // need. Without --output the original capsule is still untouched, since the swap has not happened.
+        Log::Error(L"Failed to brand capsule, removing it (path: {}) [{}]", updatedExe, ec);
+        if (auto removeEc = RemoveFile(updatedExe); removeEc)
+        {
+            Log::Error(L"Failed to remove the unbranded capsule (path: {}) [{}]", updatedExe, removeEc);
+        }
+
+        return ec;
+    }
 
     std::optional<std::wstring> expectedSha256;
     if (!args.outputPath)
@@ -539,9 +633,10 @@ CommandDescriptor GetAddCommandDescriptor()
         L"      :x64-xp      Add as Windows XP 64-bit binary (auto-detected if omitted)\n"
         L"      :x86-xp      Add as Windows XP 32-bit binary (auto-detected if omitted)\n"
         L"      :arm64       Add as Windows ARM 64-bit binary (auto-detected if omitted)\n"
-        L"      By default the capsule adopts the last added binary's icon and version info.\n"
+        L"      By default the capsule adopts the last added binary's icon, version info and UAC level.\n"
         L"      --ignore-icon           Keep the capsule's own icon\n"
-        L"      --ignore-version-info   Keep the capsule's own version info\n",
+        L"      --ignore-version-info   Keep the capsule's own version info\n"
+        L"      --ignore-manifest       Keep the capsule's own UAC level (asInvoker)\n",
         ParseAddCommand,
         ValidateAddOptions,
         HandleAddRunner,
