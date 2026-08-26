@@ -241,6 +241,14 @@ bool TryParseGlobalOption(size_t& idx, const std::vector<std::wstring>& args, Ca
         return true;
     }
 
+    // --ignore-subsystem or /ignoresubsystem
+    if (IsFlag(arg, L"--ignore-subsystem") || IsFlag(arg, L"/ignoresubsystem"))
+    {
+        opts.ignoreSubsystem = true;
+        idx++;
+        return true;
+    }
+
     return false;
 }
 

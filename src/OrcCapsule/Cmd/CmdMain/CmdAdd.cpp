@@ -9,6 +9,7 @@
 #include "Utilities/Crypto.h"
 #include "Utilities/File.h"
 #include "Utilities/Manifest.h"
+#include "Utilities/PeImage.h"
 #include "Utilities/Process.h"
 #include "Utilities/Resource.h"
 #include "Utilities/Format.h"
@@ -37,61 +38,15 @@ namespace {
 
 [[nodiscard]] std::error_code GetTargetArchitectureFromPeFile(const fs::path& path, Architecture& architecture)
 {
-    std::error_code ec;
-
-    ScopedFileHandle handle(CreateFileW(
-        path.c_str(),
-        GENERIC_READ,
-        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-        NULL,
-        OPEN_EXISTING,
-        FILE_ATTRIBUTE_NORMAL,
-        NULL));
-
-    if (!handle || handle.get() == INVALID_HANDLE_VALUE)
-    {
-        ec = LastWin32Error();
-        Log::Debug(L"Failed CreateFileW (path: {}) [{}]", path, ec);
-        return ec;
-    }
-
-    IMAGE_DOS_HEADER dosHeader;
-    ec = ReadFileAt(handle.get(), 0, &dosHeader, sizeof(dosHeader));
+    PeImageHeaders headers;
+    auto ec = ReadPeImageHeaders(path, headers);
     if (ec)
     {
-        Log::Debug(L"Failed ReadFileAt for IMAGE_DOS_HEADER (path: {}) [{}]", path, ec);
+        Log::Debug(L"Failed to read PE headers (path: {}) [{}]", path, ec);
         return ec;
     }
 
-    if (dosHeader.e_magic != IMAGE_DOS_SIGNATURE)
-    {
-        Log::Debug(L"Invalid PE file magic (actual: {}, expected: {})", dosHeader.e_magic, IMAGE_DOS_SIGNATURE);
-        return std::make_error_code(std::errc::bad_message);
-    }
-
-    DWORD signature = 0;
-    ec = ReadFileAt(handle.get(), dosHeader.e_lfanew, &signature, sizeof(signature));
-    if (ec)
-    {
-        Log::Debug(L"Failed ReadFileAt for IMAGE_NT_SIGNATURE (path: {}) [{}]", path, ec);
-        return ec;
-    }
-
-    if (signature != IMAGE_NT_SIGNATURE)
-    {
-        Log::Debug(L"Invalid PE file signature (actual: {}, expected: {})", signature, IMAGE_NT_SIGNATURE);
-        return std::make_error_code(std::errc::bad_message);
-    }
-
-    IMAGE_FILE_HEADER fileHeader;
-    ec = ReadFileAt(handle.get(), dosHeader.e_lfanew + sizeof(DWORD), &fileHeader, sizeof(fileHeader));
-    if (ec)
-    {
-        Log::Debug(L"Failed ReadFileAt for IMAGE_FILE_HEADER (path: {}) [{}]", path, ec);
-        return ec;
-    }
-
-    switch (fileHeader.Machine)
+    switch (headers.machine)
     {
         case IMAGE_FILE_MACHINE_I386:
             architecture = Architecture::X86;
@@ -176,6 +131,7 @@ struct PreparedRunner
     std::wstring rawDataSha256;
     std::wstring extractedFilename;
     ExecutionLevel requestedExecutionLevel = ExecutionLevel::None;
+    WORD subsystem = IMAGE_SUBSYSTEM_UNKNOWN;
 };
 
 [[nodiscard]] std::error_code
@@ -244,6 +200,17 @@ PrepareRunner(const fs::path& inputPath, Architecture architectureHint, Prepared
         ec.clear();
     }
 
+    // Best-effort too: a binary whose subsystem cannot be read leaves the capsule's own in place. Only that
+    // field is read, never the machine type: the capsule keeps the architecture it was built for.
+    WORD subsystem = IMAGE_SUBSYSTEM_UNKNOWN;
+    ec = ReadPeSubsystem(inputPath, subsystem);
+    if (ec)
+    {
+        Log::Debug(L"Failed to read subsystem (path: {}) [{}]", inputPath, ec);
+        subsystem = IMAGE_SUBSYSTEM_UNKNOWN;
+        ec.clear();
+    }
+
     out.inputPath = inputPath;
     out.architecture = architecture;
     out.resourceName = GetRunnerResourceName(architecture);
@@ -252,6 +219,7 @@ PrepareRunner(const fs::path& inputPath, Architecture architectureHint, Prepared
     out.rawDataSha256 = std::move(rawDataSha256);
     out.extractedFilename = std::move(extractedFilename);
     out.requestedExecutionLevel = requestedExecutionLevel;
+    out.subsystem = subsystem;
 
     return {};
 }
@@ -290,6 +258,45 @@ std::optional<ExecutionLevel> ResolveExecutionLevel(const std::vector<PreparedRu
     }
 
     return level;
+}
+
+// Resolve the subsystem the capsule should declare, with the same rule as the UAC level: the branding
+// source (the last added binary) decides, and disagreeing slots are reported since the capsule has a
+// single PE header. A console capsule around a GUI payload leaves an empty console window behind the
+// payload's windows, which is what branding the capsule with the payload's subsystem avoids.
+std::optional<WORD> ResolveSubsystem(const std::vector<PreparedRunner>& executables)
+{
+    const WORD subsystem = executables.back().subsystem;
+
+    for (const auto& exe : executables)
+    {
+        if (exe.subsystem == subsystem)
+        {
+            continue;
+        }
+
+        Log::Warn(
+            L"Added binaries declare different subsystems, using '{}' from '{}'",
+            GetSubsystemName(subsystem),
+            executables.back().inputPath);
+
+        for (const auto& reported : executables)
+        {
+            Log::Warn(L"    {}: {}", reported.inputPath, GetSubsystemName(reported.subsystem));
+        }
+
+        break;
+    }
+
+    // Only the two subsystems a capsule can be flipped between are branded from the payload: anything else (a driver, a
+    // native image, an EFI application) keeps the capsule's own rather than produce an image the loader
+    // would refuse to start.
+    if (subsystem != IMAGE_SUBSYSTEM_WINDOWS_GUI && subsystem != IMAGE_SUBSYSTEM_WINDOWS_CUI)
+    {
+        return std::nullopt;
+    }
+
+    return subsystem;
 }
 
 [[nodiscard]] std::error_code
@@ -466,6 +473,38 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     return {};
 }
 
+// Brand the capsule with the last added binary's PE subsystem. Written after the resource update because
+// EndUpdateResource rewrites the whole image and would discard a header patch applied before it.
+// It touches no other header field so the capsule keeps the architecture it was built for.
+[[nodiscard]] std::error_code BrandSubsystem(
+    const CapsuleOptions& args,
+    const fs::path& capsulePath,
+    const fs::path& brandingSource,
+    const std::vector<PreparedRunner>& executables)
+{
+    if (args.ignoreSubsystem)
+    {
+        return {};
+    }
+
+    const auto subsystem = ResolveSubsystem(executables);
+    if (!subsystem)
+    {
+        Log::Debug(L"No usable subsystem in '{}', keeping capsule subsystem", brandingSource);
+        return {};
+    }
+
+    auto ec = WritePeSubsystem(capsulePath, *subsystem);
+    if (ec)
+    {
+        Log::Error(L"Failed to brand the subsystem of '{}' [{}]", brandingSource, ec);
+        return ec;
+    }
+
+    Log::Debug(L"Capsule declares subsystem '{}'", GetSubsystemName(*subsystem));
+    return {};
+}
+
 // Print the "Updated Capsule" summary: the capsule's size and hash, then one entry per added runner.
 void PrintCapsuleSummary(
     const fs::path& capsulePath,
@@ -557,10 +596,16 @@ void PrintCapsuleSummary(
         return ec;
     }
 
-    // executables preserves input order; its last entry is the last added binary, and its stored inputPath
-    // is already absolute (resolved above).
+    // executables preserves input order; its last entry is the last added binary (the branding source), and
+    // its stored inputPath is already absolute. The subsystem is branded after the icon/version/UAC because
+    // EndUpdateResource rewrites the whole image and would discard a header patch.
     const fs::path& brandingSource = executables.back().inputPath;
     ec = BrandCapsule(args, updatedExe, brandingSource, executables);
+    if (!ec)
+    {
+        ec = BrandSubsystem(args, updatedExe, brandingSource, executables);
+    }
+
     if (ec)
     {
         // Nobody may pick up a capsule that failed branding: it holds the runners but not the UAC level they
@@ -633,10 +678,12 @@ CommandDescriptor GetAddCommandDescriptor()
         L"      :x64-xp      Add as Windows XP 64-bit binary (auto-detected if omitted)\n"
         L"      :x86-xp      Add as Windows XP 32-bit binary (auto-detected if omitted)\n"
         L"      :arm64       Add as Windows ARM 64-bit binary (auto-detected if omitted)\n"
-        L"      By default the capsule adopts the last added binary's icon, version info and UAC level.\n"
+        L"      By default the capsule brands itself with the last added binary's icon, version info, UAC level and\n"
+        L"      subsystem (a capsule carrying a GUI binary opens no console window).\n"
         L"      --ignore-icon           Keep the capsule's own icon\n"
         L"      --ignore-version-info   Keep the capsule's own version info\n"
-        L"      --ignore-manifest       Keep the capsule's own UAC level (asInvoker)\n",
+        L"      --ignore-manifest       Keep the capsule's own UAC level (asInvoker)\n"
+        L"      --ignore-subsystem      Keep the capsule's own subsystem (console)\n",
         ParseAddCommand,
         ValidateAddOptions,
         HandleAddRunner,

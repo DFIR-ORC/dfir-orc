@@ -78,11 +78,12 @@ struct CapsuleOptions
     std::optional<fs::path> outputPath;
     bool force = false;
 
-    // 'add' command: by default the capsule adopts the last added binary's icon, version resource and the
-    // UAC level of its manifest.
+    // 'add' command: by default the capsule adopts the last added binary's icon, version resource, the UAC
+    // level of its manifest and its subsystem.
     bool ignoreIcon = false;  // --ignore-icon: keep the capsule's own icon
     bool ignoreVersionInfo = false;  // --ignore-version-info: keep the capsule's own version resource
     bool ignoreManifest = false;  // --ignore-manifest: keep the capsule's own UAC level
+    bool ignoreSubsystem = false;  // --ignore-subsystem: keep the capsule's own subsystem
 
     // Execution Configuration (global options)
     std::optional<bool> relocate;

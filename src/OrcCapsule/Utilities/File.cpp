@@ -121,6 +121,53 @@ std::error_code WriteFileContents(const fs::path& path, const std::vector<uint8_
     return {};
 }
 
+std::error_code WriteFileAt(
+    HANDLE handle,
+    uint64_t offset,
+    LPCVOID lpBuffer,
+    DWORD nNumberOfBytesToWrite,
+    LPDWORD lpNumberOfBytesWritten,
+    LPOVERLAPPED lpOverlapped)
+{
+    std::error_code ec;
+
+    LARGE_INTEGER llDistanceToMove;
+    llDistanceToMove.QuadPart = offset;
+
+    DWORD fallbackNumberOfBytesWritten = 0;
+    if (!lpNumberOfBytesWritten)
+    {
+        lpNumberOfBytesWritten = &fallbackNumberOfBytesWritten;
+    }
+
+    LARGE_INTEGER llNewFilePointer;
+    if (!SetFilePointerEx(handle, llDistanceToMove, &llNewFilePointer, FILE_BEGIN))
+    {
+        ec = LastWin32Error();
+        Log::Debug(L"Failed SetFilePointerEx (offset: {}) [{}]", offset, ec);
+        return ec;
+    }
+
+    if (!WriteFile(handle, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped))
+    {
+        ec = LastWin32Error();
+        Log::Debug(L"Failed WriteFile (offset: {}, size: {}) [{}]", offset, nNumberOfBytesToWrite, ec);
+        return ec;
+    }
+
+    if (*lpNumberOfBytesWritten != nNumberOfBytesToWrite)
+    {
+        Log::Debug(
+            L"Incomplete WriteFile (actual: {}, expected: {}, offset: {})",
+            *lpNumberOfBytesWritten,
+            nNumberOfBytesToWrite,
+            offset);
+        return std::make_error_code(std::errc::io_error);
+    }
+
+    return {};
+}
+
 std::error_code ReadFileAt(
     HANDLE handle,
     uint64_t offset,

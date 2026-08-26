@@ -75,6 +75,8 @@ set(SRC_CAPSULE
     "Utilities/Log.cpp"
     "Utilities/Manifest.h"
     "Utilities/Manifest.cpp"
+    "Utilities/PeImage.h"
+    "Utilities/PeImage.cpp"
     "Utilities/Process.h"
     "Utilities/Process.cpp"
     "Utilities/Resource.h"

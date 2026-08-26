@@ -31,4 +31,12 @@ inline [[nodiscard]] std::error_code RemoveFile(const std::filesystem::path& pat
     LPDWORD lpNumberOfBytesRead = nullptr,
     LPOVERLAPPED lpOverlapped = nullptr);
 
+[[nodiscard]] std::error_code WriteFileAt(
+    HANDLE handle,
+    uint64_t offset,
+    LPCVOID lpBuffer,
+    DWORD nNumberOfBytesToWrite,
+    LPDWORD lpNumberOfBytesWritten = nullptr,
+    LPOVERLAPPED lpOverlapped = nullptr);
+
 [[nodiscard]] std::error_code WriteFileContents(const std::filesystem::path& path, const std::vector<uint8_t>& data);
