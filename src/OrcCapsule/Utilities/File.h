@@ -14,6 +14,8 @@
 
 #include <windows.h>
 
+#include "Utilities/Scope.h"
+
 [[nodiscard]] std::error_code RemoveFile(const std::wstring& path);
 
 inline [[nodiscard]] std::error_code RemoveFile(const std::filesystem::path& path)
@@ -40,3 +42,13 @@ inline [[nodiscard]] std::error_code RemoveFile(const std::filesystem::path& pat
     LPOVERLAPPED lpOverlapped = nullptr);
 
 [[nodiscard]] std::error_code WriteFileContents(const std::filesystem::path& path, const std::vector<uint8_t>& data);
+
+/// @brief Open an existing file with a delete-on-close handle that keeps it alive without holding write access.
+///
+/// The kernel deletes the file when its last handle closes, with no privilege and no reboot (works from
+/// Windows XP onward). The handle is opened GENERIC_READ | DELETE and shares read, write and delete so the
+/// image loader can map and run the file while the delete is pending. It deliberately holds no write access:
+/// CreateProcessW's loader opens the image without FILE_SHARE_WRITE and would reject a retained writable
+/// handle with ERROR_SHARING_VIOLATION. Write the file first (e.g. with WriteFileContents), then keep this
+/// handle open for as long as the file must exist and close it to trigger removal.
+[[nodiscard]] std::error_code OpenDeleteOnCloseFile(const std::filesystem::path& path, ScopedFileHandle& handle);

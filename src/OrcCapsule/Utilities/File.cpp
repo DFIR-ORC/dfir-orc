@@ -121,6 +121,28 @@ std::error_code WriteFileContents(const fs::path& path, const std::vector<uint8_
     return {};
 }
 
+std::error_code OpenDeleteOnCloseFile(const fs::path& path, ScopedFileHandle& handle)
+{
+    ScopedFileHandle hFile(CreateFileW(
+        path.c_str(),
+        GENERIC_READ | DELETE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+        nullptr,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL | FILE_FLAG_DELETE_ON_CLOSE,
+        nullptr));
+
+    if (!hFile || hFile.get() == INVALID_HANDLE_VALUE)
+    {
+        std::error_code ec = LastWin32Error();
+        Log::Error(L"Failed CreateFileW (path: {}) [{}]", path, ec);
+        return ec;
+    }
+
+    handle = std::move(hFile);
+    return {};
+}
+
 std::error_code WriteFileAt(
     HANDLE handle,
     uint64_t offset,
