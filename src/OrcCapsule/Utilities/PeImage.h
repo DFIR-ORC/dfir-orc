@@ -45,3 +45,19 @@ struct PeImageHeaders
 
 /// @brief Human readable name of an IMAGE_SUBSYSTEM_* value, for logs and usage output.
 [[nodiscard]] const wchar_t* GetSubsystemName(WORD subsystem);
+
+/// @brief Clear IMAGE_OPTIONAL_HEADER::CheckSum, declaring that the image carries no checksum.
+///
+/// Every rewrite of a capsule (a resource update, a header patch) leaves the checksum describing a file
+/// that no longer exists, and a wrong checksum is worse than none: it is a positive claim that fails
+/// verification, where zero simply means "not computed". Zero is also what the linker writes without
+/// /RELEASE, so this is the state a freshly built capsule is already in.
+///
+/// Recomputing the real value instead would be about thirty lines (a folded 16 bit one's complement sum
+/// of the file with this field read as zero, plus the file size) but it buys nothing here: no user mode
+/// image is checksum verified by the loader (that is for kernel mode drivers and a few protected system
+/// images), and signing rewrites the field with the correct value anyway. Clearing costs a four byte
+/// write where computing costs a full pass over a capsule that carries several embedded binaries.
+///
+/// Call it after the last modification of the file.
+[[nodiscard]] std::error_code ClearPeChecksum(const std::filesystem::path& path);

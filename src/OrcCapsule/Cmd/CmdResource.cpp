@@ -19,6 +19,7 @@
 #include "Utilities/Error.h"
 #include "Utilities/Compression.h"
 #include "Utilities/File.h"
+#include "Utilities/PeImage.h"
 #include "Utilities/Process.h"
 #include "Utilities/Resource.h"
 #include "Utilities/Format.h"
@@ -133,6 +134,14 @@ std::basic_string_view<uint8_t> ToStringView(const std::vector<uint8_t>& buffer)
     {
         Log::Error(L"Failed ResourceUpdater::Commit (path: {}) [{}]", updatedExe, ec);
         return ec;
+    }
+
+    // The commit leaves the header checksum describing the image as it was before. Clear it, see
+    // ClearPeChecksum. Best-effort: the resource update itself has already succeeded.
+    auto checksumEc = ClearPeChecksum(updatedExe);
+    if (checksumEc)
+    {
+        Log::Warn(L"Failed to clear the checksum of '{}' [{}]", updatedExe, checksumEc);
     }
 
     // If no explicit output was requested, perform self-update swap

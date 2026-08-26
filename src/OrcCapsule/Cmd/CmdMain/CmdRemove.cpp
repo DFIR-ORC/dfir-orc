@@ -3,6 +3,7 @@
 #include "Utilities/Log.h"
 #include "Utilities/Error.h"
 
+#include "Utilities/PeImage.h"
 #include "Utilities/Resource.h"
 #include "Utilities/Process.h"
 
@@ -60,6 +61,14 @@
     {
         Log::Error(L"Failed UpdateResourceData (path: {}, resource: {}) [{}]", updatedExe, resourceName, ec);
         return std::make_error_code(std::errc::bad_message);
+    }
+
+    // The resource update leaves the header checksum describing the image as it was before. Clear it, see
+    // ClearPeChecksum. Best-effort: the removal itself has already succeeded.
+    auto checksumEc = ClearPeChecksum(updatedExe);
+    if (checksumEc)
+    {
+        Log::Warn(L"Failed to clear the checksum of '{}' [{}]", updatedExe, checksumEc);
     }
 
     if (!args.outputPath)

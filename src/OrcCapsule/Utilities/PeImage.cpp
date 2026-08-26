@@ -34,6 +34,17 @@ static_assert(
 
 static_assert(kSubsystemOffset == 68, "Unexpected Subsystem offset in the optional header");
 
+// CheckSum sits before Subsystem, so it is at the same offset in both optional headers for the same reason.
+constexpr uint32_t kChecksumOffset = offsetof(IMAGE_OPTIONAL_HEADER32, CheckSum);
+
+static_assert(
+    offsetof(IMAGE_OPTIONAL_HEADER32, CheckSum) == offsetof(IMAGE_OPTIONAL_HEADER64, CheckSum),
+    "CheckSum must be at the same offset in PE32 and PE32+ optional headers");
+
+static_assert(kChecksumOffset == 64, "Unexpected CheckSum offset in the optional header");
+
+// e_lfanew is a signed 32-bit value in a file that is at most a few hundred megabytes. Anything beyond
+// this is a malformed or hostile image, not a binary to embed.
 constexpr LONG kMaxNtHeadersOffset = 0x10000000;
 
 [[nodiscard]] std::error_code OpenPeFile(const fs::path& path, DWORD desiredAccess, ScopedFileHandle& handle)
@@ -155,6 +166,12 @@ LocateSubsystem(HANDLE handle, const fs::path& path, const PeImageHeaders& heade
     return LocateOptionalHeaderField(handle, path, headers, kSubsystemOffset, sizeof(WORD), offset);
 }
 
+[[nodiscard]] std::error_code
+LocateChecksum(HANDLE handle, const fs::path& path, const PeImageHeaders& headers, uint64_t& offset)
+{
+    return LocateOptionalHeaderField(handle, path, headers, kChecksumOffset, sizeof(DWORD), offset);
+}
+
 }  // namespace
 
 std::error_code ReadPeImageHeaders(const fs::path& path, PeImageHeaders& headers)
@@ -247,7 +264,8 @@ std::error_code WritePeSubsystem(const fs::path& path, WORD subsystem)
         return {};
     }
 
-    // This leaves the header CheckSum describing the image as it was, as every resource update does.
+    // This invalidates the header CheckSum, as every resource update does: callers finish with
+    // ClearPeChecksum once the file has taken its final form.
     ec = WriteFileAt(handle.get(), offset, &subsystem, sizeof(subsystem));
     if (ec)
     {
@@ -260,6 +278,55 @@ std::error_code WritePeSubsystem(const fs::path& path, WORD subsystem)
         GetSubsystemName(current),
         GetSubsystemName(subsystem),
         path);
+
+    return {};
+}
+
+std::error_code ClearPeChecksum(const fs::path& path)
+{
+    ScopedFileHandle handle;
+    auto ec = OpenPeFile(path, GENERIC_READ | GENERIC_WRITE, handle);
+    if (ec)
+    {
+        return ec;
+    }
+
+    PeImageHeaders headers;
+    ec = ReadHeaders(handle.get(), path, headers);
+    if (ec)
+    {
+        return ec;
+    }
+
+    uint64_t offset = 0;
+    ec = LocateChecksum(handle.get(), path, headers, offset);
+    if (ec)
+    {
+        return ec;
+    }
+
+    DWORD current = 0;
+    ec = ReadFileAt(handle.get(), offset, &current, sizeof(current));
+    if (ec)
+    {
+        Log::Debug(L"Failed ReadFileAt for the checksum (path: {}) [{}]", path, ec);
+        return ec;
+    }
+
+    if (current == 0)
+    {
+        return {};
+    }
+
+    const DWORD cleared = 0;
+    ec = WriteFileAt(handle.get(), offset, &cleared, sizeof(cleared));
+    if (ec)
+    {
+        Log::Debug(L"Failed WriteFileAt for the checksum (path: {}) [{}]", path, ec);
+        return ec;
+    }
+
+    Log::Debug(L"Checksum cleared, was {:#010x} (path: {})", current, path);
 
     return {};
 }

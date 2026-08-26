@@ -356,7 +356,8 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
         GetArchitectureName(exe.architecture));
 }
 
-// Read, compress and hash every input path into a PreparedRunner. Input order is preserved.
+// Read, compress and hash every input path into a PreparedRunner. Input order is preserved, so the last
+// entry stays the last added binary (the branding source).
 [[nodiscard]] std::error_code PrepareRunners(const CapsuleOptions& args, std::vector<PreparedRunner>& executables)
 {
     std::error_code ec;
@@ -411,11 +412,12 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     return {};
 }
 
-// Brand the capsule from the last added binary: its icon, version resource and UAC level. What the source does
+// Brand the capsule's resources (icon, version info, UAC level) from the branding source. What the source does
 // not carry is not branded, and the capsule keeps its own. A branding that fails is an error: the capsule runs
 // asInvoker, so keeping its own UAC level where the source requests another would ship a capsule that does
-// not ask for the rights its payload needs.
-[[nodiscard]] std::error_code BrandCapsule(
+// not ask for the rights its payload needs. Runs before the header patches below, since the resource update
+// rewrites the whole image and would discard any header change made before it.
+[[nodiscard]] std::error_code BrandResources(
     const CapsuleOptions& args,
     const fs::path& capsulePath,
     const fs::path& brandingSource,
@@ -502,6 +504,37 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     }
 
     Log::Debug(L"Capsule declares subsystem '{}'", GetSubsystemName(*subsystem));
+    return {};
+}
+
+// Brand the capsule from the last added binary and finalize its headers, in the one order that survives:
+// resources first (the resource update rewrites the whole image), then the subsystem header patch, then the
+// checksum clear. The checksum is always cleared, not gated on --ignore-*: embedding the runners alone
+// already left it describing an image that no longer exists, and a wrong checksum is worse than none.
+[[nodiscard]] std::error_code BrandCapsule(
+    const CapsuleOptions& args,
+    const fs::path& capsulePath,
+    const fs::path& brandingSource,
+    const std::vector<PreparedRunner>& executables)
+{
+    auto ec = BrandResources(args, capsulePath, brandingSource, executables);
+    if (ec)
+    {
+        return ec;
+    }
+
+    ec = BrandSubsystem(args, capsulePath, brandingSource, executables);
+    if (ec)
+    {
+        return ec;
+    }
+
+    ec = ClearPeChecksum(capsulePath);
+    if (ec)
+    {
+        Log::Warn(L"Failed to clear the checksum of '{}' [{}]", capsulePath, ec);
+    }
+
     return {};
 }
 
@@ -597,15 +630,9 @@ void PrintCapsuleSummary(
     }
 
     // executables preserves input order; its last entry is the last added binary (the branding source), and
-    // its stored inputPath is already absolute. The subsystem is branded after the icon/version/UAC because
-    // EndUpdateResource rewrites the whole image and would discard a header patch.
+    // its stored inputPath is already absolute. Branding finalizes the file's headers.
     const fs::path& brandingSource = executables.back().inputPath;
     ec = BrandCapsule(args, updatedExe, brandingSource, executables);
-    if (!ec)
-    {
-        ec = BrandSubsystem(args, updatedExe, brandingSource, executables);
-    }
-
     if (ec)
     {
         // Nobody may pick up a capsule that failed branding: it holds the runners but not the UAC level they
