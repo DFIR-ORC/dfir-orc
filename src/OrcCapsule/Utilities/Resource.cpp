@@ -309,6 +309,194 @@ std::error_code PatchApplicationManifest(
     return {};
 }
 
+// What the branding source (the added binary) can offer.
+struct BrandingSource
+{
+    std::vector<SourceIconResource> iconGroups;
+    std::vector<SourceIconResource> iconImages;
+    bool haveIcon = false;
+    std::vector<uint8_t> version;
+    bool haveVersion = false;
+};
+
+// What the capsule currently carries that branding must replace (its own icons) or patch (its manifest).
+struct CapsuleBrandingState
+{
+    std::vector<IconRef> staleGroups;
+    std::vector<IconRef> staleIcons;
+    std::vector<uint8_t> patchedManifest;
+    WORD manifestLang = 0;
+    bool haveManifest = false;
+    bool manifestSatisfied = false;
+};
+
+// Read the icon set and version resource the source can offer. Loading as a datafile keeps this read-only.
+// Best-effort per resource: a missing icon or version leaves the corresponding fields empty rather than
+// failing, but a source that cannot be opened at all is an error.
+[[nodiscard]] std::error_code
+ReadBrandingSource(const fs::path& sourceBinary, const BrandingRequest& request, BrandingSource& out)
+{
+    ScopedModule source(LoadLibraryExW(
+        sourceBinary.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
+    if (!source)
+    {
+        auto ec = LastWin32Error();
+        Log::Debug(L"Failed LoadLibraryExW for branding source (path: {}) [{}]", sourceBinary, ec);
+        return ec;
+    }
+
+    if (request.icon)
+    {
+        // Read the source's whole icon set (every RT_GROUP_ICON and RT_ICON, numeric or named) so the
+        // capsule ends up with an exact copy rather than just the primary group.
+        auto ec = ReadAllIcons(source.get(), RT_GROUP_ICON, out.iconGroups);
+        if (!ec)
+        {
+            ec = ReadAllIcons(source.get(), RT_ICON, out.iconImages);
+        }
+
+        if (ec)
+        {
+            Log::Debug(L"Failed to read icons from branding source (path: {}) [{}]", sourceBinary, ec);
+            out.iconGroups.clear();
+            out.iconImages.clear();
+        }
+        else if (out.iconGroups.empty() || out.iconImages.empty())
+        {
+            Log::Debug(L"No icon in branding source (path: {})", sourceBinary);
+        }
+        else
+        {
+            out.haveIcon = true;
+        }
+    }
+
+    if (request.version)
+    {
+        // RT_VERSION resources are conventionally stored under id VS_VERSION_INFO (1).
+        auto ec = LoadResourceById(source.get(), RT_VERSION, static_cast<WORD>(VS_VERSION_INFO), out.version);
+        if (ec)
+        {
+            Log::Debug(L"No version resource in branding source (path: {}) [{}]", sourceBinary, ec);
+        }
+        else if (out.version.empty())
+        {
+            Log::Debug(L"Empty version resource in branding source (path: {})", sourceBinary);
+        }
+        else
+        {
+            out.haveVersion = true;
+        }
+    }
+
+    return {};
+}
+
+// Read the capsule's own resources up front, while no update handle is open on the file, so the datafile
+// mapping and BeginUpdateResource never contend for it: its icons (to delete) and its manifest (to patch).
+[[nodiscard]] std::error_code ReadCapsuleBrandingState(
+    const fs::path& capsulePath, const BrandingRequest& request, bool haveIcon, CapsuleBrandingState& out)
+{
+    ScopedModule capsule(LoadLibraryExW(
+        capsulePath.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
+    if (!capsule)
+    {
+        auto ec = LastWin32Error();
+        Log::Debug(L"Failed LoadLibraryExW for capsule (path: {}) [{}]", capsulePath, ec);
+        return ec;
+    }
+
+    if (haveIcon)
+    {
+        std::ignore = CollectExistingIconResources(capsule.get(), RT_GROUP_ICON, out.staleGroups);
+        std::ignore = CollectExistingIconResources(capsule.get(), RT_ICON, out.staleIcons);
+    }
+
+    if (request.manifestLevel)
+    {
+        // A capsule whose manifest cannot be patched is not an error here: PatchApplicationManifest reports
+        // why, and manifestSatisfied tells the caller, which decides (the 'add' command refuses the capsule).
+        auto ec = PatchApplicationManifest(
+            capsule.get(), capsulePath, *request.manifestLevel, out.patchedManifest, out.manifestLang, out.haveManifest);
+
+        out.manifestSatisfied = !ec;
+        if (!out.haveManifest)
+        {
+            out.patchedManifest.clear();
+        }
+    }
+
+    return {};
+}
+
+// Mirror the source's entire icon set into the capsule, within the open updater: delete every icon the
+// capsule carries (numeric and named), then write the source's verbatim under its own id or name. Done in
+// one commit, the capsule's icons become an exact copy of the source's with nothing of its own left behind.
+[[nodiscard]] std::error_code
+WriteIconResources(ResourceUpdater& updater, const CapsuleBrandingState& capsuleState, const BrandingSource& source)
+{
+    constexpr WORD kNeutral = MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL);
+    const std::vector<uint8_t> empty;
+
+    for (const auto& ref : capsuleState.staleGroups)
+    {
+        auto ec = ref.numeric ? updater.Update(RT_GROUP_ICON, ref.id, ref.lang, empty)
+                              : updater.Update(RT_GROUP_ICON, ref.name, ref.lang, empty);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
+    for (const auto& ref : capsuleState.staleIcons)
+    {
+        auto ec = ref.numeric ? updater.Update(RT_ICON, ref.id, ref.lang, empty)
+                              : updater.Update(RT_ICON, ref.name, ref.lang, empty);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
+    for (const auto& image : source.iconImages)
+    {
+        auto ec = image.numeric ? updater.Update(RT_ICON, image.id, kNeutral, image.data)
+                                : updater.Update(RT_ICON, image.name, kNeutral, image.data);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
+    for (const auto& group : source.iconGroups)
+    {
+        auto ec = group.numeric ? updater.Update(RT_GROUP_ICON, group.id, kNeutral, group.data)
+                                : updater.Update(RT_GROUP_ICON, group.name, kNeutral, group.data);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
+    return {};
+}
+
+// Tag the branded version info and write it. Branding with the payload's version erases DFIR-ORC's identity
+// strings by design; leave a small deliberate trace in FileDescription. Best-effort marker: a parse failure
+// keeps the payload's version unmarked rather than dropping it.
+[[nodiscard]] std::error_code
+WriteVersionResource(ResourceUpdater& updater, std::vector<uint8_t>& version, const fs::path& capsulePath)
+{
+    auto markerEc = AppendFileDescriptionMarker(version, L" (capsule)");
+    if (markerEc)
+    {
+        Log::Debug(L"Failed to tag version info with capsule marker (path: {}) [{}]", capsulePath, markerEc);
+    }
+
+    constexpr WORD kNeutral = MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL);
+    return updater.Update(RT_VERSION, static_cast<WORD>(VS_VERSION_INFO), kNeutral, version);
+}
+
 }  // namespace
 
 std::error_code LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::vector<uint8_t>& output)
@@ -486,118 +674,35 @@ std::error_code BrandCapsuleFromBinary(
         return {};
     }
 
-    std::vector<SourceIconResource> sourceGroups;
-    std::vector<SourceIconResource> sourceImages;
-    bool haveIcon = false;
-    std::vector<uint8_t> sourceVersion;
-    bool haveVersion = false;
-
+    // The UAC level does not come from the source read: the caller resolved it into request.manifestLevel.
+    BrandingSource source;
     if (request.icon || request.version)
     {
-        // Read what the source binary can offer. Loading as a datafile keeps this read-only and side-effect
-        // free. The UAC level does not come from here: the caller resolved it already.
-        ScopedModule source(LoadLibraryExW(
-            sourceBinary.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
-        if (!source)
+        auto ec = ReadBrandingSource(sourceBinary, request, source);
+        if (ec)
         {
-            auto ec = LastWin32Error();
-            Log::Debug(L"Failed LoadLibraryExW for branding source (path: {}) [{}]", sourceBinary, ec);
             return ec;
-        }
-
-        if (request.icon)
-        {
-            // Read the source's whole icon set (every RT_GROUP_ICON and RT_ICON, numeric or named) so the
-            // capsule ends up with an exact copy rather than just the primary group.
-            auto ec = ReadAllIcons(source.get(), RT_GROUP_ICON, sourceGroups);
-            if (!ec)
-            {
-                ec = ReadAllIcons(source.get(), RT_ICON, sourceImages);
-            }
-
-            if (ec)
-            {
-                Log::Debug(L"Failed to read icons from branding source (path: {}) [{}]", sourceBinary, ec);
-                sourceGroups.clear();
-                sourceImages.clear();
-            }
-            else if (sourceGroups.empty() || sourceImages.empty())
-            {
-                Log::Debug(L"No icon in branding source (path: {})", sourceBinary);
-            }
-            else
-            {
-                haveIcon = true;
-            }
-        }
-
-        if (request.version)
-        {
-            // RT_VERSION resources are conventionally stored under id VS_VERSION_INFO (1).
-            auto ec = LoadResourceById(source.get(), RT_VERSION, static_cast<WORD>(VS_VERSION_INFO), sourceVersion);
-            if (ec)
-            {
-                Log::Debug(L"No version resource in branding source (path: {}) [{}]", sourceBinary, ec);
-            }
-            else if (sourceVersion.empty())
-            {
-                Log::Debug(L"Empty version resource in branding source (path: {})", sourceBinary);
-            }
-            else
-            {
-                haveVersion = true;
-            }
         }
     }
 
-    // Read the capsule's own resources up front, while no update handle is open on the file, so the datafile
-    // mapping and BeginUpdateResource never contend for it.
-    std::vector<IconRef> staleGroups;
-    std::vector<IconRef> staleIcons;
-    std::vector<uint8_t> patchedManifest;
-    WORD manifestLang = 0;
-    bool haveManifest = false;
-    bool manifestSatisfied = false;
-
-    if (haveIcon || request.manifestLevel)
+    CapsuleBrandingState capsuleState;
+    if (source.haveIcon || request.manifestLevel)
     {
-        ScopedModule capsule(LoadLibraryExW(
-            capsulePath.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
-        if (!capsule)
+        auto ec = ReadCapsuleBrandingState(capsulePath, request, source.haveIcon, capsuleState);
+        if (ec)
         {
-            auto ec = LastWin32Error();
-            Log::Debug(L"Failed LoadLibraryExW for capsule (path: {}) [{}]", capsulePath, ec);
             return ec;
-        }
-
-        if (haveIcon)
-        {
-            std::ignore = CollectExistingIconResources(capsule.get(), RT_GROUP_ICON, staleGroups);
-            std::ignore = CollectExistingIconResources(capsule.get(), RT_ICON, staleIcons);
-        }
-
-        if (request.manifestLevel)
-        {
-            // A capsule whose manifest cannot be patched is not an error here: PatchApplicationManifest reports
-            // why, and manifestSatisfied tells the caller, which decides (the 'add' command refuses the capsule).
-            auto ec = PatchApplicationManifest(
-                capsule.get(), capsulePath, *request.manifestLevel, patchedManifest, manifestLang, haveManifest);
-
-            manifestSatisfied = !ec;
-            if (!haveManifest)
-            {
-                patchedManifest.clear();
-            }
         }
     }
 
-    if (!haveIcon && !haveVersion && !haveManifest)
+    if (!source.haveIcon && !source.haveVersion && !capsuleState.haveManifest)
     {
         // Nothing to write: leave the capsule's own resources untouched.
-        result.manifestApplied = manifestSatisfied;
+        result.manifestApplied = capsuleState.manifestSatisfied;
         return {};
     }
 
+    // Everything is staged in a single resource update, so the capsule file is rewritten once.
     std::unique_ptr<ResourceUpdater> updater;
     auto ec = ResourceUpdater::Make(capsulePath, updater);
     if (ec)
@@ -606,79 +711,30 @@ std::error_code BrandCapsuleFromBinary(
         return ec;
     }
 
-    constexpr WORD kNeutral = MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL);
-
-    if (haveIcon)
+    if (source.haveIcon)
     {
-        // Delete every icon the capsule carries (numeric and named), then write the source's verbatim under
-        // its own ids and names. Done in one commit, the capsule's icons become an exact copy of the source's
-        // with nothing of its own left behind, and there is no window where the shell has no icon to show.
-        const std::vector<uint8_t> empty;
-
-        for (const auto& ref : staleGroups)
-        {
-            ec = ref.numeric ? updater->Update(RT_GROUP_ICON, ref.id, ref.lang, empty)
-                             : updater->Update(RT_GROUP_ICON, ref.name, ref.lang, empty);
-            if (ec)
-            {
-                return ec;
-            }
-        }
-
-        for (const auto& ref : staleIcons)
-        {
-            ec = ref.numeric ? updater->Update(RT_ICON, ref.id, ref.lang, empty)
-                             : updater->Update(RT_ICON, ref.name, ref.lang, empty);
-            if (ec)
-            {
-                return ec;
-            }
-        }
-
-        for (const auto& image : sourceImages)
-        {
-            ec = image.numeric ? updater->Update(RT_ICON, image.id, kNeutral, image.data)
-                               : updater->Update(RT_ICON, image.name, kNeutral, image.data);
-            if (ec)
-            {
-                return ec;
-            }
-        }
-
-        for (const auto& group : sourceGroups)
-        {
-            ec = group.numeric ? updater->Update(RT_GROUP_ICON, group.id, kNeutral, group.data)
-                               : updater->Update(RT_GROUP_ICON, group.name, kNeutral, group.data);
-            if (ec)
-            {
-                return ec;
-            }
-        }
-    }
-
-    if (haveVersion)
-    {
-        // Branding the capsule with the payload's version info erases DFIR-ORC's identity strings by design; leave a small,
-        // deliberate trace by tagging the FileDescription. Best-effort: a parse failure keeps the payload's
-        // version unmarked rather than dropping it.
-        auto markerEc = AppendFileDescriptionMarker(sourceVersion, L" (capsule)");
-        if (markerEc)
-        {
-            Log::Debug(L"Failed to tag version info with capsule marker (path: {}) [{}]", capsulePath, markerEc);
-        }
-
-        ec = updater->Update(RT_VERSION, static_cast<WORD>(VS_VERSION_INFO), kNeutral, sourceVersion);
+        ec = WriteIconResources(*updater, capsuleState, source);
         if (ec)
         {
             return ec;
         }
     }
 
-    if (haveManifest)
+    if (source.haveVersion)
+    {
+        ec = WriteVersionResource(*updater, source.version, capsulePath);
+        if (ec)
+        {
+            return ec;
+        }
+    }
+
+    if (capsuleState.haveManifest)
     {
         // Written back under the language it was found in, so the loader keeps resolving the same resource
         // instead of finding a second manifest next to the original.
-        ec = updater->Update(RT_MANIFEST, kCreateProcessManifestResourceId, manifestLang, patchedManifest);
+        ec = updater->Update(
+            RT_MANIFEST, kCreateProcessManifestResourceId, capsuleState.manifestLang, capsuleState.patchedManifest);
         if (ec)
         {
             return ec;
@@ -692,9 +748,9 @@ std::error_code BrandCapsuleFromBinary(
         return ec;
     }
 
-    result.iconApplied = haveIcon;
-    result.versionApplied = haveVersion;
-    result.manifestApplied = manifestSatisfied;
+    result.iconApplied = source.haveIcon;
+    result.versionApplied = source.haveVersion;
+    result.manifestApplied = capsuleState.manifestSatisfied;
     return {};
 }
 
