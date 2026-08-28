@@ -77,6 +77,8 @@ set(SRC_CAPSULE
     "Utilities/Process.cpp"
     "Utilities/Resource.h"
     "Utilities/Resource.cpp"
+    "Utilities/VersionInfo.h"
+    "Utilities/VersionInfo.cpp"
     "Utilities/Scope.h"
     "Utilities/Strings.h"
     "Utilities/Strings.cpp"

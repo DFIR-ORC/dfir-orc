@@ -354,17 +354,19 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     return {};
 }
 
-// Brand the capsule from the last added binary: its icon. Best-effort, any failure is logged and never
-// fails the add (the runner embedding is the contract).
+// Brand the capsule from the last added binary: its icon and version resource. Best-effort, any failure is
+// logged and never fails the add (the runner embedding is the contract).
 void BrandCapsule(const CapsuleOptions& args, const fs::path& capsulePath, const fs::path& brandingSource)
 {
-    if (args.ignoreIcon)
+    if (args.ignoreIcon && args.ignoreVersionInfo)
     {
         return;
     }
 
     bool iconApplied = false;
-    auto ec = BrandCapsuleFromBinary(brandingSource, capsulePath, !args.ignoreIcon, iconApplied);
+    bool versionApplied = false;
+    auto ec = BrandCapsuleFromBinary(
+        brandingSource, capsulePath, !args.ignoreIcon, !args.ignoreVersionInfo, iconApplied, versionApplied);
     if (ec)
     {
         Log::Warn(L"Failed to brand capsule from '{}', keeping capsule defaults [{}]", brandingSource, ec);
@@ -374,6 +376,11 @@ void BrandCapsule(const CapsuleOptions& args, const fs::path& capsulePath, const
     if (!args.ignoreIcon && !iconApplied)
     {
         Log::Debug(L"No icon in '{}', keeping capsule icon", brandingSource);
+    }
+
+    if (!args.ignoreVersionInfo && !versionApplied)
+    {
+        Log::Debug(L"No version info in '{}', keeping capsule version info", brandingSource);
     }
 }
 
@@ -532,8 +539,9 @@ CommandDescriptor GetAddCommandDescriptor()
         L"      :x64-xp      Add as Windows XP 64-bit binary (auto-detected if omitted)\n"
         L"      :x86-xp      Add as Windows XP 32-bit binary (auto-detected if omitted)\n"
         L"      :arm64       Add as Windows ARM 64-bit binary (auto-detected if omitted)\n"
-        L"      By default the capsule adopts the last added binary's icon.\n"
-        L"      --ignore-icon   Keep the capsule's own icon\n",
+        L"      By default the capsule adopts the last added binary's icon and version info.\n"
+        L"      --ignore-icon           Keep the capsule's own icon\n"
+        L"      --ignore-version-info   Keep the capsule's own version info\n",
         ParseAddCommand,
         ValidateAddOptions,
         HandleAddRunner,

@@ -18,6 +18,7 @@
 
 #include "Utilities/Compression.h"
 #include "Utilities/File.h"
+#include "Utilities/VersionInfo.h"
 
 #include "Fmt/std_error_code.h"
 #include "Fmt/std_filesystem.h"
@@ -402,11 +403,14 @@ std::error_code BrandCapsuleFromBinary(
     const fs::path& sourceBinary,
     const fs::path& capsulePath,
     bool copyIcon,
-    bool& iconApplied)
+    bool copyVersion,
+    bool& iconApplied,
+    bool& versionApplied)
 {
     iconApplied = false;
+    versionApplied = false;
 
-    if (!copyIcon)
+    if (!copyIcon && !copyVersion)
     {
         return {};
     }
@@ -421,39 +425,72 @@ std::error_code BrandCapsuleFromBinary(
         return ec;
     }
 
-    // Read the source's whole icon set (every RT_GROUP_ICON and RT_ICON, numeric or named) so the capsule
-    // ends up with an exact copy rather than just the primary group.
     std::vector<SourceIconResource> sourceGroups;
     std::vector<SourceIconResource> sourceImages;
-    auto ec = ReadAllIcons(source.get(), RT_GROUP_ICON, sourceGroups);
-    if (!ec)
+    bool haveIcon = false;
+    if (copyIcon)
     {
-        ec = ReadAllIcons(source.get(), RT_ICON, sourceImages);
+        // Read the source's whole icon set (every RT_GROUP_ICON and RT_ICON, numeric or named) so the
+        // capsule ends up with an exact copy rather than just the primary group.
+        auto ec = ReadAllIcons(source.get(), RT_GROUP_ICON, sourceGroups);
+        if (!ec)
+        {
+            ec = ReadAllIcons(source.get(), RT_ICON, sourceImages);
+        }
+
+        if (ec)
+        {
+            Log::Debug(L"Failed to read icons from branding source (path: {}) [{}]", sourceBinary, ec);
+            sourceGroups.clear();
+            sourceImages.clear();
+        }
+        else if (sourceGroups.empty() || sourceImages.empty())
+        {
+            Log::Debug(L"No icon in branding source (path: {})", sourceBinary);
+        }
+        else
+        {
+            haveIcon = true;
+        }
     }
 
-    if (ec)
+    std::vector<uint8_t> sourceVersion;
+    bool haveVersion = false;
+    if (copyVersion)
     {
-        Log::Debug(L"Failed to read icons from branding source (path: {}) [{}]", sourceBinary, ec);
-        return {};
+        // RT_VERSION resources are conventionally stored under id VS_VERSION_INFO (1).
+        auto ec = LoadResourceById(source.get(), RT_VERSION, static_cast<WORD>(VS_VERSION_INFO), sourceVersion);
+        if (ec)
+        {
+            Log::Debug(L"No version resource in branding source (path: {}) [{}]", sourceBinary, ec);
+        }
+        else if (sourceVersion.empty())
+        {
+            Log::Debug(L"Empty version resource in branding source (path: {})", sourceBinary);
+        }
+        else
+        {
+            haveVersion = true;
+        }
     }
 
-    if (sourceGroups.empty() || sourceImages.empty())
+    if (!haveIcon && !haveVersion)
     {
-        // Nothing to transplant: leave the capsule's own icon untouched.
-        Log::Debug(L"No icon in branding source (path: {})", sourceBinary);
+        // Nothing to transplant: leave the capsule's own icon and version untouched.
         return {};
     }
 
     // Enumerate the capsule's own icon resources up front, while no update handle is open on the file, so the
-    // datafile mapping and BeginUpdateResource never contend for it.
+    // datafile mapping and BeginUpdateResource never contend for it. Only needed when replacing the icon.
     std::vector<IconRef> staleGroups;
     std::vector<IconRef> staleIcons;
+    if (haveIcon)
     {
         ScopedModule capsule(LoadLibraryExW(
             capsulePath.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
         if (!capsule)
         {
-            ec = LastWin32Error();
+            auto ec = LastWin32Error();
             Log::Debug(L"Failed LoadLibraryExW for capsule (path: {}) [{}]", capsulePath, ec);
             return ec;
         }
@@ -463,7 +500,7 @@ std::error_code BrandCapsuleFromBinary(
     }
 
     std::unique_ptr<ResourceUpdater> updater;
-    ec = ResourceUpdater::Make(capsulePath, updater);
+    auto ec = ResourceUpdater::Make(capsulePath, updater);
     if (ec)
     {
         Log::Debug(L"Failed ResourceUpdater::Make (path: {}) [{}]", capsulePath, ec);
@@ -472,45 +509,66 @@ std::error_code BrandCapsuleFromBinary(
 
     constexpr WORD kNeutral = MAKELANGID(LANG_NEUTRAL, SUBLANG_NEUTRAL);
 
-    // Delete every icon the capsule carries (numeric and named), then write the source's verbatim under its
-    // own ids and names. Done in one commit, the capsule's icons become an exact copy of the source's with
-    // nothing of its own left behind, and there is no window where the shell has no icon to show.
-    const std::vector<uint8_t> empty;
-
-    for (const auto& ref : staleGroups)
+    if (haveIcon)
     {
-        ec = ref.numeric ? updater->Update(RT_GROUP_ICON, ref.id, ref.lang, empty)
-                         : updater->Update(RT_GROUP_ICON, ref.name, ref.lang, empty);
-        if (ec)
+        // Delete every icon the capsule carries (numeric and named), then write the source's verbatim under
+        // its own ids and names. Done in one commit, the capsule's icons become an exact copy of the source's
+        // with nothing of its own left behind, and there is no window where the shell has no icon to show.
+        const std::vector<uint8_t> empty;
+
+        for (const auto& ref : staleGroups)
         {
-            return ec;
+            ec = ref.numeric ? updater->Update(RT_GROUP_ICON, ref.id, ref.lang, empty)
+                             : updater->Update(RT_GROUP_ICON, ref.name, ref.lang, empty);
+            if (ec)
+            {
+                return ec;
+            }
+        }
+
+        for (const auto& ref : staleIcons)
+        {
+            ec = ref.numeric ? updater->Update(RT_ICON, ref.id, ref.lang, empty)
+                             : updater->Update(RT_ICON, ref.name, ref.lang, empty);
+            if (ec)
+            {
+                return ec;
+            }
+        }
+
+        for (const auto& image : sourceImages)
+        {
+            ec = image.numeric ? updater->Update(RT_ICON, image.id, kNeutral, image.data)
+                               : updater->Update(RT_ICON, image.name, kNeutral, image.data);
+            if (ec)
+            {
+                return ec;
+            }
+        }
+
+        for (const auto& group : sourceGroups)
+        {
+            ec = group.numeric ? updater->Update(RT_GROUP_ICON, group.id, kNeutral, group.data)
+                               : updater->Update(RT_GROUP_ICON, group.name, kNeutral, group.data);
+            if (ec)
+            {
+                return ec;
+            }
         }
     }
 
-    for (const auto& ref : staleIcons)
+    if (haveVersion)
     {
-        ec = ref.numeric ? updater->Update(RT_ICON, ref.id, ref.lang, empty)
-                         : updater->Update(RT_ICON, ref.name, ref.lang, empty);
-        if (ec)
+        // Branding the capsule with the payload's version info erases DFIR-ORC's identity strings by design; leave a small,
+        // deliberate trace by tagging the FileDescription. Best-effort: a parse failure keeps the payload's
+        // version unmarked rather than dropping it.
+        auto markerEc = AppendFileDescriptionMarker(sourceVersion, L" (capsule)");
+        if (markerEc)
         {
-            return ec;
+            Log::Debug(L"Failed to tag version info with capsule marker (path: {}) [{}]", capsulePath, markerEc);
         }
-    }
 
-    for (const auto& image : sourceImages)
-    {
-        ec = image.numeric ? updater->Update(RT_ICON, image.id, kNeutral, image.data)
-                           : updater->Update(RT_ICON, image.name, kNeutral, image.data);
-        if (ec)
-        {
-            return ec;
-        }
-    }
-
-    for (const auto& group : sourceGroups)
-    {
-        ec = group.numeric ? updater->Update(RT_GROUP_ICON, group.id, kNeutral, group.data)
-                           : updater->Update(RT_GROUP_ICON, group.name, kNeutral, group.data);
+        ec = updater->Update(RT_VERSION, static_cast<WORD>(VS_VERSION_INFO), kNeutral, sourceVersion);
         if (ec)
         {
             return ec;
@@ -524,7 +582,8 @@ std::error_code BrandCapsuleFromBinary(
         return ec;
     }
 
-    iconApplied = true;
+    iconApplied = haveIcon;
+    versionApplied = haveVersion;
     return {};
 }
 

@@ -36,21 +36,26 @@ LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::v
 
 [[nodiscard]] std::error_code RemoveResource(const std::filesystem::path& path, const std::wstring& name, LPCWSTR type);
 
-/// @brief Copy the application icon from a PE binary into a capsule executable.
+/// @brief Copy the application icon and/or version resource from a PE binary into a capsule executable.
 ///
 /// The icon transplant is all-or-nothing and gated on the source: the capsule's own icon is deleted
-/// and replaced only when @p sourceBinary actually carries an icon group. A source lacking an icon
-/// leaves the capsule's own icon untouched.
+/// and replaced only when @p sourceBinary actually carries an icon group; likewise the capsule's
+/// RT_VERSION is overwritten only when the source has one. A source lacking either resource leaves the
+/// capsule's corresponding resource untouched. Icon and version are handled independently.
 ///
-/// @param sourceBinary PE file to read the icon from.
-/// @param capsulePath  Capsule executable to modify in place.
-/// @param copyIcon     When true, attempt to transplant the icon.
-/// @param iconApplied  Set to true when an icon was actually transplanted.
+/// @param sourceBinary   PE file to read the icon/version from.
+/// @param capsulePath    Capsule executable to modify in place.
+/// @param copyIcon       When true, attempt to transplant the icon.
+/// @param copyVersion    When true, attempt to transplant the version resource.
+/// @param iconApplied    Set to true when an icon was actually transplanted.
+/// @param versionApplied Set to true when a version resource was actually transplanted.
 [[nodiscard]] std::error_code BrandCapsuleFromBinary(
     const std::filesystem::path& sourceBinary,
     const std::filesystem::path& capsulePath,
     bool copyIcon,
-    bool& iconApplied);
+    bool copyVersion,
+    bool& iconApplied,
+    bool& versionApplied);
 
 class ResourceUpdater final
 {

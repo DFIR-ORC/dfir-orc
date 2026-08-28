@@ -78,8 +78,9 @@ struct CapsuleOptions
     std::optional<fs::path> outputPath;
     bool force = false;
 
-    // 'add' command: by default the capsule adopts the last added binary's icon.
+    // 'add' command: by default the capsule adopts the last added binary's icon and version resource.
     bool ignoreIcon = false;  // --ignore-icon: keep the capsule's own icon
+    bool ignoreVersionInfo = false;  // --ignore-version-info: keep the capsule's own version resource
 
     // Execution Configuration (global options)
     std::optional<bool> relocate;

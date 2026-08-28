@@ -225,6 +225,14 @@ bool TryParseGlobalOption(size_t& idx, const std::vector<std::wstring>& args, Ca
         return true;
     }
 
+    // --ignore-version-info or /ignoreversioninfo
+    if (IsFlag(arg, L"--ignore-version-info") || IsFlag(arg, L"/ignoreversioninfo"))
+    {
+        opts.ignoreVersionInfo = true;
+        idx++;
+        return true;
+    }
+
     return false;
 }
 
