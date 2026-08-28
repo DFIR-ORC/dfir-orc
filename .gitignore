@@ -3,9 +3,7 @@
 
 CMakeUserPresets.json
 
-.review
-
-docs/superpowers
+docs/
 
 # User-specific files
 *.suo
