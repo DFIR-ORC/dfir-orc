@@ -298,6 +298,79 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
         GetArchitectureName(exe.architecture));
 }
 
+// Read, compress and hash every input path into a PreparedRunner. Input order is preserved.
+[[nodiscard]] std::error_code PrepareRunners(const CapsuleOptions& args, std::vector<PreparedRunner>& executables)
+{
+    std::error_code ec;
+
+    executables.reserve(args.inputPaths.size());
+    for (const auto& inputPath : args.inputPaths)
+    {
+        PreparedRunner prepared;
+        ec = PrepareRunner(inputPath, args.architecture, prepared);
+        if (ec)
+        {
+            Log::Error(L"Failed to prepare executable (path: {}) [{}]", inputPath, ec);
+            return ec;
+        }
+
+        executables.push_back(std::move(prepared));
+    }
+
+    return {};
+}
+
+// Reject two inputs that map to the same architecture slot: they would target the same runner resource.
+[[nodiscard]] std::error_code EnsureUniqueArchitectureSlots(const std::vector<PreparedRunner>& executables)
+{
+    for (size_t i = 0; i < executables.size(); ++i)
+    {
+        for (size_t j = i + 1; j < executables.size(); ++j)
+        {
+            if (executables[i].resourceName != executables[j].resourceName)
+            {
+                continue;
+            }
+
+            Log::Error(
+                L"Duplicate architecture slot '{}': '{}' and '{}' both target the same resource",
+                executables[i].resourceName,
+                executables[i].inputPath,
+                executables[j].inputPath);
+            return std::make_error_code(std::errc::invalid_argument);
+        }
+    }
+
+    return {};
+}
+
+// Print the "Updated Capsule" summary: the capsule's size and hash, then one entry per added runner.
+void PrintCapsuleSummary(
+    const fs::path& capsulePath,
+    const std::wstring& sha256,
+    uint64_t size,
+    const std::vector<PreparedRunner>& executables)
+{
+    fmt::print(
+        stdout,
+        L"\nUpdated Capsule: {}\n"
+        L"    Size:   {} ({})\n"
+        L"    Sha256: {}\n"
+        L"\n"
+        L"    Added executables:\n",
+        capsulePath,
+        FormatHumanSize(size),
+        FormatRawBytes(size),
+        sha256);
+
+    for (const auto& exe : executables)
+    {
+        PrintAddedRunnerSummary(exe);
+    }
+
+    fmt::print(stdout, L"\n");
+}
+
 }  // namespace
 
 [[nodiscard]] std::error_code HandleAddRunner(const CapsuleOptions& args)
@@ -317,35 +390,16 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     }
 
     std::vector<PreparedRunner> executables;
-    executables.reserve(args.inputPaths.size());
-
-    for (const auto& inputPath : args.inputPaths)
+    ec = PrepareRunners(args, executables);
+    if (ec)
     {
-        PreparedRunner prepared;
-        ec = PrepareRunner(inputPath, args.architecture, prepared);
-        if (ec)
-        {
-            Log::Error(L"Failed to prepare executable (path: {}) [{}]", inputPath, ec);
-            return ec;
-        }
-
-        executables.push_back(std::move(prepared));
+        return ec;
     }
 
-    for (size_t i = 0; i < executables.size(); ++i)
+    ec = EnsureUniqueArchitectureSlots(executables);
+    if (ec)
     {
-        for (size_t j = i + 1; j < executables.size(); ++j)
-        {
-            if (executables[i].resourceName == executables[j].resourceName)
-            {
-                Log::Error(
-                    L"Duplicate architecture slot '{}': '{}' and '{}' both target the same resource",
-                    executables[i].resourceName,
-                    executables[i].inputPath,
-                    executables[j].inputPath);
-                return std::make_error_code(std::errc::invalid_argument);
-            }
-        }
+        return ec;
     }
 
     fs::path currentExe;
@@ -416,24 +470,7 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
         ec.clear();
     }
 
-    fmt::print(
-        stdout,
-        L"\nUpdated Capsule: {}\n"
-        L"    Size:   {} ({})\n"
-        L"    Sha256: {}\n"
-        L"\n"
-        L"    Added executables:\n",
-        updatedExe,
-        FormatHumanSize(updatedExeSize),
-        FormatRawBytes(updatedExeSize),
-        updatedExeSha256);
-
-    for (const auto& exe : executables)
-    {
-        PrintAddedRunnerSummary(exe);
-    }
-
-    fmt::print(stdout, L"\n");
+    PrintCapsuleSummary(updatedExe, updatedExeSha256, updatedExeSize, executables);
     return {};
 }
 
