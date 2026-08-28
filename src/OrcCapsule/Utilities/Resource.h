@@ -101,11 +101,16 @@ public:
     /// @note An empty @p data deletes the resource. Named-string ids must use the wstring overload.
     [[nodiscard]] std::error_code Update(LPCWSTR type, WORD nameId, WORD langId, const std::vector<uint8_t>& data);
 
+    /// @brief Write the staged updates to the file. This is the only path that commits: an updater that
+    /// goes away without Commit() discards everything it staged (and warns), so a failed multi-step
+    /// update never leaves a half-rewritten resource table behind.
     [[nodiscard]] std::error_code Commit();
 
 private:
     ResourceUpdater(std::filesystem::path path, HANDLE handle);
     ResourceUpdater() = default;
+
+    void Discard();
 
 private:
     std::filesystem::path m_path;

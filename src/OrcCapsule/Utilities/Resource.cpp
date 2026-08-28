@@ -786,21 +786,32 @@ std::error_code ResourceUpdater::Make(std::filesystem::path path, std::unique_pt
 
 ResourceUpdater::~ResourceUpdater()
 {
-    if (m_handle)
+    Discard();
+}
+
+// Drop every staged update without touching the file. Reaching this with an open handle means a caller
+// bailed out between Make() and Commit(): committing here would write whatever subset was staged (for
+// instance deleted icons with no replacement), so discard and say so.
+void ResourceUpdater::Discard()
+{
+    if (!m_handle)
     {
-        Log::Warn(L"Resource updater was not closed properly (file: {})", m_path);
-
-        if (!EndUpdateResourceW(m_handle, FALSE))
-        {
-            Log::Debug(L"Failed EndUpdateResourceW for best effort cleanup (path: {}) [{}]", m_path, LastWin32Error());
-        }
-
-        m_handle = nullptr;
+        return;
     }
+
+    Log::Warn(L"Resource updater closed without Commit, discarding pending update (file: {})", m_path);
+
+    if (!EndUpdateResourceW(m_handle, TRUE))
+    {
+        Log::Debug(L"Failed EndUpdateResourceW while discarding (path: {}) [{}]", m_path, LastWin32Error());
+    }
+
+    m_handle = nullptr;
 }
 
 ResourceUpdater::ResourceUpdater(ResourceUpdater&& other) noexcept
-    : m_handle {other.m_handle}
+    : m_path(std::move(other.m_path))
+    , m_handle {other.m_handle}
 {
     other.m_handle = nullptr;
     other.m_path.clear();
@@ -810,14 +821,7 @@ ResourceUpdater& ResourceUpdater::operator=(ResourceUpdater&& other) noexcept
 {
     if (this != &other)
     {
-        if (m_handle)
-        {
-            if (!EndUpdateResourceW(m_handle, FALSE))
-            {
-                Log::Debug(
-                    L"Failed EndUpdateResourceW for best effor cleanup (path: {}) [{}]", LastWin32Error(), m_path);
-            }
-        }
+        Discard();
 
         m_handle = other.m_handle;
         m_path = std::move(other.m_path);
