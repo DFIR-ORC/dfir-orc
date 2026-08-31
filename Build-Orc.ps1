@@ -32,13 +32,28 @@
 .PARAMETER FastFind
     When set, also builds and packages FastFind.exe in addition to DFIR-ORC.exe.
 
+.PARAMETER CMakeArg
+    Extra arguments appended verbatim to every 'cmake --preset' configure
+    command. They are appended last, so they override both the preset and the
+    vcpkg triplet computed by this script. Each value must start with '-'.
+
+    Use '--' to separate them from this script's own parameters, otherwise
+    PowerShell parses '-DFOO=BAR' as a parameter named '-DFOO'.
+
 .EXAMPLE
     .\Build-Orc.ps1 -BuildConfig Debug,MinSizeRel -Platform x64-xp,x86-xp,x64,x86
 
     Builds two configurations for both platforms in one pass, producing a Debug
     and a MinSizeRel package under .\build\.
+
+.EXAMPLE
+    .\Build-Orc.ps1 -Platform x64 -- -DORC_BUILD_JSON=OFF --fresh
+
+    Configures with two extra cmake arguments.
 #>
-[CmdletBinding()]
+# PositionalBinding=$false is required by -CMakeArg: without it the arguments
+# after '--' bind to $Source, $BuildConfig, ... before reaching $CMakeArg.
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [Parameter()]
     [string] $Source = $PWD,
@@ -63,7 +78,10 @@ param(
     [string] $ToolEmbed = '',
 
     [Parameter()]
-    [switch] $FastFind
+    [switch] $FastFind,
+
+    [Parameter(ValueFromRemainingArguments)]
+    [string[]] $CMakeArg = @()
 )
 
 function Resolve-InputPath {
@@ -143,6 +161,9 @@ foreach ($preset in $presets) {
         $arch, $suffix = ($preset.Platform -replace '^([^ -]+)(.*)$','$1,$2') -split ',',2
         $cmdArgs += "-DVCPKG_TARGET_TRIPLET=$arch-windows-static$suffix-release"
     }
+
+    # Last, so a user provided -D overrides the preset and the triplet above.
+    $cmdArgs += $CMakeArg
 
     Write-Host "Executing: cmake $($cmdArgs -join ' ')"
     & cmake @cmdArgs
