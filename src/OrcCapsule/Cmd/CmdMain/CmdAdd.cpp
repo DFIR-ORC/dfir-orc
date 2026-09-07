@@ -342,11 +342,11 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     fmt::print(
         stdout,
         L"\n"
-        L"        [{}]\n"
-        L"            Path:     {}\n"
-        L"            Size:     {} -> {} ({:.2f}%)\n"
-        L"            Sha256:   {}\n"
-        L"            Platform: {}\n",
+        L"    [{}]\n"
+        L"        Path:     {}\n"
+        L"        Size:     {} -> {} ({:.2f}%)\n"
+        L"        Sha256:   {}\n"
+        L"        Platform: {}\n",
         exe.resourceName,
         exe.inputPath,
         FormatHumanSize(exe.rawDataSize),
@@ -538,31 +538,32 @@ void PrintAddedRunnerSummary(const PreparedRunner& exe)
     return {};
 }
 
-// Print the "Updated Capsule" summary: the capsule's size and hash, then one entry per added runner.
+// Print the "Capsule summary": one entry per added runner, then close with the resulting capsule's size,
+// hash and output path so the last line names the file the caller cares about.
 void PrintCapsuleSummary(
     const fs::path& capsulePath,
     const std::wstring& sha256,
     uint64_t size,
     const std::vector<PreparedRunner>& executables)
 {
-    fmt::print(
-        stdout,
-        L"\nUpdated Capsule: {}\n"
-        L"    Size:   {} ({})\n"
-        L"    Sha256: {}\n"
-        L"\n"
-        L"    Added executables:\n",
-        capsulePath,
-        FormatHumanSize(size),
-        FormatRawBytes(size),
-        sha256);
+    fmt::print(stdout, L"\nCapsule summary:\n");
 
     for (const auto& exe : executables)
     {
         PrintAddedRunnerSummary(exe);
     }
 
-    fmt::print(stdout, L"\n");
+    fmt::print(
+        stdout,
+        L"\n"
+        L"    Size:   {} ({})\n"
+        L"    Sha256: {}\n"
+        L"    Output: {}\n"
+        L"\n",
+        FormatHumanSize(size),
+        FormatRawBytes(size),
+        sha256,
+        capsulePath);
 }
 
 }  // namespace
