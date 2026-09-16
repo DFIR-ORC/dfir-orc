@@ -336,12 +336,10 @@ struct CapsuleBrandingState
 [[nodiscard]] std::error_code
 ReadBrandingSource(const fs::path& sourceBinary, const BrandingRequest& request, BrandingSource& out)
 {
-    ScopedModule source(LoadLibraryExW(
-        sourceBinary.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
-    if (!source)
+    ScopedModule source;
+    if (auto ec = LoadResourceModule(sourceBinary, source); ec)
     {
-        auto ec = LastWin32Error();
-        Log::Debug(L"Failed LoadLibraryExW for branding source (path: {}) [{}]", sourceBinary, ec);
+        Log::Debug(L"Failed to load branding source (path: {}) [{}]", sourceBinary, ec);
         return ec;
     }
 
@@ -397,12 +395,10 @@ ReadBrandingSource(const fs::path& sourceBinary, const BrandingRequest& request,
 [[nodiscard]] std::error_code ReadCapsuleBrandingState(
     const fs::path& capsulePath, const BrandingRequest& request, bool haveIcon, CapsuleBrandingState& out)
 {
-    ScopedModule capsule(LoadLibraryExW(
-        capsulePath.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
-    if (!capsule)
+    ScopedModule capsule;
+    if (auto ec = LoadResourceModule(capsulePath, capsule); ec)
     {
-        auto ec = LastWin32Error();
-        Log::Debug(L"Failed LoadLibraryExW for capsule (path: {}) [{}]", capsulePath, ec);
+        Log::Debug(L"Failed to load capsule resources (path: {}) [{}]", capsulePath, ec);
         return ec;
     }
 
@@ -499,6 +495,34 @@ WriteVersionResource(ResourceUpdater& updater, std::vector<uint8_t>& version, co
 
 }  // namespace
 
+std::error_code LoadResourceModule(const fs::path& path, ScopedModule& module)
+{
+    module.reset(
+        LoadLibraryExW(path.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
+    if (module)
+    {
+        return {};
+    }
+
+    // XP and 2003 do not know LOAD_LIBRARY_AS_IMAGE_RESOURCE. Retried on any error rather than on the one XP is
+    // expected to return: a genuinely unreadable file simply fails twice.
+    const auto imageResourceError = LastWin32Error();
+    module.reset(LoadLibraryExW(path.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE));
+    if (!module)
+    {
+        auto ec = LastWin32Error();
+        Log::Debug(
+            L"Failed LoadLibraryExW (path: {}, as image resource: [{}], as datafile: [{}])",
+            path,
+            imageResourceError,
+            ec);
+        return ec;
+    }
+
+    Log::Debug(L"Loaded '{}' as a datafile, the image resource load failed [{}]", path, imageResourceError);
+    return {};
+}
+
 std::error_code LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::vector<uint8_t>& output)
 {
     return LoadResourceRaw(hModule, name.c_str(), type, output);
@@ -507,14 +531,10 @@ std::error_code LoadResourceData(HMODULE hModule, const std::wstring& name, LPCW
 std::error_code
 LoadResourceData(const fs::path& path, const std::wstring& name, LPCWSTR type, std::vector<uint8_t>& output)
 {
-    std::error_code ec;
-
-    ScopedModule module(
-        LoadLibraryExW(path.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
-    if (!module)
+    ScopedModule module;
+    std::error_code ec = LoadResourceModule(path, module);
+    if (ec)
     {
-        ec = LastWin32Error();
-        Log::Debug(L"Failed LoadLibraryExW (path: {}) [{}]", path, ec);
         return ec;
     }
 

@@ -14,6 +14,7 @@
 
 #include "Utilities/Error.h"
 #include "Utilities/Log.h"
+#include "Utilities/Resource.h"
 #include "Utilities/Scope.h"
 
 #include "Fmt/std_error_code.h"
@@ -271,13 +272,10 @@ FindLevelAttribute(std::string_view text, const ElementSpan& element, LevelAttri
 {
     manifest.clear();
 
-    ScopedModule module(
-        LoadLibraryExW(binary.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
-    if (!module)
+    ScopedModule module;
+    if (auto ec = LoadResourceModule(binary, module); ec)
     {
-        auto ec = LastWin32Error();
-        Log::Debug(L"Failed LoadLibraryExW (path: {}) [{}]", binary, ec);
-        return ec;
+        return ec;  // LoadResourceModule logged it
     }
 
     HRSRC hResource =

@@ -17,6 +17,11 @@
 #include <windows.h>
 
 #include "Utilities/Manifest.h"
+#include "Utilities/Scope.h"
+
+// Map 'path' to read its resources, never to run it. LOAD_LIBRARY_AS_IMAGE_RESOURCE is Vista+: XP and 2003 refuse
+// it, and the load is then retried with LOAD_LIBRARY_AS_DATAFILE alone, which reads resources the same way.
+[[nodiscard]] std::error_code LoadResourceModule(const std::filesystem::path& path, ScopedModule& module);
 
 [[nodiscard]] std::error_code
 LoadResourceData(HMODULE hModule, const std::wstring& name, LPCWSTR type, std::vector<uint8_t>& output);

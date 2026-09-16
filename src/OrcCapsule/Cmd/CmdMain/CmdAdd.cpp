@@ -68,13 +68,11 @@ namespace {
 {
     std::error_code ec;
 
-    ScopedModule module(
-        LoadLibraryExW(path.native().c_str(), nullptr, LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE));
-    if (!module)
+    ScopedModule module;
+    ec = LoadResourceModule(path, module);
+    if (ec)
     {
-        ec = LastWin32Error();
-        Log::Debug(L"Failed LoadLibraryExW (path: {}) [{}]", path, ec);
-        return ec;
+        return ec;  // LoadResourceModule logged it
     }
 
     std::wstring value;
