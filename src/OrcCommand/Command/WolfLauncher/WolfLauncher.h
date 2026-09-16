@@ -116,6 +116,23 @@ public:
         bool bNoJournaling = false;
         bool bTeeClearTextOutput = false;
         bool bWERDontShowUI = false;
+        // On by default, honoured only when a <recipient> is configured; encrypting renames the file
+        // ("outcome.json" becomes "outcome.json.7z.p7b"), so readers of a collection must expect the sealed name.
+        bool bEncryptOutline = true;
+        bool bEncryptOutcome = true;
+        // When encrypted, all four files are sealed like the command archives (7z, journal, CMS). The log
+        // and the console tee are sealed once closed, just before they are handed to the upload agents,
+        // and the plaintext is then removed: a CMS envelope has to be finalised to be decryptable, so
+        // sealing them as they are written would leave the log of a killed process unreadable.
+        bool bEncryptLog = true;
+        bool bEncryptConsole = true;
+        // upload="no" keeps the file on the host only. These four are the collection's own record, not
+        // collected data, so they are sent to every <upload> whatever its include/exclude say: this is
+        // the one switch that decides whether they leave the machine.
+        bool bUploadOutline = true;
+        bool bUploadOutcome = true;
+        bool bUploadLog = true;
+        bool bUploadConsole = true;
         bool bNoLimits = false;
         std::set<std::wstring, CaseInsensitive> NoLimitsKeywords;
 
@@ -251,6 +268,7 @@ private:
 
     std::optional<Guard::Handle> m_hInstanceEvent;
     std::wstring m_instanceId;
+    std::wstring m_outlineResolvedPath;
 };
 
 }  // namespace Command::Wolf

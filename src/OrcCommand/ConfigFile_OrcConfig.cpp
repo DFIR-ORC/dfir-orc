@@ -50,6 +50,17 @@ HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(Orc::Command::ConsoleConfiguration::Register, ORC_CONSOLE)))
         return hr;
+    // Same indices as on the embedded <log>/<console> nodes: both are built by the same Register functions.
+    // There is no local <outline> or <outcome>: their path, encryption and upload stay with the embedded
+    // configuration.
+    if (FAILED(hr = item[ORC_LOGGING].AddAttribute(L"encrypt", WOLFLAUNCHER_LOG_ENCRYPT, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item[ORC_LOGGING].AddAttribute(L"upload", WOLFLAUNCHER_LOG_UPLOAD, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item[ORC_CONSOLE].AddAttribute(L"encrypt", WOLFLAUNCHER_CONSOLE_ENCRYPT, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item[ORC_CONSOLE].AddAttribute(L"upload", WOLFLAUNCHER_CONSOLE_UPLOAD, ConfigItem::OPTION)))
+        return hr;
     if (FAILED(hr = item.AddAttribute(L"norelocate", ORC_NORELOCATE, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"MultipleInstance", ORC_MULTIPLE_INSTANCE, ConfigItem::OPTION)))

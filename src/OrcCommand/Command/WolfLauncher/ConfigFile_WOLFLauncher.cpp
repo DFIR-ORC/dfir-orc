@@ -221,6 +221,28 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(L"outcome", Orc::Config::Common::output, WOLFLAUNCHER_OUTCOME)))
         return hr;
+    if (FAILED(
+            hr = item[WOLFLAUNCHER_OUTLINE].AddAttribute(L"encrypt", WOLFLAUNCHER_OUTLINE_ENCRYPT, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(
+            hr = item[WOLFLAUNCHER_OUTCOME].AddAttribute(L"encrypt", WOLFLAUNCHER_OUTCOME_ENCRYPT, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item[WOLFLAUNCHER_LOG].AddAttribute(L"encrypt", WOLFLAUNCHER_LOG_ENCRYPT, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(
+            hr = item[WOLFLAUNCHER_CONSOLE].AddAttribute(L"encrypt", WOLFLAUNCHER_CONSOLE_ENCRYPT, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(
+            hr = item[WOLFLAUNCHER_OUTLINE].AddAttribute(L"upload", WOLFLAUNCHER_OUTLINE_UPLOAD, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(
+            hr = item[WOLFLAUNCHER_OUTCOME].AddAttribute(L"upload", WOLFLAUNCHER_OUTCOME_UPLOAD, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item[WOLFLAUNCHER_LOG].AddAttribute(L"upload", WOLFLAUNCHER_LOG_UPLOAD, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(
+            hr = item[WOLFLAUNCHER_CONSOLE].AddAttribute(L"upload", WOLFLAUNCHER_CONSOLE_UPLOAD, ConfigItem::OPTION)))
+        return hr;
     if (FAILED(hr = item.AddAttribute(L"childdebug", WOLFLAUNCHER_CHILDDEBUG, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"command_timeout", WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT, ConfigItem::OPTION)))

@@ -28,6 +28,12 @@
 #include "FileStream.h"
 #include "SystemIdentity.h"
 #include "CryptoHashStream.h"
+#include "EncodeMessageStream.h"
+#include "JournalingStream.h"
+#include "AccumulatingStream.h"
+#include "MemoryStream.h"
+#include "ArchiveCreate.h"
+#include "BinaryBuffer.h"
 
 #include "Utils/Guard.h"
 #include "Utils/TypeTraits.h"
@@ -52,6 +58,280 @@ using namespace Concurrency;
 namespace {
 
 constexpr std::wstring_view kInfo = L"Info";
+
+// The certificates every <recipient> declares, or nothing at all when this particular output was told
+// not to encrypt. Returning an empty list for "do not encrypt" lets each caller treat "no recipient is
+// configured" and "this output opts out" the same way, which is what they both mean: write it in clear.
+std::vector<CBinaryBuffer> RecipientCertificates(
+    bool encrypt,
+    const std::vector<std::shared_ptr<Orc::Command::Wolf::WolfExecution::Recipient>>& recipients)
+{
+    std::vector<CBinaryBuffer> certificates;
+    if (!encrypt)
+    {
+        return certificates;
+    }
+
+    for (const auto& recipient : recipients)
+    {
+        certificates.push_back(recipient->Certificate);
+    }
+
+    return certificates;
+}
+
+// How the files a collection writes about itself - outline, outcome, log, console output - are protected
+// when a recipient exists: exactly like the command archives, as a 7z archive inside a CMS message. Every
+// encrypted file of a collection is then a "<name>.7z.p7b" that orc-decrypt opens the same way, instead
+// of two formats a reader has to tell apart.
+constexpr std::wstring_view kSealedSuffix = L".7z.p7b";
+
+struct SealOptions
+{
+    bool useJournal = true;  // false under /no_journaling, as for the command archives
+    std::wstring temporaryDirectory;  // where the accumulating stream spills when the journal is off
+};
+
+void RemoveIncompleteFile(const std::filesystem::path& path)
+{
+    std::error_code ec;
+    if (!std::filesystem::remove(path, ec) && ec)
+    {
+        Log::Debug(L"Failed to remove incomplete file '{}' [{}]", path, ec);
+    }
+}
+
+// Write 'content' as the single entry 'nameInArchive' of a 7z archive encrypted for 'recipients'. The chain
+// is the one the command archives use (7z -> journal -> CMS -> file): the 7z writer seeks back to patch its
+// headers while a CMS message can only go forward, so the journal records each write with its offset and
+// unstream replays them. Without the journal the archive is accumulated first, as /no_journaling does.
+HRESULT WriteSealedArchive(
+    const std::filesystem::path& outputPath,
+    const std::wstring& nameInArchive,
+    const std::shared_ptr<ByteStream>& content,
+    const std::vector<CBinaryBuffer>& recipients,
+    const SealOptions& options)
+{
+    auto output = std::make_shared<FileStream>();
+    if (HRESULT hr = output->WriteTo(outputPath.c_str()); FAILED(hr))
+    {
+        Log::Debug(L"Failed to create '{}' [{}]", outputPath, SystemError(hr));
+        return hr;
+    }
+
+    auto encoder = std::make_shared<EncodeMessageStream>();
+    for (const auto& certificate : recipients)
+    {
+        if (HRESULT hr = encoder->AddRecipient(certificate); FAILED(hr))
+        {
+            Log::Debug(L"Failed to add a recipient certificate for '{}' [{}]", outputPath, SystemError(hr));
+            return hr;
+        }
+    }
+
+    if (HRESULT hr = encoder->Initialize(output); FAILED(hr))
+    {
+        Log::Debug(L"Failed to initialize the encryption stream for '{}' [{}]", outputPath, SystemError(hr));
+        return hr;
+    }
+
+    std::shared_ptr<ByteStream> archiveStream;
+    if (options.useJournal)
+    {
+        auto journal = std::make_shared<JournalingStream>();
+        if (HRESULT hr = journal->Open(encoder); FAILED(hr))
+        {
+            Log::Debug(L"Failed to open the journaling stream for '{}' [{}]", outputPath, SystemError(hr));
+            return hr;
+        }
+
+        archiveStream = journal;
+    }
+    else
+    {
+        auto accumulator = std::make_shared<AccumulatingStream>();
+        if (HRESULT hr = accumulator->Open(encoder, options.temporaryDirectory, 100 * 1024 * 1024); FAILED(hr))
+        {
+            Log::Debug(L"Failed to open the accumulating stream for '{}' [{}]", outputPath, SystemError(hr));
+            return hr;
+        }
+
+        archiveStream = accumulator;
+    }
+
+    auto compressor = ArchiveCreate::MakeCreate(ArchiveFormat::SevenZip, false);
+    if (compressor == nullptr)
+    {
+        Log::Debug(L"Failed to create a 7z compressor for '{}'", outputPath);
+        return E_FAIL;
+    }
+
+    if (HRESULT hr = compressor->InitArchive(archiveStream); FAILED(hr))
+    {
+        Log::Debug(L"Failed to initialize the 7z archive '{}' [{}]", outputPath, SystemError(hr));
+        return hr;
+    }
+
+    // The path argument is copied into a std::wstring, so it must not be null.
+    if (HRESULT hr = compressor->AddStream(nameInArchive.c_str(), nameInArchive.c_str(), content); FAILED(hr))
+    {
+        Log::Debug(L"Failed to add '{}' to '{}' [{}]", nameInArchive, outputPath, SystemError(hr));
+        return hr;
+    }
+
+    // Complete closes the archive stream, which closes the journal and finalises the CMS message: a message
+    // that is not finalised cannot be decrypted.
+    if (HRESULT hr = compressor->Complete(); FAILED(hr))
+    {
+        Log::Debug(L"Failed to complete '{}' [{}]", outputPath, SystemError(hr));
+        return hr;
+    }
+
+    output->Close();
+    return S_OK;
+}
+
+// Seal an already-closed file into "<path>.7z.p7b" for 'recipients' and return the path to hand to the upload
+// agents. On any failure the original path is returned and the caller uploads the plaintext: a log that
+// reaches the analyst in the clear is bad, but a log that reaches nobody is worse, and the failure is reported.
+//
+// Sealing after the fact, rather than as the bytes are written, is deliberate. A CMS envelope must be
+// finalised to be decryptable, so streaming the log into one would make the log of a killed run unreadable -
+// exactly the run whose log matters. Writing plaintext first also keeps the file readable on the host while
+// the collection is going on, and it is removed once the sealed copy exists. An empty file needs no special
+// case: the 7z archive around it is never empty.
+std::filesystem::path SealClosedFile(
+    const std::filesystem::path& path,
+    const std::vector<CBinaryBuffer>& recipients,
+    const SealOptions& options)
+{
+    if (recipients.empty())
+    {
+        return path;
+    }
+
+    const std::filesystem::path sealedPath = path.wstring() + std::wstring(kSealedSuffix);
+
+    auto input = std::make_shared<FileStream>();
+    if (HRESULT hr = input->ReadFrom(path.c_str()); FAILED(hr))
+    {
+        Log::Error(
+            L"Failed to open '{}' for encryption; it is kept in clear, while the outcome names it as encrypted [{}]",
+            path,
+            SystemError(hr));
+        return path;
+    }
+
+    if (HRESULT hr = WriteSealedArchive(sealedPath, path.filename().wstring(), input, recipients, options); FAILED(hr))
+    {
+        Log::Error(
+            L"Failed to encrypt '{}' into '{}'; it is kept in clear, while the outcome names it as encrypted [{}]",
+            path,
+            sealedPath,
+            SystemError(hr));
+        input->Close();
+        RemoveIncompleteFile(sealedPath);
+        return path;
+    }
+
+    input->Close();
+
+    if (!DeleteFileW(path.c_str()))
+    {
+        Log::Warn(L"Failed to remove '{}' after encrypting it [{}]", path, LastWin32Error());
+    }
+
+    Log::Debug(L"Encrypted '{}' into '{}'", path, sealedPath);
+    return sealedPath;
+}
+
+// Where a structured output (outline, outcome) is written. In clear it goes straight to its configured path;
+// sealed, it is built in memory and only the "<path>.7z.p7b" archive reaches the disk, so the clear text
+// never does.
+struct StructuredOutputTarget
+{
+    std::shared_ptr<StructuredOutput::IWriter> writer;
+    std::shared_ptr<MemoryStream> buffer;  // null when written in clear
+    // The file actually produced. Callers upload and record this one rather than reading the configured
+    // OutputSpec path again, which lacks the sealed suffix.
+    std::wstring path;
+};
+
+std::optional<StructuredOutputTarget> OpenStructuredOutput(const OutputSpec& output, bool sealed)
+{
+    auto options = std::make_unique<StructuredOutput::JSON::Options>();
+    options->Encoding = OutputSpec::Encoding::UTF8;
+    options->bPrettyPrint = true;
+
+    StructuredOutputTarget target;
+
+    if (!sealed)
+    {
+        target.path = output.Path;
+        target.writer = StructuredOutputWriter::GetWriter(output, std::move(options));
+        if (target.writer == nullptr)
+        {
+            Log::Debug(L"Failed to create a writer for '{}'", output.Path);
+            return std::nullopt;
+        }
+
+        return target;
+    }
+
+    target.path = output.Path + std::wstring(kSealedSuffix);
+    target.buffer = std::make_shared<MemoryStream>();
+    if (HRESULT hr = target.buffer->OpenForReadWrite(); FAILED(hr))
+    {
+        Log::Debug(L"Failed to open the memory stream for '{}' [{}]", output.Path, SystemError(hr));
+        return std::nullopt;
+    }
+
+    target.writer = StructuredOutputWriter::GetWriter(target.buffer, output.Type, std::move(options));
+    if (target.writer == nullptr)
+    {
+        Log::Debug(L"Failed to create a writer for '{}'", output.Path);
+        return std::nullopt;
+    }
+
+    return target;
+}
+
+// Close the writer and, for a sealed output, write the archive. The entry inside the archive keeps the
+// configured file name, so orc-decrypt followed by 7z gives back the file under the name the configuration
+// asked for.
+HRESULT CloseStructuredOutput(
+    StructuredOutputTarget& target,
+    const OutputSpec& output,
+    const std::vector<CBinaryBuffer>& recipients,
+    const SealOptions& options)
+{
+    if (HRESULT hr = target.writer->Close(); FAILED(hr))
+    {
+        Log::Debug(L"Failed to close the writer for '{}' [{}]", output.Path, SystemError(hr));
+        return hr;
+    }
+
+    if (target.buffer == nullptr)
+    {
+        return S_OK;
+    }
+
+    if (HRESULT hr = target.buffer->SetFilePointer(0, FILE_BEGIN, nullptr); FAILED(hr))
+    {
+        Log::Debug(L"Failed to rewind the memory stream for '{}' [{}]", output.Path, SystemError(hr));
+        return hr;
+    }
+
+    const std::wstring nameInArchive = std::filesystem::path(output.Path).filename().wstring();
+    if (HRESULT hr = WriteSealedArchive(target.path, nameInArchive, target.buffer, recipients, options); FAILED(hr))
+    {
+        Log::Debug(L"Failed to write '{}' [{}]", target.path, SystemError(hr));
+        RemoveIncompleteFile(target.path);
+        return hr;
+    }
+
+    return S_OK;
+}
 
 // Rebuild one recorded upload request for the spec it is about to be replayed to.
 //
@@ -403,16 +683,29 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, const GUID& id, HAN
     wolfLauncher.SetVersion(kOrcFileVerString);
     wolfLauncher.SetCommandLineValue(GetCommandLineW());
 }
-void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, StandardOutput& standardOutput)
+// The name a run artifact is delivered under. The outcome is written while the console output and the log are
+// still open, before SealClosedFile turns them into "<name>.7z.p7b": it has to name them as they will be.
+std::wstring DeliveredFileName(const std::filesystem::path& path, bool sealed)
+{
+    std::wstring name = path.filename().wstring();
+    if (sealed)
+    {
+        name += kSealedSuffix;
+    }
+
+    return name;
+}
+
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, StandardOutput& standardOutput, bool sealed)
 {
     auto consolePath = standardOutput.FileTee().Path();
     if (consolePath)
     {
-        outcome.SetConsoleFileName(consolePath->filename());
+        outcome.SetConsoleFileName(DeliveredFileName(*consolePath, sealed));
     }
 }
 
-void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, UtilitiesLogger& logging)
+void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, UtilitiesLogger& logging, bool sealed)
 {
     const auto& fileSink = logging.fileSink();
     if (fileSink)
@@ -420,19 +713,19 @@ void UpdateOutcome(Command::Wolf::Outcome::Outcome& outcome, UtilitiesLogger& lo
         auto logPath = fileSink->OutputPath();
         if (logPath)
         {
-            outcome.SetLogFileName(logPath->filename());
+            outcome.SetLogFileName(DeliveredFileName(*logPath, sealed));
         }
     }
 }
 
-void UpdateOutcomeWithOutline(Command::Wolf::Outcome::Outcome& outcome, OutputSpec& outline)
+void UpdateOutcomeWithOutline(Command::Wolf::Outcome::Outcome& outcome, const std::wstring& outlineResolvedPath)
 {
-    if (outline.Type == OutputSpec::Kind::None)
+    if (outlineResolvedPath.empty())
     {
         return;
     }
 
-    std::filesystem::path path(outline.Path);
+    std::filesystem::path path(outlineResolvedPath);
     outcome.SetOutlineFileName(path.filename());
 }
 
@@ -449,35 +742,37 @@ Result<uint64_t> GetFileSize(const std::filesystem::path& path)
     return fs.GetSize();
 }
 
-Orc::Result<void> DumpOutcome(Command::Wolf::Outcome::Outcome& outcome, const OutputSpec& output)
+Orc::Result<void> DumpOutcome(
+    Command::Wolf::Outcome::Outcome& outcome,
+    const OutputSpec& output,
+    const std::vector<CBinaryBuffer>& recipients,
+    const SealOptions& sealOptions,
+    std::wstring& resolvedPath)
 {
-    auto options = std::make_unique<StructuredOutput::JSON::Options>();
-    options->Encoding = OutputSpec::Encoding::UTF8;
-    options->bPrettyPrint = true;
-
-    auto writer = StructuredOutputWriter::GetWriter(output, std::move(options));
-    if (writer == nullptr)
+    std::optional<StructuredOutputTarget> target = OpenStructuredOutput(output, !recipients.empty());
+    if (!target)
     {
         Log::Error(L"Failed to create writer for outcome file {}", output.Path);
         return SystemError(E_FAIL);
     }
 
-    auto rv = Write(outcome, writer);
+    resolvedPath = target->path;
+
+    auto rv = Write(outcome, target->writer);
     if (rv.has_error())
     {
         Log::Error(L"Failed to write outcome file [{}]", rv);
         return rv;
     }
 
-    HRESULT hr = writer->Close();
-    if (FAILED(hr))
+    if (HRESULT hr = CloseStructuredOutput(*target, output, recipients, sealOptions); FAILED(hr))
     {
         const auto error = SystemError(hr);
         Log::Error(L"Failed to close outcome file [{}]", error);
         return error;
     }
 
-    Log::Debug(L"Written outcome file: '{}' (size: {})", output.Path, ToOptional(GetFileSize(output.Path)));
+    Log::Debug(L"Written outcome file: '{}' (size: {})", resolvedPath, ToOptional(GetFileSize(resolvedPath)));
     return Orc::Success<void>();
 }
 
@@ -936,16 +1231,18 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 
     try
     {
-        auto options = std::make_unique<StructuredOutput::JSON::Options>();
-        options->Encoding = OutputSpec::Encoding::UTF8;
-        options->bPrettyPrint = true;
+        const std::vector<CBinaryBuffer> recipients =
+            RecipientCertificates(config.bEncryptOutline, config.m_Recipients);
 
-        auto writer = StructuredOutputWriter::GetWriter(config.Outline, std::move(options));
-        if (writer == nullptr)
+        std::optional<StructuredOutputTarget> target = OpenStructuredOutput(config.Outline, !recipients.empty());
+        if (!target)
         {
             Log::Error(L"Failed to create writer for outline file {}", config.Outline.Path);
             return E_INVALIDARG;
         }
+
+        m_outlineResolvedPath = target->path;
+        const std::shared_ptr<StructuredOutput::IWriter>& writer = target->writer;
 
         writer->WriteNamed(L"version", L"1.0");
         writer->BeginElement(L"dfir-orc");
@@ -1090,7 +1387,13 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 
         writer->EndElement(L"outline");
         writer->EndElement(L"dfir-orc");
-        writer->Close();
+
+        const SealOptions sealOptions {config.bUseJournalWhenEncrypting, config.TempWorkingDir.Path};
+        if (HRESULT hr = CloseStructuredOutput(*target, config.Outline, recipients, sealOptions); FAILED(hr))
+        {
+            Log::Error(L"Failed to write outline file '{}' [{}]", m_outlineResolvedPath, SystemError(hr));
+            return hr;
+        }
     }
     catch (std::exception& e)
     {
@@ -1105,10 +1408,12 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
         return E_UNEXPECTED;
     }
 
+    const std::wstring outlineFileName = std::filesystem::path(m_outlineResolvedPath).filename().wstring();
+
     auto outlineSize = [&]() {
         FileStream fs;
 
-        if (FAILED(fs.ReadFrom(config.Outline.Path.c_str())))
+        if (FAILED(fs.ReadFrom(m_outlineResolvedPath.c_str())))
             return 0LLU;
 
         return fs.GetSize();
@@ -1123,15 +1428,21 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
 
         Log::Info(
             L"Outline: {} (took {} seconds, size {} bytes)",
-            config.Outline.FileName,
+            outlineFileName,
             duration.count() / 10000000,
             outlineSize());
     }
 
-    std::error_code ec;
-    if (std::filesystem::exists(config.Outline.Path, ec))
+    if (!config.bUploadOutline)
     {
-        UploadSingleFile(config.Outline.FileName, config.Outline.Path, UploadSubject::RunArtifact);
+        Log::Debug(L"Not uploading outline '{}': upload=\"no\"", m_outlineResolvedPath);
+        return S_OK;
+    }
+
+    std::error_code ec;
+    if (std::filesystem::exists(m_outlineResolvedPath, ec))
+    {
+        UploadSingleFile(outlineFileName, m_outlineResolvedPath, UploadSubject::RunArtifact);
     }
 
     return S_OK;
@@ -1225,11 +1536,18 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
     }
 
     ::UpdateOutcome(outcome, config.m_Recipients);
-    ::UpdateOutcome(outcome, m_standardOutput);
-    ::UpdateOutcome(outcome, m_logging);
-    ::UpdateOutcomeWithOutline(outcome, config.Outline);
+    // Sealed later exactly when SealClosedFile gets recipients for them (see Run_Execute).
+    const bool consoleSealed = !RecipientCertificates(config.bEncryptConsole, config.m_Recipients).empty();
+    const bool logSealed = !RecipientCertificates(config.bEncryptLog, config.m_Recipients).empty();
+    ::UpdateOutcome(outcome, m_standardOutput, consoleSealed);
+    ::UpdateOutcome(outcome, m_logging, logSealed);
+    ::UpdateOutcomeWithOutline(outcome, m_outlineResolvedPath);
 
-    auto rv = ::DumpOutcome(outcome, config.Outcome);
+    const std::vector<CBinaryBuffer> recipients = RecipientCertificates(config.bEncryptOutcome, config.m_Recipients);
+
+    std::wstring resolvedPath;
+    const SealOptions sealOptions {config.bUseJournalWhenEncrypting, config.TempWorkingDir.Path};
+    auto rv = ::DumpOutcome(outcome, config.Outcome, recipients, sealOptions, resolvedPath);
     if (rv.has_error())
     {
 
@@ -1237,8 +1555,14 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
         return rv;
     }
 
+    if (!config.bUploadOutcome)
+    {
+        Log::Debug(L"Not uploading outcome '{}': upload=\"no\"", resolvedPath);
+        return Success<void>();
+    }
+
     std::error_code ec;
-    auto exists = std::filesystem::exists(config.Outcome.Path, ec);
+    auto exists = std::filesystem::exists(resolvedPath, ec);
     if (ec)
     {
         Log::Error(L"Failed to upload outcome file [{}]", ec);
@@ -1252,7 +1576,8 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
         return ec;
     }
 
-    UploadSingleFile(config.Outcome.FileName, config.Outcome.Path, UploadSubject::RunArtifact);
+    UploadSingleFile(
+        std::filesystem::path(resolvedPath).filename().wstring(), resolvedPath, UploadSubject::RunArtifact);
     return Success<void>();
 }
 
@@ -1560,8 +1885,21 @@ HRESULT Main::Run_Execute()
 
         m_standardOutput.FileTee().Close(ec);
 
-        const std::filesystem::path localPath = *m_standardOutput.FileTee().Path();
-        UploadSingleFile(localPath.filename(), localPath, UploadSubject::RunArtifact);
+        // Encrypt between the close and the upload: the tee is closed just above, so the bytes are all
+        // on disk, and nothing has been handed to the upload agents yet.
+        const std::filesystem::path localPath = SealClosedFile(
+            *m_standardOutput.FileTee().Path(),
+            RecipientCertificates(config.bEncryptConsole, config.m_Recipients),
+            SealOptions {config.bUseJournalWhenEncrypting, config.TempWorkingDir.Path});
+
+        if (config.bUploadConsole)
+        {
+            UploadSingleFile(localPath.filename(), localPath, UploadSubject::RunArtifact);
+        }
+        else
+        {
+            Log::Debug(L"Not uploading console output '{}': upload=\"no\"", localPath);
+        }
     }
 
     const auto start = FromSystemTime(theStartTime);
@@ -1593,7 +1931,22 @@ HRESULT Main::Run_Execute()
 
         if (localPath)
         {
-            UploadSingleFile(localPath->filename(), *localPath, UploadSubject::RunArtifact);
+            // Same as the console tee: the sink is closed, so the file is complete and can be enveloped
+            // whole. Nothing written after this point reaches it either way.
+            const std::filesystem::path uploadPath = SealClosedFile(
+                *localPath,
+                RecipientCertificates(config.bEncryptLog, config.m_Recipients),
+                SealOptions {config.bUseJournalWhenEncrypting, config.TempWorkingDir.Path});
+
+            if (config.bUploadLog)
+            {
+                UploadSingleFile(uploadPath.filename(), uploadPath, UploadSubject::RunArtifact);
+            }
+            else
+            {
+                // The sink is closed: this line reaches the console only, never the log file it is about.
+                Log::Debug(L"Not uploading log '{}': upload=\"no\"", uploadPath);
+            }
         }
     }
 

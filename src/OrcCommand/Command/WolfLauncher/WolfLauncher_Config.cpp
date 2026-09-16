@@ -222,6 +222,46 @@ struct CaseInsensitiveComparator
     }
 };
 
+// For the yes-by-default switches 'encrypt' and 'upload': only an explicit "no", "false" or "0" turns
+// them off, so a typo keeps the safe behaviour for 'encrypt' and the historical one for 'upload'.
+bool IsExplicitNo(const std::wstring& value)
+{
+    using namespace std::string_view_literals;
+
+    return equalCaseInsensitive(L"No"sv, value) || equalCaseInsensitive(L"false"sv, value)
+        || equalCaseInsensitive(L"0"sv, value);
+}
+
+// <log>/<console> in a /local configuration. upload="no" keeps the file on the host, as in the embedded
+// configuration. encrypt="no" is refused: whoever holds a local file must not be able to lift the encryption the
+// embedded configuration imposes. A local <recipient> can still add encryption.
+void ApplyLocalRunArtifactSwitches(
+    const ConfigItem& node,
+    DWORD encryptIndex,
+    DWORD uploadIndex,
+    const wchar_t* name,
+    bool& upload)
+{
+    if (!node)
+    {
+        return;
+    }
+
+    if (node[encryptIndex] && IsExplicitNo(node[encryptIndex]))
+    {
+        Log::Warn(
+            L"Ignoring encrypt=\"{}\" on <{}> in the local configuration: only the embedded configuration can turn "
+            L"encryption off",
+            node[encryptIndex].c_str(),
+            name);
+    }
+
+    if (node[uploadIndex] && IsExplicitNo(node[uploadIndex]))
+    {
+        upload = false;
+    }
+}
+
 }  // namespace
 
 ConfigItem::InitFunction Main::GetXmlConfigBuilder()
@@ -401,6 +441,18 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         {
             Log::Warn(L"Failed to configure DFIR-ORC outline file [{}]", SystemError(hr));
         }
+
+        if (configitem[WOLFLAUNCHER_OUTLINE][WOLFLAUNCHER_OUTLINE_ENCRYPT]
+            && IsExplicitNo(configitem[WOLFLAUNCHER_OUTLINE][WOLFLAUNCHER_OUTLINE_ENCRYPT]))
+        {
+            config.bEncryptOutline = false;
+        }
+
+        if (configitem[WOLFLAUNCHER_OUTLINE][WOLFLAUNCHER_OUTLINE_UPLOAD]
+            && IsExplicitNo(configitem[WOLFLAUNCHER_OUTLINE][WOLFLAUNCHER_OUTLINE_UPLOAD]))
+        {
+            config.bUploadOutline = false;
+        }
     }
 
     if (configitem[WOLFLAUNCHER_OUTCOME])
@@ -410,6 +462,42 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         {
             Log::Warn(L"Failed to configure DFIR-ORC outcome file [{}]", SystemError(hr));
         }
+
+        if (configitem[WOLFLAUNCHER_OUTCOME][WOLFLAUNCHER_OUTCOME_ENCRYPT]
+            && IsExplicitNo(configitem[WOLFLAUNCHER_OUTCOME][WOLFLAUNCHER_OUTCOME_ENCRYPT]))
+        {
+            config.bEncryptOutcome = false;
+        }
+
+        if (configitem[WOLFLAUNCHER_OUTCOME][WOLFLAUNCHER_OUTCOME_UPLOAD]
+            && IsExplicitNo(configitem[WOLFLAUNCHER_OUTCOME][WOLFLAUNCHER_OUTCOME_UPLOAD]))
+        {
+            config.bUploadOutcome = false;
+        }
+    }
+
+    if (configitem[WOLFLAUNCHER_LOG][WOLFLAUNCHER_LOG_ENCRYPT]
+        && IsExplicitNo(configitem[WOLFLAUNCHER_LOG][WOLFLAUNCHER_LOG_ENCRYPT]))
+    {
+        config.bEncryptLog = false;
+    }
+
+    if (configitem[WOLFLAUNCHER_LOG][WOLFLAUNCHER_LOG_UPLOAD]
+        && IsExplicitNo(configitem[WOLFLAUNCHER_LOG][WOLFLAUNCHER_LOG_UPLOAD]))
+    {
+        config.bUploadLog = false;
+    }
+
+    if (configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_ENCRYPT]
+        && IsExplicitNo(configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_ENCRYPT]))
+    {
+        config.bEncryptConsole = false;
+    }
+
+    if (configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_UPLOAD]
+        && IsExplicitNo(configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_UPLOAD]))
+    {
+        config.bUploadConsole = false;
     }
 
     if (!configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT])
@@ -758,6 +846,15 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
     {
         ConsoleConfiguration::Parse(configitem[ORC_CONSOLE], m_consoleConfiguration);
     }
+
+    ApplyLocalRunArtifactSwitches(
+        configitem[ORC_LOGGING], WOLFLAUNCHER_LOG_ENCRYPT, WOLFLAUNCHER_LOG_UPLOAD, L"log", config.bUploadLog);
+    ApplyLocalRunArtifactSwitches(
+        configitem[ORC_CONSOLE],
+        WOLFLAUNCHER_CONSOLE_ENCRYPT,
+        WOLFLAUNCHER_CONSOLE_UPLOAD,
+        L"console",
+        config.bUploadConsole);
 
     return S_OK;
 }

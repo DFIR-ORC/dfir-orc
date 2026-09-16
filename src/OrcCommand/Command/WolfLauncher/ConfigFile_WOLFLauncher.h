@@ -83,6 +83,22 @@ constexpr auto WOLFLAUNCHER_PRIORITY = 11L;
 constexpr auto WOLFLAUNCHER_MULTIPLE_INSTANCE = 12L;
 constexpr auto WOLFLAUNCHER_INSTANCE_ID = 13L;
 
+// 'encrypt' is added here, on nodes whose own items are registered elsewhere, so every index must
+// continue that node's numbering: ConfigItem::AddAttribute requires index == SubItems.size(). Outline
+// and outcome are Common::output nodes (0-7); <log> ends at LogConfigItems::CONFIGITEM_LOG_ENUMCOUNT
+// and <console> at ConsoleConfigItems::CONFIGITEM_CONSOLE_ENUMCOUNT, both private to their .cpp. An
+// index that stops matching fails loudly when the schema is built, not silently at parse time.
+constexpr auto WOLFLAUNCHER_OUTLINE_ENCRYPT = 8L;
+constexpr auto WOLFLAUNCHER_OUTCOME_ENCRYPT = 8L;
+constexpr auto WOLFLAUNCHER_LOG_ENCRYPT = 5L;
+constexpr auto WOLFLAUNCHER_CONSOLE_ENCRYPT = 1L;
+
+// 'upload' is added right after 'encrypt' on each of the four, so each index is its encrypt index + 1.
+constexpr auto WOLFLAUNCHER_OUTLINE_UPLOAD = 9L;
+constexpr auto WOLFLAUNCHER_OUTCOME_UPLOAD = 9L;
+constexpr auto WOLFLAUNCHER_LOG_UPLOAD = 6L;
+constexpr auto WOLFLAUNCHER_CONSOLE_UPLOAD = 2L;
+
 constexpr auto WOLFLAUNCHER_WOLF = 0L;
 
 namespace Orc::Config::Wolf {
