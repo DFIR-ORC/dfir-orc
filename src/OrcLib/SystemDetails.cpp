@@ -660,6 +660,17 @@ HRESULT SystemDetails::GetOSVersion(DWORD& dwMajor, DWORD& dwMinor)
     return S_OK;
 }
 
+HRESULT SystemDetails::GetOSVersion(DWORD& dwMajor, DWORD& dwMinor, DWORD& dwBuild)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = LoadSystemDetails()))
+        return hr;
+    dwMajor = g_pDetailsBlock->osvi.dwMajorVersion;
+    dwMinor = g_pDetailsBlock->osvi.dwMinorVersion;
+    dwBuild = g_pDetailsBlock->osvi.dwBuildNumber;
+    return S_OK;
+}
+
 std::pair<DWORD, DWORD> Orc::SystemDetails::GetOSVersion()
 {
     std::pair<DWORD, DWORD> retval = {0, 0};

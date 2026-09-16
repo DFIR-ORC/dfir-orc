@@ -61,6 +61,7 @@ public:
     static HRESULT WriteDescriptionString(ITableOutput& output);
 
     static HRESULT GetOSVersion(DWORD& dwMajor, DWORD& dwMinor);
+    static HRESULT GetOSVersion(DWORD& dwMajor, DWORD& dwMinor, DWORD& dwBuild);
     static std::pair<DWORD, DWORD> GetOSVersion();
 
     static HRESULT GetArchitecture(WORD& wArch);
