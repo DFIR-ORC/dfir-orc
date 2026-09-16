@@ -171,7 +171,7 @@ HRESULT CopyFileAgent::UnInitialize()
     return S_OK;
 }
 
-HRESULT CopyFileAgent::CheckFileUpload(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
+HRESULT CopyFileAgent::CheckFileUpload(const std::wstring& strRemoteName, std::optional<uint64_t>& fileSize)
 {
     std::wstring strFullPath = GetRemoteFullPath(strRemoteName);
 
@@ -190,14 +190,7 @@ HRESULT CopyFileAgent::CheckFileUpload(const std::wstring& strRemoteName, std::o
     }
     else
     {
-        if (fileData.nFileSizeHigh > 0)
-        {
-            fileSize = MAXDWORD;
-        }
-        else
-        {
-            fileSize = fileData.nFileSizeLow;
-        }
+        fileSize = (static_cast<uint64_t>(fileData.nFileSizeHigh) << 32) | fileData.nFileSizeLow;
     }
 
     return S_OK;

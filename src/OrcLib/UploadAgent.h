@@ -36,7 +36,9 @@ public:
 
     virtual void run();
 
-    virtual HRESULT CheckFileUpload(const std::wstring& szRemoteName, std::optional<DWORD>& fileSize) PURE;
+    // The size is 64-bit because repeat="Once" compares it with the local archive: a 32-bit value capped at
+    // MAXDWORD would make every archive of 4 GiB or more look incomplete and re-upload it on every run.
+    virtual HRESULT CheckFileUpload(const std::wstring& szRemoteName, std::optional<uint64_t>& fileSize) PURE;
     virtual std::wstring GetRemoteFullPath(const std::wstring& strRemoteName) PURE;
     virtual std::wstring GetRemotePath(const std::wstring& strRemoteName) PURE;
 

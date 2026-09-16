@@ -38,8 +38,8 @@ private:
 
     std::vector<BITSJob> m_jobs;
 
-    HRESULT CheckFileUploadOverHttp(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize);
-    HRESULT CheckFileUploadOverSMB(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize);
+    HRESULT CheckFileUploadOverHttp(const std::wstring& strRemoteName, std::optional<uint64_t>& fileSize);
+    HRESULT CheckFileUploadOverSMB(const std::wstring& strRemoteName, std::optional<uint64_t>& fileSize);
 
 public:
     static HRESULT CheckCompatibleVersion();
@@ -62,7 +62,7 @@ public:
 
     HRESULT UnInitialize() override;
 
-    HRESULT CheckFileUpload(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize) override;
+    HRESULT CheckFileUpload(const std::wstring& strRemoteName, std::optional<uint64_t>& fileSize) override;
     std::wstring GetRemoteFullPath(const std::wstring& strRemoteName) override;
     std::wstring GetRemotePath(const std::wstring& strRemoteName) override;
 

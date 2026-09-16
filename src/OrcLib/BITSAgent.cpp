@@ -7,8 +7,13 @@
 //
 #include "stdafx.h"
 
+#include <algorithm>
+#include <array>
+#include <cstdint>
+#include <optional>
 #include <sstream>
 #include <regex>
+#include <string_view>
 
 #include <Bits.h>
 #include <Winhttp.h>
@@ -17,6 +22,7 @@
 #include "BITSAgent.h"
 #include "ParameterCheck.h"
 #include "Text/Fmt/GUID.h"
+#include "Utils/String.h"
 
 using namespace Orc;
 
@@ -497,7 +503,7 @@ HRESULT BITSAgent::UnInitialize()
 
 #pragma comment(lib, "winhttp.lib")
 
-HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
+HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, std::optional<uint64_t>& fileSize)
 {
     HRESULT hr = E_FAIL;
 
@@ -649,14 +655,15 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, st
 
     if (dwStatusCode == 200)
     {
-        DWORD dwFileSize = 0;
-
-        dwHeaderSize = sizeof(DWORD);
+        // Read as text: WINHTTP_QUERY_FLAG_NUMBER yields a 32-bit value, which cannot state the size of an
+        // archive of 4 GiB or more, and WINHTTP_QUERY_FLAG_NUMBER64 is not available on every supported OS.
+        std::array<wchar_t, 32> storage {};
+        dwHeaderSize = static_cast<DWORD>(storage.size() * sizeof(wchar_t));
         if (!WinHttpQueryHeaders(
                 hRequest,
-                WINHTTP_QUERY_CONTENT_LENGTH | WINHTTP_QUERY_FLAG_NUMBER,
+                WINHTTP_QUERY_CONTENT_LENGTH,
                 WINHTTP_HEADER_NAME_BY_INDEX,
-                &dwFileSize,
+                storage.data(),
                 &dwHeaderSize,
                 WINHTTP_NO_HEADER_INDEX))
         {
@@ -666,7 +673,22 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, st
             return hr;
         }
 
-        fileSize = dwFileSize;
+        // Digits only and no overflow: anything else (empty, a sign, a space, a digit run past 64 bits) is
+        // refused rather than turned into a number, so an unreadable size cannot pass for a small one and
+        // make repeat="Once" re-upload a complete archive.
+        // WinHttpQueryHeaders reports the byte count it wrote, so the view spans what the API filled rather
+        // than trusting a terminator; clamping it to the array keeps a length the API did not write from
+        // being read even if the call ever reports more than it was given.
+        const std::wstring_view contentLength(
+            storage.data(), (std::min)(static_cast<size_t>(dwHeaderSize) / sizeof(wchar_t), storage.size()));
+        const std::optional<uint64_t> value = ParseDecimalDigits(contentLength);
+        if (!value.has_value())
+        {
+            Log::Debug(L"Invalid content length '{}' for {}/{}", contentLength, m_config.ServerName, strRemotePath);
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        }
+
+        fileSize = *value;
     }
     else if (dwStatusCode == 404)
     {
@@ -682,7 +704,7 @@ HRESULT BITSAgent::CheckFileUploadOverHttp(const std::wstring& strRemoteName, st
     return S_OK;
 }
 
-HRESULT BITSAgent::CheckFileUploadOverSMB(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
+HRESULT BITSAgent::CheckFileUploadOverSMB(const std::wstring& strRemoteName, std::optional<uint64_t>& fileSize)
 {
     std::wstring strFullPath = GetRemoteFullPath(strRemoteName);
 
@@ -696,14 +718,7 @@ HRESULT BITSAgent::CheckFileUploadOverSMB(const std::wstring& strRemoteName, std
     }
     else
     {
-        if (fileData.nFileSizeHigh > 0)
-        {
-            fileSize = MAXDWORD;
-        }
-        else
-        {
-            fileSize = fileData.nFileSizeLow;
-        }
+        fileSize = (static_cast<uint64_t>(fileData.nFileSizeHigh) << 32) | fileData.nFileSizeLow;
     }
 
     return S_OK;
@@ -760,7 +775,7 @@ std::wstring BITSAgent::GetRemotePath(const std::wstring& strRemoteName)
     return stream.str();
 }
 
-HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, std::optional<DWORD>& fileSize)
+HRESULT BITSAgent::CheckFileUpload(const std::wstring& strRemoteName, std::optional<uint64_t>& fileSize)
 {
     HRESULT hr = E_FAIL;
 

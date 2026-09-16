@@ -155,7 +155,7 @@ HRESULT GetRemoteOutputFileInformations(
 
     if (exec.ShouldUpload())
     {
-        std::optional<DWORD> fileSize;
+        std::optional<uint64_t> fileSize;
         hr = uploadAgent.CheckFileUpload(exec.GetOutputFileName(), fileSize);
         if (FAILED(hr))
         {
