@@ -48,6 +48,7 @@ source_group(Disk\\FS\\NTFS\\USN FILES ${SRC_DISK_FS_NTFS_USN})
 set(SRC_UTILITIES
     "binary_buffer_test.cpp"
     "convert.cpp"
+    "crypt_string_test.cpp"
     "crypto_utilities_test.cpp"
 	"embedded_resource.cpp"
     "exceptions.cpp"
@@ -184,6 +185,7 @@ target_link_libraries(OrcLibTest
         VisualStudio::atls
         VisualStudio::CppUnitTest
         OrcLib
+        crypt32
 )
 
 target_precompile_headers(OrcLibTest PRIVATE stdafx.h)

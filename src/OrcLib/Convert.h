@@ -8,6 +8,7 @@
 #pragma once
 
 #include "Buffer.h"
+#include "Text/CryptString.h"
 
 #include <chrono>
 #include <safeint.h>
@@ -129,6 +130,18 @@ template <size_t _DeclElts>
 static std::wstring
 ConvertToBase64(const Buffer<BYTE, _DeclElts>& buffer, DWORD dwFlags = CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF)
 {
+    // CRYPT_STRING_NOCRLF is not supported on XP and 2003: CryptBinaryToSingleLineString falls back without it.
+    if (dwFlags & CRYPT_STRING_NOCRLF)
+    {
+        auto text = CryptBinaryToSingleLineString(BufferView(buffer.get(), buffer.size()), dwFlags);
+        if (text.has_error())
+        {
+            throw Exception(Severity::Continue, ToHRESULT(text.error()), L"Conversion to BASE64 failed"sv);
+        }
+
+        return std::move(*text);
+    }
+
     DWORD dwRequiredSize = 0L;
     Orc::Buffer<WCHAR, 1024> strBuffer;
 

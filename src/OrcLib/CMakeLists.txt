@@ -659,6 +659,8 @@ set(SRC_TEXT
     "Text/ByteQuantity.cpp"
     "Text/ComparisonOperator.h"
     "Text/ComparisonOperator.cpp"
+    "Text/CryptString.h"
+    "Text/CryptString.cpp"
     "Text/Encoding.h"
     "Text/Encoding.cpp"
     "Text/Iconv.h"

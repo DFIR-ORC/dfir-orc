@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "MessageStream.h"
 #include "BinaryBuffer.h"
+#include "Text/CryptString.h"
 
 using namespace Orc;
 
@@ -40,16 +41,14 @@ HRESULT MessageStream::CertSerialNumberToString(_In_ PCRYPT_INTEGER_BLOB pSerial
         j++;
     }
 
-    WCHAR szSerialNumber[ORC_MAX_PATH];
-    DWORD dwCharCount = ORC_MAX_PATH;
-    CryptBinaryToString(
-        buffer.GetData(),
-        (DWORD)buffer.GetCount(),
-        CRYPT_STRING_HEX | CRYPT_STRING_NOCRLF,
-        szSerialNumber,
-        &dwCharCount);
+    auto serial = CryptBinaryToSingleLineString(BufferView(buffer.GetData(), buffer.GetCount()), CRYPT_STRING_HEX);
+    if (serial.has_error())
+    {
+        Log::Debug(L"Failed to format certificate serial number [{}]", serial.error());
+        return ToHRESULT(serial.error());
+    }
 
-    strSerialNumber.assign(szSerialNumber, dwCharCount);
+    strSerialNumber = std::move(*serial);
     return S_OK;
 }
 

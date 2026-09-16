@@ -15,6 +15,7 @@
 #include "MemoryStream.h"
 #include "MFTRecordFileInfo.h"
 #include "VolumeReader.h"
+#include "Text/CryptString.h"
 
 #include "TableOutput.h"
 #include "TableOutputWriter.h"
@@ -1554,43 +1555,16 @@ HRESULT FileInfo::WriteSecurityDirectory(ITableOutput& output)
 
     if (GetDetails()->SecurityDirectory().GetCount())
     {
-        DWORD cchString = 0L;
-
-        if (!CryptBinaryToStringW(
-                GetDetails()->SecurityDirectory().GetData(),
-                (DWORD)GetDetails()->SecurityDirectory().GetCount(),
-                CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
-                NULL,
-                &cchString))
+        const CBinaryBuffer& directory = GetDetails()->SecurityDirectory();
+        auto base64 =
+            CryptBinaryToSingleLineString(BufferView(directory.GetData(), directory.GetCount()), CRYPT_STRING_BASE64);
+        if (base64.has_error())
         {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug("Failed CryptBinaryToStringW size query [{}]", SystemError(hr));
-            return hr;
+            Log::Debug("Failed to encode the security directory in base64 [{}]", base64.error());
+            return ToHRESULT(base64.error());
         }
 
-        LPWSTR szWstr = (LPWSTR)::malloc(msl::utilities::SafeInt<DWORD>(cchString) * sizeof(WCHAR));
-        if (szWstr == nullptr)
-            return E_OUTOFMEMORY;
-
-        BOOST_SCOPE_EXIT(&szWstr)
-        {
-            ::free(szWstr);
-        }
-        BOOST_SCOPE_EXIT_END
-
-        if (!CryptBinaryToStringW(
-                GetDetails()->SecurityDirectory().GetData(),
-                (DWORD)GetDetails()->SecurityDirectory().GetCount(),
-                CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF,
-                szWstr,
-                &cchString))
-        {
-            hr = HRESULT_FROM_WIN32(GetLastError());
-            Log::Debug("Failed CryptBinaryToStringW conversion [{}]", SystemError(hr));
-            return hr;
-        }
-
-        return output.WriteString(szWstr);
+        return output.WriteString(*base64);
     }
     return output.WriteNothing();
 }
