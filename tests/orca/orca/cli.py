@@ -1,0 +1,93 @@
+"""orca CLI. Terse help: one line per option."""
+import argparse
+import sys
+
+from . import ingest, merge, report, diff, getthis
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="orca", description="ORC results analysis")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    ing = sub.add_parser("ingest", help="archive -> per-table parquet + CSV")
+    ing.add_argument("archive", help="ORC .7z file or a dir with an Outcome json")
+    ing.add_argument("--out", required=True, help="output run directory")
+    ing.add_argument("--jobs", type=int, default=None, help="parallel workers (default: CPUs)")
+    ing.add_argument("--no-csv", action="store_true", help="skip CSV output")
+    ing.add_argument("--no-trunc", action="store_true", help="skip truncated CSV")
+    ing.add_argument("--exclude-cols", nargs="*", default=None, help="volatile columns to drop")
+    ing.add_argument("--password", default=None, help="archive password")
+    ing.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
+
+    mg = sub.add_parser("merge", help="run dir -> wide dfir-orc.parquet")
+    mg.add_argument("--run", required=True, help="a run dir (parquet/ + name-map.csv)")
+    mg.add_argument("--out", default=None, help="output parquet (default: <run>/dfir-orc.parquet)")
+    mg.add_argument("--lossless", action="store_true", help="keep every value as arrays (slow)")
+    mg.add_argument("--ts-col", nargs="*", default=None, help="override tool timestamp: Tool=Column")
+    mg.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
+
+    rp = sub.add_parser("report", help="run dir(s) -> per-host analyze views")
+    rp.add_argument("run_dirs", nargs="*", help="one or more run dirs")
+    rp.add_argument("--root", default=None, help="discover run dirs under this parent")
+    rp.add_argument("--view", action="append", default=None,
+                    choices=["outcome", "empty", "stats", "errors"], help="view(s) to show")
+    rp.add_argument("--one-line", action="store_true", help="one summary line per host")
+    rp.add_argument("--json", action="store_true", help="summary JSON per host")
+    rp.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
+
+    gt = sub.add_parser("getthis", help="run dir -> getthis.parquet + collected/distinct counts")
+    gt.add_argument("--run", required=True, help="a run dir (parquet/ from ingest)")
+    gt.add_argument("--out", default=None, help="output parquet (default: <run>/getthis.parquet)")
+    gt.add_argument("--json", action="store_true", help="summary as JSON")
+    gt.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
+
+    df = sub.add_parser("diff", help="compare two parquet/CSV or two run dirs")
+    df.add_argument("paths", nargs="*", help="two files (parquet/CSV) for a file-pair diff")
+    df.add_argument("--run", default=None, help="run dir A (run-level diff)")
+    df.add_argument("--reference", default=None, help="run dir B (run-level diff)")
+    df.add_argument("--columns", nargs="*", default=None, help="restrict compare to these columns")
+    df.add_argument("--exclude-cols", nargs="*", default=None, help="extra columns to exclude")
+    df.add_argument("--rows", action="store_true", help="also write differing rows to --out-dir")
+    df.add_argument("--out-dir", default="orca-diff", help="row output dir (with --rows)")
+    df.add_argument("--show", nargs="?", type=int, const=20, default=None,
+                    help="preview up to N differing rows per changed table (default 20)")
+    df.add_argument("--key", nargs="*", default=None,
+                    help="pair NEW/REF rows on these columns (default: per-tool key)")
+    df.add_argument("--patterns", type=int, default=10,
+                    help="max change patterns shown per table (default 10)")
+    df.add_argument("--one-line", action="store_true", help="one summary line")
+    df.add_argument("--json", action="store_true", help="summary JSON")
+    return parser
+
+
+def main(argv=None) -> int:
+    args = _build_parser().parse_args(argv)
+    if args.command == "ingest":
+        ingest.run_ingest(
+            args.archive, args.out,
+            jobs=args.jobs, make_csv=not args.no_csv, make_trunc=not args.no_trunc,
+            exclude_cols=args.exclude_cols, password=args.password, engine_name=args.engine,
+        )
+    elif args.command == "merge":
+        overrides = {}
+        for item in (args.ts_col or []):
+            tool, _, column = item.partition("=")
+            if tool and column:
+                overrides[tool] = column
+        merge.run_merge(args.run, out=args.out, lossless=args.lossless,
+                        ts_overrides=overrides or None, engine_name=args.engine)
+    elif args.command == "getthis":
+        getthis.run_getthis(args.run, out=args.out, engine_name=args.engine,
+                            as_json=args.json)
+    elif args.command == "report":
+        report.run_report(args.run_dirs, root=args.root, views=args.view,
+                          one_line=args.one_line, as_json=args.json,
+                          engine_name=args.engine)
+    elif args.command == "diff":
+        pa, pb = (args.paths + [None, None])[:2]
+        diff.run_diff(path_a=pa, path_b=pb, run_a=args.run, run_b=args.reference,
+                      columns=args.columns, exclude_cols=args.exclude_cols,
+                      rows=args.rows, out_dir=args.out_dir,
+                      one_line=args.one_line, as_json=args.json, show=args.show,
+                      key=args.key, patterns=args.patterns)
+    return 0
