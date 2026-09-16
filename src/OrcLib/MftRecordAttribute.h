@@ -17,6 +17,7 @@
 #include "MFTUtils.h"
 #include "CryptoHashStream.h"
 #include "Filesystem/Ntfs/Compression/WofAlgorithm.h"
+#include "Utils/BufferView.h"
 
 #include <vector>
 #include <boost/dynamic_bitset/dynamic_bitset.hpp>
@@ -28,6 +29,11 @@ namespace Orc {
 class MFTRecord;
 class AttributeList;
 class AttributeListEntry;
+
+// The value of a resident attribute, bounded by its ValueLength and by the attribute's RecordLength; empty for a
+// null or nonresident header or a value running past the attribute. A fixed struct may only be read from the value
+// when its size fits in it: bytes past ValueLength belong to padding or to the next attribute.
+BufferView GetResidentValue(const ATTRIBUTE_RECORD_HEADER* pHeader);
 
 class MftRecordAttribute : public std::enable_shared_from_this<MftRecordAttribute>
 {
@@ -210,9 +216,11 @@ public:
     IndexRootAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRecord* pRecord)
         : MftRecordAttribute(pHeader, pRecord)
     {
-        if (m_pHeader->FormCode == RESIDENT_FORM)
+        // Every accessor dereferences m_pRoot: map it only over a value that holds a whole INDEX_ROOT.
+        const BufferView value = GetResidentValue(m_pHeader);
+        if (value.size() >= sizeof(INDEX_ROOT))
         {
-            m_pRoot = (PINDEX_ROOT)(((PBYTE)m_pHeader) + m_pHeader->Form.Resident.ValueOffset);
+            m_pRoot = reinterpret_cast<PINDEX_ROOT>(const_cast<uint8_t*>(value.data()));
         }
         else
             m_pRoot = nullptr;

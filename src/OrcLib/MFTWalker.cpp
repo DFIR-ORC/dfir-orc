@@ -23,6 +23,7 @@
 
 #include <boost/scope_exit.hpp>
 
+#include "Filesystem/Ntfs/Attribute/SecurityDescriptorEntry.h"
 #include "Log/Log.h"
 #include "Utils/Guard.h"
 
@@ -1099,8 +1100,20 @@ HRESULT MFTWalker::Parse$SecureAndCallback(MFTRecord* pRecord)
                                 while (IsSecDescIndexEntryInBounds(pEntry, secBegin, secEnd)
                                        && !(pEntry->Flags & INDEX_ENTRY_END))
                                 {
+                                    const UINT32 sdsOffset = pEntry->SecurityDescriptorOffset;
+                                    if (!Ntfs::IsSecurityDescriptorEntryValid(
+                                            BufferView(SDS.GetData(), SDS.GetCount()), sdsOffset))
+                                    {
+                                        Log::Debug(
+                                            L"Skipping forged $SII entry (id: {:#x}, $SDS offset: {:#x})",
+                                            pEntry->SecId_Key,
+                                            sdsOffset);
+                                        pEntry = NextSecDescIndexEntryChecked(pEntry, secEnd);
+                                        continue;
+                                    }
+
                                     PSECURITY_DESCRIPTOR_ENTRY pSDSEntry =
-                                        (PSECURITY_DESCRIPTOR_ENTRY)&SDS.Get<BYTE>(pEntry->SecurityDescriptorOffset);
+                                        reinterpret_cast<PSECURITY_DESCRIPTOR_ENTRY>(SDS.GetData() + sdsOffset);
 
                                     if (m_Callbacks.SecDescCallback != nullptr)
                                         m_Callbacks.SecDescCallback(m_pVolReader, pSDSEntry);

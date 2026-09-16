@@ -16,6 +16,7 @@
 #include "VolumeReader.h"
 #include "Text/Fmt/Offset.h"
 #include "Log/Log.h"
+#include "Utils/BufferSpan.h"
 
 using namespace std;
 
@@ -52,6 +53,9 @@ bool IsAttributeInBounds(const ATTRIBUTE_RECORD_HEADER* pAttribute, DWORD dwAttr
 
     return true;
 }
+
+// An NTFS 1.2 $STANDARD_INFORMATION stops before OwnerId; NTFS 3.x appends OwnerId, SecurityId, QuotaCharged and USN.
+const size_t kLegacyStandardInformationSize = FIELD_OFFSET(STANDARD_INFORMATION, OwnerId);
 
 // IndexRootAttribute only maps m_pRoot for a resident form, and its accessors dereference it unconditionally.
 // IsAttributeInBounds() has already checked the resident value lies inside the record, so a value long enough
@@ -345,16 +349,31 @@ HRESULT MFTRecord::ParseAttribute(
                 Log::Error("Failed to parse $STANDARD_INFORMATION, attribute must be resident");
                 return E_FAIL;
             }
-            const ULONG valueOffset = pAttribute->Form.Resident.ValueOffset;
-            if (pAttribute->FormCode == RESIDENT_FORM
-                && (valueOffset > dwAttributeLen || sizeof(STANDARD_INFORMATION) > dwAttributeLen - valueOffset))
+            const BufferView value = GetResidentValue(pAttribute);
+            if (value.size() < kLegacyStandardInformationSize)
             {
-                Log::Debug("Skipping $STANDARD_INFORMATION with out-of-record value offset");
+                Log::Debug("Skipping $STANDARD_INFORMATION with a value of {} bytes", value.size());
                 break;
             }
 
-            m_pStandardInformation =
-                (PSTANDARD_INFORMATION)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset);
+            if (value.size() < sizeof(STANDARD_INFORMATION))
+            {
+                // An NTFS 1.2 value ends before OwnerId: read those fields as zero from a padded copy, never from the
+                // bytes that follow the value.
+                m_pPaddedStandardInformation = std::make_unique<STANDARD_INFORMATION>();
+
+                // Copy through a span over the padded struct: the destination bound is then the struct's own
+                // size, so a value longer than it is refused here rather than written past it. The shorter
+                // NTFS 1.2 case leaves the tail at the zero make_unique value-initialised it to.
+                const BufferSpan padded(
+                    reinterpret_cast<uint8_t*>(m_pPaddedStandardInformation.get()), sizeof(STANDARD_INFORMATION));
+                std::copy(value.begin(), value.end(), padded.begin());
+                m_pStandardInformation = m_pPaddedStandardInformation.get();
+            }
+            else
+            {
+                m_pStandardInformation = reinterpret_cast<PSTANDARD_INFORMATION>(const_cast<uint8_t*>(value.data()));
+            }
 
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
@@ -425,23 +444,18 @@ HRESULT MFTRecord::ParseAttribute(
                 Log::Error("Failed to parse $FILE_NAME, attribute must be resident");
                 return E_FAIL;
             }
-            const ULONG valueOffset = pAttribute->Form.Resident.ValueOffset;
-            if (pAttribute->FormCode == RESIDENT_FORM
-                && (valueOffset > dwAttributeLen || FIELD_OFFSET(FILE_NAME, FileName) > dwAttributeLen - valueOffset))
+            const BufferView value = GetResidentValue(pAttribute);
+            if (value.size() < FIELD_OFFSET(FILE_NAME, FileName))
             {
-                Log::Debug("Skipping $FILE_NAME with out-of-record value offset");
+                Log::Debug("Skipping $FILE_NAME with a value of {} bytes", value.size());
                 break;
             }
 
-            PFILE_NAME pParsedFileName = (PFILE_NAME)((LPBYTE)pAttribute + pAttribute->Form.Resident.ValueOffset);
-
-            if (pAttribute->FormCode == RESIDENT_FORM
-                && (valueOffset > dwAttributeLen
-                    || FIELD_OFFSET(FILE_NAME, FileName)
-                            + static_cast<size_t>(pParsedFileName->FileNameLength) * sizeof(WCHAR)
-                        > dwAttributeLen - valueOffset))
+            PFILE_NAME pParsedFileName = reinterpret_cast<PFILE_NAME>(const_cast<uint8_t*>(value.data()));
+            if (FIELD_OFFSET(FILE_NAME, FileName) + static_cast<size_t>(pParsedFileName->FileNameLength) * sizeof(WCHAR)
+                > value.size())
             {
-                Log::Debug("Skipping $FILE_NAME whose name runs past the record");
+                Log::Debug("Skipping $FILE_NAME whose name runs past its value");
                 break;
             }
 
@@ -611,11 +625,6 @@ HRESULT MFTRecord::ParseAttribute(
         break;
         case $EA_INFORMATION: {
             Log::Trace(L"Add $EA_INFORMATION");
-            EA_INFORMATION* pEAInfo = NULL;
-            if (pAttribute->FormCode == RESIDENT_FORM)
-            {
-                pEAInfo = (EA_INFORMATION*)(((BYTE*)pAttribute) + pAttribute->Form.Resident.ValueOffset);
-            }
             pNewAttr = make_shared<MftRecordAttribute>(pAttribute, this);
         }
         break;

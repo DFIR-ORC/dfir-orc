@@ -559,6 +559,8 @@ set(SRC_FILESYSTEM
     "Filesystem/FileAttribute.cpp"
     "Filesystem/Ntfs/Attribute/ReparsePoint/WofReparsePoint.h"
     "Filesystem/Ntfs/Attribute/ReparsePoint/WofReparsePoint.cpp"
+    "Filesystem/Ntfs/Attribute/SecurityDescriptorEntry.h"
+    "Filesystem/Ntfs/Attribute/SecurityDescriptorEntry.cpp"
     "Filesystem/Ntfs/Compression/WofChunks.h"
     "Filesystem/Ntfs/Compression/WofChunks.cpp"
     "Filesystem/Ntfs/Compression/WofStreamConcept.h"

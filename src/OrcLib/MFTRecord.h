@@ -179,6 +179,8 @@ private:
     std::vector<std::pair<MFTUtils::SafeMFTSegmentNumber, MFTRecord*>> m_ChildRecords;
 
     PSTANDARD_INFORMATION m_pStandardInformation = NULL;
+    // Owns the zero-extended copy m_pStandardInformation points to when the on-disk value is the short NTFS 1.2 one.
+    std::unique_ptr<STANDARD_INFORMATION> m_pPaddedStandardInformation;
 
     PFILE_RECORD_SEGMENT_HEADER m_pRecord = NULL;
 

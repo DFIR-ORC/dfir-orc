@@ -131,6 +131,30 @@ std::shared_ptr<WOFReparseAttribute> GetWofReparsePoint(const Orc::MFTRecord& re
 
 }  // namespace
 
+BufferView Orc::GetResidentValue(const ATTRIBUTE_RECORD_HEADER* pHeader)
+{
+    if (pHeader == nullptr || pHeader->FormCode != RESIDENT_FORM)
+    {
+        return {};
+    }
+
+    const DWORD recordLength = pHeader->RecordLength;
+    const DWORD valueOffset = pHeader->Form.Resident.ValueOffset;
+    const DWORD valueLength = pHeader->Form.Resident.ValueLength;
+    if (valueOffset > recordLength || valueLength > recordLength - valueOffset)
+    {
+        Log::Debug(
+            "Resident value out of its attribute (type: {:#x}, record length: {}, value offset: {}, value length: {})",
+            pHeader->TypeCode,
+            recordLength,
+            valueOffset,
+            valueLength);
+        return {};
+    }
+
+    return BufferView(reinterpret_cast<const uint8_t*>(pHeader) + valueOffset, valueLength);
+}
+
 HRESULT MftRecordAttribute::AddContinuationAttribute(const shared_ptr<MftRecordAttribute>& pMftRecordAttribute)
 {
     if (m_pHeader == NULL || pMftRecordAttribute == NULL)
@@ -725,7 +749,15 @@ HRESULT IndexRootAttribute::Open()
     }
     else if (m_pHeader->FormCode == RESIDENT_FORM)
     {
-        m_pRoot = (PINDEX_ROOT)((PBYTE)m_pHeader) + m_pHeader->Form.Resident.ValueOffset;
+        // The cast applies to the value's address: casting the header first scaled ValueOffset by sizeof(INDEX_ROOT).
+        const BufferView value = GetResidentValue(m_pHeader);
+        if (value.size() < sizeof(INDEX_ROOT))
+        {
+            Log::Debug("Invalid $INDEX_ROOT: value of {} bytes is too short", value.size());
+            return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+        }
+
+        m_pRoot = reinterpret_cast<PINDEX_ROOT>(const_cast<uint8_t*>(value.data()));
         if (m_pRoot->BytesPerIndexBuffer == 0)
         {
             Log::Debug("Invalid $INDEX_ROOT: BytesPerIndexBuffer is zero");
@@ -872,15 +904,11 @@ HRESULT ExtendedAttribute::CleanCachedData()
 
 REPARSE_POINT_TYPE_AND_FLAGS Orc::ReparsePointAttribute::GetReparsePointType(PATTRIBUTE_RECORD_HEADER pHeader)
 {
-    if (pHeader->FormCode != RESIDENT_FORM)
+    const BufferView value = GetResidentValue(pHeader);
+    if (value.size() < sizeof(REPARSE_POINT_ATTRIBUTE::TypeAndFlags))
         return (REPARSE_POINT_TYPE_AND_FLAGS)0L;
 
-    if ((size_t)pHeader->Form.Resident.ValueOffset + sizeof(DWORD) > pHeader->RecordLength)
-        return (REPARSE_POINT_TYPE_AND_FLAGS)0L;
-
-    PREPARSE_POINT_ATTRIBUTE pReparse =
-        (PREPARSE_POINT_ATTRIBUTE)(((BYTE*)pHeader) + pHeader->Form.Resident.ValueOffset);
-
+    const REPARSE_POINT_ATTRIBUTE* pReparse = reinterpret_cast<const REPARSE_POINT_ATTRIBUTE*>(value.data());
     return (REPARSE_POINT_TYPE_AND_FLAGS)pReparse->TypeAndFlags;
 }
 
@@ -891,23 +919,21 @@ HRESULT ReparsePointAttribute::Parse()
 
     m_Flags = GetReparsePointType(m_pHeader);
 
-    const BYTE* base = reinterpret_cast<const BYTE*>(m_pHeader);
-    const BYTE* recordEnd = base + m_pHeader->RecordLength;
-    const BYTE* pValue = base + m_pHeader->Form.Resident.ValueOffset;
-
-    if (pValue < base || pValue > recordEnd
-        || static_cast<size_t>(recordEnd - pValue) < FIELD_OFFSET(REPARSE_POINT_ATTRIBUTE, Data))
+    // Bounded by the value, not the attribute record: the bytes after ValueLength are not reparse data.
+    const BufferView value = GetResidentValue(m_pHeader);
+    if (value.size() < FIELD_OFFSET(REPARSE_POINT_ATTRIBUTE, Data))
     {
         Log::Debug("Forged $REPARSE_POINT: header out of bounds");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
 
-    PREPARSE_POINT_ATTRIBUTE pReparse = (PREPARSE_POINT_ATTRIBUTE)pValue;
+    const BYTE* valueEnd = value.data() + value.size();
+    PREPARSE_POINT_ATTRIBUTE pReparse = (PREPARSE_POINT_ATTRIBUTE)value.data();
     const BYTE* pReparseData = reinterpret_cast<const BYTE*>(pReparse->Data);
 
     const BYTE* reparseEnd = pReparseData + pReparse->DataLength;
-    if (reparseEnd > recordEnd)
-        reparseEnd = recordEnd;
+    if (reparseEnd > valueEnd)
+        reparseEnd = valueEnd;
 
     if (reparseEnd < pReparseData
         || static_cast<size_t>(reparseEnd - pReparseData) < FIELD_OFFSET(REPARSE_POINT_DATA, Data))
@@ -949,10 +975,27 @@ WOFReparseAttribute::WOFReparseAttribute(PATTRIBUTE_RECORD_HEADER pHeader, MFTRe
     : ReparsePointAttribute(pHeader, pRecord)
     , m_algorithm(Ntfs::WofAlgorithm::kUnknown)
 {
-    PREPARSE_POINT_ATTRIBUTE pReparse =
-        (PREPARSE_POINT_ATTRIBUTE)(((BYTE*)Header()) + Header()->Form.Resident.ValueOffset);
+    // DataLength is read from disk: the WOF header it announces must lie inside the attribute value.
+    const BufferView value = GetResidentValue(Header());
+    if (value.size() < FIELD_OFFSET(REPARSE_POINT_ATTRIBUTE, Data))
+    {
+        Log::Debug("Forged wof $REPARSE_POINT: header out of bounds (value length: {})", value.size());
+        ec = std::make_error_code(std::errc::bad_message);
+        return;
+    }
 
-    BufferView repasePointView(reinterpret_cast<uint8_t*>(pReparse->Data), pReparse->DataLength);
+    const REPARSE_POINT_ATTRIBUTE* pReparse = reinterpret_cast<const REPARSE_POINT_ATTRIBUTE*>(value.data());
+    if (pReparse->DataLength > value.size() - FIELD_OFFSET(REPARSE_POINT_ATTRIBUTE, Data))
+    {
+        Log::Debug(
+            "Forged wof $REPARSE_POINT: data length {} out of the value (value length: {})",
+            pReparse->DataLength,
+            value.size());
+        ec = std::make_error_code(std::errc::bad_message);
+        return;
+    }
+
+    BufferView repasePointView(reinterpret_cast<const uint8_t*>(pReparse->Data), pReparse->DataLength);
 
     const auto wofHeader = Ntfs::WofReparsePoint::Parse(repasePointView);
     if (!wofHeader)
