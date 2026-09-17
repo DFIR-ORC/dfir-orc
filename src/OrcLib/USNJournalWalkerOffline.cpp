@@ -13,13 +13,51 @@
 
 #include "MFTWalker.h"
 
+#include <algorithm>
 #include <cmath>
-
-#include <boost/scope_exit.hpp>
+#include <cstddef>
 
 using namespace Orc;
 
 static const auto ROOT_USN = 0x0005000000000005LL;
+
+namespace {
+
+// NTFS writes a USN_RECORD_V2 as its fixed part, then the name, padded to 8 bytes. A name has at most 255 characters.
+constexpr DWORD kUsnRecordV2FixedSize = offsetof(USN_RECORD, FileName);
+constexpr DWORD kUsnRecordV2MaxNameBytes = 255 * sizeof(WCHAR);
+constexpr DWORD kUsnRecordV2MaxSize = (kUsnRecordV2FixedSize + kUsnRecordV2MaxNameBytes + 7) & ~DWORD(7);
+
+// The granularity at which a failed read is retried: what still fails is lost, and no more.
+constexpr ULONG64 kSectorSize = 512;
+
+ULONG64 CountNonZero(const BYTE* begin, const BYTE* end)
+{
+    return static_cast<ULONG64>(std::count_if(begin, end, [](BYTE b) { return b != 0; }));
+}
+
+// True when the fixed part at 'record' describes a version 2.0 record whose lengths agree with each other. Every field
+// comes from the journal and may be garbage: a header is only trusted when the record it describes is the one NTFS
+// would have written, so that a false-small RecordLength cannot hold the walk in place and a stray 02 00 in corrupted
+// data is not taken for a record. Version 3 and 4 records are not read: like damaged data, they are passed over and
+// counted as unrecognized, and the walk goes on to the version 2 records after them.
+bool IsConsistentUsnRecordV2(const USN_RECORD& record)
+{
+    if (record.MajorVersion != 2 || record.MinorVersion != 0)
+    {
+        return false;
+    }
+
+    if (record.FileNameOffset != kUsnRecordV2FixedSize || record.FileNameLength == 0
+        || record.FileNameLength > kUsnRecordV2MaxNameBytes || (record.FileNameLength % sizeof(WCHAR)) != 0)
+    {
+        return false;
+    }
+
+    return record.RecordLength == ((kUsnRecordV2FixedSize + record.FileNameLength + 7) & ~DWORD(7));
+}
+
+}  // namespace
 
 DWORD USNJournalWalkerOffline::m_BufferSize = 0x10000;
 
@@ -168,120 +206,207 @@ HRESULT USNJournalWalkerOffline::EnumJournal(const IUSNJournalWalker::Callbacks&
 
 HRESULT USNJournalWalkerOffline::ReadJournal(const IUSNJournalWalker::Callbacks& pCallbacks)
 {
-    HRESULT hr = E_FAIL;
-
-    if (m_USNJournal)
+    if (!m_USNJournal)
     {
-        ULONGLONG numBytesReturned = 0;
-        LPVOID pChunk = HeapAlloc(GetProcessHeap(), 0, m_BufferSize);
-        if (pChunk == nullptr)
-            return E_OUTOFMEMORY;
-
-        BOOST_SCOPE_EXIT(&pChunk)
-        {
-            HeapFree(GetProcessHeap(), 0, pChunk);
-        }
-        BOOST_SCOPE_EXIT_END;
-
-        if (S_OK == m_USNJournal->CanRead())
-        {
-            ULONG64 size = m_USNJournal->GetSize();
-            ULONG64 offset = 0;
-            bool shouldStop = false;
-            bool madeNoProgress = false;
-
-            while (!shouldStop && offset < size)
-            {
-                if (FAILED(hr = m_USNJournal->SetFilePointer(offset, FILE_BEGIN, NULL)))
-                    return hr;
-
-                if (S_OK
-                    != m_USNJournal->Read(pChunk, std::min<ULONGLONG>(m_BufferSize, size - offset), &numBytesReturned))
-                {
-                    return hr;
-                }
-
-                BYTE* pCurrentChunkPosition = reinterpret_cast<BYTE*>(pChunk);
-                BYTE* pEndChunkPosition = reinterpret_cast<BYTE*>(pChunk) + numBytesReturned;
-                USN_RECORD* nextUSNRecord = nullptr;
-                ULONG64 adjustmentOffset = 0;
-                bool shouldReadAnotherChunk = false;
-
-                if (S_OK
-                    != FindNextUSNRecord(
-                        pCurrentChunkPosition,
-                        pEndChunkPosition,
-                        (BYTE**)&nextUSNRecord,
-                        shouldReadAnotherChunk,
-                        adjustmentOffset,
-                        shouldStop))
-                {
-                    if (shouldStop)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    // parse all the entries we just got
-                    while (!shouldReadAnotherChunk && nextUSNRecord != nullptr)
-                    {
-                        pCurrentChunkPosition = reinterpret_cast<BYTE*>(nextUSNRecord);
-                        bool bInSpecificLocation = false;
-                        WCHAR* pFullName = GetFullNameAndIfInLocation(nextUSNRecord, NULL, &bInSpecificLocation);
-
-                        if (pFullName && bInSpecificLocation)
-                        {
-                            pCallbacks.RecordCallback(m_VolReader, pFullName, nextUSNRecord);
-                            m_dwWalkedItems++;
-                        }
-
-                        pCurrentChunkPosition += nextUSNRecord->RecordLength;
-
-                        if (S_OK
-                            != FindNextUSNRecord(
-                                pCurrentChunkPosition,
-                                pEndChunkPosition,
-                                (BYTE**)&nextUSNRecord,
-                                shouldReadAnotherChunk,
-                                adjustmentOffset,
-                                shouldStop))
-                        {
-                            if (shouldStop)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                const ULONG64 advance =
-                    (adjustmentOffset <= numBytesReturned) ? (numBytesReturned - adjustmentOffset) : 0;
-                if (advance == 0)
-                {
-                    madeNoProgress = true;
-                    break;
-                }
-
-                offset += advance;
-            }
-
-            // Both exits abandon the rest of the journal: every record after 'offset' is dropped, so
-            // the read must not be reported as complete.
-            if (shouldStop || madeNoProgress)
-            {
-                Log::Error(
-                    L"USN journal is truncated: walk stopped at offset {:#x} of {:#x}, remaining records are lost",
-                    offset,
-                    size);
-                return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
-            }
-        }
-
-        hr = S_OK;
+        return E_FAIL;
     }
 
-    return hr;
+    if (const HRESULT canRead = m_USNJournal->CanRead(); canRead != S_OK)
+    {
+        const HRESULT hr = FAILED(canRead) ? canRead : HRESULT_FROM_WIN32(ERROR_READ_FAULT);
+        Log::Error(L"USN journal stream cannot be read [{}]", SystemError(hr));
+        return hr;
+    }
+
+    // A chunk must hold the largest record, or a record starting a chunk could never be read whole.
+    const DWORD chunkSize = std::max<DWORD>(m_BufferSize, kUsnRecordV2MaxSize);
+    std::vector<BYTE> chunk(chunkSize);
+
+    const ULONG64 size = m_USNJournal->GetSize();
+    ULONG64 offset = 0;
+
+    // Non-zero bytes passed over without a record: corrupted stretches, the slack of a reused cluster, the part of a
+    // record cut by an unreadable sector.
+    ULONG64 unrecognizedBytes = 0;
+
+    // Non-zero bytes left at the end of the journal, too short to hold the record they start.
+    ULONG64 truncatedTailBytes = 0;
+
+    // Bytes that could not be read at all, and the first error that refused them.
+    ULONG64 unreadableBytes = 0;
+    HRESULT firstReadError = S_OK;
+
+    while (offset < size)
+    {
+        const ULONG64 toRead = std::min<ULONG64>(chunkSize, size - offset);
+        ULONG64 bytesRead = 0;
+        std::vector<ByteRange> badRanges;
+
+        if (const HRESULT hr = ReadChunk(offset, chunk.data(), toRead, bytesRead, badRanges); hr != S_OK)
+        {
+            if (firstReadError == S_OK)
+            {
+                firstReadError = hr;
+            }
+        }
+
+        BYTE* const pChunk = chunk.data();
+        BYTE* const pEndChunkPosition = pChunk + bytesRead;
+
+        // Records are parsed between unreadable ranges, never across one: what a range cuts is given up with it, and
+        // the walk resynchronises after it.
+        ULONG64 segmentStart = 0;
+        for (const auto& [badStart, badEnd] : badRanges)
+        {
+            const ULONG64 unchecked =
+                ParseRecords(pChunk + segmentStart, pChunk + badStart, pCallbacks, unrecognizedBytes);
+            unrecognizedBytes += CountNonZero(pChunk + badStart - unchecked, pChunk + badStart);
+            unreadableBytes += badEnd - badStart;
+            segmentStart = badEnd;
+        }
+
+        const ULONG64 adjustmentOffset =
+            ParseRecords(pChunk + segmentStart, pEndChunkPosition, pCallbacks, unrecognizedBytes);
+
+        // What was left unchecked at the end of the chunk is read again at the start of the next one. After an
+        // unreadable range, that never goes back before the range.
+        const ULONG64 advance = bytesRead - adjustmentOffset;
+        if (advance != 0)
+        {
+            offset += advance;
+            continue;
+        }
+
+        // Nothing in this chunk could be checked: it is shorter than a record header, or than the record it starts.
+        // A chunk holds the largest record, so only the end of the journal, or a short read, leaves one that small.
+        // Either way its bytes are given up and the walk goes on after them.
+        const ULONG64 nonZero = CountNonZero(pChunk, pEndChunkPosition);
+        if (bytesRead == 0 || offset + bytesRead >= size)
+        {
+            truncatedTailBytes = nonZero;
+            break;
+        }
+
+        unrecognizedBytes += nonZero;
+        offset += bytesRead;
+    }
+
+    if (size != 0 && unreadableBytes >= size)
+    {
+        Log::Error(L"USN journal could not be read at all ({} bytes) [{}]", size, SystemError(firstReadError));
+        return firstReadError;
+    }
+
+    // Best effort: a damaged or unreadable stretch costs its own bytes, never the records around it. The loss is
+    // reported, and the records that were read are the result.
+    if (unrecognizedBytes != 0 || truncatedTailBytes != 0 || unreadableBytes != 0)
+    {
+        Log::Warn(
+            L"USN journal is damaged: {} bytes could not be read{}, {} bytes hold no valid record and {} bytes end it "
+            L"with an incomplete record; they were skipped and every valid record around them was read",
+            unreadableBytes,
+            unreadableBytes != 0 ? fmt::format(L" [{}]", SystemError(firstReadError)) : std::wstring(),
+            unrecognizedBytes,
+            truncatedTailBytes);
+    }
+
+    return S_OK;
+}
+
+HRESULT USNJournalWalkerOffline::ReadChunk(
+    ULONG64 offset,
+    BYTE* buffer,
+    ULONG64 length,
+    ULONG64& bytesRead,
+    std::vector<ByteRange>& badRanges)
+{
+    bytesRead = 0;
+    badRanges.clear();
+
+    HRESULT hr = m_USNJournal->SetFilePointer(offset, FILE_BEGIN, NULL);
+    if (SUCCEEDED(hr))
+    {
+        hr = m_USNJournal->Read(buffer, length, &bytesRead);
+        if (hr == S_OK)
+        {
+            return S_OK;
+        }
+    }
+
+    // The chunk is read again one sector at a time, so that only the sectors that still fail are lost. The error
+    // returned is the one that refused the chunk.
+    const HRESULT chunkError = FAILED(hr) ? hr : HRESULT_FROM_WIN32(ERROR_READ_FAULT);
+    Log::Debug(
+        L"Failed to read USN journal chunk at offset {:#x} ({} bytes); retrying by sector [{}]",
+        offset,
+        length,
+        SystemError(chunkError));
+
+    for (ULONG64 sector = 0; sector < length; sector += kSectorSize)
+    {
+        const ULONG64 sectorLength = std::min<ULONG64>(kSectorSize, length - sector);
+        ULONG64 sectorRead = 0;
+
+        HRESULT sectorHr = m_USNJournal->SetFilePointer(offset + sector, FILE_BEGIN, NULL);
+        if (SUCCEEDED(sectorHr))
+        {
+            sectorHr = m_USNJournal->Read(buffer + sector, sectorLength, &sectorRead);
+        }
+
+        if (sectorHr == S_OK && sectorRead == sectorLength)
+        {
+            continue;
+        }
+
+        if (!badRanges.empty() && badRanges.back().second == sector)
+        {
+            badRanges.back().second = sector + sectorLength;
+        }
+        else
+        {
+            badRanges.emplace_back(sector, sector + sectorLength);
+        }
+    }
+
+    Log::Debug(L"USN journal chunk at offset {:#x}: {} unreadable ranges", offset, badRanges.size());
+    bytesRead = length;
+    return chunkError;
+}
+
+ULONG64 USNJournalWalkerOffline::ParseRecords(
+    BYTE* begin,
+    BYTE* end,
+    const IUSNJournalWalker::Callbacks& pCallbacks,
+    ULONG64& unrecognizedBytes)
+{
+    BYTE* current = begin;
+    for (;;)
+    {
+        USN_RECORD* nextUSNRecord = nullptr;
+        bool shouldReadAnotherChunk = false;
+        ULONG64 adjustmentOffset = 0;
+        ULONG64 skippedBytes = 0;
+
+        const HRESULT found = FindNextUSNRecord(
+            current, end, (BYTE**)&nextUSNRecord, shouldReadAnotherChunk, adjustmentOffset, skippedBytes);
+
+        unrecognizedBytes += skippedBytes;
+        if (found != S_OK)
+        {
+            return adjustmentOffset;
+        }
+
+        bool bInSpecificLocation = false;
+        WCHAR* pFullName = GetFullNameAndIfInLocation(nextUSNRecord, NULL, &bInSpecificLocation);
+
+        if (pFullName && bInSpecificLocation)
+        {
+            pCallbacks.RecordCallback(m_VolReader, pFullName, nextUSNRecord);
+            m_dwWalkedItems++;
+        }
+
+        current = reinterpret_cast<BYTE*>(nextUSNRecord) + nextUSNRecord->RecordLength;
+    }
 }
 
 void USNJournalWalkerOffline::FillUSNRecord(USN_RECORD& record, MFTRecord* pElt, const PFILE_NAME pFileName)
@@ -314,110 +439,46 @@ HRESULT USNJournalWalkerOffline::FindNextUSNRecord(
     BYTE** nextUSNRecord,
     bool& shouldReadAnotherChunk,
     ULONG64& adjustmentOffset,
-    bool& shouldStop)
+    ULONG64& unrecognizedBytes)
 {
     *nextUSNRecord = nullptr;
     adjustmentOffset = 0;
     shouldReadAnotherChunk = false;
-    shouldStop = false;
+    unrecognizedBytes = 0;
 
-    // ensure we are not in a gap between 2 records
-    ULONG offset = 0;
-
-    // Prove the 4-byte gap probe below stays in-bounds: the caller advances by RecordLength and can
-    // leave fewer than 4 bytes in the chunk. Defer to the next chunk rather than read past the end.
-    if ((uint64_t)pCurrentChunkPosition + sizeof(DWORD) > (uint64_t)pEndChunkPosition)
+    // A record may start at any byte once the journal is damaged, so every position is a candidate: zero padding
+    // between records, the slack of a reused cluster or a torn write are passed over one byte at a time until a
+    // header whose fields agree. Nothing is read before the fixed part is proven inside the chunk.
+    BYTE* candidate = (std::min)(pCurrentChunkPosition, pEndChunkPosition);
+    for (;; ++candidate)
     {
-        shouldReadAnotherChunk = true;
-        adjustmentOffset = (ULONG64)((uint64_t)pEndChunkPosition - (uint64_t)pCurrentChunkPosition);
-        return E_FAIL;
-    }
-
-    if (*(DWORD*)(pCurrentChunkPosition) == 0)
-    {
-        while ((uint64_t)pCurrentChunkPosition + offset < (uint64_t)pEndChunkPosition
-               && (*(pCurrentChunkPosition + offset) == 0))
+        const ULONG64 remaining = static_cast<ULONG64>(pEndChunkPosition - candidate);
+        if (remaining < kUsnRecordV2FixedSize)
         {
-            ++offset;
+            shouldReadAnotherChunk = true;
+            adjustmentOffset = remaining;
+            return E_FAIL;
         }
-    }
 
-    // I add 8 here in to ensure that we have at least 8 bytes to check that it's a valid record
-    if ((__int64)pCurrentChunkPosition + offset + 8 >= (__int64)pEndChunkPosition)
-    {
-        shouldReadAnotherChunk = true;
-        adjustmentOffset = (__int64)pEndChunkPosition - (__int64)(pCurrentChunkPosition + offset);
-        return E_FAIL;
-    }
-
-    if (offset > 0)
-    {
-        // need to adjust offset to match the start of the USN_RECORD structure because of a gap
-        for (int i = 4; i >= 1; i--)
+        const auto* usnRecord = reinterpret_cast<const USN_RECORD*>(candidate);
+        if (IsConsistentUsnRecordV2(*usnRecord))
         {
-            if (*((WORD*)(pCurrentChunkPosition + offset + i)) == 0x2)  // TODO : handle version 3
+            if (usnRecord->RecordLength > remaining)
             {
-                const ULONG back = static_cast<ULONG>(4 - i);
-                if (back > offset)
-                {
-                    shouldStop = true;
-                    return E_FAIL;
-                }
-
-                offset -= back;
-                break;
+                shouldReadAnotherChunk = true;
+                adjustmentOffset = remaining;
+                return E_FAIL;
             }
+
+            *nextUSNRecord = candidate;
+            return S_OK;
+        }
+
+        if (*candidate != 0)
+        {
+            ++unrecognizedBytes;
         }
     }
-
-    // The probe above proves 8 bytes only, but the fields read below live up to FileNameOffset at +58:
-    // the whole fixed prefix must be inside the chunk before any of it is dereferenced. RecordLength
-    // cannot be trusted for this, it is attacker-controlled and may be false-small.
-    if ((uint64_t)pCurrentChunkPosition + offset + FIELD_OFFSET(USN_RECORD, FileName)
-        > (uint64_t)pEndChunkPosition)
-    {
-        shouldReadAnotherChunk = true;
-        adjustmentOffset = (ULONG64)((uint64_t)pEndChunkPosition - (uint64_t)(pCurrentChunkPosition + offset));
-        return E_FAIL;
-    }
-
-    USN_RECORD* usnRecord = reinterpret_cast<USN_RECORD*>(pCurrentChunkPosition + offset);
-
-    // check we have a right version number
-    if (usnRecord->MajorVersion != 2)  // TODO : handle version 3
-    {
-        shouldStop = true;
-        return E_FAIL;
-    }
-
-    // A record shorter than its own fixed part is corrupt: the caller advances by RecordLength and
-    // would never leave this record.
-    if (usnRecord->RecordLength < (DWORD)FIELD_OFFSET(USN_RECORD, FileName))
-    {
-        shouldStop = true;
-        return E_FAIL;
-    }
-
-    __int64 usnRecordEndPosition = (__int64)(usnRecord) + usnRecord->RecordLength;
-
-    if (usnRecordEndPosition > (__int64)pEndChunkPosition)
-    {
-        shouldReadAnotherChunk = true;
-        adjustmentOffset = (__int64)pEndChunkPosition - (__int64)(usnRecord);
-        return E_FAIL;
-    }
-
-    if (usnRecord->FileNameOffset < FIELD_OFFSET(USN_RECORD, FileName)
-        || (usnRecord->FileNameLength % sizeof(WCHAR)) != 0
-        || (DWORD)usnRecord->FileNameOffset + usnRecord->FileNameLength > usnRecord->RecordLength)
-    {
-        shouldStop = true;
-        return E_FAIL;
-    }
-
-    *nextUSNRecord = (BYTE*)usnRecord;
-
-    return S_OK;
 }
 
 DWORD USNJournalWalkerOffline::GetBufferSize()

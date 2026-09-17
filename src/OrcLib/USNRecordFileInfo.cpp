@@ -16,6 +16,12 @@
 #include "FileStream.h"
 
 #include "Log/Log.h"
+#include "Utils/BufferView.h"
+
+#include <cstddef>
+#include <new>
+#include <string>
+#include <string_view>
 
 using namespace Orc;
 
@@ -28,6 +34,53 @@ static const auto FILEINFO_STREAMNAME_BUFLEN = (1024);
 // The stream information query is retried with a bigger buffer until it fits: bound the growth so a
 // file with an unreasonable number of streams fails instead of looping until memory is exhausted.
 static const DWORD FILEINFO_STREAMINFO_MAX_MULTIPLIER = 64;
+
+namespace {
+
+// Every entry names its stream as ":<name>:$DATA"; the type suffix is not part of the name we report.
+constexpr std::wstring_view kDataSuffix = L":$DATA";
+constexpr std::wstring_view kDefaultDataStream = L"::$DATA";
+
+// Walk the FILE_STREAM_INFORMATION chain held in 'buffer', handing each entry's name to 'onName'.
+// NtQueryInformationFile fills the buffer, but NextEntryOffset and StreamNameLength are read back out of
+// it: the walk stops at the first entry whose header or name would reach past the bytes the query
+// actually wrote, so a damaged or adversarial chain cannot step it outside them. A zero NextEntryOffset
+// ends the chain, and a non-zero one always advances, so the walk terminates.
+template <typename FnT>
+void ForEachStreamName(const Orc::BufferView& buffer, FnT&& onName)
+{
+    constexpr size_t kHeaderSize = offsetof(FILE_STREAM_INFORMATION, StreamName);
+
+    size_t offset = 0;
+    for (;;)
+    {
+        if (!Orc::IsValidOffset(buffer, offset, kHeaderSize))
+        {
+            return;
+        }
+
+        const auto* entry = reinterpret_cast<const FILE_STREAM_INFORMATION*>(buffer.data() + offset);
+
+        // StreamNameLength counts bytes, not characters
+        const size_t nameBytes = entry->StreamNameLength;
+        if (!Orc::IsValidOffset(buffer, offset + kHeaderSize, nameBytes))
+        {
+            return;
+        }
+
+        onName(std::wstring_view(
+            reinterpret_cast<const wchar_t*>(buffer.data() + offset + kHeaderSize), nameBytes / sizeof(wchar_t)));
+
+        if (entry->NextEntryOffset == 0)
+        {
+            return;
+        }
+
+        offset += entry->NextEntryOffset;
+    }
+}
+
+}  // namespace
 
 USNRecordFileInfo::USNRecordFileInfo(
     LPCWSTR szComputerName,
@@ -54,7 +107,6 @@ USNRecordFileInfo::USNRecordFileInfo(
 
     m_bFileHasStreams = false;
     m_bStreamInformationAvailable = false;
-    m_pFileStreamInformation = NULL;
 
     m_bFileFindAvailable = false;
 
@@ -283,17 +335,20 @@ HRESULT USNRecordFileInfo::OpenStreamInformation()
     {
         const DWORD dwBufferLength = FILEINFO_STREAMINFO_BUFLEN * dwMultiplier;
 
-        m_pFileStreamInformation = (FILE_STREAM_INFORMATION*)HeapAlloc(GetProcessHeap(), 0L, dwBufferLength);
-        if (!m_pFileStreamInformation)
+        try
+        {
+            m_streamInformation.assign(dwBufferLength, 0);
+        }
+        catch (const std::bad_alloc&)
+        {
             return E_OUTOFMEMORY;
-
-        ZeroMemory(m_pFileStreamInformation, dwBufferLength);
+        }
 
         IO_STATUS_BLOCK StatusBlock;
         hr = pNtDll->NtQueryInformationFile(
             m_hFile,
             &StatusBlock,
-            m_pFileStreamInformation,
+            m_streamInformation.data(),
             dwBufferLength,
             (FILE_INFORMATION_CLASS)FileStreamInformation);
 
@@ -304,8 +359,7 @@ HRESULT USNRecordFileInfo::OpenStreamInformation()
                 break;
             case HRESULT_FROM_NT(STATUS_BUFFER_OVERFLOW):
             case HRESULT_FROM_NT(STATUS_BUFFER_TOO_SMALL):
-                HeapFree(GetProcessHeap(), 0L, m_pFileStreamInformation);
-                m_pFileStreamInformation = NULL;
+                m_streamInformation.clear();
                 dwMultiplier++;
                 if (dwMultiplier > FILEINFO_STREAMINFO_MAX_MULTIPLIER)
                 {
@@ -321,7 +375,7 @@ HRESULT USNRecordFileInfo::OpenStreamInformation()
             default:
                 return hr;
         }
-    } while (m_pFileStreamInformation == NULL);
+    } while (m_streamInformation.empty());
 
     return S_OK;
 }
@@ -447,53 +501,33 @@ HRESULT USNRecordFileInfo::WriteADS(ITableOutput& output)
         return hr;
     }
 
-    if (m_bStreamInformationAvailable && m_pFileStreamInformation)
+    if (m_bStreamInformationAvailable && !m_streamInformation.empty())
     {
-        FILE_STREAM_INFORMATION* pCur = m_pFileStreamInformation;
-        DWORD dwStreamNamesLen = 0L;
-        do
-        {
-            if (wcsncmp(L"::$DATA", pCur->StreamName, pCur->StreamNameLength))
-                dwStreamNamesLen += (pCur->StreamNameLength + 1);  // trailing \0 or separator
-            if (pCur->NextEntryOffset)
-                pCur = (FILE_STREAM_INFORMATION*)((BYTE*)pCur + pCur->NextEntryOffset);
-            else
-                break;
-        } while (1);
-
-        if (dwStreamNamesLen > 0)
-        {
-            WCHAR* szBuf = (WCHAR*)malloc(msl::utilities::SafeInt<USHORT>(dwStreamNamesLen) * sizeof(WCHAR));
-            if (szBuf == NULL)
-                return E_OUTOFMEMORY;
-            ZeroMemory(szBuf, dwStreamNamesLen * sizeof(WCHAR));
-
-            pCur = m_pFileStreamInformation;
-
-            do
+        // The names are accumulated straight into the result: the two passes the raw buffer needed - one to
+        // total the lengths, one to concatenate into a malloc'd block - only existed to size that block.
+        std::wstring names;
+        ForEachStreamName(Orc::MakeBufferView(m_streamInformation), [&names](std::wstring_view name) {
+            if (name == kDefaultDataStream)
             {
-                if (wcsncmp(L"::$DATA", pCur->StreamName, pCur->StreamNameLength))
-                {
-                    wcsncat_s(
-                        szBuf,
-                        dwStreamNamesLen,
-                        pCur->StreamName,
-                        (pCur->StreamNameLength - 12 /* -6 to remove the trailing :$DATA*/) / sizeof(WCHAR));
-                    if (pCur->NextEntryOffset)
-                        wcsncat_s(szBuf, dwStreamNamesLen, L";", 1);
-                }
-                if (pCur->NextEntryOffset)
-                    pCur = (FILE_STREAM_INFORMATION*)((BYTE*)pCur + pCur->NextEntryOffset);
-                else
-                    break;
-            } while (1);
+                return;  // the unnamed $DATA stream is not an alternate stream
+            }
 
-            output.WriteString(szBuf);
-            free(szBuf);
-        }
-        else
-            output.WriteString(L"");
+            if (name.size() >= kDataSuffix.size())
+            {
+                name.remove_suffix(kDataSuffix.size());
+            }
+
+            if (!names.empty())
+            {
+                names.push_back(L';');
+            }
+
+            names.append(name);
+        });
+
+        return output.WriteString(names);
     }
+
     return S_OK;
 }
 
@@ -536,8 +570,4 @@ HRESULT USNRecordFileInfo::WriteParentFRN(ITableOutput& output)
     return output.WriteInteger(m_pUSNRecord->ParentFileReferenceNumber);
 }
 
-USNRecordFileInfo::~USNRecordFileInfo(void)
-{
-    if (m_pFileStreamInformation)
-        HeapFree(GetProcessHeap(), 0L, m_pFileStreamInformation);
-}
+USNRecordFileInfo::~USNRecordFileInfo(void) {}

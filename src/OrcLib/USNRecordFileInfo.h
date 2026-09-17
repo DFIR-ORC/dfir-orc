@@ -9,7 +9,9 @@
 
 #include "OrcLib.h"
 #include "NtfsFileInfo.h"
+#include "Utils/BufferView.h"
 
+#include <cstdint>
 #include <vector>
 
 #pragma managed(push, off)
@@ -96,7 +98,11 @@ private:
 
     bool m_bStreamInformationAvailable;
     bool m_bFileHasStreams;
-    FILE_STREAM_INFORMATION* m_pFileStreamInformation;
+
+    // The stream information is a chain of variable-length entries NtQueryInformationFile writes into a
+    // caller buffer. It is held as bytes so the buffer frees itself and so every walk of the chain is
+    // bounded by a view over it, rather than by trusting each entry's NextEntryOffset.
+    std::vector<uint8_t> m_streamInformation;
 
     std::unique_ptr<DataDetails> m_Details;
 
