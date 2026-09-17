@@ -358,6 +358,10 @@ HRESULT ExtensionLibrary::Load(std::optional<std::filesystem::path> tempDir)
 {
     using namespace std::filesystem;
 
+    // Load is also reached without GetLibrary (GetEntryPoint on a library that is not loaded yet): it serializes itself
+    // so that two threads never fill m_hModule and m_libFile together.
+    ScopedLock lock(m_cs);
+
     if (m_hModule != NULL)
         return S_OK;
 

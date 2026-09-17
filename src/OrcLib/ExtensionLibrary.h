@@ -83,6 +83,12 @@ public:
                 return nullptr;
             }
 
+            // A shared instance is loaded, initialized and registered for unload by whichever thread gets there
+            // first, while the others wait. Unlocked, two threads load the same object at once and write its members
+            // together (m_hModule, m_libFile, m_bInitialized, m_UnLoadHandler): both free the same string buffer when
+            // assigning m_libFile, which corrupts the heap. The lock is recursive, and Initialize and Load take it too.
+            ScopedLock lock(pLib->ExtensionLibrary::m_cs);
+
             if (!pLib->IsLoaded())
             {
                 Log::Debug(L"Library {} is not yet loaded", Name<Library>());
@@ -253,15 +259,16 @@ protected:
     template <class Library>
     static const std::shared_ptr<Library> GetShared(bool bMakeNew = true)
     {
+        // Reading the weak pointer and replacing it must not interleave: lock() racing the assignment is a data race,
+        // and two threads that both find it expired would each create an instance. Both happen under the lock.
+        static CriticalSection g_cs;
         static std::weak_ptr<Library> g_pLibrary;
 
+        ScopedLock sc(g_cs);
         auto shared = g_pLibrary.lock();
 
         if (shared == nullptr && bMakeNew)
         {
-            static CriticalSection g_cs;
-            ScopedLock sc(g_cs);
-
             shared = std::make_shared<Library>();
             g_pLibrary = shared;
         }
