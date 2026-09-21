@@ -11,6 +11,8 @@
 
 #include "XmlLiteExtension.h"
 
+#include "Utils/Guard/Com.h"
+
 #pragma managed(push, off)
 
 struct IXmlWriter;
@@ -24,7 +26,7 @@ public:
         : ConfigFile()
     {
     }
-    static HRESULT WriteConfigNode(const CComPtr<IXmlWriter>& pWriter, const ConfigItem& config);
+    static HRESULT WriteConfigNode(const Guard::ComPtr<IXmlWriter>& pWriter, const ConfigItem& config);
 
     HRESULT WriteConfig(const std::wstring& strConfigFile, const WCHAR* szDescription, const ConfigItem& config);
     HRESULT

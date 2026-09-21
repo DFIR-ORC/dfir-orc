@@ -186,7 +186,7 @@ BITSAgent::UploadFile(
     if (m_pbcm == nullptr)
         return E_POINTER;
 
-    CComPtr<IBackgroundCopyJob> job;
+    Guard::ComPtr<IBackgroundCopyJob> job;
     GUID JobId;
 
     // Upload job only support one file transferred at a time
@@ -198,7 +198,7 @@ BITSAgent::UploadFile(
         return hr;
     }
 
-    CComPtr<IBackgroundCopyJob2> job2;
+    Guard::ComPtr<IBackgroundCopyJob2> job2;
     hr = job->QueryInterface(IID_IBackgroundCopyJob2, reinterpret_cast<void**>(&job2));
     if (!job2)
     {
@@ -268,7 +268,7 @@ BITSAgent::UploadFile(
     }
 
     ULONG ulNotifyFlags = 0L;
-    CComPtr<IBackgroundCopyCallback2> pNotify = new CNotifyInterface(
+    Guard::ComPtr<IBackgroundCopyCallback2> pNotify = new CNotifyInterface(
         m_config.JobName, request, m_notificationTarget, bDeleteWhenCopied, strLocalName, strRemotePath);
     if (SUCCEEDED(hr = job->SetNotifyInterface(pNotify)))
     {
@@ -429,7 +429,7 @@ HRESULT BITSAgent::IsComplete(bool bReadyToExit, bool& hasFailure)
             GUID guid = {0};
             job.m_job->GetId(&guid);
 
-            CComPtr<IBackgroundCopyError> error;
+            Guard::ComPtr<IBackgroundCopyError> error;
             HRESULT hr = job.m_job->GetError(&error);
             if (FAILED(hr))
             {
@@ -727,7 +727,7 @@ HRESULT BITSAgent::CheckFileUploadOverSMB(const std::wstring& strRemoteName, std
 HRESULT BITSAgent::CheckCompatibleVersion()
 {
 
-    CComPtr<IBackgroundCopyManager> pbcm;
+    Guard::ComPtr<IBackgroundCopyManager> pbcm;
 
     if (SUCCEEDED(pbcm.CoCreateInstance(CLSID_BackgroundCopyManager3_0, NULL, CLSCTX_LOCAL_SERVER)))
         return S_OK;
@@ -925,7 +925,7 @@ HRESULT CNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackgroundCopyErro
     // the content has a better chance of being successfully downloaded.
     if (BG_E_INSUFFICIENT_RANGE_SUPPORT == ErrorCode)
     {
-        CComPtr<IBackgroundCopyFile> pFile;
+        Guard::ComPtr<IBackgroundCopyFile> pFile;
 
         hr = pError->GetFile(&pFile);
         hr = pFile->GetProgress(&Progress);
@@ -1035,7 +1035,7 @@ HRESULT CNotifyInterface::FileTransferred(IBackgroundCopyJob* pJob, IBackgroundC
 {
     DBG_UNREFERENCED_PARAMETER(pJob);
     HRESULT hr = S_OK;
-    CComPtr<IBackgroundCopyFile3> pFile3 = NULL;
+    Guard::ComPtr<IBackgroundCopyFile3> pFile3;
 
     hr = pFile->QueryInterface(__uuidof(IBackgroundCopyFile3), (void**)&pFile3);
     if (SUCCEEDED(hr))

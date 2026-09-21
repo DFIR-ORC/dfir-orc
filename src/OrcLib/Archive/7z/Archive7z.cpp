@@ -20,6 +20,7 @@
 #include "Archive/7z/ArchiveOpenCallback.h"
 #include "Archive/7z/ArchiveUpdateCallback.h"
 #include "ByteStream.h"
+#include "Utils/Guard/Com.h"
 
 using namespace Orc::Archive;
 using namespace Orc;
@@ -160,7 +161,7 @@ UInt32 ToLib7zThreadCount(Lib7zCompressionLevel level)
 }
 
 void SetCompressionLevel(
-    const CComPtr<IOutArchive>& archiver,
+    const Guard::ComPtr<IOutArchive>& archiver,
     Archive::Format format,
     CompressionLevel level,
     std::error_code& ec)
@@ -248,7 +249,7 @@ void Archive7z::Compress(
         return;
     }
 
-    CComPtr<IOutArchive> archiver;
+    Guard::ComPtr<IOutArchive> archiver;
     const auto formatGuid = ::ToGuid(m_format);
     HRESULT hr = ::CreateObject(&formatGuid, &IID_IOutArchive, reinterpret_cast<void**>(&archiver));
     if (FAILED(hr))
@@ -287,9 +288,18 @@ void Archive7z::Compress(
             return;
         }
 
-        CComQIPtr<IInArchive, &IID_IInArchive> archiverIn(archiver);
-        CComPtr<InStreamAdapter> inStream = new InStreamAdapter(inputArchive, true);
-        CComPtr<ArchiveOpenCallback> archiveOpenCallback(new ArchiveOpenCallback());
+        // The 7z handler implements both interfaces; reading the existing items back needs the input side.
+        Guard::ComPtr<IInArchive> archiverIn;
+        hr = Guard::QueryInterfaceInto(archiver.Get(), IID_IInArchive, archiverIn);
+        if (FAILED(hr))
+        {
+            ec.assign(hr, std::system_category());
+            Log::Error(L"Failed to query the input side of the archive handler [{}]", ec);
+            return;
+        }
+
+        Guard::ComPtr<InStreamAdapter> inStream = new InStreamAdapter(inputArchive, true);
+        Guard::ComPtr<ArchiveOpenCallback> archiveOpenCallback(new ArchiveOpenCallback());
         hr = archiverIn->Open(inStream, nullptr, archiveOpenCallback);
         if (FAILED(hr))
         {
@@ -309,12 +319,12 @@ void Archive7z::Compress(
 
     const auto numberOfNewItems = m_items.size();
 
-    CComPtr<ArchiveUpdateCallback> archiveUpdateCallback(
+    Guard::ComPtr<ArchiveUpdateCallback> archiveUpdateCallback(
         new ArchiveUpdateCallback(std::move(m_items), m_password, numberOfArchivedItems));
 
     m_items.clear();
 
-    CComQIPtr<ISequentialOutStream, &IID_ISequentialOutStream> outStream(new OutStreamAdapter(outputArchive));
+    Guard::ComPtr<ISequentialOutStream> outStream(new OutStreamAdapter(outputArchive));
     hr = archiver->UpdateItems(outStream, numberOfNewItems + numberOfArchivedItems, archiveUpdateCallback);
     if (FAILED(hr))
     {

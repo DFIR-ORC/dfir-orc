@@ -15,6 +15,7 @@
 #include "7zip/IPassword.h"
 
 #include "PropVariant.h"
+#include "Utils/Guard/Com.h"
 
 #include "InByteStreamWrapper.h"
 #include "CryptoHashStream.h"
@@ -357,8 +358,7 @@ STDMETHODIMP ArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream*
     }
     else
     {
-        CComQIPtr<ISequentialInStream, &IID_ISequentialInStream> fileStream =
-            new InByteStreamWrapper(m_Items[index].Stream);
+        Guard::ComPtr<ISequentialInStream> fileStream(new InByteStreamWrapper(m_Items[index].Stream));
         *inStream = fileStream.Detach();
     }
 

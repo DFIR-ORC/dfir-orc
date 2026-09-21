@@ -21,7 +21,7 @@ using namespace std;
 
 using namespace Orc;
 
-HRESULT ConfigFileWriter::WriteConfigNode(const CComPtr<IXmlWriter>& pWriter, const ConfigItem& config)
+HRESULT ConfigFileWriter::WriteConfigNode(const Guard::ComPtr<IXmlWriter>& pWriter, const ConfigItem& config)
 {
     HRESULT hr = E_FAIL;
 
@@ -139,12 +139,12 @@ HRESULT ConfigFileWriter::WriteConfig(
 {
     HRESULT hr = E_FAIL;
 
-    CComPtr<IStream> stream;
+    Guard::ComPtr<IStream> stream;
 
     if (FAILED(hr = ByteStream::Get_IStream(streamConfig, &stream)))
         return hr;
 
-    CComPtr<IXmlWriter> pWriter;
+    Guard::ComPtr<IXmlWriter> pWriter;
     m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
     if (!m_xmllite)
     {

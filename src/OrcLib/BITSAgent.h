@@ -8,6 +8,8 @@
 #pragma once
 #include "UploadAgent.h"
 
+#include "Utils/Guard/Com.h"
+
 #include <bits.h>
 
 #pragma managed(push, off)
@@ -20,10 +22,10 @@ class BITSJob
 
 private:
     const GUID& m_id;
-    CComPtr<IBackgroundCopyJob> m_job;
+    Guard::ComPtr<IBackgroundCopyJob> m_job;
 
 public:
-    BITSJob(const GUID& id, const CComPtr<IBackgroundCopyJob>& job)
+    BITSJob(const GUID& id, const Guard::ComPtr<IBackgroundCopyJob>& job)
         : m_id(id)
         , m_job(job) {};
 };
@@ -32,7 +34,7 @@ class BITSAgent : public UploadAgent
 {
 
 private:
-    CComPtr<IBackgroundCopyManager> m_pbcm;
+    Guard::ComPtr<IBackgroundCopyManager> m_pbcm;
     bool m_bAddedConnection = false;  // When using BITS over SMB, we have to add the connection (net use) to allow test
                                       // of existence to succeed
 

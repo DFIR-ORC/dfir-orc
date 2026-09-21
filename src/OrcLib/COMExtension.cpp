@@ -67,7 +67,7 @@ HRESULT COMExtension::AddClassFactory(CLSID clsid)
 
     if (it == end(m_ClassFactories))
     {
-        CComPtr<IClassFactory> factory;
+        Guard::ComPtr<IClassFactory> factory;
 
         if (FAILED(hr = m_DllGetClassObject(clsid, IID_IUnknown, (LPVOID*)&factory)))
         {
@@ -88,9 +88,9 @@ HRESULT Orc::COMExtension::UnLoad()
 
 COMExtension::~COMExtension() {}
 
-const CComPtr<IClassFactory>& COMExtension::GetClassFactory(CLSID clsid)
+const Guard::ComPtr<IClassFactory>& COMExtension::GetClassFactory(CLSID clsid)
 {
-    static const CComPtr<IClassFactory> nullfactory;
+    static const Guard::ComPtr<IClassFactory> nullfactory;
 
     if (!IsInitialized())
     {

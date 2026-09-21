@@ -31,13 +31,13 @@ Orc::StructuredOutput::XML::Writer::Writer(std::unique_ptr<Orc::StructuredOutput
 HRESULT Orc::StructuredOutput::XML::Writer::SetOutput(const std::shared_ptr<ByteStream> pStream)
 {
     HRESULT hr = E_FAIL;
-    CComPtr<IStream> stream;
+    Guard::ComPtr<IStream> stream;
 
     if (FAILED(hr = ByteStream::Get_IStream(pStream, &stream)))
         return hr;
 
-    CComPtr<IXmlWriter> pWriter;
-    CComPtr<IXmlWriterOutput> pWriterOutput;
+    Guard::ComPtr<IXmlWriter> pWriter;
+    Guard::ComPtr<IXmlWriterOutput> pWriterOutput;
 
     m_xmllite = ExtensionLibrary::GetLibrary<XmlLiteExtension>();
     if (!m_xmllite)

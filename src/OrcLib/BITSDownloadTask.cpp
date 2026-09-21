@@ -180,7 +180,7 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
         }
     }
 
-    CComPtr<IBackgroundCopyJob2> job2;
+    Guard::ComPtr<IBackgroundCopyJob2> job2;
     hr = m_job->QueryInterface(IID_IBackgroundCopyJob2, reinterpret_cast<void**>(&job2));
     if (!job2)
     {
@@ -189,7 +189,7 @@ HRESULT BITSDownloadTask::Initialize(const bool bDelayedDeletion)
     }
 
     ULONG ulNotifyFlags = 0L;
-    CComPtr<IBackgroundCopyCallback2> pNotify;
+    Guard::ComPtr<IBackgroundCopyCallback2> pNotify;
 
     pNotify = new CDownloadNotifyInterface(shared_from_this());
 
@@ -359,7 +359,7 @@ HRESULT CDownloadNotifyInterface::JobError(IBackgroundCopyJob* pJob, IBackground
     // the content has a better chance of being successfully downloaded.
     if (BG_E_INSUFFICIENT_RANGE_SUPPORT == ErrorCode)
     {
-        CComPtr<IBackgroundCopyFile> pFile;
+        Guard::ComPtr<IBackgroundCopyFile> pFile;
 
         hr = pError->GetFile(&pFile);
         if (FAILED(hr))
@@ -457,8 +457,10 @@ HRESULT CDownloadNotifyInterface::FileTransferred(IBackgroundCopyJob* pJob, IBac
     DBG_UNREFERENCED_PARAMETER(pJob);
     HRESULT hr = S_OK;
 
-    CComQIPtr<IBackgroundCopyFile3> pFile3 = pFile;
-    if (pFile3)
+    // IBackgroundCopyFile3 is BITS 3.0 and later: an older service leaves 'pFile3' empty and validation
+    // is simply not reported.
+    Guard::ComPtr<IBackgroundCopyFile3> pFile3;
+    if (SUCCEEDED(Guard::QueryInterfaceInto(pFile, __uuidof(IBackgroundCopyFile3), pFile3)))
     {
         // Add code to validate downloaded content and set IsValid.
         BG_FILE_PROGRESS Progress;

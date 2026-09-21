@@ -9,6 +9,7 @@
 #include "stdafx.h"
 
 #include "VolumeShadowCopies.h"
+#include "Utils/Guard/Com.h"
 
 #include "Location.h"
 
@@ -89,7 +90,7 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
             return E_FAIL;
         }
 
-        CComPtr<IVssBackupComponents> pVssBackup = NULL;
+        Guard::ComPtr<IVssBackupComponents> pVssBackup;
         if (FAILED(hr = m_vssapi->CreateVssBackupComponents(&pVssBackup)))
         {
             if (hr == E_ACCESSDENIED)
@@ -126,7 +127,7 @@ HRESULT VolumeShadowCopies::EnumerateShadows(std::vector<Shadow>& shadows)
             return hr;
         }
 
-        CComPtr<IVssEnumObject> pEnum;
+        Guard::ComPtr<IVssEnumObject> pEnum;
 
         hr = pVssBackup->Query(GUID_NULL, VSS_OBJECT_NONE, VSS_OBJECT_SNAPSHOT, &pEnum);
 

@@ -159,7 +159,7 @@ ZipCreate::CompressionLevel ZipCreate::GetCompressionLevel(const std::wstring& s
     return ZipCreate::CompressionLevel::Fast;
 }
 
-HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, CompressionLevel level)
+HRESULT ZipCreate::SetCompressionLevel(const Guard::ComPtr<IOutArchive>& pArchiver, CompressionLevel level)
 {
     HRESULT hr = E_FAIL;
 
@@ -199,7 +199,7 @@ HRESULT ZipCreate::SetCompressionLevel(const CComPtr<IOutArchive>& pArchiver, Co
         ++numProps;
     }
 
-    CComPtr<ISetProperties> setter;
+    Guard::ComPtr<ISetProperties> setter;
     if (FAILED(hr = pArchiver->QueryInterface(IID_ISetProperties, reinterpret_cast<void**>(&setter))))
     {
         Log::Error("Failed to retrieve IID_ISetProperties [{}]", SystemError(hr));
@@ -295,7 +295,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
     std::shared_ptr<ByteStream> outStream;
 
     {
-        CComPtr<IOutArchive> pArchiver;
+        Guard::ComPtr<IOutArchive> pArchiver;
         if (FAILED(hr = pZipLib->CreateObject(&m_FormatGUID, &IID_IOutArchive, reinterpret_cast<void**>(&pArchiver))))
         {
             Log::Error(L"Failed to create archiver");
@@ -331,12 +331,14 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
                 return hr;
             }
 
-            CComPtr<InByteStreamWrapper> infile = new InByteStreamWrapper(m_TempStream);
+            Guard::ComPtr<InByteStreamWrapper> infile = new InByteStreamWrapper(m_TempStream);
 
-            CComQIPtr<IInArchive, &IID_IInArchive> inarchive(pArchiver);
-            if (inarchive != nullptr)
+            // Only a handler that also exposes the input side can reopen what was written so far; one that
+            // does not simply starts the archive over, as it did before.
+            Guard::ComPtr<IInArchive> inarchive;
+            if (SUCCEEDED(Guard::QueryInterfaceInto(pArchiver.Get(), IID_IInArchive, inarchive)))
             {
-                CComPtr<ArchiveOpenCallback> callback = new ArchiveOpenCallback();
+                Guard::ComPtr<ArchiveOpenCallback> callback = new ArchiveOpenCallback();
                 if (FAILED(hr = inarchive->Open(infile, nullptr, callback)))
                 {
                     Log::Error(L"Failed to open archive stream [{}]", SystemError(hr));
@@ -345,7 +347,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
             }
         }
 
-        CComPtr<OutByteStreamWrapper> outFile;
+        Guard::ComPtr<OutByteStreamWrapper> outFile;
         if (bFinal)
         {
             outFile = new OutByteStreamWrapper(m_ArchiveStream, false);
@@ -386,7 +388,7 @@ STDMETHODIMP ZipCreate::Internal_FlushQueue(bool bFinal)
             }
         }
 
-        CComPtr<ArchiveUpdateCallback> callback =
+        Guard::ComPtr<ArchiveUpdateCallback> callback =
             new ArchiveUpdateCallback(m_Items, m_Indexes, bFinal, m_Callback, m_Password);
 
         if ((hr = pArchiver->UpdateItems(outFile, (UInt32)m_Items.size(), callback)) != S_OK)

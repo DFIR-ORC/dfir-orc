@@ -13,6 +13,8 @@
 
 #include "XmlLiteExtension.h"
 
+#include "Utils/Guard/Com.h"
+
 #include <stack>
 
 #pragma managed(push, off)
@@ -29,7 +31,7 @@ class Writer : public StructuredOutput::Writer
 {
 protected:
     std::shared_ptr<XmlLiteExtension> m_xmllite;
-    CComPtr<IXmlWriter> m_pWriter;
+    Guard::ComPtr<IXmlWriter> m_pWriter;
     std::stack<std::wstring> m_collectionStack;
 
 public:

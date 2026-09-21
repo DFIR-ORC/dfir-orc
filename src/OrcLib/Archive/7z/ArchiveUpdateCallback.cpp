@@ -11,6 +11,7 @@
 #include "Archive/7z/ArchiveUpdateCallback.h"
 
 #include "Archive/7z/InStreamAdapter.h"
+#include "Utils/Guard/Com.h"
 #include "Utils/Result.h"
 #include "ByteStream.h"
 
@@ -227,7 +228,7 @@ STDMETHODIMP ArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream*
         return S_OK;
     }
 
-    CComQIPtr<ISequentialInStream, &IID_ISequentialInStream> stream(new InStreamAdapter(item, true));
+    Guard::ComPtr<ISequentialInStream> stream(new InStreamAdapter(item, true));
     *pInStream = stream.Detach();
 
     return S_OK;

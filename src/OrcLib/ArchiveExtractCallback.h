@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <atlbase.h>
+#include "Utils/Guard/Com.h"
 
 #include "7zip/Archive/IArchive.h"
 #include "7zip/IPassword.h"
@@ -27,7 +27,7 @@ public:
 private:
     long m_refCount;
 
-    CComPtr<IInArchive> m_archiveHandler;
+    Guard::ComPtr<IInArchive> m_archiveHandler;
     ArchiveExtract::MakeOutputStream m_MakeWriteAbleStream;
 
     bool m_bComputeHash;
@@ -42,7 +42,7 @@ private:
 
 public:
     ArchiveExtractCallback(
-        const CComPtr<IInArchive>& archiveHandler,
+        const Guard::ComPtr<IInArchive>& archiveHandler,
         const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
         OrcArchive::ArchiveItems& Extracted,
         ArchiveExtract::MakeOutputStream MakeWriteAbleStream,

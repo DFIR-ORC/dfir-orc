@@ -265,7 +265,7 @@ HRESULT ConfigItem::AddChild(LPCWSTR szName, NamedAdderFunction adder, DWORD dwI
 HRESULT ConfigItem::ToXml(std::wstring& output) const
 {
     HRESULT hr = E_FAIL;
-    CComPtr<IStream> stream;
+    Guard::ComPtr<IStream> stream;
 
     if (!m_xmlLite)
     {
@@ -277,7 +277,7 @@ HRESULT ConfigItem::ToXml(std::wstring& output) const
         }
     }
 
-    CComPtr<IXmlWriter> pWriter;
+    Guard::ComPtr<IXmlWriter> pWriter;
     if (FAILED(hr = m_xmlLite->CreateXmlWriter(IID_IXmlWriter, (PVOID*)&pWriter, nullptr)))
     {
         XmlLiteExtension::LogError(hr, nullptr);

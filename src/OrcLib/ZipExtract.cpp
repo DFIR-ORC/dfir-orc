@@ -16,6 +16,7 @@
 #include "7zip/IPassword.h"
 
 #include "ZipExtract.h"
+#include "Utils/Guard/Com.h"
 #include "ZipLibrary.h"
 
 #include "FileStream.h"
@@ -62,7 +63,7 @@ STDMETHODIMP ZipExtract::Extract(
         return E_FAIL;
     }
 
-    CComPtr<IInArchive> archive;
+    Guard::ComPtr<IInArchive> archive;
 
     if (FAILED(hr = pZipLib->CreateObject(&CLSID_CFormat7z, &IID_IInArchive, reinterpret_cast<void**>(&archive))))
     {
@@ -78,8 +79,8 @@ STDMETHODIMP ZipExtract::Extract(
         return hr;
     }
 
-    CComQIPtr<IInStream, &IID_IInStream> infile = new InByteStreamWrapper(InputStream);
-    CComPtr<ArchiveOpenCallback> openCallback = new ArchiveOpenCallback();
+    Guard::ComPtr<IInStream> infile(new InByteStreamWrapper(InputStream));
+    Guard::ComPtr<ArchiveOpenCallback> openCallback = new ArchiveOpenCallback();
 
     if ((hr = archive->Open(infile, 0, openCallback)) != S_OK)
     {
@@ -87,7 +88,7 @@ STDMETHODIMP ZipExtract::Extract(
         return hr;
     }
 
-    CComPtr<ArchiveExtractCallback> extractCallback = new ArchiveExtractCallback(
+    Guard::ComPtr<ArchiveExtractCallback> extractCallback = new ArchiveExtractCallback(
         archive, pShouldBeExtracted, m_Items, MakeWriteAbleStream, m_Callback, m_bComputeHash, m_Password);
 
     hr = archive->Extract(NULL, (UInt32)-1, false, extractCallback);

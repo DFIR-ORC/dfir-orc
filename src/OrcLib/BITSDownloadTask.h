@@ -9,6 +9,8 @@
 
 #include "DownloadTask.h"
 
+#include "Utils/Guard/Com.h"
+
 #include <bits.h>
 
 #pragma managed(push, off)
@@ -29,8 +31,8 @@ public:
     ~BITSDownloadTask();
 
 private:
-    CComPtr<IBackgroundCopyManager> m_pbcm;
-    CComPtr<IBackgroundCopyJob> m_job;
+    Guard::ComPtr<IBackgroundCopyManager> m_pbcm;
+    Guard::ComPtr<IBackgroundCopyJob> m_job;
     bool m_bDelayedDeletion = false;
 
     std::wstring GetRemoteFullPath(const std::wstring& strRemoteName);

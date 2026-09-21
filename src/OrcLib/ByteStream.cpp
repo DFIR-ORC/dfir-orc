@@ -7,6 +7,7 @@
 //
 #include "stdafx.h"
 #include "ByteStream.h"
+#include "Utils/Guard/Com.h"
 #include "BinaryBuffer.h"
 
 #include "Temporary.h"
@@ -191,7 +192,7 @@ std::shared_ptr<ByteStream> ByteStream::GetHashStream(const std::shared_ptr<Byte
 
 HRESULT ByteStream::Get_IInStream(const std::shared_ptr<ByteStream>& aStream, ::IInStream** pInStream)
 {
-    CComPtr<IInStream> wrapper = new InByteStreamWrapper(aStream);
+    Guard::ComPtr<IInStream> wrapper = new InByteStreamWrapper(aStream);
     if (wrapper == nullptr)
         return E_OUTOFMEMORY;
     wrapper.CopyTo(pInStream);
@@ -200,7 +201,7 @@ HRESULT ByteStream::Get_IInStream(const std::shared_ptr<ByteStream>& aStream, ::
 
 HRESULT ByteStream::Get_IStream(const std::shared_ptr<ByteStream>& aStream, ::IStream** pStream)
 {
-    CComPtr<IStream> wrapper = new IStreamWrapper(aStream);
+    Guard::ComPtr<IStream> wrapper = new IStreamWrapper(aStream);
 
     if (wrapper == nullptr)
         return E_OUTOFMEMORY;
@@ -211,7 +212,7 @@ HRESULT ByteStream::Get_IStream(const std::shared_ptr<ByteStream>& aStream, ::IS
 HRESULT
 ByteStream::Get_ISequentialStream(const std::shared_ptr<ByteStream>& aStream, ISequentialStream** pSequentialStream)
 {
-    CComPtr<ISequentialStream> wrapper = new ISequentialStreamWrapper(aStream);
+    Guard::ComPtr<ISequentialStream> wrapper = new ISequentialStreamWrapper(aStream);
     if (wrapper == nullptr)
         return E_OUTOFMEMORY;
     wrapper.CopyTo(pSequentialStream);

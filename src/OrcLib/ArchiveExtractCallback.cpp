@@ -22,7 +22,7 @@
 
 #include <memory>
 
-const std::wstring EmptyFileAlias = _T( "[Content]" );
+const std::wstring EmptyFileAlias = L"[Content]";
 
 using namespace std;
 using namespace lib7z;
@@ -30,7 +30,7 @@ using namespace lib7z;
 using namespace Orc;
 
 ArchiveExtractCallback::ArchiveExtractCallback(
-    const CComPtr<IInArchive>& archiveHandler,
+    const Guard::ComPtr<IInArchive>& archiveHandler,
     const ArchiveExtract::ItemShouldBeExtractedCallback pShouldBeExtracted,
     OrcArchive::ArchiveItems& Extracted,
     ArchiveExtract::MakeOutputStream MakeWriteAbleStream,
@@ -165,8 +165,7 @@ STDMETHODIMP ArchiveExtractCallback::GetStream(UInt32 index, ISequentialOutStrea
     if (!m_currentItem.Stream)
         return E_FAIL;
 
-    CComQIPtr<ISequentialOutStream, &IID_ISequentialOutStream> outstream =
-        new OutByteStreamWrapper(m_currentItem.Stream);
+    Guard::ComPtr<ISequentialOutStream> outstream(new OutByteStreamWrapper(m_currentItem.Stream));
 
     *outStream = outstream.Detach();
 
@@ -243,7 +242,7 @@ STDMETHODIMP ArchiveExtractCallback::GetPropertyFilePath(UInt32 index)
     else
     {
         if (prop.bstrVal != nullptr)
-            m_currentItem.NameInArchive = (std::wstring)CComBSTR(prop.bstrVal);
+            m_currentItem.NameInArchive = Guard::BStrToString(prop.bstrVal);
     }
     return S_OK;
 }

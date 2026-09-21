@@ -25,7 +25,7 @@ using namespace Orc;
 
 namespace {
 
-HRESULT SkipToElementEnd(const CComPtr<IXmlReader>& pReader)
+HRESULT SkipToElementEnd(const Guard::ComPtr<IXmlReader>& pReader)
 {
     XmlNodeType type = XmlNodeType_None;
 
@@ -73,7 +73,7 @@ ConfigFileReader::ConfigFileReader(bool bLogComment)
     m_bLogComments = bLogComment;
 }
 
-HRESULT ConfigFileReader::NavigateConfigNodeList(const CComPtr<IXmlReader>& pReader, ConfigItem& config)
+HRESULT ConfigFileReader::NavigateConfigNodeList(const Guard::ComPtr<IXmlReader>& pReader, ConfigItem& config)
 {
     HRESULT hr = E_FAIL;
 
@@ -102,7 +102,7 @@ HRESULT ConfigFileReader::NavigateConfigNodeList(const CComPtr<IXmlReader>& pRea
     return S_OK;
 }
 
-HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pReader, ConfigItem& config)
+HRESULT ConfigFileReader::NavigateConfigAttributes(const Guard::ComPtr<IXmlReader>& pReader, ConfigItem& config)
 {
     HRESULT hr = E_FAIL;
 
@@ -158,7 +158,7 @@ HRESULT ConfigFileReader::NavigateConfigAttributes(const CComPtr<IXmlReader>& pR
     return S_OK;
 }
 
-HRESULT ConfigFileReader::NavigateConfigNode(const CComPtr<IXmlReader>& pReader, ConfigItem& config)
+HRESULT ConfigFileReader::NavigateConfigNode(const Guard::ComPtr<IXmlReader>& pReader, ConfigItem& config)
 {
     HRESULT hr = E_FAIL;
 
@@ -354,7 +354,7 @@ HRESULT ConfigFileReader::ReadConfig(
 {
     HRESULT hr = E_FAIL;
 
-    CComPtr<IStream> stream;
+    Guard::ComPtr<IStream> stream;
 
     if (FAILED(hr = ByteStream::Get_IStream(streamConfig, &stream)))
         return hr;
@@ -367,7 +367,7 @@ HRESULT ConfigFileReader::ReadConfig(
         return E_FAIL;
     }
 
-    CComPtr<IXmlReader> pReader;
+    Guard::ComPtr<IXmlReader> pReader;
 
     if (FAILED(hr = m_xmllite->CreateXmlReader(IID_IXmlReader, (PVOID*)&pReader, nullptr)))
     {
@@ -388,7 +388,7 @@ HRESULT ConfigFileReader::ReadConfig(
     else
     {
 
-        CComPtr<IXmlReaderInput> pInput;
+        Guard::ComPtr<IXmlReaderInput> pInput;
         if (FAILED(
                 hr = m_xmllite->CreateXmlReaderInputWithEncodingName(
                     stream, nullptr, szEncodingHint, FALSE, L"", &pInput)))

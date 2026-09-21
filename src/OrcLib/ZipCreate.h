@@ -12,6 +12,8 @@
 
 #include "ArchiveCreate.h"
 
+#include "Utils/Guard/Com.h"
+
 #include "7zip/IStream.h"
 #include "7zip/Archive/IArchive.h"
 
@@ -64,7 +66,7 @@ private:
 
     ZipCreate(bool bComputeHash = false);
 
-    STDMETHOD(SetCompressionLevel)(const CComPtr<IOutArchive>& pArchiver, CompressionLevel level);
+    STDMETHOD(SetCompressionLevel)(const Guard::ComPtr<IOutArchive>& pArchiver, CompressionLevel level);
 
     STDMETHOD(Internal_FlushQueue)(bool bFinal);
 };

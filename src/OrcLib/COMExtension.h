@@ -9,7 +9,7 @@
 
 #include "ExtensionLibrary.h"
 
-#include <atlbase.h>
+#include "Utils/Guard/Com.h"
 
 #pragma managed(push, off)
 
@@ -37,7 +37,7 @@ public:
     HRESULT AddClassFactory(CLSID clsid);
 
     template <class T>
-    HRESULT CreateInstance(CLSID clsid, CComPtr<T>& pInterface)
+    HRESULT CreateInstance(CLSID clsid, Guard::ComPtr<T>& pInterface)
     {
         auto factory = GetClassFactory(clsid);
         if (factory == nullptr)
@@ -51,11 +51,11 @@ public:
     virtual ~COMExtension();
 
 private:
-    const CComPtr<IClassFactory>& GetClassFactory(CLSID clsid);
+    const Guard::ComPtr<IClassFactory>& GetClassFactory(CLSID clsid);
 
     HRESULT(WINAPI* m_DllGetClassObject)(_In_ REFCLSID rclsid, _In_ REFIID riid, _Out_ LPVOID* ppv) = nullptr;
 
-    std::vector<std::pair<CLSID, CComPtr<IClassFactory>>> m_ClassFactories;
+    std::vector<std::pair<CLSID, Guard::ComPtr<IClassFactory>>> m_ClassFactories;
 };
 
 }  // namespace Orc

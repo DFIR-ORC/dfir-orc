@@ -14,7 +14,7 @@
 
 #include "XmlLiteExtension.h"
 
-#include <atlbase.h>
+#include "Utils/Guard/Com.h"
 
 #pragma managed(push, off)
 
@@ -26,9 +26,9 @@ private:
     std::shared_ptr<XmlLiteExtension> m_xmllite;
     bool m_bLogComments;
 
-    HRESULT NavigateConfigAttributes(const CComPtr<IXmlReader>& pReader, ConfigItem& config);
-    HRESULT NavigateConfigNodeList(const CComPtr<IXmlReader>& pReader, ConfigItem& config);
-    HRESULT NavigateConfigNode(const CComPtr<IXmlReader>& pReader, ConfigItem& config);
+    HRESULT NavigateConfigAttributes(const Guard::ComPtr<IXmlReader>& pReader, ConfigItem& config);
+    HRESULT NavigateConfigNodeList(const Guard::ComPtr<IXmlReader>& pReader, ConfigItem& config);
+    HRESULT NavigateConfigNode(const Guard::ComPtr<IXmlReader>& pReader, ConfigItem& config);
 
 public:
     ConfigFileReader(bool bLogComment = true);

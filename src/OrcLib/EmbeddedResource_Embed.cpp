@@ -15,6 +15,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "EmbeddedResource.h"
+#include "Utils/Guard/Com.h"
 
 #include "MemoryStream.h"
 #include "FileStream.h"
@@ -65,7 +66,8 @@ void SplitResourceLink(
     }
 }
 
-Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& xmlStream, bool printErrorMessage = true)
+Result<Guard::ComPtr<IXmlReader>>
+CreateXmlReader(const std::shared_ptr<ByteStream>& xmlStream, bool printErrorMessage = true)
 {
     HRESULT hr = xmlStream->SetFilePointer(0, FILE_BEGIN, NULL);
     if (FAILED(hr))
@@ -74,7 +76,7 @@ Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& x
         return SystemError(hr);
     }
 
-    CComPtr<IStream> stream;
+    Guard::ComPtr<IStream> stream;
     if (FAILED(hr = ByteStream::Get_IStream(xmlStream, &stream)))
     {
         return SystemError(hr);
@@ -87,7 +89,7 @@ Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& x
         return SystemError(E_FAIL);
     }
 
-    CComPtr<IXmlReader> reader;
+    Guard::ComPtr<IXmlReader> reader;
 
     if (FAILED(hr = m_xmllite->CreateXmlReader(IID_IXmlReader, (PVOID*)&reader, nullptr)))
     {
@@ -100,7 +102,7 @@ Result<CComPtr<IXmlReader>> CreateXmlReader(const std::shared_ptr<ByteStream>& x
         return SystemError(hr);
     }
 
-    CComPtr<IXmlReaderInput> pInput;
+    Guard::ComPtr<IXmlReaderInput> pInput;
     hr = m_xmllite->CreateXmlReaderInputWithEncodingName(stream, nullptr, kEncodingHint, FALSE, L"", &pInput);
     if (FAILED(hr))
     {
@@ -268,7 +270,7 @@ private:
 
 // Look into the current xml element for an attributes name which match the provided regex
 Result<std::vector<XmlString>>
-GetXmlAttributeValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view attributeValueRegex)
+GetXmlAttributeValueMatch(const Guard::ComPtr<IXmlReader>& reader, std::wstring_view attributeValueRegex)
 {
     std::vector<XmlString> values;
 
@@ -401,7 +403,7 @@ GetXmlAttributesValueMatch(const std::shared_ptr<ByteStream>& xmlStream, std::ws
 
 // Look into the current xml element for an attribute's name which match the provided regex
 Result<std::optional<XmlString>>
-GetXmlElementValueMatch(const CComPtr<IXmlReader>& reader, std::wstring_view elementValueRegex)
+GetXmlElementValueMatch(const Guard::ComPtr<IXmlReader>& reader, std::wstring_view elementValueRegex)
 {
     std::vector<std::wstring> values;
 
