@@ -87,14 +87,23 @@
             }
         },
         {
-            "name": "dfir-orc-x64-llm",
+            "name": "dfir-orc-x64-ninja",
+            "displayName": "Ninja Multi-Config (x64)",
+            "description": "Ninja build of the x64 target. Requires a Visual Studio x64 developer environment: both 'architecture' and 'toolset' use the 'external' strategy, so CMake relies on the environment instead of setting them (Ninja rejects '-A'/'-T'). The XP presets cannot use Ninja: CMakeLists.txt keys CMAKE_SYSTEM_VERSION and the C++ standard off CMAKE_GENERATOR_TOOLSET, which 'external' leaves unset.",
             "inherits": "dfir-orc-x64",
-            "binaryDir": "${sourceDir}/build-llm/dfir-orc-x64"
-        },
-        {
-            "name": "dfir-orc-x86-llm",
-            "inherits": "dfir-orc-x86",
-            "binaryDir": "${sourceDir}/build-llm/dfir-orc-x86"
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build/dfir-orc-x64-ninja",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "toolset": {
+                "value": "v143",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
         },
         {
             "name": "dfir-orc-x64-clangd",
@@ -102,7 +111,7 @@
             "description": "Standalone Ninja configure that emits compile_commands.json for the clangd LSP.",
             "inherits": "dfir-orc-x64",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build-llm/dfir-orc-x64-clangd",
+            "binaryDir": "${sourceDir}/build/dfir-orc-x64-clangd",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
@@ -185,27 +194,15 @@
             "configuration": "MinSizeRel",
             "targets": ["Orc"]
         },
-                {
-            "name": "dfir-orc-x64-llm-Debug",
-            "configurePreset": "dfir-orc-x64-llm",
+        {
+            "name": "dfir-orc-x64-ninja-Debug",
+            "configurePreset": "dfir-orc-x64-ninja",
             "configuration": "Debug",
             "targets": ["Orc"]
         },
         {
-            "name": "dfir-orc-x64-llm-MinSizeRel",
-            "configurePreset": "dfir-orc-x64-llm",
-            "configuration": "MinSizeRel",
-            "targets": ["Orc"]
-        },
-        {
-            "name": "dfir-orc-x86-llm-Debug",
-            "configurePreset": "dfir-orc-x86-llm",
-            "configuration": "Debug",
-            "targets": ["Orc"]
-        },
-        {
-            "name": "dfir-orc-x86-llm-MinSizeRel",
-            "configurePreset": "dfir-orc-x86-llm",
+            "name": "dfir-orc-x64-ninja-MinSizeRel",
+            "configurePreset": "dfir-orc-x64-ninja",
             "configuration": "MinSizeRel",
             "targets": ["Orc"]
         },
