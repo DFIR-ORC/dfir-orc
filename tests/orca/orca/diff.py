@@ -392,15 +392,40 @@ def _run_summary(result: dict) -> dict:
     }
 
 
+def is_table(path: str) -> bool:
+    """A parquet/CSV file diffs as a table; anything else (archive, result dir, run dir) is a
+    whole run."""
+    return os.path.splitext(path)[1].lower() in (".parquet", ".csv")
+
+
 def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
              exclude_cols=None, rows=False, out_dir="orca-diff", one_line=False,
-             as_json=False, show=None, key=None, patterns=10, engine_name="duckdb") -> None:
+             as_json=False, show=None, key=None, patterns=10, engine_name="duckdb",
+             cache_dir=None, refresh=False, password=None, private_key=None,
+             cms_backend=None) -> None:
+    from . import cache
     from .engine import get_engine, single_process_memory_limit
-    # One duckdb at a time, so it gets the machine budget (see engine.single_process_*).
-    engine = get_engine(engine_name, single_process_memory_limit())
     rows_out = out_dir if rows else None
 
+    # Two positional archives (or result/run dirs) mean a run diff, not a file-pair diff.
+    if not (run_a or run_b) and path_a and path_b and not (is_table(path_a) or is_table(path_b)):
+        run_a, run_b, path_a, path_b = path_a, path_b, None, None
+
     if run_a and run_b:
+        # Keep the paths the user typed for the report: a cache directory name is a hash.
+        source_a, source_b = run_a, run_b
+        resolve = dict(cache_dir=cache_dir, refresh=refresh, password=password,
+                       private_key=private_key, cms_backend=cms_backend,
+                       exclude_cols=exclude_cols, engine_name=engine_name)
+        run_a = cache.ensure_run(run_a, **resolve)
+        run_b = cache.ensure_run(run_b, **resolve)
+
+        # One duckdb at a time, so it gets the machine budget (see engine.single_process_*).
+        # Taken here rather than on entry: ensure_run may have just spent minutes ingesting two
+        # archives with a duckdb per job, and the budget has to describe the machine as it is when
+        # the queries below run, not as it was when the command started.
+        engine = get_engine(engine_name, single_process_memory_limit())
+
         result = diff_runs(engine, run_a, run_b, columns, exclude_cols, rows_out)
         summary = _run_summary(result)
 
@@ -419,9 +444,9 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
             if manifest:
                 payload.update({"files_added": manifest["added"], "files_removed": manifest["removed"],
                                 "changed_binary": manifest["changed_binary"]})
-            print(render_one_line(f"{run_a} vs {run_b}", payload))
+            print(render_one_line(f"{source_a} vs {source_b}", payload))
         else:
-            print(render_run_human(run_a, run_b, result, manifest))
+            print(render_run_human(source_a, source_b, result, manifest))
             if show:
                 for n in sorted(result["tables"]):
                     text = sample_table(engine, result["tables"][n], show, name=n,
@@ -433,6 +458,9 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
 
     if not (path_a and path_b):
         raise RuntimeError("provide two files, or --run and --reference")
+
+    # Same budget, same reason, for a plain two-file diff.
+    engine = get_engine(engine_name, single_process_memory_limit())
     dt = diff_tables(engine, path_a, path_b, columns, exclude_cols, rows_out)
     summary = _pair_summary(dt)
     if as_json:
