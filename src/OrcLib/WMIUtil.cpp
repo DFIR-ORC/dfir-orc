@@ -19,7 +19,7 @@ HRESULT WMI::Initialize()
 
     if (!m_pLocator)
     {
-        if (FAILED(hr = m_pLocator.CoCreateInstance(CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER)))
+        if (FAILED(hr = m_pLocator.CoCreateInstance(CLSID_WbemLocator, nullptr, CLSCTX_INPROC_SERVER)))
         {
             Log::Error(L"Failed to create IWbemLocator object [{}]", SystemError(hr));
             return hr;
@@ -30,7 +30,8 @@ HRESULT WMI::Initialize()
     {
         // Connect to the local root\cimv2 namespace
         // and obtain pointer pSvc to make IWbemServices calls.
-        if (FAILED(hr = m_pLocator->ConnectServer(_bstr_t(L"ROOT\\CIMV2"), NULL, NULL, 0, NULL, 0, 0, &m_pServices)))
+        const Guard::ComBStr nameSpace(L"ROOT\\CIMV2");
+        if (FAILED(hr = m_pLocator->ConnectServer(nameSpace, NULL, NULL, 0, NULL, 0, 0, &m_pServices)))
         {
             Log::Error(L"Could not connect to WbemServices object [{}]", SystemError(hr));
             return hr;
@@ -68,23 +69,23 @@ HRESULT WMI::WMICreateProcess(
     HRESULT hr = E_FAIL;
 
     // set up to call the Win32_Process::Create method
-    CComBSTR ClassName(L"Win32_Process");
-    CComPtr<IWbemClassObject> pProcessClass;
+    Guard::ComBStr ClassName(L"Win32_Process");
+    Guard::ComPtr<IWbemClassObject> pProcessClass;
     if (FAILED(hr = m_pServices->GetObject(ClassName, 0, NULL, &pProcessClass, NULL)))
     {
         Log::Error(L"Could not GetObject of class name Win32_Process [{}]", SystemError(hr));
         return hr;
     }
 
-    CComBSTR MethodName(L"Create");
-    CComPtr<IWbemClassObject> pInParamsDefinition;
+    Guard::ComBStr MethodName(L"Create");
+    Guard::ComPtr<IWbemClassObject> pInParamsDefinition;
     if (FAILED(hr = pProcessClass->GetMethod(MethodName, 0, &pInParamsDefinition, NULL)))
     {
         Log::Error(L"Could not GetMethod Create of class Win32_Process [{}]", SystemError(hr));
         return hr;
     }
 
-    CComPtr<IWbemClassObject> pProcessInstance;
+    Guard::ComPtr<IWbemClassObject> pProcessInstance;
     if (FAILED(hr = pInParamsDefinition->SpawnInstance(0, &pProcessInstance)))
     {
         Log::Error("Could not SpawnInstance of Create of class Win32_Process [{}]", SystemError(hr));
@@ -92,7 +93,7 @@ HRESULT WMI::WMICreateProcess(
     }
 
     // Create the values for the in parameters
-    CComVariant varCommand = szCommandLine;
+    Guard::ComVariant varCommand(szCommandLine);
 
     // Store the value for the in parameters
     if (FAILED(hr = pProcessInstance->Put(L"CommandLine", 0, &varCommand, 0)))
@@ -105,7 +106,7 @@ HRESULT WMI::WMICreateProcess(
     if (szCurrentDirectory != nullptr)
     {
         // Create the values for the in parameters
-        CComVariant varCurrentDirectory = szCurrentDirectory;
+        Guard::ComVariant varCurrentDirectory(szCurrentDirectory);
 
         // Store the value for the in parameters
         if (FAILED(hr = pProcessInstance->Put(L"CurrentDirectory", 0, &varCurrentDirectory, 0)))
@@ -120,8 +121,8 @@ HRESULT WMI::WMICreateProcess(
 
     //************************************
     // Query the Win32_ProcessStartup Class
-    CComPtr<IWbemClassObject> pProcessStartupClass;
-    CComBSTR bstrProcessStartup(L"Win32_ProcessStartup");
+    Guard::ComPtr<IWbemClassObject> pProcessStartupClass;
+    Guard::ComBStr bstrProcessStartup(L"Win32_ProcessStartup");
     if (FAILED(hr = m_pServices->GetObject(bstrProcessStartup, 0, NULL, &pProcessStartupClass, NULL)))
     {
         Log::Error(L"Could not GetObject of class Win32_ProcessStartup");
@@ -129,15 +130,14 @@ HRESULT WMI::WMICreateProcess(
     }
 
     // Create a Instance of Win32_ProcessStartup
-    CComPtr<IWbemClassObject> pProcessStartupInstance;
+    Guard::ComPtr<IWbemClassObject> pProcessStartupInstance;
     if (FAILED(hr = pProcessStartupClass->SpawnInstance(0, &pProcessStartupInstance)))
     {
         Log::Error(L"Could not SpawnInstance of class Win32_ProcessStartup");
         return hr;
     }
 
-    CComVariant varCommand_ShowWindow;
-    varCommand_ShowWindow = SW_HIDE;
+    Guard::ComVariant varCommand_ShowWindow(static_cast<INT32>(SW_HIDE));
     if (FAILED(hr = pProcessStartupInstance->Put(L"ShowWindow", 0, &varCommand_ShowWindow, 0)))
     {
         Log::Error("Could not put ShowWindow of class Win32_ProcessStartup");
@@ -147,8 +147,7 @@ HRESULT WMI::WMICreateProcess(
 
     if (dwPriority)
     {
-        CComVariant varCommand_PriorityClass;
-        varCommand_PriorityClass = (UINT32)dwPriority;
+        Guard::ComVariant varCommand_PriorityClass(static_cast<UINT32>(dwPriority));
         if (FAILED(hr = pProcessStartupInstance->Put(L"PriorityClass", 0, &varCommand_PriorityClass, 0)))
         {
             Log::Error(
@@ -162,8 +161,7 @@ HRESULT WMI::WMICreateProcess(
 
     if (dwCreationFlags)
     {
-        CComVariant varCommand_CreateFlags;
-        varCommand_CreateFlags = (INT32)dwCreationFlags;
+        Guard::ComVariant varCommand_CreateFlags(static_cast<INT32>(dwCreationFlags));
         varCommand.ChangeType(VT_UI4);
 
         if (FAILED(hr = pProcessStartupInstance->Put(L"CreateFlags", 0, &varCommand_CreateFlags, 0L)))
@@ -175,8 +173,7 @@ HRESULT WMI::WMICreateProcess(
     }
 
     // Create a command to set ProcessStartupInformation to be the instance of Win32_ProcessStartup
-    CComVariant varCommand_ProcessStartup;
-    varCommand_ProcessStartup = pProcessStartupInstance;
+    Guard::ComVariant varCommand_ProcessStartup(pProcessStartupInstance);
     // set the value to the instance of Win32_Process process
     if (FAILED(hr = pProcessInstance->Put(L"ProcessStartupInformation", 0, &varCommand_ProcessStartup, 0)))
     {
@@ -185,7 +182,7 @@ HRESULT WMI::WMICreateProcess(
     }
 
     // Execute Method
-    CComPtr<IWbemClassObject> pOutParams;
+    Guard::ComPtr<IWbemClassObject> pOutParams;
     if (FAILED(hr = m_pServices->ExecMethod(ClassName, MethodName, 0, NULL, pProcessInstance, &pOutParams, NULL)))
     {
         Log::Error("Could not put execute command [{}]", SystemError(hr));
@@ -195,8 +192,8 @@ HRESULT WMI::WMICreateProcess(
     // To see what the method returned,
     // use the following code.  The return value will
     // be in &varReturnValue
-    CComVariant varReturnValue;
-    if (FAILED(hr = pOutParams->Get(CComBSTR(L"ReturnValue"), 0, &varReturnValue, NULL, 0)))
+    Guard::ComVariant varReturnValue;
+    if (FAILED(hr = pOutParams->Get(L"ReturnValue", 0, &varReturnValue, NULL, 0)))
     {
         Log::Error("Could not retrieve value ReturnValue [{}]", SystemError(hr));
         return hr;
@@ -206,12 +203,12 @@ HRESULT WMI::WMICreateProcess(
     return S_OK;
 }
 
-Result<CComPtr<IEnumWbemClassObject>> Orc::WMI::Query(LPCWSTR szRequest) const
+Result<Guard::ComPtr<IEnumWbemClassObject>> Orc::WMI::Query(LPCWSTR szRequest) const
 {
-    CComPtr<IEnumWbemClassObject> pEnumerator;
+    Guard::ComPtr<IEnumWbemClassObject> pEnumerator;
     if (auto hr = m_pServices->ExecQuery(
-            bstr_t("WQL"),
-            bstr_t(szRequest),
+            Guard::ComBStr(L"WQL"),
+            Guard::ComBStr(szRequest),
             WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
             NULL,
             &pEnumerator);
@@ -225,9 +222,9 @@ Result<CComPtr<IEnumWbemClassObject>> Orc::WMI::Query(LPCWSTR szRequest) const
 }
 
 template <>
-Result<bool> Orc::WMI::GetProperty<bool>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Result<bool> Orc::WMI::GetProperty<bool>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
-    CComVariant vtProp;
+    Guard::ComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return SystemError(hr);
@@ -242,9 +239,9 @@ Result<bool> Orc::WMI::GetProperty<bool>(const CComPtr<IWbemClassObject>& obj, L
 }
 
 template <>
-Result<SHORT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Result<SHORT> Orc::WMI::GetProperty<SHORT>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
-    CComVariant vtProp;
+    Guard::ComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return SystemError(hr);
@@ -259,9 +256,9 @@ Result<SHORT> Orc::WMI::GetProperty<SHORT>(const CComPtr<IWbemClassObject>& obj,
 }
 
 template <>
-Result<USHORT> Orc::WMI::GetProperty<USHORT>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Result<USHORT> Orc::WMI::GetProperty<USHORT>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
-    CComVariant vtProp;
+    Guard::ComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return SystemError(hr);
@@ -276,9 +273,9 @@ Result<USHORT> Orc::WMI::GetProperty<USHORT>(const CComPtr<IWbemClassObject>& ob
 }
 
 template <>
-Result<ULONG32> Orc::WMI::GetProperty<ULONG32>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Result<ULONG32> Orc::WMI::GetProperty<ULONG32>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
-    CComVariant vtProp;
+    Guard::ComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return SystemError(hr);
@@ -293,9 +290,9 @@ Result<ULONG32> Orc::WMI::GetProperty<ULONG32>(const CComPtr<IWbemClassObject>& 
 }
 
 template <>
-Result<LONG32> Orc::WMI::GetProperty<LONG32>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Result<LONG32> Orc::WMI::GetProperty<LONG32>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
-    CComVariant vtProp;
+    Guard::ComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return SystemError(hr);
@@ -310,9 +307,9 @@ Result<LONG32> Orc::WMI::GetProperty<LONG32>(const CComPtr<IWbemClassObject>& ob
 }
 
 template <>
-Result<ULONG64> Orc::WMI::GetProperty<ULONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Result<ULONG64> Orc::WMI::GetProperty<ULONG64>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
-    CComVariant vtProp;
+    Guard::ComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return SystemError(hr);
@@ -326,9 +323,9 @@ Result<ULONG64> Orc::WMI::GetProperty<ULONG64>(const CComPtr<IWbemClassObject>& 
 }
 
 template <>
-Result<LONG64> Orc::WMI::GetProperty<LONG64>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Result<LONG64> Orc::WMI::GetProperty<LONG64>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
-    CComVariant vtProp;
+    Guard::ComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return SystemError(hr);
@@ -343,15 +340,15 @@ Result<LONG64> Orc::WMI::GetProperty<LONG64>(const CComPtr<IWbemClassObject>& ob
 }
 
 template <>
-Result<ByteBuffer> Orc::WMI::GetProperty<ByteBuffer>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Result<ByteBuffer> Orc::WMI::GetProperty<ByteBuffer>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
     return SystemError(E_NOTIMPL);
 }
 
 template <>
-Result<std::wstring> Orc::WMI::GetProperty<std::wstring>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Result<std::wstring> Orc::WMI::GetProperty<std::wstring>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
-    CComVariant vtProp;
+    Guard::ComVariant vtProp;
     CIMTYPE propType;
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
         return SystemError(std::move(hr));
@@ -367,9 +364,9 @@ Result<std::wstring> Orc::WMI::GetProperty<std::wstring>(const CComPtr<IWbemClas
 
 template <>
 Result<std::vector<std::wstring>>
-Orc::WMI::GetProperty<std::vector<std::wstring>>(const CComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
+Orc::WMI::GetProperty<std::vector<std::wstring>>(const Guard::ComPtr<IWbemClassObject>& obj, LPCWSTR szProperty)
 {
-    CComVariant vtProp;
+    Guard::ComVariant vtProp;
     CIMTYPE propType;
 
     if (auto hr = obj->Get(szProperty, 0, &vtProp, &propType, 0); FAILED(hr))
@@ -396,14 +393,14 @@ HRESULT WMI::WMIEnumPhysicalMedia(std::vector<std::wstring>& physicaldrives) con
 
     while (pEnumerator)
     {
-        CComPtr<IWbemClassObject> pclsObj;
+        Guard::ComPtr<IWbemClassObject> pclsObj;
 
         HRESULT hr = pEnumerator->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
 
         if (0 == uReturn)
             break;
 
-        CComVariant vtProp;
+        Guard::ComVariant vtProp;
 
         // Get the value of the Name property
         hr = pclsObj->Get(L"DeviceID", 0, &vtProp, 0, 0);

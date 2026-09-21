@@ -726,7 +726,7 @@ Result<std::vector<Orc::SystemDetails::CPUInformation>> Orc::SystemDetails::GetC
 
     while (pEnum)
     {
-        CComPtr<IWbemClassObject> pclsObj;
+        Guard::ComPtr<IWbemClassObject> pclsObj;
         ULONG uReturn = 0;
 
         pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
@@ -1166,7 +1166,7 @@ Result<DWORD> Orc::SystemDetails::GetParentProcessId()
     if (!pEnum)
         return SystemError(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
 
-    CComPtr<IWbemClassObject> pclsObj;
+    Guard::ComPtr<IWbemClassObject> pclsObj;
     ULONG uReturn = 0;
 
     pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
@@ -1210,7 +1210,7 @@ Result<std::wstring> Orc::SystemDetails::GetCmdLine(DWORD dwPid)
     const auto& pEnum = result.value();
     if (!pEnum)
         return SystemError(HRESULT_FROM_WIN32(ERROR_OBJECT_NOT_FOUND));
-    CComPtr<IWbemClassObject> pclsObj;
+    Guard::ComPtr<IWbemClassObject> pclsObj;
     ULONG uReturn = 0;
 
     pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
@@ -1456,7 +1456,7 @@ Result<std::vector<Orc::SystemDetails::PhysicalDrive>> Orc::SystemDetails::GetPh
 
     while (pEnum)
     {
-        CComPtr<IWbemClassObject> pclsObj;
+        Guard::ComPtr<IWbemClassObject> pclsObj;
         ULONG uReturn = 0;
 
         pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
@@ -1524,7 +1524,7 @@ Result<std::vector<Orc::SystemDetails::MountedVolume>> Orc::SystemDetails::GetMo
 
     while (pEnum)
     {
-        CComPtr<IWbemClassObject> pclsObj;
+        Guard::ComPtr<IWbemClassObject> pclsObj;
         ULONG uReturn = 0;
 
         pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
@@ -1627,7 +1627,7 @@ Result<std::vector<Orc::SystemDetails::QFE>> Orc::SystemDetails::GetOsQFEs()
     std::vector<QFE> retval;
     while (pEnum)
     {
-        CComPtr<IWbemClassObject> pclsObj;
+        Guard::ComPtr<IWbemClassObject> pclsObj;
         ULONG uReturn = 0;
 
         pEnum->Next(WBEM_INFINITE, 1, &pclsObj, &uReturn);
