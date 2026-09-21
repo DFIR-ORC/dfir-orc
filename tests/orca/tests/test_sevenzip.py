@@ -78,5 +78,33 @@ class TestExtractTolerance(unittest.TestCase):
                 sevenzip.extract_all("7z", "a.7z", "dest")
 
 
+class TestIsArchive(unittest.TestCase):
+    def blob(self, content: bytes) -> str:
+        path = os.path.join(self.dir.name, "blob")
+        with open(path, "wb") as f:
+            f.write(content)
+        return path
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+
+    def test_recognizes_the_signature(self):
+        self.assertTrue(sevenzip.is_archive(self.blob(b"7z\xbc\xaf\x27\x1c\x00\x04rest")))
+
+    def test_rejects_a_journal(self):
+        # The other thing a decrypted '.p7b' can legitimately be.
+        self.assertFalse(sevenzip.is_archive(self.blob(b"JRNL\x02\x00\x00\x00")))
+
+    def test_rejects_garbage(self):
+        self.assertFalse(sevenzip.is_archive(self.blob(b"\xb0f5\x06\xd1\xbc@\x9e")))
+
+    def test_rejects_a_truncated_signature(self):
+        self.assertFalse(sevenzip.is_archive(self.blob(b"7z\xbc")))
+
+    def test_a_missing_file_is_not_an_archive(self):
+        self.assertFalse(sevenzip.is_archive(os.path.join(self.dir.name, "absent")))
+
+
 if __name__ == "__main__":
     unittest.main()

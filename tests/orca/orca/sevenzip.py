@@ -6,6 +6,9 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
 
+SIGNATURE = b"7z\xbc\xaf\x27\x1c"
+
+
 @dataclass(frozen=True)
 class ArchiveEntry:
     path: str
@@ -13,6 +16,19 @@ class ArchiveEntry:
     crc: str
     attributes: str
     modified: str = ""
+
+
+def is_archive(path: str) -> bool:
+    """True when the file starts with the 7z signature.
+
+    A cheap header read, not a validity check: enough to tell a real archive from a blob that
+    only claims to be one, which is what separates '/no_journaling' content from garbage.
+    """
+    try:
+        with open(path, "rb") as source:
+            return source.read(len(SIGNATURE)) == SIGNATURE
+    except OSError:
+        return False
 
 
 def parse_listing(lines: list[str]) -> list[ArchiveEntry]:

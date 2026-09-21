@@ -7,7 +7,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 
-from . import naming, sevenzip
+from . import cms, journal, naming, sevenzip
 from .columns import DEFAULT_VOLATILE_COLUMNS
 from .engine import get_engine, worker_memory_limit
 from .timing import TimingRecord, write_timing_csv, summarize
@@ -125,7 +125,128 @@ def resolve_archives(path: str) -> list[str]:
                     archives.append(os.path.join(path, name))
         if archives:
             return archives
-    raise RuntimeError(f"no Orc Outcome json with archives found in '{path}'")
+
+    # No usable Outcome: fall back to the archives sitting in the directory, the way
+    # Expand-OrcArchive accepted a plain folder of results.
+    loose = sorted(os.path.join(path, entry) for entry in os.listdir(path)
+                   if entry.lower().endswith((".7z", ".p7b")) and not sealed_output(entry))
+    if loose:
+        return loose
+
+    raise RuntimeError(f"no Orc Outcome json and no archive found in '{path}'")
+
+
+# ORC seals a closed file into '<name>.7z.p7b' (WolfLauncher_Run.cpp), so an encrypted
+# collection holds 'outcome.json.7z.p7b' and '<command>.log.7z.p7b' beside the real archives.
+SEALED_SUFFIX = ".7z.p7b"
+SEALED_OUTPUT_EXTENSIONS = (".json", ".log", ".txt", ".xml")
+
+
+def sealed_name(path: str) -> str | None:
+    """The name ORC sealed, for a '<name>.7z.p7b'; None when this is not a sealed file."""
+    base = os.path.basename(path)
+    if not base.lower().endswith(SEALED_SUFFIX):
+        return None
+    return base[:-len(SEALED_SUFFIX)]
+
+
+def sealed_output(path: str) -> bool:
+    """True for a sealed ORC *output* (an outcome, a log) rather than a sealed archive.
+
+    Both are '<name>.7z.p7b'; what separates them is the extension underneath, because
+    'SystemInfo.7z.p7b' seals an archive while 'outcome.json.7z.p7b' seals a JSON file. Without
+    this the outcome would be ingested as if it were a result archive.
+    """
+    name = sealed_name(path)
+    return bool(name) and name.lower().endswith(SEALED_OUTPUT_EXTENSIONS)
+
+
+def open_sealed_outcome(source: str, work_dir: str, seven_zip: str, private_key=None,
+                        cms_backend=None) -> str | None:
+    """Path to the Outcome JSON inside a sealed '<name>.json.7z.p7b', or None if there is none.
+
+    An encrypted collection seals its Outcome by default (bEncryptOutcome), so without this a
+    run's whole outcome view - duration, failures, peak memory - silently disappears exactly
+    when encryption is in use.
+    """
+    directory = source if os.path.isdir(source) else os.path.dirname(source) or "."
+    try:
+        entries = sorted(os.listdir(directory))
+    except OSError:
+        return None
+
+    for entry in entries:
+        name = sealed_name(entry)
+        if not name or not name.lower().endswith(".json"):
+            continue
+
+        try:
+            archive = decrypt_archive(os.path.join(directory, entry), work_dir, private_key,
+                                      cms_backend)
+            for inner in sevenzip.list_entries(seven_zip, archive):
+                if inner.path.lower().endswith(".json"):
+                    return sevenzip.extract_entry(seven_zip, archive, inner.path, work_dir)
+        except (RuntimeError, OSError) as error:
+            # A sealed outcome we cannot open is worth saying out loud: the rest of the run
+            # still ingests, but its health view will be empty.
+            print(f"could not open the sealed outcome '{entry}': {error}")
+
+    return None
+
+
+def decrypt_archive(path: str, work_dir: str, private_key: str | None = None,
+                    cms_backend: str | None = None) -> str:
+    """Return a path to an openable '.7z' for 'path', decrypting into 'work_dir' if needed.
+
+    An already-plain archive is returned untouched. A '.p7b' is CMS-decrypted and then, when
+    ORC journaled the stream (the default - '/no_journaling' does not), replayed into the
+    archive it describes. A bare '.7zs' journal is replayed without any decryption.
+
+    Kept separate from resolve_archives() so discovery stays free of side effects on disk.
+    """
+    stem = os.path.splitext(os.path.basename(path))[0]
+    # ORC names an encrypted archive '<name>.7z.p7b', so dropping '.p7b' already leaves the
+    # '.7z'; appending another would produce 'SystemInfo.7z.7z'.
+    if stem.lower().endswith(".7z"):
+        stem = stem[:-3]
+
+    if journal.is_journaled(path):
+        os.makedirs(work_dir, exist_ok=True)
+        plain = os.path.join(work_dir, stem + ".7z")
+        journal.replay(path, plain)
+        return plain
+
+    if os.path.splitext(path)[1].lower() != ".p7b":
+        return path
+
+    os.makedirs(work_dir, exist_ok=True)
+    decrypted = os.path.join(work_dir, stem + ".7zs")
+    backend = cms.decrypt(path, decrypted, private_key, cms_backend)
+
+    if not journal.is_journaled(decrypted):
+        # No JRNL header. Two unrelated things look identical here, so name which one it is.
+        # '/no_journaling' puts the archive straight into the CMS content and is normal; a
+        # wrong key also lands here, because CMS over AES-CBC carries no integrity check and
+        # OpenSSL answers a bad RSA padding with a random session key rather than an error -
+        # so cms.decrypt can return garbage and call it a success. Only the content tells them
+        # apart. Either way the caller still gets a path: 7z reports the real damage, and an
+        # archive is not refused just because this heuristic did not recognize it.
+        plain = os.path.join(work_dir, stem + ".7z")
+        os.replace(decrypted, plain)
+        name = os.path.basename(path)
+        if sevenzip.is_archive(plain):
+            print(f"decrypted '{name}' with the {backend} backend (no_journaling)")
+        else:
+            print(f"warning: '{name}' decrypted with the {backend} backend to neither a JRNL "
+                  f"journal nor a 7z archive - most likely the wrong private key; continuing")
+        return plain
+
+    plain = os.path.join(work_dir, stem + ".7z")
+    journal.replay(decrypted, plain)
+    # The journal is a GB-scale intermediate the replayed archive supersedes.
+    os.remove(decrypted)
+    print(f"decrypted '{os.path.basename(path)}' with the {backend} backend")
+    return plain
 
 
 def ingest_one(job: CsvJob, engine, out_dir: str, drop_columns, make_csv: bool,
@@ -196,7 +317,8 @@ def _write_manifest(rows: list[dict], out_dir: str, engine) -> None:
 
 
 def run_ingest(archive: str, out_dir: str, *, jobs=None, make_csv=True, make_trunc=True,
-               exclude_cols=None, password=None, engine_name="duckdb") -> list[TimingRecord]:
+               exclude_cols=None, password=None, private_key=None, cms_backend=None,
+               engine_name="duckdb") -> list[TimingRecord]:
     # The worker count decides the engine's memory budget: every job runs its own duckdb, and
     # a table large enough to matter is large enough for six of them to exhaust the machine.
     workers = jobs or os.cpu_count() or 4
@@ -206,18 +328,25 @@ def run_ingest(archive: str, out_dir: str, *, jobs=None, make_csv=True, make_tru
         raise RuntimeError("7z.exe not found")
     drop = list(exclude_cols) if exclude_cols else list(DEFAULT_VOLATILE_COLUMNS)
 
-    archives = resolve_archives(archive)
     os.makedirs(out_dir, exist_ok=True)
-
-    outcome_path = find_outcome_json(archive)
-    if outcome_path:
-        shutil.copy(outcome_path, os.path.join(out_dir, "outcome.json"))
-    capture_logs(seven, archives, out_dir, password)
 
     # Nested containers are extracted once into staging and must outlive ingestion
     # (each job extracts its CSV from its container), so staging is cleaned only at the end.
+    # A decrypted '.p7b' lands here too, for the same lifetime.
     staging = tempfile.mkdtemp(prefix="orca_stage_")
     try:
+        archives = [decrypt_archive(top, staging, private_key, cms_backend)
+                    for top in resolve_archives(archive)]
+
+        # A sealed outcome needs the staging directory, so this runs inside it rather than
+        # before, as the plain-JSON case used to.
+        outcome_path = find_outcome_json(archive) or open_sealed_outcome(
+            archive, staging, seven, private_key, cms_backend)
+        if outcome_path:
+            shutil.copy(outcome_path, os.path.join(out_dir, "outcome.json"))
+
+        capture_logs(seven, archives, out_dir, password)
+
         work_jobs, manifest_rows = discover_jobs(archives, staging, seven, password)
         _write_name_map(work_jobs, out_dir)
         _write_manifest(manifest_rows, out_dir, engine)
