@@ -42,7 +42,5 @@
 
 // Windows Header Files
 #include <windows.h>
-#include <atlbase.h>
-
 #include "OrcLib.h"
 #include "BinaryBuffer.h"

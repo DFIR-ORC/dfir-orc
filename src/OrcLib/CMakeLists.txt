@@ -1085,6 +1085,11 @@ target_link_libraries(OrcLib
         ws2_32.lib
         Iphlpapi.lib
         version.lib
+        # Linked by ATL's atlbase.h until it was dropped: PathMatchSpec (Shlwapi), CoCreateInstance
+        # (Ole32) and the BSTR/VARIANT helpers (OleAut32).
+        Shlwapi.lib
+        Ole32.lib
+        OleAut32.lib
 )
 
 find_package(RapidJSON CONFIG REQUIRED)

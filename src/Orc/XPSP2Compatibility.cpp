@@ -49,7 +49,7 @@ AfxGetLogicalProcessorInformation(__out PSYSTEM_LOGICAL_PROCESSOR_INFORMATION Bu
 
     if (!looked && !GetLogicalProcessorInformation_p)
     {
-        HMODULE mod = GetModuleHandle(_T("KERNEL32.DLL"));
+        HMODULE mod = GetModuleHandleW(L"KERNEL32.DLL");
         if (mod)
             GetLogicalProcessorInformation_p =
                 (pGetLogicalProcessorInformation)GetProcAddress(mod, "GetLogicalProcessorInformation");

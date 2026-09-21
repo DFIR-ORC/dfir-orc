@@ -26,6 +26,4 @@
 #include <algorithm>
 #include <iterator>
 
-#include <atlbase.h>
-
 #include "unittesthelper.h"

@@ -26,4 +26,3 @@
 #include <algorithm>
 #include <iterator>
 
-#include <atlbase.h>

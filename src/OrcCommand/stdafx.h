@@ -45,7 +45,6 @@
 #include <ntstatus.h>
 #include <winternl.h>
 
-#include <atlbase.h>
 #include <strsafe.h>
 #include <safeint.h>
 #include <wincrypt.h>

@@ -43,7 +43,6 @@
 // Windows Header Files
 #include <intrin.h>
 #include <windows.h>
-#include <atlbase.h>
 #include <winnt.h>
 #include <winternl.h>
 #include <strsafe.h>

@@ -23,7 +23,10 @@ STDMETHODIMP InStreamAdapter::Read(void* data, UInt32 size, UInt32* processedSiz
     {
         if (read > MAXDWORD)
         {
-            return E_ATL_VALUE_TOO_LARGE;
+            // Unreachable in practice (the caller asks for at most a UInt32) and it used to return the ATL
+            // registrar code E_ATL_VALUE_TOO_LARGE, which is 0x0215: a value SUCCEEDED() accepts, leaving
+            // processedSize unwritten on what is meant to be a failure.
+            return HRESULT_FROM_WIN32(ERROR_ARITHMETIC_OVERFLOW);
         }
 
         *processedSize = (UInt32)read;

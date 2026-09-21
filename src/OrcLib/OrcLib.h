@@ -16,8 +16,10 @@
 #include <vector>
 #include <type_traits>
 
+// WinSock2 before Windows.h: the SDK Windows.h pulls in the WinSock 1 declarations otherwise, and the
+// two headers define the same structures. ATL's atldef.h used to do exactly this for the whole project.
+#include <WinSock2.h>
 #include <Windows.h>
-#include <winsock.h>
 
 #include <fmt/core.h>
 #include <fmt/compile.h>

@@ -29,8 +29,6 @@
 #include <algorithm>
 #include <iterator>
 
-#include <atlbase.h>
-
 #include "Log/Log.h"
 
 #include "unittesthelper.h"
