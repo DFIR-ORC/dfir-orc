@@ -873,6 +873,7 @@ set(SRC_UTILITIES
     "Utils/Dump.h"
     "Utils/EnumFlags.h"
     "Utils/Guard.h"
+    "Utils/Guard/Com.h"
     "Utils/Guard/Winsock.h"
     "Utils/Guard/Winsock.cpp"
     "Utils/Locker.h"
