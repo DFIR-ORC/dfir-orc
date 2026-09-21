@@ -110,6 +110,7 @@ class TestProbes(unittest.TestCase):
     def test_libcrypto_needs_a_key(self):
         self.assertIn("private key", cms._probe_libcrypto(None))
 
+    @unittest.skipUnless(os.name == "nt", "cng declines everything off Windows")
     def test_cng_declines_a_pem_key(self):
         # By design: CryptoAPI reads the certificate store, so a key file belongs elsewhere.
         self.assertIn("PEM", cms._probe_cng("some.key"))
@@ -217,8 +218,10 @@ class TestRoundTrip(unittest.TestCase):
             capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
+        # Whichever PEM-capable backend the chain reaches first: the differential test below
+        # is what pins each one's output.
         decrypted = self.path("stream-back.7zs")
-        self.assertEqual(cms.decrypt(encrypted, decrypted, PRIVATE_KEY), "openssl")
+        self.assertIn(cms.decrypt(encrypted, decrypted, PRIVATE_KEY), ("libcrypto", "openssl"))
         with open(decrypted, "rb") as f:
             self.assertEqual(f.read(), stream)
 
