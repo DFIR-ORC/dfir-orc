@@ -168,7 +168,7 @@ void Snapshot::Parse(
 
     if (!diffAreaLocationTable.Items().empty())
     {
-        Log::Critical(
+        Log::Debug(
             "Found unsupported DiffAreaLocationTable items, please provide a full disk dump to the devs (count: {})",
             diffAreaLocationTable.Items().size());
     }
