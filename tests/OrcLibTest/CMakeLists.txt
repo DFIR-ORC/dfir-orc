@@ -58,6 +58,7 @@ set(SRC_UTILITIES
     "registry.cpp"
     "temporary.cpp"
     "result.cpp"
+    "string_test.cpp"
     "system_details.cpp"
     "wide_ansi.cpp"
 )
