@@ -51,6 +51,7 @@ E:\runs\host\
   name-map.csv        table name -> source archive / entry / mtime
   ingest-timing.csv   per-file timing
   outcome.json        the run's Outcome (if present)
+  outlines/           every Outline the collection carried (one per ORC run attempt)
   logs\               captured .log files
 ```
 
@@ -225,6 +226,74 @@ keyed by each source archive's name, size and mtime plus the ingest options - no
 which would mean reading the whole archive to decide whether to skip work. Cached runs are
 ingested parquet-only and are ordinary run directories: `orca report`, `getthis` and `merge`
 all work on them. Nothing prunes the cache; delete the directory when it grows too large.
+
+### Outline (one queryable row per ORC run)
+
+The Outline says what ran where: the exact ORC build, the machine, its OS, CPU and memory, the
+command line, the configured archives. `ingest` captures every Outline a collection carries
+(sealed ones too), and `orca outline` turns them into a table.
+
+```powershell
+orca outline --root E:\runs --out E:\runs\fleet.parquet   # across many collections
+orca outline E:\runs\host                                  # one run -> <run>\outline.parquet
+orca outline E:\runs\host --json                           # just print the rows
+```
+
+```
+fleet.parquet: 3 run(s) from 2 collection(s)
+  TESTHOST  v10.3.4-23-gf265bf56e-x64-xp   Microsoft Windows 10 Enterprise Edition (build 2
+  TESTHOST  v10.3.4-62-g48af8529a-x64-xp   Microsoft Windows 10 Enterprise Edition (build 2
+```
+
+The fields worth grouping by are real columns - `computer_name`, `version`, `system_type`,
+`architecture`, `os_description`, `os_version`, `os_tags`, `cpu_name`, `memory_physical`,
+`user_name`, `elevated`, `capsule_sha1`, counts of volumes/drives/adapters/profiles - and the
+whole document stays in a `json` column, so anything not promoted is still one `json_extract`
+away and no field has to be guessed in advance:
+
+```sql
+SELECT version, count(*) AS runs FROM read_parquet('fleet.parquet') GROUP BY version;
+
+SELECT computer_name,
+       json_extract_string(json, '$.archives[0].keyword') AS archive,
+       json_array_length(json_extract(json, '$.archives[0].commands')) AS commands
+FROM read_parquet('fleet.parquet');
+```
+
+Note a collection can hold **several** Outlines - ORC writes one per run attempt, and a
+restarted run leaves an Outline with no matching Outcome. Each is its own row, keyed by
+`run_id`.
+
+### Outcome (one queryable row per command)
+
+Where `outline` says what ran, `outcome` says how it went - one row per command executed, with
+its exit code, timing, IO counters and the archive it wrote into.
+
+```powershell
+orca outcome --root E:\runs --out E:\runs\commands.parquet
+orca outcome E:\runs\host            # one run -> <run>\outcome.parquet
+```
+
+```
+commands.parquet: 24 command(s) from 2 run(s), 7 failed
+  TESTHOST ORC_Offline/USNInfo_offline (code: 11)
+  ...
+```
+
+Both tables carry `run_id`, so they join - which is how you ask whether a command fails on a
+particular build or a particular OS, instead of reading it off two reports:
+
+```sql
+SELECT r.version, c.command, c.exit_code
+FROM read_parquet('commands.parquet') c
+JOIN read_parquet('runs.parquet') r USING (run_id)
+WHERE c.ok = 'false' ORDER BY c.command;
+```
+
+**Check this before comparing two collections.** A command that failed may have written a
+partial table or none at all, and a row-count difference then says nothing about the tool's
+behaviour. On a real pair, a USNInfo table looked like it had gained 2179 records in the newer
+build; the older run's `USNInfo_offline` had failed with exit code 11 and produced zero rows.
 
 ### Merge (one wide row per file)
 

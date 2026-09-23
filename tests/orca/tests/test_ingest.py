@@ -108,6 +108,49 @@ class TestSealedOutputs(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             self.assertIsNone(ingest.open_sealed_outcome(d, d, "7z"))
 
+    def test_a_sealed_outline_is_not_mistaken_for_the_outcome(self):
+        # Both are '<name>.json.7z.p7b' and sit side by side; matching on '.json' alone would
+        # file whichever sorted first as the run's Outcome.
+        with tempfile.TemporaryDirectory() as d:
+            for name in ("ORC_Outcome.json.7z.p7b", "ORC_Outline.json.7z.p7b"):
+                with open(os.path.join(d, name), "wb") as f:
+                    f.write(b"ciphertext")
+
+            opened = []
+
+            def fake_decrypt(path, work, key, backend):
+                opened.append(os.path.basename(path))
+                return os.path.join(work, "x.7z")
+
+            entry = ArchiveEntry(path="inner.json", size=1, crc="x", attributes="A")
+            with mock.patch.object(ingest, "decrypt_archive", fake_decrypt), \
+                 mock.patch.object(ingest.sevenzip, "list_entries", lambda *a, **k: [entry]), \
+                 mock.patch.object(ingest.sevenzip, "extract_entry",
+                                   lambda z, a, p, dest, *r: os.path.join(dest, p)):
+                ingest.open_sealed_outcome(d, d, "7z")
+
+            self.assertEqual(opened, ["ORC_Outcome.json.7z.p7b"])
+
+    def test_capture_outlines_copies_every_attempt(self):
+        with tempfile.TemporaryDirectory() as d:
+            source, run = os.path.join(d, "src"), os.path.join(d, "run")
+            os.makedirs(source)
+            for name in ("A_Outline.json", "B_Outline.json", "A_Outcome.json", "notes.txt"):
+                with open(os.path.join(source, name), "wb") as f:
+                    f.write(b"{}")
+
+            count = ingest.capture_outlines(source, run, os.path.join(d, "work"), "7z")
+
+            self.assertEqual(count, 2)
+            self.assertEqual(sorted(os.listdir(os.path.join(run, "outlines"))),
+                             ["A_Outline.json", "B_Outline.json"])
+
+    def test_capture_outlines_when_there_are_none(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = os.path.join(d, "run")
+            self.assertEqual(ingest.capture_outlines(d, run, d, "7z"), 0)
+            self.assertFalse(os.path.exists(os.path.join(run, "outlines")))
+
     def test_unopenable_sealed_outcome_does_not_abort_the_ingest(self):
         with tempfile.TemporaryDirectory() as d:
             with open(os.path.join(d, "outcome.json.7z.p7b"), "wb") as f:

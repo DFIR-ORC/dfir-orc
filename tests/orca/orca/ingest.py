@@ -161,23 +161,25 @@ def sealed_output(path: str) -> bool:
     return bool(name) and name.lower().endswith(SEALED_OUTPUT_EXTENSIONS)
 
 
-def open_sealed_outcome(source: str, work_dir: str, seven_zip: str, private_key=None,
-                        cms_backend=None) -> str | None:
-    """Path to the Outcome JSON inside a sealed '<name>.json.7z.p7b', or None if there is none.
+def open_sealed_json(source: str, work_dir: str, seven_zip: str, wanted: str,
+                     private_key=None, cms_backend=None) -> list[str]:
+    """Extract the JSONs sealed beside 'source' whose name ends with 'wanted'.
 
-    An encrypted collection seals its Outcome by default (bEncryptOutcome), so without this a
-    run's whole outcome view - duration, failures, peak memory - silently disappears exactly
-    when encryption is in use.
+    An encrypted collection seals its Outcome and its Outlines by default, as
+    '<name>.json.7z.p7b'. Matching on the full wanted suffix ('outcome.json', 'outline.json')
+    rather than on '.json' matters: both kinds sit in the same directory, and picking whichever
+    sorted first would file an Outline as the run's Outcome.
     """
     directory = source if os.path.isdir(source) else os.path.dirname(source) or "."
     try:
         entries = sorted(os.listdir(directory))
     except OSError:
-        return None
+        return []
 
+    found = []
     for entry in entries:
         name = sealed_name(entry)
-        if not name or not name.lower().endswith(".json"):
+        if not name or not name.lower().endswith(wanted):
             continue
 
         try:
@@ -185,13 +187,55 @@ def open_sealed_outcome(source: str, work_dir: str, seven_zip: str, private_key=
                                       cms_backend)
             for inner in sevenzip.list_entries(seven_zip, archive):
                 if inner.path.lower().endswith(".json"):
-                    return sevenzip.extract_entry(seven_zip, archive, inner.path, work_dir)
+                    found.append(sevenzip.extract_entry(seven_zip, archive, inner.path,
+                                                        work_dir))
+                    break
         except (RuntimeError, OSError) as error:
-            # A sealed outcome we cannot open is worth saying out loud: the rest of the run
-            # still ingests, but its health view will be empty.
-            print(f"could not open the sealed outcome '{entry}': {error}")
+            # Worth saying out loud: the rest of the run still ingests, but a view built on
+            # this file will be empty.
+            print(f"could not open the sealed '{entry}': {error}")
 
-    return None
+    return found
+
+
+def open_sealed_outcome(source: str, work_dir: str, seven_zip: str, private_key=None,
+                        cms_backend=None) -> str | None:
+    """The run's sealed Outcome, or None. Without it a run's whole outcome view - duration,
+    failures, peak memory - silently disappears exactly when encryption is in use."""
+    found = open_sealed_json(source, work_dir, seven_zip, "outcome.json", private_key,
+                             cms_backend)
+    return found[0] if found else None
+
+
+def find_outlines(source: str) -> list[str]:
+    """Plain Outline JSONs beside the collection. ORC writes one per run attempt."""
+    directory = source if os.path.isdir(source) else os.path.dirname(source) or "."
+    try:
+        entries = sorted(os.listdir(directory))
+    except OSError:
+        return []
+
+    return [os.path.join(directory, entry) for entry in entries
+            if entry.lower().endswith("outline.json")]
+
+
+def capture_outlines(source: str, out_dir: str, work_dir: str, seven_zip: str, private_key=None,
+                     cms_backend=None) -> int:
+    """Copy every Outline of a collection into '<run>/outlines/', sealed ones included.
+
+    Kept as files rather than parsed here: 'orca outline' turns them into a queryable table,
+    and keeping the documents means a later ORC version can add fields without a re-ingest.
+    """
+    paths = find_outlines(source) + open_sealed_json(source, work_dir, seven_zip, "outline.json",
+                                                     private_key, cms_backend)
+    if not paths:
+        return 0
+
+    destination = os.path.join(out_dir, "outlines")
+    os.makedirs(destination, exist_ok=True)
+    for path in paths:
+        shutil.copy(path, os.path.join(destination, os.path.basename(path)))
+    return len(paths)
 
 
 def decrypt_archive(path: str, work_dir: str, private_key: str | None = None,
@@ -345,6 +389,7 @@ def run_ingest(archive: str, out_dir: str, *, jobs=None, make_csv=True, make_tru
         if outcome_path:
             shutil.copy(outcome_path, os.path.join(out_dir, "outcome.json"))
 
+        capture_outlines(archive, out_dir, staging, seven, private_key, cms_backend)
         capture_logs(seven, archives, out_dir, password)
 
         work_jobs, manifest_rows = discover_jobs(archives, staging, seven, password)

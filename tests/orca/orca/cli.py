@@ -2,7 +2,7 @@
 import argparse
 import sys
 
-from . import cms, extract, ingest, merge, report, diff, getthis
+from . import cms, extract, ingest, merge, outcome, outline, report, diff, getthis
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -45,6 +45,20 @@ def _build_parser() -> argparse.ArgumentParser:
     rp.add_argument("--one-line", action="store_true", help="one summary line per host")
     rp.add_argument("--json", action="store_true", help="summary JSON per host")
     rp.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
+
+    oc = sub.add_parser("outcome", help="run dir(s) -> one queryable row per command run")
+    oc.add_argument("run_dirs", nargs="*", help="one or more run dirs")
+    oc.add_argument("--root", default=None, help="discover run dirs under this parent")
+    oc.add_argument("--out", default=None, help="output parquet (default: <run>/outcome.parquet)")
+    oc.add_argument("--json", action="store_true", help="print the rows instead (no parquet)")
+    oc.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
+
+    ol = sub.add_parser("outline", help="run dir(s) -> one queryable row per ORC run")
+    ol.add_argument("run_dirs", nargs="*", help="one or more run dirs")
+    ol.add_argument("--root", default=None, help="discover run dirs under this parent")
+    ol.add_argument("--out", default=None, help="output parquet (default: <run>/outline.parquet)")
+    ol.add_argument("--json", action="store_true", help="print the rows instead (no parquet)")
+    ol.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     gt = sub.add_parser("getthis", help="run dir -> getthis.parquet + collected/distinct counts")
     gt.add_argument("--run", required=True, help="a run dir (parquet/ from ingest)")
@@ -102,6 +116,12 @@ def main(argv=None) -> int:
                 overrides[tool] = column
         merge.run_merge(args.run, out=args.out, lossless=args.lossless,
                         ts_overrides=overrides or None, engine_name=args.engine)
+    elif args.command == "outcome":
+        outcome.run_outcome(args.run_dirs, root=args.root, out=args.out,
+                            engine_name=args.engine, as_json=args.json)
+    elif args.command == "outline":
+        outline.run_outline(args.run_dirs, root=args.root, out=args.out,
+                            engine_name=args.engine, as_json=args.json)
     elif args.command == "getthis":
         getthis.run_getthis(args.run, out=args.out, engine_name=args.engine,
                             as_json=args.json)

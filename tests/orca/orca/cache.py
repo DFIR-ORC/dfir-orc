@@ -13,7 +13,9 @@ import time
 from . import ingest
 
 # Bump when a run directory's layout changes in a way that makes older entries unusable.
-LAYOUT_VERSION = 1
+# 2: ingest captures the collection's Outlines into '<run>/outlines/'; entries from before that
+#    look complete but answer 'orca outline' with nothing.
+LAYOUT_VERSION = 2
 
 MARKER = "cache-source.json"
 

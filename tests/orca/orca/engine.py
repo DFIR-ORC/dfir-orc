@@ -277,6 +277,28 @@ class DuckDbEngine(Engine):
             os.remove(tmp)
 
 
+def rows_to_parquet(rows: list[dict], out_path: str, engine) -> None:
+    """Materialize plain dict rows as parquet, via a scratch CSV so every column lands as text.
+
+    The same route the manifest takes. Text keeps schemas stable across ORC versions and leaves
+    embedded JSON intact; cast in the query when you need a number.
+    """
+    if not rows:
+        raise RuntimeError("no rows to write")
+
+    csv_path = os.path.splitext(out_path)[0] + ".rows.csv"
+    os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = _csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+
+    try:
+        engine.csv_to_parquet(csv_path, out_path)
+    finally:
+        os.remove(csv_path)
+
+
 def get_engine(name: str, memory_limit: str | None = None) -> Engine:
     if name == "duckdb":
         exe = find_duckdb()
