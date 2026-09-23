@@ -98,8 +98,23 @@ def diff_runs(engine, run_a, run_b, columns=None, exclude_cols=None, rows_out_di
     return {"tables": tables, "added_tables": only_a, "removed_tables": only_b}
 
 
-def _manifest_reader(path: str) -> str:
-    return f"read_parquet('{sql_path(path)}')"
+def _manifest_reader(path: str, exclude_files=None) -> str:
+    """A manifest reader, optionally without the paths a comparison should ignore.
+
+    Comparing two versions of the same collection, every run-local artifact shows up as a
+    difference: on a real 10.3.4 vs 10.4.0 pair the 27 "changed" binaries were all logs and
+    Statistics.json, and the one added/removed file was the Capsule marker, whose name carries
+    a timestamp and a GUID. This is the file-level counterpart of --exclude-cols, and of the
+    -Exclude the PowerShell Compare-OrcManifest took.
+    """
+    reader = f"read_parquet('{sql_path(path)}')"
+    if not exclude_files:
+        return reader
+
+    # '*' is the glob users think in; SQL LIKE wants '%'.
+    clauses = " OR ".join(f"relpath ILIKE '{sql_path(pattern).replace('*', '%')}'"
+                          for pattern in exclude_files)
+    return f"(SELECT * FROM {reader} WHERE NOT ({clauses}))"
 
 
 def build_manifest_added_sql(new_reader: str, ref_reader: str) -> str:
@@ -115,10 +130,11 @@ def build_manifest_changed_sql(new_reader: str, ref_reader: str, is_csv: bool) -
             f"WHERE a.crc <> b.crc AND lower(a.isCsv) {csv_op} 'true'")
 
 
-def diff_manifest(engine, manifest_new: str, manifest_ref: str) -> dict:
+def diff_manifest(engine, manifest_new: str, manifest_ref: str, exclude_files=None) -> dict:
     """Whole-run file-set + CRC diff, the analysis equivalent of Compare-OrcManifest: files added
     (in NEW only), removed (in REF only), and content-changed split into binary vs CSV leaves."""
-    a, b = _manifest_reader(manifest_new), _manifest_reader(manifest_ref)
+    a = _manifest_reader(manifest_new, exclude_files)
+    b = _manifest_reader(manifest_ref, exclude_files)
     return {
         "added": int(engine.query_scalar(build_manifest_added_sql(a, b))),
         "removed": int(engine.query_scalar(build_manifest_added_sql(b, a))),
@@ -402,7 +418,7 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
              exclude_cols=None, rows=False, out_dir="orca-diff", one_line=False,
              as_json=False, show=None, key=None, patterns=10, engine_name="duckdb",
              cache_dir=None, refresh=False, password=None, private_key=None,
-             cms_backend=None) -> None:
+             cms_backend=None, exclude_files=None) -> None:
     from . import cache
     from .engine import get_engine, single_process_memory_limit
     rows_out = out_dir if rows else None
@@ -434,7 +450,7 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
         man_ref = os.path.join(run_b, "manifest.parquet")
         manifest = None
         if os.path.exists(man_new) and os.path.exists(man_ref):
-            manifest = diff_manifest(engine, man_new, man_ref)
+            manifest = diff_manifest(engine, man_new, man_ref, exclude_files)
             summary["manifest"] = manifest
 
         if as_json:

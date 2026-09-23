@@ -121,6 +121,9 @@ orca diff A\getthis.parquet B\getthis.parquet --columns FullName SHA1 SizeInByte
 # export the differing rows to CSV instead of (or as well as) previewing
 orca diff --run NEW --reference REF --rows --out-dir E:\runs\diff
 
+# ignore run-local files in the file-set layer (logs, per-run markers)
+orca diff --run NEW --reference REF --exclude-files "*.log" "*/Statistics.json" "Capsule#*"
+
 # pair rows on your own identity columns, and widen the change-pattern list
 orca diff --run NEW --reference REF --show --key FRN AttrName --patterns 30
 
@@ -144,6 +147,18 @@ NTFSInfo table names the delta instead of hiding it past the right edge:
 Rows with no counterpart (a pure addition such as new USNInfo records), and tables with no known
 identity columns, keep the plain `+`/`-` table. The pairing works on the sampled window, so
 `--show N` bounds it; `--key` overrides the built-in per-tool identity.
+
+**Comparing two ORC versions** on the same input, every run-local artifact shows up as a
+difference: logs, `Statistics.json`, and the `Capsule#...` marker whose name carries a timestamp
+and a GUID. Exclude them to leave only what the tools actually collected:
+
+```powershell
+orca diff --run <new>\Archive --reference <old>\Archive `
+    --exclude-files "*.log" "*/Statistics.json" "Capsule#*"
+```
+
+On a real 10.3.4 vs 10.4.0 pair that turns "27 changed binaries, +1/-1 files" into
+`files: +0 / -0  changed-binary: 0`, leaving five genuinely changed tables to look at.
 
 **Reading a run diff** - two runs have the same results when:
 

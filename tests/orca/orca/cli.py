@@ -66,6 +66,8 @@ def _build_parser() -> argparse.ArgumentParser:
     df.add_argument("--refresh", action="store_true", help="re-ingest even if cached")
     df.add_argument("--columns", nargs="*", default=None, help="restrict compare to these columns")
     df.add_argument("--exclude-cols", nargs="*", default=None, help="extra columns to exclude")
+    df.add_argument("--exclude-files", nargs="*", default=None,
+                    help="relpath glob(s) to ignore in the file-set diff, e.g. '*.log'")
     df.add_argument("--rows", action="store_true", help="also write differing rows to --out-dir")
     df.add_argument("--out-dir", default="orca-diff", help="row output dir (with --rows)")
     df.add_argument("--show", nargs="?", type=int, const=20, default=None,
@@ -116,5 +118,5 @@ def main(argv=None) -> int:
                       key=args.key, patterns=args.patterns,
                       cache_dir=args.cache_dir, refresh=args.refresh,
                       password=args.password, private_key=args.private_key,
-                      cms_backend=args.cms_backend)
+                      cms_backend=args.cms_backend, exclude_files=args.exclude_files)
     return 0

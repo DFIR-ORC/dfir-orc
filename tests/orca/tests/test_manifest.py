@@ -65,6 +65,31 @@ class TestDiffManifest(unittest.TestCase):
             self.assertEqual(got, {"added": 1, "removed": 1,
                                    "changed_binary": 0, "changed_csv": 1})
 
+    def test_excluded_files_drop_out_of_every_count(self):
+        # On a real 10.3.4 vs 10.4.0 pair the whole changed-binary list was logs, and the
+        # added/removed pair was the Capsule marker (its name carries a timestamp and a GUID).
+        with tempfile.TemporaryDirectory() as d:
+            eng = engine.DuckDbEngine(DUCKDB)
+            new, ref = os.path.join(d, "n.parquet"), os.path.join(d, "r.parquet")
+            _write_manifest_parquet(eng, new, [
+                ("NTFSInfo.csv", "SAME", True),
+                ("GetThis.log", "CRC_NEW", False),
+                ("Capsule#HOST#20260921#{A}.txt", "CRC_X", False),
+            ])
+            _write_manifest_parquet(eng, ref, [
+                ("NTFSInfo.csv", "SAME", True),
+                ("GetThis.log", "CRC_OLD", False),
+                ("Capsule#HOST#20260918#{B}.txt", "CRC_Y", False),
+            ])
+
+            noisy = diff.diff_manifest(eng, new, ref)
+            self.assertEqual((noisy["added"], noisy["removed"], noisy["changed_binary"]),
+                             (1, 1, 1))
+
+            quiet = diff.diff_manifest(eng, new, ref, ["*.log", "Capsule#*"])
+            self.assertEqual(quiet, {"added": 0, "removed": 0,
+                                     "changed_binary": 0, "changed_csv": 0})
+
 
 if __name__ == "__main__":
     unittest.main()
