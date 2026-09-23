@@ -1051,6 +1051,14 @@ target_link_libraries(OrcLib
 find_package(RapidJSON CONFIG REQUIRED)
 target_include_directories(OrcLib PRIVATE ${RAPIDJSON_INCLUDE_DIRS})
 
+if(ORC_BUILD_TEST)
+    # ORC_BUILD_TEST adds UnitTestHelper.cpp to OrcLib, and it includes <CppUnitTest.h>. Only the
+    # INCLUDE directory is needed: OrcLib is a static library, so the framework's symbols are resolved
+    # when OrcLibTest.dll links, and that target links VisualStudio::CppUnitTest itself. Linking the
+    # framework here would put it in every consumer of OrcLib, production binaries included.
+    target_include_directories(OrcLib PRIVATE ${CPPUNITTEST_INCLUDE_DIR})
+endif()
+
 if(ORC_BUILD_SSDEEP)
     find_package(ssdeep CONFIG REQUIRED)
     target_link_libraries(OrcLib PUBLIC ssdeep::fuzzy)

@@ -9,6 +9,13 @@
 
 #include "targetver.h"
 
+// <winsock2.h> must come before <windows.h>: windows.h pulls the original <winsock.h>, and including
+// <winsock2.h> after it redefines those functions with different linkage. The OrcLib headers below
+// reach <winsock2.h>, so without this the precompiled header does not compile.
+// WIN32_LEAN_AND_MEAN is NOT the fix here (it is what src/OrcLib/stdafx.h uses): it also drops the
+// COM/OLE declarations the OrcLib stream headers need.
+#include <winsock2.h>
+
 // Headers for CppUnitTest
 #include "CppUnitTest.h"
 
