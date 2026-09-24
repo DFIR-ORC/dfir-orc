@@ -19,6 +19,8 @@
 
 #include "OrcException.h"
 
+#include <cstddef>
+
 #include <boost/scope_exit.hpp>
 
 #include "Log/Log.h"
@@ -695,6 +697,26 @@ bool IsIndexEntryHeaderInBounds(const INDEX_ENTRY* entry, const BYTE* bufBegin, 
     return p >= bufBegin && p <= bufEnd && static_cast<size_t>(bufEnd - p) >= sizeof(INDEX_ENTRY);
 }
 
+// The FILE_NAME payload carried by an index entry: its fixed part, then the name it declares, must both
+// lie within [bufBegin, bufEnd) before a callback reads them. FileNameLength is a byte read from the
+// image, so a forged or truncated entry can announce a name that runs past the buffer.
+bool IsFileNameInBounds(const FILE_NAME* fileName, const BYTE* bufBegin, const BYTE* bufEnd)
+{
+    if (fileName == nullptr)
+        return false;
+
+    const BYTE* p = reinterpret_cast<const BYTE*>(fileName);
+    if (p < bufBegin || p > bufEnd)
+        return false;
+
+    constexpr size_t kFixedSize = offsetof(FILE_NAME, FileName);
+    const size_t bytesRemaining = static_cast<size_t>(bufEnd - p);
+    if (bytesRemaining < kFixedSize)
+        return false;
+
+    return static_cast<size_t>(fileName->FileNameLength) * sizeof(WCHAR) <= bytesRemaining - kFixedSize;
+}
+
 // Advance to the next index entry, rejecting a forged Length that is zero (would loop forever) or that
 // would carry the walk past the end of the buffer.
 PINDEX_ENTRY NextIndexEntryChecked(PINDEX_ENTRY entry, const BYTE* bufEnd)
@@ -763,8 +785,16 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
         {
             PFILE_NAME pFileName = (PFILE_NAME)((PBYTE)entry + sizeof(INDEX_ENTRY));
 
-            if (m_Callbacks.I30Callback)
+            // One forged entry must not cost the whole directory: skip it and keep walking, the next
+            // entry is still reachable through the (already bounded) Length field.
+            if (!IsFileNameInBounds(pFileName, bufBegin, bufEnd))
+            {
+                Log::Debug("Skipping forged $I30 entry: FILE_NAME payload is out of bounds");
+            }
+            else if (m_Callbacks.I30Callback)
+            {
                 m_Callbacks.I30Callback(m_pVolReader, pRecord, entry, pFileName, false);
+            }
 
             entry = NextIndexEntryChecked(entry, bufEnd);
         }
@@ -832,7 +862,15 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                     {
                         PFILE_NAME pFileName = (PFILE_NAME)((PBYTE)pEntry + sizeof(INDEX_ENTRY));
 
-                        m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pFileName, false);
+                        // Skip the forged entry, not the rest of the index allocation block.
+                        if (!IsFileNameInBounds(pFileName, allocBegin, allocEnd))
+                        {
+                            Log::Debug("Skipping forged $I30 entry: FILE_NAME payload is out of bounds");
+                        }
+                        else
+                        {
+                            m_Callbacks.I30Callback(m_pVolReader, pRecord, pEntry, pFileName, false);
+                        }
 
                         PINDEX_ENTRY pNext = NextIndexEntryChecked(pEntry, allocEnd);
                         if (pNext == nullptr)
@@ -858,6 +896,15 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                             }
 
                             if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory) == 0)
+                            {
+                                pFirstFreeByte++;
+                                continue;
+                            }
+
+                            // The loop condition only proves the fixed part of the FILE_NAME: a carved
+                            // candidate announcing a name past the block is dropped, carving continues.
+                            if (!IsFileNameInBounds(
+                                    pCarvedFileName, pFirstFreeByte, Data.GetData() + Data.GetCount()))
                             {
                                 pFirstFreeByte++;
                                 continue;
@@ -901,6 +948,15 @@ HRESULT MFTWalker::ParseI30AndCallback(MFTRecord* pRecord)
                             }
 
                             if (NtfsFullSegmentNumber(&pCarvedFileName->ParentDirectory) == 0)
+                            {
+                                pFirstFreeByte++;
+                                continue;
+                            }
+
+                            // The loop condition only proves the fixed part of the FILE_NAME: a carved
+                            // candidate announcing a name past the block is dropped, carving continues.
+                            if (!IsFileNameInBounds(
+                                    pCarvedFileName, pFirstFreeByte, Data.GetData() + Data.GetCount()))
                             {
                                 pFirstFreeByte++;
                                 continue;
