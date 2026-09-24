@@ -257,23 +257,28 @@ HRESULT MFTRecord::ParseRecord(
         if (pCurAttr->TypeCode == $END)
             break;
 
-        pCurAttr = (PATTRIBUTE_RECORD_HEADER)((LPBYTE)pCurAttr + pCurAttr->RecordLength);  // ready for next record
-        if ((LPBYTE)pCurAttr > ((LPBYTE)pFirstAttr + dwAllAttrLength))
-        {
-            Log::Debug("Invalid MFT attribute length. Skipped");
-            break;
-        }
+        // RecordLength belongs to the attribute being left behind, so it has to be read and accounted for
+        // before the cursor moves: subtracting the *next* attribute's length let dwAttrLeftToParse drift
+        // away from the real remaining size. A length that lands the cursor exactly on the end of the
+        // segment used to be accepted too, and the header was then re-read one past the end.
+        const DWORD dwCurrentRecordLength = pCurAttr->RecordLength;
 
-        if (pCurAttr->TypeCode == $END)
-            break;
-
-        if (pCurAttr->RecordLength == 0)
+        if (dwCurrentRecordLength == 0)
         {
             Log::Debug("Invalid null MFT attribute length. Skipped");
             break;
         }
 
-        dwAttrLeftToParse -= pCurAttr->RecordLength;
+        if (dwCurrentRecordLength > dwAttrLeftToParse)
+        {
+            Log::Debug("Invalid MFT attribute length. Skipped");
+            break;
+        }
+
+        dwAttrLeftToParse -= dwCurrentRecordLength;
+
+        // The loop condition now guarantees a whole ATTRIBUTE_RECORD_HEADER is readable at the new cursor.
+        pCurAttr = (PATTRIBUTE_RECORD_HEADER)((LPBYTE)pCurAttr + dwCurrentRecordLength);
     }
 
     m_bParsed = true;
