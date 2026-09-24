@@ -12,6 +12,7 @@
 #include <sstream>
 #include <locale>
 #include <codecvt>
+#include <unordered_set>
 
 #include "Log/Log.h"
 
@@ -506,7 +507,7 @@ HRESULT PartitionTable::ParseGPTPartitionTable(IDiskExtent& diskExtend, UINT sec
 
 /*
  * ExtendedPartition
- * recursive function
+ * follows the EBR chain iteratively
  */
 HRESULT PartitionTable::ParseExtendedPartition(
     IDiskExtent& diskExtend,
@@ -516,56 +517,79 @@ HRESULT PartitionTable::ParseExtendedPartition(
 {
     HRESULT hr = E_FAIL;
 
-    // Both bytes must match: negating "[0] == 0x55 && [1] == 0xAA" requires a disjunction, so an '&&'
-    // here only rejected a record whose two signature bytes were BOTH wrong (e.g. {0x55, 0x00} passed).
-    if (pExtendedRecord->MBRSignature[0] != MBR_SIGNATURE[0] || pExtendedRecord->MBRSignature[1] != MBR_SIGNATURE[1])
-    {
-        Log::Warn(
-            "Extended partition's signature failed to verify ({:#x}{:#x}) --> Partition ignored",
-            pExtendedRecord->MBRSignature[0],
-            pExtendedRecord->MBRSignature[1]);
-        return S_OK;
-    }
+    // The next EBR is named by an offset read from the disk, so the chain can be made to point back at a
+    // record already visited (A -> B -> A). Walking it iteratively and remembering where we have been
+    // turns what used to be unbounded recursion into a truncated chain: the partitions found before the
+    // loop back are kept, as they are for a record whose signature does not verify.
+    std::unordered_set<ULONGLONG> visitedOffsets;
 
-    DiskPartition* pExtendedPartition = &pExtendedRecord->PartitionTable[0];
-    Partition ep(GetPartitionNumber());
-
-    ParseDiskPartition(pExtendedPartition, p.SectorSize, ep, u64ExtendedPartitionStart);
-
-    if (ep.IsValid())
-    {
-        AddPartition(ep);
-    }
-    DiskPartition* pNextExtendedPartition = &pExtendedRecord->PartitionTable[1];
-
-    if (pNextExtendedPartition->NumberOfSector == 0)  // Last extended part read;
-        return S_OK;
-
-    Log::Trace("Found an extended partition. Parsing extended partition");
-
-    //
-    // Not the last, continue parsing (recursively)
-    //
-
+    // Holds the record pointed to by pExtendedRecord from the second turn onwards: it must outlive the
+    // iteration that reads it.
     CBinaryBuffer buffer;
-    buffer.SetCount(sizeof(ExtendedBootRecord));
-    ULONGLONG offset = p.Start + (pNextExtendedPartition->SectorAddress * p.SectorSize);
+    if (!buffer.SetCount(sizeof(ExtendedBootRecord)))
+        return E_OUTOFMEMORY;
 
-    if (FAILED(SeekDiskExtend(diskExtend, offset)))
-        return hr;
-
-    if (FAILED(ReadDiskExtend(diskExtend, buffer)))
-        return hr;
-
-    ExtendedBootRecord* pNextExtendedRecord = (ExtendedBootRecord*)buffer.GetData();
-
-    if (FAILED(hr = ParseExtendedPartition(diskExtend, p, pNextExtendedRecord, offset)))
+    for (;;)
     {
-        Log::Error("Failed to parse extended partition [{}]", SystemError(hr));
-        return hr;
-    }
+        if (!visitedOffsets.insert(u64ExtendedPartitionStart).second)
+        {
+            Log::Warn(
+                "Extended partition chain loops back to offset {:#x} --> chain truncated",
+                u64ExtendedPartitionStart);
+            return S_OK;
+        }
 
-    return S_OK;
+        // Both bytes must match: negating "[0] == 0x55 && [1] == 0xAA" requires a disjunction, so an '&&'
+        // here only rejected a record whose two signature bytes were BOTH wrong (e.g. {0x55, 0x00} passed).
+        if (pExtendedRecord->MBRSignature[0] != MBR_SIGNATURE[0]
+            || pExtendedRecord->MBRSignature[1] != MBR_SIGNATURE[1])
+        {
+            Log::Warn(
+                "Extended partition's signature failed to verify ({:#x}{:#x}) --> Partition ignored",
+                pExtendedRecord->MBRSignature[0],
+                pExtendedRecord->MBRSignature[1]);
+            return S_OK;
+        }
+
+        DiskPartition* pExtendedPartition = &pExtendedRecord->PartitionTable[0];
+        Partition ep(GetPartitionNumber());
+
+        ParseDiskPartition(pExtendedPartition, p.SectorSize, ep, u64ExtendedPartitionStart);
+
+        if (ep.IsValid())
+        {
+            AddPartition(ep);
+        }
+
+        DiskPartition* pNextExtendedPartition = &pExtendedRecord->PartitionTable[1];
+
+        if (pNextExtendedPartition->NumberOfSector == 0)  // Last extended part read;
+            return S_OK;
+
+        Log::Trace("Found an extended partition. Parsing extended partition");
+
+        //
+        // Not the last, continue parsing
+        //
+
+        const ULONGLONG offset = p.Start + (pNextExtendedPartition->SectorAddress * p.SectorSize);
+
+        // Both the offset and the record it names are read here, before 'buffer' is overwritten.
+        if (FAILED(hr = SeekDiskExtend(diskExtend, offset)))
+        {
+            Log::Error("Failed to seek to extended partition at offset {:#x} [{}]", offset, SystemError(hr));
+            return hr;
+        }
+
+        if (FAILED(hr = ReadDiskExtend(diskExtend, buffer)))
+        {
+            Log::Error("Failed to read extended partition at offset {:#x} [{}]", offset, SystemError(hr));
+            return hr;
+        }
+
+        pExtendedRecord = reinterpret_cast<ExtendedBootRecord*>(buffer.GetData());
+        u64ExtendedPartitionStart = offset;
+    }
 }
 
 void PartitionTable::AddPartition(const Orc::Partition& p)
