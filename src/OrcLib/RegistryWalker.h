@@ -283,9 +283,21 @@ private:
 
     BYTE* FixOffset(DWORD offset) const { return (m_pHiveBuffer + (int)offset + 0x1000); };
 
+    // 0xFFFFFFFF keeps its "no such cell" meaning: callers pair it with their own length/count checks.
+    // Any other offset must leave room for the fixed BlockHeader every caller goes on to dereference;
+    // accepting the one-past-the-end offset let CheckDataHeader() read BlockSize outside the hive.
+    // Computed in the unsigned 64 bit domain: '(int)dwOffset + 0x1000' overflowed for a forged offset
+    // near INT_MAX, and a negative cast result compared as a huge value against m_ulHiveBufferSize.
     bool IsOffsetValid(DWORD dwOffset) const
     {
-        return (dwOffset == 0xFFFFFFFF || (((int)dwOffset + 0x1000) <= (m_ulHiveBufferSize)) ? true : false);
+        if (dwOffset == 0xFFFFFFFF)
+            return true;
+
+        if (static_cast<int>(dwOffset) < 0)
+            return false;
+
+        const ULONG64 ullStart = static_cast<ULONG64>(dwOffset) + 0x1000;
+        return ullStart <= m_ulHiveBufferSize && sizeof(BlockHeader) <= m_ulHiveBufferSize - ullStart;
     };
 
     HRESULT

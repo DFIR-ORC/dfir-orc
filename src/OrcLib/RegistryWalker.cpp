@@ -650,9 +650,26 @@ HRESULT RegistryHive::CheckDataHeader(const BlockHeader* const pHeader) const
         return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     }
 
-    if ((UINT_PTR)(pHeader) + AllocatedCellSize(pHeader->BlockSize) > (UINT_PTR)(m_pHiveBuffer) + m_ulHiveBufferSize)
+    // BlockSize is itself read from the hive, so the fixed header has to be proven resident before it is
+    // dereferenced. Working in offsets rather than in raw addresses also keeps the cell extent check free
+    // of the pointer overflow the address arithmetic allowed.
+    const BYTE* const pHeaderBytes = reinterpret_cast<const BYTE*>(pHeader);
+    if (pHeaderBytes < m_pHiveBuffer)
     {
-        Log::Error("Data block end is outside of hive buffer boundary");
+        Log::Debug("Data block header is before hive buffer start");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    const size_t headerOffset = static_cast<size_t>(pHeaderBytes - m_pHiveBuffer);
+    if (headerOffset > m_ulHiveBufferSize || sizeof(BlockHeader) > m_ulHiveBufferSize - headerOffset)
+    {
+        Log::Debug("Data block header is outside of hive buffer boundary");
+        return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
+    }
+
+    if (AllocatedCellSize(pHeader->BlockSize) > m_ulHiveBufferSize - headerOffset)
+    {
+        Log::Debug("Data block end is outside of hive buffer boundary");
         return HRESULT_FROM_WIN32(ERROR_INVALID_DATA);
     }
     return S_OK;
@@ -749,6 +766,14 @@ HRESULT RegistryHive::ParseValues(
                 // Datas is too large to fit, using an offset
                 else
                 {
+                    // Do not build the pointer at all until the offset is known to name a resident cell:
+                    // this no longer leans on CheckVkHeader() having flagged the value as non resident.
+                    if (!IsOffsetValid(pCurrentValue->OffsetToData))
+                    {
+                        Log::Debug("Key '{}': Value data offset is invalid", pCurrentKey->GetKeyName());
+                        continue;
+                    }
+
                     pDataHeader = (DataHeader*)FixOffset(pCurrentValue->OffsetToData);
                     if ((hr = CheckDataHeader(&pDataHeader->Header)) != S_OK)
                     {
