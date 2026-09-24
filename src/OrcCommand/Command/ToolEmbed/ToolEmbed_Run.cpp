@@ -14,6 +14,8 @@
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
 
 #include "Robustness.h"
 #include "StructuredOutputWriter.h"
@@ -128,6 +130,201 @@ void WarnOnUploadFilterMismatch(const std::wstring& path, const std::vector<Outp
     }
 }
 
+// One of the four side files a collection produces beside its archives, with the schema indices that
+// say whether it is encrypted and whether it is uploaded.
+struct CollectionArtifact
+{
+    DWORD node;
+    DWORD encrypt;
+    DWORD upload;
+    const wchar_t* name;
+};
+
+// Whether one of those four reaches a destination in clear text.
+//
+// A node the configuration does not declare is not produced, so it is not reported: this warning
+// names what actually leaves. 'encrypt' and 'upload' are both yes-by-default, so an absent attribute
+// means encrypted - when a <recipient> exists at all - and uploaded.
+bool LeavesHostInClear(const ConfigItem& schema, const CollectionArtifact& artifact, bool hasRecipient)
+{
+    const ConfigItem& node = schema[artifact.node];
+    if (!node)
+    {
+        return false;
+    }
+
+    // upload="no" keeps the file on the machine, so no destination ever sees it.
+    if (node[artifact.upload] && Orc::Config::Wolf::IsExplicitNo(node[artifact.upload]))
+    {
+        return false;
+    }
+
+    if (!hasRecipient)
+    {
+        return true;
+    }
+
+    return node[artifact.encrypt] && Orc::Config::Wolf::IsExplicitNo(node[artifact.encrypt]);
+}
+
+// Whether any <recipient> covers this <archive>, mirroring WolfExecution::SetRecipients: a recipient's
+// 'archive' attribute is a ','/';' separated list of globs, each matched with PathMatchSpec against the
+// archive's keyword (the command set) and against its name. Reproducing that match here is what lets
+// the warning distinguish "encrypted" from "a recipient exists, but not for this archive".
+bool ArchiveHasRecipient(const ConfigItem& schema, const ConfigItem& archiveNode)
+{
+    for (const ConfigItem& recipient : schema[WOLFLAUNCHER_RECIPIENT].NodeList)
+    {
+        if (!recipient[WOLFLAUNCHER_RECIPIENT_ARCHIVE])
+        {
+            continue;
+        }
+
+        std::vector<std::wstring> specs;
+        boost::split(
+            specs, (const std::wstring&)recipient[WOLFLAUNCHER_RECIPIENT_ARCHIVE], boost::is_any_of(L",;"));
+
+        for (const std::wstring& spec : specs)
+        {
+            for (const DWORD index : {WOLFLAUNCHER_ARCHIVE_KEYWORD, WOLFLAUNCHER_ARCHIVE_NAME})
+            {
+                if (archiveNode[index]
+                    && PathMatchSpecW(((const std::wstring&)archiveNode[index]).c_str(), spec.c_str()))
+                {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+// How an <archive> is named in a warning: its keyword, else its name, else its position.
+std::wstring ArchiveLabel(const ConfigItem& archiveNode, size_t index)
+{
+    for (const DWORD attribute : {WOLFLAUNCHER_ARCHIVE_KEYWORD, WOLFLAUNCHER_ARCHIVE_NAME})
+    {
+        if (archiveNode[attribute])
+        {
+            return fmt::format(L"archive '{}'", (const std::wstring&)archiveNode[attribute]);
+        }
+    }
+
+    return fmt::format(L"archive #{}", index + 1);
+}
+
+// Warns when a collection's output reaches a destination in clear text.
+//
+// The threat model is that the collector is lost, and with it the configuration embedded in it: it
+// runs on the host under investigation, which is the host one suspects. A credential in that
+// configuration is then no protection at all - whoever holds the binary holds the key - and ToolEmbed
+// cannot see whether the destination lets that key read back what was written there. So this warning
+// deliberately does NOT care which authscheme is configured. What it reports is which artifacts leave
+// the machine unencrypted, because CMS enveloping (<recipient>) is the only thing in this
+// configuration that still protects them once it is in someone else's hands.
+//
+// The authscheme and the transport do appear, as aggravating detail on the lines that follow, never as
+// a condition: an anonymous destination widens who can write there, and insecure="true" exposes the
+// same clear text in flight as well as at rest.
+//
+// Advisory only. A plaintext collection to a trusted sink is a legitimate deployment, and refusing it
+// would break configurations already in the field. The point is that it be a decision rather than an
+// oversight.
+void WarnOnPlaintextUpload(
+    const std::wstring& path,
+    const ConfigItem& schema,
+    const std::vector<OutputSpec::Upload>& uploads)
+{
+    if (uploads.empty())
+    {
+        return;  // nothing leaves this host, so nothing is exposed by leaving it
+    }
+
+    static const CollectionArtifact kArtifacts[] = {
+        {WOLFLAUNCHER_LOG, WOLFLAUNCHER_LOG_ENCRYPT, WOLFLAUNCHER_LOG_UPLOAD, L"log"},
+        {WOLFLAUNCHER_CONSOLE, WOLFLAUNCHER_CONSOLE_ENCRYPT, WOLFLAUNCHER_CONSOLE_UPLOAD, L"console"},
+        {WOLFLAUNCHER_OUTLINE, WOLFLAUNCHER_OUTLINE_ENCRYPT, WOLFLAUNCHER_OUTLINE_UPLOAD, L"outline"},
+        {WOLFLAUNCHER_OUTCOME, WOLFLAUNCHER_OUTCOME_ENCRYPT, WOLFLAUNCHER_OUTCOME_UPLOAD, L"outcome"}};
+
+    const bool hasRecipient = !schema[WOLFLAUNCHER_RECIPIENT].NodeList.empty();
+
+    std::vector<std::wstring> clear;
+
+    // The archives first: each command set has its own, and a <recipient> covers one only when one of
+    // its globs matches, so a configuration can encrypt some archives and not others.
+    size_t index = 0;
+    for (const ConfigItem& archiveNode : schema[WOLFLAUNCHER_ARCHIVE].NodeList)
+    {
+        if (!ArchiveHasRecipient(schema, archiveNode))
+        {
+            clear.push_back(ArchiveLabel(archiveNode, index));
+        }
+
+        ++index;
+    }
+
+    for (const CollectionArtifact& artifact : kArtifacts)
+    {
+        if (LeavesHostInClear(schema, artifact, hasRecipient))
+        {
+            clear.push_back(artifact.name);
+        }
+    }
+
+    if (clear.empty())
+    {
+        return;
+    }
+
+    // A single artifact reads as "outcome leaves ... (no <recipient> covers it)", several as "... leave
+    // ... covers them": the message is the only place an operator meets this check, so it should not
+    // read like a template.
+    const bool one = (clear.size() == 1);
+    const std::wstring reason = hasRecipient
+        ? fmt::format(L"no <recipient> covers {}, or encrypt=\"no\"", one ? L"it" : L"them")
+        : std::wstring(L"the configuration declares no <recipient>, so nothing it produces is encrypted");
+
+    Log::Warn(
+        L"ToolEmbed: '{}': {} {} this host in clear text ({}); whoever obtains this collector learns "
+        L"where it uploads, so that data is then protected only by the destination's own read policy",
+        path,
+        boost::join(clear, L", "),
+        one ? L"leaves" : L"leave",
+        reason);
+
+    for (size_t i = 0; i < uploads.size(); ++i)
+    {
+        const OutputSpec::Upload& upload = uploads[i];
+
+        if (upload.AuthScheme == OutputSpec::UploadAuthScheme::Anonymous)
+        {
+            Log::Warn(
+                L"ToolEmbed: '{}': <upload> #{} presents no credential, so that clear text is written to a "
+                L"destination open to anyone who reaches it",
+                path,
+                i + 1);
+        }
+
+        if (upload.Method == OutputSpec::UploadMethod::REST && upload.rest.Insecure)
+        {
+            Log::Warn(
+                L"ToolEmbed: '{}': <upload> #{} sets insecure=\"true\", so that clear text is exposed in "
+                L"flight as well as at rest",
+                path,
+                i + 1);
+        }
+        else if (upload.bitsMode == OutputSpec::BITSMode::HTTP)
+        {
+            Log::Warn(
+                L"ToolEmbed: '{}': <upload> #{} uploads over plain HTTP, so that clear text is exposed in "
+                L"flight as well as at rest",
+                path,
+                i + 1);
+        }
+    }
+}
+
 // Validates the embedded WolfLauncher configuration. Refuses (Critical) a WOLFLAUNCHER_CONFIG resource
 // that does not parse against the schema, and any <upload> section that is insecure without the
 // required flag - so an invalid or dangerous binary cannot be produced - and warns on advisory issues
@@ -211,6 +408,7 @@ HRESULT ValidateEmbeddedUploadSecurity(const std::vector<EmbeddedResource::Embed
         }
 
         WarnOnUploadFilterMismatch(path, uploads);
+        WarnOnPlaintextUpload(path, schema, uploads);
     }
 
     if (refused)

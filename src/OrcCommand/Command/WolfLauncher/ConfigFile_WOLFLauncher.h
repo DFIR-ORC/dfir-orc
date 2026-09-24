@@ -108,4 +108,15 @@ HRESULT recipient(ConfigItem& parent, DWORD dwIndex);
 HRESULT upload(ConfigItem& parent, DWORD dwIndex);
 
 HRESULT root(ConfigItem& item);
+
+// The reading of the yes-by-default switches 'encrypt' and 'upload': only an explicit "no", "false"
+// or "0" turns one off, so a typo keeps the safe behaviour for 'encrypt' and the historical one for
+// 'upload'.
+//
+// It lives with the schema that declares those attributes rather than in one of its readers, because
+// there are now two readers of it and they must not drift apart: WolfLauncher applies the switch at
+// collection time, and ToolEmbed reads the same attribute at embed time to warn about output that
+// leaves a host in clear text. A second copy of this predicate would let that warning drift into
+// silence without anything failing.
+bool IsExplicitNo(const std::wstring& value);
 }  // namespace Orc::Config::Wolf

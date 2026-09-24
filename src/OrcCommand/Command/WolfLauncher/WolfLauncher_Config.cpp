@@ -222,15 +222,9 @@ struct CaseInsensitiveComparator
     }
 };
 
-// For the yes-by-default switches 'encrypt' and 'upload': only an explicit "no", "false" or "0" turns
-// them off, so a typo keeps the safe behaviour for 'encrypt' and the historical one for 'upload'.
-bool IsExplicitNo(const std::wstring& value)
-{
-    using namespace std::string_view_literals;
-
-    return equalCaseInsensitive(L"No"sv, value) || equalCaseInsensitive(L"false"sv, value)
-        || equalCaseInsensitive(L"0"sv, value);
-}
+// The shared reading of the yes-by-default 'encrypt'/'upload' switches, declared beside the schema that
+// defines them so this reader and ToolEmbed's clear-text warning cannot drift apart.
+using Orc::Config::Wolf::IsExplicitNo;
 
 // <log>/<console> in a /local configuration. upload="no" keeps the file on the host, as in the embedded
 // configuration. encrypt="no" is refused: whoever holds a local file must not be able to lift the encryption the

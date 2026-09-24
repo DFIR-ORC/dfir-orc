@@ -11,6 +11,7 @@
 // WOLFLAUNCHER
 #include "Configuration/ConfigFile_Common.h"
 #include "ConfigFile_WOLFLauncher.h"
+#include "CaseInsensitive.h"
 #include "Log/UtilitiesLoggerConfiguration.h"
 #include "Command/WolfLauncher/ConsoleConfiguration.h"
 
@@ -261,4 +262,14 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
         return hr;
 
     return S_OK;
+}
+
+// Declared in the header beside the 'encrypt'/'upload' attributes it reads; see there for why it is
+// shared rather than copied into each reader.
+bool Orc::Config::Wolf::IsExplicitNo(const std::wstring& value)
+{
+    using namespace std::string_view_literals;
+
+    return equalCaseInsensitive(L"No"sv, value) || equalCaseInsensitive(L"false"sv, value)
+        || equalCaseInsensitive(L"0"sv, value);
 }
