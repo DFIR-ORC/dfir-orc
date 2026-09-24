@@ -7,6 +7,8 @@
 //
 #include "DiffAreaTable.h"
 
+#include <unordered_set>
+
 #include "Filesystem/Ntfs/ShadowCopy/DiffAreaTableHeader.h"
 #include "Stream/StreamUtils.h"
 
@@ -22,8 +24,18 @@ void DiffAreaTable::Parse(
 {
     auto offset = diffAreaTableOffset;
 
+    // Block offsets come from the image: remembering the ones already walked stops a chain that loops
+    // back on any earlier block (A -> B -> A), not just on itself. Entries parsed so far are kept.
+    std::unordered_set<uint64_t> visitedOffsets;
+
     while (offset)
     {
+        if (!visitedOffsets.insert(offset).second)
+        {
+            Log::Error("Failed to parse next block from VSS DiffAreaTable: loop back to offset {:#x}", offset);
+            break;
+        }
+
         std::array<uint8_t, DiffAreaTable::kBlockSize> buffer;
         ReadChunkAt(stream, offset, buffer, ec);
         if (ec)
@@ -38,12 +50,6 @@ void DiffAreaTable::Parse(
         {
             Log::Debug("Failed to parse VSS DiffAreaTable block (offset: {:#x}) [{}]", offset, ec);
             return;
-        }
-
-        if (offset == nextOffset)
-        {
-            Log::Error("Failed to parse next block from VSS DiffAreaTable (offset: {:#x})", offset);
-            break;
         }
 
         offset = nextOffset;

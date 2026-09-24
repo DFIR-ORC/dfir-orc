@@ -8,6 +8,8 @@
 
 #include "DiffAreaBitmap.h"
 
+#include <unordered_set>
+
 #include "Stream/StreamUtils.h"
 
 namespace Orc {
@@ -21,8 +23,19 @@ void DiffAreaBitmap::Parse(
     std::error_code& ec)
 {
     auto offset = diffAreaBitmapOffset;
+
+    // Block offsets come from the image: remembering the ones already walked stops a chain that loops
+    // back on any earlier block (A -> B -> A), not just on itself. Bitmaps parsed so far are kept.
+    std::unordered_set<uint64_t> visitedOffsets;
+
     while (offset)
     {
+        if (!visitedOffsets.insert(offset).second)
+        {
+            Log::Error("Failed to parse next block from VSS DiffAreaBitmap: loop back to offset {:#x}", offset);
+            break;
+        }
+
         std::array<uint8_t, DiffAreaBitmap::kBlockSize> buffer;
         ReadChunkAt(stream, offset, buffer, ec);
         if (ec)
@@ -37,12 +50,6 @@ void DiffAreaBitmap::Parse(
         {
             Log::Debug("Failed to parse VSS DiffAreaBitmap block (offset: {:#x}) [{}]", offset, ec);
             return;
-        }
-
-        if (offset == nextOffset)
-        {
-            Log::Error("Failed to parse next block from VSS DiffAreaBitmap (offset: {:#x})", offset);
-            break;
         }
 
         offset = nextOffset;
