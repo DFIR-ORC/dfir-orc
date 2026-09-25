@@ -21,6 +21,16 @@ class TestCli(unittest.TestCase):
                      ["diff", "NEW.7z", "REF.7z", "--work-dir", "E:/work"]):
             self.assertEqual(parser.parse_args(argv).work_dir, "E:/work")
 
+    def test_extract_work_dir_is_optional(self):
+        # Same flag name, a narrower meaning than on ingest/diff: on extract it only says
+        # where the decrypted archive goes while the tree is being written.
+        parser = cli._build_parser()
+        plain = parser.parse_args(["extract", "arch.p7b", "--out", "tree"])
+        self.assertIsNone(plain.work_dir)
+
+        given = parser.parse_args(["extract", "arch.p7b", "--out", "tree", "--work-dir", "E:/w"])
+        self.assertEqual(given.work_dir, "E:/w")
+
     def test_diff_out_dir_still_means_the_rows_csv(self):
         args = cli._build_parser().parse_args(["diff", "NEW.7z", "REF.7z", "--rows"])
         self.assertEqual(args.out_dir, "orca-diff")

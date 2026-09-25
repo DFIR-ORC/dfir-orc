@@ -210,6 +210,29 @@ class TestUnsealSidecars(UnsealCase):
                          [os.path.join(self.dir.name, "ORC_Outcome.json")])
 
 
+class TestIngestScratch(unittest.TestCase):
+    """The CMS intermediate is as big as the collection and goes to scratch, so '--work-dir'
+    has to move that too - otherwise a temp volume smaller than the collection stops an ingest
+    dead, and the error recommends the flag that was already given."""
+
+    def test_work_dir_moves_the_scratch(self):
+        from orca import scratch
+
+        with tempfile.TemporaryDirectory() as d:
+            work = os.path.join(d, "work")
+            self.addCleanup(scratch.use, None)
+            self.addCleanup(scratch.cleanup)
+
+            # Set before anything can take a scratch directory, so even a run that stops on
+            # the very next line has already moved it.
+            with mock.patch.object(ingest, "get_engine", lambda *a, **k: None), \
+                 mock.patch.object(ingest.sevenzip, "find_7z", lambda: None):
+                with self.assertRaises(RuntimeError):
+                    ingest.run_ingest("x.7z", os.path.join(d, "out"), work_dir=work)
+
+            self.assertEqual(os.path.dirname(scratch.root()), os.path.join(work, "orca"))
+
+
 class TestCopyIntoRun(unittest.TestCase):
     def test_a_file_already_in_the_run_is_left_where_it_is(self):
         # 'orca extract --out <the collection>' asks to copy a file onto itself.

@@ -144,10 +144,13 @@ def ensure_run(source: str, work_dir: str | None = None, *, password=None, priva
     clear_run(run_dir)
     os.makedirs(run_dir, exist_ok=True)
     print(f"ingesting '{source}' into '{run_dir}'")
+    # 'work_dir' as well as the two directories resolved from it: those say where the products
+    # go, and run_ingest also puts its scratch there - a diff of two large collections has the
+    # same no-room-on-the-temp-volume problem as anything else.
     ingest.run_ingest(source, run_dir, make_csv=False, make_trunc=False,
                       exclude_cols=exclude_cols, password=password, private_key=private_key,
                       cms_backend=cms_backend, engine_name=engine_name, keep_dir=keep_dir,
-                      refresh=refresh)
+                      work_dir=work_dir, refresh=refresh)
 
     write_marker(run_dir, source, key, options)
     return run_dir

@@ -261,7 +261,8 @@ orca diff NEW.7z REF.7z --work-dir E:\orca-work        # put both runs somewhere
 orca diff NEW.7z REF.7z --refresh                      # re-decrypt and re-ingest
 ```
 
-`--work-dir` moves the runs and the decrypted output somewhere else, both at once; there the
+`--work-dir` moves the runs, the decrypted output **and the scratch** somewhere else, all at
+once - a collection larger than the temp volume cannot be decrypted otherwise; there the
 run directory is named with the ingest key, because two collections' archives often share a
 basename. `--out-dir` is unrelated: it is where `--rows` writes its CSVs.
 
@@ -273,8 +274,15 @@ own files or an expanded tree sharing the directory.
 
 Everything orca does *not* intend to keep - nested containers, the CSV being converted, the
 CMS/journal intermediates - goes to `%TEMP%\orca\<pid>` and is removed when the process ends.
-If the collection cannot be written to (a read-only share or image), the products go there too
-and are simply not reused.
+`--work-dir` moves that scratch to a volume with room, on every command that takes it. If the
+collection cannot be written to (a read-only share or image), an ingest's products go to
+scratch too and are simply not reused.
+
+What may be removed is decided by an **index**, never by what a directory is called: each run
+writes one in `%TEMP%\orca\` naming the scratch it created, and a directory no index names is
+left alone however it is named. The index stays in `%TEMP%` even when `--work-dir` puts the
+scratch elsewhere, so a run killed mid-way is cleaned up by a later run that knows nothing
+about that directory.
 
 ### Outline (one queryable row per ORC run)
 

@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
-from orca import extract, ingest
+from orca import extract, ingest, scratch
 from orca.sevenzip import ArchiveEntry
 
 
@@ -248,7 +248,7 @@ class TestRunExtractSidecars(ExtractCase):
             self.touch("results", name, content=content)
         return source
 
-    def extract(self, source, out, payload=b"{}"):
+    def extract(self, source, out, payload=b"{}", work_dir=None):
         """Run an extract over 'source' with the CMS and 7z layers faked out.
 
         decrypt_archive is patched in both modules: extract imported the name, so the copy it
@@ -282,7 +282,7 @@ class TestRunExtractSidecars(ExtractCase):
              mock.patch.object(extract.sevenzip, "extract_all",
                                lambda seven, a, dest, pw: self.expanded.append(dest)), \
              redirect_stdout(printed):
-            extract.run_extract(source, out, private_key="k.pem")
+            extract.run_extract(source, out, private_key="k.pem", work_dir=work_dir)
         return printed.getvalue()
 
     def test_the_sidecars_land_in_the_out_directory(self):
@@ -317,6 +317,26 @@ class TestRunExtractSidecars(ExtractCase):
         # deliverable, and none in the collection either.
         self.assertNotIn(out, self.decrypted_into)
         self.assertNotIn(source, self.decrypted_into)
+        self.assertEqual([n for n in os.listdir(out) if n.lower().endswith(".7z")], [])
+
+    def test_work_dir_keeps_the_decrypted_archive_under_a_stable_name(self):
+        # '--work-dir' is a keep dir, as it is for an ingest: the next extract of the same
+        # collection finds the archive there instead of paying for the decrypt again.
+        source = self.collection("ORC_H_1441.log")
+        out = os.path.join(self.dir.name, "out")
+        work = os.path.join(self.dir.name, "work")
+        self.addCleanup(scratch.use, None)
+
+        self.extract(source, out, work_dir=work)
+
+        # The archive lands in the keep dir itself. The sidecar's CMS work is transient and
+        # stays scratch - moved under the keep dir only because that is where the room is.
+        self.assertIn(work, self.decrypted_into)
+        for dest in self.decrypted_into:
+            self.assertTrue(dest == work or dest.startswith(os.path.join(work, "orca")), dest)
+
+        scratch.cleanup()
+        self.assertTrue(os.path.isfile(os.path.join(work, "ORC_H_1441_General.7z")))
         self.assertEqual([n for n in os.listdir(out) if n.lower().endswith(".7z")], [])
 
     def test_a_cleartext_sidecar_is_copied_rather_than_decrypted_again(self):

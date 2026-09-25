@@ -210,6 +210,16 @@ class TestEnsureRun(CacheCase):
         _, _, kwargs = calls[0]
         self.assertEqual(kwargs["keep_dir"], self.dir.name)
 
+    def test_the_work_dir_is_passed_on_and_not_only_resolved_away(self):
+        # It decides where the scratch goes too, and only run_ingest can set that - a diff of
+        # two large collections needs the room as much as an ingest of one.
+        calls, fake = self.fake_ingest()
+        with mock.patch.object(cache.ingest, "run_ingest", fake):
+            cache.ensure_run(self.archive, work_dir=os.path.join(self.dir.name, "work"))
+
+        _, _, kwargs = calls[0]
+        self.assertEqual(kwargs["work_dir"], os.path.join(self.dir.name, "work"))
+
 
 if __name__ == "__main__":
     unittest.main()

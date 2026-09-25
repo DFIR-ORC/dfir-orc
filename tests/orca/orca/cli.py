@@ -33,6 +33,9 @@ def _build_parser() -> argparse.ArgumentParser:
     ex.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
     ex.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
                     help="pin the .p7b decryption backend")
+    ex.add_argument("--work-dir", default=None,
+                    help="keep the decrypted archive here instead of throwing it away, for "
+                         "when the temp dir has no room for it or a later run will want it")
 
     mg = sub.add_parser("merge", help="run dir -> wide dfir-orc.parquet")
     mg.add_argument("--run", required=True, help="an ingested run dir")
@@ -112,7 +115,8 @@ def main(argv=None) -> int:
         )
     elif args.command == "extract":
         extract.run_extract(args.archive, args.out, password=args.password,
-                            private_key=args.private_key, cms_backend=args.cms_backend)
+                            private_key=args.private_key, cms_backend=args.cms_backend,
+                            work_dir=args.work_dir)
     elif args.command == "merge":
         overrides = {}
         for item in (args.ts_col or []):

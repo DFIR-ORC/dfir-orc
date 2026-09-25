@@ -433,8 +433,14 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
 
     'out_dir' and 'keep_dir' default to the collection's own directory (see layout.resolve):
     the run lands beside the archive it came from, and so do the decrypted archives and
-    unsealed sidecars. '--work-dir' moves both somewhere else.
+    unsealed sidecars. '--work-dir' moves those, and the scratch with them.
     """
+    # Before anything takes a scratch directory, and not only where the products go: the CMS
+    # intermediate is as big as the collection, so a machine whose temp volume is smaller than
+    # that cannot ingest it at all unless '--work-dir' moves the scratch as well. The failure
+    # if it does not is a decryption error that names no disk, so it is not one to debug twice.
+    scratch.use(work_dir)
+
     # The worker count decides the engine's memory budget: every job runs its own duckdb, and
     # a table large enough to matter is large enough for six of them to exhaust the machine.
     workers = jobs or os.cpu_count() or 4

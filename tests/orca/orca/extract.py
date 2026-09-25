@@ -77,10 +77,15 @@ def expand_containers(seven_zip: str, root: str, password: str | None,
 
 
 def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
-                cms_backend=None) -> str:
+                cms_backend=None, work_dir=None) -> str:
     seven = sevenzip.find_7z()
     if not seven:
         raise RuntimeError("7z.exe not found")
+
+    # The CMS output is archive-sized and lives only until it is replayed, so it stays scratch
+    # - pointed at 'work_dir', because the temp volume is where the room runs out. Set before
+    # anything takes a scratch directory.
+    scratch.use(work_dir)
 
     os.makedirs(out_dir, exist_ok=True)
     collection = collection_dir(source)
@@ -96,10 +101,12 @@ def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
     capture_sidecar_logs([collection], out_dir)
     unseal_sidecars(source, seven, out_dir, private_key, cms_backend)
 
-    # A decrypted archive is a full-size intermediate the expanded tree supersedes, so it goes
-    # to scratch and is gone when the process ends. Nothing else is written outside 'out_dir'
-    # either: an extract must leave the collection it reads exactly as it found it.
-    work = scratch.directory("extract_")
+    # 'work_dir' is a keep dir, as it is for an ingest: the decrypted archive lands in it under
+    # a stable name and the next extract of the same collection reuses it rather than paying
+    # for the decrypt again. Without one the archive is scratch, gone when the process ends,
+    # because the expanded tree supersedes it. Either way nothing is written to the collection:
+    # an extract must leave what it reads exactly as it found it.
+    work = work_dir or scratch.directory("extract_")
     for top in resolve_archives(source, out_dir):
         if not os.path.exists(top):
             # A partial collection: an archive the Outcome names was never written, or the
