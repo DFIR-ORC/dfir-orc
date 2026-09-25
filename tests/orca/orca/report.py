@@ -1,4 +1,4 @@
-"""orca report: per-host views over a run dir (ingest-timing.csv + outcome.json + logs/).
+"""orca report: per-host views over a run dir (its timing, its Outcome and its logs).
 Stdlib only. View builders are pure over parsed inputs."""
 import csv
 import glob
@@ -7,12 +7,12 @@ import os
 import re
 from dataclasses import asdict
 
-from . import outcome as _outcome
+from . import layout, outcome as _outcome
 from .engine import get_engine, single_process_memory_limit, sql_path
 
 
 def load_timing(run_dir: str) -> list[dict]:
-    path = os.path.join(run_dir, "ingest-timing.csv")
+    path = layout.timing_path(run_dir)
     rows = []
     if not os.path.exists(path):
         return rows
@@ -85,26 +85,38 @@ def build_outcome_view(outcome_obj) -> dict:
     }
 
 
-def build_errors_view(logs_dir: str) -> dict:
-    if not os.path.isdir(logs_dir):
+def run_log_files(run_dir: str) -> list[str]:
+    """The logs of a run: the ones ingest put in it, plus the expanded 'Errors' container.
+
+    Deliberately not a walk of the whole run directory - it may hold a tree 'orca extract'
+    expanded, whose every command log would drown the ones this run is about.
+    """
+    found = sorted(glob.glob(os.path.join(run_dir, "*.log")))
+    errors = os.path.join(run_dir, "Errors")
+    for root, _dirs, files in os.walk(errors):
+        found += sorted(os.path.join(root, name) for name in files)
+    return found
+
+
+def build_errors_view(run_dir: str) -> dict:
+    if not os.path.isdir(run_dir):
         return {"available": False}
     logs = []
-    for root, _dirs, files in os.walk(logs_dir):
-        for fn in files:
-            path = os.path.join(root, fn)
-            size = os.path.getsize(path)
-            if size == 0:
-                continue
-            count = 0
-            try:
-                with open(path, encoding="utf-8", errors="ignore") as f:
-                    for line in f:
-                        if _ERROR_RE.search(line):
-                            count += 1
-            except OSError:
-                count = -1
-            logs.append({"log": os.path.relpath(path, logs_dir).replace("\\", "/"),
-                         "bytes": size, "error_lines": count})
+    for path in run_log_files(run_dir):
+        size = os.path.getsize(path)
+        if size == 0:
+            continue
+
+        count = 0
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as f:
+                for line in f:
+                    if _ERROR_RE.search(line):
+                        count += 1
+        except OSError:
+            count = -1
+        logs.append({"log": os.path.relpath(path, run_dir).replace("\\", "/"),
+                     "bytes": size, "error_lines": count})
     logs.sort(key=lambda x: x["error_lines"], reverse=True)
     return {"available": True, "logs": logs}
 
@@ -127,8 +139,8 @@ def _hdur(seconds) -> str:
 
 
 def host_of(run_dir: str) -> str:
-    op = os.path.join(run_dir, "outcome.json")
-    if os.path.exists(op):
+    op = _outcome.outcome_file(run_dir)
+    if op:
         try:
             host = _outcome.parse_outcome(op).host
             if host:
@@ -140,16 +152,16 @@ def host_of(run_dir: str) -> str:
 
 def build_host_report(run_dir: str, engine=None) -> dict:
     timing = load_timing(run_dir)
-    op = os.path.join(run_dir, "outcome.json")
-    oc = _outcome.parse_outcome(op) if os.path.exists(op) else None
-    files = empty_output_files(engine, os.path.join(run_dir, "manifest.parquet")) if engine else []
+    op = _outcome.outcome_file(run_dir)
+    oc = _outcome.parse_outcome(op) if op else None
+    files = empty_output_files(engine, layout.manifest_path(run_dir)) if engine else []
     return {
         "host": host_of(run_dir),
         "run_dir": run_dir,
         "outcome": build_outcome_view(oc),
         "empty": build_empty_view(timing, files),
         "stats": build_stats_view(timing),
-        "errors": build_errors_view(os.path.join(run_dir, "logs")),
+        "errors": build_errors_view(run_dir),
     }
 
 
@@ -185,7 +197,7 @@ def render_human(hr: dict, views: list) -> str:
     if "outcome" in views:
         o = hr["outcome"]
         if not o.get("available"):
-            lines.append("outcome: (no outcome.json captured)")
+            lines.append("outcome: (no Outcome captured)")
         else:
             lines.append(f'outcome: ok={o["ok"]}, duration={_hdur(o["duration_seconds"])}, '
                          f'mem_peak={_hsize(o["memory_peak_bytes"])} ({o["memory_peak_set"]})')
@@ -223,7 +235,7 @@ def discover_run_dirs(run_dirs: list, root) -> list:
     found = list(run_dirs or [])
     if root:
         for path in sorted(glob.glob(os.path.join(root, "*"))):
-            if os.path.isfile(os.path.join(path, "ingest-timing.csv")):
+            if os.path.isfile(layout.timing_path(path)):
                 found.append(path)
     seen, result = set(), []
     for d in found:
@@ -238,7 +250,7 @@ def run_report(run_dirs, root=None, views=None, one_line=False, as_json=False,
                engine_name="duckdb") -> None:
     dirs = discover_run_dirs(run_dirs, root)
     if not dirs:
-        raise RuntimeError("no run dirs (need a dir with ingest-timing.csv, or --root)")
+        raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
 
     # The manifest needs the engine to read; a report still prints without one, just without
     # the empty-output-file list.

@@ -2,7 +2,7 @@ import csv
 import os
 import tempfile
 import unittest
-from orca import report
+from orca import layout, report
 
 TIMING = [
     {"name": "NTFSInfo", "rows": 100, "bytes": 5000, "seconds": 2.0},
@@ -59,7 +59,8 @@ class TestReportViews(unittest.TestCase):
 
     def test_load_timing_reads_only_parquet_rows(self):
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "ingest-timing.csv"), "w", newline="") as f:
+            os.makedirs(layout.orca_dir(d))
+            with open(layout.timing_path(d), "w", newline="") as f:
                 w = csv.writer(f)
                 w.writerow(["name", "kind", "rows", "bytes", "seconds"])
                 w.writerow(["T", "parquet", "100", "5000", "2.0"])

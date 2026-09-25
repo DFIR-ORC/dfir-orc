@@ -120,8 +120,8 @@ class TestReading(OutlineCase):
 class TestOutlineFiles(OutlineCase):
     def test_lists_every_captured_outline(self):
         run = os.path.join(self.dir.name, "run")
-        self.write(os.path.join("run", "outlines", "A_Outline.json"), OUTLINE)
-        self.write(os.path.join("run", "outlines", "B_Outline.json"), OUTLINE)
+        self.write(os.path.join("run", "A_Outline.json"), OUTLINE)
+        self.write(os.path.join("run", "B_Outline.json"), OUTLINE)
         # A restarted collection leaves one Outline per attempt.
         self.assertEqual([os.path.basename(p) for p in outline.outline_files(run)],
                          ["A_Outline.json", "B_Outline.json"])

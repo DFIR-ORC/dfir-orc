@@ -20,18 +20,30 @@ class TestOutcomeErrorsViews(unittest.TestCase):
         self.assertEqual(v["memory_peak_bytes"], 2048)
 
     def test_build_errors_view_counts_pattern_lines(self):
-        with tempfile.TemporaryDirectory() as d:
-            logs = os.path.join(d, "logs")
-            os.makedirs(logs)
-            with open(os.path.join(logs, "a.log"), "w", encoding="utf-8") as f:
+        with tempfile.TemporaryDirectory() as run:
+            with open(os.path.join(run, "a.log"), "w", encoding="utf-8") as f:
                 f.write("all good\nFAILED to open\nan Error here\nfine\n")
-            with open(os.path.join(logs, "empty.log"), "w") as f:
+            with open(os.path.join(run, "empty.log"), "w") as f:
                 pass
-            v = report.build_errors_view(logs)
+
+            # The expanded 'Errors' container counts too; an expanded tree does not.
+            errors = os.path.join(run, "Errors")
+            os.makedirs(os.path.join(run, "GetThis_Default"))
+            os.makedirs(errors)
+            with open(os.path.join(errors, "failed.log"), "w", encoding="utf-8") as f:
+                f.write("exception thrown\n")
+            with open(os.path.join(run, "GetThis_Default", "buried.log"), "w",
+                      encoding="utf-8") as f:
+                f.write("an Error here\n")
+
+            v = report.build_errors_view(run)
+
         self.assertTrue(v["available"])
         names = {x["log"]: x for x in v["logs"]}
         self.assertEqual(names["a.log"]["error_lines"], 2)
+        self.assertEqual(names["Errors/failed.log"]["error_lines"], 1)
         self.assertNotIn("empty.log", names)
+        self.assertNotIn("GetThis_Default/buried.log", names)
 
     def test_build_errors_view_missing_dir(self):
         self.assertEqual(report.build_errors_view("nope"), {"available": False})

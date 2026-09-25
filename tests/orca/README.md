@@ -41,19 +41,31 @@ its top-level archives.
 
 ## What a run directory contains
 
+A run is flat: everything it holds sits in one directory, under the name ORC gave it.
+
 ```
-E:\runs\host\
-  parquet\           one <Table>.parquet per collected CSV (NTFSInfo, USNInfo, GetThis_*, ...)
-  csv\               the same tables as CSV
-  csv-trunc\         CSV with volatile date columns dropped (for readable diffing)
-  manifest.parquet   every leaf file: relpath, size, crc, isCsv (incl. GetThis sample blobs)
-  getthis.parquet    every collected GetThis sample, one row per file (written by `orca getthis`)
-  name-map.csv        table name -> source archive / entry / mtime
-  ingest-timing.csv   per-file timing
-  outcome.json        the run's Outcome (if present)
-  outlines/           every Outline the collection carried (one per ORC run attempt)
-  logs\               captured .log files
+E:\dumps\ORC_WS_H2ODEV_Offline\
+  NTFSInfo_details.parquet    one <Table>.parquet per collected CSV
+  GetThis_Default.parquet     (NTFSInfo, USNInfo, GetThis_*, ...)
+  ORC_..._Outcome.json        the run's Outcome, under ORC's own name
+  ORC_..._Outline.json        every Outline the collection carried (one per run attempt)
+  ORC_..._172528.log          the collection-level log, plus each command's own
+  Errors\                     the 'Errors' sub-archive, expanded
+  getthis.parquet             every collected GetThis sample (written by `orca getthis`)
+  dfir-orc.parquet            the wide join (written by `orca merge`)
+  csv\                        the same tables as CSV      (`orca ingest`, unless --no-csv)
+  csv-trunc\                  CSV with volatile date columns dropped (for readable diffing)
+  .orca\                      orca's own bookkeeping, nothing to read by hand
+    name-map.csv              table name -> source archive / entry / mtime
+    ingest-timing.csv         per-file timing
+    manifest.parquet          every leaf file: relpath, size, crc, isCsv (sample blobs included)
+    products.txt              what this ingest wrote, so a rebuild removes only that
+    cache-source.json         which archive and options produced this run
 ```
+
+The CSV renderings keep a directory of their own: a top-level CSV of the collection
+(`VSS_list.csv`) carries the same name as the table ingested from it, and flat they would
+overwrite the collected file.
 
 Every parquet column is text (`VARCHAR`): ORC's forensic CSVs carry malformed cells that would
 otherwise abort type detection, and text keeps schemas stable across versions for diffing.
@@ -65,7 +77,10 @@ otherwise abort type detection, and text keeps schemas stable across versions fo
 ### Ingest
 
 ```powershell
-# basic
+# basic: the run lands beside the archive, in E:\dumps\DFIR-ORC_HOST\
+orca ingest E:\dumps\DFIR-ORC_HOST.7z
+
+# somewhere else
 orca ingest E:\dumps\DFIR-ORC_HOST.7z --out E:\runs\host
 
 # encrypted / password-protected sub-archives (otherwise read from the sibling *_cli_config.xml)
@@ -211,21 +226,55 @@ orca extract E:\dumps --out E:\expanded --private-key contoso.com.key
 Use `ingest` when you want to query the data; `extract` is for when you genuinely need the
 collected files on disk.
 
-### The run cache
+### Where orca writes
 
-`orca diff` given an archive ingests it into a per-user cache and reuses it next time, so
-comparing successive builds against the same reference pays for the reference once.
+Everything orca derives from an archive lands **beside that archive**, in a directory named
+after it - the same directory `orca extract` expands into, so one place holds everything that
+came out of one collection:
 
-```powershell
-orca diff NEW.7z REF.7z --cache-dir E:\orca-cache   # somewhere with room
-orca diff NEW.7z REF.7z --refresh                   # re-ingest even if cached
+```
+E:\dumps\
+  ORC_WS_H2ODEV_20260921_172528.log             sidecar log, unsealed in place
+  ORC_WS_H2ODEV_20260921_172528_Outcome.json    sidecar, unsealed in place
+  ORC_WS_H2ODEV_20260921_172528_Outline.json
+  ORC_WS_H2ODEV_Offline.7z.p7b                  the collected archive
+  ORC_WS_H2ODEV_Offline.7z                      decrypted, kept and reused
+  ORC_WS_H2ODEV_Offline\                        the run (flat; see above)
+    NTFSInfo_details.parquet  GetThis_Default.parquet  ...
+    ORC_..._Outcome.json  ORC_..._Outline.json  ORC_..._172528.log  .orca\
 ```
 
-Default location is `%LOCALAPPDATA%\orca\cache` (`$XDG_CACHE_HOME/orca` elsewhere). Entries are
-keyed by each source archive's name, size and mtime plus the ingest options - not by content,
-which would mean reading the whole archive to decide whether to skip work. Cached runs are
-ingested parquet-only and are ordinary run directories: `orca report`, `getthis` and `merge`
-all work on them. Nothing prunes the cache; delete the directory when it grows too large.
+A decrypted archive and an unsealed sidecar keep the encrypted file's own name with only the
+extension changed (`X.7z.p7b` -> `X.7z`, `X_Outcome.json.7z.p7b` -> `X_Outcome.json`), and both
+are reused on the next run: decrypting and replaying a multi-GB collection is the expensive
+part of an ingest.
+
+Point orca at the **directory** instead and you get one run for the whole collection - one ORC
+run writes one Outcome and one archive per command set, and they ingest together - in a
+directory named as ORC named the run, read from its Outcome (or Outline) sidecar:
+`\\h2odev\vss\extract\ORC_WS_H2ODEV_20260921_172528\`. A folder of loose archives with no such
+sidecar is named after itself.
+
+```powershell
+orca ingest E:\dumps\ORC_WS_H2ODEV_Offline.7z          # run lands beside the archive
+orca diff NEW.7z REF.7z --work-dir E:\orca-work        # put both runs somewhere with room
+orca diff NEW.7z REF.7z --refresh                      # re-decrypt and re-ingest
+```
+
+`--work-dir` moves the runs and the decrypted output somewhere else, both at once; there the
+run directory is named with the ingest key, because two collections' archives often share a
+basename. `--out-dir` is unrelated: it is where `--rows` writes its CSVs.
+
+A run is reused when its marker still matches the key of its sources - each archive's name,
+size and mtime plus the ingest options, not a content hash, which would mean reading the whole
+archive to decide whether to skip work. `--refresh` is the escape hatch. Rebuilding a run
+removes only what the previous ingest recorded in `.orca\products.txt`, never the collection's
+own files or an expanded tree sharing the directory.
+
+Everything orca does *not* intend to keep - nested containers, the CSV being converted, the
+CMS/journal intermediates - goes to `%TEMP%\orca\<pid>` and is removed when the process ends.
+If the collection cannot be written to (a read-only share or image), the products go there too
+and are simply not reused.
 
 ### Outline (one queryable row per ORC run)
 

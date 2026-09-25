@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from unittest import mock
-from orca import cache, diff, engine
+from orca import cache, diff, engine, layout
 
 EMPTY_RUN_DIFF = {"tables": {}, "added_tables": [], "removed_tables": []}
 
@@ -26,8 +26,8 @@ class DispatchCase(unittest.TestCase):
     def setUp(self):
         self.resolved = []
 
-        def ensure_run(source, cache_dir=None, **kwargs):
-            self.resolved.append((source, cache_dir, kwargs))
+        def ensure_run(source, work_dir=None, **kwargs):
+            self.resolved.append((source, work_dir, kwargs))
             return f"/cache/{os.path.basename(source)}-hash"
 
         for target, attribute, value in (
@@ -61,13 +61,13 @@ class TestDispatch(DispatchCase):
         self.run_diff(run_a="NEW.7z", run_b="REF.7z")
         self.assertEqual([source for source, _, _ in self.resolved], ["NEW.7z", "REF.7z"])
 
-    def test_decryption_options_reach_the_cache(self):
+    def test_decryption_options_reach_the_ingest(self):
         self.run_diff(run_a="NEW.p7b", run_b="REF.p7b", private_key="k.pem",
-                      cms_backend="openssl", password="S3cret", cache_dir="C:/cache",
+                      cms_backend="openssl", password="S3cret", work_dir="C:/work",
                       refresh=True, exclude_cols=["MD5"])
 
-        _, cache_dir, kwargs = self.resolved[0]
-        self.assertEqual(cache_dir, "C:/cache")
+        _, work_dir, kwargs = self.resolved[0]
+        self.assertEqual(work_dir, "C:/work")
         self.assertEqual(kwargs["private_key"], "k.pem")
         self.assertEqual(kwargs["cms_backend"], "openssl")
         self.assertEqual(kwargs["password"], "S3cret")
@@ -93,9 +93,9 @@ class TestRunDirsSkipTheCache(unittest.TestCase):
     def test_an_ingested_run_dir_is_not_re_ingested(self):
         with tempfile.TemporaryDirectory() as d:
             run = os.path.join(d, "run")
-            os.makedirs(os.path.join(run, "parquet"))
+            os.makedirs(layout.orca_dir(run))
             with mock.patch.object(cache.ingest, "run_ingest") as ingest:
-                self.assertEqual(cache.ensure_run(run, os.path.join(d, "cache")), run)
+                self.assertEqual(cache.ensure_run(run), run)
             ingest.assert_not_called()
 
 

@@ -1,8 +1,9 @@
 """orca diff: compare two parquet/CSV (or two run dirs) on selected columns.
 Pure column-selection + SQL builders here; counts/row-export go through the engine."""
-import glob
 import json
 import os
+
+from . import layout
 from .columns import DEFAULT_VOLATILE_COLUMNS
 from .engine import sql_path
 
@@ -76,10 +77,7 @@ def diff_tables(engine, path_a, path_b, columns=None, exclude_cols=None,
 
 
 def _match_parquet(run_a, run_b):
-    def index(run):
-        return {os.path.splitext(os.path.basename(p))[0]: p
-                for p in glob.glob(os.path.join(run, "parquet", "*.parquet"))}
-    ia, ib = index(run_a), index(run_b)
+    ia, ib = layout.table_paths(run_a), layout.table_paths(run_b)
     common = sorted(set(ia) & set(ib))
     only_a = sorted(set(ia) - set(ib))
     only_b = sorted(set(ib) - set(ia))
@@ -88,10 +86,7 @@ def _match_parquet(run_a, run_b):
 
 def diff_runs(engine, run_a, run_b, columns=None, exclude_cols=None, rows_out_dir=None) -> dict:
     common, only_a, only_b = _match_parquet(run_a, run_b)
-    ia = {os.path.splitext(os.path.basename(p))[0]: p
-          for p in glob.glob(os.path.join(run_a, "parquet", "*.parquet"))}
-    ib = {os.path.splitext(os.path.basename(p))[0]: p
-          for p in glob.glob(os.path.join(run_b, "parquet", "*.parquet"))}
+    ia, ib = layout.table_paths(run_a), layout.table_paths(run_b)
     tables = {}
     for n in common:
         tables[n] = diff_tables(engine, ia[n], ib[n], columns, exclude_cols, rows_out_dir, n)
@@ -417,7 +412,7 @@ def is_table(path: str) -> bool:
 def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
              exclude_cols=None, rows=False, out_dir="orca-diff", one_line=False,
              as_json=False, show=None, key=None, patterns=10, engine_name="duckdb",
-             cache_dir=None, refresh=False, password=None, private_key=None,
+             work_dir=None, refresh=False, password=None, private_key=None,
              cms_backend=None, exclude_files=None) -> None:
     from . import cache
     from .engine import get_engine, single_process_memory_limit
@@ -430,7 +425,7 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
     if run_a and run_b:
         # Keep the paths the user typed for the report: a cache directory name is a hash.
         source_a, source_b = run_a, run_b
-        resolve = dict(cache_dir=cache_dir, refresh=refresh, password=password,
+        resolve = dict(work_dir=work_dir, refresh=refresh, password=password,
                        private_key=private_key, cms_backend=cms_backend,
                        exclude_cols=exclude_cols, engine_name=engine_name)
         run_a = cache.ensure_run(run_a, **resolve)
@@ -446,8 +441,8 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
         summary = _run_summary(result)
 
         # Whole-run file-set + CRC layer, when both runs carry a manifest (older runs may not).
-        man_new = os.path.join(run_a, "manifest.parquet")
-        man_ref = os.path.join(run_b, "manifest.parquet")
+        man_new = layout.manifest_path(run_a)
+        man_ref = layout.manifest_path(run_b)
         manifest = None
         if os.path.exists(man_new) and os.path.exists(man_ref):
             manifest = diff_manifest(engine, man_new, man_ref, exclude_files)

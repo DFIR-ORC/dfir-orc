@@ -87,51 +87,131 @@ class TestSealedOutputs(unittest.TestCase):
             self.assertEqual(ingest.resolve_archives(d),
                              [os.path.join(d, "SystemInfo.7z.p7b")])
 
-    def test_open_sealed_outcome_extracts_the_json(self):
+    def test_resolve_archives_skips_the_decrypted_copy_of_a_sealed_archive(self):
+        # Once orca keeps 'X.7z' beside 'X.7z.p7b', the loose-archive fallback sees both;
+        # ingesting the pair would ingest the same collection twice.
         with tempfile.TemporaryDirectory() as d:
-            source = os.path.join(d, "out")
-            os.makedirs(source)
-            with open(os.path.join(source, "outcome.json.7z.p7b"), "wb") as f:
-                f.write(b"ciphertext")
-
-            entry = ArchiveEntry(path="Outcome.json", size=10, crc="x", attributes="A")
-            with mock.patch.object(ingest, "decrypt_archive",
-                                   lambda p, w, k, b: os.path.join(w, "outcome.json.7z")), \
-                 mock.patch.object(ingest.sevenzip, "list_entries", lambda *a, **k: [entry]), \
-                 mock.patch.object(ingest.sevenzip, "extract_entry",
-                                   lambda z, a, p, dest, *r: os.path.join(dest, p)):
-                found = ingest.open_sealed_outcome(source, d, "7z")
-
-            self.assertEqual(found, os.path.join(d, "Outcome.json"))
-
-    def test_open_sealed_outcome_when_there_is_none(self):
-        with tempfile.TemporaryDirectory() as d:
-            self.assertIsNone(ingest.open_sealed_outcome(d, d, "7z"))
-
-    def test_a_sealed_outline_is_not_mistaken_for_the_outcome(self):
-        # Both are '<name>.json.7z.p7b' and sit side by side; matching on '.json' alone would
-        # file whichever sorted first as the run's Outcome.
-        with tempfile.TemporaryDirectory() as d:
-            for name in ("ORC_Outcome.json.7z.p7b", "ORC_Outline.json.7z.p7b"):
+            for name in ("SystemInfo.7z.p7b", "SystemInfo.7z", "Other.7z"):
                 with open(os.path.join(d, name), "wb") as f:
-                    f.write(b"ciphertext")
+                    f.write(b"x")
 
-            opened = []
+            self.assertEqual(ingest.resolve_archives(d),
+                             [os.path.join(d, "Other.7z"),
+                              os.path.join(d, "SystemInfo.7z.p7b")])
 
-            def fake_decrypt(path, work, key, backend):
-                opened.append(os.path.basename(path))
-                return os.path.join(work, "x.7z")
 
-            entry = ArchiveEntry(path="inner.json", size=1, crc="x", attributes="A")
-            with mock.patch.object(ingest, "decrypt_archive", fake_decrypt), \
-                 mock.patch.object(ingest.sevenzip, "list_entries", lambda *a, **k: [entry]), \
-                 mock.patch.object(ingest.sevenzip, "extract_entry",
-                                   lambda z, a, p, dest, *r: os.path.join(dest, p)):
-                ingest.open_sealed_outcome(d, d, "7z")
+class UnsealCase(unittest.TestCase):
+    """Sealed sidecars unseal in place, beside the file they came from."""
 
-            self.assertEqual(opened, ["ORC_Outcome.json.7z.p7b"])
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.dir.cleanup)
+        self.decrypted = []
 
-    def test_capture_outlines_copies_every_attempt(self):
+    def seal(self, name, directory=None):
+        full = os.path.join(directory or self.dir.name, name)
+        with open(full, "wb") as f:
+            f.write(b"ciphertext")
+        return full
+
+    def fakes(self, payload=b"{}"):
+        """decrypt_archive/list_entries/extract_entry that produce a real file to move."""
+        def fake_decrypt(path, dest, private_key=None, backend=None, refresh=False):
+            self.decrypted.append(os.path.basename(path))
+            return os.path.join(dest, "sealed.7z")
+
+        def fake_extract(seven, archive, entry_path, dest, password=None):
+            produced = os.path.join(dest, entry_path)
+            with open(produced, "wb") as f:
+                f.write(payload)
+            return produced
+
+        entry = ArchiveEntry(path="inner", size=1, crc="x", attributes="A")
+        return (mock.patch.object(ingest, "decrypt_archive", fake_decrypt),
+                mock.patch.object(ingest.sevenzip, "list_entries", lambda *a, **k: [entry]),
+                mock.patch.object(ingest.sevenzip, "extract_entry", fake_extract))
+
+    def unseal(self, source=None, keep_dir=None, refresh=False, payload=b"{}"):
+        out = io.StringIO()
+        decrypt, listing, extract = self.fakes(payload)
+        with decrypt, listing, extract, redirect_stdout(out):
+            return ingest.unseal_sidecars(source or self.dir.name, "7z",
+                                          keep_dir or self.dir.name, refresh=refresh)
+
+
+class TestUnsealSidecars(UnsealCase):
+    def test_each_sidecar_lands_beside_its_sealed_file_named_after_it(self):
+        self.seal("ORC_H_172528_Outcome.json.7z.p7b")
+        self.seal("ORC_H_172528_Outline.json.7z.p7b")
+        self.seal("ORC_H_172528.log.7z.p7b")
+
+        unsealed = self.unseal()
+
+        self.assertEqual(sorted(os.path.basename(p) for p in unsealed),
+                         ["ORC_H_172528.log", "ORC_H_172528_Outcome.json",
+                          "ORC_H_172528_Outline.json"])
+        for path in unsealed:
+            self.assertTrue(os.path.exists(path), path)
+            self.assertEqual(os.path.dirname(path), self.dir.name)
+
+    def test_a_sealed_archive_is_left_alone(self):
+        # 'SystemInfo.7z.p7b' seals an archive, not an output: it is ingested, not unsealed.
+        self.seal("SystemInfo.7z.p7b")
+        self.assertEqual(self.unseal(), [])
+        self.assertEqual(self.decrypted, [])
+
+    def test_an_already_unsealed_sidecar_is_reused(self):
+        self.seal("ORC_Outcome.json.7z.p7b")
+        plain = os.path.join(self.dir.name, "ORC_Outcome.json")
+        with open(plain, "wb") as f:
+            f.write(b"{}")
+
+        self.assertEqual(self.unseal(), [plain])
+        self.assertEqual(self.decrypted, [])
+
+    def test_refresh_unseals_again(self):
+        self.seal("ORC_Outcome.json.7z.p7b")
+        with open(os.path.join(self.dir.name, "ORC_Outcome.json"), "wb") as f:
+            f.write(b"stale")
+
+        self.unseal(refresh=True, payload=b"fresh")
+
+        with open(os.path.join(self.dir.name, "ORC_Outcome.json"), "rb") as f:
+            self.assertEqual(f.read(), b"fresh")
+        self.assertEqual(self.decrypted, ["ORC_Outcome.json.7z.p7b"])
+
+    def test_keep_dir_redirects_the_unsealed_file(self):
+        # The read-only-collection path: the sealed file cannot be unsealed where it lives.
+        self.seal("ORC_Outcome.json.7z.p7b")
+        keep = os.path.join(self.dir.name, "elsewhere")
+        os.makedirs(keep)
+
+        self.assertEqual(self.unseal(keep_dir=keep),
+                         [os.path.join(keep, "ORC_Outcome.json")])
+
+    def test_an_unopenable_sidecar_does_not_abort_the_ingest(self):
+        self.seal("ORC_Outcome.json.7z.p7b")
+
+        def refuse(*args, **kwargs):
+            raise RuntimeError("no backend could decrypt")
+
+        out = io.StringIO()
+        with mock.patch.object(ingest, "decrypt_archive", refuse), redirect_stdout(out):
+            self.assertEqual(ingest.unseal_sidecars(self.dir.name, "7z", self.dir.name), [])
+        self.assertIn("could not unseal", out.getvalue())
+
+    def test_a_file_source_unseals_the_sidecars_of_its_collection(self):
+        archive = os.path.join(self.dir.name, "ORC_Offline.7z")
+        with open(archive, "wb") as f:
+            f.write(b"7z")
+        self.seal("ORC_Outcome.json.7z.p7b")
+
+        self.assertEqual(self.unseal(source=archive),
+                         [os.path.join(self.dir.name, "ORC_Outcome.json")])
+
+
+class TestCaptureOutlines(unittest.TestCase):
+    def test_copies_every_attempt_under_its_own_name(self):
         with tempfile.TemporaryDirectory() as d:
             source, run = os.path.join(d, "src"), os.path.join(d, "run")
             os.makedirs(source)
@@ -139,28 +219,48 @@ class TestSealedOutputs(unittest.TestCase):
                 with open(os.path.join(source, name), "wb") as f:
                     f.write(b"{}")
 
-            count = ingest.capture_outlines(source, run, os.path.join(d, "work"), "7z")
+            written = ingest.capture_outlines([source], run)
 
-            self.assertEqual(count, 2)
-            self.assertEqual(sorted(os.listdir(os.path.join(run, "outlines"))),
-                             ["A_Outline.json", "B_Outline.json"])
+            self.assertEqual(written, ["A_Outline.json", "B_Outline.json"])
+            self.assertEqual(sorted(os.listdir(run)), ["A_Outline.json", "B_Outline.json"])
 
-    def test_capture_outlines_when_there_are_none(self):
+    def test_when_there_are_none(self):
         with tempfile.TemporaryDirectory() as d:
             run = os.path.join(d, "run")
-            self.assertEqual(ingest.capture_outlines(d, run, d, "7z"), 0)
-            self.assertFalse(os.path.exists(os.path.join(run, "outlines")))
+            self.assertEqual(ingest.capture_outlines([d], run), [])
+            self.assertFalse(os.path.exists(run))
 
-    def test_unopenable_sealed_outcome_does_not_abort_the_ingest(self):
+
+class TestCaptureSidecarLogs(unittest.TestCase):
+    def test_collection_level_logs_reach_the_run(self):
+        # WolfLauncher's own log is in no archive: it only ever exists beside them.
         with tempfile.TemporaryDirectory() as d:
-            with open(os.path.join(d, "outcome.json.7z.p7b"), "wb") as f:
-                f.write(b"ciphertext")
+            source, run = os.path.join(d, "src"), os.path.join(d, "run")
+            os.makedirs(source)
+            for name in ("ORC_H_172528.log", "ORC_H_172528_Outcome.json"):
+                with open(os.path.join(source, name), "wb") as f:
+                    f.write(b"x")
 
-            def refuse(*args, **kwargs):
-                raise RuntimeError("no backend could decrypt")
+            self.assertEqual(ingest.capture_sidecar_logs([source], run),
+                             ["ORC_H_172528.log"])
+            self.assertEqual(os.listdir(run), ["ORC_H_172528.log"])
 
-            with mock.patch.object(ingest, "decrypt_archive", refuse):
-                self.assertIsNone(ingest.open_sealed_outcome(d, d, "7z"))
+    def test_no_logs_writes_no_directory(self):
+        with tempfile.TemporaryDirectory() as d:
+            run = os.path.join(d, "run")
+            self.assertEqual(ingest.capture_sidecar_logs([d], run), [])
+            self.assertFalse(os.path.exists(run))
+
+
+class TestSidecarDirs(unittest.TestCase):
+    def test_one_directory_when_the_collection_is_writable(self):
+        with tempfile.TemporaryDirectory() as d:
+            self.assertEqual(ingest.sidecar_dirs(d, d), [d])
+
+    def test_the_fallback_directory_is_searched_too(self):
+        with tempfile.TemporaryDirectory() as d:
+            keep = os.path.join(d, "scratch")
+            self.assertEqual(ingest.sidecar_dirs(d, keep), [d, keep])
 
 
 class TestDecryptArchive(unittest.TestCase):
@@ -274,6 +374,58 @@ class TestDecryptArchive(unittest.TestCase):
 
         self.assertIn("no_journaling", log)
         self.assertNotIn("warning", log.lower())
+
+    def test_an_already_decrypted_archive_is_reused(self):
+        # The whole point of keeping it: decrypt + replay of a multi-GB collection is the
+        # expensive part of an ingest, and it is deterministic.
+        encrypted = self.path("Little.7z.p7b", b"ciphertext")
+        os.makedirs(self.work, exist_ok=True)
+        plain = os.path.join(self.work, "Little.7z")
+        with open(plain, "wb") as f:
+            f.write(b"7z\xbc\xaf\x27\x1c")
+
+        out = io.StringIO()
+        with mock.patch.object(ingest.cms, "decrypt") as decrypt, redirect_stdout(out):
+            self.assertEqual(ingest.decrypt_archive(encrypted, self.work, "key.pem"), plain)
+        decrypt.assert_not_called()
+
+    def test_refresh_decrypts_again(self):
+        encrypted = self.path("Little.7z.p7b", b"ciphertext")
+        os.makedirs(self.work, exist_ok=True)
+        with open(os.path.join(self.work, "Little.7z"), "wb") as f:
+            f.write(b"7z\xbc\xaf\x27\x1c")
+
+        def fake_decrypt(src, dst, private_key, backend):
+            with open(dst, "wb") as f:
+                f.write(self.journal_of(b"fresh-archive-bytes"))
+            return "openssl"
+
+        out = io.StringIO()
+        with mock.patch.object(ingest.cms, "decrypt", fake_decrypt), redirect_stdout(out):
+            plain = ingest.decrypt_archive(encrypted, self.work, "key.pem", refresh=True)
+
+        with open(plain, "rb") as f:
+            self.assertEqual(f.read(), b"fresh-archive-bytes")
+
+    def test_a_truncated_leftover_is_not_reused(self):
+        # Only a file that actually starts with the 7z signature counts as decrypted; a killed
+        # run can leave a partial one behind.
+        encrypted = self.path("Little.7z.p7b", b"ciphertext")
+        os.makedirs(self.work, exist_ok=True)
+        with open(os.path.join(self.work, "Little.7z"), "wb") as f:
+            f.write(b"not-an-archive")
+
+        def fake_decrypt(src, dst, private_key, backend):
+            with open(dst, "wb") as f:
+                f.write(self.journal_of(b"7z-archive-bytes"))
+            return "openssl"
+
+        out = io.StringIO()
+        with mock.patch.object(ingest.cms, "decrypt", fake_decrypt), redirect_stdout(out):
+            plain = ingest.decrypt_archive(encrypted, self.work, "key.pem")
+
+        with open(plain, "rb") as f:
+            self.assertEqual(f.read(), b"7z-archive-bytes")
 
     def test_content_that_is_neither_journal_nor_archive_is_reported(self):
         # The wrong-key case. CMS over AES-CBC has no integrity check and OpenSSL answers a

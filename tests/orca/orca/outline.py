@@ -111,11 +111,8 @@ def collect_rows(paths: list[str]) -> list[dict]:
 def outline_files(run_dir: str) -> list[str]:
     """The Outlines ingest captured for a run. A collection can hold several - a run that was
     restarted leaves one per attempt, and only the last may have an Outcome."""
-    directory = os.path.join(run_dir, "outlines")
-    if not os.path.isdir(directory):
-        return []
-    return sorted(os.path.join(directory, name) for name in os.listdir(directory)
-                  if name.lower().endswith(".json"))
+    from .ingest import find_outlines
+    return find_outlines([run_dir])
 
 
 def run_outline(run_dirs, root=None, out=None, engine_name="duckdb", as_json=False) -> None:
@@ -124,7 +121,7 @@ def run_outline(run_dirs, root=None, out=None, engine_name="duckdb", as_json=Fal
 
     dirs = discover_run_dirs(list(run_dirs or []), root)
     if not dirs:
-        raise RuntimeError("no run dirs (need a dir with ingest-timing.csv, or --root)")
+        raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
 
     paths = [path for run_dir in dirs for path in outline_files(run_dir)]
     rows = collect_rows(paths)

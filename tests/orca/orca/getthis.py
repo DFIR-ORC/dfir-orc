@@ -1,22 +1,25 @@
 """GetThis collection summary: how many files each GetThis container archive collected, plus the
 grand total. Also emits getthis.parquet (all collected samples, one row per file)."""
 import csv
-import glob
 import json
 import os
 
+from . import layout
 from .engine import get_engine, sql_path as _fwd
 
 
 def discover_getthis(run_dir: str) -> list[str]:
-    return sorted(glob.glob(os.path.join(run_dir, "parquet", "GetThis*.parquet")))
+    """The GetThis tables of a run, taken by name rather than by glob: the run directory also
+    holds this command's own 'getthis.parquet', which a case-insensitive glob would match."""
+    return [path for name, path in sorted(layout.table_paths(run_dir).items())
+            if name.startswith("GetThis")]
 
 
 def glob_reader(run_dir: str) -> str:
     """A single read_parquet over every GetThis table. Schemas are uniform, but union_by_name
     tolerates any column-order drift between command sets."""
-    pattern = _fwd(os.path.join(run_dir, "parquet", "GetThis*.parquet"))
-    return f"read_parquet('{pattern}', union_by_name=true)"
+    paths = ", ".join(f"'{_fwd(path)}'" for path in discover_getthis(run_dir))
+    return f"read_parquet([{paths}], union_by_name=true)"
 
 
 def read_source_archives(name_map_path: str) -> dict[str, str]:
@@ -35,7 +38,7 @@ def read_source_archives(name_map_path: str) -> dict[str, str]:
 def counts_by_archive(engine, run_dir: str) -> list[tuple[str, int]]:
     """(container archive name, collected-file count) per GetThis container, files summed per
     archive and ordered by count descending."""
-    archives = read_source_archives(os.path.join(run_dir, "name-map.csv"))
+    archives = read_source_archives(layout.name_map_path(run_dir))
     totals: dict[str, int] = {}
     for path in discover_getthis(run_dir):
         name = os.path.splitext(os.path.basename(path))[0]

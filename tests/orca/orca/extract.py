@@ -6,9 +6,8 @@ prefer 'ingest' when you only want to query the data.
 """
 import os
 import shutil
-import tempfile
 
-from . import sevenzip
+from . import layout, sevenzip
 from .ingest import decrypt_archive, find_outcome_json, resolve_archives
 
 
@@ -64,29 +63,26 @@ def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
     if outcome:
         shutil.copy(outcome, os.path.join(out_dir, os.path.basename(outcome)))
 
-    # A decrypted '.p7b' is a full-size intermediate; keep it out of the result tree.
-    work = tempfile.mkdtemp(prefix="orca_extract_")
-    try:
-        for top in resolve_archives(source):
-            if not os.path.exists(top):
-                # A partial collection: an archive the Outcome names was never written, or the
-                # transfer dropped it. The other archives are independent deliverables, so say
-                # which one is gone and keep going rather than losing them to the first gap.
-                print(f"skipped missing archive '{top}'")
-                continue
-            if os.path.getsize(top) == 0:
-                print(f"skipped empty archive '{top}'")
-                continue
+    # A decrypted '.p7b' is a full-size intermediate: it is kept beside the archive it came
+    # from, not dropped into the result tree.
+    keep_dir, _ = layout.resolve(source)
+    for top in resolve_archives(source):
+        if not os.path.exists(top):
+            # A partial collection: an archive the Outcome names was never written, or the
+            # transfer dropped it. The other archives are independent deliverables, so say
+            # which one is gone and keep going rather than losing them to the first gap.
+            print(f"skipped missing archive '{top}'")
+            continue
+        if os.path.getsize(top) == 0:
+            print(f"skipped empty archive '{top}'")
+            continue
 
-            plain = decrypt_archive(top, work, private_key, cms_backend)
-            destination = os.path.join(out_dir,
-                                       os.path.splitext(os.path.basename(top))[0])
-            os.makedirs(destination, exist_ok=True)
-            sevenzip.extract_all(seven, plain, destination, password)
-            count = expand_containers(seven, destination, password)
-            print(f"extracted '{os.path.basename(top)}' -> {destination} "
-                  f"({count} nested container(s))")
-    finally:
-        shutil.rmtree(work, ignore_errors=True)
+        plain = decrypt_archive(top, keep_dir, private_key, cms_backend)
+        destination = os.path.join(out_dir, layout.archive_stem(top))
+        os.makedirs(destination, exist_ok=True)
+        sevenzip.extract_all(seven, plain, destination, password)
+        count = expand_containers(seven, destination, password)
+        print(f"extracted '{os.path.basename(top)}' -> {destination} "
+              f"({count} nested container(s))")
 
     return out_dir

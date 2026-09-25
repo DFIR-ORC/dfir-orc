@@ -157,9 +157,13 @@ def command_rows(outcome: dict, source: str) -> list[dict]:
 
 
 def outcome_file(run_dir: str) -> str | None:
-    """The Outcome ingest captured for a run, if it had one."""
-    path = os.path.join(run_dir, "outcome.json")
-    return path if os.path.exists(path) else None
+    """The Outcome ingest captured for a run, if it had one.
+
+    Found by content, not by name: it sits in the run under the name ORC gave it, beside the
+    Outline, which is also a '*.json' carrying the collection's name.
+    """
+    from .ingest import find_outcome_json
+    return find_outcome_json(run_dir)
 
 
 def collect_command_rows(run_dirs) -> list[dict]:
@@ -178,7 +182,7 @@ def run_outcome(run_dirs, root=None, out=None, engine_name="duckdb", as_json=Fal
 
     dirs = discover_run_dirs(list(run_dirs or []), root)
     if not dirs:
-        raise RuntimeError("no run dirs (need a dir with ingest-timing.csv, or --root)")
+        raise RuntimeError("no run dirs (need an ingested run dir, or --root)")
 
     rows = collect_command_rows(dirs)
     if not rows:

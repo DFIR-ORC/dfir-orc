@@ -11,7 +11,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     ing = sub.add_parser("ingest", help="archive -> per-table parquet + CSV")
     ing.add_argument("archive", help="ORC .7z/.p7b file or a dir of results")
-    ing.add_argument("--out", required=True, help="output run directory")
+    ing.add_argument("--out", default=None, help="output run dir (default: beside the archive)")
+    ing.add_argument("--work-dir", default=None,
+                     help="put runs and decrypted output here instead of beside the archive")
+    ing.add_argument("--refresh", action="store_true",
+                     help="re-decrypt and re-ingest even if products are already there")
     ing.add_argument("--jobs", type=int, default=None, help="parallel workers (default: CPUs)")
     ing.add_argument("--no-csv", action="store_true", help="skip CSV output")
     ing.add_argument("--no-trunc", action="store_true", help="skip truncated CSV")
@@ -31,7 +35,7 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="pin the .p7b decryption backend")
 
     mg = sub.add_parser("merge", help="run dir -> wide dfir-orc.parquet")
-    mg.add_argument("--run", required=True, help="a run dir (parquet/ + name-map.csv)")
+    mg.add_argument("--run", required=True, help="an ingested run dir")
     mg.add_argument("--out", default=None, help="output parquet (default: <run>/dfir-orc.parquet)")
     mg.add_argument("--lossless", action="store_true", help="keep every value as arrays (slow)")
     mg.add_argument("--ts-col", nargs="*", default=None, help="override tool timestamp: Tool=Column")
@@ -61,7 +65,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ol.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
 
     gt = sub.add_parser("getthis", help="run dir -> getthis.parquet + collected/distinct counts")
-    gt.add_argument("--run", required=True, help="a run dir (parquet/ from ingest)")
+    gt.add_argument("--run", required=True, help="an ingested run dir")
     gt.add_argument("--out", default=None, help="output parquet (default: <run>/getthis.parquet)")
     gt.add_argument("--json", action="store_true", help="summary as JSON")
     gt.add_argument("--engine", default="duckdb", help="compute engine (default: duckdb)")
@@ -75,9 +79,10 @@ def _build_parser() -> argparse.ArgumentParser:
     df.add_argument("--password", default=None, help="archive password")
     df.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),
                     help="pin the .p7b decryption backend")
-    df.add_argument("--cache-dir", default=None,
-                    help="where ingested archives are cached (default: per-user cache)")
-    df.add_argument("--refresh", action="store_true", help="re-ingest even if cached")
+    df.add_argument("--work-dir", default=None,
+                    help="put runs and decrypted output here instead of beside each archive")
+    df.add_argument("--refresh", action="store_true",
+                    help="re-decrypt and re-ingest even if products are already there")
     df.add_argument("--columns", nargs="*", default=None, help="restrict compare to these columns")
     df.add_argument("--exclude-cols", nargs="*", default=None, help="extra columns to exclude")
     df.add_argument("--exclude-files", nargs="*", default=None,
@@ -103,7 +108,7 @@ def main(argv=None) -> int:
             jobs=args.jobs, make_csv=not args.no_csv, make_trunc=not args.no_trunc,
             exclude_cols=args.exclude_cols, password=args.password,
             private_key=args.private_key, cms_backend=args.cms_backend,
-            engine_name=args.engine,
+            engine_name=args.engine, work_dir=args.work_dir, refresh=args.refresh,
         )
     elif args.command == "extract":
         extract.run_extract(args.archive, args.out, password=args.password,
@@ -136,7 +141,7 @@ def main(argv=None) -> int:
                       rows=args.rows, out_dir=args.out_dir,
                       one_line=args.one_line, as_json=args.json, show=args.show,
                       key=args.key, patterns=args.patterns,
-                      cache_dir=args.cache_dir, refresh=args.refresh,
+                      work_dir=args.work_dir, refresh=args.refresh,
                       password=args.password, private_key=args.private_key,
                       cms_backend=args.cms_backend, exclude_files=args.exclude_files)
     return 0

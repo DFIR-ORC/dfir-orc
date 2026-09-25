@@ -9,12 +9,12 @@ Two modes:
 
 Cells are VARCHAR: a plain scalar, or (lossless) a JSON-array string when values vary."""
 import csv as _csv
-import glob
 import os
 import shutil
 import tempfile
 import time
 
+from . import layout
 from .engine import get_engine, single_process_memory_limit, sql_path
 
 KEY_COLUMNS = ("VolumeID", "SnapshotID", "FRN")
@@ -116,11 +116,9 @@ def read_name_map_mtimes(name_map_path: str) -> dict[str, str]:
 
 
 def _discover_tables(engine, run_dir: str, ts_overrides: dict | None) -> list[dict]:
-    parquet_dir = os.path.join(run_dir, "parquet")
-    mtimes = read_name_map_mtimes(os.path.join(run_dir, "name-map.csv"))
+    mtimes = read_name_map_mtimes(layout.name_map_path(run_dir))
     tables = []
-    for path in sorted(glob.glob(os.path.join(parquet_dir, "*.parquet"))):
-        name = os.path.splitext(os.path.basename(path))[0]
+    for name, path in sorted(layout.table_paths(run_dir).items()):
         columns = engine.columns(path)
         if "VolumeID" not in columns or "FRN" not in columns:
             continue
@@ -140,8 +138,7 @@ def run_merge(run_dir: str, out: str | None = None, lossless: bool = False,
     engine = get_engine(engine_name, single_process_memory_limit())
     tables = _discover_tables(engine, run_dir, ts_overrides)
     if not tables:
-        parquet_dir = os.path.join(run_dir, "parquet")
-        raise RuntimeError(f"no file-keyed (VolumeID+FRN) parquet found under '{parquet_dir}'")
+        raise RuntimeError(f"no file-keyed (VolumeID+FRN) parquet found in '{run_dir}'")
 
     cols = master_columns(tables)
     out = out or os.path.join(run_dir, "dfir-orc.parquet")

@@ -1,7 +1,7 @@
 import os
 import tempfile
 import unittest
-from orca import getthis
+from orca import getthis, layout
 
 
 class FakeCountEngine:
@@ -13,22 +13,36 @@ class FakeCountEngine:
 
 
 def _make_run(dir_, tables, mapping):
-    parquet_dir = os.path.join(dir_, "parquet")
-    os.makedirs(parquet_dir)
+    os.makedirs(layout.orca_dir(dir_), exist_ok=True)
     for name in tables:
-        open(os.path.join(parquet_dir, name + ".parquet"), "w").close()
-    with open(os.path.join(dir_, "name-map.csv"), "w", newline="") as f:
+        open(os.path.join(dir_, name + ".parquet"), "w").close()
+    with open(layout.name_map_path(dir_), "w", newline="") as f:
         f.write("name,source_archive,entry_path,source_mtime\n")
-        for name, source in mapping.items():
-            f.write(f"{name},{source},GetThis.csv,\n")
+        for name in tables:
+            f.write(f"{name},{mapping.get(name, '')},GetThis.csv,\n")
 
 
 class TestGetThis(unittest.TestCase):
-    def test_glob_reader_unions_getthis_parquet(self):
-        reader = getthis.glob_reader("run")
+    def test_glob_reader_unions_every_getthis_table(self):
+        with tempfile.TemporaryDirectory() as d:
+            _make_run(d, ["GetThis", "GetThis_ADS", "NTFSInfo"], {})
+            reader = getthis.glob_reader(d)
+
         self.assertIn("read_parquet(", reader)
-        self.assertIn("GetThis*.parquet", reader)
         self.assertIn("union_by_name=true", reader)
+        self.assertIn("GetThis.parquet", reader)
+        self.assertIn("GetThis_ADS.parquet", reader)
+        self.assertNotIn("NTFSInfo", reader)
+
+    def test_the_commands_own_output_is_not_a_getthis_table(self):
+        # 'getthis.parquet' is what this command writes; on Windows a 'GetThis*' glob over the
+        # run directory would match it and the summary would count its own last result.
+        with tempfile.TemporaryDirectory() as d:
+            _make_run(d, ["GetThis"], {})
+            open(os.path.join(d, "getthis.parquet"), "w").close()
+            found = [os.path.basename(p) for p in getthis.discover_getthis(d)]
+
+        self.assertEqual(found, ["GetThis.parquet"])
 
     def test_read_source_archives_uses_basename(self):
         with tempfile.TemporaryDirectory() as d:
