@@ -99,8 +99,10 @@ def run_log_files(run_dir: str) -> list[str]:
 
 
 def build_errors_view(run_dir: str) -> dict:
+    """What went wrong in this run: the logs carrying error lines, and the tables the ingest
+    could not read at all, which are a hole in the run rather than a message inside it."""
     if not os.path.isdir(run_dir):
-        return {"available": False}
+        return {"available": False, "skipped": {}}
     logs = []
     for path in run_log_files(run_dir):
         size = os.path.getsize(path)
@@ -118,7 +120,7 @@ def build_errors_view(run_dir: str) -> dict:
         logs.append({"log": os.path.relpath(path, run_dir).replace("\\", "/"),
                      "bytes": size, "error_lines": count})
     logs.sort(key=lambda x: x["error_lines"], reverse=True)
-    return {"available": True, "logs": logs}
+    return {"available": True, "logs": logs, "skipped": layout.skipped(run_dir)}
 
 
 def _hsize(n) -> str:
@@ -175,6 +177,7 @@ def summary_of(hr: dict) -> dict:
         "empty": e["count"],
         "empty_files": e.get("file_count", 0),
         "tables": s["tables"],
+        "unread": len(hr["errors"].get("skipped", {})),
         "total_bytes": s["total_bytes"],
         "duration_seconds": o.get("duration_seconds") if avail else None,
         "memory_peak_bytes": o.get("memory_peak_bytes") if avail else None,
@@ -182,10 +185,16 @@ def summary_of(hr: dict) -> dict:
 
 
 def render_one_line(summary: dict) -> str:
-    return (f'{summary["host"]}: ok={summary["ok"]} fails={summary["fails"]} '
+    line = (f'{summary["host"]}: ok={summary["ok"]} fails={summary["fails"]} '
             f'empty={summary["empty"]} tables={summary["tables"]} '
             f'size={_hsize(summary["total_bytes"])} dur={_hdur(summary["duration_seconds"])} '
             f'mem={_hsize(summary["memory_peak_bytes"])}')
+
+    # Only when there is one: a field that always reads zero stops being read, and this is the
+    # one saying the run is missing a table rather than the collection missing an artifact.
+    if summary.get("unread"):
+        line += f' unread={summary["unread"]}'
+    return line
 
 
 def render_json(summaries: list) -> str:
@@ -228,6 +237,14 @@ def render_human(hr: dict, views: list) -> str:
             lines.append(f'errors: {len(with_err)} log(s) with matches')
             for x in with_err:
                 lines.append(f'  {x["log"]}: {x["error_lines"]} error-line(s)')
+
+        # A hole in the run rather than a message inside it, so it is said separately and
+        # whether or not there were logs to read.
+        skipped = er.get("skipped") or {}
+        if skipped:
+            lines.append(f'unread tables: {len(skipped)} (skipped at ingest)')
+            for name, reason in sorted(skipped.items()):
+                lines.append(f'  {name}: {reason}')
     return "\n".join(lines)
 
 

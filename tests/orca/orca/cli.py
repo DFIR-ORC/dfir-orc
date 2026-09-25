@@ -17,6 +17,8 @@ def _build_parser() -> argparse.ArgumentParser:
     ing.add_argument("--refresh", action="store_true",
                      help="re-decrypt and re-ingest even if products are already there")
     ing.add_argument("--jobs", type=int, default=None, help="parallel workers (default: CPUs)")
+    ing.add_argument("--skip-errors", action="store_true",
+                     help="skip a table orca cannot read instead of failing the whole ingest")
     ing.add_argument("--no-csv", action="store_true", help="skip CSV output")
     ing.add_argument("--no-trunc", action="store_true", help="skip truncated CSV")
     ing.add_argument("--exclude-cols", nargs="*", default=None, help="volatile columns to drop")
@@ -92,6 +94,8 @@ def _build_parser() -> argparse.ArgumentParser:
                     help="put runs and decrypted output here instead of beside each archive")
     df.add_argument("--refresh", action="store_true",
                     help="re-decrypt and re-ingest even if products are already there")
+    df.add_argument("--skip-errors", action="store_true",
+                    help="skip a table orca cannot read instead of failing the ingest")
     df.add_argument("--columns", nargs="*", default=None, help="restrict compare to these columns")
     df.add_argument("--exclude-cols", nargs="*", default=None, help="extra columns to exclude")
     df.add_argument("--exclude-files", nargs="*", default=None,
@@ -118,6 +122,7 @@ def main(argv=None) -> int:
             exclude_cols=args.exclude_cols, password=args.password,
             private_key=args.private_key, cms_backend=args.cms_backend,
             engine_name=args.engine, work_dir=args.work_dir, refresh=args.refresh,
+            skip_errors=args.skip_errors,
         )
     elif args.command == "extract":
         extract.run_extract(args.archive, args.out, password=args.password,
@@ -153,5 +158,6 @@ def main(argv=None) -> int:
                       key=args.key, patterns=args.patterns,
                       work_dir=args.work_dir, refresh=args.refresh,
                       password=args.password, private_key=args.private_key,
-                      cms_backend=args.cms_backend, exclude_files=args.exclude_files)
+                      cms_backend=args.cms_backend, exclude_files=args.exclude_files,
+                      skip_errors=args.skip_errors)
     return 0

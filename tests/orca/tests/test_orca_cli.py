@@ -31,6 +31,12 @@ class TestCli(unittest.TestCase):
         given = parser.parse_args(["extract", "arch.p7b", "--out", "tree", "--work-dir", "E:/w"])
         self.assertEqual(given.work_dir, "E:/w")
 
+    def test_skip_errors_is_on_both_commands_that_ingest(self):
+        parser = cli._build_parser()
+        for argv in (["ingest", "arch.7z"], ["diff", "NEW.7z", "REF.7z"]):
+            self.assertFalse(parser.parse_args(argv).skip_errors, argv)
+            self.assertTrue(parser.parse_args(argv + ["--skip-errors"]).skip_errors, argv)
+
     def test_extract_refresh_is_off_unless_asked(self):
         parser = cli._build_parser()
         self.assertFalse(parser.parse_args(["extract", "a.p7b", "--out", "t"]).refresh)

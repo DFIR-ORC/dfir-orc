@@ -456,7 +456,7 @@ def _write_manifest(rows: list[dict], out_dir: str, engine) -> None:
 def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=True,
                make_trunc=True, exclude_cols=None, password=None, private_key=None,
                cms_backend=None, engine_name="duckdb", work_dir=None, keep_dir=None,
-               refresh=False) -> list[TimingRecord]:
+               refresh=False, skip_errors=False) -> list[TimingRecord]:
     """Ingest a collection into a run directory.
 
     'out_dir' and 'keep_dir' default to the collection's own directory (see layout.resolve):
@@ -519,18 +519,69 @@ def run_ingest(archive: str, out_dir: str | None = None, *, jobs=None, make_csv=
         _write_name_map(work_jobs, out_dir)
         _write_manifest(manifest_rows, out_dir, engine)
 
-        records: list[TimingRecord] = []
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = [pool.submit(ingest_one, j, engine, out_dir, drop, make_csv,
                                    make_trunc, seven, j.password) for j in work_jobs]
-            for fut in futures:
-                records.extend(fut.result())
+            records, skipped = collect_results(futures, work_jobs, skip_errors)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
+
+    write_skipped(skipped, out_dir)
+    if skipped:
+        print(f"{len(skipped)} table(s) skipped, recorded in "
+              f"{os.path.join(layout.ORCA_DIR, 'skipped.txt')}")
 
     write_timing_csv(records, layout.timing_path(out_dir))
     print(summarize(records))
     return records
+
+
+def collect_results(futures, jobs: list, skip_errors: bool):
+    """Gather every job's timings, and the tables that could not be produced.
+
+    Without 'skip_errors' the first failure aborts the ingest, as it always did - one malformed
+    file then costs every other table in the collection. With it, a failed job costs its own
+    table and nothing else.
+
+    The narrow catch is deliberate: a duckdb refusal and a 7-Zip extraction failure both arrive
+    as RuntimeError, and a bug in orca should still stop the run rather than be filed as one
+    more unreadable table.
+    """
+    records: list[TimingRecord] = []
+    skipped: list[tuple[str, str]] = []
+    for job, future in zip(jobs, futures):
+        try:
+            records.extend(future.result())
+        except (RuntimeError, OSError) as error:
+            if not skip_errors:
+                raise
+
+            # One line: a duckdb error carries the whole failing statement.
+            reason = " ".join(str(error).split())[:300]
+            print(f"skipped '{job.output_name}': {reason}")
+            skipped.append((job.output_name, reason))
+
+    return records, skipped
+
+
+def write_skipped(skipped: list, out_dir: str) -> None:
+    """Record the tables an ingest could not produce, or remove the record when there are none.
+
+    A run missing a table does not say so anywhere else. Diffed against a complete run it shows
+    up as a removed table, which reads as the collection having stopped producing it rather
+    than orca having failed to read it, and '--one-line' does not mention it at all. Rewritten
+    on every ingest, so it never describes an older one.
+    """
+    path = layout.skipped_path(out_dir)
+    if not skipped:
+        if os.path.exists(path):
+            os.remove(path)
+        return
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        for name, reason in skipped:
+            f.write(f"{name}\t{reason}\n")
 
 
 def find_outcome_json(path: str) -> str | None:

@@ -240,6 +240,99 @@ class TestUnsealSidecars(UnsealCase):
                          [os.path.join(self.dir.name, "ORC_Outcome.json")])
 
 
+class Done:
+    """A finished future: the result loop only ever calls .result()."""
+
+    def __init__(self, value=None, error=None):
+        self.value, self.error = value, error
+
+    def result(self):
+        if self.error:
+            raise self.error
+        return self.value
+
+
+class Job:
+    def __init__(self, name):
+        self.output_name = name
+
+
+class TestCollectResults(unittest.TestCase):
+    """One malformed collected file used to cost every other table in the collection: the
+    first failing job's exception came straight out of the result loop."""
+
+    def collect(self, futures, jobs, skip_errors):
+        out = io.StringIO()
+        with redirect_stdout(out):
+            records, skipped = ingest.collect_results(futures, jobs, skip_errors)
+        return records, skipped, out.getvalue()
+
+    def test_a_failure_aborts_by_default(self):
+        futures = [Done(["a"]), Done(error=RuntimeError("duckdb said no")), Done(["c"])]
+        jobs = [Job("first"), Job("autoruns"), Job("third")]
+
+        with self.assertRaises(RuntimeError):
+            self.collect(futures, jobs, skip_errors=False)
+
+    def test_skip_errors_costs_only_that_table(self):
+        futures = [Done(["a"]), Done(error=RuntimeError("duckdb said no")), Done(["c"])]
+        jobs = [Job("first"), Job("autoruns"), Job("third")]
+
+        records, skipped, printed = self.collect(futures, jobs, skip_errors=True)
+
+        self.assertEqual(records, ["a", "c"])
+        self.assertEqual([name for name, _ in skipped], ["autoruns"])
+        self.assertIn("autoruns", printed)
+
+    def test_the_reason_is_kept_on_one_line(self):
+        # A duckdb error carries the whole failing statement, newlines and all.
+        futures = [Done(error=RuntimeError("Invalid Input\nSQL: COPY (SELECT\n *)"))]
+
+        _, skipped, _ = self.collect(futures, [Job("autoruns")], skip_errors=True)
+
+        self.assertNotIn("\n", skipped[0][1])
+        self.assertIn("Invalid Input", skipped[0][1])
+
+    def test_an_os_error_is_skipped_too(self):
+        futures = [Done(error=OSError("no such file"))]
+
+        _, skipped, _ = self.collect(futures, [Job("autoruns")], skip_errors=True)
+
+        self.assertEqual(len(skipped), 1)
+
+    def test_nothing_skipped_when_every_job_worked(self):
+        records, skipped, _ = self.collect([Done(["a"])], [Job("first")], skip_errors=True)
+
+        self.assertEqual(records, ["a"])
+        self.assertEqual(skipped, [])
+
+
+class TestWriteSkipped(unittest.TestCase):
+    """A run missing a table does not say so anywhere else - a diff calls it a removed table,
+    as though the collection had stopped producing it - so the run has to carry the caveat."""
+
+    def test_it_records_each_table_and_its_reason(self):
+        with tempfile.TemporaryDirectory() as d:
+            ingest.write_skipped([("autoruns", "duckdb said no")], d)
+
+            with open(ingest.layout.skipped_path(d), encoding="utf-8") as f:
+                self.assertEqual(f.read(), "autoruns\tduckdb said no\n")
+
+    def test_no_file_when_nothing_was_skipped(self):
+        with tempfile.TemporaryDirectory() as d:
+            ingest.write_skipped([], d)
+            self.assertFalse(os.path.exists(ingest.layout.skipped_path(d)))
+
+    def test_an_older_run_s_record_is_not_left_behind(self):
+        # Re-ingesting into the same directory must not leave it claiming a table is missing.
+        with tempfile.TemporaryDirectory() as d:
+            ingest.write_skipped([("autoruns", "duckdb said no")], d)
+
+            ingest.write_skipped([], d)
+
+            self.assertFalse(os.path.exists(ingest.layout.skipped_path(d)))
+
+
 class TestIngestScratch(unittest.TestCase):
     """The CMS intermediate is as big as the collection and goes to scratch, so '--work-dir'
     has to move that too - otherwise a temp volume smaller than the collection stops an ingest

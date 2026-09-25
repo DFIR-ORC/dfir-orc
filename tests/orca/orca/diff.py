@@ -77,20 +77,29 @@ def diff_tables(engine, path_a, path_b, columns=None, exclude_cols=None,
 
 
 def _match_parquet(run_a, run_b):
+    """Split the tables into compared, one-sided, and never read at all.
+
+    A table '--skip-errors' could not produce is missing from its run, and one-sided would call
+    that added or removed - saying the collection changed, when what changed is that orca could
+    not read the file. It is reported as unread instead, on whichever side lost it, and it is
+    never compared: there is nothing to compare it against.
+    """
     ia, ib = layout.table_paths(run_a), layout.table_paths(run_b)
+    unread = set(layout.skipped(run_a)) | set(layout.skipped(run_b))
     common = sorted(set(ia) & set(ib))
-    only_a = sorted(set(ia) - set(ib))
-    only_b = sorted(set(ib) - set(ia))
-    return common, only_a, only_b
+    only_a = sorted(set(ia) - set(ib) - unread)
+    only_b = sorted(set(ib) - set(ia) - unread)
+    return common, only_a, only_b, sorted(unread)
 
 
 def diff_runs(engine, run_a, run_b, columns=None, exclude_cols=None, rows_out_dir=None) -> dict:
-    common, only_a, only_b = _match_parquet(run_a, run_b)
+    common, only_a, only_b, unread = _match_parquet(run_a, run_b)
     ia, ib = layout.table_paths(run_a), layout.table_paths(run_b)
     tables = {}
     for n in common:
         tables[n] = diff_tables(engine, ia[n], ib[n], columns, exclude_cols, rows_out_dir, n)
-    return {"tables": tables, "added_tables": only_a, "removed_tables": only_b}
+    return {"tables": tables, "added_tables": only_a, "removed_tables": only_b,
+            "unread_tables": unread}
 
 
 def _manifest_reader(path: str, exclude_files=None) -> str:
@@ -168,6 +177,9 @@ def render_run_human(run_a: str, run_b: str, result: dict, manifest: dict | None
         lines.append(f'  added tables: {", ".join(result["added_tables"])}')
     if result["removed_tables"]:
         lines.append(f'  removed tables: {", ".join(result["removed_tables"])}')
+    if result.get("unread_tables"):
+        lines.append(f'  unread tables (skipped at ingest, not compared): '
+                     f'{", ".join(result["unread_tables"])}')
     return "\n".join(lines)
 
 
@@ -399,6 +411,7 @@ def _run_summary(result: dict) -> dict:
         "removed_rows": sum(d["removed"] for d in tables.values()),
         "added_tables": result["added_tables"],
         "removed_tables": result["removed_tables"],
+        "unread_tables": result.get("unread_tables", []),
         "per_table": tables,
     }
 
@@ -413,7 +426,7 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
              exclude_cols=None, rows=False, out_dir="orca-diff", one_line=False,
              as_json=False, show=None, key=None, patterns=10, engine_name="duckdb",
              work_dir=None, refresh=False, password=None, private_key=None,
-             cms_backend=None, exclude_files=None) -> None:
+             cms_backend=None, exclude_files=None, skip_errors=False) -> None:
     from . import cache
     from .engine import get_engine, single_process_memory_limit
     rows_out = out_dir if rows else None
@@ -427,7 +440,8 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
         source_a, source_b = run_a, run_b
         resolve = dict(work_dir=work_dir, refresh=refresh, password=password,
                        private_key=private_key, cms_backend=cms_backend,
-                       exclude_cols=exclude_cols, engine_name=engine_name)
+                       exclude_cols=exclude_cols, engine_name=engine_name,
+                       skip_errors=skip_errors)
         run_a = cache.ensure_run(run_a, **resolve)
         run_b = cache.ensure_run(run_b, **resolve)
 
@@ -452,6 +466,10 @@ def run_diff(path_a=None, path_b=None, run_a=None, run_b=None, columns=None,
             print(render_json(summary))
         elif one_line:
             payload = {k: summary[k] for k in ("tables", "changed", "added_rows", "removed_rows")}
+            # Only when there are any: a one-liner that always carries a zero teaches people
+            # to skip it, and this is the field that says the comparison is incomplete.
+            if summary["unread_tables"]:
+                payload["unread_tables"] = len(summary["unread_tables"])
             if manifest:
                 payload.update({"files_added": manifest["added"], "files_removed": manifest["removed"],
                                 "changed_binary": manifest["changed_binary"]})

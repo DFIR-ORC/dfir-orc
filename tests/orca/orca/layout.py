@@ -144,6 +144,27 @@ def timing_path(run_dir: str) -> str:
     return os.path.join(orca_dir(run_dir), "ingest-timing.csv")
 
 
+def skipped_path(run_dir: str) -> str:
+    """Where an ingest records the tables it could not produce. Absent means none."""
+    return os.path.join(orca_dir(run_dir), "skipped.txt")
+
+
+def skipped(run_dir: str) -> dict[str, str]:
+    """name -> why, for the tables '--skip-errors' could not produce. Empty for a full run."""
+    try:
+        with open(skipped_path(run_dir), encoding="utf-8", errors="replace") as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return {}
+
+    found = {}
+    for line in lines:
+        name, _, reason = line.partition("\t")
+        if name:
+            found[name] = reason
+    return found
+
+
 def manifest_path(run_dir: str) -> str:
     return os.path.join(orca_dir(run_dir), "manifest.parquet")
 

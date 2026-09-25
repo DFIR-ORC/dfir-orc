@@ -61,7 +61,28 @@ E:\dumps\ORC_WS_H2ODEV_Offline\
     manifest.parquet          every leaf file: relpath, size, crc, isCsv (sample blobs included)
     products.txt              what this ingest wrote, so a rebuild removes only that
     cache-source.json         which archive and options produced this run
+    skipped.txt               tables --skip-errors could not read (absent when there are none)
 ```
+
+**`--skip-errors`** (on `ingest` and `diff`). One unreadable collected file otherwise costs
+every other table: the first failing job aborts the whole ingest. It happens - on one w11
+collection `autoruns.csv` is UTF-16 text of `autorunsc`'s own usage message, saved under a
+`.csv` name because the tool failed to run, and duckdb refuses to sniff it. With the flag that
+table is skipped and the other 26 are produced.
+
+A run that skipped a table is *incomplete*, and nothing else on disk says so, which is why the
+tables and their reasons are recorded in `.orca\skipped.txt`. `diff` reads that file and calls
+such a table **unread** rather than added or removed - "the collection stopped producing it"
+and "orca could not read it" are not the same finding - and never compares it:
+
+```
+  unread tables (skipped at ingest, not compared): autoruns
+```
+
+`--one-line` carries `unread_tables` as a count, and only when there is one, so a summary that
+mentions it is a summary you should not take at face value. A run ingested with the flag also
+gets a cache key of its own: it is not the run a strict ingest would have produced, since that
+one would have failed.
 
 The CSV renderings keep a directory of their own: a top-level CSV of the collection
 (`VSS_list.csv`) carries the same name as the table ingested from it, and flat they would

@@ -1,7 +1,7 @@
 import os
 import tempfile
 import unittest
-from orca import report
+from orca import layout, report
 from orca.outcome import Outcome, Failure
 
 
@@ -46,7 +46,24 @@ class TestOutcomeErrorsViews(unittest.TestCase):
         self.assertNotIn("GetThis_Default/buried.log", names)
 
     def test_build_errors_view_missing_dir(self):
-        self.assertEqual(report.build_errors_view("nope"), {"available": False})
+        self.assertEqual(report.build_errors_view("nope"),
+                         {"available": False, "skipped": {}})
+
+    def test_build_errors_view_carries_the_tables_the_ingest_could_not_read(self):
+        # A hole in the run rather than a message inside it, but the same question answered:
+        # what went wrong here.
+        with tempfile.TemporaryDirectory() as run:
+            os.makedirs(layout.orca_dir(run))
+            with open(layout.skipped_path(run), "w", encoding="utf-8") as f:
+                f.write("autoruns\tduckdb said no\n")
+
+            v = report.build_errors_view(run)
+
+        self.assertEqual(v["skipped"], {"autoruns": "duckdb said no"})
+
+    def test_build_errors_view_of_a_complete_run_has_no_skips(self):
+        with tempfile.TemporaryDirectory() as run:
+            self.assertEqual(report.build_errors_view(run)["skipped"], {})
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from contextlib import redirect_stdout
 from unittest import mock
 from orca import cache, diff, engine, layout
 
-EMPTY_RUN_DIFF = {"tables": {}, "added_tables": [], "removed_tables": []}
+EMPTY_RUN_DIFF = {"tables": {}, "added_tables": [], "removed_tables": [], "unread_tables": []}
 
 
 class TestIsTable(unittest.TestCase):

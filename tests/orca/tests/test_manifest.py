@@ -28,7 +28,7 @@ class TestManifestSql(unittest.TestCase):
         self.assertIn("changed-csv: 7", line)
 
     def test_render_run_human_includes_manifest_line(self):
-        result = {"tables": {}, "added_tables": [], "removed_tables": []}
+        result = {"tables": {}, "added_tables": [], "removed_tables": [], "unread_tables": []}
         out = diff.render_run_human("A", "B", result,
                                     {"added": 1, "removed": 0, "changed_binary": 2, "changed_csv": 0})
         self.assertIn("files: +1 / -0", out)
