@@ -210,6 +210,19 @@ class TestUnsealSidecars(UnsealCase):
                          [os.path.join(self.dir.name, "ORC_Outcome.json")])
 
 
+class TestCopyIntoRun(unittest.TestCase):
+    def test_a_file_already_in_the_run_is_left_where_it_is(self):
+        # 'orca extract --out <the collection>' asks to copy a file onto itself.
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "ORC_Outcome.json")
+            with open(path, "wb") as f:
+                f.write(b"{}")
+
+            self.assertEqual(ingest.copy_into_run([path], d), ["ORC_Outcome.json"])
+            with open(path, "rb") as f:
+                self.assertEqual(f.read(), b"{}")
+
+
 class TestCaptureOutlines(unittest.TestCase):
     def test_copies_every_attempt_under_its_own_name(self):
         with tempfile.TemporaryDirectory() as d:

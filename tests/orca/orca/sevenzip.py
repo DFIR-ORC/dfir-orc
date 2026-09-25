@@ -110,7 +110,13 @@ def extract_entry(seven_zip: str, archive: str, entry_path: str, dest_dir: str,
     return out_path
 
 
-def extract_all(seven_zip: str, archive: str, dest_dir: str, password: str | None = None) -> None:
+def extract_all(seven_zip: str, archive: str, dest_dir: str, password: str | None = None) -> int:
+    """Extract everything in 'archive'. Returns 7-Zip's exit code: 0 clean, 1 warnings.
+
+    The code is worth having rather than discarding: on extraction a warning means entries did
+    not come out, which is the difference between an archive whose contents are now on disk and
+    one that is still the only copy of something.
+    """
     args = [seven_zip, "x", archive, "-o" + dest_dir, "-y", "-bsp0"]
     if password:
         args.append("-p" + password)
@@ -122,6 +128,8 @@ def extract_all(seven_zip: str, archive: str, dest_dir: str, password: str | Non
         message = (result.stderr or result.stdout or "").strip()
         raise RuntimeError(f"7z extract of '{archive}' failed "
                            f"(code {result.returncode}): {message}")
+
+    return result.returncode
 
 
 def password_from_cli_config(path: str) -> str | None:

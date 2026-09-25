@@ -7,8 +7,9 @@ prefer 'ingest' when you only want to query the data.
 import os
 import shutil
 
-from . import layout, sevenzip
-from .ingest import decrypt_archive, find_outcome_json, resolve_archives
+from . import layout, scratch, sevenzip
+from .ingest import (capture_outlines, capture_sidecar_logs, collection_dir, copy_into_run,
+                     decrypt_archive, find_outcome_json, resolve_archives, unseal_sidecars)
 
 
 def nested_containers(root: str) -> list[str]:
@@ -36,7 +37,23 @@ def container_password(container: str, password: str | None) -> str | None:
     return sevenzip.password_from_cli_config(config)
 
 
-def expand_containers(seven_zip: str, root: str, password: str | None) -> int:
+def retire_container(container: str, root: str, containers_dir: str) -> None:
+    """Take a container that expanded cleanly out of the tree, into the working directory.
+
+    Everything it held is in the tree now, so the archive itself is an intermediate and has no
+    business in the deliverable. It keeps the path it had within the tree, so two command sets
+    that both ship a 'GetSamples.7z' cannot land on each other.
+    """
+    target = os.path.join(containers_dir, os.path.relpath(container, root))
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    if os.path.exists(target):
+        os.remove(target)
+
+    shutil.move(container, target)
+
+
+def expand_containers(seven_zip: str, root: str, password: str | None,
+                      containers_dir: str) -> int:
     """Expand each nested container beside itself, into a directory named after it."""
     expanded = 0
     for container in nested_containers(root):
@@ -46,9 +63,16 @@ def expand_containers(seven_zip: str, root: str, password: str | None) -> int:
 
         destination = os.path.splitext(container)[0]
         os.makedirs(destination, exist_ok=True)
-        sevenzip.extract_all(seven_zip, container, destination,
-                             container_password(container, password))
+        code = sevenzip.extract_all(seven_zip, container, destination,
+                                    container_password(container, password))
         expanded += 1
+        if code:
+            # 7-Zip's warning code: something did not come out, and this archive is the only
+            # copy of it. A container left in the tree beats an entry lost from it.
+            print(f"kept '{os.path.basename(container)}' in the tree: 7z reported warnings")
+            continue
+
+        retire_container(container, root, containers_dir)
     return expanded
 
 
@@ -59,14 +83,24 @@ def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
         raise RuntimeError("7z.exe not found")
 
     os.makedirs(out_dir, exist_ok=True)
-    outcome = find_outcome_json(source)
-    if outcome:
-        shutil.copy(outcome, os.path.join(out_dir, os.path.basename(outcome)))
+    collection = collection_dir(source)
 
-    # A decrypted '.p7b' is a full-size intermediate: it is kept beside the archive it came
-    # from, not dropped into the result tree.
-    keep_dir, _ = layout.resolve(source)
-    for top in resolve_archives(source):
+    # The collection's own files - the Outcome, the Outlines, WolfLauncher's log - are in no
+    # archive, so an extracted tree only holds them if they are put there: copied when ORC
+    # left them in the clear, decrypted straight into the tree when it sealed them. Copying
+    # first means unseal_sidecars() finds the file already in place and does not decrypt a
+    # second time what is already readable.
+    outcome = find_outcome_json(collection)
+    copy_into_run([outcome] if outcome else [], out_dir)
+    capture_outlines([collection], out_dir)
+    capture_sidecar_logs([collection], out_dir)
+    unseal_sidecars(source, seven, out_dir, private_key, cms_backend)
+
+    # A decrypted archive is a full-size intermediate the expanded tree supersedes, so it goes
+    # to scratch and is gone when the process ends. Nothing else is written outside 'out_dir'
+    # either: an extract must leave the collection it reads exactly as it found it.
+    work = scratch.directory("extract_")
+    for top in resolve_archives(source, out_dir):
         if not os.path.exists(top):
             # A partial collection: an archive the Outcome names was never written, or the
             # transfer dropped it. The other archives are independent deliverables, so say
@@ -77,11 +111,12 @@ def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
             print(f"skipped empty archive '{top}'")
             continue
 
-        plain = decrypt_archive(top, keep_dir, private_key, cms_backend)
+        plain = decrypt_archive(top, work, private_key, cms_backend)
         destination = os.path.join(out_dir, layout.archive_stem(top))
         os.makedirs(destination, exist_ok=True)
         sevenzip.extract_all(seven, plain, destination, password)
-        count = expand_containers(seven, destination, password)
+        count = expand_containers(seven, destination, password,
+                                  os.path.join(work, layout.archive_stem(top)))
         print(f"extracted '{os.path.basename(top)}' -> {destination} "
               f"({count} nested container(s))")
 

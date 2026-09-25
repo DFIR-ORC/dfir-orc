@@ -89,17 +89,24 @@ def discover_jobs(top_archives: list[str], staging_dir: str, seven_zip: str,
     return _jobs_from_logical(logical), manifest
 
 
-def resolve_archives(path: str) -> list[str]:
+def resolve_archives(path: str, outcome_dir: str | None = None) -> list[str]:
+    """The archives of the collection at 'path', named by its Outcome where there is one.
+
+    'outcome_dir' is where to read that Outcome from when it does not sit beside the archives:
+    'orca extract' unseals it into the output tree so the collection stays untouched. The
+    archive names it holds are still resolved against 'path', where the archives are.
+    """
     if os.path.isfile(path):
         return [path]
     # Directory: find an Outcome json and read its command_set archive names. Sorted, so which
     # Outcome is read is the same every time AND is the same one find_outcome_json() picks -
     # otherwise a directory holding two runs could read one run's archives under the other run's
     # Outcome, differently on each listing.
-    for entry in sorted(os.listdir(path)):
+    reading = outcome_dir or path
+    for entry in sorted(os.listdir(reading)):
         if not entry.lower().endswith(".json"):
             continue
-        full = os.path.join(path, entry)
+        full = os.path.join(reading, entry)
         try:
             with open(full, encoding="utf-8") as f:
                 data = json.load(f)
@@ -265,7 +272,11 @@ def copy_into_run(paths: list[str], out_dir: str) -> list[str]:
     for path in paths:
         os.makedirs(out_dir, exist_ok=True)
         name = os.path.basename(path)
-        shutil.copy(path, os.path.join(out_dir, name))
+        target = os.path.join(out_dir, name)
+        # 'orca extract --out' may point at the collection itself, and then the file already
+        # is where it belongs; shutil.copy refuses a copy onto itself.
+        if not os.path.exists(target) or not os.path.samefile(path, target):
+            shutil.copy(path, target)
         written.append(name)
     return written
 

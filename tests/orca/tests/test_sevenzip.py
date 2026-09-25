@@ -66,10 +66,16 @@ class TestExtractTolerance(unittest.TestCase):
                     sevenzip.extract_entry("7z", "a.7z", "x.csv", d)
             self.assertIn("Wrong password?", str(ctx.exception))
 
-    def test_extract_all_tolerates_warning(self):
+    def test_extract_all_tolerates_warning_but_reports_it(self):
+        # The caller has to be able to tell 'everything came out' from 'most of it did'.
         with mock.patch("orca.sevenzip.subprocess.run",
                         return_value=mock.Mock(returncode=1, stdout="", stderr="")):
-            sevenzip.extract_all("7z", "a.7z", "dest")  # no raise
+            self.assertEqual(sevenzip.extract_all("7z", "a.7z", "dest"), 1)  # no raise
+
+    def test_extract_all_reports_a_clean_extract(self):
+        with mock.patch("orca.sevenzip.subprocess.run",
+                        return_value=mock.Mock(returncode=0, stdout="", stderr="")):
+            self.assertEqual(sevenzip.extract_all("7z", "a.7z", "dest"), 0)
 
     def test_extract_all_raises_on_fatal(self):
         with mock.patch("orca.sevenzip.subprocess.run",
