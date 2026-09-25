@@ -270,6 +270,12 @@ the decrypted archive lands there under a stable name, and the next `extract` **
 of the same collection prints `reusing` and skips the decrypt. Without it the archive is
 scratch and goes when the process ends.
 
+`--refresh` turns that reuse off, the same way it does for `ingest` and `diff`: the kept
+archive is decrypted again and the sidecars unsealed again, whatever is already there. The
+reuse check is deliberately cheap - the file exists and looks like a 7z - so a copy left behind
+by an interrupted run passes it and then fails as `Unexpected end of archive` on every
+subsequent run. `--refresh` is how you get out of that without deleting the file by hand.
+
 ### Where orca writes
 
 Everything `ingest` and `diff` derive from an archive lands **beside that archive**, in a

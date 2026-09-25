@@ -36,6 +36,8 @@ def _build_parser() -> argparse.ArgumentParser:
     ex.add_argument("--work-dir", default=None,
                     help="keep the decrypted archive here instead of throwing it away, for "
                          "when the temp dir has no room for it or a later run will want it")
+    ex.add_argument("--refresh", action="store_true",
+                    help="re-decrypt and re-unseal even if the products are already there")
     ex.add_argument("--depth", type=int, default=None,
                     help="stop after this many layers of container: 1 decrypts the .p7b, "
                          "2 also expands the archive, 3 also expands its containers "
@@ -120,7 +122,7 @@ def main(argv=None) -> int:
     elif args.command == "extract":
         extract.run_extract(args.archive, args.out, password=args.password,
                             private_key=args.private_key, cms_backend=args.cms_backend,
-                            work_dir=args.work_dir, depth=args.depth)
+                            work_dir=args.work_dir, depth=args.depth, refresh=args.refresh)
     elif args.command == "merge":
         overrides = {}
         for item in (args.ts_col or []):

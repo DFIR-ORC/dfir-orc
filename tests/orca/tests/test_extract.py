@@ -270,7 +270,7 @@ class TestRunExtract(ExtractCase):
 
         with mock.patch.object(extract.sevenzip, "find_7z", lambda: "7z"), \
              mock.patch.object(extract, "decrypt_archive",
-                               lambda path, work, key, backend: decrypted), \
+                               lambda path, work, key, backend, refresh=False: decrypted), \
              mock.patch.object(extract.sevenzip, "extract_all",
                                lambda seven, a, dest, pw: calls.append((a, dest))):
             extract.run_extract(archive, out, private_key="k.pem")
@@ -307,7 +307,7 @@ class TestRunExtractSidecars(ExtractCase):
             self.touch("results", name, content=content)
         return source
 
-    def extract(self, source, out, payload=b"{}", work_dir=None):
+    def extract(self, source, out, payload=b"{}", work_dir=None, refresh=False):
         """Run an extract over 'source' with the CMS and 7z layers faked out.
 
         decrypt_archive is patched in both modules: extract imported the name, so the copy it
@@ -315,10 +315,12 @@ class TestRunExtractSidecars(ExtractCase):
         were asked to write, which is what says whether the collection was left alone.
         """
         self.decrypted_into = []
+        self.refreshed = []
         self.expanded = []
 
         def fake_decrypt(path, dest, private_key=None, backend=None, refresh=False):
             self.decrypted_into.append(dest)
+            self.refreshed.append(refresh)
             os.makedirs(dest, exist_ok=True)
             plain = os.path.join(dest, extract.layout.archive_stem(path) + ".7z")
             with open(plain, "wb") as f:
@@ -341,7 +343,8 @@ class TestRunExtractSidecars(ExtractCase):
              mock.patch.object(extract.sevenzip, "extract_all",
                                lambda seven, a, dest, pw: self.expanded.append(dest)), \
              redirect_stdout(printed):
-            extract.run_extract(source, out, private_key="k.pem", work_dir=work_dir)
+            extract.run_extract(source, out, private_key="k.pem", work_dir=work_dir,
+                                refresh=refresh)
         return printed.getvalue()
 
     def test_the_sidecars_land_in_the_out_directory(self):
@@ -398,6 +401,39 @@ class TestRunExtractSidecars(ExtractCase):
         self.assertTrue(os.path.isfile(os.path.join(work, "ORC_H_1441_General.7z")))
         self.assertEqual([n for n in os.listdir(out) if n.lower().endswith(".7z")], [])
 
+    def test_refresh_decrypts_the_archive_again(self):
+        # The reuse guard is cheap by design - a file that exists and looks like a 7z - so a
+        # run interrupted mid-copy leaves something it accepts. --refresh says no to it.
+        source = self.collection("ORC_H_1441.log")
+        out = os.path.join(self.dir.name, "out")
+
+        self.extract(source, out, refresh=True)
+
+        # The sidecar's own decrypt goes to a fresh scratch directory every time, so it has
+        # nothing to reuse and nothing to refresh; the archive is the one with a kept copy.
+        self.assertTrue(self.refreshed[-1])
+
+    def test_refresh_unseals_a_sidecar_that_is_already_there(self):
+        source = self.collection("ORC_H_1441.log")
+        out = os.path.join(self.dir.name, "out")
+        self.extract(source, out, payload=b"first")
+
+        self.extract(source, out, payload=b"second", refresh=True)
+
+        with open(os.path.join(out, "ORC_H_1441.log"), "rb") as f:
+            self.assertEqual(f.read(), b"second")
+
+    def test_without_refresh_a_sidecar_already_there_is_left_alone(self):
+        source = self.collection("ORC_H_1441.log")
+        out = os.path.join(self.dir.name, "out")
+        self.extract(source, out, payload=b"first")
+
+        self.extract(source, out, payload=b"second")
+
+        with open(os.path.join(out, "ORC_H_1441.log"), "rb") as f:
+            self.assertEqual(f.read(), b"first")
+        self.assertEqual(self.refreshed, [False])
+
     def test_a_cleartext_sidecar_is_copied_rather_than_decrypted_again(self):
         # An unencrypted collection, or one an earlier run already unsealed in place.
         source = self.collection("ORC_H_1441.log", plain={"ORC_H_1441.log": b"cleartext"})
@@ -450,7 +486,7 @@ class TestRunExtractSidecars(ExtractCase):
         with mock.patch.object(extract.sevenzip, "find_7z", lambda: "7z"), \
              mock.patch.object(ingest, "decrypt_archive", refuse_sidecar), \
              mock.patch.object(extract, "decrypt_archive",
-                               lambda path, dest, key, backend: self.touch("plain", "a.7z")), \
+                               lambda path, dest, key, backend, refresh=False: self.touch("plain", "a.7z")), \
              mock.patch.object(extract.sevenzip, "extract_all") as extract_all, \
              redirect_stdout(printed):
             extract.run_extract(source, out, private_key="k.pem")

@@ -6,6 +6,7 @@ prefer 'ingest' when you only want to query the data.
 """
 import os
 import shutil
+from typing import NamedTuple
 
 from . import layout, scratch, sevenzip
 from .ingest import (capture_outlines, capture_sidecar_logs, collection_dir, copy_into_run,
@@ -109,8 +110,14 @@ def deliver_archive(plain: str, out_dir: str, keep: bool) -> str:
     skips the decrypt; moved when it is only scratch and would be thrown away anyway.
     """
     target = os.path.join(out_dir, os.path.basename(plain))
-    if os.path.exists(target) and os.path.samefile(plain, target):
-        return target
+    if os.path.exists(target):
+        if os.path.samefile(plain, target):
+            return target
+
+        # Explicitly, rather than leaving it to move()/copy2(): overwriting an existing file
+        # is a rename on posix and a failure-then-fallback on Windows, and a '--refresh' has
+        # to behave the same on both.
+        os.remove(target)
 
     if keep:
         shutil.copy2(plain, target)
@@ -120,18 +127,27 @@ def deliver_archive(plain: str, out_dir: str, keep: bool) -> str:
     return target
 
 
-def unwrap_archive(seven_zip: str, top: str, out_dir: str, work: str, password, private_key,
-                   cms_backend, depth: int | None, keep_work: bool) -> None:
-    """Unwrap one top archive into 'out_dir', stopping after 'depth' layers (None: all).
+class Unwrap(NamedTuple):
+    """How to open the containers of one collection, and how far down to go."""
+    password: str | None = None
+    private_key: str | None = None
+    cms_backend: str | None = None
+    depth: int | None = None
+    refresh: bool = False
+
+
+def unwrap_archive(seven_zip: str, top: str, out_dir: str, work: str, how: Unwrap,
+                   keep_work: bool) -> None:
+    """Unwrap one top archive into 'out_dir', stopping after 'how.depth' layers (None: all).
 
     A layer is one container opened: the '.p7b' envelope, then the archive it holds, then each
     level of nested containers. Whatever the last layer produced is the product - the archive
     itself when the extract stops right after the decrypt.
     """
-    remaining = depth
+    remaining = how.depth
     plain = top
     if has_encryption_layer(top):
-        plain = decrypt_archive(top, work, private_key, cms_backend)
+        plain = decrypt_archive(top, work, how.private_key, how.cms_backend, how.refresh)
         if remaining is not None:
             remaining -= 1
             if remaining == 0:
@@ -141,18 +157,18 @@ def unwrap_archive(seven_zip: str, top: str, out_dir: str, work: str, password, 
 
     destination = os.path.join(out_dir, layout.archive_stem(top))
     os.makedirs(destination, exist_ok=True)
-    sevenzip.extract_all(seven_zip, plain, destination, password)
+    sevenzip.extract_all(seven_zip, plain, destination, how.password)
     if remaining is not None:
         remaining -= 1
 
-    count = expand_containers(seven_zip, destination, password,
+    count = expand_containers(seven_zip, destination, how.password,
                               os.path.join(work, layout.archive_stem(top)), remaining)
     print(f"extracted '{os.path.basename(top)}' -> {destination} "
           f"({count} nested container(s))")
 
 
 def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
-                cms_backend=None, work_dir=None, depth=None) -> str:
+                cms_backend=None, work_dir=None, depth=None, refresh=False) -> str:
     seven = sevenzip.find_7z()
     if not seven:
         raise RuntimeError("7z.exe not found")
@@ -178,7 +194,7 @@ def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
     copy_into_run([outcome] if outcome else [], out_dir)
     capture_outlines([collection], out_dir)
     capture_sidecar_logs([collection], out_dir)
-    unseal_sidecars(source, seven, out_dir, private_key, cms_backend)
+    unseal_sidecars(source, seven, out_dir, private_key, cms_backend, refresh)
 
     # 'work_dir' is a keep dir, as it is for an ingest: the decrypted archive lands in it under
     # a stable name and the next extract of the same collection reuses it rather than paying
@@ -186,6 +202,7 @@ def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
     # because the expanded tree supersedes it. Either way nothing is written to the collection:
     # an extract must leave what it reads exactly as it found it.
     work = work_dir or scratch.directory("extract_")
+    how = Unwrap(password, private_key, cms_backend, depth, refresh)
     for top in resolve_archives(source, out_dir):
         if not os.path.exists(top):
             # A partial collection: an archive the Outcome names was never written, or the
@@ -197,7 +214,6 @@ def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
             print(f"skipped empty archive '{top}'")
             continue
 
-        unwrap_archive(seven, top, out_dir, work, password, private_key, cms_backend,
-                       depth, bool(work_dir))
+        unwrap_archive(seven, top, out_dir, work, how, bool(work_dir))
 
     return out_dir
