@@ -45,6 +45,36 @@ class TestResolveArchives(unittest.TestCase):
     def test_file_passthrough(self):
         self.assertEqual(ingest.resolve_archives(__file__), [__file__])
 
+    def test_a_decrypted_collection_is_found_under_the_name_it_now_has(self):
+        # ORC records the name it wrote. A collection can reach us decrypted and the envelope
+        # gone - 'orca extract --depth 1' produces exactly that - with the Outcome still
+        # naming the sealed one.
+        with tempfile.TemporaryDirectory() as d:
+            self._write_outcome(d, [("SystemInfo", "SystemInfo.7z.p7b")])
+            with open(os.path.join(d, "SystemInfo.7z"), "wb") as f:
+                f.write(b"7z")
+
+            self.assertEqual(ingest.resolve_archives(d), [os.path.join(d, "SystemInfo.7z")])
+
+    def test_the_sealed_archive_wins_when_both_are_there(self):
+        # The usual case: orca keeps the decrypted copy beside the original.
+        with tempfile.TemporaryDirectory() as d:
+            self._write_outcome(d, [("SystemInfo", "SystemInfo.7z.p7b")])
+            for name in ("SystemInfo.7z.p7b", "SystemInfo.7z"):
+                with open(os.path.join(d, name), "wb") as f:
+                    f.write(b"x")
+
+            self.assertEqual(ingest.resolve_archives(d),
+                             [os.path.join(d, "SystemInfo.7z.p7b")])
+
+    def test_a_missing_archive_is_named_as_the_outcome_asked_for_it(self):
+        # What is missing is the file ORC said it wrote, not a decrypted copy nobody made.
+        with tempfile.TemporaryDirectory() as d:
+            self._write_outcome(d, [("SystemInfo", "SystemInfo.7z.p7b")])
+
+            self.assertEqual(ingest.resolve_archives(d),
+                             [os.path.join(d, "SystemInfo.7z.p7b")])
+
     def test_directory_without_an_outcome_falls_back_to_its_archives(self):
         with tempfile.TemporaryDirectory() as d:
             for name in ("B.p7b", "A.7z", "notes.txt"):

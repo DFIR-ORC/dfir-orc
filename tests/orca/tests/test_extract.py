@@ -122,6 +122,65 @@ class TestExpandContainers(ExtractCase):
                                                        self.containers), 0)
         extract_all.assert_not_called()
 
+    def nesting(self, code=0):
+        """An 'Outer.7z' whose contents include an 'Inner.7z'."""
+        def fake(seven, archive, dest, pw):
+            os.makedirs(dest, exist_ok=True)
+            if os.path.basename(archive) == "Outer.7z":
+                with open(os.path.join(dest, "Inner.7z"), "wb") as f:
+                    f.write(b"x")
+            return code
+
+        return fake
+
+    def test_it_keeps_going_until_no_container_is_left(self):
+        # Expanding a container can reveal another; one pass over the list found at the start
+        # would leave that one sitting there as an archive.
+        self.touch("tree", "Outer.7z")
+
+        with mock.patch.object(extract.sevenzip, "extract_all", self.nesting()), \
+             redirect_stdout(io.StringIO()):
+            count = extract.expand_containers("7z", self.root, None, self.containers)
+
+        self.assertEqual(count, 2)
+        self.assertEqual(extract.nested_containers(self.root), [])
+        self.assertTrue(os.path.isfile(os.path.join(self.containers, "Outer.7z")))
+        self.assertTrue(os.path.isfile(os.path.join(self.containers, "Outer", "Inner.7z")))
+
+    def test_depth_stops_after_that_many_levels(self):
+        self.touch("tree", "Outer.7z")
+
+        with mock.patch.object(extract.sevenzip, "extract_all", self.nesting()), \
+             redirect_stdout(io.StringIO()):
+            count = extract.expand_containers("7z", self.root, None, self.containers, 1)
+
+        self.assertEqual(count, 1)
+        self.assertTrue(os.path.isfile(os.path.join(self.root, "Outer", "Inner.7z")))
+
+    def test_depth_zero_opens_nothing(self):
+        self.touch("tree", "GetThis.7z")
+
+        with mock.patch.object(extract.sevenzip, "extract_all") as extract_all:
+            self.assertEqual(extract.expand_containers("7z", self.root, None,
+                                                       self.containers, 0), 0)
+        extract_all.assert_not_called()
+
+    def test_a_container_left_in_the_tree_is_not_tried_again(self):
+        # It stays where nested_containers() finds it, so without a memory of what has been
+        # tried the level loop would never end.
+        self.touch("tree", "GetThis.7z")
+        tried = []
+
+        def fake(seven, archive, dest, pw):
+            tried.append(archive)
+            return 1
+
+        with mock.patch.object(extract.sevenzip, "extract_all", fake), \
+             redirect_stdout(io.StringIO()):
+            extract.expand_containers("7z", self.root, None, self.containers)
+
+        self.assertEqual(len(tried), 1)
+
 
 class TestRunExtract(ExtractCase):
     # An Outcome naming two command sets, reduced to what orca reads out of it.
@@ -398,6 +457,109 @@ class TestRunExtractSidecars(ExtractCase):
 
         self.assertIn("could not unseal", printed.getvalue())
         extract_all.assert_called_once()
+
+
+class TestRunExtractDepth(ExtractCase):
+    """'--depth' counts layers of container unwrapped, the '.p7b' envelope included, so
+    '--depth 1' on an encrypted collection means 'just decrypt it'."""
+
+    def extract(self, depth=None, work_dir=None, sealed=True):
+        name = "ORC_G.7z.p7b" if sealed else "ORC_G.7z"
+        source = os.path.dirname(self.touch("results", name, content=b"ciphertext"))
+        out = os.path.join(self.dir.name, "out")
+        self.addCleanup(scratch.use, None)
+
+        def fake_decrypt(path, dest, private_key=None, backend=None, refresh=False):
+            os.makedirs(dest, exist_ok=True)
+            plain = os.path.join(dest, extract.layout.archive_stem(path) + ".7z")
+            with open(plain, "wb") as f:
+                f.write(b"7z\xbc\xaf")
+            return plain
+
+        def fake_extract_all(seven, archive, dest, pw):
+            # Three layers to unwrap: the envelope, the archive, and the container it holds.
+            os.makedirs(dest, exist_ok=True)
+            leaf = "GetSamples.7z" if os.path.basename(archive) == "ORC_G.7z" else "GetThis.csv"
+            with open(os.path.join(dest, leaf), "wb") as f:
+                f.write(b"x")
+            return 0
+
+        with mock.patch.object(extract.sevenzip, "find_7z", lambda: "7z"), \
+             mock.patch.object(extract, "decrypt_archive", fake_decrypt), \
+             mock.patch.object(ingest, "decrypt_archive", fake_decrypt), \
+             mock.patch.object(extract.sevenzip, "extract_all", fake_extract_all), \
+             redirect_stdout(io.StringIO()):
+            extract.run_extract(source, out, private_key="k.pem", depth=depth,
+                                work_dir=work_dir)
+        return out
+
+    def test_one_layer_stops_after_the_decrypt(self):
+        out = self.extract(depth=1)
+
+        # The archive is what that layer produced, so it is the product and belongs in --out.
+        self.assertTrue(os.path.isfile(os.path.join(out, "ORC_G.7z")))
+        self.assertFalse(os.path.exists(os.path.join(out, "ORC_G")))
+
+    def test_two_layers_expand_the_archive_and_leave_its_containers(self):
+        out = self.extract(depth=2)
+
+        self.assertTrue(os.path.isfile(os.path.join(out, "ORC_G", "GetSamples.7z")))
+        self.assertFalse(os.path.exists(os.path.join(out, "ORC_G", "GetSamples")))
+        self.assertFalse(os.path.exists(os.path.join(out, "ORC_G.7z")))
+
+    def test_three_layers_expand_the_containers_too(self):
+        out = self.extract(depth=3)
+
+        self.assertTrue(os.path.isfile(os.path.join(out, "ORC_G", "GetSamples", "GetThis.csv")))
+        self.assertFalse(os.path.exists(os.path.join(out, "ORC_G", "GetSamples.7z")))
+
+    def test_unlimited_is_the_default(self):
+        out = self.extract()
+
+        self.assertTrue(os.path.isfile(os.path.join(out, "ORC_G", "GetSamples", "GetThis.csv")))
+        self.assertEqual(extract.nested_containers(out), [])
+
+    def test_a_depth_below_one_is_refused(self):
+        # There is no such thing as unwrapping zero layers: that is not running the command.
+        with self.assertRaises(RuntimeError):
+            self.extract(depth=0)
+
+    def test_a_plain_collection_has_no_envelope_to_open_first(self):
+        # The count is of layers actually present, so the same number means different things:
+        # depth 1 is the decrypt when there is one, and the archive itself when there is not.
+        out = self.extract(depth=1, sealed=False)
+
+        self.assertTrue(os.path.isfile(os.path.join(out, "ORC_G", "GetSamples.7z")))
+        self.assertFalse(os.path.exists(os.path.join(out, "ORC_G", "GetSamples")))
+
+    def test_a_plain_collection_expands_its_containers_one_layer_later(self):
+        out = self.extract(depth=2, sealed=False)
+
+        self.assertTrue(os.path.isfile(os.path.join(out, "ORC_G", "GetSamples", "GetThis.csv")))
+        self.assertFalse(os.path.exists(os.path.join(out, "ORC_G", "GetSamples.7z")))
+
+    def test_unlimited_on_a_plain_collection_leaves_no_container(self):
+        out = self.extract(sealed=False)
+
+        self.assertTrue(os.path.isfile(os.path.join(out, "ORC_G", "GetSamples", "GetThis.csv")))
+        self.assertEqual(extract.nested_containers(out), [])
+
+    def test_a_plain_collection_is_never_delivered_out_of_itself(self):
+        # decrypt_archive() returns a plain archive untouched, so the path an unwrap holds IS
+        # the collection's own file. Delivering that would move the evidence into the tree.
+        out = self.extract(depth=1, sealed=False)
+
+        self.assertTrue(os.path.isfile(os.path.join(self.dir.name, "results", "ORC_G.7z")))
+        self.assertFalse(os.path.exists(os.path.join(out, "ORC_G.7z")))
+
+    def test_the_stopped_at_archive_is_copied_out_of_a_work_dir_not_moved(self):
+        # The work dir's copy is what a later run reuses, so it has to survive delivery.
+        work = os.path.join(self.dir.name, "work")
+
+        out = self.extract(depth=1, work_dir=work)
+
+        self.assertTrue(os.path.isfile(os.path.join(out, "ORC_G.7z")))
+        self.assertTrue(os.path.isfile(os.path.join(work, "ORC_G.7z")))
 
 
 if __name__ == "__main__":

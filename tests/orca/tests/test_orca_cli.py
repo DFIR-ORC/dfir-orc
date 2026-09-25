@@ -31,6 +31,14 @@ class TestCli(unittest.TestCase):
         given = parser.parse_args(["extract", "arch.p7b", "--out", "tree", "--work-dir", "E:/w"])
         self.assertEqual(given.work_dir, "E:/w")
 
+    def test_extract_depth_is_unlimited_unless_asked(self):
+        parser = cli._build_parser()
+        plain = parser.parse_args(["extract", "a.p7b", "--out", "tree"])
+        self.assertIsNone(plain.depth)
+
+        given = parser.parse_args(["extract", "a.p7b", "--out", "tree", "--depth", "2"])
+        self.assertEqual(given.depth, 2)
+
     def test_diff_out_dir_still_means_the_rows_csv(self):
         args = cli._build_parser().parse_args(["diff", "NEW.7z", "REF.7z", "--rows"])
         self.assertEqual(args.out_dir, "orca-diff")

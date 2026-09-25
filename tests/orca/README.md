@@ -226,11 +226,56 @@ orca extract E:\dumps --out E:\expanded --private-key contoso.com.key
 Use `ingest` when you want to query the data; `extract` is for when you genuinely need the
 collected files on disk.
 
+Everything lands under `--out` and **nothing is written back to the collection**: it is
+evidence, and reading it must not change it. The Outcome, the Outlines and WolfLauncher's log
+are in no archive, so they are put into the tree explicitly - copied when ORC left them in the
+clear, decrypted into it when ORC sealed them.
+
+#### `--depth`: how far to unwrap
+
+A layer is any container, and the `.p7b` envelope counts as one, so "only decrypt it" needs no
+flag of its own:
+
+| | `--out` holds | on the real collection |
+|---|---|---|
+| `--depth 1` | the decrypted `ORC_..._General.7z`, nothing expanded | 151 MB |
+| `--depth 2` | `ORC_..._General\` with `GetSamples.7z`, `BootCode.7z` ... still packed | 169 MB |
+| `--depth 3` | `ORC_..._General\GetSamples\...`, no `.7z` anywhere | 1.6 GB |
+| *(default)* | every layer there is | 1.6 GB |
+
+`--depth 2` is the tree earlier versions and `Expand-OrcArchive` produced; from `--depth 3` on,
+a container that expanded cleanly leaves the tree, because everything it held is in the tree
+now and the archive is an intermediate. One 7-Zip warned about stays, being the only copy of
+whatever did not come out.
+
+The count is of layers actually present, so **the same number means different things for an
+encrypted and a plain collection**: `--depth 1` on a plain `.7z` expands the archive, there
+being no envelope to open first. Sidecars are exempt at every depth - a sealed Outcome is
+itself two layers, and handing back `Outcome.json.7z` rather than the Outcome would be a riddle
+for the sake of consistency.
+
+#### `--work-dir`: where the intermediates go
+
+```powershell
+orca extract E:\dumps --out E:\expanded --work-dir E:\orca-work --private-key contoso.com.key
+```
+
+The plaintext of a `.p7b` is the size of the collection, so a temp volume smaller than that
+cannot decrypt it at all - and since OpenSSL writes the plaintext itself, a full volume comes
+back as `CMS_decrypt failed`, which reads as a wrong key. orca names the free space in that
+error rather than leaving you to guess.
+
+`--work-dir` is where those intermediates go instead, and it is a **keep** dir like ingest's:
+the decrypted archive lands there under a stable name, and the next `extract` **or `ingest`**
+of the same collection prints `reusing` and skips the decrypt. Without it the archive is
+scratch and goes when the process ends.
+
 ### Where orca writes
 
-Everything orca derives from an archive lands **beside that archive**, in a directory named
-after it - the same directory `orca extract` expands into, so one place holds everything that
-came out of one collection:
+Everything `ingest` and `diff` derive from an archive lands **beside that archive**, in a
+directory named after it, so one place holds everything that came out of one collection.
+(`extract` is the exception: it writes only under `--out` and leaves the collection untouched -
+see above.)
 
 ```
 E:\dumps\

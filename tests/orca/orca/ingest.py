@@ -89,6 +89,23 @@ def discover_jobs(top_archives: list[str], staging_dir: str, seven_zip: str,
     return _jobs_from_logical(logical), manifest
 
 
+def archive_as_found(directory: str, name: str) -> str:
+    """The archive an Outcome names, as it actually is on disk.
+
+    ORC records the name it wrote, '<name>.7z.p7b'. A collection can reach us with that already
+    decrypted and the envelope gone - 'orca extract --depth 1' produces exactly that - and the
+    Outcome still names the sealed one. Fall back to the decrypted name rather than insisting
+    on a file nobody kept; when neither is there, name the one the Outcome asked for, because
+    that is the thing that is missing.
+    """
+    sealed = os.path.join(directory, name)
+    if os.path.exists(sealed):
+        return sealed
+
+    plain = os.path.join(directory, layout.archive_stem(name) + ".7z")
+    return plain if os.path.exists(plain) else sealed
+
+
 def resolve_archives(path: str, outcome_dir: str | None = None) -> list[str]:
     """The archives of the collection at 'path', named by its Outcome where there is one.
 
@@ -128,7 +145,7 @@ def resolve_archives(path: str, outcome_dir: str | None = None) -> list[str]:
             for one in (archive if isinstance(archive, list) else [archive]):
                 name = one.get("name")
                 if name:
-                    archives.append(os.path.join(path, name))
+                    archives.append(archive_as_found(path, name))
         if archives:
             return archives
 
@@ -290,6 +307,16 @@ def capture_outlines(directories: list[str], out_dir: str) -> list[str]:
     return copy_into_run(find_outlines(directories), out_dir)
 
 
+def has_encryption_layer(path: str) -> bool:
+    """True when 'path' is wrapped in a layer of its own - a CMS envelope ('.p7b') or a bare
+    journal - rather than being an openable archive already.
+
+    An extract counts that wrapping as one level of depth like any other, so it has to be able
+    to ask the question without decrypting to find out.
+    """
+    return journal.is_journaled(path) or os.path.splitext(path)[1].lower() == ".p7b"
+
+
 def decrypt_archive(path: str, dest_dir: str, private_key: str | None = None,
                     cms_backend: str | None = None, refresh: bool = False) -> str:
     """Return a path to an openable '.7z' for 'path', decrypting into 'dest_dir' if needed.
@@ -304,9 +331,10 @@ def decrypt_archive(path: str, dest_dir: str, private_key: str | None = None,
 
     Kept separate from resolve_archives() so discovery stays free of side effects on disk.
     """
-    journaled = journal.is_journaled(path)
-    if not journaled and os.path.splitext(path)[1].lower() != ".p7b":
+    if not has_encryption_layer(path):
         return path
+
+    journaled = journal.is_journaled(path)
 
     # ORC names an encrypted archive '<name>.7z.p7b', so the plain name is the sealed one with
     # only the extension changed - never 'SystemInfo.7z.7z'.

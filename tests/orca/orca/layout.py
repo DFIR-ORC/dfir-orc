@@ -1,10 +1,12 @@
 """Where orca's derived files go: the rules that turn an input path into an output path.
 
-Everything orca derives from an archive lands beside it, in a directory named after the archive
-with its archive extensions dropped - the same directory 'orca extract' expands into, so one
-place holds everything that came out of one archive. A decrypted archive and an unsealed
-sidecar (outcome, outline, log) keep the encrypted file's name with only the extension changed,
-and sit next to the encrypted original.
+Everything an ingest derives from an archive lands beside it, in a directory named after the
+archive with its archive extensions dropped, so one place holds everything that came out of one
+archive. A decrypted archive and an unsealed sidecar (outcome, outline, log) keep the encrypted
+file's name with only the extension changed, and sit next to the encrypted original.
+
+An extract is the exception and does not come through here: it writes under its own '--out' and
+leaves the collection untouched.
 
 Pure path arithmetic, apart from resolve(), which has to ask whether the collection can be
 written to at all.

@@ -9,7 +9,8 @@ import shutil
 
 from . import layout, scratch, sevenzip
 from .ingest import (capture_outlines, capture_sidecar_logs, collection_dir, copy_into_run,
-                     decrypt_archive, find_outcome_json, resolve_archives, unseal_sidecars)
+                     decrypt_archive, find_outcome_json, has_encryption_layer,
+                     resolve_archives, unseal_sidecars)
 
 
 def nested_containers(root: str) -> list[str]:
@@ -52,35 +53,113 @@ def retire_container(container: str, root: str, containers_dir: str) -> None:
     shutil.move(container, target)
 
 
-def expand_containers(seven_zip: str, root: str, password: str | None,
-                      containers_dir: str) -> int:
-    """Expand each nested container beside itself, into a directory named after it."""
+def expand_one_container(seven_zip: str, container: str, root: str, password: str | None,
+                         containers_dir: str) -> bool:
+    """Expand one container beside itself. True when it was opened at all."""
+    if os.path.getsize(container) == 0:
+        print(f"skipped empty container '{container}'")
+        return False
+
+    destination = os.path.splitext(container)[0]
+    os.makedirs(destination, exist_ok=True)
+    code = sevenzip.extract_all(seven_zip, container, destination,
+                                container_password(container, password))
+    if code:
+        # 7-Zip's warning code: something did not come out, and this archive is the only copy
+        # of it. A container left in the tree beats an entry lost from it.
+        print(f"kept '{os.path.basename(container)}' in the tree: 7z reported warnings")
+        return True
+
+    retire_container(container, root, containers_dir)
+    return True
+
+
+def expand_containers(seven_zip: str, root: str, password: str | None, containers_dir: str,
+                      depth: int | None = None) -> int:
+    """Expand nested containers level by level, until none are left or 'depth' levels are done.
+
+    Level by level rather than one pass over the containers found at the start: expanding one
+    can reveal another, and a single pass would leave that one sitting there as an archive
+    with nothing to say it was never opened.
+
+    A container 7-Zip warned about stays in the tree, so the same paths come back on the next
+    level - hence 'tried', without which the loop would never end.
+    """
     expanded = 0
-    for container in nested_containers(root):
-        if os.path.getsize(container) == 0:
-            print(f"skipped empty container '{container}'")
-            continue
+    tried: set[str] = set()
+    level = 0
+    while depth is None or level < depth:
+        containers = [path for path in nested_containers(root) if path not in tried]
+        if not containers:
+            break
 
-        destination = os.path.splitext(container)[0]
-        os.makedirs(destination, exist_ok=True)
-        code = sevenzip.extract_all(seven_zip, container, destination,
-                                    container_password(container, password))
-        expanded += 1
-        if code:
-            # 7-Zip's warning code: something did not come out, and this archive is the only
-            # copy of it. A container left in the tree beats an entry lost from it.
-            print(f"kept '{os.path.basename(container)}' in the tree: 7z reported warnings")
-            continue
+        for container in containers:
+            tried.add(container)
+            if expand_one_container(seven_zip, container, root, password, containers_dir):
+                expanded += 1
+        level += 1
 
-        retire_container(container, root, containers_dir)
     return expanded
 
 
+def deliver_archive(plain: str, out_dir: str, keep: bool) -> str:
+    """Put the archive an extract stopped at into the output directory.
+
+    Copied rather than moved when a work dir holds it, so a later run still finds it there and
+    skips the decrypt; moved when it is only scratch and would be thrown away anyway.
+    """
+    target = os.path.join(out_dir, os.path.basename(plain))
+    if os.path.exists(target) and os.path.samefile(plain, target):
+        return target
+
+    if keep:
+        shutil.copy2(plain, target)
+    else:
+        shutil.move(plain, target)
+
+    return target
+
+
+def unwrap_archive(seven_zip: str, top: str, out_dir: str, work: str, password, private_key,
+                   cms_backend, depth: int | None, keep_work: bool) -> None:
+    """Unwrap one top archive into 'out_dir', stopping after 'depth' layers (None: all).
+
+    A layer is one container opened: the '.p7b' envelope, then the archive it holds, then each
+    level of nested containers. Whatever the last layer produced is the product - the archive
+    itself when the extract stops right after the decrypt.
+    """
+    remaining = depth
+    plain = top
+    if has_encryption_layer(top):
+        plain = decrypt_archive(top, work, private_key, cms_backend)
+        if remaining is not None:
+            remaining -= 1
+            if remaining == 0:
+                target = deliver_archive(plain, out_dir, keep_work)
+                print(f"decrypted '{os.path.basename(top)}' -> {target}")
+                return
+
+    destination = os.path.join(out_dir, layout.archive_stem(top))
+    os.makedirs(destination, exist_ok=True)
+    sevenzip.extract_all(seven_zip, plain, destination, password)
+    if remaining is not None:
+        remaining -= 1
+
+    count = expand_containers(seven_zip, destination, password,
+                              os.path.join(work, layout.archive_stem(top)), remaining)
+    print(f"extracted '{os.path.basename(top)}' -> {destination} "
+          f"({count} nested container(s))")
+
+
 def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
-                cms_backend=None, work_dir=None) -> str:
+                cms_backend=None, work_dir=None, depth=None) -> str:
     seven = sevenzip.find_7z()
     if not seven:
         raise RuntimeError("7z.exe not found")
+
+    if depth is not None and depth < 1:
+        raise RuntimeError(f"extract: --depth is a number of layers to unwrap, so it starts "
+                           f"at 1 (the '.p7b' envelope); got {depth}")
 
     # The CMS output is archive-sized and lives only until it is replayed, so it stays scratch
     # - pointed at 'work_dir', because the temp volume is where the room runs out. Set before
@@ -118,13 +197,7 @@ def run_extract(source: str, out_dir: str, *, password=None, private_key=None,
             print(f"skipped empty archive '{top}'")
             continue
 
-        plain = decrypt_archive(top, work, private_key, cms_backend)
-        destination = os.path.join(out_dir, layout.archive_stem(top))
-        os.makedirs(destination, exist_ok=True)
-        sevenzip.extract_all(seven, plain, destination, password)
-        count = expand_containers(seven, destination, password,
-                                  os.path.join(work, layout.archive_stem(top)))
-        print(f"extracted '{os.path.basename(top)}' -> {destination} "
-              f"({count} nested container(s))")
+        unwrap_archive(seven, top, out_dir, work, password, private_key, cms_backend,
+                       depth, bool(work_dir))
 
     return out_dir
