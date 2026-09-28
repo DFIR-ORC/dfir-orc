@@ -273,6 +273,21 @@ void SystemDetails::GetTagsFromBuildId(uint32_t ProductType, uint32_t build, Sys
 
     switch (build)
     {
+        case 28000:
+            switch (ProductType)
+            {
+                case VER_NT_WORKSTATION:
+                    tags.insert(L"Windows11");
+                    tags.insert(L"Release#26H1");
+                    break;
+                case VER_NT_SERVER:
+                case VER_NT_DOMAIN_CONTROLLER:
+                    Log::Warn(L"Product type does not match build number (no server release for build 28000)");
+                    tags.insert(L"Windows11");
+                    tags.insert(L"Release#26H1");
+                    break;
+            }
+            break;
         case 26200:
             switch (ProductType)
             {
