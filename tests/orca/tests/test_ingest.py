@@ -75,6 +75,57 @@ class TestResolveArchives(unittest.TestCase):
             self.assertEqual(ingest.resolve_archives(d),
                              [os.path.join(d, "SystemInfo.7z.p7b")])
 
+    def test_an_archive_no_outcome_names_is_returned_too(self):
+        """A share where two ORC runs landed side by side holds one Outcome per run, and only
+        one of them is read. The other run's archive is collected data sitting right there, so
+        it comes out too, with a word about why it was not in the Outcome."""
+        with tempfile.TemporaryDirectory() as d:
+            self._write_outcome(d, [("General", "ORC_B2_General.7z.p7b")])
+            for name in ("ORC_B2_General.7z.p7b", "ORC_B0_General.7z.p7b"):
+                with open(os.path.join(d, name), "wb") as f:
+                    f.write(b"x")
+
+            printed = io.StringIO()
+            with redirect_stdout(printed):
+                got = ingest.resolve_archives(d)
+
+            self.assertEqual(got, [os.path.join(d, "ORC_B2_General.7z.p7b"),
+                                   os.path.join(d, "ORC_B0_General.7z.p7b")])
+            self.assertIn("ORC_B0_General.7z.p7b", printed.getvalue())
+
+    def test_the_outcome_read_is_the_one_the_tree_gets(self):
+        """Which Outcome is read has to be the same every time, and the same one
+        find_outcome_json() copies into the tree - it reads them sorted."""
+        with tempfile.TemporaryDirectory() as d:
+            for stem, archive in (("B_Outcome", "B_General.7z"), ("A_Outcome", "A_General.7z")):
+                outcome = {"dfir-orc": {"outcome": {"command_set": [
+                    {"name": "General", "archive": {"name": archive}}]}}}
+                with open(os.path.join(d, stem + ".json"), "w", encoding="utf-8") as f:
+                    json.dump(outcome, f)
+                with open(os.path.join(d, archive), "wb") as f:
+                    f.write(b"x")
+
+            with redirect_stdout(io.StringIO()):
+                got = ingest.resolve_archives(d)
+
+            self.assertEqual(os.path.basename(got[0]), "A_General.7z")
+            self.assertEqual(os.path.basename(ingest.find_outcome_json(d)), "A_Outcome.json")
+
+    def test_the_decrypted_copy_of_a_named_archive_is_not_taken_for_an_unnamed_one(self):
+        # 'X.7z' beside 'X.7z.p7b' is what orca kept, and the Outcome names the sealed one.
+        with tempfile.TemporaryDirectory() as d:
+            self._write_outcome(d, [("SystemInfo", "SystemInfo.7z.p7b")])
+            for name in ("SystemInfo.7z.p7b", "SystemInfo.7z"):
+                with open(os.path.join(d, name), "wb") as f:
+                    f.write(b"x")
+
+            printed = io.StringIO()
+            with redirect_stdout(printed):
+                got = ingest.resolve_archives(d)
+
+            self.assertEqual(got, [os.path.join(d, "SystemInfo.7z.p7b")])
+            self.assertEqual(printed.getvalue(), "")
+
     def test_directory_without_an_outcome_falls_back_to_its_archives(self):
         with tempfile.TemporaryDirectory() as d:
             for name in ("B.p7b", "A.7z", "notes.txt"):

@@ -239,6 +239,24 @@ class TestRunExtract(ExtractCase):
                          [os.path.join(out, "ORC_H_General"),
                           os.path.join(out, "ORC_H_Little")])
 
+    def test_a_second_run_in_the_same_directory_is_extracted_too(self):
+        """Two ORC runs dropped on the same share: one Outcome per run, only one of them read.
+        The other run's archive still has to come out, and be named as unexpected."""
+        for host in ("B0", "B2"):
+            outcome = (b'{"dfir-orc": {"outcome": {"command_set": ['
+                       b'{"archive": {"name": "ORC_' + host.encode() + b'_General.7z"}}]}}}')
+            self.touch("results", f"ORC_{host}_Outcome.json", content=outcome)
+            self.touch("results", f"ORC_{host}_General.7z", content=b"7z\xbc\xaf")
+        source = os.path.join(self.dir.name, "results")
+        out = os.path.join(self.dir.name, "out")
+
+        calls, printed = self.extract_calls(source, out)
+
+        self.assertEqual([destination for _, destination in calls],
+                         [os.path.join(out, "ORC_B0_General"),
+                          os.path.join(out, "ORC_B2_General")])
+        self.assertIn("ORC_B2_General.7z", printed)
+
     def test_a_missing_archive_is_skipped_and_the_others_still_extract(self):
         """A partial collection - an archive the Outcome names that nobody kept - is named out
         loud and the rest still comes out, rather than the first gap aborting the extract."""

@@ -341,6 +341,13 @@ directory named as ORC named the run, read from its Outcome (or Outline) sidecar
 `\\h2odev\vss\extract\ORC_WS_H2ODEV_20260921_172528\`. A folder of loose archives with no such
 sidecar is named after itself.
 
+Two ORC runs dropped in the same directory are an awkward input: there is one Outcome per run and
+only the first by name is read, so the other run's archives are named by nothing orca read. They
+are opened anyway, each reported as `is not in the Outcome that was read`, rather than dropped in
+silence. For `extract` that is the whole story, since every archive gets a directory of its own.
+`ingest` still folds them into a single run named after the Outcome it read, so ingest each run
+from its own directory when provenance matters.
+
 ```powershell
 orca ingest E:\dumps\ORC_WS_H2ODEV_Offline.7z          # run lands beside the archive
 orca diff NEW.7z REF.7z --work-dir E:\orca-work        # put both runs somewhere with room

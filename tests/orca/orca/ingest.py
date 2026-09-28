@@ -106,8 +106,43 @@ def archive_as_found(directory: str, name: str) -> str:
     return plain if os.path.exists(plain) else sealed
 
 
+def loose_archives(directory: str) -> list[str]:
+    """Every result archive sitting in 'directory', by what is on disk rather than by name in
+    an Outcome, the way Expand-OrcArchive accepted a plain folder of results.
+
+    A sealed output ('outcome.json.7z.p7b') is not an archive, and 'X.7z' beside 'X.7z.p7b' is
+    the decrypted copy orca kept, not a second collection: taking both would read it twice.
+    """
+    entries = os.listdir(directory)
+    sealed = {entry.lower() for entry in entries if entry.lower().endswith(SEALED_SUFFIX)}
+    return sorted(os.path.join(directory, entry) for entry in entries
+                  if entry.lower().endswith((".7z", ".p7b")) and not sealed_output(entry)
+                  and entry.lower() + ".p7b" not in sealed)
+
+
+def unnamed_archives(directory: str, named: list[str]) -> list[str]:
+    """The archives of 'directory' no Outcome named, each reported as it is picked up.
+
+    One directory can hold several ORC runs, each with its own Outcome, and only one Outcome is
+    read - nothing says which run a caller meant. The other runs' archives are collected data
+    sitting right there, so they are opened too rather than dropped without a word. An archive
+    ORC wrote after the Outcome it belongs to, or one dropped in by hand, lands here as well.
+
+    Matched by archive stem, so the decrypted copy of a named archive is not taken for a new
+    one just because the Outcome names the sealed spelling.
+    """
+    stems = {layout.archive_stem(path).lower() for path in named}
+    found = [path for path in loose_archives(directory)
+             if layout.archive_stem(path).lower() not in stems]
+    for path in found:
+        print(f"'{os.path.basename(path)}' is not in the Outcome that was read; "
+              "opening it anyway")
+    return found
+
+
 def resolve_archives(path: str, outcome_dir: str | None = None) -> list[str]:
-    """The archives of the collection at 'path', named by its Outcome where there is one.
+    """The archives of the collection at 'path', named by its Outcome where there is one, plus
+    any other archive of the directory that no Outcome named.
 
     'outcome_dir' is where to read that Outcome from when it does not sit beside the archives:
     'orca extract' unseals it into the output tree so the collection stays untouched. The
@@ -147,17 +182,11 @@ def resolve_archives(path: str, outcome_dir: str | None = None) -> list[str]:
                 if name:
                     archives.append(archive_as_found(path, name))
         if archives:
-            return archives
+            return archives + unnamed_archives(path, archives)
 
-    # No usable Outcome: fall back to the archives sitting in the directory, the way
-    # Expand-OrcArchive accepted a plain folder of results.
-    entries = os.listdir(path)
-    sealed = {entry.lower() for entry in entries if entry.lower().endswith(SEALED_SUFFIX)}
-    loose = sorted(os.path.join(path, entry) for entry in entries
-                   if entry.lower().endswith((".7z", ".p7b")) and not sealed_output(entry)
-                   # 'X.7z' beside 'X.7z.p7b' is the decrypted copy orca kept, not a second
-                   # collection: ingesting both would ingest the same data twice.
-                   and entry.lower() + ".p7b" not in sealed)
+    # No usable Outcome at all: everything the directory holds is unnamed, and there is nothing
+    # to warn about - a folder of loose results is a supported input, not a surprise.
+    loose = loose_archives(path)
     if loose:
         return loose
 
