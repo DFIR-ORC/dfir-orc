@@ -30,7 +30,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     ex = sub.add_parser("extract", help="archive -> expanded tree (decrypts, unnests)")
     ex.add_argument("archive", help="ORC .7z/.p7b file or a dir with an Outcome json")
-    ex.add_argument("--out", required=True, help="output directory")
+    ex.add_argument("--out", default=".", help="output directory (default: the current one)")
     ex.add_argument("--password", default=None, help="archive password")
     ex.add_argument("--private-key", default=None, help="PEM key to decrypt a .p7b")
     ex.add_argument("--cms-backend", default=None, choices=list(cms.BACKENDS),

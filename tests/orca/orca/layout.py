@@ -5,8 +5,8 @@ archive with its archive extensions dropped, so one place holds everything that 
 archive. A decrypted archive and an unsealed sidecar (outcome, outline, log) keep the encrypted
 file's name with only the extension changed, and sit next to the encrypted original.
 
-An extract is the exception and does not come through here: it writes under its own '--out' and
-leaves the collection untouched.
+An extract is the exception and does not come through here: it writes under its own '--out',
+the current directory by default, and leaves the collection untouched.
 
 Pure path arithmetic, apart from resolve(), which has to ask whether the collection can be
 written to at all.

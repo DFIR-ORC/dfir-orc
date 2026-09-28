@@ -31,6 +31,13 @@ class TestCli(unittest.TestCase):
         given = parser.parse_args(["extract", "arch.p7b", "--out", "tree", "--work-dir", "E:/w"])
         self.assertEqual(given.work_dir, "E:/w")
 
+    def test_extract_without_out_writes_to_the_current_directory(self):
+        # What every other extractor does. 'extract' names each archive's tree after the
+        # archive itself, so the cwd gets a directory per archive and the loose sidecars,
+        # never a sprayed tree.
+        args = cli._build_parser().parse_args(["extract", "arch.p7b"])
+        self.assertEqual(args.out, ".")
+
     def test_skip_errors_is_on_both_commands_that_ingest(self):
         parser = cli._build_parser()
         for argv in (["ingest", "arch.7z"], ["diff", "NEW.7z", "REF.7z"]):

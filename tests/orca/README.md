@@ -242,10 +242,24 @@ binary do not look alike.
 # decrypt, expand, and unnest every container - the successor to Expand-OrcArchive
 orca extract E:\dumps\DFIR-ORC_HOST.7z --out E:\expanded
 orca extract E:\dumps --out E:\expanded --private-key contoso.com.key
+orca extract E:\dumps\DFIR-ORC_HOST.7z                 # into the current directory
 ```
 
 Use `ingest` when you want to query the data; `extract` is for when you genuinely need the
 collected files on disk.
+
+Without `--out` the tree lands in the current directory, as any other extractor would put it
+there. Nothing is sprayed loose: each archive is expanded into a directory named after it, so
+the current directory gains one directory per archive plus the collection's own sidecars.
+
+```
+S:\work\                                          the current directory
+  ORC_WS_H2ODEV_20260921_172528_Outcome.json      sidecar, unsealed here
+  ORC_WS_H2ODEV_20260921_172528_Outline.json
+  ORC_WS_H2ODEV_20260921_172528.log
+  ORC_WS_H2ODEV_Offline\                          the expanded tree
+    NTFSInfo.csv  GetThis\  ...
+```
 
 Everything lands under `--out` and **nothing is written back to the collection**: it is
 evidence, and reading it must not change it. The Outcome, the Outlines and WolfLauncher's log
@@ -301,8 +315,8 @@ subsequent run. `--refresh` is how you get out of that without deleting the file
 
 Everything `ingest` and `diff` derive from an archive lands **beside that archive**, in a
 directory named after it, so one place holds everything that came out of one collection.
-(`extract` is the exception: it writes only under `--out` and leaves the collection untouched -
-see above.)
+(`extract` is the exception: it writes only under `--out`, the current directory by default, and
+leaves the collection untouched - see above.)
 
 ```
 E:\dumps\
