@@ -226,14 +226,18 @@ struct CaseInsensitiveComparator
 // defines them so this reader and ToolEmbed's clear-text warning cannot drift apart.
 using Orc::Config::Wolf::IsExplicitNo;
 
-// <log>/<console> in a /local configuration. upload="no" keeps the file on the host, as in the embedded
-// configuration. encrypt="no" is refused: whoever holds a local file must not be able to lift the encryption the
-// embedded configuration imposes. A local <recipient> can still add encryption.
-void ApplyLocalRunArtifactSwitches(
+// The 'encrypt'/'upload' switches of one of the four files a collection writes about itself: the log, the
+// console tee, the outline and the outcome. Both are yes by default and only an explicit no turns one off,
+// so this never switches anything back on - a /local configuration can lower what the embedded one asked
+// for, not raise it, and a <recipient> stays the only way to add encryption.
+//
+// One definition for both readers: the embedded configuration and the /local one apply the same four
+// switches, and a second copy of this would let them drift apart without anything failing.
+void ApplyRunArtifactSwitches(
     const ConfigItem& node,
     DWORD encryptIndex,
     DWORD uploadIndex,
-    const wchar_t* name,
+    bool& encrypt,
     bool& upload)
 {
     if (!node)
@@ -243,16 +247,57 @@ void ApplyLocalRunArtifactSwitches(
 
     if (node[encryptIndex] && IsExplicitNo(node[encryptIndex]))
     {
-        Log::Warn(
-            L"Ignoring encrypt=\"{}\" on <{}> in the local configuration: only the embedded configuration can turn "
-            L"encryption off",
-            node[encryptIndex].c_str(),
-            name);
+        encrypt = false;
     }
 
     if (node[uploadIndex] && IsExplicitNo(node[uploadIndex]))
     {
         upload = false;
+    }
+}
+
+// The same switches read from a /local configuration, which overrides the embedded one because it is
+// parsed after it. Taking one of these files out of the envelope the embedded configuration set up is a
+// legitimate operator decision - a local file is chosen by whoever runs the collection, not by the
+// collected host - but the collection's own record then leaves in clear text, so the run names it:
+// ToolEmbed warns about clear text at embed time, this is the same warning at collection time.
+void ApplyLocalRunArtifactSwitches(
+    const ConfigItem& node,
+    DWORD encryptIndex,
+    DWORD uploadIndex,
+    const wchar_t* name,
+    bool& encrypt,
+    bool& upload)
+{
+    const bool wasEncrypted = encrypt;
+
+    ApplyRunArtifactSwitches(node, encryptIndex, uploadIndex, encrypt, upload);
+
+    if (wasEncrypted && !encrypt)
+    {
+        Log::Warn(L"Local configuration keeps the {} in clear text", name);
+    }
+}
+
+// The path - and the other output attributes - of the outline or the outcome. Advisory on purpose: a path
+// that cannot be configured leaves the one already configured in place rather than failing the collection,
+// as the embedded reader has always done.
+//
+// A node holding no path is left alone rather than configured, which is what lets a /local <outline> or
+// <outcome> carry nothing but its switches: OutputSpec::Configure resets the kind to None and re-derives
+// it only from a non-empty value, so configuring one from an empty node would silently stop the file from
+// being written at all.
+void ConfigureArtifactOutput(const ConfigItem& node, OutputSpec& output, const wchar_t* name)
+{
+    if (!node || node.empty())
+    {
+        return;
+    }
+
+    const HRESULT hr = output.Configure(node);
+    if (FAILED(hr))
+    {
+        Log::Warn(L"Failed to configure DFIR-ORC {} file [{}]", name, SystemError(hr));
     }
 }
 
@@ -428,71 +473,33 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
         ConsoleConfiguration::Parse(configitem[WOLFLAUNCHER_CONSOLE], m_consoleConfiguration);
     }
 
-    if (configitem[WOLFLAUNCHER_OUTLINE])
-    {
-        auto hr = E_FAIL;
-        if (FAILED(hr = config.Outline.Configure(configitem[WOLFLAUNCHER_OUTLINE])))
-        {
-            Log::Warn(L"Failed to configure DFIR-ORC outline file [{}]", SystemError(hr));
-        }
+    ConfigureArtifactOutput(configitem[WOLFLAUNCHER_OUTLINE], config.Outline, L"outline");
+    ConfigureArtifactOutput(configitem[WOLFLAUNCHER_OUTCOME], config.Outcome, L"outcome");
 
-        if (configitem[WOLFLAUNCHER_OUTLINE][WOLFLAUNCHER_OUTLINE_ENCRYPT]
-            && IsExplicitNo(configitem[WOLFLAUNCHER_OUTLINE][WOLFLAUNCHER_OUTLINE_ENCRYPT]))
-        {
-            config.bEncryptOutline = false;
-        }
-
-        if (configitem[WOLFLAUNCHER_OUTLINE][WOLFLAUNCHER_OUTLINE_UPLOAD]
-            && IsExplicitNo(configitem[WOLFLAUNCHER_OUTLINE][WOLFLAUNCHER_OUTLINE_UPLOAD]))
-        {
-            config.bUploadOutline = false;
-        }
-    }
-
-    if (configitem[WOLFLAUNCHER_OUTCOME])
-    {
-        auto hr = E_FAIL;
-        if (FAILED(hr = config.Outcome.Configure(configitem[WOLFLAUNCHER_OUTCOME])))
-        {
-            Log::Warn(L"Failed to configure DFIR-ORC outcome file [{}]", SystemError(hr));
-        }
-
-        if (configitem[WOLFLAUNCHER_OUTCOME][WOLFLAUNCHER_OUTCOME_ENCRYPT]
-            && IsExplicitNo(configitem[WOLFLAUNCHER_OUTCOME][WOLFLAUNCHER_OUTCOME_ENCRYPT]))
-        {
-            config.bEncryptOutcome = false;
-        }
-
-        if (configitem[WOLFLAUNCHER_OUTCOME][WOLFLAUNCHER_OUTCOME_UPLOAD]
-            && IsExplicitNo(configitem[WOLFLAUNCHER_OUTCOME][WOLFLAUNCHER_OUTCOME_UPLOAD]))
-        {
-            config.bUploadOutcome = false;
-        }
-    }
-
-    if (configitem[WOLFLAUNCHER_LOG][WOLFLAUNCHER_LOG_ENCRYPT]
-        && IsExplicitNo(configitem[WOLFLAUNCHER_LOG][WOLFLAUNCHER_LOG_ENCRYPT]))
-    {
-        config.bEncryptLog = false;
-    }
-
-    if (configitem[WOLFLAUNCHER_LOG][WOLFLAUNCHER_LOG_UPLOAD]
-        && IsExplicitNo(configitem[WOLFLAUNCHER_LOG][WOLFLAUNCHER_LOG_UPLOAD]))
-    {
-        config.bUploadLog = false;
-    }
-
-    if (configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_ENCRYPT]
-        && IsExplicitNo(configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_ENCRYPT]))
-    {
-        config.bEncryptConsole = false;
-    }
-
-    if (configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_UPLOAD]
-        && IsExplicitNo(configitem[WOLFLAUNCHER_CONSOLE][WOLFLAUNCHER_CONSOLE_UPLOAD]))
-    {
-        config.bUploadConsole = false;
-    }
+    ApplyRunArtifactSwitches(
+        configitem[WOLFLAUNCHER_OUTLINE],
+        WOLFLAUNCHER_OUTLINE_ENCRYPT,
+        WOLFLAUNCHER_OUTLINE_UPLOAD,
+        config.bEncryptOutline,
+        config.bUploadOutline);
+    ApplyRunArtifactSwitches(
+        configitem[WOLFLAUNCHER_OUTCOME],
+        WOLFLAUNCHER_OUTCOME_ENCRYPT,
+        WOLFLAUNCHER_OUTCOME_UPLOAD,
+        config.bEncryptOutcome,
+        config.bUploadOutcome);
+    ApplyRunArtifactSwitches(
+        configitem[WOLFLAUNCHER_LOG],
+        WOLFLAUNCHER_LOG_ENCRYPT,
+        WOLFLAUNCHER_LOG_UPLOAD,
+        config.bEncryptLog,
+        config.bUploadLog);
+    ApplyRunArtifactSwitches(
+        configitem[WOLFLAUNCHER_CONSOLE],
+        WOLFLAUNCHER_CONSOLE_ENCRYPT,
+        WOLFLAUNCHER_CONSOLE_UPLOAD,
+        config.bEncryptConsole,
+        config.bUploadConsole);
 
     if (!configitem[WOLFLAUNCHER_GLOBAL_CMD_TIMEOUT])
     {
@@ -841,13 +848,36 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
         ConsoleConfiguration::Parse(configitem[ORC_CONSOLE], m_consoleConfiguration);
     }
 
+    ConfigureArtifactOutput(configitem[ORC_OUTLINE], config.Outline, L"outline");
+    ConfigureArtifactOutput(configitem[ORC_OUTCOME], config.Outcome, L"outcome");
+
     ApplyLocalRunArtifactSwitches(
-        configitem[ORC_LOGGING], WOLFLAUNCHER_LOG_ENCRYPT, WOLFLAUNCHER_LOG_UPLOAD, L"log", config.bUploadLog);
+        configitem[ORC_OUTLINE],
+        WOLFLAUNCHER_OUTLINE_ENCRYPT,
+        WOLFLAUNCHER_OUTLINE_UPLOAD,
+        L"outline",
+        config.bEncryptOutline,
+        config.bUploadOutline);
+    ApplyLocalRunArtifactSwitches(
+        configitem[ORC_OUTCOME],
+        WOLFLAUNCHER_OUTCOME_ENCRYPT,
+        WOLFLAUNCHER_OUTCOME_UPLOAD,
+        L"outcome",
+        config.bEncryptOutcome,
+        config.bUploadOutcome);
+    ApplyLocalRunArtifactSwitches(
+        configitem[ORC_LOGGING],
+        WOLFLAUNCHER_LOG_ENCRYPT,
+        WOLFLAUNCHER_LOG_UPLOAD,
+        L"log",
+        config.bEncryptLog,
+        config.bUploadLog);
     ApplyLocalRunArtifactSwitches(
         configitem[ORC_CONSOLE],
         WOLFLAUNCHER_CONSOLE_ENCRYPT,
         WOLFLAUNCHER_CONSOLE_UPLOAD,
         L"console",
+        config.bEncryptConsole,
         config.bUploadConsole);
 
     return S_OK;

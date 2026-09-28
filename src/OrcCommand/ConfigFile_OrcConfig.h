@@ -29,6 +29,8 @@ constexpr auto ORC_CONSOLE = 12L;
 constexpr auto ORC_NORELOCATE = 13L;
 constexpr auto ORC_MULTIPLE_INSTANCE = 14L;
 constexpr auto ORC_INSTANCE_ID = 15L;
+constexpr auto ORC_OUTLINE = 16L;
+constexpr auto ORC_OUTCOME = 17L;
 
 constexpr auto ORC_ORC = 0L;
 

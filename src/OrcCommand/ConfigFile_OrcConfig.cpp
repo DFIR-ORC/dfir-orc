@@ -50,9 +50,8 @@ HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddChild(Orc::Command::ConsoleConfiguration::Register, ORC_CONSOLE)))
         return hr;
-    // Same indices as on the embedded <log>/<console> nodes: both are built by the same Register functions.
-    // There is no local <outline> or <outcome>: their path, encryption and upload stay with the embedded
-    // configuration.
+    // Same indices as on the embedded nodes: all four are built by the same functions, so an attribute
+    // added here continues that node's numbering exactly as it does in the wolf schema.
     if (FAILED(hr = item[ORC_LOGGING].AddAttribute(L"encrypt", WOLFLAUNCHER_LOG_ENCRYPT, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item[ORC_LOGGING].AddAttribute(L"upload", WOLFLAUNCHER_LOG_UPLOAD, ConfigItem::OPTION)))
@@ -66,6 +65,21 @@ HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
     if (FAILED(hr = item.AddAttribute(L"MultipleInstance", ORC_MULTIPLE_INSTANCE, ConfigItem::OPTION)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"InstanceId", ORC_INSTANCE_ID, ConfigItem::OPTION)))
+        return hr;
+    // Last, because attributes and child nodes share one index sequence here: every AddChildNode and
+    // AddAttribute requires index == SubItems.size(), so appending these two at 16 and 17 is only valid
+    // once the attributes numbered up to 15 are in place.
+    if (FAILED(hr = item.AddChild(L"outline", Orc::Config::Common::output, ORC_OUTLINE)))
+        return hr;
+    if (FAILED(hr = item.AddChild(L"outcome", Orc::Config::Common::output, ORC_OUTCOME)))
+        return hr;
+    if (FAILED(hr = item[ORC_OUTLINE].AddAttribute(L"encrypt", WOLFLAUNCHER_OUTLINE_ENCRYPT, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item[ORC_OUTLINE].AddAttribute(L"upload", WOLFLAUNCHER_OUTLINE_UPLOAD, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item[ORC_OUTCOME].AddAttribute(L"encrypt", WOLFLAUNCHER_OUTCOME_ENCRYPT, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item[ORC_OUTCOME].AddAttribute(L"upload", WOLFLAUNCHER_OUTCOME_UPLOAD, ConfigItem::OPTION)))
         return hr;
     return S_OK;
 }
