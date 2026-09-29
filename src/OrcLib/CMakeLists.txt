@@ -770,6 +770,7 @@ set(SRC_LOG
     "Log/SpdlogLogger.h"
     "Log/SpdlogLogger.cpp"
     "Log/SpdlogSink.h"
+    "Log/VerboseDiagnostics.h"
     "Log/Syslog/Syslog.h"
     "Log/Syslog/Syslog.cpp"
     "Log/Syslog/SyslogMessage.h"

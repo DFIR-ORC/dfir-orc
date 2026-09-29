@@ -42,6 +42,25 @@ if(${TARGET_ARCH} STREQUAL "x64")
     )
 endif()
 
+# ORC_VERBOSE_DIAGNOSTICS: see the option in the top-level CMakeLists.txt and the macros in
+# src/OrcLib/Log/VerboseDiagnostics.h.
+#
+# The generator expression is not decoration: these builds are multi-config, so Debug and MinSizeRel
+# come out of ONE configure and the choice cannot be made at configure time. Diagnosis configurations
+# get it; the ones that ship do not.
+if(ORC_VERBOSE_DIAGNOSTICS)
+    message(WARNING
+        "ORC_VERBOSE_DIAGNOSTICS is ON for every configuration: logs may carry values normally "
+        "withheld, a captured session token among them. Keep such a binary to yourself.")
+    add_compile_definitions(
+        ORC_VERBOSE_DIAGNOSTICS
+    )
+else()
+    add_compile_definitions(
+        $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:ORC_VERBOSE_DIAGNOSTICS>
+    )
+endif()
+
 
 #
 # Compile options
