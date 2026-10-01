@@ -47,6 +47,8 @@ source_group(Disk\\FS\\NTFS\\USN FILES ${SRC_DISK_FS_NTFS_USN})
 
 set(SRC_UTILITIES
     "aws_sigv4_test.cpp"
+    "rest_path_guard_test.cpp"
+    "rest_logged_path_test.cpp"
     "binary_buffer_test.cpp"
     "convert.cpp"
     "crypt_string_test.cpp"

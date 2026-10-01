@@ -754,6 +754,8 @@ set(SRC_INOUT_UPLOAD
     "BITSAgent.h"
     "CopyFileAgent.cpp"
     "CopyFileAgent.h"
+    "RESTStep.cpp"
+    "RESTStep.h"
     "UploadAgent.cpp"
     "UploadAgent.h"
     "UploadMessage.cpp"
