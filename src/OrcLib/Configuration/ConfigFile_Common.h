@@ -25,7 +25,16 @@ HRESULT output(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName 
 HRESULT download(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName = L"download");
 
 // UPLOAD
+// Registers upload attributes directly on 'item' (no child node wrapping), so Wolf::upload() can put them on
+// its repeatable <upload> node list, one entry per upload fallback.
+HRESULT upload_attributes(ConfigItem& item);
+// The shared schema tail: proxy attributes (22-26), follow_redirects (27), AWS SigV4 (28-33) and the
+// retry policy (34-35). Registered by BOTH upload() and Wolf::upload() after their
+// <rest> list (21); factored here so the two upload schemas cannot drift (a missing registration
+// silently drops every proxy setting at parse time).
+HRESULT upload_proxy_attributes(ConfigItem& item);
 HRESULT upload(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName = L"upload");
+HRESULT rest_step(ConfigItem& parent, DWORD dwIndex);
 
 // SAMPLE content attribute
 HRESULT content(ConfigItem& parent, DWORD dwIndex);

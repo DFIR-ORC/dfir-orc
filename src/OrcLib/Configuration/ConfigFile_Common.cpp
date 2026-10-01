@@ -77,39 +77,165 @@ HRESULT Orc::Config::Common::download(ConfigItem& parent, DWORD dwIndex, std::ws
     return S_OK;
 }
 
+HRESULT Orc::Config::Common::upload_attributes(ConfigItem& item)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = item.AddAttribute(L"method", CONFIG_UPLOAD_METHOD, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"server", CONFIG_UPLOAD_SERVER, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"path", CONFIG_UPLOAD_ROOTPATH, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"job", CONFIG_UPLOAD_JOBNAME, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"user", CONFIG_UPLOAD_USER, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"password", CONFIG_UPLOAD_PASSWORD, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"operation", CONFIG_UPLOAD_OPERATION, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"mode", CONFIG_UPLOAD_MODE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"authscheme", CONFIG_UPLOAD_AUTHSCHEME, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"exclude", CONFIG_UPLOAD_FILTER_EXC, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"include", CONFIG_UPLOAD_FILTER_INC, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"uri", CONFIG_UPLOAD_URI, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"delete_smb_share", CONFIG_UPLOAD_BITS_SMB_DELETE_SHARE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"http_method", CONFIG_UPLOAD_HTTP_METHOD, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"http_header", CONFIG_UPLOAD_HTTP_HEADER, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"http_query", CONFIG_UPLOAD_HTTP_QUERY, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"chunk_size", CONFIG_UPLOAD_CHUNK_SIZE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"https_security", CONFIG_UPLOAD_HTTPS_SECURITY, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"insecure", CONFIG_UPLOAD_INSECURE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"server_cert_pin", CONFIG_UPLOAD_SERVER_CERT_PIN, ConfigItem::OPTION)))
+        return hr;
+    return S_OK;
+}
+
 HRESULT Orc::Config::Common::upload(ConfigItem& parent, DWORD dwIndex, std::wstring_view elementName)
 {
     HRESULT hr = E_FAIL;
     if (FAILED(hr = parent.AddChildNode(elementName, dwIndex, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"method", CONFIG_UPLOAD_METHOD, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"server", CONFIG_UPLOAD_SERVER, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"path", CONFIG_UPLOAD_ROOTPATH, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"job", CONFIG_UPLOAD_JOBNAME, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"user", CONFIG_UPLOAD_USER, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"password", CONFIG_UPLOAD_PASSWORD, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"operation", CONFIG_UPLOAD_OPERATION, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"mode", CONFIG_UPLOAD_MODE, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"authscheme", CONFIG_UPLOAD_AUTHSCHEME, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"exclude", CONFIG_UPLOAD_FILTER_EXC, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"include", CONFIG_UPLOAD_FILTER_INC, ConfigItem::OPTION)))
-        return hr;
-    if (FAILED(hr = parent.SubItems[dwIndex].AddAttribute(L"uri", CONFIG_UPLOAD_URI, ConfigItem::OPTION)))
+    if (FAILED(hr = upload_attributes(parent.SubItems[dwIndex])))
         return hr;
     if (FAILED(
-            hr = parent.SubItems[dwIndex].AddAttribute(
-                L"delete_smb_share", CONFIG_UPLOAD_BITS_SMB_DELETE_SHARE, ConfigItem::OPTION)))
+            hr = parent.SubItems[dwIndex].AddChildNodeList(L"header", CONFIG_UPLOAD_HEADER_LIST, ConfigItem::OPTION)))
         return hr;
+    if (FAILED(hr = rest_step(parent.SubItems[dwIndex], CONFIG_UPLOAD_REST_LIST)))
+        return hr;
+    if (FAILED(hr = upload_proxy_attributes(parent.SubItems[dwIndex])))
+        return hr;
+    return S_OK;
+}
+
+// The shared tail of the <upload> schema: proxy attributes (indices 22-26), follow_redirects (27), the
+// AWS SigV4 attributes (28-33) and the retry policy (34-35). Must be registered AFTER the <header> list
+// (20) and <rest> list (21) because ConfigItem::AddAttribute requires dwIndex == SubItems.size() (strictly
+// ascending registration). Shared by upload() and Wolf::upload() so the two schemas stay in sync.
+// The single 'proxy' attribute carries the discovery mode (host:port / system / wpad / pac:url / *.pac);
+// see Orc::ClassifyProxy.
+HRESULT Orc::Config::Common::upload_proxy_attributes(ConfigItem& item)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = item.AddAttribute(L"proxy", CONFIG_UPLOAD_PROXY, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"proxy_bypass", CONFIG_UPLOAD_PROXY_BYPASS, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"proxy_user", CONFIG_UPLOAD_PROXY_USER, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"proxy_password", CONFIG_UPLOAD_PROXY_PASSWORD, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"proxy_authscheme", CONFIG_UPLOAD_PROXY_AUTHSCHEME, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"follow_redirects", CONFIG_UPLOAD_FOLLOW_REDIRECTS, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"access_key", CONFIG_UPLOAD_ACCESS_KEY, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"secret_key", CONFIG_UPLOAD_SECRET_KEY, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"session_token", CONFIG_UPLOAD_SESSION_TOKEN, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"aws_region", CONFIG_UPLOAD_AWS_REGION, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"aws_service", CONFIG_UPLOAD_AWS_SERVICE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"aws_clock", CONFIG_UPLOAD_AWS_CLOCK, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"retry", CONFIG_UPLOAD_RETRY, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = item.AddAttribute(L"retry_delay", CONFIG_UPLOAD_RETRY_DELAY, ConfigItem::OPTION)))
+        return hr;
+    return S_OK;
+}
+
+// Schema for the repeatable <rest> step list and its nested <header>/<response>/<form> children,
+// plus the step's session="once" attribute (REST multi-step upload). Indices are local to each item
+// and must be registered in ascending order.
+HRESULT Orc::Config::Common::rest_step(ConfigItem& parent, DWORD dwIndex)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = parent.AddChildNodeList(L"rest", dwIndex, ConfigItem::OPTION)))
+        return hr;
+
+    ConfigItem& step = parent[dwIndex];
+    if (FAILED(hr = step.AddAttribute(L"http_method", CONFIG_REST_HTTP_METHOD, ConfigItem::MANDATORY)))
+        return hr;
+    if (FAILED(hr = step.AddAttribute(L"path", CONFIG_REST_PATH, ConfigItem::MANDATORY)))
+        return hr;
+    if (FAILED(hr = step.AddAttribute(L"http_query", CONFIG_REST_HTTP_QUERY, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = step.AddAttribute(L"accept_status", CONFIG_REST_ACCEPT_STATUS, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = step.AddAttribute(L"body", CONFIG_REST_BODY, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = step.AddAttribute(L"offset", CONFIG_REST_OFFSET, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = step.AddAttribute(L"chunk_size", CONFIG_REST_CHUNK_SIZE, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = step.AddChildNodeList(L"header", CONFIG_REST_HEADER_LIST, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = step.AddChildNodeList(L"response", CONFIG_REST_RESPONSE_LIST, ConfigItem::OPTION)))
+        return hr;
+
+    ConfigItem& resp = step[CONFIG_REST_RESPONSE_LIST];
+    if (FAILED(hr = resp.AddAttribute(L"header", CONFIG_RESTRESP_HEADER, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = resp.AddAttribute(L"dav_property", CONFIG_RESTRESP_DAV_PROPERTY, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = resp.AddAttribute(L"name", CONFIG_RESTRESP_NAME, ConfigItem::MANDATORY)))
+        return hr;
+    if (FAILED(hr = resp.AddAttribute(L"default", CONFIG_RESTRESP_DEFAULT, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = resp.AddAttribute(L"form_input", CONFIG_RESTRESP_FORM_INPUT, ConfigItem::OPTION)))
+        return hr;
+    // Appended last: AddAttribute requires its index to be the next free SubItems slot, so a new
+    // attribute goes at the end of this list and nothing above it may be reordered.
+    if (FAILED(hr = resp.AddAttribute(L"attribute", CONFIG_RESTRESP_ATTRIBUTE, ConfigItem::OPTION)))
+        return hr;
+
+    if (FAILED(hr = step.AddAttribute(L"session", CONFIG_REST_SESSION, ConfigItem::OPTION)))
+        return hr;
+    if (FAILED(hr = step.AddChildNodeList(L"form", CONFIG_REST_FORM_LIST, ConfigItem::OPTION)))
+        return hr;
+
+    ConfigItem& form = step[CONFIG_REST_FORM_LIST];
+    if (FAILED(hr = form.AddAttribute(L"field", CONFIG_RESTFORM_FIELD, ConfigItem::MANDATORY)))
+        return hr;
+    if (FAILED(hr = form.AddAttribute(L"value", CONFIG_RESTFORM_VALUE, ConfigItem::MANDATORY)))
+        return hr;
+
     return S_OK;
 }
 

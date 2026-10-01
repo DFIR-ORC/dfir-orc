@@ -203,6 +203,77 @@ constexpr auto CONFIG_UPLOAD_FILTER_EXC = 9U;
 constexpr auto CONFIG_UPLOAD_FILTER_INC = 10U;
 constexpr auto CONFIG_UPLOAD_URI = 11U;
 constexpr auto CONFIG_UPLOAD_BITS_SMB_DELETE_SHARE = 12U;
+constexpr auto CONFIG_UPLOAD_HTTP_METHOD = 13U;
+constexpr auto CONFIG_UPLOAD_HTTP_HEADER = 14U;
+constexpr auto CONFIG_UPLOAD_HTTP_QUERY = 15U;
+constexpr auto CONFIG_UPLOAD_CHUNK_SIZE = 16U;
+constexpr auto CONFIG_UPLOAD_HTTPS_SECURITY = 17U;
+constexpr auto CONFIG_UPLOAD_INSECURE = 18U;
+constexpr auto CONFIG_UPLOAD_SERVER_CERT_PIN = 19U;
+constexpr auto CONFIG_UPLOAD_HEADER_LIST = 20U;
+
+// The <rest> step list under <upload> (REST multi-step upload).
+constexpr auto CONFIG_UPLOAD_REST_LIST = 21U;
+
+// Proxy attributes on <upload>. Registered AFTER the <header> list (20) and <rest> list (21) because
+// ConfigItem::AddAttribute requires dwIndex == SubItems.size() (strictly ascending registration).
+constexpr auto CONFIG_UPLOAD_PROXY = 22U;
+constexpr auto CONFIG_UPLOAD_PROXY_BYPASS = 23U;
+constexpr auto CONFIG_UPLOAD_PROXY_USER = 24U;
+constexpr auto CONFIG_UPLOAD_PROXY_PASSWORD = 25U;
+constexpr auto CONFIG_UPLOAD_PROXY_AUTHSCHEME = 26U;
+
+// follow_redirects (default off). Registered last by the shared upload_proxy_attributes() tail so both upload
+// schemas keep identical indices (ConfigItem::AddAttribute requires strictly ascending registration).
+constexpr auto CONFIG_UPLOAD_FOLLOW_REDIRECTS = 27U;
+
+// AWS SigV4 (authscheme="AWSv4"). Registered in upload_proxy_attributes(), the shared tail, so both
+// Common::upload() and Wolf::upload() get them; AddAttribute requires dwIndex == SubItems.size(), so
+// they must come after the <header> (20) and <rest> (21) child lists.
+constexpr auto CONFIG_UPLOAD_ACCESS_KEY = 28U;
+constexpr auto CONFIG_UPLOAD_SECRET_KEY = 29U;
+constexpr auto CONFIG_UPLOAD_SESSION_TOKEN = 30U;
+constexpr auto CONFIG_UPLOAD_AWS_REGION = 31U;
+constexpr auto CONFIG_UPLOAD_AWS_SERVICE = 32U;
+constexpr auto CONFIG_UPLOAD_AWS_CLOCK = 33U;
+
+// Extra attempts at one <upload> entry before the next entry is tried, and the wait between them.
+// Registered by the shared upload tail like everything above, so both upload schemas keep identical
+// indices (AddAttribute requires dwIndex == SubItems.size(), so attributes can only be appended).
+constexpr auto CONFIG_UPLOAD_RETRY = 34U;
+constexpr auto CONFIG_UPLOAD_RETRY_DELAY = 35U;
+
+// Attributes/children of a single <rest> step (indices local to the step item).
+constexpr auto CONFIG_REST_HTTP_METHOD = 0U;
+constexpr auto CONFIG_REST_PATH = 1U;
+constexpr auto CONFIG_REST_HTTP_QUERY = 2U;
+constexpr auto CONFIG_REST_ACCEPT_STATUS = 3U;
+constexpr auto CONFIG_REST_BODY = 4U;
+constexpr auto CONFIG_REST_OFFSET = 5U;
+constexpr auto CONFIG_REST_CHUNK_SIZE = 6U;
+constexpr auto CONFIG_REST_HEADER_LIST = 7U;
+constexpr auto CONFIG_REST_RESPONSE_LIST = 8U;
+
+// session="once" and the <form> field list. Registered AFTER the two child lists above because
+// ConfigItem::AddAttribute requires dwIndex == SubItems.size() (strictly ascending registration),
+// the same reason the <upload> proxy attributes sit after its child lists.
+constexpr auto CONFIG_REST_SESSION = 9U;
+constexpr auto CONFIG_REST_FORM_LIST = 10U;
+
+// Attributes of a single <response> capture (indices local to the response item).
+constexpr auto CONFIG_RESTRESP_HEADER = 0U;
+constexpr auto CONFIG_RESTRESP_DAV_PROPERTY = 1U;
+constexpr auto CONFIG_RESTRESP_NAME = 2U;
+constexpr auto CONFIG_RESTRESP_DEFAULT = 3U;
+constexpr auto CONFIG_RESTRESP_FORM_INPUT = 4U;
+
+// <response attribute="data-requesttoken">: read an attribute's value off whichever tag carries it.
+// Appended, never renumbered: an index here is a position in a ConfigItem's SubItems vector.
+constexpr auto CONFIG_RESTRESP_ATTRIBUTE = 5U;
+
+// Attributes of a single <form> field (indices local to the form item).
+constexpr auto CONFIG_RESTFORM_FIELD = 0U;
+constexpr auto CONFIG_RESTFORM_VALUE = 1U;
 
 // DOWNLOAD
 constexpr auto CONFIG_DOWNLOAD_METHOD = 0U;
