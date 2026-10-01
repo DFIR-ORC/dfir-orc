@@ -768,10 +768,14 @@ source_group(In&Out\\Upload FILES ${SRC_INOUT_UPLOAD})
 set(SRC_NETWORK_HTTP
     "Network/Http/AwsV4.cpp"
     "Network/Http/AwsV4.h"
+    "Network/Http/Authenticator.cpp"
+    "Network/Http/Authenticator.h"
     "Network/Http/HttpAuth.cpp"
     "Network/Http/HttpAuth.h"
     "Network/Http/HttpProxy.cpp"
     "Network/Http/HttpProxy.h"
+    "Network/Http/HttpClient.cpp"
+    "Network/Http/HttpClient.h"
 )
 
 source_group(Network\\Http FILES ${SRC_NETWORK_HTTP})
