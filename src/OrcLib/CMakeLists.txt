@@ -71,6 +71,15 @@ set(SRC_CONFIG
 
 source_group(Config FILES ${SRC_CONFIG})
 
+set(SRC_CRYPTO
+    "Crypto/BCryptApi.cpp"
+    "Crypto/BCryptApi.h"
+    "Crypto/HmacSha256.cpp"
+    "Crypto/HmacSha256.h"
+)
+
+source_group(Crypto FILES ${SRC_CRYPTO})
+
 set(SRC_DISK
     "DiskStructures.h"
     "Partition.cpp"
@@ -984,6 +993,7 @@ add_library(OrcLib
         ${SRC_COMMAND}
         ${SRC_COMMON}
         ${SRC_CONFIG}
+        ${SRC_CRYPTO}
         ${SRC_DISK}
         ${SRC_DISK_FILESYSTEM}
         ${SRC_DISK_FILESYSTEM_FAT}
