@@ -756,6 +756,8 @@ set(SRC_INOUT_UPLOAD
     "CopyFileAgent.h"
     "RESTStep.cpp"
     "RESTStep.h"
+    "RESTCapture.cpp"
+    "RESTCapture.h"
     "UploadAgent.cpp"
     "UploadAgent.h"
     "UploadMessage.cpp"
