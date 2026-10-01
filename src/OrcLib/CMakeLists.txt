@@ -766,6 +766,8 @@ source_group(In&Out\\Upload FILES ${SRC_INOUT_UPLOAD})
 
 # Generic HTTP transport (no REST/upload/OutputSpec coupling); reusable by any HTTP consumer.
 set(SRC_NETWORK_HTTP
+    "Network/Http/AwsV4.cpp"
+    "Network/Http/AwsV4.h"
     "Network/Http/HttpAuth.cpp"
     "Network/Http/HttpAuth.h"
     "Network/Http/HttpProxy.cpp"
