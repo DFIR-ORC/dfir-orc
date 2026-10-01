@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REST upload over plain HTTP, whole file in one request (no chunking).
+  The body PUT reads the local file ({upload.local_path}); the chunk start offset is carried in the
+  query string via {upload.range_start}. Plain HTTP is insecure, so REST refuses it unless insecure="true".
+  See README.md for the matching test-server command and the port caveat.
+-->
+<dfir-orc>
+    <upload method="REST" server="http://127.0.0.1:8089"
+            operation="move" insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"
+              http_query="?start={upload.range_start}&amp;total={upload.total_size}"/>
+    </upload>
+</dfir-orc>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live test: the chunked WebDAV dialog against the python sink - one request per chunk, each to its
+  OWN path named by the chunk's byte offset, then a MOVE of the "<dir>/.file" pseudo-entry that makes
+  the server concatenate them. This is the engine half of vm-nextcloud-chunked.xml, verified without
+  Nextcloud; that fixture only confirms a real Nextcloud implements the same convention.
+
+  Mechanisms no other sink scenario reaches:
+    - {upload.range_start} in the PATH, so each chunk lands on a different URL. Everywhere else the
+      offset travels in http_query or a Content-Range header and all chunks share one path.
+    - {upload.random:...} having to resolve IDENTICALLY across four steps. A fresh value per step
+      would scatter the chunks over four directories and leave the MOVE nothing to assemble.
+    - server-side assembly order. chunk_size="64" is deliberately tiny so this rig's ~900 byte archive
+      becomes 14 chunks whose lexicographic order ("128" before "64") differs from their numeric one,
+      which is what makes the byte-exact verdict an assertion about ordering. The sink sorts numerically,
+      as Nextcloud does; vm-webdav-chunked-lex.xml is the same upload against a sink that does not.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+        <rest http_method="MKCOL" path="/up/uploads/" accept_status="405"/>
+        <rest http_method="MKCOL" path="/up/uploads/{upload.random:hex:16}"/>
+        <rest http_method="PUT" path="/up/uploads/{upload.random:hex:16}/{upload.range_start}"
+              body="{upload.local_path}" chunk_size="64"/>
+        <rest http_method="MOVE" path="/up/uploads/{upload.random:hex:16}/.file">
+            <header>Destination: /up/{upload.filename}</header>
+        </rest>
+    </upload>
+</dfir-orc>

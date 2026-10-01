@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REST upload to a two-level sharded random path (local mirror of vm-random.xml). The two MKCOLs and
+  the PUT all reference the SAME random tokens ({upload.random:hex:2:a} and :b); each token is generated
+  once per uploaded file and stays stable across every step, so the body lands in the dirs the MKCOLs
+  created. The distinct ids :a/:b yield two independent directories.
+  The local server's MKCOL needs the parent collection to exist (it returns 409 otherwise), so /up/ is
+  created first; accept_status="405" tolerates a collection that already exists from a prior run.
+  See README.md for the matching test-server command and the port caveat.
+-->
+<dfir-orc>
+    <upload method="REST" server="http://127.0.0.1:8089"
+            operation="copy" insecure="true">
+        <rest http_method="MKCOL" path="/up/" accept_status="405"/>
+        <rest http_method="MKCOL" path="/up/{upload.random:hex:2:a}" accept_status="200,201,405"/>
+        <rest http_method="MKCOL" path="/up/{upload.random:hex:2:a}/{upload.random:hex:2:b}" accept_status="200,201,405"/>
+        <rest http_method="PUT" path="/up/{upload.random:hex:2:a}/{upload.random:hex:2:b}/{upload.filename}"
+              body="{upload.local_path}" http_query="?total={upload.total_size}"/>
+    </upload>
+</dfir-orc>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Main configuration for the big-file upload scenarios (run-vmtest.ps1 -Tag big-*), in the same
+     role as wolf-main.example.xml: a raw per-arch build embeds no configuration, so the runner
+     passes this one with /config=.
+
+     It makes ONE archive whose single member is a multi-GB payload, concatenated by cmd.exe from
+     %ORC_BIG_SOURCES% straight into ORC's own temp directory - so nothing but the seed survives a
+     run. The runner sets that variable per scenario from the BigSeed setting: the seed once, or
+     several times over, which is what reaches the three sizes the scenarios are about without
+     keeping a file of each size on disk.
+
+     The seed must be a file that does NOT compress - a real collection archive is the obvious
+     one. With compression="none" the .7z then keeps the payload's size, which is the size the
+     scenario is testing, and building it costs I/O only rather than minutes of LZMA.
+
+     archive_timeout raises the 5-minute default, which covers writing the whole archive.
+
+     The keyword stays SystemInfo so the runner's own /key=SystemInfo still selects this command. -->
+<wolf childdebug="no" archive_timeout="30">
+    <archive name="SystemInfo.7z" keyword="SystemInfo" concurrency="1" repeat="Overwrite" compression="none">
+        <command keyword="SystemInfo">
+            <execute name="cmd.exe" run="%ComSpec%"/>
+            <argument>/c copy /b /y %ORC_BIG_SOURCES%</argument>
+            <output name="payload.bin" source="File" argument="{FileName}"/>
+        </command>
+    </archive>
+</wolf>

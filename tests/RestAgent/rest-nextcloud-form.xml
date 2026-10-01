@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Upload into a PASSWORD-PROTECTED PUBLIC SHARE on Nextcloud, through the four requests its web client
+  makes. Verified end to end against stock Nextcloud 35, and request by request against a deployment
+  reached through a FILTERING REVERSE PROXY - see the note at the end of this comment.
+
+  THREE THINGS TO REPLACE, and nothing else:
+
+    SHARE-HOST        https://foo.bar.com          the scheme and host, no trailing slash. Appears
+                                                   twice: server= and the Origin header.
+    SHARETOKEN        what follows /s/ in the URL. Appears FOUR times, and must be written
+                      literally: a <rest> step's 'path' is NOT environment-expanded (only
+                      <upload>'s own server / uri / proxy / proxy_bypass are), so a %VAR% there
+                      would reach the wire unexpanded.
+    SHARE-PASSWORD    the share password, in clear, as every embedded credential is.
+
+  WHY FOUR REQUESTS, not the three a first reading of the dialog suggests:
+
+    1. GET the authenticate page. It sets the session cookies and serves the CSRF token as
+       data-requesttoken. Aimed straight at /authenticate/showshare rather than at /s/SHARETOKEN,
+       which answers a redirect towards it that would otherwise have to be followed for no gain.
+    2. POST the password. Nextcloud refuses this with 412 unless the token is supplied; a
+       requesttoken header and a form field of the same name both work, and the header is used
+       here. sharingToken and sharingType are what the web client sends: stock Nextcloud ignores
+       them. Answers 303 towards the share.
+    3. GET the share page, now authenticated. THIS STEP IS NOT OPTIONAL: the login regenerates the
+       session id, so the token from step 1 is stale by here and the WebDAV write needs the one
+       this page serves. The two differ on the wire.
+    4. PUT the file under the public DAV root. Behind the filtering proxy this needs the cookie AND all
+       headers below: cookie alone, and cookie plus requesttoken, were both answered 401. Stock
+       Nextcloud needs only the cookie, so the headers cost nothing where they are not required.
+
+  Cookies need no configuration: every step runs on one WinHTTP session handle whose cookie jar
+  replays Set-Cookie across the four requests, __Host- and SameSite ones included.
+
+  session="once" marks the first three steps as session establishment rather than per-file work, so
+  the login runs once for the whole collection instead of replaying the password for every file.
+
+  IF THE LOGIN IS REFUSED: a POST answered 200 instead of 302/303 was not processed at all - the
+  usual cause is an instance that does NOT serve pretty URLs, where every /s/... path needs an
+  /index.php prefix (the PUT path never does). Its own Location header says which form it uses.
+  tests/RestAgent/Check-NextcloudShare.ps1 diagnoses that case, and tells it apart from a password
+  the server actually refused.
+
+  Certificate pinning is not set here. Add server_cert_pin="<base64 of the server certificate>" to
+  the <upload> element to pin one; do not use insecure="true" against a real share, because the
+  form body below carries the share password.
+
+  DO NOT ADD offset= TO THE PUT BELOW. This is the one edit that looks like a resume and silently
+  destroys data. Measured against Nextcloud 35, on a 5000 byte file already on the server:
+
+    PUT of just the tail, no Content-Range     204, and the file becomes 4 bytes long
+    PUT of just the tail WITH Content-Range    400 BadRequest, the file is left untouched
+    PATCH + X-Update-Range (sabre partial)     501, "no plugin willing to handle this PATCH method",
+                                               on the account endpoint too - Nextcloud never loads it
+
+  So the naive shape is the dangerous one: offset= with no range header reports success and truncates
+  the remote file to the size of the tail. Adding Content-Range only converts that into a loud 400; it
+  never produces a resume, because Nextcloud has no partial write on this endpoint at all.
+
+  A HEAD step CAN read the remote size here with a plain header capture and no WebDAV parsing:
+
+      <rest http_method="HEAD" path="/public.php/dav/files/SHARETOKEN/{upload.filename}"
+            accept_status="404">
+          <header>X-Requested-With: XMLHttpRequest</header>
+          <response header="Content-Length" name="have" default="0"/>
+      </rest>
+
+  200 with Content-Length for a file that is there, 404 for one that is not. That is a VERIFICATION
+  value only - there is nothing in this dialog it can safely drive. Real resumption needs the chunk
+  protocol: rest-nextcloud-share-resume.xml.
+
+  BEHIND A FILTERING REVERSE PROXY. This dialog was developed against a deployment first believed to
+  be a Nextcloud fork and later identified as ordinary Nextcloud behind a filtering reverse proxy.
+  That explains every way it differed from the bench, and none of the differences are Nextcloud's:
+
+    - Basic auth failed with the "no credential arrived" 401 (no WWW-Authenticate, empty
+      <s:message/>): the proxy was not forwarding the Authorization header.
+    - the PUT needed X-Requested-With where stock does not, which is the AJAX gate public DAV applies
+      to any non-GET when outgoing server-to-server sharing is off.
+    - chunked upload was unreachable: /public.php/dav/uploads/ refuses a session cookie, and Basic was
+      unavailable for the reason above.
+
+  This dialog is the one that survives such filtering, because it uses only what a browser uses: GET,
+  POST and a single PUT under /public.php/dav/files/. Chunking and resuming need /uploads/ plus MKCOL,
+  MOVE and PROPFIND, and whether those are reachable is the proxy's policy rather than Nextcloud's.
+  Check-NextcloudProxy.ps1 measures exactly which of them a given deployment admits.
+-->
+<dfir-orc>
+    <upload method="REST" server="https://SHARE-HOST" operation="copy"
+            https_security="tls1.3, tls1.2">
+
+        <rest http_method="GET" path="/s/SHARETOKEN/authenticate/showshare" session="once">
+            <response attribute="data-requesttoken" name="rt1"/>
+        </rest>
+
+        <rest http_method="POST" path="/s/SHARETOKEN/authenticate/showshare"
+              session="once" accept_status="302,303">
+            <header>requesttoken: {rt1}</header>
+            <form field="password"     value="SHARE-PASSWORD"/>
+            <form field="sharingToken" value="SHARETOKEN"/>
+            <form field="sharingType"  value="3"/>
+        </rest>
+
+        <rest http_method="GET" path="/s/SHARETOKEN" session="once">
+            <response attribute="data-requesttoken" name="rt2"/>
+        </rest>
+
+        <rest http_method="PUT"
+              path="/public.php/dav/files/SHARETOKEN/{upload.filename}"
+              body="{upload.local_path}">
+            <header>requesttoken: {rt2}</header>
+            <header>X-Requested-With: XMLHttpRequest</header>
+            <header>Origin: https://SHARE-HOST</header>
+        </rest>
+
+    </upload>
+</dfir-orc>

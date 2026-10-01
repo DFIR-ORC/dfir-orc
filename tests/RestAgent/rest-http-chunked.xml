@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REST upload over plain HTTP, CHUNKED (1 MiB chunks, one request per chunk).
+  chunk_size on the body step splits the file; each chunk's offset travels in a standard
+  Content-Range header so the sink reassembles the file at that offset.
+  insecure="true" required: plain HTTP is refused otherwise.
+  See README.md for the matching test-server command and the port caveat.
+-->
+<dfir-orc>
+    <upload method="REST" server="http://127.0.0.1:8089"
+            operation="move" insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}" chunk_size="1048576">
+            <header>Content-Range: bytes {upload.range_start}-{upload.range_end}/{upload.total_size}</header>
+        </rest>
+    </upload>
+</dfir-orc>

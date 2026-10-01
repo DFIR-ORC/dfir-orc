@@ -1,0 +1,21 @@
+# Bench-specific REST-upload test configuration. NEVER commit these: they name the test host and
+# its ssh alias, and the fixtures they point at carry certificate pins and upload credentials.
+vmtest.local.psd1
+vmtest.local.*.psd1
+
+# Local fixture copies produced by make-local-fixtures.ps1 (its default OutDir).
+local/
+
+# Scenario output, if OutRoot is left pointing inside the repo: run.log records the host address
+# and the full command line.
+vmrun/
+received/
+
+# The placeholder template carries no real values and is meant to be committed.
+!vmtest.local.example.psd1
+
+# The localhost test key. Its PEM already lives inside rest_test_server.py (_EMBEDDED_KEY_PEM,
+# a deliberate throwaway), so a second copy as a bare '.key' file added nothing but a private key
+# for every secret scanner and reviewer to trip over. The sink materializes its own pair at run
+# time; '--gencert' writes this name when you want a fresh one.
+server.key

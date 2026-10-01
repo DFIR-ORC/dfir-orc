@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VM live test (NEGATIVE): HTTPS with a WRONG pin - a throwaway self-signed certificate ('CN=wrong-pin.invalid',
+     an RFC 2606 reserved name) whose private key exists nowhere, so no sink can ever serve it. It is deliberately
+     NOT the certificate every other vm-https-*.xml pins, which is what makes this the negative test, and
+     make-local-fixtures.ps1 leaves it alone for the same reason.
+     Expect: pin mismatch -> "matches no configured 'server_cert_pin'", body never sent, upload fails. -->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            server_cert_pin="MIIDNzCCAh+gAwIBAgIUYFEZ9vqI64Cw5DHl1rQH0h7LuqgwDQYJKoZIhvcNAQELBQAwHDEaMBgGA1UEAwwRd3JvbmctcGluLmludmFsaWQwHhcNMjYwOTI0MTEzNDM1WhcNMzYwOTIxMTEzNDM1WjAcMRowGAYDVQQDDBF3cm9uZy1waW4uaW52YWxpZDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAJE2fRNMaq96vQ5TiRsjrouA9YgnS9EZfnIVJP4jj3DwffzX/FVGA6CmESphc1NmDG7ZO31LJtVIce0wj0JGAey7CQV8hN6cV/yLk6QkNHQ1HYcT5mjzD+Ug97l/GW60ldUW4uIa8/AsL6IhBWRuYIyKMmeGnJ46Iy8/wU2IWEjI2bxsd9u0ZEgcPsgs3HZqsuiyf1D7g8Cg4FbSyjht88tsJ4ISI6bzsh7UCR2darnTIspfjqEGs7FHnpb+Zr/0ktaWe/8gj0NUC5tJnrQvZoAA+xUFNI1N46dLm7aCdQcb4+XrRa48Gwjn7fy5adwQTUbf7jd/j6e2oyZoeJ7rfBkCAwEAAaNxMG8wHQYDVR0OBBYEFJdoMLxon0VaE6nPK2G792qQBdMQMB8GA1UdIwQYMBaAFJdoMLxon0VaE6nPK2G792qQBdMQMA8GA1UdEwEB/wQFMAMBAf8wHAYDVR0RBBUwE4IRd3JvbmctcGluLmludmFsaWQwDQYJKoZIhvcNAQELBQADggEBAHdIM0i3bwpwZ+jQK7f86QJRjRNp49UWp/o99z5MT4wb7y4rKOf+kgbxpaJbgbhjIOybnjhQnGJi0o6D80J2AmnH9S6O2QDV3NN6ZP6TozYXSD7R81yy40oVRiht376Qqyh/Qw4SAJBB742ISIwz0gdyqQ7bnNBCN428apiDpuhbktZvMzApOn3qpb/I0Dy3oHHuIcXwrDleppQ+YROC5kn4XmqUtKZQt5Jngq6fEEpp85ePG4EYrxcie9otbGOBBZDnOJ8tg9u25psC55n0rHxqiX38D+Zy7scg1Qwz9gCLoa5DYyj1zLLU/rYVcbs+3fiD7Oj1HO8Ph4ScrlL6jMA=">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"
+              http_query="?start={upload.range_start}&amp;total={upload.total_size}"/>
+    </upload>
+</dfir-orc>

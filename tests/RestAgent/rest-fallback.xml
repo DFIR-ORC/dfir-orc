@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REST upload fallback list: two sibling <upload> entries tried in order. The first points at a dead
+  port (127.0.0.1:9, no listener); every request to it fails with a connection error, so upload attempt
+  #1 fails and WolfLauncher advances to the second entry, which uploads to the live sink on attempt #2.
+  The body lands via the fallback (#2) only - the dead-port primary never reaches a listener.
+  Both use operation="copy" so the source archive is never consumed and the fallback always has the file.
+  Expect the primary's per-file send errors to still be logged (and counted) even though the fallback
+  rescues the data. See README.md (Fallback) for the matching test-server command and the log lines.
+-->
+<dfir-orc>
+    <!-- #1 primary: unreachable, fails to initialise (connection refused on the dead port). -->
+    <upload method="REST" server="http://127.0.0.1:9"
+            operation="copy" insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"
+              http_query="?total={upload.total_size}"/>
+    </upload>
+    <!-- #2 fallback: the live sink, where the body actually lands. -->
+    <upload method="REST" server="http://127.0.0.1:8089"
+            operation="copy" insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"
+              http_query="?total={upload.total_size}"/>
+    </upload>
+</dfir-orc>

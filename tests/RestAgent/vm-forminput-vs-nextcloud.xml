@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live NEGATIVE test: the form_input dialog pointed at a REAL Nextcloud, where it must fail.
+
+  This is the other half of the pair whose positive half is vm-nextcloud-form.xml. The two dialogs are
+  not interchangeable, and this fixture is what keeps that from being an assumption:
+
+    vm-nextcloud-form.xml   <response attribute="data-requesttoken">   against Nextcloud  -> works
+    this fixture             <response form_input="requesttoken">       against Nextcloud  -> must not
+
+  Nextcloud's password dialog is script-rendered. The page carries no <form>, and its hidden inputs are
+  'initial-state-*' blobs keyed by 'id' with no 'name' at all, so a scan that matches name= finds
+  nothing however the rest of the dialog is spelled. The CSRF token is on a <head> attribute instead.
+
+  The GET is aimed at /authenticate/showshare, which answers 200, precisely so the failure comes from
+  the CAPTURE and not from a status: aimed at /s/<token> the step would fail on the 303 first, which
+  would prove nothing about form_input.
+
+  What SHOULD appear in the log, and what makes this test meaningful rather than merely red:
+
+      Form input scan: 'requesttoken' not found in the response body
+      REST capture 'rt' found no value in the response and has no 'default'; the dialog cannot
+      continue. Check that the server still serves this value.
+
+  That is the S5 fail-closed rule doing its job: the login is NOT attempted with an empty token, and
+  the message names the capture that could not be resolved. A silent empty POST would surface later as
+  an opaque 403 from the server, which is the failure mode this design exists to avoid.
+
+  Token, password and paths match the share setup_nextcloud.sh provisions, and /index.php is there for
+  the same reason as in vm-nextcloud-form.xml: this bench does not serve pretty URLs.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+
+        <rest http_method="GET" path="/index.php/s/orcvmshare00000/authenticate/showshare" session="once">
+            <response form_input="requesttoken" name="rt"/>
+            <response form_input="sharingToken" name="st"/>
+            <response form_input="sharingType"  name="sy"/>
+        </rest>
+
+        <rest http_method="POST" path="/index.php/s/orcvmshare00000/authenticate/showshare"
+              session="once" accept_status="302,303">
+            <form field="password"     value="orc-share-not-a-secret"/>
+            <form field="requestToken" value="{rt}"/>
+            <form field="sharingToken" value="{st}"/>
+            <form field="sharingType"  value="{sy}"/>
+        </rest>
+
+        <rest http_method="PUT"
+              path="/public.php/dav/files/orcvmshare00000/{upload.filename}"
+              body="{upload.local_path}"/>
+
+    </upload>
+</dfir-orc>

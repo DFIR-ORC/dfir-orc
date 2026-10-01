@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VM live test: HTTPS, NO pin, insecure (accept any cert). Exercises PerformSend's no-callback
+     path over TLS (ArmPinCallback skipped, unregister guard no-ops). -->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy" insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"
+              http_query="?start={upload.range_start}&amp;total={upload.total_size}"/>
+    </upload>
+</dfir-orc>

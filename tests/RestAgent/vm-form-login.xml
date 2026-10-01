@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live test: a server-rendered public-share login dialog, against a MOCK of one (rest_test_server.py
+  share_login mode, started by start_sinks.sh on port 8460). NOT against Nextcloud - see below.
+
+  The sink's modes are named in prose throughout this comment, never by their command-line flag: a
+  double hyphen is illegal inside an XML comment, XmlLite then rejects the whole file, and the run
+  reads no configuration at all while reporting only that the sink received nothing.
+
+  NO NEXTCLOUD SERVES THIS DIALOG. Stock and the deployment this work started from alike
+  script-render the password dialog, so the page carries no <form> and no hidden input with a "name"
+  at all; the CSRF token sits on a <head data-requesttoken> attribute, sharingToken is in an
+  initial-state JSON blob, and the POST goes to /s/{token}/authenticate/{redirect}. That is what
+  vm-nextcloud-form.xml does, against a real Nextcloud, with the 'attribute' capture source.
+
+  So this mock is not a stand-in for a server that exists: it is the ONLY form-rendering target in the
+  rig, and that is precisely why it is kept. 'form_input' is correct for a server that renders a real
+  login form, it is a supported primitive with its own unit tests, and without this sink nothing would
+  exercise it end to end. What this fixture proves is the ENGINE'S mechanism: a bounded GET-scraped
+  form_input capture feeding a urlencoded POST, the session cookie carrying across GET/POST/PUT, and
+  session="once" running the login once per agent rather than once per file.
+
+  For Nextcloud, start from rest-nextcloud-form.xml instead.
+
+  Token and password match the sink launched by start_sinks.sh (share_login mode, token
+  orcvmshare1:orcvmshare1-secret). Hardcoded rather than a %VAR%: a <rest> step's 'path' attribute is
+  not environment-expanded, only <upload>'s own server/uri/proxy/proxy_bypass are, so a variable there
+  would reach the wire unexpanded.
+
+  See vm-form-login-nocookie.xml for the negative control proving the PUT is genuinely cookie-gated.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+
+        <rest http_method="GET" path="/s/orcvmshare1" session="once">
+            <response form_input="requesttoken" name="rt"/>
+            <response form_input="sharingToken" name="st"/>
+            <response form_input="sharingType"  name="sy"/>
+        </rest>
+
+        <rest http_method="POST" path="/s/orcvmshare1" session="once" accept_status="303">
+            <form field="password"     value="orcvmshare1-secret"/>
+            <form field="requestToken" value="{rt}"/>
+            <form field="sharingToken" value="{st}"/>
+            <form field="sharingType"  value="{sy}"/>
+        </rest>
+
+        <rest http_method="PUT"
+              path="/public.php/dav/files/orcvmshare1/{upload.filename}"
+              body="{upload.local_path}"/>
+
+    </upload>
+</dfir-orc>

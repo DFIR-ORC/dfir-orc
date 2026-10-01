@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REST upload over HTTPS to a self-signed server with certificate validation DISABLED.
+  'insecure="true"' removes MITM protection entirely (accepts any server certificate) and is
+  honored in ALL builds; Validate() warns when it is set. Use it for a quick local handshake
+  check only; prefer rest-https-pin.xml (pin the key, no flag needed) for anything real.
+  See README.md for the matching test-server command and the port caveat.
+-->
+<dfir-orc>
+    <upload method="REST" server="https://127.0.0.1:8443"
+            https_security="tls1.3, tls1.2" operation="move"
+            insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"
+              http_query="?start={upload.range_start}&amp;total={upload.total_size}"/>
+    </upload>
+</dfir-orc>

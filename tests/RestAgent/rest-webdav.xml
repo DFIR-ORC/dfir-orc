@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REST multi-step upload to a WebDAV-style server: ensure the collection exists (MKCOL, with
+  accept_status="405" because a real WebDAV server returns 405 when the collection already
+  exists), then PUT the body. A plain PUT alone fails against a strict WebDAV server, which
+  refuses a PUT into a non-existent collection with 409.
+  See README.md for the matching test-server command and the port caveat.
+-->
+<dfir-orc>
+    <upload method="REST" server="http://127.0.0.1:8089"
+            operation="move" insecure="true">
+        <rest http_method="MKCOL" path="/up/" accept_status="405"/>
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"
+              http_query="?start={upload.range_start}&amp;total={upload.total_size}" chunk_size="1048576"/>
+    </upload>
+</dfir-orc>

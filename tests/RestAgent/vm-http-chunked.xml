@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VM live test: HTTP chunked upload (1 KB chunks -> multi-request Content-Range reassembly). -->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            operation="copy" insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}" chunk_size="1024">
+            <header>Content-Range: bytes {upload.range_start}-{upload.range_end}/{upload.total_size}</header>
+        </rest>
+    </upload>
+</dfir-orc>

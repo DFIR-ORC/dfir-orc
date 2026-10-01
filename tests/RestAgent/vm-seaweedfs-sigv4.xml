@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live test: authenticated upload to a SeaweedFS (S3) bucket, whole object in one PUT, using AWS SigV4.
+
+  Byte for byte the dialog of vm-minio-sigv4.xml and vm-rustfs-sigv4.xml, pointed at a THIRD S3
+  implementation. MinIO and RustFS are close relatives - same bucket model, same object layout, the same
+  admin API - so a signature both accept could still be a dialect they share. SeaweedFS is a distributed
+  object store with an S3 gateway in front of a filer, with its own identity file and its own on-disk
+  representation; a signature all three accept is standard SigV4. setup_seaweedfs.sh provisions the same
+  separate orc-signed bucket and orcupload identity, able to write orc-signed/orc-upload/ and nothing
+  else. The anonymous orc bucket vm-seaweedfs.xml uses is untouched.
+
+  access_key/secret_key are placeholders here on purpose, for the same reason as vm-minio-sigv4.xml:
+  those two attributes are NOT environment-expanded (see tests/RestAgent/README.md, "AWS SigV4"), so a
+  committed real key would sit in the repository in the clear. make-local-fixtures.ps1 copies this file
+  into the git-ignored local/ directory unchanged; replace the two placeholders there with the access
+  key and secret setup_seaweedfs.sh printed when it created the orcupload identity.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            authscheme="AWSv4" access_key="REPLACE_WITH_YOUR_ACCESS_KEY" secret_key="REPLACE_WITH_YOUR_SECRET_KEY"
+            aws_region="us-east-1"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+        <rest http_method="PUT" path="/orc-signed/orc-upload/{upload.filename}" body="{upload.local_path}"/>
+    </upload>
+</dfir-orc>

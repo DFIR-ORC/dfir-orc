@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VM live test: retries against ONE destination, and what happens when they run out.
+
+     A single <upload> entry pointing at a dead port on the ORC host, with retry="2" retry_delay="1":
+     three attempts in all, one second apart, all of them failing with a connection error, and then the
+     run ends with nothing uploaded.
+
+     This is deliberately not a fallback test. The sink must receive nothing, which a build with no
+     retry at all also produces, so an empty sink proves nothing on its own: the verdict is the
+     ExpectLog naming the LAST retry. An implementation that made a single attempt, or that numbered
+     the attempts per entry rather than within the entry, never logs that line.
+
+     vm-retry-then-fallback.xml covers the other half: that the retries are exhausted BEFORE the next
+     entry is tried, and that the fallback still delivers afterwards. -->
+<dfir-orc>
+    <upload method="REST" server="http://127.0.0.1:9" operation="copy" insecure="true"
+            retry="2" retry_delay="1">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"/>
+    </upload>
+</dfir-orc>

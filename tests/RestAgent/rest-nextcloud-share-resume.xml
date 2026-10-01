@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CHUNKED upload into a Nextcloud public share that RESUMES from what the server already holds.
+
+  THIS CONFIG IS REFUSED BY A DEFAULT BUILD. It needs one <response dav_property> capture, and that
+  source is compiled out: a default build answers
+
+      <response dav_property> is disabled in this build (rebuild with ORC_REST_ENABLE_DAV_PROPERTY=1)
+
+  at embed time. Rebuild with -DORC_REST_ENABLE_DAV_PROPERTY=1 to use it. The reason it is gated is
+  that the capture parses an attacker-controlled PROPFIND 207 body; the parser is bounded the same way
+  the HTML scans are, but it is off unless a deployment asks for it.
+
+  VERIFIED with that flag on, against Nextcloud 35, as a real interrupted-then-resumed transfer: one
+  DFIR-ORC run uploaded 1 MiB of a 3 MiB file in four 256 KiB chunks and stopped without assembling,
+  then a second run with this configuration finished it.
+
+    run 1, partial      MKCOL 201, four chunk PUTs at 0/262144/524288/786432, no MOVE
+                        the collection's .file then reports getcontentlength 1048576
+    run 2, resume       MKCOL 405 (already there, accepted), PROPFIND 207, capture reads 1048576,
+                        the FIRST chunk sent is /1048576 - the megabyte already on the server is not
+                        sent again - then eight more chunks, MOVE 201
+    result              the assembled file is byte-identical to the 3 MiB source, checked by sha256
+                        both through DAV and against the file on the server's own disk
+
+  A first run against an empty share also works: PROPFIND answers 404, the capture falls back to
+  default="0", and the upload starts from the beginning.
+
+  Everything below the PROPFIND step is rest-nextcloud-share-chunked.xml unchanged. Replace
+  SHARE-HOST, SHARETOKEN (five times) and SHARE-PASSWORD.
+
+  HOW THE RESUME WORKS, and why it is the only shape that can work here:
+
+  Nextcloud's upload collection exposes a virtual '.file' entry whose length is the SUM of the chunks
+  already uploaded into it. On the wire, with two 1000 byte chunks present:
+
+      PROPFIND /public.php/dav/uploads/<token>/<id>/.file   Depth: 0
+      -> 207, <d:getcontentlength>2000</d:getcontentlength>
+
+  and 0 for a collection that exists but is empty. That number is exactly the byte offset the next
+  chunk must start at, so it feeds 'offset=' directly. HEAD is not an alternative: Nextcloud answers
+  405 on '.file', so the length is reachable only through PROPFIND.
+
+  A plain single-PUT resume is NOT possible against Nextcloud at all, and the way it fails is worth
+  knowing because the safer-looking variant is the broken one. On a 5000 byte file already there:
+
+    PUT of the tail alone, no Content-Range    204, and the remote file becomes 4 bytes
+    PUT of the tail WITH Content-Range         400 BadRequest, the file untouched
+    PATCH + X-Update-Range (sabre partial)     501 on BOTH endpoints - Nextcloud loads no such plugin
+
+  So there is no partial write to continue into, and offset= on a files/ PUT silently truncates.
+  Resuming means re-entering the chunk protocol, which is what this does.
+
+  This fixture's own chunk PUTs carry NO Content-Range on purpose: the offset is in the URL, and Sabre
+  answers 400 to a PUT that brings that header. See rest-nextcloud-share-chunked.xml.
+
+  THE UPLOAD ID MUST BE STABLE ACROSS RUNS, and DIFFERENT PER FILE. Both halves matter, and the id
+  below - orc-resume-{upload.filename} - is what satisfies them:
+
+    - stable, because a resume has to find what the interrupted run left. {upload.random:hex:16},
+      which the non-resuming chunked fixture uses, generates a fresh id per run, so a resume would
+      always start from 0: correct, but never actually resuming.
+    - per file, because a collection is several files (the archive, the log, the outcome). A literal
+      id would put every one of them in ONE upload collection, where their chunks overwrite each other
+      at the same offsets and the assembled result is garbage. {upload.filename} is available here
+      because these are per-file steps, not session="once" ones.
+
+  What remains, and is worth knowing:
+
+    - two DFIR-ORC runs uploading files of the same NAME into the same share at the same time still
+      collide. Give each host its own share, or put something host-specific in the id.
+    - the collection is never cleaned up on failure. A stale one keeps its chunks and the next run
+      continues into it, which is the point, but an abandoned one holds server-side space until the
+      share owner clears it or Nextcloud's own cleanup job does (it expires unfinished uploads).
+
+  accept_status="404,405" on the MKCOL is what makes a re-run work: 405 means the collection is
+  already there from the run being resumed, and 404 covers an instance that answers that way instead.
+  accept_status="404" on the PROPFIND covers the first run, where '.file' does not exist yet - the
+  capture's default="0" then starts the upload from the beginning.
+-->
+<dfir-orc>
+    <upload method="REST" server="https://SHARE-HOST"
+            user="SHARETOKEN" password="SHARE-PASSWORD" authscheme="Basic"
+            https_security="tls1.3, tls1.2" operation="copy">
+
+        <rest http_method="MKCOL" path="/public.php/dav/uploads/SHARETOKEN/orc-resume-{upload.filename}"
+              accept_status="404,405">
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+        <rest http_method="PROPFIND" path="/public.php/dav/uploads/SHARETOKEN/orc-resume-{upload.filename}/.file"
+              accept_status="404">
+            <header>Depth: 0</header>
+            <header>X-Requested-With: XMLHttpRequest</header>
+            <response dav_property="getcontentlength" name="have" default="0"/>
+        </rest>
+
+        <rest http_method="PUT"
+              path="/public.php/dav/uploads/SHARETOKEN/orc-resume-{upload.filename}/{upload.range_start}"
+              body="{upload.local_path}" offset="{have}" chunk_size="10485760">
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+        <rest http_method="MOVE" path="/public.php/dav/uploads/SHARETOKEN/orc-resume-{upload.filename}/.file">
+            <header>Destination: /public.php/dav/files/SHARETOKEN/{upload.filename}</header>
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+    </upload>
+</dfir-orc>

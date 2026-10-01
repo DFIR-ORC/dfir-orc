@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REST resumable upload: a HEAD probe reads how many bytes the server already has (404 => none),
+  captured into {remote_size}; the body PUT begins at that offset (offset="{remote_size}", clamped
+  to the file size) so only the missing tail is sent. For servers that don't return a size on HEAD,
+  swap the probe to PROPFIND with <response dav_property="getcontentlength" .../>.
+  See README.md for the matching test-server command and the port caveat.
+-->
+<dfir-orc>
+    <upload method="REST" server="http://127.0.0.1:8089"
+            operation="move" insecure="true">
+        <rest http_method="HEAD" path="/up/{upload.filename}" accept_status="404">
+            <response header="content-length" name="remote_size" default="0"/>
+        </rest>
+        <rest http_method="PUT" path="/up/{upload.filename}"
+              body="{upload.local_path}" offset="{remote_size}"
+              http_query="?start={upload.range_start}&amp;total={upload.total_size}" chunk_size="1048576"/>
+    </upload>
+</dfir-orc>

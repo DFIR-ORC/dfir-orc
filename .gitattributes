@@ -4,6 +4,10 @@
 * text=auto
 *.patch text eol=lf
 
+# Shell scripts keep LF even in a Windows working copy: some are deployed to a Linux host
+# (tests/RestAgent/vm/*.sh), where a CRLF shebang line fails as a confusing "not found".
+*.sh text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

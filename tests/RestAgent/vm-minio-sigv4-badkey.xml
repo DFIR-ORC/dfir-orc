@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live test: a signed S3 upload with a WRONG credential must be refused, named as a signature
+  error, not silently accepted or refused for some other reason (a bad pin, a network failure, ...).
+
+  This was meant to be "correct access_key/secret_key, deliberately wrong aws_region", so the same
+  fixture would also prove the region is actually part of what gets signed. Measured against this
+  bench and it does not hold: MinIO and RustFS both derive the signature they expect from whatever
+  region string the CLIENT's own Authorization header names, rather than checking it against a region
+  they enforce themselves - so a request signed consistently with any region, right or wrong, verifies
+  correctly. Confirmed on throwaway MinIO and RustFS instances with MINIO_REGION/RUSTFS_REGION pinned
+  to "us-east-1" and the request signed for "eu-west-9": still a 200. Real single-region AWS behaves
+  the same way for this reason; multi-region AWS is the case that actually rejects a mismatched
+  region, which this bench cannot reproduce. So this fixture is wrong on purpose in secret_key instead,
+  which both servers do check: same server, same bucket, same access_key as vm-minio-sigv4.xml, wrong
+  secret_key. It exercises the identical AwsV4Authenticator refusal path a bad region would have.
+
+  access_key is a placeholder for the same reason as vm-minio-sigv4.xml: it is NOT environment-expanded,
+  so the real value goes only in the git-ignored local/ copy (make-local-fixtures.ps1), never here. Fill
+  it in there with the SAME access key as vm-minio-sigv4.xml's local copy - only secret_key must stay
+  wrong, and it needs no substitution: any value that is not the real secret proves the point.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            authscheme="AWSv4" access_key="REPLACE_WITH_YOUR_ACCESS_KEY" secret_key="this-is-not-the-provisioned-secret"
+            aws_region="us-east-1"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+        <rest http_method="PUT" path="/orc-signed/orc-upload/{upload.filename}" body="{upload.local_path}"/>
+    </upload>
+</dfir-orc>

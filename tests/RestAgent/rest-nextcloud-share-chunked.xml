@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CHUNKED upload into a password-protected Nextcloud public share, for a big collection.
+
+  TWO THINGS TO REPLACE:
+
+    SHARETOKEN        what follows /s/ in the share URL. Appears FOUR times, and must be written
+                      literally: a <rest> step's 'path' is NOT environment-expanded.
+    SHARE-PASSWORD    the share password.
+
+  THE AUTHENTICATION IS NOT THE LOGIN DIALOG of rest-nextcloud-form.xml, and it cannot be.
+  On a public share the share TOKEN is the Basic username and the share PASSWORD is the Basic
+  password, so one preemptive Basic credential covers every request. That matters because
+  /public.php/dav/uploads/ - the collection chunked upload needs - answers 401 to a session cookie
+  no matter which headers accompany it, and 201 to the same request under Basic. Measured on the
+  wire, not assumed.
+
+  SO IF YOUR DEPLOYMENT DROPS THE Authorization HEADER, THIS CONFIG CANNOT WORK, and neither can any
+  other chunked upload into that share. The symptom is a 401 whose body carries an empty
+  <s:message/> and whose response has no WWW-Authenticate header: that is Nextcloud saying no
+  credential arrived, not that the credential was wrong. Check CGIPassAuth On (Apache) or
+  fastcgi_pass_header Authorization (nginx with PHP-FPM) with whoever owns the front end. Fixing it
+  also removes the need for the login dialog altogether, so it is worth asking.
+
+  Nextcloud chunked upload v2, three steps:
+
+    1. MKCOL an upload collection named by a random id. {upload.random:hex:16} resolves to the same
+       value in all three steps of one file, and to a fresh one per file.
+    2. PUT each chunk under a name that IS its byte offset. Nextcloud sorts them numerically, not
+       lexicographically, so 1024 follows 512 rather than sorting between 1 and 2.
+    3. MOVE the collection's virtual '.file' onto the destination. That is what assembles it.
+
+  chunk_size is 10 MiB here. Nextcloud's own clients use 10 MiB; the practical ceiling is whatever
+  the front end allows for one request body (php.ini upload_max_filesize / post_max_size, and any
+  proxy limit), which is precisely the limit chunking exists to stay under.
+
+  X-Requested-With is sent on every step because public DAV refuses any non-GET without it unless the
+  instance enables outgoing server-to-server sharing. Harmless where it is not required.
+
+  DELIBERATELY NO Content-Range HEADER, unlike every other chunked fixture here. In the generic-HTTP
+  ones (rest-http-chunked.xml and the proxy fixtures) the chunks all share ONE path and Content-Range is
+  the only thing telling the sink where each one goes. Here the URL carries the offset instead, each
+  chunk is a whole resource of its own, and Sabre refuses any PUT that arrives with a Content-Range:
+
+      PUT /public.php/dav/uploads/<token>/<id>/300   (no Content-Range)      -> 201
+      PUT /public.php/dav/uploads/<token>/<id>/300   + Content-Range         -> 400 BadRequest
+
+  So adding the header here does not harden anything, it breaks every chunk. Measured, not assumed.
+
+  Certificate pinning is not set. Add server_cert_pin="<base64 of the certificate>" to <upload>; do
+  not use insecure="true", the Basic credential is the share password.
+-->
+<dfir-orc>
+    <upload method="REST" server="https://SHARE-HOST"
+            user="SHARETOKEN" password="SHARE-PASSWORD" authscheme="Basic"
+            https_security="tls1.3, tls1.2" operation="copy">
+
+        <rest http_method="MKCOL" path="/public.php/dav/uploads/SHARETOKEN/{upload.random:hex:16}">
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+        <rest http_method="PUT"
+              path="/public.php/dav/uploads/SHARETOKEN/{upload.random:hex:16}/{upload.range_start}"
+              body="{upload.local_path}" chunk_size="10485760">
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+        <rest http_method="MOVE" path="/public.php/dav/uploads/SHARETOKEN/{upload.random:hex:16}/.file">
+            <header>Destination: /public.php/dav/files/SHARETOKEN/{upload.filename}</header>
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+    </upload>
+</dfir-orc>

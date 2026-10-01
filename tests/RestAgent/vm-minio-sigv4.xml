@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live test: authenticated upload to a MinIO (S3) bucket, whole object in one PUT, using AWS SigV4.
+
+  The companion of vm-minio.xml, which uploads anonymously because the engine had no way to produce a
+  per-request HMAC. That gap is closed: the engine now signs every request with AWS SigV4 (Crypto/HmacSha256,
+  Network/Http/AwsV4, AwsV4Authenticator). The dialog below is byte for byte the dialog of vm-minio.xml -
+  signing changes who the request is from, never what it says - pointed at a SEPARATE bucket
+  (orc-signed, not orc) that grants nothing to anonymous callers: setup_minio.sh creates a service
+  account scoped to s3:PutObject on orc-signed/orc-upload/ only, and nothing else. The orc bucket and
+  its anonymous policy are untouched, so vm-minio.xml keeps proving the anonymous dialog independently.
+
+  access_key/secret_key are placeholders here on purpose: those two attributes are NOT
+  environment-expanded (see tests/RestAgent/README.md, "AWS SigV4"), so a committed real key would sit
+  in the repository in the clear. make-local-fixtures.ps1 copies this file into the git-ignored local/
+  directory unchanged; replace the two placeholders there with the access key and secret setup_minio.sh
+  printed when it created the orcupload service account. Never fill them in here.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            authscheme="AWSv4" access_key="REPLACE_WITH_YOUR_ACCESS_KEY" secret_key="REPLACE_WITH_YOUR_SECRET_KEY"
+            aws_region="us-east-1"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+        <rest http_method="PUT" path="/orc-signed/orc-upload/{upload.filename}" body="{upload.local_path}"/>
+    </upload>
+</dfir-orc>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Big-file scenario: the same payload that one request cannot carry, sent as 1 GiB chunks.
+     Each chunk is one request under the 4 GB WinHTTP body limit, and Content-Range is what tells
+     the sink where to place it - the documented way past the per-request cap. -->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            operation="copy" insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}" chunk_size="1073741824">
+            <header>Content-Range: bytes {upload.range_start}-{upload.range_end}/{upload.total_size}</header>
+        </rest>
+    </upload>
+</dfir-orc>

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live test: upload into a PASSWORD-PROTECTED PUBLIC SHARE on a real Nextcloud, through the
+  four-request dialog its web client uses. This is the scenario the attribute capture exists for, and
+  unlike vm-form-login.xml (which runs against a mock) it runs against Nextcloud itself.
+
+  The dialog, and why each step is there:
+
+    1. GET the authenticate page. Sets the session cookies and serves the CSRF token as
+       data-requesttoken. Straight at /authenticate/showshare rather than at /s/TOKEN, which answers a
+       303 towards it that would then have to be followed for no gain.
+    2. POST the password. Refused with 412 without the token, so {rt1} is not optional. sharingToken
+       and sharingType are what the web client sends; Nextcloud ignores them, and a filtered deployment was seen to send them.
+       Answers 303 towards the share.
+    3. GET the share page, now authenticated. The login regenerates the session id, so the token from
+       step 1 is stale by here and the WebDAV write needs the one this page serves.
+    4. PUT the file under the public DAV root, on the session cookie. The requesttoken header is what a
+       filtered deployment was observed to require; stock accepts the PUT without it, so sending it proves
+       only that it is harmless here - it is in the fixture because a filtered deployment needs it.
+
+  /index.php is in the share paths because this bench does not serve pretty URLs. Nextcloud's own
+  Location header says which form an instance uses, and a POST to the wrong one is not processed: it
+  re-renders the dialog with 200 and the upload then fails at step 4 with 401. The DAV path never takes
+  the prefix.
+
+  The token and the password are the ones setup_nextcloud.sh provisions. The token is FORCED there
+  rather than left as Nextcloud generated it, because a <rest> 'path' is not environment-expanded (only
+  <upload>'s own server/uri/proxy attributes are), so it has to be written literally here.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+
+        <rest http_method="GET" path="/index.php/s/orcvmshare00000/authenticate/showshare" session="once">
+            <response attribute="data-requesttoken" name="rt1"/>
+        </rest>
+
+        <rest http_method="POST" path="/index.php/s/orcvmshare00000/authenticate/showshare"
+              session="once" accept_status="302,303">
+            <header>requesttoken: {rt1}</header>
+            <form field="password"     value="orc-share-not-a-secret"/>
+            <form field="sharingToken" value="orcvmshare00000"/>
+            <form field="sharingType"  value="3"/>
+        </rest>
+
+        <rest http_method="GET" path="/index.php/s/orcvmshare00000" session="once">
+            <response attribute="data-requesttoken" name="rt2"/>
+        </rest>
+
+        <rest http_method="PUT"
+              path="/public.php/dav/files/orcvmshare00000/{upload.filename}"
+              body="{upload.local_path}">
+            <header>requesttoken: {rt2}</header>
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+    </upload>
+</dfir-orc>

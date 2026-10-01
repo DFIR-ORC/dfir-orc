@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live test: upload to a Nextcloud instance with its chunked upload (v2), the shape a real
+  deployment needs for an archive larger than what one request may carry.
+
+  The dialog: MKCOL the destination collection (405 once it exists), MKCOL a private upload
+  directory under /remote.php/dav/uploads/<account>/, PUT the body there one chunk per request,
+  then MOVE the assembled ".file" onto the destination. Nextcloud assembles the chunks itself and
+  the destination file appears only on the MOVE, so a partial upload never leaves a truncated file.
+
+  Two properties this relies on, both verified live against Nextcloud 35:
+
+  - The chunk name is the chunk's BYTE OFFSET ({upload.range_start}), which is what this engine can
+    put in a path. Nextcloud sorts chunk names NUMERICALLY, so offsets past the tenth chunk still
+    assemble in order (a lexicographic sort would put "10485760" before "2097152" and corrupt the
+    file). Uploads of 12 x 1 MiB reassembled byte-exact.
+  - MOVE accepts a path-only Destination. An absolute one would have to name the host, which these
+    fixtures deliberately take from %ORC_UPLOAD_SERVER% and never hardcode.
+
+  {upload.random:hex:16} is generated once per uploaded file and is stable across every step and
+  chunk, so all four steps address the same upload directory; the next file gets a fresh one.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            user="orc" password="orc-test-not-a-secret" authscheme="Basic"
+            https_security="tls1.3, tls1.2" operation="copy"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+        <rest http_method="MKCOL" path="/remote.php/dav/files/orc/orc-upload/" accept_status="405"/>
+        <rest http_method="MKCOL" path="/remote.php/dav/uploads/orc/{upload.random:hex:16}"/>
+        <rest http_method="PUT" path="/remote.php/dav/uploads/orc/{upload.random:hex:16}/{upload.range_start}"
+              body="{upload.local_path}" chunk_size="10485760"/>
+        <rest http_method="MOVE" path="/remote.php/dav/uploads/orc/{upload.random:hex:16}/.file">
+            <header>Destination: /remote.php/dav/files/orc/orc-upload/{upload.filename}</header>
+        </rest>
+    </upload>
+</dfir-orc>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live test: CHUNKED upload into a password-protected public share, with Nextcloud's chunked
+  upload v2 under the share's own Basic credential.
+
+  The authentication is NOT the four-step login of vm-nextcloud-form.xml, and that is the point of
+  having both. On a public share the share TOKEN is the Basic username and the share PASSWORD is the
+  Basic password, so one preemptive Basic credential authenticates every request. Verified on the
+  wire: the same credential is accepted on /public.php/dav/files/<token>/ and on
+  /public.php/dav/webdav.
+
+  Chunked upload is only reachable this way. The /public.php/dav/uploads/ collection answers 401 to a
+  session cookie however many headers accompany it, while the same request under Basic answers 201.
+  So a deployment that strips the Authorization header before PHP sees it (which is what the filtering proxy
+  this feature was written for appears to do) can do the single-PUT login dialog and cannot chunk.
+
+  X-Requested-With is sent on every step because public DAV refuses any non-GET without it unless the
+  instance has outgoing server-to-server sharing enabled (publicremote.php). Stock leaves that on, so
+  this bench would accept the requests without the header; a hardened instance will not.
+
+  chunk_size is deliberately small enough that the rig's roughly 900 byte archive really splits, so a
+  byte-exact result proves Nextcloud assembled the chunks in the right order rather than proving that
+  one chunk arrived intact. The chunk names ARE their byte offsets, and Nextcloud sorts them
+  numerically.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            user="orcvmshare00000" password="orc-share-not-a-secret" authscheme="Basic"
+            https_security="tls1.3, tls1.2" operation="copy"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+
+        <rest http_method="MKCOL" path="/public.php/dav/uploads/orcvmshare00000/{upload.random:hex:16}">
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+        <rest http_method="PUT"
+              path="/public.php/dav/uploads/orcvmshare00000/{upload.random:hex:16}/{upload.range_start}"
+              body="{upload.local_path}" chunk_size="256">
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+        <rest http_method="MOVE" path="/public.php/dav/uploads/orcvmshare00000/{upload.random:hex:16}/.file">
+            <header>Destination: /public.php/dav/files/orcvmshare00000/{upload.filename}</header>
+            <header>X-Requested-With: XMLHttpRequest</header>
+        </rest>
+
+    </upload>
+</dfir-orc>

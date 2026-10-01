@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Minimal WolfLauncher main configuration, for driving the vm-*.xml scenarios with a RAW
+     per-arch build (build tree DFIR-ORC_<arch>.exe) instead of a packaged capsule.
+
+     Production embeds this as res:#WOLFLAUNCHER_CONFIG via ToolEmbed; a build-tree binary has no
+     such resource, so run-vmtest.ps1 passes a file with /config= when MainConfig is set in
+     vmtest.local.psd1. The <upload> stays in the local config (/local=vm-*.xml), exactly as in a
+     real deployment - which is what keeps the scenarios meaningful.
+
+     It runs one cheap, unprivileged command so that every scenario produces a small archive whose
+     only job is to be uploaded and hashed. Nothing here is bench-specific. -->
+<wolf childdebug="no">
+    <archive name="SystemInfo.7z" keyword="SystemInfo" concurrency="1" repeat="Overwrite" compression="fast">
+        <command keyword="SystemInfo">
+            <execute name="DFIR-Orc.exe" run="self:#"/>
+            <argument>SystemInfo</argument>
+            <output name="SystemInfo.txt" source="StdOutErr"/>
+        </command>
+    </archive>
+</wolf>

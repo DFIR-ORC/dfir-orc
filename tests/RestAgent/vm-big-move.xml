@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Big-file scenario: plain-HTTP whole-file PUT with operation="move".
+     "move" is the point: a run that believes it uploaded deletes its local archive, so for the
+     payload that cannot fit one request (above the 4 GB cap), the archive still being on disk is
+     the assertion - the refusal must not be mistaken for a delivery. -->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            operation="move" insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"
+              http_query="?start={upload.range_start}&amp;total={upload.total_size}"/>
+    </upload>
+</dfir-orc>

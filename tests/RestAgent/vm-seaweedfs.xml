@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  VM live test: upload to a SeaweedFS (S3) bucket, whole object in one PUT.
+
+  Byte for byte the dialog of vm-minio.xml and vm-rustfs.xml, pointed at a THIRD S3 implementation, and
+  anonymous for the same reason they are: this fixture proves the UNAUTHENTICATED dialog on its own, so
+  that vm-seaweedfs-sigv4.xml's verdict is about the signature and nothing else. setup_seaweedfs.sh
+  grants the anonymous identity writes under orc-upload/ of the orc bucket and nothing else - no read,
+  no list. Anyone holding this file can write there, which is why the bucket is versioned, so an
+  overwrite adds a version instead of destroying a collection, and why a real deployment of this shape
+  must seal its output (CMS encryption) rather than trust the bucket.
+
+  The limits vm-minio.xml sets out apply here identically, because they are properties of S3 and of what
+  a <rest> step can express, not of any one server:
+
+  - NO CHUNKING. S3 splits a large object with multipart upload, which needs the UploadId out of a
+    POST ?uploads XML response BODY - this engine captures response headers only - and a final request
+    whose body is XML built from every part's ETag. So there is no seaweedfs-chunked companion to this
+    fixture, and an object is capped at S3's 5 GiB single-PUT limit.
+  - NO RESUME. A PUT replaces an object rather than appending, so the HEAD -> offset pattern of
+    rest-resume.xml would upload the tail as the whole new object.
+
+  SeaweedFS serves the sink's own server.crt on 8454, so the committed pin applies unchanged and nothing
+  here needs insecure="true": the transport is verified even though the destination is anonymous.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o=">
+        <rest http_method="PUT" path="/orc/orc-upload/{upload.filename}" body="{upload.local_path}"/>
+    </upload>
+</dfir-orc>

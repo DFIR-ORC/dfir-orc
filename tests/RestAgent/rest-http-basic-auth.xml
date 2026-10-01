@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REST upload over plain HTTP with HTTP Basic auth, supplied via the 'user'/'password'
+  attributes. With authscheme="Basic" the agent builds a preemptive
+  "Authorization: Basic base64(user:password)" header itself (sent on every request, no 401
+  round-trip) - no need to hand-encode a header, and the credential never goes through a
+  loggable <header> template. (A bearer/token credential still goes in an explicit
+  <header>Authorization: ...</header> on the body step.)
+  REST does ONLY standard header-based HTTP auth: NTLM/Kerberos/Negotiate are refused
+  (fail-closed), and authscheme="Basic" without a 'user' is refused.
+  A Basic credential over plain HTTP is exposed to a MITM: prefer a scoped, revocable,
+  upload-only credential. insecure="true" required for the plain-HTTP transport.
+  See README.md for the matching test-server command and the port caveat.
+-->
+<dfir-orc>
+    <upload method="REST" server="http://127.0.0.1:8089"
+            operation="move" insecure="true"
+            authscheme="Basic" user="orc" password="secret">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}"
+              http_query="?start={upload.range_start}&amp;total={upload.total_size}"/>
+    </upload>
+</dfir-orc>

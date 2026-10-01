@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  REST upload over HTTPS via an authenticating forward HTTP proxy (Basic proxy auth).
+  The agent sends CONNECT 127.0.0.1:8443 with a Proxy-Authorization: Basic header;
+  the proxy accepts it and opens the TCP tunnel. TLS stays end-to-end (the proxy
+  never sees plaintext). The server certificate is validated by SPKI pinning.
+
+  Sinks (two terminals): run the HTTPS upload server on port 8443, and the forward proxy
+  on port 8080 with Basic proxy auth (orcproxy:s3cret). See README.md ("Proxy" section)
+  for the exact rest_test_server.py commands.
+
+  To verify fail-closed behaviour, run rest-proxy.xml (no proxy creds) against this
+  authenticating proxy: the agent should abort with a 407 error and no upload occurs.
+
+  After a successful run, compare received\up\(name) against the source archive.
+-->
+<dfir-orc>
+    <upload method="REST" server="https://<not-localhost-to-force-proxy>:8443"
+            https_security="tls1.3, tls1.2" operation="move"
+            insecure="true"
+            server_cert_pin="MIIDJTCCAg2gAwIBAgIUdYq0185rJL/bnLJmK0yl38xHtFswDQYJKoZIhvcNAQELBQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTI2MDYxMjE1MTEwNFoXDTI3MDYxMjE1MTEwNFowFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtC/JJQ9K1d1WcZIpkbQBLknmsrHSvxiJcUgyVaB3o2w4M+IkQH5qW0aTHI8nYn+dEiT+SgSWh2ARqq7xE+oSN8NDitf6j2xwRZrWdb8rgPLwZHdPpI+q0a06vhX9i9cRoT0MnyVgvabzZgzHUnBxB1Oig5K6iasWjpvSzz/V4YeRZz56CIkOtEXsFJqExiAzCjh+Jo25ysC4km53QZ6X/rbACArcoZ0cKPtH1BLNGvQPhoSipvc862yKwp+Je6hIplt2FzCPDzHhWF+97ovnuiJWWkeWx1s4Zop6x72P0IGSrOznxPwy0ZXhxB2TrNDvwMu2uoTgzubTsKHxQijEswIDAQABo28wbTAdBgNVHQ4EFgQU6PfU4GSU3NXLux8q0DIpdC42eYkwHwYDVR0jBBgwFoAU6PfU4GSU3NXLux8q0DIpdC42eYkwDwYDVR0TAQH/BAUwAwEB/zAaBgNVHREEEzARgglsb2NhbGhvc3SHBH8AAAEwDQYJKoZIhvcNAQELBQADggEBAHm5XylKgjh/x2SL+iNTZBeiWUZgUiJ9ZB+K+n24OML4eqldD4VModEQGuKfCvo9wqK2QZE0f6+JPRObgF8WXVIZr3YRB2QBXb18Qab6vV3pQxZzzVRCxBXCxRkv02goLFfuw6INPj2GWWNktoMmfTwD42oUePIsz1BMAcZTrFu9BQIS1efvFT76Em+7KjWAfboYpVZfKkdHzB9bVc/KHVkvAylUFE+C3SjCRJBQuHtoX+hM3RvDraEkEQwMtPGsQaAGfGqhpPgf18+g/ZBnC+uuyHVRbl1dKEGG+kha65J4tr1MSIBxrGJ3FWPMRdYA5S0dFQhQPLN8czf8TGddC0o="
+            proxy="127.0.0.1:8080"
+            proxy_user="orcproxy" proxy_password="s3cret" proxy_authscheme="Basic">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}" chunk_size="1048576">
+            <header>Content-Range: bytes {upload.range_start}-{upload.range_end}/{upload.total_size}</header>
+        </rest>
+    </upload>
+</dfir-orc>

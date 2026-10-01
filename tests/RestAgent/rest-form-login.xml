@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Form login against a password-protected public share, the dialog a Nextcloud FORK serves.
+
+  Three steps. The GET collects the session cookie and reads the three hidden inputs the page
+  carries; the POST sends them back with the share password as an urlencoded form; the PUT then
+  uploads under the cookie, with no HTTP credential of its own.
+
+  Cookies need no configuration: every step runs on one WinHTTP session handle, whose automatic
+  cookie jar replays Set-Cookie from the GET onto the POST and the PUT.
+
+  session="once" marks the two login steps as session establishment rather than per-file work, so
+  they run once for the whole run and not once per uploaded file.
+
+  STOCK NEXTCLOUD DOES NOT SERVE THIS DIALOG. Nextcloud 35 puts requesttoken on a
+  <head data-requesttoken> attribute and sharingToken in an initial-state JSON blob, and posts to
+  /s/<token>/authenticate/<redirect>. This fixture targets a page that renders a real form with hidden
+  inputs. It is verified by hand against the real instance, not by the VM rig.
+
+  THE TOKEN IS A LITERAL PLACEHOLDER, not a variable: a <rest> step's 'path' is NOT environment-
+  expanded (only <upload>'s own server / uri / proxy / proxy_bypass are), so a %VAR% there reaches the
+  wire unexpanded. Replace SHARETOKEN in all three paths.
+
+  NO NEXTCLOUD serves hidden inputs here, stock or otherwise: they script-render the
+  dialog and carry the CSRF token on a <head data-requesttoken> attribute. This fixture is kept for a
+  server that does render a real form; for Nextcloud use rest-nextcloud-form.xml.
+
+  The share password sits here in clear, as every embedded credential does. Use a scoped, revocable
+  share, never a reusable secret.
+-->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%" operation="copy"
+            https_security="tls1.3, tls1.2">
+
+        <rest http_method="GET" path="/s/SHARETOKEN" session="once">
+            <response form_input="requesttoken" name="rt"/>
+            <response form_input="sharingToken" name="st"/>
+            <response form_input="sharingType"  name="sy"/>
+        </rest>
+
+        <rest http_method="POST" path="/s/SHARETOKEN" session="once" accept_status="302,303">
+            <form field="password"     value="share-test-not-a-secret"/>
+            <form field="requestToken" value="{rt}"/>
+            <form field="sharingToken" value="{st}"/>
+            <form field="sharingType"  value="{sy}"/>
+        </rest>
+
+        <rest http_method="PUT"
+              path="/public.php/dav/files/SHARETOKEN/{upload.filename}"
+              body="{upload.local_path}"/>
+
+    </upload>
+</dfir-orc>

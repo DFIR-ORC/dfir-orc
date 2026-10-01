@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VM live test: HTTPS via REAL squid proxy (192.168.254.23:3128), proxy_authscheme=NTLM. -->
+<dfir-orc>
+    <upload method="REST" server="%ORC_UPLOAD_SERVER%"
+            https_security="tls1.3, tls1.2" operation="copy"
+            proxy="%ORC_UPLOAD_PROXY%" proxy_authscheme="NTLM" proxy_user="orc" proxy_password="secret"
+            insecure="true">
+        <rest http_method="PUT" path="/up/{upload.filename}" body="{upload.local_path}" chunk_size="1048576">
+            <header>Content-Range: bytes {upload.range_start}-{upload.range_end}/{upload.total_size}</header>
+        </rest>
+    </upload>
+</dfir-orc>
