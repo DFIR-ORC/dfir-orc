@@ -262,6 +262,7 @@ void UploadAgent::run()
 
 #include "CopyFileAgent.h"
 #include "BITSAgent.h"
+#include "RESTAgent.h"
 
 std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
     const OutputSpec::Upload& uploadSpec,
@@ -271,6 +272,19 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
 {
     HRESULT hr = E_FAIL;
     std::shared_ptr<UploadAgent> retval;
+
+    // Config validation gate (same check ToolEmbed runs). REST refuses an unworkable or unauthorized
+    // insecure config; other methods (BITS) only warn, so their behavior is unchanged.
+    const auto validation = uploadSpec.Validate();
+    if (validation.verdict == OutputSpec::Upload::Verdict::Refuse)
+    {
+        Log::Error(L"Upload refused: {}", validation.message);
+        return nullptr;
+    }
+    if (validation.verdict == OutputSpec::Upload::Verdict::Warn)
+    {
+        Log::Warn(L"Upload warning: {}", validation.message);
+    }
 
     switch (uploadSpec.Method)
     {
@@ -315,13 +329,24 @@ std::shared_ptr<UploadAgent> UploadAgent::CreateUploadAgent(
             }
         }
         break;
+        case OutputSpec::UploadMethod::REST: {
+            retval = std::make_shared<RESTAgent>(msgSource, msgTarget, target);
+            if (!retval)
+                return nullptr;
+            if (FAILED(hr = retval->SetConfiguration(uploadSpec)))
+            {
+                Log::Error(L"Failed to configure RESTAgent [{}]", SystemError(hr));
+                return nullptr;
+            }
+        }
+        break;
         default:
             return nullptr;
     }
 
     if (FAILED(hr = retval->Initialize()))
     {
-        Log::Error(L"Failed to initialize CopyFileAgent [{}]", SystemError(hr));
+        Log::Error(L"Failed to initialize the {} upload agent [{}]", uploadSpec.Method, SystemError(hr));
         return nullptr;
     }
     return retval;

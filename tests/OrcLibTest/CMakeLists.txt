@@ -60,6 +60,7 @@ set(SRC_UTILITIES
     "profile_list.cpp"
     "registry.cpp"
     "temporary.cpp"
+    "upload_validate_test.cpp"
     "webdav_upload_test.cpp"
     "http_client_test.cpp"
     "rest_form_login_test.cpp"
