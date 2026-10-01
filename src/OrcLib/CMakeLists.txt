@@ -759,6 +759,8 @@ source_group(In&Out\\Upload FILES ${SRC_INOUT_UPLOAD})
 set(SRC_NETWORK_HTTP
     "Network/Http/HttpAuth.cpp"
     "Network/Http/HttpAuth.h"
+    "Network/Http/HttpProxy.cpp"
+    "Network/Http/HttpProxy.h"
 )
 
 source_group(Network\\Http FILES ${SRC_NETWORK_HTTP})
