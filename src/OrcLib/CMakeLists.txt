@@ -755,6 +755,14 @@ set(SRC_INOUT_UPLOAD
 
 source_group(In&Out\\Upload FILES ${SRC_INOUT_UPLOAD})
 
+# Generic HTTP transport (no REST/upload/OutputSpec coupling); reusable by any HTTP consumer.
+set(SRC_NETWORK_HTTP
+    "Network/Http/HttpAuth.cpp"
+    "Network/Http/HttpAuth.h"
+)
+
+source_group(Network\\Http FILES ${SRC_NETWORK_HTTP})
+
 set(SRC_LOG
     "Log/BackTraceSink.h"
     "Log/FileSink.h"
@@ -1019,6 +1027,7 @@ add_library(OrcLib
         ${SRC_TEXT_FMT_FWD}
         ${SRC_TEXT_PRINT}
         ${SRC_INOUT_UPLOAD}
+        ${SRC_NETWORK_HTTP}
         ${SRC_LOG}
         ${SRC_OBJECT}
         ${SRC_REGISTRY}
