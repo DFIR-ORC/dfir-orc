@@ -493,5 +493,50 @@ public:
     }
 };
 
+// RAII for a GlobalAlloc/GlobalFree (HGLOBAL) block, e.g. the strings WinHttpGetProxyForUrl returns.
+// Templated on the element type so the typed pointer (e.g. wchar_t for an LPWSTR) is reachable via get()
+// without a cast. GlobalFree returns the handle (non-null) on failure, NULL on success.
+template <typename T = void>
+class HGlobal final : public PointerGuard<T>
+{
+public:
+    HGlobal(T* data = nullptr)
+        : PointerGuard<T>(data)
+    {
+    }
+
+    HGlobal(HGlobal&& o) noexcept = default;
+
+    HGlobal& operator=(HGlobal&& o) noexcept
+    {
+        if (this == &o)
+        {
+            return *this;
+        }
+
+        if (this->m_data != nullptr && ::GlobalFree(this->m_data) != nullptr)
+        {
+            Log::Warn("Failed GlobalFree [{}]", LastWin32Error());
+        }
+
+        this->m_data = o.m_data;
+        o.m_data = nullptr;
+        return *this;
+    }
+
+    ~HGlobal()
+    {
+        if (this->m_data == nullptr)
+        {
+            return;
+        }
+
+        if (::GlobalFree(this->m_data) != nullptr)
+        {
+            Log::Warn("Failed GlobalFree [{}]", LastWin32Error());
+        }
+    }
+};
+
 }  // namespace Guard
 }  // namespace Orc
