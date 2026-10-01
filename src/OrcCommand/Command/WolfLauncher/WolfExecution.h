@@ -38,6 +38,22 @@ namespace Command::Wolf {
 
 class WolfTask;
 
+// One upload request recorded as its file is produced, so that a fallback <upload> can be handed the
+// same files later (see Main::CompleteUpload). Every produced file is recorded, including one the first
+// <upload> filters out or declines with operation="noop": each destination decides for itself at replay
+// time, and a record gated on the first entry would hide the file from all the others.
+//
+// 'filtered' says whether the <upload> 'include'/'exclude' patterns apply to it. They select which
+// COLLECTED DATA a given destination may hold, so they gate the command archives; the run's own
+// bookkeeping - the log, the console tee, the outline and the outcome - is not collected data and is
+// uploaded whatever the filters say. Without this distinction the two paths disagree: those artifacts
+// are recorded unfiltered for the primary, so a fallback's filters would drop files the primary sent.
+struct PendingUpload
+{
+    UploadMessage::Message request;
+    bool filtered = false;
+};
+
 class WolfExecution
 {
 private:
@@ -52,7 +68,6 @@ private:
             , m_pExec(pExec) {};
         HRESULT operator()()
         {
-
             if (m_pExec != nullptr)
             {
                 return m_pExec->CompleteArchive(nullptr);
@@ -179,8 +194,15 @@ public:
         }
     }
 
-    const std::optional<Threshold<ByteQuantity<uint64_t>>>& PhysicalMemoryRequirement() const { return m_physicalMemoryRequirement; }
-    void SetPhysicalMemoryRequirement(const Threshold<ByteQuantity<uint64_t>>& threshold) { m_physicalMemoryRequirement = threshold; }
+    const std::optional<Threshold<ByteQuantity<uint64_t>>>& PhysicalMemoryRequirement() const
+    {
+        return m_physicalMemoryRequirement;
+    }
+
+    void SetPhysicalMemoryRequirement(const Threshold<ByteQuantity<uint64_t>>& threshold)
+    {
+        m_physicalMemoryRequirement = threshold;
+    }
 
     HRESULT SetOutput(const OutputSpec& output, const OutputSpec& temporary)
     {
@@ -242,7 +264,7 @@ public:
 
     bool ShouldUpload() const
     {
-        if (m_Output.UploadOutput && m_Output.UploadOutput->IsFileUploaded(m_strOutputFileName))
+        if (!m_Output.UploadOutputs.empty() && m_Output.UploadOutputs.front()->IsFileUploaded(m_strOutputFileName))
             return true;
         return false;
     }
@@ -280,6 +302,7 @@ public:
     HRESULT CompleteExecution();
     HRESULT TerminateAllAndComplete();
 
+    HRESULT CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue, std::vector<PendingUpload>& pendingUploads);
     HRESULT CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue);
 
     WolfExecution(Journal& journal, Locker<Wolf::Outcome::Outcome>& outcome)

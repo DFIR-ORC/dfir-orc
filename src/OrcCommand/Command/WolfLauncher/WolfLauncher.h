@@ -187,7 +187,26 @@ private:
     std::shared_ptr<WolfExecution::Recipient> GetRecipient(const std::wstring& strName);
 
     HRESULT InitializeUpload(const OutputSpec::Upload& uploadspec);
-    HRESULT UploadSingleFile(const std::wstring& fileName, const std::wstring& filePath);
+    // What kind of file is being handed to the upload agents, which decides whether the <upload>
+    // 'include'/'exclude' patterns get a say (see PendingUpload).
+    enum class UploadSubject
+    {
+        RunArtifact,  // the run's own bookkeeping: log, console tee, outline, outcome
+        CollectedData,  // an archive of collected artefacts, which the filters select
+    };
+
+    // Records the file for the fallbacks and queues it to the first upload entry. Nothing here can fail: the
+    // outcome of the transfer is only known once CompleteUpload has run the agents.
+    void UploadSingleFile(const std::wstring& fileName, const std::wstring& filePath, UploadSubject subject);
+    // Drop the agent left by the previous attempt and stand up a fresh one for 'spec', replaying every
+    // recorded file it should still receive. A fresh agent is required rather than merely tidy: RESTAgent
+    // latches a rejected authentication and a failed session so it refuses to try them again, and it owns
+    // the WinHTTP handles.
+    HRESULT RestartUploadAgent(
+        const OutputSpec::Upload& spec,
+        size_t entry,
+        bool afterAsyncAttempt,
+        const std::set<std::wstring>& alreadyUploaded);
     HRESULT CompleteUpload();
 
     std::shared_ptr<WolfExecution::Recipient> GetRecipientFromItem(const ConfigItem& item);
@@ -227,6 +246,7 @@ private:
     std::shared_ptr<UploadAgent> m_pUploadAgent;
     std::unique_ptr<UploadMessage::UnboundedMessageBuffer> m_pUploadMessageQueue;
     std::unique_ptr<Concurrency::call<UploadNotification::Notification>> m_pUploadNotification;
+    std::vector<PendingUpload> m_pendingUploads;
     std::vector<std::wstring> m_emptyDirectoriesToRemove;
 
     std::optional<Guard::Handle> m_hInstanceEvent;

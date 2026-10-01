@@ -26,7 +26,7 @@ HRESULT Orc::Config::Wolf::Local::root(ConfigItem& item)
 
     if (FAILED(hr = item.AddChild(L"output", Orc::Config::Common::output, ORC_OUTPUT)))
         return hr;
-    if (FAILED(hr = item.AddChild(L"upload", Orc::Config::Common::upload, ORC_UPLOAD)))
+    if (FAILED(hr = Orc::Config::Wolf::upload(item, ORC_UPLOAD)))
         return hr;
     if (FAILED(hr = item.AddChild(L"download", Orc::Config::Common::download, ORC_DOWNLOAD)))
         return hr;

@@ -10,6 +10,7 @@
 
 #include "WolfLauncher.h"
 
+#include <algorithm>
 #include <filesystem>
 
 #include <boost/logic/tribool.hpp>
@@ -51,6 +52,67 @@ using namespace Concurrency;
 namespace {
 
 constexpr std::wstring_view kInfo = L"Info";
+
+// Rebuild one recorded upload request for the spec it is about to be replayed to.
+//
+// Every file the run produces is recorded when it is produced, whatever the PRIMARY spec
+// (UploadOutputs.front()) makes of it, so a fallback can be handed the same files later. The recorded
+// message carries the primary's decisions though, so replaying it as recorded applies them to somebody
+// else's destination: a file that fallback excludes is sent to it anyway, and a primary
+// operation="move" deletes a local archive the fallback asked to keep with operation="copy".
+//
+// Returns nullptr when this file is not to be sent to this spec at all: filtered out, operation="noop",
+// already delivered to this very entry by an earlier attempt, or no longer on disk.
+//
+// 'alreadyUploaded' holds the local paths a previous attempt at THIS entry confirmed, so a retry does not
+// send them a second time. It is empty when moving to a DIFFERENT entry, which has received nothing.
+UploadMessage::Message MakeReplayRequest(
+    const Orc::Command::Wolf::PendingUpload& pending,
+    const OutputSpec::Upload& spec,
+    const std::set<std::wstring>& alreadyUploaded)
+{
+    const UploadMessage::Message& recorded = pending.request;
+    if (!recorded || recorded->GetRequest() != UploadMessage::UploadFile)
+    {
+        return nullptr;
+    }
+
+    // The recorded remote name is the plain file name, which is what the filters match on. A run
+    // artifact is never filtered here, because it was not filtered on its way to the primary either.
+    if (pending.filtered && !spec.IsFileUploaded(recorded->RemoteName()))
+    {
+        Log::Debug(L"Upload of '{}' is filtered out by this upload entry; not replayed", recorded->RemoteName());
+        return nullptr;
+    }
+
+    if (spec.Operation == OutputSpec::UploadOperation::NoOp)
+    {
+        return nullptr;
+    }
+
+    if (alreadyUploaded.find(recorded->LocalName()) != alreadyUploaded.end())
+    {
+        Log::Debug(L"Upload of '{}' already succeeded at this entry; not replayed", recorded->LocalName());
+        return nullptr;
+    }
+
+    // Almost always operation="move" having deleted it after an earlier attempt uploaded it. Replaying it
+    // could only fail, and since one failure condemns the whole attempt, every later attempt would fail too.
+    if (VerifyFileExists(recorded->LocalName().c_str()) != S_OK)
+    {
+        Log::Debug(L"Not replaying '{}': the local file is gone", recorded->LocalName());
+        return nullptr;
+    }
+
+    const bool deleteWhenDone = (spec.Operation == OutputSpec::UploadOperation::Move);
+    auto replay = UploadMessage::MakeUploadFileRequest(recorded->RemoteName(), recorded->LocalName(), deleteWhenDone);
+    if (replay)
+    {
+        replay->SetKeyword(recorded->Keyword());
+    }
+
+    return replay;
+}
 
 class FileInformations
 {
@@ -142,6 +204,35 @@ void UpdateOutcome(
         }
         outcome.Recipients().emplace_back(ToUtf8(item->Name), *certificate);
     }
+}
+
+// Whether the destination already holds the WHOLE output of a repeat="Once" command set, the only case
+// in which there is nothing left to do - neither collecting nor uploading.
+//
+// A remote file that merely exists proves nothing: a partial transfer leaves one behind too, and calling
+// that "done" skips the set and with it every fallback, so the missing tail is never sent anywhere. The
+// local archive is the reference to compare against, and it is there whenever a transfer was incomplete:
+// a run that sent nothing keeps it, and operation="move" deletes it only after a full send. No local copy
+// beside a file on the remote is therefore the signature of a finished run, while a size that differs -
+// or one the destination will not state - is not completeness and must not skip anything.
+bool IsRemoteOutputComplete(const FileInformations& remote, const FileInformations& local)
+{
+    if (!remote.file_exists)
+    {
+        return false;
+    }
+
+    if (!local.file_exists)
+    {
+        return !remote.size.has_value() || remote.size.value() > 0;
+    }
+
+    if (!remote.size.has_value() || !local.size.has_value())
+    {
+        return false;
+    }
+
+    return remote.size.value() == local.size.value();
 }
 
 HRESULT GetRemoteOutputFileInformations(
@@ -443,6 +534,35 @@ bool CheckPhysicalMemoryRequirement(const std::optional<ThresholdT>& threshold)
     return *rv;
 }
 
+// Whether a per-file success from this entry means the file actually reached the server. BITS answers the
+// upload request as soon as the file joins the job and only surfaces the real outcome later through
+// IsComplete, so a file it reported as added may never have left the host: skipping it on the very retry
+// meant to deliver it would lose it. REST and FileCopy transfer inline, so their answer is the transfer's.
+bool ReportsPerFileSuccess(const OutputSpec::Upload& spec)
+{
+    return spec.Method == OutputSpec::UploadMethod::REST || spec.Method == OutputSpec::UploadMethod::FileCopy;
+}
+
+// Wait between two attempts at the same <upload> entry. Announced at Info because this is the one place a
+// run deliberately stands still for a long time, and a silent pause at the end of a collection reads as a
+// hang. Blocking is fine here: CompleteUpload runs on the main thread once collection is over.
+void WaitBeforeRetry(std::chrono::seconds delay, size_t entry, uint32_t nextAttempt, uint32_t attempts)
+{
+    // Validate() refuses a delay above the cap at embed time; clamp again so a value that reached us
+    // some other way cannot overflow the millisecond conversion.
+    const uint32_t seconds = static_cast<uint32_t>(
+        std::min<int64_t>(delay.count(), static_cast<int64_t>(OutputSpec::Upload::kMaxRetryDelay)));
+
+    Log::Info(
+        L"UPLOAD: upload #{} attempt {}/{} failed; retrying in {} second(s)",
+        entry + 1,
+        nextAttempt - 1,
+        attempts,
+        seconds);
+
+    Sleep(seconds * 1000);
+}
+
 }  // namespace
 
 namespace Orc {
@@ -495,7 +615,7 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
             HRESULT hr = upload->GetHResult();
             if (FAILED(hr))
             {
-                Log::Critical(
+                Log::Error(
                     L"UPLOAD: Operation for '{}' failed: '{}' [{}]",
                     upload->Source(),
                     upload->Description(),
@@ -560,36 +680,207 @@ HRESULT Main::InitializeUpload(const OutputSpec::Upload& uploadspec)
     return S_OK;
 }
 
-HRESULT Orc::Command::Wolf::Main::UploadSingleFile(const std::wstring& fileName, const std::wstring& filePath)
+void Orc::Command::Wolf::Main::UploadSingleFile(
+    const std::wstring& fileName,
+    const std::wstring& filePath,
+    UploadSubject subject)
 {
-    if (VerifyFileExists(filePath.c_str()) == S_OK)
+    if (VerifyFileExists(filePath.c_str()) != S_OK)
     {
-        if (m_pUploadMessageQueue && config.Output.UploadOutput)
+        Log::Debug(L"Not uploading '{}': the file does not exist", filePath);
+        return;
+    }
+
+    if (config.Output.UploadOutputs.empty())
+    {
+        return;
+    }
+
+    const OutputSpec::Upload& primary = *config.Output.UploadOutputs.front();
+    const bool filtered = (subject == UploadSubject::CollectedData);
+
+    // Collected data is what 'include'/'exclude' select, so an archive reaching the upload agents here -
+    // a set whose output already existed, uploaded outside the usual path - obeys them like any other.
+    // A run artifact carries no such choice and is always sent.
+    const bool acceptedByPrimary = (!filtered || primary.IsFileUploaded(fileName));
+
+    // The record is what the run produced, not what the first destination accepted, so it is written
+    // whatever the primary decides. A fallback has its own 'operation' and its own filters, applied when
+    // the request is replayed to it (see MakeReplayRequest); gating the record on the primary would hide
+    // the file from every later destination, including one configured to take everything. Only the live
+    // send below obeys the primary.
+    const bool deleteWhenDone = (primary.Operation == OutputSpec::UploadOperation::Move);
+    auto msg = UploadMessage::MakeUploadFileRequest(fileName, filePath, deleteWhenDone);
+    m_pendingUploads.push_back({msg, filtered});
+
+    if (!acceptedByPrimary)
+    {
+        Log::Debug(L"Upload of '{}' is filtered out by the first upload entry; not sent to it", fileName);
+        return;
+    }
+
+    if (primary.Operation == OutputSpec::UploadOperation::NoOp)
+    {
+        return;
+    }
+
+    if (m_pUploadMessageQueue)
+    {
+        Concurrency::send(m_pUploadMessageQueue.get(), msg);
+    }
+}
+
+HRESULT Main::RestartUploadAgent(
+    const OutputSpec::Upload& spec,
+    size_t entry,
+    bool afterAsyncAttempt,
+    const std::set<std::wstring>& alreadyUploaded)
+{
+    m_pUploadAgent.reset();
+    m_pUploadMessageQueue.reset();
+    m_pUploadNotification.reset();
+
+    if (afterAsyncAttempt)
+    {
+        Log::Warn(
+            L"UPLOAD: upload #{} follows a failed asynchronous upload; "
+            L"the file may no longer be present if the async transfer already succeeded.",
+            entry + 1);
+    }
+
+    if (HRESULT hr = InitializeUpload(spec); FAILED(hr))
+    {
+        Log::Error(L"Failed to initialise upload #{}, skipping [{}]", entry + 1, SystemError(hr));
+        return hr;
+    }
+
+    if (!m_pUploadMessageQueue)
+    {
+        // InitializeUpload returned S_OK but no queue was created (e.g. NoUpload method). Nothing to do.
+        Log::Warn(L"Upload #{}: no upload method available, skipping", entry + 1);
+        return E_FAIL;
+    }
+
+    // Replay every recorded request, rebuilt for THIS spec: its own operation and its own include/exclude
+    // decide what it receives and whether the local file survives.
+    for (const auto& pending : m_pendingUploads)
+    {
+        if (auto replay = MakeReplayRequest(pending, spec, alreadyUploaded); replay)
         {
-            switch (config.Output.UploadOutput->Operation)
-            {
-                case OutputSpec::UploadOperation::NoOp:
-                    break;
-                case OutputSpec::UploadOperation::Copy:
-                    Concurrency::send(
-                        m_pUploadMessageQueue.get(), UploadMessage::MakeUploadFileRequest(fileName, filePath, false));
-                    break;
-                case OutputSpec::UploadOperation::Move:
-                    Concurrency::send(
-                        m_pUploadMessageQueue.get(), UploadMessage::MakeUploadFileRequest(fileName, filePath, true));
-                    break;
-            }
+            Concurrency::send(m_pUploadMessageQueue.get(), replay);
         }
     }
+
     return S_OK;
 }
 
 HRESULT Main::CompleteUpload()
 {
-    if (m_pUploadAgent)
+    // m_pUploadAgent may be null here if the primary upload spec failed to initialise during Run_Execute()
+    // (e.g. the server is unreachable). We must still enter the loop so retries and any configured fallback
+    // specs are attempted - bailing out here would defeat the whole point of the fallback list.
+    bool anyAsyncAttempted = false;
+    bool uploaded = false;
+
+    // Entry #1's first attempt inherits the agent Run_Execute built, unless that initialisation failed and
+    // left nothing to inherit: a destination that was already down when the run started is then retried
+    // like any other rather than only being fallen back from.
+    bool needsFreshAgent = (m_pUploadAgent == nullptr);
+
+    for (size_t i = 0; i < config.Output.UploadOutputs.size() && !uploaded; ++i)
     {
-        Concurrency::send(m_pUploadMessageQueue.get(), UploadMessage::MakeCompleteRequest());
-        concurrency::agent::wait(m_pUploadAgent.get());
+        const OutputSpec::Upload& uploadSpec = *config.Output.UploadOutputs[i];
+
+        // What this entry has already received, so a retry does not send it a second time. Scoped to the
+        // entry on purpose: the next destination has none of it.
+        std::set<std::wstring> uploadedHere;
+
+        // An asynchronous entry is never retried, whatever it asks for: BITSAgent::IsComplete answers
+        // "done, no failure" as soon as the agent is ready to exit, without looking at the jobs, so there
+        // is no failure to react to and a further attempt could only re-queue a transfer already running.
+        // Validate warns about this at embed time; this is what makes that warning true.
+        const bool retryable = (uploadSpec.Mode != OutputSpec::UploadMode::Asynchronous);
+        const uint32_t attempts = retryable ? uploadSpec.Retry + 1 : 1;
+        uint32_t attemptsMade = 0;
+
+        for (uint32_t attempt = 1; attempt <= attempts; ++attempt)
+        {
+            if (needsFreshAgent)
+            {
+                if (attempt > 1)
+                {
+                    WaitBeforeRetry(uploadSpec.RetryDelay, i, attempt, attempts);
+                }
+
+                if (FAILED(RestartUploadAgent(uploadSpec, i, anyAsyncAttempted, uploadedHere)))
+                {
+                    break;  // this entry cannot run at all; the next one still may
+                }
+            }
+
+            // Whoever built the agent this attempt used, the next attempt needs one of its own.
+            needsFreshAgent = true;
+
+            if (!m_pUploadMessageQueue || !m_pUploadAgent)
+            {
+                Log::Warn(L"Upload #{}: agent not available, skipping", i + 1);
+                break;
+            }
+
+            // Only flag an async attempt once we have a live agent that the job is actually handed to: a
+            // spec whose agent failed to initialise never touched the file, so a later attempt must not
+            // warn that the file "may already be gone".
+            if (uploadSpec.Mode == OutputSpec::UploadMode::Asynchronous)
+            {
+                anyAsyncAttempted = true;
+            }
+
+            attemptsMade = attempt;
+
+            // Signal completion and wait for the agent to drain; async agents finish shortly after.
+            Concurrency::send(m_pUploadMessageQueue.get(), UploadMessage::MakeCompleteRequest());
+            Concurrency::agent::wait(m_pUploadAgent.get());
+
+            // Read the outcome from the agent, which agent::wait has just ordered against, rather than from
+            // the notification handler, whose last message may still be queued (see HasNotifiedFailure).
+            if (ReportsPerFileSuccess(uploadSpec))
+            {
+                const std::set<std::wstring>& delivered = m_pUploadAgent->UploadedFiles();
+                uploadedHere.insert(delivered.begin(), delivered.end());
+            }
+
+            if (!m_pUploadAgent->HasNotifiedFailure())
+            {
+                Log::Info(L"Upload completed successfully (upload #{}, attempt {}/{})", i + 1, attempt, attempts);
+                uploaded = true;
+                break;
+            }
+        }
+
+        if (!uploaded && i + 1 < config.Output.UploadOutputs.size())
+        {
+            // attemptsMade is 0 when the entry never got as far as a live agent, which is a different
+            // story from an attempt that ran and failed.
+            if (attemptsMade == 0)
+            {
+                Log::Warn(L"Upload #{} could not be started, trying next upload...", i + 1);
+            }
+            else
+            {
+                Log::Warn(L"Upload #{} failed after {} attempt(s), trying next upload...", i + 1, attemptsMade);
+            }
+        }
+    }
+
+    // The only critical line of the upload. Each failure along the way is an error, because a fallback may
+    // still succeed; without this one, a collection that reached no destination at all would end with
+    // nothing more severe than an error the loop moved past.
+    if (!uploaded)
+    {
+        Log::Critical(
+            L"UPLOAD: no configured upload succeeded ({} configured); the files that were not uploaded remain "
+            L"on this host",
+            config.Output.UploadOutputs.size());
     }
 
     return S_OK;
@@ -840,10 +1131,7 @@ HRESULT Orc::Command::Wolf::Main::CreateAndUploadOutline()
     std::error_code ec;
     if (std::filesystem::exists(config.Outline.Path, ec))
     {
-        if (auto hr = UploadSingleFile(config.Outline.FileName, config.Outline.Path); FAILED(hr))
-        {
-            Log::Error(L"Failed to upload outline file [{}]", SystemError(hr));
-        }
+        UploadSingleFile(config.Outline.FileName, config.Outline.Path, UploadSubject::RunArtifact);
     }
 
     return S_OK;
@@ -964,14 +1252,7 @@ Orc::Result<void> Main::CreateAndUploadOutcome()
         return ec;
     }
 
-    HRESULT hr = UploadSingleFile(config.Outcome.FileName, config.Outcome.Path);
-    if (FAILED(hr))
-    {
-        const auto error = SystemError(hr);
-        Log::Error(L"Failed to upload outcome file [{}]", error);
-        return error;
-    }
-
+    UploadSingleFile(config.Outcome.FileName, config.Outcome.Path, UploadSubject::RunArtifact);
     return Success<void>();
 }
 
@@ -979,11 +1260,14 @@ HRESULT Main::Run_Execute()
 {
     HRESULT hr = E_FAIL;
 
-    if (config.Output.UploadOutput)
+    if (!config.Output.UploadOutputs.empty())
     {
-        if (FAILED(hr = InitializeUpload(*config.Output.UploadOutput)))
+        if (FAILED(hr = InitializeUpload(*config.Output.UploadOutputs.front())))
         {
-            Log::Error(L"Failed to initalise upload as requested, no upload will be performed [{}]", SystemError(hr));
+            Log::Error(
+                L"Failed to initialize upload #1; files are kept for the fallback uploads, tried at the end of the run "
+                L"[{}]",
+                SystemError(hr));
         }
     }
 
@@ -1015,7 +1299,8 @@ HRESULT Main::Run_Execute()
     {
         if (auto hr = CreateAndUploadOutline(); FAILED(hr))
         {
-            Log::Critical("Failed to initalise upload as requested, no upload will be performed [{}]", SystemError(hr));
+            // Critical: the run goes on without an outline, and the cause above was logged as an Error only.
+            Log::Critical("Failed to create the outline; the collection continues without it [{}]", SystemError(hr));
         }
     }
 
@@ -1171,11 +1456,15 @@ HRESULT Main::Run_Execute()
             }
             else if (exec->RepeatBehaviour() == WolfExecution::Repeat::Once)
             {
-                FileInformations info;
+                // The local archive is read first: it is the reference that tells a complete remote copy
+                // from a partial one, and the remote decision below needs both.
+                FileInformations local;
+                ::GetLocalOutputFileInformations(*exec, local);
 
                 if (exec->ShouldUpload() && m_pUploadAgent)
                 {
-                    hr = ::GetRemoteOutputFileInformations(*exec, *m_pUploadAgent, info);
+                    FileInformations remote;
+                    hr = ::GetRemoteOutputFileInformations(*exec, *m_pUploadAgent, remote);
                     if (FAILED(hr))
                     {
                         const auto path = m_pUploadAgent->GetRemoteFullPath(exec->GetOutputFileName());
@@ -1189,45 +1478,45 @@ HRESULT Main::Run_Execute()
                             path,
                             SystemError(hr));
                     }
-                    else if (info.file_exists && (!info.size.has_value() || info.size.value() > 0))
+                    else if (IsRemoteOutputComplete(remote, local))
                     {
                         m_journal.Print(
                             ToolName(),
                             exec->GetKeyword(),
                             Log::Level::Info,
-                            "Skipping set because non-empty remote output file already exists: '{}' (size: {})",
-                            info.path,
-                            info.size);
+                            "Skipping set because the remote output file is already complete: '{}' (size: {})",
+                            remote.path,
+                            remote.size);
                         continue;
+                    }
+                    else if (remote.file_exists)
+                    {
+                        // Partial: fall through rather than skip, so the archive is offered to the
+                        // upload list again - this destination first, then the fallback candidates.
+                        m_journal.Print(
+                            ToolName(),
+                            exec->GetKeyword(),
+                            Log::Level::Info,
+                            "Remote output file is incomplete, uploading again: '{}' (remote: {}, local: {})",
+                            remote.path,
+                            remote.size,
+                            local.size);
                     }
                 }
 
-                hr = ::GetLocalOutputFileInformations(*exec, info);
-                if (SUCCEEDED(hr) && (!info.size || *info.size != 0))
+                if (local.file_exists && (!local.size || *local.size != 0))
                 {
                     m_journal.Print(
                         ToolName(),
                         exec->GetKeyword(),
                         Log::Level::Info,
                         "Skipping set because non-empty local output file already exists: '{}' (size: {})",
-                        info.path,
-                        info.size);
+                        local.path,
+                        local.size);
 
                     // Archive is ready but was not uploaded
-                    hr = UploadSingleFile(exec->GetOutputFileName(), exec->GetOutputFullPath());
-                    if (FAILED(hr))
-                    {
-                        Log::Error(L"Failed to upload archive '{}' [{}]", exec->GetOutputFullPath(), SystemError(hr));
-
-                        m_journal.Print(
-                            ToolName(),
-                            exec->GetKeyword(),
-                            Log::Level::Error,
-                            L"Failed to upload archive '{}' [{}]",
-                            exec->GetOutputFullPath(),
-                            SystemError(hr));
-                    }
-
+                    UploadSingleFile(
+                        exec->GetOutputFileName(), exec->GetOutputFullPath(), UploadSubject::CollectedData);
                     continue;
                 }
             }
@@ -1272,12 +1561,7 @@ HRESULT Main::Run_Execute()
         m_standardOutput.FileTee().Close(ec);
 
         const std::filesystem::path localPath = *m_standardOutput.FileTee().Path();
-        hr = UploadSingleFile(localPath.filename(), localPath);
-        if (FAILED(hr))
-        {
-            Log::Error(
-                L"Failed to upload console log file '{}' [{}]", m_standardOutput.FileTee().Path(), SystemError(hr));
-        }
+        UploadSingleFile(localPath.filename(), localPath, UploadSubject::RunArtifact);
     }
 
     const auto start = FromSystemTime(theStartTime);
@@ -1295,18 +1579,25 @@ HRESULT Main::Run_Execute()
     if (fileSink->IsOpen())
     {
         const auto localPath = fileSink->OutputPath();  // must be done before calling 'Close'
+
+        // The log is closed, sealed and uploaded before the upload completes, so it can never hold the result of
+        // that upload. Say so in the file itself, for whoever reads it without the console output.
+        if (!config.Output.UploadOutputs.empty())
+        {
+            Log::Info(
+                L"The log file ends here: the upload is completed after it is closed, and its result is reported on "
+                L"the console only");
+        }
+
         fileSink->Close();
 
         if (localPath)
         {
-            if (auto hr = UploadSingleFile(localPath->filename(), *localPath); FAILED(hr))
-            {
-                Log::Error(L"Failed to upload log file [{}]", SystemError(hr));
-            }
+            UploadSingleFile(localPath->filename(), *localPath, UploadSubject::RunArtifact);
         }
     }
 
-    if (config.Output.UploadOutput)
+    if (!config.Output.UploadOutputs.empty())
     {
         hr = CompleteUpload();
         if (FAILED(hr))
@@ -1351,7 +1642,7 @@ HRESULT Main::ExecuteKeyword(WolfExecution& exec)
     if (FAILED(hr))
     {
         Log::Error("Command agent creation failed [{}]", SystemError(hr));
-        exec.CompleteArchive(m_pUploadMessageQueue.get());
+        exec.CompleteArchive(m_pUploadMessageQueue.get(), m_pendingUploads);
         return hr;
     }
 
@@ -1361,7 +1652,7 @@ HRESULT Main::ExecuteKeyword(WolfExecution& exec)
             exec.TerminateAllAndComplete();
         }
 
-        HRESULT hrComplete = exec.CompleteArchive(m_pUploadMessageQueue.get());
+        HRESULT hrComplete = exec.CompleteArchive(m_pUploadMessageQueue.get(), m_pendingUploads);
         if (FAILED(hrComplete))
         {
             Log::Error(L"Failed to complete archive '{}' [{}]", exec.GetOutputFileName(), SystemError(hrComplete));

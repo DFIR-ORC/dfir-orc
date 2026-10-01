@@ -89,5 +89,7 @@ namespace Orc::Config::Wolf {
 
 HRESULT recipient(ConfigItem& parent, DWORD dwIndex);
 
+HRESULT upload(ConfigItem& parent, DWORD dwIndex);
+
 HRESULT root(ConfigItem& item);
 }  // namespace Orc::Config::Wolf

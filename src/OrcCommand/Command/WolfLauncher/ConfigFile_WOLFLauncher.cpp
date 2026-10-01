@@ -94,8 +94,7 @@ HRESULT wolf_command(ConfigItem& parent, DWORD dwIndex)
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"timeout", WOLFLAUNCHER_COMMAND_TIMEOUT, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(
-            hr = parent[dwIndex].AddAttribute(L"diskfree", WOLFLAUNCHER_COMMAND_DISKFREE, ConfigItem::OPTION)))
+    if (FAILED(hr = parent[dwIndex].AddAttribute(L"diskfree", WOLFLAUNCHER_COMMAND_DISKFREE, ConfigItem::OPTION)))
         return hr;
     return S_OK;
 }
@@ -156,7 +155,9 @@ HRESULT wolf_archive(ConfigItem& parent, DWORD dwIndex)
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"diskfree", WOLFLAUNCHER_ARCHIVE_DISKFREE, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = parent[dwIndex].AddAttribute(L"physicalmemory", WOLFLAUNCHER_ARCHIVE_PHYSICALMEMORY, ConfigItem::OPTION)))
+    if (FAILED(
+            hr = parent[dwIndex].AddAttribute(
+                L"physicalmemory", WOLFLAUNCHER_ARCHIVE_PHYSICALMEMORY, ConfigItem::OPTION)))
         return hr;
     return S_OK;
 }
@@ -169,6 +170,32 @@ HRESULT Orc::Config::Wolf::recipient(ConfigItem& parent, DWORD dwIndex)
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"name", WOLFLAUNCHER_RECIPIENT_NAME, ConfigItem::MANDATORY)))
         return hr;
     if (FAILED(hr = parent[dwIndex].AddAttribute(L"archive", WOLFLAUNCHER_RECIPIENT_ARCHIVE, ConfigItem::MANDATORY)))
+        return hr;
+    return S_OK;
+}
+
+HRESULT Orc::Config::Wolf::upload(ConfigItem& parent, DWORD dwIndex)
+{
+    HRESULT hr = E_FAIL;
+    if (FAILED(hr = parent.AddChildNodeList(L"upload", dwIndex, ConfigItem::OPTION)))
+        return hr;
+    // Register attributes directly on the NodeList template so the parser can populate
+    // them into each NodeList entry without an extra level of nesting.
+    if (FAILED(hr = Orc::Config::Common::upload_attributes(parent[dwIndex])))
+        return hr;
+    // The <header> child carries custom HTTP headers (e.g. Authorization, Content-Range for
+    // chunked offsets). Without registering it here the parser rejects it as an unexpected
+    // element and the headers are silently dropped (mirrors Orc::Config::Common::upload).
+    if (FAILED(hr = parent[dwIndex].AddChildNodeList(L"header", CONFIG_UPLOAD_HEADER_LIST, ConfigItem::OPTION)))
+        return hr;
+    // The <rest> step list drives REST multi-step uploads (MKCOL/PUT/MOVE/PROPFIND...); same schema
+    // as Orc::Config::Common::upload so /local and the embedded WolfLauncher config behave identically.
+    if (FAILED(hr = Orc::Config::Common::rest_step(parent[dwIndex], CONFIG_UPLOAD_REST_LIST)))
+        return hr;
+    // Proxy attributes (same set/order as Orc::Config::Common::upload), via the shared helper so the
+    // two upload schemas cannot drift. Without this, every proxy setting in an embedded WolfLauncher
+    // config or /local.xml parses to nothing (the upload silently runs with no proxy).
+    if (FAILED(hr = Orc::Config::Common::upload_proxy_attributes(parent[dwIndex])))
         return hr;
     return S_OK;
 }
@@ -202,7 +229,7 @@ HRESULT Orc::Config::Wolf::root(ConfigItem& item)
         return hr;
     if (FAILED(hr = item.AddAttribute(L"werdontshowui", WOLFLAUNCHER_WERDONTSHOWUI, ConfigItem::OPTION)))
         return hr;
-    if (FAILED(hr = item.AddChild(L"upload", Orc::Config::Common::upload, WOLFLAUNCHER_UPLOAD)))
+    if (FAILED(hr = Orc::Config::Wolf::upload(item, WOLFLAUNCHER_UPLOAD)))
         return hr;
     if (FAILED(hr = item.AddAttribute(L"priority", WOLFLAUNCHER_PRIORITY, ConfigItem::OPTION)))
         return hr;

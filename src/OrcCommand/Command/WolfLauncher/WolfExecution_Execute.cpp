@@ -863,7 +863,8 @@ HRESULT WolfExecution::TerminateAllAndComplete()
     return S_OK;
 }
 
-HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue)
+HRESULT
+WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue, std::vector<PendingUpload>& pendingUploads)
 {
     HRESULT hr = E_FAIL;
 
@@ -936,30 +937,42 @@ HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQue
             archiveSize());
     }
 
-    if (pUploadMessageQueue && m_Output.UploadOutput)
+    if (m_Output.UploadOutputs.empty())
     {
-        if (m_Output.UploadOutput->IsFileUploaded(m_strOutputFileName))
-        {
-            switch (m_Output.UploadOutput->Operation)
-            {
-                case OutputSpec::UploadOperation::NoOp:
-                    break;
-                case OutputSpec::UploadOperation::Copy: {
+        return S_OK;
+    }
 
-                    auto request =
-                        UploadMessage::MakeUploadFileRequest(m_strOutputFileName, m_strOutputFullPath, false);
-                    Concurrency::send(pUploadMessageQueue, request);
-                }
-                break;
-                case OutputSpec::UploadOperation::Move: {
+    const OutputSpec::Upload& primary = *m_Output.UploadOutputs.front();
 
-                    auto request = UploadMessage::MakeUploadFileRequest(m_strOutputFileName, m_strOutputFullPath, true);
-                    Concurrency::send(pUploadMessageQueue, request);
-                }
-                break;
-            }
-        }
+    // The archive is recorded whatever the primary decides: a fallback <upload> applies its own
+    // 'operation' and its own filters when the request is replayed to it (see MakeReplayRequest), so a
+    // record gated on the primary would hide this archive from every later destination. Only the live
+    // send below obeys the primary.
+    const bool deleteWhenDone = (primary.Operation == OutputSpec::UploadOperation::Move);
+    auto uploadRequest = UploadMessage::MakeUploadFileRequest(m_strOutputFileName, m_strOutputFullPath, deleteWhenDone);
+    pendingUploads.push_back({uploadRequest, true});
+
+    if (!primary.IsFileUploaded(m_strOutputFileName))
+    {
+        Log::Debug(L"Upload of '{}' is filtered out by the first upload entry; not sent to it", m_strOutputFileName);
+        return S_OK;
+    }
+
+    if (primary.Operation == OutputSpec::UploadOperation::NoOp)
+    {
+        return S_OK;
+    }
+
+    if (pUploadMessageQueue)
+    {
+        Concurrency::send(pUploadMessageQueue, uploadRequest);
     }
 
     return S_OK;
+}
+
+HRESULT WolfExecution::CompleteArchive(UploadMessage::ITarget* pUploadMessageQueue)
+{
+    std::vector<PendingUpload> ignored;
+    return CompleteArchive(pUploadMessageQueue, ignored);
 }

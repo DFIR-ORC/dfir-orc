@@ -86,6 +86,62 @@ void CreateDirectories(std::filesystem::path path, std::vector<std::wstring>& ne
     }
 }
 
+// Parses upload entries from a NodeList ConfigItem and appends them to the provided vector.
+// An entry that fails to configure is skipped while another usable upload remains, so one bad fallback does
+// not cost the others. When none is left the error is returned and the run stops before collecting:
+// collecting with no upload would only leave every archive on the host behind a single Error line, and the
+// upload's own Critical never fires for an empty upload list.
+// After appending, warns when an async upload is followed by a fallback.
+HRESULT AppendUploadOutputs(const ConfigItem& upload_node, std::vector<std::shared_ptr<OutputSpec::Upload>>& outputs)
+{
+    HRESULT lastFailure = S_OK;
+
+    for (size_t i = 0; i < upload_node.NodeList.size(); ++i)
+    {
+        auto upload = std::make_shared<OutputSpec::Upload>();
+
+        if (auto hr = upload->Configure(upload_node.NodeList[i]); FAILED(hr))
+        {
+            Log::Error("Error in upload section #{} in config file, ignored [{}]", i + 1, SystemError(hr));
+            lastFailure = hr;
+            continue;
+        }
+
+        outputs.push_back(upload);
+    }
+
+    if (FAILED(lastFailure) && outputs.empty())
+    {
+        Log::Error(
+            "None of the {} upload section(s) in config file could be configured [{}]",
+            upload_node.NodeList.size(),
+            SystemError(lastFailure));
+        return lastFailure;
+    }
+
+    // Warn if an async upload is followed by fallback entries: the async upload's outcome
+    // (success/failure) cannot be confirmed by DFIR-ORC since the BITS service performs the
+    // actual transfer after the process exits. Fallbacks will still be attempted - they will
+    // fail gracefully if the file is already gone, or succeed if it is still present.
+    if (outputs.size() > 1)
+    {
+        for (size_t i = 0; i + 1 < outputs.size(); ++i)
+        {
+            if (outputs[i]->Mode == OutputSpec::UploadMode::Asynchronous)
+            {
+                Log::Warn(
+                    L"Upload #{} is configured with asynchronous mode but has {} following fallback upload(s). "
+                    L"Fallbacks will be attempted but their outcome is unpredictable: the file may already "
+                    L"be gone if the async upload succeeded.",
+                    i + 1,
+                    outputs.size() - i - 1);
+            }
+        }
+    }
+
+    return S_OK;
+}
+
 bool IgnoreOptions(LPCWSTR szArg)
 {
     const auto kConsole = "console";
@@ -410,15 +466,10 @@ HRESULT Main::GetConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[WOLFLAUNCHER_UPLOAD])
     {
-        auto upload = std::make_shared<OutputSpec::Upload>();
-
-        if (auto hr = upload->Configure(configitem[WOLFLAUNCHER_UPLOAD]); FAILED(hr))
+        if (auto hr = AppendUploadOutputs(configitem[WOLFLAUNCHER_UPLOAD], config.Output.UploadOutputs); FAILED(hr))
         {
-            Log::Error("Error in specified upload section in config file, ignored [{}]", SystemError(hr));
             return hr;
         }
-
-        config.Output.UploadOutput = upload;
     }
 
     if (configitem[WOLFLAUNCHER_PRIORITY])
@@ -603,17 +654,10 @@ HRESULT Main::GetLocalConfigurationFromConfig(const ConfigItem& configitem)
 
     if (configitem[ORC_UPLOAD])
     {
-        auto upload = std::make_shared<OutputSpec::Upload>();
-
-        if (upload == nullptr)
-            return E_OUTOFMEMORY;
-
-        if (auto hr = upload->Configure(configitem[ORC_UPLOAD]); FAILED(hr))
+        if (auto hr = AppendUploadOutputs(configitem[ORC_UPLOAD], config.Output.UploadOutputs); FAILED(hr))
         {
-            Log::Error("Error in specified upload section in config file, ignored [{}]", SystemError(hr));
             return hr;
         }
-        config.Output.UploadOutput = upload;
     }
 
     if (auto hr = config.TempWorkingDir.Configure(OutputSpec::Kind::Directory, configitem[ORC_TEMP]); FAILED(hr))
