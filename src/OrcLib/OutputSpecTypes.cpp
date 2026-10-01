@@ -27,6 +27,8 @@ std::wstring ToString(OutputSpecTypes::UploadAuthScheme scheme)
             return L"Negotiate";
         case Orc::OutputSpecTypes::UploadAuthScheme::NTLM:
             return L"NTLM";
+        case Orc::OutputSpecTypes::UploadAuthScheme::AWSv4:
+            return L"AWSv4";
     }
 
     return L"Unknown";
@@ -42,6 +44,8 @@ std::wstring ToString(OutputSpecTypes::UploadMethod method)
             return L"File copy";
         case Orc::OutputSpecTypes::UploadMethod::NoUpload:
             return L"No upload";
+        case Orc::OutputSpecTypes::UploadMethod::REST:
+            return L"REST";
     }
 
     return L"Unknown";

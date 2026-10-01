@@ -22,14 +22,16 @@ enum class UploadAuthScheme : char
     Basic,
     NTLM,
     Kerberos,
-    Negotiate
+    Negotiate,
+    AWSv4
 };
 
 enum class UploadMethod : char
 {
     NoUpload = 0,
     FileCopy,
-    BITS
+    BITS,
+    REST
 };
 
 enum BITSMode : char

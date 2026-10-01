@@ -33,6 +33,13 @@ void Print(Tree& node, const OutputSpec::Upload& upload)
 
     const auto excludes = boost::join(upload.FilterExclude, L", ");
     PrintValue(node, L"Exclude", excludes.empty() ? kEmptyW : excludes);
+
+    // Only when retrying is configured, so the usual single-attempt output is unchanged.
+    if (upload.Retry > 0)
+    {
+        PrintValue(
+            node, L"Retry", fmt::format(L"{} extra attempt(s), {}s apart", upload.Retry, upload.RetryDelay.count()));
+    }
 }
 
 void Print(Tree& node, const OutputSpec& output)
@@ -67,10 +74,16 @@ void Print(Tree& node, const OutputSpec& output)
 
     Print(node, outputPath);
 
-    if (output.UploadOutput != nullptr)
+    if (!output.UploadOutputs.empty())
     {
-        auto uploadNode = node.AddNode(4, L"Upload configuration:");
-        Print(uploadNode, *(output.UploadOutput));
+        for (size_t i = 0; i < output.UploadOutputs.size(); ++i)
+        {
+            const std::wstring uploadLabel = output.UploadOutputs.size() > 1
+                ? fmt::format(L"Upload configuration #{}:", i + 1)
+                : std::wstring(L"Upload configuration:");
+            auto uploadNode = node.AddNode(4, uploadLabel);
+            Print(uploadNode, *(output.UploadOutputs[i]));
+        }
     }
 }
 
